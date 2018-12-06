@@ -3,9 +3,9 @@ package db
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestNilDB(t *testing.T) {
@@ -92,13 +92,13 @@ func TestUpdateChainHeadNoBlock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
-	aState, err := db.GetActiveState()
+	beaconState, err := db.GetState()
 	if err != nil {
-		t.Fatalf("failed to get active state: %v", err)
+		t.Fatalf("failed to get beacon state: %v", err)
 	}
 
 	b := types.NewBlock(&pb.BeaconBlock{Slot: 1})
-	if err := db.UpdateChainHead(b, aState, nil); err == nil {
+	if err := db.UpdateChainHead(b, beaconState); err == nil {
 		t.Fatalf("expected UpdateChainHead to fail if the block does not exist: %v", err)
 	}
 }
@@ -121,14 +121,14 @@ func TestUpdateChainHead(t *testing.T) {
 		t.Fatalf("failed to get hash of b: %v", err)
 	}
 
-	aState, err := db.GetActiveState()
+	beaconState, err := db.GetState()
 	if err != nil {
-		t.Fatalf("failed to get active state: %v", err)
+		t.Fatalf("failed to get beacon state: %v", err)
 	}
 
 	b2 := types.NewBlock(&pb.BeaconBlock{
-		Slot:           1,
-		AncestorHashes: [][]byte{bHash[:]},
+		Slot:            1,
+		AncestorHash32S: [][]byte{bHash[:]},
 	})
 	b2Hash, err := b2.Hash()
 	if err != nil {
@@ -137,7 +137,7 @@ func TestUpdateChainHead(t *testing.T) {
 	if err := db.SaveBlock(b2); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
-	if err := db.UpdateChainHead(b2, aState, nil); err != nil {
+	if err := db.UpdateChainHead(b2, beaconState); err != nil {
 		t.Fatalf("failed to record the new head of the main chain: %v", err)
 	}
 
@@ -176,21 +176,17 @@ func TestChainProgress(t *testing.T) {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
 
-	aState, err := db.GetActiveState()
+	beaconState, err := db.GetState()
 	if err != nil {
-		t.Fatalf("Failed to get active state: %v", err)
+		t.Fatalf("Failed to get beacon state: %v", err)
 	}
-	cState, err := db.GetCrystallizedState()
-	if err != nil {
-		t.Fatalf("Failed to get crystallized state: %v", err)
-	}
-	cycleLength := params.GetConfig().CycleLength
+	cycleLength := params.BeaconConfig().CycleLength
 
 	b1 := types.NewBlock(&pb.BeaconBlock{Slot: 1})
 	if err := db.SaveBlock(b1); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
-	if err := db.UpdateChainHead(b1, aState, nil); err != nil {
+	if err := db.UpdateChainHead(b1, beaconState); err != nil {
 		t.Fatalf("failed to record the new head: %v", err)
 	}
 	heighestBlock, err := db.GetChainHead()
@@ -205,7 +201,7 @@ func TestChainProgress(t *testing.T) {
 	if err := db.SaveBlock(b2); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
-	if err := db.UpdateChainHead(b2, aState, nil); err != nil {
+	if err := db.UpdateChainHead(b2, beaconState); err != nil {
 		t.Fatalf("failed to record the new head: %v", err)
 	}
 	heighestBlock, err = db.GetChainHead()
@@ -220,7 +216,7 @@ func TestChainProgress(t *testing.T) {
 	if err := db.SaveBlock(b3); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
-	if err := db.UpdateChainHead(b3, aState, cState); err != nil {
+	if err := db.UpdateChainHead(b3, beaconState); err != nil {
 		t.Fatalf("failed to update head: %v", err)
 	}
 	heighestBlock, err = db.GetChainHead()

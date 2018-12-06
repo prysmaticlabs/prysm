@@ -1,0 +1,187 @@
+syntax = "proto3";
+
+package ethereum.beacon.p2p.v1;
+
+import "google/protobuf/timestamp.proto";
+
+import "proto/common/messages.proto";
+
+message BeaconState {
+  // Validator registry [1-1000] 
+  repeated ValidatorRecord validator_registry = 1;
+  uint64 validator_registry_last_change_slot = 2;
+  uint64 validator_registry_exit_count = 3;
+  bytes validator_registry_delta_chain_tip_hash32 = 4; 
+
+  // Randomness and committees [1001-2000]
+  bytes randao_mix_hash32 = 1001;
+  bytes next_seed_hash32 = 1002;
+  repeated ShardAndCommitteeArray shard_and_committees_for_slots = 1003;
+  repeated ethereum.common.Uint32List persistent_committees = 1004;
+  repeated ShardReassignmentRecord persistent_committee_reassignments = 1005;
+
+  // Finality [2001-3000] 
+  uint64 previous_justified_slot = 2001;
+  uint64 justified_slot = 2002;
+  uint64 justified_slot_bitfield = 2003;
+  uint64 finalized_slot = 2004;
+
+  // Recent state [3001-4000]
+  repeated CrosslinkRecord latest_crosslinks = 3001;
+  uint64 last_state_recalculation_slot = 3002;
+  repeated bytes latest_block_hash32s = 3003;
+  repeated uint64 latest_penalized_exit_balances = 3004;
+  repeated PendingAttestationRecord latest_attestations = 3005;
+
+  // PoW receipt root [4001-5000]
+  repeated bytes processed_pow_receipt_root_hash32 = 4001;
+  repeated CandidatePoWReceiptRootRecord candidate_pow_receipt_roots = 4002;
+
+  // Miscellaneous [5001-6000]
+  uint64 genesis_time = 5001;
+  ForkData fork_data = 5002;
+
+
+
+  // Deprecated fields 
+  // All fields mustbe annotated with [deprecated=true];
+  bytes randao_mix = 10003 [deprecated=true]; // Renamed to randao_mix_hash32
+  uint64 last_finalized_slot = 10005 [deprecated=true]; // Replaced/renamed by finalized_slot
+  uint64 last_justified_slot = 10006 [deprecated=true]; // Replaced/renamed by justified_slot
+  uint64 justified_streak = 10007 [deprecated=true]; // Deprecated by changes in fork choice rule. See https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#beacon-chain-fork-choice-rule 
+  bytes next_shuffling_seed = 10008 [deprecated=true]; // Replaced/renamed by next_seed_hash32 
+  repeated uint64 deposits_penalized_in_period = 10009 [deprecated=true]; // Replaced by latest_penalized_exit_balances
+  repeated AggregatedAttestation pending_attestations = 10018 [deprecated=true]; // Deleted by spec
+}
+
+message ForkData {
+  uint64 pre_fork_version = 1;
+  uint64 post_fork_version = 2;
+  uint64 fork_slot = 3;
+}
+
+message CandidatePoWReceiptRootRecord {
+  bytes candidate_pow_receipt_root_hash32 = 1;
+  uint64 votes = 2;
+}
+
+message PendingAttestationRecord {
+  AttestationData data = 1;
+  bytes participation_bitfield = 2;
+  bytes custody_bitfield = 3;
+  uint64 slot_included = 4;
+}
+
+message AttestationRecord {
+  AttestationData data = 1;
+  bytes participation_bitfield = 2;
+  bytes custody_bitfield = 3;
+  bytes aggregate_signature = 4; // Type of [uint384] ?
+}
+
+message AttestationData {
+  uint64 slot = 1;
+  uint64 shard = 2;
+  bytes beacon_block_hash32 = 3;
+  bytes epoch_boundary_hash32 = 4;
+  bytes shard_block_hash32 = 5;
+  bytes latest_crosslink_hash32 = 6;
+  uint64 justified_slot = 7;
+  bytes justified_block_hash32 = 8;
+}
+
+message ValidatorRecord {
+  bytes pubkey = 1;
+  // TODO(781): The usage of withdrawal_credentials is not defined in spec. Not used in Prysm yet.
+  bytes withdrawal_credentials = 2; // TODO(781): this is hash32, rename with suffix _hash32
+  bytes randao_commitment_hash32 = 3;
+  uint64 randao_skips = 4;
+  // Balance in Gwei
+  uint64 balance = 5;
+  // Possible validator status code:
+  // https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#constants
+  enum ValiatorStateCode {
+    pending_activation = 0;
+    active = 1;
+    exited_without_penalty = 2;
+    exited_with_penalty = 3;
+  }
+  ValiatorStateCode status_code = 6;
+  uint64 latest_status_change_slot = 7;
+  uint64 exit_count = 8;
+  uint64 status = 9 [deprecated=true]; // Replaced by status_code
+}
+
+message ShardReassignmentRecord {
+  uint32 validator_index = 1;
+  uint64 shard = 2;
+  uint64 slot = 3;
+}
+
+// AggregatedAttestation is deprecated entirely by AttestationRecord.
+message AggregatedAttestation {
+  uint64 slot = 1 [deprecated=true];
+  uint64 shard = 2 [deprecated=true];
+  uint64 justified_slot = 3 [deprecated=true];
+  bytes justified_block_hash = 4 [deprecated=true];
+  bytes shard_block_hash = 5 [deprecated=true];
+  bytes attester_bitfield = 6 [deprecated=true];
+  repeated bytes oblique_parent_hashes = 7 [deprecated=true];
+  repeated uint64 aggregate_sig = 8 [deprecated=true];
+}
+
+message SpecialRecord {
+    uint32 kind = 1;
+    repeated bytes data = 2;
+}
+
+message CrosslinkRecord {
+  uint64 slot = 1;
+  bytes shard_block_hash32 = 2;
+
+  // Deprecated fields
+  // All fields must be annotated with [deprecated=true];
+  bytes shard_block_hash = 1001 [deprecated=true]; // Renamed to shard_block_hash32
+}
+
+message ShardAndCommitteeArray {
+  repeated ShardAndCommittee array_shard_and_committee = 1;
+}
+
+message ShardAndCommittee {
+  uint64 shard = 1;
+  repeated uint32 committee = 2;
+  uint64 total_validator_count = 3;
+}
+
+message BeaconBlock {
+  uint64 slot = 1;
+  bytes randao_reveal_hash32 = 2;
+  bytes candidate_pow_receipt_root_hash32 = 3;
+  // Ancestor hashes represent a skip list of ancestor beacon block hashes.
+  // i'th item is the most recent ancestor whose slot is a multiple of 2^i 
+  // for i in the range of 0 to 31.
+  repeated bytes ancestor_hash32s = 4; 
+  bytes state_root_hash32 = 5;
+  // TODO(781): attestations should be a list of attestionRecords according to spec
+  // at ethereum/eth2.0-specs@11d4473. Update this field to AttestionRecord
+  // and remove the AggregatedAttestion message.
+  repeated AggregatedAttestation attestations = 6 [deprecated=true];
+  // repeated AttestationRecord attestations = 6;
+  // Specials consist of exist, penalities, etc.
+  repeated SpecialRecord specials = 7;
+  repeated bytes proposer_signature = 8; // Type of [uint384]?
+
+
+  // Deprecated fields
+  // All fields must be annotated with [deprecated=true];
+  google.protobuf.Timestamp timestamp = 1006 [deprecated=true]; // Keeping this until we refactor block validation.
+}
+
+message DepositParametersRecord {
+  bytes pubkey = 1;
+  bytes proof_of_possession = 2; // Type of ['uint384']??
+  // TODO(781): The usage of withdrawal_credentials is not defined in spec. Not used in Prysm yet.
+  bytes withdrawal_credentials_hash32 = 3;
+  bytes randao_commitment_hash32 = 4;
+}

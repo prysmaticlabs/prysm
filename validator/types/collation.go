@@ -8,8 +8,8 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/shardutil"
-	"github.com/prysmaticlabs/prysm/validator/params"
 )
 
 // Collation defines a base struct that serves as a primitive equivalent of a "block"
@@ -168,8 +168,8 @@ func SerializeTxToBlob(txs []*gethTypes.Transaction) ([]byte, error) {
 		return nil, err
 	}
 
-	csl := params.DefaultCollationSizeLimit()
-	if int64(len(serializedTx)) > csl {
+	csl := params.ShardConfig().MaxShardBlockSize
+	if uint64(len(serializedTx)) > csl {
 		return nil, fmt.Errorf("the serialized body size %d exceeded the collation size limit %d", len(serializedTx), csl)
 	}
 

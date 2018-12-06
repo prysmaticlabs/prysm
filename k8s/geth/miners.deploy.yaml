@@ -2,6 +2,7 @@ kind: StatefulSet
 apiVersion: apps/v1
 metadata:
   name: miner
+  namespace: pow
   labels:
     universe: geth
     component: miner
@@ -42,7 +43,8 @@ spec:
             - >
               geth
               --networkid=1337
-              --bootnodes=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_SERVICE_HOST):$(GETH_BOOTNODE_SERVICE_PORT_BOOTNODE_UDP)
+              --bootnodesv4=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_V4_SERVICE_HOST):$(GETH_BOOTNODE_V4_SERVICE_PORT_BOOTNODE_UDP)
+              --bootnodesv5=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_V5_SERVICE_HOST):$(GETH_BOOTNODE_V5_SERVICE_PORT_BOOTNODE_UDP)
               --ethstats=$HOSTNAME:$(ETHSTATS_WS_SECRET)@$(GETH_ETHSTATS_SERVICE_HOST):$(GETH_ETHSTATS_SERVICE_PORT)
               --rpc
               --rpcaddr=0.0.0.0
@@ -53,7 +55,7 @@ spec:
               --verbosity=4
               --mine
               --minerthreads=1
-              --etherbase=0x717c3a6e4cbd476c2312612155eb233bf498dd5b
+              --etherbase=0x00c4ac4d2a14be6a9b55652f9aabdb70fdeb07bc
               --extradata=$HOSTNAME
               --ethash.dagsinmem=1
               --ethash.dagsondisk=2
@@ -82,7 +84,7 @@ spec:
               memory: "2Gi"
               cpu: "500m"
             limits:
-              memory: "2.5Gi"
+              memory: "4Gi"
               cpu: "500m"
       initContainers:
         - name: genesis
@@ -99,8 +101,8 @@ spec:
         - name: chaindata
           emptyDir: {}
         - name: genesis
-          secret: 
-            secretName: geth-genesis
+          configMap: 
+            name: genesis
             items:
               - key: json
                 path: genesis.json
@@ -111,4 +113,4 @@ spec:
         accessModes: [ "ReadWriteOnce" ]
         resources:
           requests:
-            storage: 2Gi
+            storage: 5Gi

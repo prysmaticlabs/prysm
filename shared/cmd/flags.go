@@ -67,7 +67,7 @@ var (
 	}
 	// MonitoringPortFlag defines the http port used to serve prometheus metrics.
 	MonitoringPortFlag = cli.Int64Flag{
-		Name:  "monitoring-flag",
+		Name:  "monitoring-port",
 		Usage: "Port used to listening and respond metrics for prometheus.",
 		Value: 8080,
 	}
@@ -86,5 +86,19 @@ var (
 	BootstrapNode = cli.StringFlag{
 		Name:  "bootstrap-node",
 		Usage: "The address of bootstrap node. Beacon node will connect for peer discovery via DHT",
+	}
+
+	// RelayNode tells the beacon node which relay node to connect to.
+	RelayNode = cli.StringFlag{
+		Name: "relay-node",
+		Usage: "The address of relay node. The beacon node will connect to the " +
+			"relay node and advertise their address via the relay node to other peers",
+	}
+
+	// P2PPort defines the port to be used by libp2p.
+	P2PPort = cli.IntFlag{
+		Name:  "p2p-port",
+		Usage: "The port used by libp2p.",
+		Value: 12000,
 	}
 )

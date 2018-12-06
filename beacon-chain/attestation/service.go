@@ -4,8 +4,8 @@ package attestation
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/sirupsen/logrus"
 )
@@ -88,7 +88,7 @@ func (a *Service) aggregateAttestations() {
 				continue
 			}
 
-			log.Debugf("Forwarding aggregated attestation %#x to proposers through grpc", h)
+			log.Debugf("Forwarding aggregated attestation %#x to proposers through RPC", h)
 		}
 	}
 }

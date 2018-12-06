@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -41,6 +41,12 @@ func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
 	return new(event.Feed)
 }
 
+type mockQueryService struct{}
+
+func (ms *mockQueryService) IsSynced() (bool, error) {
+	return false, nil
+}
+
 type mockAttestService struct{}
 
 func (ms *mockAttestService) IncomingAttestationFeed() *event.Feed {
@@ -49,11 +55,11 @@ func (ms *mockAttestService) IncomingAttestationFeed() *event.Feed {
 
 func setupService(t *testing.T, db *db.BeaconDB) *Service {
 	cfg := Config{
-		BlockHashBufferSize: 0,
-		BlockBufferSize:     0,
-		ChainService:        &mockChainService{},
-		P2P:                 &mockP2P{},
-		BeaconDB:            db,
+		BlockAnnounceBufferSize: 0,
+		BlockBufferSize:         0,
+		ChainService:            &mockChainService{},
+		P2P:                     &mockP2P{},
+		BeaconDB:                db,
 	}
 	return NewSyncService(context.Background(), cfg)
 }
@@ -66,11 +72,11 @@ func TestProcessBlockHash(t *testing.T) {
 
 	// set the channel's buffer to 0 to make channel interactions blocking
 	cfg := Config{
-		BlockHashBufferSize: 0,
-		BlockBufferSize:     0,
-		ChainService:        &mockChainService{},
-		P2P:                 &mockP2P{},
-		BeaconDB:            db,
+		BlockAnnounceBufferSize: 0,
+		BlockBufferSize:         0,
+		ChainService:            &mockChainService{},
+		P2P:                     &mockP2P{},
+		BeaconDB:                db,
 	}
 	ss := NewSyncService(context.Background(), cfg)
 
@@ -82,7 +88,7 @@ func TestProcessBlockHash(t *testing.T) {
 	}()
 
 	announceHash := hashutil.Hash([]byte{})
-	hashAnnounce := &pb.BeaconBlockHashAnnounce{
+	hashAnnounce := &pb.BeaconBlockAnnounce{
 		Hash: announceHash[:],
 	}
 
@@ -93,7 +99,7 @@ func TestProcessBlockHash(t *testing.T) {
 	}
 
 	// if a new hash is processed
-	ss.announceBlockHashBuf <- msg
+	ss.announceBlockBuf <- msg
 
 	ss.cancel()
 	<-exitRoutine
@@ -112,12 +118,12 @@ func TestProcessBlock(t *testing.T) {
 	}
 
 	cfg := Config{
-		BlockHashBufferSize: 0,
-		BlockBufferSize:     0,
-		ChainService:        &mockChainService{},
-		P2P:                 &mockP2P{},
-		BeaconDB:            db,
-		AttestService:       &mockAttestService{},
+		BlockAnnounceBufferSize: 0,
+		BlockBufferSize:         0,
+		ChainService:            &mockChainService{},
+		P2P:                     &mockP2P{},
+		BeaconDB:                db,
+		AttestService:           &mockAttestService{},
 	}
 	ss := NewSyncService(context.Background(), cfg)
 
@@ -139,9 +145,9 @@ func TestProcessBlock(t *testing.T) {
 	}
 
 	data := &pb.BeaconBlock{
-		PowChainRef:    []byte{1, 2, 3, 4, 5},
-		AncestorHashes: [][]byte{parentHash[:]},
-		Slot:           1,
+		CandidatePowReceiptRootHash32: []byte{1, 2, 3, 4, 5},
+		AncestorHash32S:               [][]byte{parentHash[:]},
+		Slot:                          1,
 	}
 	attestation := &pb.AggregatedAttestation{
 		Slot:           0,
@@ -179,12 +185,12 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}
 
 	cfg := Config{
-		BlockHashBufferSize: 0,
-		BlockBufferSize:     0,
-		ChainService:        &mockChainService{},
-		P2P:                 &mockP2P{},
-		BeaconDB:            db,
-		AttestService:       &mockAttestService{},
+		BlockAnnounceBufferSize: 0,
+		BlockBufferSize:         0,
+		ChainService:            &mockChainService{},
+		P2P:                     &mockP2P{},
+		BeaconDB:                db,
+		AttestService:           &mockAttestService{},
 	}
 	ss := NewSyncService(context.Background(), cfg)
 
@@ -207,9 +213,9 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}
 
 	data1 := &pb.BeaconBlock{
-		PowChainRef:    []byte{1, 2, 3, 4, 5},
-		AncestorHashes: [][]byte{parentHash[:]},
-		Slot:           1,
+		CandidatePowReceiptRootHash32: []byte{1, 2, 3, 4, 5},
+		AncestorHash32S:               [][]byte{parentHash[:]},
+		Slot:                          1,
 	}
 
 	responseBlock1 := &pb.BeaconBlockResponse{
@@ -224,9 +230,9 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}
 
 	data2 := &pb.BeaconBlock{
-		PowChainRef:    []byte{6, 7, 8, 9, 10},
-		AncestorHashes: [][]byte{make([]byte, 32)},
-		Slot:           1,
+		CandidatePowReceiptRootHash32: []byte{6, 7, 8, 9, 10},
+		AncestorHash32S:               [][]byte{make([]byte, 32)},
+		Slot:                          1,
 	}
 
 	responseBlock2 := &pb.BeaconBlockResponse{
@@ -263,7 +269,7 @@ func TestBlockRequestErrors(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	malformedRequest := &pb.BeaconBlockHashAnnounce{
+	malformedRequest := &pb.BeaconBlockAnnounce{
 		Hash: []byte{'t', 'e', 's', 't'},
 	}
 
@@ -319,13 +325,13 @@ func TestReceiveAttestation(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 
 	cfg := Config{
-		BlockHashBufferSize:    0,
-		BlockBufferSize:        0,
-		BlockRequestBufferSize: 0,
-		ChainService:           ms,
-		AttestService:          as,
-		P2P:                    &mockP2P{},
-		BeaconDB:               db,
+		BlockAnnounceBufferSize: 0,
+		BlockBufferSize:         0,
+		BlockRequestBufferSize:  0,
+		ChainService:            ms,
+		AttestService:           as,
+		P2P:                     &mockP2P{},
+		BeaconDB:                db,
 	}
 	ss := NewSyncService(context.Background(), cfg)
 
@@ -362,12 +368,13 @@ func TestStartNotSynced(t *testing.T) {
 	cfg.ChainService = &mockChainService{}
 	cfg.P2P = &mockP2P{}
 	cfg.BeaconDB = db
+	cfg.QueryService = &mockQueryService{}
 	ss := NewSyncService(context.Background(), cfg)
 
 	ss.Start()
 	ss.Stop()
 
-	testutil.AssertLogsContain(t, hook, "Not caught up with network, but continue sync")
+	testutil.AssertLogsContain(t, hook, "Chain state not detected starting initial sync")
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 
 	hook.Reset()

@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/jsonpb"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestInitGenesisJsonFailure(t *testing.T) {
@@ -14,7 +14,7 @@ func TestInitGenesisJsonFailure(t *testing.T) {
 	pwd, _ := os.Getwd()
 	fnamePath := pwd + fname
 
-	_, err := InitialValidatorsFromJSON(fnamePath)
+	_, err := InitialValidatorRegistryFromJSON(fnamePath)
 	if err == nil {
 		t.Fatalf("genesis.json should have failed %v", err)
 	}
@@ -26,12 +26,12 @@ func TestInitGenesisJson(t *testing.T) {
 	fnamePath := pwd + fname
 	os.Remove(fnamePath)
 
-	params.SetEnv("demo")
-	cStateJSON := &pb.CrystallizedState{
+	params.UseDemoBeaconConfig()
+	stateJSON := &pb.BeaconState{
 		LastStateRecalculationSlot: 0,
 		JustifiedStreak:            1,
 		LastFinalizedSlot:          99,
-		Validators: []*pb.ValidatorRecord{
+		ValidatorRegistry: []*pb.ValidatorRecord{
 			{Pubkey: []byte{}, Balance: 32, Status: uint64(params.Active)},
 		},
 	}
@@ -42,12 +42,12 @@ func TestInitGenesisJson(t *testing.T) {
 	}
 
 	ma := jsonpb.Marshaler{}
-	err = ma.Marshal(f, cStateJSON)
+	err = ma.Marshal(f, stateJSON)
 	if err != nil {
 		t.Fatalf("can't marshal file %v", err)
 	}
 
-	validators, err := InitialValidatorsFromJSON(fnamePath)
+	validators, err := InitialValidatorRegistryFromJSON(fnamePath)
 	if err != nil {
 		t.Fatalf("genesis.json failed %v", err)
 	}

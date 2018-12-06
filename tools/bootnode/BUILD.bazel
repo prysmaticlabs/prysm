@@ -1,4 +1,6 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@io_bazel_rules_docker//go:image.bzl", "go_image")
+load("@io_bazel_rules_docker//container:container.bzl", "container_push")
 
 go_library(
     name = "go_default_library",
@@ -14,6 +16,37 @@ go_library(
         "@com_github_libp2p_go_libp2p_kad_dht//:go_default_library",
         "@com_github_multiformats_go_multiaddr//:go_default_library",
     ],
+)
+
+go_image(
+    name = "image",
+    srcs = ["bootnode.go"],
+    importpath = "github.com/prysmaticlabs/prysm/tools/bootnode",
+    visibility = ["//visibility:private"],
+    static = "on",
+    tags = ["manual"],
+    goarch = "amd64",
+    goos = "linux",
+    deps = [
+        "@com_github_ipfs_go_datastore//:go_default_library",
+        "@com_github_ipfs_go_datastore//sync:go_default_library",
+        "@com_github_ipfs_go_log//:go_default_library",
+        "@com_github_libp2p_go_libp2p//:go_default_library",
+        "@com_github_libp2p_go_libp2p_crypto//:go_default_library",
+        "@com_github_libp2p_go_libp2p_kad_dht//:go_default_library",
+        "@com_github_multiformats_go_multiaddr//:go_default_library",
+    ],
+)
+
+container_push(
+    name = "push_image",
+    format = "Docker",
+    image = ":image",
+    registry = "gcr.io",
+    repository = "prysmaticlabs/prysm/bootnode",
+    tag = "latest",
+    tags = ["manual"],
+    visibility = ["//visibility:private"],
 )
 
 go_binary(

@@ -1,0 +1,13 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: geth-faucet
+  namespace: pow
+spec:
+  selector:
+    component: faucet
+    universe: geth
+  ports:
+    - port: 8080
+      targetPort: 8080
+  type: ClusterIP

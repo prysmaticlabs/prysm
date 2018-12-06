@@ -2,11 +2,13 @@ package initialsync
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -39,19 +41,27 @@ func (ms *mockSyncService) IsSyncedWithNetwork() bool {
 	return ms.isSynced
 }
 
-type mockDB struct{}
+func (ms *mockSyncService) ResumeSync() {
 
-func (m *mockDB) SaveBlock(*types.Block) error {
-	return nil
+}
+
+type mockQueryService struct {
+	isSynced bool
+}
+
+func (ms *mockQueryService) IsSynced() (bool, error) {
+	return ms.isSynced, nil
 }
 
 func TestSetBlockForInitialSync(t *testing.T) {
 	hook := logTest.NewGlobal()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 
 	cfg := Config{
 		P2P:         &mockP2P{},
 		SyncService: &mockSyncService{},
-		BeaconDB:    &mockDB{},
+		BeaconDB:    db,
 	}
 
 	ss := NewInitialSyncService(context.Background(), cfg)
@@ -72,10 +82,10 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	genericHash[0] = 'a'
 
 	block := &pb.BeaconBlock{
-		PowChainRef:           []byte{1, 2, 3},
-		AncestorHashes:        [][]byte{genericHash},
-		Slot:                  uint64(20),
-		CrystallizedStateRoot: genericHash,
+		CandidatePowReceiptRootHash32: []byte{1, 2, 3},
+		AncestorHash32S:               [][]byte{genericHash},
+		Slot:                          uint64(1),
+		StateRootHash32:               genericHash,
 	}
 
 	blockResponse := &pb.BeaconBlockResponse{Block: block}
@@ -90,10 +100,10 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	<-exitRoutine
 
 	var hash [32]byte
-	copy(hash[:], blockResponse.Block.CrystallizedStateRoot)
+	copy(hash[:], blockResponse.Block.StateRootHash32)
 
-	if hash != ss.initialCrystallizedStateRoot {
-		t.Fatalf("Crystallized state hash not updated: %#x", blockResponse.Block.CrystallizedStateRoot)
+	if hash != ss.initialStateRootHash32 {
+		t.Fatalf("Crystallized state hash not updated: %#x", blockResponse.Block.StateRootHash32)
 	}
 
 	hook.Reset()
@@ -101,11 +111,13 @@ func TestSetBlockForInitialSync(t *testing.T) {
 
 func TestSavingBlocksInSync(t *testing.T) {
 	hook := logTest.NewGlobal()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 
 	cfg := Config{
 		P2P:         &mockP2P{},
 		SyncService: &mockSyncService{},
-		BeaconDB:    &mockDB{},
+		BeaconDB:    db,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 
@@ -125,34 +137,34 @@ func TestSavingBlocksInSync(t *testing.T) {
 	genericHash := make([]byte, 32)
 	genericHash[0] = 'a'
 
-	crystallizedState := &pb.CrystallizedState{
+	beaconState := &pb.BeaconState{
 		LastFinalizedSlot: 99,
 	}
 
-	stateResponse := &pb.CrystallizedStateResponse{
-		CrystallizedState: crystallizedState,
+	stateResponse := &pb.BeaconStateResponse{
+		BeaconState: beaconState,
 	}
 
-	incorrectState := &pb.CrystallizedState{
+	incorrectState := &pb.BeaconState{
 		LastFinalizedSlot: 9,
 		LastJustifiedSlot: 20,
 	}
 
-	incorrectStateResponse := &pb.CrystallizedStateResponse{
-		CrystallizedState: incorrectState,
+	incorrectStateResponse := &pb.BeaconStateResponse{
+		BeaconState: incorrectState,
 	}
 
-	crystallizedStateRoot, err := types.NewCrystallizedState(crystallizedState).Hash()
+	beaconStateRootHash32, err := types.NewBeaconState(beaconState).Hash()
 	if err != nil {
-		t.Fatalf("unable to get hash of crystallized state: %v", err)
+		t.Fatalf("unable to get hash of state: %v", err)
 	}
 
 	getBlockResponseMsg := func(Slot uint64) p2p.Message {
 		block := &pb.BeaconBlock{
-			PowChainRef:           []byte{1, 2, 3},
-			AncestorHashes:        [][]byte{genericHash},
-			Slot:                  Slot,
-			CrystallizedStateRoot: crystallizedStateRoot[:],
+			CandidatePowReceiptRootHash32: []byte{1, 2, 3},
+			AncestorHash32S:               [][]byte{genericHash},
+			Slot:                          Slot,
+			StateRootHash32:               beaconStateRootHash32[:],
 		}
 
 		blockResponse := &pb.BeaconBlockResponse{
@@ -165,7 +177,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 		}
 	}
 
-	msg1 := getBlockResponseMsg(0)
+	msg1 := getBlockResponseMsg(1)
 
 	msg2 := p2p.Message{
 		Peer: p2p.Peer{},
@@ -173,26 +185,27 @@ func TestSavingBlocksInSync(t *testing.T) {
 	}
 
 	ss.blockBuf <- msg1
-	ss.crystallizedStateBuf <- msg2
+	ss.stateBuf <- msg2
 
-	if ss.currentSlot == incorrectStateResponse.CrystallizedState.LastFinalizedSlot {
-		t.Fatalf("Crystallized state updated incorrectly: %#x", ss.currentSlot)
+	if ss.currentSlot == incorrectStateResponse.BeaconState.LastFinalizedSlot {
+		t.Fatalf("Crystallized state updated incorrectly: %d", ss.currentSlot)
 	}
 
 	msg2.Data = stateResponse
 
-	ss.crystallizedStateBuf <- msg2
+	ss.stateBuf <- msg2
 
-	if crystallizedStateRoot != ss.initialCrystallizedStateRoot {
+	if beaconStateRootHash32 != ss.initialStateRootHash32 {
 		br := msg1.Data.(*pb.BeaconBlockResponse)
-		t.Fatalf("Crystallized state hash not updated: %#x", br.Block.CrystallizedStateRoot)
+		t.Fatalf("state hash not updated to: %#x instead it is %#x", br.Block.StateRootHash32,
+			ss.initialStateRootHash32)
 	}
 
 	msg1 = getBlockResponseMsg(30)
 	ss.blockBuf <- msg1
 
-	if stateResponse.CrystallizedState.GetLastFinalizedSlot() != ss.currentSlot {
-		t.Fatalf("Slot saved when it was not supposed too: %v", stateResponse.CrystallizedState.GetLastFinalizedSlot())
+	if stateResponse.BeaconState.GetLastFinalizedSlot() != ss.currentSlot {
+		t.Fatalf("Slot saved when it was not supposed too: %v", stateResponse.BeaconState.GetLastFinalizedSlot())
 	}
 
 	msg1 = getBlockResponseMsg(100)
@@ -211,10 +224,12 @@ func TestSavingBlocksInSync(t *testing.T) {
 
 func TestDelayChan(t *testing.T) {
 	hook := logTest.NewGlobal()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	cfg := Config{
 		P2P:         &mockP2P{},
 		SyncService: &mockSyncService{},
-		BeaconDB:    &mockDB{},
+		BeaconDB:    db,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 
@@ -234,24 +249,24 @@ func TestDelayChan(t *testing.T) {
 	genericHash := make([]byte, 32)
 	genericHash[0] = 'a'
 
-	crystallizedstate := &pb.CrystallizedState{
+	beaconState := &pb.BeaconState{
 		LastFinalizedSlot: 99,
 	}
 
-	stateResponse := &pb.CrystallizedStateResponse{
-		CrystallizedState: crystallizedstate,
+	stateResponse := &pb.BeaconStateResponse{
+		BeaconState: beaconState,
 	}
 
-	crystallizedStateRoot, err := types.NewCrystallizedState(stateResponse.CrystallizedState).Hash()
+	beaconStateRootHash32, err := types.NewBeaconState(stateResponse.BeaconState).Hash()
 	if err != nil {
-		t.Fatalf("unable to get hash of crystallized state: %v", err)
+		t.Fatalf("unable to get hash of state: %v", err)
 	}
 
 	block := &pb.BeaconBlock{
-		PowChainRef:           []byte{1, 2, 3},
-		AncestorHashes:        [][]byte{genericHash},
-		Slot:                  uint64(20),
-		CrystallizedStateRoot: crystallizedStateRoot[:],
+		CandidatePowReceiptRootHash32: []byte{1, 2, 3},
+		AncestorHash32S:               [][]byte{genericHash},
+		Slot:                          uint64(1),
+		StateRootHash32:               beaconStateRootHash32[:],
 	}
 
 	blockResponse := &pb.BeaconBlockResponse{
@@ -270,7 +285,7 @@ func TestDelayChan(t *testing.T) {
 
 	ss.blockBuf <- msg1
 
-	ss.crystallizedStateBuf <- msg2
+	ss.stateBuf <- msg2
 
 	blockResponse.Block.Slot = 100
 	msg1.Data = blockResponse
@@ -290,19 +305,23 @@ func TestDelayChan(t *testing.T) {
 func TestIsSyncedWithNetwork(t *testing.T) {
 	hook := logTest.NewGlobal()
 	mockSync := &mockSyncService{}
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	cfg := Config{
-		P2P:                 &mockP2P{},
-		SyncService:         mockSync,
-		BeaconDB:            &mockDB{},
+		P2P:         &mockP2P{},
+		SyncService: mockSync,
+		BeaconDB:    db,
+		QueryService: &mockQueryService{
+			isSynced: true,
+		},
 		SyncPollingInterval: 1,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 
-	mockSync.isSynced = true
 	ss.Start()
 	ss.Stop()
 
-	testutil.AssertLogsContain(t, hook, "Chain state detected, exiting initial sync")
+	testutil.AssertLogsContain(t, hook, "Chain fully synced, exiting initial sync")
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 
 	hook.Reset()
@@ -311,20 +330,179 @@ func TestIsSyncedWithNetwork(t *testing.T) {
 func TestIsNotSyncedWithNetwork(t *testing.T) {
 	hook := logTest.NewGlobal()
 	mockSync := &mockSyncService{}
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	cfg := Config{
-		P2P:                 &mockP2P{},
-		SyncService:         mockSync,
-		BeaconDB:            &mockDB{},
+		P2P:         &mockP2P{},
+		SyncService: mockSync,
+		BeaconDB:    db,
+		QueryService: &mockQueryService{
+			isSynced: false,
+		},
 		SyncPollingInterval: 1,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 
-	mockSync.isSynced = false
 	ss.Start()
 	ss.Stop()
 
-	testutil.AssertLogsDoNotContain(t, hook, "Chain state detected, exiting initial sync")
+	testutil.AssertLogsDoNotContain(t, hook, "Chain fully synced, exiting initial sync")
 	testutil.AssertLogsContain(t, hook, "Stopping service")
+
+	hook.Reset()
+}
+
+func TestRequestBlocksBySlot(t *testing.T) {
+	hook := logTest.NewGlobal()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	cfg := Config{
+		P2P:             &mockP2P{},
+		SyncService:     &mockSyncService{},
+		BeaconDB:        db,
+		BlockBufferSize: 100,
+	}
+	ss := NewInitialSyncService(context.Background(), cfg)
+
+	exitRoutine := make(chan bool)
+	delayChan := make(chan time.Time)
+
+	defer func() {
+		close(exitRoutine)
+		close(delayChan)
+	}()
+
+	go func() {
+		ss.run(delayChan)
+		exitRoutine <- true
+	}()
+
+	genericHash := make([]byte, 32)
+	genericHash[0] = 'a'
+
+	getBlockResponseMsg := func(Slot uint64) (p2p.Message, [32]byte) {
+
+		block := &pb.BeaconBlock{
+			CandidatePowReceiptRootHash32: []byte{1, 2, 3},
+			AncestorHash32S:               [][]byte{genericHash},
+			Slot:                          Slot,
+			StateRootHash32:               nil,
+		}
+
+		blockResponse := &pb.BeaconBlockResponse{
+			Block: block,
+		}
+
+		hash, err := types.NewBlock(block).Hash()
+		if err != nil {
+			t.Fatalf("unable to hash block %v", err)
+		}
+
+		return p2p.Message{
+			Peer: p2p.Peer{},
+			Data: blockResponse,
+		}, hash
+	}
+
+	// sending all blocks except for the initial block
+	for i := uint64(2); i < 10; i++ {
+		response, _ := getBlockResponseMsg(i)
+		ss.blockBuf <- response
+	}
+
+	initialResponse, _ := getBlockResponseMsg(1)
+
+	//sending initial block
+	ss.blockBuf <- initialResponse
+
+	_, hash := getBlockResponseMsg(9)
+
+	expString := fmt.Sprintf("Saved block with hash %#x and slot %d for initial sync", hash, 9)
+
+	// waiting for the current slot to come up to the
+	// expected one.
+	testutil.WaitForLog(t, hook, expString)
+
+	delayChan <- time.Time{}
+
+	ss.cancel()
+	<-exitRoutine
+
+	testutil.AssertLogsContain(t, hook, "Exiting initial sync and starting normal sync")
+
+	hook.Reset()
+}
+
+func TestRequestBatchedBlocks(t *testing.T) {
+	hook := logTest.NewGlobal()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	cfg := Config{
+		P2P:             &mockP2P{},
+		SyncService:     &mockSyncService{},
+		BeaconDB:        db,
+		BlockBufferSize: 100,
+	}
+	ss := NewInitialSyncService(context.Background(), cfg)
+
+	exitRoutine := make(chan bool)
+	delayChan := make(chan time.Time)
+
+	defer func() {
+		close(exitRoutine)
+		close(delayChan)
+	}()
+
+	go func() {
+		ss.run(delayChan)
+		exitRoutine <- true
+	}()
+
+	genericHash := make([]byte, 32)
+	genericHash[0] = 'a'
+
+	getBlockResponse := func(Slot uint64) (*pb.BeaconBlockResponse, [32]byte) {
+
+		block := &pb.BeaconBlock{
+			CandidatePowReceiptRootHash32: []byte{1, 2, 3},
+			AncestorHash32S:               [][]byte{genericHash},
+			Slot:                          Slot,
+			StateRootHash32:               nil,
+		}
+
+		blockResponse := &pb.BeaconBlockResponse{
+			Block: block,
+		}
+
+		hash, err := types.NewBlock(block).Hash()
+		if err != nil {
+			t.Fatalf("unable to hash block %v", err)
+		}
+
+		return blockResponse, hash
+	}
+
+	for i := ss.currentSlot + 1; i <= 10; i++ {
+		response, _ := getBlockResponse(i)
+		ss.inMemoryBlocks[i] = response
+	}
+
+	ss.requestBatchedBlocks(10)
+
+	_, hash := getBlockResponse(10)
+	expString := fmt.Sprintf("Saved block with hash %#x and slot %d for initial sync", hash, 10)
+
+	// waiting for the current slot to come up to the
+	// expected one.
+
+	testutil.WaitForLog(t, hook, expString)
+
+	delayChan <- time.Time{}
+
+	ss.cancel()
+	<-exitRoutine
+
+	testutil.AssertLogsContain(t, hook, "Exiting initial sync and starting normal sync")
 
 	hook.Reset()
 }

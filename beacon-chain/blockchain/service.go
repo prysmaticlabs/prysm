@@ -8,45 +8,35 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
 var log = logrus.WithField("prefix", "blockchain")
 
-type beaconDB interface {
-	GetBlock(h [32]byte) (*types.Block, error)
-	GetChainHead() (*types.Block, error)
-	GetActiveState() (*types.ActiveState, error)
-	GetCrystallizedState() (*types.CrystallizedState, error)
-	GetGenesisTime() (time.Time, error)
-	HasBlock(h [32]byte) bool
-	ReadBlockVoteCache(blockHashes [][32]byte) (utils.BlockVoteCache, error)
-	SaveBlock(block *types.Block) error
-	SaveUnfinalizedBlockState(aState *types.ActiveState, cState *types.CrystallizedState) error
-	UpdateChainHead(head *types.Block, aState *types.ActiveState, cState *types.CrystallizedState) error
-	WriteBlockVoteCache(blockVoteCache utils.BlockVoteCache) error
-}
-
 // ChainService represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type ChainService struct {
-	ctx                            context.Context
-	cancel                         context.CancelFunc
-	beaconDB                       beaconDB
-	web3Service                    *powchain.Web3Service
-	incomingBlockFeed              *event.Feed
-	incomingBlockChan              chan *types.Block
-	processedBlockChan             chan *types.Block
-	canonicalBlockFeed             *event.Feed
-	canonicalCrystallizedStateFeed *event.Feed
-	genesisTime                    time.Time
-	unfinalizedBlocks              map[[32]byte]*statePair
-	enablePOWChain                 bool
+	ctx                context.Context
+	cancel             context.CancelFunc
+	beaconDB           *db.BeaconDB
+	web3Service        *powchain.Web3Service
+	incomingBlockFeed  *event.Feed
+	incomingBlockChan  chan *types.Block
+	processedBlockChan chan *types.Block
+	canonicalBlockFeed *event.Feed
+	canonicalStateFeed *event.Feed
+	genesisTime        time.Time
+	unfinalizedBlocks  map[[32]byte]*types.BeaconState
+	enablePOWChain     bool
 }
 
 // Config options for the service.
@@ -54,17 +44,9 @@ type Config struct {
 	BeaconBlockBuf   int
 	IncomingBlockBuf int
 	Web3Service      *powchain.Web3Service
-	BeaconDB         beaconDB
+	BeaconDB         *db.BeaconDB
 	DevMode          bool
 	EnablePOWChain   bool
-}
-
-// Struct used to represent an unfinalized block's state pair
-// (active state, crystallized state) tuple.
-type statePair struct {
-	crystallizedState *types.CrystallizedState
-	activeState       *types.ActiveState
-	cycleTransition   bool
 }
 
 // NewChainService instantiates a new service instance that will
@@ -72,17 +54,17 @@ type statePair struct {
 func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ChainService{
-		ctx:                            ctx,
-		cancel:                         cancel,
-		beaconDB:                       cfg.BeaconDB,
-		web3Service:                    cfg.Web3Service,
-		incomingBlockChan:              make(chan *types.Block, cfg.IncomingBlockBuf),
-		processedBlockChan:             make(chan *types.Block),
-		incomingBlockFeed:              new(event.Feed),
-		canonicalBlockFeed:             new(event.Feed),
-		canonicalCrystallizedStateFeed: new(event.Feed),
-		unfinalizedBlocks:              make(map[[32]byte]*statePair),
-		enablePOWChain:                 cfg.EnablePOWChain,
+		ctx:                ctx,
+		cancel:             cancel,
+		beaconDB:           cfg.BeaconDB,
+		web3Service:        cfg.Web3Service,
+		incomingBlockChan:  make(chan *types.Block, cfg.IncomingBlockBuf),
+		processedBlockChan: make(chan *types.Block),
+		incomingBlockFeed:  new(event.Feed),
+		canonicalBlockFeed: new(event.Feed),
+		canonicalStateFeed: new(event.Feed),
+		unfinalizedBlocks:  make(map[[32]byte]*types.BeaconState),
+		enablePOWChain:     cfg.EnablePOWChain,
 	}, nil
 }
 
@@ -123,15 +105,15 @@ func (c *ChainService) CanonicalBlockFeed() *event.Feed {
 	return c.canonicalBlockFeed
 }
 
-// CanonicalCrystallizedStateFeed returns a feed that is written to
-// whenever a new crystallized state is determined to be canonical in the chain.
-func (c *ChainService) CanonicalCrystallizedStateFeed() *event.Feed {
-	return c.canonicalCrystallizedStateFeed
+// CanonicalStateFeed returns a feed that is written to
+// whenever a new state is determined to be canonical in the chain.
+func (c *ChainService) CanonicalStateFeed() *event.Feed {
+	return c.canonicalStateFeed
 }
 
 // doesPoWBlockExist checks if the referenced PoW block exists.
 func (c *ChainService) doesPoWBlockExist(block *types.Block) bool {
-	powBlock, err := c.web3Service.Client().BlockByHash(context.Background(), block.PowChainRef())
+	powBlock, err := c.web3Service.Client().BlockByHash(context.Background(), block.CandidatePowReceiptRootHash32())
 	if err != nil {
 		log.Debugf("fetching PoW block corresponding to mainchain reference failed: %v", err)
 		return false
@@ -167,33 +149,33 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 				log.Errorf("Could not get current chain head: %v", err)
 				continue
 			}
-			currentcState, err := c.beaconDB.GetCrystallizedState()
+			currentState, err := c.beaconDB.GetState()
 			if err != nil {
-				log.Errorf("Could not get current crystallized state: %v", err)
+				log.Errorf("Could not get current beacon state: %v", err)
 				continue
 			}
 
-			blockcState := c.unfinalizedBlocks[h].crystallizedState
+			blockState := c.unfinalizedBlocks[h]
 
 			var headUpdated bool
 			newHead := currentHead
 			// If both blocks have the same crystallized state root, we favor one which has
 			// the higher slot.
-			if currentHead.CrystallizedStateRoot() == block.CrystallizedStateRoot() {
+			if currentHead.StateRootHash32() == block.StateRootHash32() {
 				if block.SlotNumber() > currentHead.SlotNumber() {
 					newHead = block
 					headUpdated = true
 				}
 				// 2a. Pick the block with the higher last_finalized_slot.
 				// 2b. If same, pick the block with the higher last_justified_slot.
-			} else if blockcState.LastFinalizedSlot() > currentcState.LastFinalizedSlot() {
+			} else if blockState.LastFinalizedSlot() > currentState.LastFinalizedSlot() {
 				newHead = block
 				headUpdated = true
-			} else if blockcState.LastFinalizedSlot() == currentcState.LastFinalizedSlot() {
-				if blockcState.LastJustifiedSlot() > currentcState.LastJustifiedSlot() {
+			} else if blockState.LastFinalizedSlot() == currentState.LastFinalizedSlot() {
+				if blockState.LastJustifiedSlot() > currentState.LastJustifiedSlot() {
 					newHead = block
 					headUpdated = true
-				} else if blockcState.LastJustifiedSlot() == currentcState.LastJustifiedSlot() {
+				} else if blockState.LastJustifiedSlot() == currentState.LastJustifiedSlot() {
 					if block.SlotNumber() > currentHead.SlotNumber() {
 						newHead = block
 						headUpdated = true
@@ -208,41 +190,23 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 			}
 
 			// TODO(#674): Handle chain reorgs.
-			var newCState *types.CrystallizedState
-			if c.unfinalizedBlocks[h].cycleTransition {
-				newCState = blockcState
-			}
-			if err := c.beaconDB.UpdateChainHead(newHead, c.unfinalizedBlocks[h].activeState, newCState); err != nil {
+			newState := blockState
+			if err := c.beaconDB.UpdateChainHead(newHead, newState); err != nil {
 				log.Errorf("Failed to update chain: %v", err)
 				continue
 			}
 			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
-			// We fire events that notify listeners of a new block (or crystallized state in
-			// the case of a state transition). This is useful for the beacon node's gRPC
+			// We fire events that notify listeners of a new block in
+			// the case of a state transition. This is useful for the beacon node's gRPC
 			// server to stream these events to beacon clients.
-			if c.unfinalizedBlocks[h].cycleTransition {
-				c.canonicalCrystallizedStateFeed.Send(blockcState)
+			// When the transition is a cycle transition, we stream the state containing the new validator
+			// assignments to clients.
+			if block.SlotNumber()%params.BeaconConfig().CycleLength == 0 {
+				c.canonicalStateFeed.Send(newState)
 			}
 			c.canonicalBlockFeed.Send(newHead)
 		}
 	}
-}
-
-func (c *ChainService) executeStateTransition(
-	cState *types.CrystallizedState,
-	aState *types.ActiveState,
-	block *types.Block) (*types.CrystallizedState, error) {
-
-	var err error
-	log.Infof("Executing state transition for slot: %d", block.SlotNumber())
-	for cState.IsCycleTransition(block.SlotNumber()) {
-		cState, err = cState.NewStateRecalculations(aState, block, c.beaconDB)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return cState, nil
 }
 
 func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
@@ -254,7 +218,9 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 			log.Debug("Chain service context closed, exiting goroutine")
 			return
 
-		// Listen for a newly received incoming block from the sync service.
+		// Listen for a newly received incoming block from the feed. Blocks
+		// can be received either from the sync service, the RPC service,
+		// or via p2p.
 		case block := <-c.incomingBlockChan:
 			if err := c.processBlock(block); err != nil {
 				log.Error(err)
@@ -271,94 +237,103 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 func (c *ChainService) processBlock(block *types.Block) error {
 	blockHash, err := block.Hash()
 	if err != nil {
-		return fmt.Errorf("Failed to get hash of block: %v", err)
+		return fmt.Errorf("failed to get hash of block: %v", err)
 	}
 
 	if c.enablePOWChain && !c.doesPoWBlockExist(block) {
-		return errors.New("Proof-of-Work chain reference in block does not exist")
+		return errors.New("proof-of-Work chain reference in block does not exist")
 	}
 
 	parent, err := c.beaconDB.GetBlock(block.ParentHash())
 	if err != nil {
-		return fmt.Errorf("Could not get parent block: %v", err)
+		return fmt.Errorf("could not get parent block: %v", err)
 	}
 	if parent == nil {
-		return fmt.Errorf("Block points to nil parent: %#x", block.ParentHash())
+		return fmt.Errorf("block points to nil parent: %#x", block.ParentHash())
 	}
 
-	aState, err := c.beaconDB.GetActiveState()
+	beaconState, err := c.beaconDB.GetState()
 	if err != nil {
-		return fmt.Errorf("Failed to get active state: %v", err)
-	}
-	cState, err := c.beaconDB.GetCrystallizedState()
-	if err != nil {
-		return fmt.Errorf("Failed to get crystallized state: %v", err)
+		return fmt.Errorf("failed to get beacon state: %v", err)
 	}
 
-	if valid := block.IsValid(
-		c.beaconDB,
-		aState,
-		cState,
+	// Verifies the block against the validity conditions specifies as part of the
+	// Ethereum 2.0 specification.
+	if err := state.IsValidBlock(
+		block,
+		beaconState,
 		parent.SlotNumber(),
 		c.genesisTime,
-	); !valid {
-		return errors.New("Block failed validity conditions")
+		c.beaconDB.HasBlock,
+	); err != nil {
+		return fmt.Errorf("block failed validity conditions: %v", err)
 	}
 
-	if err = c.calculateNewBlockVotes(block, aState, cState); err != nil {
-		return fmt.Errorf("Failed to update block vote cache: %v", err)
+	if err := c.calculateNewBlockVotes(block, beaconState); err != nil {
+		return fmt.Errorf("failed to calculate block vote cache: %v", err)
 	}
 
 	// First, include new attestations to the active state
 	// so that they're accounted for during cycle transitions.
-	aState = aState.UpdateAttestations(block.Attestations())
+	beaconState.SetPendingAttestations(block.Attestations())
 
 	// If the block is valid, we compute its associated state tuple (active, crystallized)
-	// and apply a block scoring function.
-	var didCycleTransition bool
-	if cState.IsCycleTransition(block.SlotNumber()) {
-		cState, err = c.executeStateTransition(cState, aState, block)
-		if err != nil {
-			return fmt.Errorf("Initialize new cycle transition failed: %v", err)
-		}
-		didCycleTransition = true
-	}
-
-	aState, err = aState.CalculateNewActiveState(
-		block,
-		cState,
-		parent.SlotNumber(),
-	)
+	beaconState, err = c.executeStateTransition(beaconState, block, parent.SlotNumber())
 	if err != nil {
-		return fmt.Errorf("Compute active state failed: %v", err)
+		return fmt.Errorf("initialize new cycle transition failed: %v", err)
 	}
 
 	if err := c.beaconDB.SaveBlock(block); err != nil {
-		return fmt.Errorf("Failed to save block: %v", err)
+		return fmt.Errorf("failed to save block: %v", err)
 	}
-	if err := c.beaconDB.SaveUnfinalizedBlockState(aState, cState); err != nil {
-		return fmt.Errorf("Error persisting unfinalized block's state: %v", err)
+	if err := c.beaconDB.SaveUnfinalizedBlockState(beaconState); err != nil {
+		return fmt.Errorf("error persisting unfinalized block's state: %v", err)
 	}
 
-	log.Infof("Processed block: %#x", blockHash)
+	log.WithField("hash", fmt.Sprintf("%#x", blockHash)).Info("Processed beacon block")
 
-	c.unfinalizedBlocks[blockHash] = &statePair{
-		crystallizedState: cState,
-		activeState:       aState,
-		cycleTransition:   didCycleTransition,
-	}
+	// We keep a map of unfinalized blocks in memory along with their state
+	// pair to apply the fork choice rule.
+	c.unfinalizedBlocks[blockHash] = beaconState
 
 	return nil
 }
 
-func (c *ChainService) calculateNewBlockVotes(block *types.Block, aState *types.ActiveState, cState *types.CrystallizedState) error {
+func (c *ChainService) executeStateTransition(
+	beaconState *types.BeaconState,
+	block *types.Block,
+	parentSlot uint64,
+) (*types.BeaconState, error) {
+	log.WithField("slotNumber", block.SlotNumber()).Info("Executing state transition")
+	blockVoteCache, err := c.beaconDB.ReadBlockVoteCache(beaconState.LatestBlockHashes())
+	if err != nil {
+		return nil, err
+	}
+	newState, err := state.NewStateTransition(beaconState, block, parentSlot, blockVoteCache)
+	if err != nil {
+		return nil, err
+	}
+	if newState.IsValidatorSetChange(block.SlotNumber()) {
+		log.WithField("slotNumber", block.SlotNumber()).Info("Validator set rotation occurred")
+	}
+	return newState, nil
+}
+
+func (c *ChainService) calculateNewBlockVotes(block *types.Block, beaconState *types.BeaconState) error {
 	for _, attestation := range block.Attestations() {
-		parentHashes, err := aState.GetSignedParentHashes(block, attestation)
+		parentHashes, err := beaconState.SignedParentHashes(block, attestation)
 		if err != nil {
 			return err
 		}
-
-		attesterIndices, err := cState.AttesterIndices(attestation)
+		shardCommittees, err := v.GetShardAndCommitteesForSlot(
+			beaconState.ShardAndCommitteesForSlots(),
+			beaconState.LastStateRecalculationSlot(),
+			attestation.GetSlot(),
+		)
+		if err != nil {
+			return fmt.Errorf("unable to fetch ShardAndCommittees for slot %d: %v", attestation.Slot, err)
+		}
+		attesterIndices, err := v.AttesterIndices(shardCommittees, attestation)
 		if err != nil {
 			return err
 		}
@@ -408,7 +383,7 @@ func (c *ChainService) calculateNewBlockVotes(block *types.Block, aState *types.
 				}
 				if !attesterExists {
 					blockVoteCache[h].VoterIndices = append(blockVoteCache[h].VoterIndices, attesterIndex)
-					blockVoteCache[h].VoteTotalDeposit += cState.Validators()[attesterIndex].Balance
+					blockVoteCache[h].VoteTotalDeposit += beaconState.ValidatorRegistry()[attesterIndex].Balance
 				}
 			}
 		}

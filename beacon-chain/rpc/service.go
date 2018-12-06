@@ -11,12 +11,13 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/prysmaticlabs/prysm/beacon-chain/casper"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -24,21 +25,13 @@ import (
 
 var log = logrus.WithField("prefix", "rpc")
 
-type beaconDB interface {
-	// These methods can be called on-demand by a validator
-	// to fetch canonical head and state.
-	GetChainHead() (*types.Block, error)
-	GetBlockBySlot(uint64) (*types.Block, error)
-	GetCrystallizedState() (*types.CrystallizedState, error)
-}
-
 type chainService interface {
 	IncomingBlockFeed() *event.Feed
 	// These methods are not called on-demand by a validator
 	// but instead streamed to connected validators every
 	// time the canonical head changes in the chain service.
 	CanonicalBlockFeed() *event.Feed
-	CanonicalCrystallizedStateFeed() *event.Feed
+	CanonicalStateFeed() *event.Feed
 }
 
 type attestationService interface {
@@ -53,7 +46,7 @@ type powChainService interface {
 type Service struct {
 	ctx                   context.Context
 	cancel                context.CancelFunc
-	beaconDB              beaconDB
+	beaconDB              *db.BeaconDB
 	chainService          chainService
 	powChainService       powChainService
 	attestationService    attestationService
@@ -63,7 +56,7 @@ type Service struct {
 	withKey               string
 	grpcServer            *grpc.Server
 	canonicalBlockChan    chan *types.Block
-	canonicalStateChan    chan *types.CrystallizedState
+	canonicalStateChan    chan *types.BeaconState
 	incomingAttestation   chan *types.Attestation
 	enablePOWChain        bool
 	slotAlignmentDuration time.Duration
@@ -75,7 +68,7 @@ type Config struct {
 	CertFlag           string
 	KeyFlag            string
 	SubscriptionBuf    int
-	BeaconDB           beaconDB
+	BeaconDB           *db.BeaconDB
 	ChainService       chainService
 	POWChainService    powChainService
 	AttestationService attestationService
@@ -96,9 +89,9 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		port:                  cfg.Port,
 		withCert:              cfg.CertFlag,
 		withKey:               cfg.KeyFlag,
-		slotAlignmentDuration: time.Duration(params.GetConfig().SlotDuration) * time.Second,
+		slotAlignmentDuration: time.Duration(params.BeaconConfig().SlotDuration) * time.Second,
 		canonicalBlockChan:    make(chan *types.Block, cfg.SubscriptionBuf),
-		canonicalStateChan:    make(chan *types.CrystallizedState, cfg.SubscriptionBuf),
+		canonicalStateChan:    make(chan *types.BeaconState, cfg.SubscriptionBuf),
 		incomingAttestation:   make(chan *types.Attestation, cfg.SubscriptionBuf),
 		enablePOWChain:        cfg.EnablePOWChain,
 	}
@@ -116,6 +109,8 @@ func (s *Service) Start() {
 	s.listener = lis
 	log.Infof("RPC server listening on port :%s", s.port)
 
+	// TODO(#791): Utilize a certificate for secure connections
+	// between beacon nodes and validator clients.
 	if s.withCert != "" && s.withKey != "" {
 		creds, err := credentials.NewServerTLSFromFile(s.withCert, s.withKey)
 		if err != nil {
@@ -123,7 +118,7 @@ func (s *Service) Start() {
 		}
 		s.grpcServer = grpc.NewServer(grpc.Creds(creds))
 	} else {
-		log.Warn("You are using an insecure gRPC connection! Please provide a certificate and key to use a secure connection")
+		log.Warn("You are using an insecure gRPC connection! Provide a certificate and key to connect securely")
 		s.grpcServer = grpc.NewServer()
 	}
 
@@ -167,22 +162,21 @@ func (s *Service) CanonicalHead(ctx context.Context, req *empty.Empty) (*pbp2p.B
 // initially. This method also returns the genesis timestamp
 // of the beacon node which will allow a validator client to setup a
 // a ticker to keep track of the current beacon slot.
-func (s *Service) CurrentAssignmentsAndGenesisTime(ctx context.Context, req *pb.ValidatorAssignmentRequest) (*pb.CurrentAssignmentsResponse, error) {
-	// This error is safe to ignore as we are initializing a proto timestamp
-	// from a constant value (genesis time is constant in the protocol
-	// and defined in the params.GetConfig().package).
-	// Get the genesis timestamp from persistent storage.
+func (s *Service) CurrentAssignmentsAndGenesisTime(
+	ctx context.Context,
+	req *pb.ValidatorAssignmentRequest,
+) (*pb.CurrentAssignmentsResponse, error) {
 	genesis, err := s.beaconDB.GetBlockBySlot(0)
 	if err != nil {
 		return nil, fmt.Errorf("could not get genesis block: %v", err)
 	}
-	cState, err := s.beaconDB.GetCrystallizedState()
+	beaconState, err := s.beaconDB.GetState()
 	if err != nil {
-		return nil, fmt.Errorf("could not get crystallized state: %v", err)
+		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
 	var keys []*pb.PublicKey
 	if req.AllValidators {
-		for _, val := range cState.Validators() {
+		for _, val := range beaconState.ValidatorRegistry() {
 			keys = append(keys, &pb.PublicKey{PublicKey: val.GetPubkey()})
 		}
 	} else {
@@ -191,7 +185,7 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(ctx context.Context, req *pb.
 			return nil, errors.New("no public keys specified in request")
 		}
 	}
-	assignments, err := assignmentsForPublicKeys(keys, cState)
+	assignments, err := assignmentsForPublicKeys(keys, beaconState)
 	if err != nil {
 		return nil, fmt.Errorf("could not get assignments for public keys: %v", err)
 	}
@@ -213,17 +207,16 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 	}
 
 	//TODO(#589) The attestation should be aggregated in the validator client side not in the beacon node.
-	cState, err := s.beaconDB.GetCrystallizedState()
+	beaconState, err := s.beaconDB.GetState()
 	if err != nil {
-		return nil, fmt.Errorf("could not get crystallized state: %v", err)
+		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
 
-	_, prevProposerIndex, err := casper.ProposerShardAndIndex(
-		cState.ShardAndCommitteesForSlots(),
-		cState.LastStateRecalculationSlot(),
+	_, prevProposerIndex, err := v.ProposerShardAndIndex(
+		beaconState.ShardAndCommitteesForSlots(),
+		beaconState.LastStateRecalculationSlot(),
 		req.GetSlotNumber(),
 	)
-
 	if err != nil {
 		return nil, fmt.Errorf("could not get index of previous proposer: %v", err)
 	}
@@ -234,11 +227,11 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 	}
 
 	data := &pbp2p.BeaconBlock{
-		Slot:           req.GetSlotNumber(),
-		PowChainRef:    powChainHash[:],
-		AncestorHashes: [][]byte{req.GetParentHash()},
-		Timestamp:      req.GetTimestamp(),
-		Attestations:   []*pbp2p.AggregatedAttestation{attestation},
+		Slot:                          req.GetSlotNumber(),
+		CandidatePowReceiptRootHash32: powChainHash[:],
+		AncestorHash32S:               [][]byte{req.GetParentHash()},
+		Timestamp:                     req.GetTimestamp(),
+		Attestations:                  []*pbp2p.AggregatedAttestation{attestation},
 	}
 
 	block := types.NewBlock(data)
@@ -270,9 +263,7 @@ func (s *Service) AttestHead(ctx context.Context, req *pb.AttestRequest) (*pb.At
 // LatestAttestation streams the latest processed attestations to the rpc clients.
 func (s *Service) LatestAttestation(req *empty.Empty, stream pb.BeaconService_LatestAttestationServer) error {
 	sub := s.attestationService.IncomingAttestationFeed().Subscribe(s.incomingAttestation)
-
 	defer sub.Unsubscribe()
-
 	for {
 		select {
 		case attestation := <-s.incomingAttestation:
@@ -293,15 +284,15 @@ func (s *Service) LatestAttestation(req *empty.Empty, stream pb.BeaconService_La
 // ValidatorShardID is called by a validator to get the shard ID of where it's suppose
 // to proposer or attest.
 func (s *Service) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.ShardIDResponse, error) {
-	cState, err := s.beaconDB.GetCrystallizedState()
+	beaconState, err := s.beaconDB.GetState()
 	if err != nil {
-		return nil, fmt.Errorf("could not get crystallized state: %v", err)
+		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
 
-	shardID, err := casper.ValidatorShardID(
+	shardID, err := v.ValidatorShardID(
 		req.PublicKey,
-		cState.Validators(),
-		cState.ShardAndCommitteesForSlots(),
+		beaconState.ValidatorRegistry(),
+		beaconState.ShardAndCommitteesForSlots(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator shard ID: %v", err)
@@ -312,16 +303,19 @@ func (s *Service) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.
 
 // ValidatorSlotAndResponsibility fetches a validator's assigned slot number
 // and whether it should act as a proposer/attester.
-func (s *Service) ValidatorSlotAndResponsibility(ctx context.Context, req *pb.PublicKey) (*pb.SlotResponsibilityResponse, error) {
-	cState, err := s.beaconDB.GetCrystallizedState()
+func (s *Service) ValidatorSlotAndResponsibility(
+	ctx context.Context,
+	req *pb.PublicKey,
+) (*pb.SlotResponsibilityResponse, error) {
+	beaconState, err := s.beaconDB.GetState()
 	if err != nil {
-		return nil, fmt.Errorf("could not get crystallized state: %v", err)
+		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
 
-	slot, role, err := casper.ValidatorSlotAndRole(
+	slot, role, err := v.ValidatorSlotAndRole(
 		req.PublicKey,
-		cState.Validators(),
-		cState.ShardAndCommitteesForSlots(),
+		beaconState.ValidatorRegistry(),
+		beaconState.ShardAndCommitteesForSlots(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not get assigned validator slot for attester/proposer: %v", err)
@@ -333,15 +327,13 @@ func (s *Service) ValidatorSlotAndResponsibility(ctx context.Context, req *pb.Pu
 // ValidatorIndex is called by a validator to get its index location that corresponds
 // to the attestation bit fields.
 func (s *Service) ValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.IndexResponse, error) {
-	cState, err := s.beaconDB.GetCrystallizedState()
+	beaconState, err := s.beaconDB.GetState()
 	if err != nil {
-		return nil, fmt.Errorf("could not get crystallized state: %v", err)
+		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
-
-	index, err := casper.ValidatorIndex(
+	index, err := v.ValidatorIndex(
 		req.PublicKey,
-
-		cState.Validators(),
+		beaconState.ValidatorRegistry(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator index: %v", err)
@@ -357,16 +349,16 @@ func (s *Service) ValidatorAssignments(
 	req *pb.ValidatorAssignmentRequest,
 	stream pb.BeaconService_ValidatorAssignmentsServer) error {
 
-	sub := s.chainService.CanonicalCrystallizedStateFeed().Subscribe(s.canonicalStateChan)
+	sub := s.chainService.CanonicalStateFeed().Subscribe(s.canonicalStateChan)
 	defer sub.Unsubscribe()
 	for {
 		select {
-		case cState := <-s.canonicalStateChan:
+		case beaconState := <-s.canonicalStateChan:
 			log.Info("Sending new cycle assignments to validator clients")
 
 			var keys []*pb.PublicKey
 			if req.AllValidators {
-				for _, val := range cState.Validators() {
+				for _, val := range beaconState.ValidatorRegistry() {
 					keys = append(keys, &pb.PublicKey{PublicKey: val.GetPubkey()})
 				}
 			} else {
@@ -376,7 +368,7 @@ func (s *Service) ValidatorAssignments(
 				}
 			}
 
-			assignments, err := assignmentsForPublicKeys(keys, cState)
+			assignments, err := assignmentsForPublicKeys(keys, beaconState)
 			if err != nil {
 				return fmt.Errorf("could not get assignments for public keys: %v", err)
 			}
@@ -402,7 +394,7 @@ func (s *Service) ValidatorAssignments(
 
 // assignmentsForPublicKeys fetches the validator assignments for a subset of public keys
 // given a crystallized state.
-func assignmentsForPublicKeys(keys []*pb.PublicKey, cState *types.CrystallizedState) ([]*pb.Assignment, error) {
+func assignmentsForPublicKeys(keys []*pb.PublicKey, beaconState *types.BeaconState) ([]*pb.Assignment, error) {
 	// Next, for each public key in the request, we build
 	// up an array of assignments.
 	assignments := []*pb.Assignment{}
@@ -410,10 +402,10 @@ func assignmentsForPublicKeys(keys []*pb.PublicKey, cState *types.CrystallizedSt
 		// For the corresponding public key and current crystallized state,
 		// we determine the assigned slot for the validator and whether it
 		// should act as a proposer or attester.
-		assignedSlot, role, err := casper.ValidatorSlotAndRole(
+		assignedSlot, role, err := v.ValidatorSlotAndRole(
 			val.GetPublicKey(),
-			cState.Validators(),
-			cState.ShardAndCommitteesForSlots(),
+			beaconState.ValidatorRegistry(),
+			beaconState.ShardAndCommitteesForSlots(),
 		)
 		if err != nil {
 			return nil, err
@@ -421,10 +413,10 @@ func assignmentsForPublicKeys(keys []*pb.PublicKey, cState *types.CrystallizedSt
 
 		// We determine the assigned shard ID for the validator
 		// based on a public key and current crystallized state.
-		shardID, err := casper.ValidatorShardID(
+		shardID, err := v.ValidatorShardID(
 			val.GetPublicKey(),
-			cState.Validators(),
-			cState.ShardAndCommitteesForSlots(),
+			beaconState.ValidatorRegistry(),
+			beaconState.ShardAndCommitteesForSlots(),
 		)
 		if err != nil {
 			return nil, err

@@ -11,8 +11,8 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
-	"github.com/prysmaticlabs/prysm/beacon-chain/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -52,7 +52,7 @@ func (m *mockChainService) CanonicalBlockFeed() *event.Feed {
 	return m.blockFeed
 }
 
-func (m *mockChainService) CanonicalCrystallizedStateFeed() *event.Feed {
+func (m *mockChainService) CanonicalStateFeed() *event.Feed {
 	return m.stateFeed
 }
 
@@ -62,24 +62,6 @@ func newMockChainService() *mockChainService {
 		stateFeed:       new(event.Feed),
 		attestationFeed: new(event.Feed),
 	}
-}
-
-type mockDB struct {
-	block   *types.Block
-	genesis *types.Block
-	cState  *types.CrystallizedState
-}
-
-func (m *mockDB) GetChainHead() (*types.Block, error) {
-	return m.block, nil
-}
-
-func (m *mockDB) GetCrystallizedState() (*types.CrystallizedState, error) {
-	return m.cState, nil
-}
-
-func (m *mockDB) GetBlockBySlot(uint64) (*types.Block, error) {
-	return m.genesis, nil
 }
 
 func TestLifecycle(t *testing.T) {
@@ -131,17 +113,27 @@ func TestInsecureEndpoint(t *testing.T) {
 }
 
 func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	mockChain := &mockChainService{}
-	mockDB := &mockDB{}
-	mockDB.genesis = types.NewGenesisBlock([32]byte{}, [32]byte{})
-	var err error
-	mockDB.cState, err = types.NewGenesisCrystallizedState(nil)
-	if err != nil {
-		t.Fatalf("Could not instantiate initial crystallized state: %v", err)
+
+	genesis := types.NewGenesisBlock([32]byte{})
+	if err := db.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
 	}
+
+	beaconState, err := types.NewGenesisBeaconState(nil)
+	if err != nil {
+		t.Fatalf("Could not instantiate initial state: %v", err)
+	}
+
+	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:            "6372",
-		BeaconDB:        mockDB,
+		BeaconDB:        db,
 		ChainService:    mockChain,
 		POWChainService: &mockPOWChainService{},
 	})
@@ -156,16 +148,35 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not call CurrentAssignments correctly: %v", err)
 	}
-	genesis := types.NewGenesisBlock([32]byte{}, [32]byte{})
+	genesis = types.NewGenesisBlock([32]byte{})
 	if res.GenesisTimestamp.String() != genesis.Proto().GetTimestamp().String() {
-		t.Errorf("Received different genesis timestamp, wanted: %v, received: %v", genesis.Proto().GetTimestamp(), res.GenesisTimestamp)
+		t.Errorf(
+			"Received different genesis timestamp, wanted: %v, received: %v",
+			genesis.Proto().GetTimestamp(),
+			res.GenesisTimestamp,
+		)
 	}
 }
 
 func TestProposeBlock(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	mockChain := &mockChainService{}
-	db := &mockDB{}
-	db.cState, _ = types.NewGenesisCrystallizedState(nil)
+
+	genesis := types.NewGenesisBlock([32]byte{})
+	if err := db.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+
+	beaconState, err := types.NewGenesisBeaconState(nil)
+	if err != nil {
+		t.Fatalf("Could not instantiate initial state: %v", err)
+	}
+
+	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:            "6372",
 		ChainService:    mockChain,
@@ -283,18 +294,28 @@ func TestLatestAttestation(t *testing.T) {
 }
 
 func TestValidatorSlotAndResponsibility(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	mockChain := &mockChainService{}
-	mockDB := &mockDB{}
-	cState, err := types.NewGenesisCrystallizedState(nil)
-	if err != nil {
-		t.Fatalf("Failed to instantiate genesis state: %v", err)
+
+	genesis := types.NewGenesisBlock([32]byte{})
+	if err := db.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	mockDB.cState = cState
+
+	beaconState, err := types.NewGenesisBeaconState(nil)
+	if err != nil {
+		t.Fatalf("Could not instantiate initial state: %v", err)
+	}
+
+	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
 
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:         "6372",
 		ChainService: mockChain,
-		BeaconDB:     mockDB,
+		BeaconDB:     db,
 	})
 	req := &pb.PublicKey{
 		PublicKey: []byte{},
@@ -305,18 +326,28 @@ func TestValidatorSlotAndResponsibility(t *testing.T) {
 }
 
 func TestValidatorIndex(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	mockChain := &mockChainService{}
-	mockDB := &mockDB{}
-	cState, err := types.NewGenesisCrystallizedState(nil)
-	if err != nil {
-		t.Fatalf("Failed to instantiate genesis state: %v", err)
+
+	genesis := types.NewGenesisBlock([32]byte{})
+	if err := db.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	mockDB.cState = cState
+
+	beaconState, err := types.NewGenesisBeaconState(nil)
+	if err != nil {
+		t.Fatalf("Could not instantiate initial state: %v", err)
+	}
+
+	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
 
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:         "6372",
 		ChainService: mockChain,
-		BeaconDB:     mockDB,
+		BeaconDB:     db,
 	})
 	req := &pb.PublicKey{
 		PublicKey: []byte{},
@@ -327,18 +358,28 @@ func TestValidatorIndex(t *testing.T) {
 }
 
 func TestValidatorShardID(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	mockChain := &mockChainService{}
-	mockDB := &mockDB{}
-	cState, err := types.NewGenesisCrystallizedState(nil)
-	if err != nil {
-		t.Fatalf("Failed to instantiate genesis state: %v", err)
+
+	genesis := types.NewGenesisBlock([32]byte{})
+	if err := db.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	mockDB.cState = cState
+
+	beaconState, err := types.NewGenesisBeaconState(nil)
+	if err != nil {
+		t.Fatalf("Could not instantiate initial state: %v", err)
+	}
+
+	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
 
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:         "6372",
 		ChainService: mockChain,
-		BeaconDB:     mockDB,
+		BeaconDB:     db,
 	})
 	req := &pb.PublicKey{
 		PublicKey: []byte{},
@@ -350,13 +391,28 @@ func TestValidatorShardID(t *testing.T) {
 
 func TestValidatorAssignments(t *testing.T) {
 	hook := logTest.NewGlobal()
-
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	mockChain := newMockChainService()
-	mockDB := &mockDB{}
+
+	genesis := types.NewGenesisBlock([32]byte{})
+	if err := db.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+
+	beaconState, err := types.NewGenesisBeaconState(nil)
+	if err != nil {
+		t.Fatalf("Could not instantiate initial state: %v", err)
+	}
+
+	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:         "6372",
 		ChainService: mockChain,
-		BeaconDB:     mockDB,
+		BeaconDB:     db,
 	})
 
 	ctrl := gomock.NewController(t)
@@ -381,12 +437,12 @@ func TestValidatorAssignments(t *testing.T) {
 		<-exitRoutine
 	}(t)
 
-	genesisState, err := types.NewGenesisCrystallizedState(nil)
+	beaconState, err = types.NewGenesisBeaconState(nil)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
 
-	rpcService.canonicalStateChan <- genesisState
+	rpcService.canonicalStateChan <- beaconState
 	rpcService.cancel()
 	exitRoutine <- true
 	testutil.AssertLogsContain(t, hook, "Sending new cycle assignments to validator clients")

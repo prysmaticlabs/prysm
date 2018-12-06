@@ -6,12 +6,15 @@ package backend
 import (
 	"context"
 	"fmt"
+	"reflect"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/params"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // SimulatedBackend allowing for a programmatic advancement
@@ -54,11 +57,11 @@ func (sb *SimulatedBackend) RunChainTest(testCase *ChainTestCase) error {
 	// Config parameters include: ValidatorCount, ShardCount,
 	// CycleLength, MinCommitteeSize, and more based on the YAML
 	// test language specification.
-	currentConfig := params.GetConfig()
-	currentConfig.ShardCount = testCase.Config.ShardCount
-	currentConfig.CycleLength = testCase.Config.CycleLength
-	currentConfig.MinCommitteeSize = testCase.Config.MinCommitteeSize
-	params.SetCustomConfig(currentConfig)
+	c := params.BeaconConfig()
+	c.ShardCount = testCase.Config.ShardCount
+	c.CycleLength = testCase.Config.CycleLength
+	c.TargetCommitteeSize = testCase.Config.MinCommitteeSize
+	params.OverrideBeaconConfig(c)
 
 	// Then, we create the validators based on the custom test config.
 	randaoPreCommit := [32]byte{}
@@ -66,11 +69,10 @@ func (sb *SimulatedBackend) RunChainTest(testCase *ChainTestCase) error {
 	validators := make([]*pb.ValidatorRecord, testCase.Config.ValidatorCount)
 	for i := uint64(0); i < testCase.Config.ValidatorCount; i++ {
 		validators[i] = &pb.ValidatorRecord{
-			Status:            uint64(params.Active),
-			Balance:           currentConfig.DepositSize * currentConfig.Gwei,
-			WithdrawalAddress: []byte{},
-			Pubkey:            []byte{},
-			RandaoCommitment:  randaoReveal[:],
+			Status:                 uint64(params.Active),
+			Balance:                c.DepositSize * c.Gwei,
+			Pubkey:                 []byte{},
+			RandaoCommitmentHash32: randaoReveal[:],
 		}
 	}
 	// TODO(#718): Next step is to update and save the blocks specified
@@ -78,5 +80,21 @@ func (sb *SimulatedBackend) RunChainTest(testCase *ChainTestCase) error {
 	//
 	// Then, we call the updateHead routine and confirm the
 	// chain's head is the expected result from the test case.
+	return nil
+}
+
+// RunShuffleTest uses validator set specified from a YAML file, runs the validator shuffle
+// algorithm, then compare the output with the expected output from the YAML file.
+func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
+	defer teardownDB(sb.db)
+
+	seed := common.BytesToHash([]byte(testCase.Seed))
+	output, err := utils.ShuffleIndices(seed, testCase.Input)
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(output, testCase.Output) {
+		return fmt.Errorf("shuffle result error: expected %v, actual %v", testCase.Output, output)
+	}
 	return nil
 }

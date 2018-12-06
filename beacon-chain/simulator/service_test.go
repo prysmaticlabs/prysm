@@ -31,7 +31,7 @@ func (mp *mockP2P) Subscribe(msg proto.Message, channel chan p2p.Message) event.
 }
 
 func (mp *mockP2P) Broadcast(msg proto.Message) {
-	mp.broadcastHash = msg.(*pb.BeaconBlockHashAnnounce).GetHash()
+	mp.broadcastHash = msg.(*pb.BeaconBlockAnnounce).GetHash()
 }
 
 func (mp *mockP2P) Send(msg proto.Message, peer p2p.Peer) {}
@@ -58,6 +58,7 @@ func setupSimulator(t *testing.T, beaconDB *db.BeaconDB) (*Simulator, *mockP2P) 
 		Web3Service:     &mockPOWChainService{},
 		BeaconDB:        beaconDB,
 		EnablePOWChain:  true,
+		StateReqBuf:     10,
 	}
 
 	return NewSimulator(ctx, cfg), p2pService
@@ -89,11 +90,10 @@ func TestBroadcastBlockHash(t *testing.T) {
 	sim, p2pService := setupSimulator(t, db)
 
 	slotChan := make(chan uint64)
-	requestChan := make(chan p2p.Message)
 	exitRoutine := make(chan bool)
 
 	go func() {
-		sim.run(slotChan, requestChan)
+		sim.run(slotChan)
 		<-exitRoutine
 	}()
 
@@ -101,7 +101,7 @@ func TestBroadcastBlockHash(t *testing.T) {
 	slotChan <- 1
 
 	// test an invalid block request
-	requestChan <- p2p.Message{
+	sim.blockRequestChan <- p2p.Message{
 		Data: &pb.BeaconBlockRequest{
 			Hash: make([]byte, 32),
 		},
@@ -109,7 +109,7 @@ func TestBroadcastBlockHash(t *testing.T) {
 
 	// test a valid block request
 	blockHash := p2pService.broadcastHash
-	requestChan <- p2p.Message{
+	sim.blockRequestChan <- p2p.Message{
 		Data: &pb.BeaconBlockRequest{
 			Hash: blockHash,
 		},
@@ -118,15 +118,15 @@ func TestBroadcastBlockHash(t *testing.T) {
 	// trigger another block
 	slotChan <- 2
 
-	testutil.AssertLogsContain(t, hook, "Broadcast block hash")
+	testutil.AssertLogsContain(t, hook, "Broadcast block hash and slot")
 	testutil.AssertLogsContain(t, hook, "Requested block not found")
 	testutil.AssertLogsContain(t, hook, "Responding to full block request")
 
 	// reset logs
 	hook.Reset()
 
-	// ensure that another request for the same block can't be made
-	requestChan <- p2p.Message{
+	// ensure that another request for the same block can be made
+	sim.blockRequestChan <- p2p.Message{
 		Data: &pb.BeaconBlockRequest{
 			Hash: blockHash,
 		},
@@ -135,8 +135,111 @@ func TestBroadcastBlockHash(t *testing.T) {
 	sim.cancel()
 	exitRoutine <- true
 
-	testutil.AssertLogsContain(t, hook, "Requested block not found")
-	testutil.AssertLogsDoNotContain(t, hook, "Responding to full block request")
+	testutil.AssertLogsDoNotContain(t, hook, "Requested block not found")
+	testutil.AssertLogsContain(t, hook, "Responding to full block request")
 
 	hook.Reset()
+}
+
+func TestBlockRequestBySlot(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	sim, _ := setupSimulator(t, db)
+
+	slotChan := make(chan uint64)
+	exitRoutine := make(chan bool)
+
+	go func() {
+		sim.run(slotChan)
+		<-exitRoutine
+	}()
+
+	// trigger a new block
+	slotChan <- 1
+
+	// test an invalid block request
+	sim.blockBySlotChan <- p2p.Message{
+		Data: &pb.BeaconBlockRequestBySlotNumber{
+			SlotNumber: 2,
+		},
+	}
+
+	testutil.AssertLogsContain(t, hook, "Broadcast block hash and slot")
+	testutil.AssertLogsContain(t, hook, "Requested block not found")
+
+	// reset logs
+	hook.Reset()
+
+	// test a valid block request
+	sim.blockBySlotChan <- p2p.Message{
+		Data: &pb.BeaconBlockRequestBySlotNumber{
+			SlotNumber: 1,
+		},
+	}
+
+	sim.cancel()
+	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, "Responding to full block request")
+
+	hook.Reset()
+}
+
+func TestStateRequest(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	sim, _ := setupSimulator(t, db)
+
+	slotChan := make(chan uint64)
+	exitRoutine := make(chan bool)
+
+	go func() {
+		sim.run(slotChan)
+		<-exitRoutine
+	}()
+
+	beaconState, err := sim.beaconDB.GetState()
+	if err != nil {
+		t.Fatalf("could not retrieve beacon state %v", err)
+	}
+
+	hash, err := beaconState.Hash()
+	if err != nil {
+		t.Fatalf("could not hash beacon state %v", err)
+	}
+
+	beaconStateRequest := &pb.BeaconStateRequest{
+		Hash: []byte{'t', 'e', 's', 't'},
+	}
+
+	message := p2p.Message{
+		Data: beaconStateRequest,
+	}
+
+	sim.stateReqChan <- message
+
+	testutil.WaitForLog(t, hook, "Requested beacon state is of a different hash")
+	testutil.AssertLogsDoNotContain(t, hook, "Responding to full beacon state request")
+
+	hook.Reset()
+
+	newStateReq := &pb.BeaconStateRequest{
+		Hash: hash[:],
+	}
+
+	newMessage := p2p.Message{
+		Data: newStateReq,
+	}
+
+	sim.stateReqChan <- newMessage
+
+	testutil.WaitForLog(t, hook, "Responding to full beacon state request")
+	testutil.AssertLogsDoNotContain(t, hook, "Requested beacon state is of a different hash")
+
+	sim.cancel()
+	exitRoutine <- true
 }
