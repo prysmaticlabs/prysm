@@ -5,11 +5,11 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -69,7 +69,7 @@ func (b *Block) Hash() ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, fmt.Errorf("could not marshal block proto data: %v", err)
 	}
-	return hashutil.Hash(data), nil
+	return crypto.Keccak256Hash(data), nil
 }
 
 // Proto returns the underlying protobuf data within a block primitive.
@@ -127,7 +127,7 @@ func (b *Block) IsRandaoValid(stateRandao []byte) bool {
 	var h [32]byte
 	copy(h[:], stateRandao)
 	blockRandaoRevealHash32 := b.RandaoRevealHash32()
-	return hashutil.Hash(blockRandaoRevealHash32[:]) == h
+	return crypto.Keccak256Hash(blockRandaoRevealHash32[:]) == h
 }
 
 // IsSlotValid compares the slot to the system clock to determine if the block is valid.

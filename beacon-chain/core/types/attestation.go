@@ -4,9 +4,9 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/golang/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -55,7 +55,7 @@ func AttestationMsg(
 	binary.PutUvarint(msg, shardID)
 	msg = append(msg, blockHash...)
 	binary.PutUvarint(msg, justifiedSlot)
-	return hashutil.Hash(msg)
+	return crypto.Keccak256Hash(msg)
 }
 
 // Proto returns the underlying protobuf data.
@@ -74,7 +74,7 @@ func (a *Attestation) Hash() ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, fmt.Errorf("could not marshal attestation proto data: %v", err)
 	}
-	return hashutil.Hash(data), nil
+	return crypto.Keccak256Hash(data), nil
 }
 
 // Key generates the blake2b hash of the following attestation fields:
@@ -88,7 +88,7 @@ func (a *Attestation) Key() [32]byte {
 	for _, pHash := range a.ObliqueParentHashes() {
 		key = append(key, pHash[:]...)
 	}
-	return hashutil.Hash(key)
+	return crypto.Keccak256Hash(key)
 }
 
 // SlotNumber of the block, which this attestation is attesting to.

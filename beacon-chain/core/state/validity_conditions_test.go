@@ -3,10 +3,10 @@ package state
 import (
 	"testing"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -42,7 +42,7 @@ func TestBlockValidity(t *testing.T) {
 		recentBlockHashes = append(recentBlockHashes, make([]byte, 32))
 	}
 	randaoPreCommit := [32]byte{'A'}
-	hashedRandaoPreCommit := hashutil.Hash(randaoPreCommit[:])
+	hashedRandaoPreCommit := crypto.Keccak256Hash(randaoPreCommit[:])
 	validators := beaconState.ValidatorRegistry()
 	validators[1].RandaoCommitmentHash32 = hashedRandaoPreCommit[:]
 	beaconState.SetValidatorRegistry(validators)

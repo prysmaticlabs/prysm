@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -66,7 +66,7 @@ func IsValidBlock(
 		return fmt.Errorf(
 			"pre-image of %#x is %#x, Got: %#x",
 			blockRandaoRevealHash32[:],
-			hashutil.Hash(blockRandaoRevealHash32[:]),
+			crypto.Keccak256Hash(blockRandaoRevealHash32[:]),
 			stateProposerRandaoSeed,
 		)
 	}
