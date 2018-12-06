@@ -12,6 +12,10 @@ func Hash(data []byte) [32]byte {
 
 	h := sha3.NewLegacyKeccak256()
 
+	// The hash interface never returns an error, for that reason
+	// we are not handling the error below. For reference, it is
+	// stated here https://golang.org/pkg/hash/#Hash
+
 	// #nosec G104
 	h.Write(data)
 	h.Sum(hash[:0])
