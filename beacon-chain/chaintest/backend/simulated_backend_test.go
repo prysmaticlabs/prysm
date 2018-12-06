@@ -27,7 +27,7 @@ func TestRunShuffleTest(t *testing.T) {
 	}
 	testCase := &ShuffleTestCase{
 		Input:  []uint32{1, 2, 3, 4, 5},
-		Output: []uint32{4, 5, 3, 2, 1},
+		Output: []uint32{2, 5, 3, 1, 4},
 		Seed:   "abcde",
 	}
 	if err := sb.RunShuffleTest(testCase); err != nil {

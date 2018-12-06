@@ -49,7 +49,7 @@ func ShuffleIndices(seed common.Hash, indicesList []uint32) ([]uint32, error) {
 				// Select replacement index from the current index.
 				replacementIndex := (randValue % remaining) + uint64(index)
 				indicesList[index], indicesList[replacementIndex] = indicesList[replacementIndex], indicesList[index]
-				index += 1
+				index++
 			}
 		}
 	}
