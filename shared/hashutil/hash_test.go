@@ -1,6 +1,7 @@
 package hashutil_test
 
 import (
+	"encoding/hex"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -17,6 +18,17 @@ func TestHash(t *testing.T) {
 	hash = hashutil.Hash([]byte{1})
 	if hash != hashOf1 {
 		t.Fatalf("expected hash and computed hash are not equal %d, %d", hash, hashOf1)
+	}
+
+	// Same hashing test from go-ethereum for keccak256
+	hashOfabc, _ := hex.DecodeString("4e03657aea45a94fc7d47ba826c8d667c0d1e6e33a64a036ec44f58fa12d6c45")
+	hash = hashutil.Hash([]byte("abc"))
+
+	var h [32]byte
+	copy(h[:], hashOfabc)
+
+	if hash != h {
+		t.Fatalf("expected hash and computed hash are not equal %d, %d", hash, h)
 	}
 
 	if hashOf0 == hashOf1 {
