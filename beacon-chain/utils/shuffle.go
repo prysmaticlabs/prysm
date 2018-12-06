@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -19,7 +19,7 @@ func ShuffleIndices(seed common.Hash, validatorList []uint32) ([]uint32, error) 
 		return nil, errors.New("exceeded upper bound for validator shuffle")
 	}
 
-	hashSeed := crypto.Keccak256Hash(seed[:])
+	hashSeed := hashutil.Hash(seed[:])
 	validatorCount := len(validatorList)
 
 	// Shuffle stops at the second to last index.
@@ -31,7 +31,7 @@ func ShuffleIndices(seed common.Hash, validatorList []uint32) ([]uint32, error) 
 			swapPos := swapNum%remaining + i
 			validatorList[i], validatorList[swapPos] = validatorList[swapPos], validatorList[i]
 		}
-		hashSeed = crypto.Keccak256Hash(seed[:])
+		hashSeed = hashutil.Hash(seed[:])
 	}
 	return validatorList, nil
 }

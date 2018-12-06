@@ -7,12 +7,12 @@ import (
 	"context"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -161,7 +161,7 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 				log.Errorf("Could not marshal latest beacon block: %v", err)
 				continue
 			}
-			latestBlockHash := crypto.Keccak256Hash(data)
+			latestBlockHash := hashutil.Hash(data)
 
 			// To prevent any unaccounted attestations from being added.
 			p.lock.Lock()

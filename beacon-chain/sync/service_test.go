@@ -5,13 +5,13 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -87,7 +87,7 @@ func TestProcessBlockHash(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	announceHash := crypto.Keccak256Hash([]byte{})
+	announceHash := hashutil.Hash([]byte{})
 	hashAnnounce := &pb.BeaconBlockAnnounce{
 		Hash: announceHash[:],
 	}

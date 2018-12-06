@@ -8,10 +8,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
 	sharedDB "github.com/prysmaticlabs/prysm/shared/database"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 type mockShardDB struct {
@@ -47,7 +47,7 @@ func (c *Collation) Hash() common.Hash {
 	if err != nil {
 		log.Errorf("Failed to RLP encode data: %v", err)
 	}
-	return crypto.Keccak256Hash(encoded)
+	return hashutil.Hash(encoded)
 }
 
 func TestShard_ValidateShardID(t *testing.T) {

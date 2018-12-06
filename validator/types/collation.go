@@ -6,8 +6,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/shardutil"
 )
@@ -70,7 +70,7 @@ func (h *CollationHeader) Hash() (hash common.Hash) {
 	if err != nil {
 		log.Errorf("Failed to RLP encode data: %v", err)
 	}
-	return crypto.Keccak256Hash(encoded)
+	return hashutil.Hash(encoded)
 }
 
 // AddSig adds the signature of proposer after collationHeader gets signed.
