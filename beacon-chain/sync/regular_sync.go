@@ -59,7 +59,7 @@ type RegularSync struct {
 	attestationBuf        chan p2p.Message
 }
 
-// Config allows the channel's buffer sizes to be changed.
+// RegularSyncConfig allows the channel's buffer sizes to be changed.
 type RegularSyncConfig struct {
 	BlockAnnounceBufferSize int
 	BlockBufferSize         int
@@ -72,7 +72,7 @@ type RegularSyncConfig struct {
 	P2P                     p2pAPI
 }
 
-// DefaultConfig provides the default configuration for a sync service.
+// DefaultRegularSyncConfig provides the default configuration for a sync service.
 func DefaultRegularSyncConfig() *RegularSyncConfig {
 	return &RegularSyncConfig{
 		BlockAnnounceBufferSize: 100,

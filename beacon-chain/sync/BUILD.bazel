@@ -3,9 +3,9 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "querier.go",
         "regular_sync.go",
         "service.go",
-        "sync_querier.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/sync",
     visibility = ["//beacon-chain:__subpackages__"],
@@ -26,8 +26,8 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "querier_test.go",
         "regular_sync_test.go",
-        "sync_querier_test.go",
     ],
     embed = [":go_default_library"],
     deps = [

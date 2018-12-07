@@ -17,7 +17,7 @@ func TestStartStop(t *testing.T) {
 		P2P:                &mockP2P{},
 		ResponseBufferSize: 100,
 	}
-	sq := NewSyncQuerierService(context.Background(), cfg)
+	sq := NewQuerierService(context.Background(), cfg)
 
 	exitRoutine := make(chan bool)
 
@@ -44,7 +44,7 @@ func TestChainReqResponse(t *testing.T) {
 		P2P:                &mockP2P{},
 		ResponseBufferSize: 100,
 	}
-	sq := NewSyncQuerierService(context.Background(), cfg)
+	sq := NewQuerierService(context.Background(), cfg)
 
 	exitRoutine := make(chan bool)
 

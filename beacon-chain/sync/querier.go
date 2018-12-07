@@ -27,9 +27,9 @@ func DefaultQuerierConfig() *QuerierConfig {
 	}
 }
 
-// SyncQuerier defines the main class in this package.
+// Querier defines the main class in this package.
 // See the package comments for a general description of the service's functions.
-type SyncQuerier struct {
+type Querier struct {
 	ctx             context.Context
 	cancel          context.CancelFunc
 	p2p             p2pAPI
@@ -39,16 +39,16 @@ type SyncQuerier struct {
 	responseBuf     chan p2p.Message
 }
 
-// NewSyncQuerierService constructs a new Sync Querier Service.
+// NewQuerierService constructs a new Sync Querier Service.
 // This method is normally called by the main node.
-func NewSyncQuerierService(ctx context.Context,
+func NewQuerierService(ctx context.Context,
 	cfg *QuerierConfig,
-) *SyncQuerier {
+) *Querier {
 	ctx, cancel := context.WithCancel(ctx)
 
 	responseBuf := make(chan p2p.Message, cfg.ResponseBufferSize)
 
-	return &SyncQuerier{
+	return &Querier{
 		ctx:         ctx,
 		cancel:      cancel,
 		p2p:         cfg.P2P,
@@ -58,19 +58,19 @@ func NewSyncQuerierService(ctx context.Context,
 }
 
 // Start begins the goroutine.
-func (s *SyncQuerier) Start() {
-	s.run()
+func (q *Querier) Start() {
+	q.run()
 }
 
 // Stop kills the sync querier goroutine.
-func (s *SyncQuerier) Stop() error {
+func (q *Querier) Stop() error {
 	queryLog.Info("Stopping service")
-	s.cancel()
+	q.cancel()
 	return nil
 }
 
-func (s *SyncQuerier) run() {
-	responseSub := s.p2p.Subscribe(&pb.ChainHeadResponse{}, s.responseBuf)
+func (q *Querier) run() {
+	responseSub := q.p2p.Subscribe(&pb.ChainHeadResponse{}, q.responseBuf)
 
 	// Ticker so that service will keep on requesting for chain head
 	// until they get a response.
@@ -78,48 +78,48 @@ func (s *SyncQuerier) run() {
 
 	defer func() {
 		responseSub.Unsubscribe()
-		close(s.responseBuf)
+		close(q.responseBuf)
 		ticker.Stop()
 	}()
 
-	s.RequestLatestHead()
+	q.RequestLatestHead()
 
 	for {
 		select {
-		case <-s.ctx.Done():
+		case <-q.ctx.Done():
 			queryLog.Info("Exiting goroutine")
 			return
 		case <-ticker.C:
-			s.RequestLatestHead()
-		case msg := <-s.responseBuf:
+			q.RequestLatestHead()
+		case msg := <-q.responseBuf:
 			response := msg.Data.(*pb.ChainHeadResponse)
 			queryLog.Infof("Latest chain head is at slot: %d and hash %#x", response.Slot, response.Hash)
-			s.curentHeadSlot = response.Slot
-			s.currentHeadHash = response.Hash
+			q.curentHeadSlot = response.Slot
+			q.currentHeadHash = response.Hash
 
 			ticker.Stop()
 			responseSub.Unsubscribe()
-			s.cancel()
+			q.cancel()
 		}
 	}
 }
 
 // RequestLatestHead broadcasts out a request for all
 // the latest chain heads from the node's peers.
-func (s *SyncQuerier) RequestLatestHead() {
+func (q *Querier) RequestLatestHead() {
 	request := &pb.ChainHeadRequest{}
-	s.p2p.Broadcast(request)
+	q.p2p.Broadcast(request)
 }
 
 // IsSynced checks if the node is cuurently synced with the
 // rest of the network.
-func (s *SyncQuerier) IsSynced() (bool, error) {
-	block, err := s.db.GetChainHead()
+func (q *Querier) IsSynced() (bool, error) {
+	block, err := q.db.GetChainHead()
 	if err != nil {
 		return false, err
 	}
 
-	if block.SlotNumber() >= s.curentHeadSlot {
+	if block.SlotNumber() >= q.curentHeadSlot {
 		return true, nil
 	}
 

@@ -13,7 +13,7 @@ var slog = logrus.WithField("prefix", "sync")
 type Service struct {
 	RegularSync *RegularSync
 	InitialSync *initialsync.InitialSync
-	Querier     *SyncQuerier
+	Querier     *Querier
 }
 
 // Config defines the configured services required for sync to work.
@@ -42,7 +42,7 @@ func NewSyncService(ctx context.Context, cfg *Config) *Service {
 	rsCfg.BeaconDB = cfg.BeaconDB
 	rsCfg.P2P = cfg.P2P
 
-	sq := NewSyncQuerierService(ctx, sqCfg)
+	sq := NewQuerierService(ctx, sqCfg)
 	rs := NewRegularSyncService(ctx, rsCfg)
 
 	isCfg.SyncService = rs
