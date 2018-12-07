@@ -3,6 +3,7 @@ package utils
 
 import (
 	"errors"
+	"math"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -12,29 +13,30 @@ import (
 // ShuffleIndices returns a list of pseudorandomly sampled
 // indices. This is used to shuffle validators on ETH2.0 beacon chain.
 func ShuffleIndices(seed common.Hash, indicesList []uint32) ([]uint32, error) {
-	upperBound := params.BeaconConfig().ModuloBias
-	// Since we are consuming 3 bytes of entropy at a time in the loop,
+	// Each entropy is consumed from the seed in randBytes chunks.
+	randBytes := int(params.BeaconConfig().RandBytes)
+	upperBound := uint64(math.Pow(2, float64(randBytes) * 8)) - 1
+
+	// Since we are consuming randBytes of entropy at a time in the loop,
 	// we have a bias at 2**24, this check defines our max list size and is used to remove the bias.
 	// more info on modulo bias: https://stackoverflow.com/questions/10984974/why-do-people-say-there-is-modulo-bias-when-using-a-random-number-generator.
 	if uint64(len(indicesList)) >= upperBound {
-		return nil, errors.New("exceeded upper bound for validator shuffle")
+		return nil, errors.New("input list exceeded upper bound and reached modulo bias")
 	}
 
-	// Each entropy is consumed from the seed in 3 byte (24 bit) chunks.
-	randBytes := 3
 	// Rehash the seed to obtain a new pattern of bytes.
 	hashSeed := hashutil.Hash(seed[:])
 	totalCount := len(indicesList)
 	index := 0
 	for index < totalCount-1 {
-		// Iterate through the hashSeed bytes in 3 byte chunks.
+		// Iterate through the hashSeed bytes in chunks of size randBytes.
 		for i := 0; i < 32-(32%randBytes); i += randBytes {
 			// Determine the number of indices remaining and exit if last index reached.
 			remaining := uint64(totalCount - index)
 			if remaining == 1 {
 				break
 			}
-			// Read 3 bytes of hashSeed as a 24-bit big-endian integer.
+			// Read randBytes of hashSeed as a 3 x randBytes big-endian integer.
 			randChunk := hashSeed[i : i+randBytes]
 			var randValue uint64
 			randValue |= uint64(randChunk[0])
