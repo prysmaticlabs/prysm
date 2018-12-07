@@ -45,7 +45,7 @@ type BeaconChainConfig struct {
 	InitialForkVersion                      uint64         // InitialForkVersion is used to track fork version between state transitions.
 	InitialForkSlot                         uint64         // InitialForkSlot is used to initialize the fork slot in the initial Beacon state.
 	SimulatedBlockRandao                    [32]byte       // SimulatedBlockRandao is a RANDAO seed stubbed in side simulated block to advance local beacon chain.
-	RandBytes 								uint64         // RandBytes is the number of bytes used as entropy to shuffle validators.
+	RandBytes                               uint64         // RandBytes is the number of bytes used as entropy to shuffle validators.
 	BootstrappedValidatorsCount             uint64         // BootstrappedValidatorsCount is the number of validators we seed to start beacon chain.
 	SyncPollingInterval                     int64          // SyncPollingInterval queries network nodes for sync status.
 	GenesisTime                             time.Time      // GenesisTime used by the protocol.
@@ -76,7 +76,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxValidatorChurnQuotient:     uint64(32),
 	InitialForkVersion:            0,
 	InitialForkSlot:               0,
-	RandBytes:			           3,
+	RandBytes:                     3,
 	BootstrappedValidatorsCount:   16384,
 	SyncPollingInterval:           16 * 4, // Query nodes over the network every 4 slots for sync status.
 	GenesisTime:                   time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC),
@@ -100,6 +100,7 @@ var demoBeaconConfig = &BeaconChainConfig{
 	BaseRewardQuotient:            uint64(32768),
 	MaxValidatorChurnQuotient:     uint64(32),
 	InitialForkVersion:            0,
+	RandBytes:                     3,
 	InitialForkSlot:               defaultBeaconConfig.InitialForkSlot,
 	SimulatedBlockRandao:          [32]byte{'S', 'I', 'M', 'U', 'L', 'A', 'T', 'E', 'R'},
 	SyncPollingInterval:           2 * 4, // Query nodes over the network every 4 slots for sync status.
