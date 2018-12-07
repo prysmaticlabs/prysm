@@ -162,7 +162,7 @@ func (rs *RegularSync) run() {
 // New hashes are forwarded to other peers in the network (unimplemented), and
 // the contents of the block are requested if the local chain doesn't have the block.
 func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) {
-	ctx, receiveBlockSpan := trace.StartSpan(msg.Ctx, "receiveBlockHash")
+	ctx, receiveBlockSpan := trace.StartSpan(msg.Ctx, "RegularSync_receiveBlockHash")
 	defer receiveBlockSpan.End()
 
 	data := msg.Data.(*pb.BeaconBlockAnnounce)
@@ -183,7 +183,7 @@ func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) {
 
 // receiveBlock processes a block from the p2p layer.
 func (rs *RegularSync) receiveBlock(msg p2p.Message) {
-	ctx, receiveBlockSpan := trace.StartSpan(msg.Ctx, "receiveBlock")
+	ctx, receiveBlockSpan := trace.StartSpan(msg.Ctx, "RegularSync_receiveBlock")
 	defer receiveBlockSpan.End()
 
 	response := msg.Data.(*pb.BeaconBlockResponse)
@@ -244,7 +244,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 // handleBlockRequestBySlot processes a block request from the p2p layer.
 // if found, the block is sent to the requesting peer.
 func (rs *RegularSync) handleBlockRequestBySlot(msg p2p.Message) {
-	ctx, blockRequestSpan := trace.StartSpan(msg.Ctx, "blockRequestBySlot")
+	ctx, blockRequestSpan := trace.StartSpan(msg.Ctx, "RegularSync_blockRequestBySlot")
 	defer blockRequestSpan.End()
 
 	request, ok := msg.Data.(*pb.BeaconBlockRequestBySlotNumber)
