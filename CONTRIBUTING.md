@@ -6,26 +6,174 @@ Additionally, our [Sharding Reference Implementation Doc](https://github.com/pry
 
 You can explore our [Current Projects](https://github.com/prysmaticlabs/prysm/projects) in-the works for our different releases. Feel free to fork our repo and start creating PR’s after assigning yourself to an issue of interest. We are always chatting on [Discord](https://discord.gg/che9auJ) or [Gitter](https://gitter.im/prysmaticlabs/geth-sharding) drop us a line there if you want to get more involved or have any questions on our implementation!
 
-**Contribution Steps**
+## Contribution Steps
 
--   Follow the setup instructions in our [README.md](https://github.com/prysmaticlabs/prysm/blob/master/README.md)
--   Create a folder in your `$GOPATH` and navigate to it `mkdir -p $GOPATH/src/github.com/prysmaticlabs && cd $GOPATH/src/github.com/prysmaticlabs`
--   `git clone https://github.com/prysmaticlabs/prysm`
--   Fork the our repository on Github: <https://github.com/prysmaticlabs/prysm>
--   Add a remote to your fork
-    \`git remote add YOURNAME <https://github.com/YOURNAME/prysm>
+**1. Set up Prysm following the instructions in README.md.**
 
-Now you should have a remote pointing to the `origin` repo (prysm) commit changes and start a Pull Request, our workflow is as follows:
+**2. Fork the prysm repo.**
 
--   Create a new branch with a clear feature name such as `git checkout -b collations-pool`
--   Issue changes with clear commit messages
--   Run the linter and tester as follows `gometalinter && bazel test //...`
--   Push to your remote `git push YOURNAME collations-pool`
--   Go to the [prysm](https://github.com/prysmaticlabs/prysm) repository on Github and start a PR comparing `prysm:master` with `prysm:collations-pool` (your fork on your profile).
--   Add a clear PR title along with a description of what this PR encompasses, when it can be closed, and what you are currently working on. Github markdown checklists work great for this.
+Sign in to your Github account or create a new account if you do not have one already. Then navigate your browser to https://github.com/prysmaticlabs/prysm/. In the upper right hand corner of the page, click “fork”. This will create a copy of the Prysm repo in your account.
 
-Pull requests must be cleanly rebased ontop of master. If master advances while your PR is in review, please keep rebasing it.
-Before the pull request is merged, make sure that you squash your commits into one commit using `git rebase -i` and `git push -f`. After every commit the test suite must be passing.
+**3. Create a local clone of Prysm.**
+
+```
+$ mkdir -p $GOPATH/src/github.com/prysmaticlabs
+$ cd $GOPATH/src/github.com/prysmaticlabs
+$ git clone https://github.com/prysmaticlabs/prysm.git
+$ cd $GOPATH/src/github.com/prysmaticlabs/prysm
+```
+
+**4. Link your local clone to the fork on your Github repo.**
+
+```
+$ git remote add myprysmrepo https://github.com/<your_github_user_name>/prysm.git
+```
+
+**5. Link your local clone to the Prysmatic Labs repo so that you can easily fetch future changes to the Prysmatic Labs repo.**
+
+```
+$ git remote add prysm https://github.com/prysmaticlabs/prysm.git
+$ git remote -v (you should see myrepo and prysm in the list of remotes)
+```
+
+**6. Find an issue to work on.**
+
+Check out open issues at https://github.com/prysmaticlabs/prysm/issues and pick one. Leave a comment to let the development team know that you would like to work on it. Or examine the code for areas that can be improved and leave a comment to the development team to ask if they would like you to work on it.
+
+**7. Create a local branch with a name that clearly identifies what you will be working on.**
+
+```
+$ git checkout -b feature-in-progress-branch
+```
+
+**8. Make improvements to the code.**
+
+Each time you work on the code be sure that you are working on the branch that you have created as opposed to your local copy of the Prysmatic Labs repo. Keeping your changes segregated in this branch will make it easier to merge your changes into the repo later.
+
+```
+$ git checkout feature-in-progress-branch
+```
+
+**9. Test your changes.**
+
+Changes that only affect a single file can be tested with
+
+```
+$ go test <file_you_are_working_on>
+```
+
+Changes that affect multiple files can be tested with ...
+
+```
+$ gometallinter && bazel test
+```
+
+**10. Stage the file or files that you want to commit.**
+
+```
+$ git add --all
+```
+
+This command stages all of the files that you have changed. You can add individual files by specifying the file name or names and eliminating the “-- all”.
+
+**11. Commit the file or files.**
+
+```
+$ git commit  -m “Message to explain what the commit covers”
+```
+
+You can use the –amend flag to include previous commits that have not yet been pushed to an upstream repo to the current commit.
+
+**12. Fetch any changes that have occurred in the Prysmatic Labs Prysm repo since you started work.**
+
+```
+$ git fetch prysm
+```
+
+**13. Rebase your branch atop of the latest version of Prysm.**
+
+```
+$ git rebase prysm/master
+```
+
+If there are conflicts between your edits and those made by others since you started work Git will ask you to resolve them. To find out which files have conflicts run ...
+
+```
+$ git status
+```
+
+Open those files one at a time and you
+will see lines inserted by Git that identify the conflicts:
+
+```
+<<<<<< HEAD
+Other developers’ version of the conflicting code
+======
+Your version of the conflicting code
+'>>>>> Your Commit
+```
+
+The code from the Prysm repo is inserted between <<< and === while the change you have made is inserted between === and >>>>. Remove everything between <<<< and >>> and replace it with code that resolves the conflict. Repeat the process for all files listed by git status that have conflicts.
+
+**14. Push your changes to your fork of the Prysm repo.**
+
+Rebasing a pull request changes the history on your branch, so Git will reject a normal git push after a rebase. Use a force push to move your changes to your fork of the repo.
+
+```
+$ git push myrepo feature-in-progress-branch -f
+```
+
+**15. Check to be sure your fork of the Prysm repo contains your feature branch with the latest edits.**
+
+Navigate to your fork of the repo on Github. On the upper left where the current branch is listed, change the branch to your feature-in-progress-branch. Open the files that you have worked on and check to make sure they include your changes.
+
+**16. Create a pull request.**
+
+Navigate your browser to https://github.com/prysmaticlabs/prysm and click on the new pull request button. In the “base” box on the left, leave the default selection “base master”, the branch that you want your changes to be applied to. In the “compare” box on the right, select feature-in-progress-branch, the branch containing the changes you want to apply. You will then be asked to answer a few questions about your pull request. After you complete the questionnaire, the pull request will appear in the list of pull requests at https://github.com/prysmaticlabs/prysm/pulls.
+
+**17. Respond to comments by Core Contributors.**
+
+Core Contributors may ask questions and request that you make edits. If you set notifications at the top of the page to “not watching,” you will still be notified by email whenever someone comments on the page of a pull request you have created. If you are asked to modify your pull request, repeat steps 8 through 15, then leave a comment to notify the Core Contributors that the pull request is ready for further review.
+
+**18. If the number of commits becomes excessive, you may be asked to squash your commits.**
+
+ You can do this with an interactive rebase. Start by running the following command to determine the commit that is the base of your branch...
+
+```
+$ git merge-base feature-in-progress-branch prysm/master
+```
+
+**19. The previous command will return a commit-hash that you should use in the following command.**
+
+```
+$ git rebase -i commit-hash
+```
+
+Your text editor will open with a file that lists the commits in your branch with the word pick in front of each branch such as the following …
+
+```
+pick 	hash	do some work
+pick 	hash 	fix a bug
+pick 	hash 	add a feature
+```
+
+Replace the word pick with the word “squash” for every line but the first so you end with ….
+
+```
+pick    hash	do some work
+squash  hash 	fix a bug
+squash  hash 	add a feature
+```
+
+Save and close the file, then a commit command will appear in the terminal that squashes the smaller commits into one. Check to be sure the commit message accurately reflects your changes and then hit enter to execute it.
+
+**20. Update your pull request with the following command.**
+
+```
+$ git push myrepo feature-in-progress-branch -f
+```
+
+**21.  Finally, again leave a comment to the Core Contributors on the pull request to let them know that the pull request has been updated.**
 
 ## Contributor Responsibilities
 
