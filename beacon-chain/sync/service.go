@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
 	"github.com/sirupsen/logrus"

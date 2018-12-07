@@ -45,14 +45,6 @@ func (ms *mockSyncService) ResumeSync() {
 
 }
 
-type mockQueryService struct {
-	isSynced bool
-}
-
-func (ms *mockQueryService) IsSynced() (bool, error) {
-	return ms.isSynced, nil
-}
-
 func TestSetBlockForInitialSync(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
