@@ -45,6 +45,8 @@ func decode(r io.Reader, val interface{}) (uint32, error) {
 func makeDecoder(typ reflect.Type) (dec decoder, err error) {
 	kind := typ.Kind()
 	switch {
+	case kind == reflect.Bool:
+		return decodeBool, nil
 	case kind == reflect.Uint8:
 		return decodeUint8, nil
 	case kind == reflect.Uint16:
@@ -58,6 +60,21 @@ func makeDecoder(typ reflect.Type) (dec decoder, err error) {
 	default:
 		return nil, fmt.Errorf("ssz: type %v is not deserializable", typ)
 	}
+}
+
+func decodeBool(r io.Reader, val reflect.Value) (uint32, error) {
+	b := make([]byte, 1)
+	if err := readBytes(r, 1, b); err != nil {
+		return 0, fmt.Errorf("failed to decode uint8: %v", err)
+	}
+	// TODO: read value other than 0 or 1?
+	v := uint8(b[0])
+	if v == 0 {
+		val.SetBool(false)
+	} else if v == 1 {
+		val.SetBool(true)
+	}
+	return 1, nil
 }
 
 func decodeUint8(r io.Reader, val reflect.Value) (uint32, error) {

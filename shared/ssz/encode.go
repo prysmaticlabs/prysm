@@ -48,6 +48,8 @@ func (w *encbuf) toWriter(out io.Writer) error {
 func makeEncoder(typ reflect.Type) (encoder, error) {
 	kind := typ.Kind()
 	switch {
+	case kind == reflect.Bool:
+		return encodeBool, nil
 	case kind == reflect.Uint8:
 		return encodeUint8, nil
 	case kind == reflect.Uint16:
@@ -61,6 +63,15 @@ func makeEncoder(typ reflect.Type) (encoder, error) {
 	default:
 		return nil, fmt.Errorf("ssz: type %v is not serializable", typ)
 	}
+}
+
+func encodeBool(val reflect.Value, w *encbuf) error {
+	if val.Bool() {
+		w.str = append(w.str, uint8(1))
+	} else {
+		w.str = append(w.str, uint8(0))
+	}
+	return nil
 }
 
 func encodeUint8(val reflect.Value, w *encbuf) error {
