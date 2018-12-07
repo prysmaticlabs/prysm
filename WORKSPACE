@@ -621,7 +621,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_google_api",
-    commit = "6142e720c068c6cd71f2258e007ff1991572e1d5",
+    commit = "1a5ef82f9af45ef51c486291ef2b0a16d82fdb95",
     importpath = "google.golang.org/api",
 )
 
@@ -651,7 +651,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_client_golang",
-    commit = "3fb53dff765f8a3e0f9d8b1d5b86d4f8c4eb3a09",
+    tag = "v0.9.2",
     importpath = "github.com/prometheus/client_golang",
 )
 
