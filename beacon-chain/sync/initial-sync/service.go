@@ -45,8 +45,8 @@ type Config struct {
 // SyncPollingInterval determines how frequently the service checks that initial sync is complete.
 // BlockBufferSize determines that buffer size of the `blockBuf` channel.
 // CrystallizedStateBufferSize determines the buffer size of thhe `crystallizedStateBuf` channel.
-func DefaultConfig() Config {
-	return Config{
+func DefaultConfig() *Config {
+	return &Config{
 		SyncPollingInterval:     time.Duration(params.BeaconConfig().SyncPollingInterval) * time.Second,
 		BlockBufferSize:         100,
 		BlockAnnounceBufferSize: 100,
@@ -94,7 +94,7 @@ type InitialSync struct {
 // NewInitialSyncService constructs a new InitialSyncService.
 // This method is normally called by the main node.
 func NewInitialSyncService(ctx context.Context,
-	cfg Config,
+	cfg *Config,
 ) *InitialSync {
 	ctx, cancel := context.WithCancel(ctx)
 

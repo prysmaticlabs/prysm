@@ -61,7 +61,7 @@ func setupService(t *testing.T, db *db.BeaconDB) *Service {
 		P2P:                     &mockP2P{},
 		BeaconDB:                db,
 	}
-	return NewSyncService(context.Background(), cfg)
+	return NewRegularSyncService(context.Background(), cfg)
 }
 
 func TestProcessBlockHash(t *testing.T) {
@@ -78,7 +78,7 @@ func TestProcessBlockHash(t *testing.T) {
 		P2P:                     &mockP2P{},
 		BeaconDB:                db,
 	}
-	ss := NewSyncService(context.Background(), cfg)
+	ss := NewRegularSyncService(context.Background(), cfg)
 
 	exitRoutine := make(chan bool)
 
@@ -125,7 +125,7 @@ func TestProcessBlock(t *testing.T) {
 		BeaconDB:                db,
 		AttestService:           &mockAttestService{},
 	}
-	ss := NewSyncService(context.Background(), cfg)
+	ss := NewRegularSyncService(context.Background(), cfg)
 
 	exitRoutine := make(chan bool)
 	go func() {
@@ -192,7 +192,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 		BeaconDB:                db,
 		AttestService:           &mockAttestService{},
 	}
-	ss := NewSyncService(context.Background(), cfg)
+	ss := NewRegularSyncService(context.Background(), cfg)
 
 	exitRoutine := make(chan bool)
 
@@ -333,7 +333,7 @@ func TestReceiveAttestation(t *testing.T) {
 		P2P:                     &mockP2P{},
 		BeaconDB:                db,
 	}
-	ss := NewSyncService(context.Background(), cfg)
+	ss := NewRegularSyncService(context.Background(), cfg)
 
 	exitRoutine := make(chan bool)
 	go func() {
@@ -369,7 +369,7 @@ func TestStartNotSynced(t *testing.T) {
 	cfg.P2P = &mockP2P{}
 	cfg.BeaconDB = db
 	cfg.QueryService = &mockQueryService{}
-	ss := NewSyncService(context.Background(), cfg)
+	ss := NewRegularSyncService(context.Background(), cfg)
 
 	ss.Start()
 	ss.Stop()
