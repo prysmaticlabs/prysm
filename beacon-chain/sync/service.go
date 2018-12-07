@@ -9,12 +9,14 @@ import (
 
 var slog = logrus.WithField("prefix", "sync")
 
+// SyncService defines the main routines used in the sync service.
 type SyncService struct {
 	RegularSync *RegularSync
 	InitialSync *initialsync.InitialSync
 	Querier     *SyncQuerier
 }
 
+// SyncConfig defines the configured services required for sync to work.
 type SyncConfig struct {
 	ChainService  chainService
 	AttestService attestationService
@@ -22,6 +24,8 @@ type SyncConfig struct {
 	P2P           p2pAPI
 }
 
+// NewSyncService creates a new instance of SyncService using the config
+// given.
 func NewSyncService(ctx context.Context, cfg *SyncConfig) *SyncService {
 
 	sqCfg := DefaultQuerierConfig()
@@ -52,10 +56,13 @@ func NewSyncService(ctx context.Context, cfg *SyncConfig) *SyncService {
 
 }
 
+// Start kicks off the sync service
 func (ss *SyncService) Start() {
 	go ss.run()
 }
 
+// Stop ends all the currently running routines
+// which are part of the sync service
 func (ss *SyncService) Stop() error {
 	synced, err := ss.Querier.IsSynced()
 	if err != nil {
