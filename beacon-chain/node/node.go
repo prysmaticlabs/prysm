@@ -289,7 +289,7 @@ func (b *BeaconNode) registerSyncService() error {
 		return err
 	}
 
-	cfg := &rbcsync.SyncConfig{
+	cfg := &rbcsync.Config{
 		ChainService:  chainService,
 		P2P:           p2pService,
 		BeaconDB:      b.db,

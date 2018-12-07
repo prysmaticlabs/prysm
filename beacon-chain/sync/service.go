@@ -9,15 +9,15 @@ import (
 
 var slog = logrus.WithField("prefix", "sync")
 
-// SyncService defines the main routines used in the sync service.
-type SyncService struct {
+// Service defines the main routines used in the sync service.
+type Service struct {
 	RegularSync *RegularSync
 	InitialSync *initialsync.InitialSync
 	Querier     *SyncQuerier
 }
 
-// SyncConfig defines the configured services required for sync to work.
-type SyncConfig struct {
+// Config defines the configured services required for sync to work.
+type Config struct {
 	ChainService  chainService
 	AttestService attestationService
 	BeaconDB      *db.BeaconDB
@@ -26,7 +26,7 @@ type SyncConfig struct {
 
 // NewSyncService creates a new instance of SyncService using the config
 // given.
-func NewSyncService(ctx context.Context, cfg *SyncConfig) *SyncService {
+func NewSyncService(ctx context.Context, cfg *Config) *Service {
 
 	sqCfg := DefaultQuerierConfig()
 	sqCfg.BeaconDB = cfg.BeaconDB
@@ -48,7 +48,7 @@ func NewSyncService(ctx context.Context, cfg *SyncConfig) *SyncService {
 	isCfg.SyncService = rs
 	is := initialsync.NewInitialSyncService(ctx, isCfg)
 
-	return &SyncService{
+	return &Service{
 		RegularSync: rs,
 		InitialSync: is,
 		Querier:     sq,
@@ -57,13 +57,13 @@ func NewSyncService(ctx context.Context, cfg *SyncConfig) *SyncService {
 }
 
 // Start kicks off the sync service
-func (ss *SyncService) Start() {
+func (ss *Service) Start() {
 	go ss.run()
 }
 
 // Stop ends all the currently running routines
 // which are part of the sync service
-func (ss *SyncService) Stop() error {
+func (ss *Service) Stop() error {
 	synced, err := ss.Querier.IsSynced()
 	if err != nil {
 		return err
@@ -76,7 +76,7 @@ func (ss *SyncService) Stop() error {
 	return ss.InitialSync.Stop()
 }
 
-func (ss *SyncService) run() {
+func (ss *Service) run() {
 	ss.Querier.Start()
 	synced, err := ss.Querier.IsSynced()
 	if err != nil {
