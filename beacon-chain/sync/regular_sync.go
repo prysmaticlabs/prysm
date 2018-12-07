@@ -16,7 +16,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var log = logrus.WithField("prefix", "sync")
+var log = logrus.WithField("prefix", "regular-sync")
 
 type chainService interface {
 	IncomingBlockFeed() *event.Feed
@@ -24,10 +24,6 @@ type chainService interface {
 
 type attestationService interface {
 	IncomingAttestationFeed() *event.Feed
-}
-
-type queryService interface {
-	IsSynced() (bool, error)
 }
 
 type p2pAPI interface {
@@ -54,7 +50,6 @@ type RegularSync struct {
 	p2p                   p2pAPI
 	chainService          chainService
 	attestationService    attestationService
-	queryService          queryService
 	db                    *db.BeaconDB
 	blockAnnouncementFeed *event.Feed
 	announceBlockBuf      chan p2p.Message
@@ -65,7 +60,7 @@ type RegularSync struct {
 }
 
 // Config allows the channel's buffer sizes to be changed.
-type Config struct {
+type RegularSyncConfig struct {
 	BlockAnnounceBufferSize int
 	BlockBufferSize         int
 	BlockRequestBufferSize  int
@@ -73,14 +68,13 @@ type Config struct {
 	ChainHeadReqBufferSize  int
 	ChainService            chainService
 	AttestService           attestationService
-	QueryService            queryService
 	BeaconDB                *db.BeaconDB
 	P2P                     p2pAPI
 }
 
 // DefaultConfig provides the default configuration for a sync service.
-func DefaultConfig() *Config {
-	return &Config{
+func DefaultRegularSyncConfig() *RegularSyncConfig {
+	return &RegularSyncConfig{
 		BlockAnnounceBufferSize: 100,
 		BlockBufferSize:         100,
 		BlockRequestBufferSize:  100,
@@ -90,7 +84,7 @@ func DefaultConfig() *Config {
 }
 
 // NewRegularSyncService accepts a context and returns a new Service.
-func NewRegularSyncService(ctx context.Context, cfg *Config) *RegularSync {
+func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *RegularSync {
 	ctx, cancel := context.WithCancel(ctx)
 	return &RegularSync{
 		ctx:                   ctx,
@@ -99,7 +93,6 @@ func NewRegularSyncService(ctx context.Context, cfg *Config) *RegularSync {
 		chainService:          cfg.ChainService,
 		db:                    cfg.BeaconDB,
 		attestationService:    cfg.AttestService,
-		queryService:          cfg.QueryService,
 		blockAnnouncementFeed: new(event.Feed),
 		announceBlockBuf:      make(chan p2p.Message, cfg.BlockAnnounceBufferSize),
 		blockBuf:              make(chan p2p.Message, cfg.BlockBufferSize),
@@ -109,26 +102,8 @@ func NewRegularSyncService(ctx context.Context, cfg *Config) *RegularSync {
 	}
 }
 
-// IsSyncedWithNetwork queries other nodes in the network
-// to determine whether or not the local chain is synced
-// with the rest of the network.
-// TODO(#661): Implement this method.
-func (rs *RegularSync) IsSyncedWithNetwork() bool {
-	return false
-}
-
 // Start begins the block processing goroutine.
 func (rs *RegularSync) Start() {
-	synced, err := rs.queryService.IsSynced()
-	if err != nil {
-		log.Error(err)
-	}
-
-	if !synced {
-		log.Info("Chain state not detected starting initial sync")
-		return
-	}
-
 	go rs.run()
 }
 

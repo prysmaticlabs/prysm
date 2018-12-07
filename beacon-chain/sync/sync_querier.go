@@ -21,8 +21,8 @@ type QuerierConfig struct {
 
 // DefaultQuerierConfig provides the default configuration for a sync service.
 // ResponseBufferSize determines that buffer size of the `responseBuf` channel.
-func DefaultQuerierConfig() QuerierConfig {
-	return QuerierConfig{
+func DefaultQuerierConfig() *QuerierConfig {
+	return &QuerierConfig{
 		ResponseBufferSize: 100,
 	}
 }
@@ -59,7 +59,7 @@ func NewSyncQuerierService(ctx context.Context,
 
 // Start begins the goroutine.
 func (s *SyncQuerier) Start() {
-	go s.run()
+	s.run()
 }
 
 // Stop kills the sync querier goroutine.

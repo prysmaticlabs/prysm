@@ -41,20 +41,14 @@ func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
 	return new(event.Feed)
 }
 
-type mockQueryService struct{}
-
-func (ms *mockQueryService) IsSynced() (bool, error) {
-	return false, nil
-}
-
 type mockAttestService struct{}
 
 func (ms *mockAttestService) IncomingAttestationFeed() *event.Feed {
 	return new(event.Feed)
 }
 
-func setupService(t *testing.T, db *db.BeaconDB) *Service {
-	cfg := Config{
+func setupService(t *testing.T, db *db.BeaconDB) *RegularSync {
+	cfg := &RegularSyncConfig{
 		BlockAnnounceBufferSize: 0,
 		BlockBufferSize:         0,
 		ChainService:            &mockChainService{},
@@ -71,7 +65,7 @@ func TestProcessBlockHash(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 
 	// set the channel's buffer to 0 to make channel interactions blocking
-	cfg := Config{
+	cfg := &RegularSyncConfig{
 		BlockAnnounceBufferSize: 0,
 		BlockBufferSize:         0,
 		ChainService:            &mockChainService{},
@@ -117,7 +111,7 @@ func TestProcessBlock(t *testing.T) {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
-	cfg := Config{
+	cfg := &RegularSyncConfig{
 		BlockAnnounceBufferSize: 0,
 		BlockBufferSize:         0,
 		ChainService:            &mockChainService{},
@@ -184,7 +178,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cfg := Config{
+	cfg := &RegularSyncConfig{
 		BlockAnnounceBufferSize: 0,
 		BlockBufferSize:         0,
 		ChainService:            &mockChainService{},
@@ -324,7 +318,7 @@ func TestReceiveAttestation(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
-	cfg := Config{
+	cfg := &RegularSyncConfig{
 		BlockAnnounceBufferSize: 0,
 		BlockBufferSize:         0,
 		BlockRequestBufferSize:  0,
@@ -356,26 +350,4 @@ func TestReceiveAttestation(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 	testutil.AssertLogsContain(t, hook, "Forwarding attestation to subscribed services")
-}
-
-func TestStartNotSynced(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-
-	cfg := DefaultConfig()
-	cfg.ChainService = &mockChainService{}
-	cfg.P2P = &mockP2P{}
-	cfg.BeaconDB = db
-	cfg.QueryService = &mockQueryService{}
-	ss := NewRegularSyncService(context.Background(), cfg)
-
-	ss.Start()
-	ss.Stop()
-
-	testutil.AssertLogsContain(t, hook, "Chain state not detected starting initial sync")
-	testutil.AssertLogsContain(t, hook, "Stopping service")
-
-	hook.Reset()
 }
