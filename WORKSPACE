@@ -816,13 +816,13 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_discovery",
-    commit = "7153173e40fcf3aa2c6845f00c54119bea8b427f",
+    commit = "a541342f5179d6afb44b4201ca9a870056e7b1f4",
     importpath = "github.com/libp2p/go-libp2p-discovery",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_autonat",
-    commit = "c09caf7c16407d3f68a3b8c467cf1d7445443328",
+    commit = "e79a6dde2f72d1e12af45f87108bcf2e6bc8b648",
     importpath = "github.com/libp2p/go-libp2p-autonat",
 )
 
