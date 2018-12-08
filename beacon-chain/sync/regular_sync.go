@@ -159,7 +159,7 @@ func (rs *RegularSync) run() {
 }
 
 // receiveBlockHash accepts a block hash.
-// New hashes are forwarded to other peers in the network (unimplemented), and
+// TODO(#175): New hashes are forwarded to other peers in the network, and
 // the contents of the block are requested if the local chain doesn't have the block.
 func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) {
 	ctx, receiveBlockSpan := trace.StartSpan(msg.Ctx, "RegularSync_receiveBlockHash")
@@ -191,6 +191,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 	blockHash, err := block.Hash()
 	if err != nil {
 		log.Errorf("Could not hash received block: %v", err)
+		return
 	}
 
 	log.Debugf("Processing response to block request: %#x", blockHash)

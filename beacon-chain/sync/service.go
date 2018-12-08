@@ -63,18 +63,18 @@ func (ss *Service) Start() {
 }
 
 // Stop ends all the currently running routines
-// which are part of the sync service
+// which are part of the sync service.
 func (ss *Service) Stop() error {
-	synced, err := ss.Querier.IsSynced()
+	err := ss.Querier.Stop()
 	if err != nil {
 		return err
 	}
-	if synced {
-		err := ss.RegularSync.Stop()
+
+	err = ss.InitialSync.Stop()
+	if err != nil {
 		return err
 	}
-
-	return ss.InitialSync.Stop()
+	return ss.RegularSync.Stop()
 }
 
 func (ss *Service) run() {
