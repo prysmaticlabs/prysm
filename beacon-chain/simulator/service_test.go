@@ -44,7 +44,6 @@ func (mpow *mockPOWChainService) LatestBlockHash() common.Hash {
 
 func setupSimulator(t *testing.T, beaconDB *db.BeaconDB) (*Simulator, *mockP2P) {
 	ctx := context.Background()
-
 	p2pService := &mockP2P{}
 
 	err := beaconDB.InitializeState(nil)

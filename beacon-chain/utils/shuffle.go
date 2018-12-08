@@ -3,7 +3,6 @@ package utils
 
 import (
 	"errors"
-	"math"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -14,13 +13,12 @@ import (
 // indices. This is used to shuffle validators on ETH2.0 beacon chain.
 func ShuffleIndices(seed common.Hash, indicesList []uint32) ([]uint32, error) {
 	// Each entropy is consumed from the seed in randBytes chunks.
-	randBytes := int(params.BeaconConfig().RandBytes)
-	upperBound := uint64(math.Pow(2, float64(randBytes) * 8)) - 1
-
+	randBytes := params.BeaconConfig().RandBytes
+	upperBound := 1<<(randBytes*8) - 1
 	// Since we are consuming randBytes of entropy at a time in the loop,
 	// we have a bias at 2**24, this check defines our max list size and is used to remove the bias.
 	// more info on modulo bias: https://stackoverflow.com/questions/10984974/why-do-people-say-there-is-modulo-bias-when-using-a-random-number-generator.
-	if uint64(len(indicesList)) >= upperBound {
+	if len(indicesList) >= upperBound {
 		return nil, errors.New("input list exceeded upper bound and reached modulo bias")
 	}
 
@@ -30,18 +28,18 @@ func ShuffleIndices(seed common.Hash, indicesList []uint32) ([]uint32, error) {
 	index := 0
 	for index < totalCount-1 {
 		// Iterate through the hashSeed bytes in chunks of size randBytes.
-		for i := 0; i < 32-(32%randBytes); i += randBytes {
+		for i := 0; i < 32-(32%int(randBytes)); i += int(randBytes) {
 			// Determine the number of indices remaining and exit if last index reached.
-			remaining := uint64(totalCount - index)
+			remaining := totalCount - index
 			if remaining == 1 {
 				break
 			}
 			// Read randBytes of hashSeed as a 3 x randBytes big-endian integer.
-			randChunk := hashSeed[i : i+randBytes]
-			var randValue uint64
-			randValue |= uint64(randChunk[0])
-			randValue |= uint64(randChunk[1])
-			randValue |= uint64(randChunk[2])
+			randChunk := hashSeed[i : i+int(randBytes)]
+			var randValue int
+			randValue |= int(randChunk[0])
+			randValue |= int(randChunk[1])
+			randValue |= int(randChunk[2])
 
 			// Sample values greater than or equal to sampleMax will cause
 			// modulo bias when mapped into the remaining range.
@@ -50,7 +48,7 @@ func ShuffleIndices(seed common.Hash, indicesList []uint32) ([]uint32, error) {
 			// Perform swap if the consumed entropy will not cause modulo bias.
 			if randValue < randMax {
 				// Select replacement index from the current index.
-				replacementIndex := (randValue % remaining) + uint64(index)
+				replacementIndex := (randValue % remaining) + index
 				indicesList[index], indicesList[replacementIndex] = indicesList[replacementIndex], indicesList[index]
 				index++
 			}
