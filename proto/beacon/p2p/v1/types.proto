@@ -170,12 +170,21 @@ message BeaconBlock {
   // repeated AttestationRecord attestations = 6;
   // Specials consist of exist, penalities, etc.
   repeated SpecialRecord specials = 7  [deprecated=true]; // Deprecated in favor of unify specials object w/ attestations.
-  repeated bytes proposer_signature = 8; // Type of [uint384]?
-
+  repeated bytes signature = 8; // Type of [uint384]?
+  // Block Body
+  BeaconBlockBody body = 9;
 
   // Deprecated fields
   // All fields must be annotated with [deprecated=true];
   google.protobuf.Timestamp timestamp = 1006 [deprecated=true]; // Keeping this until we refactor block validation.
+}
+
+message BeaconBlockBody {
+  repeated Attestation attestations = 1;
+  repeated ProposerSlashing proposer_slashings  = 2;
+  repeated CasperSlashing casper_slashings = 3;
+  repeated Deposit deposits = 4;
+  repeated Exit exits = 5;
 }
 
 message DepositParameters {
@@ -211,6 +220,11 @@ message ProposerSlashing {
   bytes proposal_signature_1 = 3; // Type of [uint384]?
   ProposalSignedData proposal_data_2 = 4;
   bytes proposal_signature_2 = 5;
+}
+
+message CasperSlashing {
+  SlashableVoteData votes_1 = 1;
+  SlashableVoteData votes_2 = 2;
 }
 
 message Deposit {
