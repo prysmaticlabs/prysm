@@ -15,7 +15,6 @@ type decodeTest struct {
 	error string
 }
 
-// decodeTests includes normal cases and corner cases.
 // Notice: spaces in the input string will be ignored.
 var decodeTests = []decodeTest{
 	// bool
@@ -61,6 +60,36 @@ var decodeTests = []decodeTest{
 			V:    3,
 			SubV: innerStruct{6},
 		}},
+
+	// error: nil target
+	{input: "00", ptr: nil, value: nil, error: "ssz: decode error: cannot decode into nil for output type <nil>"},
+
+	// error: non-pointer target
+	{input: "00", ptr: uint8(0), error: "ssz: decode error: can only decode into pointer target for output type uint8"},
+
+	// error: unsupported type
+	{input: "00", ptr: new(string), error: "ssz: decode error: type string is not serializable for output type string"},
+
+	// error: bool: wrong input value
+	{input: "02", ptr: new(bool), error: "ssz: decode error: expect 0 or 1 for decoding bool for output type bool"},
+
+	// error: uint16: wrong header
+	{input: "00", ptr: new(uint16), error: "ssz: decode error: can only read 1 bytes while expected to read 2 bytes for output type uint16"},
+
+	// error: bytes: wrong input
+	{input: "00000001", ptr: new([]byte), error: "ssz: decode error: can only read 0 bytes while expected to read 1 bytes for output type []uint8"},
+
+	// error: slice: wrong header
+	{input: "000001", ptr: new([]uint16), error: "ssz: decode error: failed to decode header of slice: can only read 3 bytes while expected to read 4 bytes for output type []uint16"},
+
+	// error: slice: wrong input
+	{input: "00000001", ptr: new([]uint16), error: "ssz: decode error: failed to decode element of slice: ssz: decode error: can only read 0 bytes while expected to read 2 bytes for output type uint16 for output type []uint16"},
+
+	// error: struct: wrong header
+	{input: "000001", ptr: new(simpleStruct), error: "ssz: decode error: failed to decode header of struct: can only read 3 bytes while expected to read 4 bytes for output type ssz.simpleStruct"},
+
+	// error: struct: wrong input
+	{input: "00000003 01 02", ptr: new(simpleStruct), error: "ssz: decode error: failed to decode field of slice: ssz: decode error: can only read 1 bytes while expected to read 2 bytes for output type uint16 for output type ssz.simpleStruct"},
 }
 
 func runTests(t *testing.T, decode func([]byte, interface{}) error) {
@@ -70,22 +99,26 @@ func runTests(t *testing.T, decode func([]byte, interface{}) error) {
 			t.Errorf("test %d: invalid hex input %q", i, test.input)
 			continue
 		}
-		// TODO: check these "check" code
 		err = decode(input, test.ptr)
-		if err != nil && test.error == "" {
-			t.Errorf("test %d: unexpected Decode error: %v\ndecoding into %T\ninput %q",
+		// Check unexpected error
+		if test.error == "" && err != nil {
+			t.Errorf("test %d: unexpected decode error: %v\ndecoding into %T\ninput %q",
 				i, err, test.ptr, test.input)
 			continue
 		}
+		// Check expected error
 		if test.error != "" && fmt.Sprint(err) != test.error {
-			t.Errorf("test %d: Decode error mismatch\ngot  %v\nwant %v\ndecoding into %T\ninput %q",
+			t.Errorf("test %d: decode error mismatch\ngot  %v\nwant %v\ndecoding into %T\ninput %q",
 				i, err, test.error, test.ptr, test.input)
 			continue
 		}
-		deref := reflect.ValueOf(test.ptr).Elem().Interface()
-		if err == nil && !reflect.DeepEqual(deref, test.value) {
-			t.Errorf("test %d: value mismatch\ngot  %#v\nwant %#v\ndecoding into %T\ninput %q",
-				i, deref, test.value, test.ptr, test.input)
+		// Check expected output value
+		if err == nil {
+			output := reflect.ValueOf(test.ptr).Elem().Interface()
+			if !reflect.DeepEqual(output, test.value) {
+				t.Errorf("test %d: value mismatch\ngot  %#v\nwant %#v\ndecoding into %T\ninput %q",
+					i, output, test.value, test.ptr, test.input)
+			}
 		}
 	}
 }

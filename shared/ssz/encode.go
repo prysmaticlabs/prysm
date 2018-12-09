@@ -61,7 +61,7 @@ func makeEncoder(typ reflect.Type) (encoder, error) {
 	case kind == reflect.Struct:
 		return makeStructEncoder(typ)
 	default:
-		return nil, fmt.Errorf("ssz: type %v is not serializable", typ)
+		return nil, fmt.Errorf("type %v is not serializable", typ)
 	}
 }
 

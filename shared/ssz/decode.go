@@ -2,7 +2,6 @@ package ssz
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"io"
 	"reflect"
@@ -25,19 +24,19 @@ func Decode(r io.Reader, val interface{}) error {
 
 func decode(r io.Reader, val interface{}) (uint32, error) {
 	if val == nil {
-		return 0, fmt.Errorf("ssz: cannot output to nil")
+		return 0, newDecodeError("cannot decode into nil", nil)
 	}
 	rval := reflect.ValueOf(val)
 	rtyp := rval.Type()
 	if rtyp.Kind() != reflect.Ptr {
-		return 0, fmt.Errorf("ssz: can only output to ptr")
+		return 0, newDecodeError("can only decode into pointer target", rtyp)
 	}
 	if rval.IsNil() {
-		return 0, fmt.Errorf("ssz: cannot output to nil")
+		return 0, newDecodeError("cannot output to pointer of nil", rtyp)
 	}
 	encDec, err := getEncoderDecoderForType(rval.Elem().Type())
 	if err != nil {
-		return 0, err
+		return 0, newDecodeError(fmt.Sprint(err), rval.Elem().Type())
 	}
 	return encDec.decoder(r, rval.Elem())
 }
@@ -58,21 +57,22 @@ func makeDecoder(typ reflect.Type) (dec decoder, err error) {
 	case kind == reflect.Struct:
 		return makeStructDecoder(typ)
 	default:
-		return nil, fmt.Errorf("ssz: type %v is not deserializable", typ)
+		return nil, fmt.Errorf("type %v is not deserializable", typ)
 	}
 }
 
 func decodeBool(r io.Reader, val reflect.Value) (uint32, error) {
 	b := make([]byte, 1)
 	if err := readBytes(r, 1, b); err != nil {
-		return 0, fmt.Errorf("failed to decode uint8: %v", err)
+		return 0, newDecodeError(fmt.Sprint(err), val.Type())
 	}
-	// TODO: read value other than 0 or 1?
 	v := uint8(b[0])
 	if v == 0 {
 		val.SetBool(false)
 	} else if v == 1 {
 		val.SetBool(true)
+	} else {
+		return 0, newDecodeError("expect 0 or 1 for decoding bool", val.Type())
 	}
 	return 1, nil
 }
@@ -80,7 +80,7 @@ func decodeBool(r io.Reader, val reflect.Value) (uint32, error) {
 func decodeUint8(r io.Reader, val reflect.Value) (uint32, error) {
 	b := make([]byte, 1)
 	if err := readBytes(r, 1, b); err != nil {
-		return 0, fmt.Errorf("failed to decode uint8: %v", err)
+		return 0, newDecodeError(fmt.Sprint(err), val.Type())
 	}
 	val.SetUint(uint64(b[0]))
 	return 1, nil
@@ -89,9 +89,8 @@ func decodeUint8(r io.Reader, val reflect.Value) (uint32, error) {
 func decodeUint16(r io.Reader, val reflect.Value) (uint32, error) {
 	b := make([]byte, 2)
 	if err := readBytes(r, 2, b); err != nil {
-		return 0, fmt.Errorf("failed to decode uint16: %v", err)
+		return 0, newDecodeError(fmt.Sprint(err), val.Type())
 	}
-	fmt.Println(val.Type().String())
 	val.SetUint(uint64(binary.BigEndian.Uint16(b)))
 	return 2, nil
 }
@@ -99,10 +98,9 @@ func decodeUint16(r io.Reader, val reflect.Value) (uint32, error) {
 func decodeBytes(r io.Reader, val reflect.Value) (uint32, error) {
 	sizeEnc := make([]byte, 4)
 	if err := readBytes(r, 4, sizeEnc); err != nil {
-		return 0, fmt.Errorf("failed to decode header of bytes: %v", err)
+		return 0, newDecodeError(fmt.Sprint(err), val.Type())
 	}
 	size := binary.BigEndian.Uint32(sizeEnc)
-	fmt.Println(size)
 
 	if size == 0 {
 		val.SetBytes([]byte{})
@@ -111,7 +109,7 @@ func decodeBytes(r io.Reader, val reflect.Value) (uint32, error) {
 
 	b := make([]byte, size)
 	if err := readBytes(r, int(size), b); err != nil {
-		return 0, fmt.Errorf("failed to decode bytes: %v", err)
+		return 0, newDecodeError(fmt.Sprint(err), val.Type())
 	}
 	val.SetBytes(b)
 	return 4 + size, nil
@@ -121,12 +119,12 @@ func makeSliceDecoder(typ reflect.Type) (decoder, error) {
 	elemType := typ.Elem()
 	elemEncoderDecoder, err := getEncoderDecoderForType(elemType)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get encoder/decoder: %v", err)
+		return nil, newDecodeError(fmt.Sprint(err), typ)
 	}
 	decoder := func(r io.Reader, val reflect.Value) (uint32, error) {
 		sizeEnc := make([]byte, 4)
 		if err := readBytes(r, 4, sizeEnc); err != nil {
-			return 0, fmt.Errorf("failed to decode header of slice: %v", err)
+			return 0, newDecodeError(fmt.Sprintf("failed to decode header of slice: %v", err), typ)
 		}
 		size := binary.BigEndian.Uint32(sizeEnc)
 
@@ -156,7 +154,7 @@ func makeSliceDecoder(typ reflect.Type) (decoder, error) {
 			// Decode and write into the new element
 			elemDecodeSize, err := elemEncoderDecoder.decoder(r, val.Index(i))
 			if err != nil {
-				return 0, fmt.Errorf("failed to decode element of slice: %v", err)
+				return 0, newDecodeError(fmt.Sprintf("failed to decode element of slice: %v", err), typ)
 			}
 			decodeSize += elemDecodeSize
 		}
@@ -168,12 +166,12 @@ func makeSliceDecoder(typ reflect.Type) (decoder, error) {
 func makeStructDecoder(typ reflect.Type) (decoder, error) {
 	fields, err := sortedStructFields(typ)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get encoder/decoder: %v", err)
+		return nil, newDecodeError(fmt.Sprint(err), typ)
 	}
 	decoder := func(r io.Reader, val reflect.Value) (uint32, error) {
 		sizeEnc := make([]byte, 4)
 		if err := readBytes(r, 4, sizeEnc); err != nil {
-			return 0, fmt.Errorf("failed to decode header of slice: %v", err)
+			return 0, newDecodeError(fmt.Sprintf("failed to decode header of struct: %v", err), typ)
 		}
 		size := binary.BigEndian.Uint32(sizeEnc)
 
@@ -183,12 +181,12 @@ func makeStructDecoder(typ reflect.Type) (decoder, error) {
 
 		for i, decodeSize := 0, uint32(0); i < len(fields); i++ {
 			if decodeSize >= size {
-				return 0, errors.New("not enough input data to decode into specified struct")
+				return 0, newDecodeError("not enough input data to decode into specified struct", typ)
 			}
 			f := fields[i]
 			fieldDecodeSize, err := f.encDec.decoder(r, val.Field(f.index))
 			if err != nil {
-				return 0, fmt.Errorf("failed to decode field of slice: %v", err)
+				return 0, newDecodeError(fmt.Sprintf("failed to decode field of slice: %v", err), typ)
 			}
 			decodeSize += fieldDecodeSize
 		}
@@ -209,4 +207,17 @@ func readBytes(r io.Reader, size int, b []byte) error {
 		return fmt.Errorf("failed to read from input: %v", err)
 	}
 	return nil
+}
+
+type decodeError struct {
+	msg string
+	typ reflect.Type
+}
+
+func newDecodeError(msg string, typ reflect.Type) *decodeError {
+	return &decodeError{msg, typ}
+}
+
+func (err *decodeError) Error() string {
+	return fmt.Sprintf("ssz: decode error: %s for output type %v", err.msg, err.typ)
 }
