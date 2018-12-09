@@ -37,9 +37,9 @@ func ShuffleIndices(seed common.Hash, indicesList []uint32) ([]uint32, error) {
 			// Read randBytes of hashSeed as a 8 x randBytes big-endian integer.
 			randChunk := hashSeed[i : i+int(randBytes)]
 			var randValue int
-			randValue |= int(randChunk[0])
-			randValue |= int(randChunk[1])
-			randValue |= int(randChunk[2])
+			for j := 0; j < int(randBytes); j++ {
+				randValue |= int(randChunk[j])
+			}
 
 			// Sample values greater than or equal to sampleMax will cause
 			// modulo bias when mapped into the remaining range.
