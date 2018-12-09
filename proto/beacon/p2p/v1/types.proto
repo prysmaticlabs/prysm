@@ -72,7 +72,7 @@ message PendingAttestationRecord {
   uint64 slot_included = 4;
 }
 
-message AttestationRecord {
+message Attestation {
   AttestationData data = 1 [deprecated=true];
   bytes participation_bitfield = 2 [deprecated=true];
   bytes custody_bitfield = 3 [deprecated=true];
@@ -211,13 +211,6 @@ message ProposerSlashing {
   bytes proposal_signature_1 = 3; // Type of [uint384]?
   ProposalSignedData proposal_data_2 = 4;
   bytes proposal_signature_2 = 5;
-}
-
-message Attestation {
-  AttestationData data = 1;
-  bytes participation_bitfield = 2;
-  bytes custody_bitfield = 3;
-  bytes proposal_signature_1 = 4; // Type of [uint384]?
 }
 
 message Deposit {
