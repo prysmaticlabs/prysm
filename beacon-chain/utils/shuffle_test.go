@@ -11,7 +11,9 @@ import (
 func TestFaultyShuffleIndices(t *testing.T) {
 	var list []uint32
 
-	for i := uint64(0); i < params.BeaconConfig().ModuloBias+1; i++ {
+	upperBound := 1<<(params.BeaconConfig().RandBytes*8) - 1
+
+	for i := 0; i < upperBound+1; i++ {
 		list = append(list, uint32(i))
 	}
 
@@ -25,7 +27,7 @@ func TestShuffleIndices(t *testing.T) {
 	hash2 := common.BytesToHash([]byte{'1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7'})
 	var list1 []uint32
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 10; i++ {
 		list1 = append(list1, uint32(i))
 	}
 
@@ -44,6 +46,12 @@ func TestShuffleIndices(t *testing.T) {
 
 	if reflect.DeepEqual(list1, list2) {
 		t.Errorf("2 shuffled lists shouldn't be equal")
+	}
+	if !reflect.DeepEqual(list1, []uint32{5, 4, 9, 6, 7, 3, 0, 1, 8, 2}) {
+		t.Errorf("list 1 was incorrectly shuffled")
+	}
+	if !reflect.DeepEqual(list2, []uint32{9, 0, 1, 5, 3, 2, 4, 7, 8, 6}) {
+		t.Errorf("list 2 was incorrectly shuffled")
 	}
 }
 
