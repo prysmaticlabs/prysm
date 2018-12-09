@@ -246,10 +246,10 @@ func TestNewValidatorSetRecalculationsInvalid(t *testing.T) {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 	// Negative test case, shuffle validators with more than MaxValidatorRegistry.
-	size := params.BeaconConfig().ModuloBias + 1
+	size := 1<<(params.BeaconConfig().RandBytes*8) - 1
 	validators := make([]*pb.ValidatorRecord, size)
 	validator := &pb.ValidatorRecord{Status: uint64(params.Active)}
-	for i := uint64(0); i < size; i++ {
+	for i := 0; i < size; i++ {
 		validators[i] = validator
 	}
 	beaconState.SetValidatorRegistry(validators)
