@@ -50,6 +50,7 @@ type BeaconChainConfig struct {
 	BootstrappedValidatorsCount             uint64         // BootstrappedValidatorsCount is the number of validators we seed to start beacon chain.
 	SyncPollingInterval                     int64          // SyncPollingInterval queries network nodes for sync status.
 	GenesisTime                             time.Time      // GenesisTime used by the protocol.
+	MaxNumLog2Validators                    uint64         // Max number of validators in Log2 can exist given total ETH supply.
 }
 
 // ShardChainConfig contains configs for node to participate in shard chains.
@@ -81,6 +82,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	BootstrappedValidatorsCount:   16384,
 	SyncPollingInterval:           16 * 4, // Query nodes over the network every 4 slots for sync status.
 	GenesisTime:                   time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC),
+	MaxNumLog2Validators:          24,
 }
 
 var demoBeaconConfig = &BeaconChainConfig{
@@ -106,6 +108,7 @@ var demoBeaconConfig = &BeaconChainConfig{
 	SimulatedBlockRandao:          [32]byte{'S', 'I', 'M', 'U', 'L', 'A', 'T', 'E', 'R'},
 	SyncPollingInterval:           2 * 4, // Query nodes over the network every 4 slots for sync status.
 	GenesisTime:                   time.Now(),
+	MaxNumLog2Validators:          24,
 }
 
 var defaultShardConfig = &ShardChainConfig{

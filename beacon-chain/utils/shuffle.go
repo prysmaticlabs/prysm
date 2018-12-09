@@ -14,7 +14,9 @@ import (
 func ShuffleIndices(seed common.Hash, indicesList []uint32) ([]uint32, error) {
 	// Each entropy is consumed from the seed in randBytes chunks.
 	randBytes := params.BeaconConfig().RandBytes
-	upperBound := 1<<(randBytes*8) - 1
+
+	maxValidatorsPerRandBytes := params.BeaconConfig().MaxNumLog2Validators / randBytes
+	upperBound := 1<<(randBytes*maxValidatorsPerRandBytes) - 1
 	// Since we are consuming randBytes of entropy at a time in the loop,
 	// we have a bias at 2**24, this check defines our max list size and is used to remove the bias.
 	// more info on modulo bias: https://stackoverflow.com/questions/10984974/why-do-people-say-there-is-modulo-bias-when-using-a-random-number-generator.
@@ -34,7 +36,7 @@ func ShuffleIndices(seed common.Hash, indicesList []uint32) ([]uint32, error) {
 			if remaining == 1 {
 				break
 			}
-			// Read randBytes of hashSeed as a 8 x randBytes big-endian integer.
+			// Read randBytes of hashSeed as a maxValidatorsPerRandBytes x randBytes big-endian integer.
 			randChunk := hashSeed[i : i+int(randBytes)]
 			var randValue int
 			for j := 0; j < int(randBytes); j++ {
