@@ -7,12 +7,6 @@ import (
 	"reflect"
 )
 
-// TODOs for this PR:
-// - Review all existing error handling
-// - Add error handing when decoding invalid input stream
-// - Create error types so we have fewer error texts all over the code
-// - Use constant to replace hard coding of number 4
-
 // TODOs for later PR:
 // - Add support for more types
 
@@ -57,7 +51,7 @@ func makeDecoder(typ reflect.Type) (dec decoder, err error) {
 	case kind == reflect.Struct:
 		return makeStructDecoder(typ)
 	default:
-		return nil, fmt.Errorf("type %v is not deserializable", typ)
+		return nil, newDecodeError(fmt.Sprintf("type %v is not deserializable", typ), typ)
 	}
 }
 
@@ -96,15 +90,15 @@ func decodeUint16(r io.Reader, val reflect.Value) (uint32, error) {
 }
 
 func decodeBytes(r io.Reader, val reflect.Value) (uint32, error) {
-	sizeEnc := make([]byte, 4)
-	if err := readBytes(r, 4, sizeEnc); err != nil {
+	sizeEnc := make([]byte, lengthBytes)
+	if err := readBytes(r, lengthBytes, sizeEnc); err != nil {
 		return 0, newDecodeError(fmt.Sprint(err), val.Type())
 	}
 	size := binary.BigEndian.Uint32(sizeEnc)
 
 	if size == 0 {
 		val.SetBytes([]byte{})
-		return 4, nil
+		return lengthBytes, nil
 	}
 
 	b := make([]byte, size)
@@ -112,7 +106,7 @@ func decodeBytes(r io.Reader, val reflect.Value) (uint32, error) {
 		return 0, newDecodeError(fmt.Sprint(err), val.Type())
 	}
 	val.SetBytes(b)
-	return 4 + size, nil
+	return lengthBytes + size, nil
 }
 
 func makeSliceDecoder(typ reflect.Type) (decoder, error) {
@@ -122,15 +116,15 @@ func makeSliceDecoder(typ reflect.Type) (decoder, error) {
 		return nil, newDecodeError(fmt.Sprint(err), typ)
 	}
 	decoder := func(r io.Reader, val reflect.Value) (uint32, error) {
-		sizeEnc := make([]byte, 4)
-		if err := readBytes(r, 4, sizeEnc); err != nil {
+		sizeEnc := make([]byte, lengthBytes)
+		if err := readBytes(r, lengthBytes, sizeEnc); err != nil {
 			return 0, newDecodeError(fmt.Sprintf("failed to decode header of slice: %v", err), typ)
 		}
 		size := binary.BigEndian.Uint32(sizeEnc)
 
 		if size == 0 {
 			// We prefer decode into nil, not empty slice
-			return 4, nil
+			return lengthBytes, nil
 		}
 
 		for i, decodeSize := 0, uint32(0); decodeSize < size; i++ {
@@ -158,7 +152,7 @@ func makeSliceDecoder(typ reflect.Type) (decoder, error) {
 			}
 			decodeSize += elemDecodeSize
 		}
-		return 4 + size, nil
+		return lengthBytes + size, nil
 	}
 	return decoder, nil
 }
@@ -169,14 +163,14 @@ func makeStructDecoder(typ reflect.Type) (decoder, error) {
 		return nil, newDecodeError(fmt.Sprint(err), typ)
 	}
 	decoder := func(r io.Reader, val reflect.Value) (uint32, error) {
-		sizeEnc := make([]byte, 4)
-		if err := readBytes(r, 4, sizeEnc); err != nil {
+		sizeEnc := make([]byte, lengthBytes)
+		if err := readBytes(r, lengthBytes, sizeEnc); err != nil {
 			return 0, newDecodeError(fmt.Sprintf("failed to decode header of struct: %v", err), typ)
 		}
 		size := binary.BigEndian.Uint32(sizeEnc)
 
 		if size == 0 {
-			return 4, nil
+			return lengthBytes, nil
 		}
 
 		for i, decodeSize := 0, uint32(0); i < len(fields); i++ {
@@ -190,7 +184,7 @@ func makeStructDecoder(typ reflect.Type) (decoder, error) {
 			}
 			decodeSize += fieldDecodeSize
 		}
-		return 4 + size, nil
+		return lengthBytes + size, nil
 	}
 	return decoder, nil
 }
@@ -209,6 +203,7 @@ func readBytes(r io.Reader, size int, b []byte) error {
 	return nil
 }
 
+// decodeError is what gets reported to the decoder user in error case
 type decodeError struct {
 	msg string
 	typ reflect.Type
@@ -219,5 +214,5 @@ func newDecodeError(msg string, typ reflect.Type) *decodeError {
 }
 
 func (err *decodeError) Error() string {
-	return fmt.Sprintf("ssz: decode error: %s for output type %v", err.msg, err.typ)
+	return fmt.Sprintf("decode error: %s for output type %v", err.msg, err.typ)
 }

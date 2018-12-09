@@ -7,14 +7,10 @@ import (
 	"reflect"
 )
 
-// TODOs for this PR:
-// - Review all error handling
-// - Use customized error types to avoid error string everywhere!
-// - Add check for input sizes! (2 << 32)
-// - Use constant to replace hard coding of number 4
-
 // TODOs for later PR:
 // - Add support for more types
+
+const lengthBytes = 4
 
 // Encode TODO add comments
 func Encode(w io.Writer, val interface{}) error {
@@ -61,7 +57,7 @@ func makeEncoder(typ reflect.Type) (encoder, error) {
 	case kind == reflect.Struct:
 		return makeStructEncoder(typ)
 	default:
-		return nil, fmt.Errorf("type %v is not serializable", typ)
+		return nil, newEncodeError(fmt.Sprintf("type %v is not serializable", typ), typ)
 	}
 }
 
@@ -90,7 +86,10 @@ func encodeUint16(val reflect.Value, w *encbuf) error {
 
 func encodeBytes(val reflect.Value, w *encbuf) error {
 	b := val.Bytes()
-	sizeEnc := make([]byte, 4)
+	sizeEnc := make([]byte, lengthBytes)
+	if len(val.Bytes()) >= 2<<32 {
+		return newEncodeError("bytes oversize", val.Type())
+	}
 	binary.BigEndian.PutUint32(sizeEnc, uint32(len(b)))
 	w.str = append(w.str, sizeEnc...)
 	w.str = append(w.str, val.Bytes()...)
@@ -100,21 +99,24 @@ func encodeBytes(val reflect.Value, w *encbuf) error {
 func makeSliceEncoder(typ reflect.Type) (encoder, error) {
 	elemEncoderDecoder, err := getEncoderDecoderForType(typ.Elem())
 	if err != nil {
-		return nil, fmt.Errorf("failed to get encoder/decoder: %v", err)
+		return nil, newEncodeError(fmt.Sprintf("failed to get encoder/decoder: %v", err), typ)
 	}
 	encoder := func(val reflect.Value, w *encbuf) error {
 		// TODO: totalSize should've been already known in the parsing pass. You need to add that feature to your parsing code
 		origBufSize := len(w.str)
-		totalSizeEnc := make([]byte, 4)
+		totalSizeEnc := make([]byte, lengthBytes)
 		w.str = append(w.str, totalSizeEnc...)
 		for i := 0; i < val.Len(); i++ {
 			if err := elemEncoderDecoder.encoder(val.Index(i), w); err != nil {
-				return err
+				return newEncodeError(fmt.Sprintf("failed to encode element of slice: %v", err), typ)
 			}
 		}
-		totalSize := len(w.str) - 4 - origBufSize
+		totalSize := len(w.str) - lengthBytes - origBufSize
+		if totalSize >= 2<<32 {
+			return newEncodeError("slice oversize", val.Type())
+		}
 		binary.BigEndian.PutUint32(totalSizeEnc, uint32(totalSize))
-		copy(w.str[origBufSize:origBufSize+4], totalSizeEnc)
+		copy(w.str[origBufSize:origBufSize+lengthBytes], totalSizeEnc)
 		return nil
 	}
 	return encoder, nil
@@ -127,17 +129,34 @@ func makeStructEncoder(typ reflect.Type) (encoder, error) {
 	}
 	encoder := func(val reflect.Value, w *encbuf) error {
 		origBufSize := len(w.str)
-		totalSizeEnc := make([]byte, 4)
+		totalSizeEnc := make([]byte, lengthBytes)
 		w.str = append(w.str, totalSizeEnc...)
 		for _, f := range fields {
 			if err := f.encDec.encoder(val.Field(f.index), w); err != nil {
 				return err
 			}
 		}
-		totalSize := len(w.str) - 4 - origBufSize
+		totalSize := len(w.str) - lengthBytes - origBufSize
+		if totalSize >= 2<<32 {
+			return newEncodeError("struct oversize", val.Type())
+		}
 		binary.BigEndian.PutUint32(totalSizeEnc, uint32(totalSize))
-		copy(w.str[origBufSize:origBufSize+4], totalSizeEnc)
+		copy(w.str[origBufSize:origBufSize+lengthBytes], totalSizeEnc)
 		return nil
 	}
 	return encoder, nil
+}
+
+// encodeError is what gets reported to the encoder user in error case.
+type encodeError struct {
+	msg string
+	typ reflect.Type
+}
+
+func newEncodeError(msg string, typ reflect.Type) *encodeError {
+	return &encodeError{msg, typ}
+}
+
+func (err *encodeError) Error() string {
+	return fmt.Sprintf("encode error: %s for input type %v", err.msg, err.typ)
 }
