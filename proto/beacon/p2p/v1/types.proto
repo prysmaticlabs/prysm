@@ -73,10 +73,10 @@ message PendingAttestationRecord {
 }
 
 message Attestation {
-  AttestationData data = 1 [deprecated=true];
-  bytes participation_bitfield = 2 [deprecated=true];
-  bytes custody_bitfield = 3 [deprecated=true];
-  bytes aggregate_signature = 4 [deprecated=true]; // Type of [uint384] ?
+  AttestationData data = 1;
+  bytes participation_bitfield = 2;
+  bytes custody_bitfield = 3;
+  bytes aggregate_signature = 4; // Type of [uint384] ?
 }
 
 message AttestationData {
