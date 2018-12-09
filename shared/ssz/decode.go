@@ -104,6 +104,11 @@ func decodeBytes(r io.Reader, val reflect.Value) (uint32, error) {
 	size := binary.BigEndian.Uint32(sizeEnc)
 	fmt.Println(size)
 
+	if size == 0 {
+		val.SetBytes([]byte{})
+		return 4, nil
+	}
+
 	b := make([]byte, size)
 	if err := readBytes(r, int(size), b); err != nil {
 		return 0, fmt.Errorf("failed to decode bytes: %v", err)
@@ -124,6 +129,11 @@ func makeSliceDecoder(typ reflect.Type) (decoder, error) {
 			return 0, fmt.Errorf("failed to decode header of slice: %v", err)
 		}
 		size := binary.BigEndian.Uint32(sizeEnc)
+
+		if size == 0 {
+			// We prefer decode into nil, not empty slice
+			return 4, nil
+		}
 
 		for i, decodeSize := 0, uint32(0); decodeSize < size; i++ {
 			// Grow slice's capacity if necessary
@@ -166,6 +176,10 @@ func makeStructDecoder(typ reflect.Type) (decoder, error) {
 			return 0, fmt.Errorf("failed to decode header of slice: %v", err)
 		}
 		size := binary.BigEndian.Uint32(sizeEnc)
+
+		if size == 0 {
+			return 4, nil
+		}
 
 		for i, decodeSize := 0, uint32(0); i < len(fields); i++ {
 			if decodeSize >= size {
