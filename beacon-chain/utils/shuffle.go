@@ -34,7 +34,7 @@ func ShuffleIndices(seed common.Hash, indicesList []uint32) ([]uint32, error) {
 			if remaining == 1 {
 				break
 			}
-			// Read randBytes of hashSeed as a 3 x randBytes big-endian integer.
+			// Read randBytes of hashSeed as a 8 x randBytes big-endian integer.
 			randChunk := hashSeed[i : i+int(randBytes)]
 			var randValue int
 			randValue |= int(randChunk[0])
