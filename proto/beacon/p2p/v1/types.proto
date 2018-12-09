@@ -131,8 +131,8 @@ message AggregatedAttestation {
 }
 
 message SpecialRecord {
-  uint32 kind = 1 [deprecated=true];
-  repeated bytes data = 2 [deprecated=true];
+  uint32 kind = 1 [deprecated=true]; // Deprecated in favor of unify specials object w/ attestations.
+  repeated bytes data = 2 [deprecated=true]; // Deprecated in favor of unify specials object w/ attestations.
 }
 
 message CrosslinkRecord {
@@ -169,7 +169,7 @@ message BeaconBlock {
   repeated AggregatedAttestation attestations = 6 [deprecated=true];
   // repeated AttestationRecord attestations = 6;
   // Specials consist of exist, penalities, etc.
-  repeated SpecialRecord specials = 7  [deprecated=true];
+  repeated SpecialRecord specials = 7  [deprecated=true]; // Deprecated in favor of unify specials object w/ attestations.
   repeated bytes proposer_signature = 8; // Type of [uint384]?
 
 
@@ -193,8 +193,8 @@ message ProposalSignedData {
 }
 
 message SlashableVoteData {
-  repeated ethereum.common.Uint32List aggregate_signature_poc_0_indices = 1;
-  repeated ethereum.common.Uint32List aggregate_signature_poc_1_indices = 2;
+  repeated ethereum.common.Uint32List aggregate_signature_poc_0_indices = 1; // proof of custody indices for 0 bits.
+  repeated ethereum.common.Uint32List aggregate_signature_poc_1_indices = 2; // proof of custody indices for 1 bits.
   AttestationData data = 3;
   bytes aggregate_signature = 4; // Type of [uint384]?
 }
