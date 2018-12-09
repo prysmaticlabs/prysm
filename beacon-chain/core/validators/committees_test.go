@@ -39,10 +39,11 @@ func TestGetShardAndCommitteesForSlots(t *testing.T) {
 
 func TestExceedingMaxValidatorRegistryFails(t *testing.T) {
 	// Create more validators than ModuloBias defined in config, this should fail.
-	size := params.BeaconConfig().ModuloBias + 1
+	size := 1<<(params.BeaconConfig().RandBytes*8) - 1
+
 	validators := make([]*pb.ValidatorRecord, size)
 	validator := &pb.ValidatorRecord{Status: uint64(params.Active)}
-	for i := uint64(0); i < size; i++ {
+	for i := 0; i < size; i++ {
 		validators[i] = validator
 	}
 
@@ -55,7 +56,9 @@ func TestExceedingMaxValidatorRegistryFails(t *testing.T) {
 func BenchmarkMaxValidatorRegistry(b *testing.B) {
 	var validators []*pb.ValidatorRecord
 	validator := &pb.ValidatorRecord{}
-	for i := uint64(0); i < params.BeaconConfig().ModuloBias; i++ {
+	size := 1<<(params.BeaconConfig().RandBytes*8) - 1
+
+	for i := 0; i < size; i++ {
 		validators = append(validators, validator)
 	}
 
