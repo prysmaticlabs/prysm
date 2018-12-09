@@ -73,10 +73,10 @@ message PendingAttestationRecord {
 }
 
 message AttestationRecord {
-  AttestationData data = 1;
-  bytes participation_bitfield = 2;
-  bytes custody_bitfield = 3;
-  bytes aggregate_signature = 4; // Type of [uint384] ?
+  AttestationData data = 1 [deprecated=true];
+  bytes participation_bitfield = 2 [deprecated=true];
+  bytes custody_bitfield = 3 [deprecated=true];
+  bytes aggregate_signature = 4 [deprecated=true]; // Type of [uint384] ?
 }
 
 message AttestationData {
@@ -131,8 +131,8 @@ message AggregatedAttestation {
 }
 
 message SpecialRecord {
-    uint32 kind = 1;
-    repeated bytes data = 2;
+  uint32 kind = 1 [deprecated=true];
+  repeated bytes data = 2 [deprecated=true];
 }
 
 message CrosslinkRecord {
@@ -169,7 +169,7 @@ message BeaconBlock {
   repeated AggregatedAttestation attestations = 6 [deprecated=true];
   // repeated AttestationRecord attestations = 6;
   // Specials consist of exist, penalities, etc.
-  repeated SpecialRecord specials = 7;
+  repeated SpecialRecord specials = 7  [deprecated=true];
   repeated bytes proposer_signature = 8; // Type of [uint384]?
 
 
@@ -178,10 +178,56 @@ message BeaconBlock {
   google.protobuf.Timestamp timestamp = 1006 [deprecated=true]; // Keeping this until we refactor block validation.
 }
 
-message DepositParametersRecord {
+message DepositParameters {
   bytes pubkey = 1;
   bytes proof_of_possession = 2; // Type of ['uint384']??
   // TODO(781): The usage of withdrawal_credentials is not defined in spec. Not used in Prysm yet.
   bytes withdrawal_credentials_hash32 = 3;
   bytes randao_commitment_hash32 = 4;
+}
+
+message ProposalSignedData {
+  uint64 slot = 1;
+  uint64 shard = 2;
+  bytes block_hash_hash32 = 3;
+}
+
+message SlashableVoteData {
+  repeated ethereum.common.Uint32List aggregate_signature_poc_0_indices = 1;
+  repeated ethereum.common.Uint32List aggregate_signature_poc_1_indices = 2;
+  AttestationData data = 3;
+  bytes aggregate_signature = 4; // Type of [uint384]?
+}
+
+message DepositData {
+  DepositParameters deposit_parameters = 1;
+  uint64 value = 2;
+  uint64 timestamp = 3;
+}
+
+message ProposerSlashing {
+  uint32 proposer_index = 1;
+  ProposalSignedData proposal_data_1 = 2;
+  bytes proposal_signature_1 = 3; // Type of [uint384]?
+  ProposalSignedData proposal_data_2 = 4;
+  bytes proposal_signature_2 = 5;
+}
+
+message Attestation {
+  AttestationData data = 1;
+  bytes participation_bitfield = 2;
+  bytes custody_bitfield = 3;
+  bytes proposal_signature_1 = 4; // Type of [uint384]?
+}
+
+message Deposit {
+  repeated bytes merkle_branch_hash32s = 1;
+  uint64 merkle_tree_index = 2;
+  DepositData deposit_data = 3;
+}
+
+message Exit {
+  uint64 slot = 1;
+  uint64 validator_index = 2;
+  bytes signature = 3; // Type of [uint384]?
 }
