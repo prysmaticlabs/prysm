@@ -10,7 +10,7 @@ import (
 // TODOs for later PR:
 // - Add support for more types
 
-// Decode TODO add comments
+// Decode decodes data read from r and output it into the object pointed by pointer val
 func Decode(r io.Reader, val interface{}) error {
 	_, err := decode(r, val)
 	return err

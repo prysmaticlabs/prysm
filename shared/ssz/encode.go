@@ -12,7 +12,7 @@ import (
 
 const lengthBytes = 4
 
-// Encode TODO add comments
+// Encode encodes val and output the result into w
 func Encode(w io.Writer, val interface{}) error {
 	eb := &encbuf{}
 	if err := eb.encode(val); err != nil {
