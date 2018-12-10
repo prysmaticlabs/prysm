@@ -42,15 +42,9 @@ message BeaconState {
   ForkData fork_data = 5002;
 
 
-
   // Deprecated fields 
   // All fields mustbe annotated with [deprecated=true];
-  bytes randao_mix = 10003 [deprecated=true]; // Renamed to randao_mix_hash32
-  uint64 last_finalized_slot = 10005 [deprecated=true]; // Replaced/renamed by finalized_slot
-  uint64 last_justified_slot = 10006 [deprecated=true]; // Replaced/renamed by justified_slot
   uint64 justified_streak = 10007 [deprecated=true]; // Deprecated by changes in fork choice rule. See https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#beacon-chain-fork-choice-rule 
-  bytes next_shuffling_seed = 10008 [deprecated=true]; // Replaced/renamed by next_seed_hash32 
-  repeated uint64 deposits_penalized_in_period = 10009 [deprecated=true]; // Replaced by latest_penalized_exit_balances
   repeated AggregatedAttestation pending_attestations = 10018 [deprecated=true]; // Deleted by spec
 }
 
@@ -130,18 +124,9 @@ message AggregatedAttestation {
   repeated uint64 aggregate_sig = 8 [deprecated=true];
 }
 
-message SpecialRecord {
-  uint32 kind = 1 [deprecated=true]; // Deprecated in favor of unify specials object w/ attestations.
-  repeated bytes data = 2 [deprecated=true]; // Deprecated in favor of unify specials object w/ attestations.
-}
-
 message CrosslinkRecord {
   uint64 slot = 1;
   bytes shard_block_hash32 = 2;
-
-  // Deprecated fields
-  // All fields must be annotated with [deprecated=true];
-  bytes shard_block_hash = 1001 [deprecated=true]; // Renamed to shard_block_hash32
 }
 
 message ShardAndCommitteeArray {
