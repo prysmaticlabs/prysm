@@ -166,12 +166,12 @@ message BeaconBlock {
   repeated bytes signature = 6; // Type of [uint384]?
 
   // Block Body
-  BeaconBlockBody body = 1000;
+  BeaconBlockBody body = 7;
 
   // Deprecated fields
   // All fields must be annotated with [deprecated=true];
-  google.protobuf.Timestamp timestamp = 2006 [deprecated=true]; // Keeping this until we refactor block validation.
-  repeated AggregatedAttestation attestations = 2007 [deprecated=true];
+  google.protobuf.Timestamp timestamp = 1006 [deprecated=true]; // Keeping this until we refactor block validation.
+  repeated AggregatedAttestation attestations = 1007 [deprecated=true];
 }
 
 message BeaconBlockBody {
