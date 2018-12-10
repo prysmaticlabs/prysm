@@ -68,7 +68,7 @@ func decodeBool(r io.Reader, val reflect.Value) (uint32, error) {
 	} else if v == 1 {
 		val.SetBool(true)
 	} else {
-		return 0, errors.New("expect 0 or 1 for decoding bool")
+		return 0, fmt.Errorf("expect 0 or 1 for decoding bool but got %d", v)
 	}
 	return 1, nil
 }

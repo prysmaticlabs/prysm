@@ -71,7 +71,7 @@ var decodeTests = []decodeTest{
 	{input: "00", ptr: new(string), error: "decode error: type string is not serializable for output type string"},
 
 	// error: bool: wrong input value
-	{input: "02", ptr: new(bool), error: "decode error: expect 0 or 1 for decoding bool for output type bool"},
+	{input: "02", ptr: new(bool), error: "decode error: expect 0 or 1 for decoding bool but got 2 for output type bool"},
 
 	// error: uint16: wrong header
 	{input: "00", ptr: new(uint16), error: "decode error: can only read 1 bytes while expected to read 2 bytes for output type uint16"},
