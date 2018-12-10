@@ -265,14 +265,14 @@ func (b *BeaconState) PenalizedETH(period uint64) uint64 {
 
 // ClearAttestations removes attestations older than last state recalc slot.
 func (b *BeaconState) ClearAttestations(lastStateRecalc uint64) {
-	existing := b.data.PendingAttestations
-	update := make([]*pb.AggregatedAttestation, 0, len(existing))
+	existing := b.data.LatestAttestations
+	update := make([]*pb.PendingAttestationRecord, 0, len(existing))
 	for _, a := range existing {
-		if a.GetSlot() >= lastStateRecalc {
+		if a.GetData().GetSlot() >= lastStateRecalc {
 			update = append(update, a)
 		}
 	}
-	b.data.PendingAttestations = update
+	b.data.LatestAttestations = update
 }
 
 // CalculateNewBlockHashes builds a new slice of recent block hashes with the

@@ -51,7 +51,6 @@ message BeaconState {
   uint64 justified_streak = 10007 [deprecated=true]; // Deprecated by changes in fork choice rule. See https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#beacon-chain-fork-choice-rule 
   bytes next_shuffling_seed = 10008 [deprecated=true]; // Replaced/renamed by next_seed_hash32 
   repeated uint64 deposits_penalized_in_period = 10009 [deprecated=true]; // Replaced by latest_penalized_exit_balances
-  repeated AggregatedAttestation pending_attestations = 10018 [deprecated=true]; // Deleted by spec
 }
 
 message ForkData {
