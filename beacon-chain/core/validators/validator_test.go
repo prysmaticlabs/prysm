@@ -60,47 +60,47 @@ func TestInitialValidatorRegistry(t *testing.T) {
 }
 
 func TestAreAttesterBitfieldsValid(t *testing.T) {
-	attestation := &pb.AggregatedAttestation{
-		AttesterBitfield: []byte{'F'},
+	attestation := &pb.Attestation{
+		ParticipationBitfield: []byte{'F'},
 	}
 
 	indices := []uint32{0, 1, 2, 3, 4, 5, 6, 7}
 
-	isValid := AreAttesterBitfieldsValid(attestation, indices)
+	isValid := AreAttesterBitfieldsValid(attestation.GetParticipationBitfield(), indices)
 	if !isValid {
-		t.Fatalf("expected validation to pass for bitfield %v and indices %v", attestation, indices)
+		t.Fatalf("expected validation to pass for bitfield %v and indices %v", attestation.GetParticipationBitfield(), indices)
 	}
 }
 
 func TestAreAttesterBitfieldsValidFalse(t *testing.T) {
-	attestation := &pb.AggregatedAttestation{
-		AttesterBitfield: []byte{'F', 'F'},
+	attestation := &pb.Attestation{
+		ParticipationBitfield: []byte{'F', 'F'},
 	}
 
 	indices := []uint32{0, 1, 2, 3, 4, 5, 6, 7}
 
-	isValid := AreAttesterBitfieldsValid(attestation, indices)
+	isValid := AreAttesterBitfieldsValid(attestation.GetParticipationBitfield(), indices)
 	if isValid {
-		t.Fatalf("expected validation to fail for bitfield %v and indices %v", attestation, indices)
+		t.Fatalf("expected validation to fail for bitfield %v and indices %v", attestation.GetParticipationBitfield(), indices)
 	}
 }
 
 func TestAreAttesterBitfieldsValidZerofill(t *testing.T) {
-	attestation := &pb.AggregatedAttestation{
-		AttesterBitfield: []byte{'F'},
+	attestation := &pb.Attestation{
+		ParticipationBitfield: []byte{'F'},
 	}
 
 	indices := []uint32{0, 1, 2, 3, 4, 5, 6}
 
-	isValid := AreAttesterBitfieldsValid(attestation, indices)
+	isValid := AreAttesterBitfieldsValid(attestation.GetParticipationBitfield(), indices)
 	if !isValid {
-		t.Fatalf("expected validation to pass for bitfield %v and indices %v", attestation, indices)
+		t.Fatalf("expected validation to pass for bitfield %v and indices %v", attestation.GetParticipationBitfield(), indices)
 	}
 }
 
 func TestAreAttesterBitfieldsValidNoZerofill(t *testing.T) {
-	attestation := &pb.AggregatedAttestation{
-		AttesterBitfield: []byte{'E'},
+	attestation := &pb.Attestation{
+		ParticipationBitfield: []byte{'E'},
 	}
 
 	var indices []uint32
@@ -108,9 +108,9 @@ func TestAreAttesterBitfieldsValidNoZerofill(t *testing.T) {
 		indices = append(indices, i)
 	}
 
-	isValid := AreAttesterBitfieldsValid(attestation, indices)
+	isValid := AreAttesterBitfieldsValid(attestation.GetParticipationBitfield(), indices)
 	if isValid {
-		t.Fatalf("expected validation to fail for bitfield %v and indices %v", attestation, indices)
+		t.Fatalf("expected validation to fail for bitfield %v and indices %v", attestation.GetParticipationBitfield(), indices)
 	}
 }
 

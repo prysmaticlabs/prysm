@@ -49,18 +49,20 @@ func TestCopyState(t *testing.T) {
 	state1, _ := NewGenesisBeaconState(nil)
 	state2 := state1.CopyState()
 
-	newAttestations := []*pb.AggregatedAttestation{
+	newAttestations := []*pb.PendingAttestationRecord{
 		{
-			Slot:  0,
-			Shard: 1,
+			Data: &pb.AttestationData{
+				Slot:  0,
+				Shard: 1,
+			},
 		},
 	}
 
-	state1.data.PendingAttestations = append(state1.data.PendingAttestations, newAttestations...)
-	if len(state1.data.PendingAttestations) == len(state2.data.PendingAttestations) {
+	state1.data.LatestAttestations = append(state1.data.LatestAttestations, newAttestations...)
+	if len(state1.data.LatestAttestations) == len(state2.data.LatestAttestations) {
 		t.Fatalf("The PendingAttestations should not equal each other %d, %d",
-			len(state1.data.PendingAttestations),
-			len(state2.data.PendingAttestations),
+			len(state1.data.LatestAttestations),
+			len(state2.data.LatestAttestations),
 		)
 	}
 
@@ -85,19 +87,23 @@ func TestCopyState(t *testing.T) {
 func TestUpdateAttestations(t *testing.T) {
 	state, _ := NewGenesisBeaconState(nil)
 
-	newAttestations := []*pb.AggregatedAttestation{
+	newAttestations := []*pb.PendingAttestationRecord{
 		{
-			Slot:  0,
-			Shard: 0,
+			Data: &pb.AttestationData{
+				Slot:  0,
+				Shard: 0,
+			},
 		},
 		{
-			Slot:  0,
-			Shard: 1,
+			Data: &pb.AttestationData{
+				Slot:  0,
+				Shard: 1,
+			},
 		},
 	}
 
-	state.SetPendingAttestations(newAttestations)
-	attestations := state.data.PendingAttestations
+	state.SetLatestAttestations(newAttestations)
+	attestations := state.data.LatestAttestations
 	if len(attestations) != 2 {
 		t.Fatalf("Updated attestations should be length 2: %d", len(attestations))
 	}
@@ -105,21 +111,25 @@ func TestUpdateAttestations(t *testing.T) {
 
 func TestUpdateAttestationsAfterRecalc(t *testing.T) {
 	state, _ := NewGenesisBeaconState(nil)
-	newAttestations := []*pb.AggregatedAttestation{
+	newAttestations := []*pb.PendingAttestationRecord{
 		{
-			Slot:  10,
-			Shard: 2,
+			Data: &pb.AttestationData{
+				Slot:  10,
+				Shard: 2,
+			},
 		},
 		{
-			Slot:  9,
-			Shard: 3,
+			Data: &pb.AttestationData{
+				Slot:  9,
+				Shard: 3,
+			},
 		},
 	}
 
-	state.SetPendingAttestations(newAttestations)
+	state.SetLatestAttestations(newAttestations)
 	state.ClearAttestations(8)
-	if len(state.PendingAttestations()) != 2 {
-		t.Fatalf("Updated attestations should be length 2: %d", len(state.PendingAttestations()))
+	if len(state.LatestAttestations()) != 2 {
+		t.Fatalf("Updated attestations should be length 2: %d", len(state.LatestAttestations()))
 	}
 }
 
@@ -203,103 +213,4 @@ func areBytesEqual(s1, s2 []byte) bool {
 		}
 	}
 	return true
-}
-
-func TestGetSignedParentHashes(t *testing.T) {
-	// Test the scenario described in the spec:
-	// https://github.com/ethereum/eth2.0-specs/blob/d7458bf201c8fcb93503272c8844381962488cb7/specs/beacon-chain.md#per-block-processing
-	cfg := params.BeaconConfig()
-	oldCycleLength := cfg.CycleLength
-	cycleLength := uint64(4)
-	cfg.CycleLength = cycleLength
-	defer func() {
-		cfg.CycleLength = oldCycleLength
-	}()
-
-	blockHashes := make([][]byte, 11)
-	blockHashes[0] = createHashFromByte('Z')
-	blockHashes[1] = createHashFromByte('A')
-	blockHashes[2] = createHashFromByte('B')
-	blockHashes[3] = createHashFromByte('C')
-	blockHashes[4] = createHashFromByte('D')
-	blockHashes[5] = createHashFromByte('E')
-	blockHashes[6] = createHashFromByte('F')
-	blockHashes[7] = createHashFromByte('G')
-	blockHashes[8] = createHashFromByte('H')
-	blockHashes[9] = createHashFromByte('I')
-	blockHashes[10] = createHashFromByte('J')
-
-	state := NewBeaconState(&pb.BeaconState{LatestBlockHash32S: blockHashes})
-
-	b := NewBlock(&pb.BeaconBlock{Slot: 11})
-
-	obliqueParentHashes := make([][]byte, 2)
-	obliqueParentHashes[0] = createHashFromByte(0)
-	obliqueParentHashes[1] = createHashFromByte(1)
-	a := &pb.AggregatedAttestation{
-		ObliqueParentHashes: obliqueParentHashes,
-		Slot:                5,
-	}
-
-	hashes, err := state.SignedParentHashes(b, a)
-	if err != nil {
-		t.Fatalf("failed to SignedParentHashes: %v", err)
-	}
-	if hashes[0][0] != 'B' || hashes[1][0] != 'C' {
-		t.Fatalf("SignedParentHashes did not return expected value: %#x and %#x", hashes[0], hashes[1])
-	}
-	if hashes[2][0] != 0 || hashes[3][0] != 1 {
-		t.Fatalf("SignedParentHashes did not return expected value: %#x and %#x", hashes[0], hashes[1])
-	}
-}
-
-func TestGetSignedParentHashesIndexFail(t *testing.T) {
-	cfg := params.BeaconConfig()
-	oldCycleLength := cfg.CycleLength
-	cycleLength := uint64(4)
-	cfg.CycleLength = cycleLength
-	defer func() {
-		cfg.CycleLength = oldCycleLength
-	}()
-
-	blockHashes := make([][]byte, 8)
-	blockHashes[0] = createHashFromByte('Z')
-	blockHashes[1] = createHashFromByte('A')
-	blockHashes[2] = createHashFromByte('B')
-	blockHashes[3] = createHashFromByte('C')
-	blockHashes[4] = createHashFromByte('D')
-	blockHashes[5] = createHashFromByte('E')
-	blockHashes[6] = createHashFromByte('F')
-	blockHashes[7] = createHashFromByte('G')
-
-	state := NewBeaconState(&pb.BeaconState{LatestBlockHash32S: blockHashes})
-
-	b := NewBlock(&pb.BeaconBlock{Slot: 8})
-	a := &pb.AggregatedAttestation{
-		ObliqueParentHashes: [][]byte{},
-		Slot:                2,
-	}
-
-	_, err := state.SignedParentHashes(b, a)
-	if err == nil {
-		t.Error("expected SignedParentHashes to fail")
-	}
-
-	a2 := &pb.AggregatedAttestation{
-		ObliqueParentHashes: [][]byte{},
-		Slot:                9,
-	}
-	_, err = state.SignedParentHashes(b, a2)
-	if err == nil {
-		t.Error("expected SignedParentHashes to fail")
-	}
-}
-
-func createHashFromByte(repeatedByte byte) []byte {
-	hash := make([]byte, 32)
-	for i := 0; i < 32; i++ {
-		hash[i] = repeatedByte
-	}
-
-	return hash
 }

@@ -1,8 +1,6 @@
 package types
 
 import (
-	"fmt"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -62,7 +60,7 @@ func NewGenesisBeaconState(genesisValidatorRegistry []*pb.ValidatorRecord) (*Bea
 			LatestCrosslinks:                crosslinks,
 			ValidatorRegistry:               genesisValidatorRegistry,
 			ShardAndCommitteesForSlots:      shardAndCommitteesForSlots,
-			PendingAttestations:             []*pb.AggregatedAttestation{},
+			LatestAttestations:              []*pb.PendingAttestationRecord{},
 			LatestBlockHash32S:              latestBlockHashes,
 			RandaoMix:                       make([]byte, 0, 32),
 			ForkData: &pb.ForkData{
@@ -236,9 +234,9 @@ func (b *BeaconState) LatestBlockHashes() [][32]byte {
 	return blockhashes
 }
 
-// PendingAttestations returns attestations that have not yet been processed.
-func (b *BeaconState) PendingAttestations() []*pb.AggregatedAttestation {
-	return b.data.PendingAttestations
+// LatestAttestations returns attestations that have not yet been processed.
+func (b *BeaconState) LatestAttestations() []*pb.PendingAttestationRecord {
+	return b.data.LatestAttestations
 }
 
 // RandaoMix tracks the current RANDAO state.
@@ -263,30 +261,6 @@ func (b *BeaconState) PenalizedETH(period uint64) uint64 {
 	}
 
 	return totalPenalty
-}
-
-// SignedParentHashes returns all the parent hashes stored in active state up to last cycle length.
-func (b *BeaconState) SignedParentHashes(block *Block, attestation *pb.AggregatedAttestation) ([][32]byte, error) {
-	latestBlockHashes := b.LatestBlockHashes()
-	obliqueParentHashes := attestation.ObliqueParentHashes
-	earliestSlot := int(block.SlotNumber()) - len(latestBlockHashes)
-
-	startIdx := int(attestation.Slot) - earliestSlot - int(params.BeaconConfig().CycleLength) + 1
-	endIdx := startIdx - len(attestation.ObliqueParentHashes) + int(params.BeaconConfig().CycleLength)
-	if startIdx < 0 || endIdx > len(latestBlockHashes) || endIdx <= startIdx {
-		return nil, fmt.Errorf("attempt to fetch recent blockhashes from %d to %d invalid", startIdx, endIdx)
-	}
-
-	hashes := make([][32]byte, 0, params.BeaconConfig().CycleLength)
-	for i := startIdx; i < endIdx; i++ {
-		hashes = append(hashes, latestBlockHashes[i])
-	}
-
-	for i := 0; i < len(obliqueParentHashes); i++ {
-		hash := common.BytesToHash(obliqueParentHashes[i])
-		hashes = append(hashes, hash)
-	}
-	return hashes, nil
 }
 
 // ClearAttestations removes attestations older than last state recalc slot.
@@ -365,9 +339,9 @@ func (b *BeaconState) SetLastStateRecalculationSlot(slot uint64) {
 	b.data.LastStateRecalculationSlot = slot
 }
 
-// SetPendingAttestations updates the inner proto's pending attestations.
-func (b *BeaconState) SetPendingAttestations(pendingAttestations []*pb.AggregatedAttestation) {
-	b.data.PendingAttestations = pendingAttestations
+// SetLatestAttestations updates the inner proto's latest attestations.
+func (b *BeaconState) SetLatestAttestations(latestAttestations []*pb.PendingAttestationRecord) {
+	b.data.LatestAttestations = latestAttestations
 }
 
 // SetRandaoMix updates the inner proto's randao mix.

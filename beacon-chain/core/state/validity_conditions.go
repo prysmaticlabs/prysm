@@ -86,7 +86,7 @@ func doesParentProposerExist(block *types.Block, beaconState *types.BeaconState,
 	}
 
 	// Verifies the attester bitfield to check if the proposer index is in the first included one.
-	if isBitSet, err := bitutil.CheckBit(block.Attestations()[0].AttesterBitfield, int(parentProposerIndex)); !isBitSet {
+	if isBitSet, err := bitutil.CheckBit(block.Attestations()[0].ParticipationBitfield, int(parentProposerIndex)); !isBitSet {
 		return fmt.Errorf("could not locate proposer in the first attestation of AttestionRecord: %v", err)
 	}
 	return nil
@@ -96,68 +96,63 @@ func doesParentProposerExist(block *types.Block, beaconState *types.BeaconState,
 // TODO(#781): Refactor with the new spec attestation checking conditions.
 func isBlockAttestationValid(
 	block *types.Block,
-	attestation *pb.AggregatedAttestation,
+	attestation *pb.Attestation,
 	beaconState *types.BeaconState,
 	parentSlot uint64,
 	isInChain func(blockHash [32]byte) bool,
 ) error {
+	// Obtains the inner signed data of the attestation record.
+	attestationData := attestation.GetData()
 	// Validate attestation's slot number has is within range of incoming block number.
-	if err := isAttestationSlotNumberValid(attestation.Slot, parentSlot); err != nil {
-		return fmt.Errorf("invalid attestation slot %d: %v", attestation.Slot, err)
+	if err := isAttestationSlotNumberValid(attestationData.GetSlot(), parentSlot); err != nil {
+		return fmt.Errorf("invalid attestation slot %d: %v", attestationData.GetSlot(), err)
 	}
 
-	if attestation.JustifiedSlot > beaconState.LastJustifiedSlot() {
+	if attestationData.GetJustifiedSlot() > beaconState.LastJustifiedSlot() {
 		return fmt.Errorf(
 			"attestation's justified slot has to be <= the state's last justified slot: found: %d. want <=: %d",
-			attestation.JustifiedSlot,
+			attestationData.GetJustifiedSlot(),
 			beaconState.LastJustifiedSlot(),
 		)
 	}
 
 	hash := [32]byte{}
-	copy(hash[:], attestation.JustifiedBlockHash)
+	copy(hash[:], attestationData.GetJustifiedBlockHash32())
 	if !isInChain(hash) {
 		return fmt.Errorf(
 			"the attestation's justifed block hash not found in current chain: justified block hash: 0x%x",
-			attestation.JustifiedBlockHash,
+			attestationData.GetJustifiedBlockHash32(),
 		)
-	}
-
-	// Get all the block hashes up to cycle length.
-	parentHashes, err := beaconState.SignedParentHashes(block, attestation)
-	if err != nil {
-		return fmt.Errorf("unable to get signed parent hashes: %v", err)
 	}
 
 	shardCommittees, err := v.GetShardAndCommitteesForSlot(
 		beaconState.ShardAndCommitteesForSlots(),
 		beaconState.LastStateRecalculationSlot(),
-		attestation.Slot,
+		attestationData.GetSlot(),
 	)
-	attesterIndices, err := v.AttesterIndices(shardCommittees, attestation)
+	attesterIndices, err := v.AttesterIndices(shardCommittees, attestationData)
 	if err != nil {
 		return fmt.Errorf("unable to get validator committee: %v", err)
 	}
 
 	// Verify attester bitfields matches crystallized state's prev computed bitfield.
-	if !v.AreAttesterBitfieldsValid(attestation, attesterIndices) {
+	if !v.AreAttesterBitfieldsValid(attestation.GetParticipationBitfield(), attesterIndices) {
 		return fmt.Errorf("unable to match attester bitfield with shard and committee bitfield")
 	}
 
 	// TODO(#258): Add coverage for determining fork version for an attestation.
 	forkData := beaconState.ForkData()
 	forkVersion := forkData.PostForkVersion
-	if attestation.Slot < forkData.ForkSlot {
+	if attestationData.GetSlot() < forkData.ForkSlot {
 		forkVersion = forkData.PreForkVersion
 	}
 
 	// TODO(#258): Generate validators aggregated pub key.
 	attestationMsg := types.AttestationMsg(
-		parentHashes,
-		attestation.ShardBlockHash,
-		attestation.Slot,
-		attestation.Shard,
-		attestation.JustifiedSlot,
+		attestationData.GetShardBlockHash32(),
+		attestationData.GetSlot(),
+		attestationData.GetShard(),
+		attestationData.GetJustifiedSlot(),
 		forkVersion,
 	)
 	_ = attestationMsg

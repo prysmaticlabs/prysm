@@ -78,9 +78,9 @@ func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, 
 
 // AreAttesterBitfieldsValid validates that the length of the attester bitfield matches the attester indices
 // defined in the Crystallized State.
-func AreAttesterBitfieldsValid(attestation *pb.AggregatedAttestation, attesterIndices []uint32) bool {
+func AreAttesterBitfieldsValid(participationBitfield []byte, attesterIndices []uint32) bool {
 	// Validate attester bit field has the correct length.
-	if bitutil.BitLength(len(attesterIndices)) != len(attestation.AttesterBitfield) {
+	if bitutil.BitLength(len(attesterIndices)) != len(participationBitfield) {
 		return false
 	}
 
@@ -92,7 +92,7 @@ func AreAttesterBitfieldsValid(attestation *pb.AggregatedAttestation, attesterIn
 	}
 
 	for i := 0; i < bitsInByte-remainingBits; i++ {
-		isBitSet, err := bitutil.CheckBit(attestation.AttesterBitfield, lastBit+i)
+		isBitSet, err := bitutil.CheckBit(participationBitfield, lastBit+i)
 		if err != nil {
 			return false
 		}

@@ -128,7 +128,7 @@ func NewStateTransition(
 // the proposed shard block with latest beacon chain slot numbers.
 func crossLinkCalculations(
 	st *types.BeaconState,
-	pendingAttestations []*pb.AggregatedAttestation,
+	pendingAttestations []*pb.PendingAttestationRecord,
 	currentSlot uint64,
 ) ([]*pb.CrosslinkRecord, error) {
 	slot := st.LastStateRecalculationSlot() + params.BeaconConfig().CycleLength
@@ -143,7 +143,7 @@ func crossLinkCalculations(
 			return nil, err
 		}
 
-		indices, err := v.AttesterIndices(shardCommittees, attestation)
+		indices, err := v.AttesterIndices(shardCommittees, attestation.GetData())
 		if err != nil {
 			return nil, err
 		}

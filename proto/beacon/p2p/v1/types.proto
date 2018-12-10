@@ -171,7 +171,6 @@ message BeaconBlock {
   // Deprecated fields
   // All fields must be annotated with [deprecated=true];
   google.protobuf.Timestamp timestamp = 1006 [deprecated=true]; // Keeping this until we refactor block validation.
-  repeated AggregatedAttestation attestations = 1007 [deprecated=true];
 }
 
 message BeaconBlockBody {

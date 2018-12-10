@@ -25,7 +25,6 @@ func TestAttestation(t *testing.T) {
 	attestation.JustifiedSlotNumber()
 	attestation.JustifiedBlockHash()
 	attestation.AttesterBitfield()
-	attestation.ObliqueParentHashes()
 	attestation.AggregateSig()
 	attestation.Key()
 

@@ -93,12 +93,12 @@ func (b *Block) AncestorHash32S() [][]byte {
 
 // AttestationCount returns the number of attestations.
 func (b *Block) AttestationCount() int {
-	return len(b.data.Attestations)
+	return len(b.data.GetBody().GetAttestations())
 }
 
 // Attestations returns an array of attestations in the block.
-func (b *Block) Attestations() []*pb.AggregatedAttestation {
-	return b.data.Attestations
+func (b *Block) Attestations() []*pb.Attestation {
+	return b.data.GetBody().GetAttestations()
 }
 
 // CandidatePowReceiptRootHash32 returns a keccak256 hash corresponding to a PoW chain block.
