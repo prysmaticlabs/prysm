@@ -68,7 +68,7 @@ var decodeTests = []decodeTest{
 	{input: "00", ptr: uint8(0), error: "decode error: can only decode into pointer target for output type uint8"},
 
 	// error: unsupported type
-	{input: "00", ptr: new(string), error: "decode error: encode error: type string is not serializable for input type string for output type string"},
+	{input: "00", ptr: new(string), error: "decode error: type string is not serializable for output type string"},
 
 	// error: bool: wrong input value
 	{input: "02", ptr: new(bool), error: "decode error: expect 0 or 1 for decoding bool for output type bool"},
@@ -83,13 +83,13 @@ var decodeTests = []decodeTest{
 	{input: "000001", ptr: new([]uint16), error: "decode error: failed to decode header of slice: can only read 3 bytes while expected to read 4 bytes for output type []uint16"},
 
 	// error: slice: wrong input
-	{input: "00000001", ptr: new([]uint16), error: "decode error: failed to decode element of slice: decode error: can only read 0 bytes while expected to read 2 bytes for output type uint16 for output type []uint16"},
+	{input: "00000001", ptr: new([]uint16), error: "decode error: failed to decode element of slice: can only read 0 bytes while expected to read 2 bytes for output type []uint16"},
 
 	// error: struct: wrong header
 	{input: "000001", ptr: new(simpleStruct), error: "decode error: failed to decode header of struct: can only read 3 bytes while expected to read 4 bytes for output type ssz.simpleStruct"},
 
 	// error: struct: wrong input
-	{input: "00000003 01 02", ptr: new(simpleStruct), error: "decode error: failed to decode field of slice: decode error: can only read 1 bytes while expected to read 2 bytes for output type uint16 for output type ssz.simpleStruct"},
+	{input: "00000003 01 02", ptr: new(simpleStruct), error: "decode error: failed to decode field of slice: can only read 1 bytes while expected to read 2 bytes for output type ssz.simpleStruct"},
 }
 
 func runTests(t *testing.T, decode func([]byte, interface{}) error) {

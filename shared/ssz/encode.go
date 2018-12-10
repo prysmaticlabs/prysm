@@ -2,6 +2,7 @@ package ssz
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"reflect"
@@ -40,18 +41,26 @@ func (w *encbuf) encode(val interface{}) error {
 	rval := reflect.ValueOf(val)
 	encDec, err := getEncoderDecoderForType(rval.Type())
 	if err != nil {
-		return err
+		return newEncodeError(fmt.Sprint(err), rval.Type())
 	}
-	return encDec.encoder(rval, w)
+	if err = encDec.encoder(rval, w); err != nil {
+		return newEncodeError(fmt.Sprint(err), rval.Type())
+	}
+	return nil
 }
 
 func encodeSize(val interface{}) (uint32, error) {
 	rval := reflect.ValueOf(val)
 	encDec, err := getEncoderDecoderForType(rval.Type())
 	if err != nil {
-		return 0, err
+		return 0, newEncodeError(fmt.Sprint(err), rval.Type())
 	}
-	return encDec.encodeSizer(rval)
+	var size uint32
+	if size, err = encDec.encodeSizer(rval); err != nil {
+		return 0, newEncodeError(fmt.Sprint(err), rval.Type())
+	}
+	return size, nil
+
 }
 
 func (w *encbuf) toWriter(out io.Writer) error {
@@ -77,7 +86,7 @@ func makeEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 	case kind == reflect.Struct:
 		return makeStructEncoder(typ)
 	default:
-		return nil, nil, newEncodeError(fmt.Sprintf("type %v is not serializable", typ), typ)
+		return nil, nil, fmt.Errorf("type %v is not serializable", typ)
 	}
 }
 
@@ -109,7 +118,7 @@ func makeBytesEncoder() (encoder, encodeSizer, error) {
 		b := val.Bytes()
 		sizeEnc := make([]byte, lengthBytes)
 		if len(val.Bytes()) >= 2<<32 {
-			return newEncodeError("bytes oversize", val.Type())
+			return errors.New("bytes oversize")
 		}
 		binary.BigEndian.PutUint32(sizeEnc, uint32(len(b)))
 		w.str = append(w.str, sizeEnc...)
@@ -118,7 +127,7 @@ func makeBytesEncoder() (encoder, encodeSizer, error) {
 	}
 	encodeSizer := func(val reflect.Value) (uint32, error) {
 		if len(val.Bytes()) >= 2<<32 {
-			return 0, newEncodeError("bytes oversize", val.Type())
+			return 0, errors.New("bytes oversize")
 		}
 		return uint32(len(val.Bytes())), nil
 	}
@@ -128,7 +137,7 @@ func makeBytesEncoder() (encoder, encodeSizer, error) {
 func makeSliceEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 	elemEncoderDecoder, err := getEncoderDecoderForType(typ.Elem())
 	if err != nil {
-		return nil, nil, newEncodeError(fmt.Sprintf("failed to get encoder/decoder: %v", err), typ)
+		return nil, nil, fmt.Errorf("failed to get encoder/decoder: %v", err)
 	}
 	encoder := func(val reflect.Value, w *encbuf) error {
 		origBufSize := len(w.str)
@@ -136,12 +145,12 @@ func makeSliceEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 		w.str = append(w.str, totalSizeEnc...)
 		for i := 0; i < val.Len(); i++ {
 			if err := elemEncoderDecoder.encoder(val.Index(i), w); err != nil {
-				return newEncodeError(fmt.Sprintf("failed to encode element of slice: %v", err), typ)
+				return fmt.Errorf("failed to encode element of slice: %v", err)
 			}
 		}
 		totalSize := len(w.str) - lengthBytes - origBufSize
 		if totalSize >= 2<<32 {
-			return newEncodeError("slice oversize", val.Type())
+			return errors.New("slice oversize")
 		}
 		binary.BigEndian.PutUint32(totalSizeEnc, uint32(totalSize))
 		copy(w.str[origBufSize:origBufSize+lengthBytes], totalSizeEnc)
@@ -153,7 +162,7 @@ func makeSliceEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 		}
 		elemSize, err := elemEncoderDecoder.encodeSizer(val.Index(0))
 		if err != nil {
-			return 0, newEncodeError("failed to get encode size of element of slice", typ)
+			return 0, errors.New("failed to get encode size of element of slice")
 		}
 		return lengthBytes + elemSize*uint32(val.Len()), nil
 	}
@@ -171,12 +180,12 @@ func makeStructEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 		w.str = append(w.str, totalSizeEnc...)
 		for _, f := range fields {
 			if err := f.encDec.encoder(val.Field(f.index), w); err != nil {
-				return newEncodeError(fmt.Sprintf("failed to encode field of struct: %v", err), typ)
+				return fmt.Errorf("failed to encode field of struct: %v", err)
 			}
 		}
 		totalSize := len(w.str) - lengthBytes - origBufSize
 		if totalSize >= 2<<32 {
-			return newEncodeError("struct oversize", val.Type())
+			return errors.New("struct oversize")
 		}
 		binary.BigEndian.PutUint32(totalSizeEnc, uint32(totalSize))
 		copy(w.str[origBufSize:origBufSize+lengthBytes], totalSizeEnc)
@@ -187,7 +196,7 @@ func makeStructEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 		for _, f := range fields {
 			fieldSize, err := f.encDec.encodeSizer(val.Field(f.index))
 			if err != nil {
-				return 0, newEncodeError(fmt.Sprintf("failed to get encode size for field of struct: %v", err), typ)
+				return 0, fmt.Errorf("failed to get encode size for field of struct: %v", err)
 			}
 			totalSize += fieldSize
 		}

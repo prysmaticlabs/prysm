@@ -49,7 +49,7 @@ func sortedStructFields(typ reflect.Type) (fields []field, err error) {
 		f := typ.Field(i)
 		encDec, err := getEncoderDecoderForType(f.Type)
 		if err != nil {
-			return nil, newEncodeError(fmt.Sprintf("failed to get encoder/decoder: %v", err), typ)
+			return nil, fmt.Errorf("failed to get encoder/decoder: %v", err)
 		}
 		name := f.Name
 		fields = append(fields, field{i, name, encDec})
