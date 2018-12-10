@@ -1,44 +1,35 @@
-package syncquerier
+package sync
 
 import (
 	"context"
 	"time"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 )
 
-var log = logrus.WithField("prefix", "syncQuerier")
+var queryLog = logrus.WithField("prefix", "syncQuerier")
 
-// Config defines the configurable properties of SyncQuerier.
-//
-type Config struct {
+// QuerierConfig defines the configurable properties of SyncQuerier.
+type QuerierConfig struct {
 	ResponseBufferSize int
 	P2P                p2pAPI
 	BeaconDB           *db.BeaconDB
 }
 
-// DefaultConfig provides the default configuration for a sync service.
+// DefaultQuerierConfig provides the default configuration for a sync service.
 // ResponseBufferSize determines that buffer size of the `responseBuf` channel.
-func DefaultConfig() Config {
-	return Config{
+func DefaultQuerierConfig() *QuerierConfig {
+	return &QuerierConfig{
 		ResponseBufferSize: 100,
 	}
 }
 
-type p2pAPI interface {
-	Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription
-	Send(msg proto.Message, peer p2p.Peer)
-	Broadcast(msg proto.Message)
-}
-
-// SyncQuerier defines the main class in this package.
+// Querier defines the main class in this package.
 // See the package comments for a general description of the service's functions.
-type SyncQuerier struct {
+type Querier struct {
 	ctx             context.Context
 	cancel          context.CancelFunc
 	p2p             p2pAPI
@@ -48,16 +39,16 @@ type SyncQuerier struct {
 	responseBuf     chan p2p.Message
 }
 
-// NewSyncQuerierService constructs a new Sync Querier Service.
+// NewQuerierService constructs a new Sync Querier Service.
 // This method is normally called by the main node.
-func NewSyncQuerierService(ctx context.Context,
-	cfg *Config,
-) *SyncQuerier {
+func NewQuerierService(ctx context.Context,
+	cfg *QuerierConfig,
+) *Querier {
 	ctx, cancel := context.WithCancel(ctx)
 
 	responseBuf := make(chan p2p.Message, cfg.ResponseBufferSize)
 
-	return &SyncQuerier{
+	return &Querier{
 		ctx:         ctx,
 		cancel:      cancel,
 		p2p:         cfg.P2P,
@@ -67,19 +58,19 @@ func NewSyncQuerierService(ctx context.Context,
 }
 
 // Start begins the goroutine.
-func (s *SyncQuerier) Start() {
-	go s.run()
+func (q *Querier) Start() {
+	q.run()
 }
 
 // Stop kills the sync querier goroutine.
-func (s *SyncQuerier) Stop() error {
-	log.Info("Stopping service")
-	s.cancel()
+func (q *Querier) Stop() error {
+	queryLog.Info("Stopping service")
+	q.cancel()
 	return nil
 }
 
-func (s *SyncQuerier) run() {
-	responseSub := s.p2p.Subscribe(&pb.ChainHeadResponse{}, s.responseBuf)
+func (q *Querier) run() {
+	responseSub := q.p2p.Subscribe(&pb.ChainHeadResponse{}, q.responseBuf)
 
 	// Ticker so that service will keep on requesting for chain head
 	// until they get a response.
@@ -87,48 +78,48 @@ func (s *SyncQuerier) run() {
 
 	defer func() {
 		responseSub.Unsubscribe()
-		close(s.responseBuf)
+		close(q.responseBuf)
 		ticker.Stop()
 	}()
 
-	s.RequestLatestHead()
+	q.RequestLatestHead()
 
 	for {
 		select {
-		case <-s.ctx.Done():
-			log.Info("Exiting goroutine")
+		case <-q.ctx.Done():
+			queryLog.Info("Exiting goroutine")
 			return
 		case <-ticker.C:
-			s.RequestLatestHead()
-		case msg := <-s.responseBuf:
+			q.RequestLatestHead()
+		case msg := <-q.responseBuf:
 			response := msg.Data.(*pb.ChainHeadResponse)
-			log.Infof("Latest chain head is at slot: %d and hash %#x", response.Slot, response.Hash)
-			s.curentHeadSlot = response.Slot
-			s.currentHeadHash = response.Hash
+			queryLog.Infof("Latest chain head is at slot: %d and hash %#x", response.Slot, response.Hash)
+			q.curentHeadSlot = response.Slot
+			q.currentHeadHash = response.Hash
 
 			ticker.Stop()
 			responseSub.Unsubscribe()
-			s.cancel()
+			q.cancel()
 		}
 	}
 }
 
 // RequestLatestHead broadcasts out a request for all
 // the latest chain heads from the node's peers.
-func (s *SyncQuerier) RequestLatestHead() {
+func (q *Querier) RequestLatestHead() {
 	request := &pb.ChainHeadRequest{}
-	s.p2p.Broadcast(request)
+	q.p2p.Broadcast(request)
 }
 
 // IsSynced checks if the node is cuurently synced with the
 // rest of the network.
-func (s *SyncQuerier) IsSynced() (bool, error) {
-	block, err := s.db.GetChainHead()
+func (q *Querier) IsSynced() (bool, error) {
+	block, err := q.db.GetChainHead()
 	if err != nil {
 		return false, err
 	}
 
-	if block.SlotNumber() >= s.curentHeadSlot {
+	if block.SlotNumber() >= q.curentHeadSlot {
 		return true, nil
 	}
 
