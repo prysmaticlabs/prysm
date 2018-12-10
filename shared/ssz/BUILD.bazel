@@ -6,6 +6,7 @@ go_library(
         "decode.go",
         "encode.go",
         "encoder_decoder_lib.go",
+        "test_utils.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/ssz",
     visibility = ["//visibility:public"],
@@ -16,7 +17,6 @@ go_test(
     srcs = [
         "decode_test.go",
         "encode_test.go",
-        "test_utils.go",
     ],
     embed = [":go_default_library"],
 )
