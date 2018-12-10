@@ -117,7 +117,7 @@ message ShardReassignmentRecord {
   uint64 slot = 3;
 }
 
-// AggregatedAttestation is deprecated entirely by AttestationRecord.
+// AggregatedAttestation is deprecated entirely by Attestation.
 message AggregatedAttestation {
   uint64 slot = 1 [deprecated=true];
   uint64 shard = 2 [deprecated=true];
