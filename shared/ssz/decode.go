@@ -8,8 +8,7 @@ import (
 	"reflect"
 )
 
-// TODOs for later PR:
-// - Add support for more types
+// TODO(1068): Support more data types
 
 // Decode decodes data read from r and output it into the object pointed by pointer val
 func Decode(r io.Reader, val interface{}) error {
@@ -29,7 +28,7 @@ func decode(r io.Reader, val interface{}) (uint32, error) {
 	if rval.IsNil() {
 		return 0, newDecodeError("cannot output to pointer of nil", rtyp)
 	}
-	encDec, err := getEncoderDecoderForType(rval.Elem().Type())
+	encDec, err := cachedEncoderDecoder(rval.Elem().Type())
 	if err != nil {
 		return 0, newDecodeError(fmt.Sprint(err), rval.Elem().Type())
 	}
@@ -116,7 +115,7 @@ func decodeBytes(r io.Reader, val reflect.Value) (uint32, error) {
 
 func makeSliceDecoder(typ reflect.Type) (decoder, error) {
 	elemType := typ.Elem()
-	elemEncoderDecoder, err := getEncoderDecoderForType(elemType)
+	elemEncoderDecoder, err := cachedEncoderDecoderNoAcquireLock(elemType)
 	if err != nil {
 		return nil, err
 	}

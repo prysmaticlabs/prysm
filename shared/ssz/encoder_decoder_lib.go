@@ -5,10 +5,8 @@ import (
 	"io"
 	"reflect"
 	"sort"
+	"sync"
 )
-
-// TODOs for this PR:
-// - Implement encoder/decoder caches for types to reduce the encoder/decoder lookup overhead
 
 type encoder func(reflect.Value, *encbuf) error
 
@@ -25,9 +23,51 @@ type encoderDecoder struct {
 	decoder
 }
 
-// TODO: We can let this function return (encDec *encoderDecoder, encodeTargetSize uint32, err error)
-// if we want to know the encode output size before the actual encoding
-func getEncoderDecoderForType(typ reflect.Type) (encDec *encoderDecoder, err error) {
+var (
+	encoderDecoderCacheMutex sync.RWMutex
+	encoderDecoderCache      = make(map[reflect.Type]*encoderDecoder)
+)
+
+func cachedEncoderDecoder(typ reflect.Type) (*encoderDecoder, error) {
+	encoderDecoderCacheMutex.RLock()
+	encDec := encoderDecoderCache[typ]
+	encoderDecoderCacheMutex.RUnlock()
+	if encDec != nil {
+		return encDec, nil
+	}
+
+	// If not found in cache, will get a new one and put it into the cache
+	encoderDecoderCacheMutex.Lock()
+	defer encoderDecoderCacheMutex.Unlock()
+	return cachedEncoderDecoderNoAcquireLock(typ)
+}
+
+// This version is used when the caller is already holding the rw lock for encoderDecoderCache.
+// It doesn't acquire new rw lock so it's free to recursively call itself without getting into
+// a deadlock situation.
+func cachedEncoderDecoderNoAcquireLock(typ reflect.Type) (*encoderDecoder, error) {
+	// Check again in case other goroutine has just acquired the lock
+	// and already updated the cache
+	encDec := encoderDecoderCache[typ]
+	if encDec != nil {
+		return encDec, nil
+	}
+	// Put a dummy value into the cache before generating.
+	// If the generator tries to lookup the type of itself,
+	// it will get the dummy value and won't call recursively forever.
+	encoderDecoderCache[typ] = new(encoderDecoder)
+	encDec, err := generateEncoderDecoderForType(typ)
+	if err != nil {
+		// Don't forget to remove the dummy key when fail
+		delete(encoderDecoderCache, typ)
+		return nil, err
+	}
+	// Overwrite the dummy value with real value
+	*encoderDecoderCache[typ] = *encDec
+	return encoderDecoderCache[typ], nil
+}
+
+func generateEncoderDecoderForType(typ reflect.Type) (encDec *encoderDecoder, err error) {
 	encDec = new(encoderDecoder)
 	if encDec.encoder, encDec.encodeSizer, err = makeEncoder(typ); err != nil {
 		return nil, err
@@ -47,7 +87,7 @@ type field struct {
 func sortedStructFields(typ reflect.Type) (fields []field, err error) {
 	for i := 0; i < typ.NumField(); i++ {
 		f := typ.Field(i)
-		encDec, err := getEncoderDecoderForType(f.Type)
+		encDec, err := cachedEncoderDecoderNoAcquireLock(f.Type)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get encoder/decoder: %v", err)
 		}

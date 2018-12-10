@@ -8,12 +8,7 @@ import (
 	"reflect"
 )
 
-// TODOs:
-// - Better error msg wrapping
-// - Encoder/Decoder caching
-
-// TODOs for later PR:
-// - Add support for more types
+// TODO(1068): Support more data types
 
 const lengthBytes = 4
 
@@ -39,7 +34,7 @@ type encbuf struct {
 
 func (w *encbuf) encode(val interface{}) error {
 	rval := reflect.ValueOf(val)
-	encDec, err := getEncoderDecoderForType(rval.Type())
+	encDec, err := cachedEncoderDecoder(rval.Type())
 	if err != nil {
 		return newEncodeError(fmt.Sprint(err), rval.Type())
 	}
@@ -51,7 +46,7 @@ func (w *encbuf) encode(val interface{}) error {
 
 func encodeSize(val interface{}) (uint32, error) {
 	rval := reflect.ValueOf(val)
-	encDec, err := getEncoderDecoderForType(rval.Type())
+	encDec, err := cachedEncoderDecoder(rval.Type())
 	if err != nil {
 		return 0, newEncodeError(fmt.Sprint(err), rval.Type())
 	}
@@ -135,7 +130,7 @@ func makeBytesEncoder() (encoder, encodeSizer, error) {
 }
 
 func makeSliceEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
-	elemEncoderDecoder, err := getEncoderDecoderForType(typ.Elem())
+	elemEncoderDecoder, err := cachedEncoderDecoderNoAcquireLock(typ.Elem())
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get encoder/decoder: %v", err)
 	}
