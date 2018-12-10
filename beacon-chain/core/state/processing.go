@@ -42,8 +42,8 @@ func UpdateLatestCrosslinks(slot uint64, voteBalance uint64, totalBalance uint64
 	voteMajority := 3*voteBalance >= 2*totalBalance
 	if voteMajority {
 		crosslinkRecords[attestation.Shard] = &pb.CrosslinkRecord{
-			ShardBlockHash: attestation.ShardBlockHash,
-			Slot:           slot,
+			ShardBlockHash32: attestation.ShardBlockHash,
+			Slot:             slot,
 		}
 	}
 	return crosslinkRecords

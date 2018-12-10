@@ -31,8 +31,8 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	data := &pb.BeaconState{
 		ValidatorRegistry:               validators,
 		ValidatorRegistryLastChangeSlot: 1,
-		LastJustifiedSlot:               4,
-		LastFinalizedSlot:               3,
+		JustifiedSlot:                   4,
+		FinalizedSlot:                   3,
 	}
 
 	activeValidatorIndices := make([]uint32, 0, len(validators))

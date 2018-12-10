@@ -124,6 +124,11 @@ message AggregatedAttestation {
   repeated uint64 aggregate_sig = 8 [deprecated=true];
 }
 
+message SpecialRecord {
+  uint32 kind = 1 [deprecated=true]; // Deprecated in favor of unify specials object w/ attestations.
+  repeated bytes data = 2 [deprecated=true]; // Deprecated in favor of unify specials object w/ attestations.
+}
+
 message CrosslinkRecord {
   uint64 slot = 1;
   bytes shard_block_hash32 = 2;

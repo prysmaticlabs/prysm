@@ -42,8 +42,8 @@ func NewGenesisBeaconState(genesisValidatorRegistry []*pb.ValidatorRecord) (*Bea
 	var crosslinks []*pb.CrosslinkRecord
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
 		crosslinks = append(crosslinks, &pb.CrosslinkRecord{
-			ShardBlockHash: make([]byte, 0, 32),
-			Slot:           0,
+			ShardBlockHash32: make([]byte, 0, 32),
+			Slot:             0,
 		})
 	}
 
@@ -56,15 +56,15 @@ func NewGenesisBeaconState(genesisValidatorRegistry []*pb.ValidatorRecord) (*Bea
 		data: &pb.BeaconState{
 			LastStateRecalculationSlot:      0,
 			JustifiedStreak:                 0,
-			LastJustifiedSlot:               0,
-			LastFinalizedSlot:               0,
+			JustifiedSlot:                   0,
+			FinalizedSlot:                   0,
 			ValidatorRegistryLastChangeSlot: 0,
 			LatestCrosslinks:                crosslinks,
 			ValidatorRegistry:               genesisValidatorRegistry,
 			ShardAndCommitteesForSlots:      shardAndCommitteesForSlots,
 			PendingAttestations:             []*pb.AggregatedAttestation{},
 			LatestBlockHash32S:              latestBlockHashes,
-			RandaoMix:                       make([]byte, 0, 32),
+			RandaoMixHash32:                 make([]byte, 0, 32),
 			ForkData: &pb.ForkData{
 				PreForkVersion:  params.BeaconConfig().InitialForkVersion,
 				PostForkVersion: params.BeaconConfig().InitialForkVersion,
@@ -79,8 +79,8 @@ func (b *BeaconState) CopyState() *BeaconState {
 	crosslinks := make([]*pb.CrosslinkRecord, len(b.LatestCrosslinks()))
 	for index, crossLink := range b.LatestCrosslinks() {
 		crosslinks[index] = &pb.CrosslinkRecord{
-			ShardBlockHash: crossLink.GetShardBlockHash(),
-			Slot:           crossLink.GetSlot(),
+			ShardBlockHash32: crossLink.GetShardBlockHash32(),
+			Slot:             crossLink.GetSlot(),
 		}
 	}
 
@@ -112,13 +112,13 @@ func (b *BeaconState) CopyState() *BeaconState {
 	newState := BeaconState{&pb.BeaconState{
 		LastStateRecalculationSlot:      b.LastStateRecalculationSlot(),
 		JustifiedStreak:                 b.JustifiedStreak(),
-		LastJustifiedSlot:               b.LastJustifiedSlot(),
-		LastFinalizedSlot:               b.LastFinalizedSlot(),
+		JustifiedSlot:                   b.LastJustifiedSlot(),
+		FinalizedSlot:                   b.LastFinalizedSlot(),
 		ValidatorRegistryLastChangeSlot: b.ValidatorRegistryLastChangeSlot(),
 		LatestCrosslinks:                crosslinks,
 		ValidatorRegistry:               validators,
 		ShardAndCommitteesForSlots:      shardAndCommitteesForSlots,
-		DepositsPenalizedInPeriod:       b.DepositsPenalizedInPeriod(),
+		LatestPenalizedExitBalances:     b.LatestPenalizedExitBalances(),
 		ForkData:                        b.ForkData(),
 	}}
 
@@ -204,12 +204,12 @@ func (b *BeaconState) LastStateRecalculationSlot() uint64 {
 
 // LastFinalizedSlot returns the last finalized Slot of the beacon chain.
 func (b *BeaconState) LastFinalizedSlot() uint64 {
-	return b.data.LastFinalizedSlot
+	return b.data.FinalizedSlot
 }
 
 // LastJustifiedSlot return the last justified slot of the beacon chain.
 func (b *BeaconState) LastJustifiedSlot() uint64 {
-	return b.data.LastJustifiedSlot
+	return b.data.JustifiedSlot
 }
 
 // JustifiedStreak returns number of consecutive justified slots ending at head.
@@ -217,9 +217,9 @@ func (b *BeaconState) JustifiedStreak() uint64 {
 	return b.data.JustifiedStreak
 }
 
-// DepositsPenalizedInPeriod returns total deposits penalized in the given withdrawal period.
-func (b *BeaconState) DepositsPenalizedInPeriod() []uint64 {
-	return b.data.DepositsPenalizedInPeriod
+// LatestPenalizedExitBalances returns total deposits penalized of the latest period.
+func (b *BeaconState) LatestPenalizedExitBalances() []uint64 {
+	return b.data.LatestPenalizedExitBalances
 }
 
 // ForkData returns the relevant fork data for this beacon state.
@@ -244,14 +244,14 @@ func (b *BeaconState) PendingAttestations() []*pb.AggregatedAttestation {
 // RandaoMix tracks the current RANDAO state.
 func (b *BeaconState) RandaoMix() [32]byte {
 	var h [32]byte
-	copy(h[:], b.data.RandaoMix)
+	copy(h[:], b.data.RandaoMixHash32)
 	return h
 }
 
 // PenalizedETH calculates penalized total ETH during the last 3 withdrawal periods.
 func (b *BeaconState) PenalizedETH(period uint64) uint64 {
 	var totalPenalty uint64
-	penalties := b.DepositsPenalizedInPeriod()
+	penalties := b.LatestPenalizedExitBalances()
 	totalPenalty += getPenaltyForPeriod(penalties, period)
 
 	if period >= 1 {
@@ -340,19 +340,19 @@ func (b *BeaconState) SetCrossLinks(crossLinks []*pb.CrosslinkRecord) {
 	b.data.LatestCrosslinks = crossLinks
 }
 
-// SetDepositsPenalizedInPeriod updates the inner proto's penalized deposits.
-func (b *BeaconState) SetDepositsPenalizedInPeriod(penalizedDeposits []uint64) {
-	b.data.DepositsPenalizedInPeriod = penalizedDeposits
+// SetLatestPenalizedExitBalances updates the inner proto's penalized deposits.
+func (b *BeaconState) SetLatestPenalizedExitBalances(penalizedDeposits []uint64) {
+	b.data.LatestPenalizedExitBalances = penalizedDeposits
 }
 
 // SetLastJustifiedSlot updates the inner proto's last justified slot.
 func (b *BeaconState) SetLastJustifiedSlot(justifiedSlot uint64) {
-	b.data.LastJustifiedSlot = justifiedSlot
+	b.data.JustifiedSlot = justifiedSlot
 }
 
 // SetLastFinalizedSlot updates the inner proto's last finalized slot.
 func (b *BeaconState) SetLastFinalizedSlot(finalizedSlot uint64) {
-	b.data.LastFinalizedSlot = finalizedSlot
+	b.data.FinalizedSlot = finalizedSlot
 }
 
 // SetJustifiedStreak updates the inner proto's justified streak.
@@ -372,7 +372,7 @@ func (b *BeaconState) SetPendingAttestations(pendingAttestations []*pb.Aggregate
 
 // SetRandaoMix updates the inner proto's randao mix.
 func (b *BeaconState) SetRandaoMix(randaoMix []byte) {
-	b.data.RandaoMix = randaoMix
+	b.data.RandaoMixHash32 = randaoMix
 }
 
 // SetLatestBlockHashes updates the inner proto's recent block hashes.

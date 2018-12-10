@@ -72,12 +72,12 @@ func TestCopyState(t *testing.T) {
 		)
 	}
 
-	state1.data.RandaoMix = []byte{22, 21}
-	state2.data.RandaoMix = []byte{40, 31}
-	if state1.data.RandaoMix[0] == state2.data.RandaoMix[0] {
+	state1.data.RandaoMixHash32 = []byte{22, 21}
+	state2.data.RandaoMixHash32 = []byte{40, 31}
+	if state1.data.RandaoMixHash32[0] == state2.data.RandaoMixHash32[0] {
 		t.Fatalf("The RandaoMix should not equal each other %d, %d",
-			state1.data.RandaoMix[0],
-			state2.data.RandaoMix[0],
+			state1.data.RandaoMixHash32[0],
+			state2.data.RandaoMixHash32[0],
 		)
 	}
 }
