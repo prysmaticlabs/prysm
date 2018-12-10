@@ -17,8 +17,11 @@ type encoder func(reflect.Value, *encbuf) error
 // instead. This makes our implementation look cleaner.
 type decoder func(io.Reader, reflect.Value) (uint32, error)
 
+type encodeSizer func(reflect.Value) (uint32, error)
+
 type encoderDecoder struct {
 	encoder
+	encodeSizer
 	decoder
 }
 
@@ -26,7 +29,7 @@ type encoderDecoder struct {
 // if we want to know the encode output size before the actual encoding
 func getEncoderDecoderForType(typ reflect.Type) (encDec *encoderDecoder, err error) {
 	encDec = new(encoderDecoder)
-	if encDec.encoder, err = makeEncoder(typ); err != nil {
+	if encDec.encoder, encDec.encodeSizer, err = makeEncoder(typ); err != nil {
 		return nil, err
 	}
 	if encDec.decoder, err = makeDecoder(typ); err != nil {

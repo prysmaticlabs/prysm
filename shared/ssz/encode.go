@@ -7,6 +7,10 @@ import (
 	"reflect"
 )
 
+// TODOs:
+// - Better error msg wrapping
+// - Encoder/Decoder caching
+
 // TODOs for later PR:
 // - Add support for more types
 
@@ -19,6 +23,13 @@ func Encode(w io.Writer, val interface{}) error {
 		return err
 	}
 	return eb.toWriter(w)
+}
+
+// EncodeSize returns the target encoding size without doing the actual encoding.
+// This is an optional pass. You don't need to call this before the encoding unless you
+// want to know the output size first.
+func EncodeSize(val interface{}) (uint32, error) {
+	return encodeSize(val)
 }
 
 type encbuf struct {
@@ -34,6 +45,15 @@ func (w *encbuf) encode(val interface{}) error {
 	return encDec.encoder(rval, w)
 }
 
+func encodeSize(val interface{}) (uint32, error) {
+	rval := reflect.ValueOf(val)
+	encDec, err := getEncoderDecoderForType(rval.Type())
+	if err != nil {
+		return 0, err
+	}
+	return encDec.encodeSizer(rval)
+}
+
 func (w *encbuf) toWriter(out io.Writer) error {
 	if _, err := out.Write(w.str); err != nil {
 		return err
@@ -41,23 +61,23 @@ func (w *encbuf) toWriter(out io.Writer) error {
 	return nil
 }
 
-func makeEncoder(typ reflect.Type) (encoder, error) {
+func makeEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 	kind := typ.Kind()
 	switch {
 	case kind == reflect.Bool:
-		return encodeBool, nil
+		return encodeBool, func(reflect.Value) (uint32, error) { return 1, nil }, nil
 	case kind == reflect.Uint8:
-		return encodeUint8, nil
+		return encodeUint8, func(reflect.Value) (uint32, error) { return 1, nil }, nil
 	case kind == reflect.Uint16:
-		return encodeUint16, nil
+		return encodeUint16, func(reflect.Value) (uint32, error) { return 2, nil }, nil
 	case kind == reflect.Slice && typ.Elem().Kind() == reflect.Uint8:
-		return encodeBytes, nil
+		return makeBytesEncoder()
 	case kind == reflect.Slice:
 		return makeSliceEncoder(typ)
 	case kind == reflect.Struct:
 		return makeStructEncoder(typ)
 	default:
-		return nil, newEncodeError(fmt.Sprintf("type %v is not serializable", typ), typ)
+		return nil, nil, newEncodeError(fmt.Sprintf("type %v is not serializable", typ), typ)
 	}
 }
 
@@ -84,25 +104,33 @@ func encodeUint16(val reflect.Value, w *encbuf) error {
 	return nil
 }
 
-func encodeBytes(val reflect.Value, w *encbuf) error {
-	b := val.Bytes()
-	sizeEnc := make([]byte, lengthBytes)
-	if len(val.Bytes()) >= 2<<32 {
-		return newEncodeError("bytes oversize", val.Type())
+func makeBytesEncoder() (encoder, encodeSizer, error) {
+	encoder := func(val reflect.Value, w *encbuf) error {
+		b := val.Bytes()
+		sizeEnc := make([]byte, lengthBytes)
+		if len(val.Bytes()) >= 2<<32 {
+			return newEncodeError("bytes oversize", val.Type())
+		}
+		binary.BigEndian.PutUint32(sizeEnc, uint32(len(b)))
+		w.str = append(w.str, sizeEnc...)
+		w.str = append(w.str, val.Bytes()...)
+		return nil
 	}
-	binary.BigEndian.PutUint32(sizeEnc, uint32(len(b)))
-	w.str = append(w.str, sizeEnc...)
-	w.str = append(w.str, val.Bytes()...)
-	return nil
+	encodeSizer := func(val reflect.Value) (uint32, error) {
+		if len(val.Bytes()) >= 2<<32 {
+			return 0, newEncodeError("bytes oversize", val.Type())
+		}
+		return uint32(len(val.Bytes())), nil
+	}
+	return encoder, encodeSizer, nil
 }
 
-func makeSliceEncoder(typ reflect.Type) (encoder, error) {
+func makeSliceEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 	elemEncoderDecoder, err := getEncoderDecoderForType(typ.Elem())
 	if err != nil {
-		return nil, newEncodeError(fmt.Sprintf("failed to get encoder/decoder: %v", err), typ)
+		return nil, nil, newEncodeError(fmt.Sprintf("failed to get encoder/decoder: %v", err), typ)
 	}
 	encoder := func(val reflect.Value, w *encbuf) error {
-		// TODO: totalSize should've been already known in the parsing pass. You need to add that feature to your parsing code
 		origBufSize := len(w.str)
 		totalSizeEnc := make([]byte, lengthBytes)
 		w.str = append(w.str, totalSizeEnc...)
@@ -119,13 +147,23 @@ func makeSliceEncoder(typ reflect.Type) (encoder, error) {
 		copy(w.str[origBufSize:origBufSize+lengthBytes], totalSizeEnc)
 		return nil
 	}
-	return encoder, nil
+	encodeSizer := func(val reflect.Value) (uint32, error) {
+		if val.Len() == 0 {
+			return lengthBytes, nil
+		}
+		elemSize, err := elemEncoderDecoder.encodeSizer(val.Index(0))
+		if err != nil {
+			return 0, newEncodeError("failed to get encode size of element of slice", typ)
+		}
+		return lengthBytes + elemSize*uint32(val.Len()), nil
+	}
+	return encoder, encodeSizer, nil
 }
 
-func makeStructEncoder(typ reflect.Type) (encoder, error) {
+func makeStructEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 	fields, err := sortedStructFields(typ)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	encoder := func(val reflect.Value, w *encbuf) error {
 		origBufSize := len(w.str)
@@ -133,7 +171,7 @@ func makeStructEncoder(typ reflect.Type) (encoder, error) {
 		w.str = append(w.str, totalSizeEnc...)
 		for _, f := range fields {
 			if err := f.encDec.encoder(val.Field(f.index), w); err != nil {
-				return err
+				return newEncodeError(fmt.Sprintf("failed to encode field of struct: %v", err), typ)
 			}
 		}
 		totalSize := len(w.str) - lengthBytes - origBufSize
@@ -144,7 +182,18 @@ func makeStructEncoder(typ reflect.Type) (encoder, error) {
 		copy(w.str[origBufSize:origBufSize+lengthBytes], totalSizeEnc)
 		return nil
 	}
-	return encoder, nil
+	encodeSizer := func(val reflect.Value) (uint32, error) {
+		totalSize := uint32(0)
+		for _, f := range fields {
+			fieldSize, err := f.encDec.encodeSizer(val.Field(f.index))
+			if err != nil {
+				return 0, newEncodeError(fmt.Sprintf("failed to get encode size for field of struct: %v", err), typ)
+			}
+			totalSize += fieldSize
+		}
+		return lengthBytes + totalSize, nil
+	}
+	return encoder, encodeSizer, nil
 }
 
 // encodeError is what gets reported to the encoder user in error case.

@@ -11,6 +11,12 @@ type encTest struct {
 	output, error string
 }
 
+type encSizeTest struct {
+	val   interface{}
+	size  uint32
+	error string
+}
+
 // Notice: spaces in the output string will be ignored.
 var encodeTests = []encTest{
 	// boolean
@@ -58,6 +64,44 @@ var encodeTests = []encTest{
 	{val: string("abc"), error: "encode error: type string is not serializable for input type string"},
 }
 
+var encodeSizeTests = []encSizeTest{
+	// boolean
+	{val: false, size: 1},
+
+	// uint8
+	{val: uint8(0), size: 1},
+	{val: uint8(255), size: 1},
+
+	// uint16
+	{val: uint16(0), size: 2},
+	{val: uint16(65535), size: 2},
+
+	// bytes
+	{val: []byte{}, size: 0},
+	{val: []byte{1}, size: 1},
+	{val: []byte{1, 2, 3, 4, 5, 6}, size: 6},
+
+	// slice
+	{val: []uint16{}, size: 4},
+	{val: []uint16{1}, size: 6},
+	{val: []uint16{1, 2}, size: 8},
+	{val: [][]uint16{
+		{1, 2, 3, 4},
+		{5, 6, 7, 8},
+	}, size: 28},
+
+	// struct
+	{val: simpleStruct{}, size: 7},
+	{val: simpleStruct{B: 2, A: 1}, size: 7},
+	{val: outerStruct{
+		V:    3,
+		SubV: innerStruct{V: 6},
+	}, size: 11},
+
+	// error: unsupported type
+	{val: string("abc"), error: "encode error: type string is not serializable for input type string"},
+}
+
 func runEncTests(t *testing.T, encode func(val interface{}) ([]byte, error)) {
 	for i, test := range encodeTests {
 		output, err := encode(test.val)
@@ -81,10 +125,40 @@ func runEncTests(t *testing.T, encode func(val interface{}) ([]byte, error)) {
 	}
 }
 
+func runEncSizeTests(t *testing.T, encodeSize func(val interface{}) (uint32, error)) {
+	for i, test := range encodeSizeTests {
+		size, err := encodeSize(test.val)
+		// Check unexpected error
+		if test.error == "" && err != nil {
+			t.Errorf("test %d: unexpected error: %v\nvalue %#v\ntype %T",
+				i, err, test.val, test.val)
+			continue
+		}
+		// Check expected error
+		if test.error != "" && fmt.Sprint(err) != test.error {
+			t.Errorf("test %d: error mismatch\ngot   %v\nwant  %v\nvalue %#v\ntype  %T",
+				i, err, test.error, test.val, test.val)
+			continue
+		}
+		// Check expected output
+		if err == nil && size != test.size {
+			t.Errorf("test %d: output mismatch:\ngot   %d\nwant  %d\nvalue %#v\ntype  %T",
+				i, size, test.size, test.val, test.val)
+		}
+	}
+}
+
 func TestEncode(t *testing.T) {
 	runEncTests(t, func(val interface{}) ([]byte, error) {
 		b := new(bytes.Buffer)
 		err := Encode(b, val)
 		return b.Bytes(), err
+	})
+}
+
+func TestEncodeSize(t *testing.T) {
+	runEncSizeTests(t, func(val interface{}) (uint32, error) {
+		size, err := EncodeSize(val)
+		return size, err
 	})
 }
