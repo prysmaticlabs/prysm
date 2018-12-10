@@ -12,31 +12,29 @@ import (
 
 // Decode decodes data read from r and output it into the object pointed by pointer val
 func Decode(r io.Reader, val interface{}) error {
-	_, err := decode(r, val)
-	return err
+	return decode(r, val)
 }
 
-func decode(r io.Reader, val interface{}) (uint32, error) {
+func decode(r io.Reader, val interface{}) error {
 	if val == nil {
-		return 0, newDecodeError("cannot decode into nil", nil)
+		return newDecodeError("cannot decode into nil", nil)
 	}
 	rval := reflect.ValueOf(val)
 	rtyp := rval.Type()
 	if rtyp.Kind() != reflect.Ptr {
-		return 0, newDecodeError("can only decode into pointer target", rtyp)
+		return newDecodeError("can only decode into pointer target", rtyp)
 	}
 	if rval.IsNil() {
-		return 0, newDecodeError("cannot output to pointer of nil", rtyp)
+		return newDecodeError("cannot output to pointer of nil", rtyp)
 	}
 	encDec, err := cachedEncoderDecoder(rval.Elem().Type())
 	if err != nil {
-		return 0, newDecodeError(fmt.Sprint(err), rval.Elem().Type())
+		return newDecodeError(fmt.Sprint(err), rval.Elem().Type())
 	}
-	var decodedSize uint32
-	if decodedSize, err = encDec.decoder(r, rval.Elem()); err != nil {
-		return 0, newDecodeError(fmt.Sprint(err), rval.Elem().Type())
+	if _, err = encDec.decoder(r, rval.Elem()); err != nil {
+		return newDecodeError(fmt.Sprint(err), rval.Elem().Type())
 	}
-	return decodedSize, nil
+	return nil
 }
 
 func makeDecoder(typ reflect.Type) (dec decoder, err error) {
