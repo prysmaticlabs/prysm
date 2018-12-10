@@ -45,20 +45,12 @@ func (ms *mockSyncService) ResumeSync() {
 
 }
 
-type mockQueryService struct {
-	isSynced bool
-}
-
-func (ms *mockQueryService) IsSynced() (bool, error) {
-	return ms.isSynced, nil
-}
-
 func TestSetBlockForInitialSync(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
-	cfg := Config{
+	cfg := &Config{
 		P2P:         &mockP2P{},
 		SyncService: &mockSyncService{},
 		BeaconDB:    db,
@@ -114,7 +106,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
-	cfg := Config{
+	cfg := &Config{
 		P2P:         &mockP2P{},
 		SyncService: &mockSyncService{},
 		BeaconDB:    db,
@@ -226,7 +218,7 @@ func TestDelayChan(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	cfg := Config{
+	cfg := &Config{
 		P2P:         &mockP2P{},
 		SyncService: &mockSyncService{},
 		BeaconDB:    db,
@@ -302,61 +294,11 @@ func TestDelayChan(t *testing.T) {
 	hook.Reset()
 }
 
-func TestIsSyncedWithNetwork(t *testing.T) {
-	hook := logTest.NewGlobal()
-	mockSync := &mockSyncService{}
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	cfg := Config{
-		P2P:         &mockP2P{},
-		SyncService: mockSync,
-		BeaconDB:    db,
-		QueryService: &mockQueryService{
-			isSynced: true,
-		},
-		SyncPollingInterval: 1,
-	}
-	ss := NewInitialSyncService(context.Background(), cfg)
-
-	ss.Start()
-	ss.Stop()
-
-	testutil.AssertLogsContain(t, hook, "Chain fully synced, exiting initial sync")
-	testutil.AssertLogsContain(t, hook, "Stopping service")
-
-	hook.Reset()
-}
-
-func TestIsNotSyncedWithNetwork(t *testing.T) {
-	hook := logTest.NewGlobal()
-	mockSync := &mockSyncService{}
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	cfg := Config{
-		P2P:         &mockP2P{},
-		SyncService: mockSync,
-		BeaconDB:    db,
-		QueryService: &mockQueryService{
-			isSynced: false,
-		},
-		SyncPollingInterval: 1,
-	}
-	ss := NewInitialSyncService(context.Background(), cfg)
-
-	ss.Start()
-	ss.Stop()
-
-	testutil.AssertLogsDoNotContain(t, hook, "Chain fully synced, exiting initial sync")
-	testutil.AssertLogsContain(t, hook, "Stopping service")
-
-	hook.Reset()
-}
-
 func TestRequestBlocksBySlot(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	cfg := Config{
+	cfg := &Config{
 		P2P:             &mockP2P{},
 		SyncService:     &mockSyncService{},
 		BeaconDB:        db,
@@ -437,7 +379,7 @@ func TestRequestBatchedBlocks(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	cfg := Config{
+	cfg := &Config{
 		P2P:             &mockP2P{},
 		SyncService:     &mockSyncService{},
 		BeaconDB:        db,

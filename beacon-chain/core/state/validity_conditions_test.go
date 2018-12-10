@@ -27,10 +27,6 @@ func (f *mockDB) ReadBlockVoteCache(blockHashes [][32]byte) (utils.BlockVoteCach
 	return f.blockVoteCache, nil
 }
 
-func (f *mockDB) loadMockBlockVoteCache(blockVoteCache utils.BlockVoteCache) {
-	f.blockVoteCache = blockVoteCache
-}
-
 func TestBlockValidity(t *testing.T) {
 	beaconState, err := types.NewGenesisBeaconState(nil)
 	if err != nil {
