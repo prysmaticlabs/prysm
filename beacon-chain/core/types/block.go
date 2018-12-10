@@ -32,7 +32,6 @@ func NewBlock(data *pb.BeaconBlock) *Block {
 				RandaoRevealHash32:            []byte{0},
 				CandidatePowReceiptRootHash32: []byte{0},
 				StateRootHash32:               []byte{0},
-				Specials:                      []*pb.SpecialRecord{},
 			},
 		}
 	}
