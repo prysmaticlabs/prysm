@@ -47,13 +47,17 @@ func TestBlockValidity(t *testing.T) {
 	b := types.NewBlock(&pb.BeaconBlock{
 		Slot:               1,
 		RandaoRevealHash32: randaoPreCommit[:],
-		Attestations: []*pb.AggregatedAttestation{
-			{
-				Slot:          0,
-				Shard:         1,
-				JustifiedSlot: 0,
-				AttesterBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		Body: &pb.BeaconBlockBody{
+			Attestations: []*pb.Attestation{
+				{
+					ParticipationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+						0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					Data: &pb.AttestationData{
+						Slot:          0,
+						Shard:         1,
+						JustifiedSlot: 0,
+					},
+				},
 			},
 		},
 	})
@@ -87,12 +91,16 @@ func TestBlockValidityNoParentProposer(t *testing.T) {
 	badRandaoBlock := types.NewBlock(&pb.BeaconBlock{
 		Slot:               2,
 		RandaoRevealHash32: []byte{'B'},
-		Attestations: []*pb.AggregatedAttestation{
-			{
-				Slot:             0,
-				Shard:            1,
-				JustifiedSlot:    0,
-				AttesterBitfield: []byte{64, 0},
+		Body: &pb.BeaconBlockBody{
+			Attestations: []*pb.Attestation{
+				{
+					ParticipationBitfield: []byte{64, 0},
+					Data: &pb.AttestationData{
+						Slot:          0,
+						Shard:         1,
+						JustifiedSlot: 0,
+					},
+				},
 			},
 		},
 	})
@@ -122,12 +130,16 @@ func TestBlockValidityInvalidRandao(t *testing.T) {
 	badRandaoBlock := types.NewBlock(&pb.BeaconBlock{
 		Slot:               1,
 		RandaoRevealHash32: []byte{'B'},
-		Attestations: []*pb.AggregatedAttestation{
-			{
-				Slot:             0,
-				Shard:            1,
-				JustifiedSlot:    0,
-				AttesterBitfield: []byte{64, 0},
+		Body: &pb.BeaconBlockBody{
+			Attestations: []*pb.Attestation{
+				{
+					ParticipationBitfield: []byte{64, 0},
+					Data: &pb.AttestationData{
+						Slot:          0,
+						Shard:         1,
+						JustifiedSlot: 0,
+					},
+				},
 			},
 		},
 	})

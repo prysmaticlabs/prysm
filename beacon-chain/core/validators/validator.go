@@ -199,15 +199,18 @@ func TotalActiveValidatorDepositInEth(validators []*pb.ValidatorRecord) uint64 {
 
 // VotedBalanceInAttestation checks for the total balance in the validator set and the balances of the voters in the
 // attestation.
-func VotedBalanceInAttestation(validators []*pb.ValidatorRecord, indices []uint32,
-	attestation *pb.AggregatedAttestation) (uint64, uint64, error) {
+func VotedBalanceInAttestation(
+	validators []*pb.ValidatorRecord,
+	indices []uint32,
+	participationBitfield []byte,
+) (uint64, uint64, error) {
 
 	// find the total and vote balance of the shard committee.
 	var totalBalance uint64
 	var voteBalance uint64
 	for index, attesterIndex := range indices {
 		// find balance of validators who voted.
-		bitCheck, err := bitutil.CheckBit(attestation.AttesterBitfield, index)
+		bitCheck, err := bitutil.CheckBit(participationBitfield, index)
 		if err != nil {
 			return 0, 0, err
 		}

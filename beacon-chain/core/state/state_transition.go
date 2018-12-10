@@ -85,7 +85,7 @@ func NewStateTransition(
 
 		crossLinks, err := crossLinkCalculations(
 			newState,
-			st.PendingAttestations(),
+			st.LatestAttestations(),
 			block.SlotNumber(),
 		)
 		if err != nil {
@@ -133,42 +133,45 @@ func crossLinkCalculations(
 ) ([]*pb.CrosslinkRecord, error) {
 	slot := st.LastStateRecalculationSlot() + params.BeaconConfig().CycleLength
 	crossLinkRecords := st.LatestCrosslinks()
-	for _, attestation := range pendingAttestations {
-		shardCommittees, err := v.GetShardAndCommitteesForSlot(
-			st.ShardAndCommitteesForSlots(),
-			st.LastStateRecalculationSlot(),
-			attestation.GetSlot(),
-		)
-		if err != nil {
-			return nil, err
-		}
+	// TODO: Pending refactor from the spec.
+	_ = slot
+	_ = crossLinkRecords
+	// for _, attestation := range pendingAttestations {
+	//shardCommittees, err := v.GetShardAndCommitteesForSlot(
+	//st.ShardAndCommitteesForSlots(),
+	//st.LastStateRecalculationSlot(),
+	//attestation.GetData().GetSlot(),
+	//)
+	//if err != nil {
+	//return nil, err
+	//}
 
-		indices, err := v.AttesterIndices(shardCommittees, attestation.GetData())
-		if err != nil {
-			return nil, err
-		}
+	//indices, err := v.AttesterIndices(shardCommittees, attestation.GetData())
+	//if err != nil {
+	//return nil, err
+	//}
 
-		totalBalance, voteBalance, err := v.VotedBalanceInAttestation(st.ValidatorRegistry(), indices, attestation)
-		if err != nil {
-			return nil, err
-		}
+	//totalBalance, voteBalance, err := v.VotedBalanceInAttestation(st.ValidatorRegistry(), indices, attestation)
+	//if err != nil {
+	//return nil, err
+	//}
 
-		newValidatorSet, err := incentives.ApplyCrosslinkRewardsAndPenalties(
-			crossLinkRecords,
-			currentSlot,
-			indices,
-			attestation,
-			st.ValidatorRegistry(),
-			v.TotalActiveValidatorDeposit(st.ValidatorRegistry()),
-			totalBalance,
-			voteBalance,
-		)
-		if err != nil {
-			return nil, err
-		}
-		st.SetValidatorRegistry(newValidatorSet)
-		crossLinkRecords = UpdateLatestCrosslinks(slot, voteBalance, totalBalance, attestation, crossLinkRecords)
-	}
+	//newValidatorSet, err := incentives.ApplyCrosslinkRewardsAndPenalties(
+	//crossLinkRecords,
+	//currentSlot,
+	//indices,
+	//attestation,
+	//st.ValidatorRegistry(),
+	//v.TotalActiveValidatorDeposit(st.ValidatorRegistry()),
+	//totalBalance,
+	//voteBalance,
+	//)
+	//if err != nil {
+	//return nil, err
+	//}
+	//st.SetValidatorRegistry(newValidatorSet)
+	//crossLinkRecords = UpdateLatestCrosslinks(slot, voteBalance, totalBalance, attestation, crossLinkRecords)
+	// }
 	return crossLinkRecords, nil
 }
 

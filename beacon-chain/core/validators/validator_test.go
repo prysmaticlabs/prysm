@@ -263,14 +263,14 @@ func TestVotedBalanceInAttestation(t *testing.T) {
 	}
 
 	// Calculating balances with zero votes by attesters.
-	attestation := &pb.AggregatedAttestation{
-		AttesterBitfield: []byte{0},
+	attestation := &pb.Attestation{
+		ParticipationBitfield: []byte{0},
 	}
 
 	indices := []uint32{4, 8, 10, 14, 30}
 	expectedTotalBalance := uint64(len(indices)) * defaultBalance
 
-	totalBalance, voteBalance, err := VotedBalanceInAttestation(validators, indices, attestation)
+	totalBalance, voteBalance, err := VotedBalanceInAttestation(validators, indices, attestation.GetParticipationBitfield())
 
 	if err != nil {
 		t.Fatalf("unable to get voted balances in attestation %v", err)
@@ -286,13 +286,13 @@ func TestVotedBalanceInAttestation(t *testing.T) {
 
 	// Calculating balances with 3 votes by attesters.
 
-	newAttestation := &pb.AggregatedAttestation{
-		AttesterBitfield: []byte{224}, // 128 + 64 + 32
+	newAttestation := &pb.Attestation{
+		ParticipationBitfield: []byte{224}, // 128 + 64 + 32
 	}
 
 	expectedTotalBalance = uint64(len(indices)) * defaultBalance
 
-	totalBalance, voteBalance, err = VotedBalanceInAttestation(validators, indices, newAttestation)
+	totalBalance, voteBalance, err = VotedBalanceInAttestation(validators, indices, newAttestation.GetParticipationBitfield())
 
 	if err != nil {
 		t.Fatalf("unable to get voted balances in attestation %v", err)
