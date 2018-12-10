@@ -28,6 +28,8 @@ var (
 	encoderDecoderCache      = make(map[reflect.Type]*encoderDecoder)
 )
 
+// Get cached encoder, encodeSizer and decoder implementation for a specified type.
+// With a cache we can achieve O(1) amortized time overhead for creating encoder, encodeSizer and decoder.
 func cachedEncoderDecoder(typ reflect.Type) (*encoderDecoder, error) {
 	encoderDecoderCacheMutex.RLock()
 	encDec := encoderDecoderCache[typ]

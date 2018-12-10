@@ -10,7 +10,7 @@ import (
 
 // TODO(1068): Support more data types
 
-// Decode decodes data read from r and output it into the object pointed by pointer val
+// Decode decodes data read from r and output it into the object pointed by pointer val.
 func Decode(r io.Reader, val interface{}) error {
 	return decode(r, val)
 }
@@ -205,7 +205,7 @@ func readBytes(r io.Reader, size int, b []byte) error {
 	return nil
 }
 
-// decodeError is what gets reported to the decoder user in error case
+// decodeError is what gets reported to the decoder user in error case.
 type decodeError struct {
 	msg string
 	typ reflect.Type
