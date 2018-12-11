@@ -15,7 +15,7 @@ func TestValidatorStatusCode(t *testing.T) {
 		{a: PendingExit, b: 2},
 		{a: PendingWithdraw, b: 3},
 		{a: Withdrawn, b: 4},
-		{a: Penalized, b: 127},
+		{a: ExitedWithPenalty, b: 127},
 	}
 	for _, tt := range tests {
 		if int(tt.a) != tt.b {
