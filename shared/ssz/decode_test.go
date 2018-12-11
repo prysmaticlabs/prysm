@@ -36,6 +36,25 @@ var decodeTests = []decodeTest{
 	{input: "00FF", ptr: new(uint16), value: uint16(255)},
 	{input: "FFFF", ptr: new(uint16), value: uint16(65535)},
 
+	// uint32
+	{input: "00000000", ptr: new(uint32), value: uint32(0)},
+	{input: "00000001", ptr: new(uint32), value: uint32(1)},
+	{input: "00000010", ptr: new(uint32), value: uint32(16)},
+	{input: "00000080", ptr: new(uint32), value: uint32(128)},
+	{input: "000000FF", ptr: new(uint32), value: uint32(255)},
+	{input: "0000FFFF", ptr: new(uint32), value: uint32(65535)},
+	{input: "FFFFFFFF", ptr: new(uint32), value: uint32(4294967295)},
+
+	// uint64
+	{input: "0000000000000000", ptr: new(uint64), value: uint64(0)},
+	{input: "0000000000000001", ptr: new(uint64), value: uint64(1)},
+	{input: "0000000000000010", ptr: new(uint64), value: uint64(16)},
+	{input: "0000000000000080", ptr: new(uint64), value: uint64(128)},
+	{input: "00000000000000FF", ptr: new(uint64), value: uint64(255)},
+	{input: "000000000000FFFF", ptr: new(uint64), value: uint64(65535)},
+	{input: "00000000FFFFFFFF", ptr: new(uint64), value: uint64(4294967295)},
+	{input: "FFFFFFFFFFFFFFFF", ptr: new(uint64), value: uint64(18446744073709551615)},
+
 	// bytes
 	{input: "00000000", ptr: new([]byte), value: []byte{}},
 	{input: "0000000101", ptr: new([]byte), value: []byte{1}},

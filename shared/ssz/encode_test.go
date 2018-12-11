@@ -40,6 +40,25 @@ var encodeTests = []encTest{
 	{val: uint16(255), output: "00FF"},
 	{val: uint16(65535), output: "FFFF"},
 
+	// uint32
+	{val: uint32(0), output: "00000000"},
+	{val: uint32(1), output: "00000001"},
+	{val: uint32(16), output: "00000010"},
+	{val: uint32(128), output: "00000080"},
+	{val: uint32(255), output: "000000FF"},
+	{val: uint32(65535), output: "0000FFFF"},
+	{val: uint32(4294967295), output: "FFFFFFFF"},
+
+	// uint64
+	{val: uint64(0), output: "0000000000000000"},
+	{val: uint64(1), output: "0000000000000001"},
+	{val: uint64(16), output: "0000000000000010"},
+	{val: uint64(128), output: "0000000000000080"},
+	{val: uint64(255), output: "00000000000000FF"},
+	{val: uint64(65535), output: "000000000000FFFF"},
+	{val: uint64(4294967295), output: "00000000FFFFFFFF"},
+	{val: uint64(18446744073709551615), output: "FFFFFFFFFFFFFFFF"},
+
 	// bytes
 	{val: []byte{}, output: "00000000"},
 	{val: []byte{1}, output: "00000001 01"},
@@ -77,6 +96,14 @@ var encodeSizeTests = []encSizeTest{
 	// uint16
 	{val: uint16(0), size: 2},
 	{val: uint16(65535), size: 2},
+
+	// uint32
+	{val: uint32(0), size: 4},
+	{val: uint32(65535), size: 4},
+
+	// uint64
+	{val: uint64(0), size: 8},
+	{val: uint64(65535), size: 8},
 
 	// bytes
 	{val: []byte{}, size: 0},
