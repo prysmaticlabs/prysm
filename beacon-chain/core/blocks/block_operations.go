@@ -1,4 +1,4 @@
-package state
+package blocks
 
 import (
 	"bytes"
@@ -34,8 +34,8 @@ func applyProposerSlashing(
 			log.Debugf("slashing proposal data shards do not match")
 		}
 		if !bytes.Equal(
-			slashing.GetProposalData_1().GetBlockHashHash32(),
-			slashing.GetProposalData_2().GetBlockHashHash32(),
+			slashing.GetProposalData_1().GetBlockHash32(),
+			slashing.GetProposalData_2().GetBlockHash32(),
 		) {
 			log.Debugf("slashing proposal data block hashes do not match")
 		}
