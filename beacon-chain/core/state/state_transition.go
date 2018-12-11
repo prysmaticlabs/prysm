@@ -133,7 +133,7 @@ func crossLinkCalculations(
 ) ([]*pb.CrosslinkRecord, error) {
 	slot := st.LastStateRecalculationSlot() + params.BeaconConfig().CycleLength
 	crossLinkRecords := st.LatestCrosslinks()
-	// TODO: Pending refactor from the spec.
+	// TODO(#781): Pending refactor from the spec.
 	_ = slot
 	_ = crossLinkRecords
 	// for _, attestation := range pendingAttestations {

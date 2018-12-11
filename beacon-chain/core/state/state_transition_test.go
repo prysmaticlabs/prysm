@@ -190,7 +190,7 @@ func TestProcessLatestCrosslinks(t *testing.T) {
 	}
 	_ = newLatestCrosslinks
 
-	// TODO: Pending refactor from new spec.
+	// TODO(#781): Pending refactor from new spec.
 	//if newLatestCrosslinks[1].Slot != params.BeaconConfig().CycleLength {
 	//t.Errorf("Slot did not change for new cross link. Wanted: %d. Got: %d", params.BeaconConfig().CycleLength, newLatestCrosslinks[0].Slot)
 	//}
