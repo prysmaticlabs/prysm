@@ -24,7 +24,8 @@ func ProcessProposerSlashings(
 		log.Debugf("number of proposer slashings exceeds threshold")
 		return nil
 	}
-	// TODO(#781): Verify BLS according to the spec.
+	// TODO(#781): Verify BLS according to the specification in the "Proposer Slashings"
+	// section of block operations.
 	for _, slashing := range proposerSlashings {
 		proposer := validatorRegistry[slashing.GetProposerIndex()]
 		if slashing.GetProposalData_1().GetSlot() != slashing.GetProposalData_2().GetSlot() {
