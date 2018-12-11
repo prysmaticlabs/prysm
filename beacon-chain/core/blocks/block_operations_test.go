@@ -1,44 +1,78 @@
 package blocks
 
 import (
-	"io/ioutil"
+	"fmt"
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/sirupsen/logrus"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-func init() {
-	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
-}
-
 func TestIncorrectProcessProposerSlashings(t *testing.T) {
-	hook := logTest.NewGlobal()
-
 	// We test exceeding the proposer slashing threshold.
 	slashings := make([]*pb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings+1)
 	registry := []*pb.ValidatorRecord{}
 	currentSlot := uint64(0)
-	ProcessProposerSlashings(
+
+	if _, err := ProcessProposerSlashings(
 		registry,
 		slashings,
 		currentSlot,
-	)
+	); err == nil {
+		want := "number of proposer slashings exceeds threshold"
+		t.Errorf("Expected %v, received nil", want)
+	}
 	currentSlot++
-	testutil.WaitForLog(t, hook, "number of proposer slashings exceeds threshold")
 
-	// We now test the case when slots, shards, and
-	// block hashes in the proposal signed data values
-	// are different.
-	registry = []*pb.ValidatorRecord{
+	// We now test the case with unmatched slot numbers.
+	slashings = []*pb.ProposerSlashing{
 		{
-			Status: uint64(params.ExitedWithPenalty),
+			ProposerIndex: 0,
+			ProposalData_1: &pb.ProposalSignedData{
+				Slot: 1,
+			},
+			ProposalData_2: &pb.ProposalSignedData{
+				Slot: 0,
+			},
 		},
 	}
+
+	if _, err := ProcessProposerSlashings(
+		registry,
+		slashings,
+		currentSlot,
+	); err == nil {
+		want := "slashing proposal data slots do not match: 1, 0"
+		t.Errorf("Expected %v, received nil", want)
+	}
+	currentSlot++
+
+	// We now test the case with unmatched shard IDs.
+	slashings = []*pb.ProposerSlashing{
+		{
+			ProposerIndex: 0,
+			ProposalData_1: &pb.ProposalSignedData{
+				Slot:  1,
+				Shard: 0,
+			},
+			ProposalData_2: &pb.ProposalSignedData{
+				Slot:  1,
+				Shard: 1,
+			},
+		},
+	}
+
+	if _, err := ProcessProposerSlashings(
+		registry,
+		slashings,
+		currentSlot,
+	); err == nil {
+		want := "slashing proposal data shards do not match: 0, 1"
+		t.Errorf("Expected %v, received nil", want)
+	}
+	currentSlot++
+
+	// We now test the case with unmatched block hashes.
 	slashings = []*pb.ProposerSlashing{
 		{
 			ProposerIndex: 0,
@@ -48,21 +82,24 @@ func TestIncorrectProcessProposerSlashings(t *testing.T) {
 				BlockHash32: []byte{0, 1, 0},
 			},
 			ProposalData_2: &pb.ProposalSignedData{
-				Slot:        0,
-				Shard:       1,
+				Slot:        1,
+				Shard:       0,
 				BlockHash32: []byte{1, 1, 0},
 			},
 		},
 	}
 
-	registry = ProcessProposerSlashings(
+	if _, err := ProcessProposerSlashings(
 		registry,
 		slashings,
 		currentSlot,
-	)
-	testutil.WaitForLog(t, hook, "slashing proposal data slots do not match")
-	testutil.WaitForLog(t, hook, "slashing proposal data shards do not match")
-	testutil.WaitForLog(t, hook, "slashing proposal data block hashes do not match")
+	); err == nil {
+		want := fmt.Sprintf(
+			"slashing proposal data block hashes do not match: %x, %x",
+			[]byte{0, 1, 0}, []byte{1, 1, 0},
+		)
+		t.Errorf("Expected %v, received nil", want)
+	}
 }
 
 func TestCorrectlyProcessProposerSlashings(t *testing.T) {
@@ -95,11 +132,14 @@ func TestCorrectlyProcessProposerSlashings(t *testing.T) {
 	}
 	currentSlot := uint64(1)
 
-	registry = ProcessProposerSlashings(
+	registry, err := ProcessProposerSlashings(
 		registry,
 		slashings,
 		currentSlot,
 	)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
 	if registry[1].Status != uint64(params.ExitedWithPenalty) {
 		t.Errorf("Proposer with index 1 did not ExitWithPenalty in validator registry: %v", registry[1].Status)
 	}
