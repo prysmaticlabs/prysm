@@ -72,8 +72,6 @@ func ShardAndCommitteesAtSlot(state *pb.BeaconState, slot uint64) (*pb.ShardAndC
 		earliestSlot = state.Slot - (state.Slot % epochLength) - epochLength
 	}
 
-	fmt.Printf("state.Slot: %d, epochLength: %d, earliestSlot: %d, state.Slot > epochLength = %v\n", state.Slot, epochLength, earliestSlot, state.Slot > epochLength)
-
 	if slot < earliestSlot || slot >= earliestSlot+(epochLength*2) {
 		return nil, fmt.Errorf("slot %d out of bounds: %d <= slot < %d",
 			slot,
