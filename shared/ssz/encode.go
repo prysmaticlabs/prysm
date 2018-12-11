@@ -12,6 +12,11 @@ import (
 
 const lengthBytes = 4
 
+// Encodable defines the interface for support ssz encoding
+type Encodable interface {
+	EncodeSSZ(io.Writer) error
+}
+
 // Encode encodes val and output the result into w.
 func Encode(w io.Writer, val interface{}) error {
 	eb := &encbuf{}

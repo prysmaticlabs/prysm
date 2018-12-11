@@ -8,7 +8,10 @@ import (
 	"reflect"
 )
 
-// TODO(1068): Support more data types
+// Decodable defines the interface for support ssz decoding
+type Decodable interface {
+	DecodeSSZ(io.Reader) error
+}
 
 // Decode decodes data read from r and output it into the object pointed by pointer val.
 func Decode(r io.Reader, val interface{}) error {

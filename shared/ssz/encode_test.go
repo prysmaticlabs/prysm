@@ -81,6 +81,18 @@ var encodeTests = []encTest{
 		SubV: innerStruct{V: 6},
 	}, output: "00000007 00000002 0006 03"},
 
+	// slice + struct
+	{val: arrayStruct{
+		V: []simpleStruct{
+			{B: 2, A: 1},
+			{B: 4, A: 3},
+		},
+	}, output: "00000012 0000000E 00000003 010002 00000003 030004"},
+	{val: []outerStruct{
+		{V: 3, SubV: innerStruct{V: 6}},
+		{V: 5, SubV: innerStruct{V: 7}},
+	}, output: "00000016 00000007 00000002 0006 03 00000007 00000002 0007 05"},
+
 	// error: unsupported type
 	{val: string("abc"), error: "encode error: type string is not serializable for input type string"},
 }
@@ -126,6 +138,18 @@ var encodeSizeTests = []encSizeTest{
 		V:    3,
 		SubV: innerStruct{V: 6},
 	}, size: 11},
+
+	// slice + struct
+	{val: arrayStruct{
+		V: []simpleStruct{
+			{B: 2, A: 1},
+			{B: 4, A: 3},
+		},
+	}, size: 22},
+	{val: []outerStruct{
+		{V: 3, SubV: innerStruct{V: 6}},
+		{V: 5, SubV: innerStruct{V: 7}},
+	}, size: 26},
 
 	// error: unsupported type
 	{val: string("abc"), error: "encode error: type string is not serializable for input type string"},
@@ -217,4 +241,8 @@ type innerStruct struct {
 type outerStruct struct {
 	V    uint8
 	SubV innerStruct
+}
+
+type arrayStruct struct {
+	V []simpleStruct
 }

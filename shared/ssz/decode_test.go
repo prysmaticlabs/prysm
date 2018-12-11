@@ -80,6 +80,20 @@ var decodeTests = []decodeTest{
 			SubV: innerStruct{6},
 		}},
 
+	// slice + struct
+	{input: "00000012 0000000E 00000003 010002 00000003 030004", ptr: new(arrayStruct),
+		value: arrayStruct{
+			V: []simpleStruct{
+				{B: 2, A: 1},
+				{B: 4, A: 3},
+			},
+		}},
+	{input: "00000016 00000007 00000002 0006 03 00000007 00000002 0007 05", ptr: new([]outerStruct),
+		value: []outerStruct{
+			{V: 3, SubV: innerStruct{V: 6}},
+			{V: 5, SubV: innerStruct{V: 7}},
+		}},
+
 	// error: nil target
 	{input: "00", ptr: nil, value: nil, error: "decode error: cannot decode into nil for output type <nil>"},
 
