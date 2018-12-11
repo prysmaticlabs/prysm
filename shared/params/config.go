@@ -19,6 +19,7 @@ type ValidatorSetDeltaFlags int
 
 // BeaconChainConfig contains configs for node to participate in beacon chain.
 type BeaconChainConfig struct {
+	MaxProposerSlashings                    uint64         // MaxProposerSlashing defines the maximum number of slashings of proposers possible in a block.
 	ShardCount                              uint64         // ShardCount is the fixed number of shards in Ethereum 2.0.
 	DepositSize                             uint64         // DepositSize is how much a validator has deposited in Eth.
 	MinTopUpSize                            uint64         // MinTopUpSize is the minimal amount of Ether a validator can top up.
@@ -31,7 +32,6 @@ type BeaconChainConfig struct {
 	CycleLength                             uint64         // CycleLength is one beacon chain cycle length in slots.
 	MinValidatorSetChangeInterval           uint64         // MinValidatorSetChangeInterval is the slots needed before validator set changes.
 	ShardPersistentCommitteeChangePeriod    uint64         // ShardPersistentCommitteeChangePeriod defines how often shard committee gets shuffled.
-	MaxProposerSlashings                    uint64         // MaxProposerSlashing defines the maximum number of slashings of proposers possible in a block.
 	MinAttestationInclusionDelay            uint64         // MinAttestationInclusionDelay defines how long validator has to wait to include attestation for beacon block.
 	SqrtExpDropTime                         uint64         // SqrtEDropTime is a constant to reflect time it takes to cut offline validators’ deposits by 39.4%.
 	WithdrawalsPerCycle                     uint64         // WithdrawalsPerCycle defines how many withdrawals can go through per cycle.
@@ -61,6 +61,7 @@ type ShardChainConfig struct {
 }
 
 var defaultBeaconConfig = &BeaconChainConfig{
+	MaxProposerSlashings: 16,
 	ShardCount:           1024,
 	DepositSize:          32,
 	MinTopUpSize:         1,
@@ -87,6 +88,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 }
 
 var demoBeaconConfig = &BeaconChainConfig{
+	MaxProposerSlashings: 16,
 	ShardCount:           5,
 	DepositSize:          32,
 	MinTopUpSize:         1,
@@ -128,8 +130,8 @@ const (
 	PendingWithdraw
 	// Withdrawn means a validator has successfully withdrawn balance.
 	Withdrawn
-	// Penalized means a validator did something bad and got slashed.
-	Penalized = 127
+	// ExitedWithPenalty means a validator did something bad and got slashed.
+	ExitedWithPenalty = 127
 )
 
 const (

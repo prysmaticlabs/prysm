@@ -12,18 +12,18 @@ import (
 
 var log = logrus.WithField("prefix", "state")
 
-// applyProposerSlashing is one of the operations performed
-// on each processed beacon block.
-func applyProposerSlashing(
+// ProcessProposerSlashings is one of the operations performed
+// on each processed beacon block to penalize proposers based on
+// slashing conditions if any slashable events occurred.
+func ProcessProposerSlashings(
 	validatorRegistry []*pb.ValidatorRecord,
-	currentSlot uint64,
 	proposerSlashings []*pb.ProposerSlashing,
+	currentSlot uint64,
 ) []*pb.ValidatorRecord {
 	if uint64(len(proposerSlashings)) > params.BeaconConfig().MaxProposerSlashings {
 		log.Debugf("number of proposer slashings exceeds threshold")
 		return nil
 	}
-	var exitedValidators []*pb.ValidatorRecord
 	// TODO(#781): Verify BLS according to the spec.
 	for _, slashing := range proposerSlashings {
 		proposer := validatorRegistry[slashing.GetProposerIndex()]
@@ -39,10 +39,9 @@ func applyProposerSlashing(
 		) {
 			log.Debugf("slashing proposal data block hashes do not match")
 		}
-		if proposer.Status != uint64(params.Penalized) {
-			log.Debugf("proposer exited with penalty already")
+		if proposer.Status != uint64(params.ExitedWithPenalty) {
+			validatorRegistry[slashing.GetProposerIndex()] = v.ExitValidator(proposer, currentSlot, true)
 		}
-		exitedValidators = append(exitedValidators, v.ExitValidator(proposer, currentSlot, true))
 	}
-	return exitedValidators
+	return validatorRegistry
 }

@@ -252,11 +252,11 @@ func AddPendingValidator(
 func ExitValidator(
 	validator *pb.ValidatorRecord,
 	currentSlot uint64,
-	panalize bool) *pb.ValidatorRecord {
+	penalize bool) *pb.ValidatorRecord {
 	// TODO(#614): Add validator set change
 	validator.LatestStatusChangeSlot = currentSlot
-	if panalize {
-		validator.Status = uint64(params.Penalized)
+	if penalize {
+		validator.Status = uint64(params.ExitedWithPenalty)
 	} else {
 		validator.Status = uint64(params.PendingExit)
 	}
@@ -298,7 +298,7 @@ func ChangeValidatorRegistry(currentSlot uint64, totalPenalties uint64, validato
 	// apply their penalties if they were slashed.
 	for i := 0; i < len(validators); i++ {
 		isPendingWithdraw := validators[i].Status == uint64(params.PendingWithdraw)
-		isPenalized := validators[i].Status == uint64(params.Penalized)
+		isPenalized := validators[i].Status == uint64(params.ExitedWithPenalty)
 		withdrawalSlot := validators[i].LatestStatusChangeSlot + params.BeaconConfig().MinWithdrawalPeriod
 
 		if (isPendingWithdraw || isPenalized) && currentSlot >= withdrawalSlot {
@@ -307,7 +307,7 @@ func ChangeValidatorRegistry(currentSlot uint64, totalPenalties uint64, validato
 				penaltyFactor = totalBalance
 			}
 
-			if validators[i].Status == uint64(params.Penalized) {
+			if validators[i].Status == uint64(params.ExitedWithPenalty) {
 				validators[i].Balance -= validators[i].Balance * totalBalance / validators[i].Balance
 			}
 			validators[i].Status = uint64(params.Withdrawn)
