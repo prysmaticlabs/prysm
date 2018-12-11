@@ -130,7 +130,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 	genericHash[0] = 'a'
 
 	beaconState := &pb.BeaconState{
-		LastFinalizedSlot: 99,
+		FinalizedSlot: 99,
 	}
 
 	stateResponse := &pb.BeaconStateResponse{
@@ -138,8 +138,8 @@ func TestSavingBlocksInSync(t *testing.T) {
 	}
 
 	incorrectState := &pb.BeaconState{
-		LastFinalizedSlot: 9,
-		LastJustifiedSlot: 20,
+		FinalizedSlot: 9,
+		JustifiedSlot: 20,
 	}
 
 	incorrectStateResponse := &pb.BeaconStateResponse{
@@ -179,7 +179,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 	ss.blockBuf <- msg1
 	ss.stateBuf <- msg2
 
-	if ss.currentSlot == incorrectStateResponse.BeaconState.LastFinalizedSlot {
+	if ss.currentSlot == incorrectStateResponse.BeaconState.FinalizedSlot {
 		t.Fatalf("Crystallized state updated incorrectly: %d", ss.currentSlot)
 	}
 
@@ -196,8 +196,8 @@ func TestSavingBlocksInSync(t *testing.T) {
 	msg1 = getBlockResponseMsg(30)
 	ss.blockBuf <- msg1
 
-	if stateResponse.BeaconState.GetLastFinalizedSlot() != ss.currentSlot {
-		t.Fatalf("Slot saved when it was not supposed too: %v", stateResponse.BeaconState.GetLastFinalizedSlot())
+	if stateResponse.BeaconState.GetFinalizedSlot() != ss.currentSlot {
+		t.Fatalf("Slot saved when it was not supposed too: %v", stateResponse.BeaconState.GetFinalizedSlot())
 	}
 
 	msg1 = getBlockResponseMsg(100)
@@ -242,7 +242,7 @@ func TestDelayChan(t *testing.T) {
 	genericHash[0] = 'a'
 
 	beaconState := &pb.BeaconState{
-		LastFinalizedSlot: 99,
+		FinalizedSlot: 99,
 	}
 
 	stateResponse := &pb.BeaconStateResponse{
