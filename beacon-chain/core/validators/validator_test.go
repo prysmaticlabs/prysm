@@ -491,7 +491,7 @@ func TestShardAndCommitteesAtSlot_OK(t *testing.T) {
 	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
 		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
 			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
-				&pb.ShardAndCommittee{Shard: i},
+				{Shard: i},
 			},
 		})
 	}
