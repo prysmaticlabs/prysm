@@ -523,6 +523,10 @@ func TestShardAndCommitteesAtSlot_OK(t *testing.T) {
 			stateSlot:     2048,
 			slot:          2000,
 			expectedShard: 64 - 48,
+		}, {
+			stateSlot:     2048,
+			slot:          2058,
+			expectedShard: 64 + 10,
 		},
 	}
 
