@@ -31,6 +31,7 @@ type BeaconChainConfig struct {
 	CycleLength                             uint64         // CycleLength is one beacon chain cycle length in slots.
 	MinValidatorSetChangeInterval           uint64         // MinValidatorSetChangeInterval is the slots needed before validator set changes.
 	ShardPersistentCommitteeChangePeriod    uint64         // ShardPersistentCommitteeChangePeriod defines how often shard committee gets shuffled.
+	MaxProposerSlashings                    uint64         // MaxProposerSlashing defines the maximum number of slashings of proposers possible in a block.
 	MinAttestationInclusionDelay            uint64         // MinAttestationInclusionDelay defines how long validator has to wait to include attestation for beacon block.
 	SqrtExpDropTime                         uint64         // SqrtEDropTime is a constant to reflect time it takes to cut offline validators’ deposits by 39.4%.
 	WithdrawalsPerCycle                     uint64         // WithdrawalsPerCycle defines how many withdrawals can go through per cycle.
@@ -60,11 +61,11 @@ type ShardChainConfig struct {
 }
 
 var defaultBeaconConfig = &BeaconChainConfig{
-	ShardCount:                    1024,
-	DepositSize:                   32,
-	MinTopUpSize:                  1,
-	MinOnlineDepositSize:          16,
-	Gwei:                          1e9,
+	ShardCount:           1024,
+	DepositSize:          32,
+	MinTopUpSize:         1,
+	MinOnlineDepositSize: 16,
+	Gwei:                 1e9,
 	DepositsForChainStart:         16384,
 	TargetCommitteeSize:           uint64(256),
 	SlotDuration:                  uint64(16),
@@ -86,11 +87,11 @@ var defaultBeaconConfig = &BeaconChainConfig{
 }
 
 var demoBeaconConfig = &BeaconChainConfig{
-	ShardCount:                    5,
-	DepositSize:                   32,
-	MinTopUpSize:                  1,
-	MinOnlineDepositSize:          16,
-	Gwei:                          1e9,
+	ShardCount:           5,
+	DepositSize:          32,
+	MinTopUpSize:         1,
+	MinOnlineDepositSize: 16,
+	Gwei:                 1e9,
 	DepositsForChainStart:         16384,
 	TargetCommitteeSize:           uint64(3),
 	SlotDuration:                  uint64(2),
