@@ -49,7 +49,44 @@ func ActiveValidatorIndices(validators []*pb.ValidatorRecord) []uint32 {
 	return indices
 }
 
+// ShardAndCommitteesAtSlot returns the shard and committee list for a given
+// slot within the range of 2 * epoch length within the same 2 epoch slot
+// window as the state slot.
+//
+// Spec pseudocode definition:
+//   def get_shard_committees_at_slot(state: BeaconState, slot: int) -> List[ShardCommittee]:
+//     """
+//     Returns the ``ShardCommittee`` for the ``slot``.
+//     """
+//     earliest_slot_in_array = state.Slot - (state.Slot % EPOCH_LENGTH) - EPOCH_LENGTH
+//     assert earliest_slot_in_array <= slot < earliest_slot_in_array + EPOCH_LENGTH * 2
+//     return state.shard_committees_at_slots[slot - earliest_slot_in_array]
+func ShardAndCommitteesAtSlot(state *pb.BeaconState, slot uint64) (*pb.ShardAndCommitteeArray, error) {
+	epochLength := params.BeaconConfig().EpochLength
+	var earliestSlot uint64
+
+	// If the state slot is less than epochLength, then the earliestSlot would
+	// result in a negative number. Therefore we should default to
+	// earliestSlot = 0 in this case.
+	if state.Slot > epochLength {
+		earliestSlot = state.Slot - (state.Slot % epochLength) - epochLength
+	}
+
+	fmt.Printf("state.Slot: %d, epochLength: %d, earliestSlot: %d, state.Slot > epochLength = %v\n", state.Slot, epochLength, earliestSlot, state.Slot > epochLength)
+
+	if slot < earliestSlot || slot >= earliestSlot+(epochLength*2) {
+		return nil, fmt.Errorf("slot %d out of bounds: %d <= slot < %d",
+			slot,
+			earliestSlot,
+			earliestSlot+(epochLength*2),
+		)
+	}
+
+	return state.ShardAndCommitteesAtSlots[slot-earliestSlot], nil
+}
+
 // GetShardAndCommitteesForSlot returns the attester set of a given slot.
+// Deprecated: Use ShardAndCommitteesAtSlot instead.
 func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, lastStateRecalc uint64, slot uint64) (*pb.ShardAndCommitteeArray, error) {
 	cycleLength := params.BeaconConfig().CycleLength
 
@@ -58,6 +95,7 @@ func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, 
 		lowerBound = lastStateRecalc - cycleLength
 	}
 	upperBound := lastStateRecalc + 2*cycleLength
+
 	if slot < lowerBound || slot >= upperBound {
 		return nil, fmt.Errorf("slot %d out of bounds: %d <= slot < %d",
 			slot,
