@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -13,16 +14,17 @@ func TestProcessProposerSlashings_ThresholdReached(t *testing.T) {
 	registry := []*pb.ValidatorRecord{}
 	currentSlot := uint64(0)
 
+	want := fmt.Sprintf(
+		"number of proposer slashings (%d) exceeds allowed threshold of %d",
+		params.BeaconConfig().MaxProposerSlashings+1,
+		params.BeaconConfig().MaxProposerSlashings,
+	)
+
 	if _, err := ProcessProposerSlashings(
 		registry,
 		slashings,
 		currentSlot,
-	); err == nil {
-		want := fmt.Sprintf(
-			"number of proposer slashings (%d) exceeds allowed threshold of %d",
-			params.BeaconConfig().MaxProposerSlashings+1,
-			params.BeaconConfig().MaxProposerSlashings,
-		)
+	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received nil", want)
 	}
 }
@@ -42,12 +44,12 @@ func TestProcessProposerSlashings_UnmatchedSlotNumbers(t *testing.T) {
 		},
 	}
 
+	want := "slashing proposal data slots do not match: 1, 0"
 	if _, err := ProcessProposerSlashings(
 		registry,
 		slashings,
 		currentSlot,
-	); err == nil {
-		want := "slashing proposal data slots do not match: 1, 0"
+	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received nil", want)
 	}
 }
@@ -69,12 +71,12 @@ func TestProcessProposerSlashings_UnmatchedShards(t *testing.T) {
 		},
 	}
 
+	want := "slashing proposal data shards do not match: 0, 1"
 	if _, err := ProcessProposerSlashings(
 		registry,
 		slashings,
 		currentSlot,
-	); err == nil {
-		want := "slashing proposal data shards do not match: 0, 1"
+	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received nil", want)
 	}
 }
@@ -98,15 +100,16 @@ func TestProcessProposerSlashings_UnmatchedBlockRoots(t *testing.T) {
 		},
 	}
 
+	want := fmt.Sprintf(
+		"slashing proposal data block roots do not match: %#x, %#x",
+		[]byte{0, 1, 0}, []byte{1, 1, 0},
+	)
+
 	if _, err := ProcessProposerSlashings(
 		registry,
 		slashings,
 		currentSlot,
-	); err == nil {
-		want := fmt.Sprintf(
-			"slashing proposal data block roots do not match: %x, %x",
-			[]byte{0, 1, 0}, []byte{1, 1, 0},
-		)
+	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received nil", want)
 	}
 }
@@ -159,16 +162,53 @@ func TestProcessCasperSlashings_ThresholdReached(t *testing.T) {
 	registry := []*pb.ValidatorRecord{}
 	currentSlot := uint64(0)
 
+	want := fmt.Sprintf(
+		"number of casper slashings (%d) exceeds allowed threshold of %d",
+		params.BeaconConfig().MaxCasperSlashings+1,
+		params.BeaconConfig().MaxCasperSlashings,
+	)
+
 	if _, err := ProcessCasperSlashings(
 		registry,
 		slashings,
 		currentSlot,
-	); err == nil {
-		want := fmt.Sprintf(
-			"number of casper slashings (%d) exceeds allowed threshold of %d",
-			params.BeaconConfig().MaxCasperSlashings+1,
-			params.BeaconConfig().MaxCasperSlashings,
-		)
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received nil", want)
+	}
+}
+
+func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
+	slashings := []*pb.CasperSlashing{
+		{
+			Votes_1: &pb.SlashableVoteData{
+				AggregateSignaturePoc_0Indices: make(
+					[]uint32,
+					params.BeaconConfig().MaxCasperVotes,
+				),
+				AggregateSignaturePoc_1Indices: make(
+					[]uint32,
+					params.BeaconConfig().MaxCasperVotes,
+				),
+			},
+		},
+	}
+	registry := []*pb.ValidatorRecord{}
+	currentSlot := uint64(0)
+
+	want := fmt.Sprintf(
+		`
+			total proof of custody validator indices (%d) greater than maximum
+			allowed number of casper votes (%d)
+			`,
+		params.BeaconConfig().MaxCasperVotes*2,
+		params.BeaconConfig().MaxCasperVotes,
+	)
+
+	if _, err := ProcessCasperSlashings(
+		registry,
+		slashings,
+		currentSlot,
+	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received nil", want)
 	}
 }
