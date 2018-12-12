@@ -257,7 +257,6 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *pb.BeaconBlock) {
 					processedBlock <- nil
 					continue
 				}
-
 				// Push the block to trigger the fork choice rule.
 				processedBlock <- block
 			} else {
@@ -364,7 +363,6 @@ func (c *ChainService) isBlockReadyForProcessing(block *pb.BeaconBlock) error {
 	if c.enablePOWChain {
 		powBlockFetcher = c.web3Service.Client().BlockByHash
 	}
-
 	if err := b.IsValidBlock(c.ctx, beaconState, block, c.enablePOWChain,
 		c.beaconDB.HasBlock, powBlockFetcher, c.genesisTime); err != nil {
 		return fmt.Errorf("block does not fulfill pre-processing conditions %v", err)
