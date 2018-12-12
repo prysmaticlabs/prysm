@@ -96,16 +96,16 @@ message ValidatorRecord {
   uint64 balance = 5;
   // Possible validator status code:
   // https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#constants
-  enum ValiatorStateCode {
-    pending_activation = 0;
-    active = 1;
-    exited_without_penalty = 2;
-    exited_with_penalty = 3;
+  enum StatusCodes {
+    PENDING_ACTIVATION = 0; // validator is queued and waiting to be active.
+    ACTIVE = 1; // validator is participating validator duties.
+    ACTIVE_PENDING_EXIT = 2; // validator is waiting to exit.
+    EXITED_WITHOUT_PENALTY = 3; // validator has successfully withdrawn its balance.
+    EXITED_WITH_PENALTY = 4; // validator got slashed and kicked out of validator pool.
   }
-  ValiatorStateCode status_code = 6;
+  StatusCodes status = 6;
   uint64 latest_status_change_slot = 7;
   uint64 exit_count = 8;
-  uint64 status = 9 [deprecated=true]; // Replaced by status_code
 }
 
 message ShardReassignmentRecord {

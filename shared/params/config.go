@@ -120,21 +120,6 @@ var defaultShardConfig = &ShardChainConfig{
 }
 
 const (
-	// PendingActivation means a validator is queued and waiting to be active.
-	PendingActivation ValidatorStatusCode = iota
-	// Active means a validator is participating validator duties.
-	Active
-	// PendingExit means a validator is waiting to exit.
-	PendingExit
-	// PendingWithdraw means a validator is waiting to get balance back.
-	PendingWithdraw
-	// Withdrawn means a validator has successfully withdrawn balance.
-	Withdrawn
-	// Penalized means a validator did something bad and got slashed.
-	Penalized = 127
-)
-
-const (
 	// Logout means a validator is requesting to exit the validator pool.
 	Logout SpecialRecordType = iota
 	// CasperSlashing means a attester has committed slashing penalty which a surround vote was made.
