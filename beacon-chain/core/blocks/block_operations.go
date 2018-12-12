@@ -57,7 +57,11 @@ func ProcessProposerSlashings(
 			//   proposer_slashing.proposer_index,
 			//   new_status=EXITED_WITH_PENALTY,
 			// ) after update_validator_status is implemented.
-			validatorRegistry[slashing.GetProposerIndex()] = v.ExitValidator(proposer, currentSlot, true /* penalize */)
+			validatorRegistry[slashing.GetProposerIndex()] = v.ExitValidator(
+				proposer,
+				currentSlot,
+				true, /* penalize */
+			)
 		}
 	}
 	return validatorRegistry, nil
@@ -93,7 +97,7 @@ func verifyProposerSlashing(
 // Official spec definition for casper slashings:
 // Verify that len(block.body.casper_slashings) <= MAX_CASPER_SLASHINGS.
 //   For each casper_slashing in block.body.casper_slashings:
-
+//
 //   Verify that verify_casper_votes(state, casper_slashing.votes_1).
 //   Verify that verify_casper_votes(state, casper_slashing.votes_2).
 //   Verify that casper_slashing.votes_1.data != casper_slashing.votes_2.data.
@@ -122,18 +126,82 @@ func ProcessCasperSlashings(
 			params.BeaconConfig().MaxCasperSlashings,
 		)
 	}
-	for _, slashing := range casperSlashings {
-		vote1 := slashing.GetVotes_1()
-		vote2 := slashing.GetVotes_2()
-		if !reflect.DeepEqual(vote1.GetData(), vote2.GetData()) {
-			return fmt.Errorf(
-				"casper slashing inner vote data does not match: %v, %v",
-				vote1,
-				vote2,
-			)
+	for idx, slashing := range casperSlashings {
+		validatorIndices, err := verifyCasperSlashing(slashing)
+		if err != nil {
+			return nil, fmt.Errorf("could not verify casper slashing #%d: %v", idx, err)
 		}
-
-		indices := append()
+		for _, validatorIndex := range validatorIndices {
+			proposer := validatorRegistry[validatorIndex]
+			if proposer.Status != pb.ValidatorRecord_EXITED_WITH_PENALTY {
+				// TODO(#781): Replace with
+				// update_validator_status(
+				//   state,
+				//   validatorIndex,
+				//   new_status=EXITED_WITH_PENALTY,
+				// ) after update_validator_status is implemented.
+				validatorRegistry[validatorIndex] = v.ExitValidator(
+					proposer,
+					currentSlot,
+					true, /* penalize */
+				)
+			}
+		}
 	}
 	return nil, nil
+}
+
+func verifyCasperSlashing(slashing *pb.CasperSlashing) ([]uint32, error) {
+	vote1 := slashing.GetVotes_1()
+	vote2 := slashing.GetVotes_2()
+	vote1Indices := append(
+		vote1.GetAggregateSignaturePoc_0Indices(),
+		vote1.GetAggregateSignaturePoc_1Indices()...,
+	)
+	vote2Indices := append(
+		vote2.GetAggregateSignaturePoc_0Indices(),
+		vote2.GetAggregateSignaturePoc_1Indices()...,
+	)
+
+	// TODO:
+	// Verify that verify_casper_votes(state, casper_slashing.votes_1).
+	// Verify that verify_casper_votes(state, casper_slashing.votes_2).
+
+	if !reflect.DeepEqual(vote1.GetData(), vote2.GetData()) {
+		return nil, fmt.Errorf(
+			"casper slashing inner vote data does not match: %v, %v",
+			vote1,
+			vote2,
+		)
+	}
+
+	indicesIntersection := intersection(vote1Indices, vote2Indices)
+	if len(indicesIntersection) < 1 {
+		return nil, fmt.Errorf(
+			"expected intersection of vote indices to be non-empty: %v",
+			indicesIntersection,
+		)
+	}
+	return indicesIntersection, nil
+}
+
+// Computes intersection of two sets with time
+// complexity of approximately O(n) leveraging a hash map to
+// check for element existence off by a constant factor
+// of hash map efficiency.
+func intersection(a []uint32, b []uint32) []uint32 {
+	set := make([]uint32, 0)
+	hash := make(map[uint32]bool)
+
+	for i := 0; i < len(a); i++ {
+		hash[a[i]] = true
+	}
+
+	for i := 0; i < len(b); i++ {
+		if _, found := hash[b[i]]; found {
+			set = append(set, b[i])
+		}
+	}
+
+	return set
 }
