@@ -7,6 +7,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pbcomm "github.com/prysmaticlabs/prysm/proto/common"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -54,22 +55,35 @@ func NewGenesisBeaconState(genesisValidatorRegistry []*pb.ValidatorRecord) (*Bea
 
 	return &BeaconState{
 		data: &pb.BeaconState{
-			LastStateRecalculationSlot:      0,
-			JustifiedStreak:                 0,
-			JustifiedSlot:                   0,
-			FinalizedSlot:                   0,
-			ValidatorRegistryLastChangeSlot: 0,
-			LatestCrosslinks:                crosslinks,
-			ValidatorRegistry:               genesisValidatorRegistry,
-			ShardAndCommitteesForSlots:      shardAndCommitteesForSlots,
-			PendingAttestations:             []*pb.AggregatedAttestation{},
-			LatestBlockHash32S:              latestBlockHashes,
-			RandaoMixHash32:                 make([]byte, 0, 32),
+			ValidatorRegistry:                    genesisValidatorRegistry,
+			ValidatorRegistryLastChangeSlot:      0,
+			ValidatorRegistryExitCount:           0,
+			ValidatorRegistryDeltaChainTipHash32: make([]byte, 0, 32),
+			RandaoMixHash32:                      make([]byte, 0, 32),
+			NextSeedHash32:                       make([]byte, 0, 32),
+			ShardAndCommitteesAtSlots:            shardAndCommitteesForSlots,
+			PersistentCommittees:                 []*pbcomm.Uint32List{},
+			PersistentCommitteeReassignments:     []*pb.ShardReassignmentRecord{},
+			PreviousJustifiedSlot:                0,
+			JustifiedSlot:                        0,
+			JustifiedSlotBitfield:                0,
+			FinalizedSlot:                        0,
+			LatestCrosslinks:                     crosslinks,
+			LastStateRecalculationSlot:           0,
+			LatestBlockHash32S:                   latestBlockHashes,
+			LatestPenalizedExitBalances:          []uint64{},
+			LatestAttestations:                   []*pb.PendingAttestationRecord{},
+			ProcessedPowReceiptRootHash32:        [][]byte{},
+			GenesisTime:                          0,
 			ForkData: &pb.ForkData{
 				PreForkVersion:  params.BeaconConfig().InitialForkVersion,
 				PostForkVersion: params.BeaconConfig().InitialForkVersion,
 				ForkSlot:        params.BeaconConfig().InitialForkSlot,
 			},
+			Slot:                       0,
+			JustifiedStreak:            0,
+			PendingAttestations:        []*pb.AggregatedAttestation{},
+			ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
 		},
 	}, nil
 }
