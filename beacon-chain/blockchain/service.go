@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/slotticker"
 	"github.com/sirupsen/logrus"
 )
 
@@ -37,6 +38,8 @@ type ChainService struct {
 	genesisTime        time.Time
 	unfinalizedBlocks  map[[32]byte]*types.BeaconState
 	enablePOWChain     bool
+	slotTicker         slotticker.SlotTicker
+	currentSlot uint64
 }
 
 // Config options for the service.
@@ -79,10 +82,14 @@ func (c *ChainService) Start() {
 		return
 	}
 
+	c.slotTicker = slotticker.GetSlotTicker(c.genesisTime, params.BeaconConfig().SlotDuration)
+	c.currentSlot = slotticker.CurrentSlot(c.genesisTime,params.BeaconConfig().SlotDuration,time.Since)
+
 	// TODO(#675): Initialize unfinalizedBlocks map from disk in case this
 	// is a beacon node restarting.
 	go c.updateHead(c.processedBlockChan)
 	go c.blockProcessing(c.processedBlockChan)
+	go c.slotProcessing()
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.
@@ -209,6 +216,7 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 	}
 }
 
+// DEPRECATED: Will be replaced by slot processing
 func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 	subBlock := c.incomingBlockFeed.Subscribe(c.incomingBlockChan)
 	defer subBlock.Unsubscribe()
@@ -395,4 +403,19 @@ func (c *ChainService) calculateNewBlockVotes(block *types.Block, beaconState *t
 	}
 
 	return nil
+}
+
+func (c *ChainService) slotProcessing() {
+
+	defer c.slotTicker.Done()
+
+	for {
+		select {
+		case <-c.ctx.Done():
+			log.Debug("Chain service context closed, exiting goroutine")
+			return
+		case slot := <- c.slotTicker.C()
+
+		}
+	}
 }
