@@ -241,6 +241,22 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 	}
 }
 
+func (c *ChainService) slotTracker() {
+
+	defer c.slotTicker.Done()
+
+	for {
+		select {
+		case <-c.ctx.Done():
+			log.Debug("Chain service context closed, exiting goroutine")
+			return
+		case slot := <-c.slotTicker.C():
+			c.currentSlot = slot
+
+		}
+	}
+}
+
 // DEPRECATED: Will be replaced by new block processing method
 func (c *ChainService) processBlock(block *types.Block) error {
 	blockHash, err := block.Hash()
@@ -328,6 +344,10 @@ func (c *ChainService) processBlockNew(block *types.Block) error {
 	beaconState, err := c.beaconDB.GetState()
 	if err != nil {
 		return fmt.Errorf("failed to get beacon state: %v", err)
+	}
+
+	if beaconState.Slot() != block.SlotNumber()+1 {
+		return fmt.Errorf("block slot is not valid %d", block.SlotNumber())
 	}
 
 	return nil
@@ -435,18 +455,4 @@ func (c *ChainService) calculateNewBlockVotes(block *types.Block, beaconState *t
 	return nil
 }
 
-func (c *ChainService) slotTracker() {
-
-	defer c.slotTicker.Done()
-
-	for {
-		select {
-		case <-c.ctx.Done():
-			log.Debug("Chain service context closed, exiting goroutine")
-			return
-		case slot := <-c.slotTicker.C():
-			c.currentSlot = slot
-
-		}
-	}
-}
+func (c *ChainService) checkForPOWBlock()

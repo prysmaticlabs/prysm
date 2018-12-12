@@ -54,6 +54,7 @@ func NewGenesisBeaconState(genesisValidatorRegistry []*pb.ValidatorRecord) (*Bea
 
 	return &BeaconState{
 		data: &pb.BeaconState{
+			Slot:                            0,
 			LastStateRecalculationSlot:      0,
 			JustifiedStreak:                 0,
 			JustifiedSlot:                   0,
@@ -61,6 +62,7 @@ func NewGenesisBeaconState(genesisValidatorRegistry []*pb.ValidatorRecord) (*Bea
 			ValidatorRegistryLastChangeSlot: 0,
 			LatestCrosslinks:                crosslinks,
 			ValidatorRegistry:               genesisValidatorRegistry,
+			ValidatorRegistryLastChangeSlot: 0,
 			ShardAndCommitteesForSlots:      shardAndCommitteesForSlots,
 			PendingAttestations:             []*pb.AggregatedAttestation{},
 			LatestBlockHash32S:              latestBlockHashes,
@@ -148,6 +150,11 @@ func (b *BeaconState) Hash() ([32]byte, error) {
 // ValidatorRegistryLastChangeSlot returns the slot of last time validator set changes.
 func (b *BeaconState) ValidatorRegistryLastChangeSlot() uint64 {
 	return b.data.ValidatorRegistryLastChangeSlot
+}
+
+// Slot returns the slot of the last processed block.
+func (b *BeaconState) Slot() uint64 {
+	return b.data.Slot
 }
 
 // IsValidatorSetChange checks if a validator set change transition can be processed. At that point,
@@ -333,6 +340,11 @@ func (b *BeaconState) CalculateNewBlockHashes(block *Block, parentSlot uint64) (
 		update = append(update, block.AncestorHash32S()[0])
 	}
 	return update, nil
+}
+
+// SetSlot updates the slot saved in the beacon state.
+func (b *BeaconState) SetSlot(slot uint64) {
+	b.data.Slot = slot
 }
 
 // SetCrossLinks updates the inner proto's cross link records.
