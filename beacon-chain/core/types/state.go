@@ -258,7 +258,7 @@ func (b *BeaconState) LatestAttestations() []*pb.PendingAttestationRecord {
 }
 
 // ProcessedPowReceiptRootHash32 returns the root hashes of the
-// transaction receipts from the POW chain.
+// processed transaction receipts from the POW chain.
 func (b *BeaconState) ProcessedPowReceiptRootHash32() [][]byte {
 	return b.data.ProcessedPowReceiptRootHash32
 }
@@ -269,7 +269,7 @@ func (b *BeaconState) CandidatePowReceiptRoots() []*pb.CandidatePoWReceiptRootRe
 	return b.data.CandidatePowReceiptRoots
 }
 
-// GenesisTime returns the creationg time of the
+// GenesisTime returns the creation time of the
 // genesis block.
 func (b *BeaconState) GenesisTime() uint64 {
 	return b.data.GenesisTime
