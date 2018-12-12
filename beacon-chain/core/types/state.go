@@ -231,7 +231,7 @@ func (b *BeaconState) NextSeedHash() [32]byte {
 	return h
 }
 
-// PersistentCommittees returns the stored in the beacon state.
+// PersistentCommittees returns the committees stored in the beacon state.
 func (b *BeaconState) PersistentCommittees() []*pbcomm.Uint32List {
 	return b.data.PersistentCommittees
 }
@@ -519,7 +519,7 @@ func (b *BeaconState) SetLatestAttestations(attestations []*pb.PendingAttestatio
 	b.data.LatestAttestations = attestations
 }
 
-// SetProcessedPowReceiptHash saves the POW recipts which have
+// SetProcessedPowReceiptHash saves the POW receipts which have
 // been processed by the POW chain.
 func (b *BeaconState) SetProcessedPowReceiptHash(hash [][]byte) {
 	b.data.ProcessedPowReceiptRootHash32 = hash
