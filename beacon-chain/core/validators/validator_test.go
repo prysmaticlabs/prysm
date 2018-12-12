@@ -50,7 +50,7 @@ func TestHasVoted(t *testing.T) {
 func TestInitialValidatorRegistry(t *testing.T) {
 	validators := InitialValidatorRegistry()
 	for _, validator := range validators {
-		if validator.GetBalance() != params.BeaconConfig().DepositSize*params.BeaconConfig().Gwei {
+		if validator.GetBalance() != params.BeaconConfig().MaxDeposit*params.BeaconConfig().Gwei {
 			t.Fatalf("deposit size of validator is not expected %d", validator.GetBalance())
 		}
 		if validator.GetStatus() != pb.ValidatorRecord_ACTIVE {
@@ -244,7 +244,7 @@ func TestTotalActiveValidatorDeposit(t *testing.T) {
 	expectedTotalDeposit := new(big.Int)
 	expectedTotalDeposit.SetString("10000000000", 10)
 
-	totalDeposit := TotalActiveValidatorDeposit(validators)
+	totalDeposit := TotalActiveValidatorBalance(validators)
 	if expectedTotalDeposit.Cmp(new(big.Int).SetUint64(totalDeposit)) != 0 {
 		t.Fatalf("incorrect total deposit calculated %d", totalDeposit)
 	}
@@ -321,7 +321,7 @@ func TestAddValidatorRegistry(t *testing.T) {
 	if validators[10].Status != pb.ValidatorRecord_PENDING_ACTIVATION {
 		t.Errorf("Newly added validator should be pending")
 	}
-	if validators[10].Balance != uint64(params.BeaconConfig().DepositSize*params.BeaconConfig().Gwei) {
+	if validators[10].Balance != uint64(params.BeaconConfig().MaxDeposit*params.BeaconConfig().Gwei) {
 		t.Errorf("Incorrect deposit size")
 	}
 
@@ -333,27 +333,27 @@ func TestAddValidatorRegistry(t *testing.T) {
 	if validators[5].Status != pb.ValidatorRecord_PENDING_ACTIVATION {
 		t.Errorf("Newly added validator should be pending")
 	}
-	if validators[5].Balance != uint64(params.BeaconConfig().DepositSize*params.BeaconConfig().Gwei) {
+	if validators[5].Balance != uint64(params.BeaconConfig().MaxDeposit*params.BeaconConfig().Gwei) {
 		t.Errorf("Incorrect deposit size")
 	}
 }
 
 func TestChangeValidatorRegistry(t *testing.T) {
 	existingValidatorRegistry := []*pb.ValidatorRecord{
-		{Pubkey: []byte{1}, Status: pb.ValidatorRecord_PENDING_ACTIVATION, Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), LatestStatusChangeSlot: params.BeaconConfig().MinWithdrawalPeriod},
-		{Pubkey: []byte{2}, Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT, Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), LatestStatusChangeSlot: params.BeaconConfig().MinWithdrawalPeriod},
-		{Pubkey: []byte{3}, Status: pb.ValidatorRecord_PENDING_ACTIVATION, Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), LatestStatusChangeSlot: params.BeaconConfig().MinWithdrawalPeriod},
-		{Pubkey: []byte{4}, Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT, Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), LatestStatusChangeSlot: params.BeaconConfig().MinWithdrawalPeriod},
-		{Pubkey: []byte{5}, Status: pb.ValidatorRecord_PENDING_ACTIVATION, Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), LatestStatusChangeSlot: params.BeaconConfig().MinWithdrawalPeriod},
-		{Pubkey: []byte{6}, Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT, Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), LatestStatusChangeSlot: params.BeaconConfig().MinWithdrawalPeriod},
-		{Pubkey: []byte{7}, Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT, Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
-		{Pubkey: []byte{8}, Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT, Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
-		{Pubkey: []byte{9}, Status: pb.ValidatorRecord_EXITED_WITH_PENALTY, Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
-		{Pubkey: []byte{10}, Status: pb.ValidatorRecord_EXITED_WITH_PENALTY, Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
-		{Pubkey: []byte{11}, Status: pb.ValidatorRecord_ACTIVE, Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
-		{Pubkey: []byte{12}, Status: pb.ValidatorRecord_ACTIVE, Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
-		{Pubkey: []byte{13}, Status: pb.ValidatorRecord_ACTIVE, Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
-		{Pubkey: []byte{14}, Status: pb.ValidatorRecord_ACTIVE, Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
+		{Pubkey: []byte{1}, Status: pb.ValidatorRecord_PENDING_ACTIVATION, Balance: uint64(params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei), LatestStatusChangeSlot: params.BeaconConfig().MinWithdrawalPeriod},
+		{Pubkey: []byte{2}, Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT, Balance: uint64(params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei), LatestStatusChangeSlot: params.BeaconConfig().MinWithdrawalPeriod},
+		{Pubkey: []byte{3}, Status: pb.ValidatorRecord_PENDING_ACTIVATION, Balance: uint64(params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei), LatestStatusChangeSlot: params.BeaconConfig().MinWithdrawalPeriod},
+		{Pubkey: []byte{4}, Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT, Balance: uint64(params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei), LatestStatusChangeSlot: params.BeaconConfig().MinWithdrawalPeriod},
+		{Pubkey: []byte{5}, Status: pb.ValidatorRecord_PENDING_ACTIVATION, Balance: uint64(params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei), LatestStatusChangeSlot: params.BeaconConfig().MinWithdrawalPeriod},
+		{Pubkey: []byte{6}, Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT, Balance: uint64(params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei), LatestStatusChangeSlot: params.BeaconConfig().MinWithdrawalPeriod},
+		{Pubkey: []byte{7}, Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT, Balance: uint64(params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei)},
+		{Pubkey: []byte{8}, Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT, Balance: uint64(params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei)},
+		{Pubkey: []byte{9}, Status: pb.ValidatorRecord_EXITED_WITH_PENALTY, Balance: uint64(params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei)},
+		{Pubkey: []byte{10}, Status: pb.ValidatorRecord_EXITED_WITH_PENALTY, Balance: uint64(params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei)},
+		{Pubkey: []byte{11}, Status: pb.ValidatorRecord_ACTIVE, Balance: uint64(params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei)},
+		{Pubkey: []byte{12}, Status: pb.ValidatorRecord_ACTIVE, Balance: uint64(params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei)},
+		{Pubkey: []byte{13}, Status: pb.ValidatorRecord_ACTIVE, Balance: uint64(params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei)},
+		{Pubkey: []byte{14}, Status: pb.ValidatorRecord_ACTIVE, Balance: uint64(params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei)},
 	}
 
 	validators := ChangeValidatorRegistry(params.BeaconConfig().MinWithdrawalPeriod+1, 50*10e9, existingValidatorRegistry)
@@ -361,7 +361,7 @@ func TestChangeValidatorRegistry(t *testing.T) {
 	if validators[0].Status != pb.ValidatorRecord_ACTIVE {
 		t.Errorf("Wanted status Active. Got: %d", validators[0].Status)
 	}
-	if validators[0].Balance != uint64(params.BeaconConfig().DepositSize*params.BeaconConfig().Gwei) {
+	if validators[0].Balance != uint64(params.BeaconConfig().MaxDeposit*params.BeaconConfig().Gwei) {
 		t.Error("Failed to set validator balance")
 	}
 	if validators[1].Status != pb.ValidatorRecord_ACTIVE_PENDING_EXIT {
@@ -373,7 +373,7 @@ func TestChangeValidatorRegistry(t *testing.T) {
 	if validators[2].Status != pb.ValidatorRecord_ACTIVE {
 		t.Errorf("Wanted status Active. Got: %d", validators[2].Status)
 	}
-	if validators[2].Balance != uint64(params.BeaconConfig().DepositSize*params.BeaconConfig().Gwei) {
+	if validators[2].Balance != uint64(params.BeaconConfig().MaxDeposit*params.BeaconConfig().Gwei) {
 		t.Error("Failed to set validator balance")
 	}
 	if validators[3].Status != pb.ValidatorRecord_ACTIVE_PENDING_EXIT {
