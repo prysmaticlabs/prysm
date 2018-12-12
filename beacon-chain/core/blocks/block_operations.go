@@ -130,7 +130,7 @@ func ProcessCasperSlashings(
 		// verifyCasperSlashing performs validity checks on the slashing
 		// struct and returns a list of validator indices to be slashed from
 		// the BeaconState's validator registry.
-		validatorIndices, err := verifyCasperSlashing(validatorRegistry, slashing)
+		validatorIndices, err := verifyCasperSlashing(slashing)
 		if err != nil {
 			return nil, fmt.Errorf("could not verify casper slashing #%d: %v", idx, err)
 		}
@@ -155,7 +155,6 @@ func ProcessCasperSlashings(
 }
 
 func verifyCasperSlashing(
-	validatorRegistry []*pb.ValidatorRecord,
 	slashing *pb.CasperSlashing,
 ) ([]uint32, error) {
 	votes1 := slashing.GetVotes_1()
