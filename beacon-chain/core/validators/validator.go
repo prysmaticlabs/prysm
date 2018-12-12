@@ -27,7 +27,7 @@ func InitialValidatorRegistry() []*pb.ValidatorRecord {
 	validators := make([]*pb.ValidatorRecord, config.BootstrappedValidatorsCount)
 	for i := uint64(0); i < config.BootstrappedValidatorsCount; i++ {
 		validators[i] = &pb.ValidatorRecord{
-			Status:                 uint64(params.Active),
+			Status:                 pb.ValidatorRecord_active,
 			Balance:                config.DepositSize * config.Gwei,
 			Pubkey:                 []byte{},
 			RandaoCommitmentHash32: randaoReveal[:],
@@ -41,7 +41,7 @@ func InitialValidatorRegistry() []*pb.ValidatorRecord {
 func ActiveValidatorIndices(validators []*pb.ValidatorRecord) []uint32 {
 	indices := make([]uint32, 0, len(validators))
 	for i, v := range validators {
-		if v.Status == uint64(params.Active) {
+		if v.Status == pb.ValidatorRecord_active {
 			indices = append(indices, uint32(i))
 		}
 
@@ -226,7 +226,7 @@ func AddPendingValidator(
 	validators []*pb.ValidatorRecord,
 	pubKey []byte,
 	randaoCommitment []byte,
-	status uint64) []*pb.ValidatorRecord {
+	status pb.ValidatorRecord_ValiatorStateCode) []*pb.ValidatorRecord {
 
 	// TODO(#633): Use BLS to verify signature proof of possession and pubkey and hash of pubkey.
 
@@ -256,9 +256,9 @@ func ExitValidator(
 	// TODO(#614): Add validator set change
 	validator.LatestStatusChangeSlot = currentSlot
 	if panalize {
-		validator.Status = uint64(params.Penalized)
+		validator.Status = pb.ValidatorRecord_exited_with_penalty
 	} else {
-		validator.Status = uint64(params.PendingExit)
+		validator.Status = pb.ValidatorRecord_active_pending_exit
 	}
 	return validator
 }
@@ -276,14 +276,14 @@ func ChangeValidatorRegistry(currentSlot uint64, totalPenalties uint64, validato
 
 	var totalChanged uint64
 	for i := 0; i < len(validators); i++ {
-		if validators[i].Status == uint64(params.PendingActivation) {
-			validators[i].Status = uint64(params.Active)
+		if validators[i].Status == pb.ValidatorRecord_pending_activation {
+			validators[i].Status = pb.ValidatorRecord_active
 			totalChanged += params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei
 
 			// TODO(#614): Add validator set change.
 		}
-		if validators[i].Status == uint64(params.PendingExit) {
-			validators[i].Status = uint64(params.PendingWithdraw)
+		if validators[i].Status == pb.ValidatorRecord_active_pending_exit {
+			validators[i].Status = pb.ValidatorRecord_active_pending_exit
 			validators[i].LatestStatusChangeSlot = currentSlot
 			totalChanged += validators[i].Balance
 
@@ -297,8 +297,8 @@ func ChangeValidatorRegistry(currentSlot uint64, totalPenalties uint64, validato
 	// Calculate withdraw validators that have been logged out long enough,
 	// apply their penalties if they were slashed.
 	for i := 0; i < len(validators); i++ {
-		isPendingWithdraw := validators[i].Status == uint64(params.PendingWithdraw)
-		isPenalized := validators[i].Status == uint64(params.Penalized)
+		isPendingWithdraw := validators[i].Status == pb.ValidatorRecord_active_pending_exit
+		isPenalized := validators[i].Status == pb.ValidatorRecord_exited_with_penalty
 		withdrawalSlot := validators[i].LatestStatusChangeSlot + params.BeaconConfig().MinWithdrawalPeriod
 
 		if (isPendingWithdraw || isPenalized) && currentSlot >= withdrawalSlot {
@@ -307,10 +307,10 @@ func ChangeValidatorRegistry(currentSlot uint64, totalPenalties uint64, validato
 				penaltyFactor = totalBalance
 			}
 
-			if validators[i].Status == uint64(params.Penalized) {
+			if validators[i].Status == pb.ValidatorRecord_exited_with_penalty {
 				validators[i].Balance -= validators[i].Balance * totalBalance / validators[i].Balance
 			}
-			validators[i].Status = uint64(params.Withdrawn)
+			validators[i].Status = pb.ValidatorRecord_exited_without_penalty
 		}
 	}
 	return validators
@@ -339,7 +339,7 @@ func CopyValidatorRegistry(validatorSet []*pb.ValidatorRecord) []*pb.ValidatorRe
 func CheckValidatorMinDeposit(validatorSet []*pb.ValidatorRecord, currentSlot uint64) []*pb.ValidatorRecord {
 	for index, validator := range validatorSet {
 		MinDepositInGWei := params.BeaconConfig().MinOnlineDepositSize * params.BeaconConfig().Gwei
-		isValidatorActive := validator.Status == uint64(params.Active)
+		isValidatorActive := validator.Status == pb.ValidatorRecord_active
 		if validator.Balance < MinDepositInGWei && isValidatorActive {
 			validatorSet[index] = ExitValidator(validator, currentSlot, false)
 		}
@@ -350,7 +350,7 @@ func CheckValidatorMinDeposit(validatorSet []*pb.ValidatorRecord, currentSlot ui
 // minEmptyValidator returns the lowest validator index which the status is withdrawn.
 func minEmptyValidator(validators []*pb.ValidatorRecord) int {
 	for i := 0; i < len(validators); i++ {
-		if validators[i].Status == uint64(params.Withdrawn) {
+		if validators[i].Status == pb.ValidatorRecord_exited_without_penalty {
 			return i
 		}
 	}
