@@ -20,7 +20,7 @@ func TestIncorrectProcessProposerSlashings(t *testing.T) {
 		currentSlot,
 	); err == nil {
 		want := "number of proposer slashings exceeds threshold"
-		t.Errorf("Expected %v, received nil", want)
+		t.Errorf("Expected %s, received nil", want)
 	}
 	currentSlot++
 
@@ -43,7 +43,7 @@ func TestIncorrectProcessProposerSlashings(t *testing.T) {
 		currentSlot,
 	); err == nil {
 		want := "slashing proposal data slots do not match: 1, 0"
-		t.Errorf("Expected %v, received nil", want)
+		t.Errorf("Expected %s, received nil", want)
 	}
 	currentSlot++
 
@@ -68,7 +68,7 @@ func TestIncorrectProcessProposerSlashings(t *testing.T) {
 		currentSlot,
 	); err == nil {
 		want := "slashing proposal data shards do not match: 0, 1"
-		t.Errorf("Expected %v, received nil", want)
+		t.Errorf("Expected %s, received nil", want)
 	}
 	currentSlot++
 
@@ -98,7 +98,7 @@ func TestIncorrectProcessProposerSlashings(t *testing.T) {
 			"slashing proposal data block hashes do not match: %x, %x",
 			[]byte{0, 1, 0}, []byte{1, 1, 0},
 		)
-		t.Errorf("Expected %v, received nil", want)
+		t.Errorf("Expected %s, received nil", want)
 	}
 }
 
@@ -107,11 +107,11 @@ func TestCorrectlyProcessProposerSlashings(t *testing.T) {
 	// registry has been updated.
 	registry := []*pb.ValidatorRecord{
 		{
-			Status:                 uint64(params.ExitedWithPenalty),
+			Status:                 pb.ValidatorRecord_EXITED_WITH_PENALTY,
 			LatestStatusChangeSlot: 0,
 		},
 		{
-			Status:                 uint64(params.ExitedWithPenalty),
+			Status:                 pb.ValidatorRecord_EXITED_WITH_PENALTY,
 			LatestStatusChangeSlot: 0,
 		},
 	}
@@ -138,9 +138,9 @@ func TestCorrectlyProcessProposerSlashings(t *testing.T) {
 		currentSlot,
 	)
 	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
+		t.Fatalf("Unexpected error: %s", err)
 	}
-	if registry[1].Status != uint64(params.ExitedWithPenalty) {
+	if registry[1].Status != pb.ValidatorRecord_EXITED_WITH_PENALTY {
 		t.Errorf("Proposer with index 1 did not ExitWithPenalty in validator registry: %v", registry[1].Status)
 	}
 }

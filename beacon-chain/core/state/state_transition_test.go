@@ -76,7 +76,7 @@ func TestNextDeriveSlot(t *testing.T) {
 
 	beaconState.SetValidatorRegistry([]*pb.ValidatorRecord{
 		{Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei),
-			Status: uint64(params.Active)},
+			Status: pb.ValidatorRecord_ACTIVE},
 	})
 
 	totalDeposits := v.TotalActiveValidatorDeposit(beaconState.ValidatorRegistry())
@@ -151,7 +151,7 @@ func TestProcessLatestCrosslinks(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		validators = append(validators, &pb.ValidatorRecord{
 			Balance: 1e18,
-			Status:  uint64(params.Active),
+			Status:  pb.ValidatorRecord_ACTIVE,
 		})
 	}
 
@@ -248,7 +248,7 @@ func TestNewValidatorSetRecalculationsInvalid(t *testing.T) {
 	// Negative test case, shuffle validators with more than MaxValidatorRegistry.
 	size := 1<<(params.BeaconConfig().RandBytes*8) - 1
 	validators := make([]*pb.ValidatorRecord, size)
-	validator := &pb.ValidatorRecord{Status: uint64(params.Active)}
+	validator := &pb.ValidatorRecord{Status: pb.ValidatorRecord_ACTIVE}
 	for i := 0; i < size; i++ {
 		validators[i] = validator
 	}
