@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -13,7 +14,7 @@ import (
 // on each processed beacon block to penalize proposers based on
 // slashing conditions if any slashable events occurred.
 //
-// Official spec definition for proposer slashins:
+// Official spec definition for proposer slashings:
 //   Verify that len(block.body.proposer_slashings) <= MAX_PROPOSER_SLASHINGS.
 //
 //   For each proposer_slashing in block.body.proposer_slashings:
@@ -83,4 +84,51 @@ func verifyProposerSlashing(
 		return fmt.Errorf("slashing proposal data block roots do not match: %#x, %#x", root1, root2)
 	}
 	return nil
+}
+
+// ProcessAttestations applies processing operations to a block's inner attestation
+// records. This function returns a list of pending attestations which can then be
+// appended to the BeaconState's latest attestations.
+//
+// Official spec definition for proposer slashings:
+//   Verify that len(block.body.attestations) <= MAX_ATTESTATIONS.
+//
+//   For each attestation in block.body.attestations:
+//   Verify that attestation.data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot.
+//   Verify that attestation.data.slot + EPOCH_LENGTH >= state.slot.
+//   Verify that attestation.data.justified_slot is equal to
+//     state.justified_slot if attestation.data.slot >=
+//     state.slot - (state.slot % EPOCH_LENGTH) else state.previous_justified_slot.
+//   Verify that attestation.data.justified_block_root is equal to
+//     get_block_root(state, attestation.data.justified_slot).
+//   Verify that either attestation.data.latest_crosslink_root or
+//     attestation.data.shard_block_root equals
+//     state.latest_crosslinks[shard].shard_block_root
+//   Aggregate_signature verification:
+//     Let participants = get_attestation_participants(
+//       state,
+//       attestation.data,
+//       attestation.participation_bitfield,
+//     )
+//     Let group_public_key = BLSAddPubkeys([
+//       state.validator_registry[v].pubkey for v in participants
+//     ])
+//     Verify that bls_verify(
+//       pubkey=group_public_key,
+//       message=hash_tree_root(attestation.data) + bytes1(0),
+//       signature=attestation.aggregate_signature,
+//       domain=get_domain(state.fork_data, attestation.data.slot, DOMAIN_ATTESTATION)).
+//
+//   [TO BE REMOVED IN PHASE 1] Verify that attestation.data.shard_block_hash == ZERO_HASH.
+//   return PendingAttestationRecord(
+//     data=attestation.data,
+//     participation_bitfield=attestation.participation_bitfield,
+//     custody_bitfield=attestation.custody_bitfield,
+//     slot_included=state.slot,
+//   ) which can then be appended to state.latest_attestations.
+func ProcessAttestations(
+	beaconState *types.BeaconState,
+	block *types.Block,
+) ([]*pb.PendingAttestationRecord, error) {
+	return nil, nil
 }
