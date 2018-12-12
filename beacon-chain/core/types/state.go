@@ -74,6 +74,7 @@ func NewGenesisBeaconState(genesisValidatorRegistry []*pb.ValidatorRecord) (*Bea
 			LatestPenalizedExitBalances:          []uint64{},
 			LatestAttestations:                   []*pb.PendingAttestationRecord{},
 			ProcessedPowReceiptRootHash32:        [][]byte{},
+			CandidatePowReceiptRoots:             []*pb.CandidatePoWReceiptRootRecord{},
 			GenesisTime:                          0,
 			ForkData: &pb.ForkData{
 				PreForkVersion:  params.BeaconConfig().InitialForkVersion,
@@ -159,59 +160,26 @@ func (b *BeaconState) Hash() ([32]byte, error) {
 	return hashutil.Hash(data), nil
 }
 
+// ValidatorRegistry returns list of validators.
+func (b *BeaconState) ValidatorRegistry() []*pb.ValidatorRecord {
+	return b.data.ValidatorRegistry
+}
+
 // ValidatorRegistryLastChangeSlot returns the slot of last time validator set changes.
 func (b *BeaconState) ValidatorRegistryLastChangeSlot() uint64 {
 	return b.data.ValidatorRegistryLastChangeSlot
 }
 
+// ValidatorRegistryExitCount returns the count of the
+// exited validators.
 func (b *BeaconState) ValidatorRegistryExitCount() uint64 {
 	return b.data.ValidatorRegistryExitCount
 }
 
+// ValidatorRegistryDeltaChainTipHash32 returns the delta hash of the
+// validator registry.
 func (b *BeaconState) ValidatorRegistryDeltaChainTipHash32() []byte {
 	return b.data.ValidatorRegistryDeltaChainTipHash32
-}
-
-func (b *BeaconState) NextSeedHash() [32]byte {
-	var h [32]byte
-	copy(h[:], b.data.NextSeedHash32)
-	return h
-}
-
-func (b *BeaconState) PersistentCommittees() []*pbcomm.Uint32List {
-	return b.data.PersistentCommittees
-}
-
-func (b *BeaconState) PersistentCommitteeReassignments() []*pb.ShardReassignmentRecord {
-	return b.data.PersistentCommitteeReassignments
-}
-
-func (b *BeaconState) PreviousJustifiedSlot() uint64 {
-	return b.data.PreviousJustifiedSlot
-}
-
-func (b *BeaconState) SetValidatorRegistryExitCount(count uint64) {
-	b.data.ValidatorRegistryExitCount = count
-}
-
-func (b *BeaconState) SetValidatorRegistryDeltaChainTipHash32(chainTipHash []byte) {
-	b.data.ValidatorRegistryDeltaChainTipHash32 = chainTipHash
-}
-
-func (b *BeaconState) SetNextSeedHash(hash [32]byte) {
-	b.data.NextSeedHash32 = hash[:]
-}
-
-func (b *BeaconState) SetPersistentCommittees(committees []*pbcomm.Uint32List) {
-	b.data.PersistentCommittees = committees
-}
-
-func (b *BeaconState) SetPersistentCommitteeReassignments(assingments []*pb.ShardReassignmentRecord) {
-	b.data.PersistentCommitteeReassignments = assingments
-}
-
-func (b *BeaconState) SetPreviousJustifiedSlot(slot uint64) {
-	b.data.PreviousJustifiedSlot = slot
 }
 
 // IsValidatorSetChange checks if a validator set change transition can be processed. At that point,
@@ -256,9 +224,60 @@ func (b *BeaconState) LatestCrosslinks() []*pb.CrosslinkRecord {
 	return b.data.LatestCrosslinks
 }
 
-// ValidatorRegistry returns list of validators.
-func (b *BeaconState) ValidatorRegistry() []*pb.ValidatorRecord {
-	return b.data.ValidatorRegistry
+// NextSeedHash returns the next seed to be used in RANDAO.
+func (b *BeaconState) NextSeedHash() [32]byte {
+	var h [32]byte
+	copy(h[:], b.data.NextSeedHash32)
+	return h
+}
+
+// PersistentCommittees returns the stored in the beacon state.
+func (b *BeaconState) PersistentCommittees() []*pbcomm.Uint32List {
+	return b.data.PersistentCommittees
+}
+
+// PersistentCommitteeReassignments returns the assignments of the committees.
+func (b *BeaconState) PersistentCommitteeReassignments() []*pb.ShardReassignmentRecord {
+	return b.data.PersistentCommitteeReassignments
+}
+
+// PreviousJustifiedSlot retrieves the previous justified slot in the state.
+func (b *BeaconState) PreviousJustifiedSlot() uint64 {
+	return b.data.PreviousJustifiedSlot
+}
+
+// JustifiedSlotBitfield returns the bitfield of the justified slot.
+func (b *BeaconState) JustifiedSlotBitfield() uint64 {
+	return b.data.JustifiedSlotBitfield
+}
+
+// LatestAttestations returns the latest pending attestations that have not been
+// processed.
+func (b *BeaconState) LatestAttestations() []*pb.PendingAttestationRecord {
+	return b.data.LatestAttestations
+}
+
+// ProcessedPowReceiptRootHash32 returns the root hashes of the
+// transaction receipts from the POW chain.
+func (b *BeaconState) ProcessedPowReceiptRootHash32() [][]byte {
+	return b.data.ProcessedPowReceiptRootHash32
+}
+
+// CandidatePowReceiptRoots returns the root records of receipts that have
+// yet to be processed.
+func (b *BeaconState) CandidatePowReceiptRoots() []*pb.CandidatePoWReceiptRootRecord {
+	return b.data.CandidatePowReceiptRoots
+}
+
+// GenesisTime returns the creationg time of the
+// genesis block.
+func (b *BeaconState) GenesisTime() uint64 {
+	return b.data.GenesisTime
+}
+
+// Slot refers to the slot of the last processed beacon block.
+func (b *BeaconState) Slot() uint64 {
+	return b.data.Slot
 }
 
 // LastStateRecalculationSlot returns when the last time crystallized state recalculated.
@@ -457,6 +476,76 @@ func (b *BeaconState) SetValidatorRegistry(validators []*pb.ValidatorRecord) {
 // SetValidatorRegistryLastChangeSlot updates the inner proto's validator set change slot.
 func (b *BeaconState) SetValidatorRegistryLastChangeSlot(slot uint64) {
 	b.data.ValidatorRegistryLastChangeSlot = slot
+}
+
+// SetValidatorRegistryExitCount sets the exit count of the
+// validator registry.
+func (b *BeaconState) SetValidatorRegistryExitCount(count uint64) {
+	b.data.ValidatorRegistryExitCount = count
+}
+
+// SetValidatorRegistryDeltaChainTipHash32 sets the delta hash of the validator registry.
+func (b *BeaconState) SetValidatorRegistryDeltaChainTipHash32(chainTipHash []byte) {
+	b.data.ValidatorRegistryDeltaChainTipHash32 = chainTipHash
+}
+
+// SetNextSeedHash sets the next seed hash in the beacon state.
+func (b *BeaconState) SetNextSeedHash(hash [32]byte) {
+	b.data.NextSeedHash32 = hash[:]
+}
+
+// SetPersistentCommittees sets the persistent committees in the beacon state.
+func (b *BeaconState) SetPersistentCommittees(committees []*pbcomm.Uint32List) {
+	b.data.PersistentCommittees = committees
+}
+
+// SetPersistentCommitteeReassignments sets the committee reassignments.
+func (b *BeaconState) SetPersistentCommitteeReassignments(assignments []*pb.ShardReassignmentRecord) {
+	b.data.PersistentCommitteeReassignments = assignments
+}
+
+// SetPreviousJustifiedSlot sets the previous justified slot into the state.
+func (b *BeaconState) SetPreviousJustifiedSlot(slot uint64) {
+	b.data.PreviousJustifiedSlot = slot
+}
+
+// SetJustifiedSlotBitfield sets the bitfield of the last justified slot.
+func (b *BeaconState) SetJustifiedSlotBitfield(field uint64) {
+	b.data.JustifiedSlotBitfield = field
+}
+
+// SetLatestAttestations sets the latest pending attestations into the state.
+func (b *BeaconState) SetLatestAttestations(attestations []*pb.PendingAttestationRecord) {
+	b.data.LatestAttestations = attestations
+}
+
+// SetProcessedPowReceiptHash saves the POW recipts which have
+// been processed by the POW chain.
+func (b *BeaconState) SetProcessedPowReceiptHash(hash [][]byte) {
+	b.data.ProcessedPowReceiptRootHash32 = hash
+}
+
+// SetCandidatePowReceiptRoots saves the latest roots of POW receipts that have
+// yet to be processed.
+func (b *BeaconState) SetCandidatePowReceiptRoots(records []*pb.CandidatePoWReceiptRootRecord) {
+	b.data.CandidatePowReceiptRoots = records
+}
+
+// SetGenesisTime saves the genesis time of the genesis
+// block into the state.
+func (b *BeaconState) SetGenesisTime(time uint64) {
+	b.data.GenesisTime = time
+}
+
+// SetForkData sets data relating to the fork into the state.
+func (b *BeaconState) SetForkData(data *pb.ForkData) {
+	b.data.ForkData = data
+}
+
+// SetSlot saves the slot of the last processed block to
+// the beacon state.
+func (b *BeaconState) SetSlot(slot uint64) {
+	b.data.Slot = slot
 }
 
 func getPenaltyForPeriod(penalties []uint64, period uint64) uint64 {
