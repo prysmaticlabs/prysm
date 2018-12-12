@@ -8,7 +8,7 @@ import (
 	"reflect"
 )
 
-// Decodable defines the interface for support ssz decoding
+// Decodable defines the interface for support ssz decoding.
 type Decodable interface {
 	DecodeSSZ(io.Reader) error
 }

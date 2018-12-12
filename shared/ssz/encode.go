@@ -12,7 +12,7 @@ import (
 
 const lengthBytes = 4
 
-// Encodable defines the interface for support ssz encoding
+// Encodable defines the interface for support ssz encoding.
 type Encodable interface {
 	EncodeSSZ(io.Writer) error
 }
