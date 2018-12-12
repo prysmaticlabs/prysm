@@ -211,6 +211,29 @@ func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received nil", want)
 	}
+
+	// Perform the same check for Votes_2.
+	slashings = []*pb.CasperSlashing{
+		{
+			Votes_2: &pb.SlashableVoteData{
+				AggregateSignaturePoc_0Indices: make(
+					[]uint32,
+					params.BeaconConfig().MaxCasperVotes,
+				),
+				AggregateSignaturePoc_1Indices: make(
+					[]uint32,
+					params.BeaconConfig().MaxCasperVotes,
+				),
+			},
+		},
+	}
+	if _, err := ProcessCasperSlashings(
+		registry,
+		slashings,
+		currentSlot,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received nil", want)
+	}
 }
 
 func TestProcessCasperSlashings_UnmatchedAttestations(t *testing.T) {
