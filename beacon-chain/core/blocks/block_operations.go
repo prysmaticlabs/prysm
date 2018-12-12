@@ -172,10 +172,10 @@ func verifyCasperSlashing(
 	votes1Attestation := votes1.GetData()
 	votes2Attestation := votes2.GetData()
 
-	if err := verifyCasperVotes(validatorRegistry, votes1); err != nil {
+	if err := verifyCasperVotes(votes1); err != nil {
 		return nil, fmt.Errorf("could not verify casper votes 1: %v", err)
 	}
-	if err := verifyCasperVotes(validatorRegistry, votes2); err != nil {
+	if err := verifyCasperVotes(votes2); err != nil {
 		return nil, fmt.Errorf("could not verify casper votes 2: %v", err)
 	}
 
@@ -222,7 +222,6 @@ func verifyCasperSlashing(
 }
 
 func verifyCasperVotes(
-	validatorRegistry []*pb.ValidatorRecord,
 	votes *pb.SlashableVoteData,
 ) error {
 	totalProofsOfCustody := len(votes.GetAggregateSignaturePoc_0Indices()) +
@@ -237,7 +236,6 @@ func verifyCasperVotes(
 			params.BeaconConfig().MaxCasperVotes,
 		)
 	}
-	_ = validatorRegistry
 	// TODO(#781): Implement BLS verify multiple.
 	//  pubs = aggregate_pubkeys for each validator in registry for poc0 and poc1
 	//    indices
