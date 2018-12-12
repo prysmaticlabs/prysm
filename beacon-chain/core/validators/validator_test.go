@@ -3,6 +3,7 @@ package validators
 import (
 	"bytes"
 	"math/big"
+	"reflect"
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -386,7 +387,7 @@ func TestChangeValidatorRegistry(t *testing.T) {
 	if validators[5].Status != pb.ValidatorRecord_ACTIVE_PENDING_EXIT {
 		t.Errorf("Wanted status PendingExit. Got: %d", validators[5].Status)
 	}
-	if validators[7].Status != pb.ValidatorRecord_EXITED_WITHOUT_PENALTY {
+	if validators[7].Status != pb.ValidatorRecord_ACTIVE_PENDING_EXIT {
 		t.Errorf("Wanted status Withdrawn. Got: %d", validators[7].Status)
 	}
 	if validators[8].Status != pb.ValidatorRecord_EXITED_WITHOUT_PENALTY {
@@ -577,5 +578,71 @@ func TestShardAndCommitteesAtSlot_OutOfBounds(t *testing.T) {
 			t.Fatalf("Expected error \"%s\" got \"%v\"", tt.expectedErr, err)
 		}
 
+	}
+}
+
+func TestEffectiveBalance(t *testing.T) {
+	defaultBalance := params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei
+
+	tests := []struct {
+		a uint64
+		b uint64
+	}{
+		{a: 0, b: 0},
+		{a: defaultBalance - 1, b: defaultBalance - 1},
+		{a: defaultBalance, b: defaultBalance},
+		{a: defaultBalance + 1, b: defaultBalance},
+		{a: defaultBalance * 100, b: defaultBalance},
+	}
+	for _, test := range tests {
+		validator := &pb.ValidatorRecord{Balance: test.a}
+		if EffectiveBalance(validator) != test.b {
+			t.Errorf("EffectiveBalance(%d) = %d, want = %d", validator.Balance, EffectiveBalance(validator), test.b)
+		}
+	}
+}
+
+func TestIsActiveValidator(t *testing.T) {
+
+	tests := []struct {
+		a pb.ValidatorRecord_StatusCodes
+		b bool
+	}{
+		{a: pb.ValidatorRecord_PENDING_ACTIVATION, b: false},
+		{a: pb.ValidatorRecord_ACTIVE, b: true},
+		{a: pb.ValidatorRecord_ACTIVE_PENDING_EXIT, b: true},
+		{a: pb.ValidatorRecord_EXITED_WITHOUT_PENALTY + 1, b: false},
+		{a: pb.ValidatorRecord_EXITED_WITH_PENALTY * 100, b: false},
+	}
+	for _, test := range tests {
+		validator := &pb.ValidatorRecord{Status: test.a}
+		if isActiveValidator(validator) != test.b {
+			t.Errorf("isActiveValidator(%d) = %v, want = %v", validator.Status, isActiveValidator(validator), test.b)
+		}
+	}
+}
+
+func TestGetActiveValidatorRecord(t *testing.T) {
+	inputValidators := []*pb.ValidatorRecord{
+		{ExitCount: 0},
+		{ExitCount: 1},
+		{ExitCount: 2},
+		{ExitCount: 3},
+		{ExitCount: 4},
+	}
+
+	outputValidators := []*pb.ValidatorRecord{
+		{ExitCount: 1},
+		{ExitCount: 3},
+	}
+
+	state := &pb.BeaconState{
+		ValidatorRegistry: inputValidators,
+	}
+
+	validators := ActiveValidator(state, []uint32{1, 3})
+
+	if !reflect.DeepEqual(outputValidators, validators) {
+		t.Errorf("Active validators don't match. Wanted: %v, Got: %v", outputValidators, validators)
 	}
 }
