@@ -398,7 +398,7 @@ func TestUpdateHead(t *testing.T) {
 		// Higher slot, different crystallized state, but higher last finalized slot.
 		{
 			blockSlot: 64,
-			state:     types.NewBeaconState(&pb.BeaconState{LastFinalizedSlot: 10}),
+			state:     types.NewBeaconState(&pb.BeaconState{FinalizedSlot: 10}),
 			logAssert: "Chain head block and state updated",
 		},
 		// Higher slot, different crystallized state, same last finalized slot,
@@ -406,8 +406,8 @@ func TestUpdateHead(t *testing.T) {
 		{
 			blockSlot: 64,
 			state: types.NewBeaconState(&pb.BeaconState{
-				LastFinalizedSlot: 0,
-				LastJustifiedSlot: 10,
+				FinalizedSlot: 0,
+				JustifiedSlot: 10,
 			}),
 			logAssert: "Chain head block and state updated",
 		},
