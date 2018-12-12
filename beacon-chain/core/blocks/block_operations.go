@@ -127,7 +127,10 @@ func ProcessCasperSlashings(
 		)
 	}
 	for idx, slashing := range casperSlashings {
-		validatorIndices, err := verifyCasperSlashing(slashing)
+		// verifyCasperSlashing performs validity checks on the slashing
+		// struct and returns a list of validator indices to be slashed from
+		// the BeaconState's validator registry.
+		validatorIndices, err := verifyCasperSlashing(validatorRegistry, slashing)
 		if err != nil {
 			return nil, fmt.Errorf("could not verify casper slashing #%d: %v", idx, err)
 		}
@@ -151,7 +154,10 @@ func ProcessCasperSlashings(
 	return nil, nil
 }
 
-func verifyCasperSlashing(slashing *pb.CasperSlashing) ([]uint32, error) {
+func verifyCasperSlashing(
+	validatorRegistry []*pb.ValidatorRecord,
+	slashing *pb.CasperSlashing,
+) ([]uint32, error) {
 	votes1 := slashing.GetVotes_1()
 	votes2 := slashing.GetVotes_2()
 	votes1Indices := append(
@@ -166,9 +172,12 @@ func verifyCasperSlashing(slashing *pb.CasperSlashing) ([]uint32, error) {
 	votes1Attestation := votes1.GetData()
 	votes2Attesation := votes2.GetData()
 
-	// TODO:
-	// Verify that verify_casper_votes(state, casper_slashing.votes_1).
-	// Verify that verify_casper_votes(state, casper_slashing.votes_2).
+	if err := verifyCasperVotes(validatorRegistry, votes1); err != nil {
+		return nil, fmt.Errorf("could not verify casper votes 1: %v", err)
+	}
+	if err := verifyCasperVotes(validatorRegistry, votes2); err != nil {
+		return nil, fmt.Errorf("could not verify casper votes 2: %v", err)
+	}
 
 	if !reflect.DeepEqual(votes1Attestation, votes2Attesation) {
 		return nil, fmt.Errorf(
@@ -183,9 +192,10 @@ func verifyCasperSlashing(slashing *pb.CasperSlashing) ([]uint32, error) {
 	voteJustifiedSlotsGreaterThan := votes1Attestation.GetJustifiedSlot()+1 >=
 		votes2Attesation.GetJustifiedSlot()+1
 	slotsGreaterThan := votes1Attestation.GetSlot() >= votes2Attesation.GetSlot()
-	slotInequality := votes1Attestation.GetSlot() != votes2Attesation.GetSlot()
+	slotsUnequal := votes1Attestation.GetSlot() != votes2Attesation.GetSlot()
 
-	if (voteJustifiedSlotsGreaterThan == slotsGreaterThan) || slotInequality {
+	// TODO: Think.
+	if (voteJustifiedSlotsGreaterThan == slotsGreaterThan) || slotsUnequal {
 		return nil, fmt.Errorf(
 			`
 			expected vote1.JustifiedSlot < vote2.JustifiedSlot == vote1.slot < vote2.slot
@@ -209,6 +219,36 @@ func verifyCasperSlashing(slashing *pb.CasperSlashing) ([]uint32, error) {
 		)
 	}
 	return indicesIntersection, nil
+}
+
+func verifyCasperVotes(
+	validatorRegistry []*pb.ValidatorRecord,
+	votes *pb.SlashableVoteData,
+) error {
+	totalProofsOfCustody := len(votes.GetAggregateSignaturePoc_0Indices()) +
+		len(votes.GetAggregateSignaturePoc_1Indices())
+	if uint64(totalProofsOfCustody) > params.BeaconConfig().MaxCasperVotes {
+		return fmt.Errorf(
+			`
+			total proof of custody validator indices (%d) greater than maximum
+			allowed number of casper votes (%d)
+			`,
+			totalProofsOfCustody,
+			params.BeaconConfig().MaxCasperVotes,
+		)
+	}
+	// TODO(#781): Implement BLS verify multiple.
+	//  pubs = aggregate_pubkeys for each validator in registry for poc0 and poc1
+	//    indices
+	//  bls_verify_multiple(
+	//    pubkeys=pubs,
+	//    messages=[
+	//      hash_tree_root(votes)+bytes1(0),
+	//      hash_tree_root(votes)+bytes1(1),
+	//      signature=aggregate_signature
+	//    ]
+	//  )
+	return nil
 }
 
 // Computes intersection of two sets with time
