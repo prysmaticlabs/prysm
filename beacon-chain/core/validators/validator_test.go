@@ -53,7 +53,7 @@ func TestInitialValidatorRegistry(t *testing.T) {
 		if validator.GetBalance() != params.BeaconConfig().DepositSize*params.BeaconConfig().Gwei {
 			t.Fatalf("deposit size of validator is not expected %d", validator.GetBalance())
 		}
-		if validator.GetStatus() != uint64(params.Active) {
+		if validator.GetStatus() != pb.ValidatorRecord_ACTIVE {
 			t.Errorf("validator status is not active: %d", validator.GetStatus())
 		}
 	}
@@ -147,7 +147,7 @@ func TestProposerShardAndIndex(t *testing.T) {
 func TestValidatorIndex(t *testing.T) {
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 10; i++ {
-		validators = append(validators, &pb.ValidatorRecord{Pubkey: []byte{}, Status: uint64(params.Active)})
+		validators = append(validators, &pb.ValidatorRecord{Pubkey: []byte{}, Status: pb.ValidatorRecord_ACTIVE})
 	}
 	if _, err := ValidatorIndex([]byte("100"), validators); err == nil {
 		t.Fatalf("ValidatorIndex should have failed,  there's no validator with pubkey 100")
@@ -165,7 +165,7 @@ func TestValidatorIndex(t *testing.T) {
 func TestValidatorShard(t *testing.T) {
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 21; i++ {
-		validators = append(validators, &pb.ValidatorRecord{Pubkey: []byte{}, Status: uint64(params.Active)})
+		validators = append(validators, &pb.ValidatorRecord{Pubkey: []byte{}, Status: pb.ValidatorRecord_ACTIVE})
 	}
 	shardCommittees := []*pb.ShardAndCommitteeArray{
 		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
@@ -197,7 +197,7 @@ func TestValidatorShard(t *testing.T) {
 func TestValidatorSlotAndResponsibility(t *testing.T) {
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 61; i++ {
-		validators = append(validators, &pb.ValidatorRecord{Pubkey: []byte{}, Status: uint64(params.Active)})
+		validators = append(validators, &pb.ValidatorRecord{Pubkey: []byte{}, Status: pb.ValidatorRecord_ACTIVE})
 	}
 	shardCommittees := []*pb.ShardAndCommitteeArray{
 		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
@@ -238,7 +238,7 @@ func TestValidatorSlotAndResponsibility(t *testing.T) {
 func TestTotalActiveValidatorDeposit(t *testing.T) {
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 10; i++ {
-		validators = append(validators, &pb.ValidatorRecord{Balance: 1e9, Status: uint64(params.Active)})
+		validators = append(validators, &pb.ValidatorRecord{Balance: 1e9, Status: pb.ValidatorRecord_ACTIVE})
 	}
 
 	expectedTotalDeposit := new(big.Int)
@@ -259,7 +259,7 @@ func TestVotedBalanceInAttestation(t *testing.T) {
 	var validators []*pb.ValidatorRecord
 	defaultBalance := uint64(1e9)
 	for i := 0; i < 100; i++ {
-		validators = append(validators, &pb.ValidatorRecord{Balance: defaultBalance, Status: uint64(params.Active)})
+		validators = append(validators, &pb.ValidatorRecord{Balance: defaultBalance, Status: pb.ValidatorRecord_ACTIVE})
 	}
 
 	// Calculating balances with zero votes by attesters.
@@ -311,14 +311,14 @@ func TestVotedBalanceInAttestation(t *testing.T) {
 func TestAddValidatorRegistry(t *testing.T) {
 	var existingValidatorRegistry []*pb.ValidatorRecord
 	for i := 0; i < 10; i++ {
-		existingValidatorRegistry = append(existingValidatorRegistry, &pb.ValidatorRecord{Status: uint64(params.Active)})
+		existingValidatorRegistry = append(existingValidatorRegistry, &pb.ValidatorRecord{Status: pb.ValidatorRecord_ACTIVE})
 	}
 
 	// Create a new validator.
-	validators := AddPendingValidator(existingValidatorRegistry, []byte{'A'}, []byte{'C'}, uint64(params.PendingActivation))
+	validators := AddPendingValidator(existingValidatorRegistry, []byte{'A'}, []byte{'C'}, pb.ValidatorRecord_PENDING_ACTIVATION)
 
 	// The newly added validator should be indexed 10.
-	if validators[10].Status != uint64(params.PendingActivation) {
+	if validators[10].Status != pb.ValidatorRecord_PENDING_ACTIVATION {
 		t.Errorf("Newly added validator should be pending")
 	}
 	if validators[10].Balance != uint64(params.BeaconConfig().DepositSize*params.BeaconConfig().Gwei) {
@@ -326,11 +326,11 @@ func TestAddValidatorRegistry(t *testing.T) {
 	}
 
 	// Set validator 6 to withdrawn
-	existingValidatorRegistry[5].Status = uint64(params.Withdrawn)
-	validators = AddPendingValidator(existingValidatorRegistry, []byte{'E'}, []byte{'F'}, uint64(params.PendingActivation))
+	existingValidatorRegistry[5].Status = pb.ValidatorRecord_EXITED_WITHOUT_PENALTY
+	validators = AddPendingValidator(existingValidatorRegistry, []byte{'E'}, []byte{'F'}, pb.ValidatorRecord_PENDING_ACTIVATION)
 
 	// The newly added validator should be indexed 5.
-	if validators[5].Status != uint64(params.PendingActivation) {
+	if validators[5].Status != pb.ValidatorRecord_PENDING_ACTIVATION {
 		t.Errorf("Newly added validator should be pending")
 	}
 	if validators[5].Balance != uint64(params.BeaconConfig().DepositSize*params.BeaconConfig().Gwei) {
@@ -340,56 +340,56 @@ func TestAddValidatorRegistry(t *testing.T) {
 
 func TestChangeValidatorRegistry(t *testing.T) {
 	existingValidatorRegistry := []*pb.ValidatorRecord{
-		{Pubkey: []byte{1}, Status: uint64(params.PendingActivation), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), LatestStatusChangeSlot: params.BeaconConfig().MinWithdrawalPeriod},
-		{Pubkey: []byte{2}, Status: uint64(params.PendingExit), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), LatestStatusChangeSlot: params.BeaconConfig().MinWithdrawalPeriod},
-		{Pubkey: []byte{3}, Status: uint64(params.PendingActivation), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), LatestStatusChangeSlot: params.BeaconConfig().MinWithdrawalPeriod},
-		{Pubkey: []byte{4}, Status: uint64(params.PendingExit), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), LatestStatusChangeSlot: params.BeaconConfig().MinWithdrawalPeriod},
-		{Pubkey: []byte{5}, Status: uint64(params.PendingActivation), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), LatestStatusChangeSlot: params.BeaconConfig().MinWithdrawalPeriod},
-		{Pubkey: []byte{6}, Status: uint64(params.PendingExit), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), LatestStatusChangeSlot: params.BeaconConfig().MinWithdrawalPeriod},
-		{Pubkey: []byte{7}, Status: uint64(params.PendingWithdraw), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
-		{Pubkey: []byte{8}, Status: uint64(params.PendingWithdraw), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
-		{Pubkey: []byte{9}, Status: uint64(params.Penalized), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
-		{Pubkey: []byte{10}, Status: uint64(params.Penalized), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
-		{Pubkey: []byte{11}, Status: uint64(params.Active), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
-		{Pubkey: []byte{12}, Status: uint64(params.Active), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
-		{Pubkey: []byte{13}, Status: uint64(params.Active), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
-		{Pubkey: []byte{14}, Status: uint64(params.Active), Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
+		{Pubkey: []byte{1}, Status: pb.ValidatorRecord_PENDING_ACTIVATION, Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), LatestStatusChangeSlot: params.BeaconConfig().MinWithdrawalPeriod},
+		{Pubkey: []byte{2}, Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT, Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), LatestStatusChangeSlot: params.BeaconConfig().MinWithdrawalPeriod},
+		{Pubkey: []byte{3}, Status: pb.ValidatorRecord_PENDING_ACTIVATION, Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), LatestStatusChangeSlot: params.BeaconConfig().MinWithdrawalPeriod},
+		{Pubkey: []byte{4}, Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT, Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), LatestStatusChangeSlot: params.BeaconConfig().MinWithdrawalPeriod},
+		{Pubkey: []byte{5}, Status: pb.ValidatorRecord_PENDING_ACTIVATION, Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), LatestStatusChangeSlot: params.BeaconConfig().MinWithdrawalPeriod},
+		{Pubkey: []byte{6}, Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT, Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei), LatestStatusChangeSlot: params.BeaconConfig().MinWithdrawalPeriod},
+		{Pubkey: []byte{7}, Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT, Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
+		{Pubkey: []byte{8}, Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT, Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
+		{Pubkey: []byte{9}, Status: pb.ValidatorRecord_EXITED_WITH_PENALTY, Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
+		{Pubkey: []byte{10}, Status: pb.ValidatorRecord_EXITED_WITH_PENALTY, Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
+		{Pubkey: []byte{11}, Status: pb.ValidatorRecord_ACTIVE, Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
+		{Pubkey: []byte{12}, Status: pb.ValidatorRecord_ACTIVE, Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
+		{Pubkey: []byte{13}, Status: pb.ValidatorRecord_ACTIVE, Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
+		{Pubkey: []byte{14}, Status: pb.ValidatorRecord_ACTIVE, Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei)},
 	}
 
 	validators := ChangeValidatorRegistry(params.BeaconConfig().MinWithdrawalPeriod+1, 50*10e9, existingValidatorRegistry)
 
-	if validators[0].Status != uint64(params.Active) {
+	if validators[0].Status != pb.ValidatorRecord_ACTIVE {
 		t.Errorf("Wanted status Active. Got: %d", validators[0].Status)
 	}
 	if validators[0].Balance != uint64(params.BeaconConfig().DepositSize*params.BeaconConfig().Gwei) {
 		t.Error("Failed to set validator balance")
 	}
-	if validators[1].Status != uint64(params.PendingWithdraw) {
+	if validators[1].Status != pb.ValidatorRecord_ACTIVE_PENDING_EXIT {
 		t.Errorf("Wanted status PendingWithdraw. Got: %d", validators[1].Status)
 	}
 	if validators[1].LatestStatusChangeSlot != params.BeaconConfig().MinWithdrawalPeriod+1 {
 		t.Errorf("Failed to set validator lastest status change slot")
 	}
-	if validators[2].Status != uint64(params.Active) {
+	if validators[2].Status != pb.ValidatorRecord_ACTIVE {
 		t.Errorf("Wanted status Active. Got: %d", validators[2].Status)
 	}
 	if validators[2].Balance != uint64(params.BeaconConfig().DepositSize*params.BeaconConfig().Gwei) {
 		t.Error("Failed to set validator balance")
 	}
-	if validators[3].Status != uint64(params.PendingWithdraw) {
+	if validators[3].Status != pb.ValidatorRecord_ACTIVE_PENDING_EXIT {
 		t.Errorf("Wanted status PendingWithdraw. Got: %d", validators[3].Status)
 	}
 	if validators[3].LatestStatusChangeSlot != params.BeaconConfig().MinWithdrawalPeriod+1 {
 		t.Errorf("Failed to set validator lastest status change slot")
 	}
 	// Reach max validation rotation case, this validator couldn't be rotated.
-	if validators[5].Status != uint64(params.PendingExit) {
+	if validators[5].Status != pb.ValidatorRecord_ACTIVE_PENDING_EXIT {
 		t.Errorf("Wanted status PendingExit. Got: %d", validators[5].Status)
 	}
-	if validators[7].Status != uint64(params.Withdrawn) {
+	if validators[7].Status != pb.ValidatorRecord_EXITED_WITHOUT_PENALTY {
 		t.Errorf("Wanted status Withdrawn. Got: %d", validators[7].Status)
 	}
-	if validators[8].Status != uint64(params.Withdrawn) {
+	if validators[8].Status != pb.ValidatorRecord_EXITED_WITHOUT_PENALTY {
 		t.Errorf("Wanted status Withdrawn. Got: %d", validators[8].Status)
 	}
 }
@@ -398,18 +398,18 @@ func TestValidatorMinDeposit(t *testing.T) {
 	minDeposit := params.BeaconConfig().MinOnlineDepositSize * params.BeaconConfig().Gwei
 	currentSlot := uint64(99)
 	validators := []*pb.ValidatorRecord{
-		{Status: uint64(params.Active), Balance: uint64(minDeposit) + 1},
-		{Status: uint64(params.Active), Balance: uint64(minDeposit)},
-		{Status: uint64(params.Active), Balance: uint64(minDeposit) - 1},
+		{Status: pb.ValidatorRecord_ACTIVE, Balance: uint64(minDeposit) + 1},
+		{Status: pb.ValidatorRecord_ACTIVE, Balance: uint64(minDeposit)},
+		{Status: pb.ValidatorRecord_ACTIVE, Balance: uint64(minDeposit) - 1},
 	}
 	newValidatorRegistry := CheckValidatorMinDeposit(validators, currentSlot)
-	if newValidatorRegistry[0].Status != uint64(params.Active) {
+	if newValidatorRegistry[0].Status != pb.ValidatorRecord_ACTIVE {
 		t.Error("Validator should be active")
 	}
-	if newValidatorRegistry[1].Status != uint64(params.Active) {
+	if newValidatorRegistry[1].Status != pb.ValidatorRecord_ACTIVE {
 		t.Error("Validator should be active")
 	}
-	if newValidatorRegistry[2].Status != uint64(params.PendingExit) {
+	if newValidatorRegistry[2].Status != pb.ValidatorRecord_ACTIVE_PENDING_EXIT {
 		t.Error("Validator should be pending exit")
 	}
 	if newValidatorRegistry[2].LatestStatusChangeSlot != currentSlot {
@@ -419,15 +419,15 @@ func TestValidatorMinDeposit(t *testing.T) {
 
 func TestMinEmptyValidator(t *testing.T) {
 	validators := []*pb.ValidatorRecord{
-		{Status: uint64(params.Active)},
-		{Status: uint64(params.Withdrawn)},
-		{Status: uint64(params.Active)},
+		{Status: pb.ValidatorRecord_ACTIVE},
+		{Status: pb.ValidatorRecord_EXITED_WITHOUT_PENALTY},
+		{Status: pb.ValidatorRecord_ACTIVE},
 	}
 	if minEmptyValidator(validators) != 1 {
 		t.Errorf("Min vaidator index should be 1")
 	}
 
-	validators[1].Status = uint64(params.Active)
+	validators[1].Status = pb.ValidatorRecord_ACTIVE
 	if minEmptyValidator(validators) != -1 {
 		t.Errorf("Min vaidator index should be -1")
 	}
@@ -439,7 +439,7 @@ func TestDeepCopyValidatorRegistry(t *testing.T) {
 		Pubkey:                 []byte{'k', 'e', 'y'},
 		RandaoCommitmentHash32: []byte{'r', 'a', 'n', 'd', 'a', 'o'},
 		Balance:                uint64(1e9),
-		Status:                 uint64(params.Active),
+		Status:                 pb.ValidatorRecord_ACTIVE,
 		LatestStatusChangeSlot: 10,
 	}
 	for i := 0; i < 100; i++ {
@@ -451,7 +451,7 @@ func TestDeepCopyValidatorRegistry(t *testing.T) {
 	defaultValidator.Pubkey = []byte{'n', 'e', 'w', 'k', 'e', 'y'}
 	defaultValidator.RandaoCommitmentHash32 = []byte{'n', 'e', 'w', 'r', 'a', 'n', 'd', 'a', 'o'}
 	defaultValidator.Balance = uint64(2e9)
-	defaultValidator.Status = uint64(params.PendingExit)
+	defaultValidator.Status = pb.ValidatorRecord_ACTIVE_PENDING_EXIT
 	defaultValidator.LatestStatusChangeSlot = 5
 
 	if len(newValidatorSet) != len(validators) {
@@ -480,4 +480,102 @@ func TestDeepCopyValidatorRegistry(t *testing.T) {
 		}
 	}
 
+}
+
+func TestShardAndCommitteesAtSlot_OK(t *testing.T) {
+	if params.BeaconConfig().EpochLength != 64 {
+		t.Errorf("EpochLength should be 64 for these tests to pass")
+	}
+
+	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
+			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{Shard: i},
+			},
+		})
+	}
+
+	state := &pb.BeaconState{
+		ShardAndCommitteesAtSlots: shardAndCommittees,
+	}
+
+	tests := []struct {
+		slot          uint64
+		stateSlot     uint64
+		expectedShard uint64
+	}{
+		{
+			slot:          0,
+			stateSlot:     0,
+			expectedShard: 0,
+		},
+		{
+			slot:          1,
+			stateSlot:     5,
+			expectedShard: 1,
+		},
+		{
+			stateSlot:     1024,
+			slot:          1024,
+			expectedShard: 64 - 0,
+		}, {
+			stateSlot:     2048,
+			slot:          2000,
+			expectedShard: 64 - 48,
+		}, {
+			stateSlot:     2048,
+			slot:          2058,
+			expectedShard: 64 + 10,
+		},
+	}
+
+	for _, tt := range tests {
+		state.Slot = tt.stateSlot
+
+		result, err := ShardAndCommitteesAtSlot(state, tt.slot)
+		if err != nil {
+			t.Errorf("Failed to get shard and committees at slot: %v", err)
+		}
+
+		if result.ArrayShardAndCommittee[0].Shard != tt.expectedShard {
+			t.Errorf(
+				"Result shard was an unexpected value. Wanted %d, got %d",
+				tt.expectedShard,
+				result.ArrayShardAndCommittee[0].Shard,
+			)
+		}
+	}
+}
+
+func TestShardAndCommitteesAtSlot_OutOfBounds(t *testing.T) {
+	if params.BeaconConfig().EpochLength != 64 {
+		t.Errorf("EpochLength should be 64 for these tests to pass")
+	}
+
+	state := &pb.BeaconState{
+		Slot: params.BeaconConfig().EpochLength,
+	}
+
+	tests := []struct {
+		expectedErr string
+		slot        uint64
+	}{
+		{
+			expectedErr: "slot 5000 out of bounds: 0 <= slot < 128",
+			slot:        5000,
+		},
+		{
+			expectedErr: "slot 129 out of bounds: 0 <= slot < 128",
+			slot:        129,
+		},
+	}
+
+	for _, tt := range tests {
+		_, err := ShardAndCommitteesAtSlot(state, tt.slot)
+		if err != nil && err.Error() != tt.expectedErr {
+			t.Fatalf("Expected error \"%s\" got \"%v\"", tt.expectedErr, err)
+		}
+
+	}
 }

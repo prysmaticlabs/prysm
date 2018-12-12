@@ -96,7 +96,7 @@ func TestCleanBlockVoteCache(t *testing.T) {
 
 	// Now let the cleanup service do its job
 	cleanupService := createCleanupService(beaconDB)
-	state := types.NewBeaconState(&pb.BeaconState{LastFinalizedSlot: 1})
+	state := types.NewBeaconState(&pb.BeaconState{FinalizedSlot: 1})
 	if err = cleanupService.cleanBlockVoteCache(state.LastFinalizedSlot()); err != nil {
 		t.Fatalf("failed to clean block vote cache")
 	}

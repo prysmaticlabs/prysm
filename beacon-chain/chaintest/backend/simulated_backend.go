@@ -69,7 +69,7 @@ func (sb *SimulatedBackend) RunChainTest(testCase *ChainTestCase) error {
 	validators := make([]*pb.ValidatorRecord, testCase.Config.ValidatorCount)
 	for i := uint64(0); i < testCase.Config.ValidatorCount; i++ {
 		validators[i] = &pb.ValidatorRecord{
-			Status:                 uint64(params.Active),
+			Status:                 pb.ValidatorRecord_ACTIVE,
 			Balance:                c.DepositSize * c.Gwei,
 			Pubkey:                 []byte{},
 			RandaoCommitmentHash32: randaoReveal[:],

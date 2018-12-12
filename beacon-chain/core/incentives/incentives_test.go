@@ -12,7 +12,7 @@ import (
 func newValidatorRegistry() []*pb.ValidatorRecord {
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 10; i++ {
-		validator := &pb.ValidatorRecord{Balance: 32 * 1e9, Status: uint64(params.Active)}
+		validator := &pb.ValidatorRecord{Balance: 32 * 1e9, Status: pb.ValidatorRecord_ACTIVE}
 		validators = append(validators, validator)
 	}
 	return validators
@@ -31,13 +31,13 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 	data := &pb.BeaconState{
 		ValidatorRegistry:               validators,
 		ValidatorRegistryLastChangeSlot: 1,
-		LastJustifiedSlot:               4,
-		LastFinalizedSlot:               3,
+		JustifiedSlot:                   4,
+		FinalizedSlot:                   3,
 	}
 
 	activeValidatorIndices := make([]uint32, 0, len(validators))
 	for i, v := range validators {
-		if v.Status == uint64(params.Active) {
+		if v.Status == pb.ValidatorRecord_ACTIVE {
 			activeValidatorIndices = append(activeValidatorIndices, uint32(i))
 		}
 	}
@@ -72,7 +72,7 @@ func TestComputeValidatorRewardsAndPenalties(t *testing.T) {
 
 	activeValidatorIndices = make([]uint32, 0, len(validators))
 	for i, v := range validators {
-		if v.Status == uint64(params.Active) {
+		if v.Status == pb.ValidatorRecord_ACTIVE {
 			activeValidatorIndices = append(activeValidatorIndices, uint32(i))
 		}
 	}

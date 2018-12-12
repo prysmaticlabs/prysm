@@ -16,7 +16,7 @@ message BeaconState {
   // Randomness and committees [1001-2000]
   bytes randao_mix_hash32 = 1001;
   bytes next_seed_hash32 = 1002;
-  repeated ShardAndCommitteeArray shard_and_committees_for_slots = 1003;
+  repeated ShardAndCommitteeArray shard_and_committees_at_slots = 1003;
   repeated ethereum.common.Uint32List persistent_committees = 1004;
   repeated ShardReassignmentRecord persistent_committee_reassignments = 1005;
 
@@ -40,18 +40,14 @@ message BeaconState {
   // Miscellaneous [5001-6000]
   uint64 genesis_time = 5001;
   ForkData fork_data = 5002;
-
+  uint64 slot = 5003;
 
 
   // Deprecated fields 
   // All fields mustbe annotated with [deprecated=true];
-  bytes randao_mix = 10003 [deprecated=true]; // Renamed to randao_mix_hash32
-  uint64 last_finalized_slot = 10005 [deprecated=true]; // Replaced/renamed by finalized_slot
-  uint64 last_justified_slot = 10006 [deprecated=true]; // Replaced/renamed by justified_slot
   uint64 justified_streak = 10007 [deprecated=true]; // Deprecated by changes in fork choice rule. See https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#beacon-chain-fork-choice-rule 
-  bytes next_shuffling_seed = 10008 [deprecated=true]; // Replaced/renamed by next_seed_hash32 
-  repeated uint64 deposits_penalized_in_period = 10009 [deprecated=true]; // Replaced by latest_penalized_exit_balances
   repeated AggregatedAttestation pending_attestations = 10018 [deprecated=true]; // Deleted by spec
+  repeated ShardAndCommitteeArray shard_and_committees_for_slots = 10019 [deprecated=true]; // Renamed to shard_and_committee_at_slots
 }
 
 message ForkData {
@@ -100,16 +96,16 @@ message ValidatorRecord {
   uint64 balance = 5;
   // Possible validator status code:
   // https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#constants
-  enum ValiatorStateCode {
-    pending_activation = 0;
-    active = 1;
-    exited_without_penalty = 2;
-    exited_with_penalty = 3;
+  enum StatusCodes {
+    PENDING_ACTIVATION = 0; // validator is queued and waiting to be active.
+    ACTIVE = 1; // validator is participating validator duties.
+    ACTIVE_PENDING_EXIT = 2; // validator is waiting to exit.
+    EXITED_WITHOUT_PENALTY = 3; // validator has successfully withdrawn its balance.
+    EXITED_WITH_PENALTY = 4; // validator got slashed and kicked out of validator pool.
   }
-  ValiatorStateCode status_code = 6;
+  StatusCodes status = 6;
   uint64 latest_status_change_slot = 7;
   uint64 exit_count = 8;
-  uint64 status = 9 [deprecated=true]; // Replaced by status_code
 }
 
 message ShardReassignmentRecord {
@@ -138,10 +134,6 @@ message SpecialRecord {
 message CrosslinkRecord {
   uint64 slot = 1;
   bytes shard_block_hash32 = 2;
-
-  // Deprecated fields
-  // All fields must be annotated with [deprecated=true];
-  bytes shard_block_hash = 1001 [deprecated=true]; // Renamed to shard_block_hash32
 }
 
 message ShardAndCommitteeArray {

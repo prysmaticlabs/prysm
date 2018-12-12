@@ -51,6 +51,7 @@ type BeaconChainConfig struct {
 	SyncPollingInterval                     int64          // SyncPollingInterval queries network nodes for sync status.
 	GenesisTime                             time.Time      // GenesisTime used by the protocol.
 	MaxNumLog2Validators                    uint64         // Max number of validators in Log2 can exist given total ETH supply.
+	EpochLength                             uint64         // Number of slots that define an Epoch.
 }
 
 // ShardChainConfig contains configs for node to participate in shard chains.
@@ -83,6 +84,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	SyncPollingInterval:           16 * 4, // Query nodes over the network every 4 slots for sync status.
 	GenesisTime:                   time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC),
 	MaxNumLog2Validators:          24,
+	EpochLength:                   64,
 }
 
 var demoBeaconConfig = &BeaconChainConfig{
@@ -109,27 +111,13 @@ var demoBeaconConfig = &BeaconChainConfig{
 	SyncPollingInterval:           2 * 4, // Query nodes over the network every 4 slots for sync status.
 	GenesisTime:                   time.Now(),
 	MaxNumLog2Validators:          24,
+	EpochLength:                   defaultBeaconConfig.EpochLength,
 }
 
 var defaultShardConfig = &ShardChainConfig{
 	ChunkSize:         uint64(256),
 	MaxShardBlockSize: uint64(32768),
 }
-
-const (
-	// PendingActivation means a validator is queued and waiting to be active.
-	PendingActivation ValidatorStatusCode = iota
-	// Active means a validator is participating validator duties.
-	Active
-	// PendingExit means a validator is waiting to exit.
-	PendingExit
-	// PendingWithdraw means a validator is waiting to get balance back.
-	PendingWithdraw
-	// Withdrawn means a validator has successfully withdrawn balance.
-	Withdrawn
-	// Penalized means a validator did something bad and got slashed.
-	Penalized = 127
-)
 
 const (
 	// Logout means a validator is requesting to exit the validator pool.

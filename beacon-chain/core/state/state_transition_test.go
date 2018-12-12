@@ -76,7 +76,7 @@ func TestNextDeriveSlot(t *testing.T) {
 
 	beaconState.SetValidatorRegistry([]*pb.ValidatorRecord{
 		{Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei),
-			Status: uint64(params.Active)},
+			Status: pb.ValidatorRecord_ACTIVE},
 	})
 
 	totalDeposits := v.TotalActiveValidatorDeposit(beaconState.ValidatorRegistry())
@@ -141,7 +141,7 @@ func TestProcessLatestCrosslinks(t *testing.T) {
 	// Set up crosslink record for every shard.
 	var clRecords []*pb.CrosslinkRecord
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
-		clRecord := &pb.CrosslinkRecord{ShardBlockHash: []byte{'A'}, Slot: 1}
+		clRecord := &pb.CrosslinkRecord{ShardBlockHash32: []byte{'A'}, Slot: 1}
 		clRecords = append(clRecords, clRecord)
 	}
 
@@ -151,7 +151,7 @@ func TestProcessLatestCrosslinks(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		validators = append(validators, &pb.ValidatorRecord{
 			Balance: 1e18,
-			Status:  uint64(params.Active),
+			Status:  pb.ValidatorRecord_ACTIVE,
 		})
 	}
 
@@ -188,8 +188,8 @@ func TestProcessLatestCrosslinks(t *testing.T) {
 	if newLatestCrosslinks[1].Slot != params.BeaconConfig().CycleLength {
 		t.Errorf("Slot did not change for new cross link. Wanted: %d. Got: %d", params.BeaconConfig().CycleLength, newLatestCrosslinks[0].Slot)
 	}
-	if !bytes.Equal(newLatestCrosslinks[1].ShardBlockHash, []byte{'a'}) {
-		t.Errorf("ShardBlockHash did not change for new cross link. Wanted a. Got: %s", newLatestCrosslinks[0].ShardBlockHash)
+	if !bytes.Equal(newLatestCrosslinks[1].ShardBlockHash32, []byte{'a'}) {
+		t.Errorf("ShardBlockHash did not change for new cross link. Wanted a. Got: %s", newLatestCrosslinks[0].ShardBlockHash32)
 	}
 	//TODO(#538) Implement tests on balances of the validators in committee once big.Int is introduced.
 }
@@ -248,7 +248,7 @@ func TestNewValidatorSetRecalculationsInvalid(t *testing.T) {
 	// Negative test case, shuffle validators with more than MaxValidatorRegistry.
 	size := 1<<(params.BeaconConfig().RandBytes*8) - 1
 	validators := make([]*pb.ValidatorRecord, size)
-	validator := &pb.ValidatorRecord{Status: uint64(params.Active)}
+	validator := &pb.ValidatorRecord{Status: pb.ValidatorRecord_ACTIVE}
 	for i := 0; i < size; i++ {
 		validators[i] = validator
 	}
@@ -297,7 +297,7 @@ func TestPenalizedETH(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
-	beaconState.SetDepositsPenalizedInPeriod([]uint64{100, 200, 300, 400, 500})
+	beaconState.SetLatestPenalizedExitBalances([]uint64{100, 200, 300, 400, 500})
 	beaconState.PenalizedETH(2)
 
 	tests := []struct {
