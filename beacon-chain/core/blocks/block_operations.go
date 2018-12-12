@@ -3,6 +3,7 @@ package blocks
 import (
 	"bytes"
 	"fmt"
+	"reflect"
 
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -83,4 +84,56 @@ func verifyProposerSlashing(
 		return fmt.Errorf("slashing proposal data block roots do not match: %#x, %#x", root1, root2)
 	}
 	return nil
+}
+
+// ProcessCasperSlashings is one of the operations performed
+// on each processed beacon block to penalize validators based on
+// Casper FFG slashing conditions if any slashable events occurred.
+//
+// Official spec definition for casper slashings:
+// Verify that len(block.body.casper_slashings) <= MAX_CASPER_SLASHINGS.
+//   For each casper_slashing in block.body.casper_slashings:
+
+//   Verify that verify_casper_votes(state, casper_slashing.votes_1).
+//   Verify that verify_casper_votes(state, casper_slashing.votes_2).
+//   Verify that casper_slashing.votes_1.data != casper_slashing.votes_2.data.
+//   Let indices(vote) = vote.aggregate_signature_poc_0_indices +
+//     vote.aggregate_signature_poc_1_indices.
+//   Let intersection = [x for x in indices(casper_slashing.votes_1)
+//     if x in indices(casper_slashing.votes_2)].
+//   Verify that len(intersection) >= 1.
+//   Verify that casper_slashing.votes_1.data.justified_slot + 1 <
+//     casper_slashing.votes_2.data.justified_slot + 1 ==
+//     casper_slashing.votes_2.data.slot < casper_slashing.votes_1.data.slot
+//     or casper_slashing.votes_1.data.slot == casper_slashing.votes_2.data.slot.
+//   For each validator index i in intersection,
+//     if state.validator_registry[i].status does not equal
+//     EXITED_WITH_PENALTY, then run
+//     update_validator_status(state, i, new_status=EXITED_WITH_PENALTY)
+func ProcessCasperSlashings(
+	validatorRegistry []*pb.ValidatorRecord,
+	casperSlashings []*pb.CasperSlashing,
+	currentSlot uint64,
+) ([]*pb.ValidatorRecord, error) {
+	if uint64(len(casperSlashings)) > params.BeaconConfig().MaxCasperSlashings {
+		return nil, fmt.Errorf(
+			"number of casper slashings (%d) exceeds allowed threshold of %d",
+			len(casperSlashings),
+			params.BeaconConfig().MaxCasperSlashings,
+		)
+	}
+	for _, slashing := range casperSlashings {
+		vote1 := slashing.GetVotes_1()
+		vote2 := slashing.GetVotes_2()
+		if !reflect.DeepEqual(vote1.GetData(), vote2.GetData()) {
+			return fmt.Errorf(
+				"casper slashing inner vote data does not match: %v, %v",
+				vote1,
+				vote2,
+			)
+		}
+
+		indices := append()
+	}
+	return nil, nil
 }
