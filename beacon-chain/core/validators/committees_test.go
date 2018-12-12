@@ -42,7 +42,7 @@ func TestExceedingMaxValidatorRegistryFails(t *testing.T) {
 	size := 1<<(params.BeaconConfig().RandBytes*8) - 1
 
 	validators := make([]*pb.ValidatorRecord, size)
-	validator := &pb.ValidatorRecord{Status: pb.ValidatorRecord_active}
+	validator := &pb.ValidatorRecord{Status: pb.ValidatorRecord_ACTIVE}
 	for i := 0; i < size; i++ {
 		validators[i] = validator
 	}

@@ -3,42 +3,42 @@
     {
       "pubkey": "QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFB",
       "balance": "32000000000",
-      "status": "active"
+      "status": "ACTIVE"
     },
     {
       "pubkey": "QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJC",
       "balance": "32000000000",
-      "status": "active"
+      "status": "ACTIVE"
     },
     {
       "pubkey": "Q0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0ND",
       "balance": "32000000000",
-      "status": "active"
+      "status": "ACTIVE"
     },
     {
       "pubkey": "RERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERE",
       "balance": "32000000000",
-      "status": "active"
+      "status": "ACTIVE"
     },
     {
       "pubkey": "RUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVF",
       "balance": "32000000000",
-      "status": "active"
+      "status": "ACTIVE"
     },
     {
       "pubkey": "RkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZG",
       "balance": "32000000000",
-      "status": "active"
+      "status": "ACTIVE"
     },
     {
       "pubkey": "R0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dH",
       "balance": "32000000000",
-      "status": "active"
+      "status": "ACTIVE"
     },
     {
       "pubkey": "SEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhI",
       "balance": "32000000000",
-      "status": "active"
+      "status": "ACTIVE"
     }
   ]
 }
