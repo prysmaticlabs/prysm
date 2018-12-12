@@ -25,7 +25,7 @@ func TestProcessProposerSlashings_ThresholdReached(t *testing.T) {
 		slashings,
 		currentSlot,
 	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received nil", want)
+		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
@@ -50,7 +50,7 @@ func TestProcessProposerSlashings_UnmatchedSlotNumbers(t *testing.T) {
 		slashings,
 		currentSlot,
 	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received nil", want)
+		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
@@ -77,7 +77,7 @@ func TestProcessProposerSlashings_UnmatchedShards(t *testing.T) {
 		slashings,
 		currentSlot,
 	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received nil", want)
+		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
@@ -110,7 +110,7 @@ func TestProcessProposerSlashings_UnmatchedBlockRoots(t *testing.T) {
 		slashings,
 		currentSlot,
 	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received nil", want)
+		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
@@ -119,11 +119,11 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	// registry has been updated.
 	registry := []*pb.ValidatorRecord{
 		{
-			Status:                 pb.ValidatorRecord_EXITED_WITH_PENALTY,
+			Status:                 pb.ValidatorRecord_ACTIVE,
 			LatestStatusChangeSlot: 0,
 		},
 		{
-			Status:                 pb.ValidatorRecord_EXITED_WITH_PENALTY,
+			Status:                 pb.ValidatorRecord_ACTIVE,
 			LatestStatusChangeSlot: 0,
 		},
 	}
@@ -173,7 +173,7 @@ func TestProcessCasperSlashings_ThresholdReached(t *testing.T) {
 		slashings,
 		currentSlot,
 	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received nil", want)
+		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
@@ -209,7 +209,7 @@ func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 		slashings,
 		currentSlot,
 	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received nil", want)
+		t.Errorf("Expected %s, received %v", want, err)
 	}
 
 	// Perform the same check for Votes_2.
@@ -232,7 +232,7 @@ func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 		slashings,
 		currentSlot,
 	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received nil", want)
+		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
@@ -264,7 +264,113 @@ func TestProcessCasperSlashings_UnmatchedAttestations(t *testing.T) {
 		slashings,
 		currentSlot,
 	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received nil", want)
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessCasperSlashings_SlotsInequalities(t *testing.T) {
+	testCases := []struct {
+		att1 *pb.AttestationData
+		att2 *pb.AttestationData
+	}{
+		{
+			// Case 0: Justified slot 1 < justified slot 2 ==
+			// slot 2 < slot 1 should trigger error where left-hand
+			// side is true and right hand side is false and slots
+			// are unequal.
+			att1: &pb.AttestationData{
+				Slot:          4,
+				JustifiedSlot: 4,
+			},
+			att2: &pb.AttestationData{
+				Slot:          5,
+				JustifiedSlot: 5,
+			},
+		},
+		{
+			// Case 2: Justified slot 1 < justified slot 2 ==
+			// slot 2 < slot 1 should trigger error where left-hand
+			// side is false and right hand side is true and slots
+			// are unequal.
+			att1: &pb.AttestationData{
+				Slot:          4,
+				JustifiedSlot: 5,
+			},
+			att2: &pb.AttestationData{
+				Slot:          3,
+				JustifiedSlot: 4,
+			},
+		},
+	}
+	for _, tt := range testCases {
+		slashings := []*pb.CasperSlashing{
+			{
+				Votes_1: &pb.SlashableVoteData{
+					Data: tt.att1,
+				},
+				Votes_2: &pb.SlashableVoteData{
+					Data: tt.att2,
+				},
+			},
+		}
+		registry := []*pb.ValidatorRecord{}
+		currentSlot := uint64(0)
+
+		want := fmt.Sprintf(
+			`
+			expected vote1.JustifiedSlot < vote2.JustifiedSlot == vote2.slot < vote1.slot
+			or vote1.slot == vote2.slot, instead received vote1.JustifiedSlot = %d,
+			vote2.JustifiedSlot = %d, vote1.slot = %d, and vote2.slot = %d
+			`,
+			tt.att1.JustifiedSlot,
+			tt.att2.JustifiedSlot,
+			tt.att1.Slot,
+			tt.att2.Slot,
+		)
+
+		if _, err := ProcessCasperSlashings(
+			registry,
+			slashings,
+			currentSlot,
+		); !strings.Contains(err.Error(), want) {
+			t.Errorf("Expected %s, received %v", want, err)
+		}
+	}
+}
+
+func TestProcessCasperSlashings_EmptyVoteIndexIntersection(t *testing.T) {
+	att1 := &pb.AttestationData{
+		Slot:          5,
+		JustifiedSlot: 5,
+	}
+	att2 := &pb.AttestationData{
+		Slot:          5,
+		JustifiedSlot: 4,
+	}
+	slashings := []*pb.CasperSlashing{
+		{
+			Votes_1: &pb.SlashableVoteData{
+				Data:                           att1,
+				AggregateSignaturePoc_0Indices: []uint32{1, 2},
+				AggregateSignaturePoc_1Indices: []uint32{3, 4},
+			},
+			Votes_2: &pb.SlashableVoteData{
+				Data:                           att2,
+				AggregateSignaturePoc_0Indices: []uint32{5, 6},
+				AggregateSignaturePoc_1Indices: []uint32{7, 8},
+			},
+		},
+	}
+	registry := []*pb.ValidatorRecord{}
+	currentSlot := uint64(0)
+
+	want := "expected intersection of vote indices to be non-empty"
+	if _, err := ProcessCasperSlashings(
+		registry,
+		slashings,
+		currentSlot,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 

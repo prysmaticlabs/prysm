@@ -170,7 +170,7 @@ func verifyCasperSlashing(
 	)
 
 	votes1Attestation := votes1.GetData()
-	votes2Attesation := votes2.GetData()
+	votes2Attestation := votes2.GetData()
 
 	if err := verifyCasperVotes(validatorRegistry, votes1); err != nil {
 		return nil, fmt.Errorf("could not verify casper votes 1: %v", err)
@@ -180,33 +180,32 @@ func verifyCasperSlashing(
 	}
 
 	// Inner attestation data structures for the votes should not be equal.
-	if reflect.DeepEqual(votes1Attestation, votes2Attesation) {
+	if reflect.DeepEqual(votes1Attestation, votes2Attestation) {
 		return nil, fmt.Errorf(
 			"casper slashing inner vote attestation data should not match: %v, %v",
 			votes1Attestation,
-			votes2Attesation,
+			votes2Attestation,
 		)
 	}
 
-	// If justified slot for vote 1 >= justified slot for vote 2 or slots
-	// for both are strictly unequal, the slashing is invalid.
-	voteJustifiedSlotsGreaterThan := votes1Attestation.GetJustifiedSlot()+1 >=
-		votes2Attesation.GetJustifiedSlot()+1
-	slotsGreaterThan := votes1Attestation.GetSlot() >= votes2Attesation.GetSlot()
-	slotsUnequal := votes1Attestation.GetSlot() != votes2Attesation.GetSlot()
+	// Unless vote1.justified_slot < vote2.justified_slot == vote2.slot < vote1.slot or slots
+	// for both are strictly strict equal, the slashing is invalid.
+	voteJustifiedSlotsLessThan := votes1Attestation.GetJustifiedSlot()+1 <
+		votes2Attestation.GetJustifiedSlot()+1
+	slotsLessThan := votes2Attestation.GetSlot() < votes1Attestation.GetSlot()
+	slotsEqual := votes1Attestation.GetSlot() == votes2Attestation.GetSlot()
 
-	// TODO: Think.
-	if (voteJustifiedSlotsGreaterThan == slotsGreaterThan) || slotsUnequal {
+	if !(voteJustifiedSlotsLessThan == slotsLessThan) && !slotsEqual {
 		return nil, fmt.Errorf(
 			`
-			expected vote1.JustifiedSlot < vote2.JustifiedSlot == vote1.slot < vote2.slot
+			expected vote1.JustifiedSlot < vote2.JustifiedSlot == vote2.slot < vote1.slot
 			or vote1.slot == vote2.slot, instead received vote1.JustifiedSlot = %d,
 			vote2.JustifiedSlot = %d, vote1.slot = %d, and vote2.slot = %d
 			`,
 			votes1Attestation.GetJustifiedSlot(),
-			votes2Attesation.GetJustifiedSlot(),
+			votes2Attestation.GetJustifiedSlot(),
 			votes1Attestation.GetSlot(),
-			votes2Attesation.GetSlot(),
+			votes2Attestation.GetSlot(),
 		)
 	}
 
@@ -238,6 +237,7 @@ func verifyCasperVotes(
 			params.BeaconConfig().MaxCasperVotes,
 		)
 	}
+	_ = validatorRegistry
 	// TODO(#781): Implement BLS verify multiple.
 	//  pubs = aggregate_pubkeys for each validator in registry for poc0 and poc1
 	//    indices
@@ -255,7 +255,7 @@ func verifyCasperVotes(
 // Computes intersection of two slices with time
 // complexity of approximately O(n) leveraging a hash map to
 // check for element existence off by a constant factor
-// of hash map efficiency.
+// of underlying hash map efficiency.
 func intersection(a []uint32, b []uint32) []uint32 {
 	set := make([]uint32, 0)
 	hash := make(map[uint32]bool)
