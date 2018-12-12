@@ -151,7 +151,7 @@ func ProcessCasperSlashings(
 			}
 		}
 	}
-	return nil, nil
+	return validatorRegistry, nil
 }
 
 func verifyCasperSlashing(

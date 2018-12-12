@@ -374,6 +374,75 @@ func TestProcessCasperSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 	}
 }
 
+func TestProcessCasperSlashings_AppliesCorrectStatus(t *testing.T) {
+	// We test the case when data is correct and verify the validator
+	// registry has been updated.
+	registry := []*pb.ValidatorRecord{
+		{
+			Status:                 pb.ValidatorRecord_ACTIVE,
+			LatestStatusChangeSlot: 0,
+		},
+		{
+			Status:                 pb.ValidatorRecord_ACTIVE,
+			LatestStatusChangeSlot: 0,
+		},
+	}
+
+	att1 := &pb.AttestationData{
+		Slot:          5,
+		JustifiedSlot: 5,
+	}
+	att2 := &pb.AttestationData{
+		Slot:          5,
+		JustifiedSlot: 4,
+	}
+	slashings := []*pb.CasperSlashing{
+		{
+			Votes_1: &pb.SlashableVoteData{
+				Data:                           att1,
+				AggregateSignaturePoc_0Indices: []uint32{0, 1},
+				AggregateSignaturePoc_1Indices: []uint32{2, 3},
+			},
+			Votes_2: &pb.SlashableVoteData{
+				Data:                           att2,
+				AggregateSignaturePoc_0Indices: []uint32{4, 5},
+				AggregateSignaturePoc_1Indices: []uint32{6, 1},
+			},
+		},
+	}
+
+	currentSlot := uint64(5)
+	newRegistry, err := ProcessCasperSlashings(
+		registry,
+		slashings,
+		currentSlot,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Given the intersection of slashable indices is [1], only validator
+	// at index 1 should be penalized and change Status. We confirm this below.
+	if newRegistry[1].Status != pb.ValidatorRecord_EXITED_WITH_PENALTY {
+		t.Errorf(
+			`
+			Expected validator at index 1's status to change to 
+			EXITED_WITH_PENALTY, received %v instead
+			`,
+			newRegistry[1].Status,
+		)
+	}
+	if newRegistry[0].Status != pb.ValidatorRecord_ACTIVE {
+		t.Errorf(
+			`
+			Expected validator at index 0's status to remain 
+			ACTIVE, received %v instead
+			`,
+			newRegistry[1].Status,
+		)
+	}
+}
+
 func TestIntersection(t *testing.T) {
 	testCases := []struct {
 		setA []uint32
