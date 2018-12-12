@@ -481,3 +481,101 @@ func TestDeepCopyValidatorRegistry(t *testing.T) {
 	}
 
 }
+
+func TestShardAndCommitteesAtSlot_OK(t *testing.T) {
+	if params.BeaconConfig().EpochLength != 64 {
+		t.Errorf("EpochLength should be 64 for these tests to pass")
+	}
+
+	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
+			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{Shard: i},
+			},
+		})
+	}
+
+	state := &pb.BeaconState{
+		ShardAndCommitteesAtSlots: shardAndCommittees,
+	}
+
+	tests := []struct {
+		slot          uint64
+		stateSlot     uint64
+		expectedShard uint64
+	}{
+		{
+			slot:          0,
+			stateSlot:     0,
+			expectedShard: 0,
+		},
+		{
+			slot:          1,
+			stateSlot:     5,
+			expectedShard: 1,
+		},
+		{
+			stateSlot:     1024,
+			slot:          1024,
+			expectedShard: 64 - 0,
+		}, {
+			stateSlot:     2048,
+			slot:          2000,
+			expectedShard: 64 - 48,
+		}, {
+			stateSlot:     2048,
+			slot:          2058,
+			expectedShard: 64 + 10,
+		},
+	}
+
+	for _, tt := range tests {
+		state.Slot = tt.stateSlot
+
+		result, err := ShardAndCommitteesAtSlot(state, tt.slot)
+		if err != nil {
+			t.Errorf("Failed to get shard and committees at slot: %v", err)
+		}
+
+		if result.ArrayShardAndCommittee[0].Shard != tt.expectedShard {
+			t.Errorf(
+				"Result shard was an unexpected value. Wanted %d, got %d",
+				tt.expectedShard,
+				result.ArrayShardAndCommittee[0].Shard,
+			)
+		}
+	}
+}
+
+func TestShardAndCommitteesAtSlot_OutOfBounds(t *testing.T) {
+	if params.BeaconConfig().EpochLength != 64 {
+		t.Errorf("EpochLength should be 64 for these tests to pass")
+	}
+
+	state := &pb.BeaconState{
+		Slot: params.BeaconConfig().EpochLength,
+	}
+
+	tests := []struct {
+		expectedErr string
+		slot        uint64
+	}{
+		{
+			expectedErr: "slot 5000 out of bounds: 0 <= slot < 128",
+			slot:        5000,
+		},
+		{
+			expectedErr: "slot 129 out of bounds: 0 <= slot < 128",
+			slot:        129,
+		},
+	}
+
+	for _, tt := range tests {
+		_, err := ShardAndCommitteesAtSlot(state, tt.slot)
+		if err != nil && err.Error() != tt.expectedErr {
+			t.Fatalf("Expected error \"%s\" got \"%v\"", tt.expectedErr, err)
+		}
+
+	}
+}
