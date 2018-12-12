@@ -73,6 +73,25 @@ func IsValidBlock(
 	return nil
 }
 
+func IsValidBlockNew(block *types.Block,
+	beaconState *types.BeaconState,
+	parentSlot uint64,
+	genesisTime time.Time,
+	isInChain func(blockHash [32]byte) bool) {
+	_, err := block.Hash()
+	if err != nil {
+		return fmt.Errorf("could not hash incoming block: %v", err)
+	}
+
+	if block.SlotNumber() == 0 {
+		return errors.New("cannot process a genesis block: received block with slot 0")
+	}
+
+	if !block.IsSlotValid(genesisTime) {
+		return fmt.Errorf("slot of block is too high: %d", block.SlotNumber())
+	}
+}
+
 // doesParentProposerExist checks that the proposer from the parent slot is included in the first
 // aggregated attestation object
 func doesParentProposerExist(block *types.Block, beaconState *types.BeaconState, parentSlot uint64) error {

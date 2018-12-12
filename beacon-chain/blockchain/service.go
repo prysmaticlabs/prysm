@@ -39,7 +39,7 @@ type ChainService struct {
 	unfinalizedBlocks  map[[32]byte]*types.BeaconState
 	enablePOWChain     bool
 	slotTicker         slotticker.SlotTicker
-	currentSlot uint64
+	currentSlot        uint64
 }
 
 // Config options for the service.
@@ -83,13 +83,13 @@ func (c *ChainService) Start() {
 	}
 
 	c.slotTicker = slotticker.GetSlotTicker(c.genesisTime, params.BeaconConfig().SlotDuration)
-	c.currentSlot = slotticker.CurrentSlot(c.genesisTime,params.BeaconConfig().SlotDuration,time.Since)
+	c.currentSlot = slotticker.CurrentSlot(c.genesisTime, params.BeaconConfig().SlotDuration, time.Since)
 
 	// TODO(#675): Initialize unfinalizedBlocks map from disk in case this
 	// is a beacon node restarting.
 	go c.updateHead(c.processedBlockChan)
 	go c.blockProcessing(c.processedBlockChan)
-	go c.slotProcessing()
+	go c.slotTracker()
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.
@@ -216,7 +216,6 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 	}
 }
 
-// DEPRECATED: Will be replaced by slot processing
 func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 	subBlock := c.incomingBlockFeed.Subscribe(c.incomingBlockChan)
 	defer subBlock.Unsubscribe()
@@ -242,6 +241,7 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 	}
 }
 
+// DEPRECATED: Will be replaced by new block processing method
 func (c *ChainService) processBlock(block *types.Block) error {
 	blockHash, err := block.Hash()
 	if err != nil {
@@ -307,6 +307,32 @@ func (c *ChainService) processBlock(block *types.Block) error {
 	return nil
 }
 
+func (c *ChainService) processBlockNew(block *types.Block) error {
+	blockHash, err := block.Hash()
+	if err != nil {
+		return fmt.Errorf("failed to get hash of block: %v", err)
+	}
+
+	if c.enablePOWChain && !c.doesPoWBlockExist(block) {
+		return errors.New("proof-of-Work chain reference in block does not exist")
+	}
+
+	parent, err := c.beaconDB.GetBlock(block.ParentHash())
+	if err != nil {
+		return fmt.Errorf("could not get parent block: %v", err)
+	}
+	if parent == nil {
+		return fmt.Errorf("unprocessed parent block as it points to nil parent: %#x", block.ParentHash())
+	}
+
+	beaconState, err := c.beaconDB.GetState()
+	if err != nil {
+		return fmt.Errorf("failed to get beacon state: %v", err)
+	}
+
+	return nil
+}
+
 func (c *ChainService) executeStateTransition(
 	beaconState *types.BeaconState,
 	block *types.Block,
@@ -325,6 +351,10 @@ func (c *ChainService) executeStateTransition(
 		log.WithField("slotNumber", block.SlotNumber()).Info("Validator set rotation occurred")
 	}
 	return newState, nil
+}
+
+func (c *ChainService) executeSlotTransition() {
+
 }
 
 func (c *ChainService) calculateNewBlockVotes(block *types.Block, beaconState *types.BeaconState) error {
@@ -405,7 +435,7 @@ func (c *ChainService) calculateNewBlockVotes(block *types.Block, beaconState *t
 	return nil
 }
 
-func (c *ChainService) slotProcessing() {
+func (c *ChainService) slotTracker() {
 
 	defer c.slotTicker.Done()
 
@@ -414,7 +444,8 @@ func (c *ChainService) slotProcessing() {
 		case <-c.ctx.Done():
 			log.Debug("Chain service context closed, exiting goroutine")
 			return
-		case slot := <- c.slotTicker.C()
+		case slot := <-c.slotTicker.C():
+			c.currentSlot = slot
 
 		}
 	}
