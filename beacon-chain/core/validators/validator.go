@@ -288,10 +288,10 @@ func AddPendingValidator(
 func ExitValidator(
 	validator *pb.ValidatorRecord,
 	currentSlot uint64,
-	panalize bool) *pb.ValidatorRecord {
+	penalize bool) *pb.ValidatorRecord {
 	// TODO(#614): Add validator set change
 	validator.LatestStatusChangeSlot = currentSlot
-	if panalize {
+	if penalize {
 		validator.Status = pb.ValidatorRecord_EXITED_WITH_PENALTY
 	} else {
 		validator.Status = pb.ValidatorRecord_ACTIVE_PENDING_EXIT
