@@ -152,30 +152,56 @@ func ProcessCasperSlashings(
 }
 
 func verifyCasperSlashing(slashing *pb.CasperSlashing) ([]uint32, error) {
-	vote1 := slashing.GetVotes_1()
-	vote2 := slashing.GetVotes_2()
-	vote1Indices := append(
-		vote1.GetAggregateSignaturePoc_0Indices(),
-		vote1.GetAggregateSignaturePoc_1Indices()...,
+	votes1 := slashing.GetVotes_1()
+	votes2 := slashing.GetVotes_2()
+	votes1Indices := append(
+		votes1.GetAggregateSignaturePoc_0Indices(),
+		votes1.GetAggregateSignaturePoc_1Indices()...,
 	)
-	vote2Indices := append(
-		vote2.GetAggregateSignaturePoc_0Indices(),
-		vote2.GetAggregateSignaturePoc_1Indices()...,
+	votes2Indices := append(
+		votes2.GetAggregateSignaturePoc_0Indices(),
+		votes2.GetAggregateSignaturePoc_1Indices()...,
 	)
+
+	votes1Attestation := votes1.GetData()
+	votes2Attesation := votes2.GetData()
 
 	// TODO:
 	// Verify that verify_casper_votes(state, casper_slashing.votes_1).
 	// Verify that verify_casper_votes(state, casper_slashing.votes_2).
 
-	if !reflect.DeepEqual(vote1.GetData(), vote2.GetData()) {
+	if !reflect.DeepEqual(votes1Attestation, votes2Attesation) {
 		return nil, fmt.Errorf(
 			"casper slashing inner vote data does not match: %v, %v",
-			vote1,
-			vote2,
+			votes1Attestation,
+			votes2Attesation,
 		)
 	}
 
-	indicesIntersection := intersection(vote1Indices, vote2Indices)
+	// If justified slot for vote 1 >= justified slot for vote 2 or slots
+	// for both are strictly unequal, the slashing is invalid.
+	voteJustifiedSlotsGreaterThan := votes1Attestation.GetJustifiedSlot()+1 >=
+		votes2Attesation.GetJustifiedSlot()+1
+	slotsGreaterThan := votes1Attestation.GetSlot() >= votes2Attesation.GetSlot()
+	slotInequality := votes1Attestation.GetSlot() != votes2Attesation.GetSlot()
+
+	if (voteJustifiedSlotsGreaterThan == slotsGreaterThan) || slotInequality {
+		return nil, fmt.Errorf(
+			`
+			expected vote1.JustifiedSlot < vote2.JustifiedSlot == vote1.slot < vote2.slot
+			or vote1.slot == vote2.slot, instead received vote1.JustifiedSlot = %d,
+			vote2.JustifiedSlot = %d, vote1.slot = %d, and vote2.slot = %d
+			`,
+			votes1Attestation.GetJustifiedSlot(),
+			votes2Attesation.GetJustifiedSlot(),
+			votes1Attestation.GetSlot(),
+			votes2Attesation.GetSlot(),
+		)
+	}
+
+	// Obtain the intersection of validator indices between
+	// vote1 and vote2's aggregate proof of custody indices.
+	indicesIntersection := intersection(votes1Indices, votes2Indices)
 	if len(indicesIntersection) < 1 {
 		return nil, fmt.Errorf(
 			"expected intersection of vote indices to be non-empty: %v",
