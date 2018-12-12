@@ -17,6 +17,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/slotticker"
 	"github.com/sirupsen/logrus"
 )
 
@@ -38,6 +39,8 @@ type ChainService struct {
 	unProcessedBlocks  map[uint64]*pb.BeaconBlock
 	unfinalizedBlocks  map[[32]byte]*pb.BeaconState
 	enablePOWChain     bool
+	slotTicker         slotticker.SlotTicker
+	currentSlot        uint64
 }
 
 // Config options for the service.
@@ -80,6 +83,9 @@ func (c *ChainService) Start() {
 		log.Fatalf("Unable to retrieve genesis time, therefore blockchain service cannot be started %v", err)
 		return
 	}
+
+	c.slotTicker = slotticker.GetSlotTicker(c.genesisTime, params.BeaconConfig().SlotDuration)
+	c.currentSlot = slotticker.CurrentSlot(c.genesisTime, params.BeaconConfig().SlotDuration, time.Since)
 
 	// TODO(#675): Initialize unfinalizedBlocks map from disk in case this
 	// is a beacon node restarting.
