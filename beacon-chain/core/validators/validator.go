@@ -413,8 +413,8 @@ func CheckValidatorMinDeposit(validatorSet []*pb.ValidatorRecord, currentSlot ui
 //     """
 //     return min(validator.balance, MAX_DEPOSIT)
 func EffectiveBalance(validator *pb.ValidatorRecord) uint64 {
-	if validator.Balance > params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei {
-		return params.BeaconConfig().MaxDeposit
+	if validator.Balance > params.BeaconConfig().MaxDeposit*params.BeaconConfig().Gwei {
+		return params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei
 	}
 	return validator.Balance
 }
