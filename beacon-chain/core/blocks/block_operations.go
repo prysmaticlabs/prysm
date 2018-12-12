@@ -45,7 +45,7 @@ func ProcessProposerSlashings(
 		)
 	}
 	for idx, slashing := range proposerSlashings {
-		if err := verifyProposerSlashing(validatorRegistry, slashing, currentSlot); err != nil {
+		if err := verifyProposerSlashing(slashing); err != nil {
 			return nil, fmt.Errorf("could not verify proposer slashing #%d: %v", idx, err)
 		}
 		proposer := validatorRegistry[slashing.GetProposerIndex()]
@@ -63,9 +63,7 @@ func ProcessProposerSlashings(
 }
 
 func verifyProposerSlashing(
-	validatorRegistry []*pb.ValidatorRecord,
 	slashing *pb.ProposerSlashing,
-	currentSlot uint64,
 ) error {
 	// TODO(#781): Verify BLS according to the specification in the "Proposer Slashings"
 	// section of block operations.
