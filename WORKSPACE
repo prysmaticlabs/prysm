@@ -501,7 +501,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "7da8ea5c81829e397bdf930c5d8ba4b703616f33",
+    commit = "b05ddf57801d2239d6ab0ee35f9d981e0420f4ac",
     importpath = "golang.org/x/sys",
 )
 
@@ -899,7 +899,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aws_aws_sdk_go",
-    tag = "v1.16.0",
+    tag = "v1.16.3",
     importpath = "github.com/aws/aws-sdk-go",
 )
 
