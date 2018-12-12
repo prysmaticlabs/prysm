@@ -8,8 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestIncorrectProcessProposerSlashings(t *testing.T) {
-	// We test exceeding the proposer slashing threshold.
+func TestProcessProposerSlashings_ThresholdReached(t *testing.T) {
 	slashings := make([]*pb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings+1)
 	registry := []*pb.ValidatorRecord{}
 	currentSlot := uint64(0)
@@ -22,10 +21,12 @@ func TestIncorrectProcessProposerSlashings(t *testing.T) {
 		want := "number of proposer slashings exceeds threshold"
 		t.Errorf("Expected %s, received nil", want)
 	}
-	currentSlot++
+}
 
-	// We now test the case with unmatched slot numbers.
-	slashings = []*pb.ProposerSlashing{
+func TestProcessProposerSlashings_UnmatchedSlotNumbers(t *testing.T) {
+	registry := []*pb.ValidatorRecord{}
+	currentSlot := uint64(0)
+	slashings := []*pb.ProposerSlashing{
 		{
 			ProposerIndex: 0,
 			ProposalData_1: &pb.ProposalSignedData{
@@ -45,10 +46,12 @@ func TestIncorrectProcessProposerSlashings(t *testing.T) {
 		want := "slashing proposal data slots do not match: 1, 0"
 		t.Errorf("Expected %s, received nil", want)
 	}
-	currentSlot++
+}
 
-	// We now test the case with unmatched shard IDs.
-	slashings = []*pb.ProposerSlashing{
+func TestProcessProposerSlashings_UnmatchedShards(t *testing.T) {
+	registry := []*pb.ValidatorRecord{}
+	currentSlot := uint64(0)
+	slashings := []*pb.ProposerSlashing{
 		{
 			ProposerIndex: 0,
 			ProposalData_1: &pb.ProposalSignedData{
@@ -70,10 +73,12 @@ func TestIncorrectProcessProposerSlashings(t *testing.T) {
 		want := "slashing proposal data shards do not match: 0, 1"
 		t.Errorf("Expected %s, received nil", want)
 	}
-	currentSlot++
+}
 
-	// We now test the case with unmatched block hashes.
-	slashings = []*pb.ProposerSlashing{
+func TestProcessProposerSlashings_UnmatchedBlockHashes(t *testing.T) {
+	registry := []*pb.ValidatorRecord{}
+	currentSlot := uint64(0)
+	slashings := []*pb.ProposerSlashing{
 		{
 			ProposerIndex: 0,
 			ProposalData_1: &pb.ProposalSignedData{
@@ -102,7 +107,7 @@ func TestIncorrectProcessProposerSlashings(t *testing.T) {
 	}
 }
 
-func TestCorrectlyProcessProposerSlashings(t *testing.T) {
+func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
 	registry := []*pb.ValidatorRecord{
