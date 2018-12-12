@@ -164,6 +164,56 @@ func (b *BeaconState) ValidatorRegistryLastChangeSlot() uint64 {
 	return b.data.ValidatorRegistryLastChangeSlot
 }
 
+func (b *BeaconState) ValidatorRegistryExitCount() uint64 {
+	return b.data.ValidatorRegistryExitCount
+}
+
+func (b *BeaconState) ValidatorRegistryDeltaChainTipHash32() []byte {
+	return b.data.ValidatorRegistryDeltaChainTipHash32
+}
+
+func (b *BeaconState) NextSeedHash() [32]byte {
+	var h [32]byte
+	copy(h[:], b.data.NextSeedHash32)
+	return h
+}
+
+func (b *BeaconState) PersistentCommittees() []*pbcomm.Uint32List {
+	return b.data.PersistentCommittees
+}
+
+func (b *BeaconState) PersistentCommitteeReassignments() []*pb.ShardReassignmentRecord {
+	return b.data.PersistentCommitteeReassignments
+}
+
+func (b *BeaconState) PreviousJustifiedSlot() uint64 {
+	return b.data.PreviousJustifiedSlot
+}
+
+func (b *BeaconState) SetValidatorRegistryExitCount(count uint64) {
+	b.data.ValidatorRegistryExitCount = count
+}
+
+func (b *BeaconState) SetValidatorRegistryDeltaChainTipHash32(chainTipHash []byte) {
+	b.data.ValidatorRegistryDeltaChainTipHash32 = chainTipHash
+}
+
+func (b *BeaconState) SetNextSeedHash(hash [32]byte) {
+	b.data.NextSeedHash32 = hash[:]
+}
+
+func (b *BeaconState) SetPersistentCommittees(committees []*pbcomm.Uint32List) {
+	b.data.PersistentCommittees = committees
+}
+
+func (b *BeaconState) SetPersistentCommitteeReassignments(assingments []*pb.ShardReassignmentRecord) {
+	b.data.PersistentCommitteeReassignments = assingments
+}
+
+func (b *BeaconState) SetPreviousJustifiedSlot(slot uint64) {
+	b.data.PreviousJustifiedSlot = slot
+}
+
 // IsValidatorSetChange checks if a validator set change transition can be processed. At that point,
 // validator shuffle will occur.
 func (b *BeaconState) IsValidatorSetChange(slotNumber uint64) bool {
