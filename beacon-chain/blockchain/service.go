@@ -251,7 +251,6 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *pb.BeaconBlock) {
 			}
 
 			if currentSlot+1 == block.GetSlot() {
-
 				if err := c.receiveBlock(block); err != nil {
 					log.Error(err)
 					processedBlock <- nil
