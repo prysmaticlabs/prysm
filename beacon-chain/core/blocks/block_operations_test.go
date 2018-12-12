@@ -153,3 +153,39 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		t.Errorf("Proposer with index 1 did not ExitWithPenalty in validator registry: %v", registry[1].Status)
 	}
 }
+
+func TestIntersection(t *testing.T) {
+	testCases := []struct {
+		setA []uint32
+		setB []uint32
+		out  []uint32
+	}{
+		{[]uint32{2, 3, 5}, []uint32{3}, []uint32{3}},
+		{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
+		{[]uint32{2, 3, 5}, []uint32{}, []uint32{}},
+		{[]uint32{}, []uint32{2, 3, 5}, []uint32{}},
+		{[]uint32{}, []uint32{}, []uint32{}},
+		{[]uint32{1}, []uint32{1}, []uint32{1}},
+	}
+	for _, tt := range testCases {
+		result := intersection(tt.setA, tt.setB)
+		if !testEq(result, tt.out) {
+			t.Errorf("got %d, want %d", result, tt.out)
+		}
+	}
+}
+
+func testEq(a, b []uint32) bool {
+	if (a == nil) != (b == nil) {
+		return false
+	}
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}

@@ -179,9 +179,10 @@ func verifyCasperSlashing(
 		return nil, fmt.Errorf("could not verify casper votes 2: %v", err)
 	}
 
-	if !reflect.DeepEqual(votes1Attestation, votes2Attesation) {
+	// Inner attestation data structures for the votes should not be equal.
+	if reflect.DeepEqual(votes1Attestation, votes2Attesation) {
 		return nil, fmt.Errorf(
-			"casper slashing inner vote data does not match: %v, %v",
+			"casper slashing inner vote attestation data should not match: %v, %v",
 			votes1Attestation,
 			votes2Attesation,
 		)
@@ -251,7 +252,7 @@ func verifyCasperVotes(
 	return nil
 }
 
-// Computes intersection of two sets with time
+// Computes intersection of two slices with time
 // complexity of approximately O(n) leveraging a hash map to
 // check for element existence off by a constant factor
 // of hash map efficiency.
