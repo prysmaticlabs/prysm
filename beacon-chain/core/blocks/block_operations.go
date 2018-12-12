@@ -73,16 +73,16 @@ func verifyProposerSlashing(
 	slot2 := slashing.GetProposalData_2().GetSlot()
 	shard1 := slashing.GetProposalData_1().GetShard()
 	shard2 := slashing.GetProposalData_2().GetShard()
-	hash1 := slashing.GetProposalData_1().GetBlockHash32()
-	hash2 := slashing.GetProposalData_2().GetBlockHash32()
+	root1 := slashing.GetProposalData_1().GetBlockRoot()
+	root2 := slashing.GetProposalData_2().GetBlockRoot()
 	if slot1 != slot2 {
 		return fmt.Errorf("slashing proposal data slots do not match: %d, %d", slot1, slot2)
 	}
 	if shard1 != shard2 {
 		return fmt.Errorf("slashing proposal data shards do not match: %d, %d", shard1, shard2)
 	}
-	if !bytes.Equal(hash1, hash2) {
-		return fmt.Errorf("slashing proposal data block hashes do not match: %#x, %#x", hash1, hash2)
+	if !bytes.Equal(root1, root2) {
+		return fmt.Errorf("slashing proposal data block roots do not match: %#x, %#x", root1, root2)
 	}
 	return nil
 }

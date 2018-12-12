@@ -18,7 +18,11 @@ func TestProcessProposerSlashings_ThresholdReached(t *testing.T) {
 		slashings,
 		currentSlot,
 	); err == nil {
-		want := "number of proposer slashings exceeds threshold"
+		want := fmt.Sprintf(
+			"number of proposer slashings (%d) exceeds allowed threshold of %d",
+			params.BeaconConfig().MaxProposerSlashings+1,
+			params.BeaconConfig().MaxProposerSlashings,
+		)
 		t.Errorf("Expected %s, received nil", want)
 	}
 }
@@ -75,21 +79,21 @@ func TestProcessProposerSlashings_UnmatchedShards(t *testing.T) {
 	}
 }
 
-func TestProcessProposerSlashings_UnmatchedBlockHashes(t *testing.T) {
+func TestProcessProposerSlashings_UnmatchedBlockRoots(t *testing.T) {
 	registry := []*pb.ValidatorRecord{}
 	currentSlot := uint64(0)
 	slashings := []*pb.ProposerSlashing{
 		{
 			ProposerIndex: 0,
 			ProposalData_1: &pb.ProposalSignedData{
-				Slot:        1,
-				Shard:       0,
-				BlockHash32: []byte{0, 1, 0},
+				Slot:      1,
+				Shard:     0,
+				BlockRoot: []byte{0, 1, 0},
 			},
 			ProposalData_2: &pb.ProposalSignedData{
-				Slot:        1,
-				Shard:       0,
-				BlockHash32: []byte{1, 1, 0},
+				Slot:      1,
+				Shard:     0,
+				BlockRoot: []byte{1, 1, 0},
 			},
 		},
 	}
@@ -100,7 +104,7 @@ func TestProcessProposerSlashings_UnmatchedBlockHashes(t *testing.T) {
 		currentSlot,
 	); err == nil {
 		want := fmt.Sprintf(
-			"slashing proposal data block hashes do not match: %x, %x",
+			"slashing proposal data block roots do not match: %x, %x",
 			[]byte{0, 1, 0}, []byte{1, 1, 0},
 		)
 		t.Errorf("Expected %s, received nil", want)
@@ -124,14 +128,14 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		{
 			ProposerIndex: 1,
 			ProposalData_1: &pb.ProposalSignedData{
-				Slot:        1,
-				Shard:       1,
-				BlockHash32: []byte{0, 1, 0},
+				Slot:      1,
+				Shard:     1,
+				BlockRoot: []byte{0, 1, 0},
 			},
 			ProposalData_2: &pb.ProposalSignedData{
-				Slot:        1,
-				Shard:       1,
-				BlockHash32: []byte{0, 1, 0},
+				Slot:      1,
+				Shard:     1,
+				BlockRoot: []byte{0, 1, 0},
 			},
 		},
 	}
