@@ -154,6 +154,25 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 }
 
+func TestProcessCasperSlashings_ThresholdReached(t *testing.T) {
+	slashings := make([]*pb.CasperSlashing, params.BeaconConfig().MaxCasperSlashings+1)
+	registry := []*pb.ValidatorRecord{}
+	currentSlot := uint64(0)
+
+	if _, err := ProcessCasperSlashings(
+		registry,
+		slashings,
+		currentSlot,
+	); err == nil {
+		want := fmt.Sprintf(
+			"number of casper slashings (%d) exceeds allowed threshold of %d",
+			params.BeaconConfig().MaxCasperSlashings+1,
+			params.BeaconConfig().MaxCasperSlashings,
+		)
+		t.Errorf("Expected %s, received nil", want)
+	}
+}
+
 func TestIntersection(t *testing.T) {
 	testCases := []struct {
 		setA []uint32
