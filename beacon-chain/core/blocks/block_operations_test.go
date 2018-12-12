@@ -213,6 +213,38 @@ func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 	}
 }
 
+func TestProcessCasperSlashings_UnmatchedAttestations(t *testing.T) {
+	att1 := &pb.AttestationData{
+		Slot: 5,
+	}
+	slashings := []*pb.CasperSlashing{
+		{
+			Votes_1: &pb.SlashableVoteData{
+				Data: att1,
+			},
+			Votes_2: &pb.SlashableVoteData{
+				Data: att1,
+			},
+		},
+	}
+	registry := []*pb.ValidatorRecord{}
+	currentSlot := uint64(0)
+
+	want := fmt.Sprintf(
+		"casper slashing inner vote attestation data should not match: %v, %v",
+		att1,
+		att1,
+	)
+
+	if _, err := ProcessCasperSlashings(
+		registry,
+		slashings,
+		currentSlot,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received nil", want)
+	}
+}
+
 func TestIntersection(t *testing.T) {
 	testCases := []struct {
 		setA []uint32
