@@ -29,7 +29,7 @@ message BeaconState {
   // Recent state [3001-4000]
   repeated CrosslinkRecord latest_crosslinks = 3001;
   uint64 last_state_recalculation_slot = 3002;
-  repeated bytes latest_block_hash32s = 3003;
+  repeated bytes latest_block_root_hash32s = 3003;
   repeated uint64 latest_penalized_exit_balances = 3004;
   repeated PendingAttestationRecord latest_attestations = 3005;
 
@@ -148,10 +148,7 @@ message ShardAndCommittee {
 
 message BeaconBlock {
   uint64 slot = 1;
-  // Ancestor hashes represent a skip list of ancestor beacon block hashes.
-  // i'th item is the most recent ancestor whose slot is a multiple of 2^i 
-  // for i in the range of 0 to 31.
-  repeated bytes ancestor_hash32s = 2;
+  bytes parent_root_hash32 = 2;
   bytes state_root_hash32 = 3;
   bytes randao_reveal_hash32 = 4;
   bytes candidate_pow_receipt_root_hash32 = 5;

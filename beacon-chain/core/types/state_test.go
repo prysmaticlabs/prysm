@@ -27,18 +27,18 @@ func TestGenesisState_HashEquality(t *testing.T) {
 
 func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
 	s, _ := NewGenesisBeaconState(nil)
-	want, got := len(s.data.LatestBlockHash32S), 2*int(params.BeaconConfig().CycleLength)
+	want, got := len(s.data.LatestBlockRootHash32S), 2*int(params.BeaconConfig().CycleLength)
 	if want != got {
 		t.Errorf("Wrong number of recent block hashes. Got: %d Want: %d", got, want)
 	}
 
-	want = cap(s.data.LatestBlockHash32S)
+	want = cap(s.data.LatestBlockRootHash32S)
 	if want != got {
 		t.Errorf("The slice underlying array capacity is wrong. Got: %d Want: %d", got, want)
 	}
 
 	zero := make([]byte, 0, 32)
-	for _, h := range s.data.LatestBlockHash32S {
+	for _, h := range s.data.LatestBlockRootHash32S {
 		if !bytes.Equal(h, zero) {
 			t.Errorf("Unexpected non-zero hash data: %v", h)
 		}
@@ -64,11 +64,11 @@ func TestCopyState(t *testing.T) {
 		)
 	}
 
-	state1.data.LatestBlockHash32S = [][]byte{{'A'}}
-	if len(state1.LatestBlockHashes()) == len(state2.LatestBlockHashes()) {
+	state1.data.LatestBlockRootHash32S = [][]byte{{'A'}}
+	if len(state1.LatestBlockRootHashes32()) == len(state2.LatestBlockRootHashes32()) {
 		t.Fatalf("The LatestBlockHashes should not equal each other %d, %d",
-			len(state1.LatestBlockHashes()),
-			len(state2.LatestBlockHashes()),
+			len(state1.LatestBlockRootHashes32()),
+			len(state2.LatestBlockRootHashes32()),
 		)
 	}
 
@@ -125,8 +125,8 @@ func TestUpdateAttestationsAfterRecalc(t *testing.T) {
 
 func TestUpdateLatestBlockHashes(t *testing.T) {
 	block := NewBlock(&pb.BeaconBlock{
-		Slot:            10,
-		AncestorHash32S: [][]byte{{'A'}},
+		Slot:             10,
+		ParentRootHash32: []byte{'A'},
 	})
 
 	recentBlockHashes := [][]byte{}
@@ -135,7 +135,7 @@ func TestUpdateLatestBlockHashes(t *testing.T) {
 	}
 
 	state := NewBeaconState(&pb.BeaconState{
-		LatestBlockHash32S: recentBlockHashes,
+		LatestBlockRootHash32S: recentBlockHashes,
 	})
 
 	updated, err := state.CalculateNewBlockHashes(block, 0)
@@ -152,8 +152,8 @@ func TestUpdateLatestBlockHashes(t *testing.T) {
 			if !areBytesEqual(updated[i], []byte{0}) {
 				t.Fatalf("update failed: expected %#x got %#x", []byte{0}, updated[i])
 			}
-		} else if !areBytesEqual(updated[i], block.data.AncestorHash32S[0]) {
-			t.Fatalf("update failed: expected %#x got %#x", block.data.AncestorHash32S[:], updated[i])
+		} else if !areBytesEqual(updated[i], block.data.ParentRootHash32) {
+			t.Fatalf("update failed: expected %#x got %#x", block.data.ParentRootHash32, updated[i])
 		}
 	}
 }
@@ -167,24 +167,24 @@ func TestCalculateNewBlockHashes_DoesNotMutateData(t *testing.T) {
 	}
 
 	s, _ := NewGenesisBeaconState(nil)
-	copy(s.data.LatestBlockHash32S, interestingData)
+	copy(s.data.LatestBlockRootHash32S, interestingData)
 	original := make([][]byte, 2*params.BeaconConfig().CycleLength)
-	copy(original, s.data.LatestBlockHash32S)
+	copy(original, s.data.LatestBlockRootHash32S)
 
-	if !reflect.DeepEqual(s.data.LatestBlockHash32S, original) {
+	if !reflect.DeepEqual(s.data.LatestBlockRootHash32S, original) {
 		t.Fatal("setup data should be equal!")
 	}
 
 	block := &Block{
 		data: &pb.BeaconBlock{
-			Slot:            2,
-			AncestorHash32S: [][]byte{{}},
+			Slot:             2,
+			ParentRootHash32: []byte{},
 		},
 	}
 
 	result, _ := s.CalculateNewBlockHashes(block, 0 /*parentSlot*/)
 
-	if !reflect.DeepEqual(s.data.LatestBlockHash32S, original) {
+	if !reflect.DeepEqual(s.data.LatestBlockRootHash32S, original) {
 		t.Error("data has mutated from the original")
 	}
 
@@ -229,7 +229,7 @@ func TestGetSignedParentHashes(t *testing.T) {
 	blockHashes[9] = createHashFromByte('I')
 	blockHashes[10] = createHashFromByte('J')
 
-	state := NewBeaconState(&pb.BeaconState{LatestBlockHash32S: blockHashes})
+	state := NewBeaconState(&pb.BeaconState{LatestBlockRootHash32S: blockHashes})
 
 	b := NewBlock(&pb.BeaconBlock{Slot: 11})
 
@@ -272,7 +272,7 @@ func TestGetSignedParentHashesIndexFail(t *testing.T) {
 	blockHashes[6] = createHashFromByte('F')
 	blockHashes[7] = createHashFromByte('G')
 
-	state := NewBeaconState(&pb.BeaconState{LatestBlockHash32S: blockHashes})
+	state := NewBeaconState(&pb.BeaconState{LatestBlockRootHash32S: blockHashes})
 
 	b := NewBlock(&pb.BeaconBlock{Slot: 8})
 	a := &pb.AggregatedAttestation{
