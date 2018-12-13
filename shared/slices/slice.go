@@ -1,6 +1,6 @@
 package slices
 
-// Computes intersection of two uint32 slices with time
+// Intersection of two uint32 slices with time
 // complexity of approximately O(n) leveraging a map to
 // check for element existence off by a constant factor
 // of underlying map efficiency.
