@@ -20,11 +20,14 @@ type ValidatorSetDeltaFlags int
 // BeaconChainConfig contains configs for node to participate in beacon chain.
 type BeaconChainConfig struct {
 	MaxProposerSlashings                    uint64         // MaxProposerSlashing defines the maximum number of slashings of proposers possible in a block.
+	MaxCasperSlashings                      uint64         // MaxCasperSlashings defines the maximum number of casper FFG slashings possible in a block.
+	MaxCasperVotes                          uint64         // MaxCasperVotes defines the maximum number of casper FFG votes possible in a block.
 	ShardCount                              uint64         // ShardCount is the fixed number of shards in Ethereum 2.0.
-	DepositSize                             uint64         // DepositSize is how much a validator has deposited in Eth.
+	MaxDeposit                              uint64         // MaxDeposit is the max balance a validator can have at stake.
 	MinTopUpSize                            uint64         // MinTopUpSize is the minimal amount of Ether a validator can top up.
 	MinOnlineDepositSize                    uint64         // MinOnlineDepositSize is the minimal amount of Ether a validator needs to participate.
 	Gwei                                    uint64         // Gwei is the denomination of Gwei in Ether.
+	MaxDepositInGwei                        uint64         // MaxDepositInGwei is the max balance in Gwei a validator can have at stake.
 	DepositContractAddress                  common.Address // DepositContractAddress is the address of validator registration contract in PoW chain.
 	DepositsForChainStart                   uint64         // DepositsForChainStart defines how many deposits needed to start off beacon chain.
 	TargetCommitteeSize                     uint64         // TargetCommitteeSize is the minimal number of validator needs to be in a committee.
@@ -63,11 +66,14 @@ type ShardChainConfig struct {
 
 var defaultBeaconConfig = &BeaconChainConfig{
 	MaxProposerSlashings:          16,
+	MaxCasperSlashings:            16,
+	MaxCasperVotes:                1024,
 	ShardCount:                    1024,
-	DepositSize:                   32,
+	MaxDeposit:                    32,
 	MinTopUpSize:                  1,
 	MinOnlineDepositSize:          16,
 	Gwei:                          1e9,
+	MaxDepositInGwei:              32 * 1e9,
 	DepositsForChainStart:         16384,
 	TargetCommitteeSize:           uint64(256),
 	SlotDuration:                  uint64(16),
@@ -91,11 +97,13 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 var demoBeaconConfig = &BeaconChainConfig{
 	MaxProposerSlashings:          16,
+	MaxCasperSlashings:            16,
 	ShardCount:                    5,
-	DepositSize:                   32,
+	MaxDeposit:                    32,
 	MinTopUpSize:                  1,
 	MinOnlineDepositSize:          16,
 	Gwei:                          1e9,
+	MaxDepositInGwei:              32 * 1e9,
 	DepositsForChainStart:         16384,
 	TargetCommitteeSize:           uint64(3),
 	SlotDuration:                  uint64(2),

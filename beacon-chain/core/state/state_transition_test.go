@@ -75,11 +75,11 @@ func TestNextDeriveSlot(t *testing.T) {
 	}
 
 	beaconState.SetValidatorRegistry([]*pb.ValidatorRecord{
-		{Balance: uint64(params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei),
+		{Balance: uint64(params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei),
 			Status: pb.ValidatorRecord_ACTIVE},
 	})
 
-	totalDeposits := v.TotalActiveValidatorDeposit(beaconState.ValidatorRegistry())
+	totalDeposits := v.TotalActiveValidatorBalance(beaconState.ValidatorRegistry())
 	recentShardBlockHashes := make([][]byte, 3*params.BeaconConfig().CycleLength)
 	for i := 0; i < int(params.BeaconConfig().CycleLength); i++ {
 		shardBlockHash := [32]byte{}
