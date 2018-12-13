@@ -17,6 +17,7 @@ import (
 // IsValidBlock verifies a block is valid according to the ETH 2.0 specification for
 // validity conditions taking into consideration attestation processing and more.
 // TODO(#781): Refactor with the new spec validity conditions.
+// Will be Deprecated
 func IsValidBlock(
 	block *types.Block,
 	beaconState *types.BeaconState,
@@ -71,25 +72,6 @@ func IsValidBlock(
 		)
 	}
 	return nil
-}
-
-func IsValidBlockNew(block *types.Block,
-	beaconState *types.BeaconState,
-	parentSlot uint64,
-	genesisTime time.Time,
-	isInChain func(blockHash [32]byte) bool) {
-	_, err := block.Hash()
-	if err != nil {
-		return fmt.Errorf("could not hash incoming block: %v", err)
-	}
-
-	if block.SlotNumber() == 0 {
-		return errors.New("cannot process a genesis block: received block with slot 0")
-	}
-
-	if !block.IsSlotValid(genesisTime) {
-		return fmt.Errorf("slot of block is too high: %d", block.SlotNumber())
-	}
 }
 
 // doesParentProposerExist checks that the proposer from the parent slot is included in the first

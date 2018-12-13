@@ -324,6 +324,15 @@ func (c *ChainService) processBlock(block *types.Block) error {
 }
 
 func (c *ChainService) processBlockNew(block *types.Block) error {
+
+	hash, err := block.Hash()
+	if err != nil {
+		return fmt.Errorf("could not hash incoming block: %v", err)
+	}
+
+	if block.SlotNumber() == 0 {
+		return errors.New("cannot process a genesis block: received block with slot 0")
+	}
 	blockHash, err := block.Hash()
 	if err != nil {
 		return fmt.Errorf("failed to get hash of block: %v", err)
@@ -455,4 +464,42 @@ func (c *ChainService) calculateNewBlockVotes(block *types.Block, beaconState *t
 	return nil
 }
 
-func (c *ChainService) checkForPOWBlock()
+func (c *ChainService) isBlockReadyForProcessing(block *types.Block) bool {
+
+	// Pre-Processing Condition 1:
+	// Check that the parent Block has been processed and saved
+
+	parent, err := c.beaconDB.GetBlock(block.ParentHash())
+	if err != nil {
+		log.Debugf("could not get parent block: %v", err)
+		return false
+	}
+	if parent == nil {
+		log.Debugf("unprocessed parent block as it points to nil parent: %#x", block.ParentHash())
+		return false
+	}
+
+	// PreProcessing Condition 1:
+	// The state is updated up to block.slot -1
+
+	beaconState, err := c.beaconDB.GetState()
+	if err != nil {
+		log.Debugf("failed to get beacon state: %v", err)
+		return false
+	}
+
+	if beaconState.Slot() != block.SlotNumber()-1 {
+		log.Debugf("block slot is not valid %d", block.SlotNumber())
+		return false
+	}
+
+	//if c.enablePOWChain && c.doesPoWBlockExist(beaconState.) {
+
+	//}
+
+	if !block.IsSlotValid(c.genesisTime) {
+		log.Debugf("slot of block is too high: %d", block.SlotNumber())
+		return false
+	}
+
+}

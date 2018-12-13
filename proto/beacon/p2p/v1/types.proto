@@ -34,7 +34,7 @@ message BeaconState {
   repeated PendingAttestationRecord latest_attestations = 3005;
 
   // PoW receipt root [4001-5000]
-  repeated bytes processed_pow_receipt_root_hash32 = 4001;
+  bytes processed_pow_receipt_root_hash32 = 4001;
   repeated CandidatePoWReceiptRootRecord candidate_pow_receipt_roots = 4002;
 
   // Miscellaneous [5001-6000]
