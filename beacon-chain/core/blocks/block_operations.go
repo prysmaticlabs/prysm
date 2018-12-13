@@ -78,8 +78,8 @@ func verifyProposerSlashing(
 	slot2 := slashing.GetProposalData_2().GetSlot()
 	shard1 := slashing.GetProposalData_1().GetShard()
 	shard2 := slashing.GetProposalData_2().GetShard()
-	root1 := slashing.GetProposalData_1().GetBlockRoot()
-	root2 := slashing.GetProposalData_2().GetBlockRoot()
+	root1 := slashing.GetProposalData_1().GetBlockRootHash32()
+	root2 := slashing.GetProposalData_2().GetBlockRootHash32()
 	if slot1 != slot2 {
 		return fmt.Errorf("slashing proposal data slots do not match: %d, %d", slot1, slot2)
 	}
@@ -356,11 +356,11 @@ func verifyAttestation(beaconState *types.BeaconState, att *pb.Attestation) erro
 	// state.JustifiedSlot if attestation.Slot >=
 	// state.Slot - (state.Slot % EPOCH_LENGTH) else state.PreviousJustifiedSlot.
 	if att.GetData().GetSlot() >= beaconState.Slot()-(beaconState.Slot()%params.BeaconConfig().EpochLength) {
-		if att.GetData().GetJustifiedSlot() != beaconState.JustifiedSlot() {
+		if att.GetData().GetJustifiedSlot() != beaconState.LastJustifiedSlot() {
 			return fmt.Errorf(
 				"expected attestation.JustifiedSlot == state.JustifiedSlot, received %d == %d",
 				att.GetData().GetJustifiedSlot(),
-				beaconState.JustifiedSlot(),
+				beaconState.LastJustifiedSlot(),
 			)
 		}
 	} else {
@@ -375,7 +375,7 @@ func verifyAttestation(beaconState *types.BeaconState, att *pb.Attestation) erro
 
 	// Verify that attestation.data.justified_block_root is equal to
 	// get_block_root(state, attestation.data.justified_slot).
-	justifiedBlockRoot := att.GetData().GetJustifiedSlot()
+	justifiedBlockRoot := att.GetData().GetJustifiedBlockRootHash32()
 	if bytes.Equal(justifiedBlockRoot, []byte{}) {
 		return fmt.Errorf(
 			`
@@ -391,10 +391,10 @@ func verifyAttestation(beaconState *types.BeaconState, att *pb.Attestation) erro
 	// Verify that either: attestation.data.latest_crosslink_root or
 	// attestation.data.shard_block_root equals
 	// state.latest_crosslinks[shard].shard_block_root
-	crossLinkRoot := att.GetData().GetLatestCrosslinkRoot()
-	shardBlockRoot := att.GetData().GetShardBlockRoot()
+	crossLinkRoot := att.GetData().GetLatestCrosslinkRootHash32()
+	shardBlockRoot := att.GetData().GetShardBlockRootHash32()
 	shard := att.GetData().GetShard()
-	stateShardBlockRoot := beaconState.LatestCrosslinks()[shard].GetShardBlockRoot()
+	stateShardBlockRoot := beaconState.LatestCrosslinks()[shard].GetShardBlockRootHash32()
 
 	if !(bytes.Equal(crossLinkRoot, stateShardBlockRoot) ||
 		bytes.Equal(shardBlockRoot, stateShardBlockRoot)) {
@@ -412,11 +412,11 @@ func verifyAttestation(beaconState *types.BeaconState, att *pb.Attestation) erro
 	}
 
 	// Verify attestation.shard_block_root == ZERO_HASH [TO BE REMOVED IN PHASE 1].
-	if !bytes.Equal(att.GetData().GetShardBlockRoot(), []byte{}) {
+	if !bytes.Equal(att.GetData().GetShardBlockRootHash32(), []byte{}) {
 		return fmt.Errorf(
 			"expected attestation.ShardBlockRoot == %#x, received %#x instead",
 			[]byte{},
-			att.GetData().GetShardBlockRoot(),
+			att.GetData().GetShardBlockRootHash32(),
 		)
 	}
 	// TODO(#258): Integrate BLS signature verification for attestation.
