@@ -25,7 +25,7 @@ type BeaconChainConfig struct {
 	MinTopUpSize                            uint64         // MinTopUpSize is the minimal amount of Ether a validator can top up.
 	MinOnlineDepositSize                    uint64         // MinOnlineDepositSize is the minimal amount of Ether a validator needs to participate.
 	Gwei                                    uint64         // Gwei is the denomination of Gwei in Ether.
-	MaxDepositInGwei						uint64         // MaxDepositInGwei is the max balance in Gwei a validator can have at stake.
+	MaxDepositInGwei                        uint64         // MaxDepositInGwei is the max balance in Gwei a validator can have at stake.
 	DepositContractAddress                  common.Address // DepositContractAddress is the address of validator registration contract in PoW chain.
 	DepositsForChainStart                   uint64         // DepositsForChainStart defines how many deposits needed to start off beacon chain.
 	TargetCommitteeSize                     uint64         // TargetCommitteeSize is the minimal number of validator needs to be in a committee.
