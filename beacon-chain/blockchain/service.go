@@ -36,6 +36,7 @@ type ChainService struct {
 	canonicalBlockFeed *event.Feed
 	canonicalStateFeed *event.Feed
 	genesisTime        time.Time
+	unProcessedBlocks  map[uint64]*types.Block
 	unfinalizedBlocks  map[[32]byte]*types.BeaconState
 	enablePOWChain     bool
 	slotTicker         slotticker.SlotTicker
@@ -66,6 +67,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		incomingBlockFeed:  new(event.Feed),
 		canonicalBlockFeed: new(event.Feed),
 		canonicalStateFeed: new(event.Feed),
+		unProcessedBlocks:  make(map[uint64]*types.Block),
 		unfinalizedBlocks:  make(map[[32]byte]*types.BeaconState),
 		enablePOWChain:     cfg.EnablePOWChain,
 	}, nil
@@ -255,13 +257,11 @@ func (c *ChainService) slotTracker() {
 			return
 		case slot := <-c.slotTicker.C():
 			c.currentSlot = slot
-
+			if block, ok := c.unProcessedBlocks[slot+1]; ok {
+				c.incomingBlockChan <- block
+			}
 		}
 	}
-}
-
-func (c *ChainService) blockCacher() {
-
 }
 
 // DEPRECATED: Will be replaced by new block processing method
@@ -342,8 +342,11 @@ func (c *ChainService) processBlockNew(block *types.Block) error {
 	}
 
 	if !c.isBlockReadyForProcessing(block) {
-
+		c.unProcessedBlocks[block.SlotNumber()] = block
+		return nil
 	}
+
+	c.executeSlotTransition()
 
 	return nil
 }

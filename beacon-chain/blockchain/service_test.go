@@ -227,12 +227,13 @@ func TestDoesPOWBlockExist(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, true, db)
 
-	block := types.NewBlock(&pb.BeaconBlock{
-		Slot: 10,
-	})
+	state, err := chainService.beaconDB.GetState()
+	if err != nil {
+		t.Fatalf("Unable to retrieve beacon state %v", err)
+	}
 
 	// Using a faulty client should throw error.
-	exists := chainService.doesPoWBlockExist(block)
+	exists := chainService.doesPoWBlockExist(state.ProcessedPowReceiptRootHash32())
 	if exists {
 		t.Error("Block corresponding to nil powchain reference should not exist")
 	}
