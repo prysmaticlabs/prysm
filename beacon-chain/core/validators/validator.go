@@ -290,7 +290,7 @@ func AddPendingValidator(
 	newValidatorRecord := &pb.ValidatorRecord{
 		Pubkey:                 pubKey,
 		RandaoCommitmentHash32: randaoCommitment,
-		Balance:                params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei,
+		Balance:                params.BeaconConfig().MaxDepositInGwei,
 		Status:                 status,
 	}
 
@@ -405,6 +405,8 @@ func CheckValidatorMinDeposit(validatorSet []*pb.ValidatorRecord, currentSlot ui
 }
 
 // EffectiveBalance returns the balance at stake for the validator.
+// Beacon chain allows validators to top off their balance above MAX_DEPOSIT,
+// but they can be slashed at most MAX_DEPOSIT at any time.
 //
 // Spec pseudocode definition:
 //   def get_effective_balance(validator: ValidatorRecord) -> int:
