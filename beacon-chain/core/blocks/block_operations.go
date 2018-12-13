@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -262,5 +263,67 @@ func verifyCasperVotes(votes *pb.SlashableVoteData) error {
 	//      signature=aggregate_signature
 	//    ]
 	//  )
+	return nil
+}
+
+// ProcessValidatorExits is one of the operations performed
+// on each processed beacon block to determine which validators
+// should exit the state's validator registry.
+//
+// Official spec definition for processing exits:
+//
+//   Verify that len(block.body.casper_slashings) <= MAX_CASPER_SLASHINGS.
+//   For each casper_slashing in block.body.casper_slashings:
+//
+//   Verify that len(block.body.exits) <= MAX_EXITS.
+//
+//   For each exit in block.body.exits:
+//     Let validator = state.validator_registry[exit.validator_index].
+//     Verify that validator.status == ACTIVE.
+//     Verify that state.slot >= exit.slot.
+//     Verify that state.slot >= validator.latest_status_change_slot +
+//       SHARD_PERSISTENT_COMMITTEE_CHANGE_PERIOD.
+//     Verify that bls_verify(
+//       pubkey=validator.pubkey,
+//       message=ZERO_HASH,
+//       signature=exit.signature,
+//       domain=get_domain(state.fork_data, exit.slot, DOMAIN_EXIT),
+//     )
+//     Run update_validator_status(
+//       state, exit.validator_index, new_status=ACTIVE_PENDING_EXIT,
+//     )
+func ProcessValidatorExits(
+	beaconState *types.BeaconState,
+	block *pb.BeaconBlock,
+) ([]*pb.ValidatorRecord, error) {
+	exits := block.GetBody().GetExits()
+	if uint64(len(exits)) > params.BeaconConfig().MaxExits {
+		return nil, fmt.Errorf(
+			"number of exits (%d) exceeds allowed threshold of %d",
+			len(exits),
+			params.BeaconConfig().MaxExits,
+		)
+	}
+	validatorRegistry := beaconState.ValidatorRegistry()
+	for idx, exit := range exits {
+		if err := verifyExit(exit); err != nil {
+			return nil, fmt.Errorf("could not verify exit #%d: %v", idx, err)
+		}
+		// TODO(#781): Replace with update_validator_status(
+		//   state,
+		//   validatorIndex,
+		//   new_status=EXITED_WITH_PENALTY,
+		// ) after update_validator_status is implemented.
+		validator := validatorRegistry[exit.GetValidatorIndex()]
+		validatorRegistry[exit.GetValidatorIndex()] = v.ExitValidator(
+			validator,
+			beaconState.Slot(),
+			true, /* penalize */
+		)
+	}
+	return validatorRegistry, nil
+}
+
+func verifyExit(exit *pb.Exit) error {
 	return nil
 }
