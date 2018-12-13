@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/protobuf/ptypes"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -31,7 +32,7 @@ func TestGenesisBlock(t *testing.T) {
 		t.Errorf("genesis block hash should be identical: %#x %#x", h1, h2)
 	}
 
-	if b1.data.AncestorHash32S == nil {
+	if b1.data.ParentRootHash32 == nil {
 		t.Error("genesis block missing ParentHash field")
 	}
 
@@ -80,5 +81,92 @@ func TestGenesisBlock(t *testing.T) {
 
 	if h1 == h3 {
 		t.Errorf("genesis block and new block should not have identical hash: %#x", h1)
+	}
+}
+
+func TestBlockRootAtSlot_OK(t *testing.T) {
+	if params.BeaconConfig().EpochLength != 64 {
+		t.Errorf("EpochLength should be 64 for these tests to pass")
+	}
+	var blockRoots [][]byte
+
+	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+		blockRoots = append(blockRoots, []byte{byte(i)})
+	}
+	state := &pb.BeaconState{
+		LatestBlockRootHash32S: blockRoots,
+	}
+
+	tests := []struct {
+		slot         uint64
+		stateSlot    uint64
+		expectedRoot []byte
+	}{
+		{
+			slot:         0,
+			stateSlot:    1,
+			expectedRoot: []byte{0},
+		},
+		{
+			slot:         2,
+			stateSlot:    5,
+			expectedRoot: []byte{2},
+		},
+		{
+			slot:         64,
+			stateSlot:    128,
+			expectedRoot: []byte{64},
+		}, {
+			slot:         2999,
+			stateSlot:    3000,
+			expectedRoot: []byte{127},
+		}, {
+			slot:         2873,
+			stateSlot:    3000,
+			expectedRoot: []byte{1},
+		},
+	}
+	for _, tt := range tests {
+		state.Slot = tt.stateSlot
+		result, err := BlockRoot(state, tt.slot)
+		if err != nil {
+			t.Errorf("Failed to get block root at slot %d: %v", tt.slot, err)
+		}
+		if !bytes.Equal(result, tt.expectedRoot) {
+			t.Errorf(
+				"Result block root was an unexpected value. Wanted %d, got %d",
+				tt.expectedRoot,
+				result,
+			)
+		}
+	}
+}
+
+func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
+	if params.BeaconConfig().EpochLength != 64 {
+		t.Errorf("EpochLength should be 64 for these tests to pass")
+	}
+
+	state := &pb.BeaconState{}
+
+	tests := []struct {
+		slot        uint64
+		stateSlot   uint64
+		expectedErr string
+	}{
+		{
+			slot:        1000,
+			expectedErr: "slot 1000 out of bounds: 0 <= slot < 0",
+		},
+		{
+			slot:        129,
+			expectedErr: "slot 129 out of bounds: 0 <= slot < 0",
+		},
+	}
+	for _, tt := range tests {
+		_, err := BlockRoot(state, tt.slot)
+		if err != nil && err.Error() != tt.expectedErr {
+			t.Errorf("Expected error \"%s\" got \"%v\"", tt.expectedErr, err)
+		}
 	}
 }
