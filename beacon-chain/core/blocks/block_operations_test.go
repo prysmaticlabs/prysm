@@ -647,27 +647,102 @@ func TestProcessBlockAttestations_BlockRootFailure(t *testing.T) {
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
-	//{
-	//slot:         0,
-	//stateSlot:    1,
-	//expectedRoot: []byte{0},
-	//},
-	//{
-	//slot:         2,
-	//stateSlot:    5,
-	//expectedRoot: []byte{2},
-	//},
-	//{
-	//slot:         64,
-	//stateSlot:    128,
-	//expectedRoot: []byte{64},
-	//}, {
-	//slot:         2999,
-	//stateSlot:    3000,
-	//expectedRoot: []byte{127},
-	//}, {
-	//slot:         2873,
-	//stateSlot:    3000,
-	//expectedRoot: []byte{1},
-	//},
 }
+
+func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
+	var blockRoots [][]byte
+	for i := uint64(0); i < 2*params.BeaconConfig().EpochLength; i++ {
+		blockRoots = append(blockRoots, []byte{byte(i)})
+	}
+
+	// If attestation.latest_cross_link_root != state.latest_crosslinks[shard].shard_block_root
+	// AND
+	// attestation.data.shard_block_root != state.latest_crosslinks[shard].shard_block_root
+	// the attestation should be invalid.
+	stateLatestCrosslinks := []*pb.CrosslinkRecord{
+		{
+			ShardBlockRootHash32: []byte{1},
+		},
+	}
+	state := types.NewBeaconState(&pb.BeaconState{
+		Slot:                   64,
+		PreviousJustifiedSlot:  10,
+		LatestBlockRootHash32S: blockRoots,
+		LatestCrosslinks:       stateLatestCrosslinks,
+	})
+	attestations := []*pb.Attestation{
+		{
+			Data: &pb.AttestationData{
+				Shard:                     0,
+				Slot:                      20,
+				JustifiedSlot:             10,
+				JustifiedBlockRootHash32:  blockRoots[10],
+				LatestCrosslinkRootHash32: []byte{2},
+				ShardBlockRootHash32:      []byte{2},
+			},
+		},
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
+	}
+	want := fmt.Sprintf(
+		"attestation.CrossLinkRoot and ShardBlockRoot != %v (state.LatestCrosslinks' ShardBlockRoot)",
+		[]byte{1},
+	)
+	if _, err := ProcessBlockAttestations(
+		state,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.T) {
+	var blockRoots [][]byte
+	for i := uint64(0); i < 2*params.BeaconConfig().EpochLength; i++ {
+		blockRoots = append(blockRoots, []byte{byte(i)})
+	}
+	stateLatestCrosslinks := []*pb.CrosslinkRecord{
+		{
+			ShardBlockRootHash32: []byte{1},
+		},
+	}
+	state := types.NewBeaconState(&pb.BeaconState{
+		Slot:                   64,
+		PreviousJustifiedSlot:  10,
+		LatestBlockRootHash32S: blockRoots,
+		LatestCrosslinks:       stateLatestCrosslinks,
+	})
+	attestations := []*pb.Attestation{
+		{
+			Data: &pb.AttestationData{
+				Shard:                     0,
+				Slot:                      20,
+				JustifiedSlot:             10,
+				JustifiedBlockRootHash32:  blockRoots[10],
+				LatestCrosslinkRootHash32: []byte{1},
+				ShardBlockRootHash32:      []byte{1},
+			},
+		},
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
+	}
+	want := fmt.Sprintf(
+		"expected attestation.ShardBlockRoot == %#x, received %#x instead",
+		[]byte{},
+		[]byte{1},
+	)
+	if _, err := ProcessBlockAttestations(
+		state,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+//func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {

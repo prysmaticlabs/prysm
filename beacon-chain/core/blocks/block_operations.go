@@ -399,14 +399,7 @@ func verifyAttestation(beaconState *types.BeaconState, att *pb.Attestation) erro
 	if !(bytes.Equal(crossLinkRoot, stateShardBlockRoot) ||
 		bytes.Equal(shardBlockRoot, stateShardBlockRoot)) {
 		return fmt.Errorf(
-			`
-			expected attestation.CrossLinkRoot or attestation.ShardBlockRoot
-			to match the state.LatestCrosslinks[shard].ShardBlockRoot - instead
-			received attestation.CrossLinkRoot %#x, attestation.ShardBlockRoot %#x,
-			and state.LatestCrosslinks[shard].ShardBlockRoot %#x
-			`,
-			crossLinkRoot,
-			shardBlockRoot,
+			"attestation.CrossLinkRoot and ShardBlockRoot != %v (state.LatestCrosslinks' ShardBlockRoot)",
 			stateShardBlockRoot,
 		)
 	}
