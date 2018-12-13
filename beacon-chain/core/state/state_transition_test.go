@@ -24,9 +24,9 @@ func TestInitialDeriveState(t *testing.T) {
 	}
 
 	block := types.NewBlock(&pb.BeaconBlock{
-		AncestorHash32S: [][]byte{{'A'}},
-		Slot:            0,
-		StateRootHash32: []byte{},
+		ParentRootHash32: []byte{'A'},
+		Slot:             0,
+		StateRootHash32:  []byte{},
 		Attestations: []*pb.AggregatedAttestation{{
 			Slot:             0,
 			AttesterBitfield: attesterBitfield,
@@ -64,8 +64,8 @@ func TestNextDeriveSlot(t *testing.T) {
 	}
 
 	block := types.NewBlock(&pb.BeaconBlock{
-		AncestorHash32S: [][]byte{{'A'}},
-		Slot:            0,
+		ParentRootHash32: []byte{'A'},
+		Slot:             0,
 	})
 
 	blockVoteCache := utils.NewBlockVoteCache()
@@ -93,8 +93,8 @@ func TestNextDeriveSlot(t *testing.T) {
 	beaconState.SetLatestBlockHashes(recentShardBlockHashes)
 	beaconState.SetLastStateRecalculationSlot(params.BeaconConfig().CycleLength - 1)
 	block = types.NewBlock(&pb.BeaconBlock{
-		AncestorHash32S: [][]byte{{'A'}},
-		Slot:            params.BeaconConfig().CycleLength,
+		ParentRootHash32: []byte{'A'},
+		Slot:             params.BeaconConfig().CycleLength,
 	})
 	beaconState, err = NewStateTransition(beaconState, block, params.BeaconConfig().CycleLength, blockVoteCache)
 	if err != nil {
@@ -116,8 +116,8 @@ func TestNextDeriveSlot(t *testing.T) {
 	beaconState.SetLatestBlockHashes(recentShardBlockHashes)
 	beaconState.SetLastStateRecalculationSlot(2*params.BeaconConfig().CycleLength - 1)
 	block = types.NewBlock(&pb.BeaconBlock{
-		AncestorHash32S: [][]byte{{'A'}},
-		Slot:            params.BeaconConfig().CycleLength * 2,
+		ParentRootHash32: []byte{'A'},
+		Slot:             params.BeaconConfig().CycleLength * 2,
 	})
 	beaconState, err = NewStateTransition(beaconState, block, params.BeaconConfig().CycleLength*2, blockVoteCache)
 	if err != nil {

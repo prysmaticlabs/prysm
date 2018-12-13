@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 func TestGenesisBlock(t *testing.T) {
@@ -31,7 +32,7 @@ func TestGenesisBlock(t *testing.T) {
 		t.Errorf("genesis block hash should be identical: %#x %#x", h1, h2)
 	}
 
-	if b1.data.AncestorHash32S == nil {
+	if b1.data.ParentRootHash32 == nil {
 		t.Error("genesis block missing ParentHash field")
 	}
 
@@ -80,5 +81,63 @@ func TestGenesisBlock(t *testing.T) {
 
 	if h1 == h3 {
 		t.Errorf("genesis block and new block should not have identical hash: %#x", h1)
+	}
+}
+
+func TestBlockRootAtSlot_OK(t *testing.T) {
+	if params.BeaconConfig().EpochLength != 64 {
+		t.Errorf("EpochLength should be 64 for these tests to pass")
+	}
+	var blockRoots [][]byte
+
+	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+		blockRoots = append(blockRoots, []byte{byte(i)})
+	}
+	state := &pb.BeaconState{
+		LatestBlockRootHash32S: blockRoots,
+	}
+
+	tests := []struct {
+		slot          uint64
+		stateSlot     uint64
+		expectedRoot  []byte
+	}{
+		{
+			slot:          0,
+			stateSlot:     0,
+			expectedRoot: 0,
+		},
+		{
+			slot:          1,
+			stateSlot:     5,
+			expectedRoot: 1,
+		},
+		{
+			stateSlot:     1024,
+			slot:          1024,
+			expectedRoot: 64 - 0,
+		}, {
+			stateSlot:     2048,
+			slot:          2000,
+			expectedRoot: 64 - 48,
+		}, {
+			stateSlot:     2048,
+			slot:          2058,
+			expectedRoot: 64 + 10,
+		},
+	}
+	for _, tt := range tests {
+		state.Slot = tt.stateSlot
+		result, err := ShardAndCommitteesAtSlot(state, tt.slot)
+		if err != nil {
+			t.Errorf("Failed to get shard and committees at slot: %v", err)
+		}
+		if result.ArrayShardAndCommittee[0].Shard != tt.expectedShard {
+			t.Errorf(
+				"Result shard was an unexpected value. Wanted %d, got %d",
+				tt.expectedShard,
+				result.ArrayShardAndCommittee[0].Shard,
+			)
+		}
 	}
 }
