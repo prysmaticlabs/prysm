@@ -67,7 +67,7 @@ func NewStateTransition(
 				blockVoteCache,
 				newState.ValidatorRegistry(),
 				v.ActiveValidatorIndices(newState.ValidatorRegistry()),
-				v.TotalActiveValidatorDeposit(newState.ValidatorRegistry()),
+				v.TotalActiveValidatorBalance(newState.ValidatorRegistry()),
 				timeSinceFinality,
 			)
 
@@ -79,7 +79,7 @@ func NewStateTransition(
 				finalizedSlot,
 				justifiedStreak,
 				blockVoteBalance,
-				v.TotalActiveValidatorDeposit(st.ValidatorRegistry()),
+				v.TotalActiveValidatorBalance(st.ValidatorRegistry()),
 			)
 		}
 
@@ -159,7 +159,7 @@ func crossLinkCalculations(
 			indices,
 			attestation,
 			st.ValidatorRegistry(),
-			v.TotalActiveValidatorDeposit(st.ValidatorRegistry()),
+			v.TotalActiveValidatorBalance(st.ValidatorRegistry()),
 			totalBalance,
 			voteBalance,
 		)

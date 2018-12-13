@@ -28,7 +28,7 @@ func InitialValidatorRegistry() []*pb.ValidatorRecord {
 	for i := uint64(0); i < config.BootstrappedValidatorsCount; i++ {
 		validators[i] = &pb.ValidatorRecord{
 			Status:                 pb.ValidatorRecord_ACTIVE,
-			Balance:                config.DepositSize * config.Gwei,
+			Balance:                config.MaxDeposit * config.Gwei,
 			Pubkey:                 []byte{},
 			RandaoCommitmentHash32: randaoReveal[:],
 		}
@@ -38,15 +38,34 @@ func InitialValidatorRegistry() []*pb.ValidatorRecord {
 
 // ActiveValidatorIndices filters out active validators based on validator status
 // and returns their indices in a list.
+//
+// Spec pseudocode definition:
+//   def get_active_validator_indices(validators: [ValidatorRecord]) -> List[int]:
+//     """
+//     Gets indices of active validators from ``validators``.
+//     """
+//     return [i for i, v in enumerate(validators) if is_active_validator(v)]
 func ActiveValidatorIndices(validators []*pb.ValidatorRecord) []uint32 {
 	indices := make([]uint32, 0, len(validators))
 	for i, v := range validators {
-		if v.Status == pb.ValidatorRecord_ACTIVE {
+		if isActiveValidator(v) {
 			indices = append(indices, uint32(i))
 		}
 
 	}
 	return indices
+}
+
+// ActiveValidator returns the active validator records in a list.
+//
+// Spec pseudocode definition:
+//   [state.validator_registry[i] for i in get_active_validator_indices(state.validator_registry)]
+func ActiveValidator(state *pb.BeaconState, validatorIndices []uint32) []*pb.ValidatorRecord {
+	activeValidators := make([]*pb.ValidatorRecord, 0, len(validatorIndices))
+	for _, validatorIndex := range validatorIndices {
+		activeValidators = append(activeValidators, state.ValidatorRegistry[validatorIndex])
+	}
+	return activeValidators
 }
 
 // ShardAndCommitteesAtSlot returns the shard and committee list for a given
@@ -214,20 +233,22 @@ func ValidatorSlotAndRole(pubKey []byte, validators []*pb.ValidatorRecord, shard
 	return 0, pbrpc.ValidatorRole_UNKNOWN, fmt.Errorf("can't find slot number for validator with public key %#x", pubKey)
 }
 
-// TotalActiveValidatorDeposit returns the total deposited amount in Gwei for all active validators.
-func TotalActiveValidatorDeposit(validators []*pb.ValidatorRecord) uint64 {
+// TotalActiveValidatorBalance returns the total deposited amount in Gwei for all active validators.
+//
+// Spec pseudocode definition:
+//   sum([get_effective_balance(v) for v in active_validators])
+func TotalActiveValidatorBalance(activeValidators []*pb.ValidatorRecord) uint64 {
 	var totalDeposit uint64
-	indices := ActiveValidatorIndices(validators)
 
-	for _, index := range indices {
-		totalDeposit += validators[index].GetBalance()
+	for _, v := range activeValidators {
+		totalDeposit += EffectiveBalance(v)
 	}
 	return totalDeposit
 }
 
 // TotalActiveValidatorDepositInEth returns the total deposited amount in ETH for all active validators.
 func TotalActiveValidatorDepositInEth(validators []*pb.ValidatorRecord) uint64 {
-	totalDeposit := TotalActiveValidatorDeposit(validators)
+	totalDeposit := TotalActiveValidatorBalance(validators)
 	depositInEth := totalDeposit / params.BeaconConfig().Gwei
 
 	return depositInEth
@@ -269,7 +290,7 @@ func AddPendingValidator(
 	newValidatorRecord := &pb.ValidatorRecord{
 		Pubkey:                 pubKey,
 		RandaoCommitmentHash32: randaoCommitment,
-		Balance:                params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei,
+		Balance:                params.BeaconConfig().MaxDepositInGwei,
 		Status:                 status,
 	}
 
@@ -301,9 +322,9 @@ func ExitValidator(
 
 // ChangeValidatorRegistry updates the validator set during state transition.
 func ChangeValidatorRegistry(currentSlot uint64, totalPenalties uint64, validators []*pb.ValidatorRecord) []*pb.ValidatorRecord {
-	maxAllowableChange := 2 * params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei
+	maxAllowableChange := 2 * params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei
 
-	totalBalance := TotalActiveValidatorDeposit(validators)
+	totalBalance := TotalActiveValidatorBalance(validators)
 
 	// Determine the max total wei that can deposit and withdraw.
 	if totalBalance > maxAllowableChange {
@@ -314,7 +335,7 @@ func ChangeValidatorRegistry(currentSlot uint64, totalPenalties uint64, validato
 	for i := 0; i < len(validators); i++ {
 		if validators[i].Status == pb.ValidatorRecord_PENDING_ACTIVATION {
 			validators[i].Status = pb.ValidatorRecord_ACTIVE
-			totalChanged += params.BeaconConfig().DepositSize * params.BeaconConfig().Gwei
+			totalChanged += params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei
 
 			// TODO(#614): Add validator set change.
 		}
@@ -383,6 +404,23 @@ func CheckValidatorMinDeposit(validatorSet []*pb.ValidatorRecord, currentSlot ui
 	return validatorSet
 }
 
+// EffectiveBalance returns the balance at stake for the validator.
+// Beacon chain allows validators to top off their balance above MAX_DEPOSIT,
+// but they can be slashed at most MAX_DEPOSIT at any time.
+//
+// Spec pseudocode definition:
+//   def get_effective_balance(validator: ValidatorRecord) -> int:
+//     """
+//     Returns the effective balance (also known as "balance at stake") for the ``validator``.
+//     """
+//     return min(validator.balance, MAX_DEPOSIT)
+func EffectiveBalance(validator *pb.ValidatorRecord) uint64 {
+	if validator.Balance > params.BeaconConfig().MaxDeposit*params.BeaconConfig().Gwei {
+		return params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei
+	}
+	return validator.Balance
+}
+
 // minEmptyValidator returns the lowest validator index which the status is withdrawn.
 func minEmptyValidator(validators []*pb.ValidatorRecord) int {
 	for i := 0; i < len(validators); i++ {
@@ -391,4 +429,18 @@ func minEmptyValidator(validators []*pb.ValidatorRecord) int {
 		}
 	}
 	return -1
+}
+
+// isActiveValidator returns the boolean value on whether the validator
+// is active or not.
+//
+// Spec pseudocode definition:
+//   def is_active_validator(validator: ValidatorRecord) -> bool:
+//     """
+//     Returns the ``ShardCommittee`` for the ``slot``.
+//     """
+//     return validator.status in [ACTIVE, ACTIVE_PENDING_EXIT]
+func isActiveValidator(validator *pb.ValidatorRecord) bool {
+	return validator.Status == pb.ValidatorRecord_ACTIVE_PENDING_EXIT ||
+		validator.Status == pb.ValidatorRecord_ACTIVE
 }
