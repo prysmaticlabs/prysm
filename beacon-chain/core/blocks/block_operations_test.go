@@ -88,14 +88,14 @@ func TestProcessProposerSlashings_UnmatchedBlockRoots(t *testing.T) {
 		{
 			ProposerIndex: 0,
 			ProposalData_1: &pb.ProposalSignedData{
-				Slot:      1,
-				Shard:     0,
-				BlockRoot: []byte{0, 1, 0},
+				Slot:            1,
+				Shard:           0,
+				BlockRootHash32: []byte{0, 1, 0},
 			},
 			ProposalData_2: &pb.ProposalSignedData{
-				Slot:      1,
-				Shard:     0,
-				BlockRoot: []byte{1, 1, 0},
+				Slot:            1,
+				Shard:           0,
+				BlockRootHash32: []byte{1, 1, 0},
 			},
 		},
 	}
@@ -131,14 +131,14 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		{
 			ProposerIndex: 1,
 			ProposalData_1: &pb.ProposalSignedData{
-				Slot:      1,
-				Shard:     1,
-				BlockRoot: []byte{0, 1, 0},
+				Slot:            1,
+				Shard:           1,
+				BlockRootHash32: []byte{0, 1, 0},
 			},
 			ProposalData_2: &pb.ProposalSignedData{
-				Slot:      1,
-				Shard:     1,
-				BlockRoot: []byte{0, 1, 0},
+				Slot:            1,
+				Shard:           1,
+				BlockRootHash32: []byte{0, 1, 0},
 			},
 		},
 	}
