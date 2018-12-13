@@ -167,4 +167,3 @@ func BlockRoot(state *pb.BeaconState, slot uint64) ([]byte, error) {
 
 	return state.LatestBlockRootHash32S[slot-earliestSlot], nil
 }
-

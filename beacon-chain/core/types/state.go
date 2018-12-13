@@ -310,7 +310,7 @@ func (b *BeaconState) ForkData() *pb.ForkData {
 	return b.data.ForkData
 }
 
-// LatestBlockRootHashes returns the most recent 2*EPOCH_LENGTH block hashes.
+// LatestBlockRootHashes32 returns the most recent 2*EPOCH_LENGTH block hashes.
 func (b *BeaconState) LatestBlockRootHashes32() [][32]byte {
 	var blockhashes [][32]byte
 	for _, hash := range b.data.LatestBlockRootHash32S {
