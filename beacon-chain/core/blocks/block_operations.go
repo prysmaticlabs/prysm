@@ -167,10 +167,10 @@ func verifyCasperSlashing(validatorRegistry []*pb.ValidatorRecord, slashing *pb.
 	votes1Attestation := votes1.GetData()
 	votes2Attestation := votes2.GetData()
 
-	if err := verifyCasperVotes(validatorRegistry, votes1); err != nil {
+	if err := verifyCasperVotes(votes1); err != nil {
 		return fmt.Errorf("could not verify casper votes 1: %v", err)
 	}
-	if err := verifyCasperVotes(validatorRegistry, votes2); err != nil {
+	if err := verifyCasperVotes(votes2); err != nil {
 		return fmt.Errorf("could not verify casper votes 2: %v", err)
 	}
 
@@ -241,10 +241,7 @@ func casperSlashingPenalizedIndices(slashing *pb.CasperSlashing) ([]uint32, erro
 	return indicesIntersection, nil
 }
 
-func verifyCasperVotes(
-	validatorRegistry []*pb.ValidatorRecord,
-	votes *pb.SlashableVoteData,
-) error {
+func verifyCasperVotes(votes *pb.SlashableVoteData) error {
 	totalProofsOfCustody := len(votes.GetAggregateSignaturePoc_0Indices()) +
 		len(votes.GetAggregateSignaturePoc_1Indices())
 	if uint64(totalProofsOfCustody) > params.BeaconConfig().MaxCasperVotes {
@@ -265,7 +262,5 @@ func verifyCasperVotes(
 	//      signature=aggregate_signature
 	//    ]
 	//  )
-	// nolint: unparam
-	_ = validatorRegistry
 	return nil
 }
