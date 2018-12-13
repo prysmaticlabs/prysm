@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -457,5 +458,28 @@ func TestProcessCasperSlashings_AppliesCorrectStatus(t *testing.T) {
 			`,
 			newRegistry[1].Status,
 		)
+	}
+}
+
+func TestProcessBlockAttestations_ThresholdReached(t *testing.T) {
+	attestations := make([]*pb.Attestation, params.BeaconConfig().MaxAttestations+1)
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
+	}
+	state := &types.BeaconState{}
+
+	want := fmt.Sprintf(
+		"number of attestations in block (%d) exceeds allowed threshold of %d",
+		params.BeaconConfig().MaxAttestations+1,
+		params.BeaconConfig().MaxAttestations,
+	)
+
+	if _, err := ProcessBlockAttestations(
+		state,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
 	}
 }

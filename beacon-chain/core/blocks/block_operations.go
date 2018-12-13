@@ -313,7 +313,7 @@ func ProcessBlockAttestations(
 	atts := block.GetBody().GetAttestations()
 	if uint64(len(atts)) > params.BeaconConfig().MaxAttestations {
 		return nil, fmt.Errorf(
-			"number of attestations in block  (%d) exceeds allowed threshold of %d",
+			"number of attestations in block (%d) exceeds allowed threshold of %d",
 			len(atts),
 			params.BeaconConfig().MaxAttestations,
 		)
