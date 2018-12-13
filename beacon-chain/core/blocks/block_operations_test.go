@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -610,6 +611,41 @@ func TestProcessBlockAttestations_PreviousJustifiedSlotVerificationFailure(t *te
 	}
 }
 
+func TestProcessBlockAttestations_BlockRootOutOfBounds(t *testing.T) {
+	var blockRoots [][]byte
+	for i := uint64(0); i < 2*params.BeaconConfig().EpochLength; i++ {
+		blockRoots = append(blockRoots, []byte{byte(i)})
+	}
+
+	state := types.NewBeaconState(&pb.BeaconState{
+		Slot:                   64,
+		PreviousJustifiedSlot:  65,
+		LatestBlockRootHash32S: blockRoots,
+	})
+	attestations := []*pb.Attestation{
+		{
+			Data: &pb.AttestationData{
+				Slot:                     20,
+				JustifiedSlot:            65,
+				JustifiedBlockRootHash32: []byte{},
+			},
+		},
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
+	}
+
+	want := "could not get block root for justified slot"
+	if _, err := ProcessBlockAttestations(
+		state,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
 func TestProcessBlockAttestations_BlockRootFailure(t *testing.T) {
 	var blockRoots [][]byte
 	for i := uint64(0); i < 2*params.BeaconConfig().EpochLength; i++ {
@@ -745,4 +781,59 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 	}
 }
 
-//func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
+func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
+	var blockRoots [][]byte
+	for i := uint64(0); i < 2*params.BeaconConfig().EpochLength; i++ {
+		blockRoots = append(blockRoots, []byte{byte(i)})
+	}
+	stateLatestCrosslinks := []*pb.CrosslinkRecord{
+		{
+			ShardBlockRootHash32: []byte{1},
+		},
+	}
+	state := types.NewBeaconState(&pb.BeaconState{
+		Slot:                   64,
+		PreviousJustifiedSlot:  10,
+		LatestBlockRootHash32S: blockRoots,
+		LatestCrosslinks:       stateLatestCrosslinks,
+	})
+	att1 := &pb.Attestation{
+		Data: &pb.AttestationData{
+			Shard:                     0,
+			Slot:                      20,
+			JustifiedSlot:             10,
+			JustifiedBlockRootHash32:  blockRoots[10],
+			LatestCrosslinkRootHash32: []byte{1},
+			ShardBlockRootHash32:      []byte{},
+		},
+		ParticipationBitfield: []byte{1},
+		CustodyBitfield:       []byte{1},
+	}
+	attestations := []*pb.Attestation{att1}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
+	}
+	pendingAttestations, err := ProcessBlockAttestations(
+		state,
+		block,
+	)
+	if err != nil {
+		t.Fatalf("Could not produce pending attestations: %v", err)
+	}
+	if !reflect.DeepEqual(pendingAttestations[0].GetData(), att1.GetData()) {
+		t.Errorf(
+			"Did not create pending attestation correctly with inner data, wanted %v, received %v",
+			att1.GetData(),
+			pendingAttestations[0].GetData(),
+		)
+	}
+	if pendingAttestations[0].GetSlotIncluded() != 64 {
+		t.Errorf(
+			"Pending attestation not included at correct slot: wanted %v, received %v",
+			64,
+			pendingAttestations[0].GetSlotIncluded(),
+		)
+	}
+}
