@@ -119,8 +119,8 @@ func (c *ChainService) CanonicalStateFeed() *event.Feed {
 }
 
 // doesPoWBlockExist checks if the referenced PoW block exists.
-func (c *ChainService) doesPoWBlockExist(block *types.Block) bool {
-	powBlock, err := c.web3Service.Client().BlockByHash(context.Background(), block.CandidatePowReceiptRootHash32())
+func (c *ChainService) doesPoWBlockExist(hash [32]byte) bool {
+	powBlock, err := c.web3Service.Client().BlockByHash(context.Background(), hash)
 	if err != nil {
 		log.Debugf("fetching PoW block corresponding to mainchain reference failed: %v", err)
 		return false
@@ -241,6 +241,9 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 	}
 }
 
+// This assigns the current slot of the
+// beacon node, functioning as the beacon node's
+// local clock.
 func (c *ChainService) slotTracker() {
 
 	defer c.slotTicker.Done()
@@ -257,15 +260,15 @@ func (c *ChainService) slotTracker() {
 	}
 }
 
+func (c *ChainService) blockCacher() {
+
+}
+
 // DEPRECATED: Will be replaced by new block processing method
 func (c *ChainService) processBlock(block *types.Block) error {
 	blockHash, err := block.Hash()
 	if err != nil {
 		return fmt.Errorf("failed to get hash of block: %v", err)
-	}
-
-	if c.enablePOWChain && !c.doesPoWBlockExist(block) {
-		return errors.New("proof-of-Work chain reference in block does not exist")
 	}
 
 	parent, err := c.beaconDB.GetBlock(block.ParentHash())
@@ -279,6 +282,10 @@ func (c *ChainService) processBlock(block *types.Block) error {
 	beaconState, err := c.beaconDB.GetState()
 	if err != nil {
 		return fmt.Errorf("failed to get beacon state: %v", err)
+	}
+
+	if c.enablePOWChain && !c.doesPoWBlockExist(beaconState.ProcessedPowReceiptRootHash32()) {
+		return errors.New("proof-of-Work chain reference in block does not exist")
 	}
 
 	// Verifies the block against the validity conditions specifies as part of the
@@ -325,7 +332,7 @@ func (c *ChainService) processBlock(block *types.Block) error {
 
 func (c *ChainService) processBlockNew(block *types.Block) error {
 
-	hash, err := block.Hash()
+	_, err := block.Hash()
 	if err != nil {
 		return fmt.Errorf("could not hash incoming block: %v", err)
 	}
@@ -333,30 +340,9 @@ func (c *ChainService) processBlockNew(block *types.Block) error {
 	if block.SlotNumber() == 0 {
 		return errors.New("cannot process a genesis block: received block with slot 0")
 	}
-	blockHash, err := block.Hash()
-	if err != nil {
-		return fmt.Errorf("failed to get hash of block: %v", err)
-	}
 
-	if c.enablePOWChain && !c.doesPoWBlockExist(block) {
-		return errors.New("proof-of-Work chain reference in block does not exist")
-	}
+	if !c.isBlockReadyForProcessing(block) {
 
-	parent, err := c.beaconDB.GetBlock(block.ParentHash())
-	if err != nil {
-		return fmt.Errorf("could not get parent block: %v", err)
-	}
-	if parent == nil {
-		return fmt.Errorf("unprocessed parent block as it points to nil parent: %#x", block.ParentHash())
-	}
-
-	beaconState, err := c.beaconDB.GetState()
-	if err != nil {
-		return fmt.Errorf("failed to get beacon state: %v", err)
-	}
-
-	if beaconState.Slot() != block.SlotNumber()+1 {
-		return fmt.Errorf("block slot is not valid %d", block.SlotNumber())
 	}
 
 	return nil
@@ -467,7 +453,7 @@ func (c *ChainService) calculateNewBlockVotes(block *types.Block, beaconState *t
 func (c *ChainService) isBlockReadyForProcessing(block *types.Block) bool {
 
 	// Pre-Processing Condition 1:
-	// Check that the parent Block has been processed and saved
+	// Check that the parent Block has been processed and saved.
 
 	parent, err := c.beaconDB.GetBlock(block.ParentHash())
 	if err != nil {
@@ -479,8 +465,8 @@ func (c *ChainService) isBlockReadyForProcessing(block *types.Block) bool {
 		return false
 	}
 
-	// PreProcessing Condition 1:
-	// The state is updated up to block.slot -1
+	// Pre-Processing Condition 2:
+	// The state is updated up to block.slot -1.
 
 	beaconState, err := c.beaconDB.GetState()
 	if err != nil {
@@ -493,9 +479,18 @@ func (c *ChainService) isBlockReadyForProcessing(block *types.Block) bool {
 		return false
 	}
 
-	//if c.enablePOWChain && c.doesPoWBlockExist(beaconState.) {
+	// Pre-Processing Condition 2:
+	// The block pointed to by the state in state.processed_pow_receipt_root has
+	// been processed in the ETH 1.0 chain.
 
-	//}
+	if c.enablePOWChain && !c.doesPoWBlockExist(beaconState.ProcessedPowReceiptRootHash32()) {
+		log.Debug("proof-of-Work chain reference in state does not exist")
+		return false
+	}
+
+	// Pre-Processing Condition 4:
+	// The node's local time is greater than or equal to
+	// state.genesis_time + block.slot * SLOT_DURATION.
 
 	if !block.IsSlotValid(c.genesisTime) {
 		log.Debugf("slot of block is too high: %d", block.SlotNumber())

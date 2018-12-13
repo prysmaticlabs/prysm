@@ -73,7 +73,7 @@ func NewGenesisBeaconState(genesisValidatorRegistry []*pb.ValidatorRecord) (*Bea
 			LatestBlockHash32S:                   latestBlockHashes,
 			LatestPenalizedExitBalances:          []uint64{},
 			LatestAttestations:                   []*pb.PendingAttestationRecord{},
-			ProcessedPowReceiptRootHash32:        [][]byte{},
+			ProcessedPowReceiptRootHash32:        []byte{},
 			CandidatePowReceiptRoots:             []*pb.CandidatePoWReceiptRootRecord{},
 			GenesisTime:                          0,
 			ForkData: &pb.ForkData{
@@ -259,8 +259,10 @@ func (b *BeaconState) LatestAttestations() []*pb.PendingAttestationRecord {
 
 // ProcessedPowReceiptRootHash32 returns the root hashes of the
 // processed transaction receipts from the POW chain.
-func (b *BeaconState) ProcessedPowReceiptRootHash32() [][]byte {
-	return b.data.ProcessedPowReceiptRootHash32
+func (b *BeaconState) ProcessedPowReceiptRootHash32() [32]byte {
+	var h [32]byte
+	copy(h[:], b.data.ProcessedPowReceiptRootHash32)
+	return h
 }
 
 // CandidatePowReceiptRoots returns the root records of receipts that have
@@ -521,8 +523,8 @@ func (b *BeaconState) SetLatestAttestations(attestations []*pb.PendingAttestatio
 
 // SetProcessedPowReceiptHash saves the POW receipts which have
 // been processed by the POW chain.
-func (b *BeaconState) SetProcessedPowReceiptHash(hash [][]byte) {
-	b.data.ProcessedPowReceiptRootHash32 = hash
+func (b *BeaconState) SetProcessedPowReceiptHash(hash [32]byte) {
+	b.data.ProcessedPowReceiptRootHash32 = hash[:]
 }
 
 // SetCandidatePowReceiptRoots saves the latest roots of POW receipts that have
