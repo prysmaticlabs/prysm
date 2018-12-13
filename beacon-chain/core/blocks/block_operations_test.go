@@ -271,31 +271,45 @@ func TestProcessCasperSlashings_SlotsInequalities(t *testing.T) {
 		att2 *pb.AttestationData
 	}{
 		{
-			// Case 0: Justified slot 1 < justified slot 2 ==
-			// slot 2 < slot 1 should trigger error where left-hand
-			// side is true and right hand side is false and slots
-			// are unequal.
+			// Case 0: vote1.JustifiedSlot < vote2.JustifiedSlot is false
+			// vote2.JustifiedSlot + 1 == vote2.Slot is true
+			// vote2.Slot < vote1.Slot is true
+			// and slots are unequal.
 			att1: &pb.AttestationData{
-				Slot:          4,
 				JustifiedSlot: 4,
+				Slot:          6,
 			},
 			att2: &pb.AttestationData{
+				JustifiedSlot: 4,
 				Slot:          5,
-				JustifiedSlot: 5,
 			},
 		},
 		{
-			// Case 2: Justified slot 1 < justified slot 2 ==
-			// slot 2 < slot 1 should trigger error where left-hand
-			// side is false and right hand side is true and slots
-			// are unequal.
+			// Case 1: vote1.JustifiedSlot < vote2.JustifiedSlot is false
+			// vote2.JustifiedSlot + 1 == vote2.Slot is false
+			// vote2.Slot < vote1.Slot is true
+			// and slots are unequal.
 			att1: &pb.AttestationData{
-				Slot:          4,
-				JustifiedSlot: 5,
+				JustifiedSlot: 4,
+				Slot:          8,
 			},
 			att2: &pb.AttestationData{
-				Slot:          3,
 				JustifiedSlot: 4,
+				Slot:          7,
+			},
+		},
+		{
+			// Case 2: vote1.JustifiedSlot < vote2.JustifiedSlot is false
+			// vote2.JustifiedSlot + 1 == vote2.Slot is false
+			// vote2.Slot < vote1.Slot is false
+			// and slots are unequal.
+			att1: &pb.AttestationData{
+				JustifiedSlot: 4,
+				Slot:          6,
+			},
+			att2: &pb.AttestationData{
+				JustifiedSlot: 4,
+				Slot:          7,
 			},
 		},
 	}
@@ -315,9 +329,15 @@ func TestProcessCasperSlashings_SlotsInequalities(t *testing.T) {
 
 		want := fmt.Sprintf(
 			`
-			expected vote1.JustifiedSlot < vote2.JustifiedSlot == vote2.slot < vote1.slot
-			or vote1.slot == vote2.slot, instead received vote1.JustifiedSlot = %d,
-			vote2.JustifiedSlot = %d, vote1.slot = %d, and vote2.slot = %d
+			Expected the following conditions to hold:
+			(vote1.JustifiedSlot < vote2.JustifiedSlot) &&
+			(vote2.JustifiedSlot + 1 == vote2.Slot) &&
+			(vote2.Slot < vote1.Slot)
+			OR
+			vote1.Slot == vote.Slot
+
+			Instead, received vote1.JustifiedSlot %d, vote.JustifiedSlot %d
+			and vote1.Slot %d, vote2.Slot %d
 			`,
 			tt.att1.JustifiedSlot,
 			tt.att2.JustifiedSlot,

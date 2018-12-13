@@ -108,6 +108,12 @@ func verifyProposerSlashing(
 //   Let intersection = [x for x in indices(casper_slashing.votes_1)
 //     if x in indices(casper_slashing.votes_2)].
 //   Verify that len(intersection) >= 1.
+//	 Verify the following about the casper votes:
+//     (vote1.justified_slot < vote2.justified_slot) &&
+//     (vote2.justified_slot + 1 == vote2.slot) &&
+//     (vote2.slot < vote1.slot)
+//     OR
+//     vote1.slot == vote.slot
 //   Verify that casper_slashing.votes_1.data.justified_slot + 1 <
 //     casper_slashing.votes_2.data.justified_slot + 1 ==
 //     casper_slashing.votes_2.data.slot < casper_slashing.votes_1.data.slot
@@ -168,7 +174,9 @@ func verifyCasperSlashing(validatorRegistry []*pb.ValidatorRecord, slashing *pb.
 		return fmt.Errorf("could not verify casper votes 2: %v", err)
 	}
 
-	// Inner attestation data structures for the votes should not be equal.
+	// Inner attestation data structures for the votes should not be equal,
+	// as that would mean both votes are the same and therefore no slashing
+	// should occur.
 	if reflect.DeepEqual(votes1Attestation, votes2Attestation) {
 		return fmt.Errorf(
 			"casper slashing inner vote attestation data should not match: %v, %v",
@@ -177,19 +185,31 @@ func verifyCasperSlashing(validatorRegistry []*pb.ValidatorRecord, slashing *pb.
 		)
 	}
 
-	// Unless vote1.justified_slot < vote2.justified_slot == vote2.slot < vote1.slot or slots
-	// for both are strictly strict equal, the slashing is invalid.
-	voteJustifiedSlotsLessThan := votes1Attestation.GetJustifiedSlot()+1 <
-		votes2Attestation.GetJustifiedSlot()+1
-	slotsLessThan := votes2Attestation.GetSlot() < votes1Attestation.GetSlot()
+	// Unless the following holds, the slashing is invalid:
+	// (vote1.justified_slot < vote2.justified_slot) &&
+	// (vote2.justified_slot + 1 == vote2.slot) &&
+	// (vote2.slot < vote1.slot)
+	// OR
+	// vote1.slot == vote.slot
+
+	justificationValidity := (votes1Attestation.GetJustifiedSlot() < votes2Attestation.GetJustifiedSlot()) &&
+		(votes2Attestation.GetJustifiedSlot()+1 == votes2Attestation.GetSlot()) &&
+		(votes2Attestation.GetSlot() < votes1Attestation.GetSlot())
+
 	slotsEqual := votes1Attestation.GetSlot() == votes2Attestation.GetSlot()
 
-	if !(voteJustifiedSlotsLessThan == slotsLessThan) && !slotsEqual {
+	if !(justificationValidity || slotsEqual) {
 		return fmt.Errorf(
 			`
-			expected vote1.JustifiedSlot < vote2.JustifiedSlot == vote2.slot < vote1.slot
-			or vote1.slot == vote2.slot, instead received vote1.JustifiedSlot = %d,
-			vote2.JustifiedSlot = %d, vote1.slot = %d, and vote2.slot = %d
+			Expected the following conditions to hold:
+			(vote1.JustifiedSlot < vote2.JustifiedSlot) &&
+			(vote2.JustifiedSlot + 1 == vote2.Slot) &&
+			(vote2.Slot < vote1.Slot)
+			OR
+			vote1.Slot == vote.Slot
+
+			Instead, received vote1.JustifiedSlot %d, vote.JustifiedSlot %d
+			and vote1.Slot %d, vote2.Slot %d
 			`,
 			votes1Attestation.GetJustifiedSlot(),
 			votes2Attestation.GetJustifiedSlot(),
