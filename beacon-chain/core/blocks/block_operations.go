@@ -334,8 +334,7 @@ func ProcessBlockAttestations(
 }
 
 func verifyAttestation(beaconState *types.BeaconState, att *pb.Attestation) error {
-	inclusionDelay := params.BeaconConfig().MinAttestationInclusionDelay *
-		params.BeaconConfig().SlotDuration
+	inclusionDelay := params.BeaconConfig().MinAttestationInclusionDelay
 	if att.GetData().GetSlot()+inclusionDelay > beaconState.Slot() {
 		return fmt.Errorf(
 			"attestation slot (slot %d) + inclusion delay (%d) beyond current beacon state slot (%d)",

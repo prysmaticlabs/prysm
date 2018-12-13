@@ -504,7 +504,7 @@ func TestProcessBlockAttestations_InclusionDelayFailure(t *testing.T) {
 	want := fmt.Sprintf(
 		"attestation slot (slot %d) + inclusion delay (%d) beyond current beacon state slot (%d)",
 		5,
-		params.BeaconConfig().MinAttestationInclusionDelay*params.BeaconConfig().SlotDuration,
+		params.BeaconConfig().MinAttestationInclusionDelay,
 		5,
 	)
 	if _, err := ProcessBlockAttestations(
@@ -550,7 +550,7 @@ func TestProcessBlockAttestations_JustifiedSlotVerificationFailure(t *testing.T)
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Slot:          params.BeaconConfig().EpochLength,
+				Slot:          10,
 				JustifiedSlot: 4,
 			},
 		},
@@ -561,14 +561,14 @@ func TestProcessBlockAttestations_JustifiedSlotVerificationFailure(t *testing.T)
 		},
 	}
 	state := types.NewBeaconState(&pb.BeaconState{
-		Slot:                  2*params.BeaconConfig().EpochLength - 1,
-		PreviousJustifiedSlot: 3,
+		Slot:          params.BeaconConfig().EpochLength - 1,
+		JustifiedSlot: 0,
 	})
 
 	want := fmt.Sprintf(
 		"expected attestation.JustifiedSlot == state.JustifiedSlot, received %d == %d",
 		4,
-		3,
+		0,
 	)
 	if _, err := ProcessBlockAttestations(
 		state,
