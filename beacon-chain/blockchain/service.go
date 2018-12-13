@@ -502,4 +502,6 @@ func (c *ChainService) isBlockReadyForProcessing(block *types.Block) bool {
 		return false
 	}
 
+	return true
+
 }
