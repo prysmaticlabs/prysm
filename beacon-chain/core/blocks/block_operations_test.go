@@ -196,12 +196,9 @@ func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 	currentSlot := uint64(0)
 
 	want := fmt.Sprintf(
-		`
-			total proof of custody validator indices (%d) greater than maximum
-			allowed number of casper votes (%d)
-			`,
-		params.BeaconConfig().MaxCasperVotes*2,
+		"exceeded allowed casper votes (%d), received %d",
 		params.BeaconConfig().MaxCasperVotes,
+		params.BeaconConfig().MaxCasperVotes*2,
 	)
 
 	if _, err := ProcessCasperSlashings(
@@ -441,42 +438,4 @@ func TestProcessCasperSlashings_AppliesCorrectStatus(t *testing.T) {
 			newRegistry[1].Status,
 		)
 	}
-}
-
-func TestIntersection(t *testing.T) {
-	testCases := []struct {
-		setA []uint32
-		setB []uint32
-		out  []uint32
-	}{
-		{[]uint32{2, 3, 5}, []uint32{3}, []uint32{3}},
-		{[]uint32{2, 3, 5}, []uint32{3, 5}, []uint32{3, 5}},
-		{[]uint32{2, 3, 5}, []uint32{5, 3, 2}, []uint32{5, 3, 2}},
-		{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
-		{[]uint32{2, 3, 5}, []uint32{}, []uint32{}},
-		{[]uint32{}, []uint32{2, 3, 5}, []uint32{}},
-		{[]uint32{}, []uint32{}, []uint32{}},
-		{[]uint32{1}, []uint32{1}, []uint32{1}},
-	}
-	for _, tt := range testCases {
-		result := intersection(tt.setA, tt.setB)
-		if !testEq(result, tt.out) {
-			t.Errorf("got %d, want %d", result, tt.out)
-		}
-	}
-}
-
-func testEq(a, b []uint32) bool {
-	if (a == nil) != (b == nil) {
-		return false
-	}
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }

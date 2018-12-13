@@ -8,6 +8,7 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/slices"
 )
 
 // ProcessProposerSlashings is one of the operations performed
@@ -95,7 +96,8 @@ func verifyProposerSlashing(
 // Casper FFG slashing conditions if any slashable events occurred.
 //
 // Official spec definition for casper slashings:
-// Verify that len(block.body.casper_slashings) <= MAX_CASPER_SLASHINGS.
+//
+//   Verify that len(block.body.casper_slashings) <= MAX_CASPER_SLASHINGS.
 //   For each casper_slashing in block.body.casper_slashings:
 //
 //   Verify that verify_casper_votes(state, casper_slashing.votes_1).
@@ -127,18 +129,17 @@ func ProcessCasperSlashings(
 		)
 	}
 	for idx, slashing := range casperSlashings {
-		// verifyCasperSlashing performs validity checks on the slashing
-		// struct and returns a list of validator indices to be slashed from
-		// the BeaconState's validator registry.
-		validatorIndices, err := verifyCasperSlashing(slashing)
-		if err != nil {
+		if err := verifyCasperSlashing(validatorRegistry, slashing); err != nil {
 			return nil, fmt.Errorf("could not verify casper slashing #%d: %v", idx, err)
+		}
+		validatorIndices, err := casperSlashingPenalizedIndices(slashing)
+		if err != nil {
+			return nil, fmt.Errorf("could not determine validator indices to penalize: %v", err)
 		}
 		for _, validatorIndex := range validatorIndices {
 			penalizedValidator := validatorRegistry[validatorIndex]
 			if penalizedValidator.Status != pb.ValidatorRecord_EXITED_WITH_PENALTY {
-				// TODO(#781): Replace with
-				// update_validator_status(
+				// TODO(#781): Replace with update_validator_status(
 				//   state,
 				//   validatorIndex,
 				//   new_status=EXITED_WITH_PENALTY,
@@ -154,33 +155,22 @@ func ProcessCasperSlashings(
 	return validatorRegistry, nil
 }
 
-func verifyCasperSlashing(
-	slashing *pb.CasperSlashing,
-) ([]uint32, error) {
+func verifyCasperSlashing(validatorRegistry []*pb.ValidatorRecord, slashing *pb.CasperSlashing) error {
 	votes1 := slashing.GetVotes_1()
 	votes2 := slashing.GetVotes_2()
-	votes1Indices := append(
-		votes1.GetAggregateSignaturePoc_0Indices(),
-		votes1.GetAggregateSignaturePoc_1Indices()...,
-	)
-	votes2Indices := append(
-		votes2.GetAggregateSignaturePoc_0Indices(),
-		votes2.GetAggregateSignaturePoc_1Indices()...,
-	)
-
 	votes1Attestation := votes1.GetData()
 	votes2Attestation := votes2.GetData()
 
-	if err := verifyCasperVotes(votes1); err != nil {
-		return nil, fmt.Errorf("could not verify casper votes 1: %v", err)
+	if err := verifyCasperVotes(validatorRegistry, votes1); err != nil {
+		return fmt.Errorf("could not verify casper votes 1: %v", err)
 	}
-	if err := verifyCasperVotes(votes2); err != nil {
-		return nil, fmt.Errorf("could not verify casper votes 2: %v", err)
+	if err := verifyCasperVotes(validatorRegistry, votes2); err != nil {
+		return fmt.Errorf("could not verify casper votes 2: %v", err)
 	}
 
 	// Inner attestation data structures for the votes should not be equal.
 	if reflect.DeepEqual(votes1Attestation, votes2Attestation) {
-		return nil, fmt.Errorf(
+		return fmt.Errorf(
 			"casper slashing inner vote attestation data should not match: %v, %v",
 			votes1Attestation,
 			votes2Attestation,
@@ -195,7 +185,7 @@ func verifyCasperSlashing(
 	slotsEqual := votes1Attestation.GetSlot() == votes2Attestation.GetSlot()
 
 	if !(voteJustifiedSlotsLessThan == slotsLessThan) && !slotsEqual {
-		return nil, fmt.Errorf(
+		return fmt.Errorf(
 			`
 			expected vote1.JustifiedSlot < vote2.JustifiedSlot == vote2.slot < vote1.slot
 			or vote1.slot == vote2.slot, instead received vote1.JustifiedSlot = %d,
@@ -207,10 +197,21 @@ func verifyCasperSlashing(
 			votes2Attestation.GetSlot(),
 		)
 	}
+	return nil
+}
 
-	// Obtain the intersection of validator indices between
-	// vote1 and vote2's aggregate proof of custody indices.
-	indicesIntersection := intersection(votes1Indices, votes2Indices)
+func casperSlashingPenalizedIndices(slashing *pb.CasperSlashing) ([]uint32, error) {
+	votes1 := slashing.GetVotes_1()
+	votes2 := slashing.GetVotes_2()
+	votes1Indices := append(
+		votes1.GetAggregateSignaturePoc_0Indices(),
+		votes1.GetAggregateSignaturePoc_1Indices()...,
+	)
+	votes2Indices := append(
+		votes2.GetAggregateSignaturePoc_0Indices(),
+		votes2.GetAggregateSignaturePoc_1Indices()...,
+	)
+	indicesIntersection := slices.Intersection(votes1Indices, votes2Indices)
 	if len(indicesIntersection) < 1 {
 		return nil, fmt.Errorf(
 			"expected intersection of vote indices to be non-empty: %v",
@@ -221,18 +222,17 @@ func verifyCasperSlashing(
 }
 
 func verifyCasperVotes(
+	validatorRegistry []*pb.ValidatorRecord,
 	votes *pb.SlashableVoteData,
 ) error {
+	_ = validatorRegistry
 	totalProofsOfCustody := len(votes.GetAggregateSignaturePoc_0Indices()) +
 		len(votes.GetAggregateSignaturePoc_1Indices())
 	if uint64(totalProofsOfCustody) > params.BeaconConfig().MaxCasperVotes {
 		return fmt.Errorf(
-			`
-			total proof of custody validator indices (%d) greater than maximum
-			allowed number of casper votes (%d)
-			`,
-			totalProofsOfCustody,
+			"exceeded allowed casper votes (%d), received %d",
 			params.BeaconConfig().MaxCasperVotes,
+			totalProofsOfCustody,
 		)
 	}
 	// TODO(#781): Implement BLS verify multiple.
@@ -247,25 +247,4 @@ func verifyCasperVotes(
 	//    ]
 	//  )
 	return nil
-}
-
-// Computes intersection of two slices with time
-// complexity of approximately O(n) leveraging a hash map to
-// check for element existence off by a constant factor
-// of underlying hash map efficiency.
-func intersection(a []uint32, b []uint32) []uint32 {
-	set := make([]uint32, 0)
-	hash := make(map[uint32]bool)
-
-	for i := 0; i < len(a); i++ {
-		hash[a[i]] = true
-	}
-
-	for i := 0; i < len(b); i++ {
-		if _, found := hash[b[i]]; found {
-			set = append(set, b[i])
-		}
-	}
-
-	return set
 }
