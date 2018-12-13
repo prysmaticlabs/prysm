@@ -20,6 +20,8 @@ type ValidatorSetDeltaFlags int
 // BeaconChainConfig contains configs for node to participate in beacon chain.
 type BeaconChainConfig struct {
 	MaxProposerSlashings                    uint64         // MaxProposerSlashing defines the maximum number of slashings of proposers possible in a block.
+	MaxCasperSlashings                      uint64         // MaxCasperSlashings defines the maximum number of casper FFG slashings possible in a block.
+	MaxCasperVotes                          uint64         // MaxCasperVotes defines the maximum number of casper FFG votes possible in a block.
 	ShardCount                              uint64         // ShardCount is the fixed number of shards in Ethereum 2.0.
 	MaxDeposit                              uint64         // MaxDeposit is the max balance a validator can have at stake.
 	MinTopUpSize                            uint64         // MinTopUpSize is the minimal amount of Ether a validator can top up.
@@ -64,6 +66,8 @@ type ShardChainConfig struct {
 
 var defaultBeaconConfig = &BeaconChainConfig{
 	MaxProposerSlashings:          16,
+	MaxCasperSlashings:            16,
+	MaxCasperVotes:                1024,
 	ShardCount:                    1024,
 	MaxDeposit:                    32,
 	MinTopUpSize:                  1,
@@ -93,6 +97,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 var demoBeaconConfig = &BeaconChainConfig{
 	MaxProposerSlashings:          16,
+	MaxCasperSlashings:            16,
 	ShardCount:                    5,
 	MaxDeposit:                    32,
 	MinTopUpSize:                  1,
