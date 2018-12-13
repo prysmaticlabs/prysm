@@ -135,7 +135,7 @@ func ProcessCasperSlashings(
 		)
 	}
 	for idx, slashing := range casperSlashings {
-		if err := verifyCasperSlashing(validatorRegistry, slashing); err != nil {
+		if err := verifyCasperSlashing(slashing); err != nil {
 			return nil, fmt.Errorf("could not verify casper slashing #%d: %v", idx, err)
 		}
 		validatorIndices, err := casperSlashingPenalizedIndices(slashing)
@@ -161,7 +161,7 @@ func ProcessCasperSlashings(
 	return validatorRegistry, nil
 }
 
-func verifyCasperSlashing(validatorRegistry []*pb.ValidatorRecord, slashing *pb.CasperSlashing) error {
+func verifyCasperSlashing(slashing *pb.CasperSlashing) error {
 	votes1 := slashing.GetVotes_1()
 	votes2 := slashing.GetVotes_2()
 	votes1Attestation := votes1.GetData()
