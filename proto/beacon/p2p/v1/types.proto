@@ -78,12 +78,12 @@ message Attestation {
 message AttestationData {
   uint64 slot = 1;
   uint64 shard = 2;
-  bytes beacon_block_hash32 = 3;
-  bytes epoch_boundary_hash32 = 4;
-  bytes shard_block_hash32 = 5;
-  bytes latest_crosslink_hash32 = 6;
+  bytes beacon_block_root = 3;
+  bytes epoch_boundary_root = 4;
+  bytes shard_block_root = 5;
+  bytes latest_crosslink_root = 6;
   uint64 justified_slot = 7;
-  bytes justified_block_hash32 = 8;
+  bytes justified_block_root = 8;
 }
 
 message ValidatorRecord {

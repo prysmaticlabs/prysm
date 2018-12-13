@@ -266,11 +266,11 @@ func verifyCasperVotes(votes *pb.SlashableVoteData) error {
 	return nil
 }
 
-// ProcessAttestations applies processing operations to a block's inner attestation
+// ProcessBlockAttestations applies processing operations to a block's inner attestation
 // records. This function returns a list of pending attestations which can then be
 // appended to the BeaconState's latest attestations.
 //
-// Official spec definition for proposer slashings:
+// Official spec definition for block attestation processing:
 //   Verify that len(block.body.attestations) <= MAX_ATTESTATIONS.
 //
 //   For each attestation in block.body.attestations:
@@ -306,9 +306,80 @@ func verifyCasperVotes(votes *pb.SlashableVoteData) error {
 //     custody_bitfield=attestation.custody_bitfield,
 //     slot_included=state.slot,
 //   ) which can then be appended to state.latest_attestations.
-func ProcessAttestations(
+func ProcessBlockAttestations(
 	beaconState *types.BeaconState,
-	block *types.Block,
+	block *pb.BeaconBlock,
 ) ([]*pb.PendingAttestationRecord, error) {
-	return nil, nil
+	atts := block.GetBody().GetAttestations()
+	if uint64(len(atts)) > params.BeaconConfig().MaxAttestations {
+		return nil, fmt.Errorf(
+			"number of attestations in block  (%d) exceeds allowed threshold of %d",
+			len(atts),
+			params.BeaconConfig().MaxAttestations,
+		)
+	}
+	var pendingAttestations []*pb.PendingAttestationRecord
+	for idx, attestation := range atts {
+		if err := verifyAttestation(beaconState, attestation); err != nil {
+			return nil, fmt.Errorf("could not verify attestation at index %d in block: %v", idx, err)
+		}
+		pendingAttestations = append(pendingAttestations, &pb.PendingAttestationRecord{
+			Data:                  attestation.GetData(),
+			ParticipationBitfield: attestation.GetParticipationBitfield(),
+			CustodyBitfield:       attestation.GetCustodyBitfield(),
+			SlotIncluded:          beaconState.Slot(),
+		})
+	}
+	return pendingAttestations, nil
+}
+
+func verifyAttestation(beaconState *types.BeaconState, att *pb.Attestation) error {
+	inclusionDelay := params.BeaconConfig().MinAttestationInclusionDelay * params.BeaconConfig().SlotDuration
+	if att.GetData().GetSlot()+inclusionDelay > beaconState.Slot() {
+		return fmt.Errorf(
+			"attestation slot (slot %d) + inclusion delay (%d) beyond current beacon state slot (%d)",
+			att.GetData().GetSlot(),
+			inclusionDelay,
+			beaconState.Slot(),
+		)
+	}
+	if att.GetData().GetSlot()+params.BeaconConfig().EpochLength < beaconState.Slot() {
+		return fmt.Errorf(
+			"attestation slot (slot %d) + epoch length (%d) less than current beacon state slot (%d)",
+			att.GetData().GetSlot(),
+			params.BeaconConfig().EpochLength,
+			beaconState.Slot(),
+		)
+	}
+	//   Verify that either attestation.data.latest_crosslink_root or
+	//     attestation.data.shard_block_root equals
+	//     state.latest_crosslinks[shard].shard_block_root
+	crossLinkRoot := att.GetData().GetLatestCrosslinkRoot()
+	shardBlockRoot := att.GetData().GetShardBlockRoot()
+	stateShardBlockRoot := beaconState.LatestCrosslinks()
+	fmt.Printf("%v%v%v", crossLinkRoot, shardBlockRoot, stateShardBlockRoot)
+
+	// Verify attestation.shard_block_root == ZERO_HASH [TO BE REMOVED IN PHASE 1].
+	if !bytes.Equal(att.GetData().GetShardBlockRoot(), []byte{}) {
+		return fmt.Errorf(
+			"expected attestation's shard block root == %#x, received %#x instead",
+			[]byte{},
+			att.GetData().GetShardBlockRoot(),
+		)
+	}
+	// TODO(#258): Integrate BLS signature verification for attestation.
+	//     Let participants = get_attestation_participants(
+	//       state,
+	//       attestation.data,
+	//       attestation.participation_bitfield,
+	//     )
+	//     Let group_public_key = BLSAddPubkeys([
+	//       state.validator_registry[v].pubkey for v in participants
+	//     ])
+	//     Verify that bls_verify(
+	//       pubkey=group_public_key,
+	//       message=hash_tree_root(attestation.data) + bytes1(0),
+	//       signature=attestation.aggregate_signature,
+	//       domain=get_domain(state.fork_data, attestation.data.slot, DOMAIN_ATTESTATION)).
+	return nil
 }
