@@ -334,7 +334,8 @@ func ProcessBlockAttestations(
 }
 
 func verifyAttestation(beaconState *types.BeaconState, att *pb.Attestation) error {
-	inclusionDelay := params.BeaconConfig().MinAttestationInclusionDelay * params.BeaconConfig().SlotDuration
+	inclusionDelay := params.BeaconConfig().MinAttestationInclusionDelay *
+		params.BeaconConfig().SlotDuration
 	if att.GetData().GetSlot()+inclusionDelay > beaconState.Slot() {
 		return fmt.Errorf(
 			"attestation slot (slot %d) + inclusion delay (%d) beyond current beacon state slot (%d)",
@@ -351,18 +352,69 @@ func verifyAttestation(beaconState *types.BeaconState, att *pb.Attestation) erro
 			beaconState.Slot(),
 		)
 	}
-	//   Verify that either attestation.data.latest_crosslink_root or
-	//     attestation.data.shard_block_root equals
-	//     state.latest_crosslinks[shard].shard_block_root
+	// Verify that attestation.JustifiedSlot is equal to
+	// state.JustifiedSlot if attestation.Slot >=
+	// state.Slot - (state.Slot % EPOCH_LENGTH) else state.PreviousJustifiedSlot.
+	if att.GetData().GetSlot() >= beaconState.Slot()-(beaconState.Slot()%params.BeaconConfig().EpochLength) {
+		if att.GetData().GetJustifiedSlot() != beaconState.JustifiedSlot() {
+			return fmt.Errorf(
+				"expected attestation.JustifiedSlot == state.JustifiedSlot, received %d == %d",
+				att.GetData().GetJustifiedSlot(),
+				beaconState.JustifiedSlot(),
+			)
+		}
+	} else {
+		if att.GetData().GetJustifiedSlot() != beaconState.PreviousJustifiedSlot() {
+			return fmt.Errorf(
+				"expected attestation.JustifiedSlot == state.PreviousJustifiedSlot, received %d == %d",
+				att.GetData().GetJustifiedSlot(),
+				beaconState.PreviousJustifiedSlot(),
+			)
+		}
+	}
+
+	// Verify that attestation.data.justified_block_root is equal to
+	// get_block_root(state, attestation.data.justified_slot).
+	justifiedBlockRoot := att.GetData().GetJustifiedSlot()
+	if bytes.Equal(justifiedBlockRoot, []byte{}) {
+		return fmt.Errorf(
+			`
+			expected attestation.JustifiedBlockRoot == getBlockRoot(state, attestation.JustifiedSlot),
+			received attestation.JustifiedBlockRoot = %#x and
+			attestation.JustifiedSlot = %#x
+			`,
+			justifiedBlockRoot,
+			[]byte{},
+		)
+	}
+
+	// Verify that either: attestation.data.latest_crosslink_root or
+	// attestation.data.shard_block_root equals
+	// state.latest_crosslinks[shard].shard_block_root
 	crossLinkRoot := att.GetData().GetLatestCrosslinkRoot()
 	shardBlockRoot := att.GetData().GetShardBlockRoot()
-	stateShardBlockRoot := beaconState.LatestCrosslinks()
-	fmt.Printf("%v%v%v", crossLinkRoot, shardBlockRoot, stateShardBlockRoot)
+	shard := att.GetData().GetShard()
+	stateShardBlockRoot := beaconState.LatestCrosslinks()[shard].GetShardBlockRoot()
+
+	if !(bytes.Equal(crossLinkRoot, stateShardBlockRoot) ||
+		bytes.Equal(shardBlockRoot, stateShardBlockRoot)) {
+		return fmt.Errorf(
+			`
+			expected attestation.CrossLinkRoot or attestation.ShardBlockRoot
+			to match the state.LatestCrosslinks[shard].ShardBlockRoot - instead
+			received attestation.CrossLinkRoot %#x, attestation.ShardBlockRoot %#x,
+			and state.LatestCrosslinks[shard].ShardBlockRoot %#x
+			`,
+			crossLinkRoot,
+			shardBlockRoot,
+			stateShardBlockRoot,
+		)
+	}
 
 	// Verify attestation.shard_block_root == ZERO_HASH [TO BE REMOVED IN PHASE 1].
 	if !bytes.Equal(att.GetData().GetShardBlockRoot(), []byte{}) {
 		return fmt.Errorf(
-			"expected attestation's shard block root == %#x, received %#x instead",
+			"expected attestation.ShardBlockRoot == %#x, received %#x instead",
 			[]byte{},
 			att.GetData().GetShardBlockRoot(),
 		)

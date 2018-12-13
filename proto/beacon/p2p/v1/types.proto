@@ -133,7 +133,7 @@ message SpecialRecord {
 
 message CrosslinkRecord {
   uint64 slot = 1;
-  bytes shard_block_hash32 = 2;
+  bytes shard_block_root = 2;
 }
 
 message ShardAndCommitteeArray {
