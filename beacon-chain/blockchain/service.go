@@ -305,7 +305,7 @@ func (c *ChainService) executeStateTransition(
 	parentSlot uint64,
 ) (*types.BeaconState, error) {
 	log.WithField("slotNumber", block.SlotNumber()).Info("Executing state transition")
-	blockVoteCache, err := c.beaconDB.ReadBlockVoteCache(beaconState.LatestBlockHashes())
+	blockVoteCache, err := c.beaconDB.ReadBlockVoteCache(beaconState.LatestBlockRootHashes32())
 	if err != nil {
 		return nil, err
 	}

@@ -609,3 +609,65 @@ func TestProcessBlockAttestations_PreviousJustifiedSlotVerificationFailure(t *te
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
+
+func TestProcessBlockAttestations_BlockRootFailure(t *testing.T) {
+	var blockRoots [][]byte
+	for i := uint64(0); i < 2*params.BeaconConfig().EpochLength; i++ {
+		blockRoots = append(blockRoots, []byte{byte(i)})
+	}
+
+	state := types.NewBeaconState(&pb.BeaconState{
+		Slot:                   64,
+		PreviousJustifiedSlot:  10,
+		LatestBlockRootHash32S: blockRoots,
+	})
+	attestations := []*pb.Attestation{
+		{
+			Data: &pb.AttestationData{
+				Slot:                     20,
+				JustifiedSlot:            10,
+				JustifiedBlockRootHash32: []byte{},
+			},
+		},
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
+	}
+
+	want := fmt.Sprintf(
+		"expected JustifiedBlockRoot == getBlockRoot(state, JustifiedSlot): got %#x = %#x",
+		[]byte{},
+		blockRoots[10],
+	)
+	if _, err := ProcessBlockAttestations(
+		state,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+	//{
+	//slot:         0,
+	//stateSlot:    1,
+	//expectedRoot: []byte{0},
+	//},
+	//{
+	//slot:         2,
+	//stateSlot:    5,
+	//expectedRoot: []byte{2},
+	//},
+	//{
+	//slot:         64,
+	//stateSlot:    128,
+	//expectedRoot: []byte{64},
+	//}, {
+	//slot:         2999,
+	//stateSlot:    3000,
+	//expectedRoot: []byte{127},
+	//}, {
+	//slot:         2873,
+	//stateSlot:    3000,
+	//expectedRoot: []byte{1},
+	//},
+}

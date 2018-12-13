@@ -374,16 +374,17 @@ func verifyAttestation(beaconState *types.BeaconState, att *pb.Attestation) erro
 
 	// Verify that attestation.data.justified_block_root is equal to
 	// get_block_root(state, attestation.data.justified_slot).
+	blockRoot, err := types.BlockRoot(beaconState.Proto(), att.GetData().GetJustifiedSlot())
+	if err != nil {
+		return fmt.Errorf("could not get block root for justified slot: %v", err)
+	}
+
 	justifiedBlockRoot := att.GetData().GetJustifiedBlockRootHash32()
-	if bytes.Equal(justifiedBlockRoot, []byte{}) {
+	if !bytes.Equal(justifiedBlockRoot, blockRoot) {
 		return fmt.Errorf(
-			`
-			expected attestation.JustifiedBlockRoot == getBlockRoot(state, attestation.JustifiedSlot),
-			received attestation.JustifiedBlockRoot = %#x and
-			attestation.JustifiedSlot = %#x
-			`,
+			"expected JustifiedBlockRoot == getBlockRoot(state, JustifiedSlot): got %#x = %#x",
 			justifiedBlockRoot,
-			[]byte{},
+			blockRoot,
 		)
 	}
 
