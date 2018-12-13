@@ -24,11 +24,11 @@ type Block struct {
 // Return block with default fields if data is nil.
 func NewBlock(data *pb.BeaconBlock) *Block {
 	if data == nil {
-		var ancestorHashes = make([][]byte, 0, 32)
+
 		// It is assumed when data==nil, a genesis block will be returned.
 		return &Block{
 			data: &pb.BeaconBlock{
-				AncestorHash32S:               ancestorHashes,
+				ParentRootHash32:              []byte{0},
 				RandaoRevealHash32:            []byte{0},
 				CandidatePowReceiptRootHash32: []byte{0},
 				StateRootHash32:               []byte{0},
@@ -58,7 +58,7 @@ func (b *Block) SlotNumber() uint64 {
 // ParentHash corresponding to parent beacon block.
 func (b *Block) ParentHash() [32]byte {
 	var h [32]byte
-	copy(h[:], b.data.AncestorHash32S[0])
+	copy(h[:], b.data.ParentRootHash32)
 	return h
 }
 
@@ -86,9 +86,9 @@ func (b *Block) Timestamp() (time.Time, error) {
 	return ptypes.Timestamp(b.data.Timestamp)
 }
 
-// AncestorHash32S of the block.
-func (b *Block) AncestorHash32S() [][]byte {
-	return b.data.AncestorHash32S
+// ParentRootHash32 of the block.
+func (b *Block) ParentRootHash32() []byte {
+	return b.data.ParentRootHash32
 }
 
 // AttestationCount returns the number of attestations.
@@ -134,4 +134,36 @@ func (b *Block) IsSlotValid(genesisTime time.Time) bool {
 	slotDuration := time.Duration(b.SlotNumber()*params.BeaconConfig().SlotDuration) * time.Second
 	validTimeThreshold := genesisTime.Add(slotDuration)
 	return clock.Now().After(validTimeThreshold)
+}
+
+// BlockRoot returns the block hash from input slot, the block hashes
+// are stored in BeaconState.
+//
+// Spec pseudocode definition:
+//   def get_block_root(state: BeaconState, slot: int) -> Hash32:
+//     """
+//     Returns the block hash at a recent ``slot``.
+//     """
+//     earliest_slot_in_array = state.slot - len(state.latest_block_roots)
+//     assert earliest_slot_in_array <= slot < state.slot
+//     return state.latest_block_roots[slot - earliest_slot_in_array]
+func BlockRoot(state *pb.BeaconState, slot uint64) ([]byte, error) {
+	var earliestSlot uint64
+
+	// If the state slot is less than the length of state block root list, then
+	// the earliestSlot would result in a negative number. Therefore we should
+	// default earliestSlot = 0 in this case.
+	if state.Slot > uint64(len(state.LatestBlockRootHash32S)) {
+		earliestSlot = state.Slot - uint64(len(state.LatestBlockRootHash32S))
+	}
+
+	if slot < earliestSlot || slot >= state.Slot {
+		return []byte{}, fmt.Errorf("slot %d out of bounds: %d <= slot < %d",
+			slot,
+			earliestSlot,
+			state.Slot,
+		)
+	}
+
+	return state.LatestBlockRootHash32S[slot-earliestSlot], nil
 }
