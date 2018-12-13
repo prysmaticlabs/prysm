@@ -483,3 +483,34 @@ func TestProcessBlockAttestations_ThresholdReached(t *testing.T) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
+
+func TestProcessBlockAttestations_InclusionDelayFailure(t *testing.T) {
+	attestations := []*pb.Attestation{
+		{
+			Data: &pb.AttestationData{
+				Slot: 5,
+			},
+		},
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
+	}
+	state := types.NewBeaconState(&pb.BeaconState{
+		Slot: 5,
+	})
+
+	want := fmt.Sprintf(
+		"attestation slot (slot %d) + inclusion delay (%d) beyond current beacon state slot (%d)",
+		5,
+		params.BeaconConfig().MinAttestationInclusionDelay*params.BeaconConfig().SlotDuration,
+		5,
+	)
+	if _, err := ProcessBlockAttestations(
+		state,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
