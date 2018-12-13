@@ -418,11 +418,6 @@ func (b *BeaconState) CalculateNewBlockHashes(block *Block, parentSlot uint64) (
 	return update, nil
 }
 
-// SetSlot updates the slot saved in the beacon state.
-func (b *BeaconState) SetSlot(slot uint64) {
-	b.data.Slot = slot
-}
-
 // SetCrossLinks updates the inner proto's cross link records.
 func (b *BeaconState) SetCrossLinks(crossLinks []*pb.CrosslinkRecord) {
 	b.data.LatestCrosslinks = crossLinks
@@ -545,6 +540,12 @@ func (b *BeaconState) SetGenesisTime(time uint64) {
 // SetForkData sets data relating to the fork into the state.
 func (b *BeaconState) SetForkData(data *pb.ForkData) {
 	b.data.ForkData = data
+}
+
+// SetSlot saves the slot of the last processed block to
+// the beacon state.
+func (b *BeaconState) SetSlot(slot uint64) {
+	b.data.Slot = slot
 }
 
 func getPenaltyForPeriod(penalties []uint64, period uint64) uint64 {
