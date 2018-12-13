@@ -639,7 +639,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_lint",
-    commit = "c67002cb31c3a748b7688c27f20d8358b4193582",
+    commit = "93c0bb5c83939f89e6238cefd42de38f33734409",
     importpath = "golang.org/x/lint",
 )
 
