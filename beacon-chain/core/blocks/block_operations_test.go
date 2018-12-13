@@ -514,3 +514,98 @@ func TestProcessBlockAttestations_InclusionDelayFailure(t *testing.T) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
+
+func TestProcessBlockAttestations_EpochDistanceFailure(t *testing.T) {
+	attestations := []*pb.Attestation{
+		{
+			Data: &pb.AttestationData{
+				Slot: 5,
+			},
+		},
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
+	}
+	state := types.NewBeaconState(&pb.BeaconState{
+		Slot: 5 + 2*params.BeaconConfig().EpochLength,
+	})
+
+	want := fmt.Sprintf(
+		"attestation slot (slot %d) + epoch length (%d) less than current beacon state slot (%d)",
+		5,
+		params.BeaconConfig().EpochLength,
+		5+2*params.BeaconConfig().EpochLength,
+	)
+	if _, err := ProcessBlockAttestations(
+		state,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessBlockAttestations_JustifiedSlotVerificationFailure(t *testing.T) {
+	attestations := []*pb.Attestation{
+		{
+			Data: &pb.AttestationData{
+				Slot:          params.BeaconConfig().EpochLength,
+				JustifiedSlot: 4,
+			},
+		},
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
+	}
+	state := types.NewBeaconState(&pb.BeaconState{
+		Slot:                  2*params.BeaconConfig().EpochLength - 1,
+		PreviousJustifiedSlot: 3,
+	})
+
+	want := fmt.Sprintf(
+		"expected attestation.JustifiedSlot == state.JustifiedSlot, received %d == %d",
+		4,
+		3,
+	)
+	if _, err := ProcessBlockAttestations(
+		state,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessBlockAttestations_PreviousJustifiedSlotVerificationFailure(t *testing.T) {
+	attestations := []*pb.Attestation{
+		{
+			Data: &pb.AttestationData{
+				Slot:          5,
+				JustifiedSlot: 4,
+			},
+		},
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
+	}
+	state := types.NewBeaconState(&pb.BeaconState{
+		Slot:                  5 + params.BeaconConfig().EpochLength,
+		PreviousJustifiedSlot: 3,
+	})
+
+	want := fmt.Sprintf(
+		"expected attestation.JustifiedSlot == state.PreviousJustifiedSlot, received %d == %d",
+		4,
+		3,
+	)
+	if _, err := ProcessBlockAttestations(
+		state,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
