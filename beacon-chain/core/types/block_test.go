@@ -7,8 +7,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestGenesisBlock(t *testing.T) {
@@ -98,46 +98,75 @@ func TestBlockRootAtSlot_OK(t *testing.T) {
 	}
 
 	tests := []struct {
-		slot          uint64
-		stateSlot     uint64
-		expectedRoot  []byte
+		slot         uint64
+		stateSlot    uint64
+		expectedRoot []byte
 	}{
 		{
-			slot:          0,
-			stateSlot:     0,
-			expectedRoot: 0,
+			slot:         0,
+			stateSlot:    1,
+			expectedRoot: []byte{0},
 		},
 		{
-			slot:          1,
-			stateSlot:     5,
-			expectedRoot: 1,
+			slot:         2,
+			stateSlot:    5,
+			expectedRoot: []byte{2},
 		},
 		{
-			stateSlot:     1024,
-			slot:          1024,
-			expectedRoot: 64 - 0,
+			slot:         64,
+			stateSlot:    128,
+			expectedRoot: []byte{64},
 		}, {
-			stateSlot:     2048,
-			slot:          2000,
-			expectedRoot: 64 - 48,
+			slot:         2999,
+			stateSlot:    3000,
+			expectedRoot: []byte{127},
 		}, {
-			stateSlot:     2048,
-			slot:          2058,
-			expectedRoot: 64 + 10,
+			slot:         2873,
+			stateSlot:    3000,
+			expectedRoot: []byte{1},
 		},
 	}
 	for _, tt := range tests {
 		state.Slot = tt.stateSlot
-		result, err := ShardAndCommitteesAtSlot(state, tt.slot)
+		result, err := BlockRoot(state, tt.slot)
 		if err != nil {
-			t.Errorf("Failed to get shard and committees at slot: %v", err)
+			t.Errorf("Failed to get block root at slot %d: %v", tt.slot, err)
 		}
-		if result.ArrayShardAndCommittee[0].Shard != tt.expectedShard {
+		if !bytes.Equal(result, tt.expectedRoot) {
 			t.Errorf(
-				"Result shard was an unexpected value. Wanted %d, got %d",
-				tt.expectedShard,
-				result.ArrayShardAndCommittee[0].Shard,
+				"Result block root was an unexpected value. Wanted %d, got %d",
+				tt.expectedRoot,
+				result,
 			)
+		}
+	}
+}
+
+func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
+	if params.BeaconConfig().EpochLength != 64 {
+		t.Errorf("EpochLength should be 64 for these tests to pass")
+	}
+
+	state := &pb.BeaconState{}
+
+	tests := []struct {
+		slot        uint64
+		stateSlot   uint64
+		expectedErr string
+	}{
+		{
+			slot:        1000,
+			expectedErr: "slot 1000 out of bounds: 0 <= slot < 0",
+		},
+		{
+			slot:        129,
+			expectedErr: "slot 129 out of bounds: 0 <= slot < 0",
+		},
+	}
+	for _, tt := range tests {
+		_, err := BlockRoot(state, tt.slot)
+		if err != nil && err.Error() != tt.expectedErr {
+			t.Errorf("Expected error \"%s\" got \"%v\"", tt.expectedErr, err)
 		}
 	}
 }

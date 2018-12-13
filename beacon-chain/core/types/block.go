@@ -148,7 +148,14 @@ func (b *Block) IsSlotValid(genesisTime time.Time) bool {
 //     assert earliest_slot_in_array <= slot < state.slot
 //     return state.latest_block_roots[slot - earliest_slot_in_array]
 func BlockRoot(state *pb.BeaconState, slot uint64) ([]byte, error) {
-	earliestSlot := state.Slot - uint64(len(state.LatestBlockRootHash32S))
+	var earliestSlot uint64
+
+	// If the state slot is less than the length of state block root list, then
+	// the earliestSlot would result in a negative number. Therefore we should
+	// default earliestSlot = 0 in this case.
+	if state.Slot > uint64(len(state.LatestBlockRootHash32S)) {
+		earliestSlot = state.Slot - uint64(len(state.LatestBlockRootHash32S))
+	}
 
 	if slot < earliestSlot || slot >= state.Slot {
 		return []byte{}, fmt.Errorf("slot %d out of bounds: %d <= slot < %d",
