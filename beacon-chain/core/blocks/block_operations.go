@@ -208,7 +208,7 @@ func verifyCasperSlashing(validatorRegistry []*pb.ValidatorRecord, slashing *pb.
 			OR
 			vote1.Slot == vote.Slot
 
-			Instead, received vote1.JustifiedSlot %d, vote.JustifiedSlot %d
+			Instead, received vote1.JustifiedSlot %d, vote2.JustifiedSlot %d
 			and vote1.Slot %d, vote2.Slot %d
 			`,
 			votes1Attestation.GetJustifiedSlot(),
@@ -245,7 +245,6 @@ func verifyCasperVotes(
 	validatorRegistry []*pb.ValidatorRecord,
 	votes *pb.SlashableVoteData,
 ) error {
-	_ = validatorRegistry
 	totalProofsOfCustody := len(votes.GetAggregateSignaturePoc_0Indices()) +
 		len(votes.GetAggregateSignaturePoc_1Indices())
 	if uint64(totalProofsOfCustody) > params.BeaconConfig().MaxCasperVotes {
@@ -266,5 +265,7 @@ func verifyCasperVotes(
 	//      signature=aggregate_signature
 	//    ]
 	//  )
+	// nolint: unparam
+	_ = validatorRegistry
 	return nil
 }

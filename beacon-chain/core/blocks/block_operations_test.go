@@ -336,7 +336,7 @@ func TestProcessCasperSlashings_SlotsInequalities(t *testing.T) {
 			OR
 			vote1.Slot == vote.Slot
 
-			Instead, received vote1.JustifiedSlot %d, vote.JustifiedSlot %d
+			Instead, received vote1.JustifiedSlot %d, vote2.JustifiedSlot %d
 			and vote1.Slot %d, vote2.Slot %d
 			`,
 			tt.att1.JustifiedSlot,
