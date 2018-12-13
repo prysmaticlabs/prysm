@@ -186,8 +186,8 @@ message ProposalSignedData {
 }
 
 message SlashableVoteData {
-  repeated ethereum.common.Uint32List aggregate_signature_poc_0_indices = 1; // proof of custody indices for 0 bits.
-  repeated ethereum.common.Uint32List aggregate_signature_poc_1_indices = 2; // proof of custody indices for 1 bits.
+  repeated uint32 aggregate_signature_poc_0_indices = 1; // proof of custody indices for 0 bits.
+  repeated uint32 aggregate_signature_poc_1_indices = 2; // proof of custody indices for 1 bits.
   AttestationData data = 3;
   bytes aggregate_signature = 4; // Type of [uint384]?
 }
