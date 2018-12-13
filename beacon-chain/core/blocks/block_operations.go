@@ -135,8 +135,8 @@ func ProcessCasperSlashings(
 			return nil, fmt.Errorf("could not verify casper slashing #%d: %v", idx, err)
 		}
 		for _, validatorIndex := range validatorIndices {
-			proposer := validatorRegistry[validatorIndex]
-			if proposer.Status != pb.ValidatorRecord_EXITED_WITH_PENALTY {
+			penalizedValidator := validatorRegistry[validatorIndex]
+			if penalizedValidator.Status != pb.ValidatorRecord_EXITED_WITH_PENALTY {
 				// TODO(#781): Replace with
 				// update_validator_status(
 				//   state,
@@ -144,7 +144,7 @@ func ProcessCasperSlashings(
 				//   new_status=EXITED_WITH_PENALTY,
 				// ) after update_validator_status is implemented.
 				validatorRegistry[validatorIndex] = v.ExitValidator(
-					proposer,
+					penalizedValidator,
 					currentSlot,
 					true, /* penalize */
 				)
