@@ -1,10 +1,11 @@
 package state
 
 import (
-	"github.com/prysmaticlabs/prysm/bazel-prysm/external/go_sdk/src/bytes"
+	"bytes"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 )
 
 // EpochAttestations returns the pending attestations of slots in the epoch
@@ -48,7 +49,7 @@ func EpochBoundaryAttestations(state *pb.BeaconState, thisEpochAttestations []*p
 
 	for _, attestation := range thisEpochAttestations {
 
-		boundaryBlockRoot, err := types.BlockRoot(state, state.Slot - epochLength)
+		boundaryBlockRoot, err := types.BlockRoot(state, state.Slot-epochLength)
 		if err != nil {
 			return nil, err
 		}
