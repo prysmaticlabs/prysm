@@ -100,7 +100,7 @@ func (c *ChainService) Start() {
 	// is a beacon node restarting.
 	go c.updateHead(c.processedBlockChan)
 	go c.blockProcessing(c.processedBlockChan)
-	go c.slotTracker()
+	go c.slotTracker(c.slotTicker.C(), c.slotTicker.Done)
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.
@@ -293,16 +293,16 @@ func (c *ChainService) blockProcessingNew(processedBlock chan<- *types.Block) {
 // This assigns the current slot of the
 // beacon node, functioning as the beacon node's
 // local clock.
-func (c *ChainService) slotTracker() {
+func (c *ChainService) slotTracker(slotTicker <-chan uint64, tickerDone func()) {
 
-	defer c.slotTicker.Done()
+	defer tickerDone()
 
 	for {
 		select {
 		case <-c.ctx.Done():
 			log.Debug("Chain service context closed, exiting goroutine")
 			return
-		case slot := <-c.slotTicker.C():
+		case slot := <-slotTicker:
 			c.currentSlot = slot
 
 			c.checkForSkippedSlots()
@@ -329,6 +329,10 @@ func (c *ChainService) slotTracker() {
 			// https://github.com/ethereum/eth2.0-specs/issues/319
 			vreg[proposerIndex].RandaoLayers++
 			beaconState.SetValidatorRegistry(vreg)
+
+			if err := c.beaconDB.SaveState(beaconState); err != nil {
+				log.Debugf("Unable to save beacon state to db: %v", err)
+			}
 
 			c.checkCachedBlocks()
 		}

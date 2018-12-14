@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -527,6 +528,61 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 
 	if !chainService.isBlockReadyForProcessing(block3) {
 		t.Fatal("block processing failed despite being a valid block")
+	}
+
+}
+
+func TestSlotTracker(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	chainService := setupBeaconChain(t, true, db)
+
+	slotchan := make(chan uint64)
+	exitroutine := make(chan bool)
+
+	done := func() {}
+
+	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
+			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{Committee: []uint32{9, 8, 311, 12, 92, 1, 23, 17}},
+			},
+		})
+	}
+
+	beaconState, err := chainService.beaconDB.GetState()
+	if err != nil {
+		t.Fatalf("unable to retrieve beacon state")
+	}
+
+	beaconState.SetShardAndCommitteesForSlots(shardAndCommittees)
+
+	if err := chainService.beaconDB.SaveState(beaconState); err != nil {
+		t.Fatalf("Unable to save beacon state to db %v", err)
+	}
+
+	go func() {
+		chainService.slotTracker(slotchan, done)
+		exitroutine <- true
+	}()
+
+	slotchan <- 10
+
+	chainService.cancel()
+	<-exitroutine
+
+	if chainService.currentSlot != 10 {
+		t.Fatalf("Incorrect slot assigned in the service %d", chainService.currentSlot)
+	}
+
+	beaconState, err = chainService.beaconDB.GetState()
+	if err != nil {
+		t.Fatalf("unable to retrieve beacon state")
+	}
+
+	if beaconState.Slot() != 10 {
+		t.Errorf("Incorrect slot saved in the beacon state %d", beaconState.Slot())
 	}
 
 }
