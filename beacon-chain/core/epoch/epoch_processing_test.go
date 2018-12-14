@@ -1,4 +1,4 @@
-package state
+package epoch
 
 import (
 	"bytes"
@@ -10,7 +10,7 @@ import (
 
 func TestEpochAttestations_ok(t *testing.T) {
 	if params.BeaconConfig().EpochLength != 64 {
-		t.Errorf("EpochLength should be 64 for these tests to pass")
+		t.Fatalf("EpochLength should be 64 for these tests to pass")
 	}
 
 	var pendingAttestations []*pb.PendingAttestationRecord
@@ -51,11 +51,11 @@ func TestEpochAttestations_ok(t *testing.T) {
 	for _, tt := range tests {
 		state.Slot = tt.stateSlot
 
-		if EpochAttestations(state)[0].Data.Slot != tt.firstAttestationSlot {
+		if Attestations(state)[0].Data.Slot != tt.firstAttestationSlot {
 			t.Errorf(
 				"Result slot was an unexpected value. Wanted %d, got %d",
 				tt.firstAttestationSlot,
-				EpochAttestations(state)[0].Data.Slot,
+				Attestations(state)[0].Data.Slot,
 			)
 		}
 	}
@@ -63,7 +63,7 @@ func TestEpochAttestations_ok(t *testing.T) {
 
 func TestEpochBoundaryAttestations(t *testing.T) {
 	if params.BeaconConfig().EpochLength != 64 {
-		t.Errorf("EpochLength should be 64 for these tests to pass")
+		t.Fatalf("EpochLength should be 64 for these tests to pass")
 	}
 
 	epochAttestations := []*pb.PendingAttestationRecord{
@@ -84,22 +84,22 @@ func TestEpochBoundaryAttestations(t *testing.T) {
 		LatestBlockRootHash32S: [][]byte{},
 	}
 
-	epochBoundaryAttestation, err := EpochBoundaryAttestations(state, epochAttestations)
+	epochBoundaryAttestation, err := BoundaryAttestations(state, epochAttestations)
 	if err == nil {
 		t.Fatalf("EpochBoundaryAttestations should have failed with empty block root hash")
 	}
 
 	state.LatestBlockRootHash32S = latestBlockRootHash
-	epochBoundaryAttestation, err = EpochBoundaryAttestations(state, epochAttestations)
+	epochBoundaryAttestation, err = BoundaryAttestations(state, epochAttestations)
 	if err != nil {
 		t.Fatalf("EpochBoundaryAttestations failed: %v", err)
 	}
 
-	if epochBoundaryAttestation[0].Data.JustifiedSlot != 0 {
+	if epochBoundaryAttestation[0].GetData().JustifiedSlot != 0 {
 		t.Errorf("Wanted justified slot 0 for epoch boundary attestation, got: %d", epochBoundaryAttestation[0].Data.JustifiedSlot)
 	}
 
-	if !bytes.Equal(epochBoundaryAttestation[0].Data.JustifiedBlockHash32, []byte{0}) {
+	if !bytes.Equal(epochBoundaryAttestation[0].GetData().JustifiedBlockHash32, []byte{0}) {
 		t.Errorf("Wanted justified block hash [0] for epoch boundary attestation, got: %v", epochBoundaryAttestation[0].Data.JustifiedBlockHash32)
 	}
 }
