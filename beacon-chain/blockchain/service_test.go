@@ -161,7 +161,7 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 	chainService.cancel()
 	exitRoutine <- true
 
-	testutil.AssertLogsContain(t, hook, "proof-of-Work chain reference in block does not exist")
+	testutil.AssertLogsContain(t, hook, "block points to nil parent")
 }
 
 func TestRunningChainService(t *testing.T) {
@@ -456,6 +456,79 @@ func TestUpdateHead(t *testing.T) {
 
 		testutil.AssertLogsContain(t, hook, tt.logAssert)
 	}
+}
+
+func TestIsBlockReadyForProcessing(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	chainService := setupBeaconChain(t, true, db)
+	beaconState, err := types.NewGenesisBeaconState(nil)
+	if err != nil {
+		t.Fatalf("Can't generate genesis state: %v", err)
+	}
+
+	block := types.NewBlock(&pb.BeaconBlock{
+		ParentRootHash32: []byte{'a'},
+	})
+
+	if chainService.isBlockReadyForProcessing(block) {
+		t.Fatal("block processing succeeded despite block having no parent saved")
+	}
+
+	beaconState.SetSlot(10)
+	chainService.beaconDB.SaveState(beaconState)
+
+	stateRoot, _ := beaconState.Hash()
+	genesis := types.NewGenesisBlock([32]byte{})
+	chainService.beaconDB.SaveBlock(genesis)
+	parentHash, err := genesis.Hash()
+	if err != nil {
+		t.Fatalf("unable to get hash of canonical head: %v", err)
+	}
+
+	block2 := types.NewBlock(&pb.BeaconBlock{
+		ParentRootHash32: parentHash[:],
+		Slot:             10,
+	})
+
+	if chainService.isBlockReadyForProcessing(block2) {
+		t.Fatal("block processing succeeded despite block slot being invalid")
+	}
+
+	var h [32]byte
+	copy(h[:], []byte("a"))
+	beaconState.SetProcessedPowReceiptHash(h)
+	beaconState.SetSlot(9)
+	chainService.beaconDB.SaveState(beaconState)
+
+	currentSlot := uint64(10)
+	attestationSlot := uint64(0)
+	shard := beaconState.ShardAndCommitteesForSlots()[attestationSlot].ArrayShardAndCommittee[0].Shard
+
+	block3 := types.NewBlock(&pb.BeaconBlock{
+		Slot:                          currentSlot,
+		StateRootHash32:               stateRoot[:],
+		ParentRootHash32:              parentHash[:],
+		CandidatePowReceiptRootHash32: []byte("a"),
+		Attestations: []*pb.AggregatedAttestation{{
+			Slot: attestationSlot,
+			AttesterBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			Shard:              shard,
+			JustifiedBlockHash: parentHash[:],
+		}},
+	})
+
+	if chainService.isBlockReadyForProcessing(block3) {
+		t.Fatal("block processing succeeded despite being an invalid block")
+	}
+
+	chainService.enablePOWChain = false
+
+	if !chainService.isBlockReadyForProcessing(block3) {
+		t.Fatal("block processing failed despite being a valid block")
+	}
+
 }
 
 func TestUpdateBlockVoteCache(t *testing.T) {
