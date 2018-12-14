@@ -19,6 +19,7 @@ type ValidatorSetDeltaFlags int
 
 // BeaconChainConfig contains configs for node to participate in beacon chain.
 type BeaconChainConfig struct {
+	MaxAttestations                         uint64         // MaxAttestations defines the maximum allowed attestations in a beacon block.
 	MaxProposerSlashings                    uint64         // MaxProposerSlashing defines the maximum number of slashings of proposers possible in a block.
 	MaxCasperSlashings                      uint64         // MaxCasperSlashings defines the maximum number of casper FFG slashings possible in a block.
 	MaxCasperVotes                          uint64         // MaxCasperVotes defines the maximum number of casper FFG votes possible in a block.
@@ -65,6 +66,7 @@ type ShardChainConfig struct {
 }
 
 var defaultBeaconConfig = &BeaconChainConfig{
+	MaxAttestations:               128,
 	MaxProposerSlashings:          16,
 	MaxCasperSlashings:            16,
 	MaxCasperVotes:                1024,
@@ -96,6 +98,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 }
 
 var demoBeaconConfig = &BeaconChainConfig{
+	MaxAttestations:               128,
 	MaxProposerSlashings:          16,
 	MaxCasperSlashings:            16,
 	ShardCount:                    5,

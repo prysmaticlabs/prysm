@@ -48,7 +48,7 @@ func ProcessPOWReceiptRoots(
 // on each processed beacon block to penalize proposers based on
 // slashing conditions if any slashable events occurred.
 //
-// Official spec definition for proposer slashins:
+// Official spec definition for proposer slashings:
 //   Verify that len(block.body.proposer_slashings) <= MAX_PROPOSER_SLASHINGS.
 //
 //   For each proposer_slashing in block.body.proposer_slashings:
@@ -110,8 +110,8 @@ func verifyProposerSlashing(
 	slot2 := slashing.GetProposalData_2().GetSlot()
 	shard1 := slashing.GetProposalData_1().GetShard()
 	shard2 := slashing.GetProposalData_2().GetShard()
-	root1 := slashing.GetProposalData_1().GetBlockRoot()
-	root2 := slashing.GetProposalData_2().GetBlockRoot()
+	root1 := slashing.GetProposalData_1().GetBlockRootHash32()
+	root2 := slashing.GetProposalData_2().GetBlockRootHash32()
 	if slot1 != slot2 {
 		return fmt.Errorf("slashing proposal data slots do not match: %d, %d", slot1, slot2)
 	}
@@ -295,5 +295,168 @@ func verifyCasperVotes(votes *pb.SlashableVoteData) error {
 	//      signature=aggregate_signature
 	//    ]
 	//  )
+	return nil
+}
+
+// ProcessBlockAttestations applies processing operations to a block's inner attestation
+// records. This function returns a list of pending attestations which can then be
+// appended to the BeaconState's latest attestations.
+//
+// Official spec definition for block attestation processing:
+//   Verify that len(block.body.attestations) <= MAX_ATTESTATIONS.
+//
+//   For each attestation in block.body.attestations:
+//   Verify that attestation.data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot.
+//   Verify that attestation.data.slot + EPOCH_LENGTH >= state.slot.
+//   Verify that attestation.data.justified_slot is equal to
+//     state.justified_slot if attestation.data.slot >=
+//     state.slot - (state.slot % EPOCH_LENGTH) else state.previous_justified_slot.
+//   Verify that attestation.data.justified_block_root is equal to
+//     get_block_root(state, attestation.data.justified_slot).
+//   Verify that either attestation.data.latest_crosslink_root or
+//     attestation.data.shard_block_root equals
+//     state.latest_crosslinks[shard].shard_block_root
+//   Aggregate_signature verification:
+//     Let participants = get_attestation_participants(
+//       state,
+//       attestation.data,
+//       attestation.participation_bitfield,
+//     )
+//     Let group_public_key = BLSAddPubkeys([
+//       state.validator_registry[v].pubkey for v in participants
+//     ])
+//     Verify that bls_verify(
+//       pubkey=group_public_key,
+//       message=hash_tree_root(attestation.data) + bytes1(0),
+//       signature=attestation.aggregate_signature,
+//       domain=get_domain(state.fork_data, attestation.data.slot, DOMAIN_ATTESTATION)).
+//
+//   [TO BE REMOVED IN PHASE 1] Verify that attestation.data.shard_block_hash == ZERO_HASH.
+//   return PendingAttestationRecord(
+//     data=attestation.data,
+//     participation_bitfield=attestation.participation_bitfield,
+//     custody_bitfield=attestation.custody_bitfield,
+//     slot_included=state.slot,
+//   ) which can then be appended to state.latest_attestations.
+func ProcessBlockAttestations(
+	beaconState *types.BeaconState,
+	block *pb.BeaconBlock,
+) ([]*pb.PendingAttestationRecord, error) {
+	atts := block.GetBody().GetAttestations()
+	if uint64(len(atts)) > params.BeaconConfig().MaxAttestations {
+		return nil, fmt.Errorf(
+			"number of attestations in block (%d) exceeds allowed threshold of %d",
+			len(atts),
+			params.BeaconConfig().MaxAttestations,
+		)
+	}
+	var pendingAttestations []*pb.PendingAttestationRecord
+	for idx, attestation := range atts {
+		if err := verifyAttestation(beaconState, attestation); err != nil {
+			return nil, fmt.Errorf("could not verify attestation at index %d in block: %v", idx, err)
+		}
+		pendingAttestations = append(pendingAttestations, &pb.PendingAttestationRecord{
+			Data:                  attestation.GetData(),
+			ParticipationBitfield: attestation.GetParticipationBitfield(),
+			CustodyBitfield:       attestation.GetCustodyBitfield(),
+			SlotIncluded:          beaconState.Slot(),
+		})
+	}
+	return pendingAttestations, nil
+}
+
+func verifyAttestation(beaconState *types.BeaconState, att *pb.Attestation) error {
+	inclusionDelay := params.BeaconConfig().MinAttestationInclusionDelay
+	if att.GetData().GetSlot()+inclusionDelay > beaconState.Slot() {
+		return fmt.Errorf(
+			"attestation slot (slot %d) + inclusion delay (%d) beyond current beacon state slot (%d)",
+			att.GetData().GetSlot(),
+			inclusionDelay,
+			beaconState.Slot(),
+		)
+	}
+	if att.GetData().GetSlot()+params.BeaconConfig().EpochLength < beaconState.Slot() {
+		return fmt.Errorf(
+			"attestation slot (slot %d) + epoch length (%d) less than current beacon state slot (%d)",
+			att.GetData().GetSlot(),
+			params.BeaconConfig().EpochLength,
+			beaconState.Slot(),
+		)
+	}
+	// Verify that attestation.JustifiedSlot is equal to
+	// state.JustifiedSlot if attestation.Slot >=
+	// state.Slot - (state.Slot % EPOCH_LENGTH) else state.PreviousJustifiedSlot.
+	if att.GetData().GetSlot() >= beaconState.Slot()-(beaconState.Slot()%params.BeaconConfig().EpochLength) {
+		if att.GetData().GetJustifiedSlot() != beaconState.LastJustifiedSlot() {
+			return fmt.Errorf(
+				"expected attestation.JustifiedSlot == state.JustifiedSlot, received %d == %d",
+				att.GetData().GetJustifiedSlot(),
+				beaconState.LastJustifiedSlot(),
+			)
+		}
+	} else {
+		if att.GetData().GetJustifiedSlot() != beaconState.PreviousJustifiedSlot() {
+			return fmt.Errorf(
+				"expected attestation.JustifiedSlot == state.PreviousJustifiedSlot, received %d == %d",
+				att.GetData().GetJustifiedSlot(),
+				beaconState.PreviousJustifiedSlot(),
+			)
+		}
+	}
+
+	// Verify that attestation.data.justified_block_root is equal to
+	// get_block_root(state, attestation.data.justified_slot).
+	blockRoot, err := types.BlockRoot(beaconState.Proto(), att.GetData().GetJustifiedSlot())
+	if err != nil {
+		return fmt.Errorf("could not get block root for justified slot: %v", err)
+	}
+
+	justifiedBlockRoot := att.GetData().GetJustifiedBlockRootHash32()
+	if !bytes.Equal(justifiedBlockRoot, blockRoot) {
+		return fmt.Errorf(
+			"expected JustifiedBlockRoot == getBlockRoot(state, JustifiedSlot): got %#x = %#x",
+			justifiedBlockRoot,
+			blockRoot,
+		)
+	}
+
+	// Verify that either: attestation.data.latest_crosslink_root or
+	// attestation.data.shard_block_root equals
+	// state.latest_crosslinks[shard].shard_block_root
+	crossLinkRoot := att.GetData().GetLatestCrosslinkRootHash32()
+	shardBlockRoot := att.GetData().GetShardBlockRootHash32()
+	shard := att.GetData().GetShard()
+	stateShardBlockRoot := beaconState.LatestCrosslinks()[shard].GetShardBlockRootHash32()
+
+	if !(bytes.Equal(crossLinkRoot, stateShardBlockRoot) ||
+		bytes.Equal(shardBlockRoot, stateShardBlockRoot)) {
+		return fmt.Errorf(
+			"attestation.CrossLinkRoot and ShardBlockRoot != %v (state.LatestCrosslinks' ShardBlockRoot)",
+			stateShardBlockRoot,
+		)
+	}
+
+	// Verify attestation.shard_block_root == ZERO_HASH [TO BE REMOVED IN PHASE 1].
+	if !bytes.Equal(att.GetData().GetShardBlockRootHash32(), []byte{}) {
+		return fmt.Errorf(
+			"expected attestation.ShardBlockRoot == %#x, received %#x instead",
+			[]byte{},
+			att.GetData().GetShardBlockRootHash32(),
+		)
+	}
+	// TODO(#258): Integrate BLS signature verification for attestation.
+	//     Let participants = get_attestation_participants(
+	//       state,
+	//       attestation.data,
+	//       attestation.participation_bitfield,
+	//     )
+	//     Let group_public_key = BLSAddPubkeys([
+	//       state.validator_registry[v].pubkey for v in participants
+	//     ])
+	//     Verify that bls_verify(
+	//       pubkey=group_public_key,
+	//       message=hash_tree_root(attestation.data) + bytes1(0),
+	//       signature=attestation.aggregate_signature,
+	//       domain=get_domain(state.fork_data, attestation.data.slot, DOMAIN_ATTESTATION)).
 	return nil
 }
