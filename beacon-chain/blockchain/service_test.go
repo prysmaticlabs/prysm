@@ -191,7 +191,7 @@ func TestRunningChainService(t *testing.T) {
 	block := types.NewBlock(&pb.BeaconBlock{
 		Slot:                          currentSlot,
 		StateRootHash32:               stateRoot[:],
-		AncestorHash32S:               [][]byte{parentHash[:]},
+		ParentRootHash32:              parentHash[:],
 		CandidatePowReceiptRootHash32: []byte("a"),
 		Attestations: []*pb.AggregatedAttestation{{
 			Slot: attestationSlot,
@@ -278,9 +278,9 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 	attestationSlot := currentSlot - 1
 
 	block1 := types.NewBlock(&pb.BeaconBlock{
-		AncestorHash32S: [][]byte{block0Hash[:]},
-		Slot:            currentSlot,
-		StateRootHash32: stateRoot[:],
+		ParentRootHash32: block0Hash[:],
+		Slot:             currentSlot,
+		StateRootHash32:  stateRoot[:],
 		Attestations: []*pb.AggregatedAttestation{{
 			Slot: attestationSlot,
 			AttesterBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -313,8 +313,8 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 
 	// Add 1 more attestation field for slot2
 	block2 := types.NewBlock(&pb.BeaconBlock{
-		AncestorHash32S: [][]byte{block1Hash[:]},
-		Slot:            currentSlot,
+		ParentRootHash32: block1Hash[:],
+		Slot:             currentSlot,
 		Attestations: []*pb.AggregatedAttestation{
 			{
 				Slot:               currentSlot - 1,
@@ -338,8 +338,8 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 
 	// Add 1 more attestation field for slot3
 	block3 := types.NewBlock(&pb.BeaconBlock{
-		AncestorHash32S: [][]byte{block2Hash[:]},
-		Slot:            currentSlot,
+		ParentRootHash32: block2Hash[:],
+		Slot:             currentSlot,
 		Attestations: []*pb.AggregatedAttestation{
 			{
 				Slot:               currentSlot - 1,
@@ -429,7 +429,7 @@ func TestUpdateHead(t *testing.T) {
 		block := types.NewBlock(&pb.BeaconBlock{
 			Slot:                          tt.blockSlot,
 			StateRootHash32:               stateRoot[:],
-			AncestorHash32S:               [][]byte{genesisHash[:]},
+			ParentRootHash32:              genesisHash[:],
 			CandidatePowReceiptRootHash32: []byte("a"),
 		})
 		h, err := block.Hash()
@@ -468,8 +468,8 @@ func TestUpdateBlockVoteCache(t *testing.T) {
 		t.Fatalf("failed to initialize genesis state: %v", err)
 	}
 	block := types.NewBlock(&pb.BeaconBlock{
-		Slot:            1,
-		AncestorHash32S: [][]byte{},
+		Slot:             1,
+		ParentRootHash32: []byte{},
 		Attestations: []*pb.AggregatedAttestation{
 			{
 				Slot:             0,

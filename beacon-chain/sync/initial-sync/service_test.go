@@ -75,7 +75,7 @@ func TestSetBlockForInitialSync(t *testing.T) {
 
 	block := &pb.BeaconBlock{
 		CandidatePowReceiptRootHash32: []byte{1, 2, 3},
-		AncestorHash32S:               [][]byte{genericHash},
+		ParentRootHash32:              genericHash,
 		Slot:                          uint64(1),
 		StateRootHash32:               genericHash,
 	}
@@ -154,7 +154,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 	getBlockResponseMsg := func(Slot uint64) p2p.Message {
 		block := &pb.BeaconBlock{
 			CandidatePowReceiptRootHash32: []byte{1, 2, 3},
-			AncestorHash32S:               [][]byte{genericHash},
+			ParentRootHash32:              genericHash,
 			Slot:                          Slot,
 			StateRootHash32:               beaconStateRootHash32[:],
 		}
@@ -256,7 +256,7 @@ func TestDelayChan(t *testing.T) {
 
 	block := &pb.BeaconBlock{
 		CandidatePowReceiptRootHash32: []byte{1, 2, 3},
-		AncestorHash32S:               [][]byte{genericHash},
+		ParentRootHash32:              genericHash,
 		Slot:                          uint64(1),
 		StateRootHash32:               beaconStateRootHash32[:],
 	}
@@ -326,7 +326,7 @@ func TestRequestBlocksBySlot(t *testing.T) {
 
 		block := &pb.BeaconBlock{
 			CandidatePowReceiptRootHash32: []byte{1, 2, 3},
-			AncestorHash32S:               [][]byte{genericHash},
+			ParentRootHash32:              genericHash,
 			Slot:                          Slot,
 			StateRootHash32:               nil,
 		}
@@ -407,7 +407,7 @@ func TestRequestBatchedBlocks(t *testing.T) {
 
 		block := &pb.BeaconBlock{
 			CandidatePowReceiptRootHash32: []byte{1, 2, 3},
-			AncestorHash32S:               [][]byte{genericHash},
+			ParentRootHash32:              genericHash,
 			Slot:                          Slot,
 			StateRootHash32:               nil,
 		}
