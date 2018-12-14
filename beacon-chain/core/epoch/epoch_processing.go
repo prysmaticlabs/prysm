@@ -57,8 +57,9 @@ func BoundaryAttestations(
 			return nil, err
 		}
 
-		sameRoot := bytes.Equal(attestation.GetData().JustifiedBlockHash32, boundaryBlockRoot)
-		sameSlotNum := attestation.GetData().JustifiedSlot == state.JustifiedSlot
+		attestationData := attestation.GetData()
+		sameRoot := bytes.Equal(attestationData.JustifiedBlockHash32, boundaryBlockRoot)
+		sameSlotNum := attestationData.JustifiedSlot == state.JustifiedSlot
 		if sameRoot && sameSlotNum {
 			boundaryAttestations = append(boundaryAttestations, attestation)
 		}
