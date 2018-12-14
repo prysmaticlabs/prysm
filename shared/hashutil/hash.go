@@ -22,3 +22,12 @@ func Hash(data []byte) [32]byte {
 
 	return hash
 }
+
+// RepeatHash applies the Keccak-256/SHA3 hash function repeatedly
+// numTimes on a [32]byte array.
+func RepeatHash(data [32]byte, numTimes uint64) [32]byte {
+	if numTimes == 0 {
+		return data
+	}
+	return RepeatHash(Hash(data[:]), numTimes-1)
+}

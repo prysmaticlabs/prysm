@@ -54,6 +54,58 @@ func ProcessPOWReceiptRoots(
 	return append(currentCandidateReceiptRoots, newCandidateReceiptRoots...)
 }
 
+// ProcessBlockRandao checks the block proposer's
+// randao commitment and generates a new RANDAO mix to update
+// in the beacon state and reset proposer's randao fields.
+//
+// Official spec definition for block randao verification:
+//   Let repeat_hash(x, n) = x if n == 0 else repeat_hash(hash(x), n-1).
+//   Let proposer = state.validator_registry[get_beacon_proposer_index(state, state.slot)].
+//   Verify that repeat_hash(block.randao_reveal, proposer.randao_layers) == proposer.randao_commitment.
+//   Set state.randao_mix = xor(state.randao_mix, block.randao_reveal).
+//   Set proposer.randao_commitment = block.randao_reveal.
+//   Set proposer.randao_layers = 0
+func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+	proposerIndex, err := v.BeaconProposerIndex(beaconState, beaconState.Slot())
+	if err != nil {
+		return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
+	}
+	registry := beaconState.GetValidatorRegistry()
+	proposer := registry[proposerIndex]
+	if err := verifyBlockRandao(proposer, block); err != nil {
+		return nil, fmt.Errorf("could not verify block randao: %v", err)
+	}
+	// If block RANDAO passed verification, we XOR the block RANDAO and return it
+	// as the new RANDAO mix used to update the beacon state.
+	var randaoMix [32]byte
+	for i, x := range block.GetRandaoRevealHash32() {
+		randaoMix[i] ^= x
+	}
+	proposer.RandaoCommitmentHash32 = block.GetRandaoRevealHash32()
+	proposer.RandaoLayers = 0
+	registry[proposerIndex] = proposer
+	beaconState.RandaoLayers = randaoMix[:]
+	beaconState.ValidatorRegistry = registry
+	return beaconState, nil
+}
+
+func verifyBlockRandao(proposer *pb.ValidatorRecord, block *pb.BeaconBlock) error {
+	var blockRandaoReveal [32]byte
+	var proposerRandaoCommit [32]byte
+	copy(blockRandaoReveal[:], block.GetRandaoRevealHash32())
+	copy(proposerRandaoCommit[:], proposer.GetRandaoCommitmentHash32())
+
+	randaoHashLayers := hashutil.RepeatHash(blockRandaoReveal, proposer.GetRandaoLayers())
+	if randaoHashLayers != proposerRandaoCommit {
+		return fmt.Errorf(
+			"expected hashed block randao layers to equal proposer randao: received %#x = %#x",
+			randaoHashLayers,
+			proposerRandaoCommit,
+		)
+	}
+	return nil
+}
+
 // ProcessProposerSlashings is one of the operations performed
 // on each processed beacon block to penalize proposers based on
 // slashing conditions if any slashable events occurred.
