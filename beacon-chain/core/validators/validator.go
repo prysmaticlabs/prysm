@@ -131,6 +131,26 @@ func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, 
 	return shardCommittees[index], nil
 }
 
+// GetBeaconProposerIndex returns the index of the proposer of the block at a
+// given slot.
+//
+// Spec pseudocode definition:
+//  def get_beacon_proposer_index(state: BeaconState,slot: int) -> int:
+//    """
+//    Returns the beacon proposer index for the ``slot``.
+//    """
+//    first_committee = get_shard_committees_at_slot(state, slot)[0].committee
+//    return first_committee[slot % len(first_committee)]
+func GetBeaconProposerIndex(state *pb.BeaconState, slot uint64) (uint32, error) {
+	committeeArray, err := ShardAndCommitteesAtSlot(state, slot)
+	if err != nil {
+		return 0, err
+	}
+	firstCommittee := committeeArray.GetArrayShardAndCommittee()[0].Committee
+
+	return firstCommittee[uint64(len(firstCommittee))/slot], nil
+}
+
 // AreAttesterBitfieldsValid validates that the length of the attester bitfield matches the attester indices
 // defined in the Crystallized State.
 func AreAttesterBitfieldsValid(attestation *pb.AggregatedAttestation, attesterIndices []uint32) bool {

@@ -257,6 +257,14 @@ func (c *ChainService) slotTracker() {
 			return
 		case slot := <-c.slotTicker.C():
 			c.currentSlot = slot
+
+			beaconState, err := c.beaconDB.GetState()
+			if err != nil {
+				log.Debugf("Unable to retrieve beacon state %v", err)
+				continue
+			}
+			beaconState.SetSlot(slot - 1)
+			vreg := beaconState.ValidatorRegistry()
 			if block, ok := c.unProcessedBlocks[slot+1]; ok {
 				c.incomingBlockChan <- block
 			}
