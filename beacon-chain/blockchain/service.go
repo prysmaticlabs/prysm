@@ -41,6 +41,7 @@ type ChainService struct {
 	enablePOWChain     bool
 	slotTicker         slotticker.SlotTicker
 	currentSlot        uint64
+	lastProcessedSlot  uint64
 }
 
 // Config options for the service.
@@ -83,6 +84,14 @@ func (c *ChainService) Start() {
 		log.Fatalf("Unable to retrieve genesis time, therefore blockchain service cannot be started %v", err)
 		return
 	}
+
+	beaconState, err := c.beaconDB.GetState()
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	c.lastProcessedSlot = beaconState.Slot()
 
 	c.slotTicker = slotticker.GetSlotTicker(c.genesisTime, params.BeaconConfig().SlotDuration)
 	c.currentSlot = slotticker.CurrentSlot(c.genesisTime, params.BeaconConfig().SlotDuration, time.Since)
@@ -237,6 +246,8 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *pb.BeaconBlock) {
 			// slot number is too high to be processed in the current slot, we store
 			// it in a cache.
 
+			c.checkForSkippedSlots()
+
 			beaconState, err := c.beaconDB.GetState()
 			if err != nil {
 				log.Errorf("Unable to retrieve beacon state %v", err)
@@ -244,7 +255,6 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *pb.BeaconBlock) {
 			}
 
 			currentSlot := beaconState.GetSlot()
-
 			if currentSlot+1 < block.GetSlot() {
 				c.unProcessedBlocks[block.GetSlot()] = block
 				continue
@@ -378,5 +388,33 @@ func (c *ChainService) sendAndDeleteCachedBlocks(currentSlot uint64) {
 			c.incomingBlockChan <- block
 			delete(c.unProcessedBlocks, currentSlot)
 		}
+	}
+}
+
+func (c *ChainService) checkCachedBlocks() {
+	if block, ok := c.unProcessedBlocks[c.currentSlot]; ok && c.isBlockReadyForProcessing(block) {
+		c.incomingBlockChan <- block
+		delete(c.unProcessedBlocks, c.currentSlot)
+	}
+}
+
+func (c *ChainService) checkForSkippedSlots() {
+	if c.currentSlot != c.lastProcessedSlot+1 {
+		beaconState, err := c.beaconDB.GetState()
+		if err != nil {
+			log.Debugf("Unable to retrieve beacon state %v", err)
+			return
+		}
+
+		vreg := beaconState.ValidatorRegistry()
+
+		proposerIndex, err := v.GetBeaconProposerIndex(beaconState.Proto(), beaconState.Slot())
+		if err != nil {
+			log.Debugf("Unable to retrieve proposer index %v", err)
+			return
+		}
+
+		vreg[proposerIndex].RandaoLayers++
+		beaconState.SetValidatorRegistry(vreg)
 	}
 }
