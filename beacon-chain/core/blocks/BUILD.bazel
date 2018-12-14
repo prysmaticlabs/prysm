@@ -19,6 +19,7 @@ go_test(
     srcs = ["block_operations_test.go"],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/core/types:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/params:go_default_library",
     ],
