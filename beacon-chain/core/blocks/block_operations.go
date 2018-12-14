@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -72,7 +73,7 @@ func ProcessProposerSlashings(
 func verifyProposerSlashing(
 	slashing *pb.ProposerSlashing,
 ) error {
-	// TODO(#781): Verify BLS according to the specification in the "Proposer Slashings"
+	// TODO(#258): Verify BLS according to the specification in the "Proposer Slashings"
 	// section of block operations.
 	slot1 := slashing.GetProposalData_1().GetSlot()
 	slot2 := slashing.GetProposalData_2().GetSlot()
@@ -252,7 +253,7 @@ func verifyCasperVotes(votes *pb.SlashableVoteData) error {
 			totalProofsOfCustody,
 		)
 	}
-	// TODO(#781): Implement BLS verify multiple.
+	// TODO(#258): Implement BLS verify multiple.
 	//  pubs = aggregate_pubkeys for each validator in registry for poc0 and poc1
 	//    indices
 	//  bls_verify_multiple(
@@ -306,13 +307,13 @@ func ProcessValidatorExits(
 	}
 	validatorRegistry := beaconState.ValidatorRegistry()
 	for idx, exit := range exits {
-		if err := verifyExit(exit); err != nil {
+		if err := verifyExit(beaconState, exit); err != nil {
 			return nil, fmt.Errorf("could not verify exit #%d: %v", idx, err)
 		}
 		// TODO(#781): Replace with update_validator_status(
 		//   state,
 		//   validatorIndex,
-		//   new_status=EXITED_WITH_PENALTY,
+		//   new_status=ACTIVE_PENDING_EXIT,
 		// ) after update_validator_status is implemented.
 		validator := validatorRegistry[exit.GetValidatorIndex()]
 		validatorRegistry[exit.GetValidatorIndex()] = v.ExitValidator(
@@ -324,6 +325,34 @@ func ProcessValidatorExits(
 	return validatorRegistry, nil
 }
 
-func verifyExit(exit *pb.Exit) error {
+func verifyExit(beaconState *types.BeaconState, exit *pb.Exit) error {
+	validator := beaconState.ValidatorRegistry()[exit.GetValidatorIndex()]
+	if validator.GetStatus() != pb.ValidatorRecord_ACTIVE {
+		return fmt.Errorf(
+			"expected validator to have active status, received %v",
+			validator.GetStatus(),
+		)
+	}
+	if beaconState.Slot() < exit.GetSlot() {
+		return fmt.Errorf(
+			"expected state.Slot >= exit.Slot, received %d < %d",
+			beaconState.Slot(),
+			exit.GetSlot(),
+		)
+	}
+	persistentCommitteeSlot := validator.GetLatestStatusChangeSlot() +
+		params.BeaconConfig().ShardPersistentCommitteeChangePeriod
+	if beaconState.Slot() < persistentCommitteeSlot {
+		return errors.New(
+			"expected validator.LatestStatusChangeSlot + PersistentCommitteePeriod >= state.Slot",
+		)
+	}
+	// TODO(#258): Verify using BLS signature verification below:
+	// Verify that bls_verify(
+	//   pubkey=validator.pubkey,
+	//   message=ZERO_HASH,
+	//   signature=exit.signature,
+	//   domain=get_domain(state.fork_data, exit.slot, DOMAIN_EXIT),
+	// )
 	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -457,5 +458,31 @@ func TestProcessCasperSlashings_AppliesCorrectStatus(t *testing.T) {
 			`,
 			newRegistry[1].Status,
 		)
+	}
+}
+
+func TestProcessValidatorExits_ThresholdReached(t *testing.T) {
+	exits := make([]*pb.Exit, params.BeaconConfig().MaxExits+1)
+	registry := []*pb.ValidatorRecord{}
+	state := types.NewBeaconState(&pb.BeaconState{
+		ValidatorRegistry: registry,
+	})
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Exits: exits,
+		},
+	}
+
+	want := fmt.Sprintf(
+		"number of exits (%d) exceeds allowed threshold of %d",
+		params.BeaconConfig().MaxExits+1,
+		params.BeaconConfig().MaxExits,
+	)
+
+	if _, err := ProcessValidatorExits(
+		state,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
