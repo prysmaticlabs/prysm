@@ -148,7 +148,7 @@ func GetBeaconProposerIndex(state *pb.BeaconState, slot uint64) (uint32, error) 
 	}
 	firstCommittee := committeeArray.GetArrayShardAndCommittee()[0].Committee
 
-	return firstCommittee[uint64(len(firstCommittee))/slot], nil
+	return firstCommittee[slot%uint64(len(firstCommittee))], nil
 }
 
 // AreAttesterBitfieldsValid validates that the length of the attester bitfield matches the attester indices

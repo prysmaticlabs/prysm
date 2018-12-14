@@ -646,3 +646,64 @@ func TestGetActiveValidatorRecord(t *testing.T) {
 		t.Errorf("Active validators don't match. Wanted: %v, Got: %v", outputValidators, validators)
 	}
 }
+
+func TestGetBeaconProposerIndex(t *testing.T) {
+	if params.BeaconConfig().EpochLength != 64 {
+		t.Errorf("EpochLength should be 64 for these tests to pass")
+	}
+
+	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
+			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{Committee: []uint32{9, 8, 311, 12, 92, 1, 23, 17}},
+			},
+		})
+	}
+
+	state := &pb.BeaconState{
+		ShardAndCommitteesAtSlots: shardAndCommittees,
+	}
+
+	tests := []struct {
+		slot  uint64
+		index uint32
+	}{
+		{
+			slot:  1,
+			index: 8,
+		},
+		{
+			slot:  10,
+			index: 311,
+		},
+		{
+			slot:  19,
+			index: 12,
+		}, {
+			slot:  30,
+			index: 23,
+		}, {
+			slot:  39,
+			index: 17,
+		},
+	}
+
+	for _, tt := range tests {
+		state.Slot = tt.slot
+
+		result, err := GetBeaconProposerIndex(state, tt.slot)
+		if err != nil {
+			t.Errorf("Failed to get shard and committees at slot: %v", err)
+		}
+
+		if result != tt.index {
+			t.Errorf(
+				"Result index was an unexpected value. Wanted %d, got %d",
+				tt.index,
+				result,
+			)
+		}
+	}
+
+}
