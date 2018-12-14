@@ -32,6 +32,7 @@ func ProcessPOWReceiptRoots(
 	currentCandidateReceiptRoots := beaconState.CandidatePowReceiptRoots()
 	for idx, root := range currentCandidateReceiptRoots {
 		if bytes.Equal(block.GetCandidatePowReceiptRootHash32(), root.GetCandidatePowReceiptRootHash32()) {
+			fmt.Println("voted")
 			currentCandidateReceiptRoots[idx].Votes++
 		} else {
 			newCandidateReceiptRoots = append(newCandidateReceiptRoots, &pb.CandidatePoWReceiptRootRecord{
@@ -40,7 +41,7 @@ func ProcessPOWReceiptRoots(
 			})
 		}
 	}
-	return newCandidateReceiptRoots
+	return append(currentCandidateReceiptRoots, newCandidateReceiptRoots...)
 }
 
 // ProcessProposerSlashings is one of the operations performed
