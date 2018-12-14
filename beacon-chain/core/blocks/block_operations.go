@@ -273,9 +273,6 @@ func verifyCasperVotes(votes *pb.SlashableVoteData) error {
 //
 // Official spec definition for processing exits:
 //
-//   Verify that len(block.body.casper_slashings) <= MAX_CASPER_SLASHINGS.
-//   For each casper_slashing in block.body.casper_slashings:
-//
 //   Verify that len(block.body.exits) <= MAX_EXITS.
 //
 //   For each exit in block.body.exits:
