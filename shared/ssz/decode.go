@@ -8,7 +8,10 @@ import (
 	"reflect"
 )
 
-// TODO(1068): Support more data types
+// Decodable defines the interface for support ssz decoding.
+type Decodable interface {
+	DecodeSSZ(io.Reader) error
+}
 
 // Decode decodes data read from r and output it into the object pointed by pointer val.
 func Decode(r io.Reader, val interface{}) error {
@@ -46,6 +49,10 @@ func makeDecoder(typ reflect.Type) (dec decoder, err error) {
 		return decodeUint8, nil
 	case kind == reflect.Uint16:
 		return decodeUint16, nil
+	case kind == reflect.Uint32:
+		return decodeUint32, nil
+	case kind == reflect.Uint64:
+		return decodeUint64, nil
 	case kind == reflect.Slice && typ.Elem().Kind() == reflect.Uint8:
 		return decodeBytes, nil
 	case kind == reflect.Slice:
@@ -89,6 +96,24 @@ func decodeUint16(r io.Reader, val reflect.Value) (uint32, error) {
 	}
 	val.SetUint(uint64(binary.BigEndian.Uint16(b)))
 	return 2, nil
+}
+
+func decodeUint32(r io.Reader, val reflect.Value) (uint32, error) {
+	b := make([]byte, 4)
+	if err := readBytes(r, 4, b); err != nil {
+		return 0, err
+	}
+	val.SetUint(uint64(binary.BigEndian.Uint32(b)))
+	return 4, nil
+}
+
+func decodeUint64(r io.Reader, val reflect.Value) (uint32, error) {
+	b := make([]byte, 8)
+	if err := readBytes(r, 8, b); err != nil {
+		return 0, err
+	}
+	val.SetUint(uint64(binary.BigEndian.Uint64(b)))
+	return 8, nil
 }
 
 func decodeBytes(r io.Reader, val reflect.Value) (uint32, error) {
