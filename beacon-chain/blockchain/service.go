@@ -263,8 +263,21 @@ func (c *ChainService) slotTracker() {
 				log.Debugf("Unable to retrieve beacon state %v", err)
 				continue
 			}
+
+			// Setting per slot counters
+			// Updating beacon state slot
 			beaconState.SetSlot(slot - 1)
 			vreg := beaconState.ValidatorRegistry()
+
+			proposerIndex, err := v.GetBeaconProposerIndex(beaconState.Proto(), beaconState.Slot())
+			if err != nil {
+				log.Debugf("Unable to retrieve proposer index %v", err)
+				continue
+			}
+
+			vreg[proposerIndex].RandaoLayers++
+			beaconState.SetValidatorRegistry(vreg)
+
 			if block, ok := c.unProcessedBlocks[slot+1]; ok {
 				c.incomingBlockChan <- block
 			}

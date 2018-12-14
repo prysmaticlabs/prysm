@@ -91,7 +91,7 @@ message ValidatorRecord {
   // TODO(781): The usage of withdrawal_credentials is not defined in spec. Not used in Prysm yet.
   bytes withdrawal_credentials = 2; // TODO(781): this is hash32, rename with suffix _hash32
   bytes randao_commitment_hash32 = 3;
-  uint64 randao_skips = 4;
+  uint64 randao_layers = 4;
   // Balance in Gwei
   uint64 balance = 5;
   // Possible validator status code:
