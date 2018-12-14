@@ -41,6 +41,7 @@ type ChainService struct {
 	enablePOWChain     bool
 	slotTicker         slotticker.SlotTicker
 	currentSlot        uint64
+	lastProcessedSlot  uint64
 }
 
 // Config options for the service.
@@ -83,6 +84,14 @@ func (c *ChainService) Start() {
 		log.Fatal(err)
 		return
 	}
+
+	beaconState, err := c.beaconDB.GetState()
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	c.lastProcessedSlot = beaconState.Slot()
 
 	c.slotTicker = slotticker.GetSlotTicker(c.genesisTime, params.BeaconConfig().SlotDuration)
 	c.currentSlot = slotticker.CurrentSlot(c.genesisTime, params.BeaconConfig().SlotDuration, time.Since)
@@ -218,6 +227,7 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 	}
 }
 
+// DEPRECATED: Will be replaced by new block processing routine
 func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 	subBlock := c.incomingBlockFeed.Subscribe(c.incomingBlockChan)
 	defer subBlock.Unsubscribe()
@@ -231,6 +241,43 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 		// can be received either from the sync service, the RPC service,
 		// or via p2p.
 		case block := <-c.incomingBlockChan:
+			if err := c.processBlock(block); err != nil {
+				log.Error(err)
+				processedBlock <- nil
+				continue
+			}
+
+			// Push the block to trigger the fork choice rule.
+			processedBlock <- block
+		}
+	}
+}
+
+func (c *ChainService) blockProcessingNew(processedBlock chan<- *types.Block) {
+	subBlock := c.incomingBlockFeed.Subscribe(c.incomingBlockChan)
+	defer subBlock.Unsubscribe()
+	for {
+		select {
+		case <-c.ctx.Done():
+			log.Debug("Chain service context closed, exiting goroutine")
+			return
+
+		// Listen for a newly received incoming block from the feed. Blocks
+		// can be received either from the sync service, the RPC service,
+		// or via p2p.
+		case block := <-c.incomingBlockChan:
+			if c.currentSlot < block.SlotNumber() {
+				c.unProcessedBlocks[block.SlotNumber()] = block
+				continue
+			}
+
+			if c.currentSlot > block.SlotNumber() {
+				log.Debugf(
+					"Block slot number is lower than the currently processed slot in the beacon state %d",
+					block.SlotNumber())
+				continue
+			}
+
 			if err := c.processBlock(block); err != nil {
 				log.Error(err)
 				processedBlock <- nil
@@ -258,6 +305,8 @@ func (c *ChainService) slotTracker() {
 		case slot := <-c.slotTicker.C():
 			c.currentSlot = slot
 
+			c.checkForSkippedSlots()
+
 			beaconState, err := c.beaconDB.GetState()
 			if err != nil {
 				log.Debugf("Unable to retrieve beacon state %v", err)
@@ -265,8 +314,9 @@ func (c *ChainService) slotTracker() {
 			}
 
 			// Setting per slot counters
+
 			// Updating beacon state slot
-			beaconState.SetSlot(slot - 1)
+			beaconState.SetSlot(slot)
 			vreg := beaconState.ValidatorRegistry()
 
 			proposerIndex, err := v.GetBeaconProposerIndex(beaconState.Proto(), beaconState.Slot())
@@ -275,12 +325,12 @@ func (c *ChainService) slotTracker() {
 				continue
 			}
 
+			// Updating proposer randao layers, might be a bug, for reference:
+			// https://github.com/ethereum/eth2.0-specs/issues/319
 			vreg[proposerIndex].RandaoLayers++
 			beaconState.SetValidatorRegistry(vreg)
 
-			if block, ok := c.unProcessedBlocks[slot+1]; ok {
-				c.incomingBlockChan <- block
-			}
+			c.checkCachedBlocks()
 		}
 	}
 }
@@ -353,9 +403,14 @@ func (c *ChainService) processBlock(block *types.Block) error {
 
 func (c *ChainService) processBlockNew(block *types.Block) error {
 
-	_, err := block.Hash()
+	blockhash, err := block.Hash()
 	if err != nil {
 		return fmt.Errorf("could not hash incoming block: %v", err)
+	}
+
+	beaconState, err := c.beaconDB.GetState()
+	if err != nil {
+		return fmt.Errorf("failed to get beacon state: %v", err)
 	}
 
 	if block.SlotNumber() == 0 {
@@ -367,7 +422,21 @@ func (c *ChainService) processBlockNew(block *types.Block) error {
 		return nil
 	}
 
-	c.executeSlotTransition()
+	// Add in slot transition method here, where signatures,randao and
+	// block processing will be validated.
+
+	// Add in epoch transition method here, where votes, validator exits,
+	// and balances will be updated.
+
+	if err := c.beaconDB.SaveBlock(block); err != nil {
+		return fmt.Errorf("failed to save block: %v", err)
+	}
+	if err := c.beaconDB.SaveUnfinalizedBlockState(beaconState); err != nil {
+		return fmt.Errorf("error persisting unfinalized block's state: %v", err)
+	}
+
+	log.WithField("hash", fmt.Sprintf("%#x", blockhash)).Info("Processed beacon block")
+	c.lastProcessedSlot = block.SlotNumber()
 
 	return nil
 }
@@ -390,10 +459,6 @@ func (c *ChainService) executeStateTransition(
 		log.WithField("slotNumber", block.SlotNumber()).Info("Validator set rotation occurred")
 	}
 	return newState, nil
-}
-
-func (c *ChainService) executeSlotTransition() {
-
 }
 
 func (c *ChainService) calculateNewBlockVotes(block *types.Block, beaconState *types.BeaconState) error {
@@ -523,4 +588,32 @@ func (c *ChainService) isBlockReadyForProcessing(block *types.Block) bool {
 
 	return true
 
+}
+
+func (c *ChainService) checkCachedBlocks() {
+	if block, ok := c.unProcessedBlocks[c.currentSlot]; ok && c.isBlockReadyForProcessing(block) {
+		c.incomingBlockChan <- block
+		delete(c.unProcessedBlocks, c.currentSlot)
+	}
+}
+
+func (c *ChainService) checkForSkippedSlots() {
+	if c.currentSlot != c.lastProcessedSlot+1 {
+		beaconState, err := c.beaconDB.GetState()
+		if err != nil {
+			log.Debugf("Unable to retrieve beacon state %v", err)
+			return
+		}
+
+		vreg := beaconState.ValidatorRegistry()
+
+		proposerIndex, err := v.GetBeaconProposerIndex(beaconState.Proto(), beaconState.Slot())
+		if err != nil {
+			log.Debugf("Unable to retrieve proposer index %v", err)
+			return
+		}
+
+		vreg[proposerIndex].RandaoLayers++
+		beaconState.SetValidatorRegistry(vreg)
+	}
 }
