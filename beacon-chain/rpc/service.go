@@ -229,7 +229,7 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 	data := &pbp2p.BeaconBlock{
 		Slot:                          req.GetSlotNumber(),
 		CandidatePowReceiptRootHash32: powChainHash[:],
-		AncestorHash32S:               [][]byte{req.GetParentHash()},
+		ParentRootHash32:              req.GetParentHash(),
 		Timestamp:                     req.GetTimestamp(),
 		Attestations:                  []*pbp2p.AggregatedAttestation{attestation},
 	}
