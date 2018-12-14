@@ -816,7 +816,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_discovery",
-    commit = "a541342f5179d6afb44b4201ca9a870056e7b1f4",
+    commit = "e9dd33518d02e00f7619613a89eb4b83e3d36faf",
     importpath = "github.com/libp2p/go-libp2p-discovery",
 )
 
