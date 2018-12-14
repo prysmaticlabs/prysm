@@ -245,7 +245,6 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *pb.BeaconBlock) {
 			// has already been processed by the beacon node, we throw it away. If the
 			// slot number is too high to be processed in the current slot, we store
 			// it in a cache.
-
 			c.checkForSkippedSlots()
 
 			beaconState, err := c.beaconDB.GetState()
