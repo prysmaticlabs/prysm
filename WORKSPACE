@@ -9,8 +9,8 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_go",
-    url = "https://github.com/bazelbuild/rules_go/releases/download/0.16.3/rules_go-0.16.3.tar.gz",
-    sha256 = "b7a62250a3a73277ade0ce306d22f122365b513f5402222403e507f2f997d421",
+    url = "https://github.com/bazelbuild/rules_go/releases/download/0.16.4/rules_go-0.16.4.tar.gz",
+    sha256 = "62ec3496a00445889a843062de9930c228b770218c735eca89c67949cd967c3f",
 )
 
 http_archive(
@@ -501,7 +501,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "73d4af5aa059c8c2dfcf25aad4efd6ce7bc9adc1",
+    commit = "4d1cda033e0619309c606fc686de3adcf599539e",
     importpath = "golang.org/x/sys",
 )
 
@@ -621,7 +621,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_google_api",
-    commit = "1327b224df06a29685b5f00cd0b778c665aef105",
+    commit = "874d9dc5b186e361475b082852f136f094555c30",
     importpath = "google.golang.org/api",
 )
 
@@ -899,7 +899,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aws_aws_sdk_go",
-    tag = "v1.16.3",
+    tag = "v1.16.5",
     importpath = "github.com/aws/aws-sdk-go",
 )
 
