@@ -5,11 +5,43 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slices"
 )
+
+// ProcessPOWReceiptRoots processes the proof-of-work chain's receipts
+// contained in a beacon block and appends them as candidate receipt roots
+// in the beacon state.
+//
+// Official spec definition for processing pow receipt roots:
+//   If block.candidate_pow_receipt_root is x.candidate_pow_receipt_root
+//     for some x in state.candidate_pow_receipt_roots, set x.vote_count += 1.
+//   Otherwise, append to state.candidate_pow_receipt_roots a
+//   new CandidatePoWReceiptRootRecord(
+//     candidate_pow_receipt_root=block.candidate_pow_receipt_root,
+//     vote_count=1
+//   )
+func ProcessPOWReceiptRoots(
+	beaconState *types.BeaconState,
+	block *pb.BeaconBlock,
+) []*pb.CandidatePoWReceiptRootRecord {
+	var newCandidateReceiptRoots []*pb.CandidatePoWReceiptRootRecord
+	currentCandidateReceiptRoots := beaconState.CandidatePowReceiptRoots()
+	for idx, root := range currentCandidateReceiptRoots {
+		if bytes.Equal(block.GetCandidatePowReceiptRootHash32(), root.GetCandidatePowReceiptRootHash32()) {
+			currentCandidateReceiptRoots[idx].Votes++
+		} else {
+			newCandidateReceiptRoots = append(newCandidateReceiptRoots, &pb.CandidatePoWReceiptRootRecord{
+				CandidatePowReceiptRootHash32: block.GetCandidatePowReceiptRootHash32(),
+				Votes:                         1,
+			})
+		}
+	}
+	return newCandidateReceiptRoots
+}
 
 // ProcessProposerSlashings is one of the operations performed
 // on each processed beacon block to penalize proposers based on
