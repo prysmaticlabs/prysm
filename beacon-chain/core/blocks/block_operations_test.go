@@ -486,3 +486,135 @@ func TestProcessValidatorExits_ThresholdReached(t *testing.T) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
+
+func TestProcessValidatorExits_ValidatorNotActive(t *testing.T) {
+	exits := []*pb.Exit{
+		{
+			ValidatorIndex: 0,
+		},
+	}
+	registry := []*pb.ValidatorRecord{
+		{
+			Status: pb.ValidatorRecord_EXITED_WITH_PENALTY,
+		},
+	}
+	state := types.NewBeaconState(&pb.BeaconState{
+		ValidatorRegistry: registry,
+	})
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Exits: exits,
+		},
+	}
+
+	want := fmt.Sprintf(
+		"expected validator to have active status, received %v",
+		pb.ValidatorRecord_EXITED_WITH_PENALTY,
+	)
+
+	if _, err := ProcessValidatorExits(
+		state,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessValidatorExits_InvalidExitSlot(t *testing.T) {
+	exits := []*pb.Exit{
+		{
+			Slot: 10,
+		},
+	}
+	registry := []*pb.ValidatorRecord{
+		{
+			Status: pb.ValidatorRecord_ACTIVE,
+		},
+	}
+	state := types.NewBeaconState(&pb.BeaconState{
+		ValidatorRegistry: registry,
+		Slot:              0,
+	})
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Exits: exits,
+		},
+	}
+
+	want := fmt.Sprintf(
+		"expected state.Slot >= exit.Slot, received %d < %d",
+		0,
+		10,
+	)
+
+	if _, err := ProcessValidatorExits(
+		state,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessValidatorExits_InvalidStatusChangeSlot(t *testing.T) {
+	exits := []*pb.Exit{
+		{
+			ValidatorIndex: 0,
+			Slot:           0,
+		},
+	}
+	registry := []*pb.ValidatorRecord{
+		{
+			Status:                 pb.ValidatorRecord_ACTIVE,
+			LatestStatusChangeSlot: 100,
+		},
+	}
+	state := types.NewBeaconState(&pb.BeaconState{
+		ValidatorRegistry: registry,
+		Slot:              10,
+	})
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Exits: exits,
+		},
+	}
+
+	want := "expected validator.LatestStatusChangeSlot + PersistentCommitteePeriod >= state.Slot"
+	if _, err := ProcessValidatorExits(
+		state,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
+	exits := []*pb.Exit{
+		{
+			ValidatorIndex: 0,
+			Slot:           0,
+		},
+	}
+	registry := []*pb.ValidatorRecord{
+		{
+			Status:                 pb.ValidatorRecord_ACTIVE,
+			LatestStatusChangeSlot: 0,
+		},
+	}
+	state := types.NewBeaconState(&pb.BeaconState{
+		ValidatorRegistry: registry,
+		Slot:              10,
+	})
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Exits: exits,
+		},
+	}
+
+	newRegistry, err := ProcessValidatorExits(state, block)
+	if err != nil {
+		t.Fatalf("Could not process exits: %v", err)
+	}
+	if newRegistry[0].Status == pb.ValidatorRecord_ACTIVE {
+		t.Error("Expected validator status to change, remained ACTIVE")
+	}
+}
