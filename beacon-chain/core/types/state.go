@@ -43,8 +43,8 @@ func NewGenesisBeaconState(genesisValidatorRegistry []*pb.ValidatorRecord) (*Bea
 	var crosslinks []*pb.CrosslinkRecord
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
 		crosslinks = append(crosslinks, &pb.CrosslinkRecord{
-			ShardBlockHash32: make([]byte, 0, 32),
-			Slot:             0,
+			ShardBlockRootHash32: make([]byte, 0, 32),
+			Slot:                 0,
 		})
 	}
 
@@ -94,8 +94,8 @@ func (b *BeaconState) CopyState() *BeaconState {
 	crosslinks := make([]*pb.CrosslinkRecord, len(b.LatestCrosslinks()))
 	for index, crossLink := range b.LatestCrosslinks() {
 		crosslinks[index] = &pb.CrosslinkRecord{
-			ShardBlockHash32: crossLink.GetShardBlockHash32(),
-			Slot:             crossLink.GetSlot(),
+			ShardBlockRootHash32: crossLink.GetShardBlockRootHash32(),
+			Slot:                 crossLink.GetSlot(),
 		}
 	}
 
