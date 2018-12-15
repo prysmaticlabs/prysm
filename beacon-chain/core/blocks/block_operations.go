@@ -32,7 +32,6 @@ func ProcessPOWReceiptRoots(
 	currentCandidateReceiptRoots := beaconState.CandidatePowReceiptRoots()
 	for idx, root := range currentCandidateReceiptRoots {
 		if bytes.Equal(block.GetCandidatePowReceiptRootHash32(), root.GetCandidatePowReceiptRootHash32()) {
-			fmt.Println("voted")
 			currentCandidateReceiptRoots[idx].Votes++
 		} else {
 			newCandidateReceiptRoots = append(newCandidateReceiptRoots, &pb.CandidatePoWReceiptRootRecord{
