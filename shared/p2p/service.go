@@ -3,6 +3,8 @@ package p2p
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/iputils"
+	"net"
 	"reflect"
 	"sync"
 
@@ -53,6 +55,10 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 	if cfg.RelayNodeAddr != "" {
 		opts = append(opts, libp2p.AddrsFactory(relayAddrsOnly(cfg.RelayNodeAddr)))
 	}
+	if !checkAvailablePort(cfg.Port) {
+		cancel()
+		return nil, fmt.Errorf("error listening on p2p, port %d already taken", cfg.Port)
+	}
 	h, err := libp2p.New(ctx, opts...)
 	if err != nil {
 		cancel()
@@ -82,6 +88,22 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		bootstrapNode: cfg.BootstrapNodeAddr,
 		relayNodeAddr: cfg.RelayNodeAddr,
 	}, nil
+}
+
+func checkAvailablePort(port int) bool {
+	ip, err := iputils.ExternalIPv4()
+	if err != nil {
+		log.Errorf("Could not get IPv4 address: %v", err)
+	}
+
+	ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", ip, port))
+	if err != nil {
+		return false
+	}
+
+	ln.Close()
+
+	return true
 }
 
 // Start the main routine for an p2p server.
