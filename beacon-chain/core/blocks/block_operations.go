@@ -502,7 +502,6 @@ func verifyExit(beaconState *types.BeaconState, exit *pb.Exit) error {
 	}
 	persistentCommitteeSlot := validator.GetLatestStatusChangeSlot() +
 		params.BeaconConfig().ShardPersistentCommitteeChangePeriod
-	fmt.Println(persistentCommitteeSlot)
 	if beaconState.Slot() < persistentCommitteeSlot {
 		return errors.New(
 			"expected validator.LatestStatusChangeSlot + PersistentCommitteePeriod >= state.Slot",
