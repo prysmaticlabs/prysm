@@ -1,6 +1,7 @@
 package blocks
 
 import (
+	"bytes"
 	"fmt"
 	"reflect"
 	"strings"
@@ -10,6 +11,55 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+func TestProcessPOWReceiptRoots_SameRootHash(t *testing.T) {
+	beaconState := types.NewBeaconState(&pb.BeaconState{
+		CandidatePowReceiptRoots: []*pb.CandidatePoWReceiptRootRecord{
+			{
+				CandidatePowReceiptRootHash32: []byte{1},
+				Votes:                         5,
+			},
+		},
+	})
+	block := &pb.BeaconBlock{
+		CandidatePowReceiptRootHash32: []byte{1},
+	}
+	newReceiptRoots := ProcessPOWReceiptRoots(beaconState, block)
+	if newReceiptRoots[0].Votes != 6 {
+		t.Errorf("expected votes to increase from 5 to 6, received %v", newReceiptRoots[0].Votes)
+	}
+}
+
+func TestProcessPOWReceiptRoots_NewCandidateRecord(t *testing.T) {
+	beaconState := types.NewBeaconState(&pb.BeaconState{
+		CandidatePowReceiptRoots: []*pb.CandidatePoWReceiptRootRecord{
+			{
+				CandidatePowReceiptRootHash32: []byte{0},
+				Votes:                         5,
+			},
+		},
+	})
+	block := &pb.BeaconBlock{
+		CandidatePowReceiptRootHash32: []byte{1},
+	}
+	newReceiptRoots := ProcessPOWReceiptRoots(beaconState, block)
+	if len(newReceiptRoots) == 1 {
+		t.Error("expected new receipt roots to have length > 1")
+	}
+	if newReceiptRoots[1].Votes != 1 {
+		t.Errorf(
+			"expected new receipt roots to have a new element with votes = 1, received votes = %d",
+			newReceiptRoots[1].Votes,
+		)
+	}
+	if !bytes.Equal(newReceiptRoots[1].CandidatePowReceiptRootHash32, []byte{1}) {
+		t.Errorf(
+			"expected new receipt roots to have a new element with root = %#x, received root = %#x",
+			[]byte{1},
+			newReceiptRoots[1].CandidatePowReceiptRootHash32,
+		)
+	}
+}
 
 func TestProcessProposerSlashings_ThresholdReached(t *testing.T) {
 	slashings := make([]*pb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings+1)
