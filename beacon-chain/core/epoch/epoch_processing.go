@@ -13,8 +13,8 @@ import (
 // included in the chain during the epoch.
 //
 // Spec pseudocode definition:
-//   this_epoch_attestations = [a for a in state.latest_attestations
-//   if state.slot - EPOCH_LENGTH <= a.data.slot < state.slot]
+//   [a for a in state.latest_attestations if state.slot - EPOCH_LENGTH <=
+//   a.data.slot < state.slot]
 func Attestations(state *pb.BeaconState) []*pb.PendingAttestationRecord {
 	epochLength := params.BeaconConfig().EpochLength
 	var thisEpochAttestations []*pb.PendingAttestationRecord
@@ -42,7 +42,7 @@ func Attestations(state *pb.BeaconState) []*pb.PendingAttestationRecord {
 // Spec pseudocode definition:
 //   [a for a in this_epoch_attestations if a.data.epoch_boundary_root ==
 //   get_block_root(state, state.slot-EPOCH_LENGTH) and a.justified_slot ==
-//   if state.slot - EPOCH_LENGTH <= a.data.slot < state.slot]
+//   state.justified_slot]
 func BoundaryAttestations(
 	state *pb.BeaconState,
 	thisEpochAttestations []*pb.PendingAttestationRecord,

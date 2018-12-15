@@ -10,7 +10,7 @@ import (
 
 func TestEpochAttestations_ok(t *testing.T) {
 	if params.BeaconConfig().EpochLength != 64 {
-		t.Fatalf("EpochLength should be 64 for these tests to pass")
+		t.Errorf("EpochLength should be 64 for these tests to pass")
 	}
 
 	var pendingAttestations []*pb.PendingAttestationRecord
@@ -63,7 +63,7 @@ func TestEpochAttestations_ok(t *testing.T) {
 
 func TestEpochBoundaryAttestations(t *testing.T) {
 	if params.BeaconConfig().EpochLength != 64 {
-		t.Fatalf("EpochLength should be 64 for these tests to pass")
+		t.Errorf("EpochLength should be 64 for these tests to pass")
 	}
 
 	epochAttestations := []*pb.PendingAttestationRecord{
