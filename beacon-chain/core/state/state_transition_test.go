@@ -141,7 +141,7 @@ func TestProcessLatestCrosslinks(t *testing.T) {
 	// Set up crosslink record for every shard.
 	var clRecords []*pb.CrosslinkRecord
 	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
-		clRecord := &pb.CrosslinkRecord{ShardBlockHash32: []byte{'A'}, Slot: 1}
+		clRecord := &pb.CrosslinkRecord{ShardBlockRootHash32: []byte{'A'}, Slot: 1}
 		clRecords = append(clRecords, clRecord)
 	}
 
@@ -188,8 +188,8 @@ func TestProcessLatestCrosslinks(t *testing.T) {
 	if newLatestCrosslinks[1].Slot != params.BeaconConfig().CycleLength {
 		t.Errorf("Slot did not change for new cross link. Wanted: %d. Got: %d", params.BeaconConfig().CycleLength, newLatestCrosslinks[0].Slot)
 	}
-	if !bytes.Equal(newLatestCrosslinks[1].ShardBlockHash32, []byte{'a'}) {
-		t.Errorf("ShardBlockHash did not change for new cross link. Wanted a. Got: %s", newLatestCrosslinks[0].ShardBlockHash32)
+	if !bytes.Equal(newLatestCrosslinks[1].ShardBlockRootHash32, []byte{'a'}) {
+		t.Errorf("ShardBlockHash did not change for new cross link. Wanted a. Got: %s", newLatestCrosslinks[0].ShardBlockRootHash32)
 	}
 	//TODO(#538) Implement tests on balances of the validators in committee once big.Int is introduced.
 }
