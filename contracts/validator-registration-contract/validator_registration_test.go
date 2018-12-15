@@ -133,24 +133,24 @@ func TestValidatorRegisters(t *testing.T) {
 	if log.Event.TotalDepositcount.Cmp(big.NewInt(0)) != 0 {
 		t.Errorf("HashChainValue event total desposit count miss matched. Want: %v, Got: %v", big.NewInt(0), log.Event.TotalDepositcount)
 	}
-	if !bytes.Equal(log.Event.Data, []byte{'A'}) {
-		t.Errorf("validatorRegistered event randao commitment miss matched. Want: %v, Got: %v", []byte{'A'}, log.Event.Data)
+	if !bytes.Equal(log.Event.Data[len(log.Event.Data)-1:], []byte{'A'}) {
+		t.Errorf("validatorRegistered event randao commitment miss matched. Want: %v, Got: %v", []byte{'A'}, log.Event.Data[len(log.Event.Data)-1:])
 	}
 
 	log.Next()
 	if log.Event.TotalDepositcount.Cmp(big.NewInt(1)) != 0 {
 		t.Errorf("HashChainValue event total desposit count miss matched. Want: %v, Got: %v", big.NewInt(1), log.Event.TotalDepositcount)
 	}
-	if !bytes.Equal(log.Event.Data, []byte{'B'}) {
-		t.Errorf("validatorRegistered event randao commitment miss matched. Want: %v, Got: %v", []byte{'B'}, log.Event.Data)
+	if !bytes.Equal(log.Event.Data[len(log.Event.Data)-1:], []byte{'B'}) {
+		t.Errorf("validatorRegistered event randao commitment miss matched. Want: %v, Got: %v", []byte{'B'}, log.Event.Data[len(log.Event.Data)-1:])
 	}
 
 	log.Next()
 	if log.Event.TotalDepositcount.Cmp(big.NewInt(2)) != 0 {
 		t.Errorf("HashChainValue event total desposit count miss matched. Want: %v, Got: %v", big.NewInt(1), log.Event.TotalDepositcount)
 	}
-	if !bytes.Equal(log.Event.Data, []byte{'C'}) {
-		t.Errorf("validatorRegistered event randao commitment miss matched. Want: %v, Got: %v", []byte{'B'}, log.Event.Data)
+	if !bytes.Equal(log.Event.Data[len(log.Event.Data)-1:], []byte{'C'}) {
+		t.Errorf("validatorRegistered event randao commitment miss matched. Want: %v, Got: %v", []byte{'B'}, log.Event.Data[len(log.Event.Data)-1:])
 	}
 }
 
