@@ -1,6 +1,7 @@
 package validators
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -244,5 +245,128 @@ func TestValidatorRegistryBySlotShardSmallValidatorSet(t *testing.T) {
 				t.Fatalf("Expected committee size %d: got %d", params.BeaconConfig().TargetCommitteeSize/2, len(shardCommittee.Committee))
 			}
 		}
+	}
+}
+
+func TestAttestationParticipants_ok(t *testing.T) {
+	if params.BeaconConfig().EpochLength != 64 {
+		t.Errorf("EpochLength should be 64 for these tests to pass")
+	}
+
+	var committeeIndices []uint32
+	for i := uint32(0); i < 10; i++ {
+		committeeIndices = append(committeeIndices, i)
+	}
+
+	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
+			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{Shard: i},
+				{Committee: committeeIndices},
+			},
+		})
+	}
+
+	var validators []*pb.ValidatorRecord
+	for i := uint64(0); i < params.BeaconConfig().BootstrappedValidatorsCount; i++ {
+		validators = append(validators, &pb.ValidatorRecord{
+			Pubkey: []byte{byte(i)},
+		})
+	}
+
+	state := &pb.BeaconState{
+		ShardAndCommitteesAtSlots: shardAndCommittees,
+		ValidatorRegistry:         validators,
+	}
+
+	attestationData := &pb.AttestationData{}
+
+	tests := []struct {
+		attestationSlot uint64
+		stateSlot       uint64
+		shard           uint64
+		bitfield        []byte
+		wanted          []uint32
+	}{
+		{
+			attestationSlot: 2,
+			stateSlot:       5,
+			shard:           0,
+			bitfield:        []byte{127, 127, 127, 127, 127, 127, 127, 127, 127, 127},
+			wanted:          []uint32{1, 2, 3, 4, 5, 6, 7, 9},
+		},
+		{
+			attestationSlot: 1,
+			stateSlot:       10,
+			shard:           0,
+			bitfield:        []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+			wanted:          []uint32{7},
+		},
+		{
+			attestationSlot: 10,
+			stateSlot:       20,
+			shard:           0,
+			bitfield:        []byte{7, 7, 7, 7, 7, 7, 7, 7, 7, 7},
+			wanted:          []uint32{5, 6, 7},
+		},
+		{
+			attestationSlot: 64,
+			stateSlot:       100,
+			shard:           0,
+			bitfield:        []byte{128, 128, 128, 128, 128, 128, 128, 128, 128, 128},
+			wanted:          []uint32{0, 8},
+		},
+		{
+			attestationSlot: 999,
+			stateSlot:       1000,
+			shard:           0,
+			bitfield:        []byte{10, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			wanted:          []uint32{4, 6},
+		},
+	}
+
+	for _, tt := range tests {
+		state.Slot = tt.stateSlot
+		attestationData.Slot = tt.attestationSlot
+		attestationData.Shard = tt.shard
+
+		result, err := AttestationParticipants(state, attestationData, tt.bitfield)
+		if err != nil {
+			t.Errorf("Failed to get attestation participants: %v", err)
+		}
+
+		if !reflect.DeepEqual(tt.wanted, result) {
+			t.Errorf(
+				"Result indices was an unexpected value. Wanted %d, got %d",
+				tt.wanted,
+				result,
+			)
+		}
+	}
+}
+
+func TestAttestationParticipants_IncorrectBitfield(t *testing.T) {
+	if params.BeaconConfig().EpochLength != 64 {
+		t.Errorf("EpochLength should be 64 for these tests to pass")
+	}
+
+	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
+			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{Shard: i},
+			},
+		})
+	}
+
+	state := &pb.BeaconState{
+		ShardAndCommitteesAtSlots: shardAndCommittees,
+	}
+
+	attestationData := &pb.AttestationData{}
+
+	if _, err := AttestationParticipants(state, attestationData, []byte{1}); err == nil {
+		t.Error("attestation participants should have failed with incorrect bitfield")
 	}
 }

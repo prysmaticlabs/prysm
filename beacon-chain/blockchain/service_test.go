@@ -473,7 +473,7 @@ func TestUpdateBlockVoteCache(t *testing.T) {
 			{
 				Slot:             0,
 				Shard:            1,
-				AttesterBitfield: []byte{'F', 'F'},
+				AttesterBitfield: []byte{'F', 'F', 'F'},
 			},
 		},
 	})
