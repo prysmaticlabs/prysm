@@ -56,7 +56,7 @@ func ProcessPOWReceiptRoots(
 
 // ProcessBlockRandao checks the block proposer's
 // randao commitment and generates a new RANDAO mix to update
-// in the beacon state and reset proposer's randao fields.
+// in the beacon state and set the proposer's randao fields.
 //
 // Official spec definition for block randao verification:
 //   Let repeat_hash(x, n) = x if n == 0 else repeat_hash(hash(x), n-1).
@@ -68,12 +68,12 @@ func ProcessPOWReceiptRoots(
 func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
 	proposerIndex, err := v.BeaconProposerIndex(beaconState, beaconState.Slot())
 	if err != nil {
-		return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
+		return nil, nil, fmt.Errorf("could not fetch beacon proposer index: %v", err)
 	}
 	registry := beaconState.GetValidatorRegistry()
 	proposer := registry[proposerIndex]
 	if err := verifyBlockRandao(proposer, block); err != nil {
-		return nil, fmt.Errorf("could not verify block randao: %v", err)
+		return nil, nil, fmt.Errorf("could not verify block randao: %v", err)
 	}
 	// If block RANDAO passed verification, we XOR the block RANDAO and return it
 	// as the new RANDAO mix used to update the beacon state.
@@ -99,8 +99,8 @@ func verifyBlockRandao(proposer *pb.ValidatorRecord, block *pb.BeaconBlock) erro
 	if randaoHashLayers != proposerRandaoCommit {
 		return fmt.Errorf(
 			"expected hashed block randao layers to equal proposer randao: received %#x = %#x",
-			randaoHashLayers,
-			proposerRandaoCommit,
+			randaoHashLayers[:],
+			proposerRandaoCommit[:],
 		)
 	}
 	return nil

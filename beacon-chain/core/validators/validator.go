@@ -99,7 +99,6 @@ func ShardAndCommitteesAtSlot(state *pb.BeaconState, slot uint64) (*pb.ShardAndC
 			earliestSlot+(epochLength*2),
 		)
 	}
-
 	return state.ShardAndCommitteesAtSlots[slot-earliestSlot], nil
 }
 

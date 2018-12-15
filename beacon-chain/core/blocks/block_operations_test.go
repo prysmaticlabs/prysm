@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -56,6 +57,110 @@ func TestProcessPOWReceiptRoots_NewCandidateRecord(t *testing.T) {
 			"expected new receipt roots to have a new element with root = %#x, received root = %#x",
 			[]byte{1},
 			newReceiptRoots[1].CandidatePowReceiptRootHash32,
+		)
+	}
+}
+
+func TestProcessBlockRandao_UnequalBlockAndProposerRandao(t *testing.T) {
+	registry := []*pb.ValidatorRecord{
+		{
+			RandaoLayers:           0,
+			RandaoCommitmentHash32: []byte{},
+		},
+	}
+	block := &pb.BeaconBlock{
+		RandaoRevealHash32: []byte{1},
+	}
+	beaconState := types.NewBeaconState(&pb.BeaconState{
+		ValidatorRegistry: registry,
+		Slot:              1,
+		ShardAndCommitteesAtSlots: []*pb.ShardAndCommitteeArray{
+			{
+				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+					{
+						Shard:               0,
+						Committee:           []uint32{1, 0},
+						TotalValidatorCount: 1,
+					},
+				},
+			},
+			{
+				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+					{
+						Shard:               0,
+						Committee:           []uint32{1, 0},
+						TotalValidatorCount: 1,
+					},
+				},
+			},
+		},
+	})
+
+	want := fmt.Sprintf(
+		"expected hashed block randao layers to equal proposer randao: received %#x = %#x",
+		[32]byte{1},
+		[32]byte{0},
+	)
+	if _, _, err := ProcessBlockRandao(
+		beaconState,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
+	registry := []*pb.ValidatorRecord{
+		{
+			RandaoLayers:           0,
+			RandaoCommitmentHash32: []byte{1},
+		},
+	}
+	block := &pb.BeaconBlock{
+		RandaoRevealHash32: []byte{1},
+	}
+	beaconState := types.NewBeaconState(&pb.BeaconState{
+		ValidatorRegistry: registry,
+		Slot:              1,
+		ShardAndCommitteesAtSlots: []*pb.ShardAndCommitteeArray{
+			{
+				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+					{
+						Shard:               0,
+						Committee:           []uint32{1, 0},
+						TotalValidatorCount: 1,
+					},
+				},
+			},
+			{
+				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+					{
+						Shard:               0,
+						Committee:           []uint32{1, 0},
+						TotalValidatorCount: 1,
+					},
+				},
+			},
+		},
+	})
+
+	randaoMix, newRegistry, err := ProcessBlockRandao(
+		beaconState,
+		block,
+	)
+	if err != nil {
+		t.Fatalf("Unexpected error processing block randao: %v", err)
+	}
+
+	xorRandao := [32]byte{1}
+	if !bytes.Equal(randaoMix, xorRandao[:]) {
+		t.Errorf("Expected randao mix to XOR correctly: wanted %#x, received %#x", xorRandao[:], randaoMix)
+	}
+	if !bytes.Equal(newRegistry[0].GetRandaoCommitmentHash32(), []byte{1}) {
+		t.Errorf(
+			"Expected proposer at index 0 to update randao commitment to block randao reveal = %#x, received %#x",
+			[]byte{1},
+			randaoMix,
 		)
 	}
 }
