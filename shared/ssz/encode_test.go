@@ -93,6 +93,29 @@ var encodeTests = []encTest{
 		{V: 5, SubV: innerStruct{V: 7}},
 	}, output: "00000016 00000007 00000002 0006 03 00000007 00000002 0007 05"},
 
+	// pointer
+	{val: &simpleStruct{B: 2, A: 1}, output: "00000003 01 0002"},
+	{val: &[]uint8{1, 2, 3, 4}, output: "00000004 01020304"},
+	{val: &[]uint64{1, 2}, output: "00000010 0000000000000001 0000000000000002"},
+
+	// pointer + struct
+	{val: pointerStruct{
+		V: 1,
+		Next: &pointerStruct{
+			V: 2,
+			Next: &pointerStruct{
+				V:    3,
+				Next: nil,
+			},
+		},
+	}, output: "0000000F 0000000A 00000005 00000000 03 02 01"},
+
+	// nil pointer
+	{val: (*[]uint8)(nil), output: "00000000"},
+
+	// error: nil of no-type
+	{val: nil, error: "encode error: cannot encode nil of no-type for input type <nil>"},
+
 	// error: unsupported type
 	{val: string("abc"), error: "encode error: type string is not serializable for input type string"},
 }
@@ -118,9 +141,9 @@ var encodeSizeTests = []encSizeTest{
 	{val: uint64(65535), size: 8},
 
 	// bytes
-	{val: []byte{}, size: 0},
-	{val: []byte{1}, size: 1},
-	{val: []byte{1, 2, 3, 4, 5, 6}, size: 6},
+	{val: []byte{}, size: 4},
+	{val: []byte{1}, size: 5},
+	{val: []byte{1, 2, 3, 4, 5, 6}, size: 10},
 
 	// slice
 	{val: []uint16{}, size: 4},
@@ -150,6 +173,29 @@ var encodeSizeTests = []encSizeTest{
 		{V: 3, SubV: innerStruct{V: 6}},
 		{V: 5, SubV: innerStruct{V: 7}},
 	}, size: 26},
+
+	// pointer
+	{val: &simpleStruct{B: 2, A: 1}, size: 7},
+	{val: &[]uint8{1, 2, 3, 4}, size: 8},
+	{val: &[]uint64{1, 2}, size: 20},
+
+	// nil pointer
+	{val: (*[]uint8)(nil), size: 4},
+
+	// pointer + struct
+	{val: pointerStruct{
+		V: 1,
+		Next: &pointerStruct{
+			V: 2,
+			Next: &pointerStruct{
+				V:    3,
+				Next: nil,
+			},
+		},
+	}, size: 19},
+
+	// error: nil pointer of no-type
+	{val: nil, error: "encode error: cannot encode nil of no-type for input type <nil>"},
 
 	// error: unsupported type
 	{val: string("abc"), error: "encode error: type string is not serializable for input type string"},
@@ -245,4 +291,9 @@ type outerStruct struct {
 
 type arrayStruct struct {
 	V []simpleStruct
+}
+
+type pointerStruct struct {
+	V    uint8
+	Next *pointerStruct
 }

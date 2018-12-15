@@ -72,7 +72,8 @@ var decodeTests = []decodeTest{
 	},
 
 	// struct
-	{input: "00000000", ptr: new(simpleStruct), value: simpleStruct{}},
+	//{input: "00000000", ptr: new(simpleStruct), value: simpleStruct{}},
+	{input: "00000003 00 0000", ptr: new(simpleStruct), value: simpleStruct{}},
 	{input: "00000003 01 0002", ptr: new(simpleStruct), value: simpleStruct{B: 2, A: 1}},
 	{input: "00000007 00000002 0006 03", ptr: new(outerStruct),
 		value: outerStruct{
@@ -93,6 +94,28 @@ var decodeTests = []decodeTest{
 			{V: 3, SubV: innerStruct{V: 6}},
 			{V: 5, SubV: innerStruct{V: 7}},
 		}},
+
+	// pointer
+	{input: "00000003 01 0002", ptr: new(*simpleStruct), value: &simpleStruct{B: 2, A: 1}},
+	{input: "00000004 01020304", ptr: new(*[]uint8), value: &[]uint8{1, 2, 3, 4}},
+	{input: "00000010 0000000000000001 0000000000000002", ptr: new(*[]uint64), value: &[]uint64{1, 2}},
+
+	// pointer + struct
+	{input: "0000000F 0000000A 00000005 00000000 03 02 01", ptr: new(pointerStruct),
+		value: pointerStruct{
+			V: 1,
+			Next: &pointerStruct{
+				V: 2,
+				Next: &pointerStruct{
+					V:    3,
+					Next: &pointerStruct{},
+				},
+			},
+		},
+	},
+
+	// nil pointer
+	{input: "00000000", ptr: new(*[]uint8), value: &[]uint8{}},
 
 	// error: nil target
 	{input: "00", ptr: nil, value: nil, error: "decode error: cannot decode into nil for output type <nil>"},

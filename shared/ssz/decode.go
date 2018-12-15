@@ -24,6 +24,7 @@ func decode(r io.Reader, val interface{}) error {
 	}
 	rval := reflect.ValueOf(val)
 	rtyp := rval.Type()
+	// val must be a pointer, otherwise we refuse to decode
 	if rtyp.Kind() != reflect.Ptr {
 		return newDecodeError("can only decode into pointer target", rtyp)
 	}
@@ -59,6 +60,8 @@ func makeDecoder(typ reflect.Type) (dec decoder, err error) {
 		return makeSliceDecoder(typ)
 	case kind == reflect.Struct:
 		return makeStructDecoder(typ)
+	case kind == reflect.Ptr:
+		return makePtrDecoder(typ)
 	default:
 		return nil, fmt.Errorf("type %v is not deserializable", typ)
 	}
@@ -212,6 +215,37 @@ func makeStructDecoder(typ reflect.Type) (decoder, error) {
 			decodeSize += fieldDecodeSize
 		}
 		return lengthBytes + size, nil
+	}
+	return decoder, nil
+}
+
+// Notice: we are currently not able to differentiate between decoding into nil or a pointer to empty object.
+// For example, 0x00000000 can mean:
+// - a nil pointer or a pointer that points to a struct that has no fields
+// - a nil pointer or a pointer that points to a slice that has zero length
+// So when the decode target could be either nil or pointer for an object, the decoder is facing ambiguity.
+// Some preference needs to be specified to guide the decoder.
+// This resolution is not defined in SSZ spec. In fact, SSZ spec never talks about pointer.
+// geth supports this by using a "nil" tag.
+// We will probably support this when we encounter this use case in our our code base.
+// But for now, we will always decode 0x00000000 into empty object
+func makePtrDecoder(typ reflect.Type) (decoder, error) {
+	elemType := typ.Elem()
+	elemEncoderDecoder, err := cachedEncoderDecoderNoAcquireLock(elemType)
+	if err != nil {
+		return nil, err
+	}
+	decoder := func(r io.Reader, val reflect.Value) (uint32, error) {
+		newVal := val
+		if val.IsNil() {
+			newVal = reflect.New(elemType)
+		}
+		elemDecodeSize, err := elemEncoderDecoder.decoder(r, newVal.Elem())
+		if err != nil {
+			return 0, fmt.Errorf("failed to decode to object pointed by pointer: %v", err)
+		}
+		val.Set(newVal)
+		return elemDecodeSize, nil
 	}
 	return decoder, nil
 }

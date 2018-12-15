@@ -38,6 +38,9 @@ type encbuf struct {
 }
 
 func (w *encbuf) encode(val interface{}) error {
+	if val == nil {
+		return newEncodeError("cannot encode nil of no-type", nil)
+	}
 	rval := reflect.ValueOf(val)
 	encDec, err := cachedEncoderDecoder(rval.Type())
 	if err != nil {
@@ -50,6 +53,9 @@ func (w *encbuf) encode(val interface{}) error {
 }
 
 func encodeSize(val interface{}) (uint32, error) {
+	if val == nil {
+		return 0, newEncodeError("cannot encode nil of no-type", nil)
+	}
 	rval := reflect.ValueOf(val)
 	encDec, err := cachedEncoderDecoder(rval.Type())
 	if err != nil {
@@ -89,6 +95,8 @@ func makeEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 		return makeSliceEncoder(typ)
 	case kind == reflect.Struct:
 		return makeStructEncoder(typ)
+	case kind == reflect.Ptr:
+		return makePtrEncoder(typ)
 	default:
 		return nil, nil, fmt.Errorf("type %v is not serializable", typ)
 	}
@@ -149,7 +157,7 @@ func makeBytesEncoder() (encoder, encodeSizer, error) {
 		if len(val.Bytes()) >= 2<<32 {
 			return 0, errors.New("bytes oversize")
 		}
-		return uint32(len(val.Bytes())), nil
+		return lengthBytes + uint32(len(val.Bytes())), nil
 	}
 	return encoder, encodeSizer, nil
 }
@@ -222,6 +230,41 @@ func makeStructEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 		}
 		return lengthBytes + totalSize, nil
 	}
+	return encoder, encodeSizer, nil
+}
+
+func makePtrEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
+	elemEncoderDecoder, err := cachedEncoderDecoderNoAcquireLock(typ.Elem())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var nilfunc func(*encbuf) error
+	kind := typ.Elem().Kind()
+	switch {
+	case kind == reflect.Slice || kind == reflect.Struct:
+		nilfunc = func(w *encbuf) error {
+			w.str = append(w.str, 0, 0, 0, 0)
+			return nil
+		}
+	default:
+		return nil, nil, fmt.Errorf("cannot encode nil pointer to type %v", typ)
+	}
+
+	encoder := func(val reflect.Value, w *encbuf) error {
+		if val.IsNil() {
+			return nilfunc(w)
+		}
+		return elemEncoderDecoder.encoder(val.Elem(), w)
+	}
+
+	encodeSizer := func(val reflect.Value) (uint32, error) {
+		if val.IsNil() {
+			return lengthBytes, nil
+		}
+		return elemEncoderDecoder.encodeSizer(val.Elem())
+	}
+
 	return encoder, encodeSizer, nil
 }
 
