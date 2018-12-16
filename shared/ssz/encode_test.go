@@ -73,6 +73,16 @@ var encodeTests = []encTest{
 		{5, 6, 7, 8},
 	}, output: "00000018 00000008 0001 0002 0003 0004 00000008 0005 0006 0007 0008"},
 
+	// array
+	{val: [1]byte{1}, output: "00000001 01"},
+	{val: [6]byte{1, 2, 3, 4, 5, 6}, output: "00000006 010203040506"},
+	{val: [1]uint16{1}, output: "00000002 0001"},
+	{val: [2]uint16{1, 2}, output: "00000004 0001 0002"},
+	{val: [2][4]uint16{
+		{1, 2, 3, 4},
+		{5, 6, 7, 8},
+	}, output: "00000018 00000008 0001 0002 0003 0004 00000008 0005 0006 0007 0008"},
+
 	// struct
 	{val: simpleStruct{}, output: "00000003 00 0000"},
 	{val: simpleStruct{B: 2, A: 1}, output: "00000003 01 0002"},
@@ -147,6 +157,16 @@ var encodeSizeTests = []encSizeTest{
 	{val: []uint16{1}, size: 6},
 	{val: []uint16{1, 2}, size: 8},
 	{val: [][]uint16{
+		{1, 2, 3, 4},
+		{5, 6, 7, 8},
+	}, size: 28},
+
+	// array
+	{val: [1]byte{1}, size: 5},
+	{val: [6]byte{1, 2, 3, 4, 5, 6}, size: 10},
+	{val: [1]uint16{1}, size: 6},
+	{val: [2]uint16{1, 2}, size: 8},
+	{val: [2][4]uint16{
 		{1, 2, 3, 4},
 		{5, 6, 7, 8},
 	}, size: 28},

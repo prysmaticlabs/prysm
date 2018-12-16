@@ -58,6 +58,10 @@ func makeDecoder(typ reflect.Type) (dec decoder, err error) {
 		return decodeBytes, nil
 	case kind == reflect.Slice:
 		return makeSliceDecoder(typ)
+	case kind == reflect.Array && typ.Elem().Kind() == reflect.Uint8:
+		return decodeByteArray, nil
+	case kind == reflect.Array:
+		return makeArrayDecoder(typ)
 	case kind == reflect.Struct:
 		return makeStructDecoder(typ)
 	case kind == reflect.Ptr:
@@ -139,6 +143,24 @@ func decodeBytes(r io.Reader, val reflect.Value) (uint32, error) {
 	return lengthBytes + size, nil
 }
 
+func decodeByteArray(r io.Reader, val reflect.Value) (uint32, error) {
+	sizeEnc := make([]byte, lengthBytes)
+	if err := readBytes(r, lengthBytes, sizeEnc); err != nil {
+		return 0, err
+	}
+	size := binary.BigEndian.Uint32(sizeEnc)
+
+	if size != uint32(val.Len()) {
+		return 0, fmt.Errorf("input byte array size (%d) isn't euqal to output array size (%d)", size, val.Len())
+	}
+
+	slice := val.Slice(0, val.Len()).Interface().([]byte)
+	if err := readBytes(r, int(size), slice); err != nil {
+		return 0, err
+	}
+	return lengthBytes + size, nil
+}
+
 func makeSliceDecoder(typ reflect.Type) (decoder, error) {
 	elemType := typ.Elem()
 	elemEncoderDecoder, err := cachedEncoderDecoderNoAcquireLock(elemType)
@@ -181,6 +203,38 @@ func makeSliceDecoder(typ reflect.Type) (decoder, error) {
 				return 0, fmt.Errorf("failed to decode element of slice: %v", err)
 			}
 			decodeSize += elemDecodeSize
+		}
+		return lengthBytes + size, nil
+	}
+	return decoder, nil
+}
+
+func makeArrayDecoder(typ reflect.Type) (decoder, error) {
+	elemType := typ.Elem()
+	elemEncoderDecoder, err := cachedEncoderDecoderNoAcquireLock(elemType)
+	if err != nil {
+		return nil, err
+	}
+	decoder := func(r io.Reader, val reflect.Value) (uint32, error) {
+		sizeEnc := make([]byte, lengthBytes)
+		if err := readBytes(r, lengthBytes, sizeEnc); err != nil {
+			return 0, fmt.Errorf("failed to decode header of slice: %v", err)
+		}
+		size := binary.BigEndian.Uint32(sizeEnc)
+
+		i, decodeSize := 0, uint32(0)
+		for ; i < val.Len() && decodeSize < size; i++ {
+			elemDecodeSize, err := elemEncoderDecoder.decoder(r, val.Index(i))
+			if err != nil {
+				return 0, fmt.Errorf("failed to decode element of slice: %v", err)
+			}
+			decodeSize += elemDecodeSize
+		}
+		if i < val.Len() {
+			return 0, errors.New("input is too short")
+		}
+		if decodeSize < size {
+			return 0, errors.New("input is too long")
 		}
 		return lengthBytes + size, nil
 	}

@@ -15,6 +15,7 @@ const lengthBytes = 4
 // Encodable defines the interface for support ssz encoding.
 type Encodable interface {
 	EncodeSSZ(io.Writer) error
+	EncodeSSZSize() (uint32, error)
 }
 
 // Encode encodes val and output the result into w.
@@ -93,6 +94,10 @@ func makeEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 		return makeBytesEncoder()
 	case kind == reflect.Slice:
 		return makeSliceEncoder(typ)
+	case kind == reflect.Array && typ.Elem().Kind() == reflect.Uint8:
+		return makeByteArrayEncoder()
+	case kind == reflect.Array:
+		return makeSliceEncoder(typ)
 	case kind == reflect.Struct:
 		return makeStructEncoder(typ)
 	case kind == reflect.Ptr:
@@ -158,6 +163,33 @@ func makeBytesEncoder() (encoder, encodeSizer, error) {
 			return 0, errors.New("bytes oversize")
 		}
 		return lengthBytes + uint32(len(val.Bytes())), nil
+	}
+	return encoder, encodeSizer, nil
+}
+
+func makeByteArrayEncoder() (encoder, encodeSizer, error) {
+	encoder := func(val reflect.Value, w *encbuf) error {
+		if !val.CanAddr() {
+			// Slice requires the value to be addressable.
+			// Make it addressable by copying.
+			copyVal := reflect.New(val.Type()).Elem()
+			copyVal.Set(val)
+			val = copyVal
+		}
+		sizeEnc := make([]byte, lengthBytes)
+		if val.Len() >= 2<<32 {
+			return errors.New("bytes oversize")
+		}
+		binary.BigEndian.PutUint32(sizeEnc, uint32(val.Len()))
+		w.str = append(w.str, sizeEnc...)
+		w.str = append(w.str, val.Slice(0, val.Len()).Bytes()...)
+		return nil
+	}
+	encodeSizer := func(val reflect.Value) (uint32, error) {
+		if val.Len() >= 2<<32 {
+			return 0, errors.New("bytes oversize")
+		}
+		return lengthBytes + uint32(val.Len()), nil
 	}
 	return encoder, encodeSizer, nil
 }
