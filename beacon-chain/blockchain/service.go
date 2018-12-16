@@ -82,13 +82,13 @@ func (c *ChainService) Start() {
 	var err error
 	c.genesisTime, err = c.beaconDB.GetGenesisTime()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Unable to retrieve genesis time, therefore blockchain service cannot be started %v", err)
 		return
 	}
 
 	beaconState, err := c.beaconDB.GetState()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Unable to retrieve beacon state therefore blockchain service cannot be started %v", err)
 		return
 	}
 
