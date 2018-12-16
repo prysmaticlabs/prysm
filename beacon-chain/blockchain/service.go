@@ -273,7 +273,7 @@ func (c *ChainService) blockProcessingNew(processedBlock chan<- *types.Block) {
 
 			if c.currentSlot > block.SlotNumber() {
 				log.Debugf(
-					"Block slot number is lower than the currently processed slot in the beacon state %d",
+					"Block slot number is lower than the current slot in the beacon state %d",
 					block.SlotNumber())
 				continue
 			}
@@ -303,37 +303,29 @@ func (c *ChainService) slotTracker(slotTicker <-chan uint64, tickerDone func()) 
 			log.Debug("Chain service context closed, exiting goroutine")
 			return
 		case slot := <-slotTicker:
-			c.currentSlot = slot
-
-			c.checkForSkippedSlots()
-
 			beaconState, err := c.beaconDB.GetState()
 			if err != nil {
 				log.Debugf("Unable to retrieve beacon state %v", err)
 				continue
 			}
 
-			// Setting per slot counters
-
 			// Updating beacon state slot
+			c.currentSlot = slot
 			beaconState.SetSlot(slot)
-			vreg := beaconState.ValidatorRegistry()
 
-			proposerIndex, err := v.GetBeaconProposerIndex(beaconState.Proto(), beaconState.Slot())
+			newState, lastProcessedSlot, err := state.CheckForSkippedSlots(c.lastProcessedSlot, beaconState)
 			if err != nil {
-				log.Debugf("Unable to retrieve proposer index %v", err)
-				continue
+				log.Debugf("Checking for skipped slots failed %v", err)
 			}
 
-			// Updating proposer randao layers, might be a bug, for reference:
-			// https://github.com/ethereum/eth2.0-specs/issues/319
-			vreg[proposerIndex].RandaoLayers++
-			beaconState.SetValidatorRegistry(vreg)
-
-			if err := c.beaconDB.SaveState(beaconState); err != nil {
+			if err := c.beaconDB.SaveState(newState); err != nil {
 				log.Debugf("Unable to save beacon state to db: %v", err)
 			}
 
+			c.lastProcessedSlot = lastProcessedSlot
+
+			// Sends any valid blocks in the cache
+			// to the processing routine
 			c.checkCachedBlocks()
 		}
 	}
@@ -430,12 +422,6 @@ func (c *ChainService) processBlockNew(block *types.Block) error {
 	if err != nil {
 		return errors.New("Unable to execute state transition")
 	}
-
-	// Add in slot transition method here, where signatures,randao and
-	// block processing will be validated.
-
-	// Add in epoch transition method here, where votes, validator exits,
-	// and balances will be updated.
 
 	if err := c.beaconDB.SaveBlock(block); err != nil {
 		return fmt.Errorf("failed to save block: %v", err)
@@ -579,81 +565,38 @@ func (c *ChainService) calculateNewBlockVotes(block *types.Block, beaconState *t
 }
 
 func (c *ChainService) isBlockReadyForProcessing(block *types.Block) bool {
-
-	// Pre-Processing Condition 1:
-	// Check that the parent Block has been processed and saved.
+	// Get Parent block
 	parent, err := c.beaconDB.GetBlock(block.ParentHash())
 	if err != nil {
 		log.Debugf("could not get parent block: %v", err)
 		return false
 	}
-	if parent == nil {
-		log.Debugf("unprocessed parent block as it points to nil parent: %#x", block.ParentHash())
-		return false
-	}
 
-	// Pre-Processing Condition 2:
-	// The state is updated up to block.slot -1.
 	beaconState, err := c.beaconDB.GetState()
 	if err != nil {
 		log.Debugf("failed to get beacon state: %v", err)
 		return false
 	}
-
-	if beaconState.Slot() != block.SlotNumber()-1 {
-		log.Debugf("block slot is not valid %d", block.SlotNumber())
+	//Get POW chain reference block
+	powBlock, err := c.web3Service.Client().BlockByHash(
+		context.Background(), beaconState.ProcessedPowReceiptRootHash32())
+	if err != nil {
+		log.Debugf("fetching PoW block corresponding to mainchain reference failed: %v", err)
 		return false
 	}
 
-	// Pre-Processing Condition 2:
-	// The block pointed to by the state in state.processed_pow_receipt_root has
-	// been processed in the ETH 1.0 chain.
-	if c.enablePOWChain && !c.doesPoWBlockExist(beaconState.ProcessedPowReceiptRootHash32()) {
-		log.Debug("proof-of-Work chain reference in state does not exist")
-		return false
-	}
-
-	// Pre-Processing Condition 4:
-	// The node's local time is greater than or equal to
-	// state.genesis_time + block.slot * SLOT_DURATION.
-	if !block.IsSlotValid(c.genesisTime) {
-		log.Debugf("slot of block is too high: %d", block.SlotNumber())
+	if err := state.IsValidBlockNew(beaconState, block, parent,
+		powBlock, c.enablePOWChain, c.genesisTime); err != nil {
+		log.Debugf("block does not fulfill pre-processing conditions %v", err)
 		return false
 	}
 
 	return true
-
 }
 
 func (c *ChainService) checkCachedBlocks() {
 	if block, ok := c.unProcessedBlocks[c.currentSlot]; ok && c.isBlockReadyForProcessing(block) {
 		c.incomingBlockChan <- block
 		delete(c.unProcessedBlocks, c.currentSlot)
-	}
-}
-
-func (c *ChainService) checkForSkippedSlots() {
-	if c.currentSlot != c.lastProcessedSlot+1 {
-		beaconState, err := c.beaconDB.GetState()
-		if err != nil {
-			log.Debugf("Unable to retrieve beacon state %v", err)
-			return
-		}
-
-		vreg := beaconState.ValidatorRegistry()
-
-		proposerIndex, err := v.GetBeaconProposerIndex(beaconState.Proto(), beaconState.Slot())
-		if err != nil {
-			log.Debugf("Unable to retrieve proposer index %v", err)
-			return
-		}
-
-		vreg[proposerIndex].RandaoLayers++
-		beaconState.SetValidatorRegistry(vreg)
-
-		if err := c.beaconDB.SaveState(beaconState); err != nil {
-			log.Debugf("Unable to save beacon state %v", err)
-			return
-		}
 	}
 }

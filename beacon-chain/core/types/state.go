@@ -470,6 +470,11 @@ func (b *BeaconState) SetShardAndCommitteesForSlots(shardAndCommitteesForSlot []
 	b.data.ShardAndCommitteesForSlots = shardAndCommitteesForSlot
 }
 
+// SetShardAndCommitteesAtSlots updates the inner proto's shard and committees for slots.
+func (b *BeaconState) SetShardAndCommitteesAtSlots(shardAndCommitteesAtSlot []*pb.ShardAndCommitteeArray) {
+	b.data.ShardAndCommitteesAtSlots = shardAndCommitteesAtSlot
+}
+
 // SetValidatorRegistry updates the state's internal validator set.
 func (b *BeaconState) SetValidatorRegistry(validators []*pb.ValidatorRecord) {
 	b.data.ValidatorRegistry = validators

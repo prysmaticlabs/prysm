@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -71,6 +72,44 @@ func IsValidBlock(
 			stateProposerRandaoSeed,
 		)
 	}
+	return nil
+}
+
+func IsValidBlockNew(
+	state *types.BeaconState,
+	block *types.Block,
+	parentBlock *types.Block,
+	powBlock *gethTypes.Block,
+	enablePOWChain bool,
+	genesisTime time.Time) error {
+
+	// Pre-Processing Condition 1:
+	// Check that the parent Block has been processed and saved.
+	if parentBlock == nil {
+		return fmt.Errorf("unprocessed parent block as it points to nil parent: %#x", block.ParentHash())
+	}
+
+	// Pre-Processing Condition 2:
+	// The state is updated up to block.slot -1.
+
+	if state.Slot() != block.SlotNumber()-1 {
+		return fmt.Errorf("block slot is not valid %d", block.SlotNumber())
+	}
+
+	// Pre-Processing Condition 3:
+	// The block pointed to by the state in state.processed_pow_receipt_root has
+	// been processed in the ETH 1.0 chain.
+	if enablePOWChain && powBlock == nil {
+		return fmt.Errorf("proof-of-Work chain reference in state does not exist %#x", state.ProcessedPowReceiptRootHash32())
+	}
+
+	// Pre-Processing Condition 4:
+	// The node's local time is greater than or equal to
+	// state.genesis_time + block.slot * SLOT_DURATION.
+	if !block.IsSlotValid(genesisTime) {
+		return fmt.Errorf("slot of block is too high: %d", block.SlotNumber())
+	}
+
 	return nil
 }
 

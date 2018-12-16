@@ -2,6 +2,7 @@ package state
 
 import (
 	"bytes"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -128,4 +129,43 @@ func TestProcessSpecialRecords(t *testing.T) {
 	if newValidatorRegistry[5].LatestStatusChangeSlot != 99 {
 		t.Error("Validator 5 last status change slot is not 99")
 	}
+}
+
+func TestForSkippedSlots(t *testing.T) {
+	beaconState, err := types.NewGenesisBeaconState(nil)
+	if err != nil {
+		t.Fatalf("failed to generate beacon state: %v", err)
+	}
+
+	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
+			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{Committee: []uint32{9, 8, 311, 12, 92, 1, 23, 17}},
+			},
+		})
+	}
+
+	beaconState.SetShardAndCommitteesAtSlots(shardAndCommittees)
+	beaconState.SetSlot(3)
+
+	newState, lastProcessedSlot, err := CheckForSkippedSlots(1, beaconState)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if lastProcessedSlot != 2 {
+		t.Fatalf("lastProcessedslot not updated %d", lastProcessedSlot)
+	}
+
+	vreg := newState.ValidatorRegistry()
+
+	// Since slot 2 has proposer index 311
+	if vreg[311].GetRandaoLayers() != 1 {
+		t.Fatalf("skipped slots not accounted for: %d", vreg[311].GetRandaoLayers())
+	}
+
+	if vreg[8].GetRandaoLayers() != 0 {
+		t.Errorf("randao layers updated when they were not supposed to %d", vreg[9].GetRandaoLayers())
+	}
+
 }

@@ -2,6 +2,8 @@ package state
 
 import (
 	"encoding/binary"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/randao"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -65,4 +67,21 @@ func ProcessSpecialRecords(slotNumber uint64, validators []*pb.ValidatorRecord,
 		}
 	}
 	return validators, nil
+}
+
+func CheckForSkippedSlots(
+	lastProcessedSlot uint64,
+	state *types.BeaconState) (*types.BeaconState, uint64, error) {
+
+	if state.Slot() != lastProcessedSlot+1 {
+		slotToUpdate := lastProcessedSlot + 1
+		newState, err := randao.UpdateRandaoLayers(state, slotToUpdate)
+		if err != nil {
+			return nil, lastProcessedSlot, err
+		}
+
+		lastProcessedSlot++
+		return newState, lastProcessedSlot, nil
+	}
+	return state, lastProcessedSlot, nil
 }
