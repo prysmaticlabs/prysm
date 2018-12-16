@@ -5,7 +5,6 @@ package vrc
 
 import (
 	"math/big"
-	"prysm/prysm/shared/event"
 	"strings"
 
 	ethereum "github.com/ethereum/go-ethereum"
@@ -13,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/prysmaticlabs/prysm/shared/event"
 )
 
 // ValidatorRegistrationABI is the input ABI used to generate the binding from.
