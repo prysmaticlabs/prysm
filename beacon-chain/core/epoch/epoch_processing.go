@@ -90,7 +90,8 @@ func BoundaryAttesterIndices(
 		if err != nil {
 			return nil, err
 		}
-		attesterIndicesIntersection = slices.Intersection(attesterIndicesIntersection, attesterIndices)
+
+		attesterIndicesIntersection = slices.Union(attesterIndicesIntersection, attesterIndices)
 	}
 
 	return attesterIndicesIntersection, nil
