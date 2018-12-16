@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// IsValidBlock verifies a block is valid according to the ETH 2.0 specification for
+// IsValidBlockOld verifies a block is valid according to the ETH 2.0 specification for
 // validity conditions taking into consideration attestation processing and more.
 // TODO(#781): Refactor with the new spec validity conditions.
 // Will be Deprecated

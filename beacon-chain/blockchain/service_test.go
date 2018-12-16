@@ -149,7 +149,7 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 	blockChan := make(chan *types.Block)
 	exitRoutine := make(chan bool)
 	go func() {
-		chainService.blockProcessing(blockChan)
+		chainService.blockProcessingOld(blockChan)
 		<-exitRoutine
 	}()
 
@@ -162,10 +162,10 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 	chainService.cancel()
 	exitRoutine <- true
 
-	testutil.AssertLogsContain(t, hook, "block points to nil parent")
+	testutil.AssertLogsContain(t, hook, "fetching PoW block corresponding to mainchain reference failed")
 }
 
-func TestRunningChainService(t *testing.T) {
+func TestRunningChainServiceOld(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	db := internal.SetupDB(t)
@@ -206,6 +206,64 @@ func TestRunningChainService(t *testing.T) {
 	blockChan := make(chan *types.Block)
 	exitRoutine := make(chan bool)
 	go func() {
+		chainService.blockProcessingOld(blockChan)
+		<-exitRoutine
+	}()
+
+	if err := chainService.beaconDB.SaveBlock(block); err != nil {
+		t.Fatal(err)
+	}
+
+	chainService.incomingBlockChan <- block
+	<-blockChan
+	chainService.cancel()
+	exitRoutine <- true
+	testutil.AssertLogsContain(t, hook, "Chain service context closed, exiting goroutine")
+	testutil.AssertLogsContain(t, hook, "Processed beacon block")
+}
+
+func TestRunningChainService(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	chainService := setupBeaconChain(t, false, db)
+	beaconState, err := types.NewGenesisBeaconState(nil)
+	if err != nil {
+		t.Fatalf("Can't generate genesis state: %v", err)
+	}
+
+	stateRoot, _ := beaconState.Hash()
+
+	genesis := types.NewGenesisBlock([32]byte{})
+	chainService.beaconDB.SaveBlock(genesis)
+	parentHash, err := genesis.Hash()
+	if err != nil {
+		t.Fatalf("unable to get hash of canonical head: %v", err)
+	}
+
+	currentSlot := uint64(1)
+	attestationSlot := uint64(0)
+	shard := beaconState.ShardAndCommitteesForSlots()[attestationSlot].ArrayShardAndCommittee[0].Shard
+
+	block := types.NewBlock(&pb.BeaconBlock{
+		Slot:                          currentSlot,
+		StateRootHash32:               stateRoot[:],
+		ParentRootHash32:              parentHash[:],
+		CandidatePowReceiptRootHash32: []byte("a"),
+		Attestations: []*pb.AggregatedAttestation{{
+			Slot: attestationSlot,
+			AttesterBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			Shard:              shard,
+			JustifiedBlockHash: parentHash[:],
+		}},
+	})
+
+	chainService.currentSlot = currentSlot
+	blockChan := make(chan *types.Block)
+	exitRoutine := make(chan bool)
+	go func() {
 		chainService.blockProcessing(blockChan)
 		<-exitRoutine
 	}()
@@ -218,6 +276,11 @@ func TestRunningChainService(t *testing.T) {
 	<-blockChan
 	chainService.cancel()
 	exitRoutine <- true
+
+	if chainService.lastProcessedSlot != 1 {
+		t.Fatalf("Last processed slot not updated %d", chainService.lastProcessedSlot)
+	}
+
 	testutil.AssertLogsContain(t, hook, "Chain service context closed, exiting goroutine")
 	testutil.AssertLogsContain(t, hook, "Processed beacon block")
 }
@@ -294,7 +357,7 @@ func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
 	blockChan := make(chan *types.Block)
 	exitRoutine := make(chan bool)
 	go func() {
-		chainService.blockProcessing(blockChan)
+		chainService.blockProcessingOld(blockChan)
 		<-exitRoutine
 	}()
 
@@ -462,7 +525,7 @@ func TestUpdateHead(t *testing.T) {
 func TestIsBlockReadyForProcessing(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	chainService := setupBeaconChain(t, true, db)
+	chainService := setupBeaconChain(t, false, db)
 	beaconState, err := types.NewGenesisBeaconState(nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
@@ -520,11 +583,7 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 		}},
 	})
 
-	if chainService.isBlockReadyForProcessing(block3) {
-		t.Fatal("block processing succeeded despite being an invalid block")
-	}
-
-	chainService.enablePOWChain = false
+	chainService.enablePOWChain = true
 
 	if !chainService.isBlockReadyForProcessing(block3) {
 		t.Fatal("block processing failed despite being a valid block")

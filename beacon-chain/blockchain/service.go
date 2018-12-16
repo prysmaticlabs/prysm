@@ -228,7 +228,7 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 }
 
 // DEPRECATED: Will be replaced by new block processing routine
-func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
+func (c *ChainService) blockProcessingOld(processedBlock chan<- *types.Block) {
 	subBlock := c.incomingBlockFeed.Subscribe(c.incomingBlockChan)
 	defer subBlock.Unsubscribe()
 	for {
@@ -253,7 +253,7 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 	}
 }
 
-func (c *ChainService) blockProcessingNew(processedBlock chan<- *types.Block) {
+func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 	subBlock := c.incomingBlockFeed.Subscribe(c.incomingBlockChan)
 	defer subBlock.Unsubscribe()
 	for {
@@ -332,7 +332,7 @@ func (c *ChainService) slotTracker(slotTicker <-chan uint64, tickerDone func()) 
 }
 
 // DEPRECATED: Will be replaced by new block processing method
-func (c *ChainService) processBlock(block *types.Block) error {
+func (c *ChainService) processBlockOld(block *types.Block) error {
 	blockHash, err := block.Hash()
 	if err != nil {
 		return fmt.Errorf("failed to get hash of block: %v", err)
@@ -357,7 +357,7 @@ func (c *ChainService) processBlock(block *types.Block) error {
 
 	// Verifies the block against the validity conditions specifies as part of the
 	// Ethereum 2.0 specification.
-	if err := state.IsValidBlock(
+	if err := state.IsValidBlockOld(
 		block,
 		beaconState,
 		parent.SlotNumber(),
@@ -376,7 +376,7 @@ func (c *ChainService) processBlock(block *types.Block) error {
 	beaconState.SetPendingAttestations(block.Attestations())
 
 	// If the block is valid, we compute its associated state tuple (active, crystallized)
-	beaconState, err = c.executeStateTransition(beaconState, block, parent.SlotNumber())
+	beaconState, err = c.executeStateTransitionOld(beaconState, block, parent.SlotNumber())
 	if err != nil {
 		return fmt.Errorf("initialize new cycle transition failed: %v", err)
 	}
@@ -397,7 +397,7 @@ func (c *ChainService) processBlock(block *types.Block) error {
 	return nil
 }
 
-func (c *ChainService) processBlockNew(block *types.Block) error {
+func (c *ChainService) processBlock(block *types.Block) error {
 
 	blockhash, err := block.Hash()
 	if err != nil {
@@ -418,7 +418,7 @@ func (c *ChainService) processBlockNew(block *types.Block) error {
 		return nil
 	}
 
-	newState, err := c.executeStateTransitionNew(beaconState, block)
+	newState, err := c.executeStateTransition(beaconState, block)
 	if err != nil {
 		return errors.New("Unable to execute state transition")
 	}
@@ -463,7 +463,7 @@ func (c *ChainService) executeStateTransitionOld(
 	return newState, nil
 }
 
-func (c *ChainService) executeStateTransitionNew(
+func (c *ChainService) executeStateTransition(
 	beaconState *types.BeaconState,
 	block *types.Block) (*types.BeaconState, error) {
 
@@ -585,7 +585,7 @@ func (c *ChainService) isBlockReadyForProcessing(block *types.Block) bool {
 		return false
 	}
 
-	if err := state.IsValidBlockNew(beaconState, block, parent,
+	if err := state.IsValidBlock(beaconState, block, parent,
 		powBlock, c.enablePOWChain, c.genesisTime); err != nil {
 		log.Debugf("block does not fulfill pre-processing conditions %v", err)
 		return false
