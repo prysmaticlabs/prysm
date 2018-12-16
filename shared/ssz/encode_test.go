@@ -110,16 +110,16 @@ var encodeTests = []encTest{
 	{val: &[]uint8{1, 2, 3, 4}, output: "00000004 01020304"},
 	{val: &[]uint64{1, 2}, output: "00000010 0000000000000001 0000000000000002"},
 	{val: []*simpleStruct{
-		&simpleStruct{B: 2, A: 1},
-		&simpleStruct{B: 4, A: 3},
+		{B: 2, A: 1},
+		{B: 4, A: 3},
 	}, output: "0000000E 00000003 01 0002 00000003 03 0004"},
 	{val: [2]*simpleStruct{
-		&simpleStruct{B: 2, A: 1},
-		&simpleStruct{B: 4, A: 3},
+		{B: 2, A: 1},
+		{B: 4, A: 3},
 	}, output: "0000000E 00000003 01 0002 00000003 03 0004"},
 	{val: []*pointerStruct{
-		&pointerStruct{P: &simpleStruct{B: 2, A: 1}, V: 0},
-		&pointerStruct{P: &simpleStruct{B: 4, A: 3}, V: 1},
+		{P: &simpleStruct{B: 2, A: 1}, V: 0},
+		{P: &simpleStruct{B: 4, A: 3}, V: 1},
 	}, output: "00000018 00000008 00000003 01 0002 00 00000008 00000003 03 0004 01"},
 
 	// error: nil pointer
@@ -202,12 +202,12 @@ var encodeSizeTests = []encSizeTest{
 	{val: &[]uint8{1, 2, 3, 4}, size: 8},
 	{val: &[]uint64{1, 2}, size: 20},
 	{val: []*simpleStruct{
-		&simpleStruct{B: 2, A: 1},
-		&simpleStruct{B: 4, A: 3},
+		{B: 2, A: 1},
+		{B: 4, A: 3},
 	}, size: 18},
 	{val: []*pointerStruct{
-		&pointerStruct{P: &simpleStruct{B: 2, A: 1}, V: 0},
-		&pointerStruct{P: &simpleStruct{B: 4, A: 3}, V: 1},
+		{P: &simpleStruct{B: 2, A: 1}, V: 0},
+		{P: &simpleStruct{B: 4, A: 3}, V: 1},
 	}, size: 28},
 
 	// error: nil pointer

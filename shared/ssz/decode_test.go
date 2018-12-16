@@ -115,20 +115,20 @@ var decodeTests = []decodeTest{
 	{input: "00000010 0000000000000001 0000000000000002", ptr: new(*[]uint64), value: &[]uint64{1, 2}},
 	{input: "0000000E 00000003 01 0002 00000003 03 0004", ptr: new([]*simpleStruct),
 		value: []*simpleStruct{
-			&simpleStruct{B: 2, A: 1},
-			&simpleStruct{B: 4, A: 3},
+			{B: 2, A: 1},
+			{B: 4, A: 3},
 		},
 	},
 	{input: "0000000E 00000003 01 0002 00000003 03 0004", ptr: new([2]*simpleStruct),
 		value: [2]*simpleStruct{
-			&simpleStruct{B: 2, A: 1},
-			&simpleStruct{B: 4, A: 3},
+			{B: 2, A: 1},
+			{B: 4, A: 3},
 		},
 	},
 	{input: "00000018 00000008 00000003 01 0002 00 00000008 00000003 03 0004 01", ptr: new([]*pointerStruct),
 		value: []*pointerStruct{
-			&pointerStruct{P: &simpleStruct{B: 2, A: 1}, V: 0},
-			&pointerStruct{P: &simpleStruct{B: 4, A: 3}, V: 1},
+			{P: &simpleStruct{B: 2, A: 1}, V: 0},
+			{P: &simpleStruct{B: 4, A: 3}, V: 1},
 		},
 	},
 
