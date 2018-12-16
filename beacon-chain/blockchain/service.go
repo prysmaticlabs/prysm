@@ -426,6 +426,11 @@ func (c *ChainService) processBlockNew(block *types.Block) error {
 		return nil
 	}
 
+	newState, err := c.executeStateTransitionNew(beaconState, block)
+	if err != nil {
+		return errors.New("Unable to execute state transition")
+	}
+
 	// Add in slot transition method here, where signatures,randao and
 	// block processing will be validated.
 
@@ -435,16 +440,23 @@ func (c *ChainService) processBlockNew(block *types.Block) error {
 	if err := c.beaconDB.SaveBlock(block); err != nil {
 		return fmt.Errorf("failed to save block: %v", err)
 	}
-	if err := c.beaconDB.SaveUnfinalizedBlockState(beaconState); err != nil {
+	if err := c.beaconDB.SaveUnfinalizedBlockState(newState); err != nil {
 		return fmt.Errorf("error persisting unfinalized block's state: %v", err)
 	}
 
 	log.WithField("hash", fmt.Sprintf("%#x", blockhash)).Info("Processed beacon block")
+
+	// We keep a map of unfinalized blocks in memory along with their state
+	// pair to apply the fork choice rule.
+	c.unfinalizedBlocks[blockhash] = newState
+
+	// We save the last processed slot
 	c.lastProcessedSlot = block.SlotNumber()
 
 	return nil
 }
 
+// DEPRECATED: Will be removed soon
 func (c *ChainService) executeStateTransition(
 	beaconState *types.BeaconState,
 	block *types.Block,
@@ -462,6 +474,29 @@ func (c *ChainService) executeStateTransition(
 	if newState.IsValidatorSetChange(block.SlotNumber()) {
 		log.WithField("slotNumber", block.SlotNumber()).Info("Validator set rotation occurred")
 	}
+	return newState, nil
+}
+
+func (c *ChainService) executeStateTransitionNew(
+	beaconState *types.BeaconState,
+	block *types.Block) (*types.BeaconState, error) {
+
+	log.WithField("slotNumber", block.SlotNumber()).Info("Executing state transition")
+	_, err := c.beaconDB.ReadBlockVoteCache(beaconState.LatestBlockRootHashes32())
+	if err != nil {
+		return nil, err
+	}
+
+	newState := state.NewSlotTransition(beaconState, block)
+
+	if newState.Slot()%params.BeaconConfig().EpochLength == 0 {
+		newState = state.NewEpochTransition(newState)
+	}
+
+	if newState.IsValidatorSetChange(block.SlotNumber()) {
+		log.WithField("slotNumber", block.SlotNumber()).Info("Validator set rotation occurred")
+	}
+
 	return newState, nil
 }
 
@@ -547,7 +582,6 @@ func (c *ChainService) isBlockReadyForProcessing(block *types.Block) bool {
 
 	// Pre-Processing Condition 1:
 	// Check that the parent Block has been processed and saved.
-
 	parent, err := c.beaconDB.GetBlock(block.ParentHash())
 	if err != nil {
 		log.Debugf("could not get parent block: %v", err)
@@ -560,7 +594,6 @@ func (c *ChainService) isBlockReadyForProcessing(block *types.Block) bool {
 
 	// Pre-Processing Condition 2:
 	// The state is updated up to block.slot -1.
-
 	beaconState, err := c.beaconDB.GetState()
 	if err != nil {
 		log.Debugf("failed to get beacon state: %v", err)
@@ -575,7 +608,6 @@ func (c *ChainService) isBlockReadyForProcessing(block *types.Block) bool {
 	// Pre-Processing Condition 2:
 	// The block pointed to by the state in state.processed_pow_receipt_root has
 	// been processed in the ETH 1.0 chain.
-
 	if c.enablePOWChain && !c.doesPoWBlockExist(beaconState.ProcessedPowReceiptRootHash32()) {
 		log.Debug("proof-of-Work chain reference in state does not exist")
 		return false
@@ -584,7 +616,6 @@ func (c *ChainService) isBlockReadyForProcessing(block *types.Block) bool {
 	// Pre-Processing Condition 4:
 	// The node's local time is greater than or equal to
 	// state.genesis_time + block.slot * SLOT_DURATION.
-
 	if !block.IsSlotValid(c.genesisTime) {
 		log.Debugf("slot of block is too high: %d", block.SlotNumber())
 		return false
@@ -619,5 +650,10 @@ func (c *ChainService) checkForSkippedSlots() {
 
 		vreg[proposerIndex].RandaoLayers++
 		beaconState.SetValidatorRegistry(vreg)
+
+		if err := c.beaconDB.SaveState(beaconState); err != nil {
+			log.Debugf("Unable to save beacon state %v", err)
+			return
+		}
 	}
 }

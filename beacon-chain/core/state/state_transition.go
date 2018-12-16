@@ -123,6 +123,15 @@ func NewStateTransition(
 	return newState, nil
 }
 
+func NewSlotTransition(state *types.BeaconState, block *types.Block) *types.BeaconState {
+	_ = block
+	return state
+}
+
+func NewEpochTransition(state *types.BeaconState) *types.BeaconState {
+	return state
+}
+
 // crossLinkCalculations checks if the proposed shard block has recevied
 // 2/3 of the votes. If yes, we update crosslink record to point to
 // the proposed shard block with latest beacon chain slot numbers.
