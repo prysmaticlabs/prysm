@@ -3,6 +3,7 @@ package epoch
 import (
 	"bytes"
 	"testing"
+	"reflect"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -102,5 +103,46 @@ func TestEpochBoundaryAttestations(t *testing.T) {
 	if !bytes.Equal(epochBoundaryAttestation[0].GetData().JustifiedBlockRootHash32, []byte{0}) {
 		t.Errorf("Wanted justified block hash [0] for epoch boundary attestation, got: %v",
 			epochBoundaryAttestation[0].Data.JustifiedBlockRootHash32)
+	}
+}
+
+func TestBoundaryAttestingBalance(t *testing.T) {
+	attesters := []*pb.ValidatorRecord{
+		{Balance: 25 * 1e9},
+		{Balance: 26 * 1e9},
+		{Balance: 32 * 1e9},
+		{Balance: 33 * 1e9},
+		{Balance: 100 * 1e9},
+	}
+	attestedBalances := BoundaryAttestingBalance(attesters)
+
+	// 25 + 26 + 32 + 32 + 32 = 147
+	if attestedBalances != 147 * 1e9 {
+		t.Errorf("Incorrect attested balances. Wanted: %f, got: %d", 147 * 1e9, attestedBalances)
+	}
+}
+
+func TestBoundaryAttesters(t *testing.T) {
+	var validators []*pb.ValidatorRecord
+
+	for i:=0; i < 100; i++ {
+		validators = append(validators, &pb.ValidatorRecord{Pubkey: []byte{byte(i)}})
+	}
+
+	state := &pb.BeaconState{ValidatorRegistry: validators}
+
+	boundaryAttesters := BoundaryAttesters(state, []uint32{5,2,87,42,99,0})
+
+	expectedBoundaryAttesters := []*pb.ValidatorRecord{
+		{Pubkey: []byte{byte(5)}},
+		{Pubkey: []byte{byte(2)}},
+		{Pubkey: []byte{byte(87)}},
+		{Pubkey: []byte{byte(42)}},
+		{Pubkey: []byte{byte(99)}},
+		{Pubkey: []byte{byte(0)}},
+	}
+
+	if !reflect.DeepEqual(expectedBoundaryAttesters, boundaryAttesters) {
+		t.Errorf("Incorrect boundary attesters. Wanted: %v, got: %v",expectedBoundaryAttesters , boundaryAttesters)
 	}
 }

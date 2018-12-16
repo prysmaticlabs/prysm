@@ -146,7 +146,7 @@ func AttestationParticipants(
 		}
 	}
 
-	if float64(len(participationBitfield)) != math.Ceil(float64(len(participants.Committee))) {
+	if len(participationBitfield) != int(math.Ceil(float64(len(participants.Committee)))) {
 		return nil, fmt.Errorf(
 			"wanted participants bitfield length %d, got: %d",
 			len(participants.Committee), len(participationBitfield))
@@ -157,7 +157,7 @@ func AttestationParticipants(
 	for i, validatorIndex := range participants.Committee {
 		bitSet, err := bitutil.CheckBit(participationBitfield, i)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not get participant bitfield: %v", err)
 		}
 		if bitSet {
 			participantIndices = append(participantIndices, validatorIndex)

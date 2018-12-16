@@ -4,8 +4,10 @@ import (
 	"bytes"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/slices"
 )
 
 // Attestations returns the pending attestations of slots in the epoch
@@ -65,4 +67,63 @@ func BoundaryAttestations(
 		}
 	}
 	return boundaryAttestations, nil
+}
+
+// BoundaryAttesterIndices returns the attester indices from epoch
+// boundary block.
+//
+// Spec pseudocode definition:
+//   Let this_epoch_boundary_attester_indices be the union of the validator
+//   index sets given by [get_attestation_participants(state, a.data, a.participation_bitfield)
+//   for a in this_epoch_boundary_attestations]
+func BoundaryAttesterIndices(
+	state *pb.BeaconState,
+	boundaryAttestations []*pb.PendingAttestationRecord,
+) ([]uint32, error) {
+
+	var attesterIndicesIntersection []uint32
+	for _, boundaryAttestation := range boundaryAttestations {
+		attesterIndices, err := validators.AttestationParticipants(
+			state,
+			boundaryAttestation.Data,
+			boundaryAttestation.ParticipationBitfield)
+		if err != nil {
+			return nil, err
+		}
+		attesterIndicesIntersection = slices.Intersection(attesterIndicesIntersection, attesterIndices)
+	}
+
+	return attesterIndicesIntersection, nil
+}
+
+// BoundaryAttesters returns the attesters validator object from epoch
+// boundary block.
+//
+// Spec pseudocode definition:
+//   Let this_epoch_boundary_attesters = [state.validator_registry[i]
+//   for indices in this_epoch_boundary_attester_indices for i in indices].
+func BoundaryAttesters(state *pb.BeaconState, attesterIndices []uint32) []*pb.ValidatorRecord {
+
+	var boundaryAttesters []*pb.ValidatorRecord
+	for _, attesterIndex := range attesterIndices {
+		boundaryAttesters = append(boundaryAttesters, state.ValidatorRegistry[attesterIndex])
+	}
+
+	return boundaryAttesters
+}
+
+// BoundaryAttestingBalance returns the epoch boundary attesting
+// balance.
+//
+// Spec pseudocode definition:
+//   Let this_epoch_boundary_attesting_balance =
+//   sum([get_effective_balance(v) for v in this_epoch_boundary_attesters])
+func BoundaryAttestingBalance(boundaryAttesters []*pb.ValidatorRecord) uint64 {
+
+	var boundaryAttestingBalance uint64
+	for _, boundaryAttester := range boundaryAttesters {
+		boundaryAttestingBalance += validators.EffectiveBalance(boundaryAttester)
+	}
+
+	return boundaryAttestingBalance
 }
