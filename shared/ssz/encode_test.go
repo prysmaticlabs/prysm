@@ -113,6 +113,10 @@ var encodeTests = []encTest{
 		&simpleStruct{B: 2, A: 1},
 		&simpleStruct{B: 4, A: 3},
 	}, output: "0000000E 00000003 01 0002 00000003 03 0004"},
+	{val: [2]*simpleStruct{
+		&simpleStruct{B: 2, A: 1},
+		&simpleStruct{B: 4, A: 3},
+	}, output: "0000000E 00000003 01 0002 00000003 03 0004"},
 	{val: []*pointerStruct{
 		&pointerStruct{P: &simpleStruct{B: 2, A: 1}, V: 0},
 		&pointerStruct{P: &simpleStruct{B: 4, A: 3}, V: 1},
