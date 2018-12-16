@@ -3,8 +3,10 @@ package db
 import (
 	"os"
 	"path"
-
+	"time"
 	"github.com/boltdb/bolt"
+	"strings"
+	"errors"
 )
 
 // BeaconDB manages the data layer of the beacon chain implementation.
@@ -46,8 +48,11 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 		return nil, err
 	}
 	datafile := path.Join(dirPath, "beaconchain.db")
-	boltDB, err := bolt.Open(datafile, 0600, nil)
+	boltDB, err := bolt.Open(datafile, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
+		if strings.Contains(err.Error(), "timeout") {
+			return nil, errors.New("DB locked by another process")
+		}
 		return nil, err
 	}
 
