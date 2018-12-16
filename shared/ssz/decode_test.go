@@ -62,7 +62,6 @@ var decodeTests = []decodeTest{
 
 	// slice
 	{input: "00000000", ptr: new([]uint16), value: []uint16(nil)},
-	{input: "00000000", ptr: new([]uint16), value: []uint16(nil)},
 	{input: "00000004 0001 0002", ptr: new([]uint16), value: []uint16{1, 2}},
 	{input: "00000018 00000008 0001 0002 0003 0004 00000008 0005 0006 0007 0008", ptr: new([][]uint16),
 		value: [][]uint16{
@@ -72,7 +71,6 @@ var decodeTests = []decodeTest{
 	},
 
 	// struct
-	//{input: "00000000", ptr: new(simpleStruct), value: simpleStruct{}},
 	{input: "00000003 00 0000", ptr: new(simpleStruct), value: simpleStruct{}},
 	{input: "00000003 01 0002", ptr: new(simpleStruct), value: simpleStruct{B: 2, A: 1}},
 	{input: "00000007 00000002 0006 03", ptr: new(outerStruct),
@@ -95,27 +93,40 @@ var decodeTests = []decodeTest{
 			{V: 5, SubV: innerStruct{V: 7}},
 		}},
 
+	//{val: &simpleStruct{B: 2, A: 1}, output: "00000003 01 0002"},
+	//{val: pointerStruct{P: &simpleStruct{B: 2, A: 1}, V: 3}, output: "00000008 00000003 01 0002 03"},
+	//{val: &pointerStruct{P: &simpleStruct{B: 2, A: 1}, V: 3}, output: "00000008 00000003 01 0002 03"},
+	//{val: &[]uint8{1, 2, 3, 4}, output: "00000004 01020304"},
+	//{val: &[]uint64{1, 2}, output: "00000010 0000000000000001 0000000000000002"},
+	//{val: []*simpleStruct{
+	//	&simpleStruct{B: 2, A: 1},
+	//	&simpleStruct{B: 4, A: 3},
+	//}, output: "0000000E 00000003 01 0002 00000003 03 0004"},
+	//{val: []*pointerStruct{
+	//	&pointerStruct{P: &simpleStruct{B: 2, A: 1}, V: 0},
+	//	&pointerStruct{P: &simpleStruct{B: 4, A: 3}, V: 1},
+	//}, output: "00000018 00000008 00000003 01 0002 00 00000008 00000003 03 0004 01"},
+
 	// pointer
 	{input: "00000003 01 0002", ptr: new(*simpleStruct), value: &simpleStruct{B: 2, A: 1}},
+	{input: "00000008 00000003 01 0002 03", ptr: new(pointerStruct),
+		value: pointerStruct{P: &simpleStruct{B: 2, A: 1}, V: 3}},
+	{input: "00000008 00000003 01 0002 03", ptr: new(*pointerStruct),
+		value: &pointerStruct{P: &simpleStruct{B: 2, A: 1}, V: 3}},
 	{input: "00000004 01020304", ptr: new(*[]uint8), value: &[]uint8{1, 2, 3, 4}},
 	{input: "00000010 0000000000000001 0000000000000002", ptr: new(*[]uint64), value: &[]uint64{1, 2}},
-
-	// pointer + struct
-	{input: "0000000F 0000000A 00000005 00000000 03 02 01", ptr: new(pointerStruct),
-		value: pointerStruct{
-			V: 1,
-			Next: &pointerStruct{
-				V: 2,
-				Next: &pointerStruct{
-					V:    3,
-					Next: &pointerStruct{},
-				},
-			},
+	{input: "0000000E 00000003 01 0002 00000003 03 0004", ptr: new([]*simpleStruct),
+		value: []*simpleStruct{
+			&simpleStruct{B: 2, A: 1},
+			&simpleStruct{B: 4, A: 3},
 		},
 	},
-
-	// nil pointer
-	{input: "00000000", ptr: new(*[]uint8), value: &[]uint8{}},
+	{input: "00000018 00000008 00000003 01 0002 00 00000008 00000003 03 0004 01", ptr: new([]*pointerStruct),
+		value: []*pointerStruct{
+			&pointerStruct{P: &simpleStruct{B: 2, A: 1}, V: 0},
+			&pointerStruct{P: &simpleStruct{B: 4, A: 3}, V: 1},
+		},
+	},
 
 	// error: nil target
 	{input: "00", ptr: nil, value: nil, error: "decode error: cannot decode into nil for output type <nil>"},

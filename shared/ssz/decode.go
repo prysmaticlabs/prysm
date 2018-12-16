@@ -219,16 +219,10 @@ func makeStructDecoder(typ reflect.Type) (decoder, error) {
 	return decoder, nil
 }
 
-// Notice: we are currently not able to differentiate between decoding into nil or a pointer to empty object.
-// For example, 0x00000000 can mean:
-// - a nil pointer or a pointer that points to a struct that has no fields
-// - a nil pointer or a pointer that points to a slice that has zero length
-// So when the decode target could be either nil or pointer for an object, the decoder is facing ambiguity.
-// Some preference needs to be specified to guide the decoder.
-// This resolution is not defined in SSZ spec. In fact, SSZ spec never talks about pointer.
-// geth supports this by using a "nil" tag.
-// We will probably support this when we encounter this use case in our our code base.
-// But for now, we will always decode 0x00000000 into empty object
+// Notice: Currently we don't support nil pointer:
+// - Input for encoding must not contain nil pointer
+// - Output for decoding will never contain nil pointer
+// (Not to be confused with empty slice. Empty slice is supported)
 func makePtrDecoder(typ reflect.Type) (decoder, error) {
 	elemType := typ.Elem()
 	elemEncoderDecoder, err := cachedEncoderDecoderNoAcquireLock(elemType)

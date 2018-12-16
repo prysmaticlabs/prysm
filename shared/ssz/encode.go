@@ -39,7 +39,7 @@ type encbuf struct {
 
 func (w *encbuf) encode(val interface{}) error {
 	if val == nil {
-		return newEncodeError("cannot encode nil of no-type", nil)
+		return newEncodeError("nil is not supported", nil)
 	}
 	rval := reflect.ValueOf(val)
 	encDec, err := cachedEncoderDecoder(rval.Type())
@@ -54,7 +54,7 @@ func (w *encbuf) encode(val interface{}) error {
 
 func encodeSize(val interface{}) (uint32, error) {
 	if val == nil {
-		return 0, newEncodeError("cannot encode nil of no-type", nil)
+		return 0, newEncodeError("nil is not supported", nil)
 	}
 	rval := reflect.ValueOf(val)
 	encDec, err := cachedEncoderDecoder(rval.Type())
@@ -233,34 +233,26 @@ func makeStructEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 	return encoder, encodeSizer, nil
 }
 
+// Notice: Currently we don't support nil pointer:
+// - Input for encoding must not contain nil pointer
+// - Output for decoding will never contain nil pointer
+// (Not to be confused with empty slice. Empty slice is supported)
 func makePtrEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 	elemEncoderDecoder, err := cachedEncoderDecoderNoAcquireLock(typ.Elem())
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var nilfunc func(*encbuf) error
-	kind := typ.Elem().Kind()
-	switch {
-	case kind == reflect.Slice || kind == reflect.Struct:
-		nilfunc = func(w *encbuf) error {
-			w.str = append(w.str, 0, 0, 0, 0)
-			return nil
-		}
-	default:
-		return nil, nil, fmt.Errorf("cannot encode nil pointer to type %v", typ)
-	}
-
 	encoder := func(val reflect.Value, w *encbuf) error {
 		if val.IsNil() {
-			return nilfunc(w)
+			return errors.New("nil is not supported")
 		}
 		return elemEncoderDecoder.encoder(val.Elem(), w)
 	}
 
 	encodeSizer := func(val reflect.Value) (uint32, error) {
 		if val.IsNil() {
-			return lengthBytes, nil
+			return 0, errors.New("nil is not supported")
 		}
 		return elemEncoderDecoder.encodeSizer(val.Elem())
 	}
