@@ -443,7 +443,7 @@ func (c *ChainService) processBlockNew(block *types.Block) error {
 }
 
 // DEPRECATED: Will be removed soon
-func (c *ChainService) executeStateTransition(
+func (c *ChainService) executeStateTransitionOld(
 	beaconState *types.BeaconState,
 	block *types.Block,
 	parentSlot uint64,

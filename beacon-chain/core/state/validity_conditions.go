@@ -19,7 +19,7 @@ import (
 // validity conditions taking into consideration attestation processing and more.
 // TODO(#781): Refactor with the new spec validity conditions.
 // Will be Deprecated
-func IsValidBlock(
+func IsValidBlockOld(
 	block *types.Block,
 	beaconState *types.BeaconState,
 	parentSlot uint64,
@@ -75,7 +75,7 @@ func IsValidBlock(
 	return nil
 }
 
-func IsValidBlockNew(
+func IsValidBlock(
 	state *types.BeaconState,
 	block *types.Block,
 	parentBlock *types.Block,
