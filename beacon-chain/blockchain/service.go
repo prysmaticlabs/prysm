@@ -591,7 +591,9 @@ func (c *ChainService) isBlockReadyForProcessing(block *types.Block) bool {
 		}
 
 	} else {
-		powBlock = gethTypes.NewBlock(nil, nil, nil, nil)
+		powBlock = &gethTypes.Block{
+			ReceivedAt: c.genesisTime,
+		}
 	}
 
 	if err := state.IsValidBlock(beaconState, block, parent,
