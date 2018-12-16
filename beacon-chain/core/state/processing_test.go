@@ -76,12 +76,12 @@ func TestLatestCrosslinks(t *testing.T) {
 
 	crossLinks := []*pb.CrosslinkRecord{
 		{
-			ShardBlockHash32: []byte{'A'},
-			Slot:             10,
+			ShardBlockRootHash32: []byte{'A'},
+			Slot:                 10,
 		},
 		{
-			ShardBlockHash32: []byte{'A'},
-			Slot:             10,
+			ShardBlockRootHash32: []byte{'A'},
+			Slot:                 10,
 		},
 	}
 
@@ -95,8 +95,8 @@ func TestLatestCrosslinks(t *testing.T) {
 	crossLinks = UpdateLatestCrosslinks(10, voteBalance, totalBalance, attestation, crossLinks)
 	crossLinks = UpdateLatestCrosslinks(10, voteBalance, totalBalance, attestation, crossLinks)
 
-	if !bytes.Equal(crossLinks[1].GetShardBlockHash32(), []byte{'B'}) {
-		t.Errorf("shard blockhash not saved in crosslink record %v", crossLinks[1].GetShardBlockHash32())
+	if !bytes.Equal(crossLinks[1].GetShardBlockRootHash32(), []byte{'B'}) {
+		t.Errorf("shard blockhash not saved in crosslink record %v", crossLinks[1].GetShardBlockRootHash32())
 	}
 
 }

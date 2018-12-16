@@ -78,12 +78,12 @@ message Attestation {
 message AttestationData {
   uint64 slot = 1;
   uint64 shard = 2;
-  bytes beacon_block_hash32 = 3;
-  bytes epoch_boundary_hash32 = 4;
-  bytes shard_block_hash32 = 5;
-  bytes latest_crosslink_hash32 = 6;
+  bytes beacon_block_root_hash32 = 3;
+  bytes epoch_boundary_root_hash32  = 4;
+  bytes shard_block_root_hash32 = 5;
+  bytes latest_crosslink_root_hash32 = 6;
   uint64 justified_slot = 7;
-  bytes justified_block_hash32 = 8;
+  bytes justified_block_root_hash32 = 8;
 }
 
 message ValidatorRecord {
@@ -133,7 +133,7 @@ message SpecialRecord {
 
 message CrosslinkRecord {
   uint64 slot = 1;
-  bytes shard_block_hash32 = 2;
+  bytes shard_block_root_hash32 = 2;
 }
 
 message ShardAndCommitteeArray {
@@ -182,7 +182,7 @@ message DepositParameters {
 message ProposalSignedData {
   uint64 slot = 1;
   uint64 shard = 2;
-  bytes block_root = 3;
+  bytes block_root_hash32 = 3;
 }
 
 message SlashableVoteData {

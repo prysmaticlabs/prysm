@@ -1,13 +1,65 @@
 package blocks
 
 import (
+	"bytes"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+func TestProcessPOWReceiptRoots_SameRootHash(t *testing.T) {
+	beaconState := types.NewBeaconState(&pb.BeaconState{
+		CandidatePowReceiptRoots: []*pb.CandidatePoWReceiptRootRecord{
+			{
+				CandidatePowReceiptRootHash32: []byte{1},
+				Votes:                         5,
+			},
+		},
+	})
+	block := &pb.BeaconBlock{
+		CandidatePowReceiptRootHash32: []byte{1},
+	}
+	newReceiptRoots := ProcessPOWReceiptRoots(beaconState, block)
+	if newReceiptRoots[0].Votes != 6 {
+		t.Errorf("expected votes to increase from 5 to 6, received %v", newReceiptRoots[0].Votes)
+	}
+}
+
+func TestProcessPOWReceiptRoots_NewCandidateRecord(t *testing.T) {
+	beaconState := types.NewBeaconState(&pb.BeaconState{
+		CandidatePowReceiptRoots: []*pb.CandidatePoWReceiptRootRecord{
+			{
+				CandidatePowReceiptRootHash32: []byte{0},
+				Votes:                         5,
+			},
+		},
+	})
+	block := &pb.BeaconBlock{
+		CandidatePowReceiptRootHash32: []byte{1},
+	}
+	newReceiptRoots := ProcessPOWReceiptRoots(beaconState, block)
+	if len(newReceiptRoots) == 1 {
+		t.Error("expected new receipt roots to have length > 1")
+	}
+	if newReceiptRoots[1].Votes != 1 {
+		t.Errorf(
+			"expected new receipt roots to have a new element with votes = 1, received votes = %d",
+			newReceiptRoots[1].Votes,
+		)
+	}
+	if !bytes.Equal(newReceiptRoots[1].CandidatePowReceiptRootHash32, []byte{1}) {
+		t.Errorf(
+			"expected new receipt roots to have a new element with root = %#x, received root = %#x",
+			[]byte{1},
+			newReceiptRoots[1].CandidatePowReceiptRootHash32,
+		)
+	}
+}
 
 func TestProcessProposerSlashings_ThresholdReached(t *testing.T) {
 	slashings := make([]*pb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings+1)
@@ -88,14 +140,14 @@ func TestProcessProposerSlashings_UnmatchedBlockRoots(t *testing.T) {
 		{
 			ProposerIndex: 0,
 			ProposalData_1: &pb.ProposalSignedData{
-				Slot:      1,
-				Shard:     0,
-				BlockRoot: []byte{0, 1, 0},
+				Slot:            1,
+				Shard:           0,
+				BlockRootHash32: []byte{0, 1, 0},
 			},
 			ProposalData_2: &pb.ProposalSignedData{
-				Slot:      1,
-				Shard:     0,
-				BlockRoot: []byte{1, 1, 0},
+				Slot:            1,
+				Shard:           0,
+				BlockRootHash32: []byte{1, 1, 0},
 			},
 		},
 	}
@@ -131,14 +183,14 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		{
 			ProposerIndex: 1,
 			ProposalData_1: &pb.ProposalSignedData{
-				Slot:      1,
-				Shard:     1,
-				BlockRoot: []byte{0, 1, 0},
+				Slot:            1,
+				Shard:           1,
+				BlockRootHash32: []byte{0, 1, 0},
 			},
 			ProposalData_2: &pb.ProposalSignedData{
-				Slot:      1,
-				Shard:     1,
-				BlockRoot: []byte{0, 1, 0},
+				Slot:            1,
+				Shard:           1,
+				BlockRootHash32: []byte{0, 1, 0},
 			},
 		},
 	}
@@ -457,5 +509,539 @@ func TestProcessCasperSlashings_AppliesCorrectStatus(t *testing.T) {
 			`,
 			newRegistry[1].Status,
 		)
+	}
+}
+
+func TestProcessBlockAttestations_ThresholdReached(t *testing.T) {
+	attestations := make([]*pb.Attestation, params.BeaconConfig().MaxAttestations+1)
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
+	}
+	state := &types.BeaconState{}
+
+	want := fmt.Sprintf(
+		"number of attestations in block (%d) exceeds allowed threshold of %d",
+		params.BeaconConfig().MaxAttestations+1,
+		params.BeaconConfig().MaxAttestations,
+	)
+
+	if _, err := ProcessBlockAttestations(
+		state,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessBlockAttestations_InclusionDelayFailure(t *testing.T) {
+	attestations := []*pb.Attestation{
+		{
+			Data: &pb.AttestationData{
+				Slot: 5,
+			},
+		},
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
+	}
+	state := types.NewBeaconState(&pb.BeaconState{
+		Slot: 5,
+	})
+
+	want := fmt.Sprintf(
+		"attestation slot (slot %d) + inclusion delay (%d) beyond current beacon state slot (%d)",
+		5,
+		params.BeaconConfig().MinAttestationInclusionDelay,
+		5,
+	)
+	if _, err := ProcessBlockAttestations(
+		state,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessBlockAttestations_EpochDistanceFailure(t *testing.T) {
+	attestations := []*pb.Attestation{
+		{
+			Data: &pb.AttestationData{
+				Slot: 5,
+			},
+		},
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
+	}
+	state := types.NewBeaconState(&pb.BeaconState{
+		Slot: 5 + 2*params.BeaconConfig().EpochLength,
+	})
+
+	want := fmt.Sprintf(
+		"attestation slot (slot %d) + epoch length (%d) less than current beacon state slot (%d)",
+		5,
+		params.BeaconConfig().EpochLength,
+		5+2*params.BeaconConfig().EpochLength,
+	)
+	if _, err := ProcessBlockAttestations(
+		state,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessBlockAttestations_JustifiedSlotVerificationFailure(t *testing.T) {
+	attestations := []*pb.Attestation{
+		{
+			Data: &pb.AttestationData{
+				Slot:          10,
+				JustifiedSlot: 4,
+			},
+		},
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
+	}
+	state := types.NewBeaconState(&pb.BeaconState{
+		Slot:          params.BeaconConfig().EpochLength - 1,
+		JustifiedSlot: 0,
+	})
+
+	want := fmt.Sprintf(
+		"expected attestation.JustifiedSlot == state.JustifiedSlot, received %d == %d",
+		4,
+		0,
+	)
+	if _, err := ProcessBlockAttestations(
+		state,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessBlockAttestations_PreviousJustifiedSlotVerificationFailure(t *testing.T) {
+	attestations := []*pb.Attestation{
+		{
+			Data: &pb.AttestationData{
+				Slot:          5,
+				JustifiedSlot: 4,
+			},
+		},
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
+	}
+	state := types.NewBeaconState(&pb.BeaconState{
+		Slot:                  5 + params.BeaconConfig().EpochLength,
+		PreviousJustifiedSlot: 3,
+	})
+
+	want := fmt.Sprintf(
+		"expected attestation.JustifiedSlot == state.PreviousJustifiedSlot, received %d == %d",
+		4,
+		3,
+	)
+	if _, err := ProcessBlockAttestations(
+		state,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessBlockAttestations_BlockRootOutOfBounds(t *testing.T) {
+	var blockRoots [][]byte
+	for i := uint64(0); i < 2*params.BeaconConfig().EpochLength; i++ {
+		blockRoots = append(blockRoots, []byte{byte(i)})
+	}
+
+	state := types.NewBeaconState(&pb.BeaconState{
+		Slot:                   64,
+		PreviousJustifiedSlot:  65,
+		LatestBlockRootHash32S: blockRoots,
+	})
+	attestations := []*pb.Attestation{
+		{
+			Data: &pb.AttestationData{
+				Slot:                     20,
+				JustifiedSlot:            65,
+				JustifiedBlockRootHash32: []byte{},
+			},
+		},
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
+	}
+
+	want := "could not get block root for justified slot"
+	if _, err := ProcessBlockAttestations(
+		state,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessBlockAttestations_BlockRootFailure(t *testing.T) {
+	var blockRoots [][]byte
+	for i := uint64(0); i < 2*params.BeaconConfig().EpochLength; i++ {
+		blockRoots = append(blockRoots, []byte{byte(i)})
+	}
+
+	state := types.NewBeaconState(&pb.BeaconState{
+		Slot:                   64,
+		PreviousJustifiedSlot:  10,
+		LatestBlockRootHash32S: blockRoots,
+	})
+	attestations := []*pb.Attestation{
+		{
+			Data: &pb.AttestationData{
+				Slot:                     20,
+				JustifiedSlot:            10,
+				JustifiedBlockRootHash32: []byte{},
+			},
+		},
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
+	}
+
+	want := fmt.Sprintf(
+		"expected JustifiedBlockRoot == getBlockRoot(state, JustifiedSlot): got %#x = %#x",
+		[]byte{},
+		blockRoots[10],
+	)
+	if _, err := ProcessBlockAttestations(
+		state,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
+	var blockRoots [][]byte
+	for i := uint64(0); i < 2*params.BeaconConfig().EpochLength; i++ {
+		blockRoots = append(blockRoots, []byte{byte(i)})
+	}
+
+	// If attestation.latest_cross_link_root != state.latest_crosslinks[shard].shard_block_root
+	// AND
+	// attestation.data.shard_block_root != state.latest_crosslinks[shard].shard_block_root
+	// the attestation should be invalid.
+	stateLatestCrosslinks := []*pb.CrosslinkRecord{
+		{
+			ShardBlockRootHash32: []byte{1},
+		},
+	}
+	state := types.NewBeaconState(&pb.BeaconState{
+		Slot:                   64,
+		PreviousJustifiedSlot:  10,
+		LatestBlockRootHash32S: blockRoots,
+		LatestCrosslinks:       stateLatestCrosslinks,
+	})
+	attestations := []*pb.Attestation{
+		{
+			Data: &pb.AttestationData{
+				Shard:                     0,
+				Slot:                      20,
+				JustifiedSlot:             10,
+				JustifiedBlockRootHash32:  blockRoots[10],
+				LatestCrosslinkRootHash32: []byte{2},
+				ShardBlockRootHash32:      []byte{2},
+			},
+		},
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
+	}
+	want := fmt.Sprintf(
+		"attestation.CrossLinkRoot and ShardBlockRoot != %v (state.LatestCrosslinks' ShardBlockRoot)",
+		[]byte{1},
+	)
+	if _, err := ProcessBlockAttestations(
+		state,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.T) {
+	var blockRoots [][]byte
+	for i := uint64(0); i < 2*params.BeaconConfig().EpochLength; i++ {
+		blockRoots = append(blockRoots, []byte{byte(i)})
+	}
+	stateLatestCrosslinks := []*pb.CrosslinkRecord{
+		{
+			ShardBlockRootHash32: []byte{1},
+		},
+	}
+	state := types.NewBeaconState(&pb.BeaconState{
+		Slot:                   64,
+		PreviousJustifiedSlot:  10,
+		LatestBlockRootHash32S: blockRoots,
+		LatestCrosslinks:       stateLatestCrosslinks,
+	})
+	attestations := []*pb.Attestation{
+		{
+			Data: &pb.AttestationData{
+				Shard:                     0,
+				Slot:                      20,
+				JustifiedSlot:             10,
+				JustifiedBlockRootHash32:  blockRoots[10],
+				LatestCrosslinkRootHash32: []byte{1},
+				ShardBlockRootHash32:      []byte{1},
+			},
+		},
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
+	}
+	want := fmt.Sprintf(
+		"expected attestation.ShardBlockRoot == %#x, received %#x instead",
+		[]byte{},
+		[]byte{1},
+	)
+	if _, err := ProcessBlockAttestations(
+		state,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
+	var blockRoots [][]byte
+	for i := uint64(0); i < 2*params.BeaconConfig().EpochLength; i++ {
+		blockRoots = append(blockRoots, []byte{byte(i)})
+	}
+	stateLatestCrosslinks := []*pb.CrosslinkRecord{
+		{
+			ShardBlockRootHash32: []byte{1},
+		},
+	}
+	state := types.NewBeaconState(&pb.BeaconState{
+		Slot:                   64,
+		PreviousJustifiedSlot:  10,
+		LatestBlockRootHash32S: blockRoots,
+		LatestCrosslinks:       stateLatestCrosslinks,
+	})
+	att1 := &pb.Attestation{
+		Data: &pb.AttestationData{
+			Shard:                     0,
+			Slot:                      20,
+			JustifiedSlot:             10,
+			JustifiedBlockRootHash32:  blockRoots[10],
+			LatestCrosslinkRootHash32: []byte{1},
+			ShardBlockRootHash32:      []byte{},
+		},
+		ParticipationBitfield: []byte{1},
+		CustodyBitfield:       []byte{1},
+	}
+	attestations := []*pb.Attestation{att1}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
+	}
+	pendingAttestations, err := ProcessBlockAttestations(
+		state,
+		block,
+	)
+	if err != nil {
+		t.Fatalf("Could not produce pending attestations: %v", err)
+	}
+	if !reflect.DeepEqual(pendingAttestations[0].GetData(), att1.GetData()) {
+		t.Errorf(
+			"Did not create pending attestation correctly with inner data, wanted %v, received %v",
+			att1.GetData(),
+			pendingAttestations[0].GetData(),
+		)
+	}
+	if pendingAttestations[0].GetSlotIncluded() != 64 {
+		t.Errorf(
+			"Pending attestation not included at correct slot: wanted %v, received %v",
+			64,
+			pendingAttestations[0].GetSlotIncluded(),
+		)
+	}
+}
+
+func TestProcessValidatorExits_ThresholdReached(t *testing.T) {
+	exits := make([]*pb.Exit, params.BeaconConfig().MaxExits+1)
+	registry := []*pb.ValidatorRecord{}
+	state := types.NewBeaconState(&pb.BeaconState{
+		ValidatorRegistry: registry,
+	})
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Exits: exits,
+		},
+	}
+
+	want := fmt.Sprintf(
+		"number of exits (%d) exceeds allowed threshold of %d",
+		params.BeaconConfig().MaxExits+1,
+		params.BeaconConfig().MaxExits,
+	)
+
+	if _, err := ProcessValidatorExits(
+		state,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessValidatorExits_ValidatorNotActive(t *testing.T) {
+	exits := []*pb.Exit{
+		{
+			ValidatorIndex: 0,
+		},
+	}
+	registry := []*pb.ValidatorRecord{
+		{
+			Status: pb.ValidatorRecord_EXITED_WITH_PENALTY,
+		},
+	}
+	state := types.NewBeaconState(&pb.BeaconState{
+		ValidatorRegistry: registry,
+	})
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Exits: exits,
+		},
+	}
+
+	want := fmt.Sprintf(
+		"expected validator to have active status, received %v",
+		pb.ValidatorRecord_EXITED_WITH_PENALTY,
+	)
+
+	if _, err := ProcessValidatorExits(
+		state,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessValidatorExits_InvalidExitSlot(t *testing.T) {
+	exits := []*pb.Exit{
+		{
+			Slot: 10,
+		},
+	}
+	registry := []*pb.ValidatorRecord{
+		{
+			Status: pb.ValidatorRecord_ACTIVE,
+		},
+	}
+	state := types.NewBeaconState(&pb.BeaconState{
+		ValidatorRegistry: registry,
+		Slot:              0,
+	})
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Exits: exits,
+		},
+	}
+
+	want := fmt.Sprintf(
+		"expected state.Slot >= exit.Slot, received %d < %d",
+		0,
+		10,
+	)
+
+	if _, err := ProcessValidatorExits(
+		state,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessValidatorExits_InvalidStatusChangeSlot(t *testing.T) {
+	exits := []*pb.Exit{
+		{
+			ValidatorIndex: 0,
+			Slot:           0,
+		},
+	}
+	registry := []*pb.ValidatorRecord{
+		{
+			Status:                 pb.ValidatorRecord_ACTIVE,
+			LatestStatusChangeSlot: 100,
+		},
+	}
+	state := types.NewBeaconState(&pb.BeaconState{
+		ValidatorRegistry: registry,
+		Slot:              10,
+	})
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Exits: exits,
+		},
+	}
+
+	want := "expected validator.LatestStatusChangeSlot + PersistentCommitteePeriod >= state.Slot"
+	if _, err := ProcessValidatorExits(
+		state,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
+	exits := []*pb.Exit{
+		{
+			ValidatorIndex: 0,
+			Slot:           0,
+		},
+	}
+	registry := []*pb.ValidatorRecord{
+		{
+			Status:                 pb.ValidatorRecord_ACTIVE,
+			LatestStatusChangeSlot: 0,
+		},
+	}
+	state := types.NewBeaconState(&pb.BeaconState{
+		ValidatorRegistry: registry,
+		Slot:              10,
+	})
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Exits: exits,
+		},
+	}
+
+	newRegistry, err := ProcessValidatorExits(state, block)
+	if err != nil {
+		t.Fatalf("Could not process exits: %v", err)
+	}
+	if newRegistry[0].Status == pb.ValidatorRecord_ACTIVE {
+		t.Error("Expected validator status to change, remained ACTIVE")
 	}
 }
