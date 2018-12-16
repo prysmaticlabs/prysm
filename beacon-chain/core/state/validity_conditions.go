@@ -80,7 +80,6 @@ func IsValidBlock(
 	block *types.Block,
 	parentBlock *types.Block,
 	powBlock *gethTypes.Block,
-	enablePOWChain bool,
 	genesisTime time.Time) error {
 
 	// Pre-Processing Condition 1:
@@ -99,7 +98,7 @@ func IsValidBlock(
 	// Pre-Processing Condition 3:
 	// The block pointed to by the state in state.processed_pow_receipt_root has
 	// been processed in the ETH 1.0 chain.
-	if enablePOWChain && powBlock == nil {
+	if powBlock == nil {
 		return fmt.Errorf("proof-of-Work chain reference in state does not exist %#x", state.ProcessedPowReceiptRootHash32())
 	}
 

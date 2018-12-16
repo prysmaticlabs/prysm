@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -577,16 +578,24 @@ func (c *ChainService) isBlockReadyForProcessing(block *types.Block) bool {
 		log.Debugf("failed to get beacon state: %v", err)
 		return false
 	}
-	//Get POW chain reference block
-	powBlock, err := c.web3Service.Client().BlockByHash(
-		context.Background(), beaconState.ProcessedPowReceiptRootHash32())
-	if err != nil {
-		log.Debugf("fetching PoW block corresponding to mainchain reference failed: %v", err)
-		return false
+
+	var powBlock *gethTypes.Block
+
+	if c.enablePOWChain {
+		//Get POW chain reference block
+		powBlock, err = c.web3Service.Client().BlockByHash(
+			context.Background(), beaconState.ProcessedPowReceiptRootHash32())
+		if err != nil {
+			log.Debugf("fetching PoW block corresponding to mainchain reference failed: %v", err)
+			return false
+		}
+
+	} else {
+		powBlock = gethTypes.NewBlock(nil, nil, nil, nil)
 	}
 
 	if err := state.IsValidBlock(beaconState, block, parent,
-		powBlock, c.enablePOWChain, c.genesisTime); err != nil {
+		powBlock, c.genesisTime); err != nil {
 		log.Debugf("block does not fulfill pre-processing conditions %v", err)
 		return false
 	}

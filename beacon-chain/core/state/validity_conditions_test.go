@@ -46,7 +46,7 @@ func TestBadBlock(t *testing.T) {
 	genesisTime := params.BeaconConfig().GenesisTime
 
 	if err := IsValidBlock(beaconState, block, nil,
-		powBlock, true, genesisTime); err == nil {
+		powBlock, genesisTime); err == nil {
 		t.Fatal("block is valid despite not having a parent")
 	}
 
@@ -57,21 +57,21 @@ func TestBadBlock(t *testing.T) {
 	block.Proto().Slot = 3
 
 	if err := IsValidBlock(beaconState, block, parentBlock,
-		powBlock, true, genesisTime); err == nil {
+		powBlock, genesisTime); err == nil {
 		t.Fatalf("block is valid despite having an invalid slot %d", block.SlotNumber())
 	}
 
 	block.Proto().Slot = 4
 
 	if err := IsValidBlock(beaconState, block, parentBlock,
-		nil, true, genesisTime); err == nil {
+		nil, genesisTime); err == nil {
 		t.Fatalf("block is valid despite having an invalid pow reference block")
 	}
 
 	invalidTime := time.Now().AddDate(1, 2, 3)
 
 	if err := IsValidBlock(beaconState, block, parentBlock,
-		powBlock, true, invalidTime); err == nil {
+		powBlock, invalidTime); err == nil {
 		t.Fatalf("block is valid despite having an invalid genesis time %v", invalidTime)
 	}
 
@@ -98,7 +98,7 @@ func TestValidBlock(t *testing.T) {
 	genesisTime := params.BeaconConfig().GenesisTime
 
 	if err := IsValidBlock(beaconState, block, parentBlock,
-		powBlock, true, genesisTime); err != nil {
+		powBlock, genesisTime); err != nil {
 		t.Fatal(err)
 	}
 
