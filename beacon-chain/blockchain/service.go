@@ -395,7 +395,7 @@ func (c *ChainService) processBlock(block *types.Block) error {
 
 	newState, err := c.executeStateTransition(beaconState, block)
 	if err != nil {
-		return errors.New("Unable to execute state transition")
+		return errors.New("unable to execute state transition")
 	}
 
 	if err := c.beaconDB.SaveBlock(block); err != nil {

@@ -13,7 +13,7 @@ func UpdateRandaoLayers(state *types.BeaconState, slot uint64) (*types.BeaconSta
 
 	proposerIndex, err := v.BeaconProposerIndex(state.Proto(), slot)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to retrieve proposer index %v", err)
+		return nil, fmt.Errorf("unable to retrieve proposer index %v", err)
 	}
 
 	vreg[proposerIndex].RandaoLayers++
