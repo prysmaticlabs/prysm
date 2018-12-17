@@ -146,7 +146,7 @@ func AttestationParticipants(
 		}
 	}
 
-	if len(participationBitfield) != int(math.Ceil(float64(len(participants.Committee)))) {
+	if len(participationBitfield) != int(math.Ceil(float64(len(participants.Committee)/8))) {
 		return nil, fmt.Errorf(
 			"wanted participants bitfield length %d, got: %d",
 			len(participants.Committee), len(participationBitfield))
