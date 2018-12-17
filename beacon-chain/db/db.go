@@ -50,7 +50,7 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 	boltDB, err := bolt.Open(datafile, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		if err == bolt.ErrTimeout {
-			return nil, errors.New("cannot obtain database lock, database may be in use by another process.")
+			return nil, errors.New("cannot obtain database lock, database may be in use by another process")
 		}
 		return nil, err
 	}
