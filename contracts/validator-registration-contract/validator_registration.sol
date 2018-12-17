@@ -15,6 +15,7 @@ contract ValidatorRegistration {
     );
 
     uint public constant DEPOSIT_SIZE = 32 ether;
+    // 8 is for our local test net. 2.0 spec is 2**14 == 16384 
     uint public constant DEPOSITS_FOR_CHAIN_START = 8; // 2**14
     uint public constant MIN_TOPUP_SIZE = 1 ether;
     uint public constant GWEI_PER_ETH = 10 ** 9;
