@@ -69,7 +69,7 @@ func TestCeilDiv8(t *testing.T) {
 	for _, tt := range tests {
 		div8 := CeilDiv8(tt.number)
 		if tt.div8 != div8 {
-			t.Fatalf("Div8 was an expected value. Wanted: %d, got: %d", tt.div8, div8)
+			t.Fatalf("Div8 was not an expected value. Wanted: %d, got: %d", tt.div8, div8)
 		}
 	}
 }
