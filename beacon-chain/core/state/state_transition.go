@@ -134,7 +134,7 @@ func NewSlotTransition(state *types.BeaconState, block *types.Block) *types.Beac
 // NewEpochTransition describes the per epoch operations that are performed on the
 // beacon state.
 func NewEpochTransition(state *types.BeaconState) *types.BeaconState {
-	// TODO:(#1074): This will encompass all the related logic to epoch transitions.
+	// TODO(#1074): This will encompass all the related logic to epoch transitions.
 	return state
 }
 
