@@ -2,11 +2,10 @@ package validators
 
 import (
 	"fmt"
-	"math"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -146,7 +145,7 @@ func AttestationParticipants(
 		}
 	}
 
-	if len(participationBitfield) != int(math.Ceil(float64(len(participants.Committee)))) {
+	if len(participationBitfield) != mathutil.CeilDiv8(len(participants.Committee)) {
 		return nil, fmt.Errorf(
 			"wanted participants bitfield length %d, got: %d",
 			len(participants.Committee), len(participationBitfield))

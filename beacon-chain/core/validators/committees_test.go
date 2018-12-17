@@ -254,7 +254,7 @@ func TestAttestationParticipants_ok(t *testing.T) {
 	}
 
 	var committeeIndices []uint32
-	for i := uint32(0); i < 10; i++ {
+	for i := uint32(0); i < 8; i++ {
 		committeeIndices = append(committeeIndices, i)
 	}
 
@@ -293,36 +293,36 @@ func TestAttestationParticipants_ok(t *testing.T) {
 			attestationSlot: 2,
 			stateSlot:       5,
 			shard:           0,
-			bitfield:        []byte{127, 127, 127, 127, 127, 127, 127, 127, 127, 127},
-			wanted:          []uint32{1, 2, 3, 4, 5, 6, 7, 9},
+			bitfield:        []byte{'A'},
+			wanted:          []uint32{1, 7},
 		},
 		{
 			attestationSlot: 1,
 			stateSlot:       10,
 			shard:           0,
-			bitfield:        []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+			bitfield:        []byte{1},
 			wanted:          []uint32{7},
 		},
 		{
 			attestationSlot: 10,
 			stateSlot:       20,
 			shard:           0,
-			bitfield:        []byte{7, 7, 7, 7, 7, 7, 7, 7, 7, 7},
-			wanted:          []uint32{5, 6, 7},
+			bitfield:        []byte{2},
+			wanted:          []uint32{6},
 		},
 		{
 			attestationSlot: 64,
 			stateSlot:       100,
 			shard:           0,
-			bitfield:        []byte{128, 128, 128, 128, 128, 128, 128, 128, 128, 128},
-			wanted:          []uint32{0, 8},
+			bitfield:        []byte{3},
+			wanted:          []uint32{6, 7},
 		},
 		{
 			attestationSlot: 999,
 			stateSlot:       1000,
 			shard:           0,
-			bitfield:        []byte{10, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-			wanted:          []uint32{4, 6},
+			bitfield:        []byte{'F'},
+			wanted:          []uint32{1, 5, 6},
 		},
 	}
 

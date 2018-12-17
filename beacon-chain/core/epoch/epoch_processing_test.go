@@ -152,7 +152,7 @@ func TestBoundaryAttesterIndices(t *testing.T) {
 		t.Errorf("EpochLength should be 64 for these tests to pass")
 	}
 	var committeeIndices []uint32
-	for i := uint32(0); i < 10; i++ {
+	for i := uint32(0); i < 8; i++ {
 		committeeIndices = append(committeeIndices, i)
 	}
 	var shardAndCommittees []*pb.ShardAndCommitteeArray
@@ -170,9 +170,9 @@ func TestBoundaryAttesterIndices(t *testing.T) {
 	}
 
 	boundaryAttestations := []*pb.PendingAttestationRecord{
-		{Data: &pb.AttestationData{Slot: 2, Shard: 100}, ParticipationBitfield: []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}}, // returns index 7
-		{Data: &pb.AttestationData{Slot: 2, Shard: 100}, ParticipationBitfield: []byte{7, 7, 7, 7, 7, 7, 7, 7, 7, 7}},  // returns indices 5,6,7
-		{Data: &pb.AttestationData{Slot: 2, Shard: 100}, ParticipationBitfield: []byte{10, 0, 0, 0, 0, 0, 0, 0, 0, 0}}, // returns indices 4,6
+		{Data: &pb.AttestationData{Slot: 2, Shard: 100}, ParticipationBitfield: []byte{'F'}}, // returns indices 1,5,6
+		{Data: &pb.AttestationData{Slot: 2, Shard: 100}, ParticipationBitfield: []byte{3}},   // returns indices 6,7
+		{Data: &pb.AttestationData{Slot: 2, Shard: 100}, ParticipationBitfield: []byte{'A'}}, // returns indices 1,7
 	}
 
 	attesterIndices, err := BoundaryAttesterIndices(state, boundaryAttestations)
@@ -180,7 +180,7 @@ func TestBoundaryAttesterIndices(t *testing.T) {
 		t.Fatalf("Failed to run BoundaryAttesterIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(attesterIndices, []uint32{7, 5, 6, 4}) {
-		t.Errorf("Incorrect boundary attester indices. Wanted: %v, got: %v", []uint32{7, 5, 6, 4}, attesterIndices)
+	if !reflect.DeepEqual(attesterIndices, []uint32{1, 5, 6, 7}) {
+		t.Errorf("Incorrect boundary attester indices. Wanted: %v, got: %v", []uint32{1, 5, 6, 7}, attesterIndices)
 	}
 }
