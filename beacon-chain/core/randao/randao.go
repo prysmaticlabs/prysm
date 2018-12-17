@@ -2,6 +2,7 @@ package randao
 
 import (
 	"fmt"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 )
