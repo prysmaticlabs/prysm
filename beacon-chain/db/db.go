@@ -5,7 +5,6 @@ import (
 	"path"
 	"time"
 	"github.com/boltdb/bolt"
-	"strings"
 	"errors"
 )
 
@@ -50,8 +49,8 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 	datafile := path.Join(dirPath, "beaconchain.db")
 	boltDB, err := bolt.Open(datafile, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
-		if strings.Contains(err.Error(), "timeout") {
-			return nil, errors.New("DB locked by another process")
+		if err == bolt.ErrTimeout {
+			return nil, errors.New("cannot obtain database lock, database may be in use by another process.")
 		}
 		return nil, err
 	}
