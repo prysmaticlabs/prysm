@@ -96,7 +96,8 @@ func IsValidBlock(
 	// The state is updated up to block.slot -1.
 
 	if state.Slot() != block.SlotNumber()-1 {
-		return fmt.Errorf("block slot is not valid %d", block.SlotNumber())
+		return fmt.Errorf(
+			"block slot is not valid %d as it is supposed to be %d", block.SlotNumber(), state.Slot()+1)
 	}
 
 	// Pre-Processing Condition 3:

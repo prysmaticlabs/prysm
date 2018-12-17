@@ -390,7 +390,7 @@ func (c *ChainService) processBlock(block *types.Block) error {
 
 	if !c.isBlockReadyForProcessing(block) {
 		c.unProcessedBlocks[block.SlotNumber()] = block
-		return nil
+		return fmt.Errorf("block with hash %#x is not ready for processing", blockhash)
 	}
 
 	newState, err := c.executeStateTransition(beaconState, block)
