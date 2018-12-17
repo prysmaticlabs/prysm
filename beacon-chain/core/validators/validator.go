@@ -131,7 +131,7 @@ func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, 
 	return shardCommittees[index], nil
 }
 
-// GetBeaconProposerIndex returns the index of the proposer of the block at a
+// BeaconProposerIndex returns the index of the proposer of the block at a
 // given slot.
 //
 // Spec pseudocode definition:
@@ -141,7 +141,7 @@ func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, 
 //    """
 //    first_committee = get_shard_committees_at_slot(state, slot)[0].committee
 //    return first_committee[slot % len(first_committee)]
-func GetBeaconProposerIndex(state *pb.BeaconState, slot uint64) (uint32, error) {
+func BeaconProposerIndex(state *pb.BeaconState, slot uint64) (uint32, error) {
 	committeeArray, err := ShardAndCommitteesAtSlot(state, slot)
 	if err != nil {
 		return 0, err

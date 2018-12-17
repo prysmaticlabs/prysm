@@ -123,12 +123,18 @@ func NewStateTransition(
 	return newState, nil
 }
 
+// NewSlotTransition describes the per block operations that happen on every slot.
 func NewSlotTransition(state *types.BeaconState, block *types.Block) *types.BeaconState {
 	_ = block
+	// TODO(#1073): This function will encompass all the per block slot transition functions, this will
+	// contain checks for randao,proposer validity and block operations.
 	return state
 }
 
+// NewEpochTransition describes the per epoch operations that are performed on the
+// beacon state.
 func NewEpochTransition(state *types.BeaconState) *types.BeaconState {
+	// TODO:(#1074): This will encompass all the related logic to epoch transitions.
 	return state
 }
 

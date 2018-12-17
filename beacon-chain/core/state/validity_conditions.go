@@ -15,10 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// IsValidBlockOld verifies a block is valid according to the ETH 2.0 specification for
-// validity conditions taking into consideration attestation processing and more.
-// TODO(#781): Refactor with the new spec validity conditions.
-// Will be Deprecated
+// DEPRECATED: Will be replaced by new method.
 func IsValidBlockOld(
 	block *types.Block,
 	beaconState *types.BeaconState,
@@ -75,6 +72,13 @@ func IsValidBlockOld(
 	return nil
 }
 
+// IsValidBlock ensures that the block is compliant with the block processing validity conditions.
+// Spec:
+//  For a beacon chain block, block, to be processed by a node, the following conditions must be met:
+//  The parent block with root block.parent_root has been processed and accepted.
+//  The node has processed its state up to slot, block.slot - 1.
+//  The Ethereum 1.0 block pointed to by the state.processed_pow_receipt_root has been processed and accepted.
+//  The node's local clock time is greater than or equal to state.genesis_time + block.slot * SLOT_DURATION.
 func IsValidBlock(
 	state *types.BeaconState,
 	block *types.Block,

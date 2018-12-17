@@ -647,7 +647,7 @@ func TestGetActiveValidatorRecord(t *testing.T) {
 	}
 }
 
-func TestGetBeaconProposerIndex(t *testing.T) {
+func TestBeaconProposerIndex(t *testing.T) {
 	if params.BeaconConfig().EpochLength != 64 {
 		t.Errorf("EpochLength should be 64 for these tests to pass")
 	}
@@ -680,19 +680,20 @@ func TestGetBeaconProposerIndex(t *testing.T) {
 		{
 			slot:  19,
 			index: 12,
-		}, {
+		},
+		{
 			slot:  30,
 			index: 23,
-		}, {
+		},
+		{
 			slot:  39,
 			index: 17,
 		},
 	}
 
 	for _, tt := range tests {
-		state.Slot = tt.slot
 
-		result, err := GetBeaconProposerIndex(state, tt.slot)
+		result, err := BeaconProposerIndex(state, tt.slot)
 		if err != nil {
 			t.Errorf("Failed to get shard and committees at slot: %v", err)
 		}

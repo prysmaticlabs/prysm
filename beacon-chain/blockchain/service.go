@@ -82,13 +82,13 @@ func (c *ChainService) Start() {
 	var err error
 	c.genesisTime, err = c.beaconDB.GetGenesisTime()
 	if err != nil {
-		log.Fatal("Unable to retrieve genesis time, therefore blockchain service cannot be started %v", err)
+		log.Fatalf("Unable to retrieve genesis time, therefore blockchain service cannot be started %v", err)
 		return
 	}
 
 	beaconState, err := c.beaconDB.GetState()
 	if err != nil {
-		log.Fatal("Unable to retrieve beacon state therefore blockchain service cannot be started %v", err)
+		log.Fatalf("Unable to retrieve beacon state therefore blockchain service cannot be started %v", err)
 		return
 	}
 
@@ -224,32 +224,6 @@ func (c *ChainService) updateHead(processedBlock <-chan *types.Block) {
 				c.canonicalStateFeed.Send(newState)
 			}
 			c.canonicalBlockFeed.Send(newHead)
-		}
-	}
-}
-
-// DEPRECATED: Will be replaced by new block processing routine
-func (c *ChainService) blockProcessingOld(processedBlock chan<- *types.Block) {
-	subBlock := c.incomingBlockFeed.Subscribe(c.incomingBlockChan)
-	defer subBlock.Unsubscribe()
-	for {
-		select {
-		case <-c.ctx.Done():
-			log.Debug("Chain service context closed, exiting goroutine")
-			return
-
-		// Listen for a newly received incoming block from the feed. Blocks
-		// can be received either from the sync service, the RPC service,
-		// or via p2p.
-		case block := <-c.incomingBlockChan:
-			if err := c.processBlock(block); err != nil {
-				log.Error(err)
-				processedBlock <- nil
-				continue
-			}
-
-			// Push the block to trigger the fork choice rule.
-			processedBlock <- block
 		}
 	}
 }
