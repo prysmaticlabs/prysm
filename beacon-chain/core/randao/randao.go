@@ -7,7 +7,7 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 )
 
-// UpdateRandaoLayers increments the randao of the block proposer at the given slot.
+// UpdateRandaoLayers increments the randao layer of the block proposer at the given slot.
 func UpdateRandaoLayers(state *types.BeaconState, slot uint64) (*types.BeaconState, error) {
 	vreg := state.ValidatorRegistry()
 

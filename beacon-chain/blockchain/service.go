@@ -438,6 +438,13 @@ func (c *ChainService) executeStateTransitionOld(
 	return newState, nil
 }
 
+// Spec:
+//  We now define the state transition function. At a high level the state transition is made up of two parts:
+//  - The per-slot transitions, which happens every slot, and only affects a parts of the state.
+//  - The per-epoch transitions, which happens at every epoch boundary (i.e. state.slot % EPOCH_LENGTH == 0), and affects the entire state.
+//  The per-slot transitions generally focus on verifying aggregate signatures and saving temporary records relating to the per-slot
+//  activity in the BeaconState. The per-epoch transitions focus on the validator registry, including adjusting balances and activating
+//  and exiting validators, as well as processing crosslinks and managing block justification/finalization.
 func (c *ChainService) executeStateTransition(
 	beaconState *types.BeaconState,
 	block *types.Block) (*types.BeaconState, error) {
@@ -558,7 +565,7 @@ func (c *ChainService) isBlockReadyForProcessing(block *types.Block) bool {
 	if c.enablePOWChain {
 		//Get POW chain reference block
 		powBlock, err = c.web3Service.Client().BlockByHash(
-			context.Background(), beaconState.ProcessedPowReceiptRootHash32())
+			c.ctx, beaconState.ProcessedPowReceiptRootHash32())
 		if err != nil {
 			log.Debugf("fetching PoW block corresponding to mainchain reference failed: %v", err)
 			return false
@@ -579,6 +586,9 @@ func (c *ChainService) isBlockReadyForProcessing(block *types.Block) bool {
 	return true
 }
 
+// checkCachedBlocks checks if there is any block saved in the cache with a
+// slot number equivalent to the current slot. If there is then the block is
+// sent to the incoming block channel and deleted from the cache.
 func (c *ChainService) checkCachedBlocks() {
 	if block, ok := c.unProcessedBlocks[c.currentSlot]; ok && c.isBlockReadyForProcessing(block) {
 		c.incomingBlockChan <- block

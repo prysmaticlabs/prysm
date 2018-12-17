@@ -69,9 +69,10 @@ func ProcessSpecialRecords(slotNumber uint64, validators []*pb.ValidatorRecord,
 	return validators, nil
 }
 
-// CheckForSkippedSlots checks if there were any slots that were skipped
-// where a block was not proposed.
-func CheckForSkippedSlots(
+// ProcessSkippedSlots checks if there were any slots that were skipped
+// where a block was not proposed and if they were it increments the
+// randao layer of the proposer.
+func ProcessSkippedSlots(
 	lastProcessedSlot uint64,
 	state *types.BeaconState) (*types.BeaconState, uint64, error) {
 
