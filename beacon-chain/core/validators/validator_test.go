@@ -646,3 +646,82 @@ func TestGetActiveValidatorRecord(t *testing.T) {
 		t.Errorf("Active validators don't match. Wanted: %v, Got: %v", outputValidators, validators)
 	}
 }
+
+func TestBoundaryAttestingBalance(t *testing.T) {
+	attesters := []*pb.ValidatorRecord{
+		{Balance: 25 * 1e9},
+		{Balance: 26 * 1e9},
+		{Balance: 32 * 1e9},
+		{Balance: 33 * 1e9},
+		{Balance: 100 * 1e9},
+	}
+	attestedBalances := AttestingBalance(attesters)
+
+	// 25 + 26 + 32 + 32 + 32 = 147
+	if attestedBalances != 147*1e9 {
+		t.Errorf("Incorrect attested balances. Wanted: %f, got: %d", 147*1e9, attestedBalances)
+	}
+}
+
+func TestBoundaryAttesters(t *testing.T) {
+	var validators []*pb.ValidatorRecord
+
+	for i := 0; i < 100; i++ {
+		validators = append(validators, &pb.ValidatorRecord{Pubkey: []byte{byte(i)}})
+	}
+
+	state := &pb.BeaconState{ValidatorRegistry: validators}
+
+	boundaryAttesters := Attesters(state, []uint32{5, 2, 87, 42, 99, 0})
+
+	expectedBoundaryAttesters := []*pb.ValidatorRecord{
+		{Pubkey: []byte{byte(5)}},
+		{Pubkey: []byte{byte(2)}},
+		{Pubkey: []byte{byte(87)}},
+		{Pubkey: []byte{byte(42)}},
+		{Pubkey: []byte{byte(99)}},
+		{Pubkey: []byte{byte(0)}},
+	}
+
+	if !reflect.DeepEqual(expectedBoundaryAttesters, boundaryAttesters) {
+		t.Errorf("Incorrect boundary attesters. Wanted: %v, got: %v", expectedBoundaryAttesters, boundaryAttesters)
+	}
+}
+
+func TestBoundaryAttesterIndices(t *testing.T) {
+	if params.BeaconConfig().EpochLength != 64 {
+		t.Errorf("EpochLength should be 64 for these tests to pass")
+	}
+	var committeeIndices []uint32
+	for i := uint32(0); i < 8; i++ {
+		committeeIndices = append(committeeIndices, i)
+	}
+	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
+			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{Shard: 100, Committee: committeeIndices},
+			},
+		})
+	}
+
+	state := &pb.BeaconState{
+		ShardAndCommitteesAtSlots: shardAndCommittees,
+		Slot:                      5,
+	}
+
+	boundaryAttestations := []*pb.PendingAttestationRecord{
+		{Data: &pb.AttestationData{Slot: 2, Shard: 100}, ParticipationBitfield: []byte{'F'}}, // returns indices 1,5,6
+		{Data: &pb.AttestationData{Slot: 2, Shard: 100}, ParticipationBitfield: []byte{3}},   // returns indices 6,7
+		{Data: &pb.AttestationData{Slot: 2, Shard: 100}, ParticipationBitfield: []byte{'A'}}, // returns indices 1,7
+	}
+
+	attesterIndices, err := ValidatorIndices(state, boundaryAttestations)
+	if err != nil {
+		t.Fatalf("Failed to run BoundaryAttesterIndices: %v", err)
+	}
+
+	if !reflect.DeepEqual(attesterIndices, []uint32{1, 5, 6, 7}) {
+		t.Errorf("Incorrect boundary attester indices. Wanted: %v, got: %v", []uint32{1, 5, 6, 7}, attesterIndices)
+	}
+}
