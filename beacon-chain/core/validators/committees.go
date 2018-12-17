@@ -5,6 +5,8 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bitutil"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -101,4 +103,65 @@ func getCommitteesPerSlot(numActiveValidatorRegistry uint64) uint64 {
 		return boundOnShardCount
 	}
 	return boundOnValidatorRegistry
+}
+
+// AttestationParticipants returns the attesting participants indices.
+//
+// Spec pseudocode definition:
+//   def get_attestation_participants(state: BeaconState,
+//     attestation_data: AttestationData,
+//     participation_bitfield: bytes) -> List[int]:
+//     """
+//     Returns the participant indices at for the ``attestation_data`` and ``participation_bitfield``.
+//     """
+//
+//     # Find the relevant committee
+//     shard_committees = get_shard_committees_at_slot(state, attestation_data.slot)
+//     shard_committee = [x for x in shard_committees if x.shard == attestation_data.shard][0]
+//     assert len(participation_bitfield) == ceil_div8(len(shard_committee.committee))
+//
+//     # Find the participating attesters in the committee
+//     participants = []
+//     for i, validator_index in enumerate(shard_committee.committee):
+//         participation_bit = (participation_bitfield[i//8] >> (7 - (i % 8))) % 2
+//         if participation_bit == 1:
+//             participants.append(validator_index)
+//     return participants
+func AttestationParticipants(
+	state *pb.BeaconState,
+	attestationData *pb.AttestationData,
+	participationBitfield []byte) ([]uint32, error) {
+
+	// Find the relevant committee.
+	shardCommittees, err := ShardAndCommitteesAtSlot(state, attestationData.Slot)
+	if err != nil {
+		return nil, err
+	}
+
+	var participants *pb.ShardAndCommittee
+	for _, committee := range shardCommittees.ArrayShardAndCommittee {
+		if committee.Shard == attestationData.Shard {
+			participants = committee
+			break
+		}
+	}
+
+	if len(participationBitfield) != mathutil.CeilDiv8(len(participants.Committee)) {
+		return nil, fmt.Errorf(
+			"wanted participants bitfield length %d, got: %d",
+			len(participants.Committee), len(participationBitfield))
+	}
+
+	// Find the participating attesters in the committee.
+	var participantIndices []uint32
+	for i, validatorIndex := range participants.Committee {
+		bitSet, err := bitutil.CheckBit(participationBitfield, i)
+		if err != nil {
+			return nil, fmt.Errorf("could not get participant bitfield: %v", err)
+		}
+		if bitSet {
+			participantIndices = append(participantIndices, validatorIndex)
+		}
+	}
+	return participantIndices, nil
 }
