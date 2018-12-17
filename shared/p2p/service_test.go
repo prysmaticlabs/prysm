@@ -50,6 +50,25 @@ func TestStartDialRelayNodeFails(t *testing.T) {
 	logContains(t, hook, "Could not dial relay node: invalid multiaddr, must begin with /", logrus.ErrorLevel)
 }
 
+func TestP2pPortTakenError(t *testing.T) {
+	thePort := 10000
+	_, err := NewServer(&ServerConfig{
+		Port: thePort,
+	})
+
+	if err != nil {
+		t.Fatalf("unable to create server: %s", err)
+	}
+
+	_, err = NewServer(&ServerConfig{
+		Port: thePort,
+	})
+
+	if !strings.Contains(err.Error(), fmt.Sprintf("port %d already taken", thePort)) {
+		t.Fatalf("expected fail when setting another server with same p2p port")
+	}
+}
+
 func TestBroadcast(t *testing.T) {
 	s, err := NewServer(&ServerConfig{})
 	if err != nil {
