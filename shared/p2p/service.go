@@ -101,8 +101,9 @@ func checkAvailablePort(port int) bool {
 		return false
 	}
 
-	// #nosec G104
-	ln.Close()
+	if err := ln.Close(); err != nil {
+		log.Errorf("Could not close listener %v", err)
+	}
 
 	return true
 }
