@@ -1,11 +1,12 @@
 package db
 
 import (
+	"errors"
 	"os"
 	"path"
 	"time"
+
 	"github.com/boltdb/bolt"
-	"errors"
 )
 
 // BeaconDB manages the data layer of the beacon chain implementation.
