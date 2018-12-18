@@ -6,10 +6,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/randao"
 	"time"
 
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/randao"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -253,7 +253,7 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 				log.Debugf(
 					"Block slot number is lower than the current slot in the beacon state %d",
 					block.SlotNumber())
-				c.checkAndDeleteCachedBlocks(currentSlot)
+				c.sendAndDeleteCachedBlocks(currentSlot)
 			}
 		}
 	}
@@ -567,10 +567,10 @@ func (c *ChainService) isBlockReadyForProcessing(block *types.Block) bool {
 	return true
 }
 
-// checkCachedBlocks checks if there is any block saved in the cache with a
+// sendAndDeleteCachedBlocks checks if there is any block saved in the cache with a
 // slot number equivalent to the current slot. If there is then the block is
 // sent to the incoming block channel and deleted from the cache.
-func (c *ChainService) checkAndDeleteCachedBlocks(currentSlot uint64) {
+func (c *ChainService) sendAndDeleteCachedBlocks(currentSlot uint64) {
 	if block, ok := c.unProcessedBlocks[currentSlot+1]; ok && c.isBlockReadyForProcessing(block) {
 		c.incomingBlockChan <- block
 		delete(c.unProcessedBlocks, currentSlot)

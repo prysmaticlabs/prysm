@@ -15,7 +15,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// IsValidBlockOld will be DEPRECATED soon.
+// IsValidBlockOld checks the validity conditions of a block.
+// DEPRECATED: Will be removed soon.
 func IsValidBlockOld(
 	block *types.Block,
 	beaconState *types.BeaconState,
