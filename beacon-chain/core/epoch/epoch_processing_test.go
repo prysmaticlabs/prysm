@@ -96,7 +96,7 @@ func TestEpochBoundaryAttestations(t *testing.T) {
 	}
 
 	if epochBoundaryAttestation[0].GetData().GetJustifiedSlot() != 0 {
-		t.Errorf("Wanted justified slot 0 for epoch boundary attestation, got: %d", epochBoundaryAttestation[0].GetData().GetJustifiedSlot() )
+		t.Errorf("Wanted justified slot 0 for epoch boundary attestation, got: %d", epochBoundaryAttestation[0].GetData().GetJustifiedSlot())
 	}
 
 	if !bytes.Equal(epochBoundaryAttestation[0].GetData().GetJustifiedBlockRootHash32(), []byte{0}) {
@@ -187,8 +187,8 @@ func TestPrevJustifiedAttestations(t *testing.T) {
 		if attestation.GetData().Shard != uint64(i) {
 			t.Errorf("Wanted shard %d, got %d", i, attestation.GetData().Shard)
 		}
-		if attestation.GetData().GetJustifiedSlot()  != 100 {
-			t.Errorf("Wanted justified slot 100, got %d", attestation.GetData().GetJustifiedSlot() )
+		if attestation.GetData().GetJustifiedSlot() != 100 {
+			t.Errorf("Wanted justified slot 100, got %d", attestation.GetData().GetJustifiedSlot())
 		}
 	}
 }
