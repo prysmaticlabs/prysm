@@ -501,7 +501,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "4d1cda033e0619309c606fc686de3adcf599539e",
+    commit = "dcdaa6325bcb8d3c07805583fe12153f08a41e2b",
     importpath = "golang.org/x/sys",
 )
 
@@ -633,7 +633,7 @@ go_repository(
 
 go_repository(
     name = "com_github_golang_lint",
-    commit = "93c0bb5c83939f89e6238cefd42de38f33734409",
+    commit = "8f45f776aaf18cebc8d65861cc70c33c60471952",
     importpath = "github.com/golang/lint",
 )
 
@@ -675,7 +675,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_prometheus",
-    tag = "v2.5.0",
+    tag = "v2.6.0",
     importpath = "github.com/prometheus/prometheus",
 )
 
