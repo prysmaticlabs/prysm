@@ -29,7 +29,7 @@ func Attestations(state *pb.BeaconState) []*pb.PendingAttestationRecord {
 			earliestSlot = state.Slot - epochLength
 		}
 
-		if earliestSlot <= attestation.GetData().Slot && attestation.GetData().Slot < state.Slot {
+		if earliestSlot <= attestation.GetData().GetSlot() && attestation.GetData().GetSlot() < state.Slot {
 			thisEpochAttestations = append(thisEpochAttestations, attestation)
 		}
 	}
@@ -87,8 +87,8 @@ func PrevAttestations(state *pb.BeaconState) []*pb.PendingAttestationRecord {
 			earliestSlot = state.Slot - 2*epochLength
 		}
 
-		if earliestSlot <= attestation.GetData().Slot &&
-			attestation.GetData().Slot < state.Slot-epochLength {
+		if earliestSlot <= attestation.GetData().GetSlot() &&
+			attestation.GetData().GetSlot() < state.Slot-epochLength {
 			prevEpochAttestations = append(prevEpochAttestations, attestation)
 		}
 	}
@@ -110,7 +110,7 @@ func PrevJustifiedAttestations(
 	epochAttestations := append(thisEpochAttestations, prevEpochAttestations...)
 
 	for _, attestation := range epochAttestations {
-		if attestation.Data.JustifiedSlot == state.PreviousJustifiedSlot {
+		if attestation.GetData().GetJustifiedSlot() == state.PreviousJustifiedSlot {
 			prevJustifiedAttestations = append(prevJustifiedAttestations, attestation)
 		}
 	}
@@ -130,7 +130,7 @@ func PrevHeadAttestations(
 	var headAttestations []*pb.PendingAttestationRecord
 
 	for _, attestation := range prevEpochAttestations {
-		canonicalBlockRoot, err := types.BlockRoot(state, attestation.Data.Slot)
+		canonicalBlockRoot, err := types.BlockRoot(state, attestation.GetData().GetSlot())
 		if err != nil {
 			return nil, err
 		}
