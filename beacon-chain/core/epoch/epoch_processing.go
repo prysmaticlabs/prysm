@@ -88,7 +88,7 @@ func PrevAttestations(state *pb.BeaconState) []*pb.PendingAttestationRecord {
 		}
 
 		if earliestSlot <= attestation.GetData().Slot &&
-			attestation.GetData().Slot < earliestSlot+2*epochLength {
+			attestation.GetData().Slot < state.Slot-epochLength {
 			prevEpochAttestations = append(prevEpochAttestations, attestation)
 		}
 	}
@@ -114,7 +114,7 @@ func PrevJustifiedAttestations(
 			prevJustifiedAttestations = append(prevJustifiedAttestations, attestation)
 		}
 	}
-	return prevEpochAttestations
+	return prevJustifiedAttestations
 }
 
 // PrevHeadAttestations returns the pending attestations from
