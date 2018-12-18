@@ -361,15 +361,8 @@ func (c *ChainService) processBlock(block *types.Block) error {
 		return errors.New("unable to execute state transition")
 	}
 
-	hash, err := beaconState.Hash()
-	if err != nil {
-		return fmt.Errorf("unable to hash beacon state %v", err)
-	}
-
-	if block.StateRootHash32() != hash {
-		return fmt.Errorf(
-			"block state root is not equal to beacon state hash %#x , %#x", block.StateRootHash32(), hash)
-	}
+	// TODO(#1074): Verify block.state_root == hash_tree_root(state)
+	// if there exists a block for the slot being processed.
 
 	if err := c.beaconDB.SaveBlock(block); err != nil {
 		return fmt.Errorf("failed to save block: %v", err)
@@ -432,7 +425,13 @@ func (c *ChainService) executeStateTransition(
 	if err != nil {
 		return nil, fmt.Errorf("unable to update randao layer %v", err)
 	}
-	// TODO(#1077): Add in methods for updating recent blockhashes.
+
+	newhashes, err := newState.CalculateNewBlockHashes(block, currentSlot)
+	if err != nil {
+		return nil, fmt.Errorf("unable to calculate recent blockhashes")
+	}
+
+	newState.SetLatestBlockHashes(newhashes)
 
 	if block != nil {
 		newState = state.ProcessBlock(newState, block)

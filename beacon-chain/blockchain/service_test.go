@@ -3,6 +3,7 @@ package blockchain
 import (
 	"context"
 	"errors"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"io/ioutil"
 	"math/big"
 	"testing"
@@ -195,6 +196,25 @@ func TestRunningChainService(t *testing.T) {
 	parentHash, err := genesis.Hash()
 	if err != nil {
 		t.Fatalf("unable to get hash of canonical head: %v", err)
+	}
+
+	beaconState, err = chainService.beaconDB.GetState()
+	if err != nil {
+		t.Fatalf("Can't get state from db %v", err)
+	}
+
+	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
+			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{Committee: []uint32{9, 8, 311, 12, 92, 1, 23, 17}},
+			},
+		})
+	}
+
+	beaconState.SetShardAndCommitteesAtSlots(shardAndCommittees)
+	if err := chainService.beaconDB.SaveState(beaconState); err != nil {
+		t.Fatal(err)
 	}
 
 	currentSlot := uint64(1)

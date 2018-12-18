@@ -124,6 +124,20 @@ func (b *BeaconState) CopyState() *BeaconState {
 		}
 	}
 
+	shardAndCommitteesAtSlots := make([]*pb.ShardAndCommitteeArray, len(b.ShardAndCommitteesAtSlots()))
+	for index, shardAndCommitteesAtSlot := range b.ShardAndCommitteesAtSlots() {
+		shardAndCommittees := make([]*pb.ShardAndCommittee, len(shardAndCommitteesAtSlot.GetArrayShardAndCommittee()))
+		for index, shardAndCommittee := range shardAndCommitteesAtSlot.GetArrayShardAndCommittee() {
+			shardAndCommittees[index] = &pb.ShardAndCommittee{
+				Shard:     shardAndCommittee.GetShard(),
+				Committee: shardAndCommittee.GetCommittee(),
+			}
+		}
+		shardAndCommitteesAtSlots[index] = &pb.ShardAndCommitteeArray{
+			ArrayShardAndCommittee: shardAndCommittees,
+		}
+	}
+
 	newState := BeaconState{&pb.BeaconState{
 		LastStateRecalculationSlot:      b.LastStateRecalculationSlot(),
 		JustifiedStreak:                 b.JustifiedStreak(),
@@ -133,8 +147,10 @@ func (b *BeaconState) CopyState() *BeaconState {
 		LatestCrosslinks:                crosslinks,
 		ValidatorRegistry:               validators,
 		ShardAndCommitteesForSlots:      shardAndCommitteesForSlots,
+		ShardAndCommitteesAtSlots:       shardAndCommitteesAtSlots,
 		LatestPenalizedExitBalances:     b.LatestPenalizedExitBalances(),
 		ForkData:                        b.ForkData(),
+		LatestBlockRootHash32S:          b.data.LatestBlockRootHash32S,
 	}}
 
 	return &newState
@@ -217,6 +233,11 @@ func (b *BeaconState) IsCycleTransition(slotNumber uint64) bool {
 // ShardAndCommitteesForSlots returns the shard committee object.
 func (b *BeaconState) ShardAndCommitteesForSlots() []*pb.ShardAndCommitteeArray {
 	return b.data.ShardAndCommitteesForSlots
+}
+
+// ShardAndCommitteesAtSlots returns the shard committee object.
+func (b *BeaconState) ShardAndCommitteesAtSlots() []*pb.ShardAndCommitteeArray {
+	return b.data.ShardAndCommitteesAtSlots
 }
 
 // LatestCrosslinks returns the cross link records of the all the shards.
