@@ -9,8 +9,8 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_go",
-    url = "https://github.com/bazelbuild/rules_go/releases/download/0.16.4/rules_go-0.16.4.tar.gz",
-    sha256 = "62ec3496a00445889a843062de9930c228b770218c735eca89c67949cd967c3f",
+    url = "https://github.com/bazelbuild/rules_go/releases/download/0.16.5/rules_go-0.16.5.tar.gz",
+    sha256 = "7be7dc01f1e0afdba6c8eb2b43d2fa01c743be1b9273ab1eaf6c233df078d705",
 )
 
 http_archive(
@@ -501,7 +501,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "4d1cda033e0619309c606fc686de3adcf599539e",
+    commit = "dcdaa6325bcb8d3c07805583fe12153f08a41e2b",
     importpath = "golang.org/x/sys",
 )
 
@@ -621,7 +621,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_google_api",
-    commit = "874d9dc5b186e361475b082852f136f094555c30",
+    commit = "41dc4b66e69d5dbf20efe4ba67e19d214d147ae3",
     importpath = "google.golang.org/api",
 )
 
@@ -633,13 +633,13 @@ go_repository(
 
 go_repository(
     name = "com_github_golang_lint",
-    commit = "93c0bb5c83939f89e6238cefd42de38f33734409",
+    commit = "8f45f776aaf18cebc8d65861cc70c33c60471952",
     importpath = "github.com/golang/lint",
 )
 
 go_repository(
     name = "org_golang_x_lint",
-    commit = "93c0bb5c83939f89e6238cefd42de38f33734409",
+    commit = "8f45f776aaf18cebc8d65861cc70c33c60471952",
     importpath = "golang.org/x/lint",
 )
 
@@ -675,7 +675,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_prometheus",
-    tag = "v2.5.0",
+    tag = "v2.6.0",
     importpath = "github.com/prometheus/prometheus",
 )
 
@@ -899,7 +899,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aws_aws_sdk_go",
-    tag = "v1.16.5",
+    tag = "v1.16.6",
     importpath = "github.com/aws/aws-sdk-go",
 )
 
