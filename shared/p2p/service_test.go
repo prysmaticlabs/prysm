@@ -3,6 +3,7 @@ package p2p
 import (
 	"context"
 	"fmt"
+	"github.com/libp2p/go-libp2p-peerstore"
 	"reflect"
 	"strings"
 	"sync"
@@ -66,15 +67,74 @@ func TestP2pPortTakenError(t *testing.T) {
 }
 
 func TestBroadcast(t *testing.T) {
-	s, err := NewServer(&ServerConfig{})
+	s, err := NewServer(&ServerConfig{Port:12345})
 	if err != nil {
-		t.Fatalf("Could not start a new server: %v", err)
+		t.Fatalf("error while trying to create server: %s", err)
+	}
+
+	s2, err := NewServer(&ServerConfig{Port:54321})
+	if err != nil {
+		t.Fatalf("error while trying to create server: %s", err)
+	}
+
+	s3, err := NewServer(&ServerConfig{Port:11223})
+	if err != nil {
+		t.Fatalf("error while trying to create server: %s", err)
+	}
+
+	s.Start()
+	s2.Start()
+	s3.Start()
+
+	time.Sleep(time.Second * 5)
+
+	for _, peer := range s.host.Peerstore().Peers() {
+		err = s2.host.Connect(context.Background(), peerstore.PeerInfo{ID: peer, Addrs: s.host.Addrs()})
+		if err != nil {
+			t.Fatalf("error while trying to connect to peer: %s", err)
+		}
+
+		err = s3.host.Connect(context.Background(), peerstore.PeerInfo{ID: peer, Addrs: s.host.Addrs()})
+		if err != nil {
+			t.Fatalf("error while trying to connect to peer: %s", err)
+		}
+
+		break
 	}
 
 	msg := &shardpb.CollationBodyRequest{}
-	s.Broadcast(msg)
 
-	// TODO(543): test that topic was published
+	s.RegisterTopic("theTopic", msg)
+	s2.RegisterTopic("theTopic", msg)
+	s3.RegisterTopic("theTopic", msg)
+
+	s2Chan := make(chan Message)
+	s2.Subscribe(msg, s2Chan)
+
+	s3Chan := make(chan Message)
+	s3.Subscribe(msg, s3Chan)
+
+	time.Sleep(5 * time.Second)
+
+    s.Broadcast(msg)
+
+    var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		// Wait message sent to channel for subscription node 2
+		<- s2Chan
+		wg.Done()
+	}()
+
+	go func() {
+		// Wait message sent to channel for subscription node 3
+		<- s3Chan
+		wg.Done()
+	}()
+
+	// Wait until all messages have been done
+	wg.Wait()
 }
 
 func TestEmit(t *testing.T) {
