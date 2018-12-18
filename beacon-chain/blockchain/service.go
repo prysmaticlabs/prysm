@@ -248,7 +248,7 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 
 			if currentSlot+1 == block.SlotNumber() {
 
-				if err := c.processBlock(block); err != nil {
+				if err := c.receiveBlock(block); err != nil {
 					log.Error(err)
 					processedBlock <- nil
 					continue
@@ -266,8 +266,10 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 	}
 }
 
-// processBlock checks the block to see if it passes the pre-processing conditions,
-// if it does then the per slot state transition function is carried out on the block.
+// receiveBlock is a function that defines the operations that are preformed on
+// any block that is received from p2p layer or rpc. It checks the block to see
+// if it passes the pre-processing conditions, if it does then the per slot
+// state transition function is carried out on the block.
 // spec:
 //  def process_block(block):
 //      if not block_pre_processing_conditions(block):
@@ -287,7 +289,7 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 //		else:
 //			return False  # or throw or whatever
 //
-func (c *ChainService) processBlock(block *types.Block) error {
+func (c *ChainService) receiveBlock(block *types.Block) error {
 
 	blockhash, err := block.Hash()
 	if err != nil {
