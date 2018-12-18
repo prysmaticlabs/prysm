@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/randao"
 	"time"
 
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -18,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotticker"
 	"github.com/sirupsen/logrus"
 )
 
@@ -40,9 +40,6 @@ type ChainService struct {
 	unProcessedBlocks  map[uint64]*types.Block
 	unfinalizedBlocks  map[[32]byte]*types.BeaconState
 	enablePOWChain     bool
-	slotTicker         slotticker.SlotTicker
-	currentSlot        uint64
-	lastProcessedSlot  uint64
 }
 
 // Config options for the service.
@@ -86,22 +83,10 @@ func (c *ChainService) Start() {
 		return
 	}
 
-	beaconState, err := c.beaconDB.GetState()
-	if err != nil {
-		log.Fatalf("Unable to retrieve beacon state therefore blockchain service cannot be started %v", err)
-		return
-	}
-
-	c.lastProcessedSlot = beaconState.Slot()
-
-	c.slotTicker = slotticker.GetSlotTicker(c.genesisTime, params.BeaconConfig().SlotDuration)
-	c.currentSlot = slotticker.CurrentSlot(c.genesisTime, params.BeaconConfig().SlotDuration, time.Since)
-
 	// TODO(#675): Initialize unfinalizedBlocks map from disk in case this
 	// is a beacon node restarting.
 	go c.updateHead(c.processedBlockChan)
 	go c.blockProcessing(c.processedBlockChan)
-	go c.slotTracker(c.slotTicker.C(), c.slotTicker.Done)
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.
@@ -241,67 +226,35 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 		// can be received either from the sync service, the RPC service,
 		// or via p2p.
 		case block := <-c.incomingBlockChan:
-			if c.currentSlot < block.SlotNumber() {
+
+			beaconState, err := c.beaconDB.GetState()
+			if err != nil {
+				log.Errorf("Unable to retrieve beacon state %v", err)
+			}
+
+			currentSlot := beaconState.Slot()
+
+			if currentSlot+1 < block.SlotNumber() {
 				c.unProcessedBlocks[block.SlotNumber()] = block
 				continue
 			}
 
-			if c.currentSlot > block.SlotNumber() {
+			if currentSlot+1 == block.SlotNumber() {
+
+				if err := c.processBlock(block); err != nil {
+					log.Error(err)
+					processedBlock <- nil
+					continue
+				}
+
+				// Push the block to trigger the fork choice rule.
+				processedBlock <- block
+			} else {
 				log.Debugf(
 					"Block slot number is lower than the current slot in the beacon state %d",
 					block.SlotNumber())
-				continue
+				c.checkAndDeleteCachedBlocks(currentSlot)
 			}
-
-			if err := c.processBlock(block); err != nil {
-				log.Error(err)
-				processedBlock <- nil
-				continue
-			}
-
-			// Push the block to trigger the fork choice rule.
-			processedBlock <- block
-		}
-	}
-}
-
-// This assigns the current slot of the
-// beacon node, functioning as the beacon node's
-// local clock.
-func (c *ChainService) slotTracker(slotTicker <-chan uint64, tickerDone func()) {
-
-	defer tickerDone()
-
-	for {
-		select {
-		case <-c.ctx.Done():
-			log.Debug("Chain service context closed, exiting goroutine")
-			return
-		case slot := <-slotTicker:
-			beaconState, err := c.beaconDB.GetState()
-			if err != nil {
-				log.Debugf("Unable to retrieve beacon state %v", err)
-				continue
-			}
-
-			// Updating beacon state slot
-			c.currentSlot = slot
-			beaconState.SetSlot(slot)
-
-			newState, lastProcessedSlot, err := state.CheckForSkippedSlots(c.lastProcessedSlot, beaconState)
-			if err != nil {
-				log.Debugf("Checking for skipped slots failed %v", err)
-			}
-
-			if err := c.beaconDB.SaveState(newState); err != nil {
-				log.Debugf("Unable to save beacon state to db: %v", err)
-			}
-
-			c.lastProcessedSlot = lastProcessedSlot
-
-			// Sends any valid blocks in the cache
-			// to the processing routine
-			c.checkCachedBlocks()
 		}
 	}
 }
@@ -388,20 +341,40 @@ func (c *ChainService) processBlock(block *types.Block) error {
 		return errors.New("cannot process a genesis block: received block with slot 0")
 	}
 
-	if !c.isBlockReadyForProcessing(block) {
+	// Save blocks with higher slot numbers in cache.
+	if !c.isBlockReadyForProcessing(block) && block.SlotNumber() > beaconState.Slot() {
 		c.unProcessedBlocks[block.SlotNumber()] = block
 		return fmt.Errorf("block with hash %#x is not ready for processing", blockhash)
 	}
 
-	newState, err := c.executeStateTransition(beaconState, block)
+	// Check for skipped slots and update the corresponding proposers
+	// randao layer.
+	for beaconState.Slot() < block.SlotNumber()-1 {
+		beaconState, err = c.executeStateTransition(beaconState, nil)
+		if err != nil {
+			return fmt.Errorf("unable to execute state transition %v", err)
+		}
+	}
+
+	beaconState, err = c.executeStateTransition(beaconState, block)
 	if err != nil {
 		return errors.New("unable to execute state transition")
+	}
+
+	hash, err := beaconState.Hash()
+	if err != nil {
+		return fmt.Errorf("unable to hash beacon state %v", err)
+	}
+
+	if block.StateRootHash32() != hash {
+		return fmt.Errorf(
+			"block state root is not equal to beacon state hash %#x , %#x", block.StateRootHash32(), hash)
 	}
 
 	if err := c.beaconDB.SaveBlock(block); err != nil {
 		return fmt.Errorf("failed to save block: %v", err)
 	}
-	if err := c.beaconDB.SaveUnfinalizedBlockState(newState); err != nil {
+	if err := c.beaconDB.SaveUnfinalizedBlockState(beaconState); err != nil {
 		return fmt.Errorf("error persisting unfinalized block's state: %v", err)
 	}
 
@@ -409,10 +382,7 @@ func (c *ChainService) processBlock(block *types.Block) error {
 
 	// We keep a map of unfinalized blocks in memory along with their state
 	// pair to apply the fork choice rule.
-	c.unfinalizedBlocks[blockhash] = newState
-
-	// We save the last processed slot
-	c.lastProcessedSlot = block.SlotNumber()
+	c.unfinalizedBlocks[blockhash] = beaconState
 
 	return nil
 }
@@ -449,16 +419,28 @@ func (c *ChainService) executeStateTransition(
 	beaconState *types.BeaconState,
 	block *types.Block) (*types.BeaconState, error) {
 
+	var err error
+
 	log.WithField("slotNumber", block.SlotNumber()).Info("Executing state transition")
-	_, err := c.beaconDB.ReadBlockVoteCache(beaconState.LatestBlockRootHashes32())
+
+	newState := beaconState.CopyState()
+
+	currentSlot := newState.Slot()
+	newState.SetSlot(currentSlot + 1)
+
+	newState, err = randao.UpdateRandaoLayers(newState, newState.Slot())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to update randao layer %v", err)
 	}
+	// TODO(#1077): Add in methods for updating recent blockhashes.
 
-	newState := state.NewSlotTransition(beaconState, block)
+	if block != nil {
+		newState = state.ProcessBlock(newState, block)
 
-	if newState.Slot()%params.BeaconConfig().EpochLength == 0 {
-		newState = state.NewEpochTransition(newState)
+		if newState.Slot()%params.BeaconConfig().EpochLength == 0 {
+			newState = state.NewEpochTransition(newState)
+		}
+
 	}
 
 	if newState.IsValidatorSetChange(block.SlotNumber()) {
@@ -589,9 +571,9 @@ func (c *ChainService) isBlockReadyForProcessing(block *types.Block) bool {
 // checkCachedBlocks checks if there is any block saved in the cache with a
 // slot number equivalent to the current slot. If there is then the block is
 // sent to the incoming block channel and deleted from the cache.
-func (c *ChainService) checkCachedBlocks() {
-	if block, ok := c.unProcessedBlocks[c.currentSlot]; ok && c.isBlockReadyForProcessing(block) {
+func (c *ChainService) checkAndDeleteCachedBlocks(currentSlot uint64) {
+	if block, ok := c.unProcessedBlocks[currentSlot+1]; ok && c.isBlockReadyForProcessing(block) {
 		c.incomingBlockChan <- block
-		delete(c.unProcessedBlocks, c.currentSlot)
+		delete(c.unProcessedBlocks, currentSlot)
 	}
 }
