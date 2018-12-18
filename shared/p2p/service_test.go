@@ -3,7 +3,6 @@ package p2p
 import (
 	"context"
 	"fmt"
-	"github.com/libp2p/go-libp2p-peerstore"
 	"reflect"
 	"strings"
 	"sync"
@@ -67,17 +66,17 @@ func TestP2pPortTakenError(t *testing.T) {
 }
 
 func TestBroadcast(t *testing.T) {
-	s, err := NewServer(&ServerConfig{Port:12345})
+	s, err := NewServer(&ServerConfig{Port: 12345})
 	if err != nil {
 		t.Fatalf("error while trying to create server: %s", err)
 	}
 
-	s2, err := NewServer(&ServerConfig{Port:54321})
+	s2, err := NewServer(&ServerConfig{Port: 54321})
 	if err != nil {
 		t.Fatalf("error while trying to create server: %s", err)
 	}
 
-	s3, err := NewServer(&ServerConfig{Port:11223})
+	s3, err := NewServer(&ServerConfig{Port: 11223})
 	if err != nil {
 		t.Fatalf("error while trying to create server: %s", err)
 	}
@@ -116,20 +115,20 @@ func TestBroadcast(t *testing.T) {
 
 	time.Sleep(5 * time.Second)
 
-    s.Broadcast(msg)
+	s.Broadcast(msg)
 
-    var wg sync.WaitGroup
+	var wg sync.WaitGroup
 	wg.Add(2)
 
 	go func() {
 		// Wait message sent to channel for subscription node 2
-		<- s2Chan
+		<-s2Chan
 		wg.Done()
 	}()
 
 	go func() {
 		// Wait message sent to channel for subscription node 3
-		<- s3Chan
+		<-s3Chan
 		wg.Done()
 	}()
 
