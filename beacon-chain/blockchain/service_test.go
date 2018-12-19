@@ -154,8 +154,22 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	parentBlock := types.NewBlock(&pb.BeaconBlock{
+		Slot: 1,
+	})
+
+	parentHash, err := parentBlock.Hash()
+	if err != nil {
+		t.Fatalf("Unable to hash block %v", err)
+	}
+
+	if err := chainService.beaconDB.SaveBlock(parentBlock); err != nil {
+		t.Fatalf("Unable to save block %v", err)
+	}
+
 	block := types.NewBlock(&pb.BeaconBlock{
 		Slot:                          2,
+		ParentRootHash32:              parentHash[:],
 		CandidatePowReceiptRootHash32: []byte("a"),
 	})
 
@@ -175,7 +189,7 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 	chainService.cancel()
 	exitRoutine <- true
 
-	testutil.AssertLogsContain(t, hook, "fetching PoW block corresponding to mainchain reference failed")
+	testutil.AssertLogsContain(t, hook, "unable to retrieve POW chain reference block failed")
 }
 
 func TestRunningChainService(t *testing.T) {

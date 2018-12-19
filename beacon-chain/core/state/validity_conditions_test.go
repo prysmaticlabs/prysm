@@ -1,9 +1,11 @@
 package state
 
 import (
+	"context"
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -18,15 +20,27 @@ func init() {
 }
 
 type mockDB struct {
+	hasBlock       bool
 	blockVoteCache utils.BlockVoteCache
 }
 
 func (f *mockDB) HasBlock(h [32]byte) bool {
-	return true
+	return f.hasBlock
 }
 
 func (f *mockDB) ReadBlockVoteCache(blockHashes [][32]byte) (utils.BlockVoteCache, error) {
 	return f.blockVoteCache, nil
+}
+
+type mockPOWClient struct {
+	blockExists bool
+}
+
+func (m *mockPOWClient) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
+	if m.blockExists {
+		return &gethTypes.Block{}, nil
+	}
+	return nil, nil
 }
 
 func TestBadBlock(t *testing.T) {
@@ -35,9 +49,12 @@ func TestBadBlock(t *testing.T) {
 		t.Fatalf("failed to generate beacon state: %v", err)
 	}
 
-	beaconState.SetSlot(3)
+	ctx := context.Background()
 
-	powBlock := &gethTypes.Block{}
+	db := &mockDB{}
+	powClient := &mockPOWClient{}
+
+	beaconState.SetSlot(3)
 
 	block := types.NewBlock(&pb.BeaconBlock{
 		Slot: 4,
@@ -45,33 +62,34 @@ func TestBadBlock(t *testing.T) {
 
 	genesisTime := params.BeaconConfig().GenesisTime
 
-	if err := IsValidBlock(beaconState, block, nil,
-		powBlock, genesisTime); err == nil {
+	db.hasBlock = false
+
+	if err := IsValidBlock(ctx, beaconState, block, true,
+		db.HasBlock, powClient.BlockByHash, genesisTime); err == nil {
 		t.Fatal("block is valid despite not having a parent")
 	}
 
-	parentBlock := types.NewBlock(&pb.BeaconBlock{
-		Slot: 3,
-	})
-
 	block.Proto().Slot = 3
+	db.hasBlock = true
 
-	if err := IsValidBlock(beaconState, block, parentBlock,
-		powBlock, genesisTime); err == nil {
+	if err := IsValidBlock(ctx, beaconState, block, true,
+		db.HasBlock, powClient.BlockByHash, genesisTime); err == nil {
 		t.Fatalf("block is valid despite having an invalid slot %d", block.SlotNumber())
 	}
 
 	block.Proto().Slot = 4
+	powClient.blockExists = false
 
-	if err := IsValidBlock(beaconState, block, parentBlock,
-		nil, genesisTime); err == nil {
+	if err := IsValidBlock(ctx, beaconState, block, true,
+		db.HasBlock, powClient.BlockByHash, genesisTime); err == nil {
 		t.Fatalf("block is valid despite having an invalid pow reference block")
 	}
 
 	invalidTime := time.Now().AddDate(1, 2, 3)
+	powClient.blockExists = false
 
-	if err := IsValidBlock(beaconState, block, parentBlock,
-		powBlock, invalidTime); err == nil {
+	if err := IsValidBlock(ctx, beaconState, block, true,
+		db.HasBlock, powClient.BlockByHash, genesisTime); err == nil {
 		t.Fatalf("block is valid despite having an invalid genesis time %v", invalidTime)
 	}
 
@@ -83,22 +101,23 @@ func TestValidBlock(t *testing.T) {
 		t.Fatalf("failed to generate beacon state: %v", err)
 	}
 
+	ctx := context.Background()
+
+	db := &mockDB{}
+	powClient := &mockPOWClient{}
+
 	beaconState.SetSlot(3)
-
-	powBlock := &gethTypes.Block{}
-
-	parentBlock := types.NewBlock(&pb.BeaconBlock{
-		Slot: 3,
-	})
+	db.hasBlock = true
 
 	block := types.NewBlock(&pb.BeaconBlock{
 		Slot: 4,
 	})
 
 	genesisTime := params.BeaconConfig().GenesisTime
+	powClient.blockExists = true
 
-	if err := IsValidBlock(beaconState, block, parentBlock,
-		powBlock, genesisTime); err != nil {
+	if err := IsValidBlock(ctx, beaconState, block, true,
+		db.HasBlock, powClient.BlockByHash, genesisTime); err != nil {
 		t.Fatal(err)
 	}
 
@@ -137,6 +156,7 @@ func TestBlockValidity(t *testing.T) {
 
 	parentSlot := uint64(0)
 	db := &mockDB{}
+	db.hasBlock = true
 
 	genesisTime := params.BeaconConfig().GenesisTime
 	if err := IsValidBlockOld(b, beaconState, parentSlot, genesisTime, db.HasBlock); err != nil {
@@ -159,6 +179,7 @@ func TestBlockValidityNoParentProposer(t *testing.T) {
 
 	parentSlot := uint64(1)
 	db := &mockDB{}
+	db.hasBlock = true
 
 	// Test case with invalid RANDAO reveal.
 	badRandaoBlock := types.NewBlock(&pb.BeaconBlock{
@@ -194,6 +215,7 @@ func TestBlockValidityInvalidRandao(t *testing.T) {
 
 	parentSlot := uint64(0)
 	db := &mockDB{}
+	db.hasBlock = true
 
 	// Test case with invalid RANDAO reveal.
 	badRandaoBlock := types.NewBlock(&pb.BeaconBlock{

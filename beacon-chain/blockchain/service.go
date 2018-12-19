@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"time"
 
-	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/randao"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -312,18 +310,24 @@ func (c *ChainService) receiveBlock(block *types.Block) error {
 		return nil
 	}
 
+	log.WithField("slotNumber", block.SlotNumber()).Info("Executing state transition")
+
 	// Check for skipped slots and update the corresponding proposers
 	// randao layer.
 	for beaconState.Slot() < block.SlotNumber()-1 {
-		beaconState, err = c.executeStateTransition(beaconState, nil)
+		beaconState, err = state.ExecuteStateTransition(beaconState, nil)
 		if err != nil {
 			return fmt.Errorf("unable to execute state transition %v", err)
 		}
 	}
 
-	beaconState, err = c.executeStateTransition(beaconState, block)
+	beaconState, err = state.ExecuteStateTransition(beaconState, block)
 	if err != nil {
 		return errors.New("unable to execute state transition")
+	}
+
+	if beaconState.IsValidatorSetChange(block.SlotNumber()) {
+		log.WithField("slotNumber", block.SlotNumber()).Info("Validator set rotation occurred")
 	}
 
 	// TODO(#1074): Verify block.state_root == hash_tree_root(state)
@@ -345,61 +349,7 @@ func (c *ChainService) receiveBlock(block *types.Block) error {
 	return nil
 }
 
-// Spec:
-//  We now define the state transition function. At a high level the state transition is made up of two parts:
-//  - The per-slot transitions, which happens every slot, and only affects a parts of the state.
-//  - The per-epoch transitions, which happens at every epoch boundary (i.e. state.slot % EPOCH_LENGTH == 0), and affects the entire state.
-//  The per-slot transitions generally focus on verifying aggregate signatures and saving temporary records relating to the per-slot
-//  activity in the BeaconState. The per-epoch transitions focus on the validator registry, including adjusting balances and activating
-//  and exiting validators, as well as processing crosslinks and managing block justification/finalization.
-func (c *ChainService) executeStateTransition(
-	beaconState *types.BeaconState,
-	block *types.Block) (*types.BeaconState, error) {
-
-	var err error
-
-	log.WithField("slotNumber", block.SlotNumber()).Info("Executing state transition")
-
-	newState := beaconState.CopyState()
-
-	currentSlot := newState.Slot()
-	newState.SetSlot(currentSlot + 1)
-
-	newState, err = randao.UpdateRandaoLayers(newState, newState.Slot())
-	if err != nil {
-		return nil, fmt.Errorf("unable to update randao layer %v", err)
-	}
-
-	newhashes, err := newState.CalculateNewBlockHashes(block, currentSlot)
-	if err != nil {
-		return nil, fmt.Errorf("unable to calculate recent blockhashes")
-	}
-
-	newState.SetLatestBlockHashes(newhashes)
-
-	if block != nil {
-		newState = state.ProcessBlock(newState, block)
-
-		if newState.Slot()%params.BeaconConfig().EpochLength == 0 {
-			newState = state.NewEpochTransition(newState)
-		}
-
-	}
-
-	if newState.IsValidatorSetChange(block.SlotNumber()) {
-		log.WithField("slotNumber", block.SlotNumber()).Info("Validator set rotation occurred")
-	}
-
-	return newState, nil
-}
-
 func (c *ChainService) isBlockReadyForProcessing(block *types.Block) bool {
-	// Get Parent block
-	parent, err := c.beaconDB.GetBlock(block.ParentHash())
-	if err != nil {
-		log.Debugf("could not get parent block: %v", err)
-		return false
-	}
 
 	beaconState, err := c.beaconDB.GetState()
 	if err != nil {
@@ -407,25 +357,8 @@ func (c *ChainService) isBlockReadyForProcessing(block *types.Block) bool {
 		return false
 	}
 
-	var powBlock *gethTypes.Block
-
-	if c.enablePOWChain {
-		//Get POW chain reference block
-		powBlock, err = c.web3Service.Client().BlockByHash(
-			c.ctx, beaconState.ProcessedPowReceiptRootHash32())
-		if err != nil {
-			log.Debugf("fetching PoW block corresponding to mainchain reference failed: %v", err)
-			return false
-		}
-
-	} else {
-		powBlock = &gethTypes.Block{
-			ReceivedAt: c.genesisTime,
-		}
-	}
-
-	if err := state.IsValidBlock(beaconState, block, parent,
-		powBlock, c.genesisTime); err != nil {
+	if err := state.IsValidBlock(c.ctx, beaconState, block, c.enablePOWChain,
+		c.beaconDB.HasBlock, c.web3Service.Client().BlockByHash, c.genesisTime); err != nil {
 		log.Debugf("block does not fulfill pre-processing conditions %v", err)
 		return false
 	}

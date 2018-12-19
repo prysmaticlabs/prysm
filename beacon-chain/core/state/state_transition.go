@@ -5,6 +5,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/incentives"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/randao"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -12,10 +13,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// NewStateTransition computes the new beacon state, given the previous beacon state
-// a beacon block, and its parent slot. This method is called during a cycle transition.
-// We also check for validator set change transition and compute for new
-// committees if necessary during this transition.
+// NewStateTransition computes the new beacon state.
+// DEPRECATED: Will be removed soon.
+// This function takes in the previous beacon stat, beacon block, and its parent slot.
+// This method is called during a cycle transition. We also check for validator
+// set change transition and compute for new committees if necessary during this transition.
 func NewStateTransition(
 	st *types.BeaconState,
 	block *types.Block,
@@ -120,6 +122,49 @@ func NewStateTransition(
 		}
 	}
 	newState.SetLastStateRecalculationSlot(newState.LastStateRecalculationSlot() + 1)
+	return newState, nil
+}
+
+// ExecuteStateTransition defines the procedure for a state transition function.
+// Spec:
+//  We now define the state transition function. At a high level the state transition is made up of two parts:
+//  - The per-slot transitions, which happens every slot, and only affects a parts of the state.
+//  - The per-epoch transitions, which happens at every epoch boundary (i.e. state.slot % EPOCH_LENGTH == 0), and affects the entire state.
+//  The per-slot transitions generally focus on verifying aggregate signatures and saving temporary records relating to the per-slot
+//  activity in the BeaconState. The per-epoch transitions focus on the validator registry, including adjusting balances and activating
+//  and exiting validators, as well as processing crosslinks and managing block justification/finalization.
+func ExecuteStateTransition(
+	beaconState *types.BeaconState,
+	block *types.Block) (*types.BeaconState, error) {
+
+	var err error
+
+	newState := beaconState.CopyState()
+
+	currentSlot := newState.Slot()
+	newState.SetSlot(currentSlot + 1)
+
+	newState, err = randao.UpdateRandaoLayers(newState, newState.Slot())
+	if err != nil {
+		return nil, fmt.Errorf("unable to update randao layer %v", err)
+	}
+
+	newhashes, err := newState.CalculateNewBlockHashes(block, currentSlot)
+	if err != nil {
+		return nil, fmt.Errorf("unable to calculate recent blockhashes")
+	}
+
+	newState.SetLatestBlockHashes(newhashes)
+
+	if block != nil {
+		newState = ProcessBlock(newState, block)
+
+		if newState.Slot()%params.BeaconConfig().EpochLength == 0 {
+			newState = NewEpochTransition(newState)
+		}
+
+	}
+
 	return newState, nil
 }
 

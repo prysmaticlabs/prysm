@@ -2,10 +2,12 @@ package state
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -81,16 +83,19 @@ func IsValidBlockOld(
 //  The Ethereum 1.0 block pointed to by the state.processed_pow_receipt_root has been processed and accepted.
 //  The node's local clock time is greater than or equal to state.genesis_time + block.slot * SLOT_DURATION.
 func IsValidBlock(
+	ctx context.Context,
 	state *types.BeaconState,
 	block *types.Block,
-	parentBlock *types.Block,
-	powBlock *gethTypes.Block,
+	enablePOWChain bool,
+	HasBlock func(hash [32]byte) bool,
+	GetPOWBlock func(ctx context.Context, hash common.Hash) (*gethTypes.Block, error),
 	genesisTime time.Time) error {
 
 	// Pre-Processing Condition 1:
 	// Check that the parent Block has been processed and saved.
-	if parentBlock == nil {
-		return fmt.Errorf("unprocessed parent block as it points to nil parent: %#x", block.ParentHash())
+	parentBlock := HasBlock(block.ParentHash())
+	if !parentBlock {
+		return fmt.Errorf("unprocessed parent block as it is not saved in the db: %#x", block.ParentHash())
 	}
 
 	// Pre-Processing Condition 2:
@@ -101,11 +106,18 @@ func IsValidBlock(
 			"block slot is not valid %d as it is supposed to be %d", block.SlotNumber(), state.Slot()+1)
 	}
 
-	// Pre-Processing Condition 3:
-	// The block pointed to by the state in state.processed_pow_receipt_root has
-	// been processed in the ETH 1.0 chain.
-	if powBlock == nil {
-		return fmt.Errorf("proof-of-Work chain reference in state does not exist %#x", state.ProcessedPowReceiptRootHash32())
+	if enablePOWChain {
+		powBlock, err := GetPOWBlock(ctx, state.ProcessedPowReceiptRootHash32())
+		if err != nil {
+			return fmt.Errorf("unable to retrieve POW chain reference block %v", err)
+		}
+
+		// Pre-Processing Condition 3:
+		// The block pointed to by the state in state.processed_pow_receipt_root has
+		// been processed in the ETH 1.0 chain.
+		if powBlock == nil {
+			return fmt.Errorf("proof-of-Work chain reference in state does not exist %#x", state.ProcessedPowReceiptRootHash32())
+		}
 	}
 
 	// Pre-Processing Condition 4:
