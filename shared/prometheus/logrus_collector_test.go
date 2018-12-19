@@ -86,11 +86,11 @@ func getValueFor(t *testing.T, metrics []string, prefix string, level log.Level)
 	for _, line := range metrics {
 		if strings.HasPrefix(line, pattern) {
 			parts := strings.Split(line, " ")
-			count, err := strconv.Atoi(parts[1])
+			count, err := strconv.ParseFloat(parts[1], 64)
 			if err != nil {
-				t.Errorf("Failed to convert metric counter to integer: %s", err)
+				t.Errorf("Failed to convert metric counter to float: %s", err)
 			}
-			return count
+			return int(count)
 		}
 	}
 	t.Errorf("Pattern \"%s\" not found", pattern)
