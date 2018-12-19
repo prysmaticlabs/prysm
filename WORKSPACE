@@ -872,11 +872,8 @@ go_repository(
 
 go_repository(
     name = "com_github_shyiko_kubesec",
-    commit = "b3b38efff0ecda7fd59ae59b5d09469fda51b5d7",
+    commit = "60b9dc76b678673960bc26619e5eca38dfaa1ad1",
     importpath = "github.com/shyiko/kubesec",
-    # Update after https://github.com/shyiko/kubesec/pull/19
-    remote = "https://github.com/prestonvanloon/kubesec",
-    vcs = "git",
 )
 
 go_repository(
