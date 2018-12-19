@@ -9,7 +9,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -359,7 +361,7 @@ func (c *ChainService) isBlockReadyForProcessing(block *types.Block) bool {
 		powBlockFetcher = c.web3Service.Client().BlockByHash
 	}
 
-	if err := state.IsValidBlock(c.ctx, beaconState, block, c.enablePOWChain,
+	if err := b.IsValidBlock(c.ctx, beaconState, block, c.enablePOWChain,
 		c.beaconDB.HasBlock, powBlockFetcher, c.genesisTime); err != nil {
 		log.Debugf("block does not fulfill pre-processing conditions %v", err)
 		return false

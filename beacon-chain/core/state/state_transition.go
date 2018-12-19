@@ -3,7 +3,6 @@ package state
 import (
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/incentives"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/randao"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -54,60 +53,19 @@ func ExecuteStateTransition(
 	return newState, nil
 }
 
+// ProcessBlock describes the per block operations that happen on every slot.
+func ProcessBlock(state *types.BeaconState, block *types.Block) *types.BeaconState {
+	_ = block
+	// TODO(#1073): This function will encompass all the per block slot transition functions, this will
+	// contain checks for randao,proposer validity and block operations.
+	return state
+}
+
 // NewEpochTransition describes the per epoch operations that are performed on the
 // beacon state.
 func NewEpochTransition(state *types.BeaconState) *types.BeaconState {
 	// TODO(#1074): This will encompass all the related logic to epoch transitions.
 	return state
-}
-
-// crossLinkCalculations checks if the proposed shard block has recevied
-// 2/3 of the votes. If yes, we update crosslink record to point to
-// the proposed shard block with latest beacon chain slot numbers.
-func crossLinkCalculations(
-	st *types.BeaconState,
-	pendingAttestations []*pb.AggregatedAttestation,
-	currentSlot uint64,
-) ([]*pb.CrosslinkRecord, error) {
-	slot := st.LastStateRecalculationSlot() + params.BeaconConfig().CycleLength
-	crossLinkRecords := st.LatestCrosslinks()
-	for _, attestation := range pendingAttestations {
-		shardCommittees, err := v.GetShardAndCommitteesForSlot(
-			st.ShardAndCommitteesForSlots(),
-			st.LastStateRecalculationSlot(),
-			attestation.GetSlot(),
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		indices, err := v.AttesterIndices(shardCommittees, attestation)
-		if err != nil {
-			return nil, err
-		}
-
-		totalBalance, voteBalance, err := v.VotedBalanceInAttestation(st.ValidatorRegistry(), indices, attestation)
-		if err != nil {
-			return nil, err
-		}
-
-		newValidatorSet, err := incentives.ApplyCrosslinkRewardsAndPenalties(
-			crossLinkRecords,
-			currentSlot,
-			indices,
-			attestation,
-			st.ValidatorRegistry(),
-			v.TotalActiveValidatorBalance(st.ValidatorRegistry()),
-			totalBalance,
-			voteBalance,
-		)
-		if err != nil {
-			return nil, err
-		}
-		st.SetValidatorRegistry(newValidatorSet)
-		crossLinkRecords = UpdateLatestCrosslinks(slot, voteBalance, totalBalance, attestation, crossLinkRecords)
-	}
-	return crossLinkRecords, nil
 }
 
 // validatorSetRecalculation recomputes the validator set.

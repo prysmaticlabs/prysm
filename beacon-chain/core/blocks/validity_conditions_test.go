@@ -1,4 +1,4 @@
-package state
+package blocks
 
 import (
 	"context"
@@ -120,22 +120,4 @@ func TestValidBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-}
-
-func TestIsAttestationSlotNumberValid(t *testing.T) {
-	if err := isAttestationSlotNumberValid(2, 1); err == nil {
-		t.Error("attestation slot number can't be higher than parent block's slot number")
-	}
-
-	if err := isAttestationSlotNumberValid(1, params.BeaconConfig().CycleLength+1); err == nil {
-		t.Error("attestation slot number can't be lower than parent block's slot number by one CycleLength and 1")
-	}
-
-	if err := isAttestationSlotNumberValid(2, 2); err != nil {
-		t.Errorf("attestation slot number could be less than or equal to parent block's slot number: %v", err)
-	}
-
-	if err := isAttestationSlotNumberValid(2, 10); err != nil {
-		t.Errorf("attestation slot number could be less than or equal to parent block's slot number: %v", err)
-	}
 }

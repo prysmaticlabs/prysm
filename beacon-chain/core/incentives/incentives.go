@@ -5,43 +5,10 @@
 package incentives
 
 import (
-	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
-
-// ApplyCrosslinkRewardsAndPenalties applies the appropriate rewards and
-// penalties according to the attestation for a shard.
-func ApplyCrosslinkRewardsAndPenalties(
-	crosslinkRecords []*pb.CrosslinkRecord,
-	slot uint64,
-	attesterIndices []uint32,
-	attestation *pb.AggregatedAttestation,
-	validators []*pb.ValidatorRecord,
-	totalActiveValidatorDeposit uint64,
-	totalBalance uint64,
-	voteBalance uint64,
-) ([]*pb.ValidatorRecord, error) {
-	newValidatorSet := v.CopyValidatorRegistry(validators)
-
-	rewardQuotient := RewardQuotient(totalActiveValidatorDeposit)
-	for _, attesterIndex := range attesterIndices {
-		timeSinceLastConfirmation := slot - crosslinkRecords[attestation.Shard].GetSlot()
-
-		checkBit, err := bitutil.CheckBit(attestation.AttesterBitfield, int(attesterIndex))
-		if err != nil {
-			return nil, err
-		}
-		if checkBit {
-			newValidatorSet[attesterIndex] = RewardValidatorCrosslink(totalBalance, voteBalance, rewardQuotient, newValidatorSet[attesterIndex])
-		} else {
-			newValidatorSet[attesterIndex] = PenaliseValidatorCrosslink(timeSinceLastConfirmation, rewardQuotient, newValidatorSet[attesterIndex])
-		}
-	}
-	return newValidatorSet, nil
-}
 
 // RewardQuotient returns the reward quotient for validators which will be used to
 // reward validators for voting on blocks, or penalise them for being offline.
