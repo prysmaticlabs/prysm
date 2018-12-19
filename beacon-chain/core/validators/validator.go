@@ -485,6 +485,39 @@ func ValidatorIndices(
 	return attesterIndicesIntersection, nil
 }
 
+// AttestingValidatorIndices returns all the shard committee validator indices
+// from the validator shard committee that matches the input attestations.
+//
+// Spec pseudocode definition:
+// Let attesting_validator_indices(shard_committee, shard_block_root)
+// be the union of the validator index sets given by
+// [get_attestation_participants(state, a.data, a.participation_bitfield)
+// for a in this_epoch_attestations + previous_epoch_attestations
+// if a.shard == shard_committee.shard and a.shard_block_root == shard_block_root]
+func AttestingValidatorIndices(
+	state *pb.BeaconState,
+	shardCommittee *pb.ShardAndCommittee,
+	shardBlockRoot []byte,
+	thisEpochAttestations []*pb.PendingAttestationRecord,
+	prevEpochAttestations []*pb.PendingAttestationRecord) ([]uint32, error) {
+
+	var validatorIndicesCommittees []uint32
+	attestations := append(thisEpochAttestations, prevEpochAttestations...)
+
+	for _, attestation := range attestations {
+		if attestation.Data.Slot == shardCommittee.Shard &&
+			bytes.Equal(attestation.Data.ShardBlockRootHash32, shardBlockRoot) {
+
+			validatorIndicesCommittee, err := AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)
+			if err != nil {
+				return nil, fmt.Errorf("could not get attester indices: %v", err)
+			}
+			validatorIndicesCommittees = slices.Union(validatorIndicesCommittees, validatorIndicesCommittee)
+		}
+	}
+	return validatorIndicesCommittees, nil
+}
+
 // AttestingBalance returns the combined balances from the input validator
 // records.
 //
