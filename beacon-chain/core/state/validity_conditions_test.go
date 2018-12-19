@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -121,120 +120,6 @@ func TestValidBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-}
-
-func TestBlockValidity(t *testing.T) {
-	beaconState, err := types.NewGenesisBeaconState(nil)
-	if err != nil {
-		t.Fatalf("failed to generate beacon state: %v", err)
-	}
-
-	recentBlockHashes := make([][]byte, 2*params.BeaconConfig().CycleLength)
-	for i := 0; i < 2*int(params.BeaconConfig().CycleLength); i++ {
-		recentBlockHashes = append(recentBlockHashes, make([]byte, 32))
-	}
-	randaoPreCommit := [32]byte{'A'}
-	hashedRandaoPreCommit := hashutil.Hash(randaoPreCommit[:])
-	validators := beaconState.ValidatorRegistry()
-	validators[1].RandaoCommitmentHash32 = hashedRandaoPreCommit[:]
-	beaconState.SetValidatorRegistry(validators)
-	beaconState.SetLatestBlockHashes(recentBlockHashes)
-
-	b := types.NewBlock(&pb.BeaconBlock{
-		Slot:               1,
-		RandaoRevealHash32: randaoPreCommit[:],
-		Attestations: []*pb.AggregatedAttestation{
-			{
-				Slot:          0,
-				Shard:         1,
-				JustifiedSlot: 0,
-				AttesterBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-			},
-		},
-	})
-
-	parentSlot := uint64(0)
-	db := &mockDB{}
-	db.hasBlock = true
-
-	genesisTime := params.BeaconConfig().GenesisTime
-	if err := IsValidBlockOld(b, beaconState, parentSlot, genesisTime, db.HasBlock); err != nil {
-		t.Fatalf("failed block validation: %v", err)
-	}
-}
-
-func TestBlockValidityNoParentProposer(t *testing.T) {
-	beaconState, err := types.NewGenesisBeaconState(nil)
-	if err != nil {
-		t.Fatalf("failed to generate beacon state: %v", err)
-	}
-
-	recentBlockHashes := make([][]byte, 2*params.BeaconConfig().CycleLength)
-	for i := 0; i < 2*int(params.BeaconConfig().CycleLength); i++ {
-		recentBlockHashes = append(recentBlockHashes, make([]byte, 32))
-	}
-
-	beaconState.SetLatestBlockHashes(recentBlockHashes)
-
-	parentSlot := uint64(1)
-	db := &mockDB{}
-	db.hasBlock = true
-
-	// Test case with invalid RANDAO reveal.
-	badRandaoBlock := types.NewBlock(&pb.BeaconBlock{
-		Slot:               2,
-		RandaoRevealHash32: []byte{'B'},
-		Attestations: []*pb.AggregatedAttestation{
-			{
-				Slot:             0,
-				Shard:            1,
-				JustifiedSlot:    0,
-				AttesterBitfield: []byte{64, 0},
-			},
-		},
-	})
-	genesisTime := params.BeaconConfig().GenesisTime
-	if err := IsValidBlockOld(badRandaoBlock, beaconState, parentSlot, genesisTime, db.HasBlock); err == nil {
-		t.Fatal("test should have failed without a parent proposer")
-	}
-}
-
-func TestBlockValidityInvalidRandao(t *testing.T) {
-	beaconState, err := types.NewGenesisBeaconState(nil)
-	if err != nil {
-		t.Fatalf("failed to generate beacon state: %v", err)
-	}
-
-	recentBlockHashes := make([][]byte, 2*params.BeaconConfig().CycleLength)
-	for i := 0; i < 2*int(params.BeaconConfig().CycleLength); i++ {
-		recentBlockHashes = append(recentBlockHashes, make([]byte, 32))
-	}
-
-	beaconState.SetLatestBlockHashes(recentBlockHashes)
-
-	parentSlot := uint64(0)
-	db := &mockDB{}
-	db.hasBlock = true
-
-	// Test case with invalid RANDAO reveal.
-	badRandaoBlock := types.NewBlock(&pb.BeaconBlock{
-		Slot:               1,
-		RandaoRevealHash32: []byte{'B'},
-		Attestations: []*pb.AggregatedAttestation{
-			{
-				Slot:             0,
-				Shard:            1,
-				JustifiedSlot:    0,
-				AttesterBitfield: []byte{64, 0},
-			},
-		},
-	})
-
-	genesisTime := params.BeaconConfig().GenesisTime
-	if err := IsValidBlockOld(badRandaoBlock, beaconState, parentSlot, genesisTime, db.HasBlock); err == nil {
-		t.Fatal("should have failed with invalid RANDAO")
-	}
 }
 
 func TestIsAttestationSlotNumberValid(t *testing.T) {

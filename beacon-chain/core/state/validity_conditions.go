@@ -1,9 +1,7 @@
 package state
 
 import (
-	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -13,67 +11,8 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
-
-// IsValidBlockOld checks the validity conditions of a block.
-// DEPRECATED: Will be removed soon.
-func IsValidBlockOld(
-	block *types.Block,
-	beaconState *types.BeaconState,
-	parentSlot uint64,
-	genesisTime time.Time,
-	isInChain func(blockHash [32]byte) bool,
-) error {
-	_, err := block.Hash()
-	if err != nil {
-		return fmt.Errorf("could not hash incoming block: %v", err)
-	}
-
-	if block.SlotNumber() == 0 {
-		return errors.New("cannot process a genesis block: received block with slot 0")
-	}
-
-	if !block.IsSlotValid(genesisTime) {
-		return fmt.Errorf("slot of block is too high: %d", block.SlotNumber())
-	}
-
-	if err := doesParentProposerExist(block, beaconState, parentSlot); err != nil {
-		return fmt.Errorf("could not get proposer index: %v", err)
-	}
-
-	for _, attestation := range block.Attestations() {
-		if err := isBlockAttestationValid(block, attestation, beaconState, parentSlot, isInChain); err != nil {
-			return fmt.Errorf("invalid block attestation: %v", err)
-		}
-	}
-
-	_, proposerIndex, err := v.ProposerShardAndIndex(
-		beaconState.ShardAndCommitteesForSlots(),
-		beaconState.LastStateRecalculationSlot(),
-		block.SlotNumber(),
-	)
-	if err != nil {
-		return fmt.Errorf("could not get proposer index: %v", err)
-	}
-
-	stateProposerRandaoSeed := beaconState.ValidatorRegistry()[proposerIndex].RandaoCommitmentHash32
-	blockRandaoRevealHash32 := block.RandaoRevealHash32()
-
-	// If this is a block created by the simulator service (while in development
-	// mode), we skip the RANDAO validation condition.
-	isSimulatedBlock := bytes.Equal(blockRandaoRevealHash32[:], params.BeaconConfig().SimulatedBlockRandao[:])
-	if !isSimulatedBlock && !block.IsRandaoValid(stateProposerRandaoSeed) {
-		return fmt.Errorf(
-			"pre-image of %#x is %#x, Got: %#x",
-			blockRandaoRevealHash32[:],
-			hashutil.Hash(blockRandaoRevealHash32[:]),
-			stateProposerRandaoSeed,
-		)
-	}
-	return nil
-}
 
 // IsValidBlock ensures that the block is compliant with the block processing validity conditions.
 // Spec:

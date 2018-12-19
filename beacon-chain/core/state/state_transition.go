@@ -3,127 +3,13 @@ package state
 import (
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/incentives"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/randao"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
-
-// NewStateTransition computes the new beacon state.
-// DEPRECATED: Will be removed soon.
-// This function takes in the previous beacon stat, beacon block, and its parent slot.
-// This method is called during a cycle transition. We also check for validator
-// set change transition and compute for new committees if necessary during this transition.
-func NewStateTransition(
-	st *types.BeaconState,
-	block *types.Block,
-	parentSlot uint64,
-	blockVoteCache utils.BlockVoteCache,
-) (*types.BeaconState, error) {
-	var lastStateRecalculationSlotCycleBack uint64
-	var err error
-
-	newState := st.CopyState()
-	justifiedStreak := st.JustifiedStreak()
-	justifiedSlot := st.LastJustifiedSlot()
-	finalizedSlot := st.LastFinalizedSlot()
-	timeSinceFinality := block.SlotNumber() - newState.LastFinalizedSlot()
-	newState.SetValidatorRegistry(v.CopyValidatorRegistry(newState.ValidatorRegistry()))
-
-	newState.ClearAttestations(st.LastStateRecalculationSlot())
-	// Derive the new set of recent block hashes.
-	recentBlockHashes, err := st.CalculateNewBlockHashes(block, parentSlot)
-	if err != nil {
-		return nil, err
-	}
-	newState.SetLatestBlockHashes(recentBlockHashes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to update recent block hashes: %v", err)
-	}
-
-	newRandao := createRandaoMix(block.RandaoRevealHash32(), st.RandaoMix())
-	newState.SetRandaoMix(newRandao[:])
-
-	// The changes below are only applied if this is a cycle transition.
-	if block.SlotNumber()%params.BeaconConfig().CycleLength == 0 {
-		if st.LastStateRecalculationSlot() < params.BeaconConfig().CycleLength {
-			lastStateRecalculationSlotCycleBack = 0
-		} else {
-			lastStateRecalculationSlotCycleBack = st.LastStateRecalculationSlot() - params.BeaconConfig().CycleLength
-		}
-
-		// walk through all the slots from LastStateRecalculationSlot - cycleLength to
-		// LastStateRecalculationSlot - 1.
-		for i := uint64(0); i < params.BeaconConfig().CycleLength; i++ {
-			var blockVoteBalance uint64
-
-			slot := lastStateRecalculationSlotCycleBack + i
-			blockHash := recentBlockHashes[i]
-
-			blockVoteBalance, validators := incentives.TallyVoteBalances(
-				common.BytesToHash(blockHash),
-				blockVoteCache,
-				newState.ValidatorRegistry(),
-				v.ActiveValidatorIndices(newState.ValidatorRegistry()),
-				v.TotalActiveValidatorBalance(newState.ValidatorRegistry()),
-				timeSinceFinality,
-			)
-
-			newState.SetValidatorRegistry(validators)
-
-			justifiedSlot, finalizedSlot, justifiedStreak = FinalizeAndJustifySlots(
-				slot,
-				justifiedSlot,
-				finalizedSlot,
-				justifiedStreak,
-				blockVoteBalance,
-				v.TotalActiveValidatorBalance(st.ValidatorRegistry()),
-			)
-		}
-
-		crossLinks, err := crossLinkCalculations(
-			newState,
-			st.PendingAttestations(),
-			block.SlotNumber(),
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		newState.SetCrossLinks(crossLinks)
-
-		newState.SetLastJustifiedSlot(justifiedSlot)
-		newState.SetLastFinalizedSlot(finalizedSlot)
-		newState.SetJustifiedStreak(justifiedStreak)
-
-		// Exit the validators when their balance fall below min online deposit size.
-		newState.SetValidatorRegistry(v.CheckValidatorMinDeposit(newState.ValidatorRegistry(), block.SlotNumber()))
-
-		// Entering new validator set change transition.
-		if newState.IsValidatorSetChange(block.SlotNumber()) {
-			newState.SetValidatorRegistryLastChangeSlot(newState.LastStateRecalculationSlot())
-			shardAndCommitteesForSlots, err := validatorSetRecalculations(
-				newState.ShardAndCommitteesForSlots(),
-				newState.ValidatorRegistry(),
-				block.ParentHash(),
-			)
-			if err != nil {
-				return nil, err
-			}
-			newState.SetShardAndCommitteesForSlots(shardAndCommitteesForSlots)
-
-			period := block.SlotNumber() / params.BeaconConfig().MinWithdrawalPeriod
-			totalPenalties := newState.PenalizedETH(period)
-			newState.SetValidatorRegistry(v.ChangeValidatorRegistry(block.SlotNumber(), totalPenalties, newState.ValidatorRegistry()))
-		}
-	}
-	newState.SetLastStateRecalculationSlot(newState.LastStateRecalculationSlot() + 1)
-	return newState, nil
-}
 
 // ExecuteStateTransition defines the procedure for a state transition function.
 // Spec:
