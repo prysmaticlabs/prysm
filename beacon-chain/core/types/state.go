@@ -73,7 +73,7 @@ func NewGenesisBeaconState(genesisValidatorRegistry []*pb.ValidatorRecord) (*Bea
 			LatestBlockRootHash32S:               latestBlockHashes,
 			LatestPenalizedExitBalances:          []uint64{},
 			LatestAttestations:                   []*pb.PendingAttestationRecord{},
-			ProcessedPowReceiptRootHash32:        [][]byte{},
+			ProcessedPowReceiptRootHash32:        []byte{},
 			CandidatePowReceiptRoots:             []*pb.CandidatePoWReceiptRootRecord{},
 			GenesisTime:                          0,
 			ForkData: &pb.ForkData{
@@ -124,6 +124,20 @@ func (b *BeaconState) CopyState() *BeaconState {
 		}
 	}
 
+	shardAndCommitteesAtSlots := make([]*pb.ShardAndCommitteeArray, len(b.ShardAndCommitteesAtSlots()))
+	for index, shardAndCommitteesAtSlot := range b.ShardAndCommitteesAtSlots() {
+		shardAndCommittees := make([]*pb.ShardAndCommittee, len(shardAndCommitteesAtSlot.GetArrayShardAndCommittee()))
+		for index, shardAndCommittee := range shardAndCommitteesAtSlot.GetArrayShardAndCommittee() {
+			shardAndCommittees[index] = &pb.ShardAndCommittee{
+				Shard:     shardAndCommittee.GetShard(),
+				Committee: shardAndCommittee.GetCommittee(),
+			}
+		}
+		shardAndCommitteesAtSlots[index] = &pb.ShardAndCommitteeArray{
+			ArrayShardAndCommittee: shardAndCommittees,
+		}
+	}
+
 	newState := BeaconState{&pb.BeaconState{
 		LastStateRecalculationSlot:      b.LastStateRecalculationSlot(),
 		JustifiedStreak:                 b.JustifiedStreak(),
@@ -133,8 +147,10 @@ func (b *BeaconState) CopyState() *BeaconState {
 		LatestCrosslinks:                crosslinks,
 		ValidatorRegistry:               validators,
 		ShardAndCommitteesForSlots:      shardAndCommitteesForSlots,
+		ShardAndCommitteesAtSlots:       shardAndCommitteesAtSlots,
 		LatestPenalizedExitBalances:     b.LatestPenalizedExitBalances(),
 		ForkData:                        b.ForkData(),
+		LatestBlockRootHash32S:          b.data.LatestBlockRootHash32S,
 	}}
 
 	return &newState
@@ -219,6 +235,11 @@ func (b *BeaconState) ShardAndCommitteesForSlots() []*pb.ShardAndCommitteeArray 
 	return b.data.ShardAndCommitteesForSlots
 }
 
+// ShardAndCommitteesAtSlots returns the shard committee object.
+func (b *BeaconState) ShardAndCommitteesAtSlots() []*pb.ShardAndCommitteeArray {
+	return b.data.ShardAndCommitteesAtSlots
+}
+
 // LatestCrosslinks returns the cross link records of the all the shards.
 func (b *BeaconState) LatestCrosslinks() []*pb.CrosslinkRecord {
 	return b.data.LatestCrosslinks
@@ -259,8 +280,10 @@ func (b *BeaconState) LatestAttestations() []*pb.PendingAttestationRecord {
 
 // ProcessedPowReceiptRootHash32 returns the root hashes of the
 // processed transaction receipts from the POW chain.
-func (b *BeaconState) ProcessedPowReceiptRootHash32() [][]byte {
-	return b.data.ProcessedPowReceiptRootHash32
+func (b *BeaconState) ProcessedPowReceiptRootHash32() [32]byte {
+	var h [32]byte
+	copy(h[:], b.data.ProcessedPowReceiptRootHash32)
+	return h
 }
 
 // CandidatePowReceiptRoots returns the root records of receipts that have
@@ -468,6 +491,11 @@ func (b *BeaconState) SetShardAndCommitteesForSlots(shardAndCommitteesForSlot []
 	b.data.ShardAndCommitteesForSlots = shardAndCommitteesForSlot
 }
 
+// SetShardAndCommitteesAtSlots updates the inner proto's shard and committees for slots.
+func (b *BeaconState) SetShardAndCommitteesAtSlots(shardAndCommitteesAtSlot []*pb.ShardAndCommitteeArray) {
+	b.data.ShardAndCommitteesAtSlots = shardAndCommitteesAtSlot
+}
+
 // SetValidatorRegistry updates the state's internal validator set.
 func (b *BeaconState) SetValidatorRegistry(validators []*pb.ValidatorRecord) {
 	b.data.ValidatorRegistry = validators
@@ -521,8 +549,8 @@ func (b *BeaconState) SetLatestAttestations(attestations []*pb.PendingAttestatio
 
 // SetProcessedPowReceiptHash saves the POW receipts which have
 // been processed by the POW chain.
-func (b *BeaconState) SetProcessedPowReceiptHash(hash [][]byte) {
-	b.data.ProcessedPowReceiptRootHash32 = hash
+func (b *BeaconState) SetProcessedPowReceiptHash(hash [32]byte) {
+	b.data.ProcessedPowReceiptRootHash32 = hash[:]
 }
 
 // SetCandidatePowReceiptRoots saves the latest roots of POW receipts that have
