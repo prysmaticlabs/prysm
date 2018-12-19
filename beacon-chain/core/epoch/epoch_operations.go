@@ -2,9 +2,12 @@ package epoch
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	b "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -141,4 +144,53 @@ func PrevHeadAttestations(
 		}
 	}
 	return headAttestations, nil
+}
+
+// WinningRoot returns the shard block root with the most combined validator
+// effective balance. The ties broken by favoring lower shard block root values.
+//
+// Spec pseudocode definition:
+//   Let winning_root(shard_committee) be equal to the value of shard_block_root
+//   such that sum([get_effective_balance(state, i)
+//   for i in attesting_validator_indices(shard_committee, shard_block_root)])
+//   is maximized (ties broken by favoring lower shard_block_root values)
+func WinningRoot(
+	state *pb.BeaconState,
+	shardCommittee *pb.ShardAndCommittee,
+	thisEpochAttestations []*pb.PendingAttestationRecord,
+	prevEpochAttestations []*pb.PendingAttestationRecord) ([]byte, error) {
+
+	var winnerBalance uint64
+	var winnerRoot []byte
+	var candidateRoots [][]byte
+	attestations := append(thisEpochAttestations, prevEpochAttestations...)
+
+	for _, attestation := range attestations {
+		if attestation.Data.Shard == shardCommittee.Shard {
+			candidateRoots = append(candidateRoots, attestation.Data.BeaconBlockRootHash32)
+		}
+	}
+
+	for _, candidateRoot := range candidateRoots {
+		indices, err := validators.AttestingValidatorIndices(
+			state,
+			shardCommittee,
+			candidateRoot,
+			thisEpochAttestations,
+			prevEpochAttestations)
+		if err != nil {
+			return nil, fmt.Errorf("could not get attesting validator indices: %v", err)
+		}
+		var rootBalance uint64
+		for _, index := range indices {
+			rootBalance += validators.EffectiveBalance(state.ValidatorRegistry[index])
+		}
+
+		if rootBalance > winnerBalance ||
+			(rootBalance == winnerBalance && b.LowerThan(candidateRoot, winnerRoot)) {
+			winnerBalance = rootBalance
+			winnerRoot = candidateRoot
+		}
+	}
+	return winnerRoot, nil
 }
