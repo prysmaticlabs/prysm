@@ -6,104 +6,11 @@ package incentives
 
 import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
-
-// TallyVoteBalances calculates all the votes behind a block and
-// then rewards validators for their participation in voting for that block.
-func TallyVoteBalances(
-	blockHash [32]byte,
-	blockVoteCache utils.BlockVoteCache,
-	validators []*pb.ValidatorRecord,
-	activeValidatorIndices []uint32,
-	totalActiveValidatorDeposit uint64,
-	timeSinceFinality uint64,
-) (uint64, []*pb.ValidatorRecord) {
-	blockVote, ok := blockVoteCache[blockHash]
-	if !ok {
-		return 0, validators
-	}
-
-	blockVoteBalance := blockVote.VoteTotalDeposit
-	voterIndices := blockVote.VoterIndices
-	newValidatorRegistry := CalculateRewards(
-		voterIndices,
-		activeValidatorIndices,
-		validators,
-		totalActiveValidatorDeposit,
-		blockVoteBalance,
-		timeSinceFinality,
-	)
-
-	return blockVoteBalance, newValidatorRegistry
-}
-
-// CalculateRewards adjusts validators balances by applying rewards or penalties
-// based on FFG incentive structure.
-// FFG Rewards scheme rewards validator who have voted on blocks, and penalises those validators
-// who are offline. The penalties are more severe the longer they are offline.
-func CalculateRewards(
-	voterIndices []uint32,
-	activeValidatorIndices []uint32,
-	validators []*pb.ValidatorRecord,
-	totalActiveValidatorDeposit uint64,
-	totalParticipatedDeposit uint64,
-	timeSinceFinality uint64,
-) []*pb.ValidatorRecord {
-
-	newValidatorSet := v.CopyValidatorRegistry(validators)
-
-	// Calculate the reward and penalty quotients for the validator set.
-	rewardQuotient := RewardQuotient(totalActiveValidatorDeposit)
-	penaltyQuotient := QuadraticPenaltyQuotient()
-
-	if timeSinceFinality <= 3*params.BeaconConfig().CycleLength {
-		for _, validatorIndex := range activeValidatorIndices {
-			var voted bool
-
-			for _, voterIndex := range voterIndices {
-				if voterIndex == validatorIndex {
-					voted = true
-					balance := validators[validatorIndex].GetBalance()
-					newBalance := int64(balance) + int64(balance/rewardQuotient)*(2*int64(totalParticipatedDeposit)-int64(totalActiveValidatorDeposit))/int64(totalActiveValidatorDeposit)
-					newValidatorSet[validatorIndex].Balance = uint64(newBalance)
-					break
-				}
-			}
-
-			if !voted {
-				newBalance := newValidatorSet[validatorIndex].GetBalance()
-				newBalance -= newBalance / rewardQuotient
-				newValidatorSet[validatorIndex].Balance = newBalance
-			}
-		}
-
-	} else {
-		for _, validatorIndex := range activeValidatorIndices {
-			var voted bool
-
-			for _, voterIndex := range voterIndices {
-				if voterIndex == validatorIndex {
-					voted = true
-					break
-				}
-			}
-
-			if !voted {
-				newBalance := newValidatorSet[validatorIndex].GetBalance()
-				newBalance -= newBalance/rewardQuotient + newBalance*timeSinceFinality/penaltyQuotient
-				newValidatorSet[validatorIndex].Balance = newBalance
-			}
-		}
-
-	}
-
-	return newValidatorSet
-}
 
 // ApplyCrosslinkRewardsAndPenalties applies the appropriate rewards and
 // penalties according to the attestation for a shard.
