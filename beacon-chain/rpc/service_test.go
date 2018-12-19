@@ -117,7 +117,7 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	mockChain := &mockChainService{}
 
-	genesis := types.NewGenesisBlock([32]byte{})
+	genesis := types.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
@@ -148,11 +148,11 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not call CurrentAssignments correctly: %v", err)
 	}
-	genesis = types.NewGenesisBlock([32]byte{})
-	if res.GenesisTimestamp.String() != genesis.Proto().GetTimestamp().String() {
+	genesis = types.NewGenesisBlock([]byte{})
+	if res.GenesisTimestamp.String() != genesis.GetTimestamp().String() {
 		t.Errorf(
 			"Received different genesis timestamp, wanted: %v, received: %v",
-			genesis.Proto().GetTimestamp(),
+			genesis.GetTimestamp(),
 			res.GenesisTimestamp,
 		)
 	}
@@ -163,7 +163,7 @@ func TestProposeBlock(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	mockChain := &mockChainService{}
 
-	genesis := types.NewGenesisBlock([32]byte{})
+	genesis := types.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
@@ -298,7 +298,7 @@ func TestValidatorSlotAndResponsibility(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	mockChain := &mockChainService{}
 
-	genesis := types.NewGenesisBlock([32]byte{})
+	genesis := types.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
@@ -330,7 +330,7 @@ func TestValidatorIndex(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	mockChain := &mockChainService{}
 
-	genesis := types.NewGenesisBlock([32]byte{})
+	genesis := types.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
@@ -362,7 +362,7 @@ func TestValidatorShardID(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	mockChain := &mockChainService{}
 
-	genesis := types.NewGenesisBlock([32]byte{})
+	genesis := types.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
@@ -395,7 +395,7 @@ func TestValidatorAssignments(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	mockChain := newMockChainService()
 
-	genesis := types.NewGenesisBlock([32]byte{})
+	genesis := types.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}

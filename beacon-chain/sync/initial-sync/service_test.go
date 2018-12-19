@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -335,7 +336,7 @@ func TestRequestBlocksBySlot(t *testing.T) {
 			Block: block,
 		}
 
-		hash, err := types.NewBlock(block).Hash()
+		hash, err := b.Hash(block)
 		if err != nil {
 			t.Fatalf("unable to hash block %v", err)
 		}
@@ -416,7 +417,7 @@ func TestRequestBatchedBlocks(t *testing.T) {
 			Block: block,
 		}
 
-		hash, err := types.NewBlock(block).Hash()
+		hash, err := b.Hash(block)
 		if err != nil {
 			t.Fatalf("unable to hash block %v", err)
 		}
