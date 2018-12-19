@@ -169,7 +169,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p",
-    tag = "v6.0.23",
+    tag = "v6.0.29",
     importpath = "github.com/libp2p/go-libp2p",
 )
 
@@ -188,7 +188,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr",
-    tag = "v1.3.0",
+    commit = "312b9db3552cf2045efb3ab5d10104c3ec8ff79d",
     importpath = "github.com/multiformats/go-multiaddr",
 )
 
@@ -266,7 +266,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr_net",
-    tag = "v1.6.3",
+    commit = "c75d1cac17a0d84dbf8b2c53c61f0ebf0575183a",
     importpath = "github.com/multiformats/go-multiaddr-net",
 )
 
