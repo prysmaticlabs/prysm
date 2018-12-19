@@ -8,8 +8,6 @@ import (
 	"reflect"
 )
 
-// TODO(1068): Support more data types
-
 const lengthBytes = 4
 
 // Encodable defines the interface for support ssz encoding.
