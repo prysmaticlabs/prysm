@@ -266,7 +266,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr_net",
-    commit = "c75d1cac17a0d84dbf8b2c53c61f0ebf0575183a",
+    tag = "v1.6.3",
     importpath = "github.com/multiformats/go-multiaddr-net",
 )
 
