@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -304,8 +306,7 @@ func (c *ChainService) receiveBlock(block *types.Block) error {
 	}
 
 	// Save blocks with higher slot numbers in cache.
-	if !c.isBlockReadyForProcessing(block) && block.SlotNumber() > beaconState.Slot() {
-		c.unProcessedBlocks[block.SlotNumber()] = block
+	if !c.isBlockReadyForProcessing(block) {
 		log.Debugf("block with hash %#x is not ready for processing", blockhash)
 		return nil
 	}
@@ -357,8 +358,13 @@ func (c *ChainService) isBlockReadyForProcessing(block *types.Block) bool {
 		return false
 	}
 
+	var powBlockFetcher func(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
+	if c.enablePOWChain {
+		powBlockFetcher = c.web3Service.Client().BlockByHash
+	}
+
 	if err := state.IsValidBlock(c.ctx, beaconState, block, c.enablePOWChain,
-		c.beaconDB.HasBlock, c.web3Service.Client().BlockByHash, c.genesisTime); err != nil {
+		c.beaconDB.HasBlock, powBlockFetcher, c.genesisTime); err != nil {
 		log.Debugf("block does not fulfill pre-processing conditions %v", err)
 		return false
 	}
