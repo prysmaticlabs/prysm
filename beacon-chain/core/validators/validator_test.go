@@ -602,6 +602,18 @@ func TestEffectiveBalance(t *testing.T) {
 	}
 }
 
+func TestTotalEffectiveBalance(t *testing.T) {
+	state := &pb.BeaconState{ValidatorBalances: []uint64{
+		27 * 1e9, 28 * 1e9, 32 * 1e9, 40 * 1e9,
+	}}
+
+	// 27 + 28 + 32 + 32 = 119
+	if TotalEffectiveBalance(state, []uint32{0, 1, 2, 3}) != 119*1e9 {
+		t.Errorf("Incorrect TotalEffectiveBalance. Wanted: 119, got: %d",
+			TotalEffectiveBalance(state, []uint32{0, 1, 2, 3})/1e9)
+	}
+}
+
 func TestIsActiveValidator(t *testing.T) {
 
 	tests := []struct {
