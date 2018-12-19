@@ -56,9 +56,9 @@ func TestBadBlock(t *testing.T) {
 
 	beaconState.SetSlot(3)
 
-	block := types.NewBlock(&pb.BeaconBlock{
+	block := &pb.BeaconBlock{
 		Slot: 4,
-	})
+	}
 
 	genesisTime := params.BeaconConfig().GenesisTime
 
@@ -69,15 +69,15 @@ func TestBadBlock(t *testing.T) {
 		t.Fatal("block is valid despite not having a parent")
 	}
 
-	block.Proto().Slot = 3
+	block.Slot = 3
 	db.hasBlock = true
 
 	if err := IsValidBlock(ctx, beaconState, block, true,
 		db.HasBlock, powClient.BlockByHash, genesisTime); err == nil {
-		t.Fatalf("block is valid despite having an invalid slot %d", block.SlotNumber())
+		t.Fatalf("block is valid despite having an invalid slot %d", block.GetSlot())
 	}
 
-	block.Proto().Slot = 4
+	block.Slot = 4
 	powClient.blockExists = false
 
 	if err := IsValidBlock(ctx, beaconState, block, true,
@@ -109,9 +109,9 @@ func TestValidBlock(t *testing.T) {
 	beaconState.SetSlot(3)
 	db.hasBlock = true
 
-	block := types.NewBlock(&pb.BeaconBlock{
+	block := &pb.BeaconBlock{
 		Slot: 4,
-	})
+	}
 
 	genesisTime := params.BeaconConfig().GenesisTime
 	powClient.blockExists = true
@@ -140,7 +140,7 @@ func TestBlockValidity(t *testing.T) {
 	beaconState.SetValidatorRegistry(validators)
 	beaconState.SetLatestBlockHashes(recentBlockHashes)
 
-	b := types.NewBlock(&pb.BeaconBlock{
+	b := &pb.BeaconBlock{
 		Slot:               1,
 		RandaoRevealHash32: randaoPreCommit[:],
 		Attestations: []*pb.AggregatedAttestation{
@@ -152,7 +152,7 @@ func TestBlockValidity(t *testing.T) {
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			},
 		},
-	})
+	}
 
 	parentSlot := uint64(0)
 	db := &mockDB{}
@@ -182,7 +182,7 @@ func TestBlockValidityNoParentProposer(t *testing.T) {
 	db.hasBlock = true
 
 	// Test case with invalid RANDAO reveal.
-	badRandaoBlock := types.NewBlock(&pb.BeaconBlock{
+	badRandaoBlock := &pb.BeaconBlock{
 		Slot:               2,
 		RandaoRevealHash32: []byte{'B'},
 		Attestations: []*pb.AggregatedAttestation{
@@ -193,7 +193,7 @@ func TestBlockValidityNoParentProposer(t *testing.T) {
 				AttesterBitfield: []byte{64, 0},
 			},
 		},
-	})
+	}
 	genesisTime := params.BeaconConfig().GenesisTime
 	if err := IsValidBlockOld(badRandaoBlock, beaconState, parentSlot, genesisTime, db.HasBlock); err == nil {
 		t.Fatal("test should have failed without a parent proposer")
@@ -218,7 +218,7 @@ func TestBlockValidityInvalidRandao(t *testing.T) {
 	db.hasBlock = true
 
 	// Test case with invalid RANDAO reveal.
-	badRandaoBlock := types.NewBlock(&pb.BeaconBlock{
+	badRandaoBlock := &pb.BeaconBlock{
 		Slot:               1,
 		RandaoRevealHash32: []byte{'B'},
 		Attestations: []*pb.AggregatedAttestation{
@@ -229,7 +229,7 @@ func TestBlockValidityInvalidRandao(t *testing.T) {
 				AttesterBitfield: []byte{64, 0},
 			},
 		},
-	})
+	}
 
 	genesisTime := params.BeaconConfig().GenesisTime
 	if err := IsValidBlockOld(badRandaoBlock, beaconState, parentSlot, genesisTime, db.HasBlock); err == nil {

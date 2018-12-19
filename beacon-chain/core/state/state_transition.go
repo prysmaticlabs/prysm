@@ -20,7 +20,7 @@ import (
 // set change transition and compute for new committees if necessary during this transition.
 func NewStateTransition(
 	st *types.BeaconState,
-	block *types.Block,
+	block *pb.BeaconBlock,
 	parentSlot uint64,
 	blockVoteCache utils.BlockVoteCache,
 ) (*types.BeaconState, error) {
@@ -31,7 +31,7 @@ func NewStateTransition(
 	justifiedStreak := st.JustifiedStreak()
 	justifiedSlot := st.LastJustifiedSlot()
 	finalizedSlot := st.LastFinalizedSlot()
-	timeSinceFinality := block.SlotNumber() - newState.LastFinalizedSlot()
+	timeSinceFinality := block.GetSlot() - newState.LastFinalizedSlot()
 	newState.SetValidatorRegistry(v.CopyValidatorRegistry(newState.ValidatorRegistry()))
 
 	newState.ClearAttestations(st.LastStateRecalculationSlot())
@@ -45,11 +45,13 @@ func NewStateTransition(
 		return nil, fmt.Errorf("failed to update recent block hashes: %v", err)
 	}
 
-	newRandao := createRandaoMix(block.RandaoRevealHash32(), st.RandaoMix())
+	var blockRandao [32]byte
+	copy(blockRandao[:], block.GetRandaoRevealHash32())
+	newRandao := createRandaoMix(blockRandao, st.RandaoMix())
 	newState.SetRandaoMix(newRandao[:])
 
 	// The changes below are only applied if this is a cycle transition.
-	if block.SlotNumber()%params.BeaconConfig().CycleLength == 0 {
+	if block.GetSlot()%params.BeaconConfig().CycleLength == 0 {
 		if st.LastStateRecalculationSlot() < params.BeaconConfig().CycleLength {
 			lastStateRecalculationSlotCycleBack = 0
 		} else {
@@ -88,7 +90,7 @@ func NewStateTransition(
 		crossLinks, err := crossLinkCalculations(
 			newState,
 			st.PendingAttestations(),
-			block.SlotNumber(),
+			block.GetSlot(),
 		)
 		if err != nil {
 			return nil, err
@@ -101,24 +103,26 @@ func NewStateTransition(
 		newState.SetJustifiedStreak(justifiedStreak)
 
 		// Exit the validators when their balance fall below min online deposit size.
-		newState.SetValidatorRegistry(v.CheckValidatorMinDeposit(newState.ValidatorRegistry(), block.SlotNumber()))
+		newState.SetValidatorRegistry(v.CheckValidatorMinDeposit(newState.ValidatorRegistry(), block.GetSlot()))
 
 		// Entering new validator set change transition.
-		if newState.IsValidatorSetChange(block.SlotNumber()) {
+		if newState.IsValidatorSetChange(block.GetSlot()) {
 			newState.SetValidatorRegistryLastChangeSlot(newState.LastStateRecalculationSlot())
+			var parentRoot [32]byte
+			copy(parentRoot[:], block.GetParentRootHash32())
 			shardAndCommitteesForSlots, err := validatorSetRecalculations(
 				newState.ShardAndCommitteesForSlots(),
 				newState.ValidatorRegistry(),
-				block.ParentHash(),
+				parentRoot,
 			)
 			if err != nil {
 				return nil, err
 			}
 			newState.SetShardAndCommitteesForSlots(shardAndCommitteesForSlots)
 
-			period := block.SlotNumber() / params.BeaconConfig().MinWithdrawalPeriod
+			period := block.GetSlot() / params.BeaconConfig().MinWithdrawalPeriod
 			totalPenalties := newState.PenalizedETH(period)
-			newState.SetValidatorRegistry(v.ChangeValidatorRegistry(block.SlotNumber(), totalPenalties, newState.ValidatorRegistry()))
+			newState.SetValidatorRegistry(v.ChangeValidatorRegistry(block.GetSlot(), totalPenalties, newState.ValidatorRegistry()))
 		}
 	}
 	newState.SetLastStateRecalculationSlot(newState.LastStateRecalculationSlot() + 1)
@@ -135,7 +139,8 @@ func NewStateTransition(
 //  and exiting validators, as well as processing crosslinks and managing block justification/finalization.
 func ExecuteStateTransition(
 	beaconState *types.BeaconState,
-	block *types.Block) (*types.BeaconState, error) {
+	block *pb.BeaconBlock,
+) (*types.BeaconState, error) {
 
 	var err error
 
@@ -149,20 +154,18 @@ func ExecuteStateTransition(
 		return nil, fmt.Errorf("unable to update randao layer %v", err)
 	}
 
-	newhashes, err := newState.CalculateNewBlockHashes(block, currentSlot)
+	newHashes, err := newState.CalculateNewBlockHashes(block, currentSlot)
 	if err != nil {
 		return nil, fmt.Errorf("unable to calculate recent blockhashes")
 	}
 
-	newState.SetLatestBlockHashes(newhashes)
+	newState.SetLatestBlockHashes(newHashes)
 
 	if block != nil {
 		newState = ProcessBlock(newState, block)
-
 		if newState.Slot()%params.BeaconConfig().EpochLength == 0 {
 			newState = NewEpochTransition(newState)
 		}
-
 	}
 
 	return newState, nil

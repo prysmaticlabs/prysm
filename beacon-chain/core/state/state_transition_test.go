@@ -23,7 +23,7 @@ func TestInitialDeriveState(t *testing.T) {
 		attesterBitfield = append(attesterBitfield, byte(0))
 	}
 
-	block := types.NewBlock(&pb.BeaconBlock{
+	block := &pb.BeaconBlock{
 		ParentRootHash32: []byte{'A'},
 		Slot:             0,
 		StateRootHash32:  []byte{},
@@ -32,7 +32,7 @@ func TestInitialDeriveState(t *testing.T) {
 			AttesterBitfield: attesterBitfield,
 			Shard:            0,
 		}},
-	})
+	}
 
 	var blockVoteCache utils.BlockVoteCache
 	newState, err := NewStateTransition(beaconState, block, 0, blockVoteCache)
@@ -63,10 +63,10 @@ func TestNextDeriveSlot(t *testing.T) {
 		t.Fatalf("Failed to initialized state: %v", err)
 	}
 
-	block := types.NewBlock(&pb.BeaconBlock{
+	block := &pb.BeaconBlock{
 		ParentRootHash32: []byte{'A'},
 		Slot:             0,
-	})
+	}
 
 	blockVoteCache := utils.NewBlockVoteCache()
 	beaconState, err = NewStateTransition(beaconState, block, 0, blockVoteCache)
@@ -92,10 +92,10 @@ func TestNextDeriveSlot(t *testing.T) {
 	}
 	beaconState.SetLatestBlockHashes(recentShardBlockHashes)
 	beaconState.SetLastStateRecalculationSlot(params.BeaconConfig().CycleLength - 1)
-	block = types.NewBlock(&pb.BeaconBlock{
+	block = &pb.BeaconBlock{
 		ParentRootHash32: []byte{'A'},
 		Slot:             params.BeaconConfig().CycleLength,
-	})
+	}
 	beaconState, err = NewStateTransition(beaconState, block, params.BeaconConfig().CycleLength, blockVoteCache)
 	if err != nil {
 		t.Fatalf("failed to derive state: %v", err)
@@ -115,10 +115,10 @@ func TestNextDeriveSlot(t *testing.T) {
 
 	beaconState.SetLatestBlockHashes(recentShardBlockHashes)
 	beaconState.SetLastStateRecalculationSlot(2*params.BeaconConfig().CycleLength - 1)
-	block = types.NewBlock(&pb.BeaconBlock{
+	block = &pb.BeaconBlock{
 		ParentRootHash32: []byte{'A'},
 		Slot:             params.BeaconConfig().CycleLength * 2,
-	})
+	}
 	beaconState, err = NewStateTransition(beaconState, block, params.BeaconConfig().CycleLength*2, blockVoteCache)
 	if err != nil {
 		t.Fatalf("failed to derive state: %v", err)

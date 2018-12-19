@@ -69,7 +69,7 @@ func ProcessSpecialRecords(slotNumber uint64, validators []*pb.ValidatorRecord,
 }
 
 // ProcessBlock describes the per block operations that happen on every slot.
-func ProcessBlock(state *types.BeaconState, block *types.Block) *types.BeaconState {
+func ProcessBlock(state *types.BeaconState, block *pb.BeaconBlock) *types.BeaconState {
 	_ = block
 	// TODO(#1073): This function will encompass all the per block slot transition functions, this will
 	// contain checks for randao,proposer validity and block operations.

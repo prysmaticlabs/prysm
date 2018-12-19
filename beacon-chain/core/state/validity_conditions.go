@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -20,30 +21,30 @@ import (
 // IsValidBlockOld checks the validity conditions of a block.
 // DEPRECATED: Will be removed soon.
 func IsValidBlockOld(
-	block *types.Block,
+	block *pb.BeaconBlock,
 	beaconState *types.BeaconState,
 	parentSlot uint64,
 	genesisTime time.Time,
 	isInChain func(blockHash [32]byte) bool,
 ) error {
-	_, err := block.Hash()
+	_, err := b.Hash(block)
 	if err != nil {
 		return fmt.Errorf("could not hash incoming block: %v", err)
 	}
 
-	if block.SlotNumber() == 0 {
+	if block.GetSlot() == 0 {
 		return errors.New("cannot process a genesis block: received block with slot 0")
 	}
 
-	if !block.IsSlotValid(genesisTime) {
-		return fmt.Errorf("slot of block is too high: %d", block.SlotNumber())
+	if !types.IsSlotValid(block.GetSlot(), genesisTime) {
+		return fmt.Errorf("slot of block is too high: %d", block.GetSlot())
 	}
 
 	if err := doesParentProposerExist(block, beaconState, parentSlot); err != nil {
 		return fmt.Errorf("could not get proposer index: %v", err)
 	}
 
-	for _, attestation := range block.Attestations() {
+	for _, attestation := range block.GetAttestations() {
 		if err := isBlockAttestationValid(block, attestation, beaconState, parentSlot, isInChain); err != nil {
 			return fmt.Errorf("invalid block attestation: %v", err)
 		}
@@ -52,23 +53,23 @@ func IsValidBlockOld(
 	_, proposerIndex, err := v.ProposerShardAndIndex(
 		beaconState.ShardAndCommitteesForSlots(),
 		beaconState.LastStateRecalculationSlot(),
-		block.SlotNumber(),
+		block.GetSlot(),
 	)
 	if err != nil {
 		return fmt.Errorf("could not get proposer index: %v", err)
 	}
 
 	stateProposerRandaoSeed := beaconState.ValidatorRegistry()[proposerIndex].RandaoCommitmentHash32
-	blockRandaoRevealHash32 := block.RandaoRevealHash32()
+	blockRandaoRevealHash32 := block.GetRandaoRevealHash32()
 
 	// If this is a block created by the simulator service (while in development
 	// mode), we skip the RANDAO validation condition.
-	isSimulatedBlock := bytes.Equal(blockRandaoRevealHash32[:], params.BeaconConfig().SimulatedBlockRandao[:])
-	if !isSimulatedBlock && !block.IsRandaoValid(stateProposerRandaoSeed) {
+	isSimulatedBlock := bytes.Equal(blockRandaoRevealHash32, params.BeaconConfig().SimulatedBlockRandao[:])
+	if !isSimulatedBlock && !types.IsRandaoValid(block.GetRandaoRevealHash32(), stateProposerRandaoSeed) {
 		return fmt.Errorf(
 			"pre-image of %#x is %#x, Got: %#x",
-			blockRandaoRevealHash32[:],
-			hashutil.Hash(blockRandaoRevealHash32[:]),
+			blockRandaoRevealHash32,
+			hashutil.Hash(blockRandaoRevealHash32),
 			stateProposerRandaoSeed,
 		)
 	}
@@ -85,7 +86,7 @@ func IsValidBlockOld(
 func IsValidBlock(
 	ctx context.Context,
 	state *types.BeaconState,
-	block *types.Block,
+	block *pb.BeaconBlock,
 	enablePOWChain bool,
 	HasBlock func(hash [32]byte) bool,
 	GetPOWBlock func(ctx context.Context, hash common.Hash) (*gethTypes.Block, error),
@@ -93,17 +94,18 @@ func IsValidBlock(
 
 	// Pre-Processing Condition 1:
 	// Check that the parent Block has been processed and saved.
-	parentBlock := HasBlock(block.ParentHash())
+	var parentRoot [32]byte
+	copy(parentRoot[:], block.GetParentRootHash32())
+	parentBlock := HasBlock(parentRoot)
 	if !parentBlock {
-		return fmt.Errorf("unprocessed parent block as it is not saved in the db: %#x", block.ParentHash())
+		return fmt.Errorf("unprocessed parent block as it is not saved in the db: %#x", block.GetParentRootHash32())
 	}
 
 	// Pre-Processing Condition 2:
 	// The state is updated up to block.slot -1.
-
-	if state.Slot() != block.SlotNumber()-1 {
+	if state.Slot() != block.GetSlot()-1 {
 		return fmt.Errorf(
-			"block slot is not valid %d as it is supposed to be %d", block.SlotNumber(), state.Slot()+1)
+			"block slot is not valid %d as it is supposed to be %d", block.GetSlot(), state.Slot()+1)
 	}
 
 	if enablePOWChain {
@@ -123,8 +125,8 @@ func IsValidBlock(
 	// Pre-Processing Condition 4:
 	// The node's local time is greater than or equal to
 	// state.genesis_time + block.slot * SLOT_DURATION.
-	if !block.IsSlotValid(genesisTime) {
-		return fmt.Errorf("slot of block is too high: %d", block.SlotNumber())
+	if !types.IsSlotValid(block.GetSlot(), genesisTime) {
+		return fmt.Errorf("slot of block is too high: %d", block.GetSlot())
 	}
 
 	return nil
@@ -132,7 +134,7 @@ func IsValidBlock(
 
 // doesParentProposerExist checks that the proposer from the parent slot is included in the first
 // aggregated attestation object
-func doesParentProposerExist(block *types.Block, beaconState *types.BeaconState, parentSlot uint64) error {
+func doesParentProposerExist(block *pb.BeaconBlock, beaconState *types.BeaconState, parentSlot uint64) error {
 	_, parentProposerIndex, err := v.ProposerShardAndIndex(
 		beaconState.ShardAndCommitteesForSlots(),
 		beaconState.LastStateRecalculationSlot(),
@@ -143,7 +145,7 @@ func doesParentProposerExist(block *types.Block, beaconState *types.BeaconState,
 	}
 
 	// Verifies the attester bitfield to check if the proposer index is in the first included one.
-	if isBitSet, err := bitutil.CheckBit(block.Attestations()[0].AttesterBitfield, int(parentProposerIndex)); !isBitSet {
+	if isBitSet, err := bitutil.CheckBit(block.GetAttestations()[0].AttesterBitfield, int(parentProposerIndex)); !isBitSet {
 		return fmt.Errorf("could not locate proposer in the first attestation of AttestionRecord: %v", err)
 	}
 	return nil
@@ -152,7 +154,7 @@ func doesParentProposerExist(block *types.Block, beaconState *types.BeaconState,
 // isBlockAttestationValid verifies a block's attestations pass validity conditions.
 // TODO(#781): Refactor with the new spec attestation checking conditions.
 func isBlockAttestationValid(
-	block *types.Block,
+	block *pb.BeaconBlock,
 	attestation *pb.AggregatedAttestation,
 	beaconState *types.BeaconState,
 	parentSlot uint64,

@@ -10,10 +10,13 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
@@ -61,12 +64,12 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		cancel:             cancel,
 		beaconDB:           cfg.BeaconDB,
 		web3Service:        cfg.Web3Service,
-		incomingBlockChan:  make(chan *types.Block, cfg.IncomingBlockBuf),
-		processedBlockChan: make(chan *types.Block),
+		incomingBlockChan:  make(chan *pb.BeaconBlock, cfg.IncomingBlockBuf),
+		processedBlockChan: make(chan *pb.BeaconBlock),
 		incomingBlockFeed:  new(event.Feed),
 		canonicalBlockFeed: new(event.Feed),
 		canonicalStateFeed: new(event.Feed),
-		unProcessedBlocks:  make(map[uint64]*types.Block),
+		unProcessedBlocks:  make(map[uint64]*pb.BeaconBlock),
 		unfinalizedBlocks:  make(map[[32]byte]*types.BeaconState),
 		enablePOWChain:     cfg.EnablePOWChain,
 	}, nil
@@ -205,7 +208,7 @@ func (c *ChainService) updateHead(processedBlock <-chan *pb.BeaconBlock) {
 			// server to stream these events to beacon clients.
 			// When the transition is a cycle transition, we stream the state containing the new validator
 			// assignments to clients.
-			if block.SlotNumber()%params.BeaconConfig().CycleLength == 0 {
+			if block.GetSlot()%params.BeaconConfig().CycleLength == 0 {
 				c.canonicalStateFeed.Send(newState)
 			}
 			c.canonicalBlockFeed.Send(newHead)
@@ -259,7 +262,7 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *pb.BeaconBlock) {
 			} else {
 				log.Debugf(
 					"Block slot number is lower than the current slot in the beacon state %d",
-					block.SlotNumber())
+					block.GetSlot())
 				c.sendAndDeleteCachedBlocks(currentSlot)
 			}
 		}
@@ -389,12 +392,14 @@ func (c *ChainService) processBlockOld(block *pb.BeaconBlock) error {
 		return fmt.Errorf("failed to get hash of block: %v", err)
 	}
 
-	parent, err := c.beaconDB.GetBlock(block.GetParentHash32())
+	var parentRoot [32]byte
+	copy(parentRoot[:], block.GetParentRootHash32())
+	parent, err := c.beaconDB.GetBlock(parentRoot)
 	if err != nil {
 		return fmt.Errorf("could not get parent block: %v", err)
 	}
 	if parent == nil {
-		return fmt.Errorf("block points to nil parent: %#x", block.GetParentHash32())
+		return fmt.Errorf("block points to nil parent: %#x", block.GetParentRootHash32())
 	}
 
 	beaconState, err := c.beaconDB.GetState()
