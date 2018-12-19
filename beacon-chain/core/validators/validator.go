@@ -254,11 +254,12 @@ func ValidatorSlotAndRole(pubKey []byte, validators []*pb.ValidatorRecord, shard
 	return 0, pbrpc.ValidatorRole_UNKNOWN, fmt.Errorf("can't find slot number for validator with public key %#x", pubKey)
 }
 
-// TotalBalance returns the total deposited amount in Gwei of all active validators.
+// TotalEffectiveBalance returns the total deposited amount at stake in Gwei
+// of all active validators.
 //
 // Spec pseudocode definition:
 //   sum([get_effective_balance(state, i) for i in active_validator_indices])
-func TotalBalance(state *pb.BeaconState, validatorIndices []uint32) uint64 {
+func TotalEffectiveBalance(state *pb.BeaconState, validatorIndices []uint32) uint64 {
 	var totalDeposit uint64
 
 	for _, index := range validatorIndices {
