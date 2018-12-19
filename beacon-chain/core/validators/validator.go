@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/slices"
 )
 
 const bitsInByte = 8
@@ -129,6 +130,26 @@ func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, 
 	// Otherwise, use the 3rd cycle
 	index := lowerBound + 2*cycleLength + slot%cycleLength
 	return shardCommittees[index], nil
+}
+
+// BeaconProposerIndex returns the index of the proposer of the block at a
+// given slot.
+//
+// Spec pseudocode definition:
+//  def get_beacon_proposer_index(state: BeaconState,slot: int) -> int:
+//    """
+//    Returns the beacon proposer index for the ``slot``.
+//    """
+//    first_committee = get_shard_committees_at_slot(state, slot)[0].committee
+//    return first_committee[slot % len(first_committee)]
+func BeaconProposerIndex(state *pb.BeaconState, slot uint64) (uint32, error) {
+	committeeArray, err := ShardAndCommitteesAtSlot(state, slot)
+	if err != nil {
+		return 0, err
+	}
+	firstCommittee := committeeArray.GetArrayShardAndCommittee()[0].Committee
+
+	return firstCommittee[slot%uint64(len(firstCommittee))], nil
 }
 
 // AreAttesterBitfieldsValid validates that the length of the attester bitfield matches the attester indices
@@ -419,6 +440,65 @@ func EffectiveBalance(validator *pb.ValidatorRecord) uint64 {
 		return params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei
 	}
 	return validator.Balance
+}
+
+// Attesters returns the validator records using validator indices.
+//
+// Spec pseudocode definition:
+//   Let this_epoch_boundary_attesters = [state.validator_registry[i]
+//   for indices in this_epoch_boundary_attester_indices for i in indices].
+func Attesters(state *pb.BeaconState, attesterIndices []uint32) []*pb.ValidatorRecord {
+
+	var boundaryAttesters []*pb.ValidatorRecord
+	for _, attesterIndex := range attesterIndices {
+		boundaryAttesters = append(boundaryAttesters, state.ValidatorRegistry[attesterIndex])
+	}
+
+	return boundaryAttesters
+}
+
+// ValidatorIndices returns all the validator indices from the input attestations
+// and state.
+//
+// Spec pseudocode definition:
+//   Let this_epoch_boundary_attester_indices be the union of the validator
+//   index sets given by [get_attestation_participants(state, a.data, a.participation_bitfield)
+//   for a in this_epoch_boundary_attestations]
+func ValidatorIndices(
+	state *pb.BeaconState,
+	boundaryAttestations []*pb.PendingAttestationRecord,
+) ([]uint32, error) {
+
+	var attesterIndicesIntersection []uint32
+	for _, boundaryAttestation := range boundaryAttestations {
+		attesterIndices, err := AttestationParticipants(
+			state,
+			boundaryAttestation.Data,
+			boundaryAttestation.ParticipationBitfield)
+		if err != nil {
+			return nil, err
+		}
+
+		attesterIndicesIntersection = slices.Union(attesterIndicesIntersection, attesterIndices)
+	}
+
+	return attesterIndicesIntersection, nil
+}
+
+// AttestingBalance returns the combined balances from the input validator
+// records.
+//
+// Spec pseudocode definition:
+//   Let this_epoch_boundary_attesting_balance =
+//   sum([get_effective_balance(v) for v in this_epoch_boundary_attesters])
+func AttestingBalance(boundaryAttesters []*pb.ValidatorRecord) uint64 {
+
+	var boundaryAttestingBalance uint64
+	for _, boundaryAttester := range boundaryAttesters {
+		boundaryAttestingBalance += EffectiveBalance(boundaryAttester)
+	}
+
+	return boundaryAttestingBalance
 }
 
 // minEmptyValidator returns the lowest validator index which the status is withdrawn.

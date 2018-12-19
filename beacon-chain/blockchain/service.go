@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -35,6 +37,7 @@ type ChainService struct {
 	canonicalBlockFeed *event.Feed
 	canonicalStateFeed *event.Feed
 	genesisTime        time.Time
+	unProcessedBlocks  map[uint64]*types.Block
 	unfinalizedBlocks  map[[32]byte]*types.BeaconState
 	enablePOWChain     bool
 }
@@ -63,6 +66,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		incomingBlockFeed:  new(event.Feed),
 		canonicalBlockFeed: new(event.Feed),
 		canonicalStateFeed: new(event.Feed),
+		unProcessedBlocks:  make(map[uint64]*types.Block),
 		unfinalizedBlocks:  make(map[[32]byte]*types.BeaconState),
 		enablePOWChain:     cfg.EnablePOWChain,
 	}, nil
@@ -75,7 +79,7 @@ func (c *ChainService) Start() {
 	var err error
 	c.genesisTime, err = c.beaconDB.GetGenesisTime()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Unable to retrieve genesis time, therefore blockchain service cannot be started %v", err)
 		return
 	}
 
@@ -112,8 +116,8 @@ func (c *ChainService) CanonicalStateFeed() *event.Feed {
 }
 
 // doesPoWBlockExist checks if the referenced PoW block exists.
-func (c *ChainService) doesPoWBlockExist(block *types.Block) bool {
-	powBlock, err := c.web3Service.Client().BlockByHash(context.Background(), block.CandidatePowReceiptRootHash32())
+func (c *ChainService) doesPoWBlockExist(hash [32]byte) bool {
+	powBlock, err := c.web3Service.Client().BlockByHash(c.ctx, hash)
 	if err != nil {
 		log.Debugf("fetching PoW block corresponding to mainchain reference failed: %v", err)
 		return false
@@ -222,26 +226,167 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *types.Block) {
 		// can be received either from the sync service, the RPC service,
 		// or via p2p.
 		case block := <-c.incomingBlockChan:
-			if err := c.processBlock(block); err != nil {
-				log.Error(err)
-				processedBlock <- nil
+
+			// Before sending the blocks for processing we check to see if the blocks
+			// are valid to continue being processed. If the slot number in the block
+			// has already been processed by the beacon node, we throw it away. If the
+			// slot number is too high to be processed in the current slot, we store
+			// it in a cache.
+
+			beaconState, err := c.beaconDB.GetState()
+			if err != nil {
+				log.Errorf("Unable to retrieve beacon state %v", err)
 				continue
 			}
 
-			// Push the block to trigger the fork choice rule.
-			processedBlock <- block
+			currentSlot := beaconState.Slot()
+
+			if currentSlot+1 < block.SlotNumber() {
+				c.unProcessedBlocks[block.SlotNumber()] = block
+				continue
+			}
+
+			if currentSlot+1 == block.SlotNumber() {
+
+				if err := c.receiveBlock(block); err != nil {
+					log.Error(err)
+					processedBlock <- nil
+					continue
+				}
+
+				// Push the block to trigger the fork choice rule.
+				processedBlock <- block
+			} else {
+				log.Debugf(
+					"Block slot number is lower than the current slot in the beacon state %d",
+					block.SlotNumber())
+				c.sendAndDeleteCachedBlocks(currentSlot)
+			}
 		}
 	}
 }
 
-func (c *ChainService) processBlock(block *types.Block) error {
+// receiveBlock is a function that defines the operations that are preformed on
+// any block that is received from p2p layer or rpc. It checks the block to see
+// if it passes the pre-processing conditions, if it does then the per slot
+// state transition function is carried out on the block.
+// spec:
+//  def process_block(block):
+//      if not block_pre_processing_conditions(block):
+//          return False
+//
+//  	# process skipped slots
+//
+// 		while (state.slot < block.slot - 1):
+//      	state = slot_state_transition(state, block=None)
+//
+//		# process slot with block
+//		state = slot_state_transition(state, block)
+//
+//		# check state root
+//      if block.state_root == hash(state):
+//			return state
+//		else:
+//			return False  # or throw or whatever
+//
+func (c *ChainService) receiveBlock(block *types.Block) error {
+
+	blockhash, err := block.Hash()
+	if err != nil {
+		return fmt.Errorf("could not hash incoming block: %v", err)
+	}
+
+	beaconState, err := c.beaconDB.GetState()
+	if err != nil {
+		return fmt.Errorf("failed to get beacon state: %v", err)
+	}
+
+	if block.SlotNumber() == 0 {
+		return errors.New("cannot process a genesis block: received block with slot 0")
+	}
+
+	// Save blocks with higher slot numbers in cache.
+	if !c.isBlockReadyForProcessing(block) {
+		log.Debugf("block with hash %#x is not ready for processing", blockhash)
+		return nil
+	}
+
+	log.WithField("slotNumber", block.SlotNumber()).Info("Executing state transition")
+
+	// Check for skipped slots and update the corresponding proposers
+	// randao layer.
+	for beaconState.Slot() < block.SlotNumber()-1 {
+		beaconState, err = state.ExecuteStateTransition(beaconState, nil)
+		if err != nil {
+			return fmt.Errorf("unable to execute state transition %v", err)
+		}
+	}
+
+	beaconState, err = state.ExecuteStateTransition(beaconState, block)
+	if err != nil {
+		return errors.New("unable to execute state transition")
+	}
+
+	if beaconState.IsValidatorSetChange(block.SlotNumber()) {
+		log.WithField("slotNumber", block.SlotNumber()).Info("Validator set rotation occurred")
+	}
+
+	// TODO(#1074): Verify block.state_root == hash_tree_root(state)
+	// if there exists a block for the slot being processed.
+
+	if err := c.beaconDB.SaveBlock(block); err != nil {
+		return fmt.Errorf("failed to save block: %v", err)
+	}
+	if err := c.beaconDB.SaveUnfinalizedBlockState(beaconState); err != nil {
+		return fmt.Errorf("error persisting unfinalized block's state: %v", err)
+	}
+
+	log.WithField("hash", fmt.Sprintf("%#x", blockhash)).Debug("Processed beacon block")
+
+	// We keep a map of unfinalized blocks in memory along with their state
+	// pair to apply the fork choice rule.
+	c.unfinalizedBlocks[blockhash] = beaconState
+
+	return nil
+}
+
+func (c *ChainService) isBlockReadyForProcessing(block *types.Block) bool {
+
+	beaconState, err := c.beaconDB.GetState()
+	if err != nil {
+		log.Debugf("failed to get beacon state: %v", err)
+		return false
+	}
+
+	var powBlockFetcher func(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
+	if c.enablePOWChain {
+		powBlockFetcher = c.web3Service.Client().BlockByHash
+	}
+
+	if err := state.IsValidBlock(c.ctx, beaconState, block, c.enablePOWChain,
+		c.beaconDB.HasBlock, powBlockFetcher, c.genesisTime); err != nil {
+		log.Debugf("block does not fulfill pre-processing conditions %v", err)
+		return false
+	}
+
+	return true
+}
+
+// sendAndDeleteCachedBlocks checks if there is any block saved in the cache with a
+// slot number equivalent to the current slot. If there is then the block is
+// sent to the incoming block channel and deleted from the cache.
+func (c *ChainService) sendAndDeleteCachedBlocks(currentSlot uint64) {
+	if block, ok := c.unProcessedBlocks[currentSlot+1]; ok && c.isBlockReadyForProcessing(block) {
+		c.incomingBlockChan <- block
+		delete(c.unProcessedBlocks, currentSlot)
+	}
+}
+
+// DEPRECATED: Will be replaced by new block processing method
+func (c *ChainService) processBlockOld(block *types.Block) error {
 	blockHash, err := block.Hash()
 	if err != nil {
 		return fmt.Errorf("failed to get hash of block: %v", err)
-	}
-
-	if c.enablePOWChain && !c.doesPoWBlockExist(block) {
-		return errors.New("proof-of-Work chain reference in block does not exist")
 	}
 
 	parent, err := c.beaconDB.GetBlock(block.ParentHash())
@@ -257,9 +402,13 @@ func (c *ChainService) processBlock(block *types.Block) error {
 		return fmt.Errorf("failed to get beacon state: %v", err)
 	}
 
+	if c.enablePOWChain && !c.doesPoWBlockExist(beaconState.ProcessedPowReceiptRootHash32()) {
+		return errors.New("proof-of-Work chain reference in block does not exist")
+	}
+
 	// Verifies the block against the validity conditions specifies as part of the
 	// Ethereum 2.0 specification.
-	if err := state.IsValidBlock(
+	if err := state.IsValidBlockOld(
 		block,
 		beaconState,
 		parent.SlotNumber(),
@@ -278,7 +427,7 @@ func (c *ChainService) processBlock(block *types.Block) error {
 	beaconState.SetPendingAttestations(block.Attestations())
 
 	// If the block is valid, we compute its associated state tuple (active, crystallized)
-	beaconState, err = c.executeStateTransition(beaconState, block, parent.SlotNumber())
+	beaconState, err = c.executeStateTransitionOld(beaconState, block, parent.SlotNumber())
 	if err != nil {
 		return fmt.Errorf("initialize new cycle transition failed: %v", err)
 	}
@@ -299,7 +448,8 @@ func (c *ChainService) processBlock(block *types.Block) error {
 	return nil
 }
 
-func (c *ChainService) executeStateTransition(
+// DEPRECATED: Will be removed soon
+func (c *ChainService) executeStateTransitionOld(
 	beaconState *types.BeaconState,
 	block *types.Block,
 	parentSlot uint64,

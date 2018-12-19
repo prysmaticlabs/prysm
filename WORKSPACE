@@ -169,7 +169,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p",
-    tag = "v6.0.23",
+    tag = "v6.0.29",
     importpath = "github.com/libp2p/go-libp2p",
 )
 
@@ -188,7 +188,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr",
-    tag = "v1.3.0",
+    commit = "312b9db3552cf2045efb3ab5d10104c3ec8ff79d",
     importpath = "github.com/multiformats/go-multiaddr",
 )
 
@@ -266,7 +266,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr_net",
-    tag = "v1.6.3",
+    commit = "c75d1cac17a0d84dbf8b2c53c61f0ebf0575183a",
     importpath = "github.com/multiformats/go-multiaddr-net",
 )
 
@@ -501,7 +501,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "4d1cda033e0619309c606fc686de3adcf599539e",
+    commit = "074acd46bca67915925527c07849494d115e7c43",
     importpath = "golang.org/x/sys",
 )
 
@@ -621,7 +621,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_google_api",
-    commit = "41dc4b66e69d5dbf20efe4ba67e19d214d147ae3",
+    commit = "146117f78c63efe78e04021cc321e59fb3c13e50",
     importpath = "google.golang.org/api",
 )
 
@@ -633,13 +633,13 @@ go_repository(
 
 go_repository(
     name = "com_github_golang_lint",
-    commit = "93c0bb5c83939f89e6238cefd42de38f33734409",
+    commit = "8f45f776aaf18cebc8d65861cc70c33c60471952",
     importpath = "github.com/golang/lint",
 )
 
 go_repository(
     name = "org_golang_x_lint",
-    commit = "93c0bb5c83939f89e6238cefd42de38f33734409",
+    commit = "8f45f776aaf18cebc8d65861cc70c33c60471952",
     importpath = "golang.org/x/lint",
 )
 
@@ -663,7 +663,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_common",
-    commit = "4724e9255275ce38f7179b2478abeae4e28c904f",
+    commit = "67670fe90761d7ff18ec1d640135e53b9198328f",
     importpath = "github.com/prometheus/common",
 )
 
@@ -675,7 +675,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_prometheus",
-    tag = "v2.5.0",
+    tag = "v2.6.0",
     importpath = "github.com/prometheus/prometheus",
 )
 
@@ -816,13 +816,13 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_discovery",
-    commit = "e9dd33518d02e00f7619613a89eb4b83e3d36faf",
+    commit = "cc4105e21706452e5b0f7e05390f987017188d31",
     importpath = "github.com/libp2p/go-libp2p-discovery",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_autonat",
-    commit = "e79a6dde2f72d1e12af45f87108bcf2e6bc8b648",
+    commit = "c95207c0cda9634b8e0506f3cfc2ac8de770bd08",
     importpath = "github.com/libp2p/go-libp2p-autonat",
 )
 

@@ -13,8 +13,8 @@ import (
 // included in the chain during the epoch.
 //
 // Spec pseudocode definition:
-//   [a for a in state.latest_attestations if state.slot - EPOCH_LENGTH <=
-//   a.data.slot < state.slot]
+//   [a for a in state.latest_attestations
+//   if state.slot - EPOCH_LENGTH <= a.data.slot < state.slot]
 func Attestations(state *pb.BeaconState) []*pb.PendingAttestationRecord {
 	epochLength := params.BeaconConfig().EpochLength
 	var thisEpochAttestations []*pb.PendingAttestationRecord
@@ -29,7 +29,7 @@ func Attestations(state *pb.BeaconState) []*pb.PendingAttestationRecord {
 			earliestSlot = state.Slot - epochLength
 		}
 
-		if earliestSlot <= attestation.GetData().Slot && attestation.GetData().Slot < state.Slot {
+		if earliestSlot <= attestation.GetData().GetSlot() && attestation.GetData().GetSlot() < state.Slot {
 			thisEpochAttestations = append(thisEpochAttestations, attestation)
 		}
 	}
@@ -37,7 +37,7 @@ func Attestations(state *pb.BeaconState) []*pb.PendingAttestationRecord {
 }
 
 // BoundaryAttestations returns the pending attestations from
-// the epoch boundary block.
+// the epoch's boundary block.
 //
 // Spec pseudocode definition:
 //   [a for a in this_epoch_attestations if a.data.epoch_boundary_root ==
@@ -65,4 +65,80 @@ func BoundaryAttestations(
 		}
 	}
 	return boundaryAttestations, nil
+}
+
+// PrevAttestations returns the attestations of the previous epoch
+// (state.slot - 2 * EPOCH_LENGTH...state.slot - EPOCH_LENGTH).
+//
+// Spec pseudocode definition:
+//   [a for a in state.latest_attestations
+//   if state.slot - 2 * EPOCH_LENGTH <= a.slot < state.slot - EPOCH_LENGTH]
+func PrevAttestations(state *pb.BeaconState) []*pb.PendingAttestationRecord {
+	epochLength := params.BeaconConfig().EpochLength
+	var prevEpochAttestations []*pb.PendingAttestationRecord
+	var earliestSlot uint64
+
+	for _, attestation := range state.LatestAttestations {
+
+		// If the state slot is less than 2 * epochLength, then the earliestSlot would
+		// result in a negative number. Therefore we should default to
+		// earliestSlot = 0 in this case.
+		if state.Slot > 2*epochLength {
+			earliestSlot = state.Slot - 2*epochLength
+		}
+
+		if earliestSlot <= attestation.GetData().GetSlot() &&
+			attestation.GetData().GetSlot() < state.Slot-epochLength {
+			prevEpochAttestations = append(prevEpochAttestations, attestation)
+		}
+	}
+	return prevEpochAttestations
+}
+
+// PrevJustifiedAttestations returns the justified attestations
+// of the previous 2 epochs.
+//
+// Spec pseudocode definition:
+//   [a for a in this_epoch_attestations + previous_epoch_attestations
+//   if a.justified_slot == state.previous_justified_slot]
+func PrevJustifiedAttestations(
+	state *pb.BeaconState,
+	thisEpochAttestations []*pb.PendingAttestationRecord,
+	prevEpochAttestations []*pb.PendingAttestationRecord,
+) []*pb.PendingAttestationRecord {
+	var prevJustifiedAttestations []*pb.PendingAttestationRecord
+	epochAttestations := append(thisEpochAttestations, prevEpochAttestations...)
+
+	for _, attestation := range epochAttestations {
+		if attestation.GetData().GetJustifiedSlot() == state.PreviousJustifiedSlot {
+			prevJustifiedAttestations = append(prevJustifiedAttestations, attestation)
+		}
+	}
+	return prevJustifiedAttestations
+}
+
+// PrevHeadAttestations returns the pending attestations from
+// the canonical beacon chain.
+//
+// Spec pseudocode definition:
+//   [a for a in previous_epoch_attestations
+//   if a.beacon_block_root == get_block_root(state, a.slot)]
+func PrevHeadAttestations(
+	state *pb.BeaconState,
+	prevEpochAttestations []*pb.PendingAttestationRecord,
+) ([]*pb.PendingAttestationRecord, error) {
+	var headAttestations []*pb.PendingAttestationRecord
+
+	for _, attestation := range prevEpochAttestations {
+		canonicalBlockRoot, err := types.BlockRoot(state, attestation.GetData().GetSlot())
+		if err != nil {
+			return nil, err
+		}
+
+		attestationData := attestation.GetData()
+		if bytes.Equal(attestationData.BeaconBlockRootHash32, canonicalBlockRoot) {
+			headAttestations = append(headAttestations, attestation)
+		}
+	}
+	return headAttestations, nil
 }

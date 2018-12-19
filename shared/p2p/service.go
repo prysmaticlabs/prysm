@@ -3,7 +3,6 @@ package p2p
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"net"
 	"reflect"
 	"sync"
@@ -17,6 +16,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/iputils"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -101,7 +101,9 @@ func checkAvailablePort(port int) bool {
 		return false
 	}
 
-	ln.Close()
+	if err := ln.Close(); err != nil {
+		log.Errorf("Could not close listener %v", err)
+	}
 
 	return true
 }

@@ -14,7 +14,9 @@ go_library(
         "//proto/beacon/rpc/v1:go_default_library",
         "//shared/bitutil:go_default_library",
         "//shared/hashutil:go_default_library",
+        "//shared/mathutil:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/slices:go_default_library",
     ],
 )
 
