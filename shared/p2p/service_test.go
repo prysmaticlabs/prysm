@@ -13,6 +13,7 @@ import (
 	"github.com/golang/mock/gomock"
 	ipfslog "github.com/ipfs/go-log"
 	bhost "github.com/libp2p/go-libp2p-blankhost"
+	"github.com/libp2p/go-libp2p-peerstore"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
