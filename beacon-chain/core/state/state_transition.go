@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/incentives"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/randao"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
@@ -157,7 +158,7 @@ func ExecuteStateTransition(
 	newState.SetLatestBlockHashes(newhashes)
 
 	if block != nil {
-		newState = ProcessBlock(newState, block)
+		newState = ApplyBlockOperations(newState, block.Proto())
 
 		if newState.Slot()%params.BeaconConfig().EpochLength == 0 {
 			newState = NewEpochTransition(newState)
@@ -166,6 +167,21 @@ func ExecuteStateTransition(
 	}
 
 	return newState, nil
+}
+
+// ApplyBlockOperations describes the per block operations that happen on every slot.
+func ApplyBlockOperations(state *types.BeaconState, block *pb.BeaconBlock) *types.BeaconState {
+	// TODO(#1073): This function will encompass all the per block slot transition functions, this will
+	// contain checks for randao,proposer validity and block operations.
+	newState := state.CopyState()
+	reg := newState.ValidatorRegistry()
+	slashings := block.GetProposerSlashings()
+	currentSlot := newState.Slot()
+	newReg, err := b.ProcessProposerSlashings(reg, slashings, currentSlot)
+	if err != nil {
+		panic(err)
+	}
+	return state
 }
 
 // NewEpochTransition describes the per epoch operations that are performed on the
