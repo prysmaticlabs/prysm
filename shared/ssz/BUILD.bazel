@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "decode.go",
+        "doc.go",
         "encode.go",
         "encoder_decoder_lib.go",
     ],
@@ -16,6 +17,7 @@ go_test(
     srcs = [
         "decode_test.go",
         "encode_test.go",
+        "example_and_test.go",
     ],
     embed = [":go_default_library"],
 )
