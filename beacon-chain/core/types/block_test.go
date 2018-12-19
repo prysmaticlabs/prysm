@@ -29,11 +29,11 @@ func TestGenesisBlock(t *testing.T) {
 		t.Errorf("genesis block should have 0 attestations")
 	}
 
-	if !bytes.Equal(b1.GetRandaoRevealHash32(), []byte{}) {
+	if !bytes.Equal(b1.GetRandaoRevealHash32(), []byte{0}) {
 		t.Error("genesis block missing RandaoRevealHash32 field")
 	}
 
-	if !bytes.Equal(b1.GetCandidatePowReceiptRootHash32(), []byte{}) {
+	if !bytes.Equal(b1.GetCandidatePowReceiptRootHash32(), []byte{0}) {
 		t.Error("genesis block missing CandidatePowReceiptRootHash32 field")
 	}
 
@@ -48,7 +48,9 @@ func TestGenesisBlock(t *testing.T) {
 
 	gt1 := b1.GetTimestamp()
 	gt2 := b2.GetTimestamp()
-	if gt1 != gt2 {
+	t1, _ := ptypes.Timestamp(gt1)
+	t2, _ := ptypes.Timestamp(gt2)
+	if t1 != t2 {
 		t.Error("different timestamp")
 	}
 
