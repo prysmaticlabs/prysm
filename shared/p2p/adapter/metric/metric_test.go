@@ -38,7 +38,6 @@ func TestMessageMetrics(t *testing.T) {
 	testMetricExists(t, metrics, fmt.Sprintf("p2p_message_sent_total{message=\"%T\"} 2", data))
 	testMetricExists(t, metrics, fmt.Sprintf("p2p_message_sent_latency_seconds_bucket{message=\"%T\",le=\"0.005\"} 1", data))
 	testMetricExists(t, metrics, fmt.Sprintf("p2p_message_sent_latency_seconds_bucket{message=\"%T\",le=\"0.01\"} 1", data))
-	testMetricExists(t, metrics, fmt.Sprintf("p2p_message_received_bytes_bucket{message=\"%T\",le=\"32\"} 2", data))
 }
 
 func getMetrics(t *testing.T) []string {
@@ -59,6 +58,6 @@ func testMetricExists(t *testing.T, metrics []string, pattern string) string {
 			return line
 		}
 	}
-	t.Errorf("Pattern \"%s\" not found", pattern)
+	t.Errorf("Pattern \"%s\" not found in metrics", pattern)
 	return ""
 }
