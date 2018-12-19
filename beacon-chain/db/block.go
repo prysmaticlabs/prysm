@@ -7,29 +7,26 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/ptypes"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
+
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-func createBlock(enc []byte) (*types.Block, error) {
+func createBlock(enc []byte) (*pb.BeaconBlock, error) {
 	protoBlock := &pb.BeaconBlock{}
 	err := proto.Unmarshal(enc, protoBlock)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal encoding: %v", err)
 	}
-
-	block := types.NewBlock(protoBlock)
-	if err != nil {
-		return nil, fmt.Errorf("failed to instantiate a block from the encoding: %v", err)
-	}
-
-	return block, nil
+	return protoBlock, nil
 }
 
 // GetBlock accepts a block hash and returns the corresponding block.
 // Returns nil if the block does not exist.
-func (db *BeaconDB) GetBlock(hash [32]byte) (*types.Block, error) {
-	var block *types.Block
+func (db *BeaconDB) GetBlock(hash [32]byte) (*pb.BeaconBlock, error) {
+	var block *pb.BeaconBlock
 	err := db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(blockBucket)
 
@@ -62,12 +59,12 @@ func (db *BeaconDB) HasBlock(hash [32]byte) bool {
 }
 
 // SaveBlock accepts a block and writes it to disk.
-func (db *BeaconDB) SaveBlock(block *types.Block) error {
-	hash, err := block.Hash()
+func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
+	hash, err := b.Hash(block)
 	if err != nil {
 		return fmt.Errorf("failed to hash block: %v", err)
 	}
-	enc, err := block.Marshal()
+	enc, err := proto.Marshal(block)
 	if err != nil {
 		return fmt.Errorf("failed to encode block: %v", err)
 	}
@@ -80,9 +77,8 @@ func (db *BeaconDB) SaveBlock(block *types.Block) error {
 }
 
 // GetChainHead returns the head of the main chain.
-func (db *BeaconDB) GetChainHead() (*types.Block, error) {
-	var block *types.Block
-
+func (db *BeaconDB) GetChainHead() (*pb.BeaconBlock, error) {
+	var block *pb.BeaconBlock
 	err := db.view(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
 		mainChain := tx.Bucket(mainChainBucket)
@@ -105,7 +101,6 @@ func (db *BeaconDB) GetChainHead() (*types.Block, error) {
 
 		var err error
 		block, err = createBlock(enc)
-
 		return err
 	})
 
@@ -114,8 +109,8 @@ func (db *BeaconDB) GetChainHead() (*types.Block, error) {
 
 // UpdateChainHead atomically updates the head of the chain as well as the corresponding state changes
 // Including a new crystallized state is optional.
-func (db *BeaconDB) UpdateChainHead(block *types.Block, beaconState *types.BeaconState) error {
-	blockHash, err := block.Hash()
+func (db *BeaconDB) UpdateChainHead(block *pb.BeaconBlock, beaconState *types.BeaconState) error {
+	blockHash, err := b.Hash(block)
 	if err != nil {
 		return fmt.Errorf("unable to get the block hash: %v", err)
 	}
@@ -125,7 +120,7 @@ func (db *BeaconDB) UpdateChainHead(block *types.Block, beaconState *types.Beaco
 		return fmt.Errorf("unable to encode the beacon state: %v", err)
 	}
 
-	slotBinary := encodeSlotNumber(block.SlotNumber())
+	slotBinary := encodeSlotNumber(block.GetSlot())
 
 	return db.update(func(tx *bolt.Tx) error {
 		blockBucket := tx.Bucket(blockBucket)
@@ -153,8 +148,8 @@ func (db *BeaconDB) UpdateChainHead(block *types.Block, beaconState *types.Beaco
 
 // GetBlockBySlot accepts a slot number and returns the corresponding block in the main chain.
 // Returns nil if a block was not recorded for the given slot.
-func (db *BeaconDB) GetBlockBySlot(slot uint64) (*types.Block, error) {
-	var block *types.Block
+func (db *BeaconDB) GetBlockBySlot(slot uint64) (*pb.BeaconBlock, error) {
+	var block *pb.BeaconBlock
 	slotEnc := encodeSlotNumber(slot)
 
 	err := db.view(func(tx *bolt.Tx) error {
@@ -189,10 +184,9 @@ func (db *BeaconDB) GetGenesisTime() (time.Time, error) {
 		return time.Time{}, fmt.Errorf("genesis block not found: %v", err)
 	}
 
-	genesisTime, err := genesis.Timestamp()
+	genesisTime, err := ptypes.Timestamp(genesis.GetTimestamp())
 	if err != nil {
 		return time.Time{}, fmt.Errorf("could not get genesis timestamp: %v", err)
 	}
-
 	return genesisTime, nil
 }
