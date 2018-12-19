@@ -209,7 +209,7 @@ func TestRunningChainService(t *testing.T) {
 
 	stateRoot, _ := beaconState.Hash()
 
-	genesis := types.NewGenesisBlock([]byte{})
+	genesis := b.NewGenesisBlock([]byte{})
 	chainService.beaconDB.SaveBlock(genesis)
 	parentHash, err := b.Hash(genesis)
 	if err != nil {
@@ -303,7 +303,7 @@ func TestUpdateHead(t *testing.T) {
 	}
 	stateRoot, _ := beaconState.Hash()
 
-	genesis := types.NewGenesisBlock(stateRoot[:])
+	genesis := b.NewGenesisBlock(stateRoot[:])
 	genesisHash, err := b.Hash(genesis)
 	if err != nil {
 		t.Fatalf("Could not get genesis block hash: %v", err)
@@ -403,7 +403,7 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 	chainService.beaconDB.SaveState(beaconState)
 
 	stateRoot, _ := beaconState.Hash()
-	genesis := types.NewGenesisBlock([]byte{})
+	genesis := b.NewGenesisBlock([]byte{})
 	chainService.beaconDB.SaveBlock(genesis)
 	parentHash, err := b.Hash(genesis)
 	if err != nil {

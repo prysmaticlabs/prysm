@@ -417,7 +417,7 @@ func verifyAttestation(beaconState *types.BeaconState, att *pb.Attestation) erro
 
 	// Verify that attestation.data.justified_block_root is equal to
 	// get_block_root(state, attestation.data.justified_slot).
-	blockRoot, err := types.BlockRoot(beaconState.Proto(), att.GetData().GetJustifiedSlot())
+	blockRoot, err := BlockRoot(beaconState.Proto(), att.GetData().GetJustifiedSlot())
 	if err != nil {
 		return fmt.Errorf("could not get block root for justified slot: %v", err)
 	}

@@ -36,7 +36,7 @@ func IsValidBlockOld(
 		return errors.New("cannot process a genesis block: received block with slot 0")
 	}
 
-	if !types.IsSlotValid(block.GetSlot(), genesisTime) {
+	if !b.IsSlotValid(block.GetSlot(), genesisTime) {
 		return fmt.Errorf("slot of block is too high: %d", block.GetSlot())
 	}
 
@@ -65,7 +65,7 @@ func IsValidBlockOld(
 	// If this is a block created by the simulator service (while in development
 	// mode), we skip the RANDAO validation condition.
 	isSimulatedBlock := bytes.Equal(blockRandaoRevealHash32, params.BeaconConfig().SimulatedBlockRandao[:])
-	if !isSimulatedBlock && !types.IsRandaoValid(block.GetRandaoRevealHash32(), stateProposerRandaoSeed) {
+	if !isSimulatedBlock && !b.IsRandaoValid(block.GetRandaoRevealHash32(), stateProposerRandaoSeed) {
 		return fmt.Errorf(
 			"pre-image of %#x is %#x, Got: %#x",
 			blockRandaoRevealHash32,
@@ -125,7 +125,7 @@ func IsValidBlock(
 	// Pre-Processing Condition 4:
 	// The node's local time is greater than or equal to
 	// state.genesis_time + block.slot * SLOT_DURATION.
-	if !types.IsSlotValid(block.GetSlot(), genesisTime) {
+	if !b.IsSlotValid(block.GetSlot(), genesisTime) {
 		return fmt.Errorf("slot of block is too high: %d", block.GetSlot())
 	}
 

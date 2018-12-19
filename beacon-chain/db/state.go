@@ -21,7 +21,7 @@ func (db *BeaconDB) InitializeState(genesisValidatorRegistry []*pb.ValidatorReco
 
 	// #nosec G104
 	stateHash, _ := beaconState.Hash()
-	genesisBlock := types.NewGenesisBlock(stateHash[:])
+	genesisBlock := b.NewGenesisBlock(stateHash[:])
 	// #nosec G104
 	blockHash, _ := b.Hash(genesisBlock)
 	// #nosec G104
