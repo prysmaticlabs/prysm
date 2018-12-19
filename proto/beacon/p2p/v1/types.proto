@@ -11,7 +11,8 @@ message BeaconState {
   repeated ValidatorRecord validator_registry = 1;
   uint64 validator_registry_last_change_slot = 2;
   uint64 validator_registry_exit_count = 3;
-  bytes validator_registry_delta_chain_tip_hash32 = 4; 
+  bytes validator_registry_delta_chain_tip_hash32 = 4;
+  repeated uint64 validator_balances = 5;
 
   // Randomness and committees [1001-2000]
   bytes randao_mix_hash32 = 1001;
@@ -92,8 +93,6 @@ message ValidatorRecord {
   bytes withdrawal_credentials = 2; // TODO(781): this is hash32, rename with suffix _hash32
   bytes randao_commitment_hash32 = 3;
   uint64 randao_layers = 4;
-  // Balance in Gwei
-  uint64 balance = 5;
   // Possible validator status code:
   // https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#constants
   enum StatusCodes {
@@ -103,9 +102,14 @@ message ValidatorRecord {
     EXITED_WITHOUT_PENALTY = 3; // validator has successfully withdrawn its balance.
     EXITED_WITH_PENALTY = 4; // validator got slashed and kicked out of validator pool.
   }
-  StatusCodes status = 6;
-  uint64 latest_status_change_slot = 7;
-  uint64 exit_count = 8;
+  StatusCodes status = 5;
+  uint64 latest_status_change_slot = 6;
+  uint64 exit_count = 7;
+
+  // Deprecated fields
+  // All fields must be annotated with [deprecated=true];
+  // Balance in Gwei
+  uint64 balance = 1000 [deprecated=true]; // Keeping this until we refactor epoch processing.
 }
 
 message ShardReassignmentRecord {

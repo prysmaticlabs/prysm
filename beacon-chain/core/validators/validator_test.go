@@ -595,9 +595,9 @@ func TestEffectiveBalance(t *testing.T) {
 		{a: defaultBalance * 100, b: defaultBalance},
 	}
 	for _, test := range tests {
-		validator := &pb.ValidatorRecord{Balance: test.a}
-		if EffectiveBalance(validator) != test.b {
-			t.Errorf("EffectiveBalance(%d) = %d, want = %d", validator.Balance, EffectiveBalance(validator), test.b)
+		state := &pb.BeaconState{ValidatorBalances: []uint64{test.a}}
+		if EffectiveBalance(state, 0) != test.b {
+			t.Errorf("EffectiveBalance(%d) = %d, want = %d", test.a, EffectiveBalance(state, 0), test.b)
 		}
 	}
 }
@@ -648,14 +648,11 @@ func TestGetActiveValidatorRecord(t *testing.T) {
 }
 
 func TestBoundaryAttestingBalance(t *testing.T) {
-	attesters := []*pb.ValidatorRecord{
-		{Balance: 25 * 1e9},
-		{Balance: 26 * 1e9},
-		{Balance: 32 * 1e9},
-		{Balance: 33 * 1e9},
-		{Balance: 100 * 1e9},
-	}
-	attestedBalances := AttestingBalance(attesters)
+	state := &pb.BeaconState{ValidatorBalances: []uint64{
+		25 * 1e9, 26 * 1e9, 32 * 1e9, 33 * 1e9, 100 * 1e9,
+	}}
+
+	attestedBalances := AttestingBalance(state, []uint32{0, 1, 2, 3, 4})
 
 	// 25 + 26 + 32 + 32 + 32 = 147
 	if attestedBalances != 147*1e9 {
