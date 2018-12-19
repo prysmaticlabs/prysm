@@ -372,10 +372,10 @@ func (b *BeaconState) PenalizedETH(period uint64) uint64 {
 }
 
 // SignedParentHashes returns all the parent hashes stored in active state up to last cycle length.
-func (b *BeaconState) SignedParentHashes(block *Block, attestation *pb.AggregatedAttestation) ([][32]byte, error) {
+func (b *BeaconState) SignedParentHashes(block *pb.BeaconBlock, attestation *pb.AggregatedAttestation) ([][32]byte, error) {
 	latestBlockHashes := b.LatestBlockRootHashes32()
 	obliqueParentHashes := attestation.ObliqueParentHashes
-	earliestSlot := int(block.SlotNumber()) - len(latestBlockHashes)
+	earliestSlot := int(block.GetSlot()) - len(latestBlockHashes)
 
 	startIdx := int(attestation.Slot) - earliestSlot - int(params.BeaconConfig().CycleLength) + 1
 	endIdx := startIdx - len(attestation.ObliqueParentHashes) + int(params.BeaconConfig().CycleLength)
@@ -431,12 +431,12 @@ func (b *BeaconState) ClearAttestations(lastStateRecalc uint64) {
 //   [0xF, 0x7, 0x5, 0x5, 0x5]
 //
 // This method does not mutate the state.
-func (b *BeaconState) CalculateNewBlockHashes(block *Block, parentSlot uint64) ([][]byte, error) {
-	distance := block.SlotNumber() - parentSlot
+func (b *BeaconState) CalculateNewBlockHashes(block *pb.BeaconBlock, parentSlot uint64) ([][]byte, error) {
+	distance := block.GetSlot() - parentSlot
 	existing := b.data.LatestBlockRootHash32S
 	update := existing[distance:]
 	for len(update) < 2*int(params.BeaconConfig().CycleLength) {
-		update = append(update, block.ParentRootHash32())
+		update = append(update, block.GetParentRootHash32())
 	}
 	return update, nil
 }
