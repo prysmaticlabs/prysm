@@ -1,6 +1,6 @@
 pragma solidity ^0.5.1;
 
-
+import "./SafeMath.sol";
 contract ValidatorRegistration {
 
     event HashChainValue(
