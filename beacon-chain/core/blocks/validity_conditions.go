@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 // IsValidBlock ensures that the block is compliant with the block processing validity conditions.
@@ -20,7 +21,7 @@ import (
 func IsValidBlock(
 	ctx context.Context,
 	state *types.BeaconState,
-	block *types.Block,
+	block *pb.BeaconBlock,
 	enablePOWChain bool,
 	HasBlock func(hash [32]byte) bool,
 	GetPOWBlock func(ctx context.Context, hash common.Hash) (*gethTypes.Block, error),
@@ -28,17 +29,19 @@ func IsValidBlock(
 
 	// Pre-Processing Condition 1:
 	// Check that the parent Block has been processed and saved.
-	parentBlock := HasBlock(block.ParentHash())
+	var parentRoot [32]byte
+	copy(parentRoot[:], block.GetParentRootHash32())
+	parentBlock := HasBlock(parentRoot)
 	if !parentBlock {
-		return fmt.Errorf("unprocessed parent block as it is not saved in the db: %#x", block.ParentHash())
+		return fmt.Errorf("unprocessed parent block as it is not saved in the db: %#x", parentRoot)
 	}
 
 	// Pre-Processing Condition 2:
 	// The state is updated up to block.slot -1.
 
-	if state.Slot() != block.SlotNumber()-1 {
+	if state.Slot() != block.GetSlot()-1 {
 		return fmt.Errorf(
-			"block slot is not valid %d as it is supposed to be %d", block.SlotNumber(), state.Slot()+1)
+			"block slot is not valid %d as it is supposed to be %d", block.GetSlot(), state.Slot()+1)
 	}
 
 	if enablePOWChain {
@@ -58,8 +61,8 @@ func IsValidBlock(
 	// Pre-Processing Condition 4:
 	// The node's local time is greater than or equal to
 	// state.genesis_time + block.slot * SLOT_DURATION.
-	if !block.IsSlotValid(genesisTime) {
-		return fmt.Errorf("slot of block is too high: %d", block.SlotNumber())
+	if !IsSlotValid(block.GetSlot(), genesisTime) {
+		return fmt.Errorf("slot of block is too high: %d", block.GetSlot())
 	}
 
 	return nil
