@@ -5,8 +5,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/randao"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
-	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -66,37 +64,4 @@ func ProcessBlock(state *types.BeaconState, block *types.Block) *types.BeaconSta
 func NewEpochTransition(state *types.BeaconState) *types.BeaconState {
 	// TODO(#1074): This will encompass all the related logic to epoch transitions.
 	return state
-}
-
-// validatorSetRecalculation recomputes the validator set.
-func validatorSetRecalculations(
-	shardAndCommittesForSlots []*pb.ShardAndCommitteeArray,
-	validators []*pb.ValidatorRecord,
-	seed [32]byte,
-) ([]*pb.ShardAndCommitteeArray, error) {
-	lastSlot := len(shardAndCommittesForSlots) - 1
-	lastCommitteeFromLastSlot := len(shardAndCommittesForSlots[lastSlot].ArrayShardAndCommittee) - 1
-	crosslinkLastShard := shardAndCommittesForSlots[lastSlot].ArrayShardAndCommittee[lastCommitteeFromLastSlot].Shard
-	crosslinkNextShard := (crosslinkLastShard + 1) % params.BeaconConfig().ShardCount
-
-	newShardCommitteeArray, err := v.ShuffleValidatorRegistryToCommittees(
-		seed,
-		validators,
-		crosslinkNextShard,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return append(shardAndCommittesForSlots[params.BeaconConfig().CycleLength:], newShardCommitteeArray...), nil
-}
-
-// createRandaoMix sets the block randao seed into a beacon state randao. This function
-// XOR's the current state randao with the block's randao value added by the
-// proposer.
-func createRandaoMix(blockRandao [32]byte, beaconStateRandao [32]byte) [32]byte {
-	for i, b := range blockRandao {
-		beaconStateRandao[i] ^= b
-	}
-	return beaconStateRandao
 }
