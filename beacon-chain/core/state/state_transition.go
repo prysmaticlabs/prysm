@@ -5,6 +5,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/randao"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -18,7 +19,8 @@ import (
 //  and exiting validators, as well as processing crosslinks and managing block justification/finalization.
 func ExecuteStateTransition(
 	beaconState *types.BeaconState,
-	block *types.Block) (*types.BeaconState, error) {
+	block *pb.BeaconBlock,
+) (*types.BeaconState, error) {
 
 	var err error
 
@@ -32,27 +34,25 @@ func ExecuteStateTransition(
 		return nil, fmt.Errorf("unable to update randao layer %v", err)
 	}
 
-	newhashes, err := newState.CalculateNewBlockHashes(block, currentSlot)
+	newHashes, err := newState.CalculateNewBlockHashes(block, currentSlot)
 	if err != nil {
 		return nil, fmt.Errorf("unable to calculate recent blockhashes")
 	}
 
-	newState.SetLatestBlockHashes(newhashes)
+	newState.SetLatestBlockHashes(newHashes)
 
 	if block != nil {
 		newState = ProcessBlock(newState, block)
-
 		if newState.Slot()%params.BeaconConfig().EpochLength == 0 {
 			newState = NewEpochTransition(newState)
 		}
-
 	}
 
 	return newState, nil
 }
 
 // ProcessBlock describes the per block operations that happen on every slot.
-func ProcessBlock(state *types.BeaconState, block *types.Block) *types.BeaconState {
+func ProcessBlock(state *types.BeaconState, block *pb.BeaconBlock) *types.BeaconState {
 	_ = block
 	// TODO(#1073): This function will encompass all the per block slot transition functions, this will
 	// contain checks for randao,proposer validity and block operations.

@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -154,11 +155,11 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	parentBlock := types.NewBlock(&pb.BeaconBlock{
+	parentBlock := &pb.BeaconBlock{
 		Slot: 1,
-	})
+	}
 
-	parentHash, err := parentBlock.Hash()
+	parentHash, err := b.Hash(parentBlock)
 	if err != nil {
 		t.Fatalf("Unable to hash block %v", err)
 	}
@@ -167,13 +168,13 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 		t.Fatalf("Unable to save block %v", err)
 	}
 
-	block := types.NewBlock(&pb.BeaconBlock{
+	block := &pb.BeaconBlock{
 		Slot:                          2,
 		ParentRootHash32:              parentHash[:],
 		CandidatePowReceiptRootHash32: []byte("a"),
-	})
+	}
 
-	blockChan := make(chan *types.Block)
+	blockChan := make(chan *pb.BeaconBlock)
 	exitRoutine := make(chan bool)
 	go func() {
 		chainService.blockProcessing(blockChan)
@@ -205,9 +206,9 @@ func TestRunningChainService(t *testing.T) {
 
 	stateRoot, _ := beaconState.Hash()
 
-	genesis := types.NewGenesisBlock([32]byte{})
+	genesis := b.NewGenesisBlock([]byte{})
 	chainService.beaconDB.SaveBlock(genesis)
-	parentHash, err := genesis.Hash()
+	parentHash, err := b.Hash(genesis)
 	if err != nil {
 		t.Fatalf("unable to get hash of canonical head: %v", err)
 	}
@@ -235,7 +236,7 @@ func TestRunningChainService(t *testing.T) {
 	attestationSlot := uint64(0)
 	shard := beaconState.ShardAndCommitteesForSlots()[attestationSlot].ArrayShardAndCommittee[0].Shard
 
-	block := types.NewBlock(&pb.BeaconBlock{
+	block := &pb.BeaconBlock{
 		Slot:                          currentSlot + 1,
 		StateRootHash32:               stateRoot[:],
 		ParentRootHash32:              parentHash[:],
@@ -247,13 +248,13 @@ func TestRunningChainService(t *testing.T) {
 			Shard:              shard,
 			JustifiedBlockHash: parentHash[:],
 		}},
-	})
+	}
 
 	if err := SetSlotInState(chainService, currentSlot); err != nil {
 		t.Fatal(err)
 	}
 
-	blockChan := make(chan *types.Block)
+	blockChan := make(chan *pb.BeaconBlock)
 	exitRoutine := make(chan bool)
 	go func() {
 		chainService.blockProcessing(blockChan)
@@ -299,8 +300,8 @@ func TestUpdateHead(t *testing.T) {
 	}
 	stateRoot, _ := beaconState.Hash()
 
-	genesis := types.NewGenesisBlock(stateRoot)
-	genesisHash, err := genesis.Hash()
+	genesis := b.NewGenesisBlock(stateRoot[:])
+	genesisHash, err := b.Hash(genesis)
 	if err != nil {
 		t.Fatalf("Could not get genesis block hash: %v", err)
 	}
@@ -346,19 +347,19 @@ func TestUpdateHead(t *testing.T) {
 		chainService := setupBeaconChain(t, false, db)
 
 		stateRoot, _ := tt.state.Hash()
-		block := types.NewBlock(&pb.BeaconBlock{
+		block := &pb.BeaconBlock{
 			Slot:                          tt.blockSlot,
 			StateRootHash32:               stateRoot[:],
 			ParentRootHash32:              genesisHash[:],
 			CandidatePowReceiptRootHash32: []byte("a"),
-		})
-		h, err := block.Hash()
+		}
+		h, err := b.Hash(block)
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		exitRoutine := make(chan bool)
-		blockChan := make(chan *types.Block)
+		blockChan := make(chan *pb.BeaconBlock)
 		go func() {
 			chainService.updateHead(blockChan)
 			<-exitRoutine
@@ -387,9 +388,9 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
 
-	block := types.NewBlock(&pb.BeaconBlock{
+	block := &pb.BeaconBlock{
 		ParentRootHash32: []byte{'a'},
-	})
+	}
 
 	if chainService.isBlockReadyForProcessing(block) {
 		t.Fatal("block processing succeeded despite block having no parent saved")
@@ -399,17 +400,17 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 	chainService.beaconDB.SaveState(beaconState)
 
 	stateRoot, _ := beaconState.Hash()
-	genesis := types.NewGenesisBlock([32]byte{})
+	genesis := b.NewGenesisBlock([]byte{})
 	chainService.beaconDB.SaveBlock(genesis)
-	parentHash, err := genesis.Hash()
+	parentHash, err := b.Hash(genesis)
 	if err != nil {
 		t.Fatalf("unable to get hash of canonical head: %v", err)
 	}
 
-	block2 := types.NewBlock(&pb.BeaconBlock{
+	block2 := &pb.BeaconBlock{
 		ParentRootHash32: parentHash[:],
 		Slot:             10,
-	})
+	}
 
 	if chainService.isBlockReadyForProcessing(block2) {
 		t.Fatal("block processing succeeded despite block slot being invalid")
@@ -425,7 +426,7 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 	attestationSlot := uint64(0)
 	shard := beaconState.ShardAndCommitteesForSlots()[attestationSlot].ArrayShardAndCommittee[0].Shard
 
-	block3 := types.NewBlock(&pb.BeaconBlock{
+	block3 := &pb.BeaconBlock{
 		Slot:                          currentSlot,
 		StateRootHash32:               stateRoot[:],
 		ParentRootHash32:              parentHash[:],
@@ -437,7 +438,7 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 			Shard:              shard,
 			JustifiedBlockHash: parentHash[:],
 		}},
-	})
+	}
 
 	chainService.enablePOWChain = true
 

@@ -5,8 +5,10 @@ import (
 	"context"
 	"fmt"
 
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/sirupsen/logrus"
 )
@@ -93,14 +95,14 @@ func (d *CleanupService) cleanBlockVoteCache(latestFinalizedSlot uint64) error {
 
 	var blockHashes [][32]byte
 	for slot := lastCleanedFinalizedSlot + 1; slot <= latestFinalizedSlot; slot++ {
-		var block *types.Block
+		var block *pb.BeaconBlock
 		block, err = d.beaconDB.GetBlockBySlot(slot)
 		if err != nil {
 			return fmt.Errorf("failed to read block at slot %d: %v", slot, err)
 		}
 		if block != nil {
 			var blockHash [32]byte
-			blockHash, err = block.Hash()
+			blockHash, err = b.Hash(block)
 			if err != nil {
 				return fmt.Errorf("failed to get hash of block: %v", err)
 			}
