@@ -621,7 +621,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_google_api",
-    commit = "146117f78c63efe78e04021cc321e59fb3c13e50",
+    commit = "583d854617af4d2080b5d2a24d72f7fc5a128ab2",
     importpath = "google.golang.org/api",
 )
 
@@ -872,11 +872,8 @@ go_repository(
 
 go_repository(
     name = "com_github_shyiko_kubesec",
-    commit = "b3b38efff0ecda7fd59ae59b5d09469fda51b5d7",
+    commit = "60b9dc76b678673960bc26619e5eca38dfaa1ad1",
     importpath = "github.com/shyiko/kubesec",
-    # Update after https://github.com/shyiko/kubesec/pull/19
-    remote = "https://github.com/prestonvanloon/kubesec",
-    vcs = "git",
 )
 
 go_repository(
@@ -899,7 +896,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aws_aws_sdk_go",
-    tag = "v1.16.6",
+    tag = "v1.16.9",
     importpath = "github.com/aws/aws-sdk-go",
 )
 
