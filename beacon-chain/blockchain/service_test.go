@@ -13,15 +13,12 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
-
-	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -449,48 +446,4 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 		t.Fatal("block processing failed despite being a valid block")
 	}
 
-}
-
-func TestUpdateBlockVoteCache(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	chainService := setupBeaconChain(t, true, db)
-
-	beaconState, err := types.NewGenesisBeaconState(nil)
-	if err != nil {
-		t.Fatalf("failed to initialize genesis state: %v", err)
-	}
-	block := &pb.BeaconBlock{
-		Slot:             1,
-		ParentRootHash32: []byte{},
-		Attestations: []*pb.AggregatedAttestation{
-			{
-				Slot:             0,
-				Shard:            1,
-				AttesterBitfield: []byte{'F', 'F'},
-			},
-		},
-	}
-
-	err = chainService.calculateNewBlockVotes(block, beaconState)
-	if err != nil {
-		t.Errorf("failed to update the block vote cache: %v", err)
-	}
-}
-
-func TestUpdateBlockVoteCacheNoAttestations(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	chainService := setupBeaconChain(t, true, db)
-
-	beaconState, err := types.NewGenesisBeaconState(nil)
-	if err != nil {
-		t.Fatalf("failed to initialize genesis state: %v", err)
-	}
-	block := &pb.BeaconBlock{}
-
-	err = chainService.calculateNewBlockVotes(block, beaconState)
-	if err != nil {
-		t.Errorf("failed to update the block vote cache: %v", err)
-	}
 }

@@ -13,13 +13,9 @@ import (
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
-	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
-	"github.com/prysmaticlabs/prysm/shared/bitutil"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -366,7 +362,7 @@ func (c *ChainService) isBlockReadyForProcessing(block *pb.BeaconBlock) bool {
 		powBlockFetcher = c.web3Service.Client().BlockByHash
 	}
 
-	if err := state.IsValidBlock(c.ctx, beaconState, block, c.enablePOWChain,
+	if err := b.IsValidBlock(c.ctx, beaconState, block, c.enablePOWChain,
 		c.beaconDB.HasBlock, powBlockFetcher, c.genesisTime); err != nil {
 		log.Debugf("block does not fulfill pre-processing conditions %v", err)
 		return false
@@ -383,171 +379,4 @@ func (c *ChainService) sendAndDeleteCachedBlocks(currentSlot uint64) {
 		c.incomingBlockChan <- block
 		delete(c.unProcessedBlocks, currentSlot)
 	}
-}
-
-// DEPRECATED: Will be replaced by new block processing method
-func (c *ChainService) processBlockOld(block *pb.BeaconBlock) error {
-	blockHash, err := b.Hash(block)
-	if err != nil {
-		return fmt.Errorf("failed to get hash of block: %v", err)
-	}
-
-	var parentRoot [32]byte
-	copy(parentRoot[:], block.GetParentRootHash32())
-	parent, err := c.beaconDB.GetBlock(parentRoot)
-	if err != nil {
-		return fmt.Errorf("could not get parent block: %v", err)
-	}
-	if parent == nil {
-		return fmt.Errorf("block points to nil parent: %#x", block.GetParentRootHash32())
-	}
-
-	beaconState, err := c.beaconDB.GetState()
-	if err != nil {
-		return fmt.Errorf("failed to get beacon state: %v", err)
-	}
-
-	if c.enablePOWChain && !c.doesPoWBlockExist(beaconState.ProcessedPowReceiptRootHash32()) {
-		return errors.New("proof-of-Work chain reference in block does not exist")
-	}
-
-	// Verifies the block against the validity conditions specifies as part of the
-	// Ethereum 2.0 specification.
-	if err := state.IsValidBlockOld(
-		block,
-		beaconState,
-		parent.GetSlot(),
-		c.genesisTime,
-		c.beaconDB.HasBlock,
-	); err != nil {
-		return fmt.Errorf("block failed validity conditions: %v", err)
-	}
-
-	if err := c.calculateNewBlockVotes(block, beaconState); err != nil {
-		return fmt.Errorf("failed to calculate block vote cache: %v", err)
-	}
-
-	// First, include new attestations to the active state
-	// so that they're accounted for during cycle transitions.
-	beaconState.SetPendingAttestations(block.GetAttestations())
-
-	// If the block is valid, we compute its associated state tuple (active, crystallized)
-	beaconState, err = c.executeStateTransitionOld(beaconState, block, parent.GetSlot())
-	if err != nil {
-		return fmt.Errorf("initialize new cycle transition failed: %v", err)
-	}
-
-	if err := c.beaconDB.SaveBlock(block); err != nil {
-		return fmt.Errorf("failed to save block: %v", err)
-	}
-	if err := c.beaconDB.SaveUnfinalizedBlockState(beaconState); err != nil {
-		return fmt.Errorf("error persisting unfinalized block's state: %v", err)
-	}
-
-	log.WithField("hash", fmt.Sprintf("%#x", blockHash)).Info("Processed beacon block")
-
-	// We keep a map of unfinalized blocks in memory along with their state
-	// pair to apply the fork choice rule.
-	c.unfinalizedBlocks[blockHash] = beaconState
-
-	return nil
-}
-
-// DEPRECATED: Will be removed soon
-func (c *ChainService) executeStateTransitionOld(
-	beaconState *types.BeaconState,
-	block *pb.BeaconBlock,
-	parentSlot uint64,
-) (*types.BeaconState, error) {
-	log.WithField("slotNumber", block.GetSlot()).Info("Executing state transition")
-	blockVoteCache, err := c.beaconDB.ReadBlockVoteCache(beaconState.LatestBlockRootHashes32())
-	if err != nil {
-		return nil, err
-	}
-	newState, err := state.NewStateTransition(beaconState, block, parentSlot, blockVoteCache)
-	if err != nil {
-		return nil, err
-	}
-	if newState.IsValidatorSetChange(block.GetSlot()) {
-		log.WithField("slotNumber", block.GetSlot()).Info("Validator set rotation occurred")
-	}
-	return newState, nil
-}
-
-func (c *ChainService) calculateNewBlockVotes(block *pb.BeaconBlock, beaconState *types.BeaconState) error {
-	for _, attestation := range block.GetAttestations() {
-		parentHashes, err := beaconState.SignedParentHashes(block, attestation)
-		if err != nil {
-			return err
-		}
-		shardCommittees, err := v.GetShardAndCommitteesForSlot(
-			beaconState.ShardAndCommitteesForSlots(),
-			beaconState.LastStateRecalculationSlot(),
-			attestation.GetSlot(),
-		)
-		if err != nil {
-			return fmt.Errorf("unable to fetch ShardAndCommittees for slot %d: %v", attestation.Slot, err)
-		}
-		attesterIndices, err := v.AttesterIndices(shardCommittees, attestation)
-		if err != nil {
-			return err
-		}
-
-		// Read block vote cache from DB.
-		var blockVoteCache utils.BlockVoteCache
-		if blockVoteCache, err = c.beaconDB.ReadBlockVoteCache(parentHashes); err != nil {
-			return err
-		}
-
-		// Update block vote cache.
-		for _, h := range parentHashes {
-			// Skip calculating for this hash if the hash is part of oblique parent hashes.
-			var skip bool
-			for _, oblique := range attestation.ObliqueParentHashes {
-				if bytes.Equal(h[:], oblique) {
-					skip = true
-					break
-				}
-			}
-			if skip {
-				continue
-			}
-
-			// Initialize vote cache of a given block hash if it doesn't exist already.
-			if !blockVoteCache.IsVoteCacheExist(h) {
-				blockVoteCache[h] = utils.NewBlockVote()
-			}
-
-			// Loop through attester indices, if the attester has voted but was not accounted for
-			// in the cache, then we add attester's index and balance to the block cache.
-			for i, attesterIndex := range attesterIndices {
-				var attesterExists bool
-				isBitSet, err := bitutil.CheckBit(attestation.AttesterBitfield, i)
-				if err != nil {
-					log.Errorf("Bitfield check for cache adding failed at index: %d with: %v", i, err)
-				}
-
-				if !isBitSet {
-					continue
-				}
-				for _, indexInCache := range blockVoteCache[h].VoterIndices {
-					if attesterIndex == indexInCache {
-						attesterExists = true
-						break
-					}
-				}
-				if !attesterExists {
-					blockVoteCache[h].VoterIndices = append(blockVoteCache[h].VoterIndices, attesterIndex)
-					blockVoteCache[h].VoteTotalDeposit += beaconState.ValidatorRegistry()[attesterIndex].Balance
-				}
-			}
-		}
-
-		// Write updated block vote cache back to DB.
-		if err = c.beaconDB.WriteBlockVoteCache(blockVoteCache); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }

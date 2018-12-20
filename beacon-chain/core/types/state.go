@@ -1,8 +1,6 @@
 package types
 
 import (
-	"fmt"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -354,47 +352,6 @@ func (b *BeaconState) RandaoMix() [32]byte {
 	return h
 }
 
-// PenalizedETH calculates penalized total ETH during the last 3 withdrawal periods.
-func (b *BeaconState) PenalizedETH(period uint64) uint64 {
-	var totalPenalty uint64
-	penalties := b.LatestPenalizedExitBalances()
-	totalPenalty += getPenaltyForPeriod(penalties, period)
-
-	if period >= 1 {
-		totalPenalty += getPenaltyForPeriod(penalties, period-1)
-	}
-
-	if period >= 2 {
-		totalPenalty += getPenaltyForPeriod(penalties, period-2)
-	}
-
-	return totalPenalty
-}
-
-// SignedParentHashes returns all the parent hashes stored in active state up to last cycle length.
-func (b *BeaconState) SignedParentHashes(block *pb.BeaconBlock, attestation *pb.AggregatedAttestation) ([][32]byte, error) {
-	latestBlockHashes := b.LatestBlockRootHashes32()
-	obliqueParentHashes := attestation.ObliqueParentHashes
-	earliestSlot := int(block.GetSlot()) - len(latestBlockHashes)
-
-	startIdx := int(attestation.Slot) - earliestSlot - int(params.BeaconConfig().CycleLength) + 1
-	endIdx := startIdx - len(attestation.ObliqueParentHashes) + int(params.BeaconConfig().CycleLength)
-	if startIdx < 0 || endIdx > len(latestBlockHashes) || endIdx <= startIdx {
-		return nil, fmt.Errorf("attempt to fetch recent blockhashes from %d to %d invalid", startIdx, endIdx)
-	}
-
-	hashes := make([][32]byte, 0, params.BeaconConfig().CycleLength)
-	for i := startIdx; i < endIdx; i++ {
-		hashes = append(hashes, latestBlockHashes[i])
-	}
-
-	for i := 0; i < len(obliqueParentHashes); i++ {
-		hash := common.BytesToHash(obliqueParentHashes[i])
-		hashes = append(hashes, hash)
-	}
-	return hashes, nil
-}
-
 // ClearAttestations removes attestations older than last state recalc slot.
 func (b *BeaconState) ClearAttestations(lastStateRecalc uint64) {
 	existing := b.data.PendingAttestations
@@ -574,13 +531,4 @@ func (b *BeaconState) SetForkData(data *pb.ForkData) {
 // the beacon state.
 func (b *BeaconState) SetSlot(slot uint64) {
 	b.data.Slot = slot
-}
-
-func getPenaltyForPeriod(penalties []uint64, period uint64) uint64 {
-	numPeriods := uint64(len(penalties))
-	if numPeriods < period+1 {
-		return 0
-	}
-
-	return penalties[period]
 }

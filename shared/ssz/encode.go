@@ -8,13 +8,12 @@ import (
 	"reflect"
 )
 
-// TODO(1068): Support more data types
-
 const lengthBytes = 4
 
 // Encodable defines the interface for support ssz encoding.
 type Encodable interface {
 	EncodeSSZ(io.Writer) error
+	EncodeSSZSize() (uint32, error)
 }
 
 // Encode encodes val and output the result into w.
@@ -38,6 +37,9 @@ type encbuf struct {
 }
 
 func (w *encbuf) encode(val interface{}) error {
+	if val == nil {
+		return newEncodeError("nil is not supported", nil)
+	}
 	rval := reflect.ValueOf(val)
 	encDec, err := cachedEncoderDecoder(rval.Type())
 	if err != nil {
@@ -50,6 +52,9 @@ func (w *encbuf) encode(val interface{}) error {
 }
 
 func encodeSize(val interface{}) (uint32, error) {
+	if val == nil {
+		return 0, newEncodeError("nil is not supported", nil)
+	}
 	rval := reflect.ValueOf(val)
 	encDec, err := cachedEncoderDecoder(rval.Type())
 	if err != nil {
@@ -87,8 +92,14 @@ func makeEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 		return makeBytesEncoder()
 	case kind == reflect.Slice:
 		return makeSliceEncoder(typ)
+	case kind == reflect.Array && typ.Elem().Kind() == reflect.Uint8:
+		return makeByteArrayEncoder()
+	case kind == reflect.Array:
+		return makeSliceEncoder(typ)
 	case kind == reflect.Struct:
 		return makeStructEncoder(typ)
+	case kind == reflect.Ptr:
+		return makePtrEncoder(typ)
 	default:
 		return nil, nil, fmt.Errorf("type %v is not serializable", typ)
 	}
@@ -149,7 +160,34 @@ func makeBytesEncoder() (encoder, encodeSizer, error) {
 		if len(val.Bytes()) >= 2<<32 {
 			return 0, errors.New("bytes oversize")
 		}
-		return uint32(len(val.Bytes())), nil
+		return lengthBytes + uint32(len(val.Bytes())), nil
+	}
+	return encoder, encodeSizer, nil
+}
+
+func makeByteArrayEncoder() (encoder, encodeSizer, error) {
+	encoder := func(val reflect.Value, w *encbuf) error {
+		if !val.CanAddr() {
+			// Slice requires the value to be addressable.
+			// Make it addressable by copying.
+			copyVal := reflect.New(val.Type()).Elem()
+			copyVal.Set(val)
+			val = copyVal
+		}
+		sizeEnc := make([]byte, lengthBytes)
+		if val.Len() >= 2<<32 {
+			return errors.New("bytes oversize")
+		}
+		binary.BigEndian.PutUint32(sizeEnc, uint32(val.Len()))
+		w.str = append(w.str, sizeEnc...)
+		w.str = append(w.str, val.Slice(0, val.Len()).Bytes()...)
+		return nil
+	}
+	encodeSizer := func(val reflect.Value) (uint32, error) {
+		if val.Len() >= 2<<32 {
+			return 0, errors.New("bytes oversize")
+		}
+		return lengthBytes + uint32(val.Len()), nil
 	}
 	return encoder, encodeSizer, nil
 }
@@ -222,6 +260,33 @@ func makeStructEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 		}
 		return lengthBytes + totalSize, nil
 	}
+	return encoder, encodeSizer, nil
+}
+
+// Notice: Currently we don't support nil pointer:
+// - Input for encoding must not contain nil pointer
+// - Output for decoding will never contain nil pointer
+// (Not to be confused with empty slice. Empty slice is supported)
+func makePtrEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
+	elemEncoderDecoder, err := cachedEncoderDecoderNoAcquireLock(typ.Elem())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	encoder := func(val reflect.Value, w *encbuf) error {
+		if val.IsNil() {
+			return errors.New("nil is not supported")
+		}
+		return elemEncoderDecoder.encoder(val.Elem(), w)
+	}
+
+	encodeSizer := func(val reflect.Value) (uint32, error) {
+		if val.IsNil() {
+			return 0, errors.New("nil is not supported")
+		}
+		return elemEncoderDecoder.encodeSizer(val.Elem())
+	}
+
 	return encoder, encodeSizer, nil
 }
 
