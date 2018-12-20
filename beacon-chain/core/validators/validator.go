@@ -254,15 +254,30 @@ func ValidatorSlotAndRole(pubKey []byte, validators []*pb.ValidatorRecord, shard
 	return 0, pbrpc.ValidatorRole_UNKNOWN, fmt.Errorf("can't find slot number for validator with public key %#x", pubKey)
 }
 
+// TotalEffectiveBalance returns the total deposited amount at stake in Gwei
+// of all active validators.
+//
+// Spec pseudocode definition:
+//   sum([get_effective_balance(state, i) for i in active_validator_indices])
+func TotalEffectiveBalance(state *pb.BeaconState, validatorIndices []uint32) uint64 {
+	var totalDeposit uint64
+
+	for _, index := range validatorIndices {
+		totalDeposit += EffectiveBalance(state, index)
+	}
+	return totalDeposit
+}
+
 // TotalActiveValidatorBalance returns the total deposited amount in Gwei for all active validators.
 //
 // Spec pseudocode definition:
 //   sum([get_effective_balance(v) for v in active_validators])
+// Deprecated: use TotalBalance
 func TotalActiveValidatorBalance(activeValidators []*pb.ValidatorRecord) uint64 {
 	var totalDeposit uint64
 
 	for _, v := range activeValidators {
-		totalDeposit += EffectiveBalance(v)
+		totalDeposit += v.Balance
 	}
 	return totalDeposit
 }
@@ -430,16 +445,16 @@ func CheckValidatorMinDeposit(validatorSet []*pb.ValidatorRecord, currentSlot ui
 // but they can be slashed at most MAX_DEPOSIT at any time.
 //
 // Spec pseudocode definition:
-//   def get_effective_balance(validator: ValidatorRecord) -> int:
+//   def get_effective_balance(state: State, index: int) -> int:
 //     """
-//     Returns the effective balance (also known as "balance at stake") for the ``validator``.
+//     Returns the effective balance (also known as "balance at stake") for a ``validator`` with the given ``index``.
 //     """
-//     return min(validator.balance, MAX_DEPOSIT)
-func EffectiveBalance(validator *pb.ValidatorRecord) uint64 {
-	if validator.Balance > params.BeaconConfig().MaxDeposit*params.BeaconConfig().Gwei {
+//     return min(state.validator_balances[index], MAX_DEPOSIT * GWEI_PER_ETH)
+func EffectiveBalance(state *pb.BeaconState, index uint32) uint64 {
+	if state.ValidatorBalances[index] > params.BeaconConfig().MaxDeposit*params.BeaconConfig().Gwei {
 		return params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei
 	}
-	return validator.Balance
+	return state.ValidatorBalances[index]
 }
 
 // Attesters returns the validator records using validator indices.
@@ -490,12 +505,12 @@ func ValidatorIndices(
 //
 // Spec pseudocode definition:
 //   Let this_epoch_boundary_attesting_balance =
-//   sum([get_effective_balance(v) for v in this_epoch_boundary_attesters])
-func AttestingBalance(boundaryAttesters []*pb.ValidatorRecord) uint64 {
+//   sum([get_effective_balance(state, i) for i in this_epoch_boundary_attester_indices])
+func AttestingBalance(state *pb.BeaconState, boundaryAttesterIndices []uint32) uint64 {
 
 	var boundaryAttestingBalance uint64
-	for _, boundaryAttester := range boundaryAttesters {
-		boundaryAttestingBalance += EffectiveBalance(boundaryAttester)
+	for _, index := range boundaryAttesterIndices {
+		boundaryAttestingBalance += EffectiveBalance(state, index)
 	}
 
 	return boundaryAttestingBalance
