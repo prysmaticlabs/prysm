@@ -426,7 +426,7 @@ func TestRequestBatchedBlocks(t *testing.T) {
 
 	for i := ss.currentSlot + 1; i <= 10; i++ {
 		response, _ := getBlockResponse(i)
-		ss.inMemoryBlocks[i] = response
+		ss.inMemoryBlocks[i] = response.Block
 	}
 
 	ss.requestBatchedBlocks(10)

@@ -39,7 +39,6 @@ type Config struct {
 	BeaconDB                *db.BeaconDB
 	P2P                     p2pAPI
 	SyncService             syncService
-	QueryService            queryService
 	ChainService            chainService
 }
 
@@ -47,8 +46,8 @@ type Config struct {
 // SyncPollingInterval determines how frequently the service checks that initial sync is complete.
 // BlockBufferSize determines that buffer size of the `blockBuf` channel.
 // CrystallizedStateBufferSize determines the buffer size of thhe `crystallizedStateBuf` channel.
-func DefaultConfig() Config {
-	return Config{
+func DefaultConfig() *Config {
+	return &Config{
 		SyncPollingInterval:     time.Duration(params.BeaconConfig().SyncPollingInterval) * time.Second,
 		BlockBufferSize:         100,
 		BatchedBlockBufferSize:  100,
@@ -72,11 +71,6 @@ type chainService interface {
 type syncService interface {
 	Start()
 	ResumeSync()
-	IsSyncedWithNetwork() bool
-}
-
-type queryService interface {
-	IsSynced() (bool, error)
 }
 
 // InitialSync defines the main class in this package.
@@ -86,7 +80,6 @@ type InitialSync struct {
 	cancel                 context.CancelFunc
 	p2p                    p2pAPI
 	syncService            syncService
-	queryService           queryService
 	chainService           chainService
 	db                     *db.BeaconDB
 	blockAnnounceBuf       chan p2p.Message
@@ -104,7 +97,7 @@ type InitialSync struct {
 // NewInitialSyncService constructs a new InitialSyncService.
 // This method is normally called by the main node.
 func NewInitialSyncService(ctx context.Context,
-	cfg Config,
+	cfg *Config,
 ) *InitialSync {
 	ctx, cancel := context.WithCancel(ctx)
 
@@ -128,23 +121,11 @@ func NewInitialSyncService(ctx context.Context,
 		blockAnnounceBuf:    blockAnnounceBuf,
 		syncPollingInterval: cfg.SyncPollingInterval,
 		inMemoryBlocks:      map[uint64]*pb.BeaconBlock{},
-		queryService:        cfg.QueryService,
 	}
 }
 
 // Start begins the goroutine.
 func (s *InitialSync) Start() {
-	synced, err := s.queryService.IsSynced()
-	if err != nil {
-		log.Error(err)
-	}
-
-	if synced {
-		// TODO(#661): Bail out of the sync service if the chain is only partially synced.
-		log.Info("Chain fully synced, exiting initial sync")
-		return
-	}
-
 	go func() {
 		ticker := time.NewTicker(s.syncPollingInterval)
 		s.run(ticker.C)
@@ -364,9 +345,8 @@ func (s *InitialSync) processBatchedBlocks(msg p2p.Message) {
 
 // requestStateFromPeer sends a request to a peer for the corresponding state
 // for a beacon block.
-func (s *InitialSync) requestStateFromPeer(data *pb.BeaconBlockResponse, peer p2p.Peer) error {
-	block := types.NewBlock(data.Block)
-	h := block.StateRootHash32()
+func (s *InitialSync) requestStateFromPeer(block *pb.BeaconBlock, peer p2p.Peer) error {
+	h := block.GetParentRootHash32()
 	log.Debugf("Successfully processed incoming block with state hash: %#x", h)
 	s.p2p.Send(&pb.BeaconStateRequest{Hash: h[:]}, peer)
 	return nil
