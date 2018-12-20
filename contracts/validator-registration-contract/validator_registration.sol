@@ -73,7 +73,7 @@ contract ValidatorRegistration {
             // When ChainStart log publishes, beacon chain node initializes the chain and use timestampDayBoundry
             // as genesis time.
             if (fullDepositCount == DEPOSITS_FOR_CHAIN_START) {
-                uint timestampDayBoundry = block.timestamp - block.timestamp % SECONDS_PER_DAY + SECONDS_PER_DAY;
+                uint timestampDayBoundry = block.timestamp.sub(block.timestamp).mod(SECONDS_PER_DAY).add(SECONDS_PER_DAY);
                 bytes memory timestampDayBoundryBytes = abi.encodePacked(uint64(timestampDayBoundry));
                 emit ChainStart(receiptTree[1], timestampDayBoundryBytes);
             }
