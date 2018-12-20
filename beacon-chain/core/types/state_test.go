@@ -124,10 +124,10 @@ func TestUpdateAttestationsAfterRecalc(t *testing.T) {
 }
 
 func TestUpdateLatestBlockHashes(t *testing.T) {
-	block := NewBlock(&pb.BeaconBlock{
+	block := &pb.BeaconBlock{
 		Slot:             10,
 		ParentRootHash32: []byte{'A'},
-	})
+	}
 
 	recentBlockHashes := [][]byte{}
 	for i := 0; i < 2*int(params.BeaconConfig().CycleLength); i++ {
@@ -152,8 +152,8 @@ func TestUpdateLatestBlockHashes(t *testing.T) {
 			if !areBytesEqual(updated[i], []byte{0}) {
 				t.Fatalf("update failed: expected %#x got %#x", []byte{0}, updated[i])
 			}
-		} else if !areBytesEqual(updated[i], block.data.ParentRootHash32) {
-			t.Fatalf("update failed: expected %#x got %#x", block.data.ParentRootHash32, updated[i])
+		} else if !areBytesEqual(updated[i], block.GetParentRootHash32()) {
+			t.Fatalf("update failed: expected %#x got %#x", block.GetParentRootHash32(), updated[i])
 		}
 	}
 }
@@ -175,11 +175,9 @@ func TestCalculateNewBlockHashes_DoesNotMutateData(t *testing.T) {
 		t.Fatal("setup data should be equal!")
 	}
 
-	block := &Block{
-		data: &pb.BeaconBlock{
-			Slot:             2,
-			ParentRootHash32: []byte{},
-		},
+	block := &pb.BeaconBlock{
+		Slot:             2,
+		ParentRootHash32: []byte{},
 	}
 
 	result, _ := s.CalculateNewBlockHashes(block, 0 /*parentSlot*/)
@@ -203,103 +201,4 @@ func areBytesEqual(s1, s2 []byte) bool {
 		}
 	}
 	return true
-}
-
-func TestGetSignedParentHashes(t *testing.T) {
-	// Test the scenario described in the spec:
-	// https://github.com/ethereum/eth2.0-specs/blob/d7458bf201c8fcb93503272c8844381962488cb7/specs/beacon-chain.md#per-block-processing
-	cfg := params.BeaconConfig()
-	oldCycleLength := cfg.CycleLength
-	cycleLength := uint64(4)
-	cfg.CycleLength = cycleLength
-	defer func() {
-		cfg.CycleLength = oldCycleLength
-	}()
-
-	blockHashes := make([][]byte, 11)
-	blockHashes[0] = createHashFromByte('Z')
-	blockHashes[1] = createHashFromByte('A')
-	blockHashes[2] = createHashFromByte('B')
-	blockHashes[3] = createHashFromByte('C')
-	blockHashes[4] = createHashFromByte('D')
-	blockHashes[5] = createHashFromByte('E')
-	blockHashes[6] = createHashFromByte('F')
-	blockHashes[7] = createHashFromByte('G')
-	blockHashes[8] = createHashFromByte('H')
-	blockHashes[9] = createHashFromByte('I')
-	blockHashes[10] = createHashFromByte('J')
-
-	state := NewBeaconState(&pb.BeaconState{LatestBlockRootHash32S: blockHashes})
-
-	b := NewBlock(&pb.BeaconBlock{Slot: 11})
-
-	obliqueParentHashes := make([][]byte, 2)
-	obliqueParentHashes[0] = createHashFromByte(0)
-	obliqueParentHashes[1] = createHashFromByte(1)
-	a := &pb.AggregatedAttestation{
-		ObliqueParentHashes: obliqueParentHashes,
-		Slot:                5,
-	}
-
-	hashes, err := state.SignedParentHashes(b, a)
-	if err != nil {
-		t.Fatalf("failed to SignedParentHashes: %v", err)
-	}
-	if hashes[0][0] != 'B' || hashes[1][0] != 'C' {
-		t.Fatalf("SignedParentHashes did not return expected value: %#x and %#x", hashes[0], hashes[1])
-	}
-	if hashes[2][0] != 0 || hashes[3][0] != 1 {
-		t.Fatalf("SignedParentHashes did not return expected value: %#x and %#x", hashes[0], hashes[1])
-	}
-}
-
-func TestGetSignedParentHashesIndexFail(t *testing.T) {
-	cfg := params.BeaconConfig()
-	oldCycleLength := cfg.CycleLength
-	cycleLength := uint64(4)
-	cfg.CycleLength = cycleLength
-	defer func() {
-		cfg.CycleLength = oldCycleLength
-	}()
-
-	blockHashes := make([][]byte, 8)
-	blockHashes[0] = createHashFromByte('Z')
-	blockHashes[1] = createHashFromByte('A')
-	blockHashes[2] = createHashFromByte('B')
-	blockHashes[3] = createHashFromByte('C')
-	blockHashes[4] = createHashFromByte('D')
-	blockHashes[5] = createHashFromByte('E')
-	blockHashes[6] = createHashFromByte('F')
-	blockHashes[7] = createHashFromByte('G')
-
-	state := NewBeaconState(&pb.BeaconState{LatestBlockRootHash32S: blockHashes})
-
-	b := NewBlock(&pb.BeaconBlock{Slot: 8})
-	a := &pb.AggregatedAttestation{
-		ObliqueParentHashes: [][]byte{},
-		Slot:                2,
-	}
-
-	_, err := state.SignedParentHashes(b, a)
-	if err == nil {
-		t.Error("expected SignedParentHashes to fail")
-	}
-
-	a2 := &pb.AggregatedAttestation{
-		ObliqueParentHashes: [][]byte{},
-		Slot:                9,
-	}
-	_, err = state.SignedParentHashes(b, a2)
-	if err == nil {
-		t.Error("expected SignedParentHashes to fail")
-	}
-}
-
-func createHashFromByte(repeatedByte byte) []byte {
-	hash := make([]byte, 32)
-	for i := 0; i < 32; i++ {
-		hash[i] = repeatedByte
-	}
-
-	return hash
 }

@@ -16,8 +16,8 @@ func TestInitializeState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get chain head: %v", err)
 	}
-	if b.SlotNumber() != 0 {
-		t.Fatalf("Expected block height to equal 1. Got %d", b.SlotNumber())
+	if b.GetSlot() != 0 {
+		t.Fatalf("Expected block height to equal 1. Got %d", b.GetSlot())
 	}
 
 	beaconState, err := db.GetState()
