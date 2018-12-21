@@ -172,7 +172,6 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 			if s.highestObservedSlot == s.currentSlot {
 				log.Info("Exiting initial sync and starting normal sync")
 				s.syncService.ResumeSync()
-				// TODO(#661): Resume sync after completion of initial sync.
 				return
 			}
 
@@ -304,7 +303,7 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 			return
 		}
 
-		if s.genesisHash != [32]byte{} && !s.checkForGenesisBlock(s.genesisHash, peer) {
+		if s.genesisHash != [32]byte{} && !s.checkForGenesisBlock(s.genesisHash) {
 			s.requestBlockByHash(s.genesisHash, peer)
 			log.Debugf("Genesis block with hash %#x not saved in db", s.genesisHash)
 			return
@@ -468,6 +467,6 @@ func (s *InitialSync) writeBlockToDB(block *types.Block) error {
 	return s.db.SaveBlock(block)
 }
 
-func (s *InitialSync) checkForGenesisBlock(hash [32]byte, peer p2p.Peer) bool {
+func (s *InitialSync) checkForGenesisBlock(hash [32]byte) bool {
 	return s.db.HasBlock(hash)
 }
