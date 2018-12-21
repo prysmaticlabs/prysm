@@ -86,8 +86,6 @@ func TestBroadcast(t *testing.T) {
 	s2.Start()
 	s3.Start()
 
-	time.Sleep(time.Second * 5)
-
 	err = s2.host.Connect(context.Background(), peerstore.PeerInfo{ID: s.host.ID(), Addrs: s.host.Addrs()})
 	if err != nil {
 		t.Fatalf("error while trying to connect to peer: %s", err)
@@ -110,7 +108,7 @@ func TestBroadcast(t *testing.T) {
 	s3Chan := make(chan Message)
 	s3.Subscribe(msg, s3Chan)
 
-	time.Sleep(5 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	aMessage := &shardpb.CollationBodyRequest{ShardId:1234}
 
