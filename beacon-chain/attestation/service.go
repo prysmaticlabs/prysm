@@ -4,8 +4,8 @@ package attestation
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/sirupsen/logrus"
 )
@@ -19,9 +19,9 @@ type Service struct {
 	cancel        context.CancelFunc
 	beaconDB      *db.BeaconDB
 	broadcastFeed *event.Feed
-	broadcastChan chan *types.Attestation
+	broadcastChan chan *pb.AttestationRecord
 	incomingFeed  *event.Feed
-	incomingChan  chan *types.Attestation
+	incomingChan  chan *pb.AttestationRecord
 }
 
 // Config options for the service.
@@ -40,9 +40,9 @@ func NewAttestationService(ctx context.Context, cfg *Config) *Service {
 		cancel:        cancel,
 		beaconDB:      cfg.BeaconDB,
 		broadcastFeed: new(event.Feed),
-		broadcastChan: make(chan *types.Attestation, cfg.BroadcastAttestationBuf),
+		broadcastChan: make(chan *pb.AttestationRecord, cfg.BroadcastAttestationBuf),
 		incomingFeed:  new(event.Feed),
-		incomingChan:  make(chan *types.Attestation, cfg.ReceiveAttestationBuf),
+		incomingChan:  make(chan *pb.AttestationRecord, cfg.ReceiveAttestationBuf),
 	}
 }
 

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/empty"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
@@ -18,6 +19,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -58,7 +60,7 @@ type Service struct {
 	grpcServer            *grpc.Server
 	canonicalBlockChan    chan *pbp2p.BeaconBlock
 	canonicalStateChan    chan *types.BeaconState
-	incomingAttestation   chan *types.Attestation
+	incomingAttestation   chan *pbp2p.Attestation
 	enablePOWChain        bool
 	slotAlignmentDuration time.Duration
 }
@@ -93,7 +95,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		slotAlignmentDuration: time.Duration(params.BeaconConfig().SlotDuration) * time.Second,
 		canonicalBlockChan:    make(chan *pbp2p.BeaconBlock, cfg.SubscriptionBuf),
 		canonicalStateChan:    make(chan *types.BeaconState, cfg.SubscriptionBuf),
-		incomingAttestation:   make(chan *types.Attestation, cfg.SubscriptionBuf),
+		incomingAttestation:   make(chan *pbp2p.Attestation, cfg.SubscriptionBuf),
 		enablePOWChain:        cfg.EnablePOWChain,
 	}
 }
@@ -248,14 +250,13 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 // AttestHead is a function called by an attester in a sharding validator to vote
 // on a block.
 func (s *Service) AttestHead(ctx context.Context, req *pb.AttestRequest) (*pb.AttestResponse, error) {
-	attestation := types.NewAttestation(req.Attestation)
-	h, err := attestation.Hash()
+	enc, err := proto.Marshal(req.Attestation)
 	if err != nil {
-		return nil, fmt.Errorf("could not hash attestation: %v", err)
+		return nil, fmt.Errorf("could not marshal attestation: %v", err)
 	}
-
+	h := hashutil.Hash(enc)
 	// Relays the attestation to chain service.
-	s.attestationService.IncomingAttestationFeed().Send(attestation)
+	s.attestationService.IncomingAttestationFeed().Send(req.Attestation)
 
 	return &pb.AttestResponse{AttestationHash: h[:]}, nil
 }
@@ -268,7 +269,7 @@ func (s *Service) LatestAttestation(req *empty.Empty, stream pb.BeaconService_La
 		select {
 		case attestation := <-s.incomingAttestation:
 			log.Info("Sending attestation to RPC clients")
-			if err := stream.Send(attestation.Proto()); err != nil {
+			if err := stream.Send(attestation); err != nil {
 				return err
 			}
 		case <-sub.Err():

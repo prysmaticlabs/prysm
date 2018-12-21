@@ -248,10 +248,10 @@ func TestLatestAttestationFaulty(t *testing.T) {
 	defer ctrl.Finish()
 
 	exitRoutine := make(chan bool)
-	attestation := &types.Attestation{}
+	attestation := &pb.Attestation{}
 
 	mockStream := internal.NewMockBeaconService_LatestAttestationServer(ctrl)
-	mockStream.EXPECT().Send(attestation.Proto()).Return(errors.New("something wrong"))
+	mockStream.EXPECT().Send(attestation).Return(errors.New("something wrong"))
 	// Tests a faulty stream.
 	go func(tt *testing.T) {
 		if err := rpcService.LatestAttestation(&empty.Empty{}, mockStream); err.Error() != "something wrong" {
@@ -277,9 +277,9 @@ func TestLatestAttestation(t *testing.T) {
 	defer ctrl.Finish()
 
 	exitRoutine := make(chan bool)
-	attestation := &types.Attestation{}
+	attestation := &pb.Attestation{}
 	mockStream := internal.NewMockBeaconService_LatestAttestationServer(ctrl)
-	mockStream.EXPECT().Send(attestation.Proto()).Return(nil)
+	mockStream.EXPECT().Send(attestation).Return(nil)
 	// Tests a good stream.
 	go func(tt *testing.T) {
 		if err := rpcService.LatestAttestation(&empty.Empty{}, mockStream); err != nil {
