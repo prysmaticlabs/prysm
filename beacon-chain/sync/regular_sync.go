@@ -56,6 +56,7 @@ type RegularSync struct {
 	blockBuf              chan p2p.Message
 	blockRequestBySlot    chan p2p.Message
 	blockRequestByHash    chan p2p.Message
+	batchedRequestBuf     chan p2p.Message
 	chainHeadReqBuf       chan p2p.Message
 	attestationBuf        chan p2p.Message
 }
@@ -66,6 +67,7 @@ type RegularSyncConfig struct {
 	BlockBufferSize         int
 	BlockReqSlotBufferSize  int
 	BlockReqHashBufferSize  int
+	BatchedBufferSize       int
 	AttestationBufferSize   int
 	ChainHeadReqBufferSize  int
 	ChainService            chainService
@@ -81,6 +83,7 @@ func DefaultRegularSyncConfig() *RegularSyncConfig {
 		BlockBufferSize:         100,
 		BlockReqSlotBufferSize:  100,
 		BlockReqHashBufferSize:  100,
+		BatchedBufferSize:       100,
 		ChainHeadReqBufferSize:  100,
 		AttestationBufferSize:   100,
 	}
@@ -101,6 +104,7 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		blockBuf:              make(chan p2p.Message, cfg.BlockBufferSize),
 		blockRequestBySlot:    make(chan p2p.Message, cfg.BlockReqSlotBufferSize),
 		blockRequestByHash:    make(chan p2p.Message, cfg.BlockReqHashBufferSize),
+		batchedRequestBuf:     make(chan p2p.Message, cfg.BatchedBufferSize),
 		attestationBuf:        make(chan p2p.Message, cfg.AttestationBufferSize),
 		chainHeadReqBuf:       make(chan p2p.Message, cfg.ChainHeadReqBufferSize),
 	}
@@ -135,6 +139,7 @@ func (rs *RegularSync) run() {
 	blockSub := rs.p2p.Subscribe(&pb.BeaconBlockResponse{}, rs.blockBuf)
 	blockRequestSub := rs.p2p.Subscribe(&pb.BeaconBlockRequestBySlotNumber{}, rs.blockRequestBySlot)
 	blockRequestHashSub := rs.p2p.Subscribe(&pb.BeaconBlockRequest{}, rs.blockRequestByHash)
+	batchedRequestSub := rs.p2p.Subscribe(&pb.BatchedBeaconBlockRequest{}, rs.batchedRequestBuf)
 	attestationSub := rs.p2p.Subscribe(&pb.AggregatedAttestation{}, rs.attestationBuf)
 	chainHeadReqSub := rs.p2p.Subscribe(&pb.ChainHeadRequest{}, rs.chainHeadReqBuf)
 
@@ -142,6 +147,7 @@ func (rs *RegularSync) run() {
 	defer blockSub.Unsubscribe()
 	defer blockRequestSub.Unsubscribe()
 	defer blockRequestHashSub.Unsubscribe()
+	defer batchedRequestSub.Unsubscribe()
 	defer chainHeadReqSub.Unsubscribe()
 	defer attestationSub.Unsubscribe()
 
@@ -160,6 +166,8 @@ func (rs *RegularSync) run() {
 			rs.handleBlockRequestBySlot(msg)
 		case msg := <-rs.blockRequestByHash:
 			rs.handleBlockRequestByHash(msg)
+		case msg := <-rs.batchedRequestBuf:
+			rs.handleBatchedBlockRequest(msg)
 		case msg := <-rs.chainHeadReqBuf:
 			rs.handleChainHeadRequest(msg)
 		}
@@ -348,6 +356,53 @@ func (rs *RegularSync) handleBlockRequestByHash(msg p2p.Message) {
 
 	rs.p2p.Send(&pb.BeaconBlockResponse{
 		Block: block.Proto(),
+	}, msg.Peer)
+
+}
+
+func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) {
+	data := msg.Data.(*pb.BatchedBeaconBlockRequest)
+	startSlot, endSlot := data.StartSlot, data.EndSlot
+
+	block, err := rs.db.GetChainHead()
+	if err != nil {
+		log.Errorf("Could not retrieve chain head %v", err)
+		return
+	}
+
+	finalizedSlot, err := rs.db.GetCleanedFinalizedSlot()
+	if err != nil {
+		log.Errorf("Could not retrieve last finalized slot %v", err)
+		return
+	}
+
+	currentSlot := block.SlotNumber()
+
+	if currentSlot < startSlot || finalizedSlot > endSlot {
+		log.Debugf("Batched Block Request slot is not available in db from %d to %d", startSlot, endSlot)
+		return
+	}
+
+	response := make([]*pb.BeaconBlock, 0, endSlot-startSlot)
+
+	for i := startSlot; i <= endSlot; i++ {
+		block, err := rs.db.GetBlockBySlot(i)
+		if err != nil {
+			log.Errorf("unable to retrieve block from db %v", err)
+			continue
+		}
+
+		if block == nil {
+			log.Debug("block does not exist in db")
+			continue
+		}
+
+		response = append(response, block.Proto())
+	}
+
+	log.Debugf("Sending response for batch blocks to peer %v", msg.Peer)
+	rs.p2p.Send(&pb.BatchedBeaconBlockResponse{
+		BatchedBlocks: response,
 	}, msg.Peer)
 
 }
