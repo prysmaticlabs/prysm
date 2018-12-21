@@ -168,7 +168,7 @@ func WinningRoot(
 
 	for _, attestation := range attestations {
 		if attestation.Data.Shard == shardCommittee.Shard {
-			candidateRoots = append(candidateRoots, attestation.Data.BeaconBlockRootHash32)
+			candidateRoots = append(candidateRoots, attestation.Data.ShardBlockRootHash32)
 		}
 	}
 
@@ -182,6 +182,7 @@ func WinningRoot(
 		if err != nil {
 			return nil, fmt.Errorf("could not get attesting validator indices: %v", err)
 		}
+
 		var rootBalance uint64
 		for _, index := range indices {
 			rootBalance += validators.EffectiveBalance(state, index)
@@ -208,7 +209,8 @@ func AttestingValidators(
 	prevEpochAttestations []*pb.PendingAttestationRecord) ([]uint32, error) {
 
 	root, err := WinningRoot(
-		state, shardCommittee,
+		state,
+		shardCommittee,
 		thisEpochAttestations,
 		prevEpochAttestations)
 	if err != nil {

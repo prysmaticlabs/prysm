@@ -500,8 +500,8 @@ func ValidatorIndices(
 	return attesterIndicesIntersection, nil
 }
 
-// AttestingValidatorIndices returns all the shard committee validator indices
-// from the validator shard committee that matches the input attestations.
+// AttestingValidatorIndices returns the shard committee validator indices
+// if the validator shard committee matches the input attestations.
 //
 // Spec pseudocode definition:
 // Let attesting_validator_indices(shard_committee, shard_block_root)
@@ -520,7 +520,7 @@ func AttestingValidatorIndices(
 	attestations := append(thisEpochAttestations, prevEpochAttestations...)
 
 	for _, attestation := range attestations {
-		if attestation.Data.Slot == shardCommittee.Shard &&
+		if attestation.Data.Shard == shardCommittee.Shard &&
 			bytes.Equal(attestation.Data.ShardBlockRootHash32, shardBlockRoot) {
 
 			validatorIndicesCommittee, err := AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)
