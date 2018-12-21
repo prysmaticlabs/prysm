@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
+	block "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	b "github.com/prysmaticlabs/prysm/shared/bytes"
@@ -55,7 +55,7 @@ func BoundaryAttestations(
 
 	for _, attestation := range thisEpochAttestations {
 
-		boundaryBlockRoot, err := types.BlockRoot(state, state.Slot-epochLength)
+		boundaryBlockRoot, err := block.BlockRoot(state, state.Slot-epochLength)
 		if err != nil {
 			return nil, err
 		}
@@ -134,7 +134,7 @@ func PrevHeadAttestations(
 
 	var headAttestations []*pb.PendingAttestationRecord
 	for _, attestation := range prevEpochAttestations {
-		canonicalBlockRoot, err := types.BlockRoot(state, attestation.GetData().GetSlot())
+		canonicalBlockRoot, err := block.BlockRoot(state, attestation.GetData().GetSlot())
 		if err != nil {
 			return nil, err
 		}
