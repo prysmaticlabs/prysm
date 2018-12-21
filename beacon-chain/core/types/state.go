@@ -81,7 +81,7 @@ func NewGenesisBeaconState(genesisValidatorRegistry []*pb.ValidatorRecord) (*Bea
 			},
 			Slot:                       0,
 			JustifiedStreak:            0,
-			PendingAttestations:        []*pb.AggregatedAttestation{},
+			PendingAttestations:        []*pb.Attestation{},
 			ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
 		},
 	}, nil
@@ -341,7 +341,7 @@ func (b *BeaconState) LatestBlockRootHashes32() [][32]byte {
 }
 
 // PendingAttestations returns attestations that have not yet been processed.
-func (b *BeaconState) PendingAttestations() []*pb.AggregatedAttestation {
+func (b *BeaconState) PendingAttestations() []*pb.Attestation {
 	return b.data.PendingAttestations
 }
 
@@ -355,7 +355,7 @@ func (b *BeaconState) RandaoMix() [32]byte {
 // ClearAttestations removes attestations older than last state recalc slot.
 func (b *BeaconState) ClearAttestations(lastStateRecalc uint64) {
 	existing := b.data.PendingAttestations
-	update := make([]*pb.AggregatedAttestation, 0, len(existing))
+	update := make([]*pb.Attestation, 0, len(existing))
 	for _, a := range existing {
 		if a.GetSlot() >= lastStateRecalc {
 			update = append(update, a)
@@ -429,7 +429,7 @@ func (b *BeaconState) SetLastStateRecalculationSlot(slot uint64) {
 }
 
 // SetPendingAttestations updates the inner proto's pending attestations.
-func (b *BeaconState) SetPendingAttestations(pendingAttestations []*pb.AggregatedAttestation) {
+func (b *BeaconState) SetPendingAttestations(pendingAttestations []*pb.Attestation) {
 	b.data.PendingAttestations = pendingAttestations
 }
 

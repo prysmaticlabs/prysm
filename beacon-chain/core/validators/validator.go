@@ -154,7 +154,7 @@ func BeaconProposerIndex(state *pb.BeaconState, slot uint64) (uint32, error) {
 
 // AreAttesterBitfieldsValid validates that the length of the attester bitfield matches the attester indices
 // defined in the Crystallized State.
-func AreAttesterBitfieldsValid(attestation *pb.AggregatedAttestation, attesterIndices []uint32) bool {
+func AreAttesterBitfieldsValid(attestation *pb.Attestation, attesterIndices []uint32) bool {
 	// Validate attester bit field has the correct length.
 	if bitutil.BitLength(len(attesterIndices)) != len(attestation.AttesterBitfield) {
 		return false
@@ -293,7 +293,7 @@ func TotalActiveValidatorDepositInEth(validators []*pb.ValidatorRecord) uint64 {
 // VotedBalanceInAttestation checks for the total balance in the validator set and the balances of the voters in the
 // attestation.
 func VotedBalanceInAttestation(validators []*pb.ValidatorRecord, indices []uint32,
-	attestation *pb.AggregatedAttestation) (uint64, uint64, error) {
+	attestation *pb.Attestation) (uint64, uint64, error) {
 
 	// find the total and vote balance of the shard committee.
 	var totalBalance uint64

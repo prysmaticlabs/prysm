@@ -53,7 +53,7 @@ func TestDoesAttestationExist(t *testing.T) {
 	}
 	p := NewProposer(context.Background(), cfg)
 
-	p.pendingAttestation = []*pbp2p.AggregatedAttestation{
+	p.pendingAttestation = []*pbp2p.Attestation{
 		{
 			AttesterBitfield: []byte{'a'},
 		},
@@ -67,11 +67,11 @@ func TestDoesAttestationExist(t *testing.T) {
 			AttesterBitfield: []byte{'d'},
 		}}
 
-	fakeAttestation := &pbp2p.AggregatedAttestation{
+	fakeAttestation := &pbp2p.Attestation{
 		AttesterBitfield: []byte{'e'},
 	}
 
-	realAttestation := &pbp2p.AggregatedAttestation{
+	realAttestation := &pbp2p.Attestation{
 		AttesterBitfield: []byte{'a'},
 	}
 
@@ -157,7 +157,7 @@ func TestProposerProcessAttestation(t *testing.T) {
 		p.processAttestation(doneChan)
 		<-exitRoutine
 	}()
-	p.pendingAttestation = []*pbp2p.AggregatedAttestation{
+	p.pendingAttestation = []*pbp2p.Attestation{
 		{
 			AttesterBitfield: []byte{'a'},
 		},
@@ -165,7 +165,7 @@ func TestProposerProcessAttestation(t *testing.T) {
 			AttesterBitfield: []byte{'b'},
 		}}
 
-	attestation := &pbp2p.AggregatedAttestation{AttesterBitfield: []byte{'c'}}
+	attestation := &pbp2p.Attestation{AttesterBitfield: []byte{'c'}}
 	p.attestationChan <- attestation
 
 	doneChan <- struct{}{}
@@ -208,7 +208,7 @@ func TestFullProposalOfBlock(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	p.pendingAttestation = []*pbp2p.AggregatedAttestation{
+	p.pendingAttestation = []*pbp2p.Attestation{
 		{
 			AttesterBitfield: []byte{'a'},
 		},
@@ -216,7 +216,7 @@ func TestFullProposalOfBlock(t *testing.T) {
 			AttesterBitfield: []byte{'b'},
 		}}
 
-	attestation := &pbp2p.AggregatedAttestation{AttesterBitfield: []byte{'c'}}
+	attestation := &pbp2p.Attestation{AttesterBitfield: []byte{'c'}}
 	p.attestationChan <- attestation
 
 	p.assignmentChan <- &pbp2p.BeaconBlock{Slot: 5}
@@ -263,7 +263,7 @@ func TestProposerServiceErrors(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	p.attestationChan <- &pbp2p.AggregatedAttestation{}
+	p.attestationChan <- &pbp2p.Attestation{}
 	p.assignmentChan <- nil
 	p.assignmentChan <- &pbp2p.BeaconBlock{Slot: 9}
 

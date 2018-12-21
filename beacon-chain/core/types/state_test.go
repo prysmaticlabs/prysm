@@ -49,7 +49,7 @@ func TestCopyState(t *testing.T) {
 	state1, _ := NewGenesisBeaconState(nil)
 	state2 := state1.CopyState()
 
-	newAttestations := []*pb.AggregatedAttestation{
+	newAttestations := []*pb.Attestation{
 		{
 			Slot:  0,
 			Shard: 1,
@@ -85,7 +85,7 @@ func TestCopyState(t *testing.T) {
 func TestUpdateAttestations(t *testing.T) {
 	state, _ := NewGenesisBeaconState(nil)
 
-	newAttestations := []*pb.AggregatedAttestation{
+	newAttestations := []*pb.Attestation{
 		{
 			Slot:  0,
 			Shard: 0,
@@ -105,7 +105,7 @@ func TestUpdateAttestations(t *testing.T) {
 
 func TestUpdateAttestationsAfterRecalc(t *testing.T) {
 	state, _ := NewGenesisBeaconState(nil)
-	newAttestations := []*pb.AggregatedAttestation{
+	newAttestations := []*pb.Attestation{
 		{
 			Slot:  10,
 			Shard: 2,

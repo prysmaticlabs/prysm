@@ -131,7 +131,7 @@ func (rs *RegularSync) run() {
 	announceBlockSub := rs.p2p.Subscribe(&pb.BeaconBlockAnnounce{}, rs.announceBlockBuf)
 	blockSub := rs.p2p.Subscribe(&pb.BeaconBlockResponse{}, rs.blockBuf)
 	blockRequestSub := rs.p2p.Subscribe(&pb.BeaconBlockRequestBySlotNumber{}, rs.blockRequestBySlot)
-	attestationSub := rs.p2p.Subscribe(&pb.AggregatedAttestation{}, rs.attestationBuf)
+	attestationSub := rs.p2p.Subscribe(&pb.Attestation{}, rs.attestationBuf)
 	chainHeadReqSub := rs.p2p.Subscribe(&pb.ChainHeadRequest{}, rs.chainHeadReqBuf)
 
 	defer announceBlockSub.Unsubscribe()
@@ -300,7 +300,7 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) {
 // discard the attestation if we have gotten before, send it to attestation
 // service if we have not.
 func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
-	data := msg.Data.(*pb.AggregatedAttestation)
+	data := msg.Data.(*pb.Attestation)
 	a := types.NewAttestation(data)
 	h := a.Key()
 

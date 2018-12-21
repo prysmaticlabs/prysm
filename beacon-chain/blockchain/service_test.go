@@ -241,7 +241,7 @@ func TestRunningChainService(t *testing.T) {
 		StateRootHash32:               stateRoot[:],
 		ParentRootHash32:              parentHash[:],
 		CandidatePowReceiptRootHash32: []byte("a"),
-		Attestations: []*pb.AggregatedAttestation{{
+		Attestations: []*pb.Attestation{{
 			Slot: attestationSlot,
 			AttesterBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -431,7 +431,7 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 		StateRootHash32:               stateRoot[:],
 		ParentRootHash32:              parentHash[:],
 		CandidatePowReceiptRootHash32: []byte("a"),
-		Attestations: []*pb.AggregatedAttestation{{
+		Attestations: []*pb.Attestation{{
 			Slot: attestationSlot,
 			AttesterBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},

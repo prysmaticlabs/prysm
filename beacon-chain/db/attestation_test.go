@@ -12,7 +12,7 @@ func TestSaveAndRetrieveAttestation(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	a := types.NewAttestation(&pb.AggregatedAttestation{
+	a := types.NewAttestation(&pb.Attestation{
 		Slot:  0,
 		Shard: 0,
 	})
@@ -58,7 +58,7 @@ func TestGetHasAttestation(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	a := types.NewAttestation(&pb.AggregatedAttestation{
+	a := types.NewAttestation(&pb.Attestation{
 		Slot:  0,
 		Shard: 0,
 	})
