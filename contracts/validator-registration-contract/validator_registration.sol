@@ -27,6 +27,9 @@ contract ValidatorRegistration {
     uint public fullDepositCount;
     uint public totalDepositCount;
 
+    using SafeMath for uint256;
+
+
     // When users wish to become a validator by moving ETH from
     // 1.0 chian to the 2.0 chain, they should call this function
     // sending along DEPOSIT_SIZE ETH and providing depositParams
