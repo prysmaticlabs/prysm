@@ -279,11 +279,14 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 		s.genesisHash = wrappedBlock.ParentHash()
 	}
 
+	// setting first block for sync.
 	if s.currentSlot == 0 {
 		if s.initialStateRootHash32 != [32]byte{} {
+			log.Errorf("State root hash %#x set despite current slot being 0", s.initialStateRootHash32)
 			return
 		}
 
+		// writing genesis block to db.
 		if hash == s.genesisHash {
 			if err := s.writeBlockToDB(wrappedBlock); err != nil {
 				log.Error(err)
@@ -302,6 +305,8 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 		}
 
 		if s.genesisHash != [32]byte{} && !s.checkForGenesisBlock(s.genesisHash, peer) {
+			s.requestBlockByHash(s.genesisHash, peer)
+			log.Debugf("Genesis block with hash %#x not saved in db", s.genesisHash)
 			return
 		}
 
@@ -309,7 +314,7 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 			log.Errorf("Could not set block for initial sync: %v", err)
 		}
 		if err := s.requestStateFromPeer(block, peer); err != nil {
-			log.Errorf("Could not request crystallized state from peer: %v", err)
+			log.Errorf("Could not request beacon state from peer: %v", err)
 		}
 
 		return
@@ -361,7 +366,7 @@ func (s *InitialSync) setBlockForInitialSync(rawBlock *pb.BeaconBlock) error {
 	if err != nil {
 		return err
 	}
-	log.WithField("blockhash", fmt.Sprintf("%#x", h)).Debug("State state hash exists locally")
+	log.WithField("blockhash", fmt.Sprintf("%#x", h)).Debug("Beacon state hash exists locally")
 
 	s.chainService.IncomingBlockFeed().Send(block)
 
@@ -447,7 +452,7 @@ func (s *InitialSync) checkBlockValidity(rawBlock *pb.BeaconBlock) error {
 
 	beaconState, err := s.db.GetState()
 	if err != nil {
-		return fmt.Errorf("failed to get crystallized state: %v", err)
+		return fmt.Errorf("failed to get beacon state: %v", err)
 	}
 
 	if block.SlotNumber() < beaconState.LastFinalizedSlot() {
@@ -464,15 +469,5 @@ func (s *InitialSync) writeBlockToDB(block *types.Block) error {
 }
 
 func (s *InitialSync) checkForGenesisBlock(hash [32]byte, peer p2p.Peer) bool {
-
-	if hash == [32]byte{} {
-		return false
-	}
-
-	if s.db.HasBlock(hash) {
-		return true
-	}
-
-	s.requestBlockByHash(hash, peer)
-	return false
+	return s.db.HasBlock(hash)
 }

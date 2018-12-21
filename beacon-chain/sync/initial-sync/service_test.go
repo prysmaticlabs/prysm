@@ -45,15 +45,22 @@ func (ms *mockSyncService) ResumeSync() {
 
 }
 
+type mockChainService struct{}
+
+func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
+	return &event.Feed{}
+}
+
 func TestSetBlockForInitialSync(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
 	cfg := &Config{
-		P2P:         &mockP2P{},
-		SyncService: &mockSyncService{},
-		BeaconDB:    db,
+		P2P:          &mockP2P{},
+		SyncService:  &mockSyncService{},
+		BeaconDB:     db,
+		ChainService: &mockChainService{},
 	}
 
 	ss := NewInitialSyncService(context.Background(), cfg)
@@ -76,11 +83,26 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	block := &pb.BeaconBlock{
 		CandidatePowReceiptRootHash32: []byte{1, 2, 3},
 		ParentRootHash32:              genericHash,
+		Slot:                          uint64(0),
+		StateRootHash32:               genericHash,
+	}
+
+	wrappedBlock := types.NewBlock(block)
+	hash, err := wrappedBlock.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ss.db.SaveBlock(wrappedBlock)
+
+	newblock := &pb.BeaconBlock{
+		CandidatePowReceiptRootHash32: []byte{1, 2, 3},
+		ParentRootHash32:              hash[:],
 		Slot:                          uint64(1),
 		StateRootHash32:               genericHash,
 	}
 
-	blockResponse := &pb.BeaconBlockResponse{Block: block}
+	blockResponse := &pb.BeaconBlockResponse{Block: newblock}
 	msg1 := p2p.Message{
 		Peer: p2p.Peer{},
 		Data: blockResponse,
@@ -91,11 +113,11 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	var hash [32]byte
-	copy(hash[:], blockResponse.Block.StateRootHash32)
+	var stateHash [32]byte
+	copy(stateHash[:], blockResponse.Block.StateRootHash32)
 
-	if hash != ss.initialStateRootHash32 {
-		t.Fatalf("Crystallized state hash not updated: %#x", blockResponse.Block.StateRootHash32)
+	if stateHash != ss.initialStateRootHash32 {
+		t.Fatalf("Beacon state hash not updated: %#x", blockResponse.Block.StateRootHash32)
 	}
 
 	hook.Reset()
@@ -363,80 +385,6 @@ func TestRequestBlocksBySlot(t *testing.T) {
 
 	// waiting for the current slot to come up to the
 	// expected one.
-	testutil.WaitForLog(t, hook, expString)
-
-	delayChan <- time.Time{}
-
-	ss.cancel()
-	<-exitRoutine
-
-	testutil.AssertLogsContain(t, hook, "Exiting initial sync and starting normal sync")
-
-	hook.Reset()
-}
-
-func TestRequestBatchedBlocks(t *testing.T) {
-	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	cfg := &Config{
-		P2P:             &mockP2P{},
-		SyncService:     &mockSyncService{},
-		BeaconDB:        db,
-		BlockBufferSize: 100,
-	}
-	ss := NewInitialSyncService(context.Background(), cfg)
-
-	exitRoutine := make(chan bool)
-	delayChan := make(chan time.Time)
-
-	defer func() {
-		close(exitRoutine)
-		close(delayChan)
-	}()
-
-	go func() {
-		ss.run(delayChan)
-		exitRoutine <- true
-	}()
-
-	genericHash := make([]byte, 32)
-	genericHash[0] = 'a'
-
-	getBlockResponse := func(Slot uint64) (*pb.BeaconBlockResponse, [32]byte) {
-
-		block := &pb.BeaconBlock{
-			CandidatePowReceiptRootHash32: []byte{1, 2, 3},
-			ParentRootHash32:              genericHash,
-			Slot:                          Slot,
-			StateRootHash32:               nil,
-		}
-
-		blockResponse := &pb.BeaconBlockResponse{
-			Block: block,
-		}
-
-		hash, err := types.NewBlock(block).Hash()
-		if err != nil {
-			t.Fatalf("unable to hash block %v", err)
-		}
-
-		return blockResponse, hash
-	}
-
-	for i := ss.currentSlot + 1; i <= 10; i++ {
-		response, _ := getBlockResponse(i)
-		ss.inMemoryBlocks[i] = response.Block
-	}
-
-	ss.requestBatchedBlocks(10)
-
-	_, hash := getBlockResponse(10)
-	expString := fmt.Sprintf("Saved block with hash %#x and slot %d for initial sync", hash, 10)
-
-	// waiting for the current slot to come up to the
-	// expected one.
-
 	testutil.WaitForLog(t, hook, expString)
 
 	delayChan <- time.Time{}
