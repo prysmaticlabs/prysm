@@ -156,7 +156,7 @@ func BeaconProposerIndex(state *pb.BeaconState, slot uint64) (uint32, error) {
 // defined in the Crystallized State.
 func AreAttesterBitfieldsValid(attestation *pb.Attestation, attesterIndices []uint32) bool {
 	// Validate attester bit field has the correct length.
-	if bitutil.BitLength(len(attesterIndices)) != len(attestation.AttesterBitfield) {
+	if bitutil.BitLength(len(attesterIndices)) != len(attestation.GetParticipationBitfield()) {
 		return false
 	}
 
@@ -168,7 +168,7 @@ func AreAttesterBitfieldsValid(attestation *pb.Attestation, attesterIndices []ui
 	}
 
 	for i := 0; i < bitsInByte-remainingBits; i++ {
-		isBitSet, err := bitutil.CheckBit(attestation.AttesterBitfield, lastBit+i)
+		isBitSet, err := bitutil.CheckBit(attestation.GetParticipationBitfield(), lastBit+i)
 		if err != nil {
 			return false
 		}
@@ -300,7 +300,7 @@ func VotedBalanceInAttestation(validators []*pb.ValidatorRecord, indices []uint3
 	var voteBalance uint64
 	for index, attesterIndex := range indices {
 		// find balance of validators who voted.
-		bitCheck, err := bitutil.CheckBit(attestation.AttesterBitfield, index)
+		bitCheck, err := bitutil.CheckBit(attestation.GetParticipationBitfield(), index)
 		if err != nil {
 			return 0, 0, err
 		}

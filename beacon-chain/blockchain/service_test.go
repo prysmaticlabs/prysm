@@ -241,13 +241,17 @@ func TestRunningChainService(t *testing.T) {
 		StateRootHash32:               stateRoot[:],
 		ParentRootHash32:              parentHash[:],
 		CandidatePowReceiptRootHash32: []byte("a"),
-		Attestations: []*pb.Attestation{{
-			Slot: attestationSlot,
-			AttesterBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-			Shard:              shard,
-			JustifiedBlockHash: parentHash[:],
-		}},
+		Body: &pb.BeaconBlockBody{
+			Attestations: []*pb.Attestation{{
+				ParticipationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				Data: &pb.AttestationData{
+					Slot:                     attestationSlot,
+					Shard:                    shard,
+					JustifiedBlockRootHash32: parentHash[:],
+				},
+			}},
+		},
 	}
 
 	if err := SetSlotInState(chainService, currentSlot); err != nil {
@@ -431,13 +435,17 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 		StateRootHash32:               stateRoot[:],
 		ParentRootHash32:              parentHash[:],
 		CandidatePowReceiptRootHash32: []byte("a"),
-		Attestations: []*pb.Attestation{{
-			Slot: attestationSlot,
-			AttesterBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-			Shard:              shard,
-			JustifiedBlockHash: parentHash[:],
-		}},
+		Body: &pb.BeaconBlockBody{
+			Attestations: []*pb.Attestation{{
+				ParticipationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				Data: &pb.AttestationData{
+					Slot:                     attestationSlot,
+					Shard:                    shard,
+					JustifiedBlockRootHash32: parentHash[:],
+				},
+			}},
+		},
 	}
 
 	chainService.enablePOWChain = true

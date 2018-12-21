@@ -27,7 +27,7 @@ func TestIncomingAttestations(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	service.incomingChan <- &pb.AttestationRecord{}
+	service.incomingChan <- &pb.Attestation{}
 	service.cancel()
 	exitRoutine <- true
 

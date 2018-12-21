@@ -50,12 +50,12 @@ func AttesterIndices(
 ) ([]uint32, error) {
 	shardCommitteesArray := shardCommittees.ArrayShardAndCommittee
 	for _, shardCommittee := range shardCommitteesArray {
-		if attestation.Shard == shardCommittee.Shard {
+		if attestation.GetData().GetShard() == shardCommittee.Shard {
 			return shardCommittee.Committee, nil
 		}
 	}
 
-	return nil, fmt.Errorf("unable to find committee for shard %d", attestation.Shard)
+	return nil, fmt.Errorf("unable to find committee for shard %d", attestation.GetData().GetShard())
 }
 
 // splitBySlotShard splits the validator list into evenly sized committees and assigns each

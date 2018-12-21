@@ -81,7 +81,6 @@ func NewGenesisBeaconState(genesisValidatorRegistry []*pb.ValidatorRecord) (*Bea
 			},
 			Slot:                       0,
 			JustifiedStreak:            0,
-			PendingAttestations:        []*pb.Attestation{},
 			ShardAndCommitteesForSlots: shardAndCommitteesForSlots,
 		},
 	}, nil
@@ -340,11 +339,6 @@ func (b *BeaconState) LatestBlockRootHashes32() [][32]byte {
 	return blockhashes
 }
 
-// PendingAttestations returns attestations that have not yet been processed.
-func (b *BeaconState) PendingAttestations() []*pb.Attestation {
-	return b.data.PendingAttestations
-}
-
 // RandaoMix tracks the current RANDAO state.
 func (b *BeaconState) RandaoMix() [32]byte {
 	var h [32]byte
@@ -354,14 +348,14 @@ func (b *BeaconState) RandaoMix() [32]byte {
 
 // ClearAttestations removes attestations older than last state recalc slot.
 func (b *BeaconState) ClearAttestations(lastStateRecalc uint64) {
-	existing := b.data.PendingAttestations
-	update := make([]*pb.Attestation, 0, len(existing))
+	existing := b.data.LatestAttestations
+	update := make([]*pb.PendingAttestationRecord, 0, len(existing))
 	for _, a := range existing {
-		if a.GetSlot() >= lastStateRecalc {
+		if a.GetData().GetSlot() >= lastStateRecalc {
 			update = append(update, a)
 		}
 	}
-	b.data.PendingAttestations = update
+	b.data.LatestAttestations = update
 }
 
 // CalculateNewBlockHashes builds a new slice of recent block hashes with the
@@ -426,11 +420,6 @@ func (b *BeaconState) SetJustifiedStreak(justifiedSlot uint64) {
 // SetLastStateRecalculationSlot updates the inner proto's last state recalc slot.
 func (b *BeaconState) SetLastStateRecalculationSlot(slot uint64) {
 	b.data.LastStateRecalculationSlot = slot
-}
-
-// SetPendingAttestations updates the inner proto's pending attestations.
-func (b *BeaconState) SetPendingAttestations(pendingAttestations []*pb.Attestation) {
-	b.data.PendingAttestations = pendingAttestations
 }
 
 // SetRandaoMix updates the inner proto's randao mix.

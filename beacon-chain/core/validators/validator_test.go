@@ -14,11 +14,11 @@ import (
 func TestHasVoted(t *testing.T) {
 	// Setting bit field to 11111111.
 	pendingAttestation := &pb.Attestation{
-		AttesterBitfield: []byte{255},
+		ParticipationBitfield: []byte{255},
 	}
 
-	for i := 0; i < len(pendingAttestation.AttesterBitfield); i++ {
-		voted, err := bitutil.CheckBit(pendingAttestation.AttesterBitfield, i)
+	for i := 0; i < len(pendingAttestation.GetParticipationBitfield()); i++ {
+		voted, err := bitutil.CheckBit(pendingAttestation.GetParticipationBitfield(), i)
 		if err != nil {
 			t.Errorf("checking bit failed at index: %d with : %v", i, err)
 		}
@@ -30,11 +30,11 @@ func TestHasVoted(t *testing.T) {
 
 	// Setting bit field to 01010101.
 	pendingAttestation = &pb.Attestation{
-		AttesterBitfield: []byte{85},
+		ParticipationBitfield: []byte{85},
 	}
 
-	for i := 0; i < len(pendingAttestation.AttesterBitfield); i++ {
-		voted, err := bitutil.CheckBit(pendingAttestation.AttesterBitfield, i)
+	for i := 0; i < len(pendingAttestation.GetParticipationBitfield()); i++ {
+		voted, err := bitutil.CheckBit(pendingAttestation.GetParticipationBitfield(), i)
 		if err != nil {
 			t.Errorf("checking bit failed at index: %d : %v", i, err)
 		}
@@ -62,7 +62,7 @@ func TestInitialValidatorRegistry(t *testing.T) {
 
 func TestAreAttesterBitfieldsValid(t *testing.T) {
 	attestation := &pb.Attestation{
-		AttesterBitfield: []byte{'F'},
+		ParticipationBitfield: []byte{'F'},
 	}
 
 	indices := []uint32{0, 1, 2, 3, 4, 5, 6, 7}
@@ -75,7 +75,7 @@ func TestAreAttesterBitfieldsValid(t *testing.T) {
 
 func TestAreAttesterBitfieldsValidFalse(t *testing.T) {
 	attestation := &pb.Attestation{
-		AttesterBitfield: []byte{'F', 'F'},
+		ParticipationBitfield: []byte{'F', 'F'},
 	}
 
 	indices := []uint32{0, 1, 2, 3, 4, 5, 6, 7}
@@ -88,7 +88,7 @@ func TestAreAttesterBitfieldsValidFalse(t *testing.T) {
 
 func TestAreAttesterBitfieldsValidZerofill(t *testing.T) {
 	attestation := &pb.Attestation{
-		AttesterBitfield: []byte{'F'},
+		ParticipationBitfield: []byte{'F'},
 	}
 
 	indices := []uint32{0, 1, 2, 3, 4, 5, 6}
@@ -101,7 +101,7 @@ func TestAreAttesterBitfieldsValidZerofill(t *testing.T) {
 
 func TestAreAttesterBitfieldsValidNoZerofill(t *testing.T) {
 	attestation := &pb.Attestation{
-		AttesterBitfield: []byte{'E'},
+		ParticipationBitfield: []byte{'E'},
 	}
 
 	var indices []uint32
@@ -265,7 +265,7 @@ func TestVotedBalanceInAttestation(t *testing.T) {
 
 	// Calculating balances with zero votes by attesters.
 	attestation := &pb.Attestation{
-		AttesterBitfield: []byte{0},
+		ParticipationBitfield: []byte{0},
 	}
 
 	indices := []uint32{4, 8, 10, 14, 30}
@@ -288,7 +288,7 @@ func TestVotedBalanceInAttestation(t *testing.T) {
 	// Calculating balances with 3 votes by attesters.
 
 	newAttestation := &pb.Attestation{
-		AttesterBitfield: []byte{224}, // 128 + 64 + 32
+		ParticipationBitfield: []byte{224}, // 128 + 64 + 32
 	}
 
 	expectedTotalBalance = uint64(len(indices)) * defaultBalance
