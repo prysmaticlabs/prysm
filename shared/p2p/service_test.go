@@ -67,54 +67,36 @@ func TestP2pPortTakenError(t *testing.T) {
 }
 
 func TestBroadcast(t *testing.T) {
-	s, err := NewServer(&ServerConfig{Port: 12345})
+	servers, err := runP2PServersWithDifferentPorts(3)
 	if err != nil {
 		t.Fatalf("error while trying to create server: %s", err)
 	}
 
-	s2, err := NewServer(&ServerConfig{Port: 54321})
-	if err != nil {
-		t.Fatalf("error while trying to create server: %s", err)
-	}
-
-	s3, err := NewServer(&ServerConfig{Port: 11223})
-	if err != nil {
-		t.Fatalf("error while trying to create server: %s", err)
-	}
-
-	s.Start()
-	s2.Start()
-	s3.Start()
-
-	err = connectServersTo(s, []*Server{s2, s3})
+	err = connectServersTo(servers[0], servers[1:])
 	if err != nil {
 		t.Fatalf("error while trying to connect to peer: %s", err)
 	}
 
 	msg := &shardpb.CollationBodyRequest{}
-
-	s.RegisterTopic("theTopic", msg)
-	s2.RegisterTopic("theTopic", msg)
-	s3.RegisterTopic("theTopic", msg)
+	subscribeServersToTopic(servers, "theTopic", msg)
 
 	s2Chan := make(chan Message)
-	s2.Subscribe(msg, s2Chan)
+	servers[1].Subscribe(msg, s2Chan)
 
 	s3Chan := make(chan Message)
-	s3.Subscribe(msg, s3Chan)
+	servers[2].Subscribe(msg, s3Chan)
 
 	time.Sleep(1 * time.Second)
 
 	aMessage := &shardpb.CollationBodyRequest{ShardId:1234}
-
-	s.Broadcast(aMessage)
+	servers[0].Broadcast(aMessage)
 
 	doneChan := make(chan bool)
 	errorChan := make(chan bool)
 	timeoutChan := make(chan bool)
 
     var wg sync.WaitGroup
-	wg.Add(2) // Num of nodes that receive the channel
+	wg.Add(len(servers[1:])) // Num of nodes that receive the channel
 
 	go func() {
 		// Wait message sent to channel for subscription node 2
@@ -160,6 +142,22 @@ func TestBroadcast(t *testing.T) {
 	}
 }
 
+func runP2PServersWithDifferentPorts(numServers int) ([]*Server, error) {
+	var servers []*Server
+	initialPort := 12345
+
+	for i:=0;i<numServers;i++ {
+		s, err := NewServer(&ServerConfig{Port: initialPort + i})
+		if err != nil {
+			return nil, err
+		}
+
+		servers = append(servers, s)
+	}
+
+	return servers, nil
+}
+
 func connectServersTo(serverToConnect *Server, servers []*Server) error {
 	for _, server := range servers {
 		err := server.host.Connect(context.Background(), peerstore.PeerInfo{ID: serverToConnect.host.ID(), Addrs: serverToConnect.host.Addrs()})
@@ -169,6 +167,12 @@ func connectServersTo(serverToConnect *Server, servers []*Server) error {
 	}
 
 	return nil
+}
+
+func subscribeServersToTopic(servers []*Server, topic string, msg proto.Message) {
+	for _, server := range servers {
+		server.RegisterTopic(topic, msg)
+	}
 }
 
 func TestEmit(t *testing.T) {
