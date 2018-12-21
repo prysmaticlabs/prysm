@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/golang/protobuf/proto"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -187,8 +188,8 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 	defer receiveBlockSpan.End()
 
 	response := msg.Data.(*pb.BeaconBlockResponse)
-	block := types.NewBlock(response.Block)
-	blockHash, err := block.Hash()
+	block := response.Block
+	blockHash, err := b.Hash(block)
 	if err != nil {
 		log.Errorf("Could not hash received block: %v", err)
 		return
@@ -207,7 +208,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 		return
 	}
 
-	if block.SlotNumber() < beaconState.LastFinalizedSlot() {
+	if block.GetSlot() < beaconState.LastFinalizedSlot() {
 		log.Debug("Discarding received block with a slot number smaller than the last finalized slot")
 		return
 	}
@@ -218,7 +219,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 	proposerShardID, _, err := v.ProposerShardAndIndex(
 		beaconState.ShardAndCommitteesForSlots(),
 		beaconState.LastStateRecalculationSlot(),
-		block.SlotNumber(),
+		block.GetSlot(),
 	)
 	if err != nil {
 		log.Errorf("Failed to get proposer shard ID: %v", err)
@@ -264,7 +265,7 @@ func (rs *RegularSync) handleBlockRequestBySlot(msg p2p.Message) {
 
 	_, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
 	log.WithField("slotNumber", fmt.Sprintf("%d", request.GetSlotNumber())).Debug("Sending requested block to peer")
-	rs.p2p.Send(block.Proto(), msg.Peer)
+	rs.p2p.Send(block, msg.Peer)
 	sendBlockSpan.End()
 }
 
@@ -280,16 +281,16 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) {
 		return
 	}
 
-	hash, err := block.Hash()
+	hash, err := b.Hash(block)
 	if err != nil {
 		log.Errorf("Could not hash block %v", err)
 		return
 	}
 
 	req := &pb.ChainHeadResponse{
-		Slot:  block.SlotNumber(),
+		Slot:  block.GetSlot(),
 		Hash:  hash[:],
-		Block: block.Proto(),
+		Block: block,
 	}
 
 	rs.p2p.Send(req, msg.Peer)

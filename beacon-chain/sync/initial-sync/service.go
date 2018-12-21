@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -252,8 +253,8 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 // requestStateFromPeer sends a request to a peer for the corresponding state
 // for a beacon block.
 func (s *InitialSync) requestStateFromPeer(data *pb.BeaconBlockResponse, peer p2p.Peer) error {
-	block := types.NewBlock(data.Block)
-	h := block.StateRootHash32()
+	block := data.Block
+	h := block.GetStateRootHash32()
 	log.Debugf("Successfully processed incoming block with state hash: %#x", h)
 	s.p2p.Send(&pb.BeaconStateRequest{Hash: h[:]}, peer)
 	return nil
@@ -262,9 +263,9 @@ func (s *InitialSync) requestStateFromPeer(data *pb.BeaconBlockResponse, peer p2
 // setBlockForInitialSync sets the first received block as the base finalized
 // block for initial sync.
 func (s *InitialSync) setBlockForInitialSync(data *pb.BeaconBlockResponse) error {
-	block := types.NewBlock(data.Block)
+	block := data.Block
 
-	h, err := block.Hash()
+	h, err := b.Hash(block)
 	if err != nil {
 		return err
 	}
@@ -274,10 +275,12 @@ func (s *InitialSync) setBlockForInitialSync(data *pb.BeaconBlockResponse) error
 		return err
 	}
 
-	s.initialStateRootHash32 = block.StateRootHash32()
+	var blockStateRoot [32]byte
+	copy(blockStateRoot[:], block.GetStateRootHash32())
+	s.initialStateRootHash32 = blockStateRoot
 
 	log.Infof("Saved block with hash %#x for initial sync", h)
-	s.currentSlot = block.SlotNumber()
+	s.currentSlot = block.GetSlot()
 	s.requestNextBlockBySlot(s.currentSlot + 1)
 	return nil
 }
@@ -306,8 +309,8 @@ func (s *InitialSync) requestBatchedBlocks(endSlot uint64) {
 // validateAndSaveNextBlock will validate whether blocks received from the blockfetcher
 // routine can be added to the chain.
 func (s *InitialSync) validateAndSaveNextBlock(data *pb.BeaconBlockResponse) error {
-	block := types.NewBlock(data.Block)
-	h, err := block.Hash()
+	block := data.Block
+	h, err := b.Hash(block)
 	if err != nil {
 		return err
 	}
@@ -316,23 +319,23 @@ func (s *InitialSync) validateAndSaveNextBlock(data *pb.BeaconBlockResponse) err
 		return errors.New("invalid slot number for syncing")
 	}
 
-	if (s.currentSlot + 1) == block.SlotNumber() {
+	if (s.currentSlot + 1) == block.GetSlot() {
 		if err := s.writeBlockToDB(block); err != nil {
 			return err
 		}
 
-		log.Infof("Saved block with hash %#x and slot %d for initial sync", h, block.SlotNumber())
-		s.currentSlot = block.SlotNumber()
+		log.Infof("Saved block with hash %#x and slot %d for initial sync", h, block.GetSlot())
+		s.currentSlot = block.GetSlot()
 
 		// delete block from memory
-		if _, ok := s.inMemoryBlocks[block.SlotNumber()]; ok {
-			delete(s.inMemoryBlocks, block.SlotNumber())
+		if _, ok := s.inMemoryBlocks[block.GetSlot()]; ok {
+			delete(s.inMemoryBlocks, block.GetSlot())
 		}
 	}
 	return nil
 }
 
 // writeBlockToDB saves the corresponding block to the local DB.
-func (s *InitialSync) writeBlockToDB(block *types.Block) error {
+func (s *InitialSync) writeBlockToDB(block *pb.BeaconBlock) error {
 	return s.db.SaveBlock(block)
 }
