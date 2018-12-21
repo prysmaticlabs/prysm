@@ -88,18 +88,14 @@ func TestBroadcast(t *testing.T) {
 
 	time.Sleep(time.Second * 5)
 
-	for _, peer := range s.host.Peerstore().Peers() {
-		err = s2.host.Connect(context.Background(), peerstore.PeerInfo{ID: peer, Addrs: s.host.Addrs()})
-		if err != nil {
-			t.Fatalf("error while trying to connect to peer: %s", err)
-		}
+	err = s2.host.Connect(context.Background(), peerstore.PeerInfo{ID: s.host.ID(), Addrs: s.host.Addrs()})
+	if err != nil {
+		t.Fatalf("error while trying to connect to peer: %s", err)
+	}
 
-		err = s3.host.Connect(context.Background(), peerstore.PeerInfo{ID: peer, Addrs: s.host.Addrs()})
-		if err != nil {
-			t.Fatalf("error while trying to connect to peer: %s", err)
-		}
-
-		break
+	err = s3.host.Connect(context.Background(), peerstore.PeerInfo{ID: s.host.ID(), Addrs: s.host.Addrs()})
+	if err != nil {
+		t.Fatalf("error while trying to connect to peer: %s", err)
 	}
 
 	msg := &shardpb.CollationBodyRequest{}
@@ -116,20 +112,34 @@ func TestBroadcast(t *testing.T) {
 
 	time.Sleep(5 * time.Second)
 
-	s.Broadcast(msg)
+	aMessage := &shardpb.CollationBodyRequest{ShardId:1234}
+
+	s.Broadcast(aMessage)
 
 	var wg sync.WaitGroup
 	wg.Add(2)
 
 	go func() {
 		// Wait message sent to channel for subscription node 2
-		<-s2Chan
+		recMessage := <-s2Chan
+
+		protoMsg := recMessage.Data.(*shardpb.CollationBodyRequest)
+        if protoMsg.ShardId != aMessage.ShardId {
+        	t.Fatalf("error asserting that received broacasted message equals expected")
+		}
+
 		wg.Done()
 	}()
 
 	go func() {
 		// Wait message sent to channel for subscription node 3
-		<-s3Chan
+		recMessage := <-s3Chan
+		protoMsg := recMessage.Data.(*shardpb.CollationBodyRequest)
+
+		if protoMsg.ShardId != aMessage.ShardId {
+			t.Fatalf("error asserting that received broacasted message equals expected")
+		}
+
 		wg.Done()
 	}()
 
