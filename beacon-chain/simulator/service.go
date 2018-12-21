@@ -259,26 +259,26 @@ func (sim *Simulator) processStateRequest(msg p2p.Message) {
 
 	state, err := sim.beaconDB.GetState()
 	if err != nil {
-		log.Errorf("Could not retrieve crystallized state: %v", err)
+		log.Errorf("Could not retrieve beacon state: %v", err)
 		return
 	}
 
 	hash, err := state.Hash()
 	if err != nil {
-		log.Errorf("Could not hash crystallized state: %v", err)
+		log.Errorf("Could not hash beacon state: %v", err)
 		return
 	}
 
 	if !bytes.Equal(data.GetHash(), hash[:]) {
 		log.WithFields(logrus.Fields{
 			"hash": fmt.Sprintf("%#x", data.GetHash()),
-		}).Debug("Requested Crystallized state is of a different hash")
+		}).Debug("Requested beacon state is of a different hash")
 		return
 	}
 
 	log.WithFields(logrus.Fields{
 		"hash": fmt.Sprintf("%#x", hash),
-	}).Debug("Responding to full crystallized state request")
+	}).Debug("Responding to full beacon state request")
 
 	// Sends the full beacon state to the requester.
 	res := &pb.BeaconStateResponse{
