@@ -41,8 +41,8 @@ type Simulator struct {
 	web3Service             powChainService
 	beaconDB                *db.BeaconDB
 	enablePOWChain          bool
-	broadcastedBlocksByHash map[[32]byte]*types.Block
-	broadcastedBlocksBySlot map[uint64]*types.Block
+	broadcastedBlocksByHash map[[32]byte]*pb.BeaconBlock
+	broadcastedBlocksBySlot map[uint64]*pb.BeaconBlock
 	blockRequestChan        chan p2p.Message
 	blockBySlotChan         chan p2p.Message
 	batchBlockReqChan       chan p2p.Message
@@ -84,8 +84,8 @@ func NewSimulator(ctx context.Context, cfg *Config) *Simulator {
 		web3Service:             cfg.Web3Service,
 		beaconDB:                cfg.BeaconDB,
 		enablePOWChain:          cfg.EnablePOWChain,
-		broadcastedBlocksByHash: map[[32]byte]*types.Block{},
-		broadcastedBlocksBySlot: map[uint64]*types.Block{},
+		broadcastedBlocksByHash: map[[32]byte]*pb.BeaconBlock{},
+		broadcastedBlocksBySlot: map[uint64]*pb.BeaconBlock{},
 		blockRequestChan:        make(chan p2p.Message, cfg.BlockRequestBuf),
 		blockBySlotChan:         make(chan p2p.Message, cfg.BlockSlotBuf),
 		batchBlockReqChan:       make(chan p2p.Message, cfg.BatchedBlockBuf),
@@ -224,8 +224,8 @@ func (sim *Simulator) processBlockReqByHash(msg p2p.Message) {
 	}).Debug("Responding to full block request")
 
 	// Sends the full block body to the requester.
-	res := &pb.BeaconBlockResponse{Block: block.Proto(), Attestation: &pb.AggregatedAttestation{
-		Slot:             block.SlotNumber(),
+	res := &pb.BeaconBlockResponse{Block: block, Attestation: &pb.AggregatedAttestation{
+		Slot:             block.GetSlot(),
 		AttesterBitfield: []byte{byte(255)},
 	}}
 	sim.p2p.Send(res, msg.Peer)
@@ -247,8 +247,8 @@ func (sim *Simulator) processBlockReqBySlot(msg p2p.Message) {
 	}).Debug("Responding to full block request")
 
 	// Sends the full block body to the requester.
-	res := &pb.BeaconBlockResponse{Block: block.Proto(), Attestation: &pb.AggregatedAttestation{
-		Slot:             block.SlotNumber(),
+	res := &pb.BeaconBlockResponse{Block: block, Attestation: &pb.AggregatedAttestation{
+		Slot:             block.GetSlot(),
 		AttesterBitfield: []byte{byte(255)},
 	}}
 	sim.p2p.Send(res, msg.Peer)
@@ -305,7 +305,7 @@ func (sim *Simulator) processBatchRequest(msg p2p.Message) {
 		if block == nil {
 			continue
 		}
-		response = append(response, block.Proto())
+		response = append(response, block)
 	}
 
 	log.Debugf("Sending response for batch blocks to peer %v", msg.Peer)

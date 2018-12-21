@@ -14,7 +14,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"time"
 
 	"github.com/golang/protobuf/proto"
@@ -288,7 +287,7 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 
 		// writing genesis block to db.
 		if hash == s.genesisHash {
-			if err := s.writeBlockToDB(wrappedBlock); err != nil {
+			if err := s.writeBlockToDB(block); err != nil {
 				log.Error(err)
 			}
 			return
@@ -359,9 +358,7 @@ func (s *InitialSync) requestStateFromPeer(block *pb.BeaconBlock, peer p2p.Peer)
 
 // setBlockForInitialSync sets the first received block as the base finalized
 // block for initial sync.
-func (s *InitialSync) setBlockForInitialSync(rawBlock *pb.BeaconBlock) error {
-	block := types.NewBlock(rawBlock)
-
+func (s *InitialSync) setBlockForInitialSync(block *pb.BeaconBlock) error {
 	h, err := b.Hash(block)
 	if err != nil {
 		return err
@@ -408,9 +405,9 @@ func (s *InitialSync) requestBatchedBlocks(endSlot uint64) {
 
 // validateAndSaveNextBlock will validate whether blocks received from the blockfetcher
 // routine can be added to the chain.
-func (s *InitialSync) validateAndSaveNextBlock(rawBlock *pb.BeaconBlock) error {
-	block := types.NewBlock(rawBlock)
-	h, err := block.Hash()
+func (s *InitialSync) validateAndSaveNextBlock(block *pb.BeaconBlock) error {
+
+	h, err := b.Hash(block)
 	if err != nil {
 		return err
 	}
@@ -419,9 +416,9 @@ func (s *InitialSync) validateAndSaveNextBlock(rawBlock *pb.BeaconBlock) error {
 		return errors.New("invalid slot number for syncing")
 	}
 
-	if (s.currentSlot + 1) == block.SlotNumber() {
+	if (s.currentSlot + 1) == block.GetSlot() {
 
-		if err := s.checkBlockValidity(rawBlock); err != nil {
+		if err := s.checkBlockValidity(block); err != nil {
 			return err
 		}
 
@@ -439,9 +436,9 @@ func (s *InitialSync) validateAndSaveNextBlock(rawBlock *pb.BeaconBlock) error {
 	return nil
 }
 
-func (s *InitialSync) checkBlockValidity(rawBlock *pb.BeaconBlock) error {
-	block := types.NewBlock(rawBlock)
-	blockHash, err := block.Hash()
+func (s *InitialSync) checkBlockValidity(block *pb.BeaconBlock) error {
+
+	blockHash, err := b.Hash(block)
 	if err != nil {
 		return fmt.Errorf("could not hash received block: %v", err)
 	}
@@ -457,7 +454,7 @@ func (s *InitialSync) checkBlockValidity(rawBlock *pb.BeaconBlock) error {
 		return fmt.Errorf("failed to get beacon state: %v", err)
 	}
 
-	if block.SlotNumber() < beaconState.LastFinalizedSlot() {
+	if block.GetSlot() < beaconState.LastFinalizedSlot() {
 		return errors.New("discarding received block with a slot number smaller than the last finalized slot")
 	}
 	// Attestation from proposer not verified as, other nodes only store blocks not proposer
@@ -466,7 +463,7 @@ func (s *InitialSync) checkBlockValidity(rawBlock *pb.BeaconBlock) error {
 	return nil
 }
 
-func (s *InitialSync) writeBlockToDB(block *types.Block) error {
+func (s *InitialSync) writeBlockToDB(block *pb.BeaconBlock) error {
 	return s.db.SaveBlock(block)
 }
 

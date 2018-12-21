@@ -281,7 +281,7 @@ func (rs *RegularSync) handleBlockRequestBySlot(msg p2p.Message) {
 	_, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
 	log.WithField("slotNumber", fmt.Sprintf("%d", request.GetSlotNumber())).Debug("Sending requested block to peer")
 	rs.p2p.Send(&pb.BeaconBlockResponse{
-		Block: block.Proto(),
+		Block: block,
 	}, msg.Peer)
 	sendBlockSpan.End()
 }
@@ -356,7 +356,7 @@ func (rs *RegularSync) handleBlockRequestByHash(msg p2p.Message) {
 	}
 
 	rs.p2p.Send(&pb.BeaconBlockResponse{
-		Block: block.Proto(),
+		Block: block,
 	}, msg.Peer)
 
 }
@@ -377,7 +377,7 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) {
 		return
 	}
 
-	currentSlot := block.SlotNumber()
+	currentSlot := block.GetSlot()
 
 	if currentSlot < startSlot || finalizedSlot > endSlot {
 		log.Debugf("Batched Block Request slot is not available in db from %d to %d", startSlot, endSlot)
@@ -398,7 +398,7 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) {
 			continue
 		}
 
-		response = append(response, block.Proto())
+		response = append(response, block)
 	}
 
 	log.Debugf("Sending response for batch blocks to peer %v", msg.Peer)

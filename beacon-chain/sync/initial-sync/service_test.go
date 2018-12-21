@@ -88,13 +88,12 @@ func TestSetBlockForInitialSync(t *testing.T) {
 		StateRootHash32:               genericHash,
 	}
 
-	wrappedBlock := types.NewBlock(block)
-	hash, err := wrappedBlock.Hash()
+	hash, err := b.Hash(block)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	ss.db.SaveBlock(wrappedBlock)
+	ss.db.SaveBlock(block)
 
 	newblock := &pb.BeaconBlock{
 		CandidatePowReceiptRootHash32: []byte{1, 2, 3},
