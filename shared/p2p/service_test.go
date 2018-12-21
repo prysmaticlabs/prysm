@@ -86,12 +86,7 @@ func TestBroadcast(t *testing.T) {
 	s2.Start()
 	s3.Start()
 
-	err = s2.host.Connect(context.Background(), peerstore.PeerInfo{ID: s.host.ID(), Addrs: s.host.Addrs()})
-	if err != nil {
-		t.Fatalf("error while trying to connect to peer: %s", err)
-	}
-
-	err = s3.host.Connect(context.Background(), peerstore.PeerInfo{ID: s.host.ID(), Addrs: s.host.Addrs()})
+	err = connectServersTo(s, []*Server{s2, s3})
 	if err != nil {
 		t.Fatalf("error while trying to connect to peer: %s", err)
 	}
@@ -114,8 +109,12 @@ func TestBroadcast(t *testing.T) {
 
 	s.Broadcast(aMessage)
 
-	var wg sync.WaitGroup
-	wg.Add(2)
+	doneChan := make(chan bool)
+	errorChan := make(chan bool)
+	timeoutChan := make(chan bool)
+
+    var wg sync.WaitGroup
+	wg.Add(2) // Num of nodes that receive the channel
 
 	go func() {
 		// Wait message sent to channel for subscription node 2
@@ -123,7 +122,7 @@ func TestBroadcast(t *testing.T) {
 
 		protoMsg := recMessage.Data.(*shardpb.CollationBodyRequest)
         if protoMsg.ShardId != aMessage.ShardId {
-        	t.Fatalf("error asserting that received broacasted message equals expected")
+			errorChan <- true
 		}
 
 		wg.Done()
@@ -135,14 +134,41 @@ func TestBroadcast(t *testing.T) {
 		protoMsg := recMessage.Data.(*shardpb.CollationBodyRequest)
 
 		if protoMsg.ShardId != aMessage.ShardId {
-			t.Fatalf("error asserting that received broacasted message equals expected")
+            errorChan <- true
 		}
 
 		wg.Done()
 	}()
 
-	// Wait until all messages have been done
-	wg.Wait()
+	go func() {
+		time.Sleep(5 * time.Second)
+		timeoutChan <- true
+	}()
+
+	go func() {
+		wg.Wait()
+		doneChan <- true
+	}()
+
+	select {
+	case <-doneChan:
+		break
+	case <-errorChan:
+		t.Fatalf("error asserting that received broacasted message equals expected")
+	case <-timeoutChan:
+		t.Fatalf("timeout while waiting for broadcasted message")
+	}
+}
+
+func connectServersTo(serverToConnect *Server, servers []*Server) error {
+	for _, server := range servers {
+		err := server.host.Connect(context.Background(), peerstore.PeerInfo{ID: serverToConnect.host.ID(), Addrs: serverToConnect.host.Addrs()})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func TestEmit(t *testing.T) {
