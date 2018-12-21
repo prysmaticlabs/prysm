@@ -14,9 +14,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -266,8 +268,7 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 		return
 	}
 
-	wrappedBlock := types.NewBlock(block)
-	hash, err := wrappedBlock.Hash()
+	hash, err := b.Hash(block)
 	if err != nil {
 		log.Error(err)
 		return
@@ -275,7 +276,7 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 
 	// set hash of the genesis block
 	if s.genesisHash == [32]byte{} && block.GetSlot() == 1 && s.currentSlot == 0 {
-		s.genesisHash = wrappedBlock.ParentHash()
+		copy(s.genesisHash[:], block.GetParentRootHash32())
 	}
 
 	// setting first block for sync.
@@ -361,7 +362,7 @@ func (s *InitialSync) requestStateFromPeer(block *pb.BeaconBlock, peer p2p.Peer)
 func (s *InitialSync) setBlockForInitialSync(rawBlock *pb.BeaconBlock) error {
 	block := types.NewBlock(rawBlock)
 
-	h, err := block.Hash()
+	h, err := b.Hash(block)
 	if err != nil {
 		return err
 	}
@@ -369,10 +370,12 @@ func (s *InitialSync) setBlockForInitialSync(rawBlock *pb.BeaconBlock) error {
 
 	s.chainService.IncomingBlockFeed().Send(block)
 
-	s.initialStateRootHash32 = block.StateRootHash32()
+	var blockStateRoot [32]byte
+	copy(blockStateRoot[:], block.GetStateRootHash32())
+	s.initialStateRootHash32 = blockStateRoot
 
 	log.Infof("Saved block with hash %#x for initial sync", h)
-	s.currentSlot = block.SlotNumber()
+	s.currentSlot = block.GetSlot()
 	s.requestNextBlockBySlot(s.currentSlot + 1)
 	return nil
 }
@@ -422,12 +425,12 @@ func (s *InitialSync) validateAndSaveNextBlock(rawBlock *pb.BeaconBlock) error {
 			return err
 		}
 
-		log.Infof("Saved block with hash %#x and slot %d for initial sync", h, block.SlotNumber())
-		s.currentSlot = block.SlotNumber()
+		log.Infof("Saved block with hash %#x and slot %d for initial sync", h, block.GetSlot())
+		s.currentSlot = block.GetSlot()
 
 		// delete block from memory
-		if _, ok := s.inMemoryBlocks[block.SlotNumber()]; ok {
-			delete(s.inMemoryBlocks, block.SlotNumber())
+		if _, ok := s.inMemoryBlocks[block.GetSlot()]; ok {
+			delete(s.inMemoryBlocks, block.GetSlot())
 		}
 
 		// Send block to main chain service to be processed

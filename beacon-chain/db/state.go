@@ -5,7 +5,9 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
+
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -19,11 +21,11 @@ func (db *BeaconDB) InitializeState(genesisValidatorRegistry []*pb.ValidatorReco
 
 	// #nosec G104
 	stateHash, _ := beaconState.Hash()
-	genesisBlock := types.NewGenesisBlock(stateHash)
+	genesisBlock := b.NewGenesisBlock(stateHash[:])
 	// #nosec G104
-	blockHash, _ := genesisBlock.Hash()
+	blockHash, _ := b.Hash(genesisBlock)
 	// #nosec G104
-	blockEnc, _ := genesisBlock.Marshal()
+	blockEnc, _ := proto.Marshal(genesisBlock)
 	// #nosec G104
 	stateEnc, _ := beaconState.Marshal()
 	zeroBinary := encodeSlotNumber(0)

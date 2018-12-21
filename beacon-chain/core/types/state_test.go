@@ -124,10 +124,10 @@ func TestUpdateAttestationsAfterRecalc(t *testing.T) {
 }
 
 func TestUpdateLatestBlockHashes(t *testing.T) {
-	block := NewBlock(&pb.BeaconBlock{
+	block := &pb.BeaconBlock{
 		Slot:             10,
 		ParentRootHash32: []byte{'A'},
-	})
+	}
 
 	recentBlockHashes := [][]byte{}
 	for i := 0; i < 2*int(params.BeaconConfig().CycleLength); i++ {
@@ -152,8 +152,8 @@ func TestUpdateLatestBlockHashes(t *testing.T) {
 			if !areBytesEqual(updated[i], []byte{0}) {
 				t.Fatalf("update failed: expected %#x got %#x", []byte{0}, updated[i])
 			}
-		} else if !areBytesEqual(updated[i], block.data.ParentRootHash32) {
-			t.Fatalf("update failed: expected %#x got %#x", block.data.ParentRootHash32, updated[i])
+		} else if !areBytesEqual(updated[i], block.GetParentRootHash32()) {
+			t.Fatalf("update failed: expected %#x got %#x", block.GetParentRootHash32(), updated[i])
 		}
 	}
 }
@@ -175,11 +175,9 @@ func TestCalculateNewBlockHashes_DoesNotMutateData(t *testing.T) {
 		t.Fatal("setup data should be equal!")
 	}
 
-	block := &Block{
-		data: &pb.BeaconBlock{
-			Slot:             2,
-			ParentRootHash32: []byte{},
-		},
+	block := &pb.BeaconBlock{
+		Slot:             2,
+		ParentRootHash32: []byte{},
 	}
 
 	result, _ := s.CalculateNewBlockHashes(block, 0 /*parentSlot*/)

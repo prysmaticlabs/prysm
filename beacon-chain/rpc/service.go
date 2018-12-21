@@ -11,6 +11,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/protobuf/ptypes/empty"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -55,7 +56,7 @@ type Service struct {
 	withCert              string
 	withKey               string
 	grpcServer            *grpc.Server
-	canonicalBlockChan    chan *types.Block
+	canonicalBlockChan    chan *pbp2p.BeaconBlock
 	canonicalStateChan    chan *types.BeaconState
 	incomingAttestation   chan *types.Attestation
 	enablePOWChain        bool
@@ -90,7 +91,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		withCert:              cfg.CertFlag,
 		withKey:               cfg.KeyFlag,
 		slotAlignmentDuration: time.Duration(params.BeaconConfig().SlotDuration) * time.Second,
-		canonicalBlockChan:    make(chan *types.Block, cfg.SubscriptionBuf),
+		canonicalBlockChan:    make(chan *pbp2p.BeaconBlock, cfg.SubscriptionBuf),
 		canonicalStateChan:    make(chan *types.BeaconState, cfg.SubscriptionBuf),
 		incomingAttestation:   make(chan *types.Attestation, cfg.SubscriptionBuf),
 		enablePOWChain:        cfg.EnablePOWChain,
@@ -152,7 +153,7 @@ func (s *Service) CanonicalHead(ctx context.Context, req *empty.Empty) (*pbp2p.B
 	if err != nil {
 		return nil, fmt.Errorf("could not get canonical head block: %v", err)
 	}
-	return block.Proto(), nil
+	return block, nil
 }
 
 // CurrentAssignmentsAndGenesisTime returns the current validator assignments
@@ -191,7 +192,7 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(
 	}
 
 	return &pb.CurrentAssignmentsResponse{
-		GenesisTimestamp: genesis.Proto().GetTimestamp(),
+		GenesisTimestamp: genesis.GetTimestamp(),
 		Assignments:      assignments,
 	}, nil
 }
@@ -226,7 +227,7 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 		AttesterBitfield: []byte{byte(proposerBitfield)},
 	}
 
-	data := &pbp2p.BeaconBlock{
+	block := &pbp2p.BeaconBlock{
 		Slot:                          req.GetSlotNumber(),
 		CandidatePowReceiptRootHash32: powChainHash[:],
 		ParentRootHash32:              req.GetParentHash(),
@@ -234,8 +235,7 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 		Attestations:                  []*pbp2p.AggregatedAttestation{attestation},
 	}
 
-	block := types.NewBlock(data)
-	h, err := block.Hash()
+	h, err := b.Hash(block)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash block: %v", err)
 	}

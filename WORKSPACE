@@ -15,8 +15,8 @@ http_archive(
 
 http_archive(
     name = "bazel_gazelle",
-    urls = ["https://github.com/bazelbuild/bazel-gazelle/releases/download/0.15.0/bazel-gazelle-0.15.0.tar.gz"],
-    sha256 = "6e875ab4b6bf64a38c352887760f21203ab054676d9c1b274963907e0768740d",
+    urls = ["https://github.com/bazelbuild/bazel-gazelle/releases/download/0.16.0/bazel-gazelle-0.16.0.tar.gz"],
+    sha256 = "7949fc6cc17b5b191103e97481cf8889217263acf52e00b560683413af204fcb",
 )
 
 http_archive(
@@ -501,7 +501,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "074acd46bca67915925527c07849494d115e7c43",
+    commit = "b4a75ba826a64a70990f11a225237acd6ef35c9f",
     importpath = "golang.org/x/sys",
 )
 
@@ -621,7 +621,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_google_api",
-    commit = "583d854617af4d2080b5d2a24d72f7fc5a128ab2",
+    commit = "65a46cafb132eff435c7d1e0f439cc73c8eebb85",
     importpath = "google.golang.org/api",
 )
 
@@ -645,7 +645,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aristanetworks_goarista",
-    commit = "aa2a42e13be68c4a95fe9e58003adaf63fe6476f",
+    commit = "0ca71131d8f76e0739563d97cc9f95c021825a2b",
     importpath = "github.com/aristanetworks/goarista",
 )
 
