@@ -80,11 +80,9 @@ func TestBroadcast(t *testing.T) {
 	msg := &shardpb.CollationBodyRequest{}
 	subscribeServersToTopic(servers, "theTopic", msg)
 
-	s2Chan := make(chan Message)
-	servers[1].Subscribe(msg, s2Chan)
-
-	s3Chan := make(chan Message)
-	servers[2].Subscribe(msg, s3Chan)
+	msgSubsChannel := make(chan Message)
+	servers[1].Subscribe(msg, msgSubsChannel)
+	servers[2].Subscribe(msg, msgSubsChannel)
 
 	time.Sleep(1 * time.Second)
 
@@ -99,27 +97,14 @@ func TestBroadcast(t *testing.T) {
 	wg.Add(len(servers[1:])) // Num of nodes that receive the channel
 
 	go func() {
-		// Wait message sent to channel for subscription node 2
-		recMessage := <-s2Chan
+		for recMessage := range msgSubsChannel {
+			protoMsg := recMessage.Data.(*shardpb.CollationBodyRequest)
+			if protoMsg.ShardId != aMessage.ShardId {
+				errorChan <- true
+			}
 
-		protoMsg := recMessage.Data.(*shardpb.CollationBodyRequest)
-        if protoMsg.ShardId != aMessage.ShardId {
-			errorChan <- true
+			wg.Done()
 		}
-
-		wg.Done()
-	}()
-
-	go func() {
-		// Wait message sent to channel for subscription node 3
-		recMessage := <-s3Chan
-		protoMsg := recMessage.Data.(*shardpb.CollationBodyRequest)
-
-		if protoMsg.ShardId != aMessage.ShardId {
-            errorChan <- true
-		}
-
-		wg.Done()
 	}()
 
 	go func() {
@@ -129,6 +114,7 @@ func TestBroadcast(t *testing.T) {
 
 	go func() {
 		wg.Wait()
+		close(msgSubsChannel)
 		doneChan <- true
 	}()
 
