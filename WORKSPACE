@@ -627,7 +627,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sync",
-    commit = "42b317875d0fa942474b76e1b46a6060d720ae6e",
+    commit = "37e7f081c4d4c64e13b10787722085407fe5d15f",
     importpath = "golang.org/x/sync",
 )
 
@@ -822,7 +822,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_autonat",
-    commit = "c95207c0cda9634b8e0506f3cfc2ac8de770bd08",
+    commit = "93b1787f76de807b9ab3a7c7edd45cf906139bdb",
     importpath = "github.com/libp2p/go-libp2p-autonat",
 )
 
