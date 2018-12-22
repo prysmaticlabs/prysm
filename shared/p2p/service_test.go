@@ -81,8 +81,9 @@ func TestBroadcast(t *testing.T) {
 	subscribeServersToTopic(servers, "theTopic", msg)
 
 	msgSubsChannel := make(chan Message)
-	servers[1].Subscribe(msg, msgSubsChannel)
-	servers[2].Subscribe(msg, msgSubsChannel)
+	for _, server := range servers[1:] {
+		server.Subscribe(msg, msgSubsChannel)
+	}
 
 	time.Sleep(1 * time.Second)
 
