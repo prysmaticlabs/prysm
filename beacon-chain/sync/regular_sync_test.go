@@ -144,9 +144,11 @@ func TestProcessBlock(t *testing.T) {
 		Slot:                          1,
 	}
 	attestation := &pb.Attestation{
-		Slot:           0,
-		Shard:          0,
-		ShardBlockHash: []byte{'A'},
+		Data: &pb.AttestationData{
+			Slot:                 0,
+			Shard:                0,
+			ShardBlockRootHash32: []byte{'A'},
+		},
 	}
 
 	responseBlock := &pb.BeaconBlockResponse{
@@ -336,8 +338,10 @@ func TestReceiveAttestation(t *testing.T) {
 	}()
 
 	request1 := &pb.Attestation{
-		Slot:             0,
-		AttesterBitfield: []byte{99},
+		ParticipationBitfield: []byte{99},
+		Data: &pb.AttestationData{
+			Slot: 0,
+		},
 	}
 
 	msg1 := p2p.Message{

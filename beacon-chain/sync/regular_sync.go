@@ -232,7 +232,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 
 	_, sendAttestationSpan := trace.StartSpan(ctx, "sendAttestation")
 	log.WithField("attestationHash", fmt.Sprintf("%#x", att.Key(response.Attestation.GetData()))).Debug("Sending newly received attestation to subscribers")
-	rs.attestationService.IncomingAttestationFeed().Send(attestation)
+	rs.attestationService.IncomingAttestationFeed().Send(response.Attestation)
 	sendAttestationSpan.End()
 
 	_, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
@@ -300,7 +300,7 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) {
 func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 	data := msg.Data.(*pb.Attestation)
 	a := data
-	h := att.Key(a)
+	h := att.Key(a.GetData())
 
 	attestation, err := rs.db.GetAttestation(h)
 	if err != nil {

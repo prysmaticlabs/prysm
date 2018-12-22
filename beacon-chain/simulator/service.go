@@ -195,9 +195,9 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 
 			// Sends the full block body to the requester.
 			res := &pb.BeaconBlockResponse{Block: block, Attestation: &pb.Attestation{
+				ParticipationBitfield: []byte{byte(255)},
 				Data: &pb.AttestationData{
-					Slot:             block.GetSlot(),
-					AttesterBitfield: []byte{byte(255)},
+					Slot: block.GetSlot(),
 				},
 			}}
 			sim.p2p.Send(res, msg.Peer)
@@ -221,9 +221,9 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 
 			// Sends the full block body to the requester.
 			res := &pb.BeaconBlockResponse{Block: block, Attestation: &pb.Attestation{
+				ParticipationBitfield: []byte{byte(255)},
 				Data: &pb.AttestationData{
-					Slot:             block.GetSlot(),
-					AttesterBitfield: []byte{byte(255)},
+					Slot: block.GetSlot(),
 				},
 			}}
 			sim.p2p.Send(res, msg.Peer)
@@ -303,10 +303,12 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*pb.BeaconB
 		shardID := shardCommittee.Shard
 		numAttesters := len(shardCommittee.Committee)
 		attestations[i] = &pb.Attestation{
-			Slot:               parentSlot,
-			AttesterBitfield:   bitutil.FillBitfield(numAttesters),
-			JustifiedBlockHash: parentHash,
-			Shard:              shardID,
+			ParticipationBitfield: bitutil.FillBitfield(numAttesters),
+			Data: &pb.AttestationData{
+				Slot:                     parentSlot,
+				Shard:                    shardID,
+				JustifiedBlockRootHash32: parentHash,
+			},
 		}
 	}
 
@@ -317,7 +319,9 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*pb.BeaconB
 		StateRootHash32:               stateHash[:],
 		ParentRootHash32:              parentHash,
 		RandaoRevealHash32:            params.BeaconConfig().SimulatedBlockRandao[:],
-		Attestations:                  attestations,
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
 	}
 	return block, nil
 }
