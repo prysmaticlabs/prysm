@@ -964,7 +964,7 @@ go_repository(
 
 go_repository(
     name = "in_gopkg_urfave_cli_v1",
-    tag = "v0.1.0",
+    tag = "v1.20.0",
     importpath = "gopkg.in/urfave/cli.v1",
 )
 
