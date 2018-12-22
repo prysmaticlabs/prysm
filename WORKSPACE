@@ -946,7 +946,7 @@ go_repository(
 
 go_repository(
     name = "com_github_go_stack_stack",
-    commit = "2fee6af1a9795aafbe0253a0cfbdf668e1fb8a9a",
+    tag = "v1.8.0",
     importpath = "github.com/go-stack/stack",
 )
 
