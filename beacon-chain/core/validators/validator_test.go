@@ -794,3 +794,96 @@ func TestBeaconProposerIndex(t *testing.T) {
 		}
 	}
 }
+
+func TestAttestingValidatorIndices_Ok(t *testing.T) {
+	if params.BeaconConfig().EpochLength != 64 {
+		t.Errorf("EpochLength should be 64 for these tests to pass")
+	}
+
+	var committeeIndices []uint32
+	for i := uint32(0); i < 8; i++ {
+		committeeIndices = append(committeeIndices, i)
+	}
+
+	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
+			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{Shard: i, Committee: committeeIndices},
+			},
+		})
+	}
+
+	state := &pb.BeaconState{
+		ShardAndCommitteesAtSlots: shardAndCommittees,
+		Slot:                      5,
+	}
+
+	prevAttestation := &pb.PendingAttestationRecord{
+		Data: &pb.AttestationData{
+			Slot:                 3,
+			Shard:                3,
+			ShardBlockRootHash32: []byte{'B'},
+		},
+		ParticipationBitfield: []byte{'A'}, // 01000001 = 1,7
+	}
+
+	thisAttestation := &pb.PendingAttestationRecord{
+		Data: &pb.AttestationData{
+			Slot:                 3,
+			Shard:                3,
+			ShardBlockRootHash32: []byte{'B'},
+		},
+		ParticipationBitfield: []byte{'F'}, // 01000110 = 1,5,6
+	}
+
+	indices, err := AttestingValidatorIndices(
+		state,
+		shardAndCommittees[3].ArrayShardAndCommittee[0],
+		[]byte{'B'},
+		[]*pb.PendingAttestationRecord{thisAttestation},
+		[]*pb.PendingAttestationRecord{prevAttestation})
+	if err != nil {
+		t.Fatalf("could not execute AttestingValidatorIndices: %v", err)
+	}
+
+	// Union(1,7,1,5,6) = 1,5,6,7
+	if !reflect.DeepEqual(indices, []uint32{1, 5, 6, 7}) {
+		t.Errorf("could not get incorrect validator indices. Wanted: %v, got: %v",
+			[]uint32{1, 5, 6, 7}, indices)
+	}
+}
+
+func TestAttestingValidatorIndices_OutOfBound(t *testing.T) {
+	shardAndCommittees := []*pb.ShardAndCommitteeArray{
+		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{Shard: 1},
+		}},
+	}
+
+	state := &pb.BeaconState{
+		ShardAndCommitteesAtSlots: shardAndCommittees,
+		Slot:                      5,
+	}
+
+	attestation := &pb.PendingAttestationRecord{
+		Data: &pb.AttestationData{
+			Slot:                 0,
+			Shard:                1,
+			ShardBlockRootHash32: []byte{'B'},
+		},
+		ParticipationBitfield: []byte{'A'}, // 01000001 = 1,7
+	}
+
+	_, err := AttestingValidatorIndices(
+		state,
+		shardAndCommittees[0].ArrayShardAndCommittee[0],
+		[]byte{'B'},
+		[]*pb.PendingAttestationRecord{attestation},
+		nil)
+
+	// This will fail because participation bitfield is length:1, committee bitfield is length 0.
+	if err == nil {
+		t.Fatal("AttestingValidatorIndices should have failed with incorrect bitfield")
+	}
+}
