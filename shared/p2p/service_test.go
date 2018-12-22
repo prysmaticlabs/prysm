@@ -110,13 +110,14 @@ func TestBroadcast(t *testing.T) {
 
 	go func() {
 		time.Sleep(5 * time.Second)
-		timeoutChan <- true
+        close(timeoutChan)
+		close(msgSubsChannel)
 	}()
 
 	go func() {
 		wg.Wait()
+        close(doneChan)
 		close(msgSubsChannel)
-		doneChan <- true
 	}()
 
 	select {
