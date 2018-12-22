@@ -276,6 +276,8 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 	// set hash of the genesis block
 	if s.genesisHash == [32]byte{} && block.GetSlot() == 1 && s.currentSlot == 0 {
 		copy(s.genesisHash[:], block.GetParentRootHash32())
+		s.inMemoryBlocks[block.GetSlot()] = block
+		return
 	}
 
 	// setting first block for sync.
@@ -289,6 +291,10 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 		if hash == s.genesisHash {
 			if err := s.writeBlockToDB(block); err != nil {
 				log.Error(err)
+			}
+			// If block with slot 1 is saved, then send it for sync.
+			if block, ok := s.inMemoryBlocks[1]; ok {
+				s.processBlock(block, peer)
 			}
 			return
 		}

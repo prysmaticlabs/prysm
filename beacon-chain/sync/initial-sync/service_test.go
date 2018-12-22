@@ -94,6 +94,7 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	}
 
 	ss.db.SaveBlock(block)
+	ss.genesisHash = hash
 
 	newblock := &pb.BeaconBlock{
 		CandidatePowReceiptRootHash32: []byte{1, 2, 3},
@@ -129,9 +130,10 @@ func TestSavingBlocksInSync(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 
 	cfg := &Config{
-		P2P:         &mockP2P{},
-		SyncService: &mockSyncService{},
-		BeaconDB:    db,
+		P2P:          &mockP2P{},
+		SyncService:  &mockSyncService{},
+		BeaconDB:     db,
+		ChainService: &mockChainService{},
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 
@@ -173,10 +175,10 @@ func TestSavingBlocksInSync(t *testing.T) {
 		t.Fatalf("unable to get hash of state: %v", err)
 	}
 
-	getBlockResponseMsg := func(Slot uint64) p2p.Message {
+	getBlockResponseMsg := func(Slot uint64, parentHash [32]byte) p2p.Message {
 		block := &pb.BeaconBlock{
 			CandidatePowReceiptRootHash32: []byte{1, 2, 3},
-			ParentRootHash32:              genericHash,
+			ParentRootHash32:              parentHash[:],
 			Slot:                          Slot,
 			StateRootHash32:               beaconStateRootHash32[:],
 		}
@@ -191,18 +193,27 @@ func TestSavingBlocksInSync(t *testing.T) {
 		}
 	}
 
-	msg1 := getBlockResponseMsg(1)
+	msg0 := getBlockResponseMsg(0, [32]byte{})
+	parentHash, err := b.Hash(msg0.Data.(*pb.BeaconBlockResponse).GetBlock())
+	if err != nil {
+		t.Fatalf("Unable to hash block %v", err)
+	}
+
+	msg1 := getBlockResponseMsg(1, parentHash)
+
+	// saving genesis block
+	ss.blockBuf <- msg1
+	ss.blockBuf <- msg0
 
 	msg2 := p2p.Message{
 		Peer: p2p.Peer{},
 		Data: incorrectStateResponse,
 	}
 
-	ss.blockBuf <- msg1
 	ss.stateBuf <- msg2
 
 	if ss.currentSlot == incorrectStateResponse.BeaconState.FinalizedSlot {
-		t.Fatalf("Crystallized state updated incorrectly: %d", ss.currentSlot)
+		t.Fatalf("Beacon state updated incorrectly: %d", ss.currentSlot)
 	}
 
 	msg2.Data = stateResponse
@@ -215,14 +226,14 @@ func TestSavingBlocksInSync(t *testing.T) {
 			ss.initialStateRootHash32)
 	}
 
-	msg1 = getBlockResponseMsg(30)
+	msg1 = getBlockResponseMsg(30, [32]byte{})
 	ss.blockBuf <- msg1
 
 	if stateResponse.BeaconState.GetFinalizedSlot() != ss.currentSlot {
 		t.Fatalf("Slot saved when it was not supposed too: %v", stateResponse.BeaconState.GetFinalizedSlot())
 	}
 
-	msg1 = getBlockResponseMsg(100)
+	msg1 = getBlockResponseMsg(100, [32]byte{})
 	ss.blockBuf <- msg1
 
 	ss.cancel()
@@ -241,9 +252,10 @@ func TestDelayChan(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	cfg := &Config{
-		P2P:         &mockP2P{},
-		SyncService: &mockSyncService{},
-		BeaconDB:    db,
+		P2P:          &mockP2P{},
+		SyncService:  &mockSyncService{},
+		BeaconDB:     db,
+		ChainService: &mockChainService{},
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 
@@ -262,6 +274,21 @@ func TestDelayChan(t *testing.T) {
 
 	genericHash := make([]byte, 32)
 	genericHash[0] = 'a'
+
+	genblock := &pb.BeaconBlock{
+		CandidatePowReceiptRootHash32: []byte{1, 2, 3},
+		ParentRootHash32:              genericHash,
+		Slot:                          uint64(0),
+		StateRootHash32:               genericHash,
+	}
+
+	hash, err := b.Hash(genblock)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ss.db.SaveBlock(genblock)
+	ss.genesisHash = hash
 
 	beaconState := &pb.BeaconState{
 		FinalizedSlot: 99,
@@ -323,10 +350,20 @@ func TestRequestBlocksBySlot(t *testing.T) {
 	cfg := &Config{
 		P2P:             &mockP2P{},
 		SyncService:     &mockSyncService{},
+		ChainService:    &mockChainService{},
 		BeaconDB:        db,
 		BlockBufferSize: 100,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
+	newState, err := types.NewGenesisBeaconState(nil)
+	if err != nil {
+		t.Fatalf("could not create new state %v", err)
+	}
+
+	err = ss.db.SaveState(newState)
+	if err != nil {
+		t.Fatalf("Unable to save beacon state %v", err)
+	}
 
 	exitRoutine := make(chan bool)
 	delayChan := make(chan time.Time)
@@ -343,6 +380,21 @@ func TestRequestBlocksBySlot(t *testing.T) {
 
 	genericHash := make([]byte, 32)
 	genericHash[0] = 'a'
+
+	genblock := &pb.BeaconBlock{
+		CandidatePowReceiptRootHash32: []byte{1, 2, 3},
+		ParentRootHash32:              genericHash,
+		Slot:                          uint64(0),
+		StateRootHash32:               genericHash,
+	}
+
+	hash, err := b.Hash(genblock)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ss.db.SaveBlock(genblock)
+	ss.genesisHash = hash
 
 	getBlockResponseMsg := func(Slot uint64) (p2p.Message, [32]byte) {
 
@@ -379,7 +431,7 @@ func TestRequestBlocksBySlot(t *testing.T) {
 	//sending initial block
 	ss.blockBuf <- initialResponse
 
-	_, hash := getBlockResponseMsg(9)
+	_, hash = getBlockResponseMsg(9)
 
 	expString := fmt.Sprintf("Saved block with hash %#x and slot %d for initial sync", hash, 9)
 
