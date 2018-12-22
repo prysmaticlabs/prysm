@@ -24,7 +24,7 @@ message BeaconState {
   // Finality [2001-3000] 
   uint64 previous_justified_slot = 2001;
   uint64 justified_slot = 2002;
-  uint64 justified_slot_bitfield = 2003;
+  uint64 justification_bitfield = 2003;
   uint64 finalized_slot = 2004;
 
   // Recent state [3001-4000]
@@ -59,7 +59,7 @@ message ForkData {
 
 message CandidatePoWReceiptRootRecord {
   bytes candidate_pow_receipt_root_hash32 = 1;
-  uint64 votes = 2;
+  uint64 vote_count = 2;
 }
 
 message PendingAttestationRecord {
