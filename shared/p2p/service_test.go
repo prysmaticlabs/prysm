@@ -3,6 +3,7 @@ package p2p
 import (
 	"context"
 	"fmt"
+	"github.com/libp2p/go-libp2p-peerstore"
 	"reflect"
 	"strings"
 	"sync"
@@ -13,7 +14,6 @@ import (
 	"github.com/golang/mock/gomock"
 	ipfslog "github.com/ipfs/go-log"
 	bhost "github.com/libp2p/go-libp2p-blankhost"
-	"github.com/libp2p/go-libp2p-peerstore"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
@@ -87,14 +87,14 @@ func TestBroadcast(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	aMessage := &shardpb.CollationBodyRequest{ShardId:1234}
+	aMessage := &shardpb.CollationBodyRequest{ShardId: 1234}
 	servers[0].Broadcast(aMessage)
 
 	doneChan := make(chan bool)
 	errorChan := make(chan bool)
 	timeoutChan := make(chan bool)
 
-    var wg sync.WaitGroup
+	var wg sync.WaitGroup
 	wg.Add(len(servers[1:])) // Num of nodes that receive the channel
 
 	go func() {
@@ -110,13 +110,13 @@ func TestBroadcast(t *testing.T) {
 
 	go func() {
 		time.Sleep(5 * time.Second)
-        close(timeoutChan)
+		close(timeoutChan)
 		close(msgSubsChannel)
 	}()
 
 	go func() {
 		wg.Wait()
-        close(doneChan)
+		close(doneChan)
 		close(msgSubsChannel)
 	}()
 
@@ -134,7 +134,7 @@ func runP2PServersWithDifferentPorts(numServers int) ([]*Server, error) {
 	var servers []*Server
 	initialPort := 12345
 
-	for i:=0;i<numServers;i++ {
+	for i := 0; i < numServers; i++ {
 		s, err := NewServer(&ServerConfig{Port: initialPort + i})
 		if err != nil {
 			return nil, err
