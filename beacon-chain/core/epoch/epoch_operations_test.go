@@ -497,7 +497,7 @@ func TestTotalBalance(t *testing.T) {
 	// 20 + 25 + 30 + 30 + 32 + 32 + 32 + 32 = 233
 	totalBalance := TotalBalance(state, shardAndCommittees)
 	if totalBalance != 233*1e9 {
-		t.Errorf("Incorect total balance. Wanted: 233*1e9, got: %d", totalBalance)
+		t.Errorf("Incorrect total balance. Wanted: 233*1e9, got: %d", totalBalance)
 	}
 }
 
@@ -526,7 +526,7 @@ func TestInclusionSlot_Ok(t *testing.T) {
 
 	// validator 7's attestation got included in slot 100.
 	if slot != 100 {
-		t.Errorf("Incorect slot. Wanted: 100, got: %d", slot)
+		t.Errorf("Incorrect slot. Wanted: 100, got: %d", slot)
 	}
 }
 
@@ -595,7 +595,7 @@ func TestInclusionDistance_Ok(t *testing.T) {
 	// Inclusion distance is 9 because input validator index is 7,
 	// validator 7's attested slot 0 and got included slot 9.
 	if distance != 9 {
-		t.Errorf("Incorect distance. Wanted: 9, got: %d", distance)
+		t.Errorf("Incorrect distance. Wanted: 9, got: %d", distance)
 	}
 }
 
