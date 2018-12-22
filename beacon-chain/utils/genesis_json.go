@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/golang/protobuf/jsonpb"
+	"github.com/gogo/protobuf/jsonpb"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 

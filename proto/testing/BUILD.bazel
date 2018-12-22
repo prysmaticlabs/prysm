@@ -11,6 +11,7 @@ proto_library(
 
 go_proto_library(
     name = "ethereum_testing_go_proto",
+    compiler = "//:proto_compiler",
     importpath = "github.com/prysmaticlabs/prysm/proto/testing",
     proto = ":ethereum_testing_proto",
     visibility = ["//visibility:public"],

@@ -14,8 +14,8 @@ go_library(
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/beacon/rpc/v1:go_default_library",
+        "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
-        "@io_bazel_rules_go//proto/wkt:empty_go_proto",
         "@org_golang_google_grpc//:go_default_library",
         "@org_golang_google_grpc//metadata:go_default_library",
     ],

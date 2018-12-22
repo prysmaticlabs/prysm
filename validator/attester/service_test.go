@@ -132,7 +132,7 @@ func TestAttesterMarshalError(t *testing.T) {
 	att.cancel()
 	exitRoutine <- true
 
-	testutil.AssertLogsContain(t, hook, "could not marshal latest beacon block")
+	testutil.AssertLogsContain(t, hook, "could not marshal nil latest beacon block")
 	testutil.AssertLogsContain(t, hook, "Attester context closed")
 }
 

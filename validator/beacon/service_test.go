@@ -8,9 +8,8 @@ import (
 	"testing"
 	"time"
 
+	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
-	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/empty"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -36,7 +35,7 @@ func (fc *mockClient) BeaconServiceClient() pb.BeaconServiceClient {
 
 	mockServiceClient.EXPECT().LatestAttestation(
 		gomock.Any(),
-		&empty.Empty{},
+		&ptypes.Empty{},
 	).Return(attesterStream, nil)
 
 	return mockServiceClient
@@ -68,7 +67,7 @@ func (fc *mockLifecycleClient) BeaconServiceClient() pb.BeaconServiceClient {
 	attesterStream := internal.NewMockBeaconService_LatestAttestationClient(fc.ctrl)
 	mockServiceClient.EXPECT().LatestAttestation(
 		gomock.Any(),
-		&empty.Empty{},
+		&ptypes.Empty{},
 	).Return(attesterStream, nil)
 	attesterStream.EXPECT().Recv().Return(&pbp2p.Attestation{}, io.EOF)
 

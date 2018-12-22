@@ -3,7 +3,7 @@ package p2p_test
 import (
 	"fmt"
 
-	"github.com/golang/protobuf/proto"
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 )
 
