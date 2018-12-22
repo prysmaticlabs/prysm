@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/protobuf/proto"
@@ -236,11 +237,12 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 				continue
 			}
 
-			hash, err := beaconState.Hash()
+			enc, err := proto.Marshal(beaconState)
 			if err != nil {
-				log.Errorf("Could not hash beacon state: %v", err)
+				log.Errorf("Could not marshal beacon state: %v", err)
 				continue
 			}
+			hash := hashutil.Hash(enc)
 
 			if !bytes.Equal(data.GetHash(), hash[:]) {
 				log.WithFields(logrus.Fields{
@@ -255,7 +257,7 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 
 			// Sends the full crystallized state to the requester.
 			res := &pb.BeaconStateResponse{
-				BeaconState: beaconState.Proto(),
+				BeaconState: beaconState,
 			}
 			sim.p2p.Send(res, msg.Peer)
 		}
@@ -270,9 +272,11 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*pb.BeaconB
 	}
 
 	stateHash, err := beaconState.Hash()
+	enc, err := proto.Marshal(beaconState)
 	if err != nil {
-		return nil, fmt.Errorf("could not hash beacon state: %v", err)
+		return nil, fmt.Errorf("could not marshal beacon state: %v", err)
 	}
+	stateHash := hashutil.Hash(enc)
 
 	var powChainRef []byte
 	if sim.enablePOWChain {
@@ -283,8 +287,8 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*pb.BeaconB
 
 	parentSlot := slot - 1
 	committees, err := v.GetShardAndCommitteesForSlot(
-		beaconState.ShardAndCommitteesForSlots(),
-		beaconState.LastStateRecalculationSlot(),
+		beaconState.GetShardAndCommitteesAtSlots(),
+		beaconState.GetLastStateRecalculationSlot(),
 		parentSlot,
 	)
 	if err != nil {
