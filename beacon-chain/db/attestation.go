@@ -5,14 +5,14 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
+	att "github.com/prysmaticlabs/prysm/beacon-chain/core/attestations"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 // SaveAttestation puts the attestation record into the beacon chain db.
-func (db *BeaconDB) SaveAttestation(attestation *types.Attestation) error {
-	hash := attestation.Key()
-	encodedState, err := attestation.Marshal()
+func (db *BeaconDB) SaveAttestation(attestation *pb.Attestation) error {
+	hash := att.Key(attestation.GetData())
+	encodedState, err := proto.Marshal(attestation)
 	if err != nil {
 		return err
 	}
@@ -25,8 +25,8 @@ func (db *BeaconDB) SaveAttestation(attestation *types.Attestation) error {
 }
 
 // GetAttestation retrieves an attestation record from the db using its hash.
-func (db *BeaconDB) GetAttestation(hash [32]byte) (*types.Attestation, error) {
-	var attestation *types.Attestation
+func (db *BeaconDB) GetAttestation(hash [32]byte) (*pb.Attestation, error) {
+	var attestation *pb.Attestation
 	err := db.view(func(tx *bolt.Tx) error {
 		a := tx.Bucket(attestationBucket)
 
@@ -56,17 +56,10 @@ func (db *BeaconDB) HasAttestation(hash [32]byte) bool {
 	return exists
 }
 
-func createAttestation(enc []byte) (*types.Attestation, error) {
-	protoAttestation := &pb.AggregatedAttestation{}
-	err := proto.Unmarshal(enc, protoAttestation)
-	if err != nil {
+func createAttestation(enc []byte) (*pb.Attestation, error) {
+	protoAttestation := &pb.Attestation{}
+	if err := proto.Unmarshal(enc, protoAttestation); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal encoding: %v", err)
 	}
-
-	attestation := types.NewAttestation(protoAttestation)
-	if err != nil {
-		return nil, fmt.Errorf("failed to instantiate a block from the encoding: %v", err)
-	}
-
-	return attestation, nil
+	return protoAttestation, nil
 }

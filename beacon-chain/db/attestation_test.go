@@ -4,7 +4,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
+	"github.com/gogo/protobuf/proto"
+	att "github.com/prysmaticlabs/prysm/beacon-chain/core/attestations"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -12,26 +13,28 @@ func TestSaveAndRetrieveAttestation(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	a := types.NewAttestation(&pb.AggregatedAttestation{
-		Slot:  0,
-		Shard: 0,
-	})
+	a := &pb.Attestation{
+		Data: &pb.AttestationData{
+			Slot:  0,
+			Shard: 0,
+		},
+	}
 
 	if err := db.SaveAttestation(a); err != nil {
 		t.Fatalf("Failed to save attestation: %v", err)
 	}
 
-	aHash := a.Key()
+	aHash := att.Key(a.GetData())
 	aPrime, err := db.GetAttestation(aHash)
 	if err != nil {
 		t.Fatalf("Failed to call GetAttestation: %v", err)
 	}
 
-	aEnc, err := a.Marshal()
+	aEnc, err := proto.Marshal(a)
 	if err != nil {
 		t.Fatalf("Failed to encode: %v", err)
 	}
-	aPrimeEnc, err := aPrime.Marshal()
+	aPrimeEnc, err := proto.Marshal(aPrime)
 	if err != nil {
 		t.Fatalf("Failed to encode: %v", err)
 	}
@@ -58,11 +61,13 @@ func TestGetHasAttestation(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	a := types.NewAttestation(&pb.AggregatedAttestation{
-		Slot:  0,
-		Shard: 0,
-	})
-	hash := a.Key()
+	a := &pb.Attestation{
+		Data: &pb.AttestationData{
+			Slot:  0,
+			Shard: 0,
+		},
+	}
+	hash := att.Key(a.GetData())
 
 	if db.HasAttestation(hash) {
 		t.Fatal("Expected HasAttestation to return false")
