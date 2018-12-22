@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"github.com/golang/protobuf/proto"
+	att "github.com/prysmaticlabs/prysm/beacon-chain/core/attestations"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -214,8 +214,6 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 	}
 
 	// Verify attestation coming from proposer then forward block to the subscribers.
-	attestation := types.NewAttestation(response.Attestation)
-
 	proposerShardID, _, err := v.ProposerShardAndIndex(
 		beaconState.ShardAndCommitteesForSlots(),
 		beaconState.LastStateRecalculationSlot(),
@@ -227,13 +225,13 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 	}
 
 	// TODO(#258): stubbing public key with empty 32 bytes.
-	if err := attestation.VerifyProposerAttestation([32]byte{}, proposerShardID); err != nil {
+	if err := att.VerifyProposerAttestation(response.Attestation.GetData(), [32]byte{}, proposerShardID); err != nil {
 		log.Errorf("Failed to verify proposer attestation: %v", err)
 		return
 	}
 
 	_, sendAttestationSpan := trace.StartSpan(ctx, "sendAttestation")
-	log.WithField("attestationHash", fmt.Sprintf("%#x", attestation.Key())).Debug("Sending newly received attestation to subscribers")
+	log.WithField("attestationHash", fmt.Sprintf("%#x", att.Key(response.Attestation.GetData()))).Debug("Sending newly received attestation to subscribers")
 	rs.attestationService.IncomingAttestationFeed().Send(attestation)
 	sendAttestationSpan.End()
 
@@ -301,8 +299,8 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) {
 // service if we have not.
 func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 	data := msg.Data.(*pb.Attestation)
-	a := types.NewAttestation(data)
-	h := a.Key()
+	a := data
+	h := att.Key(a)
 
 	attestation, err := rs.db.GetAttestation(h)
 	if err != nil {
@@ -310,7 +308,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 		return
 	}
 	if attestation != nil {
-		validatorExists := attestation.ContainsValidator(a.AttesterBitfield())
+		validatorExists := att.ContainsValidator(attestation.GetParticipationBitfield(), a.GetParticipationBitfield())
 		if validatorExists {
 			log.Debugf("Received attestation %#x already", h)
 			return
