@@ -976,6 +976,6 @@ go_repository(
 
 go_repository(
     name = "com_github_edsrzf_mmap_go",
-    commit = "188cc3b666ba704534fa4f96e9e61f21f1e1ba7c",
+    tag = "v1.0.0",
     importpath = "github.com/edsrzf/mmap-go",
 )
