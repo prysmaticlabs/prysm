@@ -25,7 +25,7 @@ func TestGenesisBlock(t *testing.T) {
 		t.Error("genesis block missing ParentHash field")
 	}
 
-	if b1.GetAttestations() != nil {
+	if b1.GetBody().GetAttestations() != nil {
 		t.Errorf("genesis block should have 0 attestations")
 	}
 

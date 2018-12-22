@@ -49,18 +49,20 @@ func TestCopyState(t *testing.T) {
 	state1, _ := NewGenesisBeaconState(nil)
 	state2 := state1.CopyState()
 
-	newAttestations := []*pb.AggregatedAttestation{
+	newAttestations := []*pb.PendingAttestationRecord{
 		{
-			Slot:  0,
-			Shard: 1,
+			Data: &pb.AttestationData{
+				Slot:  0,
+				Shard: 1,
+			},
 		},
 	}
 
-	state1.data.PendingAttestations = append(state1.data.PendingAttestations, newAttestations...)
-	if len(state1.data.PendingAttestations) == len(state2.data.PendingAttestations) {
-		t.Fatalf("The PendingAttestations should not equal each other %d, %d",
-			len(state1.data.PendingAttestations),
-			len(state2.data.PendingAttestations),
+	state1.data.LatestAttestations = append(state1.data.LatestAttestations, newAttestations...)
+	if len(state1.data.LatestAttestations) == len(state2.data.LatestAttestations) {
+		t.Fatalf("The LatestAttestations should not equal each other %d, %d",
+			len(state1.data.LatestAttestations),
+			len(state2.data.LatestAttestations),
 		)
 	}
 
@@ -85,19 +87,23 @@ func TestCopyState(t *testing.T) {
 func TestUpdateAttestations(t *testing.T) {
 	state, _ := NewGenesisBeaconState(nil)
 
-	newAttestations := []*pb.AggregatedAttestation{
+	newAttestations := []*pb.PendingAttestationRecord{
 		{
-			Slot:  0,
-			Shard: 0,
+			Data: &pb.AttestationData{
+				Slot:  0,
+				Shard: 0,
+			},
 		},
 		{
-			Slot:  0,
-			Shard: 1,
+			Data: &pb.AttestationData{
+				Slot:  0,
+				Shard: 1,
+			},
 		},
 	}
 
-	state.SetPendingAttestations(newAttestations)
-	attestations := state.data.PendingAttestations
+	state.SetLatestAttestations(newAttestations)
+	attestations := state.data.LatestAttestations
 	if len(attestations) != 2 {
 		t.Fatalf("Updated attestations should be length 2: %d", len(attestations))
 	}
@@ -105,21 +111,25 @@ func TestUpdateAttestations(t *testing.T) {
 
 func TestUpdateAttestationsAfterRecalc(t *testing.T) {
 	state, _ := NewGenesisBeaconState(nil)
-	newAttestations := []*pb.AggregatedAttestation{
+	newAttestations := []*pb.PendingAttestationRecord{
 		{
-			Slot:  10,
-			Shard: 2,
+			Data: &pb.AttestationData{
+				Slot:  10,
+				Shard: 2,
+			},
 		},
 		{
-			Slot:  9,
-			Shard: 3,
+			Data: &pb.AttestationData{
+				Slot:  9,
+				Shard: 3,
+			},
 		},
 	}
 
-	state.SetPendingAttestations(newAttestations)
+	state.SetLatestAttestations(newAttestations)
 	state.ClearAttestations(8)
-	if len(state.PendingAttestations()) != 2 {
-		t.Fatalf("Updated attestations should be length 2: %d", len(state.PendingAttestations()))
+	if len(state.LatestAttestations()) != 2 {
+		t.Fatalf("Updated attestations should be length 2: %d", len(state.LatestAttestations()))
 	}
 }
 
