@@ -195,8 +195,10 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 
 			// Sends the full block body to the requester.
 			res := &pb.BeaconBlockResponse{Block: block, Attestation: &pb.Attestation{
-				Slot:             block.GetSlot(),
-				AttesterBitfield: []byte{byte(255)},
+				Data: &pb.AttestationData{
+					Slot:             block.GetSlot(),
+					AttesterBitfield: []byte{byte(255)},
+				},
 			}}
 			sim.p2p.Send(res, msg.Peer)
 
@@ -219,8 +221,10 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 
 			// Sends the full block body to the requester.
 			res := &pb.BeaconBlockResponse{Block: block, Attestation: &pb.Attestation{
-				Slot:             block.GetSlot(),
-				AttesterBitfield: []byte{byte(255)},
+				Data: &pb.AttestationData{
+					Slot:             block.GetSlot(),
+					AttesterBitfield: []byte{byte(255)},
+				},
 			}}
 			sim.p2p.Send(res, msg.Peer)
 		case msg := <-sim.stateReqChan:
