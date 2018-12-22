@@ -1,1 +1,29 @@
-/home/zypherx/Desktop/Go/src/github.com/prysmaticlabs/prysm/.travis.yml
+language: go
+go_import_path: github.com/prysmaticlabs/prysm
+sudo: false
+matrix:
+  include:
+    - os: linux
+      go: 1.11.x
+      env:
+        - lint
+      script:
+        - 
+          go get github.com/alecthomas/gometalinter && gometalinter --install && gometalinter ./... --deadline=10m --exclude=client/internal/client_helper.go
+    - os: linux
+      env:
+        - coverage
+      script:
+        - ./scripts/coverage.sh
+        - bash <(curl -s https://codecov.io/bash)
+      notifications:
+        email: false
+
+      after_success:
+        - wget https://raw.githubusercontent.com/k3rn31p4nic/travis-ci-discord-webhook/master/send.sh
+        - chmod +x send.sh
+        - ./send.sh success $WEBHOOK_URL
+      after_failure:
+        - wget https://raw.githubusercontent.com/k3rn31p4nic/travis-ci-discord-webhook/master/send.sh
+        - chmod +x send.sh
+        - ./send.sh failure $WEBHOOK_URL
