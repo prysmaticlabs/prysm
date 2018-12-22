@@ -134,7 +134,7 @@ go_repository(
     # code.
     remote = "https://github.com/prysmaticlabs/bazel-go-ethereum",
     vcs = "git",
-    commit = "f4b3f83362a4cf2928e57914af040aea76c8a7d6",
+    commit = "6c700e8b788206dabf8577011cb0a338d6e88bde",
 )
 
 go_repository(
@@ -936,4 +936,46 @@ go_repository(
     name = "com_github_inconshreveable_mousetrap",
     tag = "v1.0.0",
     importpath = "github.com/inconshreveable/mousetrap",
+)
+
+go_repository(
+    name = "com_github_deckarep_golang_set",
+    commit = "699df6a3acf6867538e50931511e9dc403da108a",
+    importpath = "github.com/deckarep/golang-set",
+)
+
+go_repository(
+    name = "com_github_go_stack_stack",
+    commit = "2fee6af1a9795aafbe0253a0cfbdf668e1fb8a9a",
+    importpath = "github.com/go-stack/stack",
+)
+
+go_repository(
+    name = "com_github_rs_cors",
+    commit = "a3460e445dd310dbefee993fe449f2ff9c08ae71",
+    importpath = "github.com/rs/cors",
+)
+
+go_repository(
+    name = "com_github_golang_snappy",
+    commit = "2e65f85255dbc3072edf28d6b5b8efc472979f5a",
+    importpath = "github.com/golang/snappy",
+)
+
+go_repository(
+    name = "in_gopkg_urfave_cli_v1",
+    commit = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1",
+    importpath = "gopkg.in/urfave/cli.v1",
+)
+
+go_repository(
+    name = "com_github_rjeczalik_notify",
+    commit = "629144ba06a1c6af28c1e42c228e3d42594ce081",
+    importpath = "github.com/rjeczalik/notify",
+)
+
+go_repository(
+    name = "com_github_edsrzf_mmap_go",
+    commit = "188cc3b666ba704534fa4f96e9e61f21f1e1ba7c",
+    importpath = "github.com/edsrzf/mmap-go",
 )
