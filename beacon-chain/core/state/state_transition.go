@@ -5,6 +5,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/randao"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
+	"github.com/golang/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -53,9 +54,8 @@ func ExecuteStateTransition(
 
 // ProcessBlock describes the per block operations that happen on every slot.
 func ProcessBlock(state *types.BeaconState, block *pb.BeaconBlock) *types.BeaconState {
-	_ = block
-	// TODO(#1073): This function will encompass all the per block slot transition functions, this will
-	// contain checks for randao,proposer validity and block operations.
+	newState := proto.Clone(state.Proto()).(*pb.BeaconState)
+	fmt.Printf("%v %v", newState, block)
 	return state
 }
 
