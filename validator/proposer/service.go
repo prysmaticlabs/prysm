@@ -90,7 +90,7 @@ func (p *Proposer) Stop() error {
 func (p *Proposer) DoesAttestationExist(attestation *pbp2p.Attestation) bool {
 	exists := false
 	for _, record := range p.pendingAttestation {
-		if bytes.Equal(record.GetAttesterBitfield(), attestation.GetAttesterBitfield()) {
+		if bytes.Equal(record.GetParticipationBitfield(), attestation.GetParticipationBitfield()) {
 			exists = true
 			break
 		}

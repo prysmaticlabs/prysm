@@ -229,7 +229,11 @@ func TestListenForProcessedAttestations(t *testing.T) {
 	stream := internal.NewMockBeaconService_LatestAttestationClient(ctrl)
 
 	// Testing if an attestation is received,triggering a log.
-	stream.EXPECT().Recv().Return(&pbp2p.Attestation{Slot: 10}, nil)
+	stream.EXPECT().Recv().Return(&pbp2p.Attestation{
+		Data: &pbp2p.AttestationData{
+			Slot: 10,
+		},
+	}, nil)
 	stream.EXPECT().Recv().Return(&pbp2p.Attestation{}, io.EOF)
 
 	mockServiceClient := internal.NewMockBeaconServiceClient(ctrl)

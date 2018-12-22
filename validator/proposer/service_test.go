@@ -55,24 +55,24 @@ func TestDoesAttestationExist(t *testing.T) {
 
 	p.pendingAttestation = []*pbp2p.Attestation{
 		{
-			AttesterBitfield: []byte{'a'},
+			ParticipationBitfield: []byte{'a'},
 		},
 		{
-			AttesterBitfield: []byte{'b'},
+			ParticipationBitfield: []byte{'b'},
 		},
 		{
-			AttesterBitfield: []byte{'c'},
+			ParticipationBitfield: []byte{'c'},
 		},
 		{
-			AttesterBitfield: []byte{'d'},
+			ParticipationBitfield: []byte{'d'},
 		}}
 
 	fakeAttestation := &pbp2p.Attestation{
-		AttesterBitfield: []byte{'e'},
+		ParticipationBitfield: []byte{'e'},
 	}
 
 	realAttestation := &pbp2p.Attestation{
-		AttesterBitfield: []byte{'a'},
+		ParticipationBitfield: []byte{'a'},
 	}
 
 	if p.DoesAttestationExist(fakeAttestation) {
@@ -159,13 +159,13 @@ func TestProposerProcessAttestation(t *testing.T) {
 	}()
 	p.pendingAttestation = []*pbp2p.Attestation{
 		{
-			AttesterBitfield: []byte{'a'},
+			ParticipationBitfield: []byte{'a'},
 		},
 		{
-			AttesterBitfield: []byte{'b'},
+			ParticipationBitfield: []byte{'b'},
 		}}
 
-	attestation := &pbp2p.Attestation{AttesterBitfield: []byte{'c'}}
+	attestation := &pbp2p.Attestation{ParticipationBitfield: []byte{'c'}}
 	p.attestationChan <- attestation
 
 	doneChan <- struct{}{}
@@ -174,8 +174,8 @@ func TestProposerProcessAttestation(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Attestation stored in memory")
 	testutil.AssertLogsContain(t, hook, "Proposer context closed")
 
-	if !bytes.Equal(p.pendingAttestation[2].GetAttesterBitfield(), []byte{'c'}) {
-		t.Errorf("attestation was unable to be saved %v", p.pendingAttestation[2].GetAttesterBitfield())
+	if !bytes.Equal(p.pendingAttestation[2].GetParticipationBitfield(), []byte{'c'}) {
+		t.Errorf("attestation was unable to be saved %v", p.pendingAttestation[2].GetParticipationBitfield())
 	}
 }
 
@@ -210,13 +210,13 @@ func TestFullProposalOfBlock(t *testing.T) {
 
 	p.pendingAttestation = []*pbp2p.Attestation{
 		{
-			AttesterBitfield: []byte{'a'},
+			ParticipationBitfield: []byte{'a'},
 		},
 		{
-			AttesterBitfield: []byte{'b'},
+			ParticipationBitfield: []byte{'b'},
 		}}
 
-	attestation := &pbp2p.Attestation{AttesterBitfield: []byte{'c'}}
+	attestation := &pbp2p.Attestation{ParticipationBitfield: []byte{'c'}}
 	p.attestationChan <- attestation
 
 	p.assignmentChan <- &pbp2p.BeaconBlock{Slot: 5}
