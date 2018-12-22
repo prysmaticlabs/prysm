@@ -1,15 +1,1 @@
-{
-  "Enable": [
-    "gofmt",
-    "deadcode",
-    "misspell",
-    "goimports",
-    "nakedret",
-    "unparam",
-    "megacheck",
-    "gosec",
-    "varcheck",
-    "structcheck",
-    "golint"
-  ]
-}
+/home/zypherx/Desktop/Go/src/github.com/prysmaticlabs/prysm/.gometalinter.json

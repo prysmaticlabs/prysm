@@ -1,18 +1,1 @@
-{
-  "extends": "solium:recommended",
-  "plugins": [
-    "security"
-  ],
-  "rules": {
-    "quotes": [
-      "error",
-      "double"
-    ],
-    "security/no-inline-assembly": ["warning"],
-
-    "indentation": [
-      "error",
-      4
-    ]
-  }
-}
+/home/zypherx/Desktop/Go/src/github.com/prysmaticlabs/prysm/.soliumrc.json
