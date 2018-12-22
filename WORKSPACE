@@ -973,3 +973,9 @@ go_repository(
     commit = "629144ba06a1c6af28c1e42c228e3d42594ce081",
     importpath = "github.com/rjeczalik/notify",
 )
+
+go_repository(
+    name = "com_github_edsrzf_mmap_go",
+    commit = "188cc3b666ba704534fa4f96e9e61f21f1e1ba7c",
+    importpath = "github.com/edsrzf/mmap-go",
+)
