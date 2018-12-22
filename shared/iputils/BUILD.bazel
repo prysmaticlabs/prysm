@@ -1,0 +1,8 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["external_ip.go"],
+    importpath = "github.com/prysmaticlabs/prysm/shared/iputils",
+    visibility = ["//visibility:public"],
+)
