@@ -3,9 +3,6 @@ package blockchain
 import (
 	"context"
 	"errors"
-	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"io/ioutil"
 	"math/big"
 	"testing"
@@ -14,11 +11,14 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -306,6 +306,9 @@ func TestDoesPOWBlockExist(t *testing.T) {
 
 func TestUpdateHead(t *testing.T) {
 	beaconState, err := state.NewGenesisBeaconState(nil)
+	if err != nil {
+		t.Fatalf("Cannot create genesis beacon state: %v", err)
+	}
 	enc, _ := proto.Marshal(beaconState)
 	stateRoot := hashutil.Hash(enc)
 

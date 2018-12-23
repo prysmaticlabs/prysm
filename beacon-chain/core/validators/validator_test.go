@@ -51,9 +51,6 @@ func TestHasVoted(t *testing.T) {
 func TestInitialValidatorRegistry(t *testing.T) {
 	validators := InitialValidatorRegistry()
 	for _, validator := range validators {
-		if validator.GetBalance() != params.BeaconConfig().MaxDeposit*params.BeaconConfig().Gwei {
-			t.Fatalf("deposit size of validator is not expected %d", validator.GetBalance())
-		}
 		if validator.GetStatus() != pb.ValidatorRecord_ACTIVE {
 			t.Errorf("validator status is not active: %d", validator.GetStatus())
 		}

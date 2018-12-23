@@ -2,12 +2,12 @@ package state
 
 import (
 	"bytes"
-	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"reflect"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
