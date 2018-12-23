@@ -2,6 +2,7 @@ package simulator
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"io/ioutil"
 	"testing"
 
@@ -206,10 +207,11 @@ func TestStateRequest(t *testing.T) {
 		t.Fatalf("could not retrieve beacon state %v", err)
 	}
 
-	hash, err := beaconState.Hash()
+	enc, err := proto.Marshal(beaconState)
 	if err != nil {
-		t.Fatalf("could not hash beacon state %v", err)
+		t.Fatalf("could not marshal beacon state %v", err)
 	}
+	hash := hashutil.Hash(enc)
 
 	beaconStateRequest := &pb.BeaconStateRequest{
 		Hash: []byte{'t', 'e', 's', 't'},

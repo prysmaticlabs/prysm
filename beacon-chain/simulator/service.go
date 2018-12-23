@@ -271,7 +271,6 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*pb.BeaconB
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
 
-	stateHash, err := beaconState.Hash()
 	enc, err := proto.Marshal(beaconState)
 	if err != nil {
 		return nil, fmt.Errorf("could not marshal beacon state: %v", err)
