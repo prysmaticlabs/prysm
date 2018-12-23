@@ -3,7 +3,6 @@ package p2p
 import (
 	"context"
 	"fmt"
-	"github.com/libp2p/go-libp2p-peerstore"
 	"reflect"
 	"strings"
 	"sync"
@@ -159,7 +158,7 @@ func connectServersTo(serverToConnect *Server, servers []*Server) error {
 
 func subscribeServersToTopic(servers []*Server, topic string, msg proto.Message) {
 	for _, server := range servers {
-		copyMsg := *msg.(*shardpb.CollationBodyRequest) //TODO: Review why RegisterToTopic throws a race condition when using same instance of the message.
+		copyMsg := *msg.(*shardpb.CollationBodyRequest)
 		server.RegisterTopic(topic, &copyMsg)
 	}
 }
