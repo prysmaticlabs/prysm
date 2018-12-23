@@ -1,6 +1,8 @@
 package epoch
 
 import (
+	"fmt"
+
 	"github.com/golang/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -104,4 +106,43 @@ func ProcessFinalization(state *pb.BeaconState) *pb.BeaconState {
 		return newState
 	}
 	return newState
+}
+
+// ProcessCrosslinks goes through each shard committee and check
+// shard committee's attested balance * 3 was greater than total balance *2.
+// If it's greater then beacon node updates shard committee with
+// the latest state slot and wining root.
+//
+// Spec pseudocode definition:
+//	For every shard_committee in state.shard_committees_at_slots:
+// 		Set state.latest_crosslinks[shard] = CrosslinkRecord(
+// 		slot=state.slot, block_root=winning_root(shard_committee))
+// 		if 3 * total_attesting_balance(shard_committee) >= 2 * total_balance(shard_committee).
+func ProcessCrosslinks(
+	state *pb.BeaconState,
+	shardCommitteesAtSlots []*pb.ShardAndCommitteeArray,
+	thisEpochAttestations []*pb.PendingAttestationRecord,
+	prevEpochAttestations []*pb.PendingAttestationRecord) (*pb.BeaconState, error) {
+	newState := proto.Clone(state).(*pb.BeaconState)
+
+	for _, shardCommitteesAtSlot := range shardCommitteesAtSlots {
+		for _, shardCommittee := range shardCommitteesAtSlot.ArrayShardAndCommittee {
+			attestingBalance, err := TotalAttestingBalance(state, shardCommittee, thisEpochAttestations, prevEpochAttestations)
+			if err != nil {
+				return nil, fmt.Errorf("could not get attesting balance for shard committee %d: %v", shardCommittee.Shard, err)
+			}
+			totalBalance := TotalBalance(state, shardCommittee)
+			if attestingBalance*3 > totalBalance*2 {
+				winningRoot, err := WinningRoot(state, shardCommittee, thisEpochAttestations, prevEpochAttestations)
+				if err != nil {
+					return nil, fmt.Errorf("could not get winning root: %v", err)
+				}
+				newState.LatestCrosslinks[shardCommittee.Shard] = &pb.CrosslinkRecord{
+					Slot:                 state.Slot,
+					ShardBlockRootHash32: winningRoot,
+				}
+			}
+		}
+	}
+	return newState, nil
 }

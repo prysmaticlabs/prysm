@@ -220,3 +220,78 @@ func TestProcessFinalization(t *testing.T) {
 			0, newState.FinalizedSlot)
 	}
 }
+
+func TestProcessCrosslinks_Ok(t *testing.T) {
+	shardCommitteesAtSlot := []*pb.ShardAndCommitteeArray{
+		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
+		}}}
+
+	state := &pb.BeaconState{
+		ShardAndCommitteesAtSlots: shardCommitteesAtSlot,
+		Slot:                      5,
+		LatestCrosslinks:          []*pb.CrosslinkRecord{{}, {}},
+		ValidatorBalances: []uint64{16 * 1e9, 18 * 1e9, 20 * 1e9, 31 * 1e9,
+			32 * 1e9, 34 * 1e9, 50 * 1e9, 50 * 1e9},
+	}
+
+	var attestations []*pb.PendingAttestationRecord
+	for i := 0; i < 10; i++ {
+		attestation := &pb.PendingAttestationRecord{
+			Data: &pb.AttestationData{
+				Slot:                 0,
+				Shard:                1,
+				ShardBlockRootHash32: []byte{'A'},
+			},
+			// All validators attested to the above roots.
+			ParticipationBitfield: []byte{0xff},
+		}
+		attestations = append(attestations, attestation)
+	}
+
+	newState, err := ProcessCrosslinks(
+		state,
+		shardCommitteesAtSlot,
+		attestations,
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("Could not execute ProcessCrosslinks: %v", err)
+	}
+	// Verify crosslink for shard 1([1]) was processed at state.slot (5).
+	if newState.LatestCrosslinks[1].Slot != state.Slot {
+		t.Errorf("Shard 0s got crosslinked at slot %d, wanted: %d",
+			newState.LatestCrosslinks[1].Slot, state.Slot)
+	}
+	// Verify crosslink for shard 1 was root hashed for []byte{'A'}.
+	if !bytes.Equal(newState.LatestCrosslinks[1].ShardBlockRootHash32,
+		attestations[0].Data.ShardBlockRootHash32) {
+		t.Errorf("Shard 0's root hash is %#x, wanted: %#x",
+			newState.LatestCrosslinks[1].ShardBlockRootHash32,
+			attestations[0].Data.ShardBlockRootHash32)
+	}
+}
+
+func TestProcessCrosslinks_NoRoot(t *testing.T) {
+	shardCommitteesAtSlot := []*pb.ShardAndCommitteeArray{
+		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
+		}}}
+
+	state := &pb.BeaconState{
+		ShardAndCommitteesAtSlots: shardCommitteesAtSlot,
+		Slot:                      5,
+		LatestCrosslinks:          []*pb.CrosslinkRecord{{}, {}},
+		ValidatorBalances:         []uint64{},
+	}
+
+	attestations := []*pb.PendingAttestationRecord{
+		{Data: &pb.AttestationData{Shard: 1},
+			// Empty participation bitfield will trigger error.
+			ParticipationBitfield: []byte{}}}
+
+	_, err := ProcessCrosslinks(state, shardCommitteesAtSlot, attestations, nil)
+	if err == nil {
+		t.Fatalf("ProcessCrosslinks should have failed")
+	}
+}
