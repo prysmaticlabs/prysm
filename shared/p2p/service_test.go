@@ -80,12 +80,12 @@ func TestBroadcast(t *testing.T) {
 	msg := &shardpb.CollationBodyRequest{}
 	subscribeServersToTopic(servers, "theTopic", msg)
 
+	time.Sleep(1 * time.Second)
+
 	msgSubsChannel := make(chan Message)
 	for _, server := range servers[1:] {
-		server.Subscribe(msg, msgSubsChannel)
+		server.Subscribe(&shardpb.CollationBodyRequest{}, msgSubsChannel)
 	}
-
-	time.Sleep(1 * time.Second)
 
 	aMessage := &shardpb.CollationBodyRequest{ShardId: 1234}
 	servers[0].Broadcast(aMessage)
@@ -159,7 +159,8 @@ func connectServersTo(serverToConnect *Server, servers []*Server) error {
 
 func subscribeServersToTopic(servers []*Server, topic string, msg proto.Message) {
 	for _, server := range servers {
-		server.RegisterTopic(topic, msg)
+		copyMsg := *msg.(*shardpb.CollationBodyRequest) //TODO: Review why RegisterToTopic throws a race condition when using same instance of the message.
+		server.RegisterTopic(topic, &copyMsg)
 	}
 }
 
