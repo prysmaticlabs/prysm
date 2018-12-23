@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/golang/protobuf/proto"
+	"github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"
 	dsync "github.com/ipfs/go-datastore/sync"
 	libp2p "github.com/libp2p/go-libp2p"

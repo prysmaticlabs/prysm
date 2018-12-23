@@ -7,8 +7,8 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes"
+	"github.com/gogo/protobuf/proto"
+	ptypes "github.com/gogo/protobuf/types"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
