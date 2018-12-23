@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -12,6 +13,15 @@ import (
 )
 
 var clock utils.Clock = &utils.RealClock{}
+
+// Hash a beacon block data structure.
+func Hash(block *pb.BeaconBlock) ([32]byte, error) {
+	data, err := proto.Marshal(block)
+	if err != nil {
+		return [32]byte{}, fmt.Errorf("could not marshal block proto data: %v", err)
+	}
+	return hashutil.Hash(data), nil
+}
 
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
 func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
