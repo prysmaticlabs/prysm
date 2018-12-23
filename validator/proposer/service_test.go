@@ -272,7 +272,7 @@ func TestProposerServiceErrors(t *testing.T) {
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
-	testutil.AssertLogsContain(t, hook, "Could not marshal latest beacon block")
+	testutil.AssertLogsContain(t, hook, "Could not marshal nil latest beacon block")
 	testutil.AssertLogsContain(t, hook, "Proposer context closed")
 	testutil.AssertLogsContain(t, hook, "Could not propose block: bad block proposed")
 }

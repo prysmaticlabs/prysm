@@ -88,6 +88,10 @@ func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.Validator
 		case latestBeaconBlock := <-a.assignmentChan:
 			log.Info("Performing attester responsibility")
 
+			if latestBeaconBlock == nil {
+				log.Errorf("could not marshal nil latest beacon block")
+				continue
+			}
 			data, err := proto.Marshal(latestBeaconBlock)
 			if err != nil {
 				log.Errorf("could not marshal latest beacon block: %v", err)
