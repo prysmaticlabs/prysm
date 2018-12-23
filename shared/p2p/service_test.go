@@ -13,6 +13,7 @@ import (
 	"github.com/golang/mock/gomock"
 	ipfslog "github.com/ipfs/go-log"
 	bhost "github.com/libp2p/go-libp2p-blankhost"
+	peerstore "github.com/libp2p/go-libp2p-peerstore"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
@@ -123,9 +124,9 @@ func TestBroadcast(t *testing.T) {
 	case <-doneChan:
 		break
 	case <-errorChan:
-		t.Fatalf("error asserting that received broacasted message equals expected")
+		t.Fatalf("error asserting that received broacast message equals expected")
 	case <-timeoutChan:
-		t.Fatalf("timeout while waiting for broadcasted message")
+		t.Fatalf("timeout while waiting for broadcast message")
 	}
 }
 
