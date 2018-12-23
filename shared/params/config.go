@@ -58,6 +58,7 @@ type BeaconChainConfig struct {
 	GenesisTime                             time.Time      // GenesisTime used by the protocol.
 	MaxNumLog2Validators                    uint64         // Max number of validators in Log2 can exist given total ETH supply.
 	EpochLength                             uint64         // Number of slots that define an Epoch.
+	InactivityPenaltyQuotient 				uint64		   // InactivityPenaltyQuotient defines how much validator leaks out balances for offline.
 }
 
 // ShardChainConfig contains configs for node to participate in shard chains.
@@ -98,6 +99,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxNumLog2Validators:          24,
 	EpochLength:                   64,
 	PowReceiptRootVotingPeriod:    1024,
+	InactivityPenaltyQuotient:     1 << 24,
 }
 
 var demoBeaconConfig = &BeaconChainConfig{
@@ -130,7 +132,8 @@ var demoBeaconConfig = &BeaconChainConfig{
 	GenesisTime:                   time.Now(),
 	MaxNumLog2Validators:          24,
 	EpochLength:                   defaultBeaconConfig.EpochLength,
-	PowReceiptRootVotingPeriod:    1024,
+	PowReceiptRootVotingPeriod:    defaultBeaconConfig.PowReceiptRootVotingPeriod,
+	InactivityPenaltyQuotient:     defaultBeaconConfig.InactivityPenaltyQuotient
 }
 
 var defaultShardConfig = &ShardChainConfig{
