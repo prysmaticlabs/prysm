@@ -7,7 +7,6 @@ import (
 	"reflect"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -37,11 +36,11 @@ func Hash(block *pb.BeaconBlock) ([32]byte, error) {
 //     vote_count=1
 //   )
 func ProcessPOWReceiptRoots(
-	beaconState *types.BeaconState,
+	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 ) []*pb.CandidatePoWReceiptRootRecord {
 	var newCandidateReceiptRoots []*pb.CandidatePoWReceiptRootRecord
-	currentCandidateReceiptRoots := beaconState.CandidatePowReceiptRoots()
+	currentCandidateReceiptRoots := beaconState.GetCandidatePowReceiptRoots()
 	for idx, root := range currentCandidateReceiptRoots {
 		if bytes.Equal(block.GetCandidatePowReceiptRootHash32(), root.GetCandidatePowReceiptRootHash32()) {
 			currentCandidateReceiptRoots[idx].Votes++
@@ -350,7 +349,7 @@ func verifyCasperVotes(votes *pb.SlashableVoteData) error {
 //     slot_included=state.slot,
 //   ) which can then be appended to state.latest_attestations.
 func ProcessBlockAttestations(
-	beaconState *types.BeaconState,
+	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 ) ([]*pb.PendingAttestationRecord, error) {
 	atts := block.GetBody().GetAttestations()
@@ -370,54 +369,54 @@ func ProcessBlockAttestations(
 			Data:                  attestation.GetData(),
 			ParticipationBitfield: attestation.GetParticipationBitfield(),
 			CustodyBitfield:       attestation.GetCustodyBitfield(),
-			SlotIncluded:          beaconState.Slot(),
+			SlotIncluded:          beaconState.GetSlot(),
 		})
 	}
 	return pendingAttestations, nil
 }
 
-func verifyAttestation(beaconState *types.BeaconState, att *pb.Attestation) error {
+func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation) error {
 	inclusionDelay := params.BeaconConfig().MinAttestationInclusionDelay
-	if att.GetData().GetSlot()+inclusionDelay > beaconState.Slot() {
+	if att.GetData().GetSlot()+inclusionDelay > beaconState.GetSlot() {
 		return fmt.Errorf(
 			"attestation slot (slot %d) + inclusion delay (%d) beyond current beacon state slot (%d)",
 			att.GetData().GetSlot(),
 			inclusionDelay,
-			beaconState.Slot(),
+			beaconState.GetSlot(),
 		)
 	}
-	if att.GetData().GetSlot()+params.BeaconConfig().EpochLength < beaconState.Slot() {
+	if att.GetData().GetSlot()+params.BeaconConfig().EpochLength < beaconState.GetSlot() {
 		return fmt.Errorf(
 			"attestation slot (slot %d) + epoch length (%d) less than current beacon state slot (%d)",
 			att.GetData().GetSlot(),
 			params.BeaconConfig().EpochLength,
-			beaconState.Slot(),
+			beaconState.GetSlot(),
 		)
 	}
 	// Verify that attestation.JustifiedSlot is equal to
 	// state.JustifiedSlot if attestation.Slot >=
 	// state.Slot - (state.Slot % EPOCH_LENGTH) else state.PreviousJustifiedSlot.
-	if att.GetData().GetSlot() >= beaconState.Slot()-(beaconState.Slot()%params.BeaconConfig().EpochLength) {
-		if att.GetData().GetJustifiedSlot() != beaconState.LastJustifiedSlot() {
+	if att.GetData().GetSlot() >= beaconState.GetSlot()-(beaconState.GetSlot()%params.BeaconConfig().EpochLength) {
+		if att.GetData().GetJustifiedSlot() != beaconState.GetJustifiedSlot() {
 			return fmt.Errorf(
 				"expected attestation.JustifiedSlot == state.JustifiedSlot, received %d == %d",
 				att.GetData().GetJustifiedSlot(),
-				beaconState.LastJustifiedSlot(),
+				beaconState.GetJustifiedSlot(),
 			)
 		}
 	} else {
-		if att.GetData().GetJustifiedSlot() != beaconState.PreviousJustifiedSlot() {
+		if att.GetData().GetJustifiedSlot() != beaconState.GetPreviousJustifiedSlot() {
 			return fmt.Errorf(
 				"expected attestation.JustifiedSlot == state.PreviousJustifiedSlot, received %d == %d",
 				att.GetData().GetJustifiedSlot(),
-				beaconState.PreviousJustifiedSlot(),
+				beaconState.GetPreviousJustifiedSlot(),
 			)
 		}
 	}
 
 	// Verify that attestation.data.justified_block_root is equal to
 	// get_block_root(state, attestation.data.justified_slot).
-	blockRoot, err := BlockRoot(beaconState.Proto(), att.GetData().GetJustifiedSlot())
+	blockRoot, err := BlockRoot(beaconState, att.GetData().GetJustifiedSlot())
 	if err != nil {
 		return fmt.Errorf("could not get block root for justified slot: %v", err)
 	}
@@ -437,7 +436,7 @@ func verifyAttestation(beaconState *types.BeaconState, att *pb.Attestation) erro
 	crossLinkRoot := att.GetData().GetLatestCrosslinkRootHash32()
 	shardBlockRoot := att.GetData().GetShardBlockRootHash32()
 	shard := att.GetData().GetShard()
-	stateShardBlockRoot := beaconState.LatestCrosslinks()[shard].GetShardBlockRootHash32()
+	stateShardBlockRoot := beaconState.GetLatestCrosslinks()[shard].GetShardBlockRootHash32()
 
 	if !(bytes.Equal(crossLinkRoot, stateShardBlockRoot) ||
 		bytes.Equal(shardBlockRoot, stateShardBlockRoot)) {
@@ -496,7 +495,7 @@ func verifyAttestation(beaconState *types.BeaconState, att *pb.Attestation) erro
 //       state, exit.validator_index, new_status=ACTIVE_PENDING_EXIT,
 //     )
 func ProcessValidatorExits(
-	beaconState *types.BeaconState,
+	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 ) ([]*pb.ValidatorRecord, error) {
 	exits := block.GetBody().GetExits()
@@ -507,7 +506,7 @@ func ProcessValidatorExits(
 			params.BeaconConfig().MaxExits,
 		)
 	}
-	validatorRegistry := beaconState.ValidatorRegistry()
+	validatorRegistry := beaconState.GetValidatorRegistry()
 	for idx, exit := range exits {
 		if err := verifyExit(beaconState, exit); err != nil {
 			return nil, fmt.Errorf("could not verify exit #%d: %v", idx, err)
@@ -520,31 +519,31 @@ func ProcessValidatorExits(
 		validator := validatorRegistry[exit.GetValidatorIndex()]
 		validatorRegistry[exit.GetValidatorIndex()] = v.ExitValidator(
 			validator,
-			beaconState.Slot(),
+			beaconState.GetSlot(),
 			true, /* penalize */
 		)
 	}
 	return validatorRegistry, nil
 }
 
-func verifyExit(beaconState *types.BeaconState, exit *pb.Exit) error {
-	validator := beaconState.ValidatorRegistry()[exit.GetValidatorIndex()]
+func verifyExit(beaconState *pb.BeaconState, exit *pb.Exit) error {
+	validator := beaconState.GetValidatorRegistry()[exit.GetValidatorIndex()]
 	if validator.GetStatus() != pb.ValidatorRecord_ACTIVE {
 		return fmt.Errorf(
 			"expected validator to have active status, received %v",
 			validator.GetStatus(),
 		)
 	}
-	if beaconState.Slot() < exit.GetSlot() {
+	if beaconState.GetSlot() < exit.GetSlot() {
 		return fmt.Errorf(
 			"expected state.Slot >= exit.Slot, received %d < %d",
-			beaconState.Slot(),
+			beaconState.GetSlot(),
 			exit.GetSlot(),
 		)
 	}
 	persistentCommitteeSlot := validator.GetLatestStatusChangeSlot() +
 		params.BeaconConfig().ShardPersistentCommitteeChangePeriod
-	if beaconState.Slot() < persistentCommitteeSlot {
+	if beaconState.GetSlot() < persistentCommitteeSlot {
 		return errors.New(
 			"expected validator.LatestStatusChangeSlot + PersistentCommitteePeriod >= state.Slot",
 		)

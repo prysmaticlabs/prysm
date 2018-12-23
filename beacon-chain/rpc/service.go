@@ -13,7 +13,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -59,7 +58,7 @@ type Service struct {
 	withKey               string
 	grpcServer            *grpc.Server
 	canonicalBlockChan    chan *pbp2p.BeaconBlock
-	canonicalStateChan    chan *types.BeaconState
+	canonicalStateChan    chan *pbp2p.BeaconState
 	incomingAttestation   chan *pbp2p.Attestation
 	enablePOWChain        bool
 	slotAlignmentDuration time.Duration
@@ -94,7 +93,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		withKey:               cfg.KeyFlag,
 		slotAlignmentDuration: time.Duration(params.BeaconConfig().SlotDuration) * time.Second,
 		canonicalBlockChan:    make(chan *pbp2p.BeaconBlock, cfg.SubscriptionBuf),
-		canonicalStateChan:    make(chan *types.BeaconState, cfg.SubscriptionBuf),
+		canonicalStateChan:    make(chan *pbp2p.BeaconState, cfg.SubscriptionBuf),
 		incomingAttestation:   make(chan *pbp2p.Attestation, cfg.SubscriptionBuf),
 		enablePOWChain:        cfg.EnablePOWChain,
 	}
@@ -179,7 +178,7 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(
 	}
 	var keys []*pb.PublicKey
 	if req.AllValidators {
-		for _, val := range beaconState.ValidatorRegistry() {
+		for _, val := range beaconState.GetValidatorRegistry() {
 			keys = append(keys, &pb.PublicKey{PublicKey: val.GetPubkey()})
 		}
 	} else {
@@ -216,8 +215,8 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 	}
 
 	_, prevProposerIndex, err := v.ProposerShardAndIndex(
-		beaconState.ShardAndCommitteesForSlots(),
-		beaconState.LastStateRecalculationSlot(),
+		beaconState.GetShardAndCommitteesAtSlots(),
+		beaconState.GetLastStateRecalculationSlot(),
 		req.GetSlotNumber(),
 	)
 	if err != nil {
@@ -294,8 +293,8 @@ func (s *Service) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.
 
 	shardID, err := v.ValidatorShardID(
 		req.PublicKey,
-		beaconState.ValidatorRegistry(),
-		beaconState.ShardAndCommitteesForSlots(),
+		beaconState.GetValidatorRegistry(),
+		beaconState.GetShardAndCommitteesAtSlots(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator shard ID: %v", err)
@@ -317,8 +316,8 @@ func (s *Service) ValidatorSlotAndResponsibility(
 
 	slot, role, err := v.ValidatorSlotAndRole(
 		req.PublicKey,
-		beaconState.ValidatorRegistry(),
-		beaconState.ShardAndCommitteesForSlots(),
+		beaconState.GetValidatorRegistry(),
+		beaconState.GetShardAndCommitteesAtSlots(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not get assigned validator slot for attester/proposer: %v", err)
@@ -336,7 +335,7 @@ func (s *Service) ValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.In
 	}
 	index, err := v.ValidatorIndex(
 		req.PublicKey,
-		beaconState.ValidatorRegistry(),
+		beaconState.GetValidatorRegistry(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator index: %v", err)
@@ -361,7 +360,7 @@ func (s *Service) ValidatorAssignments(
 
 			var keys []*pb.PublicKey
 			if req.AllValidators {
-				for _, val := range beaconState.ValidatorRegistry() {
+				for _, val := range beaconState.GetValidatorRegistry() {
 					keys = append(keys, &pb.PublicKey{PublicKey: val.GetPubkey()})
 				}
 			} else {
@@ -397,7 +396,7 @@ func (s *Service) ValidatorAssignments(
 
 // assignmentsForPublicKeys fetches the validator assignments for a subset of public keys
 // given a crystallized state.
-func assignmentsForPublicKeys(keys []*pb.PublicKey, beaconState *types.BeaconState) ([]*pb.Assignment, error) {
+func assignmentsForPublicKeys(keys []*pb.PublicKey, beaconState *pbp2p.BeaconState) ([]*pb.Assignment, error) {
 	// Next, for each public key in the request, we build
 	// up an array of assignments.
 	assignments := []*pb.Assignment{}
@@ -407,8 +406,8 @@ func assignmentsForPublicKeys(keys []*pb.PublicKey, beaconState *types.BeaconSta
 		// should act as a proposer or attester.
 		assignedSlot, role, err := v.ValidatorSlotAndRole(
 			val.GetPublicKey(),
-			beaconState.ValidatorRegistry(),
-			beaconState.ShardAndCommitteesForSlots(),
+			beaconState.GetValidatorRegistry(),
+			beaconState.GetShardAndCommitteesAtSlots(),
 		)
 		if err != nil {
 			return nil, err
@@ -418,8 +417,8 @@ func assignmentsForPublicKeys(keys []*pb.PublicKey, beaconState *types.BeaconSta
 		// based on a public key and current crystallized state.
 		shardID, err := v.ValidatorShardID(
 			val.GetPublicKey(),
-			beaconState.ValidatorRegistry(),
-			beaconState.ShardAndCommitteesForSlots(),
+			beaconState.GetValidatorRegistry(),
+			beaconState.GetShardAndCommitteesAtSlots(),
 		)
 		if err != nil {
 			return nil, err
