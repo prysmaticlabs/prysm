@@ -203,10 +203,12 @@ func TestAttestHead(t *testing.T) {
 		AttestationService: mockAttestationService,
 	})
 	req := &pb.AttestRequest{
-		Attestation: &pbp2p.AggregatedAttestation{
-			Slot:           999,
-			Shard:          1,
-			ShardBlockHash: []byte{'a'},
+		Attestation: &pbp2p.Attestation{
+			Data: &pbp2p.AttestationData{
+				Slot:                 999,
+				Shard:                1,
+				ShardBlockRootHash32: []byte{'a'},
+			},
 		},
 	}
 	if _, err := rpcService.AttestHead(context.Background(), req); err != nil {
@@ -248,10 +250,10 @@ func TestLatestAttestationFaulty(t *testing.T) {
 	defer ctrl.Finish()
 
 	exitRoutine := make(chan bool)
-	attestation := &types.Attestation{}
+	attestation := &pbp2p.Attestation{}
 
 	mockStream := internal.NewMockBeaconService_LatestAttestationServer(ctrl)
-	mockStream.EXPECT().Send(attestation.Proto()).Return(errors.New("something wrong"))
+	mockStream.EXPECT().Send(attestation).Return(errors.New("something wrong"))
 	// Tests a faulty stream.
 	go func(tt *testing.T) {
 		if err := rpcService.LatestAttestation(&empty.Empty{}, mockStream); err.Error() != "something wrong" {
@@ -277,9 +279,9 @@ func TestLatestAttestation(t *testing.T) {
 	defer ctrl.Finish()
 
 	exitRoutine := make(chan bool)
-	attestation := &types.Attestation{}
+	attestation := &pbp2p.Attestation{}
 	mockStream := internal.NewMockBeaconService_LatestAttestationServer(ctrl)
-	mockStream.EXPECT().Send(attestation.Proto()).Return(nil)
+	mockStream.EXPECT().Send(attestation).Return(nil)
 	// Tests a good stream.
 	go func(tt *testing.T) {
 		if err := rpcService.LatestAttestation(&empty.Empty{}, mockStream); err != nil {

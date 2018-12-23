@@ -4,9 +4,11 @@ package attestation
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
+	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -19,9 +21,9 @@ type Service struct {
 	cancel        context.CancelFunc
 	beaconDB      *db.BeaconDB
 	broadcastFeed *event.Feed
-	broadcastChan chan *types.Attestation
+	broadcastChan chan *pb.Attestation
 	incomingFeed  *event.Feed
-	incomingChan  chan *types.Attestation
+	incomingChan  chan *pb.Attestation
 }
 
 // Config options for the service.
@@ -40,9 +42,9 @@ func NewAttestationService(ctx context.Context, cfg *Config) *Service {
 		cancel:        cancel,
 		beaconDB:      cfg.BeaconDB,
 		broadcastFeed: new(event.Feed),
-		broadcastChan: make(chan *types.Attestation, cfg.BroadcastAttestationBuf),
+		broadcastChan: make(chan *pb.Attestation, cfg.BroadcastAttestationBuf),
 		incomingFeed:  new(event.Feed),
-		incomingChan:  make(chan *types.Attestation, cfg.ReceiveAttestationBuf),
+		incomingChan:  make(chan *pb.Attestation, cfg.ReceiveAttestationBuf),
 	}
 }
 
@@ -78,11 +80,12 @@ func (a *Service) aggregateAttestations() {
 			return
 		// Listen for a newly received incoming attestation from the sync service.
 		case attestation := <-a.incomingChan:
-			h, err := attestation.Hash()
+			enc, err := proto.Marshal(attestation)
 			if err != nil {
-				log.Errorf("Could not hash incoming attestation: %v", err)
+				log.Errorf("Could not marshal incoming attestation to bytes: %v", err)
 				continue
 			}
+			h := hashutil.Hash(enc)
 			if err := a.beaconDB.SaveAttestation(attestation); err != nil {
 				log.Errorf("Could not save attestation: %v", err)
 				continue

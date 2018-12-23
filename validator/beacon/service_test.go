@@ -32,7 +32,7 @@ func (fc *mockClient) BeaconServiceClient() pb.BeaconServiceClient {
 	mockServiceClient := internal.NewMockBeaconServiceClient(fc.ctrl)
 
 	attesterStream := internal.NewMockBeaconService_LatestAttestationClient(fc.ctrl)
-	attesterStream.EXPECT().Recv().Return(&pbp2p.AggregatedAttestation{}, io.EOF)
+	attesterStream.EXPECT().Recv().Return(&pbp2p.Attestation{}, io.EOF)
 
 	mockServiceClient.EXPECT().LatestAttestation(
 		gomock.Any(),
@@ -70,7 +70,7 @@ func (fc *mockLifecycleClient) BeaconServiceClient() pb.BeaconServiceClient {
 		gomock.Any(),
 		&empty.Empty{},
 	).Return(attesterStream, nil)
-	attesterStream.EXPECT().Recv().Return(&pbp2p.AggregatedAttestation{}, io.EOF)
+	attesterStream.EXPECT().Recv().Return(&pbp2p.Attestation{}, io.EOF)
 
 	cycleStream := internal.NewMockBeaconService_ValidatorAssignmentsClient(fc.ctrl)
 	mockServiceClient.EXPECT().ValidatorAssignments(
@@ -229,8 +229,12 @@ func TestListenForProcessedAttestations(t *testing.T) {
 	stream := internal.NewMockBeaconService_LatestAttestationClient(ctrl)
 
 	// Testing if an attestation is received,triggering a log.
-	stream.EXPECT().Recv().Return(&pbp2p.AggregatedAttestation{Slot: 10}, nil)
-	stream.EXPECT().Recv().Return(&pbp2p.AggregatedAttestation{}, io.EOF)
+	stream.EXPECT().Recv().Return(&pbp2p.Attestation{
+		Data: &pbp2p.AttestationData{
+			Slot: 10,
+		},
+	}, nil)
+	stream.EXPECT().Recv().Return(&pbp2p.Attestation{}, io.EOF)
 
 	mockServiceClient := internal.NewMockBeaconServiceClient(ctrl)
 	mockServiceClient.EXPECT().LatestAttestation(
@@ -244,8 +248,8 @@ func TestListenForProcessedAttestations(t *testing.T) {
 
 	// Testing an error coming from the stream.
 	stream = internal.NewMockBeaconService_LatestAttestationClient(ctrl)
-	stream.EXPECT().Recv().Return(&pbp2p.AggregatedAttestation{}, errors.New("stream error"))
-	stream.EXPECT().Recv().Return(&pbp2p.AggregatedAttestation{}, io.EOF)
+	stream.EXPECT().Recv().Return(&pbp2p.Attestation{}, errors.New("stream error"))
+	stream.EXPECT().Recv().Return(&pbp2p.Attestation{}, io.EOF)
 
 	mockServiceClient = internal.NewMockBeaconServiceClient(ctrl)
 	mockServiceClient.EXPECT().LatestAttestation(
@@ -271,7 +275,7 @@ func TestListenForProcessedAttestations(t *testing.T) {
 	// Test that the routine exits when context is closed
 	stream = internal.NewMockBeaconService_LatestAttestationClient(ctrl)
 
-	stream.EXPECT().Recv().Return(&pbp2p.AggregatedAttestation{}, nil)
+	stream.EXPECT().Recv().Return(&pbp2p.Attestation{}, nil)
 
 	mockServiceClient = internal.NewMockBeaconServiceClient(ctrl)
 	mockServiceClient.EXPECT().LatestAttestation(

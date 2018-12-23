@@ -12,7 +12,7 @@ import (
 // Spec pseudocode definition:
 //    If state.slot % EPOCH_LENGTH == 0:
 func CanProcessEpoch(state *pb.BeaconState) bool {
-	return state.Slot&params.BeaconConfig().EpochLength == 0
+	return state.Slot%params.BeaconConfig().EpochLength == 0
 }
 
 // CanProcessReceiptRoots checks the eligibility to process PoW receipt root.
@@ -21,11 +21,12 @@ func CanProcessEpoch(state *pb.BeaconState) bool {
 // Spec pseudocode definition:
 //    If state.slot % POW_RECEIPT_ROOT_VOTING_PERIOD == 0:
 func CanProcessReceiptRoots(state *pb.BeaconState) bool {
-	return state.Slot&params.BeaconConfig().PowReceiptRootVotingPeriod == 0
+	return state.Slot%params.BeaconConfig().PowReceiptRootVotingPeriod == 0
 }
 
-// ProcessReceipt processes PoW receipt roots by checking its vote count,
-// assigns root hash to processed receipt vote with sufficient votes.
+// ProcessReceipt processes PoW receipt roots by checking its vote count.
+// With sufficient votes (>2*POW_RECEIPT_ROOT_VOTING_PERIOD), it then
+// assigns root hash to processed receipt vote in state.
 func ProcessReceipt(state *pb.BeaconState) *pb.BeaconState {
 	newState := proto.Clone(state).(*pb.BeaconState)
 	for _, receiptRoot := range state.CandidatePowReceiptRoots {
@@ -33,7 +34,8 @@ func ProcessReceipt(state *pb.BeaconState) *pb.BeaconState {
 			newState.ProcessedPowReceiptRootHash32 = receiptRoot.CandidatePowReceiptRootHash32
 		}
 	}
-	return state
+	newState.CandidatePowReceiptRoots = make([]*pb.CandidatePoWReceiptRootRecord, 0)
+	return newState
 }
 
 // ProcessJustification processes for justified slot by comparing
@@ -54,9 +56,8 @@ func ProcessJustification(
 
 	newState := proto.Clone(state).(*pb.BeaconState)
 	newState.PreviousJustifiedSlot = state.JustifiedSlot
-	// Shifts all the bits over one to create a new bit for the recent epoch
-	// adds the 0 bit in the front and chops off the upper most bit.
-	newState.JustificationBitfield = (state.JustificationBitfield * 2) % 1 << 64
+	// Shifts all the bits over one to create a new bit for the recent epoch.
+	newState.JustificationBitfield = state.JustificationBitfield * 2
 
 	// If prev prev epoch was justified then we ensure the 2nd bit in the bitfield is set,
 	// assign new justified slot to 2 * EPOCH_LENGTH before.
@@ -65,7 +66,7 @@ func ProcessJustification(
 		newState.JustifiedSlot = state.Slot - 2*params.BeaconConfig().EpochLength
 	}
 
-	// If prev epoch was justified then we ensure the 1st bit in the bitfield is set,
+	// If this epoch was justified then we ensure the 1st bit in the bitfield is set,
 	// assign new justified slot to 1 * EPOCH_LENGTH before.
 	if 3*thisEpochBoundaryAttestingBalance >= 2*totalBalance {
 		newState.JustificationBitfield |= 1
