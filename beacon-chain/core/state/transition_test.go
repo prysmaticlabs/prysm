@@ -1,11 +1,30 @@
 package state
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+func TestProcessBlock_IncorrectSlot(t *testing.T) {
+	beaconState := &pb.BeaconState{
+		Slot: 5,
+	}
+	block := &pb.BeaconBlock{
+		Slot: 4,
+	}
+	want := fmt.Sprintf(
+		"block.slot != state.slot, block.slot = %d, state.slot = %d",
+		4,
+		5,
+	)
+	if _, err := ProcessBlock(beaconState, block); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
 
 func TestIsNewValidatorSetTransition(t *testing.T) {
 	beaconState, err := NewGenesisBeaconState(nil)
