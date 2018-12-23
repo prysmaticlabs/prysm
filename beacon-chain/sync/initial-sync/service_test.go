@@ -8,10 +8,10 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -147,10 +147,11 @@ func TestSavingBlocksInSync(t *testing.T) {
 		BeaconState: incorrectState,
 	}
 
-	beaconStateRootHash32, err := types.NewBeaconState(beaconState).Hash()
+	enc, err := proto.Marshal(beaconState)
 	if err != nil {
-		t.Fatalf("unable to get hash of state: %v", err)
+		t.Fatalf("unable to get marshal state: %v", err)
 	}
+	beaconStateRootHash32 := hashutil.Hash(enc)
 
 	getBlockResponseMsg := func(Slot uint64) p2p.Message {
 		block := &pb.BeaconBlock{
@@ -250,10 +251,11 @@ func TestDelayChan(t *testing.T) {
 		BeaconState: beaconState,
 	}
 
-	beaconStateRootHash32, err := types.NewBeaconState(stateResponse.BeaconState).Hash()
+	enc, err := proto.Marshal(beaconState)
 	if err != nil {
-		t.Fatalf("unable to get hash of state: %v", err)
+		t.Fatalf("unable to get marshal state: %v", err)
 	}
+	beaconStateRootHash32 := hashutil.Hash(enc)
 
 	block := &pb.BeaconBlock{
 		CandidatePowReceiptRootHash32: []byte{1, 2, 3},

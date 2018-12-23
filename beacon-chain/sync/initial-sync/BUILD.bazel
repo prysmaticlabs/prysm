@@ -7,10 +7,10 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
-        "//beacon-chain/core/types:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/event:go_default_library",
+        "//shared/hashutil:go_default_library",
         "//shared/p2p:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_golang_protobuf//proto:go_default_library",
@@ -24,10 +24,10 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
-        "//beacon-chain/core/types:go_default_library",
         "//beacon-chain/internal:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/event:go_default_library",
+        "//shared/hashutil:go_default_library",
         "//shared/p2p:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_golang_protobuf//proto:go_default_library",

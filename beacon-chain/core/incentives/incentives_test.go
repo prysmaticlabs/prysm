@@ -9,15 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func newValidatorRegistry() []*pb.ValidatorRecord {
-	var validators []*pb.ValidatorRecord
-	for i := 0; i < 10; i++ {
-		validator := &pb.ValidatorRecord{Balance: 32 * 1e9, Status: pb.ValidatorRecord_ACTIVE}
-		validators = append(validators, validator)
-	}
-	return validators
-}
-
 func TestRewardQuotient(t *testing.T) {
 	defaultBalance := uint64(2 * 1e9)
 	totalDeposit := defaultBalance

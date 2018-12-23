@@ -208,15 +208,15 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 		return
 	}
 
-	if block.GetSlot() < beaconState.LastFinalizedSlot() {
+	if block.GetSlot() < beaconState.GetFinalizedSlot() {
 		log.Debug("Discarding received block with a slot number smaller than the last finalized slot")
 		return
 	}
 
 	// Verify attestation coming from proposer then forward block to the subscribers.
 	proposerShardID, _, err := v.ProposerShardAndIndex(
-		beaconState.ShardAndCommitteesForSlots(),
-		beaconState.LastStateRecalculationSlot(),
+		beaconState.GetShardAndCommitteesAtSlots(),
+		beaconState.GetLastStateRecalculationSlot(),
 		block.GetSlot(),
 	)
 	if err != nil {

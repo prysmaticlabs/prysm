@@ -3,6 +3,8 @@ package db
 import (
 	"bytes"
 	"testing"
+
+	"github.com/golang/protobuf/proto"
 )
 
 func TestInitializeState(t *testing.T) {
@@ -27,7 +29,7 @@ func TestInitializeState(t *testing.T) {
 	if beaconState == nil {
 		t.Fatalf("Failed to retrieve state: %v", beaconState)
 	}
-	beaconStateEnc, err := beaconState.Marshal()
+	beaconStateEnc, err := proto.Marshal(beaconState)
 	if err != nil {
 		t.Fatalf("Failed to encode state: %v", err)
 	}
@@ -36,7 +38,7 @@ func TestInitializeState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get state: %v", err)
 	}
-	statePrimeEnc, err := statePrime.Marshal()
+	statePrimeEnc, err := proto.Marshal(statePrime)
 	if err != nil {
 		t.Fatalf("Failed to encode state: %v", err)
 	}

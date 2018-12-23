@@ -17,10 +17,11 @@ go_library(
     deps = [
         "//beacon-chain/core/attestations:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
-        "//beacon-chain/core/types:go_default_library",
+        "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/utils:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bytes:go_default_library",
+        "//shared/hashutil:go_default_library",
         "@com_github_boltdb_bolt//:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_golang_protobuf//ptypes:go_default_library_gen",
@@ -46,5 +47,6 @@ go_test(
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
+        "@com_github_golang_protobuf//proto:go_default_library",
     ],
 )

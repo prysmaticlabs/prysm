@@ -12,7 +12,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/empty"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -123,7 +123,7 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	beaconState, err := types.NewGenesisBeaconState(nil)
+	beaconState, err := state.NewGenesisBeaconState(nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -169,7 +169,7 @@ func TestProposeBlock(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	beaconState, err := types.NewGenesisBeaconState(nil)
+	beaconState, err := state.NewGenesisBeaconState(nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -306,7 +306,7 @@ func TestValidatorSlotAndResponsibility(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	beaconState, err := types.NewGenesisBeaconState(nil)
+	beaconState, err := state.NewGenesisBeaconState(nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -338,7 +338,7 @@ func TestValidatorIndex(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	beaconState, err := types.NewGenesisBeaconState(nil)
+	beaconState, err := state.NewGenesisBeaconState(nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -370,7 +370,7 @@ func TestValidatorShardID(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	beaconState, err := types.NewGenesisBeaconState(nil)
+	beaconState, err := state.NewGenesisBeaconState(nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -403,7 +403,7 @@ func TestValidatorAssignments(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	beaconState, err := types.NewGenesisBeaconState(nil)
+	beaconState, err := state.NewGenesisBeaconState(nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -440,7 +440,7 @@ func TestValidatorAssignments(t *testing.T) {
 		<-exitRoutine
 	}(t)
 
-	beaconState, err = types.NewGenesisBeaconState(nil)
+	beaconState, err = state.NewGenesisBeaconState(nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}

@@ -7,7 +7,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -20,7 +19,7 @@ import (
 //  The node's local clock time is greater than or equal to state.genesis_time + block.slot * SLOT_DURATION.
 func IsValidBlock(
 	ctx context.Context,
-	state *types.BeaconState,
+	state *pb.BeaconState,
 	block *pb.BeaconBlock,
 	enablePOWChain bool,
 	HasBlock func(hash [32]byte) bool,
@@ -39,13 +38,14 @@ func IsValidBlock(
 	// Pre-Processing Condition 2:
 	// The state is updated up to block.slot -1.
 
-	if state.Slot() != block.GetSlot()-1 {
+	if state.GetSlot() != block.GetSlot()-1 {
 		return fmt.Errorf(
-			"block slot is not valid %d as it is supposed to be %d", block.GetSlot(), state.Slot()+1)
+			"block slot is not valid %d as it is supposed to be %d", block.GetSlot(), state.GetSlot()+1)
 	}
 
 	if enablePOWChain {
-		powBlock, err := GetPOWBlock(ctx, state.ProcessedPowReceiptRootHash32())
+		h := common.BytesToHash(state.GetProcessedPowReceiptRootHash32())
+		powBlock, err := GetPOWBlock(ctx, h)
 		if err != nil {
 			return fmt.Errorf("unable to retrieve POW chain reference block %v", err)
 		}
@@ -54,7 +54,7 @@ func IsValidBlock(
 		// The block pointed to by the state in state.processed_pow_receipt_root has
 		// been processed in the ETH 1.0 chain.
 		if powBlock == nil {
-			return fmt.Errorf("proof-of-Work chain reference in state does not exist %#x", state.ProcessedPowReceiptRootHash32())
+			return fmt.Errorf("proof-of-Work chain reference in state does not exist %#x", state.GetProcessedPowReceiptRootHash32())
 		}
 	}
 

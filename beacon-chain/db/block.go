@@ -9,8 +9,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
-
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -28,9 +26,9 @@ func createBlock(enc []byte) (*pb.BeaconBlock, error) {
 func (db *BeaconDB) GetBlock(hash [32]byte) (*pb.BeaconBlock, error) {
 	var block *pb.BeaconBlock
 	err := db.view(func(tx *bolt.Tx) error {
-		b := tx.Bucket(blockBucket)
+		bucket := tx.Bucket(blockBucket)
 
-		enc := b.Get(hash[:])
+		enc := bucket.Get(hash[:])
 		if enc == nil {
 			return nil
 		}
@@ -48,9 +46,9 @@ func (db *BeaconDB) HasBlock(hash [32]byte) bool {
 	hasBlock := false
 	// #nosec G104
 	_ = db.view(func(tx *bolt.Tx) error {
-		b := tx.Bucket(blockBucket)
+		bucket := tx.Bucket(blockBucket)
 
-		hasBlock = b.Get(hash[:]) != nil
+		hasBlock = bucket.Get(hash[:]) != nil
 
 		return nil
 	})
@@ -70,9 +68,9 @@ func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
 	}
 
 	return db.update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(blockBucket)
+		bucket := tx.Bucket(blockBucket)
 
-		return b.Put(hash[:], enc)
+		return bucket.Put(hash[:], enc)
 	})
 }
 
@@ -109,13 +107,13 @@ func (db *BeaconDB) GetChainHead() (*pb.BeaconBlock, error) {
 
 // UpdateChainHead atomically updates the head of the chain as well as the corresponding state changes
 // Including a new crystallized state is optional.
-func (db *BeaconDB) UpdateChainHead(block *pb.BeaconBlock, beaconState *types.BeaconState) error {
+func (db *BeaconDB) UpdateChainHead(block *pb.BeaconBlock, beaconState *pb.BeaconState) error {
 	blockHash, err := b.Hash(block)
 	if err != nil {
 		return fmt.Errorf("unable to get the block hash: %v", err)
 	}
 
-	beaconStateEnc, err := beaconState.Marshal()
+	beaconStateEnc, err := proto.Marshal(beaconState)
 	if err != nil {
 		return fmt.Errorf("unable to encode the beacon state: %v", err)
 	}

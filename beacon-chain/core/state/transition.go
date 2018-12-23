@@ -3,9 +3,8 @@ package state
 import (
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/randao"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	"github.com/golang/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/randao"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -19,32 +18,32 @@ import (
 //  activity in the BeaconState. The per-epoch transitions focus on the validator registry, including adjusting balances and activating
 //  and exiting validators, as well as processing crosslinks and managing block justification/finalization.
 func ExecuteStateTransition(
-	beaconState *types.BeaconState,
+	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
-) (*types.BeaconState, error) {
+) (*pb.BeaconState, error) {
 
 	var err error
 
-	newState := beaconState.CopyState()
+	newState := proto.Clone(beaconState).(*pb.BeaconState)
 
-	currentSlot := newState.Slot()
-	newState.SetSlot(currentSlot + 1)
+	currentSlot := newState.GetSlot()
+	newState.Slot = currentSlot + 1
 
-	newState, err = randao.UpdateRandaoLayers(newState, newState.Slot())
+	newState, err = randao.UpdateRandaoLayers(newState, newState.GetSlot())
 	if err != nil {
 		return nil, fmt.Errorf("unable to update randao layer %v", err)
 	}
 
-	newHashes, err := newState.CalculateNewBlockHashes(block, currentSlot)
+	newHashes, err := CalculateNewBlockHashes(newState, block, currentSlot)
 	if err != nil {
 		return nil, fmt.Errorf("unable to calculate recent blockhashes")
 	}
 
-	newState.SetLatestBlockHashes(newHashes)
+	newState.LatestBlockRootHash32S = newHashes
 
 	if block != nil {
 		newState = ProcessBlock(newState, block)
-		if newState.Slot()%params.BeaconConfig().EpochLength == 0 {
+		if newState.GetSlot()%params.BeaconConfig().EpochLength == 0 {
 			newState = NewEpochTransition(newState)
 		}
 	}
@@ -53,15 +52,17 @@ func ExecuteStateTransition(
 }
 
 // ProcessBlock describes the per block operations that happen on every slot.
-func ProcessBlock(state *types.BeaconState, block *pb.BeaconBlock) *types.BeaconState {
-	newState := proto.Clone(state.Proto()).(*pb.BeaconState)
+func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock) *pb.BeaconState {
+	// TODO(#1073): This function will encompass all the per block slot transition functions, this will
+	// contain checks for randao,proposer validity and block operations.
+	newState := proto.Clone(state).(*pb.BeaconState)
 	fmt.Printf("%v %v", newState, block)
 	return state
 }
 
 // NewEpochTransition describes the per epoch operations that are performed on the
 // beacon state.
-func NewEpochTransition(state *types.BeaconState) *types.BeaconState {
+func NewEpochTransition(state *pb.BeaconState) *pb.BeaconState {
 	// TODO(#1074): This will encompass all the related logic to epoch transitions.
 	return state
 }

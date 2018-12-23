@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -28,7 +27,7 @@ type CleanupService struct {
 	cancel             context.CancelFunc
 	beaconDB           *db.BeaconDB
 	chainService       chainService
-	canonicalStateChan chan *types.BeaconState
+	canonicalStateChan chan *pb.BeaconState
 }
 
 // Config defines the needed fields for creating a new cleanup service.
@@ -46,7 +45,7 @@ func NewCleanupService(ctx context.Context, cfg *Config) *CleanupService {
 		cancel:             cancel,
 		beaconDB:           cfg.BeaconDB,
 		chainService:       cfg.ChainService,
-		canonicalStateChan: make(chan *types.BeaconState, cfg.SubscriptionBuf),
+		canonicalStateChan: make(chan *pb.BeaconState, cfg.SubscriptionBuf),
 	}
 }
 
@@ -74,7 +73,7 @@ func (d *CleanupService) cleanDB() {
 			log.Debug("Cleanup service context closed, exiting goroutine")
 			return
 		case cState := <-d.canonicalStateChan:
-			if err := d.cleanBlockVoteCache(cState.LastFinalizedSlot()); err != nil {
+			if err := d.cleanBlockVoteCache(cState.GetFinalizedSlot()); err != nil {
 				log.Errorf("Failed to clean block vote cache: %v", err)
 			}
 		}
