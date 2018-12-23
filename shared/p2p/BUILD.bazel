@@ -19,7 +19,7 @@ go_library(
     deps = [
         "//shared/event:go_default_library",
         "//shared/iputils:go_default_library",
-        "@com_github_golang_protobuf//proto:go_default_library",
+        "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_ipfs_go_datastore//:go_default_library",
         "@com_github_ipfs_go_datastore//sync:go_default_library",
         "@com_github_ipfs_go_ipfs_addr//:go_default_library",
@@ -55,8 +55,8 @@ go_test(
         "//proto/sharding/p2p/v1:go_default_library",
         "//proto/testing:go_default_library",
         "//shared/p2p/mock:go_default_library",
+        "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_golang_mock//gomock:go_default_library",
-        "@com_github_golang_protobuf//proto:go_default_library",
         "@com_github_ipfs_go_log//:go_default_library",
         "@com_github_libp2p_go_libp2p_blankhost//:go_default_library",
         "@com_github_libp2p_go_libp2p_pubsub//:go_default_library",

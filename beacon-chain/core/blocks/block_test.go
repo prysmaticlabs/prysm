@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/golang/protobuf/ptypes"
+	ptypes "github.com/gogo/protobuf/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -48,8 +48,8 @@ func TestGenesisBlock(t *testing.T) {
 
 	gt1 := b1.GetTimestamp()
 	gt2 := b2.GetTimestamp()
-	t1, _ := ptypes.Timestamp(gt1)
-	t2, _ := ptypes.Timestamp(gt2)
+	t1, _ := ptypes.TimestampFromProto(gt1)
+	t2, _ := ptypes.TimestampFromProto(gt2)
 	if t1 != t2 {
 		t.Error("different timestamp")
 	}

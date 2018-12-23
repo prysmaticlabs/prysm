@@ -15,7 +15,7 @@ go_library(
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/common:go_default_library",
         "//shared/params:go_default_library",
-        "@com_github_golang_protobuf//proto:go_default_library",
+        "@com_github_gogo_protobuf//proto:go_default_library",
     ],
 )
 

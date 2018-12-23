@@ -7,7 +7,7 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
-	"github.com/golang/protobuf/ptypes"
+	ptypes "github.com/gogo/protobuf/types"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
@@ -182,7 +182,7 @@ func (db *BeaconDB) GetGenesisTime() (time.Time, error) {
 		return time.Time{}, fmt.Errorf("genesis block not found: %v", err)
 	}
 
-	genesisTime, err := ptypes.Timestamp(genesis.GetTimestamp())
+	genesisTime, err := ptypes.TimestampFromProto(genesis.GetTimestamp())
 	if err != nil {
 		return time.Time{}, fmt.Errorf("could not get genesis timestamp: %v", err)
 	}
