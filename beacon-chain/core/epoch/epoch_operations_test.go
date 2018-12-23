@@ -85,13 +85,12 @@ func TestEpochBoundaryAttestations(t *testing.T) {
 		LatestBlockRootHash32S: [][]byte{},
 	}
 
-	epochBoundaryAttestation, err := BoundaryAttestations(state, epochAttestations)
-	if err == nil {
-		t.Fatalf("EpochBoundaryAttestations should have failed with empty block root hash")
+	if _, err := BoundaryAttestations(state, epochAttestations); err == nil {
+		t.Fatal("EpochBoundaryAttestations should have failed with empty block root hash")
 	}
 
 	state.LatestBlockRootHash32S = latestBlockRootHash
-	epochBoundaryAttestation, err = BoundaryAttestations(state, epochAttestations)
+	epochBoundaryAttestation, err := BoundaryAttestations(state, epochAttestations)
 	if err != nil {
 		t.Fatalf("EpochBoundaryAttestations failed: %v", err)
 	}
