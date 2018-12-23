@@ -268,16 +268,8 @@ func TestAttestationParticipants_ok(t *testing.T) {
 		})
 	}
 
-	var validators []*pb.ValidatorRecord
-	for i := uint64(0); i < params.BeaconConfig().BootstrappedValidatorsCount; i++ {
-		validators = append(validators, &pb.ValidatorRecord{
-			Pubkey: []byte{byte(i)},
-		})
-	}
-
 	state := &pb.BeaconState{
 		ShardAndCommitteesAtSlots: shardAndCommittees,
-		ValidatorRegistry:         validators,
 	}
 
 	attestationData := &pb.AttestationData{}
