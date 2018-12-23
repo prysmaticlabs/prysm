@@ -1,7 +1,7 @@
 package p2p
 
 import (
-	"github.com/golang/protobuf/proto"
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/shared/event"
 )
 

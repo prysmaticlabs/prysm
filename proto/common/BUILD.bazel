@@ -13,6 +13,7 @@ go_proto_library(
     importpath = "github.com/prysmaticlabs/prysm/proto/common",
     proto = ":common_proto",
     visibility = ["//visibility:public"],
+    compiler = "//:proto_compiler",
 )
 
 go_library(

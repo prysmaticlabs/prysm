@@ -7,8 +7,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes"
+	"github.com/gogo/protobuf/proto"
+	ptypes "github.com/gogo/protobuf/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -156,6 +156,10 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 
 			// Extract the hash of the latest beacon block to use as parent hash in
 			// the proposal.
+			if latestBeaconBlock == nil {
+				log.Errorf("Could not marshal nil latest beacon block")
+				continue
+			}
 			data, err := proto.Marshal(latestBeaconBlock)
 			if err != nil {
 				log.Errorf("Could not marshal latest beacon block: %v", err)
