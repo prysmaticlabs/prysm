@@ -55,7 +55,9 @@ func ExecuteStateTransition(
 	return newState, nil
 }
 
-// ProcessBlock describes the per block operations that happen on every slot.
+// ProcessBlock creates a new, modified beacon state by applying block operation
+// transformations as defined in the Ethereum Serenity specification, including processing proposer slashings,
+// processing block attestations, and more.
 func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
 	newState := proto.Clone(state).(*pb.BeaconState)
 	if block.GetSlot() != state.GetSlot() {
