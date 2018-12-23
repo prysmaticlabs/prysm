@@ -8,9 +8,8 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
-	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/empty"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -229,7 +228,7 @@ func TestLatestAttestationContextClosed(t *testing.T) {
 	defer ctrl.Finish()
 	mockStream := internal.NewMockBeaconService_LatestAttestationServer(ctrl)
 	go func(tt *testing.T) {
-		if err := rpcService.LatestAttestation(&empty.Empty{}, mockStream); err != nil {
+		if err := rpcService.LatestAttestation(&ptypes.Empty{}, mockStream); err != nil {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
 		<-exitRoutine
@@ -256,7 +255,7 @@ func TestLatestAttestationFaulty(t *testing.T) {
 	mockStream.EXPECT().Send(attestation).Return(errors.New("something wrong"))
 	// Tests a faulty stream.
 	go func(tt *testing.T) {
-		if err := rpcService.LatestAttestation(&empty.Empty{}, mockStream); err.Error() != "something wrong" {
+		if err := rpcService.LatestAttestation(&ptypes.Empty{}, mockStream); err.Error() != "something wrong" {
 			tt.Errorf("Faulty stream should throw correct error, wanted 'something wrong', got %v", err)
 		}
 		<-exitRoutine
@@ -284,7 +283,7 @@ func TestLatestAttestation(t *testing.T) {
 	mockStream.EXPECT().Send(attestation).Return(nil)
 	// Tests a good stream.
 	go func(tt *testing.T) {
-		if err := rpcService.LatestAttestation(&empty.Empty{}, mockStream); err != nil {
+		if err := rpcService.LatestAttestation(&ptypes.Empty{}, mockStream); err != nil {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
 		<-exitRoutine
