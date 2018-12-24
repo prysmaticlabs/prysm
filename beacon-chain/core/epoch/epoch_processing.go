@@ -141,3 +141,25 @@ func ProcessCrosslinks(
 	}
 	return state, nil
 }
+
+func ProcessRewardsAndPenalties(
+	state *pb.BeaconState,
+	prevEpochJustifiedAttesterIndices []uint32,
+	prevEpochJustifiedAttestingBalance uint64,
+	prevEpochBoundaryAttesterIndices []uint32,
+	prevEpochBoundaryAttestingBalance uint64,
+	prevEpochHeadAttesterIndices []uint32,
+	prevEpochHeadAttestingBalance uint64,
+	prevEpochAttesterIndices []uint32,
+	prevEpochAttestingBalance uint64,
+	totalBalance uint64,
+	epochSinceFinality uint64) *pb.BeaconState {
+
+	switch {
+	case epochSinceFinality <= 4:
+
+	case epochSinceFinality > 4:
+
+	}
+
+}
