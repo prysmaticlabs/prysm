@@ -251,7 +251,6 @@ func TestProcessCrosslinks_Ok(t *testing.T) {
 
 	newState, err := ProcessCrosslinks(
 		state,
-		shardCommitteesAtSlot,
 		attestations,
 		nil,
 	)
@@ -290,9 +289,8 @@ func TestProcessCrosslinks_NoRoot(t *testing.T) {
 			// Empty participation bitfield will trigger error.
 			ParticipationBitfield: []byte{}}}
 
-	_, err := ProcessCrosslinks(state, shardCommitteesAtSlot, attestations, nil)
+	_, err := ProcessCrosslinks(state, attestations, nil)
 	if err == nil {
 		t.Fatalf("ProcessCrosslinks should have failed")
 	}
 }
-

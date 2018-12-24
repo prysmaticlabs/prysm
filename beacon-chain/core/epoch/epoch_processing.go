@@ -117,11 +117,10 @@ func ProcessFinalization(state *pb.BeaconState) *pb.BeaconState {
 // 		if 3 * total_attesting_balance(shard_committee) >= 2 * total_balance(shard_committee).
 func ProcessCrosslinks(
 	state *pb.BeaconState,
-	shardCommitteesAtSlots []*pb.ShardAndCommitteeArray,
 	thisEpochAttestations []*pb.PendingAttestationRecord,
 	prevEpochAttestations []*pb.PendingAttestationRecord) (*pb.BeaconState, error) {
 
-	for _, shardCommitteesAtSlot := range shardCommitteesAtSlots {
+	for _, shardCommitteesAtSlot := range state.ShardAndCommitteesAtSlots {
 		for _, shardCommittee := range shardCommitteesAtSlot.ArrayShardAndCommittee {
 			attestingBalance, err := TotalAttestingBalance(state, shardCommittee, thisEpochAttestations, prevEpochAttestations)
 			if err != nil {
