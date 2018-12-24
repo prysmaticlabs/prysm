@@ -7,22 +7,15 @@
   "DisableAll": true,
   "Enable": [
       "deadcode",
-      "dupl",
-      "errcheck",
-      "gochecknoglobals",
-      "gochecknoinits",
       "goconst",
       "goimports",
       "golint",
       "gosec",
-      "gosimple",
       "gotype",
       "megacheck",
       "misspell",
-      "staticcheck",
       "structcheck",
       "unparam",
-      "unused",
       "varcheck"
     ]
 }
