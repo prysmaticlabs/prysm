@@ -16,7 +16,7 @@ func TestProcessPOWReceiptRoots_SameRootHash(t *testing.T) {
 		CandidatePowReceiptRoots: []*pb.CandidatePoWReceiptRootRecord{
 			{
 				CandidatePowReceiptRootHash32: []byte{1},
-				Votes:                         5,
+				VoteCount:                     5,
 			},
 		},
 	}
@@ -35,7 +35,7 @@ func TestProcessPOWReceiptRoots_NewCandidateRecord(t *testing.T) {
 		CandidatePowReceiptRoots: []*pb.CandidatePoWReceiptRootRecord{
 			{
 				CandidatePowReceiptRootHash32: []byte{0},
-				Votes:                         5,
+				VoteCount:                     5,
 			},
 		},
 	}

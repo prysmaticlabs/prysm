@@ -16,7 +16,7 @@ import (
 // included in the chain during the epoch.
 //
 // Spec pseudocode definition:
-//   [a for a in state.latest_attestations
+//   return [a for a in state.latest_attestations
 //   if state.slot - EPOCH_LENGTH <= a.data.slot < state.slot]
 func Attestations(state *pb.BeaconState) []*pb.PendingAttestationRecord {
 	epochLength := params.BeaconConfig().EpochLength
@@ -43,7 +43,7 @@ func Attestations(state *pb.BeaconState) []*pb.PendingAttestationRecord {
 // the epoch's boundary block.
 //
 // Spec pseudocode definition:
-//   [a for a in this_epoch_attestations if a.data.epoch_boundary_root ==
+//   return [a for a in this_epoch_attestations if a.data.epoch_boundary_root ==
 //   get_block_root(state, state.slot-EPOCH_LENGTH) and a.justified_slot ==
 //   state.justified_slot]
 func BoundaryAttestations(
@@ -74,7 +74,7 @@ func BoundaryAttestations(
 // (state.slot - 2 * EPOCH_LENGTH...state.slot - EPOCH_LENGTH).
 //
 // Spec pseudocode definition:
-//   [a for a in state.latest_attestations
+//   return [a for a in state.latest_attestations
 //   if state.slot - 2 * EPOCH_LENGTH <= a.slot < state.slot - EPOCH_LENGTH]
 func PrevAttestations(state *pb.BeaconState) []*pb.PendingAttestationRecord {
 	epochLength := params.BeaconConfig().EpochLength
@@ -102,7 +102,7 @@ func PrevAttestations(state *pb.BeaconState) []*pb.PendingAttestationRecord {
 // of the previous 2 epochs.
 //
 // Spec pseudocode definition:
-//   [a for a in this_epoch_attestations + previous_epoch_attestations
+//   return [a for a in this_epoch_attestations + previous_epoch_attestations
 //   if a.justified_slot == state.previous_justified_slot]
 func PrevJustifiedAttestations(
 	state *pb.BeaconState,
@@ -125,7 +125,7 @@ func PrevJustifiedAttestations(
 // the canonical beacon chain.
 //
 // Spec pseudocode definition:
-//   [a for a in previous_epoch_attestations
+//   return [a for a in previous_epoch_attestations
 //   if a.beacon_block_root == get_block_root(state, a.slot)]
 func PrevHeadAttestations(
 	state *pb.BeaconState,
@@ -167,8 +167,8 @@ func WinningRoot(
 	attestations := append(thisEpochAttestations, prevEpochAttestations...)
 
 	for _, attestation := range attestations {
-		if attestation.Data.Shard == shardCommittee.Shard {
-			candidateRoots = append(candidateRoots, attestation.Data.ShardBlockRootHash32)
+		if attestation.GetData().GetShard() == shardCommittee.Shard {
+			candidateRoots = append(candidateRoots, attestation.GetData().ShardBlockRootHash32)
 		}
 	}
 
@@ -283,7 +283,7 @@ func TotalBalance(
 func InclusionSlot(state *pb.BeaconState, validatorIndex uint32) (uint64, error) {
 
 	for _, attestation := range state.LatestAttestations {
-		participatedValidators, err := validators.AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)
+		participatedValidators, err := validators.AttestationParticipants(state, attestation.GetData(), attestation.ParticipationBitfield)
 		if err != nil {
 			return 0, fmt.Errorf("could not get attestation participants: %v", err)
 		}
@@ -307,14 +307,14 @@ func InclusionSlot(state *pb.BeaconState, validatorIndex uint32) (uint64, error)
 func InclusionDistance(state *pb.BeaconState, validatorIndex uint32) (uint64, error) {
 
 	for _, attestation := range state.LatestAttestations {
-		participatedValidators, err := validators.AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)
+		participatedValidators, err := validators.AttestationParticipants(state, attestation.GetData(), attestation.ParticipationBitfield)
 		if err != nil {
 			return 0, fmt.Errorf("could not get attestation participants: %v", err)
 		}
 
 		for _, index := range participatedValidators {
 			if index == validatorIndex {
-				return attestation.SlotIncluded - attestation.Data.Slot, nil
+				return attestation.SlotIncluded - attestation.GetData().GetSlot(), nil
 			}
 		}
 	}
