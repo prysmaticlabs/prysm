@@ -553,7 +553,7 @@ func AttestingBalance(state *pb.BeaconState, boundaryAttesterIndices []uint32) u
 // the last validator.
 func AllValidatorsIndices(state *pb.BeaconState) []uint32 {
 	validatorIndices := make([]uint32, len(state.ValidatorBalances))
-	for i:= 0; i < len(validatorIndices); i++ {
+	for i := 0; i < len(validatorIndices); i++ {
 		validatorIndices[i] = uint32(i)
 	}
 	return validatorIndices

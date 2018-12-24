@@ -887,13 +887,13 @@ func TestAttestingValidatorIndices_OutOfBound(t *testing.T) {
 
 func TestAllValidatorIndices(t *testing.T) {
 	tests := []struct {
-		balances  []uint64
-		indices []uint32
+		balances []uint64
+		indices  []uint32
 	}{
-		{ balances:  []uint64{}, indices: []uint32{}},
-		{ balances:  []uint64{0}, indices: []uint32{0}},
-		{ balances:  []uint64{0,0,0,0}, indices: []uint32{0,1,2,3}},
-		{ balances:  []uint64{0,0,0,0,0,0}, indices: []uint32{0,1,2,3,4,5}},
+		{balances: []uint64{}, indices: []uint32{}},
+		{balances: []uint64{0}, indices: []uint32{0}},
+		{balances: []uint64{0, 0, 0, 0}, indices: []uint32{0, 1, 2, 3}},
+		{balances: []uint64{0, 0, 0, 0, 0, 0}, indices: []uint32{0, 1, 2, 3, 4, 5}},
 	}
 	for _, tt := range tests {
 		state := &pb.BeaconState{ValidatorBalances: tt.balances}
