@@ -549,6 +549,16 @@ func AttestingBalance(state *pb.BeaconState, boundaryAttesterIndices []uint32) u
 	return boundaryAttestingBalance
 }
 
+// AllValidatorsIndices returns all validator indices from 0 to
+// the last validator.
+func AllValidatorsIndices(state *pb.BeaconState) []uint32 {
+	validatorIndices := make([]uint32, len(state.ValidatorBalances))
+	for i:= 0; i < len(validatorIndices); i++ {
+		validatorIndices[i] = uint32(i)
+	}
+	return validatorIndices
+}
+
 // minEmptyValidator returns the lowest validator index which the status is withdrawn.
 func minEmptyValidator(validators []*pb.ValidatorRecord) int {
 	for i := 0; i < len(validators); i++ {
