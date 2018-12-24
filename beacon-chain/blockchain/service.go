@@ -12,7 +12,6 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -37,7 +36,7 @@ type ChainService struct {
 	canonicalStateFeed *event.Feed
 	genesisTime        time.Time
 	unProcessedBlocks  map[uint64]*pb.BeaconBlock
-	unfinalizedBlocks  map[[32]byte]*types.BeaconState
+	unfinalizedBlocks  map[[32]byte]*pb.BeaconState
 	enablePOWChain     bool
 }
 
@@ -66,7 +65,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		canonicalBlockFeed: new(event.Feed),
 		canonicalStateFeed: new(event.Feed),
 		unProcessedBlocks:  make(map[uint64]*pb.BeaconBlock),
-		unfinalizedBlocks:  make(map[[32]byte]*types.BeaconState),
+		unfinalizedBlocks:  make(map[[32]byte]*pb.BeaconState),
 		enablePOWChain:     cfg.EnablePOWChain,
 	}, nil
 }
@@ -171,14 +170,14 @@ func (c *ChainService) updateHead(processedBlock <-chan *pb.BeaconBlock) {
 				}
 				// 2a. Pick the block with the higher last_finalized_slot.
 				// 2b. If same, pick the block with the higher last_justified_slot.
-			} else if blockState.LastFinalizedSlot() > currentState.LastFinalizedSlot() {
+			} else if blockState.GetFinalizedSlot() > currentState.GetFinalizedSlot() {
 				newHead = block
 				headUpdated = true
-			} else if blockState.LastFinalizedSlot() == currentState.LastFinalizedSlot() {
-				if blockState.LastJustifiedSlot() > currentState.LastJustifiedSlot() {
+			} else if blockState.GetFinalizedSlot() == currentState.GetFinalizedSlot() {
+				if blockState.GetJustifiedSlot() > currentState.GetJustifiedSlot() {
 					newHead = block
 					headUpdated = true
-				} else if blockState.LastJustifiedSlot() == currentState.LastJustifiedSlot() {
+				} else if blockState.GetJustifiedSlot() == currentState.GetJustifiedSlot() {
 					if block.GetSlot() > currentHead.GetSlot() {
 						newHead = block
 						headUpdated = true
@@ -238,7 +237,7 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *pb.BeaconBlock) {
 				continue
 			}
 
-			currentSlot := beaconState.Slot()
+			currentSlot := beaconState.GetSlot()
 
 			if currentSlot+1 < block.GetSlot() {
 				c.unProcessedBlocks[block.GetSlot()] = block
@@ -305,8 +304,8 @@ func (c *ChainService) receiveBlock(block *pb.BeaconBlock) error {
 	}
 
 	// Save blocks with higher slot numbers in cache.
-	if !c.isBlockReadyForProcessing(block) {
-		log.Debugf("block with hash %#x is not ready for processing", blockhash)
+	if err := c.isBlockReadyForProcessing(block); err != nil {
+		log.Debugf("block with hash %#x is not ready for processing: %v", blockhash, err)
 		return nil
 	}
 
@@ -314,7 +313,7 @@ func (c *ChainService) receiveBlock(block *pb.BeaconBlock) error {
 
 	// Check for skipped slots and update the corresponding proposers
 	// randao layer.
-	for beaconState.Slot() < block.GetSlot()-1 {
+	for beaconState.GetSlot() < block.GetSlot()-1 {
 		beaconState, err = state.ExecuteStateTransition(beaconState, nil)
 		if err != nil {
 			return fmt.Errorf("unable to execute state transition %v", err)
@@ -326,7 +325,7 @@ func (c *ChainService) receiveBlock(block *pb.BeaconBlock) error {
 		return errors.New("unable to execute state transition")
 	}
 
-	if beaconState.IsValidatorSetChange(block.GetSlot()) {
+	if state.IsValidatorSetChange(beaconState, block.GetSlot()) {
 		log.WithField("slotNumber", block.GetSlot()).Info("Validator set rotation occurred")
 	}
 
@@ -349,12 +348,10 @@ func (c *ChainService) receiveBlock(block *pb.BeaconBlock) error {
 	return nil
 }
 
-func (c *ChainService) isBlockReadyForProcessing(block *pb.BeaconBlock) bool {
-
+func (c *ChainService) isBlockReadyForProcessing(block *pb.BeaconBlock) error {
 	beaconState, err := c.beaconDB.GetState()
 	if err != nil {
-		log.Debugf("failed to get beacon state: %v", err)
-		return false
+		return fmt.Errorf("failed to get beacon state: %v", err)
 	}
 
 	var powBlockFetcher func(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
@@ -364,19 +361,19 @@ func (c *ChainService) isBlockReadyForProcessing(block *pb.BeaconBlock) bool {
 
 	if err := b.IsValidBlock(c.ctx, beaconState, block, c.enablePOWChain,
 		c.beaconDB.HasBlock, powBlockFetcher, c.genesisTime); err != nil {
-		log.Debugf("block does not fulfill pre-processing conditions %v", err)
-		return false
+		return fmt.Errorf("block does not fulfill pre-processing conditions %v", err)
 	}
-
-	return true
+	return nil
 }
 
 // sendAndDeleteCachedBlocks checks if there is any block saved in the cache with a
 // slot number equivalent to the current slot. If there is then the block is
 // sent to the incoming block channel and deleted from the cache.
 func (c *ChainService) sendAndDeleteCachedBlocks(currentSlot uint64) {
-	if block, ok := c.unProcessedBlocks[currentSlot+1]; ok && c.isBlockReadyForProcessing(block) {
-		c.incomingBlockChan <- block
-		delete(c.unProcessedBlocks, currentSlot)
+	if block, ok := c.unProcessedBlocks[currentSlot+1]; ok {
+		if err := c.isBlockReadyForProcessing(block); err == nil {
+			c.incomingBlockChan <- block
+			delete(c.unProcessedBlocks, currentSlot)
+		}
 	}
 }

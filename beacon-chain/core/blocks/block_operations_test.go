@@ -7,20 +7,19 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestProcessPOWReceiptRoots_SameRootHash(t *testing.T) {
-	beaconState := types.NewBeaconState(&pb.BeaconState{
+	beaconState := &pb.BeaconState{
 		CandidatePowReceiptRoots: []*pb.CandidatePoWReceiptRootRecord{
 			{
 				CandidatePowReceiptRootHash32: []byte{1},
 				VoteCount:                     5,
 			},
 		},
-	})
+	}
 	block := &pb.BeaconBlock{
 		CandidatePowReceiptRootHash32: []byte{1},
 	}
@@ -31,14 +30,14 @@ func TestProcessPOWReceiptRoots_SameRootHash(t *testing.T) {
 }
 
 func TestProcessPOWReceiptRoots_NewCandidateRecord(t *testing.T) {
-	beaconState := types.NewBeaconState(&pb.BeaconState{
+	beaconState := &pb.BeaconState{
 		CandidatePowReceiptRoots: []*pb.CandidatePoWReceiptRootRecord{
 			{
 				CandidatePowReceiptRootHash32: []byte{0},
 				VoteCount:                     5,
 			},
 		},
-	})
+	}
 	block := &pb.BeaconBlock{
 		CandidatePowReceiptRootHash32: []byte{1},
 	}
@@ -519,7 +518,7 @@ func TestProcessBlockAttestations_ThresholdReached(t *testing.T) {
 			Attestations: attestations,
 		},
 	}
-	state := &types.BeaconState{}
+	state := &pb.BeaconState{}
 
 	want := fmt.Sprintf(
 		"number of attestations in block (%d) exceeds allowed threshold of %d",
@@ -548,9 +547,9 @@ func TestProcessBlockAttestations_InclusionDelayFailure(t *testing.T) {
 			Attestations: attestations,
 		},
 	}
-	state := types.NewBeaconState(&pb.BeaconState{
+	state := &pb.BeaconState{
 		Slot: 5,
-	})
+	}
 
 	want := fmt.Sprintf(
 		"attestation slot (slot %d) + inclusion delay (%d) beyond current beacon state slot (%d)",
@@ -579,9 +578,9 @@ func TestProcessBlockAttestations_EpochDistanceFailure(t *testing.T) {
 			Attestations: attestations,
 		},
 	}
-	state := types.NewBeaconState(&pb.BeaconState{
+	state := &pb.BeaconState{
 		Slot: 5 + 2*params.BeaconConfig().EpochLength,
-	})
+	}
 
 	want := fmt.Sprintf(
 		"attestation slot (slot %d) + epoch length (%d) less than current beacon state slot (%d)",
@@ -611,10 +610,10 @@ func TestProcessBlockAttestations_JustifiedSlotVerificationFailure(t *testing.T)
 			Attestations: attestations,
 		},
 	}
-	state := types.NewBeaconState(&pb.BeaconState{
+	state := &pb.BeaconState{
 		Slot:          params.BeaconConfig().EpochLength - 1,
 		JustifiedSlot: 0,
-	})
+	}
 
 	want := fmt.Sprintf(
 		"expected attestation.JustifiedSlot == state.JustifiedSlot, received %d == %d",
@@ -643,10 +642,10 @@ func TestProcessBlockAttestations_PreviousJustifiedSlotVerificationFailure(t *te
 			Attestations: attestations,
 		},
 	}
-	state := types.NewBeaconState(&pb.BeaconState{
+	state := &pb.BeaconState{
 		Slot:                  5 + params.BeaconConfig().EpochLength,
 		PreviousJustifiedSlot: 3,
-	})
+	}
 
 	want := fmt.Sprintf(
 		"expected attestation.JustifiedSlot == state.PreviousJustifiedSlot, received %d == %d",
@@ -667,11 +666,11 @@ func TestProcessBlockAttestations_BlockRootOutOfBounds(t *testing.T) {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 
-	state := types.NewBeaconState(&pb.BeaconState{
+	state := &pb.BeaconState{
 		Slot:                   64,
 		PreviousJustifiedSlot:  65,
 		LatestBlockRootHash32S: blockRoots,
-	})
+	}
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
@@ -702,11 +701,11 @@ func TestProcessBlockAttestations_BlockRootFailure(t *testing.T) {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 
-	state := types.NewBeaconState(&pb.BeaconState{
+	state := &pb.BeaconState{
 		Slot:                   64,
 		PreviousJustifiedSlot:  10,
 		LatestBlockRootHash32S: blockRoots,
-	})
+	}
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
@@ -750,12 +749,12 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 			ShardBlockRootHash32: []byte{1},
 		},
 	}
-	state := types.NewBeaconState(&pb.BeaconState{
+	state := &pb.BeaconState{
 		Slot:                   64,
 		PreviousJustifiedSlot:  10,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
-	})
+	}
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
@@ -795,12 +794,12 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 			ShardBlockRootHash32: []byte{1},
 		},
 	}
-	state := types.NewBeaconState(&pb.BeaconState{
+	state := &pb.BeaconState{
 		Slot:                   64,
 		PreviousJustifiedSlot:  10,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
-	})
+	}
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
@@ -841,12 +840,12 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 			ShardBlockRootHash32: []byte{1},
 		},
 	}
-	state := types.NewBeaconState(&pb.BeaconState{
+	state := &pb.BeaconState{
 		Slot:                   64,
 		PreviousJustifiedSlot:  10,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
-	})
+	}
 	att1 := &pb.Attestation{
 		Data: &pb.AttestationData{
 			Shard:                     0,
@@ -891,9 +890,9 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 func TestProcessValidatorExits_ThresholdReached(t *testing.T) {
 	exits := make([]*pb.Exit, params.BeaconConfig().MaxExits+1)
 	registry := []*pb.ValidatorRecord{}
-	state := types.NewBeaconState(&pb.BeaconState{
+	state := &pb.BeaconState{
 		ValidatorRegistry: registry,
-	})
+	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			Exits: exits,
@@ -925,9 +924,9 @@ func TestProcessValidatorExits_ValidatorNotActive(t *testing.T) {
 			Status: pb.ValidatorRecord_EXITED_WITH_PENALTY,
 		},
 	}
-	state := types.NewBeaconState(&pb.BeaconState{
+	state := &pb.BeaconState{
 		ValidatorRegistry: registry,
-	})
+	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			Exits: exits,
@@ -958,10 +957,10 @@ func TestProcessValidatorExits_InvalidExitSlot(t *testing.T) {
 			Status: pb.ValidatorRecord_ACTIVE,
 		},
 	}
-	state := types.NewBeaconState(&pb.BeaconState{
+	state := &pb.BeaconState{
 		ValidatorRegistry: registry,
 		Slot:              0,
-	})
+	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			Exits: exits,
@@ -995,10 +994,10 @@ func TestProcessValidatorExits_InvalidStatusChangeSlot(t *testing.T) {
 			LatestStatusChangeSlot: 100,
 		},
 	}
-	state := types.NewBeaconState(&pb.BeaconState{
+	state := &pb.BeaconState{
 		ValidatorRegistry: registry,
 		Slot:              10,
-	})
+	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			Exits: exits,
@@ -1027,10 +1026,10 @@ func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
 			LatestStatusChangeSlot: 0,
 		},
 	}
-	state := types.NewBeaconState(&pb.BeaconState{
+	state := &pb.BeaconState{
 		ValidatorRegistry: registry,
 		Slot:              10,
-	})
+	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			Exits: exits,
