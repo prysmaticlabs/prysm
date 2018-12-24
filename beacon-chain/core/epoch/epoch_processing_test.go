@@ -135,7 +135,7 @@ func TestProcessJustification(t *testing.T) {
 	}
 	newState := ProcessJustification(state, 1, 1, 1)
 
-	if newState.PreviousJustifiedSlot != state.JustifiedSlot {
+	if newState.PreviousJustifiedSlot != 200 {
 		t.Errorf("New state's prev justified slot %d != old state's justified slot %d",
 			newState.PreviousJustifiedSlot, state.JustifiedSlot)
 	}
@@ -295,3 +295,4 @@ func TestProcessCrosslinks_NoRoot(t *testing.T) {
 		t.Fatalf("ProcessCrosslinks should have failed")
 	}
 }
+
