@@ -3,10 +3,10 @@
 
 package ethereum_beacon_p2p_v1
 
-import proto "github.com/golang/protobuf/proto"
+import proto "github.com/gogo/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import timestamp "github.com/golang/protobuf/ptypes/timestamp"
+import types "github.com/gogo/protobuf/types"
 import common "github.com/prysmaticlabs/prysm/proto/common"
 
 import io "io"
@@ -20,10 +20,8 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
-// Possible validator status code:
-// https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#constants
 type ValidatorRecord_StatusCodes int32
 
 const (
@@ -669,21 +667,17 @@ func (m *AttestationData) GetJustifiedBlockRootHash32() []byte {
 }
 
 type ValidatorRecord struct {
-	Pubkey []byte `protobuf:"bytes,1,opt,name=pubkey,proto3" json:"pubkey,omitempty"`
-	// TODO(781): The usage of withdrawal_credentials is not defined in spec. Not used in Prysm yet.
+	Pubkey                 []byte                      `protobuf:"bytes,1,opt,name=pubkey,proto3" json:"pubkey,omitempty"`
 	WithdrawalCredentials  []byte                      `protobuf:"bytes,2,opt,name=withdrawal_credentials,json=withdrawalCredentials,proto3" json:"withdrawal_credentials,omitempty"`
 	RandaoCommitmentHash32 []byte                      `protobuf:"bytes,3,opt,name=randao_commitment_hash32,json=randaoCommitmentHash32,proto3" json:"randao_commitment_hash32,omitempty"`
 	RandaoLayers           uint64                      `protobuf:"varint,4,opt,name=randao_layers,json=randaoLayers,proto3" json:"randao_layers,omitempty"`
 	Status                 ValidatorRecord_StatusCodes `protobuf:"varint,5,opt,name=status,proto3,enum=ethereum.beacon.p2p.v1.ValidatorRecord_StatusCodes" json:"status,omitempty"`
 	LatestStatusChangeSlot uint64                      `protobuf:"varint,6,opt,name=latest_status_change_slot,json=latestStatusChangeSlot,proto3" json:"latest_status_change_slot,omitempty"`
 	ExitCount              uint64                      `protobuf:"varint,7,opt,name=exit_count,json=exitCount,proto3" json:"exit_count,omitempty"`
-	// Deprecated fields
-	// All fields must be annotated with [deprecated=true];
-	// Balance in Gwei
-	Balance              uint64   `protobuf:"varint,1000,opt,name=balance,proto3" json:"balance,omitempty"` // Deprecated: Do not use.
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Balance                uint64                      `protobuf:"varint,1000,opt,name=balance,proto3" json:"balance,omitempty"` // Deprecated: Do not use.
+	XXX_NoUnkeyedLiteral   struct{}                    `json:"-"`
+	XXX_unrecognized       []byte                      `json:"-"`
+	XXX_sizecache          int32                       `json:"-"`
 }
 
 func (m *ValidatorRecord) Reset()         { *m = ValidatorRecord{} }
@@ -1062,20 +1056,17 @@ func (m *ShardAndCommittee) GetTotalValidatorCount() uint64 {
 }
 
 type BeaconBlock struct {
-	Slot                          uint64   `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty"`
-	ParentRootHash32              []byte   `protobuf:"bytes,2,opt,name=parent_root_hash32,json=parentRootHash32,proto3" json:"parent_root_hash32,omitempty"`
-	StateRootHash32               []byte   `protobuf:"bytes,3,opt,name=state_root_hash32,json=stateRootHash32,proto3" json:"state_root_hash32,omitempty"`
-	RandaoRevealHash32            []byte   `protobuf:"bytes,4,opt,name=randao_reveal_hash32,json=randaoRevealHash32,proto3" json:"randao_reveal_hash32,omitempty"`
-	CandidatePowReceiptRootHash32 []byte   `protobuf:"bytes,5,opt,name=candidate_pow_receipt_root_hash32,json=candidatePowReceiptRootHash32,proto3" json:"candidate_pow_receipt_root_hash32,omitempty"`
-	Signature                     [][]byte `protobuf:"bytes,6,rep,name=signature" json:"signature,omitempty"`
-	// Block Body
-	Body *BeaconBlockBody `protobuf:"bytes,7,opt,name=body" json:"body,omitempty"`
-	// Deprecated fields
-	// All fields must be annotated with [deprecated=true];
-	Timestamp            *timestamp.Timestamp `protobuf:"bytes,1006,opt,name=timestamp" json:"timestamp,omitempty"` // Deprecated: Do not use.
-	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
-	XXX_unrecognized     []byte               `json:"-"`
-	XXX_sizecache        int32                `json:"-"`
+	Slot                          uint64           `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty"`
+	ParentRootHash32              []byte           `protobuf:"bytes,2,opt,name=parent_root_hash32,json=parentRootHash32,proto3" json:"parent_root_hash32,omitempty"`
+	StateRootHash32               []byte           `protobuf:"bytes,3,opt,name=state_root_hash32,json=stateRootHash32,proto3" json:"state_root_hash32,omitempty"`
+	RandaoRevealHash32            []byte           `protobuf:"bytes,4,opt,name=randao_reveal_hash32,json=randaoRevealHash32,proto3" json:"randao_reveal_hash32,omitempty"`
+	CandidatePowReceiptRootHash32 []byte           `protobuf:"bytes,5,opt,name=candidate_pow_receipt_root_hash32,json=candidatePowReceiptRootHash32,proto3" json:"candidate_pow_receipt_root_hash32,omitempty"`
+	Signature                     [][]byte         `protobuf:"bytes,6,rep,name=signature" json:"signature,omitempty"`
+	Body                          *BeaconBlockBody `protobuf:"bytes,7,opt,name=body" json:"body,omitempty"`
+	Timestamp                     *types.Timestamp `protobuf:"bytes,1006,opt,name=timestamp" json:"timestamp,omitempty"` // Deprecated: Do not use.
+	XXX_NoUnkeyedLiteral          struct{}         `json:"-"`
+	XXX_unrecognized              []byte           `json:"-"`
+	XXX_sizecache                 int32            `json:"-"`
 }
 
 func (m *BeaconBlock) Reset()         { *m = BeaconBlock{} }
@@ -1161,7 +1152,7 @@ func (m *BeaconBlock) GetBody() *BeaconBlockBody {
 }
 
 // Deprecated: Do not use.
-func (m *BeaconBlock) GetTimestamp() *timestamp.Timestamp {
+func (m *BeaconBlock) GetTimestamp() *types.Timestamp {
 	if m != nil {
 		return m.Timestamp
 	}
@@ -1248,9 +1239,8 @@ func (m *BeaconBlockBody) GetExits() []*Exit {
 }
 
 type DepositParameters struct {
-	Pubkey            []byte `protobuf:"bytes,1,opt,name=pubkey,proto3" json:"pubkey,omitempty"`
-	ProofOfPossession []byte `protobuf:"bytes,2,opt,name=proof_of_possession,json=proofOfPossession,proto3" json:"proof_of_possession,omitempty"`
-	// TODO(781): The usage of withdrawal_credentials is not defined in spec. Not used in Prysm yet.
+	Pubkey                      []byte   `protobuf:"bytes,1,opt,name=pubkey,proto3" json:"pubkey,omitempty"`
+	ProofOfPossession           []byte   `protobuf:"bytes,2,opt,name=proof_of_possession,json=proofOfPossession,proto3" json:"proof_of_possession,omitempty"`
 	WithdrawalCredentialsHash32 []byte   `protobuf:"bytes,3,opt,name=withdrawal_credentials_hash32,json=withdrawalCredentialsHash32,proto3" json:"withdrawal_credentials_hash32,omitempty"`
 	RandaoCommitmentHash32      []byte   `protobuf:"bytes,4,opt,name=randao_commitment_hash32,json=randaoCommitmentHash32,proto3" json:"randao_commitment_hash32,omitempty"`
 	XXX_NoUnkeyedLiteral        struct{} `json:"-"`
@@ -3135,9 +3125,6 @@ func encodeVarintTypes(dAtA []byte, offset int, v uint64) int {
 	return offset + 1
 }
 func (m *BeaconState) Size() (n int) {
-	if m == nil {
-		return 0
-	}
 	var l int
 	_ = l
 	if len(m.ValidatorRegistry) > 0 {
@@ -3265,9 +3252,6 @@ func (m *BeaconState) Size() (n int) {
 }
 
 func (m *ForkData) Size() (n int) {
-	if m == nil {
-		return 0
-	}
 	var l int
 	_ = l
 	if m.PreForkVersion != 0 {
@@ -3286,9 +3270,6 @@ func (m *ForkData) Size() (n int) {
 }
 
 func (m *CandidatePoWReceiptRootRecord) Size() (n int) {
-	if m == nil {
-		return 0
-	}
 	var l int
 	_ = l
 	l = len(m.CandidatePowReceiptRootHash32)
@@ -3305,9 +3286,6 @@ func (m *CandidatePoWReceiptRootRecord) Size() (n int) {
 }
 
 func (m *PendingAttestationRecord) Size() (n int) {
-	if m == nil {
-		return 0
-	}
 	var l int
 	_ = l
 	if m.Data != nil {
@@ -3332,9 +3310,6 @@ func (m *PendingAttestationRecord) Size() (n int) {
 }
 
 func (m *Attestation) Size() (n int) {
-	if m == nil {
-		return 0
-	}
 	var l int
 	_ = l
 	if m.Data != nil {
@@ -3360,9 +3335,6 @@ func (m *Attestation) Size() (n int) {
 }
 
 func (m *AttestationData) Size() (n int) {
-	if m == nil {
-		return 0
-	}
 	var l int
 	_ = l
 	if m.Slot != 0 {
@@ -3401,9 +3373,6 @@ func (m *AttestationData) Size() (n int) {
 }
 
 func (m *ValidatorRecord) Size() (n int) {
-	if m == nil {
-		return 0
-	}
 	var l int
 	_ = l
 	l = len(m.Pubkey)
@@ -3440,9 +3409,6 @@ func (m *ValidatorRecord) Size() (n int) {
 }
 
 func (m *ShardReassignmentRecord) Size() (n int) {
-	if m == nil {
-		return 0
-	}
 	var l int
 	_ = l
 	if m.ValidatorIndex != 0 {
@@ -3461,9 +3427,6 @@ func (m *ShardReassignmentRecord) Size() (n int) {
 }
 
 func (m *SpecialRecord) Size() (n int) {
-	if m == nil {
-		return 0
-	}
 	var l int
 	_ = l
 	if m.Kind != 0 {
@@ -3482,9 +3445,6 @@ func (m *SpecialRecord) Size() (n int) {
 }
 
 func (m *CrosslinkRecord) Size() (n int) {
-	if m == nil {
-		return 0
-	}
 	var l int
 	_ = l
 	if m.Slot != 0 {
@@ -3501,9 +3461,6 @@ func (m *CrosslinkRecord) Size() (n int) {
 }
 
 func (m *ShardAndCommitteeArray) Size() (n int) {
-	if m == nil {
-		return 0
-	}
 	var l int
 	_ = l
 	if len(m.ArrayShardAndCommittee) > 0 {
@@ -3519,9 +3476,6 @@ func (m *ShardAndCommitteeArray) Size() (n int) {
 }
 
 func (m *ShardAndCommittee) Size() (n int) {
-	if m == nil {
-		return 0
-	}
 	var l int
 	_ = l
 	if m.Shard != 0 {
@@ -3544,9 +3498,6 @@ func (m *ShardAndCommittee) Size() (n int) {
 }
 
 func (m *BeaconBlock) Size() (n int) {
-	if m == nil {
-		return 0
-	}
 	var l int
 	_ = l
 	if m.Slot != 0 {
@@ -3589,9 +3540,6 @@ func (m *BeaconBlock) Size() (n int) {
 }
 
 func (m *BeaconBlockBody) Size() (n int) {
-	if m == nil {
-		return 0
-	}
 	var l int
 	_ = l
 	if len(m.Attestations) > 0 {
@@ -3631,9 +3579,6 @@ func (m *BeaconBlockBody) Size() (n int) {
 }
 
 func (m *DepositParameters) Size() (n int) {
-	if m == nil {
-		return 0
-	}
 	var l int
 	_ = l
 	l = len(m.Pubkey)
@@ -3659,9 +3604,6 @@ func (m *DepositParameters) Size() (n int) {
 }
 
 func (m *ProposalSignedData) Size() (n int) {
-	if m == nil {
-		return 0
-	}
 	var l int
 	_ = l
 	if m.Slot != 0 {
@@ -3681,9 +3623,6 @@ func (m *ProposalSignedData) Size() (n int) {
 }
 
 func (m *SlashableVoteData) Size() (n int) {
-	if m == nil {
-		return 0
-	}
 	var l int
 	_ = l
 	if len(m.AggregateSignaturePoc_0Indices) > 0 {
@@ -3715,9 +3654,6 @@ func (m *SlashableVoteData) Size() (n int) {
 }
 
 func (m *DepositData) Size() (n int) {
-	if m == nil {
-		return 0
-	}
 	var l int
 	_ = l
 	if m.DepositParameters != nil {
@@ -3737,9 +3673,6 @@ func (m *DepositData) Size() (n int) {
 }
 
 func (m *ProposerSlashing) Size() (n int) {
-	if m == nil {
-		return 0
-	}
 	var l int
 	_ = l
 	if m.ProposerIndex != 0 {
@@ -3768,9 +3701,6 @@ func (m *ProposerSlashing) Size() (n int) {
 }
 
 func (m *CasperSlashing) Size() (n int) {
-	if m == nil {
-		return 0
-	}
 	var l int
 	_ = l
 	if m.Votes_1 != nil {
@@ -3788,9 +3718,6 @@ func (m *CasperSlashing) Size() (n int) {
 }
 
 func (m *Deposit) Size() (n int) {
-	if m == nil {
-		return 0
-	}
 	var l int
 	_ = l
 	if len(m.MerkleBranchHash32S) > 0 {
@@ -3813,9 +3740,6 @@ func (m *Deposit) Size() (n int) {
 }
 
 func (m *Exit) Size() (n int) {
-	if m == nil {
-		return 0
-	}
 	var l int
 	_ = l
 	if m.Slot != 0 {
@@ -4016,17 +3940,6 @@ func (m *BeaconState) Unmarshal(dAtA []byte) error {
 				postIndex := iNdEx + packedLen
 				if postIndex > l {
 					return io.ErrUnexpectedEOF
-				}
-				var elementCount int
-				var count int
-				for _, integer := range dAtA {
-					if integer < 128 {
-						count++
-					}
-				}
-				elementCount = count
-				if elementCount != 0 && len(m.ValidatorBalances) == 0 {
-					m.ValidatorBalances = make([]uint64, 0, elementCount)
 				}
 				for iNdEx < postIndex {
 					var v uint64
@@ -4399,17 +4312,6 @@ func (m *BeaconState) Unmarshal(dAtA []byte) error {
 				postIndex := iNdEx + packedLen
 				if postIndex > l {
 					return io.ErrUnexpectedEOF
-				}
-				var elementCount int
-				var count int
-				for _, integer := range dAtA {
-					if integer < 128 {
-						count++
-					}
-				}
-				elementCount = count
-				if elementCount != 0 && len(m.LatestPenalizedExitBalances) == 0 {
-					m.LatestPenalizedExitBalances = make([]uint64, 0, elementCount)
 				}
 				for iNdEx < postIndex {
 					var v uint64
@@ -6200,17 +6102,6 @@ func (m *ShardAndCommittee) Unmarshal(dAtA []byte) error {
 				if postIndex > l {
 					return io.ErrUnexpectedEOF
 				}
-				var elementCount int
-				var count int
-				for _, integer := range dAtA {
-					if integer < 128 {
-						count++
-					}
-				}
-				elementCount = count
-				if elementCount != 0 && len(m.Committee) == 0 {
-					m.Committee = make([]uint32, 0, elementCount)
-				}
 				for iNdEx < postIndex {
 					var v uint32
 					for shift := uint(0); ; shift += 7 {
@@ -6534,7 +6425,7 @@ func (m *BeaconBlock) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Timestamp == nil {
-				m.Timestamp = &timestamp.Timestamp{}
+				m.Timestamp = &types.Timestamp{}
 			}
 			if err := m.Timestamp.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -7133,17 +7024,6 @@ func (m *SlashableVoteData) Unmarshal(dAtA []byte) error {
 				if postIndex > l {
 					return io.ErrUnexpectedEOF
 				}
-				var elementCount int
-				var count int
-				for _, integer := range dAtA {
-					if integer < 128 {
-						count++
-					}
-				}
-				elementCount = count
-				if elementCount != 0 && len(m.AggregateSignaturePoc_0Indices) == 0 {
-					m.AggregateSignaturePoc_0Indices = make([]uint32, 0, elementCount)
-				}
 				for iNdEx < postIndex {
 					var v uint32
 					for shift := uint(0); ; shift += 7 {
@@ -7205,17 +7085,6 @@ func (m *SlashableVoteData) Unmarshal(dAtA []byte) error {
 				postIndex := iNdEx + packedLen
 				if postIndex > l {
 					return io.ErrUnexpectedEOF
-				}
-				var elementCount int
-				var count int
-				for _, integer := range dAtA {
-					if integer < 128 {
-						count++
-					}
-				}
-				elementCount = count
-				if elementCount != 0 && len(m.AggregateSignaturePoc_1Indices) == 0 {
-					m.AggregateSignaturePoc_1Indices = make([]uint32, 0, elementCount)
 				}
 				for iNdEx < postIndex {
 					var v uint32
