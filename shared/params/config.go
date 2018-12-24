@@ -97,6 +97,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	GenesisTime:                   time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC),
 	MaxNumLog2Validators:          24,
 	EpochLength:                   64,
+	PowReceiptRootVotingPeriod:    1024,
 }
 
 var demoBeaconConfig = &BeaconChainConfig{
@@ -129,6 +130,7 @@ var demoBeaconConfig = &BeaconChainConfig{
 	GenesisTime:                   time.Now(),
 	MaxNumLog2Validators:          24,
 	EpochLength:                   defaultBeaconConfig.EpochLength,
+	PowReceiptRootVotingPeriod:    1024,
 }
 
 var defaultShardConfig = &ShardChainConfig{
