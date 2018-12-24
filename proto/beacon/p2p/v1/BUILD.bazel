@@ -10,6 +10,7 @@ go_proto_library(
     deps = [
         "//proto/common:common_go_proto",
     ],
+    compiler = "//:proto_compiler",
 )
 
 go_library(

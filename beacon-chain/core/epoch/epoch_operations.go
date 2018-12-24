@@ -167,8 +167,8 @@ func WinningRoot(
 	attestations := append(thisEpochAttestations, prevEpochAttestations...)
 
 	for _, attestation := range attestations {
-		if attestation.Data.Shard == shardCommittee.Shard {
-			candidateRoots = append(candidateRoots, attestation.Data.ShardBlockRootHash32)
+		if attestation.GetData().GetShard() == shardCommittee.Shard {
+			candidateRoots = append(candidateRoots, attestation.GetData().ShardBlockRootHash32)
 		}
 	}
 
@@ -283,7 +283,7 @@ func TotalBalance(
 func InclusionSlot(state *pb.BeaconState, validatorIndex uint32) (uint64, error) {
 
 	for _, attestation := range state.LatestAttestations {
-		participatedValidators, err := validators.AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)
+		participatedValidators, err := validators.AttestationParticipants(state, attestation.GetData(), attestation.ParticipationBitfield)
 		if err != nil {
 			return 0, fmt.Errorf("could not get attestation participants: %v", err)
 		}
@@ -307,14 +307,14 @@ func InclusionSlot(state *pb.BeaconState, validatorIndex uint32) (uint64, error)
 func InclusionDistance(state *pb.BeaconState, validatorIndex uint32) (uint64, error) {
 
 	for _, attestation := range state.LatestAttestations {
-		participatedValidators, err := validators.AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)
+		participatedValidators, err := validators.AttestationParticipants(state, attestation.GetData(), attestation.ParticipationBitfield)
 		if err != nil {
 			return 0, fmt.Errorf("could not get attestation participants: %v", err)
 		}
 
 		for _, index := range participatedValidators {
 			if index == validatorIndex {
-				return attestation.SlotIncluded - attestation.Data.Slot, nil
+				return attestation.SlotIncluded - attestation.GetData().GetSlot(), nil
 			}
 		}
 	}

@@ -8,11 +8,10 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
-	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/empty"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -123,7 +122,7 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	beaconState, err := types.NewGenesisBeaconState(nil)
+	beaconState, err := state.NewGenesisBeaconState(nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -169,7 +168,7 @@ func TestProposeBlock(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	beaconState, err := types.NewGenesisBeaconState(nil)
+	beaconState, err := state.NewGenesisBeaconState(nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -229,7 +228,7 @@ func TestLatestAttestationContextClosed(t *testing.T) {
 	defer ctrl.Finish()
 	mockStream := internal.NewMockBeaconService_LatestAttestationServer(ctrl)
 	go func(tt *testing.T) {
-		if err := rpcService.LatestAttestation(&empty.Empty{}, mockStream); err != nil {
+		if err := rpcService.LatestAttestation(&ptypes.Empty{}, mockStream); err != nil {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
 		<-exitRoutine
@@ -256,7 +255,7 @@ func TestLatestAttestationFaulty(t *testing.T) {
 	mockStream.EXPECT().Send(attestation).Return(errors.New("something wrong"))
 	// Tests a faulty stream.
 	go func(tt *testing.T) {
-		if err := rpcService.LatestAttestation(&empty.Empty{}, mockStream); err.Error() != "something wrong" {
+		if err := rpcService.LatestAttestation(&ptypes.Empty{}, mockStream); err.Error() != "something wrong" {
 			tt.Errorf("Faulty stream should throw correct error, wanted 'something wrong', got %v", err)
 		}
 		<-exitRoutine
@@ -284,7 +283,7 @@ func TestLatestAttestation(t *testing.T) {
 	mockStream.EXPECT().Send(attestation).Return(nil)
 	// Tests a good stream.
 	go func(tt *testing.T) {
-		if err := rpcService.LatestAttestation(&empty.Empty{}, mockStream); err != nil {
+		if err := rpcService.LatestAttestation(&ptypes.Empty{}, mockStream); err != nil {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
 		<-exitRoutine
@@ -306,7 +305,7 @@ func TestValidatorSlotAndResponsibility(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	beaconState, err := types.NewGenesisBeaconState(nil)
+	beaconState, err := state.NewGenesisBeaconState(nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -338,7 +337,7 @@ func TestValidatorIndex(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	beaconState, err := types.NewGenesisBeaconState(nil)
+	beaconState, err := state.NewGenesisBeaconState(nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -370,7 +369,7 @@ func TestValidatorShardID(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	beaconState, err := types.NewGenesisBeaconState(nil)
+	beaconState, err := state.NewGenesisBeaconState(nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -403,7 +402,7 @@ func TestValidatorAssignments(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	beaconState, err := types.NewGenesisBeaconState(nil)
+	beaconState, err := state.NewGenesisBeaconState(nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -440,7 +439,7 @@ func TestValidatorAssignments(t *testing.T) {
 		<-exitRoutine
 	}(t)
 
-	beaconState, err = types.NewGenesisBeaconState(nil)
+	beaconState, err = state.NewGenesisBeaconState(nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}

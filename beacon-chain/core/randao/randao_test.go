@@ -3,16 +3,15 @@ package randao
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestUpdateRandaoLayers(t *testing.T) {
-	beaconState, err := types.NewGenesisBeaconState(nil)
-	if err != nil {
-		t.Fatalf("failed to generate beacon state: %v", err)
-	}
+	beaconState := &pb.BeaconState{}
+	genesisValidatorRegistry := v.InitialValidatorRegistry()
+	beaconState.ValidatorRegistry = genesisValidatorRegistry
 
 	var shardAndCommittees []*pb.ShardAndCommitteeArray
 	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
@@ -23,14 +22,14 @@ func TestUpdateRandaoLayers(t *testing.T) {
 		})
 	}
 
-	beaconState.SetShardAndCommitteesAtSlots(shardAndCommittees)
+	beaconState.ShardAndCommitteesAtSlots = shardAndCommittees
 
 	newState, err := UpdateRandaoLayers(beaconState, 1)
 	if err != nil {
 		t.Fatalf("failed to update randao layers: %v", err)
 	}
 
-	vreg := newState.ValidatorRegistry()
+	vreg := newState.GetValidatorRegistry()
 
 	// Since slot 1 has proposer index 8
 	if vreg[8].GetRandaoLayers() != 1 {

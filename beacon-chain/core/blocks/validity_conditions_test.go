@@ -7,7 +7,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -43,17 +42,14 @@ func (m *mockPOWClient) BlockByHash(ctx context.Context, hash common.Hash) (*get
 }
 
 func TestBadBlock(t *testing.T) {
-	beaconState, err := types.NewGenesisBeaconState(nil)
-	if err != nil {
-		t.Fatalf("failed to generate beacon state: %v", err)
-	}
+	beaconState := &pb.BeaconState{}
 
 	ctx := context.Background()
 
 	db := &mockDB{}
 	powClient := &mockPOWClient{}
 
-	beaconState.SetSlot(3)
+	beaconState.Slot = 3
 
 	block := &pb.BeaconBlock{
 		Slot: 4,
@@ -95,17 +91,13 @@ func TestBadBlock(t *testing.T) {
 }
 
 func TestValidBlock(t *testing.T) {
-	beaconState, err := types.NewGenesisBeaconState(nil)
-	if err != nil {
-		t.Fatalf("failed to generate beacon state: %v", err)
-	}
-
+	beaconState := &pb.BeaconState{}
 	ctx := context.Background()
 
 	db := &mockDB{}
 	powClient := &mockPOWClient{}
 
-	beaconState.SetSlot(3)
+	beaconState.Slot = 3
 	db.hasBlock = true
 
 	block := &pb.BeaconBlock{

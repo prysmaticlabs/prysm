@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
-	"github.com/golang/protobuf/proto"
 	ipfslog "github.com/ipfs/go-log"
 	bhost "github.com/libp2p/go-libp2p-blankhost"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
