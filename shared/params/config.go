@@ -8,6 +8,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+func makeEmptySignature() [][]byte {
+	signature := make([][]byte, 2)
+	signature[0] = make([]byte, 48)
+	signature[1] = make([]byte, 48)
+	return signature
+}
+
 // ValidatorStatusCode defines which stage a validator is in.
 type ValidatorStatusCode int
 
@@ -51,6 +58,7 @@ type BeaconChainConfig struct {
 	POWContractMerkleTreeDepth              uint64         // POWContractMerkleTreeDepth defines the depth of PoW contract merkle tree.
 	InitialForkVersion                      uint64         // InitialForkVersion is used to track fork version between state transitions.
 	InitialForkSlot                         uint64         // InitialForkSlot is used to initialize the fork slot in the initial Beacon state.
+	InitialSlotNumber                       uint64         // InitialSlotNumber is used to initialize the slot number of the genesis block.
 	SimulatedBlockRandao                    [32]byte       // SimulatedBlockRandao is a RANDAO seed stubbed in side simulated block to advance local beacon chain.
 	RandBytes                               uint64         // RandBytes is the number of bytes used as entropy to shuffle validators.
 	BootstrappedValidatorsCount             uint64         // BootstrappedValidatorsCount is the number of validators we seed to start beacon chain.
@@ -58,6 +66,8 @@ type BeaconChainConfig struct {
 	GenesisTime                             time.Time      // GenesisTime used by the protocol.
 	MaxNumLog2Validators                    uint64         // Max number of validators in Log2 can exist given total ETH supply.
 	EpochLength                             uint64         // Number of slots that define an Epoch.
+	ZeroHash                                [32]byte       // ZeroHash is used to represent a zeroed out 32 byte array.
+	EmptySignature                          [][]byte       // EmptySignature is used to represent a zeroed out BLS Signature.
 }
 
 // ShardChainConfig contains configs for node to participate in shard chains.
@@ -91,12 +101,15 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxValidatorChurnQuotient:     uint64(32),
 	InitialForkVersion:            0,
 	InitialForkSlot:               0,
+	InitialSlotNumber:             0,
 	RandBytes:                     3,
 	BootstrappedValidatorsCount:   16384,
 	SyncPollingInterval:           16 * 4, // Query nodes over the network every 4 slots for sync status.
 	GenesisTime:                   time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC),
 	MaxNumLog2Validators:          24,
 	EpochLength:                   64,
+	ZeroHash:                      [32]byte{},
+	EmptySignature:                makeEmptySignature(),
 }
 
 var demoBeaconConfig = &BeaconChainConfig{
@@ -122,6 +135,7 @@ var demoBeaconConfig = &BeaconChainConfig{
 	BaseRewardQuotient:            uint64(32768),
 	MaxValidatorChurnQuotient:     uint64(32),
 	InitialForkVersion:            0,
+	InitialSlotNumber:             0,
 	RandBytes:                     3,
 	InitialForkSlot:               defaultBeaconConfig.InitialForkSlot,
 	SimulatedBlockRandao:          [32]byte{'S', 'I', 'M', 'U', 'L', 'A', 'T', 'E', 'R'},
@@ -129,6 +143,8 @@ var demoBeaconConfig = &BeaconChainConfig{
 	GenesisTime:                   time.Now(),
 	MaxNumLog2Validators:          24,
 	EpochLength:                   defaultBeaconConfig.EpochLength,
+	ZeroHash:                      [32]byte{},
+	EmptySignature:                makeEmptySignature(),
 }
 
 var defaultShardConfig = &ShardChainConfig{
