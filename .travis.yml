@@ -9,7 +9,7 @@ matrix:
         - lint
       script:
         - 
-          go get github.com/alecthomas/gometalinter && gometalinter --install && gometalinter ./... --deadline=10m --exclude=client/internal/client_helper.go
+          go get github.com/alecthomas/gometalinter && gometalinter --install && gometalinter ./...
     - os: linux
       env:
         - coverage

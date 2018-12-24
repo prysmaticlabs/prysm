@@ -126,7 +126,6 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 
 	tests := []struct {
 		slot        uint64
-		stateSlot   uint64
 		expectedErr string
 	}{
 		{

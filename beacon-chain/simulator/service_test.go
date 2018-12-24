@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -206,10 +207,11 @@ func TestStateRequest(t *testing.T) {
 		t.Fatalf("could not retrieve beacon state %v", err)
 	}
 
-	hash, err := beaconState.Hash()
+	enc, err := proto.Marshal(beaconState)
 	if err != nil {
-		t.Fatalf("could not hash beacon state %v", err)
+		t.Fatalf("could not marshal beacon state %v", err)
 	}
+	hash := hashutil.Hash(enc)
 
 	beaconStateRequest := &pb.BeaconStateRequest{
 		Hash: []byte{'t', 'e', 's', 't'},

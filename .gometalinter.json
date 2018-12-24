@@ -1,15 +1,6 @@
 {
-  "Enable": [
-    "gofmt",
-    "deadcode",
-    "misspell",
-    "goimports",
-    "nakedret",
-    "unparam",
-    "megacheck",
-    "gosec",
-    "varcheck",
-    "structcheck",
-    "golint"
-  ]
+  "Deadline": "10m",
+  "Exclude": [
+        "^proto/"
+    ]
 }

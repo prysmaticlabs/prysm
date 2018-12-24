@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -76,11 +75,11 @@ func TestGetBlockBySlotEmptyChain(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	b, err := db.GetBlockBySlot(0)
+	block, err := db.GetBlockBySlot(0)
 	if err != nil {
 		t.Errorf("failure when fetching block by slot: %v", err)
 	}
-	if b != nil {
+	if block != nil {
 		t.Error("GetBlockBySlot should return nil for an empty chain")
 	}
 }
