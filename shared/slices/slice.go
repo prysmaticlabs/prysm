@@ -39,10 +39,10 @@ func Union(a []uint32, b []uint32) []uint32 {
 	return set
 }
 
-// Not returns uint32 in a that are not in b with time
-// complexity of approximately O(n) leveraging a map to
-// check for element existence off by a constant factor
-// of underlying map efficiency.
+// Not returns the uint32 in slice a that are
+// not in slice b with time complexity of approximately
+// O(n) leveraging a map to check for element existence
+// off by a constant factor of underlying map efficiency.
 func Not(a []uint32, b []uint32) []uint32 {
 	set := make([]uint32, 0)
 	m := make(map[uint32]bool)
