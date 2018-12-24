@@ -23,7 +23,6 @@
       "structcheck",
       "unparam",
       "unused",
-      "vet",
       "varcheck"
     ]
 }
