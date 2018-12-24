@@ -27,7 +27,7 @@ func TestBaseRewardQuotient(t *testing.T) {
 		{20e6 * params.BeaconConfig().Gwei, 4579328}, // 20M ETH staked, 2.18% interest.
 	}
 	for _, tt := range tests {
-		b := BaseRewardQuotient(tt.a)
+		b := baseRewardQuotient(tt.a)
 		if b != tt.b {
 			t.Errorf("BaseRewardQuotient(%d) = %d, want = %d",
 				tt.a, b, tt.b)
@@ -52,7 +52,7 @@ func TestBaseReward(t *testing.T) {
 			ValidatorBalances: []uint64{tt.a},
 		}
 		// Assume 10M Eth staked (base reward quotient: 3237888).
-		b := BaseReward(state, 0, 3237888)
+		b := baseReward(state, 0, 3237888)
 		if b != tt.b {
 			t.Errorf("BaseReward(%d) = %d, want = %d",
 				tt.a, b, tt.b)
@@ -77,7 +77,7 @@ func TestInactivityPenalty(t *testing.T) {
 			ValidatorBalances: []uint64{params.BeaconConfig().MaxDepositInGwei},
 		}
 		// Assume 10 ETH staked (base reward quotient: 3237888).
-		b := InactivityPenalty(state, 0, 3237888, tt.a)
+		b := inactivityPenalty(state, 0, 3237888, tt.a)
 		if b != tt.b {
 			t.Errorf("InactivityPenalty(%d) = %d, want = %d",
 				tt.a, b, tt.b)
