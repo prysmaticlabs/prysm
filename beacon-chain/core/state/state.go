@@ -61,7 +61,7 @@ func NewGenesisBeaconState(genesisValidatorRegistry []*pb.ValidatorRecord) (*pb.
 		PersistentCommitteeReassignments:     []*pb.ShardReassignmentRecord{},
 		PreviousJustifiedSlot:                0,
 		JustifiedSlot:                        0,
-		JustifiedSlotBitfield:                0,
+		JustificationBitfield:                0,
 		FinalizedSlot:                        0,
 		LatestCrosslinks:                     crosslinks,
 		LastStateRecalculationSlot:           0,

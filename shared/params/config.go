@@ -110,6 +110,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	EpochLength:                   64,
 	ZeroHash:                      [32]byte{},
 	EmptySignature:                makeEmptySignature(),
+	PowReceiptRootVotingPeriod:    1024,
 }
 
 var demoBeaconConfig = &BeaconChainConfig{
@@ -145,6 +146,7 @@ var demoBeaconConfig = &BeaconChainConfig{
 	EpochLength:                   defaultBeaconConfig.EpochLength,
 	ZeroHash:                      [32]byte{},
 	EmptySignature:                makeEmptySignature(),
+	PowReceiptRootVotingPeriod:    1024,
 }
 
 var defaultShardConfig = &ShardChainConfig{
