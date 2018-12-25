@@ -45,3 +45,15 @@ func Bytes8(x uint64) []byte {
 func FromBytes8(x []byte) uint64 {
 	return binary.BigEndian.Uint64(x)
 }
+
+// LowerThan returns true if byte slice x is lower than byte slice y. (big endian format)
+// This is used in spec to compare winning block root hash.
+// Mentioned in spec as "ties broken by favoring lower `shard_block_root` values".
+func LowerThan(x []byte, y []byte) bool {
+	for i, b := range x {
+		if b > y[i] {
+			return false
+		}
+	}
+	return true
+}

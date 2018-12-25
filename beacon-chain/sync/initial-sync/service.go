@@ -14,11 +14,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"time"
 
-	"github.com/golang/protobuf/proto"
+	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -196,13 +196,15 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 				continue
 			}
 
-			beaconState := types.NewBeaconState(data.BeaconState)
-			hash, err := beaconState.Hash()
+			beaconState := data.BeaconState
+
+			h, err := state.Hash(beaconState)
 			if err != nil {
-				log.Errorf("Unable to hash beacon state: %v", err)
+				log.Error(err)
+				continue
 			}
 
-			if hash != s.initialStateRootHash32 {
+			if h != s.initialStateRootHash32 {
 				continue
 			}
 
@@ -212,14 +214,14 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 
 			log.Debug("Successfully saved beacon state to the db")
 
-			if s.currentSlot >= beaconState.LastFinalizedSlot() {
+			if s.currentSlot >= beaconState.GetFinalizedSlot() {
 				continue
 			}
 
 			// sets the current slot to the last finalized slot of the
 			// crystallized state to begin our sync from.
-			s.currentSlot = beaconState.LastFinalizedSlot()
-			log.Debugf("Successfully saved crystallized state with the last finalized slot: %d", beaconState.LastFinalizedSlot())
+			s.currentSlot = beaconState.GetFinalizedSlot()
+			log.Debugf("Successfully saved crystallized state with the last finalized slot: %d", beaconState.GetFinalizedSlot())
 
 			s.requestNextBlockBySlot(s.currentSlot + 1)
 			beaconStateSub.Unsubscribe()

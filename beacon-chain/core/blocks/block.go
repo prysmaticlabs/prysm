@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -16,16 +15,19 @@ var clock utils.Clock = &utils.RealClock{}
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
 func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 	block := &pb.BeaconBlock{
-		ParentRootHash32:              []byte{0},
-		RandaoRevealHash32:            []byte{0},
-		CandidatePowReceiptRootHash32: []byte{0},
-		StateRootHash32:               []byte{0},
+		Slot:               params.BeaconConfig().InitialSlotNumber,
+		ParentRootHash32:   params.BeaconConfig().ZeroHash[:],
+		StateRootHash32:    stateRoot,
+		RandaoRevealHash32: params.BeaconConfig().ZeroHash[:],
+		Signature:          params.BeaconConfig().EmptySignature,
+		Body: &pb.BeaconBlockBody{
+			ProposerSlashings: []*pb.ProposerSlashing{},
+			CasperSlashings:   []*pb.CasperSlashing{},
+			Attestations:      []*pb.Attestation{},
+			Deposits:          []*pb.Deposit{},
+			Exits:             []*pb.Exit{},
+		},
 	}
-	// Genesis time here is static so error can be safely ignored.
-	// #nosec G104
-	protoGenesis, _ := ptypes.TimestampProto(params.BeaconConfig().GenesisTime)
-	block.Timestamp = protoGenesis
-	block.StateRootHash32 = stateRoot
 	return block
 }
 

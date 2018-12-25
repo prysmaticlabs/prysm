@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/golang/protobuf/proto"
+	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -143,10 +143,12 @@ func TestProcessBlock(t *testing.T) {
 		ParentRootHash32:              parentHash[:],
 		Slot:                          1,
 	}
-	attestation := &pb.AggregatedAttestation{
-		Slot:           0,
-		Shard:          0,
-		ShardBlockHash: []byte{'A'},
+	attestation := &pb.Attestation{
+		Data: &pb.AttestationData{
+			Slot:                 0,
+			Shard:                0,
+			ShardBlockRootHash32: []byte{'A'},
+		},
 	}
 
 	responseBlock := &pb.BeaconBlockResponse{
@@ -214,7 +216,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 
 	responseBlock1 := &pb.BeaconBlockResponse{
 		Block:       data1,
-		Attestation: &pb.AggregatedAttestation{},
+		Attestation: &pb.Attestation{},
 	}
 
 	msg1 := p2p.Message{
@@ -231,7 +233,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 
 	responseBlock2 := &pb.BeaconBlockResponse{
 		Block:       data2,
-		Attestation: &pb.AggregatedAttestation{},
+		Attestation: &pb.Attestation{},
 	}
 
 	msg2 := p2p.Message{
@@ -336,9 +338,11 @@ func TestReceiveAttestation(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	request1 := &pb.AggregatedAttestation{
-		Slot:             0,
-		AttesterBitfield: []byte{99},
+	request1 := &pb.Attestation{
+		ParticipationBitfield: []byte{99},
+		Data: &pb.AttestationData{
+			Slot: 0,
+		},
 	}
 
 	msg1 := p2p.Message{

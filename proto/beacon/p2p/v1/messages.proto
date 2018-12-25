@@ -34,7 +34,7 @@ message BeaconBlockRequestBySlotNumber{
 
 message BeaconBlockResponse {
   BeaconBlock block = 1;
-  AggregatedAttestation attestation = 2;
+  Attestation attestation = 2;
 }
 
 message BatchedBeaconBlockRequest {

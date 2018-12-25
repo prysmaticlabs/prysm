@@ -7,14 +7,15 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes"
+	"github.com/gogo/protobuf/proto"
+	ptypes "github.com/gogo/protobuf/types"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotticker"
@@ -97,7 +98,7 @@ func NewSimulator(ctx context.Context, cfg *Config) *Simulator {
 // Start the sim.
 func (sim *Simulator) Start() {
 	log.Info("Starting service")
-	genesisTime, err := sim.beaconDB.GetGenesisTime()
+	genesisTime, err := sim.beaconDB.GenesisTime()
 	if err != nil {
 		log.Fatal(err)
 		return
@@ -321,10 +322,11 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*pb.BeaconB
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
 
-	stateHash, err := beaconState.Hash()
+	enc, err := proto.Marshal(beaconState)
 	if err != nil {
-		return nil, fmt.Errorf("could not hash beacon state: %v", err)
+		return nil, fmt.Errorf("could not marshal beacon state: %v", err)
 	}
+	stateHash := hashutil.Hash(enc)
 
 	var powChainRef []byte
 	if sim.enablePOWChain {
@@ -335,8 +337,8 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*pb.BeaconB
 
 	parentSlot := slot - 1
 	committees, err := v.GetShardAndCommitteesForSlot(
-		beaconState.ShardAndCommitteesForSlots(),
-		beaconState.LastStateRecalculationSlot(),
+		beaconState.GetShardAndCommitteesAtSlots(),
+		beaconState.GetLastStateRecalculationSlot(),
 		parentSlot,
 	)
 	if err != nil {
@@ -347,18 +349,20 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*pb.BeaconB
 	copy(parentHash, lastHash[:])
 
 	shardCommittees := committees.ArrayShardAndCommittee
-	attestations := make([]*pb.AggregatedAttestation, len(shardCommittees))
+	attestations := make([]*pb.Attestation, len(shardCommittees))
 
 	// Create attestations for all committees of the previous block.
 	// Ensure that all attesters have voted by calling FillBitfield.
 	for i, shardCommittee := range shardCommittees {
 		shardID := shardCommittee.Shard
 		numAttesters := len(shardCommittee.Committee)
-		attestations[i] = &pb.AggregatedAttestation{
-			Slot:               parentSlot,
-			AttesterBitfield:   bitutil.FillBitfield(numAttesters),
-			JustifiedBlockHash: parentHash,
-			Shard:              shardID,
+		attestations[i] = &pb.Attestation{
+			ParticipationBitfield: bitutil.FillBitfield(numAttesters),
+			Data: &pb.AttestationData{
+				Slot:                     parentSlot,
+				Shard:                    shardID,
+				JustifiedBlockRootHash32: parentHash,
+			},
 		}
 	}
 
@@ -369,7 +373,9 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*pb.BeaconB
 		StateRootHash32:               stateHash[:],
 		ParentRootHash32:              parentHash,
 		RandaoRevealHash32:            params.BeaconConfig().SimulatedBlockRandao[:],
-		Attestations:                  attestations,
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
 	}
 	return block, nil
 }

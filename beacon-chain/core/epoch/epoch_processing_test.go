@@ -8,236 +8,289 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestEpochAttestations(t *testing.T) {
+func TestCanProcessEpoch(t *testing.T) {
 	if params.BeaconConfig().EpochLength != 64 {
 		t.Errorf("EpochLength should be 64 for these tests to pass")
 	}
-
-	var pendingAttestations []*pb.PendingAttestationRecord
-	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
-		pendingAttestations = append(pendingAttestations, &pb.PendingAttestationRecord{
-			Data: &pb.AttestationData{
-				Slot: i,
-			},
-		})
-	}
-
-	state := &pb.BeaconState{LatestAttestations: pendingAttestations}
-
 	tests := []struct {
-		stateSlot            uint64
-		firstAttestationSlot uint64
+		slot            uint64
+		canProcessEpoch bool
 	}{
 		{
-			stateSlot:            10,
-			firstAttestationSlot: 0,
+			slot:            1,
+			canProcessEpoch: false,
 		},
 		{
-			stateSlot:            63,
-			firstAttestationSlot: 0,
+			slot:            63,
+			canProcessEpoch: false,
 		},
 		{
-			stateSlot:            64,
-			firstAttestationSlot: 64 - params.BeaconConfig().EpochLength,
+			slot:            64,
+			canProcessEpoch: true,
 		}, {
-			stateSlot:            127,
-			firstAttestationSlot: 127 - params.BeaconConfig().EpochLength,
+			slot:            128,
+			canProcessEpoch: true,
 		}, {
-			stateSlot:            128,
-			firstAttestationSlot: 128 - params.BeaconConfig().EpochLength,
+			slot:            1000000000,
+			canProcessEpoch: true,
 		},
 	}
-
 	for _, tt := range tests {
-		state.Slot = tt.stateSlot
-
-		if Attestations(state)[0].GetData().GetSlot() != tt.firstAttestationSlot {
+		state := &pb.BeaconState{Slot: tt.slot}
+		if CanProcessEpoch(state) != tt.canProcessEpoch {
 			t.Errorf(
-				"Result slot was an unexpected value. Wanted %d, got %d",
-				tt.firstAttestationSlot,
-				Attestations(state)[0].GetData().GetSlot(),
+				"CanProcessEpoch(%d) = %v. Wanted %v",
+				tt.slot,
+				CanProcessEpoch(state),
+				tt.canProcessEpoch,
 			)
 		}
 	}
 }
 
-func TestEpochBoundaryAttestations(t *testing.T) {
+func TestCanProcessReceiptRoots(t *testing.T) {
+	if params.BeaconConfig().PowReceiptRootVotingPeriod != 1024 {
+		t.Errorf("PowReceiptRootVotingPeriod should be 1024 for these tests to pass")
+	}
+	tests := []struct {
+		slot                   uint64
+		canProcessReceiptRoots bool
+	}{
+		{
+			slot:                   1,
+			canProcessReceiptRoots: false,
+		},
+		{
+			slot:                   1022,
+			canProcessReceiptRoots: false,
+		},
+		{
+			slot:                   1024,
+			canProcessReceiptRoots: true,
+		}, {
+			slot:                   4096,
+			canProcessReceiptRoots: true,
+		}, {
+			slot:                   234234,
+			canProcessReceiptRoots: false,
+		},
+	}
+	for _, tt := range tests {
+		state := &pb.BeaconState{Slot: tt.slot}
+		if CanProcessReceiptRoots(state) != tt.canProcessReceiptRoots {
+			t.Errorf(
+				"CanProcessReceiptRoots(%d) = %v. Wanted %v",
+				tt.slot,
+				CanProcessReceiptRoots(state),
+				tt.canProcessReceiptRoots,
+			)
+		}
+	}
+}
+
+func TestProcessReceipt(t *testing.T) {
+	if params.BeaconConfig().PowReceiptRootVotingPeriod != 1024 {
+		t.Errorf("PowReceiptRootVotingPeriod should be 1024 for these tests to pass")
+	}
+	requiredVoteCount := params.BeaconConfig().PowReceiptRootVotingPeriod
+	state := &pb.BeaconState{
+		CandidatePowReceiptRoots: []*pb.CandidatePoWReceiptRootRecord{
+			{VoteCount: 0, CandidatePowReceiptRootHash32: []byte{'A'}},
+			// CandidatePowReceiptRootHash32 ['B'] gets to process with sufficient vote count.
+			{VoteCount: requiredVoteCount/2 + 1, CandidatePowReceiptRootHash32: []byte{'B'}},
+			{VoteCount: requiredVoteCount / 2, CandidatePowReceiptRootHash32: []byte{'C'}},
+		},
+	}
+	newState := ProcessReceipt(state)
+	if !bytes.Equal(newState.ProcessedPowReceiptRootHash32, []byte{'B'}) {
+		t.Errorf("Incorrect ProcessedPowReceiptRootHash32. Wanted: %v, got: %v",
+			[]byte{'B'}, newState.ProcessedPowReceiptRootHash32)
+	}
+
+	// Adding a new receipt root ['D'] which should be the new processed receipt root.
+	state.CandidatePowReceiptRoots = append(state.CandidatePowReceiptRoots,
+		&pb.CandidatePoWReceiptRootRecord{VoteCount: requiredVoteCount,
+			CandidatePowReceiptRootHash32: []byte{'D'}})
+	newState = ProcessReceipt(state)
+	if !bytes.Equal(newState.ProcessedPowReceiptRootHash32, []byte{'D'}) {
+		t.Errorf("Incorrect ProcessedPowReceiptRootHash32. Wanted: %v, got: %v",
+			[]byte{'D'}, newState.ProcessedPowReceiptRootHash32)
+	}
+
+	if len(newState.CandidatePowReceiptRoots) != 0 {
+		t.Errorf("Failed to clean up CandidatePowReceiptRoots slice. Length: %d",
+			len(newState.CandidatePowReceiptRoots))
+	}
+}
+
+func TestProcessJustification(t *testing.T) {
 	if params.BeaconConfig().EpochLength != 64 {
 		t.Errorf("EpochLength should be 64 for these tests to pass")
-	}
-
-	epochAttestations := []*pb.PendingAttestationRecord{
-		{Data: &pb.AttestationData{JustifiedBlockRootHash32: []byte{0}, JustifiedSlot: 0}},
-		{Data: &pb.AttestationData{JustifiedBlockRootHash32: []byte{1}, JustifiedSlot: 1}},
-		{Data: &pb.AttestationData{JustifiedBlockRootHash32: []byte{2}, JustifiedSlot: 2}},
-		{Data: &pb.AttestationData{JustifiedBlockRootHash32: []byte{3}, JustifiedSlot: 3}},
-	}
-
-	var latestBlockRootHash [][]byte
-	for i := uint64(0); i < params.BeaconConfig().EpochLength; i++ {
-		latestBlockRootHash = append(latestBlockRootHash, []byte{byte(i)})
 	}
 
 	state := &pb.BeaconState{
-		LatestAttestations:     epochAttestations,
-		Slot:                   params.BeaconConfig().EpochLength,
-		LatestBlockRootHash32S: [][]byte{},
+		Slot:                  300,
+		JustifiedSlot:         200,
+		JustificationBitfield: 4,
+	}
+	newState := ProcessJustification(state, 1, 1, 1)
+
+	if newState.PreviousJustifiedSlot != 200 {
+		t.Errorf("New state's prev justified slot %d != old state's justified slot %d",
+			newState.PreviousJustifiedSlot, state.JustifiedSlot)
+	}
+	// Since this epoch was justified (not prev), justified_slot = state.slot - EPOCH_LENGTH.
+	if newState.JustifiedSlot != state.Slot-params.BeaconConfig().EpochLength {
+		t.Errorf("New state's justified slot %d != state's slot - EPOCH_LENGTH %d",
+			newState.JustifiedSlot, state.Slot-params.BeaconConfig().EpochLength)
+	}
+	// The new JustificationBitfield is 11, it went from 0100 to 1011. Two 1's were appended because both
+	// prev epoch and this epoch were justified.
+	if newState.JustificationBitfield != 11 {
+		t.Errorf("New state's justification bitfield %d != 11", newState.JustificationBitfield)
 	}
 
-	epochBoundaryAttestation, err := BoundaryAttestations(state, epochAttestations)
-	if err == nil {
-		t.Fatalf("EpochBoundaryAttestations should have failed with empty block root hash")
-	}
-
-	state.LatestBlockRootHash32S = latestBlockRootHash
-	epochBoundaryAttestation, err = BoundaryAttestations(state, epochAttestations)
-	if err != nil {
-		t.Fatalf("EpochBoundaryAttestations failed: %v", err)
-	}
-
-	if epochBoundaryAttestation[0].GetData().GetJustifiedSlot() != 0 {
-		t.Errorf("Wanted justified slot 0 for epoch boundary attestation, got: %d", epochBoundaryAttestation[0].GetData().GetJustifiedSlot())
-	}
-
-	if !bytes.Equal(epochBoundaryAttestation[0].GetData().GetJustifiedBlockRootHash32(), []byte{0}) {
-		t.Errorf("Wanted justified block hash [0] for epoch boundary attestation, got: %v",
-			epochBoundaryAttestation[0].GetData().GetJustifiedBlockRootHash32())
+	// Assume for the case where only prev epoch got justified. Verify
+	// justified_slot = state.slot - 2 * EPOCH_LENGTH.
+	newState = ProcessJustification(state, 0, 1, 1)
+	if newState.JustifiedSlot != state.Slot-2*params.BeaconConfig().EpochLength {
+		t.Errorf("New state's justified slot %d != state's slot - 2 * EPOCH_LENGTH %d",
+			newState.JustifiedSlot, state.Slot-params.BeaconConfig().EpochLength)
 	}
 }
 
-func TestPrevEpochAttestations(t *testing.T) {
+func TestProcessFinalization(t *testing.T) {
 	if params.BeaconConfig().EpochLength != 64 {
 		t.Errorf("EpochLength should be 64 for these tests to pass")
 	}
+	epochLength := params.BeaconConfig().EpochLength
 
-	var pendingAttestations []*pb.PendingAttestationRecord
-	for i := uint64(0); i < params.BeaconConfig().EpochLength*4; i++ {
-		pendingAttestations = append(pendingAttestations, &pb.PendingAttestationRecord{
+	// 2 consecutive justified slot in a row,
+	// and previous justified slot is state slot - 2 * EPOCH_LENGTH.
+	state := &pb.BeaconState{
+		Slot:                  200,
+		JustifiedSlot:         200 - epochLength,
+		PreviousJustifiedSlot: 200 - 2*epochLength,
+		JustificationBitfield: 3,
+	}
+	newState := ProcessFinalization(state)
+	if newState.FinalizedSlot != state.JustifiedSlot {
+		t.Errorf("Wanted finalized slot to be %d, got %d:",
+			state.JustifiedSlot, newState.FinalizedSlot)
+	}
+
+	// 3 consecutive justified slot in a row.
+	// and previous justified slot is state slot - 3 * EPOCH_LENGTH.
+	state = &pb.BeaconState{
+		Slot:                  300,
+		JustifiedSlot:         300 - epochLength,
+		PreviousJustifiedSlot: 300 - 3*epochLength,
+		JustificationBitfield: 7,
+	}
+	newState = ProcessFinalization(state)
+	if newState.FinalizedSlot != state.JustifiedSlot {
+		t.Errorf("Wanted finalized slot to be %d, got %d:",
+			state.JustifiedSlot, newState.FinalizedSlot)
+	}
+
+	// 4 consecutive justified slot in a row.
+	// and previous justified slot is state slot - 3 * EPOCH_LENGTH.
+	state = &pb.BeaconState{
+		Slot:                  400,
+		JustifiedSlot:         400 - epochLength,
+		PreviousJustifiedSlot: 400 - 4*epochLength,
+		JustificationBitfield: 15,
+	}
+	newState = ProcessFinalization(state)
+	if newState.FinalizedSlot != state.JustifiedSlot {
+		t.Errorf("Wanted finalized slot to be %d, got %d:",
+			state.JustifiedSlot, newState.FinalizedSlot)
+	}
+
+	// if nothing gets finalized it just returns the same state.
+	state = &pb.BeaconState{
+		Slot:                  100,
+		JustifiedSlot:         65,
+		PreviousJustifiedSlot: 0,
+		JustificationBitfield: 1,
+	}
+	newState = ProcessFinalization(state)
+	if newState.FinalizedSlot != 0 {
+		t.Errorf("Wanted finalized slot to be %d, got %d:",
+			0, newState.FinalizedSlot)
+	}
+}
+
+func TestProcessCrosslinks_Ok(t *testing.T) {
+	shardCommitteesAtSlot := []*pb.ShardAndCommitteeArray{
+		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
+		}}}
+
+	state := &pb.BeaconState{
+		ShardAndCommitteesAtSlots: shardCommitteesAtSlot,
+		Slot:                      5,
+		LatestCrosslinks:          []*pb.CrosslinkRecord{{}, {}},
+		ValidatorBalances: []uint64{16 * 1e9, 18 * 1e9, 20 * 1e9, 31 * 1e9,
+			32 * 1e9, 34 * 1e9, 50 * 1e9, 50 * 1e9},
+	}
+
+	var attestations []*pb.PendingAttestationRecord
+	for i := 0; i < 10; i++ {
+		attestation := &pb.PendingAttestationRecord{
 			Data: &pb.AttestationData{
-				Slot: i,
+				Slot:                 0,
+				Shard:                1,
+				ShardBlockRootHash32: []byte{'A'},
 			},
-		})
-	}
-
-	state := &pb.BeaconState{LatestAttestations: pendingAttestations}
-
-	tests := []struct {
-		stateSlot            uint64
-		firstAttestationSlot uint64
-	}{
-		{
-			stateSlot:            10,
-			firstAttestationSlot: 0,
-		},
-		{
-			stateSlot:            127,
-			firstAttestationSlot: 0,
-		},
-		{
-			stateSlot:            383,
-			firstAttestationSlot: 383 - 2*params.BeaconConfig().EpochLength,
-		},
-		{
-			stateSlot:            129,
-			firstAttestationSlot: 129 - 2*params.BeaconConfig().EpochLength,
-		},
-		{
-			stateSlot:            256,
-			firstAttestationSlot: 256 - 2*params.BeaconConfig().EpochLength,
-		},
-	}
-
-	for _, tt := range tests {
-		state.Slot = tt.stateSlot
-
-		if PrevAttestations(state)[0].GetData().GetSlot() != tt.firstAttestationSlot {
-			t.Errorf(
-				"Result slot was an unexpected value. Wanted %d, got %d",
-				tt.firstAttestationSlot,
-				Attestations(state)[0].GetData().GetSlot(),
-			)
+			// All validators attested to the above roots.
+			ParticipationBitfield: []byte{0xff},
 		}
-	}
-}
-
-func TestPrevJustifiedAttestations(t *testing.T) {
-	prevEpochAttestations := []*pb.PendingAttestationRecord{
-		{Data: &pb.AttestationData{JustifiedSlot: 0}},
-		{Data: &pb.AttestationData{JustifiedSlot: 2}},
-		{Data: &pb.AttestationData{JustifiedSlot: 5}},
-		{Data: &pb.AttestationData{Shard: 2, JustifiedSlot: 100}},
-		{Data: &pb.AttestationData{Shard: 3, JustifiedSlot: 100}},
-		{Data: &pb.AttestationData{JustifiedSlot: 999}},
+		attestations = append(attestations, attestation)
 	}
 
-	thisEpochAttestations := []*pb.PendingAttestationRecord{
-		{Data: &pb.AttestationData{JustifiedSlot: 0}},
-		{Data: &pb.AttestationData{JustifiedSlot: 10}},
-		{Data: &pb.AttestationData{JustifiedSlot: 15}},
-		{Data: &pb.AttestationData{Shard: 0, JustifiedSlot: 100}},
-		{Data: &pb.AttestationData{Shard: 1, JustifiedSlot: 100}},
-		{Data: &pb.AttestationData{JustifiedSlot: 888}},
-	}
-
-	state := &pb.BeaconState{PreviousJustifiedSlot: 100}
-
-	prevJustifiedAttestations := PrevJustifiedAttestations(state, thisEpochAttestations, prevEpochAttestations)
-
-	for i, attestation := range prevJustifiedAttestations {
-		if attestation.GetData().Shard != uint64(i) {
-			t.Errorf("Wanted shard %d, got %d", i, attestation.GetData().Shard)
-		}
-		if attestation.GetData().GetJustifiedSlot() != 100 {
-			t.Errorf("Wanted justified slot 100, got %d", attestation.GetData().GetJustifiedSlot())
-		}
-	}
-}
-
-func TestHeadAttestations_Ok(t *testing.T) {
-	if params.BeaconConfig().EpochLength != 64 {
-		t.Errorf("EpochLength should be 64 for these tests to pass")
-	}
-
-	prevAttestations := []*pb.PendingAttestationRecord{
-		{Data: &pb.AttestationData{Slot: 1, BeaconBlockRootHash32: []byte{'A'}}},
-		{Data: &pb.AttestationData{Slot: 2, BeaconBlockRootHash32: []byte{'B'}}},
-		{Data: &pb.AttestationData{Slot: 3, BeaconBlockRootHash32: []byte{'C'}}},
-		{Data: &pb.AttestationData{Slot: 4, BeaconBlockRootHash32: []byte{'D'}}},
-	}
-
-	state := &pb.BeaconState{Slot: 5, LatestBlockRootHash32S: [][]byte{{'A'}, {'X'}, {'C'}, {'Y'}}}
-
-	headAttestations, err := PrevHeadAttestations(state, prevAttestations)
+	newState, err := ProcessCrosslinks(
+		state,
+		attestations,
+		nil,
+	)
 	if err != nil {
-		t.Fatalf("PrevHeadAttestations failed with %v", err)
+		t.Fatalf("Could not execute ProcessCrosslinks: %v", err)
 	}
-
-	if headAttestations[0].GetData().GetSlot() != 1 {
-		t.Errorf("headAttestations[0] wanted slot 1, got slot %d", headAttestations[0].GetData().GetSlot())
+	// Verify crosslink for shard 1([1]) was processed at state.slot (5).
+	if newState.LatestCrosslinks[1].Slot != state.Slot {
+		t.Errorf("Shard 0s got crosslinked at slot %d, wanted: %d",
+			newState.LatestCrosslinks[1].Slot, state.Slot)
 	}
-	if headAttestations[1].GetData().GetSlot() != 3 {
-		t.Errorf("headAttestations[1] wanted slot 3, got slot %d", headAttestations[1].GetData().GetSlot())
-	}
-	if !bytes.Equal([]byte{'A'}, headAttestations[0].GetData().GetBeaconBlockRootHash32()) {
-		t.Errorf("headAttestations[0] wanted hash [A], got slot %v",
-			headAttestations[0].GetData().GetBeaconBlockRootHash32())
-	}
-	if !bytes.Equal([]byte{'C'}, headAttestations[1].GetData().GetBeaconBlockRootHash32()) {
-		t.Errorf("headAttestations[1] wanted hash [C], got slot %v",
-			headAttestations[1].GetData().GetBeaconBlockRootHash32())
+	// Verify crosslink for shard 1 was root hashed for []byte{'A'}.
+	if !bytes.Equal(newState.LatestCrosslinks[1].ShardBlockRootHash32,
+		attestations[0].Data.ShardBlockRootHash32) {
+		t.Errorf("Shard 0's root hash is %#x, wanted: %#x",
+			newState.LatestCrosslinks[1].ShardBlockRootHash32,
+			attestations[0].Data.ShardBlockRootHash32)
 	}
 }
 
-func TestHeadAttestations_NotOk(t *testing.T) {
-	if params.BeaconConfig().EpochLength != 64 {
-		t.Errorf("EpochLength should be 64 for these tests to pass")
+func TestProcessCrosslinks_NoRoot(t *testing.T) {
+	shardCommitteesAtSlot := []*pb.ShardAndCommitteeArray{
+		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
+		}}}
+
+	state := &pb.BeaconState{
+		ShardAndCommitteesAtSlots: shardCommitteesAtSlot,
+		Slot:                      5,
+		LatestCrosslinks:          []*pb.CrosslinkRecord{{}, {}},
+		ValidatorBalances:         []uint64{},
 	}
 
-	prevAttestations := []*pb.PendingAttestationRecord{{Data: &pb.AttestationData{Slot: 1}}}
+	attestations := []*pb.PendingAttestationRecord{
+		{Data: &pb.AttestationData{Shard: 1},
+			// Empty participation bitfield will trigger error.
+			ParticipationBitfield: []byte{}}}
 
-	state := &pb.BeaconState{Slot: 0}
-
-	if _, err := PrevHeadAttestations(state, prevAttestations); err == nil {
-		t.Fatal("PrevHeadAttestations should have failed with invalid range")
+	_, err := ProcessCrosslinks(state, attestations, nil)
+	if err == nil {
+		t.Fatalf("ProcessCrosslinks should have failed")
 	}
 }

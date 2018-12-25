@@ -69,10 +69,8 @@ func encodeSize(val interface{}) (uint32, error) {
 }
 
 func (w *encbuf) toWriter(out io.Writer) error {
-	if _, err := out.Write(w.str); err != nil {
-		return err
-	}
-	return nil
+	_, err := out.Write(w.str)
+	return err
 }
 
 func makeEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
