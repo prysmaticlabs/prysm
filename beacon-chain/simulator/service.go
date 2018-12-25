@@ -10,12 +10,12 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotticker"
@@ -225,9 +225,11 @@ func (sim *Simulator) processBlockReqByHash(msg p2p.Message) {
 	}).Debug("Responding to full block request")
 
 	// Sends the full block body to the requester.
-	res := &pb.BeaconBlockResponse{Block: block, Attestation: &pb.AggregatedAttestation{
-		Slot:             block.GetSlot(),
-		AttesterBitfield: []byte{byte(255)},
+	res := &pb.BeaconBlockResponse{Block: block, Attestation: &pb.Attestation{
+		ParticipationBitfield: []byte{byte(255)},
+		Data: &pb.AttestationData{
+			Slot: block.GetSlot(),
+		},
 	}}
 	sim.p2p.Send(res, msg.Peer)
 }
@@ -248,9 +250,11 @@ func (sim *Simulator) processBlockReqBySlot(msg p2p.Message) {
 	}).Debug("Responding to full block request")
 
 	// Sends the full block body to the requester.
-	res := &pb.BeaconBlockResponse{Block: block, Attestation: &pb.AggregatedAttestation{
-		Slot:             block.GetSlot(),
-		AttesterBitfield: []byte{byte(255)},
+	res := &pb.BeaconBlockResponse{Block: block, Attestation: &pb.Attestation{
+		ParticipationBitfield: []byte{byte(255)},
+		Data: &pb.AttestationData{
+			Slot: block.GetSlot(),
+		},
 	}}
 	sim.p2p.Send(res, msg.Peer)
 }
@@ -258,13 +262,13 @@ func (sim *Simulator) processBlockReqBySlot(msg p2p.Message) {
 func (sim *Simulator) processStateRequest(msg p2p.Message) {
 	data := msg.Data.(*pb.BeaconStateRequest)
 
-	state, err := sim.beaconDB.GetState()
+	beaconState, err := sim.beaconDB.GetState()
 	if err != nil {
 		log.Errorf("Could not retrieve beacon state: %v", err)
 		return
 	}
 
-	hash, err := state.Hash()
+	hash, err := state.Hash(beaconState)
 	if err != nil {
 		log.Errorf("Could not hash beacon state: %v", err)
 		return
@@ -283,7 +287,7 @@ func (sim *Simulator) processStateRequest(msg p2p.Message) {
 
 	// Sends the full beacon state to the requester.
 	res := &pb.BeaconStateResponse{
-		BeaconState: state.Proto(),
+		BeaconState: beaconState,
 	}
 	sim.p2p.Send(res, msg.Peer)
 
@@ -322,11 +326,10 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*pb.BeaconB
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
 
-	enc, err := proto.Marshal(beaconState)
+	stateHash, err := state.Hash(beaconState)
 	if err != nil {
-		return nil, fmt.Errorf("could not marshal beacon state: %v", err)
+		return nil, fmt.Errorf("could not generate hash of beacon state: %v", err)
 	}
-	stateHash := hashutil.Hash(enc)
 
 	var powChainRef []byte
 	if sim.enablePOWChain {

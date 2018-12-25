@@ -141,7 +141,7 @@ func (rs *RegularSync) run() {
 	blockRequestSub := rs.p2p.Subscribe(&pb.BeaconBlockRequestBySlotNumber{}, rs.blockRequestBySlot)
 	blockRequestHashSub := rs.p2p.Subscribe(&pb.BeaconBlockRequest{}, rs.blockRequestByHash)
 	batchedRequestSub := rs.p2p.Subscribe(&pb.BatchedBeaconBlockRequest{}, rs.batchedRequestBuf)
-	attestationSub := rs.p2p.Subscribe(&pb.AggregatedAttestation{}, rs.attestationBuf)
+	attestationSub := rs.p2p.Subscribe(&pb.Attestation{}, rs.attestationBuf)
 	chainHeadReqSub := rs.p2p.Subscribe(&pb.ChainHeadRequest{}, rs.chainHeadReqBuf)
 
 	defer announceBlockSub.Unsubscribe()

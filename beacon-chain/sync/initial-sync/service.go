@@ -14,11 +14,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -430,7 +430,7 @@ func (s *InitialSync) checkBlockValidity(block *pb.BeaconBlock) error {
 		return fmt.Errorf("failed to get beacon state: %v", err)
 	}
 
-	if block.GetSlot() < beaconState.LastFinalizedSlot() {
+	if block.GetSlot() < beaconState.GetFinalizedSlot() {
 		return errors.New("discarding received block with a slot number smaller than the last finalized slot")
 	}
 	// Attestation from proposer not verified as, other nodes only store blocks not proposer

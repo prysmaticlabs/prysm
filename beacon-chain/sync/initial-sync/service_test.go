@@ -8,6 +8,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -324,7 +325,7 @@ func TestRequestBlocksBySlot(t *testing.T) {
 		BlockBufferSize: 100,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
-	newState, err := types.NewGenesisBeaconState(nil)
+	newState, err := state.NewGenesisBeaconState(nil)
 	if err != nil {
 		t.Fatalf("could not create new state %v", err)
 	}
