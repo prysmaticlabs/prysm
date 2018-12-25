@@ -102,6 +102,12 @@ func TestFFGSrcRewardsPenalties(t *testing.T) {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
 		}
 		state := &pb.BeaconState{
+			ValidatorRegistry: []*pb.ValidatorRecord{
+				{Status: pb.ValidatorRecord_ACTIVE},
+				{Status: pb.ValidatorRecord_ACTIVE},
+				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
+				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
+			},
 			ValidatorBalances: validatorBalances,
 		}
 		state = FFGSrcRewardsPenalties(
@@ -135,6 +141,12 @@ func TestFFGTargetRewardsPenalties(t *testing.T) {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
 		}
 		state := &pb.BeaconState{
+			ValidatorRegistry: []*pb.ValidatorRecord{
+				{Status: pb.ValidatorRecord_ACTIVE},
+				{Status: pb.ValidatorRecord_ACTIVE},
+				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
+				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
+			},
 			ValidatorBalances: validatorBalances,
 		}
 		state = FFGTargetRewardsPenalties(
@@ -168,6 +180,12 @@ func TestChainHeadRewardsPenalties(t *testing.T) {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
 		}
 		state := &pb.BeaconState{
+			ValidatorRegistry: []*pb.ValidatorRecord{
+				{Status: pb.ValidatorRecord_ACTIVE},
+				{Status: pb.ValidatorRecord_ACTIVE},
+				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
+				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
+			},
 			ValidatorBalances: validatorBalances,
 		}
 		state = ChainHeadRewardsPenalties(
@@ -278,6 +296,12 @@ func TestInactivityFFGSrcPenalty(t *testing.T) {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
 		}
 		state := &pb.BeaconState{
+			ValidatorRegistry: []*pb.ValidatorRecord{
+				{Status: pb.ValidatorRecord_ACTIVE},
+				{Status: pb.ValidatorRecord_ACTIVE},
+				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
+				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
+			},
 			ValidatorBalances: validatorBalances,
 		}
 		state = InactivityFFGSrcPenalty(
@@ -311,6 +335,12 @@ func TestInactivityFFGTargetPenalty(t *testing.T) {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
 		}
 		state := &pb.BeaconState{
+			ValidatorRegistry: []*pb.ValidatorRecord{
+				{Status: pb.ValidatorRecord_ACTIVE},
+				{Status: pb.ValidatorRecord_ACTIVE},
+				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
+				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
+			},
 			ValidatorBalances: validatorBalances,
 		}
 		state = InactivityFFGTargetPenalty(
@@ -332,8 +362,8 @@ func TestInactivityHeadPenalty(t *testing.T) {
 		balanceAfterInactivityHeadPenalty []uint64
 	}{
 		{[]uint32{}, []uint64{31999431819, 31999431819, 31999431819, 31999431819}},
-		{[]uint32{0,1}, []uint64{32000000000, 32000000000, 31999431819, 31999431819}},
-		{[]uint32{0,1,2,3}, []uint64{32000000000, 32000000000, 32000000000, 32000000000}},
+		{[]uint32{0, 1}, []uint64{32000000000, 32000000000, 31999431819, 31999431819}},
+		{[]uint32{0, 1, 2, 3}, []uint64{32000000000, 32000000000, 32000000000, 32000000000}},
 	}
 	for _, tt := range tests {
 		validatorBalances := make([]uint64, 4)
@@ -341,6 +371,12 @@ func TestInactivityHeadPenalty(t *testing.T) {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
 		}
 		state := &pb.BeaconState{
+			ValidatorRegistry: []*pb.ValidatorRecord{
+				{Status: pb.ValidatorRecord_ACTIVE},
+				{Status: pb.ValidatorRecord_ACTIVE},
+				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
+				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
+			},
 			ValidatorBalances: validatorBalances,
 		}
 		state = InactivityHeadPenalty(
@@ -358,7 +394,7 @@ func TestInactivityHeadPenalty(t *testing.T) {
 func TestInactivityExitedPenality(t *testing.T) {
 	tests := []struct {
 		balanceAfterExitedPenalty []uint64
-		epochsSinceFinality uint64
+		epochsSinceFinality       uint64
 	}{
 		{[]uint64{31998285921, 31998285921, 31998285921, 31998285921}, 5},
 		{[]uint64{31998276385, 31998276385, 31998276385, 31998276385}, 10},
@@ -390,7 +426,7 @@ func TestInactivityExitedPenality(t *testing.T) {
 	}
 }
 
-func TestInactivityInclusionPenalty(t *testing.T) {
+func TestInactivityInclusionPenalty_Ok(t *testing.T) {
 	shardAndCommittees := []*pb.ShardAndCommitteeArray{
 		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
 			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
@@ -429,6 +465,34 @@ func TestInactivityInclusionPenalty(t *testing.T) {
 		if !reflect.DeepEqual(state.ValidatorBalances, tt.balanceAfterInclusionPenalty) {
 			t.Errorf("InactivityInclusionPenalty(%v) = %v, wanted: %v",
 				tt.voted, state.ValidatorBalances, tt.balanceAfterInclusionPenalty)
+		}
+	}
+}
+
+func TestInactivityInclusionPenalty_NotOk(t *testing.T) {
+	shardAndCommittees := []*pb.ShardAndCommitteeArray{
+		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{Shard: 1, Committee: []uint32{}},
+		}}}
+	attestation := []*pb.PendingAttestationRecord{
+		{Data: &pb.AttestationData{Shard: 1, Slot: 0},
+			ParticipationBitfield: []byte{0xff}},
+	}
+
+	tests := []struct {
+		voted                        []uint32
+		balanceAfterInclusionRewards []uint64
+	}{
+		{[]uint32{0, 1, 2, 3}, []uint64{}},
+	}
+	for _, tt := range tests {
+		state := &pb.BeaconState{
+			ShardAndCommitteesAtSlots: shardAndCommittees,
+			LatestAttestations:        attestation,
+		}
+		_, err := InactivityInclusionPenalty(state, tt.voted, 0)
+		if err == nil {
+			t.Fatal("InclusionDistRewards should have failed")
 		}
 	}
 }

@@ -211,7 +211,7 @@ func InactivityFFGSrcPenalty(
 	epochsSinceFinality uint64) *pb.BeaconState {
 
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
-	allValidatorIndices := validators.AllValidatorsIndices(state)
+	allValidatorIndices := validators.AllActiveValidatorsIndices(state)
 	didNotAttestIndices := slices.Not(justifiedAttesterIndices, allValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
@@ -235,7 +235,7 @@ func InactivityFFGTargetPenalty(
 	epochsSinceFinality uint64) *pb.BeaconState {
 
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
-	allValidatorIndices := validators.AllValidatorsIndices(state)
+	allValidatorIndices := validators.AllActiveValidatorsIndices(state)
 	didNotAttestIndices := slices.Not(boundaryAttesterIndices, allValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
@@ -258,7 +258,7 @@ func InactivityHeadPenalty(
 	totalBalance uint64) *pb.BeaconState {
 
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
-	allValidatorIndices := validators.AllValidatorsIndices(state)
+	allValidatorIndices := validators.AllActiveValidatorsIndices(state)
 	didNotAttestIndices := slices.Not(headAttesterIndices, allValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
@@ -314,7 +314,7 @@ func InactivityInclusionPenalty(
 		}
 		baseReward := baseReward(state, index, baseRewardQuotient)
 		state.ValidatorBalances[index] -= baseReward -
-			baseReward*params.BeaconConfig().MinAttestationInclusionDelay /
+			baseReward*params.BeaconConfig().MinAttestationInclusionDelay/
 				inclusionDistance
 	}
 	return state, nil
