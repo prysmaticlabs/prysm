@@ -47,3 +47,31 @@ func TestInitializeState(t *testing.T) {
 		t.Fatalf("Expected %#x and %#x to be equal", beaconStateEnc, statePrimeEnc)
 	}
 }
+
+func TestGenesisTime(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	time, err := db.GenesisTime()
+	if err == nil {
+		t.Fatal("expected GenesisTime to fail")
+	}
+
+	err = db.InitializeState(nil)
+	if err != nil {
+		t.Fatalf("failed to initialize state: %v", err)
+	}
+
+	time, err = db.GenesisTime()
+	if err != nil {
+		t.Fatalf("GenesisTime failed on second attempt: %v", err)
+	}
+	time2, err := db.GenesisTime()
+	if err != nil {
+		t.Fatalf("GenesisTime failed on second attempt: %v", err)
+	}
+
+	if time != time2 {
+		t.Fatalf("Expected %v and %v to be equal", time, time2)
+	}
+}
