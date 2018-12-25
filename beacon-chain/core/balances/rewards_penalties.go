@@ -1,7 +1,8 @@
 package balances
 
 import (
-	"github.com/prysmaticlabs/prysm/bazel-prysm/external/go_sdk/src/fmt"
+	"fmt"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -168,7 +169,7 @@ func ChainHeadRewardsPenalties(
 	return state
 }
 
-// InclusionDistRewardsPenalties applies rewards based on
+// InclusionDistRewards applies rewards based on
 // inclusion distance. It uses calculated inclusion distance
 // and base reward quotient to calculate the reward amount.
 //
@@ -176,7 +177,7 @@ func ChainHeadRewardsPenalties(
 //    Any validator index in previous_epoch_attester_indices gains
 //    base_reward(state, index) * MIN_ATTESTATION_INCLUSION_DELAY //
 //    inclusion_distance(state, index)
-func InclusionDistRewardsPenalties(
+func InclusionDistRewards(
 	state *pb.BeaconState,
 	attesterIndices []uint32,
 	totalBalance uint64) (*pb.BeaconState, error) {
