@@ -85,7 +85,7 @@ func FFGSrcRewardsPenalties(
 				totalBalance
 	}
 
-	allValidatorIndices := validators.AllValidatorsIndices(state)
+	allValidatorIndices := validators.AllActiveValidatorsIndices(state)
 	didNotAttestIndices := slices.Not(justifiedAttesterIndices, allValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
@@ -122,7 +122,7 @@ func FFGTargetRewardsPenalties(
 				totalBalance
 	}
 
-	allValidatorIndices := validators.AllValidatorsIndices(state)
+	allValidatorIndices := validators.AllActiveValidatorsIndices(state)
 	didNotAttestIndices := slices.Not(boundaryAttesterIndices, allValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
@@ -159,7 +159,7 @@ func ChainHeadRewardsPenalties(
 				totalBalance
 	}
 
-	allValidatorIndices := validators.AllValidatorsIndices(state)
+	allValidatorIndices := validators.AllActiveValidatorsIndices(state)
 	didNotAttestIndices := slices.Not(headAttesterIndices, allValidatorIndices)
 
 	for _, index := range didNotAttestIndices {

@@ -37,7 +37,6 @@ func TestBaseRewardQuotient(t *testing.T) {
 }
 
 func TestBaseReward(t *testing.T) {
-
 	tests := []struct {
 		a uint64
 		b uint64
@@ -62,7 +61,6 @@ func TestBaseReward(t *testing.T) {
 }
 
 func TestInactivityPenalty(t *testing.T) {
-
 	tests := []struct {
 		a uint64
 		b uint64
@@ -87,7 +85,6 @@ func TestInactivityPenalty(t *testing.T) {
 }
 
 func TestFFGSrcRewardsPenalties(t *testing.T) {
-
 	tests := []struct {
 		voted                          []uint32
 		balanceAfterSrcRewardPenalties []uint64
@@ -105,6 +102,12 @@ func TestFFGSrcRewardsPenalties(t *testing.T) {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
 		}
 		state := &pb.BeaconState{
+			ValidatorRegistry: []*pb.ValidatorRecord{
+				{Status: pb.ValidatorRecord_ACTIVE},
+				{Status: pb.ValidatorRecord_ACTIVE},
+				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
+				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
+			},
 			ValidatorBalances: validatorBalances,
 		}
 		state = FFGSrcRewardsPenalties(
@@ -121,7 +124,6 @@ func TestFFGSrcRewardsPenalties(t *testing.T) {
 }
 
 func TestFFGTargetRewardsPenalties(t *testing.T) {
-
 	tests := []struct {
 		voted                          []uint32
 		balanceAfterTgtRewardPenalties []uint64
@@ -139,6 +141,12 @@ func TestFFGTargetRewardsPenalties(t *testing.T) {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
 		}
 		state := &pb.BeaconState{
+			ValidatorRegistry: []*pb.ValidatorRecord{
+				{Status: pb.ValidatorRecord_ACTIVE},
+				{Status: pb.ValidatorRecord_ACTIVE},
+				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
+				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
+			},
 			ValidatorBalances: validatorBalances,
 		}
 		state = FFGTargetRewardsPenalties(
@@ -155,7 +163,6 @@ func TestFFGTargetRewardsPenalties(t *testing.T) {
 }
 
 func TestChainHeadRewardsPenalties(t *testing.T) {
-
 	tests := []struct {
 		voted                           []uint32
 		balanceAfterHeadRewardPenalties []uint64
@@ -173,6 +180,12 @@ func TestChainHeadRewardsPenalties(t *testing.T) {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
 		}
 		state := &pb.BeaconState{
+			ValidatorRegistry: []*pb.ValidatorRecord{
+				{Status: pb.ValidatorRecord_ACTIVE},
+				{Status: pb.ValidatorRecord_ACTIVE},
+				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
+				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
+			},
 			ValidatorBalances: validatorBalances,
 		}
 		state = ChainHeadRewardsPenalties(
@@ -189,7 +202,6 @@ func TestChainHeadRewardsPenalties(t *testing.T) {
 }
 
 func TestInclusionDistRewards(t *testing.T) {
-
 	shardAndCommittees := []*pb.ShardAndCommitteeArray{
 		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
 			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
