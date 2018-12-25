@@ -129,8 +129,8 @@ func createState(enc []byte) (*pb.BeaconState, error) {
 	return protoState, nil
 }
 
-// GetGenesisTime returns the genesis timestamp for the state
-func (db *BeaconDB) GetGenesisTime() (time.Time, error) {
+// GenesisTime returns the genesis timestamp for the state.
+func (db *BeaconDB) GenesisTime() (time.Time, error) {
 	state, err := db.GetState()
 	if err != nil {
 		return time.Time{}, fmt.Errorf("could not retrieve state: %v", err)

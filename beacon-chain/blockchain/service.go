@@ -75,7 +75,7 @@ func (c *ChainService) Start() {
 	log.Info("Starting service")
 
 	var err error
-	c.genesisTime, err = c.beaconDB.GetGenesisTime()
+	c.genesisTime, err = c.beaconDB.GenesisTime()
 	if err != nil {
 		log.Fatalf("Unable to retrieve genesis time, therefore blockchain service cannot be started %v", err)
 		return

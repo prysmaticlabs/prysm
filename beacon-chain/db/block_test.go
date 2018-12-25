@@ -227,31 +227,3 @@ func TestChainProgress(t *testing.T) {
 		t.Fatalf("expected height to equal %d, got %d", block3.GetSlot(), heighestBlock.GetSlot())
 	}
 }
-
-func TestGetGenesisTime(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
-
-	time, err := db.GetGenesisTime()
-	if err == nil {
-		t.Fatal("expected GetGenesisTime to fail")
-	}
-
-	err = db.InitializeState(nil)
-	if err != nil {
-		t.Fatalf("failed to initialize state: %v", err)
-	}
-
-	time, err = db.GetGenesisTime()
-	if err != nil {
-		t.Fatalf("GetGenesisTime failed on second attempt: %v", err)
-	}
-	time2, err := db.GetGenesisTime()
-	if err != nil {
-		t.Fatalf("GetGenesisTime failed on second attempt: %v", err)
-	}
-
-	if time != time2 {
-		t.Fatalf("Expected %v and %v to be equal", time, time2)
-	}
-}
