@@ -55,14 +55,15 @@ func ProcessPOWReceiptRoots(
 }
 
 // ProcessBlockRandao checks the block proposer's
-// randao commitment and generates a new RANDAO mix to update
-// in the beacon state and set the proposer's randao fields.
+// randao commitment and generates a new randao mix to update
+// in the beacon state's latest randao mixes and set the proposer's randao fields.
 //
 // Official spec definition for block randao verification:
 //   Let repeat_hash(x, n) = x if n == 0 else repeat_hash(hash(x), n-1).
 //   Let proposer = state.validator_registry[get_beacon_proposer_index(state, state.slot)].
 //   Verify that repeat_hash(block.randao_reveal, proposer.randao_layers) == proposer.randao_commitment.
-//   Set state.randao_mix = xor(state.randao_mix, block.randao_reveal).
+//   Set state.latest_randao_mixes[state.slot % LATEST_RANDAO_MIXES_LENGTH] =
+//     xor(state.latest_randao_mixes[state.slot % LATEST_RANDAO_MIXES_LENGTH], block.randao_reveal)
 //   Set proposer.randao_commitment = block.randao_reveal.
 //   Set proposer.randao_layers = 0
 func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
@@ -75,16 +76,19 @@ func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb
 	if err := verifyBlockRandao(proposer, block); err != nil {
 		return nil, fmt.Errorf("could not verify block randao: %v", err)
 	}
-	// If block RANDAO passed verification, we XOR the block RANDAO and return it
-	// as the new RANDAO mix used to update the beacon state.
-	var randaoMix [32]byte
+	// If block randao passed verification, we XOR the state's latest randao mix with the block's
+	// randao and update the state's corresponding latest randao mix value.
+	var latestMix [32]byte
+	latestMixesLength := params.BeaconConfig().LatestRandaoMixesLength
+	latestMixSlice := beaconState.LatestRandaoMixesHash32S[beaconState.GetSlot()%latestMixesLength]
+	copy(latestMix[:], latestMixSlice)
 	for i, x := range block.GetRandaoRevealHash32() {
-		randaoMix[i] ^= x
+		latestMix[i] ^= x
 	}
 	proposer.RandaoCommitmentHash32 = block.GetRandaoRevealHash32()
 	proposer.RandaoLayers = 0
 	registry[proposerIndex] = proposer
-	beaconState.RandaoMixHash32 = randaoMix[:]
+	beaconState.LatestRandaoMixesHash32S[beaconState.GetSlot()%latestMixesLength] = latestMix[:]
 	beaconState.ValidatorRegistry = registry
 	return beaconState, nil
 }
