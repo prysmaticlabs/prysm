@@ -1,15 +1,21 @@
 {
+  "Deadline": "10m",
+  "Exclude": [
+    "^proto/",
+    "^contracts/"
+  ],
+  "DisableAll": true,
   "Enable": [
-    "gofmt",
-    "deadcode",
-    "misspell",
-    "goimports",
-    "nakedret",
-    "unparam",
-    "megacheck",
-    "gosec",
-    "varcheck",
-    "structcheck",
-    "golint"
-  ]
+      "deadcode",
+      "goconst",
+      "goimports",
+      "golint",
+      "gosec",
+      "gotype",
+      "megacheck",
+      "misspell",
+      "structcheck",
+      "unparam",
+      "varcheck"
+    ]
 }
