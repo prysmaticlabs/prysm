@@ -14,8 +14,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 
 	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
