@@ -10,7 +10,7 @@ import (
 
 type encoder func(reflect.Value, *encbuf) error
 
-// Notice: We are not exactly following the spec which requires a decoder to return new index in the input buffer.
+// Notice: we are not exactly following the spec which requires a decoder to return new index in the input buffer.
 // Our io.Reader is already capable of tracking its latest read location, so we decide to return the decoded byte size
 // instead. This makes our implementation look cleaner.
 type decoder func(io.Reader, reflect.Value) (uint32, error)

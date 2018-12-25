@@ -154,9 +154,9 @@ func BeaconProposerIndex(state *pb.BeaconState, slot uint64) (uint32, error) {
 
 // AreAttesterBitfieldsValid validates that the length of the attester bitfield matches the attester indices
 // defined in the Crystallized State.
-func AreAttesterBitfieldsValid(attestation *pb.AggregatedAttestation, attesterIndices []uint32) bool {
+func AreAttesterBitfieldsValid(attestation *pb.Attestation, attesterIndices []uint32) bool {
 	// Validate attester bit field has the correct length.
-	if bitutil.BitLength(len(attesterIndices)) != len(attestation.AttesterBitfield) {
+	if bitutil.BitLength(len(attesterIndices)) != len(attestation.GetParticipationBitfield()) {
 		return false
 	}
 
@@ -168,7 +168,7 @@ func AreAttesterBitfieldsValid(attestation *pb.AggregatedAttestation, attesterIn
 	}
 
 	for i := 0; i < bitsInByte-remainingBits; i++ {
-		isBitSet, err := bitutil.CheckBit(attestation.AttesterBitfield, lastBit+i)
+		isBitSet, err := bitutil.CheckBit(attestation.GetParticipationBitfield(), lastBit+i)
 		if err != nil {
 			return false
 		}
@@ -254,15 +254,30 @@ func ValidatorSlotAndRole(pubKey []byte, validators []*pb.ValidatorRecord, shard
 	return 0, pbrpc.ValidatorRole_UNKNOWN, fmt.Errorf("can't find slot number for validator with public key %#x", pubKey)
 }
 
+// TotalEffectiveBalance returns the total deposited amount at stake in Gwei
+// of all active validators.
+//
+// Spec pseudocode definition:
+//   sum([get_effective_balance(state, i) for i in active_validator_indices])
+func TotalEffectiveBalance(state *pb.BeaconState, validatorIndices []uint32) uint64 {
+	var totalDeposit uint64
+
+	for _, index := range validatorIndices {
+		totalDeposit += EffectiveBalance(state, index)
+	}
+	return totalDeposit
+}
+
 // TotalActiveValidatorBalance returns the total deposited amount in Gwei for all active validators.
 //
 // Spec pseudocode definition:
 //   sum([get_effective_balance(v) for v in active_validators])
+// Deprecated: use TotalBalance
 func TotalActiveValidatorBalance(activeValidators []*pb.ValidatorRecord) uint64 {
 	var totalDeposit uint64
 
 	for _, v := range activeValidators {
-		totalDeposit += EffectiveBalance(v)
+		totalDeposit += v.Balance
 	}
 	return totalDeposit
 }
@@ -278,14 +293,14 @@ func TotalActiveValidatorDepositInEth(validators []*pb.ValidatorRecord) uint64 {
 // VotedBalanceInAttestation checks for the total balance in the validator set and the balances of the voters in the
 // attestation.
 func VotedBalanceInAttestation(validators []*pb.ValidatorRecord, indices []uint32,
-	attestation *pb.AggregatedAttestation) (uint64, uint64, error) {
+	attestation *pb.Attestation) (uint64, uint64, error) {
 
 	// find the total and vote balance of the shard committee.
 	var totalBalance uint64
 	var voteBalance uint64
 	for index, attesterIndex := range indices {
 		// find balance of validators who voted.
-		bitCheck, err := bitutil.CheckBit(attestation.AttesterBitfield, index)
+		bitCheck, err := bitutil.CheckBit(attestation.GetParticipationBitfield(), index)
 		if err != nil {
 			return 0, 0, err
 		}
@@ -430,16 +445,16 @@ func CheckValidatorMinDeposit(validatorSet []*pb.ValidatorRecord, currentSlot ui
 // but they can be slashed at most MAX_DEPOSIT at any time.
 //
 // Spec pseudocode definition:
-//   def get_effective_balance(validator: ValidatorRecord) -> int:
+//   def get_effective_balance(state: State, index: int) -> int:
 //     """
-//     Returns the effective balance (also known as "balance at stake") for the ``validator``.
+//     Returns the effective balance (also known as "balance at stake") for a ``validator`` with the given ``index``.
 //     """
-//     return min(validator.balance, MAX_DEPOSIT)
-func EffectiveBalance(validator *pb.ValidatorRecord) uint64 {
-	if validator.Balance > params.BeaconConfig().MaxDeposit*params.BeaconConfig().Gwei {
+//     return min(state.validator_balances[index], MAX_DEPOSIT * GWEI_PER_ETH)
+func EffectiveBalance(state *pb.BeaconState, index uint32) uint64 {
+	if state.ValidatorBalances[index] > params.BeaconConfig().MaxDeposit*params.BeaconConfig().Gwei {
 		return params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei
 	}
-	return validator.Balance
+	return state.ValidatorBalances[index]
 }
 
 // Attesters returns the validator records using validator indices.
@@ -485,17 +500,50 @@ func ValidatorIndices(
 	return attesterIndicesIntersection, nil
 }
 
+// AttestingValidatorIndices returns the shard committee validator indices
+// if the validator shard committee matches the input attestations.
+//
+// Spec pseudocode definition:
+// Let attesting_validator_indices(shard_committee, shard_block_root)
+// be the union of the validator index sets given by
+// [get_attestation_participants(state, a.data, a.participation_bitfield)
+// for a in this_epoch_attestations + previous_epoch_attestations
+// if a.shard == shard_committee.shard and a.shard_block_root == shard_block_root]
+func AttestingValidatorIndices(
+	state *pb.BeaconState,
+	shardCommittee *pb.ShardAndCommittee,
+	shardBlockRoot []byte,
+	thisEpochAttestations []*pb.PendingAttestationRecord,
+	prevEpochAttestations []*pb.PendingAttestationRecord) ([]uint32, error) {
+
+	var validatorIndicesCommittees []uint32
+	attestations := append(thisEpochAttestations, prevEpochAttestations...)
+
+	for _, attestation := range attestations {
+		if attestation.Data.Shard == shardCommittee.Shard &&
+			bytes.Equal(attestation.Data.ShardBlockRootHash32, shardBlockRoot) {
+
+			validatorIndicesCommittee, err := AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)
+			if err != nil {
+				return nil, fmt.Errorf("could not get attester indices: %v", err)
+			}
+			validatorIndicesCommittees = slices.Union(validatorIndicesCommittees, validatorIndicesCommittee)
+		}
+	}
+	return validatorIndicesCommittees, nil
+}
+
 // AttestingBalance returns the combined balances from the input validator
 // records.
 //
 // Spec pseudocode definition:
 //   Let this_epoch_boundary_attesting_balance =
-//   sum([get_effective_balance(v) for v in this_epoch_boundary_attesters])
-func AttestingBalance(boundaryAttesters []*pb.ValidatorRecord) uint64 {
+//   sum([get_effective_balance(state, i) for i in this_epoch_boundary_attester_indices])
+func AttestingBalance(state *pb.BeaconState, boundaryAttesterIndices []uint32) uint64 {
 
 	var boundaryAttestingBalance uint64
-	for _, boundaryAttester := range boundaryAttesters {
-		boundaryAttestingBalance += EffectiveBalance(boundaryAttester)
+	for _, index := range boundaryAttesterIndices {
+		boundaryAttestingBalance += EffectiveBalance(state, index)
 	}
 
 	return boundaryAttestingBalance

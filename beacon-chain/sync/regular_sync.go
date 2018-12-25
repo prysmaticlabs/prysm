@@ -5,8 +5,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/golang/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
+	"github.com/gogo/protobuf/proto"
+	att "github.com/prysmaticlabs/prysm/beacon-chain/core/attestations"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -130,7 +131,7 @@ func (rs *RegularSync) run() {
 	announceBlockSub := rs.p2p.Subscribe(&pb.BeaconBlockAnnounce{}, rs.announceBlockBuf)
 	blockSub := rs.p2p.Subscribe(&pb.BeaconBlockResponse{}, rs.blockBuf)
 	blockRequestSub := rs.p2p.Subscribe(&pb.BeaconBlockRequestBySlotNumber{}, rs.blockRequestBySlot)
-	attestationSub := rs.p2p.Subscribe(&pb.AggregatedAttestation{}, rs.attestationBuf)
+	attestationSub := rs.p2p.Subscribe(&pb.Attestation{}, rs.attestationBuf)
 	chainHeadReqSub := rs.p2p.Subscribe(&pb.ChainHeadRequest{}, rs.chainHeadReqBuf)
 
 	defer announceBlockSub.Unsubscribe()
@@ -187,8 +188,8 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 	defer receiveBlockSpan.End()
 
 	response := msg.Data.(*pb.BeaconBlockResponse)
-	block := types.NewBlock(response.Block)
-	blockHash, err := block.Hash()
+	block := response.Block
+	blockHash, err := b.Hash(block)
 	if err != nil {
 		log.Errorf("Could not hash received block: %v", err)
 		return
@@ -207,18 +208,16 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 		return
 	}
 
-	if block.SlotNumber() < beaconState.LastFinalizedSlot() {
+	if block.GetSlot() < beaconState.GetFinalizedSlot() {
 		log.Debug("Discarding received block with a slot number smaller than the last finalized slot")
 		return
 	}
 
 	// Verify attestation coming from proposer then forward block to the subscribers.
-	attestation := types.NewAttestation(response.Attestation)
-
 	proposerShardID, _, err := v.ProposerShardAndIndex(
-		beaconState.ShardAndCommitteesForSlots(),
-		beaconState.LastStateRecalculationSlot(),
-		block.SlotNumber(),
+		beaconState.GetShardAndCommitteesAtSlots(),
+		beaconState.GetLastStateRecalculationSlot(),
+		block.GetSlot(),
 	)
 	if err != nil {
 		log.Errorf("Failed to get proposer shard ID: %v", err)
@@ -226,14 +225,14 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 	}
 
 	// TODO(#258): stubbing public key with empty 32 bytes.
-	if err := attestation.VerifyProposerAttestation([32]byte{}, proposerShardID); err != nil {
+	if err := att.VerifyProposerAttestation(response.Attestation.GetData(), [32]byte{}, proposerShardID); err != nil {
 		log.Errorf("Failed to verify proposer attestation: %v", err)
 		return
 	}
 
 	_, sendAttestationSpan := trace.StartSpan(ctx, "sendAttestation")
-	log.WithField("attestationHash", fmt.Sprintf("%#x", attestation.Key())).Debug("Sending newly received attestation to subscribers")
-	rs.attestationService.IncomingAttestationFeed().Send(attestation)
+	log.WithField("attestationHash", fmt.Sprintf("%#x", att.Key(response.Attestation.GetData()))).Debug("Sending newly received attestation to subscribers")
+	rs.attestationService.IncomingAttestationFeed().Send(response.Attestation)
 	sendAttestationSpan.End()
 
 	_, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
@@ -264,7 +263,7 @@ func (rs *RegularSync) handleBlockRequestBySlot(msg p2p.Message) {
 
 	_, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
 	log.WithField("slotNumber", fmt.Sprintf("%d", request.GetSlotNumber())).Debug("Sending requested block to peer")
-	rs.p2p.Send(block.Proto(), msg.Peer)
+	rs.p2p.Send(block, msg.Peer)
 	sendBlockSpan.End()
 }
 
@@ -280,16 +279,16 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) {
 		return
 	}
 
-	hash, err := block.Hash()
+	hash, err := b.Hash(block)
 	if err != nil {
 		log.Errorf("Could not hash block %v", err)
 		return
 	}
 
 	req := &pb.ChainHeadResponse{
-		Slot:  block.SlotNumber(),
+		Slot:  block.GetSlot(),
 		Hash:  hash[:],
-		Block: block.Proto(),
+		Block: block,
 	}
 
 	rs.p2p.Send(req, msg.Peer)
@@ -299,9 +298,9 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) {
 // discard the attestation if we have gotten before, send it to attestation
 // service if we have not.
 func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
-	data := msg.Data.(*pb.AggregatedAttestation)
-	a := types.NewAttestation(data)
-	h := a.Key()
+	data := msg.Data.(*pb.Attestation)
+	a := data
+	h := att.Key(a.GetData())
 
 	attestation, err := rs.db.GetAttestation(h)
 	if err != nil {
@@ -309,7 +308,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 		return
 	}
 	if attestation != nil {
-		validatorExists := attestation.ContainsValidator(a.AttesterBitfield())
+		validatorExists := att.ContainsValidator(attestation.GetParticipationBitfield(), a.GetParticipationBitfield())
 		if validatorExists {
 			log.Debugf("Received attestation %#x already", h)
 			return

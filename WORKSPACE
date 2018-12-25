@@ -15,8 +15,8 @@ http_archive(
 
 http_archive(
     name = "bazel_gazelle",
-    urls = ["https://github.com/bazelbuild/bazel-gazelle/releases/download/0.15.0/bazel-gazelle-0.15.0.tar.gz"],
-    sha256 = "6e875ab4b6bf64a38c352887760f21203ab054676d9c1b274963907e0768740d",
+    urls = ["https://github.com/bazelbuild/bazel-gazelle/releases/download/0.16.0/bazel-gazelle-0.16.0.tar.gz"],
+    sha256 = "7949fc6cc17b5b191103e97481cf8889217263acf52e00b560683413af204fcb",
 )
 
 http_archive(
@@ -134,7 +134,7 @@ go_repository(
     # code.
     remote = "https://github.com/prysmaticlabs/bazel-go-ethereum",
     vcs = "git",
-    commit = "f4b3f83362a4cf2928e57914af040aea76c8a7d6",
+    commit = "6c700e8b788206dabf8577011cb0a338d6e88bde",
 )
 
 go_repository(
@@ -501,7 +501,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "074acd46bca67915925527c07849494d115e7c43",
+    commit = "b4a75ba826a64a70990f11a225237acd6ef35c9f",
     importpath = "golang.org/x/sys",
 )
 
@@ -621,13 +621,13 @@ go_repository(
 
 go_repository(
     name = "org_golang_google_api",
-    commit = "146117f78c63efe78e04021cc321e59fb3c13e50",
+    commit = "65a46cafb132eff435c7d1e0f439cc73c8eebb85",
     importpath = "google.golang.org/api",
 )
 
 go_repository(
     name = "org_golang_x_sync",
-    commit = "42b317875d0fa942474b76e1b46a6060d720ae6e",
+    commit = "37e7f081c4d4c64e13b10787722085407fe5d15f",
     importpath = "golang.org/x/sync",
 )
 
@@ -645,7 +645,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aristanetworks_goarista",
-    commit = "aa2a42e13be68c4a95fe9e58003adaf63fe6476f",
+    commit = "0ca71131d8f76e0739563d97cc9f95c021825a2b",
     importpath = "github.com/aristanetworks/goarista",
 )
 
@@ -822,7 +822,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_autonat",
-    commit = "c95207c0cda9634b8e0506f3cfc2ac8de770bd08",
+    commit = "93b1787f76de807b9ab3a7c7edd45cf906139bdb",
     importpath = "github.com/libp2p/go-libp2p-autonat",
 )
 
@@ -896,7 +896,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aws_aws_sdk_go",
-    tag = "v1.16.6",
+    tag = "v1.16.9",
     importpath = "github.com/aws/aws-sdk-go",
 )
 
@@ -936,4 +936,46 @@ go_repository(
     name = "com_github_inconshreveable_mousetrap",
     tag = "v1.0.0",
     importpath = "github.com/inconshreveable/mousetrap",
+)
+
+go_repository(
+    name = "com_github_deckarep_golang_set",
+    tag = "v1.7.1",
+    importpath = "github.com/deckarep/golang-set",
+)
+
+go_repository(
+    name = "com_github_go_stack_stack",
+    tag = "v1.8.0",
+    importpath = "github.com/go-stack/stack",
+)
+
+go_repository(
+    name = "com_github_rs_cors",
+    tag = "v1.6.0",
+    importpath = "github.com/rs/cors",
+)
+
+go_repository(
+    name = "com_github_golang_snappy",
+    commit = "2e65f85255dbc3072edf28d6b5b8efc472979f5a",
+    importpath = "github.com/golang/snappy",
+)
+
+go_repository(
+    name = "in_gopkg_urfave_cli_v1",
+    tag = "v1.20.0",
+    importpath = "gopkg.in/urfave/cli.v1",
+)
+
+go_repository(
+    name = "com_github_rjeczalik_notify",
+    tag = "v0.9.2",
+    importpath = "github.com/rjeczalik/notify",
+)
+
+go_repository(
+    name = "com_github_edsrzf_mmap_go",
+    tag = "v1.0.0",
+    importpath = "github.com/edsrzf/mmap-go",
 )

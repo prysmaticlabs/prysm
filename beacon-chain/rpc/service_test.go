@@ -8,10 +8,10 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
-	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -117,12 +117,12 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	mockChain := &mockChainService{}
 
-	genesis := types.NewGenesisBlock([32]byte{})
+	genesis := b.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	beaconState, err := types.NewGenesisBeaconState(nil)
+	beaconState, err := state.NewGenesisBeaconState(nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -148,11 +148,11 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not call CurrentAssignments correctly: %v", err)
 	}
-	genesis = types.NewGenesisBlock([32]byte{})
-	if res.GenesisTimestamp.String() != genesis.Proto().GetTimestamp().String() {
+	genesis = b.NewGenesisBlock([]byte{})
+	if res.GenesisTimestamp.String() != genesis.GetTimestamp().String() {
 		t.Errorf(
 			"Received different genesis timestamp, wanted: %v, received: %v",
-			genesis.Proto().GetTimestamp(),
+			genesis.GetTimestamp(),
 			res.GenesisTimestamp,
 		)
 	}
@@ -163,12 +163,12 @@ func TestProposeBlock(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	mockChain := &mockChainService{}
 
-	genesis := types.NewGenesisBlock([32]byte{})
+	genesis := b.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	beaconState, err := types.NewGenesisBeaconState(nil)
+	beaconState, err := state.NewGenesisBeaconState(nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -202,10 +202,12 @@ func TestAttestHead(t *testing.T) {
 		AttestationService: mockAttestationService,
 	})
 	req := &pb.AttestRequest{
-		Attestation: &pbp2p.AggregatedAttestation{
-			Slot:           999,
-			Shard:          1,
-			ShardBlockHash: []byte{'a'},
+		Attestation: &pbp2p.Attestation{
+			Data: &pbp2p.AttestationData{
+				Slot:                 999,
+				Shard:                1,
+				ShardBlockRootHash32: []byte{'a'},
+			},
 		},
 	}
 	if _, err := rpcService.AttestHead(context.Background(), req); err != nil {
@@ -226,7 +228,7 @@ func TestLatestAttestationContextClosed(t *testing.T) {
 	defer ctrl.Finish()
 	mockStream := internal.NewMockBeaconService_LatestAttestationServer(ctrl)
 	go func(tt *testing.T) {
-		if err := rpcService.LatestAttestation(&empty.Empty{}, mockStream); err != nil {
+		if err := rpcService.LatestAttestation(&ptypes.Empty{}, mockStream); err != nil {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
 		<-exitRoutine
@@ -247,13 +249,13 @@ func TestLatestAttestationFaulty(t *testing.T) {
 	defer ctrl.Finish()
 
 	exitRoutine := make(chan bool)
-	attestation := &types.Attestation{}
+	attestation := &pbp2p.Attestation{}
 
 	mockStream := internal.NewMockBeaconService_LatestAttestationServer(ctrl)
-	mockStream.EXPECT().Send(attestation.Proto()).Return(errors.New("something wrong"))
+	mockStream.EXPECT().Send(attestation).Return(errors.New("something wrong"))
 	// Tests a faulty stream.
 	go func(tt *testing.T) {
-		if err := rpcService.LatestAttestation(&empty.Empty{}, mockStream); err.Error() != "something wrong" {
+		if err := rpcService.LatestAttestation(&ptypes.Empty{}, mockStream); err.Error() != "something wrong" {
 			tt.Errorf("Faulty stream should throw correct error, wanted 'something wrong', got %v", err)
 		}
 		<-exitRoutine
@@ -276,12 +278,12 @@ func TestLatestAttestation(t *testing.T) {
 	defer ctrl.Finish()
 
 	exitRoutine := make(chan bool)
-	attestation := &types.Attestation{}
+	attestation := &pbp2p.Attestation{}
 	mockStream := internal.NewMockBeaconService_LatestAttestationServer(ctrl)
-	mockStream.EXPECT().Send(attestation.Proto()).Return(nil)
+	mockStream.EXPECT().Send(attestation).Return(nil)
 	// Tests a good stream.
 	go func(tt *testing.T) {
-		if err := rpcService.LatestAttestation(&empty.Empty{}, mockStream); err != nil {
+		if err := rpcService.LatestAttestation(&ptypes.Empty{}, mockStream); err != nil {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
 		<-exitRoutine
@@ -298,12 +300,12 @@ func TestValidatorSlotAndResponsibility(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	mockChain := &mockChainService{}
 
-	genesis := types.NewGenesisBlock([32]byte{})
+	genesis := b.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	beaconState, err := types.NewGenesisBeaconState(nil)
+	beaconState, err := state.NewGenesisBeaconState(nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -330,12 +332,12 @@ func TestValidatorIndex(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	mockChain := &mockChainService{}
 
-	genesis := types.NewGenesisBlock([32]byte{})
+	genesis := b.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	beaconState, err := types.NewGenesisBeaconState(nil)
+	beaconState, err := state.NewGenesisBeaconState(nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -362,12 +364,12 @@ func TestValidatorShardID(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	mockChain := &mockChainService{}
 
-	genesis := types.NewGenesisBlock([32]byte{})
+	genesis := b.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	beaconState, err := types.NewGenesisBeaconState(nil)
+	beaconState, err := state.NewGenesisBeaconState(nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -395,12 +397,12 @@ func TestValidatorAssignments(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	mockChain := newMockChainService()
 
-	genesis := types.NewGenesisBlock([32]byte{})
+	genesis := b.NewGenesisBlock([]byte{})
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	beaconState, err := types.NewGenesisBeaconState(nil)
+	beaconState, err := state.NewGenesisBeaconState(nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -437,7 +439,7 @@ func TestValidatorAssignments(t *testing.T) {
 		<-exitRoutine
 	}(t)
 
-	beaconState, err = types.NewGenesisBeaconState(nil)
+	beaconState, err = state.NewGenesisBeaconState(nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}

@@ -13,12 +13,12 @@ import (
 
 func TestHasVoted(t *testing.T) {
 	// Setting bit field to 11111111.
-	pendingAttestation := &pb.AggregatedAttestation{
-		AttesterBitfield: []byte{255},
+	pendingAttestation := &pb.Attestation{
+		ParticipationBitfield: []byte{255},
 	}
 
-	for i := 0; i < len(pendingAttestation.AttesterBitfield); i++ {
-		voted, err := bitutil.CheckBit(pendingAttestation.AttesterBitfield, i)
+	for i := 0; i < len(pendingAttestation.GetParticipationBitfield()); i++ {
+		voted, err := bitutil.CheckBit(pendingAttestation.GetParticipationBitfield(), i)
 		if err != nil {
 			t.Errorf("checking bit failed at index: %d with : %v", i, err)
 		}
@@ -29,12 +29,12 @@ func TestHasVoted(t *testing.T) {
 	}
 
 	// Setting bit field to 01010101.
-	pendingAttestation = &pb.AggregatedAttestation{
-		AttesterBitfield: []byte{85},
+	pendingAttestation = &pb.Attestation{
+		ParticipationBitfield: []byte{85},
 	}
 
-	for i := 0; i < len(pendingAttestation.AttesterBitfield); i++ {
-		voted, err := bitutil.CheckBit(pendingAttestation.AttesterBitfield, i)
+	for i := 0; i < len(pendingAttestation.GetParticipationBitfield()); i++ {
+		voted, err := bitutil.CheckBit(pendingAttestation.GetParticipationBitfield(), i)
 		if err != nil {
 			t.Errorf("checking bit failed at index: %d : %v", i, err)
 		}
@@ -51,9 +51,6 @@ func TestHasVoted(t *testing.T) {
 func TestInitialValidatorRegistry(t *testing.T) {
 	validators := InitialValidatorRegistry()
 	for _, validator := range validators {
-		if validator.GetBalance() != params.BeaconConfig().MaxDeposit*params.BeaconConfig().Gwei {
-			t.Fatalf("deposit size of validator is not expected %d", validator.GetBalance())
-		}
 		if validator.GetStatus() != pb.ValidatorRecord_ACTIVE {
 			t.Errorf("validator status is not active: %d", validator.GetStatus())
 		}
@@ -61,8 +58,8 @@ func TestInitialValidatorRegistry(t *testing.T) {
 }
 
 func TestAreAttesterBitfieldsValid(t *testing.T) {
-	attestation := &pb.AggregatedAttestation{
-		AttesterBitfield: []byte{'F'},
+	attestation := &pb.Attestation{
+		ParticipationBitfield: []byte{'F'},
 	}
 
 	indices := []uint32{0, 1, 2, 3, 4, 5, 6, 7}
@@ -74,8 +71,8 @@ func TestAreAttesterBitfieldsValid(t *testing.T) {
 }
 
 func TestAreAttesterBitfieldsValidFalse(t *testing.T) {
-	attestation := &pb.AggregatedAttestation{
-		AttesterBitfield: []byte{'F', 'F'},
+	attestation := &pb.Attestation{
+		ParticipationBitfield: []byte{'F', 'F'},
 	}
 
 	indices := []uint32{0, 1, 2, 3, 4, 5, 6, 7}
@@ -87,8 +84,8 @@ func TestAreAttesterBitfieldsValidFalse(t *testing.T) {
 }
 
 func TestAreAttesterBitfieldsValidZerofill(t *testing.T) {
-	attestation := &pb.AggregatedAttestation{
-		AttesterBitfield: []byte{'F'},
+	attestation := &pb.Attestation{
+		ParticipationBitfield: []byte{'F'},
 	}
 
 	indices := []uint32{0, 1, 2, 3, 4, 5, 6}
@@ -100,8 +97,8 @@ func TestAreAttesterBitfieldsValidZerofill(t *testing.T) {
 }
 
 func TestAreAttesterBitfieldsValidNoZerofill(t *testing.T) {
-	attestation := &pb.AggregatedAttestation{
-		AttesterBitfield: []byte{'E'},
+	attestation := &pb.Attestation{
+		ParticipationBitfield: []byte{'E'},
 	}
 
 	var indices []uint32
@@ -264,8 +261,8 @@ func TestVotedBalanceInAttestation(t *testing.T) {
 	}
 
 	// Calculating balances with zero votes by attesters.
-	attestation := &pb.AggregatedAttestation{
-		AttesterBitfield: []byte{0},
+	attestation := &pb.Attestation{
+		ParticipationBitfield: []byte{0},
 	}
 
 	indices := []uint32{4, 8, 10, 14, 30}
@@ -287,8 +284,8 @@ func TestVotedBalanceInAttestation(t *testing.T) {
 
 	// Calculating balances with 3 votes by attesters.
 
-	newAttestation := &pb.AggregatedAttestation{
-		AttesterBitfield: []byte{224}, // 128 + 64 + 32
+	newAttestation := &pb.Attestation{
+		ParticipationBitfield: []byte{224}, // 128 + 64 + 32
 	}
 
 	expectedTotalBalance = uint64(len(indices)) * defaultBalance
@@ -595,10 +592,22 @@ func TestEffectiveBalance(t *testing.T) {
 		{a: defaultBalance * 100, b: defaultBalance},
 	}
 	for _, test := range tests {
-		validator := &pb.ValidatorRecord{Balance: test.a}
-		if EffectiveBalance(validator) != test.b {
-			t.Errorf("EffectiveBalance(%d) = %d, want = %d", validator.Balance, EffectiveBalance(validator), test.b)
+		state := &pb.BeaconState{ValidatorBalances: []uint64{test.a}}
+		if EffectiveBalance(state, 0) != test.b {
+			t.Errorf("EffectiveBalance(%d) = %d, want = %d", test.a, EffectiveBalance(state, 0), test.b)
 		}
+	}
+}
+
+func TestTotalEffectiveBalance(t *testing.T) {
+	state := &pb.BeaconState{ValidatorBalances: []uint64{
+		27 * 1e9, 28 * 1e9, 32 * 1e9, 40 * 1e9,
+	}}
+
+	// 27 + 28 + 32 + 32 = 119
+	if TotalEffectiveBalance(state, []uint32{0, 1, 2, 3}) != 119*1e9 {
+		t.Errorf("Incorrect TotalEffectiveBalance. Wanted: 119, got: %d",
+			TotalEffectiveBalance(state, []uint32{0, 1, 2, 3})/1e9)
 	}
 }
 
@@ -648,14 +657,11 @@ func TestGetActiveValidatorRecord(t *testing.T) {
 }
 
 func TestBoundaryAttestingBalance(t *testing.T) {
-	attesters := []*pb.ValidatorRecord{
-		{Balance: 25 * 1e9},
-		{Balance: 26 * 1e9},
-		{Balance: 32 * 1e9},
-		{Balance: 33 * 1e9},
-		{Balance: 100 * 1e9},
-	}
-	attestedBalances := AttestingBalance(attesters)
+	state := &pb.BeaconState{ValidatorBalances: []uint64{
+		25 * 1e9, 26 * 1e9, 32 * 1e9, 33 * 1e9, 100 * 1e9,
+	}}
+
+	attestedBalances := AttestingBalance(state, []uint32{0, 1, 2, 3, 4})
 
 	// 25 + 26 + 32 + 32 + 32 = 147
 	if attestedBalances != 147*1e9 {
@@ -783,5 +789,98 @@ func TestBeaconProposerIndex(t *testing.T) {
 				result,
 			)
 		}
+	}
+}
+
+func TestAttestingValidatorIndices_Ok(t *testing.T) {
+	if params.BeaconConfig().EpochLength != 64 {
+		t.Errorf("EpochLength should be 64 for these tests to pass")
+	}
+
+	var committeeIndices []uint32
+	for i := uint32(0); i < 8; i++ {
+		committeeIndices = append(committeeIndices, i)
+	}
+
+	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
+			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{Shard: i, Committee: committeeIndices},
+			},
+		})
+	}
+
+	state := &pb.BeaconState{
+		ShardAndCommitteesAtSlots: shardAndCommittees,
+		Slot:                      5,
+	}
+
+	prevAttestation := &pb.PendingAttestationRecord{
+		Data: &pb.AttestationData{
+			Slot:                 3,
+			Shard:                3,
+			ShardBlockRootHash32: []byte{'B'},
+		},
+		ParticipationBitfield: []byte{'A'}, // 01000001 = 1,7
+	}
+
+	thisAttestation := &pb.PendingAttestationRecord{
+		Data: &pb.AttestationData{
+			Slot:                 3,
+			Shard:                3,
+			ShardBlockRootHash32: []byte{'B'},
+		},
+		ParticipationBitfield: []byte{'F'}, // 01000110 = 1,5,6
+	}
+
+	indices, err := AttestingValidatorIndices(
+		state,
+		shardAndCommittees[3].ArrayShardAndCommittee[0],
+		[]byte{'B'},
+		[]*pb.PendingAttestationRecord{thisAttestation},
+		[]*pb.PendingAttestationRecord{prevAttestation})
+	if err != nil {
+		t.Fatalf("could not execute AttestingValidatorIndices: %v", err)
+	}
+
+	// Union(1,7,1,5,6) = 1,5,6,7
+	if !reflect.DeepEqual(indices, []uint32{1, 5, 6, 7}) {
+		t.Errorf("could not get incorrect validator indices. Wanted: %v, got: %v",
+			[]uint32{1, 5, 6, 7}, indices)
+	}
+}
+
+func TestAttestingValidatorIndices_OutOfBound(t *testing.T) {
+	shardAndCommittees := []*pb.ShardAndCommitteeArray{
+		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{Shard: 1},
+		}},
+	}
+
+	state := &pb.BeaconState{
+		ShardAndCommitteesAtSlots: shardAndCommittees,
+		Slot:                      5,
+	}
+
+	attestation := &pb.PendingAttestationRecord{
+		Data: &pb.AttestationData{
+			Slot:                 0,
+			Shard:                1,
+			ShardBlockRootHash32: []byte{'B'},
+		},
+		ParticipationBitfield: []byte{'A'}, // 01000001 = 1,7
+	}
+
+	_, err := AttestingValidatorIndices(
+		state,
+		shardAndCommittees[0].ArrayShardAndCommittee[0],
+		[]byte{'B'},
+		[]*pb.PendingAttestationRecord{attestation},
+		nil)
+
+	// This will fail because participation bitfield is length:1, committee bitfield is length 0.
+	if err == nil {
+		t.Fatal("AttestingValidatorIndices should have failed with incorrect bitfield")
 	}
 }

@@ -4,7 +4,7 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/golang/protobuf/proto"
+	"github.com/gogo/protobuf/proto"
 )
 
 // Message represents a message received from an external peer.

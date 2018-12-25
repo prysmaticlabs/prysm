@@ -7,14 +7,15 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
+	"github.com/gogo/protobuf/proto"
+	ptypes "github.com/gogo/protobuf/types"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotticker"
@@ -89,7 +90,7 @@ func NewSimulator(ctx context.Context, cfg *Config) *Simulator {
 // Start the sim.
 func (sim *Simulator) Start() {
 	log.Info("Starting service")
-	genesisTime, err := sim.beaconDB.GetGenesisTime()
+	genesisTime, err := sim.beaconDB.GenesisTime()
 	if err != nil {
 		log.Fatal(err)
 		return
@@ -133,12 +134,12 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 		return
 	}
 
-	lastHash, err := lastBlock.Hash()
+	lastHash, err := b.Hash(lastBlock)
 	if err != nil {
 		log.Errorf("Could not get hash of the latest block: %v", err)
 	}
-	broadcastedBlocksByHash := map[[32]byte]*types.Block{}
-	broadcastedBlocksBySlot := map[uint64]*types.Block{}
+	broadcastedBlocksByHash := map[[32]byte]*pb.BeaconBlock{}
+	broadcastedBlocksBySlot := map[uint64]*pb.BeaconBlock{}
 
 	for {
 		select {
@@ -159,7 +160,7 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 				continue
 			}
 
-			hash, err := block.Hash()
+			hash, err := b.Hash(block)
 			if err != nil {
 				log.Errorf("Could not hash simulated block: %v", err)
 				continue
@@ -194,9 +195,11 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 			}).Debug("Responding to full block request")
 
 			// Sends the full block body to the requester.
-			res := &pb.BeaconBlockResponse{Block: block.Proto(), Attestation: &pb.AggregatedAttestation{
-				Slot:             block.SlotNumber(),
-				AttesterBitfield: []byte{byte(255)},
+			res := &pb.BeaconBlockResponse{Block: block, Attestation: &pb.Attestation{
+				ParticipationBitfield: []byte{byte(255)},
+				Data: &pb.AttestationData{
+					Slot: block.GetSlot(),
+				},
 			}}
 			sim.p2p.Send(res, msg.Peer)
 
@@ -218,9 +221,11 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 			}).Debug("Responding to full block request")
 
 			// Sends the full block body to the requester.
-			res := &pb.BeaconBlockResponse{Block: block.Proto(), Attestation: &pb.AggregatedAttestation{
-				Slot:             block.SlotNumber(),
-				AttesterBitfield: []byte{byte(255)},
+			res := &pb.BeaconBlockResponse{Block: block, Attestation: &pb.Attestation{
+				ParticipationBitfield: []byte{byte(255)},
+				Data: &pb.AttestationData{
+					Slot: block.GetSlot(),
+				},
 			}}
 			sim.p2p.Send(res, msg.Peer)
 		case msg := <-sim.stateReqChan:
@@ -232,11 +237,12 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 				continue
 			}
 
-			hash, err := beaconState.Hash()
+			enc, err := proto.Marshal(beaconState)
 			if err != nil {
-				log.Errorf("Could not hash beacon state: %v", err)
+				log.Errorf("Could not marshal beacon state: %v", err)
 				continue
 			}
+			hash := hashutil.Hash(enc)
 
 			if !bytes.Equal(data.GetHash(), hash[:]) {
 				log.WithFields(logrus.Fields{
@@ -251,7 +257,7 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 
 			// Sends the full crystallized state to the requester.
 			res := &pb.BeaconStateResponse{
-				BeaconState: beaconState.Proto(),
+				BeaconState: beaconState,
 			}
 			sim.p2p.Send(res, msg.Peer)
 		}
@@ -259,16 +265,17 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 }
 
 // generateBlock generates fake blocks for the simulator.
-func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*types.Block, error) {
+func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*pb.BeaconBlock, error) {
 	beaconState, err := sim.beaconDB.GetState()
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
 
-	stateHash, err := beaconState.Hash()
+	enc, err := proto.Marshal(beaconState)
 	if err != nil {
-		return nil, fmt.Errorf("could not hash beacon state: %v", err)
+		return nil, fmt.Errorf("could not marshal beacon state: %v", err)
 	}
+	stateHash := hashutil.Hash(enc)
 
 	var powChainRef []byte
 	if sim.enablePOWChain {
@@ -279,8 +286,8 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*types.Bloc
 
 	parentSlot := slot - 1
 	committees, err := v.GetShardAndCommitteesForSlot(
-		beaconState.ShardAndCommitteesForSlots(),
-		beaconState.LastStateRecalculationSlot(),
+		beaconState.GetShardAndCommitteesAtSlots(),
+		beaconState.GetLastStateRecalculationSlot(),
 		parentSlot,
 	)
 	if err != nil {
@@ -291,51 +298,54 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*types.Bloc
 	copy(parentHash, lastHash[:])
 
 	shardCommittees := committees.ArrayShardAndCommittee
-	attestations := make([]*pb.AggregatedAttestation, len(shardCommittees))
+	attestations := make([]*pb.Attestation, len(shardCommittees))
 
 	// Create attestations for all committees of the previous block.
 	// Ensure that all attesters have voted by calling FillBitfield.
 	for i, shardCommittee := range shardCommittees {
 		shardID := shardCommittee.Shard
 		numAttesters := len(shardCommittee.Committee)
-		attestations[i] = &pb.AggregatedAttestation{
-			Slot:               parentSlot,
-			AttesterBitfield:   bitutil.FillBitfield(numAttesters),
-			JustifiedBlockHash: parentHash,
-			Shard:              shardID,
+		attestations[i] = &pb.Attestation{
+			ParticipationBitfield: bitutil.FillBitfield(numAttesters),
+			Data: &pb.AttestationData{
+				Slot:                     parentSlot,
+				Shard:                    shardID,
+				JustifiedBlockRootHash32: parentHash,
+			},
 		}
 	}
 
-	block := types.NewBlock(&pb.BeaconBlock{
+	block := &pb.BeaconBlock{
 		Slot:                          slot,
 		Timestamp:                     ptypes.TimestampNow(),
 		CandidatePowReceiptRootHash32: powChainRef,
 		StateRootHash32:               stateHash[:],
 		ParentRootHash32:              parentHash,
 		RandaoRevealHash32:            params.BeaconConfig().SimulatedBlockRandao[:],
-		Attestations:                  attestations,
-	})
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
+	}
 	return block, nil
 }
 
 // SendChainHead sends the latest head of the local chain
 // to the peer who requested it.
 func (sim *Simulator) SendChainHead(peer p2p.Peer) error {
-
 	block, err := sim.beaconDB.GetChainHead()
 	if err != nil {
 		return err
 	}
 
-	hash, err := block.Hash()
+	hash, err := b.Hash(block)
 	if err != nil {
 		return err
 	}
 
 	res := &pb.ChainHeadResponse{
 		Hash:  hash[:],
-		Slot:  block.SlotNumber(),
-		Block: block.Proto(),
+		Slot:  block.GetSlot(),
+		Block: block,
 	}
 
 	sim.p2p.Send(res, peer)
