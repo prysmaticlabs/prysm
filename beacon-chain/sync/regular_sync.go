@@ -361,6 +361,8 @@ func (rs *RegularSync) handleBlockRequestByHash(msg p2p.Message) {
 
 }
 
+// handleBatchedBlockRequest receives p2p messages which consist of requests for batched blocks
+// which are bounded by a start slot and end slot.
 func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) {
 	data := msg.Data.(*pb.BatchedBeaconBlockRequest)
 	startSlot, endSlot := data.StartSlot, data.EndSlot
@@ -380,7 +382,9 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) {
 	currentSlot := block.GetSlot()
 
 	if currentSlot < startSlot || finalizedSlot > endSlot {
-		log.Debugf("Batched Block Request slot is not available in db from %d to %d", startSlot, endSlot)
+		log.Debugf(
+			"invalid batch request: current slot < start slot || finalized slot > end slot."+
+				"currentSlot %d startSlot %d endSlot %d finalizedSlot %d", currentSlot, startSlot, endSlot, finalizedSlot)
 		return
 	}
 

@@ -294,7 +294,7 @@ func (sim *Simulator) processBatchRequest(msg p2p.Message) {
 	endSlot := data.GetEndSlot()
 
 	if endSlot <= startSlot {
-		log.Debugf("Invalid Batch Request end slot %d is less than or equal to start slot %d", endSlot, startSlot)
+		log.Debugf("invalid batch request: end slot <= start slot, received %d < %d", endSlot, startSlot)
 		return
 	}
 
