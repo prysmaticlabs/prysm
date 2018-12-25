@@ -119,8 +119,9 @@ func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 		RandaoRevealHash32: []byte{1},
 	}
 	beaconState := &pb.BeaconState{
-		ValidatorRegistry: registry,
-		Slot:              1,
+		ValidatorRegistry:        registry,
+		Slot:                     1,
+		LatestRandaoMixesHash32S: make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		ShardAndCommitteesAtSlots: []*pb.ShardAndCommitteeArray{
 			{
 				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
@@ -152,8 +153,9 @@ func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 	}
 
 	xorRandao := [32]byte{1}
-	if !bytes.Equal(newState.GetRandaoMixHash32(), xorRandao[:]) {
-		t.Errorf("Expected randao mix to XOR correctly: wanted %#x, received %#x", xorRandao[:], newState.GetRandaoMixHash32())
+	updatedLatestMix := newState.LatestRandaoMixesHash32S[newState.GetSlot()%params.BeaconConfig().LatestRandaoMixesLength]
+	if !bytes.Equal(updatedLatestMix, xorRandao[:]) {
+		t.Errorf("Expected randao mix to XOR correctly: wanted %#x, received %#x", xorRandao[:], updatedLatestMix)
 	}
 	if !bytes.Equal(newState.GetValidatorRegistry()[0].GetRandaoCommitmentHash32(), []byte{1}) {
 		t.Errorf(
