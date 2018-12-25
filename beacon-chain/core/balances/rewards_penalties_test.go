@@ -237,3 +237,181 @@ func TestInclusionDistRewards(t *testing.T) {
 		}
 	}
 }
+
+func TestInactivityFFGSrcPenalty(t *testing.T) {
+
+	tests := []struct {
+		voted                     []uint32
+		balanceAfterFFGSrcPenalty []uint64
+		epochsSinceFinality       uint64
+	}{
+		// The higher the epochs since finality, the more penalties applied.
+		{[]uint32{0, 1}, []uint64{32000000000, 32000000000, 31999427051, 31999427051}, 5},
+		{[]uint32{}, []uint64{31999427051, 31999427051, 31999427051, 31999427051}, 5},
+		{[]uint32{}, []uint64{31999422283, 31999422283, 31999422283, 31999422283}, 10},
+		{[]uint32{}, []uint64{31999412746, 31999412746, 31999412746, 31999412746}, 20},
+	}
+	for _, tt := range tests {
+		validatorBalances := make([]uint64, 4)
+		for i := 0; i < len(validatorBalances); i++ {
+			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
+		}
+		state := &pb.BeaconState{
+			ValidatorBalances: validatorBalances,
+		}
+		state = InactivityFFGSrcPenalty(
+			state,
+			tt.voted,
+			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositInGwei,
+			tt.epochsSinceFinality)
+
+		if !reflect.DeepEqual(state.ValidatorBalances, tt.balanceAfterFFGSrcPenalty) {
+			t.Errorf("InactivityFFGSrcPenalty(%v) = %v, wanted: %v",
+				tt.voted, state.ValidatorBalances, tt.balanceAfterFFGSrcPenalty)
+		}
+	}
+}
+
+func TestInactivityFFGTargetPenalty(t *testing.T) {
+
+	tests := []struct {
+		voted                        []uint32
+		balanceAfterFFGTargetPenalty []uint64
+		epochsSinceFinality          uint64
+	}{
+		// The higher the epochs since finality, the more penalties applied.
+		{[]uint32{0, 1}, []uint64{32000000000, 32000000000, 31999427051, 31999427051}, 5},
+		{[]uint32{}, []uint64{31999427051, 31999427051, 31999427051, 31999427051}, 5},
+		{[]uint32{}, []uint64{31999422283, 31999422283, 31999422283, 31999422283}, 10},
+		{[]uint32{}, []uint64{31999412746, 31999412746, 31999412746, 31999412746}, 20},
+	}
+	for _, tt := range tests {
+		validatorBalances := make([]uint64, 4)
+		for i := 0; i < len(validatorBalances); i++ {
+			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
+		}
+		state := &pb.BeaconState{
+			ValidatorBalances: validatorBalances,
+		}
+		state = InactivityFFGTargetPenalty(
+			state,
+			tt.voted,
+			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositInGwei,
+			tt.epochsSinceFinality)
+
+		if !reflect.DeepEqual(state.ValidatorBalances, tt.balanceAfterFFGTargetPenalty) {
+			t.Errorf("InactivityFFGTargetPenalty(%v) = %v, wanted: %v",
+				tt.voted, state.ValidatorBalances, tt.balanceAfterFFGTargetPenalty)
+		}
+	}
+}
+
+func TestInactivityHeadPenalty(t *testing.T) {
+
+	tests := []struct {
+		voted                             []uint32
+		balanceAfterInactivityHeadPenalty []uint64
+	}{
+		{[]uint32{}, []uint64{31999431819, 31999431819, 31999431819, 31999431819}},
+		{[]uint32{0,1}, []uint64{32000000000, 32000000000, 31999431819, 31999431819}},
+		{[]uint32{0,1,2,3}, []uint64{32000000000, 32000000000, 32000000000, 32000000000}},
+	}
+	for _, tt := range tests {
+		validatorBalances := make([]uint64, 4)
+		for i := 0; i < len(validatorBalances); i++ {
+			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
+		}
+		state := &pb.BeaconState{
+			ValidatorBalances: validatorBalances,
+		}
+		state = InactivityHeadPenalty(
+			state,
+			tt.voted,
+			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositInGwei)
+
+		if !reflect.DeepEqual(state.ValidatorBalances, tt.balanceAfterInactivityHeadPenalty) {
+			t.Errorf("InactivityHeadPenalty(%v) = %v, wanted: %v",
+				tt.voted, state.ValidatorBalances, tt.balanceAfterInactivityHeadPenalty)
+		}
+	}
+}
+
+func TestInactivityExitedPenality(t *testing.T) {
+
+	tests := []struct {
+		balanceAfterExitedPenalty []uint64
+		epochsSinceFinality uint64
+	}{
+		{[]uint64{31998285921, 31998285921, 31998285921, 31998285921}, 5},
+		{[]uint64{31998276385, 31998276385, 31998276385, 31998276385}, 10},
+		{[]uint64{31997341783, 31997341783, 31997341783, 31997341783}, 500},
+	}
+	for _, tt := range tests {
+		validatorBalances := make([]uint64, 4)
+		for i := 0; i < len(validatorBalances); i++ {
+			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
+		}
+		state := &pb.BeaconState{
+			ValidatorRegistry: []*pb.ValidatorRecord{
+				{Status: pb.ValidatorRecord_EXITED_WITH_PENALTY},
+				{Status: pb.ValidatorRecord_EXITED_WITH_PENALTY},
+				{Status: pb.ValidatorRecord_EXITED_WITH_PENALTY},
+				{Status: pb.ValidatorRecord_EXITED_WITH_PENALTY}},
+			ValidatorBalances: validatorBalances,
+		}
+		state = InactivityExitedPenalty(
+			state,
+			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositInGwei,
+			tt.epochsSinceFinality,
+		)
+
+		if !reflect.DeepEqual(state.ValidatorBalances, tt.balanceAfterExitedPenalty) {
+			t.Errorf("InactivityExitedPenalty(epochSinceFinality=%v) = %v, wanted: %v",
+				tt.epochsSinceFinality, state.ValidatorBalances, tt.balanceAfterExitedPenalty)
+		}
+	}
+}
+
+func TestInactivityInclusionPenalty(t *testing.T) {
+
+	shardAndCommittees := []*pb.ShardAndCommitteeArray{
+		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
+		}}}
+	attestation := []*pb.PendingAttestationRecord{
+		{Data: &pb.AttestationData{Shard: 1, Slot: 0},
+			ParticipationBitfield: []byte{0xff},
+			SlotIncluded:          5},
+	}
+
+	tests := []struct {
+		voted                        []uint32
+		balanceAfterInclusionPenalty []uint64
+	}{
+		{[]uint32{}, []uint64{32000000000, 32000000000, 32000000000, 32000000000}},
+		{[]uint32{0, 1}, []uint64{31999886363, 31999886363, 32000000000, 32000000000}},
+		{[]uint32{0, 1, 2, 3}, []uint64{31999886363, 31999886363, 31999886363, 31999886363}},
+	}
+	for _, tt := range tests {
+		validatorBalances := make([]uint64, 4)
+		for i := 0; i < len(validatorBalances); i++ {
+			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
+		}
+		state := &pb.BeaconState{
+			ShardAndCommitteesAtSlots: shardAndCommittees,
+			ValidatorBalances:         validatorBalances,
+			LatestAttestations:        attestation,
+		}
+		state, err := InactivityInclusionPenalty(
+			state,
+			tt.voted,
+			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositInGwei)
+		if err != nil {
+			t.Fatalf("could not execute InactivityInclusionPenalty:%v", err)
+		}
+		if !reflect.DeepEqual(state.ValidatorBalances, tt.balanceAfterInclusionPenalty) {
+			t.Errorf("InactivityInclusionPenalty(%v) = %v, wanted: %v",
+				tt.voted, state.ValidatorBalances, tt.balanceAfterInclusionPenalty)
+		}
+	}
+}
