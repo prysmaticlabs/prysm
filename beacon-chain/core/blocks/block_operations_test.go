@@ -100,7 +100,7 @@ func TestProcessBlockRandao_UnequalBlockAndProposerRandao(t *testing.T) {
 		[32]byte{1},
 		[32]byte{0},
 	)
-	if _, _, err := ProcessBlockRandao(
+	if _, err := ProcessBlockRandao(
 		beaconState,
 		block,
 	); !strings.Contains(err.Error(), want) {
@@ -143,7 +143,7 @@ func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 		},
 	}
 
-	randaoMix, newRegistry, err := ProcessBlockRandao(
+	newState, err := ProcessBlockRandao(
 		beaconState,
 		block,
 	)
@@ -152,14 +152,14 @@ func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 	}
 
 	xorRandao := [32]byte{1}
-	if !bytes.Equal(randaoMix, xorRandao[:]) {
-		t.Errorf("Expected randao mix to XOR correctly: wanted %#x, received %#x", xorRandao[:], randaoMix)
+	if !bytes.Equal(newState.GetRandaoMixHash32(), xorRandao[:]) {
+		t.Errorf("Expected randao mix to XOR correctly: wanted %#x, received %#x", xorRandao[:], newState.GetRandaoMixHash32())
 	}
-	if !bytes.Equal(newRegistry[0].GetRandaoCommitmentHash32(), []byte{1}) {
+	if !bytes.Equal(newState.GetValidatorRegistry()[0].GetRandaoCommitmentHash32(), []byte{1}) {
 		t.Errorf(
 			"Expected proposer at index 0 to update randao commitment to block randao reveal = %#x, received %#x",
 			[]byte{1},
-			randaoMix,
+			newState.GetRandaoMixHash32(),
 		)
 	}
 }

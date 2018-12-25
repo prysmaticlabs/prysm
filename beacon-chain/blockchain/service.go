@@ -91,7 +91,7 @@ func (c *ChainService) Start() {
 		return
 	}
 
-	c.lastProcessedSlot = beaconState.Slot()
+	c.lastProcessedSlot = beaconState.GetSlot()
 
 	c.slotTicker = slotticker.GetSlotTicker(c.genesisTime, params.BeaconConfig().SlotDuration)
 	c.currentSlot = slotticker.CurrentSlot(c.genesisTime, params.BeaconConfig().SlotDuration, time.Since)
@@ -239,14 +239,6 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *pb.BeaconBlock) {
 		// can be received either from the sync service, the RPC service,
 		// or via p2p.
 		case block := <-c.incomingBlockChan:
-
-			// Before sending the blocks for processing we check to see if the blocks
-			// are valid to continue being processed. If the slot number in the block
-			// has already been processed by the beacon node, we throw it away. If the
-			// slot number is too high to be processed in the current slot, we store
-			// it in a cache.
-			c.checkForSkippedSlots()
-
 			beaconState, err := c.beaconDB.GetState()
 			if err != nil {
 				log.Errorf("Unable to retrieve beacon state %v", err)
@@ -391,29 +383,10 @@ func (c *ChainService) sendAndDeleteCachedBlocks(currentSlot uint64) {
 }
 
 func (c *ChainService) checkCachedBlocks() {
-	if block, ok := c.unProcessedBlocks[c.currentSlot]; ok && c.isBlockReadyForProcessing(block) {
-		c.incomingBlockChan <- block
-		delete(c.unProcessedBlocks, c.currentSlot)
-	}
-}
-
-func (c *ChainService) checkForSkippedSlots() {
-	if c.currentSlot != c.lastProcessedSlot+1 {
-		beaconState, err := c.beaconDB.GetState()
-		if err != nil {
-			log.Debugf("Unable to retrieve beacon state %v", err)
-			return
+	if block, ok := c.unProcessedBlocks[c.currentSlot]; ok {
+		if err := c.isBlockReadyForProcessing(block); err == nil {
+			c.incomingBlockChan <- block
+			delete(c.unProcessedBlocks, c.currentSlot)
 		}
-
-		vreg := beaconState.ValidatorRegistry()
-
-		proposerIndex, err := v.GetBeaconProposerIndex(beaconState.Proto(), beaconState.Slot())
-		if err != nil {
-			log.Debugf("Unable to retrieve proposer index %v", err)
-			return
-		}
-
-		vreg[proposerIndex].RandaoLayers++
-		beaconState.SetValidatorRegistry(vreg)
 	}
 }

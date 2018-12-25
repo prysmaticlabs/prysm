@@ -66,14 +66,14 @@ func ProcessPOWReceiptRoots(
 //   Set proposer.randao_commitment = block.randao_reveal.
 //   Set proposer.randao_layers = 0
 func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
-	proposerIndex, err := v.BeaconProposerIndex(beaconState, beaconState.Slot())
+	proposerIndex, err := v.BeaconProposerIndex(beaconState, beaconState.GetSlot())
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not fetch beacon proposer index: %v", err)
+		return nil, fmt.Errorf("could not fetch beacon proposer index: %v", err)
 	}
 	registry := beaconState.GetValidatorRegistry()
 	proposer := registry[proposerIndex]
 	if err := verifyBlockRandao(proposer, block); err != nil {
-		return nil, nil, fmt.Errorf("could not verify block randao: %v", err)
+		return nil, fmt.Errorf("could not verify block randao: %v", err)
 	}
 	// If block RANDAO passed verification, we XOR the block RANDAO and return it
 	// as the new RANDAO mix used to update the beacon state.
@@ -84,7 +84,7 @@ func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb
 	proposer.RandaoCommitmentHash32 = block.GetRandaoRevealHash32()
 	proposer.RandaoLayers = 0
 	registry[proposerIndex] = proposer
-	beaconState.RandaoLayers = randaoMix[:]
+	beaconState.RandaoMixHash32 = randaoMix[:]
 	beaconState.ValidatorRegistry = registry
 	return beaconState, nil
 }
