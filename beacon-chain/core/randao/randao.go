@@ -28,7 +28,7 @@ func UpdateRandaoLayers(state *pb.BeaconState, slot uint64) (*pb.BeaconState, er
 func UpdateRandaoMixes(state *pb.BeaconState) *pb.BeaconState {
 	newState := proto.Clone(state).(*pb.BeaconState)
 	latestMixesLength := params.BeaconConfig().LatestRandaoMixesLength
-	prevMixes := state.LatestRandaoMixesHash32S[(newState.GetSlot() - 1) % latestMixesLength]
-    newState.LatestRandaoMixesHash32S[state.GetSlot()%latestMixesLength] = prevMixes
+	prevMixes := state.LatestRandaoMixesHash32S[(newState.GetSlot()-1)%latestMixesLength]
+	newState.LatestRandaoMixesHash32S[state.GetSlot()%latestMixesLength] = prevMixes
 	return newState
 }
