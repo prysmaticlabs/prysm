@@ -91,7 +91,6 @@ type InitialSync struct {
 	highestObservedSlot    uint64
 	syncPollingInterval    time.Duration
 	initialStateRootHash32 [32]byte
-	genesisHash            [32]byte
 	inMemoryBlocks         map[uint64]*pb.BeaconBlock
 }
 
@@ -267,35 +266,10 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 		return
 	}
 
-	hash, err := b.Hash(block)
-	if err != nil {
-		log.Error(err)
-		return
-	}
-
-	// set hash of the genesis block
-	if s.genesisHash == [32]byte{} && block.GetSlot() == 1 && s.currentSlot == 0 {
-		copy(s.genesisHash[:], block.GetParentRootHash32())
-		s.inMemoryBlocks[block.GetSlot()] = block
-		return
-	}
-
 	// setting first block for sync.
 	if s.currentSlot == 0 {
 		if s.initialStateRootHash32 != [32]byte{} {
 			log.Errorf("State root hash %#x set despite current slot being 0", s.initialStateRootHash32)
-			return
-		}
-
-		// writing genesis block to db.
-		if hash == s.genesisHash {
-			if err := s.writeBlockToDB(block); err != nil {
-				log.Error(err)
-			}
-			// If block with slot 1 is saved, then send it for sync.
-			if block, ok := s.inMemoryBlocks[1]; ok {
-				s.processBlock(block, peer)
-			}
 			return
 		}
 
@@ -306,12 +280,6 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 				s.inMemoryBlocks[block.GetSlot()] = block
 			}
 			s.requestNextBlockBySlot(1)
-			return
-		}
-
-		if s.genesisHash != [32]byte{} && !s.checkForGenesisBlock(s.genesisHash) {
-			s.requestBlockByHash(s.genesisHash, peer)
-			log.Debugf("Genesis block with hash %#x not saved in db", s.genesisHash)
 			return
 		}
 

@@ -393,12 +393,12 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) {
 	for i := startSlot; i <= endSlot; i++ {
 		block, err := rs.db.GetBlockBySlot(i)
 		if err != nil {
-			log.Errorf("unable to retrieve block from db %v", err)
+			log.Errorf("Unable to retrieve block from db %v", err)
 			continue
 		}
 
 		if block == nil {
-			log.Debug("block does not exist in db")
+			log.Debug("Block does not exist in db")
 			continue
 		}
 
