@@ -884,3 +884,22 @@ func TestAttestingValidatorIndices_OutOfBound(t *testing.T) {
 		t.Fatal("AttestingValidatorIndices should have failed with incorrect bitfield")
 	}
 }
+
+func TestAllValidatorIndices(t *testing.T) {
+	tests := []struct {
+		balances []uint64
+		indices  []uint32
+	}{
+		{balances: []uint64{}, indices: []uint32{}},
+		{balances: []uint64{0}, indices: []uint32{0}},
+		{balances: []uint64{0, 0, 0, 0}, indices: []uint32{0, 1, 2, 3}},
+		{balances: []uint64{0, 0, 0, 0, 0, 0}, indices: []uint32{0, 1, 2, 3, 4, 5}},
+	}
+	for _, tt := range tests {
+		state := &pb.BeaconState{ValidatorBalances: tt.balances}
+		if !reflect.DeepEqual(AllValidatorsIndices(state), tt.indices) {
+			t.Errorf("AllValidatorsIndices(%v) = %v, wanted:%v",
+				tt.balances, AllValidatorsIndices(state), tt.indices)
+		}
+	}
+}
