@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -71,7 +70,7 @@ func TestProcessBlockRandao_UnequalBlockAndProposerRandao(t *testing.T) {
 	block := &pb.BeaconBlock{
 		RandaoRevealHash32: []byte{1},
 	}
-	beaconState := types.NewBeaconState(&pb.BeaconState{
+	beaconState := &pb.BeaconState{
 		ValidatorRegistry: registry,
 		Slot:              1,
 		ShardAndCommitteesAtSlots: []*pb.ShardAndCommitteeArray{
@@ -94,7 +93,7 @@ func TestProcessBlockRandao_UnequalBlockAndProposerRandao(t *testing.T) {
 				},
 			},
 		},
-	})
+	}
 
 	want := fmt.Sprintf(
 		"expected hashed block randao layers to equal proposer randao: received %#x = %#x",
@@ -119,7 +118,7 @@ func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 	block := &pb.BeaconBlock{
 		RandaoRevealHash32: []byte{1},
 	}
-	beaconState := types.NewBeaconState(&pb.BeaconState{
+	beaconState := &pb.BeaconState{
 		ValidatorRegistry: registry,
 		Slot:              1,
 		ShardAndCommitteesAtSlots: []*pb.ShardAndCommitteeArray{
@@ -142,7 +141,7 @@ func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 				},
 			},
 		},
-	})
+	}
 
 	randaoMix, newRegistry, err := ProcessBlockRandao(
 		beaconState,
