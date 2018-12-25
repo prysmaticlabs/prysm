@@ -201,7 +201,7 @@ func TestChainHeadRewardsPenalties(t *testing.T) {
 	}
 }
 
-func TestInclusionDistRewards(t *testing.T) {
+func TestInclusionDistRewards_Ok(t *testing.T) {
 	shardAndCommittees := []*pb.ShardAndCommitteeArray{
 		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
 			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
@@ -246,6 +246,34 @@ func TestInclusionDistRewards(t *testing.T) {
 		if !reflect.DeepEqual(state.ValidatorBalances, tt.balanceAfterInclusionRewards) {
 			t.Errorf("InclusionDistRewards(%v) = %v, wanted: %v",
 				tt.voted, state.ValidatorBalances, tt.balanceAfterInclusionRewards)
+		}
+	}
+}
+
+func TestInclusionDistRewards_NotOk(t *testing.T) {
+	shardAndCommittees := []*pb.ShardAndCommitteeArray{
+		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{Shard: 1, Committee: []uint32{}},
+		}}}
+	attestation := []*pb.PendingAttestationRecord{
+		{Data: &pb.AttestationData{Shard: 1, Slot: 0},
+			ParticipationBitfield: []byte{0xff}},
+	}
+
+	tests := []struct {
+		voted                        []uint32
+		balanceAfterInclusionRewards []uint64
+	}{
+		{[]uint32{0, 1, 2, 3}, []uint64{}},
+	}
+	for _, tt := range tests {
+		state := &pb.BeaconState{
+			ShardAndCommitteesAtSlots: shardAndCommittees,
+			LatestAttestations:        attestation,
+		}
+		_, err := InclusionDistRewards(state, tt.voted, 0)
+		if err == nil {
+			t.Fatal("InclusionDistRewards should have failed")
 		}
 	}
 }
