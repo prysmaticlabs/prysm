@@ -90,7 +90,7 @@ func NewSimulator(ctx context.Context, cfg *Config) *Simulator {
 // Start the sim.
 func (sim *Simulator) Start() {
 	log.Info("Starting service")
-	genesisTime, err := sim.beaconDB.GetGenesisTime()
+	genesisTime, err := sim.beaconDB.GenesisTime()
 	if err != nil {
 		log.Fatal(err)
 		return

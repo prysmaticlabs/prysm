@@ -14,6 +14,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -21,7 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -220,11 +220,12 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 			}
 
 			beaconState := data.BeaconState
-			enc, err := proto.Marshal(beaconState)
+
+			h, err := state.Hash(beaconState)
 			if err != nil {
-				log.Errorf("Unable to marshal beacon state: %v", err)
+				log.Error(err)
+				continue
 			}
-			h := hashutil.Hash(enc)
 
 			if h != s.initialStateRootHash32 {
 				continue

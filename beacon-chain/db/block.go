@@ -3,11 +3,9 @@ package db
 import (
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
-	ptypes "github.com/gogo/protobuf/types"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
@@ -170,21 +168,4 @@ func (db *BeaconDB) GetBlockBySlot(slot uint64) (*pb.BeaconBlock, error) {
 	})
 
 	return block, err
-}
-
-// GetGenesisTime returns the timestamp for the genesis block
-func (db *BeaconDB) GetGenesisTime() (time.Time, error) {
-	genesis, err := db.GetBlockBySlot(0)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("could not get genesis block: %v", err)
-	}
-	if genesis == nil {
-		return time.Time{}, fmt.Errorf("genesis block not found: %v", err)
-	}
-
-	genesisTime, err := ptypes.TimestampFromProto(genesis.GetTimestamp())
-	if err != nil {
-		return time.Time{}, fmt.Errorf("could not get genesis timestamp: %v", err)
-	}
-	return genesisTime, nil
 }
