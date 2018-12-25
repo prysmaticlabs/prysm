@@ -25,8 +25,8 @@ func TestProcessPOWReceiptRoots_SameRootHash(t *testing.T) {
 	}
 	beaconState = ProcessPOWReceiptRoots(beaconState, block)
 	newRoots := beaconState.GetCandidatePowReceiptRoots()
-	if newRoots[0].GetVotes() != 6 {
-		t.Errorf("expected votes to increase from 5 to 6, received %v", newRoots[0].GetVotes())
+	if newRoots[0].GetVoteCount() != 6 {
+		t.Errorf("expected votes to increase from 5 to 6, received %v", newRoots[0].GetVoteCount())
 	}
 }
 
@@ -47,10 +47,10 @@ func TestProcessPOWReceiptRoots_NewCandidateRecord(t *testing.T) {
 	if len(newRoots) == 1 {
 		t.Error("expected new receipt roots to have length > 1")
 	}
-	if newRoots[1].GetVotes() != 1 {
+	if newRoots[1].GetVoteCount() != 1 {
 		t.Errorf(
 			"expected new receipt roots to have a new element with votes = 1, received votes = %d",
-			newRoots[1].GetVotes(),
+			newRoots[1].GetVoteCount(),
 		)
 	}
 	if !bytes.Equal(newRoots[1].CandidatePowReceiptRootHash32, []byte{1}) {
