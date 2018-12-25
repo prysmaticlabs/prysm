@@ -33,6 +33,7 @@ func ExecuteStateTransition(
 	if err != nil {
 		return nil, fmt.Errorf("unable to update randao layer %v", err)
 	}
+	newState = randao.UpdateRandaoMixes(newState)
 
 	newHashes, err := CalculateNewBlockHashes(newState, block, currentSlot)
 	if err != nil {
