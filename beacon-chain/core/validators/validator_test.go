@@ -887,19 +887,45 @@ func TestAttestingValidatorIndices_OutOfBound(t *testing.T) {
 
 func TestAllValidatorIndices(t *testing.T) {
 	tests := []struct {
-		balances []uint64
-		indices  []uint32
+		registries []*pb.ValidatorRecord
+		indices    []uint32
 	}{
-		{balances: []uint64{}, indices: []uint32{}},
-		{balances: []uint64{0}, indices: []uint32{0}},
-		{balances: []uint64{0, 0, 0, 0}, indices: []uint32{0, 1, 2, 3}},
-		{balances: []uint64{0, 0, 0, 0, 0, 0}, indices: []uint32{0, 1, 2, 3, 4, 5}},
+		{registries: []*pb.ValidatorRecord{}, indices: []uint32{}},
+		{registries: []*pb.ValidatorRecord{{}}, indices: []uint32{0}},
+		{registries: []*pb.ValidatorRecord{{}, {}, {}, {}}, indices: []uint32{0, 1, 2, 3}},
 	}
 	for _, tt := range tests {
-		state := &pb.BeaconState{ValidatorBalances: tt.balances}
+		state := &pb.BeaconState{ValidatorRegistry: tt.registries}
 		if !reflect.DeepEqual(AllValidatorsIndices(state), tt.indices) {
 			t.Errorf("AllValidatorsIndices(%v) = %v, wanted:%v",
-				tt.balances, AllValidatorsIndices(state), tt.indices)
+				tt.registries, AllValidatorsIndices(state), tt.indices)
+		}
+	}
+}
+
+func TestAllActiveValidatorIndices(t *testing.T) {
+	tests := []struct {
+		registries []*pb.ValidatorRecord
+		indices    []uint32
+	}{
+		{registries: []*pb.ValidatorRecord{
+			{Status: pb.ValidatorRecord_ACTIVE},
+			{Status: pb.ValidatorRecord_EXITED_WITH_PENALTY},
+			{Status: pb.ValidatorRecord_PENDING_ACTIVATION},
+			{Status: pb.ValidatorRecord_EXITED_WITHOUT_PENALTY}},
+			indices: []uint32{0}},
+		{registries: []*pb.ValidatorRecord{
+			{Status: pb.ValidatorRecord_ACTIVE},
+			{Status: pb.ValidatorRecord_ACTIVE},
+			{Status: pb.ValidatorRecord_ACTIVE},
+			{Status: pb.ValidatorRecord_ACTIVE}},
+			indices: []uint32{0, 1, 2, 3}},
+	}
+	for _, tt := range tests {
+		state := &pb.BeaconState{ValidatorRegistry: tt.registries}
+		if !reflect.DeepEqual(AllActiveValidatorsIndices(state), tt.indices) {
+			t.Errorf("AllActiveValidatorsIndices(%v) = %v, wanted:%v",
+				tt.registries, AllActiveValidatorsIndices(state), tt.indices)
 		}
 	}
 }

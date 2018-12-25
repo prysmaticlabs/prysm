@@ -37,7 +37,6 @@ func TestBaseRewardQuotient(t *testing.T) {
 }
 
 func TestBaseReward(t *testing.T) {
-
 	tests := []struct {
 		a uint64
 		b uint64
@@ -62,7 +61,6 @@ func TestBaseReward(t *testing.T) {
 }
 
 func TestInactivityPenalty(t *testing.T) {
-
 	tests := []struct {
 		a uint64
 		b uint64
@@ -87,7 +85,6 @@ func TestInactivityPenalty(t *testing.T) {
 }
 
 func TestFFGSrcRewardsPenalties(t *testing.T) {
-
 	tests := []struct {
 		voted                          []uint32
 		balanceAfterSrcRewardPenalties []uint64
@@ -121,7 +118,6 @@ func TestFFGSrcRewardsPenalties(t *testing.T) {
 }
 
 func TestFFGTargetRewardsPenalties(t *testing.T) {
-
 	tests := []struct {
 		voted                          []uint32
 		balanceAfterTgtRewardPenalties []uint64
@@ -155,7 +151,6 @@ func TestFFGTargetRewardsPenalties(t *testing.T) {
 }
 
 func TestChainHeadRewardsPenalties(t *testing.T) {
-
 	tests := []struct {
 		voted                           []uint32
 		balanceAfterHeadRewardPenalties []uint64
@@ -188,8 +183,7 @@ func TestChainHeadRewardsPenalties(t *testing.T) {
 	}
 }
 
-func TestInclusionDistRewards(t *testing.T) {
-
+func TestInclusionDistRewards_Ok(t *testing.T) {
 	shardAndCommittees := []*pb.ShardAndCommitteeArray{
 		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
 			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
@@ -238,8 +232,35 @@ func TestInclusionDistRewards(t *testing.T) {
 	}
 }
 
-func TestInactivityFFGSrcPenalty(t *testing.T) {
+func TestInclusionDistRewards_NotOk(t *testing.T) {
+	shardAndCommittees := []*pb.ShardAndCommitteeArray{
+		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{Shard: 1, Committee: []uint32{}},
+		}}}
+	attestation := []*pb.PendingAttestationRecord{
+		{Data: &pb.AttestationData{Shard: 1, Slot: 0},
+			ParticipationBitfield: []byte{0xff}},
+	}
 
+	tests := []struct {
+		voted                        []uint32
+		balanceAfterInclusionRewards []uint64
+	}{
+		{[]uint32{0, 1, 2, 3}, []uint64{}},
+	}
+	for _, tt := range tests {
+		state := &pb.BeaconState{
+			ShardAndCommitteesAtSlots: shardAndCommittees,
+			LatestAttestations:        attestation,
+		}
+		_, err := InclusionDistRewards(state, tt.voted, 0)
+		if err == nil {
+			t.Fatal("InclusionDistRewards should have failed")
+		}
+	}
+}
+
+func TestInactivityFFGSrcPenalty(t *testing.T) {
 	tests := []struct {
 		voted                     []uint32
 		balanceAfterFFGSrcPenalty []uint64
@@ -273,7 +294,6 @@ func TestInactivityFFGSrcPenalty(t *testing.T) {
 }
 
 func TestInactivityFFGTargetPenalty(t *testing.T) {
-
 	tests := []struct {
 		voted                        []uint32
 		balanceAfterFFGTargetPenalty []uint64
@@ -307,7 +327,6 @@ func TestInactivityFFGTargetPenalty(t *testing.T) {
 }
 
 func TestInactivityHeadPenalty(t *testing.T) {
-
 	tests := []struct {
 		voted                             []uint32
 		balanceAfterInactivityHeadPenalty []uint64
@@ -337,7 +356,6 @@ func TestInactivityHeadPenalty(t *testing.T) {
 }
 
 func TestInactivityExitedPenality(t *testing.T) {
-
 	tests := []struct {
 		balanceAfterExitedPenalty []uint64
 		epochsSinceFinality uint64
@@ -373,7 +391,6 @@ func TestInactivityExitedPenality(t *testing.T) {
 }
 
 func TestInactivityInclusionPenalty(t *testing.T) {
-
 	shardAndCommittees := []*pb.ShardAndCommitteeArray{
 		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
 			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},

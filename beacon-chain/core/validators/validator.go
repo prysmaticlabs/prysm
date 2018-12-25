@@ -552,9 +552,21 @@ func AttestingBalance(state *pb.BeaconState, boundaryAttesterIndices []uint32) u
 // AllValidatorsIndices returns all validator indices from 0 to
 // the last validator.
 func AllValidatorsIndices(state *pb.BeaconState) []uint32 {
-	validatorIndices := make([]uint32, len(state.ValidatorBalances))
+	validatorIndices := make([]uint32, len(state.ValidatorRegistry))
 	for i := 0; i < len(validatorIndices); i++ {
 		validatorIndices[i] = uint32(i)
+	}
+	return validatorIndices
+}
+
+// AllActiveValidatorsIndices returns all active validator indices
+// from 0 to the last validator.
+func AllActiveValidatorsIndices(state *pb.BeaconState) []uint32 {
+	var validatorIndices []uint32
+	for i := range state.ValidatorRegistry {
+		if isActiveValidator(state.ValidatorRegistry[i]) {
+			validatorIndices = append(validatorIndices, uint32(i))
+		}
 	}
 	return validatorIndices
 }
