@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/helperutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -119,5 +120,34 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 		if err != nil && err.Error() != tt.expectedErr {
 			t.Errorf("Expected error \"%s\" got \"%v\"", tt.expectedErr, err)
 		}
+	}
+}
+
+func TestProcessBlockRoots(t *testing.T) {
+	state := &pb.BeaconState{}
+
+	state.LatestBlockRootHash32S = make([][]byte, params.BeaconConfig().LatestBlockRootsLength)
+	state.Slot = params.BeaconConfig().LatestBlockRootsLength + 1
+
+	testRoot := [32]byte{'a'}
+
+	newState := ProcessBlockRoots(state, testRoot)
+	if !bytes.Equal(newState.LatestBlockRootHash32S[0], testRoot[:]) {
+		t.Fatalf("Latest Block root hash not saved."+
+			" Supposed to get %#x , but got %#x", testRoot, newState.LatestBlockRootHash32S[0])
+	}
+
+	newState.Slot = newState.Slot - 1
+
+	newState = ProcessBlockRoots(newState, testRoot)
+	expectedHashes := make([][]byte, params.BeaconConfig().LatestBlockRootsLength)
+	expectedHashes[0] = testRoot[:]
+	expectedHashes[params.BeaconConfig().LatestBlockRootsLength-1] = testRoot[:]
+
+	expectedRoot := helperutils.MerkleRoot(expectedHashes)
+
+	if !bytes.Equal(newState.BatchedBlockRootHash32S[0], expectedRoot[:]) {
+		t.Errorf("Saved merkle root is not equal to expected merkle root"+
+			"\n Expected %#x but got %#x", expectedRoot, newState.BatchedBlockRootHash32S[0])
 	}
 }
