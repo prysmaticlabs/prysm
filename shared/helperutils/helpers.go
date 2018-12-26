@@ -2,6 +2,9 @@ package helperutils
 
 import "github.com/prysmaticlabs/prysm/shared/hashutil"
 
+// MerkleRoot derives the merkle root from a 2d byte array with each element
+// in the outer array signifying the data that is to be represented in the
+// merkle tree.
 func MerkleRoot(values [][]byte) []byte {
 	length := len(values)
 	newSet := make([][]byte, length, length*2)
