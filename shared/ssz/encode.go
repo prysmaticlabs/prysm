@@ -41,11 +41,11 @@ func (w *encbuf) encode(val interface{}) error {
 		return newEncodeError("nil is not supported", nil)
 	}
 	rval := reflect.ValueOf(val)
-	encDec, err := cachedEncoderDecoder(rval.Type())
+	sszUtils, err := cachedSSZUtils(rval.Type())
 	if err != nil {
 		return newEncodeError(fmt.Sprint(err), rval.Type())
 	}
-	if err = encDec.encoder(rval, w); err != nil {
+	if err = sszUtils.encoder(rval, w); err != nil {
 		return newEncodeError(fmt.Sprint(err), rval.Type())
 	}
 	return nil
@@ -56,12 +56,12 @@ func encodeSize(val interface{}) (uint32, error) {
 		return 0, newEncodeError("nil is not supported", nil)
 	}
 	rval := reflect.ValueOf(val)
-	encDec, err := cachedEncoderDecoder(rval.Type())
+	sszUtils, err := cachedSSZUtils(rval.Type())
 	if err != nil {
 		return 0, newEncodeError(fmt.Sprint(err), rval.Type())
 	}
 	var size uint32
-	if size, err = encDec.encodeSizer(rval); err != nil {
+	if size, err = sszUtils.encodeSizer(rval); err != nil {
 		return 0, newEncodeError(fmt.Sprint(err), rval.Type())
 	}
 	return size, nil

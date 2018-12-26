@@ -31,11 +31,11 @@ func decode(r io.Reader, val interface{}) error {
 	if rval.IsNil() {
 		return newDecodeError("cannot output to pointer of nil", rtyp)
 	}
-	encDec, err := cachedEncoderDecoder(rval.Elem().Type())
+	sszUtils, err := cachedSSZUtils(rval.Elem().Type())
 	if err != nil {
 		return newDecodeError(fmt.Sprint(err), rval.Elem().Type())
 	}
-	if _, err = encDec.decoder(r, rval.Elem()); err != nil {
+	if _, err = sszUtils.decoder(r, rval.Elem()); err != nil {
 		return newDecodeError(fmt.Sprint(err), rval.Elem().Type())
 	}
 	return nil
