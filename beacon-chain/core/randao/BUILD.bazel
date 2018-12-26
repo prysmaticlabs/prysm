@@ -1,0 +1,25 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["randao.go"],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/randao",
+    visibility = ["//beacon-chain:__subpackages__"],
+    deps = [
+        "//beacon-chain/core/validators:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/params:go_default_library",
+        "@com_github_gogo_protobuf//proto:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["randao_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//beacon-chain/core/validators:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/params:go_default_library",
+    ],
+)
