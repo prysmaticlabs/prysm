@@ -336,3 +336,12 @@ func AdjustForInclusionDistance(magniture uint64, distance uint64) uint64 {
 	return magniture/2 + (magniture/2)*
 		params.BeaconConfig().MinAttestationInclusionDelay/distance
 }
+
+// SinceFinality calculates and returns how many epoch has it been since
+// a finalized slot.
+//
+// Spec pseudocode definition:
+//    epochs_since_finality = (state.slot - state.finalized_slot) // EPOCH_LENGTH
+func SinceFinality(state *pb.BeaconState) uint64 {
+	return state.Slot - state.FinalizedSlot/params.BeaconConfig().EpochLength
+}
