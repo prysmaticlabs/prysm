@@ -323,7 +323,8 @@ func TestReceiveAttestation(t *testing.T) {
 	cfg := &RegularSyncConfig{
 		BlockAnnounceBufferSize: 0,
 		BlockBufferSize:         0,
-		BlockRequestBufferSize:  0,
+		BlockReqHashBufferSize:  0,
+		BlockReqSlotBufferSize:  0,
 		ChainService:            ms,
 		AttestService:           as,
 		P2P:                     &mockP2P{},
