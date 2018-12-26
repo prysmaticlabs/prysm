@@ -1,8 +1,1 @@
-{
-  "extends": [
-    "config:base"
-  ],
-  "ignoreDeps": [
-    "com_github_aws_aws_sdk_go" 
-   ]
-}
+/home/nishant/Projects/GoProjects/src/github.com/prysmaticlabs/prysm/renovate.json

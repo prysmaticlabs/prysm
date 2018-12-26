@@ -1,8 +1,1 @@
-{
-  "name": "prysm",
-  "version": "0.0.0",
-  "repository": "git@github.com:prysmaticlabs/prysm.git",
-  "devDependencies": {
-    "solium": "1.1.8"
-  }
-}
+/home/nishant/Projects/GoProjects/src/github.com/prysmaticlabs/prysm/package.json
