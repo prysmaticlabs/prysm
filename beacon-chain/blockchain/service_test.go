@@ -223,8 +223,6 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatalf("Can't get state from db %v", err)
 	}
 
-	beaconState.LatestRandaoMixesHash32S = make([][]byte, params.BeaconConfig().LatestRandaoMixesLength*2)
-
 	var shardAndCommittees []*pb.ShardAndCommitteeArray
 	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
 		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
