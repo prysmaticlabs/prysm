@@ -7,7 +7,7 @@ func MerkleRoot(values [][]byte) []byte {
 	newSet := make([][]byte, length, length*2)
 	newSet = append(newSet, values...)
 
-	for i := length; i >= 0; i-- {
+	for i := length - 1; i >= 0; i-- {
 		concatenatedNodes := append(newSet[i*2], newSet[i*2+1]...)
 		hash := hashutil.Hash(concatenatedNodes)
 		newSet[i] = hash[:]
