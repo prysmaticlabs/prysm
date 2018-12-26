@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"testing"
 
-	ptypes "github.com/gogo/protobuf/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -13,28 +12,17 @@ import (
 func TestGenesisBlock(t *testing.T) {
 	stateHash := []byte{0}
 	b1 := NewGenesisBlock(stateHash)
-	b2 := NewGenesisBlock(stateHash)
-
-	// We ensure that initializing a proto timestamp from
-	// genesis time will lead to no error.
-	if _, err := ptypes.TimestampProto(params.BeaconConfig().GenesisTime); err != nil {
-		t.Errorf("could not create proto timestamp, expected no error: %v", err)
-	}
 
 	if b1.GetParentRootHash32() == nil {
 		t.Error("genesis block missing ParentHash field")
 	}
 
-	if b1.GetBody().GetAttestations() != nil {
+	if !reflect.DeepEqual(b1.GetBody().GetAttestations(), []*pb.Attestation{}) {
 		t.Errorf("genesis block should have 0 attestations")
 	}
 
-	if !bytes.Equal(b1.GetRandaoRevealHash32(), []byte{0}) {
+	if !bytes.Equal(b1.GetRandaoRevealHash32(), params.BeaconConfig().ZeroHash[:]) {
 		t.Error("genesis block missing RandaoRevealHash32 field")
-	}
-
-	if !bytes.Equal(b1.GetCandidatePowReceiptRootHash32(), []byte{0}) {
-		t.Error("genesis block missing CandidatePowReceiptRootHash32 field")
 	}
 
 	if !bytes.Equal(b1.GetStateRootHash32(), stateHash) {
@@ -46,17 +34,6 @@ func TestGenesisBlock(t *testing.T) {
 		t.Error("RANDAO should be empty")
 	}
 
-	gt1 := b1.GetTimestamp()
-	gt2 := b2.GetTimestamp()
-	t1, _ := ptypes.TimestampFromProto(gt1)
-	t2, _ := ptypes.TimestampFromProto(gt2)
-	if t1 != t2 {
-		t.Error("different timestamp")
-	}
-
-	if !reflect.DeepEqual(b1, b2) {
-		t.Error("genesis blocks proto should be equal")
-	}
 }
 
 func TestBlockRootAtSlot_OK(t *testing.T) {
