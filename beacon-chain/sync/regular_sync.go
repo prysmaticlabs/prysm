@@ -56,6 +56,8 @@ type RegularSync struct {
 	announceBlockBuf      chan p2p.Message
 	blockBuf              chan p2p.Message
 	blockRequestBySlot    chan p2p.Message
+	blockRequestByHash    chan p2p.Message
+	batchedRequestBuf     chan p2p.Message
 	chainHeadReqBuf       chan p2p.Message
 	attestationBuf        chan p2p.Message
 }
@@ -64,7 +66,9 @@ type RegularSync struct {
 type RegularSyncConfig struct {
 	BlockAnnounceBufferSize int
 	BlockBufferSize         int
-	BlockRequestBufferSize  int
+	BlockReqSlotBufferSize  int
+	BlockReqHashBufferSize  int
+	BatchedBufferSize       int
 	AttestationBufferSize   int
 	ChainHeadReqBufferSize  int
 	ChainService            chainService
@@ -78,7 +82,9 @@ func DefaultRegularSyncConfig() *RegularSyncConfig {
 	return &RegularSyncConfig{
 		BlockAnnounceBufferSize: 100,
 		BlockBufferSize:         100,
-		BlockRequestBufferSize:  100,
+		BlockReqSlotBufferSize:  100,
+		BlockReqHashBufferSize:  100,
+		BatchedBufferSize:       100,
 		ChainHeadReqBufferSize:  100,
 		AttestationBufferSize:   100,
 	}
@@ -97,7 +103,9 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		blockAnnouncementFeed: new(event.Feed),
 		announceBlockBuf:      make(chan p2p.Message, cfg.BlockAnnounceBufferSize),
 		blockBuf:              make(chan p2p.Message, cfg.BlockBufferSize),
-		blockRequestBySlot:    make(chan p2p.Message, cfg.BlockRequestBufferSize),
+		blockRequestBySlot:    make(chan p2p.Message, cfg.BlockReqSlotBufferSize),
+		blockRequestByHash:    make(chan p2p.Message, cfg.BlockReqHashBufferSize),
+		batchedRequestBuf:     make(chan p2p.Message, cfg.BatchedBufferSize),
 		attestationBuf:        make(chan p2p.Message, cfg.AttestationBufferSize),
 		chainHeadReqBuf:       make(chan p2p.Message, cfg.ChainHeadReqBufferSize),
 	}
@@ -131,12 +139,16 @@ func (rs *RegularSync) run() {
 	announceBlockSub := rs.p2p.Subscribe(&pb.BeaconBlockAnnounce{}, rs.announceBlockBuf)
 	blockSub := rs.p2p.Subscribe(&pb.BeaconBlockResponse{}, rs.blockBuf)
 	blockRequestSub := rs.p2p.Subscribe(&pb.BeaconBlockRequestBySlotNumber{}, rs.blockRequestBySlot)
+	blockRequestHashSub := rs.p2p.Subscribe(&pb.BeaconBlockRequest{}, rs.blockRequestByHash)
+	batchedRequestSub := rs.p2p.Subscribe(&pb.BatchedBeaconBlockRequest{}, rs.batchedRequestBuf)
 	attestationSub := rs.p2p.Subscribe(&pb.Attestation{}, rs.attestationBuf)
 	chainHeadReqSub := rs.p2p.Subscribe(&pb.ChainHeadRequest{}, rs.chainHeadReqBuf)
 
 	defer announceBlockSub.Unsubscribe()
 	defer blockSub.Unsubscribe()
 	defer blockRequestSub.Unsubscribe()
+	defer blockRequestHashSub.Unsubscribe()
+	defer batchedRequestSub.Unsubscribe()
 	defer chainHeadReqSub.Unsubscribe()
 	defer attestationSub.Unsubscribe()
 
@@ -153,13 +165,17 @@ func (rs *RegularSync) run() {
 			rs.receiveBlock(msg)
 		case msg := <-rs.blockRequestBySlot:
 			rs.handleBlockRequestBySlot(msg)
+		case msg := <-rs.blockRequestByHash:
+			rs.handleBlockRequestByHash(msg)
+		case msg := <-rs.batchedRequestBuf:
+			rs.handleBatchedBlockRequest(msg)
 		case msg := <-rs.chainHeadReqBuf:
 			rs.handleChainHeadRequest(msg)
 		}
 	}
 }
 
-// receiveBlockHash accepts a block hash.
+// receiveBlockAnnounce accepts a block hash.
 // TODO(#175): New hashes are forwarded to other peers in the network, and
 // the contents of the block are requested if the local chain doesn't have the block.
 func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) {
@@ -192,7 +208,6 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 	blockHash, err := b.Hash(block)
 	if err != nil {
 		log.Errorf("Could not hash received block: %v", err)
-		return
 	}
 
 	log.Debugf("Processing response to block request: %#x", blockHash)
@@ -263,7 +278,9 @@ func (rs *RegularSync) handleBlockRequestBySlot(msg p2p.Message) {
 
 	_, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
 	log.WithField("slotNumber", fmt.Sprintf("%d", request.GetSlotNumber())).Debug("Sending requested block to peer")
-	rs.p2p.Send(block, msg.Peer)
+	rs.p2p.Send(&pb.BeaconBlockResponse{
+		Block: block,
+	}, msg.Peer)
 	sendBlockSpan.End()
 }
 
@@ -318,4 +335,77 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 	log.WithField("attestationHash", fmt.Sprintf("%#x", h)).Debug("Forwarding attestation to subscribed services")
 	// Request the full block data from peer that sent the block hash.
 	rs.attestationService.IncomingAttestationFeed().Send(a)
+}
+
+func (rs *RegularSync) handleBlockRequestByHash(msg p2p.Message) {
+	data := msg.Data.(*pb.BeaconBlockRequest)
+
+	var hash [32]byte
+	copy(hash[:], data.Hash)
+
+	block, err := rs.db.GetBlock(hash)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	if block == nil {
+		log.Debug("Block does not exist")
+		return
+	}
+
+	rs.p2p.Send(&pb.BeaconBlockResponse{
+		Block: block,
+	}, msg.Peer)
+
+}
+
+// handleBatchedBlockRequest receives p2p messages which consist of requests for batched blocks
+// which are bounded by a start slot and end slot.
+func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) {
+	data := msg.Data.(*pb.BatchedBeaconBlockRequest)
+	startSlot, endSlot := data.StartSlot, data.EndSlot
+
+	block, err := rs.db.GetChainHead()
+	if err != nil {
+		log.Errorf("Could not retrieve chain head %v", err)
+		return
+	}
+
+	finalizedSlot, err := rs.db.GetCleanedFinalizedSlot()
+	if err != nil {
+		log.Errorf("Could not retrieve last finalized slot %v", err)
+		return
+	}
+
+	currentSlot := block.GetSlot()
+
+	if currentSlot < startSlot || finalizedSlot > endSlot {
+		log.Debugf(
+			"invalid batch request: current slot < start slot || finalized slot > end slot."+
+				"currentSlot %d startSlot %d endSlot %d finalizedSlot %d", currentSlot, startSlot, endSlot, finalizedSlot)
+		return
+	}
+
+	response := make([]*pb.BeaconBlock, 0, endSlot-startSlot)
+
+	for i := startSlot; i <= endSlot; i++ {
+		block, err := rs.db.GetBlockBySlot(i)
+		if err != nil {
+			log.Errorf("Unable to retrieve block from db %v", err)
+			continue
+		}
+
+		if block == nil {
+			log.Debug("Block does not exist in db")
+			continue
+		}
+
+		response = append(response, block)
+	}
+
+	log.Debugf("Sending response for batch blocks to peer %v", msg.Peer)
+	rs.p2p.Send(&pb.BatchedBeaconBlockResponse{
+		BatchedBlocks: response,
+	}, msg.Peer)
+
 }
