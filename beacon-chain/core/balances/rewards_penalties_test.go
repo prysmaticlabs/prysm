@@ -304,7 +304,7 @@ func TestInactivityFFGSrcPenalty(t *testing.T) {
 			},
 			ValidatorBalances: validatorBalances,
 		}
-		state = InactivityFFGSrcPenalty(
+		state = InactivityFFGSrcPenalties(
 			state,
 			tt.voted,
 			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositInGwei,
@@ -343,7 +343,7 @@ func TestInactivityFFGTargetPenalty(t *testing.T) {
 			},
 			ValidatorBalances: validatorBalances,
 		}
-		state = InactivityFFGTargetPenalty(
+		state = InactivityFFGTargetPenalties(
 			state,
 			tt.voted,
 			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositInGwei,
@@ -379,7 +379,7 @@ func TestInactivityHeadPenalty(t *testing.T) {
 			},
 			ValidatorBalances: validatorBalances,
 		}
-		state = InactivityHeadPenalty(
+		state = InactivityHeadPenalties(
 			state,
 			tt.voted,
 			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositInGwei)
@@ -413,7 +413,7 @@ func TestInactivityExitedPenality(t *testing.T) {
 				{Status: pb.ValidatorRecord_EXITED_WITH_PENALTY}},
 			ValidatorBalances: validatorBalances,
 		}
-		state = InactivityExitedPenalty(
+		state = InactivityExitedPenalties(
 			state,
 			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositInGwei,
 			tt.epochsSinceFinality,
@@ -455,7 +455,7 @@ func TestInactivityInclusionPenalty_Ok(t *testing.T) {
 			ValidatorBalances:         validatorBalances,
 			LatestAttestations:        attestation,
 		}
-		state, err := InactivityInclusionPenalty(
+		state, err := InactivityInclusionPenalties(
 			state,
 			tt.voted,
 			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositInGwei)
@@ -490,7 +490,7 @@ func TestInactivityInclusionPenalty_NotOk(t *testing.T) {
 			ShardAndCommitteesAtSlots: shardAndCommittees,
 			LatestAttestations:        attestation,
 		}
-		_, err := InactivityInclusionPenalty(state, tt.voted, 0)
+		_, err := InactivityInclusionPenalties(state, tt.voted, 0)
 		if err == nil {
 			t.Fatal("InclusionDistRewards should have failed")
 		}
