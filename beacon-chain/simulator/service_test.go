@@ -58,7 +58,6 @@ func setupSimulator(t *testing.T, beaconDB *db.BeaconDB) (*Simulator, *mockP2P) 
 		Web3Service:     &mockPOWChainService{},
 		BeaconDB:        beaconDB,
 		EnablePOWChain:  true,
-		StateReqBuf:     10,
 	}
 
 	return NewSimulator(ctx, cfg), p2pService
@@ -213,33 +212,23 @@ func TestStateRequest(t *testing.T) {
 	}
 	hash := hashutil.Hash(enc)
 
-	beaconStateRequest := &pb.BeaconStateRequest{
-		Hash: []byte{'t', 'e', 's', 't'},
+	sim.stateReqChan <- p2p.Message{
+		Data: &pb.BeaconStateRequest{
+			Hash: []byte{'t', 'e', 's', 't'},
+		},
 	}
-
-	message := p2p.Message{
-		Data: beaconStateRequest,
-	}
-
-	sim.stateReqChan <- message
 
 	testutil.WaitForLog(t, hook, "Requested beacon state is of a different hash")
-	testutil.AssertLogsDoNotContain(t, hook, "Responding to full beacon state request")
 
 	hook.Reset()
 
-	newStateReq := &pb.BeaconStateRequest{
-		Hash: hash[:],
+	sim.stateReqChan <- p2p.Message{
+		Data: &pb.BeaconStateRequest{
+			Hash: hash[:],
+		},
 	}
-
-	newMessage := p2p.Message{
-		Data: newStateReq,
-	}
-
-	sim.stateReqChan <- newMessage
 
 	testutil.WaitForLog(t, hook, "Responding to full beacon state request")
-	testutil.AssertLogsDoNotContain(t, hook, "Requested beacon state is of a different hash")
 
 	sim.cancel()
 	exitRoutine <- true
