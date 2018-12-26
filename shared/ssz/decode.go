@@ -163,7 +163,7 @@ func decodeByteArray(r io.Reader, val reflect.Value) (uint32, error) {
 
 func makeSliceDecoder(typ reflect.Type) (decoder, error) {
 	elemType := typ.Elem()
-	elemEncoderDecoder, err := cachedEncoderDecoderNoAcquireLock(elemType)
+	elemEncoderDecoder, err := cachedSSZUtilsNoAcquireLock(elemType)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +211,7 @@ func makeSliceDecoder(typ reflect.Type) (decoder, error) {
 
 func makeArrayDecoder(typ reflect.Type) (decoder, error) {
 	elemType := typ.Elem()
-	elemEncoderDecoder, err := cachedEncoderDecoderNoAcquireLock(elemType)
+	elemEncoderDecoder, err := cachedSSZUtilsNoAcquireLock(elemType)
 	if err != nil {
 		return nil, err
 	}
@@ -279,7 +279,7 @@ func makeStructDecoder(typ reflect.Type) (decoder, error) {
 // (Not to be confused with empty slice. Empty slice is supported)
 func makePtrDecoder(typ reflect.Type) (decoder, error) {
 	elemType := typ.Elem()
-	elemEncoderDecoder, err := cachedEncoderDecoderNoAcquireLock(elemType)
+	elemEncoderDecoder, err := cachedSSZUtilsNoAcquireLock(elemType)
 	if err != nil {
 		return nil, err
 	}

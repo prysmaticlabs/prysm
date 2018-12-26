@@ -41,13 +41,13 @@ func cachedSSZUtils(typ reflect.Type) (*sszUtils, error) {
 	// If not found in cache, will get a new one and put it into the cache
 	sszUtilsCacheMutex.Lock()
 	defer sszUtilsCacheMutex.Unlock()
-	return cachedEncoderDecoderNoAcquireLock(typ)
+	return cachedSSZUtilsNoAcquireLock(typ)
 }
 
 // This version is used when the caller is already holding the rw lock for sszUtilsCache.
 // It doesn't acquire new rw lock so it's free to recursively call itself without getting into
 // a deadlock situation.
-func cachedEncoderDecoderNoAcquireLock(typ reflect.Type) (*sszUtils, error) {
+func cachedSSZUtilsNoAcquireLock(typ reflect.Type) (*sszUtils, error) {
 	// Check again in case other goroutine has just acquired the lock
 	// and already updated the cache
 	encDec := sszUtilsCache[typ]
@@ -58,7 +58,7 @@ func cachedEncoderDecoderNoAcquireLock(typ reflect.Type) (*sszUtils, error) {
 	// If the generator tries to lookup the type of itself,
 	// it will get the dummy value and won't call recursively forever.
 	sszUtilsCache[typ] = new(sszUtils)
-	encDec, err := generateEncoderDecoderForType(typ)
+	encDec, err := generateSSZUtilsForType(typ)
 	if err != nil {
 		// Don't forget to remove the dummy key when fail
 		delete(sszUtilsCache, typ)
@@ -69,7 +69,7 @@ func cachedEncoderDecoderNoAcquireLock(typ reflect.Type) (*sszUtils, error) {
 	return sszUtilsCache[typ], nil
 }
 
-func generateEncoderDecoderForType(typ reflect.Type) (encDec *sszUtils, err error) {
+func generateSSZUtilsForType(typ reflect.Type) (encDec *sszUtils, err error) {
 	encDec = new(sszUtils)
 	if encDec.encoder, encDec.encodeSizer, err = makeEncoder(typ); err != nil {
 		return nil, err
@@ -92,7 +92,7 @@ func structFields(typ reflect.Type) (fields []field, err error) {
 		if strings.Contains(f.Name, "XXX") {
 			continue
 		}
-		encDec, err := cachedEncoderDecoderNoAcquireLock(f.Type)
+		encDec, err := cachedSSZUtilsNoAcquireLock(f.Type)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get encoder/decoder: %v", err)
 		}

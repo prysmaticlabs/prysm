@@ -191,7 +191,7 @@ func makeByteArrayEncoder() (encoder, encodeSizer, error) {
 }
 
 func makeSliceEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
-	elemEncoderDecoder, err := cachedEncoderDecoderNoAcquireLock(typ.Elem())
+	elemEncoderDecoder, err := cachedSSZUtilsNoAcquireLock(typ.Elem())
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get encoder/decoder: %v", err)
 	}
@@ -266,7 +266,7 @@ func makeStructEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 // - Output for decoding will never contain nil pointer
 // (Not to be confused with empty slice. Empty slice is supported)
 func makePtrEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
-	elemEncoderDecoder, err := cachedEncoderDecoderNoAcquireLock(typ.Elem())
+	elemEncoderDecoder, err := cachedSSZUtilsNoAcquireLock(typ.Elem())
 	if err != nil {
 		return nil, nil, err
 	}
