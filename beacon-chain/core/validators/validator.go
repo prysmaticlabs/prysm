@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
@@ -438,6 +439,45 @@ func CheckValidatorMinDeposit(validatorSet []*pb.ValidatorRecord, currentSlot ui
 		}
 	}
 	return validatorSet
+}
+
+// NewRegistryDeltaChainTip returns the new validator registry delta chain tip.
+//
+// Spec pseudocode definition:
+//   def get_new_validator_registry_delta_chain_tip(current_validator_registry_delta_chain_tip: Hash32,
+//                                               validator_index: int,
+//                                               pubkey: int,
+//                                               flag: int) -> Hash32:
+// 	  """
+//    Compute the next root in the validator registry delta chain.
+//    """
+//    return hash_tree_root(
+//        ValidatorRegistryDeltaBlock(
+//            latest_registry_delta_root=current_validator_registry_delta_chain_tip,
+//            validator_index=validator_index,
+//            pubkey=pubkey,
+//            flag=flag,
+//        )
+//    )
+func NewRegistryDeltaChainTip(
+	flag uint64,
+	index uint32,
+	pubKey []byte,
+	currentValidatorRegistryDeltaChainTip []byte) ([32]byte, error) {
+
+	newDeltaChainTip := &pb.ValidatorRegistryDeltaBlock{
+		LatestRegistryDeltaRootHash32: currentValidatorRegistryDeltaChainTip,
+		ValidatorIndex:                index,
+		Pubkey:                        pubKey,
+		Flag:                          flag,
+	}
+
+	// TODO(716): Replace serialization with tree hash function.
+	serializedChainTip, err := proto.Marshal(newDeltaChainTip)
+	if err != nil {
+		return [32]byte{}, fmt.Errorf("could not marshal new chain tip: %v", err)
+	}
+	return hashutil.Hash(serializedChainTip), nil
 }
 
 // EffectiveBalance returns the balance at stake for the validator.
