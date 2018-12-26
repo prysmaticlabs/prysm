@@ -197,7 +197,7 @@ func InclusionDistRewards(
 	return state, nil
 }
 
-// InactivityFFGSrcPenalty applies penalties to inactive
+// InactivityFFGSrcPenalties applies penalties to inactive
 // validators that missed to vote FFG source over an
 // extended of time. (epochs_since_finality > 4)
 //
@@ -221,7 +221,7 @@ func InactivityFFGSrcPenalties(
 	return state
 }
 
-// InactivityFFGTargetPenalty applies penalties to inactive
+// InactivityFFGTargetPenalties applies penalties to inactive
 // validators that missed to vote FFG target over an
 // extended of time. (epochs_since_finality > 4)
 //
@@ -245,7 +245,7 @@ func InactivityFFGTargetPenalties(
 	return state
 }
 
-// InactivityHeadPenalty applies penalties to inactive validators
+// InactivityHeadPenalties applies penalties to inactive validators
 // that missed to vote on canonical head over an extended of time.
 // (epochs_since_finality > 4)
 //
@@ -268,7 +268,7 @@ func InactivityHeadPenalties(
 	return state
 }
 
-// InactivityExitedPenalty applies additional (2x) penalties
+// InactivityExitedPenalties applies additional (2x) penalties
 // to inactive validators with status EXITED_WITH_PENALTY.
 //
 // Spec pseudocode definition:
@@ -293,7 +293,7 @@ func InactivityExitedPenalties(
 	return state
 }
 
-// InactivityInclusionPenalty applies penalties in relation with
+// InactivityInclusionPenalties applies penalties in relation with
 // inclusion delay to inactive validators.
 //
 // Spec pseudocode definition:
@@ -320,7 +320,7 @@ func InactivityInclusionPenalties(
 	return state, nil
 }
 
-// AttestationInclusionReward awards the the beacon
+// AttestationInclusionRewards awards the the beacon
 // proposers who included previous epoch attestations.
 //
 // Spec pseudocode definition:
