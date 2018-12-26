@@ -1,1 +1,3 @@
-/home/nishant/Projects/GoProjects/src/github.com/prysmaticlabs/prysm/.gitattributes
+# Auto detect text files and perform LF normalization
+* text=auto
+*.sol linguist-language=Solidity

@@ -1,0 +1,54 @@
+kind: Deployment
+apiVersion: apps/v1beta1
+metadata:
+  name: beacon-chain
+  namespace: beacon-chain
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      component: beacon-chain
+      universe: beacon-chain
+  template:
+    metadata:
+      labels:
+        component: beacon-chain
+        universe: beacon-chain
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '9090'
+    spec:
+      priorityClassName: production-priority
+      containers:
+        - name: beacon-chain
+          image: gcr.io/prysmaticlabs/prysm/beacon-chain:latest
+          args: 
+            - "--web3provider=ws://geth-nodes.pow.svc.cluster.local:8546"
+            - "--verbosity=debug"
+            - "--vrcaddr=$(VALIDATOR_REGISTRATION_CONTRACT_ADDRESS)"
+            - "--rpc-port=4000"
+            - "--simulator=false"
+            - "--monitoring-port=9090"
+            - "--bootstrap-node=/ip4/$(BOOTNODE_SERVICE_HOST)/tcp/$(BOOTNODE_SERVICE_PORT)/p2p/QmUWTsZwoJ51tey4fEE9EAqzQeHFHm4FE9aSfgTv8xyuG5" 
+            - "--relay-node=/ip4/35.221.47.224/tcp/20000/p2p/QmXNZeGdHYshgwyYyJnYG7u5iQ1Hej5R9QshgEZ5NACc1x" 
+            - "--p2p-port=5000"
+          resources:
+            requests:
+              memory: "100Mi"
+              cpu: "50m"
+            limits:
+              memory: "250Mi"
+              cpu: "100m"
+          ports:
+            - containerPort: 4000
+              name: grpc
+            - containerPort: 5000
+              name: p2p
+            - containerPort: 9090
+              name: prometheus
+          env:
+            - name: VALIDATOR_REGISTRATION_CONTRACT_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: beacon-config
+                  key: VALIDATOR_REGISTRATION_CONTRACT_ADDRESS

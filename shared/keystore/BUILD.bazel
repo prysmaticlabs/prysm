@@ -1,0 +1,33 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "key.go",
+        "keystore.go",
+        "utils.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/shared/keystore",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//shared/bls:go_default_library",
+        "@com_github_ethereum_go_ethereum//common/math:go_default_library",
+        "@com_github_ethereum_go_ethereum//crypto:go_default_library",
+        "@com_github_pborman_uuid//:go_default_library",
+        "@org_golang_x_crypto//pbkdf2:go_default_library",
+        "@org_golang_x_crypto//scrypt:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "key_test.go",
+        "keystore_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//shared/bls:go_default_library",
+        "@com_github_pborman_uuid//:go_default_library",
+    ],
+)

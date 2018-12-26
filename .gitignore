@@ -1,1 +1,21 @@
-/home/nishant/Projects/GoProjects/src/github.com/prysmaticlabs/prysm/.gitignore
+# Ignore bazel directories
+bazel-*
+
+.DS_Store
+.gitattributes
+
+# IntelliJ
+.idea
+.ijwb
+
+# delve debugger output (not sure how to get rid of these)
+**/debug.test
+
+# Coverage outputs
+coverage.txt
+profile.out
+
+# Nodejs
+node_modules
+yarn-error.log
+.vscode/

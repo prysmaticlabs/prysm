@@ -1,1 +1,21 @@
-/home/nishant/Projects/GoProjects/src/github.com/prysmaticlabs/prysm/.gometalinter.json
+{
+  "Deadline": "10m",
+  "Exclude": [
+    "^proto/",
+    "^contracts/"
+  ],
+  "DisableAll": true,
+  "Enable": [
+      "deadcode",
+      "goconst",
+      "goimports",
+      "golint",
+      "gosec",
+      "gotype",
+      "megacheck",
+      "misspell",
+      "structcheck",
+      "unparam",
+      "varcheck"
+    ]
+}

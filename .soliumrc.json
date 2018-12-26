@@ -1,1 +1,18 @@
-/home/nishant/Projects/GoProjects/src/github.com/prysmaticlabs/prysm/.soliumrc.json
+{
+  "extends": "solium:recommended",
+  "plugins": [
+    "security"
+  ],
+  "rules": {
+    "quotes": [
+      "error",
+      "double"
+    ],
+    "security/no-inline-assembly": ["warning"],
+
+    "indentation": [
+      "error",
+      4
+    ]
+  }
+}
