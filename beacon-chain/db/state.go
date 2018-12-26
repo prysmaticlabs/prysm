@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
@@ -126,4 +127,18 @@ func createState(enc []byte) (*pb.BeaconState, error) {
 		return nil, fmt.Errorf("failed to unmarshal encoding: %v", err)
 	}
 	return protoState, nil
+}
+
+// GenesisTime returns the genesis timestamp for the state.
+func (db *BeaconDB) GenesisTime() (time.Time, error) {
+	state, err := db.GetState()
+	if err != nil {
+		return time.Time{}, fmt.Errorf("could not retrieve state: %v", err)
+	}
+	if state == nil {
+		return time.Time{}, fmt.Errorf("state not found: %v", err)
+	}
+
+	genesisTime := time.Unix(int64(state.GetGenesisTime()), int64(0))
+	return genesisTime, nil
 }
