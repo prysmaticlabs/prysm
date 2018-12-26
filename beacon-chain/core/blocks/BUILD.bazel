@@ -34,6 +34,7 @@ go_test(
     deps = [
         "//beacon-chain/utils:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/helperutils:go_default_library",
         "//shared/params:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",
