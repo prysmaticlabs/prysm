@@ -3,6 +3,6 @@
   "version": "0.0.0",
   "repository": "git@github.com:prysmaticlabs/prysm.git",
   "devDependencies": {
-    "solium": "1.1.8"
+    "solium": "1.2.0"
   }
 }

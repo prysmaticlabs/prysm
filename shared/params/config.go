@@ -68,6 +68,7 @@ type BeaconChainConfig struct {
 	GenesisTime                             time.Time      // GenesisTime used by the protocol.
 	MaxNumLog2Validators                    uint64         // Max number of validators in Log2 can exist given total ETH supply.
 	EpochLength                             uint64         // Number of slots that define an Epoch.
+	InactivityPenaltyQuotient               uint64         // InactivityPenaltyQuotient defines how much validator leaks out balances for offline.
 	ZeroHash                                [32]byte       // ZeroHash is used to represent a zeroed out 32 byte array.
 	EmptySignature                          [][]byte       // EmptySignature is used to represent a zeroed out BLS Signature.
 }
@@ -101,7 +102,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	SqrtExpDropTime:               uint64(65536),
 	MinWithdrawalPeriod:           uint64(4096),
 	WithdrawalsPerCycle:           uint64(4),
-	BaseRewardQuotient:            uint64(32768),
+	BaseRewardQuotient:            uint64(1024),
 	MaxValidatorChurnQuotient:     uint64(32),
 	InitialForkVersion:            0,
 	InitialForkSlot:               0,
@@ -115,6 +116,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	ZeroHash:                      [32]byte{},
 	EmptySignature:                makeEmptySignature(),
 	PowReceiptRootVotingPeriod:    1024,
+	InactivityPenaltyQuotient:     1 << 24,
 }
 
 var demoBeaconConfig = &BeaconChainConfig{
@@ -139,7 +141,7 @@ var demoBeaconConfig = &BeaconChainConfig{
 	SqrtExpDropTime:               uint64(65536),
 	MinWithdrawalPeriod:           uint64(20),
 	WithdrawalsPerCycle:           uint64(2),
-	BaseRewardQuotient:            uint64(32768),
+	BaseRewardQuotient:            defaultBeaconConfig.BaseRewardQuotient,
 	MaxValidatorChurnQuotient:     uint64(32),
 	InitialForkVersion:            0,
 	InitialSlotNumber:             0,
@@ -150,9 +152,10 @@ var demoBeaconConfig = &BeaconChainConfig{
 	GenesisTime:                   time.Now(),
 	MaxNumLog2Validators:          24,
 	EpochLength:                   defaultBeaconConfig.EpochLength,
+	PowReceiptRootVotingPeriod:    defaultBeaconConfig.PowReceiptRootVotingPeriod,
+	InactivityPenaltyQuotient:     defaultBeaconConfig.InactivityPenaltyQuotient,
 	ZeroHash:                      [32]byte{},
 	EmptySignature:                makeEmptySignature(),
-	PowReceiptRootVotingPeriod:    1024,
 }
 
 var defaultShardConfig = &ShardChainConfig{
