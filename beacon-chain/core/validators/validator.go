@@ -460,7 +460,7 @@ func CheckValidatorMinDeposit(validatorSet []*pb.ValidatorRecord, currentSlot ui
 //        )
 //    )
 func NewRegistryDeltaChainTip(
-	flag uint64,
+	flag pb.ValidatorRegistryDeltaBlock_ValidatorRegistryDeltaFlags,
 	index uint32,
 	pubKey []byte,
 	currentValidatorRegistryDeltaChainTip []byte) ([32]byte, error) {
@@ -646,7 +646,7 @@ func activateValidator(state *pb.BeaconState, index uint32) (*pb.BeaconState, er
 	validator.Status = pb.ValidatorRecord_ACTIVE
 	validator.LatestStatusChangeSlot = state.Slot
 	newChainTip, err := NewRegistryDeltaChainTip(
-		uint64(pb.ValidatorRecord_ACTIVE),
+		pb.ValidatorRegistryDeltaBlock_ACTIVATION,
 		index,
 		validator.Pubkey,
 		state.ValidatorRegistryDeltaChainTipHash32,
@@ -699,15 +699,15 @@ func exitValidator(state *pb.BeaconState, index uint32, newStatus pb.ValidatorRe
 		state.ValidatorBalances[index] -= whistleblowerReward
 	}
 
-	if prevStatus == pb.ValidatorRecord_EXITED_WITH_PENALTY {
-		return nil, fmt.Errorf("validator %d already exited due to penalty", index)
+	if prevStatus == pb.ValidatorRecord_EXITED_WITHOUT_PENALTY {
+		return nil, fmt.Errorf("validator %d already exited without penalty", index)
 	}
 
 	// The following only gets updated if not previous exited.
 	state.ValidatorRegistryExitCount += 1
 	validator.ExitCount = state.ValidatorRegistryExitCount
 	newChainTip, err := NewRegistryDeltaChainTip(
-		uint64(pb.ValidatorRecord_EXITED_WITHOUT_PENALTY),
+		pb.ValidatorRegistryDeltaBlock_EXIT,
 		index,
 		validator.Pubkey,
 		state.ValidatorRegistryDeltaChainTipHash32,
@@ -722,8 +722,8 @@ func exitValidator(state *pb.BeaconState, index uint32, newStatus pb.ValidatorRe
 		for j, validatorIndex := range committee.List {
 			if validatorIndex == index {
 				state.PersistentCommittees[i].List = append(
-					state.PersistentCommittees[i].List[j:],
-					state.PersistentCommittees[i].List[j+1])
+					state.PersistentCommittees[i].List[:j],
+					state.PersistentCommittees[i].List[j+1:]...)
 				break
 			}
 		}
