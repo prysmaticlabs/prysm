@@ -496,4 +496,3 @@ func TestInactivityInclusionPenalty_NotOk(t *testing.T) {
 		}
 	}
 }
-

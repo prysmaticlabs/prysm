@@ -319,4 +319,3 @@ func InactivityInclusionPenalty(
 	}
 	return state, nil
 }
-
