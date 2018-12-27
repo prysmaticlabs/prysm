@@ -26,7 +26,7 @@ func TestProcessPOWReceiptRoots_SameRootHash(t *testing.T) {
 	beaconState = ProcessPOWReceiptRoots(beaconState, block)
 	newRoots := beaconState.GetCandidatePowReceiptRoots()
 	if newRoots[0].GetVoteCount() != 6 {
-		t.Errorf("expected votes to increase from 5 to 6, received %v", newRoots[0].GetVoteCount())
+		t.Errorf("expected votes to increase from 5 to 6, received %d", newRoots[0].GetVoteCount())
 	}
 }
 
