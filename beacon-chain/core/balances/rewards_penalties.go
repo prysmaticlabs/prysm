@@ -332,10 +332,10 @@ func InactivityInclusionPenalties(
 func AttestationInclusionRewards(
 	state *pb.BeaconState,
 	totalBalance uint64,
-	attesterIndices []uint32) (*pb.BeaconState, error) {
+	prevEpochAttesterIndices []uint32) (*pb.BeaconState, error) {
 
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
-	for _, index := range attesterIndices {
+	for _, index := range prevEpochAttesterIndices {
 		slot, err := epoch.InclusionSlot(state, index)
 		if err != nil {
 			return nil, fmt.Errorf("could not get inclusion slot: %v", err)
