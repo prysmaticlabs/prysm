@@ -659,7 +659,7 @@ func isActiveValidator(validator *pb.ValidatorRecord) bool {
 func activateValidator(state *pb.BeaconState, index uint32) (*pb.BeaconState, error) {
 	validator := state.ValidatorRegistry[index]
 	if validator.Status != pb.ValidatorRecord_PENDING_ACTIVATION {
-		return nil, fmt.Errorf("could not activte validator %d, status is %d",
+		return nil, fmt.Errorf("expected validator %d to be PENDING_ACTIVATION, but was %v",
 			index, validator.Status)
 	}
 	validator.Status = pb.ValidatorRecord_ACTIVE
@@ -697,7 +697,7 @@ func activateValidator(state *pb.BeaconState, index uint32) (*pb.BeaconState, er
 func initiateValidatorExit(state *pb.BeaconState, index uint32) (*pb.BeaconState, error) {
 	validator := state.ValidatorRegistry[index]
 	if validator.Status != pb.ValidatorRecord_ACTIVE {
-		return nil, fmt.Errorf("could not exit validator %d, status is %d",
+		return nil, fmt.Errorf("expected validator %d to be ACTIVE, but was %v",
 			index, validator.Status)
 	}
 	validator.Status = pb.ValidatorRecord_ACTIVE_PENDING_EXIT
