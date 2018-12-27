@@ -637,6 +637,25 @@ func isActiveValidator(validator *pb.ValidatorRecord) bool {
 
 // activateValidator takes in validator index and activates
 // validator from pending activation status to active status.
+//
+// Spec pseudocode definition:
+// def activate_validator(state: BeaconState,
+// 						  index: int) -> None:
+// 		"""
+// 		Activate the validator with the given ``index``.
+// 		Note that this function mutates ``state``.
+// 		"""
+// 		validator = state.validator_registry[index]
+// 		if validator.status != PENDING_ACTIVATION:
+// 				return
+//
+// 		validator.status = ACTIVE
+// 		validator.latest_status_change_slot = state.slot
+// 		state.validator_registry_delta_chain_tip = get_new_validator_registry_delta_chain_tip(
+// 				current_validator_registry_delta_chain_tip=state.validator_registry_delta_chain_tip,
+// 				validator_index=index,
+// 				pubkey=validator.pubkey,
+// 				flag=ACTIVATION)
 func activateValidator(state *pb.BeaconState, index uint32) (*pb.BeaconState, error) {
 	validator := state.ValidatorRegistry[index]
 	if validator.Status != pb.ValidatorRecord_PENDING_ACTIVATION {
@@ -661,6 +680,20 @@ func activateValidator(state *pb.BeaconState, index uint32) (*pb.BeaconState, er
 
 // initiateValidatorExit takes in validator index and exits
 // validator from active status to active pending exit status.
+//
+// Spec pseudocode definition:
+// def initiate_validator_exit(state: BeaconState,
+//                            index: int) -> None:
+//    """
+//    Initiate exit for the validator with the given ``index``.
+//    Note that this function mutates ``state``.
+//    """
+//    validator = state.validator_registry[index]
+//    if validator.status != ACTIVE:
+//        return
+//
+//    validator.status = ACTIVE_PENDING_EXIT
+//    validator.latest_status_change_slot = state.slot
 func initiateValidatorExit(state *pb.BeaconState, index uint32) (*pb.BeaconState, error) {
 	validator := state.ValidatorRegistry[index]
 	if validator.Status != pb.ValidatorRecord_ACTIVE {
@@ -675,6 +708,51 @@ func initiateValidatorExit(state *pb.BeaconState, index uint32) (*pb.BeaconState
 
 // exitValidator takes in validator index and does house
 // keeping work for validators with exited with penalty or without penalty status.
+//
+// Spec pseudocode definition:
+// def exit_validator(state: BeaconState,
+//                   index: int,
+//                   new_status: int) -> None:
+//    """
+//    Exit the validator with the given ``index``.
+//    Note that this function mutates ``state``.
+//    """
+//    validator = state.validator_registry[index]
+//    prev_status = validator.status
+//
+//    if prev_status == EXITED_WITH_PENALTY:
+//        return
+//
+//    validator.status = new_status
+//    validator.latest_status_change_slot = state.slot
+//
+//    if new_status == EXITED_WITH_PENALTY:
+//        state.latest_penalized_exit_balances[state.slot // COLLECTIVE_PENALTY_CALCULATION_PERIOD] += get_effective_balance(state, index)
+//
+//        whistleblower_index = get_beacon_proposer_index(state, state.slot)
+//        whistleblower_reward = get_effective_balance(state, index) // WHISTLEBLOWER_REWARD_QUOTIENT
+//        state.validator_balances[whistleblower_index] += whistleblower_reward
+//        state.validator_balances[index] -= whistleblower_reward
+//
+//    if prev_status == EXITED_WITHOUT_PENALTY:
+//        return
+//
+//    # The following updates only occur if not previous exited
+//    state.validator_registry_exit_count += 1
+//    validator.exit_count = state.validator_registry_exit_count
+//    state.validator_registry_delta_chain_tip = get_new_validator_registry_delta_chain_tip(
+//        current_validator_registry_delta_chain_tip=state.validator_registry_delta_chain_tip,
+//        validator_index=index,
+//        pubkey=validator.pubkey,
+//        flag=EXIT,
+//    )
+//
+//    # Remove validator from persistent committees
+//    for committee in state.persistent_committees:
+//        for i, validator_index in committee:
+//            if validator_index == index:
+//                committee.pop(i)
+//                break
 func exitValidator(state *pb.BeaconState, index uint32, newStatus pb.ValidatorRecord_StatusCodes) (*pb.BeaconState, error) {
 	validator := state.ValidatorRegistry[index]
 	prevStatus := validator.Status
