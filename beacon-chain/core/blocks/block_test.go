@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/helperutils"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -144,7 +144,7 @@ func TestProcessBlockRoots(t *testing.T) {
 	expectedHashes[0] = testRoot[:]
 	expectedHashes[params.BeaconConfig().LatestBlockRootsLength-1] = testRoot[:]
 
-	expectedRoot := helperutils.MerkleRoot(expectedHashes)
+	expectedRoot := hashutil.MerkleRoot(expectedHashes)
 
 	if !bytes.Equal(newState.BatchedBlockRootHash32S[0], expectedRoot[:]) {
 		t.Errorf("Saved merkle root is not equal to expected merkle root"+

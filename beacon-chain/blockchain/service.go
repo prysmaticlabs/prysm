@@ -311,13 +311,13 @@ func (c *ChainService) receiveBlock(block *pb.BeaconBlock) error {
 
 	prevBlock, err := c.beaconDB.GetChainHead()
 	if err != nil {
-		return fmt.Errorf("unable to retrieve chain head %v", err)
+		return fmt.Errorf("could not retrieve chain head %v", err)
 	}
 
 	// TODO(#716):Replace with tree-hashing algorithm.
 	blockRoot, err := b.Hash(prevBlock)
 	if err != nil {
-		return fmt.Errorf("unable to hash block %v", err)
+		return fmt.Errorf("could not hash block %v", err)
 	}
 
 	log.WithField("slotNumber", block.GetSlot()).Info("Executing state transition")
@@ -327,13 +327,13 @@ func (c *ChainService) receiveBlock(block *pb.BeaconBlock) error {
 	for beaconState.GetSlot() < block.GetSlot()-1 {
 		beaconState, err = state.ExecuteStateTransition(beaconState, nil, blockRoot)
 		if err != nil {
-			return fmt.Errorf("unable to execute state transition %v", err)
+			return fmt.Errorf("could not execute state transition %v", err)
 		}
 	}
 
 	beaconState, err = state.ExecuteStateTransition(beaconState, block, blockRoot)
 	if err != nil {
-		return errors.New("unable to execute state transition")
+		return errors.New("could not execute state transition")
 	}
 
 	if state.IsValidatorSetChange(beaconState, block.GetSlot()) {
