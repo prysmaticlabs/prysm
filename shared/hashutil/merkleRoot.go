@@ -5,10 +5,10 @@ package hashutil
 // merkle tree.
 // Spec:
 //	def merkle_root(values):
-//	o = [0] * len(values) + values
-//	for i in range(len(values)-1, 0, -1):
-//	o[i] = hash(o[i*2] + o[i*2+1])
-//	return o[1]
+//		o = [0] * len(values) + values
+//		for i in range(len(values)-1, 0, -1):
+//			o[i] = hash(o[i*2] + o[i*2+1])
+//		return o[1]
 func MerkleRoot(values [][]byte) []byte {
 	length := len(values)
 	newSet := make([][]byte, length, length*2)
