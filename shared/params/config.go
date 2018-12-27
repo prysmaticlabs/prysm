@@ -26,6 +26,8 @@ type ValidatorSetDeltaFlags int
 
 // BeaconChainConfig contains configs for node to participate in beacon chain.
 type BeaconChainConfig struct {
+	LatestBlockRootsLength                  uint64         // LatestBlockRootsLength is the number of block roots kept in the beacon state.
+	LatestRandaoMixesLength                 uint64         // LatestRandaoMixesLength is the number of randao mixes kept in the beacon state.
 	MaxExits                                uint64         // MaxExits determines the maximum number of validator exits in a block.
 	MaxAttestations                         uint64         // MaxAttestations defines the maximum allowed attestations in a beacon block.
 	MaxProposerSlashings                    uint64         // MaxProposerSlashing defines the maximum number of slashings of proposers possible in a block.
@@ -78,6 +80,8 @@ type ShardChainConfig struct {
 }
 
 var defaultBeaconConfig = &BeaconChainConfig{
+	LatestRandaoMixesLength:       8192,
+	LatestBlockRootsLength:        8192,
 	MaxExits:                      16,
 	MaxAttestations:               128,
 	MaxProposerSlashings:          16,
@@ -117,6 +121,8 @@ var defaultBeaconConfig = &BeaconChainConfig{
 }
 
 var demoBeaconConfig = &BeaconChainConfig{
+	LatestRandaoMixesLength:       8192,
+	LatestBlockRootsLength:        8192,
 	MaxExits:                      16,
 	MaxAttestations:               128,
 	MaxProposerSlashings:          16,
