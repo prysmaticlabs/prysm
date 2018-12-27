@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -11,6 +12,15 @@ import (
 )
 
 var clock utils.Clock = &utils.RealClock{}
+
+// Hash a beacon block data structure.
+func Hash(block *pb.BeaconBlock) ([32]byte, error) {
+	data, err := proto.Marshal(block)
+	if err != nil {
+		return [32]byte{}, fmt.Errorf("could not marshal block proto data: %v", err)
+	}
+	return hashutil.Hash(data), nil
+}
 
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
 func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
@@ -76,4 +86,20 @@ func BlockRoot(state *pb.BeaconState, slot uint64) ([]byte, error) {
 	}
 
 	return state.LatestBlockRootHash32S[slot-earliestSlot], nil
+}
+
+// ProcessBlockRoots processes the previous block root into the state, by appending it
+// to the most recent block roots.
+// Spec:
+//  Let previous_block_root be the tree_hash_root of the previous beacon block processed in the chain.
+//	Set state.latest_block_roots[(state.slot - 1) % LATEST_BLOCK_ROOTS_LENGTH] = previous_block_root.
+//	If state.slot % LATEST_BLOCK_ROOTS_LENGTH == 0 append merkle_root(state.latest_block_roots) to state.batched_block_roots.
+func ProcessBlockRoots(state *pb.BeaconState, prevBlockRoot [32]byte) *pb.BeaconState {
+	state.LatestBlockRootHash32S[(state.Slot-1)%params.BeaconConfig().LatestBlockRootsLength] = prevBlockRoot[:]
+	if state.Slot%params.BeaconConfig().LatestBlockRootsLength == 0 {
+		merkleRoot := hashutil.MerkleRoot(state.LatestBlockRootHash32S)
+		state.BatchedBlockRootHash32S = append(state.BatchedBlockRootHash32S, merkleRoot)
+	}
+
+	return state
 }
