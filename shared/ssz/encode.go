@@ -191,7 +191,7 @@ func makeByteArrayEncoder() (encoder, encodeSizer, error) {
 }
 
 func makeSliceEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
-	elemEncoderDecoder, err := cachedSSZUtilsNoAcquireLock(typ.Elem())
+	elemSSZUtils, err := cachedSSZUtilsNoAcquireLock(typ.Elem())
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get encoder/decoder: %v", err)
 	}
@@ -200,7 +200,7 @@ func makeSliceEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 		totalSizeEnc := make([]byte, lengthBytes)
 		w.str = append(w.str, totalSizeEnc...)
 		for i := 0; i < val.Len(); i++ {
-			if err := elemEncoderDecoder.encoder(val.Index(i), w); err != nil {
+			if err := elemSSZUtils.encoder(val.Index(i), w); err != nil {
 				return fmt.Errorf("failed to encode element of slice: %v", err)
 			}
 		}
@@ -216,7 +216,7 @@ func makeSliceEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 		if val.Len() == 0 {
 			return lengthBytes, nil
 		}
-		elemSize, err := elemEncoderDecoder.encodeSizer(val.Index(0))
+		elemSize, err := elemSSZUtils.encodeSizer(val.Index(0))
 		if err != nil {
 			return 0, errors.New("failed to get encode size of element of slice")
 		}
@@ -235,7 +235,7 @@ func makeStructEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 		totalSizeEnc := make([]byte, lengthBytes)
 		w.str = append(w.str, totalSizeEnc...)
 		for _, f := range fields {
-			if err := f.encDec.encoder(val.Field(f.index), w); err != nil {
+			if err := f.sszUtils.encoder(val.Field(f.index), w); err != nil {
 				return fmt.Errorf("failed to encode field of struct: %v", err)
 			}
 		}
@@ -250,7 +250,7 @@ func makeStructEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 	encodeSizer := func(val reflect.Value) (uint32, error) {
 		totalSize := uint32(0)
 		for _, f := range fields {
-			fieldSize, err := f.encDec.encodeSizer(val.Field(f.index))
+			fieldSize, err := f.sszUtils.encodeSizer(val.Field(f.index))
 			if err != nil {
 				return 0, fmt.Errorf("failed to get encode size for field of struct: %v", err)
 			}
@@ -266,7 +266,7 @@ func makeStructEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 // - Output for decoding will never contain nil pointer
 // (Not to be confused with empty slice. Empty slice is supported)
 func makePtrEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
-	elemEncoderDecoder, err := cachedSSZUtilsNoAcquireLock(typ.Elem())
+	elemSSZUtils, err := cachedSSZUtilsNoAcquireLock(typ.Elem())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -275,14 +275,14 @@ func makePtrEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 		if val.IsNil() {
 			return errors.New("nil is not supported")
 		}
-		return elemEncoderDecoder.encoder(val.Elem(), w)
+		return elemSSZUtils.encoder(val.Elem(), w)
 	}
 
 	encodeSizer := func(val reflect.Value) (uint32, error) {
 		if val.IsNil() {
 			return 0, errors.New("nil is not supported")
 		}
-		return elemEncoderDecoder.encodeSizer(val.Elem())
+		return elemSSZUtils.encodeSizer(val.Elem())
 	}
 
 	return encoder, encodeSizer, nil
