@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/randao"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -36,7 +36,7 @@ func ExecuteStateTransition(
 		return nil, fmt.Errorf("unable to update randao layer %v", err)
 	}
 
-	newState = blocks.ProcessBlockRoots(newState, prevBlockRoot)
+	newState = b.ProcessBlockRoots(newState, prevBlockRoot)
 
 	newHashes, err := CalculateNewBlockHashes(newState, block, currentSlot)
 	if err != nil {
@@ -46,7 +46,10 @@ func ExecuteStateTransition(
 	newState.LatestBlockRootHash32S = newHashes
 
 	if block != nil {
-		newState = ProcessBlock(newState, block)
+		newState, err = ProcessBlock(newState, block)
+		if err != nil {
+			return nil, fmt.Errorf("unable to process block: %v", err)
+		}
 		if newState.GetSlot()%params.BeaconConfig().EpochLength == 0 {
 			newState = NewEpochTransition(newState)
 		}
@@ -55,12 +58,40 @@ func ExecuteStateTransition(
 	return newState, nil
 }
 
-// ProcessBlock describes the per block operations that happen on every slot.
-func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock) *pb.BeaconState {
-	_ = block
-	// TODO(#1073): This function will encompass all the per block slot transition functions, this will
-	// contain checks for randao,proposer validity and block operations.
-	return state
+// ProcessBlock creates a new, modified beacon state by applying block operation
+// transformations as defined in the Ethereum Serenity specification, including processing proposer slashings,
+// processing block attestations, and more.
+func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+	newState := proto.Clone(state).(*pb.BeaconState)
+	if block.GetSlot() != state.GetSlot() {
+		return nil, fmt.Errorf(
+			"block.slot != state.slot, block.slot = %d, state.slot = %d",
+			block.GetSlot(),
+			newState.GetSlot(),
+		)
+	}
+	// TODO(#781): Verify Proposer Signature.
+	// TODO(#781): Verify and Update RANDAO.
+	var err error
+	newState = b.ProcessPOWReceiptRoots(newState, block)
+	newState, err = b.ProcessProposerSlashings(newState, block)
+	if err != nil {
+		return nil, fmt.Errorf("could not verify block proposer slashings: %v", err)
+	}
+	newState, err = b.ProcessCasperSlashings(newState, block)
+	if err != nil {
+		return nil, fmt.Errorf("could not verify block casper slashings: %v", err)
+	}
+	newState, err = b.ProcessBlockAttestations(newState, block)
+	if err != nil {
+		return nil, fmt.Errorf("could not process block attestations: %v", err)
+	}
+	// TODO(#781): Process block validator deposits.
+	newState, err = b.ProcessValidatorExits(newState, block)
+	if err != nil {
+		return nil, fmt.Errorf("could not process validator exits: %v", err)
+	}
+	return newState, nil
 }
 
 // NewEpochTransition describes the per epoch operations that are performed on the
