@@ -1,0 +1,26 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["rewards_penalties.go"],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/balances",
+    visibility = ["//beacon-chain:__subpackages__"],
+    deps = [
+        "//beacon-chain/core/epoch:go_default_library",
+        "//beacon-chain/core/validators:go_default_library",
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/mathutil:go_default_library",
+        "//shared/params:go_default_library",
+        "//shared/slices:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["rewards_penalties_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/params:go_default_library",
+    ],
+)

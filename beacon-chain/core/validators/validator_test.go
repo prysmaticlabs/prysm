@@ -884,3 +884,48 @@ func TestAttestingValidatorIndices_OutOfBound(t *testing.T) {
 		t.Fatal("AttestingValidatorIndices should have failed with incorrect bitfield")
 	}
 }
+
+func TestAllValidatorIndices(t *testing.T) {
+	tests := []struct {
+		registries []*pb.ValidatorRecord
+		indices    []uint32
+	}{
+		{registries: []*pb.ValidatorRecord{}, indices: []uint32{}},
+		{registries: []*pb.ValidatorRecord{{}}, indices: []uint32{0}},
+		{registries: []*pb.ValidatorRecord{{}, {}, {}, {}}, indices: []uint32{0, 1, 2, 3}},
+	}
+	for _, tt := range tests {
+		state := &pb.BeaconState{ValidatorRegistry: tt.registries}
+		if !reflect.DeepEqual(AllValidatorsIndices(state), tt.indices) {
+			t.Errorf("AllValidatorsIndices(%v) = %v, wanted:%v",
+				tt.registries, AllValidatorsIndices(state), tt.indices)
+		}
+	}
+}
+
+func TestAllActiveValidatorIndices(t *testing.T) {
+	tests := []struct {
+		registries []*pb.ValidatorRecord
+		indices    []uint32
+	}{
+		{registries: []*pb.ValidatorRecord{
+			{Status: pb.ValidatorRecord_ACTIVE},
+			{Status: pb.ValidatorRecord_EXITED_WITH_PENALTY},
+			{Status: pb.ValidatorRecord_PENDING_ACTIVATION},
+			{Status: pb.ValidatorRecord_EXITED_WITHOUT_PENALTY}},
+			indices: []uint32{0}},
+		{registries: []*pb.ValidatorRecord{
+			{Status: pb.ValidatorRecord_ACTIVE},
+			{Status: pb.ValidatorRecord_ACTIVE},
+			{Status: pb.ValidatorRecord_ACTIVE},
+			{Status: pb.ValidatorRecord_ACTIVE}},
+			indices: []uint32{0, 1, 2, 3}},
+	}
+	for _, tt := range tests {
+		state := &pb.BeaconState{ValidatorRegistry: tt.registries}
+		if !reflect.DeepEqual(AllActiveValidatorsIndices(state), tt.indices) {
+			t.Errorf("AllActiveValidatorsIndices(%v) = %v, wanted:%v",
+				tt.registries, AllActiveValidatorsIndices(state), tt.indices)
+		}
+	}
+}
