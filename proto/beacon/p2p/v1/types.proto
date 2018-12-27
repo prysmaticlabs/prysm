@@ -213,3 +213,10 @@ message Exit {
   uint64 validator_index = 2;
   bytes signature = 3; // Type of [uint384]?
 }
+
+message ValidatorRegistryDeltaBlock {
+  bytes latest_registry_delta_root_hash32 = 1;
+  uint32 validator_index = 2;
+  bytes pubkey = 3;
+  uint64 flag = 4;
+}
