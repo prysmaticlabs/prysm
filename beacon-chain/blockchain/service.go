@@ -321,13 +321,13 @@ func (c *ChainService) receiveBlock(block *pb.BeaconBlock) error {
 	for beaconState.GetSlot() < block.GetSlot()-1 {
 		beaconState, err = state.ExecuteStateTransition(beaconState, nil)
 		if err != nil {
-			return fmt.Errorf("unable to execute state transition %v", err)
+			return fmt.Errorf("unable to execute state transition: %v", err)
 		}
 	}
 
 	beaconState, err = state.ExecuteStateTransition(beaconState, block)
 	if err != nil {
-		return errors.New("unable to execute state transition")
+		return fmt.Errorf("unable to execute state transition: %v", err)
 	}
 
 	if state.IsValidatorSetChange(beaconState, block.GetSlot()) {
