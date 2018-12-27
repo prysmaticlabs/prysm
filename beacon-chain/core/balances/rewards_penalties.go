@@ -196,3 +196,126 @@ func InclusionDistRewards(
 	}
 	return state, nil
 }
+
+// InactivityFFGSrcPenalty applies penalties to inactive
+// validators that missed to vote FFG source over an
+// extended of time. (epochs_since_finality > 4)
+//
+// Spec pseudocode definition:
+//    Any active validator index not in previous_epoch_justified_attester_indices,
+//    loses inactivity_penalty(state, index, epochs_since_finality)
+func InactivityFFGSrcPenalty(
+	state *pb.BeaconState,
+	justifiedAttesterIndices []uint32,
+	totalBalance uint64,
+	epochsSinceFinality uint64) *pb.BeaconState {
+
+	baseRewardQuotient := baseRewardQuotient(totalBalance)
+	allValidatorIndices := validators.AllActiveValidatorsIndices(state)
+	didNotAttestIndices := slices.Not(justifiedAttesterIndices, allValidatorIndices)
+
+	for _, index := range didNotAttestIndices {
+		state.ValidatorBalances[index] -=
+			inactivityPenalty(state, index, baseRewardQuotient, epochsSinceFinality)
+	}
+	return state
+}
+
+// InactivityFFGTargetPenalty applies penalties to inactive
+// validators that missed to vote FFG target over an
+// extended of time. (epochs_since_finality > 4)
+//
+// Spec pseudocode definition:
+//    Any active validator index not in previous_epoch_boundary_attester_indices,
+// 	  loses inactivity_penalty(state, index, epochs_since_finality)
+func InactivityFFGTargetPenalty(
+	state *pb.BeaconState,
+	boundaryAttesterIndices []uint32,
+	totalBalance uint64,
+	epochsSinceFinality uint64) *pb.BeaconState {
+
+	baseRewardQuotient := baseRewardQuotient(totalBalance)
+	allValidatorIndices := validators.AllActiveValidatorsIndices(state)
+	didNotAttestIndices := slices.Not(boundaryAttesterIndices, allValidatorIndices)
+
+	for _, index := range didNotAttestIndices {
+		state.ValidatorBalances[index] -=
+			inactivityPenalty(state, index, baseRewardQuotient, epochsSinceFinality)
+	}
+	return state
+}
+
+// InactivityHeadPenalty applies penalties to inactive validators
+// that missed to vote on canonical head over an extended of time.
+// (epochs_since_finality > 4)
+//
+// Spec pseudocode definition:
+//    Any active validator index not in previous_epoch_head_attester_indices,
+// 	  loses base_reward(state, index)
+func InactivityHeadPenalty(
+	state *pb.BeaconState,
+	headAttesterIndices []uint32,
+	totalBalance uint64) *pb.BeaconState {
+
+	baseRewardQuotient := baseRewardQuotient(totalBalance)
+	allValidatorIndices := validators.AllActiveValidatorsIndices(state)
+	didNotAttestIndices := slices.Not(headAttesterIndices, allValidatorIndices)
+
+	for _, index := range didNotAttestIndices {
+		state.ValidatorBalances[index] -=
+			baseReward(state, index, baseRewardQuotient)
+	}
+	return state
+}
+
+// InactivityExitedPenalty applies additional (2x) penalties
+// to inactive validators with status EXITED_WITH_PENALTY.
+//
+// Spec pseudocode definition:
+//    Any validator index with status == EXITED_WITH_PENALTY,
+//    loses 2 * inactivity_penalty(state, index, epochs_since_finality) +
+//    base_reward(state, index)
+func InactivityExitedPenalty(
+	state *pb.BeaconState,
+	totalBalance uint64,
+	epochsSinceFinality uint64) *pb.BeaconState {
+
+	baseRewardQuotient := baseRewardQuotient(totalBalance)
+	allValidatorIndices := validators.AllValidatorsIndices(state)
+
+	for _, index := range allValidatorIndices {
+		if state.ValidatorRegistry[index].Status == pb.ValidatorRecord_EXITED_WITH_PENALTY {
+			state.ValidatorBalances[index] -=
+				2*inactivityPenalty(state, index, baseRewardQuotient, epochsSinceFinality) +
+					baseReward(state, index, baseRewardQuotient)
+		}
+	}
+	return state
+}
+
+// InactivityInclusionPenalty applies penalties in relation with
+// inclusion delay to inactive validators.
+//
+// Spec pseudocode definition:
+//    Any validator index in previous_epoch_attester_indices loses
+//    base_reward(state, index) - base_reward(state, index) *
+//    MIN_ATTESTATION_INCLUSION_DELAY // inclusion_distance(state, index)
+func InactivityInclusionPenalty(
+	state *pb.BeaconState,
+	attesterIndices []uint32,
+	totalBalance uint64) (*pb.BeaconState, error) {
+
+	baseRewardQuotient := baseRewardQuotient(totalBalance)
+
+	for _, index := range attesterIndices {
+		inclusionDistance, err := epoch.InclusionDistance(state, index)
+		if err != nil {
+			return nil, fmt.Errorf("could not get inclusion distance: %v", err)
+		}
+		baseReward := baseReward(state, index, baseRewardQuotient)
+		state.ValidatorBalances[index] -= baseReward -
+			baseReward*params.BeaconConfig().MinAttestationInclusionDelay/
+				inclusionDistance
+	}
+	return state, nil
+}
