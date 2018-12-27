@@ -704,7 +704,7 @@ func exitValidator(state *pb.BeaconState, index uint32, newStatus pb.ValidatorRe
 	}
 
 	// The following only gets updated if not previous exited.
-	state.ValidatorRegistryExitCount += 1
+	state.ValidatorRegistryExitCount++
 	validator.ExitCount = state.ValidatorRegistryExitCount
 	newChainTip, err := NewRegistryDeltaChainTip(
 		pb.ValidatorRegistryDeltaBlock_EXIT,
