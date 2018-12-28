@@ -35,6 +35,7 @@ func ExecuteStateTransition(
 	if err != nil {
 		return nil, fmt.Errorf("unable to update randao layer %v", err)
 	}
+	newState = randao.UpdateRandaoMixes(newState)
 
 	newState = b.ProcessBlockRoots(newState, prevBlockRoot)
 
@@ -71,9 +72,12 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState
 		)
 	}
 	// TODO(#781): Verify Proposer Signature.
-	// TODO(#781): Verify and Update RANDAO.
 	var err error
 	newState = b.ProcessPOWReceiptRoots(newState, block)
+	newState, err = b.ProcessBlockRandao(newState, block)
+	if err != nil {
+		return nil, fmt.Errorf("could not verify and process block randao: %v", err)
+	}
 	newState, err = b.ProcessProposerSlashings(newState, block)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify block proposer slashings: %v", err)
