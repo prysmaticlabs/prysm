@@ -3,6 +3,7 @@ package epoch
 import (
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -136,6 +137,32 @@ func ProcessCrosslinks(
 					Slot:                 state.Slot,
 					ShardBlockRootHash32: winningRoot,
 				}
+			}
+		}
+	}
+	return state, nil
+}
+
+// ProcessEjections iterates through every validator and find the ones below
+// ejection balance and eject them.
+//
+// Spec pseudocode definition:
+//	def process_ejections(state: BeaconState) -> None:
+//    """
+//    Iterate through the validator registry
+//    and eject active validators with balance below ``EJECTION_BALANCE``.
+//    """
+//    for index in active_validator_indices(state.validator_registry):
+//        if state.validator_balances[index] < EJECTION_BALANCE:
+//            update_validator_status(state, index, new_status=EXITED_WITHOUT_PENALTY)
+func ProcessEjections(state *pb.BeaconState) (*pb.BeaconState, error) {
+	var err error
+	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry)
+	for _, index := range activeValidatorIndices {
+		if state.ValidatorBalances[index] < params.BeaconConfig().EjectionBalanceInGwei {
+			state, err = validators.UpdateStatus(state, index, pb.ValidatorRecord_EXITED_WITHOUT_PENALTY)
+			if err != nil {
+				return nil, fmt.Errorf("could not update validator status: %v", err)
 			}
 		}
 	}
