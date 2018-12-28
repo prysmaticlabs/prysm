@@ -17,7 +17,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotticker"
 	"github.com/sirupsen/logrus"
 )
 
@@ -39,9 +38,6 @@ type ChainService struct {
 	unProcessedBlocks  map[uint64]*pb.BeaconBlock
 	unfinalizedBlocks  map[[32]byte]*pb.BeaconState
 	enablePOWChain     bool
-	slotTicker         slotticker.SlotTicker
-	currentSlot        uint64
-	lastProcessedSlot  uint64
 }
 
 // Config options for the service.
