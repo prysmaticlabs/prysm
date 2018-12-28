@@ -27,13 +27,16 @@ func startPeerWatcher(ctx context.Context, h host.Host) {
 			case <-ctx.Done():
 				return
 			default:
-				// Update peer count (minus ourselves)
-				peerCountMetric.Set(float64(len(h.Peerstore().Peers()) - 1))
+				peerCountMetric.Set(float64(peerCount(h)))
 
 				// Wait 1 second to update again
 				time.Sleep(1 * time.Second)
 			}
 		}
 	})()
+}
 
+func peerCount(h host.Host) int {
+	// Return number of peers in peerstore, excluding our own host.
+	return len(h.Peerstore().Peers()) - 1
 }

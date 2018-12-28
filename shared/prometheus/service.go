@@ -1,11 +1,14 @@
 package prometheus
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/sirupsen/logrus"
 )
 
@@ -19,9 +22,34 @@ type Service struct {
 
 // NewPrometheusService sets up a new instance for a given address host:port.
 // An empty host will match with any IP so an address like ":2121" is perfectly acceptable.
-func NewPrometheusService(addr string) *Service {
+func NewPrometheusService(addr string, svcRegistry *shared.ServiceRegistry) *Service {
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		statuses := svcRegistry.Statuses()
+
+		hasError := false
+		// TODO: Call all services in the registry.
+		//       if any are not OK, write 500
+		//       print the statuses of all services.
+		var buf bytes.Buffer
+		for k, v := range statuses {
+			var status string
+			if v == nil {
+				status = "OK"
+			} else {
+				hasError = true
+				status = "ERROR: " + v.Error()
+			}
+			buf.WriteString(fmt.Sprintf("%s: %s\n", k, status))
+		}
+		if hasError {
+			w.WriteHeader(http.StatusInternalServerError)
+		} else {
+			w.WriteHeader(http.StatusOK)
+		}
+		w.Write(buf.Bytes())
+	})
 
 	return &Service{
 		server: &http.Server{Addr: addr, Handler: mux},
@@ -45,4 +73,8 @@ func (s *Service) Stop() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	return s.server.Shutdown(ctx)
+}
+
+func (s *Service) Status() error {
+	return nil
 }

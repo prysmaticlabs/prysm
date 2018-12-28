@@ -75,6 +75,10 @@ func (a *Attester) Stop() error {
 	return nil
 }
 
+func (a *Attester) Status() error {
+	return nil
+}
+
 // run the main event loop that listens for an attester assignment.
 func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.ValidatorServiceClient) {
 	sub := a.beaconService.AttesterAssignmentFeed().Subscribe(a.assignmentChan)

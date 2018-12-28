@@ -126,6 +126,10 @@ func (sim *Simulator) Stop() error {
 	return nil
 }
 
+func (sim *Simulator) Status() error {
+	return nil
+}
+
 func (sim *Simulator) run(slotInterval <-chan uint64) {
 	chainHdReqSub := sim.p2p.Subscribe(&pb.ChainHeadRequest{}, sim.chainHeadRequestChan)
 	blockReqSub := sim.p2p.Subscribe(&pb.BeaconBlockRequest{}, sim.blockRequestChan)

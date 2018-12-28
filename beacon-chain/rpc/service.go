@@ -147,6 +147,10 @@ func (s *Service) Stop() error {
 	return nil
 }
 
+func (s *Service) Status() error {
+	return nil
+}
+
 // CanonicalHead of the current beacon chain. This method is requested on-demand
 // by a validator when it is their time to propose or attest.
 func (s *Service) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*pbp2p.BeaconBlock, error) {

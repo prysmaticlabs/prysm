@@ -77,6 +77,10 @@ func (ss *Service) Stop() error {
 	return ss.RegularSync.Stop()
 }
 
+func (ss *Service) Status() error {
+	return nil
+}
+
 func (ss *Service) run() {
 	ss.Querier.Start()
 	synced, err := ss.Querier.IsSynced()

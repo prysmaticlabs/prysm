@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"reflect"
@@ -142,6 +143,13 @@ func (s *Server) Stop() error {
 	log.Info("Stopping service")
 
 	s.cancel()
+	return nil
+}
+
+func (s *Server) Status() error {
+	if peerCount(s.host) < 5 {
+		return errors.New("Less than 5 peers")
+	}
 	return nil
 }
 

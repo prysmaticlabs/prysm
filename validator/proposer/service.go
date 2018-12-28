@@ -86,6 +86,10 @@ func (p *Proposer) Stop() error {
 	return nil
 }
 
+func (p *Proposer) Status() error {
+	return nil
+}
+
 // DoesAttestationExist checks if an attester has already attested to a block.
 func (p *Proposer) DoesAttestationExist(attestation *pbp2p.Attestation) bool {
 	exists := false

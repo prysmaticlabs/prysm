@@ -63,6 +63,10 @@ func (d *CleanupService) Stop() error {
 	return nil
 }
 
+func (d *CleanupService) Status() error {
+	return nil
+}
+
 func (d *CleanupService) cleanDB() {
 	cStateSub := d.chainService.CanonicalStateFeed().Subscribe(d.canonicalStateChan)
 	defer cStateSub.Unsubscribe()

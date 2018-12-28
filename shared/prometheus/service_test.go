@@ -9,7 +9,7 @@ import (
 
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
-	prometheusService := NewPrometheusService(":2112")
+	prometheusService := NewPrometheusService(":2112", nil)
 
 	prometheusService.Start()
 

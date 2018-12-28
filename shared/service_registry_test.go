@@ -15,10 +15,18 @@ func (m *mockService) Stop() error {
 	return nil
 }
 
+func (m *mockService) Status() error {
+	return nil
+}
+
 func (s *secondMockService) Start() {
 }
 
 func (s *secondMockService) Stop() error {
+	return nil
+}
+
+func (s *secondMockService) Status() error {
 	return nil
 }
 

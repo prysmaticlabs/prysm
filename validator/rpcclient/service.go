@@ -3,6 +3,7 @@ package rpcclient
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 
@@ -72,6 +73,13 @@ func (s *Service) Stop() error {
 	log.Info("Stopping service")
 	if s.conn != nil {
 		return s.conn.Close()
+	}
+	return nil
+}
+
+func (s *Service) Status() error {
+	if s.conn == nil {
+		return errors.New("no connection to beacon RPC")
 	}
 	return nil
 }
