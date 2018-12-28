@@ -90,14 +90,15 @@ type field struct {
 func sortedStructFields(typ reflect.Type) (fields []field, err error) {
 	for i := 0; i < typ.NumField(); i++ {
 		f := typ.Field(i)
+		if strings.Contains(f.Name, "XXX") {
+			continue
+		}
 		encDec, err := cachedEncoderDecoderNoAcquireLock(f.Type)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get encoder/decoder: %v", err)
 		}
 		name := f.Name
-		if !strings.Contains(name, "XXX") {
-			fields = append(fields, field{i, name, encDec})
-		}
+		fields = append(fields, field{i, name, encDec})
 	}
 	sort.SliceStable(fields, func(i, j int) bool {
 		return fields[i].name < fields[j].name
