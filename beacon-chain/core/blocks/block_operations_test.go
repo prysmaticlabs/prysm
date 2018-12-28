@@ -1123,6 +1123,7 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 		},
 	}
 	beaconState := &pb.BeaconState{}
+	// TODO(#1194): Pending ignoring of proto XXX fields in SSZ.
 	if _, err := ProcessValidatorDeposits(beaconState, block); err != nil {
 		t.Errorf("Could not process deposits: %v", err)
 	}
