@@ -163,7 +163,7 @@ func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 		t.Errorf(
 			"Expected proposer at index 0 to update randao commitment to block randao reveal = %#x, received %#x",
 			[]byte{1},
-			newState.GetRandaoMixHash32(),
+			newState.GetValidatorRegistry()[0].GetRandaoCommitmentHash32(),
 		)
 	}
 }

@@ -26,6 +26,7 @@ type ValidatorSetDeltaFlags int
 
 // BeaconChainConfig contains configs for node to participate in beacon chain.
 type BeaconChainConfig struct {
+	LatestBlockRootsLength                  uint64         // LatestBlockRootsLength is the number of block roots kept in the beacon state.
 	LatestRandaoMixesLength                 uint64         // LatestRandaoMixesLength is the number of randao mixes kept in the beacon state.
 	MaxExits                                uint64         // MaxExits determines the maximum number of validator exits in a block.
 	MaxAttestations                         uint64         // MaxAttestations defines the maximum allowed attestations in a beacon block.
@@ -54,7 +55,7 @@ type BeaconChainConfig struct {
 	PowReceiptRootVotingPeriod              uint64         // PowReceiptRootVotingPeriod defines how often PoW hash gets updated in beacon node.
 	SlashingWhistlerBlowerRewardDenominator uint64         // SlashingWhistlerBlowerRewardDenominator defines how the reward denominator of whistler blower.
 	BaseRewardQuotient                      uint64         // BaseRewardQuotient is used to calculate validator per-slot interest rate.
-	IncluderRewardShareQuotient             uint64         // IncluderRewardShareQuotient defines the reward quotient for proposer.
+	IncluderRewardQuotient                  uint64         // IncluderRewardQuotient defines the reward quotient of proposer for including attestations..
 	MaxValidatorChurnQuotient               uint64         // MaxValidatorChurnQuotient defines the quotient how many validators can change each time.
 	POWContractMerkleTreeDepth              uint64         // POWContractMerkleTreeDepth defines the depth of PoW contract merkle tree.
 	InitialForkVersion                      uint64         // InitialForkVersion is used to track fork version between state transitions.
@@ -80,6 +81,7 @@ type ShardChainConfig struct {
 
 var defaultBeaconConfig = &BeaconChainConfig{
 	LatestRandaoMixesLength:       8192,
+	LatestBlockRootsLength:        8192,
 	MaxExits:                      16,
 	MaxAttestations:               128,
 	MaxProposerSlashings:          16,
@@ -115,10 +117,12 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	EmptySignature:                makeEmptySignature(),
 	PowReceiptRootVotingPeriod:    1024,
 	InactivityPenaltyQuotient:     1 << 24,
+	IncluderRewardQuotient:        8,
 }
 
 var demoBeaconConfig = &BeaconChainConfig{
 	LatestRandaoMixesLength:       8192,
+	LatestBlockRootsLength:        8192,
 	MaxExits:                      16,
 	MaxAttestations:               128,
 	MaxProposerSlashings:          16,
@@ -153,6 +157,7 @@ var demoBeaconConfig = &BeaconChainConfig{
 	InactivityPenaltyQuotient:     defaultBeaconConfig.InactivityPenaltyQuotient,
 	ZeroHash:                      [32]byte{},
 	EmptySignature:                makeEmptySignature(),
+	IncluderRewardQuotient:        defaultBeaconConfig.IncluderRewardQuotient,
 }
 
 var defaultShardConfig = &ShardChainConfig{

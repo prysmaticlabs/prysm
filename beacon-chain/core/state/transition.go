@@ -21,6 +21,7 @@ import (
 func ExecuteStateTransition(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
+	prevBlockRoot [32]byte,
 ) (*pb.BeaconState, error) {
 
 	var err error
@@ -35,6 +36,8 @@ func ExecuteStateTransition(
 		return nil, fmt.Errorf("unable to update randao layer %v", err)
 	}
 	newState = randao.UpdateRandaoMixes(newState)
+
+	newState = b.ProcessBlockRoots(newState, prevBlockRoot)
 
 	newHashes, err := CalculateNewBlockHashes(newState, block, currentSlot)
 	if err != nil {

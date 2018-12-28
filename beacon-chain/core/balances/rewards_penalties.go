@@ -197,14 +197,14 @@ func InclusionDistRewards(
 	return state, nil
 }
 
-// InactivityFFGSrcPenalty applies penalties to inactive
+// InactivityFFGSrcPenalties applies penalties to inactive
 // validators that missed to vote FFG source over an
 // extended of time. (epochs_since_finality > 4)
 //
 // Spec pseudocode definition:
 //    Any active validator index not in previous_epoch_justified_attester_indices,
 //    loses inactivity_penalty(state, index, epochs_since_finality)
-func InactivityFFGSrcPenalty(
+func InactivityFFGSrcPenalties(
 	state *pb.BeaconState,
 	justifiedAttesterIndices []uint32,
 	totalBalance uint64,
@@ -221,14 +221,14 @@ func InactivityFFGSrcPenalty(
 	return state
 }
 
-// InactivityFFGTargetPenalty applies penalties to inactive
+// InactivityFFGTargetPenalties applies penalties to inactive
 // validators that missed to vote FFG target over an
 // extended of time. (epochs_since_finality > 4)
 //
 // Spec pseudocode definition:
 //    Any active validator index not in previous_epoch_boundary_attester_indices,
 // 	  loses inactivity_penalty(state, index, epochs_since_finality)
-func InactivityFFGTargetPenalty(
+func InactivityFFGTargetPenalties(
 	state *pb.BeaconState,
 	boundaryAttesterIndices []uint32,
 	totalBalance uint64,
@@ -245,14 +245,14 @@ func InactivityFFGTargetPenalty(
 	return state
 }
 
-// InactivityHeadPenalty applies penalties to inactive validators
+// InactivityHeadPenalties applies penalties to inactive validators
 // that missed to vote on canonical head over an extended of time.
 // (epochs_since_finality > 4)
 //
 // Spec pseudocode definition:
 //    Any active validator index not in previous_epoch_head_attester_indices,
 // 	  loses base_reward(state, index)
-func InactivityHeadPenalty(
+func InactivityHeadPenalties(
 	state *pb.BeaconState,
 	headAttesterIndices []uint32,
 	totalBalance uint64) *pb.BeaconState {
@@ -268,14 +268,14 @@ func InactivityHeadPenalty(
 	return state
 }
 
-// InactivityExitedPenalty applies additional (2x) penalties
+// InactivityExitedPenalties applies additional (2x) penalties
 // to inactive validators with status EXITED_WITH_PENALTY.
 //
 // Spec pseudocode definition:
 //    Any validator index with status == EXITED_WITH_PENALTY,
 //    loses 2 * inactivity_penalty(state, index, epochs_since_finality) +
 //    base_reward(state, index)
-func InactivityExitedPenalty(
+func InactivityExitedPenalties(
 	state *pb.BeaconState,
 	totalBalance uint64,
 	epochsSinceFinality uint64) *pb.BeaconState {
@@ -293,14 +293,14 @@ func InactivityExitedPenalty(
 	return state
 }
 
-// InactivityInclusionPenalty applies penalties in relation with
+// InactivityInclusionPenalties applies penalties in relation with
 // inclusion delay to inactive validators.
 //
 // Spec pseudocode definition:
 //    Any validator index in previous_epoch_attester_indices loses
 //    base_reward(state, index) - base_reward(state, index) *
 //    MIN_ATTESTATION_INCLUSION_DELAY // inclusion_distance(state, index)
-func InactivityInclusionPenalty(
+func InactivityInclusionPenalties(
 	state *pb.BeaconState,
 	attesterIndices []uint32,
 	totalBalance uint64) (*pb.BeaconState, error) {
@@ -318,4 +318,72 @@ func InactivityInclusionPenalty(
 				inclusionDistance
 	}
 	return state, nil
+}
+
+// AttestationInclusionRewards awards the the beacon
+// proposers who included previous epoch attestations.
+//
+// Spec pseudocode definition:
+//    For each index in previous_epoch_attester_indices,
+//    we determine the proposer proposer_index =
+//    get_beacon_proposer_index(state, inclusion_slot(state, index))
+//    and set state.validator_balances[proposer_index] +=
+//    base_reward(state, index) // INCLUDER_REWARD_QUOTIENT
+func AttestationInclusionRewards(
+	state *pb.BeaconState,
+	totalBalance uint64,
+	prevEpochAttesterIndices []uint32) (*pb.BeaconState, error) {
+
+	baseRewardQuotient := baseRewardQuotient(totalBalance)
+	for _, index := range prevEpochAttesterIndices {
+		slot, err := epoch.InclusionSlot(state, index)
+		if err != nil {
+			return nil, fmt.Errorf("could not get inclusion slot: %v", err)
+		}
+		proposerIndex, err := validators.BeaconProposerIndex(state, slot)
+		if err != nil {
+			return nil, fmt.Errorf("could not get propoer index: %v", err)
+		}
+		state.ValidatorBalances[proposerIndex] +=
+			baseReward(state, proposerIndex, baseRewardQuotient) /
+				params.BeaconConfig().IncluderRewardQuotient
+	}
+	return state, nil
+}
+
+// CrosslinksRewardsPenalties awards or penalizes attesters
+// for attesting shard cross links.
+//
+// Spec pseudocode definition:
+//    For every shard_committee in state.shard_committees_at_slots[:EPOCH_LENGTH]:
+// 	  	For each index in shard_committee.committee, adjust balances as follows:
+// 			If index in attesting_validators(shard_committee), state.validator_balances[index]
+// 				+= base_reward(state, index) * total_attesting_balance(shard_committee)
+// 				   total_balance(shard_committee)).
+//			If index not in attesting_validators(shard_committee), state.validator_balances[index]
+// 				-= base_reward(state, index).
+func CrosslinksRewardsPenalties(
+	state *pb.BeaconState,
+	totalAttestingBalance uint64,
+	totalBalance uint64,
+	attesterIndices []uint32) *pb.BeaconState {
+
+	epochLength := params.BeaconConfig().EpochLength
+	baseRewardQuotient := baseRewardQuotient(totalBalance)
+	for _, shardCommitteesAtSlot := range state.ShardAndCommitteesAtSlots[:epochLength] {
+		for _, shardCommitees := range shardCommitteesAtSlot.ArrayShardAndCommittee {
+
+			for _, index := range shardCommitees.Committee {
+				baseReward := baseReward(state, index, baseRewardQuotient)
+				if slices.IsIn(index, attesterIndices) {
+					state.ValidatorBalances[index] +=
+						baseReward * totalAttestingBalance / totalBalance
+				} else {
+					state.ValidatorBalances[index] -=
+						baseReward * totalAttestingBalance / totalBalance
+				}
+			}
+		}
+	}
+	return state
 }
