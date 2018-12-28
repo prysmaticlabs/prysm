@@ -67,3 +67,41 @@ func ContainsValidator(attesterBitfield []byte, bitfield []byte) bool {
 	}
 	return false
 }
+
+// IsDoubleVote checks if both of the attestations have been used to vote for the same slot.
+// Spec:
+//	def is_double_vote(attestation_data_1: AttestationData,
+//                   attestation_data_2: AttestationData) -> bool
+//    """
+//    Assumes ``attestation_data_1`` is distinct from ``attestation_data_2``.
+//    Returns True if the provided ``AttestationData`` are slashable
+//    due to a 'double vote'.
+//    """
+//    return attestation_data_1.slot == attestation_data_2.slot
+func IsDoubleVote(attestation1 *pb.AttestationData, attestation2 *pb.AttestationData) bool {
+	return attestation1.Slot == attestation2.Slot
+}
+
+// IsSurroundVote checks if the data provided by the attestations fulfill the conditions for
+// a surround vote.
+// Spec:
+//	def is_surround_vote(attestation_data_1: AttestationData,
+//                     attestation_data_2: AttestationData) -> bool:
+//    """
+//    Assumes ``attestation_data_1`` is distinct from ``attestation_data_2``.
+//    Returns True if the provided ``AttestationData`` are slashable
+//    due to a 'surround vote'.
+//    Note: parameter order matters as this function only checks
+//    that ``attestation_data_1`` surrounds ``attestation_data_2``.
+//    """
+//    return (
+//        (attestation_data_1.justified_slot < attestation_data_2.justified_slot) and
+//        (attestation_data_2.justified_slot + 1 == attestation_data_2.slot) and
+//        (attestation_data_2.slot < attestation_data_1.slot)
+//    )
+func IsSurroundVote(attestation1 *pb.AttestationData, attestation2 *pb.AttestationData) bool {
+	return attestation1.JustifiedSlot < attestation2.JustifiedSlot &&
+		attestation2.JustifiedSlot+1 == attestation2.Slot &&
+		attestation2.Slot < attestation1.Slot
+
+}
