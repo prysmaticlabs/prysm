@@ -524,6 +524,49 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation) error {
 	return nil
 }
 
+// ProcessValidatorDeposits is one of the operations performed on each processed
+// beacon block to verify queued validators from the Ethereum 1.0 Deposit Contract
+// into the beacon chain.
+//
+// Official spec definition for processing validator deposits:
+//    Verify that len(block.body.deposits) <= MAX_DEPOSITS.
+//    For each deposit in block.body.deposits:
+//      Let serialized_deposit_data be the serialized form of deposit.deposit_data.
+//			It should be the DepositInput followed by 8 bytes for deposit_data.value
+//			and 8 bytes for deposit_data.timestamp. That is, it should match
+//			deposit_data in the Ethereum 1.0 deposit contract of which the hash
+//			was placed into the Merkle tree.
+//
+//			Verify deposit.merkle_branch, setting leaf=serialized_deposit_data,
+//			depth=DEPOSIT_CONTRACT_TREE_DEPTH and root=state.processed_pow_receipt_root:
+//		  Verify that state.slot - (deposit.deposit_data.timestamp -
+//			state.genesis_time)  SLOT_DURATION < ZERO_BALANCE_VALIDATOR_TTL.
+//
+//		  Run the following:
+//		  process_deposit(
+//			  state=state,
+//			  pubkey=deposit.deposit_data.deposit_input.pubkey,
+//			  deposit=deposit.deposit_data.value,
+//			  proof_of_possession=deposit.deposit_data.deposit_input.proof_of_possession,
+//			  withdrawal_credentials=deposit.deposit_data.deposit_input.withdrawal_credentials,
+//			  randao_commitment=deposit.deposit_data.deposit_input.randao_commitment,
+//			  poc_commitment=deposit.deposit_data.deposit_input.poc_commitment,
+//			)
+func ProcessValidatorDeposits(
+	beaconState *pb.BeaconState,
+	block *pb.BeaconBlock,
+) (*pb.BeaconState, error) {
+	deposits := block.GetBody().GetDeposits()
+	if uint64(len(deposits)) > params.BeaconConfig().MaxDeposits {
+		return nil, fmt.Errorf(
+			"number of deposits (%d) exceeds allowed threshold of %d",
+			len(deposits),
+			params.BeaconConfig().MaxDeposits,
+		)
+	}
+	return beaconState, nil
+}
+
 // ProcessValidatorExits is one of the operations performed
 // on each processed beacon block to determine which validators
 // should exit the state's validator registry.
