@@ -589,6 +589,34 @@ func AttestingBalance(state *pb.BeaconState, boundaryAttesterIndices []uint32) u
 	return boundaryAttestingBalance
 }
 
+// UpdateStatus updates validator to a new status, it handles
+// other general accounting related to this status update.
+// Spec pseudocode definition:
+//   def update_validator_status(state: BeaconState,
+//                            index: int,
+//                            new_status: int) -> None:
+//    if new_status == ACTIVE:
+//        activate_validator(state, index)
+//    if new_status == ACTIVE_PENDING_EXIT:
+//        initiate_validator_exit(state, index)
+//    if new_status in [EXITED_WITH_PENALTY, EXITED_WITHOUT_PENALTY]:
+//        exit_validator(state, index, new_status)
+func UpdateStatus(
+	state *pb.BeaconState,
+	index uint32,
+	newStatus pb.ValidatorRecord_StatusCodes) (*pb.BeaconState, error) {
+
+	switch newStatus {
+	case pb.ValidatorRecord_ACTIVE:
+		return activateValidator(state, index)
+	case pb.ValidatorRecord_ACTIVE_PENDING_EXIT:
+		return initiateValidatorExit(state, index)
+	case pb.ValidatorRecord_EXITED_WITH_PENALTY, pb.ValidatorRecord_EXITED_WITHOUT_PENALTY:
+		return exitValidator(state, index, newStatus)
+	}
+	return nil, fmt.Errorf("expected ACTIVE, ACTIVE_PENDING_EXIT, EXITED_WITH or WITHOUT_PENALTY, but got %v", newStatus)
+}
+
 // AllValidatorsIndices returns all validator indices from 0 to
 // the last validator.
 func AllValidatorsIndices(state *pb.BeaconState) []uint32 {
@@ -693,7 +721,7 @@ func activateValidator(state *pb.BeaconState, index uint32) (*pb.BeaconState, er
 //        return
 //
 //    validator.status = ACTIVE_PENDING_EXIT
-//    validator.latest_status_change_slot = state.slot
+//    validator.lat est_status_change_slot = state.slot
 func initiateValidatorExit(state *pb.BeaconState, index uint32) (*pb.BeaconState, error) {
 	validator := state.ValidatorRegistry[index]
 	if validator.Status != pb.ValidatorRecord_ACTIVE {
