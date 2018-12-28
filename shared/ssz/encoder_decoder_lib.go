@@ -5,6 +5,7 @@ import (
 	"io"
 	"reflect"
 	"sort"
+	"strings"
 	"sync"
 )
 
@@ -94,7 +95,9 @@ func sortedStructFields(typ reflect.Type) (fields []field, err error) {
 			return nil, fmt.Errorf("failed to get encoder/decoder: %v", err)
 		}
 		name := f.Name
-		fields = append(fields, field{i, name, encDec})
+		if !strings.Contains(name, "XXX") {
+			fields = append(fields, field{i, name, encDec})
+		}
 	}
 	sort.SliceStable(fields, func(i, j int) bool {
 		return fields[i].name < fields[j].name
