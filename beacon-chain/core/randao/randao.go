@@ -11,16 +11,15 @@ import (
 
 // UpdateRandaoLayers increments the randao layer of the block proposer at the given slot.
 func UpdateRandaoLayers(state *pb.BeaconState, slot uint64) (*pb.BeaconState, error) {
-	newState := proto.Clone(state).(*pb.BeaconState)
-	vreg := newState.GetValidatorRegistry()
+	vreg := state.GetValidatorRegistry()
 
-	proposerIndex, err := v.BeaconProposerIndex(newState, slot)
+	proposerIndex, err := v.BeaconProposerIndex(state, slot)
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve proposer index %v", err)
 	}
 	vreg[proposerIndex].RandaoLayers++
 	state.ValidatorRegistry = vreg
-	return newState, nil
+	return state, nil
 }
 
 // UpdateRandaoMixes sets the beacon state's latest randao mixes according to the latest

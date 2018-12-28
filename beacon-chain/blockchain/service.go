@@ -77,25 +77,6 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
 	log.Info("Starting service")
-
-	var err error
-	c.genesisTime, err = c.beaconDB.GenesisTime()
-	if err != nil {
-		log.Fatalf("Unable to retrieve genesis time, therefore blockchain service cannot be started %v", err)
-		return
-	}
-
-	beaconState, err := c.beaconDB.GetState()
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
-
-	c.lastProcessedSlot = beaconState.GetSlot()
-
-	c.slotTicker = slotticker.GetSlotTicker(c.genesisTime, params.BeaconConfig().SlotDuration)
-	c.currentSlot = slotticker.CurrentSlot(c.genesisTime, params.BeaconConfig().SlotDuration, time.Since)
-
 	// TODO(#675): Initialize unfinalizedBlocks map from disk in case this
 	// is a beacon node restarting.
 	go c.updateHead(c.processedBlockChan)
@@ -239,6 +220,11 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *pb.BeaconBlock) {
 		// can be received either from the sync service, the RPC service,
 		// or via p2p.
 		case block := <-c.incomingBlockChan:
+			// Before sending the blocks for processing we check to see if the blocks
+			// are valid to continue being processed. If the slot number in the block
+			// has already been processed by the beacon node, we throw it away. If the
+			// slot number is too high to be processed in the current slot, we store
+			// it in a cache.
 			beaconState, err := c.beaconDB.GetState()
 			if err != nil {
 				log.Errorf("Unable to retrieve beacon state %v", err)
@@ -389,15 +375,6 @@ func (c *ChainService) sendAndDeleteCachedBlocks(currentSlot uint64) {
 		if err := c.isBlockReadyForProcessing(block); err == nil {
 			c.incomingBlockChan <- block
 			delete(c.unProcessedBlocks, currentSlot)
-		}
-	}
-}
-
-func (c *ChainService) checkCachedBlocks() {
-	if block, ok := c.unProcessedBlocks[c.currentSlot]; ok {
-		if err := c.isBlockReadyForProcessing(block); err == nil {
-			c.incomingBlockChan <- block
-			delete(c.unProcessedBlocks, c.currentSlot)
 		}
 	}
 }
