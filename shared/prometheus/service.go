@@ -26,12 +26,12 @@ func NewPrometheusService(addr string, svcRegistry *shared.ServiceRegistry) *Ser
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		statuses := svcRegistry.Statuses()
+		// Call all services in the registry.
+		// if any are not OK, write 500
+		// print the statuses of all services.
 
+		statuses := svcRegistry.Statuses()
 		hasError := false
-		// TODO: Call all services in the registry.
-		//       if any are not OK, write 500
-		//       print the statuses of all services.
 		var buf bytes.Buffer
 		for k, v := range statuses {
 			var status string
@@ -39,15 +39,19 @@ func NewPrometheusService(addr string, svcRegistry *shared.ServiceRegistry) *Ser
 				status = "OK"
 			} else {
 				hasError = true
-				status = "ERROR: " + v.Error()
+				status = "ERROR " + v.Error()
 			}
 			buf.WriteString(fmt.Sprintf("%s: %s\n", k, status))
 		}
+
+		// Write status header
 		if hasError {
 			w.WriteHeader(http.StatusInternalServerError)
 		} else {
 			w.WriteHeader(http.StatusOK)
 		}
+
+		// Write http body
 		w.Write(buf.Bytes())
 	})
 
