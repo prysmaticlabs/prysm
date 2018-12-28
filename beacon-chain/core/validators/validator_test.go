@@ -750,6 +750,7 @@ func TestBeaconProposerIndex(t *testing.T) {
 	state := &pb.BeaconState{
 		ShardAndCommitteesAtSlots: shardAndCommittees,
 	}
+
 	tests := []struct {
 		slot  uint64
 		index uint32
@@ -777,7 +778,6 @@ func TestBeaconProposerIndex(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-
 		result, err := BeaconProposerIndex(state, tt.slot)
 		if err != nil {
 			t.Errorf("Failed to get shard and committees at slot: %v", err)

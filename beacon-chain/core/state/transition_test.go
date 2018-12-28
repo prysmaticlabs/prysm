@@ -26,13 +26,81 @@ func TestProcessBlock_IncorrectSlot(t *testing.T) {
 	}
 }
 
-func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
-	slashings := make([]*pb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings+1)
+func TestProcessBlock_IncorrectBlockRandao(t *testing.T) {
+	registry := []*pb.ValidatorRecord{
+		{
+			Status:                 pb.ValidatorRecord_ACTIVE,
+			LatestStatusChangeSlot: 0,
+			RandaoCommitmentHash32: []byte{0},
+			RandaoLayers:           0,
+		},
+		{
+			Status:                 pb.ValidatorRecord_ACTIVE,
+			LatestStatusChangeSlot: 0,
+			RandaoCommitmentHash32: []byte{0},
+			RandaoLayers:           0,
+		},
+	}
 	beaconState := &pb.BeaconState{
-		Slot: 5,
+		Slot:              0,
+		ValidatorRegistry: registry,
+		ShardAndCommitteesAtSlots: []*pb.ShardAndCommitteeArray{
+			{
+				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+					{
+						Shard:     0,
+						Committee: []uint32{0, 1},
+					},
+				},
+			},
+		},
 	}
 	block := &pb.BeaconBlock{
-		Slot: 5,
+		Slot:               0,
+		RandaoRevealHash32: []byte{1},
+		Body:               &pb.BeaconBlockBody{},
+	}
+	want := "could not verify and process block randao"
+	if _, err := ProcessBlock(beaconState, block); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
+	registry := []*pb.ValidatorRecord{
+		{
+			Status:                 pb.ValidatorRecord_ACTIVE,
+			LatestStatusChangeSlot: 0,
+			RandaoCommitmentHash32: []byte{1},
+			RandaoLayers:           0,
+		},
+		{
+			Status:                 pb.ValidatorRecord_ACTIVE,
+			LatestStatusChangeSlot: 0,
+			RandaoCommitmentHash32: []byte{1},
+			RandaoLayers:           0,
+		},
+	}
+	slashings := make([]*pb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings+1)
+	shardAndCommittees := make([]*pb.ShardAndCommitteeArray, 64)
+	shardAndCommittees[5] = &pb.ShardAndCommitteeArray{
+		ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{
+				Shard:     0,
+				Committee: []uint32{0, 1},
+			},
+		},
+	}
+	latestMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
+	beaconState := &pb.BeaconState{
+		LatestRandaoMixesHash32S:  latestMixes,
+		ValidatorRegistry:         registry,
+		ShardAndCommitteesAtSlots: shardAndCommittees,
+		Slot:                      5,
+	}
+	block := &pb.BeaconBlock{
+		Slot:               5,
+		RandaoRevealHash32: []byte{1},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: slashings,
 		},
@@ -48,10 +116,14 @@ func TestProcessBlock_IncorrectCasperSlashing(t *testing.T) {
 		{
 			Status:                 pb.ValidatorRecord_ACTIVE,
 			LatestStatusChangeSlot: 0,
+			RandaoCommitmentHash32: []byte{1},
+			RandaoLayers:           0,
 		},
 		{
 			Status:                 pb.ValidatorRecord_ACTIVE,
 			LatestStatusChangeSlot: 0,
+			RandaoCommitmentHash32: []byte{1},
+			RandaoLayers:           0,
 		},
 	}
 	slashings := []*pb.ProposerSlashing{
@@ -70,12 +142,25 @@ func TestProcessBlock_IncorrectCasperSlashing(t *testing.T) {
 		},
 	}
 	casperSlashings := make([]*pb.CasperSlashing, params.BeaconConfig().MaxCasperSlashings+1)
+	shardAndCommittees := make([]*pb.ShardAndCommitteeArray, 64)
+	shardAndCommittees[5] = &pb.ShardAndCommitteeArray{
+		ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{
+				Shard:     0,
+				Committee: []uint32{0, 1},
+			},
+		},
+	}
+	latestMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
-		Slot:              5,
-		ValidatorRegistry: registry,
+		LatestRandaoMixesHash32S:  latestMixes,
+		Slot:                      5,
+		ValidatorRegistry:         registry,
+		ShardAndCommitteesAtSlots: shardAndCommittees,
 	}
 	block := &pb.BeaconBlock{
-		Slot: 5,
+		Slot:               5,
+		RandaoRevealHash32: []byte{1},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: slashings,
 			CasperSlashings:   casperSlashings,
@@ -92,10 +177,14 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		{
 			Status:                 pb.ValidatorRecord_ACTIVE,
 			LatestStatusChangeSlot: 0,
+			RandaoCommitmentHash32: []byte{1},
+			RandaoLayers:           0,
 		},
 		{
 			Status:                 pb.ValidatorRecord_ACTIVE,
 			LatestStatusChangeSlot: 0,
+			RandaoCommitmentHash32: []byte{1},
+			RandaoLayers:           0,
 		},
 	}
 	proposerSlashings := []*pb.ProposerSlashing{
@@ -136,12 +225,25 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		},
 	}
 	blockAttestations := make([]*pb.Attestation, params.BeaconConfig().MaxAttestations+1)
+	shardAndCommittees := make([]*pb.ShardAndCommitteeArray, 64)
+	shardAndCommittees[5] = &pb.ShardAndCommitteeArray{
+		ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{
+				Shard:     0,
+				Committee: []uint32{0, 1},
+			},
+		},
+	}
+	latestMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
-		Slot:              5,
-		ValidatorRegistry: registry,
+		LatestRandaoMixesHash32S:  latestMixes,
+		Slot:                      5,
+		ValidatorRegistry:         registry,
+		ShardAndCommitteesAtSlots: shardAndCommittees,
 	}
 	block := &pb.BeaconBlock{
-		Slot: 5,
+		Slot:               5,
+		RandaoRevealHash32: []byte{1},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: proposerSlashings,
 			CasperSlashings:   casperSlashings,
@@ -159,10 +261,14 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		{
 			Status:                 pb.ValidatorRecord_ACTIVE,
 			LatestStatusChangeSlot: 0,
+			RandaoCommitmentHash32: []byte{1},
+			RandaoLayers:           0,
 		},
 		{
 			Status:                 pb.ValidatorRecord_ACTIVE,
 			LatestStatusChangeSlot: 0,
+			RandaoCommitmentHash32: []byte{1},
+			RandaoLayers:           0,
 		},
 	}
 	proposerSlashings := []*pb.ProposerSlashing{
@@ -224,16 +330,29 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		CustodyBitfield:       []byte{1},
 	}
 	attestations := []*pb.Attestation{blockAtt}
+	shardAndCommittees := make([]*pb.ShardAndCommitteeArray, 128)
+	shardAndCommittees[64] = &pb.ShardAndCommitteeArray{
+		ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{
+				Shard:     0,
+				Committee: []uint32{0, 1},
+			},
+		},
+	}
+	latestMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
-		ValidatorRegistry:      registry,
-		Slot:                   64,
-		PreviousJustifiedSlot:  10,
-		LatestBlockRootHash32S: blockRoots,
-		LatestCrosslinks:       stateLatestCrosslinks,
+		LatestRandaoMixesHash32S:  latestMixes,
+		ValidatorRegistry:         registry,
+		Slot:                      64,
+		PreviousJustifiedSlot:     10,
+		LatestBlockRootHash32S:    blockRoots,
+		LatestCrosslinks:          stateLatestCrosslinks,
+		ShardAndCommitteesAtSlots: shardAndCommittees,
 	}
 	exits := make([]*pb.Exit, params.BeaconConfig().MaxExits+1)
 	block := &pb.BeaconBlock{
-		Slot: 64,
+		Slot:               64,
+		RandaoRevealHash32: []byte{1},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: proposerSlashings,
 			CasperSlashings:   casperSlashings,
@@ -252,10 +371,14 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		{
 			Status:                 pb.ValidatorRecord_ACTIVE,
 			LatestStatusChangeSlot: 0,
+			RandaoCommitmentHash32: []byte{1},
+			RandaoLayers:           0,
 		},
 		{
 			Status:                 pb.ValidatorRecord_ACTIVE,
 			LatestStatusChangeSlot: 0,
+			RandaoCommitmentHash32: []byte{1},
+			RandaoLayers:           0,
 		},
 	}
 	proposerSlashings := []*pb.ProposerSlashing{
@@ -317,12 +440,24 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		CustodyBitfield:       []byte{1},
 	}
 	attestations := []*pb.Attestation{blockAtt}
+	shardAndCommittees := make([]*pb.ShardAndCommitteeArray, 128)
+	shardAndCommittees[64] = &pb.ShardAndCommitteeArray{
+		ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+			{
+				Shard:     0,
+				Committee: []uint32{0, 1},
+			},
+		},
+	}
+	latestMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
-		ValidatorRegistry:      registry,
-		Slot:                   64,
-		PreviousJustifiedSlot:  10,
-		LatestBlockRootHash32S: blockRoots,
-		LatestCrosslinks:       stateLatestCrosslinks,
+		LatestRandaoMixesHash32S:  latestMixes,
+		ValidatorRegistry:         registry,
+		Slot:                      64,
+		ShardAndCommitteesAtSlots: shardAndCommittees,
+		PreviousJustifiedSlot:     10,
+		LatestBlockRootHash32S:    blockRoots,
+		LatestCrosslinks:          stateLatestCrosslinks,
 	}
 	exits := []*pb.Exit{
 		{
@@ -331,7 +466,8 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		},
 	}
 	block := &pb.BeaconBlock{
-		Slot: 64,
+		Slot:               64,
+		RandaoRevealHash32: []byte{1},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: proposerSlashings,
 			CasperSlashings:   casperSlashings,
