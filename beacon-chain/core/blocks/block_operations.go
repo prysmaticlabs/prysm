@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"reflect"
 
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -11,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slices"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 // ProcessPOWReceiptRoots processes the proof-of-work chain's receipts
@@ -564,7 +566,37 @@ func ProcessValidatorDeposits(
 			params.BeaconConfig().MaxDeposits,
 		)
 	}
+	for idx, deposit := range deposits {
+		if err := verifyDeposit(deposit); err != nil {
+			return nil, fmt.Errorf("could not verify deposit #%d: %v", idx, err)
+		}
+	}
 	return beaconState, nil
+}
+
+func verifyDeposit(deposit *pb.Deposit) error {
+	depositData := deposit.GetDepositData()
+	// Last 16 bytes of deposit data are 8 bytes for value
+	// and 8 bytes for timestamp. Everything before that is a
+	// Simple Serialized deposit input value.
+	if len(depositData) < 16 {
+		return fmt.Errorf(
+			"deposit data slice too small: len(depositData) = %d",
+			len(depositData),
+		)
+	}
+	depositInput := new(pb.DepositInput)
+	depositInputBytes := depositData[:len(depositData)-16]
+	rBuf := bytes.NewReader(depositInputBytes)
+	if err := decodeDepositData(rBuf, depositInput); err != nil {
+		return fmt.Errorf("could not decode deposit input: %v", err)
+	}
+	fmt.Printf("deposit input: %v\n", depositInput)
+	return nil
+}
+
+func decodeDepositData(r io.Reader, depositInput *pb.DepositInput) error {
+	return ssz.Decode(r, depositInput)
 }
 
 // ProcessValidatorExits is one of the operations performed

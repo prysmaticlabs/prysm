@@ -162,7 +162,7 @@ message BeaconBlockBody {
   repeated Exit exits = 5;
 }
 
-message DepositParameters {
+message DepositInput {
   bytes pubkey = 1;
   bytes proof_of_possession = 2; // Type of ['uint384']??
   // TODO(781): The usage of withdrawal_credentials is not defined in spec. Not used in Prysm yet.
@@ -184,7 +184,7 @@ message SlashableVoteData {
 }
 
 message DepositData {
-  DepositParameters deposit_parameters = 1;
+  DepositInput deposit_input = 1;
   uint64 value = 2;
   uint64 timestamp = 3;
 }
@@ -205,7 +205,7 @@ message CasperSlashing {
 message Deposit {
   repeated bytes merkle_branch_hash32s = 1;
   uint64 merkle_tree_index = 2;
-  DepositData deposit_data = 3;
+  bytes deposit_data = 3;
 }
 
 message Exit {

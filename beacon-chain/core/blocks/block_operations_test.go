@@ -9,6 +9,7 @@ import (
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 func TestProcessPOWReceiptRoots_SameRootHash(t *testing.T) {
@@ -1091,6 +1092,39 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 			64,
 			pendingAttestations[0].GetSlotIncluded(),
 		)
+	}
+}
+
+func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
+	var err error
+	depositInput := &pb.DepositInput{
+		Pubkey:                      []byte{1, 2, 3},
+		ProofOfPossession:           []byte{1},
+		WithdrawalCredentialsHash32: []byte{0},
+		RandaoCommitmentHash32:      []byte{1},
+	}
+	wBuf := new(bytes.Buffer)
+	if err = ssz.Encode(wBuf, depositInput); err != nil {
+		t.Fatalf("failed to encode: %v", err)
+	}
+	encodedDepositInput := wBuf.Bytes()
+	data := []byte{}
+	value := make([]byte, 8)
+	timestamp := make([]byte, 8)
+	data = append(data, encodedDepositInput...)
+	data = append(data, value...)
+	data = append(data, timestamp...)
+	deposit := &pb.Deposit{
+		DepositData: data,
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Deposits: []*pb.Deposit{deposit},
+		},
+	}
+	beaconState := &pb.BeaconState{}
+	if _, err := ProcessValidatorDeposits(beaconState, block); err != nil {
+		t.Errorf("Could not process deposits: %v", err)
 	}
 }
 
