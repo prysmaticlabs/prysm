@@ -77,6 +77,12 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
 	log.Info("Starting service")
+	var err error
+	c.genesisTime, err = c.beaconDB.GenesisTime()
+	if err != nil {
+		log.Fatalf("Unable to retrieve genesis time - blockchain service could not start: %v", err)
+		return
+	}
 	// TODO(#675): Initialize unfinalizedBlocks map from disk in case this
 	// is a beacon node restarting.
 	go c.updateHead(c.processedBlockChan)

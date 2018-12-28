@@ -91,6 +91,7 @@ func verifyBlockRandao(proposer *pb.ValidatorRecord, block *pb.BeaconBlock) erro
 	copy(proposerRandaoCommit[:], proposer.GetRandaoCommitmentHash32())
 
 	randaoHashLayers := hashutil.RepeatHash(blockRandaoReveal, proposer.GetRandaoLayers())
+	// Verify that repeat_hash(block.randao_reveal, proposer.randao_layers) == proposer.randao_commitment.
 	if randaoHashLayers != proposerRandaoCommit {
 		return fmt.Errorf(
 			"expected hashed block randao layers to equal proposer randao: received %#x = %#x",
