@@ -641,7 +641,9 @@ func AllActiveValidatorsIndices(state *pb.BeaconState) []uint32 {
 // ProcessDeposit mutates a corresponding index in the beacon state for
 // a validator depositing ETH into the beacon chain. Specifically, this function
 // adds a validator balance or tops up an existing validator's balance
-// by some deposit amount.
+// by some deposit amount. This function returns a mutated beacon state and
+// the validator index corresponding to the validator in the processed
+// deposit.
 func ProcessDeposit(
 	state *pb.BeaconState,
 	pubkey []byte,
