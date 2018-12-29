@@ -382,7 +382,7 @@ func TestChangeValidatorRegistry(t *testing.T) {
 	if validators[3].LatestStatusChangeSlot != params.BeaconConfig().MinWithdrawalPeriod+1 {
 		t.Errorf("Failed to set validator lastest status change slot")
 	}
-	// Reach max validation rotation case, this validator couldn't be rotated.
+	// Reach max validation rotation case, this validator Couldn't be rotated.
 	if validators[5].Status != pb.ValidatorRecord_ACTIVE_PENDING_EXIT {
 		t.Errorf("Wanted status PendingExit. Got: %d", validators[5].Status)
 	}
@@ -843,12 +843,12 @@ func TestAttestingValidatorIndices_Ok(t *testing.T) {
 		[]*pb.PendingAttestationRecord{thisAttestation},
 		[]*pb.PendingAttestationRecord{prevAttestation})
 	if err != nil {
-		t.Fatalf("could not execute AttestingValidatorIndices: %v", err)
+		t.Fatalf("Could not execute AttestingValidatorIndices: %v", err)
 	}
 
 	// Union(1,7,1,5,6) = 1,5,6,7
 	if !reflect.DeepEqual(indices, []uint32{1, 5, 6, 7}) {
-		t.Errorf("could not get incorrect validator indices. Wanted: %v, got: %v",
+		t.Errorf("Could not get incorrect validator indices. Wanted: %v, got: %v",
 			[]uint32{1, 5, 6, 7}, indices)
 	}
 }
@@ -955,7 +955,7 @@ func TestNewRegistryDeltaChainTip(t *testing.T) {
 			tt.currentRegistryDeltaChainTip,
 		)
 		if err != nil {
-			t.Fatalf("could not execute NewRegistryDeltaChainTip:%v", err)
+			t.Fatalf("Could not execute NewRegistryDeltaChainTip:%v", err)
 		}
 		if !bytes.Equal(newChainTip[:], tt.newRegistryDeltaChainTip) {
 			t.Errorf("Incorrect new chain tip. Wanted %#x, got %#x",
@@ -1136,7 +1136,7 @@ func TestActivateValidator_Ok(t *testing.T) {
 	}
 	newState, err := activateValidator(state, 0)
 	if err != nil {
-		t.Fatalf("could not execute activateValidator:%v", err)
+		t.Fatalf("Could not execute activateValidator:%v", err)
 	}
 	if newState.ValidatorRegistry[0].Status != pb.ValidatorRecord_ACTIVE {
 		t.Errorf("Wanted status ACTIVE, got %v", newState.ValidatorRegistry[0].Status)
@@ -1167,7 +1167,7 @@ func TestInitiateValidatorExit_Ok(t *testing.T) {
 	}
 	newState, err := initiateValidatorExit(state, 0)
 	if err != nil {
-		t.Fatalf("could not execute initiateValidatorExit:%v", err)
+		t.Fatalf("Could not execute initiateValidatorExit:%v", err)
 	}
 	if newState.ValidatorRegistry[0].Status != pb.ValidatorRecord_ACTIVE_PENDING_EXIT {
 		t.Errorf("Wanted status ACTIVE_PENDING_EXIT, got %v", newState.ValidatorRegistry[0].Status)
@@ -1215,7 +1215,7 @@ func TestExitValidatorWithPenalty_Ok(t *testing.T) {
 	newStatus := pb.ValidatorRecord_EXITED_WITH_PENALTY
 	newState, err := exitValidator(state, 0, newStatus)
 	if err != nil {
-		t.Fatalf("could not execute exitValidator:%v", err)
+		t.Fatalf("Could not execute exitValidator:%v", err)
 	}
 
 	if newState.ValidatorRegistry[0].Status != newStatus {
@@ -1262,5 +1262,49 @@ func TestExitValidator_AlreadyExitedWithOutPenalty(t *testing.T) {
 	}
 	if _, err := exitValidator(state, 0, pb.ValidatorRecord_EXITED_WITHOUT_PENALTY); err == nil {
 		t.Fatal("exitValidator should have failed with incorrect status")
+	}
+}
+
+func TestUpdateValidatorStatus_Ok(t *testing.T) {
+	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
+			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
+			},
+		})
+	}
+	state := &pb.BeaconState{
+		ShardAndCommitteesAtSlots:   shardAndCommittees,
+		ValidatorBalances:           []uint64{params.BeaconConfig().MaxDepositInGwei},
+		LatestPenalizedExitBalances: []uint64{0},
+		ValidatorRegistry:           []*pb.ValidatorRecord{{}},
+	}
+	tests := []struct {
+		currentStatus pb.ValidatorRecord_StatusCodes
+		newStatus     pb.ValidatorRecord_StatusCodes
+	}{
+		{pb.ValidatorRecord_PENDING_ACTIVATION, pb.ValidatorRecord_ACTIVE},
+		{pb.ValidatorRecord_ACTIVE, pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
+		{pb.ValidatorRecord_ACTIVE, pb.ValidatorRecord_EXITED_WITH_PENALTY},
+		{pb.ValidatorRecord_ACTIVE, pb.ValidatorRecord_EXITED_WITHOUT_PENALTY},
+	}
+	for _, tt := range tests {
+		state.ValidatorRegistry[0].Status = tt.currentStatus
+		newState, err := UpdateStatus(state, 0, tt.newStatus)
+		if err != nil {
+			t.Fatalf("Could not execute UpdateStatus: %v", err)
+		}
+		if newState.ValidatorRegistry[0].Status != tt.newStatus {
+			t.Errorf("Expected status:%v, got:%v",
+				tt.newStatus, newState.ValidatorRegistry[0].Status)
+		}
+	}
+}
+
+func TestUpdateValidatorStatus_IncorrectStatus(t *testing.T) {
+	if _, err := UpdateStatus(
+		&pb.BeaconState{}, 0, pb.ValidatorRecord_PENDING_ACTIVATION); err == nil {
+		t.Fatal("UpdateStatus should have failed with incorrect status")
 	}
 }
