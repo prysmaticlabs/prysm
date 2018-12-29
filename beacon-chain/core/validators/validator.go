@@ -720,7 +720,7 @@ func activateValidator(state *pb.BeaconState, index uint32) (*pb.BeaconState, er
 //        return
 //
 //    validator.status = ACTIVE_PENDING_EXIT
-//    validator.lat est_status_change_slot = state.slot
+//    validator.latest_status_change_slot = state.slot
 func initiateValidatorExit(state *pb.BeaconState, index uint32) (*pb.BeaconState, error) {
 	validator := state.ValidatorRegistry[index]
 	if validator.Status != pb.ValidatorRecord_ACTIVE {
