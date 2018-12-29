@@ -985,7 +985,7 @@ func TestProcessDeposit_PublicKeyExistsBadWithdrawalCredentials(t *testing.T) {
 	pocCommitment := []byte{}
 
 	want := "expected withdrawal credentials to match"
-	if _, err := ProcessDeposit(
+	if _, _, err := ProcessDeposit(
 		beaconState,
 		pubkey,
 		deposit,
@@ -1020,7 +1020,7 @@ func TestProcessDeposit_PublicKeyExistsGoodWithdrawalCredentials(t *testing.T) {
 	randaoCommitment := []byte{}
 	pocCommitment := []byte{}
 
-	newState, err := ProcessDeposit(
+	newState, _, err := ProcessDeposit(
 		beaconState,
 		pubkey,
 		deposit,
@@ -1060,7 +1060,7 @@ func TestProcessDeposit_PublicKeyDoesNotExistNoEmptyValidator(t *testing.T) {
 	randaoCommitment := []byte{}
 	pocCommitment := []byte{}
 
-	newState, err := ProcessDeposit(
+	newState, _, err := ProcessDeposit(
 		beaconState,
 		pubkey,
 		deposit,
@@ -1106,7 +1106,7 @@ func TestProcessDeposit_PublicKeyDoesNotExistEmptyValidatorExists(t *testing.T) 
 	randaoCommitment := []byte{}
 	pocCommitment := []byte{}
 
-	newState, err := ProcessDeposit(
+	newState, _, err := ProcessDeposit(
 		beaconState,
 		pubkey,
 		deposit,
