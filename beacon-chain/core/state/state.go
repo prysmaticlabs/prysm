@@ -2,6 +2,7 @@ package state
 
 import (
 	"fmt"
+	"github.com/prysmaticlabs/prysm/bazel-prysm/beacon-chain/core/validators"
 
 	"github.com/gogo/protobuf/proto"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -10,6 +11,102 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+// InitialBeaconState gets called when enough full deposits were made to the
+// deposit contract and the ChainStart log gets emitted.
+func InitialBeaconState(
+	initialValidatorDeposits []*pb.Deposit,
+	genesisTime uint64,
+	processedPowReceiptRoot []byte) (*pb.BeaconState, error) {
+	latestRandaoMixes := make([][]byte,
+		params.BeaconConfig().LatestRandaoMixesLength)
+	for i:=0; i<len(latestRandaoMixes); i++ {
+		latestRandaoMixes[i] = params.BeaconConfig().ZeroHash[:]
+	}
+
+	latestVDFOutputs := make([][]byte,
+		params.BeaconConfig().LatestRandaoMixesLength/params.BeaconConfig().EpochLength)
+	for i:=0; i<len(latestVDFOutputs); i++ {
+		latestVDFOutputs[i] = params.BeaconConfig().ZeroHash[:]
+	}
+
+	latestCrosslinks := make([]*pb.CrosslinkRecord,params.BeaconConfig().ShardCount)
+	for i:=0; i<len(latestCrosslinks); i++ {
+		latestCrosslinks[i] = &pb.CrosslinkRecord{
+			Slot: params.BeaconConfig().InitialSlotNumber,
+			ShardBlockRootHash32: params.BeaconConfig().ZeroHash[:],
+		}
+	}
+
+	latestBlockRoots := make([][]byte,params.BeaconConfig().LatestBlockRootsLength)
+	for i:=0; i<len(latestBlockRoots); i++ {
+		latestBlockRoots[i] = params.BeaconConfig().ZeroHash[:]
+	}
+
+	state := &pb.BeaconState{
+		// Misc fields.
+		Slot: params.BeaconConfig().InitialSlotNumber,
+		GenesisTime: genesisTime,
+		ForkData: &pb.ForkData{
+			PreForkVersion: params.BeaconConfig().InitialForkVersion,
+			PostForkVersion: params.BeaconConfig().InitialForkVersion,
+			ForkSlot: params.BeaconConfig().InitialSlotNumber,
+		},
+
+		// Validator registry fields.
+		ValidatorRegistry: []*pb.ValidatorRecord{},
+		ValidatorBalances: []uint64{},
+		ValidatorRegistryLastChangeSlot: params.BeaconConfig().InitialSlotNumber,
+		ValidatorRegistryExitCount: 0,
+		ValidatorRegistryDeltaChainTipHash32: params.BeaconConfig().ZeroHash[:],
+
+		// Randomness and committees.
+		LatestRandaoMixesHash32S: latestRandaoMixes,
+		LatestVdfOutputs: latestVDFOutputs,
+		ShardAndCommitteesAtSlots: []*pb.ShardAndCommitteeArray{},
+		PersistentCommittees: []*pbcomm.Uint32List{},
+		PersistentCommitteeReassignments: []*pb.ShardReassignmentRecord{},
+
+		// Proof of custody.
+		// Place holder, proof of custody challenge is defined in phase 1.
+		// This list will remain empty through out phase 0.
+		PocChallenges: []*pb.ProofOfCustodyChallenge{},
+
+		// Finality.
+		PreviousJustifiedSlot: params.BeaconConfig().InitialSlotNumber,
+		JustifiedSlot: params.BeaconConfig().InitialSlotNumber,
+		JustificationBitfield: 0,
+		FinalizedSlot : params.BeaconConfig().InitialSlotNumber,
+
+		// Recent state.
+		LatestCrosslinks: latestCrosslinks,
+		LatestBlockRootHash32S: latestBlockRoots,
+		LatestPenalizedExitBalances: []uint64{},
+		LatestAttestations: []*pb.PendingAttestationRecord{},
+		BatchedBlockRootHash32S: [][]byte{},
+
+		// PoW receipt root.
+		ProcessedPowReceiptRootHash32: processedPowReceiptRoot,
+		CandidatePowReceiptRoots: []*pb.CandidatePoWReceiptRootRecord{},
+	}
+
+	// Set initial committee shuffling.
+	initialShuffling, err := validators.ShuffleValidatorRegistryToCommittees(
+		params.BeaconConfig().ZeroHash,
+		state.ValidatorRegistry,
+		0,
+		)
+	if err != nil {
+		return nil, fmt.Errorf("could not shuffle initial committee: %v", err)
+	}
+	state.ShardAndCommitteesAtSlots = append(initialShuffling, initialShuffling...)
+
+	// Set initial persistent shuffling.
+	activeValidatorIndices := v.ActiveValidatorIndices(state.ValidatorRegistry)
+	state.PersistentCommittees =
+
+	return state
+}
 
 // Hash the beacon state data structure.
 func Hash(state *pb.BeaconState) ([32]byte, error) {

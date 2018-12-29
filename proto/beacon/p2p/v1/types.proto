@@ -20,6 +20,7 @@ message BeaconState {
   repeated ethereum.common.Uint32List persistent_committees = 1004;
   repeated ShardReassignmentRecord persistent_committee_reassignments = 1005;
   repeated bytes latest_randao_mixes_hash32s = 1006;
+  repeated bytes latest_vdf_outputs = 1007;
 
   // Finality [2001-3000] 
   uint64 previous_justified_slot = 2001;
@@ -44,6 +45,10 @@ message BeaconState {
   ForkData fork_data = 5002;
   uint64 slot = 5003;
 
+  // Proof of custody [6001-7000]
+  // Placeholders, ProofOfCustodyChallenge is defined in phase 1,
+  // the list will remain empty throughout phase 0
+  repeated ProofOfCustodyChallenge poc_challenges = 6001;
 
   // Deprecated fields 
   // All fields must be annotated with [deprecated=true];
@@ -184,7 +189,7 @@ message SlashableVoteData {
 }
 
 message DepositData {
-  DepositParameters deposit_parameters = 1;
+  DepositParameters deposit_input = 1;
   uint64 value = 2;
   uint64 timestamp = 3;
 }
@@ -220,3 +225,5 @@ message ValidatorRegistryDeltaBlock {
   bytes pubkey = 3;
   uint64 flag = 4;
 }
+
+message ProofOfCustodyChallenge {} // Empty until phase 1
