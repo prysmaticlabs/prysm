@@ -3,7 +3,6 @@
 
 package ethereum_beacon_p2p_v1
 
-
 import proto "github.com/gogo/protobuf/proto"
 import fmt "fmt"
 import math "math"

@@ -69,8 +69,11 @@ type BeaconChainConfig struct {
 	MaxNumLog2Validators                    uint64         // Max number of validators in Log2 can exist given total ETH supply.
 	EpochLength                             uint64         // Number of slots that define an Epoch.
 	InactivityPenaltyQuotient               uint64         // InactivityPenaltyQuotient defines how much validator leaks out balances for offline.
+	EjectionBalance                         uint64         // EjectionBalance is the minimal balance a validator needs before ejected.
+	EjectionBalanceInGwei                   uint64         // EjectionBalanceInGwei is the minimal balance in Gwei a validator needs before ejected.
 	ZeroHash                                [32]byte       // ZeroHash is used to represent a zeroed out 32 byte array.
 	EmptySignature                          [][]byte       // EmptySignature is used to represent a zeroed out BLS Signature.
+
 }
 
 // ShardChainConfig contains configs for node to participate in shard chains.
@@ -119,6 +122,8 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	InactivityPenaltyQuotient:          1 << 24,
 	CollectivePenaltyCalculationPeriod: 1 << 20,
 	IncluderRewardQuotient:             8,
+	EjectionBalance:                    16,
+	EjectionBalanceInGwei:              16 * 1e9,
 }
 
 var demoBeaconConfig = &BeaconChainConfig{
@@ -160,6 +165,8 @@ var demoBeaconConfig = &BeaconChainConfig{
 	EmptySignature:                     makeEmptySignature(),
 	CollectivePenaltyCalculationPeriod: defaultBeaconConfig.CollectivePenaltyCalculationPeriod,
 	IncluderRewardQuotient:             defaultBeaconConfig.IncluderRewardQuotient,
+	EjectionBalance:                    defaultBeaconConfig.EjectionBalance,
+	EjectionBalanceInGwei:              defaultBeaconConfig.EjectionBalanceInGwei,
 }
 
 var defaultShardConfig = &ShardChainConfig{
