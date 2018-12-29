@@ -2,10 +2,12 @@ package blocks
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -1196,7 +1198,7 @@ func TestProcessBlockValidatorDeposits_MerkleBranchFailsVerification(t *testing.
 	}
 }
 
-func TestProcessBlockValidatorDeposits_TimestampDecodingFails(t *testing.T) {
+func TestProcessBlockValidatorDeposits_OutsideAllowedTTLBoundary(t *testing.T) {
 	// We create a correctly encoded deposit data using Simple Serialize.
 	depositInput := &pb.DepositInput{
 		Pubkey: []byte{1, 2, 3},
@@ -1208,7 +1210,23 @@ func TestProcessBlockValidatorDeposits_TimestampDecodingFails(t *testing.T) {
 	encodedInput := wBuf.Bytes()
 	data := []byte{}
 	value := make([]byte, 8)
+
+	// We then serialize a unix time into the timestamp []byte slice
+	// and ensure it has size of 8 bytes.
 	timestamp := make([]byte, 8)
+
+	// Set deposit time to 1000 seconds since unix time 0.
+	depositTime := time.Unix(1000, 0).Unix()
+	// Set genesis time to unix time 0.
+	genesisTime := time.Unix(0, 0).Unix()
+
+	// We sent current slot to 1000 seconds * SlotDuration - with these
+	// values, state.slot-timeToLive will always be < ZERO_BALANCE_VALIDATOR_TTL.
+	currentSlot := 1000 * params.BeaconConfig().SlotDuration
+	binary.BigEndian.PutUint64(timestamp, uint64(depositTime))
+
+	// We then create a serialized deposit data slice of type []byte
+	// by appending all 3 items above together.
 	data = append(data, encodedInput...)
 	data = append(data, value...)
 	data = append(data, timestamp...)
@@ -1237,29 +1255,13 @@ func TestProcessBlockValidatorDeposits_TimestampDecodingFails(t *testing.T) {
 	}
 	beaconState := &pb.BeaconState{
 		ProcessedPowReceiptRootHash32: powReceiptRoot[:],
+		Slot:                          currentSlot,
+		GenesisTime:                   uint64(genesisTime),
 	}
-	want := "could not unmarshal deposit timestamp"
-	if _, err := ProcessBlockValidatorDeposits(
-		beaconState,
-		block,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected error: %s, received %v", want, err)
-	}
-}
-
-// TODO
-func TestProcessBlockValidatorDeposits_OutsideAllowedTTLBoundary(t *testing.T) {
-	data := make([]byte, 16)
-	deposit := &pb.Deposit{
-		DepositData: data,
-	}
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			Deposits: []*pb.Deposit{deposit},
-		},
-	}
-	beaconState := &pb.BeaconState{}
-	want := "ssz decode failed"
+	want := fmt.Sprintf(
+		"want state.slot - (deposit.time - genesis_time) // SLOT_DURATION > %d",
+		params.BeaconConfig().ZeroBalanceValidatorTTL,
+	)
 	if _, err := ProcessBlockValidatorDeposits(
 		beaconState,
 		block,

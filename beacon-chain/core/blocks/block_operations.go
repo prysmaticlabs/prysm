@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"time"
 
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -636,14 +635,12 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 
 	// We unmarshal the timestamp bytes into a time.Time value for us to use.
 	depositTimestampBytes := depositData[len(depositData)-8:]
-	depositTime := new(time.Time)
-	if err := depositTime.UnmarshalBinary(depositTimestampBytes); err != nil {
-		return fmt.Errorf("could not unmarshal deposit timestamp: %v", err)
-	}
+	depositUnixTime := int64(binary.BigEndian.Uint64(depositTimestampBytes))
 
 	// Parse beacon state's genesis time from a uint32 into a unix timestamp.
-	genesisTime := time.Unix(int64(beaconState.GetGenesisTime()), 0)
-	timeToLive := uint64(depositTime.Sub(genesisTime).Seconds()) / params.BeaconConfig().SlotDuration
+	genesisUnixTime := int64(beaconState.GetGenesisTime())
+	depositGenesisTimeDifference := depositUnixTime - genesisUnixTime
+	timeToLive := uint64(depositGenesisTimeDifference) / params.BeaconConfig().SlotDuration
 
 	// Verify current slot slot - allowed validator TTL is within the allowed boundary.
 	if beaconState.GetSlot()-timeToLive < params.BeaconConfig().ZeroBalanceValidatorTTL {
