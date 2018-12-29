@@ -77,6 +77,8 @@ func (ss *Service) Stop() error {
 	return ss.RegularSync.Stop()
 }
 
+// Status always returns nil.
+// TODO(1206): Add service health checks.
 func (ss *Service) Status() error {
 	return nil
 }

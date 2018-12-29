@@ -126,6 +126,8 @@ func (sim *Simulator) Stop() error {
 	return nil
 }
 
+// Status always returns nil. This is just a debugging/test service that does
+// not need to be monitored in production.
 func (sim *Simulator) Status() error {
 	return nil
 }

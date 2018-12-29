@@ -61,6 +61,8 @@ func (a *Service) Stop() error {
 	return nil
 }
 
+// Status always returns nil.
+// TODO(1201): Add service health checks.
 func (a *Service) Status() error {
 	return nil
 }

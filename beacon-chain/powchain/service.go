@@ -113,6 +113,8 @@ func (w *Web3Service) Stop() error {
 	return nil
 }
 
+// Status always returns nil.
+// TODO(1204): Add service health checks.
 func (w *Web3Service) Status() error {
 	return nil
 }

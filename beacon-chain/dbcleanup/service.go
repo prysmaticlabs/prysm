@@ -63,6 +63,8 @@ func (d *CleanupService) Stop() error {
 	return nil
 }
 
+// Status always returns nil.
+// TODO(1203): Add service health checks.
 func (d *CleanupService) Status() error {
 	return nil
 }

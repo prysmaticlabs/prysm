@@ -86,6 +86,9 @@ func (p *Proposer) Stop() error {
 	return nil
 }
 
+// Status always returns nil.
+// This service will be rewritten in the future so this service check is a
+// no-op for now.
 func (p *Proposer) Status() error {
 	return nil
 }

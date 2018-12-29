@@ -93,6 +93,8 @@ func (c *ChainService) Stop() error {
 	return nil
 }
 
+// Status always returns nil.
+// TODO(1202): Add service health checks.
 func (c *ChainService) Status() error {
 	return nil
 }

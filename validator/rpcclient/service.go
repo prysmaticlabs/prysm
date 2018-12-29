@@ -77,6 +77,7 @@ func (s *Service) Stop() error {
 	return nil
 }
 
+// Status returns error if there is no connection to the beacon chain RPC.
 func (s *Service) Status() error {
 	if s.conn == nil {
 		return errors.New("no connection to beacon RPC")

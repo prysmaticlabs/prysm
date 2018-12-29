@@ -92,6 +92,9 @@ func (s *Service) Stop() error {
 	return nil
 }
 
+// Status always returns nil.
+// This service will be rewritten in the future so this service check is a
+// no-op for now.
 func (s *Service) Status() error {
 	return nil
 }
