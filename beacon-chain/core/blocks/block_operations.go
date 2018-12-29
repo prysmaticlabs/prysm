@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slices"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
+	"github.com/prysmaticlabs/prysm/shared/trie"
 )
 
 // ProcessPOWReceiptRoots processes the proof-of-work chain's receipts
@@ -540,7 +541,7 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation) error {
 //			deposit_data in the Ethereum 1.0 deposit contract of which the hash
 //			was placed into the Merkle tree.
 //
-//			Verify deposit.merkle_branch, setting leaf=serialized_deposit_data,
+//			Verify deposit merkle_branch, setting leaf=serialized_deposit_data,
 //			depth=DEPOSIT_CONTRACT_TREE_DEPTH and root=state.processed_pow_receipt_root:
 //		  Verify that state.slot - (deposit.deposit_data.timestamp -
 //			state.genesis_time)  SLOT_DURATION < ZERO_BALANCE_VALIDATOR_TTL.
@@ -577,6 +578,20 @@ func ProcessValidatorDeposits(
 
 func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 	depositData := deposit.GetDepositData()
+	// Verify Merkle proof of deposit and PoW receipt trie root.
+	var receiptRoot [32]byte
+	var merkleLeaf [32]byte
+	copy(receiptRoot[:], beaconState.GetProcessedPowReceiptRootHash32())
+	copy(merkleLeaf[:], depositData)
+	if ok := trie.VerifyMerkleBranch(
+		merkleLeaf,
+		deposit.GetMerkleBranchHash32S(),
+		params.BeaconConfig().DepositContractTreeDepth,
+		receiptRoot,
+	); !ok {
+		return errors.New("Deposit merkle branch of PoW receipt root did not verify")
+	}
+
 	// Last 16 bytes of deposit data are 8 bytes for value
 	// and 8 bytes for timestamp. Everything before that is a
 	// Simple Serialized deposit input value.
@@ -593,22 +608,24 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 		return fmt.Errorf("could not decode deposit input: %v", err)
 	}
 	// TODO: Basic integrity checking of fields in deposit input.
-	fmt.Printf("deposit input: %v\n", depositInput)
 	// Verify the timestamp.
 	depositTimestampBytes := depositData[len(depositData)-8:]
 	depositTime := new(time.Time)
 	if err := depositTime.UnmarshalBinary(depositTimestampBytes); err != nil {
 		return fmt.Errorf("could not unmarshal deposit timestamp: %v", err)
 	}
-	genesisTime := beaconState.GetGenesisTime()
-	currentSlotTime := genesisTime.Add(beaconState.GetSlot() * params.BeaconConfig().SlotDuration * time.Second)
-	timeToLive := currentSlotTime.Sub(depositTime.Sub(genesisTime))
-	if timeToLive/params.BeaconConfig().SlotDuration < params.BeaconConfig().ZeroBalanceValidatorTTL {
+
+	// Parse beacon state's genesis time from a uint32 into a unix timestamp.
+	genesisTime := time.Unix(int64(beaconState.GetGenesisTime()), 0)
+	timeToLive := uint64(depositTime.Sub(genesisTime).Seconds()) / params.BeaconConfig().SlotDuration
+
+	// Verify validator TTL is correct.
+	if beaconState.GetSlot()-timeToLive < params.BeaconConfig().ZeroBalanceValidatorTTL {
 		return fmt.Errorf(
 			"want state.slot - (deposit.time - genesis_time) // SLOT_DURATION > %d, received %d < %d",
-			5,
-			5,
-			5,
+			params.BeaconConfig().ZeroBalanceValidatorTTL,
+			beaconState.GetSlot()-timeToLive,
+			params.BeaconConfig().ZeroBalanceValidatorTTL,
 		)
 	}
 	return nil
