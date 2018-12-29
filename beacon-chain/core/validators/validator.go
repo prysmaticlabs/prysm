@@ -689,6 +689,7 @@ func ProcessDeposit(
 		if !ok {
 			state.ValidatorRegistry = append(state.ValidatorRegistry, newValidator)
 			state.ValidatorBalances = append(state.ValidatorBalances, deposit)
+			idx = len(state.ValidatorRegistry) - 1
 		} else {
 			state.ValidatorRegistry[idx] = newValidator
 			state.ValidatorBalances[idx] = deposit
