@@ -459,7 +459,7 @@ func CheckValidatorMinDeposit(validatorSet []*pb.ValidatorRecord, currentSlot ui
 //        )
 //    )
 func NewRegistryDeltaChainTip(
-	flag uint64,
+	flag pb.ValidatorRegistryDeltaBlock_ValidatorRegistryDeltaFlags,
 	index uint32,
 	pubKey []byte,
 	currentValidatorRegistryDeltaChainTip []byte) ([32]byte, error) {
@@ -588,6 +588,34 @@ func AttestingBalance(state *pb.BeaconState, boundaryAttesterIndices []uint32) u
 	return boundaryAttestingBalance
 }
 
+// UpdateStatus updates validator to a new status, it handles
+// other general accounting related to this status update.
+// Spec pseudocode definition:
+//   def update_validator_status(state: BeaconState,
+//                            index: int,
+//                            new_status: int) -> None:
+//    if new_status == ACTIVE:
+//        activate_validator(state, index)
+//    if new_status == ACTIVE_PENDING_EXIT:
+//        initiate_validator_exit(state, index)
+//    if new_status in [EXITED_WITH_PENALTY, EXITED_WITHOUT_PENALTY]:
+//        exit_validator(state, index, new_status)
+func UpdateStatus(
+	state *pb.BeaconState,
+	index uint32,
+	newStatus pb.ValidatorRecord_StatusCodes) (*pb.BeaconState, error) {
+
+	switch newStatus {
+	case pb.ValidatorRecord_ACTIVE:
+		return activateValidator(state, index)
+	case pb.ValidatorRecord_ACTIVE_PENDING_EXIT:
+		return initiateValidatorExit(state, index)
+	case pb.ValidatorRecord_EXITED_WITH_PENALTY, pb.ValidatorRecord_EXITED_WITHOUT_PENALTY:
+		return exitValidator(state, index, newStatus)
+	}
+	return nil, fmt.Errorf("expected ACTIVE, ACTIVE_PENDING_EXIT, EXITED_WITH or WITHOUT_PENALTY, but got %v", newStatus)
+}
+
 // AllValidatorsIndices returns all validator indices from 0 to
 // the last validator.
 func AllValidatorsIndices(state *pb.BeaconState) []uint32 {
@@ -632,4 +660,178 @@ func minEmptyValidator(validators []*pb.ValidatorRecord) int {
 func isActiveValidator(validator *pb.ValidatorRecord) bool {
 	return validator.Status == pb.ValidatorRecord_ACTIVE_PENDING_EXIT ||
 		validator.Status == pb.ValidatorRecord_ACTIVE
+}
+
+// activateValidator takes in validator index and activates
+// validator from pending activation status to active status.
+//
+// Spec pseudocode definition:
+// def activate_validator(state: BeaconState,
+// 						  index: int) -> None:
+// 		"""
+// 		Activate the validator with the given ``index``.
+// 		Note that this function mutates ``state``.
+// 		"""
+// 		validator = state.validator_registry[index]
+// 		if validator.status != PENDING_ACTIVATION:
+// 				return
+//
+// 		validator.status = ACTIVE
+// 		validator.latest_status_change_slot = state.slot
+// 		state.validator_registry_delta_chain_tip = get_new_validator_registry_delta_chain_tip(
+// 				current_validator_registry_delta_chain_tip=state.validator_registry_delta_chain_tip,
+// 				validator_index=index,
+// 				pubkey=validator.pubkey,
+// 				flag=ACTIVATION)
+func activateValidator(state *pb.BeaconState, index uint32) (*pb.BeaconState, error) {
+	validator := state.ValidatorRegistry[index]
+	if validator.Status != pb.ValidatorRecord_PENDING_ACTIVATION {
+		return nil, fmt.Errorf("expected validator %d to be PENDING_ACTIVATION, but was %v",
+			index, validator.Status)
+	}
+	validator.Status = pb.ValidatorRecord_ACTIVE
+	validator.LatestStatusChangeSlot = state.Slot
+	newChainTip, err := NewRegistryDeltaChainTip(
+		pb.ValidatorRegistryDeltaBlock_ACTIVATION,
+		index,
+		validator.Pubkey,
+		state.ValidatorRegistryDeltaChainTipHash32,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("could not get new chain tip %v", err)
+	}
+	state.ValidatorRegistryDeltaChainTipHash32 = newChainTip[:]
+	state.ValidatorRegistry[index] = validator
+	return state, nil
+}
+
+// initiateValidatorExit takes in validator index and exits
+// validator from active status to active pending exit status.
+//
+// Spec pseudocode definition:
+// def initiate_validator_exit(state: BeaconState,
+//                            index: int) -> None:
+//    """
+//    Initiate exit for the validator with the given ``index``.
+//    Note that this function mutates ``state``.
+//    """
+//    validator = state.validator_registry[index]
+//    if validator.status != ACTIVE:
+//        return
+//
+//    validator.status = ACTIVE_PENDING_EXIT
+//    validator.latest_status_change_slot = state.slot
+func initiateValidatorExit(state *pb.BeaconState, index uint32) (*pb.BeaconState, error) {
+	validator := state.ValidatorRegistry[index]
+	if validator.Status != pb.ValidatorRecord_ACTIVE {
+		return nil, fmt.Errorf("expected validator %d to be ACTIVE, but was %v",
+			index, validator.Status)
+	}
+	validator.Status = pb.ValidatorRecord_ACTIVE_PENDING_EXIT
+	validator.LatestStatusChangeSlot = state.Slot
+	state.ValidatorRegistry[index] = validator
+	return state, nil
+}
+
+// exitValidator takes in validator index and does house
+// keeping work for validators with exited with penalty or without penalty status.
+//
+// Spec pseudocode definition:
+// def exit_validator(state: BeaconState,
+//                   index: int,
+//                   new_status: int) -> None:
+//    """
+//    Exit the validator with the given ``index``.
+//    Note that this function mutates ``state``.
+//    """
+//    validator = state.validator_registry[index]
+//    prev_status = validator.status
+//
+//    if prev_status == EXITED_WITH_PENALTY:
+//        return
+//
+//    validator.status = new_status
+//    validator.latest_status_change_slot = state.slot
+//
+//    if new_status == EXITED_WITH_PENALTY:
+//        state.latest_penalized_exit_balances[state.slot // COLLECTIVE_PENALTY_CALCULATION_PERIOD] += get_effective_balance(state, index)
+//
+//        whistleblower_index = get_beacon_proposer_index(state, state.slot)
+//        whistleblower_reward = get_effective_balance(state, index) // WHISTLEBLOWER_REWARD_QUOTIENT
+//        state.validator_balances[whistleblower_index] += whistleblower_reward
+//        state.validator_balances[index] -= whistleblower_reward
+//
+//    if prev_status == EXITED_WITHOUT_PENALTY:
+//        return
+//
+//    # The following updates only occur if not previous exited
+//    state.validator_registry_exit_count += 1
+//    validator.exit_count = state.validator_registry_exit_count
+//    state.validator_registry_delta_chain_tip = get_new_validator_registry_delta_chain_tip(
+//        current_validator_registry_delta_chain_tip=state.validator_registry_delta_chain_tip,
+//        validator_index=index,
+//        pubkey=validator.pubkey,
+//        flag=EXIT,
+//    )
+//
+//    # Remove validator from persistent committees
+//    for committee in state.persistent_committees:
+//        for i, validator_index in committee:
+//            if validator_index == index:
+//                committee.pop(i)
+//                break
+func exitValidator(state *pb.BeaconState, index uint32, newStatus pb.ValidatorRecord_StatusCodes) (*pb.BeaconState, error) {
+	validator := state.ValidatorRegistry[index]
+	prevStatus := validator.Status
+
+	if prevStatus == pb.ValidatorRecord_EXITED_WITH_PENALTY {
+		return nil, fmt.Errorf("validator %d already exited due to penalty", index)
+	}
+
+	validator.Status = newStatus
+	validator.LatestStatusChangeSlot = state.Slot
+
+	if newStatus == pb.ValidatorRecord_EXITED_WITH_PENALTY {
+		state.LatestPenalizedExitBalances[state.Slot/params.BeaconConfig().CollectivePenaltyCalculationPeriod] +=
+			EffectiveBalance(state, index)
+		proposerIndex, err := BeaconProposerIndex(state, state.Slot)
+		if err != nil {
+			return nil, fmt.Errorf("could not get proposer index: %v", err)
+		}
+		whistleblowerIndex := proposerIndex
+		whistleblowerReward := EffectiveBalance(state, index)
+		state.ValidatorBalances[whistleblowerIndex] += whistleblowerReward
+		state.ValidatorBalances[index] -= whistleblowerReward
+	}
+
+	if prevStatus == pb.ValidatorRecord_EXITED_WITHOUT_PENALTY {
+		return nil, fmt.Errorf("validator %d already exited without penalty", index)
+	}
+
+	// The following only gets updated if not previous exited.
+	state.ValidatorRegistryExitCount++
+	validator.ExitCount = state.ValidatorRegistryExitCount
+	newChainTip, err := NewRegistryDeltaChainTip(
+		pb.ValidatorRegistryDeltaBlock_EXIT,
+		index,
+		validator.Pubkey,
+		state.ValidatorRegistryDeltaChainTipHash32,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("could not get new chain tip %v", err)
+	}
+	state.ValidatorRegistryDeltaChainTipHash32 = newChainTip[:]
+
+	// Remove validator from persistent committees.
+	for i, committee := range state.PersistentCommittees {
+		for j, validatorIndex := range committee.List {
+			if validatorIndex == index {
+				state.PersistentCommittees[i].List = append(
+					state.PersistentCommittees[i].List[:j],
+					state.PersistentCommittees[i].List[j+1:]...)
+				break
+			}
+		}
+	}
+	return state, nil
 }

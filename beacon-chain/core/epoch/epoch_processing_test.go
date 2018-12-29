@@ -294,3 +294,34 @@ func TestProcessCrosslinks_NoRoot(t *testing.T) {
 		t.Fatalf("ProcessCrosslinks should have failed")
 	}
 }
+
+func TestProcessEjections_Ok(t *testing.T) {
+	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
+			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
+			},
+		})
+	}
+	state := &pb.BeaconState{
+		ShardAndCommitteesAtSlots: shardAndCommittees,
+		ValidatorBalances: []uint64{
+			params.BeaconConfig().EjectionBalanceInGwei - 1,
+			params.BeaconConfig().EjectionBalanceInGwei + 1},
+		LatestPenalizedExitBalances: []uint64{0},
+		ValidatorRegistry: []*pb.ValidatorRecord{
+			{Status: pb.ValidatorRecord_ACTIVE},
+			{Status: pb.ValidatorRecord_ACTIVE}},
+	}
+	state, err := ProcessEjections(state)
+	if err != nil {
+		t.Fatalf("Could not execute ProcessEjections: %v", err)
+	}
+	if state.ValidatorRegistry[0].Status != pb.ValidatorRecord_EXITED_WITHOUT_PENALTY {
+		t.Errorf("Expected EXITED_WITHOUT_PENALTY, but got %v", state.ValidatorRegistry[0].Status)
+	}
+	if state.ValidatorRegistry[1].Status != pb.ValidatorRecord_ACTIVE {
+		t.Errorf("Expected ACTIVE, but got %v", state.ValidatorRegistry[1].Status)
+	}
+}
