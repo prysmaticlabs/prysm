@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"math/big"
 	"reflect"
+	"strings"
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/proto/common"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -380,7 +382,7 @@ func TestChangeValidatorRegistry(t *testing.T) {
 	if validators[3].LatestStatusChangeSlot != params.BeaconConfig().MinWithdrawalPeriod+1 {
 		t.Errorf("Failed to set validator lastest status change slot")
 	}
-	// Reach max validation rotation case, this validator couldn't be rotated.
+	// Reach max validation rotation case, this validator Couldn't be rotated.
 	if validators[5].Status != pb.ValidatorRecord_ACTIVE_PENDING_EXIT {
 		t.Errorf("Wanted status PendingExit. Got: %d", validators[5].Status)
 	}
@@ -415,18 +417,18 @@ func TestValidatorMinDeposit(t *testing.T) {
 	}
 }
 
-func TestMinEmptyValidator(t *testing.T) {
+func TestMinEmptyExitedValidator(t *testing.T) {
 	validators := []*pb.ValidatorRecord{
 		{Status: pb.ValidatorRecord_ACTIVE},
 		{Status: pb.ValidatorRecord_EXITED_WITHOUT_PENALTY},
 		{Status: pb.ValidatorRecord_ACTIVE},
 	}
-	if minEmptyValidator(validators) != 1 {
+	if minEmptyExitedValidator(validators) != 1 {
 		t.Errorf("Min vaidator index should be 1")
 	}
 
 	validators[1].Status = pb.ValidatorRecord_ACTIVE
-	if minEmptyValidator(validators) != -1 {
+	if minEmptyExitedValidator(validators) != -1 {
 		t.Errorf("Min vaidator index should be -1")
 	}
 }
@@ -841,12 +843,12 @@ func TestAttestingValidatorIndices_Ok(t *testing.T) {
 		[]*pb.PendingAttestationRecord{thisAttestation},
 		[]*pb.PendingAttestationRecord{prevAttestation})
 	if err != nil {
-		t.Fatalf("could not execute AttestingValidatorIndices: %v", err)
+		t.Fatalf("Could not execute AttestingValidatorIndices: %v", err)
 	}
 
 	// Union(1,7,1,5,6) = 1,5,6,7
 	if !reflect.DeepEqual(indices, []uint32{1, 5, 6, 7}) {
-		t.Errorf("could not get incorrect validator indices. Wanted: %v, got: %v",
+		t.Errorf("Could not get incorrect validator indices. Wanted: %v, got: %v",
 			[]uint32{1, 5, 6, 7}, indices)
 	}
 }
@@ -947,17 +949,362 @@ func TestNewRegistryDeltaChainTip(t *testing.T) {
 	}
 	for _, tt := range tests {
 		newChainTip, err := NewRegistryDeltaChainTip(
-			tt.flag,
+			pb.ValidatorRegistryDeltaBlock_ValidatorRegistryDeltaFlags(tt.flag),
 			tt.index,
 			tt.pubKey,
 			tt.currentRegistryDeltaChainTip,
 		)
 		if err != nil {
-			t.Fatalf("could not execute NewRegistryDeltaChainTip:%v", err)
+			t.Fatalf("Could not execute NewRegistryDeltaChainTip:%v", err)
 		}
 		if !bytes.Equal(newChainTip[:], tt.newRegistryDeltaChainTip) {
 			t.Errorf("Incorrect new chain tip. Wanted %#x, got %#x",
 				tt.newRegistryDeltaChainTip, newChainTip[:])
 		}
+	}
+}
+
+func TestProcessDeposit_PublicKeyExistsBadWithdrawalCredentials(t *testing.T) {
+	registry := []*pb.ValidatorRecord{
+		{
+			Pubkey: []byte{1, 2, 3},
+		},
+		{
+			Pubkey:                []byte{4, 5, 6},
+			WithdrawalCredentials: []byte{0},
+		},
+	}
+	beaconState := &pb.BeaconState{
+		ValidatorRegistry: registry,
+	}
+	pubkey := []byte{4, 5, 6}
+	deposit := uint64(1000)
+	proofOfPossession := []byte{}
+	withdrawalCredentials := []byte{1}
+	randaoCommitment := []byte{}
+	pocCommitment := []byte{}
+
+	want := "expected withdrawal credentials to match"
+	if _, _, err := ProcessDeposit(
+		beaconState,
+		pubkey,
+		deposit,
+		proofOfPossession,
+		withdrawalCredentials,
+		randaoCommitment,
+		pocCommitment,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Wanted error to contain %s, received %v", want, err)
+	}
+}
+
+func TestProcessDeposit_PublicKeyExistsGoodWithdrawalCredentials(t *testing.T) {
+	registry := []*pb.ValidatorRecord{
+		{
+			Pubkey: []byte{1, 2, 3},
+		},
+		{
+			Pubkey:                []byte{4, 5, 6},
+			WithdrawalCredentials: []byte{1},
+		},
+	}
+	balances := []uint64{0, 0}
+	beaconState := &pb.BeaconState{
+		ValidatorBalances: balances,
+		ValidatorRegistry: registry,
+	}
+	pubkey := []byte{4, 5, 6}
+	deposit := uint64(1000)
+	proofOfPossession := []byte{}
+	withdrawalCredentials := []byte{1}
+	randaoCommitment := []byte{}
+	pocCommitment := []byte{}
+
+	newState, _, err := ProcessDeposit(
+		beaconState,
+		pubkey,
+		deposit,
+		proofOfPossession,
+		withdrawalCredentials,
+		randaoCommitment,
+		pocCommitment,
+	)
+	if err != nil {
+		t.Fatalf("Process deposit failed: %v", err)
+	}
+	if newState.ValidatorBalances[1] != 1000 {
+		t.Errorf("Expected balance at index 1 to be 1000, received %d", newState.ValidatorBalances[1])
+	}
+}
+
+func TestProcessDeposit_PublicKeyDoesNotExistNoEmptyValidator(t *testing.T) {
+	registry := []*pb.ValidatorRecord{
+		{
+			Pubkey:                []byte{1, 2, 3},
+			WithdrawalCredentials: []byte{2},
+		},
+		{
+			Pubkey:                []byte{4, 5, 6},
+			WithdrawalCredentials: []byte{1},
+		},
+	}
+	balances := []uint64{1000, 1000}
+	beaconState := &pb.BeaconState{
+		ValidatorBalances: balances,
+		ValidatorRegistry: registry,
+	}
+	pubkey := []byte{7, 8, 9}
+	deposit := uint64(2000)
+	proofOfPossession := []byte{}
+	withdrawalCredentials := []byte{1}
+	randaoCommitment := []byte{}
+	pocCommitment := []byte{}
+
+	newState, _, err := ProcessDeposit(
+		beaconState,
+		pubkey,
+		deposit,
+		proofOfPossession,
+		withdrawalCredentials,
+		randaoCommitment,
+		pocCommitment,
+	)
+	if err != nil {
+		t.Fatalf("Process deposit failed: %v", err)
+	}
+	if len(newState.ValidatorBalances) != 3 {
+		t.Errorf("Expected validator balances list to increase by 1, received len %d", len(newState.ValidatorBalances))
+	}
+	if newState.ValidatorBalances[2] != 2000 {
+		t.Errorf("Expected new validator have balance of %d, received %d", 2000, newState.ValidatorBalances[2])
+	}
+}
+
+func TestProcessDeposit_PublicKeyDoesNotExistEmptyValidatorExists(t *testing.T) {
+	registry := []*pb.ValidatorRecord{
+		{
+			Pubkey:                 []byte{1, 2, 3},
+			WithdrawalCredentials:  []byte{2},
+			LatestStatusChangeSlot: 0,
+		},
+		{
+			Pubkey:                 []byte{4, 5, 6},
+			WithdrawalCredentials:  []byte{1},
+			LatestStatusChangeSlot: 0,
+		},
+	}
+	balances := []uint64{0, 1000}
+	beaconState := &pb.BeaconState{
+		Slot:              0 + params.BeaconConfig().ZeroBalanceValidatorTTL,
+		ValidatorBalances: balances,
+		ValidatorRegistry: registry,
+	}
+	pubkey := []byte{7, 8, 9}
+	deposit := uint64(2000)
+	proofOfPossession := []byte{}
+	withdrawalCredentials := []byte{1}
+	randaoCommitment := []byte{}
+	pocCommitment := []byte{}
+
+	newState, _, err := ProcessDeposit(
+		beaconState,
+		pubkey,
+		deposit,
+		proofOfPossession,
+		withdrawalCredentials,
+		randaoCommitment,
+		pocCommitment,
+	)
+	if err != nil {
+		t.Fatalf("Process deposit failed: %v", err)
+	}
+	if len(newState.ValidatorBalances) != 2 {
+		t.Errorf("Expected validator balances list to stay the same, received len %d", len(newState.ValidatorBalances))
+	}
+	if newState.ValidatorBalances[0] != 2000 {
+		t.Errorf("Expected validator at index 0 to have balance of %d, received %d", 2000, newState.ValidatorBalances[0])
+	}
+}
+
+func TestActivateValidator_Ok(t *testing.T) {
+	state := &pb.BeaconState{
+		Slot:                                 100,
+		ValidatorRegistryDeltaChainTipHash32: []byte{'A'},
+		ValidatorRegistry: []*pb.ValidatorRecord{
+			{Status: pb.ValidatorRecord_PENDING_ACTIVATION, Pubkey: []byte{'B'}},
+		},
+	}
+	newState, err := activateValidator(state, 0)
+	if err != nil {
+		t.Fatalf("Could not execute activateValidator:%v", err)
+	}
+	if newState.ValidatorRegistry[0].Status != pb.ValidatorRecord_ACTIVE {
+		t.Errorf("Wanted status ACTIVE, got %v", newState.ValidatorRegistry[0].Status)
+	}
+	if newState.ValidatorRegistry[0].LatestStatusChangeSlot != state.Slot {
+		t.Errorf("Wanted last change slot %d, got %v",
+			state.Slot, newState.ValidatorRegistry[0].LatestStatusChangeSlot)
+	}
+}
+
+func TestActivateValidator_BadStatus(t *testing.T) {
+	state := &pb.BeaconState{
+		ValidatorRegistry: []*pb.ValidatorRecord{
+			{Status: pb.ValidatorRecord_ACTIVE},
+		},
+	}
+	if _, err := activateValidator(state, 0); err == nil {
+		t.Fatal("activateValidator should have failed with incorrect status")
+	}
+}
+
+func TestInitiateValidatorExit_Ok(t *testing.T) {
+	state := &pb.BeaconState{
+		Slot: 200,
+		ValidatorRegistry: []*pb.ValidatorRecord{
+			{Status: pb.ValidatorRecord_ACTIVE},
+		},
+	}
+	newState, err := initiateValidatorExit(state, 0)
+	if err != nil {
+		t.Fatalf("Could not execute initiateValidatorExit:%v", err)
+	}
+	if newState.ValidatorRegistry[0].Status != pb.ValidatorRecord_ACTIVE_PENDING_EXIT {
+		t.Errorf("Wanted status ACTIVE_PENDING_EXIT, got %v", newState.ValidatorRegistry[0].Status)
+	}
+	if newState.ValidatorRegistry[0].LatestStatusChangeSlot != state.Slot {
+		t.Errorf("Wanted last change slot %d, got %v",
+			state.Slot, newState.ValidatorRegistry[0].LatestStatusChangeSlot)
+	}
+}
+
+func TestInitiateValidatorExit_BadStatus(t *testing.T) {
+	state := &pb.BeaconState{
+		ValidatorRegistry: []*pb.ValidatorRecord{
+			{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
+		},
+	}
+	if _, err := initiateValidatorExit(state, 0); err == nil {
+		t.Fatal("initiateValidatorExit should have failed with incorrect status")
+	}
+}
+
+func TestExitValidatorWithPenalty_Ok(t *testing.T) {
+	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
+			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
+			},
+		})
+	}
+	state := &pb.BeaconState{
+		Slot:                      100,
+		ShardAndCommitteesAtSlots: shardAndCommittees,
+		ValidatorBalances: []uint64{params.BeaconConfig().MaxDepositInGwei, params.BeaconConfig().MaxDepositInGwei,
+			params.BeaconConfig().MaxDepositInGwei, params.BeaconConfig().MaxDepositInGwei, params.BeaconConfig().MaxDepositInGwei},
+		ValidatorRegistryDeltaChainTipHash32: []byte{'A'},
+		LatestPenalizedExitBalances:          []uint64{0},
+		ValidatorRegistry: []*pb.ValidatorRecord{
+			{Status: pb.ValidatorRecord_ACTIVE, Pubkey: []byte{'B'}},
+		},
+		PersistentCommittees: []*common.Uint32List{
+			{List: []uint32{1, 2, 0, 4, 6}},
+		},
+	}
+	newStatus := pb.ValidatorRecord_EXITED_WITH_PENALTY
+	newState, err := exitValidator(state, 0, newStatus)
+	if err != nil {
+		t.Fatalf("Could not execute exitValidator:%v", err)
+	}
+
+	if newState.ValidatorRegistry[0].Status != newStatus {
+		t.Errorf("Wanted status %v, got %v", newStatus, newState.ValidatorRegistry[0].Status)
+	}
+	if newState.ValidatorRegistry[0].LatestStatusChangeSlot != state.Slot {
+		t.Errorf("Wanted last change slot %d, got %v",
+			state.Slot, newState.ValidatorRegistry[0].LatestStatusChangeSlot)
+	}
+	if newState.ValidatorRegistry[0].ExitCount != 1 {
+		t.Errorf("Wanted exit count 1, got %d", newState.ValidatorRegistry[0].ExitCount)
+	}
+	if newState.ValidatorBalances[0] != 0 {
+		t.Errorf("Wanted validator balance 0, got %d", newState.ValidatorBalances[0])
+	}
+	if newState.ValidatorBalances[4] != 2*params.BeaconConfig().MaxDepositInGwei {
+		t.Errorf("Wanted validator balance %d, got %d",
+			2*params.BeaconConfig().MaxDepositInGwei, newState.ValidatorBalances[4])
+	}
+	for _, i := range newState.PersistentCommittees[0].List {
+		if i == 0 {
+			t.Errorf("Validator index 0 should be removed from persistent committee. Got: %v",
+				newState.PersistentCommittees[0].List)
+		}
+	}
+}
+
+func TestExitValidator_AlreadyExitedWithPenalty(t *testing.T) {
+	state := &pb.BeaconState{
+		ValidatorRegistry: []*pb.ValidatorRecord{
+			{Status: pb.ValidatorRecord_EXITED_WITH_PENALTY},
+		},
+	}
+	if _, err := exitValidator(state, 0, pb.ValidatorRecord_EXITED_WITH_PENALTY); err == nil {
+		t.Fatal("exitValidator should have failed with incorrect status")
+	}
+}
+
+func TestExitValidator_AlreadyExitedWithOutPenalty(t *testing.T) {
+	state := &pb.BeaconState{
+		ValidatorRegistry: []*pb.ValidatorRecord{
+			{Status: pb.ValidatorRecord_EXITED_WITHOUT_PENALTY},
+		},
+	}
+	if _, err := exitValidator(state, 0, pb.ValidatorRecord_EXITED_WITHOUT_PENALTY); err == nil {
+		t.Fatal("exitValidator should have failed with incorrect status")
+	}
+}
+
+func TestUpdateValidatorStatus_Ok(t *testing.T) {
+	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
+			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
+			},
+		})
+	}
+	state := &pb.BeaconState{
+		ShardAndCommitteesAtSlots:   shardAndCommittees,
+		ValidatorBalances:           []uint64{params.BeaconConfig().MaxDepositInGwei},
+		LatestPenalizedExitBalances: []uint64{0},
+		ValidatorRegistry:           []*pb.ValidatorRecord{{}},
+	}
+	tests := []struct {
+		currentStatus pb.ValidatorRecord_StatusCodes
+		newStatus     pb.ValidatorRecord_StatusCodes
+	}{
+		{pb.ValidatorRecord_PENDING_ACTIVATION, pb.ValidatorRecord_ACTIVE},
+		{pb.ValidatorRecord_ACTIVE, pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
+		{pb.ValidatorRecord_ACTIVE, pb.ValidatorRecord_EXITED_WITH_PENALTY},
+		{pb.ValidatorRecord_ACTIVE, pb.ValidatorRecord_EXITED_WITHOUT_PENALTY},
+	}
+	for _, tt := range tests {
+		state.ValidatorRegistry[0].Status = tt.currentStatus
+		newState, err := UpdateStatus(state, 0, tt.newStatus)
+		if err != nil {
+			t.Fatalf("Could not execute UpdateStatus: %v", err)
+		}
+		if newState.ValidatorRegistry[0].Status != tt.newStatus {
+			t.Errorf("Expected status:%v, got:%v",
+				tt.newStatus, newState.ValidatorRegistry[0].Status)
+		}
+	}
+}
+
+func TestUpdateValidatorStatus_IncorrectStatus(t *testing.T) {
+	if _, err := UpdateStatus(
+		&pb.BeaconState{}, 0, pb.ValidatorRecord_PENDING_ACTIVATION); err == nil {
+		t.Fatal("UpdateStatus should have failed with incorrect status")
 	}
 }

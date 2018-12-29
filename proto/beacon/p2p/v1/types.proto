@@ -110,6 +110,9 @@ message ValidatorRecord {
   StatusCodes status = 5;
   uint64 latest_status_change_slot = 6;
   uint64 exit_count = 7;
+  bytes poc_commitment_hash32 = 8;
+  uint64 last_poc_change_slot = 9;
+  uint64 second_last_poc_change_slot = 10;
 
   // Deprecated fields
   // All fields must be annotated with [deprecated=true];
@@ -167,12 +170,13 @@ message BeaconBlockBody {
   repeated Exit exits = 5;
 }
 
-message DepositParameters {
+message DepositInput {
   bytes pubkey = 1;
   bytes proof_of_possession = 2; // Type of ['uint384']??
   // TODO(781): The usage of withdrawal_credentials is not defined in spec. Not used in Prysm yet.
   bytes withdrawal_credentials_hash32 = 3;
   bytes randao_commitment_hash32 = 4;
+  bytes poc_commitment = 5;
 }
 
 message ProposalSignedData {
@@ -189,7 +193,7 @@ message SlashableVoteData {
 }
 
 message DepositData {
-  DepositParameters deposit_input = 1;
+  DepositInput deposit_input = 1;
   uint64 value = 2;
   uint64 timestamp = 3;
 }
@@ -223,7 +227,11 @@ message ValidatorRegistryDeltaBlock {
   bytes latest_registry_delta_root_hash32 = 1;
   uint32 validator_index = 2;
   bytes pubkey = 3;
-  uint64 flag = 4;
+  enum ValidatorRegistryDeltaFlags {
+      ACTIVATION = 0;
+      EXIT = 1;
+  }
+  ValidatorRegistryDeltaFlags flag = 4;
 }
 
 message ProofOfCustodyChallenge {} // Empty until phase 1
