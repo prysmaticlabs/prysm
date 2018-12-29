@@ -330,7 +330,7 @@ func AddPendingValidator(
 		Status:                 status,
 	}
 
-	index := minEmptyValidator(validators)
+	index := minEmptyExitedValidator(validators)
 	if index > 0 {
 		validators[index] = newValidatorRecord
 		return validators
@@ -680,6 +680,8 @@ func ProcessDeposit(
 	return newState, nil
 }
 
+// minEmptyValidatorIndex returns the lowest validator index which the balance is 0
+// and the time to live window is less than the current slot.
 func minEmptyValidatorIndex(
 	validators []*pb.ValidatorRecord,
 	balances []uint64,
@@ -695,8 +697,8 @@ func minEmptyValidatorIndex(
 	return 0, false
 }
 
-// minEmptyValidator returns the lowest validator index which the status is withdrawn.
-func minEmptyValidator(validators []*pb.ValidatorRecord) int {
+// minEmptyExitedValidator returns the lowest validator index which the status is withdrawn.
+func minEmptyExitedValidator(validators []*pb.ValidatorRecord) int {
 	for i := 0; i < len(validators); i++ {
 		if validators[i].Status == pb.ValidatorRecord_EXITED_WITHOUT_PENALTY {
 			return i

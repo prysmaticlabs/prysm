@@ -569,11 +569,12 @@ func ProcessBlockValidatorDeposits(
 		)
 	}
 	var err error
+	var depositInput *pb.DepositInput
 	for idx, deposit := range deposits {
 		depositData := deposit.GetDepositData()
-		depositInput, err := decodeDepositInput(depositData)
+		depositInput, err = decodeDepositInput(depositData)
 		if err != nil {
-			return nil, fmt.Errorf("could not decode deposit input: %v", idx, err)
+			return nil, fmt.Errorf("could not decode deposit input: %v", err)
 		}
 		if err = verifyDeposit(beaconState, deposit); err != nil {
 			return nil, fmt.Errorf("could not verify deposit #%d: %v", idx, err)

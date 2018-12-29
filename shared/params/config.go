@@ -26,8 +26,8 @@ type ValidatorSetDeltaFlags int
 
 // BeaconChainConfig contains configs for node to participate in beacon chain.
 type BeaconChainConfig struct {
-	ZeroBalanceValidatorTTL                 uint64         // Amount of time a validator with zero balance can live in the protocol.
 	DepositContractTreeDepth                uint64         // Depth of the Merkle trie of deposits in the validator deposit contract on the PoW chain.
+	ZeroBalanceValidatorTTL                 uint64         // ZeroBalanceValidatorTTL specifies the allowed number of slots a validator with 0 balance can live in the state.
 	LatestBlockRootsLength                  uint64         // LatestBlockRootsLength is the number of block roots kept in the beacon state.
 	LatestRandaoMixesLength                 uint64         // LatestRandaoMixesLength is the number of randao mixes kept in the beacon state.
 	MaxExits                                uint64         // MaxExits determines the maximum number of validator exits in a block.
