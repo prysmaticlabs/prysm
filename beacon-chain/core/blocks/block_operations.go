@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"time"
 
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -567,14 +568,14 @@ func ProcessValidatorDeposits(
 		)
 	}
 	for idx, deposit := range deposits {
-		if err := verifyDeposit(deposit); err != nil {
+		if err := verifyDeposit(beaconState, deposit); err != nil {
 			return nil, fmt.Errorf("could not verify deposit #%d: %v", idx, err)
 		}
 	}
 	return beaconState, nil
 }
 
-func verifyDeposit(deposit *pb.Deposit) error {
+func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 	depositData := deposit.GetDepositData()
 	// Last 16 bytes of deposit data are 8 bytes for value
 	// and 8 bytes for timestamp. Everything before that is a
@@ -591,7 +592,25 @@ func verifyDeposit(deposit *pb.Deposit) error {
 	if err := decodeDepositData(rBuf, depositInput); err != nil {
 		return fmt.Errorf("could not decode deposit input: %v", err)
 	}
+	// TODO: Basic integrity checking of fields in deposit input.
 	fmt.Printf("deposit input: %v\n", depositInput)
+	// Verify the timestamp.
+	depositTimestampBytes := depositData[len(depositData)-8:]
+	depositTime := new(time.Time)
+	if err := depositTime.UnmarshalBinary(depositTimestampBytes); err != nil {
+		return fmt.Errorf("could not unmarshal deposit timestamp: %v", err)
+	}
+	genesisTime := beaconState.GetGenesisTime()
+	currentSlotTime := genesisTime.Add(beaconState.GetSlot() * params.BeaconConfig().SlotDuration * time.Second)
+	timeToLive := currentSlotTime.Sub(depositTime.Sub(genesisTime))
+	if timeToLive/params.BeaconConfig().SlotDuration < params.BeaconConfig().ZeroBalanceValidatorTTL {
+		return fmt.Errorf(
+			"want state.slot - (deposit.time - genesis_time) // SLOT_DURATION > %d, received %d < %d",
+			5,
+			5,
+			5,
+		)
+	}
 	return nil
 }
 
