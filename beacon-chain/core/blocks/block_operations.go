@@ -528,7 +528,7 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation) error {
 	return nil
 }
 
-// ProcessValidatorDeposits is one of the operations performed on each processed
+// ProcessBlockValidatorDeposits is one of the operations performed on each processed
 // beacon block to verify queued validators from the Ethereum 1.0 Deposit Contract
 // into the beacon chain.
 //
@@ -556,7 +556,7 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation) error {
 //			  randao_commitment=deposit.deposit_data.deposit_input.randao_commitment,
 //			  poc_commitment=deposit.deposit_data.deposit_input.poc_commitment,
 //			)
-func ProcessValidatorDeposits(
+func ProcessBlockValidatorDeposits(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 ) (*pb.BeaconState, error) {
@@ -568,9 +568,24 @@ func ProcessValidatorDeposits(
 			params.BeaconConfig().MaxDeposits,
 		)
 	}
+	var err error
 	for idx, deposit := range deposits {
-		if err := verifyDeposit(beaconState, deposit); err != nil {
+		if err = verifyDeposit(beaconState, deposit); err != nil {
 			return nil, fmt.Errorf("could not verify deposit #%d: %v", idx, err)
+		}
+		depositData := new(pb.DepositData)
+		// We then mutate the beacon state with the verified validator deposit.
+		beaconState, err = v.ProcessDeposit(
+			beaconState,
+			depositData.GetDepositInput().GetPubkey(),
+			depositData.GetValue(),
+			depositData.GetDepositInput().GetProofOfPossession(),
+			depositData.GetDepositInput().GetWithdrawalCredentialsHash32(),
+			depositData.GetDepositInput().GetRandaoCommitmentHash32(),
+			depositData.GetDepositInput().GetPocCommitmentHash32(),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could process deposit into beacon state: %v", err)
 		}
 	}
 	return beaconState, nil
