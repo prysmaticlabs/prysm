@@ -26,6 +26,7 @@ type ValidatorSetDeltaFlags int
 
 // BeaconChainConfig contains configs for node to participate in beacon chain.
 type BeaconChainConfig struct {
+	ZeroBalanceValidatorTTL                 uint64         // ZeroBalanceValidatorTTL specifies the allowed number of slots a validator with 0 balance can live in the state.
 	LatestBlockRootsLength                  uint64         // LatestBlockRootsLength is the number of block roots kept in the beacon state.
 	LatestRandaoMixesLength                 uint64         // LatestRandaoMixesLength is the number of randao mixes kept in the beacon state.
 	MaxExits                                uint64         // MaxExits determines the maximum number of validator exits in a block.
@@ -80,6 +81,7 @@ type ShardChainConfig struct {
 }
 
 var defaultBeaconConfig = &BeaconChainConfig{
+	ZeroBalanceValidatorTTL:       4194304,
 	LatestRandaoMixesLength:       8192,
 	LatestBlockRootsLength:        8192,
 	MaxExits:                      16,
@@ -121,6 +123,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 }
 
 var demoBeaconConfig = &BeaconChainConfig{
+	ZeroBalanceValidatorTTL:       4194304,
 	LatestRandaoMixesLength:       8192,
 	LatestBlockRootsLength:        8192,
 	MaxExits:                      16,
