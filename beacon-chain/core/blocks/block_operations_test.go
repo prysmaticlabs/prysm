@@ -1095,6 +1095,7 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 	}
 }
 
+// TODO: Threshold.
 func TestProcessBlockValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	var err error
 	depositInput := &pb.DepositInput{
