@@ -26,6 +26,29 @@ func CanProcessReceiptRoots(state *pb.BeaconState) bool {
 	return state.Slot%params.BeaconConfig().PowReceiptRootVotingPeriod == 0
 }
 
+// CanProcessValidatorRegistry checks the eligibility to process validator registry.
+// It checks shard committees last changed slot and finalized slot against
+// latest change slot.
+//
+// Spec pseudocode definition:
+//    If the following are satisfied:
+//		* state.finalized_slot > state.validator_registry_latest_change_slot
+//		* state.latest_crosslinks[shard].slot > state.validator_registry_latest_change_slot
+// 			for every shard number shard in state.shard_committees_at_slots
+func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
+	if state.FinalizedSlot <= state.ValidatorRegistryLastChangeSlot {
+		return false
+	}
+	for _, shardCommitteesAtSlot := range state.ShardAndCommitteesAtSlots {
+		for _, shardCommittee := range shardCommitteesAtSlot.ArrayShardAndCommittee {
+			if state.LatestCrosslinks[shardCommittee.Shard].Slot <= state.ValidatorRegistryLastChangeSlot {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 // ProcessReceipt processes PoW receipt roots by checking its vote count.
 // With sufficient votes (>2*POW_RECEIPT_ROOT_VOTING_PERIOD), it then
 // assigns root hash to processed receipt vote in state.

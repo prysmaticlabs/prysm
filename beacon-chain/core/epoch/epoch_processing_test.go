@@ -325,3 +325,45 @@ func TestProcessEjections_Ok(t *testing.T) {
 		t.Errorf("Expected ACTIVE, but got %v", state.ValidatorRegistry[1].Status)
 	}
 }
+
+func TestCanProcessValidatorRegistry(t *testing.T) {
+	state := &pb.BeaconState{
+		FinalizedSlot:                   100,
+		ValidatorRegistryLastChangeSlot: 99,
+		LatestCrosslinks: []*pb.CrosslinkRecord{
+			{Slot: 101}, {Slot: 102}, {Slot: 103}, {Slot: 104},
+		},
+		ShardAndCommitteesAtSlots: []*pb.ShardAndCommitteeArray{
+			{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{Shard: 0}, {Shard: 1}, {Shard: 2}, {Shard: 3},
+			}},
+		},
+	}
+	if !CanProcessValidatorRegistry(state) {
+		t.Errorf("Wanted True for CanProcessValidatorRegistry, but got %v", CanProcessValidatorRegistry(state))
+	}
+}
+
+func TestCanNotProcessValidatorRegistry(t *testing.T) {
+	state := &pb.BeaconState{
+		FinalizedSlot:                   100,
+		ValidatorRegistryLastChangeSlot: 101,
+	}
+	if CanProcessValidatorRegistry(state) {
+		t.Errorf("Wanted False for CanProcessValidatorRegistry, but got %v", CanProcessValidatorRegistry(state))
+	}
+	state = &pb.BeaconState{
+		FinalizedSlot:                   100,
+		ValidatorRegistryLastChangeSlot: 99,
+		LatestCrosslinks: []*pb.CrosslinkRecord{
+			{Slot: 99},
+		},
+		ShardAndCommitteesAtSlots: []*pb.ShardAndCommitteeArray{
+			{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{Shard: 0}},
+			}},
+	}
+	if CanProcessValidatorRegistry(state) {
+		t.Errorf("Wanted False for CanProcessValidatorRegistry, but got %v", CanProcessValidatorRegistry(state))
+	}
+}
