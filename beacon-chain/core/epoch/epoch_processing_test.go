@@ -385,3 +385,4 @@ func TestCanNotProcessCanNotProcessValidatorRegistry(t *testing.T) {
 		t.Errorf("Wanted False for CanProcessValidatorRegistry, but got %v", CanProcessValidatorRegistry(state))
 	}
 }
+
