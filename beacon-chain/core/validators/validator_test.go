@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"math/big"
 	"reflect"
+	"strings"
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -416,18 +417,18 @@ func TestValidatorMinDeposit(t *testing.T) {
 	}
 }
 
-func TestMinEmptyValidator(t *testing.T) {
+func TestMinEmptyExitedValidator(t *testing.T) {
 	validators := []*pb.ValidatorRecord{
 		{Status: pb.ValidatorRecord_ACTIVE},
 		{Status: pb.ValidatorRecord_EXITED_WITHOUT_PENALTY},
 		{Status: pb.ValidatorRecord_ACTIVE},
 	}
-	if minEmptyValidator(validators) != 1 {
+	if minEmptyExitedValidator(validators) != 1 {
 		t.Errorf("Min vaidator index should be 1")
 	}
 
 	validators[1].Status = pb.ValidatorRecord_ACTIVE
-	if minEmptyValidator(validators) != -1 {
+	if minEmptyExitedValidator(validators) != -1 {
 		t.Errorf("Min vaidator index should be -1")
 	}
 }
@@ -960,6 +961,168 @@ func TestNewRegistryDeltaChainTip(t *testing.T) {
 			t.Errorf("Incorrect new chain tip. Wanted %#x, got %#x",
 				tt.newRegistryDeltaChainTip, newChainTip[:])
 		}
+	}
+}
+
+func TestProcessDeposit_PublicKeyExistsBadWithdrawalCredentials(t *testing.T) {
+	registry := []*pb.ValidatorRecord{
+		{
+			Pubkey: []byte{1, 2, 3},
+		},
+		{
+			Pubkey:                []byte{4, 5, 6},
+			WithdrawalCredentials: []byte{0},
+		},
+	}
+	beaconState := &pb.BeaconState{
+		ValidatorRegistry: registry,
+	}
+	pubkey := []byte{4, 5, 6}
+	deposit := uint64(1000)
+	proofOfPossession := []byte{}
+	withdrawalCredentials := []byte{1}
+	randaoCommitment := []byte{}
+	pocCommitment := []byte{}
+
+	want := "expected withdrawal credentials to match"
+	if _, _, err := ProcessDeposit(
+		beaconState,
+		pubkey,
+		deposit,
+		proofOfPossession,
+		withdrawalCredentials,
+		randaoCommitment,
+		pocCommitment,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Wanted error to contain %s, received %v", want, err)
+	}
+}
+
+func TestProcessDeposit_PublicKeyExistsGoodWithdrawalCredentials(t *testing.T) {
+	registry := []*pb.ValidatorRecord{
+		{
+			Pubkey: []byte{1, 2, 3},
+		},
+		{
+			Pubkey:                []byte{4, 5, 6},
+			WithdrawalCredentials: []byte{1},
+		},
+	}
+	balances := []uint64{0, 0}
+	beaconState := &pb.BeaconState{
+		ValidatorBalances: balances,
+		ValidatorRegistry: registry,
+	}
+	pubkey := []byte{4, 5, 6}
+	deposit := uint64(1000)
+	proofOfPossession := []byte{}
+	withdrawalCredentials := []byte{1}
+	randaoCommitment := []byte{}
+	pocCommitment := []byte{}
+
+	newState, _, err := ProcessDeposit(
+		beaconState,
+		pubkey,
+		deposit,
+		proofOfPossession,
+		withdrawalCredentials,
+		randaoCommitment,
+		pocCommitment,
+	)
+	if err != nil {
+		t.Fatalf("Process deposit failed: %v", err)
+	}
+	if newState.ValidatorBalances[1] != 1000 {
+		t.Errorf("Expected balance at index 1 to be 1000, received %d", newState.ValidatorBalances[1])
+	}
+}
+
+func TestProcessDeposit_PublicKeyDoesNotExistNoEmptyValidator(t *testing.T) {
+	registry := []*pb.ValidatorRecord{
+		{
+			Pubkey:                []byte{1, 2, 3},
+			WithdrawalCredentials: []byte{2},
+		},
+		{
+			Pubkey:                []byte{4, 5, 6},
+			WithdrawalCredentials: []byte{1},
+		},
+	}
+	balances := []uint64{1000, 1000}
+	beaconState := &pb.BeaconState{
+		ValidatorBalances: balances,
+		ValidatorRegistry: registry,
+	}
+	pubkey := []byte{7, 8, 9}
+	deposit := uint64(2000)
+	proofOfPossession := []byte{}
+	withdrawalCredentials := []byte{1}
+	randaoCommitment := []byte{}
+	pocCommitment := []byte{}
+
+	newState, _, err := ProcessDeposit(
+		beaconState,
+		pubkey,
+		deposit,
+		proofOfPossession,
+		withdrawalCredentials,
+		randaoCommitment,
+		pocCommitment,
+	)
+	if err != nil {
+		t.Fatalf("Process deposit failed: %v", err)
+	}
+	if len(newState.ValidatorBalances) != 3 {
+		t.Errorf("Expected validator balances list to increase by 1, received len %d", len(newState.ValidatorBalances))
+	}
+	if newState.ValidatorBalances[2] != 2000 {
+		t.Errorf("Expected new validator have balance of %d, received %d", 2000, newState.ValidatorBalances[2])
+	}
+}
+
+func TestProcessDeposit_PublicKeyDoesNotExistEmptyValidatorExists(t *testing.T) {
+	registry := []*pb.ValidatorRecord{
+		{
+			Pubkey:                 []byte{1, 2, 3},
+			WithdrawalCredentials:  []byte{2},
+			LatestStatusChangeSlot: 0,
+		},
+		{
+			Pubkey:                 []byte{4, 5, 6},
+			WithdrawalCredentials:  []byte{1},
+			LatestStatusChangeSlot: 0,
+		},
+	}
+	balances := []uint64{0, 1000}
+	beaconState := &pb.BeaconState{
+		Slot:              0 + params.BeaconConfig().ZeroBalanceValidatorTTL,
+		ValidatorBalances: balances,
+		ValidatorRegistry: registry,
+	}
+	pubkey := []byte{7, 8, 9}
+	deposit := uint64(2000)
+	proofOfPossession := []byte{}
+	withdrawalCredentials := []byte{1}
+	randaoCommitment := []byte{}
+	pocCommitment := []byte{}
+
+	newState, _, err := ProcessDeposit(
+		beaconState,
+		pubkey,
+		deposit,
+		proofOfPossession,
+		withdrawalCredentials,
+		randaoCommitment,
+		pocCommitment,
+	)
+	if err != nil {
+		t.Fatalf("Process deposit failed: %v", err)
+	}
+	if len(newState.ValidatorBalances) != 2 {
+		t.Errorf("Expected validator balances list to stay the same, received len %d", len(newState.ValidatorBalances))
+	}
+	if newState.ValidatorBalances[0] != 2000 {
+		t.Errorf("Expected validator at index 0 to have balance of %d, received %d", 2000, newState.ValidatorBalances[0])
 	}
 }
 

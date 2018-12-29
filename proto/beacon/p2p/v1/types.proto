@@ -105,6 +105,9 @@ message ValidatorRecord {
   StatusCodes status = 5;
   uint64 latest_status_change_slot = 6;
   uint64 exit_count = 7;
+  bytes poc_commitment_hash32 = 8;
+  uint64 last_poc_change_slot = 9;
+  uint64 second_last_poc_change_slot = 10;
 
   // Deprecated fields
   // All fields must be annotated with [deprecated=true];
