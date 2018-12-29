@@ -1095,7 +1095,146 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 	}
 }
 
-// TODO: Threshold.
+func TestProcessBlockValidatorDeposits_ThresholdReached(t *testing.T) {
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Deposits: make([]*pb.Deposit, params.BeaconConfig().MaxDeposits+1),
+		},
+	}
+	beaconState := &pb.BeaconState{}
+	want := "exceeds allowed threshold"
+	if _, err := ProcessBlockValidatorDeposits(
+		beaconState,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected error: %s, received %v", want, err)
+	}
+}
+
+func TestProcessBlockValidatorDeposits_DepositDataSizeTooSmall(t *testing.T) {
+	data := []byte{1, 2, 3}
+	deposit := &pb.Deposit{
+		DepositData: data,
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Deposits: []*pb.Deposit{deposit},
+		},
+	}
+	beaconState := &pb.BeaconState{}
+	want := "deposit data slice too small"
+	if _, err := ProcessBlockValidatorDeposits(
+		beaconState,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected error: %s, received %v", want, err)
+	}
+}
+
+func TestProcessBlockValidatorDeposits_DepositInputDecodingFails(t *testing.T) {
+	data := make([]byte, 16)
+	deposit := &pb.Deposit{
+		DepositData: data,
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Deposits: []*pb.Deposit{deposit},
+		},
+	}
+	beaconState := &pb.BeaconState{}
+	want := "ssz decode failed"
+	if _, err := ProcessBlockValidatorDeposits(
+		beaconState,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected error: %s, received %v", want, err)
+	}
+}
+
+// TODO
+func TestProcessBlockValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
+	data := make([]byte, 16)
+	deposit := &pb.Deposit{
+		DepositData: data,
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Deposits: []*pb.Deposit{deposit},
+		},
+	}
+	beaconState := &pb.BeaconState{}
+	want := "ssz decode failed"
+	if _, err := ProcessBlockValidatorDeposits(
+		beaconState,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected error: %s, received %v", want, err)
+	}
+}
+
+// TODO
+func TestProcessBlockValidatorDeposits_TimestampDecodingFails(t *testing.T) {
+	data := make([]byte, 16)
+	deposit := &pb.Deposit{
+		DepositData: data,
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Deposits: []*pb.Deposit{deposit},
+		},
+	}
+	beaconState := &pb.BeaconState{}
+	want := "ssz decode failed"
+	if _, err := ProcessBlockValidatorDeposits(
+		beaconState,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected error: %s, received %v", want, err)
+	}
+}
+
+// TODO
+func TestProcessBlockValidatorDeposits_OutsideAllowedTTLBoundary(t *testing.T) {
+	data := make([]byte, 16)
+	deposit := &pb.Deposit{
+		DepositData: data,
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Deposits: []*pb.Deposit{deposit},
+		},
+	}
+	beaconState := &pb.BeaconState{}
+	want := "ssz decode failed"
+	if _, err := ProcessBlockValidatorDeposits(
+		beaconState,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected error: %s, received %v", want, err)
+	}
+}
+
+// TODO
+func TestProcessBlockValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
+	data := make([]byte, 16)
+	deposit := &pb.Deposit{
+		DepositData: data,
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Deposits: []*pb.Deposit{deposit},
+		},
+	}
+	beaconState := &pb.BeaconState{}
+	want := "ssz decode failed"
+	if _, err := ProcessBlockValidatorDeposits(
+		beaconState,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected error: %s, received %v", want, err)
+	}
+}
+
 func TestProcessBlockValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	var err error
 	depositInput := &pb.DepositInput{
