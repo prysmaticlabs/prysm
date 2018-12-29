@@ -641,7 +641,9 @@ func AllActiveValidatorsIndices(state *pb.BeaconState) []uint32 {
 // ProcessDeposit mutates a corresponding index in the beacon state for
 // a validator depositing ETH into the beacon chain. Specifically, this function
 // adds a validator balance or tops up an existing validator's balance
-// by some deposit amount.
+// by some deposit amount. This function returns a mutated beacon state and
+// the validator index corresponding to the validator in the processed
+// deposit.
 func ProcessDeposit(
 	state *pb.BeaconState,
 	pubkey []byte,
@@ -650,12 +652,11 @@ func ProcessDeposit(
 	withdrawalCredentials []byte,
 	randaoCommitment []byte,
 	pocCommitment []byte,
-) (*pb.BeaconState, error) {
-	newState := proto.Clone(state).(*pb.BeaconState)
+) (*pb.BeaconState, int, error) {
 	// TODO(#258): Validate proof of possession using BLS.
 	var publicKeyExists bool
 	var existingValidatorIndex int
-	for idx, val := range newState.ValidatorRegistry {
+	for idx, val := range state.ValidatorRegistry {
 		if bytes.Equal(val.GetPubkey(), pubkey) {
 			publicKeyExists = true
 			existingValidatorIndex = idx
@@ -669,16 +670,16 @@ func ProcessDeposit(
 			RandaoCommitmentHash32:  randaoCommitment,
 			RandaoLayers:            0,
 			Status:                  pb.ValidatorRecord_PENDING_ACTIVATION,
-			LatestStatusChangeSlot:  newState.GetSlot(),
+			LatestStatusChangeSlot:  state.GetSlot(),
 			ExitCount:               0,
 			PocCommitmentHash32:     pocCommitment,
 			LastPocChangeSlot:       0,
 			SecondLastPocChangeSlot: 0,
 		}
 		idx, ok := minEmptyValidatorIndex(
-			newState.ValidatorRegistry,
-			newState.ValidatorBalances,
-			newState.GetSlot(),
+			state.ValidatorRegistry,
+			state.ValidatorBalances,
+			state.GetSlot(),
 		)
 		// In the case there is no empty validator index in the state,
 		// we append an entirely new record to the validator registry and list
@@ -686,26 +687,27 @@ func ProcessDeposit(
 		// an existing index that has 0 balance and is outside the validator
 		// time to live window.
 		if !ok {
-			newState.ValidatorRegistry = append(newState.ValidatorRegistry, newValidator)
-			newState.ValidatorBalances = append(newState.ValidatorBalances, deposit)
+			state.ValidatorRegistry = append(state.ValidatorRegistry, newValidator)
+			state.ValidatorBalances = append(state.ValidatorBalances, deposit)
+			idx = len(state.ValidatorRegistry) - 1
 		} else {
-			newState.ValidatorRegistry[idx] = newValidator
-			newState.ValidatorBalances[idx] = deposit
+			state.ValidatorRegistry[idx] = newValidator
+			state.ValidatorBalances[idx] = deposit
 		}
-	} else {
-		if !bytes.Equal(
-			newState.ValidatorRegistry[existingValidatorIndex].WithdrawalCredentials,
-			withdrawalCredentials,
-		) {
-			return nil, fmt.Errorf(
-				"expected withdrawal credentials to match, received %#x == %#x",
-				newState.ValidatorRegistry[existingValidatorIndex].WithdrawalCredentials,
-				withdrawalCredentials,
-			)
-		}
-		newState.ValidatorBalances[existingValidatorIndex] += deposit
+		return state, idx, nil
 	}
-	return newState, nil
+	if !bytes.Equal(
+		state.ValidatorRegistry[existingValidatorIndex].WithdrawalCredentials,
+		withdrawalCredentials,
+	) {
+		return nil, 0, fmt.Errorf(
+			"expected withdrawal credentials to match, received %#x == %#x",
+			state.ValidatorRegistry[existingValidatorIndex].WithdrawalCredentials,
+			withdrawalCredentials,
+		)
+	}
+	state.ValidatorBalances[existingValidatorIndex] += deposit
+	return state, existingValidatorIndex, nil
 }
 
 // minEmptyValidatorIndex returns the lowest validator index which the balance is 0
