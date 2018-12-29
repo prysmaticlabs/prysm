@@ -3,6 +3,7 @@ package state
 import (
 	"bytes"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -10,6 +11,169 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+func TestInitialBeaconState_Ok(t *testing.T) {
+	if params.BeaconConfig().EpochLength != 64 {
+		t.Errorf("EpochLength should be 64 for these tests to pass")
+	}
+	epochLength := params.BeaconConfig().EpochLength
+
+	if params.BeaconConfig().InitialSlotNumber != 0 {
+		t.Error("InitialSlotNumber should be 0 for these tests to pass")
+	}
+	initialSlotNumber := params.BeaconConfig().InitialSlotNumber
+
+	if params.BeaconConfig().InitialForkVersion != 0 {
+		t.Error("InitialForkVersion should be 0 for these tests to pass")
+	}
+	initialForkVersion := params.BeaconConfig().InitialForkVersion
+
+	if params.BeaconConfig().ZeroHash != [32]byte{} {
+		t.Error("ZeroHash should be all 0s for these tests to pass")
+	}
+
+	if params.BeaconConfig().LatestRandaoMixesLength != 8192 {
+		t.Error("LatestRandaoMixesLength should be 8192 for these tests to pass")
+	}
+	latestRandaoMixesLength := int(params.BeaconConfig().LatestRandaoMixesLength)
+	LatestVdfMixesLength := int(params.BeaconConfig().LatestRandaoMixesLength /
+		params.BeaconConfig().EpochLength)
+
+	if params.BeaconConfig().ShardCount != 1024 {
+		t.Error("ShardCount should be 1024 for these tests to pass")
+	}
+	shardCount := int(params.BeaconConfig().ShardCount)
+
+	if params.BeaconConfig().LatestBlockRootsLength != 8192 {
+		t.Error("LatestBlockRootsLength should be 8192 for these tests to pass")
+	}
+	latestBlockRootsLength := int(params.BeaconConfig().LatestBlockRootsLength)
+
+	if params.BeaconConfig().DepositsForChainStart != 16384 {
+		t.Error("DepositsForChainStart should be 16384 for these tests to pass")
+	}
+	depositsForChainStart := int(params.BeaconConfig().DepositsForChainStart)
+
+	genesisTime := uint64(99999)
+	processedPowReceiptRoot := []byte{'A', 'B', 'C'}
+	maxDeposit := params.BeaconConfig().MaxDepositInGwei
+	var deposits []*pb.Deposit
+	for i := 0; i < depositsForChainStart; i++ {
+		deposits = append(deposits, &pb.Deposit{MerkleBranchHash32S: [][]byte{{1}, {2}, {3}}, MerkleTreeIndex: 0,
+			DepositData: &pb.DepositData{Value: maxDeposit, DepositInput: &pb.DepositInput{
+				Pubkey: []byte(strconv.Itoa(i)), ProofOfPossession: []byte{'B'},
+				WithdrawalCredentialsHash32: []byte{'C'}, RandaoCommitmentHash32: []byte{'D'},
+				PocCommitment: []byte{'D'},
+			}}})
+	}
+
+	state, err := InitialBeaconState(
+		deposits,
+		genesisTime,
+		processedPowReceiptRoot)
+	if err != nil {
+		t.Fatalf("could not execute InitialBeaconState: %v", err)
+	}
+
+	// Misc fields checks.
+	if state.Slot != initialSlotNumber {
+		t.Error("Slot was not correctly initialized")
+	}
+	if state.GenesisTime != genesisTime {
+		t.Error("GenesisTime was not correctly initialized")
+	}
+	if !reflect.DeepEqual(*state.ForkData, pb.ForkData{
+		PreForkVersion:  initialForkVersion,
+		PostForkVersion: initialForkVersion,
+		ForkSlot:        initialSlotNumber,
+	}) {
+		t.Error("ForkData was not correctly initialized")
+	}
+
+	// Validator registry fields checks.
+	if state.ValidatorRegistryLastChangeSlot != initialSlotNumber {
+		t.Error("ValidatorRegistryLastChangeSlot was not correctly initialized")
+	}
+	if state.ValidatorRegistryExitCount != 0 {
+		t.Error("ValidatorRegistryExitCount was not correctly initialized")
+	}
+	if len(state.ValidatorRegistry) != depositsForChainStart {
+		t.Error("ValidatorRegistry was not correctly initialized")
+	}
+	if len(state.ValidatorBalances) != depositsForChainStart {
+		t.Error("ValidatorBalances was not correctly initialized")
+	}
+
+	// Randomness and committees fields checks.
+	if len(state.LatestRandaoMixesHash32S) != latestRandaoMixesLength {
+		t.Error("Length of LatestRandaoMixesHash32S was not correctly initialized")
+	}
+	if len(state.LatestVdfOutputs) != LatestVdfMixesLength {
+		t.Error("Length of LatestRandaoMixesHash32S was not correctly initialized")
+	}
+	if len(state.PersistentCommittees) != shardCount {
+		t.Error("PersistentCommittees was not correctly initialized")
+	}
+	if !reflect.DeepEqual(state.PersistentCommitteeReassignments, []*pb.ShardReassignmentRecord{}) {
+		t.Error("PersistentCommitteeReassignments was not correctly initialized")
+	}
+
+	// Proof of custody field check.
+	if !reflect.DeepEqual(state.PocChallenges, []*pb.ProofOfCustodyChallenge{}) {
+		t.Error("PocChallenges was not correctly initialized")
+	}
+
+	// Finality fields checks.
+	if state.PreviousJustifiedSlot != initialSlotNumber {
+		t.Error("PreviousJustifiedSlot was not correctly initialized")
+	}
+	if state.JustifiedSlot != initialSlotNumber {
+		t.Error("JustifiedSlot was not correctly initialized")
+	}
+	if state.FinalizedSlot != initialSlotNumber {
+		t.Error("FinalizedSlot was not correctly initialized")
+	}
+	if state.JustificationBitfield != 0 {
+		t.Error("JustificationBitfield was not correctly initialized")
+	}
+
+	// Recent state checks.
+	if len(state.LatestCrosslinks) != shardCount {
+		t.Error("Length of LatestCrosslinks was not correctly initialized")
+	}
+	if len(state.LatestBlockRootHash32S) != latestBlockRootsLength {
+		t.Error("Length of LatestBlockRootHash32S was not correctly initialized")
+	}
+	if !reflect.DeepEqual(state.LatestPenalizedExitBalances, []uint64{}) {
+		t.Error("LatestPenalizedExitBalances was not correctly initialized")
+	}
+	if !reflect.DeepEqual(state.LatestAttestations, []*pb.PendingAttestationRecord{}) {
+		t.Error("LatestAttestations was not correctly initialized")
+	}
+	if !reflect.DeepEqual(state.BatchedBlockRootHash32S, [][]byte{}) {
+		t.Error("BatchedBlockRootHash32S was not correctly initialized")
+	}
+
+	// PoW receipt root checks.
+	if !bytes.Equal(state.ProcessedPowReceiptRootHash32, processedPowReceiptRoot) {
+		t.Error("ProcessedPowReceiptRootHash32 was not correctly initialized")
+	}
+	if !reflect.DeepEqual(state.CandidatePowReceiptRoots, []*pb.CandidatePoWReceiptRootRecord{}) {
+		t.Error("CandidatePowReceiptRoots was not correctly initialized")
+	}
+
+	// Initial committee shuffling check.
+	if len(state.ShardAndCommitteesAtSlots) != int(2*epochLength) {
+		t.Error("ShardAndCommitteesAtSlots was not correctly initialized")
+	}
+
+	for i := 0; i < len(state.ShardAndCommitteesAtSlots); i++ {
+		if len(state.ShardAndCommitteesAtSlots[i].ArrayShardAndCommittee[0].Committee) !=
+			int(params.BeaconConfig().TargetCommitteeSize) {
+			t.Error("ShardAndCommittees was not correctly initialized")
+		}
+	}
+}
 
 func TestGenesisState_HashEquality(t *testing.T) {
 	state1, _ := NewGenesisBeaconState(nil)
