@@ -73,14 +73,12 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
 	log.Info("Starting service")
-
 	var err error
 	c.genesisTime, err = c.beaconDB.GenesisTime()
 	if err != nil {
-		log.Fatalf("Unable to retrieve genesis time, therefore blockchain service cannot be started %v", err)
+		log.Fatalf("Unable to retrieve genesis time - blockchain service could not start: %v", err)
 		return
 	}
-
 	// TODO(#675): Initialize unfinalizedBlocks map from disk in case this
 	// is a beacon node restarting.
 	go c.updateHead(c.processedBlockChan)
@@ -228,13 +226,11 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *pb.BeaconBlock) {
 		// can be received either from the sync service, the RPC service,
 		// or via p2p.
 		case block := <-c.incomingBlockChan:
-
 			// Before sending the blocks for processing we check to see if the blocks
 			// are valid to continue being processed. If the slot number in the block
 			// has already been processed by the beacon node, we throw it away. If the
 			// slot number is too high to be processed in the current slot, we store
 			// it in a cache.
-
 			beaconState, err := c.beaconDB.GetState()
 			if err != nil {
 				log.Errorf("Unable to retrieve beacon state %v", err)
@@ -242,20 +238,17 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *pb.BeaconBlock) {
 			}
 
 			currentSlot := beaconState.GetSlot()
-
 			if currentSlot+1 < block.GetSlot() {
 				c.unProcessedBlocks[block.GetSlot()] = block
 				continue
 			}
 
 			if currentSlot+1 == block.GetSlot() {
-
 				if err := c.receiveBlock(block); err != nil {
 					log.Error(err)
 					processedBlock <- nil
 					continue
 				}
-
 				// Push the block to trigger the fork choice rule.
 				processedBlock <- block
 			} else {
@@ -373,7 +366,6 @@ func (c *ChainService) isBlockReadyForProcessing(block *pb.BeaconBlock) error {
 	if c.enablePOWChain {
 		powBlockFetcher = c.web3Service.Client().BlockByHash
 	}
-
 	if err := b.IsValidBlock(c.ctx, beaconState, block, c.enablePOWChain,
 		c.beaconDB.HasBlock, powBlockFetcher, c.genesisTime); err != nil {
 		return fmt.Errorf("block does not fulfill pre-processing conditions %v", err)
