@@ -5,6 +5,7 @@ import (
 	"io"
 	"reflect"
 	"sort"
+	"strings"
 	"sync"
 )
 
@@ -89,6 +90,9 @@ type field struct {
 func sortedStructFields(typ reflect.Type) (fields []field, err error) {
 	for i := 0; i < typ.NumField(); i++ {
 		f := typ.Field(i)
+		if strings.Contains(f.Name, "XXX") {
+			continue
+		}
 		encDec, err := cachedEncoderDecoderNoAcquireLock(f.Type)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get encoder/decoder: %v", err)

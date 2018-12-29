@@ -1,6 +1,7 @@
 package randao
 
 import (
+	"bytes"
 	"testing"
 
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -38,5 +39,20 @@ func TestUpdateRandaoLayers(t *testing.T) {
 
 	if vreg[9].GetRandaoLayers() != 0 {
 		t.Errorf("randao layers updated when they were not supposed to %d", vreg[9].GetRandaoLayers())
+	}
+}
+
+func TestUpdateLatestRandaoMixes(t *testing.T) {
+	beaconState := &pb.BeaconState{
+		LatestRandaoMixesHash32S: make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		Slot:                     5,
+	}
+	beaconState.LatestRandaoMixesHash32S[4%params.BeaconConfig().LatestRandaoMixesLength] = []byte{1, 2, 3}
+	beaconState.LatestRandaoMixesHash32S[5%params.BeaconConfig().LatestRandaoMixesLength] = []byte{4, 5, 6}
+	newState := UpdateRandaoMixes(beaconState)
+	prevSlotMix := newState.LatestRandaoMixesHash32S[4%params.BeaconConfig().LatestRandaoMixesLength]
+	currSlotMix := newState.LatestRandaoMixesHash32S[5%params.BeaconConfig().LatestRandaoMixesLength]
+	if !bytes.Equal(currSlotMix, prevSlotMix) {
+		t.Errorf("Latest randao mix not updated, wanted %#x, received %#x", prevSlotMix, currSlotMix)
 	}
 }

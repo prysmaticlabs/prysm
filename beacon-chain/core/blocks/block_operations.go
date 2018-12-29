@@ -6,22 +6,12 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/gogo/protobuf/proto"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slices"
 )
-
-// Hash a beacon block data structure.
-func Hash(block *pb.BeaconBlock) ([32]byte, error) {
-	data, err := proto.Marshal(block)
-	if err != nil {
-		return [32]byte{}, fmt.Errorf("could not marshal block proto data: %v", err)
-	}
-	return hashutil.Hash(data), nil
-}
 
 // ProcessPOWReceiptRoots processes the proof-of-work chain's receipts
 // contained in a beacon block and appends them as candidate receipt roots
@@ -38,7 +28,7 @@ func Hash(block *pb.BeaconBlock) ([32]byte, error) {
 func ProcessPOWReceiptRoots(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
-) []*pb.CandidatePoWReceiptRootRecord {
+) *pb.BeaconState {
 	var newCandidateReceiptRoots []*pb.CandidatePoWReceiptRootRecord
 	currentCandidateReceiptRoots := beaconState.GetCandidatePowReceiptRoots()
 	for idx, root := range currentCandidateReceiptRoots {
@@ -51,7 +41,65 @@ func ProcessPOWReceiptRoots(
 			})
 		}
 	}
-	return append(currentCandidateReceiptRoots, newCandidateReceiptRoots...)
+	beaconState.CandidatePowReceiptRoots = append(currentCandidateReceiptRoots, newCandidateReceiptRoots...)
+	return beaconState
+}
+
+// ProcessBlockRandao checks the block proposer's
+// randao commitment and generates a new randao mix to update
+// in the beacon state's latest randao mixes and set the proposer's randao fields.
+//
+// Official spec definition for block randao verification:
+//   Let repeat_hash(x, n) = x if n == 0 else repeat_hash(hash(x), n-1).
+//   Let proposer = state.validator_registry[get_beacon_proposer_index(state, state.slot)].
+//   Verify that repeat_hash(block.randao_reveal, proposer.randao_layers) == proposer.randao_commitment.
+//   Set state.latest_randao_mixes[state.slot % LATEST_RANDAO_MIXES_LENGTH] =
+//     xor(state.latest_randao_mixes[state.slot % LATEST_RANDAO_MIXES_LENGTH], block.randao_reveal)
+//   Set proposer.randao_commitment = block.randao_reveal.
+//   Set proposer.randao_layers = 0
+func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+	proposerIndex, err := v.BeaconProposerIndex(beaconState, beaconState.GetSlot())
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch beacon proposer index: %v", err)
+	}
+	registry := beaconState.GetValidatorRegistry()
+	proposer := registry[proposerIndex]
+	if err := verifyBlockRandao(proposer, block); err != nil {
+		return nil, fmt.Errorf("could not verify block randao: %v", err)
+	}
+	// If block randao passed verification, we XOR the state's latest randao mix with the block's
+	// randao and update the state's corresponding latest randao mix value.
+	var latestMix [32]byte
+	latestMixesLength := params.BeaconConfig().LatestRandaoMixesLength
+	latestMixSlice := beaconState.LatestRandaoMixesHash32S[beaconState.GetSlot()%latestMixesLength]
+	copy(latestMix[:], latestMixSlice)
+	for i, x := range block.GetRandaoRevealHash32() {
+		latestMix[i] ^= x
+	}
+	proposer.RandaoCommitmentHash32 = block.GetRandaoRevealHash32()
+	proposer.RandaoLayers = 0
+	registry[proposerIndex] = proposer
+	beaconState.LatestRandaoMixesHash32S[beaconState.GetSlot()%latestMixesLength] = latestMix[:]
+	beaconState.ValidatorRegistry = registry
+	return beaconState, nil
+}
+
+func verifyBlockRandao(proposer *pb.ValidatorRecord, block *pb.BeaconBlock) error {
+	var blockRandaoReveal [32]byte
+	var proposerRandaoCommit [32]byte
+	copy(blockRandaoReveal[:], block.GetRandaoRevealHash32())
+	copy(proposerRandaoCommit[:], proposer.GetRandaoCommitmentHash32())
+
+	randaoHashLayers := hashutil.RepeatHash(blockRandaoReveal, proposer.GetRandaoLayers())
+	// Verify that repeat_hash(block.randao_reveal, proposer.randao_layers) == proposer.randao_commitment.
+	if randaoHashLayers != proposerRandaoCommit {
+		return fmt.Errorf(
+			"expected hashed block randao layers to equal proposer randao: received %#x = %#x",
+			randaoHashLayers[:],
+			proposerRandaoCommit[:],
+		)
+	}
+	return nil
 }
 
 // ProcessProposerSlashings is one of the operations performed
@@ -78,37 +126,39 @@ func ProcessPOWReceiptRoots(
 //   Verify that proposer.status != EXITED_WITH_PENALTY.
 //   Run update_validator_status(state, proposer_slashing.proposer_index, new_status=EXITED_WITH_PENALTY).
 func ProcessProposerSlashings(
-	validatorRegistry []*pb.ValidatorRecord,
-	proposerSlashings []*pb.ProposerSlashing,
-	currentSlot uint64,
-) ([]*pb.ValidatorRecord, error) {
-	if uint64(len(proposerSlashings)) > params.BeaconConfig().MaxProposerSlashings {
+	beaconState *pb.BeaconState,
+	block *pb.BeaconBlock,
+) (*pb.BeaconState, error) {
+	body := block.GetBody()
+	registry := beaconState.GetValidatorRegistry()
+	if uint64(len(body.GetProposerSlashings())) > params.BeaconConfig().MaxProposerSlashings {
 		return nil, fmt.Errorf(
 			"number of proposer slashings (%d) exceeds allowed threshold of %d",
-			len(proposerSlashings),
+			len(body.GetProposerSlashings()),
 			params.BeaconConfig().MaxProposerSlashings,
 		)
 	}
-	for idx, slashing := range proposerSlashings {
+	for idx, slashing := range body.GetProposerSlashings() {
 		if err := verifyProposerSlashing(slashing); err != nil {
 			return nil, fmt.Errorf("could not verify proposer slashing #%d: %v", idx, err)
 		}
-		proposer := validatorRegistry[slashing.GetProposerIndex()]
-		if proposer.Status != pb.ValidatorRecord_EXITED_WITH_PENALTY {
+		proposer := registry[slashing.GetProposerIndex()]
+		if proposer.GetStatus() != pb.ValidatorRecord_EXITED_WITH_PENALTY {
 			// TODO(#781): Replace with
 			// update_validator_status(
 			//   state,
 			//   proposer_slashing.proposer_index,
 			//   new_status=EXITED_WITH_PENALTY,
 			// ) after update_validator_status is implemented.
-			validatorRegistry[slashing.GetProposerIndex()] = v.ExitValidator(
+			registry[slashing.GetProposerIndex()] = v.ExitValidator(
 				proposer,
-				currentSlot,
+				beaconState.GetSlot(),
 				true, /* penalize */
 			)
 		}
 	}
-	return validatorRegistry, nil
+	beaconState.ValidatorRegistry = registry
+	return beaconState, nil
 }
 
 func verifyProposerSlashing(
@@ -166,18 +216,19 @@ func verifyProposerSlashing(
 //     EXITED_WITH_PENALTY, then run
 //     update_validator_status(state, i, new_status=EXITED_WITH_PENALTY)
 func ProcessCasperSlashings(
-	validatorRegistry []*pb.ValidatorRecord,
-	casperSlashings []*pb.CasperSlashing,
-	currentSlot uint64,
-) ([]*pb.ValidatorRecord, error) {
-	if uint64(len(casperSlashings)) > params.BeaconConfig().MaxCasperSlashings {
+	beaconState *pb.BeaconState,
+	block *pb.BeaconBlock,
+) (*pb.BeaconState, error) {
+	body := block.GetBody()
+	registry := beaconState.GetValidatorRegistry()
+	if uint64(len(body.GetCasperSlashings())) > params.BeaconConfig().MaxCasperSlashings {
 		return nil, fmt.Errorf(
 			"number of casper slashings (%d) exceeds allowed threshold of %d",
-			len(casperSlashings),
+			len(body.GetCasperSlashings()),
 			params.BeaconConfig().MaxCasperSlashings,
 		)
 	}
-	for idx, slashing := range casperSlashings {
+	for idx, slashing := range body.GetCasperSlashings() {
 		if err := verifyCasperSlashing(slashing); err != nil {
 			return nil, fmt.Errorf("could not verify casper slashing #%d: %v", idx, err)
 		}
@@ -186,22 +237,23 @@ func ProcessCasperSlashings(
 			return nil, fmt.Errorf("could not determine validator indices to penalize: %v", err)
 		}
 		for _, validatorIndex := range validatorIndices {
-			penalizedValidator := validatorRegistry[validatorIndex]
-			if penalizedValidator.Status != pb.ValidatorRecord_EXITED_WITH_PENALTY {
+			penalizedValidator := registry[validatorIndex]
+			if penalizedValidator.GetStatus() != pb.ValidatorRecord_EXITED_WITH_PENALTY {
 				// TODO(#781): Replace with update_validator_status(
 				//   state,
 				//   validatorIndex,
 				//   new_status=EXITED_WITH_PENALTY,
 				// ) after update_validator_status is implemented.
-				validatorRegistry[validatorIndex] = v.ExitValidator(
+				registry[validatorIndex] = v.ExitValidator(
 					penalizedValidator,
-					currentSlot,
+					beaconState.GetSlot(),
 					true, /* penalize */
 				)
 			}
 		}
 	}
-	return validatorRegistry, nil
+	beaconState.ValidatorRegistry = registry
+	return beaconState, nil
 }
 
 func verifyCasperSlashing(slashing *pb.CasperSlashing) error {
@@ -351,7 +403,7 @@ func verifyCasperVotes(votes *pb.SlashableVoteData) error {
 func ProcessBlockAttestations(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
-) ([]*pb.PendingAttestationRecord, error) {
+) (*pb.BeaconState, error) {
 	atts := block.GetBody().GetAttestations()
 	if uint64(len(atts)) > params.BeaconConfig().MaxAttestations {
 		return nil, fmt.Errorf(
@@ -372,7 +424,8 @@ func ProcessBlockAttestations(
 			SlotIncluded:          beaconState.GetSlot(),
 		})
 	}
-	return pendingAttestations, nil
+	beaconState.LatestAttestations = pendingAttestations
+	return beaconState, nil
 }
 
 func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation) error {
@@ -497,7 +550,7 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation) error {
 func ProcessValidatorExits(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
-) ([]*pb.ValidatorRecord, error) {
+) (*pb.BeaconState, error) {
 	exits := block.GetBody().GetExits()
 	if uint64(len(exits)) > params.BeaconConfig().MaxExits {
 		return nil, fmt.Errorf(
@@ -523,7 +576,8 @@ func ProcessValidatorExits(
 			true, /* penalize */
 		)
 	}
-	return validatorRegistry, nil
+	beaconState.ValidatorRegistry = validatorRegistry
+	return beaconState, nil
 }
 
 func verifyExit(beaconState *pb.BeaconState, exit *pb.Exit) error {

@@ -205,6 +205,7 @@ func TestRunningChainService(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
+	beaconState.Slot = 5
 
 	enc, _ := proto.Marshal(beaconState)
 	stateRoot := hashutil.Hash(enc)
@@ -237,7 +238,7 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	currentSlot := uint64(1)
+	currentSlot := uint64(5)
 	attestationSlot := uint64(0)
 	shard := beaconState.ShardAndCommitteesAtSlots[attestationSlot].ArrayShardAndCommittee[0].Shard
 
@@ -253,7 +254,7 @@ func TestRunningChainService(t *testing.T) {
 				Data: &pb.AttestationData{
 					Slot:                     attestationSlot,
 					Shard:                    shard,
-					JustifiedBlockRootHash32: parentHash[:],
+					JustifiedBlockRootHash32: []byte{},
 				},
 			}},
 		},
@@ -469,5 +470,4 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 	if err := chainService.isBlockReadyForProcessing(block3); err != nil {
 		t.Fatalf("block processing failed despite being a valid block: %v", err)
 	}
-
 }

@@ -23,9 +23,10 @@ func TestProcessPOWReceiptRoots_SameRootHash(t *testing.T) {
 	block := &pb.BeaconBlock{
 		CandidatePowReceiptRootHash32: []byte{1},
 	}
-	newReceiptRoots := ProcessPOWReceiptRoots(beaconState, block)
-	if newReceiptRoots[0].VoteCount != 6 {
-		t.Errorf("expected votes to increase from 5 to 6, received %v", newReceiptRoots[0].VoteCount)
+	beaconState = ProcessPOWReceiptRoots(beaconState, block)
+	newRoots := beaconState.GetCandidatePowReceiptRoots()
+	if newRoots[0].GetVoteCount() != 6 {
+		t.Errorf("expected votes to increase from 5 to 6, received %d", newRoots[0].GetVoteCount())
 	}
 }
 
@@ -41,21 +42,128 @@ func TestProcessPOWReceiptRoots_NewCandidateRecord(t *testing.T) {
 	block := &pb.BeaconBlock{
 		CandidatePowReceiptRootHash32: []byte{1},
 	}
-	newReceiptRoots := ProcessPOWReceiptRoots(beaconState, block)
-	if len(newReceiptRoots) == 1 {
+	beaconState = ProcessPOWReceiptRoots(beaconState, block)
+	newRoots := beaconState.GetCandidatePowReceiptRoots()
+	if len(newRoots) == 1 {
 		t.Error("expected new receipt roots to have length > 1")
 	}
-	if newReceiptRoots[1].VoteCount != 1 {
+	if newRoots[1].GetVoteCount() != 1 {
 		t.Errorf(
 			"expected new receipt roots to have a new element with votes = 1, received votes = %d",
-			newReceiptRoots[1].VoteCount,
+			newRoots[1].GetVoteCount(),
 		)
 	}
-	if !bytes.Equal(newReceiptRoots[1].CandidatePowReceiptRootHash32, []byte{1}) {
+	if !bytes.Equal(newRoots[1].CandidatePowReceiptRootHash32, []byte{1}) {
 		t.Errorf(
 			"expected new receipt roots to have a new element with root = %#x, received root = %#x",
 			[]byte{1},
-			newReceiptRoots[1].CandidatePowReceiptRootHash32,
+			newRoots[1].CandidatePowReceiptRootHash32,
+		)
+	}
+}
+
+func TestProcessBlockRandao_UnequalBlockAndProposerRandao(t *testing.T) {
+	registry := []*pb.ValidatorRecord{
+		{
+			RandaoLayers:           0,
+			RandaoCommitmentHash32: []byte{},
+		},
+	}
+	block := &pb.BeaconBlock{
+		RandaoRevealHash32: []byte{1},
+	}
+	beaconState := &pb.BeaconState{
+		ValidatorRegistry: registry,
+		Slot:              1,
+		ShardAndCommitteesAtSlots: []*pb.ShardAndCommitteeArray{
+			{
+				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+					{
+						Shard:               0,
+						Committee:           []uint32{1, 0},
+						TotalValidatorCount: 1,
+					},
+				},
+			},
+			{
+				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+					{
+						Shard:               0,
+						Committee:           []uint32{1, 0},
+						TotalValidatorCount: 1,
+					},
+				},
+			},
+		},
+	}
+
+	want := fmt.Sprintf(
+		"expected hashed block randao layers to equal proposer randao: received %#x = %#x",
+		[32]byte{1},
+		[32]byte{0},
+	)
+	if _, err := ProcessBlockRandao(
+		beaconState,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
+	registry := []*pb.ValidatorRecord{
+		{
+			RandaoLayers:           0,
+			RandaoCommitmentHash32: []byte{1},
+		},
+	}
+	block := &pb.BeaconBlock{
+		RandaoRevealHash32: []byte{1},
+	}
+	beaconState := &pb.BeaconState{
+		ValidatorRegistry:        registry,
+		Slot:                     1,
+		LatestRandaoMixesHash32S: make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		ShardAndCommitteesAtSlots: []*pb.ShardAndCommitteeArray{
+			{
+				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+					{
+						Shard:               0,
+						Committee:           []uint32{1, 0},
+						TotalValidatorCount: 1,
+					},
+				},
+			},
+			{
+				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+					{
+						Shard:               0,
+						Committee:           []uint32{1, 0},
+						TotalValidatorCount: 1,
+					},
+				},
+			},
+		},
+	}
+
+	newState, err := ProcessBlockRandao(
+		beaconState,
+		block,
+	)
+	if err != nil {
+		t.Fatalf("Unexpected error processing block randao: %v", err)
+	}
+
+	xorRandao := [32]byte{1}
+	updatedLatestMix := newState.LatestRandaoMixesHash32S[newState.GetSlot()%params.BeaconConfig().LatestRandaoMixesLength]
+	if !bytes.Equal(updatedLatestMix, xorRandao[:]) {
+		t.Errorf("Expected randao mix to XOR correctly: wanted %#x, received %#x", xorRandao[:], updatedLatestMix)
+	}
+	if !bytes.Equal(newState.GetValidatorRegistry()[0].GetRandaoCommitmentHash32(), []byte{1}) {
+		t.Errorf(
+			"Expected proposer at index 0 to update randao commitment to block randao reveal = %#x, received %#x",
+			[]byte{1},
+			newState.GetValidatorRegistry()[0].GetRandaoCommitmentHash32(),
 		)
 	}
 }
@@ -70,11 +178,19 @@ func TestProcessProposerSlashings_ThresholdReached(t *testing.T) {
 		params.BeaconConfig().MaxProposerSlashings+1,
 		params.BeaconConfig().MaxProposerSlashings,
 	)
+	beaconState := &pb.BeaconState{
+		ValidatorRegistry: registry,
+		Slot:              currentSlot,
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			ProposerSlashings: slashings,
+		},
+	}
 
 	if _, err := ProcessProposerSlashings(
-		registry,
-		slashings,
-		currentSlot,
+		beaconState,
+		block,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -95,11 +211,19 @@ func TestProcessProposerSlashings_UnmatchedSlotNumbers(t *testing.T) {
 		},
 	}
 
+	beaconState := &pb.BeaconState{
+		ValidatorRegistry: registry,
+		Slot:              currentSlot,
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			ProposerSlashings: slashings,
+		},
+	}
 	want := "slashing proposal data slots do not match: 1, 0"
 	if _, err := ProcessProposerSlashings(
-		registry,
-		slashings,
-		currentSlot,
+		beaconState,
+		block,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -122,11 +246,19 @@ func TestProcessProposerSlashings_UnmatchedShards(t *testing.T) {
 		},
 	}
 
+	beaconState := &pb.BeaconState{
+		ValidatorRegistry: registry,
+		Slot:              currentSlot,
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			ProposerSlashings: slashings,
+		},
+	}
 	want := "slashing proposal data shards do not match: 0, 1"
 	if _, err := ProcessProposerSlashings(
-		registry,
-		slashings,
-		currentSlot,
+		beaconState,
+		block,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -151,15 +283,23 @@ func TestProcessProposerSlashings_UnmatchedBlockRoots(t *testing.T) {
 		},
 	}
 
+	beaconState := &pb.BeaconState{
+		ValidatorRegistry: registry,
+		Slot:              currentSlot,
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			ProposerSlashings: slashings,
+		},
+	}
 	want := fmt.Sprintf(
 		"slashing proposal data block roots do not match: %#x, %#x",
 		[]byte{0, 1, 0}, []byte{1, 1, 0},
 	)
 
 	if _, err := ProcessProposerSlashings(
-		registry,
-		slashings,
-		currentSlot,
+		beaconState,
+		block,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -194,12 +334,21 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		},
 	}
 	currentSlot := uint64(1)
+	beaconState := &pb.BeaconState{
+		ValidatorRegistry: registry,
+		Slot:              currentSlot,
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			ProposerSlashings: slashings,
+		},
+	}
 
-	registry, err := ProcessProposerSlashings(
-		registry,
-		slashings,
-		currentSlot,
+	newState, err := ProcessProposerSlashings(
+		beaconState,
+		block,
 	)
+	registry = newState.GetValidatorRegistry()
 	if err != nil {
 		t.Fatalf("Unexpected error: %s", err)
 	}
@@ -213,6 +362,15 @@ func TestProcessCasperSlashings_ThresholdReached(t *testing.T) {
 	registry := []*pb.ValidatorRecord{}
 	currentSlot := uint64(0)
 
+	beaconState := &pb.BeaconState{
+		ValidatorRegistry: registry,
+		Slot:              currentSlot,
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			CasperSlashings: slashings,
+		},
+	}
 	want := fmt.Sprintf(
 		"number of casper slashings (%d) exceeds allowed threshold of %d",
 		params.BeaconConfig().MaxCasperSlashings+1,
@@ -220,9 +378,8 @@ func TestProcessCasperSlashings_ThresholdReached(t *testing.T) {
 	)
 
 	if _, err := ProcessCasperSlashings(
-		registry,
-		slashings,
-		currentSlot,
+		beaconState,
+		block,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -246,6 +403,15 @@ func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 	registry := []*pb.ValidatorRecord{}
 	currentSlot := uint64(0)
 
+	beaconState := &pb.BeaconState{
+		ValidatorRegistry: registry,
+		Slot:              currentSlot,
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			CasperSlashings: slashings,
+		},
+	}
 	want := fmt.Sprintf(
 		"exceeded allowed casper votes (%d), received %d",
 		params.BeaconConfig().MaxCasperVotes,
@@ -253,9 +419,8 @@ func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 	)
 
 	if _, err := ProcessCasperSlashings(
-		registry,
-		slashings,
-		currentSlot,
+		beaconState,
+		block,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -275,10 +440,18 @@ func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 			},
 		},
 	}
+	beaconState = &pb.BeaconState{
+		ValidatorRegistry: registry,
+		Slot:              currentSlot,
+	}
+	block = &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			CasperSlashings: slashings,
+		},
+	}
 	if _, err := ProcessCasperSlashings(
-		registry,
-		slashings,
-		currentSlot,
+		beaconState,
+		block,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -301,6 +474,15 @@ func TestProcessCasperSlashings_UnmatchedAttestations(t *testing.T) {
 	registry := []*pb.ValidatorRecord{}
 	currentSlot := uint64(0)
 
+	beaconState := &pb.BeaconState{
+		ValidatorRegistry: registry,
+		Slot:              currentSlot,
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			CasperSlashings: slashings,
+		},
+	}
 	want := fmt.Sprintf(
 		"casper slashing inner vote attestation data should not match: %v, %v",
 		att1,
@@ -308,9 +490,8 @@ func TestProcessCasperSlashings_UnmatchedAttestations(t *testing.T) {
 	)
 
 	if _, err := ProcessCasperSlashings(
-		registry,
-		slashings,
-		currentSlot,
+		beaconState,
+		block,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -378,6 +559,15 @@ func TestProcessCasperSlashings_SlotsInequalities(t *testing.T) {
 		registry := []*pb.ValidatorRecord{}
 		currentSlot := uint64(0)
 
+		beaconState := &pb.BeaconState{
+			ValidatorRegistry: registry,
+			Slot:              currentSlot,
+		}
+		block := &pb.BeaconBlock{
+			Body: &pb.BeaconBlockBody{
+				CasperSlashings: slashings,
+			},
+		}
 		want := fmt.Sprintf(
 			`
 			Expected the following conditions to hold:
@@ -397,9 +587,8 @@ func TestProcessCasperSlashings_SlotsInequalities(t *testing.T) {
 		)
 
 		if _, err := ProcessCasperSlashings(
-			registry,
-			slashings,
-			currentSlot,
+			beaconState,
+			block,
 		); !strings.Contains(err.Error(), want) {
 			t.Errorf("Expected %s, received %v", want, err)
 		}
@@ -432,11 +621,19 @@ func TestProcessCasperSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 	registry := []*pb.ValidatorRecord{}
 	currentSlot := uint64(0)
 
+	beaconState := &pb.BeaconState{
+		ValidatorRegistry: registry,
+		Slot:              currentSlot,
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			CasperSlashings: slashings,
+		},
+	}
 	want := "expected intersection of vote indices to be non-empty"
 	if _, err := ProcessCasperSlashings(
-		registry,
-		slashings,
-		currentSlot,
+		beaconState,
+		block,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -480,14 +677,23 @@ func TestProcessCasperSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 
 	currentSlot := uint64(5)
-	newRegistry, err := ProcessCasperSlashings(
-		registry,
-		slashings,
-		currentSlot,
+	beaconState := &pb.BeaconState{
+		ValidatorRegistry: registry,
+		Slot:              currentSlot,
+	}
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			CasperSlashings: slashings,
+		},
+	}
+	newState, err := ProcessCasperSlashings(
+		beaconState,
+		block,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
+	newRegistry := newState.GetValidatorRegistry()
 
 	// Given the intersection of slashable indices is [1], only validator
 	// at index 1 should be penalized and change Status. We confirm this below.
@@ -864,10 +1070,11 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 			Attestations: attestations,
 		},
 	}
-	pendingAttestations, err := ProcessBlockAttestations(
+	newState, err := ProcessBlockAttestations(
 		state,
 		block,
 	)
+	pendingAttestations := newState.GetLatestAttestations()
 	if err != nil {
 		t.Fatalf("Could not produce pending attestations: %v", err)
 	}
@@ -1035,11 +1242,11 @@ func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
 			Exits: exits,
 		},
 	}
-
-	newRegistry, err := ProcessValidatorExits(state, block)
+	newState, err := ProcessValidatorExits(state, block)
 	if err != nil {
 		t.Fatalf("Could not process exits: %v", err)
 	}
+	newRegistry := newState.GetValidatorRegistry()
 	if newRegistry[0].Status == pb.ValidatorRecord_ACTIVE {
 		t.Error("Expected validator status to change, remained ACTIVE")
 	}

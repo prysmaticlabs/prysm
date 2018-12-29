@@ -15,11 +15,11 @@ message BeaconState {
   repeated uint64 validator_balances = 5; // Balance in Gwei
 
   // Randomness and committees [1001-2000]
-  bytes randao_mix_hash32 = 1001;
   bytes next_seed_hash32 = 1002;
   repeated ShardAndCommitteeArray shard_and_committees_at_slots = 1003;
   repeated ethereum.common.Uint32List persistent_committees = 1004;
   repeated ShardReassignmentRecord persistent_committee_reassignments = 1005;
+  repeated bytes latest_randao_mixes_hash32s = 1006;
 
   // Finality [2001-3000] 
   uint64 previous_justified_slot = 2001;
@@ -31,8 +31,9 @@ message BeaconState {
   repeated CrosslinkRecord latest_crosslinks = 3001;
   uint64 last_state_recalculation_slot = 3002;
   repeated bytes latest_block_root_hash32s = 3003;
-  repeated uint64 latest_penalized_exit_balances = 3004;
-  repeated PendingAttestationRecord latest_attestations = 3005;
+  repeated bytes batched_block_root_hash32s = 3004;
+  repeated uint64 latest_penalized_exit_balances = 3005;
+  repeated PendingAttestationRecord latest_attestations = 3006;
 
   // PoW receipt root [4001-5000]
   bytes processed_pow_receipt_root_hash32 = 4001;
@@ -45,8 +46,8 @@ message BeaconState {
 
 
   // Deprecated fields 
-  // All fields mustbe annotated with [deprecated=true];
-  uint64 justified_streak = 10007 [deprecated=true]; // Deprecated by changes in fork choice rule. See https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#beacon-chain-fork-choice-rule 
+  // All fields must be annotated with [deprecated=true];
+  uint64 justified_streak = 10007 [deprecated=true]; // Deprecated by changes in fork choice rule. See https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#beacon-chain-fork-choice-rule
   repeated ShardAndCommitteeArray shard_and_committees_for_slots = 10019 [deprecated=true]; // Renamed to shard_and_committee_at_slots
 }
 
@@ -211,4 +212,11 @@ message Exit {
   uint64 slot = 1;
   uint64 validator_index = 2;
   bytes signature = 3; // Type of [uint384]?
+}
+
+message ValidatorRegistryDeltaBlock {
+  bytes latest_registry_delta_root_hash32 = 1;
+  uint32 validator_index = 2;
+  bytes pubkey = 3;
+  uint64 flag = 4;
 }

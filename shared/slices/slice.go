@@ -57,3 +57,13 @@ func Not(a []uint32, b []uint32) []uint32 {
 	}
 	return set
 }
+
+// IsIn returns true if a is in b and False otherwise.
+func IsIn(a uint32, b []uint32) bool {
+	for _, v := range b {
+		if a == v {
+			return true
+		}
+	}
+	return false
+}

@@ -749,6 +749,7 @@ func TestBeaconProposerIndex(t *testing.T) {
 	state := &pb.BeaconState{
 		ShardAndCommitteesAtSlots: shardAndCommittees,
 	}
+
 	tests := []struct {
 		slot  uint64
 		index uint32
@@ -776,7 +777,6 @@ func TestBeaconProposerIndex(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-
 		result, err := BeaconProposerIndex(state, tt.slot)
 		if err != nil {
 			t.Errorf("Failed to get shard and committees at slot: %v", err)
@@ -926,6 +926,38 @@ func TestAllActiveValidatorIndices(t *testing.T) {
 		if !reflect.DeepEqual(AllActiveValidatorsIndices(state), tt.indices) {
 			t.Errorf("AllActiveValidatorsIndices(%v) = %v, wanted:%v",
 				tt.registries, AllActiveValidatorsIndices(state), tt.indices)
+		}
+	}
+}
+
+func TestNewRegistryDeltaChainTip(t *testing.T) {
+	tests := []struct {
+		flag                         uint64
+		index                        uint32
+		pubKey                       []byte
+		currentRegistryDeltaChainTip []byte
+		newRegistryDeltaChainTip     []byte
+	}{
+		{0, 100, []byte{'A'}, []byte{'B'},
+			[]byte{35, 123, 149, 41, 92, 226, 26, 73, 96, 40, 4, 219, 59, 254, 27,
+				38, 220, 125, 83, 177, 78, 12, 187, 74, 72, 115, 64, 91, 16, 144, 37, 245}},
+		{2, 64, []byte{'Y'}, []byte{'Z'},
+			[]byte{105, 155, 218, 237, 2, 246, 129, 117, 122, 234, 129, 145, 140,
+				42, 123, 133, 57, 241, 58, 237, 43, 180, 158, 123, 236, 47, 141, 21, 71, 150, 237, 246}},
+	}
+	for _, tt := range tests {
+		newChainTip, err := NewRegistryDeltaChainTip(
+			tt.flag,
+			tt.index,
+			tt.pubKey,
+			tt.currentRegistryDeltaChainTip,
+		)
+		if err != nil {
+			t.Fatalf("could not execute NewRegistryDeltaChainTip:%v", err)
+		}
+		if !bytes.Equal(newChainTip[:], tt.newRegistryDeltaChainTip) {
+			t.Errorf("Incorrect new chain tip. Wanted %#x, got %#x",
+				tt.newRegistryDeltaChainTip, newChainTip[:])
 		}
 	}
 }

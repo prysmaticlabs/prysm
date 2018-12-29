@@ -54,7 +54,7 @@ func NewGenesisBeaconState(genesisValidatorRegistry []*pb.ValidatorRecord) (*pb.
 		ValidatorRegistryLastChangeSlot:      0,
 		ValidatorRegistryExitCount:           0,
 		ValidatorRegistryDeltaChainTipHash32: make([]byte, 0, 32),
-		RandaoMixHash32:                      make([]byte, 0, 32),
+		LatestRandaoMixesHash32S:             make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		NextSeedHash32:                       make([]byte, 0, 32),
 		ShardAndCommitteesAtSlots:            shardAndCommitteesForSlots,
 		PersistentCommittees:                 []*pbcomm.Uint32List{},
