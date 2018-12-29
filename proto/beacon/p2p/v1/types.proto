@@ -171,6 +171,7 @@ message DepositInput {
   // TODO(781): The usage of withdrawal_credentials is not defined in spec. Not used in Prysm yet.
   bytes withdrawal_credentials_hash32 = 3;
   bytes randao_commitment_hash32 = 4;
+  bytes poc_commitment_hash32 = 5;
 }
 
 message ProposalSignedData {

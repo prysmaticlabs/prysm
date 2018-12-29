@@ -2,9 +2,9 @@ package blocks
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
-	"io"
 	"reflect"
 	"time"
 
@@ -533,29 +533,29 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation) error {
 // into the beacon chain.
 //
 // Official spec definition for processing validator deposits:
-//    Verify that len(block.body.deposits) <= MAX_DEPOSITS.
-//    For each deposit in block.body.deposits:
-//      Let serialized_deposit_data be the serialized form of deposit.deposit_data.
-//			It should be the DepositInput followed by 8 bytes for deposit_data.value
-//			and 8 bytes for deposit_data.timestamp. That is, it should match
-//			deposit_data in the Ethereum 1.0 deposit contract of which the hash
-//			was placed into the Merkle tree.
+//   Verify that len(block.body.deposits) <= MAX_DEPOSITS.
+//   For each deposit in block.body.deposits:
+//     Let serialized_deposit_data be the serialized form of deposit.deposit_data.
+//     It should be the DepositInput followed by 8 bytes for deposit_data.value
+//     and 8 bytes for deposit_data.timestamp. That is, it should match
+//     deposit_data in the Ethereum 1.0 deposit contract of which the hash
+//     was placed into the Merkle tree.
 //
-//			Verify deposit merkle_branch, setting leaf=serialized_deposit_data,
-//			depth=DEPOSIT_CONTRACT_TREE_DEPTH and root=state.processed_pow_receipt_root:
-//		  Verify that state.slot - (deposit.deposit_data.timestamp -
-//			state.genesis_time)  SLOT_DURATION < ZERO_BALANCE_VALIDATOR_TTL.
+//     Verify deposit merkle_branch, setting leaf=serialized_deposit_data,
+//     depth=DEPOSIT_CONTRACT_TREE_DEPTH and root=state.processed_pow_receipt_root:
+//     Verify that state.slot - (deposit.deposit_data.timestamp -
+//     state.genesis_time)  SLOT_DURATION < ZERO_BALANCE_VALIDATOR_TTL.
 //
-//		  Run the following:
-//		  process_deposit(
-//			  state=state,
-//			  pubkey=deposit.deposit_data.deposit_input.pubkey,
-//			  deposit=deposit.deposit_data.value,
-//			  proof_of_possession=deposit.deposit_data.deposit_input.proof_of_possession,
-//			  withdrawal_credentials=deposit.deposit_data.deposit_input.withdrawal_credentials,
-//			  randao_commitment=deposit.deposit_data.deposit_input.randao_commitment,
-//			  poc_commitment=deposit.deposit_data.deposit_input.poc_commitment,
-//			)
+//     Run the following:
+//     process_deposit(
+//       state=state,
+//       pubkey=deposit.deposit_data.deposit_input.pubkey,
+//       deposit=deposit.deposit_data.value,
+//       proof_of_possession=deposit.deposit_data.deposit_input.proof_of_possession,
+//       withdrawal_credentials=deposit.deposit_data.deposit_input.withdrawal_credentials,
+//       randao_commitment=deposit.deposit_data.deposit_input.randao_commitment,
+//       poc_commitment=deposit.deposit_data.deposit_input.poc_commitment,
+//     )
 func ProcessBlockValidatorDeposits(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
@@ -570,25 +570,51 @@ func ProcessBlockValidatorDeposits(
 	}
 	var err error
 	for idx, deposit := range deposits {
+		depositData := deposit.GetDepositData()
+		depositInput, err := decodeDepositInput(depositData)
+		if err != nil {
+			return nil, fmt.Errorf("could not decode deposit input: %v", idx, err)
+		}
 		if err = verifyDeposit(beaconState, deposit); err != nil {
 			return nil, fmt.Errorf("could not verify deposit #%d: %v", idx, err)
 		}
-		depositData := new(pb.DepositData)
+		// depositData consists of depositInput []byte + depositValue [8]byte +
+		// depositTimestamp [8]byte.
+		depositValue := depositData[len(depositData)-16 : len(depositData)-8]
 		// We then mutate the beacon state with the verified validator deposit.
 		beaconState, err = v.ProcessDeposit(
 			beaconState,
-			depositData.GetDepositInput().GetPubkey(),
-			depositData.GetValue(),
-			depositData.GetDepositInput().GetProofOfPossession(),
-			depositData.GetDepositInput().GetWithdrawalCredentialsHash32(),
-			depositData.GetDepositInput().GetRandaoCommitmentHash32(),
-			depositData.GetDepositInput().GetPocCommitmentHash32(),
+			depositInput.GetPubkey(),
+			binary.BigEndian.Uint64(depositValue),
+			depositInput.GetProofOfPossession(),
+			depositInput.GetWithdrawalCredentialsHash32(),
+			depositInput.GetRandaoCommitmentHash32(),
+			depositInput.GetPocCommitmentHash32(),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could process deposit into beacon state: %v", err)
 		}
 	}
 	return beaconState, nil
+}
+
+func decodeDepositInput(depositData []byte) (*pb.DepositInput, error) {
+	// Last 16 bytes of deposit data are 8 bytes for value
+	// and 8 bytes for timestamp. Everything before that is a
+	// Simple Serialized deposit input value.
+	if len(depositData) < 16 {
+		return nil, fmt.Errorf(
+			"deposit data slice too small: len(depositData) = %d",
+			len(depositData),
+		)
+	}
+	depositInput := new(pb.DepositInput)
+	depositInputBytes := depositData[:len(depositData)-16]
+	rBuf := bytes.NewReader(depositInputBytes)
+	if err := ssz.Decode(rBuf, depositInput); err != nil {
+		return nil, fmt.Errorf("ssz decode failed: %v", err)
+	}
+	return depositInput, nil
 }
 
 func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
@@ -607,23 +633,7 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 		return errors.New("Deposit merkle branch of PoW receipt root did not verify")
 	}
 
-	// Last 16 bytes of deposit data are 8 bytes for value
-	// and 8 bytes for timestamp. Everything before that is a
-	// Simple Serialized deposit input value.
-	if len(depositData) < 16 {
-		return fmt.Errorf(
-			"deposit data slice too small: len(depositData) = %d",
-			len(depositData),
-		)
-	}
-	depositInput := new(pb.DepositInput)
-	depositInputBytes := depositData[:len(depositData)-16]
-	rBuf := bytes.NewReader(depositInputBytes)
-	if err := decodeDepositData(rBuf, depositInput); err != nil {
-		return fmt.Errorf("could not decode deposit input: %v", err)
-	}
-	// TODO: Basic integrity checking of fields in deposit input.
-	// Verify the timestamp.
+	// We unmarshal the timestamp bytes into a time.Time value for us to use.
 	depositTimestampBytes := depositData[len(depositData)-8:]
 	depositTime := new(time.Time)
 	if err := depositTime.UnmarshalBinary(depositTimestampBytes); err != nil {
@@ -634,7 +644,7 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 	genesisTime := time.Unix(int64(beaconState.GetGenesisTime()), 0)
 	timeToLive := uint64(depositTime.Sub(genesisTime).Seconds()) / params.BeaconConfig().SlotDuration
 
-	// Verify validator TTL is correct.
+	// Verify current slot slot - allowed validator TTL is within the allowed boundary.
 	if beaconState.GetSlot()-timeToLive < params.BeaconConfig().ZeroBalanceValidatorTTL {
 		return fmt.Errorf(
 			"want state.slot - (deposit.time - genesis_time) // SLOT_DURATION > %d, received %d < %d",
@@ -644,10 +654,6 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 		)
 	}
 	return nil
-}
-
-func decodeDepositData(r io.Reader, depositInput *pb.DepositInput) error {
-	return ssz.Decode(r, depositInput)
 }
 
 // ProcessValidatorExits is one of the operations performed
