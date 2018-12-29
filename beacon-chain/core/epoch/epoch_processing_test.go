@@ -347,24 +347,6 @@ func TestCanProcessValidatorRegistry(t *testing.T) {
 func TestCanNotProcessValidatorRegistry(t *testing.T) {
 	state := &pb.BeaconState{
 		FinalizedSlot:                   100,
-		ValidatorRegistryLastChangeSlot: 99,
-		LatestCrosslinks: []*pb.CrosslinkRecord{
-			{Slot: 101}, {Slot: 102}, {Slot: 103}, {Slot: 104},
-		},
-		ShardAndCommitteesAtSlots: []*pb.ShardAndCommitteeArray{
-			{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
-				{Shard: 0}, {Shard: 1}, {Shard: 2}, {Shard: 3},
-			}},
-		},
-	}
-	if !CanProcessValidatorRegistry(state) {
-		t.Errorf("Wanted True for CanProcessValidatorRegistry, but got %v", CanProcessValidatorRegistry(state))
-	}
-}
-
-func TestCanNotProcessCanNotProcessValidatorRegistry(t *testing.T) {
-	state := &pb.BeaconState{
-		FinalizedSlot:                   100,
 		ValidatorRegistryLastChangeSlot: 101,
 	}
 	if CanProcessValidatorRegistry(state) {
@@ -385,4 +367,3 @@ func TestCanNotProcessCanNotProcessValidatorRegistry(t *testing.T) {
 		t.Errorf("Wanted False for CanProcessValidatorRegistry, but got %v", CanProcessValidatorRegistry(state))
 	}
 }
-
