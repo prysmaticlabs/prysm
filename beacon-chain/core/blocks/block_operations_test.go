@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
@@ -1151,19 +1152,42 @@ func TestProcessBlockValidatorDeposits_DepositInputDecodingFails(t *testing.T) {
 	}
 }
 
-// TODO
 func TestProcessBlockValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
-	data := make([]byte, 16)
+	// We create a correctly encoded deposit data using Simple Serialize.
+	depositInput := &pb.DepositInput{
+		Pubkey: []byte{1, 2, 3},
+	}
+	wBuf := new(bytes.Buffer)
+	if err := ssz.Encode(wBuf, depositInput); err != nil {
+		t.Fatalf("failed to encode deposit input: %v", err)
+	}
+	encodedInput := wBuf.Bytes()
+	data := []byte{}
+	value := make([]byte, 8)
+	timestamp := make([]byte, 8)
+	data = append(data, encodedInput...)
+	data = append(data, value...)
+	data = append(data, timestamp...)
+
+	// We then create a merkle branch for the test.
+	branch := [][]byte{}
+	for i := uint64(0); i < params.BeaconConfig().DepositContractTreeDepth; i++ {
+		branch = append(branch, []byte{1})
+	}
+
 	deposit := &pb.Deposit{
-		DepositData: data,
+		DepositData:         data,
+		MerkleBranchHash32S: branch,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			Deposits: []*pb.Deposit{deposit},
 		},
 	}
-	beaconState := &pb.BeaconState{}
-	want := "ssz decode failed"
+	beaconState := &pb.BeaconState{
+		ProcessedPowReceiptRootHash32: []byte{0},
+	}
+	want := "merkle branch of PoW receipt root did not verify"
 	if _, err := ProcessBlockValidatorDeposits(
 		beaconState,
 		block,
@@ -1172,19 +1196,49 @@ func TestProcessBlockValidatorDeposits_MerkleBranchFailsVerification(t *testing.
 	}
 }
 
-// TODO
 func TestProcessBlockValidatorDeposits_TimestampDecodingFails(t *testing.T) {
-	data := make([]byte, 16)
+	// We create a correctly encoded deposit data using Simple Serialize.
+	depositInput := &pb.DepositInput{
+		Pubkey: []byte{1, 2, 3},
+	}
+	wBuf := new(bytes.Buffer)
+	if err := ssz.Encode(wBuf, depositInput); err != nil {
+		t.Fatalf("failed to encode deposit input: %v", err)
+	}
+	encodedInput := wBuf.Bytes()
+	data := []byte{}
+	value := make([]byte, 8)
+	timestamp := make([]byte, 8)
+	data = append(data, encodedInput...)
+	data = append(data, value...)
+	data = append(data, timestamp...)
+
+	// We then create a merkle branch for the test and derive its root.
+	branch := [][]byte{}
+	var powReceiptRoot [32]byte
+	copy(powReceiptRoot[:], data)
+	for i := uint64(0); i < params.BeaconConfig().DepositContractTreeDepth; i++ {
+		branch = append(branch, []byte{1, 2, 3})
+		if i%2 == 0 {
+			powReceiptRoot = hashutil.Hash(append(branch[i], powReceiptRoot[:]...))
+		} else {
+			powReceiptRoot = hashutil.Hash(append(powReceiptRoot[:], branch[i]...))
+		}
+	}
+
 	deposit := &pb.Deposit{
-		DepositData: data,
+		DepositData:         data,
+		MerkleBranchHash32S: branch,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			Deposits: []*pb.Deposit{deposit},
 		},
 	}
-	beaconState := &pb.BeaconState{}
-	want := "ssz decode failed"
+	beaconState := &pb.BeaconState{
+		ProcessedPowReceiptRootHash32: powReceiptRoot[:],
+	}
+	want := "could not unmarshal deposit timestamp"
 	if _, err := ProcessBlockValidatorDeposits(
 		beaconState,
 		block,
