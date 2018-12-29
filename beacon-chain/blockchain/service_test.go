@@ -470,5 +470,4 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 	if err := chainService.isBlockReadyForProcessing(block3); err != nil {
 		t.Fatalf("block processing failed despite being a valid block: %v", err)
 	}
-
 }

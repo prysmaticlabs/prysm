@@ -62,6 +62,112 @@ func TestProcessPOWReceiptRoots_NewCandidateRecord(t *testing.T) {
 	}
 }
 
+func TestProcessBlockRandao_UnequalBlockAndProposerRandao(t *testing.T) {
+	registry := []*pb.ValidatorRecord{
+		{
+			RandaoLayers:           0,
+			RandaoCommitmentHash32: []byte{},
+		},
+	}
+	block := &pb.BeaconBlock{
+		RandaoRevealHash32: []byte{1},
+	}
+	beaconState := &pb.BeaconState{
+		ValidatorRegistry: registry,
+		Slot:              1,
+		ShardAndCommitteesAtSlots: []*pb.ShardAndCommitteeArray{
+			{
+				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+					{
+						Shard:               0,
+						Committee:           []uint32{1, 0},
+						TotalValidatorCount: 1,
+					},
+				},
+			},
+			{
+				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+					{
+						Shard:               0,
+						Committee:           []uint32{1, 0},
+						TotalValidatorCount: 1,
+					},
+				},
+			},
+		},
+	}
+
+	want := fmt.Sprintf(
+		"expected hashed block randao layers to equal proposer randao: received %#x = %#x",
+		[32]byte{1},
+		[32]byte{0},
+	)
+	if _, err := ProcessBlockRandao(
+		beaconState,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
+	registry := []*pb.ValidatorRecord{
+		{
+			RandaoLayers:           0,
+			RandaoCommitmentHash32: []byte{1},
+		},
+	}
+	block := &pb.BeaconBlock{
+		RandaoRevealHash32: []byte{1},
+	}
+	beaconState := &pb.BeaconState{
+		ValidatorRegistry:        registry,
+		Slot:                     1,
+		LatestRandaoMixesHash32S: make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		ShardAndCommitteesAtSlots: []*pb.ShardAndCommitteeArray{
+			{
+				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+					{
+						Shard:               0,
+						Committee:           []uint32{1, 0},
+						TotalValidatorCount: 1,
+					},
+				},
+			},
+			{
+				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+					{
+						Shard:               0,
+						Committee:           []uint32{1, 0},
+						TotalValidatorCount: 1,
+					},
+				},
+			},
+		},
+	}
+
+	newState, err := ProcessBlockRandao(
+		beaconState,
+		block,
+	)
+	if err != nil {
+		t.Fatalf("Unexpected error processing block randao: %v", err)
+	}
+
+	xorRandao := [32]byte{1}
+	updatedLatestMix := newState.LatestRandaoMixesHash32S[newState.GetSlot()%params.BeaconConfig().LatestRandaoMixesLength]
+	if !bytes.Equal(updatedLatestMix, xorRandao[:]) {
+		t.Errorf("Expected randao mix to XOR correctly: wanted %#x, received %#x", xorRandao[:], updatedLatestMix)
+	}
+	if !bytes.Equal(newState.GetValidatorRegistry()[0].GetRandaoCommitmentHash32(), []byte{1}) {
+		t.Errorf(
+			"Expected proposer at index 0 to update randao commitment to block randao reveal = %#x, received %#x",
+			[]byte{1},
+			newState.GetValidatorRegistry()[0].GetRandaoCommitmentHash32(),
+		)
+	}
+}
+
 func TestProcessProposerSlashings_ThresholdReached(t *testing.T) {
 	slashings := make([]*pb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings+1)
 	registry := []*pb.ValidatorRecord{}
