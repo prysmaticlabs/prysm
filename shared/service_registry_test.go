@@ -127,18 +127,18 @@ func TestServiceStatus(t *testing.T) {
 		t.Fatalf("failed to register first service")
 	}
 
-	m.status = errors.New("Something bad has happened")
-	s.status = errors.New("Woah, horsee!")
+	m.status = errors.New("something bad has happened")
+	s.status = errors.New("woah, horsee")
 
 	statuses := registry.Statuses()
 
 	mStatus := statuses[reflect.TypeOf(m)]
-	if mStatus == nil || mStatus.Error() != "Something bad has happened" {
+	if mStatus == nil || mStatus.Error() != "something bad has happened" {
 		t.Errorf("Received unexpected status for %T = %v", m, mStatus)
 	}
 
 	sStatus := statuses[reflect.TypeOf(s)]
-	if sStatus == nil || sStatus.Error() != "Woah, horsee!" {
+	if sStatus == nil || sStatus.Error() != "woah, horsee" {
 		t.Errorf("Received unexpected status for %T = %v", s, sStatus)
 	}
 }
