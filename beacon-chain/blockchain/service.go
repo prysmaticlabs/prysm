@@ -93,6 +93,12 @@ func (c *ChainService) Stop() error {
 	return nil
 }
 
+// Status always returns nil.
+// TODO(1202): Add service health checks.
+func (c *ChainService) Status() error {
+	return nil
+}
+
 // IncomingBlockFeed returns a feed that any service can send incoming p2p blocks into.
 // The chain service will subscribe to this feed in order to process incoming blocks.
 func (c *ChainService) IncomingBlockFeed() *event.Feed {

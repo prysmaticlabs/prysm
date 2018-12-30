@@ -86,6 +86,13 @@ func (p *Proposer) Stop() error {
 	return nil
 }
 
+// Status always returns nil.
+// This service will be rewritten in the future so this service check is a
+// no-op for now.
+func (p *Proposer) Status() error {
+	return nil
+}
+
 // DoesAttestationExist checks if an attester has already attested to a block.
 func (p *Proposer) DoesAttestationExist(attestation *pbp2p.Attestation) bool {
 	exists := false

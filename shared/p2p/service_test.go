@@ -340,6 +340,30 @@ func TestRegisterTopic_WithAdapters(t *testing.T) {
 	}
 }
 
+func TestStatus_MinimumPeers(t *testing.T) {
+	minPeers := 5
+
+	ctx := context.Background()
+	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
+	s := Server{host: h}
+
+	err := s.Status()
+	if err == nil || err.Error() != "less than 5 peers" {
+		t.Errorf("p2p server did not return expected status, instead returned %v", err)
+	}
+
+	for i := 0; i < minPeers; i++ {
+		other := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
+		if err := h.Connect(ctx, other.Peerstore().PeerInfo(other.ID())); err != nil {
+			t.Fatalf("Could not connect to host for test setup")
+		}
+	}
+
+	if err := s.Status(); err != nil {
+		t.Errorf("Unexpected server status %v", err)
+	}
+}
+
 func simulateIncomingMessage(t *testing.T, s *Server, topic string, b []byte) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

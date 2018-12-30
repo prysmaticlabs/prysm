@@ -92,6 +92,13 @@ func (s *Service) Stop() error {
 	return nil
 }
 
+// Status always returns nil.
+// This service will be rewritten in the future so this service check is a
+// no-op for now.
+func (s *Service) Status() error {
+	return nil
+}
+
 // fetchCurrentAssignmentsAndGenesisTime fetches both the genesis timestamp as well
 // as the current assignments for the current cycle in the beacon node. This allows
 // the validator to do the following:
