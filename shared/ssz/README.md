@@ -107,7 +107,7 @@ To calculate hash of the object
 ```go
 var hash [32]byte
 if hash, err = e1.HashSSZ(); err != nil {
-    t.Fatalf("failed to hash: %v", err)
+    return fmt.Errorf("failed to hash: %v", err)
 }
 // hash stores the hashing result
 ```

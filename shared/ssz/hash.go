@@ -13,10 +13,12 @@ import (
 const hashLengthBytes = 32
 const sszChunkSize = 128
 
+// Hashable defines the interface for supporting tree-hash function.
 type Hashable interface {
 	HashSSZ() ([32]byte, error)
 }
 
+// Hash calculate tree-hash result for input value.
 func Hash(val interface{}) ([32]byte, error) {
 	if val == nil {
 		return [32]byte{}, newHashError("nil is not supported", nil)
@@ -74,6 +76,9 @@ func makeHasher(typ reflect.Type) (hasher, error) {
 
 func getEncoding(val reflect.Value) ([]byte, error) {
 	utils, err := cachedSSZUtilsNoAcquireLock(val.Type())
+	if err != nil {
+		return nil, err
+	}
 	buf := &encbuf{}
 	if err = utils.encoder(val, buf); err != nil {
 		return nil, err
