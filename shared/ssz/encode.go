@@ -193,7 +193,7 @@ func makeByteArrayEncoder() (encoder, encodeSizer, error) {
 func makeSliceEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 	elemSSZUtils, err := cachedSSZUtilsNoAcquireLock(typ.Elem())
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get encoder/decoder: %v", err)
+		return nil, nil, fmt.Errorf("failed to get ssz utils: %v", err)
 	}
 	encoder := func(val reflect.Value, w *encbuf) error {
 		origBufSize := len(w.str)
@@ -201,7 +201,7 @@ func makeSliceEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 		w.str = append(w.str, totalSizeEnc...)
 		for i := 0; i < val.Len(); i++ {
 			if err := elemSSZUtils.encoder(val.Index(i), w); err != nil {
-				return fmt.Errorf("failed to encode element of slice: %v", err)
+				return fmt.Errorf("failed to encode element of slice/array: %v", err)
 			}
 		}
 		totalSize := len(w.str) - lengthBytes - origBufSize
@@ -218,7 +218,7 @@ func makeSliceEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 		}
 		elemSize, err := elemSSZUtils.encodeSizer(val.Index(0))
 		if err != nil {
-			return 0, errors.New("failed to get encode size of element of slice")
+			return 0, errors.New("failed to get encode size of element of slice/array")
 		}
 		return lengthBytes + elemSize*uint32(val.Len()), nil
 	}

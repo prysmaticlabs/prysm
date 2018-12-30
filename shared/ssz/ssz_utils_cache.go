@@ -17,7 +17,7 @@ type decoder func(io.Reader, reflect.Value) (uint32, error)
 
 type encodeSizer func(reflect.Value) (uint32, error)
 
-type hasher func(reflect.Value) ([32]byte, error)
+type hasher func(reflect.Value) ([]byte, error)
 
 type sszUtils struct {
 	encoder
@@ -102,7 +102,7 @@ func structFields(typ reflect.Type) (fields []field, err error) {
 		}
 		utils, err := cachedSSZUtilsNoAcquireLock(f.Type)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get encoder/decoder: %v", err)
+			return nil, fmt.Errorf("failed to get ssz utils: %v", err)
 		}
 		name := f.Name
 		fields = append(fields, field{i, name, utils})
