@@ -1,12 +1,17 @@
 package shared
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 )
 
-type mockService struct{}
-type secondMockService struct{}
+type mockService struct {
+	status error
+}
+type secondMockService struct {
+	status error
+}
 
 func (m *mockService) Start() {
 }
@@ -16,7 +21,7 @@ func (m *mockService) Stop() error {
 }
 
 func (m *mockService) Status() error {
-	return nil
+	return m.status
 }
 
 func (s *secondMockService) Start() {
@@ -27,7 +32,7 @@ func (s *secondMockService) Stop() error {
 }
 
 func (s *secondMockService) Status() error {
-	return nil
+	return s.status
 }
 
 func TestRegisterServiceTwice(t *testing.T) {
@@ -104,5 +109,36 @@ func TestFetchService(t *testing.T) {
 
 	if m2 != m {
 		t.Errorf("pointers were not equal, instead got %p, %p", m2, m)
+	}
+}
+
+func TestServiceStatus(t *testing.T) {
+	registry := &ServiceRegistry{
+		services: make(map[reflect.Type]Service),
+	}
+
+	m := &mockService{}
+	if err := registry.RegisterService(m); err != nil {
+		t.Fatalf("failed to register first service")
+	}
+
+	s := &secondMockService{}
+	if err := registry.RegisterService(s); err != nil {
+		t.Fatalf("failed to register first service")
+	}
+
+	m.status = errors.New("Something bad has happened")
+	s.status = errors.New("Woah, horsee!")
+
+	statuses := registry.Statuses()
+
+	mStatus := statuses[reflect.TypeOf(m)]
+	if mStatus == nil || mStatus.Error() != "Something bad has happened" {
+		t.Errorf("Received unexpected status for %T = %v", m, mStatus)
+	}
+
+	sStatus := statuses[reflect.TypeOf(s)]
+	if sStatus == nil || sStatus.Error() != "Woah, horsee!" {
+		t.Errorf("Received unexpected status for %T = %v", s, sStatus)
 	}
 }
