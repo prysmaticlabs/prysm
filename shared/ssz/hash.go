@@ -3,6 +3,7 @@ package ssz
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -11,8 +12,6 @@ import (
 
 const hashLengthBytes = 32
 const sszChunkSize = 128
-
-// TODO: cachedSSZUtils should be renamed into cachedSSZUtils
 
 type Hashable interface {
 	HashSSZ() ([32]byte, error)
@@ -31,6 +30,7 @@ func Hash(val interface{}) ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, newHashError(fmt.Sprint(err), rval.Type())
 	}
+	// Right-pad with 0 to make 32 bytes long, if necessary
 	var paddedOutput [32]byte
 	copy(paddedOutput[:], output)
 	return paddedOutput, nil
@@ -42,7 +42,7 @@ type hashError struct {
 }
 
 func (err *hashError) Error() string {
-	return fmt.Sprintf("ssz hash error: %s for input type %v", err.msg, err.typ)
+	return fmt.Sprintf("hash error: %s for input type %v", err.msg, err.typ)
 }
 
 func newHashError(msg string, typ reflect.Type) *hashError {
@@ -63,6 +63,10 @@ func makeHasher(typ reflect.Type) (hasher, error) {
 		return hashedEncoding, nil
 	case kind == reflect.Slice || kind == reflect.Array:
 		return makeSliceHasher(typ)
+	case kind == reflect.Struct:
+		return makeStructHasher(typ)
+	case kind == reflect.Ptr:
+		return makePtrHasher(typ)
 	default:
 		return nil, fmt.Errorf("type %v is not hashable", typ)
 	}
@@ -80,16 +84,6 @@ func getEncoding(val reflect.Value) ([]byte, error) {
 	}
 	return writer.Bytes(), nil
 }
-
-//func paddedEncoding(val reflect.Value) ([32]byte, error) {
-//	encoding, err := getEncoding(val)
-//	if err != nil {
-//		return [32]byte{}, err
-//	}
-//	var output [32]byte
-//	copy(output[:], encoding)
-//	return output, nil
-//}
 
 func hashedEncoding(val reflect.Value) ([]byte, error) {
 	encoding, err := getEncoding(val)
@@ -123,12 +117,49 @@ func makeSliceHasher(typ reflect.Type) (hasher, error) {
 	return hasher, nil
 }
 
+func makeStructHasher(typ reflect.Type) (hasher, error) {
+	fields, err := structFields(typ)
+	if err != nil {
+		return nil, err
+	}
+	hasher := func(val reflect.Value) ([]byte, error) {
+		concatElemHash := make([]byte, 0)
+		for _, f := range fields {
+			elemHash, err := f.sszUtils.hasher(val.Field(f.index))
+			if err != nil {
+				return nil, fmt.Errorf("failed to hash field of struct: %v", err)
+			}
+			concatElemHash = append(concatElemHash, elemHash...)
+		}
+		result := hashutil.Hash(concatElemHash)
+		return result[:], nil
+	}
+	return hasher, nil
+}
+
+// Notice: Currently we don't support nil pointer:
+// - Input for encoding must not contain nil pointer
+// - Output for decoding will never contain nil pointer
+// (Not to be confused with empty slice. Empty slice is supported)
+func makePtrHasher(typ reflect.Type) (hasher, error) {
+	elemSSZUtils, err := cachedSSZUtilsNoAcquireLock(typ.Elem())
+	if err != nil {
+		return nil, err
+	}
+
+	hasher := func(val reflect.Value) ([]byte, error) {
+		if val.IsNil() {
+			return nil, errors.New("nil is not supported")
+		}
+		return elemSSZUtils.hasher(val.Elem())
+	}
+	return hasher, nil
+}
+
 func merkleHash(list [][]byte) ([]byte, error) {
 	// Assume len(list) < 2^64
 	dataLenEnc := make([]byte, hashLengthBytes)
 	binary.BigEndian.PutUint64(dataLenEnc[hashLengthBytes-8:], uint64(len(list)))
-
-	//fmt.Printf("datalen enc: %v", dataLenEnc)
 
 	var chunkz [][]byte
 	emptyChunk := make([]byte, sszChunkSize)
@@ -137,12 +168,10 @@ func merkleHash(list [][]byte) ([]byte, error) {
 		chunkz = make([][]byte, 1)
 		chunkz[0] = emptyChunk
 	} else if len(list[0]) < sszChunkSize {
-		//fmt.Printf("elem size: %d\n", len(list[0]))
 		if sszChunkSize%len(list[0]) != 0 {
 			return nil, fmt.Errorf("element hash size needs to be factor of %d", sszChunkSize)
 		}
 		itemsPerChunk := sszChunkSize / len(list[0])
-		//fmt.Printf("items per chunk: %d\n", itemsPerChunk)
 		chunkz = make([][]byte, 0)
 		for i := 0; i < len(list); i += itemsPerChunk {
 			chunk := make([]byte, 0)
@@ -154,17 +183,11 @@ func merkleHash(list [][]byte) ([]byte, error) {
 			for _, elemHash := range list[i:j] {
 				chunk = append(chunk, elemHash...)
 			}
-			//fmt.Printf("chunk %d has size: %d\n", i, len(chunk))
 			chunkz = append(chunkz, chunk)
-			//fmt.Printf("chunk %d: %v\n", i, chunk)
 		}
-		//fmt.Printf("got %d chunks in total\n", len(chunkz))
 	} else {
 		chunkz = list
 	}
-
-	//fmt.Printf("chunks: %v\n", chunkz)
-	//fmt.Println(len(chunkz[0]))
 
 	for len(chunkz) > 1 {
 		if len(chunkz)%2 == 1 {
@@ -177,10 +200,7 @@ func merkleHash(list [][]byte) ([]byte, error) {
 		}
 		chunkz = hashedChunkz
 	}
-	//fmt.Printf("merkle hashed chunkz: %v\n", chunkz)
 
 	result := hashutil.Hash(append(chunkz[0], dataLenEnc...))
-	//fmt.Printf("final result: %x\n", result)
-
 	return result[:], nil
 }

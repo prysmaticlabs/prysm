@@ -80,52 +80,52 @@ var hashTests = []hashTest{
 		{5, 6, 7, 8},
 	}, output: "D779C77E9E3FE29311097A0D62AA55077C2ACCC2CE89D6C3024877CA73222BB3"},
 
-	//// struct
-	//{val: simpleStruct{}, output: "00000003 00 0000"},
-	//{val: simpleStruct{B: 2, A: 1}, output: "00000003 01 0002"},
-	//{val: outerStruct{
-	//	V:    3,
-	//	SubV: innerStruct{V: 6},
-	//}, output: "00000007 00000002 0006 03"},
-	//
-	//// slice + struct
-	//{val: arrayStruct{
-	//	V: []simpleStruct{
-	//		{B: 2, A: 1},
-	//		{B: 4, A: 3},
-	//	},
-	//}, output: "00000012 0000000E 00000003 010002 00000003 030004"},
-	//{val: []outerStruct{
-	//	{V: 3, SubV: innerStruct{V: 6}},
-	//	{V: 5, SubV: innerStruct{V: 7}},
-	//}, output: "00000016 00000007 00000002 0006 03 00000007 00000002 0007 05"},
-	//
-	//// pointer
-	//{val: &simpleStruct{B: 2, A: 1}, output: "00000003 01 0002"},
-	//{val: pointerStruct{P: &simpleStruct{B: 2, A: 1}, V: 3}, output: "00000008 00000003 01 0002 03"},
-	//{val: &pointerStruct{P: &simpleStruct{B: 2, A: 1}, V: 3}, output: "00000008 00000003 01 0002 03"},
-	//{val: &[]uint8{1, 2, 3, 4}, output: "00000004 01020304"},
-	//{val: &[]uint64{1, 2}, output: "00000010 0000000000000001 0000000000000002"},
-	//{val: []*simpleStruct{
-	//	{B: 2, A: 1},
-	//	{B: 4, A: 3},
-	//}, output: "0000000E 00000003 01 0002 00000003 03 0004"},
-	//{val: [2]*simpleStruct{
-	//	{B: 2, A: 1},
-	//	{B: 4, A: 3},
-	//}, output: "0000000E 00000003 01 0002 00000003 03 0004"},
-	//{val: []*pointerStruct{
-	//	{P: &simpleStruct{B: 2, A: 1}, V: 0},
-	//	{P: &simpleStruct{B: 4, A: 3}, V: 1},
-	//}, output: "00000018 00000008 00000003 01 0002 00 00000008 00000003 03 0004 01"},
-	//
-	//// error: nil pointer
-	//{val: nil, error: "encode error: nil is not supported for input type <nil>"},
-	//{val: (*[]uint8)(nil), error: "encode error: nil is not supported for input type *[]uint8"},
-	//{val: pointerStruct{P: nil, V: 0}, error: "encode error: failed to encode field of struct: nil is not supported for input type ssz.pointerStruct"},
-	//
-	//// error: unsupported type
-	//{val: string("abc"), error: "encode error: type string is not serializable for input type string"},
+	// struct
+	{val: simpleStruct{}, output: "99FF0D9125E1FC9531A11262E15AEB2C60509A078C4CC4C64CEFDFB06FF68647"},
+	{val: simpleStruct{B: 2, A: 1}, output: "D841AA2CE38FDA992D162D973EBD62CF0C74522F8FEB294C48A03D4DB0A6B78C"},
+	{val: outerStruct{
+		V:    3,
+		SubV: innerStruct{V: 6},
+	}, output: "22E310A4B644FBCF2A8F90AC1A5311ED9070E6C9E68A2FE58082BBF78C0D030E"},
+
+	// slice + struct
+	{val: arrayStruct{
+		V: []simpleStruct{
+			{B: 2, A: 1},
+			{B: 4, A: 3},
+		},
+	}, output: "C338A2C69762D374CF6453DDF9B1D685D75243CF59B1FDD9A4DF4DB623E80512"},
+	{val: []outerStruct{
+		{V: 3, SubV: innerStruct{V: 6}},
+		{V: 5, SubV: innerStruct{V: 7}},
+	}, output: "D568DF03934C0EE51F49AABE81F20844D2F44159C389411BBC0C6008D5D85395"},
+
+	// pointer
+	{val: &simpleStruct{B: 2, A: 1}, output: "D841AA2CE38FDA992D162D973EBD62CF0C74522F8FEB294C48A03D4DB0A6B78C"},
+	{val: pointerStruct{P: &simpleStruct{B: 2, A: 1}, V: 3}, output: "4CD458194E1DBAF67726FEBDB4124759481C1BADBF2E2BF4A5CCB898760ADFEF"},
+	{val: &pointerStruct{P: &simpleStruct{B: 2, A: 1}, V: 3}, output: "4CD458194E1DBAF67726FEBDB4124759481C1BADBF2E2BF4A5CCB898760ADFEF"},
+	{val: &[]uint8{1, 2, 3, 4}, output: "B95DACF1ACB820C8D826235E82C9F6D62C30C20B56181FC7463F3C3EB0ABA574"},
+	{val: &[]uint64{1, 2}, output: "319034D88B14EB956CB208AF60CE41BA6F80B179EF6216626AEE547586B700B0"},
+	{val: []*simpleStruct{
+		{B: 2, A: 1},
+		{B: 4, A: 3},
+	}, output: "6E16C02DCAAB3106B973CF6D6F7CE1DC386E438E5E56CC20C604D13BCDDC4CB4"},
+	{val: [2]*simpleStruct{
+		{B: 2, A: 1},
+		{B: 4, A: 3},
+	}, output: "6E16C02DCAAB3106B973CF6D6F7CE1DC386E438E5E56CC20C604D13BCDDC4CB4"},
+	{val: []*pointerStruct{
+		{P: &simpleStruct{B: 2, A: 1}, V: 0},
+		{P: &simpleStruct{B: 4, A: 3}, V: 1},
+	}, output: "E6A6A93F6E9EE2CB20043A9528AD9A4A6CF9212E4321427783EC9685429C0D26"},
+
+	// error: nil pointer
+	{val: nil, error: "hash error: nil is not supported for input type <nil>"},
+	{val: (*[]uint8)(nil), error: "hash error: nil is not supported for input type *[]uint8"},
+	{val: pointerStruct{P: nil, V: 0}, error: "hash error: failed to hash field of struct: nil is not supported for input type ssz.pointerStruct"},
+
+	// error: unsupported type
+	{val: string("abc"), error: "hash error: type string is not serializable for input type string"},
 }
 
 var merkleHashTests = []merkleHashTest{
