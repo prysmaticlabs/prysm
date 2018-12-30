@@ -11,6 +11,13 @@ package hashutil
 //		return o[1]
 func MerkleRoot(values [][]byte) []byte {
 	length := len(values)
+
+	// Data is hashed so as to be stored as leaves in the tree.
+	for i, v := range values {
+		hashedValue := Hash(v)
+		values[i] = hashedValue[:]
+	}
+
 	newSet := make([][]byte, length, length*2)
 	newSet = append(newSet, values...)
 
