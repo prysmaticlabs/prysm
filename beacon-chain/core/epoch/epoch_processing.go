@@ -5,6 +5,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -190,4 +191,74 @@ func ProcessEjections(state *pb.BeaconState) (*pb.BeaconState, error) {
 		}
 	}
 	return state, nil
+}
+
+// ProcessValidatorRegistry sets new validator registry fields,
+// reshuffles shard committees and returns the recomputed state.
+//
+// Spec pseudocode definition:
+//	Set state.validator_registry_latest_change_slot = state.slot.
+//	Set state.shard_committees_at_slots[:EPOCH_LENGTH] = state.shard_committees_at_slots[EPOCH_LENGTH:].
+//	Set state.shard_committees_at_slots[EPOCH_LENGTH:] =
+//  	get_new_shuffling(state.latest_randao_mixes[(state.slot - EPOCH_LENGTH) %
+//  	LATEST_RANDAO_MIXES_LENGTH], state.validator_registry, next_start_shard)
+//  	where next_start_shard = (state.shard_committees_at_slots[-1][-1].shard + 1) % SHARD_COUNT.
+func ProcessValidatorRegistry(
+	state *pb.BeaconState) (*pb.BeaconState, error) {
+
+	epochLength := params.BeaconConfig().EpochLength
+	randaoMixesLength := params.BeaconConfig().LatestRandaoMixesLength
+	shardCount := params.BeaconConfig().ShardCount
+	lastShardAndCommitteesAtSlots := len(state.ShardAndCommitteesAtSlots) - 1
+	lastCommiteeFromLastSlot := len(state.ShardAndCommitteesAtSlots[len(state.ShardAndCommitteesAtSlots)-1].ArrayShardAndCommittee)
+	nextStartShard := state.ShardAndCommitteesAtSlots[lastShardAndCommitteesAtSlots].ArrayShardAndCommittee[lastCommiteeFromLastSlot].Shard +
+		1%shardCount
+
+	var randaoHash32 [32]byte
+	copy(randaoHash32[:], state.LatestRandaoMixesHash32S[(state.Slot-epochLength)%randaoMixesLength])
+
+	state.ValidatorRegistryLastChangeSlot = state.Slot
+	state.ShardAndCommitteesAtSlots[:epochLength] = state.ShardAndCommitteesAtSlots[epochLength:]
+	var err error
+	state.ShardAndCommitteesAtSlots[epochLength:], err = validators.ShuffleValidatorRegistryToCommittees(
+		randaoHash32,
+		state.ValidatorRegistry,
+		nextStartShard,
+	)
+
+	return state, err
+}
+
+// ProcessValidatorRegistryNoUpdate processes validator registry fields,
+// without setting registry latest change slot. This only gets called if
+// validator registry update did not happen.
+//
+// Spec pseudocode definition:
+//	Set state.shard_committees_at_slots[:EPOCH_LENGTH] = state.shard_committees_at_slots[EPOCH_LENGTH:].
+//  Let epochs_since_last_registry_change = (state.slot - state.validator_registry_latest_change_slot) // EPOCH_LENGTH.
+//	Let start_shard = state.shard_committees_at_slots[0][0].shard.
+//	If epochs_since_last_registry_change is an exact power of 2, set state.shard_committees_at_slots[EPOCH_LENGTH:] =
+// 		get_new_shuffling(state.latest_randao_mixes[(state.slot - EPOCH_LENGTH) % LATEST_RANDAO_MIXES_LENGTH],
+// 		state.validator_registry, start_shard).
+func ProcessValidatorRegistryNoUpdate(
+	state *pb.BeaconState) (*pb.BeaconState, error) {
+
+	epochLength := params.BeaconConfig().EpochLength
+	randaoMixesLength := params.BeaconConfig().LatestRandaoMixesLength
+	var err error
+	var randaoHash32 [32]byte
+	copy(randaoHash32[:], state.LatestRandaoMixesHash32S[(state.Slot-epochLength)%randaoMixesLength])
+
+	state.ShardAndCommitteesAtSlots[:epochLength] = state.ShardAndCommitteesAtSlots[epochLength:]
+	epochsSinceLastRegistryChange := (state.Slot - state.ValidatorRegistryLastChangeSlot) / epochLength
+	shardShard := state.ShardAndCommitteesAtSlots[0].ArrayShardAndCommittee[0].Shard
+	if mathutil.IsPowerOf2(int(epochsSinceLastRegistryChange)) {
+		state.ShardAndCommitteesAtSlots[epochLength:], err = validators.ShuffleValidatorRegistryToCommittees(
+			randaoHash32,
+			state.ValidatorRegistry,
+			shardShard,
+		)
+	}
+
+	return state, err
 }
