@@ -206,27 +206,34 @@ func ProcessEjections(state *pb.BeaconState) (*pb.BeaconState, error) {
 func ProcessValidatorRegistry(
 	state *pb.BeaconState) (*pb.BeaconState, error) {
 
-	epochLength := params.BeaconConfig().EpochLength
+	epochLength := int(params.BeaconConfig().EpochLength)
 	randaoMixesLength := params.BeaconConfig().LatestRandaoMixesLength
 	shardCount := params.BeaconConfig().ShardCount
 	lastShardAndCommitteesAtSlots := len(state.ShardAndCommitteesAtSlots) - 1
-	lastCommiteeFromLastSlot := len(state.ShardAndCommitteesAtSlots[len(state.ShardAndCommitteesAtSlots)-1].ArrayShardAndCommittee)
-	nextStartShard := state.ShardAndCommitteesAtSlots[lastShardAndCommitteesAtSlots].ArrayShardAndCommittee[lastCommiteeFromLastSlot].Shard +
-		1%shardCount
+	lastCommiteeFromLastSlot := len(state.ShardAndCommitteesAtSlots[lastShardAndCommitteesAtSlots].ArrayShardAndCommittee) - 1
+	nextStartShard := (state.ShardAndCommitteesAtSlots[lastShardAndCommitteesAtSlots].ArrayShardAndCommittee[lastCommiteeFromLastSlot].Shard +
+		1) % shardCount
 
 	var randaoHash32 [32]byte
-	copy(randaoHash32[:], state.LatestRandaoMixesHash32S[(state.Slot-epochLength)%randaoMixesLength])
+	copy(randaoHash32[:], state.LatestRandaoMixesHash32S[(state.Slot-uint64(epochLength))%randaoMixesLength])
 
 	state.ValidatorRegistryLastChangeSlot = state.Slot
-	state.ShardAndCommitteesAtSlots[:epochLength] = state.ShardAndCommitteesAtSlots[epochLength:]
-	var err error
-	state.ShardAndCommitteesAtSlots[epochLength:], err = validators.ShuffleValidatorRegistryToCommittees(
+	for i := 0; i < epochLength; i++ {
+		state.ShardAndCommitteesAtSlots[epochLength+i] = state.ShardAndCommitteesAtSlots[i]
+	}
+	newShuffledCommittees, err := validators.ShuffleValidatorRegistryToCommittees(
 		randaoHash32,
 		state.ValidatorRegistry,
 		nextStartShard,
 	)
+	if err != nil {
+		return nil, fmt.Errorf("could not shuffle validator registry for commtitees: %v", err)
+	}
 
-	return state, err
+	for i := 0; i < epochLength; i++ {
+		state.ShardAndCommitteesAtSlots[i] = newShuffledCommittees[i]
+	}
+	return state, nil
 }
 
 // ProcessValidatorRegistryNoUpdate processes validator registry fields,
@@ -243,22 +250,28 @@ func ProcessValidatorRegistry(
 func ProcessValidatorRegistryNoUpdate(
 	state *pb.BeaconState) (*pb.BeaconState, error) {
 
-	epochLength := params.BeaconConfig().EpochLength
+	epochLength := int(params.BeaconConfig().EpochLength)
 	randaoMixesLength := params.BeaconConfig().LatestRandaoMixesLength
-	var err error
 	var randaoHash32 [32]byte
-	copy(randaoHash32[:], state.LatestRandaoMixesHash32S[(state.Slot-epochLength)%randaoMixesLength])
+	copy(randaoHash32[:], state.LatestRandaoMixesHash32S[(state.Slot-uint64(epochLength))%randaoMixesLength])
 
-	state.ShardAndCommitteesAtSlots[:epochLength] = state.ShardAndCommitteesAtSlots[epochLength:]
-	epochsSinceLastRegistryChange := (state.Slot - state.ValidatorRegistryLastChangeSlot) / epochLength
-	shardShard := state.ShardAndCommitteesAtSlots[0].ArrayShardAndCommittee[0].Shard
+	for i := 0; i < epochLength; i++ {
+		state.ShardAndCommitteesAtSlots[epochLength+i] = state.ShardAndCommitteesAtSlots[i]
+	}
+	epochsSinceLastRegistryChange := (state.Slot - state.ValidatorRegistryLastChangeSlot) / uint64(epochLength)
+	startShard := state.ShardAndCommitteesAtSlots[0].ArrayShardAndCommittee[0].Shard
 	if mathutil.IsPowerOf2(int(epochsSinceLastRegistryChange)) {
-		state.ShardAndCommitteesAtSlots[epochLength:], err = validators.ShuffleValidatorRegistryToCommittees(
+		newShuffledCommittees, err := validators.ShuffleValidatorRegistryToCommittees(
 			randaoHash32,
 			state.ValidatorRegistry,
-			shardShard,
+			startShard,
 		)
+		if err != nil {
+			return nil, fmt.Errorf("could not shuffle validator registry for commtitees: %v", err)
+		}
+		for i := 0; i < epochLength; i++ {
+			state.ShardAndCommitteesAtSlots[i] = newShuffledCommittees[i]
+		}
 	}
-
-	return state, err
+	return state, nil
 }
