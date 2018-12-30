@@ -33,3 +33,10 @@ func (p *TXPool) Stop() error {
 	log.Info("Stopping shard txpool service")
 	return nil
 }
+
+// Status always returns nil.
+// This service will be rewritten in the future so this service check is a
+// no-op for now.
+func (p *TXPool) Status() error {
+	return nil
+}
