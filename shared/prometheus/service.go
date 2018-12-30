@@ -17,47 +17,52 @@ var log = logrus.WithField("prefix", "prometheus")
 // Service provides Prometheus metrics via the /metrics route. This route will
 // show all the metrics registered with the Prometheus DefaultRegisterer.
 type Service struct {
-	server *http.Server
+	server      *http.Server
+	svcRegistry *shared.ServiceRegistry
 }
 
 // NewPrometheusService sets up a new instance for a given address host:port.
 // An empty host will match with any IP so an address like ":2121" is perfectly acceptable.
 func NewPrometheusService(addr string, svcRegistry *shared.ServiceRegistry) *Service {
+	s := &Service{svcRegistry: svcRegistry}
+
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		// Call all services in the registry.
-		// if any are not OK, write 500
-		// print the statuses of all services.
+	mux.HandleFunc("/healthz", s.healthzHandler)
 
-		statuses := svcRegistry.Statuses()
-		hasError := false
-		var buf bytes.Buffer
-		for k, v := range statuses {
-			var status string
-			if v == nil {
-				status = "OK"
-			} else {
-				hasError = true
-				status = "ERROR " + v.Error()
-			}
-			buf.WriteString(fmt.Sprintf("%s: %s\n", k, status))
-		}
+	s.server = &http.Server{Addr: addr, Handler: mux}
 
-		// Write status header
-		if hasError {
-			w.WriteHeader(http.StatusInternalServerError)
+	return s
+}
+
+func (s *Service) healthzHandler(w http.ResponseWriter, r *http.Request) {
+	// Call all services in the registry.
+	// if any are not OK, write 500
+	// print the statuses of all services.
+
+	statuses := s.svcRegistry.Statuses()
+	hasError := false
+	var buf bytes.Buffer
+	for k, v := range statuses {
+		var status string
+		if v == nil {
+			status = "OK"
 		} else {
-			w.WriteHeader(http.StatusOK)
+			hasError = true
+			status = "ERROR " + v.Error()
 		}
-
-		// Write http body
-		w.Write(buf.Bytes())
-	})
-
-	return &Service{
-		server: &http.Server{Addr: addr, Handler: mux},
+		buf.WriteString(fmt.Sprintf("%s: %s\n", k, status))
 	}
+
+	// Write status header
+	if hasError {
+		w.WriteHeader(http.StatusInternalServerError)
+	} else {
+		w.WriteHeader(http.StatusOK)
+	}
+
+	// Write http body
+	w.Write(buf.Bytes())
 }
 
 // Start the prometheus service.
