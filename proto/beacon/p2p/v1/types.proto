@@ -105,6 +105,9 @@ message ValidatorRecord {
   StatusCodes status = 5;
   uint64 latest_status_change_slot = 6;
   uint64 exit_count = 7;
+  bytes poc_commitment_hash32 = 8;
+  uint64 last_poc_change_slot = 9;
+  uint64 second_last_poc_change_slot = 10;
 
   // Deprecated fields
   // All fields must be annotated with [deprecated=true];
@@ -218,5 +221,9 @@ message ValidatorRegistryDeltaBlock {
   bytes latest_registry_delta_root_hash32 = 1;
   uint32 validator_index = 2;
   bytes pubkey = 3;
-  uint64 flag = 4;
+  enum ValidatorRegistryDeltaFlags {
+      ACTIVATION = 0;
+      EXIT = 1;
+  }
+  ValidatorRegistryDeltaFlags flag = 4;
 }
