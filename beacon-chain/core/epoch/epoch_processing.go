@@ -193,7 +193,7 @@ func ProcessEjections(state *pb.BeaconState) (*pb.BeaconState, error) {
 	return state, nil
 }
 
-// ProcessValidatorRegistry sets new validator registry fields,
+// ProcessValidatorRegistry computes and sets new validator registry fields,
 // reshuffles shard committees and returns the recomputed state.
 //
 // Spec pseudocode definition:
@@ -236,8 +236,8 @@ func ProcessValidatorRegistry(
 	return state, nil
 }
 
-// ProcessValidatorRegistryNoUpdate processes validator registry fields,
-// without setting registry latest change slot. This only gets called if
+// ProcessPartialValidatorRegistry processes the portion of validator registry
+// fields, it doesn't set registry latest change slot. This only gets called if
 // validator registry update did not happen.
 //
 // Spec pseudocode definition:
@@ -247,7 +247,7 @@ func ProcessValidatorRegistry(
 //	If epochs_since_last_registry_change is an exact power of 2, set state.shard_committees_at_slots[EPOCH_LENGTH:] =
 // 		get_new_shuffling(state.latest_randao_mixes[(state.slot - EPOCH_LENGTH) % LATEST_RANDAO_MIXES_LENGTH],
 // 		state.validator_registry, start_shard).
-func ProcessValidatorRegistryNoUpdate(
+func ProcessPartialValidatorRegistry(
 	state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	epochLength := int(params.BeaconConfig().EpochLength)

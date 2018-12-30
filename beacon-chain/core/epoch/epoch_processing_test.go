@@ -426,7 +426,7 @@ func TestProcessValidatorRegistry_ReachedUpperBound(t *testing.T) {
 	}
 }
 
-func TestProcessValidatorRegistryNoUpdate(t *testing.T) {
+func TestProcessPartialValidatorRegistry(t *testing.T) {
 	epochLength := params.BeaconConfig().EpochLength
 	shardAndCommittees := make([]*pb.ShardAndCommitteeArray, epochLength*2)
 	for i := 0; i < len(shardAndCommittees); i++ {
@@ -442,7 +442,7 @@ func TestProcessValidatorRegistryNoUpdate(t *testing.T) {
 		LatestRandaoMixesHash32S:        [][]byte{{'A'}},
 	}
 	copiedState := proto.Clone(state).(*pb.BeaconState)
-	newState, err := ProcessValidatorRegistryNoUpdate(copiedState)
+	newState, err := ProcessPartialValidatorRegistry(copiedState)
 	if err != nil {
 		t.Fatalf("Could not execute ProcessValidatorRegistryNoUpdate: %v", err)
 	}
@@ -458,7 +458,7 @@ func TestProcessValidatorRegistryNoUpdate(t *testing.T) {
 	}
 }
 
-func TestProcessValidatorRegistryNoUpdate_ReachedUpperBound(t *testing.T) {
+func TestProcessPartialValidatorRegistry_ReachedUpperBound(t *testing.T) {
 	epochLength := params.BeaconConfig().EpochLength
 	shardAndCommittees := make([]*pb.ShardAndCommitteeArray, epochLength*2)
 	for i := 0; i < len(shardAndCommittees); i++ {
@@ -479,7 +479,7 @@ func TestProcessValidatorRegistryNoUpdate_ReachedUpperBound(t *testing.T) {
 		ValidatorRegistry:               validators,
 	}
 
-	if _, err := ProcessValidatorRegistryNoUpdate(state); err == nil {
+	if _, err := ProcessPartialValidatorRegistry(state); err == nil {
 		t.Fatalf("ProcessValidatorRegistry should have failed with upperbound")
 	}
 }
