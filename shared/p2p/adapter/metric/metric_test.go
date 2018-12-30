@@ -17,7 +17,7 @@ import (
 const addr = "127.0.0.1:8989"
 
 func TestMessageMetrics(t *testing.T) {
-	service := prometheus.NewPrometheusService(addr)
+	service := prometheus.NewPrometheusService(addr, nil)
 	go service.Start()
 	defer service.Stop()
 

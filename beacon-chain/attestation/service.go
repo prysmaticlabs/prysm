@@ -61,6 +61,12 @@ func (a *Service) Stop() error {
 	return nil
 }
 
+// Status always returns nil.
+// TODO(1201): Add service health checks.
+func (a *Service) Status() error {
+	return nil
+}
+
 // IncomingAttestationFeed returns a feed that any service can send incoming p2p attestations into.
 // The attestation service will subscribe to this feed in order to relay incoming attestations.
 func (a *Service) IncomingAttestationFeed() *event.Feed {

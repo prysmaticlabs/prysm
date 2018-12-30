@@ -126,6 +126,12 @@ func (sim *Simulator) Stop() error {
 	return nil
 }
 
+// Status always returns nil. This is just a debugging/test service that does
+// not need to be monitored in production.
+func (sim *Simulator) Status() error {
+	return nil
+}
+
 func (sim *Simulator) run(slotInterval <-chan uint64) {
 	chainHdReqSub := sim.p2p.Subscribe(&pb.ChainHeadRequest{}, sim.chainHeadRequestChan)
 	blockReqSub := sim.p2p.Subscribe(&pb.BeaconBlockRequest{}, sim.blockRequestChan)
