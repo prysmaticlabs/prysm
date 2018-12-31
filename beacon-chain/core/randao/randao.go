@@ -17,6 +17,7 @@ func UpdateRandaoLayers(state *pb.BeaconState, slot uint64) (*pb.BeaconState, er
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve proposer index %v", err)
 	}
+
 	vreg[proposerIndex].RandaoLayers++
 	state.ValidatorRegistry = vreg
 	return state, nil

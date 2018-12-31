@@ -47,7 +47,6 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	if params.BeaconConfig().LatestBlockRootsLength != 8192 {
 		t.Error("LatestBlockRootsLength should be 8192 for these tests to pass")
 	}
-	latestBlockRootsLength := int(params.BeaconConfig().LatestBlockRootsLength)
 
 	if params.BeaconConfig().DepositsForChainStart != 16384 {
 		t.Error("DepositsForChainStart should be 16384 for these tests to pass")

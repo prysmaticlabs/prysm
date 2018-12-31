@@ -332,7 +332,7 @@ func (c *ChainService) receiveBlock(block *pb.BeaconBlock) error {
 
 	beaconState, err = state.ExecuteStateTransition(beaconState, block, blockRoot)
 	if err != nil {
-		return errors.New("could not execute state transition")
+		return fmt.Errorf("could not execute state transition %v", err)
 	}
 
 	if state.IsValidatorSetChange(beaconState, block.GetSlot()) {

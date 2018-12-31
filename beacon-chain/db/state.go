@@ -10,12 +10,23 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // InitializeState creates an initial genesis state for the beacon
 // node using a set of genesis validators.
 func (db *BeaconDB) InitializeState(genesisValidatorRegistry []*pb.ValidatorRecord) error {
-	beaconState, err := state.NewGenesisBeaconState(genesisValidatorRegistry)
+	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
+	for i := 0; i < len(deposits); i++ {
+		deposits[i] = &pb.Deposit{DepositData: &pb.DepositData{
+			Value: genesisValidatorRegistry[i].Balance,
+			DepositInput: &pb.DepositInput{
+				Pubkey: genesisValidatorRegistry[i].Pubkey,
+			},
+		}}
+	}
+	genesisTime := uint64(params.BeaconConfig().GenesisTime.Unix())
+	beaconState, err := state.InitialBeaconState(deposits, genesisTime, nil)
 	if err != nil {
 		return err
 	}
