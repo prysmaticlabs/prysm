@@ -147,66 +147,6 @@ func Hash(state *pb.BeaconState) ([32]byte, error) {
 	return hashutil.Hash(data), nil
 }
 
-// NewGenesisBeaconState initializes the beacon chain state for slot 0.
-func NewGenesisBeaconState(genesisValidatorRegistry []*pb.ValidatorRecord) (*pb.BeaconState, error) {
-	// We seed the genesis state with a bunch of validators to
-	// bootstrap the system.
-	var err error
-	if genesisValidatorRegistry == nil {
-		genesisValidatorRegistry = v.InitialValidatorRegistry()
-
-	}
-	// Bootstrap attester indices for slots, each slot contains an array of attester indices.
-	shardAndCommitteesForSlots, err := v.InitialShardAndCommitteesForSlots(genesisValidatorRegistry)
-	if err != nil {
-		return nil, err
-	}
-
-	// Bootstrap cross link records.
-	var crosslinks []*pb.CrosslinkRecord
-	for i := uint64(0); i < params.BeaconConfig().ShardCount; i++ {
-		crosslinks = append(crosslinks, &pb.CrosslinkRecord{
-			ShardBlockRootHash32: make([]byte, 0, 32),
-			Slot:                 0,
-		})
-	}
-
-	var latestBlockHashes [][]byte
-	for i := 0; i < 2*int(params.BeaconConfig().CycleLength); i++ {
-		latestBlockHashes = append(latestBlockHashes, make([]byte, 0, 32))
-	}
-
-	return &pb.BeaconState{
-		ValidatorRegistry:                    genesisValidatorRegistry,
-		ValidatorRegistryLastChangeSlot:      0,
-		ValidatorRegistryExitCount:           0,
-		ValidatorRegistryDeltaChainTipHash32: make([]byte, 0, 32),
-		LatestRandaoMixesHash32S:             make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		NextSeedHash32:                       make([]byte, 0, 32),
-		ShardAndCommitteesAtSlots:            shardAndCommitteesForSlots,
-		PersistentCommittees:                 []*pbcomm.Uint32List{},
-		PersistentCommitteeReassignments:     []*pb.ShardReassignmentRecord{},
-		PreviousJustifiedSlot:                0,
-		JustifiedSlot:                        0,
-		JustificationBitfield:                0,
-		FinalizedSlot:                        0,
-		LatestCrosslinks:                     crosslinks,
-		LastStateRecalculationSlot:           0,
-		LatestBlockRootHash32S:               latestBlockHashes,
-		LatestPenalizedExitBalances:          []uint64{},
-		LatestAttestations:                   []*pb.PendingAttestationRecord{},
-		ProcessedPowReceiptRootHash32:        []byte{},
-		CandidatePowReceiptRoots:             []*pb.CandidatePoWReceiptRootRecord{},
-		GenesisTime:                          0,
-		ForkData: &pb.ForkData{
-			PreForkVersion:  params.BeaconConfig().InitialForkVersion,
-			PostForkVersion: params.BeaconConfig().InitialForkVersion,
-			ForkSlot:        params.BeaconConfig().InitialForkSlot,
-		},
-		Slot: 0,
-	}, nil
-}
-
 // CalculateNewBlockHashes builds a new slice of recent block hashes with the
 // provided block and the parent slot number.
 //
@@ -263,22 +203,4 @@ func IsValidatorSetChange(state *pb.BeaconState, slotNumber uint64) bool {
 		}
 	}
 	return true
-}
-
-// ClearAttestations removes attestations older than last state recalculation slot.
-func ClearAttestations(state *pb.BeaconState, lastStateRecalc uint64) []*pb.PendingAttestationRecord {
-	existing := state.GetLatestAttestations()
-	updatedAttestations := make([]*pb.PendingAttestationRecord, 0, len(existing))
-	for _, a := range existing {
-		if a.GetData().GetSlot() >= lastStateRecalc {
-			updatedAttestations = append(updatedAttestations, a)
-		}
-	}
-	return updatedAttestations
-}
-
-// IsCycleTransition checks if a new cycle has been reached. At that point,
-// a new state transition will occur in the beacon chain.
-func IsCycleTransition(lastRecalcSlot uint64, slotNumber uint64) bool {
-	return slotNumber >= lastRecalcSlot+params.BeaconConfig().CycleLength
 }

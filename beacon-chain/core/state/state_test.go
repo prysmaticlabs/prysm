@@ -141,9 +141,6 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	if len(state.LatestCrosslinks) != shardCount {
 		t.Error("Length of LatestCrosslinks was not correctly initialized")
 	}
-	if len(state.LatestBlockRootHash32S) != latestBlockRootsLength {
-		t.Error("Length of LatestBlockRootHash32S was not correctly initialized")
-	}
 	if !reflect.DeepEqual(state.LatestPenalizedExitBalances, []uint64{}) {
 		t.Error("LatestPenalizedExitBalances was not correctly initialized")
 	}
@@ -176,8 +173,8 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 }
 
 func TestGenesisState_HashEquality(t *testing.T) {
-	state1, _ := NewGenesisBeaconState(nil)
-	state2, _ := NewGenesisBeaconState(nil)
+	state1, _ := InitialBeaconState(nil, 0, nil)
+	state2, _ := InitialBeaconState(nil, 0, nil)
 
 	enc1, err1 := proto.Marshal(state1)
 	enc2, err2 := proto.Marshal(state2)
@@ -194,8 +191,8 @@ func TestGenesisState_HashEquality(t *testing.T) {
 }
 
 func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
-	s, _ := NewGenesisBeaconState(nil)
-	want, got := len(s.GetLatestBlockRootHash32S()), 2*int(params.BeaconConfig().CycleLength)
+	s, _ := InitialBeaconState(nil, 0, nil)
+	want, got := len(s.GetLatestBlockRootHash32S()), int(params.BeaconConfig().LatestBlockRootsLength)
 	if want != got {
 		t.Errorf("Wrong number of recent block hashes. Got: %d Want: %d", got, want)
 	}
@@ -205,35 +202,10 @@ func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
 		t.Errorf("The slice underlying array capacity is wrong. Got: %d Want: %d", got, want)
 	}
 
-	zero := make([]byte, 0, 32)
 	for _, h := range s.GetLatestBlockRootHash32S() {
-		if !bytes.Equal(h, zero) {
+		if !bytes.Equal(h, params.BeaconConfig().ZeroHash[:]) {
 			t.Errorf("Unexpected non-zero hash data: %v", h)
 		}
-	}
-}
-
-func TestUpdateAttestationsAfterRecalc(t *testing.T) {
-	state, _ := NewGenesisBeaconState(nil)
-	newAttestations := []*pb.PendingAttestationRecord{
-		{
-			Data: &pb.AttestationData{
-				Slot:  10,
-				Shard: 2,
-			},
-		},
-		{
-			Data: &pb.AttestationData{
-				Slot:  9,
-				Shard: 3,
-			},
-		},
-	}
-
-	state.LatestAttestations = newAttestations
-	newAttestations = ClearAttestations(state, 8)
-	if len(newAttestations) != 2 {
-		t.Fatalf("Updated attestations should be length 2: %d", len(newAttestations))
 	}
 }
 
@@ -280,9 +252,9 @@ func TestCalculateNewBlockHashes_DoesNotMutateData(t *testing.T) {
 		[]byte("hash"),
 	}
 
-	s, _ := NewGenesisBeaconState(nil)
+	s, _ := InitialBeaconState(nil, 0, nil)
 	copy(s.LatestBlockRootHash32S, interestingData)
-	original := make([][]byte, 2*params.BeaconConfig().CycleLength)
+	original := make([][]byte, params.BeaconConfig().LatestBlockRootsLength)
 	copy(original, s.LatestBlockRootHash32S)
 
 	if !reflect.DeepEqual(s.GetLatestBlockRootHash32S(), original) {
