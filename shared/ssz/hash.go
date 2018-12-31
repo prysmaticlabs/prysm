@@ -15,11 +15,11 @@ const sszChunkSize = 128
 
 // Hashable defines the interface for supporting tree-hash function.
 type Hashable interface {
-	HashSSZ() ([32]byte, error)
+	TreeHashSSZ() ([32]byte, error)
 }
 
-// Hash calculate tree-hash result for input value.
-func Hash(val interface{}) ([32]byte, error) {
+// TreeHash calculates tree-hash result for input value.
+func TreeHash(val interface{}) ([32]byte, error) {
 	if val == nil {
 		return [32]byte{}, newHashError("nil is not supported", nil)
 	}

@@ -205,7 +205,7 @@ func runMerkleHashTests(t *testing.T, merkleHash func([][]byte) ([]byte, error))
 
 func TestHash(t *testing.T) {
 	runHashTests(t, func(val interface{}) ([32]byte, error) {
-		return Hash(val)
+		return TreeHash(val)
 	})
 }
 

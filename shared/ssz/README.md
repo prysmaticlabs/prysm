@@ -24,10 +24,10 @@ type Decodable interface {
 ```
 
 ### Hashable
-A type is Hashable if it implements `HashSSZ()`.
+A type is Hashable if it implements `TreeHashSSZ()`.
 ```go
 type Hashable interface {
-	HashSSZ() ([32]byte, error)
+	TreeHashSSZ() ([32]byte, error)
 }
 ```
 
@@ -56,7 +56,7 @@ func Decode(r io.Reader, val interface{}) error
 ### Hashing function
 ```go
 // Tree-hash data into [32]byte
-func Hash(val interface{}) ([32]byte, error)
+func TreeHash(val interface{}) ([32]byte, error)
 ````
 
 ## Usage
@@ -103,10 +103,10 @@ if encodeSize, err = e1.EncodeSSZSize(); err != nil {
 // encodeSize becomes 13
 ```
 
-To calculate hash of the object
+To calculate tree-hash of the object
 ```go
 var hash [32]byte
-if hash, err = e1.HashSSZ(); err != nil {
+if hash, err = e1.TreeHashSSZ(); err != nil {
     return fmt.Errorf("failed to hash: %v", err)
 }
 // hash stores the hashing result

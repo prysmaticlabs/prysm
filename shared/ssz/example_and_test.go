@@ -27,8 +27,8 @@ func (e *exampleStruct1) DecodeSSZ(r io.Reader) error {
 	return Decode(r, e)
 }
 
-func (e *exampleStruct1) HashSSZ() ([32]byte, error) {
-	return Hash(e)
+func (e *exampleStruct1) TreeHashSSZ() ([32]byte, error) {
+	return TreeHash(e)
 }
 
 type exampleStruct2 struct {
@@ -62,8 +62,8 @@ func (e *exampleStruct2) DecodeSSZ(r io.Reader) error {
 	return nil
 }
 
-func (e *exampleStruct2) HashSSZ() ([32]byte, error) {
-	return Hash(exampleStruct2Export{
+func (e *exampleStruct2) TreeHashSSZ() ([32]byte, error) {
+	return TreeHash(exampleStruct2Export{
 		e.Field2,
 	})
 }
@@ -98,7 +98,7 @@ func TestEncodeDecodeExampleStruct1(t *testing.T) {
 		t.Error("wrong encode size calculation result")
 	}
 
-	hash, err := e1.HashSSZ()
+	hash, err := e1.TreeHashSSZ()
 	if err != nil {
 		t.Fatalf("failed to hash: %v", err)
 	}
@@ -137,7 +137,7 @@ func TestEncodeDecodeExampleStruct2(t *testing.T) {
 		t.Error("wrong encode size calculation result")
 	}
 
-	hash, err := e1.HashSSZ()
+	hash, err := e1.TreeHashSSZ()
 	if err != nil {
 		t.Fatalf("failed to hash: %v", err)
 	}
