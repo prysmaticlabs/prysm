@@ -652,7 +652,7 @@ func ProcessDeposit(
 	withdrawalCredentials []byte,
 	randaoCommitment []byte,
 	pocCommitment []byte,
-) (*pb.BeaconState, int, error) {
+) (*pb.BeaconState, uint32, error) {
 	// TODO(#258): Validate proof of possession using BLS.
 	var publicKeyExists bool
 	var existingValidatorIndex int
@@ -694,7 +694,7 @@ func ProcessDeposit(
 			state.ValidatorRegistry[idx] = newValidator
 			state.ValidatorBalances[idx] = deposit
 		}
-		return state, idx, nil
+		return state, uint32(idx), nil
 	}
 	if !bytes.Equal(
 		state.ValidatorRegistry[existingValidatorIndex].WithdrawalCredentials,
@@ -707,7 +707,7 @@ func ProcessDeposit(
 		)
 	}
 	state.ValidatorBalances[existingValidatorIndex] += deposit
-	return state, existingValidatorIndex, nil
+	return state, uint32(existingValidatorIndex), nil
 }
 
 // minEmptyValidatorIndex returns the lowest validator index which the balance is 0
