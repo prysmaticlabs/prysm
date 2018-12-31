@@ -21,5 +21,4 @@ library SafeMath {
         require(b != 0, "The second parameter can not be zero");
         return a % b;
     }
-
 }
