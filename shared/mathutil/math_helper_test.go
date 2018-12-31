@@ -76,7 +76,7 @@ func TestCeilDiv8(t *testing.T) {
 
 func TestIsPowerOf2(t *testing.T) {
 	tests := []struct {
-		a int
+		a uint64
 		b bool
 	}{
 		{

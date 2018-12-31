@@ -26,6 +26,6 @@ func CeilDiv8(n int) int {
 
 // IsPowerOf2 returns true if n is an
 // exact power of two. False otherwise.
-func IsPowerOf2(n int) bool {
+func IsPowerOf2(n uint64) bool {
 	return (n & (n - 1)) == 0
 }
