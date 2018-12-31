@@ -409,9 +409,10 @@ func TestProcessValidatorRegistry_ReachedUpperBound(t *testing.T) {
 			ArrayShardAndCommittee: []*pb.ShardAndCommittee{{Shard: uint64(i)}},
 		}
 	}
-	validators := make([]*pb.ValidatorRecord, 1<<params.BeaconConfig().MaxNumLog2Validators)
+	validators := make([]*pb.ValidatorRecord, 1<<params.BeaconConfig().MaxNumLog2Validators-1)
+	validator := &pb.ValidatorRecord{Status: pb.ValidatorRecord_ACTIVE}
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.ValidatorRecord{Status: pb.ValidatorRecord_ACTIVE}
+		validators[i] = validator
 	}
 	state := &pb.BeaconState{
 		Slot:                            64,
@@ -466,10 +467,10 @@ func TestProcessPartialValidatorRegistry_ReachedUpperBound(t *testing.T) {
 			ArrayShardAndCommittee: []*pb.ShardAndCommittee{{Shard: uint64(i)}},
 		}
 	}
-
-	validators := make([]*pb.ValidatorRecord, 1<<params.BeaconConfig().MaxNumLog2Validators)
+	validators := make([]*pb.ValidatorRecord, 1<<params.BeaconConfig().MaxNumLog2Validators-1)
+	validator := &pb.ValidatorRecord{Status: pb.ValidatorRecord_ACTIVE}
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.ValidatorRecord{Status: pb.ValidatorRecord_ACTIVE}
+		validators[i] = validator
 	}
 	state := &pb.BeaconState{
 		Slot:                            64,
