@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"reflect"
-	"sort"
 	"strings"
 	"sync"
 )
@@ -87,7 +86,7 @@ type field struct {
 	encDec *encoderDecoder
 }
 
-func sortedStructFields(typ reflect.Type) (fields []field, err error) {
+func structFields(typ reflect.Type) (fields []field, err error) {
 	for i := 0; i < typ.NumField(); i++ {
 		f := typ.Field(i)
 		if strings.Contains(f.Name, "XXX") {
@@ -100,8 +99,5 @@ func sortedStructFields(typ reflect.Type) (fields []field, err error) {
 		name := f.Name
 		fields = append(fields, field{i, name, encDec})
 	}
-	sort.SliceStable(fields, func(i, j int) bool {
-		return fields[i].name < fields[j].name
-	})
 	return fields, nil
 }

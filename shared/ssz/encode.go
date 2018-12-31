@@ -226,7 +226,7 @@ func makeSliceEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 }
 
 func makeStructEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
-	fields, err := sortedStructFields(typ)
+	fields, err := structFields(typ)
 	if err != nil {
 		return nil, nil, err
 	}
