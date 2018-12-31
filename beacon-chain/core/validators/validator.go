@@ -337,7 +337,7 @@ func NewRegistryDeltaChainTip(
 // but they can be slashed at most MAX_DEPOSIT at any time.
 //
 // Spec pseudocode definition:
-//   def get_effective_balance(state: State, index: int)Attesters -> int:
+//   def get_effective_balance(state: State, index: int) -> int:
 //     """
 //     Returns the effective balance (also known as "balance at stake") for a ``validator`` with the given ``index``.
 //     """
