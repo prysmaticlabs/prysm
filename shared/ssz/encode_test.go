@@ -85,11 +85,11 @@ var encodeTests = []encTest{
 
 	// struct
 	{val: simpleStruct{}, output: "00000003 00 0000"},
-	{val: simpleStruct{B: 2, A: 1}, output: "00000003 01 0002"},
+	{val: simpleStruct{B: 2, A: 1}, output: "00000003 0002 01"},
 	{val: outerStruct{
 		V:    3,
 		SubV: innerStruct{V: 6},
-	}, output: "00000007 00000002 0006 03"},
+	}, output: "00000007 03 00000002 0006"},
 
 	// slice + struct
 	{val: arrayStruct{
@@ -97,30 +97,30 @@ var encodeTests = []encTest{
 			{B: 2, A: 1},
 			{B: 4, A: 3},
 		},
-	}, output: "00000012 0000000E 00000003 010002 00000003 030004"},
+	}, output: "00000012 0000000E 00000003 000201 00000003 000403"},
 	{val: []outerStruct{
 		{V: 3, SubV: innerStruct{V: 6}},
 		{V: 5, SubV: innerStruct{V: 7}},
-	}, output: "00000016 00000007 00000002 0006 03 00000007 00000002 0007 05"},
+	}, output: "00000016 00000007 03 00000002 0006 00000007 05 00000002 0007"},
 
 	// pointer
-	{val: &simpleStruct{B: 2, A: 1}, output: "00000003 01 0002"},
-	{val: pointerStruct{P: &simpleStruct{B: 2, A: 1}, V: 3}, output: "00000008 00000003 01 0002 03"},
-	{val: &pointerStruct{P: &simpleStruct{B: 2, A: 1}, V: 3}, output: "00000008 00000003 01 0002 03"},
+	{val: &simpleStruct{B: 2, A: 1}, output: "00000003 0002 01"},
+	{val: pointerStruct{P: &simpleStruct{B: 2, A: 1}, V: 3}, output: "00000008 00000003 0002 01 03"},
+	{val: &pointerStruct{P: &simpleStruct{B: 2, A: 1}, V: 3}, output: "00000008 00000003 0002 01 03"},
 	{val: &[]uint8{1, 2, 3, 4}, output: "00000004 01020304"},
 	{val: &[]uint64{1, 2}, output: "00000010 0000000000000001 0000000000000002"},
 	{val: []*simpleStruct{
 		{B: 2, A: 1},
 		{B: 4, A: 3},
-	}, output: "0000000E 00000003 01 0002 00000003 03 0004"},
+	}, output: "0000000E 00000003 0002 01 00000003 0004 03"},
 	{val: [2]*simpleStruct{
 		{B: 2, A: 1},
 		{B: 4, A: 3},
-	}, output: "0000000E 00000003 01 0002 00000003 03 0004"},
+	}, output: "0000000E 00000003 0002 01 00000003 0004 03"},
 	{val: []*pointerStruct{
 		{P: &simpleStruct{B: 2, A: 1}, V: 0},
 		{P: &simpleStruct{B: 4, A: 3}, V: 1},
-	}, output: "00000018 00000008 00000003 01 0002 00 00000008 00000003 03 0004 01"},
+	}, output: "00000018 00000008 00000003 0002 01 00 00000008 00000003 0004 03 01"},
 
 	// error: nil pointer
 	{val: nil, error: "encode error: nil is not supported for input type <nil>"},
