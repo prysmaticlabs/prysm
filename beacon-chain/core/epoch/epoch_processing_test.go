@@ -394,7 +394,7 @@ func TestProcessValidatorRegistry(t *testing.T) {
 			state.Slot, newState.ValidatorRegistryLastChangeSlot)
 	}
 
-	if newState.ShardAndCommitteesAtSlots[epochLength].ArrayShardAndCommittee[0].Shard != state.ShardAndCommitteesAtSlots[0].ArrayShardAndCommittee[0].Shard {
+	if newState.ShardAndCommitteesAtSlots[0].ArrayShardAndCommittee[0].Shard != state.ShardAndCommitteesAtSlots[epochLength].ArrayShardAndCommittee[0].Shard {
 		t.Errorf("Incorrect rotation for shard committees, wanted shard: %d, got shard: %d",
 			state.ShardAndCommitteesAtSlots[0].ArrayShardAndCommittee[0].Shard,
 			newState.ShardAndCommitteesAtSlots[epochLength].ArrayShardAndCommittee[0].Shard)
@@ -451,7 +451,7 @@ func TestProcessPartialValidatorRegistry(t *testing.T) {
 			state.ValidatorRegistryLastChangeSlot, newState.ValidatorRegistryLastChangeSlot)
 	}
 
-	if newState.ShardAndCommitteesAtSlots[epochLength].ArrayShardAndCommittee[0].Shard != state.ShardAndCommitteesAtSlots[0].ArrayShardAndCommittee[0].Shard {
+	if newState.ShardAndCommitteesAtSlots[0].ArrayShardAndCommittee[0].Shard != state.ShardAndCommitteesAtSlots[epochLength].ArrayShardAndCommittee[0].Shard {
 		t.Errorf("Incorrect rotation for shard committees, wanted shard: %d, got shard: %d",
 			state.ShardAndCommitteesAtSlots[0].ArrayShardAndCommittee[0].Shard,
 			newState.ShardAndCommitteesAtSlots[epochLength].ArrayShardAndCommittee[0].Shard)
