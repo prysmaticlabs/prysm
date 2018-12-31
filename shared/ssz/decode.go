@@ -242,7 +242,7 @@ func makeArrayDecoder(typ reflect.Type) (decoder, error) {
 }
 
 func makeStructDecoder(typ reflect.Type) (decoder, error) {
-	fields, err := sortedStructFields(typ)
+	fields, err := structFields(typ)
 	if err != nil {
 		return nil, err
 	}
