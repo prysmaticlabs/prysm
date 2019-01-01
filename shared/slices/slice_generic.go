@@ -1,17 +1,16 @@
 package slices
 
 // Type is the placeholder type that indicates a generic value.
-// when executed variables of this type will be replaced with
+// when executed variables of this type will be replaced with,
 // references to the specific types.
-// var GenericType generic.Type
 type Type interface{}
 
-// GenericItem of is of type empty interface in order
+// GenericItem is of type empty interface in order
 // to hold any values.
 type GenericItem Type
 
-// GenericIntersection returns a new set with elements that exist in
-// both sets
+// GenericIntersection returns a new set with elements that are common in
+// both sets a and b.
 func GenericIntersection(a, b []GenericItem) []GenericItem {
 	set := make([]GenericItem, 0)
 	m := make(map[GenericItem]bool)
@@ -28,7 +27,7 @@ func GenericIntersection(a, b []GenericItem) []GenericItem {
 }
 
 // GenericUnion returns a new set with elements from both
-// the given sets
+// the given sets a and b.
 func GenericUnion(a, b []GenericItem) []GenericItem {
 	set := make([]GenericItem, 0)
 	m := make(map[GenericItem]bool)
@@ -46,7 +45,7 @@ func GenericUnion(a, b []GenericItem) []GenericItem {
 }
 
 // GenericNot returns new set with elements which of a which are not in
-// set b
+// set b.
 func GenericNot(a, b []GenericItem) []GenericItem {
 	set := make([]GenericItem, 0)
 	m := make(map[GenericItem]bool)
