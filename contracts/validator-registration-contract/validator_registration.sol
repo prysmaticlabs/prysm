@@ -1,6 +1,6 @@
 pragma solidity ^0.5.1;
 
-
+import "./SafeMath.sol";
 contract ValidatorRegistration {
 
     event HashChainValue(
@@ -26,6 +26,9 @@ contract ValidatorRegistration {
     mapping (uint => bytes) public receiptTree;
     uint public fullDepositCount;
     uint public totalDepositCount;
+
+    using SafeMath for uint256;
+
 
     // When users wish to become a validator by moving ETH from
     // 1.0 chian to the 2.0 chain, they should call this function
@@ -73,7 +76,7 @@ contract ValidatorRegistration {
             // When ChainStart log publishes, beacon chain node initializes the chain and use timestampDayBoundry
             // as genesis time.
             if (fullDepositCount == DEPOSITS_FOR_CHAIN_START) {
-                uint timestampDayBoundry = block.timestamp - block.timestamp % SECONDS_PER_DAY + SECONDS_PER_DAY;
+                uint timestampDayBoundry = block.timestamp.sub(block.timestamp).mod(SECONDS_PER_DAY).add(SECONDS_PER_DAY);
                 bytes memory timestampDayBoundryBytes = abi.encodePacked(uint64(timestampDayBoundry));
                 emit ChainStart(receiptTree[1], timestampDayBoundryBytes);
             }
