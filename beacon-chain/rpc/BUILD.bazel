@@ -34,6 +34,7 @@ go_test(
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/beacon/rpc/v1:go_default_library",
         "//shared/event:go_default_library",
+        "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",

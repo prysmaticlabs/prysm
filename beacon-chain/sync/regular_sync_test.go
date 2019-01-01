@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"io/ioutil"
+	"strconv"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -13,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -107,7 +109,16 @@ func TestProcessBlock(t *testing.T) {
 
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	if err := db.InitializeState(nil); err != nil {
+	validators := make([]*pb.ValidatorRecord, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.ValidatorRecord{
+			Balance: params.BeaconConfig().MaxDepositInGwei,
+			Pubkey:  []byte(strconv.Itoa(i)),
+			RandaoCommitmentHash32: []byte{41, 13, 236, 217, 84, 139, 98, 168, 214, 3, 69,
+				169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
+		}
+	}
+	if err := db.InitializeState(validators); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -176,7 +187,16 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
-	if err := db.InitializeState(nil); err != nil {
+	validators := make([]*pb.ValidatorRecord, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.ValidatorRecord{
+			Balance: params.BeaconConfig().MaxDepositInGwei,
+			Pubkey:  []byte(strconv.Itoa(i)),
+			RandaoCommitmentHash32: []byte{41, 13, 236, 217, 84, 139, 98, 168, 214, 3, 69,
+				169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
+		}
+	}
+	if err := db.InitializeState(validators); err != nil {
 		t.Fatal(err)
 	}
 
