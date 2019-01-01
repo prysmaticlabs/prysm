@@ -5,8 +5,10 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -58,12 +60,23 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	maxDeposit := params.BeaconConfig().MaxDepositInGwei
 	var deposits []*pb.Deposit
 	for i := 0; i < depositsForChainStart; i++ {
-		deposits = append(deposits, &pb.Deposit{MerkleBranchHash32S: [][]byte{{1}, {2}, {3}}, MerkleTreeIndex: 0,
-			DepositData: &pb.DepositData{Value: maxDeposit, DepositInput: &pb.DepositInput{
+		depositData, err := b.EncodeBlockDepositData(
+			&pb.DepositInput{
 				Pubkey: []byte(strconv.Itoa(i)), ProofOfPossession: []byte{'B'},
 				WithdrawalCredentialsHash32: []byte{'C'}, RandaoCommitmentHash32: []byte{'D'},
 				PocCommitment: []byte{'D'},
-			}}})
+			},
+			maxDeposit,
+			time.Now().Unix(),
+		)
+		if err != nil {
+			t.Fatalf("Could not encode deposit data: %v", err)
+		}
+		deposits = append(deposits, &pb.Deposit{
+			MerkleBranchHash32S: [][]byte{{1}, {2}, {3}},
+			MerkleTreeIndex:     0,
+			DepositData:         depositData,
+		})
 	}
 
 	state, err := InitialBeaconState(

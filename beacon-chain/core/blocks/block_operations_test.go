@@ -1279,7 +1279,7 @@ func TestProcessBlockValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.
 		WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		ProofOfPossession:           []byte{},
 		RandaoCommitmentHash32:      []byte{0},
-		PocCommitmentHash32:         []byte{0},
+		PocCommitment:               []byte{0},
 	}
 	wBuf := new(bytes.Buffer)
 	if err := ssz.Encode(wBuf, depositInput); err != nil {
@@ -1367,7 +1367,7 @@ func TestProcessBlockValidatorDeposits_ProcessCorrectly(t *testing.T) {
 		WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		ProofOfPossession:           []byte{},
 		RandaoCommitmentHash32:      []byte{0},
-		PocCommitmentHash32:         []byte{0},
+		PocCommitment:               []byte{0},
 	}
 	wBuf := new(bytes.Buffer)
 	if err := ssz.Encode(wBuf, depositInput); err != nil {

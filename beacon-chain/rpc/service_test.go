@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	ptypes "github.com/gogo/protobuf/types"
@@ -123,13 +124,16 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
+	depositData, err := b.EncodeBlockDepositData(
+		&pbp2p.DepositInput{Pubkey: []byte{'A'}},
+		params.BeaconConfig().MaxDepositInGwei,
+		time.Now().Unix(),
+	)
+	if err != nil {
+		t.Fatalf("Could not encode deposit input: %v", err)
+	}
 	deposit := []*pbp2p.Deposit{
-		{DepositData: &pbp2p.DepositData{
-			Value: params.BeaconConfig().MaxDepositInGwei,
-			DepositInput: &pbp2p.DepositInput{
-				Pubkey: []byte{'A'},
-			},
-		}},
+		{DepositData: depositData},
 	}
 	beaconState, err := state.InitialBeaconState(deposit, 0, nil)
 	if err != nil {
@@ -180,14 +184,21 @@ func TestProposeBlock(t *testing.T) {
 
 	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
-		deposits[i] = &pbp2p.Deposit{DepositData: &pbp2p.DepositData{
-			Value: params.BeaconConfig().MaxDepositInGwei,
-			DepositInput: &pbp2p.DepositInput{
+		depositData, err := b.EncodeBlockDepositData(
+			&pbp2p.DepositInput{
 				Pubkey: []byte(strconv.Itoa(i)),
 				RandaoCommitmentHash32: []byte{41, 13, 236, 217, 84, 139, 98, 168, 214, 3, 69,
 					169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
 			},
-		}}
+			params.BeaconConfig().MaxDepositInGwei,
+			time.Now().Unix(),
+		)
+		if err != nil {
+			t.Fatalf("Could not encode deposit input: %v", err)
+		}
+		deposits[i] = &pbp2p.Deposit{
+			DepositData: depositData,
+		}
 	}
 
 	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
@@ -326,17 +337,21 @@ func TestValidatorSlotAndResponsibility(t *testing.T) {
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-
-	deposit := []*pbp2p.Deposit{
-		{DepositData: &pbp2p.DepositData{
-			Value: params.BeaconConfig().MaxDepositInGwei,
-			DepositInput: &pbp2p.DepositInput{
-				Pubkey: []byte{'A'},
-			},
-		}},
+	depositData, err := b.EncodeBlockDepositData(
+		&pbp2p.DepositInput{
+			Pubkey: []byte{'A'},
+		},
+		params.BeaconConfig().MaxDepositInGwei,
+		time.Now().Unix(),
+	)
+	if err != nil {
+		t.Fatalf("Could not encode deposit input: %v", err)
+	}
+	deposits := []*pbp2p.Deposit{
+		{DepositData: depositData},
 	}
 
-	beaconState, err := state.InitialBeaconState(deposit, 0, nil)
+	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -367,16 +382,20 @@ func TestValidatorIndex(t *testing.T) {
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-
-	deposit := []*pbp2p.Deposit{
-		{DepositData: &pbp2p.DepositData{
-			Value: params.BeaconConfig().MaxDepositInGwei,
-			DepositInput: &pbp2p.DepositInput{
-				Pubkey: []byte{'A'},
-			},
-		}},
+	depositData, err := b.EncodeBlockDepositData(
+		&pbp2p.DepositInput{
+			Pubkey: []byte{'A'},
+		},
+		params.BeaconConfig().MaxDepositInGwei,
+		time.Now().Unix(),
+	)
+	if err != nil {
+		t.Fatalf("Could not encode deposit input: %v", err)
 	}
-	beaconState, err := state.InitialBeaconState(deposit, 0, nil)
+	deposits := []*pbp2p.Deposit{
+		{DepositData: depositData},
+	}
+	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -407,16 +426,20 @@ func TestValidatorShardID(t *testing.T) {
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-
-	deposit := []*pbp2p.Deposit{
-		{DepositData: &pbp2p.DepositData{
-			Value: params.BeaconConfig().MaxDepositInGwei,
-			DepositInput: &pbp2p.DepositInput{
-				Pubkey: []byte{'A'},
-			},
-		}},
+	depositData, err := b.EncodeBlockDepositData(
+		&pbp2p.DepositInput{
+			Pubkey: []byte{'A'},
+		},
+		params.BeaconConfig().MaxDepositInGwei,
+		time.Now().Unix(),
+	)
+	if err != nil {
+		t.Fatalf("Could not encode deposit input: %v", err)
 	}
-	beaconState, err := state.InitialBeaconState(deposit, 0, nil)
+	deposits := []*pbp2p.Deposit{
+		{DepositData: depositData},
+	}
+	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -448,16 +471,20 @@ func TestValidatorAssignments(t *testing.T) {
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-
-	deposit := []*pbp2p.Deposit{
-		{DepositData: &pbp2p.DepositData{
-			Value: params.BeaconConfig().MaxDepositInGwei,
-			DepositInput: &pbp2p.DepositInput{
-				Pubkey: []byte{'A'},
-			},
-		}},
+	depositData, err := b.EncodeBlockDepositData(
+		&pbp2p.DepositInput{
+			Pubkey: []byte{'A'},
+		},
+		params.BeaconConfig().MaxDepositInGwei,
+		time.Now().Unix(),
+	)
+	if err != nil {
+		t.Fatalf("Could not encode deposit input: %v", err)
 	}
-	beaconState, err := state.InitialBeaconState(deposit, 0, nil)
+	deposits := []*pbp2p.Deposit{
+		{DepositData: depositData},
+	}
+	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -494,7 +521,7 @@ func TestValidatorAssignments(t *testing.T) {
 		<-exitRoutine
 	}(t)
 
-	beaconState, err = state.InitialBeaconState(deposit, 0, nil)
+	beaconState, err = state.InitialBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
