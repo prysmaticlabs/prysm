@@ -18,48 +18,46 @@ func TestContainsValidator(t *testing.T) {
 
 func TestIsDoubleVote(t *testing.T) {
 	att1 := &pb.AttestationData{
-		Slot: 1,
+		Slot: 0,
 	}
 
 	att2 := &pb.AttestationData{
-		Slot: 2,
+		Slot: 64,
 	}
 
 	if IsDoubleVote(att1, att2) {
-		t.Error("It is a double vote despite the attestations being on different slots")
+		t.Error("It is a double vote despite the attestations being on different epochs")
 	}
 
 	att2.Slot = 1
 
 	if !IsDoubleVote(att1, att2) {
-		t.Error("It is not a double vote despite the attestations being on the same slot")
+		t.Error("It is not a double vote despite the attestations being on the same epoch")
 	}
 }
 
 func TestIsSurroundVote(t *testing.T) {
 	att1 := &pb.AttestationData{
-		Slot:          2,
-		JustifiedSlot: 1,
+		Slot:          0,
+		JustifiedSlot: 0,
 	}
 
 	att2 := &pb.AttestationData{
-		Slot:          1,
-		JustifiedSlot: 1,
+		Slot:          0,
+		JustifiedSlot: 0,
 	}
 
 	if IsSurroundVote(att1, att2) {
-		t.Error("It is a surround vote despite both attestations having the same justified slot")
+		t.Error("It is a surround vote despite both attestations having the same epoch")
 	}
-
-	att2.Slot++
 
 	if IsSurroundVote(att1, att2) {
-		t.Error("It is a surround vote despite both attestations having the same slot.")
+		t.Error("It is a surround vote despite both attestations being on the same epoch")
 	}
 
-	att1.Slot = 4
-	att2.JustifiedSlot = 2
-	att2.Slot++
+	att1.Slot = 192
+	att2.JustifiedSlot = 64
+	att2.Slot = 128
 
 	if !IsSurroundVote(att1, att2) {
 		t.Error("It is not a surround vote despite all the surround conditions being fulfilled")

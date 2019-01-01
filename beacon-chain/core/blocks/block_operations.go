@@ -571,7 +571,7 @@ func ProcessBlockValidatorDeposits(
 	var depositInput *pb.DepositInput
 	for idx, deposit := range deposits {
 		depositData := deposit.GetDepositData()
-		depositInput, err = decodeDepositInput(depositData)
+		depositInput, err = DecodeDepositInput(depositData)
 		if err != nil {
 			return nil, fmt.Errorf("could not decode deposit input: %v", err)
 		}
@@ -582,14 +582,14 @@ func ProcessBlockValidatorDeposits(
 		// depositTimestamp [8]byte.
 		depositValue := depositData[len(depositData)-16 : len(depositData)-8]
 		// We then mutate the beacon state with the verified validator deposit.
-		beaconState, err = v.ProcessDeposit(
+		beaconState, _, err = v.ProcessDeposit(
 			beaconState,
 			depositInput.GetPubkey(),
 			binary.BigEndian.Uint64(depositValue),
 			depositInput.GetProofOfPossession(),
 			depositInput.GetWithdrawalCredentialsHash32(),
 			depositInput.GetRandaoCommitmentHash32(),
-			depositInput.GetPocCommitmentHash32(),
+			depositInput.GetPocCommitment(),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could process deposit into beacon state: %v", err)
@@ -598,7 +598,10 @@ func ProcessBlockValidatorDeposits(
 	return beaconState, nil
 }
 
-func decodeDepositInput(depositData []byte) (*pb.DepositInput, error) {
+// DecodeDepositInput unmarshales a depositData byte slice into
+// a proto *pb.DepositInput by using the Simple Serialize (SSZ)
+// algorithm.
+func DecodeDepositInput(depositData []byte) (*pb.DepositInput, error) {
 	// Last 16 bytes of deposit data are 8 bytes for value
 	// and 8 bytes for timestamp. Everything before that is a
 	// Simple Serialized deposit input value.

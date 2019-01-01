@@ -84,48 +84,48 @@ var decodeTests = []decodeTest{
 
 	// struct
 	{input: "00000003 00 0000", ptr: new(simpleStruct), value: simpleStruct{}},
-	{input: "00000003 01 0002", ptr: new(simpleStruct), value: simpleStruct{B: 2, A: 1}},
-	{input: "00000007 00000002 0006 03", ptr: new(outerStruct),
+	{input: "00000003 0002 01", ptr: new(simpleStruct), value: simpleStruct{B: 2, A: 1}},
+	{input: "00000007 03 00000002 0006", ptr: new(outerStruct),
 		value: outerStruct{
 			V:    3,
 			SubV: innerStruct{6},
 		}},
 
 	// slice + struct
-	{input: "00000012 0000000E 00000003 010002 00000003 030004", ptr: new(arrayStruct),
+	{input: "00000012 0000000E 00000003 000201 00000003 000403", ptr: new(arrayStruct),
 		value: arrayStruct{
 			V: []simpleStruct{
 				{B: 2, A: 1},
 				{B: 4, A: 3},
 			},
 		}},
-	{input: "00000016 00000007 00000002 0006 03 00000007 00000002 0007 05", ptr: new([]outerStruct),
+	{input: "00000016 00000007 03 00000002 0006 00000007 05 00000002 0007", ptr: new([]outerStruct),
 		value: []outerStruct{
 			{V: 3, SubV: innerStruct{V: 6}},
 			{V: 5, SubV: innerStruct{V: 7}},
 		}},
 
 	// pointer
-	{input: "00000003 01 0002", ptr: new(*simpleStruct), value: &simpleStruct{B: 2, A: 1}},
-	{input: "00000008 00000003 01 0002 03", ptr: new(pointerStruct),
+	{input: "00000003 0002 01", ptr: new(*simpleStruct), value: &simpleStruct{B: 2, A: 1}},
+	{input: "00000008 00000003 0002 01 03", ptr: new(pointerStruct),
 		value: pointerStruct{P: &simpleStruct{B: 2, A: 1}, V: 3}},
-	{input: "00000008 00000003 01 0002 03", ptr: new(*pointerStruct),
+	{input: "00000008 00000003 0002 01 03", ptr: new(*pointerStruct),
 		value: &pointerStruct{P: &simpleStruct{B: 2, A: 1}, V: 3}},
 	{input: "00000004 01020304", ptr: new(*[]uint8), value: &[]uint8{1, 2, 3, 4}},
 	{input: "00000010 0000000000000001 0000000000000002", ptr: new(*[]uint64), value: &[]uint64{1, 2}},
-	{input: "0000000E 00000003 01 0002 00000003 03 0004", ptr: new([]*simpleStruct),
+	{input: "0000000E 00000003 0002 01 00000003 0004 03", ptr: new([]*simpleStruct),
 		value: []*simpleStruct{
 			{B: 2, A: 1},
 			{B: 4, A: 3},
 		},
 	},
-	{input: "0000000E 00000003 01 0002 00000003 03 0004", ptr: new([2]*simpleStruct),
+	{input: "0000000E 00000003 0002 01 00000003 0004 03", ptr: new([2]*simpleStruct),
 		value: [2]*simpleStruct{
 			{B: 2, A: 1},
 			{B: 4, A: 3},
 		},
 	},
-	{input: "00000018 00000008 00000003 01 0002 00 00000008 00000003 03 0004 01", ptr: new([]*pointerStruct),
+	{input: "00000018 00000008 00000003 0002 01 00 00000008 00000003 0004 03 01", ptr: new([]*pointerStruct),
 		value: []*pointerStruct{
 			{P: &simpleStruct{B: 2, A: 1}, V: 0},
 			{P: &simpleStruct{B: 4, A: 3}, V: 1},
@@ -169,7 +169,7 @@ var decodeTests = []decodeTest{
 	{input: "000001", ptr: new(simpleStruct), error: "decode error: failed to decode header of struct: can only read 3 bytes while expected to read 4 bytes for output type ssz.simpleStruct"},
 
 	// error: struct: wrong input
-	{input: "00000003 01 02", ptr: new(simpleStruct), error: "decode error: failed to decode field of slice: can only read 1 bytes while expected to read 2 bytes for output type ssz.simpleStruct"},
+	{input: "00000003 01 02", ptr: new(simpleStruct), error: "decode error: failed to decode field of slice: can only read 0 bytes while expected to read 1 bytes for output type ssz.simpleStruct"},
 }
 
 func runTests(t *testing.T, decode func([]byte, interface{}) error) {

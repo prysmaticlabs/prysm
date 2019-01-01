@@ -73,3 +73,32 @@ func TestCeilDiv8(t *testing.T) {
 		}
 	}
 }
+
+func TestIsPowerOf2(t *testing.T) {
+	tests := []struct {
+		a uint64
+		b bool
+	}{
+		{
+			a: 2,
+			b: true,
+		},
+		{
+			a: 64,
+			b: true,
+		},
+		{
+			a: 100,
+			b: false,
+		},
+		{
+			a: 1024,
+			b: true,
+		},
+	}
+	for _, tt := range tests {
+		if tt.b != IsPowerOf2(tt.a) {
+			t.Fatalf("IsPowerOf2(%d) = %v, wanted: %v", tt.a, IsPowerOf2(tt.a), tt.b)
+		}
+	}
+}

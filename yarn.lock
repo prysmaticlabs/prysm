@@ -297,6 +297,10 @@ diff@3.3.1:
   version "3.3.1"
   resolved "https://registry.yarnpkg.com/diff/-/diff-3.3.1.tgz#aa8567a6eed03c531fc89d3f711cd0e5259dec75"
 
+diff@^3.5.0:
+  version "3.5.0"
+  resolved "https://registry.yarnpkg.com/diff/-/diff-3.5.0.tgz#800c0dd1e0a8bfbc95835c202ad220fe317e5a12"
+
 eol@^0.9.1:
   version "0.9.1"
   resolved "https://registry.yarnpkg.com/eol/-/eol-0.9.1.tgz#f701912f504074be35c6117a5c4ade49cd547acd"
@@ -1290,26 +1294,27 @@ solium-plugin-security@0.1.1:
   version "0.1.1"
   resolved "https://registry.yarnpkg.com/solium-plugin-security/-/solium-plugin-security-0.1.1.tgz#2a87bcf8f8c3abf7d198e292e4ac080284e3f3f6"
 
-solium@1.2.0:
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/solium/-/solium-1.2.0.tgz#17520a4c1323f04f17c640c1304d31e8a46fd55f"
+solium@1.2.1:
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/solium/-/solium-1.2.1.tgz#ead11f2921ba2337461752155cc96149ea08f247"
   dependencies:
     ajv "^5.2.2"
     chokidar "^1.6.0"
     colors "^1.1.2"
     commander "^2.9.0"
+    diff "^3.5.0"
     eol "^0.9.1"
     js-string-escape "^1.0.1"
     lodash "^4.14.2"
     sol-digger "0.0.2"
     sol-explore "1.6.1"
     solium-plugin-security "0.1.1"
-    solparse "2.2.6"
+    solparse "2.2.7"
     text-table "^0.2.0"
 
-solparse@2.2.6:
-  version "2.2.6"
-  resolved "https://registry.yarnpkg.com/solparse/-/solparse-2.2.6.tgz#e66bca4b77b3d1886d57f6a62c282708916844b9"
+solparse@2.2.7:
+  version "2.2.7"
+  resolved "https://registry.yarnpkg.com/solparse/-/solparse-2.2.7.tgz#5479ff4ba4ca6900df89b902b5af1ee23b816250"
   dependencies:
     mocha "^4.0.1"
     pegjs "^0.10.0"

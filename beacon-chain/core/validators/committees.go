@@ -42,22 +42,6 @@ func InitialShardAndCommitteesForSlots(validators []*pb.ValidatorRecord) ([]*pb.
 	return initialCommittees, nil
 }
 
-// AttesterIndices returns the validator indices that acted as attesters
-// for a particular attestation.
-func AttesterIndices(
-	shardCommittees *pb.ShardAndCommitteeArray,
-	attestation *pb.Attestation,
-) ([]uint32, error) {
-	shardCommitteesArray := shardCommittees.ArrayShardAndCommittee
-	for _, shardCommittee := range shardCommitteesArray {
-		if attestation.GetData().GetShard() == shardCommittee.Shard {
-			return shardCommittee.Committee, nil
-		}
-	}
-
-	return nil, fmt.Errorf("unable to find committee for shard %d", attestation.GetData().GetShard())
-}
-
 // splitBySlotShard splits the validator list into evenly sized committees and assigns each
 // committee to a slot and a shard. If the validator set is large, multiple committees are assigned
 // to a single slot and shard. See getCommitteesPerSlot for more details.

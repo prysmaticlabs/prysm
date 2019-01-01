@@ -17,6 +17,8 @@ type Service interface {
 	// Stop terminates all goroutines belonging to the service,
 	// blocking until they are all terminated.
 	Stop() error
+	// Returns error if the service is not considered healthy.
+	Status() error
 }
 
 // ServiceRegistry provides a useful pattern for managing services.
@@ -54,6 +56,16 @@ func (s *ServiceRegistry) StopAll() {
 			log.Panicf("Could not stop the following service: %v, %v", kind, err)
 		}
 	}
+}
+
+// Statuses returns a map of Service type -> error. The map will be populated
+// with the results of each service.Status() method call.
+func (s *ServiceRegistry) Statuses() map[reflect.Type]error {
+	m := make(map[reflect.Type]error)
+	for _, kind := range s.serviceTypes {
+		m[kind] = s.services[kind].Status()
+	}
+	return m
 }
 
 // RegisterService appends a service constructor function to the service
