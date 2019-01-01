@@ -152,35 +152,6 @@ func BeaconProposerIndex(state *pb.BeaconState, slot uint64) (uint32, error) {
 	return firstCommittee[slot%uint64(len(firstCommittee))], nil
 }
 
-// AreAttesterBitfieldsValid validates that the length of the attester bitfield matches the attester indices
-// defined in the Crystallized State.
-func AreAttesterBitfieldsValid(attestation *pb.Attestation, attesterIndices []uint32) bool {
-	// Validate attester bit field has the correct length.
-	if bitutil.BitLength(len(attesterIndices)) != len(attestation.GetParticipationBitfield()) {
-		return false
-	}
-
-	// Valid attestation can not have non-zero trailing bits.
-	lastBit := len(attesterIndices)
-	remainingBits := lastBit % bitsInByte
-	if remainingBits == 0 {
-		return true
-	}
-
-	for i := 0; i < bitsInByte-remainingBits; i++ {
-		isBitSet, err := bitutil.CheckBit(attestation.GetParticipationBitfield(), lastBit+i)
-		if err != nil {
-			return false
-		}
-
-		if isBitSet {
-			return false
-		}
-	}
-
-	return true
-}
-
 // ProposerShardAndIndex returns the index and the shardID of a proposer from a given slot.
 func ProposerShardAndIndex(shardCommittees []*pb.ShardAndCommitteeArray, lastStateRecalc uint64, slot uint64) (uint64, uint64, error) {
 	slotCommittees, err := GetShardAndCommitteesForSlot(
@@ -282,14 +253,6 @@ func TotalActiveValidatorBalance(activeValidators []*pb.ValidatorRecord) uint64 
 	return totalDeposit
 }
 
-// TotalActiveValidatorDepositInEth returns the total deposited amount in ETH for all active validators.
-func TotalActiveValidatorDepositInEth(validators []*pb.ValidatorRecord) uint64 {
-	totalDeposit := TotalActiveValidatorBalance(validators)
-	depositInEth := totalDeposit / params.BeaconConfig().Gwei
-
-	return depositInEth
-}
-
 // VotedBalanceInAttestation checks for the total balance in the validator set and the balances of the voters in the
 // attestation.
 func VotedBalanceInAttestation(validators []*pb.ValidatorRecord, indices []uint32,
@@ -314,32 +277,6 @@ func VotedBalanceInAttestation(validators []*pb.ValidatorRecord, indices []uint3
 	return totalBalance, voteBalance, nil
 }
 
-// AddPendingValidator runs for every validator that is inducted as part of a log created on the PoW chain.
-func AddPendingValidator(
-	validators []*pb.ValidatorRecord,
-	pubKey []byte,
-	randaoCommitment []byte,
-	status pb.ValidatorRecord_StatusCodes) []*pb.ValidatorRecord {
-
-	// TODO(#633): Use BLS to verify signature proof of possession and pubkey and hash of pubkey.
-
-	newValidatorRecord := &pb.ValidatorRecord{
-		Pubkey:                 pubKey,
-		RandaoCommitmentHash32: randaoCommitment,
-		Balance:                params.BeaconConfig().MaxDepositInGwei,
-		Status:                 status,
-	}
-
-	index := minEmptyExitedValidator(validators)
-	if index > 0 {
-		validators[index] = newValidatorRecord
-		return validators
-	}
-
-	validators = append(validators, newValidatorRecord)
-	return validators
-}
-
 // ExitValidator exits validator from the active list. It returns
 // updated validator record with an appropriate status of each validator.
 func ExitValidator(
@@ -354,90 +291,6 @@ func ExitValidator(
 		validator.Status = pb.ValidatorRecord_ACTIVE_PENDING_EXIT
 	}
 	return validator
-}
-
-// ChangeValidatorRegistry updates the validator set during state transition.
-func ChangeValidatorRegistry(currentSlot uint64, totalPenalties uint64, validators []*pb.ValidatorRecord) []*pb.ValidatorRecord {
-	maxAllowableChange := 2 * params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei
-
-	totalBalance := TotalActiveValidatorBalance(validators)
-
-	// Determine the max total wei that can deposit and withdraw.
-	if totalBalance > maxAllowableChange {
-		maxAllowableChange = totalBalance
-	}
-
-	var totalChanged uint64
-	for i := 0; i < len(validators); i++ {
-		if validators[i].Status == pb.ValidatorRecord_PENDING_ACTIVATION {
-			validators[i].Status = pb.ValidatorRecord_ACTIVE
-			totalChanged += params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei
-
-			// TODO(#614): Add validator set change.
-		}
-		if validators[i].Status == pb.ValidatorRecord_ACTIVE_PENDING_EXIT {
-			validators[i].Status = pb.ValidatorRecord_ACTIVE_PENDING_EXIT
-			validators[i].LatestStatusChangeSlot = currentSlot
-			totalChanged += validators[i].Balance
-
-			// TODO(#614): Add validator set change.
-		}
-		if totalChanged > maxAllowableChange {
-			break
-		}
-	}
-
-	// Calculate withdraw validators that have been logged out long enough,
-	// apply their penalties if they were slashed.
-	for i := 0; i < len(validators); i++ {
-		isPendingWithdraw := validators[i].Status == pb.ValidatorRecord_ACTIVE_PENDING_EXIT
-		isPenalized := validators[i].Status == pb.ValidatorRecord_EXITED_WITH_PENALTY
-		withdrawalSlot := validators[i].LatestStatusChangeSlot + params.BeaconConfig().MinWithdrawalPeriod
-
-		if (isPendingWithdraw || isPenalized) && currentSlot >= withdrawalSlot {
-			penaltyFactor := totalPenalties * 3
-			if penaltyFactor > totalBalance {
-				penaltyFactor = totalBalance
-			}
-
-			if validators[i].Status == pb.ValidatorRecord_EXITED_WITH_PENALTY {
-				validators[i].Balance -= validators[i].Balance * totalBalance / validators[i].Balance
-			}
-			validators[i].Status = pb.ValidatorRecord_EXITED_WITHOUT_PENALTY
-		}
-	}
-	return validators
-}
-
-// CopyValidatorRegistry creates a fresh new validator set by copying all the validator information
-// from the old validator set. This is used in calculating the new state of the crystallized
-// state, where the changes to the validator balances are applied to the new validator set.
-func CopyValidatorRegistry(validatorSet []*pb.ValidatorRecord) []*pb.ValidatorRecord {
-	newValidatorSet := make([]*pb.ValidatorRecord, len(validatorSet))
-
-	for i, validator := range validatorSet {
-		newValidatorSet[i] = &pb.ValidatorRecord{
-			Pubkey:                 validator.Pubkey,
-			RandaoCommitmentHash32: validator.RandaoCommitmentHash32,
-			Balance:                validator.Balance,
-			Status:                 validator.Status,
-			LatestStatusChangeSlot: validator.LatestStatusChangeSlot,
-		}
-	}
-	return newValidatorSet
-}
-
-// CheckValidatorMinDeposit checks if a validator deposit has fallen below min online deposit size,
-// it exits the validator if it's below.
-func CheckValidatorMinDeposit(validatorSet []*pb.ValidatorRecord, currentSlot uint64) []*pb.ValidatorRecord {
-	for index, validator := range validatorSet {
-		MinDepositInGWei := params.BeaconConfig().MinOnlineDepositSize * params.BeaconConfig().Gwei
-		isValidatorActive := validator.Status == pb.ValidatorRecord_ACTIVE
-		if validator.Balance < MinDepositInGWei && isValidatorActive {
-			validatorSet[index] = ExitValidator(validator, currentSlot, false)
-		}
-	}
-	return validatorSet
 }
 
 // NewRegistryDeltaChainTip returns the new validator registry delta chain tip.
@@ -626,18 +479,6 @@ func AllValidatorsIndices(state *pb.BeaconState) []uint32 {
 	return validatorIndices
 }
 
-// AllActiveValidatorsIndices returns all active validator indices
-// from 0 to the last validator.
-func AllActiveValidatorsIndices(state *pb.BeaconState) []uint32 {
-	var validatorIndices []uint32
-	for i := range state.ValidatorRegistry {
-		if isActiveValidator(state.ValidatorRegistry[i]) {
-			validatorIndices = append(validatorIndices, uint32(i))
-		}
-	}
-	return validatorIndices
-}
-
 // ProcessDeposit mutates a corresponding index in the beacon state for
 // a validator depositing ETH into the beacon chain. Specifically, this function
 // adds a validator balance or tops up an existing validator's balance
@@ -725,16 +566,6 @@ func minEmptyValidatorIndex(
 		}
 	}
 	return 0, false
-}
-
-// minEmptyExitedValidator returns the lowest validator index which the status is withdrawn.
-func minEmptyExitedValidator(validators []*pb.ValidatorRecord) int {
-	for i := 0; i < len(validators); i++ {
-		if validators[i].Status == pb.ValidatorRecord_EXITED_WITHOUT_PENALTY {
-			return i
-		}
-	}
-	return -1
 }
 
 // isActiveValidator returns the boolean value on whether the validator

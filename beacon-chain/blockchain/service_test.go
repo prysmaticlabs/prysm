@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"math/big"
+	"strconv"
 	"testing"
 
 	ethereum "github.com/ethereum/go-ethereum"
@@ -201,7 +202,18 @@ func TestRunningChainService(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db)
-	beaconState, err := state.NewGenesisBeaconState(nil)
+	deposits := make([]*pb.Deposit, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(deposits); i++ {
+		deposits[i] = &pb.Deposit{DepositData: &pb.DepositData{
+			Value: params.BeaconConfig().MaxDepositInGwei,
+			DepositInput: &pb.DepositInput{
+				Pubkey: []byte(strconv.Itoa(i)),
+				RandaoCommitmentHash32: []byte{41, 13, 236, 217, 84, 139, 98, 168, 214, 3, 69,
+					169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
+			},
+		}}
+	}
+	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -218,7 +230,9 @@ func TestRunningChainService(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to get hash of canonical head: %v", err)
 	}
-
+	if err := chainService.beaconDB.SaveState(beaconState); err != nil {
+		t.Fatalf("Can't save state to db %v", err)
+	}
 	beaconState, err = chainService.beaconDB.GetState()
 	if err != nil {
 		t.Fatalf("Can't get state from db %v", err)
@@ -252,9 +266,10 @@ func TestRunningChainService(t *testing.T) {
 				ParticipationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Data: &pb.AttestationData{
-					Slot:                     attestationSlot,
-					Shard:                    shard,
-					JustifiedBlockRootHash32: []byte{},
+					Slot:                      attestationSlot,
+					Shard:                     shard,
+					JustifiedBlockRootHash32:  params.BeaconConfig().ZeroHash[:],
+					LatestCrosslinkRootHash32: params.BeaconConfig().ZeroHash[:],
 				},
 			}},
 		},
@@ -306,7 +321,7 @@ func TestDoesPOWBlockExist(t *testing.T) {
 }
 
 func TestUpdateHead(t *testing.T) {
-	beaconState, err := state.NewGenesisBeaconState(nil)
+	beaconState, err := state.InitialBeaconState(nil, 0, nil)
 	if err != nil {
 		t.Fatalf("Cannot create genesis beacon state: %v", err)
 	}
@@ -397,7 +412,7 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db)
-	beaconState, err := state.NewGenesisBeaconState(nil)
+	beaconState, err := state.InitialBeaconState(nil, 0, nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}

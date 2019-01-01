@@ -22,6 +22,7 @@ go_library(
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bytes:go_default_library",
         "//shared/hashutil:go_default_library",
+        "//shared/params:go_default_library",
         "@com_github_boltdb_bolt//:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
     ],

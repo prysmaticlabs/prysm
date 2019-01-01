@@ -85,7 +85,7 @@ func FFGSrcRewardsPenalties(
 				totalBalance
 	}
 
-	allValidatorIndices := validators.AllActiveValidatorsIndices(state)
+	allValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry)
 	didNotAttestIndices := slices.Not(justifiedAttesterIndices, allValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
@@ -122,7 +122,7 @@ func FFGTargetRewardsPenalties(
 				totalBalance
 	}
 
-	allValidatorIndices := validators.AllActiveValidatorsIndices(state)
+	allValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry)
 	didNotAttestIndices := slices.Not(boundaryAttesterIndices, allValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
@@ -159,7 +159,7 @@ func ChainHeadRewardsPenalties(
 				totalBalance
 	}
 
-	allValidatorIndices := validators.AllActiveValidatorsIndices(state)
+	allValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry)
 	didNotAttestIndices := slices.Not(headAttesterIndices, allValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
@@ -211,7 +211,7 @@ func InactivityFFGSrcPenalties(
 	epochsSinceFinality uint64) *pb.BeaconState {
 
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
-	allValidatorIndices := validators.AllActiveValidatorsIndices(state)
+	allValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry)
 	didNotAttestIndices := slices.Not(justifiedAttesterIndices, allValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
@@ -235,7 +235,7 @@ func InactivityFFGTargetPenalties(
 	epochsSinceFinality uint64) *pb.BeaconState {
 
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
-	allValidatorIndices := validators.AllActiveValidatorsIndices(state)
+	allValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry)
 	didNotAttestIndices := slices.Not(boundaryAttesterIndices, allValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
@@ -258,7 +258,7 @@ func InactivityHeadPenalties(
 	totalBalance uint64) *pb.BeaconState {
 
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
-	allValidatorIndices := validators.AllActiveValidatorsIndices(state)
+	allValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry)
 	didNotAttestIndices := slices.Not(headAttesterIndices, allValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
