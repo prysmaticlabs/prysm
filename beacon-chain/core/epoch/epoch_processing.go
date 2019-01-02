@@ -278,3 +278,29 @@ func ProcessPartialValidatorRegistry(
 	}
 	return state, nil
 }
+
+// CleanupAttestations removes any attestation in state's latest attestations
+// such that the attestation slot is lower than state slot minus epoch length.
+// Spec pseudocode definition:
+// 		Remove any attestation in state.latest_attestations such
+// 		that attestation.data.slot < state.slot - EPOCH_LENGTH
+func CleanupAttestations(state *pb.BeaconState) *pb.BeaconState {
+	epochLength := params.BeaconConfig().EpochLength
+	var earliestSlot uint64
+
+	// If the state slot is less than epochLength, then the earliestSlot would
+	// result in a negative number. Therefore we should default to
+	// earliestSlot = 0 in this case.
+	if state.Slot > epochLength {
+		earliestSlot = state.Slot - epochLength
+	}
+
+	var latestAttestations []*pb.PendingAttestationRecord
+	for _, attestation := range state.LatestAttestations {
+		if attestation.Data.Slot >= earliestSlot {
+			latestAttestations = append(latestAttestations, attestation)
+		}
+	}
+	state.LatestAttestations = latestAttestations
+	return state
+}
