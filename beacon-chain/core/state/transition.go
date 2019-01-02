@@ -25,7 +25,6 @@ func ExecuteStateTransition(
 ) (*pb.BeaconState, error) {
 
 	var err error
-
 	newState := proto.Clone(beaconState).(*pb.BeaconState)
 
 	currentSlot := newState.GetSlot()
@@ -36,16 +35,7 @@ func ExecuteStateTransition(
 		return nil, fmt.Errorf("unable to update randao layer %v", err)
 	}
 	newState = randao.UpdateRandaoMixes(newState)
-
 	newState = b.ProcessBlockRoots(newState, prevBlockRoot)
-
-	newHashes, err := CalculateNewBlockHashes(newState, block, currentSlot)
-	if err != nil {
-		return nil, fmt.Errorf("unable to calculate recent blockhashes")
-	}
-
-	newState.LatestBlockRootHash32S = newHashes
-
 	if block != nil {
 		newState, err = ProcessBlock(newState, block)
 		if err != nil {

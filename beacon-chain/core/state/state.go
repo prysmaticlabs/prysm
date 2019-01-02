@@ -186,7 +186,7 @@ func CalculateNewBlockHashes(state *pb.BeaconState, block *pb.BeaconBlock, paren
 	distance := block.GetSlot() - parentSlot
 	existing := state.GetLatestBlockRootHash32S()
 	update := existing[distance:]
-	for len(update) < 2*int(params.BeaconConfig().CycleLength) {
+	for len(update) < 2*int(params.BeaconConfig().EpochLength) {
 		update = append(update, block.GetParentRootHash32())
 	}
 	return update, nil

@@ -1,13 +1,27 @@
 title: Sample Ethereum Serenity State Transition Tests
 summary: Testing state transitions occurring with no blocks being published
 test_suite: prysm
+fork: tchaikovsky
+version: 1.0
 test_cases:
   - config:
-      validator_count: 100
-      epoch_length: 8
-      shard_count: 32
-      min_committee_size: 8
+      epoch_length: 64
+      deposits_for_chain_start: 1000
     state_transition:
-      num_slots: 100 # How many slots to advance the state
+      num_slots: 32 # Testing advancing state to slot < EpochLength
     results:
-      slot: 100
+      slot: 32
+  - config:
+      epoch_length: 64
+      deposits_for_chain_start: 1000
+    state_transition:
+      num_slots: 64 # Testing advancing state to exactly slot == EpochLength
+    results:
+      slot: 64
+  - config:
+      epoch_length: 64
+      deposits_for_chain_start: 1000
+    state_transition:
+      num_slots: 128 # Testing advancing state's slot == 2*EpochLength
+    results:
+      slot: 128

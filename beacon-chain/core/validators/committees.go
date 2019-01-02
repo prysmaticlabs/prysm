@@ -50,7 +50,7 @@ func splitBySlotShard(shuffledValidatorRegistry []uint32, crosslinkStartShard ui
 	committeBySlotAndShard := []*pb.ShardAndCommitteeArray{}
 
 	// split the validator indices by slot.
-	validatorsBySlot := utils.SplitIndices(shuffledValidatorRegistry, params.BeaconConfig().CycleLength)
+	validatorsBySlot := utils.SplitIndices(shuffledValidatorRegistry, params.BeaconConfig().EpochLength)
 	for i, validatorsForSlot := range validatorsBySlot {
 		shardCommittees := []*pb.ShardAndCommittee{}
 		validatorsByShard := utils.SplitIndices(validatorsForSlot, committeesPerSlot)

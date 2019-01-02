@@ -107,13 +107,19 @@ func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
 // slots from a genesis state, with a block being processed at every iteration
 // of the state transition function.
 func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) error {
+	// We setup the initial configuration for running state
+	// transition tests below.
+	c := params.BeaconConfig()
+	c.EpochLength = testCase.Config.EpochLength
+	c.DepositsForChainStart = testCase.Config.DepositsForChainStart
+	params.OverrideBeaconConfig(c)
+
 	genesisTime := params.BeaconConfig().GenesisTime.Unix()
 	deposits := make([]*pb.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
 		depositInput := &pb.DepositInput{
-			Pubkey: []byte(strconv.Itoa(i)),
-			RandaoCommitmentHash32: []byte{41, 13, 236, 217, 84, 139, 98, 168, 214, 3, 69,
-				169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
+			Pubkey:                 []byte(strconv.Itoa(i)),
+			RandaoCommitmentHash32: []byte("simulated"),
 		}
 		depositData, err := b.EncodeBlockDepositData(
 			depositInput,
@@ -131,6 +137,8 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		return err
 	}
 
+	// We do not expect hashing initial beacon state and genesis block to
+	// fail, so we can safely ignore the error below.
 	// #nosec G104
 	encodedState, _ := proto.Marshal(beaconState)
 	stateRoot := hashutil.Hash(encodedState)

@@ -19,10 +19,9 @@ type StateTestCase struct {
 
 // StateTestConfig --
 type StateTestConfig struct {
-	ValidatorCount   uint64 `yaml:"validator_count"`
-	CycleLength      uint64 `yaml:"cycle_length"`
-	ShardCount       uint64 `yaml:"shard_count"`
-	MinCommitteeSize uint64 `yaml:"min_committee_size"`
+	EpochLength           uint64 `yaml:"epoch_length"`
+	ShardCount            uint64 `yaml:"shard_count"`
+	DepositsForChainStart uint64 `yaml:"deposits_for_chain_start"`
 }
 
 // StateTestTransition --
