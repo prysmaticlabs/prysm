@@ -20,6 +20,8 @@ service BeaconService {
     // ValidatorAssignments streams validator assignments to clients
     // for a subset of public keys in the active validator set.
     rpc ValidatorAssignments(ValidatorAssignmentRequest) returns(stream ValidatorAssignmentResponse);
+    // CurrentBeaconState can be called on demand to fetch the current state of a beacon node.
+    rpc CurrentBeaconState(google.protobuf.Empty) returns(ethereum.beacon.p2p.v1.BeaconState);
 }
 
 service AttesterService {
