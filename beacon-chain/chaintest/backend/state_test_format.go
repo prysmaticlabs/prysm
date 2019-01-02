@@ -12,21 +12,17 @@ type StateTest struct {
 
 // StateTestCase --
 type StateTestCase struct {
-	Config               *StateTestConfig     `yaml:"config"`
-	TransitionParameters *StateTestTransition `yaml:"state_transition,flow"`
-	Results              *StateTestResults    `yaml:"results"`
+	Config  *StateTestConfig  `yaml:"config"`
+	Results *StateTestResults `yaml:"results"`
 }
 
 // StateTestConfig --
 type StateTestConfig struct {
+	PublishBlocks         bool   `yaml:"publish_blocks"`
 	EpochLength           uint64 `yaml:"epoch_length"`
 	ShardCount            uint64 `yaml:"shard_count"`
 	DepositsForChainStart uint64 `yaml:"deposits_for_chain_start"`
-}
-
-// StateTestTransition --
-type StateTestTransition struct {
-	NumSlots uint64 `yaml:"num_slots"`
+	NumSlots              uint64 `yaml:"num_slots"`
 }
 
 // StateTestResults --

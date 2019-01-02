@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
@@ -19,6 +20,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	log "github.com/sirupsen/logrus"
 )
 
 // SimulatedBackend allowing for a programmatic advancement
@@ -146,19 +148,27 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	encodedGenesisBlock, _ := proto.Marshal(genesisBlock)
 	prevBlockRoot := hashutil.Hash(encodedGenesisBlock)
 
-	for i := uint64(0); i < testCase.TransitionParameters.NumSlots; i++ {
+	startTime := time.Now()
+	for i := uint64(0); i < testCase.Config.NumSlots; i++ {
 		newState, err := state.ExecuteStateTransition(beaconState, nil, prevBlockRoot)
 		if err != nil {
 			return fmt.Errorf("could not execute state transition: %v", err)
 		}
 		beaconState = newState
 	}
+	endTime := time.Now()
+	log.Infof(
+		"%d state transitions with %d deposits finished in %v seconds",
+		testCase.Config.NumSlots,
+		testCase.Config.DepositsForChainStart,
+		endTime.Sub(startTime).Seconds(),
+	)
 
 	if beaconState.GetSlot() != testCase.Results.Slot {
 		return fmt.Errorf(
 			"incorrect state slot after %d state transitions without blocks, wanted %d, received %d",
-			testCase.TransitionParameters.NumSlots,
-			testCase.TransitionParameters.NumSlots,
+			testCase.Config.NumSlots,
+			testCase.Config.NumSlots,
 			testCase.Results.Slot,
 		)
 	}
