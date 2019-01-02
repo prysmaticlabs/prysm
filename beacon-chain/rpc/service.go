@@ -174,10 +174,6 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(
 	ctx context.Context,
 	req *pb.ValidatorAssignmentRequest,
 ) (*pb.CurrentAssignmentsResponse, error) {
-	genesis, err := s.beaconDB.GetBlockBySlot(0)
-	if err != nil {
-		return nil, fmt.Errorf("could not get genesis block: %v", err)
-	}
 	beaconState, err := s.beaconDB.GetState()
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
@@ -198,8 +194,13 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(
 		return nil, fmt.Errorf("could not get assignments for public keys: %v", err)
 	}
 
+	timestamp, err := ptypes.TimestampProto(time.Unix(int64(beaconState.GenesisTime), 0))
+	if err != nil {
+		return nil, fmt.Errorf("could not create timestamp proto object %v", err)
+	}
+
 	return &pb.CurrentAssignmentsResponse{
-		GenesisTimestamp: genesis.GetTimestamp(),
+		GenesisTimestamp: timestamp,
 		Assignments:      assignments,
 	}, nil
 }
@@ -237,7 +238,6 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 		Slot:                          req.GetSlotNumber(),
 		CandidatePowReceiptRootHash32: powChainHash[:],
 		ParentRootHash32:              req.GetParentHash(),
-		Timestamp:                     req.GetTimestamp(),
 		Body: &pbp2p.BeaconBlockBody{
 			Attestations: []*pbp2p.Attestation{attestation},
 		},
