@@ -18,8 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slices"
 )
 
-const bitsInByte = 8
-
 // InitialValidatorRegistry creates a new validator set that is used to
 // generate a new crystallized state.
 func InitialValidatorRegistry() []*pb.ValidatorRecord {
