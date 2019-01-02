@@ -221,8 +221,7 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 	}
 
 	_, prevProposerIndex, err := v.ProposerShardAndIndex(
-		beaconState.GetShardAndCommitteesAtSlots(),
-		beaconState.GetLastStateRecalculationSlot(),
+		beaconState,
 		req.GetSlotNumber(),
 	)
 	if err != nil {

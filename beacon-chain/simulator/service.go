@@ -345,9 +345,8 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*pb.BeaconB
 	}
 
 	parentSlot := slot - 1
-	committees, err := v.GetShardAndCommitteesForSlot(
-		beaconState.GetShardAndCommitteesAtSlots(),
-		beaconState.GetLastStateRecalculationSlot(),
+	committees, err := v.ShardAndCommitteesAtSlot(
+		beaconState,
 		parentSlot,
 	)
 	if err != nil {
