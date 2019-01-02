@@ -1,0 +1,13 @@
+title: Sample Ethereum Serenity State Transition Tests
+summary: Testing state transitions occurring with no blocks being published
+test_suite: prysm
+test_cases:
+  - config:
+      validator_count: 100
+      epoch_length: 8
+      shard_count: 32
+      min_committee_size: 8
+    state_transition:
+      num_slots: 100 # How many slots to advance the state
+    results:
+      slot: 100

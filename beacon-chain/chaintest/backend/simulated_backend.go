@@ -7,9 +7,13 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -95,6 +99,60 @@ func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
 	}
 	if !reflect.DeepEqual(output, testCase.Output) {
 		return fmt.Errorf("shuffle result error: expected %v, actual %v", testCase.Output, output)
+	}
+	return nil
+}
+
+// RunStateTransitionTest advances a beacon chain state transition an N amount of
+// slots from a genesis state, with a block being processed at every iteration
+// of the state transition function.
+func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) error {
+	genesisTime := params.BeaconConfig().GenesisTime.Unix()
+	deposits := make([]*pb.Deposit, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(deposits); i++ {
+		depositInput := &pb.DepositInput{
+			Pubkey: []byte(strconv.Itoa(i)),
+			RandaoCommitmentHash32: []byte{41, 13, 236, 217, 84, 139, 98, 168, 214, 3, 69,
+				169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
+		}
+		depositData, err := b.EncodeBlockDepositData(
+			depositInput,
+			params.BeaconConfig().MaxDepositInGwei,
+			genesisTime,
+		)
+		if err != nil {
+			return fmt.Errorf("could not encode initial block deposits: %v", err)
+		}
+		deposits[i] = &pb.Deposit{DepositData: depositData}
+	}
+
+	beaconState, err := state.InitialBeaconState(deposits, uint64(genesisTime), nil)
+	if err != nil {
+		return err
+	}
+
+	// #nosec G104
+	encodedState, _ := proto.Marshal(beaconState)
+	stateRoot := hashutil.Hash(encodedState)
+	genesisBlock := b.NewGenesisBlock(stateRoot[:])
+	encodedGenesisBlock, _ := proto.Marshal(genesisBlock)
+	prevBlockRoot := hashutil.Hash(encodedGenesisBlock)
+
+	for i := uint64(0); i < testCase.TransitionParameters.NumSlots; i++ {
+		newState, err := state.ExecuteStateTransition(beaconState, nil, prevBlockRoot)
+		if err != nil {
+			return fmt.Errorf("could not execute state transition: %v", err)
+		}
+		beaconState = newState
+	}
+
+	if beaconState.GetSlot() != testCase.Results.Slot {
+		return fmt.Errorf(
+			"incorrect state slot after %d state transitions without blocks, wanted %d, received %d",
+			testCase.TransitionParameters.NumSlots,
+			testCase.TransitionParameters.NumSlots,
+			testCase.Results.Slot,
+		)
 	}
 	return nil
 }

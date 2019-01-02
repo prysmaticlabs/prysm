@@ -29,10 +29,12 @@ func TestRunTests(t *testing.T) {
 		},
 	}
 	shuffleTestCase := &backend.ShuffleTestCase{}
+	stateTestCase := &backend.StateTestCase{}
 
 	chainTest := &backend.ChainTest{TestCases: []*backend.ChainTestCase{chainTestCase}}
 	shuffleTest := &backend.ShuffleTest{TestCases: []*backend.ShuffleTestCase{shuffleTestCase}}
-	if err = runTests([]interface{}{chainTest, shuffleTest}, sb); err != nil {
+	stateTest := &backend.StateTest{TestCases: []*backend.StateTestCase{stateTestCase}}
+	if err = runTests([]interface{}{chainTest, shuffleTest, stateTest}, sb); err != nil {
 		t.Fatalf("Failed to run test cases: %v", err)
 	}
 }

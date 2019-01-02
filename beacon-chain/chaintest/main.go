@@ -16,6 +16,7 @@ import (
 func readTestsFromYaml(yamlDir string) ([]interface{}, error) {
 	const chainTestsFolderName = "chain-tests"
 	const shuffleTestsFolderName = "shuffle-tests"
+	const stateTestsFolderName = "state-tests"
 
 	var tests []interface{}
 
@@ -47,6 +48,12 @@ func readTestsFromYaml(yamlDir string) ([]interface{}, error) {
 					return nil, fmt.Errorf("could not unmarshal YAML file into test struct: %v", err)
 				}
 				tests = append(tests, decoded)
+			case stateTestsFolderName:
+				decoded := &backend.StateTest{}
+				if err := yaml.Unmarshal(data, decoded); err != nil {
+					return nil, fmt.Errorf("could not unmarshal YAML file into test struct: %v", err)
+				}
+				tests = append(tests, decoded)
 			}
 		}
 	}
@@ -65,6 +72,7 @@ func runTests(tests []interface{}, sb *backend.SimulatedBackend) error {
 					return fmt.Errorf("chain test failed: %v", err)
 				}
 			}
+			log.Info("Test PASSED")
 		case *backend.ShuffleTest:
 			log.Infof("Title: %v", typedTest.Title)
 			log.Infof("Summary: %v", typedTest.Summary)
@@ -76,9 +84,23 @@ func runTests(tests []interface{}, sb *backend.SimulatedBackend) error {
 					return fmt.Errorf("chain test failed: %v", err)
 				}
 			}
+			log.Info("Test PASSED")
+		case *backend.StateTest:
+			log.Infof("Title: %v", typedTest.Title)
+			log.Infof("Summary: %v", typedTest.Summary)
+			log.Infof("Test Suite: %v", typedTest.TestSuite)
+			log.Infof("Fork: %v", typedTest.Fork)
+			log.Infof("Version: %v", typedTest.Version)
+			for _, testCase := range typedTest.TestCases {
+				if err := sb.RunStateTransitionTest(testCase); err != nil {
+					return fmt.Errorf("chain test failed: %v", err)
+				}
+			}
+			log.Info("Test PASSED")
 		default:
 			return fmt.Errorf("receive unknown test type: %T", typedTest)
 		}
+		log.Info("-----------------------------")
 	}
 	return nil
 }

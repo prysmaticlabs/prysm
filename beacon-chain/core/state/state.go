@@ -19,9 +19,12 @@ import (
 func InitialBeaconState(
 	initialValidatorDeposits []*pb.Deposit,
 	genesisTime uint64,
-	processedPowReceiptRoot []byte) (*pb.BeaconState, error) {
-	latestRandaoMixes := make([][]byte,
-		params.BeaconConfig().LatestRandaoMixesLength)
+	processedPowReceiptRoot []byte,
+) (*pb.BeaconState, error) {
+	latestRandaoMixes := make(
+		[][]byte,
+		params.BeaconConfig().LatestRandaoMixesLength,
+	)
 	for i := 0; i < len(latestRandaoMixes); i++ {
 		latestRandaoMixes[i] = params.BeaconConfig().ZeroHash[:]
 	}
