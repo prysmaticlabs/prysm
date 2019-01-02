@@ -8,33 +8,15 @@ import (
 
 // TestReadTestsFromYaml tests constructing test cases from yaml file.
 func TestReadTestsFromYaml(t *testing.T) {
-	if _, err := readTestsFromYaml(string("./tests")); err != nil {
+	tests, err := readTestsFromYaml(string("./tests"))
+	if err != nil {
 		t.Fatalf("Failed to read yaml files: %v", err)
 	}
-}
-
-// TestReadTestsFromYaml tests the running of provided tests structs.
-func TestRunTests(t *testing.T) {
 	sb, err := backend.NewSimulatedBackend()
 	if err != nil {
 		t.Fatalf("Could not create backend: %v", err)
 	}
-
-	chainTestCase := &backend.ChainTestCase{
-		Config: &backend.ChainTestConfig{
-			ShardCount:       3,
-			CycleLength:      10,
-			MinCommitteeSize: 3,
-			ValidatorCount:   100,
-		},
-	}
-	shuffleTestCase := &backend.ShuffleTestCase{}
-	stateTestCase := &backend.StateTestCase{}
-
-	chainTest := &backend.ChainTest{TestCases: []*backend.ChainTestCase{chainTestCase}}
-	shuffleTest := &backend.ShuffleTest{TestCases: []*backend.ShuffleTestCase{shuffleTestCase}}
-	stateTest := &backend.StateTest{TestCases: []*backend.StateTestCase{stateTestCase}}
-	if err = runTests([]interface{}{chainTest, shuffleTest, stateTest}, sb); err != nil {
-		t.Fatalf("Failed to run test cases: %v", err)
+	if err := runTests(tests, sb); err != nil {
+		t.Errorf("Failed to run yaml tests")
 	}
 }
