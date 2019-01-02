@@ -161,6 +161,17 @@ func makePtrHasher(typ reflect.Type) (hasher, error) {
 	return hasher, nil
 }
 
+// merkelHash implements a merkle-tree style hash algorithm.
+//
+// Please refer to the official spec for details. The overall idea is:
+// 1. Create a bunch of bytes chunk (each has a size of sszChunkSize) from the input hash list.
+// 2. Treat each bytes chunk as the leaf of a binary tree.
+// 3. For every pair of leaves, we set their parent's value using the hash value of the concatenation of the two leaves.
+//    The original two leaves are then removed.
+// 4. Keep doing step 3 until there's only one node left in the tree (the root).
+// 5. Return the hash of the concatenation of the root and the data length encoding.
+//
+// Time complexity is O(n) given input list of size n.
 func merkleHash(list [][]byte) ([]byte, error) {
 	// Assume len(list) < 2^64
 	dataLenEnc := make([]byte, hashLengthBytes)
