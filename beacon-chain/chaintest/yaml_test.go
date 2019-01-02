@@ -8,9 +8,20 @@ import (
 
 // TestReadTestsFromYaml tests constructing test cases from yaml file.
 func TestReadTestsFromYaml(t *testing.T) {
-	if _, err := readTestsFromYaml(string("./tests")); err != nil {
+	tests, err := readTestsFromYaml("./tests")
+	if err != nil {
 		t.Fatalf("Failed to read yaml files: %v", err)
 	}
+
+	sb, err := backend.NewSimulatedBackend()
+	if err != nil {
+		t.Fatalf("Failed to setup simulated backend: %v", err)
+	}
+
+	if err := runTests(tests, sb); err != nil {
+		t.Fatal(err)
+	}
+
 }
 
 // TestReadTestsFromYaml tests the running of provided tests structs.
