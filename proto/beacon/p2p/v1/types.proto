@@ -49,11 +49,6 @@ message BeaconState {
   // Placeholders, ProofOfCustodyChallenge is defined in phase 1,
   // the list will remain empty throughout phase 0
   repeated ProofOfCustodyChallenge poc_challenges = 6001;
-
-  // Deprecated fields 
-  // All fields must be annotated with [deprecated=true];
-  uint64 justified_streak = 10007 [deprecated=true]; // Deprecated by changes in fork choice rule. See https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#beacon-chain-fork-choice-rule
-  repeated ShardAndCommitteeArray shard_and_committees_for_slots = 10019 [deprecated=true]; // Renamed to shard_and_committee_at_slots
 }
 
 message ForkData {
