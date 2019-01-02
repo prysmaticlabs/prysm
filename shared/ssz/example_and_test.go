@@ -27,6 +27,10 @@ func (e *exampleStruct1) DecodeSSZ(r io.Reader) error {
 	return Decode(r, e)
 }
 
+func (e *exampleStruct1) TreeHashSSZ() ([32]byte, error) {
+	return TreeHash(e)
+}
+
 type exampleStruct2 struct {
 	Field1 uint8 // a volatile, or host-specific field that doesn't need to be exported
 	Field2 []byte
@@ -58,6 +62,12 @@ func (e *exampleStruct2) DecodeSSZ(r io.Reader) error {
 	return nil
 }
 
+func (e *exampleStruct2) TreeHashSSZ() ([32]byte, error) {
+	return TreeHash(exampleStruct2Export{
+		e.Field2,
+	})
+}
+
 func TestEncodeDecodeExampleStruct1(t *testing.T) {
 	var err error
 	e1 := &exampleStruct1{
@@ -86,6 +96,14 @@ func TestEncodeDecodeExampleStruct1(t *testing.T) {
 	}
 	if encodeSize != 13 {
 		t.Error("wrong encode size calculation result")
+	}
+
+	hash, err := e1.TreeHashSSZ()
+	if err != nil {
+		t.Fatalf("failed to hash: %v", err)
+	}
+	if !bytes.Equal(hash[:], unhex("cc9e553a3fae873a919e6ab62dc0f461199fb5880d38d124178c209c1f5d78cd")) {
+		t.Errorf("wrong hash result")
 	}
 }
 
@@ -117,5 +135,13 @@ func TestEncodeDecodeExampleStruct2(t *testing.T) {
 	}
 	if encodeSize != 12 {
 		t.Error("wrong encode size calculation result")
+	}
+
+	hash, err := e1.TreeHashSSZ()
+	if err != nil {
+		t.Fatalf("failed to hash: %v", err)
+	}
+	if !bytes.Equal(hash[:], unhex("d74e2ddcd0ec52ae08d6e041af3eec1a78955533577e8320c06af4ad923eba0d")) {
+		t.Errorf("wrong hash result")
 	}
 }

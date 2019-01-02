@@ -41,11 +41,11 @@ func (w *encbuf) encode(val interface{}) error {
 		return newEncodeError("nil is not supported", nil)
 	}
 	rval := reflect.ValueOf(val)
-	encDec, err := cachedEncoderDecoder(rval.Type())
+	sszUtils, err := cachedSSZUtils(rval.Type())
 	if err != nil {
 		return newEncodeError(fmt.Sprint(err), rval.Type())
 	}
-	if err = encDec.encoder(rval, w); err != nil {
+	if err = sszUtils.encoder(rval, w); err != nil {
 		return newEncodeError(fmt.Sprint(err), rval.Type())
 	}
 	return nil
@@ -56,12 +56,12 @@ func encodeSize(val interface{}) (uint32, error) {
 		return 0, newEncodeError("nil is not supported", nil)
 	}
 	rval := reflect.ValueOf(val)
-	encDec, err := cachedEncoderDecoder(rval.Type())
+	sszUtils, err := cachedSSZUtils(rval.Type())
 	if err != nil {
 		return 0, newEncodeError(fmt.Sprint(err), rval.Type())
 	}
 	var size uint32
-	if size, err = encDec.encodeSizer(rval); err != nil {
+	if size, err = sszUtils.encodeSizer(rval); err != nil {
 		return 0, newEncodeError(fmt.Sprint(err), rval.Type())
 	}
 	return size, nil
@@ -191,17 +191,17 @@ func makeByteArrayEncoder() (encoder, encodeSizer, error) {
 }
 
 func makeSliceEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
-	elemEncoderDecoder, err := cachedEncoderDecoderNoAcquireLock(typ.Elem())
+	elemSSZUtils, err := cachedSSZUtilsNoAcquireLock(typ.Elem())
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get encoder/decoder: %v", err)
+		return nil, nil, fmt.Errorf("failed to get ssz utils: %v", err)
 	}
 	encoder := func(val reflect.Value, w *encbuf) error {
 		origBufSize := len(w.str)
 		totalSizeEnc := make([]byte, lengthBytes)
 		w.str = append(w.str, totalSizeEnc...)
 		for i := 0; i < val.Len(); i++ {
-			if err := elemEncoderDecoder.encoder(val.Index(i), w); err != nil {
-				return fmt.Errorf("failed to encode element of slice: %v", err)
+			if err := elemSSZUtils.encoder(val.Index(i), w); err != nil {
+				return fmt.Errorf("failed to encode element of slice/array: %v", err)
 			}
 		}
 		totalSize := len(w.str) - lengthBytes - origBufSize
@@ -216,9 +216,9 @@ func makeSliceEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 		if val.Len() == 0 {
 			return lengthBytes, nil
 		}
-		elemSize, err := elemEncoderDecoder.encodeSizer(val.Index(0))
+		elemSize, err := elemSSZUtils.encodeSizer(val.Index(0))
 		if err != nil {
-			return 0, errors.New("failed to get encode size of element of slice")
+			return 0, errors.New("failed to get encode size of element of slice/array")
 		}
 		return lengthBytes + elemSize*uint32(val.Len()), nil
 	}
@@ -235,7 +235,7 @@ func makeStructEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 		totalSizeEnc := make([]byte, lengthBytes)
 		w.str = append(w.str, totalSizeEnc...)
 		for _, f := range fields {
-			if err := f.encDec.encoder(val.Field(f.index), w); err != nil {
+			if err := f.sszUtils.encoder(val.Field(f.index), w); err != nil {
 				return fmt.Errorf("failed to encode field of struct: %v", err)
 			}
 		}
@@ -250,7 +250,7 @@ func makeStructEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 	encodeSizer := func(val reflect.Value) (uint32, error) {
 		totalSize := uint32(0)
 		for _, f := range fields {
-			fieldSize, err := f.encDec.encodeSizer(val.Field(f.index))
+			fieldSize, err := f.sszUtils.encodeSizer(val.Field(f.index))
 			if err != nil {
 				return 0, fmt.Errorf("failed to get encode size for field of struct: %v", err)
 			}
@@ -266,7 +266,7 @@ func makeStructEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 // - Output for decoding will never contain nil pointer
 // (Not to be confused with empty slice. Empty slice is supported)
 func makePtrEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
-	elemEncoderDecoder, err := cachedEncoderDecoderNoAcquireLock(typ.Elem())
+	elemSSZUtils, err := cachedSSZUtilsNoAcquireLock(typ.Elem())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -275,14 +275,14 @@ func makePtrEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 		if val.IsNil() {
 			return errors.New("nil is not supported")
 		}
-		return elemEncoderDecoder.encoder(val.Elem(), w)
+		return elemSSZUtils.encoder(val.Elem(), w)
 	}
 
 	encodeSizer := func(val reflect.Value) (uint32, error) {
 		if val.IsNil() {
 			return 0, errors.New("nil is not supported")
 		}
-		return elemEncoderDecoder.encodeSizer(val.Elem())
+		return elemSSZUtils.encodeSizer(val.Elem())
 	}
 
 	return encoder, encodeSizer, nil
