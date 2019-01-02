@@ -59,32 +59,34 @@ func TestInitialValidatorRegistry(t *testing.T) {
 }
 
 func TestProposerShardAndIndex(t *testing.T) {
-	shardCommittees := []*pb.ShardAndCommitteeArray{
-		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
-			{Shard: 0, Committee: []uint32{0, 1, 2, 3, 4}},
-			{Shard: 1, Committee: []uint32{5, 6, 7, 8, 9}},
-		}},
-		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
-			{Shard: 2, Committee: []uint32{10, 11, 12, 13, 14}},
-			{Shard: 3, Committee: []uint32{15, 16, 17, 18, 19}},
-		}},
-		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
-			{Shard: 4, Committee: []uint32{20, 21, 22, 23, 24}},
-			{Shard: 5, Committee: []uint32{25, 26, 27, 28, 29}},
-		}},
-	}
-	if _, _, err := ProposerShardAndIndex(shardCommittees, 100, 0); err == nil {
+	state := &pb.BeaconState{
+		ShardAndCommitteesAtSlots: []*pb.ShardAndCommitteeArray{
+			{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{Shard: 0, Committee: []uint32{0, 1, 2, 3, 4}},
+				{Shard: 1, Committee: []uint32{5, 6, 7, 8, 9}},
+			}},
+			{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{Shard: 2, Committee: []uint32{10, 11, 12, 13, 14}},
+				{Shard: 3, Committee: []uint32{15, 16, 17, 18, 19}},
+			}},
+			{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{Shard: 4, Committee: []uint32{20, 21, 22, 23, 24}},
+				{Shard: 5, Committee: []uint32{25, 26, 27, 28, 29}},
+			}},
+		}}
+
+	if _, _, err := ProposerShardAndIndex(state, 150); err == nil {
 		t.Error("ProposerShardAndIndex should have failed with invalid lcs")
 	}
-	shard, index, err := ProposerShardAndIndex(shardCommittees, 128, 65)
+	shard, index, err := ProposerShardAndIndex(state, 2)
 	if err != nil {
 		t.Fatalf("ProposerShardAndIndex failed with %v", err)
 	}
-	if shard != 2 {
-		t.Errorf("Invalid shard ID. Wanted 2, got %d", shard)
+	if shard != 4 {
+		t.Errorf("Invalid shard ID. Wanted 4, got %d", shard)
 	}
-	if index != 0 {
-		t.Errorf("Invalid proposer index. Wanted 0, got %d", index)
+	if index != 2 {
+		t.Errorf("Invalid proposer index. Wanted 2, got %d", index)
 	}
 }
 
