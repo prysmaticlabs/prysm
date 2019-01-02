@@ -633,7 +633,7 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 		params.BeaconConfig().DepositContractTreeDepth,
 		receiptRoot,
 	); !ok {
-		return errors.New("Deposit merkle branch of PoW receipt root did not verify")
+		return errors.New("deposit merkle branch of PoW receipt root did not verify")
 	}
 
 	// We unmarshal the timestamp bytes into a time.Time value for us to use.
