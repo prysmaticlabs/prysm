@@ -163,7 +163,10 @@ func makePtrHasher(typ reflect.Type) (hasher, error) {
 
 // merkelHash implements a merkle-tree style hash algorithm.
 //
-// Please refer to the official spec for details. The overall idea is:
+// Please refer to the official spec for details:
+// https://github.com/ethereum/eth2.0-specs/blob/master/specs/simple-serialize.md#tree-hash
+//
+// The overall idea is:
 // 1. Create a bunch of bytes chunk (each has a size of sszChunkSize) from the input hash list.
 // 2. Treat each bytes chunk as the leaf of a binary tree.
 // 3. For every pair of leaves, we set their parent's value using the hash value of the concatenation of the two leaves.
