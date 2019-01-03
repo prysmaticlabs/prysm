@@ -11,6 +11,7 @@ go_library(
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/randao:go_default_library",
+        "//beacon-chain/core/state/stateutils:go_default_library",
         "//beacon-chain/core/validators:go_default_library",
         "//beacon-chain/utils:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",

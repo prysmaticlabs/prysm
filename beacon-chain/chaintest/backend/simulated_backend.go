@@ -158,10 +158,10 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	}
 	endTime := time.Now()
 	log.Infof(
-		"%d state transitions with %d deposits finished in %v seconds",
+		"%d state transitions with %d deposits finished in %v",
 		testCase.Config.NumSlots,
 		testCase.Config.DepositsForChainStart,
-		endTime.Sub(startTime).Seconds(),
+		endTime.Sub(startTime),
 	)
 
 	if beaconState.GetSlot() != testCase.Results.Slot {
