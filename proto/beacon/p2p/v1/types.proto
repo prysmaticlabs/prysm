@@ -121,11 +121,6 @@ message ShardReassignmentRecord {
   uint64 slot = 3;
 }
 
-message SpecialRecord {
-  uint32 kind = 1 [deprecated=true]; // Deprecated in favor of unify specials object w/ attestations.
-  repeated bytes data = 2 [deprecated=true]; // Deprecated in favor of unify specials object w/ attestations.
-}
-
 message CrosslinkRecord {
   uint64 slot = 1;
   bytes shard_block_root_hash32 = 2;
@@ -151,10 +146,6 @@ message BeaconBlock {
 
   // Block Body
   BeaconBlockBody body = 7;
-
-  // Deprecated fields
-  // All fields must be annotated with [deprecated=true];
-  google.protobuf.Timestamp timestamp = 1006 [deprecated=true]; // Keeping this until we refactor block validation.
 }
 
 message BeaconBlockBody {
