@@ -43,13 +43,13 @@ func TestExceedingMaxValidatorRegistryFails(t *testing.T) {
 	size := 1<<(params.BeaconConfig().RandBytes*8) - 1
 
 	validators := make([]*pb.ValidatorRecord, size)
-	validator := &pb.ValidatorRecord{Status: pb.ValidatorRecord_ACTIVE}
+	validator := &pb.ValidatorRecord{ExitSlot: params.BeaconConfig().FarFutureSlot}
 	for i := 0; i < size; i++ {
 		validators[i] = validator
 	}
 
 	// ValidatorRegistryBySlotShard should fail the same.
-	if _, err := ShuffleValidatorRegistryToCommittees(common.Hash{'A'}, validators, 1); err == nil {
+	if _, err := ShuffleValidatorRegistryToCommittees(common.Hash{'A'}, validators, 1, 0); err == nil {
 		t.Errorf("ValidatorRegistryBySlotShard should have failed")
 	}
 }
@@ -65,27 +65,10 @@ func BenchmarkMaxValidatorRegistry(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		ShuffleValidatorRegistryToCommittees(common.Hash{'A'}, validators, 1)
+		ShuffleValidatorRegistryToCommittees(common.Hash{'A'}, validators, 1, 0)
 	}
 }
 
-func TestInitialShardAndCommiteeForSlots(t *testing.T) {
-	// Create 1000 validators in ActiveValidatorRegistry.
-	var validators []*pb.ValidatorRecord
-	for i := 0; i < 1000; i++ {
-		validator := &pb.ValidatorRecord{}
-		validators = append(validators, validator)
-	}
-	shardAndCommitteeArray, err := InitialShardAndCommitteesForSlots(validators)
-	if err != nil {
-		t.Fatalf("unable to get initial shard committees %v", err)
-	}
-
-	if uint64(len(shardAndCommitteeArray)) != 3*params.BeaconConfig().CycleLength {
-		t.Errorf("shard committee slots are not as expected: %d instead of %d", len(shardAndCommitteeArray), 3*params.BeaconConfig().CycleLength)
-	}
-
-}
 func TestShuffleActiveValidatorRegistry(t *testing.T) {
 	// Create 1000 validators in ActiveValidatorRegistry.
 	var validators []*pb.ValidatorRecord
@@ -94,7 +77,7 @@ func TestShuffleActiveValidatorRegistry(t *testing.T) {
 		validators = append(validators, validator)
 	}
 
-	indices, err := ShuffleValidatorRegistryToCommittees(common.Hash{'A'}, validators, 1)
+	indices, err := ShuffleValidatorRegistryToCommittees(common.Hash{'A'}, validators, 1, 0)
 	if err != nil {
 		t.Errorf("validatorsBySlotShard failed with %v:", err)
 	}
@@ -111,7 +94,7 @@ func TestSmallSampleValidatorRegistry(t *testing.T) {
 		validators = append(validators, validator)
 	}
 
-	indices, err := ShuffleValidatorRegistryToCommittees(common.Hash{'A'}, validators, 1)
+	indices, err := ShuffleValidatorRegistryToCommittees(common.Hash{'A'}, validators, 1, 0)
 	if err != nil {
 		t.Errorf("validatorsBySlotShard failed with %v:", err)
 	}

@@ -125,7 +125,7 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 	}
 	deposit := []*pbp2p.Deposit{
 		{DepositData: &pbp2p.DepositData{
-			Value: params.BeaconConfig().MaxDepositInGwei,
+			Amount: params.BeaconConfig().MaxDepositInGwei,
 			DepositInput: &pbp2p.DepositInput{
 				Pubkey: []byte{'A'},
 			},
@@ -181,7 +181,7 @@ func TestProposeBlock(t *testing.T) {
 	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
 		deposits[i] = &pbp2p.Deposit{DepositData: &pbp2p.DepositData{
-			Value: params.BeaconConfig().MaxDepositInGwei,
+			Amount: params.BeaconConfig().MaxDepositInGwei,
 			DepositInput: &pbp2p.DepositInput{
 				Pubkey: []byte(strconv.Itoa(i)),
 				RandaoCommitmentHash32: []byte{41, 13, 236, 217, 84, 139, 98, 168, 214, 3, 69,
@@ -329,7 +329,7 @@ func TestValidatorSlotAndResponsibility(t *testing.T) {
 
 	deposit := []*pbp2p.Deposit{
 		{DepositData: &pbp2p.DepositData{
-			Value: params.BeaconConfig().MaxDepositInGwei,
+			Amount: params.BeaconConfig().MaxDepositInGwei,
 			DepositInput: &pbp2p.DepositInput{
 				Pubkey: []byte{'A'},
 			},
@@ -370,7 +370,7 @@ func TestValidatorIndex(t *testing.T) {
 
 	deposit := []*pbp2p.Deposit{
 		{DepositData: &pbp2p.DepositData{
-			Value: params.BeaconConfig().MaxDepositInGwei,
+			Amount: params.BeaconConfig().MaxDepositInGwei,
 			DepositInput: &pbp2p.DepositInput{
 				Pubkey: []byte{'A'},
 			},
@@ -410,7 +410,7 @@ func TestValidatorShardID(t *testing.T) {
 
 	deposit := []*pbp2p.Deposit{
 		{DepositData: &pbp2p.DepositData{
-			Value: params.BeaconConfig().MaxDepositInGwei,
+			Amount: params.BeaconConfig().MaxDepositInGwei,
 			DepositInput: &pbp2p.DepositInput{
 				Pubkey: []byte{'A'},
 			},
@@ -451,7 +451,7 @@ func TestValidatorAssignments(t *testing.T) {
 
 	deposit := []*pbp2p.Deposit{
 		{DepositData: &pbp2p.DepositData{
-			Value: params.BeaconConfig().MaxDepositInGwei,
+			Amount: params.BeaconConfig().MaxDepositInGwei,
 			DepositInput: &pbp2p.DepositInput{
 				Pubkey: []byte{'A'},
 			},

@@ -308,14 +308,22 @@ func TestProcessProposerSlashings_UnmatchedBlockRoots(t *testing.T) {
 func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
+	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
+			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
+			},
+		})
+	}
 	registry := []*pb.ValidatorRecord{
 		{
-			Status:                 pb.ValidatorRecord_ACTIVE,
-			LatestStatusChangeSlot: 0,
+			ExitSlot:      params.BeaconConfig().FarFutureSlot,
+			PenalizedSlot: 2,
 		},
 		{
-			Status:                 pb.ValidatorRecord_ACTIVE,
-			LatestStatusChangeSlot: 0,
+			ExitSlot:      params.BeaconConfig().FarFutureSlot,
+			PenalizedSlot: 2,
 		},
 	}
 	slashings := []*pb.ProposerSlashing{
@@ -337,6 +345,10 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	beaconState := &pb.BeaconState{
 		ValidatorRegistry: registry,
 		Slot:              currentSlot,
+		ValidatorBalances: []uint64{params.BeaconConfig().MaxDepositInGwei,
+			params.BeaconConfig().MaxDepositInGwei},
+		LatestPenalizedExitBalances: []uint64{0},
+		ShardAndCommitteesAtSlots:   shardAndCommittees,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -352,8 +364,10 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unexpected error: %s", err)
 	}
-	if registry[1].Status != pb.ValidatorRecord_EXITED_WITH_PENALTY {
-		t.Errorf("Proposer with index 1 did not ExitWithPenalty in validator registry: %v", registry[1].Status)
+	if registry[1].ExitSlot !=
+		beaconState.Slot+params.BeaconConfig().EntryExitDelay {
+		t.Errorf("Proposer with index 1 did not correctly exit,"+"wanted slot:%d, got:%d",
+			beaconState.Slot+params.BeaconConfig().EntryExitDelay, registry[1].ExitSlot)
 	}
 }
 
@@ -642,14 +656,22 @@ func TestProcessCasperSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 func TestProcessCasperSlashings_AppliesCorrectStatus(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
+	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
+			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
+			},
+		})
+	}
 	registry := []*pb.ValidatorRecord{
 		{
-			Status:                 pb.ValidatorRecord_ACTIVE,
-			LatestStatusChangeSlot: 0,
+			ExitSlot:      params.BeaconConfig().FarFutureSlot,
+			PenalizedSlot: 6,
 		},
 		{
-			Status:                 pb.ValidatorRecord_ACTIVE,
-			LatestStatusChangeSlot: 0,
+			ExitSlot:      params.BeaconConfig().FarFutureSlot,
+			PenalizedSlot: 6,
 		},
 	}
 
@@ -678,8 +700,11 @@ func TestProcessCasperSlashings_AppliesCorrectStatus(t *testing.T) {
 
 	currentSlot := uint64(5)
 	beaconState := &pb.BeaconState{
-		ValidatorRegistry: registry,
-		Slot:              currentSlot,
+		ValidatorRegistry:           registry,
+		Slot:                        currentSlot,
+		ValidatorBalances:           []uint64{32, 32, 32, 32, 32, 32},
+		LatestPenalizedExitBalances: []uint64{0},
+		ShardAndCommitteesAtSlots:   shardAndCommittees,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -696,23 +721,23 @@ func TestProcessCasperSlashings_AppliesCorrectStatus(t *testing.T) {
 	newRegistry := newState.GetValidatorRegistry()
 
 	// Given the intersection of slashable indices is [1], only validator
-	// at index 1 should be penalized and change Status. We confirm this below.
-	if newRegistry[1].Status != pb.ValidatorRecord_EXITED_WITH_PENALTY {
+	// at index 1 should be penalized and exited. We confirm this below.
+	if newRegistry[1].ExitSlot != params.BeaconConfig().EntryExitDelay+currentSlot {
 		t.Errorf(
 			`
-			Expected validator at index 1's status to change to 
-			EXITED_WITH_PENALTY, received %v instead
+			Expected validator at index 1's exit slot to change to
+			%d, received %d instead
 			`,
-			newRegistry[1].Status,
+			params.BeaconConfig().EntryExitDelay+currentSlot, newRegistry[1].ExitSlot,
 		)
 	}
-	if newRegistry[0].Status != pb.ValidatorRecord_ACTIVE {
+	if newRegistry[0].ExitSlot != params.BeaconConfig().FarFutureSlot {
 		t.Errorf(
 			`
-			Expected validator at index 0's status to remain 
-			ACTIVE, received %v instead
+			Expected validator at index 0's exit slot to not change,
+			received %d instead
 			`,
-			newRegistry[1].Status,
+			newRegistry[0].ExitSlot,
 		)
 	}
 }
@@ -1128,7 +1153,7 @@ func TestProcessValidatorExits_ValidatorNotActive(t *testing.T) {
 	}
 	registry := []*pb.ValidatorRecord{
 		{
-			Status: pb.ValidatorRecord_EXITED_WITH_PENALTY,
+			ExitSlot: 0,
 		},
 	}
 	state := &pb.BeaconState{
@@ -1141,8 +1166,8 @@ func TestProcessValidatorExits_ValidatorNotActive(t *testing.T) {
 	}
 
 	want := fmt.Sprintf(
-		"expected validator to have active status, received %v",
-		pb.ValidatorRecord_EXITED_WITH_PENALTY,
+		"expected exit.Slot > state.Slot + EntryExitDelay, received 0 < %d",
+		params.BeaconConfig().EntryExitDelay,
 	)
 
 	if _, err := ProcessValidatorExits(
@@ -1161,7 +1186,7 @@ func TestProcessValidatorExits_InvalidExitSlot(t *testing.T) {
 	}
 	registry := []*pb.ValidatorRecord{
 		{
-			Status: pb.ValidatorRecord_ACTIVE,
+			ExitSlot: params.BeaconConfig().FarFutureSlot,
 		},
 	}
 	state := &pb.BeaconState{
@@ -1197,8 +1222,7 @@ func TestProcessValidatorExits_InvalidStatusChangeSlot(t *testing.T) {
 	}
 	registry := []*pb.ValidatorRecord{
 		{
-			Status:                 pb.ValidatorRecord_ACTIVE,
-			LatestStatusChangeSlot: 100,
+			ExitSlot: 1,
 		},
 	}
 	state := &pb.BeaconState{
@@ -1211,7 +1235,7 @@ func TestProcessValidatorExits_InvalidStatusChangeSlot(t *testing.T) {
 		},
 	}
 
-	want := "expected validator.LatestStatusChangeSlot + PersistentCommitteePeriod >= state.Slot"
+	want := "expected exit.Slot > state.Slot + EntryExitDelay"
 	if _, err := ProcessValidatorExits(
 		state,
 		block,
@@ -1229,8 +1253,7 @@ func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
 	}
 	registry := []*pb.ValidatorRecord{
 		{
-			Status:                 pb.ValidatorRecord_ACTIVE,
-			LatestStatusChangeSlot: 0,
+			ExitSlot: params.BeaconConfig().FarFutureSlot,
 		},
 	}
 	state := &pb.BeaconState{
@@ -1247,7 +1270,7 @@ func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
 		t.Fatalf("Could not process exits: %v", err)
 	}
 	newRegistry := newState.GetValidatorRegistry()
-	if newRegistry[0].Status == pb.ValidatorRecord_ACTIVE {
-		t.Error("Expected validator status to change, remained ACTIVE")
+	if newRegistry[0].StatusFlags == pb.ValidatorRecord_INITIAL {
+		t.Error("Expected validator status to change, remained INITIAL")
 	}
 }

@@ -48,7 +48,7 @@ func VerifyProposerAttestation(att *pb.AttestationData, pubKey [32]byte, propose
 		att.GetSlot(),
 		proposerShardID,
 		att.GetJustifiedSlot(),
-		params.BeaconConfig().InitialForkVersion,
+		params.BeaconConfig().GenesisForkVersion,
 	)
 	_ = attestationMsg
 	_ = pubKey

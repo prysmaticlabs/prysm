@@ -205,7 +205,7 @@ func TestRunningChainService(t *testing.T) {
 	deposits := make([]*pb.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
 		deposits[i] = &pb.Deposit{DepositData: &pb.DepositData{
-			Value: params.BeaconConfig().MaxDepositInGwei,
+			Amount: params.BeaconConfig().MaxDepositInGwei,
 			DepositInput: &pb.DepositInput{
 				Pubkey: []byte(strconv.Itoa(i)),
 				RandaoCommitmentHash32: []byte{41, 13, 236, 217, 84, 139, 98, 168, 214, 3, 69,

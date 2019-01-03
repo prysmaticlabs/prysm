@@ -19,7 +19,7 @@ func (db *BeaconDB) InitializeState(genesisValidatorRegistry []*pb.ValidatorReco
 	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
 	for i := 0; i < len(deposits); i++ {
 		deposits[i] = &pb.Deposit{DepositData: &pb.DepositData{
-			Value: genesisValidatorRegistry[i].Balance,
+			Amount: genesisValidatorRegistry[i].Balance,
 			DepositInput: &pb.DepositInput{
 				Pubkey: genesisValidatorRegistry[i].Pubkey,
 			},
