@@ -51,7 +51,10 @@ func (s *Service) healthzHandler(w http.ResponseWriter, r *http.Request) {
 			hasError = true
 			status = "ERROR " + v.Error()
 		}
-		buf.WriteString(fmt.Sprintf("%s: %s\n", k, status))
+		if _, err := buf.WriteString(fmt.Sprintf("%s: %s\n", k, status)); err != nil {
+			hasError = true
+			status = "ERROR " + err.Error()
+		}
 	}
 
 	// Write status header
