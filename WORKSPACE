@@ -543,7 +543,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_crypto",
-    commit = "505ab145d0a99da450461ae2c1a9f6cd10d1f447",
+    commit = "8d7daa0c54b357f3071e11eaef7efc4e19a417e2",
     importpath = "golang.org/x/crypto",
 )
 
@@ -621,7 +621,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_google_api",
-    commit = "f26a60c56f148a32e87f3f4591c8ebf834b5561f",
+    tag = "v0.1.0",
     importpath = "google.golang.org/api",
 )
 
