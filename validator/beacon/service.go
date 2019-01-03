@@ -126,7 +126,7 @@ func (s *Service) fetchCurrentAssignmentsAndGenesisTime(client pb.BeaconServiceC
 
 	// Determine what slot the beacon node is in by checking the number of seconds
 	// since the genesis block.
-	genesisTimestamp, err := ptypes.TimestampFromProto(res.GetGenesisTimestamp())
+	genesisTimestamp, err := ptypes.TimestampFromProto(res.GenesisTimestamp)
 	if err != nil {
 		return fmt.Errorf("could not compute genesis timestamp: %v", err)
 	}
@@ -234,7 +234,7 @@ func (s *Service) listenForProcessedAttestations(client pb.BeaconServiceClient) 
 			continue
 		}
 
-		log.WithField("slotNumber", attestation.GetData().GetSlot()).Info("Latest attestation slot number")
+		log.WithField("slotNumber", attestation.Data.Slot).Info("Latest attestation slot number")
 		s.processedAttestationFeed.Send(attestation)
 	}
 }

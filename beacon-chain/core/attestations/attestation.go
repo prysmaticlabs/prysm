@@ -32,9 +32,9 @@ func CreateAttestationMsg(
 // This is used for attestation table look up in localDB.
 func Key(att *pb.AttestationData) [32]byte {
 	key := make([]byte, binary.MaxVarintLen64)
-	binary.PutUvarint(key, att.GetSlot())
-	binary.PutUvarint(key, att.GetShard())
-	key = append(key, att.GetShardBlockRootHash32()...)
+	binary.PutUvarint(key, att.Slot)
+	binary.PutUvarint(key, att.Shard)
+	key = append(key, att.ShardBlockRootHash32...)
 	return hashutil.Hash(key)
 }
 
@@ -44,10 +44,10 @@ func VerifyProposerAttestation(att *pb.AttestationData, pubKey [32]byte, propose
 	// Verify the attestation attached with block response.
 	// Get proposer index and shardID.
 	attestationMsg := CreateAttestationMsg(
-		att.GetShardBlockRootHash32(),
-		att.GetSlot(),
+		att.ShardBlockRootHash32,
+		att.Slot,
 		proposerShardID,
-		att.GetJustifiedSlot(),
+		att.JustifiedSlot,
 		params.BeaconConfig().InitialForkVersion,
 	)
 	_ = attestationMsg

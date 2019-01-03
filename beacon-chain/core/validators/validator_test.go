@@ -18,8 +18,8 @@ func TestHasVoted(t *testing.T) {
 		ParticipationBitfield: []byte{255},
 	}
 
-	for i := 0; i < len(pendingAttestation.GetParticipationBitfield()); i++ {
-		voted, err := bitutil.CheckBit(pendingAttestation.GetParticipationBitfield(), i)
+	for i := 0; i < len(pendingAttestation.ParticipationBitfield); i++ {
+		voted, err := bitutil.CheckBit(pendingAttestation.ParticipationBitfield, i)
 		if err != nil {
 			t.Errorf("checking bit failed at index: %d with : %v", i, err)
 		}
@@ -34,8 +34,8 @@ func TestHasVoted(t *testing.T) {
 		ParticipationBitfield: []byte{85},
 	}
 
-	for i := 0; i < len(pendingAttestation.GetParticipationBitfield()); i++ {
-		voted, err := bitutil.CheckBit(pendingAttestation.GetParticipationBitfield(), i)
+	for i := 0; i < len(pendingAttestation.ParticipationBitfield); i++ {
+		voted, err := bitutil.CheckBit(pendingAttestation.ParticipationBitfield, i)
 		if err != nil {
 			t.Errorf("checking bit failed at index: %d : %v", i, err)
 		}
@@ -52,8 +52,8 @@ func TestHasVoted(t *testing.T) {
 func TestInitialValidatorRegistry(t *testing.T) {
 	validators := InitialValidatorRegistry()
 	for _, validator := range validators {
-		if validator.GetStatus() != pb.ValidatorRecord_ACTIVE {
-			t.Errorf("validator status is not active: %d", validator.GetStatus())
+		if validator.Status != pb.ValidatorRecord_ACTIVE {
+			t.Errorf("validator status is not active: %d", validator.Status)
 		}
 	}
 }
