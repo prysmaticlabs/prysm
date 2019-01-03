@@ -31,11 +31,11 @@ func decode(r io.Reader, val interface{}) error {
 	if rval.IsNil() {
 		return newDecodeError("cannot output to pointer of nil", rtyp)
 	}
-	encDec, err := cachedEncoderDecoder(rval.Elem().Type())
+	sszUtils, err := cachedSSZUtils(rval.Elem().Type())
 	if err != nil {
 		return newDecodeError(fmt.Sprint(err), rval.Elem().Type())
 	}
-	if _, err = encDec.decoder(r, rval.Elem()); err != nil {
+	if _, err = sszUtils.decoder(r, rval.Elem()); err != nil {
 		return newDecodeError(fmt.Sprint(err), rval.Elem().Type())
 	}
 	return nil
@@ -163,7 +163,7 @@ func decodeByteArray(r io.Reader, val reflect.Value) (uint32, error) {
 
 func makeSliceDecoder(typ reflect.Type) (decoder, error) {
 	elemType := typ.Elem()
-	elemEncoderDecoder, err := cachedEncoderDecoderNoAcquireLock(elemType)
+	elemSSZUtils, err := cachedSSZUtilsNoAcquireLock(elemType)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +198,7 @@ func makeSliceDecoder(typ reflect.Type) (decoder, error) {
 			}
 
 			// Decode and write into the new element
-			elemDecodeSize, err := elemEncoderDecoder.decoder(r, val.Index(i))
+			elemDecodeSize, err := elemSSZUtils.decoder(r, val.Index(i))
 			if err != nil {
 				return 0, fmt.Errorf("failed to decode element of slice: %v", err)
 			}
@@ -211,7 +211,7 @@ func makeSliceDecoder(typ reflect.Type) (decoder, error) {
 
 func makeArrayDecoder(typ reflect.Type) (decoder, error) {
 	elemType := typ.Elem()
-	elemEncoderDecoder, err := cachedEncoderDecoderNoAcquireLock(elemType)
+	elemSSZUtils, err := cachedSSZUtilsNoAcquireLock(elemType)
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +224,7 @@ func makeArrayDecoder(typ reflect.Type) (decoder, error) {
 
 		i, decodeSize := 0, uint32(0)
 		for ; i < val.Len() && decodeSize < size; i++ {
-			elemDecodeSize, err := elemEncoderDecoder.decoder(r, val.Index(i))
+			elemDecodeSize, err := elemSSZUtils.decoder(r, val.Index(i))
 			if err != nil {
 				return 0, fmt.Errorf("failed to decode element of slice: %v", err)
 			}
@@ -262,7 +262,7 @@ func makeStructDecoder(typ reflect.Type) (decoder, error) {
 				return 0, errors.New("not enough input data to decode into specified struct")
 			}
 			f := fields[i]
-			fieldDecodeSize, err := f.encDec.decoder(r, val.Field(f.index))
+			fieldDecodeSize, err := f.sszUtils.decoder(r, val.Field(f.index))
 			if err != nil {
 				return 0, fmt.Errorf("failed to decode field of slice: %v", err)
 			}
@@ -279,7 +279,7 @@ func makeStructDecoder(typ reflect.Type) (decoder, error) {
 // (Not to be confused with empty slice. Empty slice is supported)
 func makePtrDecoder(typ reflect.Type) (decoder, error) {
 	elemType := typ.Elem()
-	elemEncoderDecoder, err := cachedEncoderDecoderNoAcquireLock(elemType)
+	elemSSZUtils, err := cachedSSZUtilsNoAcquireLock(elemType)
 	if err != nil {
 		return nil, err
 	}
@@ -288,7 +288,7 @@ func makePtrDecoder(typ reflect.Type) (decoder, error) {
 		if val.IsNil() {
 			newVal = reflect.New(elemType)
 		}
-		elemDecodeSize, err := elemEncoderDecoder.decoder(r, newVal.Elem())
+		elemDecodeSize, err := elemSSZUtils.decoder(r, newVal.Elem())
 		if err != nil {
 			return 0, fmt.Errorf("failed to decode to object pointed by pointer: %v", err)
 		}
