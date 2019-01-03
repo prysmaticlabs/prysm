@@ -230,8 +230,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 
 	// Verify attestation coming from proposer then forward block to the subscribers.
 	proposerShardID, _, err := v.ProposerShardAndIndex(
-		beaconState.GetShardAndCommitteesAtSlots(),
-		beaconState.GetLastStateRecalculationSlot(),
+		beaconState,
 		block.GetSlot(),
 	)
 	if err != nil {
