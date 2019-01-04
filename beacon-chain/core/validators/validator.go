@@ -338,14 +338,14 @@ func Attesters(state *pb.BeaconState, attesterIndices []uint32) []*pb.ValidatorR
 // Spec pseudocode definition:
 //   Let this_epoch_boundary_attester_indices be the union of the validator
 //   index sets given by [get_attestation_participants(state, a.data, a.participation_bitfield)
-//   for a in this_epoch_boundary_attestations]
+//   for a in attestations]
 func ValidatorIndices(
 	state *pb.BeaconState,
-	boundaryAttestations []*pb.PendingAttestationRecord,
+	attestations []*pb.PendingAttestationRecord,
 ) ([]uint32, error) {
 
 	var attesterIndicesIntersection []uint32
-	for _, boundaryAttestation := range boundaryAttestations {
+	for _, boundaryAttestation := range attestations {
 		attesterIndices, err := AttestationParticipants(
 			state,
 			boundaryAttestation.Data,
