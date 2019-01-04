@@ -214,6 +214,59 @@ func TestProposeBlock(t *testing.T) {
 	}
 }
 
+func TestComputeBlockWithStateRoot(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	mockChain := &mockChainService{}
+
+	genesis := b.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+
+	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(deposits); i++ {
+		deposits[i] = &pbp2p.Deposit{DepositData: &pbp2p.DepositData{
+			Value: params.BeaconConfig().MaxDepositInGwei,
+			DepositInput: &pbp2p.DepositInput{
+				Pubkey: []byte(strconv.Itoa(i)),
+				RandaoCommitmentHash32: []byte{41, 13, 236, 217, 84, 139, 98, 168, 214, 3, 69,
+					169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
+			},
+		}}
+	}
+
+	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
+	if err != nil {
+		t.Fatalf("Could not instantiate initial state: %v", err)
+	}
+
+	beaconState.Slot = 10
+
+	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:            "6372",
+		ChainService:    mockChain,
+		BeaconDB:        db,
+		POWChainService: &mockPOWChainService{},
+	})
+
+	req := &pb.ProposeRequest{
+		ParentHash:              nil,
+		SlotNumber:              11,
+		RandaoRevealHash32:      nil,
+		AttestationBitmask:      nil,
+		AttestationAggregateSig: nil,
+		Timestamp:               nil,
+	}
+
+	_, _ = rpcService.ComputeBlockWithStateRoot(context.Background(), req)
+}
+
 func TestAttestHead(t *testing.T) {
 	mockChain := &mockChainService{}
 	mockAttestationService := &mockAttestationService{}

@@ -185,11 +185,11 @@ func (p *Proposer) receiveAssignment(latestBeaconBlock *pbp2p.BeaconBlock, clien
 
 	hash, err := client.ProposeBlock(p.ctx, block)
 	if err != nil {
-		log.Errorf("unable to propose block %v", err)
+		log.Errorf("Unable to propose block %v", err)
 		return
 	}
 
-	log.Infof("Successfully proposed block with hash %#x", hash)
+	log.Infof("Successfully proposed block with hash %#x", hash.BlockHash)
 }
 
 func (p *Proposer) computeBlockToBeProposed(latestBlock *pbp2p.BeaconBlock,
@@ -235,7 +235,7 @@ func (p *Proposer) createProposalDataFromBlock(block *pbp2p.BeaconBlock) (*pbp2p
 
 	marshalledBlock, err := proto.Marshal(block)
 	if err != nil {
-		return nil, fmt.Errorf("unable to marshal block", err)
+		return nil, fmt.Errorf("unable to marshal block %v", err)
 	}
 
 	blockHash := hashutil.Hash(marshalledBlock)
