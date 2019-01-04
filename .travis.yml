@@ -1,4 +1,5 @@
 language: go
+install: true
 go_import_path: github.com/prysmaticlabs/prysm
 sudo: false
 env:
