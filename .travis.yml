@@ -1,6 +1,9 @@
 language: go
 go_import_path: github.com/prysmaticlabs/prysm
 sudo: false
+env:
+  global:
+    - GO111MODULE=on
 matrix:
   include:
     - os: linux
