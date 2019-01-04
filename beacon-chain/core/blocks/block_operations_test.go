@@ -398,6 +398,16 @@ func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 					params.BeaconConfig().MaxCasperVotes,
 				),
 			},
+			Votes_2: &pb.SlashableVoteData{
+				AggregateSignaturePoc_0Indices: make(
+					[]uint32,
+					params.BeaconConfig().MaxCasperVotes,
+				),
+				AggregateSignaturePoc_1Indices: make(
+					[]uint32,
+					params.BeaconConfig().MaxCasperVotes,
+				),
+			},
 		},
 	}
 	registry := []*pb.ValidatorRecord{}
@@ -428,6 +438,16 @@ func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 	// Perform the same check for Votes_2.
 	slashings = []*pb.CasperSlashing{
 		{
+			Votes_1: &pb.SlashableVoteData{
+				AggregateSignaturePoc_0Indices: make(
+					[]uint32,
+					params.BeaconConfig().MaxCasperVotes,
+				),
+				AggregateSignaturePoc_1Indices: make(
+					[]uint32,
+					params.BeaconConfig().MaxCasperVotes,
+				),
+			},
 			Votes_2: &pb.SlashableVoteData{
 				AggregateSignaturePoc_0Indices: make(
 					[]uint32,
