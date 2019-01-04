@@ -66,7 +66,7 @@ func (s *Service) healthzHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Write http body
 	if _, err := w.Write(buf.Bytes()); err != nil {
-		log.Errorf("Could not write healthz body")
+		log.Errorf("Could not write healthz body %v", err)
 	}
 }
 
