@@ -205,10 +205,9 @@ func TestProposeBlock(t *testing.T) {
 		BeaconDB:        db,
 		POWChainService: &mockPOWChainService{},
 	})
-	req := &pb.ProposeRequest{
-		SlotNumber: 5,
-		ParentHash: []byte("parent-hash"),
-		Timestamp:  ptypes.TimestampNow(),
+	req := &pbp2p.BeaconBlock{
+		Slot:             5,
+		ParentRootHash32: []byte("parent-hash"),
 	}
 	if _, err := rpcService.ProposeBlock(context.Background(), req); err != nil {
 		t.Errorf("Could not propose block correctly: %v", err)
