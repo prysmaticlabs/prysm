@@ -8,7 +8,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
-	ptypes "github.com/gogo/protobuf/types"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -376,7 +375,6 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*pb.BeaconB
 
 	block := &pb.BeaconBlock{
 		Slot:                          slot,
-		Timestamp:                     ptypes.TimestampNow(),
 		CandidatePowReceiptRootHash32: powChainRef,
 		StateRootHash32:               stateHash[:],
 		ParentRootHash32:              parentHash,

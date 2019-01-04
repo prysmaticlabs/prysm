@@ -23,6 +23,14 @@ type Decodable interface {
 }
 ```
 
+### Hashable
+A type is Hashable if it implements `TreeHashSSZ()`.
+```go
+type Hashable interface {
+	TreeHashSSZ() ([32]byte, error)
+}
+```
+
 ## API
 
 ### Encoding function
@@ -44,6 +52,12 @@ func EncodeSize(val interface{}) (uint32, error)
 // Decode data read from r and output it into the object pointed by pointer val.
 func Decode(r io.Reader, val interface{}) error
 ```
+
+### Hashing function
+```go
+// Tree-hash data into [32]byte
+func TreeHash(val interface{}) ([32]byte, error)
+````
 
 ## Usage
 
@@ -87,6 +101,15 @@ if encodeSize, err = e1.EncodeSSZSize(); err != nil {
     return fmt.Errorf("failed to get encode size: %v", err)
 }
 // encodeSize becomes 13
+```
+
+To calculate tree-hash of the object
+```go
+var hash [32]byte
+if hash, err = e1.TreeHashSSZ(); err != nil {
+    return fmt.Errorf("failed to hash: %v", err)
+}
+// hash stores the hashing result
 ```
 
 Similarly, you can implement the `Decodable` interface for this struct

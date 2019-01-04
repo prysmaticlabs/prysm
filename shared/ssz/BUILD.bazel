@@ -6,10 +6,12 @@ go_library(
         "decode.go",
         "doc.go",
         "encode.go",
-        "encoder_decoder_lib.go",
+        "hash.go",
+        "ssz_utils_cache.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/ssz",
     visibility = ["//visibility:public"],
+    deps = ["//shared/hashutil:go_default_library"],
 )
 
 go_test(
@@ -18,6 +20,7 @@ go_test(
         "decode_test.go",
         "encode_test.go",
         "example_and_test.go",
+        "hash_test.go",
     ],
     embed = [":go_default_library"],
 )

@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	ptypes "github.com/gogo/protobuf/types"
@@ -157,12 +158,16 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not call CurrentAssignments correctly: %v", err)
 	}
-	genesis = b.NewGenesisBlock([]byte{})
 
-	if res.GenesisTimestamp.String() != genesis.GetTimestamp().String() {
+	genesisTimeStamp, err := ptypes.TimestampProto(time.Unix(int64(beaconState.GenesisTime), 0))
+	if err != nil {
+		t.Errorf("Could not generate genesis timestamp %v", err)
+	}
+
+	if res.GenesisTimestamp.String() != genesisTimeStamp.String() {
 		t.Errorf(
 			"Received different genesis timestamp, wanted: %v, received: %v",
-			genesis.GetTimestamp(),
+			genesisTimeStamp.String(),
 			res.GenesisTimestamp,
 		)
 	}
