@@ -131,10 +131,18 @@ func PrevBoundaryAttestations(
 	state *pb.BeaconState,
 	prevEpochJustifiedAttestations []*pb.PendingAttestationRecord,
 ) ([]*pb.PendingAttestationRecord, error) {
+	var earliestSlot uint64
+
+	// If the state slot is less than 2 * epochLength, then the earliestSlot would
+	// result in a negative number. Therefore we should default to
+	// earliestSlot = 0 in this case.
+	if state.Slot > 2*params.BeaconConfig().EpochLength {
+		earliestSlot = state.Slot - 2*params.BeaconConfig().EpochLength
+	}
 
 	var prevBoundaryAttestations []*pb.PendingAttestationRecord
 	prevBoundaryBlockRoot, err := block.BlockRoot(state,
-		state.Slot-2*params.BeaconConfig().EpochLength)
+		earliestSlot)
 	if err != nil {
 		return nil, err
 	}
