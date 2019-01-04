@@ -9,6 +9,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/prysmaticlabs/go-bls/bazel-go-bls/external/go_sdk/src/fmt"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -159,43 +160,93 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 		// When we receive an assignment on a slot, we leverage the fields
 		// from the latest canonical beacon block to perform a proposal responsibility.
 		case latestBeaconBlock := <-p.assignmentChan:
-			log.Info("Performing proposer responsibility")
-
-			// Extract the hash of the latest beacon block to use as parent hash in
-			// the proposal.
-			if latestBeaconBlock == nil {
-				log.Errorf("Could not marshal nil latest beacon block")
-				continue
-			}
-			data, err := proto.Marshal(latestBeaconBlock)
-			if err != nil {
-				log.Errorf("Could not marshal latest beacon block: %v", err)
-				continue
-			}
-			latestBlockHash := hashutil.Hash(data)
-
-			// To prevent any unaccounted attestations from being added.
-			p.lock.Lock()
-
-			bitmask := p.GenerateBitmask(p.pendingAttestation)
-			// TODO(#619): Implement real proposals with randao reveals and attestation fields.
-			req := &pb.ProposeRequest{
-				ParentHash: latestBlockHash[:],
-				// TODO(#511): Fix to be the actual, timebased slot number instead.
-				SlotNumber:         latestBeaconBlock.GetSlot() + 1,
-				RandaoRevealHash32: []byte{},
-				AttestationBitmask: bitmask,
-				Timestamp:          ptypes.TimestampNow(),
-			}
-			res, err := client.ProposeBlock(p.ctx, req)
-			if err != nil {
-				log.Errorf("Could not propose block: %v", err)
-				continue
-			}
-
-			log.Infof("Block proposed successfully with hash %#x", res.BlockHash)
-			p.pendingAttestation = nil
-			p.lock.Unlock()
+			p.receiveAssignment(latestBeaconBlock, client)
 		}
 	}
+}
+
+func (p *Proposer) receiveAssignment(latestBeaconBlock *pbp2p.BeaconBlock, client pb.ProposerServiceClient) {
+	log.Info("Performing proposer responsibility")
+
+	block, err := p.computeBlockToBeProposed(latestBeaconBlock, client)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	proposalData, err := p.createProposalDataFromBlock(block)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	signature := p.signProposalData(proposalData)
+	block.Signature[0] = signature[:]
+
+	hash, err := client.ProposeBlock(p.ctx, block)
+	if err != nil {
+		log.Errorf("unable to propose block %v", err)
+		return
+	}
+
+	log.Infof("Successfully proposed block with hash %#x", hash)
+}
+
+func (p *Proposer) computeBlockToBeProposed(latestBlock *pbp2p.BeaconBlock,
+	client pb.ProposerServiceClient) (*pbp2p.BeaconBlock, error) {
+	// Extract the hash of the latest beacon block to use as parent hash in
+	// the proposal.
+	if latestBlock == nil {
+		return nil, fmt.Errorf("Could not marshal nil latest beacon block")
+
+	}
+	data, err := proto.Marshal(latestBlock)
+	if err != nil {
+		return nil, fmt.Errorf("Could not marshal latest beacon block: %v", err)
+	}
+	latestBlockHash := hashutil.Hash(data)
+
+	// To prevent any unaccounted attestations from being added.
+	p.lock.Lock()
+
+	bitmask := p.GenerateBitmask(p.pendingAttestation)
+	// TODO(#619): Implement real proposals with randao reveals and attestation fields.
+	req := &pb.ProposeRequest{
+		ParentHash: latestBlockHash[:],
+		// TODO(#511): Fix to be the actual, timebased slot number instead.
+		SlotNumber:         latestBlock.GetSlot() + 1,
+		RandaoRevealHash32: []byte{},
+		AttestationBitmask: bitmask,
+		Timestamp:          ptypes.TimestampNow(),
+	}
+	res, err := client.ComputeBlockWithStateRoot(p.ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("Could not compute new block: %v", err)
+	}
+
+	log.Infof("Block has state root hash of %#x", res.StateRootHash32)
+	p.pendingAttestation = nil
+	p.lock.Unlock()
+
+	return res, nil
+}
+
+func (p *Proposer) createProposalDataFromBlock(block *pbp2p.BeaconBlock) (*pbp2p.ProposalSignedData, error) {
+
+	marshalledBlock, err := proto.Marshal(block)
+	if err != nil {
+		return nil, fmt.Errorf("unable to marshal block", err)
+	}
+
+	blockHash := hashutil.Hash(marshalledBlock)
+
+	return &pbp2p.ProposalSignedData{
+		Slot:            block.Slot,
+		Shard:           0, // placeholder
+		BlockRootHash32: blockHash[:],
+	}, nil
+}
+
+func (p *Proposer) signProposalData(data *pbp2p.ProposalSignedData) [32]byte {
+	return [32]byte{'S', 'I', 'G', 'N', 'A', 'T', 'U', 'R', 'E'}
 }
