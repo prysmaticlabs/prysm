@@ -106,15 +106,16 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState
 
 // NewEpochTransition describes the per epoch operations that are performed on the
 // beacon state.
+//
 // Spec pseudocode definition:
-// 		process_candidate_receipt_roots(state)
-//      update_justification(state)
-//      update_finalization(state)
-//      update_crosslinks(state)
-//      process_casper_reward_penalties(state)
-//      process_crosslink_reward_penalties(state)
-//      update_validator_registry(state)
-//      final_book_keeping(state)
+// 	 process_candidate_receipt_roots(state)
+// 	 update_justification(state)
+// 	 update_finalization(state)
+// 	 update_crosslinks(state)
+// 	 process_casper_reward_penalties(state)
+// 	 process_crosslink_reward_penalties(state)
+// 	 update_validator_registry(state)
+// 	 final_book_keeping(state)
 func NewEpochTransition(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Calculate total balances of active validators of the current state.
