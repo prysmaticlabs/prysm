@@ -485,7 +485,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 	defaultBalance := config.MaxDepositInGwei
 
 	var shardAndCommittees []*pb.ShardAndCommitteeArray
-	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+	for i := uint64(0); i < config.EpochLength*2; i++ {
 		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
 			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
 				{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
@@ -505,7 +505,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 	}
 
 	var attestations []*pb.PendingAttestationRecord
-	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+	for i := uint64(0); i < config.EpochLength*2; i++ {
 		attestations = append(attestations, &pb.PendingAttestationRecord{
 			Data: &pb.AttestationData{
 				Slot:                     i + config.EpochLength,
@@ -519,12 +519,12 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 	}
 
 	var blockRoots [][]byte
-	for i := uint64(0); i < 2*params.BeaconConfig().EpochLength; i++ {
+	for i := uint64(0); i < 2*config.EpochLength; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 
 	var randaoHashes [][]byte
-	for i := uint64(0); i < 2*params.BeaconConfig().EpochLength; i++ {
+	for i := uint64(0); i < 2*config.EpochLength; i++ {
 		randaoHashes = append(randaoHashes, []byte{byte(i)})
 	}
 
@@ -532,6 +532,73 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 
 	state := &pb.BeaconState{
 		Slot:                      config.EpochLength*2 + 1,
+		LatestAttestations:        attestations,
+		ValidatorBalances:         validatorBalances,
+		ValidatorRegistry:         validatorRegistry,
+		ShardAndCommitteesAtSlots: shardAndCommittees,
+		LatestBlockRootHash32S:    blockRoots,
+		LatestCrosslinks:          crosslinkRecord,
+		LatestRandaoMixesHash32S:  randaoHashes,
+	}
+
+	_, err := NewEpochTransition(state)
+	if err != nil {
+		t.Errorf("Expected epoch transition to pass processing conditions: %v", err)
+	}
+}
+
+func TestProcessEpoch_InactiveConditions(t *testing.T) {
+	config := params.BeaconConfig()
+	defaultBalance := config.MaxDepositInGwei
+
+	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	for i := uint64(0); i < config.EpochLength*2; i++ {
+		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
+			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
+			},
+		})
+	}
+
+	validatorRegistry := []*pb.ValidatorRecord{
+		{Status: pb.ValidatorRecord_ACTIVE}, {Status: pb.ValidatorRecord_ACTIVE},
+		{Status: pb.ValidatorRecord_ACTIVE}, {Status: pb.ValidatorRecord_ACTIVE},
+		{Status: pb.ValidatorRecord_ACTIVE}, {Status: pb.ValidatorRecord_ACTIVE},
+		{Status: pb.ValidatorRecord_ACTIVE}, {Status: pb.ValidatorRecord_ACTIVE}}
+
+	validatorBalances := []uint64{
+		defaultBalance, defaultBalance, defaultBalance, defaultBalance,
+		defaultBalance, defaultBalance, defaultBalance, defaultBalance,
+	}
+
+	var attestations []*pb.PendingAttestationRecord
+	for i := uint64(0); i < config.EpochLength*2; i++ {
+		attestations = append(attestations, &pb.PendingAttestationRecord{
+			Data: &pb.AttestationData{
+				Slot:                     i + config.EpochLength,
+				Shard:                    1,
+				JustifiedSlot:            64,
+				JustifiedBlockRootHash32: []byte{0},
+			},
+			ParticipationBitfield: []byte{0xff},
+			SlotIncluded:          i + config.EpochLength + 1,
+		})
+	}
+
+	var blockRoots [][]byte
+	for i := uint64(0); i < 2*config.EpochLength; i++ {
+		blockRoots = append(blockRoots, []byte{byte(i)})
+	}
+
+	var randaoHashes [][]byte
+	for i := uint64(0); i < 5*config.EpochLength; i++ {
+		randaoHashes = append(randaoHashes, []byte{byte(i)})
+	}
+
+	crosslinkRecord := []*pb.CrosslinkRecord{{}, {}}
+
+	state := &pb.BeaconState{
+		Slot:                      config.EpochLength * 5,
 		LatestAttestations:        attestations,
 		ValidatorBalances:         validatorBalances,
 		ValidatorRegistry:         validatorRegistry,

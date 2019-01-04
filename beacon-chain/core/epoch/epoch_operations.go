@@ -311,7 +311,7 @@ func TotalAttestingBalance(
 // Spec pseudocode definition:
 //    epochs_since_finality = (state.slot - state.finalized_slot) // EPOCH_LENGTH
 func SinceFinality(state *pb.BeaconState) uint64 {
-	return state.Slot - state.FinalizedSlot/params.BeaconConfig().EpochLength
+	return (state.Slot - state.FinalizedSlot) / params.BeaconConfig().EpochLength
 }
 
 // winningRoot returns the shard block root with the most combined validator
