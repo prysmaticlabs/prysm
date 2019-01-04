@@ -10,10 +10,10 @@ import (
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
+	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slices"
@@ -500,14 +500,8 @@ func ProcessDeposit(
 	var publicKeyExists bool
 	var existingValidatorIndex int
 
-	existingValidatorIndex, publicKeyExists = validatorIndexMap[stateutils.BytesToBytes32(pubkey)]
+	existingValidatorIndex, publicKeyExists = validatorIndexMap[bytesutil.BytesToBytes32(pubkey)]
 
-	//for idx, val := range state.ValidatorRegistry {
-	//	if bytes.Equal(val.Pubkey, pubkey) {
-	//		publicKeyExists = true
-	//		existingValidatorIndex = idx
-	//	}
-	//}
 	if !publicKeyExists {
 		// If public key does not exist in the registry, we add a new validator
 		// to the beacon state.
