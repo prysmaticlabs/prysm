@@ -500,7 +500,7 @@ func ProcessDeposit(
 	var publicKeyExists bool
 	var existingValidatorIndex int
 
-	existingValidatorIndex, publicKeyExists = validatorIndexMap[bytesutil.BytesToBytes32(pubkey)]
+	existingValidatorIndex, publicKeyExists = validatorIndexMap[bytesutil.ToBytes32(pubkey)]
 
 	if !publicKeyExists {
 		// If public key does not exist in the registry, we add a new validator

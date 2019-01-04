@@ -26,15 +26,15 @@ func TestValidatorIndexMap(t *testing.T) {
 		ok  bool
 	}{
 		{
-			key: bytes.BytesToBytes32([]byte("zero")),
+			key: bytes.ToBytes32([]byte("zero")),
 			val: 0,
 			ok:  true,
 		}, {
-			key: bytes.BytesToBytes32([]byte("one")),
+			key: bytes.ToBytes32([]byte("one")),
 			val: 1,
 			ok:  true,
 		}, {
-			key: bytes.BytesToBytes32([]byte("no")),
+			key: bytes.ToBytes32([]byte("no")),
 			val: 0,
 			ok:  false,
 		},
