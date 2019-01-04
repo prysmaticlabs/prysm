@@ -11,6 +11,7 @@ matrix:
         - 
           go get github.com/alecthomas/gometalinter && gometalinter --install && gometalinter ./...
     - os: linux
+      go: 1.11.x
       env:
         - coverage
       script:
