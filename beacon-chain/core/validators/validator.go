@@ -13,6 +13,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
+	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slices"
@@ -487,6 +488,7 @@ func AllValidatorsIndices(state *pb.BeaconState) []uint32 {
 // deposit.
 func ProcessDeposit(
 	state *pb.BeaconState,
+	validatorIndexMap map[[32]byte]int,
 	pubkey []byte,
 	deposit uint64,
 	proofOfPossession []byte,
@@ -497,12 +499,9 @@ func ProcessDeposit(
 	// TODO(#258): Validate proof of possession using BLS.
 	var publicKeyExists bool
 	var existingValidatorIndex int
-	for idx, val := range state.ValidatorRegistry {
-		if bytes.Equal(val.GetPubkey(), pubkey) {
-			publicKeyExists = true
-			existingValidatorIndex = idx
-		}
-	}
+
+	existingValidatorIndex, publicKeyExists = validatorIndexMap[bytesutil.ToBytes32(pubkey)]
+
 	if !publicKeyExists {
 		// If public key does not exist in the registry, we add a new validator
 		// to the beacon state.
@@ -511,7 +510,7 @@ func ProcessDeposit(
 			RandaoCommitmentHash32:  randaoCommitment,
 			RandaoLayers:            0,
 			Status:                  pb.ValidatorRecord_PENDING_ACTIVATION,
-			LatestStatusChangeSlot:  state.GetSlot(),
+			LatestStatusChangeSlot:  state.Slot,
 			ExitCount:               0,
 			PocCommitmentHash32:     pocCommitment,
 			LastPocChangeSlot:       0,
@@ -520,7 +519,7 @@ func ProcessDeposit(
 		idx, ok := minEmptyValidatorIndex(
 			state.ValidatorRegistry,
 			state.ValidatorBalances,
-			state.GetSlot(),
+			state.Slot,
 		)
 		// In the case there is no empty validator index in the state,
 		// we append an entirely new record to the validator registry and list

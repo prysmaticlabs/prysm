@@ -31,7 +31,7 @@ func readTestsFromYaml(yamlDir string) ([]interface{}, error) {
 		}
 		for _, file := range files {
 			filePath := path.Join(yamlDir, dir.Name(), file.Name())
-			data, err := ioutil.ReadFile(filePath) // #nosec
+			data, err := ioutil.ReadFile(filePath)
 			if err != nil {
 				return nil, fmt.Errorf("could not read yaml file: %v", err)
 			}
@@ -133,5 +133,5 @@ func main() {
 	}
 
 	endTime := time.Now()
-	log.Infof("Test Runs Finished In: %v Seconds", endTime.Sub(startTime).Seconds())
+	log.Infof("Test Runs Finished In: %v", endTime.Sub(startTime))
 }

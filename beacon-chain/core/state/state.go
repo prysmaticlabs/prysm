@@ -6,6 +6,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -98,6 +99,7 @@ func InitialBeaconState(
 	// Set initial deposits and activations.
 	var validatorIndex uint32
 	var err error
+	validatorMap := stateutils.ValidatorIndexMap(state)
 	for _, deposit := range initialValidatorDeposits {
 		depositData := deposit.GetDepositData()
 		depositInput, err := b.DecodeDepositInput(depositData)
@@ -109,6 +111,7 @@ func InitialBeaconState(
 		depositValue := depositData[len(depositData)-16 : len(depositData)-8]
 		state, validatorIndex, err = v.ProcessDeposit(
 			state,
+			validatorMap,
 			depositInput.GetPubkey(),
 			binary.BigEndian.Uint64(depositValue),
 			depositInput.GetProofOfPossession(),

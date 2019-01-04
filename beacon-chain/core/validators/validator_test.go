@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/proto/common"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
@@ -657,6 +658,7 @@ func TestProcessDeposit_PublicKeyExistsBadWithdrawalCredentials(t *testing.T) {
 	want := "expected withdrawal credentials to match"
 	if _, _, err := ProcessDeposit(
 		beaconState,
+		stateutils.ValidatorIndexMap(beaconState),
 		pubkey,
 		deposit,
 		proofOfPossession,
@@ -692,6 +694,7 @@ func TestProcessDeposit_PublicKeyExistsGoodWithdrawalCredentials(t *testing.T) {
 
 	newState, _, err := ProcessDeposit(
 		beaconState,
+		stateutils.ValidatorIndexMap(beaconState),
 		pubkey,
 		deposit,
 		proofOfPossession,
@@ -732,6 +735,7 @@ func TestProcessDeposit_PublicKeyDoesNotExistNoEmptyValidator(t *testing.T) {
 
 	newState, _, err := ProcessDeposit(
 		beaconState,
+		stateutils.ValidatorIndexMap(beaconState),
 		pubkey,
 		deposit,
 		proofOfPossession,
@@ -778,6 +782,7 @@ func TestProcessDeposit_PublicKeyDoesNotExistEmptyValidatorExists(t *testing.T) 
 
 	newState, _, err := ProcessDeposit(
 		beaconState,
+		stateutils.ValidatorIndexMap(beaconState),
 		pubkey,
 		deposit,
 		proofOfPossession,

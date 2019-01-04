@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -569,6 +570,7 @@ func ProcessBlockValidatorDeposits(
 	}
 	var err error
 	var depositInput *pb.DepositInput
+	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	for idx, deposit := range deposits {
 		depositData := deposit.GetDepositData()
 		depositInput, err = DecodeDepositInput(depositData)
@@ -584,6 +586,7 @@ func ProcessBlockValidatorDeposits(
 		// We then mutate the beacon state with the verified validator deposit.
 		beaconState, _, err = v.ProcessDeposit(
 			beaconState,
+			validatorIndexMap,
 			depositInput.GetPubkey(),
 			binary.BigEndian.Uint64(depositValue),
 			depositInput.GetProofOfPossession(),
