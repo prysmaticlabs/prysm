@@ -5,11 +5,11 @@ package proposer
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
-	"github.com/prysmaticlabs/go-bls/bazel-go-bls/external/go_sdk/src/fmt"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
