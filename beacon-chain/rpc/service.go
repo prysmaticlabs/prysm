@@ -13,6 +13,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -206,7 +207,19 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(
 
 // ProposeBlock is called by a proposer in a sharding validator and a full beacon node
 // sends the request into a beacon block that can then be included in a canonical chain.
-func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb.ProposeResponse, error) {
+func (s *Service) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlock) (*pb.ProposeResponse, error) {
+
+	h, err := b.Hash(blk)
+	if err != nil {
+		return nil, fmt.Errorf("could not hash block: %v", err)
+	}
+	log.WithField("blockHash", fmt.Sprintf("%#x", h)).Debugf("Block proposal received via RPC")
+	// We relay the received block from the proposer to the chain service for processing.
+	s.chainService.IncomingBlockFeed().Send(blk)
+	return &pb.ProposeResponse{BlockHash: h[:]}, nil
+}
+
+func (s *Service) ComputeBlockWithStateRoot(ctx context.Context, req *pb.ProposeRequest) (*pbp2p.BeaconBlock, error) {
 	var powChainHash common.Hash
 	if !s.enablePOWChain {
 		powChainHash = common.BytesToHash([]byte{byte(req.GetSlotNumber())})
@@ -243,14 +256,25 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 		},
 	}
 
-	h, err := b.Hash(block)
+	parentHash := [32]byte{}
+	copy(parentHash[:], block.ParentRootHash32)
+
+	beaconState, err = state.ExecuteStateTransition(beaconState, block, parentHash)
 	if err != nil {
-		return nil, fmt.Errorf("could not hash block: %v", err)
+		return nil, fmt.Errorf("could not execute state transition %v", err)
 	}
-	log.WithField("blockHash", fmt.Sprintf("%#x", h)).Debugf("Block proposal received via RPC")
-	// We relay the received block from the proposer to the chain service for processing.
-	s.chainService.IncomingBlockFeed().Send(block)
-	return &pb.ProposeResponse{BlockHash: h[:]}, nil
+
+	marshalledState, err := proto.Marshal(beaconState)
+	if err != nil {
+		return nil, fmt.Errorf("unable to marshal state %v", err)
+	}
+
+	stateHash := hashutil.Hash(marshalledState)
+
+	log.WithField("stateHash", fmt.Sprintf("%#x", stateHash)).Debugf("Computed state hash")
+	block.StateRootHash32 = stateHash[:]
+
+	return block, nil
 }
 
 // AttestHead is a function called by an attester in a sharding validator to vote
