@@ -28,9 +28,9 @@ func TestProcessPOWReceiptRoots_SameRootHash(t *testing.T) {
 		CandidatePowReceiptRootHash32: []byte{1},
 	}
 	beaconState = ProcessPOWReceiptRoots(beaconState, block)
-	newRoots := beaconState.GetCandidatePowReceiptRoots()
-	if newRoots[0].GetVoteCount() != 6 {
-		t.Errorf("expected votes to increase from 5 to 6, received %d", newRoots[0].GetVoteCount())
+	newRoots := beaconState.CandidatePowReceiptRoots
+	if newRoots[0].VoteCount != 6 {
+		t.Errorf("expected votes to increase from 5 to 6, received %d", newRoots[0].VoteCount)
 	}
 }
 
@@ -47,14 +47,14 @@ func TestProcessPOWReceiptRoots_NewCandidateRecord(t *testing.T) {
 		CandidatePowReceiptRootHash32: []byte{1},
 	}
 	beaconState = ProcessPOWReceiptRoots(beaconState, block)
-	newRoots := beaconState.GetCandidatePowReceiptRoots()
+	newRoots := beaconState.CandidatePowReceiptRoots
 	if len(newRoots) == 1 {
 		t.Error("expected new receipt roots to have length > 1")
 	}
-	if newRoots[1].GetVoteCount() != 1 {
+	if newRoots[1].VoteCount != 1 {
 		t.Errorf(
 			"expected new receipt roots to have a new element with votes = 1, received votes = %d",
-			newRoots[1].GetVoteCount(),
+			newRoots[1].VoteCount,
 		)
 	}
 	if !bytes.Equal(newRoots[1].CandidatePowReceiptRootHash32, []byte{1}) {
@@ -159,15 +159,15 @@ func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 	}
 
 	xorRandao := [32]byte{1}
-	updatedLatestMix := newState.LatestRandaoMixesHash32S[newState.GetSlot()%params.BeaconConfig().LatestRandaoMixesLength]
+	updatedLatestMix := newState.LatestRandaoMixesHash32S[newState.Slot%params.BeaconConfig().LatestRandaoMixesLength]
 	if !bytes.Equal(updatedLatestMix, xorRandao[:]) {
 		t.Errorf("Expected randao mix to XOR correctly: wanted %#x, received %#x", xorRandao[:], updatedLatestMix)
 	}
-	if !bytes.Equal(newState.GetValidatorRegistry()[0].GetRandaoCommitmentHash32(), []byte{1}) {
+	if !bytes.Equal(newState.ValidatorRegistry[0].RandaoCommitmentHash32, []byte{1}) {
 		t.Errorf(
 			"Expected proposer at index 0 to update randao commitment to block randao reveal = %#x, received %#x",
 			[]byte{1},
-			newState.GetValidatorRegistry()[0].GetRandaoCommitmentHash32(),
+			newState.ValidatorRegistry[0].RandaoCommitmentHash32,
 		)
 	}
 }
@@ -352,7 +352,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		beaconState,
 		block,
 	)
-	registry = newState.GetValidatorRegistry()
+	registry = newState.ValidatorRegistry
 	if err != nil {
 		t.Fatalf("Unexpected error: %s", err)
 	}
@@ -402,6 +402,16 @@ func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 					params.BeaconConfig().MaxCasperVotes,
 				),
 			},
+			Votes_2: &pb.SlashableVoteData{
+				AggregateSignaturePoc_0Indices: make(
+					[]uint32,
+					params.BeaconConfig().MaxCasperVotes,
+				),
+				AggregateSignaturePoc_1Indices: make(
+					[]uint32,
+					params.BeaconConfig().MaxCasperVotes,
+				),
+			},
 		},
 	}
 	registry := []*pb.ValidatorRecord{}
@@ -432,6 +442,16 @@ func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 	// Perform the same check for Votes_2.
 	slashings = []*pb.CasperSlashing{
 		{
+			Votes_1: &pb.SlashableVoteData{
+				AggregateSignaturePoc_0Indices: make(
+					[]uint32,
+					params.BeaconConfig().MaxCasperVotes,
+				),
+				AggregateSignaturePoc_1Indices: make(
+					[]uint32,
+					params.BeaconConfig().MaxCasperVotes,
+				),
+			},
 			Votes_2: &pb.SlashableVoteData{
 				AggregateSignaturePoc_0Indices: make(
 					[]uint32,
@@ -697,7 +717,7 @@ func TestProcessCasperSlashings_AppliesCorrectStatus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	newRegistry := newState.GetValidatorRegistry()
+	newRegistry := newState.ValidatorRegistry
 
 	// Given the intersection of slashable indices is [1], only validator
 	// at index 1 should be penalized and change Status. We confirm this below.
@@ -1078,22 +1098,22 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 		state,
 		block,
 	)
-	pendingAttestations := newState.GetLatestAttestations()
+	pendingAttestations := newState.LatestAttestations
 	if err != nil {
 		t.Fatalf("Could not produce pending attestations: %v", err)
 	}
-	if !reflect.DeepEqual(pendingAttestations[0].GetData(), att1.GetData()) {
+	if !reflect.DeepEqual(pendingAttestations[0].Data, att1.Data) {
 		t.Errorf(
 			"Did not create pending attestation correctly with inner data, wanted %v, received %v",
-			att1.GetData(),
-			pendingAttestations[0].GetData(),
+			att1.Data,
+			pendingAttestations[0].Data,
 		)
 	}
-	if pendingAttestations[0].GetSlotIncluded() != 64 {
+	if pendingAttestations[0].SlotIncluded != 64 {
 		t.Errorf(
 			"Pending attestation not included at correct slot: wanted %v, received %v",
 			64,
-			pendingAttestations[0].GetSlotIncluded(),
+			pendingAttestations[0].SlotIncluded,
 		)
 	}
 }
@@ -1607,7 +1627,7 @@ func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not process exits: %v", err)
 	}
-	newRegistry := newState.GetValidatorRegistry()
+	newRegistry := newState.ValidatorRegistry
 	if newRegistry[0].Status == pb.ValidatorRecord_ACTIVE {
 		t.Error("Expected validator status to change, remained ACTIVE")
 	}

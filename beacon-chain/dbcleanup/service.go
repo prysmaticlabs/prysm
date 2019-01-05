@@ -79,7 +79,7 @@ func (d *CleanupService) cleanDB() {
 			log.Debug("Cleanup service context closed, exiting goroutine")
 			return
 		case cState := <-d.canonicalStateChan:
-			if err := d.cleanBlockVoteCache(cState.GetFinalizedSlot()); err != nil {
+			if err := d.cleanBlockVoteCache(cState.FinalizedSlot); err != nil {
 				log.Errorf("Failed to clean block vote cache: %v", err)
 			}
 		}

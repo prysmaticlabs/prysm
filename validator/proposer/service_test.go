@@ -174,8 +174,8 @@ func TestProposerProcessAttestation(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Attestation stored in memory")
 	testutil.AssertLogsContain(t, hook, "Proposer context closed")
 
-	if !bytes.Equal(p.pendingAttestation[2].GetParticipationBitfield(), []byte{'c'}) {
-		t.Errorf("attestation was unable to be saved %v", p.pendingAttestation[2].GetParticipationBitfield())
+	if !bytes.Equal(p.pendingAttestation[2].ParticipationBitfield, []byte{'c'}) {
+		t.Errorf("attestation was unable to be saved %v", p.pendingAttestation[2].ParticipationBitfield)
 	}
 }
 
