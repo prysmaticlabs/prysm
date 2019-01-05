@@ -111,6 +111,7 @@ func InitialBeaconState(
 		depositValue := depositData[len(depositData)-16 : len(depositData)-8]
 		state, validatorIndex, err = v.ProcessDeposit(
 			state,
+			validatorMap,
 			depositInput.Pubkey,
 			binary.BigEndian.Uint64(depositValue),
 			depositInput.ProofOfPossession,

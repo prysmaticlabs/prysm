@@ -123,7 +123,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 			Pubkey:                 []byte(strconv.Itoa(i)),
 			RandaoCommitmentHash32: []byte("simulated"),
 		}
-		depositData, err := b.EncodeBlockDepositData(
+		depositData, err := b.EncodeDepositData(
 			depositInput,
 			params.BeaconConfig().MaxDepositInGwei,
 			genesisTime,
