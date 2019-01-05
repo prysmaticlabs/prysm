@@ -116,7 +116,7 @@ func BeaconProposerIndex(state *pb.BeaconState, slot uint64) (uint32, error) {
 	if err != nil {
 		return 0, err
 	}
-	firstCommittee := committeeArray.GetArrayShardAndCommittee()[0].Committee
+	firstCommittee := committeeArray.ArrayShardAndCommittee[0].Committee
 
 	return firstCommittee[slot%uint64(len(firstCommittee))], nil
 }
@@ -231,7 +231,7 @@ func VotedBalanceInAttestation(validators []*pb.ValidatorRecord, indices []uint3
 	var voteBalance uint64
 	for index, attesterIndex := range indices {
 		// find balance of validators who voted.
-		bitCheck, err := bitutil.CheckBit(attestation.GetParticipationBitfield(), index)
+		bitCheck, err := bitutil.CheckBit(attestation.ParticipationBitfield, index)
 		if err != nil {
 			return 0, 0, err
 		}
@@ -466,7 +466,7 @@ func ProcessDeposit(
 	var publicKeyExists bool
 	var existingValidatorIndex int
 	for idx, val := range state.ValidatorRegistry {
-		if bytes.Equal(val.GetPubkey(), pubkey) {
+		if bytes.Equal(val.Pubkey, pubkey) {
 			publicKeyExists = true
 			existingValidatorIndex = idx
 		}
@@ -479,7 +479,7 @@ func ProcessDeposit(
 			RandaoCommitmentHash32:  randaoCommitment,
 			RandaoLayers:            0,
 			Status:                  pb.ValidatorRecord_PENDING_ACTIVATION,
-			LatestStatusChangeSlot:  state.GetSlot(),
+			LatestStatusChangeSlot:  state.Slot,
 			ExitCount:               0,
 			PocCommitmentHash32:     pocCommitment,
 			LastPocChangeSlot:       0,
@@ -488,7 +488,7 @@ func ProcessDeposit(
 		idx, ok := minEmptyValidatorIndex(
 			state.ValidatorRegistry,
 			state.ValidatorBalances,
-			state.GetSlot(),
+			state.Slot,
 		)
 		// In the case there is no empty validator index in the state,
 		// we append an entirely new record to the validator registry and list
@@ -527,7 +527,7 @@ func minEmptyValidatorIndex(
 	currentSlot uint64,
 ) (int, bool) {
 	for i := range validators {
-		lastStatusChange := validators[i].GetLatestStatusChangeSlot()
+		lastStatusChange := validators[i].LatestStatusChangeSlot
 		ttlWindow := lastStatusChange + params.BeaconConfig().ZeroBalanceValidatorTTL
 		if balances[i] == 0 && ttlWindow <= currentSlot {
 			return i, true

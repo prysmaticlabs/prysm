@@ -69,7 +69,7 @@ func TestBadBlock(t *testing.T) {
 
 	if err := IsValidBlock(ctx, beaconState, block, true,
 		db.HasBlock, powClient.BlockByHash, genesisTime); err == nil {
-		t.Fatalf("block is valid despite having an invalid slot %d", block.GetSlot())
+		t.Fatalf("block is valid despite having an invalid slot %d", block.Slot)
 	}
 
 	block.Slot = 4
