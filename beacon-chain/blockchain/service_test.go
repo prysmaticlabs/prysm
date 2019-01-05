@@ -312,7 +312,7 @@ func TestDoesPOWBlockExist(t *testing.T) {
 
 	// Using a faulty client should throw error.
 	var powHash [32]byte
-	copy(powHash[:], beaconState.GetProcessedPowReceiptRootHash32())
+	copy(powHash[:], beaconState.ProcessedPowReceiptRootHash32)
 	exists := chainService.doesPoWBlockExist(powHash)
 	if exists {
 		t.Error("Block corresponding to nil powchain reference should not exist")
@@ -460,7 +460,7 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 
 	currentSlot := uint64(1)
 	attestationSlot := uint64(0)
-	shard := beaconState.GetShardAndCommitteesAtSlots()[attestationSlot].ArrayShardAndCommittee[0].Shard
+	shard := beaconState.ShardAndCommitteesAtSlots[attestationSlot].ArrayShardAndCommittee[0].Shard
 
 	block3 := &pb.BeaconBlock{
 		Slot:                          currentSlot,

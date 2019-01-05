@@ -30,15 +30,15 @@ func TestUpdateRandaoLayers(t *testing.T) {
 		t.Fatalf("failed to update randao layers: %v", err)
 	}
 
-	vreg := newState.GetValidatorRegistry()
+	vreg := newState.ValidatorRegistry
 
 	// Since slot 1 has proposer index 8
-	if vreg[8].GetRandaoLayers() != 1 {
-		t.Fatalf("randao layers not updated %d", vreg[9].GetRandaoLayers())
+	if vreg[8].RandaoLayers != 1 {
+		t.Fatalf("randao layers not updated %d", vreg[9].RandaoLayers)
 	}
 
-	if vreg[9].GetRandaoLayers() != 0 {
-		t.Errorf("randao layers updated when they were not supposed to %d", vreg[9].GetRandaoLayers())
+	if vreg[9].RandaoLayers != 0 {
+		t.Errorf("randao layers updated when they were not supposed to %d", vreg[9].RandaoLayers)
 	}
 }
 
