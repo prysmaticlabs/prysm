@@ -235,8 +235,14 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}
 
 	responseBlock1 := &pb.BeaconBlockResponse{
-		Block:       data1,
-		Attestation: &pb.Attestation{},
+		Block: data1,
+		Attestation: &pb.Attestation{
+			Data: &pb.AttestationData{
+				ShardBlockRootHash32: []byte{},
+				Slot:                 0,
+				JustifiedSlot:        0,
+			},
+		},
 	}
 
 	msg1 := p2p.Message{
@@ -252,8 +258,14 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}
 
 	responseBlock2 := &pb.BeaconBlockResponse{
-		Block:       data2,
-		Attestation: &pb.Attestation{},
+		Block: data2,
+		Attestation: &pb.Attestation{
+			Data: &pb.AttestationData{
+				ShardBlockRootHash32: []byte{},
+				Slot:                 0,
+				JustifiedSlot:        0,
+			},
+		},
 	}
 
 	msg2 := p2p.Message{

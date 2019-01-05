@@ -2,6 +2,7 @@ package epoch
 
 import (
 	"bytes"
+	"reflect"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -482,5 +483,40 @@ func TestProcessPartialValidatorRegistry_ReachedUpperBound(t *testing.T) {
 
 	if _, err := ProcessPartialValidatorRegistry(state); err == nil {
 		t.Fatalf("ProcessValidatorRegistry should have failed with upperbound")
+	}
+}
+
+func TestCleanupAttestations(t *testing.T) {
+	if params.BeaconConfig().EpochLength != 64 {
+		t.Errorf("EpochLength should be 64 for these tests to pass")
+	}
+	epochLength := params.BeaconConfig().EpochLength
+	state := &pb.BeaconState{
+		Slot: 2 * epochLength,
+		LatestAttestations: []*pb.PendingAttestationRecord{
+			{Data: &pb.AttestationData{Slot: 1}},
+			{Data: &pb.AttestationData{Slot: epochLength - 10}},
+			{Data: &pb.AttestationData{Slot: epochLength}},
+			{Data: &pb.AttestationData{Slot: epochLength + 1}},
+			{Data: &pb.AttestationData{Slot: epochLength + 20}},
+			{Data: &pb.AttestationData{Slot: 32}},
+			{Data: &pb.AttestationData{Slot: 33}},
+			{Data: &pb.AttestationData{Slot: 2 * epochLength}},
+		},
+	}
+	wanted := &pb.BeaconState{
+		Slot: 2 * epochLength,
+		LatestAttestations: []*pb.PendingAttestationRecord{
+			{Data: &pb.AttestationData{Slot: epochLength}},
+			{Data: &pb.AttestationData{Slot: epochLength + 1}},
+			{Data: &pb.AttestationData{Slot: epochLength + 20}},
+			{Data: &pb.AttestationData{Slot: 2 * epochLength}},
+		},
+	}
+	newState := CleanupAttestations(state)
+
+	if !reflect.DeepEqual(newState, wanted) {
+		t.Errorf("Wanted state: %v, got state: %v ",
+			wanted, newState)
 	}
 }

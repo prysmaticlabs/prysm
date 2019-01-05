@@ -18,12 +18,15 @@ import (
 func (db *BeaconDB) InitializeState(genesisValidatorRegistry []*pb.ValidatorRecord) error {
 	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
 	for i := 0; i < len(deposits); i++ {
-		deposits[i] = &pb.Deposit{DepositData: &pb.DepositData{
-			Amount: genesisValidatorRegistry[i].Balance,
-			DepositInput: &pb.DepositInput{
-				Pubkey: genesisValidatorRegistry[i].Pubkey,
-			},
-		}}
+		depositInput := &pb.DepositInput{
+			Pubkey: genesisValidatorRegistry[i].Pubkey,
+		}
+		balance := genesisValidatorRegistry[i].Balance
+		depositData, err := b.EncodeDepositData(depositInput, balance, time.Now().Unix())
+		if err != nil {
+			return err
+		}
+		deposits[i] = &pb.Deposit{DepositData: depositData}
 	}
 	genesisTime := uint64(params.BeaconConfig().GenesisTime.Unix())
 	beaconState, err := state.InitialBeaconState(deposits, genesisTime, nil)

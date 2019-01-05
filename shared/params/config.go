@@ -26,57 +26,61 @@ type ValidatorSetDeltaFlags int
 
 // BeaconChainConfig contains configs for node to participate in beacon chain.
 type BeaconChainConfig struct {
-	LatestBlockRootsLength               uint64         // LatestBlockRootsLength is the number of block roots kept in the beacon state.
-	LatestRandaoMixesLength              uint64         // LatestRandaoMixesLength is the number of randao mixes kept in the beacon state.
-	MaxExits                             uint64         // MaxExits determines the maximum number of validator exits in a block.
-	MaxAttestations                      uint64         // MaxAttestations defines the maximum allowed attestations in a beacon block.
-	MaxProposerSlashings                 uint64         // MaxProposerSlashing defines the maximum number of slashings of proposers possible in a block.
-	MaxCasperSlashings                   uint64         // MaxCasperSlashings defines the maximum number of casper FFG slashings possible in a block.
-	MaxCasperVotes                       uint64         // MaxCasperVotes defines the maximum number of casper FFG votes possible in a block.
-	ShardCount                           uint64         // ShardCount is the fixed number of shards in Ethereum 2.0.
-	MaxDeposit                           uint64         // MaxDeposit is the max balance a validator can have at stake.
-	MinTopUpSize                         uint64         // MinTopUpSize is the minimal amount of Ether a validator can top up.
-	MinOnlineDepositSize                 uint64         // MinOnlineDepositSize is the minimal amount of Ether a validator needs to participate.
-	Gwei                                 uint64         // Gwei is the denomination of Gwei in Ether.
-	MaxDepositInGwei                     uint64         // MaxDepositInGwei is the max balance in Gwei a validator can have at stake.
-	DepositContractAddress               common.Address // DepositContractAddress is the address of validator registration contract in PoW chain.
-	DepositsForChainStart                uint64         // DepositsForChainStart defines how many deposits needed to start off beacon chain.
-	TargetCommitteeSize                  uint64         // TargetCommitteeSize is the minimal number of validator needs to be in a committee.
-	SlotDuration                         uint64         // SlotDuration is how many seconds are in a single slot.
-	CycleLength                          uint64         // CycleLength is one beacon chain cycle length in slots.
-	MinValidatorSetChangeInterval        uint64         // MinValidatorSetChangeInterval is the slots needed before validator set changes.
-	ShardPersistentCommitteeChangePeriod uint64         // ShardPersistentCommitteeChangePeriod defines how often shard committee gets shuffled.
-	MinAttestationInclusionDelay         uint64         // MinAttestationInclusionDelay defines how long validator has to wait to include attestation for beacon block.
-	SqrtExpDropTime                      uint64         // SqrtEDropTime is a constant to reflect time it takes to cut offline validators’ deposits by 39.4%.
-	WithdrawalsPerCycle                  uint64         // WithdrawalsPerCycle defines how many withdrawals can go through per cycle.
-	MinWithdrawalPeriod                  uint64         // MinWithdrawalPeriod defines the slots between a validator exit and validator balance being withdrawable.
-	DeletionPeriod                       uint64         // DeletionPeriod define the period length of when validator is deleted from the pool.
-	PowReceiptRootVotingPeriod           uint64         // PowReceiptRootVotingPeriod defines how often PoW hash gets updated in beacon node.
-	WhistlerBlowerRewardQuotient         uint64         // WhistlerBlowerRewardQuotient defines how the reward denominator of whistler blower.
-	BaseRewardQuotient                   uint64         // BaseRewardQuotient is used to calculate validator per-slot interest rate.
-	IncluderRewardQuotient               uint64         // IncluderRewardQuotient defines the reward quotient of proposer for including attestations..
-	MaxValidatorChurnQuotient            uint64         // MaxValidatorChurnQuotient defines the quotient how many validators can change each time.
-	POWContractMerkleTreeDepth           uint64         // POWContractMerkleTreeDepth defines the depth of PoW contract merkle tree.
-	GenesisForkVersion                   uint64         // GenesisForkVersion is used to track fork version between state transitions.
-	InitialForkSlot                      uint64         // InitialForkSlot is used to initialize the fork slot in the initial Beacon state.
-	GenesisSlot                          uint64         // GenesisSlot is used to initialize the slot number of the genesis block.
-	FarFutureSlot                        uint64         // FarFutureSlot is the last slot based on uint64 type.
-	SimulatedBlockRandao                 [32]byte       // SimulatedBlockRandao is a RANDAO seed stubbed in side simulated block to advance local beacon chain.
-	RandBytes                            uint64         // RandBytes is the number of bytes used as entropy to shuffle validators.
-	BootstrappedValidatorsCount          uint64         // BootstrappedValidatorsCount is the number of validators we seed to start beacon chain.
-	SyncPollingInterval                  int64          // SyncPollingInterval queries network nodes for sync status.
-	GenesisTime                          time.Time      // GenesisTime used by the protocol.
-	MaxNumLog2Validators                 uint64         // Max number of validators in Log2 can exist given total ETH supply.
-	EpochLength                          uint64         // Number of slots that define an Epoch.
-	InactivityPenaltyQuotient            uint64         // InactivityPenaltyQuotient defines how much validator leaks out balances for offline.
-	EjectionBalance                      uint64         // EjectionBalance is the minimal balance a validator needs before ejected.
-	EjectionBalanceInGwei                uint64         // EjectionBalanceInGwei is the minimal balance in Gwei a validator needs before ejected.
-	ZeroHash                             [32]byte       // ZeroHash is used to represent a zeroed out 32 byte array.
-	EmptySignature                       [][]byte       // EmptySignature is used to represent a zeroed out BLS Signature.
-	LatestPenalizedExitLength            uint64         // LatestPenalizedExitLength represents withdrawal time when a validator is penalized.
-	BLSWithdrawalPrefixByte              byte           // BLSWithdrawalPrefixByte is the prefix byte for BLS withdrawal.
-	SeedLookahead                        uint64         // SeedLookahead is the duration of the look ahead seed.
-	EntryExitDelay                       uint64         // EntryExitDelay is the duration of the day for entry exit.
+	DepositContractTreeDepth                uint64         // Depth of the Merkle trie of deposits in the validator deposit contract on the PoW chain.
+	ZeroBalanceValidatorTTL                 uint64         // ZeroBalanceValidatorTTL specifies the allowed number of slots a validator with 0 balance can live in the state.
+	LatestBlockRootsLength                  uint64         // LatestBlockRootsLength is the number of block roots kept in the beacon state.
+	LatestRandaoMixesLength                 uint64         // LatestRandaoMixesLength is the number of randao mixes kept in the beacon state.
+	MaxExits                                uint64         // MaxExits determines the maximum number of validator exits in a block.
+	MaxDeposits                             uint64         // MaxExits determines the maximum number of validator deposits in a block.
+	MaxAttestations                         uint64         // MaxAttestations defines the maximum allowed attestations in a beacon block.
+	MaxProposerSlashings                    uint64         // MaxProposerSlashing defines the maximum number of slashings of proposers possible in a block.
+	MaxCasperSlashings                      uint64         // MaxCasperSlashings defines the maximum number of casper FFG slashings possible in a block.
+	MaxCasperVotes                          uint64         // MaxCasperVotes defines the maximum number of casper FFG votes possible in a block.
+	ShardCount                              uint64         // ShardCount is the fixed number of shards in Ethereum 2.0.
+	MaxDeposit                              uint64         // MaxDeposit is the max balance a validator can have at stake.
+	MinTopUpSize                            uint64         // MinTopUpSize is the minimal amount of Ether a validator can top up.
+	MinOnlineDepositSize                    uint64         // MinOnlineDepositSize is the minimal amount of Ether a validator needs to participate.
+	Gwei                                    uint64         // Gwei is the denomination of Gwei in Ether.
+	MaxDepositInGwei                        uint64         // MaxDepositInGwei is the max balance in Gwei a validator can have at stake.
+	DepositContractAddress                  common.Address // DepositContractAddress is the address of validator registration contract in PoW chain.
+	DepositsForChainStart                   uint64         // DepositsForChainStart defines how many deposits needed to start off beacon chain.
+	TargetCommitteeSize                     uint64         // TargetCommitteeSize is the minimal number of validator needs to be in a committee.
+	SlotDuration                            uint64         // SlotDuration is how many seconds are in a single slot.
+	CycleLength                             uint64         // CycleLength is one beacon chain cycle length in slots.
+	MinValidatorSetChangeInterval           uint64         // MinValidatorSetChangeInterval is the slots needed before validator set changes.
+	ShardPersistentCommitteeChangePeriod    uint64         // ShardPersistentCommitteeChangePeriod defines how often shard committee gets shuffled.
+	MinAttestationInclusionDelay            uint64         // MinAttestationInclusionDelay defines how long validator has to wait to include attestation for beacon block.
+	SqrtExpDropTime                         uint64         // SqrtEDropTime is a constant to reflect time it takes to cut offline validators’ deposits by 39.4%.
+	WithdrawalsPerCycle                     uint64         // WithdrawalsPerCycle defines how many withdrawals can go through per cycle.
+	MinWithdrawalPeriod                     uint64         // MinWithdrawalPeriod defines the slots between a validator exit and validator balance being withdrawable.
+	DeletionPeriod                          uint64         // DeletionPeriod define the period length of when validator is deleted from the pool.
+	CollectivePenaltyCalculationPeriod      uint64         // CollectivePenaltyCalculationPeriod defines the period length for an aggregated penalty amount.
+	PowReceiptRootVotingPeriod              uint64         // PowReceiptRootVotingPeriod defines how often PoW hash gets updated in beacon node.
+	SlashingWhistlerBlowerRewardDenominator uint64         // SlashingWhistlerBlowerRewardDenominator defines how the reward denominator of whistler blower.
+	BaseRewardQuotient                      uint64         // BaseRewardQuotient is used to calculate validator per-slot interest rate.
+	IncluderRewardQuotient                  uint64         // IncluderRewardQuotient defines the reward quotient of proposer for including attestations..
+	MaxValidatorChurnQuotient               uint64         // MaxValidatorChurnQuotient defines the quotient how many validators can change each time.
+	POWContractMerkleTreeDepth              uint64         // POWContractMerkleTreeDepth defines the depth of PoW contract merkle tree.
+	GenesisForkVersion                      uint64         // GenesisForkVersion is used to track fork version between state transitions.
+	InitialForkSlot                         uint64         // InitialForkSlot is used to initialize the fork slot in the initial Beacon state.
+	GenesisSlot                             uint64         // GenesisSlot is used to initialize the slot number of the genesis block.
+	SimulatedBlockRandao                    [32]byte       // SimulatedBlockRandao is a RANDAO seed stubbed in side simulated block to advance local beacon chain.
+	RandBytes                               uint64         // RandBytes is the number of bytes used as entropy to shuffle validators.
+	BootstrappedValidatorsCount             uint64         // BootstrappedValidatorsCount is the number of validators we seed to start beacon chain.
+	SyncPollingInterval                     int64          // SyncPollingInterval queries network nodes for sync status.
+	GenesisTime                             time.Time      // GenesisTime used by the protocol.
+	MaxNumLog2Validators                    uint64         // Max number of validators in Log2 can exist given total ETH supply.
+	EpochLength                             uint64         // Number of slots that define an Epoch.
+	InactivityPenaltyQuotient               uint64         // InactivityPenaltyQuotient defines how much validator leaks out balances for offline.
+	EjectionBalance                         uint64         // EjectionBalance is the minimal balance a validator needs before ejected.
+	EjectionBalanceInGwei                   uint64         // EjectionBalanceInGwei is the minimal balance in Gwei a validator needs before ejected.
+	ZeroHash                                [32]byte       // ZeroHash is used to represent a zeroed out 32 byte array.
+	EmptySignature                          [][]byte       // EmptySignature is used to represent a zeroed out BLS Signature.
+	FarFutureSlot                           uint64         // FarFutureSlot is the last slot based on uint64 type.
+	EntryExitDelay                          uint64         // EntryExitDelay is the duration of the day for entry exit.
+	LatestPenalizedExitLength               uint64         // LatestPenalizedExitLength represents withdrawal time when a validator is penalized.
+	WhistlerBlowerRewardQuotient            uint64         // WhistlerBlowerRewardQuotient defines how the reward denominator of whistler blower.
+	SeedLookahead                           uint64         // SeedLookahead is the duration of the look ahead seed.
 }
 
 // ShardChainConfig contains configs for node to participate in shard chains.
@@ -86,52 +90,55 @@ type ShardChainConfig struct {
 }
 
 var defaultBeaconConfig = &BeaconChainConfig{
-	LatestRandaoMixesLength:       8192,
-	LatestBlockRootsLength:        8192,
-	MaxExits:                      16,
-	MaxAttestations:               128,
-	MaxProposerSlashings:          16,
-	MaxCasperSlashings:            16,
-	MaxCasperVotes:                1024,
-	ShardCount:                    1024,
-	MaxDeposit:                    32,
-	MinTopUpSize:                  1,
-	MinOnlineDepositSize:          16,
-	Gwei:                          1e9,
-	MaxDepositInGwei:              32 * 1e9,
-	DepositsForChainStart:         16384,
-	TargetCommitteeSize:           uint64(256),
-	SlotDuration:                  uint64(16),
-	CycleLength:                   uint64(64),
-	MinValidatorSetChangeInterval: uint64(256),
-	MinAttestationInclusionDelay:  uint64(4),
-	SqrtExpDropTime:               uint64(65536),
-	MinWithdrawalPeriod:           uint64(4096),
-	WithdrawalsPerCycle:           uint64(4),
-	BaseRewardQuotient:            uint64(1024),
-	MaxValidatorChurnQuotient:     uint64(32),
-	GenesisForkVersion:            0,
-	InitialForkSlot:               0,
-	GenesisSlot:                   0,
-	FarFutureSlot:                 1<<64 - 1,
-	RandBytes:                     3,
-	BootstrappedValidatorsCount:   16384,
-	SyncPollingInterval:           16 * 4, // Query nodes over the network every 4 slots for sync status.
-	GenesisTime:                   time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC),
-	MaxNumLog2Validators:          24,
-	EpochLength:                   64,
-	ZeroHash:                      [32]byte{},
-	EmptySignature:                makeEmptySignature(),
-	PowReceiptRootVotingPeriod:    1024,
-	InactivityPenaltyQuotient:     1 << 24,
-	IncluderRewardQuotient:        8,
-	EjectionBalance:               16,
-	EjectionBalanceInGwei:         16 * 1e9,
-	BLSWithdrawalPrefixByte:       byte(0),
-	SeedLookahead:                 64,
-	EntryExitDelay:                256,
-	LatestPenalizedExitLength:     8192,
-	WhistlerBlowerRewardQuotient:  512,
+	ZeroBalanceValidatorTTL:            4194304,
+	DepositContractTreeDepth:           32,
+	LatestRandaoMixesLength:            8192,
+	LatestBlockRootsLength:             8192,
+	MaxExits:                           16,
+	MaxAttestations:                    128,
+	MaxProposerSlashings:               16,
+	MaxCasperSlashings:                 16,
+	MaxCasperVotes:                     1024,
+	ShardCount:                         1024,
+	MaxDeposit:                         32,
+	MaxDeposits:                        16,
+	MinTopUpSize:                       1,
+	MinOnlineDepositSize:               16,
+	Gwei:                               1e9,
+	MaxDepositInGwei:                   32 * 1e9,
+	DepositsForChainStart:              16384,
+	TargetCommitteeSize:                uint64(256),
+	SlotDuration:                       uint64(16),
+	CycleLength:                        uint64(64),
+	MinValidatorSetChangeInterval:      uint64(256),
+	MinAttestationInclusionDelay:       uint64(4),
+	SqrtExpDropTime:                    uint64(65536),
+	MinWithdrawalPeriod:                uint64(4096),
+	WithdrawalsPerCycle:                uint64(4),
+	BaseRewardQuotient:                 uint64(1024),
+	MaxValidatorChurnQuotient:          uint64(32),
+	GenesisForkVersion:                 0,
+	InitialForkSlot:                    0,
+	GenesisSlot:                        0,
+	RandBytes:                          3,
+	BootstrappedValidatorsCount:        16384,
+	SyncPollingInterval:                16 * 4, // Query nodes over the network every 4 slots for sync status.
+	GenesisTime:                        time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC),
+	MaxNumLog2Validators:               24,
+	EpochLength:                        64,
+	ZeroHash:                           [32]byte{},
+	EmptySignature:                     makeEmptySignature(),
+	PowReceiptRootVotingPeriod:         1024,
+	InactivityPenaltyQuotient:          1 << 24,
+	CollectivePenaltyCalculationPeriod: 1 << 20,
+	IncluderRewardQuotient:             8,
+	EjectionBalance:                    16,
+	EjectionBalanceInGwei:              16 * 1e9,
+	FarFutureSlot:                      1<<64 - 1,
+	EntryExitDelay:                     256,
+	LatestPenalizedExitLength:          8192,
+	WhistlerBlowerRewardQuotient:       512,
+	SeedLookahead:                      64,
 }
 
 var demoBeaconConfig = &BeaconChainConfig{

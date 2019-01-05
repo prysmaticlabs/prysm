@@ -2,8 +2,6 @@ syntax = "proto3";
 
 package ethereum.beacon.p2p.v1;
 
-import "google/protobuf/timestamp.proto";
-
 import "proto/common/messages.proto";
 
 message BeaconState {
@@ -49,11 +47,6 @@ message BeaconState {
   // Placeholders, ProofOfCustodyChallenge is defined in phase 1,
   // the list will remain empty throughout phase 0
   repeated ProofOfCustodyChallenge poc_challenges = 6001;
-
-  // Deprecated fields 
-  // All fields must be annotated with [deprecated=true];
-  uint64 justified_streak = 10007 [deprecated=true]; // Deprecated by changes in fork choice rule. See https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#beacon-chain-fork-choice-rule
-  repeated ShardAndCommitteeArray shard_and_committees_for_slots = 10019 [deprecated=true]; // Renamed to shard_and_committee_at_slots
 }
 
 message ForkData {
@@ -127,11 +120,6 @@ message ShardReassignmentRecord {
   uint64 slot = 3;
 }
 
-message SpecialRecord {
-  uint32 kind = 1 [deprecated=true]; // Deprecated in favor of unify specials object w/ attestations.
-  repeated bytes data = 2 [deprecated=true]; // Deprecated in favor of unify specials object w/ attestations.
-}
-
 message CrosslinkRecord {
   uint64 slot = 1;
   bytes shard_block_root_hash32 = 2;
@@ -157,10 +145,6 @@ message BeaconBlock {
 
   // Block Body
   BeaconBlockBody body = 7;
-
-  // Deprecated fields
-  // All fields must be annotated with [deprecated=true];
-  google.protobuf.Timestamp timestamp = 1006 [deprecated=true]; // Keeping this until we refactor block validation.
 }
 
 message BeaconBlockBody {
@@ -215,7 +199,7 @@ message CasperSlashing {
 message Deposit {
   repeated bytes merkle_branch_hash32s = 1;
   uint64 merkle_tree_index = 2;
-  DepositData deposit_data = 3;
+  bytes deposit_data = 3;
 }
 
 message Exit {
