@@ -559,7 +559,7 @@ func ProcessBlockValidatorDeposits(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 ) (*pb.BeaconState, error) {
-	deposits := block.GetBody().GetDeposits()
+	deposits := block.Body.Deposits
 	if uint64(len(deposits)) > params.BeaconConfig().MaxDeposits {
 		return nil, fmt.Errorf(
 			"number of deposits (%d) exceeds allowed threshold of %d",
@@ -570,7 +570,7 @@ func ProcessBlockValidatorDeposits(
 	var err error
 	var depositInput *pb.DepositInput
 	for idx, deposit := range deposits {
-		depositData := deposit.GetDepositData()
+		depositData := deposit.DepositData
 		depositInput, err = DecodeDepositInput(depositData)
 		if err != nil {
 			return nil, fmt.Errorf("could not decode deposit input: %v", err)
@@ -584,12 +584,12 @@ func ProcessBlockValidatorDeposits(
 		// We then mutate the beacon state with the verified validator deposit.
 		beaconState, _, err = v.ProcessDeposit(
 			beaconState,
-			depositInput.GetPubkey(),
+			depositInput.Pubkey,
 			binary.BigEndian.Uint64(depositValue),
-			depositInput.GetProofOfPossession(),
-			depositInput.GetWithdrawalCredentialsHash32(),
-			depositInput.GetRandaoCommitmentHash32(),
-			depositInput.GetPocCommitment(),
+			depositInput.ProofOfPossession,
+			depositInput.WithdrawalCredentialsHash32,
+			depositInput.RandaoCommitmentHash32,
+			depositInput.PocCommitment,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could process deposit into beacon state: %v", err)
@@ -621,15 +621,15 @@ func DecodeDepositInput(depositData []byte) (*pb.DepositInput, error) {
 }
 
 func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
-	depositData := deposit.GetDepositData()
+	depositData := deposit.DepositData
 	// Verify Merkle proof of deposit and PoW receipt trie root.
 	var receiptRoot [32]byte
 	var merkleLeaf [32]byte
-	copy(receiptRoot[:], beaconState.GetProcessedPowReceiptRootHash32())
+	copy(receiptRoot[:], beaconState.ProcessedPowReceiptRootHash32)
 	copy(merkleLeaf[:], depositData)
 	if ok := trie.VerifyMerkleBranch(
 		merkleLeaf,
-		deposit.GetMerkleBranchHash32S(),
+		deposit.MerkleBranchHash32S,
 		params.BeaconConfig().DepositContractTreeDepth,
 		receiptRoot,
 	); !ok {
@@ -641,16 +641,16 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 	depositUnixTime := int64(binary.BigEndian.Uint64(depositTimestampBytes))
 
 	// Parse beacon state's genesis time from a uint32 into a unix timestamp.
-	genesisUnixTime := int64(beaconState.GetGenesisTime())
+	genesisUnixTime := int64(beaconState.GenesisTime)
 	depositGenesisTimeDifference := depositUnixTime - genesisUnixTime
 	timeToLive := uint64(depositGenesisTimeDifference) / params.BeaconConfig().SlotDuration
 
 	// Verify current slot slot - allowed validator TTL is within the allowed boundary.
-	if beaconState.GetSlot()-timeToLive < params.BeaconConfig().ZeroBalanceValidatorTTL {
+	if beaconState.Slot-timeToLive < params.BeaconConfig().ZeroBalanceValidatorTTL {
 		return fmt.Errorf(
 			"want state.slot - (deposit.time - genesis_time) // SLOT_DURATION > %d, received %d < %d",
 			params.BeaconConfig().ZeroBalanceValidatorTTL,
-			beaconState.GetSlot()-timeToLive,
+			beaconState.Slot-timeToLive,
 			params.BeaconConfig().ZeroBalanceValidatorTTL,
 		)
 	}

@@ -96,7 +96,7 @@ func InitialBeaconState(
 	var validatorIndex uint32
 	var err error
 	for _, deposit := range initialValidatorDeposits {
-		depositData := deposit.GetDepositData()
+		depositData := deposit.DepositData
 		depositInput, err := b.DecodeDepositInput(depositData)
 		if err != nil {
 			return nil, fmt.Errorf("could not decode deposit input: %v", err)
@@ -106,12 +106,12 @@ func InitialBeaconState(
 		depositValue := depositData[len(depositData)-16 : len(depositData)-8]
 		state, validatorIndex, err = v.ProcessDeposit(
 			state,
-			depositInput.GetPubkey(),
+			depositInput.Pubkey,
 			binary.BigEndian.Uint64(depositValue),
-			depositInput.GetProofOfPossession(),
-			depositInput.GetWithdrawalCredentialsHash32(),
-			depositInput.GetRandaoCommitmentHash32(),
-			depositInput.GetPocCommitment(),
+			depositInput.ProofOfPossession,
+			depositInput.WithdrawalCredentialsHash32,
+			depositInput.RandaoCommitmentHash32,
+			depositInput.PocCommitment,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not process validator deposit: %v", err)
