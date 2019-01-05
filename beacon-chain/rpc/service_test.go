@@ -124,7 +124,7 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	depositData, err := b.EncodeBlockDepositData(
+	depositData, err := b.EncodeDepositData(
 		&pbp2p.DepositInput{Pubkey: []byte{'A'}},
 		params.BeaconConfig().MaxDepositInGwei,
 		time.Now().Unix(),
@@ -161,12 +161,16 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not call CurrentAssignments correctly: %v", err)
 	}
-	genesis = b.NewGenesisBlock([]byte{})
 
-	if res.GenesisTimestamp.String() != genesis.GetTimestamp().String() {
+	genesisTimeStamp, err := ptypes.TimestampProto(time.Unix(int64(beaconState.GenesisTime), 0))
+	if err != nil {
+		t.Errorf("Could not generate genesis timestamp %v", err)
+	}
+
+	if res.GenesisTimestamp.String() != genesisTimeStamp.String() {
 		t.Errorf(
 			"Received different genesis timestamp, wanted: %v, received: %v",
-			genesis.GetTimestamp(),
+			genesisTimeStamp.String(),
 			res.GenesisTimestamp,
 		)
 	}
@@ -184,7 +188,7 @@ func TestProposeBlock(t *testing.T) {
 
 	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
-		depositData, err := b.EncodeBlockDepositData(
+		depositData, err := b.EncodeDepositData(
 			&pbp2p.DepositInput{
 				Pubkey: []byte(strconv.Itoa(i)),
 				RandaoCommitmentHash32: []byte{41, 13, 236, 217, 84, 139, 98, 168, 214, 3, 69,
@@ -337,7 +341,7 @@ func TestValidatorSlotAndResponsibility(t *testing.T) {
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	depositData, err := b.EncodeBlockDepositData(
+	depositData, err := b.EncodeDepositData(
 		&pbp2p.DepositInput{
 			Pubkey: []byte{'A'},
 		},
@@ -382,7 +386,7 @@ func TestValidatorIndex(t *testing.T) {
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	depositData, err := b.EncodeBlockDepositData(
+	depositData, err := b.EncodeDepositData(
 		&pbp2p.DepositInput{
 			Pubkey: []byte{'A'},
 		},
@@ -426,7 +430,7 @@ func TestValidatorShardID(t *testing.T) {
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	depositData, err := b.EncodeBlockDepositData(
+	depositData, err := b.EncodeDepositData(
 		&pbp2p.DepositInput{
 			Pubkey: []byte{'A'},
 		},
@@ -471,7 +475,7 @@ func TestValidatorAssignments(t *testing.T) {
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	depositData, err := b.EncodeBlockDepositData(
+	depositData, err := b.EncodeDepositData(
 		&pbp2p.DepositInput{
 			Pubkey: []byte{'A'},
 		},

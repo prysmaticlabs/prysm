@@ -19,8 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slices"
 )
 
-const bitsInByte = 8
-
 // InitialValidatorRegistry creates a new validator set that is used to
 // generate a new crystallized state.
 func InitialValidatorRegistry() []*pb.ValidatorRecord {
@@ -104,35 +102,6 @@ func ShardAndCommitteesAtSlot(state *pb.BeaconState, slot uint64) (*pb.ShardAndC
 	return state.ShardAndCommitteesAtSlots[slot-earliestSlot], nil
 }
 
-// GetShardAndCommitteesForSlot returns the attester set of a given slot.
-// Deprecated: Use ShardAndCommitteesAtSlot instead.
-func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, lastStateRecalc uint64, slot uint64) (*pb.ShardAndCommitteeArray, error) {
-	cycleLength := params.BeaconConfig().CycleLength
-
-	var lowerBound uint64
-	if lastStateRecalc >= cycleLength {
-		lowerBound = lastStateRecalc - cycleLength
-	}
-	upperBound := lastStateRecalc + 2*cycleLength
-
-	if slot < lowerBound || slot >= upperBound {
-		return nil, fmt.Errorf("slot %d out of bounds: %d <= slot < %d",
-			slot,
-			lowerBound,
-			upperBound,
-		)
-	}
-
-	// If in the previous or current cycle, simply calculate offset
-	if slot < lastStateRecalc+2*cycleLength {
-		return shardCommittees[slot-lowerBound], nil
-	}
-
-	// Otherwise, use the 3rd cycle
-	index := lowerBound + 2*cycleLength + slot%cycleLength
-	return shardCommittees[index], nil
-}
-
 // BeaconProposerIndex returns the index of the proposer of the block at a
 // given slot.
 //
@@ -148,16 +117,15 @@ func BeaconProposerIndex(state *pb.BeaconState, slot uint64) (uint32, error) {
 	if err != nil {
 		return 0, err
 	}
-	firstCommittee := committeeArray.GetArrayShardAndCommittee()[0].Committee
+	firstCommittee := committeeArray.ArrayShardAndCommittee[0].Committee
 
 	return firstCommittee[slot%uint64(len(firstCommittee))], nil
 }
 
 // ProposerShardAndIndex returns the index and the shardID of a proposer from a given slot.
-func ProposerShardAndIndex(shardCommittees []*pb.ShardAndCommitteeArray, lastStateRecalc uint64, slot uint64) (uint64, uint64, error) {
-	slotCommittees, err := GetShardAndCommitteesForSlot(
-		shardCommittees,
-		lastStateRecalc,
+func ProposerShardAndIndex(state *pb.BeaconState, slot uint64) (uint64, uint64, error) {
+	slotCommittees, err := ShardAndCommitteesAtSlot(
+		state,
 		slot)
 	if err != nil {
 		return 0, 0, err
@@ -264,7 +232,7 @@ func VotedBalanceInAttestation(validators []*pb.ValidatorRecord, indices []uint3
 	var voteBalance uint64
 	for index, attesterIndex := range indices {
 		// find balance of validators who voted.
-		bitCheck, err := bitutil.CheckBit(attestation.GetParticipationBitfield(), index)
+		bitCheck, err := bitutil.CheckBit(attestation.ParticipationBitfield, index)
 		if err != nil {
 			return 0, 0, err
 		}
@@ -557,7 +525,7 @@ func minEmptyValidatorIndex(
 	currentSlot uint64,
 ) (int, bool) {
 	for i := range validators {
-		lastStatusChange := validators[i].GetLatestStatusChangeSlot()
+		lastStatusChange := validators[i].LatestStatusChangeSlot
 		ttlWindow := lastStatusChange + params.BeaconConfig().ZeroBalanceValidatorTTL
 		if balances[i] == 0 && ttlWindow <= currentSlot {
 			return i, true

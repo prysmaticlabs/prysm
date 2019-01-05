@@ -10,7 +10,7 @@ import (
 
 // UpdateRandaoLayers increments the randao layer of the block proposer at the given slot.
 func UpdateRandaoLayers(state *pb.BeaconState, slot uint64) (*pb.BeaconState, error) {
-	vreg := state.GetValidatorRegistry()
+	vreg := state.ValidatorRegistry
 
 	proposerIndex, err := v.BeaconProposerIndex(state, slot)
 	if err != nil {
@@ -26,7 +26,7 @@ func UpdateRandaoLayers(state *pb.BeaconState, slot uint64) (*pb.BeaconState, er
 // beacon slot.
 func UpdateRandaoMixes(state *pb.BeaconState) *pb.BeaconState {
 	latestMixesLength := params.BeaconConfig().LatestRandaoMixesLength
-	prevMixes := state.LatestRandaoMixesHash32S[(state.GetSlot()-1)%latestMixesLength]
-	state.LatestRandaoMixesHash32S[state.GetSlot()%latestMixesLength] = prevMixes
-	return state
+	prevMixes := state.LatestRandaoMixesHash32S[(newState.Slot-1)%latestMixesLength]
+	newState.LatestRandaoMixesHash32S[state.Slot%latestMixesLength] = prevMixes
+	return newState
 }

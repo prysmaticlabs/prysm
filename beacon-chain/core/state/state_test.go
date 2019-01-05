@@ -60,7 +60,7 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	maxDeposit := params.BeaconConfig().MaxDepositInGwei
 	var deposits []*pb.Deposit
 	for i := 0; i < depositsForChainStart; i++ {
-		depositData, err := b.EncodeBlockDepositData(
+		depositData, err := b.EncodeDepositData(
 			&pb.DepositInput{
 				Pubkey: []byte(strconv.Itoa(i)), ProofOfPossession: []byte{'B'},
 				WithdrawalCredentialsHash32: []byte{'C'}, RandaoCommitmentHash32: []byte{'D'},
@@ -204,17 +204,17 @@ func TestGenesisState_HashEquality(t *testing.T) {
 
 func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
 	s, _ := InitialBeaconState(nil, 0, nil)
-	want, got := len(s.GetLatestBlockRootHash32S()), int(params.BeaconConfig().LatestBlockRootsLength)
+	want, got := len(s.LatestBlockRootHash32S), int(params.BeaconConfig().LatestBlockRootsLength)
 	if want != got {
 		t.Errorf("Wrong number of recent block hashes. Got: %d Want: %d", got, want)
 	}
 
-	want = cap(s.GetLatestBlockRootHash32S())
+	want = cap(s.LatestBlockRootHash32S)
 	if want != got {
 		t.Errorf("The slice underlying array capacity is wrong. Got: %d Want: %d", got, want)
 	}
 
-	for _, h := range s.GetLatestBlockRootHash32S() {
+	for _, h := range s.LatestBlockRootHash32S {
 		if !bytes.Equal(h, params.BeaconConfig().ZeroHash[:]) {
 			t.Errorf("Unexpected non-zero hash data: %v", h)
 		}
@@ -250,8 +250,8 @@ func TestUpdateLatestBlockHashes(t *testing.T) {
 			if !bytes.Equal(updated[i], []byte{0}) {
 				t.Fatalf("update failed: expected %#x got %#x", []byte{0}, updated[i])
 			}
-		} else if !bytes.Equal(updated[i], block.GetParentRootHash32()) {
-			t.Fatalf("update failed: expected %#x got %#x", block.GetParentRootHash32(), updated[i])
+		} else if !bytes.Equal(updated[i], block.ParentRootHash32) {
+			t.Fatalf("update failed: expected %#x got %#x", block.ParentRootHash32, updated[i])
 		}
 	}
 }
@@ -269,7 +269,7 @@ func TestCalculateNewBlockHashes_DoesNotMutateData(t *testing.T) {
 	original := make([][]byte, params.BeaconConfig().LatestBlockRootsLength)
 	copy(original, s.LatestBlockRootHash32S)
 
-	if !reflect.DeepEqual(s.GetLatestBlockRootHash32S(), original) {
+	if !reflect.DeepEqual(s.LatestBlockRootHash32S, original) {
 		t.Fatal("setup data should be equal!")
 	}
 
@@ -280,7 +280,7 @@ func TestCalculateNewBlockHashes_DoesNotMutateData(t *testing.T) {
 
 	result, _ := CalculateNewBlockHashes(s, block, 0 /*parentSlot*/)
 
-	if !reflect.DeepEqual(s.GetLatestBlockRootHash32S(), original) {
+	if !reflect.DeepEqual(s.LatestBlockRootHash32S, original) {
 		t.Error("data has mutated from the original")
 	}
 

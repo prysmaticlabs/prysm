@@ -167,22 +167,22 @@ func (c *ChainService) updateHead(processedBlock <-chan *pb.BeaconBlock) {
 			newHead := currentHead
 			// If both blocks have the same crystallized state root, we favor one which has
 			// the higher slot.
-			if bytes.Equal(currentHead.GetStateRootHash32(), block.GetStateRootHash32()) {
-				if block.GetSlot() > currentHead.GetSlot() {
+			if bytes.Equal(currentHead.StateRootHash32, block.StateRootHash32) {
+				if block.Slot > currentHead.Slot {
 					newHead = block
 					headUpdated = true
 				}
 				// 2a. Pick the block with the higher last_finalized_slot.
 				// 2b. If same, pick the block with the higher last_justified_slot.
-			} else if blockState.GetFinalizedSlot() > currentState.GetFinalizedSlot() {
+			} else if blockState.FinalizedSlot > currentState.FinalizedSlot {
 				newHead = block
 				headUpdated = true
-			} else if blockState.GetFinalizedSlot() == currentState.GetFinalizedSlot() {
-				if blockState.GetJustifiedSlot() > currentState.GetJustifiedSlot() {
+			} else if blockState.FinalizedSlot == currentState.FinalizedSlot {
+				if blockState.JustifiedSlot > currentState.JustifiedSlot {
 					newHead = block
 					headUpdated = true
-				} else if blockState.GetJustifiedSlot() == currentState.GetJustifiedSlot() {
-					if block.GetSlot() > currentHead.GetSlot() {
+				} else if blockState.JustifiedSlot == currentState.JustifiedSlot {
+					if block.Slot > currentHead.Slot {
 						newHead = block
 						headUpdated = true
 					}
@@ -207,7 +207,7 @@ func (c *ChainService) updateHead(processedBlock <-chan *pb.BeaconBlock) {
 			// server to stream these events to beacon clients.
 			// When the transition is a cycle transition, we stream the state containing the new validator
 			// assignments to clients.
-			if block.GetSlot()%params.BeaconConfig().CycleLength == 0 {
+			if block.Slot%params.BeaconConfig().CycleLength == 0 {
 				c.canonicalStateFeed.Send(newState)
 			}
 			c.canonicalBlockFeed.Send(newHead)
@@ -239,13 +239,13 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *pb.BeaconBlock) {
 				continue
 			}
 
-			currentSlot := beaconState.GetSlot()
-			if currentSlot+1 < block.GetSlot() {
-				c.unProcessedBlocks[block.GetSlot()] = block
+			currentSlot := beaconState.Slot
+			if currentSlot+1 < block.Slot {
+				c.unProcessedBlocks[block.Slot] = block
 				continue
 			}
 
-			if currentSlot+1 == block.GetSlot() {
+			if currentSlot+1 == block.Slot {
 				if err := c.receiveBlock(block); err != nil {
 					log.Error(err)
 					processedBlock <- nil
@@ -256,7 +256,7 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *pb.BeaconBlock) {
 			} else {
 				log.Debugf(
 					"Block slot number is lower than the current slot in the beacon state %d",
-					block.GetSlot())
+					block.Slot)
 				c.sendAndDeleteCachedBlocks(currentSlot)
 			}
 		}
@@ -298,7 +298,7 @@ func (c *ChainService) receiveBlock(block *pb.BeaconBlock) error {
 		return fmt.Errorf("failed to get beacon state: %v", err)
 	}
 
-	if block.GetSlot() == 0 {
+	if block.Slot == 0 {
 		return errors.New("cannot process a genesis block: received block with slot 0")
 	}
 
@@ -319,11 +319,11 @@ func (c *ChainService) receiveBlock(block *pb.BeaconBlock) error {
 		return fmt.Errorf("could not hash block %v", err)
 	}
 
-	log.WithField("slotNumber", block.GetSlot()).Info("Executing state transition")
+	log.WithField("slotNumber", block.Slot).Info("Executing state transition")
 
 	// Check for skipped slots and update the corresponding proposers
 	// randao layer.
-	for beaconState.GetSlot() < block.GetSlot()-1 {
+	for beaconState.Slot < block.Slot-1 {
 		beaconState, err = state.ExecuteStateTransition(beaconState, nil, blockRoot)
 		if err != nil {
 			return fmt.Errorf("could not execute state transition %v", err)
@@ -335,8 +335,8 @@ func (c *ChainService) receiveBlock(block *pb.BeaconBlock) error {
 		return fmt.Errorf("could not execute state transition %v", err)
 	}
 
-	if state.IsValidatorSetChange(beaconState, block.GetSlot()) {
-		log.WithField("slotNumber", block.GetSlot()).Info("Validator set rotation occurred")
+	if state.IsValidatorSetChange(beaconState, block.Slot) {
+		log.WithField("slotNumber", block.Slot).Info("Validator set rotation occurred")
 	}
 
 	// TODO(#1074): Verify block.state_root == hash_tree_root(state)

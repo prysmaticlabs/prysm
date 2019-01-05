@@ -101,7 +101,7 @@ func InitialBeaconState(
 	var err error
 	validatorMap := stateutils.ValidatorIndexMap(state)
 	for _, deposit := range initialValidatorDeposits {
-		depositData := deposit.GetDepositData()
+		depositData := deposit.DepositData
 		depositInput, err := b.DecodeDepositInput(depositData)
 		if err != nil {
 			return nil, fmt.Errorf("could not decode deposit input: %v", err)
@@ -111,13 +111,12 @@ func InitialBeaconState(
 		depositValue := depositData[len(depositData)-16 : len(depositData)-8]
 		state, validatorIndex, err = v.ProcessDeposit(
 			state,
-			validatorMap,
-			depositInput.GetPubkey(),
+			depositInput.Pubkey,
 			binary.BigEndian.Uint64(depositValue),
-			depositInput.GetProofOfPossession(),
-			depositInput.GetWithdrawalCredentialsHash32(),
-			depositInput.GetRandaoCommitmentHash32(),
-			depositInput.GetPocCommitment(),
+			depositInput.ProofOfPossession,
+			depositInput.WithdrawalCredentialsHash32,
+			depositInput.RandaoCommitmentHash32,
+			depositInput.PocCommitment,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not process validator deposit: %v", err)
@@ -186,11 +185,11 @@ func Hash(state *pb.BeaconState) ([32]byte, error) {
 //
 //   [0xF, 0x7, 0x5, 0x5, 0x5]
 func CalculateNewBlockHashes(state *pb.BeaconState, block *pb.BeaconBlock, parentSlot uint64) ([][]byte, error) {
-	distance := block.GetSlot() - parentSlot
-	existing := state.GetLatestBlockRootHash32S()
+	distance := block.Slot - parentSlot
+	existing := state.LatestBlockRootHash32S
 	update := existing[distance:]
-	for len(update) < 2*int(params.BeaconConfig().EpochLength) {
-		update = append(update, block.GetParentRootHash32())
+	for len(update) < 2*int(params.BeaconConfig().CycleLength) {
+		update = append(update, block.ParentRootHash32)
 	}
 	return update, nil
 }
@@ -198,23 +197,23 @@ func CalculateNewBlockHashes(state *pb.BeaconState, block *pb.BeaconBlock, paren
 // IsValidatorSetChange checks if a validator set change transition can be processed. At that point,
 // validator shuffle will occur.
 func IsValidatorSetChange(state *pb.BeaconState, slotNumber uint64) bool {
-	if state.GetFinalizedSlot() <= state.GetValidatorRegistryLastChangeSlot() {
+	if state.FinalizedSlot <= state.ValidatorRegistryLastChangeSlot {
 		return false
 	}
-	if slotNumber-state.GetValidatorRegistryLastChangeSlot() < params.BeaconConfig().MinValidatorSetChangeInterval {
+	if slotNumber-state.ValidatorRegistryLastChangeSlot < params.BeaconConfig().MinValidatorSetChangeInterval {
 		return false
 	}
 
 	shardProcessed := map[uint64]bool{}
-	for _, shardAndCommittee := range state.GetShardAndCommitteesAtSlots() {
+	for _, shardAndCommittee := range state.ShardAndCommitteesAtSlots {
 		for _, committee := range shardAndCommittee.ArrayShardAndCommittee {
 			shardProcessed[committee.Shard] = true
 		}
 	}
 
-	crosslinks := state.GetLatestCrosslinks()
+	crosslinks := state.LatestCrosslinks
 	for shard := range shardProcessed {
-		if state.GetValidatorRegistryLastChangeSlot() >= crosslinks[shard].Slot {
+		if state.ValidatorRegistryLastChangeSlot >= crosslinks[shard].Slot {
 			return false
 		}
 	}
