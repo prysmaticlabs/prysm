@@ -11,7 +11,7 @@ import (
 
 // SaveAttestation puts the attestation record into the beacon chain db.
 func (db *BeaconDB) SaveAttestation(attestation *pb.Attestation) error {
-	hash := att.Key(attestation.GetData())
+	hash := att.Key(attestation.Data)
 	encodedState, err := proto.Marshal(attestation)
 	if err != nil {
 		return err
