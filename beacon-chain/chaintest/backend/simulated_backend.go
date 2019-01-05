@@ -59,7 +59,7 @@ func (sb *SimulatedBackend) RunChainTest(testCase *ChainTestCase) error {
 	// test language specification.
 	c := params.BeaconConfig()
 	c.ShardCount = testCase.Config.ShardCount
-	c.CycleLength = testCase.Config.CycleLength
+	c.EpochLength = testCase.Config.CycleLength
 	c.TargetCommitteeSize = testCase.Config.MinCommitteeSize
 	params.OverrideBeaconConfig(c)
 

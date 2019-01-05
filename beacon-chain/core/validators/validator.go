@@ -24,8 +24,8 @@ func InitialValidatorRegistry() []*pb.ValidatorRecord {
 	config := params.BeaconConfig()
 	randaoPreCommit := [32]byte{}
 	randaoReveal := hashutil.Hash(randaoPreCommit[:])
-	validators := make([]*pb.ValidatorRecord, config.BootstrappedValidatorsCount)
-	for i := uint64(0); i < config.BootstrappedValidatorsCount; i++ {
+	validators := make([]*pb.ValidatorRecord, config.DepositsForChainStart)
+	for i := uint64(0); i < config.DepositsForChainStart; i++ {
 		validators[i] = &pb.ValidatorRecord{
 			ExitSlot:               params.BeaconConfig().FarFutureSlot,
 			Balance:                config.MaxDeposit * config.Gwei,

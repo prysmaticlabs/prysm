@@ -207,7 +207,7 @@ func (c *ChainService) updateHead(processedBlock <-chan *pb.BeaconBlock) {
 			// server to stream these events to beacon clients.
 			// When the transition is a cycle transition, we stream the state containing the new validator
 			// assignments to clients.
-			if block.Slot%params.BeaconConfig().CycleLength == 0 {
+			if block.Slot%params.BeaconConfig().EpochLength == 0 {
 				c.canonicalStateFeed.Send(newState)
 			}
 			c.canonicalBlockFeed.Send(newHead)
@@ -333,10 +333,6 @@ func (c *ChainService) receiveBlock(block *pb.BeaconBlock) error {
 	beaconState, err = state.ExecuteStateTransition(beaconState, block, blockRoot)
 	if err != nil {
 		return fmt.Errorf("could not execute state transition %v", err)
-	}
-
-	if state.IsValidatorSetChange(beaconState, block.Slot) {
-		log.WithField("slotNumber", block.Slot).Info("Validator set rotation occurred")
 	}
 
 	// TODO(#1074): Verify block.state_root == hash_tree_root(state)
