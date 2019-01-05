@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"strconv"
 	"testing"
+	"time"
 
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
@@ -204,14 +205,20 @@ func TestRunningChainService(t *testing.T) {
 	chainService := setupBeaconChain(t, false, db)
 	deposits := make([]*pb.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
-		deposits[i] = &pb.Deposit{DepositData: &pb.DepositData{
-			Value: params.BeaconConfig().MaxDepositInGwei,
-			DepositInput: &pb.DepositInput{
-				Pubkey: []byte(strconv.Itoa(i)),
-				RandaoCommitmentHash32: []byte{41, 13, 236, 217, 84, 139, 98, 168, 214, 3, 69,
-					169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
-			},
-		}}
+		depositInput := &pb.DepositInput{
+			Pubkey: []byte(strconv.Itoa(i)),
+			RandaoCommitmentHash32: []byte{41, 13, 236, 217, 84, 139, 98, 168, 214, 3, 69,
+				169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
+		}
+		depositData, err := b.EncodeDepositData(
+			depositInput,
+			params.BeaconConfig().MaxDepositInGwei,
+			time.Now().Unix(),
+		)
+		if err != nil {
+			t.Fatalf("Could not encode deposit input: %v", err)
+		}
+		deposits[i] = &pb.Deposit{DepositData: depositData}
 	}
 	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
 	if err != nil {
@@ -312,7 +319,7 @@ func TestDoesPOWBlockExist(t *testing.T) {
 
 	// Using a faulty client should throw error.
 	var powHash [32]byte
-	copy(powHash[:], beaconState.GetProcessedPowReceiptRootHash32())
+	copy(powHash[:], beaconState.ProcessedPowReceiptRootHash32)
 	exists := chainService.doesPoWBlockExist(powHash)
 	if exists {
 		t.Error("Block corresponding to nil powchain reference should not exist")
@@ -460,7 +467,7 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 
 	currentSlot := uint64(1)
 	attestationSlot := uint64(0)
-	shard := beaconState.GetShardAndCommitteesAtSlots()[attestationSlot].ArrayShardAndCommittee[0].Shard
+	shard := beaconState.ShardAndCommitteesAtSlots[attestationSlot].ArrayShardAndCommittee[0].Shard
 
 	block3 := &pb.BeaconBlock{
 		Slot:                          currentSlot,

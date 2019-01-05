@@ -213,8 +213,8 @@ func TestSavingBlocksInSync(t *testing.T) {
 	msg1 = getBlockResponseMsg(30)
 	ss.blockBuf <- msg1
 
-	if stateResponse.BeaconState.GetFinalizedSlot() != ss.currentSlot {
-		t.Fatalf("Slot saved when it was not supposed too: %v", stateResponse.BeaconState.GetFinalizedSlot())
+	if stateResponse.BeaconState.FinalizedSlot != ss.currentSlot {
+		t.Fatalf("Slot saved when it was not supposed too: %v", stateResponse.BeaconState.FinalizedSlot)
 	}
 
 	msg1 = getBlockResponseMsg(100)
@@ -224,7 +224,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 	<-exitRoutine
 
 	br := msg1.Data.(*pb.BeaconBlockResponse)
-	if br.Block.GetSlot() != ss.currentSlot {
+	if br.Block.Slot != ss.currentSlot {
 		t.Fatalf("Slot not updated despite receiving a valid block: %v", ss.currentSlot)
 	}
 

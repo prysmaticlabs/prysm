@@ -27,11 +27,10 @@ func ExecuteStateTransition(
 	var err error
 
 	newState := proto.Clone(beaconState).(*pb.BeaconState)
-
-	currentSlot := newState.GetSlot()
+	currentSlot := newState.Slot
 	newState.Slot = currentSlot + 1
 
-	newState, err = randao.UpdateRandaoLayers(newState, newState.GetSlot())
+	newState, err = randao.UpdateRandaoLayers(newState, newState.Slot)
 	if err != nil {
 		return nil, fmt.Errorf("unable to update randao layer %v", err)
 	}
@@ -51,7 +50,7 @@ func ExecuteStateTransition(
 		if err != nil {
 			return nil, fmt.Errorf("unable to process block: %v", err)
 		}
-		if newState.GetSlot()%params.BeaconConfig().EpochLength == 0 {
+		if newState.Slot%params.BeaconConfig().EpochLength == 0 {
 			newState = NewEpochTransition(newState)
 		}
 	}
@@ -64,11 +63,11 @@ func ExecuteStateTransition(
 // processing block attestations, and more.
 func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
 	newState := proto.Clone(state).(*pb.BeaconState)
-	if block.GetSlot() != state.GetSlot() {
+	if block.Slot != state.Slot {
 		return nil, fmt.Errorf(
 			"block.slot != state.slot, block.slot = %d, state.slot = %d",
-			block.GetSlot(),
-			newState.GetSlot(),
+			block.Slot,
+			newState.Slot,
 		)
 	}
 	// TODO(#781): Verify Proposer Signature.
