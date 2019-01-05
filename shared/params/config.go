@@ -161,7 +161,7 @@ var demoBeaconConfig = &BeaconChainConfig{
 	InitialSlotNumber:                  defaultBeaconConfig.InitialSlotNumber,
 	RandBytes:                          defaultBeaconConfig.RandBytes,
 	InitialForkSlot:                    defaultBeaconConfig.InitialForkSlot,
-	SimulatedBlockRandao:               [32]byte{'S', 'I', 'M', 'U', 'L', 'A', 'T', 'E', 'R'},
+	SimulatedBlockRandao:               [32]byte{'S', 'I', 'M', 'U', 'L', 'A', 'T', 'O', 'R'},
 	SyncPollingInterval:                2 * 4, // Query nodes over the network every 4 slots for sync status.
 	GenesisTime:                        time.Now(),
 	MaxNumLog2Validators:               defaultBeaconConfig.MaxNumLog2Validators,
