@@ -26,10 +26,12 @@ type ValidatorSetDeltaFlags int
 
 // BeaconChainConfig contains configs for node to participate in beacon chain.
 type BeaconChainConfig struct {
+	DepositContractTreeDepth                uint64         // Depth of the Merkle trie of deposits in the validator deposit contract on the PoW chain.
 	ZeroBalanceValidatorTTL                 uint64         // ZeroBalanceValidatorTTL specifies the allowed number of slots a validator with 0 balance can live in the state.
 	LatestBlockRootsLength                  uint64         // LatestBlockRootsLength is the number of block roots kept in the beacon state.
 	LatestRandaoMixesLength                 uint64         // LatestRandaoMixesLength is the number of randao mixes kept in the beacon state.
 	MaxExits                                uint64         // MaxExits determines the maximum number of validator exits in a block.
+	MaxDeposits                             uint64         // MaxExits determines the maximum number of validator deposits in a block.
 	MaxAttestations                         uint64         // MaxAttestations defines the maximum allowed attestations in a beacon block.
 	MaxProposerSlashings                    uint64         // MaxProposerSlashing defines the maximum number of slashings of proposers possible in a block.
 	MaxCasperSlashings                      uint64         // MaxCasperSlashings defines the maximum number of casper FFG slashings possible in a block.
@@ -85,6 +87,7 @@ type ShardChainConfig struct {
 
 var defaultBeaconConfig = &BeaconChainConfig{
 	ZeroBalanceValidatorTTL:            4194304,
+	DepositContractTreeDepth:           32,
 	LatestRandaoMixesLength:            8192,
 	LatestBlockRootsLength:             8192,
 	MaxExits:                           16,
@@ -94,6 +97,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxCasperVotes:                     1024,
 	ShardCount:                         1024,
 	MaxDeposit:                         32,
+	MaxDeposits:                        16,
 	MinTopUpSize:                       1,
 	MinOnlineDepositSize:               16,
 	Gwei:                               1e9,

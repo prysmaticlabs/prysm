@@ -1,9 +1,11 @@
 package state
 
 import (
+	"encoding/binary"
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -94,14 +96,22 @@ func InitialBeaconState(
 	var validatorIndex uint32
 	var err error
 	for _, deposit := range initialValidatorDeposits {
+		depositData := deposit.DepositData
+		depositInput, err := b.DecodeDepositInput(depositData)
+		if err != nil {
+			return nil, fmt.Errorf("could not decode deposit input: %v", err)
+		}
+		// depositData consists of depositInput []byte + depositValue [8]byte +
+		// depositTimestamp [8]byte.
+		depositValue := depositData[len(depositData)-16 : len(depositData)-8]
 		state, validatorIndex, err = v.ProcessDeposit(
 			state,
-			deposit.DepositData.DepositInput.Pubkey,
-			deposit.DepositData.Value,
-			deposit.DepositData.DepositInput.ProofOfPossession,
-			deposit.DepositData.DepositInput.WithdrawalCredentialsHash32,
-			deposit.DepositData.DepositInput.RandaoCommitmentHash32,
-			deposit.DepositData.DepositInput.PocCommitment,
+			depositInput.Pubkey,
+			binary.BigEndian.Uint64(depositValue),
+			depositInput.ProofOfPossession,
+			depositInput.WithdrawalCredentialsHash32,
+			depositInput.RandaoCommitmentHash32,
+			depositInput.PocCommitment,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not process validator deposit: %v", err)
