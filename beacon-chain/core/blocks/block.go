@@ -148,7 +148,7 @@ func EncodeBlockDepositData(
 		return nil, fmt.Errorf("failed to encode deposit input: %v", err)
 	}
 	encodedInput := wBuf.Bytes()
-	depositData := []byte{}
+	depositData := make([]byte,0,16+len(encodedInput))
 
 	value := make([]byte, 8)
 	binary.BigEndian.PutUint64(value, depositValue)
