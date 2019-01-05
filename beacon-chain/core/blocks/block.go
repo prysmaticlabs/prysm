@@ -29,7 +29,7 @@ func Hash(block *pb.BeaconBlock) ([32]byte, error) {
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
 func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 	block := &pb.BeaconBlock{
-		Slot:               params.BeaconConfig().InitialSlotNumber,
+		Slot:               params.BeaconConfig().GenesisSlot,
 		ParentRootHash32:   params.BeaconConfig().ZeroHash[:],
 		StateRootHash32:    stateRoot,
 		RandaoRevealHash32: params.BeaconConfig().ZeroHash[:],
@@ -148,7 +148,7 @@ func EncodeDepositData(
 		return nil, fmt.Errorf("failed to encode deposit input: %v", err)
 	}
 	encodedInput := wBuf.Bytes()
-	depositData := make([]byte,0,16+len(encodedInput))
+	depositData := make([]byte, 0, 16+len(encodedInput))
 
 	value := make([]byte, 8)
 	binary.BigEndian.PutUint64(value, depositValue)

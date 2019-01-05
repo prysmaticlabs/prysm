@@ -2,8 +2,6 @@ syntax = "proto3";
 
 package ethereum.beacon.p2p.v1;
 
-import "google/protobuf/timestamp.proto";
-
 import "proto/common/messages.proto";
 
 message BeaconState {
@@ -90,24 +88,25 @@ message AttestationData {
 message ValidatorRecord {
   bytes pubkey = 1;
   // TODO(781): The usage of withdrawal_credentials is not defined in spec. Not used in Prysm yet.
-  bytes withdrawal_credentials = 2; // TODO(781): this is hash32, rename with suffix _hash32
+  bytes withdrawal_credentials_hash32 = 2;
   bytes randao_commitment_hash32 = 3;
   uint64 randao_layers = 4;
+  uint64 activation_slot = 5;
+  uint64 exit_slot = 6;
+  uint64 withdrawal_slot = 7;
+  uint64 penalized_slot = 8;
+  uint64 exit_count = 9;
   // Possible validator status code:
   // https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#constants
-  enum StatusCodes {
-    PENDING_ACTIVATION = 0; // validator is queued and waiting to be active.
-    ACTIVE = 1; // validator is participating validator duties.
-    ACTIVE_PENDING_EXIT = 2; // validator is waiting to exit.
-    EXITED_WITHOUT_PENALTY = 3; // validator has successfully withdrawn its balance.
-    EXITED_WITH_PENALTY = 4; // validator got slashed and kicked out of validator pool.
+  enum StatusFlags {
+    INITIAL = 0; // validator status initial value.
+    INITIATED_EXIT = 1; // validator initiated exit.
+    WITHDRAWABLE = 2; // validator is participating validator duties.
   }
-  StatusCodes status = 5;
-  uint64 latest_status_change_slot = 6;
-  uint64 exit_count = 7;
-  bytes poc_commitment_hash32 = 8;
-  uint64 last_poc_change_slot = 9;
-  uint64 second_last_poc_change_slot = 10;
+  StatusFlags status_flags = 10;
+  bytes poc_commitment_hash32 = 11;
+  uint64 last_poc_change_slot = 12;
+  uint64 second_last_poc_change_slot = 13;
 
   // Deprecated fields
   // All fields must be annotated with [deprecated=true];
@@ -180,7 +179,7 @@ message SlashableVoteData {
 
 message DepositData {
   DepositInput deposit_input = 1;
-  uint64 value = 2;
+  uint64 amount = 2; // Amount in Gwei
   uint64 timestamp = 3;
 }
 
@@ -205,7 +204,7 @@ message Deposit {
 
 message Exit {
   uint64 slot = 1;
-  uint64 validator_index = 2;
+  uint32 validator_index = 2;
   bytes signature = 3; // Type of [uint384]?
 }
 
@@ -213,11 +212,12 @@ message ValidatorRegistryDeltaBlock {
   bytes latest_registry_delta_root_hash32 = 1;
   uint32 validator_index = 2;
   bytes pubkey = 3;
+  uint64 slot = 4;
   enum ValidatorRegistryDeltaFlags {
       ACTIVATION = 0;
       EXIT = 1;
   }
-  ValidatorRegistryDeltaFlags flag = 4;
+  ValidatorRegistryDeltaFlags flag = 5;
 }
 
 message ProofOfCustodyChallenge {} // Empty until phase 1

@@ -61,9 +61,9 @@ type BeaconChainConfig struct {
 	IncluderRewardQuotient                  uint64         // IncluderRewardQuotient defines the reward quotient of proposer for including attestations..
 	MaxValidatorChurnQuotient               uint64         // MaxValidatorChurnQuotient defines the quotient how many validators can change each time.
 	POWContractMerkleTreeDepth              uint64         // POWContractMerkleTreeDepth defines the depth of PoW contract merkle tree.
-	InitialForkVersion                      uint64         // InitialForkVersion is used to track fork version between state transitions.
+	GenesisForkVersion                      uint64         // GenesisForkVersion is used to track fork version between state transitions.
 	InitialForkSlot                         uint64         // InitialForkSlot is used to initialize the fork slot in the initial Beacon state.
-	InitialSlotNumber                       uint64         // InitialSlotNumber is used to initialize the slot number of the genesis block.
+	GenesisSlot                             uint64         // GenesisSlot is used to initialize the slot number of the genesis block.
 	SimulatedBlockRandao                    [32]byte       // SimulatedBlockRandao is a RANDAO seed stubbed in side simulated block to advance local beacon chain.
 	RandBytes                               uint64         // RandBytes is the number of bytes used as entropy to shuffle validators.
 	BootstrappedValidatorsCount             uint64         // BootstrappedValidatorsCount is the number of validators we seed to start beacon chain.
@@ -76,7 +76,11 @@ type BeaconChainConfig struct {
 	EjectionBalanceInGwei                   uint64         // EjectionBalanceInGwei is the minimal balance in Gwei a validator needs before ejected.
 	ZeroHash                                [32]byte       // ZeroHash is used to represent a zeroed out 32 byte array.
 	EmptySignature                          [][]byte       // EmptySignature is used to represent a zeroed out BLS Signature.
-
+	FarFutureSlot                           uint64         // FarFutureSlot is the last slot based on uint64 type.
+	EntryExitDelay                          uint64         // EntryExitDelay is the duration of the day for entry exit.
+	LatestPenalizedExitLength               uint64         // LatestPenalizedExitLength represents withdrawal time when a validator is penalized.
+	WhistlerBlowerRewardQuotient            uint64         // WhistlerBlowerRewardQuotient defines how the reward denominator of whistler blower.
+	SeedLookahead                           uint64         // SeedLookahead is the duration of the look ahead seed.
 }
 
 // ShardChainConfig contains configs for node to participate in shard chains.
@@ -113,9 +117,9 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	WithdrawalsPerCycle:                uint64(4),
 	BaseRewardQuotient:                 uint64(1024),
 	MaxValidatorChurnQuotient:          uint64(32),
-	InitialForkVersion:                 0,
+	GenesisForkVersion:                 0,
 	InitialForkSlot:                    0,
-	InitialSlotNumber:                  0,
+	GenesisSlot:                        0,
 	RandBytes:                          3,
 	BootstrappedValidatorsCount:        16384,
 	SyncPollingInterval:                16 * 4, // Query nodes over the network every 4 slots for sync status.
@@ -130,50 +134,55 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	IncluderRewardQuotient:             8,
 	EjectionBalance:                    16,
 	EjectionBalanceInGwei:              16 * 1e9,
+	FarFutureSlot:                      1<<64 - 1,
+	EntryExitDelay:                     256,
+	LatestPenalizedExitLength:          8192,
+	WhistlerBlowerRewardQuotient:       512,
+	SeedLookahead:                      64,
 }
 
 var demoBeaconConfig = &BeaconChainConfig{
-	ZeroBalanceValidatorTTL:            defaultBeaconConfig.ZeroBalanceValidatorTTL,
-	LatestRandaoMixesLength:            defaultBeaconConfig.LatestRandaoMixesLength,
-	LatestBlockRootsLength:             defaultBeaconConfig.LatestBlockRootsLength,
-	MaxExits:                           defaultBeaconConfig.MaxExits,
-	MaxAttestations:                    defaultBeaconConfig.MaxAttestations,
-	MaxProposerSlashings:               defaultBeaconConfig.MaxProposerSlashings,
-	MaxCasperSlashings:                 defaultBeaconConfig.MaxCasperSlashings,
-	ShardCount:                         5,
-	MaxDeposit:                         defaultBeaconConfig.MaxDeposit,
-	MinTopUpSize:                       defaultBeaconConfig.MinTopUpSize,
-	MinOnlineDepositSize:               defaultBeaconConfig.MinOnlineDepositSize,
-	Gwei:                               defaultBeaconConfig.Gwei,
-	MaxDepositInGwei:                   defaultBeaconConfig.MaxDepositInGwei,
-	DepositsForChainStart:              defaultBeaconConfig.DepositsForChainStart,
-	TargetCommitteeSize:                uint64(3),
-	SlotDuration:                       uint64(2),
-	CycleLength:                        uint64(5),
-	MinValidatorSetChangeInterval:      uint64(15),
-	MinAttestationInclusionDelay:       defaultBeaconConfig.MinAttestationInclusionDelay,
-	SqrtExpDropTime:                    defaultBeaconConfig.SqrtExpDropTime,
-	MinWithdrawalPeriod:                uint64(20),
-	WithdrawalsPerCycle:                uint64(2),
-	BaseRewardQuotient:                 defaultBeaconConfig.BaseRewardQuotient,
-	MaxValidatorChurnQuotient:          defaultBeaconConfig.MaxValidatorChurnQuotient,
-	InitialForkVersion:                 defaultBeaconConfig.InitialForkVersion,
-	InitialSlotNumber:                  defaultBeaconConfig.InitialSlotNumber,
-	RandBytes:                          defaultBeaconConfig.RandBytes,
-	InitialForkSlot:                    defaultBeaconConfig.InitialForkSlot,
-	SimulatedBlockRandao:               [32]byte{'S', 'I', 'M', 'U', 'L', 'A', 'T', 'E', 'R'},
-	SyncPollingInterval:                2 * 4, // Query nodes over the network every 4 slots for sync status.
-	GenesisTime:                        time.Now(),
-	MaxNumLog2Validators:               defaultBeaconConfig.MaxNumLog2Validators,
-	EpochLength:                        defaultBeaconConfig.EpochLength,
-	PowReceiptRootVotingPeriod:         defaultBeaconConfig.PowReceiptRootVotingPeriod,
-	InactivityPenaltyQuotient:          defaultBeaconConfig.InactivityPenaltyQuotient,
-	ZeroHash:                           defaultBeaconConfig.ZeroHash,
-	EmptySignature:                     makeEmptySignature(),
-	CollectivePenaltyCalculationPeriod: defaultBeaconConfig.CollectivePenaltyCalculationPeriod,
-	IncluderRewardQuotient:             defaultBeaconConfig.IncluderRewardQuotient,
-	EjectionBalance:                    defaultBeaconConfig.EjectionBalance,
-	EjectionBalanceInGwei:              defaultBeaconConfig.EjectionBalanceInGwei,
+	LatestRandaoMixesLength:       defaultBeaconConfig.LatestRandaoMixesLength,
+	LatestBlockRootsLength:        defaultBeaconConfig.LatestBlockRootsLength,
+	MaxExits:                      defaultBeaconConfig.MaxExits,
+	MaxAttestations:               defaultBeaconConfig.MaxAttestations,
+	MaxProposerSlashings:          defaultBeaconConfig.MaxProposerSlashings,
+	MaxCasperSlashings:            defaultBeaconConfig.MaxCasperSlashings,
+	ShardCount:                    5,
+	MaxDeposit:                    defaultBeaconConfig.MaxDeposit,
+	MinTopUpSize:                  defaultBeaconConfig.MinTopUpSize,
+	MinOnlineDepositSize:          defaultBeaconConfig.MinOnlineDepositSize,
+	Gwei:                          defaultBeaconConfig.Gwei,
+	MaxDepositInGwei:              defaultBeaconConfig.MaxDepositInGwei,
+	DepositsForChainStart:         defaultBeaconConfig.DepositsForChainStart,
+	TargetCommitteeSize:           uint64(3),
+	SlotDuration:                  uint64(2),
+	CycleLength:                   uint64(5),
+	MinValidatorSetChangeInterval: uint64(15),
+	MinAttestationInclusionDelay:  defaultBeaconConfig.MinAttestationInclusionDelay,
+	SqrtExpDropTime:               defaultBeaconConfig.SqrtExpDropTime,
+	MinWithdrawalPeriod:           uint64(20),
+	WithdrawalsPerCycle:           uint64(2),
+	BaseRewardQuotient:            defaultBeaconConfig.BaseRewardQuotient,
+	MaxValidatorChurnQuotient:     defaultBeaconConfig.MaxValidatorChurnQuotient,
+	GenesisForkVersion:            defaultBeaconConfig.GenesisForkVersion,
+	GenesisSlot:                   defaultBeaconConfig.GenesisSlot,
+	RandBytes:                     defaultBeaconConfig.RandBytes,
+	InitialForkSlot:               defaultBeaconConfig.InitialForkSlot,
+	SimulatedBlockRandao:          [32]byte{'S', 'I', 'M', 'U', 'L', 'A', 'T', 'E', 'R'},
+	SyncPollingInterval:           2 * 4, // Query nodes over the network every 4 slots for sync status.
+	GenesisTime:                   time.Now(),
+	MaxNumLog2Validators:          defaultBeaconConfig.MaxNumLog2Validators,
+	EpochLength:                   defaultBeaconConfig.EpochLength,
+	PowReceiptRootVotingPeriod:    defaultBeaconConfig.PowReceiptRootVotingPeriod,
+	InactivityPenaltyQuotient:     defaultBeaconConfig.InactivityPenaltyQuotient,
+	ZeroHash:                      defaultBeaconConfig.ZeroHash,
+	EmptySignature:                makeEmptySignature(),
+	IncluderRewardQuotient:        defaultBeaconConfig.IncluderRewardQuotient,
+	EjectionBalance:               defaultBeaconConfig.EjectionBalance,
+	EjectionBalanceInGwei:         defaultBeaconConfig.EjectionBalanceInGwei,
+	LatestPenalizedExitLength:     defaultBeaconConfig.LatestPenalizedExitLength,
+	WhistlerBlowerRewardQuotient:  defaultBeaconConfig.WhistlerBlowerRewardQuotient,
 }
 
 var defaultShardConfig = &ShardChainConfig{
