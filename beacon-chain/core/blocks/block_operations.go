@@ -527,7 +527,7 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation) error {
 	return nil
 }
 
-// ProcessBlockValidatorDeposits is one of the operations performed on each processed
+// ProcessValidatorDeposits is one of the operations performed on each processed
 // beacon block to verify queued validators from the Ethereum 1.0 Deposit Contract
 // into the beacon chain.
 //
@@ -555,7 +555,7 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation) error {
 //       randao_commitment=deposit.deposit_data.deposit_input.randao_commitment,
 //       poc_commitment=deposit.deposit_data.deposit_input.poc_commitment,
 //     )
-func ProcessBlockValidatorDeposits(
+func ProcessValidatorDeposits(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 ) (*pb.BeaconState, error) {
@@ -592,7 +592,7 @@ func ProcessBlockValidatorDeposits(
 			depositInput.PocCommitment,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("could process deposit into beacon state: %v", err)
+			return nil, fmt.Errorf("could not process deposit into beacon state: %v", err)
 		}
 	}
 	return beaconState, nil
@@ -601,6 +601,8 @@ func ProcessBlockValidatorDeposits(
 // DecodeDepositInput unmarshales a depositData byte slice into
 // a proto *pb.DepositInput by using the Simple Serialize (SSZ)
 // algorithm.
+// TODO(#1253): Do not assume we will receive serialized proto objects - instead,
+// replace completely by a common struct which can be simple serialized.
 func DecodeDepositInput(depositData []byte) (*pb.DepositInput, error) {
 	// Last 16 bytes of deposit data are 8 bytes for value
 	// and 8 bytes for timestamp. Everything before that is a
@@ -633,7 +635,10 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 		params.BeaconConfig().DepositContractTreeDepth,
 		receiptRoot,
 	); !ok {
-		return errors.New("deposit merkle branch of PoW receipt root did not verify")
+		return fmt.Errorf(
+			"deposit merkle branch of PoW receipt root did not verify for root: %#x",
+			receiptRoot,
+		)
 	}
 
 	// We unmarshal the timestamp bytes into a time.Time value for us to use.

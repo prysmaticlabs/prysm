@@ -60,7 +60,7 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	maxDeposit := params.BeaconConfig().MaxDepositInGwei
 	var deposits []*pb.Deposit
 	for i := 0; i < depositsForChainStart; i++ {
-		depositData, err := b.EncodeBlockDepositData(
+		depositData, err := b.EncodeDepositData(
 			&pb.DepositInput{
 				Pubkey: []byte(strconv.Itoa(i)), ProofOfPossession: []byte{'B'},
 				WithdrawalCredentialsHash32: []byte{'C'}, RandaoCommitmentHash32: []byte{'D'},

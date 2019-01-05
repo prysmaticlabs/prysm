@@ -1118,7 +1118,7 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 	}
 }
 
-func TestProcessBlockValidatorDeposits_ThresholdReached(t *testing.T) {
+func TestProcessValidatorDeposits_ThresholdReached(t *testing.T) {
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			Deposits: make([]*pb.Deposit, params.BeaconConfig().MaxDeposits+1),
@@ -1126,7 +1126,7 @@ func TestProcessBlockValidatorDeposits_ThresholdReached(t *testing.T) {
 	}
 	beaconState := &pb.BeaconState{}
 	want := "exceeds allowed threshold"
-	if _, err := ProcessBlockValidatorDeposits(
+	if _, err := ProcessValidatorDeposits(
 		beaconState,
 		block,
 	); !strings.Contains(err.Error(), want) {
@@ -1134,7 +1134,7 @@ func TestProcessBlockValidatorDeposits_ThresholdReached(t *testing.T) {
 	}
 }
 
-func TestProcessBlockValidatorDeposits_DepositDataSizeTooSmall(t *testing.T) {
+func TestProcessValidatorDeposits_DepositDataSizeTooSmall(t *testing.T) {
 	data := []byte{1, 2, 3}
 	deposit := &pb.Deposit{
 		DepositData: data,
@@ -1146,7 +1146,7 @@ func TestProcessBlockValidatorDeposits_DepositDataSizeTooSmall(t *testing.T) {
 	}
 	beaconState := &pb.BeaconState{}
 	want := "deposit data slice too small"
-	if _, err := ProcessBlockValidatorDeposits(
+	if _, err := ProcessValidatorDeposits(
 		beaconState,
 		block,
 	); !strings.Contains(err.Error(), want) {
@@ -1154,7 +1154,7 @@ func TestProcessBlockValidatorDeposits_DepositDataSizeTooSmall(t *testing.T) {
 	}
 }
 
-func TestProcessBlockValidatorDeposits_DepositInputDecodingFails(t *testing.T) {
+func TestProcessValidatorDeposits_DepositInputDecodingFails(t *testing.T) {
 	data := make([]byte, 16)
 	deposit := &pb.Deposit{
 		DepositData: data,
@@ -1166,7 +1166,7 @@ func TestProcessBlockValidatorDeposits_DepositInputDecodingFails(t *testing.T) {
 	}
 	beaconState := &pb.BeaconState{}
 	want := "ssz decode failed"
-	if _, err := ProcessBlockValidatorDeposits(
+	if _, err := ProcessValidatorDeposits(
 		beaconState,
 		block,
 	); !strings.Contains(err.Error(), want) {
@@ -1174,7 +1174,7 @@ func TestProcessBlockValidatorDeposits_DepositInputDecodingFails(t *testing.T) {
 	}
 }
 
-func TestProcessBlockValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
+func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	// We create a correctly encoded deposit data using Simple Serialize.
 	depositInput := &pb.DepositInput{
 		Pubkey: []byte{1, 2, 3},
@@ -1210,7 +1210,7 @@ func TestProcessBlockValidatorDeposits_MerkleBranchFailsVerification(t *testing.
 		ProcessedPowReceiptRootHash32: []byte{0},
 	}
 	want := "merkle branch of PoW receipt root did not verify"
-	if _, err := ProcessBlockValidatorDeposits(
+	if _, err := ProcessValidatorDeposits(
 		beaconState,
 		block,
 	); !strings.Contains(err.Error(), want) {
@@ -1218,7 +1218,7 @@ func TestProcessBlockValidatorDeposits_MerkleBranchFailsVerification(t *testing.
 	}
 }
 
-func TestProcessBlockValidatorDeposits_OutsideAllowedTTLBoundary(t *testing.T) {
+func TestProcessValidatorDeposits_OutsideAllowedTTLBoundary(t *testing.T) {
 	// We create a correctly encoded deposit data using Simple Serialize.
 	depositInput := &pb.DepositInput{
 		Pubkey: []byte{1, 2, 3},
@@ -1282,7 +1282,7 @@ func TestProcessBlockValidatorDeposits_OutsideAllowedTTLBoundary(t *testing.T) {
 		"want state.slot - (deposit.time - genesis_time) // SLOT_DURATION > %d",
 		params.BeaconConfig().ZeroBalanceValidatorTTL,
 	)
-	if _, err := ProcessBlockValidatorDeposits(
+	if _, err := ProcessValidatorDeposits(
 		beaconState,
 		block,
 	); !strings.Contains(err.Error(), want) {
@@ -1290,7 +1290,7 @@ func TestProcessBlockValidatorDeposits_OutsideAllowedTTLBoundary(t *testing.T) {
 	}
 }
 
-func TestProcessBlockValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
+func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	// Having mismatched withdrawal credentials will cause the process deposit
 	// validator helper function to fail with error when the public key
 	// currently exists in the validator registry.
@@ -1373,7 +1373,7 @@ func TestProcessBlockValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.
 		GenesisTime:                   uint64(genesisTime),
 	}
 	want := "expected withdrawal credentials to match"
-	if _, err := ProcessBlockValidatorDeposits(
+	if _, err := ProcessValidatorDeposits(
 		beaconState,
 		block,
 	); !strings.Contains(err.Error(), want) {
@@ -1381,7 +1381,7 @@ func TestProcessBlockValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.
 	}
 }
 
-func TestProcessBlockValidatorDeposits_ProcessCorrectly(t *testing.T) {
+func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	depositInput := &pb.DepositInput{
 		Pubkey:                      []byte{1},
 		WithdrawalCredentialsHash32: []byte{1, 2, 3},
@@ -1459,7 +1459,7 @@ func TestProcessBlockValidatorDeposits_ProcessCorrectly(t *testing.T) {
 		Slot:                          currentSlot,
 		GenesisTime:                   uint64(genesisTime),
 	}
-	newState, err := ProcessBlockValidatorDeposits(
+	newState, err := ProcessValidatorDeposits(
 		beaconState,
 		block,
 	)

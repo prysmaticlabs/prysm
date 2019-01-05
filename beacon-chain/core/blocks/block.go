@@ -135,10 +135,10 @@ func DomainVersion(data *pb.ForkData, slot uint64, domainType uint64) uint64 {
 	return ForkVersion(data, slot)*constant + domainType
 }
 
-// EncodeBlockDepositData converts a deposit input proto into an a byte slice
+// EncodeDepositData converts a deposit input proto into an a byte slice
 // of Simple Serialized deposit input followed by 8 bytes for a deposit value
 // and 8 bytes for a unix timestamp, all in BigEndian format.
-func EncodeBlockDepositData(
+func EncodeDepositData(
 	depositInput *pb.DepositInput,
 	depositValue uint64,
 	depositTimestamp int64,
