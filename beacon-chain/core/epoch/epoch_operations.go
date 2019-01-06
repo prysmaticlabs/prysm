@@ -146,7 +146,6 @@ func PrevBoundaryAttestations(
 	if err != nil {
 		return nil, err
 	}
-
 	for _, attestation := range prevEpochJustifiedAttestations {
 		if bytes.Equal(attestation.Data.EpochBoundaryRootHash32, prevBoundaryBlockRoot) {
 			prevBoundaryAttestations = append(prevBoundaryAttestations, attestation)

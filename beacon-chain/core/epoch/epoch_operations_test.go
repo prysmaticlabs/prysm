@@ -82,14 +82,13 @@ func TestEpochBoundaryAttestations(t *testing.T) {
 	state := &pb.BeaconState{
 		LatestAttestations:     epochAttestations,
 		Slot:                   params.BeaconConfig().EpochLength,
-		LatestBlockRootHash32S: [][]byte{},
+		LatestBlockRootHash32S: latestBlockRootHash,
 	}
 
 	if _, err := BoundaryAttestations(state, epochAttestations); err == nil {
 		t.Fatal("EpochBoundaryAttestations should have failed with empty block root hash")
 	}
 
-	state.LatestBlockRootHash32S = latestBlockRootHash
 	epochBoundaryAttestation, err := BoundaryAttestations(state, epochAttestations)
 	if err != nil {
 		t.Fatalf("EpochBoundaryAttestations failed: %v", err)
@@ -193,6 +192,46 @@ func TestPrevJustifiedAttestations(t *testing.T) {
 	}
 }
 
+func TestPrevEpochBoundaryAttestations(t *testing.T) {
+	if params.BeaconConfig().EpochLength != 64 {
+		t.Errorf("EpochLength should be 64 for these tests to pass")
+	}
+
+	epochAttestations := []*pb.PendingAttestationRecord{
+		{Data: &pb.AttestationData{EpochBoundaryRootHash32: []byte{100}}},
+		{Data: &pb.AttestationData{EpochBoundaryRootHash32: []byte{0}}},
+		{Data: &pb.AttestationData{EpochBoundaryRootHash32: []byte{64}}}, // selected
+		{Data: &pb.AttestationData{EpochBoundaryRootHash32: []byte{55}}},
+		{Data: &pb.AttestationData{EpochBoundaryRootHash32: []byte{64}}}, // selected
+	}
+
+	var latestBlockRootHash [][]byte
+	for i := uint64(0); i < params.BeaconConfig().EpochLength*3; i++ {
+		latestBlockRootHash = append(latestBlockRootHash, []byte{byte(i)})
+	}
+
+	state := &pb.BeaconState{
+		Slot:                   3 * params.BeaconConfig().EpochLength,
+		LatestBlockRootHash32S: latestBlockRootHash,
+	}
+
+	prevEpochBoundaryAttestation, err := PrevBoundaryAttestations(state, epochAttestations)
+	if err != nil {
+		t.Fatalf("EpochBoundaryAttestations failed: %v", err)
+	}
+
+	// 64 is selected because we start off with 3 epochs (192 slots)
+	// The prev epoch boundary slot is 192 - 2 * epoch_length = 64
+	if !bytes.Equal(prevEpochBoundaryAttestation[0].Data.EpochBoundaryRootHash32, []byte{64}) {
+		t.Errorf("Wanted justified block hash [64] for epoch boundary attestation, got: %v",
+			prevEpochBoundaryAttestation[0].Data.EpochBoundaryRootHash32)
+	}
+	if !bytes.Equal(prevEpochBoundaryAttestation[1].Data.EpochBoundaryRootHash32, []byte{64}) {
+		t.Errorf("Wanted justified block hash [64] for epoch boundary attestation, got: %v",
+			prevEpochBoundaryAttestation[1].Data.EpochBoundaryRootHash32)
+	}
+}
+
 func TestHeadAttestations_Ok(t *testing.T) {
 	if params.BeaconConfig().EpochLength != 64 {
 		t.Errorf("EpochLength should be 64 for these tests to pass")
@@ -242,7 +281,7 @@ func TestHeadAttestations_NotOk(t *testing.T) {
 	}
 }
 
-func TestwinningRoot_Ok(t *testing.T) {
+func TestWinningRoot_Ok(t *testing.T) {
 	defaultBalance := params.BeaconConfig().MaxDeposit
 
 	shardAndCommittees := []*pb.ShardAndCommitteeArray{
@@ -332,7 +371,7 @@ func TestwinningRoot_OutOfBound(t *testing.T) {
 	}
 }
 
-func TestattestingValidators_Ok(t *testing.T) {
+func TestAttestingValidators_Ok(t *testing.T) {
 	defaultBalance := params.BeaconConfig().MaxDeposit
 
 	shardAndCommittees := []*pb.ShardAndCommitteeArray{
@@ -380,7 +419,7 @@ func TestattestingValidators_Ok(t *testing.T) {
 	}
 }
 
-func TestattestingValidators_CantGetwinningRoot(t *testing.T) {
+func TestAttestingValidators_CantGetwinningRoot(t *testing.T) {
 	shardAndCommittees := []*pb.ShardAndCommitteeArray{
 		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
 			{Shard: 1, Committee: []uint32{}},
@@ -408,7 +447,7 @@ func TestattestingValidators_CantGetwinningRoot(t *testing.T) {
 	}
 }
 
-func TesttotalAttestingBalance_Ok(t *testing.T) {
+func TestTotalAttestingBalance_Ok(t *testing.T) {
 
 	shardAndCommittees := []*pb.ShardAndCommitteeArray{
 		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
@@ -453,7 +492,7 @@ func TesttotalAttestingBalance_Ok(t *testing.T) {
 	}
 }
 
-func TesttotalAttestingBalance_NotOfBound(t *testing.T) {
+func TestTotalAttestingBalance_NotOfBound(t *testing.T) {
 
 	shardAndCommittees := []*pb.ShardAndCommitteeArray{
 		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
