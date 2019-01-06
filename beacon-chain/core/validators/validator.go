@@ -420,7 +420,7 @@ func ProcessDeposit(
 	withdrawalCredentials []byte,
 	randaoCommitment []byte,
 	pocCommitment []byte,
-) (*pb.BeaconState, error) {
+) (*pb.BeaconState, uint32, error) {
 	// TODO(#258): Validate proof of possession using BLS.
 	var publicKeyExists bool
 	var existingValidatorIndex int
@@ -451,7 +451,7 @@ func ProcessDeposit(
 			state.ValidatorRegistry[existingValidatorIndex].WithdrawalCredentialsHash32,
 			withdrawalCredentials,
 		) {
-			return nil, fmt.Errorf(
+			return nil, uint32(0), fmt.Errorf(
 				"expected withdrawal credentials to match, received %#x == %#x",
 				state.ValidatorRegistry[existingValidatorIndex].WithdrawalCredentialsHash32,
 				withdrawalCredentials,
@@ -459,7 +459,7 @@ func ProcessDeposit(
 		}
 		state.ValidatorBalances[existingValidatorIndex] += amount
 	}
-	return state, nil
+	return state, uint32(existingValidatorIndex), nil
 }
 
 // isActiveValidator returns the boolean value on whether the validator

@@ -3,7 +3,6 @@ package blocks
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"reflect"
 
