@@ -80,7 +80,7 @@ func TestBroadcast(t *testing.T) {
 	msg := &shardpb.CollationBodyRequest{}
 	subscribeServersToTopic(servers, "theTopic", msg)
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(20 * time.Millisecond)
 
 	msgSubsChannel := make(chan Message)
 	for _, server := range servers[1:] {
