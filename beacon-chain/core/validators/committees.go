@@ -61,7 +61,7 @@ func splitBySlotShard(shuffledValidatorRegistry []uint32, crosslinkStartShard ui
 // numActiveValidatorRegistry / CycleLength /  (MinCommitteeSize*2) + 1 or
 // ShardCount / CycleLength.
 func getCommitteesPerSlot(numActiveValidatorRegistry uint64) uint64 {
-	cycleLength := params.BeaconConfig().CycleLength
+	cycleLength := params.BeaconConfig().EpochLength
 	boundOnValidatorRegistry := numActiveValidatorRegistry/cycleLength/(params.BeaconConfig().TargetCommitteeSize*2) + 1
 	boundOnShardCount := params.BeaconConfig().ShardCount / cycleLength
 	// Ensure that comitteesPerSlot is at least 1.
