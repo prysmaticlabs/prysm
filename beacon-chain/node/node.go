@@ -177,7 +177,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 	if beaconState == nil {
 		var genesisValidatorRegistry []*pb.ValidatorRecord
 		if genesisJSON != "" {
-			log.Infof("Initializing Crystallized State from %s", genesisJSON)
+			log.Infof("Initializing state from %s", genesisJSON)
 			genesisValidatorRegistry, err = utils.InitialValidatorRegistryFromJSON(genesisJSON)
 			if err != nil {
 				return err

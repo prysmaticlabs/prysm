@@ -17,6 +17,7 @@ import (
 // full deposits were made to the deposit contract and the ChainStart log gets emitted.
 func InitialBeaconState(
 	initialValidatorDeposits []*pb.Deposit,
+	genesisValidatorRegistry []*pb.ValidatorRecord,
 	genesisTime uint64,
 	processedPowReceiptRoot []byte) (*pb.BeaconState, error) {
 	latestRandaoMixes := make([][]byte,
@@ -44,6 +45,11 @@ func InitialBeaconState(
 		latestBlockRoots[i] = params.BeaconConfig().ZeroHash[:]
 	}
 
+	latestBalances := make([]uint64, len(genesisValidatorRegistry))
+	for i, v := range genesisValidatorRegistry {
+		latestBalances[i] = v.Balance
+	}
+
 	latestPenalizedExitBalances := make([]uint64, params.BeaconConfig().LatestPenalizedExitLength)
 
 	state := &pb.BeaconState{
@@ -57,8 +63,8 @@ func InitialBeaconState(
 		},
 
 		// Validator registry fields.
-		ValidatorRegistry:                    []*pb.ValidatorRecord{},
-		ValidatorBalances:                    []uint64{},
+		ValidatorRegistry:                    genesisValidatorRegistry,
+		ValidatorBalances:                    latestBalances,
 		ValidatorRegistryLastChangeSlot:      params.BeaconConfig().GenesisSlot,
 		ValidatorRegistryExitCount:           0,
 		ValidatorRegistryDeltaChainTipHash32: params.BeaconConfig().ZeroHash[:],

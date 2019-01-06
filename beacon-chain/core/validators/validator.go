@@ -426,6 +426,7 @@ func ProcessDeposit(
 		if bytes.Equal(val.Pubkey, pubkey) {
 			publicKeyExists = true
 			existingValidatorIndex = idx
+			break
 		}
 	}
 	if !publicKeyExists {

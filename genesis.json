@@ -2,35 +2,51 @@
   "validatorRegistry": [
     {
       "pubkey": "QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFB",
-      "balance": "32000000000"
+      "balance": "32000000000",
+      "activation_slot": "0",
+      "exit_slot": "9223372036854775807"
     },
     {
       "pubkey": "QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJC",
-      "balance": "32000000000"
+      "balance": "32000000000",
+      "activation_slot": "0",
+      "exit_slot": "9223372036854775807"
     },
     {
       "pubkey": "Q0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0ND",
-      "balance": "32000000000"
+      "balance": "32000000000",
+      "activation_slot": "0",
+      "exit_slot": "9223372036854775807"
     },
     {
       "pubkey": "RERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERE",
-      "balance": "32000000000"
+      "balance": "32000000000",
+      "activation_slot": "0",
+      "exit_slot": "9223372036854775807"
     },
     {
       "pubkey": "RUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVF",
-      "balance": "32000000000"
+      "balance": "32000000000",
+      "activation_slot": "0",
+      "exit_slot": "9223372036854775807"
     },
     {
       "pubkey": "RkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZG",
-      "balance": "32000000000"
+      "balance": "32000000000",
+      "activation_slot": "0",
+      "exit_slot": "9223372036854775807"
     },
     {
       "pubkey": "R0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dH",
-      "balance": "32000000000"
+      "balance": "32000000000",
+      "activation_slot": "0",
+      "exit_slot": "9223372036854775807"
     },
     {
       "pubkey": "SEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhI",
-      "balance": "32000000000"
+      "balance": "32000000000",
+      "activation_slot": "0",
+      "exit_slot": "9223372036854775807"
     }
   ]
 }
