@@ -22,7 +22,11 @@ func (db *BeaconDB) InitializeState(genesisValidatorRegistry []*pb.ValidatorReco
 			Pubkey: genesisValidatorRegistry[i].Pubkey,
 		}
 		balance := genesisValidatorRegistry[i].Balance
+<<<<<<< HEAD
 		depositData, err := b.EncodeDepositData(depositInput, balance, time.Now().Unix())
+=======
+		depositData, err := b.EncodeBlockDepositData(depositInput, balance, time.Now().Unix())
+>>>>>>> 4ebbb03fd370020b93fd8614bdb784f121c6da50
 		if err != nil {
 			return err
 		}

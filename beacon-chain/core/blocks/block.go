@@ -104,7 +104,6 @@ func ProcessBlockRoots(state *pb.BeaconState, prevBlockRoot [32]byte) *pb.Beacon
 		merkleRoot := hashutil.MerkleRoot(state.LatestBlockRootHash32S)
 		state.BatchedBlockRootHash32S = append(state.BatchedBlockRootHash32S, merkleRoot)
 	}
-
 	return state
 }
 

@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
@@ -412,6 +413,7 @@ func AllValidatorsIndices(state *pb.BeaconState) []uint32 {
 // deposit.
 func ProcessDeposit(
 	state *pb.BeaconState,
+	validatorIndexMap map[[32]byte]int,
 	pubkey []byte,
 	amount uint64,
 	_ /*proofOfPossession*/ []byte,
@@ -422,12 +424,15 @@ func ProcessDeposit(
 	// TODO(#258): Validate proof of possession using BLS.
 	var publicKeyExists bool
 	var existingValidatorIndex int
-	for idx, val := range state.ValidatorRegistry {
-		if bytes.Equal(val.Pubkey, pubkey) {
-			publicKeyExists = true
-			existingValidatorIndex = idx
-		}
-	}
+
+	existingValidatorIndex, publicKeyExists = validatorIndexMap[stateutils.BytesToBytes32(pubkey)]
+
+	//for idx, val := range state.ValidatorRegistry {
+	//	if bytes.Equal(val.Pubkey, pubkey) {
+	//		publicKeyExists = true
+	//		existingValidatorIndex = idx
+	//	}
+	//}
 	if !publicKeyExists {
 		// If public key does not exist in the registry, we add a new validator
 		// to the beacon state.

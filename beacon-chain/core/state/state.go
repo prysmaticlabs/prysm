@@ -6,6 +6,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbcomm "github.com/prysmaticlabs/prysm/proto/common"
@@ -18,9 +19,12 @@ import (
 func InitialBeaconState(
 	initialValidatorDeposits []*pb.Deposit,
 	genesisTime uint64,
-	processedPowReceiptRoot []byte) (*pb.BeaconState, error) {
-	latestRandaoMixes := make([][]byte,
-		params.BeaconConfig().LatestRandaoMixesLength)
+	processedPowReceiptRoot []byte,
+) (*pb.BeaconState, error) {
+	latestRandaoMixes := make(
+		[][]byte,
+		params.BeaconConfig().LatestRandaoMixesLength,
+	)
 	for i := 0; i < len(latestRandaoMixes); i++ {
 		latestRandaoMixes[i] = params.BeaconConfig().ZeroHash[:]
 	}
@@ -95,6 +99,7 @@ func InitialBeaconState(
 
 	// Process initial deposits.
 	var err error
+	validatorMap := stateutils.ValidatorIndexMap(state)
 	for _, deposit := range initialValidatorDeposits {
 		depositData := deposit.DepositData
 		depositInput, err := b.DecodeDepositInput(depositData)
@@ -104,8 +109,9 @@ func InitialBeaconState(
 		// depositData consists of depositInput []byte + depositValue [8]byte +
 		// depositTimestamp [8]byte.
 		depositValue := depositData[len(depositData)-16 : len(depositData)-8]
-		state, err = v.ProcessDeposit(
+		state, validatorIndex, err = v.ProcessDeposit(
 			state,
+			validatorMap,
 			depositInput.Pubkey,
 			binary.BigEndian.Uint64(depositValue),
 			depositInput.ProofOfPossession,
