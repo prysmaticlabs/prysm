@@ -23,12 +23,12 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	if params.BeaconConfig().GenesisSlot != 0 {
 		t.Error("GenesisSlot should be 0 for these tests to pass")
 	}
-	initialSlotNumber := params.BeaconConfig().InitialForkSlot
+	initialSlotNumber := params.BeaconConfig().GenesisSlot
 
-	if params.BeaconConfig().InitialForkSlot != 0 {
+	if params.BeaconConfig().GenesisForkVersion != 0 {
 		t.Error("InitialForkSlot should be 0 for these tests to pass")
 	}
-	initialForkVersion := params.BeaconConfig().InitialForkSlot
+	initialForkVersion := params.BeaconConfig().GenesisForkVersion
 
 	if params.BeaconConfig().ZeroHash != [32]byte{} {
 		t.Error("ZeroHash should be all 0s for these tests to pass")
@@ -230,8 +230,8 @@ func TestUpdateLatestBlockHashes(t *testing.T) {
 		ParentRootHash32: []byte{'A'},
 	}
 
-	recentBlockHashes := make([][]byte, 2*int(params.BeaconConfig().CycleLength))
-	for i := 0; i < 2*int(params.BeaconConfig().CycleLength); i++ {
+	recentBlockHashes := make([][]byte, 2*int(params.BeaconConfig().EpochLength))
+	for i := 0; i < 2*int(params.BeaconConfig().EpochLength); i++ {
 		recentBlockHashes[i] = []byte{0}
 	}
 
@@ -244,8 +244,8 @@ func TestUpdateLatestBlockHashes(t *testing.T) {
 		t.Fatalf("failed to update recent blockhashes: %v", err)
 	}
 
-	if len(updated) != 2*int(params.BeaconConfig().CycleLength) {
-		t.Fatalf("length of updated recent blockhashes should be %d: found %d", params.BeaconConfig().CycleLength, len(updated))
+	if len(updated) != 2*int(params.BeaconConfig().EpochLength) {
+		t.Fatalf("length of updated recent blockhashes should be %d: found %d", params.BeaconConfig().EpochLength, len(updated))
 	}
 
 	for i := 0; i < len(updated); i++ {
