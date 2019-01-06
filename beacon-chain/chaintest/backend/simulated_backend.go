@@ -145,6 +145,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	encodedState, _ := proto.Marshal(beaconState)
 	stateRoot := hashutil.Hash(encodedState)
 	genesisBlock := b.NewGenesisBlock(stateRoot[:])
+	// #nosec G104
 	encodedGenesisBlock, _ := proto.Marshal(genesisBlock)
 	prevBlockRoot := hashutil.Hash(encodedGenesisBlock)
 
