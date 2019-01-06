@@ -1,11 +1,12 @@
 package state
 
 import (
+	"encoding/binary"
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbcomm "github.com/prysmaticlabs/prysm/proto/common"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -33,7 +34,7 @@ func InitialBeaconState(
 	latestCrosslinks := make([]*pb.CrosslinkRecord, params.BeaconConfig().ShardCount)
 	for i := 0; i < len(latestCrosslinks); i++ {
 		latestCrosslinks[i] = &pb.CrosslinkRecord{
-			Slot:                 params.BeaconConfig().InitialSlotNumber,
+			Slot:                 params.BeaconConfig().GenesisSlot,
 			ShardBlockRootHash32: params.BeaconConfig().ZeroHash[:],
 		}
 	}
@@ -43,20 +44,22 @@ func InitialBeaconState(
 		latestBlockRoots[i] = params.BeaconConfig().ZeroHash[:]
 	}
 
+	latestPenalizedExitBalances := make([]uint64, params.BeaconConfig().LatestPenalizedExitLength)
+
 	state := &pb.BeaconState{
 		// Misc fields.
-		Slot:        params.BeaconConfig().InitialSlotNumber,
+		Slot:        params.BeaconConfig().GenesisSlot,
 		GenesisTime: genesisTime,
 		ForkData: &pb.ForkData{
-			PreForkVersion:  params.BeaconConfig().InitialForkVersion,
-			PostForkVersion: params.BeaconConfig().InitialForkVersion,
-			ForkSlot:        params.BeaconConfig().InitialSlotNumber,
+			PreForkVersion:  params.BeaconConfig().GenesisForkVersion,
+			PostForkVersion: params.BeaconConfig().GenesisForkVersion,
+			ForkSlot:        params.BeaconConfig().GenesisSlot,
 		},
 
 		// Validator registry fields.
 		ValidatorRegistry:                    []*pb.ValidatorRecord{},
 		ValidatorBalances:                    []uint64{},
-		ValidatorRegistryLastChangeSlot:      params.BeaconConfig().InitialSlotNumber,
+		ValidatorRegistryLastChangeSlot:      params.BeaconConfig().GenesisSlot,
 		ValidatorRegistryExitCount:           0,
 		ValidatorRegistryDeltaChainTipHash32: params.BeaconConfig().ZeroHash[:],
 
@@ -73,15 +76,15 @@ func InitialBeaconState(
 		PocChallenges: []*pb.ProofOfCustodyChallenge{},
 
 		// Finality.
-		PreviousJustifiedSlot: params.BeaconConfig().InitialSlotNumber,
-		JustifiedSlot:         params.BeaconConfig().InitialSlotNumber,
+		PreviousJustifiedSlot: params.BeaconConfig().GenesisSlot,
+		JustifiedSlot:         params.BeaconConfig().GenesisSlot,
 		JustificationBitfield: 0,
-		FinalizedSlot:         params.BeaconConfig().InitialSlotNumber,
+		FinalizedSlot:         params.BeaconConfig().GenesisSlot,
 
 		// Recent state.
 		LatestCrosslinks:            latestCrosslinks,
 		LatestBlockRootHash32S:      latestBlockRoots,
-		LatestPenalizedExitBalances: []uint64{},
+		LatestPenalizedExitBalances: latestPenalizedExitBalances,
 		LatestAttestations:          []*pb.PendingAttestationRecord{},
 		BatchedBlockRootHash32S:     [][]byte{},
 
@@ -90,27 +93,36 @@ func InitialBeaconState(
 		CandidatePowReceiptRoots:      []*pb.CandidatePoWReceiptRootRecord{},
 	}
 
-	// Set initial deposits and activations.
-	var validatorIndex uint32
+	// Process initial deposits.
 	var err error
 	for _, deposit := range initialValidatorDeposits {
-		state, validatorIndex, err = v.ProcessDeposit(
+		depositData := deposit.DepositData
+		depositInput, err := b.DecodeDepositInput(depositData)
+		if err != nil {
+			return nil, fmt.Errorf("could not decode deposit input: %v", err)
+		}
+		// depositData consists of depositInput []byte + depositValue [8]byte +
+		// depositTimestamp [8]byte.
+		depositValue := depositData[len(depositData)-16 : len(depositData)-8]
+		state, err = v.ProcessDeposit(
 			state,
-			deposit.DepositData.DepositInput.Pubkey,
-			deposit.DepositData.Value,
-			deposit.DepositData.DepositInput.ProofOfPossession,
-			deposit.DepositData.DepositInput.WithdrawalCredentialsHash32,
-			deposit.DepositData.DepositInput.RandaoCommitmentHash32,
-			deposit.DepositData.DepositInput.PocCommitment,
+			depositInput.Pubkey,
+			binary.BigEndian.Uint64(depositValue),
+			depositInput.ProofOfPossession,
+			depositInput.WithdrawalCredentialsHash32,
+			depositInput.RandaoCommitmentHash32,
+			depositInput.PocCommitment,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not process validator deposit: %v", err)
 		}
-		if v.EffectiveBalance(state, validatorIndex) ==
+	}
+	for validatorIndex := range state.ValidatorRegistry {
+		if v.EffectiveBalance(state, uint32(validatorIndex)) ==
 			params.BeaconConfig().MaxDepositInGwei {
-			state, err = v.UpdateStatus(state, validatorIndex, pb.ValidatorRecord_ACTIVE)
+			state, err = v.ActivateValidator(state, uint32(validatorIndex), true)
 			if err != nil {
-				return nil, fmt.Errorf("could not update validator status: %v", err)
+				return nil, fmt.Errorf("could not activate validator: %v", err)
 			}
 		}
 	}
@@ -120,20 +132,12 @@ func InitialBeaconState(
 		params.BeaconConfig().ZeroHash,
 		state.ValidatorRegistry,
 		0,
+		params.BeaconConfig().GenesisSlot,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not shuffle initial committee: %v", err)
 	}
 	state.ShardAndCommitteesAtSlots = append(initialShuffling, initialShuffling...)
-
-	// Set initial persistent shuffling.
-	activeValidatorIndices := v.ActiveValidatorIndices(state.ValidatorRegistry)
-	committees := utils.SplitIndices(activeValidatorIndices, params.BeaconConfig().ShardCount)
-	persistentCommittees := make([]*pbcomm.Uint32List, params.BeaconConfig().ShardCount)
-	for i := 0; i < len(persistentCommittees); i++ {
-		persistentCommittees[i] = &pbcomm.Uint32List{List: committees[i]}
-	}
-	state.PersistentCommittees = persistentCommittees
 
 	return state, nil
 }

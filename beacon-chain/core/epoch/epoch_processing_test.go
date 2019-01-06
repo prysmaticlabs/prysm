@@ -307,24 +307,28 @@ func TestProcessEjections_Ok(t *testing.T) {
 		})
 	}
 	state := &pb.BeaconState{
+		Slot:                      1,
 		ShardAndCommitteesAtSlots: shardAndCommittees,
 		ValidatorBalances: []uint64{
 			params.BeaconConfig().EjectionBalanceInGwei - 1,
 			params.BeaconConfig().EjectionBalanceInGwei + 1},
 		LatestPenalizedExitBalances: []uint64{0},
 		ValidatorRegistry: []*pb.ValidatorRecord{
-			{Status: pb.ValidatorRecord_ACTIVE},
-			{Status: pb.ValidatorRecord_ACTIVE}},
+			{ExitSlot: params.BeaconConfig().FarFutureSlot},
+			{ExitSlot: params.BeaconConfig().FarFutureSlot}},
 	}
 	state, err := ProcessEjections(state)
 	if err != nil {
 		t.Fatalf("Could not execute ProcessEjections: %v", err)
 	}
-	if state.ValidatorRegistry[0].Status != pb.ValidatorRecord_EXITED_WITHOUT_PENALTY {
-		t.Errorf("Expected EXITED_WITHOUT_PENALTY, but got %v", state.ValidatorRegistry[0].Status)
+	if state.ValidatorRegistry[0].ExitSlot !=
+		params.BeaconConfig().EntryExitDelay+state.Slot {
+		t.Errorf("Expected exit slot %d, but got %d",
+			state.ValidatorRegistry[0].ExitSlot, params.BeaconConfig().EntryExitDelay)
 	}
-	if state.ValidatorRegistry[1].Status != pb.ValidatorRecord_ACTIVE {
-		t.Errorf("Expected ACTIVE, but got %v", state.ValidatorRegistry[1].Status)
+	if state.ValidatorRegistry[1].ExitSlot !=
+		params.BeaconConfig().FarFutureSlot {
+		t.Errorf("Expected exit slot 0, but got %v", state.ValidatorRegistry[1].ExitSlot)
 	}
 }
 
@@ -390,10 +394,6 @@ func TestProcessValidatorRegistry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not execute ProcessValidatorRegistry: %v", err)
 	}
-	if newState.ValidatorRegistryLastChangeSlot != state.Slot {
-		t.Errorf("Incorrect ValidatorRegistryLastChangeSlot, wanted: %d, got: %d",
-			state.Slot, newState.ValidatorRegistryLastChangeSlot)
-	}
 
 	if newState.ShardAndCommitteesAtSlots[0].ArrayShardAndCommittee[0].Shard != state.ShardAndCommitteesAtSlots[epochLength].ArrayShardAndCommittee[0].Shard {
 		t.Errorf("Incorrect rotation for shard committees, wanted shard: %d, got shard: %d",
@@ -411,7 +411,7 @@ func TestProcessValidatorRegistry_ReachedUpperBound(t *testing.T) {
 		}
 	}
 	validators := make([]*pb.ValidatorRecord, 1<<params.BeaconConfig().MaxNumLog2Validators-1)
-	validator := &pb.ValidatorRecord{Status: pb.ValidatorRecord_ACTIVE}
+	validator := &pb.ValidatorRecord{ExitSlot: params.BeaconConfig().FarFutureSlot}
 	for i := 0; i < len(validators); i++ {
 		validators[i] = validator
 	}
@@ -469,7 +469,7 @@ func TestProcessPartialValidatorRegistry_ReachedUpperBound(t *testing.T) {
 		}
 	}
 	validators := make([]*pb.ValidatorRecord, 1<<params.BeaconConfig().MaxNumLog2Validators-1)
-	validator := &pb.ValidatorRecord{Status: pb.ValidatorRecord_ACTIVE}
+	validator := &pb.ValidatorRecord{ExitSlot: params.BeaconConfig().FarFutureSlot}
 	for i := 0; i < len(validators); i++ {
 		validators[i] = validator
 	}

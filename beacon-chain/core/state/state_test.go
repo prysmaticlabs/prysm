@@ -5,8 +5,10 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -18,15 +20,15 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	}
 	epochLength := params.BeaconConfig().EpochLength
 
-	if params.BeaconConfig().InitialSlotNumber != 0 {
-		t.Error("InitialSlotNumber should be 0 for these tests to pass")
+	if params.BeaconConfig().GenesisSlot != 0 {
+		t.Error("GenesisSlot should be 0 for these tests to pass")
 	}
-	initialSlotNumber := params.BeaconConfig().InitialSlotNumber
+	initialSlotNumber := params.BeaconConfig().InitialForkSlot
 
-	if params.BeaconConfig().InitialForkVersion != 0 {
-		t.Error("InitialForkVersion should be 0 for these tests to pass")
+	if params.BeaconConfig().InitialForkSlot != 0 {
+		t.Error("InitialForkSlot should be 0 for these tests to pass")
 	}
-	initialForkVersion := params.BeaconConfig().InitialForkVersion
+	initialForkVersion := params.BeaconConfig().InitialForkSlot
 
 	if params.BeaconConfig().ZeroHash != [32]byte{} {
 		t.Error("ZeroHash should be all 0s for these tests to pass")
@@ -53,17 +55,33 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	}
 	depositsForChainStart := int(params.BeaconConfig().DepositsForChainStart)
 
+	if params.BeaconConfig().LatestPenalizedExitLength != 8192 {
+		t.Error("LatestPenalizedExitLength should be 8192 for these tests to pass")
+	}
+	latestPenalizedExitLength := int(params.BeaconConfig().LatestPenalizedExitLength)
+
 	genesisTime := uint64(99999)
 	processedPowReceiptRoot := []byte{'A', 'B', 'C'}
 	maxDeposit := params.BeaconConfig().MaxDepositInGwei
 	var deposits []*pb.Deposit
 	for i := 0; i < depositsForChainStart; i++ {
-		deposits = append(deposits, &pb.Deposit{MerkleBranchHash32S: [][]byte{{1}, {2}, {3}}, MerkleTreeIndex: 0,
-			DepositData: &pb.DepositData{Value: maxDeposit, DepositInput: &pb.DepositInput{
+		depositData, err := b.EncodeDepositData(
+			&pb.DepositInput{
 				Pubkey: []byte(strconv.Itoa(i)), ProofOfPossession: []byte{'B'},
 				WithdrawalCredentialsHash32: []byte{'C'}, RandaoCommitmentHash32: []byte{'D'},
 				PocCommitment: []byte{'D'},
-			}}})
+			},
+			maxDeposit,
+			time.Now().Unix(),
+		)
+		if err != nil {
+			t.Fatalf("Could not encode deposit data: %v", err)
+		}
+		deposits = append(deposits, &pb.Deposit{
+			MerkleBranchHash32S: [][]byte{{1}, {2}, {3}},
+			MerkleTreeIndex:     0,
+			DepositData:         depositData,
+		})
 	}
 
 	state, err := InitialBeaconState(
@@ -110,9 +128,6 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	if len(state.LatestVdfOutputs) != LatestVdfMixesLength {
 		t.Error("Length of LatestRandaoMixesHash32S was not correctly initialized")
 	}
-	if len(state.PersistentCommittees) != shardCount {
-		t.Error("PersistentCommittees was not correctly initialized")
-	}
 	if !reflect.DeepEqual(state.PersistentCommitteeReassignments, []*pb.ShardReassignmentRecord{}) {
 		t.Error("PersistentCommitteeReassignments was not correctly initialized")
 	}
@@ -140,7 +155,8 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	if len(state.LatestCrosslinks) != shardCount {
 		t.Error("Length of LatestCrosslinks was not correctly initialized")
 	}
-	if !reflect.DeepEqual(state.LatestPenalizedExitBalances, []uint64{}) {
+	if !reflect.DeepEqual(state.LatestPenalizedExitBalances,
+		make([]uint64, latestPenalizedExitLength)) {
 		t.Error("LatestPenalizedExitBalances was not correctly initialized")
 	}
 	if !reflect.DeepEqual(state.LatestAttestations, []*pb.PendingAttestationRecord{}) {

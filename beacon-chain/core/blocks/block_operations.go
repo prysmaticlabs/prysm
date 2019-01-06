@@ -2,7 +2,7 @@ package blocks
 
 import (
 	"bytes"
-	"errors"
+	"encoding/binary"
 	"fmt"
 	"reflect"
 
@@ -11,6 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slices"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
+	"github.com/prysmaticlabs/prysm/shared/trie"
 )
 
 // ProcessPOWReceiptRoots processes the proof-of-work chain's receipts
@@ -123,8 +125,8 @@ func verifyBlockRandao(proposer *pb.ValidatorRecord, block *pb.BeaconBlock) erro
 //   Verify that proposer_slashing.proposal_data_1.slot == proposer_slashing.proposal_data_2.slot.
 //   Verify that proposer_slashing.proposal_data_1.shard == proposer_slashing.proposal_data_2.shard.
 //   Verify that proposer_slashing.proposal_data_1.block_root != proposer_slashing.proposal_data_2.block_root.
-//   Verify that proposer.status != EXITED_WITH_PENALTY.
-//   Run update_validator_status(state, proposer_slashing.proposer_index, new_status=EXITED_WITH_PENALTY).
+//   Verify that validator.penalized_slot > state.slot.
+//   Run penalize_validator(state, proposer_slashing.proposer_index).
 func ProcessProposerSlashings(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
@@ -138,26 +140,20 @@ func ProcessProposerSlashings(
 			params.BeaconConfig().MaxProposerSlashings,
 		)
 	}
-	for idx, slashing := range body.ProposerSlashings {
-		if err := verifyProposerSlashing(slashing); err != nil {
+	var err error
+	for idx, slashing := range body.GetProposerSlashings() {
+		if err = verifyProposerSlashing(slashing); err != nil {
 			return nil, fmt.Errorf("could not verify proposer slashing #%d: %v", idx, err)
 		}
-		proposer := registry[slashing.ProposerIndex]
-		if proposer.Status != pb.ValidatorRecord_EXITED_WITH_PENALTY {
-			// TODO(#781): Replace with
-			// update_validator_status(
-			//   state,
-			//   proposer_slashing.proposer_index,
-			//   new_status=EXITED_WITH_PENALTY,
-			// ) after update_validator_status is implemented.
-			registry[slashing.ProposerIndex] = v.ExitValidator(
-				proposer,
-				beaconState.Slot,
-				true, /* penalize */
-			)
+		proposer := registry[slashing.GetProposerIndex()]
+		if proposer.GetPenalizedSlot() > beaconState.Slot {
+			beaconState, err = v.PenalizeValidator(beaconState, slashing.ProposerIndex)
+			if err != nil {
+				return nil, fmt.Errorf("could not penalize proposer index %d: %v",
+					slashing.ProposerIndex, err)
+			}
 		}
 	}
-	beaconState.ValidatorRegistry = registry
 	return beaconState, nil
 }
 
@@ -212,9 +208,8 @@ func verifyProposerSlashing(
 //     casper_slashing.votes_2.data.slot < casper_slashing.votes_1.data.slot
 //     or casper_slashing.votes_1.data.slot == casper_slashing.votes_2.data.slot.
 //   For each validator index i in intersection,
-//     if state.validator_registry[i].status does not equal
-//     EXITED_WITH_PENALTY, then run
-//     update_validator_status(state, i, new_status=EXITED_WITH_PENALTY)
+//     if state.validator_registry[i].penalized_slot > state.slot, then
+// 	   run penalize_validator(state, i)
 func ProcessCasperSlashings(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
@@ -238,21 +233,15 @@ func ProcessCasperSlashings(
 		}
 		for _, validatorIndex := range validatorIndices {
 			penalizedValidator := registry[validatorIndex]
-			if penalizedValidator.Status != pb.ValidatorRecord_EXITED_WITH_PENALTY {
-				// TODO(#781): Replace with update_validator_status(
-				//   state,
-				//   validatorIndex,
-				//   new_status=EXITED_WITH_PENALTY,
-				// ) after update_validator_status is implemented.
-				registry[validatorIndex] = v.ExitValidator(
-					penalizedValidator,
-					beaconState.Slot,
-					true, /* penalize */
-				)
+			if penalizedValidator.GetPenalizedSlot() > beaconState.Slot {
+				beaconState, err = v.PenalizeValidator(beaconState, validatorIndex)
+				if err != nil {
+					return nil, fmt.Errorf("could not penalize validator index %d: %v",
+						validatorIndex, err)
+				}
 			}
 		}
 	}
-	beaconState.ValidatorRegistry = registry
 	return beaconState, nil
 }
 
@@ -524,6 +513,141 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation) error {
 	return nil
 }
 
+// ProcessValidatorDeposits is one of the operations performed on each processed
+// beacon block to verify queued validators from the Ethereum 1.0 Deposit Contract
+// into the beacon chain.
+//
+// Official spec definition for processing validator deposits:
+//   Verify that len(block.body.deposits) <= MAX_DEPOSITS.
+//   For each deposit in block.body.deposits:
+//     Let serialized_deposit_data be the serialized form of deposit.deposit_data.
+//     It should be the DepositInput followed by 8 bytes for deposit_data.value
+//     and 8 bytes for deposit_data.timestamp. That is, it should match
+//     deposit_data in the Ethereum 1.0 deposit contract of which the hash
+//     was placed into the Merkle tree.
+//
+//     Verify deposit merkle_branch, setting leaf=serialized_deposit_data,
+//     depth=DEPOSIT_CONTRACT_TREE_DEPTH and root=state.processed_pow_receipt_root:
+//     Verify that state.slot - (deposit.deposit_data.timestamp -
+//     state.genesis_time)  SLOT_DURATION < ZERO_BALANCE_VALIDATOR_TTL.
+//
+//     Run the following:
+//     process_deposit(
+//       state=state,
+//       pubkey=deposit.deposit_data.deposit_input.pubkey,
+//       deposit=deposit.deposit_data.value,
+//       proof_of_possession=deposit.deposit_data.deposit_input.proof_of_possession,
+//       withdrawal_credentials=deposit.deposit_data.deposit_input.withdrawal_credentials,
+//       randao_commitment=deposit.deposit_data.deposit_input.randao_commitment,
+//       poc_commitment=deposit.deposit_data.deposit_input.poc_commitment,
+//     )
+func ProcessValidatorDeposits(
+	beaconState *pb.BeaconState,
+	block *pb.BeaconBlock,
+) (*pb.BeaconState, error) {
+	deposits := block.Body.Deposits
+	if uint64(len(deposits)) > params.BeaconConfig().MaxDeposits {
+		return nil, fmt.Errorf(
+			"number of deposits (%d) exceeds allowed threshold of %d",
+			len(deposits),
+			params.BeaconConfig().MaxDeposits,
+		)
+	}
+	var err error
+	var depositInput *pb.DepositInput
+	for idx, deposit := range deposits {
+		depositData := deposit.DepositData
+		depositInput, err = DecodeDepositInput(depositData)
+		if err != nil {
+			return nil, fmt.Errorf("could not decode deposit input: %v", err)
+		}
+		if err = verifyDeposit(beaconState, deposit); err != nil {
+			return nil, fmt.Errorf("could not verify deposit #%d: %v", idx, err)
+		}
+		// depositData consists of depositInput []byte + depositValue [8]byte +
+		// depositTimestamp [8]byte.
+		depositValue := depositData[len(depositData)-16 : len(depositData)-8]
+		// We then mutate the beacon state with the verified validator deposit.
+		beaconState, err = v.ProcessDeposit(
+			beaconState,
+			depositInput.Pubkey,
+			binary.BigEndian.Uint64(depositValue),
+			depositInput.ProofOfPossession,
+			depositInput.WithdrawalCredentialsHash32,
+			depositInput.RandaoCommitmentHash32,
+			depositInput.PocCommitment,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could not process deposit into beacon state: %v", err)
+		}
+	}
+	return beaconState, nil
+}
+
+// DecodeDepositInput unmarshales a depositData byte slice into
+// a proto *pb.DepositInput by using the Simple Serialize (SSZ)
+// algorithm.
+// TODO(#1253): Do not assume we will receive serialized proto objects - instead,
+// replace completely by a common struct which can be simple serialized.
+func DecodeDepositInput(depositData []byte) (*pb.DepositInput, error) {
+	// Last 16 bytes of deposit data are 8 bytes for value
+	// and 8 bytes for timestamp. Everything before that is a
+	// Simple Serialized deposit input value.
+	if len(depositData) < 16 {
+		return nil, fmt.Errorf(
+			"deposit data slice too small: len(depositData) = %d",
+			len(depositData),
+		)
+	}
+	depositInput := new(pb.DepositInput)
+	depositInputBytes := depositData[:len(depositData)-16]
+	rBuf := bytes.NewReader(depositInputBytes)
+	if err := ssz.Decode(rBuf, depositInput); err != nil {
+		return nil, fmt.Errorf("ssz decode failed: %v", err)
+	}
+	return depositInput, nil
+}
+
+func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
+	depositData := deposit.DepositData
+	// Verify Merkle proof of deposit and PoW receipt trie root.
+	var receiptRoot [32]byte
+	var merkleLeaf [32]byte
+	copy(receiptRoot[:], beaconState.ProcessedPowReceiptRootHash32)
+	copy(merkleLeaf[:], depositData)
+	if ok := trie.VerifyMerkleBranch(
+		merkleLeaf,
+		deposit.MerkleBranchHash32S,
+		params.BeaconConfig().DepositContractTreeDepth,
+		receiptRoot,
+	); !ok {
+		return fmt.Errorf(
+			"deposit merkle branch of PoW receipt root did not verify for root: %#x",
+			receiptRoot,
+		)
+	}
+
+	// We unmarshal the timestamp bytes into a time.Time value for us to use.
+	depositTimestampBytes := depositData[len(depositData)-8:]
+	depositUnixTime := int64(binary.BigEndian.Uint64(depositTimestampBytes))
+
+	// Parse beacon state's genesis time from a uint32 into a unix timestamp.
+	genesisUnixTime := int64(beaconState.GenesisTime)
+	depositGenesisTimeDifference := depositUnixTime - genesisUnixTime
+	timeToLive := uint64(depositGenesisTimeDifference) / params.BeaconConfig().SlotDuration
+
+	// Verify current slot slot - allowed validator TTL is within the allowed boundary.
+	if beaconState.Slot-timeToLive < params.BeaconConfig().ZeroBalanceValidatorTTL {
+		return fmt.Errorf(
+			"want state.slot - (deposit.time - genesis_time) // SLOT_DURATION > %d, received %d < %d",
+			params.BeaconConfig().ZeroBalanceValidatorTTL,
+			beaconState.Slot-timeToLive,
+			params.BeaconConfig().ZeroBalanceValidatorTTL,
+		)
+	}
+	return nil
+}
+
 // ProcessValidatorExits is one of the operations performed
 // on each processed beacon block to determine which validators
 // should exit the state's validator registry.
@@ -534,7 +658,7 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation) error {
 //
 //   For each exit in block.body.exits:
 //     Let validator = state.validator_registry[exit.validator_index].
-//     Verify that validator.status == ACTIVE.
+//     Verify that validator.exit_slot > state.slot + ENTRY_EXIT_DELAY.
 //     Verify that state.slot >= exit.slot.
 //     Verify that state.slot >= validator.latest_status_change_slot +
 //       SHARD_PERSISTENT_COMMITTEE_CHANGE_PERIOD.
@@ -544,8 +668,8 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation) error {
 //       signature=exit.signature,
 //       domain=get_domain(state.fork_data, exit.slot, DOMAIN_EXIT),
 //     )
-//     Run update_validator_status(
-//       state, exit.validator_index, new_status=ACTIVE_PENDING_EXIT,
+//     Run initiate_validator_exit(
+//       state, exit.validator_index,
 //     )
 func ProcessValidatorExits(
 	beaconState *pb.BeaconState,
@@ -559,33 +683,24 @@ func ProcessValidatorExits(
 			params.BeaconConfig().MaxExits,
 		)
 	}
+
 	validatorRegistry := beaconState.ValidatorRegistry
 	for idx, exit := range exits {
 		if err := verifyExit(beaconState, exit); err != nil {
 			return nil, fmt.Errorf("could not verify exit #%d: %v", idx, err)
 		}
-		// TODO(#781): Replace with update_validator_status(
-		//   state,
-		//   validatorIndex,
-		//   new_status=ACTIVE_PENDING_EXIT,
-		// ) after update_validator_status is implemented.
-		validator := validatorRegistry[exit.ValidatorIndex]
-		validatorRegistry[exit.ValidatorIndex] = v.ExitValidator(
-			validator,
-			beaconState.Slot,
-			true, /* penalize */
-		)
+		beaconState = v.InitiateValidatorExit(beaconState, exit.GetValidatorIndex())
 	}
 	beaconState.ValidatorRegistry = validatorRegistry
 	return beaconState, nil
 }
 
 func verifyExit(beaconState *pb.BeaconState, exit *pb.Exit) error {
-	validator := beaconState.ValidatorRegistry[exit.ValidatorIndex]
-	if validator.Status != pb.ValidatorRecord_ACTIVE {
+	validator := beaconState.GetValidatorRegistry()[exit.GetValidatorIndex()]
+	if validator.GetExitSlot() <= beaconState.Slot+params.BeaconConfig().EntryExitDelay {
 		return fmt.Errorf(
-			"expected validator to have active status, received %v",
-			validator.Status,
+			"expected exit.Slot > state.Slot + EntryExitDelay, received %d < %d",
+			validator.GetExitSlot(), beaconState.Slot+params.BeaconConfig().EntryExitDelay,
 		)
 	}
 	if beaconState.Slot < exit.Slot {
@@ -593,13 +708,6 @@ func verifyExit(beaconState *pb.BeaconState, exit *pb.Exit) error {
 			"expected state.Slot >= exit.Slot, received %d < %d",
 			beaconState.Slot,
 			exit.Slot,
-		)
-	}
-	persistentCommitteeSlot := validator.LatestStatusChangeSlot +
-		params.BeaconConfig().ShardPersistentCommitteeChangePeriod
-	if beaconState.Slot < persistentCommitteeSlot {
-		return errors.New(
-			"expected validator.LatestStatusChangeSlot + PersistentCommitteePeriod >= state.Slot",
 		)
 	}
 	// TODO(#258): Verify using BLS signature verification below:
