@@ -5,7 +5,6 @@ go_library(
     srcs = ["config.go"],
     importpath = "github.com/prysmaticlabs/prysm/shared/params",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_ethereum_go_ethereum//common:go_default_library"],
 )
 
 go_test(

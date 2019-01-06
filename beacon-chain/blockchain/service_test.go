@@ -428,14 +428,11 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 		ParentRootHash32: []byte{'a'},
 	}
 
-	if err := chainService.isBlockReadyForProcessing(block); err == nil {
+	if err := chainService.isBlockReadyForProcessing(block, beaconState); err == nil {
 		t.Fatal("block processing succeeded despite block having no parent saved")
 	}
 
 	beaconState.Slot = 10
-	if err := chainService.beaconDB.SaveState(beaconState); err != nil {
-		t.Fatalf("cannot save state: %v", err)
-	}
 
 	enc, _ := proto.Marshal(beaconState)
 	stateRoot := hashutil.Hash(enc)
@@ -453,7 +450,7 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 		Slot:             10,
 	}
 
-	if err := chainService.isBlockReadyForProcessing(block2); err == nil {
+	if err := chainService.isBlockReadyForProcessing(block2, beaconState); err == nil {
 		t.Fatal("block processing succeeded despite block slot being invalid")
 	}
 
@@ -461,9 +458,6 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 	copy(h[:], []byte("a"))
 	beaconState.ProcessedPowReceiptRootHash32 = h[:]
 	beaconState.Slot = 0
-	if err := chainService.beaconDB.SaveState(beaconState); err != nil {
-		t.Fatalf("cannot save state: %v", err)
-	}
 
 	currentSlot := uint64(1)
 	attestationSlot := uint64(0)
@@ -489,7 +483,7 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 
 	chainService.enablePOWChain = true
 
-	if err := chainService.isBlockReadyForProcessing(block3); err != nil {
+	if err := chainService.isBlockReadyForProcessing(block3, beaconState); err != nil {
 		t.Fatalf("block processing failed despite being a valid block: %v", err)
 	}
 }
