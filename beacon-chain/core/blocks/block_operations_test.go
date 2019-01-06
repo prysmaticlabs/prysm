@@ -1243,78 +1243,6 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	}
 }
 
-func TestProcessValidatorDeposits_OutsideAllowedTTLBoundary(t *testing.T) {
-	// We create a correctly encoded deposit data using Simple Serialize.
-	depositInput := &pb.DepositInput{
-		Pubkey: []byte{1, 2, 3},
-	}
-	wBuf := new(bytes.Buffer)
-	if err := ssz.Encode(wBuf, depositInput); err != nil {
-		t.Fatalf("failed to encode deposit input: %v", err)
-	}
-	encodedInput := wBuf.Bytes()
-	data := []byte{}
-	value := make([]byte, 8)
-
-	// We then serialize a unix time into the timestamp []byte slice
-	// and ensure it has size of 8 bytes.
-	timestamp := make([]byte, 8)
-
-	// Set deposit time to 1000 seconds since unix time 0.
-	depositTime := time.Unix(1000, 0).Unix()
-	// Set genesis time to unix time 0.
-	genesisTime := time.Unix(0, 0).Unix()
-
-	// We sent current slot to 1000 seconds * SlotDuration - with these
-	// values, state.slot-timeToLive will always be < ZERO_BALANCE_VALIDATOR_TTL.
-	currentSlot := 1000 * params.BeaconConfig().SlotDuration
-	binary.BigEndian.PutUint64(timestamp, uint64(depositTime))
-
-	// We then create a serialized deposit data slice of type []byte
-	// by appending all 3 items above together.
-	data = append(data, encodedInput...)
-	data = append(data, value...)
-	data = append(data, timestamp...)
-
-	// We then create a merkle branch for the test and derive its root.
-	branch := [][]byte{}
-	var powReceiptRoot [32]byte
-	copy(powReceiptRoot[:], data)
-	for i := uint64(0); i < params.BeaconConfig().DepositContractTreeDepth; i++ {
-		branch = append(branch, []byte{1, 2, 3})
-		if i%2 == 0 {
-			powReceiptRoot = hashutil.Hash(append(branch[i], powReceiptRoot[:]...))
-		} else {
-			powReceiptRoot = hashutil.Hash(append(powReceiptRoot[:], branch[i]...))
-		}
-	}
-
-	deposit := &pb.Deposit{
-		DepositData:         data,
-		MerkleBranchHash32S: branch,
-	}
-	block := &pb.BeaconBlock{
-		Body: &pb.BeaconBlockBody{
-			Deposits: []*pb.Deposit{deposit},
-		},
-	}
-	beaconState := &pb.BeaconState{
-		ProcessedPowReceiptRootHash32: powReceiptRoot[:],
-		Slot:                          currentSlot,
-		GenesisTime:                   uint64(genesisTime),
-	}
-	want := fmt.Sprintf(
-		"want state.slot - (deposit.time - genesis_time) // SLOT_DURATION > %d",
-		params.BeaconConfig().ZeroBalanceValidatorTTL,
-	)
-	if _, err := ProcessValidatorDeposits(
-		beaconState,
-		block,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected error: %s, received %v", want, err)
-	}
-}
-
 func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	// Having mismatched withdrawal credentials will cause the process deposit
 	// validator helper function to fail with error when the public key
@@ -1346,11 +1274,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	// Set genesis time to unix time 0.
 	genesisTime := time.Unix(0, 0).Unix()
 
-	// Adding params.BeaconConfig().ZeroBalanceValidatorTTL to
-	// current slot will always allow the deposit to pass the > ZERO_BALANCE_VALIDATOR_TTL
-	// validity condition.
 	currentSlot := 1000 * params.BeaconConfig().SlotDuration
-	currentSlot += params.BeaconConfig().ZeroBalanceValidatorTTL
 	binary.BigEndian.PutUint64(timestamp, uint64(depositTime))
 
 	// We then create a serialized deposit data slice of type []byte
@@ -1435,11 +1359,7 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	// Set genesis time to unix time 0.
 	genesisTime := time.Unix(0, 0).Unix()
 
-	// Adding params.BeaconConfig().ZeroBalanceValidatorTTL to
-	// current slot will always allow the deposit to pass the > ZERO_BALANCE_VALIDATOR_TTL
-	// validity condition.
 	currentSlot := 1000 * params.BeaconConfig().SlotDuration
-	currentSlot += params.BeaconConfig().ZeroBalanceValidatorTTL
 	binary.BigEndian.PutUint64(timestamp, uint64(depositTime))
 
 	// We then create a serialized deposit data slice of type []byte

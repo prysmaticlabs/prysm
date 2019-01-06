@@ -61,14 +61,14 @@ func TestSplitIndices(t *testing.T) {
 	for i := 0; i < validators; i++ {
 		l = append(l, uint32(i))
 	}
-	split := SplitIndices(l, params.BeaconConfig().CycleLength)
-	if len(split) != int(params.BeaconConfig().CycleLength) {
-		t.Errorf("Split list failed due to incorrect length, wanted:%v, got:%v", params.BeaconConfig().CycleLength, len(split))
+	split := SplitIndices(l, params.BeaconConfig().EpochLength)
+	if len(split) != int(params.BeaconConfig().EpochLength) {
+		t.Errorf("Split list failed due to incorrect length, wanted:%v, got:%v", params.BeaconConfig().EpochLength, len(split))
 	}
 
 	for _, s := range split {
-		if len(s) != validators/int(params.BeaconConfig().CycleLength) {
-			t.Errorf("Split list failed due to incorrect length, wanted:%v, got:%v", validators/int(params.BeaconConfig().CycleLength), len(s))
+		if len(s) != validators/int(params.BeaconConfig().EpochLength) {
+			t.Errorf("Split list failed due to incorrect length, wanted:%v, got:%v", validators/int(params.BeaconConfig().EpochLength), len(s))
 		}
 	}
 }

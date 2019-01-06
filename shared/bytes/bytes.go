@@ -57,3 +57,12 @@ func LowerThan(x []byte, y []byte) bool {
 	}
 	return true
 }
+
+// ToBytes32 is a convenience method for converting a byte slice to a fix
+// sized 32 byte array. This method will truncate the input if it is larger
+// than 32 bytes.
+func ToBytes32(a []byte) [32]byte {
+	var b [32]byte
+	copy(b[:], a)
+	return b
+}

@@ -65,7 +65,7 @@ func (sb *SimulatedBackend) RunChainTest(testCase *ChainTestCase) error {
 	// test language specification.
 	c := params.BeaconConfig()
 	c.ShardCount = testCase.Config.ShardCount
-	c.CycleLength = testCase.Config.CycleLength
+	c.EpochLength = testCase.Config.CycleLength
 	c.TargetCommitteeSize = testCase.Config.MinCommitteeSize
 	params.OverrideBeaconConfig(c)
 
@@ -118,7 +118,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 
 	// We create a list of randao hash onions for the given number of epochs
 	// we run the state transition.
-	numEpochs := testCase.Config.NumSlots%params.BeaconConfig().EpochLength
+	numEpochs := testCase.Config.NumSlots % params.BeaconConfig().EpochLength
 	hashOnions := [][32]byte{params.BeaconConfig().SimulatedBlockRandao}
 
 	// We make the length of the hash onions list equal to the number of epochs + 50 to be safe.
@@ -134,7 +134,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 			Pubkey:                 []byte(strconv.Itoa(i)),
 			RandaoCommitmentHash32: hashOnions[len(hashOnions)-1][:],
 		}
-		depositData, err := b.EncodeBlockDepositData(
+		depositData, err := b.EncodeDepositData(
 			depositInput,
 			params.BeaconConfig().MaxDepositInGwei,
 			genesisTime,
@@ -152,7 +152,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 
 	// We keep track of the peeled randao layers in a map of proposer indices.
 	proposerLayersPeeled := make(map[uint32]int, len(beaconState.ValidatorRegistry))
-	for idx, _ := range beaconState.ValidatorRegistry {
+	for idx := range beaconState.ValidatorRegistry {
 		proposerLayersPeeled[uint32(idx)] = 0
 	}
 
@@ -162,6 +162,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	encodedState, _ := proto.Marshal(beaconState)
 	stateRoot := hashutil.Hash(encodedState)
 	genesisBlock := b.NewGenesisBlock(stateRoot[:])
+	// #nosec G104
 	encodedGenesisBlock, _ := proto.Marshal(genesisBlock)
 	genesisBlockRoot := hashutil.Hash(encodedGenesisBlock)
 
