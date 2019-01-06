@@ -414,7 +414,7 @@ func ProcessDeposit(
 	state *pb.BeaconState,
 	pubkey []byte,
 	amount uint64,
-	proofOfPossession []byte,
+	_ /*proofOfPossession*/ []byte,
 	withdrawalCredentials []byte,
 	randaoCommitment []byte,
 	pocCommitment []byte,
