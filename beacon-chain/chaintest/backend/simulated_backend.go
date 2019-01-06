@@ -75,7 +75,7 @@ func (sb *SimulatedBackend) RunChainTest(testCase *ChainTestCase) error {
 	validators := make([]*pb.ValidatorRecord, testCase.Config.ValidatorCount)
 	for i := uint64(0); i < testCase.Config.ValidatorCount; i++ {
 		validators[i] = &pb.ValidatorRecord{
-			Status:                 pb.ValidatorRecord_ACTIVE,
+			ExitSlot:               params.BeaconConfig().EntryExitDelay,
 			Balance:                c.MaxDeposit * c.Gwei,
 			Pubkey:                 []byte{},
 			RandaoCommitmentHash32: randaoReveal[:],

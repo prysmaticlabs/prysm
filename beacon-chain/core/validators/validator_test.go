@@ -8,7 +8,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/proto/common"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -52,9 +51,9 @@ func TestHasVoted(t *testing.T) {
 
 func TestInitialValidatorRegistry(t *testing.T) {
 	validators := InitialValidatorRegistry()
-	for _, validator := range validators {
-		if validator.Status != pb.ValidatorRecord_ACTIVE {
-			t.Errorf("validator status is not active: %d", validator.Status)
+	for index, validator := range validators {
+		if !isActiveValidator(validator, 1) {
+			t.Errorf("validator %d status is not active", index)
 		}
 	}
 }
@@ -94,7 +93,7 @@ func TestProposerShardAndIndex(t *testing.T) {
 func TestValidatorIndex(t *testing.T) {
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 10; i++ {
-		validators = append(validators, &pb.ValidatorRecord{Pubkey: []byte{}, Status: pb.ValidatorRecord_ACTIVE})
+		validators = append(validators, &pb.ValidatorRecord{Pubkey: []byte{}, ExitSlot: params.BeaconConfig().FarFutureSlot})
 	}
 	if _, err := ValidatorIndex([]byte("100"), validators); err == nil {
 		t.Fatalf("ValidatorIndex should have failed,  there's no validator with pubkey 100")
@@ -112,7 +111,7 @@ func TestValidatorIndex(t *testing.T) {
 func TestValidatorShard(t *testing.T) {
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 21; i++ {
-		validators = append(validators, &pb.ValidatorRecord{Pubkey: []byte{}, Status: pb.ValidatorRecord_ACTIVE})
+		validators = append(validators, &pb.ValidatorRecord{Pubkey: []byte{}, ExitSlot: params.BeaconConfig().FarFutureSlot})
 	}
 	shardCommittees := []*pb.ShardAndCommitteeArray{
 		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
@@ -144,7 +143,7 @@ func TestValidatorShard(t *testing.T) {
 func TestValidatorSlotAndResponsibility(t *testing.T) {
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 61; i++ {
-		validators = append(validators, &pb.ValidatorRecord{Pubkey: []byte{}, Status: pb.ValidatorRecord_ACTIVE})
+		validators = append(validators, &pb.ValidatorRecord{Pubkey: []byte{}, ExitSlot: params.BeaconConfig().FarFutureSlot})
 	}
 	shardCommittees := []*pb.ShardAndCommitteeArray{
 		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
@@ -316,19 +315,20 @@ func TestTotalEffectiveBalance(t *testing.T) {
 func TestIsActiveValidator(t *testing.T) {
 
 	tests := []struct {
-		a pb.ValidatorRecord_StatusCodes
+		a uint64
 		b bool
 	}{
-		{a: pb.ValidatorRecord_PENDING_ACTIVATION, b: false},
-		{a: pb.ValidatorRecord_ACTIVE, b: true},
-		{a: pb.ValidatorRecord_ACTIVE_PENDING_EXIT, b: true},
-		{a: pb.ValidatorRecord_EXITED_WITHOUT_PENALTY + 1, b: false},
-		{a: pb.ValidatorRecord_EXITED_WITH_PENALTY * 100, b: false},
+		{a: 0, b: false},
+		{a: 10, b: true},
+		{a: 100, b: false},
+		{a: 1000, b: false},
+		{a: 64, b: true},
 	}
 	for _, test := range tests {
-		validator := &pb.ValidatorRecord{Status: test.a}
-		if isActiveValidator(validator) != test.b {
-			t.Errorf("isActiveValidator(%d) = %v, want = %v", validator.Status, isActiveValidator(validator), test.b)
+		validator := &pb.ValidatorRecord{ActivationSlot: 10, ExitSlot: 100}
+		if isActiveValidator(validator, test.a) != test.b {
+			t.Errorf("isActiveValidator(%d) = %v, want = %v",
+				test.a, isActiveValidator(validator, test.a), test.b)
 		}
 	}
 }
@@ -617,13 +617,14 @@ func TestNewRegistryDeltaChainTip(t *testing.T) {
 			[]byte{35, 123, 149, 41, 92, 226, 26, 73, 96, 40, 4, 219, 59, 254, 27,
 				38, 220, 125, 83, 177, 78, 12, 187, 74, 72, 115, 64, 91, 16, 144, 37, 245}},
 		{2, 64, []byte{'Y'}, []byte{'Z'},
-			[]byte{105, 155, 218, 237, 2, 246, 129, 117, 122, 234, 129, 145, 140,
-				42, 123, 133, 57, 241, 58, 237, 43, 180, 158, 123, 236, 47, 141, 21, 71, 150, 237, 246}},
+			[]byte{69, 192, 214, 2, 37, 19, 40, 60, 179, 83, 79, 158, 211, 247, 151,
+				7, 240, 82, 41, 37, 251, 149, 221, 37, 22, 151, 204, 234, 64, 69, 7, 166}},
 	}
 	for _, tt := range tests {
 		newChainTip, err := NewRegistryDeltaChainTip(
 			pb.ValidatorRegistryDeltaBlock_ValidatorRegistryDeltaFlags(tt.flag),
 			tt.index,
+			0,
 			tt.pubKey,
 			tt.currentRegistryDeltaChainTip,
 		)
@@ -643,8 +644,8 @@ func TestProcessDeposit_PublicKeyExistsBadWithdrawalCredentials(t *testing.T) {
 			Pubkey: []byte{1, 2, 3},
 		},
 		{
-			Pubkey:                []byte{4, 5, 6},
-			WithdrawalCredentials: []byte{0},
+			Pubkey:                      []byte{4, 5, 6},
+			WithdrawalCredentialsHash32: []byte{0},
 		},
 	}
 	beaconState := &pb.BeaconState{
@@ -658,7 +659,7 @@ func TestProcessDeposit_PublicKeyExistsBadWithdrawalCredentials(t *testing.T) {
 	pocCommitment := []byte{}
 
 	want := "expected withdrawal credentials to match"
-	if _, _, err := ProcessDeposit(
+	if _, err := ProcessDeposit(
 		beaconState,
 		stateutils.ValidatorIndexMap(beaconState),
 		pubkey,
@@ -678,8 +679,8 @@ func TestProcessDeposit_PublicKeyExistsGoodWithdrawalCredentials(t *testing.T) {
 			Pubkey: []byte{1, 2, 3},
 		},
 		{
-			Pubkey:                []byte{4, 5, 6},
-			WithdrawalCredentials: []byte{1},
+			Pubkey:                      []byte{4, 5, 6},
+			WithdrawalCredentialsHash32: []byte{1},
 		},
 	}
 	balances := []uint64{0, 0}
@@ -694,7 +695,7 @@ func TestProcessDeposit_PublicKeyExistsGoodWithdrawalCredentials(t *testing.T) {
 	randaoCommitment := []byte{}
 	pocCommitment := []byte{}
 
-	newState, _, err := ProcessDeposit(
+	newState, err := ProcessDeposit(
 		beaconState,
 		stateutils.ValidatorIndexMap(beaconState),
 		pubkey,
@@ -715,12 +716,12 @@ func TestProcessDeposit_PublicKeyExistsGoodWithdrawalCredentials(t *testing.T) {
 func TestProcessDeposit_PublicKeyDoesNotExistNoEmptyValidator(t *testing.T) {
 	registry := []*pb.ValidatorRecord{
 		{
-			Pubkey:                []byte{1, 2, 3},
-			WithdrawalCredentials: []byte{2},
+			Pubkey:                      []byte{1, 2, 3},
+			WithdrawalCredentialsHash32: []byte{2},
 		},
 		{
-			Pubkey:                []byte{4, 5, 6},
-			WithdrawalCredentials: []byte{1},
+			Pubkey:                      []byte{4, 5, 6},
+			WithdrawalCredentialsHash32: []byte{1},
 		},
 	}
 	balances := []uint64{1000, 1000}
@@ -735,7 +736,7 @@ func TestProcessDeposit_PublicKeyDoesNotExistNoEmptyValidator(t *testing.T) {
 	randaoCommitment := []byte{}
 	pocCommitment := []byte{}
 
-	newState, _, err := ProcessDeposit(
+	newState, err := ProcessDeposit(
 		beaconState,
 		stateutils.ValidatorIndexMap(beaconState),
 		pubkey,
@@ -759,19 +760,17 @@ func TestProcessDeposit_PublicKeyDoesNotExistNoEmptyValidator(t *testing.T) {
 func TestProcessDeposit_PublicKeyDoesNotExistEmptyValidatorExists(t *testing.T) {
 	registry := []*pb.ValidatorRecord{
 		{
-			Pubkey:                 []byte{1, 2, 3},
-			WithdrawalCredentials:  []byte{2},
-			LatestStatusChangeSlot: 0,
+			Pubkey:                      []byte{1, 2, 3},
+			WithdrawalCredentialsHash32: []byte{2},
 		},
 		{
-			Pubkey:                 []byte{4, 5, 6},
-			WithdrawalCredentials:  []byte{1},
-			LatestStatusChangeSlot: 0,
+			Pubkey:                      []byte{4, 5, 6},
+			WithdrawalCredentialsHash32: []byte{1},
 		},
 	}
 	balances := []uint64{0, 1000}
 	beaconState := &pb.BeaconState{
-		Slot:              0 + params.BeaconConfig().ZeroBalanceValidatorTTL,
+		Slot:              params.BeaconConfig().EpochLength,
 		ValidatorBalances: balances,
 		ValidatorRegistry: registry,
 	}
@@ -782,7 +781,7 @@ func TestProcessDeposit_PublicKeyDoesNotExistEmptyValidatorExists(t *testing.T) 
 	randaoCommitment := []byte{}
 	pocCommitment := []byte{}
 
-	newState, _, err := ProcessDeposit(
+	newState, err := ProcessDeposit(
 		beaconState,
 		stateutils.ValidatorIndexMap(beaconState),
 		pubkey,
@@ -795,11 +794,28 @@ func TestProcessDeposit_PublicKeyDoesNotExistEmptyValidatorExists(t *testing.T) 
 	if err != nil {
 		t.Fatalf("Process deposit failed: %v", err)
 	}
-	if len(newState.ValidatorBalances) != 2 {
-		t.Errorf("Expected validator balances list to stay the same, received len %d", len(newState.ValidatorBalances))
+	if len(newState.ValidatorBalances) != 3 {
+		t.Errorf("Expected validator balances list to be 3, received len %d", len(newState.ValidatorBalances))
 	}
-	if newState.ValidatorBalances[0] != 2000 {
-		t.Errorf("Expected validator at index 0 to have balance of %d, received %d", 2000, newState.ValidatorBalances[0])
+	if newState.ValidatorBalances[len(newState.ValidatorBalances)-1] != 2000 {
+		t.Errorf("Expected validator at last index to have balance of %d, received %d", 2000, newState.ValidatorBalances[0])
+	}
+}
+
+func TestActivateValidatorGenesis_Ok(t *testing.T) {
+	state := &pb.BeaconState{
+		ValidatorRegistryDeltaChainTipHash32: []byte{'A'},
+		ValidatorRegistry: []*pb.ValidatorRecord{
+			{Pubkey: []byte{'A'}},
+		},
+	}
+	newState, err := ActivateValidator(state, 0, true)
+	if err != nil {
+		t.Fatalf("Could not execute activateValidator:%v", err)
+	}
+	if newState.ValidatorRegistry[0].ActivationSlot != params.BeaconConfig().GenesisSlot {
+		t.Errorf("Wanted activation slot = genesis slot, got %d",
+			newState.ValidatorRegistry[0].ActivationSlot)
 	}
 }
 
@@ -808,180 +824,65 @@ func TestActivateValidator_Ok(t *testing.T) {
 		Slot:                                 100,
 		ValidatorRegistryDeltaChainTipHash32: []byte{'A'},
 		ValidatorRegistry: []*pb.ValidatorRecord{
-			{Status: pb.ValidatorRecord_PENDING_ACTIVATION, Pubkey: []byte{'B'}},
+			{Pubkey: []byte{'A'}},
 		},
 	}
-	newState, err := activateValidator(state, 0)
+	newState, err := ActivateValidator(state, 0, false)
 	if err != nil {
 		t.Fatalf("Could not execute activateValidator:%v", err)
 	}
-	if newState.ValidatorRegistry[0].Status != pb.ValidatorRecord_ACTIVE {
-		t.Errorf("Wanted status ACTIVE, got %v", newState.ValidatorRegistry[0].Status)
-	}
-	if newState.ValidatorRegistry[0].LatestStatusChangeSlot != state.Slot {
-		t.Errorf("Wanted last change slot %d, got %v",
-			state.Slot, newState.ValidatorRegistry[0].LatestStatusChangeSlot)
-	}
-}
-
-func TestActivateValidator_BadStatus(t *testing.T) {
-	state := &pb.BeaconState{
-		ValidatorRegistry: []*pb.ValidatorRecord{
-			{Status: pb.ValidatorRecord_ACTIVE},
-		},
-	}
-	if _, err := activateValidator(state, 0); err == nil {
-		t.Fatal("activateValidator should have failed with incorrect status")
+	if newState.ValidatorRegistry[0].ActivationSlot !=
+		state.Slot+params.BeaconConfig().EntryExitDelay {
+		t.Errorf("Wanted activation slot = %d, got %d",
+			state.Slot+params.BeaconConfig().EntryExitDelay,
+			newState.ValidatorRegistry[0].ActivationSlot)
 	}
 }
 
 func TestInitiateValidatorExit_Ok(t *testing.T) {
-	state := &pb.BeaconState{
-		Slot: 200,
-		ValidatorRegistry: []*pb.ValidatorRecord{
-			{Status: pb.ValidatorRecord_ACTIVE},
-		},
+	state := &pb.BeaconState{ValidatorRegistry: []*pb.ValidatorRecord{{}, {}, {}}}
+	newState := InitiateValidatorExit(state, 2)
+	if newState.ValidatorRegistry[0].StatusFlags != pb.ValidatorRecord_INITIAL {
+		t.Errorf("Wanted flag INITIAL, got %v", newState.ValidatorRegistry[0].StatusFlags)
 	}
-	newState, err := initiateValidatorExit(state, 0)
-	if err != nil {
-		t.Fatalf("Could not execute initiateValidatorExit:%v", err)
-	}
-	if newState.ValidatorRegistry[0].Status != pb.ValidatorRecord_ACTIVE_PENDING_EXIT {
-		t.Errorf("Wanted status ACTIVE_PENDING_EXIT, got %v", newState.ValidatorRegistry[0].Status)
-	}
-	if newState.ValidatorRegistry[0].LatestStatusChangeSlot != state.Slot {
-		t.Errorf("Wanted last change slot %d, got %v",
-			state.Slot, newState.ValidatorRegistry[0].LatestStatusChangeSlot)
+	if newState.ValidatorRegistry[2].StatusFlags != pb.ValidatorRecord_INITIATED_EXIT {
+		t.Errorf("Wanted flag ACTIVE_PENDING_EXIT, got %v", newState.ValidatorRegistry[0].StatusFlags)
 	}
 }
 
-func TestInitiateValidatorExit_BadStatus(t *testing.T) {
+func TestExitValidator_Ok(t *testing.T) {
 	state := &pb.BeaconState{
-		ValidatorRegistry: []*pb.ValidatorRecord{
-			{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
-		},
-	}
-	if _, err := initiateValidatorExit(state, 0); err == nil {
-		t.Fatal("initiateValidatorExit should have failed with incorrect status")
-	}
-}
-
-func TestExitValidatorWithPenalty_Ok(t *testing.T) {
-	var shardAndCommittees []*pb.ShardAndCommitteeArray
-	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
-		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
-			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
-				{Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
-			},
-		})
-	}
-	state := &pb.BeaconState{
-		Slot:                      100,
-		ShardAndCommitteesAtSlots: shardAndCommittees,
-		ValidatorBalances: []uint64{params.BeaconConfig().MaxDepositInGwei, params.BeaconConfig().MaxDepositInGwei,
-			params.BeaconConfig().MaxDepositInGwei, params.BeaconConfig().MaxDepositInGwei, params.BeaconConfig().MaxDepositInGwei},
+		Slot:                                 100,
 		ValidatorRegistryDeltaChainTipHash32: []byte{'A'},
 		LatestPenalizedExitBalances:          []uint64{0},
 		ValidatorRegistry: []*pb.ValidatorRecord{
-			{Status: pb.ValidatorRecord_ACTIVE, Pubkey: []byte{'B'}},
-		},
-		PersistentCommittees: []*common.Uint32List{
-			{List: []uint32{1, 2, 0, 4, 6}},
+			{ExitSlot: params.BeaconConfig().FarFutureSlot, Pubkey: []byte{'B'}},
 		},
 	}
-	newStatus := pb.ValidatorRecord_EXITED_WITH_PENALTY
-	newState, err := exitValidator(state, 0, newStatus)
+	newState, err := ExitValidator(state, 0)
 	if err != nil {
-		t.Fatalf("Could not execute exitValidator:%v", err)
+		t.Fatalf("Could not execute ExitValidator:%v", err)
 	}
 
-	if newState.ValidatorRegistry[0].Status != newStatus {
-		t.Errorf("Wanted status %v, got %v", newStatus, newState.ValidatorRegistry[0].Status)
-	}
-	if newState.ValidatorRegistry[0].LatestStatusChangeSlot != state.Slot {
-		t.Errorf("Wanted last change slot %d, got %v",
-			state.Slot, newState.ValidatorRegistry[0].LatestStatusChangeSlot)
+	if newState.ValidatorRegistry[0].ExitSlot !=
+		state.Slot+params.BeaconConfig().EntryExitDelay {
+		t.Errorf("Wanted exit slot %d, got %d",
+			state.Slot+params.BeaconConfig().EntryExitDelay,
+			newState.ValidatorRegistry[0].ExitSlot)
 	}
 	if newState.ValidatorRegistry[0].ExitCount != 1 {
 		t.Errorf("Wanted exit count 1, got %d", newState.ValidatorRegistry[0].ExitCount)
 	}
-	if newState.ValidatorBalances[0] != 0 {
-		t.Errorf("Wanted validator balance 0, got %d", newState.ValidatorBalances[0])
-	}
-	if newState.ValidatorBalances[4] != 2*params.BeaconConfig().MaxDepositInGwei {
-		t.Errorf("Wanted validator balance %d, got %d",
-			2*params.BeaconConfig().MaxDepositInGwei, newState.ValidatorBalances[4])
-	}
-	for _, i := range newState.PersistentCommittees[0].List {
-		if i == 0 {
-			t.Errorf("Validator index 0 should be removed from persistent committee. Got: %v",
-				newState.PersistentCommittees[0].List)
-		}
-	}
 }
 
-func TestExitValidator_AlreadyExitedWithPenalty(t *testing.T) {
+func TestExitValidator_AlreadyExited(t *testing.T) {
 	state := &pb.BeaconState{
+		Slot: 1,
 		ValidatorRegistry: []*pb.ValidatorRecord{
-			{Status: pb.ValidatorRecord_EXITED_WITH_PENALTY},
+			{ExitSlot: params.BeaconConfig().EntryExitDelay},
 		},
 	}
-	if _, err := exitValidator(state, 0, pb.ValidatorRecord_EXITED_WITH_PENALTY); err == nil {
-		t.Fatal("exitValidator should have failed with incorrect status")
-	}
-}
-
-func TestExitValidator_AlreadyExitedWithOutPenalty(t *testing.T) {
-	state := &pb.BeaconState{
-		ValidatorRegistry: []*pb.ValidatorRecord{
-			{Status: pb.ValidatorRecord_EXITED_WITHOUT_PENALTY},
-		},
-	}
-	if _, err := exitValidator(state, 0, pb.ValidatorRecord_EXITED_WITHOUT_PENALTY); err == nil {
-		t.Fatal("exitValidator should have failed with incorrect status")
-	}
-}
-
-func TestUpdateValidatorStatus_Ok(t *testing.T) {
-	var shardAndCommittees []*pb.ShardAndCommitteeArray
-	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
-		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
-			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
-				{Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
-			},
-		})
-	}
-	state := &pb.BeaconState{
-		ShardAndCommitteesAtSlots:   shardAndCommittees,
-		ValidatorBalances:           []uint64{params.BeaconConfig().MaxDepositInGwei},
-		LatestPenalizedExitBalances: []uint64{0},
-		ValidatorRegistry:           []*pb.ValidatorRecord{{}},
-	}
-	tests := []struct {
-		currentStatus pb.ValidatorRecord_StatusCodes
-		newStatus     pb.ValidatorRecord_StatusCodes
-	}{
-		{pb.ValidatorRecord_PENDING_ACTIVATION, pb.ValidatorRecord_ACTIVE},
-		{pb.ValidatorRecord_ACTIVE, pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
-		{pb.ValidatorRecord_ACTIVE, pb.ValidatorRecord_EXITED_WITH_PENALTY},
-		{pb.ValidatorRecord_ACTIVE, pb.ValidatorRecord_EXITED_WITHOUT_PENALTY},
-	}
-	for _, tt := range tests {
-		state.ValidatorRegistry[0].Status = tt.currentStatus
-		newState, err := UpdateStatus(state, 0, tt.newStatus)
-		if err != nil {
-			t.Fatalf("Could not execute UpdateStatus: %v", err)
-		}
-		if newState.ValidatorRegistry[0].Status != tt.newStatus {
-			t.Errorf("Expected status:%v, got:%v",
-				tt.newStatus, newState.ValidatorRegistry[0].Status)
-		}
-	}
-}
-
-func TestUpdateValidatorStatus_IncorrectStatus(t *testing.T) {
-	if _, err := UpdateStatus(
-		&pb.BeaconState{}, 0, pb.ValidatorRecord_PENDING_ACTIVATION); err == nil {
-		t.Fatal("UpdateStatus should have failed with incorrect status")
+	if _, err := ExitValidator(state, 0); err == nil {
+		t.Fatal("exitValidator should have failed with exiting again")
 	}
 }

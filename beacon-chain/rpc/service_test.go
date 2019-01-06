@@ -341,6 +341,7 @@ func TestValidatorSlotAndResponsibility(t *testing.T) {
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
+
 	depositData, err := b.EncodeDepositData(
 		&pbp2p.DepositInput{
 			Pubkey: []byte{'A'},
@@ -386,6 +387,7 @@ func TestValidatorIndex(t *testing.T) {
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
+
 	depositData, err := b.EncodeDepositData(
 		&pbp2p.DepositInput{
 			Pubkey: []byte{'A'},
@@ -430,6 +432,7 @@ func TestValidatorShardID(t *testing.T) {
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
+
 	depositData, err := b.EncodeDepositData(
 		&pbp2p.DepositInput{
 			Pubkey: []byte{'A'},
@@ -475,6 +478,7 @@ func TestValidatorAssignments(t *testing.T) {
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
+
 	depositData, err := b.EncodeDepositData(
 		&pbp2p.DepositInput{
 			Pubkey: []byte{'A'},

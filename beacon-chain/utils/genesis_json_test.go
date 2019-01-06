@@ -37,7 +37,7 @@ func TestInitGenesisJson(t *testing.T) {
 	params.UseDemoBeaconConfig()
 	state := &pb.BeaconState{
 		ValidatorRegistry: []*pb.ValidatorRecord{
-			{Pubkey: []byte("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"), Balance: 32000000000, Status: pb.ValidatorRecord_ACTIVE},
+			{Pubkey: []byte("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"), Balance: 32000000000},
 		},
 	}
 

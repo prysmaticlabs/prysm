@@ -29,7 +29,7 @@ func Hash(block *pb.BeaconBlock) ([32]byte, error) {
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
 func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 	block := &pb.BeaconBlock{
-		Slot:               params.BeaconConfig().InitialSlotNumber,
+		Slot:               params.BeaconConfig().GenesisSlot,
 		ParentRootHash32:   params.BeaconConfig().ZeroHash[:],
 		StateRootHash32:    stateRoot,
 		RandaoRevealHash32: params.BeaconConfig().ZeroHash[:],

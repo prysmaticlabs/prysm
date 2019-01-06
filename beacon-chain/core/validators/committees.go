@@ -15,31 +15,15 @@ func ShuffleValidatorRegistryToCommittees(
 	seed [32]byte,
 	validators []*pb.ValidatorRecord,
 	crosslinkStartShard uint64,
+	slot uint64,
 ) ([]*pb.ShardAndCommitteeArray, error) {
-	indices := ActiveValidatorIndices(validators)
+	indices := ActiveValidatorIndices(validators, slot)
 	// split the shuffled list for slot.
 	shuffledValidatorRegistry, err := utils.ShuffleIndices(seed, indices)
 	if err != nil {
 		return nil, err
 	}
 	return splitBySlotShard(shuffledValidatorRegistry, crosslinkStartShard), nil
-}
-
-// InitialShardAndCommitteesForSlots initialises the committees for shards by shuffling the validators
-// and assigning them to specific shards.
-func InitialShardAndCommitteesForSlots(validators []*pb.ValidatorRecord) ([]*pb.ShardAndCommitteeArray, error) {
-	seed := [32]byte{}
-	committees, err := ShuffleValidatorRegistryToCommittees(seed, validators, 1)
-	if err != nil {
-		return nil, err
-	}
-
-	// Initialize with 3 cycles of the same committees.
-	initialCommittees := make([]*pb.ShardAndCommitteeArray, 0, 3*params.BeaconConfig().CycleLength)
-	initialCommittees = append(initialCommittees, committees...)
-	initialCommittees = append(initialCommittees, committees...)
-	initialCommittees = append(initialCommittees, committees...)
-	return initialCommittees, nil
 }
 
 // splitBySlotShard splits the validator list into evenly sized committees and assigns each

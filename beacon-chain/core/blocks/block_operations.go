@@ -3,7 +3,6 @@ package blocks
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"reflect"
 
@@ -127,8 +126,8 @@ func verifyBlockRandao(proposer *pb.ValidatorRecord, block *pb.BeaconBlock) erro
 //   Verify that proposer_slashing.proposal_data_1.slot == proposer_slashing.proposal_data_2.slot.
 //   Verify that proposer_slashing.proposal_data_1.shard == proposer_slashing.proposal_data_2.shard.
 //   Verify that proposer_slashing.proposal_data_1.block_root != proposer_slashing.proposal_data_2.block_root.
-//   Verify that proposer.status != EXITED_WITH_PENALTY.
-//   Run update_validator_status(state, proposer_slashing.proposer_index, new_status=EXITED_WITH_PENALTY).
+//   Verify that validator.penalized_slot > state.slot.
+//   Run penalize_validator(state, proposer_slashing.proposer_index).
 func ProcessProposerSlashings(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
@@ -142,26 +141,20 @@ func ProcessProposerSlashings(
 			params.BeaconConfig().MaxProposerSlashings,
 		)
 	}
-	for idx, slashing := range body.ProposerSlashings {
-		if err := verifyProposerSlashing(slashing); err != nil {
+	var err error
+	for idx, slashing := range body.GetProposerSlashings() {
+		if err = verifyProposerSlashing(slashing); err != nil {
 			return nil, fmt.Errorf("could not verify proposer slashing #%d: %v", idx, err)
 		}
-		proposer := registry[slashing.ProposerIndex]
-		if proposer.Status != pb.ValidatorRecord_EXITED_WITH_PENALTY {
-			// TODO(#781): Replace with
-			// update_validator_status(
-			//   state,
-			//   proposer_slashing.proposer_index,
-			//   new_status=EXITED_WITH_PENALTY,
-			// ) after update_validator_status is implemented.
-			registry[slashing.ProposerIndex] = v.ExitValidator(
-				proposer,
-				beaconState.Slot,
-				true, /* penalize */
-			)
+		proposer := registry[slashing.GetProposerIndex()]
+		if proposer.GetPenalizedSlot() > beaconState.Slot {
+			beaconState, err = v.PenalizeValidator(beaconState, slashing.ProposerIndex)
+			if err != nil {
+				return nil, fmt.Errorf("could not penalize proposer index %d: %v",
+					slashing.ProposerIndex, err)
+			}
 		}
 	}
-	beaconState.ValidatorRegistry = registry
 	return beaconState, nil
 }
 
@@ -216,9 +209,8 @@ func verifyProposerSlashing(
 //     casper_slashing.votes_2.data.slot < casper_slashing.votes_1.data.slot
 //     or casper_slashing.votes_1.data.slot == casper_slashing.votes_2.data.slot.
 //   For each validator index i in intersection,
-//     if state.validator_registry[i].status does not equal
-//     EXITED_WITH_PENALTY, then run
-//     update_validator_status(state, i, new_status=EXITED_WITH_PENALTY)
+//     if state.validator_registry[i].penalized_slot > state.slot, then
+// 	   run penalize_validator(state, i)
 func ProcessCasperSlashings(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
@@ -242,21 +234,15 @@ func ProcessCasperSlashings(
 		}
 		for _, validatorIndex := range validatorIndices {
 			penalizedValidator := registry[validatorIndex]
-			if penalizedValidator.Status != pb.ValidatorRecord_EXITED_WITH_PENALTY {
-				// TODO(#781): Replace with update_validator_status(
-				//   state,
-				//   validatorIndex,
-				//   new_status=EXITED_WITH_PENALTY,
-				// ) after update_validator_status is implemented.
-				registry[validatorIndex] = v.ExitValidator(
-					penalizedValidator,
-					beaconState.Slot,
-					true, /* penalize */
-				)
+			if penalizedValidator.GetPenalizedSlot() > beaconState.Slot {
+				beaconState, err = v.PenalizeValidator(beaconState, validatorIndex)
+				if err != nil {
+					return nil, fmt.Errorf("could not penalize validator index %d: %v",
+						validatorIndex, err)
+				}
 			}
 		}
 	}
-	beaconState.ValidatorRegistry = registry
 	return beaconState, nil
 }
 
@@ -584,7 +570,7 @@ func ProcessValidatorDeposits(
 		// depositTimestamp [8]byte.
 		depositValue := depositData[len(depositData)-16 : len(depositData)-8]
 		// We then mutate the beacon state with the verified validator deposit.
-		beaconState, _, err = v.ProcessDeposit(
+		beaconState, err = v.ProcessDeposit(
 			beaconState,
 			validatorIndexMap,
 			depositInput.Pubkey,
@@ -675,7 +661,7 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 //
 //   For each exit in block.body.exits:
 //     Let validator = state.validator_registry[exit.validator_index].
-//     Verify that validator.status == ACTIVE.
+//     Verify that validator.exit_slot > state.slot + ENTRY_EXIT_DELAY.
 //     Verify that state.slot >= exit.slot.
 //     Verify that state.slot >= validator.latest_status_change_slot +
 //       SHARD_PERSISTENT_COMMITTEE_CHANGE_PERIOD.
@@ -685,8 +671,8 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 //       signature=exit.signature,
 //       domain=get_domain(state.fork_data, exit.slot, DOMAIN_EXIT),
 //     )
-//     Run update_validator_status(
-//       state, exit.validator_index, new_status=ACTIVE_PENDING_EXIT,
+//     Run initiate_validator_exit(
+//       state, exit.validator_index,
 //     )
 func ProcessValidatorExits(
 	beaconState *pb.BeaconState,
@@ -700,33 +686,24 @@ func ProcessValidatorExits(
 			params.BeaconConfig().MaxExits,
 		)
 	}
+
 	validatorRegistry := beaconState.ValidatorRegistry
 	for idx, exit := range exits {
 		if err := verifyExit(beaconState, exit); err != nil {
 			return nil, fmt.Errorf("could not verify exit #%d: %v", idx, err)
 		}
-		// TODO(#781): Replace with update_validator_status(
-		//   state,
-		//   validatorIndex,
-		//   new_status=ACTIVE_PENDING_EXIT,
-		// ) after update_validator_status is implemented.
-		validator := validatorRegistry[exit.ValidatorIndex]
-		validatorRegistry[exit.ValidatorIndex] = v.ExitValidator(
-			validator,
-			beaconState.Slot,
-			true, /* penalize */
-		)
+		beaconState = v.InitiateValidatorExit(beaconState, exit.GetValidatorIndex())
 	}
 	beaconState.ValidatorRegistry = validatorRegistry
 	return beaconState, nil
 }
 
 func verifyExit(beaconState *pb.BeaconState, exit *pb.Exit) error {
-	validator := beaconState.ValidatorRegistry[exit.ValidatorIndex]
-	if validator.Status != pb.ValidatorRecord_ACTIVE {
+	validator := beaconState.GetValidatorRegistry()[exit.GetValidatorIndex()]
+	if validator.GetExitSlot() <= beaconState.Slot+params.BeaconConfig().EntryExitDelay {
 		return fmt.Errorf(
-			"expected validator to have active status, received %v",
-			validator.Status,
+			"expected exit.Slot > state.Slot + EntryExitDelay, received %d < %d",
+			validator.GetExitSlot(), beaconState.Slot+params.BeaconConfig().EntryExitDelay,
 		)
 	}
 	if beaconState.Slot < exit.Slot {
@@ -734,13 +711,6 @@ func verifyExit(beaconState *pb.BeaconState, exit *pb.Exit) error {
 			"expected state.Slot >= exit.Slot, received %d < %d",
 			beaconState.Slot,
 			exit.Slot,
-		)
-	}
-	persistentCommitteeSlot := validator.LatestStatusChangeSlot +
-		params.BeaconConfig().ShardPersistentCommitteeChangePeriod
-	if beaconState.Slot < persistentCommitteeSlot {
-		return errors.New(
-			"expected validator.LatestStatusChangeSlot + PersistentCommitteePeriod >= state.Slot",
 		)
 	}
 	// TODO(#258): Verify using BLS signature verification below:

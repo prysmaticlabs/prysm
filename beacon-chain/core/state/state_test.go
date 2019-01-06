@@ -20,15 +20,15 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	}
 	epochLength := params.BeaconConfig().EpochLength
 
-	if params.BeaconConfig().InitialSlotNumber != 0 {
-		t.Error("InitialSlotNumber should be 0 for these tests to pass")
+	if params.BeaconConfig().GenesisSlot != 0 {
+		t.Error("GenesisSlot should be 0 for these tests to pass")
 	}
-	initialSlotNumber := params.BeaconConfig().InitialSlotNumber
+	initialSlotNumber := params.BeaconConfig().InitialForkSlot
 
-	if params.BeaconConfig().InitialForkVersion != 0 {
-		t.Error("InitialForkVersion should be 0 for these tests to pass")
+	if params.BeaconConfig().InitialForkSlot != 0 {
+		t.Error("InitialForkSlot should be 0 for these tests to pass")
 	}
-	initialForkVersion := params.BeaconConfig().InitialForkVersion
+	initialForkVersion := params.BeaconConfig().InitialForkSlot
 
 	if params.BeaconConfig().ZeroHash != [32]byte{} {
 		t.Error("ZeroHash should be all 0s for these tests to pass")
@@ -54,6 +54,11 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 		t.Error("DepositsForChainStart should be 16384 for these tests to pass")
 	}
 	depositsForChainStart := int(params.BeaconConfig().DepositsForChainStart)
+
+	if params.BeaconConfig().LatestPenalizedExitLength != 8192 {
+		t.Error("LatestPenalizedExitLength should be 8192 for these tests to pass")
+	}
+	latestPenalizedExitLength := int(params.BeaconConfig().LatestPenalizedExitLength)
 
 	genesisTime := uint64(99999)
 	processedPowReceiptRoot := []byte{'A', 'B', 'C'}
@@ -123,9 +128,6 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	if len(state.LatestVdfOutputs) != LatestVdfMixesLength {
 		t.Error("Length of LatestRandaoMixesHash32S was not correctly initialized")
 	}
-	if len(state.PersistentCommittees) != shardCount {
-		t.Error("PersistentCommittees was not correctly initialized")
-	}
 	if !reflect.DeepEqual(state.PersistentCommitteeReassignments, []*pb.ShardReassignmentRecord{}) {
 		t.Error("PersistentCommitteeReassignments was not correctly initialized")
 	}
@@ -153,7 +155,8 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	if len(state.LatestCrosslinks) != shardCount {
 		t.Error("Length of LatestCrosslinks was not correctly initialized")
 	}
-	if !reflect.DeepEqual(state.LatestPenalizedExitBalances, []uint64{}) {
+	if !reflect.DeepEqual(state.LatestPenalizedExitBalances,
+		make([]uint64, latestPenalizedExitLength)) {
 		t.Error("LatestPenalizedExitBalances was not correctly initialized")
 	}
 	if !reflect.DeepEqual(state.LatestAttestations, []*pb.PendingAttestationRecord{}) {
