@@ -308,7 +308,7 @@ go_repository(
 
 go_repository(
     name = "com_github_minio_sha256_simd",
-    commit = "e529fa194128a50ecb64b49880c294ceea7a46c6",
+    commit = "66352e71c5e1cd598fa97be77a56fe3973730042",
     importpath = "github.com/minio/sha256-simd",
 )
 
@@ -495,13 +495,13 @@ go_repository(
 
 go_repository(
     name = "com_github_sirupsen_logrus",
-    tag = "v1.2.0",
+    tag = "v1.3.0",
     importpath = "github.com/sirupsen/logrus",
 )
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "82a175fd1598e8a172e58ebdf5ed262bb29129e5",
+    commit = "badf5585203e739f88c2c6cd34188a6f54b5d619",
     importpath = "golang.org/x/sys",
 )
 
