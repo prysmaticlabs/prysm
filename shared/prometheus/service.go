@@ -35,9 +35,7 @@ func NewPrometheusService(addr string, svcRegistry *shared.ServiceRegistry) *Ser
 	return s
 }
 
-func (s *Service) healthzHandler(w http.ResponseWriter, r *http.Request) {
-	_ = r // Request is unused
-
+func (s *Service) healthzHandler(w http.ResponseWriter, _ *http.Request) {
 	// Call all services in the registry.
 	// if any are not OK, write 500
 	// print the statuses of all services.
