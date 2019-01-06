@@ -35,7 +35,7 @@ func NewPrometheusService(addr string, svcRegistry *shared.ServiceRegistry) *Ser
 	return s
 }
 
-func (s *Service) healthzHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Service) healthzHandler(w http.ResponseWriter, _ *http.Request) {
 	// Call all services in the registry.
 	// if any are not OK, write 500
 	// print the statuses of all services.
@@ -51,6 +51,7 @@ func (s *Service) healthzHandler(w http.ResponseWriter, r *http.Request) {
 			hasError = true
 			status = "ERROR " + v.Error()
 		}
+
 		if _, err := buf.WriteString(fmt.Sprintf("%s: %s\n", k, status)); err != nil {
 			hasError = true
 			status = "ERROR " + err.Error()
@@ -65,7 +66,9 @@ func (s *Service) healthzHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Write http body
-	w.Write(buf.Bytes())
+	if _, err := w.Write(buf.Bytes()); err != nil {
+		log.Errorf("Could not write healthz body %v", err)
+	}
 }
 
 // Start the prometheus service.

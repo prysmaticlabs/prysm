@@ -242,9 +242,9 @@ func (s *Service) listenForProcessedAttestations(client pb.BeaconServiceClient) 
 // startSlot returns the first slot of the given slot's cycle.
 func (s *Service) startSlot() uint64 {
 	duration := params.BeaconConfig().SlotDuration
-	cycleLength := params.BeaconConfig().CycleLength
+	epochLength := params.BeaconConfig().EpochLength
 	slot := slotticker.CurrentSlot(s.genesisTimestamp, duration, time.Since)
-	return slot - slot%cycleLength
+	return slot - slot%epochLength
 }
 
 func (s *Service) assignRole(assignments []*pb.Assignment, startSlot uint64) error {

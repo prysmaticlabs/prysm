@@ -528,8 +528,6 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation) error {
 //
 //     Verify deposit merkle_branch, setting leaf=serialized_deposit_data,
 //     depth=DEPOSIT_CONTRACT_TREE_DEPTH and root=state.processed_pow_receipt_root:
-//     Verify that state.slot - (deposit.deposit_data.timestamp -
-//     state.genesis_time)  SLOT_DURATION < ZERO_BALANCE_VALIDATOR_TTL.
 //
 //     Run the following:
 //     process_deposit(
@@ -627,24 +625,6 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 		)
 	}
 
-	// We unmarshal the timestamp bytes into a time.Time value for us to use.
-	depositTimestampBytes := depositData[len(depositData)-8:]
-	depositUnixTime := int64(binary.BigEndian.Uint64(depositTimestampBytes))
-
-	// Parse beacon state's genesis time from a uint32 into a unix timestamp.
-	genesisUnixTime := int64(beaconState.GenesisTime)
-	depositGenesisTimeDifference := depositUnixTime - genesisUnixTime
-	timeToLive := uint64(depositGenesisTimeDifference) / params.BeaconConfig().SlotDuration
-
-	// Verify current slot slot - allowed validator TTL is within the allowed boundary.
-	if beaconState.Slot-timeToLive < params.BeaconConfig().ZeroBalanceValidatorTTL {
-		return fmt.Errorf(
-			"want state.slot - (deposit.time - genesis_time) // SLOT_DURATION > %d, received %d < %d",
-			params.BeaconConfig().ZeroBalanceValidatorTTL,
-			beaconState.Slot-timeToLive,
-			params.BeaconConfig().ZeroBalanceValidatorTTL,
-		)
-	}
 	return nil
 }
 

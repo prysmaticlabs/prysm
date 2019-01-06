@@ -180,7 +180,7 @@ func TestChainProgress(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get beacon state: %v", err)
 	}
-	cycleLength := params.BeaconConfig().CycleLength
+	cycleLength := params.BeaconConfig().EpochLength
 
 	block1 := &pb.BeaconBlock{Slot: 1}
 	if err := db.SaveBlock(block1); err != nil {

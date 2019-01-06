@@ -20,7 +20,7 @@ func CreateAttestationMsg(
 ) [32]byte {
 	msg := make([]byte, binary.MaxVarintLen64)
 	binary.BigEndian.PutUint64(msg, forkVersion)
-	binary.PutUvarint(msg, slot%params.BeaconConfig().CycleLength)
+	binary.PutUvarint(msg, slot%params.BeaconConfig().EpochLength)
 	binary.PutUvarint(msg, shardID)
 	msg = append(msg, blockHash...)
 	binary.PutUvarint(msg, justifiedSlot)

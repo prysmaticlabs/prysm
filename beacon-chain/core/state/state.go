@@ -177,34 +177,8 @@ func CalculateNewBlockHashes(state *pb.BeaconState, block *pb.BeaconBlock, paren
 	distance := block.Slot - parentSlot
 	existing := state.LatestBlockRootHash32S
 	update := existing[distance:]
-	for len(update) < 2*int(params.BeaconConfig().CycleLength) {
+	for len(update) < 2*int(params.BeaconConfig().EpochLength) {
 		update = append(update, block.ParentRootHash32)
 	}
 	return update, nil
-}
-
-// IsValidatorSetChange checks if a validator set change transition can be processed. At that point,
-// validator shuffle will occur.
-func IsValidatorSetChange(state *pb.BeaconState, slotNumber uint64) bool {
-	if state.FinalizedSlot <= state.ValidatorRegistryLastChangeSlot {
-		return false
-	}
-	if slotNumber-state.ValidatorRegistryLastChangeSlot < params.BeaconConfig().MinValidatorSetChangeInterval {
-		return false
-	}
-
-	shardProcessed := map[uint64]bool{}
-	for _, shardAndCommittee := range state.ShardAndCommitteesAtSlots {
-		for _, committee := range shardAndCommittee.ArrayShardAndCommittee {
-			shardProcessed[committee.Shard] = true
-		}
-	}
-
-	crosslinks := state.LatestCrosslinks
-	for shard := range shardProcessed {
-		if state.ValidatorRegistryLastChangeSlot >= crosslinks[shard].Slot {
-			return false
-		}
-	}
-	return true
 }
