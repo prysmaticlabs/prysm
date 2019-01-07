@@ -129,7 +129,7 @@ func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.Validator
 					ParticipationBitfield: attesterBitfield,
 					AggregateSignature:    []byte{}, // TODO(258): Need Signature verification scheme/library
 					Data: &pbp2p.AttestationData{
-						Slot:                 latestBeaconBlock.GetSlot(),
+						Slot:                 latestBeaconBlock.Slot,
 						Shard:                a.shardID,
 						ShardBlockRootHash32: latestBlockHash[:],
 					},

@@ -119,7 +119,7 @@ func (q *Querier) IsSynced() (bool, error) {
 		return false, err
 	}
 
-	if block.GetSlot() >= q.curentHeadSlot {
+	if block.Slot >= q.curentHeadSlot {
 		return true, nil
 	}
 

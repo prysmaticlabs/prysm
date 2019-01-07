@@ -1,6 +1,8 @@
 package blocks
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"math"
 	"time"
@@ -10,6 +12,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 var clock utils.Clock = &utils.RealClock{}
@@ -26,7 +29,7 @@ func Hash(block *pb.BeaconBlock) ([32]byte, error) {
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
 func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 	block := &pb.BeaconBlock{
-		Slot:               params.BeaconConfig().InitialSlotNumber,
+		Slot:               params.BeaconConfig().GenesisSlot,
 		ParentRootHash32:   params.BeaconConfig().ZeroHash[:],
 		StateRootHash32:    stateRoot,
 		RandaoRevealHash32: params.BeaconConfig().ZeroHash[:],
@@ -101,7 +104,6 @@ func ProcessBlockRoots(state *pb.BeaconState, prevBlockRoot [32]byte) *pb.Beacon
 		merkleRoot := hashutil.MerkleRoot(state.LatestBlockRootHash32S)
 		state.BatchedBlockRootHash32S = append(state.BatchedBlockRootHash32S, merkleRoot)
 	}
-
 	return state
 }
 
@@ -130,4 +132,31 @@ func ForkVersion(data *pb.ForkData, slot uint64) uint64 {
 func DomainVersion(data *pb.ForkData, slot uint64, domainType uint64) uint64 {
 	constant := uint64(math.Pow(2, 32))
 	return ForkVersion(data, slot)*constant + domainType
+}
+
+// EncodeDepositData converts a deposit input proto into an a byte slice
+// of Simple Serialized deposit input followed by 8 bytes for a deposit value
+// and 8 bytes for a unix timestamp, all in BigEndian format.
+func EncodeDepositData(
+	depositInput *pb.DepositInput,
+	depositValue uint64,
+	depositTimestamp int64,
+) ([]byte, error) {
+	wBuf := new(bytes.Buffer)
+	if err := ssz.Encode(wBuf, depositInput); err != nil {
+		return nil, fmt.Errorf("failed to encode deposit input: %v", err)
+	}
+	encodedInput := wBuf.Bytes()
+	depositData := make([]byte, 0, 16+len(encodedInput))
+
+	value := make([]byte, 8)
+	binary.BigEndian.PutUint64(value, depositValue)
+
+	timestamp := make([]byte, 8)
+	binary.BigEndian.PutUint64(timestamp, uint64(depositTimestamp))
+
+	depositData = append(depositData, encodedInput...)
+	depositData = append(depositData, value...)
+	depositData = append(depositData, timestamp...)
+	return depositData, nil
 }
