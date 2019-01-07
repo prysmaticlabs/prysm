@@ -155,7 +155,7 @@ func TestProposerComputeBlock(t *testing.T) {
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Block has been created by the proposer for slot %d", 6))
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Created block proposal for slot %d", 6))
 	testutil.AssertLogsContain(t, hook, "Proposer context closed")
 }
 
@@ -267,7 +267,7 @@ func TestFullProposalOfBlock(t *testing.T) {
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Block has been created by the proposer for slot %d", 6))
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Created block proposal for slot %d", 6))
 	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Successfully proposed block with hash %#x", []byte("hi")))
 	testutil.AssertLogsContain(t, hook, "Proposer context closed")
 	testutil.AssertLogsContain(t, hook, "Attestation stored in memory")

@@ -14,6 +14,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -240,7 +241,7 @@ func (p *Proposer) computeBlockToBeProposed(latestBlock *pbp2p.BeaconBlock,
 		return nil, err
 	}
 
-	log.Infof("Block has been created by the proposer for slot %d", block.Slot)
+	log.Infof("Created block proposal for slot %d", block.Slot)
 	p.pendingAttestation = nil
 	p.lock.Unlock()
 
@@ -260,16 +261,16 @@ func (p *Proposer) addStateRootToBlock(block *pbp2p.BeaconBlock, client pb.Propo
 
 func (p *Proposer) createProposalDataFromBlock(block *pbp2p.BeaconBlock) (*pbp2p.ProposalSignedData, error) {
 
-	marshalledBlock, err := proto.Marshal(block)
+	encodedBlock, err := proto.Marshal(block)
 	if err != nil {
 		return nil, fmt.Errorf("unable to marshal block %v", err)
 	}
 
-	blockHash := hashutil.Hash(marshalledBlock)
+	blockHash := hashutil.Hash(encodedBlock)
 
 	return &pbp2p.ProposalSignedData{
 		Slot:            block.Slot,
-		Shard:           0, // placeholder
+		Shard:           params.BeaconConfig().BeaconChainShardNumber, // placeholder
 		BlockRootHash32: blockHash[:],
 	}, nil
 }

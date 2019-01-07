@@ -219,6 +219,7 @@ func (s *Service) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlock) (*pb
 	return &pb.ProposeResponse{BlockHash: h[:]}, nil
 }
 
+// CurrentPOWChainBlockHash retrieves the latest blockhash of the POW chain and sends it to the validator client.
 func (s *Service) CurrentPOWChainBlockHash(ctx context.Context, req *ptypes.Empty) (*pb.POWChainResponse, error) {
 	var powChainHash common.Hash
 
@@ -238,6 +239,8 @@ func (s *Service) CurrentPOWChainBlockHash(ctx context.Context, req *ptypes.Empt
 
 }
 
+// ComputeStateRootForBlock computes the state root after a block has been processed through a state transition and
+// returns it to the validator client.
 func (s *Service) ComputeStateRootForBlock(ctx context.Context, req *pbp2p.BeaconBlock) (*pb.StateRootResponse, error) {
 
 	beaconState, err := s.beaconDB.GetState()
@@ -267,6 +270,7 @@ func (s *Service) ComputeStateRootForBlock(ctx context.Context, req *pbp2p.Beaco
 	}, nil
 }
 
+// ProposerIndex returns the index of the block proposer of a certain slot to the validator client.
 func (s *Service) ProposerIndex(ctx context.Context, req *pb.ProposerIndexRequest) (*pb.IndexResponse, error) {
 
 	beaconState, err := s.beaconDB.GetState()
