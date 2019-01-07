@@ -6,10 +6,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math"
 	"sync"
 
 	"github.com/gogo/protobuf/proto"
-	ptypes "github.com/gogo/protobuf/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -202,33 +202,59 @@ func (p *Proposer) computeBlockToBeProposed(latestBlock *pbp2p.BeaconBlock,
 	}
 	data, err := proto.Marshal(latestBlock)
 	if err != nil {
-		return nil, fmt.Errorf("Could not marshal latest beacon block: %v", err)
+		return nil, fmt.Errorf("could not marshal latest beacon block: %v", err)
 	}
 	latestBlockHash := hashutil.Hash(data)
+
+	// Error is thrown away here because the client method returns no possible error.
+	powChainHashRes, _ := client.CurrentPOWChainBlockHash(p.ctx, nil)
+
+	indexRes, err := client.ProposerIndex(p.ctx, &pb.ProposerIndexRequest{SlotNumber: latestBlock.Slot})
+	if err != nil {
+		return nil, fmt.Errorf("could not get proposer index: %v", err)
+	}
+
+	proposerBitfield := uint64(math.Pow(2, 7-float64(indexRes.Index)))
+	attestation := &pbp2p.Attestation{
+		ParticipationBitfield: []byte{byte(proposerBitfield)},
+	}
 
 	// To prevent any unaccounted attestations from being added.
 	p.lock.Lock()
 
-	bitmask := p.GenerateBitmask(p.pendingAttestation)
 	// TODO(#619): Implement real proposals with randao reveals and attestation fields.
-	req := &pb.ProposeRequest{
-		ParentHash: latestBlockHash[:],
-		// TODO(#511): Fix to be the actual, timebased slot number instead.
-		SlotNumber:         latestBlock.GetSlot() + 1,
-		RandaoRevealHash32: []byte{},
-		AttestationBitmask: bitmask,
-		Timestamp:          ptypes.TimestampNow(),
-	}
-	res, err := client.ComputeBlockWithStateRoot(p.ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("Could not compute new block: %v", err)
+
+	block := &pbp2p.BeaconBlock{
+		Slot:                          latestBlock.Slot + 1,
+		ParentRootHash32:              latestBlockHash[:],
+		RandaoRevealHash32:            []byte{},
+		CandidatePowReceiptRootHash32: powChainHashRes.BlockHash,
+		Body: &pbp2p.BeaconBlockBody{
+			Attestations: []*pbp2p.Attestation{attestation},
+		},
 	}
 
-	log.Infof("Block has state root hash of %#x", res.StateRootHash32)
+	block, err = p.addStateRootToBlock(block, client)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Infof("Block has been created by the proposer for slot %d", block.Slot)
 	p.pendingAttestation = nil
 	p.lock.Unlock()
 
-	return res, nil
+	return block, nil
+}
+
+func (p *Proposer) addStateRootToBlock(block *pbp2p.BeaconBlock, client pb.ProposerServiceClient) (*pbp2p.BeaconBlock, error) {
+	res, err := client.ComputeStateRootForBlock(p.ctx, block)
+	if err != nil {
+		return nil, fmt.Errorf("unable to compute state root for block %v", err)
+	}
+
+	block.StateRootHash32 = res.StateRoot
+
+	return block, nil
 }
 
 func (p *Proposer) createProposalDataFromBlock(block *pbp2p.BeaconBlock) (*pbp2p.ProposalSignedData, error) {

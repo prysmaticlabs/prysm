@@ -115,7 +115,7 @@ func TestProposerComputeBlock(t *testing.T) {
 	p := NewProposer(context.Background(), cfg)
 
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
-	mockServiceClient.EXPECT().ComputeBlockWithStateRoot(
+	mockServiceClient.EXPECT().ComputeStateRootForBlock(
 		gomock.Any(),
 		gomock.Any()).Return(
 		&pbp2p.BeaconBlock{
@@ -199,7 +199,7 @@ func TestFullProposalOfBlock(t *testing.T) {
 	}
 	p := NewProposer(context.Background(), cfg)
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
-	mockServiceClient.EXPECT().ComputeBlockWithStateRoot(
+	mockServiceClient.EXPECT().ComputeStateRootForBlock(
 		gomock.Any(),
 		gomock.Any()).Return(
 		&pbp2p.BeaconBlock{
@@ -264,7 +264,7 @@ func TestProposerServiceErrors(t *testing.T) {
 
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
 	// Expect call to throw an error
-	mockServiceClient.EXPECT().ComputeBlockWithStateRoot(
+	mockServiceClient.EXPECT().ComputeStateRootForBlock(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(nil, errors.New("could not hash state"))
@@ -307,7 +307,7 @@ func TestProposedBlockError(t *testing.T) {
 
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
 
-	mockServiceClient.EXPECT().ComputeBlockWithStateRoot(
+	mockServiceClient.EXPECT().ComputeStateRootForBlock(
 		gomock.Any(),
 		gomock.Any()).Return(
 		&pbp2p.BeaconBlock{

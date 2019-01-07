@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"net"
 	"time"
 
@@ -220,61 +219,72 @@ func (s *Service) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlock) (*pb
 	return &pb.ProposeResponse{BlockHash: h[:]}, nil
 }
 
-func (s *Service) ComputeBlockWithStateRoot(ctx context.Context, req *pb.ProposeRequest) (*pbp2p.BeaconBlock, error) {
+func (s *Service) CurrentPOWChainBlockHash(ctx context.Context, req *ptypes.Empty) (*pb.POWChainResponse, error) {
 	var powChainHash common.Hash
+
 	if !s.enablePOWChain {
-		powChainHash = common.BytesToHash([]byte{byte(req.GetSlotNumber())})
-	} else {
-		powChainHash = s.powChainService.LatestBlockHash()
+		powChainHash = common.BytesToHash([]byte{'p', 'o', 'w', 'c', 'h', 'a', 'i', 'n'})
+
+		return &pb.POWChainResponse{
+			BlockHash: powChainHash[:],
+		}, nil
 	}
 
-	//TODO(#589) The attestation should be aggregated in the validator client side not in the beacon node.
+	powChainHash = s.powChainService.LatestBlockHash()
+
+	return &pb.POWChainResponse{
+		BlockHash: powChainHash[:],
+	}, nil
+
+}
+
+func (s *Service) ComputeStateRootForBlock(ctx context.Context, req *pbp2p.BeaconBlock) (*pb.StateRootResponse, error) {
+
 	beaconState, err := s.beaconDB.GetState()
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
 
-	_, prevProposerIndex, err := v.ProposerShardAndIndex(
+	parentHash := [32]byte{}
+	copy(parentHash[:], req.ParentRootHash32)
+
+	beaconState, err = state.ExecuteStateTransition(beaconState, req, parentHash)
+	if err != nil {
+		return nil, fmt.Errorf("could not execute state transition %v", err)
+	}
+
+	encodedState, err := proto.Marshal(beaconState)
+	if err != nil {
+		return nil, fmt.Errorf("unable to marshal state %v", err)
+	}
+
+	stateHash := hashutil.Hash(encodedState)
+
+	log.WithField("stateHash", fmt.Sprintf("%#x", stateHash)).Debugf("Computed state hash")
+
+	return &pb.StateRootResponse{
+		StateRoot: stateHash[:],
+	}, nil
+}
+
+func (s *Service) ProposerIndex(ctx context.Context, req *pb.ProposerIndexRequest) (*pb.IndexResponse, error) {
+
+	beaconState, err := s.beaconDB.GetState()
+	if err != nil {
+		return nil, fmt.Errorf("could not get beacon state: %v", err)
+	}
+
+	_, ProposerIndex, err := v.ProposerShardAndIndex(
 		beaconState,
-		req.GetSlotNumber(),
+		req.SlotNumber,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not get index of previous proposer: %v", err)
 	}
 
-	proposerBitfield := uint64(math.Pow(2, (7 - float64(prevProposerIndex))))
-	attestation := &pbp2p.Attestation{
-		ParticipationBitfield: []byte{byte(proposerBitfield)},
-	}
-
-	block := &pbp2p.BeaconBlock{
-		Slot:                          req.GetSlotNumber(),
-		CandidatePowReceiptRootHash32: powChainHash[:],
-		ParentRootHash32:              req.GetParentHash(),
-		Body: &pbp2p.BeaconBlockBody{
-			Attestations: []*pbp2p.Attestation{attestation},
-		},
-	}
-
-	parentHash := [32]byte{}
-	copy(parentHash[:], block.ParentRootHash32)
-
-	beaconState, err = state.ExecuteStateTransition(beaconState, block, parentHash)
-	if err != nil {
-		return nil, fmt.Errorf("could not execute state transition %v", err)
-	}
-
-	marshalledState, err := proto.Marshal(beaconState)
-	if err != nil {
-		return nil, fmt.Errorf("unable to marshal state %v", err)
-	}
-
-	stateHash := hashutil.Hash(marshalledState)
-
-	log.WithField("stateHash", fmt.Sprintf("%#x", stateHash)).Debugf("Computed state hash")
-	block.StateRootHash32 = stateHash[:]
-
-	return block, nil
+	return &pb.IndexResponse{
+		Index: uint32(ProposerIndex),
+	}, nil
 }
 
 // AttestHead is a function called by an attester in a sharding validator to vote

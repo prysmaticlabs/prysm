@@ -260,16 +260,13 @@ func TestComputeBlockWithStateRoot(t *testing.T) {
 		POWChainService: &mockPOWChainService{},
 	})
 
-	req := &pb.ProposeRequest{
-		ParentHash:              nil,
-		SlotNumber:              11,
-		RandaoRevealHash32:      nil,
-		AttestationBitmask:      nil,
-		AttestationAggregateSig: nil,
-		Timestamp:               nil,
+	req := &pbp2p.BeaconBlock{
+		ParentRootHash32:   nil,
+		Slot:               11,
+		RandaoRevealHash32: nil,
 	}
 
-	_, _ = rpcService.ComputeBlockWithStateRoot(context.Background(), req)
+	_, _ = rpcService.ComputeStateRootForBlock(context.Background(), req)
 }
 
 func TestAttestHead(t *testing.T) {
