@@ -208,6 +208,7 @@ func (p *Proposer) computeBlockToBeProposed(latestBlock *pbp2p.BeaconBlock,
 	latestBlockHash := hashutil.Hash(data)
 
 	// Error is thrown away here because the client method returns no possible error.
+	// #nosec G104
 	powChainHashRes, _ := client.CurrentPOWChainBlockHash(p.ctx, nil)
 
 	indexRes, err := client.ProposerIndex(p.ctx, &pb.ProposerIndexRequest{SlotNumber: latestBlock.Slot})
