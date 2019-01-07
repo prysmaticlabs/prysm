@@ -223,7 +223,7 @@ func (p *Proposer) computeBlockToBeProposed(latestBlock *pbp2p.BeaconBlock,
 	p.lock.Lock()
 
 	// TODO(#619): Implement real proposals with randao reveals and attestation fields.
-
+	signature := make([][]byte, 48)
 	block := &pbp2p.BeaconBlock{
 		Slot:                          latestBlock.Slot + 1,
 		ParentRootHash32:              latestBlockHash[:],
@@ -232,6 +232,7 @@ func (p *Proposer) computeBlockToBeProposed(latestBlock *pbp2p.BeaconBlock,
 		Body: &pbp2p.BeaconBlockBody{
 			Attestations: []*pbp2p.Attestation{attestation},
 		},
+		Signature: signature,
 	}
 
 	block, err = p.addStateRootToBlock(block, client)
@@ -249,7 +250,7 @@ func (p *Proposer) computeBlockToBeProposed(latestBlock *pbp2p.BeaconBlock,
 func (p *Proposer) addStateRootToBlock(block *pbp2p.BeaconBlock, client pb.ProposerServiceClient) (*pbp2p.BeaconBlock, error) {
 	res, err := client.ComputeStateRootForBlock(p.ctx, block)
 	if err != nil {
-		return nil, fmt.Errorf("unable to compute state root for block %v", err)
+		return nil, fmt.Errorf("unable to compute state root for block: %v", err)
 	}
 
 	block.StateRootHash32 = res.StateRoot

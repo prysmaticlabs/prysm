@@ -115,12 +115,25 @@ func TestProposerComputeBlock(t *testing.T) {
 	p := NewProposer(context.Background(), cfg)
 
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
+
+	mockServiceClient.EXPECT().CurrentPOWChainBlockHash(
+		gomock.Any(),
+		gomock.Any()).Return(
+		&pb.POWChainResponse{
+			BlockHash: []byte("hi"),
+		}, nil)
+	mockServiceClient.EXPECT().ProposerIndex(
+		gomock.Any(),
+		gomock.Any()).Return(
+		&pb.IndexResponse{
+			Index: 2,
+		}, nil)
+
 	mockServiceClient.EXPECT().ComputeStateRootForBlock(
 		gomock.Any(),
 		gomock.Any()).Return(
-		&pbp2p.BeaconBlock{
-			StateRootHash32: []byte("test"),
-			Signature:       make([][]byte, 10),
+		&pb.StateRootResponse{
+			StateRoot: []byte("test"),
 		}, nil)
 
 	mockServiceClient.EXPECT().ProposeBlock(
@@ -142,7 +155,7 @@ func TestProposerComputeBlock(t *testing.T) {
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Block has state root hash of %#x", []byte("test")))
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Block has been created by the proposer for slot %d", 6))
 	testutil.AssertLogsContain(t, hook, "Proposer context closed")
 }
 
@@ -199,12 +212,24 @@ func TestFullProposalOfBlock(t *testing.T) {
 	}
 	p := NewProposer(context.Background(), cfg)
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
+	mockServiceClient.EXPECT().CurrentPOWChainBlockHash(
+		gomock.Any(),
+		gomock.Any()).Return(
+		&pb.POWChainResponse{
+			BlockHash: []byte("hi"),
+		}, nil)
+	mockServiceClient.EXPECT().ProposerIndex(
+		gomock.Any(),
+		gomock.Any()).Return(
+		&pb.IndexResponse{
+			Index: 2,
+		}, nil)
+
 	mockServiceClient.EXPECT().ComputeStateRootForBlock(
 		gomock.Any(),
 		gomock.Any()).Return(
-		&pbp2p.BeaconBlock{
-			StateRootHash32: []byte("test"),
-			Signature:       make([][]byte, 10),
+		&pb.StateRootResponse{
+			StateRoot: []byte("test"),
 		}, nil)
 
 	mockServiceClient.EXPECT().ProposeBlock(
@@ -242,7 +267,7 @@ func TestFullProposalOfBlock(t *testing.T) {
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Block has state root hash of %#x", []byte("test")))
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Block has been created by the proposer for slot %d", 6))
 	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Successfully proposed block with hash %#x", []byte("hi")))
 	testutil.AssertLogsContain(t, hook, "Proposer context closed")
 	testutil.AssertLogsContain(t, hook, "Attestation stored in memory")
@@ -263,6 +288,19 @@ func TestProposerServiceErrors(t *testing.T) {
 	p := NewProposer(context.Background(), cfg)
 
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
+
+	mockServiceClient.EXPECT().CurrentPOWChainBlockHash(
+		gomock.Any(),
+		gomock.Any()).Return(
+		&pb.POWChainResponse{
+			BlockHash: []byte("hi"),
+		}, nil)
+	mockServiceClient.EXPECT().ProposerIndex(
+		gomock.Any(),
+		gomock.Any()).Return(
+		&pb.IndexResponse{
+			Index: 2,
+		}, nil)
 	// Expect call to throw an error
 	mockServiceClient.EXPECT().ComputeStateRootForBlock(
 		gomock.Any(),
@@ -290,7 +328,7 @@ func TestProposerServiceErrors(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
 	testutil.AssertLogsContain(t, hook, "Could not marshal nil latest beacon block")
 	testutil.AssertLogsContain(t, hook, "Proposer context closed")
-	testutil.AssertLogsContain(t, hook, "Could not compute new block: could not hash state")
+	testutil.AssertLogsContain(t, hook, "unable to compute state root for block: could not hash state")
 }
 
 func TestProposedBlockError(t *testing.T) {
@@ -307,12 +345,25 @@ func TestProposedBlockError(t *testing.T) {
 
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
 
+	mockServiceClient.EXPECT().CurrentPOWChainBlockHash(
+		gomock.Any(),
+		gomock.Any()).Return(
+		&pb.POWChainResponse{
+			BlockHash: []byte("hi"),
+		}, nil)
+
+	mockServiceClient.EXPECT().ProposerIndex(
+		gomock.Any(),
+		gomock.Any()).Return(
+		&pb.IndexResponse{
+			Index: 2,
+		}, nil)
+
 	mockServiceClient.EXPECT().ComputeStateRootForBlock(
 		gomock.Any(),
 		gomock.Any()).Return(
-		&pbp2p.BeaconBlock{
-			StateRootHash32: []byte("test"),
-			Signature:       make([][]byte, 10),
+		&pb.StateRootResponse{
+			StateRoot: []byte("test"),
 		}, nil)
 
 	// Expect call to throw an error.
