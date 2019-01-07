@@ -1570,7 +1570,7 @@ func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not process exits: %v", err)
 	}
-	newRegistry := newState.GetValidatorRegistry()
+	newRegistry := newState.ValidatorRegistry
 	if newRegistry[0].StatusFlags == pb.ValidatorRecord_INITIAL {
 		t.Error("Expected validator status to change, remained INITIAL")
 	}

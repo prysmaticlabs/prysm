@@ -59,8 +59,8 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState
 	if block.Slot != state.Slot {
 		return nil, fmt.Errorf(
 			"block.slot != state.slot, block.slot = %d, state.slot = %d",
-			block.GetSlot(),
-			state.GetSlot(),
+			block.Slot,
+			state.Slot,
 		)
 	}
 	// TODO(#781): Verify Proposer Signature.
