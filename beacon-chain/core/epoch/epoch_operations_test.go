@@ -52,11 +52,11 @@ func TestEpochAttestations(t *testing.T) {
 	for _, tt := range tests {
 		state.Slot = tt.stateSlot
 
-		if Attestations(state)[0].GetData().GetSlot() != tt.firstAttestationSlot {
+		if Attestations(state)[0].Data.Slot != tt.firstAttestationSlot {
 			t.Errorf(
 				"Result slot was an unexpected value. Wanted %d, got %d",
 				tt.firstAttestationSlot,
-				Attestations(state)[0].GetData().GetSlot(),
+				Attestations(state)[0].Data.Slot,
 			)
 		}
 	}
@@ -95,13 +95,13 @@ func TestEpochBoundaryAttestations(t *testing.T) {
 		t.Fatalf("EpochBoundaryAttestations failed: %v", err)
 	}
 
-	if epochBoundaryAttestation[0].GetData().GetJustifiedSlot() != 0 {
-		t.Errorf("Wanted justified slot 0 for epoch boundary attestation, got: %d", epochBoundaryAttestation[0].GetData().GetJustifiedSlot())
+	if epochBoundaryAttestation[0].Data.JustifiedSlot != 0 {
+		t.Errorf("Wanted justified slot 0 for epoch boundary attestation, got: %d", epochBoundaryAttestation[0].Data.JustifiedSlot)
 	}
 
-	if !bytes.Equal(epochBoundaryAttestation[0].GetData().GetJustifiedBlockRootHash32(), []byte{0}) {
+	if !bytes.Equal(epochBoundaryAttestation[0].Data.JustifiedBlockRootHash32, []byte{0}) {
 		t.Errorf("Wanted justified block hash [0] for epoch boundary attestation, got: %v",
-			epochBoundaryAttestation[0].GetData().GetJustifiedBlockRootHash32())
+			epochBoundaryAttestation[0].Data.JustifiedBlockRootHash32)
 	}
 }
 
@@ -150,11 +150,11 @@ func TestPrevEpochAttestations(t *testing.T) {
 	for _, tt := range tests {
 		state.Slot = tt.stateSlot
 
-		if PrevAttestations(state)[0].GetData().GetSlot() != tt.firstAttestationSlot {
+		if PrevAttestations(state)[0].Data.Slot != tt.firstAttestationSlot {
 			t.Errorf(
 				"Result slot was an unexpected value. Wanted %d, got %d",
 				tt.firstAttestationSlot,
-				Attestations(state)[0].GetData().GetSlot(),
+				Attestations(state)[0].Data.Slot,
 			)
 		}
 	}
@@ -184,11 +184,11 @@ func TestPrevJustifiedAttestations(t *testing.T) {
 	prevJustifiedAttestations := PrevJustifiedAttestations(state, thisEpochAttestations, prevEpochAttestations)
 
 	for i, attestation := range prevJustifiedAttestations {
-		if attestation.GetData().Shard != uint64(i) {
-			t.Errorf("Wanted shard %d, got %d", i, attestation.GetData().Shard)
+		if attestation.Data.Shard != uint64(i) {
+			t.Errorf("Wanted shard %d, got %d", i, attestation.Data.Shard)
 		}
-		if attestation.GetData().GetJustifiedSlot() != 100 {
-			t.Errorf("Wanted justified slot 100, got %d", attestation.GetData().GetJustifiedSlot())
+		if attestation.Data.JustifiedSlot != 100 {
+			t.Errorf("Wanted justified slot 100, got %d", attestation.Data.JustifiedSlot)
 		}
 	}
 }
@@ -212,19 +212,19 @@ func TestHeadAttestations_Ok(t *testing.T) {
 		t.Fatalf("PrevHeadAttestations failed with %v", err)
 	}
 
-	if headAttestations[0].GetData().GetSlot() != 1 {
-		t.Errorf("headAttestations[0] wanted slot 1, got slot %d", headAttestations[0].GetData().GetSlot())
+	if headAttestations[0].Data.Slot != 1 {
+		t.Errorf("headAttestations[0] wanted slot 1, got slot %d", headAttestations[0].Data.Slot)
 	}
-	if headAttestations[1].GetData().GetSlot() != 3 {
-		t.Errorf("headAttestations[1] wanted slot 3, got slot %d", headAttestations[1].GetData().GetSlot())
+	if headAttestations[1].Data.Slot != 3 {
+		t.Errorf("headAttestations[1] wanted slot 3, got slot %d", headAttestations[1].Data.Slot)
 	}
-	if !bytes.Equal([]byte{'A'}, headAttestations[0].GetData().GetBeaconBlockRootHash32()) {
+	if !bytes.Equal([]byte{'A'}, headAttestations[0].Data.BeaconBlockRootHash32) {
 		t.Errorf("headAttestations[0] wanted hash [A], got slot %v",
-			headAttestations[0].GetData().GetBeaconBlockRootHash32())
+			headAttestations[0].Data.BeaconBlockRootHash32)
 	}
-	if !bytes.Equal([]byte{'C'}, headAttestations[1].GetData().GetBeaconBlockRootHash32()) {
+	if !bytes.Equal([]byte{'C'}, headAttestations[1].Data.BeaconBlockRootHash32) {
 		t.Errorf("headAttestations[1] wanted hash [C], got slot %v",
-			headAttestations[1].GetData().GetBeaconBlockRootHash32())
+			headAttestations[1].Data.BeaconBlockRootHash32)
 	}
 }
 

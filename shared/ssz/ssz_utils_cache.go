@@ -17,73 +17,81 @@ type decoder func(io.Reader, reflect.Value) (uint32, error)
 
 type encodeSizer func(reflect.Value) (uint32, error)
 
-type encoderDecoder struct {
+type hasher func(reflect.Value) ([]byte, error)
+
+type sszUtils struct {
 	encoder
 	encodeSizer
 	decoder
+	hasher
 }
 
 var (
-	encoderDecoderCacheMutex sync.RWMutex
-	encoderDecoderCache      = make(map[reflect.Type]*encoderDecoder)
+	sszUtilsCacheMutex sync.RWMutex
+	sszUtilsCache      = make(map[reflect.Type]*sszUtils)
 )
 
 // Get cached encoder, encodeSizer and decoder implementation for a specified type.
 // With a cache we can achieve O(1) amortized time overhead for creating encoder, encodeSizer and decoder.
-func cachedEncoderDecoder(typ reflect.Type) (*encoderDecoder, error) {
-	encoderDecoderCacheMutex.RLock()
-	encDec := encoderDecoderCache[typ]
-	encoderDecoderCacheMutex.RUnlock()
-	if encDec != nil {
-		return encDec, nil
+func cachedSSZUtils(typ reflect.Type) (*sszUtils, error) {
+	sszUtilsCacheMutex.RLock()
+	utils := sszUtilsCache[typ]
+	sszUtilsCacheMutex.RUnlock()
+	if utils != nil {
+		return utils, nil
 	}
 
 	// If not found in cache, will get a new one and put it into the cache
-	encoderDecoderCacheMutex.Lock()
-	defer encoderDecoderCacheMutex.Unlock()
-	return cachedEncoderDecoderNoAcquireLock(typ)
+	sszUtilsCacheMutex.Lock()
+	defer sszUtilsCacheMutex.Unlock()
+	return cachedSSZUtilsNoAcquireLock(typ)
 }
 
-// This version is used when the caller is already holding the rw lock for encoderDecoderCache.
+// This version is used when the caller is already holding the rw lock for sszUtilsCache.
 // It doesn't acquire new rw lock so it's free to recursively call itself without getting into
 // a deadlock situation.
-func cachedEncoderDecoderNoAcquireLock(typ reflect.Type) (*encoderDecoder, error) {
+//
+// Make sure you are
+func cachedSSZUtilsNoAcquireLock(typ reflect.Type) (*sszUtils, error) {
 	// Check again in case other goroutine has just acquired the lock
 	// and already updated the cache
-	encDec := encoderDecoderCache[typ]
-	if encDec != nil {
-		return encDec, nil
+	utils := sszUtilsCache[typ]
+	if utils != nil {
+		return utils, nil
 	}
 	// Put a dummy value into the cache before generating.
 	// If the generator tries to lookup the type of itself,
 	// it will get the dummy value and won't call recursively forever.
-	encoderDecoderCache[typ] = new(encoderDecoder)
-	encDec, err := generateEncoderDecoderForType(typ)
+	sszUtilsCache[typ] = new(sszUtils)
+	utils, err := generateSSZUtilsForType(typ)
 	if err != nil {
 		// Don't forget to remove the dummy key when fail
-		delete(encoderDecoderCache, typ)
+		delete(sszUtilsCache, typ)
 		return nil, err
 	}
 	// Overwrite the dummy value with real value
-	*encoderDecoderCache[typ] = *encDec
-	return encoderDecoderCache[typ], nil
+	*sszUtilsCache[typ] = *utils
+	return sszUtilsCache[typ], nil
 }
 
-func generateEncoderDecoderForType(typ reflect.Type) (encDec *encoderDecoder, err error) {
-	encDec = new(encoderDecoder)
-	if encDec.encoder, encDec.encodeSizer, err = makeEncoder(typ); err != nil {
+func generateSSZUtilsForType(typ reflect.Type) (utils *sszUtils, err error) {
+	utils = new(sszUtils)
+	if utils.encoder, utils.encodeSizer, err = makeEncoder(typ); err != nil {
 		return nil, err
 	}
-	if encDec.decoder, err = makeDecoder(typ); err != nil {
+	if utils.decoder, err = makeDecoder(typ); err != nil {
 		return nil, err
 	}
-	return encDec, nil
+	if utils.hasher, err = makeHasher(typ); err != nil {
+		return nil, err
+	}
+	return utils, nil
 }
 
 type field struct {
-	index  int
-	name   string
-	encDec *encoderDecoder
+	index    int
+	name     string
+	sszUtils *sszUtils
 }
 
 func structFields(typ reflect.Type) (fields []field, err error) {
@@ -92,12 +100,12 @@ func structFields(typ reflect.Type) (fields []field, err error) {
 		if strings.Contains(f.Name, "XXX") {
 			continue
 		}
-		encDec, err := cachedEncoderDecoderNoAcquireLock(f.Type)
+		utils, err := cachedSSZUtilsNoAcquireLock(f.Type)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get encoder/decoder: %v", err)
+			return nil, fmt.Errorf("failed to get ssz utils: %v", err)
 		}
 		name := f.Name
-		fields = append(fields, field{i, name, encDec})
+		fields = append(fields, field{i, name, utils})
 	}
 	return fields, nil
 }

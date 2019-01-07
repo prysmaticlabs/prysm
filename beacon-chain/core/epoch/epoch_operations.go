@@ -32,7 +32,7 @@ func Attestations(state *pb.BeaconState) []*pb.PendingAttestationRecord {
 			earliestSlot = state.Slot - epochLength
 		}
 
-		if earliestSlot <= attestation.GetData().GetSlot() && attestation.GetData().GetSlot() < state.Slot {
+		if earliestSlot <= attestation.Data.Slot && attestation.Data.Slot < state.Slot {
 			thisEpochAttestations = append(thisEpochAttestations, attestation)
 		}
 	}
@@ -60,7 +60,7 @@ func BoundaryAttestations(
 			return nil, err
 		}
 
-		attestationData := attestation.GetData()
+		attestationData := attestation.Data
 		sameRoot := bytes.Equal(attestationData.JustifiedBlockRootHash32, boundaryBlockRoot)
 		sameSlotNum := attestationData.JustifiedSlot == state.JustifiedSlot
 		if sameRoot && sameSlotNum {
@@ -90,8 +90,8 @@ func PrevAttestations(state *pb.BeaconState) []*pb.PendingAttestationRecord {
 			earliestSlot = state.Slot - 2*epochLength
 		}
 
-		if earliestSlot <= attestation.GetData().GetSlot() &&
-			attestation.GetData().GetSlot() < state.Slot-epochLength {
+		if earliestSlot <= attestation.Data.Slot &&
+			attestation.Data.Slot < state.Slot-epochLength {
 			prevEpochAttestations = append(prevEpochAttestations, attestation)
 		}
 	}
@@ -114,7 +114,7 @@ func PrevJustifiedAttestations(
 	epochAttestations := append(thisEpochAttestations, prevEpochAttestations...)
 
 	for _, attestation := range epochAttestations {
-		if attestation.GetData().GetJustifiedSlot() == state.PreviousJustifiedSlot {
+		if attestation.Data.JustifiedSlot == state.PreviousJustifiedSlot {
 			prevJustifiedAttestations = append(prevJustifiedAttestations, attestation)
 		}
 	}
@@ -134,12 +134,12 @@ func PrevHeadAttestations(
 
 	var headAttestations []*pb.PendingAttestationRecord
 	for _, attestation := range prevEpochAttestations {
-		canonicalBlockRoot, err := block.BlockRoot(state, attestation.GetData().GetSlot())
+		canonicalBlockRoot, err := block.BlockRoot(state, attestation.Data.Slot)
 		if err != nil {
 			return nil, err
 		}
 
-		attestationData := attestation.GetData()
+		attestationData := attestation.Data
 		if bytes.Equal(attestationData.BeaconBlockRootHash32, canonicalBlockRoot) {
 			headAttestations = append(headAttestations, attestation)
 		}
@@ -167,8 +167,8 @@ func WinningRoot(
 	attestations := append(thisEpochAttestations, prevEpochAttestations...)
 
 	for _, attestation := range attestations {
-		if attestation.GetData().GetShard() == shardCommittee.Shard {
-			candidateRoots = append(candidateRoots, attestation.GetData().ShardBlockRootHash32)
+		if attestation.Data.Shard == shardCommittee.Shard {
+			candidateRoots = append(candidateRoots, attestation.Data.ShardBlockRootHash32)
 		}
 	}
 
@@ -283,7 +283,7 @@ func TotalBalance(
 func InclusionSlot(state *pb.BeaconState, validatorIndex uint32) (uint64, error) {
 
 	for _, attestation := range state.LatestAttestations {
-		participatedValidators, err := validators.AttestationParticipants(state, attestation.GetData(), attestation.ParticipationBitfield)
+		participatedValidators, err := validators.AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)
 		if err != nil {
 			return 0, fmt.Errorf("could not get attestation participants: %v", err)
 		}
@@ -307,14 +307,14 @@ func InclusionSlot(state *pb.BeaconState, validatorIndex uint32) (uint64, error)
 func InclusionDistance(state *pb.BeaconState, validatorIndex uint32) (uint64, error) {
 
 	for _, attestation := range state.LatestAttestations {
-		participatedValidators, err := validators.AttestationParticipants(state, attestation.GetData(), attestation.ParticipationBitfield)
+		participatedValidators, err := validators.AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)
 		if err != nil {
 			return 0, fmt.Errorf("could not get attestation participants: %v", err)
 		}
 
 		for _, index := range participatedValidators {
 			if index == validatorIndex {
-				return attestation.SlotIncluded - attestation.GetData().GetSlot(), nil
+				return attestation.SlotIncluded - attestation.Data.Slot, nil
 			}
 		}
 	}
@@ -332,8 +332,8 @@ func InclusionDistance(state *pb.BeaconState, validatorIndex uint32) (uint64, er
 //    (the longer, the lower the reward). Returns a value between ``0`` and ``magnitude``.
 //    ""
 //    return magnitude // 2 + (magnitude // 2) * MIN_ATTESTATION_INCLUSION_DELAY // distance
-func AdjustForInclusionDistance(magniture uint64, distance uint64) uint64 {
-	return magniture/2 + (magniture/2)*
+func AdjustForInclusionDistance(magnitude uint64, distance uint64) uint64 {
+	return magnitude/2 + (magnitude/2)*
 		params.BeaconConfig().MinAttestationInclusionDelay/distance
 }
 

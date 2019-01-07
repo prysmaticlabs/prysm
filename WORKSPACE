@@ -308,7 +308,7 @@ go_repository(
 
 go_repository(
     name = "com_github_minio_sha256_simd",
-    commit = "51976451ce1942acbb55707a983ed232fa027110",
+    commit = "66352e71c5e1cd598fa97be77a56fe3973730042",
     importpath = "github.com/minio/sha256-simd",
 )
 
@@ -453,7 +453,7 @@ go_repository(
 
 go_repository(
     name = "com_github_miekg_dns",
-    tag = "v1.1.1",
+    tag = "v1.1.2",
     importpath = "github.com/miekg/dns",
 )
 
@@ -495,13 +495,13 @@ go_repository(
 
 go_repository(
     name = "com_github_sirupsen_logrus",
-    tag = "v1.2.0",
+    tag = "v1.3.0",
     importpath = "github.com/sirupsen/logrus",
 )
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "9a3f9b0469bbc6b8802087ae5c0af9f61502de01",
+    commit = "1775db3f06b568179d273425900dd09125831dd5",
     importpath = "golang.org/x/sys",
 )
 
@@ -543,7 +543,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_crypto",
-    commit = "505ab145d0a99da450461ae2c1a9f6cd10d1f447",
+    commit = "ff983b9c42bc9fbf91556e191cc8efb585c16908",
     importpath = "golang.org/x/crypto",
 )
 
@@ -621,7 +621,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_google_api",
-    commit = "f26a60c56f148a32e87f3f4591c8ebf834b5561f",
+    tag = "v0.1.0",
     importpath = "google.golang.org/api",
 )
 
@@ -645,7 +645,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aristanetworks_goarista",
-    commit = "0ca71131d8f76e0739563d97cc9f95c021825a2b",
+    commit = "332ede26fbf000b0af488b1836b53b44d2a7c46c",
     importpath = "github.com/aristanetworks/goarista",
 )
 
@@ -663,13 +663,13 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_common",
-    commit = "67670fe90761d7ff18ec1d640135e53b9198328f",
+    commit = "b1c43a6df3aedba268353d940b5974f05037ed5c",
     importpath = "github.com/prometheus/common",
 )
 
 go_repository(
     name = "com_github_prometheus_procfs",
-    commit = "1dc9a6cbc91aacc3e8b2d63db4d2e957a5394ac4",
+    commit = "b1a0a9a36d7453ba0f62578b99712f3a6c5f82d1",
     importpath = "github.com/prometheus/procfs",
 )
 

@@ -13,12 +13,11 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
+	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slices"
 )
-
-const bitsInByte = 8
 
 // InitialValidatorRegistry creates a new validator set that is used to
 // generate a new crystallized state.
@@ -26,10 +25,10 @@ func InitialValidatorRegistry() []*pb.ValidatorRecord {
 	config := params.BeaconConfig()
 	randaoPreCommit := [32]byte{}
 	randaoReveal := hashutil.Hash(randaoPreCommit[:])
-	validators := make([]*pb.ValidatorRecord, config.BootstrappedValidatorsCount)
-	for i := uint64(0); i < config.BootstrappedValidatorsCount; i++ {
+	validators := make([]*pb.ValidatorRecord, config.DepositsForChainStart)
+	for i := uint64(0); i < config.DepositsForChainStart; i++ {
 		validators[i] = &pb.ValidatorRecord{
-			Status:                 pb.ValidatorRecord_ACTIVE,
+			ExitSlot:               params.BeaconConfig().FarFutureSlot,
 			Balance:                config.MaxDeposit * config.Gwei,
 			Pubkey:                 []byte{},
 			RandaoCommitmentHash32: randaoReveal[:],
@@ -42,15 +41,15 @@ func InitialValidatorRegistry() []*pb.ValidatorRecord {
 // and returns their indices in a list.
 //
 // Spec pseudocode definition:
-//   def get_active_validator_indices(validators: [ValidatorRecord]) -> List[int]:
+//   def get_active_validator_indices(validators: [ValidatorRecord], slot: int) -> List[int]:
 //     """
 //     Gets indices of active validators from ``validators``.
 //     """
-//     return [i for i, v in enumerate(validators) if is_active_validator(v)]
-func ActiveValidatorIndices(validators []*pb.ValidatorRecord) []uint32 {
+//     return [i for i, v in enumerate(validators) if is_active_validator(v, slot)]
+func ActiveValidatorIndices(validators []*pb.ValidatorRecord, slot uint64) []uint32 {
 	indices := make([]uint32, 0, len(validators))
 	for i, v := range validators {
-		if isActiveValidator(v) {
+		if isActiveValidator(v, slot) {
 			indices = append(indices, uint32(i))
 		}
 
@@ -103,35 +102,6 @@ func ShardAndCommitteesAtSlot(state *pb.BeaconState, slot uint64) (*pb.ShardAndC
 	return state.ShardAndCommitteesAtSlots[slot-earliestSlot], nil
 }
 
-// GetShardAndCommitteesForSlot returns the attester set of a given slot.
-// Deprecated: Use ShardAndCommitteesAtSlot instead.
-func GetShardAndCommitteesForSlot(shardCommittees []*pb.ShardAndCommitteeArray, lastStateRecalc uint64, slot uint64) (*pb.ShardAndCommitteeArray, error) {
-	cycleLength := params.BeaconConfig().CycleLength
-
-	var lowerBound uint64
-	if lastStateRecalc >= cycleLength {
-		lowerBound = lastStateRecalc - cycleLength
-	}
-	upperBound := lastStateRecalc + 2*cycleLength
-
-	if slot < lowerBound || slot >= upperBound {
-		return nil, fmt.Errorf("slot %d out of bounds: %d <= slot < %d",
-			slot,
-			lowerBound,
-			upperBound,
-		)
-	}
-
-	// If in the previous or current cycle, simply calculate offset
-	if slot < lastStateRecalc+2*cycleLength {
-		return shardCommittees[slot-lowerBound], nil
-	}
-
-	// Otherwise, use the 3rd cycle
-	index := lowerBound + 2*cycleLength + slot%cycleLength
-	return shardCommittees[index], nil
-}
-
 // BeaconProposerIndex returns the index of the proposer of the block at a
 // given slot.
 //
@@ -147,16 +117,15 @@ func BeaconProposerIndex(state *pb.BeaconState, slot uint64) (uint32, error) {
 	if err != nil {
 		return 0, err
 	}
-	firstCommittee := committeeArray.GetArrayShardAndCommittee()[0].Committee
+	firstCommittee := committeeArray.ArrayShardAndCommittee[0].Committee
 
 	return firstCommittee[slot%uint64(len(firstCommittee))], nil
 }
 
 // ProposerShardAndIndex returns the index and the shardID of a proposer from a given slot.
-func ProposerShardAndIndex(shardCommittees []*pb.ShardAndCommitteeArray, lastStateRecalc uint64, slot uint64) (uint64, uint64, error) {
-	slotCommittees, err := GetShardAndCommitteesForSlot(
-		shardCommittees,
-		lastStateRecalc,
+func ProposerShardAndIndex(state *pb.BeaconState, slot uint64) (uint64, uint64, error) {
+	slotCommittees, err := ShardAndCommitteesAtSlot(
+		state,
 		slot)
 	if err != nil {
 		return 0, 0, err
@@ -169,11 +138,10 @@ func ProposerShardAndIndex(shardCommittees []*pb.ShardAndCommitteeArray, lastSta
 
 // ValidatorIndex returns the index of the validator given an input public key.
 func ValidatorIndex(pubKey []byte, validators []*pb.ValidatorRecord) (uint32, error) {
-	activeValidatorRegistry := ActiveValidatorIndices(validators)
 
-	for _, index := range activeValidatorRegistry {
+	for index := range validators {
 		if bytes.Equal(validators[index].Pubkey, pubKey) {
-			return index, nil
+			return uint32(index), nil
 		}
 	}
 
@@ -263,7 +231,7 @@ func VotedBalanceInAttestation(validators []*pb.ValidatorRecord, indices []uint3
 	var voteBalance uint64
 	for index, attesterIndex := range indices {
 		// find balance of validators who voted.
-		bitCheck, err := bitutil.CheckBit(attestation.GetParticipationBitfield(), index)
+		bitCheck, err := bitutil.CheckBit(attestation.ParticipationBitfield, index)
 		if err != nil {
 			return 0, 0, err
 		}
@@ -275,22 +243,6 @@ func VotedBalanceInAttestation(validators []*pb.ValidatorRecord, indices []uint3
 	}
 
 	return totalBalance, voteBalance, nil
-}
-
-// ExitValidator exits validator from the active list. It returns
-// updated validator record with an appropriate status of each validator.
-func ExitValidator(
-	validator *pb.ValidatorRecord,
-	currentSlot uint64,
-	penalize bool) *pb.ValidatorRecord {
-	// TODO(#614): Add validator set change
-	validator.LatestStatusChangeSlot = currentSlot
-	if penalize {
-		validator.Status = pb.ValidatorRecord_EXITED_WITH_PENALTY
-	} else {
-		validator.Status = pb.ValidatorRecord_ACTIVE_PENDING_EXIT
-	}
-	return validator
 }
 
 // NewRegistryDeltaChainTip returns the new validator registry delta chain tip.
@@ -314,6 +266,7 @@ func ExitValidator(
 func NewRegistryDeltaChainTip(
 	flag pb.ValidatorRegistryDeltaBlock_ValidatorRegistryDeltaFlags,
 	index uint32,
+	slot uint64,
 	pubKey []byte,
 	currentValidatorRegistryDeltaChainTip []byte) ([32]byte, error) {
 
@@ -322,6 +275,7 @@ func NewRegistryDeltaChainTip(
 		ValidatorIndex:                index,
 		Pubkey:                        pubKey,
 		Flag:                          flag,
+		Slot:                          slot,
 	}
 
 	// TODO(716): Replace serialization with tree hash function.
@@ -441,34 +395,6 @@ func AttestingBalance(state *pb.BeaconState, boundaryAttesterIndices []uint32) u
 	return boundaryAttestingBalance
 }
 
-// UpdateStatus updates validator to a new status, it handles
-// other general accounting related to this status update.
-// Spec pseudocode definition:
-//   def update_validator_status(state: BeaconState,
-//                            index: int,
-//                            new_status: int) -> None:
-//    if new_status == ACTIVE:
-//        activate_validator(state, index)
-//    if new_status == ACTIVE_PENDING_EXIT:
-//        initiate_validator_exit(state, index)
-//    if new_status in [EXITED_WITH_PENALTY, EXITED_WITHOUT_PENALTY]:
-//        exit_validator(state, index, new_status)
-func UpdateStatus(
-	state *pb.BeaconState,
-	index uint32,
-	newStatus pb.ValidatorRecord_StatusCodes) (*pb.BeaconState, error) {
-
-	switch newStatus {
-	case pb.ValidatorRecord_ACTIVE:
-		return activateValidator(state, index)
-	case pb.ValidatorRecord_ACTIVE_PENDING_EXIT:
-		return initiateValidatorExit(state, index)
-	case pb.ValidatorRecord_EXITED_WITH_PENALTY, pb.ValidatorRecord_EXITED_WITHOUT_PENALTY:
-		return exitValidator(state, index, newStatus)
-	}
-	return nil, fmt.Errorf("expected ACTIVE, ACTIVE_PENDING_EXIT, EXITED_WITH or WITHOUT_PENALTY, but got %v", newStatus)
-}
-
 // AllValidatorsIndices returns all validator indices from 0 to
 // the last validator.
 func AllValidatorsIndices(state *pb.BeaconState) []uint32 {
@@ -487,22 +413,19 @@ func AllValidatorsIndices(state *pb.BeaconState) []uint32 {
 // deposit.
 func ProcessDeposit(
 	state *pb.BeaconState,
+	validatorIndexMap map[[32]byte]int,
 	pubkey []byte,
-	deposit uint64,
-	proofOfPossession []byte,
+	amount uint64,
+	_ /*proofOfPossession*/ []byte,
 	withdrawalCredentials []byte,
 	randaoCommitment []byte,
 	pocCommitment []byte,
-) (*pb.BeaconState, uint32, error) {
+) (*pb.BeaconState, error) {
 	// TODO(#258): Validate proof of possession using BLS.
 	var publicKeyExists bool
 	var existingValidatorIndex int
-	for idx, val := range state.ValidatorRegistry {
-		if bytes.Equal(val.GetPubkey(), pubkey) {
-			publicKeyExists = true
-			existingValidatorIndex = idx
-		}
-	}
+
+	existingValidatorIndex, publicKeyExists = validatorIndexMap[bytesutil.ToBytes32(pubkey)]
 	if !publicKeyExists {
 		// If public key does not exist in the registry, we add a new validator
 		// to the beacon state.
@@ -510,110 +433,77 @@ func ProcessDeposit(
 			Pubkey:                  pubkey,
 			RandaoCommitmentHash32:  randaoCommitment,
 			RandaoLayers:            0,
-			Status:                  pb.ValidatorRecord_PENDING_ACTIVATION,
-			LatestStatusChangeSlot:  state.GetSlot(),
 			ExitCount:               0,
 			PocCommitmentHash32:     pocCommitment,
-			LastPocChangeSlot:       0,
-			SecondLastPocChangeSlot: 0,
+			LastPocChangeSlot:       params.BeaconConfig().GenesisSlot,
+			SecondLastPocChangeSlot: params.BeaconConfig().GenesisSlot,
+			ActivationSlot:          params.BeaconConfig().FarFutureSlot,
+			ExitSlot:                params.BeaconConfig().FarFutureSlot,
+			WithdrawalSlot:          params.BeaconConfig().FarFutureSlot,
+			PenalizedSlot:           params.BeaconConfig().FarFutureSlot,
+			StatusFlags:             0,
 		}
-		idx, ok := minEmptyValidatorIndex(
-			state.ValidatorRegistry,
-			state.ValidatorBalances,
-			state.GetSlot(),
-		)
-		// In the case there is no empty validator index in the state,
-		// we append an entirely new record to the validator registry and list
-		// of validator balances. Otherwise, we simply overwrite the value at
-		// an existing index that has 0 balance and is outside the validator
-		// time to live window.
-		if !ok {
-			state.ValidatorRegistry = append(state.ValidatorRegistry, newValidator)
-			state.ValidatorBalances = append(state.ValidatorBalances, deposit)
-			idx = len(state.ValidatorRegistry) - 1
-		} else {
-			state.ValidatorRegistry[idx] = newValidator
-			state.ValidatorBalances[idx] = deposit
-		}
-		return state, uint32(idx), nil
-	}
-	if !bytes.Equal(
-		state.ValidatorRegistry[existingValidatorIndex].WithdrawalCredentials,
-		withdrawalCredentials,
-	) {
-		return nil, 0, fmt.Errorf(
-			"expected withdrawal credentials to match, received %#x == %#x",
-			state.ValidatorRegistry[existingValidatorIndex].WithdrawalCredentials,
-			withdrawalCredentials,
-		)
-	}
-	state.ValidatorBalances[existingValidatorIndex] += deposit
-	return state, uint32(existingValidatorIndex), nil
-}
+		state.ValidatorRegistry = append(state.ValidatorRegistry, newValidator)
+		state.ValidatorBalances = append(state.ValidatorBalances, amount)
 
-// minEmptyValidatorIndex returns the lowest validator index which the balance is 0
-// and the time to live window is less than the current slot.
-func minEmptyValidatorIndex(
-	validators []*pb.ValidatorRecord,
-	balances []uint64,
-	currentSlot uint64,
-) (int, bool) {
-	for i := range validators {
-		lastStatusChange := validators[i].GetLatestStatusChangeSlot()
-		ttlWindow := lastStatusChange + params.BeaconConfig().ZeroBalanceValidatorTTL
-		if balances[i] == 0 && ttlWindow <= currentSlot {
-			return i, true
+	} else {
+		if !bytes.Equal(
+			state.ValidatorRegistry[existingValidatorIndex].WithdrawalCredentialsHash32,
+			withdrawalCredentials,
+		) {
+			return nil, fmt.Errorf(
+				"expected withdrawal credentials to match, received %#x == %#x",
+				state.ValidatorRegistry[existingValidatorIndex].WithdrawalCredentialsHash32,
+				withdrawalCredentials,
+			)
 		}
+		state.ValidatorBalances[existingValidatorIndex] += amount
 	}
-	return 0, false
+	return state, nil
 }
 
 // isActiveValidator returns the boolean value on whether the validator
 // is active or not.
 //
 // Spec pseudocode definition:
-//   def is_active_validator(validator: ValidatorRecord) -> bool:
+//   def is_active_validator(validator: ValidatorRecord, slot: int) -> bool:
 //     """
-//     Returns the ``ShardCommittee`` for the ``slot``.
+//     Checks if ``validator`` is active.
 //     """
-//     return validator.status in [ACTIVE, ACTIVE_PENDING_EXIT]
-func isActiveValidator(validator *pb.ValidatorRecord) bool {
-	return validator.Status == pb.ValidatorRecord_ACTIVE_PENDING_EXIT ||
-		validator.Status == pb.ValidatorRecord_ACTIVE
+//     return validator.activation_slot <= slot < validator.exit_slot
+func isActiveValidator(validator *pb.ValidatorRecord, slot uint64) bool {
+	return validator.ActivationSlot <= slot &&
+		slot < validator.ExitSlot
 }
 
-// activateValidator takes in validator index and activates
-// validator from pending activation status to active status.
+// ActivateValidator takes in validator index and updates
+// validator's activation slot.
 //
 // Spec pseudocode definition:
-// def activate_validator(state: BeaconState,
-// 						  index: int) -> None:
-// 		"""
-// 		Activate the validator with the given ``index``.
-// 		Note that this function mutates ``state``.
-// 		"""
-// 		validator = state.validator_registry[index]
-// 		if validator.status != PENDING_ACTIVATION:
-// 				return
+// def activate_validator(state: BeaconState, index: int, genesis: bool) -> None:
+//    validator = state.validator_registry[index]
 //
-// 		validator.status = ACTIVE
-// 		validator.latest_status_change_slot = state.slot
-// 		state.validator_registry_delta_chain_tip = get_new_validator_registry_delta_chain_tip(
-// 				current_validator_registry_delta_chain_tip=state.validator_registry_delta_chain_tip,
-// 				validator_index=index,
-// 				pubkey=validator.pubkey,
-// 				flag=ACTIVATION)
-func activateValidator(state *pb.BeaconState, index uint32) (*pb.BeaconState, error) {
+//    validator.activation_slot = GENESIS_SLOT if genesis else (state.slot + ENTRY_EXIT_DELAY)
+//    state.validator_registry_delta_chain_tip = hash_tree_root(
+//        ValidatorRegistryDeltaBlock(
+//            current_validator_registry_delta_chain_tip=state.validator_registry_delta_chain_tip,
+//            validator_index=index,
+//            pubkey=validator.pubkey,
+//            slot=validator.activation_slot,
+//            flag=ACTIVATION,
+//        )
+//    )
+func ActivateValidator(state *pb.BeaconState, index uint32, genesis bool) (*pb.BeaconState, error) {
 	validator := state.ValidatorRegistry[index]
-	if validator.Status != pb.ValidatorRecord_PENDING_ACTIVATION {
-		return nil, fmt.Errorf("expected validator %d to be PENDING_ACTIVATION, but was %v",
-			index, validator.Status)
+	if genesis {
+		validator.ActivationSlot = params.BeaconConfig().GenesisSlot
+	} else {
+		validator.ActivationSlot = state.Slot + params.BeaconConfig().EntryExitDelay
 	}
-	validator.Status = pb.ValidatorRecord_ACTIVE
-	validator.LatestStatusChangeSlot = state.Slot
 	newChainTip, err := NewRegistryDeltaChainTip(
 		pb.ValidatorRegistryDeltaBlock_ACTIVATION,
 		index,
+		validator.ActivationSlot,
 		validator.Pubkey,
 		state.ValidatorRegistryDeltaChainTipHash32,
 	)
@@ -625,115 +515,58 @@ func activateValidator(state *pb.BeaconState, index uint32) (*pb.BeaconState, er
 	return state, nil
 }
 
-// initiateValidatorExit takes in validator index and exits
-// validator from active status to active pending exit status.
+// InitiateValidatorExit takes in validator index and updates
+// validator with INITIATED_EXIT status flag.
 //
 // Spec pseudocode definition:
-// def initiate_validator_exit(state: BeaconState,
-//                            index: int) -> None:
-//    """
-//    Initiate exit for the validator with the given ``index``.
-//    Note that this function mutates ``state``.
-//    """
+// def initiate_validator_exit(state: BeaconState, index: int) -> None:
 //    validator = state.validator_registry[index]
-//    if validator.status != ACTIVE:
-//        return
-//
-//    validator.status = ACTIVE_PENDING_EXIT
-//    validator.latest_status_change_slot = state.slot
-func initiateValidatorExit(state *pb.BeaconState, index uint32) (*pb.BeaconState, error) {
-	validator := state.ValidatorRegistry[index]
-	if validator.Status != pb.ValidatorRecord_ACTIVE {
-		return nil, fmt.Errorf("expected validator %d to be ACTIVE, but was %v",
-			index, validator.Status)
-	}
-	validator.Status = pb.ValidatorRecord_ACTIVE_PENDING_EXIT
-	validator.LatestStatusChangeSlot = state.Slot
-	state.ValidatorRegistry[index] = validator
-	return state, nil
+//    validator.status_flags |= INITIATED_EXIT
+func InitiateValidatorExit(state *pb.BeaconState, index uint32) *pb.BeaconState {
+	state.ValidatorRegistry[index].StatusFlags |=
+		pb.ValidatorRecord_INITIATED_EXIT
+	return state
 }
 
-// exitValidator takes in validator index and does house
-// keeping work for validators with exited with penalty or without penalty status.
+// ExitValidator takes in validator index and does house
+// keeping work to exit validator with entry exit delay.
 //
 // Spec pseudocode definition:
-// def exit_validator(state: BeaconState,
-//                   index: int,
-//                   new_status: int) -> None:
-//    """
-//    Exit the validator with the given ``index``.
-//    Note that this function mutates ``state``.
-//    """
+// def exit_validator(state: BeaconState, index: int) -> None:
 //    validator = state.validator_registry[index]
-//    prev_status = validator.status
 //
-//    if prev_status == EXITED_WITH_PENALTY:
+//    if validator.exit_slot < state.slot + ENTRY_EXIT_DELAY:
 //        return
 //
-//    validator.status = new_status
-//    validator.latest_status_change_slot = state.slot
+//    validator.exit_slot = state.slot + ENTRY_EXIT_DELAY
 //
-//    if new_status == EXITED_WITH_PENALTY:
-//        state.latest_penalized_exit_balances[state.slot // COLLECTIVE_PENALTY_CALCULATION_PERIOD] += get_effective_balance(state, index)
-//
-//        whistleblower_index = get_beacon_proposer_index(state, state.slot)
-//        whistleblower_reward = get_effective_balance(state, index) // WHISTLEBLOWER_REWARD_QUOTIENT
-//        state.validator_balances[whistleblower_index] += whistleblower_reward
-//        state.validator_balances[index] -= whistleblower_reward
-//
-//    if prev_status == EXITED_WITHOUT_PENALTY:
-//        return
-//
-//    # The following updates only occur if not previous exited
 //    state.validator_registry_exit_count += 1
 //    validator.exit_count = state.validator_registry_exit_count
-//    state.validator_registry_delta_chain_tip = get_new_validator_registry_delta_chain_tip(
-//        current_validator_registry_delta_chain_tip=state.validator_registry_delta_chain_tip,
-//        validator_index=index,
-//        pubkey=validator.pubkey,
-//        flag=EXIT,
+//    state.validator_registry_delta_chain_tip = hash_tree_root(
+//        ValidatorRegistryDeltaBlock(
+//            current_validator_registry_delta_chain_tip=state.validator_registry_delta_chain_tip,
+//            validator_index=index,
+//            pubkey=validator.pubkey,
+//            slot=validator.exit_slot,
+//            flag=EXIT,
+//        )
 //    )
-//
-//    # Remove validator from persistent committees
-//    for committee in state.persistent_committees:
-//        for i, validator_index in committee:
-//            if validator_index == index:
-//                committee.pop(i)
-//                break
-func exitValidator(state *pb.BeaconState, index uint32, newStatus pb.ValidatorRecord_StatusCodes) (*pb.BeaconState, error) {
+func ExitValidator(state *pb.BeaconState, index uint32) (*pb.BeaconState, error) {
 	validator := state.ValidatorRegistry[index]
-	prevStatus := validator.Status
 
-	if prevStatus == pb.ValidatorRecord_EXITED_WITH_PENALTY {
-		return nil, fmt.Errorf("validator %d already exited due to penalty", index)
+	if validator.ExitSlot < state.Slot+params.BeaconConfig().EntryExitDelay {
+		return nil, fmt.Errorf("validator %d could not exit until slot %d",
+			index, state.Slot+params.BeaconConfig().EntryExitDelay)
 	}
 
-	validator.Status = newStatus
-	validator.LatestStatusChangeSlot = state.Slot
+	validator.ExitSlot = state.Slot + params.BeaconConfig().EntryExitDelay
 
-	if newStatus == pb.ValidatorRecord_EXITED_WITH_PENALTY {
-		state.LatestPenalizedExitBalances[state.Slot/params.BeaconConfig().CollectivePenaltyCalculationPeriod] +=
-			EffectiveBalance(state, index)
-		proposerIndex, err := BeaconProposerIndex(state, state.Slot)
-		if err != nil {
-			return nil, fmt.Errorf("could not get proposer index: %v", err)
-		}
-		whistleblowerIndex := proposerIndex
-		whistleblowerReward := EffectiveBalance(state, index)
-		state.ValidatorBalances[whistleblowerIndex] += whistleblowerReward
-		state.ValidatorBalances[index] -= whistleblowerReward
-	}
-
-	if prevStatus == pb.ValidatorRecord_EXITED_WITHOUT_PENALTY {
-		return nil, fmt.Errorf("validator %d already exited without penalty", index)
-	}
-
-	// The following only gets updated if not previous exited.
 	state.ValidatorRegistryExitCount++
 	validator.ExitCount = state.ValidatorRegistryExitCount
 	newChainTip, err := NewRegistryDeltaChainTip(
 		pb.ValidatorRegistryDeltaBlock_EXIT,
 		index,
+		validator.ExitSlot,
 		validator.Pubkey,
 		state.ValidatorRegistryDeltaChainTipHash32,
 	)
@@ -742,16 +575,58 @@ func exitValidator(state *pb.BeaconState, index uint32, newStatus pb.ValidatorRe
 	}
 	state.ValidatorRegistryDeltaChainTipHash32 = newChainTip[:]
 
-	// Remove validator from persistent committees.
-	for i, committee := range state.PersistentCommittees {
-		for j, validatorIndex := range committee.List {
-			if validatorIndex == index {
-				state.PersistentCommittees[i].List = append(
-					state.PersistentCommittees[i].List[:j],
-					state.PersistentCommittees[i].List[j+1:]...)
-				break
-			}
-		}
-	}
 	return state, nil
+}
+
+// PenalizeValidator slashes the malicious validator's balance and awards
+// the whistleblower's balance.
+//
+// Spec pseudocode definition:
+// def penalize_validator(state: BeaconState, index: int) -> None:
+//    exit_validator(state, index)
+//    validator = state.validator_registry[index]
+//    state.latest_penalized_exit_balances[(state.slot // EPOCH_LENGTH) % LATEST_PENALIZED_EXIT_LENGTH] += get_effective_balance(state, index)
+//
+//    whistleblower_index = get_beacon_proposer_index(state, state.slot)
+//    whistleblower_reward = get_effective_balance(state, index) // WHISTLEBLOWER_REWARD_QUOTIENT
+//    state.validator_balances[whistleblower_index] += whistleblower_reward
+//    state.validator_balances[index] -= whistleblower_reward
+//    validator.penalized_slot = state.slot
+func PenalizeValidator(state *pb.BeaconState, index uint32) (*pb.BeaconState, error) {
+	validator := state.ValidatorRegistry[index]
+	state, err := ExitValidator(state, index)
+	if err != nil {
+		return nil, fmt.Errorf("could not exit penalized validator: %v", err)
+	}
+
+	penalizedDuration := (state.Slot / params.BeaconConfig().EpochLength) %
+		params.BeaconConfig().LatestPenalizedExitLength
+	state.LatestPenalizedExitBalances[penalizedDuration] +=
+		EffectiveBalance(state, index)
+
+	whistleblowerIndex, err := BeaconProposerIndex(state, state.Slot)
+	if err != nil {
+		return nil, fmt.Errorf("could not get proposer index: %v", err)
+	}
+	whistleblowerReward := EffectiveBalance(state, index) /
+		params.BeaconConfig().WhistlerBlowerRewardQuotient
+
+	state.ValidatorBalances[whistleblowerIndex] += whistleblowerReward
+	state.ValidatorBalances[index] -= whistleblowerReward
+
+	validator.PenalizedSlot = state.Slot
+	return state, nil
+}
+
+// PrepareValidatorForWithdrawal sets validator's status flag to
+// WITHDRAWABLE.
+//
+// Spec pseudocode definition:
+// def prepare_validator_for_withdrawal(state: BeaconState, index: int) -> None:
+//    validator = state.validator_registry[index]
+//    validator.status_flags |= WITHDRAWABLE
+func PrepareValidatorForWithdrawal(state *pb.BeaconState, index uint32) *pb.BeaconState {
+	state.ValidatorRegistry[index].StatusFlags |=
+		pb.ValidatorRecord_WITHDRAWABLE
+	return state
 }

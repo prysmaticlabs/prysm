@@ -180,7 +180,7 @@ func TestChainProgress(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get beacon state: %v", err)
 	}
-	cycleLength := params.BeaconConfig().CycleLength
+	cycleLength := params.BeaconConfig().EpochLength
 
 	block1 := &pb.BeaconBlock{Slot: 1}
 	if err := db.SaveBlock(block1); err != nil {
@@ -193,8 +193,8 @@ func TestChainProgress(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get chain head: %v", err)
 	}
-	if heighestBlock.GetSlot() != block1.GetSlot() {
-		t.Fatalf("expected height to equal %d, got %d", block1.GetSlot(), heighestBlock.GetSlot())
+	if heighestBlock.Slot != block1.Slot {
+		t.Fatalf("expected height to equal %d, got %d", block1.Slot, heighestBlock.Slot)
 	}
 
 	block2 := &pb.BeaconBlock{Slot: cycleLength}
@@ -208,8 +208,8 @@ func TestChainProgress(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get block: %v", err)
 	}
-	if heighestBlock.GetSlot() != block2.GetSlot() {
-		t.Fatalf("expected height to equal %d, got %d", block2.GetSlot(), heighestBlock.GetSlot())
+	if heighestBlock.Slot != block2.Slot {
+		t.Fatalf("expected height to equal %d, got %d", block2.Slot, heighestBlock.Slot)
 	}
 
 	block3 := &pb.BeaconBlock{Slot: 3}
@@ -223,7 +223,7 @@ func TestChainProgress(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get chain head: %v", err)
 	}
-	if heighestBlock.GetSlot() != block3.GetSlot() {
-		t.Fatalf("expected height to equal %d, got %d", block3.GetSlot(), heighestBlock.GetSlot())
+	if heighestBlock.Slot != block3.Slot {
+		t.Fatalf("expected height to equal %d, got %d", block3.Slot, heighestBlock.Slot)
 	}
 }

@@ -178,15 +178,15 @@ func ProcessCrosslinks(
 //    """
 //    for index in active_validator_indices(state.validator_registry):
 //        if state.validator_balances[index] < EJECTION_BALANCE:
-//            update_validator_status(state, index, new_status=EXITED_WITHOUT_PENALTY)
+//            exit_validator(state, index)
 func ProcessEjections(state *pb.BeaconState) (*pb.BeaconState, error) {
 	var err error
-	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry)
+	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
 	for _, index := range activeValidatorIndices {
 		if state.ValidatorBalances[index] < params.BeaconConfig().EjectionBalanceInGwei {
-			state, err = validators.UpdateStatus(state, index, pb.ValidatorRecord_EXITED_WITHOUT_PENALTY)
+			state, err = validators.ExitValidator(state, index)
 			if err != nil {
-				return nil, fmt.Errorf("could not update validator status: %v", err)
+				return nil, fmt.Errorf("could not exit validator %d: %v", index, err)
 			}
 		}
 	}
@@ -197,17 +197,17 @@ func ProcessEjections(state *pb.BeaconState) (*pb.BeaconState, error) {
 // reshuffles shard committees and returns the recomputed state.
 //
 // Spec pseudocode definition:
-//	Set state.validator_registry_latest_change_slot = state.slot.
 //	Set state.shard_committees_at_slots[:EPOCH_LENGTH] = state.shard_committees_at_slots[EPOCH_LENGTH:].
 //	Set state.shard_committees_at_slots[EPOCH_LENGTH:] =
-//  		get_new_shuffling(state.latest_randao_mixes[(state.slot - EPOCH_LENGTH) %
-//  		LATEST_RANDAO_MIXES_LENGTH], state.validator_registry, next_start_shard)
+//  		get_new_shuffling(state.latest_randao_mixes[(state.slot - SEED_LOOKAHEAD) %
+//  		LATEST_RANDAO_MIXES_LENGTH], state.validator_registry, next_start_shard, state.slot)
 //  		where next_start_shard = (state.shard_committees_at_slots[-1][-1].shard + 1) % SHARD_COUNT
 func ProcessValidatorRegistry(
 	state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	epochLength := int(params.BeaconConfig().EpochLength)
 	randaoMixesLength := params.BeaconConfig().LatestRandaoMixesLength
+	seedLookahead := params.BeaconConfig().SeedLookahead
 	shardCount := params.BeaconConfig().ShardCount
 
 	shardCommittees := state.ShardAndCommitteesAtSlots
@@ -217,9 +217,9 @@ func ProcessValidatorRegistry(
 		shardCount
 
 	var randaoHash32 [32]byte
-	copy(randaoHash32[:], state.LatestRandaoMixesHash32S[(state.Slot-uint64(epochLength))%randaoMixesLength])
+	copy(randaoHash32[:], state.LatestRandaoMixesHash32S[(state.Slot-
+		uint64(seedLookahead))%randaoMixesLength])
 
-	state.ValidatorRegistryLastChangeSlot = state.Slot
 	for i := 0; i < epochLength; i++ {
 		state.ShardAndCommitteesAtSlots[i] = state.ShardAndCommitteesAtSlots[epochLength+i]
 	}
@@ -227,6 +227,7 @@ func ProcessValidatorRegistry(
 		randaoHash32,
 		state.ValidatorRegistry,
 		nextStartShard,
+		state.Slot,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not shuffle validator registry for commtitees: %v", err)
@@ -243,20 +244,21 @@ func ProcessValidatorRegistry(
 // validator registry update did not happen.
 //
 // Spec pseudocode definition:
-//	Set state.shard_committees_at_slots[:EPOCH_LENGTH] = state.shard_committees_at_slots[EPOCH_LENGTH:].
-//	Let epochs_since_last_registry_change = (state.slot - state.validator_registry_latest_change_slot) // EPOCH_LENGTH.
-//	Let start_shard = state.shard_committees_at_slots[0][0].shard.
+//	Set state.shard_committees_at_slots[:EPOCH_LENGTH] = state.shard_committees_at_slots[EPOCH_LENGTH:]
+//  Let epochs_since_last_registry_change =
+//  	(state.slot - state.validator_registry_latest_change_slot) // EPOCH_LENGTH
 //	If epochs_since_last_registry_change is an exact power of 2:
-// 		Set state.shard_committees_at_slots[EPOCH_LENGTH:] =
-// 			get_new_shuffling(state.latest_randao_mixes[(state.slot - EPOCH_LENGTH) %
-// 			LATEST_RANDAO_MIXES_LENGTH], state.validator_registry, start_shard)
+// 		state.shard_committees_at_slots[EPOCH_LENGTH:] =
+// 			get_shuffling(state.latest_randao_mixes[(state.slot - SEED_LOOKAHEAD)
+// 			% LATEST_RANDAO_MIXES_LENGTH], state.validator_registry, start_shard, state.slot)
 func ProcessPartialValidatorRegistry(
 	state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	epochLength := int(params.BeaconConfig().EpochLength)
 	randaoMixesLength := params.BeaconConfig().LatestRandaoMixesLength
+	seedLookahead := params.BeaconConfig().SeedLookahead
 	var randaoHash32 [32]byte
-	copy(randaoHash32[:], state.LatestRandaoMixesHash32S[(state.Slot-uint64(epochLength))%randaoMixesLength])
+	copy(randaoHash32[:], state.LatestRandaoMixesHash32S[(state.Slot-uint64(seedLookahead))%randaoMixesLength])
 
 	for i := 0; i < epochLength; i++ {
 		state.ShardAndCommitteesAtSlots[i] = state.ShardAndCommitteesAtSlots[epochLength+i]
@@ -268,6 +270,7 @@ func ProcessPartialValidatorRegistry(
 			randaoHash32,
 			state.ValidatorRegistry,
 			startShard,
+			state.Slot,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not shuffle validator registry for commtitees: %v", err)
@@ -277,4 +280,30 @@ func ProcessPartialValidatorRegistry(
 		}
 	}
 	return state, nil
+}
+
+// CleanupAttestations removes any attestation in state's latest attestations
+// such that the attestation slot is lower than state slot minus epoch length.
+// Spec pseudocode definition:
+// 		Remove any attestation in state.latest_attestations such
+// 		that attestation.data.slot < state.slot - EPOCH_LENGTH
+func CleanupAttestations(state *pb.BeaconState) *pb.BeaconState {
+	epochLength := params.BeaconConfig().EpochLength
+	var earliestSlot uint64
+
+	// If the state slot is less than epochLength, then the earliestSlot would
+	// result in a negative number. Therefore we should default to
+	// earliestSlot = 0 in this case.
+	if state.Slot > epochLength {
+		earliestSlot = state.Slot - epochLength
+	}
+
+	var latestAttestations []*pb.PendingAttestationRecord
+	for _, attestation := range state.LatestAttestations {
+		if attestation.Data.Slot >= earliestSlot {
+			latestAttestations = append(latestAttestations, attestation)
+		}
+	}
+	state.LatestAttestations = latestAttestations
+	return state
 }

@@ -2,43 +2,35 @@
   "validatorRegistry": [
     {
       "pubkey": "QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFB",
-      "balance": "32000000000",
-      "status": "ACTIVE"
+      "balance": "32000000000"
     },
     {
       "pubkey": "QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJC",
-      "balance": "32000000000",
-      "status": "ACTIVE"
+      "balance": "32000000000"
     },
     {
       "pubkey": "Q0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0ND",
-      "balance": "32000000000",
-      "status": "ACTIVE"
+      "balance": "32000000000"
     },
     {
       "pubkey": "RERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERE",
-      "balance": "32000000000",
-      "status": "ACTIVE"
+      "balance": "32000000000"
     },
     {
       "pubkey": "RUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVF",
-      "balance": "32000000000",
-      "status": "ACTIVE"
+      "balance": "32000000000"
     },
     {
       "pubkey": "RkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZG",
-      "balance": "32000000000",
-      "status": "ACTIVE"
+      "balance": "32000000000"
     },
     {
       "pubkey": "R0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dH",
-      "balance": "32000000000",
-      "status": "ACTIVE"
+      "balance": "32000000000"
     },
     {
       "pubkey": "SEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhI",
-      "balance": "32000000000",
-      "status": "ACTIVE"
+      "balance": "32000000000"
     }
   ]
 }

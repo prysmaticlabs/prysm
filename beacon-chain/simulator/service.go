@@ -8,7 +8,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
-	ptypes "github.com/gogo/protobuf/types"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -234,7 +233,7 @@ func (sim *Simulator) processBlockReqByHash(msg p2p.Message) {
 	res := &pb.BeaconBlockResponse{Block: block, Attestation: &pb.Attestation{
 		ParticipationBitfield: []byte{byte(255)},
 		Data: &pb.AttestationData{
-			Slot: block.GetSlot(),
+			Slot: block.Slot,
 		},
 	}}
 	sim.p2p.Send(res, msg.Peer)
@@ -243,23 +242,23 @@ func (sim *Simulator) processBlockReqByHash(msg p2p.Message) {
 func (sim *Simulator) processBlockReqBySlot(msg p2p.Message) {
 	data := msg.Data.(*pb.BeaconBlockRequestBySlotNumber)
 
-	block := sim.broadcastedBlocksBySlot[data.GetSlotNumber()]
+	block := sim.broadcastedBlocksBySlot[data.SlotNumber]
 	if block == nil {
 		log.WithFields(logrus.Fields{
-			"slot": fmt.Sprintf("%d", data.GetSlotNumber()),
+			"slot": fmt.Sprintf("%d", data.SlotNumber),
 		}).Debug("Requested block not found:")
 		return
 	}
 
 	log.WithFields(logrus.Fields{
-		"slot": fmt.Sprintf("%d", data.GetSlotNumber()),
+		"slot": fmt.Sprintf("%d", data.SlotNumber),
 	}).Debug("Responding to full block request")
 
 	// Sends the full block body to the requester.
 	res := &pb.BeaconBlockResponse{Block: block, Attestation: &pb.Attestation{
 		ParticipationBitfield: []byte{byte(255)},
 		Data: &pb.AttestationData{
-			Slot: block.GetSlot(),
+			Slot: block.Slot,
 		},
 	}}
 	sim.p2p.Send(res, msg.Peer)
@@ -280,9 +279,9 @@ func (sim *Simulator) processStateRequest(msg p2p.Message) {
 		return
 	}
 
-	if !bytes.Equal(data.GetHash(), hash[:]) {
+	if !bytes.Equal(data.Hash, hash[:]) {
 		log.WithFields(logrus.Fields{
-			"hash": fmt.Sprintf("%#x", data.GetHash()),
+			"hash": fmt.Sprintf("%#x", data.Hash),
 		}).Debug("Requested beacon state is of a different hash")
 		return
 	}
@@ -301,8 +300,8 @@ func (sim *Simulator) processStateRequest(msg p2p.Message) {
 
 func (sim *Simulator) processBatchRequest(msg p2p.Message) {
 	data := msg.Data.(*pb.BatchedBeaconBlockRequest)
-	startSlot := data.GetStartSlot()
-	endSlot := data.GetEndSlot()
+	startSlot := data.StartSlot
+	endSlot := data.EndSlot
 
 	if endSlot <= startSlot {
 		log.Debugf("invalid batch request: end slot <= start slot, received %d < %d", endSlot, startSlot)
@@ -345,9 +344,8 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*pb.BeaconB
 	}
 
 	parentSlot := slot - 1
-	committees, err := v.GetShardAndCommitteesForSlot(
-		beaconState.GetShardAndCommitteesAtSlots(),
-		beaconState.GetLastStateRecalculationSlot(),
+	committees, err := v.ShardAndCommitteesAtSlot(
+		beaconState,
 		parentSlot,
 	)
 	if err != nil {
@@ -377,7 +375,6 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*pb.BeaconB
 
 	block := &pb.BeaconBlock{
 		Slot:                          slot,
-		Timestamp:                     ptypes.TimestampNow(),
 		CandidatePowReceiptRootHash32: powChainRef,
 		StateRootHash32:               stateHash[:],
 		ParentRootHash32:              parentHash,
@@ -404,7 +401,7 @@ func (sim *Simulator) SendChainHead(peer p2p.Peer) error {
 
 	res := &pb.ChainHeadResponse{
 		Hash:  hash[:],
-		Slot:  block.GetSlot(),
+		Slot:  block.Slot,
 		Block: block,
 	}
 
