@@ -84,3 +84,11 @@ func TestHealthz(t *testing.T) {
 	}
 
 }
+
+func TestStatus(t *testing.T) {
+	fStatus:= s.failStatus
+	sStatus := s.Status()
+	if err := sStatus; err != fStatus  {
+		t.Errorf("Expected match of s.Status() and s.failStatus, but got %v, %v", sStatus, fStatus)
+	}
+}

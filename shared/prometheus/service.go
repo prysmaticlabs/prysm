@@ -19,6 +19,7 @@ var log = logrus.WithField("prefix", "prometheus")
 type Service struct {
 	server      *http.Server
 	svcRegistry *shared.ServiceRegistry
+	failStatus  error
 }
 
 // NewPrometheusService sets up a new instance for a given address host:port.
@@ -78,6 +79,7 @@ func (s *Service) Start() {
 		err := s.server.ListenAndServe()
 		if err != nil && err != http.ErrServerClosed {
 			log.Errorf("Could not listen to host:port :%s: %v", s.server.Addr, err)
+			s.failStatus = err
 		}
 	}()
 }
@@ -93,5 +95,9 @@ func (s *Service) Stop() error {
 // Status always returns nil.
 // TODO(1207): Add service health checks.
 func (s *Service) Status() error {
+	if s.failStatus != nil {
+		log.Errorf("Prometheus service is unhealthy : %s", s.server.Addr)
+		return s.failStatus
+	}
 	return nil
 }
