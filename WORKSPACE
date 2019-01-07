@@ -501,7 +501,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "1775db3f06b568179d273425900dd09125831dd5",
+    commit = "cb59ee3660675d463e86971646692ea3e470021c",
     importpath = "golang.org/x/sys",
 )
 
@@ -663,7 +663,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_common",
-    commit = "b1c43a6df3aedba268353d940b5974f05037ed5c",
+    commit = "2998b132700a7d019ff618c06a234b47c1f3f681",
     importpath = "github.com/prometheus/common",
 )
 
