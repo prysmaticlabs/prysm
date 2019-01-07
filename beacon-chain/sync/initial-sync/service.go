@@ -181,15 +181,15 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 		case msg := <-s.blockAnnounceBuf:
 			data := msg.Data.(*pb.BeaconBlockAnnounce)
 
-			if data.GetSlotNumber() > s.highestObservedSlot {
-				s.highestObservedSlot = data.GetSlotNumber()
+			if data.SlotNumber > s.highestObservedSlot {
+				s.highestObservedSlot = data.SlotNumber
 			}
 
 			s.requestBatchedBlocks(s.highestObservedSlot)
-			log.Debugf("Successfully requested the next block with slot: %d", data.GetSlotNumber())
+			log.Debugf("Successfully requested the next block with slot: %d", data.SlotNumber)
 		case msg := <-s.blockBuf:
 			data := msg.Data.(*pb.BeaconBlockResponse)
-			s.processBlock(data.GetBlock(), msg.Peer)
+			s.processBlock(data.Block, msg.Peer)
 		case msg := <-s.stateBuf:
 			data := msg.Data.(*pb.BeaconStateResponse)
 
@@ -215,14 +215,14 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 
 			log.Debug("Successfully saved beacon state to the db")
 
-			if s.currentSlot >= beaconState.GetFinalizedSlot() {
+			if s.currentSlot >= beaconState.FinalizedSlot {
 				continue
 			}
 
 			// sets the current slot to the last finalized slot of the
 			// crystallized state to begin our sync from.
-			s.currentSlot = beaconState.GetFinalizedSlot()
-			log.Debugf("Successfully saved crystallized state with the last finalized slot: %d", beaconState.GetFinalizedSlot())
+			s.currentSlot = beaconState.FinalizedSlot
+			log.Debugf("Successfully saved crystallized state with the last finalized slot: %d", beaconState.FinalizedSlot)
 
 			s.requestNextBlockBySlot(s.currentSlot + 1)
 			beaconStateSub.Unsubscribe()
@@ -261,11 +261,11 @@ func (s *InitialSync) checkInMemoryBlocks() {
 // for initial sync. It checks if the blocks are valid and then will continue to
 // process and save it into the db.
 func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
-	if block.GetSlot() > s.highestObservedSlot {
-		s.highestObservedSlot = block.GetSlot()
+	if block.Slot > s.highestObservedSlot {
+		s.highestObservedSlot = block.Slot
 	}
 
-	if block.GetSlot() < s.currentSlot {
+	if block.Slot < s.currentSlot {
 		return
 	}
 
@@ -276,11 +276,11 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 			return
 		}
 
-		if block.GetSlot() != 1 {
+		if block.Slot != 1 {
 
 			// saves block in memory if it isn't the initial block.
-			if _, ok := s.inMemoryBlocks[block.GetSlot()]; !ok {
-				s.inMemoryBlocks[block.GetSlot()] = block
+			if _, ok := s.inMemoryBlocks[block.Slot]; !ok {
+				s.inMemoryBlocks[block.Slot] = block
 			}
 			s.requestNextBlockBySlot(1)
 			return
@@ -296,9 +296,9 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 		return
 	}
 	// if it isn't the block in the next slot it saves it in memory.
-	if block.GetSlot() != (s.currentSlot + 1) {
-		if _, ok := s.inMemoryBlocks[block.GetSlot()]; !ok {
-			s.inMemoryBlocks[block.GetSlot()] = block
+	if block.Slot != (s.currentSlot + 1) {
+		if _, ok := s.inMemoryBlocks[block.Slot]; !ok {
+			s.inMemoryBlocks[block.Slot] = block
 		}
 		return
 	}
@@ -316,7 +316,7 @@ func (s *InitialSync) processBatchedBlocks(msg p2p.Message) {
 	log.Debug("Processing batched block response")
 
 	response := msg.Data.(*pb.BatchedBeaconBlockResponse)
-	batchedBlocks := response.GetBatchedBlocks()
+	batchedBlocks := response.BatchedBlocks
 
 	for _, block := range batchedBlocks {
 		s.processBlock(block, msg.Peer)
@@ -327,7 +327,7 @@ func (s *InitialSync) processBatchedBlocks(msg p2p.Message) {
 // requestStateFromPeer sends a request to a peer for the corresponding state
 // for a beacon block.
 func (s *InitialSync) requestStateFromPeer(block *pb.BeaconBlock, peer p2p.Peer) error {
-	h := block.GetParentRootHash32()
+	h := block.ParentRootHash32
 	log.Debugf("Successfully processed incoming block with state hash: %#x", h)
 	s.p2p.Send(&pb.BeaconStateRequest{Hash: h[:]}, peer)
 	return nil
@@ -345,11 +345,11 @@ func (s *InitialSync) setBlockForInitialSync(block *pb.BeaconBlock) error {
 	s.chainService.IncomingBlockFeed().Send(block)
 
 	var blockStateRoot [32]byte
-	copy(blockStateRoot[:], block.GetStateRootHash32())
+	copy(blockStateRoot[:], block.StateRootHash32)
 	s.initialStateRootHash32 = blockStateRoot
 
 	log.Infof("Saved block with hash %#x for initial sync", h)
-	s.currentSlot = block.GetSlot()
+	s.currentSlot = block.Slot
 	s.requestNextBlockBySlot(s.currentSlot + 1)
 	return nil
 }
@@ -393,18 +393,18 @@ func (s *InitialSync) validateAndSaveNextBlock(block *pb.BeaconBlock) error {
 		return errors.New("invalid slot number for syncing")
 	}
 
-	if (s.currentSlot + 1) == block.GetSlot() {
+	if (s.currentSlot + 1) == block.Slot {
 
 		if err := s.checkBlockValidity(block); err != nil {
 			return err
 		}
 
-		log.Infof("Saved block with hash %#x and slot %d for initial sync", h, block.GetSlot())
-		s.currentSlot = block.GetSlot()
+		log.Infof("Saved block with hash %#x and slot %d for initial sync", h, block.Slot)
+		s.currentSlot = block.Slot
 
 		// delete block from memory
-		if _, ok := s.inMemoryBlocks[block.GetSlot()]; ok {
-			delete(s.inMemoryBlocks, block.GetSlot())
+		if _, ok := s.inMemoryBlocks[block.Slot]; ok {
+			delete(s.inMemoryBlocks, block.Slot)
 		}
 
 		// Send block to main chain service to be processed
@@ -431,7 +431,7 @@ func (s *InitialSync) checkBlockValidity(block *pb.BeaconBlock) error {
 		return fmt.Errorf("failed to get beacon state: %v", err)
 	}
 
-	if block.GetSlot() < beaconState.GetFinalizedSlot() {
+	if block.Slot < beaconState.FinalizedSlot {
 		return errors.New("discarding received block with a slot number smaller than the last finalized slot")
 	}
 	// Attestation from proposer not verified as, other nodes only store blocks not proposer

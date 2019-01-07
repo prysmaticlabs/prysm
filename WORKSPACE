@@ -308,7 +308,7 @@ go_repository(
 
 go_repository(
     name = "com_github_minio_sha256_simd",
-    commit = "51976451ce1942acbb55707a983ed232fa027110",
+    commit = "66352e71c5e1cd598fa97be77a56fe3973730042",
     importpath = "github.com/minio/sha256-simd",
 )
 
@@ -453,7 +453,7 @@ go_repository(
 
 go_repository(
     name = "com_github_miekg_dns",
-    tag = "v1.1.1",
+    tag = "v1.1.2",
     importpath = "github.com/miekg/dns",
 )
 
@@ -495,13 +495,13 @@ go_repository(
 
 go_repository(
     name = "com_github_sirupsen_logrus",
-    tag = "v1.2.0",
+    tag = "v1.3.0",
     importpath = "github.com/sirupsen/logrus",
 )
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "82a175fd1598e8a172e58ebdf5ed262bb29129e5",
+    commit = "1775db3f06b568179d273425900dd09125831dd5",
     importpath = "golang.org/x/sys",
 )
 
@@ -663,13 +663,13 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_common",
-    commit = "c47d5b9a16eaeecf96a088a694da84d55a54d4a6",
+    commit = "b1c43a6df3aedba268353d940b5974f05037ed5c",
     importpath = "github.com/prometheus/common",
 )
 
 go_repository(
     name = "com_github_prometheus_procfs",
-    commit = "14fa7590c24d4615893b68e22fce3b3489689f65",
+    commit = "b1a0a9a36d7453ba0f62578b99712f3a6c5f82d1",
     importpath = "github.com/prometheus/procfs",
 )
 

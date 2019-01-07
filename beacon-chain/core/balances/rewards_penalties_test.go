@@ -42,7 +42,7 @@ func TestBaseReward(t *testing.T) {
 		b uint64
 	}{
 		{0, 0},
-		{params.BeaconConfig().MinOnlineDepositSize * params.BeaconConfig().Gwei, 988},
+		{params.BeaconConfig().MinDepositinGwei, 61},
 		{30 * 1e9, 1853},
 		{params.BeaconConfig().MaxDepositInGwei, 1976},
 		{40 * 1e9, 1976},
@@ -103,10 +103,10 @@ func TestFFGSrcRewardsPenalties(t *testing.T) {
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry: []*pb.ValidatorRecord{
-				{Status: pb.ValidatorRecord_ACTIVE},
-				{Status: pb.ValidatorRecord_ACTIVE},
-				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
-				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
+				{ExitSlot: params.BeaconConfig().FarFutureSlot},
+				{ExitSlot: params.BeaconConfig().FarFutureSlot},
+				{ExitSlot: params.BeaconConfig().FarFutureSlot},
+				{ExitSlot: params.BeaconConfig().FarFutureSlot},
 			},
 			ValidatorBalances: validatorBalances,
 		}
@@ -142,10 +142,10 @@ func TestFFGTargetRewardsPenalties(t *testing.T) {
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry: []*pb.ValidatorRecord{
-				{Status: pb.ValidatorRecord_ACTIVE},
-				{Status: pb.ValidatorRecord_ACTIVE},
-				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
-				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
+				{ExitSlot: params.BeaconConfig().FarFutureSlot},
+				{ExitSlot: params.BeaconConfig().FarFutureSlot},
+				{ExitSlot: params.BeaconConfig().FarFutureSlot},
+				{ExitSlot: params.BeaconConfig().FarFutureSlot},
 			},
 			ValidatorBalances: validatorBalances,
 		}
@@ -181,10 +181,10 @@ func TestChainHeadRewardsPenalties(t *testing.T) {
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry: []*pb.ValidatorRecord{
-				{Status: pb.ValidatorRecord_ACTIVE},
-				{Status: pb.ValidatorRecord_ACTIVE},
-				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
-				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
+				{ExitSlot: params.BeaconConfig().FarFutureSlot},
+				{ExitSlot: params.BeaconConfig().FarFutureSlot},
+				{ExitSlot: params.BeaconConfig().FarFutureSlot},
+				{ExitSlot: params.BeaconConfig().FarFutureSlot},
 			},
 			ValidatorBalances: validatorBalances,
 		}
@@ -297,10 +297,10 @@ func TestInactivityFFGSrcPenalty(t *testing.T) {
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry: []*pb.ValidatorRecord{
-				{Status: pb.ValidatorRecord_ACTIVE},
-				{Status: pb.ValidatorRecord_ACTIVE},
-				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
-				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
+				{ExitSlot: params.BeaconConfig().FarFutureSlot},
+				{ExitSlot: params.BeaconConfig().FarFutureSlot},
+				{ExitSlot: params.BeaconConfig().FarFutureSlot},
+				{ExitSlot: params.BeaconConfig().FarFutureSlot},
 			},
 			ValidatorBalances: validatorBalances,
 		}
@@ -336,10 +336,10 @@ func TestInactivityFFGTargetPenalty(t *testing.T) {
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry: []*pb.ValidatorRecord{
-				{Status: pb.ValidatorRecord_ACTIVE},
-				{Status: pb.ValidatorRecord_ACTIVE},
-				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
-				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
+				{ExitSlot: params.BeaconConfig().FarFutureSlot},
+				{ExitSlot: params.BeaconConfig().FarFutureSlot},
+				{ExitSlot: params.BeaconConfig().FarFutureSlot},
+				{ExitSlot: params.BeaconConfig().FarFutureSlot},
 			},
 			ValidatorBalances: validatorBalances,
 		}
@@ -372,10 +372,10 @@ func TestInactivityHeadPenalty(t *testing.T) {
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry: []*pb.ValidatorRecord{
-				{Status: pb.ValidatorRecord_ACTIVE},
-				{Status: pb.ValidatorRecord_ACTIVE},
-				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
-				{Status: pb.ValidatorRecord_ACTIVE_PENDING_EXIT},
+				{ExitSlot: params.BeaconConfig().FarFutureSlot},
+				{ExitSlot: params.BeaconConfig().FarFutureSlot},
+				{ExitSlot: params.BeaconConfig().FarFutureSlot},
+				{ExitSlot: params.BeaconConfig().FarFutureSlot},
 			},
 			ValidatorBalances: validatorBalances,
 		}
@@ -407,10 +407,10 @@ func TestInactivityExitedPenality(t *testing.T) {
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry: []*pb.ValidatorRecord{
-				{Status: pb.ValidatorRecord_EXITED_WITH_PENALTY},
-				{Status: pb.ValidatorRecord_EXITED_WITH_PENALTY},
-				{Status: pb.ValidatorRecord_EXITED_WITH_PENALTY},
-				{Status: pb.ValidatorRecord_EXITED_WITH_PENALTY}},
+				{ExitSlot: params.BeaconConfig().FarFutureSlot},
+				{ExitSlot: params.BeaconConfig().FarFutureSlot},
+				{ExitSlot: params.BeaconConfig().FarFutureSlot},
+				{ExitSlot: params.BeaconConfig().FarFutureSlot}},
 			ValidatorBalances: validatorBalances,
 		}
 		state = InactivityExitedPenalties(

@@ -180,11 +180,11 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(
 	}
 	var keys []*pb.PublicKey
 	if req.AllValidators {
-		for _, val := range beaconState.GetValidatorRegistry() {
-			keys = append(keys, &pb.PublicKey{PublicKey: val.GetPubkey()})
+		for _, val := range beaconState.ValidatorRegistry {
+			keys = append(keys, &pb.PublicKey{PublicKey: val.Pubkey})
 		}
 	} else {
-		keys = req.GetPublicKeys()
+		keys = req.PublicKeys
 		if len(keys) == 0 {
 			return nil, errors.New("no public keys specified in request")
 		}
@@ -332,8 +332,8 @@ func (s *Service) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.
 
 	shardID, err := v.ValidatorShardID(
 		req.PublicKey,
-		beaconState.GetValidatorRegistry(),
-		beaconState.GetShardAndCommitteesAtSlots(),
+		beaconState.ValidatorRegistry,
+		beaconState.ShardAndCommitteesAtSlots,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator shard ID: %v", err)
@@ -355,8 +355,8 @@ func (s *Service) ValidatorSlotAndResponsibility(
 
 	slot, role, err := v.ValidatorSlotAndRole(
 		req.PublicKey,
-		beaconState.GetValidatorRegistry(),
-		beaconState.GetShardAndCommitteesAtSlots(),
+		beaconState.ValidatorRegistry,
+		beaconState.ShardAndCommitteesAtSlots,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not get assigned validator slot for attester/proposer: %v", err)
@@ -374,7 +374,7 @@ func (s *Service) ValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.In
 	}
 	index, err := v.ValidatorIndex(
 		req.PublicKey,
-		beaconState.GetValidatorRegistry(),
+		beaconState.ValidatorRegistry,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator index: %v", err)
@@ -399,11 +399,11 @@ func (s *Service) ValidatorAssignments(
 
 			var keys []*pb.PublicKey
 			if req.AllValidators {
-				for _, val := range beaconState.GetValidatorRegistry() {
-					keys = append(keys, &pb.PublicKey{PublicKey: val.GetPubkey()})
+				for _, val := range beaconState.ValidatorRegistry {
+					keys = append(keys, &pb.PublicKey{PublicKey: val.Pubkey})
 				}
 			} else {
-				keys = req.GetPublicKeys()
+				keys = req.PublicKeys
 				if len(keys) == 0 {
 					return errors.New("no public keys specified in request")
 				}
@@ -444,9 +444,9 @@ func assignmentsForPublicKeys(keys []*pb.PublicKey, beaconState *pbp2p.BeaconSta
 		// we determine the assigned slot for the validator and whether it
 		// should act as a proposer or attester.
 		assignedSlot, role, err := v.ValidatorSlotAndRole(
-			val.GetPublicKey(),
-			beaconState.GetValidatorRegistry(),
-			beaconState.GetShardAndCommitteesAtSlots(),
+			val.PublicKey,
+			beaconState.ValidatorRegistry,
+			beaconState.ShardAndCommitteesAtSlots,
 		)
 		if err != nil {
 			return nil, err
@@ -455,9 +455,9 @@ func assignmentsForPublicKeys(keys []*pb.PublicKey, beaconState *pbp2p.BeaconSta
 		// We determine the assigned shard ID for the validator
 		// based on a public key and current crystallized state.
 		shardID, err := v.ValidatorShardID(
-			val.GetPublicKey(),
-			beaconState.GetValidatorRegistry(),
-			beaconState.GetShardAndCommitteesAtSlots(),
+			val.PublicKey,
+			beaconState.ValidatorRegistry,
+			beaconState.ShardAndCommitteesAtSlots,
 		)
 		if err != nil {
 			return nil, err
