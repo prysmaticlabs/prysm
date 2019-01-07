@@ -326,7 +326,7 @@ func TestProposerServiceErrors(t *testing.T) {
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
-	testutil.AssertLogsContain(t, hook, "Could not marshal nil latest beacon block")
+	testutil.AssertLogsContain(t, hook, "could not marshal nil latest beacon block")
 	testutil.AssertLogsContain(t, hook, "Proposer context closed")
 	testutil.AssertLogsContain(t, hook, "unable to compute state root for block: could not hash state")
 }

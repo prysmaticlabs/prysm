@@ -198,7 +198,7 @@ func (p *Proposer) computeBlockToBeProposed(latestBlock *pbp2p.BeaconBlock,
 	// Extract the hash of the latest beacon block to use as parent hash in
 	// the proposal.
 	if latestBlock == nil {
-		return nil, fmt.Errorf("Could not marshal nil latest beacon block")
+		return nil, fmt.Errorf("could not marshal nil latest beacon block")
 
 	}
 	data, err := proto.Marshal(latestBlock)
