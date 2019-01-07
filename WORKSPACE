@@ -663,7 +663,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_common",
-    commit = "b1c43a6df3aedba268353d940b5974f05037ed5c",
+    commit = "2998b132700a7d019ff618c06a234b47c1f3f681",
     importpath = "github.com/prometheus/common",
 )
 
