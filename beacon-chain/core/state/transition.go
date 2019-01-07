@@ -42,7 +42,7 @@ func ExecuteStateTransition(
 		}
 
 		if e.CanProcessEpoch(beaconState) {
-			beaconState, err = NewEpochTransition(beaconState)
+			beaconState, err = ProcessEpoch(beaconState)
 		}
 		if err != nil {
 			return nil, fmt.Errorf("unable to process epoch: %v", err)
@@ -90,7 +90,7 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState
 	return state, nil
 }
 
-// NewEpochTransition describes the per epoch operations that are performed on the
+// ProcessEpoch describes the per epoch operations that are performed on the
 // beacon state.
 //
 // Spec pseudocode definition:
@@ -102,7 +102,7 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState
 // 	 process_crosslink_reward_penalties(state)
 // 	 update_validator_registry(state)
 // 	 final_book_keeping(state)
-func NewEpochTransition(state *pb.BeaconState) (*pb.BeaconState, error) {
+func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Calculate total balances of active validators of the current state.
 	activeValidatorIndices := v.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)

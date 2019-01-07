@@ -529,7 +529,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 		LatestRandaoMixesHash32S:  randaoHashes,
 	}
 
-	_, err := NewEpochTransition(state)
+	_, err := ProcessEpoch(state)
 	if err != nil {
 		t.Errorf("Expected epoch transition to pass processing conditions: %v", err)
 	}
@@ -596,7 +596,7 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 		LatestRandaoMixesHash32S:  randaoHashes,
 	}
 
-	_, err := NewEpochTransition(state)
+	_, err := ProcessEpoch(state)
 	if err != nil {
 		t.Errorf("Expected epoch transition to pass processing conditions: %v", err)
 	}
