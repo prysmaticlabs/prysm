@@ -223,7 +223,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 		return
 	}
 
-	if block.GetSlot() < beaconState.GetFinalizedSlot() {
+	if block.Slot < beaconState.FinalizedSlot {
 		log.Debug("Discarding received block with a slot number smaller than the last finalized slot")
 		return
 	}
@@ -231,7 +231,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 	// Verify attestation coming from proposer then forward block to the subscribers.
 	proposerShardID, _, err := v.ProposerShardAndIndex(
 		beaconState,
-		block.GetSlot(),
+		block.Slot,
 	)
 	if err != nil {
 		log.Errorf("Failed to get proposer shard ID: %v", err)
@@ -239,7 +239,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 	}
 
 	// TODO(#258): stubbing public key with empty 32 bytes.
-	if err := att.VerifyProposerAttestation(response.Attestation.GetData(), [32]byte{}, proposerShardID); err != nil {
+	if err := att.VerifyProposerAttestation(response.Attestation.Data, [32]byte{}, proposerShardID); err != nil {
 		log.Errorf("Failed to verify proposer attestation: %v", err)
 		return
 	}
@@ -268,7 +268,7 @@ func (rs *RegularSync) handleBlockRequestBySlot(msg p2p.Message) {
 	}
 
 	ctx, getBlockSpan := trace.StartSpan(ctx, "getBlockBySlot")
-	block, err := rs.db.GetBlockBySlot(request.GetSlotNumber())
+	block, err := rs.db.GetBlockBySlot(request.SlotNumber)
 	getBlockSpan.End()
 	if err != nil || block == nil {
 		log.Errorf("Error retrieving block from db: %v", err)
@@ -276,7 +276,7 @@ func (rs *RegularSync) handleBlockRequestBySlot(msg p2p.Message) {
 	}
 
 	_, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
-	log.WithField("slotNumber", fmt.Sprintf("%d", request.GetSlotNumber())).Debug("Sending requested block to peer")
+	log.WithField("slotNumber", fmt.Sprintf("%d", request.SlotNumber)).Debug("Sending requested block to peer")
 	rs.p2p.Send(&pb.BeaconBlockResponse{
 		Block: block,
 	}, msg.Peer)
@@ -302,7 +302,7 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) {
 	}
 
 	req := &pb.ChainHeadResponse{
-		Slot:  block.GetSlot(),
+		Slot:  block.Slot,
 		Hash:  hash[:],
 		Block: block,
 	}
@@ -316,7 +316,7 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) {
 func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 	data := msg.Data.(*pb.Attestation)
 	a := data
-	h := att.Key(a.GetData())
+	h := att.Key(a.Data)
 
 	attestation, err := rs.db.GetAttestation(h)
 	if err != nil {
@@ -324,7 +324,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 		return
 	}
 	if attestation != nil {
-		validatorExists := att.ContainsValidator(attestation.GetParticipationBitfield(), a.GetParticipationBitfield())
+		validatorExists := att.ContainsValidator(attestation.ParticipationBitfield, a.ParticipationBitfield)
 		if validatorExists {
 			log.Debugf("Received attestation %#x already", h)
 			return
@@ -376,7 +376,7 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) {
 		return
 	}
 
-	currentSlot := block.GetSlot()
+	currentSlot := block.Slot
 
 	if currentSlot < startSlot || finalizedSlot > endSlot {
 		log.Debugf(

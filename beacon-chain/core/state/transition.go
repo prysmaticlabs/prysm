@@ -3,7 +3,6 @@ package state
 import (
 	"fmt"
 
-	"github.com/gogo/protobuf/proto"
 	bal "github.com/prysmaticlabs/prysm/beacon-chain/core/balances"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
@@ -25,83 +24,70 @@ func ExecuteStateTransition(
 	block *pb.BeaconBlock,
 	prevBlockRoot [32]byte,
 ) (*pb.BeaconState, error) {
-
 	var err error
 
-	newState := proto.Clone(beaconState).(*pb.BeaconState)
+	currentSlot := beaconState.Slot
+	beaconState.Slot = currentSlot + 1
 
-	currentSlot := newState.GetSlot()
-	newState.Slot = currentSlot + 1
-
-	newState, err = randao.UpdateRandaoLayers(newState, newState.GetSlot())
+	beaconState, err = randao.UpdateRandaoLayers(beaconState, beaconState.Slot)
 	if err != nil {
 		return nil, fmt.Errorf("unable to update randao layer %v", err)
 	}
-	newState = randao.UpdateRandaoMixes(newState)
-
-	newState = b.ProcessBlockRoots(newState, prevBlockRoot)
-
-	newHashes, err := CalculateNewBlockHashes(newState, block, currentSlot)
-	if err != nil {
-		return nil, fmt.Errorf("unable to calculate recent blockhashes")
-	}
-
-	newState.LatestBlockRootHash32S = newHashes
-
+	beaconState = randao.UpdateRandaoMixes(beaconState)
+	beaconState = b.ProcessBlockRoots(beaconState, prevBlockRoot)
 	if block != nil {
-		newState, err = ProcessBlock(newState, block)
+		beaconState, err = ProcessBlock(beaconState, block)
 		if err != nil {
 			return nil, fmt.Errorf("unable to process block: %v", err)
 		}
 
-		if e.CanProcessEpoch(newState) {
-			newState, err = NewEpochTransition(newState)
+		if e.CanProcessEpoch(beaconState) {
+			beaconState, err = NewEpochTransition(beaconState)
 		}
 		if err != nil {
 			return nil, fmt.Errorf("unable to process epoch: %v", err)
 		}
 	}
 
-	return newState, nil
+	return beaconState, nil
 }
 
 // ProcessBlock creates a new, modified beacon state by applying block operation
 // transformations as defined in the Ethereum Serenity specification, including processing proposer slashings,
 // processing block attestations, and more.
 func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
-	newState := proto.Clone(state).(*pb.BeaconState)
-	if block.GetSlot() != state.GetSlot() {
+	if block.Slot != state.Slot {
 		return nil, fmt.Errorf(
 			"block.slot != state.slot, block.slot = %d, state.slot = %d",
 			block.GetSlot(),
-			newState.GetSlot(),
+			state.GetSlot(),
 		)
 	}
 	// TODO(#781): Verify Proposer Signature.
 	var err error
-	newState = b.ProcessPOWReceiptRoots(newState, block)
-	newState, err = b.ProcessBlockRandao(newState, block)
+	state = b.ProcessPOWReceiptRoots(state, block)
+	state, err = b.ProcessBlockRandao(state, block)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify and process block randao: %v", err)
 	}
-	newState, err = b.ProcessProposerSlashings(newState, block)
+	state, err = b.ProcessProposerSlashings(state, block)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify block proposer slashings: %v", err)
 	}
-	newState, err = b.ProcessCasperSlashings(newState, block)
+	state, err = b.ProcessCasperSlashings(state, block)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify block casper slashings: %v", err)
 	}
-	newState, err = b.ProcessBlockAttestations(newState, block)
+	state, err = b.ProcessBlockAttestations(state, block)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block attestations: %v", err)
 	}
 	// TODO(#781): Process block validator deposits.
-	newState, err = b.ProcessValidatorExits(newState, block)
+	state, err = b.ProcessValidatorExits(state, block)
 	if err != nil {
 		return nil, fmt.Errorf("could not process validator exits: %v", err)
 	}
-	return newState, nil
+	return state, nil
 }
 
 // NewEpochTransition describes the per epoch operations that are performed on the
@@ -119,7 +105,7 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState
 func NewEpochTransition(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Calculate total balances of active validators of the current state.
-	activeValidatorIndices := v.ActiveValidatorIndices(state.ValidatorRegistry)
+	activeValidatorIndices := v.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
 	totalBalance := e.TotalBalance(state, activeValidatorIndices)
 
 	// Calculate the attesting balances of validators that justified the

@@ -308,7 +308,7 @@ go_repository(
 
 go_repository(
     name = "com_github_minio_sha256_simd",
-    commit = "51976451ce1942acbb55707a983ed232fa027110",
+    commit = "66352e71c5e1cd598fa97be77a56fe3973730042",
     importpath = "github.com/minio/sha256-simd",
 )
 
@@ -453,7 +453,7 @@ go_repository(
 
 go_repository(
     name = "com_github_miekg_dns",
-    tag = "v1.1.1",
+    tag = "v1.1.2",
     importpath = "github.com/miekg/dns",
 )
 
@@ -495,13 +495,13 @@ go_repository(
 
 go_repository(
     name = "com_github_sirupsen_logrus",
-    tag = "v1.2.0",
+    tag = "v1.3.0",
     importpath = "github.com/sirupsen/logrus",
 )
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "82a175fd1598e8a172e58ebdf5ed262bb29129e5",
+    commit = "cb59ee3660675d463e86971646692ea3e470021c",
     importpath = "golang.org/x/sys",
 )
 
@@ -543,7 +543,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_crypto",
-    commit = "8d7daa0c54b357f3071e11eaef7efc4e19a417e2",
+    commit = "ff983b9c42bc9fbf91556e191cc8efb585c16908",
     importpath = "golang.org/x/crypto",
 )
 
@@ -645,7 +645,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aristanetworks_goarista",
-    commit = "0ca71131d8f76e0739563d97cc9f95c021825a2b",
+    commit = "332ede26fbf000b0af488b1836b53b44d2a7c46c",
     importpath = "github.com/aristanetworks/goarista",
 )
 
@@ -663,13 +663,13 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_common",
-    commit = "67670fe90761d7ff18ec1d640135e53b9198328f",
+    commit = "2998b132700a7d019ff618c06a234b47c1f3f681",
     importpath = "github.com/prometheus/common",
 )
 
 go_repository(
     name = "com_github_prometheus_procfs",
-    commit = "14fa7590c24d4615893b68e22fce3b3489689f65",
+    commit = "b1a0a9a36d7453ba0f62578b99712f3a6c5f82d1",
     importpath = "github.com/prometheus/procfs",
 )
 
