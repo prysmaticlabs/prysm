@@ -249,8 +249,8 @@ func (s *Server) Send(msg proto.Message, peer Peer) {
 // if msg cannot be encoded into a byte array, 
 // or if the server is unable to publish the message over gossipsub. 
 //
-//	 msg := make(chan p2p.Message, 100) // Choose a reasonable buffer size!
-//	 ps.RegisterTopic("message_topic_here", msg)
+//   msg := make(chan p2p.Message, 100) // Choose a reasonable buffer size!
+//   ps.RegisterTopic("message_topic_here", msg)
 //   ps.Broadcast(msg)
 func (s *Server) Broadcast(msg proto.Message) {
 	topic := s.topicMapping[messageType(msg)]
