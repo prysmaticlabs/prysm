@@ -23,7 +23,7 @@ func TestGenericIntersection(t *testing.T) {
 	for _, tt := range testCases {
 		result, err := GenericIntersection(tt.setA, tt.setB)
 		if err != nil {
-			result := result.Interface().([]uint32)
+			result := result.Interface().([]int32)
 			if !reflect.DeepEqual(result, tt.out) {
 				t.Errorf("got %d, want %d", result, tt.out)
 			}
@@ -163,6 +163,53 @@ func TestFloatGenericNot(t *testing.T) {
 	}
 }
 
+func TestStringGenericNot(t *testing.T) {
+	testCases := []struct {
+		setA []string
+		setB []string
+		out  []string
+	}{
+		{[]string{"hello", "world"}, []string{"hello", "world", "its", "go"}, []string{"its", "go"}},
+		{[]string{}, []string{}, []string{}},
+	}
+	for _, tt := range testCases {
+		result, err := GenericNot(tt.setA, tt.setB)
+		if err != nil {
+			result := result.Interface().([]string)
+			if !reflect.DeepEqual(result, tt.out) {
+				t.Errorf("got %d, want %d", result, tt.out)
+			}
+		}
+
+	}
+}
+
+func TestIntGenericNot(t *testing.T) {
+	testCases := []struct {
+		setA []int32
+		setB []int32
+		out  []int32
+	}{
+		{[]int32{4, 6}, []int32{2, 3, 5, 4, 6}, []int32{2, 3, 5}},
+		{[]int32{3, 5}, []int32{2, 3, 5}, []int32{2}},
+		{[]int32{2, 3, 5}, []int32{2, 3, 5}, []int32{}},
+		{[]int32{2}, []int32{2, 3, 5}, []int32{3, 5}},
+		{[]int32{}, []int32{2, 3, 5}, []int32{2, 3, 5}},
+		{[]int32{}, []int32{}, []int32{}},
+		{[]int32{1}, []int32{1}, []int32{}},
+	}
+	for _, tt := range testCases {
+		result, err := GenericNot(tt.setA, tt.setB)
+		if err != nil {
+			result := result.Interface().([]int32)
+			if !reflect.DeepEqual(result, tt.out) {
+				t.Errorf("got %d, want %d", result, tt.out)
+			}
+		}
+
+	}
+}
+
 func TestGenericUnion(t *testing.T) {
 	testCases := []struct {
 		setA []uint32
@@ -181,6 +228,33 @@ func TestGenericUnion(t *testing.T) {
 		result, err := GenericUnion(tt.setA, tt.setB)
 		if err != nil {
 			result := result.Interface().([]uint32)
+			if !reflect.DeepEqual(result, tt.out) {
+				t.Errorf("got %d, want %d", result, tt.out)
+			}
+		}
+
+	}
+}
+
+func TestFloatGenericUnion(t *testing.T) {
+	testCases := []struct {
+		setA []float32
+		setB []float32
+		out  []float32
+	}{
+		{[]float32{2, 3, 5}, []float32{4, 6}, []float32{2, 3, 5, 4, 6}},
+		{[]float32{2, 3, 5}, []float32{4, 6}, []float32{2, 3, 5, 4, 6}},
+		{[]float32{2, 3, 5}, []float32{3, 5}, []float32{2, 3, 5}},
+		{[]float32{2, 3, 5}, []float32{2, 3, 5}, []float32{2, 3, 5}},
+		{[]float32{2, 3, 5}, []float32{}, []float32{2, 3, 5}},
+		{[]float32{}, []float32{2, 3, 5}, []float32{2, 3, 5}},
+		{[]float32{}, []float32{}, []float32{}},
+		{[]float32{1}, []float32{1}, []float32{1}},
+	}
+	for _, tt := range testCases {
+		result, err := GenericUnion(tt.setA, tt.setB)
+		if err != nil {
+			result := result.Interface().([]float32)
 			if !reflect.DeepEqual(result, tt.out) {
 				t.Errorf("got %d, want %d", result, tt.out)
 			}

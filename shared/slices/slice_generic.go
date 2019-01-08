@@ -102,7 +102,7 @@ func GenericIntersection(a, b interface{}) (reflect.Value, error) {
 		return modifiedSet, nil
 
 	default:
-		return reflect.ValueOf(interface{}(nil)), fmt.Errorf("Slice error: for input type %v", v)
+		return reflect.ValueOf(interface{}(nil)), fmt.Errorf("slice error: for input type %v", v)
 	}
 
 }
@@ -198,7 +198,7 @@ func GenericUnion(a, b interface{}) (reflect.Value, error) {
 		return modifiedSet, nil
 
 	default:
-		return reflect.ValueOf(interface{}(nil)), fmt.Errorf("Slice error: for input type %v", v)
+		return reflect.ValueOf(interface{}(nil)), fmt.Errorf("slice error: for input type %v", v)
 	}
 
 }
@@ -290,7 +290,7 @@ func GenericNot(a, b interface{}) (reflect.Value, error) {
 		return modifiedSet, nil
 
 	default:
-		return reflect.ValueOf(interface{}(nil)), fmt.Errorf("Slice error: for input type %v", v)
+		return reflect.ValueOf(interface{}(nil)), fmt.Errorf("slice error: for input type %v", v)
 
 	}
 
