@@ -187,7 +187,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 			genesisValidatorRegistry = validators.InitialValidatorRegistry()
 		}
 
-		if err := db.InitializeState(genesisValidatorRegistry); err != nil {
+		if err := db.InitializeState(); err != nil {
 			return err
 		}
 	}

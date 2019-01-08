@@ -27,10 +27,11 @@ func InitialValidatorRegistry() []*pb.ValidatorRecord {
 	randaoReveal := hashutil.Hash(randaoPreCommit[:])
 	validators := make([]*pb.ValidatorRecord, config.DepositsForChainStart)
 	for i := uint64(0); i < config.DepositsForChainStart; i++ {
+		pubkey := hashutil.Hash([]byte{byte(i)})
 		validators[i] = &pb.ValidatorRecord{
 			ExitSlot:               params.BeaconConfig().FarFutureSlot,
 			Balance:                config.MaxDeposit * config.Gwei,
-			Pubkey:                 []byte{},
+			Pubkey:                 pubkey[:],
 			RandaoCommitmentHash32: randaoReveal[:],
 		}
 	}
