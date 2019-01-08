@@ -1,4 +1,4 @@
-// package state implements the whole whole state transition
+// package state implements the whole state transition
 // function which consists of per slot, per-epoch transitions.
 // It also bootstraps the genesis beacon state for slot 0.
 package state
