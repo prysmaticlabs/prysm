@@ -110,6 +110,7 @@ func PrevAttestations(state *pb.BeaconState) []*pb.PendingAttestationRecord {
 			prevEpochAttestations = append(prevEpochAttestations, attestation)
 		}
 	}
+
 	return prevEpochAttestations
 }
 

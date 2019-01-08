@@ -125,11 +125,11 @@ func TestPrevEpochAttestations(t *testing.T) {
 		firstAttestationSlot uint64
 	}{
 		{
-			stateSlot:            10,
+			stateSlot:            127,
 			firstAttestationSlot: 0,
 		},
 		{
-			stateSlot:            127,
+			stateSlot:            128,
 			firstAttestationSlot: 0,
 		},
 		{
@@ -153,7 +153,7 @@ func TestPrevEpochAttestations(t *testing.T) {
 			t.Errorf(
 				"Result slot was an unexpected value. Wanted %d, got %d",
 				tt.firstAttestationSlot,
-				Attestations(state)[0].Data.Slot,
+				PrevAttestations(state)[0].Data.Slot,
 			)
 		}
 	}
