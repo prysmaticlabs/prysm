@@ -2,7 +2,6 @@ package validators
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -36,7 +35,6 @@ func splitBySlotShard(shuffledValidatorRegistry []uint32, crosslinkStartShard ui
 
 	// split the validator indices by slot.
 	validatorsBySlot := utils.SplitIndices(shuffledValidatorRegistry, params.BeaconConfig().EpochLength)
-	logrus.Info(validatorsBySlot)
 	for i, validatorsForSlot := range validatorsBySlot {
 		shardCommittees := []*pb.ShardAndCommittee{}
 		validatorsByShard := utils.SplitIndices(validatorsForSlot, committeesPerSlot)
