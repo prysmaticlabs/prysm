@@ -29,7 +29,7 @@ func (db *BeaconDB) InitializeState(genesisValidatorRegistry []*pb.ValidatorReco
 		deposits[i] = &pb.Deposit{DepositData: depositData}
 	}
 	genesisTime := uint64(params.BeaconConfig().GenesisTime.Unix())
-	beaconState, err := state.InitialBeaconState(deposits, genesisValidatorRegistry, genesisTime, nil)
+	beaconState, err := state.InitialBeaconState(deposits, genesisTime, nil)
 	if err != nil {
 		return err
 	}

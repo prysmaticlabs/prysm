@@ -37,7 +37,11 @@ func TestInitGenesisJson(t *testing.T) {
 	params.UseDemoBeaconConfig()
 	state := &pb.BeaconState{
 		ValidatorRegistry: []*pb.ValidatorRecord{
-			{Pubkey: []byte("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"), Balance: 32000000000},
+			{
+				Pubkey:   []byte("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
+				Balance:  32000000000,
+				ExitSlot: 9223372036854775807,
+			},
 		},
 	}
 
@@ -47,6 +51,6 @@ func TestInitGenesisJson(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(state.ValidatorRegistry[0], validators[0]) {
-		t.Error("Validator registry mismatched")
+		t.Errorf("Validator registry mismatched, %v : %v", state.ValidatorRegistry[0], validators[0])
 	}
 }

@@ -220,7 +220,7 @@ func TestRunningChainService(t *testing.T) {
 		}
 		deposits[i] = &pb.Deposit{DepositData: depositData}
 	}
-	beaconState, err := state.InitialBeaconState(deposits, nil, 0, nil)
+	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -328,7 +328,7 @@ func TestDoesPOWBlockExist(t *testing.T) {
 }
 
 func TestUpdateHead(t *testing.T) {
-	beaconState, err := state.InitialBeaconState(nil, nil, 0, nil)
+	beaconState, err := state.InitialBeaconState(nil, 0, nil)
 	if err != nil {
 		t.Fatalf("Cannot create genesis beacon state: %v", err)
 	}
@@ -419,7 +419,7 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db)
-	beaconState, err := state.InitialBeaconState(nil, nil, 0, nil)
+	beaconState, err := state.InitialBeaconState(nil, 0, nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}

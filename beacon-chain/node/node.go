@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/dbcleanup"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -182,7 +183,10 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 			if err != nil {
 				return err
 			}
+		} else {
+			genesisValidatorRegistry = validators.InitialValidatorRegistry()
 		}
+
 		if err := db.InitializeState(genesisValidatorRegistry); err != nil {
 			return err
 		}

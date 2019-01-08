@@ -86,7 +86,6 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 
 	state, err := InitialBeaconState(
 		deposits,
-		nil,
 		genesisTime,
 		processedPowReceiptRoot)
 	if err != nil {
@@ -183,14 +182,15 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	for i := 0; i < len(state.ShardAndCommitteesAtSlots); i++ {
 		if len(state.ShardAndCommitteesAtSlots[i].ArrayShardAndCommittee[0].Committee) !=
 			int(params.BeaconConfig().TargetCommitteeSize) {
-			t.Error("ShardAndCommittees was not correctly initialized")
+			t.Errorf("ShardAndCommittees was not correctly initialized %d",
+				len(state.ShardAndCommitteesAtSlots[i].ArrayShardAndCommittee[0].Committee))
 		}
 	}
 }
 
 func TestGenesisState_HashEquality(t *testing.T) {
-	state1, _ := InitialBeaconState(nil, nil, 0, nil)
-	state2, _ := InitialBeaconState(nil, nil, 0, nil)
+	state1, _ := InitialBeaconState(nil, 0, nil)
+	state2, _ := InitialBeaconState(nil, 0, nil)
 
 	enc1, err1 := proto.Marshal(state1)
 	enc2, err2 := proto.Marshal(state2)
@@ -207,7 +207,7 @@ func TestGenesisState_HashEquality(t *testing.T) {
 }
 
 func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
-	s, _ := InitialBeaconState(nil, nil, 0, nil)
+	s, _ := InitialBeaconState(nil, 0, nil)
 	want, got := len(s.LatestBlockRootHash32S), int(params.BeaconConfig().LatestBlockRootsLength)
 	if want != got {
 		t.Errorf("Wrong number of recent block hashes. Got: %d Want: %d", got, want)
@@ -268,7 +268,7 @@ func TestCalculateNewBlockHashes_DoesNotMutateData(t *testing.T) {
 		[]byte("hash"),
 	}
 
-	s, _ := InitialBeaconState(nil, nil, 0, nil)
+	s, _ := InitialBeaconState(nil, 0, nil)
 	copy(s.LatestBlockRootHash32S, interestingData)
 	original := make([][]byte, params.BeaconConfig().LatestBlockRootsLength)
 	copy(original, s.LatestBlockRootHash32S)

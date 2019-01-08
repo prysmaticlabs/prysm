@@ -325,7 +325,7 @@ func TestRequestBlocksBySlot(t *testing.T) {
 		BlockBufferSize: 100,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
-	newState, err := state.InitialBeaconState(nil, nil, 0, nil)
+	newState, err := state.InitialBeaconState(nil, 0, nil)
 	if err != nil {
 		t.Fatalf("could not create new state %v", err)
 	}

@@ -135,7 +135,7 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 	deposit := []*pbp2p.Deposit{
 		{DepositData: depositData},
 	}
-	beaconState, err := state.InitialBeaconState(deposit, nil, 0, nil)
+	beaconState, err := state.InitialBeaconState(deposit, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -205,7 +205,7 @@ func TestProposeBlock(t *testing.T) {
 		}
 	}
 
-	beaconState, err := state.InitialBeaconState(deposits, nil, 0, nil)
+	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -356,7 +356,7 @@ func TestValidatorSlotAndResponsibility(t *testing.T) {
 		{DepositData: depositData},
 	}
 
-	beaconState, err := state.InitialBeaconState(deposits, nil, 0, nil)
+	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -401,7 +401,7 @@ func TestValidatorIndex(t *testing.T) {
 	deposits := []*pbp2p.Deposit{
 		{DepositData: depositData},
 	}
-	beaconState, err := state.InitialBeaconState(deposits, nil, 0, nil)
+	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -446,7 +446,7 @@ func TestValidatorShardID(t *testing.T) {
 	deposits := []*pbp2p.Deposit{
 		{DepositData: depositData},
 	}
-	beaconState, err := state.InitialBeaconState(deposits, nil, 0, nil)
+	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -492,7 +492,7 @@ func TestValidatorAssignments(t *testing.T) {
 	deposits := []*pbp2p.Deposit{
 		{DepositData: depositData},
 	}
-	beaconState, err := state.InitialBeaconState(deposits, nil, 0, nil)
+	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -529,7 +529,7 @@ func TestValidatorAssignments(t *testing.T) {
 		<-exitRoutine
 	}(t)
 
-	beaconState, err = state.InitialBeaconState(deposits, nil, 0, nil)
+	beaconState, err = state.InitialBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}

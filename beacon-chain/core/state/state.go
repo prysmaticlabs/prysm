@@ -18,7 +18,6 @@ import (
 // full deposits were made to the deposit contract and the ChainStart log gets emitted.
 func InitialBeaconState(
 	initialValidatorDeposits []*pb.Deposit,
-	genesisValidatorRegistry []*pb.ValidatorRecord,
 	genesisTime uint64,
 	processedPowReceiptRoot []byte,
 ) (*pb.BeaconState, error) {
@@ -49,9 +48,33 @@ func InitialBeaconState(
 		latestBlockRoots[i] = params.BeaconConfig().ZeroHash[:]
 	}
 
-	latestBalances := make([]uint64, len(genesisValidatorRegistry))
-	for i, v := range genesisValidatorRegistry {
-		latestBalances[i] = v.Balance
+	validatorRegistry := make([]*pb.ValidatorRecord, len(initialValidatorDeposits))
+	latestBalances := make([]uint64, len(initialValidatorDeposits))
+	for i, d := range initialValidatorDeposits {
+
+		amount, _, err := b.DecodeDepositAmountAndTimeStamp(d.DepositData)
+		if err != nil {
+			return nil, fmt.Errorf("could not decode deposit amount and timestamp %v", err)
+		}
+
+		latestBalances[i] = amount
+
+		depositInput, err := b.DecodeDepositInput(d.DepositData)
+		if err != nil {
+			return nil, fmt.Errorf("could decode deposit input %v", err)
+		}
+
+		validator := &pb.ValidatorRecord{
+			Pubkey:                      depositInput.Pubkey,
+			RandaoCommitmentHash32:      depositInput.RandaoCommitmentHash32,
+			WithdrawalCredentialsHash32: depositInput.WithdrawalCredentialsHash32,
+			PocCommitmentHash32:         depositInput.PocCommitment,
+			Balance:                     amount,
+			ExitSlot:                    params.BeaconConfig().FarFutureSlot,
+		}
+
+		validatorRegistry[i] = validator
+
 	}
 
 	latestPenalizedExitBalances := make([]uint64, params.BeaconConfig().LatestPenalizedExitLength)
@@ -67,7 +90,7 @@ func InitialBeaconState(
 		},
 
 		// Validator registry fields.
-		ValidatorRegistry:                    genesisValidatorRegistry,
+		ValidatorRegistry:                    validatorRegistry,
 		ValidatorBalances:                    latestBalances,
 		ValidatorRegistryLastChangeSlot:      params.BeaconConfig().GenesisSlot,
 		ValidatorRegistryExitCount:           0,
