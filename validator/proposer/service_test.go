@@ -390,5 +390,5 @@ func TestProposedBlockError(t *testing.T) {
 
 	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
 	testutil.AssertLogsContain(t, hook, "Proposer context closed")
-	testutil.AssertLogsContain(t, hook, "Unable to propose block bad block proposed")
+	testutil.AssertLogsContain(t, hook, "Could not propose block bad block proposed")
 }

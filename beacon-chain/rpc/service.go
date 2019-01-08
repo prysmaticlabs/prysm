@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -248,8 +249,7 @@ func (s *Service) ComputeStateRoot(ctx context.Context, req *pbp2p.BeaconBlock) 
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
 
-	parentHash := [32]byte{}
-	copy(parentHash[:], req.ParentRootHash32)
+	parentHash := bytes.ToBytes32(req.ParentRootHash32)
 
 	beaconState, err = state.ExecuteStateTransition(beaconState, req, parentHash)
 	if err != nil {
@@ -258,19 +258,21 @@ func (s *Service) ComputeStateRoot(ctx context.Context, req *pbp2p.BeaconBlock) 
 
 	encodedState, err := proto.Marshal(beaconState)
 	if err != nil {
-		return nil, fmt.Errorf("unable to marshal state %v", err)
+		return nil, fmt.Errorf("could not marshal state %v", err)
 	}
 
-	stateHash := hashutil.Hash(encodedState)
+	beaconStateHash := hashutil.Hash(encodedState)
 
-	log.WithField("stateHash", fmt.Sprintf("%#x", stateHash)).Debugf("Computed state hash")
+	log.WithField("beaconStateHash", fmt.Sprintf("%#x", beaconStateHash)).Debugf("Computed state hash")
 
 	return &pb.StateRootResponse{
-		StateRoot: stateHash[:],
+		StateRoot: beaconStateHash[:],
 	}, nil
 }
 
-// ProposerIndex returns the index of the block proposer of a certain slot to the validator client.
+// ProposerIndex sends a response to the client which returns the proposer index for a given slot. Validators
+// are shuffled and assigned slots to attest/propose to. This method will look for the validator that is assigned
+// to propose a beacon block at the given slot.
 func (s *Service) ProposerIndex(ctx context.Context, req *pb.ProposerIndexRequest) (*pb.IndexResponse, error) {
 
 	beaconState, err := s.beaconDB.GetState()

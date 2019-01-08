@@ -166,6 +166,9 @@ func (p *Proposer) run(done <-chan struct{}, client pb.ProposerServiceClient) {
 	}
 }
 
+// receiveAssignment responds to the latest proposer assignment that the validator has received from the beacon
+// node. It handles all the core proposal logic for the validator client, from creating the block to be proposed,
+// to the signing of the proposal data and ultimately sending the block proposal to the beacon node.
 func (p *Proposer) receiveAssignment(latestBeaconBlock *pbp2p.BeaconBlock, client pb.ProposerServiceClient) {
 	log.Info("Performing proposer responsibility")
 
@@ -186,7 +189,7 @@ func (p *Proposer) receiveAssignment(latestBeaconBlock *pbp2p.BeaconBlock, clien
 
 	hash, err := client.ProposeBlock(p.ctx, block)
 	if err != nil {
-		log.Errorf("Unable to propose block %v", err)
+		log.Errorf("Could not propose block %v", err)
 		return
 	}
 
@@ -201,15 +204,18 @@ func (p *Proposer) computeBlockToBeProposed(latestBlock *pbp2p.BeaconBlock,
 		return nil, fmt.Errorf("could not marshal nil latest beacon block")
 
 	}
+
+	// TODO(#1253): Change this to be serialized using SSZ instead of protobufs.
 	data, err := proto.Marshal(latestBlock)
 	if err != nil {
 		return nil, fmt.Errorf("could not marshal latest beacon block: %v", err)
 	}
 	latestBlockHash := hashutil.Hash(data)
 
-	// Error is thrown away here because the client method returns no possible error.
-	// #nosec G104
-	powChainHashRes, _ := client.LatestPOWChainBlockHash(p.ctx, nil)
+	powChainHashRes, err := client.LatestPOWChainBlockHash(p.ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("could not get latest pow chain blockhash %v", err)
+	}
 
 	indexRes, err := client.ProposerIndex(p.ctx, &pb.ProposerIndexRequest{SlotNumber: latestBlock.Slot})
 	if err != nil {
@@ -223,8 +229,8 @@ func (p *Proposer) computeBlockToBeProposed(latestBlock *pbp2p.BeaconBlock,
 
 	// To prevent any unaccounted attestations from being added.
 	p.lock.Lock()
+	defer p.lock.Unlock()
 
-	// TODO(#619): Implement real proposals with randao reveals and attestation fields.
 	signature := make([][]byte, 48)
 	block := &pbp2p.BeaconBlock{
 		Slot:                          latestBlock.Slot + 1,
@@ -244,7 +250,6 @@ func (p *Proposer) computeBlockToBeProposed(latestBlock *pbp2p.BeaconBlock,
 
 	log.Infof("Created block proposal for slot %d", block.Slot)
 	p.pendingAttestation = nil
-	p.lock.Unlock()
 
 	return block, nil
 }
