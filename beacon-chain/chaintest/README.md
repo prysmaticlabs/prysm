@@ -14,7 +14,9 @@ Chain tests check for conformity of a certain client to the beacon chain specifi
 
 **State Transition Tests**
 
-The most important use case for this test format is to verify the ins and outs of the Ethereum Phase 0 Beacon Chain:
+The most important use case for this test format is to verify the ins and outs of the Ethereum Phase 0 Beacon Chain state advancement. The specification details very strict guidelines for blocks to successfully trigger a state transition, including items such as Casper Proof of Stake slashing conditions of validators, pseudorandomness in the form of RANDAO, and attestation on shard blocks being processed all inside each incoming beacon block. The YAML configuration for this test type allows for configuring a state transition run over N slots, triggering slashing conditions, processing deposits of new validators, and more.
+
+A full state transition test will look as follows:
 
 TODO
 
