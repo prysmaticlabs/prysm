@@ -1,3 +1,7 @@
+// Package balances contains libraries to calculate reward and
+// penalty quotients. It computes new validator balances
+// for justifications, crosslinks and attestation inclusions. It
+// also computes penalties for the inactive validators.
 package balances
 
 import (

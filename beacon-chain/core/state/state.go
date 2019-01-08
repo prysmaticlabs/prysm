@@ -1,3 +1,6 @@
+// package state implements the whole whole state transition
+// function which consists of per slot, per-epoch transitions.
+// It also bootstraps the genesis beacon state for slot 0.
 package state
 
 import (
@@ -155,36 +158,4 @@ func Hash(state *pb.BeaconState) ([32]byte, error) {
 		return [32]byte{}, fmt.Errorf("could not marshal beacon state: %v", err)
 	}
 	return hashutil.Hash(data), nil
-}
-
-// CalculateNewBlockHashes builds a new slice of recent block hashes with the
-// provided block and the parent slot number.
-//
-// The algorithm is:
-//   1) shift the array by block.SlotNumber - parentSlot (i.e. truncate the
-//     first by the number of slots that have occurred between the block and
-//     its parent).
-//
-//   2) fill the array with the parent block hash for all values between the parent
-//     slot and the block slot.
-//
-// Computation of the state hash depends on this feature that slots with
-// missing blocks have the block hash of the next block hash in the chain.
-//
-// For example, if we have a segment of recent block hashes that look like this
-//   [0xF, 0x7, 0x0, 0x0, 0x5]
-//
-// Where 0x0 is an empty or missing hash where no block was produced in the
-// alloted slot. When storing the list (or at least when computing the hash of
-// the active state), the list should be back-filled as such:
-//
-//   [0xF, 0x7, 0x5, 0x5, 0x5]
-func CalculateNewBlockHashes(state *pb.BeaconState, block *pb.BeaconBlock, parentSlot uint64) ([][]byte, error) {
-	distance := block.Slot - parentSlot
-	existing := state.LatestBlockRootHash32S
-	update := existing[distance:]
-	for len(update) < 2*int(params.BeaconConfig().EpochLength) {
-		update = append(update, block.ParentRootHash32)
-	}
-	return update, nil
 }

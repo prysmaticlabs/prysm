@@ -1,3 +1,5 @@
+// package randao contains libraries to update and proposer's RANDAO layer
+// and mixes the RANDAO with the existing RANDAO in state.
 package randao
 
 import (
