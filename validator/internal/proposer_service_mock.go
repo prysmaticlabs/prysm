@@ -37,40 +37,40 @@ func (m *MockProposerServiceClient) EXPECT() *MockProposerServiceClientMockRecor
 	return m.recorder
 }
 
-// ComputeStateRootForBlock mocks base method
-func (m *MockProposerServiceClient) ComputeStateRootForBlock(arg0 context.Context, arg1 *v1.BeaconBlock, arg2 ...grpc.CallOption) (*v10.StateRootResponse, error) {
+// ComputeStateRoot mocks base method
+func (m *MockProposerServiceClient) ComputeStateRoot(arg0 context.Context, arg1 *v1.BeaconBlock, arg2 ...grpc.CallOption) (*v10.StateRootResponse, error) {
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "ComputeStateRootForBlock", varargs...)
+	ret := m.ctrl.Call(m, "ComputeStateRoot", varargs...)
 	ret0, _ := ret[0].(*v10.StateRootResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ComputeStateRootForBlock indicates an expected call of ComputeStateRootForBlock
-func (mr *MockProposerServiceClientMockRecorder) ComputeStateRootForBlock(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+// ComputeStateRoot indicates an expected call of ComputeStateRoot
+func (mr *MockProposerServiceClientMockRecorder) ComputeStateRoot(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ComputeStateRootForBlock", reflect.TypeOf((*MockProposerServiceClient)(nil).ComputeStateRootForBlock), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ComputeStateRoot", reflect.TypeOf((*MockProposerServiceClient)(nil).ComputeStateRoot), varargs...)
 }
 
-// CurrentPOWChainBlockHash mocks base method
-func (m *MockProposerServiceClient) CurrentPOWChainBlockHash(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (*v10.POWChainResponse, error) {
+// LatestPOWChainBlockHash mocks base method
+func (m *MockProposerServiceClient) LatestPOWChainBlockHash(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (*v10.POWChainResponse, error) {
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "CurrentPOWChainBlockHash", varargs...)
+	ret := m.ctrl.Call(m, "LatestPOWChainBlockHash", varargs...)
 	ret0, _ := ret[0].(*v10.POWChainResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// CurrentPOWChainBlockHash indicates an expected call of CurrentPOWChainBlockHash
-func (mr *MockProposerServiceClientMockRecorder) CurrentPOWChainBlockHash(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+// LatestPOWChainBlockHash indicates an expected call of LatestPOWChainBlockHash
+func (mr *MockProposerServiceClientMockRecorder) LatestPOWChainBlockHash(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentPOWChainBlockHash", reflect.TypeOf((*MockProposerServiceClient)(nil).CurrentPOWChainBlockHash), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LatestPOWChainBlockHash", reflect.TypeOf((*MockProposerServiceClient)(nil).LatestPOWChainBlockHash), varargs...)
 }
 
 // ProposeBlock mocks base method

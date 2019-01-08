@@ -116,7 +116,7 @@ func TestProposerComputeBlock(t *testing.T) {
 
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
 
-	mockServiceClient.EXPECT().CurrentPOWChainBlockHash(
+	mockServiceClient.EXPECT().LatestPOWChainBlockHash(
 		gomock.Any(),
 		gomock.Any()).Return(
 		&pb.POWChainResponse{
@@ -129,7 +129,7 @@ func TestProposerComputeBlock(t *testing.T) {
 			Index: 2,
 		}, nil)
 
-	mockServiceClient.EXPECT().ComputeStateRootForBlock(
+	mockServiceClient.EXPECT().ComputeStateRoot(
 		gomock.Any(),
 		gomock.Any()).Return(
 		&pb.StateRootResponse{
@@ -212,7 +212,7 @@ func TestFullProposalOfBlock(t *testing.T) {
 	}
 	p := NewProposer(context.Background(), cfg)
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
-	mockServiceClient.EXPECT().CurrentPOWChainBlockHash(
+	mockServiceClient.EXPECT().LatestPOWChainBlockHash(
 		gomock.Any(),
 		gomock.Any()).Return(
 		&pb.POWChainResponse{
@@ -225,7 +225,7 @@ func TestFullProposalOfBlock(t *testing.T) {
 			Index: 2,
 		}, nil)
 
-	mockServiceClient.EXPECT().ComputeStateRootForBlock(
+	mockServiceClient.EXPECT().ComputeStateRoot(
 		gomock.Any(),
 		gomock.Any()).Return(
 		&pb.StateRootResponse{
@@ -289,7 +289,7 @@ func TestProposerServiceErrors(t *testing.T) {
 
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
 
-	mockServiceClient.EXPECT().CurrentPOWChainBlockHash(
+	mockServiceClient.EXPECT().LatestPOWChainBlockHash(
 		gomock.Any(),
 		gomock.Any()).Return(
 		&pb.POWChainResponse{
@@ -302,7 +302,7 @@ func TestProposerServiceErrors(t *testing.T) {
 			Index: 2,
 		}, nil)
 	// Expect call to throw an error
-	mockServiceClient.EXPECT().ComputeStateRootForBlock(
+	mockServiceClient.EXPECT().ComputeStateRoot(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(nil, errors.New("could not hash state"))
@@ -345,7 +345,7 @@ func TestProposedBlockError(t *testing.T) {
 
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
 
-	mockServiceClient.EXPECT().CurrentPOWChainBlockHash(
+	mockServiceClient.EXPECT().LatestPOWChainBlockHash(
 		gomock.Any(),
 		gomock.Any()).Return(
 		&pb.POWChainResponse{
@@ -359,7 +359,7 @@ func TestProposedBlockError(t *testing.T) {
 			Index: 2,
 		}, nil)
 
-	mockServiceClient.EXPECT().ComputeStateRootForBlock(
+	mockServiceClient.EXPECT().ComputeStateRoot(
 		gomock.Any(),
 		gomock.Any()).Return(
 		&pb.StateRootResponse{

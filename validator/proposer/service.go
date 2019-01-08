@@ -209,7 +209,7 @@ func (p *Proposer) computeBlockToBeProposed(latestBlock *pbp2p.BeaconBlock,
 
 	// Error is thrown away here because the client method returns no possible error.
 	// #nosec G104
-	powChainHashRes, _ := client.CurrentPOWChainBlockHash(p.ctx, nil)
+	powChainHashRes, _ := client.LatestPOWChainBlockHash(p.ctx, nil)
 
 	indexRes, err := client.ProposerIndex(p.ctx, &pb.ProposerIndexRequest{SlotNumber: latestBlock.Slot})
 	if err != nil {
@@ -250,7 +250,7 @@ func (p *Proposer) computeBlockToBeProposed(latestBlock *pbp2p.BeaconBlock,
 }
 
 func (p *Proposer) addStateRootToBlock(block *pbp2p.BeaconBlock, client pb.ProposerServiceClient) (*pbp2p.BeaconBlock, error) {
-	res, err := client.ComputeStateRootForBlock(p.ctx, block)
+	res, err := client.ComputeStateRoot(p.ctx, block)
 	if err != nil {
 		return nil, fmt.Errorf("unable to compute state root for block: %v", err)
 	}

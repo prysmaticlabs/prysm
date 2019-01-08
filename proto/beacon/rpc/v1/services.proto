@@ -28,8 +28,8 @@ service AttesterService {
 
 service ProposerService {
     rpc ProposeBlock(ethereum.beacon.p2p.v1.BeaconBlock) returns (ProposeResponse);
-    rpc CurrentPOWChainBlockHash(google.protobuf.Empty) returns (POWChainResponse);
-    rpc ComputeStateRootForBlock(ethereum.beacon.p2p.v1.BeaconBlock) returns (StateRootResponse);
+    rpc LatestPOWChainBlockHash(google.protobuf.Empty) returns (POWChainResponse);
+    rpc ComputeStateRoot(ethereum.beacon.p2p.v1.BeaconBlock) returns (StateRootResponse);
     rpc ProposerIndex(ProposerIndexRequest) returns (IndexResponse);
 }
 
