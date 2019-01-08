@@ -77,7 +77,7 @@ bazel build //validator:validator
 
 ## Running The Beacon Chain
 
-To start the system, we need to seed the beacon chain state with an initial validator set for local development. We created a reference [genesis.json](https://github.com/prysmaticlabs/prysm/blob/master/genesis.json) in the prysm base directory for this! You'll also need a special data directory where all the beacon chain data will be persisted to. 
+To start the system, you will need a special data directory where all the beacon chain data will be persisted to. 
 
 Then, you can run the node as follows:
 
@@ -85,7 +85,6 @@ With the binary executable:
 
 ```
 ./beacon-chain \
-  --genesis-json /path/to/genesis.json \
   --datadir /path/to/your/datadir \
   --rpc-port 4000 \
   --simulator \
@@ -97,7 +96,6 @@ With bazel:
 
 ```
 bazel run //beacon-chain --\
-  --genesis-json /path/to/genesis.json \
   --datadir /path/to/your/datadir \
   --rpc-port 4000 \
   --simulator \
@@ -154,8 +152,7 @@ if you want to run multiple validator clients, **each one needs to have its own 
 ## Running Via Docker
 
 ```
-docker run -p 4000:4000 -v /path/to/genesis.json:/genesis.json gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
-  --genesis-json /genesis.json \
+docker run -p 4000:4000 -v gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
   --rpc-port 4000 \
   --simulator \
   --demo-config \
@@ -183,7 +180,6 @@ The best way to run under Windows is to clone the repository and then run the no
 
 ```
 go run ./beacon-chain main.go \
-   --genesis-json /path/to/genesis.json \
    --datadir /path/to/your/datadir \
    --rpc-port 4000 \
    --simulator \
