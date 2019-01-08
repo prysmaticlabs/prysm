@@ -17,6 +17,7 @@ import (
 // InitializeState creates an initial genesis state for the beacon
 // node using a set of genesis validators.
 func (db *BeaconDB) InitializeState() error {
+	// TODO(#1267): Remove initial validators once testnet startup procedure is finalized.
 	genesisValidatorRegistry := validators.InitialValidatorRegistry()
 	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
 	for i := 0; i < len(deposits); i++ {
