@@ -23,7 +23,6 @@ func TestGenericIntersection(t *testing.T) {
 	for _, tt := range testCases {
 		result, err := GenericIntersection(tt.setA, tt.setB)
 		if err != nil {
-			result := result.Interface().([]int32)
 			if !reflect.DeepEqual(result, tt.out) {
 				t.Errorf("got %d, want %d", result, tt.out)
 			}
@@ -51,7 +50,7 @@ func TestFloatGenericIntersection(t *testing.T) {
 	for _, tt := range testCases {
 		result, err := GenericIntersection(tt.setA, tt.setB)
 		if err != nil {
-			result := result.Interface().([]float32)
+
 			if !reflect.DeepEqual(result, tt.out) {
 				t.Errorf("got %d, want %d", result, tt.out)
 			}
@@ -73,7 +72,7 @@ func TestStringGenericIntersection(t *testing.T) {
 	for _, tt := range testCases {
 		result, err := GenericIntersection(tt.setA, tt.setB)
 		if err != nil {
-			result := result.Interface().([]string)
+
 			if !reflect.DeepEqual(result, tt.out) {
 				t.Errorf("got %d, want %d", result, tt.out)
 			}
@@ -101,7 +100,7 @@ func TestIntGenericIntersection(t *testing.T) {
 	for _, tt := range testCases {
 		result, err := GenericIntersection(tt.setA, tt.setB)
 		if err != nil {
-			result := result.Interface().([]int32)
+
 			if !reflect.DeepEqual(result, tt.out) {
 				t.Errorf("got %d, want %d", result, tt.out)
 			}
@@ -128,7 +127,7 @@ func TestGenericNot(t *testing.T) {
 	for _, tt := range testCases {
 		result, err := GenericNot(tt.setA, tt.setB)
 		if err != nil {
-			result := result.Interface().([]uint32)
+
 			if !reflect.DeepEqual(result, tt.out) {
 				t.Errorf("got %d, want %d", result, tt.out)
 			}
@@ -154,7 +153,7 @@ func TestFloatGenericNot(t *testing.T) {
 	for _, tt := range testCases {
 		result, err := GenericNot(tt.setA, tt.setB)
 		if err != nil {
-			result := result.Interface().([]float32)
+
 			if !reflect.DeepEqual(result, tt.out) {
 				t.Errorf("got %d, want %d", result, tt.out)
 			}
@@ -175,7 +174,7 @@ func TestStringGenericNot(t *testing.T) {
 	for _, tt := range testCases {
 		result, err := GenericNot(tt.setA, tt.setB)
 		if err != nil {
-			result := result.Interface().([]string)
+
 			if !reflect.DeepEqual(result, tt.out) {
 				t.Errorf("got %d, want %d", result, tt.out)
 			}
@@ -201,7 +200,7 @@ func TestIntGenericNot(t *testing.T) {
 	for _, tt := range testCases {
 		result, err := GenericNot(tt.setA, tt.setB)
 		if err != nil {
-			result := result.Interface().([]int32)
+
 			if !reflect.DeepEqual(result, tt.out) {
 				t.Errorf("got %d, want %d", result, tt.out)
 			}
@@ -227,7 +226,7 @@ func TestGenericUnion(t *testing.T) {
 	for _, tt := range testCases {
 		result, err := GenericUnion(tt.setA, tt.setB)
 		if err != nil {
-			result := result.Interface().([]uint32)
+
 			if !reflect.DeepEqual(result, tt.out) {
 				t.Errorf("got %d, want %d", result, tt.out)
 			}
@@ -254,7 +253,7 @@ func TestFloatGenericUnion(t *testing.T) {
 	for _, tt := range testCases {
 		result, err := GenericUnion(tt.setA, tt.setB)
 		if err != nil {
-			result := result.Interface().([]float32)
+			
 			if !reflect.DeepEqual(result, tt.out) {
 				t.Errorf("got %d, want %d", result, tt.out)
 			}
