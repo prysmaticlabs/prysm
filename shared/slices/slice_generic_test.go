@@ -21,9 +21,34 @@ func TestGenericIntersection(t *testing.T) {
 		{[]uint32{1}, []uint32{1}, []uint32{1}},
 	}
 	for _, tt := range testCases {
-		result := GenericIntersection(tt.setA, tt.setB)
-		result2 := result.Interface().([]uint32)
-		if !reflect.DeepEqual(result2, tt.out) {
+		result := GenericIntersection(tt.setA, tt.setB).Interface().([]uint32)
+
+		if !reflect.DeepEqual(result, tt.out) {
+			t.Errorf("got %d, want %d", result, tt.out)
+		}
+	}
+
+}
+
+func TestFloatGenericIntersection(t *testing.T) {
+	testCases := []struct {
+		setA []float32
+		setB []float32
+		out  []float32
+	}{
+		{[]float32{2, 3, 5}, []float32{3}, []float32{3}},
+		{[]float32{2, 3, 5}, []float32{3, 5}, []float32{3, 5}},
+		{[]float32{2, 3, 5}, []float32{5, 3, 2}, []float32{5, 3, 2}},
+		{[]float32{2, 3, 5}, []float32{2, 3, 5}, []float32{2, 3, 5}},
+		{[]float32{2, 3, 5}, []float32{}, []float32{}},
+		{[]float32{}, []float32{2, 3, 5}, []float32{}},
+		{[]float32{}, []float32{}, []float32{}},
+		{[]float32{1}, []float32{1}, []float32{1}},
+	}
+	for _, tt := range testCases {
+		result := GenericIntersection(tt.setA, tt.setB).Interface().([]float32)
+
+		if !reflect.DeepEqual(result, tt.out) {
 			t.Errorf("got %d, want %d", result, tt.out)
 		}
 	}
@@ -45,9 +70,8 @@ func TestGenericNot(t *testing.T) {
 		{[]uint32{1}, []uint32{1}, []uint32{}},
 	}
 	for _, tt := range testCases {
-		result := GenericNot(tt.setA, tt.setB)
-		result2 := result.Interface().([]uint32)
-		if !reflect.DeepEqual(result2, tt.out) {
+		result := GenericNot(tt.setA, tt.setB).Interface().([]uint32)
+		if !reflect.DeepEqual(result, tt.out) {
 			t.Errorf("got %d, want %d", result, tt.out)
 		}
 	}
@@ -68,9 +92,9 @@ func TestGenericUnion(t *testing.T) {
 		{[]uint32{1}, []uint32{1}, []uint32{1}},
 	}
 	for _, tt := range testCases {
-		result := GenericUnion(tt.setA, tt.setB)
-		result2 := result.Interface().([]uint32)
-		if !reflect.DeepEqual(result2, tt.out) {
+		result := GenericUnion(tt.setA, tt.setB).Interface().([]uint32)
+
+		if !reflect.DeepEqual(result, tt.out) {
 			t.Errorf("got %d, want %d", result, tt.out)
 		}
 	}
