@@ -1,4 +1,4 @@
-// package randao contains libraries to update and proposer's RANDAO layer
+// Package randao contains libraries to update and proposer's RANDAO layer
 // and mixes the RANDAO with the existing RANDAO value in state.
 package randao
 
