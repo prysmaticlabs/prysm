@@ -1,6 +1,9 @@
 package slices
 
-import "reflect"
+import (
+	"fmt"
+	"reflect"
+)
 
 func interfaceToSlice(slice interface{}) []interface{} {
 	s := reflect.ValueOf(slice)
@@ -16,9 +19,9 @@ func interfaceToSlice(slice interface{}) []interface{} {
 
 // GenericIntersection returns a new set with elements that are common in
 // both sets a and b.
-func GenericIntersection(a, b interface{}) reflect.Value {
+func GenericIntersection(a, b interface{}) (reflect.Value, error) {
 
-	switch a.(type) {
+	switch v := a.(type) {
 	case []uint32:
 
 		set := make([]uint32, 0)
@@ -37,7 +40,7 @@ func GenericIntersection(a, b interface{}) reflect.Value {
 				modifiedSet = reflect.Append(modifiedSet, rv)
 			}
 		}
-		return modifiedSet
+		return modifiedSet, nil
 
 	case []float32:
 
@@ -57,7 +60,7 @@ func GenericIntersection(a, b interface{}) reflect.Value {
 				modifiedSet = reflect.Append(modifiedSet, rv)
 			}
 		}
-		return modifiedSet
+		return modifiedSet, nil
 
 	case []int32:
 
@@ -77,7 +80,7 @@ func GenericIntersection(a, b interface{}) reflect.Value {
 				modifiedSet = reflect.Append(modifiedSet, rv)
 			}
 		}
-		return modifiedSet
+		return modifiedSet, nil
 	case []string:
 
 		set := make([]string, 0)
@@ -96,18 +99,19 @@ func GenericIntersection(a, b interface{}) reflect.Value {
 				modifiedSet = reflect.Append(modifiedSet, rv)
 			}
 		}
-		return modifiedSet
-
+		return modifiedSet, nil
+	default:
+		return reflect.ValueOf(interface{}(nil)), fmt.Errorf("Slice error: for input type %v", v)
 	}
 
-	return reflect.ValueOf(0)
+	return reflect.ValueOf(interface{}(nil)), fmt.Errorf("Slice error: case type not supported")
 }
 
 // GenericUnion returns a new set with elements from both
 // the given sets a and b.
-func GenericUnion(a, b interface{}) reflect.Value {
+func GenericUnion(a, b interface{}) (reflect.Value, error) {
 
-	switch a.(type) {
+	switch v := a.(type) {
 	case []uint32:
 		set := make([]uint32, 0)
 		sliceType := reflect.TypeOf(set)
@@ -127,7 +131,7 @@ func GenericUnion(a, b interface{}) reflect.Value {
 				modifiedSet = reflect.Append(modifiedSet, rv)
 			}
 		}
-		return modifiedSet
+		return modifiedSet, nil
 	case []float32:
 
 		set := make([]float32, 0)
@@ -148,7 +152,7 @@ func GenericUnion(a, b interface{}) reflect.Value {
 				modifiedSet = reflect.Append(modifiedSet, rv)
 			}
 		}
-		return modifiedSet
+		return modifiedSet, nil
 	case []int32:
 
 		set := make([]int32, 0)
@@ -169,7 +173,7 @@ func GenericUnion(a, b interface{}) reflect.Value {
 				modifiedSet = reflect.Append(modifiedSet, rv)
 			}
 		}
-		return modifiedSet
+		return modifiedSet, nil
 
 	case []string:
 
@@ -191,15 +195,17 @@ func GenericUnion(a, b interface{}) reflect.Value {
 				modifiedSet = reflect.Append(modifiedSet, rv)
 			}
 		}
-		return modifiedSet
+		return modifiedSet, nil
+	default:
+		return reflect.ValueOf(interface{}(nil)), fmt.Errorf("Slice error: for input type %v", v)
 	}
-	return reflect.ValueOf(0)
+	return reflect.ValueOf(interface{}(nil)), fmt.Errorf("Slice error: case type not supported")
 }
 
 // GenericNot returns new set with elements which of a which are not in
 // set b.
-func GenericNot(a, b interface{}) reflect.Value {
-	switch a.(type) {
+func GenericNot(a, b interface{}) (reflect.Value, error) {
+	switch v := a.(type) {
 	case []uint32:
 
 		set := make([]uint32, 0)
@@ -219,7 +225,7 @@ func GenericNot(a, b interface{}) reflect.Value {
 				modifiedSet = reflect.Append(modifiedSet, rv)
 			}
 		}
-		return modifiedSet
+		return modifiedSet, nil
 	case []float32:
 
 		set := make([]float32, 0)
@@ -239,7 +245,7 @@ func GenericNot(a, b interface{}) reflect.Value {
 				modifiedSet = reflect.Append(modifiedSet, rv)
 			}
 		}
-		return modifiedSet
+		return modifiedSet, nil
 
 	case []int32:
 
@@ -260,7 +266,7 @@ func GenericNot(a, b interface{}) reflect.Value {
 				modifiedSet = reflect.Append(modifiedSet, rv)
 			}
 		}
-		return modifiedSet
+		return modifiedSet, nil
 	case []string:
 
 		set := make([]string, 0)
@@ -280,10 +286,12 @@ func GenericNot(a, b interface{}) reflect.Value {
 				modifiedSet = reflect.Append(modifiedSet, rv)
 			}
 		}
-		return modifiedSet
+		return modifiedSet, nil
+	default:
+		return reflect.ValueOf(interface{}(nil)), fmt.Errorf("Slice error: for input type %v", v)
 
 	}
-	return reflect.ValueOf(0)
+	return reflect.ValueOf(interface{}(nil)), fmt.Errorf("Slice error: case type not supported")
 }
 
 // GenericIsIn returns true if a is in b and False otherwise.

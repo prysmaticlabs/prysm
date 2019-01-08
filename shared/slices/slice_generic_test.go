@@ -21,11 +21,14 @@ func TestGenericIntersection(t *testing.T) {
 		{[]uint32{1}, []uint32{1}, []uint32{1}},
 	}
 	for _, tt := range testCases {
-		result := GenericIntersection(tt.setA, tt.setB).Interface().([]uint32)
-
-		if !reflect.DeepEqual(result, tt.out) {
-			t.Errorf("got %d, want %d", result, tt.out)
+		result, err := GenericIntersection(tt.setA, tt.setB)
+		if err != nil {
+			result := result.Interface().([]uint32)
+			if !reflect.DeepEqual(result, tt.out) {
+				t.Errorf("got %d, want %d", result, tt.out)
+			}
 		}
+
 	}
 
 }
@@ -46,11 +49,14 @@ func TestFloatGenericIntersection(t *testing.T) {
 		{[]float32{1}, []float32{1}, []float32{1}},
 	}
 	for _, tt := range testCases {
-		result := GenericIntersection(tt.setA, tt.setB).Interface().([]float32)
-
-		if !reflect.DeepEqual(result, tt.out) {
-			t.Errorf("got %d, want %d", result, tt.out)
+		result, err := GenericIntersection(tt.setA, tt.setB)
+		if err != nil {
+			result := result.Interface().([]float32)
+			if !reflect.DeepEqual(result, tt.out) {
+				t.Errorf("got %d, want %d", result, tt.out)
+			}
 		}
+
 	}
 
 }
@@ -70,10 +76,14 @@ func TestGenericNot(t *testing.T) {
 		{[]uint32{1}, []uint32{1}, []uint32{}},
 	}
 	for _, tt := range testCases {
-		result := GenericNot(tt.setA, tt.setB).Interface().([]uint32)
-		if !reflect.DeepEqual(result, tt.out) {
-			t.Errorf("got %d, want %d", result, tt.out)
+		result, err := GenericNot(tt.setA, tt.setB)
+		if err != nil {
+			result := result.Interface().([]uint32)
+			if !reflect.DeepEqual(result, tt.out) {
+				t.Errorf("got %d, want %d", result, tt.out)
+			}
 		}
+
 	}
 }
 
@@ -92,11 +102,14 @@ func TestGenericUnion(t *testing.T) {
 		{[]uint32{1}, []uint32{1}, []uint32{1}},
 	}
 	for _, tt := range testCases {
-		result := GenericUnion(tt.setA, tt.setB).Interface().([]uint32)
-
-		if !reflect.DeepEqual(result, tt.out) {
-			t.Errorf("got %d, want %d", result, tt.out)
+		result, err := GenericUnion(tt.setA, tt.setB)
+		if err != nil {
+			result := result.Interface().([]uint32)
+			if !reflect.DeepEqual(result, tt.out) {
+				t.Errorf("got %d, want %d", result, tt.out)
+			}
 		}
+
 	}
 }
 
