@@ -331,11 +331,11 @@ func ValidatorIndices(
 ) ([]uint32, error) {
 
 	var attesterIndicesIntersection []uint32
-	for _, boundaryAttestation := range attestations {
+	for _, attestation := range attestations {
 		attesterIndices, err := AttestationParticipants(
 			state,
-			boundaryAttestation.Data,
-			boundaryAttestation.ParticipationBitfield)
+			attestation.Data,
+			attestation.ParticipationBitfield)
 		if err != nil {
 			return nil, err
 		}
@@ -555,8 +555,8 @@ func ExitValidator(state *pb.BeaconState, index uint32) (*pb.BeaconState, error)
 	validator := state.ValidatorRegistry[index]
 
 	if validator.ExitSlot < state.Slot+params.BeaconConfig().EntryExitDelay {
-		return nil, fmt.Errorf("validator %d could not exit until slot %d",
-			index, state.Slot+params.BeaconConfig().EntryExitDelay)
+		return nil, fmt.Errorf("validator %d has already exited at slot %d",
+			index, validator.ExitSlot)
 	}
 
 	validator.ExitSlot = state.Slot + params.BeaconConfig().EntryExitDelay

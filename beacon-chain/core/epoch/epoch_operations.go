@@ -51,11 +51,19 @@ func BoundaryAttestations(
 	thisEpochAttestations []*pb.PendingAttestationRecord,
 ) ([]*pb.PendingAttestationRecord, error) {
 	epochLength := params.BeaconConfig().EpochLength
+	var boundarySlot uint64
 	var boundaryAttestations []*pb.PendingAttestationRecord
 
 	for _, attestation := range thisEpochAttestations {
 
-		boundaryBlockRoot, err := block.BlockRoot(state, state.Slot-epochLength)
+		// If boundary slot is less than epoch length, then it would
+		// result in a negative number. Therefore we should
+		// default boundarySlot = 0 in this case.
+		if state.Slot > epochLength {
+			boundarySlot = state.Slot - epochLength
+		}
+
+		boundaryBlockRoot, err := block.BlockRoot(state, boundarySlot)
 		if err != nil {
 			return nil, err
 		}
@@ -80,6 +88,7 @@ func PrevAttestations(state *pb.BeaconState) []*pb.PendingAttestationRecord {
 	epochLength := params.BeaconConfig().EpochLength
 	var prevEpochAttestations []*pb.PendingAttestationRecord
 	var earliestSlot uint64
+	var lastSlot uint64
 
 	for _, attestation := range state.LatestAttestations {
 
@@ -89,9 +98,15 @@ func PrevAttestations(state *pb.BeaconState) []*pb.PendingAttestationRecord {
 		if state.Slot > 2*epochLength {
 			earliestSlot = state.Slot - 2*epochLength
 		}
+		// If the state slot is less than epochLength, then the lastSlot would
+		// result in a negative number. Therefore we should default to
+		// lastSlot = 0 in this case.
+		if state.Slot > epochLength {
+			lastSlot = state.Slot - epochLength
+		}
 
 		if earliestSlot <= attestation.Data.Slot &&
-			attestation.Data.Slot < state.Slot-epochLength {
+			attestation.Data.Slot < lastSlot {
 			prevEpochAttestations = append(prevEpochAttestations, attestation)
 		}
 	}

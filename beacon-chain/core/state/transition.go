@@ -133,6 +133,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	// previous justified hash.
 	prevJustifiedAttestations := e.PrevJustifiedAttestations(state,
 		currentAttestations, prevAttestations)
+
 	prevJustifiedAttesterIndices, err := v.ValidatorIndices(state, prevJustifiedAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not get prev epoch justified attester indices: %v", err)
