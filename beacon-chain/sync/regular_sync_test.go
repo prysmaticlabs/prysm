@@ -118,7 +118,7 @@ func TestProcessBlock(t *testing.T) {
 				169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
 		}
 	}
-	if err := db.InitializeState(validators); err != nil {
+	if err := db.InitializeState(); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -196,7 +196,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 				169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
 		}
 	}
-	if err := db.InitializeState(validators); err != nil {
+	if err := db.InitializeState(); err != nil {
 		t.Fatal(err)
 	}
 

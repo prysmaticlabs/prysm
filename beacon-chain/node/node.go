@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/dbcleanup"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -25,7 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/simulator"
 	rbcsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
@@ -158,10 +156,6 @@ func (b *BeaconNode) Close() {
 
 func (b *BeaconNode) startDB(ctx *cli.Context) error {
 	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
-	var genesisJSON string
-	if ctx.GlobalIsSet(utils.GenesisJSON.Name) {
-		genesisJSON = ctx.GlobalString(utils.GenesisJSON.Name)
-	}
 
 	db, err := db.NewDB(path.Join(baseDir, beaconChainDBName))
 	if err != nil {
@@ -176,17 +170,6 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 	}
 	// Ensure that state has been initialized.
 	if beaconState == nil {
-		var genesisValidatorRegistry []*pb.ValidatorRecord
-		if genesisJSON != "" {
-			log.Infof("Initializing state from %s", genesisJSON)
-			genesisValidatorRegistry, err = utils.InitialValidatorRegistryFromJSON(genesisJSON)
-			if err != nil {
-				return err
-			}
-		} else {
-			genesisValidatorRegistry = validators.InitialValidatorRegistry()
-		}
-
 		if err := db.InitializeState(); err != nil {
 			return err
 		}
