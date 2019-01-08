@@ -15,24 +15,24 @@ func TestGenesisBlock(t *testing.T) {
 	stateHash := []byte{0}
 	b1 := NewGenesisBlock(stateHash)
 
-	if b1.GetParentRootHash32() == nil {
+	if b1.ParentRootHash32 == nil {
 		t.Error("genesis block missing ParentHash field")
 	}
 
-	if !reflect.DeepEqual(b1.GetBody().GetAttestations(), []*pb.Attestation{}) {
+	if !reflect.DeepEqual(b1.Body.Attestations, []*pb.Attestation{}) {
 		t.Errorf("genesis block should have 0 attestations")
 	}
 
-	if !bytes.Equal(b1.GetRandaoRevealHash32(), params.BeaconConfig().ZeroHash[:]) {
+	if !bytes.Equal(b1.RandaoRevealHash32, params.BeaconConfig().ZeroHash[:]) {
 		t.Error("genesis block missing RandaoRevealHash32 field")
 	}
 
-	if !bytes.Equal(b1.GetStateRootHash32(), stateHash) {
+	if !bytes.Equal(b1.StateRootHash32, stateHash) {
 		t.Error("genesis block StateRootHash32 isn't initialized correctly")
 	}
 
 	rd := []byte{}
-	if IsRandaoValid(b1.GetRandaoRevealHash32(), rd) {
+	if IsRandaoValid(b1.RandaoRevealHash32, rd) {
 		t.Error("RANDAO should be empty")
 	}
 

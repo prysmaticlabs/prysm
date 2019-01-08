@@ -167,22 +167,22 @@ func (c *ChainService) updateHead(processedBlock <-chan *pb.BeaconBlock) {
 			newHead := currentHead
 			// If both blocks have the same crystallized state root, we favor one which has
 			// the higher slot.
-			if bytes.Equal(currentHead.GetStateRootHash32(), block.GetStateRootHash32()) {
-				if block.GetSlot() > currentHead.GetSlot() {
+			if bytes.Equal(currentHead.StateRootHash32, block.StateRootHash32) {
+				if block.Slot > currentHead.Slot {
 					newHead = block
 					headUpdated = true
 				}
 				// 2a. Pick the block with the higher last_finalized_slot.
 				// 2b. If same, pick the block with the higher last_justified_slot.
-			} else if blockState.GetFinalizedSlot() > currentState.GetFinalizedSlot() {
+			} else if blockState.FinalizedSlot > currentState.FinalizedSlot {
 				newHead = block
 				headUpdated = true
-			} else if blockState.GetFinalizedSlot() == currentState.GetFinalizedSlot() {
-				if blockState.GetJustifiedSlot() > currentState.GetJustifiedSlot() {
+			} else if blockState.FinalizedSlot == currentState.FinalizedSlot {
+				if blockState.JustifiedSlot > currentState.JustifiedSlot {
 					newHead = block
 					headUpdated = true
-				} else if blockState.GetJustifiedSlot() == currentState.GetJustifiedSlot() {
-					if block.GetSlot() > currentHead.GetSlot() {
+				} else if blockState.JustifiedSlot == currentState.JustifiedSlot {
+					if block.Slot > currentHead.Slot {
 						newHead = block
 						headUpdated = true
 					}
@@ -207,7 +207,7 @@ func (c *ChainService) updateHead(processedBlock <-chan *pb.BeaconBlock) {
 			// server to stream these events to beacon clients.
 			// When the transition is a cycle transition, we stream the state containing the new validator
 			// assignments to clients.
-			if block.GetSlot()%params.BeaconConfig().CycleLength == 0 {
+			if block.Slot%params.BeaconConfig().EpochLength == 0 {
 				c.canonicalStateFeed.Send(newState)
 			}
 			c.canonicalBlockFeed.Send(newHead)
@@ -239,14 +239,14 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *pb.BeaconBlock) {
 				continue
 			}
 
-			currentSlot := beaconState.GetSlot()
-			if currentSlot+1 < block.GetSlot() {
-				c.unProcessedBlocks[block.GetSlot()] = block
+			currentSlot := beaconState.Slot
+			if currentSlot+1 < block.Slot {
+				c.unProcessedBlocks[block.Slot] = block
 				continue
 			}
 
-			if currentSlot+1 == block.GetSlot() {
-				if err := c.receiveBlock(block); err != nil {
+			if currentSlot+1 == block.Slot {
+				if err := c.receiveBlock(block, beaconState); err != nil {
 					log.Error(err)
 					processedBlock <- nil
 					continue
@@ -256,8 +256,8 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *pb.BeaconBlock) {
 			} else {
 				log.Debugf(
 					"Block slot number is lower than the current slot in the beacon state %d",
-					block.GetSlot())
-				c.sendAndDeleteCachedBlocks(currentSlot)
+					block.Slot)
+				c.sendAndDeleteCachedBlocks(currentSlot, beaconState)
 			}
 		}
 	}
@@ -286,24 +286,19 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *pb.BeaconBlock) {
 //		else:
 //			return False  # or throw or whatever
 //
-func (c *ChainService) receiveBlock(block *pb.BeaconBlock) error {
+func (c *ChainService) receiveBlock(block *pb.BeaconBlock, beaconState *pb.BeaconState) error {
 
 	blockhash, err := b.Hash(block)
 	if err != nil {
 		return fmt.Errorf("could not hash incoming block: %v", err)
 	}
 
-	beaconState, err := c.beaconDB.GetState()
-	if err != nil {
-		return fmt.Errorf("failed to get beacon state: %v", err)
-	}
-
-	if block.GetSlot() == 0 {
+	if block.Slot == 0 {
 		return errors.New("cannot process a genesis block: received block with slot 0")
 	}
 
 	// Save blocks with higher slot numbers in cache.
-	if err := c.isBlockReadyForProcessing(block); err != nil {
+	if err := c.isBlockReadyForProcessing(block, beaconState); err != nil {
 		log.Debugf("block with hash %#x is not ready for processing: %v", blockhash, err)
 		return nil
 	}
@@ -319,11 +314,11 @@ func (c *ChainService) receiveBlock(block *pb.BeaconBlock) error {
 		return fmt.Errorf("could not hash block %v", err)
 	}
 
-	log.WithField("slotNumber", block.GetSlot()).Info("Executing state transition")
+	log.WithField("slotNumber", block.Slot).Info("Executing state transition")
 
 	// Check for skipped slots and update the corresponding proposers
 	// randao layer.
-	for beaconState.GetSlot() < block.GetSlot()-1 {
+	for beaconState.Slot < block.Slot-1 {
 		beaconState, err = state.ExecuteStateTransition(beaconState, nil, blockRoot)
 		if err != nil {
 			return fmt.Errorf("could not execute state transition %v", err)
@@ -333,10 +328,6 @@ func (c *ChainService) receiveBlock(block *pb.BeaconBlock) error {
 	beaconState, err = state.ExecuteStateTransition(beaconState, block, blockRoot)
 	if err != nil {
 		return fmt.Errorf("could not execute state transition %v", err)
-	}
-
-	if state.IsValidatorSetChange(beaconState, block.GetSlot()) {
-		log.WithField("slotNumber", block.GetSlot()).Info("Validator set rotation occurred")
 	}
 
 	// TODO(#1074): Verify block.state_root == hash_tree_root(state)
@@ -358,11 +349,7 @@ func (c *ChainService) receiveBlock(block *pb.BeaconBlock) error {
 	return nil
 }
 
-func (c *ChainService) isBlockReadyForProcessing(block *pb.BeaconBlock) error {
-	beaconState, err := c.beaconDB.GetState()
-	if err != nil {
-		return fmt.Errorf("failed to get beacon state: %v", err)
-	}
+func (c *ChainService) isBlockReadyForProcessing(block *pb.BeaconBlock, beaconState *pb.BeaconState) error {
 
 	var powBlockFetcher func(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
 	if c.enablePOWChain {
@@ -378,9 +365,9 @@ func (c *ChainService) isBlockReadyForProcessing(block *pb.BeaconBlock) error {
 // sendAndDeleteCachedBlocks checks if there is any block saved in the cache with a
 // slot number equivalent to the current slot. If there is then the block is
 // sent to the incoming block channel and deleted from the cache.
-func (c *ChainService) sendAndDeleteCachedBlocks(currentSlot uint64) {
+func (c *ChainService) sendAndDeleteCachedBlocks(currentSlot uint64, beaconState *pb.BeaconState) {
 	if block, ok := c.unProcessedBlocks[currentSlot+1]; ok {
-		if err := c.isBlockReadyForProcessing(block); err == nil {
+		if err := c.isBlockReadyForProcessing(block, beaconState); err == nil {
 			c.incomingBlockChan <- block
 			delete(c.unProcessedBlocks, currentSlot)
 		}

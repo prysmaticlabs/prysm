@@ -7,14 +7,20 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strconv"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	log "github.com/sirupsen/logrus"
 )
 
 // SimulatedBackend allowing for a programmatic advancement
@@ -59,7 +65,7 @@ func (sb *SimulatedBackend) RunChainTest(testCase *ChainTestCase) error {
 	// test language specification.
 	c := params.BeaconConfig()
 	c.ShardCount = testCase.Config.ShardCount
-	c.CycleLength = testCase.Config.CycleLength
+	c.EpochLength = testCase.Config.CycleLength
 	c.TargetCommitteeSize = testCase.Config.MinCommitteeSize
 	params.OverrideBeaconConfig(c)
 
@@ -69,7 +75,7 @@ func (sb *SimulatedBackend) RunChainTest(testCase *ChainTestCase) error {
 	validators := make([]*pb.ValidatorRecord, testCase.Config.ValidatorCount)
 	for i := uint64(0); i < testCase.Config.ValidatorCount; i++ {
 		validators[i] = &pb.ValidatorRecord{
-			Status:                 pb.ValidatorRecord_ACTIVE,
+			ExitSlot:               params.BeaconConfig().EntryExitDelay,
 			Balance:                c.MaxDeposit * c.Gwei,
 			Pubkey:                 []byte{},
 			RandaoCommitmentHash32: randaoReveal[:],
@@ -95,6 +101,77 @@ func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
 	}
 	if !reflect.DeepEqual(output, testCase.Output) {
 		return fmt.Errorf("shuffle result error: expected %v, actual %v", testCase.Output, output)
+	}
+	return nil
+}
+
+// RunStateTransitionTest advances a beacon chain state transition an N amount of
+// slots from a genesis state, with a block being processed at every iteration
+// of the state transition function.
+func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) error {
+	// We setup the initial configuration for running state
+	// transition tests below.
+	c := params.BeaconConfig()
+	c.EpochLength = testCase.Config.EpochLength
+	c.DepositsForChainStart = testCase.Config.DepositsForChainStart
+	params.OverrideBeaconConfig(c)
+
+	genesisTime := params.BeaconConfig().GenesisTime.Unix()
+	deposits := make([]*pb.Deposit, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(deposits); i++ {
+		depositInput := &pb.DepositInput{
+			Pubkey:                 []byte(strconv.Itoa(i)),
+			RandaoCommitmentHash32: []byte("simulated"),
+		}
+		depositData, err := b.EncodeDepositData(
+			depositInput,
+			params.BeaconConfig().MaxDepositInGwei,
+			genesisTime,
+		)
+		if err != nil {
+			return fmt.Errorf("could not encode initial block deposits: %v", err)
+		}
+		deposits[i] = &pb.Deposit{DepositData: depositData}
+	}
+
+	beaconState, err := state.InitialBeaconState(deposits, uint64(genesisTime), nil)
+	if err != nil {
+		return err
+	}
+
+	// We do not expect hashing initial beacon state and genesis block to
+	// fail, so we can safely ignore the error below.
+	// #nosec G104
+	encodedState, _ := proto.Marshal(beaconState)
+	stateRoot := hashutil.Hash(encodedState)
+	genesisBlock := b.NewGenesisBlock(stateRoot[:])
+	// #nosec G104
+	encodedGenesisBlock, _ := proto.Marshal(genesisBlock)
+	prevBlockRoot := hashutil.Hash(encodedGenesisBlock)
+
+	startTime := time.Now()
+	for i := uint64(0); i < testCase.Config.NumSlots; i++ {
+		newState, err := state.ExecuteStateTransition(beaconState, nil, prevBlockRoot)
+		if err != nil {
+			return fmt.Errorf("could not execute state transition: %v", err)
+		}
+		beaconState = newState
+	}
+	endTime := time.Now()
+	log.Infof(
+		"%d state transitions with %d deposits finished in %v",
+		testCase.Config.NumSlots,
+		testCase.Config.DepositsForChainStart,
+		endTime.Sub(startTime),
+	)
+
+	if beaconState.GetSlot() != testCase.Results.Slot {
+		return fmt.Errorf(
+			"incorrect state slot after %d state transitions without blocks, wanted %d, received %d",
+			testCase.Config.NumSlots,
+			testCase.Config.NumSlots,
+			testCase.Results.Slot,
+		)
 	}
 	return nil
 }
