@@ -5,83 +5,87 @@ import (
 	"testing"
 )
 
-func GenericTestIntersection(t *testing.T) {
+func TestGenericIntersection(t *testing.T) {
 	testCases := []struct {
-		setA []GenericItem
-		setB []GenericItem
-		out  []GenericItem
+		setA []uint32
+		setB []uint32
+		out  []uint32
 	}{
-		{[]GenericItem{2, 3, 5}, []GenericItem{3}, []GenericItem{3}},
-		{[]GenericItem{2, 3, 5}, []GenericItem{3, 5}, []GenericItem{3, 5}},
-		{[]GenericItem{2, 3, 5}, []GenericItem{5, 3, 2}, []GenericItem{5, 3, 2}},
-		{[]GenericItem{2, 3, 5}, []GenericItem{2, 3, 5}, []GenericItem{2, 3, 5}},
-		{[]GenericItem{2, 3, 5}, []GenericItem{}, []GenericItem{}},
-		{[]GenericItem{}, []GenericItem{2, 3, 5}, []GenericItem{}},
-		{[]GenericItem{}, []GenericItem{}, []GenericItem{}},
-		{[]GenericItem{1}, []GenericItem{1}, []GenericItem{1}},
+		{[]uint32{2, 3, 5}, []uint32{3}, []uint32{3}},
+		{[]uint32{2, 3, 5}, []uint32{3, 5}, []uint32{3, 5}},
+		{[]uint32{2, 3, 5}, []uint32{5, 3, 2}, []uint32{5, 3, 2}},
+		{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
+		{[]uint32{2, 3, 5}, []uint32{}, []uint32{}},
+		{[]uint32{}, []uint32{2, 3, 5}, []uint32{}},
+		{[]uint32{}, []uint32{}, []uint32{}},
+		{[]uint32{1}, []uint32{1}, []uint32{1}},
 	}
 	for _, tt := range testCases {
 		result := GenericIntersection(tt.setA, tt.setB)
-		if !reflect.DeepEqual(result, tt.out) {
+		result2 := result.Interface().([]uint32)
+		if !reflect.DeepEqual(result2, tt.out) {
 			t.Errorf("got %d, want %d", result, tt.out)
 		}
 	}
+
 }
 
-func GenericTestUnion(t *testing.T) {
+func TestGenericNot(t *testing.T) {
 	testCases := []struct {
-		setA []GenericItem
-		setB []GenericItem
-		out  []GenericItem
+		setA []uint32
+		setB []uint32
+		out  []uint32
 	}{
-		{[]GenericItem{2, 3, 5}, []GenericItem{4, 6}, []GenericItem{2, 3, 5, 4, 6}},
-		{[]GenericItem{2, 3, 5}, []GenericItem{3, 5}, []GenericItem{2, 3, 5}},
-		{[]GenericItem{2, 3, 5}, []GenericItem{2, 3, 5}, []GenericItem{2, 3, 5}},
-		{[]GenericItem{2, 3, 5}, []GenericItem{}, []GenericItem{2, 3, 5}},
-		{[]GenericItem{}, []GenericItem{2, 3, 5}, []GenericItem{2, 3, 5}},
-		{[]GenericItem{}, []GenericItem{}, []GenericItem{}},
-		{[]GenericItem{1}, []GenericItem{1}, []GenericItem{1}},
-	}
-	for _, tt := range testCases {
-		result := GenericUnion(tt.setA, tt.setB)
-		if !reflect.DeepEqual(result, tt.out) {
-			t.Errorf("got %d, want %d", result, tt.out)
-		}
-	}
-}
-
-func GenericTestNot(t *testing.T) {
-	testCases := []struct {
-		setA []GenericItem
-		setB []GenericItem
-		out  []GenericItem
-	}{
-		{[]GenericItem{4, 6}, []GenericItem{2, 3, 5, 4, 6}, []GenericItem{2, 3, 5}},
-		{[]GenericItem{3, 5}, []GenericItem{2, 3, 5}, []GenericItem{2}},
-		{[]GenericItem{2, 3, 5}, []GenericItem{2, 3, 5}, []GenericItem{}},
-		{[]GenericItem{2}, []GenericItem{2, 3, 5}, []GenericItem{3, 5}},
-		{[]GenericItem{}, []GenericItem{2, 3, 5}, []GenericItem{2, 3, 5}},
-		{[]GenericItem{}, []GenericItem{}, []GenericItem{}},
-		{[]GenericItem{1}, []GenericItem{1}, []GenericItem{}},
+		{[]uint32{4, 6}, []uint32{2, 3, 5, 4, 6}, []uint32{2, 3, 5}},
+		{[]uint32{3, 5}, []uint32{2, 3, 5}, []uint32{2}},
+		{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{}},
+		{[]uint32{2}, []uint32{2, 3, 5}, []uint32{3, 5}},
+		{[]uint32{}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
+		{[]uint32{}, []uint32{}, []uint32{}},
+		{[]uint32{1}, []uint32{1}, []uint32{}},
 	}
 	for _, tt := range testCases {
 		result := GenericNot(tt.setA, tt.setB)
-		if !reflect.DeepEqual(result, tt.out) {
+		result2 := result.Interface().([]uint32)
+		if !reflect.DeepEqual(result2, tt.out) {
 			t.Errorf("got %d, want %d", result, tt.out)
 		}
 	}
 }
 
-func GenericTestIsIn(t *testing.T) {
+func TestGenericUnion(t *testing.T) {
 	testCases := []struct {
-		a      GenericItem
-		b      []GenericItem
+		setA []uint32
+		setB []uint32
+		out  []uint32
+	}{
+		{[]uint32{2, 3, 5}, []uint32{4, 6}, []uint32{2, 3, 5, 4, 6}},
+		{[]uint32{2, 3, 5}, []uint32{3, 5}, []uint32{2, 3, 5}},
+		{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
+		{[]uint32{2, 3, 5}, []uint32{}, []uint32{2, 3, 5}},
+		{[]uint32{}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
+		{[]uint32{}, []uint32{}, []uint32{}},
+		{[]uint32{1}, []uint32{1}, []uint32{1}},
+	}
+	for _, tt := range testCases {
+		result := GenericUnion(tt.setA, tt.setB)
+		result2 := result.Interface().([]uint32)
+		if !reflect.DeepEqual(result2, tt.out) {
+			t.Errorf("got %d, want %d", result, tt.out)
+		}
+	}
+}
+
+func TestGenericIsIn(t *testing.T) {
+	testCases := []struct {
+		a      uint32
+		b      []uint32
 		result bool
 	}{
-		{0, []GenericItem{}, false},
-		{0, []GenericItem{0}, true},
-		{4, []GenericItem{2, 3, 5, 4, 6}, true},
-		{100, []GenericItem{2, 3, 5, 4, 6}, false},
+		{0, []uint32{}, false},
+		{0, []uint32{0}, true},
+		{4, []uint32{2, 3, 5, 4, 6}, true},
+		{100, []uint32{2, 3, 5, 4, 6}, false},
 	}
 	for _, tt := range testCases {
 		result := GenericIsIn(tt.a, tt.b)
