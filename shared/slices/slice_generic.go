@@ -104,7 +104,6 @@ func GenericIntersection(a, b interface{}) (reflect.Value, error) {
 		return reflect.ValueOf(interface{}(nil)), fmt.Errorf("Slice error: for input type %v", v)
 	}
 
-	return reflect.ValueOf(interface{}(nil)), fmt.Errorf("Slice error: case type not supported")
 }
 
 // GenericUnion returns a new set with elements from both
@@ -199,7 +198,7 @@ func GenericUnion(a, b interface{}) (reflect.Value, error) {
 	default:
 		return reflect.ValueOf(interface{}(nil)), fmt.Errorf("Slice error: for input type %v", v)
 	}
-	return reflect.ValueOf(interface{}(nil)), fmt.Errorf("Slice error: case type not supported")
+
 }
 
 // GenericNot returns new set with elements which of a which are not in
@@ -291,7 +290,7 @@ func GenericNot(a, b interface{}) (reflect.Value, error) {
 		return reflect.ValueOf(interface{}(nil)), fmt.Errorf("Slice error: for input type %v", v)
 
 	}
-	return reflect.ValueOf(interface{}(nil)), fmt.Errorf("Slice error: case type not supported")
+
 }
 
 // GenericIsIn returns true if a is in b and False otherwise.

@@ -61,7 +61,83 @@ func TestFloatGenericIntersection(t *testing.T) {
 
 }
 
+func TestStringGenericIntersection(t *testing.T) {
+	testCases := []struct {
+		setA []string
+		setB []string
+		out  []string
+	}{
+		{[]string{"hello", "world"}, []string{"world"}, []string{"world"}},
+		{[]string{"hello"}, []string{"world"}, []string{}},
+	}
+	for _, tt := range testCases {
+		result, err := GenericIntersection(tt.setA, tt.setB)
+		if err != nil {
+			result := result.Interface().([]string)
+			if !reflect.DeepEqual(result, tt.out) {
+				t.Errorf("got %d, want %d", result, tt.out)
+			}
+		}
+
+	}
+
+}
+
+func TestIntGenericIntersection(t *testing.T) {
+	testCases := []struct {
+		setA []int32
+		setB []int32
+		out  []int32
+	}{
+		{[]int32{2, 3, 5}, []int32{3}, []int32{3}},
+		{[]int32{2, 3, 5}, []int32{3, 5}, []int32{3, 5}},
+		{[]int32{2, 3, 5}, []int32{5, 3, 2}, []int32{5, 3, 2}},
+		{[]int32{2, 3, 5}, []int32{2, 3, 5}, []int32{2, 3, 5}},
+		{[]int32{2, 3, 5}, []int32{}, []int32{}},
+		{[]int32{}, []int32{2, 3, 5}, []int32{}},
+		{[]int32{}, []int32{}, []int32{}},
+		{[]int32{1}, []int32{1}, []int32{1}},
+	}
+	for _, tt := range testCases {
+		result, err := GenericIntersection(tt.setA, tt.setB)
+		if err != nil {
+			result := result.Interface().([]int32)
+			if !reflect.DeepEqual(result, tt.out) {
+				t.Errorf("got %d, want %d", result, tt.out)
+			}
+		}
+
+	}
+
+}
+
 func TestGenericNot(t *testing.T) {
+	testCases := []struct {
+		setA []uint32
+		setB []uint32
+		out  []uint32
+	}{
+		{[]uint32{4, 6}, []uint32{2, 3, 5, 4, 6}, []uint32{2, 3, 5}},
+		{[]uint32{3, 5}, []uint32{2, 3, 5}, []uint32{2}},
+		{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{}},
+		{[]uint32{2}, []uint32{2, 3, 5}, []uint32{3, 5}},
+		{[]uint32{}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
+		{[]uint32{}, []uint32{}, []uint32{}},
+		{[]uint32{1}, []uint32{1}, []uint32{}},
+	}
+	for _, tt := range testCases {
+		result, err := GenericNot(tt.setA, tt.setB)
+		if err != nil {
+			result := result.Interface().([]uint32)
+			if !reflect.DeepEqual(result, tt.out) {
+				t.Errorf("got %d, want %d", result, tt.out)
+			}
+		}
+
+	}
+}
+
+func TestFloatGenericNot(t *testing.T) {
 	testCases := []struct {
 		setA []uint32
 		setB []uint32
