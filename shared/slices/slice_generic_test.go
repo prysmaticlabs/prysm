@@ -139,22 +139,22 @@ func TestGenericNot(t *testing.T) {
 
 func TestFloatGenericNot(t *testing.T) {
 	testCases := []struct {
-		setA []uint32
-		setB []uint32
-		out  []uint32
+		setA []float32
+		setB []float32
+		out  []float32
 	}{
-		{[]uint32{4, 6}, []uint32{2, 3, 5, 4, 6}, []uint32{2, 3, 5}},
-		{[]uint32{3, 5}, []uint32{2, 3, 5}, []uint32{2}},
-		{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{}},
-		{[]uint32{2}, []uint32{2, 3, 5}, []uint32{3, 5}},
-		{[]uint32{}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
-		{[]uint32{}, []uint32{}, []uint32{}},
-		{[]uint32{1}, []uint32{1}, []uint32{}},
+		{[]float32{4, 6}, []float32{2, 3, 5, 4, 6}, []float32{2, 3, 5}},
+		{[]float32{3, 5}, []float32{2, 3, 5}, []float32{2}},
+		{[]float32{2, 3, 5}, []float32{2, 3, 5}, []float32{}},
+		{[]float32{2}, []float32{2, 3, 5}, []float32{3, 5}},
+		{[]float32{}, []float32{2, 3, 5}, []float32{2, 3, 5}},
+		{[]float32{}, []float32{}, []float32{}},
+		{[]float32{1}, []float32{1}, []float32{}},
 	}
 	for _, tt := range testCases {
 		result, err := GenericNot(tt.setA, tt.setB)
 		if err != nil {
-			result := result.Interface().([]uint32)
+			result := result.Interface().([]float32)
 			if !reflect.DeepEqual(result, tt.out) {
 				t.Errorf("got %d, want %d", result, tt.out)
 			}
