@@ -2,7 +2,6 @@
 // and retrieve active validator indices from a given slot
 // or an attestation. It also provides helper functions to locate
 // validator based on pubic key.
-
 package validators
 
 import (
