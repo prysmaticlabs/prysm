@@ -179,7 +179,8 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	for i := 0; i < len(state.ShardAndCommitteesAtSlots); i++ {
 		if len(state.ShardAndCommitteesAtSlots[i].ArrayShardAndCommittee[0].Committee) !=
 			int(params.BeaconConfig().TargetCommitteeSize) {
-			t.Error("ShardAndCommittees was not correctly initialized")
+			t.Errorf("ShardAndCommittees was not correctly initialized %d",
+				len(state.ShardAndCommitteesAtSlots[i].ArrayShardAndCommittee[0].Committee))
 		}
 	}
 }
