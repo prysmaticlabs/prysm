@@ -47,7 +47,7 @@ func setupSimulator(t *testing.T, beaconDB *db.BeaconDB) (*Simulator, *mockP2P) 
 	ctx := context.Background()
 	p2pService := &mockP2P{}
 
-	err := beaconDB.InitializeState(nil)
+	err := beaconDB.InitializeState()
 	if err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}

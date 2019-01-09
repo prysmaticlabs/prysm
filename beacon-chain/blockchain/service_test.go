@@ -98,7 +98,7 @@ func setupBeaconChain(t *testing.T, faultyPoWClient bool, beaconDB *db.BeaconDB)
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
-	if err := beaconDB.InitializeState(nil); err != nil {
+	if err := beaconDB.InitializeState(); err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
 
