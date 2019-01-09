@@ -302,7 +302,7 @@ go_repository(
 
 go_repository(
     name = "com_github_btcsuite_btcd",
-    commit = "7d2daa5bfef28c5e282571bc06416516936115ee",
+    commit = "5bda5314ca9549a589e63d7b2e6104492a0d5328",
     importpath = "github.com/btcsuite/btcd",
 )
 
