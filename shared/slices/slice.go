@@ -1,5 +1,18 @@
 package slices
 
+// Contains determines if a uint64 item exists in a slice.
+func Contains(item uint64, slice []uint64) bool {
+	if len(slice) == 0 {
+		return false
+	}
+	for _, a := range slice {
+		if item == a {
+			return true
+		}
+	}
+	return false
+}
+
 // Intersection of two uint32 slices with time
 // complexity of approximately O(n) leveraging a map to
 // check for element existence off by a constant factor

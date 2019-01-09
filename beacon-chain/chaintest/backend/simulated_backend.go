@@ -19,6 +19,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/slices"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -164,7 +165,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 
 		// If the slot is marked as skipped in the configuration options,
 		// we simply run the state transition with a nil block argument.
-		if contains(i, testCase.Config.SkipSlots) {
+		if slices.Contains(i, testCase.Config.SkipSlots) {
 			newState, err := state.ExecuteStateTransition(beaconState, nil, prevBlockRoot)
 			if err != nil {
 				return fmt.Errorf("could not execute state transition: %v", err)

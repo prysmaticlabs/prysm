@@ -116,8 +116,8 @@ func findNextSlotProposerIndex(beaconState *pb.BeaconState) (uint32, error) {
 			earliestSlot+(epochLength*2),
 		)
 	}
-	committeeArray := beaconState.ShardAndCommitteesAtSlots[nextSlot-earliestSlot]
-	firstCommittee := committeeArray.ArrayShardAndCommittee[0].Committee
+	committeeArray := beaconState.ShardCommitteesAtSlots[nextSlot-earliestSlot]
+	firstCommittee := committeeArray.ArrayShardCommittee[0].Committee
 	return firstCommittee[nextSlot%uint64(len(firstCommittee))], nil
 }
 
