@@ -224,15 +224,15 @@ func TestProcessFinalization(t *testing.T) {
 }
 
 func TestProcessCrosslinks_Ok(t *testing.T) {
-	shardCommitteesAtSlot := []*pb.ShardAndCommitteeArray{
-		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+	shardCommitteesAtSlot := []*pb.ShardCommitteeArray{
+		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
 		}}}
 
 	state := &pb.BeaconState{
-		ShardAndCommitteesAtSlots: shardCommitteesAtSlot,
-		Slot:                      5,
-		LatestCrosslinks:          []*pb.CrosslinkRecord{{}, {}},
+		ShardCommitteesAtSlots: shardCommitteesAtSlot,
+		Slot:                   5,
+		LatestCrosslinks:       []*pb.CrosslinkRecord{{}, {}},
 		ValidatorBalances: []uint64{16 * 1e9, 18 * 1e9, 20 * 1e9, 31 * 1e9,
 			32 * 1e9, 34 * 1e9, 50 * 1e9, 50 * 1e9},
 	}
@@ -274,16 +274,16 @@ func TestProcessCrosslinks_Ok(t *testing.T) {
 }
 
 func TestProcessCrosslinks_NoRoot(t *testing.T) {
-	shardCommitteesAtSlot := []*pb.ShardAndCommitteeArray{
-		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+	shardCommitteesAtSlot := []*pb.ShardCommitteeArray{
+		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
 		}}}
 
 	state := &pb.BeaconState{
-		ShardAndCommitteesAtSlots: shardCommitteesAtSlot,
-		Slot:                      5,
-		LatestCrosslinks:          []*pb.CrosslinkRecord{{}, {}},
-		ValidatorBalances:         []uint64{},
+		ShardCommitteesAtSlots: shardCommitteesAtSlot,
+		Slot:                   5,
+		LatestCrosslinks:       []*pb.CrosslinkRecord{{}, {}},
+		ValidatorBalances:      []uint64{},
 	}
 
 	attestations := []*pb.PendingAttestationRecord{
@@ -298,17 +298,17 @@ func TestProcessCrosslinks_NoRoot(t *testing.T) {
 }
 
 func TestProcessEjections_Ok(t *testing.T) {
-	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	var ShardCommittees []*pb.ShardCommitteeArray
 	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
-		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
-			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+		ShardCommittees = append(ShardCommittees, &pb.ShardCommitteeArray{
+			ArrayShardCommittee: []*pb.ShardCommittee{
 				{Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
 			},
 		})
 	}
 	state := &pb.BeaconState{
-		Slot:                      1,
-		ShardAndCommitteesAtSlots: shardAndCommittees,
+		Slot:                   1,
+		ShardCommitteesAtSlots: ShardCommittees,
 		ValidatorBalances: []uint64{
 			params.BeaconConfig().EjectionBalanceInGwei - 1,
 			params.BeaconConfig().EjectionBalanceInGwei + 1},
@@ -339,8 +339,8 @@ func TestCanProcessValidatorRegistry(t *testing.T) {
 		LatestCrosslinks: []*pb.CrosslinkRecord{
 			{Slot: 101}, {Slot: 102}, {Slot: 103}, {Slot: 104},
 		},
-		ShardAndCommitteesAtSlots: []*pb.ShardAndCommitteeArray{
-			{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+		ShardCommitteesAtSlots: []*pb.ShardCommitteeArray{
+			{ArrayShardCommittee: []*pb.ShardCommittee{
 				{Shard: 0}, {Shard: 1}, {Shard: 2}, {Shard: 3},
 			}},
 		},
@@ -364,8 +364,8 @@ func TestCanNotProcessValidatorRegistry(t *testing.T) {
 		LatestCrosslinks: []*pb.CrosslinkRecord{
 			{Slot: 99},
 		},
-		ShardAndCommitteesAtSlots: []*pb.ShardAndCommitteeArray{
-			{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+		ShardCommitteesAtSlots: []*pb.ShardCommitteeArray{
+			{ArrayShardCommittee: []*pb.ShardCommittee{
 				{Shard: 0}},
 			}},
 	}
@@ -376,17 +376,17 @@ func TestCanNotProcessValidatorRegistry(t *testing.T) {
 
 func TestProcessValidatorRegistry(t *testing.T) {
 	epochLength := params.BeaconConfig().EpochLength
-	shardAndCommittees := make([]*pb.ShardAndCommitteeArray, epochLength*2)
-	for i := 0; i < len(shardAndCommittees); i++ {
-		shardAndCommittees[i] = &pb.ShardAndCommitteeArray{
-			ArrayShardAndCommittee: []*pb.ShardAndCommittee{{Shard: uint64(i)}},
+	shardCommittees := make([]*pb.ShardCommitteeArray, epochLength*2)
+	for i := 0; i < len(shardCommittees); i++ {
+		shardCommittees[i] = &pb.ShardCommitteeArray{
+			ArrayShardCommittee: []*pb.ShardCommittee{{Shard: uint64(i)}},
 		}
 	}
 
 	state := &pb.BeaconState{
 		Slot:                              64,
 		ValidatorRegistryLatestChangeSlot: 1,
-		ShardAndCommitteesAtSlots:         shardAndCommittees,
+		ShardCommitteesAtSlots:            shardCommittees,
 		LatestRandaoMixesHash32S:          [][]byte{{'A'}},
 	}
 	copiedState := proto.Clone(state).(*pb.BeaconState)
@@ -395,19 +395,19 @@ func TestProcessValidatorRegistry(t *testing.T) {
 		t.Fatalf("Could not execute ProcessValidatorRegistry: %v", err)
 	}
 
-	if newState.ShardAndCommitteesAtSlots[0].ArrayShardAndCommittee[0].Shard != state.ShardAndCommitteesAtSlots[epochLength].ArrayShardAndCommittee[0].Shard {
+	if newState.ShardCommitteesAtSlots[0].ArrayShardCommittee[0].Shard != state.ShardCommitteesAtSlots[epochLength].ArrayShardCommittee[0].Shard {
 		t.Errorf("Incorrect rotation for shard committees, wanted shard: %d, got shard: %d",
-			state.ShardAndCommitteesAtSlots[0].ArrayShardAndCommittee[0].Shard,
-			newState.ShardAndCommitteesAtSlots[epochLength].ArrayShardAndCommittee[0].Shard)
+			state.ShardCommitteesAtSlots[0].ArrayShardCommittee[0].Shard,
+			newState.ShardCommitteesAtSlots[epochLength].ArrayShardCommittee[0].Shard)
 	}
 }
 
 func TestProcessValidatorRegistry_ReachedUpperBound(t *testing.T) {
 	epochLength := params.BeaconConfig().EpochLength
-	shardAndCommittees := make([]*pb.ShardAndCommitteeArray, epochLength*2)
-	for i := 0; i < len(shardAndCommittees); i++ {
-		shardAndCommittees[i] = &pb.ShardAndCommitteeArray{
-			ArrayShardAndCommittee: []*pb.ShardAndCommittee{{Shard: uint64(i)}},
+	shardCommittees := make([]*pb.ShardCommitteeArray, epochLength*2)
+	for i := 0; i < len(shardCommittees); i++ {
+		shardCommittees[i] = &pb.ShardCommitteeArray{
+			ArrayShardCommittee: []*pb.ShardCommittee{{Shard: uint64(i)}},
 		}
 	}
 	validators := make([]*pb.ValidatorRecord, 1<<params.BeaconConfig().MaxNumLog2Validators-1)
@@ -418,7 +418,7 @@ func TestProcessValidatorRegistry_ReachedUpperBound(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                              64,
 		ValidatorRegistryLatestChangeSlot: 1,
-		ShardAndCommitteesAtSlots:         shardAndCommittees,
+		ShardCommitteesAtSlots:            shardCommittees,
 		LatestRandaoMixesHash32S:          [][]byte{{'A'}},
 		ValidatorRegistry:                 validators,
 	}
@@ -430,17 +430,17 @@ func TestProcessValidatorRegistry_ReachedUpperBound(t *testing.T) {
 
 func TestProcessPartialValidatorRegistry(t *testing.T) {
 	epochLength := params.BeaconConfig().EpochLength
-	shardAndCommittees := make([]*pb.ShardAndCommitteeArray, epochLength*2)
-	for i := 0; i < len(shardAndCommittees); i++ {
-		shardAndCommittees[i] = &pb.ShardAndCommitteeArray{
-			ArrayShardAndCommittee: []*pb.ShardAndCommittee{{Shard: uint64(i)}},
+	shardCommittees := make([]*pb.ShardCommitteeArray, epochLength*2)
+	for i := 0; i < len(shardCommittees); i++ {
+		shardCommittees[i] = &pb.ShardCommitteeArray{
+			ArrayShardCommittee: []*pb.ShardCommittee{{Shard: uint64(i)}},
 		}
 	}
 
 	state := &pb.BeaconState{
 		Slot:                              64,
 		ValidatorRegistryLatestChangeSlot: 1,
-		ShardAndCommitteesAtSlots:         shardAndCommittees,
+		ShardCommitteesAtSlots:            shardCommittees,
 		LatestRandaoMixesHash32S:          [][]byte{{'A'}},
 	}
 	copiedState := proto.Clone(state).(*pb.BeaconState)
@@ -453,19 +453,19 @@ func TestProcessPartialValidatorRegistry(t *testing.T) {
 			state.ValidatorRegistryLatestChangeSlot, newState.ValidatorRegistryLatestChangeSlot)
 	}
 
-	if newState.ShardAndCommitteesAtSlots[0].ArrayShardAndCommittee[0].Shard != state.ShardAndCommitteesAtSlots[epochLength].ArrayShardAndCommittee[0].Shard {
+	if newState.ShardCommitteesAtSlots[0].ArrayShardCommittee[0].Shard != state.ShardCommitteesAtSlots[epochLength].ArrayShardCommittee[0].Shard {
 		t.Errorf("Incorrect rotation for shard committees, wanted shard: %d, got shard: %d",
-			state.ShardAndCommitteesAtSlots[0].ArrayShardAndCommittee[0].Shard,
-			newState.ShardAndCommitteesAtSlots[epochLength].ArrayShardAndCommittee[0].Shard)
+			state.ShardCommitteesAtSlots[0].ArrayShardCommittee[0].Shard,
+			newState.ShardCommitteesAtSlots[epochLength].ArrayShardCommittee[0].Shard)
 	}
 }
 
 func TestProcessPartialValidatorRegistry_ReachedUpperBound(t *testing.T) {
 	epochLength := params.BeaconConfig().EpochLength
-	shardAndCommittees := make([]*pb.ShardAndCommitteeArray, epochLength*2)
-	for i := 0; i < len(shardAndCommittees); i++ {
-		shardAndCommittees[i] = &pb.ShardAndCommitteeArray{
-			ArrayShardAndCommittee: []*pb.ShardAndCommittee{{Shard: uint64(i)}},
+	shardCommittees := make([]*pb.ShardCommitteeArray, epochLength*2)
+	for i := 0; i < len(shardCommittees); i++ {
+		shardCommittees[i] = &pb.ShardCommitteeArray{
+			ArrayShardCommittee: []*pb.ShardCommittee{{Shard: uint64(i)}},
 		}
 	}
 	validators := make([]*pb.ValidatorRecord, 1<<params.BeaconConfig().MaxNumLog2Validators-1)
@@ -476,7 +476,7 @@ func TestProcessPartialValidatorRegistry_ReachedUpperBound(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                              64,
 		ValidatorRegistryLatestChangeSlot: 1,
-		ShardAndCommitteesAtSlots:         shardAndCommittees,
+		ShardCommitteesAtSlots:            shardCommittees,
 		LatestRandaoMixesHash32S:          [][]byte{{'A'}},
 		ValidatorRegistry:                 validators,
 	}

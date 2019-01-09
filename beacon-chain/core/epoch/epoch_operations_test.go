@@ -245,15 +245,15 @@ func TestHeadAttestations_NotOk(t *testing.T) {
 func TestWinningRoot_Ok(t *testing.T) {
 	defaultBalance := params.BeaconConfig().MaxDeposit
 
-	shardAndCommittees := []*pb.ShardAndCommitteeArray{
-		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+	ShardCommittees := []*pb.ShardCommitteeArray{
+		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
 		}}}
 
-	// Assign 32 ETH balance to every validator in shardAndCommittees.
+	// Assign 32 ETH balance to every validator in ShardCommittees.
 	state := &pb.BeaconState{
-		ShardAndCommitteesAtSlots: shardAndCommittees,
-		Slot:                      5,
+		ShardCommitteesAtSlots: ShardCommittees,
+		Slot:                   5,
 		ValidatorBalances: []uint64{
 			defaultBalance, defaultBalance, defaultBalance, defaultBalance,
 			defaultBalance, defaultBalance, defaultBalance, defaultBalance,
@@ -279,7 +279,7 @@ func TestWinningRoot_Ok(t *testing.T) {
 	// WinningRoot chooses the lowest hash: []byte{100}
 	winnerRoot, err := WinningRoot(
 		state,
-		shardAndCommittees[0].ArrayShardAndCommittee[0],
+		ShardCommittees[0].ArrayShardCommittee[0],
 		attestations,
 		nil)
 	if err != nil {
@@ -293,7 +293,7 @@ func TestWinningRoot_Ok(t *testing.T) {
 	attestations[5].ParticipationBitfield = []byte{'C'}
 	winnerRoot, err = WinningRoot(
 		state,
-		shardAndCommittees[0].ArrayShardAndCommittee[0],
+		ShardCommittees[0].ArrayShardCommittee[0],
 		attestations,
 		nil)
 	if err != nil {
@@ -305,13 +305,13 @@ func TestWinningRoot_Ok(t *testing.T) {
 }
 
 func TestWinningRoot_OutOfBound(t *testing.T) {
-	shardAndCommittees := []*pb.ShardAndCommitteeArray{
-		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+	ShardCommittees := []*pb.ShardCommitteeArray{
+		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{}},
 		}}}
 
 	state := &pb.BeaconState{
-		ShardAndCommitteesAtSlots: shardAndCommittees,
+		ShardCommitteesAtSlots: ShardCommittees,
 	}
 
 	attestation := &pb.PendingAttestationRecord{
@@ -324,7 +324,7 @@ func TestWinningRoot_OutOfBound(t *testing.T) {
 
 	_, err := WinningRoot(
 		state,
-		shardAndCommittees[0].ArrayShardAndCommittee[0],
+		ShardCommittees[0].ArrayShardCommittee[0],
 		[]*pb.PendingAttestationRecord{attestation},
 		nil)
 	if err == nil {
@@ -335,15 +335,15 @@ func TestWinningRoot_OutOfBound(t *testing.T) {
 func TestAttestingValidators_Ok(t *testing.T) {
 	defaultBalance := params.BeaconConfig().MaxDeposit
 
-	shardAndCommittees := []*pb.ShardAndCommitteeArray{
-		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+	ShardCommittees := []*pb.ShardCommitteeArray{
+		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
 		}}}
 
-	// Assign 32 ETH balance to every validator in shardAndCommittees.
+	// Assign 32 ETH balance to every validator in ShardCommittees.
 	state := &pb.BeaconState{
-		ShardAndCommitteesAtSlots: shardAndCommittees,
-		Slot:                      5,
+		ShardCommitteesAtSlots: ShardCommittees,
+		Slot:                   5,
 		ValidatorBalances: []uint64{
 			defaultBalance, defaultBalance, defaultBalance, defaultBalance,
 			defaultBalance, defaultBalance, defaultBalance, defaultBalance,
@@ -367,7 +367,7 @@ func TestAttestingValidators_Ok(t *testing.T) {
 
 	attestedValidators, err := AttestingValidators(
 		state,
-		shardAndCommittees[0].ArrayShardAndCommittee[0],
+		ShardCommittees[0].ArrayShardCommittee[0],
 		attestations,
 		nil)
 	if err != nil {
@@ -381,13 +381,13 @@ func TestAttestingValidators_Ok(t *testing.T) {
 }
 
 func TestAttestingValidators_CantGetWinningRoot(t *testing.T) {
-	shardAndCommittees := []*pb.ShardAndCommitteeArray{
-		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+	ShardCommittees := []*pb.ShardCommitteeArray{
+		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{}},
 		}}}
 
 	state := &pb.BeaconState{
-		ShardAndCommitteesAtSlots: shardAndCommittees,
+		ShardCommitteesAtSlots: ShardCommittees,
 	}
 
 	attestation := &pb.PendingAttestationRecord{
@@ -400,7 +400,7 @@ func TestAttestingValidators_CantGetWinningRoot(t *testing.T) {
 
 	_, err := AttestingValidators(
 		state,
-		shardAndCommittees[0].ArrayShardAndCommittee[0],
+		ShardCommittees[0].ArrayShardCommittee[0],
 		[]*pb.PendingAttestationRecord{attestation},
 		nil)
 	if err == nil {
@@ -410,15 +410,15 @@ func TestAttestingValidators_CantGetWinningRoot(t *testing.T) {
 
 func TestTotalAttestingBalance_Ok(t *testing.T) {
 
-	shardAndCommittees := []*pb.ShardAndCommitteeArray{
-		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+	ShardCommittees := []*pb.ShardCommitteeArray{
+		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
 		}}}
 
 	// Assign validators to different balances.
 	state := &pb.BeaconState{
-		ShardAndCommitteesAtSlots: shardAndCommittees,
-		Slot:                      5,
+		ShardCommitteesAtSlots: ShardCommittees,
+		Slot:                   5,
 		ValidatorBalances: []uint64{16 * 1e9, 18 * 1e9, 20 * 1e9, 31 * 1e9,
 			32 * 1e9, 34 * 1e9, 50 * 1e9, 50 * 1e9},
 	}
@@ -440,7 +440,7 @@ func TestTotalAttestingBalance_Ok(t *testing.T) {
 
 	attestedBalance, err := TotalAttestingBalance(
 		state,
-		shardAndCommittees[0].ArrayShardAndCommittee[0],
+		ShardCommittees[0].ArrayShardCommittee[0],
 		attestations,
 		nil)
 	if err != nil {
@@ -455,13 +455,13 @@ func TestTotalAttestingBalance_Ok(t *testing.T) {
 
 func TestTotalAttestingBalance_NotOfBound(t *testing.T) {
 
-	shardAndCommittees := []*pb.ShardAndCommitteeArray{
-		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+	ShardCommittees := []*pb.ShardCommitteeArray{
+		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{}},
 		}}}
 
 	state := &pb.BeaconState{
-		ShardAndCommitteesAtSlots: shardAndCommittees,
+		ShardCommitteesAtSlots: ShardCommittees,
 	}
 
 	attestation := &pb.PendingAttestationRecord{
@@ -474,7 +474,7 @@ func TestTotalAttestingBalance_NotOfBound(t *testing.T) {
 
 	_, err := TotalAttestingBalance(
 		state,
-		shardAndCommittees[0].ArrayShardAndCommittee[0],
+		ShardCommittees[0].ArrayShardCommittee[0],
 		[]*pb.PendingAttestationRecord{attestation},
 		nil)
 	if err == nil {
@@ -484,7 +484,7 @@ func TestTotalAttestingBalance_NotOfBound(t *testing.T) {
 
 func TestTotalBalance(t *testing.T) {
 
-	shardAndCommittees := &pb.ShardAndCommittee{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}}
+	ShardCommittees := &pb.ShardCommittee{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}}
 
 	// Assign validators to different balances.
 	state := &pb.BeaconState{
@@ -494,7 +494,7 @@ func TestTotalBalance(t *testing.T) {
 	}
 
 	// 20 + 25 + 30 + 30 + 32 + 32 + 32 + 32 = 233
-	totalBalance := TotalBalance(state, shardAndCommittees)
+	totalBalance := TotalBalance(state, ShardCommittees)
 	if totalBalance != 233*1e9 {
 		t.Errorf("Incorrect total balance. Wanted: 233*1e9, got: %d", totalBalance)
 	}
@@ -502,14 +502,14 @@ func TestTotalBalance(t *testing.T) {
 
 func TestInclusionSlot_Ok(t *testing.T) {
 
-	shardAndCommittees := []*pb.ShardAndCommitteeArray{
-		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+	ShardCommittees := []*pb.ShardCommitteeArray{
+		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
 		}}}
 
 	state := &pb.BeaconState{
-		ShardAndCommitteesAtSlots: shardAndCommittees,
-		Slot:                      5,
+		ShardCommitteesAtSlots: ShardCommittees,
+		Slot:                   5,
 		LatestAttestations: []*pb.PendingAttestationRecord{
 			{Data: &pb.AttestationData{Shard: 1, Slot: 0},
 				// Validator 1 and 7 participated.
@@ -531,13 +531,13 @@ func TestInclusionSlot_Ok(t *testing.T) {
 
 func TestInclusionSlot_BadBitfield(t *testing.T) {
 
-	shardAndCommittees := []*pb.ShardAndCommitteeArray{
-		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+	ShardCommittees := []*pb.ShardCommitteeArray{
+		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{1}},
 		}}}
 
 	state := &pb.BeaconState{
-		ShardAndCommitteesAtSlots: shardAndCommittees,
+		ShardCommitteesAtSlots: ShardCommittees,
 		LatestAttestations: []*pb.PendingAttestationRecord{
 			{Data: &pb.AttestationData{Shard: 1, Slot: 0},
 				ParticipationBitfield: []byte{},
@@ -553,13 +553,13 @@ func TestInclusionSlot_BadBitfield(t *testing.T) {
 
 func TestInclusionSlot_NotFound(t *testing.T) {
 
-	shardAndCommittees := []*pb.ShardAndCommitteeArray{
-		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+	ShardCommittees := []*pb.ShardCommitteeArray{
+		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{1}},
 		}}}
 
 	state := &pb.BeaconState{
-		ShardAndCommitteesAtSlots: shardAndCommittees,
+		ShardCommitteesAtSlots: ShardCommittees,
 	}
 
 	_, err := InclusionSlot(state, 1)
@@ -570,14 +570,14 @@ func TestInclusionSlot_NotFound(t *testing.T) {
 
 func TestInclusionDistance_Ok(t *testing.T) {
 
-	shardAndCommittees := []*pb.ShardAndCommitteeArray{
-		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+	ShardCommittees := []*pb.ShardCommitteeArray{
+		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
 		}}}
 
 	state := &pb.BeaconState{
-		ShardAndCommitteesAtSlots: shardAndCommittees,
-		Slot:                      5,
+		ShardCommitteesAtSlots: ShardCommittees,
+		Slot:                   5,
 		LatestAttestations: []*pb.PendingAttestationRecord{
 			{Data: &pb.AttestationData{Shard: 1, Slot: 0},
 				// Validator 1 and 7 participated.
@@ -600,13 +600,13 @@ func TestInclusionDistance_Ok(t *testing.T) {
 
 func TestInclusionDistance_BadBitfield(t *testing.T) {
 
-	shardAndCommittees := []*pb.ShardAndCommitteeArray{
-		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+	ShardCommittees := []*pb.ShardCommitteeArray{
+		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{1}},
 		}}}
 
 	state := &pb.BeaconState{
-		ShardAndCommitteesAtSlots: shardAndCommittees,
+		ShardCommitteesAtSlots: ShardCommittees,
 		LatestAttestations: []*pb.PendingAttestationRecord{
 			{Data: &pb.AttestationData{Shard: 1, Slot: 0},
 				ParticipationBitfield: []byte{},
@@ -622,13 +622,13 @@ func TestInclusionDistance_BadBitfield(t *testing.T) {
 
 func TestInclusionDistance_NotFound(t *testing.T) {
 
-	shardAndCommittees := []*pb.ShardAndCommitteeArray{
-		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+	ShardCommittees := []*pb.ShardCommitteeArray{
+		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{1}},
 		}}}
 
 	state := &pb.BeaconState{
-		ShardAndCommitteesAtSlots: shardAndCommittees,
+		ShardCommitteesAtSlots: ShardCommittees,
 	}
 
 	_, err := InclusionDistance(state, 1)
