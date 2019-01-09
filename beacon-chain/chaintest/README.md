@@ -8,7 +8,7 @@ The test suite opts for YAML due to wide language support and support for inline
 
 The testing format follows the official ETH2.0 Specification created [here](https://github.com/ethereum/eth2.0-specs/blob/master/specs/test-format.md)
 
-### Core, Chain Tests
+### Stateful Tests
 
 Chain tests check for conformity of a certain client to the beacon chain specification for items such as the fork choice rule and Casper FFG validator rewards & penalties. Stateful tests need to specify a certain configuration of a beacon chain, with items such as the number validators, in the YAML file. Sample tests will all required fields are shown below.
 
@@ -20,27 +20,24 @@ An example state transition test for testing slot and block processing will look
 
 ```yaml
 title: Sample Ethereum Serenity State Transition Tests
-summary: Testing state transitions occurring with no blocks being published
+summary: Testing state transitions occurring over N slots with varying deposit sizes and proposal skips
 test_suite: prysm
 fork: tchaikovsky
 version: 1.0
 test_cases:
   - config:
-      publish_blocks: false
       epoch_length: 64
       deposits_for_chain_start: 1000
       num_slots: 32 # Testing advancing state to slot < EpochLength
     results:
       slot: 32
   - config:
-      publish_blocks: true
       epoch_length: 64
       deposits_for_chain_start: 16384
       num_slots: 64 # Testing advancing state to exactly slot == EpochLength
     results:
       slot: 64
   - config:
-      publish_blocks: true
       skip_slots: [10, 20, 30]
       epoch_length: 64
       deposits_for_chain_start: 1000
@@ -50,8 +47,7 @@ test_cases:
 ```
 
 The following configuration options are available for state transition tests:
-- **publish_blocks**: `bool` determines whether or not blocks should be published at every slot in the simulated state transition
-- TODO: **skip_slots**: `[int]` determines which slot numbers to simulate a proposer not submitting a block in the state transition TODO
+- **skip_slots**: `[int]` determines which slot numbers to simulate a proposer not submitting a block in the state transition TODO
 - **epoch_length**: `int` the number of slots in an epoch
 - **deposits_for_chain_start**: `int` the number of eth deposits needed for the beacon chain to initialize (this simulates an initial validator registry based on this number in the test)
 - **num_slots**: `int` the number of times we run a state transition in the test
