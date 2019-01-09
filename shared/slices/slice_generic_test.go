@@ -253,7 +253,6 @@ func TestFloatGenericUnion(t *testing.T) {
 	for _, tt := range testCases {
 		result, err := GenericUnion(tt.setA, tt.setB)
 		if err != nil {
-			
 			if !reflect.DeepEqual(result, tt.out) {
 				t.Errorf("got %d, want %d", result, tt.out)
 			}
@@ -281,3 +280,196 @@ func TestGenericIsIn(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkGenericIntersection(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		testCases := []struct {
+			setA []uint32
+			setB []uint32
+			out  []uint32
+		}{
+			{[]uint32{2, 3, 5}, []uint32{3}, []uint32{3}},
+			{[]uint32{2, 3, 5}, []uint32{3, 5}, []uint32{3, 5}},
+			{[]uint32{2, 3, 5}, []uint32{5, 3, 2}, []uint32{5, 3, 2}},
+			{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
+			{[]uint32{2, 3, 5}, []uint32{}, []uint32{}},
+			{[]uint32{}, []uint32{2, 3, 5}, []uint32{}},
+			{[]uint32{}, []uint32{}, []uint32{}},
+			{[]uint32{1}, []uint32{1}, []uint32{1}},
+		}
+		for _, tt := range testCases {
+			res, err := GenericIntersection(tt.setA, tt.setB)
+			if err != nil {
+				b.Errorf("Benchmark error for %v", res)
+			}
+
+		}
+
+	}
+}
+
+func BenchmarkIntersection(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		testCases := []struct {
+			setA []uint32
+			setB []uint32
+			out  []uint32
+		}{
+			{[]uint32{2, 3, 5}, []uint32{3}, []uint32{3}},
+			{[]uint32{2, 3, 5}, []uint32{3, 5}, []uint32{3, 5}},
+			{[]uint32{2, 3, 5}, []uint32{5, 3, 2}, []uint32{5, 3, 2}},
+			{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
+			{[]uint32{2, 3, 5}, []uint32{}, []uint32{}},
+			{[]uint32{}, []uint32{2, 3, 5}, []uint32{}},
+			{[]uint32{}, []uint32{}, []uint32{}},
+			{[]uint32{1}, []uint32{1}, []uint32{1}},
+		}
+		for _, tt := range testCases {
+			Intersection(tt.setA, tt.setB)
+
+		}
+	}
+}
+
+func BenchmarkUnion(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		testCases := []struct {
+			setA []uint32
+			setB []uint32
+			out  []uint32
+		}{
+			{[]uint32{2, 3, 5}, []uint32{3}, []uint32{3}},
+			{[]uint32{2, 3, 5}, []uint32{3, 5}, []uint32{3, 5}},
+			{[]uint32{2, 3, 5}, []uint32{5, 3, 2}, []uint32{5, 3, 2}},
+			{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
+			{[]uint32{2, 3, 5}, []uint32{}, []uint32{}},
+			{[]uint32{}, []uint32{2, 3, 5}, []uint32{}},
+			{[]uint32{}, []uint32{}, []uint32{}},
+			{[]uint32{1}, []uint32{1}, []uint32{1}},
+		}
+		for _, tt := range testCases {
+			Union(tt.setA, tt.setB)
+
+		}
+
+	}
+}
+
+func BenchmarkGenericUnion(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		testCases := []struct {
+			setA []uint32
+			setB []uint32
+			out  []uint32
+		}{
+			{[]uint32{2, 3, 5}, []uint32{3}, []uint32{3}},
+			{[]uint32{2, 3, 5}, []uint32{3, 5}, []uint32{3, 5}},
+			{[]uint32{2, 3, 5}, []uint32{5, 3, 2}, []uint32{5, 3, 2}},
+			{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
+			{[]uint32{2, 3, 5}, []uint32{}, []uint32{}},
+			{[]uint32{}, []uint32{2, 3, 5}, []uint32{}},
+			{[]uint32{}, []uint32{}, []uint32{}},
+			{[]uint32{1}, []uint32{1}, []uint32{1}},
+		}
+		for _, tt := range testCases {
+			res, err := GenericUnion(tt.setA, tt.setB)
+			if err != nil {
+				b.Errorf("Benchmark error for %v", res)
+			}
+
+		}
+	}
+}
+
+func BenchmarkNot(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		testCases := []struct {
+			setA []uint32
+			setB []uint32
+			out  []uint32
+		}{
+			{[]uint32{2, 3, 5}, []uint32{3}, []uint32{3}},
+			{[]uint32{2, 3, 5}, []uint32{3, 5}, []uint32{3, 5}},
+			{[]uint32{2, 3, 5}, []uint32{5, 3, 2}, []uint32{5, 3, 2}},
+			{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
+			{[]uint32{2, 3, 5}, []uint32{}, []uint32{}},
+			{[]uint32{}, []uint32{2, 3, 5}, []uint32{}},
+			{[]uint32{}, []uint32{}, []uint32{}},
+			{[]uint32{1}, []uint32{1}, []uint32{1}},
+		}
+		for _, tt := range testCases {
+			Not(tt.setA, tt.setB)
+
+		}
+
+	}
+}
+
+func BenchmarkGenericNot(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		testCases := []struct {
+			setA []uint32
+			setB []uint32
+			out  []uint32
+		}{
+			{[]uint32{2, 3, 5}, []uint32{3}, []uint32{3}},
+			{[]uint32{2, 3, 5}, []uint32{3, 5}, []uint32{3, 5}},
+			{[]uint32{2, 3, 5}, []uint32{5, 3, 2}, []uint32{5, 3, 2}},
+			{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
+			{[]uint32{2, 3, 5}, []uint32{}, []uint32{}},
+			{[]uint32{}, []uint32{2, 3, 5}, []uint32{}},
+			{[]uint32{}, []uint32{}, []uint32{}},
+			{[]uint32{1}, []uint32{1}, []uint32{1}},
+		}
+		for _, tt := range testCases {
+			res, err := GenericNot(tt.setA, tt.setB)
+			if err != nil {
+				b.Errorf("Benchmark error for %v", res)
+			}
+
+
+		}
+
+	}
+}
+
+func BenchmarkIsIn(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		testCases := []struct {
+			a      uint32
+			b      []uint32
+			result bool
+		}{
+			{0, []uint32{}, false},
+			{0, []uint32{0}, true},
+			{4, []uint32{2, 3, 5, 4, 6}, true},
+			{100, []uint32{2, 3, 5, 4, 6}, false},
+		}
+		for _, tt := range testCases {
+			IsIn(tt.a, tt.b)
+
+		}
+
+	}
+}
+
+func BenchmarkGenericIsIn(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		testCases := []struct {
+			a      uint32
+			b      []uint32
+			result bool
+		}{
+			{0, []uint32{}, false},
+			{0, []uint32{0}, true},
+			{4, []uint32{2, 3, 5, 4, 6}, true},
+			{100, []uint32{2, 3, 5, 4, 6}, false},
+		}
+		for _, tt := range testCases {
+			GenericIsIn(tt.a, tt.b)
+
+		}
+
+	}
+}
+
