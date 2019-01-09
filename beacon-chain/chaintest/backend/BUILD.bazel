@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
-        "chain_test_format.go",
+        "fork_choice_test_format.go",
         "helpers.go",
         "setup_db.go",
         "shuffle_test_format.go",

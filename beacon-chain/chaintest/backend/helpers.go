@@ -16,7 +16,6 @@ import (
 // the previous beacon block, and previous beacon block root.
 func generateSimulatedBlock(
 	beaconState *pb.BeaconState,
-	prevBlock *pb.BeaconBlock,
 	prevBlockRoot [32]byte,
 	randaoReveal [32]byte,
 ) (*pb.BeaconBlock, [32]byte, error) {
@@ -45,7 +44,8 @@ func generateSimulatedBlock(
 	return block, hashutil.Hash(encodedBlock), nil
 }
 
-// Given a number of slots,
+// Given a number of slots, we create a list of hash onions from an underlying randao reveal. For example,
+// if we have N slots, we create a list of [secret, hash(secret), hash(hash(secret)), hash(...(prev N-1 hashes))].
 func generateSimulatedRandaoHashOnions(numSlots uint64) [][32]byte {
 	// We create a list of randao hash onions for the given number of epochs
 	// we run the state transition.
@@ -119,4 +119,17 @@ func findNextSlotProposerIndex(beaconState *pb.BeaconState) (uint32, error) {
 	committeeArray := beaconState.ShardAndCommitteesAtSlots[nextSlot-earliestSlot]
 	firstCommittee := committeeArray.ArrayShardAndCommittee[0].Committee
 	return firstCommittee[nextSlot%uint64(len(firstCommittee))], nil
+}
+
+// determines if a uint64 item exists in a slice.
+func contains(item uint64, slice []uint64) bool {
+	if len(slice) == 0 {
+		return false
+	}
+	for _, a := range slice {
+		if item == a {
+			return true
+		}
+	}
+	return false
 }

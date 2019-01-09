@@ -27,7 +27,7 @@ import (
 // and other e2e use cases.
 type SimulatedBackend struct {
 	chainService *blockchain.ChainService
-	db           *db.BeaconDB
+	beaconDB           *db.BeaconDB
 }
 
 // NewSimulatedBackend creates an instance by initializing a chain service
@@ -48,15 +48,15 @@ func NewSimulatedBackend() (*SimulatedBackend, error) {
 	}
 	return &SimulatedBackend{
 		chainService: cs,
-		db:           db,
+		beaconDB:           db,
 	}, nil
 }
 
-// RunChainTest uses a parsed set of chaintests from a YAML file
+// RunForkChoiceTest uses a parsed set of chaintests from a YAML file
 // according to the ETH 2.0 client chain test specification and runs them
 // against the simulated backend.
-func (sb *SimulatedBackend) RunChainTest(testCase *ChainTestCase) error {
-	defer teardownDB(sb.db)
+func (sb *SimulatedBackend) RunForkChoiceTest(testCase *ForkChoiceTestCase) error {
+	defer teardownDB(sb.beaconDB)
 	// Utilize the config parameters in the test case to setup
 	// the DB and set global config parameters accordingly.
 	// Config parameters include: ValidatorCount, ShardCount,
@@ -75,7 +75,6 @@ func (sb *SimulatedBackend) RunChainTest(testCase *ChainTestCase) error {
 	for i := uint64(0); i < testCase.Config.ValidatorCount; i++ {
 		validators[i] = &pb.ValidatorRecord{
 			ExitSlot:               params.BeaconConfig().EntryExitDelay,
-			Balance:                c.MaxDeposit * c.Gwei,
 			Pubkey:                 []byte{},
 			RandaoCommitmentHash32: randaoReveal[:],
 		}
@@ -91,8 +90,7 @@ func (sb *SimulatedBackend) RunChainTest(testCase *ChainTestCase) error {
 // RunShuffleTest uses validator set specified from a YAML file, runs the validator shuffle
 // algorithm, then compare the output with the expected output from the YAML file.
 func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
-	defer teardownDB(sb.db)
-
+	defer teardownDB(sb.beaconDB)
 	seed := common.BytesToHash([]byte(testCase.Seed))
 	output, err := utils.ShuffleIndices(seed, testCase.Input)
 	if err != nil {
@@ -108,6 +106,7 @@ func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
 // slots from a genesis state, with a block being processed at every iteration
 // of the state transition function.
 func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) error {
+	defer teardownDB(sb.beaconDB)
 	// We setup the initial configuration for running state
 	// transition tests below.
 	c := params.BeaconConfig()
@@ -147,7 +146,6 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	// We now keep track of generated blocks for each state transition in
 	// a slice.
 	prevBlockRoots := [][32]byte{genesisBlockRoot}
-	prevBlocks := []*pb.BeaconBlock{genesisBlock}
 
 	// We keep track of the randao layers peeled for each proposer index in a map.
 	layersPeeledForProposer := make(map[uint32]int, len(beaconState.ValidatorRegistry))
@@ -158,7 +156,6 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	startTime := time.Now()
 	for i := uint64(0); i < testCase.Config.NumSlots; i++ {
 		prevBlockRoot := prevBlockRoots[len(prevBlockRoots)-1]
-		prevBlock := prevBlocks[len(prevBlocks)-1]
 
 		proposerIndex, err := findNextSlotProposerIndex(beaconState)
 		if err != nil {
@@ -183,7 +180,6 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		// We generate a new block to pass into the state transition.
 		newBlock, newBlockRoot, err := generateSimulatedBlock(
 			beaconState,
-			prevBlock,
 			prevBlockRoot,
 			blockRandaoReveal,
 		)
@@ -199,7 +195,6 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		// state transition was applied.
 		beaconState = newState
 		prevBlockRoots = append(prevBlockRoots, newBlockRoot)
-		prevBlocks = append(prevBlocks, newBlock)
 		layersPeeledForProposer[proposerIndex]++
 	}
 
@@ -222,14 +217,3 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	return nil
 }
 
-func contains(item uint64, slice []uint64) bool {
-	if len(slice) == 0 {
-		return false
-	}
-	for _, a := range slice {
-		if item == a {
-			return true
-		}
-	}
-	return false
-}
