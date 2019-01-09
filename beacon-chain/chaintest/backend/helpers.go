@@ -120,16 +120,3 @@ func findNextSlotProposerIndex(beaconState *pb.BeaconState) (uint32, error) {
 	firstCommittee := committeeArray.ArrayShardCommittee[0].Committee
 	return firstCommittee[nextSlot%uint64(len(firstCommittee))], nil
 }
-
-// determines if a uint64 item exists in a slice.
-func contains(item uint64, slice []uint64) bool {
-	if len(slice) == 0 {
-		return false
-	}
-	for _, a := range slice {
-		if item == a {
-			return true
-		}
-	}
-	return false
-}
