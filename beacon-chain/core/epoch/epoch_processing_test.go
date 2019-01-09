@@ -231,8 +231,8 @@ func TestProcessCrosslinks_Ok(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ShardCommitteesAtSlots: shardCommitteesAtSlot,
-		Slot:                      5,
-		LatestCrosslinks:          []*pb.CrosslinkRecord{{}, {}},
+		Slot:                   5,
+		LatestCrosslinks:       []*pb.CrosslinkRecord{{}, {}},
 		ValidatorBalances: []uint64{16 * 1e9, 18 * 1e9, 20 * 1e9, 31 * 1e9,
 			32 * 1e9, 34 * 1e9, 50 * 1e9, 50 * 1e9},
 	}
@@ -281,9 +281,9 @@ func TestProcessCrosslinks_NoRoot(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ShardCommitteesAtSlots: shardCommitteesAtSlot,
-		Slot:                      5,
-		LatestCrosslinks:          []*pb.CrosslinkRecord{{}, {}},
-		ValidatorBalances:         []uint64{},
+		Slot:                   5,
+		LatestCrosslinks:       []*pb.CrosslinkRecord{{}, {}},
+		ValidatorBalances:      []uint64{},
 	}
 
 	attestations := []*pb.PendingAttestationRecord{
@@ -307,7 +307,7 @@ func TestProcessEjections_Ok(t *testing.T) {
 		})
 	}
 	state := &pb.BeaconState{
-		Slot:                      1,
+		Slot:                   1,
 		ShardCommitteesAtSlots: ShardCommittees,
 		ValidatorBalances: []uint64{
 			params.BeaconConfig().EjectionBalanceInGwei - 1,
@@ -386,7 +386,7 @@ func TestProcessValidatorRegistry(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                            64,
 		ValidatorRegistryLastChangeSlot: 1,
-		ShardCommitteesAtSlots:       ShardCommittees,
+		ShardCommitteesAtSlots:          ShardCommittees,
 		LatestRandaoMixesHash32S:        [][]byte{{'A'}},
 	}
 	copiedState := proto.Clone(state).(*pb.BeaconState)
@@ -418,7 +418,7 @@ func TestProcessValidatorRegistry_ReachedUpperBound(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                            64,
 		ValidatorRegistryLastChangeSlot: 1,
-		ShardCommitteesAtSlots:       ShardCommittees,
+		ShardCommitteesAtSlots:          ShardCommittees,
 		LatestRandaoMixesHash32S:        [][]byte{{'A'}},
 		ValidatorRegistry:               validators,
 	}
@@ -440,7 +440,7 @@ func TestProcessPartialValidatorRegistry(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                            64,
 		ValidatorRegistryLastChangeSlot: 1,
-		ShardCommitteesAtSlots:       ShardCommittees,
+		ShardCommitteesAtSlots:          ShardCommittees,
 		LatestRandaoMixesHash32S:        [][]byte{{'A'}},
 	}
 	copiedState := proto.Clone(state).(*pb.BeaconState)
@@ -476,7 +476,7 @@ func TestProcessPartialValidatorRegistry_ReachedUpperBound(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                            64,
 		ValidatorRegistryLastChangeSlot: 1,
-		ShardCommitteesAtSlots:       ShardCommittees,
+		ShardCommitteesAtSlots:          ShardCommittees,
 		LatestRandaoMixesHash32S:        [][]byte{{'A'}},
 		ValidatorRegistry:               validators,
 	}

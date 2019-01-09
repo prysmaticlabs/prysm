@@ -70,7 +70,7 @@ func InitialBeaconState(
 		// Randomness and committees.
 		LatestRandaoMixesHash32S:         latestRandaoMixes,
 		LatestVdfOutputs:                 latestVDFOutputs,
-		ShardCommitteesAtSlots:        []*pb.ShardCommitteeArray{},
+		ShardCommitteesAtSlots:           []*pb.ShardCommitteeArray{},
 		PersistentCommittees:             []*pbcomm.Uint32List{},
 		PersistentCommitteeReassignments: []*pb.ShardReassignmentRecord{},
 

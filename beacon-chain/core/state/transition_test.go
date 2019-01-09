@@ -89,10 +89,10 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	}
 	latestMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
-		LatestRandaoMixesHash32S:  latestMixes,
-		ValidatorRegistry:         registry,
-		ShardCommitteesAtSlots: ShardCommittees,
-		Slot:                      5,
+		LatestRandaoMixesHash32S: latestMixes,
+		ValidatorRegistry:        registry,
+		ShardCommitteesAtSlots:   ShardCommittees,
+		Slot:                     5,
 	}
 	block := &pb.BeaconBlock{
 		Slot:               5,
@@ -147,10 +147,10 @@ func TestProcessBlock_IncorrectCasperSlashing(t *testing.T) {
 	}
 	latestMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
-		LatestRandaoMixesHash32S:  latestMixes,
-		Slot:                      5,
-		ValidatorRegistry:         registry,
-		ShardCommitteesAtSlots: ShardCommittees,
+		LatestRandaoMixesHash32S: latestMixes,
+		Slot:                     5,
+		ValidatorRegistry:        registry,
+		ShardCommitteesAtSlots:   ShardCommittees,
 	}
 	block := &pb.BeaconBlock{
 		Slot:               5,
@@ -228,10 +228,10 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	}
 	latestMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
-		LatestRandaoMixesHash32S:  latestMixes,
-		Slot:                      5,
-		ValidatorRegistry:         registry,
-		ShardCommitteesAtSlots: ShardCommittees,
+		LatestRandaoMixesHash32S: latestMixes,
+		Slot:                     5,
+		ValidatorRegistry:        registry,
+		ShardCommitteesAtSlots:   ShardCommittees,
 	}
 	block := &pb.BeaconBlock{
 		Slot:               5,
@@ -331,13 +331,13 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	}
 	latestMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
-		LatestRandaoMixesHash32S:  latestMixes,
-		ValidatorRegistry:         registry,
-		Slot:                      64,
-		PreviousJustifiedSlot:     10,
-		LatestBlockRootHash32S:    blockRoots,
-		LatestCrosslinks:          stateLatestCrosslinks,
-		ShardCommitteesAtSlots: ShardCommittees,
+		LatestRandaoMixesHash32S: latestMixes,
+		ValidatorRegistry:        registry,
+		Slot:                     64,
+		PreviousJustifiedSlot:    10,
+		LatestBlockRootHash32S:   blockRoots,
+		LatestCrosslinks:         stateLatestCrosslinks,
+		ShardCommitteesAtSlots:   ShardCommittees,
 	}
 	exits := make([]*pb.Exit, params.BeaconConfig().MaxExits+1)
 	block := &pb.BeaconBlock{
@@ -439,13 +439,13 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	latestMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
-		LatestRandaoMixesHash32S:  latestMixes,
-		ValidatorRegistry:         registry,
-		Slot:                      64,
-		ShardCommitteesAtSlots: ShardCommittees,
-		PreviousJustifiedSlot:     10,
-		LatestBlockRootHash32S:    blockRoots,
-		LatestCrosslinks:          stateLatestCrosslinks,
+		LatestRandaoMixesHash32S: latestMixes,
+		ValidatorRegistry:        registry,
+		Slot:                     64,
+		ShardCommitteesAtSlots:   ShardCommittees,
+		PreviousJustifiedSlot:    10,
+		LatestBlockRootHash32S:   blockRoots,
+		LatestCrosslinks:         stateLatestCrosslinks,
 	}
 	exits := []*pb.Exit{
 		{

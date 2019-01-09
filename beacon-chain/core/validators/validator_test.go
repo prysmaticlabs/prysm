@@ -415,7 +415,7 @@ func TestBoundaryAttesterIndices(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ShardCommitteesAtSlots: ShardCommittees,
-		Slot:                      5,
+		Slot:                   5,
 	}
 
 	boundaryAttestations := []*pb.PendingAttestationRecord{
@@ -515,7 +515,7 @@ func TestAttestingValidatorIndices_Ok(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ShardCommitteesAtSlots: ShardCommittees,
-		Slot:                      5,
+		Slot:                   5,
 	}
 
 	prevAttestation := &pb.PendingAttestationRecord{
@@ -562,7 +562,7 @@ func TestAttestingValidatorIndices_OutOfBound(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ShardCommitteesAtSlots: ShardCommittees,
-		Slot:                      5,
+		Slot:                   5,
 	}
 
 	attestation := &pb.PendingAttestationRecord{

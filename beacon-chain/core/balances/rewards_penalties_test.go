@@ -233,8 +233,8 @@ func TestInclusionDistRewards_Ok(t *testing.T) {
 		}
 		state := &pb.BeaconState{
 			ShardCommitteesAtSlots: ShardCommittees,
-			ValidatorBalances:         validatorBalances,
-			LatestAttestations:        attestation,
+			ValidatorBalances:      validatorBalances,
+			LatestAttestations:     attestation,
 		}
 		state, err := InclusionDistRewards(
 			state,
@@ -269,7 +269,7 @@ func TestInclusionDistRewards_NotOk(t *testing.T) {
 	for _, tt := range tests {
 		state := &pb.BeaconState{
 			ShardCommitteesAtSlots: ShardCommittees,
-			LatestAttestations:        attestation,
+			LatestAttestations:     attestation,
 		}
 		_, err := InclusionDistRewards(state, tt.voted, 0)
 		if err == nil {
@@ -452,8 +452,8 @@ func TestInactivityInclusionPenalty_Ok(t *testing.T) {
 		}
 		state := &pb.BeaconState{
 			ShardCommitteesAtSlots: ShardCommittees,
-			ValidatorBalances:         validatorBalances,
-			LatestAttestations:        attestation,
+			ValidatorBalances:      validatorBalances,
+			LatestAttestations:     attestation,
 		}
 		state, err := InactivityInclusionPenalties(
 			state,
@@ -488,7 +488,7 @@ func TestInactivityInclusionPenalty_NotOk(t *testing.T) {
 	for _, tt := range tests {
 		state := &pb.BeaconState{
 			ShardCommitteesAtSlots: ShardCommittees,
-			LatestAttestations:        attestation,
+			LatestAttestations:     attestation,
 		}
 		_, err := InactivityInclusionPenalties(state, tt.voted, 0)
 		if err == nil {
@@ -522,8 +522,8 @@ func TestAttestationInclusionRewards(t *testing.T) {
 		}
 		state := &pb.BeaconState{
 			ShardCommitteesAtSlots: ShardCommittees,
-			ValidatorBalances:         validatorBalances,
-			LatestAttestations:        attestation,
+			ValidatorBalances:      validatorBalances,
+			LatestAttestations:     attestation,
 		}
 		state, err := AttestationInclusionRewards(
 			state,
@@ -558,7 +558,7 @@ func TestAttestationInclusionRewards_NoInclusionSlot(t *testing.T) {
 		}
 		state := &pb.BeaconState{
 			ShardCommitteesAtSlots: ShardCommittees,
-			ValidatorBalances:         validatorBalances,
+			ValidatorBalances:      validatorBalances,
 		}
 		if _, err := AttestationInclusionRewards(state, 0, tt.voted); err == nil {
 			t.Fatal("AttestationInclusionRewards should have failed with no inclusion slot")
@@ -589,10 +589,10 @@ func TestAttestationInclusionRewards_NoProposerIndex(t *testing.T) {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
 		}
 		state := &pb.BeaconState{
-			Slot:                      1000,
+			Slot:                   1000,
 			ShardCommitteesAtSlots: ShardCommittees,
-			ValidatorBalances:         validatorBalances,
-			LatestAttestations:        attestation,
+			ValidatorBalances:      validatorBalances,
+			LatestAttestations:     attestation,
 		}
 		if _, err := AttestationInclusionRewards(state, 0, tt.voted); err == nil {
 			t.Fatal("AttestationInclusionRewards should have failed with no proposer index")
@@ -633,8 +633,8 @@ func TestCrosslinksRewardsPenalties(t *testing.T) {
 		}
 		state := &pb.BeaconState{
 			ShardCommitteesAtSlots: ShardCommittees,
-			ValidatorBalances:         validatorBalances,
-			LatestAttestations:        attestation,
+			ValidatorBalances:      validatorBalances,
+			LatestAttestations:     attestation,
 		}
 		state = CrosslinksRewardsPenalties(
 			state,
