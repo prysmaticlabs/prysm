@@ -27,7 +27,7 @@ import (
 // and other e2e use cases.
 type SimulatedBackend struct {
 	chainService *blockchain.ChainService
-	beaconDB           *db.BeaconDB
+	beaconDB     *db.BeaconDB
 }
 
 // NewSimulatedBackend creates an instance by initializing a chain service
@@ -48,7 +48,7 @@ func NewSimulatedBackend() (*SimulatedBackend, error) {
 	}
 	return &SimulatedBackend{
 		chainService: cs,
-		beaconDB:           db,
+		beaconDB:     db,
 	}, nil
 }
 
@@ -216,4 +216,3 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	}
 	return nil
 }
-

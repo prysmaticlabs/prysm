@@ -4,14 +4,14 @@ package backend
 type ForkChoiceTest struct {
 	Title     string
 	Summary   string
-	TestSuite string           `yaml:"test_suite"`
+	TestSuite string                `yaml:"test_suite"`
 	TestCases []*ForkChoiceTestCase `yaml:"test_cases"`
 }
 
 // ForkChoiceTestCase --
 type ForkChoiceTestCase struct {
-	Config  *ForkChoiceTestConfig  `yaml:"config"`
-	Slots   []*ForkChoiceTestSlot  `yaml:"slots,flow"`
+	Config  *ForkChoiceTestConfig `yaml:"config"`
+	Slots   []*ForkChoiceTestSlot `yaml:"slots,flow"`
 	Results *ForkChoiceTestResult `yaml:"results"`
 }
 
