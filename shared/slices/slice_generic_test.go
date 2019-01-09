@@ -55,7 +55,7 @@ func TestGenericIntersectionWithSSZ(t *testing.T) {
 
 		b2 := new(bytes.Buffer)
 		err1 := ssz.Encode(b2, tt.setA)
-		if err1 == nil && err == nil{
+		if err1 == nil && err == nil {
 
 			result, err := GenericIntersection(b1.Bytes(), b2.Bytes())
 			if err != nil {
@@ -64,7 +64,6 @@ func TestGenericIntersectionWithSSZ(t *testing.T) {
 				}
 			}
 		}
-
 
 	}
 
@@ -465,7 +464,6 @@ func BenchmarkGenericNot(b *testing.B) {
 				b.Errorf("Benchmark error for %v", res)
 			}
 
-
 		}
 
 	}
@@ -510,7 +508,6 @@ func BenchmarkGenericIsIn(b *testing.B) {
 
 	}
 }
-
 
 func BenchmarkGenericIntersectionWithSSZ(b *testing.B) {
 	for i := 0; i < b.N; i++ {
@@ -578,7 +575,6 @@ func BenchmarkIntersectionWithSSZ(b *testing.B) {
 	}
 }
 
-
 func BenchmarkGenericUnionWithSSZ(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		testCases := []struct {
@@ -645,7 +641,6 @@ func BenchmarkUnionWithSSZ(b *testing.B) {
 	}
 }
 
-
 func BenchmarkGenericNotWithSSZ(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		testCases := []struct {
@@ -711,9 +706,3 @@ func BenchmarkNotWithSSZ(b *testing.B) {
 		}
 	}
 }
-
-
-
-
-
-
