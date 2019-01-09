@@ -77,7 +77,7 @@ bazel build //validator:validator
 
 ## Running The Beacon Chain
 
-To start the system, we need to seed the beacon chain state with an initial validator set for local development. We created a reference [genesis.json](https://github.com/prysmaticlabs/prysm/blob/master/genesis.json) in the prysm base directory for this! You'll also need a special data directory where all the beacon chain data will be persisted to. 
+To start the system, you will need a special data directory where all the beacon chain data will be persisted to. 
 
 Then, you can run the node as follows:
 
@@ -85,7 +85,6 @@ With the binary executable:
 
 ```
 ./beacon-chain \
-  --genesis-json /path/to/genesis.json \
   --datadir /path/to/your/datadir \
   --rpc-port 4000 \
   --simulator \
@@ -97,7 +96,6 @@ With bazel:
 
 ```
 bazel run //beacon-chain --\
-  --genesis-json /path/to/genesis.json \
   --datadir /path/to/your/datadir \
   --rpc-port 4000 \
   --simulator \
@@ -121,9 +119,16 @@ Once your beacon node is up, you'll need to attach a validator client as a separ
 To get started, you'll need to use a public key from the initial validator set of the beacon node. Here are a few you can try out:
 
 ```
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
-CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+bc36789e7a1e281436464229828f817d6612f7b477d66591ff96a9e064bcc98a
+5fe7f977e71dba2ea1a68e21057beebb9be2ac30c6410aa38d4f3fbe41dcffd2
+f2ee15ea639b73fa3db9b34a245bdfa015c260c598b211bf05a1ecc4b3e3b4f2
+69c322e3248a5dfc29d73c5b0553b0185a35cd5bb6386747517ef7e53b15e287
+f343681465b9efe82c933c3e8748c70cb8aa06539c361de20f72eac04e766393
+dbb8d0f4c497851a5043c6363657698cb1387682cac2f786c731f8936109d795
+d0591206d9e81e07f4defc5327957173572bcd1bca7838caa7be39b0c12b1873
+ee2a4bc7db81da2b7164e56b3649b1e2a09c58c455b15dabddd9146c7582cebc
+d33e25809fcaa2b6900567812852539da8559dc8b76a7ce3fc5ddd77e8d19a69
+b2e7b7a21d986ae84d62a7de4a916f006c4e42a596358b93bad65492d174c4ff
 ```
 
 Run as follows:
@@ -134,7 +139,7 @@ With the binary executable:
 ./validator \
   --beacon-rpc-provider http://localhost:4000 \
   --datadir /path/to/uniquevalidatordatadir \
-  --pubkey CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+  --pubkey f2ee15ea639b73fa3db9b34a245bdfa015c260c598b211bf05a1ecc4b3e3b4f2
 ```
 
 With Bazel:
@@ -143,7 +148,7 @@ With Bazel:
 bazel run //validator --\
   --beacon-rpc-provider http://localhost:4000 \
   --datadir /path/to/uniquevalidatordatadir \
-  --pubkey CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+  --pubkey f2ee15ea639b73fa3db9b34a245bdfa015c260c598b211bf05a1ecc4b3e3b4f2
 ```
 
 
@@ -154,8 +159,7 @@ if you want to run multiple validator clients, **each one needs to have its own 
 ## Running Via Docker
 
 ```
-docker run -p 4000:4000 -v /path/to/genesis.json:/genesis.json gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
-  --genesis-json /genesis.json \
+docker run -p 4000:4000 -v gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
   --rpc-port 4000 \
   --simulator \
   --demo-config \
@@ -167,7 +171,7 @@ Then, to run a validator client, use:
 ```
 docker run gcr.io/prysmaticlabs/prysm/validator:latest \
   --beacon-rpc-provider http://{YOUR_LOCAL_IP}:4000 \
-  --pubkey CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+  --pubkey f2ee15ea639b73fa3db9b34a245bdfa015c260c598b211bf05a1ecc4b3e3b4f2
 ```
 
 
@@ -183,7 +187,6 @@ The best way to run under Windows is to clone the repository and then run the no
 
 ```
 go run ./beacon-chain main.go \
-   --genesis-json /path/to/genesis.json \
    --datadir /path/to/your/datadir \
    --rpc-port 4000 \
    --simulator \
@@ -197,7 +200,7 @@ After the beacon chain is up and running, run the validator client as a separate
 go run ./validator/main.go \
   --beacon-rpc-provider http://localhost:4000 \
   --datadir /path/to/uniquevalidatordatadir \
-  --pubkey CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+  --pubkey f2ee15ea639b73fa3db9b34a245bdfa015c260c598b211bf05a1ecc4b3e3b4f2
 ```
 
 # Testing

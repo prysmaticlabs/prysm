@@ -186,3 +186,77 @@ func TestDomainVersion(t *testing.T) {
 		t.Errorf("Incorrect domain version %d", DomainVersion(forkData, 11, 3))
 	}
 }
+
+func TestDecodeDepositAmountAndTimeStamp(t *testing.T) {
+
+	tests := []struct {
+		depositData *pb.DepositInput
+		amount      uint64
+		timestamp   int64
+	}{
+		{
+			depositData: &pb.DepositInput{
+				Pubkey:                      []byte("testing"),
+				RandaoCommitmentHash32:      []byte("randao"),
+				CustodyCommitmentHash32:     []byte("commitment"),
+				WithdrawalCredentialsHash32: []byte("withdraw"),
+			},
+			amount:    8749343850,
+			timestamp: 458739850,
+		},
+		{
+			depositData: &pb.DepositInput{
+				Pubkey:                      []byte("testing"),
+				CustodyCommitmentHash32:     []byte("commitment"),
+				WithdrawalCredentialsHash32: []byte("withdraw"),
+			},
+			amount:    657660,
+			timestamp: 67750,
+		},
+		{
+			depositData: &pb.DepositInput{
+				Pubkey:                      []byte("testing"),
+				RandaoCommitmentHash32:      []byte("randao"),
+				WithdrawalCredentialsHash32: []byte("withdraw"),
+			},
+			amount:    5445540,
+			timestamp: 34340,
+		}, {
+			depositData: &pb.DepositInput{
+				RandaoCommitmentHash32:      []byte("randao"),
+				CustodyCommitmentHash32:     []byte("commitment"),
+				WithdrawalCredentialsHash32: []byte("withdraw"),
+			},
+			amount:    4545,
+			timestamp: 4343,
+		}, {
+			depositData: &pb.DepositInput{
+				Pubkey:                  []byte("testing"),
+				RandaoCommitmentHash32:  []byte("randao"),
+				CustodyCommitmentHash32: []byte("commitment"),
+			},
+			amount:    76706966,
+			timestamp: 34394393,
+		},
+	}
+
+	for _, tt := range tests {
+		data, err := EncodeDepositData(tt.depositData, tt.amount, tt.timestamp)
+		if err != nil {
+			t.Fatalf("Could not encode data %v", err)
+		}
+
+		decAmount, decTimestamp, err := DecodeDepositAmountAndTimeStamp(data)
+		if err != nil {
+			t.Fatalf("Could not decode data %v", err)
+		}
+
+		if tt.amount != decAmount {
+			t.Errorf("Decoded amount not equal to given amount, %d : %d", decAmount, tt.amount)
+		}
+
+		if tt.timestamp != decTimestamp {
+			t.Errorf("Decoded timestamp not equal to given timestamp, %d : %d", decTimestamp, tt.timestamp)
+		}
+	}
+}
