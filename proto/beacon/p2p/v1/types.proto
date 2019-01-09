@@ -7,18 +7,15 @@ import "proto/common/messages.proto";
 message BeaconState {
   // Validator registry [1-1000] 
   repeated ValidatorRecord validator_registry = 1;
-  uint64 validator_registry_last_change_slot = 2;
+  uint64 validator_registry_latest_change_slot = 2;
   uint64 validator_registry_exit_count = 3;
   bytes validator_registry_delta_chain_tip_hash32 = 4;
   repeated uint64 validator_balances = 5; // Balance in Gwei
 
   // Randomness and committees [1001-2000]
-  bytes next_seed_hash32 = 1002;
-  repeated ShardAndCommitteeArray shard_and_committees_at_slots = 1003;
-  repeated ethereum.common.Uint32List persistent_committees = 1004;
-  repeated ShardReassignmentRecord persistent_committee_reassignments = 1005;
-  repeated bytes latest_randao_mixes_hash32s = 1006;
-  repeated bytes latest_vdf_outputs = 1007;
+  repeated ShardCommitteeArray shard_committees_at_slots = 1003;
+  repeated bytes latest_randao_mixes_hash32s = 1004;
+  repeated bytes latest_vdf_outputs_hash32s = 1005;
 
   // Finality [2001-3000] 
   uint64 previous_justified_slot = 2001;
@@ -28,15 +25,14 @@ message BeaconState {
 
   // Recent state [3001-4000]
   repeated CrosslinkRecord latest_crosslinks = 3001;
-  uint64 last_state_recalculation_slot = 3002;
   repeated bytes latest_block_root_hash32s = 3003;
   repeated bytes batched_block_root_hash32s = 3004;
   repeated uint64 latest_penalized_exit_balances = 3005;
   repeated PendingAttestationRecord latest_attestations = 3006;
 
-  // PoW receipt root [4001-5000]
-  bytes processed_pow_receipt_root_hash32 = 4001;
-  repeated CandidatePoWReceiptRootRecord candidate_pow_receipt_roots = 4002;
+  // Ethereum 1.0 deposit root [4001-5000]
+  bytes latest_deposit_root_hash32 = 4001;
+  repeated DepositRootVote deposit_root_votes = 4002;
 
   // Miscellaneous [5001-6000]
   uint64 genesis_time = 5001;
@@ -46,7 +42,7 @@ message BeaconState {
   // Proof of custody [6001-7000]
   // Placeholders, ProofOfCustodyChallenge is defined in phase 1,
   // the list will remain empty throughout phase 0
-  repeated ProofOfCustodyChallenge poc_challenges = 6001;
+  repeated CustodyChallenge custody_challenges = 6001;
 }
 
 message ForkData {
@@ -55,8 +51,8 @@ message ForkData {
   uint64 fork_slot = 3;
 }
 
-message CandidatePoWReceiptRootRecord {
-  bytes candidate_pow_receipt_root_hash32 = 1;
+message DepositRootVote {
+  bytes deposit_root_hash32 = 1;
   uint64 vote_count = 2;
 }
 
@@ -85,6 +81,11 @@ message AttestationData {
   bytes justified_block_root_hash32 = 8;
 }
 
+message AttestationDataAndCustodyBit {
+  AttestationData data = 1;
+  bool custody_bit = 2;
+}
+
 message ValidatorRecord {
   bytes pubkey = 1;
   // TODO(781): The usage of withdrawal_credentials is not defined in spec. Not used in Prysm yet.
@@ -104,9 +105,9 @@ message ValidatorRecord {
     WITHDRAWABLE = 2; // validator is participating validator duties.
   }
   StatusFlags status_flags = 10;
-  bytes poc_commitment_hash32 = 11;
-  uint64 last_poc_change_slot = 12;
-  uint64 second_last_poc_change_slot = 13;
+  bytes custody_commitment_hash32 = 11;
+  uint64 latest_custody_reseed_slot = 12;
+  uint64 penultimate_custody_reseed_slot = 13;
 
   // Deprecated fields
   // All fields must be annotated with [deprecated=true];
@@ -125,11 +126,11 @@ message CrosslinkRecord {
   bytes shard_block_root_hash32 = 2;
 }
 
-message ShardAndCommitteeArray {
-  repeated ShardAndCommittee array_shard_and_committee = 1;
+message ShardCommitteeArray {
+  repeated ShardCommittee array_shard_committee = 1;
 }
 
-message ShardAndCommittee {
+message ShardCommittee {
   uint64 shard = 1;
   repeated uint32 committee = 2;
   uint64 total_validator_count = 3;
@@ -140,7 +141,7 @@ message BeaconBlock {
   bytes parent_root_hash32 = 2;
   bytes state_root_hash32 = 3;
   bytes randao_reveal_hash32 = 4;
-  bytes candidate_pow_receipt_root_hash32 = 5;
+  bytes deposit_root_hash32 = 5;
   repeated bytes signature = 6; // Type of [uint384]?
 
   // Block Body
@@ -161,7 +162,7 @@ message DepositInput {
   // TODO(781): The usage of withdrawal_credentials is not defined in spec. Not used in Prysm yet.
   bytes withdrawal_credentials_hash32 = 3;
   bytes randao_commitment_hash32 = 4;
-  bytes poc_commitment = 5;
+  bytes custody_commitment_hash32 = 5;
 }
 
 message ProposalSignedData {
@@ -171,8 +172,8 @@ message ProposalSignedData {
 }
 
 message SlashableVoteData {
-  repeated uint32 aggregate_signature_poc_0_indices = 1; // proof of custody indices for 0 bits.
-  repeated uint32 aggregate_signature_poc_1_indices = 2; // proof of custody indices for 1 bits.
+  repeated uint32 custody_bit_0_indices = 1; // proof of custody indices for 0 bits.
+  repeated uint32 custody_bit_1_indices = 2; // proof of custody indices for 1 bits.
   AttestationData data = 3;
   bytes aggregate_signature = 4; // Type of [uint384]?
 }
@@ -220,4 +221,4 @@ message ValidatorRegistryDeltaBlock {
   ValidatorRegistryDeltaFlags flag = 5;
 }
 
-message ProofOfCustodyChallenge {} // Empty until phase 1
+message CustodyChallenge {} // Empty until phase 1

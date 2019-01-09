@@ -173,9 +173,9 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 	}
 
 	block := &pb.BeaconBlock{
-		Slot:                          2,
-		ParentRootHash32:              parentHash[:],
-		CandidatePowReceiptRootHash32: []byte("a"),
+		Slot:              2,
+		ParentRootHash32:  parentHash[:],
+		DepositRootHash32: []byte("a"),
 	}
 
 	blockChan := make(chan *pb.BeaconBlock)
@@ -245,29 +245,29 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatalf("Can't get state from db %v", err)
 	}
 
-	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	var ShardCommittees []*pb.ShardCommitteeArray
 	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
-		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
-			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+		ShardCommittees = append(ShardCommittees, &pb.ShardCommitteeArray{
+			ArrayShardCommittee: []*pb.ShardCommittee{
 				{Committee: []uint32{9, 8, 311, 12, 92, 1, 23, 17}},
 			},
 		})
 	}
 
-	beaconState.ShardAndCommitteesAtSlots = shardAndCommittees
+	beaconState.ShardCommitteesAtSlots = ShardCommittees
 	if err := chainService.beaconDB.SaveState(beaconState); err != nil {
 		t.Fatal(err)
 	}
 
 	currentSlot := uint64(5)
 	attestationSlot := uint64(0)
-	shard := beaconState.ShardAndCommitteesAtSlots[attestationSlot].ArrayShardAndCommittee[0].Shard
+	shard := beaconState.ShardCommitteesAtSlots[attestationSlot].ArrayShardCommittee[0].Shard
 
 	block := &pb.BeaconBlock{
-		Slot:                          currentSlot + 1,
-		StateRootHash32:               stateRoot[:],
-		ParentRootHash32:              parentHash[:],
-		CandidatePowReceiptRootHash32: []byte("a"),
+		Slot:              currentSlot + 1,
+		StateRootHash32:   stateRoot[:],
+		ParentRootHash32:  parentHash[:],
+		DepositRootHash32: []byte("a"),
 		Body: &pb.BeaconBlockBody{
 			Attestations: []*pb.Attestation{{
 				ParticipationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -319,7 +319,7 @@ func TestDoesPOWBlockExist(t *testing.T) {
 
 	// Using a faulty client should throw error.
 	var powHash [32]byte
-	copy(powHash[:], beaconState.ProcessedPowReceiptRootHash32)
+	copy(powHash[:], beaconState.LatestDepositRootHash32)
 	exists := chainService.doesPoWBlockExist(powHash)
 	if exists {
 		t.Error("Block corresponding to nil powchain reference should not exist")
@@ -384,10 +384,10 @@ func TestUpdateHead(t *testing.T) {
 		enc, _ := proto.Marshal(tt.state)
 		stateRoot := hashutil.Hash(enc)
 		block := &pb.BeaconBlock{
-			Slot:                          tt.blockSlot,
-			StateRootHash32:               stateRoot[:],
-			ParentRootHash32:              genesisHash[:],
-			CandidatePowReceiptRootHash32: []byte("a"),
+			Slot:              tt.blockSlot,
+			StateRootHash32:   stateRoot[:],
+			ParentRootHash32:  genesisHash[:],
+			DepositRootHash32: []byte("a"),
 		}
 		h, err := b.Hash(block)
 		if err != nil {
@@ -456,18 +456,18 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 
 	var h [32]byte
 	copy(h[:], []byte("a"))
-	beaconState.ProcessedPowReceiptRootHash32 = h[:]
+	beaconState.LatestDepositRootHash32 = h[:]
 	beaconState.Slot = 0
 
 	currentSlot := uint64(1)
 	attestationSlot := uint64(0)
-	shard := beaconState.ShardAndCommitteesAtSlots[attestationSlot].ArrayShardAndCommittee[0].Shard
+	shard := beaconState.ShardCommitteesAtSlots[attestationSlot].ArrayShardCommittee[0].Shard
 
 	block3 := &pb.BeaconBlock{
-		Slot:                          currentSlot,
-		StateRootHash32:               stateRoot[:],
-		ParentRootHash32:              parentHash[:],
-		CandidatePowReceiptRootHash32: []byte("a"),
+		Slot:              currentSlot,
+		StateRootHash32:   stateRoot[:],
+		ParentRootHash32:  parentHash[:],
+		DepositRootHash32: []byte("a"),
 		Body: &pb.BeaconBlockBody{
 			Attestations: []*pb.Attestation{{
 				ParticipationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
