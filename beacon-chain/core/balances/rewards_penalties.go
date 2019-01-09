@@ -340,7 +340,7 @@ func Crosslinks(
 				prevEpochAttestations)
 			if err != nil {
 				return nil,
-					fmt.Errorf("could not get attesting indices for shard commitee %d: %v", shardCommitee.Shard, err)
+					fmt.Errorf("could not get attesting indices for shard committee %d: %v", shardCommitee.Shard, err)
 			}
 			for _, index := range shardCommitee.Committee {
 				baseReward := baseReward(state, index, baseRewardQuotient)

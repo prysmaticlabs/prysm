@@ -378,19 +378,3 @@ func winningRoot(
 	}
 	return winnerRoot, nil
 }
-
-// adjustForInclusionDistance returns the calculated reward based on
-// how long it took for attestation to get included. The longer, the lower
-// the the reward.
-//
-// Spec pseudocode definition:
-//    def adjust_for_inclusion_distance(magnitude: int, distance: int) -> int:
-//    """
-//    Adjusts the reward of an attestation based on how long it took to get included
-//    (the longer, the lower the reward). Returns a value between ``0`` and ``magnitude``.
-//    ""
-//    return magnitude // 2 + (magnitude // 2) * MIN_ATTESTATION_INCLUSION_DELAY // distance
-func adjustForInclusionDistance(magniture uint64, distance uint64) uint64 {
-	return magniture/2 + (magniture/2)*
-		params.BeaconConfig().MinAttestationInclusionDelay/distance
-}

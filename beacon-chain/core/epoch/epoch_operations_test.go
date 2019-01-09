@@ -675,24 +675,3 @@ func TestInclusionDistance_NotFound(t *testing.T) {
 		t.Fatal("InclusionDistance should have failed")
 	}
 }
-
-func TestAdjustForInclusionDistance(t *testing.T) {
-	tests := []struct {
-		a uint64
-		b uint64
-		c uint64
-	}{
-		{a: 10, b: 1, c: 25},
-		{a: 10, b: 2, c: 15},
-		{a: 10, b: 16, c: 6},
-		{a: 50, b: 1, c: 125},
-		{a: 50, b: 16, c: 31},
-	}
-	for _, tt := range tests {
-		if adjustForInclusionDistance(tt.a, tt.b) != tt.c {
-			t.Errorf(
-				"AdjustForInclusionDistance(%d, %d) = %d, want = %d",
-				tt.a, tt.b, adjustForInclusionDistance(tt.a, tt.b), tt.c)
-		}
-	}
-}
