@@ -233,10 +233,10 @@ func (p *Proposer) computeBlockToBeProposed(latestBlock *pbp2p.BeaconBlock,
 
 	signature := make([][]byte, 48)
 	block := &pbp2p.BeaconBlock{
-		Slot:                          latestBlock.Slot + 1,
-		ParentRootHash32:              latestBlockHash[:],
-		RandaoRevealHash32:            []byte{},
-		CandidatePowReceiptRootHash32: powChainHashRes.BlockHash,
+		Slot:               latestBlock.Slot + 1,
+		ParentRootHash32:   latestBlockHash[:],
+		RandaoRevealHash32: []byte{},
+		DepositRootHash32:  powChainHashRes.BlockHash,
 		Body: &pbp2p.BeaconBlockBody{
 			Attestations: []*pbp2p.Attestation{attestation},
 		},
