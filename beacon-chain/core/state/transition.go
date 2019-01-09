@@ -65,7 +65,7 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState
 	}
 	// TODO(#781): Verify Proposer Signature.
 	var err error
-	state = b.ProcessPOWReceiptRoots(state, block)
+	state = b.ProcessDepositRoots(state, block)
 	state, err = b.ProcessBlockRandao(state, block)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify and process block randao: %v", err)

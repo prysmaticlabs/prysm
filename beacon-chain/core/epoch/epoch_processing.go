@@ -18,13 +18,13 @@ func CanProcessEpoch(state *pb.BeaconState) bool {
 	return state.Slot%params.BeaconConfig().EpochLength == 0
 }
 
-// CanProcessReceiptRoots checks the eligibility to process PoW receipt root.
-// The receipt root can be processed every POW_RECEIPT_ROOT_VOTING_PERIOD.
+// CanProcessDepositRoots checks the eligibility to process deposit root.
+// The deposit root can be processed every DEPOSIT_ROOT_VOTING_PERIOD.
 //
 // Spec pseudocode definition:
-//    If state.slot % POW_RECEIPT_ROOT_VOTING_PERIOD == 0:
-func CanProcessReceiptRoots(state *pb.BeaconState) bool {
-	return state.Slot%params.BeaconConfig().PowReceiptRootVotingPeriod == 0
+//    If state.slot % DEPOSIT_ROOT_VOTING_PERIOD == 0:
+func CanProcessDepositRoots(state *pb.BeaconState) bool {
+	return state.Slot%params.BeaconConfig().DepositRootVotingPeriod == 0
 }
 
 // CanProcessValidatorRegistry checks the eligibility to process validator registry.
@@ -37,12 +37,12 @@ func CanProcessReceiptRoots(state *pb.BeaconState) bool {
 //		* state.latest_crosslinks[shard].slot > state.validator_registry_latest_change_slot
 // 			for every shard number shard in state.shard_committees_at_slots
 func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
-	if state.FinalizedSlot <= state.ValidatorRegistryLastChangeSlot {
+	if state.FinalizedSlot <= state.ValidatorRegistryLatestChangeSlot {
 		return false
 	}
 	for _, shardCommitteesAtSlot := range state.ShardAndCommitteesAtSlots {
 		for _, shardCommittee := range shardCommitteesAtSlot.ArrayShardAndCommittee {
-			if state.LatestCrosslinks[shardCommittee.Shard].Slot <= state.ValidatorRegistryLastChangeSlot {
+			if state.LatestCrosslinks[shardCommittee.Shard].Slot <= state.ValidatorRegistryLatestChangeSlot {
 				return false
 			}
 		}
@@ -50,17 +50,17 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 	return true
 }
 
-// ProcessReceipt processes PoW receipt roots by checking its vote count.
-// With sufficient votes (>2*POW_RECEIPT_ROOT_VOTING_PERIOD), it then
+// ProcessDeposits processes deposit roots by checking its vote count.
+// With sufficient votes (>2*DEPOSIT_ROOT_VOTING_PERIOD), it then
 // assigns root hash to processed receipt vote in state.
-func ProcessReceipt(state *pb.BeaconState) *pb.BeaconState {
+func ProcessDeposits(state *pb.BeaconState) *pb.BeaconState {
 
-	for _, receiptRoot := range state.CandidatePowReceiptRoots {
-		if receiptRoot.VoteCount*2 > params.BeaconConfig().PowReceiptRootVotingPeriod {
-			state.ProcessedPowReceiptRootHash32 = receiptRoot.CandidatePowReceiptRootHash32
+	for _, receiptRoot := range state.DepositRootVotes {
+		if receiptRoot.VoteCount*2 > params.BeaconConfig().DepositRootVotingPeriod {
+			state.LatestDepositRootHash32 = receiptRoot.DepositRootHash32
 		}
 	}
-	state.CandidatePowReceiptRoots = make([]*pb.CandidatePoWReceiptRootRecord, 0)
+	state.DepositRootVotes = make([]*pb.DepositRootVote, 0)
 	return state
 }
 
@@ -263,7 +263,7 @@ func ProcessPartialValidatorRegistry(
 	for i := 0; i < epochLength; i++ {
 		state.ShardAndCommitteesAtSlots[i] = state.ShardAndCommitteesAtSlots[epochLength+i]
 	}
-	epochsSinceLastRegistryChange := (state.Slot - state.ValidatorRegistryLastChangeSlot) / uint64(epochLength)
+	epochsSinceLastRegistryChange := (state.Slot - state.ValidatorRegistryLatestChangeSlot) / uint64(epochLength)
 	startShard := state.ShardAndCommitteesAtSlots[0].ArrayShardAndCommittee[0].Shard
 	if mathutil.IsPowerOf2(epochsSinceLastRegistryChange) {
 		newShuffledCommittees, err := validators.ShuffleValidatorRegistryToCommittees(
