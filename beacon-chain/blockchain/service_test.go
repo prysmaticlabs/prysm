@@ -245,23 +245,23 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatalf("Can't get state from db %v", err)
 	}
 
-	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	var ShardCommittees []*pb.ShardCommitteeArray
 	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
-		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
-			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+		ShardCommittees = append(ShardCommittees, &pb.ShardCommitteeArray{
+			ArrayShardCommittee: []*pb.ShardCommittee{
 				{Committee: []uint32{9, 8, 311, 12, 92, 1, 23, 17}},
 			},
 		})
 	}
 
-	beaconState.ShardAndCommitteesAtSlots = shardAndCommittees
+	beaconState.ShardCommitteesAtSlots = ShardCommittees
 	if err := chainService.beaconDB.SaveState(beaconState); err != nil {
 		t.Fatal(err)
 	}
 
 	currentSlot := uint64(5)
 	attestationSlot := uint64(0)
-	shard := beaconState.ShardAndCommitteesAtSlots[attestationSlot].ArrayShardAndCommittee[0].Shard
+	shard := beaconState.ShardCommitteesAtSlots[attestationSlot].ArrayShardCommittee[0].Shard
 
 	block := &pb.BeaconBlock{
 		Slot:              currentSlot + 1,
@@ -461,7 +461,7 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 
 	currentSlot := uint64(1)
 	attestationSlot := uint64(0)
-	shard := beaconState.ShardAndCommitteesAtSlots[attestationSlot].ArrayShardAndCommittee[0].Shard
+	shard := beaconState.ShardCommitteesAtSlots[attestationSlot].ArrayShardCommittee[0].Shard
 
 	block3 := &pb.BeaconBlock{
 		Slot:              currentSlot,
