@@ -269,7 +269,7 @@ func InclusionDistance(state *pb.BeaconState, validatorIndex uint32) (uint64, er
 //    `attesting_validator_indices(shard_committee, winning_root(shard_committee))` for convenience
 func AttestingValidators(
 	state *pb.BeaconState,
-	shardCommittee *pb.ShardAndCommittee,
+	shardCommittee *pb.ShardCommittee,
 	thisEpochAttestations []*pb.PendingAttestationRecord,
 	prevEpochAttestations []*pb.PendingAttestationRecord) ([]uint32, error) {
 
@@ -303,7 +303,7 @@ func AttestingValidators(
 //    sum([get_effective_balance(state, i) for i in shard_committee.committee])
 func TotalAttestingBalance(
 	state *pb.BeaconState,
-	shardCommittee *pb.ShardAndCommittee,
+	shardCommittee *pb.ShardCommittee,
 	thisEpochAttestations []*pb.PendingAttestationRecord,
 	prevEpochAttestations []*pb.PendingAttestationRecord) (uint64, error) {
 
@@ -339,7 +339,7 @@ func SinceFinality(state *pb.BeaconState) uint64 {
 //   is maximized (ties broken by favoring lower shard_block_root values)
 func winningRoot(
 	state *pb.BeaconState,
-	shardCommittee *pb.ShardAndCommittee,
+	shardCommittee *pb.ShardCommittee,
 	thisEpochAttestations []*pb.PendingAttestationRecord,
 	prevEpochAttestations []*pb.PendingAttestationRecord) ([]byte, error) {
 

@@ -322,8 +322,8 @@ func Crosslinks(
 
 	epochLength := params.BeaconConfig().EpochLength
 
-	for _, shardCommitteesAtSlot := range state.ShardAndCommitteesAtSlots[:epochLength] {
-		for _, shardCommitee := range shardCommitteesAtSlot.ArrayShardAndCommittee {
+	for _, shardCommitteesAtSlot := range state.ShardCommitteesAtSlots[:epochLength] {
+		for _, shardCommitee := range shardCommitteesAtSlot.ArrayShardCommittee {
 			totalAttestingBalance, err :=
 				epoch.TotalAttestingBalance(state, shardCommitee, thisEpochAttestations, prevEpochAttestations)
 			if err != nil {

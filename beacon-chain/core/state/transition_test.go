@@ -44,9 +44,9 @@ func TestProcessBlock_IncorrectBlockRandao(t *testing.T) {
 	beaconState := &pb.BeaconState{
 		Slot:              0,
 		ValidatorRegistry: registry,
-		ShardAndCommitteesAtSlots: []*pb.ShardAndCommitteeArray{
+		ShardCommitteesAtSlots: []*pb.ShardCommitteeArray{
 			{
-				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				ArrayShardCommittee: []*pb.ShardCommittee{
 					{
 						Shard:     0,
 						Committee: []uint32{0, 1},
@@ -79,10 +79,11 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 			RandaoLayers:           0,
 		},
 	}
+
 	slashings := make([]*pb.ProposerSlashing, config.MaxProposerSlashings+1)
-	shardAndCommittees := make([]*pb.ShardAndCommitteeArray, 64)
-	shardAndCommittees[5] = &pb.ShardAndCommitteeArray{
-		ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+	shardCommittees := make([]*pb.ShardCommitteeArray, 64)
+	shardCommittees[5] = &pb.ShardCommitteeArray{
+		ArrayShardCommittee: []*pb.ShardCommittee{
 			{
 				Shard:     0,
 				Committee: []uint32{0, 1},
@@ -91,10 +92,10 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	}
 	latestMixes := make([][]byte, config.LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
-		LatestRandaoMixesHash32S:  latestMixes,
-		ValidatorRegistry:         registry,
-		ShardAndCommitteesAtSlots: shardAndCommittees,
-		Slot:                      5,
+		LatestRandaoMixesHash32S: latestMixes,
+		ValidatorRegistry:        registry,
+		ShardCommitteesAtSlots:   shardCommittees,
+		Slot:                     5,
 	}
 	block := &pb.BeaconBlock{
 		Slot:               5,
@@ -138,9 +139,9 @@ func TestProcessBlock_IncorrectCasperSlashing(t *testing.T) {
 		},
 	}
 	casperSlashings := make([]*pb.CasperSlashing, config.MaxCasperSlashings+1)
-	shardAndCommittees := make([]*pb.ShardAndCommitteeArray, 64)
-	shardAndCommittees[5] = &pb.ShardAndCommitteeArray{
-		ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+	shardCommittees := make([]*pb.ShardCommitteeArray, 64)
+	shardCommittees[5] = &pb.ShardCommitteeArray{
+		ArrayShardCommittee: []*pb.ShardCommittee{
 			{
 				Shard:     0,
 				Committee: []uint32{0, 1},
@@ -149,10 +150,10 @@ func TestProcessBlock_IncorrectCasperSlashing(t *testing.T) {
 	}
 	latestMixes := make([][]byte, config.LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
-		LatestRandaoMixesHash32S:  latestMixes,
-		Slot:                      5,
-		ValidatorRegistry:         registry,
-		ShardAndCommitteesAtSlots: shardAndCommittees,
+		LatestRandaoMixesHash32S: latestMixes,
+		Slot:                     5,
+		ValidatorRegistry:        registry,
+		ShardCommitteesAtSlots:   shardCommittees,
 	}
 	block := &pb.BeaconBlock{
 		Slot:               5,
@@ -218,10 +219,11 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 			},
 		},
 	}
+
 	blockAttestations := make([]*pb.Attestation, config.MaxAttestations+1)
-	shardAndCommittees := make([]*pb.ShardAndCommitteeArray, 64)
-	shardAndCommittees[5] = &pb.ShardAndCommitteeArray{
-		ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+	shardCommittees := make([]*pb.ShardCommitteeArray, 64)
+	shardCommittees[5] = &pb.ShardCommitteeArray{
+		ArrayShardCommittee: []*pb.ShardCommittee{
 			{
 				Shard:     0,
 				Committee: []uint32{0, 1},
@@ -230,10 +232,10 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	}
 	latestMixes := make([][]byte, config.LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
-		LatestRandaoMixesHash32S:  latestMixes,
-		Slot:                      5,
-		ValidatorRegistry:         registry,
-		ShardAndCommitteesAtSlots: shardAndCommittees,
+		LatestRandaoMixesHash32S: latestMixes,
+		Slot:                     5,
+		ValidatorRegistry:        registry,
+		ShardCommitteesAtSlots:   shardCommittees,
 	}
 	block := &pb.BeaconBlock{
 		Slot:               5,
@@ -322,9 +324,9 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		CustodyBitfield:       []byte{1},
 	}
 	attestations := []*pb.Attestation{blockAtt}
-	shardAndCommittees := make([]*pb.ShardAndCommitteeArray, 128)
-	shardAndCommittees[64] = &pb.ShardAndCommitteeArray{
-		ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+	ShardCommittees := make([]*pb.ShardCommitteeArray, 128)
+	ShardCommittees[64] = &pb.ShardCommitteeArray{
+		ArrayShardCommittee: []*pb.ShardCommittee{
 			{
 				Shard:     0,
 				Committee: []uint32{0, 1},
@@ -333,13 +335,13 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	}
 	latestMixes := make([][]byte, config.LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
-		LatestRandaoMixesHash32S:  latestMixes,
-		ValidatorRegistry:         registry,
-		Slot:                      64,
-		PreviousJustifiedSlot:     10,
-		LatestBlockRootHash32S:    blockRoots,
-		LatestCrosslinks:          stateLatestCrosslinks,
-		ShardAndCommitteesAtSlots: shardAndCommittees,
+		LatestRandaoMixesHash32S: latestMixes,
+		ValidatorRegistry:        registry,
+		Slot:                     64,
+		PreviousJustifiedSlot:    10,
+		LatestBlockRootHash32S:   blockRoots,
+		LatestCrosslinks:         stateLatestCrosslinks,
+		ShardCommitteesAtSlots:   ShardCommittees,
 	}
 	exits := make([]*pb.Exit, config.MaxExits+1)
 	block := &pb.BeaconBlock{
@@ -430,9 +432,9 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		CustodyBitfield:       []byte{1},
 	}
 	attestations := []*pb.Attestation{blockAtt}
-	shardAndCommittees := make([]*pb.ShardAndCommitteeArray, 128)
-	shardAndCommittees[64] = &pb.ShardAndCommitteeArray{
-		ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+	ShardCommittees := make([]*pb.ShardCommitteeArray, 128)
+	ShardCommittees[64] = &pb.ShardCommitteeArray{
+		ArrayShardCommittee: []*pb.ShardCommittee{
 			{
 				Shard:     0,
 				Committee: []uint32{0, 1},
@@ -441,13 +443,13 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	latestMixes := make([][]byte, config.LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
-		LatestRandaoMixesHash32S:  latestMixes,
-		ValidatorRegistry:         registry,
-		Slot:                      64,
-		ShardAndCommitteesAtSlots: shardAndCommittees,
-		PreviousJustifiedSlot:     10,
-		LatestBlockRootHash32S:    blockRoots,
-		LatestCrosslinks:          stateLatestCrosslinks,
+		LatestRandaoMixesHash32S: latestMixes,
+		ValidatorRegistry:        registry,
+		Slot:                     64,
+		ShardCommitteesAtSlots:   ShardCommittees,
+		PreviousJustifiedSlot:    10,
+		LatestBlockRootHash32S:   blockRoots,
+		LatestCrosslinks:         stateLatestCrosslinks,
 	}
 	exits := []*pb.Exit{
 		{
@@ -473,10 +475,10 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 	defaultBalance := config.MaxDepositInGwei
 
-	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	var shardCommittees []*pb.ShardCommitteeArray
 	for i := uint64(0); i < config.EpochLength*2; i++ {
-		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
-			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+		shardCommittees = append(shardCommittees, &pb.ShardCommitteeArray{
+			ArrayShardCommittee: []*pb.ShardCommittee{
 				{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
 			},
 		})
@@ -520,14 +522,14 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 	crosslinkRecord := []*pb.CrosslinkRecord{{}, {}}
 
 	state := &pb.BeaconState{
-		Slot:                      config.EpochLength * 16,
-		LatestAttestations:        attestations,
-		ValidatorBalances:         validatorBalances,
-		ValidatorRegistry:         validatorRegistry,
-		ShardAndCommitteesAtSlots: shardAndCommittees,
-		LatestBlockRootHash32S:    blockRoots,
-		LatestCrosslinks:          crosslinkRecord,
-		LatestRandaoMixesHash32S:  randaoHashes,
+		Slot:                     config.EpochLength * 16,
+		LatestAttestations:       attestations,
+		ValidatorBalances:        validatorBalances,
+		ValidatorRegistry:        validatorRegistry,
+		ShardCommitteesAtSlots:   shardCommittees,
+		LatestBlockRootHash32S:   blockRoots,
+		LatestCrosslinks:         crosslinkRecord,
+		LatestRandaoMixesHash32S: randaoHashes,
 	}
 
 	_, err := ProcessEpoch(state)
@@ -539,10 +541,10 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 func TestProcessEpoch_InactiveConditions(t *testing.T) {
 	defaultBalance := config.MaxDepositInGwei
 
-	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	var shardCommittees []*pb.ShardCommitteeArray
 	for i := uint64(0); i < config.EpochLength*2; i++ {
-		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
-			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+		shardCommittees = append(shardCommittees, &pb.ShardCommitteeArray{
+			ArrayShardCommittee: []*pb.ShardCommittee{
 				{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
 			},
 		})
@@ -586,14 +588,14 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 	crosslinkRecord := []*pb.CrosslinkRecord{{}, {}}
 
 	state := &pb.BeaconState{
-		Slot:                      config.EpochLength * 5,
-		LatestAttestations:        attestations,
-		ValidatorBalances:         validatorBalances,
-		ValidatorRegistry:         validatorRegistry,
-		ShardAndCommitteesAtSlots: shardAndCommittees,
-		LatestBlockRootHash32S:    blockRoots,
-		LatestCrosslinks:          crosslinkRecord,
-		LatestRandaoMixesHash32S:  randaoHashes,
+		Slot:                     config.EpochLength * 5,
+		LatestAttestations:       attestations,
+		ValidatorBalances:        validatorBalances,
+		ValidatorRegistry:        validatorRegistry,
+		ShardCommitteesAtSlots:   shardCommittees,
+		LatestBlockRootHash32S:   blockRoots,
+		LatestCrosslinks:         crosslinkRecord,
+		LatestRandaoMixesHash32S: randaoHashes,
 	}
 
 	_, err := ProcessEpoch(state)
@@ -624,10 +626,10 @@ func TestProcessEpoch_CantGetCurrentValidatorIndices(t *testing.T) {
 		latestBlockRoots[i] = config.ZeroHash[:]
 	}
 
-	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	var shardCommittees []*pb.ShardCommitteeArray
 	for i := uint64(0); i < config.EpochLength*2; i++ {
-		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
-			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+		shardCommittees = append(shardCommittees, &pb.ShardCommitteeArray{
+			ArrayShardCommittee: []*pb.ShardCommittee{
 				{Shard: 1, Committee: []uint32{}},
 			},
 		})
@@ -646,15 +648,15 @@ func TestProcessEpoch_CantGetCurrentValidatorIndices(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                      config.EpochLength,
-		ShardAndCommitteesAtSlots: shardAndCommittees,
-		LatestAttestations:        attestations,
-		LatestBlockRootHash32S:    latestBlockRoots,
+		Slot:                   config.EpochLength,
+		ShardCommitteesAtSlots: shardCommittees,
+		LatestAttestations:     attestations,
+		LatestBlockRootHash32S: latestBlockRoots,
 	}
 
 	want := fmt.Sprintf(
 		"could not get current boundary attester indices: wanted participants bitfield length %d, got: %d",
-		len(shardAndCommittees[0].ArrayShardAndCommittee[0].Committee),
+		len(shardCommittees[0].ArrayShardCommittee[0].Committee),
 		len(attestations[0].ParticipationBitfield),
 	)
 	if _, err := ProcessEpoch(state); !strings.Contains(err.Error(), want) {
@@ -669,10 +671,10 @@ func TestProcessEpoch_CantGetPrevValidatorIndices(t *testing.T) {
 		latestBlockRoots[i] = config.ZeroHash[:]
 	}
 
-	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	var shardCommittees []*pb.ShardCommitteeArray
 	for i := uint64(0); i < config.EpochLength*2; i++ {
-		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
-			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+		shardCommittees = append(shardCommittees, &pb.ShardCommitteeArray{
+			ArrayShardCommittee: []*pb.ShardCommittee{
 				{Shard: 1, Committee: []uint32{}},
 			},
 		})
@@ -691,10 +693,10 @@ func TestProcessEpoch_CantGetPrevValidatorIndices(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                      config.EpochLength * 2,
-		ShardAndCommitteesAtSlots: shardAndCommittees,
-		LatestAttestations:        attestations,
-		LatestBlockRootHash32S:    latestBlockRoots,
+		Slot:                   config.EpochLength * 2,
+		ShardCommitteesAtSlots: shardCommittees,
+		LatestAttestations:     attestations,
+		LatestBlockRootHash32S: latestBlockRoots,
 	}
 
 	want := fmt.Sprintf(
@@ -725,10 +727,10 @@ func TestProcessEpoch_CantProcessPrevBoundaryAttestations(t *testing.T) {
 
 func TestProcessEpoch_CantProcessEjections(t *testing.T) {
 
-	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	var shardCommittees []*pb.ShardCommitteeArray
 	for i := uint64(0); i < config.EpochLength*2; i++ {
-		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
-			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+		shardCommittees = append(shardCommittees, &pb.ShardCommitteeArray{
+			ArrayShardCommittee: []*pb.ShardCommittee{
 				{Shard: 1, Committee: []uint32{}},
 			},
 		})
@@ -741,12 +743,12 @@ func TestProcessEpoch_CantProcessEjections(t *testing.T) {
 
 	exitSlot := 4*config.EpochLength + 1
 	state := &pb.BeaconState{
-		Slot:                      4 * config.EpochLength,
-		ValidatorBalances:         []uint64{1e9},
-		ShardAndCommitteesAtSlots: shardAndCommittees,
-		LatestBlockRootHash32S:    make([][]byte, config.LatestBlockRootsLength),
-		ValidatorRegistry:         []*pb.ValidatorRecord{{ExitSlot: exitSlot}},
-		LatestRandaoMixesHash32S:  randaoHashes,
+		Slot:                     4 * config.EpochLength,
+		ValidatorBalances:        []uint64{1e9},
+		ShardCommitteesAtSlots:   shardCommittees,
+		LatestBlockRootHash32S:   make([][]byte, config.LatestBlockRootsLength),
+		ValidatorRegistry:        []*pb.ValidatorRecord{{ExitSlot: exitSlot}},
+		LatestRandaoMixesHash32S: randaoHashes,
 		LatestAttestations: []*pb.PendingAttestationRecord{
 			{Data: &pb.AttestationData{}, ParticipationBitfield: []byte{}},
 		}}
@@ -763,10 +765,10 @@ func TestProcessEpoch_CantProcessEjections(t *testing.T) {
 func TestProcessEpoch_CantProcessValidators(t *testing.T) {
 	defaultBalance := config.MaxDepositInGwei
 
-	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	var shardCommittees []*pb.ShardCommitteeArray
 	for i := uint64(0); i < config.EpochLength*2; i++ {
-		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
-			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+		shardCommittees = append(shardCommittees, &pb.ShardCommitteeArray{
+			ArrayShardCommittee: []*pb.ShardCommittee{
 				{Committee: []uint32{}},
 			},
 		})
@@ -787,12 +789,12 @@ func TestProcessEpoch_CantProcessValidators(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                      4 * config.EpochLength,
-		ValidatorBalances:         validatorBalances,
-		ShardAndCommitteesAtSlots: shardAndCommittees,
-		LatestBlockRootHash32S:    make([][]byte, config.LatestBlockRootsLength),
-		ValidatorRegistry:         validators,
-		LatestRandaoMixesHash32S:  randaoHashes,
+		Slot:                     4 * config.EpochLength,
+		ValidatorBalances:        validatorBalances,
+		ShardCommitteesAtSlots:   shardCommittees,
+		LatestBlockRootHash32S:   make([][]byte, config.LatestBlockRootsLength),
+		ValidatorRegistry:        validators,
+		LatestRandaoMixesHash32S: randaoHashes,
 		LatestAttestations: []*pb.PendingAttestationRecord{
 			{Data: &pb.AttestationData{}, ParticipationBitfield: []byte{}}},
 		FinalizedSlot:    1,
@@ -810,10 +812,10 @@ func TestProcessEpoch_CantProcessValidators(t *testing.T) {
 func TestProcessEpoch_CantProcessPartialValidators(t *testing.T) {
 	defaultBalance := config.MaxDepositInGwei
 
-	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	var shardCommittees []*pb.ShardCommitteeArray
 	for i := uint64(0); i < config.EpochLength*2; i++ {
-		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
-			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+		shardCommittees = append(shardCommittees, &pb.ShardCommitteeArray{
+			ArrayShardCommittee: []*pb.ShardCommittee{
 				{Shard: 1, Committee: []uint32{}},
 			},
 		})
@@ -834,12 +836,12 @@ func TestProcessEpoch_CantProcessPartialValidators(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                      4 * config.EpochLength,
-		ValidatorBalances:         validatorBalances,
-		ShardAndCommitteesAtSlots: shardAndCommittees,
-		LatestBlockRootHash32S:    make([][]byte, config.LatestBlockRootsLength),
-		ValidatorRegistry:         validators,
-		LatestRandaoMixesHash32S:  randaoHashes,
+		Slot:                     4 * config.EpochLength,
+		ValidatorBalances:        validatorBalances,
+		ShardCommitteesAtSlots:   shardCommittees,
+		LatestBlockRootHash32S:   make([][]byte, config.LatestBlockRootsLength),
+		ValidatorRegistry:        validators,
+		LatestRandaoMixesHash32S: randaoHashes,
 		LatestAttestations: []*pb.PendingAttestationRecord{
 			{Data: &pb.AttestationData{}, ParticipationBitfield: []byte{}},
 		}}

@@ -94,9 +94,9 @@ func InitialBeaconState(
 		ValidatorRegistryDeltaChainTipHash32: params.BeaconConfig().ZeroHash[:],
 
 		// Randomness and committees.
-		LatestRandaoMixesHash32S:  latestRandaoMixes,
-		LatestVdfOutputsHash32S:   latestVDFOutputs,
-		ShardAndCommitteesAtSlots: []*pb.ShardAndCommitteeArray{},
+		LatestRandaoMixesHash32S: latestRandaoMixes,
+		LatestVdfOutputsHash32S:  latestVDFOutputs,
+		ShardCommitteesAtSlots:   []*pb.ShardCommitteeArray{},
 
 		// Proof of custody.
 		// Place holder, proof of custody challenge is defined in phase 1.
@@ -167,7 +167,7 @@ func InitialBeaconState(
 	if err != nil {
 		return nil, fmt.Errorf("could not shuffle initial committee: %v", err)
 	}
-	state.ShardAndCommitteesAtSlots = append(initialShuffling, initialShuffling...)
+	state.ShardCommitteesAtSlots = append(initialShuffling, initialShuffling...)
 
 	return state, nil
 }
