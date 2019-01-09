@@ -16,4 +16,5 @@ build --curses=yes --color=yes
 build --keep_going
 build --test_output=errors
 build --flaky_test_attempts=5
-build --features=race
+# Disabled race detection due to unstable test results under constrained environment build kite
+# build --features=race
