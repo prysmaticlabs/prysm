@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slices"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/trie"
 )
 
@@ -583,30 +582,6 @@ func ProcessValidatorDeposits(
 		}
 	}
 	return beaconState, nil
-}
-
-// DecodeDepositInput unmarshales a depositData byte slice into
-// a proto *pb.DepositInput by using the Simple Serialize (SSZ)
-// algorithm.
-// TODO(#1253): Do not assume we will receive serialized proto objects - instead,
-// replace completely by a common struct which can be simple serialized.
-func DecodeDepositInput(depositData []byte) (*pb.DepositInput, error) {
-	// Last 16 bytes of deposit data are 8 bytes for value
-	// and 8 bytes for timestamp. Everything before that is a
-	// Simple Serialized deposit input value.
-	if len(depositData) < 16 {
-		return nil, fmt.Errorf(
-			"deposit data slice too small: len(depositData) = %d",
-			len(depositData),
-		)
-	}
-	depositInput := new(pb.DepositInput)
-	depositInputBytes := depositData[:len(depositData)-16]
-	rBuf := bytes.NewReader(depositInputBytes)
-	if err := ssz.Decode(rBuf, depositInput); err != nil {
-		return nil, fmt.Errorf("ssz decode failed: %v", err)
-	}
-	return depositInput, nil
 }
 
 func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {

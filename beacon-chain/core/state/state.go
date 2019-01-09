@@ -48,6 +48,33 @@ func InitialBeaconState(
 		latestBlockRoots[i] = params.BeaconConfig().ZeroHash[:]
 	}
 
+	validatorRegistry := make([]*pb.ValidatorRecord, len(initialValidatorDeposits))
+	latestBalances := make([]uint64, len(initialValidatorDeposits))
+	for i, d := range initialValidatorDeposits {
+
+		amount, _, err := b.DecodeDepositAmountAndTimeStamp(d.DepositData)
+		if err != nil {
+			return nil, fmt.Errorf("could not decode deposit amount and timestamp %v", err)
+		}
+
+		depositInput, err := b.DecodeDepositInput(d.DepositData)
+		if err != nil {
+			return nil, fmt.Errorf("could decode deposit input %v", err)
+		}
+
+		validator := &pb.ValidatorRecord{
+			Pubkey:                      depositInput.Pubkey,
+			RandaoCommitmentHash32:      depositInput.RandaoCommitmentHash32,
+			WithdrawalCredentialsHash32: depositInput.WithdrawalCredentialsHash32,
+			PocCommitmentHash32:         depositInput.PocCommitment,
+			Balance:                     amount,
+			ExitSlot:                    params.BeaconConfig().FarFutureSlot,
+		}
+
+		validatorRegistry[i] = validator
+
+	}
+
 	latestPenalizedExitBalances := make([]uint64, params.BeaconConfig().LatestPenalizedExitLength)
 
 	state := &pb.BeaconState{
@@ -61,8 +88,8 @@ func InitialBeaconState(
 		},
 
 		// Validator registry fields.
-		ValidatorRegistry:                    []*pb.ValidatorRecord{},
-		ValidatorBalances:                    []uint64{},
+		ValidatorRegistry:                    validatorRegistry,
+		ValidatorBalances:                    latestBalances,
 		ValidatorRegistryLastChangeSlot:      params.BeaconConfig().GenesisSlot,
 		ValidatorRegistryExitCount:           0,
 		ValidatorRegistryDeltaChainTipHash32: params.BeaconConfig().ZeroHash[:],
@@ -123,10 +150,10 @@ func InitialBeaconState(
 			return nil, fmt.Errorf("could not process validator deposit: %v", err)
 		}
 	}
-	for validatorIndex := range state.ValidatorRegistry {
-		if v.EffectiveBalance(state, uint32(validatorIndex)) ==
+	for i := 0; i < len(state.ValidatorRegistry); i++ {
+		if v.EffectiveBalance(state, uint32(i)) ==
 			params.BeaconConfig().MaxDepositInGwei {
-			state, err = v.ActivateValidator(state, uint32(validatorIndex), true)
+			state, err = v.ActivateValidator(state, uint32(i), true)
 			if err != nil {
 				return nil, fmt.Errorf("could not activate validator: %v", err)
 			}
