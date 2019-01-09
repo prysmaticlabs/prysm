@@ -20,7 +20,7 @@ func ShuffleValidatorRegistryToCommittees(
 	validators []*pb.ValidatorRecord,
 	crosslinkStartShard uint64,
 	slot uint64,
-) ([]*pb.ShardAndCommitteeArray, error) {
+) ([]*pb.ShardCommitteeArray, error) {
 	indices := ActiveValidatorIndices(validators, slot)
 	// split the shuffled list for slot.
 	shuffledValidatorRegistry, err := utils.ShuffleIndices(seed, indices)
@@ -33,28 +33,28 @@ func ShuffleValidatorRegistryToCommittees(
 // splitBySlotShard splits the validator list into evenly sized committees and assigns each
 // committee to a slot and a shard. If the validator set is large, multiple committees are assigned
 // to a single slot and shard. See getCommitteesPerSlot for more details.
-func splitBySlotShard(shuffledValidatorRegistry []uint32, crosslinkStartShard uint64) []*pb.ShardAndCommitteeArray {
+func splitBySlotShard(shuffledValidatorRegistry []uint32, crosslinkStartShard uint64) []*pb.ShardCommitteeArray {
 	committeesPerSlot := getCommitteesPerSlot(uint64(len(shuffledValidatorRegistry)))
-	committeBySlotAndShard := []*pb.ShardAndCommitteeArray{}
+	committeBySlotAndShard := []*pb.ShardCommitteeArray{}
 
 	// split the validator indices by slot.
 	validatorsBySlot := utils.SplitIndices(shuffledValidatorRegistry, params.BeaconConfig().EpochLength)
 	for i, validatorsForSlot := range validatorsBySlot {
-		shardCommittees := []*pb.ShardAndCommittee{}
+		shardCommittees := []*pb.ShardCommittee{}
 		validatorsByShard := utils.SplitIndices(validatorsForSlot, committeesPerSlot)
 		shardStart := crosslinkStartShard + uint64(i)*committeesPerSlot
 
 		for j, validatorsForShard := range validatorsByShard {
 			shardID := (shardStart + uint64(j)) % params.BeaconConfig().ShardCount
-			shardCommittees = append(shardCommittees, &pb.ShardAndCommittee{
-				Shard:               shardID,
-				Committee:           validatorsForShard,
+			shardCommittees = append(shardCommittees, &pb.ShardCommittee{
+				Shard:     shardID,
+				Committee: validatorsForShard,
 				TotalValidatorCount: uint64(len(shuffledValidatorRegistry)),
 			})
 		}
 
-		committeBySlotAndShard = append(committeBySlotAndShard, &pb.ShardAndCommitteeArray{
-			ArrayShardAndCommittee: shardCommittees,
+		committeBySlotAndShard = append(committeBySlotAndShard, &pb.ShardCommitteeArray{
+			ArrayShardCommittee: shardCommittees,
 		})
 	}
 	return committeBySlotAndShard
@@ -108,13 +108,13 @@ func AttestationParticipants(
 	participationBitfield []byte) ([]uint32, error) {
 
 	// Find the relevant committee.
-	shardCommittees, err := ShardAndCommitteesAtSlot(state, attestationData.Slot)
+	shardCommittees, err := ShardCommitteesAtSlot(state, attestationData.Slot)
 	if err != nil {
 		return nil, err
 	}
 
-	var participants *pb.ShardAndCommittee
-	for _, committee := range shardCommittees.ArrayShardAndCommittee {
+	var participants *pb.ShardCommittee
+	for _, committee := range shardCommittees.ArrayShardCommittee {
 		if committee.Shard == attestationData.Shard {
 			participants = committee
 			break

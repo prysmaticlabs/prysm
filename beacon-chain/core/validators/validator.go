@@ -25,10 +25,11 @@ func InitialValidatorRegistry() []*pb.ValidatorRecord {
 	randaoReveal := hashutil.Hash(randaoPreCommit[:])
 	validators := make([]*pb.ValidatorRecord, config.DepositsForChainStart)
 	for i := uint64(0); i < config.DepositsForChainStart; i++ {
+		pubkey := hashutil.Hash([]byte{byte(i)})
 		validators[i] = &pb.ValidatorRecord{
 			ExitSlot:               params.BeaconConfig().FarFutureSlot,
 			Balance:                config.MaxDeposit * config.Gwei,
-			Pubkey:                 []byte{},
+			Pubkey:                 pubkey[:],
 			RandaoCommitmentHash32: randaoReveal[:],
 		}
 	}
@@ -67,7 +68,7 @@ func ActiveValidator(state *pb.BeaconState, validatorIndices []uint32) []*pb.Val
 	return activeValidators
 }
 
-// ShardAndCommitteesAtSlot returns the shard and committee list for a given
+// ShardCommitteesAtSlot returns the shard and committee list for a given
 // slot within the range of 2 * epoch length within the same 2 epoch slot
 // window as the state slot.
 //
@@ -79,7 +80,7 @@ func ActiveValidator(state *pb.BeaconState, validatorIndices []uint32) []*pb.Val
 //     earliest_slot_in_array = state.Slot - (state.Slot % EPOCH_LENGTH) - EPOCH_LENGTH
 //     assert earliest_slot_in_array <= slot < earliest_slot_in_array + EPOCH_LENGTH * 2
 //     return state.shard_committees_at_slots[slot - earliest_slot_in_array]
-func ShardAndCommitteesAtSlot(state *pb.BeaconState, slot uint64) (*pb.ShardAndCommitteeArray, error) {
+func ShardCommitteesAtSlot(state *pb.BeaconState, slot uint64) (*pb.ShardCommitteeArray, error) {
 	epochLength := params.BeaconConfig().EpochLength
 	var earliestSlot uint64
 
@@ -97,7 +98,7 @@ func ShardAndCommitteesAtSlot(state *pb.BeaconState, slot uint64) (*pb.ShardAndC
 			earliestSlot+(epochLength*2),
 		)
 	}
-	return state.ShardAndCommitteesAtSlots[slot-earliestSlot], nil
+	return state.ShardCommitteesAtSlots[slot-earliestSlot], nil
 }
 
 // BeaconProposerIndex returns the index of the proposer of the block at a
@@ -111,26 +112,26 @@ func ShardAndCommitteesAtSlot(state *pb.BeaconState, slot uint64) (*pb.ShardAndC
 //    first_committee = get_shard_committees_at_slot(state, slot)[0].committee
 //    return first_committee[slot % len(first_committee)]
 func BeaconProposerIndex(state *pb.BeaconState, slot uint64) (uint32, error) {
-	committeeArray, err := ShardAndCommitteesAtSlot(state, slot)
+	committeeArray, err := ShardCommitteesAtSlot(state, slot)
 	if err != nil {
 		return 0, err
 	}
-	firstCommittee := committeeArray.ArrayShardAndCommittee[0].Committee
+	firstCommittee := committeeArray.ArrayShardCommittee[0].Committee
 
 	return firstCommittee[slot%uint64(len(firstCommittee))], nil
 }
 
 // ProposerShardAndIndex returns the index and the shardID of a proposer from a given slot.
 func ProposerShardAndIndex(state *pb.BeaconState, slot uint64) (uint64, uint64, error) {
-	slotCommittees, err := ShardAndCommitteesAtSlot(
+	slotCommittees, err := ShardCommitteesAtSlot(
 		state,
 		slot)
 	if err != nil {
 		return 0, 0, err
 	}
 
-	proposerShardID := slotCommittees.ArrayShardAndCommittee[0].Shard
-	proposerIndex := slot % uint64(len(slotCommittees.ArrayShardAndCommittee[0].Committee))
+	proposerShardID := slotCommittees.ArrayShardCommittee[0].Shard
+	proposerIndex := slot % uint64(len(slotCommittees.ArrayShardCommittee[0].Committee))
 	return proposerShardID, proposerIndex, nil
 }
 
@@ -147,14 +148,14 @@ func ValidatorIndex(pubKey []byte, validators []*pb.ValidatorRecord) (uint32, er
 }
 
 // ValidatorShardID returns the shard ID of the validator currently participates in.
-func ValidatorShardID(pubKey []byte, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardAndCommitteeArray) (uint64, error) {
+func ValidatorShardID(pubKey []byte, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardCommitteeArray) (uint64, error) {
 	index, err := ValidatorIndex(pubKey, validators)
 	if err != nil {
 		return 0, err
 	}
 
 	for _, slotCommittee := range shardCommittees {
-		for _, committee := range slotCommittee.ArrayShardAndCommittee {
+		for _, committee := range slotCommittee.ArrayShardCommittee {
 			for _, validator := range committee.Committee {
 				if validator == index {
 					return committee.Shard, nil
@@ -168,14 +169,14 @@ func ValidatorShardID(pubKey []byte, validators []*pb.ValidatorRecord, shardComm
 
 // ValidatorSlotAndRole returns a validator's assingned slot number
 // and whether it should act as an attester or proposer.
-func ValidatorSlotAndRole(pubKey []byte, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardAndCommitteeArray) (uint64, pbrpc.ValidatorRole, error) {
+func ValidatorSlotAndRole(pubKey []byte, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardCommitteeArray) (uint64, pbrpc.ValidatorRole, error) {
 	index, err := ValidatorIndex(pubKey, validators)
 	if err != nil {
 		return 0, pbrpc.ValidatorRole_UNKNOWN, err
 	}
 
 	for slot, slotCommittee := range shardCommittees {
-		for i, committee := range slotCommittee.ArrayShardAndCommittee {
+		for i, committee := range slotCommittee.ArrayShardCommittee {
 			for v, validator := range committee.Committee {
 				if validator != index {
 					continue
@@ -298,18 +299,18 @@ func Attesters(state *pb.BeaconState, attesterIndices []uint32) []*pb.ValidatorR
 // Spec pseudocode definition:
 //   Let this_epoch_boundary_attester_indices be the union of the validator
 //   index sets given by [get_attestation_participants(state, a.data, a.participation_bitfield)
-//   for a in this_epoch_boundary_attestations]
+//   for a in attestations]
 func ValidatorIndices(
 	state *pb.BeaconState,
-	boundaryAttestations []*pb.PendingAttestationRecord,
+	attestations []*pb.PendingAttestationRecord,
 ) ([]uint32, error) {
 
 	var attesterIndicesIntersection []uint32
-	for _, boundaryAttestation := range boundaryAttestations {
+	for _, attestation := range attestations {
 		attesterIndices, err := AttestationParticipants(
 			state,
-			boundaryAttestation.Data,
-			boundaryAttestation.ParticipationBitfield)
+			attestation.Data,
+			attestation.ParticipationBitfield)
 		if err != nil {
 			return nil, err
 		}
@@ -331,7 +332,7 @@ func ValidatorIndices(
 // if a.shard == shard_committee.shard and a.shard_block_root == shard_block_root]
 func AttestingValidatorIndices(
 	state *pb.BeaconState,
-	shardCommittee *pb.ShardAndCommittee,
+	shardCommittee *pb.ShardCommittee,
 	shardBlockRoot []byte,
 	thisEpochAttestations []*pb.PendingAttestationRecord,
 	prevEpochAttestations []*pb.PendingAttestationRecord) ([]uint32, error) {
@@ -393,7 +394,7 @@ func ProcessDeposit(
 	_ /*proofOfPossession*/ []byte,
 	withdrawalCredentials []byte,
 	randaoCommitment []byte,
-	pocCommitment []byte,
+	custodyCommitment []byte,
 ) (*pb.BeaconState, error) {
 	// TODO(#258): Validate proof of possession using BLS.
 	var publicKeyExists bool
@@ -404,18 +405,18 @@ func ProcessDeposit(
 		// If public key does not exist in the registry, we add a new validator
 		// to the beacon state.
 		newValidator := &pb.ValidatorRecord{
-			Pubkey:                  pubkey,
-			RandaoCommitmentHash32:  randaoCommitment,
-			RandaoLayers:            0,
-			ExitCount:               0,
-			PocCommitmentHash32:     pocCommitment,
-			LastPocChangeSlot:       params.BeaconConfig().GenesisSlot,
-			SecondLastPocChangeSlot: params.BeaconConfig().GenesisSlot,
-			ActivationSlot:          params.BeaconConfig().FarFutureSlot,
-			ExitSlot:                params.BeaconConfig().FarFutureSlot,
-			WithdrawalSlot:          params.BeaconConfig().FarFutureSlot,
-			PenalizedSlot:           params.BeaconConfig().FarFutureSlot,
-			StatusFlags:             0,
+			Pubkey:                       pubkey,
+			RandaoCommitmentHash32:       randaoCommitment,
+			RandaoLayers:                 0,
+			ExitCount:                    0,
+			CustodyCommitmentHash32:      custodyCommitment,
+			LatestCustodyReseedSlot:      params.BeaconConfig().GenesisSlot,
+			PenultimateCustodyReseedSlot: params.BeaconConfig().GenesisSlot,
+			ActivationSlot:               params.BeaconConfig().FarFutureSlot,
+			ExitSlot:                     params.BeaconConfig().FarFutureSlot,
+			WithdrawalSlot:               params.BeaconConfig().FarFutureSlot,
+			PenalizedSlot:                params.BeaconConfig().FarFutureSlot,
+			StatusFlags:                  0,
 		}
 		state.ValidatorRegistry = append(state.ValidatorRegistry, newValidator)
 		state.ValidatorBalances = append(state.ValidatorBalances, amount)
@@ -529,8 +530,8 @@ func ExitValidator(state *pb.BeaconState, index uint32) (*pb.BeaconState, error)
 	validator := state.ValidatorRegistry[index]
 
 	if validator.ExitSlot < state.Slot+params.BeaconConfig().EntryExitDelay {
-		return nil, fmt.Errorf("validator %d could not exit until slot %d",
-			index, state.Slot+params.BeaconConfig().EntryExitDelay)
+		return nil, fmt.Errorf("validator %d has already exited at slot %d",
+			index, validator.ExitSlot)
 	}
 
 	validator.ExitSlot = state.Slot + params.BeaconConfig().EntryExitDelay
