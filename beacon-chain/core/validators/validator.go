@@ -13,7 +13,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
-	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slices"
@@ -420,8 +419,8 @@ func ProcessDeposit(
 	_ /*proofOfPossession*/ []byte,
 	withdrawalCredentials []byte,
 	randaoCommitment []byte,
-	pocCommitment []byte,
-) (*pb.BeaconState, uint32, error) {
+	custodyCommitment []byte,
+) (*pb.BeaconState, error) {
 	// TODO(#258): Validate proof of possession using BLS.
 	var publicKeyExists bool
 	var existingValidatorIndex int
@@ -431,18 +430,18 @@ func ProcessDeposit(
 		// If public key does not exist in the registry, we add a new validator
 		// to the beacon state.
 		newValidator := &pb.ValidatorRecord{
-			Pubkey:                  pubkey,
-			RandaoCommitmentHash32:  randaoCommitment,
-			RandaoLayers:            0,
-			ExitCount:               0,
-			PocCommitmentHash32:     pocCommitment,
-			LastPocChangeSlot:       params.BeaconConfig().GenesisSlot,
-			SecondLastPocChangeSlot: params.BeaconConfig().GenesisSlot,
-			ActivationSlot:          params.BeaconConfig().FarFutureSlot,
-			ExitSlot:                params.BeaconConfig().FarFutureSlot,
-			WithdrawalSlot:          params.BeaconConfig().FarFutureSlot,
-			PenalizedSlot:           params.BeaconConfig().FarFutureSlot,
-			StatusFlags:             0,
+			Pubkey:                       pubkey,
+			RandaoCommitmentHash32:       randaoCommitment,
+			RandaoLayers:                 0,
+			ExitCount:                    0,
+			CustodyCommitmentHash32:      custodyCommitment,
+			LatestCustodyReseedSlot:      params.BeaconConfig().GenesisSlot,
+			PenultimateCustodyReseedSlot: params.BeaconConfig().GenesisSlot,
+			ActivationSlot:               params.BeaconConfig().FarFutureSlot,
+			ExitSlot:                     params.BeaconConfig().FarFutureSlot,
+			WithdrawalSlot:               params.BeaconConfig().FarFutureSlot,
+			PenalizedSlot:                params.BeaconConfig().FarFutureSlot,
+			StatusFlags:                  0,
 		}
 		state.ValidatorRegistry = append(state.ValidatorRegistry, newValidator)
 		state.ValidatorBalances = append(state.ValidatorBalances, amount)
