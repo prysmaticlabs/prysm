@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pbcomm "github.com/prysmaticlabs/prysm/proto/common"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -48,6 +47,33 @@ func InitialBeaconState(
 		latestBlockRoots[i] = params.BeaconConfig().ZeroHash[:]
 	}
 
+	validatorRegistry := make([]*pb.ValidatorRecord, len(initialValidatorDeposits))
+	latestBalances := make([]uint64, len(initialValidatorDeposits))
+	for i, d := range initialValidatorDeposits {
+
+		amount, _, err := b.DecodeDepositAmountAndTimeStamp(d.DepositData)
+		if err != nil {
+			return nil, fmt.Errorf("could not decode deposit amount and timestamp %v", err)
+		}
+
+		depositInput, err := b.DecodeDepositInput(d.DepositData)
+		if err != nil {
+			return nil, fmt.Errorf("could decode deposit input %v", err)
+		}
+
+		validator := &pb.ValidatorRecord{
+			Pubkey:                      depositInput.Pubkey,
+			RandaoCommitmentHash32:      depositInput.RandaoCommitmentHash32,
+			WithdrawalCredentialsHash32: depositInput.WithdrawalCredentialsHash32,
+			CustodyCommitmentHash32:     depositInput.CustodyCommitmentHash32,
+			Balance:                     amount,
+			ExitSlot:                    params.BeaconConfig().FarFutureSlot,
+		}
+
+		validatorRegistry[i] = validator
+
+	}
+
 	latestPenalizedExitBalances := make([]uint64, params.BeaconConfig().LatestPenalizedExitLength)
 
 	state := &pb.BeaconState{
@@ -61,23 +87,21 @@ func InitialBeaconState(
 		},
 
 		// Validator registry fields.
-		ValidatorRegistry:                    []*pb.ValidatorRecord{},
-		ValidatorBalances:                    []uint64{},
-		ValidatorRegistryLastChangeSlot:      params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry:                    validatorRegistry,
+		ValidatorBalances:                    latestBalances,
+		ValidatorRegistryLatestChangeSlot:    params.BeaconConfig().GenesisSlot,
 		ValidatorRegistryExitCount:           0,
 		ValidatorRegistryDeltaChainTipHash32: params.BeaconConfig().ZeroHash[:],
 
 		// Randomness and committees.
-		LatestRandaoMixesHash32S:         latestRandaoMixes,
-		LatestVdfOutputs:                 latestVDFOutputs,
-		ShardAndCommitteesAtSlots:        []*pb.ShardAndCommitteeArray{},
-		PersistentCommittees:             []*pbcomm.Uint32List{},
-		PersistentCommitteeReassignments: []*pb.ShardReassignmentRecord{},
+		LatestRandaoMixesHash32S:  latestRandaoMixes,
+		LatestVdfOutputsHash32S:   latestVDFOutputs,
+		ShardAndCommitteesAtSlots: []*pb.ShardAndCommitteeArray{},
 
 		// Proof of custody.
 		// Place holder, proof of custody challenge is defined in phase 1.
 		// This list will remain empty through out phase 0.
-		PocChallenges: []*pb.ProofOfCustodyChallenge{},
+		CustodyChallenges: []*pb.CustodyChallenge{},
 
 		// Finality.
 		PreviousJustifiedSlot: params.BeaconConfig().GenesisSlot,
@@ -92,9 +116,9 @@ func InitialBeaconState(
 		LatestAttestations:          []*pb.PendingAttestationRecord{},
 		BatchedBlockRootHash32S:     [][]byte{},
 
-		// PoW receipt root.
-		ProcessedPowReceiptRootHash32: processedPowReceiptRoot,
-		CandidatePowReceiptRoots:      []*pb.CandidatePoWReceiptRootRecord{},
+		// deposit root.
+		LatestDepositRootHash32: processedPowReceiptRoot,
+		DepositRootVotes:        []*pb.DepositRootVote{},
 	}
 
 	// Process initial deposits.
@@ -117,16 +141,16 @@ func InitialBeaconState(
 			depositInput.ProofOfPossession,
 			depositInput.WithdrawalCredentialsHash32,
 			depositInput.RandaoCommitmentHash32,
-			depositInput.PocCommitment,
+			depositInput.CustodyCommitmentHash32,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not process validator deposit: %v", err)
 		}
 	}
-	for validatorIndex := range state.ValidatorRegistry {
-		if v.EffectiveBalance(state, uint32(validatorIndex)) ==
+	for i := 0; i < len(state.ValidatorRegistry); i++ {
+		if v.EffectiveBalance(state, uint32(i)) ==
 			params.BeaconConfig().MaxDepositInGwei {
-			state, err = v.ActivateValidator(state, uint32(validatorIndex), true)
+			state, err = v.ActivateValidator(state, uint32(i), true)
 			if err != nil {
 				return nil, fmt.Errorf("could not activate validator: %v", err)
 			}

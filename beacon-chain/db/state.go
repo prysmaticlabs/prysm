@@ -8,6 +8,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -15,7 +16,9 @@ import (
 
 // InitializeState creates an initial genesis state for the beacon
 // node using a set of genesis validators.
-func (db *BeaconDB) InitializeState(genesisValidatorRegistry []*pb.ValidatorRecord) error {
+func (db *BeaconDB) InitializeState() error {
+	// TODO(#1267): Remove initial validators once testnet startup procedure is finalized.
+	genesisValidatorRegistry := validators.InitialValidatorRegistry()
 	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
 	for i := 0; i < len(deposits); i++ {
 		depositInput := &pb.DepositInput{
