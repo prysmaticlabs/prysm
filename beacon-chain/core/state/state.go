@@ -70,7 +70,7 @@ func InitialBeaconState(
 		// Randomness and committees.
 		LatestRandaoMixesHash32S:         latestRandaoMixes,
 		LatestVdfOutputs:                 latestVDFOutputs,
-		ShardAndCommitteesAtSlots:        []*pb.ShardAndCommitteeArray{},
+		ShardCommitteesAtSlots:        []*pb.ShardCommitteeArray{},
 		PersistentCommittees:             []*pbcomm.Uint32List{},
 		PersistentCommitteeReassignments: []*pb.ShardReassignmentRecord{},
 
@@ -143,7 +143,7 @@ func InitialBeaconState(
 	if err != nil {
 		return nil, fmt.Errorf("could not shuffle initial committee: %v", err)
 	}
-	state.ShardAndCommitteesAtSlots = append(initialShuffling, initialShuffling...)
+	state.ShardCommitteesAtSlots = append(initialShuffling, initialShuffling...)
 
 	return state, nil
 }

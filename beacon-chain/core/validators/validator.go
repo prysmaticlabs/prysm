@@ -69,7 +69,7 @@ func ActiveValidator(state *pb.BeaconState, validatorIndices []uint32) []*pb.Val
 	return activeValidators
 }
 
-// ShardAndCommitteesAtSlot returns the shard and committee list for a given
+// ShardCommitteesAtSlot returns the shard and committee list for a given
 // slot within the range of 2 * epoch length within the same 2 epoch slot
 // window as the state slot.
 //
@@ -81,7 +81,7 @@ func ActiveValidator(state *pb.BeaconState, validatorIndices []uint32) []*pb.Val
 //     earliest_slot_in_array = state.Slot - (state.Slot % EPOCH_LENGTH) - EPOCH_LENGTH
 //     assert earliest_slot_in_array <= slot < earliest_slot_in_array + EPOCH_LENGTH * 2
 //     return state.shard_committees_at_slots[slot - earliest_slot_in_array]
-func ShardAndCommitteesAtSlot(state *pb.BeaconState, slot uint64) (*pb.ShardAndCommitteeArray, error) {
+func ShardCommitteesAtSlot(state *pb.BeaconState, slot uint64) (*pb.ShardCommitteeArray, error) {
 	epochLength := params.BeaconConfig().EpochLength
 	var earliestSlot uint64
 
@@ -99,7 +99,7 @@ func ShardAndCommitteesAtSlot(state *pb.BeaconState, slot uint64) (*pb.ShardAndC
 			earliestSlot+(epochLength*2),
 		)
 	}
-	return state.ShardAndCommitteesAtSlots[slot-earliestSlot], nil
+	return state.ShardCommitteesAtSlots[slot-earliestSlot], nil
 }
 
 // BeaconProposerIndex returns the index of the proposer of the block at a
@@ -113,26 +113,26 @@ func ShardAndCommitteesAtSlot(state *pb.BeaconState, slot uint64) (*pb.ShardAndC
 //    first_committee = get_shard_committees_at_slot(state, slot)[0].committee
 //    return first_committee[slot % len(first_committee)]
 func BeaconProposerIndex(state *pb.BeaconState, slot uint64) (uint32, error) {
-	committeeArray, err := ShardAndCommitteesAtSlot(state, slot)
+	committeeArray, err := ShardCommitteesAtSlot(state, slot)
 	if err != nil {
 		return 0, err
 	}
-	firstCommittee := committeeArray.ArrayShardAndCommittee[0].Committee
+	firstCommittee := committeeArray.ArrayShardCommittee[0].Committee
 
 	return firstCommittee[slot%uint64(len(firstCommittee))], nil
 }
 
 // ProposerShardAndIndex returns the index and the shardID of a proposer from a given slot.
 func ProposerShardAndIndex(state *pb.BeaconState, slot uint64) (uint64, uint64, error) {
-	slotCommittees, err := ShardAndCommitteesAtSlot(
+	slotCommittees, err := ShardCommitteesAtSlot(
 		state,
 		slot)
 	if err != nil {
 		return 0, 0, err
 	}
 
-	proposerShardID := slotCommittees.ArrayShardAndCommittee[0].Shard
-	proposerIndex := slot % uint64(len(slotCommittees.ArrayShardAndCommittee[0].Committee))
+	proposerShardID := slotCommittees.ArrayShardCommittee[0].Shard
+	proposerIndex := slot % uint64(len(slotCommittees.ArrayShardCommittee[0].Committee))
 	return proposerShardID, proposerIndex, nil
 }
 
@@ -149,14 +149,14 @@ func ValidatorIndex(pubKey []byte, validators []*pb.ValidatorRecord) (uint32, er
 }
 
 // ValidatorShardID returns the shard ID of the validator currently participates in.
-func ValidatorShardID(pubKey []byte, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardAndCommitteeArray) (uint64, error) {
+func ValidatorShardID(pubKey []byte, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardCommitteeArray) (uint64, error) {
 	index, err := ValidatorIndex(pubKey, validators)
 	if err != nil {
 		return 0, err
 	}
 
 	for _, slotCommittee := range shardCommittees {
-		for _, committee := range slotCommittee.ArrayShardAndCommittee {
+		for _, committee := range slotCommittee.ArrayShardCommittee {
 			for _, validator := range committee.Committee {
 				if validator == index {
 					return committee.Shard, nil
@@ -170,14 +170,14 @@ func ValidatorShardID(pubKey []byte, validators []*pb.ValidatorRecord, shardComm
 
 // ValidatorSlotAndRole returns a validator's assingned slot number
 // and whether it should act as an attester or proposer.
-func ValidatorSlotAndRole(pubKey []byte, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardAndCommitteeArray) (uint64, pbrpc.ValidatorRole, error) {
+func ValidatorSlotAndRole(pubKey []byte, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardCommitteeArray) (uint64, pbrpc.ValidatorRole, error) {
 	index, err := ValidatorIndex(pubKey, validators)
 	if err != nil {
 		return 0, pbrpc.ValidatorRole_UNKNOWN, err
 	}
 
 	for slot, slotCommittee := range shardCommittees {
-		for i, committee := range slotCommittee.ArrayShardAndCommittee {
+		for i, committee := range slotCommittee.ArrayShardCommittee {
 			for v, validator := range committee.Committee {
 				if validator != index {
 					continue
@@ -357,7 +357,7 @@ func ValidatorIndices(
 // if a.shard == shard_committee.shard and a.shard_block_root == shard_block_root]
 func AttestingValidatorIndices(
 	state *pb.BeaconState,
-	shardCommittee *pb.ShardAndCommittee,
+	shardCommittee *pb.ShardCommittee,
 	shardBlockRoot []byte,
 	thisEpochAttestations []*pb.PendingAttestationRecord,
 	prevEpochAttestations []*pb.PendingAttestationRecord) ([]uint32, error) {

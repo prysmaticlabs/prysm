@@ -344,7 +344,7 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*pb.BeaconB
 	}
 
 	parentSlot := slot - 1
-	committees, err := v.ShardAndCommitteesAtSlot(
+	committees, err := v.ShardCommitteesAtSlot(
 		beaconState,
 		parentSlot,
 	)
@@ -355,7 +355,7 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*pb.BeaconB
 	parentHash := make([]byte, 32)
 	copy(parentHash, lastHash[:])
 
-	shardCommittees := committees.ArrayShardAndCommittee
+	shardCommittees := committees.ArrayShardCommittee
 	attestations := make([]*pb.Attestation, len(shardCommittees))
 
 	// Create attestations for all committees of the previous block.
