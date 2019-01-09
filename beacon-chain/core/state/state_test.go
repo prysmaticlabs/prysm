@@ -108,8 +108,8 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	}
 
 	// Validator registry fields checks.
-	if state.ValidatorRegistryLastestChangeSlot != initialSlotNumber {
-		t.Error("ValidatorRegistryLastestChangeSlot was not correctly initialized")
+	if state.ValidatorRegistryLatestChangeSlot != initialSlotNumber {
+		t.Error("ValidatorRegistryLatestChangeSlot was not correctly initialized")
 	}
 	if state.ValidatorRegistryExitCount != 0 {
 		t.Error("ValidatorRegistryExitCount was not correctly initialized")

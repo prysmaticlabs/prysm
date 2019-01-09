@@ -334,8 +334,8 @@ func TestProcessEjections_Ok(t *testing.T) {
 
 func TestCanProcessValidatorRegistry(t *testing.T) {
 	state := &pb.BeaconState{
-		FinalizedSlot:                      100,
-		ValidatorRegistryLastestChangeSlot: 99,
+		FinalizedSlot:                     100,
+		ValidatorRegistryLatestChangeSlot: 99,
 		LatestCrosslinks: []*pb.CrosslinkRecord{
 			{Slot: 101}, {Slot: 102}, {Slot: 103}, {Slot: 104},
 		},
@@ -352,15 +352,15 @@ func TestCanProcessValidatorRegistry(t *testing.T) {
 
 func TestCanNotProcessValidatorRegistry(t *testing.T) {
 	state := &pb.BeaconState{
-		FinalizedSlot:                      100,
-		ValidatorRegistryLastestChangeSlot: 101,
+		FinalizedSlot:                     100,
+		ValidatorRegistryLatestChangeSlot: 101,
 	}
 	if CanProcessValidatorRegistry(state) {
 		t.Errorf("Wanted False for CanProcessValidatorRegistry, but got %v", CanProcessValidatorRegistry(state))
 	}
 	state = &pb.BeaconState{
-		FinalizedSlot:                      100,
-		ValidatorRegistryLastestChangeSlot: 99,
+		FinalizedSlot:                     100,
+		ValidatorRegistryLatestChangeSlot: 99,
 		LatestCrosslinks: []*pb.CrosslinkRecord{
 			{Slot: 99},
 		},
@@ -384,10 +384,10 @@ func TestProcessValidatorRegistry(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                               64,
-		ValidatorRegistryLastestChangeSlot: 1,
-		ShardAndCommitteesAtSlots:          shardAndCommittees,
-		LatestRandaoMixesHash32S:           [][]byte{{'A'}},
+		Slot:                              64,
+		ValidatorRegistryLatestChangeSlot: 1,
+		ShardAndCommitteesAtSlots:         shardAndCommittees,
+		LatestRandaoMixesHash32S:          [][]byte{{'A'}},
 	}
 	copiedState := proto.Clone(state).(*pb.BeaconState)
 	newState, err := ProcessValidatorRegistry(copiedState)
@@ -416,11 +416,11 @@ func TestProcessValidatorRegistry_ReachedUpperBound(t *testing.T) {
 		validators[i] = validator
 	}
 	state := &pb.BeaconState{
-		Slot:                               64,
-		ValidatorRegistryLastestChangeSlot: 1,
-		ShardAndCommitteesAtSlots:          shardAndCommittees,
-		LatestRandaoMixesHash32S:           [][]byte{{'A'}},
-		ValidatorRegistry:                  validators,
+		Slot:                              64,
+		ValidatorRegistryLatestChangeSlot: 1,
+		ShardAndCommitteesAtSlots:         shardAndCommittees,
+		LatestRandaoMixesHash32S:          [][]byte{{'A'}},
+		ValidatorRegistry:                 validators,
 	}
 
 	if _, err := ProcessValidatorRegistry(state); err == nil {
@@ -438,19 +438,19 @@ func TestProcessPartialValidatorRegistry(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                               64,
-		ValidatorRegistryLastestChangeSlot: 1,
-		ShardAndCommitteesAtSlots:          shardAndCommittees,
-		LatestRandaoMixesHash32S:           [][]byte{{'A'}},
+		Slot:                              64,
+		ValidatorRegistryLatestChangeSlot: 1,
+		ShardAndCommitteesAtSlots:         shardAndCommittees,
+		LatestRandaoMixesHash32S:          [][]byte{{'A'}},
 	}
 	copiedState := proto.Clone(state).(*pb.BeaconState)
 	newState, err := ProcessPartialValidatorRegistry(copiedState)
 	if err != nil {
 		t.Fatalf("Could not execute ProcessValidatorRegistryNoUpdate: %v", err)
 	}
-	if newState.ValidatorRegistryLastestChangeSlot != state.ValidatorRegistryLastestChangeSlot {
-		t.Errorf("Incorrect ValidatorRegistryLastestChangeSlot, wanted: %d, got: %d",
-			state.ValidatorRegistryLastestChangeSlot, newState.ValidatorRegistryLastestChangeSlot)
+	if newState.ValidatorRegistryLatestChangeSlot != state.ValidatorRegistryLatestChangeSlot {
+		t.Errorf("Incorrect ValidatorRegistryLatestChangeSlot, wanted: %d, got: %d",
+			state.ValidatorRegistryLatestChangeSlot, newState.ValidatorRegistryLatestChangeSlot)
 	}
 
 	if newState.ShardAndCommitteesAtSlots[0].ArrayShardAndCommittee[0].Shard != state.ShardAndCommitteesAtSlots[epochLength].ArrayShardAndCommittee[0].Shard {
@@ -474,11 +474,11 @@ func TestProcessPartialValidatorRegistry_ReachedUpperBound(t *testing.T) {
 		validators[i] = validator
 	}
 	state := &pb.BeaconState{
-		Slot:                               64,
-		ValidatorRegistryLastestChangeSlot: 1,
-		ShardAndCommitteesAtSlots:          shardAndCommittees,
-		LatestRandaoMixesHash32S:           [][]byte{{'A'}},
-		ValidatorRegistry:                  validators,
+		Slot:                              64,
+		ValidatorRegistryLatestChangeSlot: 1,
+		ShardAndCommitteesAtSlots:         shardAndCommittees,
+		LatestRandaoMixesHash32S:          [][]byte{{'A'}},
+		ValidatorRegistry:                 validators,
 	}
 
 	if _, err := ProcessPartialValidatorRegistry(state); err == nil {

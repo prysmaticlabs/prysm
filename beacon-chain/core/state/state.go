@@ -65,7 +65,7 @@ func InitialBeaconState(
 			Pubkey:                      depositInput.Pubkey,
 			RandaoCommitmentHash32:      depositInput.RandaoCommitmentHash32,
 			WithdrawalCredentialsHash32: depositInput.WithdrawalCredentialsHash32,
-			PocCommitmentHash32:         depositInput.PocCommitment,
+			CustodyCommitmentHash32:     depositInput.CustodyCommitmentHash32,
 			Balance:                     amount,
 			ExitSlot:                    params.BeaconConfig().FarFutureSlot,
 		}
@@ -89,7 +89,7 @@ func InitialBeaconState(
 		// Validator registry fields.
 		ValidatorRegistry:                    validatorRegistry,
 		ValidatorBalances:                    latestBalances,
-		ValidatorRegistryLatestChangeSlot:      params.BeaconConfig().GenesisSlot,
+		ValidatorRegistryLatestChangeSlot:    params.BeaconConfig().GenesisSlot,
 		ValidatorRegistryExitCount:           0,
 		ValidatorRegistryDeltaChainTipHash32: params.BeaconConfig().ZeroHash[:],
 

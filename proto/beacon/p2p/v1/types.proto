@@ -7,7 +7,7 @@ import "proto/common/messages.proto";
 message BeaconState {
   // Validator registry [1-1000] 
   repeated ValidatorRecord validator_registry = 1;
-  uint64 validator_registry_lastest_change_slot = 2;
+  uint64 validator_registry_latest_change_slot = 2;
   uint64 validator_registry_exit_count = 3;
   bytes validator_registry_delta_chain_tip_hash32 = 4;
   repeated uint64 validator_balances = 5; // Balance in Gwei
