@@ -235,9 +235,9 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 	}
 
 	block := &pbp2p.BeaconBlock{
-		Slot:                          req.SlotNumber,
-		CandidatePowReceiptRootHash32: powChainHash[:],
-		ParentRootHash32:              req.ParentHash,
+		Slot:              req.SlotNumber,
+		DepositRootHash32: powChainHash[:],
+		ParentRootHash32:  req.ParentHash,
 		Body: &pbp2p.BeaconBlockBody{
 			Attestations: []*pbp2p.Attestation{attestation},
 		},

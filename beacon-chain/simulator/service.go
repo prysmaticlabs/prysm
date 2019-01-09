@@ -374,11 +374,11 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*pb.BeaconB
 	}
 
 	block := &pb.BeaconBlock{
-		Slot:                          slot,
-		CandidatePowReceiptRootHash32: powChainRef,
-		StateRootHash32:               stateHash[:],
-		ParentRootHash32:              parentHash,
-		RandaoRevealHash32:            params.BeaconConfig().SimulatedBlockRandao[:],
+		Slot:               slot,
+		DepositRootHash32:  powChainRef,
+		StateRootHash32:    stateHash[:],
+		ParentRootHash32:   parentHash,
+		RandaoRevealHash32: params.BeaconConfig().SimulatedBlockRandao[:],
 		Body: &pb.BeaconBlockBody{
 			Attestations: attestations,
 		},

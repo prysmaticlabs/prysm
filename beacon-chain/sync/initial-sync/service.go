@@ -364,12 +364,6 @@ func (s *InitialSync) requestNextBlockBySlot(slotNumber uint64) {
 	s.p2p.Broadcast(&pb.BeaconBlockRequestBySlotNumber{SlotNumber: slotNumber})
 }
 
-func (s *InitialSync) requestBlockByHash(hash [32]byte, peer p2p.Peer) {
-	s.p2p.Send(&pb.BeaconBlockRequest{
-		Hash: hash[:],
-	}, peer)
-}
-
 // requestBatchedBlocks sends out a request for multiple blocks till a
 // specified bound slot number.
 func (s *InitialSync) requestBatchedBlocks(endSlot uint64) {
@@ -438,12 +432,4 @@ func (s *InitialSync) checkBlockValidity(block *pb.BeaconBlock) error {
 	// attestations.
 
 	return nil
-}
-
-func (s *InitialSync) writeBlockToDB(block *pb.BeaconBlock) error {
-	return s.db.SaveBlock(block)
-}
-
-func (s *InitialSync) checkForGenesisBlock(hash [32]byte) bool {
-	return s.db.HasBlock(hash)
 }

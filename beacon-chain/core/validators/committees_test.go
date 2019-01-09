@@ -11,7 +11,6 @@ import (
 
 func TestGetShardCommitteesAtSlots(t *testing.T) {
 	state := &pb.BeaconState{
-		LastStateRecalculationSlot: 64,
 		ShardCommitteesAtSlots: []*pb.ShardCommitteeArray{
 			{ArrayShardCommittee: []*pb.ShardCommittee{
 				{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4}},

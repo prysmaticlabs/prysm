@@ -15,35 +15,36 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trie"
 )
 
-// ProcessPOWReceiptRoots processes the proof-of-work chain's receipts
+// ProcessDepositRoots processes the proof-of-work chain's receipts
 // contained in a beacon block and appends them as candidate receipt roots
 // in the beacon state.
 //
-// Official spec definition for processing pow receipt roots:
-//   If block.candidate_pow_receipt_root is x.candidate_pow_receipt_root
-//     for some x in state.candidate_pow_receipt_roots, set x.vote_count += 1.
-//   Otherwise, append to state.candidate_pow_receipt_roots a
-//   new CandidatePoWReceiptRootRecord(
-//     candidate_pow_receipt_root=block.candidate_pow_receipt_root,
+// Official spec definition for processing deposit roots:
+//   If block.deposit_root is deposit_root_vote.deposit_root
+//     for some deposit_root_vote in state.deposit_root_votes,
+//     set deposit_root_vote.vote_count += 1.
+//   Otherwise, append to state.deposit_root_votes a
+//   new DepositRootVote(
+//     deposit_root=block.deposit_root,
 //     vote_count=1
 //   )
-func ProcessPOWReceiptRoots(
+func ProcessDepositRoots(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 ) *pb.BeaconState {
-	var newCandidateReceiptRoots []*pb.CandidatePoWReceiptRootRecord
-	currentCandidateReceiptRoots := beaconState.CandidatePowReceiptRoots
+	var newCandidateReceiptRoots []*pb.DepositRootVote
+	currentCandidateReceiptRoots := beaconState.DepositRootVotes
 	for idx, root := range currentCandidateReceiptRoots {
-		if bytes.Equal(block.CandidatePowReceiptRootHash32, root.CandidatePowReceiptRootHash32) {
+		if bytes.Equal(block.DepositRootHash32, root.DepositRootHash32) {
 			currentCandidateReceiptRoots[idx].VoteCount++
 		} else {
-			newCandidateReceiptRoots = append(newCandidateReceiptRoots, &pb.CandidatePoWReceiptRootRecord{
-				CandidatePowReceiptRootHash32: block.CandidatePowReceiptRootHash32,
-				VoteCount:                     1,
+			newCandidateReceiptRoots = append(newCandidateReceiptRoots, &pb.DepositRootVote{
+				DepositRootHash32: block.DepositRootHash32,
+				VoteCount:         1,
 			})
 		}
 	}
-	beaconState.CandidatePowReceiptRoots = append(currentCandidateReceiptRoots, newCandidateReceiptRoots...)
+	beaconState.DepositRootVotes = append(currentCandidateReceiptRoots, newCandidateReceiptRoots...)
 	return beaconState
 }
 
@@ -308,12 +309,12 @@ func casperSlashingPenalizedIndices(slashing *pb.CasperSlashing) ([]uint32, erro
 	votes1 := slashing.Votes_1
 	votes2 := slashing.Votes_2
 	votes1Indices := append(
-		votes1.AggregateSignaturePoc_0Indices,
-		votes1.AggregateSignaturePoc_1Indices...,
+		votes1.CustodyBit_0Indices,
+		votes1.CustodyBit_1Indices...,
 	)
 	votes2Indices := append(
-		votes2.AggregateSignaturePoc_0Indices,
-		votes2.AggregateSignaturePoc_1Indices...,
+		votes2.CustodyBit_0Indices,
+		votes2.CustodyBit_1Indices...,
 	)
 	indicesIntersection := slices.Intersection(votes1Indices, votes2Indices)
 	if len(indicesIntersection) < 1 {
@@ -326,13 +327,13 @@ func casperSlashingPenalizedIndices(slashing *pb.CasperSlashing) ([]uint32, erro
 }
 
 func verifyCasperVotes(votes *pb.SlashableVoteData) error {
-	totalProofsOfCustody := len(votes.AggregateSignaturePoc_0Indices) +
-		len(votes.AggregateSignaturePoc_1Indices)
-	if uint64(totalProofsOfCustody) > params.BeaconConfig().MaxCasperVotes {
+	totalCustody := len(votes.CustodyBit_0Indices) +
+		len(votes.CustodyBit_1Indices)
+	if uint64(totalCustody) > params.BeaconConfig().MaxCasperVotes {
 		return fmt.Errorf(
 			"exceeded allowed casper votes (%d), received %d",
 			params.BeaconConfig().MaxCasperVotes,
-			totalProofsOfCustody,
+			totalCustody,
 		)
 	}
 	// TODO(#258): Implement BLS verify multiple.
@@ -527,7 +528,7 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation) error {
 //     was placed into the Merkle tree.
 //
 //     Verify deposit merkle_branch, setting leaf=serialized_deposit_data,
-//     depth=DEPOSIT_CONTRACT_TREE_DEPTH and root=state.processed_pow_receipt_root:
+//     depth=DEPOSIT_CONTRACT_TREE_DEPTH and root=state.latest_deposit_root:
 //
 //     Run the following:
 //     process_deposit(
@@ -575,7 +576,7 @@ func ProcessValidatorDeposits(
 			depositInput.ProofOfPossession,
 			depositInput.WithdrawalCredentialsHash32,
 			depositInput.RandaoCommitmentHash32,
-			depositInput.PocCommitment,
+			depositInput.CustodyCommitmentHash32,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not process deposit into beacon state: %v", err)
@@ -586,10 +587,10 @@ func ProcessValidatorDeposits(
 
 func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 	depositData := deposit.DepositData
-	// Verify Merkle proof of deposit and PoW receipt trie root.
+	// Verify Merkle proof of deposit and deposit trie root.
 	var receiptRoot [32]byte
 	var merkleLeaf [32]byte
-	copy(receiptRoot[:], beaconState.ProcessedPowReceiptRootHash32)
+	copy(receiptRoot[:], beaconState.LatestDepositRootHash32)
 	copy(merkleLeaf[:], depositData)
 	if ok := trie.VerifyMerkleBranch(
 		merkleLeaf,
@@ -598,7 +599,7 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 		receiptRoot,
 	); !ok {
 		return fmt.Errorf(
-			"deposit merkle branch of PoW receipt root did not verify for root: %#x",
+			"deposit merkle branch of deposit root did not verify for root: %#x",
 			receiptRoot,
 		)
 	}

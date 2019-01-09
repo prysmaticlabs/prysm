@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pbcomm "github.com/prysmaticlabs/prysm/proto/common"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -66,7 +65,7 @@ func InitialBeaconState(
 			Pubkey:                      depositInput.Pubkey,
 			RandaoCommitmentHash32:      depositInput.RandaoCommitmentHash32,
 			WithdrawalCredentialsHash32: depositInput.WithdrawalCredentialsHash32,
-			PocCommitmentHash32:         depositInput.PocCommitment,
+			CustodyCommitmentHash32:     depositInput.CustodyCommitmentHash32,
 			Balance:                     amount,
 			ExitSlot:                    params.BeaconConfig().FarFutureSlot,
 		}
@@ -90,21 +89,19 @@ func InitialBeaconState(
 		// Validator registry fields.
 		ValidatorRegistry:                    validatorRegistry,
 		ValidatorBalances:                    latestBalances,
-		ValidatorRegistryLastChangeSlot:      params.BeaconConfig().GenesisSlot,
+		ValidatorRegistryLatestChangeSlot:    params.BeaconConfig().GenesisSlot,
 		ValidatorRegistryExitCount:           0,
 		ValidatorRegistryDeltaChainTipHash32: params.BeaconConfig().ZeroHash[:],
 
 		// Randomness and committees.
-		LatestRandaoMixesHash32S:         latestRandaoMixes,
-		LatestVdfOutputs:                 latestVDFOutputs,
-		ShardCommitteesAtSlots:           []*pb.ShardCommitteeArray{},
-		PersistentCommittees:             []*pbcomm.Uint32List{},
-		PersistentCommitteeReassignments: []*pb.ShardReassignmentRecord{},
+		LatestRandaoMixesHash32S: latestRandaoMixes,
+		LatestVdfOutputsHash32S:  latestVDFOutputs,
+		ShardCommitteesAtSlots:   []*pb.ShardCommitteeArray{},
 
 		// Proof of custody.
 		// Place holder, proof of custody challenge is defined in phase 1.
 		// This list will remain empty through out phase 0.
-		PocChallenges: []*pb.ProofOfCustodyChallenge{},
+		CustodyChallenges: []*pb.CustodyChallenge{},
 
 		// Finality.
 		PreviousJustifiedSlot: params.BeaconConfig().GenesisSlot,
@@ -119,9 +116,9 @@ func InitialBeaconState(
 		LatestAttestations:          []*pb.PendingAttestationRecord{},
 		BatchedBlockRootHash32S:     [][]byte{},
 
-		// PoW receipt root.
-		ProcessedPowReceiptRootHash32: processedPowReceiptRoot,
-		CandidatePowReceiptRoots:      []*pb.CandidatePoWReceiptRootRecord{},
+		// deposit root.
+		LatestDepositRootHash32: processedPowReceiptRoot,
+		DepositRootVotes:        []*pb.DepositRootVote{},
 	}
 
 	// Process initial deposits.
@@ -144,7 +141,7 @@ func InitialBeaconState(
 			depositInput.ProofOfPossession,
 			depositInput.WithdrawalCredentialsHash32,
 			depositInput.RandaoCommitmentHash32,
-			depositInput.PocCommitment,
+			depositInput.CustodyCommitmentHash32,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not process validator deposit: %v", err)
