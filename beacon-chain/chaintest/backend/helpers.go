@@ -1,8 +1,13 @@
 package backend
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"strconv"
+	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 
 	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -18,6 +23,7 @@ func generateSimulatedBlock(
 	beaconState *pb.BeaconState,
 	prevBlockRoot [32]byte,
 	randaoReveal [32]byte,
+	simulatedDeposit *StateTestDeposit,
 ) (*pb.BeaconBlock, [32]byte, error) {
 	encodedState, err := proto.Marshal(beaconState)
 	if err != nil {
@@ -36,6 +42,58 @@ func generateSimulatedBlock(
 			Deposits:          []*pb.Deposit{},
 			Exits:             []*pb.Exit{},
 		},
+	}
+	if simulatedDeposit != nil {
+		depositInput := &pb.DepositInput{
+			Pubkey:                      []byte{},
+			WithdrawalCredentialsHash32: []byte{},
+			ProofOfPossession:           []byte{},
+			// TODO: Fix based on hash onions.
+			RandaoCommitmentHash32:  []byte{},
+			CustodyCommitmentHash32: []byte{},
+		}
+		wBuf := new(bytes.Buffer)
+		if err := ssz.Encode(wBuf, depositInput); err != nil {
+			return nil, [32]byte{}, fmt.Errorf("failed to encode deposit input: %v", err)
+		}
+		encodedInput := wBuf.Bytes()
+		data := []byte{}
+
+		// We set a deposit value of 1000.
+		value := make([]byte, 8)
+		binary.BigEndian.PutUint64(value, simulatedDeposit.Amount)
+
+		// We then serialize a unix time into the timestamp []byte slice
+		// and ensure it has size of 8 bytes.
+		timestamp := make([]byte, 8)
+
+		// Set deposit time to 1000 seconds since unix time 0.
+		depositTime := time.Now().Unix()
+		binary.BigEndian.PutUint64(timestamp, uint64(depositTime))
+
+		// We then create a serialized deposit data slice of type []byte
+		// by appending all 3 items above together.
+		data = append(data, encodedInput...)
+		data = append(data, value...)
+		data = append(data, timestamp...)
+
+		// We then create a merkle branch for the test and derive its root.
+		branch := [][]byte{}
+		var powReceiptRoot [32]byte
+		copy(powReceiptRoot[:], data)
+		for i := uint64(0); i < params.BeaconConfig().DepositContractTreeDepth; i++ {
+			branch = append(branch, []byte{1})
+			if i%2 == 0 {
+				powReceiptRoot = hashutil.Hash(append(branch[i], powReceiptRoot[:]...))
+			} else {
+				powReceiptRoot = hashutil.Hash(append(powReceiptRoot[:], branch[i]...))
+			}
+		}
+
+		block.Body.Deposits = append(block.Body.Deposits, &pb.Deposit{
+			DepositData:         data,
+			MerkleBranchHash32S: branch,
+		})
 	}
 	encodedBlock, err := proto.Marshal(block)
 	if err != nil {

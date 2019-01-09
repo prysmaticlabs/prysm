@@ -175,6 +175,15 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 			continue
 		}
 
+		// If the slot is not skipped, we check if we are simulating a deposit at the current slot.
+		var simulatedDeposit *StateTestDeposit
+		for _, deposit := range testCase.Config.Deposits {
+			if deposit.Slot == i {
+				simulatedDeposit = deposit
+				break
+			}
+		}
+
 		layersPeeled := layersPeeledForProposer[proposerIndex]
 		blockRandaoReveal := determineSimulatedBlockRandaoReveal(layersPeeled, hashOnions)
 
@@ -183,6 +192,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 			beaconState,
 			prevBlockRoot,
 			blockRandaoReveal,
+			simulatedDeposit,
 		)
 		if err != nil {
 			return fmt.Errorf("could not generate simulated beacon block %v", err)
@@ -207,12 +217,20 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		endTime.Sub(startTime),
 	)
 
-	if beaconState.GetSlot() != testCase.Results.Slot {
+	if beaconState.Slot != testCase.Results.Slot {
 		return fmt.Errorf(
 			"incorrect state slot after %d state transitions without blocks, wanted %d, received %d",
 			testCase.Config.NumSlots,
 			testCase.Config.NumSlots,
 			testCase.Results.Slot,
+		)
+	}
+	if len(beaconState.ValidatorRegistry) != testCase.Results.NumValidators {
+		return fmt.Errorf(
+			"incorrect num validators after %d state transitions without blocks, wanted %d, received %d",
+			testCase.Config.NumSlots,
+			testCase.Results.NumValidators,
+			len(beaconState.ValidatorRegistry),
 		)
 	}
 	return nil
