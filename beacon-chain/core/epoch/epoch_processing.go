@@ -18,13 +18,13 @@ func CanProcessEpoch(state *pb.BeaconState) bool {
 	return state.Slot%params.BeaconConfig().EpochLength == 0
 }
 
-// CanProcessReceiptRoots checks the eligibility to process PoW receipt root.
-// The receipt root can be processed every POW_RECEIPT_ROOT_VOTING_PERIOD.
+// CanProcessDepositRoots checks the eligibility to process deposit root.
+// The deposit root can be processed every DEPOSIT_ROOT_VOTING_PERIOD.
 //
 // Spec pseudocode definition:
-//    If state.slot % POW_RECEIPT_ROOT_VOTING_PERIOD == 0:
-func CanProcessReceiptRoots(state *pb.BeaconState) bool {
-	return state.Slot%params.BeaconConfig().PowReceiptRootVotingPeriod == 0
+//    If state.slot % DEPOSIT_ROOT_VOTING_PERIOD == 0:
+func CanProcessDepositRoots(state *pb.BeaconState) bool {
+	return state.Slot%params.BeaconConfig().DepositRootVotingPeriod == 0
 }
 
 // CanProcessValidatorRegistry checks the eligibility to process validator registry.
@@ -37,12 +37,12 @@ func CanProcessReceiptRoots(state *pb.BeaconState) bool {
 //		* state.latest_crosslinks[shard].slot > state.validator_registry_latest_change_slot
 // 			for every shard number shard in state.shard_committees_at_slots
 func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
-	if state.FinalizedSlot <= state.ValidatorRegistryLastChangeSlot {
+	if state.FinalizedSlot <= state.ValidatorRegistryLatestChangeSlot {
 		return false
 	}
-	for _, shardCommitteesAtSlot := range state.ShardAndCommitteesAtSlots {
-		for _, shardCommittee := range shardCommitteesAtSlot.ArrayShardAndCommittee {
-			if state.LatestCrosslinks[shardCommittee.Shard].Slot <= state.ValidatorRegistryLastChangeSlot {
+	for _, shardCommitteesAtSlot := range state.ShardCommitteesAtSlots {
+		for _, shardCommittee := range shardCommitteesAtSlot.ArrayShardCommittee {
+			if state.LatestCrosslinks[shardCommittee.Shard].Slot <= state.ValidatorRegistryLatestChangeSlot {
 				return false
 			}
 		}
@@ -50,17 +50,17 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 	return true
 }
 
-// ProcessReceipt processes PoW receipt roots by checking its vote count.
-// With sufficient votes (>2*POW_RECEIPT_ROOT_VOTING_PERIOD), it then
+// ProcessDeposits processes deposit roots by checking its vote count.
+// With sufficient votes (>2*DEPOSIT_ROOT_VOTING_PERIOD), it then
 // assigns root hash to processed receipt vote in state.
-func ProcessReceipt(state *pb.BeaconState) *pb.BeaconState {
+func ProcessDeposits(state *pb.BeaconState) *pb.BeaconState {
 
-	for _, receiptRoot := range state.CandidatePowReceiptRoots {
-		if receiptRoot.VoteCount*2 > params.BeaconConfig().PowReceiptRootVotingPeriod {
-			state.ProcessedPowReceiptRootHash32 = receiptRoot.CandidatePowReceiptRootHash32
+	for _, receiptRoot := range state.DepositRootVotes {
+		if receiptRoot.VoteCount*2 > params.BeaconConfig().DepositRootVotingPeriod {
+			state.LatestDepositRootHash32 = receiptRoot.DepositRootHash32
 		}
 	}
-	state.CandidatePowReceiptRoots = make([]*pb.CandidatePoWReceiptRootRecord, 0)
+	state.DepositRootVotes = make([]*pb.DepositRootVote, 0)
 	return state
 }
 
@@ -145,8 +145,8 @@ func ProcessCrosslinks(
 	thisEpochAttestations []*pb.PendingAttestationRecord,
 	prevEpochAttestations []*pb.PendingAttestationRecord) (*pb.BeaconState, error) {
 
-	for _, shardCommitteesAtSlot := range state.ShardAndCommitteesAtSlots {
-		for _, shardCommittee := range shardCommitteesAtSlot.ArrayShardAndCommittee {
+	for _, shardCommitteesAtSlot := range state.ShardCommitteesAtSlots {
+		for _, shardCommittee := range shardCommitteesAtSlot.ArrayShardCommittee {
 			attestingBalance, err := TotalAttestingBalance(state, shardCommittee, thisEpochAttestations, prevEpochAttestations)
 			if err != nil {
 				return nil, fmt.Errorf("could not get attesting balance for shard committee %d: %v", shardCommittee.Shard, err)
@@ -210,10 +210,10 @@ func ProcessValidatorRegistry(
 	seedLookahead := params.BeaconConfig().SeedLookahead
 	shardCount := params.BeaconConfig().ShardCount
 
-	shardCommittees := state.ShardAndCommitteesAtSlots
+	shardCommittees := state.ShardCommitteesAtSlots
 	lastSlot := len(shardCommittees) - 1
-	lastCommittee := len(shardCommittees[lastSlot].ArrayShardAndCommittee) - 1
-	nextStartShard := (shardCommittees[lastSlot].ArrayShardAndCommittee[lastCommittee].Shard + 1) %
+	lastCommittee := len(shardCommittees[lastSlot].ArrayShardCommittee) - 1
+	nextStartShard := (shardCommittees[lastSlot].ArrayShardCommittee[lastCommittee].Shard + 1) %
 		shardCount
 
 	var randaoHash32 [32]byte
@@ -221,7 +221,7 @@ func ProcessValidatorRegistry(
 		uint64(seedLookahead))%randaoMixesLength])
 
 	for i := 0; i < epochLength; i++ {
-		state.ShardAndCommitteesAtSlots[i] = state.ShardAndCommitteesAtSlots[epochLength+i]
+		state.ShardCommitteesAtSlots[i] = state.ShardCommitteesAtSlots[epochLength+i]
 	}
 	newShuffledCommittees, err := validators.ShuffleValidatorRegistryToCommittees(
 		randaoHash32,
@@ -234,7 +234,7 @@ func ProcessValidatorRegistry(
 	}
 
 	for i := 0; i < epochLength; i++ {
-		state.ShardAndCommitteesAtSlots[epochLength+i] = newShuffledCommittees[i]
+		state.ShardCommitteesAtSlots[epochLength+i] = newShuffledCommittees[i]
 	}
 	return state, nil
 }
@@ -261,10 +261,10 @@ func ProcessPartialValidatorRegistry(
 	copy(randaoHash32[:], state.LatestRandaoMixesHash32S[(state.Slot-uint64(seedLookahead))%randaoMixesLength])
 
 	for i := 0; i < epochLength; i++ {
-		state.ShardAndCommitteesAtSlots[i] = state.ShardAndCommitteesAtSlots[epochLength+i]
+		state.ShardCommitteesAtSlots[i] = state.ShardCommitteesAtSlots[epochLength+i]
 	}
-	epochsSinceLastRegistryChange := (state.Slot - state.ValidatorRegistryLastChangeSlot) / uint64(epochLength)
-	startShard := state.ShardAndCommitteesAtSlots[0].ArrayShardAndCommittee[0].Shard
+	epochsSinceLastRegistryChange := (state.Slot - state.ValidatorRegistryLatestChangeSlot) / uint64(epochLength)
+	startShard := state.ShardCommitteesAtSlots[0].ArrayShardCommittee[0].Shard
 	if mathutil.IsPowerOf2(epochsSinceLastRegistryChange) {
 		newShuffledCommittees, err := validators.ShuffleValidatorRegistryToCommittees(
 			randaoHash32,
@@ -276,7 +276,7 @@ func ProcessPartialValidatorRegistry(
 			return nil, fmt.Errorf("could not shuffle validator registry for commtitees: %v", err)
 		}
 		for i := 0; i < epochLength; i++ {
-			state.ShardAndCommitteesAtSlots[epochLength+i] = newShuffledCommittees[i]
+			state.ShardCommitteesAtSlots[epochLength+i] = newShuffledCommittees[i]
 		}
 	}
 	return state, nil

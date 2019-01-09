@@ -11,10 +11,10 @@ import (
 func TestValidatorIndexMap(t *testing.T) {
 	state := &pb.BeaconState{
 		ValidatorRegistry: []*pb.ValidatorRecord{
-			&pb.ValidatorRecord{
+			{
 				Pubkey: []byte("zero"),
 			},
-			&pb.ValidatorRecord{
+			{
 				Pubkey: []byte("one"),
 			},
 		},

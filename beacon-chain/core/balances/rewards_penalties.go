@@ -370,8 +370,8 @@ func CrosslinksRewardsPenalties(
 
 	epochLength := params.BeaconConfig().EpochLength
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
-	for _, shardCommitteesAtSlot := range state.ShardAndCommitteesAtSlots[:epochLength] {
-		for _, shardCommitees := range shardCommitteesAtSlot.ArrayShardAndCommittee {
+	for _, shardCommitteesAtSlot := range state.ShardCommitteesAtSlots[:epochLength] {
+		for _, shardCommitees := range shardCommitteesAtSlot.ArrayShardCommittee {
 
 			for _, index := range shardCommitees.Committee {
 				baseReward := baseReward(state, index, baseRewardQuotient)
