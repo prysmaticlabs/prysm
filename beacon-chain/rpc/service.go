@@ -10,13 +10,15 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
+	"github.com/gogo/protobuf/proto"
+	ptypes "github.com/gogo/protobuf/types"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -55,9 +57,9 @@ type Service struct {
 	withCert              string
 	withKey               string
 	grpcServer            *grpc.Server
-	canonicalBlockChan    chan *types.Block
-	canonicalStateChan    chan *types.BeaconState
-	incomingAttestation   chan *types.Attestation
+	canonicalBlockChan    chan *pbp2p.BeaconBlock
+	canonicalStateChan    chan *pbp2p.BeaconState
+	incomingAttestation   chan *pbp2p.Attestation
 	enablePOWChain        bool
 	slotAlignmentDuration time.Duration
 }
@@ -90,9 +92,9 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		withCert:              cfg.CertFlag,
 		withKey:               cfg.KeyFlag,
 		slotAlignmentDuration: time.Duration(params.BeaconConfig().SlotDuration) * time.Second,
-		canonicalBlockChan:    make(chan *types.Block, cfg.SubscriptionBuf),
-		canonicalStateChan:    make(chan *types.BeaconState, cfg.SubscriptionBuf),
-		incomingAttestation:   make(chan *types.Attestation, cfg.SubscriptionBuf),
+		canonicalBlockChan:    make(chan *pbp2p.BeaconBlock, cfg.SubscriptionBuf),
+		canonicalStateChan:    make(chan *pbp2p.BeaconState, cfg.SubscriptionBuf),
+		incomingAttestation:   make(chan *pbp2p.Attestation, cfg.SubscriptionBuf),
 		enablePOWChain:        cfg.EnablePOWChain,
 	}
 }
@@ -145,14 +147,20 @@ func (s *Service) Stop() error {
 	return nil
 }
 
+// Status always returns nil.
+// TODO(1205): Add service health checks.
+func (s *Service) Status() error {
+	return nil
+}
+
 // CanonicalHead of the current beacon chain. This method is requested on-demand
 // by a validator when it is their time to propose or attest.
-func (s *Service) CanonicalHead(ctx context.Context, req *empty.Empty) (*pbp2p.BeaconBlock, error) {
+func (s *Service) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*pbp2p.BeaconBlock, error) {
 	block, err := s.beaconDB.GetChainHead()
 	if err != nil {
 		return nil, fmt.Errorf("could not get canonical head block: %v", err)
 	}
-	return block.Proto(), nil
+	return block, nil
 }
 
 // CurrentAssignmentsAndGenesisTime returns the current validator assignments
@@ -166,21 +174,17 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(
 	ctx context.Context,
 	req *pb.ValidatorAssignmentRequest,
 ) (*pb.CurrentAssignmentsResponse, error) {
-	genesis, err := s.beaconDB.GetBlockBySlot(0)
-	if err != nil {
-		return nil, fmt.Errorf("could not get genesis block: %v", err)
-	}
 	beaconState, err := s.beaconDB.GetState()
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
 	var keys []*pb.PublicKey
 	if req.AllValidators {
-		for _, val := range beaconState.ValidatorRegistry() {
-			keys = append(keys, &pb.PublicKey{PublicKey: val.GetPubkey()})
+		for _, val := range beaconState.ValidatorRegistry {
+			keys = append(keys, &pb.PublicKey{PublicKey: val.Pubkey})
 		}
 	} else {
-		keys = req.GetPublicKeys()
+		keys = req.PublicKeys
 		if len(keys) == 0 {
 			return nil, errors.New("no public keys specified in request")
 		}
@@ -190,8 +194,13 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(
 		return nil, fmt.Errorf("could not get assignments for public keys: %v", err)
 	}
 
+	timestamp, err := ptypes.TimestampProto(time.Unix(int64(beaconState.GenesisTime), 0))
+	if err != nil {
+		return nil, fmt.Errorf("could not create timestamp proto object %v", err)
+	}
+
 	return &pb.CurrentAssignmentsResponse{
-		GenesisTimestamp: genesis.Proto().GetTimestamp(),
+		GenesisTimestamp: timestamp,
 		Assignments:      assignments,
 	}, nil
 }
@@ -201,7 +210,7 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(
 func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb.ProposeResponse, error) {
 	var powChainHash common.Hash
 	if !s.enablePOWChain {
-		powChainHash = common.BytesToHash([]byte{byte(req.GetSlotNumber())})
+		powChainHash = common.BytesToHash([]byte{byte(req.SlotNumber)})
 	} else {
 		powChainHash = s.powChainService.LatestBlockHash()
 	}
@@ -213,29 +222,28 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 	}
 
 	_, prevProposerIndex, err := v.ProposerShardAndIndex(
-		beaconState.ShardAndCommitteesForSlots(),
-		beaconState.LastStateRecalculationSlot(),
-		req.GetSlotNumber(),
+		beaconState,
+		req.SlotNumber,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not get index of previous proposer: %v", err)
 	}
 
 	proposerBitfield := uint64(math.Pow(2, (7 - float64(prevProposerIndex))))
-	attestation := &pbp2p.AggregatedAttestation{
-		AttesterBitfield: []byte{byte(proposerBitfield)},
+	attestation := &pbp2p.Attestation{
+		ParticipationBitfield: []byte{byte(proposerBitfield)},
 	}
 
-	data := &pbp2p.BeaconBlock{
-		Slot:                          req.GetSlotNumber(),
-		CandidatePowReceiptRootHash32: powChainHash[:],
-		AncestorHash32S:               [][]byte{req.GetParentHash()},
-		Timestamp:                     req.GetTimestamp(),
-		Attestations:                  []*pbp2p.AggregatedAttestation{attestation},
+	block := &pbp2p.BeaconBlock{
+		Slot:              req.SlotNumber,
+		DepositRootHash32: powChainHash[:],
+		ParentRootHash32:  req.ParentHash,
+		Body: &pbp2p.BeaconBlockBody{
+			Attestations: []*pbp2p.Attestation{attestation},
+		},
 	}
 
-	block := types.NewBlock(data)
-	h, err := block.Hash()
+	h, err := b.Hash(block)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash block: %v", err)
 	}
@@ -248,27 +256,26 @@ func (s *Service) ProposeBlock(ctx context.Context, req *pb.ProposeRequest) (*pb
 // AttestHead is a function called by an attester in a sharding validator to vote
 // on a block.
 func (s *Service) AttestHead(ctx context.Context, req *pb.AttestRequest) (*pb.AttestResponse, error) {
-	attestation := types.NewAttestation(req.Attestation)
-	h, err := attestation.Hash()
+	enc, err := proto.Marshal(req.Attestation)
 	if err != nil {
-		return nil, fmt.Errorf("could not hash attestation: %v", err)
+		return nil, fmt.Errorf("could not marshal attestation: %v", err)
 	}
-
+	h := hashutil.Hash(enc)
 	// Relays the attestation to chain service.
-	s.attestationService.IncomingAttestationFeed().Send(attestation)
+	s.attestationService.IncomingAttestationFeed().Send(req.Attestation)
 
 	return &pb.AttestResponse{AttestationHash: h[:]}, nil
 }
 
 // LatestAttestation streams the latest processed attestations to the rpc clients.
-func (s *Service) LatestAttestation(req *empty.Empty, stream pb.BeaconService_LatestAttestationServer) error {
+func (s *Service) LatestAttestation(req *ptypes.Empty, stream pb.BeaconService_LatestAttestationServer) error {
 	sub := s.attestationService.IncomingAttestationFeed().Subscribe(s.incomingAttestation)
 	defer sub.Unsubscribe()
 	for {
 		select {
 		case attestation := <-s.incomingAttestation:
 			log.Info("Sending attestation to RPC clients")
-			if err := stream.Send(attestation.Proto()); err != nil {
+			if err := stream.Send(attestation); err != nil {
 				return err
 			}
 		case <-sub.Err():
@@ -291,8 +298,8 @@ func (s *Service) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.
 
 	shardID, err := v.ValidatorShardID(
 		req.PublicKey,
-		beaconState.ValidatorRegistry(),
-		beaconState.ShardAndCommitteesForSlots(),
+		beaconState.ValidatorRegistry,
+		beaconState.ShardCommitteesAtSlots,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator shard ID: %v", err)
@@ -314,8 +321,8 @@ func (s *Service) ValidatorSlotAndResponsibility(
 
 	slot, role, err := v.ValidatorSlotAndRole(
 		req.PublicKey,
-		beaconState.ValidatorRegistry(),
-		beaconState.ShardAndCommitteesForSlots(),
+		beaconState.ValidatorRegistry,
+		beaconState.ShardCommitteesAtSlots,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not get assigned validator slot for attester/proposer: %v", err)
@@ -333,7 +340,7 @@ func (s *Service) ValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.In
 	}
 	index, err := v.ValidatorIndex(
 		req.PublicKey,
-		beaconState.ValidatorRegistry(),
+		beaconState.ValidatorRegistry,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator index: %v", err)
@@ -358,11 +365,11 @@ func (s *Service) ValidatorAssignments(
 
 			var keys []*pb.PublicKey
 			if req.AllValidators {
-				for _, val := range beaconState.ValidatorRegistry() {
-					keys = append(keys, &pb.PublicKey{PublicKey: val.GetPubkey()})
+				for _, val := range beaconState.ValidatorRegistry {
+					keys = append(keys, &pb.PublicKey{PublicKey: val.Pubkey})
 				}
 			} else {
-				keys = req.GetPublicKeys()
+				keys = req.PublicKeys
 				if len(keys) == 0 {
 					return errors.New("no public keys specified in request")
 				}
@@ -394,7 +401,7 @@ func (s *Service) ValidatorAssignments(
 
 // assignmentsForPublicKeys fetches the validator assignments for a subset of public keys
 // given a crystallized state.
-func assignmentsForPublicKeys(keys []*pb.PublicKey, beaconState *types.BeaconState) ([]*pb.Assignment, error) {
+func assignmentsForPublicKeys(keys []*pb.PublicKey, beaconState *pbp2p.BeaconState) ([]*pb.Assignment, error) {
 	// Next, for each public key in the request, we build
 	// up an array of assignments.
 	assignments := []*pb.Assignment{}
@@ -403,9 +410,9 @@ func assignmentsForPublicKeys(keys []*pb.PublicKey, beaconState *types.BeaconSta
 		// we determine the assigned slot for the validator and whether it
 		// should act as a proposer or attester.
 		assignedSlot, role, err := v.ValidatorSlotAndRole(
-			val.GetPublicKey(),
-			beaconState.ValidatorRegistry(),
-			beaconState.ShardAndCommitteesForSlots(),
+			val.PublicKey,
+			beaconState.ValidatorRegistry,
+			beaconState.ShardCommitteesAtSlots,
 		)
 		if err != nil {
 			return nil, err
@@ -414,9 +421,9 @@ func assignmentsForPublicKeys(keys []*pb.PublicKey, beaconState *types.BeaconSta
 		// We determine the assigned shard ID for the validator
 		// based on a public key and current crystallized state.
 		shardID, err := v.ValidatorShardID(
-			val.GetPublicKey(),
-			beaconState.ValidatorRegistry(),
-			beaconState.ShardAndCommitteesForSlots(),
+			val.PublicKey,
+			beaconState.ValidatorRegistry,
+			beaconState.ShardCommitteesAtSlots,
 		)
 		if err != nil {
 			return nil, err

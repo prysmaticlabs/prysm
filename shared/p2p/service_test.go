@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
-	"github.com/golang/protobuf/proto"
 	ipfslog "github.com/ipfs/go-log"
 	bhost "github.com/libp2p/go-libp2p-blankhost"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -48,6 +48,25 @@ func TestStartDialRelayNodeFails(t *testing.T) {
 
 	s.Start()
 	logContains(t, hook, "Could not dial relay node: invalid multiaddr, must begin with /", logrus.ErrorLevel)
+}
+
+func TestP2pPortTakenError(t *testing.T) {
+	thePort := 10000
+	_, err := NewServer(&ServerConfig{
+		Port: thePort,
+	})
+
+	if err != nil {
+		t.Fatalf("unable to create server: %s", err)
+	}
+
+	_, err = NewServer(&ServerConfig{
+		Port: thePort,
+	})
+
+	if !strings.Contains(err.Error(), fmt.Sprintf("port %d already taken", thePort)) {
+		t.Fatalf("expected fail when setting another server with same p2p port")
+	}
 }
 
 func TestBroadcast(t *testing.T) {
@@ -318,6 +337,30 @@ func TestRegisterTopic_WithAdapters(t *testing.T) {
 		return // OK
 	case <-time.After(1 * time.Second):
 		t.Fatal("TestMessage not received within 1 seconds")
+	}
+}
+
+func TestStatus_MinimumPeers(t *testing.T) {
+	minPeers := 5
+
+	ctx := context.Background()
+	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
+	s := Server{host: h}
+
+	err := s.Status()
+	if err == nil || err.Error() != "less than 5 peers" {
+		t.Errorf("p2p server did not return expected status, instead returned %v", err)
+	}
+
+	for i := 0; i < minPeers; i++ {
+		other := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
+		if err := h.Connect(ctx, other.Peerstore().PeerInfo(other.ID())); err != nil {
+			t.Fatalf("Could not connect to host for test setup")
+		}
+	}
+
+	if err := s.Status(); err != nil {
+		t.Errorf("Unexpected server status %v", err)
 	}
 }
 

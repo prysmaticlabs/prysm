@@ -1,7 +1,7 @@
 package node
 
 import (
-	"github.com/golang/protobuf/proto"
+	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -15,6 +15,8 @@ var topicMappings = map[pb.Topic]proto.Message{
 	pb.Topic_BEACON_BLOCK_REQUEST:                &pb.BeaconBlockRequest{},
 	pb.Topic_BEACON_BLOCK_REQUEST_BY_SLOT_NUMBER: &pb.BeaconBlockRequestBySlotNumber{},
 	pb.Topic_BEACON_BLOCK_RESPONSE:               &pb.BeaconBlockResponse{},
+	pb.Topic_BATCHED_BEACON_BLOCK_REQUEST:        &pb.BatchedBeaconBlockRequest{},
+	pb.Topic_BATCHED_BEACON_BLOCK_RESPONSE:       &pb.BatchedBeaconBlockResponse{},
 	pb.Topic_CHAIN_HEAD_REQUEST:                  &pb.ChainHeadRequest{},
 	pb.Topic_CHAIN_HEAD_RESPONSE:                 &pb.ChainHeadResponse{},
 	pb.Topic_BEACON_STATE_HASH_ANNOUNCE:          &pb.BeaconStateHashAnnounce{},

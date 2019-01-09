@@ -4,15 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
-
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-
-	"github.com/prysmaticlabs/prysm/shared/event"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -66,15 +63,15 @@ func TestCleanBlockVoteCache(t *testing.T) {
 	var err error
 
 	// Pre-fill block vote cache in DB
-	if err = beaconDB.InitializeState(nil); err != nil {
+	if err = beaconDB.InitializeState(); err != nil {
 		t.Fatalf("failed to initialize DB: %v", err)
 	}
-	oldBlock := types.NewBlock(&pb.BeaconBlock{Slot: 1})
-	oldBlockHash, _ := oldBlock.Hash()
+	oldBlock := &pb.BeaconBlock{Slot: 1}
+	oldBlockHash, _ := b.Hash(oldBlock)
 	if err = beaconDB.SaveBlock(oldBlock); err != nil {
 		t.Fatalf("failed to write block int DB: %v", err)
 	}
-	oldState := types.NewBeaconState(&pb.BeaconState{})
+	oldState := &pb.BeaconState{}
 	if err = beaconDB.SaveState(oldState); err != nil {
 		t.Fatalf("failed to pre-fill DB: %v", err)
 	}
@@ -99,8 +96,8 @@ func TestCleanBlockVoteCache(t *testing.T) {
 
 	// Now let the cleanup service do its job
 	cleanupService := createCleanupService(beaconDB)
-	state := types.NewBeaconState(&pb.BeaconState{LastFinalizedSlot: 1})
-	if err = cleanupService.cleanBlockVoteCache(state.LastFinalizedSlot()); err != nil {
+	state := &pb.BeaconState{FinalizedSlot: 1}
+	if err = cleanupService.cleanBlockVoteCache(state.FinalizedSlot); err != nil {
 		t.Fatalf("failed to clean block vote cache")
 	}
 

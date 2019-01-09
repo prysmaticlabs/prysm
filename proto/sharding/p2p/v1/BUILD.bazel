@@ -8,6 +8,7 @@ go_proto_library(
     proto = ":v1_proto", 
     visibility = ["//visibility:public"],
     deps = ["//proto/beacon/p2p/v1:go_default_library"],
+    compiler = "//:proto_compiler",
 )
 
 go_library(

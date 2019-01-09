@@ -2,14 +2,20 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["hash.go"],
+    srcs = [
+        "hash.go",
+        "merkleRoot.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/shared/hashutil",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_ethereum_go_ethereum//crypto/sha3:go_default_library"],
+    deps = ["@org_golang_x_crypto//sha3:go_default_library"],
 )
 
 go_test(
     name = "go_default_test",
-    srcs = ["hash_test.go"],
+    srcs = [
+        "hash_test.go",
+        "merkleRoot_test.go",
+    ],
     embed = [":go_default_library"],
 )

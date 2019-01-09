@@ -6,11 +6,12 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/golang/protobuf/proto"
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -31,7 +32,7 @@ func (mp *mockP2P) Subscribe(msg proto.Message, channel chan p2p.Message) event.
 }
 
 func (mp *mockP2P) Broadcast(msg proto.Message) {
-	mp.broadcastHash = msg.(*pb.BeaconBlockAnnounce).GetHash()
+	mp.broadcastHash = msg.(*pb.BeaconBlockAnnounce).Hash
 }
 
 func (mp *mockP2P) Send(msg proto.Message, peer p2p.Peer) {}
@@ -44,10 +45,9 @@ func (mpow *mockPOWChainService) LatestBlockHash() common.Hash {
 
 func setupSimulator(t *testing.T, beaconDB *db.BeaconDB) (*Simulator, *mockP2P) {
 	ctx := context.Background()
-
 	p2pService := &mockP2P{}
 
-	err := beaconDB.InitializeState(nil)
+	err := beaconDB.InitializeState()
 	if err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
@@ -58,7 +58,6 @@ func setupSimulator(t *testing.T, beaconDB *db.BeaconDB) (*Simulator, *mockP2P) 
 		Web3Service:     &mockPOWChainService{},
 		BeaconDB:        beaconDB,
 		EnablePOWChain:  true,
-		StateReqBuf:     10,
 	}
 
 	return NewSimulator(ctx, cfg), p2pService
@@ -207,38 +206,29 @@ func TestStateRequest(t *testing.T) {
 		t.Fatalf("could not retrieve beacon state %v", err)
 	}
 
-	hash, err := beaconState.Hash()
+	enc, err := proto.Marshal(beaconState)
 	if err != nil {
-		t.Fatalf("could not hash beacon state %v", err)
+		t.Fatalf("could not marshal beacon state %v", err)
 	}
+	hash := hashutil.Hash(enc)
 
-	beaconStateRequest := &pb.BeaconStateRequest{
-		Hash: []byte{'t', 'e', 's', 't'},
+	sim.stateReqChan <- p2p.Message{
+		Data: &pb.BeaconStateRequest{
+			Hash: []byte{'t', 'e', 's', 't'},
+		},
 	}
-
-	message := p2p.Message{
-		Data: beaconStateRequest,
-	}
-
-	sim.stateReqChan <- message
 
 	testutil.WaitForLog(t, hook, "Requested beacon state is of a different hash")
-	testutil.AssertLogsDoNotContain(t, hook, "Responding to full beacon state request")
 
 	hook.Reset()
 
-	newStateReq := &pb.BeaconStateRequest{
-		Hash: hash[:],
+	sim.stateReqChan <- p2p.Message{
+		Data: &pb.BeaconStateRequest{
+			Hash: hash[:],
+		},
 	}
-
-	newMessage := p2p.Message{
-		Data: newStateReq,
-	}
-
-	sim.stateReqChan <- newMessage
 
 	testutil.WaitForLog(t, hook, "Responding to full beacon state request")
-	testutil.AssertLogsDoNotContain(t, hook, "Requested beacon state is of a different hash")
 
 	sim.cancel()
 	exitRoutine <- true

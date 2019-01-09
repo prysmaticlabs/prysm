@@ -10,22 +10,20 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/dbcleanup"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/dbcleanup"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/simulator"
 	rbcsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync/sync-querier"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
@@ -94,15 +92,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if err := beacon.registerQueryService(); err != nil {
-		return nil, err
-	}
-
 	if err := beacon.registerSyncService(); err != nil {
-		return nil, err
-	}
-
-	if err := beacon.registerInitialSyncService(); err != nil {
 		return nil, err
 	}
 
@@ -166,10 +156,6 @@ func (b *BeaconNode) Close() {
 
 func (b *BeaconNode) startDB(ctx *cli.Context) error {
 	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
-	var genesisJSON string
-	if ctx.GlobalIsSet(utils.GenesisJSON.Name) {
-		genesisJSON = ctx.GlobalString(utils.GenesisJSON.Name)
-	}
 
 	db, err := db.NewDB(path.Join(baseDir, beaconChainDBName))
 	if err != nil {
@@ -184,15 +170,28 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 	}
 	// Ensure that state has been initialized.
 	if beaconState == nil {
-		var genesisValidatorRegistry []*pb.ValidatorRecord
-		if genesisJSON != "" {
-			log.Infof("Initializing Crystallized State from %s", genesisJSON)
-			genesisValidatorRegistry, err = utils.InitialValidatorRegistryFromJSON(genesisJSON)
-			if err != nil {
-				return err
-			}
+		if err := db.InitializeState(); err != nil {
+			return err
 		}
-		if err := db.InitializeState(genesisValidatorRegistry); err != nil {
+	}
+
+	beaconState, err = db.GetState()
+	if err != nil {
+		return err
+	}
+
+	hash, err := state.Hash(beaconState)
+	if err != nil {
+		return err
+	}
+
+	genesisBlock, err := db.GetBlockBySlot(0)
+	if err != nil {
+		return err
+	}
+
+	if genesisBlock == nil {
+		if err := db.SaveBlock(blocks.NewGenesisBlock(hash[:])); err != nil {
 			return err
 		}
 	}
@@ -300,50 +299,15 @@ func (b *BeaconNode) registerSyncService() error {
 		return err
 	}
 
-	var queryService *syncquerier.SyncQuerier
-	if err := b.services.FetchService(&queryService); err != nil {
-		return err
+	cfg := &rbcsync.Config{
+		ChainService:  chainService,
+		P2P:           p2pService,
+		BeaconDB:      b.db,
+		AttestService: attestationService,
 	}
-
-	cfg := rbcsync.DefaultConfig()
-	cfg.ChainService = chainService
-	cfg.AttestService = attestationService
-	cfg.P2P = p2pService
-	cfg.QueryService = queryService
-	cfg.BeaconDB = b.db
 
 	syncService := rbcsync.NewSyncService(context.Background(), cfg)
 	return b.services.RegisterService(syncService)
-}
-
-func (b *BeaconNode) registerInitialSyncService() error {
-	var p2pService *p2p.Server
-	if err := b.services.FetchService(&p2pService); err != nil {
-		return err
-	}
-
-	var chainService *blockchain.ChainService
-	if err := b.services.FetchService(&chainService); err != nil {
-		return err
-	}
-
-	var syncService *rbcsync.Service
-	if err := b.services.FetchService(&syncService); err != nil {
-		return err
-	}
-
-	var queryService *syncquerier.SyncQuerier
-	if err := b.services.FetchService(&queryService); err != nil {
-		return err
-	}
-
-	cfg := initialsync.DefaultConfig()
-	cfg.P2P = p2pService
-	cfg.SyncService = syncService
-	cfg.QueryService = queryService
-	cfg.BeaconDB = b.db
-	initialSyncService := initialsync.NewInitialSyncService(context.Background(), cfg)
-	return b.services.RegisterService(initialSyncService)
 }
 
 func (b *BeaconNode) registerSimulatorService(ctx *cli.Context) error {
@@ -378,22 +342,6 @@ func (b *BeaconNode) registerSimulatorService(ctx *cli.Context) error {
 	}
 	simulatorService := simulator.NewSimulator(context.TODO(), cfg)
 	return b.services.RegisterService(simulatorService)
-}
-
-func (b *BeaconNode) registerQueryService() error {
-	var p2pService *p2p.Server
-	if err := b.services.FetchService(&p2pService); err != nil {
-		return err
-	}
-
-	defaultConfig := syncquerier.DefaultConfig()
-	cfg := &syncquerier.Config{
-		P2P:                p2pService,
-		BeaconDB:           b.db,
-		ResponseBufferSize: defaultConfig.ResponseBufferSize,
-	}
-	querierservice := syncquerier.NewSyncQuerierService(context.TODO(), cfg)
-	return b.services.RegisterService(querierservice)
 }
 
 func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
@@ -436,6 +384,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 func (b *BeaconNode) registerPrometheusService(ctx *cli.Context) error {
 	service := prometheus.NewPrometheusService(
 		fmt.Sprintf(":%d", ctx.GlobalInt64(cmd.MonitoringPortFlag.Name)),
+		b.services,
 	)
 	hook := prometheus.NewLogrusCollector()
 	logrus.AddHook(hook)

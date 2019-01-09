@@ -5,10 +5,26 @@ load("@io_kubernetes_build//defs:run_in_workspace.bzl", "workspace_binary")
 
 prefix = "github.com/prysmaticlabs/prysm"
 
+exports_files(["genesis.json"])
+
 # gazelle:prefix github.com/prysmaticlabs/prysm
 gazelle(
     name = "gazelle",
     prefix = prefix,
+)
+
+# Protobuf compiler (non-gRPC)
+alias(
+    name = "proto_compiler",
+    actual = "@io_bazel_rules_go//proto:gogofast_proto",
+    visibility = ["//proto:__subpackages__"],
+)
+
+# Protobuf compiler (gRPC)
+alias(
+    name = "grpc_proto_compiler",
+    actual = "@io_bazel_rules_go//proto:gogofast_grpc",
+    visibility = ["//proto:__subpackages__"],
 )
 
 gometalinter(

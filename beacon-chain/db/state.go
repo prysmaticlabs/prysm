@@ -2,30 +2,49 @@ package db
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // InitializeState creates an initial genesis state for the beacon
 // node using a set of genesis validators.
-func (db *BeaconDB) InitializeState(genesisValidatorRegistry []*pb.ValidatorRecord) error {
-	beaconState, err := types.NewGenesisBeaconState(genesisValidatorRegistry)
+func (db *BeaconDB) InitializeState() error {
+	// TODO(#1267): Remove initial validators once testnet startup procedure is finalized.
+	genesisValidatorRegistry := validators.InitialValidatorRegistry()
+	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
+	for i := 0; i < len(deposits); i++ {
+		depositInput := &pb.DepositInput{
+			Pubkey: genesisValidatorRegistry[i].Pubkey,
+		}
+		balance := genesisValidatorRegistry[i].Balance
+		depositData, err := b.EncodeDepositData(depositInput, balance, time.Now().Unix())
+		if err != nil {
+			return err
+		}
+		deposits[i] = &pb.Deposit{DepositData: depositData}
+	}
+	genesisTime := uint64(params.BeaconConfig().GenesisTime.Unix())
+	beaconState, err := state.InitialBeaconState(deposits, genesisTime, nil)
 	if err != nil {
 		return err
 	}
 
 	// #nosec G104
-	stateHash, _ := beaconState.Hash()
-	genesisBlock := types.NewGenesisBlock(stateHash)
+	stateEnc, _ := proto.Marshal(beaconState)
+	stateHash := hashutil.Hash(stateEnc)
+	genesisBlock := b.NewGenesisBlock(stateHash[:])
 	// #nosec G104
-	blockHash, _ := genesisBlock.Hash()
+	blockHash, _ := b.Hash(genesisBlock)
 	// #nosec G104
-	blockEnc, _ := genesisBlock.Marshal()
-	// #nosec G104
-	stateEnc, _ := beaconState.Marshal()
+	blockEnc, _ := proto.Marshal(genesisBlock)
 	zeroBinary := encodeSlotNumber(0)
 
 	return db.update(func(tx *bolt.Tx) error {
@@ -54,8 +73,8 @@ func (db *BeaconDB) InitializeState(genesisValidatorRegistry []*pb.ValidatorReco
 }
 
 // GetState fetches the canonical beacon chain's state from the DB.
-func (db *BeaconDB) GetState() (*types.BeaconState, error) {
-	var beaconState *types.BeaconState
+func (db *BeaconDB) GetState() (*pb.BeaconState, error) {
+	var beaconState *pb.BeaconState
 	err := db.view(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
 		enc := chainInfo.Get(stateLookupKey)
@@ -72,10 +91,10 @@ func (db *BeaconDB) GetState() (*types.BeaconState, error) {
 }
 
 // SaveState updates the beacon chain state.
-func (db *BeaconDB) SaveState(beaconState *types.BeaconState) error {
+func (db *BeaconDB) SaveState(beaconState *pb.BeaconState) error {
 	return db.update(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
-		beaconStateEnc, err := beaconState.Marshal()
+		beaconStateEnc, err := proto.Marshal(beaconState)
 		if err != nil {
 			return err
 		}
@@ -85,8 +104,8 @@ func (db *BeaconDB) SaveState(beaconState *types.BeaconState) error {
 
 // GetUnfinalizedBlockState fetches an unfinalized block's
 // active and crystallized state pair.
-func (db *BeaconDB) GetUnfinalizedBlockState(stateRoot [32]byte) (*types.BeaconState, error) {
-	var beaconState *types.BeaconState
+func (db *BeaconDB) GetUnfinalizedBlockState(stateRoot [32]byte) (*pb.BeaconState, error) {
+	var beaconState *pb.BeaconState
 	err := db.view(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
 		encState := chainInfo.Get(stateRoot[:])
@@ -103,32 +122,40 @@ func (db *BeaconDB) GetUnfinalizedBlockState(stateRoot [32]byte) (*types.BeaconS
 
 // SaveUnfinalizedBlockState persists the associated state
 // for a given unfinalized block.
-func (db *BeaconDB) SaveUnfinalizedBlockState(beaconState *types.BeaconState) error {
-	stateHash, err := beaconState.Hash()
+func (db *BeaconDB) SaveUnfinalizedBlockState(beaconState *pb.BeaconState) error {
+	enc, err := proto.Marshal(beaconState)
 	if err != nil {
-		return fmt.Errorf("unable to hash the beacon state: %v", err)
+		return fmt.Errorf("unable to marshal the beacon state: %v", err)
 	}
-	beaconStateEnc, err := beaconState.Marshal()
-	if err != nil {
-		return fmt.Errorf("unable to encode the beacon state: %v", err)
-	}
-
+	stateHash := hashutil.Hash(enc)
 	return db.update(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
-		if err := chainInfo.Put(stateHash[:], beaconStateEnc); err != nil {
+		if err := chainInfo.Put(stateHash[:], enc); err != nil {
 			return fmt.Errorf("failed to save beacon state: %v", err)
 		}
 		return nil
 	})
 }
 
-func createState(enc []byte) (*types.BeaconState, error) {
+func createState(enc []byte) (*pb.BeaconState, error) {
 	protoState := &pb.BeaconState{}
 	err := proto.Unmarshal(enc, protoState)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal encoding: %v", err)
 	}
+	return protoState, nil
+}
 
-	state := types.NewBeaconState(protoState)
-	return state, nil
+// GenesisTime returns the genesis timestamp for the state.
+func (db *BeaconDB) GenesisTime() (time.Time, error) {
+	state, err := db.GetState()
+	if err != nil {
+		return time.Time{}, fmt.Errorf("could not retrieve state: %v", err)
+	}
+	if state == nil {
+		return time.Time{}, fmt.Errorf("state not found: %v", err)
+	}
+
+	genesisTime := time.Unix(int64(state.GetGenesisTime()), int64(0))
+	return genesisTime, nil
 }

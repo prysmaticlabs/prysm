@@ -75,6 +75,13 @@ func (a *Attester) Stop() error {
 	return nil
 }
 
+// Status always returns nil.
+// This service will be rewritten in the future so this service check is a
+// no-op for now.
+func (a *Attester) Status() error {
+	return nil
+}
+
 // run the main event loop that listens for an attester assignment.
 func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.ValidatorServiceClient) {
 	sub := a.beaconService.AttesterAssignmentFeed().Subscribe(a.assignmentChan)
@@ -88,6 +95,10 @@ func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.Validator
 		case latestBeaconBlock := <-a.assignmentChan:
 			log.Info("Performing attester responsibility")
 
+			if latestBeaconBlock == nil {
+				log.Errorf("could not marshal nil latest beacon block")
+				continue
+			}
 			data, err := proto.Marshal(latestBeaconBlock)
 			if err != nil {
 				log.Errorf("could not marshal latest beacon block: %v", err)
@@ -114,12 +125,14 @@ func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.Validator
 			attesterBitfield := bitutil.SetBitfield(int(attesterIndex.Index))
 
 			attestReq := &pb.AttestRequest{
-				Attestation: &pbp2p.AggregatedAttestation{
-					Slot:             latestBeaconBlock.GetSlot(),
-					Shard:            a.shardID,
-					AttesterBitfield: attesterBitfield,
-					ShardBlockHash:   latestBlockHash[:], // Is a stub for actual shard blockhash.
-					AggregateSig:     []uint64{},         // TODO(258): Need Signature verification scheme/library
+				Attestation: &pbp2p.Attestation{
+					ParticipationBitfield: attesterBitfield,
+					AggregateSignature:    []byte{}, // TODO(258): Need Signature verification scheme/library
+					Data: &pbp2p.AttestationData{
+						Slot:                 latestBeaconBlock.Slot,
+						Shard:                a.shardID,
+						ShardBlockRootHash32: latestBlockHash[:],
+					},
 				},
 			}
 

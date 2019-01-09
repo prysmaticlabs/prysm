@@ -5,10 +5,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
-	"github.com/prysmaticlabs/prysm/shared/event"
-
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/sirupsen/logrus"
 )
 
@@ -27,7 +27,7 @@ type CleanupService struct {
 	cancel             context.CancelFunc
 	beaconDB           *db.BeaconDB
 	chainService       chainService
-	canonicalStateChan chan *types.BeaconState
+	canonicalStateChan chan *pb.BeaconState
 }
 
 // Config defines the needed fields for creating a new cleanup service.
@@ -45,7 +45,7 @@ func NewCleanupService(ctx context.Context, cfg *Config) *CleanupService {
 		cancel:             cancel,
 		beaconDB:           cfg.BeaconDB,
 		chainService:       cfg.ChainService,
-		canonicalStateChan: make(chan *types.BeaconState, cfg.SubscriptionBuf),
+		canonicalStateChan: make(chan *pb.BeaconState, cfg.SubscriptionBuf),
 	}
 }
 
@@ -63,6 +63,12 @@ func (d *CleanupService) Stop() error {
 	return nil
 }
 
+// Status always returns nil.
+// TODO(1203): Add service health checks.
+func (d *CleanupService) Status() error {
+	return nil
+}
+
 func (d *CleanupService) cleanDB() {
 	cStateSub := d.chainService.CanonicalStateFeed().Subscribe(d.canonicalStateChan)
 	defer cStateSub.Unsubscribe()
@@ -73,7 +79,7 @@ func (d *CleanupService) cleanDB() {
 			log.Debug("Cleanup service context closed, exiting goroutine")
 			return
 		case cState := <-d.canonicalStateChan:
-			if err := d.cleanBlockVoteCache(cState.LastFinalizedSlot()); err != nil {
+			if err := d.cleanBlockVoteCache(cState.FinalizedSlot); err != nil {
 				log.Errorf("Failed to clean block vote cache: %v", err)
 			}
 		}
@@ -94,14 +100,14 @@ func (d *CleanupService) cleanBlockVoteCache(latestFinalizedSlot uint64) error {
 
 	var blockHashes [][32]byte
 	for slot := lastCleanedFinalizedSlot + 1; slot <= latestFinalizedSlot; slot++ {
-		var block *types.Block
+		var block *pb.BeaconBlock
 		block, err = d.beaconDB.GetBlockBySlot(slot)
 		if err != nil {
 			return fmt.Errorf("failed to read block at slot %d: %v", slot, err)
 		}
 		if block != nil {
 			var blockHash [32]byte
-			blockHash, err = block.Hash()
+			blockHash, err = b.Hash(block)
 			if err != nil {
 				return fmt.Errorf("failed to get hash of block: %v", err)
 			}

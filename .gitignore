@@ -4,6 +4,10 @@ bazel-*
 .DS_Store
 .gitattributes
 
+# IntelliJ
+.idea
+.ijwb
+
 # delve debugger output (not sure how to get rid of these)
 **/debug.test
 

@@ -5,18 +5,23 @@ import (
 	"errors"
 	"io/ioutil"
 	"math/big"
+	"strconv"
 	"testing"
+	"time"
 
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/types"
-	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
+	"github.com/gogo/protobuf/proto"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -93,7 +98,7 @@ func setupBeaconChain(t *testing.T, faultyPoWClient bool, beaconDB *db.BeaconDB)
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
-	if err := beaconDB.InitializeState(nil); err != nil {
+	if err := beaconDB.InitializeState(); err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
 
@@ -112,6 +117,16 @@ func setupBeaconChain(t *testing.T, faultyPoWClient bool, beaconDB *db.BeaconDB)
 	}
 
 	return chainService
+}
+
+func SetSlotInState(service *ChainService, slot uint64) error {
+	bState, err := service.beaconDB.GetState()
+	if err != nil {
+		return err
+	}
+
+	bState.Slot = slot
+	return service.beaconDB.SaveState(bState)
 }
 
 func TestStartStop(t *testing.T) {
@@ -140,12 +155,30 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, true, db)
 
-	block := types.NewBlock(&pb.BeaconBlock{
-		Slot:                          1,
-		CandidatePowReceiptRootHash32: []byte("a"),
-	})
+	if err := SetSlotInState(chainService, 1); err != nil {
+		t.Fatal(err)
+	}
 
-	blockChan := make(chan *types.Block)
+	parentBlock := &pb.BeaconBlock{
+		Slot: 1,
+	}
+
+	parentHash, err := b.Hash(parentBlock)
+	if err != nil {
+		t.Fatalf("Unable to hash block %v", err)
+	}
+
+	if err := chainService.beaconDB.SaveBlock(parentBlock); err != nil {
+		t.Fatalf("Unable to save block %v", err)
+	}
+
+	block := &pb.BeaconBlock{
+		Slot:              2,
+		ParentRootHash32:  parentHash[:],
+		DepositRootHash32: []byte("a"),
+	}
+
+	blockChan := make(chan *pb.BeaconBlock)
 	exitRoutine := make(chan bool)
 	go func() {
 		chainService.blockProcessing(blockChan)
@@ -161,7 +194,7 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 	chainService.cancel()
 	exitRoutine <- true
 
-	testutil.AssertLogsContain(t, hook, "proof-of-Work chain reference in block does not exist")
+	testutil.AssertLogsContain(t, hook, "unable to retrieve POW chain reference block failed")
 }
 
 func TestRunningChainService(t *testing.T) {
@@ -170,39 +203,90 @@ func TestRunningChainService(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db)
-	beaconState, err := types.NewGenesisBeaconState(nil)
+	deposits := make([]*pb.Deposit, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(deposits); i++ {
+		depositInput := &pb.DepositInput{
+			Pubkey: []byte(strconv.Itoa(i)),
+			RandaoCommitmentHash32: []byte{41, 13, 236, 217, 84, 139, 98, 168, 214, 3, 69,
+				169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
+		}
+		depositData, err := b.EncodeDepositData(
+			depositInput,
+			params.BeaconConfig().MaxDepositInGwei,
+			time.Now().Unix(),
+		)
+		if err != nil {
+			t.Fatalf("Could not encode deposit input: %v", err)
+		}
+		deposits[i] = &pb.Deposit{DepositData: depositData}
+	}
+	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
+	beaconState.Slot = 5
 
-	stateRoot, _ := beaconState.Hash()
+	enc, _ := proto.Marshal(beaconState)
+	stateRoot := hashutil.Hash(enc)
 
-	genesis := types.NewGenesisBlock([32]byte{})
-	chainService.beaconDB.SaveBlock(genesis)
-	parentHash, err := genesis.Hash()
+	genesis := b.NewGenesisBlock([]byte{})
+	if err := chainService.beaconDB.SaveBlock(genesis); err != nil {
+		t.Fatalf("could not save block to db: %v", err)
+	}
+	parentHash, err := b.Hash(genesis)
 	if err != nil {
 		t.Fatalf("unable to get hash of canonical head: %v", err)
 	}
+	if err := chainService.beaconDB.SaveState(beaconState); err != nil {
+		t.Fatalf("Can't save state to db %v", err)
+	}
+	beaconState, err = chainService.beaconDB.GetState()
+	if err != nil {
+		t.Fatalf("Can't get state from db %v", err)
+	}
 
-	currentSlot := uint64(1)
+	var ShardCommittees []*pb.ShardCommitteeArray
+	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+		ShardCommittees = append(ShardCommittees, &pb.ShardCommitteeArray{
+			ArrayShardCommittee: []*pb.ShardCommittee{
+				{Committee: []uint32{9, 8, 311, 12, 92, 1, 23, 17}},
+			},
+		})
+	}
+
+	beaconState.ShardCommitteesAtSlots = ShardCommittees
+	if err := chainService.beaconDB.SaveState(beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	currentSlot := uint64(5)
 	attestationSlot := uint64(0)
-	shard := beaconState.ShardAndCommitteesForSlots()[attestationSlot].ArrayShardAndCommittee[0].Shard
+	shard := beaconState.ShardCommitteesAtSlots[attestationSlot].ArrayShardCommittee[0].Shard
 
-	block := types.NewBlock(&pb.BeaconBlock{
-		Slot:                          currentSlot,
-		StateRootHash32:               stateRoot[:],
-		AncestorHash32S:               [][]byte{parentHash[:]},
-		CandidatePowReceiptRootHash32: []byte("a"),
-		Attestations: []*pb.AggregatedAttestation{{
-			Slot: attestationSlot,
-			AttesterBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-			Shard:              shard,
-			JustifiedBlockHash: parentHash[:],
-		}},
-	})
+	block := &pb.BeaconBlock{
+		Slot:              currentSlot + 1,
+		StateRootHash32:   stateRoot[:],
+		ParentRootHash32:  parentHash[:],
+		DepositRootHash32: []byte("a"),
+		Body: &pb.BeaconBlockBody{
+			Attestations: []*pb.Attestation{{
+				ParticipationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				Data: &pb.AttestationData{
+					Slot:                      attestationSlot,
+					Shard:                     shard,
+					JustifiedBlockRootHash32:  params.BeaconConfig().ZeroHash[:],
+					LatestCrosslinkRootHash32: params.BeaconConfig().ZeroHash[:],
+				},
+			}},
+		},
+	}
 
-	blockChan := make(chan *types.Block)
+	if err := SetSlotInState(chainService, currentSlot); err != nil {
+		t.Fatal(err)
+	}
+
+	blockChan := make(chan *pb.BeaconBlock)
 	exitRoutine := make(chan bool)
 	go func() {
 		chainService.blockProcessing(blockChan)
@@ -217,6 +301,7 @@ func TestRunningChainService(t *testing.T) {
 	<-blockChan
 	chainService.cancel()
 	exitRoutine <- true
+
 	testutil.AssertLogsContain(t, hook, "Chain service context closed, exiting goroutine")
 	testutil.AssertLogsContain(t, hook, "Processed beacon block")
 }
@@ -227,166 +312,38 @@ func TestDoesPOWBlockExist(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, true, db)
 
-	block := types.NewBlock(&pb.BeaconBlock{
-		Slot: 10,
-	})
+	beaconState, err := chainService.beaconDB.GetState()
+	if err != nil {
+		t.Fatalf("Unable to retrieve beacon state %v", err)
+	}
 
 	// Using a faulty client should throw error.
-	exists := chainService.doesPoWBlockExist(block)
+	var powHash [32]byte
+	copy(powHash[:], beaconState.LatestDepositRootHash32)
+	exists := chainService.doesPoWBlockExist(powHash)
 	if exists {
 		t.Error("Block corresponding to nil powchain reference should not exist")
 	}
 	testutil.AssertLogsContain(t, hook, "fetching PoW block corresponding to mainchain reference failed")
 }
 
-func getShardForSlot(t *testing.T, beaconState *types.BeaconState, slot uint64) uint64 {
-	shardAndCommittee, err := v.GetShardAndCommitteesForSlot(
-		beaconState.ShardAndCommitteesForSlots(),
-		beaconState.LastStateRecalculationSlot(),
-		slot,
-	)
-	if err != nil {
-		t.Fatalf("Unable to get shard for slot: %d", slot)
-	}
-	return shardAndCommittee.ArrayShardAndCommittee[0].Shard
-}
-
-func TestProcessBlocksWithCorrectAttestations(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	chainService := setupBeaconChain(t, false, db)
-	beaconState, err := types.NewGenesisBeaconState(nil)
-	if err != nil {
-		t.Fatalf("Can't generate genesis state: %v", err)
-	}
-
-	stateRoot, _ := beaconState.Hash()
-
-	block0 := types.NewBlock(&pb.BeaconBlock{
-		Slot: 0,
-	})
-	if saveErr := chainService.beaconDB.SaveBlock(block0); saveErr != nil {
-		t.Fatalf("Could not save block: %v", saveErr)
-	}
-	block0Hash, err := block0.Hash()
-	if err != nil {
-		t.Fatalf("Failed to compute block's hash: %v", err)
-	}
-
-	currentSlot := uint64(1)
-	attestationSlot := currentSlot - 1
-
-	block1 := types.NewBlock(&pb.BeaconBlock{
-		AncestorHash32S: [][]byte{block0Hash[:]},
-		Slot:            currentSlot,
-		StateRootHash32: stateRoot[:],
-		Attestations: []*pb.AggregatedAttestation{{
-			Slot: attestationSlot,
-			AttesterBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-			Shard:              getShardForSlot(t, beaconState, attestationSlot),
-			JustifiedBlockHash: block0Hash[:],
-		}},
-	})
-
-	blockChan := make(chan *types.Block)
-	exitRoutine := make(chan bool)
-	go func() {
-		chainService.blockProcessing(blockChan)
-		<-exitRoutine
-	}()
-
-	chainService.incomingBlockChan <- block1
-	block1Returned := <-blockChan
-
-	if block1 != block1Returned {
-		t.Fatalf("expected %v and %v to be the same", block1, block1Returned)
-	}
-
-	block1Hash, err := block1.Hash()
-	if err != nil {
-		t.Fatalf("unable to get hash of block 1: %v", err)
-	}
-
-	currentSlot++
-
-	// Add 1 more attestation field for slot2
-	block2 := types.NewBlock(&pb.BeaconBlock{
-		AncestorHash32S: [][]byte{block1Hash[:]},
-		Slot:            currentSlot,
-		Attestations: []*pb.AggregatedAttestation{
-			{
-				Slot:               currentSlot - 1,
-				AttesterBitfield:   []byte{64, 0},
-				Shard:              getShardForSlot(t, beaconState, currentSlot-1),
-				JustifiedBlockHash: block0Hash[:],
-			},
-			{
-				Slot:               currentSlot - 2,
-				AttesterBitfield:   []byte{128, 0},
-				Shard:              getShardForSlot(t, beaconState, currentSlot-2),
-				JustifiedBlockHash: block0Hash[:],
-			},
-		}})
-	block2Hash, err := block2.Hash()
-	if err != nil {
-		t.Fatalf("unable to get hash of block 1: %v", err)
-	}
-
-	currentSlot++
-
-	// Add 1 more attestation field for slot3
-	block3 := types.NewBlock(&pb.BeaconBlock{
-		AncestorHash32S: [][]byte{block2Hash[:]},
-		Slot:            currentSlot,
-		Attestations: []*pb.AggregatedAttestation{
-			{
-				Slot:               currentSlot - 1,
-				AttesterBitfield:   []byte{32, 0},
-				Shard:              getShardForSlot(t, beaconState, currentSlot-1),
-				JustifiedBlockHash: block0Hash[:],
-			},
-			{
-				Slot:               currentSlot - 2,
-				AttesterBitfield:   []byte{64, 0},
-				Shard:              getShardForSlot(t, beaconState, currentSlot-2),
-				JustifiedBlockHash: block0Hash[:],
-			},
-			{
-				Slot:               currentSlot - 3,
-				AttesterBitfield:   []byte{128, 0},
-				Shard:              getShardForSlot(t, beaconState, currentSlot-3),
-				JustifiedBlockHash: block0Hash[:],
-			},
-		}})
-
-	chainService.incomingBlockChan <- block1
-	<-blockChan
-	chainService.incomingBlockChan <- block2
-	<-blockChan
-	chainService.incomingBlockChan <- block3
-	<-blockChan
-
-	chainService.cancel()
-	exitRoutine <- true
-}
-
 func TestUpdateHead(t *testing.T) {
-	beaconState, err := types.NewGenesisBeaconState(nil)
+	beaconState, err := state.InitialBeaconState(nil, 0, nil)
 	if err != nil {
-		t.Fatalf("Could not generate genesis state: %v", err)
+		t.Fatalf("Cannot create genesis beacon state: %v", err)
 	}
-	stateRoot, _ := beaconState.Hash()
+	enc, _ := proto.Marshal(beaconState)
+	stateRoot := hashutil.Hash(enc)
 
-	genesis := types.NewGenesisBlock(stateRoot)
-	genesisHash, err := genesis.Hash()
+	genesis := b.NewGenesisBlock(stateRoot[:])
+	genesisHash, err := b.Hash(genesis)
 	if err != nil {
 		t.Fatalf("Could not get genesis block hash: %v", err)
 	}
 	// Table driven tests for various fork choice scenarios.
 	tests := []struct {
 		blockSlot uint64
-		state     *types.BeaconState
+		state     *pb.BeaconState
 		logAssert string
 	}{
 		// Higher slot but same crystallized state should trigger chain update.
@@ -398,17 +355,17 @@ func TestUpdateHead(t *testing.T) {
 		// Higher slot, different crystallized state, but higher last finalized slot.
 		{
 			blockSlot: 64,
-			state:     types.NewBeaconState(&pb.BeaconState{LastFinalizedSlot: 10}),
+			state:     &pb.BeaconState{FinalizedSlot: 10},
 			logAssert: "Chain head block and state updated",
 		},
 		// Higher slot, different crystallized state, same last finalized slot,
 		// but last justified slot.
 		{
 			blockSlot: 64,
-			state: types.NewBeaconState(&pb.BeaconState{
-				LastFinalizedSlot: 0,
-				LastJustifiedSlot: 10,
-			}),
+			state: &pb.BeaconState{
+				FinalizedSlot: 0,
+				JustifiedSlot: 10,
+			},
 			logAssert: "Chain head block and state updated",
 		},
 		// Same slot should not trigger a head update.
@@ -424,20 +381,21 @@ func TestUpdateHead(t *testing.T) {
 		defer internal.TeardownDB(t, db)
 		chainService := setupBeaconChain(t, false, db)
 
-		stateRoot, _ := tt.state.Hash()
-		block := types.NewBlock(&pb.BeaconBlock{
-			Slot:                          tt.blockSlot,
-			StateRootHash32:               stateRoot[:],
-			AncestorHash32S:               [][]byte{genesisHash[:]},
-			CandidatePowReceiptRootHash32: []byte("a"),
-		})
-		h, err := block.Hash()
+		enc, _ := proto.Marshal(tt.state)
+		stateRoot := hashutil.Hash(enc)
+		block := &pb.BeaconBlock{
+			Slot:              tt.blockSlot,
+			StateRootHash32:   stateRoot[:],
+			ParentRootHash32:  genesisHash[:],
+			DepositRootHash32: []byte("a"),
+		}
+		h, err := b.Hash(block)
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		exitRoutine := make(chan bool)
-		blockChan := make(chan *types.Block)
+		blockChan := make(chan *pb.BeaconBlock)
 		go func() {
 			chainService.updateHead(blockChan)
 			<-exitRoutine
@@ -457,46 +415,75 @@ func TestUpdateHead(t *testing.T) {
 	}
 }
 
-func TestUpdateBlockVoteCache(t *testing.T) {
+func TestIsBlockReadyForProcessing(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	chainService := setupBeaconChain(t, true, db)
-
-	beaconState, err := types.NewGenesisBeaconState(nil)
+	chainService := setupBeaconChain(t, false, db)
+	beaconState, err := state.InitialBeaconState(nil, 0, nil)
 	if err != nil {
-		t.Fatalf("failed to initialize genesis state: %v", err)
+		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	block := types.NewBlock(&pb.BeaconBlock{
-		Slot:            1,
-		AncestorHash32S: [][]byte{},
-		Attestations: []*pb.AggregatedAttestation{
-			{
-				Slot:             0,
-				Shard:            1,
-				AttesterBitfield: []byte{'F', 'F'},
-			},
+
+	block := &pb.BeaconBlock{
+		ParentRootHash32: []byte{'a'},
+	}
+
+	if err := chainService.isBlockReadyForProcessing(block, beaconState); err == nil {
+		t.Fatal("block processing succeeded despite block having no parent saved")
+	}
+
+	beaconState.Slot = 10
+
+	enc, _ := proto.Marshal(beaconState)
+	stateRoot := hashutil.Hash(enc)
+	genesis := b.NewGenesisBlock([]byte{})
+	if err := chainService.beaconDB.SaveBlock(genesis); err != nil {
+		t.Fatalf("cannot save block: %v", err)
+	}
+	parentHash, err := b.Hash(genesis)
+	if err != nil {
+		t.Fatalf("unable to get hash of canonical head: %v", err)
+	}
+
+	block2 := &pb.BeaconBlock{
+		ParentRootHash32: parentHash[:],
+		Slot:             10,
+	}
+
+	if err := chainService.isBlockReadyForProcessing(block2, beaconState); err == nil {
+		t.Fatal("block processing succeeded despite block slot being invalid")
+	}
+
+	var h [32]byte
+	copy(h[:], []byte("a"))
+	beaconState.LatestDepositRootHash32 = h[:]
+	beaconState.Slot = 0
+
+	currentSlot := uint64(1)
+	attestationSlot := uint64(0)
+	shard := beaconState.ShardCommitteesAtSlots[attestationSlot].ArrayShardCommittee[0].Shard
+
+	block3 := &pb.BeaconBlock{
+		Slot:              currentSlot,
+		StateRootHash32:   stateRoot[:],
+		ParentRootHash32:  parentHash[:],
+		DepositRootHash32: []byte("a"),
+		Body: &pb.BeaconBlockBody{
+			Attestations: []*pb.Attestation{{
+				ParticipationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				Data: &pb.AttestationData{
+					Slot:                     attestationSlot,
+					Shard:                    shard,
+					JustifiedBlockRootHash32: parentHash[:],
+				},
+			}},
 		},
-	})
-
-	err = chainService.calculateNewBlockVotes(block, beaconState)
-	if err != nil {
-		t.Errorf("failed to update the block vote cache: %v", err)
 	}
-}
 
-func TestUpdateBlockVoteCacheNoAttestations(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	chainService := setupBeaconChain(t, true, db)
+	chainService.enablePOWChain = true
 
-	beaconState, err := types.NewGenesisBeaconState(nil)
-	if err != nil {
-		t.Fatalf("failed to initialize genesis state: %v", err)
-	}
-	block := types.NewBlock(nil)
-
-	err = chainService.calculateNewBlockVotes(block, beaconState)
-	if err != nil {
-		t.Errorf("failed to update the block vote cache: %v", err)
+	if err := chainService.isBlockReadyForProcessing(block3, beaconState); err != nil {
+		t.Fatalf("block processing failed despite being a valid block: %v", err)
 	}
 }

@@ -113,6 +113,12 @@ func (w *Web3Service) Stop() error {
 	return nil
 }
 
+// Status always returns nil.
+// TODO(1204): Add service health checks.
+func (w *Web3Service) Status() error {
+	return nil
+}
+
 // run subscribes to all the services for the powchain.
 func (w *Web3Service) run(done <-chan struct{}) {
 	headSub, err := w.reader.SubscribeNewHead(w.ctx, w.headerChan)
