@@ -157,7 +157,7 @@ func PrevHeadAttestations(
 //   is maximized (ties broken by favoring lower shard_block_root values)
 func WinningRoot(
 	state *pb.BeaconState,
-	shardCommittee *pb.ShardAndCommittee,
+	shardCommittee *pb.ShardCommittee,
 	thisEpochAttestations []*pb.PendingAttestationRecord,
 	prevEpochAttestations []*pb.PendingAttestationRecord) ([]byte, error) {
 
@@ -204,7 +204,7 @@ func WinningRoot(
 //    `attesting_validator_indices(shard_committee, winning_root(shard_committee))` for convenience
 func AttestingValidators(
 	state *pb.BeaconState,
-	shardCommittee *pb.ShardAndCommittee,
+	shardCommittee *pb.ShardCommittee,
 	thisEpochAttestations []*pb.PendingAttestationRecord,
 	prevEpochAttestations []*pb.PendingAttestationRecord) ([]uint32, error) {
 
@@ -238,7 +238,7 @@ func AttestingValidators(
 //    sum([get_effective_balance(state, i) for i in shard_committee.committee])
 func TotalAttestingBalance(
 	state *pb.BeaconState,
-	shardCommittee *pb.ShardAndCommittee,
+	shardCommittee *pb.ShardCommittee,
 	thisEpochAttestations []*pb.PendingAttestationRecord,
 	prevEpochAttestations []*pb.PendingAttestationRecord) (uint64, error) {
 
@@ -263,7 +263,7 @@ func TotalAttestingBalance(
 //    sum([get_effective_balance(state, i) for i in shard_committee.committee])
 func TotalBalance(
 	state *pb.BeaconState,
-	shardCommittee *pb.ShardAndCommittee) uint64 {
+	shardCommittee *pb.ShardCommittee) uint64 {
 
 	var totalBalance uint64
 	for _, index := range shardCommittee.Committee {

@@ -172,15 +172,15 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	}
 
 	// Initial committee shuffling check.
-	if len(state.ShardAndCommitteesAtSlots) != int(2*epochLength) {
-		t.Error("ShardAndCommitteesAtSlots was not correctly initialized")
+	if len(state.ShardCommitteesAtSlots) != int(2*epochLength) {
+		t.Error("ShardCommitteesAtSlots was not correctly initialized")
 	}
 
-	for i := 0; i < len(state.ShardAndCommitteesAtSlots); i++ {
-		if len(state.ShardAndCommitteesAtSlots[i].ArrayShardAndCommittee[0].Committee) !=
+	for i := 0; i < len(state.ShardCommitteesAtSlots); i++ {
+		if len(state.ShardCommitteesAtSlots[i].ArrayShardCommittee[0].Committee) !=
 			int(params.BeaconConfig().TargetCommitteeSize) {
-			t.Errorf("ShardAndCommittees was not correctly initialized %d",
-				len(state.ShardAndCommitteesAtSlots[i].ArrayShardAndCommittee[0].Committee))
+			t.Errorf("ShardCommittees was not correctly initialized %d",
+				len(state.ShardCommitteesAtSlots[i].ArrayShardCommittee[0].Committee))
 		}
 	}
 }
