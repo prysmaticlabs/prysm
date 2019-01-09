@@ -631,3 +631,11 @@ func PrepareValidatorForWithdrawal(state *pb.BeaconState, index uint32) *pb.Beac
 		pb.ValidatorRecord_WITHDRAWABLE
 	return state
 }
+
+func UpdateValidatorRegistry(state *pb.BeaconState) *pb.BeaconState {
+	activeValidatorIndices := ActiveValidatorIndices(
+		state.ValidatorRegistry, state.Slot)
+
+	totalBalance := TotalEffectiveBalance(state, activeValidatorIndices)
+
+}
