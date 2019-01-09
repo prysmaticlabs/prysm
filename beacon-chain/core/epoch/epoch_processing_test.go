@@ -376,9 +376,9 @@ func TestCanNotProcessValidatorRegistry(t *testing.T) {
 
 func TestProcessValidatorRegistry(t *testing.T) {
 	epochLength := params.BeaconConfig().EpochLength
-	ShardCommittees := make([]*pb.ShardCommitteeArray, epochLength*2)
-	for i := 0; i < len(ShardCommittees); i++ {
-		ShardCommittees[i] = &pb.ShardCommitteeArray{
+	shardCommittees := make([]*pb.ShardCommitteeArray, epochLength*2)
+	for i := 0; i < len(shardCommittees); i++ {
+		shardCommittees[i] = &pb.ShardCommitteeArray{
 			ArrayShardCommittee: []*pb.ShardCommittee{{Shard: uint64(i)}},
 		}
 	}
@@ -404,9 +404,9 @@ func TestProcessValidatorRegistry(t *testing.T) {
 
 func TestProcessValidatorRegistry_ReachedUpperBound(t *testing.T) {
 	epochLength := params.BeaconConfig().EpochLength
-	ShardCommittees := make([]*pb.ShardCommitteeArray, epochLength*2)
-	for i := 0; i < len(ShardCommittees); i++ {
-		ShardCommittees[i] = &pb.ShardCommitteeArray{
+	shardCommittees := make([]*pb.ShardCommitteeArray, epochLength*2)
+	for i := 0; i < len(shardCommittees); i++ {
+		shardCommittees[i] = &pb.ShardCommitteeArray{
 			ArrayShardCommittee: []*pb.ShardCommittee{{Shard: uint64(i)}},
 		}
 	}
@@ -430,9 +430,9 @@ func TestProcessValidatorRegistry_ReachedUpperBound(t *testing.T) {
 
 func TestProcessPartialValidatorRegistry(t *testing.T) {
 	epochLength := params.BeaconConfig().EpochLength
-	ShardCommittees := make([]*pb.ShardCommitteeArray, epochLength*2)
-	for i := 0; i < len(ShardCommittees); i++ {
-		ShardCommittees[i] = &pb.ShardCommitteeArray{
+	shardCommittees := make([]*pb.ShardCommitteeArray, epochLength*2)
+	for i := 0; i < len(shardCommittees); i++ {
+		shardCommittees[i] = &pb.ShardCommitteeArray{
 			ArrayShardCommittee: []*pb.ShardCommittee{{Shard: uint64(i)}},
 		}
 	}
@@ -462,9 +462,9 @@ func TestProcessPartialValidatorRegistry(t *testing.T) {
 
 func TestProcessPartialValidatorRegistry_ReachedUpperBound(t *testing.T) {
 	epochLength := params.BeaconConfig().EpochLength
-	ShardCommittees := make([]*pb.ShardCommitteeArray, epochLength*2)
-	for i := 0; i < len(ShardCommittees); i++ {
-		ShardCommittees[i] = &pb.ShardCommitteeArray{
+	shardCommittees := make([]*pb.ShardCommitteeArray, epochLength*2)
+	for i := 0; i < len(shardCommittees); i++ {
+		shardCommittees[i] = &pb.ShardCommitteeArray{
 			ArrayShardCommittee: []*pb.ShardCommittee{{Shard: uint64(i)}},
 		}
 	}
