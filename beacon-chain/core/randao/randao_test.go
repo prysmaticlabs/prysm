@@ -14,16 +14,16 @@ func TestUpdateRandaoLayers(t *testing.T) {
 	genesisValidatorRegistry := v.InitialValidatorRegistry()
 	beaconState.ValidatorRegistry = genesisValidatorRegistry
 
-	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	var ShardCommittees []*pb.ShardCommitteeArray
 	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
-		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
-			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+		ShardCommittees = append(ShardCommittees, &pb.ShardCommitteeArray{
+			ArrayShardCommittee: []*pb.ShardCommittee{
 				{Committee: []uint32{9, 8, 311, 12, 92, 1, 23, 17}},
 			},
 		})
 	}
 
-	beaconState.ShardAndCommitteesAtSlots = shardAndCommittees
+	beaconState.ShardCommitteesAtSlots = ShardCommittees
 
 	newState, err := UpdateRandaoLayers(beaconState, 1)
 	if err != nil {
