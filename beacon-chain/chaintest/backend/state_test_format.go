@@ -18,11 +18,12 @@ type StateTestCase struct {
 
 // StateTestConfig --
 type StateTestConfig struct {
-	PublishBlocks         bool   `yaml:"publish_blocks"`
-	EpochLength           uint64 `yaml:"epoch_length"`
-	ShardCount            uint64 `yaml:"shard_count"`
-	DepositsForChainStart uint64 `yaml:"deposits_for_chain_start"`
-	NumSlots              uint64 `yaml:"num_slots"`
+	SkipSlots             []uint64 `yaml:"skip_slots"`
+	PublishBlocks         bool     `yaml:"publish_blocks"`
+	EpochLength           uint64   `yaml:"epoch_length"`
+	ShardCount            uint64   `yaml:"shard_count"`
+	DepositsForChainStart uint64   `yaml:"deposits_for_chain_start"`
+	NumSlots              uint64   `yaml:"num_slots"`
 }
 
 // StateTestResults --

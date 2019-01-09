@@ -5,21 +5,19 @@ fork: tchaikovsky
 version: 1.0
 test_cases:
   - config:
-      publish_blocks: false
       epoch_length: 64
       deposits_for_chain_start: 1000
       num_slots: 32 # Testing advancing state to slot < EpochLength
     results:
       slot: 32
   - config:
-      publish_blocks: false
       epoch_length: 64
       deposits_for_chain_start: 16384
       num_slots: 64 # Testing advancing state to exactly slot == EpochLength
     results:
       slot: 64
   - config:
-      publish_blocks: false
+      skip_slots: [10, 20, 30]
       epoch_length: 64
       deposits_for_chain_start: 1000
       num_slots: 128 # Testing advancing state's slot == 2*EpochLength

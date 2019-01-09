@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -116,44 +115,23 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	c.DepositsForChainStart = testCase.Config.DepositsForChainStart
 	params.OverrideBeaconConfig(c)
 
-	// We create a list of randao hash onions for the given number of epochs
-	// we run the state transition.
-	numEpochs := testCase.Config.NumSlots % params.BeaconConfig().EpochLength
-	hashOnions := [][32]byte{params.BeaconConfig().SimulatedBlockRandao}
+	// We create a list of randao hash onions for the given number of slots
+	// the simulation will attempt.
+	hashOnions := generateSimulatedRandaoHashOnions(testCase.Config.NumSlots)
 
-	// We make the length of the hash onions list equal to the number of epochs + 50 to be safe.
-	for i := uint64(0); i < numEpochs+10; i++ {
-		prevHash := hashOnions[i]
-		hashOnions = append(hashOnions, hashutil.Hash(prevHash[:]))
+	// We then generate initial validator deposits for initializing the
+	// beacon state based where every validator will use the last layer in the randao
+	// onions list as the commitment in the deposit instance.
+	lastRandaoLayer := hashOnions[len(hashOnions)-1]
+	initialDeposits, err := generateInitialSimulatedDeposits(lastRandaoLayer)
+	if err != nil {
+		return fmt.Errorf("could not simulate initial validator deposits: %v", err)
 	}
 
 	genesisTime := params.BeaconConfig().GenesisTime.Unix()
-	deposits := make([]*pb.Deposit, params.BeaconConfig().DepositsForChainStart)
-	for i := 0; i < len(deposits); i++ {
-		depositInput := &pb.DepositInput{
-			Pubkey:                 []byte(strconv.Itoa(i)),
-			RandaoCommitmentHash32: hashOnions[len(hashOnions)-1][:],
-		}
-		depositData, err := b.EncodeDepositData(
-			depositInput,
-			params.BeaconConfig().MaxDepositInGwei,
-			genesisTime,
-		)
-		if err != nil {
-			return fmt.Errorf("could not encode initial block deposits: %v", err)
-		}
-		deposits[i] = &pb.Deposit{DepositData: depositData}
-	}
-
-	beaconState, err := state.InitialBeaconState(deposits, uint64(genesisTime), nil)
+	beaconState, err := state.InitialBeaconState(initialDeposits, uint64(genesisTime), nil)
 	if err != nil {
-		return err
-	}
-
-	// We keep track of the peeled randao layers in a map of proposer indices.
-	proposerLayersPeeled := make(map[uint32]int, len(beaconState.ValidatorRegistry))
-	for idx := range beaconState.ValidatorRegistry {
-		proposerLayersPeeled[uint32(idx)] = 0
+		return fmt.Errorf("could not initialize simulated beacon state")
 	}
 
 	// We do not expect hashing initial beacon state and genesis block to
@@ -171,28 +149,37 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	prevBlockRoots := [][32]byte{genesisBlockRoot}
 	prevBlocks := []*pb.BeaconBlock{genesisBlock}
 
+	// We keep track of the randao layers peeled for each proposer index in a map.
+	layersPeeledForProposer := make(map[uint32]int, len(beaconState.ValidatorRegistry))
+	for idx := range beaconState.ValidatorRegistry {
+		layersPeeledForProposer[uint32(idx)] = 0
+	}
+
 	startTime := time.Now()
 	for i := uint64(0); i < testCase.Config.NumSlots; i++ {
-		prevBlockRoot := prevBlockRoots[i]
-		prevBlock := prevBlocks[i]
+		prevBlockRoot := prevBlockRoots[len(prevBlockRoots)-1]
+		prevBlock := prevBlocks[len(prevBlocks)-1]
 
-		// Assuming there are no skipped slots, given a list of randao hash onions
-		// such as [pre-image, 0x01, 0x02, 0x03], for the 0th epoch, the block
-		// randao reveal will be 0x02 and the proposer commitment 0x03. The next epoch, the block randao
-		// reveal will be 0x01 and the commitment 0x02, so on and so forth until all randao
-		// layers are peeled off.
-		proposerIndex, err := findNextSlotProposerIndex(beaconState, beaconState.Slot+1, beaconState.Slot+1)
+		proposerIndex, err := findNextSlotProposerIndex(beaconState)
 		if err != nil {
-			return fmt.Errorf("could not fetch beacon proposer index: %v")
+			return fmt.Errorf("could not fetch beacon proposer index: %v", err)
 		}
 
-		var blockRandaoReveal [32]byte
-		layersPeeled, _ := proposerLayersPeeled[proposerIndex]
-		if layersPeeled == 0 {
-			blockRandaoReveal = hashOnions[len(hashOnions)-2]
-		} else {
-			blockRandaoReveal = hashOnions[len(hashOnions)-layersPeeled-2]
+		// If the slot is marked as skipped in the configuration options,
+		// we simply run the state transition with a nil block argument.
+		if contains(i, testCase.Config.SkipSlots) {
+			newState, err := state.ExecuteStateTransition(beaconState, nil, prevBlockRoot)
+			if err != nil {
+				return fmt.Errorf("could not execute state transition: %v", err)
+			}
+			beaconState = newState
+			layersPeeledForProposer[proposerIndex]++
+			continue
 		}
+
+		layersPeeled := layersPeeledForProposer[proposerIndex]
+		blockRandaoReveal := determineSimulatedBlockRandaoReveal(layersPeeled, hashOnions)
+
 		// We generate a new block to pass into the state transition.
 		newBlock, newBlockRoot, err := generateSimulatedBlock(
 			beaconState,
@@ -207,11 +194,15 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		if err != nil {
 			return fmt.Errorf("could not execute state transition: %v", err)
 		}
+
+		// We then keep track of information about the state after the
+		// state transition was applied.
 		beaconState = newState
 		prevBlockRoots = append(prevBlockRoots, newBlockRoot)
 		prevBlocks = append(prevBlocks, newBlock)
-		proposerLayersPeeled[proposerIndex]++
+		layersPeeledForProposer[proposerIndex]++
 	}
+
 	endTime := time.Now()
 	log.Infof(
 		"%d state transitions with %d deposits finished in %v",
@@ -231,59 +222,14 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	return nil
 }
 
-// generates a simulated beacon block to use
-// in the next state transition given the current state,
-// the previous beacon block, and previous beacon block root.
-func generateSimulatedBlock(
-	beaconState *pb.BeaconState,
-	prevBlock *pb.BeaconBlock,
-	prevBlockRoot [32]byte,
-	randaoReveal [32]byte,
-) (*pb.BeaconBlock, [32]byte, error) {
-	encodedState, err := proto.Marshal(beaconState)
-	if err != nil {
-		return nil, [32]byte{}, fmt.Errorf("could not marshal beacon state: %v", err)
+func contains(item uint64, slice []uint64) bool {
+	if len(slice) == 0 {
+		return false
 	}
-	stateRoot := hashutil.Hash(encodedState)
-	block := &pb.BeaconBlock{
-		Slot:               beaconState.Slot + 1,
-		RandaoRevealHash32: randaoReveal[:],
-		ParentRootHash32:   prevBlockRoot[:],
-		StateRootHash32:    stateRoot[:],
-		Body: &pb.BeaconBlockBody{
-			ProposerSlashings: []*pb.ProposerSlashing{},
-			CasperSlashings:   []*pb.CasperSlashing{},
-			Attestations:      []*pb.Attestation{},
-			Deposits:          []*pb.Deposit{},
-			Exits:             []*pb.Exit{},
-		},
+	for _, a := range slice {
+		if item == a {
+			return true
+		}
 	}
-	encodedBlock, err := proto.Marshal(block)
-	if err != nil {
-		return nil, [32]byte{}, fmt.Errorf("could not marshal new block: %v", err)
-	}
-	return block, hashutil.Hash(encodedBlock), nil
-}
-
-func findNextSlotProposerIndex(beaconState *pb.BeaconState, newBeaconSlot uint64, slot uint64) (uint32, error) {
-	epochLength := params.BeaconConfig().EpochLength
-	var earliestSlot uint64
-
-	// If the state slot is less than epochLength, then the earliestSlot would
-	// result in a negative number. Therefore we should default to
-	// earliestSlot = 0 in this case.
-	if newBeaconSlot > epochLength {
-		earliestSlot = newBeaconSlot - (newBeaconSlot % epochLength) - epochLength
-	}
-
-	if slot < earliestSlot || slot >= earliestSlot+(epochLength*2) {
-		return 0, fmt.Errorf("slot %d out of bounds: %d <= slot < %d",
-			slot,
-			earliestSlot,
-			earliestSlot+(epochLength*2),
-		)
-	}
-	committeeArray := beaconState.ShardAndCommitteesAtSlots[slot-earliestSlot]
-	firstCommittee := committeeArray.GetArrayShardAndCommittee()[0].Committee
-	return firstCommittee[slot%uint64(len(firstCommittee))], nil
+	return false
 }
