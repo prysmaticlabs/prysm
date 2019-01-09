@@ -165,8 +165,8 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	prevHeadAttestingBalances := e.TotalBalance(state, prevHeadAttesterIndices)
 
 	// Process receipt roots.
-	if e.CanProcessReceiptRoots(state) {
-		e.ProcessReceipt(state)
+	if e.CanProcessDepositRoots(state) {
+		e.ProcessDeposits(state)
 	}
 
 	// Update justification.
