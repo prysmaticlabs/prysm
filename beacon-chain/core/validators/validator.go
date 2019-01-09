@@ -287,18 +287,18 @@ func Attesters(state *pb.BeaconState, attesterIndices []uint32) []*pb.ValidatorR
 // Spec pseudocode definition:
 //   Let this_epoch_boundary_attester_indices be the union of the validator
 //   index sets given by [get_attestation_participants(state, a.data, a.participation_bitfield)
-//   for a in this_epoch_boundary_attestations]
+//   for a in attestations]
 func ValidatorIndices(
 	state *pb.BeaconState,
-	boundaryAttestations []*pb.PendingAttestationRecord,
+	attestations []*pb.PendingAttestationRecord,
 ) ([]uint32, error) {
 
 	var attesterIndicesIntersection []uint32
-	for _, boundaryAttestation := range boundaryAttestations {
+	for _, attestation := range attestations {
 		attesterIndices, err := AttestationParticipants(
 			state,
-			boundaryAttestation.Data,
-			boundaryAttestation.ParticipationBitfield)
+			attestation.Data,
+			attestation.ParticipationBitfield)
 		if err != nil {
 			return nil, err
 		}
@@ -609,20 +609,20 @@ func UpdateValidatorRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	var err error
 	for index, validator := range state.ValidatorRegistry {
 		// Activate validators within the allowable balance churn.
-		if validator.ActivationSlot > state.Slot + config.EntryExitDelay &&
+		if validator.ActivationSlot > state.Slot+config.EntryExitDelay &&
 			state.ValidatorBalances[index] > config.MaxDepositInGwei {
-				balChurn += EffectiveBalance(state, uint32(index))
-				if balChurn > maxBalChurn {
-					break
-				}
-				state, err = ActivateValidator(state, uint32(index), false)
-				if err != nil {
-					return nil, fmt.Errorf("could not activate validator %d: %v", index, err)
-				}
+			balChurn += EffectiveBalance(state, uint32(index))
+			if balChurn > maxBalChurn {
+				break
+			}
+			state, err = ActivateValidator(state, uint32(index), false)
+			if err != nil {
+				return nil, fmt.Errorf("could not activate validator %d: %v", index, err)
+			}
 		}
 		balChurn = 0
 		// Exit validators within the allowable balance churn.
-		if validator.ExitSlot > state.Slot + config.EntryExitDelay &&
+		if validator.ExitSlot > state.Slot+config.EntryExitDelay &&
 			validator.StatusFlags == pb.ValidatorRecord_INITIATED_EXIT {
 			balChurn += EffectiveBalance(state, uint32(index))
 			if balChurn > maxBalChurn {
@@ -648,7 +648,7 @@ func UpdateValidatorRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 func maxBalanceChurn(totalBalance uint64) uint64 {
 	maxBalanceChurn := totalBalance / 2 * config.MaxBalanceChurnQuotient
 	if maxBalanceChurn > config.MaxDepositInGwei {
-			return maxBalanceChurn
+		return maxBalanceChurn
 	}
 	return config.MaxDepositInGwei
 }
