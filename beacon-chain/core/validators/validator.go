@@ -12,24 +12,24 @@ import (
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slices"
 )
 
+var config = params.BeaconConfig()
+
 // InitialValidatorRegistry creates a new validator set that is used to
 // generate a new crystallized state.
 func InitialValidatorRegistry() []*pb.ValidatorRecord {
-	config := params.BeaconConfig()
 	randaoPreCommit := [32]byte{}
 	randaoReveal := hashutil.Hash(randaoPreCommit[:])
 	validators := make([]*pb.ValidatorRecord, config.DepositsForChainStart)
 	for i := uint64(0); i < config.DepositsForChainStart; i++ {
 		pubkey := hashutil.Hash([]byte{byte(i)})
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot:               params.BeaconConfig().FarFutureSlot,
+			ExitSlot:               config.FarFutureSlot,
 			Balance:                config.MaxDeposit * config.Gwei,
 			Pubkey:                 pubkey[:],
 			RandaoCommitmentHash32: randaoReveal[:],
@@ -83,7 +83,7 @@ func ActiveValidator(state *pb.BeaconState, validatorIndices []uint32) []*pb.Val
 //     assert earliest_slot_in_array <= slot < earliest_slot_in_array + EPOCH_LENGTH * 2
 //     return state.shard_committees_at_slots[slot - earliest_slot_in_array]
 func ShardCommitteesAtSlot(state *pb.BeaconState, slot uint64) (*pb.ShardCommitteeArray, error) {
-	epochLength := params.BeaconConfig().EpochLength
+	epochLength := config.EpochLength
 	var earliestSlot uint64
 
 	// If the state slot is less than epochLength, then the earliestSlot would
@@ -208,44 +208,6 @@ func TotalEffectiveBalance(state *pb.BeaconState, validatorIndices []uint32) uin
 	return totalDeposit
 }
 
-// TotalActiveValidatorBalance returns the total deposited amount in Gwei for all active validators.
-//
-// Spec pseudocode definition:
-//   sum([get_effective_balance(v) for v in active_validators])
-// Deprecated: use TotalBalance
-func TotalActiveValidatorBalance(activeValidators []*pb.ValidatorRecord) uint64 {
-	var totalDeposit uint64
-
-	for _, v := range activeValidators {
-		totalDeposit += v.Balance
-	}
-	return totalDeposit
-}
-
-// VotedBalanceInAttestation checks for the total balance in the validator set and the balances of the voters in the
-// attestation.
-func VotedBalanceInAttestation(validators []*pb.ValidatorRecord, indices []uint32,
-	attestation *pb.Attestation) (uint64, uint64, error) {
-
-	// find the total and vote balance of the shard committee.
-	var totalBalance uint64
-	var voteBalance uint64
-	for index, attesterIndex := range indices {
-		// find balance of validators who voted.
-		bitCheck, err := bitutil.CheckBit(attestation.ParticipationBitfield, index)
-		if err != nil {
-			return 0, 0, err
-		}
-		if bitCheck {
-			voteBalance += validators[attesterIndex].Balance
-		}
-		// add to total balance of the committee.
-		totalBalance += validators[attesterIndex].Balance
-	}
-
-	return totalBalance, voteBalance, nil
-}
-
 // NewRegistryDeltaChainTip returns the new validator registry delta chain tip.
 //
 // Spec pseudocode definition:
@@ -298,8 +260,8 @@ func NewRegistryDeltaChainTip(
 //     """
 //     return min(state.validator_balances[index], MAX_DEPOSIT * GWEI_PER_ETH)
 func EffectiveBalance(state *pb.BeaconState, index uint32) uint64 {
-	if state.ValidatorBalances[index] > params.BeaconConfig().MaxDeposit*params.BeaconConfig().Gwei {
-		return params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei
+	if state.ValidatorBalances[index] > config.MaxDeposit*config.Gwei {
+		return config.MaxDeposit * config.Gwei
 	}
 	return state.ValidatorBalances[index]
 }
@@ -436,12 +398,12 @@ func ProcessDeposit(
 			RandaoLayers:                 0,
 			ExitCount:                    0,
 			CustodyCommitmentHash32:      custodyCommitment,
-			LatestCustodyReseedSlot:      params.BeaconConfig().GenesisSlot,
-			PenultimateCustodyReseedSlot: params.BeaconConfig().GenesisSlot,
-			ActivationSlot:               params.BeaconConfig().FarFutureSlot,
-			ExitSlot:                     params.BeaconConfig().FarFutureSlot,
-			WithdrawalSlot:               params.BeaconConfig().FarFutureSlot,
-			PenalizedSlot:                params.BeaconConfig().FarFutureSlot,
+			LatestCustodyReseedSlot:      config.GenesisSlot,
+			PenultimateCustodyReseedSlot: config.GenesisSlot,
+			ActivationSlot:               config.FarFutureSlot,
+			ExitSlot:                     config.FarFutureSlot,
+			WithdrawalSlot:               config.FarFutureSlot,
+			PenalizedSlot:                config.FarFutureSlot,
 			StatusFlags:                  0,
 		}
 		state.ValidatorRegistry = append(state.ValidatorRegistry, newValidator)
@@ -497,9 +459,9 @@ func isActiveValidator(validator *pb.ValidatorRecord, slot uint64) bool {
 func ActivateValidator(state *pb.BeaconState, index uint32, genesis bool) (*pb.BeaconState, error) {
 	validator := state.ValidatorRegistry[index]
 	if genesis {
-		validator.ActivationSlot = params.BeaconConfig().GenesisSlot
+		validator.ActivationSlot = config.GenesisSlot
 	} else {
-		validator.ActivationSlot = state.Slot + params.BeaconConfig().EntryExitDelay
+		validator.ActivationSlot = state.Slot + config.EntryExitDelay
 	}
 	newChainTip, err := NewRegistryDeltaChainTip(
 		pb.ValidatorRegistryDeltaBlock_ACTIVATION,
@@ -555,12 +517,12 @@ func InitiateValidatorExit(state *pb.BeaconState, index uint32) *pb.BeaconState 
 func ExitValidator(state *pb.BeaconState, index uint32) (*pb.BeaconState, error) {
 	validator := state.ValidatorRegistry[index]
 
-	if validator.ExitSlot < state.Slot+params.BeaconConfig().EntryExitDelay {
+	if validator.ExitSlot < state.Slot+config.EntryExitDelay {
 		return nil, fmt.Errorf("validator %d could not exit until slot %d",
-			index, state.Slot+params.BeaconConfig().EntryExitDelay)
+			index, state.Slot+config.EntryExitDelay)
 	}
 
-	validator.ExitSlot = state.Slot + params.BeaconConfig().EntryExitDelay
+	validator.ExitSlot = state.Slot + config.EntryExitDelay
 
 	state.ValidatorRegistryExitCount++
 	validator.ExitCount = state.ValidatorRegistryExitCount
@@ -600,8 +562,8 @@ func PenalizeValidator(state *pb.BeaconState, index uint32) (*pb.BeaconState, er
 		return nil, fmt.Errorf("could not exit penalized validator: %v", err)
 	}
 
-	penalizedDuration := (state.Slot / params.BeaconConfig().EpochLength) %
-		params.BeaconConfig().LatestPenalizedExitLength
+	penalizedDuration := (state.Slot / config.EpochLength) %
+		config.LatestPenalizedExitLength
 	state.LatestPenalizedExitBalances[penalizedDuration] +=
 		EffectiveBalance(state, index)
 
@@ -610,7 +572,7 @@ func PenalizeValidator(state *pb.BeaconState, index uint32) (*pb.BeaconState, er
 		return nil, fmt.Errorf("could not get proposer index: %v", err)
 	}
 	whistleblowerReward := EffectiveBalance(state, index) /
-		params.BeaconConfig().WhistlerBlowerRewardQuotient
+		config.WhistlerBlowerRewardQuotient
 
 	state.ValidatorBalances[whistleblowerIndex] += whistleblowerReward
 	state.ValidatorBalances[index] -= whistleblowerReward
@@ -632,10 +594,61 @@ func PrepareValidatorForWithdrawal(state *pb.BeaconState, index uint32) *pb.Beac
 	return state
 }
 
-func UpdateValidatorRegistry(state *pb.BeaconState) *pb.BeaconState {
+// UpdateValidatorRegistry rotates validators in and out of active pool.
+// the amount to rotate is determined by max validator balance churn.
+func UpdateValidatorRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	activeValidatorIndices := ActiveValidatorIndices(
 		state.ValidatorRegistry, state.Slot)
 
 	totalBalance := TotalEffectiveBalance(state, activeValidatorIndices)
 
+	// The maximum balance churn in Gwei (for deposits and exits separately).
+	maxBalChurn := maxBalanceChurn(totalBalance)
+
+	var balChurn uint64
+	var err error
+	for index, validator := range state.ValidatorRegistry {
+		// Activate validators within the allowable balance churn.
+		if validator.ActivationSlot > state.Slot + config.EntryExitDelay &&
+			state.ValidatorBalances[index] > config.MaxDepositInGwei {
+				balChurn += EffectiveBalance(state, uint32(index))
+				if balChurn > maxBalChurn {
+					break
+				}
+				state, err = ActivateValidator(state, uint32(index), false)
+				if err != nil {
+					return nil, fmt.Errorf("could not activate validator %d: %v", index, err)
+				}
+		}
+		balChurn = 0
+		// Exit validators within the allowable balance churn.
+		if validator.ExitSlot > state.Slot + config.EntryExitDelay &&
+			validator.StatusFlags == pb.ValidatorRecord_INITIATED_EXIT {
+			balChurn += EffectiveBalance(state, uint32(index))
+			if balChurn > maxBalChurn {
+				break
+			}
+			state, err = ExitValidator(state, uint32(index))
+			if err != nil {
+				return nil, fmt.Errorf("could not exit validator %d: %v", index, err)
+			}
+		}
+	}
+	state.ValidatorRegistryLatestChangeSlot = state.Slot
+	return state, nil
+}
+
+// maxBalanceChurn returns the maximum balance churn in Gwei,
+// this determines how many validators can be rotated
+// in and out of the validator pool.
+// Spec pseudocode definition:
+//     max_balance_churn = max(
+//        MAX_DEPOSIT * GWEI_PER_ETH,
+//        total_balance // (2 * MAX_BALANCE_CHURN_QUOTIENT))
+func maxBalanceChurn(totalBalance uint64) uint64 {
+	maxBalanceChurn := totalBalance / 2 * config.MaxBalanceChurnQuotient
+	if maxBalanceChurn > config.MaxDepositInGwei {
+			return maxBalanceChurn
+	}
+	return config.MaxDepositInGwei
 }
