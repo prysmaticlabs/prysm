@@ -11,7 +11,7 @@ func TestInitializeState(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	if err := db.InitializeState(nil); err != nil {
+	if err := db.InitializeState(); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 	b, err := db.GetChainHead()
@@ -57,7 +57,7 @@ func TestGenesisTime(t *testing.T) {
 		t.Fatal("expected GenesisTime to fail")
 	}
 
-	err = db.InitializeState(nil)
+	err = db.InitializeState()
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
