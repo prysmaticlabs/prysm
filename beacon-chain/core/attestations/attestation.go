@@ -1,3 +1,6 @@
+// Package attestations tracks the life-cycle of the latest attestations
+// from each validator. It also contains libraries to create attestation
+// message, verify attestation correctness and slashing conditions.
 package attestations
 
 import (
