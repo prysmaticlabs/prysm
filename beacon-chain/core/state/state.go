@@ -133,7 +133,7 @@ func InitialBeaconState(
 		// depositData consists of depositInput []byte + depositValue [8]byte +
 		// depositTimestamp [8]byte.
 		depositValue := depositData[len(depositData)-16 : len(depositData)-8]
-		state, _, err = v.ProcessDeposit(
+		state, err = v.ProcessDeposit(
 			state,
 			validatorMap,
 			depositInput.Pubkey,

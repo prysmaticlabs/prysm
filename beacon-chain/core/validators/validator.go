@@ -13,6 +13,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
+	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slices"
@@ -451,7 +452,7 @@ func ProcessDeposit(
 			state.ValidatorRegistry[existingValidatorIndex].WithdrawalCredentialsHash32,
 			withdrawalCredentials,
 		) {
-			return nil, uint32(0), fmt.Errorf(
+			return nil, fmt.Errorf(
 				"expected withdrawal credentials to match, received %#x == %#x",
 				state.ValidatorRegistry[existingValidatorIndex].WithdrawalCredentialsHash32,
 				withdrawalCredentials,
@@ -459,7 +460,7 @@ func ProcessDeposit(
 		}
 		state.ValidatorBalances[existingValidatorIndex] += amount
 	}
-	return state, uint32(existingValidatorIndex), nil
+	return state, nil
 }
 
 // isActiveValidator returns the boolean value on whether the validator

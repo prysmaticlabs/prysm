@@ -568,7 +568,7 @@ func ProcessValidatorDeposits(
 		// depositTimestamp [8]byte.
 		depositValue := depositData[len(depositData)-16 : len(depositData)-8]
 		// We then mutate the beacon state with the verified validator deposit.
-		beaconState, _, err = v.ProcessDeposit(
+		beaconState, err = v.ProcessDeposit(
 			beaconState,
 			validatorIndexMap,
 			depositInput.Pubkey,
