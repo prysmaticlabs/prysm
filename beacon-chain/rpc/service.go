@@ -445,6 +445,7 @@ func assignmentsForPublicKeys(keys []*pb.PublicKey, beaconState *pbp2p.BeaconSta
 	// Next, for each public key in the request, we build
 	// up an array of assignments.
 	assignments := []*pb.Assignment{}
+
 	for _, val := range keys {
 		// For the corresponding public key and current crystallized state,
 		// we determine the assigned slot for the validator and whether it

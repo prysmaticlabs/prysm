@@ -81,15 +81,14 @@ func TestEpochBoundaryAttestations(t *testing.T) {
 
 	state := &pb.BeaconState{
 		LatestAttestations:     epochAttestations,
-		Slot:                   params.BeaconConfig().EpochLength,
-		LatestBlockRootHash32S: [][]byte{},
+		LatestBlockRootHash32S: latestBlockRootHash,
 	}
 
 	if _, err := BoundaryAttestations(state, epochAttestations); err == nil {
 		t.Fatal("EpochBoundaryAttestations should have failed with empty block root hash")
 	}
 
-	state.LatestBlockRootHash32S = latestBlockRootHash
+	state.Slot = params.BeaconConfig().EpochLength
 	epochBoundaryAttestation, err := BoundaryAttestations(state, epochAttestations)
 	if err != nil {
 		t.Fatalf("EpochBoundaryAttestations failed: %v", err)
@@ -126,11 +125,11 @@ func TestPrevEpochAttestations(t *testing.T) {
 		firstAttestationSlot uint64
 	}{
 		{
-			stateSlot:            10,
+			stateSlot:            127,
 			firstAttestationSlot: 0,
 		},
 		{
-			stateSlot:            127,
+			stateSlot:            128,
 			firstAttestationSlot: 0,
 		},
 		{
@@ -154,7 +153,7 @@ func TestPrevEpochAttestations(t *testing.T) {
 			t.Errorf(
 				"Result slot was an unexpected value. Wanted %d, got %d",
 				tt.firstAttestationSlot,
-				Attestations(state)[0].Data.Slot,
+				PrevAttestations(state)[0].Data.Slot,
 			)
 		}
 	}
@@ -190,6 +189,46 @@ func TestPrevJustifiedAttestations(t *testing.T) {
 		if attestation.Data.JustifiedSlot != 100 {
 			t.Errorf("Wanted justified slot 100, got %d", attestation.Data.JustifiedSlot)
 		}
+	}
+}
+
+func TestPrevEpochBoundaryAttestations(t *testing.T) {
+	if params.BeaconConfig().EpochLength != 64 {
+		t.Errorf("EpochLength should be 64 for these tests to pass")
+	}
+
+	epochAttestations := []*pb.PendingAttestationRecord{
+		{Data: &pb.AttestationData{EpochBoundaryRootHash32: []byte{100}}},
+		{Data: &pb.AttestationData{EpochBoundaryRootHash32: []byte{0}}},
+		{Data: &pb.AttestationData{EpochBoundaryRootHash32: []byte{64}}}, // selected
+		{Data: &pb.AttestationData{EpochBoundaryRootHash32: []byte{55}}},
+		{Data: &pb.AttestationData{EpochBoundaryRootHash32: []byte{64}}}, // selected
+	}
+
+	var latestBlockRootHash [][]byte
+	for i := uint64(0); i < params.BeaconConfig().EpochLength*3; i++ {
+		latestBlockRootHash = append(latestBlockRootHash, []byte{byte(i)})
+	}
+
+	state := &pb.BeaconState{
+		Slot:                   3 * params.BeaconConfig().EpochLength,
+		LatestBlockRootHash32S: latestBlockRootHash,
+	}
+
+	prevEpochBoundaryAttestation, err := PrevBoundaryAttestations(state, epochAttestations)
+	if err != nil {
+		t.Fatalf("EpochBoundaryAttestations failed: %v", err)
+	}
+
+	// 64 is selected because we start off with 3 epochs (192 slots)
+	// The prev epoch boundary slot is 192 - 2 * epoch_length = 64
+	if !bytes.Equal(prevEpochBoundaryAttestation[0].Data.EpochBoundaryRootHash32, []byte{64}) {
+		t.Errorf("Wanted justified block hash [64] for epoch boundary attestation, got: %v",
+			prevEpochBoundaryAttestation[0].Data.EpochBoundaryRootHash32)
+	}
+	if !bytes.Equal(prevEpochBoundaryAttestation[1].Data.EpochBoundaryRootHash32, []byte{64}) {
+		t.Errorf("Wanted justified block hash [64] for epoch boundary attestation, got: %v",
+			prevEpochBoundaryAttestation[1].Data.EpochBoundaryRootHash32)
 	}
 }
 
@@ -276,14 +315,14 @@ func TestWinningRoot_Ok(t *testing.T) {
 	}
 
 	// Since all 10 roots have the balance of 64 ETHs
-	// WinningRoot chooses the lowest hash: []byte{100}
-	winnerRoot, err := WinningRoot(
+	// winningRoot chooses the lowest hash: []byte{100}
+	winnerRoot, err := winningRoot(
 		state,
 		ShardCommittees[0].ArrayShardCommittee[0],
 		attestations,
 		nil)
 	if err != nil {
-		t.Fatalf("Could not execute WinningRoot: %v", err)
+		t.Fatalf("Could not execute winningRoot: %v", err)
 	}
 	if !bytes.Equal(winnerRoot, []byte{100}) {
 		t.Errorf("Incorrect winner root, wanted:[100], got: %v", winnerRoot)
@@ -291,13 +330,13 @@ func TestWinningRoot_Ok(t *testing.T) {
 
 	// Give root [105] one more attester
 	attestations[5].ParticipationBitfield = []byte{'C'}
-	winnerRoot, err = WinningRoot(
+	winnerRoot, err = winningRoot(
 		state,
 		ShardCommittees[0].ArrayShardCommittee[0],
 		attestations,
 		nil)
 	if err != nil {
-		t.Fatalf("Could not execute WinningRoot: %v", err)
+		t.Fatalf("Could not execute winningRoot: %v", err)
 	}
 	if !bytes.Equal(winnerRoot, []byte{105}) {
 		t.Errorf("Incorrect winner root, wanted:[105], got: %v", winnerRoot)
@@ -322,13 +361,13 @@ func TestWinningRoot_OutOfBound(t *testing.T) {
 		ParticipationBitfield: []byte{'A'},
 	}
 
-	_, err := WinningRoot(
+	_, err := winningRoot(
 		state,
 		ShardCommittees[0].ArrayShardCommittee[0],
 		[]*pb.PendingAttestationRecord{attestation},
 		nil)
 	if err == nil {
-		t.Fatal("WinningRoot should have failed")
+		t.Fatal("winningRoot should have failed")
 	}
 }
 
@@ -371,7 +410,7 @@ func TestAttestingValidators_Ok(t *testing.T) {
 		attestations,
 		nil)
 	if err != nil {
-		t.Fatalf("Could not execute WinningRoot: %v", err)
+		t.Fatalf("Could not execute winningRoot: %v", err)
 	}
 
 	// Verify the winner root is attested by validator 1 and 7.
@@ -404,7 +443,7 @@ func TestAttestingValidators_CantGetWinningRoot(t *testing.T) {
 		[]*pb.PendingAttestationRecord{attestation},
 		nil)
 	if err == nil {
-		t.Fatal("AttestingValidators should have failed")
+		t.Fatal("attestingValidators should have failed")
 	}
 }
 
@@ -444,7 +483,7 @@ func TestTotalAttestingBalance_Ok(t *testing.T) {
 		attestations,
 		nil)
 	if err != nil {
-		t.Fatalf("Could not execute TotalAttestingBalance: %v", err)
+		t.Fatalf("Could not execute totalAttestingBalance: %v", err)
 	}
 
 	// Verify the Attested balances are 16+18+20+31+(32*4)=213.
@@ -478,7 +517,7 @@ func TestTotalAttestingBalance_NotOfBound(t *testing.T) {
 		[]*pb.PendingAttestationRecord{attestation},
 		nil)
 	if err == nil {
-		t.Fatal("TotalAttestingBalance should have failed")
+		t.Fatal("totalAttestingBalance should have failed")
 	}
 }
 
@@ -494,7 +533,7 @@ func TestTotalBalance(t *testing.T) {
 	}
 
 	// 20 + 25 + 30 + 30 + 32 + 32 + 32 + 32 = 233
-	totalBalance := TotalBalance(state, ShardCommittees)
+	totalBalance := TotalBalance(state, ShardCommittees.Committee)
 	if totalBalance != 233*1e9 {
 		t.Errorf("Incorrect total balance. Wanted: 233*1e9, got: %d", totalBalance)
 	}
@@ -634,26 +673,5 @@ func TestInclusionDistance_NotFound(t *testing.T) {
 	_, err := InclusionDistance(state, 1)
 	if err == nil {
 		t.Fatal("InclusionDistance should have failed")
-	}
-}
-
-func TestAdjustForInclusionDistance(t *testing.T) {
-	tests := []struct {
-		a uint64
-		b uint64
-		c uint64
-	}{
-		{a: 10, b: 1, c: 25},
-		{a: 10, b: 2, c: 15},
-		{a: 10, b: 16, c: 6},
-		{a: 50, b: 1, c: 125},
-		{a: 50, b: 16, c: 31},
-	}
-	for _, tt := range tests {
-		if AdjustForInclusionDistance(tt.a, tt.b) != tt.c {
-			t.Errorf(
-				"AdjustForInclusionDistance(%d, %d) = %d, want = %d",
-				tt.a, tt.b, AdjustForInclusionDistance(tt.a, tt.b), tt.c)
-		}
 	}
 }

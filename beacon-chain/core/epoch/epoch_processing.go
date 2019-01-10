@@ -1,3 +1,7 @@
+// Package epoch contains epoch processing libraries. These libraries
+// process new balance for the validators, justify and finalize new
+// check points, shuffle and reassign validators to different slots and
+// shards.
 package epoch
 
 import (
@@ -151,9 +155,9 @@ func ProcessCrosslinks(
 			if err != nil {
 				return nil, fmt.Errorf("could not get attesting balance for shard committee %d: %v", shardCommittee.Shard, err)
 			}
-			totalBalance := TotalBalance(state, shardCommittee)
+			totalBalance := TotalBalance(state, shardCommittee.Committee)
 			if attestingBalance*3 > totalBalance*2 {
-				winningRoot, err := WinningRoot(state, shardCommittee, thisEpochAttestations, prevEpochAttestations)
+				winningRoot, err := winningRoot(state, shardCommittee, thisEpochAttestations, prevEpochAttestations)
 				if err != nil {
 					return nil, fmt.Errorf("could not get winning root: %v", err)
 				}
