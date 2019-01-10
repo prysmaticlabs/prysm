@@ -42,8 +42,8 @@ func ExpectedFFGSource(
 				totalBalance
 	}
 
-	allValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
-	didNotAttestIndices := slices.Not(justifiedAttesterIndices, allValidatorIndices)
+	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
+	didNotAttestIndices := slices.Not(justifiedAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
@@ -79,8 +79,8 @@ func ExpectedFFGTarget(
 				totalBalance
 	}
 
-	allValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
-	didNotAttestIndices := slices.Not(boundaryAttesterIndices, allValidatorIndices)
+	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
+	didNotAttestIndices := slices.Not(boundaryAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
@@ -116,8 +116,8 @@ func ExpectedBeaconChainHead(
 				totalBalance
 	}
 
-	allValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
-	didNotAttestIndices := slices.Not(headAttesterIndices, allValidatorIndices)
+	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
+	didNotAttestIndices := slices.Not(headAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
@@ -168,8 +168,8 @@ func InactivityFFGSource(
 	epochsSinceFinality uint64) *pb.BeaconState {
 
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
-	allValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
-	didNotAttestIndices := slices.Not(justifiedAttesterIndices, allValidatorIndices)
+	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
+	didNotAttestIndices := slices.Not(justifiedAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
@@ -192,8 +192,8 @@ func InactivityFFGTarget(
 	epochsSinceFinality uint64) *pb.BeaconState {
 
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
-	allValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
-	didNotAttestIndices := slices.Not(boundaryAttesterIndices, allValidatorIndices)
+	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
+	didNotAttestIndices := slices.Not(boundaryAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
@@ -215,8 +215,8 @@ func InactivityChainHead(
 	totalBalance uint64) *pb.BeaconState {
 
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
-	allValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
-	didNotAttestIndices := slices.Not(headAttesterIndices, allValidatorIndices)
+	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
+	didNotAttestIndices := slices.Not(headAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=

@@ -7,6 +7,7 @@ package validators
 import (
 	"bytes"
 	"fmt"
+	"sort"
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -16,6 +17,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slices"
 )
+
+var config = params.BeaconConfig()
 
 // InitialValidatorRegistry creates a new validator set that is used to
 // generate a new crystallized state.
@@ -604,4 +607,63 @@ func PrepareValidatorForWithdrawal(state *pb.BeaconState, index uint32) *pb.Beac
 	state.ValidatorRegistry[index].StatusFlags |=
 		pb.ValidatorRecord_WITHDRAWABLE
 	return state
+}
+
+// ProcessPenaltiesAndExits prepares the validators and the penalized validators
+// for withdrawal.
+func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
+
+	activeValidatorIndices := ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
+	totalBalance := TotalEffectiveBalance(state, activeValidatorIndices)
+
+	for index, validator := range state.ValidatorRegistry {
+		penalized := validator.PenalizedSlot/config.EpochLength +
+			config.LatestPenalizedExitLength/2
+		if state.Slot/config.EpochLength == penalized {
+			e := (state.Slot / config.EpochLength) % config.LatestPenalizedExitLength
+			totalAtStart := state.LatestPenalizedExitBalances[(e+1)%config.LatestPenalizedExitLength]
+			totalAtEnd := state.LatestPenalizedExitBalances[e]
+			totalPenalties := totalAtStart - totalAtEnd
+
+			penaltyMultiplier := totalPenalties * 3
+			if totalBalance < penaltyMultiplier {
+				penaltyMultiplier = totalBalance
+			}
+
+			penalty := EffectiveBalance(state, uint32(index)) *
+				penaltyMultiplier / totalBalance
+			state.ValidatorBalances[index] -= penalty
+		}
+	}
+	allIndices := AllValidatorsIndices(state)
+	var eligibleIndices []uint32
+	for _, index := range allIndices {
+		if eligibleToExit(state, index) {
+			eligibleIndices = append(eligibleIndices, index)
+		}
+	}
+	sort.Slice(eligibleIndices, func(i, j int) bool {
+		return state.ValidatorRegistry[i].ExitCount < state.ValidatorRegistry[j].ExitCount
+	})
+	var withdrawanSoFar int
+	for _, index := range eligibleIndices {
+		state = PrepareValidatorForWithdrawal(state, index)
+		withdrawanSoFar++
+		if withdrawanSoFar >= 0 {
+			break
+		}
+	}
+	return state
+}
+
+// eligibleToExit checks if a validator is eligible to exit whether it was
+// penalized or not.
+func eligibleToExit(state *pb.BeaconState, index uint32) bool {
+	validator := state.ValidatorRegistry[index]
+
+	if validator.PenalizedSlot <= state.Slot {
+		penalizedWithdrawalTime := config.LatestPenalizedExitLength * config.EpochLength / 2
+		return state.Slot >= validator.PenalizedSlot+penalizedWithdrawalTime
+	}
+	return state.Slot >= validator.ExitSlot+config.MinValidatorWithdrawalTime
 }
