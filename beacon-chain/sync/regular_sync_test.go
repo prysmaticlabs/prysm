@@ -118,7 +118,7 @@ func TestProcessBlock(t *testing.T) {
 				169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
 		}
 	}
-	if err := db.InitializeState(validators); err != nil {
+	if err := db.InitializeState(); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -150,9 +150,9 @@ func TestProcessBlock(t *testing.T) {
 	}
 
 	data := &pb.BeaconBlock{
-		CandidatePowReceiptRootHash32: []byte{1, 2, 3, 4, 5},
-		ParentRootHash32:              parentHash[:],
-		Slot:                          1,
+		DepositRootHash32: []byte{1, 2, 3, 4, 5},
+		ParentRootHash32:  parentHash[:],
+		Slot:              1,
 	}
 	attestation := &pb.Attestation{
 		Data: &pb.AttestationData{
@@ -196,7 +196,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 				169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
 		}
 	}
-	if err := db.InitializeState(validators); err != nil {
+	if err := db.InitializeState(); err != nil {
 		t.Fatal(err)
 	}
 
@@ -229,9 +229,9 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}
 
 	data1 := &pb.BeaconBlock{
-		CandidatePowReceiptRootHash32: []byte{1, 2, 3, 4, 5},
-		ParentRootHash32:              parentHash[:],
-		Slot:                          1,
+		DepositRootHash32: []byte{1, 2, 3, 4, 5},
+		ParentRootHash32:  parentHash[:],
+		Slot:              1,
 	}
 
 	responseBlock1 := &pb.BeaconBlockResponse{
@@ -252,9 +252,9 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}
 
 	data2 := &pb.BeaconBlock{
-		CandidatePowReceiptRootHash32: []byte{6, 7, 8, 9, 10},
-		ParentRootHash32:              []byte{},
-		Slot:                          1,
+		DepositRootHash32: []byte{6, 7, 8, 9, 10},
+		ParentRootHash32:  []byte{},
+		Slot:              1,
 	}
 
 	responseBlock2 := &pb.BeaconBlockResponse{

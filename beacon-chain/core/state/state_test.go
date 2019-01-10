@@ -69,7 +69,7 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 			&pb.DepositInput{
 				Pubkey: []byte(strconv.Itoa(i)), ProofOfPossession: []byte{'B'},
 				WithdrawalCredentialsHash32: []byte{'C'}, RandaoCommitmentHash32: []byte{'D'},
-				PocCommitment: []byte{'D'},
+				CustodyCommitmentHash32: []byte{'D'},
 			},
 			maxDeposit,
 			time.Now().Unix(),
@@ -108,8 +108,8 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	}
 
 	// Validator registry fields checks.
-	if state.ValidatorRegistryLastChangeSlot != initialSlotNumber {
-		t.Error("ValidatorRegistryLastChangeSlot was not correctly initialized")
+	if state.ValidatorRegistryLatestChangeSlot != initialSlotNumber {
+		t.Error("ValidatorRegistryLatestChangeSlot was not correctly initialized")
 	}
 	if state.ValidatorRegistryExitCount != 0 {
 		t.Error("ValidatorRegistryExitCount was not correctly initialized")
@@ -125,16 +125,13 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	if len(state.LatestRandaoMixesHash32S) != latestRandaoMixesLength {
 		t.Error("Length of LatestRandaoMixesHash32S was not correctly initialized")
 	}
-	if len(state.LatestVdfOutputs) != LatestVdfMixesLength {
+	if len(state.LatestVdfOutputsHash32S) != LatestVdfMixesLength {
 		t.Error("Length of LatestRandaoMixesHash32S was not correctly initialized")
-	}
-	if !reflect.DeepEqual(state.PersistentCommitteeReassignments, []*pb.ShardReassignmentRecord{}) {
-		t.Error("PersistentCommitteeReassignments was not correctly initialized")
 	}
 
 	// Proof of custody field check.
-	if !reflect.DeepEqual(state.PocChallenges, []*pb.ProofOfCustodyChallenge{}) {
-		t.Error("PocChallenges was not correctly initialized")
+	if !reflect.DeepEqual(state.CustodyChallenges, []*pb.CustodyChallenge{}) {
+		t.Error("CustodyChallenges was not correctly initialized")
 	}
 
 	// Finality fields checks.
@@ -166,23 +163,24 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 		t.Error("BatchedBlockRootHash32S was not correctly initialized")
 	}
 
-	// PoW receipt root checks.
-	if !bytes.Equal(state.ProcessedPowReceiptRootHash32, processedPowReceiptRoot) {
-		t.Error("ProcessedPowReceiptRootHash32 was not correctly initialized")
+	// deposit root checks.
+	if !bytes.Equal(state.LatestDepositRootHash32, processedPowReceiptRoot) {
+		t.Error("LatestDepositRootHash32 was not correctly initialized")
 	}
-	if !reflect.DeepEqual(state.CandidatePowReceiptRoots, []*pb.CandidatePoWReceiptRootRecord{}) {
-		t.Error("CandidatePowReceiptRoots was not correctly initialized")
+	if !reflect.DeepEqual(state.DepositRootVotes, []*pb.DepositRootVote{}) {
+		t.Error("DepositRootVotes was not correctly initialized")
 	}
 
 	// Initial committee shuffling check.
-	if len(state.ShardAndCommitteesAtSlots) != int(2*epochLength) {
-		t.Error("ShardAndCommitteesAtSlots was not correctly initialized")
+	if len(state.ShardCommitteesAtSlots) != int(2*epochLength) {
+		t.Error("ShardCommitteesAtSlots was not correctly initialized")
 	}
 
-	for i := 0; i < len(state.ShardAndCommitteesAtSlots); i++ {
-		if len(state.ShardAndCommitteesAtSlots[i].ArrayShardAndCommittee[0].Committee) !=
+	for i := 0; i < len(state.ShardCommitteesAtSlots); i++ {
+		if len(state.ShardCommitteesAtSlots[i].ArrayShardCommittee[0].Committee) !=
 			int(params.BeaconConfig().TargetCommitteeSize) {
-			t.Error("ShardAndCommittees was not correctly initialized")
+			t.Errorf("ShardCommittees was not correctly initialized %d",
+				len(state.ShardCommitteesAtSlots[i].ArrayShardCommittee[0].Committee))
 		}
 	}
 }
@@ -221,73 +219,5 @@ func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
 		if !bytes.Equal(h, params.BeaconConfig().ZeroHash[:]) {
 			t.Errorf("Unexpected non-zero hash data: %v", h)
 		}
-	}
-}
-
-func TestUpdateLatestBlockHashes(t *testing.T) {
-	block := &pb.BeaconBlock{
-		Slot:             10,
-		ParentRootHash32: []byte{'A'},
-	}
-
-	recentBlockHashes := make([][]byte, 2*int(params.BeaconConfig().EpochLength))
-	for i := 0; i < 2*int(params.BeaconConfig().EpochLength); i++ {
-		recentBlockHashes[i] = []byte{0}
-	}
-
-	state := &pb.BeaconState{
-		LatestBlockRootHash32S: recentBlockHashes,
-	}
-
-	updated, err := CalculateNewBlockHashes(state, block, 0)
-	if err != nil {
-		t.Fatalf("failed to update recent blockhashes: %v", err)
-	}
-
-	if len(updated) != 2*int(params.BeaconConfig().EpochLength) {
-		t.Fatalf("length of updated recent blockhashes should be %d: found %d", params.BeaconConfig().EpochLength, len(updated))
-	}
-
-	for i := 0; i < len(updated); i++ {
-		if i < len(updated)-10 {
-			if !bytes.Equal(updated[i], []byte{0}) {
-				t.Fatalf("update failed: expected %#x got %#x", []byte{0}, updated[i])
-			}
-		} else if !bytes.Equal(updated[i], block.ParentRootHash32) {
-			t.Fatalf("update failed: expected %#x got %#x", block.ParentRootHash32, updated[i])
-		}
-	}
-}
-
-func TestCalculateNewBlockHashes_DoesNotMutateData(t *testing.T) {
-	interestingData := [][]byte{
-		[]byte("hello"),
-		[]byte("world"),
-		[]byte("block"),
-		[]byte("hash"),
-	}
-
-	s, _ := InitialBeaconState(nil, 0, nil)
-	copy(s.LatestBlockRootHash32S, interestingData)
-	original := make([][]byte, params.BeaconConfig().LatestBlockRootsLength)
-	copy(original, s.LatestBlockRootHash32S)
-
-	if !reflect.DeepEqual(s.LatestBlockRootHash32S, original) {
-		t.Fatal("setup data should be equal!")
-	}
-
-	block := &pb.BeaconBlock{
-		Slot:             2,
-		ParentRootHash32: []byte{},
-	}
-
-	result, _ := CalculateNewBlockHashes(s, block, 0 /*parentSlot*/)
-
-	if !reflect.DeepEqual(s.LatestBlockRootHash32S, original) {
-		t.Error("data has mutated from the original")
-	}
-
-	if reflect.DeepEqual(result, original) {
-		t.Error("the resulting data did not change from the original")
 	}
 }

@@ -1,3 +1,6 @@
+// Package state implements the whole state transition
+// function which consists of per slot, per-epoch transitions.
+// It also bootstraps the genesis beacon state for slot 0.
 package state
 
 import (
@@ -9,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pbcomm "github.com/prysmaticlabs/prysm/proto/common"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -48,6 +50,33 @@ func InitialBeaconState(
 		latestBlockRoots[i] = params.BeaconConfig().ZeroHash[:]
 	}
 
+	validatorRegistry := make([]*pb.ValidatorRecord, len(initialValidatorDeposits))
+	latestBalances := make([]uint64, len(initialValidatorDeposits))
+	for i, d := range initialValidatorDeposits {
+
+		amount, _, err := b.DecodeDepositAmountAndTimeStamp(d.DepositData)
+		if err != nil {
+			return nil, fmt.Errorf("could not decode deposit amount and timestamp %v", err)
+		}
+
+		depositInput, err := b.DecodeDepositInput(d.DepositData)
+		if err != nil {
+			return nil, fmt.Errorf("could decode deposit input %v", err)
+		}
+
+		validator := &pb.ValidatorRecord{
+			Pubkey:                      depositInput.Pubkey,
+			RandaoCommitmentHash32:      depositInput.RandaoCommitmentHash32,
+			WithdrawalCredentialsHash32: depositInput.WithdrawalCredentialsHash32,
+			CustodyCommitmentHash32:     depositInput.CustodyCommitmentHash32,
+			Balance:                     amount,
+			ExitSlot:                    params.BeaconConfig().FarFutureSlot,
+		}
+
+		validatorRegistry[i] = validator
+
+	}
+
 	latestPenalizedExitBalances := make([]uint64, params.BeaconConfig().LatestPenalizedExitLength)
 
 	state := &pb.BeaconState{
@@ -61,23 +90,21 @@ func InitialBeaconState(
 		},
 
 		// Validator registry fields.
-		ValidatorRegistry:                    []*pb.ValidatorRecord{},
-		ValidatorBalances:                    []uint64{},
-		ValidatorRegistryLastChangeSlot:      params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry:                    validatorRegistry,
+		ValidatorBalances:                    latestBalances,
+		ValidatorRegistryLatestChangeSlot:    params.BeaconConfig().GenesisSlot,
 		ValidatorRegistryExitCount:           0,
 		ValidatorRegistryDeltaChainTipHash32: params.BeaconConfig().ZeroHash[:],
 
 		// Randomness and committees.
-		LatestRandaoMixesHash32S:         latestRandaoMixes,
-		LatestVdfOutputs:                 latestVDFOutputs,
-		ShardAndCommitteesAtSlots:        []*pb.ShardAndCommitteeArray{},
-		PersistentCommittees:             []*pbcomm.Uint32List{},
-		PersistentCommitteeReassignments: []*pb.ShardReassignmentRecord{},
+		LatestRandaoMixesHash32S: latestRandaoMixes,
+		LatestVdfOutputsHash32S:  latestVDFOutputs,
+		ShardCommitteesAtSlots:   []*pb.ShardCommitteeArray{},
 
 		// Proof of custody.
 		// Place holder, proof of custody challenge is defined in phase 1.
 		// This list will remain empty through out phase 0.
-		PocChallenges: []*pb.ProofOfCustodyChallenge{},
+		CustodyChallenges: []*pb.CustodyChallenge{},
 
 		// Finality.
 		PreviousJustifiedSlot: params.BeaconConfig().GenesisSlot,
@@ -92,9 +119,9 @@ func InitialBeaconState(
 		LatestAttestations:          []*pb.PendingAttestationRecord{},
 		BatchedBlockRootHash32S:     [][]byte{},
 
-		// PoW receipt root.
-		ProcessedPowReceiptRootHash32: processedPowReceiptRoot,
-		CandidatePowReceiptRoots:      []*pb.CandidatePoWReceiptRootRecord{},
+		// deposit root.
+		LatestDepositRootHash32: processedPowReceiptRoot,
+		DepositRootVotes:        []*pb.DepositRootVote{},
 	}
 
 	// Process initial deposits.
@@ -117,16 +144,16 @@ func InitialBeaconState(
 			depositInput.ProofOfPossession,
 			depositInput.WithdrawalCredentialsHash32,
 			depositInput.RandaoCommitmentHash32,
-			depositInput.PocCommitment,
+			depositInput.CustodyCommitmentHash32,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not process validator deposit: %v", err)
 		}
 	}
-	for validatorIndex := range state.ValidatorRegistry {
-		if v.EffectiveBalance(state, uint32(validatorIndex)) ==
+	for i := 0; i < len(state.ValidatorRegistry); i++ {
+		if v.EffectiveBalance(state, uint32(i)) ==
 			params.BeaconConfig().MaxDepositInGwei {
-			state, err = v.ActivateValidator(state, uint32(validatorIndex), true)
+			state, err = v.ActivateValidator(state, uint32(i), true)
 			if err != nil {
 				return nil, fmt.Errorf("could not activate validator: %v", err)
 			}
@@ -143,7 +170,7 @@ func InitialBeaconState(
 	if err != nil {
 		return nil, fmt.Errorf("could not shuffle initial committee: %v", err)
 	}
-	state.ShardAndCommitteesAtSlots = append(initialShuffling, initialShuffling...)
+	state.ShardCommitteesAtSlots = append(initialShuffling, initialShuffling...)
 
 	return state, nil
 }
@@ -155,36 +182,4 @@ func Hash(state *pb.BeaconState) ([32]byte, error) {
 		return [32]byte{}, fmt.Errorf("could not marshal beacon state: %v", err)
 	}
 	return hashutil.Hash(data), nil
-}
-
-// CalculateNewBlockHashes builds a new slice of recent block hashes with the
-// provided block and the parent slot number.
-//
-// The algorithm is:
-//   1) shift the array by block.SlotNumber - parentSlot (i.e. truncate the
-//     first by the number of slots that have occurred between the block and
-//     its parent).
-//
-//   2) fill the array with the parent block hash for all values between the parent
-//     slot and the block slot.
-//
-// Computation of the state hash depends on this feature that slots with
-// missing blocks have the block hash of the next block hash in the chain.
-//
-// For example, if we have a segment of recent block hashes that look like this
-//   [0xF, 0x7, 0x0, 0x0, 0x5]
-//
-// Where 0x0 is an empty or missing hash where no block was produced in the
-// alloted slot. When storing the list (or at least when computing the hash of
-// the active state), the list should be back-filled as such:
-//
-//   [0xF, 0x7, 0x5, 0x5, 0x5]
-func CalculateNewBlockHashes(state *pb.BeaconState, block *pb.BeaconBlock, parentSlot uint64) ([][]byte, error) {
-	distance := block.Slot - parentSlot
-	existing := state.LatestBlockRootHash32S
-	update := existing[distance:]
-	for len(update) < 2*int(params.BeaconConfig().EpochLength) {
-		update = append(update, block.ParentRootHash32)
-	}
-	return update, nil
 }
