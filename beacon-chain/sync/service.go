@@ -15,6 +15,7 @@ type Service struct {
 	RegularSync *RegularSync
 	InitialSync *initialsync.InitialSync
 	Querier     *Querier
+	failStatus   error
 }
 
 // Config defines the configured services required for sync to work.
@@ -80,6 +81,10 @@ func (ss *Service) Stop() error {
 // Status always returns nil.
 // TODO(1206): Add service health checks.
 func (ss *Service) Status() error {
+	if ss.failStatus != nil {
+        log.Errorf("Sync service is unhealthy : %v ", ss.failStatus)
+		return ss.failStatus
+	}
 	return nil
 }
 
@@ -88,6 +93,7 @@ func (ss *Service) run() {
 	synced, err := ss.Querier.IsSynced()
 	if err != nil {
 		slog.Fatalf("Unable to retrieve result from sync querier %v", err)
+		ss.failStatus = err
 	}
 
 	if synced {
