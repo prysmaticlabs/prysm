@@ -92,6 +92,7 @@ func (ss *Service) run() {
 	ss.Querier.Start()
 	synced, err := ss.Querier.IsSynced()
 	if err != nil {
+		ss.failStatus = err
 		slog.Fatalf("Unable to retrieve result from sync querier %v", err)
 		ss.failStatus = err
 	}
