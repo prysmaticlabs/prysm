@@ -69,6 +69,7 @@ func (f *faultyClient) LatestBlockHash() common.Hash {
 	return common.BytesToHash([]byte{'A'})
 }
 
+
 func setupBeaconChain(t *testing.T, faultyPoWClient bool, beaconDB *db.BeaconDB) *ChainService {
 	endpoint := "ws://127.0.0.1"
 	ctx := context.Background()
@@ -146,6 +147,17 @@ func TestStartStop(t *testing.T) {
 	// The context should have been canceled.
 	if chainService.ctx.Err() == nil {
 		t.Error("context was not canceled")
+	}
+}
+
+func TestStatus(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	chainService := setupBeaconChain(t, false, db)
+	chainFailStatus:= chainService.failStatus
+	chainStatus := chainService.Status()
+	if err := chainStatus; err != chainFailStatus  {
+		t.Errorf("Expected match of s.Status() and s.failStatus, but got %v, %v", chainStatus, chainFailStatus)
 	}
 }
 

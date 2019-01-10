@@ -38,6 +38,7 @@ type ChainService struct {
 	unProcessedBlocks  map[uint64]*pb.BeaconBlock
 	unfinalizedBlocks  map[[32]byte]*pb.BeaconState
 	enablePOWChain     bool
+	failStatus         error
 }
 
 // Config options for the service.
@@ -77,8 +78,16 @@ func (c *ChainService) Start() {
 	c.genesisTime, err = c.beaconDB.GenesisTime()
 	if err != nil {
 		log.Fatalf("Unable to retrieve genesis time - blockchain service could not start: %v", err)
+		c.failStatus = err
 		return
 	}
+
+	if c.web3Service.Status() != nil {
+		log.Fatalf("Unable to connect to web3Service")
+		c.failStatus = c.web3Service.Status()
+		return
+	}
+
 	// TODO(#675): Initialize unfinalizedBlocks map from disk in case this
 	// is a beacon node restarting.
 	go c.updateHead(c.processedBlockChan)
@@ -96,6 +105,10 @@ func (c *ChainService) Stop() error {
 // Status always returns nil.
 // TODO(1202): Add service health checks.
 func (c *ChainService) Status() error {
+	if c.failStatus != nil {
+		log.Errorf("Chain service is unhealthy")
+		return c.failStatus
+	}
 	return nil
 }
 
@@ -140,6 +153,7 @@ func (c *ChainService) updateHead(processedBlock <-chan *pb.BeaconBlock) {
 			return
 		case block := <-processedBlock:
 			if block == nil {
+				c.failStatus = fmt.Errorf("chain head block not receieved for updating ")
 				continue
 			}
 
@@ -228,6 +242,10 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *pb.BeaconBlock) {
 		// can be received either from the sync service, the RPC service,
 		// or via p2p.
 		case block := <-c.incomingBlockChan:
+			if block == nil{
+				c.failStatus = fmt.Errorf("block not received for processing ")
+				continue
+			}
 			// Before sending the blocks for processing we check to see if the blocks
 			// are valid to continue being processed. If the slot number in the block
 			// has already been processed by the beacon node, we throw it away. If the
