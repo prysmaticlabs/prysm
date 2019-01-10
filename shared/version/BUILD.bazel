@@ -6,7 +6,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/shared/version",
     visibility = ["//visibility:public"],
     x_defs = {
-        "GitCommit": "{STABLE_GIT_COMMIT}",
-        "BuildDate": "{DATE}",
+        "gitCommit": "{STABLE_GIT_COMMIT}",
+        "buildDate": "{DATE}",
     },
 )
