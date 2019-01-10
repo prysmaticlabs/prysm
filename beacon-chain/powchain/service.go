@@ -10,6 +10,7 @@ import (
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/sirupsen/logrus"
 )
 
@@ -58,6 +59,7 @@ type Web3Service struct {
 	logger              Logger
 	blockNumber         *big.Int    // the latest PoW chain blockNumber.
 	blockHash           common.Hash // the latest PoW chain blockHash.
+	depositCount        uint64
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -158,18 +160,39 @@ func (w *Web3Service) run(done <-chan struct{}) {
 				"blockHash":   w.blockHash.Hex(),
 			}).Debug("Latest web3 chain event")
 		case VRClog := <-w.logChan:
-			// public key is the second topic from validatorRegistered log.
-			pubKeyLog := VRClog.Topics[1].Hex()
-			// Support user pubKeys with or without the leading 0x.
-			if pubKeyLog == w.pubKey || pubKeyLog[2:] == w.pubKey {
-				log.WithFields(logrus.Fields{
-					"publicKey": pubKeyLog,
-				}).Info("Validator registered in VRC with public key")
-				w.validatorRegistered = true
-				w.logChan = nil
-			}
+			w.ProcessLog(VRClog)
+
 		}
 	}
+}
+
+func (w *Web3Service) ProcessLog(VRClog gethTypes.Log) {
+	// public key is the second topic from validatorRegistered log.
+	merkleRoot := VRClog.Topics[1]
+	depositData := VRClog.Topics[2]
+	depositCount := VRClog.Topics[3]
+
+	w.depositCount = bytes.FromBytes8(depositCount.Bytes())
+
+	if err := w.SaveInTrie(merkleRoot); err != nil {
+		log.Errorf("Could not save in trie %v", err)
+		return
+	}
+
+	if err := w.ProcessDepositData(depositData); err != nil {
+		log.Errorf("Could not process deposit from log %v", err)
+		return
+	}
+}
+
+func (w *Web3Service) ProcessDepositData(data common.Hash) error {
+	_ = data
+	return nil
+}
+
+func (w *Web3Service) SaveInTrie(root common.Hash) error {
+	_ = root
+	return nil
 }
 
 // LatestBlockNumber in the PoWChain.
