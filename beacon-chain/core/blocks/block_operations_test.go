@@ -79,9 +79,9 @@ func TestProcessBlockRandao_UnequalBlockAndProposerRandao(t *testing.T) {
 	beaconState := &pb.BeaconState{
 		ValidatorRegistry: registry,
 		Slot:              1,
-		ShardAndCommitteesAtSlots: []*pb.ShardAndCommitteeArray{
+		ShardCommitteesAtSlots: []*pb.ShardCommitteeArray{
 			{
-				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				ArrayShardCommittee: []*pb.ShardCommittee{
 					{
 						Shard:               0,
 						Committee:           []uint32{1, 0},
@@ -90,7 +90,7 @@ func TestProcessBlockRandao_UnequalBlockAndProposerRandao(t *testing.T) {
 				},
 			},
 			{
-				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				ArrayShardCommittee: []*pb.ShardCommittee{
 					{
 						Shard:               0,
 						Committee:           []uint32{1, 0},
@@ -128,9 +128,9 @@ func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 		ValidatorRegistry:        registry,
 		Slot:                     1,
 		LatestRandaoMixesHash32S: make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		ShardAndCommitteesAtSlots: []*pb.ShardAndCommitteeArray{
+		ShardCommitteesAtSlots: []*pb.ShardCommitteeArray{
 			{
-				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				ArrayShardCommittee: []*pb.ShardCommittee{
 					{
 						Shard:               0,
 						Committee:           []uint32{1, 0},
@@ -139,7 +139,7 @@ func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 				},
 			},
 			{
-				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				ArrayShardCommittee: []*pb.ShardCommittee{
 					{
 						Shard:               0,
 						Committee:           []uint32{1, 0},
@@ -312,10 +312,10 @@ func TestProcessProposerSlashings_UnmatchedBlockRoots(t *testing.T) {
 func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
-	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	var ShardCommittees []*pb.ShardCommitteeArray
 	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
-		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
-			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+		ShardCommittees = append(ShardCommittees, &pb.ShardCommitteeArray{
+			ArrayShardCommittee: []*pb.ShardCommittee{
 				{Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
 			},
 		})
@@ -352,7 +352,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		ValidatorBalances: []uint64{params.BeaconConfig().MaxDepositInGwei,
 			params.BeaconConfig().MaxDepositInGwei},
 		LatestPenalizedExitBalances: []uint64{0},
-		ShardAndCommitteesAtSlots:   shardAndCommittees,
+		ShardCommitteesAtSlots:      ShardCommittees,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -680,10 +680,10 @@ func TestProcessCasperSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 func TestProcessCasperSlashings_AppliesCorrectStatus(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
-	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	var ShardCommittees []*pb.ShardCommitteeArray
 	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
-		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
-			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+		ShardCommittees = append(ShardCommittees, &pb.ShardCommitteeArray{
+			ArrayShardCommittee: []*pb.ShardCommittee{
 				{Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
 			},
 		})
@@ -728,7 +728,7 @@ func TestProcessCasperSlashings_AppliesCorrectStatus(t *testing.T) {
 		Slot:                        currentSlot,
 		ValidatorBalances:           []uint64{32, 32, 32, 32, 32, 32},
 		LatestPenalizedExitBalances: []uint64{0},
-		ShardAndCommitteesAtSlots:   shardAndCommittees,
+		ShardCommitteesAtSlots:      ShardCommittees,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -1570,7 +1570,7 @@ func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not process exits: %v", err)
 	}
-	newRegistry := newState.GetValidatorRegistry()
+	newRegistry := newState.ValidatorRegistry
 	if newRegistry[0].StatusFlags == pb.ValidatorRecord_INITIAL {
 		t.Error("Expected validator status to change, remained INITIAL")
 	}

@@ -30,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
+	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -51,6 +52,9 @@ type BeaconNode struct {
 // NewBeaconNode creates a new node instance, sets up configuration options, and registers
 // every required service to the node.
 func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
+	log.WithFields(logrus.Fields{
+		"version": version.GetVersion(),
+	}).Info("Starting beacon node")
 	registry := shared.NewServiceRegistry()
 
 	beacon := &BeaconNode{
