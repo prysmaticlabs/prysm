@@ -419,11 +419,14 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db)
-	beaconState, err := state.InitialBeaconState(nil, 0, nil)
+	err := db.InitializeState()
 	if err != nil {
-		t.Fatalf("Can't generate genesis state: %v", err)
+		t.Fatalf("Can't initialze genesis state: %v", err)
 	}
-
+	beaconState, err := db.GetState()
+	if err != nil {
+		t.Fatalf("Can't get genesis state: %v", err)
+	}
 	block := &pb.BeaconBlock{
 		ParentRootHash32: []byte{'a'},
 	}

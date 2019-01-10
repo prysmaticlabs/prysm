@@ -1,8 +1,7 @@
-// Package validators defines helper functions to locate validator
-// based on pubic key. Each validator is associated with a given index,
-// shard ID and slot number to propose or attest. This package also defines
-// functions to initialize validators, verify validator bit fields,
-// and rotate validator in and out of committees.
+// Package validators contains libraries to shuffle validators
+// and retrieve active validator indices from a given slot
+// or an attestation. It also provides helper functions to locate
+// validator based on pubic key.
 package validators
 
 import (
@@ -12,7 +11,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -222,30 +220,6 @@ func TotalActiveValidatorBalance(activeValidators []*pb.ValidatorRecord) uint64 
 	return totalDeposit
 }
 
-// VotedBalanceInAttestation checks for the total balance in the validator set and the balances of the voters in the
-// attestation.
-func VotedBalanceInAttestation(validators []*pb.ValidatorRecord, indices []uint32,
-	attestation *pb.Attestation) (uint64, uint64, error) {
-
-	// find the total and vote balance of the shard committee.
-	var totalBalance uint64
-	var voteBalance uint64
-	for index, attesterIndex := range indices {
-		// find balance of validators who voted.
-		bitCheck, err := bitutil.CheckBit(attestation.ParticipationBitfield, index)
-		if err != nil {
-			return 0, 0, err
-		}
-		if bitCheck {
-			voteBalance += validators[attesterIndex].Balance
-		}
-		// add to total balance of the committee.
-		totalBalance += validators[attesterIndex].Balance
-	}
-
-	return totalBalance, voteBalance, nil
-}
-
 // NewRegistryDeltaChainTip returns the new validator registry delta chain tip.
 //
 // Spec pseudocode definition:
@@ -325,18 +299,18 @@ func Attesters(state *pb.BeaconState, attesterIndices []uint32) []*pb.ValidatorR
 // Spec pseudocode definition:
 //   Let this_epoch_boundary_attester_indices be the union of the validator
 //   index sets given by [get_attestation_participants(state, a.data, a.participation_bitfield)
-//   for a in this_epoch_boundary_attestations]
+//   for a in attestations]
 func ValidatorIndices(
 	state *pb.BeaconState,
-	boundaryAttestations []*pb.PendingAttestationRecord,
+	attestations []*pb.PendingAttestationRecord,
 ) ([]uint32, error) {
 
 	var attesterIndicesIntersection []uint32
-	for _, boundaryAttestation := range boundaryAttestations {
+	for _, attestation := range attestations {
 		attesterIndices, err := AttestationParticipants(
 			state,
-			boundaryAttestation.Data,
-			boundaryAttestation.ParticipationBitfield)
+			attestation.Data,
+			attestation.ParticipationBitfield)
 		if err != nil {
 			return nil, err
 		}
@@ -556,8 +530,8 @@ func ExitValidator(state *pb.BeaconState, index uint32) (*pb.BeaconState, error)
 	validator := state.ValidatorRegistry[index]
 
 	if validator.ExitSlot < state.Slot+params.BeaconConfig().EntryExitDelay {
-		return nil, fmt.Errorf("validator %d could not exit until slot %d",
-			index, state.Slot+params.BeaconConfig().EntryExitDelay)
+		return nil, fmt.Errorf("validator %d has already exited at slot %d",
+			index, validator.ExitSlot)
 	}
 
 	validator.ExitSlot = state.Slot + params.BeaconConfig().EntryExitDelay
