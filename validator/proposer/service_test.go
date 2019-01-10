@@ -102,7 +102,7 @@ func TestLifecycle(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
 
-func TestProposerReceiveBeaconBlock(t *testing.T) {
+func TestProposerComputeBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -115,6 +115,27 @@ func TestProposerReceiveBeaconBlock(t *testing.T) {
 	p := NewProposer(context.Background(), cfg)
 
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
+
+	mockServiceClient.EXPECT().LatestPOWChainBlockHash(
+		gomock.Any(),
+		gomock.Any()).Return(
+		&pb.POWChainResponse{
+			BlockHash: []byte("hi"),
+		}, nil)
+	mockServiceClient.EXPECT().ProposerIndex(
+		gomock.Any(),
+		gomock.Any()).Return(
+		&pb.IndexResponse{
+			Index: 2,
+		}, nil)
+
+	mockServiceClient.EXPECT().ComputeStateRoot(
+		gomock.Any(),
+		gomock.Any()).Return(
+		&pb.StateRootResponse{
+			StateRoot: []byte("test"),
+		}, nil)
+
 	mockServiceClient.EXPECT().ProposeBlock(
 		gomock.Any(),
 		gomock.Any(),
@@ -134,7 +155,7 @@ func TestProposerReceiveBeaconBlock(t *testing.T) {
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Block proposed successfully with hash %#x", []byte("hi")))
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Created block proposal for slot %d", 6))
 	testutil.AssertLogsContain(t, hook, "Proposer context closed")
 }
 
@@ -191,6 +212,26 @@ func TestFullProposalOfBlock(t *testing.T) {
 	}
 	p := NewProposer(context.Background(), cfg)
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
+	mockServiceClient.EXPECT().LatestPOWChainBlockHash(
+		gomock.Any(),
+		gomock.Any()).Return(
+		&pb.POWChainResponse{
+			BlockHash: []byte("hi"),
+		}, nil)
+	mockServiceClient.EXPECT().ProposerIndex(
+		gomock.Any(),
+		gomock.Any()).Return(
+		&pb.IndexResponse{
+			Index: 2,
+		}, nil)
+
+	mockServiceClient.EXPECT().ComputeStateRoot(
+		gomock.Any(),
+		gomock.Any()).Return(
+		&pb.StateRootResponse{
+			StateRoot: []byte("test"),
+		}, nil)
+
 	mockServiceClient.EXPECT().ProposeBlock(
 		gomock.Any(),
 		gomock.Any(),
@@ -226,7 +267,8 @@ func TestFullProposalOfBlock(t *testing.T) {
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Block proposed successfully with hash %#x", []byte("hi")))
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Created block proposal for slot %d", 6))
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Successfully proposed block with hash %#x", []byte("hi")))
 	testutil.AssertLogsContain(t, hook, "Proposer context closed")
 	testutil.AssertLogsContain(t, hook, "Attestation stored in memory")
 	testutil.AssertLogsContain(t, hook, "Proposer context closed")
@@ -247,11 +289,23 @@ func TestProposerServiceErrors(t *testing.T) {
 
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
 
-	// Expect call to throw an error.
-	mockServiceClient.EXPECT().ProposeBlock(
+	mockServiceClient.EXPECT().LatestPOWChainBlockHash(
+		gomock.Any(),
+		gomock.Any()).Return(
+		&pb.POWChainResponse{
+			BlockHash: []byte("hi"),
+		}, nil)
+	mockServiceClient.EXPECT().ProposerIndex(
+		gomock.Any(),
+		gomock.Any()).Return(
+		&pb.IndexResponse{
+			Index: 2,
+		}, nil)
+	// Expect call to throw an error
+	mockServiceClient.EXPECT().ComputeStateRoot(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(nil, errors.New("bad block proposed"))
+	).Return(nil, errors.New("could not hash state"))
 
 	doneChan := make(chan struct{})
 	exitRoutine := make(chan bool)
@@ -272,7 +326,69 @@ func TestProposerServiceErrors(t *testing.T) {
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
-	testutil.AssertLogsContain(t, hook, "Could not marshal nil latest beacon block")
+	testutil.AssertLogsContain(t, hook, "could not marshal nil latest beacon block")
 	testutil.AssertLogsContain(t, hook, "Proposer context closed")
-	testutil.AssertLogsContain(t, hook, "Could not propose block: bad block proposed")
+	testutil.AssertLogsContain(t, hook, "unable to compute state root for block: could not hash state")
+}
+
+func TestProposedBlockError(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	cfg := &Config{
+		AssignmentBuf: 0,
+		Assigner:      &mockAssigner{},
+		Client:        &mockClient{ctrl},
+		AttesterFeed:  &mockAttesterFeed{},
+	}
+	p := NewProposer(context.Background(), cfg)
+
+	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
+
+	mockServiceClient.EXPECT().LatestPOWChainBlockHash(
+		gomock.Any(),
+		gomock.Any()).Return(
+		&pb.POWChainResponse{
+			BlockHash: []byte("hi"),
+		}, nil)
+
+	mockServiceClient.EXPECT().ProposerIndex(
+		gomock.Any(),
+		gomock.Any()).Return(
+		&pb.IndexResponse{
+			Index: 2,
+		}, nil)
+
+	mockServiceClient.EXPECT().ComputeStateRoot(
+		gomock.Any(),
+		gomock.Any()).Return(
+		&pb.StateRootResponse{
+			StateRoot: []byte("test"),
+		}, nil)
+
+	// Expect call to throw an error.
+	mockServiceClient.EXPECT().ProposeBlock(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(nil, errors.New("bad block proposed"))
+
+	doneChan := make(chan struct{})
+	exitRoutine := make(chan bool)
+
+	go p.run(doneChan, mockServiceClient)
+
+	go func() {
+		p.processAttestation(doneChan)
+		<-exitRoutine
+	}()
+
+	p.assignmentChan <- &pbp2p.BeaconBlock{Slot: 9}
+
+	doneChan <- struct{}{}
+	doneChan <- struct{}{}
+	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, "Performing proposer responsibility")
+	testutil.AssertLogsContain(t, hook, "Proposer context closed")
+	testutil.AssertLogsContain(t, hook, "Could not propose block bad block proposed")
 }
