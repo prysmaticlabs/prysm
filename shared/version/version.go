@@ -5,8 +5,8 @@ import (
 )
 
 // The value of these vars are set through linker options.
-var gitCommit string = "Local build"
-var buildDate string = "Moments ago"
+var gitCommit = "Local build"
+var buildDate = "Moments ago"
 
 // GetVersion returns the version string of this build.
 func GetVersion() string {
