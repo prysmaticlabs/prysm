@@ -29,6 +29,7 @@ go_library(
         "//shared/p2p/adapter/tracer:go_default_library",
         "//shared/params:go_default_library",
         "//shared/prometheus:go_default_library",
+        "//shared/version:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//ethclient:go_default_library",
         "@com_github_ethereum_go_ethereum//rpc:go_default_library",
