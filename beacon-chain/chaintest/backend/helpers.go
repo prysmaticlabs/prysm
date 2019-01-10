@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/trie"
 	"strconv"
 	"time"
 
@@ -24,6 +25,7 @@ func generateSimulatedBlock(
 	prevBlockRoot [32]byte,
 	randaoReveal [32]byte,
 	simulatedDeposit *StateTestDeposit,
+	depositsTrie *trie.DepositTrie,
 ) (*pb.BeaconBlock, [32]byte, error) {
 	encodedState, err := proto.Marshal(beaconState)
 	if err != nil {
@@ -77,7 +79,12 @@ func generateSimulatedBlock(
 		data = append(data, value...)
 		data = append(data, timestamp...)
 
-		// We then create a merkle branch for the test and derive its root.
+		// We then update the deposits Merkle trie with the deposit data and return
+		// its Merkle branch leading up to the root of the trie.
+		depositsTrie.UpdateDepositTrie(data)
+		merkleBranch := depositsTrie.GenerateMerkleBranch(data)
+
+		// We then create a Merkle branch for the test and derive its root.
 		branch := [][]byte{}
 		var powReceiptRoot [32]byte
 		copy(powReceiptRoot[:], data)
@@ -92,7 +99,7 @@ func generateSimulatedBlock(
 
 		block.Body.Deposits = append(block.Body.Deposits, &pb.Deposit{
 			DepositData:         data,
-			MerkleBranchHash32S: branch,
+			MerkleBranchHash32S: merkleBranch,
 		})
 	}
 	encodedBlock, err := proto.Marshal(block)

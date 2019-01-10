@@ -6,6 +6,7 @@ package backend
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/trie"
 	"reflect"
 	"time"
 
@@ -154,6 +155,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		layersPeeledForProposer[uint32(idx)] = 0
 	}
 
+	depositsTrie := trie.NewDepositTrie()
 	startTime := time.Now()
 	for i := uint64(0); i < testCase.Config.NumSlots; i++ {
 		prevBlockRoot := prevBlockRoots[len(prevBlockRoots)-1]
@@ -193,6 +195,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 			prevBlockRoot,
 			blockRandaoReveal,
 			simulatedDeposit,
+			depositsTrie,
 		)
 		if err != nil {
 			return fmt.Errorf("could not generate simulated beacon block %v", err)
