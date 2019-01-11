@@ -59,9 +59,9 @@ func (d *DepositTrie) Root() [32]byte {
 	return d.merkleHashes[1]
 }
 
-// VerifyMerkleBranch verifies a merkle path in a trie
+// VerifyMerkleBranch verifies a Merkle path in a trie
 // by checking the aggregated hash of contiguous leaves along a path
-// eventually equals the root hash of the merkle trie.
+// eventually equals the root hash of the Merkle trie.
 func VerifyMerkleBranch(leaf [32]byte, branch [][]byte, depth uint64, index uint64, root [32]byte) bool {
 	twoToPowerOfTreeDepth := 1 << params.BeaconConfig().DepositContractTreeDepth
 	idx := index + uint64(twoToPowerOfTreeDepth)
