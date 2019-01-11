@@ -1,37 +1,37 @@
 package backend
 
-// ChainTest --
-type ChainTest struct {
+// ForkChoiceTest --
+type ForkChoiceTest struct {
 	Title     string
 	Summary   string
-	TestSuite string           `yaml:"test_suite"`
-	TestCases []*ChainTestCase `yaml:"test_cases"`
+	TestSuite string                `yaml:"test_suite"`
+	TestCases []*ForkChoiceTestCase `yaml:"test_cases"`
 }
 
-// ChainTestCase --
-type ChainTestCase struct {
-	Config  *ChainTestConfig  `yaml:"config"`
-	Slots   []*ChainTestSlot  `yaml:"slots,flow"`
-	Results *ChainTestResults `yaml:"results"`
+// ForkChoiceTestCase --
+type ForkChoiceTestCase struct {
+	Config  *ForkChoiceTestConfig `yaml:"config"`
+	Slots   []*ForkChoiceTestSlot `yaml:"slots,flow"`
+	Results *ForkChoiceTestResult `yaml:"results"`
 }
 
-// ChainTestConfig --
-type ChainTestConfig struct {
+// ForkChoiceTestConfig --
+type ForkChoiceTestConfig struct {
 	ValidatorCount   uint64 `yaml:"validator_count"`
 	CycleLength      uint64 `yaml:"cycle_length"`
 	ShardCount       uint64 `yaml:"shard_count"`
 	MinCommitteeSize uint64 `yaml:"min_committee_size"`
 }
 
-// ChainTestSlot --
-type ChainTestSlot struct {
+// ForkChoiceTestSlot --
+type ForkChoiceTestSlot struct {
 	SlotNumber   uint64             `yaml:"slot_number"`
 	NewBlock     *TestBlock         `yaml:"new_block"`
 	Attestations []*TestAttestation `yaml:",flow"`
 }
 
-// ChainTestResults --
-type ChainTestResults struct {
+// ForkChoiceTestResult --
+type ForkChoiceTestResult struct {
 	Head               string
 	LastJustifiedBlock string `yaml:"last_justified_block"`
 	LastFinalizedBlock string `yaml:"last_finalized_block"`
