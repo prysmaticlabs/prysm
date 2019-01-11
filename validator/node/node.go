@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/attester"
 	"github.com/prysmaticlabs/prysm/validator/beacon"
 	"github.com/prysmaticlabs/prysm/validator/proposer"
@@ -109,7 +110,9 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 func (s *ValidatorClient) Start() {
 	s.lock.Lock()
 
-	log.Info("Starting sharding validator")
+	log.WithFields(logrus.Fields{
+		"version": version.GetVersion(),
+	}).Info("Starting validator node")
 
 	s.services.StartAll()
 

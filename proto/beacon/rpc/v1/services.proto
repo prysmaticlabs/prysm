@@ -27,7 +27,10 @@ service AttesterService {
 }
 
 service ProposerService {
-    rpc ProposeBlock(ProposeRequest) returns (ProposeResponse);
+    rpc ProposeBlock(ethereum.beacon.p2p.v1.BeaconBlock) returns (ProposeResponse);
+    rpc LatestPOWChainBlockHash(google.protobuf.Empty) returns (POWChainResponse);
+    rpc ComputeStateRoot(ethereum.beacon.p2p.v1.BeaconBlock) returns (StateRootResponse);
+    rpc ProposerIndex(ProposerIndexRequest) returns (IndexResponse);
 }
 
 service ValidatorService {
@@ -49,6 +52,18 @@ message ProposeRequest {
 
 message ProposeResponse {
     bytes block_hash = 1;
+}
+
+message POWChainResponse {
+    bytes block_hash = 1;
+}
+
+message ProposerIndexRequest {
+    uint64 slot_number = 1;
+}
+
+message StateRootResponse {
+    bytes state_root = 1;
 }
 
 message AttestRequest {
