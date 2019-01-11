@@ -2,7 +2,6 @@
 bazel-*
 
 .DS_Store
-.gitattributes
 
 # IntelliJ
 .idea

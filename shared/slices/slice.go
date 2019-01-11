@@ -1,18 +1,5 @@
 package slices
 
-// Contains determines if a uint64 item exists in a slice.
-func Contains(item uint64, slice []uint64) bool {
-	if len(slice) == 0 {
-		return false
-	}
-	for _, a := range slice {
-		if item == a {
-			return true
-		}
-	}
-	return false
-}
-
 // Intersection of two uint32 slices with time
 // complexity of approximately O(n) leveraging a map to
 // check for element existence off by a constant factor
@@ -73,6 +60,16 @@ func Not(a []uint32, b []uint32) []uint32 {
 
 // IsIn returns true if a is in b and False otherwise.
 func IsIn(a uint32, b []uint32) bool {
+	for _, v := range b {
+		if a == v {
+			return true
+		}
+	}
+	return false
+}
+
+// IsInUint64 returns true if a is in b and False otherwise.
+func IsInUint64(a uint64, b []uint64) bool {
 	for _, v := range b {
 		if a == v {
 			return true
