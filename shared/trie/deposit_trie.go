@@ -1,3 +1,6 @@
+// Package trie contains definitions for building a Merkle trie for validator deposits
+// as defined in the Ethereum Serenity specification, as well as utilities to generate
+// and verify Merkle proofs.
 package trie
 
 import (
@@ -9,15 +12,15 @@ import (
 // PoW chain contract created in Vyper.
 type DepositTrie struct {
 	depositCount uint64
-	merkleHashes map[uint64][32]byte
+	merkleMap    map[uint64][32]byte
 }
 
-// NewDepositTrie creates a new struct instance with a hash list of initial
-// length equal to 2 to the power of the deposit contract's tree depth.
+// NewDepositTrie creates a new struct instance representing a Merkle trie for deposits
+// and tracking an initial deposit count of 0.
 func NewDepositTrie() *DepositTrie {
 	return &DepositTrie{
 		depositCount: 0,
-		merkleHashes: make(map[uint64][32]byte),
+		merkleMap:    make(map[uint64][32]byte),
 	}
 }
 
@@ -26,12 +29,12 @@ func NewDepositTrie() *DepositTrie {
 func (d *DepositTrie) UpdateDepositTrie(depositData []byte) {
 	twoToPowerOfTreeDepth := 1 << params.BeaconConfig().DepositContractTreeDepth
 	index := d.depositCount + uint64(twoToPowerOfTreeDepth)
-	d.merkleHashes[index] = hashutil.Hash(depositData)
+	d.merkleMap[index] = hashutil.Hash(depositData)
 	for i := uint64(0); i < params.BeaconConfig().DepositContractTreeDepth; i++ {
 		index = index / 2
-		left := d.merkleHashes[index*2]
-		right := d.merkleHashes[index*2+1]
-		d.merkleHashes[index] = hashutil.Hash(append(left[:], right[:]...))
+		left := d.merkleMap[index*2]
+		right := d.merkleMap[index*2+1]
+		d.merkleMap[index] = hashutil.Hash(append(left[:], right[:]...))
 	}
 	d.depositCount++
 }
@@ -43,10 +46,10 @@ func (d *DepositTrie) GenerateMerkleBranch(index uint64) [][]byte {
 	branch := make([][]byte, params.BeaconConfig().DepositContractTreeDepth)
 	for i := uint64(0); i < params.BeaconConfig().DepositContractTreeDepth; i++ {
 		if idx%2 == 1 {
-			value := d.merkleHashes[idx-1]
+			value := d.merkleMap[idx-1]
 			branch[i] = value[:]
 		} else {
-			value := d.merkleHashes[idx+1]
+			value := d.merkleMap[idx+1]
 			branch[i] = value[:]
 		}
 		idx = idx / 2
@@ -56,7 +59,7 @@ func (d *DepositTrie) GenerateMerkleBranch(index uint64) [][]byte {
 
 // Root returns the Merkle root of the calculated deposit trie.
 func (d *DepositTrie) Root() [32]byte {
-	return d.merkleHashes[1]
+	return d.merkleMap[1]
 }
 
 // VerifyMerkleBranch verifies a Merkle path in a trie
