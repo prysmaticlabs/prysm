@@ -157,7 +157,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	}
 
 	depositsTrie := trie.NewDepositTrie()
-	startTime := time.Now()
+	averageTimesPerTransition := []time.Duration{}
 	for i := uint64(0); i < testCase.Config.NumSlots; i++ {
 		prevBlockRoot := prevBlockRoots[len(prevBlockRoots)-1]
 
@@ -204,10 +204,14 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		}
 		latestRoot := depositsTrie.Root()
 		beaconState.LatestDepositRootHash32 = latestRoot[:]
+
+		startTime := time.Now()
 		newState, err := state.ExecuteStateTransition(beaconState, newBlock, prevBlockRoot)
 		if err != nil {
 			return fmt.Errorf("could not execute state transition: %v", err)
 		}
+		endTime := time.Now()
+		averageTimesPerTransition = append(averageTimesPerTransition, endTime.Sub(startTime))
 
 		// We then keep track of information about the state after the
 		// state transition was applied.
@@ -216,12 +220,10 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		layersPeeledForProposer[proposerIndex]++
 	}
 
-	endTime := time.Now()
 	log.Infof(
-		"%d state transitions with %d deposits finished in %v",
-		testCase.Config.NumSlots,
+		"with %d initial deposits, each state transition took average time = %v",
 		testCase.Config.DepositsForChainStart,
-		endTime.Sub(startTime),
+		time.Duration(averageDuration(averageTimesPerTransition)),
 	)
 
 	if beaconState.Slot != testCase.Results.Slot {
@@ -241,4 +243,12 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		)
 	}
 	return nil
+}
+
+func averageDuration(times []time.Duration) int64 {
+	sum := int64(0)
+	for _, t := range times {
+		sum += t.Nanoseconds()
+	}
+	return sum / int64(len(times))
 }
