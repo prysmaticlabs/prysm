@@ -115,16 +115,16 @@ func generateSimulatedBlock(
 					Slot:          simulatedCasperSlashing.Votes1Slot,
 					JustifiedSlot: simulatedCasperSlashing.Votes1JustifiedSlot,
 				},
-				CustodyBit_0Indices: simulatedCasperSlashing.Votes1CustodyBit_0Indices,
-				CustodyBit_1Indices: simulatedCasperSlashing.Votes1CustodyBit_1Indices,
+				CustodyBit_0Indices: simulatedCasperSlashing.Votes1CustodyBit0Indices,
+				CustodyBit_1Indices: simulatedCasperSlashing.Votes1CustodyBit1Indices,
 			},
 			Votes_2: &pb.SlashableVoteData{
 				Data: &pb.AttestationData{
 					Slot:          simulatedCasperSlashing.Votes2Slot,
 					JustifiedSlot: simulatedCasperSlashing.Votes2JustifiedSlot,
 				},
-				CustodyBit_0Indices: simulatedCasperSlashing.Votes2CustodyBit_0Indices,
-				CustodyBit_1Indices: simulatedCasperSlashing.Votes2CustodyBit_1Indices,
+				CustodyBit_0Indices: simulatedCasperSlashing.Votes2CustodyBit0Indices,
+				CustodyBit_1Indices: simulatedCasperSlashing.Votes2CustodyBit1Indices,
 			},
 		})
 	}
