@@ -465,7 +465,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_reuseport",
-    tag = "v0.1.18",
+    tag = "v0.2.0",
     importpath = "github.com/libp2p/go-reuseport",
 )
 
@@ -555,7 +555,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_reuseport_transport",
-    tag = "v0.1.11",
+    tag = "v0.2.0",
     importpath = "github.com/libp2p/go-reuseport-transport",
 )
 
@@ -978,4 +978,10 @@ go_repository(
     name = "com_github_edsrzf_mmap_go",
     tag = "v1.0.0",
     importpath = "github.com/edsrzf/mmap-go",
+)
+
+go_repository(
+    name = "com_github_pkg_errors",
+    tag = "v0.8.1",
+    importpath = "github.com/pkg/errors",
 )
