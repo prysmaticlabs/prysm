@@ -36,7 +36,7 @@ func TestDepositTrie_UpdateDepositTrie(t *testing.T) {
 		}
 		hash := hashutil.Hash(tt.deposits[1])
 		twoToPowerOfTreeDepth := 1 << params.BeaconConfig().DepositContractTreeDepth
-		lastLeaf := d.merkleHashes[d.depositCount-1+uint64(twoToPowerOfTreeDepth)]
+		lastLeaf := d.merkleMap[d.depositCount-1+uint64(twoToPowerOfTreeDepth)]
 		if lastLeaf != hash {
 			t.Errorf("Expected last leaf to equal %#x, received %#x", lastLeaf, hash)
 		}
