@@ -979,3 +979,9 @@ go_repository(
     tag = "v1.0.0",
     importpath = "github.com/edsrzf/mmap-go",
 )
+
+go_repository(
+    name = "com_github_pkg_errors",
+    commit = "ffb6e22f01932bf7ac35e0bad9be11f01d1c8685",
+    importpath = "github.com/pkg/errors",
+)
