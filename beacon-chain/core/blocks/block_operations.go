@@ -589,16 +589,14 @@ func ProcessValidatorDeposits(
 }
 
 func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
-	depositData := deposit.DepositData
 	// Verify Merkle proof of deposit and deposit trie root.
 	var receiptRoot [32]byte
-	var merkleLeaf [32]byte
 	copy(receiptRoot[:], beaconState.LatestDepositRootHash32)
-	copy(merkleLeaf[:], depositData)
 	if ok := trie.VerifyMerkleBranch(
-		merkleLeaf,
+		hashutil.Hash(deposit.DepositData),
 		deposit.MerkleBranchHash32S,
 		params.BeaconConfig().DepositContractTreeDepth,
+		deposit.MerkleTreeIndex,
 		receiptRoot,
 	); !ok {
 		return fmt.Errorf(
