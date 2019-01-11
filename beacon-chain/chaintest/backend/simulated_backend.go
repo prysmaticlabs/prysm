@@ -6,9 +6,10 @@ package backend
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/trie"
 	"reflect"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/trie"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
@@ -194,12 +195,15 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 			beaconState,
 			prevBlockRoot,
 			blockRandaoReveal,
+			lastRandaoLayer,
 			simulatedDeposit,
 			depositsTrie,
 		)
 		if err != nil {
 			return fmt.Errorf("could not generate simulated beacon block %v", err)
 		}
+		latestRoot := depositsTrie.Root()
+		beaconState.LatestDepositRootHash32 = latestRoot[:]
 		newState, err := state.ExecuteStateTransition(beaconState, newBlock, prevBlockRoot)
 		if err != nil {
 			return fmt.Errorf("could not execute state transition: %v", err)

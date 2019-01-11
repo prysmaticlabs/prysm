@@ -29,8 +29,10 @@ type StateTestConfig struct {
 
 // StateTestDeposit --
 type StateTestDeposit struct {
-	Slot   uint64 `yaml:"slot"`
-	Amount uint64 `yaml:"amount"`
+	Slot        uint64 `yaml:"slot"`
+	Amount      uint64 `yaml:"amount"`
+	MerkleIndex uint64 `yaml:"merkle_index"`
+	Pubkey      string `yaml:"pubkey"`
 }
 
 // StateTestResults --

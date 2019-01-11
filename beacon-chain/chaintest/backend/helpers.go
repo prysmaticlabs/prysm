@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/trie"
 	"strconv"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/trie"
 
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 
@@ -24,6 +25,7 @@ func generateSimulatedBlock(
 	beaconState *pb.BeaconState,
 	prevBlockRoot [32]byte,
 	randaoReveal [32]byte,
+	depositRandaoCommit [32]byte,
 	simulatedDeposit *StateTestDeposit,
 	depositsTrie *trie.DepositTrie,
 ) (*pb.BeaconBlock, [32]byte, error) {
@@ -47,12 +49,11 @@ func generateSimulatedBlock(
 	}
 	if simulatedDeposit != nil {
 		depositInput := &pb.DepositInput{
-			Pubkey:                      []byte{},
+			Pubkey:                      []byte(simulatedDeposit.Pubkey),
 			WithdrawalCredentialsHash32: []byte{},
 			ProofOfPossession:           []byte{},
-			// TODO: Fix based on hash onions.
-			RandaoCommitmentHash32:  []byte{},
-			CustodyCommitmentHash32: []byte{},
+			RandaoCommitmentHash32:      depositRandaoCommit[:],
+			CustodyCommitmentHash32:     []byte{},
 		}
 		wBuf := new(bytes.Buffer)
 		if err := ssz.Encode(wBuf, depositInput); err != nil {
@@ -82,24 +83,12 @@ func generateSimulatedBlock(
 		// We then update the deposits Merkle trie with the deposit data and return
 		// its Merkle branch leading up to the root of the trie.
 		depositsTrie.UpdateDepositTrie(data)
-		merkleBranch := depositsTrie.GenerateMerkleBranch(data)
-
-		// We then create a Merkle branch for the test and derive its root.
-		branch := [][]byte{}
-		var powReceiptRoot [32]byte
-		copy(powReceiptRoot[:], data)
-		for i := uint64(0); i < params.BeaconConfig().DepositContractTreeDepth; i++ {
-			branch = append(branch, []byte{1})
-			if i%2 == 0 {
-				powReceiptRoot = hashutil.Hash(append(branch[i], powReceiptRoot[:]...))
-			} else {
-				powReceiptRoot = hashutil.Hash(append(powReceiptRoot[:], branch[i]...))
-			}
-		}
+		merkleBranch := depositsTrie.GenerateMerkleBranch(simulatedDeposit.MerkleIndex)
 
 		block.Body.Deposits = append(block.Body.Deposits, &pb.Deposit{
 			DepositData:         data,
 			MerkleBranchHash32S: merkleBranch,
+			MerkleTreeIndex:     simulatedDeposit.MerkleIndex,
 		})
 	}
 	encodedBlock, err := proto.Marshal(block)

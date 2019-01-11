@@ -1,5 +1,5 @@
 title: Sample Ethereum Serenity State Transition Tests
-summary: Testing state transitions occurring with no blocks being published
+summary: Testing full state transition block processing
 test_suite: prysm
 fork: tchaikovsky
 version: 1.0
@@ -18,10 +18,19 @@ test_cases:
       deposits:
         - slot: 10
           amount: 32
+          merkle_index: 0
+          pubkey: !!binary |
+            SlAAbShSkUg7PLiPHZI/rTS1uAvKiieOrifPN6Moso0=
         - slot: 20
           amount: 32
+          merkle_index: 1
+          pubkey: !!binary |
+            Oklajsjdkaklsdlkajsdjlajslkdjlkasjlkdjlajdsd
         - slot: 30
           amount: 32
+          merkle_index: 2
+          pubkey: !!binary |
+            LkmqmqoodLKAslkjdkajsdljasdkajlksjdasldjasdd
     results:
       slot: 64
       num_validators: 16387
