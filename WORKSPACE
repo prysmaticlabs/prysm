@@ -910,7 +910,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_oauth2",
-    commit = "d668ce993890a79bda886613ee587a69dd5da7a6",
+    commit = "fd3eaa146cbb5c89ce187c275fb79bd3a36a5ffc",
     importpath = "golang.org/x/oauth2",
 )
 
@@ -982,6 +982,6 @@ go_repository(
 
 go_repository(
     name = "com_github_pkg_errors",
-    commit = "ffb6e22f01932bf7ac35e0bad9be11f01d1c8685",
+    tag = "v0.8.1",
     importpath = "github.com/pkg/errors",
 )
