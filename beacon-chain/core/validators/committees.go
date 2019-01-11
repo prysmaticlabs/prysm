@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// ShardCommittee defines the validator committee of each slot and shard combinations.
 type ShardCommittee struct {
 	Committee []uint32
 	Shard uint64
