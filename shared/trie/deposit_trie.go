@@ -31,16 +31,48 @@ func (d *DepositTrie) UpdateDepositTrie(depositData []byte) {
 		index = index / 2
 		left := d.merkleHashes[index*2]
 		right := d.merkleHashes[index*2+1]
-		if right == [32]byte{} {
-			d.merkleHashes[index] = hashutil.Hash(left[:])
-		} else {
-			d.merkleHashes[index] = hashutil.Hash(append(left[:], right[:]...))
-		}
+		d.merkleHashes[index] = hashutil.Hash(append(left[:], right[:]...))
 	}
 	d.depositCount++
+}
+
+// GenerateMerkleBranch for a value up to the root from a leaf in the trie.
+func (d *DepositTrie) GenerateMerkleBranch(index uint64) [][]byte {
+	twoToPowerOfTreeDepth := 1 << params.BeaconConfig().DepositContractTreeDepth
+	idx := index + uint64(twoToPowerOfTreeDepth)
+	branch := make([][]byte, params.BeaconConfig().DepositContractTreeDepth)
+	for i := uint64(0); i < params.BeaconConfig().DepositContractTreeDepth; i++ {
+		if idx%2 == 1 {
+			value := d.merkleHashes[idx-1]
+			branch[i] = value[:]
+		} else {
+			value := d.merkleHashes[idx+1]
+			branch[i] = value[:]
+		}
+		idx = idx / 2
+	}
+	return branch
 }
 
 // Root returns the Merkle root of the calculated deposit trie.
 func (d *DepositTrie) Root() [32]byte {
 	return d.merkleHashes[1]
+}
+
+// VerifyMerkleBranch verifies a merkle path in a trie
+// by checking the aggregated hash of contiguous leaves along a path
+// eventually equals the root hash of the merkle trie.
+func VerifyMerkleBranch(leaf [32]byte, branch [][]byte, depth uint64, index uint64, root [32]byte) bool {
+	twoToPowerOfTreeDepth := 1 << params.BeaconConfig().DepositContractTreeDepth
+	idx := index + uint64(twoToPowerOfTreeDepth)
+	value := leaf
+	for i := uint64(0); i < depth; i++ {
+		if idx%2 == 1 {
+			value = hashutil.Hash(append(branch[i], value[:]...))
+		} else {
+			value = hashutil.Hash(append(value[:], branch[i]...))
+		}
+		idx = idx / 2
+	}
+	return value == root
 }
