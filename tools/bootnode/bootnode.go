@@ -21,6 +21,7 @@ import (
 	crypto "github.com/libp2p/go-libp2p-crypto"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	ma "github.com/multiformats/go-multiaddr"
+	"github.com/prysmaticlabs/prysm/shared/version"
 )
 
 var (
@@ -33,6 +34,9 @@ var (
 
 func main() {
 	flag.Parse()
+
+	fmt.Printf("Starting bootnode. Version: %s\n", version.GetVersion())
+
 	if *debug {
 		logging.SetDebugLogging()
 	}

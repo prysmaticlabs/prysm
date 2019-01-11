@@ -30,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
+	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -113,7 +114,9 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 func (b *BeaconNode) Start() {
 	b.lock.Lock()
 
-	log.Info("Starting beacon node")
+	log.WithFields(logrus.Fields{
+		"version": version.GetVersion(),
+	}).Info("Starting beacon node")
 
 	b.services.StartAll()
 
