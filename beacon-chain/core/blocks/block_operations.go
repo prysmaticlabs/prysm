@@ -1,3 +1,6 @@
+// Package blocks contains block processing libraries. These libraries
+// process and verify block specific messages such as PoW receipt root,
+// RANDAO, validator deposits, exits and slashing proofs.
 package blocks
 
 import (
@@ -9,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slices"
@@ -142,12 +146,12 @@ func ProcessProposerSlashings(
 		)
 	}
 	var err error
-	for idx, slashing := range body.GetProposerSlashings() {
+	for idx, slashing := range body.ProposerSlashings {
 		if err = verifyProposerSlashing(slashing); err != nil {
 			return nil, fmt.Errorf("could not verify proposer slashing #%d: %v", idx, err)
 		}
-		proposer := registry[slashing.GetProposerIndex()]
-		if proposer.GetPenalizedSlot() > beaconState.Slot {
+		proposer := registry[slashing.ProposerIndex]
+		if proposer.PenalizedSlot > beaconState.Slot {
 			beaconState, err = v.PenalizeValidator(beaconState, slashing.ProposerIndex)
 			if err != nil {
 				return nil, fmt.Errorf("could not penalize proposer index %d: %v",
@@ -234,7 +238,7 @@ func ProcessCasperSlashings(
 		}
 		for _, validatorIndex := range validatorIndices {
 			penalizedValidator := registry[validatorIndex]
-			if penalizedValidator.GetPenalizedSlot() > beaconState.Slot {
+			if penalizedValidator.PenalizedSlot > beaconState.Slot {
 				beaconState, err = v.PenalizeValidator(beaconState, validatorIndex)
 				if err != nil {
 					return nil, fmt.Errorf("could not penalize validator index %d: %v",
@@ -586,16 +590,13 @@ func ProcessValidatorDeposits(
 }
 
 func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
-	depositData := deposit.DepositData
 	// Verify Merkle proof of deposit and deposit trie root.
-	var receiptRoot [32]byte
-	var merkleLeaf [32]byte
-	copy(receiptRoot[:], beaconState.LatestDepositRootHash32)
-	copy(merkleLeaf[:], depositData)
+	receiptRoot := bytesutil.ToBytes32(beaconState.LatestDepositRootHash32)
 	if ok := trie.VerifyMerkleBranch(
-		merkleLeaf,
+		hashutil.Hash(deposit.DepositData),
 		deposit.MerkleBranchHash32S,
 		params.BeaconConfig().DepositContractTreeDepth,
+		deposit.MerkleTreeIndex,
 		receiptRoot,
 	); !ok {
 		return fmt.Errorf(
@@ -648,18 +649,18 @@ func ProcessValidatorExits(
 		if err := verifyExit(beaconState, exit); err != nil {
 			return nil, fmt.Errorf("could not verify exit #%d: %v", idx, err)
 		}
-		beaconState = v.InitiateValidatorExit(beaconState, exit.GetValidatorIndex())
+		beaconState = v.InitiateValidatorExit(beaconState, exit.ValidatorIndex)
 	}
 	beaconState.ValidatorRegistry = validatorRegistry
 	return beaconState, nil
 }
 
 func verifyExit(beaconState *pb.BeaconState, exit *pb.Exit) error {
-	validator := beaconState.GetValidatorRegistry()[exit.GetValidatorIndex()]
-	if validator.GetExitSlot() <= beaconState.Slot+params.BeaconConfig().EntryExitDelay {
+	validator := beaconState.ValidatorRegistry[exit.ValidatorIndex]
+	if validator.ExitSlot <= beaconState.Slot+params.BeaconConfig().EntryExitDelay {
 		return fmt.Errorf(
 			"expected exit.Slot > state.Slot + EntryExitDelay, received %d < %d",
-			validator.GetExitSlot(), beaconState.Slot+params.BeaconConfig().EntryExitDelay,
+			validator.ExitSlot, beaconState.Slot+params.BeaconConfig().EntryExitDelay,
 		)
 	}
 	if beaconState.Slot < exit.Slot {
