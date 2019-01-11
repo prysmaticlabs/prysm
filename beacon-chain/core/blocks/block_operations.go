@@ -239,6 +239,7 @@ func ProcessCasperSlashings(
 		for _, validatorIndex := range validatorIndices {
 			penalizedValidator := registry[validatorIndex]
 			if penalizedValidator.PenalizedSlot > beaconState.Slot {
+				fmt.Println(validatorIndex)
 				beaconState, err = v.PenalizeValidator(beaconState, validatorIndex)
 				if err != nil {
 					return nil, fmt.Errorf("could not penalize validator index %d: %v",
@@ -279,8 +280,7 @@ func verifyCasperSlashing(slashing *pb.CasperSlashing) error {
 	// (vote2.justified_slot + 1 == vote2.slot) &&
 	// (vote2.slot < vote1.slot)
 	// OR
-	// vote1.slot == vote.slot
-
+	// vote1.slot == vote2.slot
 	justificationValidity := (votes1Attestation.JustifiedSlot < votes2Attestation.JustifiedSlot) &&
 		(votes2Attestation.JustifiedSlot+1 == votes2Attestation.Slot) &&
 		(votes2Attestation.Slot < votes1Attestation.Slot)
