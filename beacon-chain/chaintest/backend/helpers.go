@@ -28,6 +28,7 @@ func generateSimulatedBlock(
 	depositRandaoCommit [32]byte,
 	simulatedDeposit *StateTestDeposit,
 	depositsTrie *trie.DepositTrie,
+	simulatedProposerSlashing *StateTestProposerSlashing,
 ) (*pb.BeaconBlock, [32]byte, error) {
 	encodedState, err := proto.Marshal(beaconState)
 	if err != nil {
@@ -89,6 +90,21 @@ func generateSimulatedBlock(
 			DepositData:         data,
 			MerkleBranchHash32S: merkleBranch,
 			MerkleTreeIndex:     simulatedDeposit.MerkleIndex,
+		})
+	}
+	if simulatedProposerSlashing != nil {
+		block.Body.ProposerSlashings = append(block.Body.ProposerSlashings, &pb.ProposerSlashing{
+			ProposerIndex: simulatedProposerSlashing.ProposerIndex,
+			ProposalData_1: &pb.ProposalSignedData{
+				Slot:            simulatedProposerSlashing.Proposal1Slot,
+				Shard:           simulatedProposerSlashing.Proposal1Shard,
+				BlockRootHash32: []byte(simulatedProposerSlashing.Proposal1Root),
+			},
+			ProposalData_2: &pb.ProposalSignedData{
+				Slot:            simulatedProposerSlashing.Proposal2Slot,
+				Shard:           simulatedProposerSlashing.Proposal2Shard,
+				BlockRootHash32: []byte(simulatedProposerSlashing.Proposal2Root),
+			},
 		})
 	}
 	encodedBlock, err := proto.Marshal(block)

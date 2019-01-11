@@ -60,15 +60,19 @@ test_cases:
       num_validators: 1000
 ```
 
+
+#### Test Configuration Options
+
 The following configuration options are available for state transition tests:
 
-**Test Config**
+**Config**
 
 - **skip_slots**: `[int]` determines which slot numbers to simulate a proposer not submitting a block in the state transition TODO
 - **epoch_length**: `int` the number of slots in an epoch
 - **deposits_for_chain_start**: `int` the number of eth deposits needed for the beacon chain to initialize (this simulates an initial validator registry based on this number in the test)
 - **num_slots**: `int` the number of times we run a state transition in the test
 - **deposits**: `[Deposit Config]` trigger a new validator deposit into the beacon state based on configuration options
+- **proposer_slashings**: `[Proposer Slashing Config]` trigger a proposer slashing at a certain slot for a certain proposer index
 
 **Deposit Config**
 - **slot**: `int` a slot in which to trigger a deposit during a state transition test
@@ -76,14 +80,22 @@ The following configuration options are available for state transition tests:
 - **merkle_index**: `int` the index of the deposit in the validator deposit contract's Merkle trie
 - **pubkey**: `!!binary` the public key of the validator in the triggered deposit object
 
+**Proposer Slashing Config**
+- **slot**: `int` a slot in which to trigger a proposer slashing during a state transition test
+- **proposer_index**: `int` the proposer to penalize
+- **proposal_1_shard**: `int` the first proposal data's shard id
+- **proposal_1_slot**: `int` the first proposal data's slot
+- **proposal_1_root**: `!!binary` the second proposal data's block root
+- **proposal_2_shard**: `int`  the second proposal data's shard id
+- **proposal_2_slot**: `int` the second proposal data's slot
+- **proposal_2_root**: `!!binary` the second proposal data's block root
 
-**Test Results**
+#### Test Results
 
 The following are **mandatory** fields as they correspond to checks done at the end of the test run.
 - **slot**: `int` check the slot of the state resulting from applying N state transitions in the test
 - **num_validators** `[int]` check the number of validators in the validator registry after applying N state transitions
-
-
+- **penalized_validators** `[int]` the list of validator indices we verify were penalized during the test
 
 ## Stateless Tests
 

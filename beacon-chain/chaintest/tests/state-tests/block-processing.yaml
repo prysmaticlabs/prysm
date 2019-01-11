@@ -12,9 +12,9 @@ test_cases:
       slot: 32
       num_validators: 1000
   - config:
-      epoch_length: 64
+      epoch_length: 63
       deposits_for_chain_start: 16384
-      num_slots: 64 # Testing advancing state to exactly slot == EpochLength
+      num_slots: 63
       deposits:
         - slot: 1
           amount: 32
@@ -31,9 +31,21 @@ test_cases:
           merkle_index: 2
           pubkey: !!binary |
             LkmqmqoodLKAslkjdkajsdljasdkajlksjdasldjasdd
+      proposer_slashings:
+        - slot: 16 # At slot 16, we trigger a proposal slashing occurring
+          proposer_index: 16385 # We penalize the proposer that was just added from slot 15
+          proposal_1_shard: 0
+          proposal_1_slot: 15
+          proposal_1_root: !!binary |
+            LkmqmqoodLKAslkjdkajsdljasdkajlksjdasldjasdd
+          proposal_2_shard: 0
+          proposal_2_slot: 15
+          proposal_2_root: !!binary |
+            LkmqmqoodLKAslkjdkajsdljasdkajlksjdasldjasdd
     results:
-      slot: 64
-      num_validators: 16387
+      slot: 63
+      num_validators: 16386 # We ensure 2 new validators were added to the registry and 1 ejected
+      penalized_validators: [16385] # We test that the validator at index 16385 was indeed penalized
   - config:
       skip_slots: [10, 20]
       epoch_length: 64

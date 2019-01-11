@@ -186,6 +186,13 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 				break
 			}
 		}
+		var simulatedProposerSlashing *StateTestProposerSlashing
+		for _, pSlashing := range testCase.Config.ProposerSlashings {
+			if pSlashing.Slot == i {
+				simulatedProposerSlashing = pSlashing
+				break
+			}
+		}
 
 		layersPeeled := layersPeeledForProposer[proposerIndex]
 		blockRandaoReveal := determineSimulatedBlockRandaoReveal(layersPeeled, hashOnions)
@@ -198,6 +205,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 			lastRandaoLayer,
 			simulatedDeposit,
 			depositsTrie,
+			simulatedProposerSlashing,
 		)
 		if err != nil {
 			return fmt.Errorf("could not generate simulated beacon block %v", err)
@@ -241,6 +249,14 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 			testCase.Results.NumValidators,
 			len(beaconState.ValidatorRegistry),
 		)
+	}
+	for _, penalized := range testCase.Results.PenalizedValidators {
+		if beaconState.ValidatorRegistry[penalized].PenalizedSlot == params.BeaconConfig().FarFutureSlot {
+			return fmt.Errorf(
+				"expected validator at index %d to have been penalized",
+				penalized,
+			)
+		}
 	}
 	return nil
 }

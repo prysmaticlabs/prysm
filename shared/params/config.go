@@ -39,7 +39,6 @@ type BeaconChainConfig struct {
 	// Initial value constants.
 	GenesisForkVersion      uint64   // GenesisForkVersion is used to track fork version between state transitions.
 	GenesisSlot             uint64   // GenesisSlot is used to initialize the genesis state fields..
-	FarFutureSlot           uint64   // FarFutureSlot is used to track validator exit. Currently default to 2^64-1.
 	ZeroHash                [32]byte // ZeroHash is used to represent a zeroed out 32 byte array.
 	EmptySignature          [][]byte // EmptySignature is used to represent a zeroed out BLS Signature.
 	BLSWithdrawalPrefixByte byte     // BLSWithdrawalPrefixByte is used for BLS withdrawal and it's the first byte.
@@ -52,7 +51,7 @@ type BeaconChainConfig struct {
 	EntryExitDelay               uint64 // EntryExitDelay is the duration a validator has to wait for entry and exit.
 	DepositRootVotingPeriod      uint64 // DepositRootVotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
 	MinValidatorWithdrawalTime   uint64 // MinValidatorWithdrawalTime is the shortest amount of time a validator can get the deposit out.
-	FarFutureSlot uint64 // FarFutureSlot represents a slot extremely far away in the future used as the default penalization slot for validators.
+	FarFutureSlot                uint64 // FarFutureSlot represents a slot extremely far away in the future used as the default penalization slot for validators.
 
 	// Reward and penalty quotients constants.
 	BaseRewardQuotient           uint64 // BaseRewardQuotient is used to calculate validator per-slot interest rate.
