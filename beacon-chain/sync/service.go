@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"errors"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
@@ -92,14 +93,14 @@ func (ss *Service) run() {
 	ss.Querier.Start()
 	synced, err := ss.Querier.IsSynced()
 	if err != nil {
-		ss.failStatus = err
 		slog.Fatalf("Unable to retrieve result from sync querier %v", err)
-		ss.failStatus = err
 	}
 
 	if synced {
 		ss.RegularSync.Start()
 		return
+	} else {
+		ss.failStatus = errors.New("Service is unhealthy")
 	}
 
 	ss.InitialSync.Start()
