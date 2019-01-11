@@ -1,3 +1,6 @@
+// Package blocks contains block processing libraries. These libraries
+// process and verify block specific messages such as PoW receipt root,
+// RANDAO, validator deposits, exits and slashing proofs.
 package blocks
 
 import (
@@ -142,12 +145,12 @@ func ProcessProposerSlashings(
 		)
 	}
 	var err error
-	for idx, slashing := range body.GetProposerSlashings() {
+	for idx, slashing := range body.ProposerSlashings {
 		if err = verifyProposerSlashing(slashing); err != nil {
 			return nil, fmt.Errorf("could not verify proposer slashing #%d: %v", idx, err)
 		}
-		proposer := registry[slashing.GetProposerIndex()]
-		if proposer.GetPenalizedSlot() > beaconState.Slot {
+		proposer := registry[slashing.ProposerIndex]
+		if proposer.PenalizedSlot > beaconState.Slot {
 			beaconState, err = v.PenalizeValidator(beaconState, slashing.ProposerIndex)
 			if err != nil {
 				return nil, fmt.Errorf("could not penalize proposer index %d: %v",
@@ -234,7 +237,7 @@ func ProcessCasperSlashings(
 		}
 		for _, validatorIndex := range validatorIndices {
 			penalizedValidator := registry[validatorIndex]
-			if penalizedValidator.GetPenalizedSlot() > beaconState.Slot {
+			if penalizedValidator.PenalizedSlot > beaconState.Slot {
 				beaconState, err = v.PenalizeValidator(beaconState, validatorIndex)
 				if err != nil {
 					return nil, fmt.Errorf("could not penalize validator index %d: %v",
@@ -648,18 +651,18 @@ func ProcessValidatorExits(
 		if err := verifyExit(beaconState, exit); err != nil {
 			return nil, fmt.Errorf("could not verify exit #%d: %v", idx, err)
 		}
-		beaconState = v.InitiateValidatorExit(beaconState, exit.GetValidatorIndex())
+		beaconState = v.InitiateValidatorExit(beaconState, exit.ValidatorIndex)
 	}
 	beaconState.ValidatorRegistry = validatorRegistry
 	return beaconState, nil
 }
 
 func verifyExit(beaconState *pb.BeaconState, exit *pb.Exit) error {
-	validator := beaconState.GetValidatorRegistry()[exit.GetValidatorIndex()]
-	if validator.GetExitSlot() <= beaconState.Slot+params.BeaconConfig().EntryExitDelay {
+	validator := beaconState.ValidatorRegistry[exit.ValidatorIndex]
+	if validator.ExitSlot <= beaconState.Slot+params.BeaconConfig().EntryExitDelay {
 		return fmt.Errorf(
 			"expected exit.Slot > state.Slot + EntryExitDelay, received %d < %d",
-			validator.GetExitSlot(), beaconState.Slot+params.BeaconConfig().EntryExitDelay,
+			validator.ExitSlot, beaconState.Slot+params.BeaconConfig().EntryExitDelay,
 		)
 	}
 	if beaconState.Slot < exit.Slot {
