@@ -52,6 +52,7 @@ type BeaconChainConfig struct {
 	EntryExitDelay               uint64 // EntryExitDelay is the duration a validator has to wait for entry and exit.
 	DepositRootVotingPeriod      uint64 // DepositRootVotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
 	MinValidatorWithdrawalTime   uint64 // MinValidatorWithdrawalTime is the shortest amount of time a validator can get the deposit out.
+	FarFutureSlot uint64 // FarFutureSlot represents a slot extremely far away in the future used as the default penalization slot for validators.
 
 	// Reward and penalty quotients constants.
 	BaseRewardQuotient           uint64 // BaseRewardQuotient is used to calculate validator per-slot interest rate.
