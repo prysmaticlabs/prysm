@@ -1,6 +1,7 @@
 package trie
 
 import (
+	"fmt"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -27,36 +28,32 @@ func (d *DepositTrie) UpdateDepositTrie(depositData []byte) {
 	twoToPowerOfTreeDepth := 1 << params.BeaconConfig().DepositContractTreeDepth
 	index := d.depositCount + uint64(twoToPowerOfTreeDepth)
 	d.merkleHashes[index] = hashutil.Hash(depositData)
+	fmt.Printf("%#x input data\n", d.merkleHashes[index])
 	for i := uint64(0); i < params.BeaconConfig().DepositContractTreeDepth; i++ {
 		index = index / 2
 		left := d.merkleHashes[index*2]
 		right := d.merkleHashes[index*2+1]
-		if right == [32]byte{} {
-			d.merkleHashes[index] = hashutil.Hash(left[:])
-		} else {
-			d.merkleHashes[index] = hashutil.Hash(append(left[:], right[:]...))
-		}
+		fmt.Printf("%#x left %d\n", left, index*2+1)
+		fmt.Printf("%#x right %d\n", right, index*2+1)
+		d.merkleHashes[index] = hashutil.Hash(append(left[:], right[:]...))
+		fmt.Printf("%#x hash(left + right) \n", d.merkleHashes[index])
 	}
+	fmt.Println("---------------------------------------------")
 	d.depositCount++
 }
 
 // GenerateMerkleBranch for a value up to the root from a leaf in the trie.
-func (d *DepositTrie) GenerateMerkleBranch(depositData []byte) [][]byte {
-	twoToPowerOfTreeDepth := 1 << params.BeaconConfig().DepositContractTreeDepth
-	index := d.depositCount + uint64(twoToPowerOfTreeDepth)
-	root := hashutil.Hash(depositData)
-	branch := [][]byte{root[:]}
+func (d *DepositTrie) GenerateMerkleBranch(index uint64) [][]byte {
+	idx := index
+	branch := make([][]byte, params.BeaconConfig().DepositContractTreeDepth)
+	fmt.Println("-------------------------------------")
 	for i := uint64(0); i < params.BeaconConfig().DepositContractTreeDepth; i++ {
-		index = index / 2
-		left := d.merkleHashes[index*2]
-		right := d.merkleHashes[index*2+1]
-		if i%2 == 0 {
-			root = hashutil.Hash(append(left[:], root[:]...))
-		} else {
-			root = hashutil.Hash(append(root[:], right[:]...))
-		}
-		branch = append(branch, root[:])
+		fmt.Printf("index: %d\n", idx|1)
+		root := d.merkleHashes[idx|1]
+		branch[i] = root[:]
+		idx = idx / 2
 	}
+	fmt.Println("-------------------------------------")
 	return branch
 }
 
@@ -72,10 +69,15 @@ func VerifyMerkleBranch(leaf [32]byte, branch [][]byte, depth uint64, root [32]b
 	value := leaf
 	for i := uint64(0); i < depth; i++ {
 		if i%2 == 0 {
+			fmt.Printf("%#x left\n", branch[i])
+			fmt.Printf("%#x right\n", value)
 			value = hashutil.Hash(append(branch[i], value[:]...))
 		} else {
+			fmt.Printf("%#x left\n", value)
+			fmt.Printf("%#x right\n", branch[i])
 			value = hashutil.Hash(append(value[:], branch[i]...))
 		}
+		fmt.Printf("%#x hash(left + right)\n", value)
 	}
 	return value == root
 }

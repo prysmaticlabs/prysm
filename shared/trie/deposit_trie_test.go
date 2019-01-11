@@ -61,12 +61,16 @@ func TestDepositTrie_GenerateMerkleBranch(t *testing.T) {
 	d.UpdateDepositTrie(deposit1)
 	deposit2 := []byte{5, 6, 7}
 	d.UpdateDepositTrie(deposit2)
-	deposit3 := []byte{8, 9, 10}
-	d.UpdateDepositTrie(deposit3)
-	branch := d.GenerateMerkleBranch(deposit3)
-	fmt.Println(branch)
+	twoToPowerOfTreeDepth := 1 << params.BeaconConfig().DepositContractTreeDepth
+	index := d.depositCount + uint64(twoToPowerOfTreeDepth)
+	branch := d.GenerateMerkleBranch(index)
+	for _, item := range branch {
+		fmt.Printf("branch %#x\n", item)
+	}
+	fmt.Printf("root %#x\n", d.Root())
+	fmt.Printf("input: #%x\n", hashutil.Hash(deposit2))
 	if ok := VerifyMerkleBranch(
-		hashutil.Hash(deposit3),
+		hashutil.Hash(deposit2),
 		branch,
 		params.BeaconConfig().DepositContractTreeDepth,
 		d.Root(),
