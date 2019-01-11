@@ -67,13 +67,12 @@ type BeaconChainConfig struct {
 	MaxCasperSlashings   uint64 // MaxCasperSlashings defines the maximum number of casper FFG slashings possible in a block.
 
 	// Prysm constants.
-	DepositsForChainStart      uint64    // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
-	POWContractMerkleTreeDepth uint64    // POWContractMerkleTreeDepth defines the depth of PoW contract merkle tree.
-	SimulatedBlockRandao       [32]byte  // SimulatedBlockRandao is a RANDAO seed stubbed in simulated block for advancing local beacon chain.
-	RandBytes                  uint64    // RandBytes is the number of bytes used as entropy to shuffle validators.
-	SyncPollingInterval        int64     // SyncPollingInterval queries network nodes for sync status.
-	GenesisTime                time.Time // GenesisTime used by the protocol.
-	MaxNumLog2Validators       uint64    // MaxNumLog2Validators is the Max number of validators in Log2 exists given total ETH supply.
+	DepositsForChainStart uint64    // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
+	SimulatedBlockRandao  [32]byte  // SimulatedBlockRandao is a RANDAO seed stubbed in simulated block for advancing local beacon chain.
+	RandBytes             uint64    // RandBytes is the number of bytes used as entropy to shuffle validators.
+	SyncPollingInterval   int64     // SyncPollingInterval queries network nodes for sync status.
+	GenesisTime           time.Time // GenesisTime used by the protocol.
+	MaxNumLog2Validators  uint64    // MaxNumLog2Validators is the Max number of validators in Log2 exists given total ETH supply.
 }
 
 // ShardChainConfig contains configs for node to participate in shard chains.

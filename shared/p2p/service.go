@@ -240,14 +240,14 @@ func (s *Server) Send(msg proto.Message, peer Peer) {
 	s.Broadcast(msg)
 }
 
-// Broadcast publishes a message to all localized peers using gossipsub. 
-// msg must be a proto.Message that can be encoded into a byte array.  
-// It publishes the first 100 chars of msg over the msg's mapped topic. 
+// Broadcast publishes a message to all localized peers using gossipsub.
+// msg must be a proto.Message that can be encoded into a byte array.
+// It publishes the first 100 chars of msg over the msg's mapped topic.
 // To map a messageType to a topic, use RegisterTopic.
 //
-// It logs an error if msg is not a protobuf message, 
-// if msg cannot be encoded into a byte array, 
-// or if the server is unable to publish the message over gossipsub. 
+// It logs an error if msg is not a protobuf message,
+// if msg cannot be encoded into a byte array,
+// or if the server is unable to publish the message over gossipsub.
 //
 //   msg := make(chan p2p.Message, 100) // Choose a reasonable buffer size!
 //   ps.RegisterTopic("message_topic_here", msg)
