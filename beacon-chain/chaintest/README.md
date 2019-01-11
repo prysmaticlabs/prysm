@@ -8,79 +8,49 @@ The test suite opts for YAML due to wide language support and support for inline
 
 The testing format follows the official ETH2.0 Specification created [here](https://github.com/ethereum/eth2.0-specs/blob/master/specs/test-format.md)
 
-### Core, Chain Tests
+### Stateful Tests
 
 Chain tests check for conformity of a certain client to the beacon chain specification for items such as the fork choice rule and Casper FFG validator rewards & penalties. Stateful tests need to specify a certain configuration of a beacon chain, with items such as the number validators, in the YAML file. Sample tests will all required fields are shown below.
 
-**Fork Choice and Chain Updates**
+**State Transition**
+
+The most important use case for this test format is to verify the ins and outs of the Ethereum Phase 0 Beacon Chain state advancement. The specification details very strict guidelines for blocks to successfully trigger a state transition, including items such as Casper Proof of Stake slashing conditions of validators, pseudorandomness in the form of RANDAO, and attestation on shard blocks being processed all inside each incoming beacon block. The YAML configuration for this test type allows for configuring a state transition run over N slots, triggering slashing conditions, processing deposits of new validators, and more.
+
+An example state transition test for testing slot and block processing will look as follows:
 
 ```yaml
-
-title: Sample Ethereum 2.0 Beacon Chain Test
-summary: Basic, functioning fork choice rule for Ethereum 2.0
+title: Sample Ethereum Serenity State Transition Tests
+summary: Testing state transitions occurring over N slots with varying deposit sizes and proposal skips
 test_suite: prysm
+fork: tchaikovsky
+version: 1.0
 test_cases:
   - config:
-      validator_count: 100
-      cycle_length: 8
-      shard_count: 32
-      min_committee_size: 8
-    slots:
-      # "slot_number" has a minimum of 1
-      - slot_number: 1
-        new_block:
-          id: A
-          # "*" is used for the genesis block
-          parent: "*"
-        attestations:
-          - block: A
-            # the following is a shorthand string for [0, 1, 2, 3, 4, 5]
-            validators: "0-5"
-      - slot_number: 2
-        new_block:
-          id: B
-          parent: A
-        attestations:
-          - block: B
-            validators: "0-5"
-      - slot_number: 3
-        new_block:
-          id: C
-          parent: A
-        attestations:
-          # attestation "committee_slot" defaults to the slot during which the attestation occurs
-          - block: C
-            validators: "2-7"
-          # default "committee_slot" can be directly overridden
-          - block: C
-            committee_slot: 2
-            validators: "6, 7"
-      - slot_number: 4
-        new_block:
-          id: D
-          parent: C
-        attestations:
-          - block: D
-            validators: "1-4"
-      # slots can be skipped entirely (5 in this case)
-      - slot_number: 6
-        new_block:
-          id: E
-          parent: D
-        attestations:
-          - block: E
-            validators: "0-4"
-          - block: B
-            validators: "5, 6, 7"
+      epoch_length: 64
+      deposits_for_chain_start: 1000
+      num_slots: 32 # Testing advancing state to slot < EpochLength
     results:
-      head: E
-      last_justified_block: "*"
-      last_finalized_block: "*"
+      slot: 32
+  - config:
+      epoch_length: 64
+      deposits_for_chain_start: 16384
+      num_slots: 64 # Testing advancing state to exactly slot == EpochLength
+    results:
+      slot: 64
+  - config:
+      skip_slots: [10, 20, 30]
+      epoch_length: 64
+      deposits_for_chain_start: 1000
+      num_slots: 128 # Testing advancing state's slot == 2*EpochLength
+    results:
+      slot: 128
 ```
 
-**Casper FFG Rewards/Penalties**
-
-TODO
+The following configuration options are available for state transition tests:
+- **skip_slots**: `[int]` determines which slot numbers to simulate a proposer not submitting a block in the state transition TODO
+- **epoch_length**: `int` the number of slots in an epoch
+- **deposits_for_chain_start**: `int` the number of eth deposits needed for the beacon chain to initialize (this simulates an initial validator registry based on this number in the test)
+- **num_slots**: `int` the number of times we run a state transition in the test
 
 ### Stateless Tests
 

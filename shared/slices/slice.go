@@ -135,6 +135,7 @@ func IsInUint64(a uint64, b []uint64) bool {
 	}
 	return false
 }
+
 // IntersectionInt32 of two int32 slices with time
 // complexity of approximately O(n) leveraging a map to
 // check for element existence off by a constant factor

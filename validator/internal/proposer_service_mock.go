@@ -7,8 +7,10 @@ import (
 	context "context"
 	reflect "reflect"
 
+	types "github.com/gogo/protobuf/types"
 	gomock "github.com/golang/mock/gomock"
-	v1 "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	v10 "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	grpc "google.golang.org/grpc"
 )
 
@@ -35,14 +37,50 @@ func (m *MockProposerServiceClient) EXPECT() *MockProposerServiceClientMockRecor
 	return m.recorder
 }
 
+// ComputeStateRoot mocks base method
+func (m *MockProposerServiceClient) ComputeStateRoot(arg0 context.Context, arg1 *v1.BeaconBlock, arg2 ...grpc.CallOption) (*v10.StateRootResponse, error) {
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ComputeStateRoot", varargs...)
+	ret0, _ := ret[0].(*v10.StateRootResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ComputeStateRoot indicates an expected call of ComputeStateRoot
+func (mr *MockProposerServiceClientMockRecorder) ComputeStateRoot(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ComputeStateRoot", reflect.TypeOf((*MockProposerServiceClient)(nil).ComputeStateRoot), varargs...)
+}
+
+// LatestPOWChainBlockHash mocks base method
+func (m *MockProposerServiceClient) LatestPOWChainBlockHash(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (*v10.POWChainResponse, error) {
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "LatestPOWChainBlockHash", varargs...)
+	ret0, _ := ret[0].(*v10.POWChainResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// LatestPOWChainBlockHash indicates an expected call of LatestPOWChainBlockHash
+func (mr *MockProposerServiceClientMockRecorder) LatestPOWChainBlockHash(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LatestPOWChainBlockHash", reflect.TypeOf((*MockProposerServiceClient)(nil).LatestPOWChainBlockHash), varargs...)
+}
+
 // ProposeBlock mocks base method
-func (m *MockProposerServiceClient) ProposeBlock(arg0 context.Context, arg1 *v1.ProposeRequest, arg2 ...grpc.CallOption) (*v1.ProposeResponse, error) {
+func (m *MockProposerServiceClient) ProposeBlock(arg0 context.Context, arg1 *v1.BeaconBlock, arg2 ...grpc.CallOption) (*v10.ProposeResponse, error) {
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "ProposeBlock", varargs...)
-	ret0, _ := ret[0].(*v1.ProposeResponse)
+	ret0, _ := ret[0].(*v10.ProposeResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -51,4 +89,22 @@ func (m *MockProposerServiceClient) ProposeBlock(arg0 context.Context, arg1 *v1.
 func (mr *MockProposerServiceClientMockRecorder) ProposeBlock(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposeBlock", reflect.TypeOf((*MockProposerServiceClient)(nil).ProposeBlock), varargs...)
+}
+
+// ProposerIndex mocks base method
+func (m *MockProposerServiceClient) ProposerIndex(arg0 context.Context, arg1 *v10.ProposerIndexRequest, arg2 ...grpc.CallOption) (*v10.IndexResponse, error) {
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ProposerIndex", varargs...)
+	ret0, _ := ret[0].(*v10.IndexResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ProposerIndex indicates an expected call of ProposerIndex
+func (mr *MockProposerServiceClientMockRecorder) ProposerIndex(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposerIndex", reflect.TypeOf((*MockProposerServiceClient)(nil).ProposerIndex), varargs...)
 }

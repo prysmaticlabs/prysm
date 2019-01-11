@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	contracts "github.com/prysmaticlabs/prysm/contracts/validator-registration-contract"
+	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
@@ -40,6 +41,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "deployVRC"
 	app.Usage = "this is a util to deploy validator registration contract"
+	app.Version = version.GetVersion()
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:        "keystoreUTCPath",
