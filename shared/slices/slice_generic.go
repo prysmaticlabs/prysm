@@ -62,13 +62,14 @@ func GenericUnion(a, b interface{}) (reflect.Value, error) {
 	var m interface{}
 	if len(set1) == 0 && len(set2) == 0 {
 		return set,nil
-	}else{
-		if len(set1) > 0 {
-			m = set1[0]
-		}else {
-			m = set2[0]
-		}
 	}
+
+	if len(set1) > 0 {
+		m = set1[0]
+	}else {
+		m = set2[0]
+	}
+
 
 	if err1 == nil && err2 == nil {
 		m := reflect.MapOf(reflect.TypeOf(m), reflect.TypeOf(true))
@@ -105,13 +106,14 @@ func GenericNot(a, b interface{}) (reflect.Value, error) {
 	var m interface{}
 	if len(set1) == 0 && len(set2) == 0 {
 		return set,nil
-	}else{
-		if len(set1) > 0 {
-			m = set1[0]
-		}else {
-			m = set2[0]
-		}
 	}
+
+	if len(set1) > 0 {
+		m = set1[0]
+	}else {
+		m = set2[0]
+	}
+
 	if err1 == nil && err2 == nil {
 		m := reflect.MapOf(reflect.TypeOf(m), reflect.TypeOf(true))
 		m1 := reflect.MakeMapWithSize(m, 0)
