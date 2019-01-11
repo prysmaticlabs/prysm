@@ -112,7 +112,7 @@ func generateSimulatedBlock(
 		block.Body.CasperSlashings = append(block.Body.CasperSlashings, &pb.CasperSlashing{
 			Votes_1: &pb.SlashableVoteData{
 				Data: &pb.AttestationData{
-					Slot: simulatedCasperSlashing.Votes1Slot,
+					Slot:          simulatedCasperSlashing.Votes1Slot,
 					JustifiedSlot: simulatedCasperSlashing.Votes1JustifiedSlot,
 				},
 				CustodyBit_0Indices: simulatedCasperSlashing.Votes1CustodyBit_0Indices,
@@ -120,7 +120,7 @@ func generateSimulatedBlock(
 			},
 			Votes_2: &pb.SlashableVoteData{
 				Data: &pb.AttestationData{
-					Slot: simulatedCasperSlashing.Votes2Slot,
+					Slot:          simulatedCasperSlashing.Votes2Slot,
 					JustifiedSlot: simulatedCasperSlashing.Votes2JustifiedSlot,
 				},
 				CustodyBit_0Indices: simulatedCasperSlashing.Votes2CustodyBit_0Indices,

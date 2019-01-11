@@ -568,7 +568,6 @@ func ExitValidator(state *pb.BeaconState, index uint32) (*pb.BeaconState, error)
 //    state.validator_balances[index] -= whistleblower_reward
 //    validator.penalized_slot = state.slot
 func PenalizeValidator(state *pb.BeaconState, index uint32) (*pb.BeaconState, error) {
-	validator := state.ValidatorRegistry[index]
 	state, err := ExitValidator(state, index)
 	if err != nil {
 		return nil, fmt.Errorf("could not exit penalized validator: %v", err)
@@ -589,7 +588,7 @@ func PenalizeValidator(state *pb.BeaconState, index uint32) (*pb.BeaconState, er
 	state.ValidatorBalances[whistleblowerIndex] += whistleblowerReward
 	state.ValidatorBalances[index] -= whistleblowerReward
 
-	validator.PenalizedSlot = state.Slot
+	state.ValidatorRegistry[index].PenalizedSlot = state.Slot
 	return state, nil
 }
 

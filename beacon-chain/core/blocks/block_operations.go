@@ -239,7 +239,6 @@ func ProcessCasperSlashings(
 		for _, validatorIndex := range validatorIndices {
 			penalizedValidator := registry[validatorIndex]
 			if penalizedValidator.PenalizedSlot > beaconState.Slot {
-				fmt.Println(validatorIndex)
 				beaconState, err = v.PenalizeValidator(beaconState, validatorIndex)
 				if err != nil {
 					return nil, fmt.Errorf("could not penalize validator index %d: %v",

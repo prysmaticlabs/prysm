@@ -14,7 +14,7 @@ test_cases:
   - config:
       epoch_length: 64
       deposits_for_chain_start: 16384
-      num_slots: 63
+      num_slots: 64
       deposits:
         - slot: 1
           amount: 32
@@ -43,7 +43,7 @@ test_cases:
           proposal_2_root: !!binary |
             LkmqmqoodLKAslkjdkajsdljasdkajlksjdasldjasdd
       casper_slashings:
-        - slot: 59 # At slot 64, we trigger a casper slashing
+        - slot: 59 # At slot 59, we trigger a casper slashing
           votes_1_slot: 55
           votes_2_slot: 55
           votes_1_justified_slot: 0
@@ -53,8 +53,8 @@ test_cases:
           votes_2_custody_0_indices: []
           votes_2_custody_1_indices: [16386]
     results:
-      slot: 63
-      num_validators: 16386 # We ensure 1 new validator was added to the registry and 2 ejected
+      slot: 64
+      num_validators: 16387
       penalized_validators: [16385, 16386] # We test that the validators at indices 16385, 16386 were indeed penalized
   - config:
       skip_slots: [10, 20]

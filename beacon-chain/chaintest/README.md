@@ -20,9 +20,9 @@ An example state transition test for testing slot and block processing will look
 
 ```yaml
 title: Sample Ethereum Serenity State Transition Tests
-summary: Testing state transitions occurring over N slots with varying deposit sizes and proposal skips
+summary: Testing full state transition block processing
 test_suite: prysm
-fork: tchaikovsky
+fork: sapphire
 version: 1.0
 test_cases:
   - config:
@@ -35,7 +35,53 @@ test_cases:
   - config:
       epoch_length: 64
       deposits_for_chain_start: 16384
-      num_slots: 64 # Testing advancing state to exactly slot == EpochLength
+      num_slots: 64
+      deposits:
+        - slot: 1
+          amount: 32
+          merkle_index: 0
+          pubkey: !!binary |
+            SlAAbShSkUg7PLiPHZI/rTS1uAvKiieOrifPN6Moso0=
+        - slot: 15
+          amount: 32
+          merkle_index: 1
+          pubkey: !!binary |
+            Oklajsjdkaklsdlkajsdjlajslkdjlkasjlkdjlajdsd
+        - slot: 55
+          amount: 32
+          merkle_index: 2
+          pubkey: !!binary |
+            LkmqmqoodLKAslkjdkajsdljasdkajlksjdasldjasdd
+      proposer_slashings:
+        - slot: 16 # At slot 16, we trigger a proposal slashing occurring
+          proposer_index: 16385 # We penalize the proposer that was just added from slot 15
+          proposal_1_shard: 0
+          proposal_1_slot: 15
+          proposal_1_root: !!binary |
+            LkmqmqoodLKAslkjdkajsdljasdkajlksjdasldjasdd
+          proposal_2_shard: 0
+          proposal_2_slot: 15
+          proposal_2_root: !!binary |
+            LkmqmqoodLKAslkjdkajsdljasdkajlksjdasldjasdd
+      casper_slashings:
+        - slot: 59 # At slot 59, we trigger a casper slashing
+          votes_1_slot: 55
+          votes_2_slot: 55
+          votes_1_justified_slot: 0
+          votes_2_justified_slot: 1
+          votes_1_custody_0_indices: [16386]
+          votes_1_custody_1_indices: []
+          votes_2_custody_0_indices: []
+          votes_2_custody_1_indices: [16386]
+    results:
+      slot: 64
+      num_validators: 16387
+      penalized_validators: [16385, 16386] # We test that the validators at indices 16385, 16386 were indeed penalized
+  - config:
+      skip_slots: [10, 20]
+      epoch_length: 64
+      deposits_for_chain_start: 1000
+      num_slots: 128 # Testing advancing state's slot == 2*EpochLength
       deposits:
         - slot: 10
           amount: 32
@@ -48,16 +94,8 @@ test_cases:
           pubkey: !!binary |
             Oklajsjdkaklsdlkajsdjlajslkdjlkasjlkdjlajdsd
     results:
-      slot: 64
-      num_validators: 16386
-  - config:
-      skip_slots: [10, 20, 30]
-      epoch_length: 64
-      deposits_for_chain_start: 1000
-      num_slots: 128 # Testing advancing state's slot == 2*EpochLength
-    results:
       slot: 128
-      num_validators: 1000
+      num_validators: 1000 # Validator registry should not have grown if slots 10 and 20 were skipped
 ```
 
 
@@ -73,6 +111,7 @@ The following configuration options are available for state transition tests:
 - **num_slots**: `int` the number of times we run a state transition in the test
 - **deposits**: `[Deposit Config]` trigger a new validator deposit into the beacon state based on configuration options
 - **proposer_slashings**: `[Proposer Slashing Config]` trigger a proposer slashing at a certain slot for a certain proposer index
+- **casper_slashings**: `[Casper Slashing Config]` trigger a casper slashing at a certain slot
 
 **Deposit Config**
 - **slot**: `int` a slot in which to trigger a deposit during a state transition test
@@ -89,6 +128,17 @@ The following configuration options are available for state transition tests:
 - **proposal_2_shard**: `int`  the second proposal data's shard id
 - **proposal_2_slot**: `int` the second proposal data's slot
 - **proposal_2_root**: `!!binary` the second proposal data's block root
+
+**Casper Slashing Config**
+- **slot**: `int` a slot in which to trigger a casper slashing during a state transition test
+- **votes_1_slot**: `int` the slot of the attestation data of votes1
+- **votes_2_slot**: `int` the slot of the attestation data of votes2
+- **votes_1_justified_slot**: `int` the justified slot of the attestation data of votes1
+- **votes_2_justified_slot**: `int` the justified slot of the attestation data of votes2
+- **votes_1_custody_0_indices**: `[int]` the custody indices 0 for votes1
+- **votes_1_custody_1_indices**: `[int]` the custody indices 1 for votes1
+- **votes_2_custody_0_indices**: `[int]` the custody indices 0 for votes2
+- **votes_2_custody_1_indices**: `[int]` the custody indices 1 for votes2
 
 #### Test Results
 
