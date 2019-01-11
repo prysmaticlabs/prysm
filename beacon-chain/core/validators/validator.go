@@ -68,38 +68,6 @@ func ActiveValidator(state *pb.BeaconState, validatorIndices []uint32) []*pb.Val
 	return activeValidators
 }
 
-// ShardCommitteesAtSlot returns the shard and committee list for a given
-// slot within the range of 2 * epoch length within the same 2 epoch slot
-// window as the state slot.
-//
-// Spec pseudocode definition:
-//   def get_shard_committees_at_slot(state: BeaconState, slot: int) -> List[ShardCommittee]:
-//     """
-//     Returns the ``ShardCommittee`` for the ``slot``.
-//     """
-//     earliest_slot_in_array = state.Slot - (state.Slot % EPOCH_LENGTH) - EPOCH_LENGTH
-//     assert earliest_slot_in_array <= slot < earliest_slot_in_array + EPOCH_LENGTH * 2
-//     return state.shard_committees_at_slots[slot - earliest_slot_in_array]
-func ShardCommitteesAtSlot(state *pb.BeaconState, slot uint64) (*pb.ShardCommitteeArray, error) {
-	epochLength := params.BeaconConfig().EpochLength
-	var earliestSlot uint64
-
-	// If the state slot is less than epochLength, then the earliestSlot would
-	// result in a negative number. Therefore we should default to
-	// earliestSlot = 0 in this case.
-	if state.Slot > epochLength {
-		earliestSlot = state.Slot - (state.Slot % epochLength) - epochLength
-	}
-
-	if slot < earliestSlot || slot >= earliestSlot+(epochLength*2) {
-		return nil, fmt.Errorf("slot %d out of bounds: %d <= slot < %d",
-			slot,
-			earliestSlot,
-			earliestSlot+(epochLength*2),
-		)
-	}
-	return state.ShardCommitteesAtSlots[slot-earliestSlot], nil
-}
 
 // BeaconProposerIndex returns the index of the proposer of the block at a
 // given slot.
@@ -109,14 +77,14 @@ func ShardCommitteesAtSlot(state *pb.BeaconState, slot uint64) (*pb.ShardCommitt
 //    """
 //    Returns the beacon proposer index for the ``slot``.
 //    """
-//    first_committee = get_shard_committees_at_slot(state, slot)[0].committee
+//    first_committee, _ = get_shard_committees_at_slot(state, slot)[0]
 //    return first_committee[slot % len(first_committee)]
 func BeaconProposerIndex(state *pb.BeaconState, slot uint64) (uint32, error) {
 	committeeArray, err := ShardCommitteesAtSlot(state, slot)
 	if err != nil {
 		return 0, err
 	}
-	firstCommittee := committeeArray.ArrayShardCommittee[0].Committee
+	firstCommittee := committeeArray[0].Committee
 
 	return firstCommittee[slot%uint64(len(firstCommittee))], nil
 }
@@ -130,8 +98,8 @@ func ProposerShardAndIndex(state *pb.BeaconState, slot uint64) (uint64, uint64, 
 		return 0, 0, err
 	}
 
-	proposerShardID := slotCommittees.ArrayShardCommittee[0].Shard
-	proposerIndex := slot % uint64(len(slotCommittees.ArrayShardCommittee[0].Committee))
+	proposerShardID := slotCommittees[0].Shard
+	proposerIndex := slot % uint64(len(slotCommittees[0].Committee))
 	return proposerShardID, proposerIndex, nil
 }
 
@@ -148,19 +116,17 @@ func ValidatorIndex(pubKey []byte, validators []*pb.ValidatorRecord) (uint32, er
 }
 
 // ValidatorShardID returns the shard ID of the validator currently participates in.
-func ValidatorShardID(pubKey []byte, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardCommitteeArray) (uint64, error) {
+func ValidatorShardID(pubKey []byte, validators []*pb.ValidatorRecord, shardCommittees []*ShardCommittee) (uint64, error) {
 	index, err := ValidatorIndex(pubKey, validators)
 	if err != nil {
 		return 0, err
 	}
 
-	for _, slotCommittee := range shardCommittees {
-		for _, committee := range slotCommittee.ArrayShardCommittee {
-			for _, validator := range committee.Committee {
-				if validator == index {
-					return committee.Shard, nil
+	for _, shardCommittee := range shardCommittees {
+		for _, validatorIndex := range shardCommittee.Committee {
+				if index == validatorIndex {
+					return shardCommittee.Shard, nil
 				}
-			}
 		}
 	}
 
@@ -169,14 +135,17 @@ func ValidatorShardID(pubKey []byte, validators []*pb.ValidatorRecord, shardComm
 
 // ValidatorSlotAndRole returns a validator's assingned slot number
 // and whether it should act as an attester or proposer.
-func ValidatorSlotAndRole(pubKey []byte, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardCommitteeArray) (uint64, pbrpc.ValidatorRole, error) {
+func ValidatorSlotAndRole(
+	pubKey []byte,
+	validators []*pb.ValidatorRecord,
+	shardCommittees [][]*ShardCommittee) (uint64, pbrpc.ValidatorRole, error) {
 	index, err := ValidatorIndex(pubKey, validators)
 	if err != nil {
 		return 0, pbrpc.ValidatorRole_UNKNOWN, err
 	}
 
 	for slot, slotCommittee := range shardCommittees {
-		for i, committee := range slotCommittee.ArrayShardCommittee {
+		for i, committee := range slotCommittee {
 			for v, validator := range committee.Committee {
 				if validator != index {
 					continue
@@ -326,13 +295,13 @@ func ValidatorIndices(
 //
 // Spec pseudocode definition:
 // Let attesting_validator_indices(shard_committee, shard_block_root)
-// be the union of the validator index sets given by
-// [get_attestation_participants(state, a.data, a.participation_bitfield)
-// for a in this_epoch_attestations + previous_epoch_attestations
-// if a.shard == shard_committee.shard and a.shard_block_root == shard_block_root]
+// 	be the union of the validator index sets given by
+// 	[get_attestation_participants(state, a.data, a.participation_bitfield)
+// 	for a in current_epoch_attestations + previous_epoch_attestations
+// 	if a.shard == shard and a.shard_block_root == shard_block_root].
 func AttestingValidatorIndices(
 	state *pb.BeaconState,
-	shardCommittee *pb.ShardCommittee,
+	shard uint64,
 	shardBlockRoot []byte,
 	thisEpochAttestations []*pb.PendingAttestationRecord,
 	prevEpochAttestations []*pb.PendingAttestationRecord) ([]uint32, error) {
@@ -341,7 +310,7 @@ func AttestingValidatorIndices(
 	attestations := append(thisEpochAttestations, prevEpochAttestations...)
 
 	for _, attestation := range attestations {
-		if attestation.Data.Shard == shardCommittee.Shard &&
+		if attestation.Data.Shard == shard &&
 			bytes.Equal(attestation.Data.ShardBlockRootHash32, shardBlockRoot) {
 
 			validatorIndicesCommittee, err := AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)

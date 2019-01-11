@@ -310,43 +310,39 @@ func AttestationInclusion(
 
 // Crosslinks awards or penalizes attesters
 // for attesting shard cross links.
-//
-// Spec pseudocode definition:
-//    For every shard_committee in state.shard_committees_at_slots[:EPOCH_LENGTH]:
-// 	  	For each index in shard_committee.committee, adjust balances as follows:
-// 			If index in attesting_validators(shard_committee), state.validator_balances[index]
-// 				+= base_reward(state, index) * total_attesting_balance(shard_committee)
-// 				   total_balance(shard_committee)).
-//			If index not in attesting_validators(shard_committee), state.validator_balances[index]
-// 				-= base_reward(state, index).
 func Crosslinks(
 	state *pb.BeaconState,
 	thisEpochAttestations []*pb.PendingAttestationRecord,
 	prevEpochAttestations []*pb.PendingAttestationRecord) (*pb.BeaconState, error) {
 
 	epochLength := params.BeaconConfig().EpochLength
-
-	for _, shardCommitteesAtSlot := range state.ShardCommitteesAtSlots[:epochLength] {
-		for _, shardCommitee := range shardCommitteesAtSlot.ArrayShardCommittee {
+	startSlot := state.Slot - 2*epochLength
+	for i := startSlot; i < state.Slot; i++ {
+		shardCommittees, err := validators.ShardCommitteesAtSlot(state, i)
+		if err != nil {
+			return nil, fmt.Errorf("could not get shard committees for slot %d", i)
+		}
+		for _, shardCommittee := range shardCommittees {
+			shard := shardCommittee.Shard
+			committee := shardCommittee.Committee
 			totalAttestingBalance, err :=
-				epoch.TotalAttestingBalance(state, shardCommitee, thisEpochAttestations, prevEpochAttestations)
+				epoch.TotalAttestingBalance(state, shard, thisEpochAttestations, prevEpochAttestations)
 			if err != nil {
 				return nil,
-					fmt.Errorf("could not get attesting balance for shard committee %d: %v", shardCommitee.Shard, err)
+					fmt.Errorf("could not get attesting balance for shard committee %d: %v", shard, err)
 			}
-			totalBalance := epoch.TotalBalance(state, shardCommitee.Committee)
+			totalBalance := epoch.TotalBalance(state, committee)
 			baseRewardQuotient := baseRewardQuotient(totalBalance)
-
 			attestingIndices, err := epoch.AttestingValidators(
 				state,
-				shardCommitee,
+				shard,
 				thisEpochAttestations,
 				prevEpochAttestations)
 			if err != nil {
 				return nil,
-					fmt.Errorf("could not get attesting indices for shard committee %d: %v", shardCommitee.Shard, err)
+					fmt.Errorf("could not get attesting indices for shard committee %d: %v", shard, err)
 			}
-			for _, index := range shardCommitee.Committee {
+			for _, index := range committee {
 				baseReward := baseReward(state, index, baseRewardQuotient)
 				if slices.IsIn(index, attestingIndices) {
 					state.ValidatorBalances[index] +=

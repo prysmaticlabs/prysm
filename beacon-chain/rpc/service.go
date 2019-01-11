@@ -339,7 +339,7 @@ func (s *Service) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.
 	shardID, err := v.ValidatorShardID(
 		req.PublicKey,
 		beaconState.ValidatorRegistry,
-		beaconState.ShardCommitteesAtSlots,
+		[]*v.ShardCommittee{},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator shard ID: %v", err)
@@ -362,7 +362,7 @@ func (s *Service) ValidatorSlotAndResponsibility(
 	slot, role, err := v.ValidatorSlotAndRole(
 		req.PublicKey,
 		beaconState.ValidatorRegistry,
-		beaconState.ShardCommitteesAtSlots,
+		[][]*v.ShardCommittee{},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not get assigned validator slot for attester/proposer: %v", err)
@@ -453,7 +453,7 @@ func assignmentsForPublicKeys(keys []*pb.PublicKey, beaconState *pbp2p.BeaconSta
 		assignedSlot, role, err := v.ValidatorSlotAndRole(
 			val.PublicKey,
 			beaconState.ValidatorRegistry,
-			beaconState.ShardCommitteesAtSlots,
+			[][]*v.ShardCommittee{},
 		)
 		if err != nil {
 			return nil, err
@@ -464,7 +464,7 @@ func assignmentsForPublicKeys(keys []*pb.PublicKey, beaconState *pbp2p.BeaconSta
 		shardID, err := v.ValidatorShardID(
 			val.PublicKey,
 			beaconState.ValidatorRegistry,
-			beaconState.ShardCommitteesAtSlots,
+			[]*v.ShardCommittee{},
 		)
 		if err != nil {
 			return nil, err
