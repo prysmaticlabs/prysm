@@ -17,18 +17,18 @@ import (
 
 func TestProcessPOWReceiptRoots_SameRootHash(t *testing.T) {
 	beaconState := &pb.BeaconState{
-		CandidatePowReceiptRoots: []*pb.CandidatePoWReceiptRootRecord{
+		DepositRootVotes: []*pb.DepositRootVote{
 			{
-				CandidatePowReceiptRootHash32: []byte{1},
-				VoteCount:                     5,
+				DepositRootHash32: []byte{1},
+				VoteCount:         5,
 			},
 		},
 	}
 	block := &pb.BeaconBlock{
-		CandidatePowReceiptRootHash32: []byte{1},
+		DepositRootHash32: []byte{1},
 	}
-	beaconState = ProcessPOWReceiptRoots(beaconState, block)
-	newRoots := beaconState.CandidatePowReceiptRoots
+	beaconState = ProcessDepositRoots(beaconState, block)
+	newRoots := beaconState.DepositRootVotes
 	if newRoots[0].VoteCount != 6 {
 		t.Errorf("expected votes to increase from 5 to 6, received %d", newRoots[0].VoteCount)
 	}
@@ -36,18 +36,18 @@ func TestProcessPOWReceiptRoots_SameRootHash(t *testing.T) {
 
 func TestProcessPOWReceiptRoots_NewCandidateRecord(t *testing.T) {
 	beaconState := &pb.BeaconState{
-		CandidatePowReceiptRoots: []*pb.CandidatePoWReceiptRootRecord{
+		DepositRootVotes: []*pb.DepositRootVote{
 			{
-				CandidatePowReceiptRootHash32: []byte{0},
-				VoteCount:                     5,
+				DepositRootHash32: []byte{0},
+				VoteCount:         5,
 			},
 		},
 	}
 	block := &pb.BeaconBlock{
-		CandidatePowReceiptRootHash32: []byte{1},
+		DepositRootHash32: []byte{1},
 	}
-	beaconState = ProcessPOWReceiptRoots(beaconState, block)
-	newRoots := beaconState.CandidatePowReceiptRoots
+	beaconState = ProcessDepositRoots(beaconState, block)
+	newRoots := beaconState.DepositRootVotes
 	if len(newRoots) == 1 {
 		t.Error("expected new receipt roots to have length > 1")
 	}
@@ -57,11 +57,11 @@ func TestProcessPOWReceiptRoots_NewCandidateRecord(t *testing.T) {
 			newRoots[1].VoteCount,
 		)
 	}
-	if !bytes.Equal(newRoots[1].CandidatePowReceiptRootHash32, []byte{1}) {
+	if !bytes.Equal(newRoots[1].DepositRootHash32, []byte{1}) {
 		t.Errorf(
 			"expected new receipt roots to have a new element with root = %#x, received root = %#x",
 			[]byte{1},
-			newRoots[1].CandidatePowReceiptRootHash32,
+			newRoots[1].DepositRootHash32,
 		)
 	}
 }
@@ -79,9 +79,9 @@ func TestProcessBlockRandao_UnequalBlockAndProposerRandao(t *testing.T) {
 	beaconState := &pb.BeaconState{
 		ValidatorRegistry: registry,
 		Slot:              1,
-		ShardAndCommitteesAtSlots: []*pb.ShardAndCommitteeArray{
+		ShardCommitteesAtSlots: []*pb.ShardCommitteeArray{
 			{
-				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				ArrayShardCommittee: []*pb.ShardCommittee{
 					{
 						Shard:               0,
 						Committee:           []uint32{1, 0},
@@ -90,7 +90,7 @@ func TestProcessBlockRandao_UnequalBlockAndProposerRandao(t *testing.T) {
 				},
 			},
 			{
-				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				ArrayShardCommittee: []*pb.ShardCommittee{
 					{
 						Shard:               0,
 						Committee:           []uint32{1, 0},
@@ -128,9 +128,9 @@ func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 		ValidatorRegistry:        registry,
 		Slot:                     1,
 		LatestRandaoMixesHash32S: make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		ShardAndCommitteesAtSlots: []*pb.ShardAndCommitteeArray{
+		ShardCommitteesAtSlots: []*pb.ShardCommitteeArray{
 			{
-				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				ArrayShardCommittee: []*pb.ShardCommittee{
 					{
 						Shard:               0,
 						Committee:           []uint32{1, 0},
@@ -139,7 +139,7 @@ func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 				},
 			},
 			{
-				ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+				ArrayShardCommittee: []*pb.ShardCommittee{
 					{
 						Shard:               0,
 						Committee:           []uint32{1, 0},
@@ -312,10 +312,10 @@ func TestProcessProposerSlashings_UnmatchedBlockRoots(t *testing.T) {
 func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
-	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	var ShardCommittees []*pb.ShardCommitteeArray
 	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
-		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
-			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+		ShardCommittees = append(ShardCommittees, &pb.ShardCommitteeArray{
+			ArrayShardCommittee: []*pb.ShardCommittee{
 				{Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
 			},
 		})
@@ -352,7 +352,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		ValidatorBalances: []uint64{params.BeaconConfig().MaxDepositInGwei,
 			params.BeaconConfig().MaxDepositInGwei},
 		LatestPenalizedExitBalances: []uint64{0},
-		ShardAndCommitteesAtSlots:   shardAndCommittees,
+		ShardCommitteesAtSlots:      ShardCommittees,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -407,21 +407,21 @@ func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 	slashings := []*pb.CasperSlashing{
 		{
 			Votes_1: &pb.SlashableVoteData{
-				AggregateSignaturePoc_0Indices: make(
+				CustodyBit_0Indices: make(
 					[]uint32,
 					params.BeaconConfig().MaxCasperVotes,
 				),
-				AggregateSignaturePoc_1Indices: make(
+				CustodyBit_1Indices: make(
 					[]uint32,
 					params.BeaconConfig().MaxCasperVotes,
 				),
 			},
 			Votes_2: &pb.SlashableVoteData{
-				AggregateSignaturePoc_0Indices: make(
+				CustodyBit_0Indices: make(
 					[]uint32,
 					params.BeaconConfig().MaxCasperVotes,
 				),
-				AggregateSignaturePoc_1Indices: make(
+				CustodyBit_1Indices: make(
 					[]uint32,
 					params.BeaconConfig().MaxCasperVotes,
 				),
@@ -457,21 +457,21 @@ func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 	slashings = []*pb.CasperSlashing{
 		{
 			Votes_1: &pb.SlashableVoteData{
-				AggregateSignaturePoc_0Indices: make(
+				CustodyBit_0Indices: make(
 					[]uint32,
 					params.BeaconConfig().MaxCasperVotes,
 				),
-				AggregateSignaturePoc_1Indices: make(
+				CustodyBit_1Indices: make(
 					[]uint32,
 					params.BeaconConfig().MaxCasperVotes,
 				),
 			},
 			Votes_2: &pb.SlashableVoteData{
-				AggregateSignaturePoc_0Indices: make(
+				CustodyBit_0Indices: make(
 					[]uint32,
 					params.BeaconConfig().MaxCasperVotes,
 				),
-				AggregateSignaturePoc_1Indices: make(
+				CustodyBit_1Indices: make(
 					[]uint32,
 					params.BeaconConfig().MaxCasperVotes,
 				),
@@ -645,14 +645,14 @@ func TestProcessCasperSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 	slashings := []*pb.CasperSlashing{
 		{
 			Votes_1: &pb.SlashableVoteData{
-				Data:                           att1,
-				AggregateSignaturePoc_0Indices: []uint32{1, 2},
-				AggregateSignaturePoc_1Indices: []uint32{3, 4},
+				Data:                att1,
+				CustodyBit_0Indices: []uint32{1, 2},
+				CustodyBit_1Indices: []uint32{3, 4},
 			},
 			Votes_2: &pb.SlashableVoteData{
-				Data:                           att2,
-				AggregateSignaturePoc_0Indices: []uint32{5, 6},
-				AggregateSignaturePoc_1Indices: []uint32{7, 8},
+				Data:                att2,
+				CustodyBit_0Indices: []uint32{5, 6},
+				CustodyBit_1Indices: []uint32{7, 8},
 			},
 		},
 	}
@@ -680,10 +680,10 @@ func TestProcessCasperSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 func TestProcessCasperSlashings_AppliesCorrectStatus(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
-	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	var ShardCommittees []*pb.ShardCommitteeArray
 	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
-		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
-			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+		ShardCommittees = append(ShardCommittees, &pb.ShardCommitteeArray{
+			ArrayShardCommittee: []*pb.ShardCommittee{
 				{Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
 			},
 		})
@@ -710,14 +710,14 @@ func TestProcessCasperSlashings_AppliesCorrectStatus(t *testing.T) {
 	slashings := []*pb.CasperSlashing{
 		{
 			Votes_1: &pb.SlashableVoteData{
-				Data:                           att1,
-				AggregateSignaturePoc_0Indices: []uint32{0, 1},
-				AggregateSignaturePoc_1Indices: []uint32{2, 3},
+				Data:                att1,
+				CustodyBit_0Indices: []uint32{0, 1},
+				CustodyBit_1Indices: []uint32{2, 3},
 			},
 			Votes_2: &pb.SlashableVoteData{
-				Data:                           att2,
-				AggregateSignaturePoc_0Indices: []uint32{4, 5},
-				AggregateSignaturePoc_1Indices: []uint32{6, 1},
+				Data:                att2,
+				CustodyBit_0Indices: []uint32{4, 5},
+				CustodyBit_1Indices: []uint32{6, 1},
 			},
 		},
 	}
@@ -728,7 +728,7 @@ func TestProcessCasperSlashings_AppliesCorrectStatus(t *testing.T) {
 		Slot:                        currentSlot,
 		ValidatorBalances:           []uint64{32, 32, 32, 32, 32, 32},
 		LatestPenalizedExitBalances: []uint64{0},
-		ShardAndCommitteesAtSlots:   shardAndCommittees,
+		ShardCommitteesAtSlots:      ShardCommittees,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -1232,9 +1232,9 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 		},
 	}
 	beaconState := &pb.BeaconState{
-		ProcessedPowReceiptRootHash32: []byte{0},
+		LatestDepositRootHash32: []byte{0},
 	}
-	want := "merkle branch of PoW receipt root did not verify"
+	want := "merkle branch of deposit root did not verify"
 	if _, err := ProcessValidatorDeposits(
 		beaconState,
 		block,
@@ -1252,7 +1252,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 		WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		ProofOfPossession:           []byte{},
 		RandaoCommitmentHash32:      []byte{0},
-		PocCommitment:               []byte{0},
+		CustodyCommitmentHash32:     []byte{0},
 	}
 	wBuf := new(bytes.Buffer)
 	if err := ssz.Encode(wBuf, depositInput); err != nil {
@@ -1315,11 +1315,11 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	}
 	balances := []uint64{0}
 	beaconState := &pb.BeaconState{
-		ValidatorRegistry:             registry,
-		ValidatorBalances:             balances,
-		ProcessedPowReceiptRootHash32: powReceiptRoot[:],
-		Slot:                          currentSlot,
-		GenesisTime:                   uint64(genesisTime),
+		ValidatorRegistry:       registry,
+		ValidatorBalances:       balances,
+		LatestDepositRootHash32: powReceiptRoot[:],
+		Slot:                    currentSlot,
+		GenesisTime:             uint64(genesisTime),
 	}
 	want := "expected withdrawal credentials to match"
 	if _, err := ProcessValidatorDeposits(
@@ -1336,7 +1336,7 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 		WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		ProofOfPossession:           []byte{},
 		RandaoCommitmentHash32:      []byte{0},
-		PocCommitment:               []byte{0},
+		CustodyCommitmentHash32:     []byte{0},
 	}
 	wBuf := new(bytes.Buffer)
 	if err := ssz.Encode(wBuf, depositInput); err != nil {
@@ -1398,11 +1398,11 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	}
 	balances := []uint64{0}
 	beaconState := &pb.BeaconState{
-		ValidatorRegistry:             registry,
-		ValidatorBalances:             balances,
-		ProcessedPowReceiptRootHash32: powReceiptRoot[:],
-		Slot:                          currentSlot,
-		GenesisTime:                   uint64(genesisTime),
+		ValidatorRegistry:       registry,
+		ValidatorBalances:       balances,
+		LatestDepositRootHash32: powReceiptRoot[:],
+		Slot:                    currentSlot,
+		GenesisTime:             uint64(genesisTime),
 	}
 	newState, err := ProcessValidatorDeposits(
 		beaconState,
@@ -1570,7 +1570,7 @@ func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not process exits: %v", err)
 	}
-	newRegistry := newState.GetValidatorRegistry()
+	newRegistry := newState.ValidatorRegistry
 	if newRegistry[0].StatusFlags == pb.ValidatorRecord_INITIAL {
 		t.Error("Expected validator status to change, remained INITIAL")
 	}

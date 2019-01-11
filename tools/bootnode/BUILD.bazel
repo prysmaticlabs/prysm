@@ -8,6 +8,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/tools/bootnode",
     visibility = ["//visibility:private"],
     deps = [
+        "//shared/version:go_default_library",
         "@com_github_ipfs_go_datastore//:go_default_library",
         "@com_github_ipfs_go_datastore//sync:go_default_library",
         "@com_github_ipfs_go_log//:go_default_library",
@@ -28,6 +29,7 @@ go_image(
     goarch = "amd64",
     goos = "linux",
     deps = [
+        "//shared/version:go_default_library",
         "@com_github_ipfs_go_datastore//:go_default_library",
         "@com_github_ipfs_go_datastore//sync:go_default_library",
         "@com_github_ipfs_go_log//:go_default_library",

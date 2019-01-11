@@ -110,7 +110,7 @@ func TestFFGSrcRewardsPenalties(t *testing.T) {
 			},
 			ValidatorBalances: validatorBalances,
 		}
-		state = FFGSrcRewardsPenalties(
+		state = ExpectedFFGSource(
 			state,
 			tt.voted,
 			uint64(len(tt.voted))*params.BeaconConfig().MaxDepositInGwei,
@@ -149,7 +149,7 @@ func TestFFGTargetRewardsPenalties(t *testing.T) {
 			},
 			ValidatorBalances: validatorBalances,
 		}
-		state = FFGTargetRewardsPenalties(
+		state = ExpectedFFGTarget(
 			state,
 			tt.voted,
 			uint64(len(tt.voted))*params.BeaconConfig().MaxDepositInGwei,
@@ -188,7 +188,7 @@ func TestChainHeadRewardsPenalties(t *testing.T) {
 			},
 			ValidatorBalances: validatorBalances,
 		}
-		state = ChainHeadRewardsPenalties(
+		state = ExpectedBeaconChainHead(
 			state,
 			tt.voted,
 			uint64(len(tt.voted))*params.BeaconConfig().MaxDepositInGwei,
@@ -202,8 +202,8 @@ func TestChainHeadRewardsPenalties(t *testing.T) {
 }
 
 func TestInclusionDistRewards_Ok(t *testing.T) {
-	shardAndCommittees := []*pb.ShardAndCommitteeArray{
-		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+	ShardCommittees := []*pb.ShardCommitteeArray{
+		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
 		}}}
 	attestation := []*pb.PendingAttestationRecord{
@@ -232,11 +232,11 @@ func TestInclusionDistRewards_Ok(t *testing.T) {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
 		}
 		state := &pb.BeaconState{
-			ShardAndCommitteesAtSlots: shardAndCommittees,
-			ValidatorBalances:         validatorBalances,
-			LatestAttestations:        attestation,
+			ShardCommitteesAtSlots: ShardCommittees,
+			ValidatorBalances:      validatorBalances,
+			LatestAttestations:     attestation,
 		}
-		state, err := InclusionDistRewards(
+		state, err := InclusionDistance(
 			state,
 			tt.voted,
 			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositInGwei)
@@ -251,8 +251,8 @@ func TestInclusionDistRewards_Ok(t *testing.T) {
 }
 
 func TestInclusionDistRewards_NotOk(t *testing.T) {
-	shardAndCommittees := []*pb.ShardAndCommitteeArray{
-		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+	ShardCommittees := []*pb.ShardCommitteeArray{
+		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{}},
 		}}}
 	attestation := []*pb.PendingAttestationRecord{
@@ -268,10 +268,10 @@ func TestInclusionDistRewards_NotOk(t *testing.T) {
 	}
 	for _, tt := range tests {
 		state := &pb.BeaconState{
-			ShardAndCommitteesAtSlots: shardAndCommittees,
-			LatestAttestations:        attestation,
+			ShardCommitteesAtSlots: ShardCommittees,
+			LatestAttestations:     attestation,
 		}
-		_, err := InclusionDistRewards(state, tt.voted, 0)
+		_, err := InclusionDistance(state, tt.voted, 0)
 		if err == nil {
 			t.Fatal("InclusionDistRewards should have failed")
 		}
@@ -304,7 +304,7 @@ func TestInactivityFFGSrcPenalty(t *testing.T) {
 			},
 			ValidatorBalances: validatorBalances,
 		}
-		state = InactivityFFGSrcPenalties(
+		state = InactivityFFGSource(
 			state,
 			tt.voted,
 			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositInGwei,
@@ -343,7 +343,7 @@ func TestInactivityFFGTargetPenalty(t *testing.T) {
 			},
 			ValidatorBalances: validatorBalances,
 		}
-		state = InactivityFFGTargetPenalties(
+		state = InactivityFFGTarget(
 			state,
 			tt.voted,
 			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositInGwei,
@@ -379,7 +379,7 @@ func TestInactivityHeadPenalty(t *testing.T) {
 			},
 			ValidatorBalances: validatorBalances,
 		}
-		state = InactivityHeadPenalties(
+		state = InactivityChainHead(
 			state,
 			tt.voted,
 			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositInGwei)
@@ -427,8 +427,8 @@ func TestInactivityExitedPenality(t *testing.T) {
 }
 
 func TestInactivityInclusionPenalty_Ok(t *testing.T) {
-	shardAndCommittees := []*pb.ShardAndCommitteeArray{
-		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+	ShardCommittees := []*pb.ShardCommitteeArray{
+		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
 		}}}
 	attestation := []*pb.PendingAttestationRecord{
@@ -451,11 +451,11 @@ func TestInactivityInclusionPenalty_Ok(t *testing.T) {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
 		}
 		state := &pb.BeaconState{
-			ShardAndCommitteesAtSlots: shardAndCommittees,
-			ValidatorBalances:         validatorBalances,
-			LatestAttestations:        attestation,
+			ShardCommitteesAtSlots: ShardCommittees,
+			ValidatorBalances:      validatorBalances,
+			LatestAttestations:     attestation,
 		}
-		state, err := InactivityInclusionPenalties(
+		state, err := InactivityInclusionDistance(
 			state,
 			tt.voted,
 			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositInGwei)
@@ -470,8 +470,8 @@ func TestInactivityInclusionPenalty_Ok(t *testing.T) {
 }
 
 func TestInactivityInclusionPenalty_NotOk(t *testing.T) {
-	shardAndCommittees := []*pb.ShardAndCommitteeArray{
-		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+	ShardCommittees := []*pb.ShardCommitteeArray{
+		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{}},
 		}}}
 	attestation := []*pb.PendingAttestationRecord{
@@ -487,10 +487,10 @@ func TestInactivityInclusionPenalty_NotOk(t *testing.T) {
 	}
 	for _, tt := range tests {
 		state := &pb.BeaconState{
-			ShardAndCommitteesAtSlots: shardAndCommittees,
-			LatestAttestations:        attestation,
+			ShardCommitteesAtSlots: ShardCommittees,
+			LatestAttestations:     attestation,
 		}
-		_, err := InactivityInclusionPenalties(state, tt.voted, 0)
+		_, err := InactivityInclusionDistance(state, tt.voted, 0)
 		if err == nil {
 			t.Fatal("InclusionDistRewards should have failed")
 		}
@@ -498,8 +498,8 @@ func TestInactivityInclusionPenalty_NotOk(t *testing.T) {
 }
 
 func TestAttestationInclusionRewards(t *testing.T) {
-	shardAndCommittees := []*pb.ShardAndCommitteeArray{
-		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+	ShardCommittees := []*pb.ShardCommitteeArray{
+		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
 		}}}
 	attestation := []*pb.PendingAttestationRecord{
@@ -521,11 +521,11 @@ func TestAttestationInclusionRewards(t *testing.T) {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
 		}
 		state := &pb.BeaconState{
-			ShardAndCommitteesAtSlots: shardAndCommittees,
-			ValidatorBalances:         validatorBalances,
-			LatestAttestations:        attestation,
+			ShardCommitteesAtSlots: ShardCommittees,
+			ValidatorBalances:      validatorBalances,
+			LatestAttestations:     attestation,
 		}
-		state, err := AttestationInclusionRewards(
+		state, err := AttestationInclusion(
 			state,
 			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositInGwei,
 			tt.voted)
@@ -540,8 +540,8 @@ func TestAttestationInclusionRewards(t *testing.T) {
 }
 
 func TestAttestationInclusionRewards_NoInclusionSlot(t *testing.T) {
-	shardAndCommittees := []*pb.ShardAndCommitteeArray{
-		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+	ShardCommittees := []*pb.ShardCommitteeArray{
+		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
 		}}}
 
@@ -557,18 +557,18 @@ func TestAttestationInclusionRewards_NoInclusionSlot(t *testing.T) {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
 		}
 		state := &pb.BeaconState{
-			ShardAndCommitteesAtSlots: shardAndCommittees,
-			ValidatorBalances:         validatorBalances,
+			ShardCommitteesAtSlots: ShardCommittees,
+			ValidatorBalances:      validatorBalances,
 		}
-		if _, err := AttestationInclusionRewards(state, 0, tt.voted); err == nil {
+		if _, err := AttestationInclusion(state, 0, tt.voted); err == nil {
 			t.Fatal("AttestationInclusionRewards should have failed with no inclusion slot")
 		}
 	}
 }
 
 func TestAttestationInclusionRewards_NoProposerIndex(t *testing.T) {
-	shardAndCommittees := []*pb.ShardAndCommitteeArray{
-		{ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+	ShardCommittees := []*pb.ShardCommitteeArray{
+		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
 		}}}
 	attestation := []*pb.PendingAttestationRecord{
@@ -589,58 +589,62 @@ func TestAttestationInclusionRewards_NoProposerIndex(t *testing.T) {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
 		}
 		state := &pb.BeaconState{
-			Slot:                      1000,
-			ShardAndCommitteesAtSlots: shardAndCommittees,
-			ValidatorBalances:         validatorBalances,
-			LatestAttestations:        attestation,
+			Slot:                   1000,
+			ShardCommitteesAtSlots: ShardCommittees,
+			ValidatorBalances:      validatorBalances,
+			LatestAttestations:     attestation,
 		}
-		if _, err := AttestationInclusionRewards(state, 0, tt.voted); err == nil {
+		if _, err := AttestationInclusion(state, 0, tt.voted); err == nil {
 			t.Fatal("AttestationInclusionRewards should have failed with no proposer index")
 		}
 	}
 }
 
 func TestCrosslinksRewardsPenalties(t *testing.T) {
-	var shardAndCommittees []*pb.ShardAndCommitteeArray
+	var ShardCommittees []*pb.ShardCommitteeArray
 	for i := uint64(0); i < params.BeaconConfig().EpochLength; i++ {
-		shardAndCommittees = append(shardAndCommittees, &pb.ShardAndCommitteeArray{
-			ArrayShardAndCommittee: []*pb.ShardAndCommittee{
+		ShardCommittees = append(ShardCommittees, &pb.ShardCommitteeArray{
+			ArrayShardCommittee: []*pb.ShardCommittee{
 				{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
 			},
 		})
 	}
-	attestation := []*pb.PendingAttestationRecord{
-		{Data: &pb.AttestationData{Shard: 1, Slot: 0},
-			ParticipationBitfield: []byte{0xff},
-			SlotIncluded:          0},
-	}
 
 	tests := []struct {
-		voted                        []uint32
+		voted                        []byte
 		balanceAfterCrosslinkRewards []uint64
 	}{
-		{[]uint32{}, []uint64{
+		{[]byte{0x0}, []uint64{
 			32 * 1e9, 32 * 1e9, 32 * 1e9, 32 * 1e9, 32 * 1e9, 32 * 1e9, 32 * 1e9, 32 * 1e9}},
-		{[]uint32{0}, []uint64{
-			32003124992, 31996875183, 31996875183, 31996875183, 31996875183, 31996875183, 31996875183, 31996875183}},
-		{[]uint32{1, 3, 5, 7}, []uint64{
-			31987502435, 32012499968, 31987502435, 32012499968, 31987502435, 32012499968, 31987502435, 32012499968}},
+		{[]byte{0xF}, []uint64{
+			31986681100, 31986681100, 31986681100, 31986681100,
+			32013321624, 32013321624, 32013321624, 32013321624}},
+		{[]byte{0xFF}, []uint64{
+			32025000000, 32025000000, 32025000000, 32025000000,
+			32025000000, 32025000000, 32025000000, 32025000000}},
 	}
 	for _, tt := range tests {
+		attestation := []*pb.PendingAttestationRecord{
+			{Data: &pb.AttestationData{Shard: 1, Slot: 0},
+				ParticipationBitfield: tt.voted,
+				SlotIncluded:          0},
+		}
 		validatorBalances := make([]uint64, 8)
 		for i := 0; i < len(validatorBalances); i++ {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
 		}
 		state := &pb.BeaconState{
-			ShardAndCommitteesAtSlots: shardAndCommittees,
-			ValidatorBalances:         validatorBalances,
-			LatestAttestations:        attestation,
+			ShardCommitteesAtSlots: ShardCommittees,
+			ValidatorBalances:      validatorBalances,
+			LatestAttestations:     attestation,
 		}
-		state = CrosslinksRewardsPenalties(
+		state, err := Crosslinks(
 			state,
-			uint64(len(tt.voted))*params.BeaconConfig().MaxDepositInGwei,
-			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositInGwei,
-			tt.voted)
+			attestation,
+			nil)
+		if err != nil {
+			t.Fatalf("Could not apply Crosslinks rewards: %v", err)
+		}
 		if !reflect.DeepEqual(state.ValidatorBalances, tt.balanceAfterCrosslinkRewards) {
 			t.Errorf("CrosslinksRewardsPenalties(%v) = %v, wanted: %v",
 				tt.voted, state.ValidatorBalances, tt.balanceAfterCrosslinkRewards)

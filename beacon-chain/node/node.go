@@ -24,13 +24,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/simulator"
 	rbcsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
+	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -52,6 +52,9 @@ type BeaconNode struct {
 // NewBeaconNode creates a new node instance, sets up configuration options, and registers
 // every required service to the node.
 func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
+	log.WithFields(logrus.Fields{
+		"version": version.GetVersion(),
+	}).Info("Starting beacon node")
 	registry := shared.NewServiceRegistry()
 
 	beacon := &BeaconNode{
@@ -157,10 +160,6 @@ func (b *BeaconNode) Close() {
 
 func (b *BeaconNode) startDB(ctx *cli.Context) error {
 	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
-	var genesisJSON string
-	if ctx.GlobalIsSet(utils.GenesisJSON.Name) {
-		genesisJSON = ctx.GlobalString(utils.GenesisJSON.Name)
-	}
 
 	db, err := db.NewDB(path.Join(baseDir, beaconChainDBName))
 	if err != nil {
@@ -175,15 +174,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 	}
 	// Ensure that state has been initialized.
 	if beaconState == nil {
-		var genesisValidatorRegistry []*pb.ValidatorRecord
-		if genesisJSON != "" {
-			log.Infof("Initializing Crystallized State from %s", genesisJSON)
-			genesisValidatorRegistry, err = utils.InitialValidatorRegistryFromJSON(genesisJSON)
-			if err != nil {
-				return err
-			}
-		}
-		if err := db.InitializeState(genesisValidatorRegistry); err != nil {
+		if err := db.InitializeState(); err != nil {
 			return err
 		}
 	}

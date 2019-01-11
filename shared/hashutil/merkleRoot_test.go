@@ -7,10 +7,10 @@ import (
 
 func TestMerkleRoot(t *testing.T) {
 	valueSet := [][]byte{
-		[]byte{'a'},
-		[]byte{'b'},
-		[]byte{'c'},
-		[]byte{'d'},
+		{'a'},
+		{'b'},
+		{'c'},
+		{'d'},
 	}
 
 	hashedV1 := Hash([]byte{'a'})

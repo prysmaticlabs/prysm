@@ -1,3 +1,7 @@
+// Package validators contains libraries to shuffle validators
+// and retrieve active validator indices from a given slot
+// or an attestation. It also provides helper functions to locate
+// validator based on pubic key.
 package validators
 
 import (
@@ -16,7 +20,7 @@ func ShuffleValidatorRegistryToCommittees(
 	validators []*pb.ValidatorRecord,
 	crosslinkStartShard uint64,
 	slot uint64,
-) ([]*pb.ShardAndCommitteeArray, error) {
+) ([]*pb.ShardCommitteeArray, error) {
 	indices := ActiveValidatorIndices(validators, slot)
 	// split the shuffled list for slot.
 	shuffledValidatorRegistry, err := utils.ShuffleIndices(seed, indices)
@@ -29,27 +33,28 @@ func ShuffleValidatorRegistryToCommittees(
 // splitBySlotShard splits the validator list into evenly sized committees and assigns each
 // committee to a slot and a shard. If the validator set is large, multiple committees are assigned
 // to a single slot and shard. See getCommitteesPerSlot for more details.
-func splitBySlotShard(shuffledValidatorRegistry []uint32, crosslinkStartShard uint64) []*pb.ShardAndCommitteeArray {
+func splitBySlotShard(shuffledValidatorRegistry []uint32, crosslinkStartShard uint64) []*pb.ShardCommitteeArray {
 	committeesPerSlot := getCommitteesPerSlot(uint64(len(shuffledValidatorRegistry)))
-	committeBySlotAndShard := []*pb.ShardAndCommitteeArray{}
+	committeBySlotAndShard := []*pb.ShardCommitteeArray{}
 
 	// split the validator indices by slot.
 	validatorsBySlot := utils.SplitIndices(shuffledValidatorRegistry, params.BeaconConfig().EpochLength)
 	for i, validatorsForSlot := range validatorsBySlot {
-		shardCommittees := []*pb.ShardAndCommittee{}
+		shardCommittees := []*pb.ShardCommittee{}
 		validatorsByShard := utils.SplitIndices(validatorsForSlot, committeesPerSlot)
 		shardStart := crosslinkStartShard + uint64(i)*committeesPerSlot
 
 		for j, validatorsForShard := range validatorsByShard {
 			shardID := (shardStart + uint64(j)) % params.BeaconConfig().ShardCount
-			shardCommittees = append(shardCommittees, &pb.ShardAndCommittee{
-				Shard:     shardID,
-				Committee: validatorsForShard,
+			shardCommittees = append(shardCommittees, &pb.ShardCommittee{
+				Shard:               shardID,
+				Committee:           validatorsForShard,
+				TotalValidatorCount: uint64(len(shuffledValidatorRegistry)),
 			})
 		}
 
-		committeBySlotAndShard = append(committeBySlotAndShard, &pb.ShardAndCommitteeArray{
-			ArrayShardAndCommittee: shardCommittees,
+		committeBySlotAndShard = append(committeBySlotAndShard, &pb.ShardCommitteeArray{
+			ArrayShardCommittee: shardCommittees,
 		})
 	}
 	return committeBySlotAndShard
@@ -58,12 +63,14 @@ func splitBySlotShard(shuffledValidatorRegistry []uint32, crosslinkStartShard ui
 // getCommitteesPerSlot calculates the parameters for ShuffleValidatorRegistryToCommittees.
 // The minimum value for committeesPerSlot is 1.
 // Otherwise, the value for committeesPerSlot is the smaller of
-// numActiveValidatorRegistry / CycleLength /  (MinCommitteeSize*2) + 1 or
+// numActiveValidatorRegistry / EpochLength / TargetCommitteeSize or
 // ShardCount / CycleLength.
 func getCommitteesPerSlot(numActiveValidatorRegistry uint64) uint64 {
-	cycleLength := params.BeaconConfig().EpochLength
-	boundOnValidatorRegistry := numActiveValidatorRegistry/cycleLength/(params.BeaconConfig().TargetCommitteeSize*2) + 1
-	boundOnShardCount := params.BeaconConfig().ShardCount / cycleLength
+	epochLength := params.BeaconConfig().EpochLength
+	targetCommitteeSize := params.BeaconConfig().TargetCommitteeSize
+
+	boundOnValidatorRegistry := numActiveValidatorRegistry / epochLength / targetCommitteeSize
+	boundOnShardCount := params.BeaconConfig().ShardCount / epochLength
 	// Ensure that comitteesPerSlot is at least 1.
 	if boundOnShardCount == 0 {
 		return 1
@@ -101,13 +108,13 @@ func AttestationParticipants(
 	participationBitfield []byte) ([]uint32, error) {
 
 	// Find the relevant committee.
-	shardCommittees, err := ShardAndCommitteesAtSlot(state, attestationData.Slot)
+	shardCommittees, err := ShardCommitteesAtSlot(state, attestationData.Slot)
 	if err != nil {
 		return nil, err
 	}
 
-	var participants *pb.ShardAndCommittee
-	for _, committee := range shardCommittees.ArrayShardAndCommittee {
+	var participants *pb.ShardCommittee
+	for _, committee := range shardCommittees.ArrayShardCommittee {
 		if committee.Shard == attestationData.Shard {
 			participants = committee
 			break

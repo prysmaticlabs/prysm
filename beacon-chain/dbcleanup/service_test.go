@@ -63,7 +63,7 @@ func TestCleanBlockVoteCache(t *testing.T) {
 	var err error
 
 	// Pre-fill block vote cache in DB
-	if err = beaconDB.InitializeState(nil); err != nil {
+	if err = beaconDB.InitializeState(); err != nil {
 		t.Fatalf("failed to initialize DB: %v", err)
 	}
 	oldBlock := &pb.BeaconBlock{Slot: 1}

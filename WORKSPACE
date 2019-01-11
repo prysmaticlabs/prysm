@@ -302,13 +302,13 @@ go_repository(
 
 go_repository(
     name = "com_github_btcsuite_btcd",
-    commit = "7d2daa5bfef28c5e282571bc06416516936115ee",
+    commit = "5bda5314ca9549a589e63d7b2e6104492a0d5328",
     importpath = "github.com/btcsuite/btcd",
 )
 
 go_repository(
     name = "com_github_minio_sha256_simd",
-    commit = "66352e71c5e1cd598fa97be77a56fe3973730042",
+    commit = "79eac576c45d16c8d290cf2e3db5f9ab34c343e9",
     importpath = "github.com/minio/sha256-simd",
 )
 
@@ -501,7 +501,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "1775db3f06b568179d273425900dd09125831dd5",
+    commit = "48ac38b7c8cbedd50b1613c0fccacfc7d88dfcdf",
     importpath = "golang.org/x/sys",
 )
 
@@ -645,7 +645,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aristanetworks_goarista",
-    commit = "332ede26fbf000b0af488b1836b53b44d2a7c46c",
+    commit = "b3287ee629098a1640360d7b618be7ab046f7ac2",
     importpath = "github.com/aristanetworks/goarista",
 )
 
@@ -657,13 +657,13 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_client_model",
-    commit = "5c3871d89910bfb32f5fcab2aa4b9ec68e65a99f",
+    commit = "f287a105a20ec685d797f65cd0ce8fbeaef42da1",
     importpath = "github.com/prometheus/client_model",
 )
 
 go_repository(
     name = "com_github_prometheus_common",
-    commit = "b1c43a6df3aedba268353d940b5974f05037ed5c",
+    commit = "2998b132700a7d019ff618c06a234b47c1f3f681",
     importpath = "github.com/prometheus/common",
 )
 
@@ -718,7 +718,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_pubsub",
     build_file_proto_mode = "disable_global",
-    tag = "v0.10.2",
+    tag = "v0.11.10",
     importpath = "github.com/libp2p/go-libp2p-pubsub",
 )
 
