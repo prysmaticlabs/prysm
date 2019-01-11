@@ -17,58 +17,6 @@ func interfaceToSlice(slice interface{}) ([]interface{}, error) {
 	return ret, nil
 }
 
-// ByteIntersection returns a new set with elements that are common in
-// both sets a and b.
-func ByteIntersection(a []byte, b []byte) []byte {
-	set := make([]byte, 0)
-	m := make(map[byte]bool)
-
-	for i := 0; i < len(a); i++ {
-		m[a[i]] = true
-	}
-	for i := 0; i < len(b); i++ {
-		if _, found := m[b[i]]; found {
-			set = append(set, b[i])
-		}
-	}
-	return set
-}
-
-// ByteUnion returns a new set with elements that are common in
-// both sets a and b.
-func ByteUnion(a []byte, b []byte) []byte {
-	set := make([]byte, 0)
-	m := make(map[byte]bool)
-
-	for i := 0; i < len(a); i++ {
-		m[a[i]] = true
-		set = append(set, a[i])
-	}
-	for i := 0; i < len(b); i++ {
-		if _, found := m[b[i]]; !found {
-			set = append(set, b[i])
-		}
-	}
-	return set
-}
-
-// ByteNot returns a new set with elements that are common in
-// both sets a and b.
-func ByteNot(a []byte, b []byte) []byte {
-	set := make([]byte, 0)
-	m := make(map[byte]bool)
-
-	for i := 0; i < len(a); i++ {
-		m[a[i]] = true
-	}
-	for i := 0; i < len(b); i++ {
-		if _, found := m[b[i]]; !found {
-			set = append(set, b[i])
-		}
-	}
-	return set
-}
-
 // GenericIntersection returns a new set with elements that are common in
 // both sets a and b.
 func GenericIntersection(a, b interface{}) (reflect.Value, error) {
