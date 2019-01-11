@@ -25,45 +25,28 @@ func GenericIntersection(a, b interface{}) (reflect.Value, error) {
 	set1, err1 := interfaceToSlice(a)
 	set2, err2 := interfaceToSlice(b)
 
+	if len(set1) == 0 || len(set2) == 0 {
+		return set,nil
+	}
+
 	if err1 == nil && err2 == nil {
+		m := reflect.MapOf(reflect.TypeOf(set1[0]), reflect.TypeOf(true))
+		m1 := reflect.MakeMapWithSize(m, 0)
+		for i := 0; i < len(set1); i++ {
+			m1.SetMapIndex(reflect.ValueOf(set1[i]), reflect.ValueOf(true))
+		}
 
-		s1 := len(set1)
-		s2 := len(set2)
-
-		if s1 > 0 {
-			m := reflect.MapOf(reflect.TypeOf(set1[0]), reflect.TypeOf(true))
-			m1 := reflect.MakeMapWithSize(m, 0)
-			for i := 0; i < len(set1); i++ {
-				m1.SetMapIndex(reflect.ValueOf(set1[i]), reflect.ValueOf(true))
-			}
-
-			for i := 0; i < len(set2); i++ {
-				x := m1.MapIndex(reflect.ValueOf(set2[i]))
-				if x.IsValid() {
-					if found := x; found.Bool() {
-						rv := reflect.ValueOf(set2[i])
-						set = reflect.Append(set, rv)
-					}
-				}
-			}
-
-		} else if s2 > 0 {
-			m := reflect.MapOf(reflect.TypeOf(set2[0]), reflect.TypeOf(true))
-			m1 := reflect.MakeMapWithSize(m, 0)
-			for i := 0; i < len(set1); i++ {
-				m1.SetMapIndex(reflect.ValueOf(set1[i]), reflect.ValueOf(true))
-			}
-
-			for i := 0; i < len(set2); i++ {
-				x := m1.MapIndex(reflect.ValueOf(set2[i]))
-				if x.IsValid() {
-					if found := x; found.Bool() {
-						rv := reflect.ValueOf(set2[i])
-						set = reflect.Append(set, rv)
-					}
+		for i := 0; i < len(set2); i++ {
+			x := m1.MapIndex(reflect.ValueOf(set2[i]))
+			if x.IsValid() {
+				if found := x; found.Bool() {
+					rv := reflect.ValueOf(set2[i])
+					set = reflect.Append(set, rv)
 				}
 			}
 		}
+	}else {
+		return set,fmt.Errorf("slice type is invalid")
 	}
 
 	return set, nil
@@ -76,49 +59,37 @@ func GenericUnion(a, b interface{}) (reflect.Value, error) {
 	set := reflect.MakeSlice(reflect.TypeOf(a), 0, 0)
 	set1, err1 := interfaceToSlice(a)
 	set2, err2 := interfaceToSlice(b)
+	var m interface{}
+	if len(set1) == 0 && len(set2) == 0 {
+		return set,nil
+	}else{
+		if len(set1) > 0 {
+			m = set1[0]
+		}else {
+			m = set2[0]
+		}
+	}
+
 	if err1 == nil && err2 == nil {
+		m := reflect.MapOf(reflect.TypeOf(m), reflect.TypeOf(true))
+		m1 := reflect.MakeMapWithSize(m, 0)
+		for i := 0; i < len(set1); i++ {
+			m1.SetMapIndex(reflect.ValueOf(set1[i]), reflect.ValueOf(true))
+			rv := reflect.ValueOf(set1[i])
+			set = reflect.Append(set, rv)
+		}
 
-		s1 := len(set1)
-		s2 := len(set2)
-
-		if s1 > 0 {
-			m := reflect.MapOf(reflect.TypeOf(set1[0]), reflect.TypeOf(true))
-			m1 := reflect.MakeMapWithSize(m, 0)
-			for i := 0; i < len(set1); i++ {
-				m1.SetMapIndex(reflect.ValueOf(set1[i]), reflect.ValueOf(true))
-				rv := reflect.ValueOf(set1[i])
-				set = reflect.Append(set, rv)
-			}
-
-			for i := 0; i < len(set2); i++ {
-				x := m1.MapIndex(reflect.ValueOf(set2[i]))
-				if x.IsValid() {
-					if found := x; !found.Bool() {
-						rv := reflect.ValueOf(set2[i])
-						set = reflect.Append(set, rv)
-					}
-				}
-			}
-
-		} else if s2 > 0 {
-			m := reflect.MapOf(reflect.TypeOf(set2[0]), reflect.TypeOf(true))
-			m1 := reflect.MakeMapWithSize(m, 0)
-			for i := 0; i < len(set1); i++ {
-				m1.SetMapIndex(reflect.ValueOf(set1[i]), reflect.ValueOf(true))
-				rv := reflect.ValueOf(set1[i])
-				set = reflect.Append(set, rv)
-			}
-
-			for i := 0; i < len(set2); i++ {
-				x := m1.MapIndex(reflect.ValueOf(set2[i]))
-				if x.IsValid() {
-					if found := x; !found.Bool() {
-						rv := reflect.ValueOf(set2[i])
-						set = reflect.Append(set, rv)
-					}
+		for i := 0; i < len(set2); i++ {
+			x := m1.MapIndex(reflect.ValueOf(set2[i]))
+			if x.IsValid() {
+				if found := x; !found.Bool() {
+					rv := reflect.ValueOf(set2[i])
+					set = reflect.Append(set, rv)
 				}
 			}
 		}
+	}else {
+		return set,fmt.Errorf("slice type is invalid")
 	}
 	return set, nil
 
@@ -130,48 +101,38 @@ func GenericNot(a, b interface{}) (reflect.Value, error) {
 	set := reflect.MakeSlice(reflect.TypeOf(a), 0, 0)
 	set1, err1 := interfaceToSlice(a)
 	set2, err2 := interfaceToSlice(b)
+
+	var m interface{}
+	if len(set1) == 0 && len(set2) == 0 {
+		return set,nil
+	}else{
+		if len(set1) > 0 {
+			m = set1[0]
+		}else {
+			m = set2[0]
+		}
+	}
 	if err1 == nil && err2 == nil {
+		m := reflect.MapOf(reflect.TypeOf(m), reflect.TypeOf(true))
+		m1 := reflect.MakeMapWithSize(m, 0)
+		for i := 0; i < len(set1); i++ {
+			m1.SetMapIndex(reflect.ValueOf(set1[i]), reflect.ValueOf(true))
 
-		s1 := len(set1)
-		s2 := len(set2)
+		}
 
-		if s1 > 0 {
-			m := reflect.MapOf(reflect.TypeOf(set1[0]), reflect.TypeOf(true))
-			m1 := reflect.MakeMapWithSize(m, 0)
-			for i := 0; i < len(set1); i++ {
-				m1.SetMapIndex(reflect.ValueOf(set1[i]), reflect.ValueOf(true))
-
-			}
-
-			for i := 0; i < len(set2); i++ {
-				x := m1.MapIndex(reflect.ValueOf(set2[i]))
-				if x.IsValid() {
-					if found := x; !found.Bool() {
-						rv := reflect.ValueOf(set2[i])
-						set = reflect.Append(set, rv)
-					}
-				}
-			}
-
-		} else if s2 > 0 {
-			m := reflect.MapOf(reflect.TypeOf(set2[0]), reflect.TypeOf(true))
-			m1 := reflect.MakeMapWithSize(m, 0)
-			for i := 0; i < len(set1); i++ {
-				m1.SetMapIndex(reflect.ValueOf(set1[i]), reflect.ValueOf(true))
-
-			}
-
-			for i := 0; i < len(set2); i++ {
-				x := m1.MapIndex(reflect.ValueOf(set2[i]))
-				if x.IsValid() {
-					if found := x; !found.Bool() {
-						rv := reflect.ValueOf(set2[i])
-						set = reflect.Append(set, rv)
-					}
+		for i := 0; i < len(set2); i++ {
+			x := m1.MapIndex(reflect.ValueOf(set2[i]))
+			if x.IsValid() {
+				if found := x; !found.Bool() {
+					rv := reflect.ValueOf(set2[i])
+					set = reflect.Append(set, rv)
 				}
 			}
 		}
+	}else {
+		return set,fmt.Errorf("slice type is invalid")
 	}
+
 	return set, nil
 
 }
