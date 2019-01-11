@@ -8,11 +8,19 @@ The test suite opts for YAML due to wide language support and support for inline
 
 The testing format follows the official ETH2.0 Specification created [here](https://github.com/ethereum/eth2.0-specs/blob/master/specs/test-format.md)
 
+<<<<<<< HEAD
 ## Stateful Tests
 
 Chain tests check for conformity of a certain client to the beacon chain specification for items such as the fork choice rule and Casper FFG validator rewards & penalties. Stateful tests need to specify a certain configuration of a beacon chain, with items such as the number validators, in the YAML file. Sample tests will all required fields are shown below.
 
 ### State Transition
+=======
+### Stateful Tests
+
+Chain tests check for conformity of a certain client to the beacon chain specification for items such as the fork choice rule and Casper FFG validator rewards & penalties. Stateful tests need to specify a certain configuration of a beacon chain, with items such as the number validators, in the YAML file. Sample tests will all required fields are shown below.
+
+**State Transition**
+>>>>>>> master
 
 The most important use case for this test format is to verify the ins and outs of the Ethereum Phase 0 Beacon Chain state advancement. The specification details very strict guidelines for blocks to successfully trigger a state transition, including items such as Casper Proof of Stake slashing conditions of validators, pseudorandomness in the form of RANDAO, and attestation on shard blocks being processed all inside each incoming beacon block. The YAML configuration for this test type allows for configuring a state transition run over N slots, triggering slashing conditions, processing deposits of new validators, and more.
 
