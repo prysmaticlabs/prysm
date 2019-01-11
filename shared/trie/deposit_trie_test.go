@@ -61,8 +61,7 @@ func TestDepositTrie_GenerateMerkleBranch(t *testing.T) {
 	d.UpdateDepositTrie(deposit1)
 	deposit2 := []byte{5, 6, 7}
 	d.UpdateDepositTrie(deposit2)
-	twoToPowerOfTreeDepth := 1 << params.BeaconConfig().DepositContractTreeDepth
-	index := d.depositCount + uint64(twoToPowerOfTreeDepth)
+	index := d.depositCount - 1
 	branch := d.GenerateMerkleBranch(index)
 	for _, item := range branch {
 		fmt.Printf("branch %#x\n", item)
@@ -73,6 +72,7 @@ func TestDepositTrie_GenerateMerkleBranch(t *testing.T) {
 		hashutil.Hash(deposit2),
 		branch,
 		params.BeaconConfig().DepositContractTreeDepth,
+		index,
 		d.Root(),
 	); !ok {
 		t.Error("Expected Merkle branch to verify, received false")
@@ -83,7 +83,7 @@ func TestVerifyMerkleBranch(t *testing.T) {
 	// We build up a Merkle proof and then run
 	// the verify function for data integrity testing
 	// along a Merkle branch in a Merkle trie structure.
-	depth := 4
+	depth := uint64(4)
 	leaf := [32]byte{1, 2, 3}
 	root := leaf
 	branch := [][]byte{
@@ -92,14 +92,15 @@ func TestVerifyMerkleBranch(t *testing.T) {
 		{10, 11, 12},
 		{13, 14, 15},
 	}
-	for i := 0; i < depth; i++ {
-		if i%2 == 0 {
+	index := uint64(0)
+	for i := uint64(0); i < depth; i++ {
+		if (index/(1<<i))%2 == 0 {
 			root = hashutil.Hash(append(branch[i], root[:]...))
 		} else {
 			root = hashutil.Hash(append(root[:], branch[i]...))
 		}
 	}
-	if ok := VerifyMerkleBranch(leaf, branch, uint64(depth), root); !ok {
+	if ok := VerifyMerkleBranch(leaf, branch, depth, index, root); !ok {
 		t.Error("Expected merkle branch to verify, received false")
 	}
 }
