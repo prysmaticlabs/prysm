@@ -23,6 +23,7 @@ type StateTestConfig struct {
 	Deposits              []*StateTestDeposit          `yaml:"deposits"`
 	ProposerSlashings     []*StateTestProposerSlashing `yaml:"proposer_slashings"`
 	CasperSlashings       []*StateTestCasperSlashing   `yaml:"casper_slashings"`
+	ValidatorExits        []*StateTestValidatorExit    `yaml:"validator_exits"`
 	EpochLength           uint64                       `yaml:"epoch_length"`
 	ShardCount            uint64                       `yaml:"shard_count"`
 	DepositsForChainStart uint64                       `yaml:"deposits_for_chain_start"`
@@ -62,9 +63,16 @@ type StateTestCasperSlashing struct {
 	Votes2CustodyBit1Indices []uint32 `yaml:"votes_2_custody_1_indices"`
 }
 
+// StateTestValidatorExit --
+type StateTestValidatorExit struct {
+	Slot           uint64 `yaml:"slot"`
+	ValidatorIndex uint32 `yaml:"validator_index"`
+}
+
 // StateTestResults --
 type StateTestResults struct {
 	Slot                uint64
 	NumValidators       int      `yaml:"num_validators"`
 	PenalizedValidators []uint32 `yaml:"penalized_validators"`
+	ExitedValidators    []uint32 `yaml:"exited_validators"`
 }

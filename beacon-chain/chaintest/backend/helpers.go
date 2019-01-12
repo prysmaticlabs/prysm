@@ -26,6 +26,7 @@ func generateSimulatedBlock(
 	depositsTrie *trie.DepositTrie,
 	simulatedProposerSlashing *StateTestProposerSlashing,
 	simulatedCasperSlashing *StateTestCasperSlashing,
+	simulatedExit *StateTestValidatorExit,
 ) (*pb.BeaconBlock, [32]byte, error) {
 	encodedState, err := proto.Marshal(beaconState)
 	if err != nil {
@@ -103,6 +104,12 @@ func generateSimulatedBlock(
 				CustodyBit_0Indices: simulatedCasperSlashing.Votes2CustodyBit0Indices,
 				CustodyBit_1Indices: simulatedCasperSlashing.Votes2CustodyBit1Indices,
 			},
+		})
+	}
+	if simulatedExit != nil {
+		block.Body.Exits = append(block.Body.Exits, &pb.Exit{
+			Slot:           simulatedExit.Slot,
+			ValidatorIndex: simulatedExit.ValidatorIndex,
 		})
 	}
 	encodedBlock, err := proto.Marshal(block)
