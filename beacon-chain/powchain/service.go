@@ -9,8 +9,9 @@ import (
 
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/prysmaticlabs/prysm/shared/bytes"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/sirupsen/logrus"
 )
 
@@ -46,26 +47,22 @@ type Client interface {
 // Validator Registration Contract on the PoW chain to kick off the beacon
 // chain's validator registration process.
 type Web3Service struct {
-	ctx                 context.Context
-	cancel              context.CancelFunc
-	client              Client
-	headerChan          chan *gethTypes.Header
-	logChan             chan gethTypes.Log
-	pubKey              string
-	endpoint            string
-	validatorRegistered bool
-	vrcAddress          common.Address
-	reader              Reader
-	logger              Logger
-	blockNumber         *big.Int    // the latest PoW chain blockNumber.
-	blockHash           common.Hash // the latest PoW chain blockHash.
-	depositCount        uint64
+	ctx         context.Context
+	cancel      context.CancelFunc
+	client      Client
+	headerChan  chan *gethTypes.Header
+	logChan     chan gethTypes.Log
+	endpoint    string
+	vrcAddress  common.Address
+	reader      Reader
+	logger      Logger
+	blockNumber *big.Int    // the latest PoW chain blockNumber.
+	blockHash   common.Hash // the latest PoW chain blockHash.
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
 type Web3ServiceConfig struct {
 	Endpoint string
-	Pubkey   string
 	VrcAddr  common.Address
 	Client   Client
 	Reader   Reader
@@ -83,19 +80,17 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	return &Web3Service{
-		ctx:                 ctx,
-		cancel:              cancel,
-		headerChan:          make(chan *gethTypes.Header),
-		logChan:             make(chan gethTypes.Log),
-		pubKey:              config.Pubkey,
-		endpoint:            config.Endpoint,
-		validatorRegistered: false,
-		blockNumber:         nil,
-		blockHash:           common.BytesToHash([]byte{}),
-		vrcAddress:          config.VrcAddr,
-		client:              config.Client,
-		reader:              config.Reader,
-		logger:              config.Logger,
+		ctx:         ctx,
+		cancel:      cancel,
+		headerChan:  make(chan *gethTypes.Header),
+		logChan:     make(chan gethTypes.Log),
+		endpoint:    config.Endpoint,
+		blockNumber: nil,
+		blockHash:   common.BytesToHash([]byte{}),
+		vrcAddress:  config.VrcAddr,
+		client:      config.Client,
+		reader:      config.Reader,
+		logger:      config.Logger,
 	}, nil
 }
 
@@ -170,15 +165,12 @@ func (w *Web3Service) ProcessLog(VRClog gethTypes.Log) {
 	// public key is the second topic from validatorRegistered log.
 	merkleRoot := VRClog.Topics[1]
 	depositData := VRClog.Topics[2]
-	depositCount := VRClog.Topics[3]
-
-	w.depositCount = bytes.FromBytes8(depositCount.Bytes())
+	_ = VRClog.Topics[3] // merkleTreeBranch
 
 	if err := w.SaveInTrie(merkleRoot); err != nil {
 		log.Errorf("Could not save in trie %v", err)
 		return
 	}
-
 	if err := w.ProcessDepositData(depositData); err != nil {
 		log.Errorf("Could not process deposit from log %v", err)
 		return
@@ -186,7 +178,20 @@ func (w *Web3Service) ProcessLog(VRClog gethTypes.Log) {
 }
 
 func (w *Web3Service) ProcessDepositData(data common.Hash) error {
-	_ = data
+	decodedData, err := hexutil.Decode(data.Hex())
+	if err != nil {
+		return err
+	}
+
+	depositInput, err := blocks.DecodeDepositInput(decodedData)
+	if err != nil {
+		return err
+	}
+
+	log.WithFields(logrus.Fields{
+		"publicKey": depositInput.Pubkey,
+	}).Info("Validator registered in VRC with public key")
+
 	return nil
 }
 
@@ -203,11 +208,6 @@ func (w *Web3Service) LatestBlockNumber() *big.Int {
 // LatestBlockHash in the PoWChain.
 func (w *Web3Service) LatestBlockHash() common.Hash {
 	return w.blockHash
-}
-
-// IsValidatorRegistered in the PoWChain.
-func (w *Web3Service) IsValidatorRegistered() bool {
-	return w.validatorRegistered
 }
 
 // Client for interacting with the PoWChain.
