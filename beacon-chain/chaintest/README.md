@@ -95,6 +95,7 @@ The following configuration options are available for state transition tests:
 The following are **mandatory** fields as they correspond to checks done at the end of the test run.
 - **slot**: `int` check the slot of the state resulting from applying N state transitions in the test
 - **num_validators** `[int]` check the number of validators in the validator registry after applying N state transitions
+<<<<<<< HEAD
 - **penalized_validators** `[int]` the list of validator indices we verify were penalized during the test
 
 ## Stateless Tests

@@ -1,15 +1,11 @@
 package backend
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/trie"
-
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 
 	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -56,30 +52,11 @@ func generateSimulatedBlock(
 			RandaoCommitmentHash32:      depositRandaoCommit[:],
 			CustodyCommitmentHash32:     []byte{},
 		}
-		wBuf := new(bytes.Buffer)
-		if err := ssz.Encode(wBuf, depositInput); err != nil {
-			return nil, [32]byte{}, fmt.Errorf("failed to encode deposit input: %v", err)
+
+		data, err := b.EncodeDepositData(depositInput, simulatedDeposit.Amount, time.Now().Unix())
+		if err != nil {
+			return nil, [32]byte{}, fmt.Errorf("could not encode deposit data: %v", err)
 		}
-		encodedInput := wBuf.Bytes()
-		data := []byte{}
-
-		// We set a deposit value of 1000.
-		value := make([]byte, 8)
-		binary.BigEndian.PutUint64(value, simulatedDeposit.Amount)
-
-		// We then serialize a unix time into the timestamp []byte slice
-		// and ensure it has size of 8 bytes.
-		timestamp := make([]byte, 8)
-
-		// Set deposit time to 1000 seconds since unix time 0.
-		depositTime := time.Now().Unix()
-		binary.BigEndian.PutUint64(timestamp, uint64(depositTime))
-
-		// We then create a serialized deposit data slice of type []byte
-		// by appending all 3 items above together.
-		data = append(data, encodedInput...)
-		data = append(data, value...)
-		data = append(data, timestamp...)
 
 		// We then update the deposits Merkle trie with the deposit data and return
 		// its Merkle branch leading up to the root of the trie.

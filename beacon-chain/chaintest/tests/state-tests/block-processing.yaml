@@ -14,7 +14,7 @@ test_cases:
   - config:
       epoch_length: 63
       deposits_for_chain_start: 16384
-      num_slots: 63
+      num_slots: 64 # Testing advancing state to exactly slot == EpochLength
       deposits:
         - slot: 1
           amount: 32
@@ -43,8 +43,8 @@ test_cases:
           proposal_2_root: !!binary |
             LkmqmqoodLKAslkjdkajsdljasdkajlksjdasldjasdd
     results:
-      slot: 63
-      num_validators: 16386 # We ensure 2 new validators were added to the registry and 1 ejected
+      slot: 64
+      num_validators: 16387 # We ensure 2 new validators were added to the registry and 1 ejected
       penalized_validators: [16385] # We test that the validator at index 16385 was indeed penalized
   - config:
       skip_slots: [10, 20]
