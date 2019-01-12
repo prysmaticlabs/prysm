@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/prysmaticlabs/beacon-chain/contracts"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/sirupsen/logrus"
 )
@@ -32,12 +33,19 @@ type Logger interface {
 	SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error)
 }
 
+// ContractCaller defines a struct that interacts with the VRC contract on the POW Chain.
+type ContractCaller interface {
+	CallContract(ctx context.Context, call ethereum.CallMsg, blockNumber *big.Int) ([]byte, error)
+	CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error)
+}
+
 // Client defines a struct that combines all relevant PoW mainchain interactions required
 // by the beacon chain node.
 type Client interface {
 	Reader
 	POWBlockFetcher
 	Logger
+	ContractCaller
 }
 
 // Web3Service fetches important information about the canonical
@@ -58,6 +66,7 @@ type Web3Service struct {
 	logger      Logger
 	blockNumber *big.Int    // the latest PoW chain blockNumber.
 	blockHash   common.Hash // the latest PoW chain blockHash.
+	vrcCaller   *contracts.ValidatorRegistrationCaller
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -78,6 +87,12 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 			config.Endpoint,
 		)
 	}
+
+	vrcCaller, err := contracts.NewValidatorRegistrationCaller(config.VrcAddr, config.Client)
+	if err != nil {
+		return nil, fmt.Errorf("could not create VRC caller %v", err)
+	}
+
 	ctx, cancel := context.WithCancel(ctx)
 	return &Web3Service{
 		ctx:         ctx,
@@ -91,6 +106,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		client:      config.Client,
 		reader:      config.Reader,
 		logger:      config.Logger,
+		vrcCaller:   vrcCaller,
 	}, nil
 }
 
