@@ -14,6 +14,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	contracts "github.com/prysmaticlabs/prysm/contracts/validator-registration-contract"
+	"github.com/prysmaticlabs/prysm/shared/trie"
 	"github.com/sirupsen/logrus"
 )
 
@@ -31,6 +32,7 @@ type POWBlockFetcher interface {
 
 // Logger defines a struct that subscribes to filtered logs on the PoW chain.
 type Logger interface {
+	FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]gethTypes.Log, error)
 	SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error)
 }
 
@@ -70,6 +72,7 @@ type Web3Service struct {
 	vrcCaller    *contracts.ValidatorRegistrationCaller
 	depositCount uint64
 	depositRoot  []byte
+	depositTrie *trie.DepositTrie
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -135,7 +138,7 @@ func (w *Web3Service) Status() error {
 	return nil
 }
 
-func (w *Web3Service) retrieveDataFromVRC() error {
+func (w *Web3Service) initDataFromVRC() error {
 	depositCount, err := w.vrcCaller.DepositCount(&bind.CallOpts{})
 	if err != nil {
 		return fmt.Errorf("could not retrieve deposit count %v", err)
@@ -149,17 +152,20 @@ func (w *Web3Service) retrieveDataFromVRC() error {
 	}
 
 	w.depositRoot = root
+	newTrie := trie.NewDepositTrie()
 
+	logs := w.client.
 	return nil
 }
 
 // run subscribes to all the services for the powchain.
 func (w *Web3Service) run(done <-chan struct{}) {
 
-	if err := w.retrieveDataFromVRC(); err != nil {
+	if err := w.initDataFromVRC(); err != nil {
 		log.Errorf("Unable to retrieve data from VRC %v", err)
 		return
 	}
+
 	headSub, err := w.reader.SubscribeNewHead(w.ctx, w.headerChan)
 	if err != nil {
 		log.Errorf("Unable to subscribe to incoming PoW chain headers: %v", err)
@@ -240,6 +246,13 @@ func (w *Web3Service) ProcessDepositData(data common.Hash) error {
 func (w *Web3Service) SaveInTrie(root common.Hash) error {
 	_ = root
 	return nil
+}
+
+func (w *Web3Service) ProcessPastLogs(query ethereum.FilterQuery) error {
+	logs,err := w.client.FilterLogs(w.ctx,query)
+	if err != nil {
+		return err
+	}
 }
 
 // LatestBlockNumber in the PoWChain.
