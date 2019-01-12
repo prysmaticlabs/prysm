@@ -8,11 +8,12 @@ import (
 	"strings"
 
 	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/prysmaticlabs/beacon-chain/contracts"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	contracts "github.com/prysmaticlabs/prysm/contracts/validator-registration-contract"
 	"github.com/sirupsen/logrus"
 )
 
@@ -55,18 +56,20 @@ type Client interface {
 // Validator Registration Contract on the PoW chain to kick off the beacon
 // chain's validator registration process.
 type Web3Service struct {
-	ctx         context.Context
-	cancel      context.CancelFunc
-	client      Client
-	headerChan  chan *gethTypes.Header
-	logChan     chan gethTypes.Log
-	endpoint    string
-	vrcAddress  common.Address
-	reader      Reader
-	logger      Logger
-	blockNumber *big.Int    // the latest PoW chain blockNumber.
-	blockHash   common.Hash // the latest PoW chain blockHash.
-	vrcCaller   *contracts.ValidatorRegistrationCaller
+	ctx          context.Context
+	cancel       context.CancelFunc
+	client       Client
+	headerChan   chan *gethTypes.Header
+	logChan      chan gethTypes.Log
+	endpoint     string
+	vrcAddress   common.Address
+	reader       Reader
+	logger       Logger
+	blockNumber  *big.Int    // the latest PoW chain blockNumber.
+	blockHash    common.Hash // the latest PoW chain blockHash.
+	vrcCaller    *contracts.ValidatorRegistrationCaller
+	depositCount uint64
+	depositRoot  []byte
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -132,8 +135,31 @@ func (w *Web3Service) Status() error {
 	return nil
 }
 
+func (w *Web3Service) retrieveDataFromVRC() error {
+	depositCount, err := w.vrcCaller.DepositCount(&bind.CallOpts{})
+	if err != nil {
+		return fmt.Errorf("could not retrieve deposit count %v", err)
+	}
+
+	w.depositCount = depositCount.Uint64()
+
+	root, err := w.vrcCaller.GetDepositRoot(&bind.CallOpts{})
+	if err != nil {
+		return fmt.Errorf("could not retrieve deposit root %v", err)
+	}
+
+	w.depositRoot = root
+
+	return nil
+}
+
 // run subscribes to all the services for the powchain.
 func (w *Web3Service) run(done <-chan struct{}) {
+
+	if err := w.retrieveDataFromVRC(); err != nil {
+		log.Errorf("Unable to retrieve data from VRC %v", err)
+		return
+	}
 	headSub, err := w.reader.SubscribeNewHead(w.ctx, w.headerChan)
 	if err != nil {
 		log.Errorf("Unable to subscribe to incoming PoW chain headers: %v", err)

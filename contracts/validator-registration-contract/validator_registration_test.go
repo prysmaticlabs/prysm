@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/prysmaticlabs/go-bls/bazel-go-bls/external/go_sdk/src/encoding/binary"
 )
 
 var (
@@ -113,7 +114,7 @@ func TestValidatorRegisters(t *testing.T) {
 	if err != nil {
 		t.Errorf("Validator registration failed: %v", err)
 	}
-	log, err := testAccount.contract.FilterHashChainValue(&bind.FilterOpts{}, [][]byte{})
+	log, err := testAccount.contract.FilterDeposit(&bind.FilterOpts{}, [][]byte{})
 
 	defer func() {
 		err = log.Close()
@@ -130,7 +131,7 @@ func TestValidatorRegisters(t *testing.T) {
 	}
 	log.Next()
 
-	if log.Event.TotalDepositcount.Cmp(big.NewInt(0)) != 0 {
+	if bytes.Equal(log.Event.MerkleTreeIndex, binary.BigEndian.PutUint64()) {
 		t.Errorf("HashChainValue event total desposit count miss matched. Want: %v, Got: %v", big.NewInt(0), log.Event.TotalDepositcount)
 	}
 	if !bytes.Equal(log.Event.Data[len(log.Event.Data)-1:], []byte{'A'}) {
