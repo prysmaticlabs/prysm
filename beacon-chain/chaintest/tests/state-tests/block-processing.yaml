@@ -14,7 +14,7 @@ test_cases:
   - config:
       epoch_length: 64
       deposits_for_chain_start: 16384
-      num_slots: 64
+      num_slots: 64 # Testing advancing state to exactly slot == EpochLength
       deposits:
         - slot: 1
           amount: 32
