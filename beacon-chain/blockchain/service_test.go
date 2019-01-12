@@ -25,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 )
 
 func init() {
@@ -318,8 +319,7 @@ func TestDoesPOWBlockExist(t *testing.T) {
 	}
 
 	// Using a faulty client should throw error.
-	var powHash [32]byte
-	copy(powHash[:], beaconState.LatestDepositRootHash32)
+	powHash := bytesutil.ToBytes32(beaconState.LatestDepositRootHash32)
 	exists := chainService.doesPoWBlockExist(powHash)
 	if exists {
 		t.Error("Block corresponding to nil powchain reference should not exist")
@@ -457,8 +457,7 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 		t.Fatal("block processing succeeded despite block slot being invalid")
 	}
 
-	var h [32]byte
-	copy(h[:], []byte("a"))
+	h := bytesutil.ToBytes32([]byte("a"))
 	beaconState.LatestDepositRootHash32 = h[:]
 	beaconState.Slot = 0
 

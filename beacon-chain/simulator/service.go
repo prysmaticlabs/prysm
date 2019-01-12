@@ -19,7 +19,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotticker"
 	"github.com/sirupsen/logrus"
-)
+	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
+	)
 
 var log = logrus.WithField("prefix", "simulator")
 
@@ -214,9 +215,7 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 func (sim *Simulator) processBlockReqByHash(msg p2p.Message) {
 
 	data := msg.Data.(*pb.BeaconBlockRequest)
-	var hash [32]byte
-	copy(hash[:], data.Hash)
-
+	hash := bytesutil.ToBytes32(data.Hash)
 	block := sim.broadcastedBlocksByHash[hash]
 	if block == nil {
 		log.WithFields(logrus.Fields{
