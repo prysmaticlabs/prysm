@@ -112,6 +112,7 @@ The following configuration options are available for state transition tests:
 - **deposits**: `[Deposit Config]` trigger a new validator deposit into the beacon state based on configuration options
 - **proposer_slashings**: `[Proposer Slashing Config]` trigger a proposer slashing at a certain slot for a certain proposer index
 - **casper_slashings**: `[Casper Slashing Config]` trigger a casper slashing at a certain slot
+- **validator_exits**: `[Validator Exit Config]` trigger a voluntary validator exit at a certain slot for a validator index
 
 **Deposit Config**
 - **slot**: `int` a slot in which to trigger a deposit during a state transition test
@@ -140,13 +141,17 @@ The following configuration options are available for state transition tests:
 - **votes_2_custody_0_indices**: `[int]` the custody indices 0 for votes2
 - **votes_2_custody_1_indices**: `[int]` the custody indices 1 for votes2
 
+**Validator Exit Config**
+- **slot**: `int` the slot at which a validator wants to voluntarily exit the validator registry
+- **validator_index**: `int` the index of the validator in the registry that is exiting
+
 #### Test Results
 
 The following are **mandatory** fields as they correspond to checks done at the end of the test run.
 - **slot**: `int` check the slot of the state resulting from applying N state transitions in the test
 - **num_validators** `[int]` check the number of validators in the validator registry after applying N state transitions
-<<<<<<< HEAD
 - **penalized_validators** `[int]` the list of validator indices we verify were penalized during the test
+- **exited_validators**: `[int]` the list of validator indices we verify voluntarily exited the registry during the test
 
 ## Stateless Tests
 
