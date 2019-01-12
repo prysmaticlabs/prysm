@@ -910,7 +910,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_oauth2",
-    commit = "fd3eaa146cbb5c89ce187c275fb79bd3a36a5ffc",
+    commit = "36a7019397c4c86cf59eeab3bc0d188bac444277",
     importpath = "golang.org/x/oauth2",
 )
 
