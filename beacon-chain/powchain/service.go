@@ -3,6 +3,7 @@ package powchain
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -72,7 +73,7 @@ type Web3Service struct {
 	vrcCaller    *contracts.ValidatorRegistrationCaller
 	depositCount uint64
 	depositRoot  []byte
-	depositTrie *trie.DepositTrie
+	depositTrie  *trie.DepositTrie
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -152,9 +153,8 @@ func (w *Web3Service) initDataFromVRC() error {
 	}
 
 	w.depositRoot = root
-	newTrie := trie.NewDepositTrie()
+	w.depositTrie = trie.NewDepositTrie()
 
-	logs := w.client.
 	return nil
 }
 
@@ -179,6 +179,10 @@ func (w *Web3Service) run(done <-chan struct{}) {
 	logSub, err := w.logger.SubscribeFilterLogs(w.ctx, query, w.logChan)
 	if err != nil {
 		log.Errorf("Unable to query logs from VRC: %v", err)
+		return
+	}
+	if err := w.ProcessPastLogs(query); err != nil {
+		log.Errorf("Unable to process past logs %v", err)
 		return
 	}
 	defer logSub.Unsubscribe()
@@ -215,44 +219,48 @@ func (w *Web3Service) ProcessLog(VRClog gethTypes.Log) {
 	depositData := VRClog.Topics[2]
 	_ = VRClog.Topics[3] // merkleTreeBranch
 
-	if err := w.SaveInTrie(merkleRoot); err != nil {
+	if err := w.SaveInTrie(depositData, merkleRoot); err != nil {
 		log.Errorf("Could not save in trie %v", err)
 		return
 	}
-	if err := w.ProcessDepositData(depositData); err != nil {
-		log.Errorf("Could not process deposit from log %v", err)
-		return
-	}
-}
 
-func (w *Web3Service) ProcessDepositData(data common.Hash) error {
-	decodedData, err := hexutil.Decode(data.Hex())
+	decodedData, err := hexutil.Decode(depositData.Hex())
 	if err != nil {
-		return err
+		log.Errorf("Could not decode log %v", err)
+		return
 	}
 
 	depositInput, err := blocks.DecodeDepositInput(decodedData)
 	if err != nil {
-		return err
+		log.Errorf("Could not decode deposit input %v", err)
+		return
 	}
 
 	log.WithFields(logrus.Fields{
 		"publicKey": depositInput.Pubkey,
 	}).Info("Validator registered in VRC with public key")
 
-	return nil
 }
 
-func (w *Web3Service) SaveInTrie(root common.Hash) error {
-	_ = root
+func (w *Web3Service) SaveInTrie(depositData common.Hash, merkleRoot common.Hash) error {
+	if w.depositTrie.Root() != merkleRoot {
+		return errors.New("Saved root in trie is unequal to root received from log ")
+	}
+
+	w.depositTrie.UpdateDepositTrie(depositData.Bytes())
 	return nil
 }
 
 func (w *Web3Service) ProcessPastLogs(query ethereum.FilterQuery) error {
-	logs,err := w.client.FilterLogs(w.ctx,query)
+	logs, err := w.client.FilterLogs(w.ctx, query)
 	if err != nil {
 		return err
 	}
+
+	for _, log := range logs {
+		w.ProcessLog(log)
+	}
+	return nil
 }
 
 // LatestBlockNumber in the PoWChain.

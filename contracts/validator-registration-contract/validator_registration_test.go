@@ -3,6 +3,7 @@ package vrc
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"encoding/binary"
 	"fmt"
 	"log"
 	"math/big"
@@ -13,7 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/prysmaticlabs/go-bls/bazel-go-bls/external/go_sdk/src/encoding/binary"
 )
 
 var (
