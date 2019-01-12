@@ -4,85 +4,101 @@ This is a test-suite for conformity end-2-end tests for Prysm's implementation o
 
 The test suite opts for YAML due to wide language support and support for inline comments.
 
-## Testing Format
+# Testing Format
 
 The testing format follows the official ETH2.0 Specification created [here](https://github.com/ethereum/eth2.0-specs/blob/master/specs/test-format.md)
 
-### Core, Chain Tests
+## Stateful Tests
 
 Chain tests check for conformity of a certain client to the beacon chain specification for items such as the fork choice rule and Casper FFG validator rewards & penalties. Stateful tests need to specify a certain configuration of a beacon chain, with items such as the number validators, in the YAML file. Sample tests will all required fields are shown below.
 
-**Fork Choice and Chain Updates**
+### State Transition
+
+The most important use case for this test format is to verify the ins and outs of the Ethereum Phase 0 Beacon Chain state advancement. The specification details very strict guidelines for blocks to successfully trigger a state transition, including items such as Casper Proof of Stake slashing conditions of validators, pseudorandomness in the form of RANDAO, and attestation on shard blocks being processed all inside each incoming beacon block. The YAML configuration for this test type allows for configuring a state transition run over N slots, triggering slashing conditions, processing deposits of new validators, and more.
+
+An example state transition test for testing slot and block processing will look as follows:
 
 ```yaml
-
-title: Sample Ethereum 2.0 Beacon Chain Test
-summary: Basic, functioning fork choice rule for Ethereum 2.0
+title: Sample Ethereum Serenity State Transition Tests
+summary: Testing state transitions occurring over N slots with varying deposit sizes and proposal skips
 test_suite: prysm
+fork: tchaikovsky
+version: 1.0
 test_cases:
   - config:
-      validator_count: 100
-      cycle_length: 8
-      shard_count: 32
-      min_committee_size: 8
-    slots:
-      # "slot_number" has a minimum of 1
-      - slot_number: 1
-        new_block:
-          id: A
-          # "*" is used for the genesis block
-          parent: "*"
-        attestations:
-          - block: A
-            # the following is a shorthand string for [0, 1, 2, 3, 4, 5]
-            validators: "0-5"
-      - slot_number: 2
-        new_block:
-          id: B
-          parent: A
-        attestations:
-          - block: B
-            validators: "0-5"
-      - slot_number: 3
-        new_block:
-          id: C
-          parent: A
-        attestations:
-          # attestation "committee_slot" defaults to the slot during which the attestation occurs
-          - block: C
-            validators: "2-7"
-          # default "committee_slot" can be directly overridden
-          - block: C
-            committee_slot: 2
-            validators: "6, 7"
-      - slot_number: 4
-        new_block:
-          id: D
-          parent: C
-        attestations:
-          - block: D
-            validators: "1-4"
-      # slots can be skipped entirely (5 in this case)
-      - slot_number: 6
-        new_block:
-          id: E
-          parent: D
-        attestations:
-          - block: E
-            validators: "0-4"
-          - block: B
-            validators: "5, 6, 7"
+      epoch_length: 64
+      deposits_for_chain_start: 1000
+      num_slots: 32 # Testing advancing state to slot < EpochLength
     results:
-      head: E
-      last_justified_block: "*"
-      last_finalized_block: "*"
+      slot: 32
+      num_validators: 1000
+  - config:
+      epoch_length: 64
+      deposits_for_chain_start: 16384
+      num_slots: 64 # Testing advancing state to exactly slot == EpochLength
+      deposits:
+        - slot: 10
+          amount: 32
+          merkle_index: 0
+          pubkey: !!binary |
+            SlAAbShSkUg7PLiPHZI/rTS1uAvKiieOrifPN6Moso0=
+        - slot: 20
+          amount: 32
+          merkle_index: 1
+          pubkey: !!binary |
+            Oklajsjdkaklsdlkajsdjlajslkdjlkasjlkdjlajdsd
+    results:
+      slot: 64
+      num_validators: 16386
+  - config:
+      skip_slots: [10, 20, 30]
+      epoch_length: 64
+      deposits_for_chain_start: 1000
+      num_slots: 128 # Testing advancing state's slot == 2*EpochLength
+    results:
+      slot: 128
+      num_validators: 1000
 ```
 
-**Casper FFG Rewards/Penalties**
 
-TODO
+#### Test Configuration Options
 
-### Stateless Tests
+The following configuration options are available for state transition tests:
+
+**Config**
+
+- **skip_slots**: `[int]` determines which slot numbers to simulate a proposer not submitting a block in the state transition TODO
+- **epoch_length**: `int` the number of slots in an epoch
+- **deposits_for_chain_start**: `int` the number of eth deposits needed for the beacon chain to initialize (this simulates an initial validator registry based on this number in the test)
+- **num_slots**: `int` the number of times we run a state transition in the test
+- **deposits**: `[Deposit Config]` trigger a new validator deposit into the beacon state based on configuration options
+- **proposer_slashings**: `[Proposer Slashing Config]` trigger a proposer slashing at a certain slot for a certain proposer index
+
+**Deposit Config**
+- **slot**: `int` a slot in which to trigger a deposit during a state transition test
+- **amount**: `int` the ETH deposit amount to trigger
+- **merkle_index**: `int` the index of the deposit in the validator deposit contract's Merkle trie
+- **pubkey**: `!!binary` the public key of the validator in the triggered deposit object
+
+**Proposer Slashing Config**
+- **slot**: `int` a slot in which to trigger a proposer slashing during a state transition test
+- **proposer_index**: `int` the proposer to penalize
+- **proposal_1_shard**: `int` the first proposal data's shard id
+- **proposal_1_slot**: `int` the first proposal data's slot
+- **proposal_1_root**: `!!binary` the second proposal data's block root
+- **proposal_2_shard**: `int`  the second proposal data's shard id
+- **proposal_2_slot**: `int` the second proposal data's slot
+- **proposal_2_root**: `!!binary` the second proposal data's block root
+
+#### Test Results
+
+The following are **mandatory** fields as they correspond to checks done at the end of the test run.
+- **slot**: `int` check the slot of the state resulting from applying N state transitions in the test
+- **num_validators** `[int]` check the number of validators in the validator registry after applying N state transitions
+<<<<<<< HEAD
+- **penalized_validators** `[int]` the list of validator indices we verify were penalized during the test
+
+## Stateless Tests
 
 Stateless tests represent simple unit test definitions for important invariants in the ETH2.0 runtime. In particular, these test conformity across clients with respect to items such as Simple Serialize (SSZ), Signature Aggregation (BLS), and Validator Shuffling
 
@@ -127,12 +143,29 @@ test_cases:
     JlAYJ5H2j8g7PLiPHZI/rTS1uAvKiieOrifPN6Moso0=
 ```
 
-## Using the Runner
+# Using the Runner
 
-First, create a directory containing the YAML files you wish to test (or use the default `./sampletests` directory included with Prysm). Then, navigate to the test runner's directory and use the go tool as follows:
+First, create a directory containing the YAML files you wish to test (or use the default `./sampletests` directory included with Prysm). 
+Then, make sure you have the following folder structure for the directory:
+
+```
+yourtestdir/
+  fork-choice-tests/
+    *.yaml
+    ...
+  shuffle-tests/
+    *.yaml
+    ...
+  state-tests/
+    *.yaml
+    ...
+```
+
+Then, navigate to the test runner's directory and use the go tool as follows:
+
 
 ```bash
-go run main.go -tests-dir /path/to/your/yamlfiles
+go run main.go -tests-dir /path/to/your/testsdir
 ```
 
 The runner will then start up a simulated backend and run all your specified YAML tests.

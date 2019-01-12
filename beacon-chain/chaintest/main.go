@@ -14,7 +14,7 @@ import (
 )
 
 func readTestsFromYaml(yamlDir string) ([]interface{}, error) {
-	const chainTestsFolderName = "chain-tests"
+	const forkChoiceTestsFolderName = "fork-choice-tests"
 	const shuffleTestsFolderName = "shuffle-tests"
 	const stateTestsFolderName = "state-tests"
 
@@ -37,8 +37,8 @@ func readTestsFromYaml(yamlDir string) ([]interface{}, error) {
 				return nil, fmt.Errorf("could not read yaml file: %v", err)
 			}
 			switch dir.Name() {
-			case chainTestsFolderName:
-				decoded := &backend.ChainTest{}
+			case forkChoiceTestsFolderName:
+				decoded := &backend.ForkChoiceTest{}
 				if err := yaml.Unmarshal(data, decoded); err != nil {
 					return nil, fmt.Errorf("could not unmarshal YAML file into test struct: %v", err)
 				}
@@ -64,12 +64,12 @@ func readTestsFromYaml(yamlDir string) ([]interface{}, error) {
 func runTests(tests []interface{}, sb *backend.SimulatedBackend) error {
 	for _, tt := range tests {
 		switch typedTest := tt.(type) {
-		case *backend.ChainTest:
+		case *backend.ForkChoiceTest:
 			log.Infof("Title: %v", typedTest.Title)
 			log.Infof("Summary: %v", typedTest.Summary)
 			log.Infof("Test Suite: %v", typedTest.TestSuite)
 			for _, testCase := range typedTest.TestCases {
-				if err := sb.RunChainTest(testCase); err != nil {
+				if err := sb.RunForkChoiceTest(testCase); err != nil {
 					return fmt.Errorf("chain test failed: %v", err)
 				}
 			}

@@ -53,10 +53,6 @@ func GeneratePubKey() ([]byte, error) {
 
 // NewValidatorClient creates a new, Ethereum Serenity validator client.
 func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
-	log.WithFields(logrus.Fields{
-		"version": version.GetVersion(),
-	}).Info("Starting validator node")
-
 	registry := shared.NewServiceRegistry()
 	ValidatorClient := &ValidatorClient{
 		ctx:      ctx,
@@ -114,7 +110,9 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 func (s *ValidatorClient) Start() {
 	s.lock.Lock()
 
-	log.Info("Starting sharding validator")
+	log.WithFields(logrus.Fields{
+		"version": version.GetVersion(),
+	}).Info("Starting validator node")
 
 	s.services.StartAll()
 

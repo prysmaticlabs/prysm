@@ -67,3 +67,13 @@ func IsIn(a uint32, b []uint32) bool {
 	}
 	return false
 }
+
+// IsInUint64 returns true if a is in b and False otherwise.
+func IsInUint64(a uint64, b []uint64) bool {
+	for _, v := range b {
+		if a == v {
+			return true
+		}
+	}
+	return false
+}

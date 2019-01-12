@@ -71,6 +71,7 @@ func InitialBeaconState(
 			CustodyCommitmentHash32:     depositInput.CustodyCommitmentHash32,
 			Balance:                     amount,
 			ExitSlot:                    params.BeaconConfig().FarFutureSlot,
+			PenalizedSlot:               params.BeaconConfig().FarFutureSlot,
 		}
 
 		validatorRegistry[i] = validator

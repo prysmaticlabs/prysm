@@ -52,9 +52,6 @@ type BeaconNode struct {
 // NewBeaconNode creates a new node instance, sets up configuration options, and registers
 // every required service to the node.
 func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
-	log.WithFields(logrus.Fields{
-		"version": version.GetVersion(),
-	}).Info("Starting beacon node")
 	registry := shared.NewServiceRegistry()
 
 	beacon := &BeaconNode{
@@ -117,7 +114,9 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 func (b *BeaconNode) Start() {
 	b.lock.Lock()
 
-	log.Info("Starting beacon node")
+	log.WithFields(logrus.Fields{
+		"version": version.GetVersion(),
+	}).Info("Starting beacon node")
 
 	b.services.StartAll()
 
