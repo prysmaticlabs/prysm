@@ -70,19 +70,18 @@ func GenericUnion(a, b interface{}) (reflect.Value, error) {
 	if err2 != nil {
 		return set, fmt.Errorf("slice type is invalid %v", err2)
 	}
-
-	var t interface{}
 	if len(set1) == 0 && len(set2) == 0 {
 		return set, nil
 	}
 
-	if len(set1) > 0 {
-		t = set1[0]
-	} else {
-		t = set2[0]
+	if len(set1) == 0 {
+		return reflect.ValueOf(set2), nil
+	}
+	if len(set2) == 0 {
+		return reflect.ValueOf(set1), nil
 	}
 
-	m := reflect.MapOf(reflect.TypeOf(t), reflect.TypeOf(true))
+	m := reflect.MapOf(reflect.TypeOf(set1[0]), reflect.TypeOf(true))
 	m1 := reflect.MakeMapWithSize(m, 0)
 	for i := 0; i < len(set1); i++ {
 		m1.SetMapIndex(reflect.ValueOf(set1[i]), reflect.ValueOf(true))
@@ -119,18 +118,18 @@ func GenericNot(a, b interface{}) (reflect.Value, error) {
 		return set, fmt.Errorf("slice type is invalid %v", err2)
 	}
 
-	var t interface{}
 	if len(set1) == 0 && len(set2) == 0 {
 		return set, nil
 	}
 
-	if len(set1) > 0 {
-		t = set1[0]
-	} else {
-		t = set2[0]
+	if len(set1) == 0 {
+		return reflect.ValueOf(set2), nil
+	}
+	if len(set2) == 0 {
+		return reflect.ValueOf(set1), nil
 	}
 
-	m := reflect.MapOf(reflect.TypeOf(t), reflect.TypeOf(true))
+	m := reflect.MapOf(reflect.TypeOf(set1[0]), reflect.TypeOf(true))
 	m1 := reflect.MakeMapWithSize(m, 0)
 	for i := 0; i < len(set1); i++ {
 		m1.SetMapIndex(reflect.ValueOf(set1[i]), reflect.ValueOf(true))
