@@ -2,9 +2,10 @@ package slices
 
 import (
 	"bytes"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"reflect"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 func TestGenericIntersection(t *testing.T) {
