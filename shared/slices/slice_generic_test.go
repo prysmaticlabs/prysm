@@ -698,7 +698,6 @@ func BenchmarkNotWithSSZ(b *testing.B) {
 			b2 := new(bytes.Buffer)
 			err1 := ssz.Encode(b2, tt.setA)
 			if err1 == nil && err == nil {
-
 				ByteNot(b1.Bytes(), b2.Bytes())
 
 			}

@@ -26,7 +26,7 @@ func GenericIntersection(a, b interface{}) (reflect.Value, error) {
 	set2, err2 := interfaceToSlice(b)
 
 	if len(set1) == 0 || len(set2) == 0 {
-		return set,nil
+		return set, nil
 	}
 
 	if err1 == nil && err2 == nil {
@@ -45,8 +45,8 @@ func GenericIntersection(a, b interface{}) (reflect.Value, error) {
 				}
 			}
 		}
-	}else {
-		return set,fmt.Errorf("slice type is invalid")
+	} else {
+		return set, fmt.Errorf("slice type is invalid")
 	}
 
 	return set, nil
@@ -61,15 +61,14 @@ func GenericUnion(a, b interface{}) (reflect.Value, error) {
 	set2, err2 := interfaceToSlice(b)
 	var m interface{}
 	if len(set1) == 0 && len(set2) == 0 {
-		return set,nil
+		return set, nil
 	}
 
 	if len(set1) > 0 {
 		m = set1[0]
-	}else {
+	} else {
 		m = set2[0]
 	}
-
 
 	if err1 == nil && err2 == nil {
 		m := reflect.MapOf(reflect.TypeOf(m), reflect.TypeOf(true))
@@ -89,8 +88,8 @@ func GenericUnion(a, b interface{}) (reflect.Value, error) {
 				}
 			}
 		}
-	}else {
-		return set,fmt.Errorf("slice type is invalid")
+	} else {
+		return set, fmt.Errorf("slice type is invalid")
 	}
 	return set, nil
 
@@ -105,12 +104,12 @@ func GenericNot(a, b interface{}) (reflect.Value, error) {
 
 	var m interface{}
 	if len(set1) == 0 && len(set2) == 0 {
-		return set,nil
+		return set, nil
 	}
 
 	if len(set1) > 0 {
 		m = set1[0]
-	}else {
+	} else {
 		m = set2[0]
 	}
 
@@ -131,8 +130,8 @@ func GenericNot(a, b interface{}) (reflect.Value, error) {
 				}
 			}
 		}
-	}else {
-		return set,fmt.Errorf("slice type is invalid")
+	} else {
+		return set, fmt.Errorf("slice type is invalid")
 	}
 
 	return set, nil

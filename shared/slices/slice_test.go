@@ -236,7 +236,6 @@ func TestUnionInt64(t *testing.T) {
 	}
 }
 
-
 func TestNotUint64(t *testing.T) {
 	testCases := []struct {
 		setA []uint64
@@ -258,7 +257,6 @@ func TestNotUint64(t *testing.T) {
 		}
 	}
 }
-
 
 func TestNotInt64(t *testing.T) {
 	testCases := []struct {
@@ -304,7 +302,6 @@ func TestNotInt32(t *testing.T) {
 	}
 }
 
-
 func TestIsInUint64(t *testing.T) {
 	testCases := []struct {
 		a      uint64
@@ -324,7 +321,6 @@ func TestIsInUint64(t *testing.T) {
 		}
 	}
 }
-
 
 func TestIsInInt32(t *testing.T) {
 	testCases := []struct {
@@ -365,5 +361,3 @@ func TestIsInInt64(t *testing.T) {
 		}
 	}
 }
-
-

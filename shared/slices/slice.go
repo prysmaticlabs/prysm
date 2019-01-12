@@ -204,7 +204,6 @@ func IsInInt32(a int32, b []int32) bool {
 	return false
 }
 
-
 // IntersectionInt64 of two int64 slices with time
 // complexity of approximately O(n) leveraging a map to
 // check for element existence off by a constant factor
@@ -272,7 +271,6 @@ func IsInInt64(a int64, b []int64) bool {
 	}
 	return false
 }
-
 
 // ByteIntersection returns a new set with elements that are common in
 // both sets a and b.
