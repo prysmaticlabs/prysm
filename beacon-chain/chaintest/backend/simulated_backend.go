@@ -186,6 +186,13 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 				break
 			}
 		}
+		var simulatedProposerSlashing *StateTestProposerSlashing
+		for _, pSlashing := range testCase.Config.ProposerSlashings {
+			if pSlashing.Slot == i {
+				simulatedProposerSlashing = pSlashing
+				break
+			}
+		}
 
 		layersPeeled := layersPeeledForProposer[proposerIndex]
 		blockRandaoReveal := determineSimulatedBlockRandaoReveal(layersPeeled, hashOnions)
@@ -198,6 +205,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 			lastRandaoLayer,
 			simulatedDeposit,
 			depositsTrie,
+			simulatedProposerSlashing,
 		)
 		if err != nil {
 			return fmt.Errorf("could not generate simulated beacon block %v", err)
@@ -223,7 +231,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	log.Infof(
 		"with %d initial deposits, each state transition took average time = %v",
 		testCase.Config.DepositsForChainStart,
-		time.Duration(averageDuration(averageTimesPerTransition)),
+		averageDuration(averageTimesPerTransition),
 	)
 
 	if beaconState.Slot != testCase.Results.Slot {
@@ -242,13 +250,21 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 			len(beaconState.ValidatorRegistry),
 		)
 	}
+	for _, penalized := range testCase.Results.PenalizedValidators {
+		if beaconState.ValidatorRegistry[penalized].PenalizedSlot == params.BeaconConfig().FarFutureSlot {
+			return fmt.Errorf(
+				"expected validator at index %d to have been penalized",
+				penalized,
+			)
+		}
+	}
 	return nil
 }
 
-func averageDuration(times []time.Duration) int64 {
+func averageDuration(times []time.Duration) time.Duration {
 	sum := int64(0)
 	for _, t := range times {
 		sum += t.Nanoseconds()
 	}
-	return sum / int64(len(times))
+	return time.Duration(sum / int64(len(times)))
 }
