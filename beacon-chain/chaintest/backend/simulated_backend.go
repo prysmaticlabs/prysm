@@ -231,7 +231,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	log.Infof(
 		"with %d initial deposits, each state transition took average time = %v",
 		testCase.Config.DepositsForChainStart,
-		time.Duration(averageDuration(averageTimesPerTransition)),
+		averageDuration(averageTimesPerTransition),
 	)
 
 	if beaconState.Slot != testCase.Results.Slot {
@@ -261,10 +261,10 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	return nil
 }
 
-func averageDuration(times []time.Duration) int64 {
+func averageDuration(times []time.Duration) time.Duration {
 	sum := int64(0)
 	for _, t := range times {
 		sum += t.Nanoseconds()
 	}
-	return sum / int64(len(times))
+	return time.Duration(sum / int64(len(times)))
 }
