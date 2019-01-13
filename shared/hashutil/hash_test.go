@@ -4,9 +4,8 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
-
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 func TestHash(t *testing.T) {

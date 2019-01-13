@@ -9,9 +9,9 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 )
 
 // CanProcessEpoch checks the eligibility to process epoch.
@@ -214,6 +214,8 @@ func ProcessValidatorRegistry(
 	randaoMixesLength := params.BeaconConfig().LatestRandaoMixesLength
 	seedLookahead := params.BeaconConfig().SeedLookahead
 	shardCount := params.BeaconConfig().ShardCount
+
+	state, err := validators.UpdateRegistry(state)
 
 	shardCommittees := state.ShardCommitteesAtSlots
 	lastSlot := len(shardCommittees) - 1
