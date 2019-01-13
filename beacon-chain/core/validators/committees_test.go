@@ -6,7 +6,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestGetShardCommitteesAtSlots(t *testing.T) {
@@ -39,10 +38,10 @@ func TestGetShardCommitteesAtSlots(t *testing.T) {
 
 func TestExceedingMaxValidatorRegistryFails(t *testing.T) {
 	// Create more validators than ModuloBias defined in config, this should fail.
-	size := 1<<(params.BeaconConfig().RandBytes*8) - 1
+	size := 1<<(config.RandBytes*8) - 1
 
 	validators := make([]*pb.ValidatorRecord, size)
-	validator := &pb.ValidatorRecord{ExitSlot: params.BeaconConfig().FarFutureSlot}
+	validator := &pb.ValidatorRecord{ExitSlot: config.FarFutureSlot}
 	for i := 0; i < size; i++ {
 		validators[i] = validator
 	}
@@ -56,7 +55,7 @@ func TestExceedingMaxValidatorRegistryFails(t *testing.T) {
 func BenchmarkMaxValidatorRegistry(b *testing.B) {
 	var validators []*pb.ValidatorRecord
 	validator := &pb.ValidatorRecord{}
-	size := 1<<(params.BeaconConfig().RandBytes*8) - 1
+	size := 1<<(config.RandBytes*8) - 1
 
 	for i := 0; i < size; i++ {
 		validators = append(validators, validator)
@@ -80,8 +79,8 @@ func TestShuffleActiveValidatorRegistry(t *testing.T) {
 	if err != nil {
 		t.Errorf("validatorsBySlotShard failed with %v:", err)
 	}
-	if len(indices) != int(params.BeaconConfig().EpochLength) {
-		t.Errorf("incorret length for validator indices. Want: %d. Got: %v", params.BeaconConfig().EpochLength, len(indices))
+	if len(indices) != int(config.EpochLength) {
+		t.Errorf("incorret length for validator indices. Want: %d. Got: %v", config.EpochLength, len(indices))
 	}
 }
 
@@ -97,22 +96,22 @@ func TestSmallSampleValidatorRegistry(t *testing.T) {
 	if err != nil {
 		t.Errorf("validatorsBySlotShard failed with %v:", err)
 	}
-	if len(indices) != int(params.BeaconConfig().EpochLength) {
-		t.Errorf("incorret length for validator indices. Want: %d. Got: %d", params.BeaconConfig().EpochLength, len(indices))
+	if len(indices) != int(config.EpochLength) {
+		t.Errorf("incorret length for validator indices. Want: %d. Got: %d", config.EpochLength, len(indices))
 	}
 }
 
 func TestGetCommitteesPerSlotSmallValidatorSet(t *testing.T) {
-	numValidatorRegistry := params.BeaconConfig().EpochLength * params.BeaconConfig().TargetCommitteeSize / 4
+	numValidatorRegistry := config.EpochLength * config.TargetCommitteeSize / 4
 
 	committesPerSlot := getCommitteesPerSlot(numValidatorRegistry)
-	if committesPerSlot != 1 {
-		t.Fatalf("Expected committeesPerSlot to equal %d: got %d", 1, committesPerSlot)
+	if committesPerSlot != 0 {
+		t.Fatalf("Expected committeesPerSlot to equal %d: got %d", 0, committesPerSlot)
 	}
 }
 
 func TestGetCommitteesPerSlotRegularValidatorSet(t *testing.T) {
-	numValidatorRegistry := params.BeaconConfig().EpochLength * params.BeaconConfig().TargetCommitteeSize
+	numValidatorRegistry := config.EpochLength * config.TargetCommitteeSize
 
 	committesPerSlot := getCommitteesPerSlot(numValidatorRegistry)
 	if committesPerSlot != 1 {
@@ -121,20 +120,20 @@ func TestGetCommitteesPerSlotRegularValidatorSet(t *testing.T) {
 }
 
 func TestGetCommitteesPerSlotLargeValidatorSet(t *testing.T) {
-	numValidatorRegistry := params.BeaconConfig().EpochLength * params.BeaconConfig().TargetCommitteeSize * 8
+	numValidatorRegistry := config.EpochLength * config.TargetCommitteeSize * 8
 
 	committesPerSlot := getCommitteesPerSlot(numValidatorRegistry)
-	if committesPerSlot != 5 {
-		t.Fatalf("Expected committeesPerSlot to equal %d: got %d", 5, committesPerSlot)
+	if committesPerSlot != 8 {
+		t.Fatalf("Expected committeesPerSlot to equal %d: got %d", 8, committesPerSlot)
 	}
 }
 
 func TestGetCommitteesPerSlotSmallShardCount(t *testing.T) {
-	config := params.BeaconConfig()
+	config := config
 	oldShardCount := config.ShardCount
 	config.ShardCount = config.EpochLength - 1
 
-	numValidatorRegistry := params.BeaconConfig().EpochLength * params.BeaconConfig().TargetCommitteeSize
+	numValidatorRegistry := config.EpochLength * config.TargetCommitteeSize
 
 	committesPerSlot := getCommitteesPerSlot(numValidatorRegistry)
 	if committesPerSlot != 1 {
@@ -146,47 +145,47 @@ func TestGetCommitteesPerSlotSmallShardCount(t *testing.T) {
 
 func TestValidatorRegistryBySlotShardRegularValidatorSet(t *testing.T) {
 	validatorIndices := []uint32{}
-	numValidatorRegistry := int(params.BeaconConfig().EpochLength * params.BeaconConfig().TargetCommitteeSize)
+	numValidatorRegistry := int(config.EpochLength * config.TargetCommitteeSize)
 	for i := 0; i < numValidatorRegistry; i++ {
 		validatorIndices = append(validatorIndices, uint32(i))
 	}
 
 	ShardCommitteeArray := splitBySlotShard(validatorIndices, 0)
 
-	if len(ShardCommitteeArray) != int(params.BeaconConfig().EpochLength) {
-		t.Fatalf("Expected length %d: got %d", params.BeaconConfig().EpochLength, len(ShardCommitteeArray))
+	if len(ShardCommitteeArray) != int(config.EpochLength) {
+		t.Fatalf("Expected length %d: got %d", config.EpochLength, len(ShardCommitteeArray))
 	}
 
 	for i := 0; i < len(ShardCommitteeArray); i++ {
 		ShardCommittees := ShardCommitteeArray[i].ArrayShardCommittee
 		if len(ShardCommittees) != 1 {
-			t.Fatalf("Expected %d committee per slot: got %d", params.BeaconConfig().TargetCommitteeSize, 1)
+			t.Fatalf("Expected %d committee per slot: got %d", config.TargetCommitteeSize, 1)
 		}
 
 		committeeSize := len(ShardCommittees[0].Committee)
-		if committeeSize != int(params.BeaconConfig().TargetCommitteeSize) {
-			t.Fatalf("Expected committee size %d: got %d", params.BeaconConfig().TargetCommitteeSize, committeeSize)
+		if committeeSize != int(config.TargetCommitteeSize) {
+			t.Fatalf("Expected committee size %d: got %d", config.TargetCommitteeSize, committeeSize)
 		}
 	}
 }
 
 func TestValidatorRegistryBySlotShardLargeValidatorSet(t *testing.T) {
 	validatorIndices := []uint32{}
-	numValidatorRegistry := int(params.BeaconConfig().EpochLength*params.BeaconConfig().TargetCommitteeSize) * 2
+	numValidatorRegistry := int(config.EpochLength*config.TargetCommitteeSize) * 2
 	for i := 0; i < numValidatorRegistry; i++ {
 		validatorIndices = append(validatorIndices, uint32(i))
 	}
 
 	ShardCommitteeArray := splitBySlotShard(validatorIndices, 0)
 
-	if len(ShardCommitteeArray) != int(params.BeaconConfig().EpochLength) {
-		t.Fatalf("Expected length %d: got %d", params.BeaconConfig().EpochLength, len(ShardCommitteeArray))
+	if len(ShardCommitteeArray) != int(config.EpochLength) {
+		t.Fatalf("Expected length %d: got %d", config.EpochLength, len(ShardCommitteeArray))
 	}
 
 	for i := 0; i < len(ShardCommitteeArray); i++ {
 		ShardCommittees := ShardCommitteeArray[i].ArrayShardCommittee
 		if len(ShardCommittees) != 2 {
-			t.Fatalf("Expected %d committee per slot: got %d", params.BeaconConfig().TargetCommitteeSize, 2)
+			t.Fatalf("Expected %d committee per slot: got %d", config.TargetCommitteeSize, 2)
 		}
 
 		t.Logf("slot %d", i)
@@ -194,8 +193,8 @@ func TestValidatorRegistryBySlotShardLargeValidatorSet(t *testing.T) {
 			shardCommittee := ShardCommittees[j]
 			t.Logf("shard %d", shardCommittee.Shard)
 			t.Logf("committee: %v", shardCommittee.Committee)
-			if len(shardCommittee.Committee) != int(params.BeaconConfig().TargetCommitteeSize) {
-				t.Fatalf("Expected committee size %d: got %d", params.BeaconConfig().TargetCommitteeSize, len(shardCommittee.Committee))
+			if len(shardCommittee.Committee) != int(config.TargetCommitteeSize) {
+				t.Fatalf("Expected committee size %d: got %d", config.TargetCommitteeSize, len(shardCommittee.Committee))
 			}
 		}
 
@@ -204,34 +203,35 @@ func TestValidatorRegistryBySlotShardLargeValidatorSet(t *testing.T) {
 
 func TestValidatorRegistryBySlotShardSmallValidatorSet(t *testing.T) {
 	validatorIndices := []uint32{}
-	numValidatorRegistry := int(params.BeaconConfig().EpochLength*params.BeaconConfig().TargetCommitteeSize) / 2
+	numValidatorRegistry := int(config.EpochLength * config.TargetCommitteeSize)
 	for i := 0; i < numValidatorRegistry; i++ {
 		validatorIndices = append(validatorIndices, uint32(i))
 	}
 
 	ShardCommitteeArray := splitBySlotShard(validatorIndices, 0)
 
-	if len(ShardCommitteeArray) != int(params.BeaconConfig().EpochLength) {
-		t.Fatalf("Expected length %d: got %d", params.BeaconConfig().EpochLength, len(ShardCommitteeArray))
+	if len(ShardCommitteeArray) != int(config.EpochLength) {
+		t.Fatalf("Expected length %d: got %d", config.EpochLength, len(ShardCommitteeArray))
 	}
 
 	for i := 0; i < len(ShardCommitteeArray); i++ {
 		ShardCommittees := ShardCommitteeArray[i].ArrayShardCommittee
 		if len(ShardCommittees) != 1 {
-			t.Fatalf("Expected %d committee per slot: got %d", params.BeaconConfig().TargetCommitteeSize, 1)
+			t.Fatalf("Expected %d committee per slot: got %d", config.TargetCommitteeSize,
+				len(ShardCommittees))
 		}
 
 		for j := 0; j < len(ShardCommittees); j++ {
 			shardCommittee := ShardCommittees[j]
-			if len(shardCommittee.Committee) != int(params.BeaconConfig().TargetCommitteeSize/2) {
-				t.Fatalf("Expected committee size %d: got %d", params.BeaconConfig().TargetCommitteeSize/2, len(shardCommittee.Committee))
+			if len(shardCommittee.Committee) != int(config.TargetCommitteeSize) {
+				t.Fatalf("Expected committee size %d: got %d", config.TargetCommitteeSize, len(shardCommittee.Committee))
 			}
 		}
 	}
 }
 
 func TestAttestationParticipants_ok(t *testing.T) {
-	if params.BeaconConfig().EpochLength != 64 {
+	if config.EpochLength != 64 {
 		t.Errorf("EpochLength should be 64 for these tests to pass")
 	}
 
@@ -241,7 +241,7 @@ func TestAttestationParticipants_ok(t *testing.T) {
 	}
 
 	var ShardCommittees []*pb.ShardCommitteeArray
-	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+	for i := uint64(0); i < config.EpochLength*2; i++ {
 		ShardCommittees = append(ShardCommittees, &pb.ShardCommitteeArray{
 			ArrayShardCommittee: []*pb.ShardCommittee{
 				{Shard: i},
@@ -321,12 +321,12 @@ func TestAttestationParticipants_ok(t *testing.T) {
 }
 
 func TestAttestationParticipants_IncorrectBitfield(t *testing.T) {
-	if params.BeaconConfig().EpochLength != 64 {
+	if config.EpochLength != 64 {
 		t.Errorf("EpochLength should be 64 for these tests to pass")
 	}
 
 	var ShardCommittees []*pb.ShardCommitteeArray
-	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+	for i := uint64(0); i < config.EpochLength*2; i++ {
 		ShardCommittees = append(ShardCommittees, &pb.ShardCommitteeArray{
 			ArrayShardCommittee: []*pb.ShardCommittee{
 				{Shard: i},

@@ -1,8 +1,7 @@
-// Package validators defines helper functions to locate validator
-// based on pubic key. Each validator is associated with a given index,
-// shard ID and slot number to propose or attest. This package also defines
-// functions to initialize validators, verify validator bit fields,
-// and rotate validator in and out of committees.
+// Package validators contains libraries to shuffle validators
+// and retrieve active validator indices from a given slot
+// or an attestation. It also provides helper functions to locate
+// validator based on pubic key.
 package validators
 
 import (
@@ -207,6 +206,7 @@ func TotalEffectiveBalance(state *pb.BeaconState, validatorIndices []uint32) uin
 	}
 	return totalDeposit
 }
+
 
 // NewRegistryDeltaChainTip returns the new validator registry delta chain tip.
 //

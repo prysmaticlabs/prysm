@@ -978,9 +978,11 @@ func TestUpdateRegistry_Exit(t *testing.T) {
 		t.Errorf("update registry failed: %v", err)
 	}
 	for i, validator := range newState.ValidatorRegistry {
-		if validator.ExitSlot != config.EntryExitDelay+5+uint64(i) {
+		if validator.ExitSlot != config.EntryExitDelay+5 {
 			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
-				i, config.EntryExitDelay, validator.ExitSlot)
+				i,
+				config.EntryExitDelay+5,
+				validator.ExitSlot)
 		}
 	}
 	if newState.ValidatorRegistryLatestChangeSlot != state.Slot {

@@ -1,3 +1,6 @@
+// Package blocks contains block processing libraries. These libraries
+// process and verify block specific messages such as PoW receipt root,
+// RANDAO, validator deposits, exits and slashing proofs.
 package blocks
 
 import (
@@ -9,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slices"
@@ -586,16 +590,13 @@ func ProcessValidatorDeposits(
 }
 
 func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
-	depositData := deposit.DepositData
 	// Verify Merkle proof of deposit and deposit trie root.
-	var receiptRoot [32]byte
-	var merkleLeaf [32]byte
-	copy(receiptRoot[:], beaconState.LatestDepositRootHash32)
-	copy(merkleLeaf[:], depositData)
+	receiptRoot := bytesutil.ToBytes32(beaconState.LatestDepositRootHash32)
 	if ok := trie.VerifyMerkleBranch(
-		merkleLeaf,
+		hashutil.Hash(deposit.DepositData),
 		deposit.MerkleBranchHash32S,
 		params.BeaconConfig().DepositContractTreeDepth,
+		deposit.MerkleTreeIndex,
 		receiptRoot,
 	); !ok {
 		return fmt.Errorf(
