@@ -31,25 +31,13 @@ type POWBlockFetcher interface {
 	BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
 }
 
-// Logger defines a struct that subscribes to filtered logs on the PoW chain.
-type Logger interface {
-	FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]gethTypes.Log, error)
-	SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error)
-}
-
-// ContractCaller defines a struct that interacts with the VRC contract on the POW Chain.
-type ContractCaller interface {
-	CallContract(ctx context.Context, call ethereum.CallMsg, blockNumber *big.Int) ([]byte, error)
-	CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error)
-}
-
 // Client defines a struct that combines all relevant PoW mainchain interactions required
 // by the beacon chain node.
 type Client interface {
 	Reader
 	POWBlockFetcher
-	Logger
-	ContractCaller
+	bind.ContractFilterer
+	bind.ContractCaller
 }
 
 // Web3Service fetches important information about the canonical
@@ -67,7 +55,7 @@ type Web3Service struct {
 	endpoint     string
 	vrcAddress   common.Address
 	reader       Reader
-	logger       Logger
+	logger       bind.ContractFilterer
 	blockNumber  *big.Int    // the latest PoW chain blockNumber.
 	blockHash    common.Hash // the latest PoW chain blockHash.
 	vrcCaller    *contracts.ValidatorRegistrationCaller
@@ -82,7 +70,7 @@ type Web3ServiceConfig struct {
 	VrcAddr  common.Address
 	Client   Client
 	Reader   Reader
-	Logger   Logger
+	Logger   bind.ContractFilterer
 }
 
 // NewWeb3Service sets up a new instance with an ethclient when
@@ -217,7 +205,6 @@ func (w *Web3Service) ProcessLog(VRClog gethTypes.Log) {
 	// public key is the second topic from validatorRegistered log.
 	merkleRoot := VRClog.Topics[1]
 	depositData := VRClog.Topics[2]
-	_ = VRClog.Topics[3] // merkleTreeBranch
 
 	if err := w.SaveInTrie(depositData, merkleRoot); err != nil {
 		log.Errorf("Could not save in trie %v", err)
