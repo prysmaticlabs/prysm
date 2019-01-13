@@ -453,7 +453,7 @@ go_repository(
 
 go_repository(
     name = "com_github_miekg_dns",
-    tag = "v1.1.2",
+    tag = "v1.1.3",
     importpath = "github.com/miekg/dns",
 )
 
@@ -465,7 +465,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_reuseport",
-    tag = "v0.1.18",
+    tag = "v0.2.0",
     importpath = "github.com/libp2p/go-reuseport",
 )
 
@@ -555,7 +555,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_reuseport_transport",
-    tag = "v0.1.11",
+    tag = "v0.2.0",
     importpath = "github.com/libp2p/go-reuseport-transport",
 )
 
@@ -645,7 +645,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aristanetworks_goarista",
-    commit = "b3287ee629098a1640360d7b618be7ab046f7ac2",
+    commit = "6a92e3c91dcbc84d50d34a49fcf91d5a702891df",
     importpath = "github.com/aristanetworks/goarista",
 )
 
@@ -718,7 +718,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_pubsub",
     build_file_proto_mode = "disable_global",
-    tag = "v0.10.2",
+    tag = "v0.11.10",
     importpath = "github.com/libp2p/go-libp2p-pubsub",
 )
 
@@ -910,7 +910,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_oauth2",
-    commit = "d668ce993890a79bda886613ee587a69dd5da7a6",
+    commit = "36a7019397c4c86cf59eeab3bc0d188bac444277",
     importpath = "golang.org/x/oauth2",
 )
 
@@ -978,4 +978,10 @@ go_repository(
     name = "com_github_edsrzf_mmap_go",
     tag = "v1.0.0",
     importpath = "github.com/edsrzf/mmap-go",
+)
+
+go_repository(
+    name = "com_github_pkg_errors",
+    tag = "v0.8.1",
+    importpath = "github.com/pkg/errors",
 )

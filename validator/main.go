@@ -74,6 +74,7 @@ VERSION:
 		cmd.KeystorePasswordFlag,
 		cmd.KeystoreDirectoryFlag,
 		cmd.BootstrapNode,
+		cmd.MonitoringPortFlag,
 		debug.PProfFlag,
 		debug.PProfAddrFlag,
 		debug.PProfPortFlag,
