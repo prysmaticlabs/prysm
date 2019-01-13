@@ -17,18 +17,14 @@ import (
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
+	"github.com/prysmaticlabs/prysm/shared"
 	p2pmock "github.com/prysmaticlabs/prysm/shared/p2p/mock"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-type testService interface {
-	Start()
-	Stop() error
-}
-
 // Ensure that server implements service.
-var _ = testService(&Server{})
+var _ = shared.Service(&Server{})
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
