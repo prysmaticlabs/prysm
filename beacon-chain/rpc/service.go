@@ -24,6 +24,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/reflection"
 )
 
 var log = logrus.WithField("prefix", "rpc")
@@ -124,6 +125,9 @@ func (s *Service) Start() {
 		log.Warn("You are using an insecure gRPC connection! Provide a certificate and key to connect securely")
 		s.grpcServer = grpc.NewServer()
 	}
+
+	// Register reflection service on gRPC server.
+	reflection.Register(s.grpcServer)
 
 	pb.RegisterBeaconServiceServer(s.grpcServer, s)
 	pb.RegisterValidatorServiceServer(s.grpcServer, s)
