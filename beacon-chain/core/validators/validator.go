@@ -595,6 +595,49 @@ func PrepareValidatorForWithdrawal(state *pb.BeaconState, index uint32) *pb.Beac
 
 // UpdateRegistry rotates validators in and out of active pool.
 // the amount to rotate is determined by max validator balance churn.
+//
+// Spec pseudocode definition:
+// def update_validator_registry(state: BeaconState) -> None:
+//    """
+//    Update validator registry.
+//    Note that this function mutates ``state``.
+//    """
+//    # The active validators
+//    active_validator_indices = get_active_validator_indices(state.validator_registry, state.slot)
+//    # The total effective balance of active validators
+//    total_balance = sum([get_effective_balance(state, i) for i in active_validator_indices])
+//
+//    # The maximum balance churn in Gwei (for deposits and exits separately)
+//    max_balance_churn = max(
+//        MAX_DEPOSIT * GWEI_PER_ETH,
+//        total_balance // (2 * MAX_BALANCE_CHURN_QUOTIENT)
+//    )
+//
+//    # Activate validators within the allowable balance churn
+//    balance_churn = 0
+//    for index, validator in enumerate(state.validator_registry):
+//        if validator.activation_slot > state.slot + ENTRY_EXIT_DELAY and state.validator_balances[index] >= MAX_DEPOSIT * GWEI_PER_ETH:
+//            # Check the balance churn would be within the allowance
+//            balance_churn += get_effective_balance(state, index)
+//            if balance_churn > max_balance_churn:
+//                break
+//
+//            # Activate validator
+//            activate_validator(state, index, False)
+//
+//    # Exit validators within the allowable balance churn
+//    balance_churn = 0
+//    for index, validator in enumerate(state.validator_registry):
+//        if validator.exit_slot > state.slot + ENTRY_EXIT_DELAY and validator.status_flags & INITIATED_EXIT:
+//            # Check the balance churn would be within the allowance
+//            balance_churn += get_effective_balance(state, index)
+//            if balance_churn > max_balance_churn:
+//                break
+//
+//            # Exit validator
+//            exit_validator(state, index)
+//
+//    state.validator_registry_latest_change_slot = state.slot
 func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	activeValidatorIndices := ActiveValidatorIndices(
 		state.ValidatorRegistry, state.Slot)
