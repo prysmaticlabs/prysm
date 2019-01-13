@@ -273,11 +273,12 @@ func (b *BeaconNode) registerPOWChainService(ctx *cli.Context) error {
 	powClient := ethclient.NewClient(rpcClient)
 
 	web3Service, err := powchain.NewWeb3Service(context.TODO(), &powchain.Web3ServiceConfig{
-		Endpoint: b.ctx.GlobalString(utils.Web3ProviderFlag.Name),
-		VrcAddr:  common.HexToAddress(b.ctx.GlobalString(utils.VrcContractFlag.Name)),
-		Client:   powClient,
-		Reader:   powClient,
-		Logger:   powClient,
+		Endpoint:        b.ctx.GlobalString(utils.Web3ProviderFlag.Name),
+		VrcAddr:         common.HexToAddress(b.ctx.GlobalString(utils.VrcContractFlag.Name)),
+		Client:          powClient,
+		Reader:          powClient,
+		Logger:          powClient,
+		ContractBackend: powClient,
 	})
 	if err != nil {
 		return fmt.Errorf("could not register proof-of-work chain web3Service: %v", err)

@@ -66,11 +66,12 @@ type Web3Service struct {
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
 type Web3ServiceConfig struct {
-	Endpoint string
-	VrcAddr  common.Address
-	Client   Client
-	Reader   Reader
-	Logger   bind.ContractFilterer
+	Endpoint        string
+	VrcAddr         common.Address
+	Client          Client
+	Reader          Reader
+	Logger          bind.ContractFilterer
+	ContractBackend bind.ContractBackend
 }
 
 // NewWeb3Service sets up a new instance with an ethclient when
@@ -83,7 +84,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		)
 	}
 
-	vrcCaller, err := contracts.NewValidatorRegistrationCaller(config.VrcAddr, config.Client)
+	vrcCaller, err := contracts.NewValidatorRegistrationCaller(config.VrcAddr, config.ContractBackend)
 	if err != nil {
 		return nil, fmt.Errorf("could not create VRC caller %v", err)
 	}
@@ -231,7 +232,7 @@ func (w *Web3Service) ProcessLog(VRClog gethTypes.Log) {
 
 func (w *Web3Service) SaveInTrie(depositData common.Hash, merkleRoot common.Hash) error {
 	if w.depositTrie.Root() != merkleRoot {
-		return errors.New("Saved root in trie is unequal to root received from log ")
+		return errors.New("saved root in trie is unequal to root received from log")
 	}
 
 	w.depositTrie.UpdateDepositTrie(depositData.Bytes())
@@ -239,7 +240,7 @@ func (w *Web3Service) SaveInTrie(depositData common.Hash, merkleRoot common.Hash
 }
 
 func (w *Web3Service) ProcessPastLogs(query ethereum.FilterQuery) error {
-	logs, err := w.client.FilterLogs(w.ctx, query)
+	logs, err := w.logger.FilterLogs(w.ctx, query)
 	if err != nil {
 		return err
 	}
