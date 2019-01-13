@@ -14,6 +14,7 @@ func TestGenericIntersection(t *testing.T) {
 		setB []uint32
 		out  []uint32
 	}{
+
 		{[]uint32{2, 3, 5}, []uint32{3}, []uint32{3}},
 		{[]uint32{2, 3, 5}, []uint32{3, 5}, []uint32{3, 5}},
 		{[]uint32{2, 3, 5}, []uint32{5, 3, 2}, []uint32{5, 3, 2}},
