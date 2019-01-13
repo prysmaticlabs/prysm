@@ -886,3 +886,129 @@ func TestExitValidator_AlreadyExited(t *testing.T) {
 		t.Fatal("exitValidator should have failed with exiting again")
 	}
 }
+
+func TestUpdateRegistry_NoRotation(t *testing.T) {
+	state := &pb.BeaconState{
+		Slot: 5,
+		ValidatorRegistry: []*pb.ValidatorRecord{
+			{ExitSlot: params.BeaconConfig().EntryExitDelay},
+			{ExitSlot: params.BeaconConfig().EntryExitDelay},
+			{ExitSlot: params.BeaconConfig().EntryExitDelay},
+			{ExitSlot: params.BeaconConfig().EntryExitDelay},
+			{ExitSlot: params.BeaconConfig().EntryExitDelay},
+		},
+		ValidatorBalances: []uint64{
+			config.MaxDepositInGwei,
+			config.MaxDepositInGwei,
+			config.MaxDepositInGwei,
+			config.MaxDepositInGwei,
+			config.MaxDepositInGwei,
+		},
+	}
+	newState, err := UpdateRegistry(state)
+	if err != nil {
+		t.Log(err)
+	}
+	for i, validator := range newState.ValidatorRegistry {
+		if validator.ExitSlot != config.EntryExitDelay {
+			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
+				i, config.EntryExitDelay, validator.ExitSlot)
+		}
+	}
+	if newState.ValidatorRegistryLatestChangeSlot != state.Slot {
+		t.Errorf("wanted validator registry lastet change %d, got %d",
+			state.Slot, newState.ValidatorRegistryLatestChangeSlot)
+	}
+}
+
+func TestUpdateRegistry_Activate(t *testing.T) {
+	state := &pb.BeaconState{
+		Slot: 5,
+		ValidatorRegistry: []*pb.ValidatorRecord{
+			{ExitSlot: params.BeaconConfig().EntryExitDelay,
+				ActivationSlot: 5 + config.EntryExitDelay + 1},
+			{ExitSlot: params.BeaconConfig().EntryExitDelay,
+				ActivationSlot: 5 + config.EntryExitDelay + 1},
+		},
+		ValidatorBalances: []uint64{
+			config.MaxDepositInGwei,
+			config.MaxDepositInGwei,
+		},
+		ValidatorRegistryDeltaChainTipHash32: []byte{'A'},
+	}
+	newState, err := UpdateRegistry(state)
+	if err != nil {
+		t.Log(err)
+	}
+	for i, validator := range newState.ValidatorRegistry {
+		if validator.ExitSlot != config.EntryExitDelay {
+			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
+				i, config.EntryExitDelay, validator.ExitSlot)
+		}
+	}
+	if newState.ValidatorRegistryLatestChangeSlot != state.Slot {
+		t.Errorf("wanted validator registry lastet change %d, got %d",
+			state.Slot, newState.ValidatorRegistryLatestChangeSlot)
+	}
+
+	if bytes.Equal(newState.ValidatorRegistryDeltaChainTipHash32, []byte{'A'}) {
+		t.Errorf("validator registry delta chain did not change")
+	}
+}
+
+func TestUpdateRegistry_Exit(t *testing.T) {
+	state := &pb.BeaconState{
+		Slot: 5,
+		ValidatorRegistry: []*pb.ValidatorRecord{
+			{
+				ExitSlot:    5 + config.EntryExitDelay + 1,
+				StatusFlags: pb.ValidatorRecord_INITIATED_EXIT},
+			{
+				ExitSlot:    5 + config.EntryExitDelay + 1,
+				StatusFlags: pb.ValidatorRecord_INITIATED_EXIT},
+		},
+		ValidatorBalances: []uint64{
+			config.MaxDepositInGwei,
+			config.MaxDepositInGwei,
+		},
+		ValidatorRegistryDeltaChainTipHash32: []byte{'A'},
+	}
+	newState, err := UpdateRegistry(state)
+	if err != nil {
+		t.Errorf("update registry failed: %v", err)
+	}
+	for i, validator := range newState.ValidatorRegistry {
+		if validator.ExitSlot != config.EntryExitDelay+5+uint64(i) {
+			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
+				i, config.EntryExitDelay, validator.ExitSlot)
+		}
+	}
+	if newState.ValidatorRegistryLatestChangeSlot != state.Slot {
+		t.Errorf("wanted validator registry lastet change %d, got %d",
+			state.Slot, newState.ValidatorRegistryLatestChangeSlot)
+	}
+
+	if bytes.Equal(newState.ValidatorRegistryDeltaChainTipHash32, []byte{'A'}) {
+		t.Errorf("validator registry delta chain did not change")
+	}
+}
+
+func TestMaxBalanceChurn(t *testing.T) {
+	tests := []struct {
+		totalBalance    uint64
+		maxBalanceChurn uint64
+	}{
+		{totalBalance: 1e9, maxBalanceChurn: config.MaxDepositInGwei},
+		{totalBalance: config.MaxDepositInGwei, maxBalanceChurn: 512 * 1e9},
+		{totalBalance: config.MaxDepositInGwei * 10, maxBalanceChurn: 512 * 1e10},
+		{totalBalance: config.MaxDepositInGwei * 1000, maxBalanceChurn: 512 * 1e12},
+	}
+
+	for _, tt := range tests {
+		churn := maxBalanceChurn(tt.totalBalance)
+		if tt.maxBalanceChurn != churn {
+			t.Errorf("MaxBalanceChurn was not an expected value. Wanted: %d, got: %d",
+				tt.maxBalanceChurn, churn)
+		}
+	}
+}
