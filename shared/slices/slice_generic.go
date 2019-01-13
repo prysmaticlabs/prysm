@@ -70,9 +70,6 @@ func GenericUnion(a, b interface{}) (reflect.Value, error) {
 	if err2 != nil {
 		return set, fmt.Errorf("slice type is invalid %v", err2)
 	}
-	if len(set1) == 0 && len(set2) == 0 {
-		return set, nil
-	}
 
 	if len(set1) == 0 {
 		return reflect.ValueOf(set2), nil
@@ -118,9 +115,6 @@ func GenericNot(a, b interface{}) (reflect.Value, error) {
 		return set, fmt.Errorf("slice type is invalid %v", err2)
 	}
 
-	if len(set1) == 0 && len(set2) == 0 {
-		return set, nil
-	}
 
 	if len(set1) == 0 {
 		return reflect.ValueOf(set2), nil
