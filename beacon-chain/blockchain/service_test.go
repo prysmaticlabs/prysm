@@ -20,12 +20,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 )
 
 func init() {
@@ -48,6 +48,27 @@ func (f *mockClient) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQ
 	return new(event.Feed).Subscribe(ch), nil
 }
 
+func (f *mockClient) CallContract(ctx context.Context, call ethereum.CallMsg, blockNumber *big.Int) ([]byte, error) {
+	return []byte{'t', 'e', 's', 't'}, nil
+}
+
+func (f *mockClient) CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error) {
+	return []byte{'t', 'e', 's', 't'}, nil
+}
+
+func (b *mockClient) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]gethTypes.Log, error) {
+	logs := make([]gethTypes.Log, 3)
+	for i := 0; i < len(logs); i++ {
+		logs[i].Address = common.Address{}
+		logs[i].Topics = make([]common.Hash, 5)
+		logs[i].Topics[0] = common.Hash{'a'}
+		logs[i].Topics[1] = common.Hash{'b'}
+		logs[i].Topics[2] = common.Hash{'c'}
+
+	}
+	return logs, nil
+}
+
 func (f *mockClient) LatestBlockHash() common.Hash {
 	return common.BytesToHash([]byte{'A'})
 }
@@ -64,6 +85,18 @@ func (f *faultyClient) BlockByHash(ctx context.Context, hash common.Hash) (*geth
 
 func (f *faultyClient) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error) {
 	return new(event.Feed).Subscribe(ch), nil
+}
+
+func (b *faultyClient) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]gethTypes.Log, error) {
+	return nil, errors.New("unable to retrieve logs")
+}
+
+func (f *faultyClient) CallContract(ctx context.Context, call ethereum.CallMsg, blockNumber *big.Int) ([]byte, error) {
+	return []byte{}, errors.New("unable to retrieve contract code")
+}
+
+func (f *faultyClient) CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error) {
+	return []byte{}, errors.New("unable to retrieve contract code")
 }
 
 func (f *faultyClient) LatestBlockHash() common.Hash {

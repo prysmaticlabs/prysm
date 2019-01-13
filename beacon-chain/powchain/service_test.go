@@ -17,8 +17,13 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	contracts "github.com/prysmaticlabs/prysm/contracts/validator-registration-contract"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	byteutils "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/trie"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -63,11 +68,7 @@ func (b *goodLogger) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]
 	return logs, nil
 }
 
-var (
-	amount33Eth, _        = new(big.Int).SetString("33000000000000000000", 10)
-	amount32Eth, _        = new(big.Int).SetString("32000000000000000000", 10)
-	amountLessThan1Eth, _ = new(big.Int).SetString("500000000000000000", 10)
-)
+var amount32Eth, _ = new(big.Int).SetString("32000000000000000000", 10)
 
 type testAccount struct {
 	addr         common.Address
@@ -149,15 +150,21 @@ func TestStart(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	endpoint := "ws://127.0.0.1"
+	testAcc, err := setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
-		Endpoint: endpoint,
-		VrcAddr:  common.Address{},
-		Reader:   &goodReader{},
-		Logger:   &goodLogger{},
+		Endpoint:        endpoint,
+		VrcAddr:         testAcc.contractAddr,
+		Reader:          &goodReader{},
+		Logger:          &goodLogger{},
+		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
+	testAcc.backend.Commit()
 
 	web3Service.Start()
 
@@ -167,21 +174,29 @@ func TestStart(t *testing.T) {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
 	hook.Reset()
+	web3Service.cancel()
 }
 
 func TestStop(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	endpoint := "ws://127.0.0.1"
+	testAcc, err := setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
-		Endpoint: endpoint,
-		VrcAddr:  common.Address{},
-		Reader:   &goodReader{},
-		Logger:   &goodLogger{},
+		Endpoint:        endpoint,
+		VrcAddr:         testAcc.contractAddr,
+		Reader:          &goodReader{},
+		Logger:          &goodLogger{},
+		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
+
+	testAcc.backend.Commit()
 
 	if err := web3Service.Stop(); err != nil {
 		t.Fatalf("Unable to stop web3 PoW chain service: %v", err)
@@ -201,7 +216,6 @@ func TestStop(t *testing.T) {
 }
 
 func TestInitDataFromVRC(t *testing.T) {
-	//hook := logTest.NewGlobal()
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
@@ -233,7 +247,9 @@ func TestInitDataFromVRC(t *testing.T) {
 	}
 
 	testAcc.txOpts.Value = amount32Eth
-	testAcc.contract.Deposit(testAcc.txOpts, []byte{'A'})
+	if _, err := testAcc.contract.Deposit(testAcc.txOpts, []byte{'a'}); err != nil {
+		t.Fatalf("Could not deposit to VRC %v", err)
+	}
 	testAcc.backend.Commit()
 
 	if err := web3Service.initDataFromVRC(); err != nil {
@@ -247,20 +263,106 @@ func TestInitDataFromVRC(t *testing.T) {
 	if bytes.Equal(web3Service.depositRoot, []byte{}) {
 		t.Errorf("Deposit root is  empty %v", web3Service.depositRoot)
 	}
+
+}
+
+func TestSaveInTrie(t *testing.T) {
+	endpoint := "ws://127.0.0.1"
+	testAcc, err := setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint:        endpoint,
+		VrcAddr:         testAcc.contractAddr,
+		Reader:          &goodReader{},
+		Logger:          &goodLogger{},
+		ContractBackend: testAcc.backend,
+	})
+	if err != nil {
+		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
+	}
+
+	testAcc.backend.Commit()
+
+	web3Service.depositTrie = trie.NewDepositTrie()
+
+	currentRoot := web3Service.depositTrie.Root()
+
+	if err := web3Service.SaveInTrie(common.Hash{'A'}, currentRoot); err != nil {
+		t.Errorf("Unable to save deposit in trie %v", err)
+	}
+
+}
+
+func TestProcessLogs(t *testing.T) {
+	hook := logTest.NewGlobal()
+	endpoint := "ws://127.0.0.1"
+	testAcc, err := setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint:        endpoint,
+		VrcAddr:         testAcc.contractAddr,
+		Reader:          &goodReader{},
+		Logger:          &goodLogger{},
+		ContractBackend: testAcc.backend,
+	})
+	if err != nil {
+		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
+	}
+
+	testAcc.backend.Commit()
+
+	web3Service.depositTrie = trie.NewDepositTrie()
+
+	currentRoot := web3Service.depositTrie.Root()
+
+	depositData := &pb.DepositInput{
+		Pubkey:                      []byte("testing"),
+		RandaoCommitmentHash32:      []byte("randao"),
+		WithdrawalCredentialsHash32: []byte("withdraw"),
+	}
+
+	encodedData, err := blocks.EncodeDepositData(depositData, 100000, 100000)
+	if err != nil {
+		t.Fatalf("Unable to encode deposit data %v", err)
+	}
+
+	log := gethTypes.Log{
+		Address: common.Address{},
+		Topics:  make([]common.Hash, 5),
+	}
+
+	log.Topics[0] = common.Hash{'a'}
+	log.Topics[1] = currentRoot
+	log.Topics[2] = byteutils.ToBytes32(encodedData)
+
+	testutil.AssertLogsDoNotContain(t, hook, "Could not save in trie")
+
+	hook.Reset()
 }
 
 func TestBadReader(t *testing.T) {
 	hook := logTest.NewGlobal()
 	endpoint := "ws://127.0.0.1"
+	testAcc, err := setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
-		Endpoint: endpoint,
-		VrcAddr:  common.Address{},
-		Reader:   &badReader{},
-		Logger:   &goodLogger{},
+		Endpoint:        endpoint,
+		VrcAddr:         testAcc.contractAddr,
+		Reader:          &badReader{},
+		Logger:          &goodLogger{},
+		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
+
+	testAcc.backend.Commit()
 	web3Service.reader = &badReader{}
 	web3Service.logger = &goodLogger{}
 	web3Service.run(web3Service.ctx.Done())
@@ -274,15 +376,21 @@ func TestBadReader(t *testing.T) {
 
 func TestLatestMainchainInfo(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
+	testAcc, err := setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
-		Endpoint: endpoint,
-		VrcAddr:  common.Address{},
-		Reader:   &goodReader{},
-		Logger:   &goodLogger{},
+		Endpoint:        endpoint,
+		VrcAddr:         testAcc.contractAddr,
+		Reader:          &goodReader{},
+		Logger:          &goodLogger{},
+		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
+	testAcc.backend.Commit()
 	web3Service.reader = &goodReader{}
 	web3Service.logger = &goodLogger{}
 
@@ -311,15 +419,22 @@ func TestLatestMainchainInfo(t *testing.T) {
 func TestBadLogger(t *testing.T) {
 	hook := logTest.NewGlobal()
 	endpoint := "ws://127.0.0.1"
+	testAcc, err := setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
-		Endpoint: endpoint,
-		VrcAddr:  common.Address{},
-		Reader:   &goodReader{},
-		Logger:   &goodLogger{},
+		Endpoint:        endpoint,
+		VrcAddr:         testAcc.contractAddr,
+		Reader:          &goodReader{},
+		Logger:          &goodLogger{},
+		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
+	testAcc.backend.Commit()
+
 	web3Service.reader = &goodReader{}
 	web3Service.logger = &badLogger{}
 

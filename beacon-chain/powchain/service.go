@@ -218,9 +218,11 @@ func (w *Web3Service) ProcessLog(VRClog gethTypes.Log) {
 		return
 	}
 
+	log.Info(decodedData)
+
 	depositInput, err := blocks.DecodeDepositInput(decodedData)
 	if err != nil {
-		log.Errorf("Could not decode deposit input %v", err)
+		log.Errorf("Could not decode deposit input  %v", err)
 		return
 	}
 

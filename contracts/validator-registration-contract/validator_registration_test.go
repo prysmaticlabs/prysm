@@ -131,8 +131,8 @@ func TestValidatorRegisters(t *testing.T) {
 	}
 	log.Next()
 
-	var index []byte
-	binary.BigEndian.PutUint64(index, 0)
+	index := make([]byte, 8)
+	binary.BigEndian.PutUint64(index, 65536)
 
 	if !bytes.Equal(log.Event.MerkleTreeIndex, index) {
 		t.Errorf("HashChainValue event total desposit count miss matched. Want: %v, Got: %v", index, log.Event.MerkleTreeIndex)
@@ -142,7 +142,7 @@ func TestValidatorRegisters(t *testing.T) {
 	}
 
 	log.Next()
-	binary.BigEndian.PutUint64(index, 1)
+	binary.BigEndian.PutUint64(index, 65537)
 	if !bytes.Equal(log.Event.MerkleTreeIndex, index) {
 		t.Errorf("HashChainValue event total desposit count miss matched. Want: %v, Got: %v", index, log.Event.MerkleTreeIndex)
 	}
@@ -151,7 +151,7 @@ func TestValidatorRegisters(t *testing.T) {
 	}
 
 	log.Next()
-	binary.BigEndian.PutUint64(index, 2)
+	binary.BigEndian.PutUint64(index, 65538)
 	if !bytes.Equal(log.Event.MerkleTreeIndex, index) {
 		t.Errorf("HashChainValue event total desposit count miss matched. Want: %v, Got: %v", index, log.Event.MerkleTreeIndex)
 	}
