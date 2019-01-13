@@ -9,6 +9,8 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/trie"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -154,7 +156,8 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		layersPeeledForProposer[uint32(idx)] = 0
 	}
 
-	startTime := time.Now()
+	depositsTrie := trie.NewDepositTrie()
+	averageTimesPerTransition := []time.Duration{}
 	for i := uint64(0); i < testCase.Config.NumSlots; i++ {
 		prevBlockRoot := prevBlockRoots[len(prevBlockRoots)-1]
 
@@ -175,6 +178,22 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 			continue
 		}
 
+		// If the slot is not skipped, we check if we are simulating a deposit at the current slot.
+		var simulatedDeposit *StateTestDeposit
+		for _, deposit := range testCase.Config.Deposits {
+			if deposit.Slot == i {
+				simulatedDeposit = deposit
+				break
+			}
+		}
+		var simulatedProposerSlashing *StateTestProposerSlashing
+		for _, pSlashing := range testCase.Config.ProposerSlashings {
+			if pSlashing.Slot == i {
+				simulatedProposerSlashing = pSlashing
+				break
+			}
+		}
+
 		layersPeeled := layersPeeledForProposer[proposerIndex]
 		blockRandaoReveal := determineSimulatedBlockRandaoReveal(layersPeeled, hashOnions)
 
@@ -183,14 +202,24 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 			beaconState,
 			prevBlockRoot,
 			blockRandaoReveal,
+			lastRandaoLayer,
+			simulatedDeposit,
+			depositsTrie,
+			simulatedProposerSlashing,
 		)
 		if err != nil {
 			return fmt.Errorf("could not generate simulated beacon block %v", err)
 		}
+		latestRoot := depositsTrie.Root()
+		beaconState.LatestDepositRootHash32 = latestRoot[:]
+
+		startTime := time.Now()
 		newState, err := state.ExecuteStateTransition(beaconState, newBlock, prevBlockRoot)
 		if err != nil {
 			return fmt.Errorf("could not execute state transition: %v", err)
 		}
+		endTime := time.Now()
+		averageTimesPerTransition = append(averageTimesPerTransition, endTime.Sub(startTime))
 
 		// We then keep track of information about the state after the
 		// state transition was applied.
@@ -199,15 +228,13 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		layersPeeledForProposer[proposerIndex]++
 	}
 
-	endTime := time.Now()
 	log.Infof(
-		"%d state transitions with %d deposits finished in %v",
-		testCase.Config.NumSlots,
+		"with %d initial deposits, each state transition took average time = %v",
 		testCase.Config.DepositsForChainStart,
-		endTime.Sub(startTime),
+		averageDuration(averageTimesPerTransition),
 	)
 
-	if beaconState.GetSlot() != testCase.Results.Slot {
+	if beaconState.Slot != testCase.Results.Slot {
 		return fmt.Errorf(
 			"incorrect state slot after %d state transitions without blocks, wanted %d, received %d",
 			testCase.Config.NumSlots,
@@ -215,5 +242,29 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 			testCase.Results.Slot,
 		)
 	}
+	if len(beaconState.ValidatorRegistry) != testCase.Results.NumValidators {
+		return fmt.Errorf(
+			"incorrect num validators after %d state transitions without blocks, wanted %d, received %d",
+			testCase.Config.NumSlots,
+			testCase.Results.NumValidators,
+			len(beaconState.ValidatorRegistry),
+		)
+	}
+	for _, penalized := range testCase.Results.PenalizedValidators {
+		if beaconState.ValidatorRegistry[penalized].PenalizedSlot == params.BeaconConfig().FarFutureSlot {
+			return fmt.Errorf(
+				"expected validator at index %d to have been penalized",
+				penalized,
+			)
+		}
+	}
 	return nil
+}
+
+func averageDuration(times []time.Duration) time.Duration {
+	sum := int64(0)
+	for _, t := range times {
+		sum += t.Nanoseconds()
+	}
+	return time.Duration(sum / int64(len(times)))
 }

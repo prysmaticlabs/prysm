@@ -3,6 +3,9 @@ package backend
 import (
 	"fmt"
 	"strconv"
+	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/trie"
 
 	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -18,6 +21,10 @@ func generateSimulatedBlock(
 	beaconState *pb.BeaconState,
 	prevBlockRoot [32]byte,
 	randaoReveal [32]byte,
+	depositRandaoCommit [32]byte,
+	simulatedDeposit *StateTestDeposit,
+	depositsTrie *trie.DepositTrie,
+	simulatedProposerSlashing *StateTestProposerSlashing,
 ) (*pb.BeaconBlock, [32]byte, error) {
 	encodedState, err := proto.Marshal(beaconState)
 	if err != nil {
@@ -36,6 +43,46 @@ func generateSimulatedBlock(
 			Deposits:          []*pb.Deposit{},
 			Exits:             []*pb.Exit{},
 		},
+	}
+	if simulatedDeposit != nil {
+		depositInput := &pb.DepositInput{
+			Pubkey:                      []byte(simulatedDeposit.Pubkey),
+			WithdrawalCredentialsHash32: []byte{},
+			ProofOfPossession:           []byte{},
+			RandaoCommitmentHash32:      depositRandaoCommit[:],
+			CustodyCommitmentHash32:     []byte{},
+		}
+
+		data, err := b.EncodeDepositData(depositInput, simulatedDeposit.Amount, time.Now().Unix())
+		if err != nil {
+			return nil, [32]byte{}, fmt.Errorf("could not encode deposit data: %v", err)
+		}
+
+		// We then update the deposits Merkle trie with the deposit data and return
+		// its Merkle branch leading up to the root of the trie.
+		depositsTrie.UpdateDepositTrie(data)
+		merkleBranch := depositsTrie.GenerateMerkleBranch(simulatedDeposit.MerkleIndex)
+
+		block.Body.Deposits = append(block.Body.Deposits, &pb.Deposit{
+			DepositData:         data,
+			MerkleBranchHash32S: merkleBranch,
+			MerkleTreeIndex:     simulatedDeposit.MerkleIndex,
+		})
+	}
+	if simulatedProposerSlashing != nil {
+		block.Body.ProposerSlashings = append(block.Body.ProposerSlashings, &pb.ProposerSlashing{
+			ProposerIndex: simulatedProposerSlashing.ProposerIndex,
+			ProposalData_1: &pb.ProposalSignedData{
+				Slot:            simulatedProposerSlashing.Proposal1Slot,
+				Shard:           simulatedProposerSlashing.Proposal1Shard,
+				BlockRootHash32: []byte(simulatedProposerSlashing.Proposal1Root),
+			},
+			ProposalData_2: &pb.ProposalSignedData{
+				Slot:            simulatedProposerSlashing.Proposal2Slot,
+				Shard:           simulatedProposerSlashing.Proposal2Shard,
+				BlockRootHash32: []byte(simulatedProposerSlashing.Proposal2Root),
+			},
+		})
 	}
 	encodedBlock, err := proto.Marshal(block)
 	if err != nil {

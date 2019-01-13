@@ -85,7 +85,10 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState
 	if err != nil {
 		return nil, fmt.Errorf("could not process block attestations: %v", err)
 	}
-	// TODO(#781): Process block validator deposits.
+	state, err = b.ProcessValidatorDeposits(state, block)
+	if err != nil {
+		return nil, fmt.Errorf("could not process block validator deposits: %v", err)
+	}
 	state, err = b.ProcessValidatorExits(state, block)
 	if err != nil {
 		return nil, fmt.Errorf("could not process validator exits: %v", err)
