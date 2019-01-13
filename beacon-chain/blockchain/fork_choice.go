@@ -49,6 +49,7 @@ func blockAncestor(block *pb.BeaconBlock, slot uint64, beaconDB *db.BeaconDB) *p
 	if block.Slot == slot {
 		return block
 	}
+	// TODO(#1307): This should instead be the parent of the block in DB.
 	parent, _ := beaconDB.GetChainHead()
 	return blockAncestor(parent, slot, beaconDB)
 }
@@ -75,5 +76,6 @@ func attestationTargets(beaconState *pb.BeaconState, block *pb.BeaconBlock, beac
 }
 
 func latestAttestationTarget(validator *pb.ValidatorRecord, beaconDB *db.BeaconDB) *pb.BeaconBlock {
+	// TODO(#1307) Fetch the block target corresponding to the latest attestation by the validator.
 	return nil
 }
