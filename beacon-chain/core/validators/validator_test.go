@@ -543,12 +543,12 @@ func TestAttestingValidatorIndices_Ok(t *testing.T) {
 		[]*pb.PendingAttestationRecord{thisAttestation},
 		[]*pb.PendingAttestationRecord{prevAttestation})
 	if err != nil {
-		t.Fatalf("Could not execute AttestingValidatorIndices: %v", err)
+		t.Fatalf("could not execute AttestingValidatorIndices: %v", err)
 	}
 
 	// Union(1,7,1,5,6) = 1,5,6,7
 	if !reflect.DeepEqual(indices, []uint32{1, 5, 6, 7}) {
-		t.Errorf("Could not get incorrect validator indices. Wanted: %v, got: %v",
+		t.Errorf("could not get incorrect validator indices. Wanted: %v, got: %v",
 			[]uint32{1, 5, 6, 7}, indices)
 	}
 }
@@ -629,7 +629,7 @@ func TestNewRegistryDeltaChainTip(t *testing.T) {
 			tt.currentRegistryDeltaChainTip,
 		)
 		if err != nil {
-			t.Fatalf("Could not execute NewRegistryDeltaChainTip:%v", err)
+			t.Fatalf("could not execute NewRegistryDeltaChainTip:%v", err)
 		}
 		if !bytes.Equal(newChainTip[:], tt.newRegistryDeltaChainTip) {
 			t.Errorf("Incorrect new chain tip. Wanted %#x, got %#x",
@@ -811,7 +811,7 @@ func TestActivateValidatorGenesis_Ok(t *testing.T) {
 	}
 	newState, err := ActivateValidator(state, 0, true)
 	if err != nil {
-		t.Fatalf("Could not execute activateValidator:%v", err)
+		t.Fatalf("could not execute activateValidator:%v", err)
 	}
 	if newState.ValidatorRegistry[0].ActivationSlot != params.BeaconConfig().GenesisSlot {
 		t.Errorf("Wanted activation slot = genesis slot, got %d",
@@ -829,7 +829,7 @@ func TestActivateValidator_Ok(t *testing.T) {
 	}
 	newState, err := ActivateValidator(state, 0, false)
 	if err != nil {
-		t.Fatalf("Could not execute activateValidator:%v", err)
+		t.Fatalf("could not execute activateValidator:%v", err)
 	}
 	if newState.ValidatorRegistry[0].ActivationSlot !=
 		state.Slot+params.BeaconConfig().EntryExitDelay {
@@ -861,7 +861,7 @@ func TestExitValidator_Ok(t *testing.T) {
 	}
 	newState, err := ExitValidator(state, 0)
 	if err != nil {
-		t.Fatalf("Could not execute ExitValidator:%v", err)
+		t.Fatalf("could not execute ExitValidator:%v", err)
 	}
 
 	if newState.ValidatorRegistry[0].ExitSlot !=
@@ -907,7 +907,7 @@ func TestUpdateRegistry_NoRotation(t *testing.T) {
 	}
 	newState, err := UpdateRegistry(state)
 	if err != nil {
-		t.Log(err)
+		t.Fatalf("could not update validator registry:%v", err)
 	}
 	for i, validator := range newState.ValidatorRegistry {
 		if validator.ExitSlot != config.EntryExitDelay {
@@ -938,7 +938,7 @@ func TestUpdateRegistry_Activate(t *testing.T) {
 	}
 	newState, err := UpdateRegistry(state)
 	if err != nil {
-		t.Log(err)
+		t.Fatalf("could not update validator registry:%v", err)
 	}
 	for i, validator := range newState.ValidatorRegistry {
 		if validator.ExitSlot != config.EntryExitDelay {
@@ -975,7 +975,7 @@ func TestUpdateRegistry_Exit(t *testing.T) {
 	}
 	newState, err := UpdateRegistry(state)
 	if err != nil {
-		t.Errorf("update registry failed: %v", err)
+		t.Fatalf("could not update validator registry:%v", err)
 	}
 	for i, validator := range newState.ValidatorRegistry {
 		if validator.ExitSlot != config.EntryExitDelay+5 {
