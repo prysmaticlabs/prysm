@@ -396,6 +396,8 @@ func (s *Service) ValidatorAssignments(
 	req *pb.ValidatorAssignmentRequest,
 	stream pb.BeaconService_ValidatorAssignmentsServer) error {
 
+	log.WithField("req", req).Debug("Opening validator assignment stream")
+
 	sub := s.chainService.CanonicalStateFeed().Subscribe(s.canonicalStateChan)
 	defer sub.Unsubscribe()
 	for {
@@ -447,6 +449,9 @@ func assignmentsForPublicKeys(keys []*pb.PublicKey, beaconState *pbp2p.BeaconSta
 	assignments := []*pb.Assignment{}
 
 	for _, val := range keys {
+		if len(val.PublicKey) == 0 {
+			continue
+		}
 		// For the corresponding public key and current crystallized state,
 		// we determine the assigned slot for the validator and whether it
 		// should act as a proposer or attester.
