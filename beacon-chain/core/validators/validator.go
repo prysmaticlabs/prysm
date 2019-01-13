@@ -610,7 +610,6 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	for index, validator := range state.ValidatorRegistry {
 		// Activate validators within the allowable balance churn.
 		if validator.ActivationSlot > state.Slot+config.EntryExitDelay &&
-			// TODO: Verify 2.1 spec
 			state.ValidatorBalances[index] >= config.MaxDepositInGwei {
 			balChurn += EffectiveBalance(state, uint32(index))
 			if balChurn > maxBalChurn {
