@@ -205,12 +205,10 @@ func (p *Proposer) computeBlockToBeProposed(latestBlock *pbp2p.BeaconBlock,
 
 	}
 
-	// TODO(#1253): Change this to be serialized using SSZ instead of protobufs.
-	data, err := proto.Marshal(latestBlock)
+	latestBlockHash, err := hashutil.HashBeaconBlock(latestBlock)
 	if err != nil {
-		return nil, fmt.Errorf("could not marshal latest beacon block: %v", err)
+		return nil, fmt.Errorf("could not hash latest beacon block: %v", err)
 	}
-	latestBlockHash := hashutil.Hash(data)
 
 	powChainHashRes, err := client.LatestPOWChainBlockHash(p.ctx, nil)
 	if err != nil {

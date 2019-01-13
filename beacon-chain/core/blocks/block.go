@@ -10,26 +10,15 @@ import (
 	"math"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
-	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
-
 )
 
 var clock utils.Clock = &utils.RealClock{}
-
-// Hash a beacon block data structure.
-func Hash(block *pb.BeaconBlock) ([32]byte, error) {
-	data, err := proto.Marshal(block)
-	if err != nil {
-		return [32]byte{}, fmt.Errorf("could not marshal block proto data: %v", err)
-	}
-	return hashutil.Hash(data), nil
-}
 
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
 func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
