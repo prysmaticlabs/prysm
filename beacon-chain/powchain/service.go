@@ -206,7 +206,8 @@ func (w *Web3Service) ProcessLog(VRClog gethTypes.Log) {
 	// public key is the second topic from validatorRegistered log.
 	merkleRoot := VRClog.Topics[1]
 	depositData := VRClog.Topics[2]
-
+	// size of topics are bounded to 32 bytes, so for deposit data larger than 32 bytes
+	// retrieve from other topics.
 	if err := w.SaveInTrie(depositData, merkleRoot); err != nil {
 		log.Errorf("Could not save in trie %v", err)
 		return
