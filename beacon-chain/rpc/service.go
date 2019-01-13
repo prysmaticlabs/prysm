@@ -125,15 +125,15 @@ func (s *Service) Start() {
 		log.Warn("You are using an insecure gRPC connection! Provide a certificate and key to connect securely")
 		s.grpcServer = grpc.NewServer()
 	}
-	
+
 	pb.RegisterBeaconServiceServer(s.grpcServer, s)
 	pb.RegisterValidatorServiceServer(s.grpcServer, s)
 	pb.RegisterProposerServiceServer(s.grpcServer, s)
 	pb.RegisterAttesterServiceServer(s.grpcServer, s)
-	
+
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)
-	
+
 	go func() {
 		err = s.grpcServer.Serve(lis)
 		if err != nil {

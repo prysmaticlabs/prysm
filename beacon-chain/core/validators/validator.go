@@ -611,6 +611,32 @@ func PrepareValidatorForWithdrawal(state *pb.BeaconState, index uint32) *pb.Beac
 
 // ProcessPenaltiesAndExits prepares the validators and the penalized validators
 // for withdrawal.
+//
+// Spec pseudocode definition:
+// def process_penalties_and_exits(state: BeaconState) -> None:
+//    # The active validators
+//    active_validator_indices = get_active_validator_indices(state.validator_registry, state.slot)
+//    # The total effective balance of active validators
+//    total_balance = sum([get_effective_balance(state, i) for i in active_validator_indices])
+//
+//    for index, validator in enumerate(state.validator_registry):
+//        if (state.slot // EPOCH_LENGTH) == (validator.penalized_slot // EPOCH_LENGTH) + LATEST_PENALIZED_EXIT_LENGTH // 2:
+//            e = (state.slot // EPOCH_LENGTH) % LATEST_PENALIZED_EXIT_LENGTH
+//            total_at_start = state.latest_penalized_exit_balances[(e + 1) % LATEST_PENALIZED_EXIT_LENGTH]
+//            total_at_end = state.latest_penalized_exit_balances[e]
+//            total_penalties = total_at_end - total_at_start
+//            penalty = get_effective_balance(state, index) * min(total_penalties * 3, total_balance) // total_balance
+//            state.validator_balances[index] -= penalty
+//
+//    all_indices = list(range(len(state.validator_registry)))
+//    eligible_indices = filter(eligible, all_indices)
+//    sorted_indices = sorted(eligible_indices, key=lambda index: state.validator_registry[index].exit_count)
+//    withdrawn_so_far = 0
+//    for index in sorted_indices:
+//        prepare_validator_for_withdrawal(state, index)
+//        withdrawn_so_far += 1
+//        if withdrawn_so_far >= MAX_WITHDRAWALS_PER_EPOCH:
+//            break
 func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 
 	activeValidatorIndices := ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
@@ -629,7 +655,6 @@ func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 			if totalBalance < penaltyMultiplier {
 				penaltyMultiplier = totalBalance
 			}
-
 			penalty := EffectiveBalance(state, uint32(index)) *
 				penaltyMultiplier / totalBalance
 			state.ValidatorBalances[index] -= penalty
@@ -658,6 +683,15 @@ func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 
 // eligibleToExit checks if a validator is eligible to exit whether it was
 // penalized or not.
+//
+// Spec pseudocode definition:
+// def eligible(index):
+//    validator = state.validator_registry[index]
+//    if validator.penalized_slot <= state.slot:
+//        PENALIZED_WITHDRAWAL_TIME = LATEST_PENALIZED_EXIT_LENGTH * EPOCH_LENGTH // 2
+//        return state.slot >= validator.penalized_slot + PENALIZED_WITHDRAWAL_TIME
+//    else:
+//        return state.slot >= validator.exit_slot + MIN_VALIDATOR_WITHDRAWAL_TIME
 func eligibleToExit(state *pb.BeaconState, index uint32) bool {
 	validator := state.ValidatorRegistry[index]
 

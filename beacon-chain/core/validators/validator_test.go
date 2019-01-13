@@ -886,3 +886,69 @@ func TestExitValidator_AlreadyExited(t *testing.T) {
 		t.Fatal("exitValidator should have failed with exiting again")
 	}
 }
+
+func TestProcessPenaltiesExits_NothingHappened(t *testing.T) {
+	state := &pb.BeaconState{
+		ValidatorBalances: []uint64{config.MaxDepositInGwei},
+		ValidatorRegistry: []*pb.ValidatorRecord{
+			{ExitSlot: params.BeaconConfig().FarFutureSlot},
+		},
+	}
+	if ProcessPenaltiesAndExits(state).ValidatorBalances[0] !=
+		config.MaxDepositInGwei {
+		t.Errorf("wanted validator balance %d, got %d",
+			config.MaxDepositInGwei,
+			ProcessPenaltiesAndExits(state).ValidatorBalances[0])
+	}
+}
+
+func TestProcessPenaltiesExits_ValidatorPenalized(t *testing.T) {
+
+	latestPenalizedExits := make([]uint64, config.LatestPenalizedExitLength)
+	for i := 0; i < len(latestPenalizedExits); i++ {
+		latestPenalizedExits[i] = uint64(i) * config.MaxDepositInGwei
+	}
+
+	state := &pb.BeaconState{
+		Slot:                        config.LatestPenalizedExitLength / 2 * config.EpochLength,
+		LatestPenalizedExitBalances: latestPenalizedExits,
+		ValidatorBalances:           []uint64{config.MaxDepositInGwei, config.MaxDepositInGwei},
+		ValidatorRegistry: []*pb.ValidatorRecord{
+			{ExitSlot: params.BeaconConfig().FarFutureSlot, ExitCount: 1},
+		},
+	}
+
+	penalty := EffectiveBalance(state, 0) *
+		EffectiveBalance(state, 0) /
+		config.MaxDepositInGwei
+
+	newState := ProcessPenaltiesAndExits(state)
+	if newState.ValidatorBalances[0] != config.MaxDepositInGwei-penalty {
+		t.Errorf("wanted validator balance %d, got %d",
+			config.MaxDepositInGwei-penalty,
+			newState.ValidatorBalances[0])
+	}
+}
+
+func TestEligibleToExit(t *testing.T) {
+	state := &pb.BeaconState{
+		Slot: 1,
+		ValidatorRegistry: []*pb.ValidatorRecord{
+			{ExitSlot: params.BeaconConfig().EntryExitDelay},
+		},
+	}
+	if eligibleToExit(state, 0) {
+		t.Error("eligible to exit should be true but got false")
+	}
+
+	state = &pb.BeaconState{
+		Slot: config.MinValidatorWithdrawalTime,
+		ValidatorRegistry: []*pb.ValidatorRecord{
+			{ExitSlot: params.BeaconConfig().EntryExitDelay,
+				PenalizedSlot: 1},
+		},
+	}
+	if eligibleToExit(state, 0) {
+		t.Error("eligible to exit should be true but got false")
+	}
+}
