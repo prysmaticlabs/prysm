@@ -396,8 +396,6 @@ func (s *Service) ValidatorAssignments(
 	req *pb.ValidatorAssignmentRequest,
 	stream pb.BeaconService_ValidatorAssignmentsServer) error {
 
-	log.WithField("req", req).Debug("Opening validator assignment stream")
-
 	sub := s.chainService.CanonicalStateFeed().Subscribe(s.canonicalStateChan)
 	defer sub.Unsubscribe()
 	for {
