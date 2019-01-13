@@ -207,7 +207,6 @@ func TotalEffectiveBalance(state *pb.BeaconState, validatorIndices []uint32) uin
 	return totalDeposit
 }
 
-
 // NewRegistryDeltaChainTip returns the new validator registry delta chain tip.
 //
 // Spec pseudocode definition:
