@@ -594,9 +594,9 @@ func PrepareValidatorForWithdrawal(state *pb.BeaconState, index uint32) *pb.Beac
 	return state
 }
 
-// UpdateValidatorRegistry rotates validators in and out of active pool.
+// UpdateRegistry rotates validators in and out of active pool.
 // the amount to rotate is determined by max validator balance churn.
-func UpdateValidatorRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
+func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	activeValidatorIndices := ActiveValidatorIndices(
 		state.ValidatorRegistry, state.Slot)
 
@@ -610,7 +610,8 @@ func UpdateValidatorRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	for index, validator := range state.ValidatorRegistry {
 		// Activate validators within the allowable balance churn.
 		if validator.ActivationSlot > state.Slot+config.EntryExitDelay &&
-			state.ValidatorBalances[index] > config.MaxDepositInGwei {
+			// TODO: Verify 2.1 spec
+			state.ValidatorBalances[index] >= config.MaxDepositInGwei {
 			balChurn += EffectiveBalance(state, uint32(index))
 			if balChurn > maxBalChurn {
 				break
@@ -620,7 +621,10 @@ func UpdateValidatorRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 				return nil, fmt.Errorf("could not activate validator %d: %v", index, err)
 			}
 		}
-		balChurn = 0
+	}
+
+	balChurn = 0
+	for index, validator := range state.ValidatorRegistry {
 		// Exit validators within the allowable balance churn.
 		if validator.ExitSlot > state.Slot+config.EntryExitDelay &&
 			validator.StatusFlags == pb.ValidatorRecord_INITIATED_EXIT {
