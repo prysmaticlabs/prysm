@@ -1294,9 +1294,9 @@ solium-plugin-security@0.1.1:
   version "0.1.1"
   resolved "https://registry.yarnpkg.com/solium-plugin-security/-/solium-plugin-security-0.1.1.tgz#2a87bcf8f8c3abf7d198e292e4ac080284e3f3f6"
 
-solium@1.2.1:
-  version "1.2.1"
-  resolved "https://registry.yarnpkg.com/solium/-/solium-1.2.1.tgz#ead11f2921ba2337461752155cc96149ea08f247"
+solium@1.2.2:
+  version "1.2.2"
+  resolved "https://registry.yarnpkg.com/solium/-/solium-1.2.2.tgz#9b75abfbff81a93080e75d0cfd3979e22b2e3379"
   dependencies:
     ajv "^5.2.2"
     chokidar "^1.6.0"
@@ -1309,12 +1309,12 @@ solium@1.2.1:
     sol-digger "0.0.2"
     sol-explore "1.6.1"
     solium-plugin-security "0.1.1"
-    solparse "2.2.7"
+    solparse "2.2.8"
     text-table "^0.2.0"
 
-solparse@2.2.7:
-  version "2.2.7"
-  resolved "https://registry.yarnpkg.com/solparse/-/solparse-2.2.7.tgz#5479ff4ba4ca6900df89b902b5af1ee23b816250"
+solparse@2.2.8:
+  version "2.2.8"
+  resolved "https://registry.yarnpkg.com/solparse/-/solparse-2.2.8.tgz#d13e42dbed95ce32f43894f5ec53f00d14cf9f11"
   dependencies:
     mocha "^4.0.1"
     pegjs "^0.10.0"
