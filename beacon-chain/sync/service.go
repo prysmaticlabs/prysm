@@ -16,6 +16,7 @@ type Service struct {
 	RegularSync *RegularSync
 	InitialSync *initialsync.InitialSync
 	Querier     *Querier
+	failStatus   error
 }
 
 // Config defines the configured services required for sync to work.
@@ -101,6 +102,8 @@ func (ss *Service) run() {
 	if synced {
 		ss.RegularSync.Start()
 		return
+	} else {
+		ss.failStatus = errors.New("Service is unhealthy")
 	}
 
 	ss.InitialSync.Start()
