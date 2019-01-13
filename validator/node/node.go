@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/debug"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/attester"
 	"github.com/prysmaticlabs/prysm/validator/beacon"
@@ -100,6 +101,10 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 	}
 
 	if err := ValidatorClient.registerProposerService(); err != nil {
+		return nil, err
+	}
+
+	if err := ValidatorClient.registerPrometheusService(ctx); err != nil {
 		return nil, err
 	}
 
@@ -251,4 +256,13 @@ func (s *ValidatorClient) registerRPCClientService(ctx *cli.Context) error {
 		Endpoint: endpoint,
 	})
 	return s.services.RegisterService(rpcService)
+}
+
+func (s *ValidatorClient) registerPrometheusService(ctx *cli.Context) error {
+	service := prometheus.NewPrometheusService(
+		fmt.Sprintf(":%d", ctx.GlobalInt64(cmd.MonitoringPortFlag.Name)),
+		s.services,
+	)
+	logrus.AddHook(prometheus.NewLogrusCollector())
+	return s.services.RegisterService(service)
 }
