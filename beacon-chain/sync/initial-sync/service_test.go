@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 )
 
 type mockP2P struct {
@@ -100,9 +101,8 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	var stateHash [32]byte
-	copy(stateHash[:], blockResponse.Block.StateRootHash32)
-
+	stateHash := bytesutil.ToBytes32(blockResponse.Block.StateRootHash32)
+	
 	if stateHash != ss.initialStateRootHash32 {
 		t.Fatalf("Beacon state hash not updated: %#x", blockResponse.Block.StateRootHash32)
 	}

@@ -11,6 +11,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 )
 
 // CanProcessEpoch checks the eligibility to process epoch.
@@ -222,8 +223,7 @@ func ProcessValidatorRegistry(
 	nextStartShard := (shardCommittees[lastSlot].ArrayShardCommittee[lastCommittee].Shard + 1) %
 		shardCount
 
-	var randaoHash32 [32]byte
-	copy(randaoHash32[:], state.LatestRandaoMixesHash32S[(state.Slot-
+	randaoHash32 := bytesutil.ToBytes32(state.LatestRandaoMixesHash32S[(state.Slot-
 		uint64(seedLookahead))%randaoMixesLength])
 
 	for i := 0; i < epochLength; i++ {
@@ -263,9 +263,7 @@ func ProcessPartialValidatorRegistry(
 	epochLength := int(params.BeaconConfig().EpochLength)
 	randaoMixesLength := params.BeaconConfig().LatestRandaoMixesLength
 	seedLookahead := params.BeaconConfig().SeedLookahead
-	var randaoHash32 [32]byte
-	copy(randaoHash32[:], state.LatestRandaoMixesHash32S[(state.Slot-uint64(seedLookahead))%randaoMixesLength])
-
+	randaoHash32 := bytesutil.ToBytes32(state.LatestRandaoMixesHash32S[(state.Slot-uint64(seedLookahead))%randaoMixesLength])
 	for i := 0; i < epochLength; i++ {
 		state.ShardCommitteesAtSlots[i] = state.ShardCommitteesAtSlots[epochLength+i]
 	}
