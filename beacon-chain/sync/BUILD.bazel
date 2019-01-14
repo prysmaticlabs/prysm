@@ -29,6 +29,7 @@ go_test(
     srcs = [
         "querier_test.go",
         "regular_sync_test.go",
+        "service_test.go",
     ],
     embed = [":go_default_library"],
     deps = [

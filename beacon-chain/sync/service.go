@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"errors"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
@@ -76,10 +77,17 @@ func (ss *Service) Stop() error {
 	return ss.RegularSync.Stop()
 }
 
-// Status always returns nil.
-// TODO(1206): Add service health checks.
+// Status checks the status of the node. It returns nil if it's synced
+// with the rest of the network and no errors occured. Otherwise, it returns an error.
 func (ss *Service) Status() error {
-	return nil
+	synced, err := ss.Querier.IsSynced() 
+	if err != nil {
+	  return err
+	}
+	if !synced {
+	  return errors.New("node is not synced with the rest of the network")
+	}
+  	return nil
 }
 
 func (ss *Service) run() {
