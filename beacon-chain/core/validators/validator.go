@@ -745,11 +745,11 @@ func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 	sort.Slice(eligibleIndices, func(i, j int) bool {
 		return state.ValidatorRegistry[i].ExitCount < state.ValidatorRegistry[j].ExitCount
 	})
-	var withdrawanSoFar int
+	var withdrawanSoFar uint64
 	for _, index := range eligibleIndices {
 		state = PrepareValidatorForWithdrawal(state, index)
 		withdrawanSoFar++
-		if withdrawanSoFar >= 0 {
+		if withdrawanSoFar >= config.MaxWithdrawalsPerEpoch {
 			break
 		}
 	}
