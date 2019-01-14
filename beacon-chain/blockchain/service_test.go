@@ -21,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -203,7 +202,7 @@ func TestRunningChainService(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db)
-	deposits := make([]*pb.Deposit, params.BeaconConfig().DepositsForChainStart)
+	deposits := make([]*pb.Deposit, config.DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
 		depositInput := &pb.DepositInput{
 			Pubkey: []byte(strconv.Itoa(i)),
@@ -212,7 +211,7 @@ func TestRunningChainService(t *testing.T) {
 		}
 		depositData, err := b.EncodeDepositData(
 			depositInput,
-			params.BeaconConfig().MaxDepositInGwei,
+			config.MaxDepositInGwei,
 			time.Now().Unix(),
 		)
 		if err != nil {
@@ -245,23 +244,22 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatalf("Can't get state from db %v", err)
 	}
 
-	var ShardCommittees []*pb.ShardCommitteeArray
-	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
-		ShardCommittees = append(ShardCommittees, &pb.ShardCommitteeArray{
-			ArrayShardCommittee: []*pb.ShardCommittee{
-				{Committee: []uint32{9, 8, 311, 12, 92, 1, 23, 17}},
-			},
-		})
+	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
+	randaoCommit := hashutil.RepeatHash([32]byte{}, 1)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.ValidatorRecord{
+			ExitSlot:               config.FarFutureSlot,
+			RandaoCommitmentHash32: randaoCommit[:],
+		}
 	}
 
-	beaconState.ShardCommitteesAtSlots = ShardCommittees
+	beaconState.ValidatorRegistry = validators
 	if err := chainService.beaconDB.SaveState(beaconState); err != nil {
 		t.Fatal(err)
 	}
 
 	currentSlot := uint64(5)
 	attestationSlot := uint64(0)
-	shard := beaconState.ShardCommitteesAtSlots[attestationSlot].ArrayShardCommittee[0].Shard
 
 	block := &pb.BeaconBlock{
 		Slot:              currentSlot + 1,
@@ -274,9 +272,9 @@ func TestRunningChainService(t *testing.T) {
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Data: &pb.AttestationData{
 					Slot:                      attestationSlot,
-					Shard:                     shard,
-					JustifiedBlockRootHash32:  params.BeaconConfig().ZeroHash[:],
-					LatestCrosslinkRootHash32: params.BeaconConfig().ZeroHash[:],
+					Shard:                     0,
+					JustifiedBlockRootHash32:  config.ZeroHash[:],
+					LatestCrosslinkRootHash32: config.ZeroHash[:],
 				},
 			}},
 		},
@@ -464,7 +462,6 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 
 	currentSlot := uint64(1)
 	attestationSlot := uint64(0)
-	shard := beaconState.ShardCommitteesAtSlots[attestationSlot].ArrayShardCommittee[0].Shard
 
 	block3 := &pb.BeaconBlock{
 		Slot:              currentSlot,
@@ -477,7 +474,7 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Data: &pb.AttestationData{
 					Slot:                     attestationSlot,
-					Shard:                    shard,
+					Shard:                    0,
 					JustifiedBlockRootHash32: parentHash[:],
 				},
 			}},
