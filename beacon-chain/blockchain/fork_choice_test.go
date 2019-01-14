@@ -23,7 +23,7 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 		depositInput := &pb.DepositInput{
 			Pubkey: genesisValidatorRegistry[i].Pubkey,
 		}
-		balance := genesisValidatorRegistry[i].Balance
+		balance := params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei
 		depositData, err := b.EncodeDepositData(depositInput, balance, time.Now().Unix())
 		if err != nil {
             t.Fatal(err)
@@ -51,14 +51,47 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	potentialHead := &pb.BeaconBlock{
 		Slot: 1,
 		ParentRootHash32: genesisHash[:],
+		StateRootHash32: stateHash[:],
 	}
-	observedBlocks := []*pb.BeaconBlock{potentialHead}
+	potentialHead2 := &pb.BeaconBlock{
+		Slot: 1,
+		ParentRootHash32: genesisHash[:],
+        StateRootHash32: []byte("some-other-head"),
+	}
+	potentialHeadEnc, _ := proto.Marshal(potentialHead)
+	potentialHeadHash := hashutil.Hash(potentialHeadEnc)
+
+	// We store these potential heads in the DB.
+	if err := db.SaveBlock(potentialHead); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveBlock(potentialHead2); err != nil {
+		t.Fatal(err)
+	}
+
+	// We store some simulated latest attestations for an active validator.
+	latestAtts := &pb.LatestAttestations{
+		Attestations: []*pb.Attestation{
+			{
+				Data: &pb.AttestationData{
+					Slot: 1,
+					BeaconBlockRootHash32: potentialHeadHash[:],
+				},
+			},
+		},
+	}
+	if err := db.SaveLatestAttestationsForValidator(0, latestAtts); err != nil {
+		t.Fatal(err)
+	}
+
+	// We then test LMD Ghost was applied as the fork-choice rule.
+	observedBlocks := []*pb.BeaconBlock{potentialHead, potentialHead2}
 	head, err := LMDGhost(beaconState, genesisBlock, observedBlocks, db)
 	if err != nil {
 		t.Fatalf("Could not run LMD GHOST: %v", err)
 	}
-	if !reflect.DeepEqual(genesisBlock, head) {
-		t.Errorf("Expected head to equal %v, received %v", genesisBlock, head)
+	if !reflect.DeepEqual(potentialHead, head) {
+		t.Errorf("Expected head to equal %v, received %v", potentialHead, head)
 	}
 }
 

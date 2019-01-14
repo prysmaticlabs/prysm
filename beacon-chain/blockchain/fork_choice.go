@@ -32,9 +32,11 @@ func LMDGhost(
 			return nil, fmt.Errorf("could not fetch block children: %v", err)
 		}
 		if len(children) == 0 {
+			fmt.Println("NOCHILD")
 			return head, nil
 		}
-		maxChild := children[0]
+		fmt.Println("CHILD")
+		maxChild := children[0] // so far max child will be potentialHead [potentialHead]
 		for i := 1; i < len(children); i++ {
 			candidateChildVotes, err := VoteCount(children[i], targets, beaconDB)
 			if err != nil {
@@ -44,6 +46,7 @@ func LMDGhost(
 			if err != nil {
 				return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
 			}
+			fmt.Printf("candidate: %d, max: %d\n", candidateChildVotes, maxChildVotes)
 			if candidateChildVotes > maxChildVotes {
 				maxChild = children[i]
 			}
@@ -53,7 +56,7 @@ func LMDGhost(
 }
 
 // VoteCount determines the number of votes on a beacon block by counting the number
-// of observed blocks that have the current beacon block as a common ancestor.
+// of target blocks that have such beacon block as a common ancestor.
 func VoteCount(block *pb.BeaconBlock, targets []*pb.BeaconBlock, beaconDB *db.BeaconDB) (int, error) {
 	votes := 0
 	for _, target := range targets {
@@ -65,12 +68,15 @@ func VoteCount(block *pb.BeaconBlock, targets []*pb.BeaconBlock, beaconDB *db.Be
 			votes++
 		}
 	}
+	fmt.Println(votes)
 	return votes, nil
 }
 
 // BlockAncestor obtains the ancestor at of a block at a certain slot.
 func BlockAncestor(block *pb.BeaconBlock, slot uint64, beaconDB *db.BeaconDB) (*pb.BeaconBlock, error) {
+	fmt.Println("WORKSSS")
 	if block.Slot == slot {
+		fmt.Println("YAY")
 		return block, nil
 	}
 	parentHash := bytesutil.ToBytes32(block.ParentRootHash32)
@@ -121,9 +127,16 @@ func AttestationTargets(
 func LatestAttestationTarget(validatorIndex uint32, beaconDB *db.BeaconDB) (*pb.BeaconBlock, error) {
 	latestAttsProto, err := beaconDB.GetLatestAttestationsForValidator(validatorIndex)
 	if err != nil {
-		return nil, fmt.Errorf("could not fetch latest attestations for validator at index %d: %v", err)
+		return nil, fmt.Errorf(
+			"could not fetch latest attestations for validator at index %d: %v",
+			validatorIndex,
+			err,
+		)
 	}
 	latestAtts := latestAttsProto.Attestations
+	if len(latestAtts) == 0 {
+		return nil, nil
+	}
 	highestSlotAtt := latestAtts[0]
 	for i := 1; i < len(latestAtts); i++ {
 		if latestAtts[i].Data.Slot > highestSlotAtt.Data.Slot {

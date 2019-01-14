@@ -62,7 +62,7 @@ func (db *BeaconDB) SaveLatestAttestationsForValidator(validatorIdx uint32, late
 // GetLatestAttestationsForValidator returns the observed attestations by a validator at a
 // certain index in the beacon state's registry.
 func (db *BeaconDB) GetLatestAttestationsForValidator(validatorIdx uint32) (*pb.LatestAttestations, error) {
-	var latestAtts *pb.LatestAttestations
+	latestAtts := &pb.LatestAttestations{}
 	err := db.view(func(tx *bolt.Tx) error {
 		a := tx.Bucket(attestationBucket)
 
