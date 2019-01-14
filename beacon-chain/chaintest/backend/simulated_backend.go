@@ -200,6 +200,13 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 				break
 			}
 		}
+		var simulatedValidatorExit *StateTestValidatorExit
+		for _, exit := range testCase.Config.ValidatorExits {
+			if exit.Slot == i {
+				simulatedValidatorExit = exit
+				break
+			}
+		}
 
 		layersPeeled := layersPeeledForProposer[proposerIndex]
 		blockRandaoReveal := determineSimulatedBlockRandaoReveal(layersPeeled, hashOnions)
@@ -214,6 +221,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 			depositsTrie,
 			simulatedProposerSlashing,
 			simulatedCasperSlashing,
+			simulatedValidatorExit,
 		)
 		if err != nil {
 			return fmt.Errorf("could not generate simulated beacon block %v", err)
@@ -263,6 +271,14 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 			return fmt.Errorf(
 				"expected validator at index %d to have been penalized",
 				penalized,
+			)
+		}
+	}
+	for _, exited := range testCase.Results.ExitedValidators {
+		if beaconState.ValidatorRegistry[exited].StatusFlags != pb.ValidatorRecord_INITIATED_EXIT {
+			return fmt.Errorf(
+				"expected validator at index %d to have exited",
+				exited,
 			)
 		}
 	}

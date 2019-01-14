@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -67,7 +67,7 @@ func TestCleanBlockVoteCache(t *testing.T) {
 		t.Fatalf("failed to initialize DB: %v", err)
 	}
 	oldBlock := &pb.BeaconBlock{Slot: 1}
-	oldBlockHash, _ := b.Hash(oldBlock)
+	oldBlockHash, _ := hashutil.HashBeaconBlock(oldBlock)
 	if err = beaconDB.SaveBlock(oldBlock); err != nil {
 		t.Fatalf("failed to write block int DB: %v", err)
 	}

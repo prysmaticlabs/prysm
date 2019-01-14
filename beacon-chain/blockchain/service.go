@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -143,7 +144,7 @@ func (c *ChainService) updateHead(processedBlock <-chan *pb.BeaconBlock) {
 				continue
 			}
 
-			h, err := b.Hash(block)
+			h, err := hashutil.HashBeaconBlock(block)
 			if err != nil {
 				log.Errorf("Could not hash incoming block: %v", err)
 				continue
@@ -288,7 +289,7 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *pb.BeaconBlock) {
 //
 func (c *ChainService) receiveBlock(block *pb.BeaconBlock, beaconState *pb.BeaconState) error {
 
-	blockhash, err := b.Hash(block)
+	blockhash, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return fmt.Errorf("could not hash incoming block: %v", err)
 	}
@@ -309,7 +310,7 @@ func (c *ChainService) receiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	}
 
 	// TODO(#716):Replace with tree-hashing algorithm.
-	blockRoot, err := b.Hash(prevBlock)
+	blockRoot, err := hashutil.HashBeaconBlock(prevBlock)
 	if err != nil {
 		return fmt.Errorf("could not hash block %v", err)
 	}

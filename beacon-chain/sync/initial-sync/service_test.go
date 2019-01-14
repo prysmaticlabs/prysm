@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -364,7 +363,7 @@ func TestRequestBlocksBySlot(t *testing.T) {
 			Block: block,
 		}
 
-		hash, err := b.Hash(block)
+		hash, err := hashutil.HashBeaconBlock(block)
 		if err != nil {
 			t.Fatalf("unable to hash block %v", err)
 		}

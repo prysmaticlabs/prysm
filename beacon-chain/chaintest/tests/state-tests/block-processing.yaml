@@ -52,10 +52,14 @@ test_cases:
           votes_1_custody_1_indices: []
           votes_2_custody_0_indices: []
           votes_2_custody_1_indices: [16386]
+      validator_exits:
+        - slot: 60
+          validator_index: 100 # At slot 60, validator at index 100 triggers a voluntary exit
     results:
       slot: 64
       num_validators: 16387
       penalized_validators: [16385, 16386] # We test that the validators at indices 16385, 16386 were indeed penalized
+      exited_validators: [100] # We confirm the indices of validators that willingly exited the registry
   - config:
       skip_slots: [10, 20]
       epoch_length: 64
