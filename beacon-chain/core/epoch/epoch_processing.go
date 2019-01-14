@@ -215,6 +215,8 @@ func ProcessValidatorRegistry(
 	seedLookahead := params.BeaconConfig().SeedLookahead
 	shardCount := params.BeaconConfig().ShardCount
 
+	state, err := validators.UpdateRegistry(state)
+
 	shardCommittees := state.ShardCommitteesAtSlots
 	lastSlot := len(shardCommittees) - 1
 	lastCommittee := len(shardCommittees[lastSlot].ArrayShardCommittee) - 1

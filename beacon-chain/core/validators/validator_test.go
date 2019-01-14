@@ -543,12 +543,12 @@ func TestAttestingValidatorIndices_Ok(t *testing.T) {
 		[]*pb.PendingAttestationRecord{thisAttestation},
 		[]*pb.PendingAttestationRecord{prevAttestation})
 	if err != nil {
-		t.Fatalf("Could not execute AttestingValidatorIndices: %v", err)
+		t.Fatalf("could not execute AttestingValidatorIndices: %v", err)
 	}
 
 	// Union(1,7,1,5,6) = 1,5,6,7
 	if !reflect.DeepEqual(indices, []uint32{1, 5, 6, 7}) {
-		t.Errorf("Could not get incorrect validator indices. Wanted: %v, got: %v",
+		t.Errorf("could not get incorrect validator indices. Wanted: %v, got: %v",
 			[]uint32{1, 5, 6, 7}, indices)
 	}
 }
@@ -629,7 +629,7 @@ func TestNewRegistryDeltaChainTip(t *testing.T) {
 			tt.currentRegistryDeltaChainTip,
 		)
 		if err != nil {
-			t.Fatalf("Could not execute NewRegistryDeltaChainTip:%v", err)
+			t.Fatalf("could not execute NewRegistryDeltaChainTip:%v", err)
 		}
 		if !bytes.Equal(newChainTip[:], tt.newRegistryDeltaChainTip) {
 			t.Errorf("Incorrect new chain tip. Wanted %#x, got %#x",
@@ -811,7 +811,7 @@ func TestActivateValidatorGenesis_Ok(t *testing.T) {
 	}
 	newState, err := ActivateValidator(state, 0, true)
 	if err != nil {
-		t.Fatalf("Could not execute activateValidator:%v", err)
+		t.Fatalf("could not execute activateValidator:%v", err)
 	}
 	if newState.ValidatorRegistry[0].ActivationSlot != params.BeaconConfig().GenesisSlot {
 		t.Errorf("Wanted activation slot = genesis slot, got %d",
@@ -829,7 +829,7 @@ func TestActivateValidator_Ok(t *testing.T) {
 	}
 	newState, err := ActivateValidator(state, 0, false)
 	if err != nil {
-		t.Fatalf("Could not execute activateValidator:%v", err)
+		t.Fatalf("could not execute activateValidator:%v", err)
 	}
 	if newState.ValidatorRegistry[0].ActivationSlot !=
 		state.Slot+params.BeaconConfig().EntryExitDelay {
@@ -861,7 +861,7 @@ func TestExitValidator_Ok(t *testing.T) {
 	}
 	newState, err := ExitValidator(state, 0)
 	if err != nil {
-		t.Fatalf("Could not execute ExitValidator:%v", err)
+		t.Fatalf("could not execute ExitValidator:%v", err)
 	}
 
 	if newState.ValidatorRegistry[0].ExitSlot !=
@@ -950,5 +950,133 @@ func TestEligibleToExit(t *testing.T) {
 	}
 	if eligibleToExit(state, 0) {
 		t.Error("eligible to exit should be true but got false")
+	}
+}
+
+func TestUpdateRegistry_NoRotation(t *testing.T) {
+	state := &pb.BeaconState{
+		Slot: 5,
+		ValidatorRegistry: []*pb.ValidatorRecord{
+			{ExitSlot: params.BeaconConfig().EntryExitDelay},
+			{ExitSlot: params.BeaconConfig().EntryExitDelay},
+			{ExitSlot: params.BeaconConfig().EntryExitDelay},
+			{ExitSlot: params.BeaconConfig().EntryExitDelay},
+			{ExitSlot: params.BeaconConfig().EntryExitDelay},
+		},
+		ValidatorBalances: []uint64{
+			config.MaxDepositInGwei,
+			config.MaxDepositInGwei,
+			config.MaxDepositInGwei,
+			config.MaxDepositInGwei,
+			config.MaxDepositInGwei,
+		},
+	}
+	newState, err := UpdateRegistry(state)
+	if err != nil {
+		t.Fatalf("could not update validator registry:%v", err)
+	}
+	for i, validator := range newState.ValidatorRegistry {
+		if validator.ExitSlot != config.EntryExitDelay {
+			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
+				i, config.EntryExitDelay, validator.ExitSlot)
+		}
+	}
+	if newState.ValidatorRegistryLatestChangeSlot != state.Slot {
+		t.Errorf("wanted validator registry lastet change %d, got %d",
+			state.Slot, newState.ValidatorRegistryLatestChangeSlot)
+	}
+}
+
+func TestUpdateRegistry_Activate(t *testing.T) {
+	state := &pb.BeaconState{
+		Slot: 5,
+		ValidatorRegistry: []*pb.ValidatorRecord{
+			{ExitSlot: params.BeaconConfig().EntryExitDelay,
+				ActivationSlot: 5 + config.EntryExitDelay + 1},
+			{ExitSlot: params.BeaconConfig().EntryExitDelay,
+				ActivationSlot: 5 + config.EntryExitDelay + 1},
+		},
+		ValidatorBalances: []uint64{
+			config.MaxDepositInGwei,
+			config.MaxDepositInGwei,
+		},
+		ValidatorRegistryDeltaChainTipHash32: []byte{'A'},
+	}
+	newState, err := UpdateRegistry(state)
+	if err != nil {
+		t.Fatalf("could not update validator registry:%v", err)
+	}
+	for i, validator := range newState.ValidatorRegistry {
+		if validator.ExitSlot != config.EntryExitDelay {
+			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
+				i, config.EntryExitDelay, validator.ExitSlot)
+		}
+	}
+	if newState.ValidatorRegistryLatestChangeSlot != state.Slot {
+		t.Errorf("wanted validator registry lastet change %d, got %d",
+			state.Slot, newState.ValidatorRegistryLatestChangeSlot)
+	}
+
+	if bytes.Equal(newState.ValidatorRegistryDeltaChainTipHash32, []byte{'A'}) {
+		t.Errorf("validator registry delta chain did not change")
+	}
+}
+
+func TestUpdateRegistry_Exit(t *testing.T) {
+	state := &pb.BeaconState{
+		Slot: 5,
+		ValidatorRegistry: []*pb.ValidatorRecord{
+			{
+				ExitSlot:    5 + config.EntryExitDelay + 1,
+				StatusFlags: pb.ValidatorRecord_INITIATED_EXIT},
+			{
+				ExitSlot:    5 + config.EntryExitDelay + 1,
+				StatusFlags: pb.ValidatorRecord_INITIATED_EXIT},
+		},
+		ValidatorBalances: []uint64{
+			config.MaxDepositInGwei,
+			config.MaxDepositInGwei,
+		},
+		ValidatorRegistryDeltaChainTipHash32: []byte{'A'},
+	}
+	newState, err := UpdateRegistry(state)
+	if err != nil {
+		t.Fatalf("could not update validator registry:%v", err)
+	}
+	for i, validator := range newState.ValidatorRegistry {
+		if validator.ExitSlot != config.EntryExitDelay+5 {
+			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
+				i,
+				config.EntryExitDelay+5,
+				validator.ExitSlot)
+		}
+	}
+	if newState.ValidatorRegistryLatestChangeSlot != state.Slot {
+		t.Errorf("wanted validator registry lastet change %d, got %d",
+			state.Slot, newState.ValidatorRegistryLatestChangeSlot)
+	}
+
+	if bytes.Equal(newState.ValidatorRegistryDeltaChainTipHash32, []byte{'A'}) {
+		t.Errorf("validator registry delta chain did not change")
+	}
+}
+
+func TestMaxBalanceChurn(t *testing.T) {
+	tests := []struct {
+		totalBalance    uint64
+		maxBalanceChurn uint64
+	}{
+		{totalBalance: 1e9, maxBalanceChurn: config.MaxDepositInGwei},
+		{totalBalance: config.MaxDepositInGwei, maxBalanceChurn: 512 * 1e9},
+		{totalBalance: config.MaxDepositInGwei * 10, maxBalanceChurn: 512 * 1e10},
+		{totalBalance: config.MaxDepositInGwei * 1000, maxBalanceChurn: 512 * 1e12},
+	}
+
+	for _, tt := range tests {
+		churn := maxBalanceChurn(tt.totalBalance)
+		if tt.maxBalanceChurn != churn {
+			t.Errorf("MaxBalanceChurn was not an expected value. Wanted: %d, got: %d",
+				tt.maxBalanceChurn, churn)
+		}
 	}
 }

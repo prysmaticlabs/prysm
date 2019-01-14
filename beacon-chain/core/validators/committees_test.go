@@ -191,8 +191,6 @@ func TestValidatorRegistryBySlotShardLargeValidatorSet(t *testing.T) {
 		t.Logf("slot %d", i)
 		for j := 0; j < len(ShardCommittees); j++ {
 			shardCommittee := ShardCommittees[j]
-			t.Logf("shard %d", shardCommittee.Shard)
-			t.Logf("committee: %v", shardCommittee.Committee)
 			if len(shardCommittee.Committee) != int(config.TargetCommitteeSize) {
 				t.Fatalf("Expected committee size %d: got %d", config.TargetCommitteeSize, len(shardCommittee.Committee))
 			}
