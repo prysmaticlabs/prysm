@@ -15,6 +15,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slices"
 )
 
+var config = params.BeaconConfig()
+
 // ExpectedFFGSource applies rewards or penalties
 // for an expected FFG source. It uses total justified
 // attesting balances, total validator balances and base
@@ -148,7 +150,7 @@ func InclusionDistance(
 		}
 		state.ValidatorBalances[index] +=
 			baseReward(state, index, baseRewardQuotient) *
-				params.BeaconConfig().MinAttestationInclusionDelay /
+				config.MinAttestationInclusionDelay /
 				inclusionDistance
 	}
 	return state, nil
@@ -271,7 +273,7 @@ func InactivityInclusionDistance(
 		}
 		baseReward := baseReward(state, index, baseRewardQuotient)
 		state.ValidatorBalances[index] -= baseReward -
-			baseReward*params.BeaconConfig().MinAttestationInclusionDelay/
+			baseReward*config.MinAttestationInclusionDelay/
 				inclusionDistance
 	}
 	return state, nil
@@ -303,7 +305,7 @@ func AttestationInclusion(
 		}
 		state.ValidatorBalances[proposerIndex] +=
 			baseReward(state, proposerIndex, baseRewardQuotient) /
-				params.BeaconConfig().IncluderRewardQuotient
+				config.IncluderRewardQuotient
 	}
 	return state, nil
 }
@@ -315,7 +317,7 @@ func Crosslinks(
 	thisEpochAttestations []*pb.PendingAttestationRecord,
 	prevEpochAttestations []*pb.PendingAttestationRecord) (*pb.BeaconState, error) {
 
-	epochLength := params.BeaconConfig().EpochLength
+	epochLength := config.EpochLength
 	startSlot := state.Slot - 2*epochLength
 	for i := startSlot; i < state.Slot; i++ {
 		shardCommittees, err := validators.ShardCommitteesAtSlot(state, i)
@@ -365,8 +367,8 @@ func Crosslinks(
 //    	BASE_REWARD_QUOTIENT * integer_squareroot(total_balance // GWEI_PER_ETH)
 func baseRewardQuotient(totalBalance uint64) uint64 {
 
-	baseRewardQuotient := params.BeaconConfig().BaseRewardQuotient * mathutil.IntegerSquareRoot(
-		totalBalance/params.BeaconConfig().Gwei)
+	baseRewardQuotient := config.BaseRewardQuotient * mathutil.IntegerSquareRoot(
+		totalBalance/config.Gwei)
 
 	return baseRewardQuotient
 }
@@ -401,5 +403,5 @@ func inactivityPenalty(
 
 	baseReward := baseReward(state, validatorIndex, baseRewardQuotient)
 	validatorBalance := validators.EffectiveBalance(state, validatorIndex)
-	return baseReward + validatorBalance*epochsSinceFinality/params.BeaconConfig().InactivityPenaltyQuotient/2
+	return baseReward + validatorBalance*epochsSinceFinality/config.InactivityPenaltyQuotient/2
 }
