@@ -99,14 +99,14 @@ func InitialBeaconState(
 		ValidatorRegistryDeltaChainTipHash32: config.ZeroHash[:],
 
 		// Randomness and committees.
-		LatestRandaoMixesHash32S: latestRandaoMixes,
-		LatestVdfOutputsHash32S:  latestVDFOutputs,
-		PreviousEpochStartShard: config.GenesisStartShard,
-		CurrentEpochStartShard: config.GenesisStartShard,
+		LatestRandaoMixesHash32S:     latestRandaoMixes,
+		LatestVdfOutputsHash32S:      latestVDFOutputs,
+		PreviousEpochStartShard:      config.GenesisStartShard,
+		CurrentEpochStartShard:       config.GenesisStartShard,
 		PreviousEpochCalculationSlot: config.GenesisSlot,
-		CurrentEpochCalculationSlot: config.GenesisSlot,
+		CurrentEpochCalculationSlot:  config.GenesisSlot,
 		PreviousEpochRandaoMixHash32: config.ZeroHash[:],
-		CurrentEpochRandaoMixHash32: config.ZeroHash[:],
+		CurrentEpochRandaoMixHash32:  config.ZeroHash[:],
 
 		// Proof of custody.
 		// Place holder, proof of custody challenge is defined in phase 1.
@@ -178,4 +178,3 @@ func Hash(state *pb.BeaconState) ([32]byte, error) {
 	}
 	return hashutil.Hash(data), nil
 }
-

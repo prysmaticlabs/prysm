@@ -1,12 +1,11 @@
 package validators
 
 import (
-	//"reflect"
+	"reflect"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	//"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestGetShardCommitteesAtSlots(t *testing.T) {
@@ -75,7 +74,7 @@ func TestShuffleActiveValidatorRegistry(t *testing.T) {
 		validators = append(validators, validator)
 	}
 
-	indices, err := ShuffleValidatorRegistryToCommittees(common.Hash{'A'}, validators,  0)
+	indices, err := ShuffleValidatorRegistryToCommittees(common.Hash{'A'}, validators, 0)
 	if err != nil {
 		t.Errorf("validatorsBySlotShard failed with %v:", err)
 	}
@@ -132,184 +131,169 @@ func TestGetCommitteesPerSlotBoundOnShardCount(t *testing.T) {
 	numValidatorRegistry := config.EpochLength * config.TargetCommitteeSize * 16
 
 	committesPerSlot := committeesCountPerSlot(numValidatorRegistry)
-	if committesPerSlot != config.ShardCount / config.EpochLength  {
+	if committesPerSlot != config.ShardCount/config.EpochLength {
 		t.Fatalf("Expected committeesPerSlot to equal %d: got %d", 8, committesPerSlot)
 	}
 }
 
-
 func TestValidatorRegistryBySlotShardLargeValidatorSet(t *testing.T) {
-	validatorIndices := []uint32{}
-	numValidatorRegistry := int(config.EpochLength*config.TargetCommitteeSize) * 2
-	for i := 0; i < numValidatorRegistry; i++ {
-		validatorIndices = append(validatorIndices, uint32(i))
+
+	size := config.EpochLength * config.TargetCommitteeSize
+	validators := make([]*pb.ValidatorRecord, size)
+	for i := uint64(0); i < size; i++ {
+		validators[i] = &pb.ValidatorRecord{
+			ExitSlot: config.FarFutureSlot,
+		}
+	}
+	committees, err := ShuffleValidatorRegistryToCommittees(
+		[32]byte{}, validators, 0)
+	if err != nil {
+		t.Errorf("could not execute ShuffleValidatorRegistryToCommittees: %v", err)
 	}
 
-	ShardCommitteeArray := splitBySlotShard(validatorIndices, 0)
-
-	if len(ShardCommitteeArray) != int(config.EpochLength) {
-		t.Fatalf("Expected length %d: got %d", config.EpochLength, len(ShardCommitteeArray))
+	if len(committees) != int(config.EpochLength) {
+		t.Fatalf("Expected length %d: got %d", config.EpochLength, len(committees))
 	}
 
-	for i := 0; i < len(ShardCommitteeArray); i++ {
-		ShardCommittees := ShardCommitteeArray[i].ArrayShardCommittee
-		if len(ShardCommittees) != 2 {
-			t.Fatalf("Expected %d committee per slot: got %d", config.TargetCommitteeSize, 2)
+	for i := 0; i < len(committees); i++ {
+		committee := committees[i]
+		if len(committee) != int(config.TargetCommitteeSize) {
+			t.Fatalf("Expected %d committee per slot: got %d",
+				config.TargetCommitteeSize, len(committee))
 		}
-
-		t.Logf("slot %d", i)
-		for j := 0; j < len(ShardCommittees); j++ {
-			shardCommittee := ShardCommittees[j]
-			t.Logf("shard %d", shardCommittee.Shard)
-			t.Logf("committee: %v", shardCommittee.Committee)
-			if len(shardCommittee.Committee) != int(config.TargetCommitteeSize) {
-				t.Fatalf("Expected committee size %d: got %d", config.TargetCommitteeSize, len(shardCommittee.Committee))
-			}
-		}
-
 	}
 }
-//
-//func TestValidatorRegistryBySlotShardSmallValidatorSet(t *testing.T) {
-//	validatorIndices := []uint32{}
-//	numValidatorRegistry := int(config.EpochLength * config.TargetCommitteeSize)
-//	for i := 0; i < numValidatorRegistry; i++ {
-//		validatorIndices = append(validatorIndices, uint32(i))
-//	}
-//
-//	ShardCommitteeArray := splitBySlotShard(validatorIndices, 0)
-//
-//	if len(ShardCommitteeArray) != int(config.EpochLength) {
-//		t.Fatalf("Expected length %d: got %d", config.EpochLength, len(ShardCommitteeArray))
-//	}
-//
-//	for i := 0; i < len(ShardCommitteeArray); i++ {
-//		ShardCommittees := ShardCommitteeArray[i].ArrayShardCommittee
-//		if len(ShardCommittees) != 1 {
-//			t.Fatalf("Expected %d committee per slot: got %d", config.TargetCommitteeSize,
-//				len(ShardCommittees))
-//		}
-//
-//		for j := 0; j < len(ShardCommittees); j++ {
-//			shardCommittee := ShardCommittees[j]
-//			if len(shardCommittee.Committee) != int(config.TargetCommitteeSize) {
-//				t.Fatalf("Expected committee size %d: got %d", config.TargetCommitteeSize, len(shardCommittee.Committee))
-//			}
-//		}
-//	}
-//}
-//
-//func TestAttestationParticipants_ok(t *testing.T) {
-//	if config.EpochLength != 64 {
-//		t.Errorf("EpochLength should be 64 for these tests to pass")
-//	}
-//
-//	var committeeIndices []uint32
-//	for i := uint32(0); i < 8; i++ {
-//		committeeIndices = append(committeeIndices, i)
-//	}
-//
-//	var ShardCommittees []*pb.ShardCommitteeArray
-//	for i := uint64(0); i < config.EpochLength*2; i++ {
-//		ShardCommittees = append(ShardCommittees, &pb.ShardCommitteeArray{
-//			ArrayShardCommittee: []*pb.ShardCommittee{
-//				{Shard: i},
-//				{Committee: committeeIndices},
-//			},
-//		})
-//	}
-//
-//	state := &pb.BeaconState{
-//		ShardCommitteesAtSlots: ShardCommittees,
-//	}
-//
-//	attestationData := &pb.AttestationData{}
-//
-//	tests := []struct {
-//		attestationSlot uint64
-//		stateSlot       uint64
-//		shard           uint64
-//		bitfield        []byte
-//		wanted          []uint32
-//	}{
-//		{
-//			attestationSlot: 2,
-//			stateSlot:       5,
-//			shard:           0,
-//			bitfield:        []byte{'A'},
-//			wanted:          []uint32{1, 7},
-//		},
-//		{
-//			attestationSlot: 1,
-//			stateSlot:       10,
-//			shard:           0,
-//			bitfield:        []byte{1},
-//			wanted:          []uint32{7},
-//		},
-//		{
-//			attestationSlot: 10,
-//			stateSlot:       20,
-//			shard:           0,
-//			bitfield:        []byte{2},
-//			wanted:          []uint32{6},
-//		},
-//		{
-//			attestationSlot: 64,
-//			stateSlot:       100,
-//			shard:           0,
-//			bitfield:        []byte{3},
-//			wanted:          []uint32{6, 7},
-//		},
-//		{
-//			attestationSlot: 999,
-//			stateSlot:       1000,
-//			shard:           0,
-//			bitfield:        []byte{'F'},
-//			wanted:          []uint32{1, 5, 6},
-//		},
-//	}
-//
-//	for _, tt := range tests {
-//		state.Slot = tt.stateSlot
-//		attestationData.Slot = tt.attestationSlot
-//		attestationData.Shard = tt.shard
-//
-//		result, err := AttestationParticipants(state, attestationData, tt.bitfield)
-//		if err != nil {
-//			t.Errorf("Failed to get attestation participants: %v", err)
-//		}
-//
-//		if !reflect.DeepEqual(tt.wanted, result) {
-//			t.Errorf(
-//				"Result indices was an unexpected value. Wanted %d, got %d",
-//				tt.wanted,
-//				result,
-//			)
-//		}
-//	}
-//}
-//
-//func TestAttestationParticipants_IncorrectBitfield(t *testing.T) {
-//	if config.EpochLength != 64 {
-//		t.Errorf("EpochLength should be 64 for these tests to pass")
-//	}
-//
-//	var ShardCommittees []*pb.ShardCommitteeArray
-//	for i := uint64(0); i < config.EpochLength*2; i++ {
-//		ShardCommittees = append(ShardCommittees, &pb.ShardCommitteeArray{
-//			ArrayShardCommittee: []*pb.ShardCommittee{
-//				{Shard: i},
-//			},
-//		})
-//	}
-//
-//	state := &pb.BeaconState{
-//		ShardCommitteesAtSlots: ShardCommittees,
-//	}
-//
-//	attestationData := &pb.AttestationData{}
-//
-//	if _, err := AttestationParticipants(state, attestationData, []byte{1}); err == nil {
-//		t.Error("attestation participants should have failed with incorrect bitfield")
-//	}
-//}
+
+func TestValidatorRegistryBySlotShardSmallValidatorSet(t *testing.T) {
+	validators := make([]*pb.ValidatorRecord, config.EpochLength*config.TargetCommitteeSize)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.ValidatorRecord{
+			ExitSlot: config.FarFutureSlot,
+		}
+	}
+
+	state := &pb.BeaconState{
+		ValidatorRegistry: validators,
+	}
+
+	for i := uint64(0); i < config.EpochLength; i++ {
+		committees, err := ShardCommitteesAtSlot(state, i)
+		if err != nil {
+			t.Errorf("getShardCommitteesForSlot failed: %v", err)
+		}
+
+		if len(committees) != 1 {
+			t.Fatalf("Expected %d committee per slot: got %d", 1,
+				len(committees))
+		}
+
+		if len(committees[0].Committee) != int(config.TargetCommitteeSize) {
+			t.Fatalf("Expected committee size %d: got %d",
+				config.TargetCommitteeSize, len(committees[0].Committee))
+		}
+
+		if committees[0].Shard != i {
+			t.Fatalf("Expected shard number %d: got %d",
+				i, committees[0].Shard)
+		}
+	}
+}
+
+func TestAttestationParticipants_ok(t *testing.T) {
+	if config.EpochLength != 64 {
+		t.Errorf("EpochLength should be 64 for these tests to pass")
+	}
+
+	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.ValidatorRecord{
+			ExitSlot: config.FarFutureSlot,
+		}
+	}
+
+	state := &pb.BeaconState{
+		ValidatorRegistry: validators,
+	}
+
+	attestationData := &pb.AttestationData{}
+
+	tests := []struct {
+		attestationSlot uint64
+		stateSlot       uint64
+		shard           uint64
+		bitfield        []byte
+		wanted          []uint32
+	}{
+		{
+			attestationSlot: 2,
+			stateSlot:       5,
+			shard:           2,
+			bitfield:        []byte{0xFF},
+			wanted:          []uint32{11, 121},
+		},
+		{
+			attestationSlot: 1,
+			stateSlot:       10,
+			shard:           1,
+			bitfield:        []byte{77},
+			wanted:          []uint32{117},
+		},
+		{
+			attestationSlot: 10,
+			stateSlot:       20,
+			shard:           10,
+			bitfield:        []byte{0xFF},
+			wanted:          []uint32{14, 30},
+		},
+		{
+			attestationSlot: 64,
+			stateSlot:       100,
+			shard:           0,
+			bitfield:        []byte{0xFF},
+			wanted:          []uint32{109, 97},
+		},
+		{
+			attestationSlot: 999,
+			stateSlot:       1000,
+			shard:           39,
+			bitfield:        []byte{99},
+			wanted:          []uint32{89},
+		},
+	}
+
+	for _, tt := range tests {
+		state.Slot = tt.stateSlot
+		attestationData.Slot = tt.attestationSlot
+		attestationData.Shard = tt.shard
+
+		result, err := AttestationParticipants(state, attestationData, tt.bitfield)
+		if err != nil {
+			t.Errorf("Failed to get attestation participants: %v", err)
+		}
+
+		if !reflect.DeepEqual(tt.wanted, result) {
+			t.Errorf(
+				"Result indices was an unexpected value. Wanted %d, got %d",
+				tt.wanted,
+				result,
+			)
+		}
+	}
+}
+
+func TestAttestationParticipants_IncorrectBitfield(t *testing.T) {
+	if config.EpochLength != 64 {
+		t.Errorf("EpochLength should be 64 for these tests to pass")
+	}
+
+	state := &pb.BeaconState{
+		ValidatorRegistry: []*pb.ValidatorRecord{
+			{ExitSlot: config.FarFutureSlot},
+		},
+	}
+	attestationData := &pb.AttestationData{}
+
+	if _, err := AttestationParticipants(state, attestationData, []byte{1}); err == nil {
+		t.Error("attestation participants should have failed with incorrect bitfield")
+	}
+}

@@ -19,7 +19,7 @@ import (
 // ShardCommittee defines the validator committee of each slot and shard combinations.
 type ShardCommittee struct {
 	Committee []uint32
-	Shard uint64
+	Shard     uint64
 }
 
 var config = params.BeaconConfig()
@@ -133,7 +133,7 @@ func ShardCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*ShardCommitte
 		)
 	}
 	offSet := slot % config.EpochLength
-	if slot < earliestSlot + epochLength {
+	if slot < earliestSlot+epochLength {
 		countPerSlot = prevCommitteesCountPerSlot(state)
 		shuffledIndices, err = ShuffleValidatorRegistryToCommittees(
 			bytes.ToBytes32(state.PreviousEpochRandaoMixHash32),
@@ -142,7 +142,7 @@ func ShardCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*ShardCommitte
 		if err != nil {
 			return nil, fmt.Errorf("could not shuffle prev epoch validators: %v", err)
 		}
-		slotStartShard = (state.PreviousEpochStartShard + countPerSlot * offSet) %
+		slotStartShard = (state.PreviousEpochStartShard + countPerSlot*offSet) %
 			config.ShardCount
 	} else {
 		countPerSlot = CurrCommitteesCountPerSlot(state)
@@ -153,15 +153,15 @@ func ShardCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*ShardCommitte
 		if err != nil {
 			return nil, fmt.Errorf("could not shuffle current epoch validators: %v", err)
 		}
-		slotStartShard = (state.CurrentEpochCalculationSlot + countPerSlot * offSet) %
+		slotStartShard = (state.CurrentEpochCalculationSlot + countPerSlot*offSet) %
 			config.ShardCount
 	}
 
 	var shardCommittees []*ShardCommittee
-	for i:=uint64(0); i < countPerSlot; i ++ {
+	for i := uint64(0); i < countPerSlot; i++ {
 		shardCommittees = append(shardCommittees, &ShardCommittee{
-			Committee: shuffledIndices[countPerSlot * offSet + i],
-			Shard: (slotStartShard + i) % config.ShardCount,
+			Committee: shuffledIndices[countPerSlot*offSet+i],
+			Shard:     (slotStartShard + i) % config.ShardCount,
 		})
 	}
 

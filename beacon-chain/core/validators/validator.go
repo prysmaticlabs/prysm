@@ -68,7 +68,6 @@ func ActiveValidator(state *pb.BeaconState, validatorIndices []uint32) []*pb.Val
 	return activeValidators
 }
 
-
 // BeaconProposerIndex returns the index of the proposer of the block at a
 // given slot.
 //
@@ -124,9 +123,9 @@ func ValidatorShardID(pubKey []byte, validators []*pb.ValidatorRecord, shardComm
 
 	for _, shardCommittee := range shardCommittees {
 		for _, validatorIndex := range shardCommittee.Committee {
-				if index == validatorIndex {
-					return shardCommittee.Shard, nil
-				}
+			if index == validatorIndex {
+				return shardCommittee.Shard, nil
+			}
 		}
 	}
 

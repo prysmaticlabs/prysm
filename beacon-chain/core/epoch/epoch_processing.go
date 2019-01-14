@@ -272,8 +272,8 @@ func ProcessPartialValidatorRegistry(
 	if mathutil.IsPowerOf2(epochsSinceLastRegistryChange) {
 		state.CurrentEpochCalculationSlot = state.Slot
 
-		randaoMix := state.LatestRandaoMixesHash32S[(state.CurrentEpochCalculationSlot -
-			config.SeedLookahead) % config.LatestRandaoMixesLength]
+		randaoMix := state.LatestRandaoMixesHash32S[(state.CurrentEpochCalculationSlot-
+			config.SeedLookahead)%config.LatestRandaoMixesLength]
 		state.CurrentEpochRandaoMixHash32 = randaoMix
 	}
 	return state, nil

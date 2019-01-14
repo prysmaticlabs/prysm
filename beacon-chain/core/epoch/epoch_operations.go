@@ -405,5 +405,5 @@ func randaoMix(state *pb.BeaconState, slot uint64) ([]byte, error) {
 		return nil, fmt.Errorf("randao mix slot %d, can't be higher than %d",
 			slot, upperBound)
 	}
-	return state.LatestRandaoMixesHash32S[slot % config.LatestRandaoMixesLength], nil
+	return state.LatestRandaoMixesHash32S[slot%config.LatestRandaoMixesLength], nil
 }
