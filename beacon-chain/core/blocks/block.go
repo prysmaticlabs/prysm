@@ -180,6 +180,8 @@ func DecodeDepositInput(depositData []byte) (*pb.DepositInput, error) {
 		)
 	}
 	depositInput := new(pb.DepositInput)
+	// Since the value deposited and the timestamp are both 8 bytes each,
+	// the deposit data is the chunk after the first 16 bytes.
 	depositInputBytes := depositData[16:]
 	rBuf := bytes.NewReader(depositInputBytes)
 	if err := ssz.Decode(rBuf, depositInput); err != nil {
@@ -201,6 +203,8 @@ func DecodeDepositAmountAndTimeStamp(depositData []byte) (uint64, int64, error) 
 		)
 	}
 
+	// the amount occupies the first 8 bytes while the
+	// timestamp occupies the next 8 bytes.
 	amount := binary.BigEndian.Uint64(depositData[:8])
 	timestamp := binary.BigEndian.Uint64(depositData[8:16])
 
