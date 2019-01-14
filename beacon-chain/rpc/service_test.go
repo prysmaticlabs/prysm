@@ -658,7 +658,7 @@ func TestValidatorAssignments(t *testing.T) {
 }
 
 func TestAssignmentsForPublicKeys_emptyPubKey(t *testing.T) {
-	pks := []*pb.PublicKey{&pb.PublicKey{}}
+	pks := []*pb.PublicKey{{}}
 
 	a, err := assignmentsForPublicKeys(pks, nil)
 	if err != nil {
