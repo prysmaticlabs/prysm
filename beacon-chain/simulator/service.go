@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
+	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -214,9 +215,7 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 func (sim *Simulator) processBlockReqByHash(msg p2p.Message) {
 
 	data := msg.Data.(*pb.BeaconBlockRequest)
-	var hash [32]byte
-	copy(hash[:], data.Hash)
-
+	hash := bytesutil.ToBytes32(data.Hash)
 	block := sim.broadcastedBlocksByHash[hash]
 	if block == nil {
 		log.WithFields(logrus.Fields{

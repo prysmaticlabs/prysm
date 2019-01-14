@@ -9,11 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/trie"
-
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
+	"github.com/prysmaticlabs/prysm/shared/trie"
 )
 
 func TestProcessPOWReceiptRoots_SameRootHash(t *testing.T) {
@@ -1280,9 +1279,9 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 
 	// We then create a serialized deposit data slice of type []byte
 	// by appending all 3 items above together.
-	data = append(data, encodedInput...)
 	data = append(data, value...)
 	data = append(data, timestamp...)
+	data = append(data, encodedInput...)
 
 	// We then create a merkle branch for the test.
 	depositTrie := trie.NewDepositTrie()
@@ -1359,9 +1358,9 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 
 	// We then create a serialized deposit data slice of type []byte
 	// by appending all 3 items above together.
-	data = append(data, encodedInput...)
 	data = append(data, value...)
 	data = append(data, timestamp...)
+	data = append(data, encodedInput...)
 
 	// We then create a merkle branch for the test.
 	depositTrie := trie.NewDepositTrie()

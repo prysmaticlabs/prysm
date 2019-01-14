@@ -9,6 +9,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -214,14 +215,15 @@ func ProcessValidatorRegistry(
 	seedLookahead := params.BeaconConfig().SeedLookahead
 	shardCount := params.BeaconConfig().ShardCount
 
+	state, err := validators.UpdateRegistry(state)
+
 	shardCommittees := state.ShardCommitteesAtSlots
 	lastSlot := len(shardCommittees) - 1
 	lastCommittee := len(shardCommittees[lastSlot].ArrayShardCommittee) - 1
 	nextStartShard := (shardCommittees[lastSlot].ArrayShardCommittee[lastCommittee].Shard + 1) %
 		shardCount
 
-	var randaoHash32 [32]byte
-	copy(randaoHash32[:], state.LatestRandaoMixesHash32S[(state.Slot-
+	randaoHash32 := bytesutil.ToBytes32(state.LatestRandaoMixesHash32S[(state.Slot-
 		uint64(seedLookahead))%randaoMixesLength])
 
 	for i := 0; i < epochLength; i++ {
@@ -261,9 +263,7 @@ func ProcessPartialValidatorRegistry(
 	epochLength := int(params.BeaconConfig().EpochLength)
 	randaoMixesLength := params.BeaconConfig().LatestRandaoMixesLength
 	seedLookahead := params.BeaconConfig().SeedLookahead
-	var randaoHash32 [32]byte
-	copy(randaoHash32[:], state.LatestRandaoMixesHash32S[(state.Slot-uint64(seedLookahead))%randaoMixesLength])
-
+	randaoHash32 := bytesutil.ToBytes32(state.LatestRandaoMixesHash32S[(state.Slot-uint64(seedLookahead))%randaoMixesLength])
 	for i := 0; i < epochLength; i++ {
 		state.ShardCommitteesAtSlots[i] = state.ShardCommitteesAtSlots[epochLength+i]
 	}

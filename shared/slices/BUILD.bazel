@@ -2,13 +2,28 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["slice.go"],
+    srcs = [
+        "doc.go",
+        "slice.go",
+        "slice_generic.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/shared/slices",
     visibility = ["//visibility:public"],
 )
 
 go_test(
     name = "go_default_test",
-    srcs = ["slice_test.go"],
+    srcs = [
+        "slice_generic_test.go",
+        "slice_test.go",
+    ],
     embed = [":go_default_library"],
+    deps = ["//shared/ssz:go_default_library"],
+)
+
+go_test(
+    name = "go_generic_test",
+    srcs = ["slice_generic_test.go"],
+    embed = [":go_default_library"],
+    deps = ["//shared/ssz:go_default_library"],
 )

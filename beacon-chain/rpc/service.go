@@ -24,6 +24,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/reflection"
 )
 
 var log = logrus.WithField("prefix", "rpc")
@@ -129,6 +130,10 @@ func (s *Service) Start() {
 	pb.RegisterValidatorServiceServer(s.grpcServer, s)
 	pb.RegisterProposerServiceServer(s.grpcServer, s)
 	pb.RegisterAttesterServiceServer(s.grpcServer, s)
+
+	// Register reflection service on gRPC server.
+	reflection.Register(s.grpcServer)
+
 	go func() {
 		err = s.grpcServer.Serve(lis)
 		if err != nil {
@@ -447,6 +452,9 @@ func assignmentsForPublicKeys(keys []*pb.PublicKey, beaconState *pbp2p.BeaconSta
 	assignments := []*pb.Assignment{}
 
 	for _, val := range keys {
+		if len(val.PublicKey) == 0 {
+			continue
+		}
 		// For the corresponding public key and current crystallized state,
 		// we determine the assigned slot for the validator and whether it
 		// should act as a proposer or attester.

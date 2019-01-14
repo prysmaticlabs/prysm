@@ -656,3 +656,16 @@ func TestValidatorAssignments(t *testing.T) {
 	exitRoutine <- true
 	testutil.AssertLogsContain(t, hook, "Sending new cycle assignments to validator clients")
 }
+
+func TestAssignmentsForPublicKeys_emptyPubKey(t *testing.T) {
+	pks := []*pb.PublicKey{{}}
+
+	a, err := assignmentsForPublicKeys(pks, nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(a) > 0 {
+		t.Errorf("Expected no assignments, but got %v", a)
+	}
+}

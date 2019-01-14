@@ -453,7 +453,7 @@ go_repository(
 
 go_repository(
     name = "com_github_miekg_dns",
-    tag = "v1.1.2",
+    tag = "v1.1.3",
     importpath = "github.com/miekg/dns",
 )
 
@@ -645,7 +645,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aristanetworks_goarista",
-    commit = "b3287ee629098a1640360d7b618be7ab046f7ac2",
+    commit = "23a91eb493c6734b762ab29037be0dc3c4f5d105",
     importpath = "github.com/aristanetworks/goarista",
 )
 

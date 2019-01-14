@@ -76,10 +76,9 @@ func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb
 	}
 	// If block randao passed verification, we XOR the state's latest randao mix with the block's
 	// randao and update the state's corresponding latest randao mix value.
-	var latestMix [32]byte
 	latestMixesLength := params.BeaconConfig().LatestRandaoMixesLength
 	latestMixSlice := beaconState.LatestRandaoMixesHash32S[beaconState.Slot%latestMixesLength]
-	copy(latestMix[:], latestMixSlice)
+	latestMix := bytesutil.ToBytes32(latestMixSlice)
 	for i, x := range block.RandaoRevealHash32 {
 		latestMix[i] ^= x
 	}
@@ -92,11 +91,8 @@ func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb
 }
 
 func verifyBlockRandao(proposer *pb.ValidatorRecord, block *pb.BeaconBlock) error {
-	var blockRandaoReveal [32]byte
-	var proposerRandaoCommit [32]byte
-	copy(blockRandaoReveal[:], block.RandaoRevealHash32)
-	copy(proposerRandaoCommit[:], proposer.RandaoCommitmentHash32)
-
+	blockRandaoReveal := bytesutil.ToBytes32(block.RandaoRevealHash32)
+	proposerRandaoCommit := bytesutil.ToBytes32(proposer.RandaoCommitmentHash32)
 	randaoHashLayers := hashutil.RepeatHash(blockRandaoReveal, proposer.RandaoLayers)
 	// Verify that repeat_hash(block.randao_reveal, proposer.randao_layers) == proposer.randao_commitment.
 	if randaoHashLayers != proposerRandaoCommit {
@@ -567,9 +563,9 @@ func ProcessValidatorDeposits(
 		if err = verifyDeposit(beaconState, deposit); err != nil {
 			return nil, fmt.Errorf("could not verify deposit #%d: %v", idx, err)
 		}
-		// depositData consists of depositInput []byte + depositValue [8]byte +
-		// depositTimestamp [8]byte.
-		depositValue := depositData[len(depositData)-16 : len(depositData)-8]
+		// depositData consists of depositValue [8]byte +
+		// depositTimestamp [8]byte + depositInput []byte .
+		depositValue := depositData[:8]
 		// We then mutate the beacon state with the verified validator deposit.
 		beaconState, err = v.ProcessDeposit(
 			beaconState,
