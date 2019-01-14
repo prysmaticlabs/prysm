@@ -6,10 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
-
-var config = params.BeaconConfig()
 
 func TestGetShardCommitteesAtSlots(t *testing.T) {
 	state := &pb.BeaconState{
@@ -194,8 +191,6 @@ func TestValidatorRegistryBySlotShardLargeValidatorSet(t *testing.T) {
 		t.Logf("slot %d", i)
 		for j := 0; j < len(ShardCommittees); j++ {
 			shardCommittee := ShardCommittees[j]
-			t.Logf("shard %d", shardCommittee.Shard)
-			t.Logf("committee: %v", shardCommittee.Committee)
 			if len(shardCommittee.Committee) != int(config.TargetCommitteeSize) {
 				t.Fatalf("Expected committee size %d: got %d", config.TargetCommitteeSize, len(shardCommittee.Committee))
 			}

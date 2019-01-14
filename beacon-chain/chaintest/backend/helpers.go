@@ -25,6 +25,7 @@ func generateSimulatedBlock(
 	simulatedDeposit *StateTestDeposit,
 	depositsTrie *trie.DepositTrie,
 	simulatedProposerSlashing *StateTestProposerSlashing,
+	simulatedCasperSlashing *StateTestCasperSlashing,
 ) (*pb.BeaconBlock, [32]byte, error) {
 	encodedState, err := proto.Marshal(beaconState)
 	if err != nil {
@@ -81,6 +82,26 @@ func generateSimulatedBlock(
 				Slot:            simulatedProposerSlashing.Proposal2Slot,
 				Shard:           simulatedProposerSlashing.Proposal2Shard,
 				BlockRootHash32: []byte(simulatedProposerSlashing.Proposal2Root),
+			},
+		})
+	}
+	if simulatedCasperSlashing != nil {
+		block.Body.CasperSlashings = append(block.Body.CasperSlashings, &pb.CasperSlashing{
+			Votes_1: &pb.SlashableVoteData{
+				Data: &pb.AttestationData{
+					Slot:          simulatedCasperSlashing.Votes1Slot,
+					JustifiedSlot: simulatedCasperSlashing.Votes1JustifiedSlot,
+				},
+				CustodyBit_0Indices: simulatedCasperSlashing.Votes1CustodyBit0Indices,
+				CustodyBit_1Indices: simulatedCasperSlashing.Votes1CustodyBit1Indices,
+			},
+			Votes_2: &pb.SlashableVoteData{
+				Data: &pb.AttestationData{
+					Slot:          simulatedCasperSlashing.Votes2Slot,
+					JustifiedSlot: simulatedCasperSlashing.Votes2JustifiedSlot,
+				},
+				CustodyBit_0Indices: simulatedCasperSlashing.Votes2CustodyBit0Indices,
+				CustodyBit_1Indices: simulatedCasperSlashing.Votes2CustodyBit1Indices,
 			},
 		})
 	}
