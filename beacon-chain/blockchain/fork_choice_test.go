@@ -9,11 +9,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/gogo/protobuf/proto"
+	"reflect"
 	"testing"
 	"time"
 )
 
-func TestLMDGhost_UpdatesHead(t *testing.T) {
+func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	genesisValidatorRegistry := validators.InitialValidatorRegistry()
@@ -37,9 +38,21 @@ func TestLMDGhost_UpdatesHead(t *testing.T) {
 
 	// #nosec G104
 	stateEnc, _ := proto.Marshal(beaconState)
+	if err := db.SaveState(beaconState); err != nil {
+		t.Fatal(err)
+	}
 	stateHash := hashutil.Hash(stateEnc)
 	genesisBlock := b.NewGenesisBlock(stateHash[:])
 	if err := db.SaveBlock(genesisBlock); err != nil {
 		t.Fatal(err)
 	}
+	observedBlocks := createObservedBlocks(genesisBlock)
+	head := LMDGhost(beaconState, genesisBlock, observedBlocks, db)
+	if !reflect.DeepEqual(genesisBlock, head) {
+		t.Errorf("Expected head to equal %v, received %v", genesisBlock, head)
+	}
+}
+
+func createObservedBlocks(block *pb.BeaconBlock) []*pb.BeaconBlock {
+	return nil
 }
