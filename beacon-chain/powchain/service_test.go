@@ -11,12 +11,15 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/prysmaticlabs/go-bls/bazel-go-bls/external/go_sdk/src/encoding/binary"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	contracts "github.com/prysmaticlabs/prysm/contracts/validator-registration-contract"
 	byteutils "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -459,4 +462,75 @@ func TestBadLogger(t *testing.T) {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
 	hook.Reset()
+}
+
+func TestStuff(t *testing.T) {
+	endpoint := "ws://127.0.0.1"
+	testAcc, err := setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint:        endpoint,
+		VrcAddr:         testAcc.contractAddr,
+		Reader:          &goodReader{},
+		Logger:          &goodLogger{},
+		ContractBackend: testAcc.backend,
+	})
+	if err != nil {
+		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
+	}
+
+	testAcc.backend.Commit()
+
+	if err := web3Service.initDataFromVRC(); err != nil {
+		t.Fatalf("Could not init from vrc %v", err)
+	}
+
+	if web3Service.depositCount != 0 {
+		t.Errorf("Deposit count is not equal to zero %d", web3Service.depositCount)
+	}
+
+	if !bytes.Equal(web3Service.depositRoot, []byte{}) {
+		t.Errorf("Deposit root is not empty %v", web3Service.depositRoot)
+	}
+
+	hell := [4]byte{'a', 'b', 'c', 'd'}
+	t.Log(hell)
+
+	testAcc.txOpts.Value = amount32Eth
+	if _, err := testAcc.contract.Deposit(testAcc.txOpts, hell[:]); err != nil {
+		t.Fatalf("Could not deposit to VRC %v", err)
+	}
+	testAcc.backend.Commit()
+
+	reader := bytes.NewReader([]byte(contracts.ValidatorRegistrationABI))
+	contractAbi, _ := abi.JSON(reader)
+
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{
+			web3Service.vrcAddress,
+		},
+	}
+	logy, err := testAcc.backend.FilterLogs(web3Service.ctx, query)
+
+	logz, err := testAcc.contract.FilterDeposit(&bind.FilterOpts{}, [][]byte{})
+	nt := make([]*[]byte, 2)
+
+	nt[0] = &[]byte{}
+	nt[1] = &[]byte{}
+
+	_ = logz.Next()
+	t.Log(logy[0].Data)
+	for _, V := range contractAbi.Events {
+		t.Log(V)
+	}
+	contractAbi.Unpack(&nt, "Deposit", logy[0].Data)
+	t.Log(*nt[0])
+	parsedData := *nt[0]
+	nc, nv, err := blocks.DecodeDepositAmountAndTimeStamp(*nt[0])
+	t.Log(nc)
+	t.Log(nv)
+
+	t.Log(binary.BigEndian.Uint64(parsedData[len(parsedData)-20 : len(parsedData)-12]))
 }
