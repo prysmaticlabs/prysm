@@ -297,7 +297,7 @@ func AttestationInclusion(
 		if err != nil {
 			return nil, fmt.Errorf("could not get inclusion slot: %v", err)
 		}
-		proposerIndex, err := validators.BeaconProposerIndex(state, slot)
+		proposerIndex, err := validators.BeaconProposerIdx(state, slot)
 		if err != nil {
 			return nil, fmt.Errorf("could not get propoer index: %v", err)
 		}

@@ -65,7 +65,7 @@ func ProcessDepositRoots(
 //   Set proposer.randao_commitment = block.randao_reveal.
 //   Set proposer.randao_layers = 0
 func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
-	proposerIndex, err := v.BeaconProposerIndex(beaconState, beaconState.Slot)
+	proposerIndex, err := v.BeaconProposerIdx(beaconState, beaconState.Slot)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon proposer index: %v", err)
 	}
