@@ -70,8 +70,8 @@ func committeesCountPerSlot(activeValidatorCount uint64) uint64 {
 
 	boundOnValidatorRegistry := activeValidatorCount / epochLength / targetCommitteeSize
 	boundOnShardCount := config.ShardCount / epochLength
-	// Ensure that comitteesPerSlot is at least 1.
-	if boundOnShardCount == 0 {
+	// Ensure that committeesPerSlot is at least 1.
+	if boundOnValidatorRegistry == 0 {
 		return 1
 	} else if boundOnValidatorRegistry > boundOnShardCount {
 		return boundOnShardCount

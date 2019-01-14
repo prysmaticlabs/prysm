@@ -86,7 +86,7 @@ type ShardChainConfig struct {
 var defaultBeaconConfig = &BeaconChainConfig{
 	// Misc constant.
 	ShardCount:                1024,
-	TargetCommitteeSize:       256,
+	TargetCommitteeSize:       128,
 	EjectionBalance:           16,
 	EjectionBalanceInGwei:     16 * 1e9,
 	Gwei:                      1e9,
