@@ -84,3 +84,12 @@ func TestHealthz(t *testing.T) {
 	}
 
 }
+//Tests Status() function
+func TestStatus(t *testing.T) {
+	failError := errors.New("failure")
+	s := &Service{failStatus: failError}
+
+	if err := s.Status(); err != s.failStatus  {
+		t.Errorf("Expected match of s.Status() and s.failStatus, but got %v, %v", s.Status(), s.failStatus)
+	}
+}
