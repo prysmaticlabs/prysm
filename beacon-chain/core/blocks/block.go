@@ -157,9 +157,10 @@ func EncodeDepositData(
 	timestamp := make([]byte, 8)
 	binary.BigEndian.PutUint64(timestamp, uint64(depositTimestamp))
 
-	depositData = append(depositData, encodedInput...)
 	depositData = append(depositData, value...)
 	depositData = append(depositData, timestamp...)
+	depositData = append(depositData, encodedInput...)
+
 	return depositData, nil
 }
 
@@ -179,7 +180,7 @@ func DecodeDepositInput(depositData []byte) (*pb.DepositInput, error) {
 		)
 	}
 	depositInput := new(pb.DepositInput)
-	depositInputBytes := depositData[:len(depositData)-16]
+	depositInputBytes := depositData[16:]
 	rBuf := bytes.NewReader(depositInputBytes)
 	if err := ssz.Decode(rBuf, depositInput); err != nil {
 		return nil, fmt.Errorf("ssz decode failed: %v", err)
@@ -199,9 +200,9 @@ func DecodeDepositAmountAndTimeStamp(depositData []byte) (uint64, int64, error) 
 			len(depositData),
 		)
 	}
-	length := len(depositData)
-	amount := binary.BigEndian.Uint64(depositData[length-16 : length-8])
-	timestamp := binary.BigEndian.Uint64(depositData[length-8:])
+
+	amount := binary.BigEndian.Uint64(depositData[:8])
+	timestamp := binary.BigEndian.Uint64(depositData[8:16])
 
 	return amount, int64(timestamp), nil
 }
