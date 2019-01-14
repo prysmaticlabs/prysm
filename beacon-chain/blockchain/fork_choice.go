@@ -3,8 +3,6 @@ package blockchain
 import (
 	"bytes"
 	"fmt"
-	"reflect"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -62,7 +60,17 @@ func VoteCount(block *pb.BeaconBlock, targets []*pb.BeaconBlock, beaconDB *db.Be
 		if err != nil {
 			return 0, err
 		}
-		if reflect.DeepEqual(ancestor, block) {
+		ancestorEnc, err := proto.Marshal(ancestor)
+		if err != nil {
+			return 0, err
+		}
+		ancestorHash := hashutil.Hash(ancestorEnc)
+		blockEnc, err := proto.Marshal(block)
+		if err != nil {
+			return 0, err
+		}
+		blockHash := hashutil.Hash(blockEnc)
+		if blockHash == ancestorHash {
 			votes++
 		}
 	}
@@ -78,6 +86,9 @@ func BlockAncestor(block *pb.BeaconBlock, slot uint64, beaconDB *db.BeaconDB) (*
 	parent, err := beaconDB.GetBlock(parentHash)
 	if err != nil {
 		return nil, fmt.Errorf("could not get parent block: %v", err)
+	}
+	if parent == nil {
+		return nil, fmt.Errorf("parent block does not exist: %v", err)
 	}
 	return BlockAncestor(parent, slot, beaconDB)
 }

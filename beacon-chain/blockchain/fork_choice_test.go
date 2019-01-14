@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -101,5 +102,84 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 }
 
 func TestVoteCount_ParentDoesNotExist(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	genesisBlock := b.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(genesisBlock); err != nil {
+		t.Fatal(err)
+	}
+	potentialHead := &pb.BeaconBlock{
+		Slot:             5,
+		ParentRootHash32: []byte{}, // We give a bogus parent root hash.
+	}
+	if err := db.SaveBlock(potentialHead); err != nil {
+		t.Fatal(err)
+	}
+	targets := []*pb.BeaconBlock{potentialHead}
+	want := "parent does not exist"
+	if _, err := VoteCount(genesisBlock, targets, db); !strings.Contains(err.Error(), want) {
+		t.Fatalf("Expected %s, received %v", want, err)
+	}
+}
 
+func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	genesisBlock := b.NewGenesisBlock([]byte{})
+	genesisEnc, _ := proto.Marshal(genesisBlock)
+	genesisHash := hashutil.Hash(genesisEnc)
+	if err := db.SaveBlock(genesisBlock); err != nil {
+		t.Fatal(err)
+	}
+
+	potentialHead := &pb.BeaconBlock{
+		Slot:             5,
+		ParentRootHash32: genesisHash[:],
+	}
+	potentialHead2 := &pb.BeaconBlock{
+		Slot:             5,
+		ParentRootHash32: genesisHash[:],
+	}
+	// We store these potential heads in the DB.
+	if err := db.SaveBlock(potentialHead); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.SaveBlock(potentialHead2); err != nil {
+		t.Fatal(err)
+	}
+	targets := []*pb.BeaconBlock{potentialHead, potentialHead2}
+	count, err := VoteCount(genesisBlock, targets, db)
+	if err != nil {
+		t.Fatalf("Could not fetch vote count: %v", err)
+	}
+	if count != 2 {
+		t.Errorf("Expected 2 votes, received %d", count)
+	}
+}
+
+func TestBlockChildren(t *testing.T) {
+	genesisBlock := b.NewGenesisBlock([]byte{})
+	genesisEnc, _ := proto.Marshal(genesisBlock)
+	genesisHash := hashutil.Hash(genesisEnc)
+	targets := []*pb.BeaconBlock{
+		{
+			Slot:             9,
+			ParentRootHash32: genesisHash[:],
+		},
+		{
+			Slot:             5,
+			ParentRootHash32: []byte{},
+		},
+		{
+			Slot:             8,
+			ParentRootHash32: genesisHash[:],
+		},
+	}
+	children, err := BlockChildren(genesisBlock, targets)
+	if err != nil {
+		t.Fatalf("Could not fetch block children: %v", err)
+	}
+	if len(children) != 2 {
+		t.Errorf("Expected %d children, received %d", 2, len(children))
+	}
 }
