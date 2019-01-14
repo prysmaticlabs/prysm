@@ -32,10 +32,8 @@ func LMDGhost(
 			return nil, fmt.Errorf("could not fetch block children: %v", err)
 		}
 		if len(children) == 0 {
-			fmt.Println("NOCHILD")
 			return head, nil
 		}
-		fmt.Println("CHILD")
 		maxChild := children[0] // so far max child will be potentialHead [potentialHead]
 		for i := 1; i < len(children); i++ {
 			candidateChildVotes, err := VoteCount(children[i], targets, beaconDB)
@@ -68,21 +66,18 @@ func VoteCount(block *pb.BeaconBlock, targets []*pb.BeaconBlock, beaconDB *db.Be
 			votes++
 		}
 	}
-	fmt.Println(votes)
 	return votes, nil
 }
 
 // BlockAncestor obtains the ancestor at of a block at a certain slot.
 func BlockAncestor(block *pb.BeaconBlock, slot uint64, beaconDB *db.BeaconDB) (*pb.BeaconBlock, error) {
-	fmt.Println("WORKSSS")
 	if block.Slot == slot {
-		fmt.Println("YAY")
 		return block, nil
 	}
 	parentHash := bytesutil.ToBytes32(block.ParentRootHash32)
 	parent, err := beaconDB.GetBlock(parentHash)
 	if err != nil {
-		return nil, fmt.Errorf("could not get parent blocK: %v", err)
+		return nil, fmt.Errorf("could not get parent block: %v", err)
 	}
 	return BlockAncestor(parent, slot, beaconDB)
 }
@@ -112,11 +107,13 @@ func AttestationTargets(
 	activeValidators := validators.ActiveValidatorIndices(beaconState.ValidatorRegistry, beaconState.Slot)
 	var attestationTargets []*pb.BeaconBlock
 	for _, validatorIndex := range activeValidators {
-		target, err:= LatestAttestationTarget(validatorIndex, beaconDB)
+		target, err := LatestAttestationTarget(validatorIndex, beaconDB)
 		if err != nil {
-            return nil, err
+			return nil, err
 		}
-		attestationTargets = append(attestationTargets, target)
+		if target != nil {
+			attestationTargets = append(attestationTargets, target)
+		}
 	}
 	return attestationTargets, nil
 }

@@ -1,17 +1,18 @@
 package blockchain
 
 import (
+	"reflect"
+	"testing"
+	"time"
+
+	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/gogo/protobuf/proto"
-	"reflect"
-	"testing"
-	"time"
 )
 
 func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
@@ -26,14 +27,14 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 		balance := params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei
 		depositData, err := b.EncodeDepositData(depositInput, balance, time.Now().Unix())
 		if err != nil {
-            t.Fatal(err)
+			t.Fatal(err)
 		}
 		deposits[i] = &pb.Deposit{DepositData: depositData}
 	}
 	genesisTime := uint64(params.BeaconConfig().GenesisTime.Unix())
 	beaconState, err := state.InitialBeaconState(deposits, genesisTime, nil)
 	if err != nil {
-        t.Fatal(err)
+		t.Fatal(err)
 	}
 
 	// #nosec G104
@@ -49,14 +50,14 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	genesisEnc, _ := proto.Marshal(genesisBlock)
 	genesisHash := hashutil.Hash(genesisEnc)
 	potentialHead := &pb.BeaconBlock{
-		Slot: 1,
+		Slot:             5,
 		ParentRootHash32: genesisHash[:],
-		StateRootHash32: stateHash[:],
+		StateRootHash32:  stateHash[:],
 	}
 	potentialHead2 := &pb.BeaconBlock{
-		Slot: 1,
+		Slot:             5,
 		ParentRootHash32: genesisHash[:],
-        StateRootHash32: []byte("some-other-head"),
+		StateRootHash32:  []byte("some-other-head"),
 	}
 	potentialHeadEnc, _ := proto.Marshal(potentialHead)
 	potentialHeadHash := hashutil.Hash(potentialHeadEnc)
@@ -74,12 +75,13 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 		Attestations: []*pb.Attestation{
 			{
 				Data: &pb.AttestationData{
-					Slot: 1,
+					Slot:                  3,
 					BeaconBlockRootHash32: potentialHeadHash[:],
 				},
 			},
 		},
 	}
+	// We ensure the block target of potentialHead has 1 vote from validator at index 0.
 	if err := db.SaveLatestAttestationsForValidator(0, latestAtts); err != nil {
 		t.Fatal(err)
 	}
@@ -90,11 +92,14 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not run LMD GHOST: %v", err)
 	}
+
+	// We expect that potential head has more votes than potential head 2, allowing it to be
+	// selected by the fork-choice rule.
 	if !reflect.DeepEqual(potentialHead, head) {
 		t.Errorf("Expected head to equal %v, received %v", potentialHead, head)
 	}
 }
 
-func createObservedBlocks(block *pb.BeaconBlock) []*pb.BeaconBlock {
-	return nil
+func TestVoteCount_ParentDoesNotExist(t *testing.T) {
+
 }
