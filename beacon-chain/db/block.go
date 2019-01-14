@@ -6,8 +6,8 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 func createBlock(enc []byte) (*pb.BeaconBlock, error) {
@@ -56,7 +56,7 @@ func (db *BeaconDB) HasBlock(hash [32]byte) bool {
 
 // SaveBlock accepts a block and writes it to disk.
 func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
-	hash, err := b.Hash(block)
+	hash, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return fmt.Errorf("failed to hash block: %v", err)
 	}
@@ -106,7 +106,7 @@ func (db *BeaconDB) GetChainHead() (*pb.BeaconBlock, error) {
 // UpdateChainHead atomically updates the head of the chain as well as the corresponding state changes
 // Including a new crystallized state is optional.
 func (db *BeaconDB) UpdateChainHead(block *pb.BeaconBlock, beaconState *pb.BeaconState) error {
-	blockHash, err := b.Hash(block)
+	blockHash, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return fmt.Errorf("unable to get the block hash: %v", err)
 	}

@@ -42,7 +42,7 @@ func (db *BeaconDB) InitializeState() error {
 	stateHash := hashutil.Hash(stateEnc)
 	genesisBlock := b.NewGenesisBlock(stateHash[:])
 	// #nosec G104
-	blockHash, _ := b.Hash(genesisBlock)
+	blockHash, _ := hashutil.HashBeaconBlock(genesisBlock)
 	// #nosec G104
 	blockEnc, _ := proto.Marshal(genesisBlock)
 	zeroBinary := encodeSlotNumber(0)
