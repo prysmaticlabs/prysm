@@ -128,6 +128,8 @@ func (w *Web3Service) Status() error {
 	return nil
 }
 
+// initDataFromVRC calls the vrc contract and finds the deposit count
+// and deposit root.
 func (w *Web3Service) initDataFromVRC() error {
 	depositCount, err := w.vrcCaller.DepositCount(&bind.CallOpts{})
 	if err != nil {
@@ -170,7 +172,7 @@ func (w *Web3Service) run(done <-chan struct{}) {
 		log.Errorf("Unable to query logs from VRC: %v", err)
 		return
 	}
-	if err := w.ProcessPastLogs(query); err != nil {
+	if err := w.processPastLogs(query); err != nil {
 		log.Errorf("Unable to process past logs %v", err)
 		return
 	}
@@ -196,19 +198,22 @@ func (w *Web3Service) run(done <-chan struct{}) {
 				"blockHash":   w.blockHash.Hex(),
 			}).Debug("Latest web3 chain event")
 		case VRClog := <-w.logChan:
-			w.ProcessLog(VRClog)
+			w.processLog(VRClog)
 
 		}
 	}
 }
 
-func (w *Web3Service) ProcessLog(VRClog gethTypes.Log) {
+// processLog processes the log which had been received from
+// the POW chain by trying to ascertain which participant deposited
+// in the contract
+func (w *Web3Service) processLog(VRClog gethTypes.Log) {
 	// public key is the second topic from validatorRegistered log.
 	merkleRoot := VRClog.Topics[1]
 	depositData := VRClog.Topics[2]
 	// size of topics are bounded to 32 bytes, so for deposit data larger than 32 bytes
 	// retrieve from other topics.
-	if err := w.SaveInTrie(depositData, merkleRoot); err != nil {
+	if err := w.saveInTrie(depositData, merkleRoot); err != nil {
 		log.Errorf("Could not save in trie %v", err)
 		return
 	}
@@ -233,7 +238,8 @@ func (w *Web3Service) ProcessLog(VRClog gethTypes.Log) {
 
 }
 
-func (w *Web3Service) SaveInTrie(depositData common.Hash, merkleRoot common.Hash) error {
+// saveInTrie saves in the in-memory deposit trie.
+func (w *Web3Service) saveInTrie(depositData common.Hash, merkleRoot common.Hash) error {
 	if w.depositTrie.Root() != merkleRoot {
 		return errors.New("saved root in trie is unequal to root received from log")
 	}
@@ -242,14 +248,14 @@ func (w *Web3Service) SaveInTrie(depositData common.Hash, merkleRoot common.Hash
 	return nil
 }
 
-func (w *Web3Service) ProcessPastLogs(query ethereum.FilterQuery) error {
+func (w *Web3Service) processPastLogs(query ethereum.FilterQuery) error {
 	logs, err := w.logger.FilterLogs(w.ctx, query)
 	if err != nil {
 		return err
 	}
 
 	for _, log := range logs {
-		w.ProcessLog(log)
+		w.processLog(log)
 	}
 	return nil
 }

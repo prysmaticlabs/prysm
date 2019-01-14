@@ -23,11 +23,10 @@ go_test(
     srcs = ["service_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/core/blocks:go_default_library",
         "//contracts/validator-registration-contract:go_default_library",
-        "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bytes:go_default_library",
         "//shared/event:go_default_library",
+        "//shared/ssz:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/trie:go_default_library",
         "@com_github_ethereum_go_ethereum//:go_default_library",

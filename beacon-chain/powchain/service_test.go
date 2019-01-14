@@ -17,11 +17,10 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	contracts "github.com/prysmaticlabs/prysm/contracts/validator-registration-contract"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	byteutils "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trie"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -55,7 +54,7 @@ func (g *goodLogger) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQ
 	return new(event.Feed).Subscribe(ch), nil
 }
 
-func (b *goodLogger) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]gethTypes.Log, error) {
+func (g *goodLogger) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]gethTypes.Log, error) {
 	logs := make([]gethTypes.Log, 3)
 	for i := 0; i < len(logs); i++ {
 		logs[i].Address = common.Address{}
@@ -289,7 +288,7 @@ func TestSaveInTrie(t *testing.T) {
 
 	currentRoot := web3Service.depositTrie.Root()
 
-	if err := web3Service.SaveInTrie(common.Hash{'A'}, currentRoot); err != nil {
+	if err := web3Service.saveInTrie(common.Hash{'A'}, currentRoot); err != nil {
 		t.Errorf("Unable to save deposit in trie %v", err)
 	}
 
@@ -319,15 +318,28 @@ func TestProcessLogs(t *testing.T) {
 
 	currentRoot := web3Service.depositTrie.Root()
 
-	depositData := &pb.DepositInput{
-		Pubkey:                      []byte("testing"),
-		RandaoCommitmentHash32:      []byte("randao"),
-		WithdrawalCredentialsHash32: []byte("withdraw"),
+	type depositData struct {
+		Pubkey                      [48]byte
+		RandaoCommitmentHash32      [32]byte
+		WithdrawalCredentialsHash32 [32]byte
+		CustodyCommitment           [32]byte
+		Possession                  [48]byte
 	}
 
-	encodedData, err := blocks.EncodeDepositData(depositData, 100000, 100000)
-	if err != nil {
-		t.Fatalf("Unable to encode deposit data %v", err)
+	var newf [48]byte
+	copy(newf[:], []byte("testing"))
+
+	data := depositData{
+		Pubkey:                      newf,
+		RandaoCommitmentHash32:      byteutils.ToBytes32([]byte("randao")),
+		WithdrawalCredentialsHash32: byteutils.ToBytes32([]byte("withdraw")),
+		CustodyCommitment:           byteutils.ToBytes32([]byte("randao")),
+		Possession:                  newf,
+	}
+
+	serializedData := new(bytes.Buffer)
+	if err := ssz.Encode(serializedData, data); err != nil {
+		t.Fatalf("Could not serialize data %v", err)
 	}
 
 	log := gethTypes.Log{
@@ -337,7 +349,9 @@ func TestProcessLogs(t *testing.T) {
 
 	log.Topics[0] = common.Hash{'a'}
 	log.Topics[1] = currentRoot
-	log.Topics[2] = byteutils.ToBytes32(encodedData)
+	log.Topics[2] = byteutils.ToBytes32(serializedData.Bytes())
+
+	web3Service.processLog(log)
 
 	testutil.AssertLogsDoNotContain(t, hook, "Could not save in trie")
 

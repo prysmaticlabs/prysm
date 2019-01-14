@@ -35,28 +35,28 @@ func init() {
 
 type mockClient struct{}
 
-func (f *mockClient) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
+func (m *mockClient) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
 	return new(event.Feed).Subscribe(ch), nil
 }
 
-func (f *mockClient) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
+func (m *mockClient) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
 	head := &gethTypes.Header{Number: big.NewInt(0), Difficulty: big.NewInt(100)}
 	return gethTypes.NewBlockWithHeader(head), nil
 }
 
-func (f *mockClient) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error) {
+func (m *mockClient) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error) {
 	return new(event.Feed).Subscribe(ch), nil
 }
 
-func (f *mockClient) CallContract(ctx context.Context, call ethereum.CallMsg, blockNumber *big.Int) ([]byte, error) {
+func (m *mockClient) CallContract(ctx context.Context, call ethereum.CallMsg, blockNumber *big.Int) ([]byte, error) {
 	return []byte{'t', 'e', 's', 't'}, nil
 }
 
-func (f *mockClient) CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error) {
+func (m *mockClient) CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error) {
 	return []byte{'t', 'e', 's', 't'}, nil
 }
 
-func (b *mockClient) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]gethTypes.Log, error) {
+func (m *mockClient) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]gethTypes.Log, error) {
 	logs := make([]gethTypes.Log, 3)
 	for i := 0; i < len(logs); i++ {
 		logs[i].Address = common.Address{}
@@ -69,7 +69,7 @@ func (b *mockClient) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]
 	return logs, nil
 }
 
-func (f *mockClient) LatestBlockHash() common.Hash {
+func (m *mockClient) LatestBlockHash() common.Hash {
 	return common.BytesToHash([]byte{'A'})
 }
 
@@ -87,7 +87,7 @@ func (f *faultyClient) SubscribeFilterLogs(ctx context.Context, q ethereum.Filte
 	return new(event.Feed).Subscribe(ch), nil
 }
 
-func (b *faultyClient) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]gethTypes.Log, error) {
+func (f *faultyClient) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]gethTypes.Log, error) {
 	return nil, errors.New("unable to retrieve logs")
 }
 
