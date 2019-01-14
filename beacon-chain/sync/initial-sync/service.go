@@ -22,6 +22,7 @@ import (
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -344,9 +345,7 @@ func (s *InitialSync) setBlockForInitialSync(block *pb.BeaconBlock) error {
 
 	s.chainService.IncomingBlockFeed().Send(block)
 
-	var blockStateRoot [32]byte
-	copy(blockStateRoot[:], block.StateRootHash32)
-	s.initialStateRootHash32 = blockStateRoot
+	s.initialStateRootHash32 = bytesutil.ToBytes32(block.StateRootHash32)
 
 	log.Infof("Saved block with hash %#x for initial sync", h)
 	s.currentSlot = block.Slot

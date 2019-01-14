@@ -411,9 +411,11 @@ func TestProcessValidatorRegistry_ReachedUpperBound(t *testing.T) {
 		}
 	}
 	validators := make([]*pb.ValidatorRecord, 1<<params.BeaconConfig().MaxNumLog2Validators-1)
+	balances := make([]uint64, 1<<params.BeaconConfig().MaxNumLog2Validators-1)
 	validator := &pb.ValidatorRecord{ExitSlot: params.BeaconConfig().FarFutureSlot}
 	for i := 0; i < len(validators); i++ {
 		validators[i] = validator
+		balances[i] = params.BeaconConfig().MaxDepositInGwei
 	}
 	state := &pb.BeaconState{
 		Slot:                              64,
@@ -421,6 +423,7 @@ func TestProcessValidatorRegistry_ReachedUpperBound(t *testing.T) {
 		ShardCommitteesAtSlots:            shardCommittees,
 		LatestRandaoMixesHash32S:          [][]byte{{'A'}},
 		ValidatorRegistry:                 validators,
+		ValidatorBalances:                 balances,
 	}
 
 	if _, err := ProcessValidatorRegistry(state); err == nil {
@@ -469,9 +472,11 @@ func TestProcessPartialValidatorRegistry_ReachedUpperBound(t *testing.T) {
 		}
 	}
 	validators := make([]*pb.ValidatorRecord, 1<<params.BeaconConfig().MaxNumLog2Validators-1)
+	balances := make([]uint64, 1<<params.BeaconConfig().MaxNumLog2Validators-1)
 	validator := &pb.ValidatorRecord{ExitSlot: params.BeaconConfig().FarFutureSlot}
 	for i := 0; i < len(validators); i++ {
 		validators[i] = validator
+		balances[i] = params.BeaconConfig().MaxDepositInGwei
 	}
 	state := &pb.BeaconState{
 		Slot:                              64,
@@ -479,6 +484,7 @@ func TestProcessPartialValidatorRegistry_ReachedUpperBound(t *testing.T) {
 		ShardCommitteesAtSlots:            shardCommittees,
 		LatestRandaoMixesHash32S:          [][]byte{{'A'}},
 		ValidatorRegistry:                 validators,
+		ValidatorBalances:                 balances,
 	}
 
 	if _, err := ProcessPartialValidatorRegistry(state); err == nil {

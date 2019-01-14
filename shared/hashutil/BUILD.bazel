@@ -18,4 +18,5 @@ go_test(
         "merkleRoot_test.go",
     ],
     embed = [":go_default_library"],
+    deps = ["//shared/bytes:go_default_library"],
 )
