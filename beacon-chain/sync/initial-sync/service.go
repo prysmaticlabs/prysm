@@ -19,11 +19,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 
 	"github.com/gogo/protobuf/proto"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -337,7 +337,7 @@ func (s *InitialSync) requestStateFromPeer(block *pb.BeaconBlock, peer p2p.Peer)
 // setBlockForInitialSync sets the first received block as the base finalized
 // block for initial sync.
 func (s *InitialSync) setBlockForInitialSync(block *pb.BeaconBlock) error {
-	h, err := b.Hash(block)
+	h, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return err
 	}
@@ -377,7 +377,7 @@ func (s *InitialSync) requestBatchedBlocks(endSlot uint64) {
 // routine can be added to the chain.
 func (s *InitialSync) validateAndSaveNextBlock(block *pb.BeaconBlock) error {
 
-	h, err := b.Hash(block)
+	h, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return err
 	}
@@ -408,7 +408,7 @@ func (s *InitialSync) validateAndSaveNextBlock(block *pb.BeaconBlock) error {
 
 func (s *InitialSync) checkBlockValidity(block *pb.BeaconBlock) error {
 
-	blockHash, err := b.Hash(block)
+	blockHash, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return fmt.Errorf("could not hash received block: %v", err)
 	}

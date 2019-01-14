@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -144,7 +143,7 @@ func TestProcessBlock(t *testing.T) {
 	if err := db.SaveBlock(parentBlock); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
-	parentHash, err := b.Hash(parentBlock)
+	parentHash, err := hashutil.HashBeaconBlock(parentBlock)
 	if err != nil {
 		t.Fatalf("failed to get parent hash: %v", err)
 	}
@@ -223,7 +222,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	if err := db.SaveBlock(parentBlock); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
-	parentHash, err := b.Hash(parentBlock)
+	parentHash, err := hashutil.HashBeaconBlock(parentBlock)
 	if err != nil {
 		t.Fatalf("failed to get parent hash: %v", err)
 	}

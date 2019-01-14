@@ -5,10 +5,10 @@ import (
 	"context"
 	"fmt"
 
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -107,7 +107,7 @@ func (d *CleanupService) cleanBlockVoteCache(latestFinalizedSlot uint64) error {
 		}
 		if block != nil {
 			var blockHash [32]byte
-			blockHash, err = b.Hash(block)
+			blockHash, err = hashutil.HashBeaconBlock(block)
 			if err != nil {
 				return fmt.Errorf("failed to get hash of block: %v", err)
 			}
