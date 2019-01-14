@@ -22,6 +22,7 @@ type StateTestConfig struct {
 	DepositSlots          []uint64                     `yaml:"deposit_slots"`
 	Deposits              []*StateTestDeposit          `yaml:"deposits"`
 	ProposerSlashings     []*StateTestProposerSlashing `yaml:"proposer_slashings"`
+	CasperSlashings       []*StateTestCasperSlashing   `yaml:"casper_slashings"`
 	EpochLength           uint64                       `yaml:"epoch_length"`
 	ShardCount            uint64                       `yaml:"shard_count"`
 	DepositsForChainStart uint64                       `yaml:"deposits_for_chain_start"`
@@ -46,6 +47,19 @@ type StateTestProposerSlashing struct {
 	Proposal2Slot  uint64 `yaml:"proposal_2_slot"`
 	Proposal1Root  string `yaml:"proposal_1_root"`
 	Proposal2Root  string `yaml:"proposal_2_root"`
+}
+
+// StateTestCasperSlashing --
+type StateTestCasperSlashing struct {
+	Slot                     uint64   `yaml:"slot"`
+	Votes1Slot               uint64   `yaml:"votes_1_slot"`
+	Votes1JustifiedSlot      uint64   `yaml:"votes_1_justified_slot"`
+	Votes1CustodyBit0Indices []uint32 `yaml:"votes_1_custody_0_indices"`
+	Votes1CustodyBit1Indices []uint32 `yaml:"votes_1_custody_1_indices"`
+	Votes2Slot               uint64   `yaml:"votes_2_slot"`
+	Votes2JustifiedSlot      uint64   `yaml:"votes_2_justified_slot"`
+	Votes2CustodyBit0Indices []uint32 `yaml:"votes_2_custody_0_indices"`
+	Votes2CustodyBit1Indices []uint32 `yaml:"votes_2_custody_1_indices"`
 }
 
 // StateTestResults --

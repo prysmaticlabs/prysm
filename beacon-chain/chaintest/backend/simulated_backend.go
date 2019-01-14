@@ -193,6 +193,13 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 				break
 			}
 		}
+		var simulatedCasperSlashing *StateTestCasperSlashing
+		for _, cSlashing := range testCase.Config.CasperSlashings {
+			if cSlashing.Slot == i {
+				simulatedCasperSlashing = cSlashing
+				break
+			}
+		}
 
 		layersPeeled := layersPeeledForProposer[proposerIndex]
 		blockRandaoReveal := determineSimulatedBlockRandaoReveal(layersPeeled, hashOnions)
@@ -206,6 +213,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 			simulatedDeposit,
 			depositsTrie,
 			simulatedProposerSlashing,
+			simulatedCasperSlashing,
 		)
 		if err != nil {
 			return fmt.Errorf("could not generate simulated beacon block %v", err)
