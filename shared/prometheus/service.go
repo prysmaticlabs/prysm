@@ -91,8 +91,7 @@ func (s *Service) Stop() error {
 	return s.server.Shutdown(ctx)
 }
 
-// Status always returns nil.
-// TODO(1207): Add service health checks.
+// Status checks for any service failure conditions.
 func (s *Service) Status() error {
 	if s.failStatus != nil {
 		return s.failStatus
