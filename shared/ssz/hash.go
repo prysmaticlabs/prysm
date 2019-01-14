@@ -7,9 +7,8 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
-
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 const hashLengthBytes = 32

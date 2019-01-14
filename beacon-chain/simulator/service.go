@@ -14,13 +14,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
+	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotticker"
 	"github.com/sirupsen/logrus"
-	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
-	)
+)
 
 var log = logrus.WithField("prefix", "simulator")
 
