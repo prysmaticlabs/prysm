@@ -46,8 +46,17 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	if err := db.SaveBlock(genesisBlock); err != nil {
 		t.Fatal(err)
 	}
-	observedBlocks := createObservedBlocks(genesisBlock)
-	head := LMDGhost(beaconState, genesisBlock, observedBlocks, db)
+	genesisEnc, _ := proto.Marshal(genesisBlock)
+	genesisHash := hashutil.Hash(genesisEnc)
+	potentialHead := &pb.BeaconBlock{
+		Slot: 1,
+		ParentRootHash32: genesisHash[:],
+	}
+	observedBlocks := []*pb.BeaconBlock{potentialHead}
+	head, err := LMDGhost(beaconState, genesisBlock, observedBlocks, db)
+	if err != nil {
+		t.Fatalf("Could not run LMD GHOST: %v", err)
+	}
 	if !reflect.DeepEqual(genesisBlock, head) {
 		t.Errorf("Expected head to equal %v, received %v", genesisBlock, head)
 	}
