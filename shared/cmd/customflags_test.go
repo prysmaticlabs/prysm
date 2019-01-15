@@ -22,20 +22,67 @@ import (
 	"testing"
 )
 
+var (
+  // user-specific tests can use the usr variable
+  usr, _ = user.Current()
+  against []DirectoryString
+)
+
+func init() {
+  // test for environment variables in paths with $DDDXXX
+  os.Setenv("DDDXXX", "/tmp")
+  // test against valid DirectoryString structs
+  against = []DirectoryString{
+	  {"/home/someuser/tmp"},
+	  {usr.HomeDir + "/tmp"},
+	  {"~thisOtherUser/b"},
+    {"/tmp/a/b"},
+    {"/a/b"},
+  }
+}
+
 func TestPathExpansion(t *testing.T) {
-	user, _ := user.Current()
-	tests := map[string]string{
-		"/home/someuser/tmp": "/home/someuser/tmp",
-		"~/tmp":              user.HomeDir + "/tmp",
-		"~thisOtherUser/b/":  "~thisOtherUser/b",
-		"$DDDXXX/a/b":        "/tmp/a/b",
-		"/a/b/":              "/a/b",
-	}
-	os.Setenv("DDDXXX", "/tmp")
+  initials := []string{
+		"/home/someuser/tmp",
+		"~/tmp",
+		"~thisOtherUser/b/",
+		"$DDDXXX/a/b",
+		"/a/b/",
+  }
+  tests := make(map[string]DirectoryString)
+  for i, value := range against {
+    tests[initials[i]] = value
+  }
 	for test, expected := range tests {
 		got := expandPath(test)
-		if got != expected {
-			t.Errorf("test %s, got %s, expected %s\n", test, got, expected)
+		if got != expected.Value {
+			t.Errorf("test path expansion %s, got %s, expected %s\n", test, got, expected)
 		}
 	}
+}
+
+func TestSetDirectoryString(t *testing.T) {
+  tests := make([]DirectoryString, len(against))
+  copy(tests, against)
+  expected := "/tmp"
+  for _, test := range tests {
+    original := test.Value
+    test.Set("$DDDXXX")
+    got := test.Value
+    if test.Value != expected {
+      t.Errorf("test set path %s, got %s, expected %s\n", original, got, expected)
+    }
+  }
+}
+
+func TestStringDirectoryString(t *testing.T) {
+  
+}
+
+func TestHomeDir(t *testing.T) {
+  expected := usr.HomeDir
+  got := homeDir()
+  if got != expected {
+    t.Errorf("test homeDir(): got %s, expected %s\n", got, expected)
+  }
 }
