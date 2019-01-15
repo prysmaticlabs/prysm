@@ -200,8 +200,7 @@ func TestLMDGhost_EveryActiveValidatorHasLatestAttestation(t *testing.T) {
 				BeaconBlockRootHash32: candidateHeadHash[:],
 			},
 		}
-		// We ensure the block target of potentialHead has 1 vote corresponding to validator
-		// at index 0.
+		// We ensure the block target of potentialHead has 1 vote per each active validator.
 		if err := beaconDB.SaveLatestAttestationForValidator(uint32(idx), latestAtt); err != nil {
 			t.Fatal(err)
 		}
