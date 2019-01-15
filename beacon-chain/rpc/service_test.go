@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -18,6 +19,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -124,20 +126,13 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	depositData, err := b.EncodeDepositData(
-		&pbp2p.DepositInput{Pubkey: []byte{'A'}},
-		params.BeaconConfig().MaxDepositInGwei,
-		time.Now().Unix(),
-	)
+	err := db.InitializeState()
 	if err != nil {
-		t.Fatalf("Could not encode deposit input: %v", err)
+		t.Fatalf("Can't initialze genesis state: %v", err)
 	}
-	deposit := []*pbp2p.Deposit{
-		{DepositData: depositData},
-	}
-	beaconState, err := state.InitialBeaconState(deposit, 0, nil)
+	beaconState, err := db.GetState()
 	if err != nil {
-		t.Fatalf("Could not instantiate initial state: %v", err)
+		t.Fatalf("Can't get genesis state: %v", err)
 	}
 
 	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
@@ -150,8 +145,8 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 		ChainService:    mockChain,
 		POWChainService: &mockPOWChainService{},
 	})
-
-	key := &pb.PublicKey{PublicKey: []byte{'A'}}
+	pubkey := hashutil.Hash([]byte{byte(0)})
+	key := &pb.PublicKey{PublicKey: pubkey[:]}
 	publicKeys := []*pb.PublicKey{key}
 	req := &pb.ValidatorAssignmentRequest{
 		PublicKeys: publicKeys,
@@ -220,13 +215,165 @@ func TestProposeBlock(t *testing.T) {
 		BeaconDB:        db,
 		POWChainService: &mockPOWChainService{},
 	})
-	req := &pb.ProposeRequest{
-		SlotNumber: 5,
-		ParentHash: []byte("parent-hash"),
-		Timestamp:  ptypes.TimestampNow(),
+	req := &pbp2p.BeaconBlock{
+		Slot:             5,
+		ParentRootHash32: []byte("parent-hash"),
 	}
 	if _, err := rpcService.ProposeBlock(context.Background(), req); err != nil {
 		t.Errorf("Could not propose block correctly: %v", err)
+	}
+}
+
+func TestLatestPOWChainBlockHash(t *testing.T) {
+	mockChain := &mockChainService{}
+	mockPOWChain := &mockPOWChainService{}
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:            "6372",
+		ChainService:    mockChain,
+		BeaconDB:        db,
+		POWChainService: mockPOWChain,
+	})
+
+	rpcService.enablePOWChain = false
+
+	res, err := rpcService.LatestPOWChainBlockHash(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("Could not get latest POW Chain block hash %v", err)
+	}
+
+	expectedHash := common.BytesToHash([]byte{'p', 'o', 'w', 'c', 'h', 'a', 'i', 'n'})
+	if !bytes.Equal(res.BlockHash, expectedHash[:]) {
+		t.Errorf("pow chain hash received is not the expected hash")
+	}
+
+}
+
+func TestComputeStateRoot(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	mockChain := &mockChainService{}
+
+	genesis := b.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+
+	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(deposits); i++ {
+		depositData, err := b.EncodeDepositData(
+			&pbp2p.DepositInput{
+				Pubkey: []byte(strconv.Itoa(i)),
+				RandaoCommitmentHash32: []byte{41, 13, 236, 217, 84, 139, 98, 168, 214, 3, 69,
+					169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
+			},
+			params.BeaconConfig().MaxDepositInGwei,
+			time.Now().Unix(),
+		)
+		if err != nil {
+			t.Fatalf("Could not encode deposit input: %v", err)
+		}
+		deposits[i] = &pbp2p.Deposit{
+			DepositData: depositData,
+		}
+	}
+
+	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
+	if err != nil {
+		t.Fatalf("Could not instantiate initial state: %v", err)
+	}
+
+	beaconState.Slot = 10
+
+	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:            "6372",
+		ChainService:    mockChain,
+		BeaconDB:        db,
+		POWChainService: &mockPOWChainService{},
+	})
+
+	req := &pbp2p.BeaconBlock{
+		ParentRootHash32:   nil,
+		Slot:               11,
+		RandaoRevealHash32: nil,
+		Body: &pbp2p.BeaconBlockBody{
+			ProposerSlashings: nil,
+			CasperSlashings:   nil,
+		},
+	}
+
+	_, _ = rpcService.ComputeStateRoot(context.Background(), req)
+}
+
+func TestProposerIndex(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	mockChain := &mockChainService{}
+	mockPOWChain := &mockPOWChainService{}
+	genesis := b.NewGenesisBlock([]byte{})
+
+	if err := db.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+
+	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(deposits); i++ {
+		depositData, err := b.EncodeDepositData(
+			&pbp2p.DepositInput{
+				Pubkey: []byte(strconv.Itoa(i)),
+				RandaoCommitmentHash32: []byte{41, 13, 236, 217, 84, 139, 98, 168, 214, 3, 69,
+					169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
+			},
+			params.BeaconConfig().MaxDepositInGwei,
+			time.Now().Unix(),
+		)
+		if err != nil {
+			t.Fatalf("Could not encode deposit input: %v", err)
+		}
+		deposits[i] = &pbp2p.Deposit{
+			DepositData: depositData,
+		}
+	}
+
+	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
+	if err != nil {
+		t.Fatalf("Could not instantiate initial state: %v", err)
+	}
+
+	beaconState.Slot = 10
+
+	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:            "6372",
+		ChainService:    mockChain,
+		BeaconDB:        db,
+		POWChainService: mockPOWChain,
+	})
+
+	expectedIndex := 1
+
+	req := &pb.ProposerIndexRequest{
+		SlotNumber: 1,
+	}
+
+	res, err := rpcService.ProposerIndex(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Could not get proposer index %v", err)
+	}
+
+	if res.Index != uint32(expectedIndex) {
+		t.Errorf("Expected index of %d but got %d", expectedIndex, res.Index)
 	}
 }
 
@@ -342,23 +489,13 @@ func TestValidatorSlotAndResponsibility(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	depositData, err := b.EncodeDepositData(
-		&pbp2p.DepositInput{
-			Pubkey: []byte{'A'},
-		},
-		params.BeaconConfig().MaxDepositInGwei,
-		time.Now().Unix(),
-	)
+	err := db.InitializeState()
 	if err != nil {
-		t.Fatalf("Could not encode deposit input: %v", err)
+		t.Fatalf("Can't initialze genesis state: %v", err)
 	}
-	deposits := []*pbp2p.Deposit{
-		{DepositData: depositData},
-	}
-
-	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
+	beaconState, err := db.GetState()
 	if err != nil {
-		t.Fatalf("Could not instantiate initial state: %v", err)
+		t.Fatalf("Can't get genesis state: %v", err)
 	}
 
 	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
@@ -370,8 +507,9 @@ func TestValidatorSlotAndResponsibility(t *testing.T) {
 		ChainService: mockChain,
 		BeaconDB:     db,
 	})
+	pubkey := hashutil.Hash([]byte{byte(0)})
 	req := &pb.PublicKey{
-		PublicKey: []byte{'A'},
+		PublicKey: pubkey[:],
 	}
 	if _, err := rpcService.ValidatorSlotAndResponsibility(context.Background(), req); err != nil {
 		t.Errorf("Could not get validator slot: %v", err)
@@ -433,22 +571,13 @@ func TestValidatorShardID(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	depositData, err := b.EncodeDepositData(
-		&pbp2p.DepositInput{
-			Pubkey: []byte{'A'},
-		},
-		params.BeaconConfig().MaxDepositInGwei,
-		time.Now().Unix(),
-	)
+	err := db.InitializeState()
 	if err != nil {
-		t.Fatalf("Could not encode deposit input: %v", err)
+		t.Fatalf("Can't initialze genesis state: %v", err)
 	}
-	deposits := []*pbp2p.Deposit{
-		{DepositData: depositData},
-	}
-	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
+	beaconState, err := db.GetState()
 	if err != nil {
-		t.Fatalf("Could not instantiate initial state: %v", err)
+		t.Fatalf("Can't get genesis state: %v", err)
 	}
 
 	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
@@ -460,8 +589,9 @@ func TestValidatorShardID(t *testing.T) {
 		ChainService: mockChain,
 		BeaconDB:     db,
 	})
+	pubkey := hashutil.Hash([]byte{byte(0)})
 	req := &pb.PublicKey{
-		PublicKey: []byte{'A'},
+		PublicKey: pubkey[:],
 	}
 	if _, err := rpcService.ValidatorShardID(context.Background(), req); err != nil {
 		t.Errorf("Could not get validator shard ID: %v", err)
@@ -479,22 +609,13 @@ func TestValidatorAssignments(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	depositData, err := b.EncodeDepositData(
-		&pbp2p.DepositInput{
-			Pubkey: []byte{'A'},
-		},
-		params.BeaconConfig().MaxDepositInGwei,
-		time.Now().Unix(),
-	)
+	err := db.InitializeState()
 	if err != nil {
-		t.Fatalf("Could not encode deposit input: %v", err)
+		t.Fatalf("Can't initialze genesis state: %v", err)
 	}
-	deposits := []*pbp2p.Deposit{
-		{DepositData: depositData},
-	}
-	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
+	beaconState, err := db.GetState()
 	if err != nil {
-		t.Fatalf("Could not instantiate initial state: %v", err)
+		t.Fatalf("Can't get genesis state: %v", err)
 	}
 
 	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
@@ -513,7 +634,8 @@ func TestValidatorAssignments(t *testing.T) {
 	mockStream := internal.NewMockBeaconService_ValidatorAssignmentsServer(ctrl)
 	mockStream.EXPECT().Send(gomock.Any()).Return(nil)
 
-	key := &pb.PublicKey{PublicKey: []byte{'A'}}
+	pubkey := hashutil.Hash([]byte{byte(0)})
+	key := &pb.PublicKey{PublicKey: pubkey[:]}
 	publicKeys := []*pb.PublicKey{key}
 	req := &pb.ValidatorAssignmentRequest{
 		PublicKeys: publicKeys,
@@ -529,13 +651,21 @@ func TestValidatorAssignments(t *testing.T) {
 		<-exitRoutine
 	}(t)
 
-	beaconState, err = state.InitialBeaconState(deposits, 0, nil)
-	if err != nil {
-		t.Fatalf("Could not instantiate initial state: %v", err)
-	}
-
 	rpcService.canonicalStateChan <- beaconState
 	rpcService.cancel()
 	exitRoutine <- true
 	testutil.AssertLogsContain(t, hook, "Sending new cycle assignments to validator clients")
+}
+
+func TestAssignmentsForPublicKeys_emptyPubKey(t *testing.T) {
+	pks := []*pb.PublicKey{{}}
+
+	a, err := assignmentsForPublicKeys(pks, nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(a) > 0 {
+		t.Errorf("Expected no assignments, but got %v", a)
+	}
 }

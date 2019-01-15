@@ -1,3 +1,7 @@
+// Package validators contains libraries to shuffle validators
+// and retrieve active validator indices from a given slot
+// or an attestation. It also provides helper functions to locate
+// validator based on pubic key.
 package validators
 
 import (
@@ -43,8 +47,9 @@ func splitBySlotShard(shuffledValidatorRegistry []uint32, crosslinkStartShard ui
 		for j, validatorsForShard := range validatorsByShard {
 			shardID := (shardStart + uint64(j)) % params.BeaconConfig().ShardCount
 			shardCommittees = append(shardCommittees, &pb.ShardCommittee{
-				Shard:     shardID,
-				Committee: validatorsForShard,
+				Shard:               shardID,
+				Committee:           validatorsForShard,
+				TotalValidatorCount: uint64(len(shuffledValidatorRegistry)),
 			})
 		}
 
@@ -58,12 +63,14 @@ func splitBySlotShard(shuffledValidatorRegistry []uint32, crosslinkStartShard ui
 // getCommitteesPerSlot calculates the parameters for ShuffleValidatorRegistryToCommittees.
 // The minimum value for committeesPerSlot is 1.
 // Otherwise, the value for committeesPerSlot is the smaller of
-// numActiveValidatorRegistry / CycleLength /  (MinCommitteeSize*2) + 1 or
+// numActiveValidatorRegistry / EpochLength / TargetCommitteeSize or
 // ShardCount / CycleLength.
 func getCommitteesPerSlot(numActiveValidatorRegistry uint64) uint64 {
-	cycleLength := params.BeaconConfig().EpochLength
-	boundOnValidatorRegistry := numActiveValidatorRegistry/cycleLength/(params.BeaconConfig().TargetCommitteeSize*2) + 1
-	boundOnShardCount := params.BeaconConfig().ShardCount / cycleLength
+	epochLength := params.BeaconConfig().EpochLength
+	targetCommitteeSize := params.BeaconConfig().TargetCommitteeSize
+
+	boundOnValidatorRegistry := numActiveValidatorRegistry / epochLength / targetCommitteeSize
+	boundOnShardCount := params.BeaconConfig().ShardCount / epochLength
 	// Ensure that comitteesPerSlot is at least 1.
 	if boundOnShardCount == 0 {
 		return 1

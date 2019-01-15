@@ -1,3 +1,5 @@
+// Package randao contains libraries to update and proposer's RANDAO layer
+// and mixes the RANDAO with the existing RANDAO value in state.
 package randao
 
 import (
@@ -11,7 +13,6 @@ import (
 // UpdateRandaoLayers increments the randao layer of the block proposer at the given slot.
 func UpdateRandaoLayers(state *pb.BeaconState, slot uint64) (*pb.BeaconState, error) {
 	vreg := state.ValidatorRegistry
-
 	proposerIndex, err := v.BeaconProposerIndex(state, slot)
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve proposer index %v", err)

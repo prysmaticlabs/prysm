@@ -18,6 +18,7 @@ import (
 	circuit "github.com/libp2p/go-libp2p-circuit"
 	crypto "github.com/libp2p/go-libp2p-crypto"
 	multiaddr "github.com/multiformats/go-multiaddr"
+	"github.com/prysmaticlabs/prysm/shared/version"
 )
 
 var (
@@ -30,6 +31,8 @@ var (
 
 func main() {
 	flag.Parse()
+
+	fmt.Printf("Starting relay node. Version: %s\n", version.GetVersion())
 
 	if *debug {
 		logging.SetDebugLogging()

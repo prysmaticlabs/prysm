@@ -10,9 +10,9 @@ import (
 	"time"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
+	"github.com/prysmaticlabs/prysm/shared/trie"
 )
 
 func TestProcessPOWReceiptRoots_SameRootHash(t *testing.T) {
@@ -1217,14 +1217,14 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	data = append(data, timestamp...)
 
 	// We then create a merkle branch for the test.
-	branch := [][]byte{}
-	for i := uint64(0); i < params.BeaconConfig().DepositContractTreeDepth; i++ {
-		branch = append(branch, []byte{1})
-	}
+	depositTrie := trie.NewDepositTrie()
+	depositTrie.UpdateDepositTrie(data)
+	branch := depositTrie.GenerateMerkleBranch(0)
 
 	deposit := &pb.Deposit{
 		DepositData:         data,
 		MerkleBranchHash32S: branch,
+		MerkleTreeIndex:     0,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -1232,7 +1232,7 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 		},
 	}
 	beaconState := &pb.BeaconState{
-		LatestDepositRootHash32: []byte{0},
+		LatestDepositRootHash32: []byte{},
 	}
 	want := "merkle branch of deposit root did not verify"
 	if _, err := ProcessValidatorDeposits(
@@ -1279,26 +1279,19 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 
 	// We then create a serialized deposit data slice of type []byte
 	// by appending all 3 items above together.
-	data = append(data, encodedInput...)
 	data = append(data, value...)
 	data = append(data, timestamp...)
+	data = append(data, encodedInput...)
 
-	// We then create a merkle branch for the test and derive its root.
-	branch := [][]byte{}
-	var powReceiptRoot [32]byte
-	copy(powReceiptRoot[:], data)
-	for i := uint64(0); i < params.BeaconConfig().DepositContractTreeDepth; i++ {
-		branch = append(branch, []byte{1})
-		if i%2 == 0 {
-			powReceiptRoot = hashutil.Hash(append(branch[i], powReceiptRoot[:]...))
-		} else {
-			powReceiptRoot = hashutil.Hash(append(powReceiptRoot[:], branch[i]...))
-		}
-	}
+	// We then create a merkle branch for the test.
+	depositTrie := trie.NewDepositTrie()
+	depositTrie.UpdateDepositTrie(data)
+	branch := depositTrie.GenerateMerkleBranch(0)
 
 	deposit := &pb.Deposit{
 		DepositData:         data,
 		MerkleBranchHash32S: branch,
+		MerkleTreeIndex:     0,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -1314,10 +1307,11 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
+	root := depositTrie.Root()
 	beaconState := &pb.BeaconState{
 		ValidatorRegistry:       registry,
 		ValidatorBalances:       balances,
-		LatestDepositRootHash32: powReceiptRoot[:],
+		LatestDepositRootHash32: root[:],
 		Slot:                    currentSlot,
 		GenesisTime:             uint64(genesisTime),
 	}
@@ -1364,26 +1358,19 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 
 	// We then create a serialized deposit data slice of type []byte
 	// by appending all 3 items above together.
-	data = append(data, encodedInput...)
 	data = append(data, value...)
 	data = append(data, timestamp...)
+	data = append(data, encodedInput...)
 
-	// We then create a merkle branch for the test and derive its root.
-	branch := [][]byte{}
-	var powReceiptRoot [32]byte
-	copy(powReceiptRoot[:], data)
-	for i := uint64(0); i < params.BeaconConfig().DepositContractTreeDepth; i++ {
-		branch = append(branch, []byte{1})
-		if i%2 == 0 {
-			powReceiptRoot = hashutil.Hash(append(branch[i], powReceiptRoot[:]...))
-		} else {
-			powReceiptRoot = hashutil.Hash(append(powReceiptRoot[:], branch[i]...))
-		}
-	}
+	// We then create a merkle branch for the test.
+	depositTrie := trie.NewDepositTrie()
+	depositTrie.UpdateDepositTrie(data)
+	branch := depositTrie.GenerateMerkleBranch(0)
 
 	deposit := &pb.Deposit{
 		DepositData:         data,
 		MerkleBranchHash32S: branch,
+		MerkleTreeIndex:     0,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -1397,10 +1384,11 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
+	root := depositTrie.Root()
 	beaconState := &pb.BeaconState{
 		ValidatorRegistry:       registry,
 		ValidatorBalances:       balances,
-		LatestDepositRootHash32: powReceiptRoot[:],
+		LatestDepositRootHash32: root[:],
 		Slot:                    currentSlot,
 		GenesisTime:             uint64(genesisTime),
 	}

@@ -1,3 +1,6 @@
+// Package blocks contains block processing libraries. These libraries
+// process and verify block specific messages such as PoW receipt root,
+// RANDAO, validator deposits, exits and slashing proofs.
 package blocks
 
 import (
@@ -7,24 +10,15 @@ import (
 	"math"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 var clock utils.Clock = &utils.RealClock{}
-
-// Hash a beacon block data structure.
-func Hash(block *pb.BeaconBlock) ([32]byte, error) {
-	data, err := proto.Marshal(block)
-	if err != nil {
-		return [32]byte{}, fmt.Errorf("could not marshal block proto data: %v", err)
-	}
-	return hashutil.Hash(data), nil
-}
 
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
 func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
@@ -48,9 +42,7 @@ func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 // IsRandaoValid verifies the validity of randao from block by comparing it with
 // the proposer's randao from the beacon state.
 func IsRandaoValid(blockRandao []byte, stateRandao []byte) bool {
-	var h [32]byte
-	copy(h[:], stateRandao)
-	return hashutil.Hash(blockRandao) == h
+	return hashutil.Hash(blockRandao) == bytesutil.ToBytes32(stateRandao)
 }
 
 // IsSlotValid compares the slot to the system clock to determine if the block is valid.
@@ -155,9 +147,10 @@ func EncodeDepositData(
 	timestamp := make([]byte, 8)
 	binary.BigEndian.PutUint64(timestamp, uint64(depositTimestamp))
 
-	depositData = append(depositData, encodedInput...)
 	depositData = append(depositData, value...)
 	depositData = append(depositData, timestamp...)
+	depositData = append(depositData, encodedInput...)
+
 	return depositData, nil
 }
 
@@ -177,7 +170,9 @@ func DecodeDepositInput(depositData []byte) (*pb.DepositInput, error) {
 		)
 	}
 	depositInput := new(pb.DepositInput)
-	depositInputBytes := depositData[:len(depositData)-16]
+	// Since the value deposited and the timestamp are both 8 bytes each,
+	// the deposit data is the chunk after the first 16 bytes.
+	depositInputBytes := depositData[16:]
 	rBuf := bytes.NewReader(depositInputBytes)
 	if err := ssz.Decode(rBuf, depositInput); err != nil {
 		return nil, fmt.Errorf("ssz decode failed: %v", err)
@@ -197,9 +192,11 @@ func DecodeDepositAmountAndTimeStamp(depositData []byte) (uint64, int64, error) 
 			len(depositData),
 		)
 	}
-	length := len(depositData)
-	amount := binary.BigEndian.Uint64(depositData[length-16 : length-8])
-	timestamp := binary.BigEndian.Uint64(depositData[length-8:])
+
+	// the amount occupies the first 8 bytes while the
+	// timestamp occupies the next 8 bytes.
+	amount := binary.BigEndian.Uint64(depositData[:8])
+	timestamp := binary.BigEndian.Uint64(depositData[8:16])
 
 	return amount, int64(timestamp), nil
 }

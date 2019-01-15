@@ -6,6 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/node"
 	"github.com/prysmaticlabs/prysm/validator/types"
 	"github.com/sirupsen/logrus"
@@ -60,6 +61,7 @@ VERSION:
 	app.Name = "validator"
 	app.Usage = `launches an Ethereum Serenity validator client that interacts with a beacon chain, starts proposer services, shardp2p connections, and more
 `
+	app.Version = version.GetVersion()
 	app.Action = startNode
 	app.Flags = []cli.Flag{
 		types.BeaconRPCProviderFlag,
@@ -72,6 +74,7 @@ VERSION:
 		cmd.KeystorePasswordFlag,
 		cmd.KeystoreDirectoryFlag,
 		cmd.BootstrapNode,
+		cmd.MonitoringPortFlag,
 		debug.PProfFlag,
 		debug.PProfAddrFlag,
 		debug.PProfPortFlag,

@@ -1,3 +1,6 @@
+// Package state implements the whole state transition
+// function which consists of per slot, per-epoch transitions.
+// It also bootstraps the genesis beacon state for slot 0.
 package state
 
 import (
@@ -82,7 +85,10 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState
 	if err != nil {
 		return nil, fmt.Errorf("could not process block attestations: %v", err)
 	}
-	// TODO(#781): Process block validator deposits.
+	state, err = b.ProcessValidatorDeposits(state, block)
+	if err != nil {
+		return nil, fmt.Errorf("could not process block validator deposits: %v", err)
+	}
 	state, err = b.ProcessValidatorExits(state, block)
 	if err != nil {
 		return nil, fmt.Errorf("could not process validator exits: %v", err)

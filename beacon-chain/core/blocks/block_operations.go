@@ -1,3 +1,6 @@
+// Package blocks contains block processing libraries. These libraries
+// process and verify block specific messages such as PoW receipt root,
+// RANDAO, validator deposits, exits and slashing proofs.
 package blocks
 
 import (
@@ -9,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slices"
@@ -72,10 +76,9 @@ func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb
 	}
 	// If block randao passed verification, we XOR the state's latest randao mix with the block's
 	// randao and update the state's corresponding latest randao mix value.
-	var latestMix [32]byte
 	latestMixesLength := params.BeaconConfig().LatestRandaoMixesLength
 	latestMixSlice := beaconState.LatestRandaoMixesHash32S[beaconState.Slot%latestMixesLength]
-	copy(latestMix[:], latestMixSlice)
+	latestMix := bytesutil.ToBytes32(latestMixSlice)
 	for i, x := range block.RandaoRevealHash32 {
 		latestMix[i] ^= x
 	}
@@ -88,11 +91,8 @@ func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb
 }
 
 func verifyBlockRandao(proposer *pb.ValidatorRecord, block *pb.BeaconBlock) error {
-	var blockRandaoReveal [32]byte
-	var proposerRandaoCommit [32]byte
-	copy(blockRandaoReveal[:], block.RandaoRevealHash32)
-	copy(proposerRandaoCommit[:], proposer.RandaoCommitmentHash32)
-
+	blockRandaoReveal := bytesutil.ToBytes32(block.RandaoRevealHash32)
+	proposerRandaoCommit := bytesutil.ToBytes32(proposer.RandaoCommitmentHash32)
 	randaoHashLayers := hashutil.RepeatHash(blockRandaoReveal, proposer.RandaoLayers)
 	// Verify that repeat_hash(block.randao_reveal, proposer.randao_layers) == proposer.randao_commitment.
 	if randaoHashLayers != proposerRandaoCommit {
@@ -275,8 +275,7 @@ func verifyCasperSlashing(slashing *pb.CasperSlashing) error {
 	// (vote2.justified_slot + 1 == vote2.slot) &&
 	// (vote2.slot < vote1.slot)
 	// OR
-	// vote1.slot == vote.slot
-
+	// vote1.slot == vote2.slot
 	justificationValidity := (votes1Attestation.JustifiedSlot < votes2Attestation.JustifiedSlot) &&
 		(votes2Attestation.JustifiedSlot+1 == votes2Attestation.Slot) &&
 		(votes2Attestation.Slot < votes1Attestation.Slot)
@@ -564,9 +563,9 @@ func ProcessValidatorDeposits(
 		if err = verifyDeposit(beaconState, deposit); err != nil {
 			return nil, fmt.Errorf("could not verify deposit #%d: %v", idx, err)
 		}
-		// depositData consists of depositInput []byte + depositValue [8]byte +
-		// depositTimestamp [8]byte.
-		depositValue := depositData[len(depositData)-16 : len(depositData)-8]
+		// depositData consists of depositValue [8]byte +
+		// depositTimestamp [8]byte + depositInput []byte .
+		depositValue := depositData[:8]
 		// We then mutate the beacon state with the verified validator deposit.
 		beaconState, err = v.ProcessDeposit(
 			beaconState,
@@ -586,16 +585,13 @@ func ProcessValidatorDeposits(
 }
 
 func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
-	depositData := deposit.DepositData
 	// Verify Merkle proof of deposit and deposit trie root.
-	var receiptRoot [32]byte
-	var merkleLeaf [32]byte
-	copy(receiptRoot[:], beaconState.LatestDepositRootHash32)
-	copy(merkleLeaf[:], depositData)
+	receiptRoot := bytesutil.ToBytes32(beaconState.LatestDepositRootHash32)
 	if ok := trie.VerifyMerkleBranch(
-		merkleLeaf,
+		hashutil.Hash(deposit.DepositData),
 		deposit.MerkleBranchHash32S,
 		params.BeaconConfig().DepositContractTreeDepth,
+		deposit.MerkleTreeIndex,
 		receiptRoot,
 	); !ok {
 		return fmt.Errorf(

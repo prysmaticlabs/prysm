@@ -3,19 +3,30 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "beacon_block.go",
         "hash.go",
         "merkleRoot.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/hashutil",
     visibility = ["//visibility:public"],
-    deps = ["@org_golang_x_crypto//sha3:go_default_library"],
+    deps = [
+        "//proto/beacon/p2p/v1:go_default_library",
+        "@com_github_gogo_protobuf//proto:go_default_library",
+        "@org_golang_x_crypto//sha3:go_default_library",
+    ],
 )
 
 go_test(
     name = "go_default_test",
     srcs = [
+        "beacon_block_test.go",
         "hash_test.go",
         "merkleRoot_test.go",
     ],
     embed = [":go_default_library"],
+    deps = [
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/bytes:go_default_library",
+        "@com_github_gogo_protobuf//proto:go_default_library",
+    ],
 )

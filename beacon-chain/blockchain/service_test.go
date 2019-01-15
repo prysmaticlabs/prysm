@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -163,7 +164,7 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 		Slot: 1,
 	}
 
-	parentHash, err := b.Hash(parentBlock)
+	parentHash, err := hashutil.HashBeaconBlock(parentBlock)
 	if err != nil {
 		t.Fatalf("Unable to hash block %v", err)
 	}
@@ -233,7 +234,7 @@ func TestRunningChainService(t *testing.T) {
 	if err := chainService.beaconDB.SaveBlock(genesis); err != nil {
 		t.Fatalf("could not save block to db: %v", err)
 	}
-	parentHash, err := b.Hash(genesis)
+	parentHash, err := hashutil.HashBeaconBlock(genesis)
 	if err != nil {
 		t.Fatalf("unable to get hash of canonical head: %v", err)
 	}
@@ -318,8 +319,7 @@ func TestDoesPOWBlockExist(t *testing.T) {
 	}
 
 	// Using a faulty client should throw error.
-	var powHash [32]byte
-	copy(powHash[:], beaconState.LatestDepositRootHash32)
+	powHash := bytesutil.ToBytes32(beaconState.LatestDepositRootHash32)
 	exists := chainService.doesPoWBlockExist(powHash)
 	if exists {
 		t.Error("Block corresponding to nil powchain reference should not exist")
@@ -336,7 +336,7 @@ func TestUpdateHead(t *testing.T) {
 	stateRoot := hashutil.Hash(enc)
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
-	genesisHash, err := b.Hash(genesis)
+	genesisHash, err := hashutil.HashBeaconBlock(genesis)
 	if err != nil {
 		t.Fatalf("Could not get genesis block hash: %v", err)
 	}
@@ -389,7 +389,7 @@ func TestUpdateHead(t *testing.T) {
 			ParentRootHash32:  genesisHash[:],
 			DepositRootHash32: []byte("a"),
 		}
-		h, err := b.Hash(block)
+		h, err := hashutil.HashBeaconBlock(block)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -419,11 +419,14 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db)
-	beaconState, err := state.InitialBeaconState(nil, 0, nil)
+	err := db.InitializeState()
 	if err != nil {
-		t.Fatalf("Can't generate genesis state: %v", err)
+		t.Fatalf("Can't initialze genesis state: %v", err)
 	}
-
+	beaconState, err := db.GetState()
+	if err != nil {
+		t.Fatalf("Can't get genesis state: %v", err)
+	}
 	block := &pb.BeaconBlock{
 		ParentRootHash32: []byte{'a'},
 	}
@@ -440,7 +443,7 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 	if err := chainService.beaconDB.SaveBlock(genesis); err != nil {
 		t.Fatalf("cannot save block: %v", err)
 	}
-	parentHash, err := b.Hash(genesis)
+	parentHash, err := hashutil.HashBeaconBlock(genesis)
 	if err != nil {
 		t.Fatalf("unable to get hash of canonical head: %v", err)
 	}
@@ -454,8 +457,7 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 		t.Fatal("block processing succeeded despite block slot being invalid")
 	}
 
-	var h [32]byte
-	copy(h[:], []byte("a"))
+	h := bytesutil.ToBytes32([]byte("a"))
 	beaconState.LatestDepositRootHash32 = h[:]
 	beaconState.Slot = 0
 

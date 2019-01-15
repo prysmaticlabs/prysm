@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"reflect"
 
+	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
@@ -33,8 +34,7 @@ func TreeHash(val interface{}) ([32]byte, error) {
 		return [32]byte{}, newHashError(fmt.Sprint(err), rval.Type())
 	}
 	// Right-pad with 0 to make 32 bytes long, if necessary
-	var paddedOutput [32]byte
-	copy(paddedOutput[:], output)
+	paddedOutput := bytesutil.ToBytes32(output)
 	return paddedOutput, nil
 }
 
