@@ -741,13 +741,12 @@ func TestProcessEpoch_CantProcessEjections(t *testing.T) {
 		randaoHashes = append(randaoHashes, []byte{byte(i)})
 	}
 
-	exitSlot := 4*config.EpochLength + 1
 	state := &pb.BeaconState{
 		Slot:                     4 * config.EpochLength,
 		ValidatorBalances:        []uint64{1e9},
 		ShardCommitteesAtSlots:   shardCommittees,
 		LatestBlockRootHash32S:   make([][]byte, config.LatestBlockRootsLength),
-		ValidatorRegistry:        []*pb.ValidatorRecord{{ExitSlot: exitSlot}},
+		ValidatorRegistry:        []*pb.ValidatorRecord{{ExitSlot: 4*config.EpochLength + 1}},
 		LatestRandaoMixesHash32S: randaoHashes,
 		LatestAttestations: []*pb.PendingAttestationRecord{
 			{Data: &pb.AttestationData{}, ParticipationBitfield: []byte{}},
@@ -755,7 +754,7 @@ func TestProcessEpoch_CantProcessEjections(t *testing.T) {
 
 	want := fmt.Sprintf(
 		"could not process ejections: could not exit validator 0: "+
-			"validator 0 has already exited at slot %d", exitSlot)
+			"validator 0 could not exit until slot %d", state.Slot+config.EntryExitDelay)
 
 	if _, err := ProcessEpoch(state); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected: %s, received: %v", want, err)

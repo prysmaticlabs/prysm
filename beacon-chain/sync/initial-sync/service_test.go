@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -100,8 +100,7 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	var stateHash [32]byte
-	copy(stateHash[:], blockResponse.Block.StateRootHash32)
+	stateHash := bytesutil.ToBytes32(blockResponse.Block.StateRootHash32)
 
 	if stateHash != ss.initialStateRootHash32 {
 		t.Fatalf("Beacon state hash not updated: %#x", blockResponse.Block.StateRootHash32)
@@ -364,7 +363,7 @@ func TestRequestBlocksBySlot(t *testing.T) {
 			Block: block,
 		}
 
-		hash, err := b.Hash(block)
+		hash, err := hashutil.HashBeaconBlock(block)
 		if err != nil {
 			t.Fatalf("unable to hash block %v", err)
 		}

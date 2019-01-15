@@ -7,11 +7,12 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	att "github.com/prysmaticlabs/prysm/beacon-chain/core/attestations"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -183,8 +184,7 @@ func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) {
 	defer receiveBlockSpan.End()
 
 	data := msg.Data.(*pb.BeaconBlockAnnounce)
-	var h [32]byte
-	copy(h[:], data.Hash[:32])
+	h := bytesutil.ToBytes32(data.Hash[:32])
 
 	if rs.db.HasBlock(h) {
 		log.Debugf("Received a hash for a block that has already been processed: %#x", h)
@@ -205,7 +205,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 
 	response := msg.Data.(*pb.BeaconBlockResponse)
 	block := response.Block
-	blockHash, err := b.Hash(block)
+	blockHash, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		log.Errorf("Could not hash received block: %v", err)
 	}
@@ -295,7 +295,7 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) {
 		return
 	}
 
-	hash, err := b.Hash(block)
+	hash, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		log.Errorf("Could not hash block %v", err)
 		return
@@ -339,8 +339,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 func (rs *RegularSync) handleBlockRequestByHash(msg p2p.Message) {
 	data := msg.Data.(*pb.BeaconBlockRequest)
 
-	var hash [32]byte
-	copy(hash[:], data.Hash)
+	hash := bytesutil.ToBytes32(data.Hash)
 
 	block, err := rs.db.GetBlock(hash)
 	if err != nil {

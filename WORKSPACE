@@ -302,7 +302,7 @@ go_repository(
 
 go_repository(
     name = "com_github_btcsuite_btcd",
-    commit = "5bda5314ca9549a589e63d7b2e6104492a0d5328",
+    commit = "ed77733ec07dfc8a513741138419b8d9d3de9d2d",
     importpath = "github.com/btcsuite/btcd",
 )
 
@@ -453,7 +453,7 @@ go_repository(
 
 go_repository(
     name = "com_github_miekg_dns",
-    tag = "v1.1.2",
+    tag = "v1.1.3",
     importpath = "github.com/miekg/dns",
 )
 
@@ -501,7 +501,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "48ac38b7c8cbedd50b1613c0fccacfc7d88dfcdf",
+    commit = "2be51725563103c17124a318f1745b66f2347acb",
     importpath = "golang.org/x/sys",
 )
 
@@ -645,7 +645,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aristanetworks_goarista",
-    commit = "b3287ee629098a1640360d7b618be7ab046f7ac2",
+    commit = "b7a59f2ffb2369336aaa78fc9a555e4fd277616b",
     importpath = "github.com/aristanetworks/goarista",
 )
 

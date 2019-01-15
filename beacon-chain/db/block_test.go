@@ -3,8 +3,8 @@ package db
 import (
 	"testing"
 
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -13,7 +13,7 @@ func TestNilDB(t *testing.T) {
 	defer teardownDB(t, db)
 
 	block := &pb.BeaconBlock{}
-	h, _ := b.Hash(block)
+	h, _ := hashutil.HashBeaconBlock(block)
 
 	hasBlock := db.HasBlock(h)
 	if hasBlock {
@@ -34,7 +34,7 @@ func TestSave(t *testing.T) {
 	defer teardownDB(t, db)
 
 	block1 := &pb.BeaconBlock{}
-	h1, _ := b.Hash(block1)
+	h1, _ := hashutil.HashBeaconBlock(block1)
 
 	err := db.SaveBlock(block1)
 	if err != nil {
@@ -45,7 +45,7 @@ func TestSave(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get block: %v", err)
 	}
-	h1Prime, _ := b.Hash(b1Prime)
+	h1Prime, _ := hashutil.HashBeaconBlock(b1Prime)
 
 	if b1Prime == nil || h1 != h1Prime {
 		t.Fatalf("get should return b1: %x", h1)
@@ -54,7 +54,7 @@ func TestSave(t *testing.T) {
 	block2 := &pb.BeaconBlock{
 		Slot: 0,
 	}
-	h2, _ := b.Hash(block2)
+	h2, _ := hashutil.HashBeaconBlock(block2)
 
 	err = db.SaveBlock(block2)
 	if err != nil {
@@ -65,7 +65,7 @@ func TestSave(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get block: %v", err)
 	}
-	h2Prime, _ := b.Hash(b2Prime)
+	h2Prime, _ := hashutil.HashBeaconBlock(b2Prime)
 	if b2Prime == nil || h2 != h2Prime {
 		t.Fatalf("get should return b2: %x", h2)
 	}
@@ -116,7 +116,7 @@ func TestUpdateChainHead(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get genesis block: %v", err)
 	}
-	bHash, err := b.Hash(block)
+	bHash, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		t.Fatalf("failed to get hash of b: %v", err)
 	}
@@ -130,7 +130,7 @@ func TestUpdateChainHead(t *testing.T) {
 		Slot:             1,
 		ParentRootHash32: bHash[:],
 	}
-	b2Hash, err := b.Hash(block2)
+	b2Hash, err := hashutil.HashBeaconBlock(block2)
 	if err != nil {
 		t.Fatalf("failed to hash b2: %v", err)
 	}
@@ -150,11 +150,11 @@ func TestUpdateChainHead(t *testing.T) {
 		t.Fatalf("failed to retrieve head: %v", err)
 	}
 
-	b2PrimeHash, err := b.Hash(b2Prime)
+	b2PrimeHash, err := hashutil.HashBeaconBlock(b2Prime)
 	if err != nil {
 		t.Fatalf("failed to hash b2Prime: %v", err)
 	}
-	b2SigmaHash, err := b.Hash(b2Sigma)
+	b2SigmaHash, err := hashutil.HashBeaconBlock(b2Sigma)
 	if err != nil {
 		t.Fatalf("failed to hash b2Sigma: %v", err)
 	}

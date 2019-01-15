@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -24,6 +23,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/reflection"
 )
 
 var log = logrus.WithField("prefix", "rpc")
@@ -129,6 +129,10 @@ func (s *Service) Start() {
 	pb.RegisterValidatorServiceServer(s.grpcServer, s)
 	pb.RegisterProposerServiceServer(s.grpcServer, s)
 	pb.RegisterAttesterServiceServer(s.grpcServer, s)
+
+	// Register reflection service on gRPC server.
+	reflection.Register(s.grpcServer)
+
 	go func() {
 		err = s.grpcServer.Serve(lis)
 		if err != nil {
@@ -210,7 +214,7 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(
 // sends the request into a beacon block that can then be included in a canonical chain.
 func (s *Service) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlock) (*pb.ProposeResponse, error) {
 
-	h, err := b.Hash(blk)
+	h, err := hashutil.HashBeaconBlock(blk)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash block: %v", err)
 	}
@@ -447,6 +451,9 @@ func assignmentsForPublicKeys(keys []*pb.PublicKey, beaconState *pbp2p.BeaconSta
 	assignments := []*pb.Assignment{}
 
 	for _, val := range keys {
+		if len(val.PublicKey) == 0 {
+			continue
+		}
 		// For the corresponding public key and current crystallized state,
 		// we determine the assigned slot for the validator and whether it
 		// should act as a proposer or attester.
