@@ -176,7 +176,7 @@ func TestLMDGhost_EveryActiveValidatorHasLatestAttestation(t *testing.T) {
 	defer internal.TeardownDB(t, beaconDB)
 	beaconState, genesisBlock, stateHash, genesisHash := generateTestGenesisStateAndBlock(
 		t,
-		100000,
+		params.BeaconConfig().DepositsForChainStart,
 		beaconDB,
 	)
 	lowerVoteBlock := &pb.BeaconBlock{
