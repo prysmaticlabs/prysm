@@ -312,6 +312,28 @@ func AttestationInclusion(
 
 // Crosslinks awards or penalizes attesters
 // for attesting shard cross links.
+//
+// Spec pseudocode definition:
+// 	For every slot in range(state.slot - 2 * EPOCH_LENGTH, state.slot),
+// 		let shard_committee_at_slot = get_shard_committees_at_slot(slot).
+// 		For every (shard_committee, shard) in shard_committee_at_slot, compute:
+//
+//			Let shard_block_root be state.latest_crosslinks[shard].shard_block_root
+//			Let attesting_validator_indices(shard_committee, shard_block_root)
+// 				be the union of the validator index sets given by [get_attestation_participants(
+// 				state, a.data, a.participation_bitfield) for a in current_epoch_attestations +
+// 				previous_epoch_attestations if a.shard == shard and a.shard_block_root == shard_block_root].
+//			Let winning_root(shard_committee)
+// 				be equal to the value of shard_block_root such that sum([get_effective_balance(state, i)
+// 				for i in attesting_validator_indices(shard_committee, shard_block_root)])
+// 				is maximized (ties broken by favoring lower shard_block_root values).
+//			Let attesting_validators(shard_committee)
+// 				be equal to attesting_validator_indices(
+// 				shard_committee, winning_root(shard_committee)) for convenience.
+//			Let total_attesting_balance(shard_committee) =
+// 				sum([get_effective_balance(state, i) for i in attesting_validators(shard_committee)]).
+//			Let total_balance(shard_committee) =
+// 				sum([get_effective_balance(state, i) for i in shard_committee]).
 func Crosslinks(
 	state *pb.BeaconState,
 	thisEpochAttestations []*pb.PendingAttestationRecord,
