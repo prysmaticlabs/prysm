@@ -43,42 +43,42 @@ func (db *BeaconDB) GetAttestation(hash [32]byte) (*pb.Attestation, error) {
 	return attestation, err
 }
 
-// SaveLatestAttestationsForValidator puts a list of latest attestations from a
+// SaveLatestAttestationForValidator puts the latest observed attestation for a
 // beacon chain validator into the key value store using the validator index
 // to construct the key for retrieval.
-func (db *BeaconDB) SaveLatestAttestationsForValidator(validatorIdx uint32, latestAtts *pb.LatestAttestations) error {
-	encodedAtts, err := proto.Marshal(latestAtts)
+func (db *BeaconDB) SaveLatestAttestationForValidator(validatorIdx uint32, latestAtt *pb.Attestation) error {
+	encodedAtt, err := proto.Marshal(latestAtt)
 	if err != nil {
 		return err
 	}
 
 	return db.update(func(tx *bolt.Tx) error {
 		a := tx.Bucket(attestationBucket)
-		key := []byte(fmt.Sprintf("validator-%d-latest-atts", validatorIdx))
-		return a.Put(key, encodedAtts)
+		key := []byte(fmt.Sprintf("validator-%d-latest-att", validatorIdx))
+		return a.Put(key, encodedAtt)
 	})
 }
 
-// GetLatestAttestationsForValidator returns the observed attestations by a validator at a
+// GetLatestAttestationForValidator returns the observed attestations by a validator at a
 // certain index in the beacon state's registry.
-func (db *BeaconDB) GetLatestAttestationsForValidator(validatorIdx uint32) (*pb.LatestAttestations, error) {
-	latestAtts := &pb.LatestAttestations{}
+func (db *BeaconDB) GetLatestAttestationForValidator(validatorIdx uint32) (*pb.Attestation, error) {
+	latestAtt := &pb.Attestation{}
 	err := db.view(func(tx *bolt.Tx) error {
 		a := tx.Bucket(attestationBucket)
 
-		key := []byte(fmt.Sprintf("validator-%d-latest-atts", validatorIdx))
+		key := []byte(fmt.Sprintf("validator-%d-latest-att", validatorIdx))
 		enc := a.Get(key)
 		if enc == nil {
 			return nil
 		}
 
-		if err := proto.Unmarshal(enc, latestAtts); err != nil {
+		if err := proto.Unmarshal(enc, latestAtt); err != nil {
 			return fmt.Errorf("failed to unmarshal encoding: %v", err)
 		}
 		return nil
 	})
 
-	return latestAtts, err
+	return latestAtt, err
 }
 
 // HasAttestation checks if the attestation exists.

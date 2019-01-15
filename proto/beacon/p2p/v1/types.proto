@@ -63,10 +63,6 @@ message PendingAttestationRecord {
   uint64 slot_included = 4;
 }
 
-message LatestAttestations {
-  repeated Attestation attestations = 1;
-}
-
 message Attestation {
   AttestationData data = 1;
   bytes participation_bitfield = 2;

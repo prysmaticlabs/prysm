@@ -118,39 +118,25 @@ func AttestationTargets(
 	activeValidators := validators.ActiveValidatorIndices(beaconState.ValidatorRegistry, beaconState.Slot)
 	var attestationTargets []*pb.BeaconBlock
 	for _, validatorIndex := range activeValidators {
-		target, err := LatestAttestationTarget(validatorIndex, beaconDB)
+		latestAttestation, err := beaconDB.GetLatestAttestationForValidator(validatorIndex)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf(
+				"could not fetch latest attestation for validator at index %d: %v",
+				validatorIndex,
+				err,
+			)
 		}
-		if target != nil {
-			attestationTargets = append(attestationTargets, target)
+		if latestAttestation.Data != nil {
+			blockHash := bytesutil.ToBytes32(latestAttestation.Data.BeaconBlockRootHash32)
+			target, err := beaconDB.GetBlock(blockHash)
+			if err != nil {
+				return nil, fmt.Errorf("could not get latest attestation's block target: %v", err)
+			}
+			if target != nil {
+				attestationTargets = append(attestationTargets, target)
+			}
 		}
 	}
 	return attestationTargets, nil
 }
 
-// LatestAttestationTarget obtains the block target corresponding to the latest
-// attestation seen by the validator. It is the attestation with the highest slot number
-// in store from the validator. In case of a tie, pick the one observed first.
-func LatestAttestationTarget(validatorIndex uint32, beaconDB *db.BeaconDB) (*pb.BeaconBlock, error) {
-	latestAttsProto, err := beaconDB.GetLatestAttestationsForValidator(validatorIndex)
-	if err != nil {
-		return nil, fmt.Errorf(
-			"could not fetch latest attestations for validator at index %d: %v",
-			validatorIndex,
-			err,
-		)
-	}
-	latestAtts := latestAttsProto.Attestations
-	if len(latestAtts) == 0 {
-		return nil, nil
-	}
-	highestSlotAtt := latestAtts[0]
-	for i := 1; i < len(latestAtts); i++ {
-		if latestAtts[i].Data.Slot > highestSlotAtt.Data.Slot {
-			highestSlotAtt = latestAtts[i]
-		}
-	}
-	blockHash := bytesutil.ToBytes32(highestSlotAtt.Data.BeaconBlockRootHash32)
-	return beaconDB.GetBlock(blockHash)
-}
