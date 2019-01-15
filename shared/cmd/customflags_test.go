@@ -23,15 +23,15 @@ import (
 )
 
 var (
-  // user-specific tests can use the usr variable
+  // user-specific tests can use the usr variable.
   usr, _ = user.Current()
   against []DirectoryString
 )
 
 func init() {
-  // test for environment variables in paths with $DDDXXX
+  // test for environment variables in paths with $DDDXXX.
   os.Setenv("DDDXXX", "/tmp")
-  // test against valid DirectoryString structs
+  // test against valid DirectoryString structs.
   against = []DirectoryString{
 	  {"/home/someuser/tmp"},
 	  {usr.HomeDir + "/tmp"},
