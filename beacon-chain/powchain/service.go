@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"time"
 
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -233,7 +234,7 @@ func (w *Web3Service) processLog(VRClog gethTypes.Log) {
 func (w *Web3Service) processDepositLog(VRClog gethTypes.Log) {
 
 	merkleRoot := VRClog.Topics[1]
-	depositData, MerkleTreeIndex, err := w.unPackLogData(VRClog.Data)
+	depositData, MerkleTreeIndex, err := w.unPackDepositLogData(VRClog.Data)
 	if err != nil {
 		log.Errorf("Could not unpack log %v", err)
 		return
@@ -260,10 +261,34 @@ func (w *Web3Service) processDepositLog(VRClog gethTypes.Log) {
 }
 
 func (w *Web3Service) processChainStartLog(VRClog gethTypes.Log) {
-	_ = VRClog
+	receiptRoot := VRClog.Topics[1]
+
+	timestampData, err := w.unPackChainStartLogData(VRClog.Data)
+	if err != nil {
+		log.Errorf("Unable to unpack ChainStart log data %v", err)
+		return
+	}
+
+	if w.depositTrie.Root() != receiptRoot {
+		log.Errorf("Receipt root from log doesn't match the root saved in memory %#x", receiptRoot)
+		return
+	}
+
+	timestamp := binary.BigEndian.Uint64(timestampData)
+
+	if uint64(time.Now().Unix()) < timestamp {
+		log.Errorf("Invalid timestamp from log %v", err)
+	}
+
+	chainStartTime := time.Unix(int64(timestamp), 0)
+
+	log.WithFields(logrus.Fields{
+		"ChainStartTime": chainStartTime,
+	}).Info("Minimum Number of Validators Reached for beacon-chain to start")
+
 }
 
-func (w *Web3Service) unPackLogData(data []byte) ([]byte, []byte, error) {
+func (w *Web3Service) unPackDepositLogData(data []byte) ([]byte, []byte, error) {
 
 	reader := bytes.NewReader([]byte(contracts.ValidatorRegistrationABI))
 	contractAbi, err := abi.JSON(reader)
@@ -284,6 +309,27 @@ func (w *Web3Service) unPackLogData(data []byte) ([]byte, []byte, error) {
 	merkleTreeIndex := *unpackedLogs[1]
 
 	return depositData, merkleTreeIndex, nil
+}
+
+func (w *Web3Service) unPackChainStartLogData(data []byte) ([]byte, error) {
+
+	reader := bytes.NewReader([]byte(contracts.ValidatorRegistrationABI))
+	contractAbi, err := abi.JSON(reader)
+	if err != nil {
+		return nil, fmt.Errorf("unable to generate contract abi %v", err)
+	}
+
+	unpackedLogs := []*[]byte{
+		&[]byte{},
+	}
+
+	if err := contractAbi.Unpack(&unpackedLogs, "Deposit", data); err != nil {
+		return nil, fmt.Errorf("unable to unpack logs %v", err)
+	}
+
+	timestamp := *unpackedLogs[0]
+
+	return timestamp, nil
 }
 
 // saveInTrie saves in the in-memory deposit trie.

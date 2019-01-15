@@ -533,7 +533,7 @@ func TestUnpackLogs(t *testing.T) {
 		t.Fatalf("Unable to retrieve logs %v", err)
 	}
 
-	depData, index, err := web3Service.unPackLogData(logz[0].Data)
+	depData, index, err := web3Service.unPackDepositLogData(logz[0].Data)
 	if err != nil {
 		t.Fatalf("Unable to unpack logs %v", err)
 	}
