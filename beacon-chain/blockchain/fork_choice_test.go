@@ -21,7 +21,7 @@ import (
 // Generates an initial genesis block and state using a custom number of initial
 // deposits as a helper function for LMD Ghost fork-choice testing.
 func generateTestGenesisStateAndBlock(
-	t *testing.T,
+	t testing.TB,
 	numDeposits uint64,
 	beaconDB *db.BeaconDB,
 ) (*pb.BeaconState, *pb.BeaconBlock, [32]byte, [32]byte) {
@@ -160,11 +160,11 @@ func TestLMDGhost_TrivialHigherVoteCountWins(t *testing.T) {
 	}
 }
 
-func TestLMDGhost_EveryActiveValidatorHasLatestAttestation(t *testing.T) {
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
+func BenchmarkLMDGhost_EveryActiveValidatorHasLatestAttestation(b *testing.B) {
+	beaconDB := internal.SetupDB(b)
+	defer internal.TeardownDB(b, beaconDB)
 	beaconState, genesisBlock, stateHash, genesisHash := generateTestGenesisStateAndBlock(
-		t,
+		b,
 		params.BeaconConfig().DepositsForChainStart,
 		beaconDB,
 	)
@@ -181,10 +181,10 @@ func TestLMDGhost_EveryActiveValidatorHasLatestAttestation(t *testing.T) {
 
 	// We store these potential heads in the DB.
 	if err := beaconDB.SaveBlock(lowerVoteBlock); err != nil {
-		t.Fatal(err)
+		b.Fatal(err)
 	}
 	if err := beaconDB.SaveBlock(higherVoteBlock); err != nil {
-		t.Fatal(err)
+		b.Fatal(err)
 	}
 
 	activeIndices := validators.ActiveValidatorIndices(beaconState.ValidatorRegistry, 0)
@@ -202,7 +202,7 @@ func TestLMDGhost_EveryActiveValidatorHasLatestAttestation(t *testing.T) {
 		}
 		// We ensure the block target of potentialHead has 1 vote per each active validator.
 		if err := beaconDB.SaveLatestAttestationForValidator(uint32(idx), latestAtt); err != nil {
-			t.Fatal(err)
+			b.Fatal(err)
 		}
 	}
 
@@ -210,13 +210,13 @@ func TestLMDGhost_EveryActiveValidatorHasLatestAttestation(t *testing.T) {
 	observedBlocks := []*pb.BeaconBlock{lowerVoteBlock, higherVoteBlock}
 	head, err := LMDGhost(beaconState, genesisBlock, observedBlocks, beaconDB)
 	if err != nil {
-		t.Fatalf("Could not run LMD GHOST: %v", err)
+		b.Fatalf("Could not run LMD GHOST: %v", err)
 	}
 
 	// We expect that higherVoteBlock to have overwhelmingly more votes
 	// than lowerVoteBlock, allowing it to be selected by the fork-choice rule.
 	if !reflect.DeepEqual(higherVoteBlock, head) {
-		t.Errorf("Expected head to equal %v, received %v", higherVoteBlock, head)
+		b.Errorf("Expected head to equal %v, received %v", higherVoteBlock, head)
 	}
 }
 

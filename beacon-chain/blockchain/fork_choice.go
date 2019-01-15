@@ -34,12 +34,12 @@ func LMDGhost(
 			return head, nil
 		}
 		maxChild := children[0] // so far max child will be potentialHead [potentialHead]
+		maxChildVotes, err := VoteCount(maxChild, targets, beaconDB)
+		if err != nil {
+			return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
+		}
 		for i := 1; i < len(children); i++ {
 			candidateChildVotes, err := VoteCount(children[i], targets, beaconDB)
-			if err != nil {
-				return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
-			}
-			maxChildVotes, err := VoteCount(maxChild, targets, beaconDB)
 			if err != nil {
 				return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
 			}
