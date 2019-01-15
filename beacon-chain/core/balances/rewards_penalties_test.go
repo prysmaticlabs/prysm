@@ -524,7 +524,7 @@ func TestAttestationInclusionRewards(t *testing.T) {
 	}
 
 	tests := []struct {
-		voted                            []uint32
+		voted []uint32
 	}{
 		{[]uint32{}},
 		{[]uint32{237}},
