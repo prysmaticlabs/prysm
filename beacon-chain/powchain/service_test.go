@@ -539,7 +539,7 @@ func TestUnpackLogs(t *testing.T) {
 	}
 
 	if binary.BigEndian.Uint64(index) != 65536 {
-		t.Errorf("Retrived merkle tree index is incorrect %d", index)
+		t.Errorf("Retrieved merkle tree index is incorrect %d", index)
 	}
 
 	deserializeData, err := blocks.DecodeDepositInput(depData)
@@ -552,7 +552,7 @@ func TestUnpackLogs(t *testing.T) {
 	}
 
 	if !bytes.Equal(deserializeData.ProofOfPossession, stub[:]) {
-		t.Errorf("Proof of Possesion is not the same as the data that was put in %v", deserializeData.ProofOfPossession)
+		t.Errorf("Proof of Possession is not the same as the data that was put in %v", deserializeData.ProofOfPossession)
 	}
 
 	if !bytes.Equal(deserializeData.CustodyCommitmentHash32, []byte("custody")) {
