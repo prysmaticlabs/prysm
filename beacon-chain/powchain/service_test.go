@@ -296,7 +296,7 @@ func TestSaveInTrie(t *testing.T) {
 
 }
 
-func TestProcessLogs(t *testing.T) {
+func TestProcessDepositLog(t *testing.T) {
 	hook := logTest.NewGlobal()
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
@@ -320,12 +320,12 @@ func TestProcessLogs(t *testing.T) {
 
 	currentRoot := web3Service.depositTrie.Root()
 
-	var newf [48]byte
-	copy(newf[:], []byte("testing"))
+	var stub [48]byte
+	copy(stub[:], []byte("testing"))
 
 	data := &pb.DepositInput{
-		Pubkey:                      newf[:],
-		ProofOfPossession:           newf[:],
+		Pubkey:                      stub[:],
+		ProofOfPossession:           stub[:],
 		WithdrawalCredentialsHash32: []byte("withdraw"),
 		RandaoCommitmentHash32:      []byte("randao"),
 		CustodyCommitmentHash32:     []byte("custody"),
@@ -349,14 +349,14 @@ func TestProcessLogs(t *testing.T) {
 		},
 	}
 
-	logz, err := testAcc.backend.FilterLogs(web3Service.ctx, query)
+	logs, err := testAcc.backend.FilterLogs(web3Service.ctx, query)
 	if err != nil {
 		t.Fatalf("Unable to retrieve logs %v", err)
 	}
 
-	logz[0].Topics[1] = currentRoot
+	logs[0].Topics[1] = currentRoot
 
-	web3Service.processLog(logz[0])
+	web3Service.processLog(logs[0])
 
 	testutil.AssertLogsDoNotContain(t, hook, "Could not unpack log")
 	testutil.AssertLogsDoNotContain(t, hook, "Could not save in trie")
@@ -500,12 +500,12 @@ func TestUnpackLogs(t *testing.T) {
 		t.Errorf("Deposit root is not empty %v", web3Service.depositRoot)
 	}
 
-	var newf [48]byte
-	copy(newf[:], []byte("testing"))
+	var stub [48]byte
+	copy(stub[:], []byte("testing"))
 
 	data := &pb.DepositInput{
-		Pubkey:                      newf[:],
-		ProofOfPossession:           newf[:],
+		Pubkey:                      stub[:],
+		ProofOfPossession:           stub[:],
 		WithdrawalCredentialsHash32: []byte("withdraw"),
 		RandaoCommitmentHash32:      []byte("randao"),
 		CustodyCommitmentHash32:     []byte("custody"),
@@ -547,11 +547,11 @@ func TestUnpackLogs(t *testing.T) {
 		t.Fatalf("Unable to decode deposit input %v", err)
 	}
 
-	if !bytes.Equal(deserializeData.Pubkey, newf[:]) {
+	if !bytes.Equal(deserializeData.Pubkey, stub[:]) {
 		t.Errorf("Pubkey is not the same as the data that was put in %v", deserializeData.Pubkey)
 	}
 
-	if !bytes.Equal(deserializeData.ProofOfPossession, newf[:]) {
+	if !bytes.Equal(deserializeData.ProofOfPossession, stub[:]) {
 		t.Errorf("Proof of Possesion is not the same as the data that was put in %v", deserializeData.ProofOfPossession)
 	}
 

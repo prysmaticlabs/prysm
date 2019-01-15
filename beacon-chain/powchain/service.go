@@ -17,6 +17,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	contracts "github.com/prysmaticlabs/prysm/contracts/validator-registration-contract"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/trie"
 	"github.com/sirupsen/logrus"
 )
@@ -75,6 +76,11 @@ type Web3ServiceConfig struct {
 	Logger          bind.ContractFilterer
 	ContractBackend bind.ContractBackend
 }
+
+var (
+	depositEventSignature    = []byte("Deposit(bytes,bytes,bytes)")
+	chainStartEventSignature = []byte("ChainStart(bytes,bytes,bytes)")
+)
 
 // NewWeb3Service sets up a new instance with an ethclient when
 // given a web3 endpoint as a string in the config.
@@ -206,10 +212,25 @@ func (w *Web3Service) run(done <-chan struct{}) {
 	}
 }
 
-// processLog processes the log which had been received from
+func (w *Web3Service) processLog(VRClog gethTypes.Log) {
+	// Process logs according to their event signature.
+	if VRClog.Topics[0] == hashutil.Hash(depositEventSignature) {
+		w.processDepositLog(VRClog)
+		return
+	}
+
+	if VRClog.Topics[0] == hashutil.Hash(chainStartEventSignature) {
+		w.processChainStartLog(VRClog)
+		return
+	}
+
+	log.Debugf("Log is not of a valid event signature %#x", VRClog.Topics[0])
+}
+
+// processDepositLog processes the log which had been received from
 // the POW chain by trying to ascertain which participant deposited
 // in the contract
-func (w *Web3Service) processLog(VRClog gethTypes.Log) {
+func (w *Web3Service) processDepositLog(VRClog gethTypes.Log) {
 
 	merkleRoot := VRClog.Topics[1]
 	depositData, MerkleTreeIndex, err := w.unPackLogData(VRClog.Data)
@@ -236,6 +257,10 @@ func (w *Web3Service) processLog(VRClog gethTypes.Log) {
 		"merkle tree index": index,
 	}).Info("Validator registered in VRC with public key and index")
 
+}
+
+func (w *Web3Service) processChainStartLog(VRClog gethTypes.Log) {
+	_ = VRClog
 }
 
 func (w *Web3Service) unPackLogData(data []byte) ([]byte, []byte, error) {
