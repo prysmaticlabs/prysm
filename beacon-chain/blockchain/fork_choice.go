@@ -3,6 +3,7 @@ package blockchain
 import (
 	"bytes"
 	"fmt"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -19,7 +20,7 @@ func LMDGhost(
 	observedBlocks []*pb.BeaconBlock,
 	beaconDB *db.BeaconDB,
 ) (*pb.BeaconBlock, error) {
-	targets, err := AttestationTargets(beaconState, block, beaconDB)
+	targets, err := AttestationTargets(beaconState, beaconDB)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch attestation targets for active validators: %v", err)
 	}
@@ -42,7 +43,6 @@ func LMDGhost(
 			if err != nil {
 				return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
 			}
-			fmt.Printf("candidate: %d, max: %d\n", candidateChildVotes, maxChildVotes)
 			if candidateChildVotes > maxChildVotes {
 				maxChild = children[i]
 			}
@@ -113,7 +113,7 @@ func BlockChildren(block *pb.BeaconBlock, observedBlocks []*pb.BeaconBlock) ([]*
 // AttestationTargets fetches the blocks corresponding to the latest observed attestation
 // for each active validator in the state's registry.
 func AttestationTargets(
-	beaconState *pb.BeaconState, block *pb.BeaconBlock, beaconDB *db.BeaconDB,
+	beaconState *pb.BeaconState, beaconDB *db.BeaconDB,
 ) ([]*pb.BeaconBlock, error) {
 	activeValidators := validators.ActiveValidatorIndices(beaconState.ValidatorRegistry, beaconState.Slot)
 	var attestationTargets []*pb.BeaconBlock
@@ -139,4 +139,3 @@ func AttestationTargets(
 	}
 	return attestationTargets, nil
 }
-
