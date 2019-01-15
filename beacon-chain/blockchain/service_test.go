@@ -195,7 +195,7 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 		Slot: 1,
 	}
 
-	parentHash, err := b.Hash(parentBlock)
+	parentHash, err := hashutil.HashBeaconBlock(parentBlock)
 	if err != nil {
 		t.Fatalf("Unable to hash block %v", err)
 	}
@@ -265,7 +265,7 @@ func TestRunningChainService(t *testing.T) {
 	if err := chainService.beaconDB.SaveBlock(genesis); err != nil {
 		t.Fatalf("could not save block to db: %v", err)
 	}
-	parentHash, err := b.Hash(genesis)
+	parentHash, err := hashutil.HashBeaconBlock(genesis)
 	if err != nil {
 		t.Fatalf("unable to get hash of canonical head: %v", err)
 	}
@@ -367,7 +367,7 @@ func TestUpdateHead(t *testing.T) {
 	stateRoot := hashutil.Hash(enc)
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
-	genesisHash, err := b.Hash(genesis)
+	genesisHash, err := hashutil.HashBeaconBlock(genesis)
 	if err != nil {
 		t.Fatalf("Could not get genesis block hash: %v", err)
 	}
@@ -420,7 +420,7 @@ func TestUpdateHead(t *testing.T) {
 			ParentRootHash32:  genesisHash[:],
 			DepositRootHash32: []byte("a"),
 		}
-		h, err := b.Hash(block)
+		h, err := hashutil.HashBeaconBlock(block)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -474,7 +474,7 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 	if err := chainService.beaconDB.SaveBlock(genesis); err != nil {
 		t.Fatalf("cannot save block: %v", err)
 	}
-	parentHash, err := b.Hash(genesis)
+	parentHash, err := hashutil.HashBeaconBlock(genesis)
 	if err != nil {
 		t.Fatalf("unable to get hash of canonical head: %v", err)
 	}
