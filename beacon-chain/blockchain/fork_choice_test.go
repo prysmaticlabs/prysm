@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -14,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -27,9 +29,9 @@ func generateTestGenesisStateAndBlock(
 ) (*pb.BeaconState, *pb.BeaconBlock, [32]byte, [32]byte) {
 	deposits := make([]*pb.Deposit, numDeposits)
 	for i := 0; i < len(deposits); i++ {
-		pubkey := hashutil.Hash([]byte{byte(i)})
+		pubkey := []byte{byte(i)}
 		depositInput := &pb.DepositInput{
-			Pubkey: pubkey[:],
+			Pubkey: pubkey,
 		}
 		balance := params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei
 		depositData, err := b.EncodeDepositData(depositInput, balance, time.Now().Unix())
@@ -95,7 +97,12 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 
 	// We then test LMD Ghost was applied as the fork-choice rule with a single observed block.
 	observedBlocks := []*pb.BeaconBlock{potentialHead}
-	head, err := LMDGhost(beaconState, genesisBlock, observedBlocks, beaconDB)
+
+	voteTargets := make(map[[32]byte]*pb.BeaconBlock)
+	key := bytesutil.ToBytes32(beaconState.ValidatorRegistry[0].Pubkey)
+	voteTargets[key] = potentialHead
+
+	head, err := LMDGhost(beaconState, genesisBlock, voteTargets, observedBlocks, beaconDB)
 	if err != nil {
 		t.Fatalf("Could not run LMD GHOST: %v", err)
 	}
@@ -146,9 +153,13 @@ func TestLMDGhost_TrivialHigherVoteCountWins(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	voteTargets := make(map[[32]byte]*pb.BeaconBlock)
+	key := bytesutil.ToBytes32(beaconState.ValidatorRegistry[0].Pubkey)
+	voteTargets[key] = higherVoteBlock
+
 	// We then test LMD Ghost was applied as the fork-choice rule.
 	observedBlocks := []*pb.BeaconBlock{lowerVoteBlock, higherVoteBlock}
-	head, err := LMDGhost(beaconState, genesisBlock, observedBlocks, beaconDB)
+	head, err := LMDGhost(beaconState, genesisBlock, voteTargets, observedBlocks, beaconDB)
 	if err != nil {
 		t.Fatalf("Could not run LMD GHOST: %v", err)
 	}
@@ -160,12 +171,12 @@ func TestLMDGhost_TrivialHigherVoteCountWins(t *testing.T) {
 	}
 }
 
-func BenchmarkLMDGhost_EveryActiveValidatorHasLatestAttestation(b *testing.B) {
-	beaconDB := internal.SetupDB(b)
-	defer internal.TeardownDB(b, beaconDB)
+func TestLMDGhost_EveryActiveValidatorHasLatestAttestation(t *testing.T) {
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
 	beaconState, genesisBlock, stateHash, genesisHash := generateTestGenesisStateAndBlock(
-		b,
-		params.BeaconConfig().DepositsForChainStart,
+		t,
+		100000,
 		beaconDB,
 	)
 	lowerVoteBlock := &pb.BeaconBlock{
@@ -181,42 +192,31 @@ func BenchmarkLMDGhost_EveryActiveValidatorHasLatestAttestation(b *testing.B) {
 
 	// We store these potential heads in the DB.
 	if err := beaconDB.SaveBlock(lowerVoteBlock); err != nil {
-		b.Fatal(err)
+		t.Fatal(err)
 	}
 	if err := beaconDB.SaveBlock(higherVoteBlock); err != nil {
-		b.Fatal(err)
+		t.Fatal(err)
 	}
 
 	activeIndices := validators.ActiveValidatorIndices(beaconState.ValidatorRegistry, 0)
-	candidateHeadEnc, _ := proto.Marshal(higherVoteBlock)
-	candidateHeadHash := hashutil.Hash(candidateHeadEnc)
-
-	// We store some simulated latest attestation for every active validator
-	// in the registry.
-	for idx := range activeIndices {
-		latestAtt := &pb.Attestation{
-			Data: &pb.AttestationData{
-				Slot:                  3,
-				BeaconBlockRootHash32: candidateHeadHash[:],
-			},
-		}
-		// We ensure the block target of potentialHead has 1 vote per each active validator.
-		if err := beaconDB.SaveLatestAttestationForValidator(uint32(idx), latestAtt); err != nil {
-			b.Fatal(err)
-		}
+	// We store some simulated latest attestation target for every active validator in a map.
+	voteTargets := make(map[[32]byte]*pb.BeaconBlock, len(activeIndices))
+	for i := 0; i < len(activeIndices); i++ {
+		key := bytesutil.ToBytes32([]byte(fmt.Sprintf("%d", i)))
+		voteTargets[key] = higherVoteBlock
 	}
 
 	// We then test LMD Ghost was applied as the fork-choice rule.
 	observedBlocks := []*pb.BeaconBlock{lowerVoteBlock, higherVoteBlock}
-	head, err := LMDGhost(beaconState, genesisBlock, observedBlocks, beaconDB)
+	head, err := LMDGhost(beaconState, genesisBlock, voteTargets, observedBlocks, beaconDB)
 	if err != nil {
-		b.Fatalf("Could not run LMD GHOST: %v", err)
+		t.Fatalf("Could not run LMD GHOST: %v", err)
 	}
 
 	// We expect that higherVoteBlock to have overwhelmingly more votes
 	// than lowerVoteBlock, allowing it to be selected by the fork-choice rule.
 	if !reflect.DeepEqual(higherVoteBlock, head) {
-		b.Errorf("Expected head to equal %v, received %v", higherVoteBlock, head)
+		t.Errorf("Expected head to equal %v, received %v", higherVoteBlock, head)
 	}
 }
 
@@ -234,9 +234,11 @@ func TestVoteCount_ParentDoesNotExist(t *testing.T) {
 	if err := beaconDB.SaveBlock(potentialHead); err != nil {
 		t.Fatal(err)
 	}
-	targets := []*pb.BeaconBlock{potentialHead}
+
+	voteTargets := make(map[[32]byte]*pb.BeaconBlock)
+	voteTargets[[32]byte{}] = potentialHead
 	want := "parent block does not exist"
-	if _, err := VoteCount(genesisBlock, targets, beaconDB); !strings.Contains(err.Error(), want) {
+	if _, err := VoteCount(genesisBlock, voteTargets, beaconDB); !strings.Contains(err.Error(), want) {
 		t.Fatalf("Expected %s, received %v", want, err)
 	}
 }
@@ -266,8 +268,11 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 	if err := beaconDB.SaveBlock(potentialHead2); err != nil {
 		t.Fatal(err)
 	}
-	targets := []*pb.BeaconBlock{potentialHead, potentialHead2}
-	count, err := VoteCount(genesisBlock, targets, beaconDB)
+
+	voteTargets := make(map[[32]byte]*pb.BeaconBlock)
+	voteTargets[[32]byte{0}] = potentialHead
+	voteTargets[[32]byte{1}] = potentialHead2
+	count, err := VoteCount(genesisBlock, voteTargets, beaconDB)
 	if err != nil {
 		t.Fatalf("Could not fetch vote count: %v", err)
 	}
