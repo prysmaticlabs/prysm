@@ -102,7 +102,7 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	key := bytesutil.ToBytes32(beaconState.ValidatorRegistry[0].Pubkey)
 	voteTargets[key] = potentialHead
 
-	head, err := LMDGhost(beaconState, genesisBlock, voteTargets, observedBlocks, beaconDB)
+	head, err := LMDGhost(genesisBlock, voteTargets, observedBlocks, beaconDB)
 	if err != nil {
 		t.Fatalf("Could not run LMD GHOST: %v", err)
 	}
@@ -159,7 +159,7 @@ func TestLMDGhost_TrivialHigherVoteCountWins(t *testing.T) {
 
 	// We then test LMD Ghost was applied as the fork-choice rule.
 	observedBlocks := []*pb.BeaconBlock{lowerVoteBlock, higherVoteBlock}
-	head, err := LMDGhost(beaconState, genesisBlock, voteTargets, observedBlocks, beaconDB)
+	head, err := LMDGhost(genesisBlock, voteTargets, observedBlocks, beaconDB)
 	if err != nil {
 		t.Fatalf("Could not run LMD GHOST: %v", err)
 	}
@@ -208,7 +208,7 @@ func TestLMDGhost_EveryActiveValidatorHasLatestAttestation(t *testing.T) {
 
 	// We then test LMD Ghost was applied as the fork-choice rule.
 	observedBlocks := []*pb.BeaconBlock{lowerVoteBlock, higherVoteBlock}
-	head, err := LMDGhost(beaconState, genesisBlock, voteTargets, observedBlocks, beaconDB)
+	head, err := LMDGhost(genesisBlock, voteTargets, observedBlocks, beaconDB)
 	if err != nil {
 		t.Fatalf("Could not run LMD GHOST: %v", err)
 	}

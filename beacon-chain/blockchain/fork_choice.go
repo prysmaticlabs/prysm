@@ -14,7 +14,6 @@ import (
 // LMDGhost applies the Latest Message Driven, Greediest Heaviest Observed Sub-Tree
 // fork-choice rule defined in the Ethereum Serenity specification for the beacon chain.
 func LMDGhost(
-	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 	voteTargets map[[32]byte]*pb.BeaconBlock,
 	observedBlocks []*pb.BeaconBlock,
