@@ -75,10 +75,6 @@ func TestSetDirectoryString(t *testing.T) {
   }
 }
 
-func TestStringDirectoryString(t *testing.T) {
-  
-}
-
 func TestHomeDir(t *testing.T) {
   expected := usr.HomeDir
   got := homeDir()
