@@ -85,7 +85,7 @@ func TestLifecycle(t *testing.T) {
 	rpcService.Stop()
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
-
+//failed
 func TestBadEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
 	rpcService := NewRPCService(context.Background(), &Config{

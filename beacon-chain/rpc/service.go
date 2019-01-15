@@ -63,8 +63,7 @@ type Service struct {
 	incomingAttestation   chan *pbp2p.Attestation
 	enablePOWChain        bool
 	slotAlignmentDuration time.Duration
-	failStatus            error
-
+	credentialError       error
 }
 
 // Config options for the beacon node RPC server.
@@ -108,10 +107,11 @@ func (s *Service) Start() {
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", s.port))
 	if err != nil {
-		log.Errorf("Could not listen to port :%s: %v", s.port, err)
-		s.failStatus = err
+		log.Fatalf("Could not listen to port :%s: %v", s.port, err)
 		return
 	}
+	s.listener = lis
+	log.Infof("RPC server listening on port :%s", s.port)
 
 	// TODO(#791): Utilize a certificate for secure connections
 	// between beacon nodes and validator clients.
@@ -119,7 +119,7 @@ func (s *Service) Start() {
 		creds, err := credentials.NewServerTLSFromFile(s.withCert, s.withKey)
 		if err != nil {
 			log.Errorf("Could not load TLS keys: %s", err)
-			s.failStatus = err
+			s.credentialError = err
 		}
 		s.grpcServer = grpc.NewServer(grpc.Creds(creds))
 	} else {
@@ -138,8 +138,7 @@ func (s *Service) Start() {
 	go func() {
 		err = s.grpcServer.Serve(lis)
 		if err != nil {
-			log.Errorf("Could not serve gRPC: %v", err)
-			s.failStatus = err
+			log.Fatalf("Could not serve gRPC: %v", err)
 		}
 	}()
 }
@@ -155,11 +154,10 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// Status always returns nil.
-// TODO(1205): Add service health checks.
+// Status returns nil or credentialError
 func (s *Service) Status() error {
-	if s.failStatus != nil {
-		return s.failStatus
+	if s.credentialError != nil {
+		return s.credentialError
 	}
 	return nil
 }
