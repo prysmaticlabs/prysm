@@ -2,16 +2,18 @@
 package powchain
 
 import (
+	"bytes"
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"math/big"
 	"strings"
 
 	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	contracts "github.com/prysmaticlabs/prysm/contracts/validator-registration-contract"
@@ -208,44 +210,64 @@ func (w *Web3Service) run(done <-chan struct{}) {
 // the POW chain by trying to ascertain which participant deposited
 // in the contract
 func (w *Web3Service) processLog(VRClog gethTypes.Log) {
-	// public key is the second topic from validatorRegistered log.
+
 	merkleRoot := VRClog.Topics[1]
-	depositData := VRClog.Topics[2]
-	// TODO(#1288): Handle logs larger than 32 bytes, which might not be possible
-	// currently. size of topics are bounded to 32 bytes, so for deposit data larger than 32 bytes
-	// retrieve from other topics.
+	depositData, MerkleTreeIndex, err := w.unPackLogData(VRClog.Data)
+	if err != nil {
+		log.Errorf("Could not unpack log %v", err)
+		return
+	}
+
 	if err := w.saveInTrie(depositData, merkleRoot); err != nil {
 		log.Errorf("Could not save in trie %v", err)
 		return
 	}
 
-	decodedData, err := hexutil.Decode(depositData.Hex())
-	if err != nil {
-		log.Errorf("Could not decode log %v", err)
-		return
-	}
-
-	log.Info(decodedData)
-
-	depositInput, err := blocks.DecodeDepositInput(decodedData)
+	depositInput, err := blocks.DecodeDepositInput(depositData)
 	if err != nil {
 		log.Errorf("Could not decode deposit input  %v", err)
 		return
 	}
 
+	index := binary.BigEndian.Uint64(MerkleTreeIndex)
+
 	log.WithFields(logrus.Fields{
-		"publicKey": depositInput.Pubkey,
-	}).Info("Validator registered in VRC with public key")
+		"publicKey":         depositInput.Pubkey,
+		"merkle tree index": index,
+	}).Info("Validator registered in VRC with public key and index")
 
 }
 
+func (w *Web3Service) unPackLogData(data []byte) ([]byte, []byte, error) {
+
+	reader := bytes.NewReader([]byte(contracts.ValidatorRegistrationABI))
+	contractAbi, err := abi.JSON(reader)
+	if err != nil {
+		return nil, nil, fmt.Errorf("unable to generate contract abi %v", err)
+	}
+
+	unpackedLogs := []*[]byte{
+		&[]byte{},
+		&[]byte{},
+	}
+
+	if err := contractAbi.Unpack(&unpackedLogs, "Deposit", data); err != nil {
+		return nil, nil, fmt.Errorf("unable to unpack logs %v", err)
+	}
+
+	depositData := *unpackedLogs[0]
+	merkleTreeIndex := *unpackedLogs[1]
+
+	return depositData, merkleTreeIndex, nil
+}
+
 // saveInTrie saves in the in-memory deposit trie.
-func (w *Web3Service) saveInTrie(depositData common.Hash, merkleRoot common.Hash) error {
+func (w *Web3Service) saveInTrie(depositData []byte, merkleRoot common.Hash) error {
 	if w.depositTrie.Root() != merkleRoot {
 		return errors.New("saved root in trie is unequal to root received from log")
 	}
 
-	w.depositTrie.UpdateDepositTrie(depositData.Bytes())
+	w.depositTrie.UpdateDepositTrie(depositData)
 	return nil
 }
 

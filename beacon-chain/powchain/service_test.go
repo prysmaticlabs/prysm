@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"math/big"
@@ -11,17 +12,15 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/prysmaticlabs/go-bls/bazel-go-bls/external/go_sdk/src/encoding/binary"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	contracts "github.com/prysmaticlabs/prysm/contracts/validator-registration-contract"
-	byteutils "github.com/prysmaticlabs/prysm/shared/bytes"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -291,7 +290,7 @@ func TestSaveInTrie(t *testing.T) {
 
 	currentRoot := web3Service.depositTrie.Root()
 
-	if err := web3Service.saveInTrie(common.Hash{'A'}, currentRoot); err != nil {
+	if err := web3Service.saveInTrie([]byte{'A'}, currentRoot); err != nil {
 		t.Errorf("Unable to save deposit in trie %v", err)
 	}
 
@@ -321,23 +320,15 @@ func TestProcessLogs(t *testing.T) {
 
 	currentRoot := web3Service.depositTrie.Root()
 
-	type depositData struct {
-		Pubkey                      [48]byte
-		RandaoCommitmentHash32      [32]byte
-		WithdrawalCredentialsHash32 [32]byte
-		CustodyCommitment           [32]byte
-		Possession                  [48]byte
-	}
-
 	var newf [48]byte
 	copy(newf[:], []byte("testing"))
 
-	data := depositData{
-		Pubkey:                      newf,
-		RandaoCommitmentHash32:      byteutils.ToBytes32([]byte("randao")),
-		WithdrawalCredentialsHash32: byteutils.ToBytes32([]byte("withdraw")),
-		CustodyCommitment:           byteutils.ToBytes32([]byte("randao")),
-		Possession:                  newf,
+	data := &pb.DepositInput{
+		Pubkey:                      newf[:],
+		ProofOfPossession:           newf[:],
+		WithdrawalCredentialsHash32: []byte("withdraw"),
+		RandaoCommitmentHash32:      []byte("randao"),
+		CustodyCommitmentHash32:     []byte("custody"),
 	}
 
 	serializedData := new(bytes.Buffer)
@@ -345,18 +336,32 @@ func TestProcessLogs(t *testing.T) {
 		t.Fatalf("Could not serialize data %v", err)
 	}
 
-	log := gethTypes.Log{
-		Address: common.Address{},
-		Topics:  make([]common.Hash, 5),
+	testAcc.txOpts.Value = amount32Eth
+	if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+		t.Fatalf("Could not deposit to VRC %v", err)
 	}
 
-	log.Topics[0] = common.Hash{'a'}
-	log.Topics[1] = currentRoot
-	log.Topics[2] = byteutils.ToBytes32(serializedData.Bytes())
+	testAcc.backend.Commit()
 
-	web3Service.processLog(log)
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{
+			web3Service.vrcAddress,
+		},
+	}
 
+	logz, err := testAcc.backend.FilterLogs(web3Service.ctx, query)
+	if err != nil {
+		t.Fatalf("Unable to retrieve logs %v", err)
+	}
+
+	logz[0].Topics[1] = currentRoot
+
+	web3Service.processLog(logz[0])
+
+	testutil.AssertLogsDoNotContain(t, hook, "Could not unpack log")
 	testutil.AssertLogsDoNotContain(t, hook, "Could not save in trie")
+	testutil.AssertLogsDoNotContain(t, hook, "Could not decode deposit input")
+	testutil.AssertLogsContain(t, hook, "Validator registered in VRC with public key and index")
 
 	hook.Reset()
 }
@@ -464,7 +469,7 @@ func TestBadLogger(t *testing.T) {
 	hook.Reset()
 }
 
-func TestStuff(t *testing.T) {
+func TestUnpackLogs(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
@@ -495,42 +500,71 @@ func TestStuff(t *testing.T) {
 		t.Errorf("Deposit root is not empty %v", web3Service.depositRoot)
 	}
 
-	hell := [4]byte{'a', 'b', 'c', 'd'}
-	t.Log(hell)
+	var newf [48]byte
+	copy(newf[:], []byte("testing"))
+
+	data := &pb.DepositInput{
+		Pubkey:                      newf[:],
+		ProofOfPossession:           newf[:],
+		WithdrawalCredentialsHash32: []byte("withdraw"),
+		RandaoCommitmentHash32:      []byte("randao"),
+		CustodyCommitmentHash32:     []byte("custody"),
+	}
+
+	serializedData := new(bytes.Buffer)
+	if err := ssz.Encode(serializedData, data); err != nil {
+		t.Fatalf("Could not serialize data %v", err)
+	}
 
 	testAcc.txOpts.Value = amount32Eth
-	if _, err := testAcc.contract.Deposit(testAcc.txOpts, hell[:]); err != nil {
+	if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
 		t.Fatalf("Could not deposit to VRC %v", err)
 	}
 	testAcc.backend.Commit()
-
-	reader := bytes.NewReader([]byte(contracts.ValidatorRegistrationABI))
-	contractAbi, _ := abi.JSON(reader)
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
 			web3Service.vrcAddress,
 		},
 	}
-	logy, err := testAcc.backend.FilterLogs(web3Service.ctx, query)
 
-	logz, err := testAcc.contract.FilterDeposit(&bind.FilterOpts{}, [][]byte{})
-	nt := make([]*[]byte, 2)
-
-	nt[0] = &[]byte{}
-	nt[1] = &[]byte{}
-
-	_ = logz.Next()
-	t.Log(logy[0].Data)
-	for _, V := range contractAbi.Events {
-		t.Log(V)
+	logz, err := testAcc.backend.FilterLogs(web3Service.ctx, query)
+	if err != nil {
+		t.Fatalf("Unable to retrieve logs %v", err)
 	}
-	contractAbi.Unpack(&nt, "Deposit", logy[0].Data)
-	t.Log(*nt[0])
-	parsedData := *nt[0]
-	nc, nv, err := blocks.DecodeDepositAmountAndTimeStamp(*nt[0])
-	t.Log(nc)
-	t.Log(nv)
 
-	t.Log(binary.BigEndian.Uint64(parsedData[len(parsedData)-20 : len(parsedData)-12]))
+	depData, index, err := web3Service.unPackLogData(logz[0].Data)
+	if err != nil {
+		t.Fatalf("Unable to unpack logs %v", err)
+	}
+
+	if binary.BigEndian.Uint64(index) != 65536 {
+		t.Errorf("Retrived merkle tree index is incorrect %d", index)
+	}
+
+	deserializeData, err := blocks.DecodeDepositInput(depData)
+	if err != nil {
+		t.Fatalf("Unable to decode deposit input %v", err)
+	}
+
+	if !bytes.Equal(deserializeData.Pubkey, newf[:]) {
+		t.Errorf("Pubkey is not the same as the data that was put in %v", deserializeData.Pubkey)
+	}
+
+	if !bytes.Equal(deserializeData.ProofOfPossession, newf[:]) {
+		t.Errorf("Proof of Possesion is not the same as the data that was put in %v", deserializeData.ProofOfPossession)
+	}
+
+	if !bytes.Equal(deserializeData.CustodyCommitmentHash32, []byte("custody")) {
+		t.Errorf("Custody commitment is not the same as the data that was put in %v", deserializeData.CustodyCommitmentHash32)
+	}
+
+	if !bytes.Equal(deserializeData.RandaoCommitmentHash32, []byte("randao")) {
+		t.Errorf("Randao Commitment is not the same as the data that was put in %v", deserializeData.RandaoCommitmentHash32)
+	}
+
+	if !bytes.Equal(deserializeData.WithdrawalCredentialsHash32, []byte("withdraw")) {
+		t.Errorf("Withdrawal Credentials is not the same as the data that was put in %v", deserializeData.WithdrawalCredentialsHash32)
+	}
+
 }
