@@ -717,4 +717,5 @@ func TestUnpackChainStartLogs(t *testing.T) {
 	if timestamp > uint64(time.Now().Unix()) {
 		t.Errorf("Timestamp from log is incorrect %d , %d", timestamp, time.Now().Unix())
 	}
+
 }
