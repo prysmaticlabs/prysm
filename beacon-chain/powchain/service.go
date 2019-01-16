@@ -230,7 +230,7 @@ func (w *Web3Service) processLog(VRClog gethTypes.Log) {
 
 // processDepositLog processes the log which had been received from
 // the POW chain by trying to ascertain which participant deposited
-// in the contract
+// in the contract.
 func (w *Web3Service) processDepositLog(VRClog gethTypes.Log) {
 
 	merkleRoot := VRClog.Topics[1]
@@ -260,6 +260,8 @@ func (w *Web3Service) processDepositLog(VRClog gethTypes.Log) {
 
 }
 
+// processChainStartLog processes the log which had been received from
+// the POW chain by trying to determine when to start the beacon chain.
 func (w *Web3Service) processChainStartLog(VRClog gethTypes.Log) {
 	receiptRoot := VRClog.Topics[1]
 
@@ -288,6 +290,7 @@ func (w *Web3Service) processChainStartLog(VRClog gethTypes.Log) {
 
 }
 
+// unPackDepositLogData unpacks the data from a log using the abi decoder.
 func (w *Web3Service) unPackDepositLogData(data []byte) ([]byte, []byte, error) {
 
 	reader := bytes.NewReader([]byte(contracts.ValidatorRegistrationABI))
