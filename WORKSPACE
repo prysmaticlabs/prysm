@@ -302,7 +302,7 @@ go_repository(
 
 go_repository(
     name = "com_github_btcsuite_btcd",
-    commit = "5bda5314ca9549a589e63d7b2e6104492a0d5328",
+    commit = "ed77733ec07dfc8a513741138419b8d9d3de9d2d",
     importpath = "github.com/btcsuite/btcd",
 )
 
@@ -501,7 +501,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "48ac38b7c8cbedd50b1613c0fccacfc7d88dfcdf",
+    commit = "a457fd036447854c0c02e89ea439481bdcf941a2",
     importpath = "golang.org/x/sys",
 )
 
@@ -645,7 +645,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aristanetworks_goarista",
-    commit = "23a91eb493c6734b762ab29037be0dc3c4f5d105",
+    commit = "b7a59f2ffb2369336aaa78fc9a555e4fd277616b",
     importpath = "github.com/aristanetworks/goarista",
 )
 
@@ -657,7 +657,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_client_model",
-    commit = "f287a105a20ec685d797f65cd0ce8fbeaef42da1",
+    commit = "56726106282f1985ea77d5305743db7231b0c0a8",
     importpath = "github.com/prometheus/client_model",
 )
 
@@ -675,7 +675,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_prometheus",
-    tag = "v2.6.0",
+    tag = "v2.6.1",
     importpath = "github.com/prometheus/prometheus",
 )
 
@@ -910,7 +910,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_oauth2",
-    commit = "36a7019397c4c86cf59eeab3bc0d188bac444277",
+    commit = "5dab4167f31cbd76b407f1486c86b40748bc5073",
     importpath = "golang.org/x/oauth2",
 )
 
