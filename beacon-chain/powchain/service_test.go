@@ -1,17 +1,30 @@
 package powchain
 
 import (
+	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"encoding/binary"
 	"errors"
+	"fmt"
 	"math/big"
 	"strings"
 	"testing"
 
-	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	contracts "github.com/prysmaticlabs/prysm/contracts/validator-registration-contract"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/trie"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -29,6 +42,10 @@ func (g *goodReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.
 
 type badLogger struct{}
 
+func (b *badLogger) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]gethTypes.Log, error) {
+	return nil, errors.New("unable to retrieve logs")
+}
+
 func (b *badLogger) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error) {
 	return nil, errors.New("subscription has failed")
 }
@@ -39,13 +56,62 @@ func (g *goodLogger) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQ
 	return new(event.Feed).Subscribe(ch), nil
 }
 
+func (g *goodLogger) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]gethTypes.Log, error) {
+	logs := make([]gethTypes.Log, 3)
+	for i := 0; i < len(logs); i++ {
+		logs[i].Address = common.Address{}
+		logs[i].Topics = make([]common.Hash, 5)
+		logs[i].Topics[0] = common.Hash{'a'}
+		logs[i].Topics[1] = common.Hash{'b'}
+		logs[i].Topics[2] = common.Hash{'c'}
+
+	}
+	return logs, nil
+}
+
+var amount32Eth, _ = new(big.Int).SetString("32000000000000000000", 10)
+
+type testAccount struct {
+	addr         common.Address
+	contract     *contracts.ValidatorRegistration
+	contractAddr common.Address
+	backend      *backends.SimulatedBackend
+	txOpts       *bind.TransactOpts
+}
+
+func setup() (*testAccount, error) {
+	genesis := make(core.GenesisAlloc)
+	privKey, _ := crypto.GenerateKey()
+	pubKeyECDSA, ok := privKey.Public().(*ecdsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("error casting public key to ECDSA")
+	}
+
+	// strip off the 0x and the first 2 characters 04 which is always the EC prefix and is not required.
+	publicKeyBytes := crypto.FromECDSAPub(pubKeyECDSA)[4:]
+	var pubKey = make([]byte, 48)
+	copy(pubKey[:], []byte(publicKeyBytes))
+
+	addr := crypto.PubkeyToAddress(privKey.PublicKey)
+	txOpts := bind.NewKeyedTransactor(privKey)
+	startingBalance, _ := new(big.Int).SetString("1000000000000000000000", 10)
+	genesis[addr] = core.GenesisAccount{Balance: startingBalance}
+	backend := backends.NewSimulatedBackend(genesis, 2100000)
+
+	contractAddr, _, contract, err := contracts.DeployValidatorRegistration(txOpts, backend)
+	if err != nil {
+		return nil, err
+	}
+
+	return &testAccount{addr, contract, contractAddr, backend, txOpts}, nil
+}
+
 func TestNewWeb3Service(t *testing.T) {
 	endpoint := "http://127.0.0.1"
 	ctx := context.Background()
 	var err error
 	if _, err = NewWeb3Service(ctx, &Web3ServiceConfig{
 		Endpoint: endpoint,
-		Pubkey:   "",
 		VrcAddr:  common.Address{},
 		Reader:   &goodReader{},
 		Logger:   &goodLogger{},
@@ -55,7 +121,6 @@ func TestNewWeb3Service(t *testing.T) {
 	endpoint = "ftp://127.0.0.1"
 	if _, err = NewWeb3Service(ctx, &Web3ServiceConfig{
 		Endpoint: endpoint,
-		Pubkey:   "",
 		VrcAddr:  common.Address{},
 		Reader:   &goodReader{},
 		Logger:   &goodLogger{},
@@ -65,7 +130,6 @@ func TestNewWeb3Service(t *testing.T) {
 	endpoint = "ws://127.0.0.1"
 	if _, err = NewWeb3Service(ctx, &Web3ServiceConfig{
 		Endpoint: endpoint,
-		Pubkey:   "",
 		VrcAddr:  common.Address{},
 		Reader:   &goodReader{},
 		Logger:   &goodLogger{},
@@ -75,7 +139,6 @@ func TestNewWeb3Service(t *testing.T) {
 	endpoint = "ipc://geth.ipc"
 	if _, err = NewWeb3Service(ctx, &Web3ServiceConfig{
 		Endpoint: endpoint,
-		Pubkey:   "",
 		VrcAddr:  common.Address{},
 		Reader:   &goodReader{},
 		Logger:   &goodLogger{},
@@ -88,16 +151,21 @@ func TestStart(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	endpoint := "ws://127.0.0.1"
+	testAcc, err := setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
-		Endpoint: endpoint,
-		Pubkey:   "",
-		VrcAddr:  common.Address{},
-		Reader:   &goodReader{},
-		Logger:   &goodLogger{},
+		Endpoint:        endpoint,
+		VrcAddr:         testAcc.contractAddr,
+		Reader:          &goodReader{},
+		Logger:          &goodLogger{},
+		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
+	testAcc.backend.Commit()
 
 	web3Service.Start()
 
@@ -107,22 +175,29 @@ func TestStart(t *testing.T) {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
 	hook.Reset()
+	web3Service.cancel()
 }
 
 func TestStop(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	endpoint := "ws://127.0.0.1"
+	testAcc, err := setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
-		Endpoint: endpoint,
-		Pubkey:   "",
-		VrcAddr:  common.Address{},
-		Reader:   &goodReader{},
-		Logger:   &goodLogger{},
+		Endpoint:        endpoint,
+		VrcAddr:         testAcc.contractAddr,
+		Reader:          &goodReader{},
+		Logger:          &goodLogger{},
+		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
+
+	testAcc.backend.Commit()
 
 	if err := web3Service.Stop(); err != nil {
 		t.Fatalf("Unable to stop web3 PoW chain service: %v", err)
@@ -141,19 +216,175 @@ func TestStop(t *testing.T) {
 	hook.Reset()
 }
 
-func TestBadReader(t *testing.T) {
-	hook := logTest.NewGlobal()
+func TestInitDataFromVRC(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
+	testAcc, err := setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
-		Endpoint: endpoint,
-		Pubkey:   "",
-		VrcAddr:  common.Address{},
-		Reader:   &badReader{},
-		Logger:   &goodLogger{},
+		Endpoint:        endpoint,
+		VrcAddr:         testAcc.contractAddr,
+		Reader:          &goodReader{},
+		Logger:          &goodLogger{},
+		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
+
+	testAcc.backend.Commit()
+
+	if err := web3Service.initDataFromVRC(); err != nil {
+		t.Fatalf("Could not init from vrc %v", err)
+	}
+
+	if web3Service.depositCount != 0 {
+		t.Errorf("Deposit count is not equal to zero %d", web3Service.depositCount)
+	}
+
+	if !bytes.Equal(web3Service.depositRoot, []byte{}) {
+		t.Errorf("Deposit root is not empty %v", web3Service.depositRoot)
+	}
+
+	testAcc.txOpts.Value = amount32Eth
+	if _, err := testAcc.contract.Deposit(testAcc.txOpts, []byte{'a'}); err != nil {
+		t.Fatalf("Could not deposit to VRC %v", err)
+	}
+	testAcc.backend.Commit()
+
+	if err := web3Service.initDataFromVRC(); err != nil {
+		t.Fatalf("Could not init from vrc %v", err)
+	}
+
+	if web3Service.depositCount != 1 {
+		t.Errorf("Deposit count is not equal to one %d", web3Service.depositCount)
+	}
+
+	if bytes.Equal(web3Service.depositRoot, []byte{}) {
+		t.Errorf("Deposit root is  empty %v", web3Service.depositRoot)
+	}
+
+}
+
+func TestSaveInTrie(t *testing.T) {
+	endpoint := "ws://127.0.0.1"
+	testAcc, err := setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint:        endpoint,
+		VrcAddr:         testAcc.contractAddr,
+		Reader:          &goodReader{},
+		Logger:          &goodLogger{},
+		ContractBackend: testAcc.backend,
+	})
+	if err != nil {
+		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
+	}
+
+	testAcc.backend.Commit()
+
+	web3Service.depositTrie = trie.NewDepositTrie()
+
+	currentRoot := web3Service.depositTrie.Root()
+
+	if err := web3Service.saveInTrie([]byte{'A'}, currentRoot); err != nil {
+		t.Errorf("Unable to save deposit in trie %v", err)
+	}
+
+}
+
+func TestProcessDepositLog(t *testing.T) {
+	hook := logTest.NewGlobal()
+	endpoint := "ws://127.0.0.1"
+	testAcc, err := setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint:        endpoint,
+		VrcAddr:         testAcc.contractAddr,
+		Reader:          &goodReader{},
+		Logger:          &goodLogger{},
+		ContractBackend: testAcc.backend,
+	})
+	if err != nil {
+		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
+	}
+
+	testAcc.backend.Commit()
+
+	web3Service.depositTrie = trie.NewDepositTrie()
+
+	currentRoot := web3Service.depositTrie.Root()
+
+	var stub [48]byte
+	copy(stub[:], []byte("testing"))
+
+	data := &pb.DepositInput{
+		Pubkey:                      stub[:],
+		ProofOfPossession:           stub[:],
+		WithdrawalCredentialsHash32: []byte("withdraw"),
+		RandaoCommitmentHash32:      []byte("randao"),
+		CustodyCommitmentHash32:     []byte("custody"),
+	}
+
+	serializedData := new(bytes.Buffer)
+	if err := ssz.Encode(serializedData, data); err != nil {
+		t.Fatalf("Could not serialize data %v", err)
+	}
+
+	testAcc.txOpts.Value = amount32Eth
+	if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+		t.Fatalf("Could not deposit to VRC %v", err)
+	}
+
+	testAcc.backend.Commit()
+
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{
+			web3Service.vrcAddress,
+		},
+	}
+
+	logs, err := testAcc.backend.FilterLogs(web3Service.ctx, query)
+	if err != nil {
+		t.Fatalf("Unable to retrieve logs %v", err)
+	}
+
+	logs[0].Topics[1] = currentRoot
+
+	web3Service.processLog(logs[0])
+
+	testutil.AssertLogsDoNotContain(t, hook, "Could not unpack log")
+	testutil.AssertLogsDoNotContain(t, hook, "Could not save in trie")
+	testutil.AssertLogsDoNotContain(t, hook, "Could not decode deposit input")
+	testutil.AssertLogsContain(t, hook, "Validator registered in VRC with public key and index")
+
+	hook.Reset()
+}
+
+func TestBadReader(t *testing.T) {
+	hook := logTest.NewGlobal()
+	endpoint := "ws://127.0.0.1"
+	testAcc, err := setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint:        endpoint,
+		VrcAddr:         testAcc.contractAddr,
+		Reader:          &badReader{},
+		Logger:          &goodLogger{},
+		ContractBackend: testAcc.backend,
+	})
+	if err != nil {
+		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
+	}
+
+	testAcc.backend.Commit()
 	web3Service.reader = &badReader{}
 	web3Service.logger = &goodLogger{}
 	web3Service.run(web3Service.ctx.Done())
@@ -167,16 +398,21 @@ func TestBadReader(t *testing.T) {
 
 func TestLatestMainchainInfo(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
+	testAcc, err := setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
-		Endpoint: endpoint,
-		Pubkey:   "",
-		VrcAddr:  common.Address{},
-		Reader:   &goodReader{},
-		Logger:   &goodLogger{},
+		Endpoint:        endpoint,
+		VrcAddr:         testAcc.contractAddr,
+		Reader:          &goodReader{},
+		Logger:          &goodLogger{},
+		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
+	testAcc.backend.Commit()
 	web3Service.reader = &goodReader{}
 	web3Service.logger = &goodLogger{}
 
@@ -205,16 +441,22 @@ func TestLatestMainchainInfo(t *testing.T) {
 func TestBadLogger(t *testing.T) {
 	hook := logTest.NewGlobal()
 	endpoint := "ws://127.0.0.1"
+	testAcc, err := setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
-		Endpoint: endpoint,
-		Pubkey:   "",
-		VrcAddr:  common.Address{},
-		Reader:   &goodReader{},
-		Logger:   &goodLogger{},
+		Endpoint:        endpoint,
+		VrcAddr:         testAcc.contractAddr,
+		Reader:          &goodReader{},
+		Logger:          &goodLogger{},
+		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
+	testAcc.backend.Commit()
+
 	web3Service.reader = &goodReader{}
 	web3Service.logger = &badLogger{}
 
@@ -227,112 +469,102 @@ func TestBadLogger(t *testing.T) {
 	hook.Reset()
 }
 
-func TestGoodLogger(t *testing.T) {
-	hook := logTest.NewGlobal()
+func TestUnpackLogs(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
+	testAcc, err := setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
-		Endpoint: endpoint,
-		Pubkey:   "",
-		VrcAddr:  common.Address{},
-		Reader:   &goodReader{},
-		Logger:   &goodLogger{},
+		Endpoint:        endpoint,
+		VrcAddr:         testAcc.contractAddr,
+		Reader:          &goodReader{},
+		Logger:          &goodLogger{},
+		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
 	}
 
-	web3Service.pubKey = "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-	pubkey := common.HexToHash(web3Service.pubKey)
+	testAcc.backend.Commit()
 
-	web3Service.reader = &goodReader{}
-	web3Service.logger = &goodLogger{}
-
-	exitRoutine := make(chan bool)
-
-	go func() {
-		web3Service.run(web3Service.ctx.Done())
-		<-exitRoutine
-	}()
-
-	log := gethTypes.Log{Topics: []common.Hash{[32]byte{}, pubkey}}
-	web3Service.logChan <- log
-	web3Service.cancel()
-	exitRoutine <- true
-
-	lastEntry := hook.LastEntry()
-	want := "Validator registered in VRC with public key"
-	if lastEntry.Message != want {
-		t.Errorf("incorrect log, expected %s, got %s", want, lastEntry.Message)
+	if err := web3Service.initDataFromVRC(); err != nil {
+		t.Fatalf("Could not init from vrc %v", err)
 	}
 
-	if lastEntry.Data["publicKey"] != web3Service.pubKey {
-		t.Errorf("incorrect pubKey, expected %s, got %s", lastEntry.Data["publicKey"], web3Service.pubKey)
+	if web3Service.depositCount != 0 {
+		t.Errorf("Deposit count is not equal to zero %d", web3Service.depositCount)
 	}
 
-	if !web3Service.validatorRegistered {
-		t.Errorf("validatorRegistered status expected true, got %v", web3Service.validatorRegistered)
+	if !bytes.Equal(web3Service.depositRoot, []byte{}) {
+		t.Errorf("Deposit root is not empty %v", web3Service.depositRoot)
 	}
 
-	hook.Reset()
-}
+	var stub [48]byte
+	copy(stub[:], []byte("testing"))
 
-func TestHeaderAfterValidation(t *testing.T) {
-	// User pubkeys with or without 0x should be OK.
-	testPubKeys := []string{
-		"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-		"0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+	data := &pb.DepositInput{
+		Pubkey:                      stub[:],
+		ProofOfPossession:           stub[:],
+		WithdrawalCredentialsHash32: []byte("withdraw"),
+		RandaoCommitmentHash32:      []byte("randao"),
+		CustodyCommitmentHash32:     []byte("custody"),
 	}
 
-	for _, tt := range testPubKeys {
-		func(pubKey string) {
-			hook := logTest.NewGlobal()
-			endpoint := "ws://127.0.0.1"
-			web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
-				Endpoint: endpoint,
-				Pubkey:   "",
-				VrcAddr:  common.Address{},
-				Reader:   &goodReader{},
-				Logger:   &goodLogger{},
-			})
-			if err != nil {
-				t.Fatalf("unable to setup web3 PoW chain service: %v", err)
-			}
-
-			web3Service.pubKey = pubKey
-			p := common.HexToHash(web3Service.pubKey)
-
-			web3Service.reader = &goodReader{}
-			web3Service.logger = &goodLogger{}
-
-			exitRoutine := make(chan bool)
-
-			go func() {
-				web3Service.run(web3Service.ctx.Done())
-				<-exitRoutine
-			}()
-
-			log := gethTypes.Log{Topics: []common.Hash{[32]byte{}, p}}
-			web3Service.logChan <- log
-
-			header := &gethTypes.Header{Number: big.NewInt(42)}
-			web3Service.headerChan <- header
-
-			web3Service.cancel()
-			exitRoutine <- true
-
-			testutil.AssertLogsContain(t, hook, "Validator registered in VRC with public key")
-
-			if !web3Service.validatorRegistered {
-				t.Errorf("validatorRegistered status expected true, got %v", web3Service.validatorRegistered)
-			}
-
-			if web3Service.blockNumber.Cmp(header.Number) != 0 {
-				t.Errorf("block number not set, expected %v, got %v", header.Number, web3Service.blockNumber)
-			}
-
-			if web3Service.blockHash.Hex() != header.Hash().Hex() {
-				t.Errorf("block hash not set, expected %v, got %v", header.Hash().Hex(), web3Service.blockHash.Hex())
-			}
-		}(tt)
+	serializedData := new(bytes.Buffer)
+	if err := ssz.Encode(serializedData, data); err != nil {
+		t.Fatalf("Could not serialize data %v", err)
 	}
+
+	testAcc.txOpts.Value = amount32Eth
+	if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+		t.Fatalf("Could not deposit to VRC %v", err)
+	}
+	testAcc.backend.Commit()
+
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{
+			web3Service.vrcAddress,
+		},
+	}
+
+	logz, err := testAcc.backend.FilterLogs(web3Service.ctx, query)
+	if err != nil {
+		t.Fatalf("Unable to retrieve logs %v", err)
+	}
+
+	depData, index, err := web3Service.unPackLogData(logz[0].Data)
+	if err != nil {
+		t.Fatalf("Unable to unpack logs %v", err)
+	}
+
+	if binary.BigEndian.Uint64(index) != 65536 {
+		t.Errorf("Retrieved merkle tree index is incorrect %d", index)
+	}
+
+	deserializeData, err := blocks.DecodeDepositInput(depData)
+	if err != nil {
+		t.Fatalf("Unable to decode deposit input %v", err)
+	}
+
+	if !bytes.Equal(deserializeData.Pubkey, stub[:]) {
+		t.Errorf("Pubkey is not the same as the data that was put in %v", deserializeData.Pubkey)
+	}
+
+	if !bytes.Equal(deserializeData.ProofOfPossession, stub[:]) {
+		t.Errorf("Proof of Possession is not the same as the data that was put in %v", deserializeData.ProofOfPossession)
+	}
+
+	if !bytes.Equal(deserializeData.CustodyCommitmentHash32, []byte("custody")) {
+		t.Errorf("Custody commitment is not the same as the data that was put in %v", deserializeData.CustodyCommitmentHash32)
+	}
+
+	if !bytes.Equal(deserializeData.RandaoCommitmentHash32, []byte("randao")) {
+		t.Errorf("Randao Commitment is not the same as the data that was put in %v", deserializeData.RandaoCommitmentHash32)
+	}
+
+	if !bytes.Equal(deserializeData.WithdrawalCredentialsHash32, []byte("withdraw")) {
+		t.Errorf("Withdrawal Credentials is not the same as the data that was put in %v", deserializeData.WithdrawalCredentialsHash32)
+	}
+
 }
