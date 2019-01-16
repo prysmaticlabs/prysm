@@ -712,7 +712,6 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 //        if withdrawn_so_far >= MAX_WITHDRAWALS_PER_EPOCH:
 //            break
 func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
-
 	activeValidatorIndices := ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
 	totalBalance := TotalEffectiveBalance(state, activeValidatorIndices)
 
