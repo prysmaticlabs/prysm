@@ -284,7 +284,7 @@ func (s *Service) ProposerIndex(ctx context.Context, req *pb.ProposerIndexReques
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
 
-	_, ProposerIndex, err := v.ProposerShardAndIndex(
+	_, ProposerIndex, err := v.ProposerShardAndIdx(
 		beaconState,
 		req.SlotNumber,
 	)
@@ -382,7 +382,7 @@ func (s *Service) ValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.In
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
-	index, err := v.ValidatorIndex(
+	index, err := v.ValidatorIdx(
 		req.PublicKey,
 		beaconState.ValidatorRegistry,
 	)
