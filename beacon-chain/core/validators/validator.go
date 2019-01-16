@@ -720,9 +720,10 @@ func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 		penalized := validator.PenalizedSlot/config.EpochLength +
 			config.LatestPenalizedExitLength/2
 		if state.Slot/config.EpochLength == penalized {
-			e := (state.Slot / config.EpochLength) % config.LatestPenalizedExitLength
-			totalAtStart := state.LatestPenalizedExitBalances[(e+1)%config.LatestPenalizedExitLength]
-			totalAtEnd := state.LatestPenalizedExitBalances[e]
+			penalizedEpoch := (state.Slot / config.EpochLength) % config.LatestPenalizedExitLength
+			penalizedEpochStart := (penalizedEpoch + 1) % config.LatestPenalizedExitLength
+			totalAtStart := state.LatestPenalizedExitBalances[penalizedEpochStart]
+			totalAtEnd := state.LatestPenalizedExitBalances[penalizedEpoch]
 			totalPenalties := totalAtStart - totalAtEnd
 
 			penaltyMultiplier := totalPenalties * 3
