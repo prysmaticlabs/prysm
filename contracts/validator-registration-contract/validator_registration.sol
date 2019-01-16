@@ -3,10 +3,10 @@ pragma solidity ^0.5.1;
 import "./SafeMath.sol";
 contract ValidatorRegistration {
 
-    event HashChainValue(
+    event Deposit(
         bytes indexed previousReceiptRoot,
         bytes data,
-        uint totalDepositcount
+        bytes merkleTreeIndex
     );
 
     event ChainStart(
@@ -23,9 +23,10 @@ contract ValidatorRegistration {
     uint public constant MERKLE_TREE_DEPTH = 16;
     uint public constant SECONDS_PER_DAY = 86400;
 
-    mapping (uint => bytes) public receiptTree;
+    mapping (uint => bytes) public depositTree;
+    uint public depositCount;
     uint public fullDepositCount;
-    uint public totalDepositCount;
+
 
     using SafeMath for uint256;
 
@@ -56,20 +57,21 @@ contract ValidatorRegistration {
             "Deposit can't be lesser than MIN_TOPUP_SIZE."
         );
 
-        uint index = totalDepositCount + 2 ** MERKLE_TREE_DEPTH;
+        uint index = depositCount + 2 ** MERKLE_TREE_DEPTH;
         bytes memory msgGweiInBytes8 = abi.encodePacked(uint64(msg.value/GWEI_PER_ETH));
         bytes memory timeStampInBytes8 = abi.encodePacked(uint64(block.timestamp));
         bytes memory depositData = abi.encodePacked(msgGweiInBytes8, timeStampInBytes8, depositParams);
+        bytes memory merkleTreeIndex = abi.encodePacked(uint64(index));
 
-        emit HashChainValue(receiptTree[1], depositData, totalDepositCount);
+        emit Deposit(depositTree[1], depositData, merkleTreeIndex);
 
-        receiptTree[index] = abi.encodePacked(keccak256(depositData));
+        depositTree[index] = abi.encodePacked(keccak256(depositData));
         for (uint i = 0; i < MERKLE_TREE_DEPTH; i++) {
             index = index / 2;
-            receiptTree[index] = abi.encodePacked(keccak256(abi.encodePacked(receiptTree[index * 2], receiptTree[index * 2 + 1])));
+            depositTree[index] = abi.encodePacked(keccak256(abi.encodePacked(depositTree[index * 2], depositTree[index * 2 + 1])));
         }
         
-        totalDepositCount++;
+        depositCount++;
         if (msg.value == DEPOSIT_SIZE) {
             fullDepositCount++;
 
@@ -78,12 +80,12 @@ contract ValidatorRegistration {
             if (fullDepositCount == DEPOSITS_FOR_CHAIN_START) {
                 uint timestampDayBoundry = block.timestamp.sub(block.timestamp).mod(SECONDS_PER_DAY).add(SECONDS_PER_DAY);
                 bytes memory timestampDayBoundryBytes = abi.encodePacked(uint64(timestampDayBoundry));
-                emit ChainStart(receiptTree[1], timestampDayBoundryBytes);
+                emit ChainStart(depositTree[1], timestampDayBoundryBytes);
             }
         }
     }
 
-    function getReceiptRoot() public view returns (bytes memory) {
-        return receiptTree[1];
+    function getDepositRoot() public view returns (bytes memory) {
+        return depositTree[1];
     }
 }
