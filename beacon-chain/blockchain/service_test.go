@@ -111,20 +111,20 @@ func setupBeaconChain(t *testing.T, faultyPoWClient bool, beaconDB *db.BeaconDB)
 	if faultyPoWClient {
 		client := &faultyClient{}
 		web3Service, err = powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{
-			Endpoint: endpoint,
-			VrcAddr:  common.Address{},
-			Reader:   client,
-			Client:   client,
-			Logger:   client,
+			Endpoint:        endpoint,
+			DepositContract: common.Address{},
+			Reader:          client,
+			Client:          client,
+			Logger:          client,
 		})
 	} else {
 		client := &mockClient{}
 		web3Service, err = powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{
-			Endpoint: endpoint,
-			VrcAddr:  common.Address{},
-			Reader:   client,
-			Client:   client,
-			Logger:   client,
+			Endpoint:        endpoint,
+			DepositContract: common.Address{},
+			Reader:          client,
+			Client:          client,
+			Logger:          client,
 		})
 	}
 	if err != nil {
