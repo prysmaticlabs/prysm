@@ -97,6 +97,7 @@ func TestBroadcast(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(len(servers[1:])) // Num of nodes that receive the channel
 
+	// Goroutine that waits the broadcasted messages and completes waitgroup
 	go func() {
 		for recMessage := range msgSubsChannel {
 			protoMsg := recMessage.Data.(*shardpb.CollationBodyRequest)
@@ -108,12 +109,14 @@ func TestBroadcast(t *testing.T) {
 		}
 	}()
 
+	// Goroutine that makes timeouts if there if it is not completed in 5 seconds
 	go func() {
 		time.Sleep(5 * time.Second)
 		close(timeoutChan)
 		close(msgSubsChannel)
 	}()
 
+	// Goroutine that closes all channels once broadcast is complete
 	go func() {
 		wg.Wait()
 		close(doneChan)
