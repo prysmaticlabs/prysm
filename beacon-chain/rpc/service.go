@@ -101,6 +101,10 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 	}
 }
 
+func Crasher() {
+	log.Fatalf("Could not listen to port")
+}
+
 // Start the gRPC server.
 func (s *Service) Start() {
 	log.Info("Starting service")
@@ -108,7 +112,6 @@ func (s *Service) Start() {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", s.port))
 	if err != nil {
 		log.Fatalf("Could not listen to port :%s: %v", s.port, err)
-		return
 	}
 	s.listener = lis
 	log.Infof("RPC server listening on port :%s", s.port)
