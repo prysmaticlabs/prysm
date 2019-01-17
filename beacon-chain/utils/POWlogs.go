@@ -8,7 +8,7 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/contracts/validator-registration-contract"
 )
 
-// UnpackDepositLogData unpacks the data from a deposit log using the abi decoder.
+// UnpackDepositLogData unpacks the data from a deposit log using the ABI decoder.
 func UnpackDepositLogData(data []byte) (depositData []byte, merkleTreeIndex []byte, err error) {
 	reader := bytes.NewReader([]byte(contracts.ValidatorRegistrationABI))
 	contractAbi, err := abi.JSON(reader)
@@ -28,7 +28,7 @@ func UnpackDepositLogData(data []byte) (depositData []byte, merkleTreeIndex []by
 	return depositData, merkleTreeIndex, nil
 }
 
-// UnpackChainStartLogData unpacks the data from a chain start log using the abi decoder.
+// UnpackChainStartLogData unpacks the data from a chain start log using the ABI decoder.
 func UnpackChainStartLogData(data []byte) ([]byte, error) {
 	reader := bytes.NewReader([]byte(contracts.ValidatorRegistrationABI))
 	contractAbi, err := abi.JSON(reader)
