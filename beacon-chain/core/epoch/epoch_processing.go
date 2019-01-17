@@ -14,13 +14,15 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+var config = params.BeaconConfig()
+
 // CanProcessEpoch checks the eligibility to process epoch.
 // The epoch can be processed every EPOCH_LENGTH.
 //
 // Spec pseudocode definition:
 //    If state.slot % EPOCH_LENGTH == 0:
 func CanProcessEpoch(state *pb.BeaconState) bool {
-	return state.Slot%params.BeaconConfig().EpochLength == 0
+	return state.Slot%config.EpochLength == 0
 }
 
 // CanProcessDepositRoots checks the eligibility to process deposit root.
@@ -29,7 +31,7 @@ func CanProcessEpoch(state *pb.BeaconState) bool {
 // Spec pseudocode definition:
 //    If state.slot % DEPOSIT_ROOT_VOTING_PERIOD == 0:
 func CanProcessDepositRoots(state *pb.BeaconState) bool {
-	return state.Slot%params.BeaconConfig().DepositRootVotingPeriod == 0
+	return state.Slot%config.DepositRootVotingPeriod == 0
 }
 
 // CanProcessValidatorRegistry checks the eligibility to process validator registry.
@@ -61,7 +63,7 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 func ProcessDeposits(state *pb.BeaconState) *pb.BeaconState {
 
 	for _, receiptRoot := range state.DepositRootVotes {
-		if receiptRoot.VoteCount*2 > params.BeaconConfig().DepositRootVotingPeriod {
+		if receiptRoot.VoteCount*2 > config.DepositRootVotingPeriod {
 			state.LatestDepositRootHash32 = receiptRoot.DepositRootHash32
 		}
 	}
@@ -93,14 +95,14 @@ func ProcessJustification(
 	// assign new justified slot to 2 * EPOCH_LENGTH before.
 	if 3*prevEpochBoundaryAttestingBalance >= 2*totalBalance {
 		state.JustificationBitfield |= 2
-		state.JustifiedSlot = state.Slot - 2*params.BeaconConfig().EpochLength
+		state.JustifiedSlot = state.Slot - 2*config.EpochLength
 	}
 
 	// If this epoch was justified then we ensure the 1st bit in the bitfield is set,
 	// assign new justified slot to 1 * EPOCH_LENGTH before.
 	if 3*thisEpochBoundaryAttestingBalance >= 2*totalBalance {
 		state.JustificationBitfield |= 1
-		state.JustifiedSlot = state.Slot - 1*params.BeaconConfig().EpochLength
+		state.JustifiedSlot = state.Slot - 1*config.EpochLength
 	}
 	return state
 }
@@ -114,7 +116,7 @@ func ProcessJustification(
 //		state.previous_justified_slot == state.slot - 3 * EPOCH_LENGTH and state.justification_bitfield % 8 == 7
 //		state.previous_justified_slot == state.slot - 4 * EPOCH_LENGTH and state.justification_bitfield % 16 in (15, 14)
 func ProcessFinalization(state *pb.BeaconState) *pb.BeaconState {
-	epochLength := params.BeaconConfig().EpochLength
+	epochLength := config.EpochLength
 
 	if state.PreviousJustifiedSlot == state.Slot-2*epochLength &&
 		state.JustificationBitfield%4 == 3 {
@@ -188,7 +190,7 @@ func ProcessEjections(state *pb.BeaconState) (*pb.BeaconState, error) {
 	var err error
 	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
 	for _, index := range activeValidatorIndices {
-		if state.ValidatorBalances[index] < params.BeaconConfig().EjectionBalanceInGwei {
+		if state.ValidatorBalances[index] < config.EjectionBalanceInGwei {
 			state, err = validators.ExitValidator(state, index)
 			if err != nil {
 				return nil, fmt.Errorf("could not exit validator %d: %v", index, err)
@@ -210,10 +212,10 @@ func ProcessEjections(state *pb.BeaconState) (*pb.BeaconState, error) {
 func ProcessValidatorRegistry(
 	state *pb.BeaconState) (*pb.BeaconState, error) {
 
-	epochLength := int(params.BeaconConfig().EpochLength)
-	randaoMixesLength := params.BeaconConfig().LatestRandaoMixesLength
-	seedLookahead := params.BeaconConfig().SeedLookahead
-	shardCount := params.BeaconConfig().ShardCount
+	epochLength := int(config.EpochLength)
+	randaoMixesLength := config.LatestRandaoMixesLength
+	seedLookahead := config.SeedLookahead
+	shardCount := config.ShardCount
 
 	state, err := validators.UpdateRegistry(state)
 
@@ -260,9 +262,9 @@ func ProcessValidatorRegistry(
 func ProcessPartialValidatorRegistry(
 	state *pb.BeaconState) (*pb.BeaconState, error) {
 
-	epochLength := int(params.BeaconConfig().EpochLength)
-	randaoMixesLength := params.BeaconConfig().LatestRandaoMixesLength
-	seedLookahead := params.BeaconConfig().SeedLookahead
+	epochLength := int(config.EpochLength)
+	randaoMixesLength := config.LatestRandaoMixesLength
+	seedLookahead := config.SeedLookahead
 	randaoHash32 := bytesutil.ToBytes32(state.LatestRandaoMixesHash32S[(state.Slot-uint64(seedLookahead))%randaoMixesLength])
 	for i := 0; i < epochLength; i++ {
 		state.ShardCommitteesAtSlots[i] = state.ShardCommitteesAtSlots[epochLength+i]
@@ -292,7 +294,7 @@ func ProcessPartialValidatorRegistry(
 // 		Remove any attestation in state.latest_attestations such
 // 		that attestation.data.slot < state.slot - EPOCH_LENGTH
 func CleanupAttestations(state *pb.BeaconState) *pb.BeaconState {
-	epochLength := params.BeaconConfig().EpochLength
+	epochLength := config.EpochLength
 	var earliestSlot uint64
 
 	// If the state slot is less than epochLength, then the earliestSlot would
@@ -309,5 +311,21 @@ func CleanupAttestations(state *pb.BeaconState) *pb.BeaconState {
 		}
 	}
 	state.LatestAttestations = latestAttestations
+	return state
+}
+
+// UpdatePenalizedExitBalances ports over the current epoch's penalized exit balances
+// into next epoch.
+//
+// Spec pseudocode definition:
+// Let e = state.slot // EPOCH_LENGTH.
+// Set state.latest_penalized_exit_balances[(e+1) % LATEST_PENALIZED_EXIT_LENGTH] =
+// 		state.latest_penalized_exit_balances[e % LATEST_PENALIZED_EXIT_LENGTH]
+func UpdatePenalizedExitBalances(state *pb.BeaconState) *pb.BeaconState {
+	epoch := state.Slot / config.EpochLength
+	nextPenalizedEpoch := (epoch + 1) % config.LatestPenalizedExitLength
+	currPenalizedEpoch := (epoch) % config.LatestPenalizedExitLength
+	state.LatestPenalizedExitBalances[nextPenalizedEpoch] =
+		state.LatestPenalizedExitBalances[currPenalizedEpoch]
 	return state
 }
