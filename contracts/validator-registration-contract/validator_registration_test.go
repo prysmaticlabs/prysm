@@ -3,6 +3,7 @@ package vrc
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"encoding/binary"
 	"fmt"
 	"log"
 	"math/big"
@@ -113,7 +114,7 @@ func TestValidatorRegisters(t *testing.T) {
 	if err != nil {
 		t.Errorf("Validator registration failed: %v", err)
 	}
-	log, err := testAccount.contract.FilterHashChainValue(&bind.FilterOpts{}, [][]byte{})
+	log, err := testAccount.contract.FilterDeposit(&bind.FilterOpts{}, [][]byte{})
 
 	defer func() {
 		err = log.Close()
@@ -130,24 +131,29 @@ func TestValidatorRegisters(t *testing.T) {
 	}
 	log.Next()
 
-	if log.Event.TotalDepositcount.Cmp(big.NewInt(0)) != 0 {
-		t.Errorf("HashChainValue event total desposit count miss matched. Want: %v, Got: %v", big.NewInt(0), log.Event.TotalDepositcount)
+	index := make([]byte, 8)
+	binary.BigEndian.PutUint64(index, 65536)
+
+	if !bytes.Equal(log.Event.MerkleTreeIndex, index) {
+		t.Errorf("HashChainValue event total desposit count miss matched. Want: %v, Got: %v", index, log.Event.MerkleTreeIndex)
 	}
 	if !bytes.Equal(log.Event.Data[len(log.Event.Data)-1:], []byte{'A'}) {
 		t.Errorf("validatorRegistered event randao commitment miss matched. Want: %v, Got: %v", []byte{'A'}, log.Event.Data[len(log.Event.Data)-1:])
 	}
 
 	log.Next()
-	if log.Event.TotalDepositcount.Cmp(big.NewInt(1)) != 0 {
-		t.Errorf("HashChainValue event total desposit count miss matched. Want: %v, Got: %v", big.NewInt(1), log.Event.TotalDepositcount)
+	binary.BigEndian.PutUint64(index, 65537)
+	if !bytes.Equal(log.Event.MerkleTreeIndex, index) {
+		t.Errorf("HashChainValue event total desposit count miss matched. Want: %v, Got: %v", index, log.Event.MerkleTreeIndex)
 	}
 	if !bytes.Equal(log.Event.Data[len(log.Event.Data)-1:], []byte{'B'}) {
 		t.Errorf("validatorRegistered event randao commitment miss matched. Want: %v, Got: %v", []byte{'B'}, log.Event.Data[len(log.Event.Data)-1:])
 	}
 
 	log.Next()
-	if log.Event.TotalDepositcount.Cmp(big.NewInt(2)) != 0 {
-		t.Errorf("HashChainValue event total desposit count miss matched. Want: %v, Got: %v", big.NewInt(1), log.Event.TotalDepositcount)
+	binary.BigEndian.PutUint64(index, 65538)
+	if !bytes.Equal(log.Event.MerkleTreeIndex, index) {
+		t.Errorf("HashChainValue event total desposit count miss matched. Want: %v, Got: %v", index, log.Event.MerkleTreeIndex)
 	}
 	if !bytes.Equal(log.Event.Data[len(log.Event.Data)-1:], []byte{'C'}) {
 		t.Errorf("validatorRegistered event randao commitment miss matched. Want: %v, Got: %v", []byte{'B'}, log.Event.Data[len(log.Event.Data)-1:])
