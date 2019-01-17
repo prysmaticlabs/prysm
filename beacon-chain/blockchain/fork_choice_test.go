@@ -46,8 +46,10 @@ func generateTestGenesisStateAndBlock(
 		t.Fatal(err)
 	}
 
-	// #nosec G104
-	stateEnc, _ := proto.Marshal(beaconState)
+	stateEnc, err := proto.Marshal(beaconState)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := beaconDB.SaveState(beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -56,8 +58,10 @@ func generateTestGenesisStateAndBlock(
 	if err := beaconDB.SaveBlock(genesisBlock); err != nil {
 		t.Fatal(err)
 	}
-	genesisEnc, _ := proto.Marshal(genesisBlock)
-	genesisHash := hashutil.Hash(genesisEnc)
+	genesisHash, err := hashutil.HashBeaconBlock(genesisBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
 	return beaconState, genesisBlock, stateHash, genesisHash
 }
 
@@ -247,8 +251,10 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	genesisBlock := b.NewGenesisBlock([]byte{})
-	genesisEnc, _ := proto.Marshal(genesisBlock)
-	genesisHash := hashutil.Hash(genesisEnc)
+	genesisHash, err := hashutil.HashBeaconBlock(genesisBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := beaconDB.SaveBlock(genesisBlock); err != nil {
 		t.Fatal(err)
 	}
@@ -258,7 +264,7 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 		ParentRootHash32: genesisHash[:],
 	}
 	potentialHead2 := &pb.BeaconBlock{
-		Slot:             5,
+		Slot:             6,
 		ParentRootHash32: genesisHash[:],
 	}
 	// We store these potential heads in the DB.
@@ -277,14 +283,16 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 		t.Fatalf("Could not fetch vote count: %v", err)
 	}
 	if count != 2 {
-		t.Errorf("Expected 2 votes, received %d", count)
+		t.Errorf("Expected 1 vote, received %d", count)
 	}
 }
 
 func TestBlockChildren(t *testing.T) {
 	genesisBlock := b.NewGenesisBlock([]byte{})
-	genesisEnc, _ := proto.Marshal(genesisBlock)
-	genesisHash := hashutil.Hash(genesisEnc)
+	genesisHash, err := hashutil.HashBeaconBlock(genesisBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
 	targets := []*pb.BeaconBlock{
 		{
 			Slot:             9,
