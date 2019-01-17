@@ -274,7 +274,7 @@ func (b *BeaconNode) registerPOWChainService(ctx *cli.Context) error {
 
 	web3Service, err := powchain.NewWeb3Service(context.TODO(), &powchain.Web3ServiceConfig{
 		Endpoint:        b.ctx.GlobalString(utils.Web3ProviderFlag.Name),
-		VrcAddr:         common.HexToAddress(b.ctx.GlobalString(utils.VrcContractFlag.Name)),
+		DepositContract: common.HexToAddress(b.ctx.GlobalString(utils.VrcContractFlag.Name)),
 		Client:          powClient,
 		Reader:          powClient,
 		Logger:          powClient,
