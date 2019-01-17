@@ -7,11 +7,11 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
+        "//beacon-chain/utils:go_default_library",
         "//contracts/validator-registration-contract:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/trie:go_default_library",
         "@com_github_ethereum_go_ethereum//:go_default_library",
-        "@com_github_ethereum_go_ethereum//accounts/abi:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",
@@ -25,6 +25,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
+        "//beacon-chain/utils:go_default_library",
         "//contracts/validator-registration-contract:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/event:go_default_library",
