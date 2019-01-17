@@ -78,24 +78,9 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 		ParentRootHash32: genesisHash[:],
 		StateRootHash32:  stateHash[:],
 	}
-	potentialHeadEnc, _ := proto.Marshal(potentialHead)
-	potentialHeadHash := hashutil.Hash(potentialHeadEnc)
 
 	// We store these potential heads in the DB.
 	if err := beaconDB.SaveBlock(potentialHead); err != nil {
-		t.Fatal(err)
-	}
-
-	// We store some simulated latest attestation for an active validator.
-	latestAtt := &pb.Attestation{
-		Data: &pb.AttestationData{
-			Slot:                  3,
-			BeaconBlockRootHash32: potentialHeadHash[:],
-		},
-	}
-	// We ensure the block target of potentialHead has 1 vote corresponding to validator
-	// at index 0.
-	if err := beaconDB.SaveLatestAttestationForValidator(0, latestAtt); err != nil {
 		t.Fatal(err)
 	}
 
@@ -133,27 +118,12 @@ func TestLMDGhost_TrivialHigherVoteCountWins(t *testing.T) {
 		ParentRootHash32: genesisHash[:],
 		StateRootHash32:  []byte("some-other-state"),
 	}
-	higherVoteBlockEnc, _ := proto.Marshal(higherVoteBlock)
-	higherVoteBlockHash := hashutil.Hash(higherVoteBlockEnc)
 
 	// We store these potential heads in the DB.
 	if err := beaconDB.SaveBlock(lowerVoteBlock); err != nil {
 		t.Fatal(err)
 	}
 	if err := beaconDB.SaveBlock(higherVoteBlock); err != nil {
-		t.Fatal(err)
-	}
-
-	// We store some simulated latest attestation for an active validator.
-	latestAtt := &pb.Attestation{
-		Data: &pb.AttestationData{
-			Slot:                  3,
-			BeaconBlockRootHash32: higherVoteBlockHash[:],
-		},
-	}
-	// We ensure the block target of potentialHead has 1 vote corresponding to validator
-	// at index 0.
-	if err := beaconDB.SaveLatestAttestationForValidator(0, latestAtt); err != nil {
 		t.Fatal(err)
 	}
 

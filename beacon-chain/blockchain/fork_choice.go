@@ -92,11 +92,10 @@ func BlockAncestor(block *pb.BeaconBlock, slot uint64, beaconDB *db.BeaconDB) (*
 // beacon block's hash as their parent root hash.
 func BlockChildren(block *pb.BeaconBlock, observedBlocks []*pb.BeaconBlock) ([]*pb.BeaconBlock, error) {
 	var children []*pb.BeaconBlock
-	encoded, err := proto.Marshal(block)
+	hash, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
-		return nil, fmt.Errorf("could not marshal block: %v", err)
+		return nil, fmt.Errorf("could not hash block: %v", err)
 	}
-	hash := hashutil.Hash(encoded)
 	for _, observed := range observedBlocks {
 		if bytes.Equal(observed.ParentRootHash32, hash[:]) {
 			children = append(children, observed)

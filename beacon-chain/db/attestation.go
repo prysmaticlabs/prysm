@@ -43,44 +43,6 @@ func (db *BeaconDB) GetAttestation(hash [32]byte) (*pb.Attestation, error) {
 	return attestation, err
 }
 
-// SaveLatestAttestationForValidator puts the latest observed attestation for a
-// beacon chain validator into the key value store using the validator index
-// to construct the key for retrieval.
-func (db *BeaconDB) SaveLatestAttestationForValidator(validatorIdx uint32, latestAtt *pb.Attestation) error {
-	encodedAtt, err := proto.Marshal(latestAtt)
-	if err != nil {
-		return err
-	}
-
-	return db.update(func(tx *bolt.Tx) error {
-		a := tx.Bucket(attestationBucket)
-		key := []byte(fmt.Sprintf("validator-%d-latest-att", validatorIdx))
-		return a.Put(key, encodedAtt)
-	})
-}
-
-// GetLatestAttestationForValidator returns the observed attestations by a validator at a
-// certain index in the beacon state's registry.
-func (db *BeaconDB) GetLatestAttestationForValidator(validatorIdx uint32) (*pb.Attestation, error) {
-	latestAtt := &pb.Attestation{}
-	err := db.view(func(tx *bolt.Tx) error {
-		a := tx.Bucket(attestationBucket)
-
-		key := []byte(fmt.Sprintf("validator-%d-latest-att", validatorIdx))
-		enc := a.Get(key)
-		if enc == nil {
-			return nil
-		}
-
-		if err := proto.Unmarshal(enc, latestAtt); err != nil {
-			return fmt.Errorf("failed to unmarshal encoding: %v", err)
-		}
-		return nil
-	})
-
-	return latestAtt, err
-}
-
 // HasAttestation checks if the attestation exists.
 func (db *BeaconDB) HasAttestation(hash [32]byte) bool {
 	exists := false
