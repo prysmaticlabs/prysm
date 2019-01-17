@@ -9,7 +9,10 @@ import (
 	"strconv"
 	"testing"
 	"time"
+<<<<<<< HEAD
 
+=======
+>>>>>>> assertPanic , TestBadEndPoint failed because of panic in goroutine
 
 	"github.com/ethereum/go-ethereum/common"
 	ptypes "github.com/gogo/protobuf/types"
@@ -84,18 +87,9 @@ func TestLifecycle(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, fmt.Sprintf("RPC server listening on port :%s", rpcService.port))
 
 	rpcService.Stop()
-	testutil.AssertLogsContain(t, hook, "Stopping service")
+	testutil.AssertLogsContain(t, hook, "Stopping service"git 
 
-}
 
-// func assertPanic(t *testing.T, f func()) {
-//     defer func() {
-//         if r := recover(); r == nil {
-//             t.Errorf("The code did not panic")
-//         }
-//     }()
-//     f()
-// }
 
 func TestBadEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()

@@ -113,7 +113,12 @@ func (s *Service) Start() {
 	
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", s.port))
 	if err != nil {
+<<<<<<< HEAD
 		panic(err)
+=======
+		panic(fmt.Sprintf("Could not listen to port :%s: %v", s.port, err))
+		//log.Fatalf("Could not listen to port :%s: %v", s.port, err)
+>>>>>>> assertPanic , TestBadEndPoint failed because of panic in goroutine
 	}
 	s.listener = lis
 	log.Infof("RPC server listening on port :%s", s.port)
@@ -141,6 +146,7 @@ func (s *Service) Start() {
 	reflection.Register(s.grpcServer)
 
 	go func() {
+<<<<<<< HEAD
 		defer func() {
 			if err := recover(); err != nil {
 				log.Info("Could not serve gRPC")
@@ -148,6 +154,12 @@ func (s *Service) Start() {
 		}()
 		if err := s.grpcServer.Serve(lis); err != nil {
 			panic(err)
+=======
+		err = s.grpcServer.Serve(lis)
+		if err != nil {
+			//log.Fatalf("Could not serve gRPC: %v", err)
+			panic(fmt.Sprintf("Could not serve gRPC: %v", err))
+>>>>>>> assertPanic , TestBadEndPoint failed because of panic in goroutine
 		}
 	}()
 }
