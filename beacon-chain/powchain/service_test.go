@@ -20,6 +20,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	contracts "github.com/prysmaticlabs/prysm/contracts/validator-registration-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -460,7 +461,7 @@ func TestProcessDepositLog(t *testing.T) {
 
 	logs[0].Topics[1] = currentRoot
 
-	web3Service.processLog(logs[0])
+	web3Service.ProcessLog(logs[0])
 
 	testutil.AssertLogsDoNotContain(t, hook, "Could not unpack log")
 	testutil.AssertLogsDoNotContain(t, hook, "Could not save in trie")
@@ -534,7 +535,7 @@ func TestUnpackDepositLogs(t *testing.T) {
 		t.Fatalf("Unable to retrieve logs %v", err)
 	}
 
-	depData, index, err := web3Service.unPackDepositLogData(logz[0].Data)
+	depData, index, err := utils.UnpackDepositLogData(logz[0].Data)
 	if err != nil {
 		t.Fatalf("Unable to unpack logs %v", err)
 	}
@@ -636,7 +637,7 @@ func TestProcessChainStartLog(t *testing.T) {
 
 	logs[len(logs)-1].Topics[1] = currentRoot
 
-	web3Service.processLog(logs[len(logs)-1])
+	web3Service.ProcessLog(logs[len(logs)-1])
 
 	testutil.AssertLogsDoNotContain(t, hook, "Unable to unpack ChainStart log data")
 	testutil.AssertLogsDoNotContain(t, hook, "Receipt root from log doesn't match the root saved in memory")
@@ -685,8 +686,7 @@ func TestUnpackChainStartLogs(t *testing.T) {
 	}
 
 	// 8 Validators are used as size required for beacon-chain to start. This number
-	// is defined in the VRC as the number required for the testnet. The actual number
-	// is 2**14
+	// is defined in the VRC as the number required for the testnet.
 	for i := 0; i < 8; i++ {
 		testAcc.txOpts.Value = amount32Eth
 		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
@@ -707,7 +707,7 @@ func TestUnpackChainStartLogs(t *testing.T) {
 		t.Fatalf("Unable to retrieve logs %v", err)
 	}
 
-	timestampData, err := web3Service.unPackChainStartLogData(logs[len(logs)-1].Data)
+	timestampData, err := utils.UnpackChainStartLogData(logs[len(logs)-1].Data)
 	if err != nil {
 		t.Fatalf("Unable to unpack logs %v", err)
 	}
@@ -715,7 +715,7 @@ func TestUnpackChainStartLogs(t *testing.T) {
 	timestamp := binary.BigEndian.Uint64(timestampData)
 
 	if timestamp > uint64(time.Now().Unix()) {
-		t.Errorf("Timestamp from log is incorrect %d , %d", timestamp, time.Now().Unix())
+		t.Errorf("Timestamp from log is higher than the current time %d > %d", timestamp, time.Now().Unix())
 	}
 
 }

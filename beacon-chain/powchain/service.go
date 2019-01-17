@@ -2,7 +2,6 @@
 package powchain
 
 import (
-	"bytes"
 	"context"
 	"encoding/binary"
 	"errors"
@@ -12,11 +11,11 @@ import (
 	"time"
 
 	ethereum "github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	contracts "github.com/prysmaticlabs/prysm/contracts/validator-registration-contract"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/trie"
@@ -207,33 +206,35 @@ func (w *Web3Service) run(done <-chan struct{}) {
 				"blockHash":   w.blockHash.Hex(),
 			}).Debug("Latest web3 chain event")
 		case VRClog := <-w.logChan:
-			w.processLog(VRClog)
+			w.ProcessLog(VRClog)
 
 		}
 	}
 }
 
-func (w *Web3Service) processLog(VRClog gethTypes.Log) {
+// ProcessLog is the main method which handles the processing of all
+// logs from the deposit contract on the POW Chain.
+func (w *Web3Service) ProcessLog(VRClog gethTypes.Log) {
 	// Process logs according to their event signature.
 	if VRClog.Topics[0] == hashutil.Hash(depositEventSignature) {
-		w.processDepositLog(VRClog)
+		w.ProcessDepositLog(VRClog)
 		return
 	}
 
 	if VRClog.Topics[0] == hashutil.Hash(chainStartEventSignature) {
-		w.processChainStartLog(VRClog)
+		w.ProcessChainStartLog(VRClog)
 		return
 	}
 
 	log.Debugf("Log is not of a valid event signature %#x", VRClog.Topics[0])
 }
 
-// processDepositLog processes the log which had been received from
+// ProcessDepositLog processes the log which had been received from
 // the POW chain by trying to ascertain which participant deposited
 // in the contract.
-func (w *Web3Service) processDepositLog(VRClog gethTypes.Log) {
+func (w *Web3Service) ProcessDepositLog(VRClog gethTypes.Log) {
 	merkleRoot := VRClog.Topics[1]
-	depositData, MerkleTreeIndex, err := w.unPackDepositLogData(VRClog.Data)
+	depositData, MerkleTreeIndex, err := utils.UnpackDepositLogData(VRClog.Data)
 	if err != nil {
 		log.Errorf("Could not unpack log %v", err)
 		return
@@ -254,11 +255,11 @@ func (w *Web3Service) processDepositLog(VRClog gethTypes.Log) {
 	}).Info("Validator registered in VRC with public key and index")
 }
 
-// processChainStartLog processes the log which had been received from
+// ProcessChainStartLog processes the log which had been received from
 // the POW chain by trying to determine when to start the beacon chain.
-func (w *Web3Service) processChainStartLog(VRClog gethTypes.Log) {
+func (w *Web3Service) ProcessChainStartLog(VRClog gethTypes.Log) {
 	receiptRoot := VRClog.Topics[1]
-	timestampData, err := w.unPackChainStartLogData(VRClog.Data)
+	timestampData, err := utils.UnpackChainStartLogData(VRClog.Data)
 	if err != nil {
 		log.Errorf("Unable to unpack ChainStart log data %v", err)
 		return
@@ -279,42 +280,6 @@ func (w *Web3Service) processChainStartLog(VRClog gethTypes.Log) {
 	}).Info("Minimum Number of Validators Reached for beacon-chain to start")
 }
 
-// unPackDepositLogData unpacks the data from a log using the abi decoder.
-func (w *Web3Service) unPackDepositLogData(data []byte) (depositData []byte, merkleTreeIndex []byte, err error) {
-	reader := bytes.NewReader([]byte(contracts.ValidatorRegistrationABI))
-	contractAbi, err := abi.JSON(reader)
-	if err != nil {
-		return nil, nil, fmt.Errorf("unable to generate contract abi: %v", err)
-	}
-	unpackedLogs := []*[]byte{
-		&[]byte{},
-		&[]byte{},
-	}
-	if err := contractAbi.Unpack(&unpackedLogs, "Deposit", data); err != nil {
-		return nil, nil, fmt.Errorf("unable to unpack logs: %v", err)
-	}
-	depositData = *unpackedLogs[0]
-	merkleTreeIndex = *unpackedLogs[1]
-
-	return depositData, merkleTreeIndex, nil
-}
-
-func (w *Web3Service) unPackChainStartLogData(data []byte) ([]byte, error) {
-	reader := bytes.NewReader([]byte(contracts.ValidatorRegistrationABI))
-	contractAbi, err := abi.JSON(reader)
-	if err != nil {
-		return nil, fmt.Errorf("unable to generate contract abi: %v", err)
-	}
-	unpackedLogs := []*[]byte{
-		&[]byte{},
-	}
-	if err := contractAbi.Unpack(&unpackedLogs, "ChainStart", data); err != nil {
-		return nil, fmt.Errorf("unable to unpack logs: %v", err)
-	}
-	timestamp := *unpackedLogs[0]
-	return timestamp, nil
-}
-
 // saveInTrie saves in the in-memory deposit trie.
 func (w *Web3Service) saveInTrie(depositData []byte, merkleRoot common.Hash) error {
 	if w.depositTrie.Root() != merkleRoot {
@@ -332,7 +297,7 @@ func (w *Web3Service) processPastLogs(query ethereum.FilterQuery) error {
 	}
 
 	for _, log := range logs {
-		w.processLog(log)
+		w.ProcessLog(log)
 	}
 	return nil
 }
