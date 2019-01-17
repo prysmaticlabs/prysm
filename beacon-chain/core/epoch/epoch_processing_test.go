@@ -526,3 +526,47 @@ func TestCleanupAttestations(t *testing.T) {
 			wanted, newState)
 	}
 }
+
+func TestUpdatePenalizedExitBalances(t *testing.T) {
+	tests := []struct {
+		slot     uint64
+		balances uint64
+	}{
+		{
+			slot:     0,
+			balances: 100,
+		},
+		{
+			slot:     config.LatestPenalizedExitLength,
+			balances: 324,
+		},
+		{
+			slot:     config.LatestPenalizedExitLength + 1,
+			balances: 234324,
+		}, {
+			slot:     config.LatestPenalizedExitLength * 100,
+			balances: 34,
+		}, {
+			slot:     config.LatestPenalizedExitLength * 1000,
+			balances: 1,
+		},
+	}
+	for _, tt := range tests {
+		epoch := (tt.slot / config.EpochLength) % config.LatestPenalizedExitLength
+		latestPenalizedExitBalances := make([]uint64,
+			config.LatestPenalizedExitLength)
+		latestPenalizedExitBalances[epoch] = tt.balances
+		state := &pb.BeaconState{
+			Slot:                        tt.slot,
+			LatestPenalizedExitBalances: latestPenalizedExitBalances}
+		newState := UpdatePenalizedExitBalances(state)
+		if newState.LatestPenalizedExitBalances[epoch+1] !=
+			tt.balances {
+			t.Errorf(
+				"LatestPenalizedExitBalances didn't update for epoch %d,"+
+					"wanted: %d, got: %d", epoch+1, tt.balances,
+				newState.LatestPenalizedExitBalances[epoch+1],
+			)
+		}
+	}
+}
