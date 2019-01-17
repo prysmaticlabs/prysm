@@ -1,10 +1,10 @@
 package blockchain
 
 import (
-	"bytes"
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
@@ -21,7 +21,7 @@ func LMDGhost(
 ) (*pb.BeaconBlock, error) {
 	head := block
 	for {
-		children, err := BlockChildren(head, observedBlocks)
+		children, err := b.BlockChildren(head, observedBlocks)
 		if err != nil {
 			return nil, fmt.Errorf("could not fetch block children: %v", err)
 		}
@@ -86,20 +86,4 @@ func BlockAncestor(block *pb.BeaconBlock, slot uint64, beaconDB *db.BeaconDB) (*
 		return nil, fmt.Errorf("parent block does not exist: %v", err)
 	}
 	return BlockAncestor(parent, slot, beaconDB)
-}
-
-// BlockChildren obtains the blocks in a list of observed blocks which have the current
-// beacon block's hash as their parent root hash.
-func BlockChildren(block *pb.BeaconBlock, observedBlocks []*pb.BeaconBlock) ([]*pb.BeaconBlock, error) {
-	var children []*pb.BeaconBlock
-	hash, err := hashutil.HashBeaconBlock(block)
-	if err != nil {
-		return nil, fmt.Errorf("could not hash block: %v", err)
-	}
-	for _, observed := range observedBlocks {
-		if bytes.Equal(observed.ParentRootHash32, hash[:]) {
-			children = append(children, observed)
-		}
-	}
-	return children, nil
 }

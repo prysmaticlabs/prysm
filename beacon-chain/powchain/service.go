@@ -276,8 +276,8 @@ func (w *Web3Service) unPackLogData(data []byte) ([]byte, []byte, error) {
 	}
 
 	unpackedLogs := []*[]byte{
-		&[]byte{},
-		&[]byte{},
+		{},
+		{},
 	}
 
 	if err := contractAbi.Unpack(&unpackedLogs, "Deposit", data); err != nil {
