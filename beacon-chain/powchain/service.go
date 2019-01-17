@@ -290,6 +290,8 @@ func (w *Web3Service) saveInTrie(depositData []byte, merkleRoot common.Hash) err
 	return nil
 }
 
+// processPastLogs processes all the past logs from the deposit contract and
+// updates the deposit trie with the data from each individual log.
 func (w *Web3Service) processPastLogs(query ethereum.FilterQuery) error {
 	logs, err := w.logger.FilterLogs(w.ctx, query)
 	if err != nil {
