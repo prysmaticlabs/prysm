@@ -9,8 +9,7 @@ import (
 	"strconv"
 	"testing"
 	"time"
-	"os"
-	"os/exec"
+
 
 	"github.com/ethereum/go-ethereum/common"
 	ptypes "github.com/gogo/protobuf/types"
@@ -86,21 +85,17 @@ func TestLifecycle(t *testing.T) {
 
 	rpcService.Stop()
 	testutil.AssertLogsContain(t, hook, "Stopping service")
+
 }
 
-func TestCrasher(t *testing.T) {
-	if os.Getenv("BE_CRASHER") == "1" {
-        Crasher()
-        return
-    }
-    cmd := exec.Command(os.Args[0], "-test.run=TestCrasher")
-    cmd.Env = append(os.Environ(), "BE_CRASHER=1")
-    err := cmd.Run()
-    if e, ok := err.(*exec.ExitError); ok && !e.Success() {
-        return
-    }
-    t.Fatalf("process ran with err %v, want exit status 1", err)
-}
+// func assertPanic(t *testing.T, f func()) {
+//     defer func() {
+//         if r := recover(); r == nil {
+//             t.Errorf("The code did not panic")
+//         }
+//     }()
+//     f()
+// }
 
 func TestBadEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
@@ -109,14 +104,22 @@ func TestBadEndpoint(t *testing.T) {
 	})
 
 	rpcService.Start()
+    // startRPCService := func() {
+	// 	rpcService.Start()
+	// }
+
+	// assertPanic(t, startRPCService)
+	
 
 	testutil.AssertLogsContain(t, hook, "Starting service")
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Could not listen to port :%s", rpcService.port))
+	//testutil.AssertLogsContain(t, hook, fmt.Sprintf("Could not listen to port :%s", rpcService.port))
+	
+	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Listening to the port: %s failed", rpcService.port))
+	testutil.AssertLogsContain(t, hook, "Could not serve gRPC")
 
-	rpcService.Stop()
+    rpcService.Stop()
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
-
 func TestInsecureEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
 	rpcService := NewRPCService(context.Background(), &Config{

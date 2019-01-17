@@ -8,6 +8,7 @@ import (
 	"net"
 	"time"
 
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
@@ -101,17 +102,18 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 	}
 }
 
-func Crasher() {
-	log.Fatalf("Could not listen to port")
-}
-
 // Start the gRPC server.
 func (s *Service) Start() {
 	log.Info("Starting service")
-
+	defer func() {
+		if err := recover(); err != nil {
+			log.Infof("Listening to the port: %s failed", s.port)
+		}
+	}()
+	
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", s.port))
 	if err != nil {
-		log.Fatalf("Could not listen to port :%s: %v", s.port, err)
+		panic(err)
 	}
 	s.listener = lis
 	log.Infof("RPC server listening on port :%s", s.port)
@@ -139,12 +141,17 @@ func (s *Service) Start() {
 	reflection.Register(s.grpcServer)
 
 	go func() {
-		err = s.grpcServer.Serve(lis)
-		if err != nil {
-			log.Fatalf("Could not serve gRPC: %v", err)
+		defer func() {
+			if err := recover(); err != nil {
+				log.Info("Could not serve gRPC")
+			}
+		}()
+		if err := s.grpcServer.Serve(lis); err != nil {
+			panic(err)
 		}
 	}()
 }
+
 
 // Stop the service.
 func (s *Service) Stop() error {
