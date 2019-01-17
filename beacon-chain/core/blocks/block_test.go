@@ -73,11 +73,11 @@ func TestBlockRootAtSlot_OK(t *testing.T) {
 		}, {
 			slot:         2999,
 			stateSlot:    3000,
-			expectedRoot: []byte{127},
+			expectedRoot: []byte{55},
 		}, {
 			slot:         2873,
 			stateSlot:    3000,
-			expectedRoot: []byte{1},
+			expectedRoot: []byte{57},
 		},
 	}
 	for _, tt := range tests {
@@ -101,22 +101,33 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 		t.Errorf("EpochLength should be 64 for these tests to pass")
 	}
 
-	state := &pb.BeaconState{}
+	var blockRoots [][]byte
+
+	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+		blockRoots = append(blockRoots, []byte{byte(i)})
+	}
+	state := &pb.BeaconState{
+		LatestBlockRootHash32S: blockRoots,
+	}
 
 	tests := []struct {
 		slot        uint64
+		stateSlot   uint64
 		expectedErr string
 	}{
 		{
 			slot:        1000,
-			expectedErr: "slot 1000 out of bounds: 0 <= slot < 0",
+			stateSlot:   500,
+			expectedErr: "Slot 1000 is not within expected range of 372 to 499",
 		},
 		{
 			slot:        129,
-			expectedErr: "slot 129 out of bounds: 0 <= slot < 0",
+			stateSlot:   400,
+			expectedErr: "Slot 129 is not within expected range of 272 to 399",
 		},
 	}
 	for _, tt := range tests {
+		state.Slot = tt.stateSlot
 		_, err := BlockRoot(state, tt.slot)
 		if err != nil && err.Error() != tt.expectedErr {
 			t.Errorf("Expected error \"%s\" got \"%v\"", tt.expectedErr, err)
