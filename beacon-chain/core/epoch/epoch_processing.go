@@ -156,13 +156,16 @@ func ProcessCrosslinks(
 	thisEpochAttestations []*pb.PendingAttestationRecord,
 	prevEpochAttestations []*pb.PendingAttestationRecord) (*pb.BeaconState, error) {
 
-	startSlot := state.Slot - 2*config.EpochLength
+	var startSlot uint64
+	if state.Slot > 2*config.EpochLength {
+		startSlot = state.Slot - 2*config.EpochLength
+	}
+
 	for i := startSlot; i < state.Slot; i++ {
 		shardCommittees, err := validators.ShardCommitteesAtSlot(state, i)
 		if err != nil {
 			return nil, fmt.Errorf("could not get shard committees for slot %d", i)
 		}
-
 		for _, shardCommittee := range shardCommittees {
 			shard := shardCommittee.Shard
 			committee := shardCommittee.Committee
@@ -235,8 +238,12 @@ func ProcessValidatorRegistry(
 		config.EpochLength
 	state.CurrentEpochStartShard = nextStartShard
 
-	randaoMix, err := randaoMix(state, state.CurrentEpochCalculationSlot-
-		config.SeedLookahead)
+	var randaoMixSlot uint64
+	if state.CurrentEpochCalculationSlot > config.SeedLookahead {
+		randaoMixSlot = state.CurrentEpochCalculationSlot -
+			config.SeedLookahead
+	}
+	randaoMix, err := randaoMix(state, randaoMixSlot)
 	if err != nil {
 		return nil, fmt.Errorf("could not get randao mix: %v", err)
 	}
@@ -260,9 +267,7 @@ func ProcessValidatorRegistry(
 // 		(state.current_epoch_calculation_slot - SEED_LOOKAHEAD) %
 // 		LATEST_RANDAO_MIXES_LENGTH].
 // 		Note that state.current_epoch_start_shard is left unchanged.
-func ProcessPartialValidatorRegistry(
-	state *pb.BeaconState) (*pb.BeaconState, error) {
-
+func ProcessPartialValidatorRegistry(state *pb.BeaconState) *pb.BeaconState {
 	state.PreviousEpochCalculationSlot = state.CurrentEpochCalculationSlot
 	state.PreviousEpochStartShard = state.CurrentEpochStartShard
 
@@ -276,7 +281,7 @@ func ProcessPartialValidatorRegistry(
 			config.SeedLookahead)%config.LatestRandaoMixesLength]
 		state.CurrentEpochRandaoMixHash32 = randaoMix
 	}
-	return state, nil
+	return state
 }
 
 // CleanupAttestations removes any attestation in state's latest attestations

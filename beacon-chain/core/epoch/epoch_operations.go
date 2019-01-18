@@ -395,7 +395,10 @@ func winningRoot(
 //	  assert slot < state.slot
 //    return state.latest_block_roots[slot % LATEST_RANDAO_MIXES_LENGTH]
 func randaoMix(state *pb.BeaconState, slot uint64) ([]byte, error) {
-	lowerBound := state.Slot - config.LatestRandaoMixesLength
+	var lowerBound uint64
+	if state.Slot > config.LatestRandaoMixesLength {
+		lowerBound = state.Slot - config.LatestRandaoMixesLength
+	}
 	upperBound := state.Slot
 	if slot <= lowerBound {
 		return nil, fmt.Errorf("randao mix slot %d, can't be lower than %d",
