@@ -274,6 +274,8 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	// Check for skipped slots and update the corresponding proposers
 	// randao layer.
 	for beaconState.Slot < block.Slot-1 {
+		log.Info("Slot was skipped")
+		// TODO: Some sort of slot skip failure here...
 		beaconState, err = state.ExecuteStateTransition(beaconState, nil, blockRoot)
 		if err != nil {
 			return fmt.Errorf("could not execute state transition %v", err)
