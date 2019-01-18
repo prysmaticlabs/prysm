@@ -8,6 +8,11 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
+	"math/big"
+	"reflect"
+	"strings"
+	"time"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
@@ -17,10 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
-	"math/big"
-	"reflect"
-	"strings"
-	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/trie"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -181,7 +182,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
-            testAcc.contractAddr,
+			testAcc.contractAddr,
 		},
 	}
 
@@ -275,7 +276,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 
 	depositsTrie := trie.NewDepositTrie()
 	for i := uint64(1); i <= testCase.Config.NumSlots; i++ {
-		time.Sleep(time.Second*2)
+		time.Sleep(time.Second * 2)
 		currentState, err := sb.beaconDB.GetState()
 		if err != nil {
 			return fmt.Errorf("could not get current beacon state: %v", err)
@@ -330,7 +331,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 
 		// We generate a new block to pass into the state transition.
 		newBlock, newBlockRoot, err := generateSimulatedBlock(
-            currentState,
+			currentState,
 			prevBlockRoot,
 			blockRandaoReveal,
 			lastRandaoLayer,
@@ -355,7 +356,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		layersPeeledForProposer[proposerIndex]++
 	}
 
-	time.Sleep(time.Second*2)
+	time.Sleep(time.Second * 2)
 	chainService.Cancel()
 	exitRoutine <- true
 
@@ -369,7 +370,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 			"incorrect state slot after %d state transitions without blocks, wanted %d, received %d",
 			testCase.Config.NumSlots,
 			testCase.Results.Slot,
-            finalState.Slot,
+			finalState.Slot,
 		)
 	}
 	if len(finalState.ValidatorRegistry) != testCase.Results.NumValidators {
@@ -495,4 +496,3 @@ func assertLogs(hook *logTest.Hook, want string, flag bool) error {
 	}
 	return nil
 }
-
