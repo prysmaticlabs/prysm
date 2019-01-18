@@ -1,4 +1,4 @@
-## Validator Registration Contract
+## Validator Registration Contract(Deprecated)
 
 A validator will deposit 32 ETH to the registration
 contract. The contract will generate a receipt showing the validator as a
