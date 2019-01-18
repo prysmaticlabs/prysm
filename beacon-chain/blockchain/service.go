@@ -146,6 +146,7 @@ func (c *ChainService) UpdateHead(processedBlock <-chan *pb.BeaconBlock) {
 			log.Info("Updating chain head...")
 			// TODO: Add LMD GHOST Fork-Choice Rule here.
 			blockState := c.unfinalizedBlocks[h]
+			log.Infof("BEFORE UPDATE HEAD: %v", blockState.Slot)
 			if err := c.beaconDB.UpdateChainHead(block, blockState); err != nil {
 				log.Errorf("Failed to update chain: %v", err)
 				continue

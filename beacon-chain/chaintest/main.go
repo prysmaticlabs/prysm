@@ -135,4 +135,6 @@ func main() {
 
 	endTime := time.Now()
 	log.Infof("Test Runs Finished In: %v", endTime.Sub(startTime))
+	// Closes and tears down the simulated backend instance and its database.
+	sb.Close()
 }

@@ -69,6 +69,10 @@ func NewSimulatedBackend() (*SimulatedBackend, error) {
 	}, nil
 }
 
+func (sb *SimulatedBackend) Close() {
+	teardownDB(sb.beaconDB)
+}
+
 // RunForkChoiceTest uses a parsed set of chaintests from a YAML file
 // according to the ETH 2.0 client chain test specification and runs them
 // against the simulated backend.
@@ -121,7 +125,6 @@ func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
 // slots from a genesis state, with a block being processed at every iteration
 // of the state transition function.
 func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) error {
-	defer teardownDB(sb.beaconDB)
 	// We setup the initial configuration for running state
 	// transition tests below.
 	c := params.BeaconConfig()
@@ -219,6 +222,8 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	}
 
 	genesisTime := params.BeaconConfig().GenesisTime.Unix()
+
+	// TODO: Use the deposits from the contract instead to initialize the state.
 	beaconState, err := state.InitialBeaconState(initialDeposits, uint64(genesisTime), nil)
 	if err != nil {
 		return fmt.Errorf("could not initialize simulated beacon state")
@@ -235,7 +240,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		return fmt.Errorf("could not hash genesis block: %v", err)
 	}
 	if err := sb.beaconDB.SaveBlock(genesisBlock); err != nil {
-		return fmt.Errorf("could not save genesis blocK: %v", err)
+		return fmt.Errorf("could not save genesis block: %v", err)
 	}
 	if err := sb.beaconDB.UpdateChainHead(genesisBlock, beaconState); err != nil {
 		return fmt.Errorf("could not save initial beacon state: %v", err)
@@ -269,7 +274,8 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	}()
 
 	depositsTrie := trie.NewDepositTrie()
-	for i := uint64(0); i < testCase.Config.NumSlots; i++ {
+	for i := uint64(1); i <= testCase.Config.NumSlots; i++ {
+		time.Sleep(time.Second*2)
 		currentState, err := sb.beaconDB.GetState()
 		if err != nil {
 			return fmt.Errorf("could not get current beacon state: %v", err)
@@ -318,6 +324,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 				break
 			}
 		}
+		fmt.Printf("IN ITERATION %d: %v\n", i, currentState.Slot)
 
 		layersPeeled := layersPeeledForProposer[proposerIndex]
 		blockRandaoReveal := determineSimulatedBlockRandaoReveal(layersPeeled, hashOnions)
@@ -349,6 +356,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		layersPeeledForProposer[proposerIndex]++
 	}
 
+	time.Sleep(time.Second*2)
 	chainService.Cancel()
 	exitRoutine <- true
 
