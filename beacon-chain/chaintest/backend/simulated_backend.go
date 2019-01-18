@@ -268,15 +268,9 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	if err != nil {
 		return fmt.Errorf("unable to setup chain service: %v", err)
 	}
-	exitRoutine := make(chan bool)
-	go func() {
-		chainService.Start()
-		<-exitRoutine
-	}()
 
 	depositsTrie := trie.NewDepositTrie()
 	for i := uint64(1); i <= testCase.Config.NumSlots; i++ {
-		time.Sleep(time.Second * 2)
 		currentState, err := sb.beaconDB.GetState()
 		if err != nil {
 			return fmt.Errorf("could not get current beacon state: %v", err)
@@ -347,18 +341,19 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		latestRoot := depositsTrie.Root()
 		beaconState.LatestDepositRootHash32 = latestRoot[:]
 
-		// We trigger a new block in the blockchain service.
-		chainService.IncomingBlockFeed.Send(newBlock)
+		// We trigger a new block in the blockchain service and update the head.
+		if err := chainService.ReceiveBlock(newBlock, currentState); err != nil {
+			return fmt.Errorf("could not send block to chain service: %v", err)
+		}
+		if err := chainService.ApplyForkChoiceRule(newBlock); err != nil {
+			return fmt.Errorf("could not apply fork choice rule: %v", err)
+		}
 
 		// We then keep track of information about the state after the
 		// state transition was applied.
 		prevBlockRoots = append(prevBlockRoots, newBlockRoot)
 		layersPeeledForProposer[proposerIndex]++
 	}
-
-	time.Sleep(time.Second * 2)
-	chainService.Cancel()
-	exitRoutine <- true
 
 	finalState, err := sb.beaconDB.GetState()
 	if err != nil {

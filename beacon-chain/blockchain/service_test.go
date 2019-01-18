@@ -162,6 +162,7 @@ func SetSlotInState(service *ChainService, slot uint64) error {
 }
 
 func TestStartStop(t *testing.T) {
+	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db)
@@ -170,6 +171,7 @@ func TestStartStop(t *testing.T) {
 
 	// Test the start function.
 	chainService.Start()
+	chainService.genesisTimeChan <- time.Unix(0, 0)
 
 	if err := chainService.Stop(); err != nil {
 		t.Fatalf("unable to stop chain service: %v", err)
@@ -178,6 +180,15 @@ func TestStartStop(t *testing.T) {
 	// The context should have been canceled.
 	if chainService.ctx.Err() == nil {
 		t.Error("context was not canceled")
+	}
+	testutil.AssertLogsContain(t, hook, "Waiting for ChainStart log from the Validator Deposit Contract to start the beacon chain...")
+	testutil.AssertLogsContain(t, hook, "ChainStart time reached, starting the beacon chain!")
+	if chainService.genesisTime != time.Unix(0, 0) {
+		t.Errorf(
+			"Expected genesis time to equal chainstart time (%v), received %v",
+			time.Unix(0, 0),
+			chainService.genesisTime,
+		)
 	}
 }
 
@@ -398,12 +409,6 @@ func TestUpdateHead(t *testing.T) {
 				JustifiedSlot: 10,
 			},
 			logAssert: "Chain head block and state updated",
-		},
-		// Same slot should not trigger a head update.
-		{
-			blockSlot: 0,
-			state:     beaconState,
-			logAssert: "Chain head not updated",
 		},
 	}
 	for _, tt := range tests {
