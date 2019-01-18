@@ -399,12 +399,6 @@ func TestUpdateHead(t *testing.T) {
 			},
 			logAssert: "Chain head block and state updated",
 		},
-		// Same slot should not trigger a head update.
-		{
-			blockSlot: 0,
-			state:     beaconState,
-			logAssert: "Chain head not updated",
-		},
 	}
 	for _, tt := range tests {
 		hook := logTest.NewGlobal()
