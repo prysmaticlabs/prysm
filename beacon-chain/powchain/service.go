@@ -133,8 +133,8 @@ func (w *Web3Service) Stop() error {
 	return nil
 }
 
-// CanonicalBlockFeed returns a channel that is written to
-// whenever a new block is determined to be canonical in the chain.
+// ChainStartFeed returns a feed that is written to
+// whenever the deposit contract fires a ChainStart log.
 func (w *Web3Service) ChainStartFeed() *event.Feed {
 	return w.chainStartFeed
 }
