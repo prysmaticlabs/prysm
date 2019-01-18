@@ -22,11 +22,11 @@ func TestUpdateRandaoLayers(t *testing.T) {
 	vreg := newState.ValidatorRegistry
 
 	// Since slot 1 has proposer index 511
-	if vreg[511].RandaoLayers != 1 {
-		t.Fatalf("randao layers not updated %d", vreg[9].RandaoLayers)
+	if vreg[511].RandaoLayers != 2 {
+		t.Fatalf("randao layers not updated %d", vreg[511].RandaoLayers)
 	}
 
-	if vreg[9].RandaoLayers != 0 {
+	if vreg[9].RandaoLayers != 1 {
 		t.Errorf("randao layers updated when they were not supposed to %d", vreg[9].RandaoLayers)
 	}
 }
