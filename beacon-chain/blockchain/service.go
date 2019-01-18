@@ -146,7 +146,6 @@ func (c *ChainService) UpdateHead(processedBlock <-chan *pb.BeaconBlock) {
 			log.Info("Updating chain head...")
 			// TODO: Add LMD GHOST Fork-Choice Rule here.
 			blockState := c.unfinalizedBlocks[h]
-			log.Infof("BEFORE UPDATE HEAD: %v", blockState.Slot)
 			if err := c.beaconDB.UpdateChainHead(block, blockState); err != nil {
 				log.Errorf("Failed to update chain: %v", err)
 				continue
@@ -236,8 +235,7 @@ func (c *ChainService) BlockProcessing(processedBlock chan<- *pb.BeaconBlock) {
 //			return False  # or throw or whatever
 //
 func (c *ChainService) receiveBlock(block *pb.BeaconBlock, beaconState *pb.BeaconState) error {
-
-	blockhash, err := hashutil.HashBeaconBlock(block)
+	blockHash, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return fmt.Errorf("could not hash incoming block: %v", err)
 	}
@@ -247,7 +245,7 @@ func (c *ChainService) receiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	}
 	// Save blocks with higher slot numbers in cache.
 	if err := c.isBlockReadyForProcessing(block, beaconState); err != nil {
-		log.Debugf("block with hash %#x is not ready for processing: %v", blockhash, err)
+		log.Debugf("block with hash %#x is not ready for processing: %v", blockHash, err)
 		return nil
 	}
 
@@ -288,17 +286,16 @@ func (c *ChainService) receiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 		return fmt.Errorf("error persisting unfinalized block's state: %v", err)
 	}
 
-	log.WithField("hash", fmt.Sprintf("%#x", blockhash)).Debug("Processed beacon block")
+	log.WithField("hash", fmt.Sprintf("%#x", blockHash)).Debug("Processed beacon block")
 
 	// We keep a map of unfinalized blocks in memory along with their state
 	// pair to apply the fork choice rule.
-	c.unfinalizedBlocks[blockhash] = beaconState
+	c.unfinalizedBlocks[blockHash] = beaconState
 
 	return nil
 }
 
 func (c *ChainService) isBlockReadyForProcessing(block *pb.BeaconBlock, beaconState *pb.BeaconState) error {
-
 	var powBlockFetcher func(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
 	if c.enablePOWChain {
 		powBlockFetcher = c.web3Service.Client().BlockByHash
