@@ -51,7 +51,7 @@ type Client interface {
 // chain's validator registration process.
 type Web3Service struct {
 	ctx                    context.Context
-	cancel                 context.CancelFunc
+	Cancel                 context.CancelFunc
 	client                 Client
 	headerChan             chan *gethTypes.Header
 	logChan                chan gethTypes.Log
@@ -63,8 +63,8 @@ type Web3Service struct {
 	blockHash              common.Hash // the latest PoW chain blockHash.
 	vrcCaller              *contracts.ValidatorRegistrationCaller
 	depositCount           uint64
-	depositRoot            []byte
-	depositTrie            *trie.DepositTrie
+	DepositRoot            []byte
+	DepositTrie            *trie.DepositTrie
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -100,7 +100,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 	ctx, cancel := context.WithCancel(ctx)
 	return &Web3Service{
 		ctx:                    ctx,
-		cancel:                 cancel,
+		Cancel:                 cancel,
 		headerChan:             make(chan *gethTypes.Header),
 		logChan:                make(chan gethTypes.Log),
 		endpoint:               config.Endpoint,
@@ -124,7 +124,7 @@ func (w *Web3Service) Start() {
 
 // Stop the web3 service's main event loop and associated goroutines.
 func (w *Web3Service) Stop() error {
-	defer w.cancel()
+	defer w.Cancel()
 	defer close(w.headerChan)
 	log.Info("Stopping service")
 	return nil
@@ -151,8 +151,8 @@ func (w *Web3Service) initDataFromVRC() error {
 		return fmt.Errorf("could not retrieve deposit root %v", err)
 	}
 
-	w.depositRoot = root
-	w.depositTrie = trie.NewDepositTrie()
+	w.DepositRoot = root
+	w.DepositTrie = trie.NewDepositTrie()
 
 	return nil
 }
@@ -207,7 +207,6 @@ func (w *Web3Service) run(done <-chan struct{}) {
 			}).Debug("Latest web3 chain event")
 		case VRClog := <-w.logChan:
 			w.ProcessLog(VRClog)
-
 		}
 	}
 }
@@ -264,7 +263,7 @@ func (w *Web3Service) ProcessChainStartLog(VRClog gethTypes.Log) {
 		log.Errorf("Unable to unpack ChainStart log data %v", err)
 		return
 	}
-	if w.depositTrie.Root() != receiptRoot {
+	if w.DepositTrie.Root() != receiptRoot {
 		log.Errorf("Receipt root from log doesn't match the root saved in memory %#x", receiptRoot)
 		return
 	}
@@ -282,11 +281,11 @@ func (w *Web3Service) ProcessChainStartLog(VRClog gethTypes.Log) {
 
 // saveInTrie saves in the in-memory deposit trie.
 func (w *Web3Service) saveInTrie(depositData []byte, merkleRoot common.Hash) error {
-	if w.depositTrie.Root() != merkleRoot {
+	if w.DepositTrie.Root() != merkleRoot {
 		return errors.New("saved root in trie is unequal to root received from log")
 	}
 
-	w.depositTrie.UpdateDepositTrie(depositData)
+	w.DepositTrie.UpdateDepositTrie(depositData)
 	return nil
 }
 

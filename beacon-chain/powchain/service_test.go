@@ -245,8 +245,8 @@ func TestInitDataFromVRC(t *testing.T) {
 		t.Errorf("Deposit count is not equal to zero %d", web3Service.depositCount)
 	}
 
-	if !bytes.Equal(web3Service.depositRoot, []byte{}) {
-		t.Errorf("Deposit root is not empty %v", web3Service.depositRoot)
+	if !bytes.Equal(web3Service.DepositRoot, []byte{}) {
+		t.Errorf("Deposit root is not empty %v", web3Service.DepositRoot)
 	}
 
 	testAcc.txOpts.Value = amount32Eth
@@ -263,8 +263,8 @@ func TestInitDataFromVRC(t *testing.T) {
 		t.Errorf("Deposit count is not equal to one %d", web3Service.depositCount)
 	}
 
-	if bytes.Equal(web3Service.depositRoot, []byte{}) {
-		t.Errorf("Deposit root is  empty %v", web3Service.depositRoot)
+	if bytes.Equal(web3Service.DepositRoot, []byte{}) {
+		t.Errorf("Deposit root is  empty %v", web3Service.DepositRoot)
 	}
 
 }
@@ -288,9 +288,9 @@ func TestSaveInTrie(t *testing.T) {
 
 	testAcc.backend.Commit()
 
-	web3Service.depositTrie = trie.NewDepositTrie()
+	web3Service.DepositTrie = trie.NewDepositTrie()
 
-	currentRoot := web3Service.depositTrie.Root()
+	currentRoot := web3Service.DepositTrie.Root()
 
 	if err := web3Service.saveInTrie([]byte{'A'}, currentRoot); err != nil {
 		t.Errorf("Unable to save deposit in trie %v", err)
@@ -421,9 +421,9 @@ func TestProcessDepositLog(t *testing.T) {
 
 	testAcc.backend.Commit()
 
-	web3Service.depositTrie = trie.NewDepositTrie()
+	web3Service.DepositTrie = trie.NewDepositTrie()
 
-	currentRoot := web3Service.depositTrie.Root()
+	currentRoot := web3Service.DepositTrie.Root()
 
 	var stub [48]byte
 	copy(stub[:], []byte("testing"))
@@ -498,8 +498,8 @@ func TestUnpackDepositLogs(t *testing.T) {
 		t.Errorf("Deposit count is not equal to zero %d", web3Service.depositCount)
 	}
 
-	if !bytes.Equal(web3Service.depositRoot, []byte{}) {
-		t.Errorf("Deposit root is not empty %v", web3Service.depositRoot)
+	if !bytes.Equal(web3Service.DepositRoot, []byte{}) {
+		t.Errorf("Deposit root is not empty %v", web3Service.DepositRoot)
 	}
 
 	var stub [48]byte
@@ -592,9 +592,9 @@ func TestProcessChainStartLog(t *testing.T) {
 	testAcc.backend.Commit()
 	testAcc.backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
 
-	web3Service.depositTrie = trie.NewDepositTrie()
+	web3Service.DepositTrie = trie.NewDepositTrie()
 
-	currentRoot := web3Service.depositTrie.Root()
+	currentRoot := web3Service.DepositTrie.Root()
 
 	var stub [48]byte
 	copy(stub[:], []byte("testing"))

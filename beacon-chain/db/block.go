@@ -116,7 +116,7 @@ func (db *BeaconDB) UpdateChainHead(block *pb.BeaconBlock, beaconState *pb.Beaco
 		return fmt.Errorf("unable to encode the beacon state: %v", err)
 	}
 
-	slotBinary := encodeSlotNumber(block.GetSlot())
+	slotBinary := encodeSlotNumber(block.Slot)
 
 	return db.update(func(tx *bolt.Tx) error {
 		blockBucket := tx.Bucket(blockBucket)
