@@ -31,6 +31,7 @@ type ChainService struct {
 	web3Service        *powchain.Web3Service
 	incomingBlockFeed  *event.Feed
 	incomingBlockChan  chan *pb.BeaconBlock
+	genesisTimeChan    chan time.Time
 	processedBlockChan chan *pb.BeaconBlock
 	canonicalBlockFeed *event.Feed
 	canonicalStateFeed *event.Feed
@@ -61,6 +62,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		web3Service:        cfg.Web3Service,
 		incomingBlockChan:  make(chan *pb.BeaconBlock, cfg.IncomingBlockBuf),
 		processedBlockChan: make(chan *pb.BeaconBlock),
+		genesisTimeChan:    make(chan time.Time),
 		incomingBlockFeed:  new(event.Feed),
 		canonicalBlockFeed: new(event.Feed),
 		canonicalStateFeed: new(event.Feed),
@@ -72,17 +74,17 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
-	log.Info("Starting service")
-	var err error
-	c.genesisTime, err = c.beaconDB.GenesisTime()
-	if err != nil {
-		log.Fatalf("Unable to retrieve genesis time - blockchain service could not start: %v", err)
-		return
-	}
-	// TODO(#675): Initialize unfinalizedBlocks map from disk in case this
-	// is a beacon node restarting.
-	go c.updateHead(c.processedBlockChan)
-	go c.blockProcessing(c.processedBlockChan)
+	log.Info("Waiting for ChainStart log from the Validator Deposit Contract to start the beacon chain...")
+	subChainStart := c.web3Service.ChainStartFeed().Subscribe(c.genesisTimeChan)
+	go func() {
+		genesisTime := <-c.genesisTimeChan
+		log.Info("ChainStart time reached, starting the beacon chain!")
+		c.genesisTime = genesisTime
+		// TODO(#675): Initialize unfinalizedBlocks map from disk in case this
+		go c.updateHead(c.processedBlockChan)
+		go c.blockProcessing(c.processedBlockChan)
+		subChainStart.Unsubscribe()
+	}()
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.

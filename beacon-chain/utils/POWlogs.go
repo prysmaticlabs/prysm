@@ -16,8 +16,8 @@ func UnpackDepositLogData(data []byte) (depositData []byte, merkleTreeIndex []by
 		return nil, nil, fmt.Errorf("unable to generate contract abi: %v", err)
 	}
 	unpackedLogs := []*[]byte{
-		&[]byte{},
-		&[]byte{},
+		{},
+		{},
 	}
 	if err := contractAbi.Unpack(&unpackedLogs, "Deposit", data); err != nil {
 		return nil, nil, fmt.Errorf("unable to unpack logs: %v", err)
@@ -36,7 +36,7 @@ func UnpackChainStartLogData(data []byte) ([]byte, error) {
 		return nil, fmt.Errorf("unable to generate contract abi: %v", err)
 	}
 	unpackedLogs := []*[]byte{
-		&[]byte{},
+		{},
 	}
 	if err := contractAbi.Unpack(&unpackedLogs, "ChainStart", data); err != nil {
 		return nil, fmt.Errorf("unable to unpack logs: %v", err)
