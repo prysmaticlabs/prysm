@@ -20,10 +20,11 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
-	contracts "github.com/prysmaticlabs/prysm/contracts/validator-registration-contract"
+	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trie"
@@ -75,7 +76,7 @@ var amount32Eth, _ = new(big.Int).SetString("32000000000000000000", 10)
 
 type testAccount struct {
 	addr         common.Address
-	contract     *contracts.ValidatorRegistration
+	contract     *contracts.DepositContract
 	contractAddr common.Address
 	backend      *backends.SimulatedBackend
 	txOpts       *bind.TransactOpts
@@ -100,7 +101,7 @@ func setup() (*testAccount, error) {
 	genesis[addr] = core.GenesisAccount{Balance: startingBalance}
 	backend := backends.NewSimulatedBackend(genesis, 2100000)
 
-	contractAddr, _, contract, err := contracts.DeployValidatorRegistration(txOpts, backend)
+	contractAddr, _, contract, err := contracts.DeployDepositContract(txOpts, backend)
 	if err != nil {
 		return nil, err
 	}
@@ -240,12 +241,8 @@ func TestInitDataFromVRC(t *testing.T) {
 	if err := web3Service.initDataFromVRC(); err != nil {
 		t.Fatalf("Could not init from vrc %v", err)
 	}
-
-	if web3Service.depositCount != 0 {
-		t.Errorf("Deposit count is not equal to zero %d", web3Service.depositCount)
-	}
-
-	if !bytes.Equal(web3Service.depositRoot, []byte{}) {
+	empty32Byte := [32]byte{}
+	if !bytes.Equal(web3Service.depositRoot, empty32Byte[:]) {
 		t.Errorf("Deposit root is not empty %v", web3Service.depositRoot)
 	}
 
@@ -257,10 +254,6 @@ func TestInitDataFromVRC(t *testing.T) {
 
 	if err := web3Service.initDataFromVRC(); err != nil {
 		t.Fatalf("Could not init from vrc %v", err)
-	}
-
-	if web3Service.depositCount != 1 {
-		t.Errorf("Deposit count is not equal to one %d", web3Service.depositCount)
 	}
 
 	if bytes.Equal(web3Service.depositRoot, []byte{}) {
@@ -423,7 +416,7 @@ func TestProcessDepositLog(t *testing.T) {
 
 	web3Service.depositTrie = trie.NewDepositTrie()
 
-	currentRoot := web3Service.depositTrie.Root()
+	//currentRoot := web3Service.depositTrie.Root()
 
 	var stub [48]byte
 	copy(stub[:], []byte("testing"))
@@ -458,8 +451,6 @@ func TestProcessDepositLog(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to retrieve logs %v", err)
 	}
-
-	logs[0].Topics[1] = currentRoot
 
 	web3Service.ProcessLog(logs[0])
 
@@ -498,7 +489,9 @@ func TestUnpackDepositLogs(t *testing.T) {
 		t.Errorf("Deposit count is not equal to zero %d", web3Service.depositCount)
 	}
 
-	if !bytes.Equal(web3Service.depositRoot, []byte{}) {
+	empty32byte := [32]byte{}
+
+	if !bytes.Equal(web3Service.depositRoot, empty32byte[:]) {
 		t.Errorf("Deposit root is not empty %v", web3Service.depositRoot)
 	}
 
@@ -535,16 +528,18 @@ func TestUnpackDepositLogs(t *testing.T) {
 		t.Fatalf("Unable to retrieve logs %v", err)
 	}
 
-	depData, index, err := utils.UnpackDepositLogData(logz[0].Data)
+	_, depositData, index, err := contracts.UnpackDepositLogData(logz[0].Data)
 	if err != nil {
 		t.Fatalf("Unable to unpack logs %v", err)
 	}
 
-	if binary.BigEndian.Uint64(index) != 65536 {
+	twoTothePowerOfTreeDepth := mathutil.PowerOf2(params.BeaconConfig().DepositContractTreeDepth)
+
+	if binary.BigEndian.Uint64(index) != twoTothePowerOfTreeDepth {
 		t.Errorf("Retrieved merkle tree index is incorrect %d", index)
 	}
 
-	deserializeData, err := blocks.DecodeDepositInput(depData)
+	deserializeData, err := blocks.DecodeDepositInput(depositData)
 	if err != nil {
 		t.Fatalf("Unable to decode deposit input %v", err)
 	}
@@ -594,8 +589,6 @@ func TestProcessChainStartLog(t *testing.T) {
 
 	web3Service.depositTrie = trie.NewDepositTrie()
 
-	currentRoot := web3Service.depositTrie.Root()
-
 	var stub [48]byte
 	copy(stub[:], []byte("testing"))
 
@@ -634,8 +627,6 @@ func TestProcessChainStartLog(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to retrieve logs %v", err)
 	}
-
-	logs[len(logs)-1].Topics[1] = currentRoot
 
 	web3Service.ProcessLog(logs[len(logs)-1])
 
@@ -707,7 +698,7 @@ func TestUnpackChainStartLogs(t *testing.T) {
 		t.Fatalf("Unable to retrieve logs %v", err)
 	}
 
-	timestampData, err := utils.UnpackChainStartLogData(logs[len(logs)-1].Data)
+	_, timestampData, err := contracts.UnpackChainStartLogData(logs[len(logs)-1].Data)
 	if err != nil {
 		t.Fatalf("Unable to unpack logs %v", err)
 	}

@@ -1,7 +1,7 @@
 ## compiled with v0.1.0-beta.6 ##
 
 GWEI_PER_ETH: constant(uint256) = 1000000000  # 10**9
-CHAIN_START_FULL_DEPOSIT_THRESHOLD: constant(uint256) = 16384  # 2**14
+CHAIN_START_FULL_DEPOSIT_THRESHOLD: constant(uint256) = 8  # The actual number is 2**14, but we are keeping it at 8 for the testnet.
 DEPOSIT_CONTRACT_TREE_DEPTH: constant(uint256) = 32
 TWO_TO_POWER_OF_TREE_DEPTH: constant(uint256) = 4294967296  # 2**32
 SECONDS_PER_DAY: constant(uint256) = 86400
