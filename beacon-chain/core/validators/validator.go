@@ -31,6 +31,7 @@ func InitialValidatorRegistry() []*pb.ValidatorRecord {
 			Balance:                config.MaxDeposit * config.Gwei,
 			Pubkey:                 pubkey[:],
 			RandaoCommitmentHash32: randaoReveal[:],
+			RandaoLayers:           1,
 		}
 	}
 	return validators

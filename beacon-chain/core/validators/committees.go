@@ -217,7 +217,8 @@ func AttestationParticipants(
 	if len(participationBitfield) != mathutil.CeilDiv8(len(committee)) {
 		return nil, fmt.Errorf(
 			"wanted participants bitfield length %d, got: %d",
-			len(committee), len(participationBitfield))
+			mathutil.CeilDiv8(len(committee)),
+			len(participationBitfield))
 	}
 
 	// Find the participating attesters in the committee.
