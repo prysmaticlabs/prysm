@@ -308,7 +308,7 @@ go_repository(
 
 go_repository(
     name = "com_github_minio_sha256_simd",
-    commit = "79eac576c45d16c8d290cf2e3db5f9ab34c343e9",
+    commit = "cc1980cb03383b1d46f518232672584432d7532d",
     importpath = "github.com/minio/sha256-simd",
 )
 
@@ -501,7 +501,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "a457fd036447854c0c02e89ea439481bdcf941a2",
+    commit = "11f53e03133963fb11ae0588e08b5e0b85be8be5",
     importpath = "golang.org/x/sys",
 )
 
@@ -669,7 +669,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_procfs",
-    commit = "b1a0a9a36d7453ba0f62578b99712f3a6c5f82d1",
+    commit = "bf6a532e95b1f7a62adf0ab5050a5bb2237ad2f4",
     importpath = "github.com/prometheus/procfs",
 )
 
