@@ -1,10 +1,13 @@
 package depositContract
 
 import (
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"encoding/binary"
 	"fmt"
+	"github.com/ethereum/go-ethereum"
 	"log"
 	"math/big"
 	"testing"
@@ -23,10 +26,11 @@ var (
 )
 
 type testAccount struct {
-	addr     common.Address
-	contract *DepositContract
-	backend  *backends.SimulatedBackend
-	txOpts   *bind.TransactOpts
+	addr         common.Address
+	contract     *DepositContract
+	contractAddr common.Address
+	backend      *backends.SimulatedBackend
+	txOpts       *bind.TransactOpts
 }
 
 func setup() (*testAccount, error) {
@@ -48,12 +52,12 @@ func setup() (*testAccount, error) {
 	genesis[addr] = core.GenesisAccount{Balance: startingBalance}
 	backend := backends.NewSimulatedBackend(genesis, 2100000)
 
-	_, _, contract, err := DeployDepositContract(txOpts, backend)
+	contractAddr, _, contract, err := DeployDepositContract(txOpts, backend)
 	if err != nil {
 		return nil, err
 	}
 
-	return &testAccount{addr, contract, backend, txOpts}, nil
+	return &testAccount{addr, contract, contractAddr, backend, txOpts}, nil
 }
 
 func TestSetupAndContractRegistration(t *testing.T) {
@@ -114,28 +118,36 @@ func TestValidatorRegisters(t *testing.T) {
 	if err != nil {
 		t.Errorf("Validator registration failed: %v", err)
 	}
-	log, err := testAccount.contract.FilterDeposit(&bind.FilterOpts{})
 
-	defer func() {
-		err = log.Close()
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
-
-	if err != nil {
-		t.Fatal(err)
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{
+			testAccount.contractAddr,
+		},
 	}
-	if log.Error() != nil {
-		t.Fatal(log.Error())
-	}
-	log.Next()
 
 	index := make([]byte, 8)
-	binary.BigEndian.PutUint64(index, 65536)
 
-	if !bytes.Equal(log.Event.MerkleTreeIndex, index) {
-		t.Errorf("HashChainValue event total desposit count miss matched. Want: %v, Got: %v", index, log.Event.MerkleTreeIndex)
+	logs, err := testAccount.backend.FilterLogs(context.Background(), query)
+	if err != nil {
+		t.Fatalf("Unable to get logs of deposit contract: %v", err)
+	}
+
+	merkleTreeIndex := make([]uint64, 5)
+	depositData := make([][]byte, 5)
+
+	for i, log := range logs {
+		_, data, idx, err := UnpackDepositLogData(log.Data)
+		if err != nil {
+			t.Fatalf("Unable to unpack log data: %v", err)
+		}
+		merkleTreeIndex[i] = binary.BigEndian.Uint64(idx)
+		depositData[i] = 
+	}
+
+	twoTothePowerOfTreeDepth := math.Pow(2,params.BeaconConfig().DepositContractTreeDepth) 
+
+	if merkleTreeIndex[0] != twoTothePowerOfTreeDepth + 1 {
+		t.Errorf("HashChainValue event total desposit count miss matched. Want: %v, Got: %v", index, logs[0])
 	}
 	if !bytes.Equal(log.Event.Data[len(log.Event.Data)-1:], []byte{'A'}) {
 		t.Errorf("validatorRegistered event randao commitment miss matched. Want: %v, Got: %v", []byte{'A'}, log.Event.Data[len(log.Event.Data)-1:])

@@ -1,4 +1,4 @@
-package utils
+package depositContract
 
 import (
 	"bytes"
@@ -9,23 +9,23 @@ import (
 )
 
 // UnpackDepositLogData unpacks the data from a deposit log using the ABI decoder.
-func UnpackDepositLogData(data []byte) (depositData []byte, merkleTreeIndex []byte, err error) {
-	reader := bytes.NewReader([]byte(contracts.ValidatorRegistrationABI))
+func UnpackDepositLogData(data []byte) (depositRoot [32]byte, datad []byte, merkleTreeIndex []byte, err error) {
+	reader := bytes.NewReader([]byte(DepositContractABI))
 	contractAbi, err := abi.JSON(reader)
 	if err != nil {
-		return nil, nil, fmt.Errorf("unable to generate contract abi: %v", err)
+		return [32]byte{}, nil, nil, fmt.Errorf("unable to generate contract abi: %v", err)
 	}
-	unpackedLogs := []*[]byte{
-		&[]byte{},
-		&[]byte{},
+
+	unpackedLogs := []interface{}{
+		&depositRoot,
+		&datad,
+		&merkleTreeIndex,
 	}
 	if err := contractAbi.Unpack(&unpackedLogs, "Deposit", data); err != nil {
-		return nil, nil, fmt.Errorf("unable to unpack logs: %v", err)
+		return [32]byte{}, nil, nil, fmt.Errorf("unable to unpack logs: %v", err)
 	}
-	depositData = *unpackedLogs[0]
-	merkleTreeIndex = *unpackedLogs[1]
 
-	return depositData, merkleTreeIndex, nil
+	return depositRoot, datad, merkleTreeIndex, nil
 }
 
 // UnpackChainStartLogData unpacks the data from a chain start log using the ABI decoder.
