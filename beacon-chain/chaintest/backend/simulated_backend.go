@@ -270,8 +270,13 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 
 	depositsTrie := trie.NewDepositTrie()
 	for i := uint64(0); i < testCase.Config.NumSlots; i++ {
+		currentState, err := sb.beaconDB.GetState()
+		if err != nil {
+			return fmt.Errorf("could not get current beacon state: %v", err)
+		}
+
 		prevBlockRoot := prevBlockRoots[len(prevBlockRoots)-1]
-		proposerIndex, err := findNextSlotProposerIndex(beaconState)
+		proposerIndex, err := findNextSlotProposerIndex(currentState)
 		if err != nil {
 			return fmt.Errorf("could not fetch beacon proposer index: %v", err)
 		}
@@ -316,11 +321,6 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 
 		layersPeeled := layersPeeledForProposer[proposerIndex]
 		blockRandaoReveal := determineSimulatedBlockRandaoReveal(layersPeeled, hashOnions)
-
-		currentState, err := sb.beaconDB.GetState()
-		if err != nil {
-			return fmt.Errorf("could not get current beacon state: %v", err)
-		}
 
 		// We generate a new block to pass into the state transition.
 		newBlock, newBlockRoot, err := generateSimulatedBlock(
