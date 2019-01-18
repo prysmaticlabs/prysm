@@ -3,7 +3,6 @@ package blockchain
 import (
 	"fmt"
 
-	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -55,16 +54,14 @@ func VoteCount(block *pb.BeaconBlock, targets map[[32]byte]*pb.BeaconBlock, beac
 		if err != nil {
 			return 0, err
 		}
-		ancestorEnc, err := proto.Marshal(ancestor)
+		ancestorHash, err := hashutil.HashBeaconBlock(ancestor)
 		if err != nil {
 			return 0, err
 		}
-		ancestorHash := hashutil.Hash(ancestorEnc)
-		blockEnc, err := proto.Marshal(block)
+		blockHash, err := hashutil.HashBeaconBlock(block)
 		if err != nil {
 			return 0, err
 		}
-		blockHash := hashutil.Hash(blockEnc)
 		if blockHash == ancestorHash {
 			votes++
 		}

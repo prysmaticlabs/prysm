@@ -65,6 +65,32 @@ func generateTestGenesisStateAndBlock(
 	return beaconState, genesisBlock, stateHash, genesisHash
 }
 
+func setupConflictingBlocks(
+	t *testing.T,
+	beaconDB *db.BeaconDB,
+	genesisHash [32]byte,
+	stateRoot [32]byte,
+) (candidate1 *pb.BeaconBlock, candidate2 *pb.BeaconBlock) {
+	candidate1 = &pb.BeaconBlock{
+		Slot:             5,
+		ParentRootHash32: genesisHash[:],
+		StateRootHash32:  stateRoot[:],
+	}
+	candidate2 = &pb.BeaconBlock{
+		Slot:             5,
+		ParentRootHash32: genesisHash[:],
+		StateRootHash32:  []byte("some-other-state"),
+	}
+	// We store these potential heads in the DB.
+	if err := beaconDB.SaveBlock(candidate1); err != nil {
+		t.Fatal(err)
+	}
+	if err := beaconDB.SaveBlock(candidate2); err != nil {
+		t.Fatal(err)
+	}
+	return candidate1, candidate2
+}
+
 func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
@@ -108,31 +134,15 @@ func TestLMDGhost_TrivialHigherVoteCountWins(t *testing.T) {
 		100,
 		beaconDB,
 	)
-	lowerVoteBlock := &pb.BeaconBlock{
-		Slot:             5,
-		ParentRootHash32: genesisHash[:],
-		StateRootHash32:  stateHash[:],
-	}
-	higherVoteBlock := &pb.BeaconBlock{
-		Slot:             5,
-		ParentRootHash32: genesisHash[:],
-		StateRootHash32:  []byte("some-other-state"),
-	}
 
-	// We store these potential heads in the DB.
-	if err := beaconDB.SaveBlock(lowerVoteBlock); err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconDB.SaveBlock(higherVoteBlock); err != nil {
-		t.Fatal(err)
-	}
+	candidate1, candidate2 := setupConflictingBlocks(t, beaconDB, genesisHash, stateHash)
 
 	voteTargets := make(map[[32]byte]*pb.BeaconBlock)
 	key := bytesutil.ToBytes32(beaconState.ValidatorRegistry[0].Pubkey)
-	voteTargets[key] = higherVoteBlock
+	voteTargets[key] = candidate2
 
 	// We then test LMD Ghost was applied as the fork-choice rule.
-	observedBlocks := []*pb.BeaconBlock{lowerVoteBlock, higherVoteBlock}
+	observedBlocks := []*pb.BeaconBlock{candidate1, candidate2}
 	head, err := LMDGhost(genesisBlock, voteTargets, observedBlocks, beaconDB)
 	if err != nil {
 		t.Fatalf("Could not run LMD GHOST: %v", err)
@@ -140,8 +150,8 @@ func TestLMDGhost_TrivialHigherVoteCountWins(t *testing.T) {
 
 	// We expect that higherVoteBlock has more votes than lowerVoteBlock, allowing it to be
 	// selected by the fork-choice rule.
-	if !reflect.DeepEqual(higherVoteBlock, head) {
-		t.Errorf("Expected head to equal %v, received %v", higherVoteBlock, head)
+	if !reflect.DeepEqual(candidate2, head) {
+		t.Errorf("Expected head to equal %v, received %v", candidate2, head)
 	}
 }
 
@@ -153,35 +163,18 @@ func TestLMDGhost_EveryActiveValidatorHasLatestAttestation(t *testing.T) {
 		params.BeaconConfig().DepositsForChainStart,
 		beaconDB,
 	)
-	lowerVoteBlock := &pb.BeaconBlock{
-		Slot:             5,
-		ParentRootHash32: genesisHash[:],
-		StateRootHash32:  stateHash[:],
-	}
-	higherVoteBlock := &pb.BeaconBlock{
-		Slot:             5,
-		ParentRootHash32: genesisHash[:],
-		StateRootHash32:  []byte("some-other-state"),
-	}
-
-	// We store these potential heads in the DB.
-	if err := beaconDB.SaveBlock(lowerVoteBlock); err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconDB.SaveBlock(higherVoteBlock); err != nil {
-		t.Fatal(err)
-	}
+	candidate1, candidate2 := setupConflictingBlocks(t, beaconDB, genesisHash, stateHash)
 
 	activeIndices := validators.ActiveValidatorIndices(beaconState.ValidatorRegistry, 0)
 	// We store some simulated latest attestation target for every active validator in a map.
 	voteTargets := make(map[[32]byte]*pb.BeaconBlock, len(activeIndices))
 	for i := 0; i < len(activeIndices); i++ {
 		key := bytesutil.ToBytes32([]byte(fmt.Sprintf("%d", i)))
-		voteTargets[key] = higherVoteBlock
+		voteTargets[key] = candidate2
 	}
 
 	// We then test LMD Ghost was applied as the fork-choice rule.
-	observedBlocks := []*pb.BeaconBlock{lowerVoteBlock, higherVoteBlock}
+	observedBlocks := []*pb.BeaconBlock{candidate1, candidate2}
 	head, err := LMDGhost(genesisBlock, voteTargets, observedBlocks, beaconDB)
 	if err != nil {
 		t.Fatalf("Could not run LMD GHOST: %v", err)
@@ -189,8 +182,8 @@ func TestLMDGhost_EveryActiveValidatorHasLatestAttestation(t *testing.T) {
 
 	// We expect that higherVoteBlock to have overwhelmingly more votes
 	// than lowerVoteBlock, allowing it to be selected by the fork-choice rule.
-	if !reflect.DeepEqual(higherVoteBlock, head) {
-		t.Errorf("Expected head to equal %v, received %v", higherVoteBlock, head)
+	if !reflect.DeepEqual(candidate2, head) {
+		t.Errorf("Expected head to equal %v, received %v", candidate2, head)
 	}
 }
 
