@@ -232,6 +232,7 @@ func ContractConfig() *DepositContractConfig {
 	return contractConfig
 }
 
+// DemoContractConfig uses the argument provided to initialize a fresh config.
 func DemoContractConfig(depositsReq *big.Int) *DepositContractConfig {
 	return &DepositContractConfig{
 		DepositsForChainStart: depositsReq,
