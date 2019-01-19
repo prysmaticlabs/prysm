@@ -167,7 +167,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 
 	log.Info("checking db")
 
-	beaconState, err := db.GetState()
+	beaconState, err := db.State()
 	if err != nil {
 		return err
 	}
@@ -178,7 +178,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 		}
 	}
 
-	beaconState, err = db.GetState()
+	beaconState, err = db.State()
 	if err != nil {
 		return err
 	}
@@ -188,7 +188,7 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 		return err
 	}
 
-	genesisBlock, err := db.GetBlockBySlot(0)
+	genesisBlock, err := db.BlockBySlot(0)
 	if err != nil {
 		return err
 	}
