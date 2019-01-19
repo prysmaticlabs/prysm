@@ -71,7 +71,7 @@ func TestSave(t *testing.T) {
 	}
 }
 
-func TestGetBlockBySlotEmptyChain(t *testing.T) {
+func TestBlockBySlotEmptyChain(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 

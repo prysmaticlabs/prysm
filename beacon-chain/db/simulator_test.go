@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestSaveAndGetSlot(t *testing.T) {
+func TestSimulatorSlotAndSaveSimulatorSlot(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 

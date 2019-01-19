@@ -43,7 +43,7 @@ func TestSaveAndRetrieveAttestation(t *testing.T) {
 	}
 }
 
-func TestGetNilAttestation(t *testing.T) {
+func TestNilAttestation(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
@@ -57,7 +57,7 @@ func TestGetNilAttestation(t *testing.T) {
 	}
 }
 
-func TestGetHasAttestation(t *testing.T) {
+func TestHasAttestation(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 

@@ -14,7 +14,7 @@ func TestSaveCleanedFinalizedSlot(t *testing.T) {
 	}
 }
 
-func TestGetCleanedFinalizedSlot_NotFound(t *testing.T) {
+func TestCleanedFinalizedSlot_NotFound(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
@@ -28,7 +28,7 @@ func TestGetCleanedFinalizedSlot_NotFound(t *testing.T) {
 	}
 }
 
-func TestGetCleanedFinalizedSlot(t *testing.T) {
+func TestCleanedFinalizedSlot(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
