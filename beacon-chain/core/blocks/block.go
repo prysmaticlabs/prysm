@@ -200,3 +200,19 @@ func DecodeDepositAmountAndTimeStamp(depositData []byte) (uint64, int64, error) 
 
 	return amount, int64(timestamp), nil
 }
+
+// BlockChildren obtains the blocks in a list of observed blocks which have the current
+// beacon block's hash as their parent root hash.
+func BlockChildren(block *pb.BeaconBlock, observedBlocks []*pb.BeaconBlock) ([]*pb.BeaconBlock, error) {
+	var children []*pb.BeaconBlock
+	hash, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		return nil, fmt.Errorf("could not hash block: %v", err)
+	}
+	for _, observed := range observedBlocks {
+		if bytes.Equal(observed.ParentRootHash32, hash[:]) {
+			children = append(children, observed)
+		}
+	}
+	return children, nil
+}

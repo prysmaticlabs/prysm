@@ -260,3 +260,32 @@ func TestDecodeDepositAmountAndTimeStamp(t *testing.T) {
 		}
 	}
 }
+
+func TestBlockChildren(t *testing.T) {
+	genesisBlock := NewGenesisBlock([]byte{})
+	genesisHash, err := hashutil.HashBeaconBlock(genesisBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	targets := []*pb.BeaconBlock{
+		{
+			Slot:             9,
+			ParentRootHash32: genesisHash[:],
+		},
+		{
+			Slot:             5,
+			ParentRootHash32: []byte{},
+		},
+		{
+			Slot:             8,
+			ParentRootHash32: genesisHash[:],
+		},
+	}
+	children, err := BlockChildren(genesisBlock, targets)
+	if err != nil {
+		t.Fatalf("Could not fetch block children: %v", err)
+	}
+	if len(children) != 2 {
+		t.Errorf("Expected %d children, received %d", 2, len(children))
+	}
+}
