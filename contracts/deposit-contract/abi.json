@@ -39,6 +39,19 @@
         "type": "event"
     },
     {
+        "name": "__init__",
+        "outputs": [],
+        "inputs": [
+            {
+                "type": "uint256",
+                "name": "depositThreshold"
+            }
+        ],
+        "constant": false,
+        "payable": false,
+        "type": "constructor"
+    },
+    {
         "name": "deposit",
         "outputs": [],
         "inputs": [
@@ -50,7 +63,7 @@
         "constant": false,
         "payable": true,
         "type": "function",
-        "gas": 1688758
+        "gas": 1688958
     },
     {
         "name": "get_deposit_root",

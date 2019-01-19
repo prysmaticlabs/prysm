@@ -3,6 +3,7 @@
 package params
 
 import (
+	"math/big"
 	"time"
 )
 
@@ -74,6 +75,11 @@ type BeaconChainConfig struct {
 	SyncPollingInterval   int64     // SyncPollingInterval queries network nodes for sync status.
 	GenesisTime           time.Time // GenesisTime used by the protocol.
 	MaxNumLog2Validators  uint64    // MaxNumLog2Validators is the Max number of validators in Log2 exists given total ETH supply.
+}
+
+// DepositContractConfig contains the deposits for
+type DepositContractConfig struct {
+	DepositsForChainStart *big.Int // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
 }
 
 // ShardChainConfig contains configs for node to participate in shard chains.
@@ -203,8 +209,13 @@ var defaultShardConfig = &ShardChainConfig{
 	MaxShardBlockSize: uint64(32768),
 }
 
+var defaultDepositContractConfig = &DepositContractConfig{
+	DepositsForChainStart: big.NewInt(16384),
+}
+
 var beaconConfig = defaultBeaconConfig
 var shardConfig = defaultShardConfig
+var contractConfig = defaultDepositContractConfig
 
 // BeaconConfig retrieves beacon chain config.
 func BeaconConfig() *BeaconChainConfig {
@@ -214,6 +225,17 @@ func BeaconConfig() *BeaconChainConfig {
 // ShardConfig retrieves shard chain config.
 func ShardConfig() *ShardChainConfig {
 	return shardConfig
+}
+
+// ContractConfig retrieves the deposit contract config
+func ContractConfig() *DepositContractConfig {
+	return contractConfig
+}
+
+func DemoContractConfig(depositsReq *big.Int) *DepositContractConfig {
+	return &DepositContractConfig{
+		DepositsForChainStart: depositsReq,
+	}
 }
 
 // UseDemoBeaconConfig for beacon chain services.

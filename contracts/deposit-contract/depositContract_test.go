@@ -53,7 +53,8 @@ func setup() (*testAccount, error) {
 	genesis[addr] = core.GenesisAccount{Balance: startingBalance}
 	backend := backends.NewSimulatedBackend(genesis, 210000000000)
 
-	contractAddr, _, contract, err := DeployDepositContract(txOpts, backend)
+	depositsRequired := big.NewInt(8)
+	contractAddr, _, contract, err := DeployDepositContract(txOpts, backend, depositsRequired)
 	if err != nil {
 		return nil, err
 	}
