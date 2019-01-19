@@ -100,9 +100,9 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 		t.Error("GenesisTime was not correctly initialized")
 	}
 	if !reflect.DeepEqual(*state.Fork, pb.Fork{
-		PreviousVersion:  initialForkVersion,
-		CurrentVersion: initialForkVersion,
-		Slot:        initialSlotNumber,
+		PreviousVersion: initialForkVersion,
+		CurrentVersion:  initialForkVersion,
+		Slot:            initialSlotNumber,
 	}) {
 		t.Error("Fork was not correctly initialized")
 	}

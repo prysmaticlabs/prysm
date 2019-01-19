@@ -854,7 +854,7 @@ func TestExitValidator_Ok(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                                 100,
 		ValidatorRegistryDeltaChainTipHash32: []byte{'A'},
-		LatestPenalizedBalances:          []uint64{0},
+		LatestPenalizedBalances:              []uint64{0},
 		ValidatorRegistry: []*pb.ValidatorRecord{
 			{ExitSlot: params.BeaconConfig().FarFutureSlot, Pubkey: []byte{'B'}},
 		},
@@ -910,9 +910,9 @@ func TestProcessPenaltiesExits_ValidatorPenalized(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                        config.LatestPenalizedExitLength / 2 * config.EpochLength,
+		Slot:                    config.LatestPenalizedExitLength / 2 * config.EpochLength,
 		LatestPenalizedBalances: latestPenalizedExits,
-		ValidatorBalances:           []uint64{config.MaxDepositInGwei, config.MaxDepositInGwei},
+		ValidatorBalances:       []uint64{config.MaxDepositInGwei, config.MaxDepositInGwei},
 		ValidatorRegistry: []*pb.ValidatorRecord{
 			{ExitSlot: params.BeaconConfig().FarFutureSlot, ExitCount: 1},
 		},
