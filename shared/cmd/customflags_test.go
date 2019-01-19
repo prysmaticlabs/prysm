@@ -75,6 +75,21 @@ func TestSetDirectoryString(t *testing.T) {
   }
 }
 
+func TestPrefixFor(t *testing.T) {
+  tests := map[string]string{
+    "d": "-",
+    "datadir": "--",
+    "": "--",
+  }
+
+  for test, expected := range tests {
+    actual := prefixFor(test)
+    if actual != expected {
+      t.Errorf("test prefix for %s, got %s, expected %s\n", test, actual, expected)
+    }
+  }
+}
+
 func TestHomeDir(t *testing.T) {
   expected := usr.HomeDir
   got := homeDir()
