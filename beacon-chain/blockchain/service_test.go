@@ -224,7 +224,7 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 	blockChan := make(chan *pb.BeaconBlock)
 	exitRoutine := make(chan bool)
 	go func() {
-		chainService.BlockProcessing(blockChan)
+		chainService.blockProcessing(blockChan)
 		<-exitRoutine
 	}()
 
@@ -232,9 +232,9 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	chainService.IncomingBlockChan <- block
+	chainService.incomingBlockChan <- block
 	<-blockChan
-	chainService.Cancel()
+	chainService.cancel()
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, "unable to retrieve POW chain reference block failed")
@@ -332,7 +332,7 @@ func TestRunningChainService(t *testing.T) {
 	blockChan := make(chan *pb.BeaconBlock)
 	exitRoutine := make(chan bool)
 	go func() {
-		chainService.BlockProcessing(blockChan)
+		chainService.blockProcessing(blockChan)
 		<-exitRoutine
 	}()
 
@@ -340,9 +340,9 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	chainService.IncomingBlockChan <- block
+	chainService.incomingBlockChan <- block
 	<-blockChan
-	chainService.Cancel()
+	chainService.cancel()
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, "Chain service context closed, exiting goroutine")
@@ -433,7 +433,7 @@ func TestUpdateHead(t *testing.T) {
 		exitRoutine := make(chan bool)
 		blockChan := make(chan *pb.BeaconBlock)
 		go func() {
-			chainService.UpdateHead(blockChan)
+			chainService.updateHead(blockChan)
 			<-exitRoutine
 		}()
 
@@ -444,7 +444,7 @@ func TestUpdateHead(t *testing.T) {
 
 		// If blocks pending processing is empty, the updateHead routine does nothing.
 		blockChan <- block
-		chainService.Cancel()
+		chainService.cancel()
 		exitRoutine <- true
 
 		testutil.AssertLogsContain(t, hook, tt.logAssert)

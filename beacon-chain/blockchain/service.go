@@ -101,7 +101,13 @@ func (c *ChainService) Status() error {
 	return nil
 }
 
-// CanonicalBlockFeed returns a channel that is written to
+// IncomingBlockFeed returns a feed that is written to
+// whenever a new block is sent to the chain service.
+func (c *ChainService) IncomingBlockFeed() *event.Feed {
+	return c.incomingBlockFeed
+}
+
+// CanonicalBlockFeed returns a feed that is written to
 // whenever a new block is determined to be canonical in the chain.
 func (c *ChainService) CanonicalBlockFeed() *event.Feed {
 	return c.canonicalBlockFeed

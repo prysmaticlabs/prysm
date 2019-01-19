@@ -1,0 +1,88 @@
+[
+    {
+        "name": "Deposit",
+        "inputs": [
+            {
+                "type": "bytes32",
+                "name": "previous_deposit_root",
+                "indexed": false
+            },
+            {
+                "type": "bytes",
+                "name": "data",
+                "indexed": false
+            },
+            {
+                "type": "bytes",
+                "name": "merkle_tree_index",
+                "indexed": false
+            }
+        ],
+        "anonymous": false,
+        "type": "event"
+    },
+    {
+        "name": "ChainStart",
+        "inputs": [
+            {
+                "type": "bytes32",
+                "name": "deposit_root",
+                "indexed": false
+            },
+            {
+                "type": "bytes",
+                "name": "time",
+                "indexed": false
+            }
+        ],
+        "anonymous": false,
+        "type": "event"
+    },
+    {
+        "name": "deposit",
+        "outputs": [],
+        "inputs": [
+            {
+                "type": "bytes",
+                "name": "deposit_input"
+            }
+        ],
+        "constant": false,
+        "payable": true,
+        "type": "function",
+        "gas": 1688758
+    },
+    {
+        "name": "get_deposit_root",
+        "outputs": [
+            {
+                "type": "bytes32",
+                "name": "out"
+            }
+        ],
+        "inputs": [],
+        "constant": true,
+        "payable": false,
+        "type": "function",
+        "gas": 625
+    },
+    {
+        "name": "get_branch",
+        "outputs": [
+            {
+                "type": "bytes32[32]",
+                "name": "out"
+            }
+        ],
+        "inputs": [
+            {
+                "type": "uint256",
+                "name": "leaf"
+            }
+        ],
+        "constant": true,
+        "payable": false,
+        "type": "function",
+        "gas": 20108
+    }
+]

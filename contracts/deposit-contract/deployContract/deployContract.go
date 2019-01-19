@@ -14,7 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
-	contracts "github.com/prysmaticlabs/prysm/contracts/validator-registration-contract"
+	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -132,7 +132,7 @@ func main() {
 		}
 
 		// Deploy validator registration contract
-		addr, tx, _, err := contracts.DeployValidatorRegistration(txOps, client)
+		addr, tx, _, err := contracts.DeployDepositContract(txOps, client)
 		if err != nil {
 			log.Fatal(err)
 		}

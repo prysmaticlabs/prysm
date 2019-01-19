@@ -4,11 +4,11 @@ load("@io_bazel_rules_docker//container:container.bzl", "container_push")
 
 go_library(
     name = "go_default_library",
-    srcs = ["deployVRC.go"],
-    importpath = "github.com/prysmaticlabs/prysm/contracts/validator-registration-contract/deployVRC",
+    srcs = ["deployContract.go"],
+    importpath = "github.com/prysmaticlabs/prysm/contracts/deposit-contract/deployContract",
     visibility = ["//visibility:private"],
     deps = [
-        "//contracts/validator-registration-contract:go_default_library",
+        "//contracts/deposit-contract:go_default_library",
         "//shared/version:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/keystore:go_default_library",

@@ -33,7 +33,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
-	contracts "github.com/prysmaticlabs/prysm/contracts/validator-registration-contract"
+	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -169,13 +169,13 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 
 	serializedData := new(bytes.Buffer)
 	if err := ssz.Encode(serializedData, data); err != nil {
-		fmt.Errorf("Could not serialize data %v", err)
+		return fmt.Errorf("could not serialize data %v", err)
 	}
 
 	for i := 0; i < 8; i++ {
 		testAcc.txOpts.Value = amount32Eth
 		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
-			return fmt.Errorf("Could not deposit to VRC %v", err)
+			return fmt.Errorf("could not deposit to VRC %v", err)
 		}
 		testAcc.backend.Commit()
 	}
@@ -188,7 +188,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 
 	logs, err := testAcc.backend.FilterLogs(context.Background(), query)
 	if err != nil {
-		return fmt.Errorf("Unable to retrieve logs %v", err)
+		return fmt.Errorf("unable to retrieve logs %v", err)
 	}
 
 	logs[len(logs)-1].Topics[1] = currentRoot
@@ -339,7 +339,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 			return fmt.Errorf("could not generate simulated beacon block %v", err)
 		}
 		latestRoot := depositsTrie.Root()
-		beaconState.LatestDepositRootHash32 = latestRoot[:]
+		currentState.LatestDepositRootHash32 = latestRoot[:]
 
 		// We trigger a new block in the blockchain service and update the head.
 		if err := chainService.ReceiveBlock(newBlock, currentState); err != nil {
@@ -424,7 +424,7 @@ func (g *goodLogger) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]
 
 type testAccount struct {
 	addr         common.Address
-	contract     *contracts.ValidatorRegistration
+	contract     *contracts.DepositContract
 	contractAddr common.Address
 	backend      *backends.SimulatedBackend
 	txOpts       *bind.TransactOpts
@@ -449,7 +449,7 @@ func setupPOWChainAccount() (*testAccount, error) {
 	genesis[addr] = core.GenesisAccount{Balance: startingBalance}
 	backend := backends.NewSimulatedBackend(genesis, 2100000)
 
-	contractAddr, _, contract, err := contracts.DeployValidatorRegistration(txOpts, backend)
+	contractAddr, _, contract, err := contracts.DeployDepositContract(txOpts, backend)
 	if err != nil {
 		return nil, err
 	}

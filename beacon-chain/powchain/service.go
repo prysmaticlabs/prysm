@@ -10,13 +10,12 @@ import (
 	"strings"
 	"time"
 
-	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
-	contracts "github.com/prysmaticlabs/prysm/contracts/validator-registration-contract"
+	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/trie"
@@ -52,7 +51,7 @@ type Client interface {
 // chain's validator registration process.
 type Web3Service struct {
 	ctx                    context.Context
-	Cancel                 context.CancelFunc
+	cancel                 context.CancelFunc
 	client                 Client
 	headerChan             chan *gethTypes.Header
 	logChan                chan gethTypes.Log
@@ -63,8 +62,7 @@ type Web3Service struct {
 	logger                 bind.ContractFilterer
 	blockNumber            *big.Int    // the latest PoW chain blockNumber.
 	blockHash              common.Hash // the latest PoW chain blockHash.
-	vrcCaller              *contracts.ValidatorRegistrationCaller
-	depositCount           uint64
+	vrcCaller              *contracts.DepositContractCaller
 	DepositRoot            []byte
 	DepositTrie            *trie.DepositTrie
 }
@@ -80,8 +78,8 @@ type Web3ServiceConfig struct {
 }
 
 var (
-	depositEventSignature    = []byte("Deposit(bytes,bytes,bytes)")
-	chainStartEventSignature = []byte("ChainStart(bytes,bytes)")
+	depositEventSignature    = []byte("Deposit(bytes32,bytes,bytes)")
+	chainStartEventSignature = []byte("ChainStart(bytes32,bytes)")
 )
 
 // NewWeb3Service sets up a new instance with an ethclient when
@@ -94,7 +92,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		)
 	}
 
-	vrcCaller, err := contracts.NewValidatorRegistrationCaller(config.DepositContract, config.ContractBackend)
+	vrcCaller, err := contracts.NewDepositContractCaller(config.DepositContract, config.ContractBackend)
 	if err != nil {
 		return nil, fmt.Errorf("could not create VRC caller %v", err)
 	}
@@ -102,7 +100,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 	ctx, cancel := context.WithCancel(ctx)
 	return &Web3Service{
 		ctx:                    ctx,
-		Cancel:                 cancel,
+		cancel:                 cancel,
 		headerChan:             make(chan *gethTypes.Header),
 		logChan:                make(chan gethTypes.Log),
 		endpoint:               config.Endpoint,
@@ -127,7 +125,7 @@ func (w *Web3Service) Start() {
 
 // Stop the web3 service's main event loop and associated goroutines.
 func (w *Web3Service) Stop() error {
-	defer w.Cancel()
+	defer w.cancel()
 	defer close(w.headerChan)
 	log.Info("Stopping service")
 	return nil
@@ -148,19 +146,13 @@ func (w *Web3Service) Status() error {
 // initDataFromVRC calls the vrc contract and finds the deposit count
 // and deposit root.
 func (w *Web3Service) initDataFromVRC() error {
-	depositCount, err := w.vrcCaller.DepositCount(&bind.CallOpts{})
-	if err != nil {
-		return fmt.Errorf("could not retrieve deposit count %v", err)
-	}
-
-	w.depositCount = depositCount.Uint64()
 
 	root, err := w.vrcCaller.GetDepositRoot(&bind.CallOpts{})
 	if err != nil {
 		return fmt.Errorf("could not retrieve deposit root %v", err)
 	}
 
-	w.DepositRoot = root
+	w.DepositRoot = root[:]
 	w.DepositTrie = trie.NewDepositTrie()
 
 	return nil
@@ -241,8 +233,8 @@ func (w *Web3Service) ProcessLog(VRClog gethTypes.Log) {
 // the POW chain by trying to ascertain which participant deposited
 // in the contract.
 func (w *Web3Service) ProcessDepositLog(VRClog gethTypes.Log) {
-	merkleRoot := VRClog.Topics[1]
-	depositData, MerkleTreeIndex, err := utils.UnpackDepositLogData(VRClog.Data)
+
+	merkleRoot, depositData, MerkleTreeIndex, err := contracts.UnpackDepositLogData(VRClog.Data)
 	if err != nil {
 		log.Errorf("Could not unpack log %v", err)
 		return
@@ -266,8 +258,8 @@ func (w *Web3Service) ProcessDepositLog(VRClog gethTypes.Log) {
 // ProcessChainStartLog processes the log which had been received from
 // the POW chain by trying to determine when to start the beacon chain.
 func (w *Web3Service) ProcessChainStartLog(VRClog gethTypes.Log) {
-	receiptRoot := VRClog.Topics[1]
-	timestampData, err := utils.UnpackChainStartLogData(VRClog.Data)
+
+	receiptRoot, timestampData, err := contracts.UnpackChainStartLogData(VRClog.Data)
 	if err != nil {
 		log.Errorf("Unable to unpack ChainStart log data %v", err)
 		return
