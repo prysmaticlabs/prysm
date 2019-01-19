@@ -13,7 +13,6 @@ import (
 	"github.com/golang/mock/gomock"
 	ipfslog "github.com/ipfs/go-log"
 	bhost "github.com/libp2p/go-libp2p-blankhost"
-	peerstore "github.com/libp2p/go-libp2p-peerstore"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
@@ -67,104 +66,15 @@ func TestP2pPortTakenError(t *testing.T) {
 }
 
 func TestBroadcast(t *testing.T) {
-	servers, err := runP2PServersWithDifferentPorts(3)
+	s, err := NewServer(&ServerConfig{})
 	if err != nil {
-		t.Fatalf("error while trying to create server: %s", err)
-	}
-
-	err = connectServersTo(servers[0], servers[1:])
-	if err != nil {
-		t.Fatalf("error while trying to connect to peer: %s", err)
+		t.Fatalf("Could not start a new server: %v", err)
 	}
 
 	msg := &shardpb.CollationBodyRequest{}
-	subscribeServersToTopic(servers, "theTopic", msg)
+	s.Broadcast(msg)
 
-	time.Sleep(20 * time.Millisecond)
-
-	msgSubsChannel := make(chan Message)
-	for _, server := range servers[1:] {
-		server.Subscribe(&shardpb.CollationBodyRequest{}, msgSubsChannel)
-	}
-
-	aMessage := &shardpb.CollationBodyRequest{ShardId: 1234}
-	servers[0].Broadcast(aMessage)
-
-	doneChan := make(chan bool)
-	errorChan := make(chan bool)
-	timeoutChan := make(chan bool)
-
-	var wg sync.WaitGroup
-	wg.Add(len(servers[1:])) // Num of nodes that receive the channel
-
-	// Goroutine that waits the broadcasted messages and completes waitgroup
-	go func() {
-		for recMessage := range msgSubsChannel {
-			protoMsg := recMessage.Data.(*shardpb.CollationBodyRequest)
-			if protoMsg.ShardId != aMessage.ShardId {
-				errorChan <- true
-			}
-
-			wg.Done()
-		}
-	}()
-
-	// Goroutine that makes timeouts if there if it is not completed in 5 seconds
-	go func() {
-		time.Sleep(5 * time.Second)
-		close(timeoutChan)
-		close(msgSubsChannel)
-	}()
-
-	// Goroutine that closes all channels once broadcast is complete
-	go func() {
-		wg.Wait()
-		close(doneChan)
-		close(msgSubsChannel)
-	}()
-
-	select {
-	case <-doneChan:
-		break
-	case <-errorChan:
-		t.Fatalf("error asserting that received broacast message equals expected")
-	case <-timeoutChan:
-		t.Fatalf("timeout while waiting for broadcast message")
-	}
-}
-
-func runP2PServersWithDifferentPorts(numServers int) ([]*Server, error) {
-	var servers []*Server
-	initialPort := 12345
-
-	for i := 0; i < numServers; i++ {
-		s, err := NewServer(&ServerConfig{Port: initialPort + i})
-		if err != nil {
-			return nil, err
-		}
-
-		servers = append(servers, s)
-	}
-
-	return servers, nil
-}
-
-func connectServersTo(serverToConnect *Server, servers []*Server) error {
-	for _, server := range servers {
-		err := server.host.Connect(context.Background(), peerstore.PeerInfo{ID: serverToConnect.host.ID(), Addrs: serverToConnect.host.Addrs()})
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func subscribeServersToTopic(servers []*Server, topic string, msg proto.Message) {
-	for _, server := range servers {
-		copyMsg := *msg.(*shardpb.CollationBodyRequest)
-		server.RegisterTopic(topic, &copyMsg)
-	}
+	// TODO(543): test that topic was published
 }
 
 func TestEmit(t *testing.T) {
