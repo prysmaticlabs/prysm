@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	contracts "github.com/prysmaticlabs/prysm/contracts/validator-registration-contract"
 )
 
 // UnpackDepositLogData unpacks the data from a deposit log using the ABI decoder.
@@ -30,7 +29,7 @@ func UnpackDepositLogData(data []byte) (depositRoot [32]byte, depositData []byte
 
 // UnpackChainStartLogData unpacks the data from a chain start log using the ABI decoder.
 func UnpackChainStartLogData(data []byte) (depositRoot [32]byte, timestamp []byte, err error) {
-	reader := bytes.NewReader([]byte(contracts.ValidatorRegistrationABI))
+	reader := bytes.NewReader([]byte(DepositContractABI))
 	contractAbi, err := abi.JSON(reader)
 	if err != nil {
 		return [32]byte{}, nil, fmt.Errorf("unable to generate contract abi: %v", err)

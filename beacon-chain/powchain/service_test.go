@@ -605,6 +605,8 @@ func TestProcessChainStartLog(t *testing.T) {
 		t.Fatalf("Could not serialize data %v", err)
 	}
 
+	blocks.EncodeDepositData(data, amount32Eth.Uint64(), time.Now().Unix())
+
 	// 8 Validators are used as size required for beacon-chain to start. This number
 	// is defined in the VRC as the number required for the testnet. The actual number
 	// is 2**14
@@ -626,6 +628,15 @@ func TestProcessChainStartLog(t *testing.T) {
 	logs, err := testAcc.backend.FilterLogs(web3Service.ctx, query)
 	if err != nil {
 		t.Fatalf("Unable to retrieve logs %v", err)
+	}
+
+	for i := 0; i < 8; i++ {
+		_, depData, _, err := contracts.UnpackDepositLogData(logs[i].Data)
+		if err != nil {
+			t.Fatalf("Unable to unpack deposit logs %v", err)
+		}
+
+		web3Service.depositTrie.UpdateDepositTrie(depData)
 	}
 
 	web3Service.ProcessLog(logs[len(logs)-1])
