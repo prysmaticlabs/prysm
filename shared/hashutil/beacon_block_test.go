@@ -12,7 +12,7 @@ func TestHashBeaconBlock_doesntMutate(t *testing.T) {
 	a := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			Attestations: []*pb.Attestation{
-				&pb.Attestation{
+				{
 					Data: &pb.AttestationData{
 						Slot:  123,
 						Shard: 456,
@@ -20,7 +20,7 @@ func TestHashBeaconBlock_doesntMutate(t *testing.T) {
 				},
 			},
 		},
-		Signature: [][]byte{[]byte{'S', 'I', 'G'}},
+		Signature: [][]byte{{'S', 'I', 'G'}},
 	}
 	b := proto.Clone(a).(*pb.BeaconBlock)
 
