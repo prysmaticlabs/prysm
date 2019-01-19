@@ -244,11 +244,11 @@ func ProcessValidatorRegistry(
 		randaoMixSlot = state.CurrentEpochCalculationSlot -
 			config.SeedLookahead
 	}
-	randaoMix, err := randaoMix(state, randaoMixSlot)
+	mix, err := randaoMix(state, randaoMixSlot)
 	if err != nil {
 		return nil, fmt.Errorf("could not get randao mix: %v", err)
 	}
-	state.CurrentEpochRandaoMixHash32 = randaoMix
+	state.CurrentEpochRandaoMixHash32 = mix
 
 	return state, nil
 }

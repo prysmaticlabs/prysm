@@ -410,24 +410,6 @@ func TestProcessValidatorRegistry(t *testing.T) {
 	}
 }
 
-func TestProcessValidatorRegistry_ReachedUpperBound(t *testing.T) {
-	validators := make([]*pb.ValidatorRecord, 1<<config.MaxNumLog2Validators-1)
-	validator := &pb.ValidatorRecord{ExitSlot: config.FarFutureSlot}
-	for i := 0; i < len(validators); i++ {
-		validators[i] = validator
-	}
-	state := &pb.BeaconState{
-		Slot:                              64,
-		ValidatorRegistryLatestChangeSlot: 1,
-		LatestRandaoMixesHash32S:          [][]byte{{'A'}},
-		ValidatorRegistry:                 validators,
-	}
-
-	if _, err := ProcessValidatorRegistry(state); err == nil {
-		t.Fatalf("ProcessValidatorRegistry should have failed with upperbound")
-	}
-}
-
 func TestProcessPartialValidatorRegistry(t *testing.T) {
 	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
 	for i := 0; i < len(validators); i++ {

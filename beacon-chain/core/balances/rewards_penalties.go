@@ -344,7 +344,7 @@ func Crosslinks(
 	for i := startSlot; i < state.Slot; i++ {
 		shardCommittees, err := validators.ShardCommitteesAtSlot(state, i)
 		if err != nil {
-			return nil, fmt.Errorf("could not get shard committees for slot %d", i)
+			return nil, fmt.Errorf("could not get shard committees for slot %d: %v", i, err)
 		}
 		for _, shardCommittee := range shardCommittees {
 			shard := shardCommittee.Shard

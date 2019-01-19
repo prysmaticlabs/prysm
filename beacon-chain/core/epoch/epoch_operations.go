@@ -400,11 +400,11 @@ func randaoMix(state *pb.BeaconState, slot uint64) ([]byte, error) {
 		lowerBound = state.Slot - config.LatestRandaoMixesLength
 	}
 	upperBound := state.Slot
-	if slot <= lowerBound {
+	if slot < lowerBound {
 		return nil, fmt.Errorf("randao mix slot %d, can't be lower than %d",
 			slot, lowerBound)
 	}
-	if slot > upperBound {
+	if slot >= upperBound {
 		return nil, fmt.Errorf("randao mix slot %d, can't be higher than %d",
 			slot, upperBound)
 	}
