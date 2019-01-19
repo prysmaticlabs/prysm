@@ -7,7 +7,7 @@ import "proto/common/messages.proto";
 message BeaconState {
   // Validator registry [1-1000] 
   repeated ValidatorRecord validator_registry = 1;
-  uint64 validator_registry_latest_change_slot = 2;
+  uint64 validator_registry_update_slot = 2;
   uint64 validator_registry_exit_count = 3;
   bytes validator_registry_delta_chain_tip_hash32 = 4;
   repeated uint64 validator_balances = 5; // Balance in Gwei
@@ -16,6 +16,12 @@ message BeaconState {
   repeated ShardCommitteeArray shard_committees_at_slots = 1003;
   repeated bytes latest_randao_mixes_hash32s = 1004;
   repeated bytes latest_vdf_outputs_hash32s = 1005;
+  uint64 previous_epoch_start_shard = 1006;
+  uint64 current_epoch_start_shard = 1007;
+  uint64 previous_epoch_calculation_slot = 1008;
+  uint64 current_epoch_calculation_slot = 1009;
+  bytes previous_epoch_randao_mix_hash32 = 1010;
+  bytes current_epoch_randao_mix_hash32 = 1011;
 
   // Finality [2001-3000] 
   uint64 previous_justified_slot = 2001;
@@ -27,7 +33,7 @@ message BeaconState {
   repeated CrosslinkRecord latest_crosslinks = 3001;
   repeated bytes latest_block_root_hash32s = 3003;
   repeated bytes batched_block_root_hash32s = 3004;
-  repeated uint64 latest_penalized_exit_balances = 3005;
+  repeated uint64 latest_penalized_balances = 3005;
   repeated PendingAttestationRecord latest_attestations = 3006;
 
   // Ethereum 1.0 deposit root [4001-5000]
@@ -36,7 +42,7 @@ message BeaconState {
 
   // Miscellaneous [5001-6000]
   uint64 genesis_time = 5001;
-  ForkData fork_data = 5002;
+  Fork fork = 5002;
   uint64 slot = 5003;
 
   // Proof of custody [6001-7000]
@@ -45,10 +51,10 @@ message BeaconState {
   repeated CustodyChallenge custody_challenges = 6001;
 }
 
-message ForkData {
-  uint64 pre_fork_version = 1;
-  uint64 post_fork_version = 2;
-  uint64 fork_slot = 3;
+message Fork {
+  uint64 previous_version = 1;
+  uint64 current_version = 2;
+  uint64 slot = 3;
 }
 
 message DepositRootVote {

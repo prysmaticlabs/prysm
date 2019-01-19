@@ -312,7 +312,7 @@ func TestProcessEjections_Ok(t *testing.T) {
 		ValidatorBalances: []uint64{
 			params.BeaconConfig().EjectionBalanceInGwei - 1,
 			params.BeaconConfig().EjectionBalanceInGwei + 1},
-		LatestPenalizedExitBalances: []uint64{0},
+		LatestPenalizedBalances: []uint64{0},
 		ValidatorRegistry: []*pb.ValidatorRecord{
 			{ExitSlot: params.BeaconConfig().FarFutureSlot},
 			{ExitSlot: params.BeaconConfig().FarFutureSlot}},
@@ -335,7 +335,7 @@ func TestProcessEjections_Ok(t *testing.T) {
 func TestCanProcessValidatorRegistry(t *testing.T) {
 	state := &pb.BeaconState{
 		FinalizedSlot:                     100,
-		ValidatorRegistryLatestChangeSlot: 99,
+		ValidatorRegistryUpdateSlot: 99,
 		LatestCrosslinks: []*pb.CrosslinkRecord{
 			{Slot: 101}, {Slot: 102}, {Slot: 103}, {Slot: 104},
 		},
@@ -353,14 +353,14 @@ func TestCanProcessValidatorRegistry(t *testing.T) {
 func TestCanNotProcessValidatorRegistry(t *testing.T) {
 	state := &pb.BeaconState{
 		FinalizedSlot:                     100,
-		ValidatorRegistryLatestChangeSlot: 101,
+		ValidatorRegistryUpdateSlot: 101,
 	}
 	if CanProcessValidatorRegistry(state) {
 		t.Errorf("Wanted False for CanProcessValidatorRegistry, but got %v", CanProcessValidatorRegistry(state))
 	}
 	state = &pb.BeaconState{
 		FinalizedSlot:                     100,
-		ValidatorRegistryLatestChangeSlot: 99,
+		ValidatorRegistryUpdateSlot: 99,
 		LatestCrosslinks: []*pb.CrosslinkRecord{
 			{Slot: 99},
 		},
@@ -385,7 +385,7 @@ func TestProcessValidatorRegistry(t *testing.T) {
 
 	state := &pb.BeaconState{
 		Slot:                              64,
-		ValidatorRegistryLatestChangeSlot: 1,
+		ValidatorRegistryUpdateSlot: 1,
 		ShardCommitteesAtSlots:            shardCommittees,
 		LatestRandaoMixesHash32S:          [][]byte{{'A'}},
 	}
@@ -419,7 +419,7 @@ func TestProcessValidatorRegistry_ReachedUpperBound(t *testing.T) {
 	}
 	state := &pb.BeaconState{
 		Slot:                              64,
-		ValidatorRegistryLatestChangeSlot: 1,
+		ValidatorRegistryUpdateSlot: 1,
 		ShardCommitteesAtSlots:            shardCommittees,
 		LatestRandaoMixesHash32S:          [][]byte{{'A'}},
 		ValidatorRegistry:                 validators,
@@ -442,7 +442,7 @@ func TestProcessPartialValidatorRegistry(t *testing.T) {
 
 	state := &pb.BeaconState{
 		Slot:                              64,
-		ValidatorRegistryLatestChangeSlot: 1,
+		ValidatorRegistryUpdateSlot: 1,
 		ShardCommitteesAtSlots:            shardCommittees,
 		LatestRandaoMixesHash32S:          [][]byte{{'A'}},
 	}
@@ -451,9 +451,9 @@ func TestProcessPartialValidatorRegistry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not execute ProcessValidatorRegistryNoUpdate: %v", err)
 	}
-	if newState.ValidatorRegistryLatestChangeSlot != state.ValidatorRegistryLatestChangeSlot {
-		t.Errorf("Incorrect ValidatorRegistryLatestChangeSlot, wanted: %d, got: %d",
-			state.ValidatorRegistryLatestChangeSlot, newState.ValidatorRegistryLatestChangeSlot)
+	if newState.ValidatorRegistryUpdateSlot != state.ValidatorRegistryUpdateSlot {
+		t.Errorf("Incorrect ValidatorRegistryUpdateSlot, wanted: %d, got: %d",
+			state.ValidatorRegistryUpdateSlot, newState.ValidatorRegistryUpdateSlot)
 	}
 
 	if newState.ShardCommitteesAtSlots[0].ArrayShardCommittee[0].Shard != state.ShardCommitteesAtSlots[epochLength].ArrayShardCommittee[0].Shard {
@@ -480,7 +480,7 @@ func TestProcessPartialValidatorRegistry_ReachedUpperBound(t *testing.T) {
 	}
 	state := &pb.BeaconState{
 		Slot:                              64,
-		ValidatorRegistryLatestChangeSlot: 1,
+		ValidatorRegistryUpdateSlot: 1,
 		ShardCommitteesAtSlots:            shardCommittees,
 		LatestRandaoMixesHash32S:          [][]byte{{'A'}},
 		ValidatorRegistry:                 validators,
@@ -558,14 +558,14 @@ func TestUpdatePenalizedExitBalances(t *testing.T) {
 		latestPenalizedExitBalances[epoch] = tt.balances
 		state := &pb.BeaconState{
 			Slot:                        tt.slot,
-			LatestPenalizedExitBalances: latestPenalizedExitBalances}
+			LatestPenalizedBalances: latestPenalizedExitBalances}
 		newState := UpdatePenalizedExitBalances(state)
-		if newState.LatestPenalizedExitBalances[epoch+1] !=
+		if newState.LatestPenalizedBalances[epoch+1] !=
 			tt.balances {
 			t.Errorf(
-				"LatestPenalizedExitBalances didn't update for epoch %d,"+
+				"LatestPenalizedBalances didn't update for epoch %d,"+
 					"wanted: %d, got: %d", epoch+1, tt.balances,
-				newState.LatestPenalizedExitBalances[epoch+1],
+				newState.LatestPenalizedBalances[epoch+1],
 			)
 		}
 	}

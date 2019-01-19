@@ -854,7 +854,7 @@ func TestExitValidator_Ok(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                                 100,
 		ValidatorRegistryDeltaChainTipHash32: []byte{'A'},
-		LatestPenalizedExitBalances:          []uint64{0},
+		LatestPenalizedBalances:          []uint64{0},
 		ValidatorRegistry: []*pb.ValidatorRecord{
 			{ExitSlot: params.BeaconConfig().FarFutureSlot, Pubkey: []byte{'B'}},
 		},
@@ -911,7 +911,7 @@ func TestProcessPenaltiesExits_ValidatorPenalized(t *testing.T) {
 
 	state := &pb.BeaconState{
 		Slot:                        config.LatestPenalizedExitLength / 2 * config.EpochLength,
-		LatestPenalizedExitBalances: latestPenalizedExits,
+		LatestPenalizedBalances: latestPenalizedExits,
 		ValidatorBalances:           []uint64{config.MaxDepositInGwei, config.MaxDepositInGwei},
 		ValidatorRegistry: []*pb.ValidatorRecord{
 			{ExitSlot: params.BeaconConfig().FarFutureSlot, ExitCount: 1},
@@ -981,9 +981,9 @@ func TestUpdateRegistry_NoRotation(t *testing.T) {
 				i, config.EntryExitDelay, validator.ExitSlot)
 		}
 	}
-	if newState.ValidatorRegistryLatestChangeSlot != state.Slot {
+	if newState.ValidatorRegistryUpdateSlot != state.Slot {
 		t.Errorf("wanted validator registry lastet change %d, got %d",
-			state.Slot, newState.ValidatorRegistryLatestChangeSlot)
+			state.Slot, newState.ValidatorRegistryUpdateSlot)
 	}
 }
 
@@ -1012,9 +1012,9 @@ func TestUpdateRegistry_Activate(t *testing.T) {
 				i, config.EntryExitDelay, validator.ExitSlot)
 		}
 	}
-	if newState.ValidatorRegistryLatestChangeSlot != state.Slot {
+	if newState.ValidatorRegistryUpdateSlot != state.Slot {
 		t.Errorf("wanted validator registry lastet change %d, got %d",
-			state.Slot, newState.ValidatorRegistryLatestChangeSlot)
+			state.Slot, newState.ValidatorRegistryUpdateSlot)
 	}
 
 	if bytes.Equal(newState.ValidatorRegistryDeltaChainTipHash32, []byte{'A'}) {
@@ -1051,9 +1051,9 @@ func TestUpdateRegistry_Exit(t *testing.T) {
 				validator.ExitSlot)
 		}
 	}
-	if newState.ValidatorRegistryLatestChangeSlot != state.Slot {
+	if newState.ValidatorRegistryUpdateSlot != state.Slot {
 		t.Errorf("wanted validator registry lastet change %d, got %d",
-			state.Slot, newState.ValidatorRegistryLatestChangeSlot)
+			state.Slot, newState.ValidatorRegistryUpdateSlot)
 	}
 
 	if bytes.Equal(newState.ValidatorRegistryDeltaChainTipHash32, []byte{'A'}) {

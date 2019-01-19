@@ -84,16 +84,16 @@ func InitialBeaconState(
 		// Misc fields.
 		Slot:        params.BeaconConfig().GenesisSlot,
 		GenesisTime: genesisTime,
-		ForkData: &pb.ForkData{
-			PreForkVersion:  params.BeaconConfig().GenesisForkVersion,
-			PostForkVersion: params.BeaconConfig().GenesisForkVersion,
-			ForkSlot:        params.BeaconConfig().GenesisSlot,
+		Fork: &pb.Fork{
+			PreviousVersion:  params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion: params.BeaconConfig().GenesisForkVersion,
+			Slot:        params.BeaconConfig().GenesisSlot,
 		},
 
 		// Validator registry fields.
 		ValidatorRegistry:                    validatorRegistry,
 		ValidatorBalances:                    latestBalances,
-		ValidatorRegistryLatestChangeSlot:    params.BeaconConfig().GenesisSlot,
+		ValidatorRegistryUpdateSlot:    params.BeaconConfig().GenesisSlot,
 		ValidatorRegistryExitCount:           0,
 		ValidatorRegistryDeltaChainTipHash32: params.BeaconConfig().ZeroHash[:],
 
@@ -116,7 +116,7 @@ func InitialBeaconState(
 		// Recent state.
 		LatestCrosslinks:            latestCrosslinks,
 		LatestBlockRootHash32S:      latestBlockRoots,
-		LatestPenalizedExitBalances: latestPenalizedExitBalances,
+		LatestPenalizedBalances: latestPenalizedExitBalances,
 		LatestAttestations:          []*pb.PendingAttestationRecord{},
 		BatchedBlockRootHash32S:     [][]byte{},
 

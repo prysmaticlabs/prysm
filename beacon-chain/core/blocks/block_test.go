@@ -154,10 +154,10 @@ func TestProcessBlockRoots(t *testing.T) {
 }
 
 func TestForkVersion(t *testing.T) {
-	forkData := &pb.ForkData{
-		ForkSlot:        10,
-		PreForkVersion:  2,
-		PostForkVersion: 3,
+	forkData := &pb.Fork{
+		Slot:        10,
+		PreviousVersion:  2,
+		CurrentVersion: 3,
 	}
 
 	if ForkVersion(forkData, 9) != 2 {
@@ -170,10 +170,10 @@ func TestForkVersion(t *testing.T) {
 }
 
 func TestDomainVersion(t *testing.T) {
-	forkData := &pb.ForkData{
-		ForkSlot:        10,
-		PreForkVersion:  2,
-		PostForkVersion: 3,
+	forkData := &pb.Fork{
+		Slot:        10,
+		PreviousVersion:  2,
+		CurrentVersion: 3,
 	}
 
 	constant := uint64(math.Pow(2, 32))
