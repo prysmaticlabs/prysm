@@ -485,10 +485,6 @@ func TestUnpackDepositLogs(t *testing.T) {
 		t.Fatalf("Could not init from vrc %v", err)
 	}
 
-	if web3Service.depositCount != 0 {
-		t.Errorf("Deposit count is not equal to zero %d", web3Service.depositCount)
-	}
-
 	empty32byte := [32]byte{}
 
 	if !bytes.Equal(web3Service.depositRoot, empty32byte[:]) {

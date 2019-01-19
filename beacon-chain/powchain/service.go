@@ -61,7 +61,6 @@ type Web3Service struct {
 	blockNumber            *big.Int    // the latest PoW chain blockNumber.
 	blockHash              common.Hash // the latest PoW chain blockHash.
 	vrcCaller              *contracts.DepositContractCaller
-	depositCount           uint64
 	depositRoot            []byte
 	depositTrie            *trie.DepositTrie
 }
