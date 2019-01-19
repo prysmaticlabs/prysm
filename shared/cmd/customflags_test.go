@@ -90,6 +90,17 @@ func TestPrefixFor(t *testing.T) {
   }
 }
 
+func TestPrefixedNames(t *testing.T) {
+  test := "d,datadir,,n,network"
+  expected := "-d, --datadir, --, -n, --network"
+
+  prefixed := prefixedNames(test)
+
+  if prefixed != expected {
+    t.Errorf("test prefixed names for %s, got %s, expected %s\n", test, prefixed, expected)
+  }
+}
+
 func TestHomeDir(t *testing.T) {
   expected := usr.HomeDir
   got := homeDir()
