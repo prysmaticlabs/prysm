@@ -23,36 +23,36 @@ import (
 )
 
 var (
-  // user-specific tests can use the usr variable.
-  usr, _ = user.Current()
-  against []DirectoryString
+	// user-specific tests can use the usr variable.
+	usr, _  = user.Current()
+	against []DirectoryString
 )
 
 func init() {
-  // test for environment variables in paths with $DDDXXX.
-  os.Setenv("DDDXXX", "/tmp")
-  // test against valid DirectoryString structs.
-  against = []DirectoryString{
-	  {"/home/someuser/tmp"},
-	  {usr.HomeDir + "/tmp"},
-	  {"~thisOtherUser/b"},
-    {"/tmp/a/b"},
-    {"/a/b"},
-  }
+	// test for environment variables in paths with $DDDXXX.
+	os.Setenv("DDDXXX", "/tmp")
+	// test against valid DirectoryString structs.
+	against = []DirectoryString{
+		{"/home/someuser/tmp"},
+		{usr.HomeDir + "/tmp"},
+		{"~thisOtherUser/b"},
+		{"/tmp/a/b"},
+		{"/a/b"},
+	}
 }
 
 func TestPathExpansion(t *testing.T) {
-  initials := []string{
+	initials := []string{
 		"/home/someuser/tmp",
 		"~/tmp",
 		"~thisOtherUser/b/",
 		"$DDDXXX/a/b",
 		"/a/b/",
-  }
-  tests := make(map[string]DirectoryString)
-  for i, value := range against {
-    tests[initials[i]] = value
-  }
+	}
+	tests := make(map[string]DirectoryString)
+	for i, value := range against {
+		tests[initials[i]] = value
+	}
 	for test, expected := range tests {
 		got := expandPath(test)
 		if got != expected.Value {
@@ -62,49 +62,49 @@ func TestPathExpansion(t *testing.T) {
 }
 
 func TestSetDirectoryString(t *testing.T) {
-  tests := make([]DirectoryString, len(against))
-  copy(tests, against)
-  expected := "/tmp"
-  for _, test := range tests {
-    original := test.Value
-    test.Set("$DDDXXX")
-    got := test.Value
-    if test.Value != expected {
-      t.Errorf("test set path %s, got %s, expected %s\n", original, got, expected)
-    }
-  }
+	tests := make([]DirectoryString, len(against))
+	copy(tests, against)
+	expected := "/tmp"
+	for _, test := range tests {
+		original := test.Value
+		test.Set("$DDDXXX")
+		got := test.Value
+		if got != expected {
+			t.Errorf("test set path %s, got %s, expected %s\n", original, got, expected)
+		}
+	}
 }
 
 func TestPrefixFor(t *testing.T) {
-  tests := map[string]string{
-    "d": "-",
-    "datadir": "--",
-    "": "--",
-  }
+	tests := map[string]string{
+		"d":       "-",
+		"datadir": "--",
+		"":        "--",
+	}
 
-  for test, expected := range tests {
-    actual := prefixFor(test)
-    if actual != expected {
-      t.Errorf("test prefix for %s, got %s, expected %s\n", test, actual, expected)
-    }
-  }
+	for test, expected := range tests {
+		actual := prefixFor(test)
+		if actual != expected {
+			t.Errorf("test prefix for %s, got %s, expected %s\n", test, actual, expected)
+		}
+	}
 }
 
 func TestPrefixedNames(t *testing.T) {
-  test := "d,datadir,,n,network"
-  expected := "-d, --datadir, --, -n, --network"
+	test := "d,datadir,,n,network"
+	expected := "-d, --datadir, --, -n, --network"
 
-  prefixed := prefixedNames(test)
+	prefixed := prefixedNames(test)
 
-  if prefixed != expected {
-    t.Errorf("test prefixed names for %s, got %s, expected %s\n", test, prefixed, expected)
-  }
+	if prefixed != expected {
+		t.Errorf("test prefixed names for %s, got %s, expected %s\n", test, prefixed, expected)
+	}
 }
 
 func TestHomeDir(t *testing.T) {
-  expected := usr.HomeDir
-  got := homeDir()
-  if got != expected {
-    t.Errorf("test homeDir(): got %s, expected %s\n", got, expected)
-  }
+	expected := usr.HomeDir
+	got := homeDir()
+	if got != expected {
+		t.Errorf("test homeDir(): got %s, expected %s\n", got, expected)
+	}
 }
