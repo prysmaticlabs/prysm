@@ -13,6 +13,7 @@ message BeaconState {
   repeated uint64 validator_balances = 5; // Balance in Gwei
 
   // Randomness and committees [1001-2000]
+  // TODO(#1300): shard_committees_at_slots and ShardCommitteeArray to be removed.
   repeated ShardCommitteeArray shard_committees_at_slots = 1003;
   repeated bytes latest_randao_mixes_hash32s = 1004;
   repeated bytes latest_vdf_outputs_hash32s = 1005;
