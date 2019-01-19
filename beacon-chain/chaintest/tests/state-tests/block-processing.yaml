@@ -7,9 +7,9 @@ test_cases:
   - config:
       epoch_length: 64
       deposits_for_chain_start: 1000
-      num_slots: 64 # Testing advancing state to slot == EpochLength with some skipped blocks
+      num_slots: 32 # Testing advancing state to slot == EpochLength with some skipped blocks
     results:
-      slot: 64
+      slot: 32
       num_validators: 1000
   - config:
       epoch_length: 63
@@ -61,7 +61,6 @@ test_cases:
       penalized_validators: [16385, 16386] # We test that the validators at indices 16385, 16386 were indeed penalized
       exited_validators: [100] # We confirm the indices of validators that willingly exited the registry
   - config:
-      skip_slots: [10, 20]
       epoch_length: 64
       deposits_for_chain_start: 1000
       num_slots: 128 # Testing advancing state's slot == 2*EpochLength
@@ -78,4 +77,4 @@ test_cases:
             Oklajsjdkaklsdlkajsdjlajslkdjlkasjlkdjlajdsd
     results:
       slot: 128
-      num_validators: 1000 # Validator registry should not have grown if slots 10 and 20 were skipped
+      num_validators: 1002 # Validator registry should have grown to 1002

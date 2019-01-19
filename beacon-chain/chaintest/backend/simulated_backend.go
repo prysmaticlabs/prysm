@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"encoding/binary"
 	"fmt"
 	"math/big"
 	"reflect"
@@ -154,7 +155,6 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	testAcc.backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
 
 	web3Service.DepositTrie = trie.NewDepositTrie()
-	currentRoot := web3Service.DepositTrie.Root()
 
 	var stub [48]byte
 	copy(stub[:], []byte("testing"))
@@ -191,9 +191,25 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		return fmt.Errorf("unable to retrieve logs %v", err)
 	}
 
-	logs[len(logs)-1].Topics[1] = currentRoot
+	for i := 0; i < 8; i++ {
+		_, depData, _, err := contracts.UnpackDepositLogData(logs[i].Data)
+		if err != nil {
+			return fmt.Errorf("unable to unpack deposit logs %v", err)
+		}
 
+		web3Service.DepositTrie.UpdateDepositTrie(depData)
+	}
 	web3Service.ProcessLog(logs[len(logs)-1])
+
+	_, timestampData, err := contracts.UnpackChainStartLogData(logs[len(logs)-1].Data)
+	if err != nil {
+		return fmt.Errorf("unable to unpack logs %v", err)
+	}
+
+	genesisTimestamp := binary.BigEndian.Uint64(timestampData)
+	if genesisTimestamp > uint64(time.Now().Unix()) {
+		return fmt.Errorf("timestamp from log is higher than the current time %d > %d", genesisTimestamp, time.Now().Unix())
+	}
 
 	if err := assertLogsDoNotContain(hook, "Unable to unpack ChainStart log data"); err != nil {
 		return fmt.Errorf("chain start log failure: %v", err)
