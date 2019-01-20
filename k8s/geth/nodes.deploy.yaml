@@ -63,6 +63,8 @@ spec:
               --nousb
               --lightserv=50
               --metrics
+              --mine
+              --etherbase=0xd9a5179f091d85051d3c982785efd1455cec8699
           volumeMounts:
             - name: chaindata
               mountPath: "/ethereum"
@@ -94,7 +96,22 @@ spec:
               readOnly: true
             - name: chaindata
               mountPath: "/ethereum"
-        - name: initgenesis
+        - name: import-validator-account
+          image: ethereum/client-go:alltools-stable
+          command: ["geth"]
+          args:
+            - account
+            - import
+            - /secret/privatekey
+            - --datadir=/ethereum
+            - --password=/secret/password
+          volumeMounts:
+            - name: chaindata
+              mountPath: /ethereum
+            - name: validator-pk
+              mountPath: /secret
+              readOnly: true
+        - name: init-genesis
           image: ethereum/client-go:alltools-stable
           command: ["geth"]
           args: ["--datadir=/ethereum", "init", "/data/genesis.json"]
@@ -105,8 +122,6 @@ spec:
             - name: chaindata
               mountPath: "/ethereum"
       volumes:
-        #- name: chaindata
-        #  emptyDir: {}
         - name: networkdata
           configMap: 
             name: goerli
@@ -115,6 +130,9 @@ spec:
                 path: genesis.json
               - key: staticnodes
                 path: static-nodes.json
+        - name: validator-pk
+          secret:
+            secretName: goerli-validator-pk
   volumeClaimTemplates:
     - metadata:
         name: chaindata

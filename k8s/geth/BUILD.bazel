@@ -47,6 +47,7 @@ _secrets = [
     "bootnode",
     "ethstats",
     "faucet",
+    "goerli_validator",
 ]
 
 k8s_ingress(
