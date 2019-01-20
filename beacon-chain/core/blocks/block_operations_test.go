@@ -351,8 +351,8 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		Slot:              currentSlot,
 		ValidatorBalances: []uint64{params.BeaconConfig().MaxDepositInGwei,
 			params.BeaconConfig().MaxDepositInGwei},
-		LatestPenalizedExitBalances: []uint64{0},
-		ShardCommitteesAtSlots:      ShardCommittees,
+		LatestPenalizedBalances: []uint64{0},
+		ShardCommitteesAtSlots:  ShardCommittees,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -724,11 +724,11 @@ func TestProcessCasperSlashings_AppliesCorrectStatus(t *testing.T) {
 
 	currentSlot := uint64(5)
 	beaconState := &pb.BeaconState{
-		ValidatorRegistry:           registry,
-		Slot:                        currentSlot,
-		ValidatorBalances:           []uint64{32, 32, 32, 32, 32, 32},
-		LatestPenalizedExitBalances: []uint64{0},
-		ShardCommitteesAtSlots:      ShardCommittees,
+		ValidatorRegistry:       registry,
+		Slot:                    currentSlot,
+		ValidatorBalances:       []uint64{32, 32, 32, 32, 32, 32},
+		LatestPenalizedBalances: []uint64{0},
+		ShardCommitteesAtSlots:  ShardCommittees,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
