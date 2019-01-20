@@ -25,7 +25,7 @@ k8s_objects(
 _NAMESPACE = "pow"
 
 _configs = [
-    "genesis",
+    "goerli",
 ]
 
 _deployments = [

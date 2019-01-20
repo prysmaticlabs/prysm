@@ -1,5 +1,5 @@
-kind: Deployment
-apiVersion: apps/v1beta1
+kind: StatefulSet
+apiVersion: apps/v1
 metadata:
   name: node
   namespace: pow
@@ -8,6 +8,7 @@ metadata:
     component: node
 spec:
   replicas: 3
+  serviceName: "node"
   selector: 
     matchLabels:
       universe: geth
@@ -20,6 +21,12 @@ spec:
     spec:
       priorityClassName: batch-priority
       containers:
+        - name: prober
+          image: gcr.io/prysmaticlabs/prysm/geth-prober 
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
         - name: node
           image: ethereum/client-go:alltools-stable
           ports: 
@@ -41,9 +48,7 @@ spec:
             - "-c"
             - >
               geth
-              --networkid=1337
-              --bootnodesv4=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_V4_SERVICE_HOST):$(GETH_BOOTNODE_V4_SERVICE_PORT_BOOTNODE_UDP) 
-              --bootnodesv5=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_V5_SERVICE_HOST):$(GETH_BOOTNODE_V5_SERVICE_PORT_BOOTNODE_UDP)
+              --networkid=6284
               --ethstats=$HOSTNAME:$(ETHSTATS_WS_SECRET)@$(GETH_ETHSTATS_SERVICE_HOST):$(GETH_ETHSTATS_SERVICE_PORT)
               --rpc
               --rpcaddr=0.0.0.0
@@ -54,9 +59,10 @@ spec:
               --wsorigins="*"
               --datadir=/ethereum
               --debug
-              --verbosity=4
+              --verbosity=3
               --nousb
               --lightserv=50
+              --metrics
           volumeMounts:
             - name: chaindata
               mountPath: "/ethereum"
@@ -73,28 +79,47 @@ spec:
                   key: public_key
           resources:
             requests:
-              memory: "500Mi"
-              cpu: "100m"
+              memory: "1000Mi"
+              cpu: "200m"
             limits:
-              memory: "500Mi"
-              cpu: "100m"
+              memory: "1200Mi"
+              cpu: "200m"
       initContainers:
-        - name: genesis
+        - name: copy-staticnodes
+          image: busybox
+          command: ["cp", "/data/static-nodes.json", "/ethereum/static-nodes.json"] 
+          volumeMounts:
+            - name: networkdata
+              mountPath: "/data"
+              readOnly: true
+            - name: chaindata
+              mountPath: "/ethereum"
+        - name: initgenesis
           image: ethereum/client-go:alltools-stable
           command: ["geth"]
           args: ["--datadir=/ethereum", "init", "/data/genesis.json"]
           volumeMounts:
-            - name: genesis
+            - name: networkdata
               mountPath: "/data"
               readOnly: true
             - name: chaindata
               mountPath: "/ethereum"
       volumes:
-        - name: chaindata
-          emptyDir: {}
-        - name: genesis
+        #- name: chaindata
+        #  emptyDir: {}
+        - name: networkdata
           configMap: 
-            name: genesis
+            name: goerli
             items:
-              - key: json
+              - key: genesis
                 path: genesis.json
+              - key: staticnodes
+                path: static-nodes.json
+  volumeClaimTemplates:
+    - metadata:
+        name: chaindata
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 50Gi
