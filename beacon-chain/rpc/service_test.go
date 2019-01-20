@@ -87,7 +87,10 @@ func TestLifecycle(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, fmt.Sprintf("RPC server listening on port :%s", rpcService.port))
 
 	rpcService.Stop()
-	testutil.AssertLogsContain(t, hook, "Stopping service"git 
+	testutil.AssertLogsContain(t, hook, "Stopping service")
+
+}
+
 
 
 
@@ -97,13 +100,29 @@ func TestBadEndpoint(t *testing.T) {
 		Port: "ralph merkle!!!",
 	})
 
-	rpcService.Start()
-    // startRPCService := func() {
-	// 	rpcService.Start()
-	// }
+	if rpcService.didPanicHappendStart {
+		t.Fatal("Panic in Start() happened before expected")
+	}
 
-	// assertPanic(t, startRPCService)
+	if rpcService.didPanicHappendGo {
+		t.Fatal("Panic in go routine happened before expected")
+	}
+
+	rpcService.Start()
 	
+	  if !rpcService.didPanicHappendStart  {
+		t.Fatal("No panic happened. Expected Start() to panic")
+	  }
+
+
+	//   if !rpcService.didPanicHappendGo {
+	// 	t.Fatal("No panic happened. Expected go routine in Start() to panic")
+	//   }
+	
+	
+	testutil.AssertLogsContain(t, hook, "Starting service")
+	testutil.AssertLogsContain(t, hook, "Starting go routine")
+}
 
 	testutil.AssertLogsContain(t, hook, "Starting service")
 	//testutil.AssertLogsContain(t, hook, fmt.Sprintf("Could not listen to port :%s", rpcService.port))
