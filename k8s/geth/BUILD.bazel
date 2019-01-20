@@ -13,7 +13,7 @@ k8s_objects(
     name = "everything",
     objects = [
         ":namespace",  # Must be first
-        "configs",
+        ":configs",
         ":deployments",
         ":ingress",
         ":secrets",
@@ -29,24 +29,24 @@ _configs = [
 ]
 
 _deployments = [
-    "bootnode",
-    "ethstats",
-    "faucet",
-    "miners",
+#    "bootnode",
+#    "ethstats",
+#    "faucet",
+#    "miners",
     "nodes",
 ]
 
 _services = [
-    "bootnode",
-    "ethstats",
-    "faucet",
+#    "bootnode",
+#    "ethstats",
+#    "faucet",
     "nodes",
 ]
 
 _secrets = [
     "bootnode",
     "ethstats",
-    "faucet",
+#    "faucet",
     "goerli_validator",
 ]
 

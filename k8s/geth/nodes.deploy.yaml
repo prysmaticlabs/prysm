@@ -15,6 +15,8 @@ spec:
       component: node
   template:
     metadata:
+      annotations:
+        sidecar.istio.io/inject: "false"
       labels:
         universe: geth
         component: node
@@ -49,7 +51,7 @@ spec:
             - >
               geth
               --networkid=6284
-              --ethstats=$HOSTNAME:$(ETHSTATS_WS_SECRET)@$(GETH_ETHSTATS_SERVICE_HOST):$(GETH_ETHSTATS_SERVICE_PORT)
+              --ethstats=prysm-$HOSTNAME:$(ETHSTATS_WS_SECRET)@wss://stats.goerli.net
               --rpc
               --rpcaddr=0.0.0.0
               --rpccorsdomain="*"
@@ -58,16 +60,21 @@ spec:
               --wsaddr=0.0.0.0
               --wsorigins="*"
               --datadir=/ethereum
+              --keystore=/keystore
               --debug
               --verbosity=3
               --nousb
               --lightserv=50
               --metrics
-              --mine
+              #--mine
               --etherbase=0xd9a5179f091d85051d3c982785efd1455cec8699
+              --extradata="Prysm $HOSTNAME"
           volumeMounts:
             - name: chaindata
-              mountPath: "/ethereum"
+              mountPath: /ethereum
+            - name: keystore
+              mountPath: /keystore
+              readOnly: true
           env:
             - name: ETHSTATS_WS_SECRET
               valueFrom:
@@ -104,6 +111,7 @@ spec:
             - import
             - /secret/privatekey
             - --datadir=/ethereum
+            - --keystore=/keystore
             - --password=/secret/password
           volumeMounts:
             - name: chaindata
@@ -111,6 +119,8 @@ spec:
             - name: validator-pk
               mountPath: /secret
               readOnly: true
+            - name: keystore
+              mountPath: /keystore
         - name: init-genesis
           image: ethereum/client-go:alltools-stable
           command: ["geth"]
@@ -133,6 +143,8 @@ spec:
         - name: validator-pk
           secret:
             secretName: goerli-validator-pk
+        - name: keystore
+          emptyDir: {}
   volumeClaimTemplates:
     - metadata:
         name: chaindata
