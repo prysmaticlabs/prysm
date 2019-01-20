@@ -25,24 +25,24 @@ func TestStatus(t *testing.T) {
 	}
 
 	ss := NewSyncService(context.Background(), cfg)
-	synced, err := ss.Querier.IsSynced()
+	synced, querierErr := ss.Querier.IsSynced()
 
-	if err != nil {
-		if err1 := ss.Status(); err1 != err {
-			t.Errorf("Expected err %v but got %v", err, err1)
+	if querierErr != nil {
+		if statusErr := ss.Status(); statusErr != querierErr {
+			t.Errorf("Expected err %v but got %v", querierErr, statusErr)
 		}
 	}
 
 	errNotSync := errors.New("node is not synced with the rest of the network")
 	if !synced {
-		if err1 := ss.Status(); err1 != errNotSync {
-			t.Errorf("Expected errNotSync %v but got %v", errNotSync, err1)
+		if statusErr := ss.Status(); statusErr != errNotSync {
+			t.Errorf("Expected errNotSync %v but got %v", errNotSync, statusErr)
 		}
 	}
 
 	if synced {
-		if err1 := ss.Status(); err1 != nil {
-			t.Errorf("Expected nil but got %v", err1)
+		if statusErr := ss.Status(); statusErr != nil {
+			t.Errorf("Expected nil but got %v", statusErr)
 		}
 	}
 }
