@@ -63,7 +63,7 @@
         "constant": false,
         "payable": true,
         "type": "function",
-        "gas": 1688958
+        "gas": 1688864
     },
     {
         "name": "get_deposit_root",

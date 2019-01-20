@@ -147,15 +147,15 @@ func TestValidatorRegisters(t *testing.T) {
 	twoTothePowerOfTreeDepth := mathutil.PowerOf2(params.BeaconConfig().DepositContractTreeDepth)
 
 	if merkleTreeIndex[0] != twoTothePowerOfTreeDepth {
-		t.Errorf("HashChainValue event total desposit count miss matched. Want: %d, Got: %d", twoTothePowerOfTreeDepth+1, merkleTreeIndex[0])
+		t.Errorf("Deposit event total desposit count miss matched. Want: %d, Got: %d", twoTothePowerOfTreeDepth+1, merkleTreeIndex[0])
 	}
 
 	if merkleTreeIndex[1] != twoTothePowerOfTreeDepth+1 {
-		t.Errorf("HashChainValue event total desposit count miss matched. Want: %d, Got: %d", twoTothePowerOfTreeDepth+2, merkleTreeIndex[1])
+		t.Errorf("Deposit event total desposit count miss matched. Want: %d, Got: %d", twoTothePowerOfTreeDepth+2, merkleTreeIndex[1])
 	}
 
 	if merkleTreeIndex[2] != twoTothePowerOfTreeDepth+2 {
-		t.Errorf("HashChainValue event total desposit count miss matched. Want: %v, Got: %v", twoTothePowerOfTreeDepth+3, merkleTreeIndex[2])
+		t.Errorf("Deposit event total desposit count miss matched. Want: %v, Got: %v", twoTothePowerOfTreeDepth+3, merkleTreeIndex[2])
 	}
 }
 
@@ -186,6 +186,8 @@ func TestChainStarts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to get logs %v", err)
 	}
+
+	t.Log(len(logs))
 
 	if logs[8].Topics[0] != hashutil.Hash([]byte("ChainStart(bytes32,bytes)")) {
 		t.Error("Chain start even did not get emitted")
