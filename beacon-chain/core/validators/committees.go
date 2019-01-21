@@ -209,7 +209,7 @@ func CrosslinkCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*Crosslink
 	var err error
 
 	epochLength := config.EpochLength
-	startEpochSlot := slot - (slot % epochLength)
+	startEpochSlot := state.Slot - (state.Slot % epochLength)
 
 	// If the start epoch slot is less than epochLength, then the earliestSlot would
 	// result in a negative number. Therefore we should default to
@@ -222,13 +222,13 @@ func CrosslinkCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*Crosslink
 		return nil, fmt.Errorf(
 			"input committee slot %d out of bounds: %d <= slot < %d",
 			slot,
-			startEpochSlot-epochLength,
+			earliestSlot,
 			startEpochSlot+epochLength,
 		)
 	}
 
 	offSet := slot % config.EpochLength
-	if slot < earliestSlot {
+	if slot < startEpochSlot {
 		countPerSlot = prevCommitteesCountPerSlot(state)
 		shuffledIndices, err = Shuffling(
 			bytes.ToBytes32(state.PreviousEpochRandaoMixHash32),
@@ -315,3 +315,40 @@ func Shuffling(
 	return utils.SplitIndices(shuffledIndices, committeesPerSlot*config.EpochLength), nil
 }
 
+// committeeCountPerSlot retrieves the number of crosslink committees of a given slot.
+//
+// Spec pseudocode definition:
+//   def get_committee_count_per_slot(active_validator_count: int) -> int:
+//    return max(
+//        1,
+//        min(
+//            SHARD_COUNT // EPOCH_LENGTH,
+//            active_validator_count // EPOCH_LENGTH // TARGET_COMMITTEE_SIZE,
+//        )
+//    )
+func committeeCountPerSlot(activeValidatorCount uint64) uint64 {
+	var minCommitteePerSlot = uint64(1)
+	var maxCommitteePerSlot = config.ShardCount / config.EpochLength
+	var currCommitteePerSlot = activeValidatorCount / config.EpochLength / config.TargetCommitteeSize
+	if currCommitteePerSlot > maxCommitteePerSlot {
+		return maxCommitteePerSlot
+	}
+	if currCommitteePerSlot < 1 {
+		return minCommitteePerSlot
+	}
+	return currCommitteePerSlot
+}
+
+// prevCommitteesCountPerSlot returns the number of committees per slot
+// for the previous epoch.
+//
+// Spec pseudocode definition:
+//   def get_previous_epoch_committee_count_per_slot(state: BeaconState) -> int:
+//         previous_active_validators =
+// 			get_active_validator_indices(validators, state.previous_epoch_calculation_slot)
+//        return get_committees_per_slot(len(previous_active_validators))
+func prevCommitteesCountPerSlot(state *pb.BeaconState) uint64 {
+	prevActiveValidatorIndices := ActiveValidatorIndices(
+		state.ValidatorRegistry, state.PreviousEpochCalculationSlot)
+	return committeeCountPerSlot(uint64(len(prevActiveValidatorIndices)))
+}
