@@ -89,7 +89,7 @@ func TestStatus(t *testing.T) {
 	failError := errors.New("failure")
 	s := &Service{failStatus: failError}
 
-	if err := s.Status(); err != s.failStatus  {
+	if err := s.Status(); err != s.failStatus {
 		t.Errorf("Wanted: %v, got: %v", s.failStatus, s.Status())
 	}
 }
