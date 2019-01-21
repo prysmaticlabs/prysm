@@ -102,7 +102,7 @@ func TestEncodeDecodeExampleStruct1(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to hash: %v", err)
 	}
-	if !bytes.Equal(hash[:], unhex("cc9e553a3fae873a919e6ab62dc0f461199fb5880d38d124178c209c1f5d78cd")) {
+	if !bytes.Equal(hash[:], unhex("898470f5d98653c8e4fb2c7ae771019402cca8ccaa71a9c2ea4ad129e3c431d0")) {
 		t.Errorf("wrong hash result")
 	}
 }
@@ -141,7 +141,7 @@ func TestEncodeDecodeExampleStruct2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to hash: %v", err)
 	}
-	if !bytes.Equal(hash[:], unhex("d74e2ddcd0ec52ae08d6e041af3eec1a78955533577e8320c06af4ad923eba0d")) {
+	if !bytes.Equal(hash[:], unhex("b982eb8cf7e1d6f5ec77f0ae4a9ed44bde23da284488f498176a5123fe05e7dd")) {
 		t.Errorf("wrong hash result")
 	}
 }
