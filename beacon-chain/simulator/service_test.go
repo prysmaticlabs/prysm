@@ -201,7 +201,7 @@ func TestStateRequest(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	beaconState, err := sim.beaconDB.GetState()
+	beaconState, err := sim.beaconDB.State()
 	if err != nil {
 		t.Fatalf("could not retrieve beacon state %v", err)
 	}

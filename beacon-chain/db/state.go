@@ -72,8 +72,8 @@ func (db *BeaconDB) InitializeState() error {
 	})
 }
 
-// GetState fetches the canonical beacon chain's state from the DB.
-func (db *BeaconDB) GetState() (*pb.BeaconState, error) {
+// State fetches the canonical beacon chain's state from the DB.
+func (db *BeaconDB) State() (*pb.BeaconState, error) {
 	var beaconState *pb.BeaconState
 	err := db.view(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
@@ -102,9 +102,9 @@ func (db *BeaconDB) SaveState(beaconState *pb.BeaconState) error {
 	})
 }
 
-// GetUnfinalizedBlockState fetches an unfinalized block's
+// UnfinalizedBlockState fetches an unfinalized block's
 // active and crystallized state pair.
-func (db *BeaconDB) GetUnfinalizedBlockState(stateRoot [32]byte) (*pb.BeaconState, error) {
+func (db *BeaconDB) UnfinalizedBlockState(stateRoot [32]byte) (*pb.BeaconState, error) {
 	var beaconState *pb.BeaconState
 	err := db.view(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
@@ -148,7 +148,7 @@ func createState(enc []byte) (*pb.BeaconState, error) {
 
 // GenesisTime returns the genesis timestamp for the state.
 func (db *BeaconDB) GenesisTime() (time.Time, error) {
-	state, err := db.GetState()
+	state, err := db.State()
 	if err != nil {
 		return time.Time{}, fmt.Errorf("could not retrieve state: %v", err)
 	}

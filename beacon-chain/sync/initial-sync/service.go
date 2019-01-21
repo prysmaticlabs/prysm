@@ -418,7 +418,7 @@ func (s *InitialSync) checkBlockValidity(block *pb.BeaconBlock) error {
 		return errors.New("received a block that already exists. Exiting")
 	}
 
-	beaconState, err := s.db.GetState()
+	beaconState, err := s.db.State()
 	if err != nil {
 		return fmt.Errorf("failed to get beacon state: %v", err)
 	}

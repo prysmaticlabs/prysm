@@ -14,7 +14,7 @@ func TestInitializeState(t *testing.T) {
 	if err := db.InitializeState(); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
-	b, err := db.GetChainHead()
+	b, err := db.ChainHead()
 	if err != nil {
 		t.Fatalf("Failed to get chain head: %v", err)
 	}
@@ -22,7 +22,7 @@ func TestInitializeState(t *testing.T) {
 		t.Fatalf("Expected block height to equal 1. Got %d", b.GetSlot())
 	}
 
-	beaconState, err := db.GetState()
+	beaconState, err := db.State()
 	if err != nil {
 		t.Fatalf("Failed to get state: %v", err)
 	}
@@ -34,7 +34,7 @@ func TestInitializeState(t *testing.T) {
 		t.Fatalf("Failed to encode state: %v", err)
 	}
 
-	statePrime, err := db.GetState()
+	statePrime, err := db.State()
 	if err != nil {
 		t.Fatalf("Failed to get state: %v", err)
 	}
