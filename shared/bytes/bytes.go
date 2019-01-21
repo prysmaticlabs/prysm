@@ -61,8 +61,22 @@ func LowerThan(x []byte, y []byte) bool {
 // ToBytes32 is a convenience method for converting a byte slice to a fix
 // sized 32 byte array. This method will truncate the input if it is larger
 // than 32 bytes.
-func ToBytes32(a []byte) [32]byte {
-	var b [32]byte
-	copy(b[:], a)
-	return b
+
+func ToBytes32(x []byte) [32]byte {
+	var y [32]byte
+	copy(y[:], x)
+	return y
+}
+
+// Xor xors the bytes in x and y and returns the result.
+func Xor(x []byte, y []byte) []byte {
+	n := len(x)
+	if len(y) < n {
+		n = len(y)
+	}
+	var result []byte
+	for i := 0; i < n; i++ {
+		result = append(result, x[i]^y[i])
+	}
+	return result
 }
