@@ -483,7 +483,8 @@ func TestCrosslinkCommitteesAtSlot_OutOfBound(t *testing.T) {
 func TestCrosslinkCommitteesAtPrevSlot_ShuffleFailed(t *testing.T) {
 	state := &pb.BeaconState{
 		ValidatorRegistry: validatorsUpperBound,
-		Slot:              100}
+		Slot:              100,
+	}
 
 	want := fmt.Sprint(
 		"could not shuffle prev epoch validators: " +
@@ -498,7 +499,8 @@ func TestCrosslinkCommitteesAtPrevSlot_ShuffleFailed(t *testing.T) {
 func TestCrosslinkCommitteesAtCurrSlot_ShuffleFailed(t *testing.T) {
 	state := &pb.BeaconState{
 		ValidatorRegistry: validatorsUpperBound,
-		Slot:              100}
+		Slot:              100,
+	}
 
 	want := fmt.Sprint(
 		"could not shuffle current epoch validators: " +

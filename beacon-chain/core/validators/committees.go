@@ -151,7 +151,8 @@ func AttestationParticipants(
 }
 
 // CurrCommitteesCountPerSlot returns the number of crosslink committees per slot
-// for the curent epoch.
+// of the current epoch.
+// Ex: Returns 8 means there's 8 committees assigned to one slot in current epoch.
 //
 // Spec pseudocode definition:
 //   def get_current_epoch_committee_count_per_slot(state: BeaconState) -> int:
@@ -315,7 +316,7 @@ func Shuffling(
 	return utils.SplitIndices(shuffledIndices, committeesPerSlot*config.EpochLength), nil
 }
 
-// committeeCountPerSlot retrieves the number of crosslink committees of a given slot.
+// committeeCountPerSlot returns the number of crosslink committees of one slot.
 //
 // Spec pseudocode definition:
 //   def get_committee_count_per_slot(active_validator_count: int) -> int:
@@ -340,7 +341,8 @@ func committeeCountPerSlot(activeValidatorCount uint64) uint64 {
 }
 
 // prevCommitteesCountPerSlot returns the number of committees per slot
-// for the previous epoch.
+// of the previous epoch.
+// Ex: Returns 16 means there's 16 committees assigned to one slot in previous epoch.
 //
 // Spec pseudocode definition:
 //   def get_previous_epoch_committee_count_per_slot(state: BeaconState) -> int:
