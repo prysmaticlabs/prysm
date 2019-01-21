@@ -4,9 +4,9 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-// GetSimulatorSlot returns the last saved simulator slot
+// SimulatorSlot returns the last saved simulator slot
 // from the disk.
-func (db *BeaconDB) GetSimulatorSlot() (uint64, error) {
+func (db *BeaconDB) SimulatorSlot() (uint64, error) {
 	var slot uint64
 	err := db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(simulatorBucket)

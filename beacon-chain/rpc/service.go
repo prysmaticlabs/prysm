@@ -161,7 +161,7 @@ func (s *Service) Status() error {
 // CanonicalHead of the current beacon chain. This method is requested on-demand
 // by a validator when it is their time to propose or attest.
 func (s *Service) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*pbp2p.BeaconBlock, error) {
-	block, err := s.beaconDB.GetChainHead()
+	block, err := s.beaconDB.ChainHead()
 	if err != nil {
 		return nil, fmt.Errorf("could not get canonical head block: %v", err)
 	}
@@ -179,7 +179,7 @@ func (s *Service) CurrentAssignmentsAndGenesisTime(
 	ctx context.Context,
 	req *pb.ValidatorAssignmentRequest,
 ) (*pb.CurrentAssignmentsResponse, error) {
-	beaconState, err := s.beaconDB.GetState()
+	beaconState, err := s.beaconDB.State()
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
@@ -248,7 +248,7 @@ func (s *Service) LatestPOWChainBlockHash(ctx context.Context, req *ptypes.Empty
 // returns it to the validator client.
 func (s *Service) ComputeStateRoot(ctx context.Context, req *pbp2p.BeaconBlock) (*pb.StateRootResponse, error) {
 
-	beaconState, err := s.beaconDB.GetState()
+	beaconState, err := s.beaconDB.State()
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
@@ -279,7 +279,7 @@ func (s *Service) ComputeStateRoot(ctx context.Context, req *pbp2p.BeaconBlock) 
 // to propose a beacon block at the given slot.
 func (s *Service) ProposerIndex(ctx context.Context, req *pb.ProposerIndexRequest) (*pb.IndexResponse, error) {
 
-	beaconState, err := s.beaconDB.GetState()
+	beaconState, err := s.beaconDB.State()
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
@@ -335,7 +335,7 @@ func (s *Service) LatestAttestation(req *ptypes.Empty, stream pb.BeaconService_L
 // ValidatorShardID is called by a validator to get the shard ID of where it's suppose
 // to proposer or attest.
 func (s *Service) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.ShardIDResponse, error) {
-	beaconState, err := s.beaconDB.GetState()
+	beaconState, err := s.beaconDB.State()
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
@@ -358,7 +358,7 @@ func (s *Service) ValidatorSlotAndResponsibility(
 	ctx context.Context,
 	req *pb.PublicKey,
 ) (*pb.SlotResponsibilityResponse, error) {
-	beaconState, err := s.beaconDB.GetState()
+	beaconState, err := s.beaconDB.State()
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
@@ -378,7 +378,7 @@ func (s *Service) ValidatorSlotAndResponsibility(
 // ValidatorIndex is called by a validator to get its index location that corresponds
 // to the attestation bit fields.
 func (s *Service) ValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.IndexResponse, error) {
-	beaconState, err := s.beaconDB.GetState()
+	beaconState, err := s.beaconDB.State()
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}

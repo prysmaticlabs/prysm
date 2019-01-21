@@ -114,7 +114,7 @@ func (q *Querier) RequestLatestHead() {
 // IsSynced checks if the node is cuurently synced with the
 // rest of the network.
 func (q *Querier) IsSynced() (bool, error) {
-	block, err := q.db.GetChainHead()
+	block, err := q.db.ChainHead()
 	if err != nil {
 		return false, err
 	}

@@ -9,8 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-var config = params.BeaconConfig()
-
 func TestProcessBlock_IncorrectSlot(t *testing.T) {
 	beaconState := &pb.BeaconState{
 		Slot: 5,

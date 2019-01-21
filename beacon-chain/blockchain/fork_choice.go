@@ -75,7 +75,7 @@ func BlockAncestor(block *pb.BeaconBlock, slot uint64, beaconDB *db.BeaconDB) (*
 		return block, nil
 	}
 	parentHash := bytesutil.ToBytes32(block.ParentRootHash32)
-	parent, err := beaconDB.GetBlock(parentHash)
+	parent, err := beaconDB.Block(parentHash)
 	if err != nil {
 		return nil, fmt.Errorf("could not get parent block: %v", err)
 	}

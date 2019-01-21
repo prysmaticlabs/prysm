@@ -152,7 +152,7 @@ func setupBeaconChain(t *testing.T, faultyPoWClient bool, beaconDB *db.BeaconDB)
 }
 
 func SetSlotInState(service *ChainService, slot uint64) error {
-	bState, err := service.beaconDB.GetState()
+	bState, err := service.beaconDB.State()
 	if err != nil {
 		return err
 	}
@@ -272,7 +272,7 @@ func TestRunningChainService(t *testing.T) {
 	if err := chainService.beaconDB.SaveState(beaconState); err != nil {
 		t.Fatalf("Can't save state to db %v", err)
 	}
-	beaconState, err = chainService.beaconDB.GetState()
+	beaconState, err = chainService.beaconDB.State()
 	if err != nil {
 		t.Fatalf("Can't get state from db %v", err)
 	}
@@ -344,7 +344,7 @@ func TestDoesPOWBlockExist(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, true, db)
 
-	beaconState, err := chainService.beaconDB.GetState()
+	beaconState, err := chainService.beaconDB.State()
 	if err != nil {
 		t.Fatalf("Unable to retrieve beacon state %v", err)
 	}
@@ -454,7 +454,7 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't initialze genesis state: %v", err)
 	}
-	beaconState, err := db.GetState()
+	beaconState, err := db.State()
 	if err != nil {
 		t.Fatalf("Can't get genesis state: %v", err)
 	}

@@ -40,7 +40,8 @@ type BeaconChainConfig struct {
 
 	// Initial value constants.
 	GenesisForkVersion      uint64   // GenesisForkVersion is used to track fork version between state transitions.
-	GenesisSlot             uint64   // GenesisSlot is used to initialize the genesis state fields..
+	GenesisSlot             uint64   // GenesisSlot is used to initialize the genesis state fields.
+	GenesisStartShard       uint64   // GenesisStartShard is the first shard to assign validators.
 	ZeroHash                [32]byte // ZeroHash is used to represent a zeroed out 32 byte array.
 	EmptySignature          [][]byte // EmptySignature is used to represent a zeroed out BLS Signature.
 	BLSWithdrawalPrefixByte byte     // BLSWithdrawalPrefixByte is used for BLS withdrawal and it's the first byte.
@@ -91,7 +92,7 @@ type ShardChainConfig struct {
 var defaultBeaconConfig = &BeaconChainConfig{
 	// Misc constant.
 	ShardCount:                1024,
-	TargetCommitteeSize:       256,
+	TargetCommitteeSize:       128,
 	EjectionBalance:           16,
 	EjectionBalanceInGwei:     16 * 1e9,
 	MaxBalanceChurnQuotient:   32,
@@ -113,6 +114,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	// Initial value constants.
 	GenesisForkVersion: 0,
 	GenesisSlot:        0,
+	GenesisStartShard:  0,
 	FarFutureSlot:      1<<64 - 1,
 	ZeroHash:           [32]byte{},
 	EmptySignature:     makeEmptySignature(),
@@ -170,6 +172,7 @@ var demoBeaconConfig = &BeaconChainConfig{
 	// Initial value constants.
 	GenesisForkVersion: defaultBeaconConfig.GenesisForkVersion,
 	GenesisSlot:        defaultBeaconConfig.GenesisSlot,
+	GenesisStartShard:  defaultBeaconConfig.GenesisStartShard,
 	FarFutureSlot:      defaultBeaconConfig.FarFutureSlot,
 	ZeroHash:           defaultBeaconConfig.ZeroHash,
 	EmptySignature:     defaultBeaconConfig.EmptySignature,
