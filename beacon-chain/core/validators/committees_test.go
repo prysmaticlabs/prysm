@@ -431,12 +431,12 @@ func TestShuffling_Ok(t *testing.T) {
 	// Verify shuffled list is correctly split into
 	// epoch_length * committees_per_slot pieces.
 	committeesPerSlot := committeeCountPerSlot(uint64(len(validators)))
-	if len(committees) != len(validators)/int(committeesPerSlot*config.EpochLength) {
+	if len(committees) != int(committeesPerSlot*config.EpochLength) {
 		t.Errorf("Incorrect committee count after splitting. Wanted: %d, got: %d",
-			len(validators)/int(committeesPerSlot*config.EpochLength), len(committees))
+			committeesPerSlot*config.EpochLength, len(committees))
 	}
 
-	// Verify each shuffled committee is TARGET_COMMITTEE_SIZE
+	// Verify each shuffled committee is TARGET_COMMITTEE_SIZE.
 	for i := 0; i < len(committees); i++ {
 		if len(committees[i]) != int(config.TargetCommitteeSize) {
 			t.Errorf("Incorrect validator count per committee. Wanted: %d, got: %d",
