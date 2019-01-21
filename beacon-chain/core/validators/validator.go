@@ -563,7 +563,7 @@ func PenalizeValidator(state *pb.BeaconState, idx uint32) (*pb.BeaconState, erro
 
 	penalizedDuration := (state.Slot / config.EpochLength) %
 		config.LatestPenalizedExitLength
-	state.LatestPenalizedExitBalances[penalizedDuration] +=
+	state.LatestPenalizedBalances[penalizedDuration] +=
 		EffectiveBalance(state, idx)
 
 	whistleblowerIdx, err := BeaconProposerIdx(state, state.Slot)
@@ -679,7 +679,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 			}
 		}
 	}
-	state.ValidatorRegistryLatestChangeSlot = state.Slot
+	state.ValidatorRegistryUpdateSlot = state.Slot
 	return state, nil
 }
 
@@ -721,8 +721,8 @@ func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 		if state.Slot/config.EpochLength == penalized {
 			penalizedEpoch := (state.Slot / config.EpochLength) % config.LatestPenalizedExitLength
 			penalizedEpochStart := (penalizedEpoch + 1) % config.LatestPenalizedExitLength
-			totalAtStart := state.LatestPenalizedExitBalances[penalizedEpochStart]
-			totalAtEnd := state.LatestPenalizedExitBalances[penalizedEpoch]
+			totalAtStart := state.LatestPenalizedBalances[penalizedEpochStart]
+			totalAtEnd := state.LatestPenalizedBalances[penalizedEpoch]
 			totalPenalties := totalAtStart - totalAtEnd
 
 			penaltyMultiplier := totalPenalties * 3
