@@ -263,7 +263,7 @@ func CrosslinkCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*Crosslink
 	return crosslinkCommittees, nil
 }
 
-// Shuffle shuffles input validator indices and splits them by slot and shard.
+// Shuffling shuffles input validator indices and splits them by slot and shard.
 //
 // Spec pseudocode definition:
 //   def get_shuffling(seed: Bytes32,
