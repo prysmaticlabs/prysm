@@ -54,5 +54,5 @@ container_push(
 go_binary(
     name = "validator",
     embed = [":go_default_library"],
-    visibility = ["//validator:__subpackages__"],
+    visibility = ["//visibility:public"],
 )
