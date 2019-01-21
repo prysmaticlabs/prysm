@@ -10,6 +10,8 @@ spec:
       labels:
         component: bootnode-v4
         universe: geth
+      annotations:
+        sidecar.istio.io/inject: "false"
     spec:
       priorityClassName: production-priority
       containers:

@@ -81,11 +81,6 @@ spec:
                 secretKeyRef:
                   name: ethstats-secrets
                   key: ws
-            - name: BOOTNODE_PUBKEY
-              valueFrom:
-                secretKeyRef:
-                  name: geth-bootnode-secret
-                  key: public_key
           resources:
             requests:
               memory: "1000Mi"

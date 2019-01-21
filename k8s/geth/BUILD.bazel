@@ -44,7 +44,7 @@ _services = [
 ]
 
 _secrets = [
-    "bootnode",
+#    "bootnode",
     "ethstats",
 #    "faucet",
     "goerli_validator",
