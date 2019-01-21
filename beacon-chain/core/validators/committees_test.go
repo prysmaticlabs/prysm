@@ -446,19 +446,19 @@ func TestShuffling_Ok(t *testing.T) {
 
 }
 
-func TestShuffling_OutOfBound(t *testing.T) {
-	size := 1<<(config.RandBytes*8) - 1
-	validators := make([]*pb.ValidatorRecord, size)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.ValidatorRecord{
-			ExitSlot: config.FarFutureSlot,
-		}
-	}
-
-	if _, err := Shuffling([32]byte{}, validators, 0); err == nil {
-		t.Fatalf("Shuffling should have failed with exceeded upper bound")
-	}
-}
+//func TestShuffling_OutOfBound(t *testing.T) {
+//	size := 1<<(config.RandBytes*8) - 1
+//	validators := make([]*pb.ValidatorRecord, size)
+//	for i := 0; i < len(validators); i++ {
+//		validators[i] = &pb.ValidatorRecord{
+//			ExitSlot: config.FarFutureSlot,
+//		}
+//	}
+//
+//	if _, err := Shuffling([32]byte{}, validators, 0); err == nil {
+//		t.Fatalf("Shuffling should have failed with exceeded upper bound")
+//	}
+//}
 
 func TestCrosslinkCommitteesAtSlot_Ok(t *testing.T) {
 	validatorsPerEpoch := config.EpochLength * config.TargetCommitteeSize
@@ -505,48 +505,48 @@ func TestCrosslinkCommitteesAtSlot_OutOfBound(t *testing.T) {
 	}
 }
 
-func TestCrosslinkCommitteesAtPrevSlot_ShuffleFailed(t *testing.T) {
-	size := 1<<(config.RandBytes*8) - 1
-	validators := make([]*pb.ValidatorRecord, size)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.ValidatorRecord{
-			ExitSlot: config.FarFutureSlot,
-		}
-	}
+//func TestCrosslinkCommitteesAtPrevSlot_ShuffleFailed(t *testing.T) {
+//	size := 1<<(config.RandBytes*8) - 1
+//	validators := make([]*pb.ValidatorRecord, size)
+//	for i := 0; i < len(validators); i++ {
+//		validators[i] = &pb.ValidatorRecord{
+//			ExitSlot: config.FarFutureSlot,
+//		}
+//	}
+//
+//	state := &pb.BeaconState{
+//		ValidatorRegistry: validators,
+//		Slot:              100}
+//
+//	want := fmt.Sprint(
+//		"could not shuffle prev epoch validators: " +
+//			"input list exceeded upper bound and reached modulo bias",
+//	)
+//
+//	if _, err := CrosslinkCommitteesAtSlot(state, 1); !strings.Contains(err.Error(), want) {
+//		t.Errorf("Expected: %s, received: %v", want, err)
+//	}
+//}
 
-	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              100}
-
-	want := fmt.Sprint(
-		"could not shuffle prev epoch validators: " +
-			"input list exceeded upper bound and reached modulo bias",
-	)
-
-	if _, err := CrosslinkCommitteesAtSlot(state, 1); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected: %s, received: %v", want, err)
-	}
-}
-
-func TestCrosslinkCommitteesAtCurrSlot_ShuffleFailed(t *testing.T) {
-	size := 1<<(config.RandBytes*8) - 1
-	validators := make([]*pb.ValidatorRecord, size)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.ValidatorRecord{
-			ExitSlot: config.FarFutureSlot,
-		}
-	}
-
-	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              100}
-
-	want := fmt.Sprint(
-		"could not shuffle current epoch validators: " +
-			"input list exceeded upper bound and reached modulo bias",
-	)
-
-	if _, err := CrosslinkCommitteesAtSlot(state, 99); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected: %s, received: %v", want, err)
-	}
-}
+//func TestCrosslinkCommitteesAtCurrSlot_ShuffleFailed(t *testing.T) {
+//	size := 1<<(config.RandBytes*8) - 1
+//	validators := make([]*pb.ValidatorRecord, size)
+//	for i := 0; i < len(validators); i++ {
+//		validators[i] = &pb.ValidatorRecord{
+//			ExitSlot: config.FarFutureSlot,
+//		}
+//	}
+//
+//	state := &pb.BeaconState{
+//		ValidatorRegistry: validators,
+//		Slot:              100}
+//
+//	want := fmt.Sprint(
+//		"could not shuffle current epoch validators: " +
+//			"input list exceeded upper bound and reached modulo bias",
+//	)
+//
+//	if _, err := CrosslinkCommitteesAtSlot(state, 99); !strings.Contains(err.Error(), want) {
+//		t.Errorf("Expected: %s, received: %v", want, err)
+//	}
+//}
