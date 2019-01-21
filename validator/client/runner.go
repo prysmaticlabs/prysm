@@ -7,6 +7,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Validator interface defines the primary methods of a validator client.
 type Validator interface {
 	Initialize()
 	Done()

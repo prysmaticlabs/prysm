@@ -38,7 +38,7 @@ func (v *ValidatorService) Stop() error {
 	return nil
 }
 
-// Status
+// Status ...
 //
 // WIP - not done.
 func (v *ValidatorService) Status() error {
