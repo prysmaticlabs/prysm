@@ -56,7 +56,7 @@ var decodeTests = []decodeTest{
 	{input: "FFFFFFFFFFFFFFFF", ptr: new(uint64), value: uint64(18446744073709551615)},
 
 	// bytes
-	{input: "00000000", ptr:new([]byte), value: []byte{}},
+	{input: "00000000", ptr: new([]byte), value: []byte{}},
 	{input: "0100000001", ptr: new([]byte), value: []byte{1}},
 	{input: "06000000 010203040506", ptr: new([]byte), value: []byte{1, 2, 3, 4, 5, 6}},
 
