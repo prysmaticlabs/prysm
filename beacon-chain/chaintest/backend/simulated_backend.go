@@ -9,8 +9,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/trie"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -22,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slices"
+	"github.com/prysmaticlabs/prysm/shared/trie"
 	log "github.com/sirupsen/logrus"
 )
 

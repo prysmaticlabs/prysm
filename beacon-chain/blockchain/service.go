@@ -153,12 +153,12 @@ func (c *ChainService) updateHead(processedBlock <-chan *pb.BeaconBlock) {
 			}
 
 			log.Info("Updating chain head...")
-			currentHead, err := c.beaconDB.GetChainHead()
+			currentHead, err := c.beaconDB.ChainHead()
 			if err != nil {
 				log.Errorf("Could not get current chain head: %v", err)
 				continue
 			}
-			currentState, err := c.beaconDB.GetState()
+			currentState, err := c.beaconDB.State()
 			if err != nil {
 				log.Errorf("Could not get current beacon state: %v", err)
 				continue
@@ -236,7 +236,7 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *pb.BeaconBlock) {
 			// has already been processed by the beacon node, we throw it away. If the
 			// slot number is too high to be processed in the current slot, we store
 			// it in a cache.
-			beaconState, err := c.beaconDB.GetState()
+			beaconState, err := c.beaconDB.State()
 			if err != nil {
 				log.Errorf("Unable to retrieve beacon state %v", err)
 				continue
@@ -306,7 +306,7 @@ func (c *ChainService) receiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 		return nil
 	}
 
-	prevBlock, err := c.beaconDB.GetChainHead()
+	prevBlock, err := c.beaconDB.ChainHead()
 	if err != nil {
 		return fmt.Errorf("could not retrieve chain head %v", err)
 	}

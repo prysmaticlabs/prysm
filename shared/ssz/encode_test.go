@@ -34,62 +34,62 @@ var encodeTests = []encTest{
 
 	// uint16
 	{val: uint16(0), output: "0000"},
-	{val: uint16(1), output: "0001"},
-	{val: uint16(16), output: "0010"},
-	{val: uint16(128), output: "0080"},
-	{val: uint16(255), output: "00FF"},
+	{val: uint16(1), output: "0100"},
+	{val: uint16(16), output: "1000"},
+	{val: uint16(128), output: "8000"},
+	{val: uint16(255), output: "FF00"},
 	{val: uint16(65535), output: "FFFF"},
 
 	// uint32
 	{val: uint32(0), output: "00000000"},
-	{val: uint32(1), output: "00000001"},
-	{val: uint32(16), output: "00000010"},
-	{val: uint32(128), output: "00000080"},
-	{val: uint32(255), output: "000000FF"},
-	{val: uint32(65535), output: "0000FFFF"},
+	{val: uint32(1), output: "01000000"},
+	{val: uint32(16), output: "10000000"},
+	{val: uint32(128), output: "80000000"},
+	{val: uint32(255), output: "FF000000"},
+	{val: uint32(65535), output: "FFFF0000"},
 	{val: uint32(4294967295), output: "FFFFFFFF"},
 
 	// uint64
 	{val: uint64(0), output: "0000000000000000"},
-	{val: uint64(1), output: "0000000000000001"},
-	{val: uint64(16), output: "0000000000000010"},
-	{val: uint64(128), output: "0000000000000080"},
-	{val: uint64(255), output: "00000000000000FF"},
-	{val: uint64(65535), output: "000000000000FFFF"},
-	{val: uint64(4294967295), output: "00000000FFFFFFFF"},
+	{val: uint64(1), output: "0100000000000000"},
+	{val: uint64(16), output: "1000000000000000"},
+	{val: uint64(128), output: "8000000000000000"},
+	{val: uint64(255), output: "FF00000000000000"},
+	{val: uint64(65535), output: "FFFF000000000000"},
+	{val: uint64(4294967295), output: "FFFFFFFF00000000"},
 	{val: uint64(18446744073709551615), output: "FFFFFFFFFFFFFFFF"},
 
 	// bytes
 	{val: []byte{}, output: "00000000"},
-	{val: []byte{1}, output: "00000001 01"},
-	{val: []byte{1, 2, 3, 4, 5, 6}, output: "00000006 010203040506"},
+	{val: []byte{1}, output: "01000000 01"},
+	{val: []byte{1, 2, 3, 4, 5, 6}, output: "06000000 010203040506"},
 
 	// slice
 	{val: []uint16{}, output: "00000000"},
-	{val: []uint16{1}, output: "00000002 0001"},
-	{val: []uint16{1, 2}, output: "00000004 0001 0002"},
+	{val: []uint16{1}, output: "02000000 0100"},
+	{val: []uint16{1, 2}, output: "04000000 0100 0200"},
 	{val: [][]uint16{
 		{1, 2, 3, 4},
 		{5, 6, 7, 8},
-	}, output: "00000018 00000008 0001 0002 0003 0004 00000008 0005 0006 0007 0008"},
+	}, output: "18000000 08000000 0100 0200 0300 0400 08000000 0500 0600 0700 0800"},
 
 	// array
-	{val: [1]byte{1}, output: "00000001 01"},
-	{val: [6]byte{1, 2, 3, 4, 5, 6}, output: "00000006 010203040506"},
-	{val: [1]uint16{1}, output: "00000002 0001"},
-	{val: [2]uint16{1, 2}, output: "00000004 0001 0002"},
+	{val: [1]byte{1}, output: "01000000 01"},
+	{val: [6]byte{1, 2, 3, 4, 5, 6}, output: "06000000 010203040506"},
+	{val: [1]uint16{1}, output: "02000000 0100"},
+	{val: [2]uint16{1, 2}, output: "04000000 0100 0200"},
 	{val: [2][4]uint16{
 		{1, 2, 3, 4},
 		{5, 6, 7, 8},
-	}, output: "00000018 00000008 0001 0002 0003 0004 00000008 0005 0006 0007 0008"},
+	}, output: "18000000 08000000 0100 0200 0300 0400 08000000 0500 0600 0700 0800"},
 
 	// struct
-	{val: simpleStruct{}, output: "00000003 00 0000"},
-	{val: simpleStruct{B: 2, A: 1}, output: "00000003 0002 01"},
+	{val: simpleStruct{}, output: "03000000 00 0000"},
+	{val: simpleStruct{B: 2, A: 1}, output: "03000000 0200 01"},
 	{val: outerStruct{
 		V:    3,
 		SubV: innerStruct{V: 6},
-	}, output: "00000007 03 00000002 0006"},
+	}, output: "07000000 03 02000000 0600"},
 
 	// slice + struct
 	{val: arrayStruct{
@@ -97,30 +97,30 @@ var encodeTests = []encTest{
 			{B: 2, A: 1},
 			{B: 4, A: 3},
 		},
-	}, output: "00000012 0000000E 00000003 000201 00000003 000403"},
+	}, output: "12000000 0E000000 03000000 020001 03000000 040003"},
 	{val: []outerStruct{
 		{V: 3, SubV: innerStruct{V: 6}},
 		{V: 5, SubV: innerStruct{V: 7}},
-	}, output: "00000016 00000007 03 00000002 0006 00000007 05 00000002 0007"},
+	}, output: "16000000 07000000 03 02000000 0600 07000000 05 02000000 0700"},
 
 	// pointer
-	{val: &simpleStruct{B: 2, A: 1}, output: "00000003 0002 01"},
-	{val: pointerStruct{P: &simpleStruct{B: 2, A: 1}, V: 3}, output: "00000008 00000003 0002 01 03"},
-	{val: &pointerStruct{P: &simpleStruct{B: 2, A: 1}, V: 3}, output: "00000008 00000003 0002 01 03"},
-	{val: &[]uint8{1, 2, 3, 4}, output: "00000004 01020304"},
-	{val: &[]uint64{1, 2}, output: "00000010 0000000000000001 0000000000000002"},
+	{val: &simpleStruct{B: 2, A: 1}, output: "03000000 0200 01"},
+	{val: pointerStruct{P: &simpleStruct{B: 2, A: 1}, V: 3}, output: "08000000 03000000 0200 01 03"},
+	{val: &pointerStruct{P: &simpleStruct{B: 2, A: 1}, V: 3}, output: "08000000 03000000 0200 01 03"},
+	{val: &[]uint8{1, 2, 3, 4}, output: "04000000 01020304"},
+	{val: &[]uint64{1, 2}, output: "10000000 0100000000000000 0200000000000000"},
 	{val: []*simpleStruct{
 		{B: 2, A: 1},
 		{B: 4, A: 3},
-	}, output: "0000000E 00000003 0002 01 00000003 0004 03"},
+	}, output: "0E000000 03000000 0200 01 03000000 0400 03"},
 	{val: [2]*simpleStruct{
 		{B: 2, A: 1},
 		{B: 4, A: 3},
-	}, output: "0000000E 00000003 0002 01 00000003 0004 03"},
+	}, output: "0E000000 03000000 0200 01 03000000 0400 03"},
 	{val: []*pointerStruct{
 		{P: &simpleStruct{B: 2, A: 1}, V: 0},
 		{P: &simpleStruct{B: 4, A: 3}, V: 1},
-	}, output: "00000018 00000008 00000003 0002 01 00 00000008 00000003 0004 03 01"},
+	}, output: "18000000 08000000 03000000 0200 01 00 08000000 03000000 0400 03 01"},
 
 	// error: nil pointer
 	{val: nil, error: "encode error: nil is not supported for input type <nil>"},
