@@ -99,7 +99,7 @@ func setup() (*testAccount, error) {
 	txOpts := bind.NewKeyedTransactor(privKey)
 	startingBalance, _ := new(big.Int).SetString("1000000000000000000000", 10)
 	genesis[addr] = core.GenesisAccount{Balance: startingBalance}
-	backend := backends.NewSimulatedBackend(genesis, 2100000)
+	backend := backends.NewSimulatedBackend(genesis, 2100000000)
 
 	depositsRequired := big.NewInt(8)
 	contractAddr, _, contract, err := contracts.DeployDepositContract(txOpts, backend, depositsRequired)

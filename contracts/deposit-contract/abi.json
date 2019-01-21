@@ -52,20 +52,6 @@
         "type": "constructor"
     },
     {
-        "name": "deposit",
-        "outputs": [],
-        "inputs": [
-            {
-                "type": "bytes",
-                "name": "deposit_input"
-            }
-        ],
-        "constant": false,
-        "payable": true,
-        "type": "function",
-        "gas": 1688864
-    },
-    {
         "name": "get_deposit_root",
         "outputs": [
             {
@@ -78,6 +64,20 @@
         "payable": false,
         "type": "function",
         "gas": 625
+    },
+    {
+        "name": "deposit",
+        "outputs": [],
+        "inputs": [
+            {
+                "type": "bytes",
+                "name": "deposit_input"
+            }
+        ],
+        "constant": false,
+        "payable": true,
+        "type": "function",
+        "gas": 1707235
     },
     {
         "name": "get_branch",
@@ -96,6 +96,6 @@
         "constant": true,
         "payable": false,
         "type": "function",
-        "gas": 20108
+        "gas": 20138
     }
 ]

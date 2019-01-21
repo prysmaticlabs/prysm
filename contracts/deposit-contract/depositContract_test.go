@@ -187,8 +187,6 @@ func TestChainStarts(t *testing.T) {
 		t.Fatalf("Unable to get logs %v", err)
 	}
 
-	t.Log(len(logs))
-
 	if logs[8].Topics[0] != hashutil.Hash([]byte("ChainStart(bytes32,bytes)")) {
 		t.Error("Chain start even did not get emitted")
 	}
