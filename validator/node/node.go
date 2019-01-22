@@ -71,7 +71,7 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 			return nil, err
 		}
 
-		pubKey = blspubkey.BufferedPublicKey()
+		pubKey = blspubkey.Serialize()
 	} else {
 		pubKey = []byte(ctx.GlobalString(types.PubKeyFlag.Name))
 	}

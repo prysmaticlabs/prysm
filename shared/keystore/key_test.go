@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/pborman/uuid"
-	"github.com/prysmaticlabs/prysm/shared/bls"
+	bls "github.com/prysmaticlabs/go-bls"
 )
 
 func TestMarshalAndUnmarshal(t *testing.T) {

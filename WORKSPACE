@@ -2,35 +2,35 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
     name = "bazel_skylib",
-    url = "https://github.com/bazelbuild/bazel-skylib/archive/0.6.0.tar.gz",
     sha256 = "eb5c57e4c12e68c0c20bc774bfbc60a568e800d025557bc4ea022c6479acc867",
     strip_prefix = "bazel-skylib-0.6.0",
+    url = "https://github.com/bazelbuild/bazel-skylib/archive/0.6.0.tar.gz",
 )
 
 http_archive(
     name = "io_bazel_rules_go",
-    url = "https://github.com/bazelbuild/rules_go/releases/download/0.16.5/rules_go-0.16.5.tar.gz",
     sha256 = "7be7dc01f1e0afdba6c8eb2b43d2fa01c743be1b9273ab1eaf6c233df078d705",
+    url = "https://github.com/bazelbuild/rules_go/releases/download/0.16.5/rules_go-0.16.5.tar.gz",
 )
 
 http_archive(
     name = "bazel_gazelle",
-    urls = ["https://github.com/bazelbuild/bazel-gazelle/releases/download/0.16.0/bazel-gazelle-0.16.0.tar.gz"],
     sha256 = "7949fc6cc17b5b191103e97481cf8889217263acf52e00b560683413af204fcb",
+    urls = ["https://github.com/bazelbuild/bazel-gazelle/releases/download/0.16.0/bazel-gazelle-0.16.0.tar.gz"],
 )
 
 http_archive(
     name = "com_github_atlassian_bazel_tools",
+    sha256 = "e7d0c0e2963a7f9cb2c377e241502119dae24909708adef1918e8dcb70ae9e8c",
     strip_prefix = "bazel-tools-6fef37f33dfa0189be9df4d3d60e6291bfe71177",
     urls = ["https://github.com/atlassian/bazel-tools/archive/6fef37f33dfa0189be9df4d3d60e6291bfe71177.tar.gz"],
-    sha256 = "e7d0c0e2963a7f9cb2c377e241502119dae24909708adef1918e8dcb70ae9e8c",
 )
 
 http_archive(
     name = "io_bazel_rules_docker",
-    url = "https://github.com/bazelbuild/rules_docker/archive/v0.5.1.tar.gz",
-    strip_prefix = "rules_docker-0.5.1",
     sha256 = "29d109605e0d6f9c892584f07275b8c9260803bf0c6fcb7de2623b2bedc910bd",
+    strip_prefix = "rules_docker-0.5.1",
+    url = "https://github.com/bazelbuild/rules_docker/archive/v0.5.1.tar.gz",
 )
 
 load("@io_bazel_rules_docker//docker:docker.bzl", "docker_repositories")
@@ -39,9 +39,9 @@ docker_repositories()
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    url = "https://github.com/bazelbuild/rules_nodejs/archive/0.16.2.tar.gz",
-    strip_prefix = "rules_nodejs-0.16.2",
     sha256 = "5dea8b55e41caae044f4b1697f2bbf882d99563cf6c012929384063fddc801d4",
+    strip_prefix = "rules_nodejs-0.16.2",
+    url = "https://github.com/bazelbuild/rules_nodejs/archive/0.16.2.tar.gz",
 )
 
 load("@build_bazel_rules_nodejs//:package.bzl", "rules_nodejs_dependencies")
@@ -61,12 +61,12 @@ yarn_install(
 # This requires rules_docker to be fully instantiated before it is pulled in.
 http_archive(
     name = "io_bazel_rules_k8s",
-    url = "https://github.com/bazelbuild/rules_k8s/archive/2206972072d64e5d2d966d81cc6c5fb77fd58dcb.tar.gz",
-    strip_prefix = "rules_k8s-2206972072d64e5d2d966d81cc6c5fb77fd58dcb",
     sha256 = "828fb1ac4c44280be95306b885a326e40110eeba50bffa05e72ddd3b5cdc5d33",
+    strip_prefix = "rules_k8s-2206972072d64e5d2d966d81cc6c5fb77fd58dcb",
+    url = "https://github.com/bazelbuild/rules_k8s/archive/2206972072d64e5d2d966d81cc6c5fb77fd58dcb.tar.gz",
 )
 
-load("@io_bazel_rules_k8s//k8s:k8s.bzl", "k8s_repositories", "k8s_defaults")
+load("@io_bazel_rules_k8s//k8s:k8s.bzl", "k8s_defaults", "k8s_repositories")
 
 k8s_repositories()
 
@@ -88,7 +88,7 @@ k8s_repositories()
     "service_account",
 ]]
 
-load("@io_bazel_rules_go//go:def.bzl", "go_rules_dependencies", "go_register_toolchains")
+load("@io_bazel_rules_go//go:def.bzl", "go_register_toolchains", "go_rules_dependencies")
 
 go_rules_dependencies()
 
@@ -111,9 +111,9 @@ _go_image_repos()
 
 http_archive(
     name = "io_kubernetes_build",
-    url = "https://github.com/kubernetes/repo-infra/archive/4ce715fbe67d8fbed05ec2bb47a148e754100a4b.tar.gz",
-    strip_prefix = "repo-infra-4ce715fbe67d8fbed05ec2bb47a148e754100a4b",
     sha256 = "b4e7819861f2ec89b7309bd0c44fb3348c3a4a8ee494ec7668edb3960ff11814",
+    strip_prefix = "repo-infra-4ce715fbe67d8fbed05ec2bb47a148e754100a4b",
+    url = "https://github.com/kubernetes/repo-infra/archive/4ce715fbe67d8fbed05ec2bb47a148e754100a4b.tar.gz",
 )
 
 go_repository(
@@ -126,6 +126,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ethereum_go_ethereum",
+    commit = "6c700e8b788206dabf8577011cb0a338d6e88bde",
     importpath = "github.com/ethereum/go-ethereum",
     # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
     # a fork that has resolved these issues by disabling HID/USB support and
@@ -134,25 +135,24 @@ go_repository(
     # code.
     remote = "https://github.com/prysmaticlabs/bazel-go-ethereum",
     vcs = "git",
-    commit = "6c700e8b788206dabf8577011cb0a338d6e88bde",
 )
 
 go_repository(
     name = "com_github_urfave_cli",
-    tag = "v1.20.0",
     importpath = "github.com/urfave/cli",
+    tag = "v1.20.0",
 )
 
 go_repository(
     name = "com_github_go_yaml_yaml",
-    tag = "v2.2.2",
     importpath = "github.com/go-yaml/yaml",
+    tag = "v2.2.2",
 )
 
 go_repository(
     name = "com_github_x_cray_logrus_prefixed_formatter",
-    tag = "v0.5.2",
     importpath = "github.com/x-cray/logrus-prefixed-formatter",
+    tag = "v0.5.2",
 )
 
 go_repository(
@@ -169,21 +169,21 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p",
-    tag = "v6.0.29",
     importpath = "github.com/libp2p/go-libp2p",
+    tag = "v6.0.29",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_peer",
-    tag = "v2.4.0",
     importpath = "github.com/libp2p/go-libp2p-peer",
+    tag = "v2.4.0",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_crypto",
     build_file_proto_mode = "disable_global",
-    tag = "v2.0.1",
     importpath = "github.com/libp2p/go-libp2p-crypto",
+    tag = "v2.0.1",
 )
 
 go_repository(
@@ -194,74 +194,74 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_log",
-    tag = "v1.5.7",
     importpath = "github.com/ipfs/go-log",
+    tag = "v1.5.7",
 )
 
 go_repository(
     name = "com_github_multiformats_go_multihash",
-    tag = "v1.0.8",
     importpath = "github.com/multiformats/go-multihash",
+    tag = "v1.0.8",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_swarm",
-    tag = "v3.0.22",
     importpath = "github.com/libp2p/go-libp2p-swarm",
+    tag = "v3.0.22",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_host",
-    tag = "v3.0.15",
     importpath = "github.com/libp2p/go-libp2p-host",
+    tag = "v3.0.15",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_peerstore",
-    tag = "v2.0.6",
     importpath = "github.com/libp2p/go-libp2p-peerstore",
+    tag = "v2.0.6",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_circuit",
-    tag = "v2.3.2",
     importpath = "github.com/libp2p/go-libp2p-circuit",
+    tag = "v2.3.2",
 )
 
 go_repository(
     name = "com_github_coreos_go_semver",
-    tag = "v0.2.0",
     importpath = "github.com/coreos/go-semver",
+    tag = "v0.2.0",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_interface_connmgr",
-    tag = "v0.0.21",
     importpath = "github.com/libp2p/go-libp2p-interface-connmgr",
+    tag = "v0.0.21",
 )
 
 go_repository(
     name = "com_github_libp2p_go_conn_security_multistream",
-    tag = "v0.1.15",
     importpath = "github.com/libp2p/go-conn-security-multistream",
+    tag = "v0.1.15",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_metrics",
-    tag = "v2.1.7",
     importpath = "github.com/libp2p/go-libp2p-metrics",
+    tag = "v2.1.7",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_net",
-    tag = "v3.0.15",
     importpath = "github.com/libp2p/go-libp2p-net",
+    tag = "v3.0.15",
 )
 
 go_repository(
     name = "com_github_whyrusleeping_mafmt",
-    tag = "v1.2.8",
     importpath = "github.com/whyrusleeping/mafmt",
+    tag = "v1.2.8",
 )
 
 go_repository(
@@ -290,8 +290,8 @@ go_repository(
 
 go_repository(
     name = "com_github_mattn_go_colorable",
-    tag = "v0.0.9",
     importpath = "github.com/mattn/go-colorable",
+    tag = "v0.0.9",
 )
 
 go_repository(
@@ -314,33 +314,33 @@ go_repository(
 
 go_repository(
     name = "com_github_mr_tron_base58",
-    tag = "v1.1.0",
     importpath = "github.com/mr-tron/base58",
+    tag = "v1.1.0",
 )
 
 go_repository(
     name = "com_github_whyrusleeping_go_smux_yamux",
-    tag = "v2.0.8",
     importpath = "github.com/whyrusleeping/go-smux-yamux",
+    tag = "v2.0.8",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_secio",
     build_file_proto_mode = "disable_global",
-    tag = "v2.0.17",
     importpath = "github.com/libp2p/go-libp2p-secio",
+    tag = "v2.0.17",
 )
 
 go_repository(
     name = "com_github_libp2p_go_tcp_transport",
-    tag = "v2.0.16",
     importpath = "github.com/libp2p/go-tcp-transport",
+    tag = "v2.0.16",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_protocol",
-    tag = "v1.0.0",
     importpath = "github.com/libp2p/go-libp2p-protocol",
+    tag = "v1.0.0",
 )
 
 go_repository(
@@ -357,26 +357,26 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_loggables",
-    tag = "v1.1.24",
     importpath = "github.com/libp2p/go-libp2p-loggables",
+    tag = "v1.1.24",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_nat",
-    tag = "v0.8.8",
     importpath = "github.com/libp2p/go-libp2p-nat",
+    tag = "v0.8.8",
 )
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr_dns",
-    tag = "v0.2.5",
     importpath = "github.com/multiformats/go-multiaddr-dns",
+    tag = "v0.2.5",
 )
 
 go_repository(
     name = "com_github_fd_go_nat",
-    tag = "v1.0.0",
     importpath = "github.com/fd/go-nat",
+    tag = "v1.0.0",
 )
 
 go_repository(
@@ -387,62 +387,62 @@ go_repository(
 
 go_repository(
     name = "com_github_mattn_go_isatty",
-    tag = "v0.0.4",
     importpath = "github.com/mattn/go-isatty",
+    tag = "v0.0.4",
 )
 
 go_repository(
     name = "com_github_libp2p_go_stream_muxer",
-    tag = "v3.0.1",
     importpath = "github.com/libp2p/go-stream-muxer",
+    tag = "v3.0.1",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_transport_upgrader",
-    tag = "v0.1.16",
     importpath = "github.com/libp2p/go-libp2p-transport-upgrader",
+    tag = "v0.1.16",
 )
 
 go_repository(
     name = "com_github_libp2p_go_testutil",
-    tag = "v1.2.10",
     importpath = "github.com/libp2p/go-testutil",
+    tag = "v1.2.10",
 )
 
 go_repository(
     name = "com_github_whyrusleeping_go_smux_multistream",
-    tag = "v2.0.2",
     importpath = "github.com/whyrusleeping/go-smux-multistream",
+    tag = "v2.0.2",
 )
 
 go_repository(
     name = "com_github_libp2p_go_maddr_filter",
-    tag = "v1.1.10",
     importpath = "github.com/libp2p/go-maddr-filter",
+    tag = "v1.1.10",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_transport",
-    tag = "v3.0.15",
     importpath = "github.com/libp2p/go-libp2p-transport",
+    tag = "v3.0.15",
 )
 
 go_repository(
     name = "com_github_libp2p_go_addr_util",
-    tag = "v2.0.7",
     importpath = "github.com/libp2p/go-addr-util",
+    tag = "v2.0.7",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_interface_pnet",
-    tag = "v3.0.0",
     importpath = "github.com/libp2p/go-libp2p-interface-pnet",
+    tag = "v3.0.0",
 )
 
 go_repository(
     name = "com_github_libp2p_go_conn_security",
-    tag = "v0.1.15",
     importpath = "github.com/libp2p/go-conn-security",
+    tag = "v0.1.15",
 )
 
 go_repository(
@@ -453,26 +453,26 @@ go_repository(
 
 go_repository(
     name = "com_github_miekg_dns",
-    tag = "v1.1.3",
     importpath = "github.com/miekg/dns",
+    tag = "v1.1.3",
 )
 
 go_repository(
     name = "com_github_opentracing_opentracing_go",
-    tag = "v1.0.2",
     importpath = "github.com/opentracing/opentracing-go",
+    tag = "v1.0.2",
 )
 
 go_repository(
     name = "com_github_libp2p_go_reuseport",
-    tag = "v0.2.0",
     importpath = "github.com/libp2p/go-reuseport",
+    tag = "v0.2.0",
 )
 
 go_repository(
     name = "com_github_huin_goupnp",
-    tag = "v1.0.0",
     importpath = "github.com/huin/goupnp",
+    tag = "v1.0.0",
 )
 
 go_repository(
@@ -489,14 +489,14 @@ go_repository(
 
 go_repository(
     name = "com_github_satori_go_uuid",
-    tag = "v1.2.0",
     importpath = "github.com/satori/go.uuid",
+    tag = "v1.2.0",
 )
 
 go_repository(
     name = "com_github_sirupsen_logrus",
-    tag = "v1.3.0",
     importpath = "github.com/sirupsen/logrus",
+    tag = "v1.3.0",
 )
 
 go_repository(
@@ -507,26 +507,26 @@ go_repository(
 
 go_repository(
     name = "com_github_whyrusleeping_yamux",
-    tag = "v1.1.2",
     importpath = "github.com/whyrusleeping/yamux",
+    tag = "v1.1.2",
 )
 
 go_repository(
     name = "com_github_libp2p_go_flow_metrics",
-    tag = "v0.2.0",
     importpath = "github.com/libp2p/go-flow-metrics",
+    tag = "v0.2.0",
 )
 
 go_repository(
     name = "com_github_libp2p_go_msgio",
-    tag = "v0.0.6",
     importpath = "github.com/libp2p/go-msgio",
+    tag = "v0.0.6",
 )
 
 go_repository(
     name = "com_github_jackpal_gateway",
-    tag = "v1.0.5",
     importpath = "github.com/jackpal/gateway",
+    tag = "v1.0.5",
 )
 
 go_repository(
@@ -537,8 +537,8 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_ws_transport",
-    tag = "v2.0.15",
     importpath = "github.com/libp2p/go-ws-transport",
+    tag = "v2.0.15",
 )
 
 go_repository(
@@ -549,20 +549,20 @@ go_repository(
 
 go_repository(
     name = "com_github_jackpal_go_nat_pmp",
-    tag = "v1.0.1",
     importpath = "github.com/jackpal/go-nat-pmp",
+    tag = "v1.0.1",
 )
 
 go_repository(
     name = "com_github_libp2p_go_reuseport_transport",
-    tag = "v0.2.0",
     importpath = "github.com/libp2p/go-reuseport-transport",
+    tag = "v0.2.0",
 )
 
 go_repository(
     name = "com_github_libp2p_go_sockaddr",
-    tag = "v1.0.3",
     importpath = "github.com/libp2p/go-sockaddr",
+    tag = "v1.0.3",
 )
 
 go_repository(
@@ -573,14 +573,14 @@ go_repository(
 
 go_repository(
     name = "com_github_gorilla_websocket",
-    tag = "v1.4.0",
     importpath = "github.com/gorilla/websocket",
+    tag = "v1.4.0",
 )
 
 go_repository(
     name = "com_github_whyrusleeping_go_smux_multiplex",
-    tag = "v3.0.16",
     importpath = "github.com/whyrusleeping/go-smux-multiplex",
+    tag = "v3.0.16",
 )
 
 go_repository(
@@ -603,26 +603,26 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_blankhost",
-    tag = "v0.3.15",
     importpath = "github.com/libp2p/go-libp2p-blankhost",
+    tag = "v0.3.15",
 )
 
 go_repository(
     name = "com_github_steakknife_hamming",
-    tag = "0.2.5",
     importpath = "github.com/steakknife/hamming",
+    tag = "0.2.5",
 )
 
 go_repository(
     name = "io_opencensus_go",
-    tag = "v0.18.0",
     importpath = "go.opencensus.io",
+    tag = "v0.18.0",
 )
 
 go_repository(
     name = "org_golang_google_api",
-    tag = "v0.1.0",
     importpath = "google.golang.org/api",
+    tag = "v0.1.0",
 )
 
 go_repository(
@@ -651,8 +651,8 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_client_golang",
-    tag = "v0.9.2",
     importpath = "github.com/prometheus/client_golang",
+    tag = "v0.9.2",
 )
 
 go_repository(
@@ -675,8 +675,8 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_prometheus",
-    tag = "v2.6.1",
     importpath = "github.com/prometheus/prometheus",
+    tag = "v2.6.1",
 )
 
 go_repository(
@@ -687,64 +687,64 @@ go_repository(
 
 go_repository(
     name = "com_github_matttproud_golang_protobuf_extensions",
-    tag = "v1.0.1",
     importpath = "github.com/matttproud/golang_protobuf_extensions",
+    tag = "v1.0.1",
 )
 
 go_repository(
     name = "com_github_boltdb_bolt",
-    tag = "v1.3.1",
     importpath = "github.com/boltdb/bolt",
+    tag = "v1.3.1",
 )
 
 go_repository(
     name = "com_github_pborman_uuid",
-    tag = "v1.2.0",
     importpath = "github.com/pborman/uuid",
+    tag = "v1.2.0",
 )
 
 go_repository(
     name = "com_github_libp2p_go_buffer_pool",
-    tag = "v0.1.1",
     importpath = "github.com/libp2p/go-buffer-pool",
+    tag = "v0.1.1",
 )
 
 go_repository(
     name = "com_github_libp2p_go_mplex",
-    tag = "v0.2.30",
     importpath = "github.com/libp2p/go-mplex",
+    tag = "v0.2.30",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_pubsub",
     build_file_proto_mode = "disable_global",
-    tag = "v0.11.10",
     importpath = "github.com/libp2p/go-libp2p-pubsub",
+    tag = "v0.11.10",
 )
 
 go_repository(
     name = "com_github_ipfs_go_ipfs_util",
-    tag = "v1.2.8",
     importpath = "github.com/ipfs/go-ipfs-util",
+    tag = "v1.2.8",
 )
 
 go_repository(
     name = "com_github_google_uuid",
-    tag = "v1.1.0",
     importpath = "github.com/google/uuid",
+    tag = "v1.1.0",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_kad_dht",
     build_file_proto_mode = "disable_global",
-    tag = "v4.4.12",
     importpath = "github.com/libp2p/go-libp2p-kad-dht",
+    tag = "v4.4.12",
 )
 
 go_repository(
     name = "com_github_ipfs_go_datastore",
-    tag = "v3.2.0",
     importpath = "github.com/ipfs/go-datastore",
+    tag = "v3.2.0",
 )
 
 go_repository(
@@ -755,27 +755,27 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_cid",
-    tag = "v0.9.0",
     importpath = "github.com/ipfs/go-cid",
+    tag = "v0.9.0",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_record",
     build_file_proto_mode = "disable_global",
-    tag = "v4.1.7",
     importpath = "github.com/libp2p/go-libp2p-record",
+    tag = "v4.1.7",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_routing",
-    tag = "v2.7.1",
     importpath = "github.com/libp2p/go-libp2p-routing",
+    tag = "v2.7.1",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_kbucket",
-    tag = "v2.2.12",
     importpath = "github.com/libp2p/go-libp2p-kbucket",
+    tag = "v2.2.12",
 )
 
 go_repository(
@@ -786,8 +786,8 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_todocounter",
-    tag = "v1.0.1",
     importpath = "github.com/ipfs/go-todocounter",
+    tag = "v1.0.1",
 )
 
 go_repository(
@@ -798,20 +798,20 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multibase",
-    tag = "v0.3.0",
     importpath = "github.com/multiformats/go-multibase",
+    tag = "v0.3.0",
 )
 
 go_repository(
     name = "com_github_hashicorp_golang_lru",
-    tag = "v0.5.0",
     importpath = "github.com/hashicorp/golang-lru",
+    tag = "v0.5.0",
 )
 
 go_repository(
     name = "com_github_ipfs_go_ipfs_addr",
-    tag = "v0.1.25",
     importpath = "github.com/ipfs/go-ipfs-addr",
+    tag = "v0.1.25",
 )
 
 go_repository(
@@ -828,8 +828,8 @@ go_repository(
 
 go_repository(
     name = "com_github_konsorten_go_windows_terminal_sequences",
-    tag = "v1.0.1",
     importpath = "github.com/konsorten/go-windows-terminal-sequences",
+    tag = "v1.0.1",
 )
 
 go_repository(
@@ -878,26 +878,26 @@ go_repository(
 
 go_repository(
     name = "in_gopkg_yaml_v2",
-    tag = "v2.2.2",
     importpath = "gopkg.in/yaml.v2",
+    tag = "v2.2.2",
 )
 
 go_repository(
     name = "com_github_spf13_pflag",
-    tag = "v1.0.3",
     importpath = "github.com/spf13/pflag",
+    tag = "v1.0.3",
 )
 
 go_repository(
     name = "com_github_spf13_cobra",
-    tag = "v0.0.3",
     importpath = "github.com/spf13/cobra",
+    tag = "v0.0.3",
 )
 
 go_repository(
     name = "com_github_aws_aws_sdk_go",
-    tag = "v1.16.9",
     importpath = "github.com/aws/aws-sdk-go",
+    tag = "v1.16.9",
 )
 
 go_repository(
@@ -916,44 +916,44 @@ go_repository(
 
 go_repository(
     name = "com_github_hashicorp_go_multierror",
-    tag = "v1.0.0",
     importpath = "github.com/hashicorp/go-multierror",
+    tag = "v1.0.0",
 )
 
 go_repository(
     name = "com_github_hashicorp_errwrap",
-    tag = "v1.0.0",
     importpath = "github.com/hashicorp/errwrap",
+    tag = "v1.0.0",
 )
 
 go_repository(
     name = "com_google_cloud_go",
-    tag = "v0.34.0",
     importpath = "cloud.google.com/go",
+    tag = "v0.34.0",
 )
 
 go_repository(
     name = "com_github_inconshreveable_mousetrap",
-    tag = "v1.0.0",
     importpath = "github.com/inconshreveable/mousetrap",
+    tag = "v1.0.0",
 )
 
 go_repository(
     name = "com_github_deckarep_golang_set",
-    tag = "v1.7.1",
     importpath = "github.com/deckarep/golang-set",
+    tag = "v1.7.1",
 )
 
 go_repository(
     name = "com_github_go_stack_stack",
-    tag = "v1.8.0",
     importpath = "github.com/go-stack/stack",
+    tag = "v1.8.0",
 )
 
 go_repository(
     name = "com_github_rs_cors",
-    tag = "v1.6.0",
     importpath = "github.com/rs/cors",
+    tag = "v1.6.0",
 )
 
 go_repository(
@@ -964,24 +964,60 @@ go_repository(
 
 go_repository(
     name = "in_gopkg_urfave_cli_v1",
-    tag = "v1.20.0",
     importpath = "gopkg.in/urfave/cli.v1",
+    tag = "v1.20.0",
 )
 
 go_repository(
     name = "com_github_rjeczalik_notify",
-    tag = "v0.9.2",
     importpath = "github.com/rjeczalik/notify",
+    tag = "v0.9.2",
 )
 
 go_repository(
     name = "com_github_edsrzf_mmap_go",
-    tag = "v1.0.0",
     importpath = "github.com/edsrzf/mmap-go",
+    tag = "v1.0.0",
 )
 
 go_repository(
     name = "com_github_pkg_errors",
-    tag = "v0.8.1",
     importpath = "github.com/pkg/errors",
+    tag = "v0.8.1",
 )
+
+go_repository(
+    name = "com_github_prysmaticlabs_go_bls",
+    commit = "a37e65522727d6a8518151ce9008aa155632c13d",
+    importpath = "github.com/prysmaticlabs/go-bls",
+)
+
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+
+git_repository(
+    name = "herumi_mcl",
+    remote = "https://github.com/prysmaticlabs/mcl",
+    commit = "79b3a33e21072712f00985ed2adf34b3bcf0d74e",
+)
+
+git_repository(
+    name = "bazelify_gmp",
+    remote = "https://github.com/robin-thomas/bazelify-gmp",
+    commit = "bb4881b35e6864c90493980d035e1d984cafd093",
+)
+
+git_repository(
+    name = "boringssl",
+    commit = "fafc4482e85c09e7af5f71b2eb287b73ccd1020a",
+    remote = "https://github.com/google/boringssl",
+)
+
+git_repository(
+    name = "io_bazel_rules_m4",
+    remote = "https://github.com/jmillikin/rules_m4",
+    commit = "2bf69df77dfb6b3ba6b7fc95c304b0dc279375bc",
+)
+
+load("@io_bazel_rules_m4//:m4.bzl", "m4_register_toolchains")
+
+m4_register_toolchains()
