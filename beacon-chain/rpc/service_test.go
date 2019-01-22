@@ -35,6 +35,16 @@ func init() {
 	logrus.SetOutput(ioutil.Discard)
 }
 
+type TestLogger struct {
+	logrus.FieldLogger
+	testMap map[string]interface{}
+}
+
+func (t *TestLogger) Fatalf(format string, args ...interface{}) {
+	t.testMap["fatal_error"] = true
+	panic("fatal_error")
+}
+
 type mockPOWChainService struct{}
 
 func (m *mockPOWChainService) LatestBlockHash() common.Hash {
@@ -91,48 +101,33 @@ func TestLifecycle(t *testing.T) {
 
 }
 
-
-
-
 func TestBadEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
+
+	log = &TestLogger{
+		FieldLogger: logrus.WithField("prefix", "rpc"),
+		testMap:     make(map[string]interface{}),
+	}
+
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port: "ralph merkle!!!",
 	})
 
-	if rpcService.didPanicHappendStart {
+	if _, ok := log.(*TestLogger).testMap["fatal_error"]; ok {
 		t.Fatal("Panic in Start() happened before expected")
 	}
 
-	if rpcService.didPanicHappendGo {
-		t.Fatal("Panic in go routine happened before expected")
+	rpcService.Start()
+
+	if _, ok := log.(*TestLogger).testMap["fatal_error"]; !ok {
+		t.Fatal("No panic happened. Expected Start() to panic")
 	}
 
-	rpcService.Start()
-	
-	  if !rpcService.didPanicHappendStart  {
-		t.Fatal("No panic happened. Expected Start() to panic")
-	  }
-
-
-	//   if !rpcService.didPanicHappendGo {
-	// 	t.Fatal("No panic happened. Expected go routine in Start() to panic")
-	//   }
-	
-	
 	testutil.AssertLogsContain(t, hook, "Starting service")
+	testutil.AssertLogsContain(t, hook, "Handling Connections")
 	testutil.AssertLogsContain(t, hook, "Starting go routine")
 }
 
-	testutil.AssertLogsContain(t, hook, "Starting service")
-	//testutil.AssertLogsContain(t, hook, fmt.Sprintf("Could not listen to port :%s", rpcService.port))
-	
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Listening to the port: %s failed", rpcService.port))
-	testutil.AssertLogsContain(t, hook, "Could not serve gRPC")
-
-    rpcService.Stop()
-	testutil.AssertLogsContain(t, hook, "Stopping service")
-}
 func TestInsecureEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
 	rpcService := NewRPCService(context.Background(), &Config{

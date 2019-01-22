@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"net"
 	"time"
-	"strings"
-
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
@@ -28,7 +26,11 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-var log = logrus.WithField("prefix", "rpc")
+var log logrus.FieldLogger
+
+func init() {
+	log = logrus.WithField("prefix", "rpc")
+}
 
 type chainService interface {
 	IncomingBlockFeed() *event.Feed
@@ -66,8 +68,6 @@ type Service struct {
 	enablePOWChain        bool
 	slotAlignmentDuration time.Duration
 	credentialError       error
-	didPanicHappendStart  bool
-	didPanicHappendGo     bool
 }
 
 // Config options for the beacon node RPC server.
@@ -105,20 +105,10 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 	}
 }
 
-var panic = func(s *Service, msg string)  {
-	fmt.Printf("panic received: %s\n", msg)
-	if strings.Contains(msg, "Start"){
-		s.didPanicHappendStart  = true 
-	} else {
-		s.didPanicHappendGo = true 
-	}
-	
-}
-
-
 // Start the gRPC server.
 func (s *Service) Start() {
 	log.Info("Starting service")
+<<<<<<< HEAD
 <<<<<<< HEAD
 	defer func() {
 		if err := recover(); err != nil {
@@ -135,15 +125,19 @@ func (s *Service) Start() {
 =======
 	s.didPanicHappendStart = false
 	s.didPanicHappendGo  = false 
+=======
+>>>>>>> TestLogger implementation
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", s.port))
-	// addrStr := lis.Addr().String()
-	// log.Infof("Starring Listener")
 	if err != nil {
+<<<<<<< HEAD
 		msg1 := fmt.Sprintf("Could not listen to port in Start() :%s: %v", s.port, err)
 		panic(s, msg1)
 >>>>>>> log not found: Starting go routine
 		//log.Fatalf("Could not listen to port :%s: %v", s.port, err)
 >>>>>>> assertPanic , TestBadEndPoint failed because of panic in goroutine
+=======
+		log.Fatalf("Could not listen to port in Start() :%s: %v", s.port, err)
+>>>>>>> TestLogger implementation
 	}
 	s.listener = lis
 	log.Infof("RPC server listening on port :%s", s.port)
@@ -170,7 +164,9 @@ func (s *Service) Start() {
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)
 
+	log.Info("Handling Connections")
 	go func() {
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 		defer func() {
@@ -194,10 +190,14 @@ func (s *Service) Start() {
 				msg2 := fmt.Sprintf("Could not serve gRPC: %v", err)
 				panic(s, msg2)
 >>>>>>> log not found: Starting go routine
+=======
+		log.Info("Starting go routine")
+		if err := s.grpcServer.Serve(lis); err != nil {
+			log.Fatalf("Could not serve gRPC: %v", err)
+>>>>>>> TestLogger implementation
 		}
 	}()
 }
-
 
 // Stop the service.
 func (s *Service) Stop() error {
