@@ -1,6 +1,8 @@
 package client
 
 import (
+	"context"
+
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 )
 
@@ -30,7 +32,7 @@ type fakeValidator struct {
 	ProposeBlockArg1   uint64
 }
 
-func (fv *fakeValidator) Initialize() {
+func (fv *fakeValidator) Initialize(_ context.Context) {
 	fv.InitializeCalled = true
 }
 
@@ -38,7 +40,7 @@ func (fv *fakeValidator) Done() {
 	fv.DoneCalled = true
 }
 
-func (fv *fakeValidator) WaitForActivation() {
+func (fv *fakeValidator) WaitForActivation(_ context.Context) {
 	fv.WaitForActivationCalled = true
 }
 
@@ -47,7 +49,7 @@ func (fv *fakeValidator) NextSlot() <-chan uint64 {
 	return fv.NextSlotRet
 }
 
-func (fv *fakeValidator) UpdateAssignments(slot uint64) {
+func (fv *fakeValidator) UpdateAssignments(_ context.Context, slot uint64) {
 	fv.UpdateAssignmentsCalled = true
 	fv.UpdateAssignmentsArg1 = slot
 }
@@ -58,12 +60,12 @@ func (fv *fakeValidator) RoleAt(slot uint64) pb.ValidatorRole {
 	return fv.RoleAtRet
 }
 
-func (fv *fakeValidator) AttestToBlockHead(slot uint64) {
+func (fv *fakeValidator) AttestToBlockHead(_ context.Context, slot uint64) {
 	fv.AttestToBlockHeadCalled = true
 	fv.AttestToBlockHeadArg1 = slot
 }
 
-func (fv *fakeValidator) ProposeBlock(slot uint64) {
+func (fv *fakeValidator) ProposeBlock(_ context.Context, slot uint64) {
 	fv.ProposeBlockCalled = true
 	fv.ProposeBlockArg1 = slot
 }

@@ -1,6 +1,10 @@
 package client
 
 import (
+	"context"
+
+	"github.com/opentracing/opentracing-go"
+
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotticker"
@@ -17,7 +21,10 @@ type validator struct {
 // Initialize
 //
 // WIP - not done.
-func (v *validator) Initialize() {
+func (v *validator) Initialize(ctx context.Context) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.Initialize")
+	defer span.Finish()
+
 	cfg := params.BeaconConfig()
 	v.ticker = slotticker.GetSlotTicker(cfg.GenesisTime, cfg.SlotDuration)
 }
@@ -32,7 +39,9 @@ func (v *validator) Done() {
 // received.
 //
 // WIP - not done.
-func (v *validator) WaitForActivation() {
+func (v *validator) WaitForActivation(ctx context.Context) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.WaitForActivation")
+	defer span.Finish()
 }
 
 // NextSlot emits the next slot number at the start time of that slot.
@@ -43,7 +52,9 @@ func (v *validator) NextSlot() <-chan uint64 {
 // UpdateAssignments checks the slot number to determine if the validator's
 // list of upcoming assignments needs to be updated. For example, at the
 // beginning of a new epoch.
-func (v *validator) UpdateAssignments(slot uint64) {
+func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.UpdateAssignments")
+	defer span.Finish()
 
 }
 
@@ -60,13 +71,17 @@ func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
 // ProposeBlock
 //
 // WIP - not done.
-func (v *validator) ProposeBlock(slot uint64) {
+func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.ProposeBlock")
+	defer span.Finish()
 
 }
 
 // AttestToBlockHead
 //
 // WIP - not done.
-func (v *validator) AttestToBlockHead(slot uint64) {
+func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.AttestToBlockHead")
+	defer span.Finish()
 
 }
