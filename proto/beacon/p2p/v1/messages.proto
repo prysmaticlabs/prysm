@@ -17,6 +17,9 @@ enum Topic {
   BEACON_STATE_HASH_ANNOUNCE = 9;
   BEACON_STATE_REQUEST = 10;
   BEACON_STATE_RESPONSE = 11;
+  ATTESTATION_ANNOUNCE = 12;
+  ATTESTATION_REQUEST = 13;
+  ATTESTATION_RESPONSE = 14;
 }
 
 message BeaconBlockAnnounce {
@@ -64,4 +67,17 @@ message BeaconStateRequest {
 
 message BeaconStateResponse {
   BeaconState beacon_state = 1;
+}
+
+message AttestationAnnounce {
+  bytes hash = 1;
+}
+
+message AttestationRequest {
+  bytes hash = 1;
+}
+
+message AttestationResponse {
+  bytes hash = 1;
+  Attestation attestation = 2;
 }
