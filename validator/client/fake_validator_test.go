@@ -9,27 +9,20 @@ import (
 var _ = Validator(&fakeValidator{})
 
 type fakeValidator struct {
-	InitializeCalled bool
-
-	DoneCalled bool
-
+	InitializeCalled        bool
+	DoneCalled              bool
 	WaitForActivationCalled bool
-
-	NextSlotRet    <-chan uint64
-	NextSlotCalled bool
-
+	NextSlotRet             <-chan uint64
+	NextSlotCalled          bool
 	UpdateAssignmentsCalled bool
 	UpdateAssignmentsArg1   uint64
-
-	RoleAtCalled bool
-	RoleAtArg1   uint64
-	RoleAtRet    pb.ValidatorRole
-
+	RoleAtCalled            bool
+	RoleAtArg1              uint64
+	RoleAtRet               pb.ValidatorRole
 	AttestToBlockHeadCalled bool
 	AttestToBlockHeadArg1   uint64
-
-	ProposeBlockCalled bool
-	ProposeBlockArg1   uint64
+	ProposeBlockCalled      bool
+	ProposeBlockArg1        uint64
 }
 
 func (fv *fakeValidator) Initialize(_ context.Context) {

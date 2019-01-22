@@ -13,7 +13,7 @@ func cancelledContext() context.Context {
 	return ctx
 }
 
-func TestRun_initializesValidator(t *testing.T) {
+func TestRunInitializesValidator(t *testing.T) {
 	v := &fakeValidator{}
 	run(cancelledContext(), v)
 	if !v.InitializeCalled {
@@ -21,7 +21,7 @@ func TestRun_initializesValidator(t *testing.T) {
 	}
 }
 
-func TestRun_cleansUpValidator(t *testing.T) {
+func TestRunCleansUpValidator(t *testing.T) {
 	v := &fakeValidator{}
 	run(cancelledContext(), v)
 	if !v.DoneCalled {
@@ -29,7 +29,7 @@ func TestRun_cleansUpValidator(t *testing.T) {
 	}
 }
 
-func TestRun_waitsForActivation(t *testing.T) {
+func TestRunWaitsForActivation(t *testing.T) {
 	v := &fakeValidator{}
 	run(cancelledContext(), v)
 	if !v.WaitForActivationCalled {
@@ -37,7 +37,7 @@ func TestRun_waitsForActivation(t *testing.T) {
 	}
 }
 
-func TestRun_onNextSlot_updatesAssignments(t *testing.T) {
+func TestRunOnNextSlotUpdatesAssignments(t *testing.T) {
 	v := &fakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -53,14 +53,14 @@ func TestRun_onNextSlot_updatesAssignments(t *testing.T) {
 	run(ctx, v)
 
 	if !v.UpdateAssignmentsCalled {
-		t.Fatalf("Expected UpdateAssignments(%v) to be called", slot)
+		t.Fatalf("Expected UpdateAssignments(%d) to be called", slot)
 	}
 	if v.UpdateAssignmentsArg1 != slot {
-		t.Errorf("UpdateAssignments was called with wrong argument. Want=%v, got=%v", slot, v.UpdateAssignmentsArg1)
+		t.Errorf("UpdateAssignments was called with wrong argument. Want=%d, got=%d", slot, v.UpdateAssignmentsArg1)
 	}
 }
 
-func TestRun_onNextSlot_DeterminesRole(t *testing.T) {
+func TestRunOnNextSlotDeterminesRole(t *testing.T) {
 	v := &fakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -76,14 +76,14 @@ func TestRun_onNextSlot_DeterminesRole(t *testing.T) {
 	run(ctx, v)
 
 	if !v.RoleAtCalled {
-		t.Fatalf("Expected RoleAt(%v) to be called", slot)
+		t.Fatalf("Expected RoleAt(%d) to be called", slot)
 	}
 	if v.RoleAtArg1 != slot {
-		t.Errorf("RoleAt called with the wrong arg. Want=%v, got=%v", slot, v.RoleAtArg1)
+		t.Errorf("RoleAt called with the wrong arg. Want=%d, got=%d", slot, v.RoleAtArg1)
 	}
 }
 
-func TestRun_onNextSlot_actsAsAttester(t *testing.T) {
+func TestRunOnNextSlotActsAsAttester(t *testing.T) {
 	v := &fakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -100,14 +100,14 @@ func TestRun_onNextSlot_actsAsAttester(t *testing.T) {
 	run(ctx, v)
 
 	if !v.AttestToBlockHeadCalled {
-		t.Fatalf("AttestToBlockHead(%v) was not called", slot)
+		t.Fatalf("AttestToBlockHead(%d) was not called", slot)
 	}
 	if v.AttestToBlockHeadArg1 != slot {
-		t.Errorf("AttestToBlockHead was called with wrong arg. Want=%v, got=%v", slot, v.AttestToBlockHeadArg1)
+		t.Errorf("AttestToBlockHead was called with wrong arg. Want=%d, got=%d", slot, v.AttestToBlockHeadArg1)
 	}
 }
 
-func TestRun_onNextSlot_actsAsProposer(t *testing.T) {
+func TestRunOnNextSlotActsAsProposer(t *testing.T) {
 	v := &fakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -124,9 +124,9 @@ func TestRun_onNextSlot_actsAsProposer(t *testing.T) {
 	run(ctx, v)
 
 	if !v.ProposeBlockCalled {
-		t.Fatalf("ProposeBlock(%v) was not called", slot)
+		t.Fatalf("ProposeBlock(%d) was not called", slot)
 	}
 	if v.ProposeBlockArg1 != slot {
-		t.Errorf("ProposeBlock was called with wrong arg. Want=%v, got=%v", slot, v.AttestToBlockHeadArg1)
+		t.Errorf("ProposeBlock was called with wrong arg. Want=%d, got=%d", slot, v.AttestToBlockHeadArg1)
 	}
 }
