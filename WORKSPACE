@@ -501,7 +501,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "770c60269bf0ef965e9e7ac8bedcb6bca2a1cefd",
+    commit = "054c452bb702e465e95ce8e7a3d9a6cf0cd1188d",
     importpath = "golang.org/x/sys",
 )
 
@@ -996,14 +996,14 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 git_repository(
     name = "herumi_mcl",
-    remote = "https://github.com/prysmaticlabs/mcl",
     commit = "79b3a33e21072712f00985ed2adf34b3bcf0d74e",
+    remote = "https://github.com/prysmaticlabs/mcl",
 )
 
 git_repository(
     name = "bazelify_gmp",
-    remote = "https://github.com/robin-thomas/bazelify-gmp",
     commit = "bb4881b35e6864c90493980d035e1d984cafd093",
+    remote = "https://github.com/robin-thomas/bazelify-gmp",
 )
 
 git_repository(
@@ -1014,8 +1014,8 @@ git_repository(
 
 git_repository(
     name = "io_bazel_rules_m4",
-    remote = "https://github.com/jmillikin/rules_m4",
     commit = "2bf69df77dfb6b3ba6b7fc95c304b0dc279375bc",
+    remote = "https://github.com/jmillikin/rules_m4",
 )
 
 load("@io_bazel_rules_m4//:m4.bzl", "m4_register_toolchains")
