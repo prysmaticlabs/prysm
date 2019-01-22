@@ -164,8 +164,9 @@ func (s *Service) Start() {
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)
 
-	log.Info("Handling Connections")
+	log.Info("Starting go routine")
 	go func() {
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -195,6 +196,12 @@ func (s *Service) Start() {
 		if err := s.grpcServer.Serve(lis); err != nil {
 			log.Fatalf("Could not serve gRPC: %v", err)
 >>>>>>> TestLogger implementation
+=======
+		if s.listener != nil {
+			if err := s.grpcServer.Serve(s.listener); err != nil {
+				log.Fatalf("Could not serve gRPC: %v", err)
+			}
+>>>>>>> Testlogger with map  and overriden Fatalf
 		}
 	}()
 }

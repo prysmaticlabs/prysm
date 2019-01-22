@@ -42,7 +42,6 @@ type TestLogger struct {
 
 func (t *TestLogger) Fatalf(format string, args ...interface{}) {
 	t.testMap["fatal_error"] = true
-	panic("fatal_error")
 }
 
 type mockPOWChainService struct{}
@@ -102,13 +101,19 @@ func TestLifecycle(t *testing.T) {
 }
 
 func TestBadEndpoint(t *testing.T) {
-	hook := logTest.NewGlobal()
+
+	fl := logrus.WithField("prefix", "rpc")
 
 	log = &TestLogger{
-		FieldLogger: logrus.WithField("prefix", "rpc"),
+		FieldLogger: fl,
 		testMap:     make(map[string]interface{}),
 	}
 
+<<<<<<< HEAD
+=======
+	hook := logTest.NewLocal(fl.Logger)
+
+>>>>>>> Testlogger with map  and overriden Fatalf
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port: "ralph merkle!!!",
 	})
@@ -124,7 +129,6 @@ func TestBadEndpoint(t *testing.T) {
 	}
 
 	testutil.AssertLogsContain(t, hook, "Starting service")
-	testutil.AssertLogsContain(t, hook, "Handling Connections")
 	testutil.AssertLogsContain(t, hook, "Starting go routine")
 }
 
