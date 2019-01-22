@@ -382,3 +382,27 @@ func winningRoot(
 	}
 	return winnerRoot, nil
 }
+
+// randaoMix returns the randao mix of a given slot.
+//
+// Spec pseudocode definition:
+//   def get_randao_mix(state: BeaconState,
+//                   slot: int) -> Hash32:
+//    """
+//    Returns the randao mix at a recent ``slot``.
+//    """
+//    assert state.slot <= slot + LATEST_RANDAO_MIXES_LENGTH
+//	  assert slot < state.slot
+//    return state.latest_block_roots[slot % LATEST_RANDAO_MIXES_LENGTH]
+func randaoMix(state *pb.BeaconState, slot uint64) ([]byte, error) {
+	var lowerBound uint64
+	if state.Slot > config.LatestRandaoMixesLength {
+		lowerBound = state.Slot - config.LatestRandaoMixesLength
+	}
+	upperBound := state.Slot
+	if lowerBound > slot || slot >= upperBound {
+		return nil, fmt.Errorf("input randaoMix slot %d out of bounds: %d <= slot < %d",
+			slot, lowerBound, upperBound)
+	}
+	return state.LatestRandaoMixesHash32S[slot%config.LatestRandaoMixesLength], nil
+}

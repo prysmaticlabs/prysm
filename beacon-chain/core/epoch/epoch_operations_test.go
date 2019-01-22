@@ -2,7 +2,10 @@ package epoch
 
 import (
 	"bytes"
+	"encoding/binary"
+	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -448,7 +451,6 @@ func TestAttestingValidators_CantGetWinningRoot(t *testing.T) {
 }
 
 func TestTotalAttestingBalance_Ok(t *testing.T) {
-
 	ShardCommittees := []*pb.ShardCommitteeArray{
 		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
@@ -493,7 +495,6 @@ func TestTotalAttestingBalance_Ok(t *testing.T) {
 }
 
 func TestTotalAttestingBalance_NotOfBound(t *testing.T) {
-
 	ShardCommittees := []*pb.ShardCommitteeArray{
 		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{}},
@@ -522,7 +523,6 @@ func TestTotalAttestingBalance_NotOfBound(t *testing.T) {
 }
 
 func TestTotalBalance(t *testing.T) {
-
 	ShardCommittees := &pb.ShardCommittee{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}}
 
 	// Assign validators to different balances.
@@ -540,7 +540,6 @@ func TestTotalBalance(t *testing.T) {
 }
 
 func TestInclusionSlot_Ok(t *testing.T) {
-
 	ShardCommittees := []*pb.ShardCommitteeArray{
 		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
@@ -569,7 +568,6 @@ func TestInclusionSlot_Ok(t *testing.T) {
 }
 
 func TestInclusionSlot_BadBitfield(t *testing.T) {
-
 	ShardCommittees := []*pb.ShardCommitteeArray{
 		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{1}},
@@ -591,7 +589,6 @@ func TestInclusionSlot_BadBitfield(t *testing.T) {
 }
 
 func TestInclusionSlot_NotFound(t *testing.T) {
-
 	ShardCommittees := []*pb.ShardCommitteeArray{
 		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{1}},
@@ -608,7 +605,6 @@ func TestInclusionSlot_NotFound(t *testing.T) {
 }
 
 func TestInclusionDistance_Ok(t *testing.T) {
-
 	ShardCommittees := []*pb.ShardCommitteeArray{
 		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
@@ -638,7 +634,6 @@ func TestInclusionDistance_Ok(t *testing.T) {
 }
 
 func TestInclusionDistance_BadBitfield(t *testing.T) {
-
 	ShardCommittees := []*pb.ShardCommitteeArray{
 		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{1}},
@@ -660,7 +655,6 @@ func TestInclusionDistance_BadBitfield(t *testing.T) {
 }
 
 func TestInclusionDistance_NotFound(t *testing.T) {
-
 	ShardCommittees := []*pb.ShardCommitteeArray{
 		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{1}},
@@ -673,5 +667,53 @@ func TestInclusionDistance_NotFound(t *testing.T) {
 	_, err := InclusionDistance(state, 1)
 	if err == nil {
 		t.Fatal("InclusionDistance should have failed")
+	}
+}
+
+func TestRandaoMix_Ok(t *testing.T) {
+	randaoMixes := make([][]byte, config.LatestRandaoMixesLength)
+	for i := 0; i < len(randaoMixes); i++ {
+		intInBytes := make([]byte, 32)
+		binary.BigEndian.PutUint64(intInBytes, uint64(i))
+		randaoMixes[i] = intInBytes
+	}
+	state := &pb.BeaconState{LatestRandaoMixesHash32S: randaoMixes}
+	tests := []struct {
+		slot      uint64
+		randaoMix []byte
+	}{
+		{
+			slot:      10,
+			randaoMix: randaoMixes[10],
+		},
+		{
+			slot:      2344,
+			randaoMix: randaoMixes[2344],
+		},
+		{
+			slot:      99999,
+			randaoMix: randaoMixes[99999%config.LatestRandaoMixesLength],
+		},
+	}
+	for _, test := range tests {
+		state.Slot = test.slot + 1
+		mix, err := randaoMix(state, test.slot)
+		if err != nil {
+			t.Fatalf("Could not get randao mix: %v", err)
+		}
+		if !bytes.Equal(test.randaoMix, mix) {
+			t.Errorf("Incorrect randao mix. Wanted: %#x, got: %#x",
+				test.randaoMix, mix)
+		}
+	}
+}
+
+func TestRandaoMix_OutOfBound(t *testing.T) {
+	want := fmt.Sprintf(
+		"input randaoMix slot %d out of bounds: %d <= slot < %d",
+		100, 0, 0,
+	)
+	if _, err := randaoMix(&pb.BeaconState{}, 100); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected: %s, received: %v", want, err)
 	}
 }
