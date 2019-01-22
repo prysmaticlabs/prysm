@@ -2,8 +2,7 @@ package sync
 
 import (
 	"context"
-	"errors"
-
+    "errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
 	"github.com/sirupsen/logrus"
@@ -85,7 +84,7 @@ func (ss *Service) Status() error {
 	  return err
 	}
 	if !synced {
-	  return errors.New("node is not synced with the rest of the network")
+		return errors.New("node is not in sync with the rest of the network")
 	}
   	return nil
 }
