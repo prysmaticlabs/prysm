@@ -714,6 +714,6 @@ func TestRandaoMix_OutOfBound(t *testing.T) {
 		100, 0, 0,
 	)
 	if _, err := randaoMix(&pb.BeaconState{}, 100); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected: %s, received: %v", want, err)
+		t.Errorf("Expected: %s, received: %s", want, err.Error())
 	}
 }
