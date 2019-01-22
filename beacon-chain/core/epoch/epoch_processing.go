@@ -199,9 +199,8 @@ func ProcessEjections(state *pb.BeaconState) (*pb.BeaconState, error) {
 	return state, nil
 }
 
-// ProcessValidatorRegistry computes and sets current epoch's calculation slot
-// and start shard to previous epoch. It returns the updated state with previous
-// epoch's calculation slot and start shard updated.
+// ProcessPrevSlotShard computes and sets current epoch's calculation slot
+// and start shard to previous epoch. Then it returns the updated state.
 //
 // Spec pseudocode definition:
 //	Set state.previous_epoch_randao_mix = state.current_epoch_randao_mix
