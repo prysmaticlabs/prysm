@@ -22,7 +22,7 @@ import (
 
 var log = logrus.WithField("prefix", "node")
 
-const shardChainDBName = "shardchaindata"
+//const shardChainDBName = "shardchaindata"
 
 // ValidatorClient defines an instance of a sharding validator that manages
 // the entire lifecycle of services attached to it participating in
