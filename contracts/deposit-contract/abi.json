@@ -45,6 +45,14 @@
             {
                 "type": "uint256",
                 "name": "depositThreshold"
+            },
+            {
+                "type": "uint256",
+                "name": "minDeposit"
+            },
+            {
+                "type": "uint256",
+                "name": "maxDeposit"
             }
         ],
         "constant": false,
@@ -77,7 +85,7 @@
         "constant": false,
         "payable": true,
         "type": "function",
-        "gas": 1707235
+        "gas": 1707835
     },
     {
         "name": "get_branch",

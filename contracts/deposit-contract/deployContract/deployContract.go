@@ -133,7 +133,9 @@ func main() {
 		}
 
 		// Deploy validator registration contract
-		addr, tx, _, err := contracts.DeployDepositContract(txOps, client, params.ContractConfig().DepositsForChainStart)
+		addr, tx, _, err := contracts.DeployDepositContract(
+			txOps, client, params.ContractConfig().DepositsForChainStart,
+			params.ContractConfig().MinDepositAmount, params.ContractConfig().MaxDepositAmount)
 		if err != nil {
 			log.Fatal(err)
 		}

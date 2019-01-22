@@ -81,6 +81,8 @@ type BeaconChainConfig struct {
 // DepositContractConfig contains the deposits for
 type DepositContractConfig struct {
 	DepositsForChainStart *big.Int // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
+	MinDepositAmount      *big.Int // MinDepositAmount defines the minimum deposit amount in gwei that is required in the deposit contract.
+	MaxDepositAmount      *big.Int // // MaxDepositAmount defines the minimum deposit amount in gwei that is required in the deposit contract.
 }
 
 // ShardChainConfig contains configs for node to participate in shard chains.
@@ -214,6 +216,8 @@ var defaultShardConfig = &ShardChainConfig{
 
 var defaultDepositContractConfig = &DepositContractConfig{
 	DepositsForChainStart: big.NewInt(16384),
+	MinDepositAmount:      big.NewInt(1e9),
+	MaxDepositAmount:      big.NewInt(32e9),
 }
 
 var beaconConfig = defaultBeaconConfig
@@ -236,9 +240,11 @@ func ContractConfig() *DepositContractConfig {
 }
 
 // DemoContractConfig uses the argument provided to initialize a fresh config.
-func DemoContractConfig(depositsReq *big.Int) *DepositContractConfig {
+func DemoContractConfig(depositsReq *big.Int, minDeposit *big.Int, maxDeposit *big.Int) *DepositContractConfig {
 	return &DepositContractConfig{
 		DepositsForChainStart: depositsReq,
+		MinDepositAmount:      minDeposit,
+		MaxDepositAmount:      maxDeposit,
 	}
 }
 

@@ -54,7 +54,9 @@ func setup() (*testAccount, error) {
 	backend := backends.NewSimulatedBackend(genesis, 210000000000)
 
 	depositsRequired := big.NewInt(8)
-	contractAddr, _, contract, err := DeployDepositContract(txOpts, backend, depositsRequired)
+	minDeposit := big.NewInt(1e9)
+	maxDeposit := big.NewInt(32e9)
+	contractAddr, _, contract, err := DeployDepositContract(txOpts, backend, depositsRequired, minDeposit, maxDeposit)
 	if err != nil {
 		return nil, err
 	}
