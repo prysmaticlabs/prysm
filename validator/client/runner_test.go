@@ -2,9 +2,12 @@ package client
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func cancelledContext() context.Context {
@@ -58,6 +61,26 @@ func TestRunOnNextSlotUpdatesAssignments(t *testing.T) {
 	if v.UpdateAssignmentsArg1 != slot {
 		t.Errorf("UpdateAssignments was called with wrong argument. Want=%d, got=%d", slot, v.UpdateAssignmentsArg1)
 	}
+}
+
+func TestRunOnNextSlotUpdatesAssignmentsHandlesError(t *testing.T) {
+	hook := logTest.NewGlobal()
+	v := &fakeValidator{}
+	ctx, cancel := context.WithCancel(context.Background())
+
+	slot := uint64(55)
+	ticker := make(chan uint64)
+	v.NextSlotRet = ticker
+	go func() {
+		ticker <- slot
+
+		cancel()
+	}()
+	v.UpdateAssignmentsRet = errors.New("bad")
+
+	run(ctx, v)
+
+	testutil.AssertLogsContain(t, hook, "Failed to update assignments")
 }
 
 func TestRunOnNextSlotDeterminesRole(t *testing.T) {

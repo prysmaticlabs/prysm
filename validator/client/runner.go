@@ -44,7 +44,10 @@ func run(ctx context.Context, v Validator) {
 			span, ctx := opentracing.StartSpanFromContext(ctx, "processSlot")
 			defer span.Finish()
 
-			v.UpdateAssignments(ctx, slot)
+			if err := v.UpdateAssignments(ctx, slot); err != nil {
+				log.WithField("error", err).Error("Failed to update assignments")
+				continue
+			}
 			role := v.RoleAt(slot)
 
 			switch role {
