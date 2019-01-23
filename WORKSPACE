@@ -985,3 +985,9 @@ go_repository(
     tag = "v0.8.1",
     importpath = "github.com/pkg/errors",
 )
+
+go_repository(
+    name = "in_gopkg_natefinch_npipe_v2",
+    commit = "c1b8fa8bdccecb0b8db834ee0b92fdbcfa606dd6",
+    importpath = "gopkg.in/natefinch/npipe.v2",
+)
