@@ -14,7 +14,7 @@ type Validator interface {
 	Done()
 	WaitForActivation(ctx context.Context)
 	NextSlot() <-chan uint64
-	UpdateAssignments(ctx context.Context, slot uint64)
+	UpdateAssignments(ctx context.Context, slot uint64) error
 	RoleAt(slot uint64) pb.ValidatorRole
 	AttestToBlockHead(ctx context.Context, slot uint64)
 	ProposeBlock(ctx context.Context, slot uint64)

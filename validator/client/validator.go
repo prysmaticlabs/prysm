@@ -15,7 +15,10 @@ import (
 // WIP - not done.
 type validator struct {
 	ticker      slotticker.SlotTicker
-	assignments map[uint64]pb.ValidatorRole
+	assignments map[uint64]*pb.Assignment
+
+	validatorClient pb.ValidatorServiceClient
+	pubKey          *pb.PublicKey
 }
 
 // Initialize
@@ -52,10 +55,27 @@ func (v *validator) NextSlot() <-chan uint64 {
 // UpdateAssignments checks the slot number to determine if the validator's
 // list of upcoming assignments needs to be updated. For example, at the
 // beginning of a new epoch.
-func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) {
+func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.UpdateAssignments")
 	defer span.Finish()
 
+	req := &pb.ValidatorEpochAssignmentsRequest{
+		EpochStart: slot,
+		PublicKey:  v.pubKey,
+	}
+
+	resp, err := v.validatorClient.ValidatorEpochAssignments(ctx, req)
+	if err != nil {
+		return err
+	}
+
+	m := make(map[uint64]*pb.Assignment)
+	for _, a := range resp.Assignments {
+		m[a.AssignedSlot] = a
+	}
+	v.assignments = m
+
+	return nil
 }
 
 // RoleAt slot returns the validator role at the given slot. Returns nil if the
@@ -65,7 +85,10 @@ func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
 	if v.assignments == nil {
 		return pb.ValidatorRole_UNKNOWN
 	}
-	return v.assignments[slot]
+	if v.assignments[slot] == nil {
+		return pb.ValidatorRole_UNKNOWN
+	}
+	return v.assignments[slot].Role
 }
 
 // ProposeBlock
