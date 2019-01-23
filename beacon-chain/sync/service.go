@@ -2,7 +2,8 @@ package sync
 
 import (
 	"context"
-    "errors"
+	"errors"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
 	"github.com/sirupsen/logrus"
@@ -77,16 +78,16 @@ func (ss *Service) Stop() error {
 }
 
 // Status checks the status of the node. It returns nil if it's synced
-// with the rest of the network and no errors occured. Otherwise, it returns an error.
+// with the rest of the network and no errors occurred. Otherwise, it returns an error.
 func (ss *Service) Status() error {
-	synced, err := ss.Querier.IsSynced() 
+	synced, err := ss.Querier.IsSynced()
 	if err != nil {
-	  return err
+		return err
 	}
 	if !synced {
 		return errors.New("node is not in sync with the rest of the network")
 	}
-  	return nil
+	return nil
 }
 
 func (ss *Service) run() {
