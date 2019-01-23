@@ -313,14 +313,14 @@ func ValidatorIndices(
 // if the validator shard committee matches the input attestations.
 //
 // Spec pseudocode definition:
-// Let attesting_validator_indices(shard_committee, shard_block_root)
+// Let attesting_validator_indices(crosslink_committee, shard_block_root)
 // be the union of the validator index sets given by
 // [get_attestation_participants(state, a.data, a.participation_bitfield)
 // for a in this_epoch_attestations + previous_epoch_attestations
 // if a.shard == shard_committee.shard and a.shard_block_root == shard_block_root]
 func AttestingValidatorIndices(
 	state *pb.BeaconState,
-	shardCommittee *pb.ShardCommittee,
+	shard uint64,
 	shardBlockRoot []byte,
 	thisEpochAttestations []*pb.PendingAttestationRecord,
 	prevEpochAttestations []*pb.PendingAttestationRecord) ([]uint32, error) {
@@ -329,7 +329,7 @@ func AttestingValidatorIndices(
 	attestations := append(thisEpochAttestations, prevEpochAttestations...)
 
 	for _, attestation := range attestations {
-		if attestation.Data.Shard == shardCommittee.Shard &&
+		if attestation.Data.Shard == shard &&
 			bytes.Equal(attestation.Data.ShardBlockRootHash32, shardBlockRoot) {
 
 			validatorIndicesCommittee, err := AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)

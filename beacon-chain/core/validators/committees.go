@@ -100,16 +100,19 @@ func getCommitteesPerSlot(numActiveValidatorRegistry uint64) uint64 {
 //     Returns the participant indices at for the ``attestation_data`` and ``participation_bitfield``.
 //     """
 //
-//     # Find the relevant committee
-//     shard_committees = get_shard_committees_at_slot(state, attestation_data.slot)
-//     shard_committee = [x for x in shard_committees if x.shard == attestation_data.shard][0]
-//     assert len(participation_bitfield) == ceil_div8(len(shard_committee.committee))
+//     # Find the committee in the list with the desired shard
+//     crosslink_committees = get_crosslink_committees_at_slot(state, attestation_data.slot)
+
+//	   assert attestation_data.shard in [shard for _, shard in crosslink_committees]
+//     crosslink_committee = [committee for committee,
+//     		shard in crosslink_committees if shard == attestation_data.shard][0]
+//     assert len(participation_bitfield) == ceil_div8(len(shard_committee))
 //
 //     # Find the participating attesters in the committee
 //     participants = []
-//     for i, validator_index in enumerate(shard_committee.committee):
-//         participation_bit = (participation_bitfield[i//8] >> (7 - (i % 8))) % 2
-//         if participation_bit == 1:
+//     for i, validator_index in enumerate(crosslink_committee):
+//         aggregation_bit = (aggregation_bitfield[i // 8] >> (7 - (i % 8))) % 2
+//         if aggregation_bit == 1:
 //             participants.append(validator_index)
 //     return participants
 func AttestationParticipants(
@@ -118,36 +121,37 @@ func AttestationParticipants(
 	participationBitfield []byte) ([]uint32, error) {
 
 	// Find the relevant committee.
-	shardCommittees, err := ShardCommitteesAtSlot(state, attestationData.Slot)
+	crosslinkCommittees, err := CrosslinkCommitteesAtSlot(state, attestationData.Slot)
 	if err != nil {
 		return nil, err
 	}
 
-	var participants *pb.ShardCommittee
-	for _, committee := range shardCommittees.ArrayShardCommittee {
-		if committee.Shard == attestationData.Shard {
-			participants = committee
+	var committee []uint32
+	for _, crosslinkCommittee := range crosslinkCommittees {
+		if crosslinkCommittee.Shard == attestationData.Shard {
+			committee = crosslinkCommittee.Committee
 			break
 		}
 	}
-	if len(participationBitfield) != mathutil.CeilDiv8(len(participants.Committee)) {
+	if len(participationBitfield) != mathutil.CeilDiv8(len(committee)) {
 		return nil, fmt.Errorf(
 			"wanted participants bitfield length %d, got: %d",
-			len(participants.Committee), len(participationBitfield))
+			mathutil.CeilDiv8(len(committee)),
+			len(participationBitfield))
 	}
 
-	// Find the participating attesters in the committee.
-	var participantIndices []uint32
-	for i, validatorIndex := range participants.Committee {
+	// Find the participating validators in the committee.
+	var participants []uint32
+	for i, validatorIndex := range committee {
 		bitSet, err := bitutil.CheckBit(participationBitfield, i)
 		if err != nil {
 			return nil, fmt.Errorf("could not get participant bitfield: %v", err)
 		}
 		if bitSet {
-			participantIndices = append(participantIndices, validatorIndex)
+			participants = append(participants, validatorIndex)
 		}
 	}
-	return participantIndices, nil
+	return participants, nil
 }
 
 // CurrCommitteesCountPerSlot returns the number of crosslink committees per slot

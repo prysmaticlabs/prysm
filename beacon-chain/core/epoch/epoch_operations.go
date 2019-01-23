@@ -273,13 +273,12 @@ func InclusionDistance(state *pb.BeaconState, validatorIndex uint32) (uint64, er
 //    `attesting_validator_indices(shard_committee, winning_root(shard_committee))` for convenience
 func AttestingValidators(
 	state *pb.BeaconState,
-	shardCommittee *pb.ShardCommittee,
-	thisEpochAttestations []*pb.PendingAttestationRecord,
+	shard uint64, thisEpochAttestations []*pb.PendingAttestationRecord,
 	prevEpochAttestations []*pb.PendingAttestationRecord) ([]uint32, error) {
 
 	root, err := winningRoot(
 		state,
-		shardCommittee,
+		shard,
 		thisEpochAttestations,
 		prevEpochAttestations)
 	if err != nil {
@@ -288,7 +287,7 @@ func AttestingValidators(
 
 	indices, err := validators.AttestingValidatorIndices(
 		state,
-		shardCommittee,
+		shard,
 		root,
 		thisEpochAttestations,
 		prevEpochAttestations)
@@ -307,12 +306,12 @@ func AttestingValidators(
 //    sum([get_effective_balance(state, i) for i in shard_committee.committee])
 func TotalAttestingBalance(
 	state *pb.BeaconState,
-	shardCommittee *pb.ShardCommittee,
+	shard uint64,
 	thisEpochAttestations []*pb.PendingAttestationRecord,
 	prevEpochAttestations []*pb.PendingAttestationRecord) (uint64, error) {
 
 	var totalBalance uint64
-	attestedValidatorIndices, err := AttestingValidators(state, shardCommittee, thisEpochAttestations, prevEpochAttestations)
+	attestedValidatorIndices, err := AttestingValidators(state, shard, thisEpochAttestations, prevEpochAttestations)
 	if err != nil {
 		return 0, fmt.Errorf("could not get attesting validator indices: %v", err)
 	}
@@ -337,13 +336,13 @@ func SinceFinality(state *pb.BeaconState) uint64 {
 // effective balance. The ties broken by favoring lower shard block root values.
 //
 // Spec pseudocode definition:
-//   Let winning_root(shard_committee) be equal to the value of shard_block_root
+//   Let winning_root(crosslink_committee) be equal to the value of shard_block_root
 //   such that sum([get_effective_balance(state, i)
-//   for i in attesting_validator_indices(shard_committee, shard_block_root)])
+//   for i in attesting_validator_indices(crosslink_committee, shard_block_root)])
 //   is maximized (ties broken by favoring lower shard_block_root values)
 func winningRoot(
 	state *pb.BeaconState,
-	shardCommittee *pb.ShardCommittee,
+	shard uint64,
 	thisEpochAttestations []*pb.PendingAttestationRecord,
 	prevEpochAttestations []*pb.PendingAttestationRecord) ([]byte, error) {
 
@@ -353,7 +352,7 @@ func winningRoot(
 	attestations := append(thisEpochAttestations, prevEpochAttestations...)
 
 	for _, attestation := range attestations {
-		if attestation.Data.Shard == shardCommittee.Shard {
+		if attestation.Data.Shard == shard {
 			candidateRoots = append(candidateRoots, attestation.Data.ShardBlockRootHash32)
 		}
 	}
@@ -361,7 +360,7 @@ func winningRoot(
 	for _, candidateRoot := range candidateRoots {
 		indices, err := validators.AttestingValidatorIndices(
 			state,
-			shardCommittee,
+			shard,
 			candidateRoot,
 			thisEpochAttestations,
 			prevEpochAttestations)
