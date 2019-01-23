@@ -59,6 +59,11 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.UpdateAssignments")
 	defer span.Finish()
 
+	if slot%params.BeaconConfig().EpochLength != 0 {
+		// Do nothing if not epoch start.
+		return nil
+	}
+
 	req := &pb.ValidatorEpochAssignmentsRequest{
 		EpochStart: slot,
 		PublicKey:  v.pubKey,
