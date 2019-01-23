@@ -615,7 +615,7 @@ go_repository(
 
 go_repository(
     name = "io_opencensus_go",
-    tag = "v0.18.0",
+    tag = "v0.19.0",
     importpath = "go.opencensus.io",
 )
 
