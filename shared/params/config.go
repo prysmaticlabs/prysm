@@ -145,7 +145,7 @@ var demoBeaconConfig = &BeaconChainConfig{
 	EjectionBalance:         defaultBeaconConfig.EjectionBalance,
 	EjectionBalanceInGwei:   defaultBeaconConfig.EjectionBalanceInGwei,
 	MaxBalanceChurnQuotient: defaultBeaconConfig.MaxBalanceChurnQuotient,
-	Gwei:                    defaultBeaconConfig.Gwei,
+	Gwei: defaultBeaconConfig.Gwei,
 	BeaconChainShardNumber:    defaultBeaconConfig.BeaconChainShardNumber,
 	MaxCasperVotes:            defaultBeaconConfig.MaxCasperVotes,
 	LatestBlockRootsLength:    defaultBeaconConfig.LatestBlockRootsLength,
