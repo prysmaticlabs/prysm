@@ -247,26 +247,26 @@ func ProcessCasperSlashings(
 }
 
 func verifyCasperSlashing(slashing *pb.CasperSlashing) error {
-	votes1 := slashing.Votes_1
-	votes2 := slashing.Votes_2
-	votes1Attestation := votes1.Data
-	votes2Attestation := votes2.Data
+	slashableVoteData1 := slashing.slashableVoteData1
+	slashableVoteData2 := slashing.slashableVoteData1
+	slashableVoteData1Attestation := slashableVoteData1.Data
+	slashableVoteData2Attestation := slashableVoteData2.Data
 
-	if err := verifyCasperVotes(votes1); err != nil {
+	if err := verifySlashableVoteData(slashableVoteData1); err != nil {
 		return fmt.Errorf("could not verify casper votes 1: %v", err)
 	}
-	if err := verifyCasperVotes(votes2); err != nil {
+	if err := verifySlashableVoteData(slashableVoteData1Attestation); err != nil {
 		return fmt.Errorf("could not verify casper votes 2: %v", err)
 	}
 
 	// Inner attestation data structures for the votes should not be equal,
 	// as that would mean both votes are the same and therefore no slashing
 	// should occur.
-	if reflect.DeepEqual(votes1Attestation, votes2Attestation) {
+	if reflect.DeepEqual(slashableVoteData1Attestation, slashableVoteData2Attestation) {
 		return fmt.Errorf(
-			"casper slashing inner vote attestation data should not match: %v, %v",
-			votes1Attestation,
-			votes2Attestation,
+			"casper slashing inner slashable vote data attestation should not match: %v, %v",
+			slashableVoteData1Attestation,
+			slashableVoteData2Attestation,
 		)
 	}
 
@@ -276,37 +276,41 @@ func verifyCasperSlashing(slashing *pb.CasperSlashing) error {
 	// (vote2.slot < vote1.slot)
 	// OR
 	// vote1.slot == vote2.slot
-	justificationValidity := (votes1Attestation.JustifiedSlot < votes2Attestation.JustifiedSlot) &&
-		(votes2Attestation.JustifiedSlot+1 == votes2Attestation.Slot) &&
-		(votes2Attestation.Slot < votes1Attestation.Slot)
+	justificationValidity := 
+		(slashableVoteData1Attestation.JustifiedSlot < slashableVoteData2Attestation.JustifiedSlot) &&
+		(slashableVoteData2Attestation.JustifiedSlot+1 == slashableVoteData2Attestation.Slot) &&
+		(slashableVoteData2Attestation.Slot < slashableVoteData1Attestation.Slot)
 
-	slotsEqual := votes1Attestation.Slot == votes2Attestation.Slot
+	slotsEqual := slashableVoteData1Attestation.Slot == slashableVoteData2Attestation.Slot
 
 	if !(justificationValidity || slotsEqual) {
 		return fmt.Errorf(
 			`
 			Expected the following conditions to hold:
-			(vote1.JustifiedSlot < vote2.JustifiedSlot) &&
-			(vote2.JustifiedSlot + 1 == vote2.Slot) &&
-			(vote2.Slot < vote1.Slot)
+			(slashableVoteData1.JustifiedSlot < 
+			slashableVoteData2.JustifiedSlot) &&
+			(slashableVoteData2.JustifiedSlot + 1 
+			== slashableVoteData1.Slot) &&
+			(slashableVoteData2.Slot < slashableVoteData1.Slot)
 			OR
-			vote1.Slot == vote.Slot
+			slashableVoteData1Attestation.Slot == slashableVoteData2Attestation.Slot
 
-			Instead, received vote1.JustifiedSlot %d, vote2.JustifiedSlot %d
-			and vote1.Slot %d, vote2.Slot %d
+			Instead, received slashableVoteData1.JustifiedSlot %d, 
+			slashableVoteData2.JustifiedSlot %d
+			and slashableVoteData1.Slot %d, slashableVoteData2.Slot %d
 			`,
-			votes1Attestation.JustifiedSlot,
-			votes2Attestation.JustifiedSlot,
-			votes1Attestation.Slot,
-			votes2Attestation.Slot,
+			slashableVoteData1Attestation.JustifiedSlot,
+			slashableVoteData2Attestation.JustifiedSlot,
+			slashableVoteData1Attestation.Slot,
+			slashableVoteData2Attestation.Slot,
 		)
 	}
 	return nil
 }
 
 func casperSlashingPenalizedIndices(slashing *pb.CasperSlashing) ([]uint32, error) {
-	votes1 := slashing.Votes_1
-	votes2 := slashing.Votes_2
+	slashableVoteData1 := slashing.SlashableVoteData_1
+	slashableVoteData2 := slashing.SlashableVoteData_2
 	votes1Indices := append(
 		votes1.CustodyBit_0Indices,
 		votes1.CustodyBit_1Indices...,
@@ -325,7 +329,7 @@ func casperSlashingPenalizedIndices(slashing *pb.CasperSlashing) ([]uint32, erro
 	return indicesIntersection, nil
 }
 
-func verifyCasperVotes(votes *pb.SlashableVoteData) error {
+func verifySlashableVoteData(votes *pb.SlashableVoteData) error {
 	totalCustody := len(votes.CustodyBit_0Indices) +
 		len(votes.CustodyBit_1Indices)
 	if uint64(totalCustody) > params.BeaconConfig().MaxCasperVotes {

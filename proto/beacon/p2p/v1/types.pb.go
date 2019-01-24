@@ -1669,8 +1669,8 @@ func (m *ProposerSlashing) GetProposalSignature_2() []byte {
 }
 
 type CasperSlashing struct {
-	Votes_1              *SlashableVoteData `protobuf:"bytes,1,opt,name=votes_1,json=votes1" json:"votes_1,omitempty"`
-	Votes_2              *SlashableVoteData `protobuf:"bytes,2,opt,name=votes_2,json=votes2" json:"votes_2,omitempty"`
+	SlashableVoteData_1  *SlashableVoteData `protobuf:"bytes,1,opt,name=slashableVoteData_1,json=slashableVoteData1" json:"slashableVoteData_1,omitempty"`
+	SlashableVoteData_2  *SlashableVoteData `protobuf:"bytes,2,opt,name=slashableVoteData_2,json=slashableVoteData2" json:"slashableVoteData_2,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
 	XXX_unrecognized     []byte             `json:"-"`
 	XXX_sizecache        int32              `json:"-"`
