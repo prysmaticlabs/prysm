@@ -305,8 +305,8 @@ func TestRunningChainService(t *testing.T) {
 				ParticipationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Data: &pb.AttestationData{
-					Slot:                      attestationSlot,
-					Shard:                     shard,
+					Slot:  attestationSlot,
+					Shard: shard,
 					JustifiedBlockRootHash32:  params.BeaconConfig().ZeroHash[:],
 					LatestCrosslinkRootHash32: params.BeaconConfig().ZeroHash[:],
 				},
@@ -506,8 +506,8 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 				ParticipationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Data: &pb.AttestationData{
-					Slot:                     attestationSlot,
-					Shard:                    shard,
+					Slot:  attestationSlot,
+					Shard: shard,
 					JustifiedBlockRootHash32: parentHash[:],
 				},
 			}},

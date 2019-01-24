@@ -260,7 +260,7 @@ func NewRegistryDeltaChainTip(
 //     """
 //     return min(state.validator_balances[idx], MAX_DEPOSIT * GWEI_PER_ETH)
 func EffectiveBalance(state *pb.BeaconState, idx uint32) uint64 {
-	if state.ValidatorBalances[idx] > config.MaxDepositInGwei{
+	if state.ValidatorBalances[idx] > config.MaxDepositInGwei {
 		return config.MaxDepositInGwei
 	}
 	return state.ValidatorBalances[idx]

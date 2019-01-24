@@ -214,7 +214,7 @@ func TestPrevEpochBoundaryAttestations(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                   3 * params.BeaconConfig().EpochLength,
+		Slot: 3 * params.BeaconConfig().EpochLength,
 		LatestBlockRootHash32S: latestBlockRootHash,
 	}
 
@@ -295,7 +295,7 @@ func TestWinningRootOk(t *testing.T) {
 	// Assign 32 ETH balance to every validator in ShardCommittees.
 	state := &pb.BeaconState{
 		ShardCommitteesAtSlots: ShardCommittees,
-		Slot:                   5,
+		Slot: 5,
 		ValidatorBalances: []uint64{
 			defaultBalance, defaultBalance, defaultBalance, defaultBalance,
 			defaultBalance, defaultBalance, defaultBalance, defaultBalance,
@@ -374,13 +374,8 @@ func TestWinningRootOutOfBound(t *testing.T) {
 	}
 }
 
-<<<<<<< HEAD
 func TestAttestingValidatorsOk(t *testing.T) {
-	defaultBalance := params.BeaconConfig().MaxDeposit
-=======
-func TestAttestingValidators_Ok(t *testing.T) {
 	defaultBalance := params.BeaconConfig().MaxDepositInGwei
->>>>>>> 41447826e... Normalize ETH to Gwei client-wide
 
 	ShardCommittees := []*pb.ShardCommitteeArray{
 		{ArrayShardCommittee: []*pb.ShardCommittee{
@@ -390,7 +385,7 @@ func TestAttestingValidators_Ok(t *testing.T) {
 	// Assign 32 ETH balance to every validator in ShardCommittees.
 	state := &pb.BeaconState{
 		ShardCommitteesAtSlots: ShardCommittees,
-		Slot:                   5,
+		Slot: 5,
 		ValidatorBalances: []uint64{
 			defaultBalance, defaultBalance, defaultBalance, defaultBalance,
 			defaultBalance, defaultBalance, defaultBalance, defaultBalance,
@@ -464,7 +459,7 @@ func TestTotalAttestingBalanceOk(t *testing.T) {
 	// Assign validators to different balances.
 	state := &pb.BeaconState{
 		ShardCommitteesAtSlots: ShardCommittees,
-		Slot:                   5,
+		Slot: 5,
 		ValidatorBalances: []uint64{16 * 1e9, 18 * 1e9, 20 * 1e9, 31 * 1e9,
 			32 * 1e9, 34 * 1e9, 50 * 1e9, 50 * 1e9},
 	}
@@ -552,7 +547,7 @@ func TestInclusionSlotOk(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ShardCommitteesAtSlots: ShardCommittees,
-		Slot:                   5,
+		Slot: 5,
 		LatestAttestations: []*pb.PendingAttestationRecord{
 			{Data: &pb.AttestationData{Shard: 1, Slot: 0},
 				// Validator 1 and 7 participated.
@@ -617,7 +612,7 @@ func TestInclusionDistanceOk(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ShardCommitteesAtSlots: ShardCommittees,
-		Slot:                   5,
+		Slot: 5,
 		LatestAttestations: []*pb.PendingAttestationRecord{
 			{Data: &pb.AttestationData{Shard: 1, Slot: 0},
 				// Validator 1 and 7 participated.

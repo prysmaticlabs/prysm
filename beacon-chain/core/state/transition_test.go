@@ -92,7 +92,7 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 		LatestRandaoMixesHash32S: latestMixes,
 		ValidatorRegistry:        registry,
 		ShardCommitteesAtSlots:   shardCommittees,
-		Slot:                     5,
+		Slot: 5,
 	}
 	block := &pb.BeaconBlock{
 		Slot:               5,
@@ -148,9 +148,9 @@ func TestProcessBlock_IncorrectCasperSlashing(t *testing.T) {
 	latestMixes := make([][]byte, config.LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
 		LatestRandaoMixesHash32S: latestMixes,
-		Slot:                     5,
-		ValidatorRegistry:        registry,
-		ShardCommitteesAtSlots:   shardCommittees,
+		Slot:                   5,
+		ValidatorRegistry:      registry,
+		ShardCommitteesAtSlots: shardCommittees,
 	}
 	block := &pb.BeaconBlock{
 		Slot:               5,
@@ -230,9 +230,9 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	latestMixes := make([][]byte, config.LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
 		LatestRandaoMixesHash32S: latestMixes,
-		Slot:                     5,
-		ValidatorRegistry:        registry,
-		ShardCommitteesAtSlots:   shardCommittees,
+		Slot:                   5,
+		ValidatorRegistry:      registry,
+		ShardCommitteesAtSlots: shardCommittees,
 	}
 	block := &pb.BeaconBlock{
 		Slot:               5,
@@ -335,10 +335,10 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		LatestRandaoMixesHash32S: latestMixes,
 		ValidatorRegistry:        registry,
 		Slot:                     64,
-		PreviousJustifiedSlot:    10,
-		LatestBlockRootHash32S:   blockRoots,
-		LatestCrosslinks:         stateLatestCrosslinks,
-		ShardCommitteesAtSlots:   ShardCommittees,
+		PreviousJustifiedSlot:  10,
+		LatestBlockRootHash32S: blockRoots,
+		LatestCrosslinks:       stateLatestCrosslinks,
+		ShardCommitteesAtSlots: ShardCommittees,
 	}
 	exits := make([]*pb.Exit, config.MaxExits+1)
 	block := &pb.BeaconBlock{
@@ -443,10 +443,10 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		LatestRandaoMixesHash32S: latestMixes,
 		ValidatorRegistry:        registry,
 		Slot:                     64,
-		ShardCommitteesAtSlots:   ShardCommittees,
-		PreviousJustifiedSlot:    10,
-		LatestBlockRootHash32S:   blockRoots,
-		LatestCrosslinks:         stateLatestCrosslinks,
+		ShardCommitteesAtSlots: ShardCommittees,
+		PreviousJustifiedSlot:  10,
+		LatestBlockRootHash32S: blockRoots,
+		LatestCrosslinks:       stateLatestCrosslinks,
 	}
 	exits := []*pb.Exit{
 		{
@@ -636,8 +636,8 @@ func TestProcessEpoch_CantGetCurrentValidatorIndices(t *testing.T) {
 	for i := uint64(0); i < config.EpochLength*2; i++ {
 		attestations = append(attestations, &pb.PendingAttestationRecord{
 			Data: &pb.AttestationData{
-				Slot:                     1,
-				Shard:                    1,
+				Slot:  1,
+				Shard: 1,
 				JustifiedBlockRootHash32: make([]byte, 32),
 			},
 			ParticipationBitfield: []byte{0xff},
@@ -645,7 +645,7 @@ func TestProcessEpoch_CantGetCurrentValidatorIndices(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                   config.EpochLength,
+		Slot: config.EpochLength,
 		ShardCommitteesAtSlots: shardCommittees,
 		LatestAttestations:     attestations,
 		LatestBlockRootHash32S: latestBlockRoots,
@@ -681,8 +681,8 @@ func TestProcessEpoch_CantGetPrevValidatorIndices(t *testing.T) {
 	for i := uint64(0); i < config.EpochLength*2; i++ {
 		attestations = append(attestations, &pb.PendingAttestationRecord{
 			Data: &pb.AttestationData{
-				Slot:                     1,
-				Shard:                    1,
+				Slot:  1,
+				Shard: 1,
 				JustifiedBlockRootHash32: make([]byte, 32),
 			},
 			ParticipationBitfield: []byte{0xff},
@@ -690,7 +690,7 @@ func TestProcessEpoch_CantGetPrevValidatorIndices(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                   config.EpochLength * 2,
+		Slot: config.EpochLength * 2,
 		ShardCommitteesAtSlots: shardCommittees,
 		LatestAttestations:     attestations,
 		LatestBlockRootHash32S: latestBlockRoots,
