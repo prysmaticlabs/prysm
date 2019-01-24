@@ -9,8 +9,8 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_go",
-    sha256 = "7be7dc01f1e0afdba6c8eb2b43d2fa01c743be1b9273ab1eaf6c233df078d705",
-    url = "https://github.com/bazelbuild/rules_go/releases/download/0.16.5/rules_go-0.16.5.tar.gz",
+    url = "https://github.com/bazelbuild/rules_go/releases/download/0.16.6/rules_go-0.16.6.tar.gz",
+    sha256 = "ade51a315fa17347e5c31201fdc55aa5ffb913377aa315dceb56ee9725e620ee",
 )
 
 http_archive(
@@ -501,7 +501,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "054c452bb702e465e95ce8e7a3d9a6cf0cd1188d",
+    commit = "c6b37f3e92850b723493d63fd35aad34e19e048d",
     importpath = "golang.org/x/sys",
 )
 
@@ -543,7 +543,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_crypto",
-    commit = "64072686203f69e3fd20143576b27200f18ab0fa",
+    commit = "057139ce5d2bdbe6fe73c53679e24e9cf007f637",
     importpath = "golang.org/x/crypto",
 )
 
@@ -615,6 +615,7 @@ go_repository(
 
 go_repository(
     name = "io_opencensus_go",
+    tag = "v0.19.0",
     importpath = "go.opencensus.io",
     tag = "v0.18.0",
 )
@@ -663,7 +664,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_common",
-    commit = "2998b132700a7d019ff618c06a234b47c1f3f681",
+    tag = "v0.1.0",
     importpath = "github.com/prometheus/common",
 )
 
@@ -928,6 +929,7 @@ go_repository(
 
 go_repository(
     name = "com_google_cloud_go",
+    tag = "v0.35.1",
     importpath = "cloud.google.com/go",
     tag = "v0.34.0",
 )
@@ -986,6 +988,12 @@ go_repository(
     tag = "v0.8.1",
 )
 
+ go_repository(
+    name = "in_gopkg_natefinch_npipe_v2",
+    commit = "c1b8fa8bdccecb0b8db834ee0b92fdbcfa606dd6",
+    importpath = "gopkg.in/natefinch/npipe.v2",
+)
+
 go_repository(
     name = "com_github_prysmaticlabs_go_bls",
     commit = "76f5aa90f44469e06fc34a734a85e3c5f6e0bc8c",
@@ -1021,3 +1029,4 @@ git_repository(
 load("@io_bazel_rules_m4//:m4.bzl", "m4_register_toolchains")
 
 m4_register_toolchains()
+
