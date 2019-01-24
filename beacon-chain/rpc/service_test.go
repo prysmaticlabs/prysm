@@ -8,8 +8,8 @@ import (
 	"io/ioutil"
 	"strconv"
 	"testing"
-	"time"	
-	
+	"time"
+
 	"github.com/ethereum/go-ethereum/common"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
@@ -36,9 +36,8 @@ type TestLogger struct {
 	testMap map[string]interface{}
 }
 
-func (t *TestLogger) Fatalf(format string, args ...interface{}) {
-	t.testMap["fatal_error"] = true
-	panic("fatal_error")
+func (t *TestLogger) Errorf(format string, args ...interface{}) {
+	t.testMap["error"] = true
 }
 
 type mockPOWChainService struct{}
@@ -98,30 +97,40 @@ func TestLifecycle(t *testing.T) {
 }
 
 func TestBadEndpoint(t *testing.T) {
-	hook := logTest.NewGlobal()
+	fl := logrus.WithField("prefix", "rpc")
 
 	log = &TestLogger{
-		FieldLogger: logrus.WithField("prefix", "rpc"),
+		FieldLogger: fl,
 		testMap:     make(map[string]interface{}),
 	}
+
+	hook := logTest.NewLocal(fl.Logger)
 
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port: "ralph merkle!!!",
 	})
 
-	if _, ok := log.(*TestLogger).testMap["fatal_error"]; ok {
-		t.Fatal("Panic in Start() happened before expected")
+	if _, ok := log.(*TestLogger).testMap["error"]; ok {
+		t.Fatal("Error in Start() occurred before expected")
 	}
 
 	rpcService.Start()
 
-	if _, ok := log.(*TestLogger).testMap["fatal_error"]; !ok {
-		t.Fatal("No panic happened. Expected Start() to panic")
+	if _, ok := log.(*TestLogger).testMap["error"]; !ok {
+		t.Fatal("No error occurred. Expected Start() to output an error")
 	}
 
 	testutil.AssertLogsContain(t, hook, "Starting service")
-	testutil.AssertLogsContain(t, hook, "Handling Connections")
-	testutil.AssertLogsContain(t, hook, "Starting go routine")
+
+}
+
+func TestStatus(t *testing.T) {
+	credentialErr := errors.New("credentialError")
+	s := &Service{credentialError: credentialErr}
+
+	if err := s.Status(); err != s.credentialError {
+		t.Errorf("Wanted: %v, got: %v", s.credentialError, s.Status())
+	}
 }
 
 func TestInsecureEndpoint(t *testing.T) {

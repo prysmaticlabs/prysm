@@ -110,7 +110,7 @@ func (s *Service) Start() {
 	log.Info("Starting service")
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", s.port))
 	if err != nil {
-		log.Fatalf("Could not listen to port in Start() :%s: %v", s.port, err)
+		log.Errorf("Could not listen to port in Start() :%s: %v", s.port, err)
 	}
 	s.listener = lis
 	log.Infof("RPC server listening on port :%s", s.port)
@@ -137,11 +137,10 @@ func (s *Service) Start() {
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)
 
-	log.Info("Starting go routine")
 	go func() {
 		if s.listener != nil {
 			if err := s.grpcServer.Serve(s.listener); err != nil {
-				log.Fatalf("Could not serve gRPC: %v", err)
+				log.Errorf("Could not serve gRPC: %v", err)
 			}
 		}
 	}()
