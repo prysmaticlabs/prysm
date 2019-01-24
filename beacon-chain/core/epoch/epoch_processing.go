@@ -233,7 +233,6 @@ func ProcessPrevSlotShard(state *pb.BeaconState) *pb.BeaconState {
 //	Set state.current_epoch_randao_mix = get_randao_mix(state, state.current_epoch_calculation_slot - SEED_LOOKAHEAD)
 func ProcessValidatorRegistry(
 	state *pb.BeaconState) (*pb.BeaconState, error) {
-
 	state.PreviousEpochRandaoMixHash32 = state.CurrentEpochRandaoMixHash32
 	state.CurrentEpochCalculationSlot = state.Slot
 

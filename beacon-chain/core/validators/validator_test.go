@@ -292,7 +292,7 @@ func TestShardCommitteesAtSlot_OutOfBounds(t *testing.T) {
 }
 
 func TestEffectiveBalance(t *testing.T) {
-	defaultBalance := params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei
+	defaultBalance := params.BeaconConfig().MaxDepositInGwei
 
 	tests := []struct {
 		a uint64

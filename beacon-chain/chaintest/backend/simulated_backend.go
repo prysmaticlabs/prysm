@@ -234,7 +234,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		startTime := time.Now()
 		newState, err := state.ExecuteStateTransition(beaconState, newBlock, prevBlockRoot)
 		if err != nil {
-			return fmt.Errorf("could not execute state transition2: %v", err)
+			return fmt.Errorf("could not execute state transition: %v", err)
 		}
 		endTime := time.Now()
 		averageTimesPerTransition = append(averageTimesPerTransition, endTime.Sub(startTime))
@@ -242,7 +242,6 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		// We then keep track of information about the state after the
 		// state transition was applied.
 		beaconState = newState
-
 		prevBlockRoots = append(prevBlockRoots, newBlockRoot)
 		layersPeeledForProposer[proposerIndex]++
 	}
