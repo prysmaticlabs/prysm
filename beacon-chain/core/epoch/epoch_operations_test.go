@@ -713,7 +713,7 @@ func TestRandaoMixOutOfBound(t *testing.T) {
 		"input randaoMix slot %d out of bounds: %d <= slot < %d",
 		100, 0, 0,
 	)
-	if _, err := randaoMix(&pb.BeaconState{}, 100); !strings.Contains(err.Error(), want) {
+	if _, err := randaoMix(&pb.BeaconState{}, 100); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected: %s, received: %s", wanted, err.Error())
 	}
 }
