@@ -178,7 +178,7 @@ func makePtrHasher(typ reflect.Type) (hasher, error) {
 func merkleHash(list [][]byte) ([]byte, error) {
 	// Assume len(list) < 2^64
 	dataLenEnc := make([]byte, hashLengthBytes)
-	binary.BigEndian.PutUint64(dataLenEnc[hashLengthBytes-8:], uint64(len(list)))
+	binary.LittleEndian.PutUint64(dataLenEnc, uint64(len(list)))
 
 	var chunkz [][]byte
 	emptyChunk := make([]byte, sszChunkSize)
@@ -187,9 +187,7 @@ func merkleHash(list [][]byte) ([]byte, error) {
 		chunkz = make([][]byte, 1)
 		chunkz[0] = emptyChunk
 	} else if len(list[0]) < sszChunkSize {
-		if sszChunkSize%len(list[0]) != 0 {
-			return nil, fmt.Errorf("element hash size needs to be factor of %d", sszChunkSize)
-		}
+
 		itemsPerChunk := sszChunkSize / len(list[0])
 		chunkz = make([][]byte, 0)
 		for i := 0; i < len(list); i += itemsPerChunk {
