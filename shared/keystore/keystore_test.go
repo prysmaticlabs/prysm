@@ -3,12 +3,11 @@ package keystore
 import (
 	"bytes"
 	"crypto/rand"
-	"math/big"
 	"os"
 	"testing"
 
 	"github.com/pborman/uuid"
-	bls "github.com/prysmaticlabs/go-bls"
+	"github.com/prysmaticlabs/go-bls"
 )
 
 func TestStoreandGetKey(t *testing.T) {
@@ -34,8 +33,8 @@ func TestStoreandGetKey(t *testing.T) {
 		t.Fatalf("unable to get key %v", err)
 	}
 
-	if newkey.SecretKey.K.Cmp(key.SecretKey.K) != 0 {
-		t.Fatalf("retrieved secret keys are not equal %v , %v", newkey.SecretKey.K, key.SecretKey.K)
+	if !newkey.SecretKey.IsEqual(key.SecretKey) {
+		t.Fatalf("retrieved secret keys are not equal %v , %v", newkey.SecretKey.LittleEndian(), key.SecretKey.LittleEndian())
 	}
 
 	if err := os.RemoveAll(filedir); err != nil {
@@ -44,14 +43,13 @@ func TestStoreandGetKey(t *testing.T) {
 }
 func TestEncryptDecryptKey(t *testing.T) {
 	newID := uuid.NewRandom()
-	keyValue := big.NewInt(1e16)
+	blsKey := &bls.SecretKey{}
+	blsKey.SetByCSPRNG()
 	password := "test"
 
 	key := &Key{
-		ID: newID,
-		SecretKey: &bls.SecretKey{
-			K: keyValue,
-		},
+		ID:        newID,
+		SecretKey: blsKey,
 	}
 
 	keyjson, err := EncryptKey(key, password, LightScryptN, LightScryptP)
@@ -68,8 +66,8 @@ func TestEncryptDecryptKey(t *testing.T) {
 		t.Fatalf("decrypted key's uuid doesn't match %v", newkey.ID)
 	}
 
-	if newkey.SecretKey.K.Cmp(keyValue) != 0 {
-		t.Fatalf("decrypted key's value is not equal %v", newkey.SecretKey.K)
+	if !newkey.SecretKey.IsEqual(blsKey) {
+		t.Fatalf("decrypted key's value is not equal %v", newkey.SecretKey.LittleEndian())
 	}
 
 }

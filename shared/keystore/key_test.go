@@ -14,9 +14,8 @@ import (
 
 func TestMarshalAndUnmarshal(t *testing.T) {
 	testID := uuid.NewRandom()
-	blsKey := &bls.SecretKey{
-		K: big.NewInt(10),
-	}
+	blsKey := &bls.SecretKey{}
+	blsKey.SetByCSPRNG()
 	key := &Key{
 		ID:        testID,
 		SecretKey: blsKey,
