@@ -285,7 +285,7 @@ func TestHeadAttestationsNotOk(t *testing.T) {
 }
 
 func TestWinningRootOk(t *testing.T) {
-	defaultBalance := params.BeaconConfig().MaxDeposit
+	defaultBalance := params.BeaconConfig().MaxDepositInGwei
 
 	ShardCommittees := []*pb.ShardCommitteeArray{
 		{ArrayShardCommittee: []*pb.ShardCommittee{
@@ -374,8 +374,13 @@ func TestWinningRootOutOfBound(t *testing.T) {
 	}
 }
 
+<<<<<<< HEAD
 func TestAttestingValidatorsOk(t *testing.T) {
 	defaultBalance := params.BeaconConfig().MaxDeposit
+=======
+func TestAttestingValidators_Ok(t *testing.T) {
+	defaultBalance := params.BeaconConfig().MaxDepositInGwei
+>>>>>>> 41447826e... Normalize ETH to Gwei client-wide
 
 	ShardCommittees := []*pb.ShardCommitteeArray{
 		{ArrayShardCommittee: []*pb.ShardCommittee{

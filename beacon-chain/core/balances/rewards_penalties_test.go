@@ -42,7 +42,7 @@ func TestBaseReward(t *testing.T) {
 		b uint64
 	}{
 		{0, 0},
-		{params.BeaconConfig().MinDepositinGwei, 61},
+		{params.BeaconConfig().MinDepositInGwei, 61},
 		{30 * 1e9, 1853},
 		{params.BeaconConfig().MaxDepositInGwei, 1976},
 		{40 * 1e9, 1976},
@@ -589,7 +589,7 @@ func TestAttestationInclusionRewards_NoProposerIndex(t *testing.T) {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
 		}
 		state := &pb.BeaconState{
-			Slot:                   1000,
+			Slot: 1000,
 			ShardCommitteesAtSlots: ShardCommittees,
 			ValidatorBalances:      validatorBalances,
 			LatestAttestations:     attestation,
