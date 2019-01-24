@@ -589,7 +589,7 @@ func TestAttestationInclusionRewards_NoProposerIndex(t *testing.T) {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
 		}
 		state := &pb.BeaconState{
-			Slot: 1000,
+			Slot:                   1000,
 			ShardCommitteesAtSlots: ShardCommittees,
 			ValidatorBalances:      validatorBalances,
 			LatestAttestations:     attestation,

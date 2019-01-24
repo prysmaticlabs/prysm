@@ -59,21 +59,21 @@ func TestCanProcessReceiptRoots(t *testing.T) {
 		canProcessReceiptRoots bool
 	}{
 		{
-			slot: 1,
+			slot:                   1,
 			canProcessReceiptRoots: false,
 		},
 		{
-			slot: 1022,
+			slot:                   1022,
 			canProcessReceiptRoots: false,
 		},
 		{
-			slot: 1024,
+			slot:                   1024,
 			canProcessReceiptRoots: true,
 		}, {
-			slot: 4096,
+			slot:                   4096,
 			canProcessReceiptRoots: true,
 		}, {
-			slot: 234234,
+			slot:                   234234,
 			canProcessReceiptRoots: false,
 		},
 	}
@@ -231,8 +231,8 @@ func TestProcessCrosslinksOk(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ShardCommitteesAtSlots: shardCommitteesAtSlot,
-		Slot:             5,
-		LatestCrosslinks: []*pb.CrosslinkRecord{{}, {}},
+		Slot:                   5,
+		LatestCrosslinks:       []*pb.CrosslinkRecord{{}, {}},
 		ValidatorBalances: []uint64{16 * 1e9, 18 * 1e9, 20 * 1e9, 31 * 1e9,
 			32 * 1e9, 34 * 1e9, 50 * 1e9, 50 * 1e9},
 	}
@@ -281,9 +281,9 @@ func TestProcessCrosslinksNoRoot(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ShardCommitteesAtSlots: shardCommitteesAtSlot,
-		Slot:              5,
-		LatestCrosslinks:  []*pb.CrosslinkRecord{{}, {}},
-		ValidatorBalances: []uint64{},
+		Slot:                   5,
+		LatestCrosslinks:       []*pb.CrosslinkRecord{{}, {}},
+		ValidatorBalances:      []uint64{},
 	}
 
 	attestations := []*pb.PendingAttestationRecord{
@@ -307,7 +307,7 @@ func TestProcessEjectionsOk(t *testing.T) {
 		})
 	}
 	state := &pb.BeaconState{
-		Slot: 1,
+		Slot:                   1,
 		ShardCommitteesAtSlots: ShardCommittees,
 		ValidatorBalances: []uint64{
 			params.BeaconConfig().EjectionBalanceInGwei - 1,
@@ -396,7 +396,7 @@ func TestProcessPrevSlotShardOk(t *testing.T) {
 func TestProcessValidatorRegistryOk(t *testing.T) {
 	offset := uint64(1)
 	state := &pb.BeaconState{
-		Slot: config.SeedLookahead + offset,
+		Slot:                        config.SeedLookahead + offset,
 		LatestRandaoMixesHash32S:    [][]byte{{'A'}, {'B'}},
 		CurrentEpochRandaoMixHash32: []byte{'C'},
 	}
@@ -422,7 +422,7 @@ func TestProcessValidatorRegistryOk(t *testing.T) {
 func TestProcessPartialValidatorRegistry(t *testing.T) {
 	offset := uint64(1)
 	state := &pb.BeaconState{
-		Slot: config.SeedLookahead + offset,
+		Slot:                        config.SeedLookahead + offset,
 		ValidatorRegistryUpdateSlot: offset,
 		LatestRandaoMixesHash32S:    [][]byte{{'A'}, {'B'}},
 	}
@@ -503,7 +503,7 @@ func TestUpdatePenalizedExitBalances(t *testing.T) {
 			config.LatestPenalizedExitLength)
 		latestPenalizedExitBalances[epoch] = tt.balances
 		state := &pb.BeaconState{
-			Slot: tt.slot,
+			Slot:                    tt.slot,
 			LatestPenalizedBalances: latestPenalizedExitBalances}
 		newState := UpdatePenalizedExitBalances(state)
 		if newState.LatestPenalizedBalances[epoch+1] !=

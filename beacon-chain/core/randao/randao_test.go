@@ -45,7 +45,7 @@ func TestUpdateRandaoLayers(t *testing.T) {
 func TestUpdateLatestRandaoMixes(t *testing.T) {
 	beaconState := &pb.BeaconState{
 		LatestRandaoMixesHash32S: make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
-		Slot: 5,
+		Slot:                     5,
 	}
 	beaconState.LatestRandaoMixesHash32S[4%params.BeaconConfig().LatestRandaoMixesLength] = []byte{1, 2, 3}
 	beaconState.LatestRandaoMixesHash32S[5%params.BeaconConfig().LatestRandaoMixesLength] = []byte{4, 5, 6}

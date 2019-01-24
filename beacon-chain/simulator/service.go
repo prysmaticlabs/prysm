@@ -365,8 +365,8 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*pb.BeaconB
 		attestations[i] = &pb.Attestation{
 			ParticipationBitfield: bitutil.FillBitfield(numAttesters),
 			Data: &pb.AttestationData{
-				Slot:  parentSlot,
-				Shard: shardID,
+				Slot:                     parentSlot,
+				Shard:                    shardID,
 				JustifiedBlockRootHash32: parentHash,
 			},
 		}

@@ -427,7 +427,7 @@ func TestBoundaryAttesterIndices(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ShardCommitteesAtSlots: ShardCommittees,
-		Slot: 5,
+		Slot:                   5,
 	}
 
 	boundaryAttestations := []*pb.PendingAttestationRecord{
@@ -527,7 +527,7 @@ func TestAttestingValidatorIndices_Ok(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ShardCommitteesAtSlots: ShardCommittees,
-		Slot: 5,
+		Slot:                   5,
 	}
 
 	prevAttestation := &pb.PendingAttestationRecord{
@@ -574,7 +574,7 @@ func TestAttestingValidatorIndices_OutOfBound(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ShardCommitteesAtSlots: ShardCommittees,
-		Slot: 5,
+		Slot:                   5,
 	}
 
 	attestation := &pb.PendingAttestationRecord{
@@ -656,7 +656,7 @@ func TestProcessDeposit_PublicKeyExistsBadWithdrawalCredentials(t *testing.T) {
 			Pubkey: []byte{1, 2, 3},
 		},
 		{
-			Pubkey: []byte{4, 5, 6},
+			Pubkey:                      []byte{4, 5, 6},
 			WithdrawalCredentialsHash32: []byte{0},
 		},
 	}
@@ -691,7 +691,7 @@ func TestProcessDeposit_PublicKeyExistsGoodWithdrawalCredentials(t *testing.T) {
 			Pubkey: []byte{1, 2, 3},
 		},
 		{
-			Pubkey: []byte{4, 5, 6},
+			Pubkey:                      []byte{4, 5, 6},
 			WithdrawalCredentialsHash32: []byte{1},
 		},
 	}
@@ -728,11 +728,11 @@ func TestProcessDeposit_PublicKeyExistsGoodWithdrawalCredentials(t *testing.T) {
 func TestProcessDeposit_PublicKeyDoesNotExistNoEmptyValidator(t *testing.T) {
 	registry := []*pb.ValidatorRecord{
 		{
-			Pubkey: []byte{1, 2, 3},
+			Pubkey:                      []byte{1, 2, 3},
 			WithdrawalCredentialsHash32: []byte{2},
 		},
 		{
-			Pubkey: []byte{4, 5, 6},
+			Pubkey:                      []byte{4, 5, 6},
 			WithdrawalCredentialsHash32: []byte{1},
 		},
 	}
@@ -772,11 +772,11 @@ func TestProcessDeposit_PublicKeyDoesNotExistNoEmptyValidator(t *testing.T) {
 func TestProcessDeposit_PublicKeyDoesNotExistEmptyValidatorExists(t *testing.T) {
 	registry := []*pb.ValidatorRecord{
 		{
-			Pubkey: []byte{1, 2, 3},
+			Pubkey:                      []byte{1, 2, 3},
 			WithdrawalCredentialsHash32: []byte{2},
 		},
 		{
-			Pubkey: []byte{4, 5, 6},
+			Pubkey:                      []byte{4, 5, 6},
 			WithdrawalCredentialsHash32: []byte{1},
 		},
 	}
@@ -833,7 +833,7 @@ func TestActivateValidatorGenesis_Ok(t *testing.T) {
 
 func TestActivateValidator_Ok(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot: 100,
+		Slot:                                 100,
 		ValidatorRegistryDeltaChainTipHash32: []byte{'A'},
 		ValidatorRegistry: []*pb.ValidatorRecord{
 			{Pubkey: []byte{'A'}},
@@ -864,7 +864,7 @@ func TestInitiateValidatorExit_Ok(t *testing.T) {
 
 func TestExitValidator_Ok(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot: 100,
+		Slot:                                 100,
 		ValidatorRegistryDeltaChainTipHash32: []byte{'A'},
 		LatestPenalizedBalances:              []uint64{0},
 		ValidatorRegistry: []*pb.ValidatorRecord{
@@ -922,7 +922,7 @@ func TestProcessPenaltiesExits_ValidatorPenalized(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot: config.LatestPenalizedExitLength / 2 * config.EpochLength,
+		Slot:                    config.LatestPenalizedExitLength / 2 * config.EpochLength,
 		LatestPenalizedBalances: latestPenalizedExits,
 		ValidatorBalances:       []uint64{config.MaxDepositInGwei, config.MaxDepositInGwei},
 		ValidatorRegistry: []*pb.ValidatorRecord{
