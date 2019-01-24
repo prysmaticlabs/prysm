@@ -50,6 +50,7 @@ func TestEncryptDecryptKey(t *testing.T) {
 	key := &Key{
 		ID:        newID,
 		SecretKey: blsKey,
+		PublicKey: blsKey.GetPublicKey(),
 	}
 
 	keyjson, err := EncryptKey(key, password, LightScryptN, LightScryptP)

@@ -18,17 +18,18 @@ func TestMarshalAndUnmarshal(t *testing.T) {
 	blsKey.SetValue(10)
 	key := &Key{
 		ID:        testID,
+		PublicKey: blsKey.GetPublicKey(),
 		SecretKey: blsKey,
 	}
 	marshalledObject, err := key.MarshalJSON()
 	if err != nil {
 		t.Fatalf("unable to marshall key %v", err)
 	}
-	newBLSKey := &bls.SecretKey{}
 
 	newKey := &Key{
 		ID:        []byte{},
-		SecretKey: newBLSKey,
+		SecretKey: &bls.SecretKey{},
+		PublicKey: &bls.PublicKey{},
 	}
 
 	err = newKey.UnmarshalJSON(marshalledObject)
@@ -69,11 +70,11 @@ func TestNewKeyFromBLS(t *testing.T) {
 
 	key := newKeyFromBLS(blskey)
 
-	var keyBuffer []byte
+	keyBuffer := make([]byte, len(key.SecretKey.LittleEndian()))
 	binary.LittleEndian.PutUint64(keyBuffer, uint64(expectedNum))
 
 	if !bytes.Equal(key.SecretKey.LittleEndian(), keyBuffer) {
-		t.Fatalf("secret key is not of the expected value %d", key.SecretKey.LittleEndian())
+		t.Fatalf("secret key is not of the expected value %v , %v", key.SecretKey.LittleEndian(), keyBuffer)
 	}
 
 }
