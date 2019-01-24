@@ -223,7 +223,7 @@ func TestProcessFinalization(t *testing.T) {
 	}
 }
 
-func TestProcessCrosslinks_Ok(t *testing.T) {
+func TestProcessCrosslinksOk(t *testing.T) {
 	shardCommitteesAtSlot := []*pb.ShardCommitteeArray{
 		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
@@ -273,7 +273,7 @@ func TestProcessCrosslinks_Ok(t *testing.T) {
 	}
 }
 
-func TestProcessCrosslinks_NoRoot(t *testing.T) {
+func TestProcessCrosslinksNoRoot(t *testing.T) {
 	shardCommitteesAtSlot := []*pb.ShardCommitteeArray{
 		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
@@ -297,7 +297,7 @@ func TestProcessCrosslinks_NoRoot(t *testing.T) {
 	}
 }
 
-func TestProcessEjections_Ok(t *testing.T) {
+func TestProcessEjectionsOk(t *testing.T) {
 	var ShardCommittees []*pb.ShardCommitteeArray
 	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
 		ShardCommittees = append(ShardCommittees, &pb.ShardCommitteeArray{
@@ -374,7 +374,7 @@ func TestCanNotProcessValidatorRegistry(t *testing.T) {
 	}
 }
 
-func TestProcessPrevSlotShard_Ok(t *testing.T) {
+func TestProcessPrevSlotShardOk(t *testing.T) {
 	state := &pb.BeaconState{
 		CurrentEpochCalculationSlot: 1,
 		CurrentEpochStartShard:      2,
@@ -393,7 +393,7 @@ func TestProcessPrevSlotShard_Ok(t *testing.T) {
 	}
 }
 
-func TestProcessValidatorRegistry_Ok(t *testing.T) {
+func TestProcessValidatorRegistryOk(t *testing.T) {
 	offset := uint64(1)
 	state := &pb.BeaconState{
 		Slot:                        config.SeedLookahead + offset,
