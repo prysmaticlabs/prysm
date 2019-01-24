@@ -47,7 +47,7 @@ func generateSimulatedBlock(
 	}
 	if simulatedDeposit != nil {
 		depositInput := &pb.DepositInput{
-			Pubkey: []byte(simulatedDeposit.Pubkey),
+			Pubkey:                      []byte(simulatedDeposit.Pubkey),
 			WithdrawalCredentialsHash32: []byte{},
 			ProofOfPossession:           []byte{},
 			RandaoCommitmentHash32:      depositRandaoCommit[:],
