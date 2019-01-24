@@ -928,7 +928,7 @@ go_repository(
 
 go_repository(
     name = "com_google_cloud_go",
-    tag = "v0.34.0",
+    tag = "v0.35.1",
     importpath = "cloud.google.com/go",
 )
 
