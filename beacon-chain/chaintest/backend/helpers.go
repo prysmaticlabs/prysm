@@ -131,6 +131,7 @@ func generateSimulatedRandaoHashOnions(numSlots uint64) [][32]byte {
 		prevHash := hashOnions[i]
 		hashOnions = append(hashOnions, hashutil.Hash(prevHash[:]))
 	}
+	fmt.Println(hashOnions)
 	return hashOnions
 }
 
@@ -167,30 +168,4 @@ func generateInitialSimulatedDeposits(randaoCommit [32]byte) ([]*pb.Deposit, err
 		deposits[i] = &pb.Deposit{DepositData: depositData}
 	}
 	return deposits, nil
-}
-
-// Finds the index of the next slot's proposer in the beacon state's
-// validator set.
-func findNextSlotProposerIndex(beaconState *pb.BeaconState) (uint32, error) {
-	nextSlot := beaconState.Slot + 1
-	epochLength := params.BeaconConfig().EpochLength
-	var earliestSlot uint64
-
-	// If the state slot is less than epochLength, then the earliestSlot would
-	// result in a negative number. Therefore we should default to
-	// earliestSlot = 0 in this case.
-	if nextSlot > epochLength {
-		earliestSlot = nextSlot - (nextSlot % epochLength) - epochLength
-	}
-
-	if nextSlot < earliestSlot || nextSlot >= earliestSlot+(epochLength*2) {
-		return 0, fmt.Errorf("slot %d out of bounds: %d <= slot < %d",
-			nextSlot,
-			earliestSlot,
-			earliestSlot+(epochLength*2),
-		)
-	}
-	committeeArray := beaconState.ShardCommitteesAtSlots[nextSlot-earliestSlot]
-	firstCommittee := committeeArray.ArrayShardCommittee[0].Committee
-	return firstCommittee[nextSlot%uint64(len(firstCommittee))], nil
 }

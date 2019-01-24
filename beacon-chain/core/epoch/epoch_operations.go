@@ -382,7 +382,8 @@ func winningRoot(
 	return winnerRoot, nil
 }
 
-// randaoMix returns the randao mix of a given slot.
+// randaoMix returns the randao mix (xor'ed seed)
+// of a given slot. It is used to shuffle validators.
 //
 // Spec pseudocode definition:
 //   def get_randao_mix(state: BeaconState,

@@ -60,7 +60,6 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 // With sufficient votes (>2*DEPOSIT_ROOT_VOTING_PERIOD), it then
 // assigns root hash to processed receipt vote in state.
 func ProcessDeposits(state *pb.BeaconState) *pb.BeaconState {
-
 	for _, receiptRoot := range state.DepositRootVotes {
 		if receiptRoot.VoteCount*2 > config.DepositRootVotingPeriod {
 			state.LatestDepositRootHash32 = receiptRoot.DepositRootHash32

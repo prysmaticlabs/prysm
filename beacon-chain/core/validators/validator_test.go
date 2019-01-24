@@ -412,28 +412,20 @@ func TestBoundaryAttesterIndices(t *testing.T) {
 	if params.BeaconConfig().EpochLength != 64 {
 		t.Errorf("EpochLength should be 64 for these tests to pass")
 	}
-	var committeeIndices []uint32
-	for i := uint32(0); i < 8; i++ {
-		committeeIndices = append(committeeIndices, i)
-	}
-	var ShardCommittees []*pb.ShardCommitteeArray
-	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
-		ShardCommittees = append(ShardCommittees, &pb.ShardCommitteeArray{
-			ArrayShardCommittee: []*pb.ShardCommittee{
-				{Shard: 100, Committee: committeeIndices},
-			},
-		})
+	validators := make([]*pb.ValidatorRecord, config.EpochLength*4)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.ValidatorRecord{
+			ExitSlot: config.FarFutureSlot,
+		}
 	}
 
 	state := &pb.BeaconState{
-		ShardCommitteesAtSlots: ShardCommittees,
-		Slot:                   5,
+		ValidatorRegistry: validators,
 	}
 
 	boundaryAttestations := []*pb.PendingAttestationRecord{
-		{Data: &pb.AttestationData{Slot: 2, Shard: 100}, ParticipationBitfield: []byte{'F'}}, // returns indices 1,5,6
-		{Data: &pb.AttestationData{Slot: 2, Shard: 100}, ParticipationBitfield: []byte{3}},   // returns indices 6,7
-		{Data: &pb.AttestationData{Slot: 2, Shard: 100}, ParticipationBitfield: []byte{'A'}}, // returns indices 1,7
+		{Data: &pb.AttestationData{}, ParticipationBitfield: []byte{0x10}}, // returns indices 242
+		{Data: &pb.AttestationData{}, ParticipationBitfield: []byte{0xF0}}, // returns indices 237,224,2
 	}
 
 	attesterIndices, err := ValidatorIndices(state, boundaryAttestations)
@@ -441,8 +433,9 @@ func TestBoundaryAttesterIndices(t *testing.T) {
 		t.Fatalf("Failed to run BoundaryAttesterIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(attesterIndices, []uint32{1, 5, 6, 7}) {
-		t.Errorf("Incorrect boundary attester indices. Wanted: %v, got: %v", []uint32{1, 5, 6, 7}, attesterIndices)
+	if !reflect.DeepEqual(attesterIndices, []uint32{242, 237, 224, 2}) {
+		t.Errorf("Incorrect boundary attester indices. Wanted: %v, got: %v",
+			[]uint32{242, 237, 224, 2}, attesterIndices)
 	}
 }
 
@@ -451,42 +444,40 @@ func TestBeaconProposerIdx(t *testing.T) {
 		t.Errorf("EpochLength should be 64 for these tests to pass")
 	}
 
-	var ShardCommittees []*pb.ShardCommitteeArray
-	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
-		ShardCommittees = append(ShardCommittees, &pb.ShardCommitteeArray{
-			ArrayShardCommittee: []*pb.ShardCommittee{
-				{Committee: []uint32{9, 8, 311, 12, 92, 1, 23, 17}},
-			},
-		})
+	validators := make([]*pb.ValidatorRecord, config.EpochLength*4)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.ValidatorRecord{
+			ExitSlot: config.FarFutureSlot,
+		}
 	}
 
 	state := &pb.BeaconState{
-		ShardCommitteesAtSlots: ShardCommittees,
+		ValidatorRegistry: validators,
 	}
 
 	tests := []struct {
-		slot uint64
-		idx  uint32
+		slot  uint64
+		index uint32
 	}{
 		{
-			slot: 1,
-			idx:  8,
+			slot:  1,
+			index: 244,
 		},
 		{
-			slot: 10,
-			idx:  311,
+			slot:  10,
+			index: 82,
 		},
 		{
-			slot: 19,
-			idx:  12,
+			slot:  19,
+			index: 157,
 		},
 		{
-			slot: 30,
-			idx:  23,
+			slot:  30,
+			index: 3,
 		},
 		{
-			slot: 39,
-			idx:  17,
+			slot:  39,
+			index: 220,
 		},
 	}
 
@@ -496,10 +487,10 @@ func TestBeaconProposerIdx(t *testing.T) {
 			t.Errorf("Failed to get shard and committees at slot: %v", err)
 		}
 
-		if result != tt.idx {
+		if result != tt.index {
 			t.Errorf(
 				"Result index was an unexpected value. Wanted %d, got %d",
-				tt.idx,
+				tt.index,
 				result,
 			)
 		}
@@ -516,18 +507,16 @@ func TestAttestingValidatorIndices_Ok(t *testing.T) {
 		committeeIndices = append(committeeIndices, i)
 	}
 
-	var ShardCommittees []*pb.ShardCommitteeArray
-	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
-		ShardCommittees = append(ShardCommittees, &pb.ShardCommitteeArray{
-			ArrayShardCommittee: []*pb.ShardCommittee{
-				{Shard: i, Committee: committeeIndices},
-			},
-		})
+	validators := make([]*pb.ValidatorRecord, config.EpochLength*8)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.ValidatorRecord{
+			ExitSlot: config.FarFutureSlot,
+		}
 	}
 
 	state := &pb.BeaconState{
-		ShardCommitteesAtSlots: ShardCommittees,
-		Slot:                   5,
+		ValidatorRegistry: validators,
+		Slot:              5,
 	}
 
 	prevAttestation := &pb.PendingAttestationRecord{
@@ -536,7 +525,7 @@ func TestAttestingValidatorIndices_Ok(t *testing.T) {
 			Shard:                3,
 			ShardBlockRootHash32: []byte{'B'},
 		},
-		ParticipationBitfield: []byte{'A'}, // 01000001 = 1,7
+		ParticipationBitfield: []byte{0x1}, //
 	}
 
 	thisAttestation := &pb.PendingAttestationRecord{
@@ -545,36 +534,36 @@ func TestAttestingValidatorIndices_Ok(t *testing.T) {
 			Shard:                3,
 			ShardBlockRootHash32: []byte{'B'},
 		},
-		ParticipationBitfield: []byte{'F'}, // 01000110 = 1,5,6
+		ParticipationBitfield: []byte{0x2},
 	}
 
 	indices, err := AttestingValidatorIndices(
 		state,
-		ShardCommittees[3].ArrayShardCommittee[0],
+		3,
 		[]byte{'B'},
 		[]*pb.PendingAttestationRecord{thisAttestation},
 		[]*pb.PendingAttestationRecord{prevAttestation})
 	if err != nil {
-		t.Fatalf("could not execute AttestingValidatorIndices: %v", err)
+		t.Fatalf("Could not execute AttestingValidatorIndices: %v", err)
 	}
 
-	// Union(1,7,1,5,6) = 1,5,6,7
-	if !reflect.DeepEqual(indices, []uint32{1, 5, 6, 7}) {
-		t.Errorf("could not get incorrect validator indices. Wanted: %v, got: %v",
-			[]uint32{1, 5, 6, 7}, indices)
+	if !reflect.DeepEqual(indices, []uint32{267, 15}) {
+		t.Errorf("Could not get incorrect validator indices. Wanted: %v, got: %v",
+			[]uint32{267, 15}, indices)
 	}
 }
 
 func TestAttestingValidatorIndices_OutOfBound(t *testing.T) {
-	ShardCommittees := []*pb.ShardCommitteeArray{
-		{ArrayShardCommittee: []*pb.ShardCommittee{
-			{Shard: 1},
-		}},
+	validators := make([]*pb.ValidatorRecord, config.EpochLength*9)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.ValidatorRecord{
+			ExitSlot: config.FarFutureSlot,
+		}
 	}
 
 	state := &pb.BeaconState{
-		ShardCommitteesAtSlots: ShardCommittees,
-		Slot:                   5,
+		ValidatorRegistry: validators,
+		Slot:              5,
 	}
 
 	attestation := &pb.PendingAttestationRecord{
@@ -588,14 +577,14 @@ func TestAttestingValidatorIndices_OutOfBound(t *testing.T) {
 
 	_, err := AttestingValidatorIndices(
 		state,
-		ShardCommittees[0].ArrayShardCommittee[0],
+		1,
 		[]byte{'B'},
 		[]*pb.PendingAttestationRecord{attestation},
 		nil)
 
 	// This will fail because participation bitfield is length:1, committee bitfield is length 0.
 	if err == nil {
-		t.Fatal("AttestingValidatorIndices should have failed with incorrect bitfield")
+		t.Error("AttestingValidatorIndices should have failed with incorrect bitfield")
 	}
 }
 

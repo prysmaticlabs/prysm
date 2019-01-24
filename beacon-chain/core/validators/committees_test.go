@@ -218,23 +218,15 @@ func TestAttestationParticipants_ok(t *testing.T) {
 		t.Errorf("EpochLength should be 64 for these tests to pass")
 	}
 
-	var committeeIndices []uint32
-	for i := uint32(0); i < 8; i++ {
-		committeeIndices = append(committeeIndices, i)
-	}
-
-	var ShardCommittees []*pb.ShardCommitteeArray
-	for i := uint64(0); i < config.EpochLength*2; i++ {
-		ShardCommittees = append(ShardCommittees, &pb.ShardCommitteeArray{
-			ArrayShardCommittee: []*pb.ShardCommittee{
-				{Shard: i},
-				{Committee: committeeIndices},
-			},
-		})
+	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.ValidatorRecord{
+			ExitSlot: config.FarFutureSlot,
+		}
 	}
 
 	state := &pb.BeaconState{
-		ShardCommitteesAtSlots: ShardCommittees,
+		ValidatorRegistry: validators,
 	}
 
 	attestationData := &pb.AttestationData{}
@@ -249,37 +241,37 @@ func TestAttestationParticipants_ok(t *testing.T) {
 		{
 			attestationSlot: 2,
 			stateSlot:       5,
-			shard:           0,
-			bitfield:        []byte{'A'},
-			wanted:          []uint32{1, 7},
+			shard:           2,
+			bitfield:        []byte{0xFF},
+			wanted:          []uint32{11, 121},
 		},
 		{
 			attestationSlot: 1,
 			stateSlot:       10,
-			shard:           0,
-			bitfield:        []byte{1},
-			wanted:          []uint32{7},
+			shard:           1,
+			bitfield:        []byte{77},
+			wanted:          []uint32{117},
 		},
 		{
 			attestationSlot: 10,
 			stateSlot:       20,
-			shard:           0,
-			bitfield:        []byte{2},
-			wanted:          []uint32{6},
+			shard:           10,
+			bitfield:        []byte{0xFF},
+			wanted:          []uint32{14, 30},
 		},
 		{
 			attestationSlot: 64,
 			stateSlot:       100,
 			shard:           0,
-			bitfield:        []byte{3},
-			wanted:          []uint32{6, 7},
+			bitfield:        []byte{0xFF},
+			wanted:          []uint32{109, 97},
 		},
 		{
 			attestationSlot: 999,
 			stateSlot:       1000,
-			shard:           0,
-			bitfield:        []byte{'F'},
-			wanted:          []uint32{1, 5, 6},
+			shard:           39,
+			bitfield:        []byte{99},
+			wanted:          []uint32{89},
 		},
 	}
 

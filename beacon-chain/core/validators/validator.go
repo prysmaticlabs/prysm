@@ -21,7 +21,7 @@ import (
 var config = params.BeaconConfig()
 
 // InitialValidatorRegistry creates a new validator set that is used to
-// generate a new crystallized state.
+// generate a new bootstrapped state.
 func InitialValidatorRegistry() []*pb.ValidatorRecord {
 	randaoPreCommit := [32]byte{}
 	randaoReveal := hashutil.Hash(randaoPreCommit[:])
@@ -33,6 +33,7 @@ func InitialValidatorRegistry() []*pb.ValidatorRecord {
 			Balance:                config.MaxDeposit * config.Gwei,
 			Pubkey:                 pubkey[:],
 			RandaoCommitmentHash32: randaoReveal[:],
+			RandaoLayers:           1,
 		}
 	}
 	return validators
@@ -111,14 +112,14 @@ func ShardCommitteesAtSlot(state *pb.BeaconState, slot uint64) (*pb.ShardCommitt
 //    """
 //    Returns the beacon proposer index for the ``slot``.
 //    """
-//    first_committee = get_shard_committees_at_slot(state, slot)[0].committee
+//    first_committee, _ = get_crosslink_committees_at_slot(state, slot)[0]
 //    return first_committee[slot % len(first_committee)]
 func BeaconProposerIdx(state *pb.BeaconState, slot uint64) (uint32, error) {
-	committeeArray, err := ShardCommitteesAtSlot(state, slot)
+	committeeArray, err := CrosslinkCommitteesAtSlot(state, slot)
 	if err != nil {
 		return 0, err
 	}
-	firstCommittee := committeeArray.ArrayShardCommittee[0].Committee
+	firstCommittee := committeeArray[0].Committee
 
 	return firstCommittee[slot%uint64(len(firstCommittee))], nil
 }

@@ -102,7 +102,6 @@ func getCommitteesPerSlot(numActiveValidatorRegistry uint64) uint64 {
 //
 //     # Find the committee in the list with the desired shard
 //     crosslink_committees = get_crosslink_committees_at_slot(state, attestation_data.slot)
-
 //	   assert attestation_data.shard in [shard for _, shard in crosslink_committees]
 //     crosslink_committee = [committee for committee,
 //     		shard in crosslink_committees if shard == attestation_data.shard][0]

@@ -2,6 +2,7 @@ package epoch
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"reflect"
 	"strings"
@@ -252,7 +253,7 @@ func TestPrevEpochBoundaryAttestations(t *testing.T) {
 	}
 }
 
-func TestHeadAttestations_Ok(t *testing.T) {
+func TestHeadAttestationsOk(t *testing.T) {
 	if params.BeaconConfig().EpochLength != 64 {
 		t.Errorf("EpochLength should be 64 for these tests to pass")
 	}
@@ -287,7 +288,7 @@ func TestHeadAttestations_Ok(t *testing.T) {
 	}
 }
 
-func TestHeadAttestations_NotOk(t *testing.T) {
+func TestHeadAttestationsNotOk(t *testing.T) {
 	if params.BeaconConfig().EpochLength != 64 {
 		t.Errorf("EpochLength should be 64 for these tests to pass")
 	}
@@ -301,7 +302,7 @@ func TestHeadAttestations_NotOk(t *testing.T) {
 	}
 }
 
-func TestWinningRoot_Ok(t *testing.T) {
+func TestWinningRootOk(t *testing.T) {
 	state := buildState(0, config.EpochLength*2)
 
 	// Generate 10 roots ([]byte{100}...[]byte{110})
@@ -346,7 +347,7 @@ func TestWinningRoot_Ok(t *testing.T) {
 	}
 }
 
-func TestWinningRoot_CantGetParticipantBitfield(t *testing.T) {
+func TestWinningRootCantGetParticipantBitfield(t *testing.T) {
 	state := buildState(0, config.EpochLength)
 
 	attestations := []*pb.PendingAttestationRecord{
@@ -363,7 +364,7 @@ func TestWinningRoot_CantGetParticipantBitfield(t *testing.T) {
 	}
 }
 
-func TestAttestingValidators_Ok(t *testing.T) {
+func TestAttestingValidatorsOk(t *testing.T) {
 	state := buildState(0, config.EpochLength)
 
 	var attestations []*pb.PendingAttestationRecord
@@ -392,7 +393,7 @@ func TestAttestingValidators_Ok(t *testing.T) {
 	}
 }
 
-func TestAttestingValidators_CantGetWinningRoot(t *testing.T) {
+func TestAttestingValidatorsCantGetWinningRoot(t *testing.T) {
 	state := buildState(0, config.EpochLength)
 
 	attestation := &pb.PendingAttestationRecord{
@@ -408,7 +409,7 @@ func TestAttestingValidators_CantGetWinningRoot(t *testing.T) {
 	}
 }
 
-func TestTotalAttestingBalance_Ok(t *testing.T) {
+func TestTotalAttestingBalanceOk(t *testing.T) {
 	validatorsPerCommittee := uint64(2)
 	state := buildState(0, config.EpochLength*validatorsPerCommittee)
 
@@ -439,7 +440,7 @@ func TestTotalAttestingBalance_Ok(t *testing.T) {
 	}
 }
 
-func TestTotalAttestingBalance_CantGetWinningRoot(t *testing.T) {
+func TestTotalAttestingBalanceCantGetWinningRoot(t *testing.T) {
 	state := buildState(0, config.EpochLength)
 
 	attestation := &pb.PendingAttestationRecord{
@@ -470,7 +471,7 @@ func TestTotalBalance(t *testing.T) {
 	}
 }
 
-func TestInclusionSlot_Ok(t *testing.T) {
+func TestInclusionSlotOk(t *testing.T) {
 	state := buildState(0, config.EpochLength)
 
 	state.LatestAttestations = []*pb.PendingAttestationRecord{
@@ -488,7 +489,7 @@ func TestInclusionSlot_Ok(t *testing.T) {
 	}
 }
 
-func TestInclusionSlot_BadBitfield(t *testing.T) {
+func TestInclusionSlotBadBitfield(t *testing.T) {
 	state := buildState(0, config.EpochLength)
 	state.LatestAttestations = []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{},
@@ -502,7 +503,7 @@ func TestInclusionSlot_BadBitfield(t *testing.T) {
 	}
 }
 
-func TestInclusionSlot_NotFound(t *testing.T) {
+func TestInclusionSlotNotFound(t *testing.T) {
 	state := buildState(0, config.EpochLength)
 
 	badIndex := uint32(10000)
@@ -512,7 +513,7 @@ func TestInclusionSlot_NotFound(t *testing.T) {
 	}
 }
 
-func TestInclusionDistance_Ok(t *testing.T) {
+func TestInclusionDistanceOk(t *testing.T) {
 	state := buildState(0, config.EpochLength)
 
 	state.LatestAttestations = []*pb.PendingAttestationRecord{
@@ -533,7 +534,7 @@ func TestInclusionDistance_Ok(t *testing.T) {
 	}
 }
 
-func TestInclusionDistance_BadBitfield(t *testing.T) {
+func TestInclusionDistanceBadBitfield(t *testing.T) {
 	state := buildState(0, config.EpochLength)
 
 	state.LatestAttestations = []*pb.PendingAttestationRecord{
@@ -548,12 +549,60 @@ func TestInclusionDistance_BadBitfield(t *testing.T) {
 	}
 }
 
-func TestInclusionDistance_NotFound(t *testing.T) {
+func TestInclusionDistanceNotFound(t *testing.T) {
 	state := buildState(0, config.EpochLength)
 
 	badIndex := uint32(10000)
 	want := fmt.Sprintf("could not find inclusion distance for validator index %d", badIndex)
 	if _, err := InclusionDistance(state, badIndex); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestRandaoMixOk(t *testing.T) {
+	randaoMixes := make([][]byte, config.LatestRandaoMixesLength)
+	for i := 0; i < len(randaoMixes); i++ {
+		intInBytes := make([]byte, 32)
+		binary.BigEndian.PutUint64(intInBytes, uint64(i))
+		randaoMixes[i] = intInBytes
+	}
+	state := &pb.BeaconState{LatestRandaoMixesHash32S: randaoMixes}
+	tests := []struct {
+		slot      uint64
+		randaoMix []byte
+	}{
+		{
+			slot:      10,
+			randaoMix: randaoMixes[10],
+		},
+		{
+			slot:      2344,
+			randaoMix: randaoMixes[2344],
+		},
+		{
+			slot:      99999,
+			randaoMix: randaoMixes[99999%config.LatestRandaoMixesLength],
+		},
+	}
+	for _, test := range tests {
+		state.Slot = test.slot + 1
+		mix, err := randaoMix(state, test.slot)
+		if err != nil {
+			t.Fatalf("Could not get randao mix: %v", err)
+		}
+		if !bytes.Equal(test.randaoMix, mix) {
+			t.Errorf("Incorrect randao mix. Wanted: %#x, got: %#x",
+				test.randaoMix, mix)
+		}
+	}
+}
+
+func TestRandaoMixOutOfBound(t *testing.T) {
+	wanted := fmt.Sprintf(
+		"input randaoMix slot %d out of bounds: %d <= slot < %d",
+		100, 0, 0,
+	)
+	if _, err := randaoMix(&pb.BeaconState{}, 100); !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected: %s, received: %s", wanted, err.Error())
 	}
 }
