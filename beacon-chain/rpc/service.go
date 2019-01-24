@@ -108,36 +108,9 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 // Start the gRPC server.
 func (s *Service) Start() {
 	log.Info("Starting service")
-<<<<<<< HEAD
-<<<<<<< HEAD
-	defer func() {
-		if err := recover(); err != nil {
-			log.Infof("Listening to the port: %s failed", s.port)
-		}
-	}()
-	
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", s.port))
 	if err != nil {
-<<<<<<< HEAD
-		panic(err)
-=======
-		panic(fmt.Sprintf("Could not listen to port :%s: %v", s.port, err))
-=======
-	s.didPanicHappendStart = false
-	s.didPanicHappendGo  = false 
-=======
->>>>>>> TestLogger implementation
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", s.port))
-	if err != nil {
-<<<<<<< HEAD
-		msg1 := fmt.Sprintf("Could not listen to port in Start() :%s: %v", s.port, err)
-		panic(s, msg1)
->>>>>>> log not found: Starting go routine
-		//log.Fatalf("Could not listen to port :%s: %v", s.port, err)
->>>>>>> assertPanic , TestBadEndPoint failed because of panic in goroutine
-=======
 		log.Fatalf("Could not listen to port in Start() :%s: %v", s.port, err)
->>>>>>> TestLogger implementation
 	}
 	s.listener = lis
 	log.Infof("RPC server listening on port :%s", s.port)
@@ -166,42 +139,10 @@ func (s *Service) Start() {
 
 	log.Info("Starting go routine")
 	go func() {
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-		defer func() {
-			if err := recover(); err != nil {
-				log.Info("Could not serve gRPC")
-			}
-		}()
-		if err := s.grpcServer.Serve(lis); err != nil {
-			panic(err)
-=======
-		err = s.grpcServer.Serve(lis)
-		if err != nil {
-			//log.Fatalf("Could not serve gRPC: %v", err)
-			panic(fmt.Sprintf("Could not serve gRPC: %v", err))
->>>>>>> assertPanic , TestBadEndPoint failed because of panic in goroutine
-=======
-		    log.Info("Starting go routine")
-			err := s.grpcServer.Serve(lis);
-			if err != nil {
-			//log.Fatalf("Could not serve gRPC: %v", err)
-				msg2 := fmt.Sprintf("Could not serve gRPC: %v", err)
-				panic(s, msg2)
->>>>>>> log not found: Starting go routine
-=======
-		log.Info("Starting go routine")
-		if err := s.grpcServer.Serve(lis); err != nil {
-			log.Fatalf("Could not serve gRPC: %v", err)
->>>>>>> TestLogger implementation
-=======
 		if s.listener != nil {
 			if err := s.grpcServer.Serve(s.listener); err != nil {
 				log.Fatalf("Could not serve gRPC: %v", err)
 			}
->>>>>>> Testlogger with map  and overriden Fatalf
 		}
 	}()
 }

@@ -8,12 +8,8 @@ import (
 	"io/ioutil"
 	"strconv"
 	"testing"
-	"time"
-<<<<<<< HEAD
-
-=======
->>>>>>> assertPanic , TestBadEndPoint failed because of panic in goroutine
-
+	"time"	
+	
 	"github.com/ethereum/go-ethereum/common"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
@@ -42,6 +38,7 @@ type TestLogger struct {
 
 func (t *TestLogger) Fatalf(format string, args ...interface{}) {
 	t.testMap["fatal_error"] = true
+	panic("fatal_error")
 }
 
 type mockPOWChainService struct{}
@@ -101,19 +98,13 @@ func TestLifecycle(t *testing.T) {
 }
 
 func TestBadEndpoint(t *testing.T) {
-
-	fl := logrus.WithField("prefix", "rpc")
+	hook := logTest.NewGlobal()
 
 	log = &TestLogger{
-		FieldLogger: fl,
+		FieldLogger: logrus.WithField("prefix", "rpc"),
 		testMap:     make(map[string]interface{}),
 	}
 
-<<<<<<< HEAD
-=======
-	hook := logTest.NewLocal(fl.Logger)
-
->>>>>>> Testlogger with map  and overriden Fatalf
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port: "ralph merkle!!!",
 	})
@@ -129,6 +120,7 @@ func TestBadEndpoint(t *testing.T) {
 	}
 
 	testutil.AssertLogsContain(t, hook, "Starting service")
+	testutil.AssertLogsContain(t, hook, "Handling Connections")
 	testutil.AssertLogsContain(t, hook, "Starting go routine")
 }
 
