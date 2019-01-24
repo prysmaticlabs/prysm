@@ -257,7 +257,8 @@ func (w *Web3Service) ProcessChainStartLog(VRClog gethTypes.Log) {
 		return
 	}
 	if w.depositTrie.Root() != receiptRoot {
-		log.Errorf("Receipt root from log doesn't match the root saved in memory %#x", receiptRoot)
+		log.Errorf("Receipt root from log doesn't match the root saved in memory,"+
+			" want %#x but got %#x", w.depositTrie.Root(), receiptRoot)
 		return
 	}
 

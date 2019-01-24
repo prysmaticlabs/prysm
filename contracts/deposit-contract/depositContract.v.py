@@ -42,9 +42,8 @@ def deposit(deposit_input: bytes[2048]):
     deposit_timestamp: uint256 = as_unitless_number(block.timestamp)
     deposit_data: bytes[2064] = concat(self.to_bytes(deposit_amount), self.to_bytes(deposit_timestamp), deposit_input)
     index: uint256 = self.deposit_count + TWO_TO_POWER_OF_TREE_DEPTH
-    merkle_tree_index: bytes[8] = self.to_bytes(index)
 
-    log.Deposit(self.deposit_tree[1], deposit_data, merkle_tree_index)
+    log.Deposit(self.get_deposit_root(), deposit_data, self.to_bytes(index))
 
     # Add deposit to merkle tree
     self.deposit_tree[index] = sha3(deposit_data)
@@ -57,7 +56,7 @@ def deposit(deposit_input: bytes[2048]):
         self.full_deposit_count += 1
         if self.full_deposit_count == self.CHAIN_START_FULL_DEPOSIT_THRESHOLD:
             timestamp_day_boundary: uint256 = deposit_timestamp - deposit_timestamp % SECONDS_PER_DAY + SECONDS_PER_DAY
-            log.ChainStart(self.deposit_tree[1], self.to_bytes(timestamp_day_boundary))
+            log.ChainStart(self.get_deposit_root(), self.to_bytes(timestamp_day_boundary))
 
 @public
 @constant
