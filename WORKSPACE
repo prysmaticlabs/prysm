@@ -501,7 +501,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "054c452bb702e465e95ce8e7a3d9a6cf0cd1188d",
+    commit = "c6b37f3e92850b723493d63fd35aad34e19e048d",
     importpath = "golang.org/x/sys",
 )
 
@@ -543,7 +543,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_crypto",
-    commit = "64072686203f69e3fd20143576b27200f18ab0fa",
+    commit = "057139ce5d2bdbe6fe73c53679e24e9cf007f637",
     importpath = "golang.org/x/crypto",
 )
 
@@ -615,7 +615,7 @@ go_repository(
 
 go_repository(
     name = "io_opencensus_go",
-    tag = "v0.18.0",
+    tag = "v0.19.0",
     importpath = "go.opencensus.io",
 )
 
@@ -663,7 +663,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_common",
-    commit = "2998b132700a7d019ff618c06a234b47c1f3f681",
+    tag = "v0.1.0",
     importpath = "github.com/prometheus/common",
 )
 
