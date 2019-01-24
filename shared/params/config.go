@@ -85,12 +85,12 @@ type ShardChainConfig struct {
 
 var defaultBeaconConfig = &BeaconChainConfig{
 	// Misc constant.
-	ShardCount:              1024,
-	TargetCommitteeSize:     128,
-	EjectionBalance:         16,
-	EjectionBalanceInGwei:   16 * 1e9,
-	MaxBalanceChurnQuotient: 32,
-	Gwei: 1e9,
+	ShardCount:                1024,
+	TargetCommitteeSize:       128,
+	EjectionBalance:           16,
+	EjectionBalanceInGwei:     16 * 1e9,
+	MaxBalanceChurnQuotient:   32,
+	Gwei:                      1e9,
 	BeaconChainShardNumber:    1<<64 - 1,
 	MaxCasperVotes:            1024,
 	LatestBlockRootsLength:    8192,
@@ -144,12 +144,12 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 var demoBeaconConfig = &BeaconChainConfig{
 	// Misc constant.
-	ShardCount:              5,
-	TargetCommitteeSize:     3,
-	EjectionBalance:         defaultBeaconConfig.EjectionBalance,
-	EjectionBalanceInGwei:   defaultBeaconConfig.EjectionBalanceInGwei,
-	MaxBalanceChurnQuotient: defaultBeaconConfig.MaxBalanceChurnQuotient,
-	Gwei: defaultBeaconConfig.Gwei,
+	ShardCount:                5,
+	TargetCommitteeSize:       3,
+	EjectionBalance:           defaultBeaconConfig.EjectionBalance,
+	EjectionBalanceInGwei:     defaultBeaconConfig.EjectionBalanceInGwei,
+	MaxBalanceChurnQuotient:   defaultBeaconConfig.MaxBalanceChurnQuotient,
+	Gwei:                      defaultBeaconConfig.Gwei,
 	BeaconChainShardNumber:    defaultBeaconConfig.BeaconChainShardNumber,
 	MaxCasperVotes:            defaultBeaconConfig.MaxCasperVotes,
 	LatestBlockRootsLength:    defaultBeaconConfig.LatestBlockRootsLength,

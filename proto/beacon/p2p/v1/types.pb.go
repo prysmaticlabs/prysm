@@ -1669,11 +1669,11 @@ func (m *ProposerSlashing) GetProposalSignature_2() []byte {
 }
 
 type CasperSlashing struct {
-	Slashable_Vote_Data_1  *SlashableVoteData `protobuf:"bytes,1,opt,name=slashable_vote_data_1,json=slashableVoteData1" json:"slashable_vote_data_1,omitempty"`
-	Slashable_Vote_Data_2  *SlashableVoteData `protobuf:"bytes,2,opt,name=slashable_vote_data_2,json=slashableVoteData2" json:"slashable_vote_data_2,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
-	XXX_unrecognized     []byte             `json:"-"`
-	XXX_sizecache        int32              `json:"-"`
+	Slashable_Vote_Data_1 *SlashableVoteData `protobuf:"bytes,1,opt,name=slashable_vote_data_1,json=slashableVoteData1" json:"slashable_vote_data_1,omitempty"`
+	Slashable_Vote_Data_2 *SlashableVoteData `protobuf:"bytes,2,opt,name=slashable_vote_data_2,json=slashableVoteData2" json:"slashable_vote_data_2,omitempty"`
+	XXX_NoUnkeyedLiteral  struct{}           `json:"-"`
+	XXX_unrecognized      []byte             `json:"-"`
+	XXX_sizecache         int32              `json:"-"`
 }
 
 func (m *CasperSlashing) Reset()         { *m = CasperSlashing{} }
@@ -1709,14 +1709,14 @@ func (m *CasperSlashing) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_CasperSlashing proto.InternalMessageInfo
 
-func (m *CasperSlashing) GetVotes_1() *SlashableVoteData {
+func (m *CasperSlashing) GetSlashableVoteData_1() *SlashableVoteData {
 	if m != nil {
 		return m.Slashable_Vote_Data_1
 	}
 	return nil
 }
 
-func (m *CasperSlashing) GetVotes_2() *SlashableVoteData {
+func (m *CasperSlashing) GetSlashableVoteData_2() *SlashableVoteData {
 	if m != nil {
 		return m.Slashable_Vote_Data_2
 	}

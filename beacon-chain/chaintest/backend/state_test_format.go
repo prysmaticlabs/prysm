@@ -52,7 +52,7 @@ type StateTestProposerSlashing struct {
 
 // StateTestCasperSlashing --
 type StateTestCasperSlashing struct {
-	Slot                     uint64   `yaml:"slot"`
+	Slot                                 uint64   `yaml:"slot"`
 	SlashableVoteData1Slot               uint64   `yaml:"slashable_vote_data_1_slot"`
 	SlashableVoteData1JustifiedSlot      uint64   `yaml:"slashable_vote_data_1_justified_slot"`
 	SlashableVoteData1CustodyBit0Indices []uint32 `yaml:"slashable_vote_data_1_custody_0_indices"`
