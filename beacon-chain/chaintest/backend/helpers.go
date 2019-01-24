@@ -47,7 +47,7 @@ func generateSimulatedBlock(
 	}
 	if simulatedDeposit != nil {
 		depositInput := &pb.DepositInput{
-			Pubkey:                      []byte(simulatedDeposit.Pubkey),
+			Pubkey: []byte(simulatedDeposit.Pubkey),
 			WithdrawalCredentialsHash32: []byte{},
 			ProofOfPossession:           []byte{},
 			RandaoCommitmentHash32:      depositRandaoCommit[:],
@@ -87,7 +87,7 @@ func generateSimulatedBlock(
 	}
 	if simulatedCasperSlashing != nil {
 		block.Body.CasperSlashings = append(block.Body.CasperSlashings, &pb.CasperSlashing{
-			Slashable_Vote_Data_1: &pb.SlashableVoteData{
+			SlashableVoteData_1: &pb.SlashableVoteData{
 				Data: &pb.AttestationData{
 					Slot:          simulatedCasperSlashing.SlashableVoteData1Slot,
 					JustifiedSlot: simulatedCasperSlashing.SlashableVoteData1JustifiedSlot,
@@ -95,7 +95,7 @@ func generateSimulatedBlock(
 				CustodyBit_0Indices: simulatedCasperSlashing.SlashableVoteData1CustodyBit0Indices,
 				CustodyBit_1Indices: simulatedCasperSlashing.SlashableVoteData1CustodyBit1Indices,
 			},
-			Slashable_Vote_Data_2: &pb.SlashableVoteData{
+			SlashableVoteData_2: &pb.SlashableVoteData{
 				Data: &pb.AttestationData{
 					Slot:          simulatedCasperSlashing.SlashableVoteData2Slot,
 					JustifiedSlot: simulatedCasperSlashing.SlashableVoteData2JustifiedSlot,

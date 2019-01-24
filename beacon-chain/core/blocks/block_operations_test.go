@@ -125,8 +125,8 @@ func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 		RandaoRevealHash32: []byte{1},
 	}
 	beaconState := &pb.BeaconState{
-		ValidatorRegistry:        registry,
-		Slot:                     1,
+		ValidatorRegistry: registry,
+		Slot:              1,
 		LatestRandaoMixesHash32S: make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		ShardCommitteesAtSlots: []*pb.ShardCommitteeArray{
 			{
@@ -406,7 +406,7 @@ func TestProcessCasperSlashings_ThresholdReached(t *testing.T) {
 func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 	slashings := []*pb.CasperSlashing{
 		{
-			Slashable_Vote_Data_1: &pb.SlashableVoteData{
+			SlashableVoteData_1: &pb.SlashableVoteData{
 				CustodyBit_0Indices: make(
 					[]uint32,
 					params.BeaconConfig().MaxCasperVotes,
@@ -416,7 +416,7 @@ func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 					params.BeaconConfig().MaxCasperVotes,
 				),
 			},
-			Slashable_Vote_Data_2: &pb.SlashableVoteData{
+			SlashableVoteData_2: &pb.SlashableVoteData{
 				CustodyBit_0Indices: make(
 					[]uint32,
 					params.BeaconConfig().MaxCasperVotes,
@@ -453,10 +453,10 @@ func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 
-	// Perform the same check for Slashable_Vote_Data_2.
+	// Perform the same check for SlashableVoteData_2.
 	slashings = []*pb.CasperSlashing{
 		{
-			Slashable_Vote_Data_1: &pb.SlashableVoteData{
+			SlashableVoteData_1: &pb.SlashableVoteData{
 				CustodyBit_0Indices: make(
 					[]uint32,
 					params.BeaconConfig().MaxCasperVotes,
@@ -466,7 +466,7 @@ func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 					params.BeaconConfig().MaxCasperVotes,
 				),
 			},
-			Slashable_Vote_Data_2: &pb.SlashableVoteData{
+			SlashableVoteData_2: &pb.SlashableVoteData{
 				CustodyBit_0Indices: make(
 					[]uint32,
 					params.BeaconConfig().MaxCasperVotes,
@@ -501,10 +501,10 @@ func TestProcessCasperSlashings_UnmatchedAttestations(t *testing.T) {
 	}
 	slashings := []*pb.CasperSlashing{
 		{
-			Slashable_Vote_Data_1: &pb.SlashableVoteData{
+			SlashableVoteData_1: &pb.SlashableVoteData{
 				Data: att1,
 			},
-			Slashable_Vote_Data_2: &pb.SlashableVoteData{
+			SlashableVoteData_2: &pb.SlashableVoteData{
 				Data: att1,
 			},
 		},
@@ -586,10 +586,10 @@ func TestProcessCasperSlashings_SlotsInequalities(t *testing.T) {
 	for _, tt := range testCases {
 		slashings := []*pb.CasperSlashing{
 			{
-				Slashable_Vote_Data_1: &pb.SlashableVoteData{
+				SlashableVoteData_1: &pb.SlashableVoteData{
 					Data: tt.att1,
 				},
-				Slashable_Vote_Data_2: &pb.SlashableVoteData{
+				SlashableVoteData_2: &pb.SlashableVoteData{
 					Data: tt.att2,
 				},
 			},
@@ -644,12 +644,12 @@ func TestProcessCasperSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 	}
 	slashings := []*pb.CasperSlashing{
 		{
-			Slashable_Vote_Data_1: &pb.SlashableVoteData{
+			SlashableVoteData_1: &pb.SlashableVoteData{
 				Data:                att1,
 				CustodyBit_0Indices: []uint32{1, 2},
 				CustodyBit_1Indices: []uint32{3, 4},
 			},
-			Slashable_Vote_Data_2: &pb.SlashableVoteData{
+			SlashableVoteData_2: &pb.SlashableVoteData{
 				Data:                att2,
 				CustodyBit_0Indices: []uint32{5, 6},
 				CustodyBit_1Indices: []uint32{7, 8},
@@ -709,12 +709,12 @@ func TestProcessCasperSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 	slashings := []*pb.CasperSlashing{
 		{
-			Slashable_Vote_Data_1: &pb.SlashableVoteData{
+			SlashableVoteData_1: &pb.SlashableVoteData{
 				Data:                att1,
 				CustodyBit_0Indices: []uint32{0, 1},
 				CustodyBit_1Indices: []uint32{2, 3},
 			},
-			Slashable_Vote_Data_2: &pb.SlashableVoteData{
+			SlashableVoteData_2: &pb.SlashableVoteData{
 				Data:                att2,
 				CustodyBit_0Indices: []uint32{4, 5},
 				CustodyBit_1Indices: []uint32{6, 1},
@@ -898,7 +898,7 @@ func TestProcessBlockAttestations_PreviousJustifiedSlotVerificationFailure(t *te
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                  5 + params.BeaconConfig().EpochLength,
+		Slot: 5 + params.BeaconConfig().EpochLength,
 		PreviousJustifiedSlot: 3,
 	}
 
@@ -922,7 +922,7 @@ func TestProcessBlockAttestations_BlockRootOutOfBounds(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                   64,
+		Slot: 64,
 		PreviousJustifiedSlot:  65,
 		LatestBlockRootHash32S: blockRoots,
 	}
@@ -957,7 +957,7 @@ func TestProcessBlockAttestations_BlockRootFailure(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                   64,
+		Slot: 64,
 		PreviousJustifiedSlot:  10,
 		LatestBlockRootHash32S: blockRoots,
 	}
@@ -1005,7 +1005,7 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   64,
+		Slot: 64,
 		PreviousJustifiedSlot:  10,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
@@ -1050,7 +1050,7 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   64,
+		Slot: 64,
 		PreviousJustifiedSlot:  10,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
@@ -1096,7 +1096,7 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   64,
+		Slot: 64,
 		PreviousJustifiedSlot:  10,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
@@ -1248,7 +1248,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	// validator helper function to fail with error when the public key
 	// currently exists in the validator registry.
 	depositInput := &pb.DepositInput{
-		Pubkey:                      []byte{1},
+		Pubkey: []byte{1},
 		WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		ProofOfPossession:           []byte{},
 		RandaoCommitmentHash32:      []byte{0},
@@ -1302,7 +1302,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	// the one specified in the deposit input, causing a failure.
 	registry := []*pb.ValidatorRecord{
 		{
-			Pubkey:                      []byte{1},
+			Pubkey: []byte{1},
 			WithdrawalCredentialsHash32: []byte{4, 5, 6},
 		},
 	}
@@ -1312,8 +1312,8 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 		ValidatorRegistry:       registry,
 		ValidatorBalances:       balances,
 		LatestDepositRootHash32: root[:],
-		Slot:                    currentSlot,
-		GenesisTime:             uint64(genesisTime),
+		Slot:        currentSlot,
+		GenesisTime: uint64(genesisTime),
 	}
 	want := "expected withdrawal credentials to match"
 	if _, err := ProcessValidatorDeposits(
@@ -1326,7 +1326,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 
 func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	depositInput := &pb.DepositInput{
-		Pubkey:                      []byte{1},
+		Pubkey: []byte{1},
 		WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		ProofOfPossession:           []byte{},
 		RandaoCommitmentHash32:      []byte{0},
@@ -1379,7 +1379,7 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	}
 	registry := []*pb.ValidatorRecord{
 		{
-			Pubkey:                      []byte{1},
+			Pubkey: []byte{1},
 			WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		},
 	}
@@ -1389,8 +1389,8 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 		ValidatorRegistry:       registry,
 		ValidatorBalances:       balances,
 		LatestDepositRootHash32: root[:],
-		Slot:                    currentSlot,
-		GenesisTime:             uint64(genesisTime),
+		Slot:        currentSlot,
+		GenesisTime: uint64(genesisTime),
 	}
 	newState, err := ProcessValidatorDeposits(
 		beaconState,

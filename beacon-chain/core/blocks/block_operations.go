@@ -247,16 +247,16 @@ func ProcessCasperSlashings(
 }
 
 func verifyCasperSlashing(slashing *pb.CasperSlashing) error {
-	slashableVoteData1 := slashing.Slashable_Vote_Data_1
-	slashableVoteData2 := slashing.Slashable_Vote_Data_2
+	slashableVoteData1 := slashing.SlashableVoteData_1
+	slashableVoteData2 := slashing.SlashableVoteData_2
 	slashableVoteData1Attestation := slashableVoteData1.Data
 	slashableVoteData2Attestation := slashableVoteData2.Data
 
 	if err := verifySlashableVoteData(slashableVoteData1); err != nil {
-		return fmt.Errorf("could not verify casper votes 1: %v", err)
+		return fmt.Errorf("could not verify casper slashable vote data 1: %v", err)
 	}
 	if err := verifySlashableVoteData(slashableVoteData2); err != nil {
-		return fmt.Errorf("could not verify casper slashotes 2: %v", err)
+		return fmt.Errorf("could not verify casper slashable vote data 2: %v", err)
 	}
 
 	// Inner attestation data structures for the votes should not be equal,
@@ -287,17 +287,17 @@ func verifyCasperSlashing(slashing *pb.CasperSlashing) error {
 		return fmt.Errorf(
 			`
 			Expected the following conditions to hold:
-			(slashableVoteData1Attestation.JustifiedSlot <
-			slashableVoteData2Attestation.JustifiedSlot) &&
-			(slashableVoteData2Attestation.JustifiedSlot + 1
-			== slashableVoteData1Attestation.Slot) &&
-			(slashableVoteData2Attestation.Slot < slashableVoteData1Attestation.Slot)
+			(slashableVoteData1.JustifiedSlot <
+			slashableVoteData2.JustifiedSlot) &&
+			(slashableVoteData2.JustifiedSlot + 1
+			== slashableVoteData1.Slot) &&
+			(slashableVoteData2.Slot < slashableVoteData1.Slot)
 			OR
-			slashableVoteData1Attestation.Slot == slashableVoteData2Attestation.Slot
+			slashableVoteData1.Slot == slashableVoteData2.Slot
 
-			Instead, received slashableVoteData1Attestation.JustifiedSlot %d,
-			slashableVoteData2Attestation.JustifiedSlot %d
-			and slashableVoteData1Attestation.Slot %d, slashableVoteData2Attestation.Slot %d
+			Instead, received slashableVoteData1.JustifiedSlot %d,
+			slashableVoteData2.JustifiedSlot %d
+			and slashableVoteData1.Slot %d, slashableVoteData2.Slot %d
 			`,
 			slashableVoteData1Attestation.JustifiedSlot,
 			slashableVoteData2Attestation.JustifiedSlot,
@@ -309,8 +309,8 @@ func verifyCasperSlashing(slashing *pb.CasperSlashing) error {
 }
 
 func casperSlashingPenalizedIndices(slashing *pb.CasperSlashing) ([]uint32, error) {
-	slashableVoteData1 := slashing.Slashable_Vote_Data_1
-	slashableVoteData2 := slashing.Slashable_Vote_Data_2
+	slashableVoteData1 := slashing.SlashableVoteData_1
+	slashableVoteData2 := slashing.SlashableVoteData_2
 	slashableVoteData1Indices := append(
 		slashableVoteData1.CustodyBit_0Indices,
 		slashableVoteData1.CustodyBit_1Indices...,
