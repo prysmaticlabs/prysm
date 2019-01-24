@@ -988,7 +988,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_bls",
-    commit = "a37e65522727d6a8518151ce9008aa155632c13d",
+    commit = "2440b739ec8fb55fcc1177299384efc0372308b0",
     importpath = "github.com/prysmaticlabs/go-bls",
 )
 
