@@ -2,7 +2,9 @@ package epoch
 
 import (
 	"bytes"
+	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -191,8 +193,8 @@ func TestPrevJustifiedAttestations(t *testing.T) {
 		{Data: &pb.AttestationData{JustifiedSlot: 0}},
 		{Data: &pb.AttestationData{JustifiedSlot: 10}},
 		{Data: &pb.AttestationData{JustifiedSlot: 15}},
-		{Data: &pb.AttestationData{Shard: 0, JustifiedSlot: 100}},
 		{Data: &pb.AttestationData{JustifiedSlot: 100}},
+		{Data: &pb.AttestationData{Shard: 1, JustifiedSlot: 100}},
 		{Data: &pb.AttestationData{JustifiedSlot: 888}},
 	}
 
@@ -300,7 +302,7 @@ func TestHeadAttestations_NotOk(t *testing.T) {
 }
 
 func TestWinningRoot_Ok(t *testing.T) {
-	state := buildState(0, config.EpochLength * 2)
+	state := buildState(0, config.EpochLength*2)
 
 	// Generate 10 roots ([]byte{100}...[]byte{110})
 	var attestations []*pb.PendingAttestationRecord
@@ -345,67 +347,31 @@ func TestWinningRoot_Ok(t *testing.T) {
 }
 
 func TestWinningRoot_CantGetParticipantBitfield(t *testing.T) {
-	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.ValidatorRecord{
-			ExitSlot:      config.FarFutureSlot,
-			PenalizedSlot: 2,
-		}
-	}
-	validatorBalances := make([]uint64, len(validators))
-	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = config.MaxDepositInGwei
-	}
+	state := buildState(0, config.EpochLength)
 
-	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		ValidatorBalances: validatorBalances,
-	}
-
-	attestation := &pb.PendingAttestationRecord{
-		Data: &pb.AttestationData{
+	attestations := []*pb.PendingAttestationRecord{
+		{Data: &pb.AttestationData{
 			ShardBlockRootHash32: []byte{},
 		},
-		ParticipationBitfield: []byte{},
+			ParticipationBitfield: []byte{},
+		},
 	}
 
-	_, err := winningRoot(
-		state,
-		0,
-		[]*pb.PendingAttestationRecord{attestation},
-		nil)
-	if err == nil {
-		t.Fatal("winningRoot should have failed")
+	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 1, 0)
+	if _, err := winningRoot(state, 0, attestations, nil); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
 func TestAttestingValidators_Ok(t *testing.T) {
-	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.ValidatorRecord{
-			ExitSlot:      config.FarFutureSlot,
-			PenalizedSlot: 2,
-		}
-	}
-	validatorBalances := make([]uint64, len(validators))
-	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = config.MaxDepositInGwei
-	}
+	state := buildState(0, config.EpochLength)
 
-	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              5,
-		ValidatorBalances: validatorBalances,
-	}
-
-	// Generate 10 roots ([]byte{100}...[]byte{110})
 	var attestations []*pb.PendingAttestationRecord
 	for i := 0; i < 10; i++ {
 		attestation := &pb.PendingAttestationRecord{
 			Data: &pb.AttestationData{
 				ShardBlockRootHash32: []byte{byte(i + 100)},
 			},
-			// Validator 1 and 7 attested to the above roots.
 			ParticipationBitfield: []byte{0xFF},
 		}
 		attestations = append(attestations, attestation)
@@ -420,28 +386,14 @@ func TestAttestingValidators_Ok(t *testing.T) {
 		t.Fatalf("Could not execute AttestingValidators: %v", err)
 	}
 
-	// Verify the winner root is attested by validator 109 and 97.
-	if !reflect.DeepEqual(attestedValidators, []uint32{109, 97}) {
+	// Verify the winner root is attested by validator 45 based on shuffling.
+	if !reflect.DeepEqual(attestedValidators, []uint32{45}) {
 		t.Errorf("Active validators don't match. Wanted:[109, 97], Got: %v", attestedValidators)
 	}
 }
 
 func TestAttestingValidators_CantGetWinningRoot(t *testing.T) {
-	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.ValidatorRecord{
-			ExitSlot: config.FarFutureSlot,
-		}
-	}
-	validatorBalances := make([]uint64, len(validators))
-	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = config.MaxDepositInGwei
-	}
-
-	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		ValidatorBalances: validatorBalances,
-	}
+	state := buildState(0, config.EpochLength)
 
 	attestation := &pb.PendingAttestationRecord{
 		Data: &pb.AttestationData{
@@ -450,34 +402,15 @@ func TestAttestingValidators_CantGetWinningRoot(t *testing.T) {
 		ParticipationBitfield: []byte{},
 	}
 
-	_, err := AttestingValidators(
-		state,
-		0,
-		[]*pb.PendingAttestationRecord{attestation},
-		nil)
-	if err == nil {
-		t.Fatal("AttestingValidators should have failed")
+	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 1, 0)
+	if _, err := AttestingValidators(state, 0, []*pb.PendingAttestationRecord{attestation}, nil); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
 func TestTotalAttestingBalance_Ok(t *testing.T) {
-	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.ValidatorRecord{
-			ExitSlot:      config.FarFutureSlot,
-			PenalizedSlot: 2,
-		}
-	}
-	validatorBalances := make([]uint64, len(validators))
-	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = config.MaxDepositInGwei
-	}
-
-	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              5,
-		ValidatorBalances: validatorBalances,
-	}
+	validatorsPerCommittee := uint64(2)
+	state := buildState(0, config.EpochLength*validatorsPerCommittee)
 
 	// Generate 10 roots ([]byte{100}...[]byte{110})
 	var attestations []*pb.PendingAttestationRecord
@@ -501,28 +434,13 @@ func TestTotalAttestingBalance_Ok(t *testing.T) {
 		t.Fatalf("Could not execute totalAttestingBalance: %v", err)
 	}
 
-	if attestedBalance != config.MaxDepositInGwei*2 {
+	if attestedBalance != config.MaxDepositInGwei*validatorsPerCommittee {
 		t.Errorf("Incorrect attested balance. Wanted:64*1e9, Got: %d", attestedBalance)
 	}
 }
 
-func TestTotalAttestingBalance_NotOfBound(t *testing.T) {
-	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.ValidatorRecord{
-			ExitSlot:      config.FarFutureSlot,
-			PenalizedSlot: 2,
-		}
-	}
-	validatorBalances := make([]uint64, len(validators))
-	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = config.MaxDepositInGwei
-	}
-
-	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		ValidatorBalances: validatorBalances,
-	}
+func TestTotalAttestingBalance_CantGetWinningRoot(t *testing.T) {
+	state := buildState(0, config.EpochLength)
 
 	attestation := &pb.PendingAttestationRecord{
 		Data: &pb.AttestationData{
@@ -531,13 +449,9 @@ func TestTotalAttestingBalance_NotOfBound(t *testing.T) {
 		ParticipationBitfield: []byte{},
 	}
 
-	_, err := TotalAttestingBalance(
-		state,
-		0,
-		[]*pb.PendingAttestationRecord{attestation},
-		nil)
-	if err == nil {
-		t.Fatal("totalAttestingBalance should have failed")
+	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 1, 0)
+	if _, err := TotalAttestingBalance(state, 0, []*pb.PendingAttestationRecord{attestation}, nil); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
@@ -557,192 +471,89 @@ func TestTotalBalance(t *testing.T) {
 }
 
 func TestInclusionSlot_Ok(t *testing.T) {
-	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.ValidatorRecord{
-			ExitSlot:      config.FarFutureSlot,
-			PenalizedSlot: 2,
-		}
-	}
-	validatorBalances := make([]uint64, len(validators))
-	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = config.MaxDepositInGwei
-	}
+	state := buildState(0, config.EpochLength)
 
-	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		ValidatorBalances: validatorBalances,
-		Slot:              5,
-		LatestAttestations: []*pb.PendingAttestationRecord{
-			{Data: &pb.AttestationData{},
-				ParticipationBitfield: []byte{'A'},
-				SlotIncluded:          100},
-		},
+	state.LatestAttestations = []*pb.PendingAttestationRecord{
+		{Data: &pb.AttestationData{},
+			ParticipationBitfield: []byte{0xFF},
+			SlotIncluded:          100},
 	}
-
-	slot, err := InclusionSlot(state, 97)
+	slot, err := InclusionSlot(state, 45)
 	if err != nil {
 		t.Fatalf("Could not execute InclusionSlot: %v", err)
 	}
-
-	// validator 97's attestation got included in slot 100.
+	// validator 45's attestation got included in slot 100.
 	if slot != 100 {
 		t.Errorf("Incorrect slot. Wanted: 100, got: %d", slot)
 	}
 }
 
 func TestInclusionSlot_BadBitfield(t *testing.T) {
-	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.ValidatorRecord{
-			ExitSlot:      config.FarFutureSlot,
-			PenalizedSlot: 2,
-		}
-	}
-	validatorBalances := make([]uint64, len(validators))
-	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = config.MaxDepositInGwei
+	state := buildState(0, config.EpochLength)
+	state.LatestAttestations = []*pb.PendingAttestationRecord{
+		{Data: &pb.AttestationData{},
+			ParticipationBitfield: []byte{},
+			SlotIncluded:          100},
 	}
 
-	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		ValidatorBalances: validatorBalances,
-		Slot:              5,
-		LatestAttestations: []*pb.PendingAttestationRecord{
-			{Data: &pb.AttestationData{},
-				ParticipationBitfield: []byte{0},
-				SlotIncluded:          100},
-		},
-	}
-
-	_, err := InclusionSlot(state, 97)
-	if err == nil {
-		t.Fatal("InclusionSlot should have failed")
+	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 1, 0)
+	if _, err := InclusionSlot(state, 0); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
 func TestInclusionSlot_NotFound(t *testing.T) {
-	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.ValidatorRecord{
-			ExitSlot:      config.FarFutureSlot,
-			PenalizedSlot: 2,
-		}
-	}
-	validatorBalances := make([]uint64, len(validators))
-	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = config.MaxDepositInGwei
-	}
+	state := buildState(0, config.EpochLength)
 
-	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		ValidatorBalances: validatorBalances,
-		Slot:              5,
-		LatestAttestations: []*pb.PendingAttestationRecord{
-			{Data: &pb.AttestationData{},
-				ParticipationBitfield: []byte{'A'},
-				SlotIncluded:          100},
-		},
-	}
-
-	_, err := InclusionSlot(state, 1)
-	if err == nil {
-		t.Fatal("InclusionSlot should have failed")
+	badIndex := uint32(10000)
+	want := fmt.Sprintf("could not find inclusion slot for validator index %d", badIndex)
+	if _, err := InclusionSlot(state, badIndex); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
 func TestInclusionDistance_Ok(t *testing.T) {
-	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.ValidatorRecord{
-			ExitSlot:      config.FarFutureSlot,
-			PenalizedSlot: 2,
-		}
-	}
-	validatorBalances := make([]uint64, len(validators))
-	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = config.MaxDepositInGwei
-	}
+	state := buildState(0, config.EpochLength)
 
-	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		ValidatorBalances: validatorBalances,
-		Slot:              5,
-		LatestAttestations: []*pb.PendingAttestationRecord{
-			{Data: &pb.AttestationData{},
-				ParticipationBitfield: []byte{'A'},
-				SlotIncluded:          9},
-		},
+	state.LatestAttestations = []*pb.PendingAttestationRecord{
+		{Data: &pb.AttestationData{},
+			ParticipationBitfield: []byte{0xFF},
+			SlotIncluded:          100},
 	}
-
-	distance, err := InclusionDistance(state, 97)
+	distance, err := InclusionDistance(state, 45)
 	if err != nil {
 		t.Fatalf("Could not execute InclusionDistance: %v", err)
 	}
 
-	// Inclusion distance is 9 because input validator index is 7,
-	// validator 97's attested slot 0 and got included slot 9.
-	if distance != 9 {
-		t.Errorf("Incorrect distance. Wanted: 9, got: %d", distance)
+	// Inclusion distance is 100 because input validator index is 45,
+	// validator 45's attested slot 0 and got included slot 100.
+	if distance != state.LatestAttestations[0].SlotIncluded {
+		t.Errorf("Incorrect distance. Wanted: %d, got: %d",
+			state.LatestAttestations[0].SlotIncluded, distance)
 	}
 }
 
 func TestInclusionDistance_BadBitfield(t *testing.T) {
-	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.ValidatorRecord{
-			ExitSlot:      config.FarFutureSlot,
-			PenalizedSlot: 2,
-		}
-	}
-	validatorBalances := make([]uint64, len(validators))
-	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = config.MaxDepositInGwei
+	state := buildState(0, config.EpochLength)
+
+	state.LatestAttestations = []*pb.PendingAttestationRecord{
+		{Data: &pb.AttestationData{},
+			ParticipationBitfield: []byte{},
+			SlotIncluded:          100},
 	}
 
-	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		ValidatorBalances: validatorBalances,
-		Slot:              5,
-		LatestAttestations: []*pb.PendingAttestationRecord{
-			{Data: &pb.AttestationData{},
-				ParticipationBitfield: []byte{},
-				SlotIncluded:          100},
-		},
-	}
-
-	_, err := InclusionDistance(state, 1)
-	if err == nil {
-		t.Fatal("InclusionDistance should have failed")
+	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 1, 0)
+	if _, err := InclusionDistance(state, 0); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
 func TestInclusionDistance_NotFound(t *testing.T) {
-	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.ValidatorRecord{
-			ExitSlot:      config.FarFutureSlot,
-			PenalizedSlot: 2,
-		}
-	}
-	validatorBalances := make([]uint64, len(validators))
-	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = config.MaxDepositInGwei
-	}
+	state := buildState(0, config.EpochLength)
 
-	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		ValidatorBalances: validatorBalances,
-		Slot:              5,
-		LatestAttestations: []*pb.PendingAttestationRecord{
-			{Data: &pb.AttestationData{},
-				ParticipationBitfield: []byte{'A'},
-				SlotIncluded:          100},
-		},
-	}
-
-	_, err := InclusionDistance(state, 1)
-	if err == nil {
-		t.Fatal("InclusionDistance should have failed")
+	badIndex := uint32(10000)
+	want := fmt.Sprintf("could not find inclusion distance for validator index %d", badIndex)
+	if _, err := InclusionDistance(state, badIndex); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
