@@ -132,14 +132,14 @@ The following configuration options are available for state transition tests:
 
 **Casper Slashing Config**
 - **slot**: `int` a slot in which to trigger a casper slashing during a state transition test
-- **votes_1_slot**: `int` the slot of the attestation data of votes1
-- **votes_2_slot**: `int` the slot of the attestation data of votes2
-- **votes_1_justified_slot**: `int` the justified slot of the attestation data of votes1
-- **votes_2_justified_slot**: `int` the justified slot of the attestation data of votes2
-- **votes_1_custody_0_indices**: `[int]` the custody indices 0 for votes1
-- **votes_1_custody_1_indices**: `[int]` the custody indices 1 for votes1
-- **votes_2_custody_0_indices**: `[int]` the custody indices 0 for votes2
-- **votes_2_custody_1_indices**: `[int]` the custody indices 1 for votes2
+- **slashable_vote_data_1_slot**: `int` the slot of the attestation data of slashableVoteData1
+- **slashable_vote_data_2_slot**: `int` the slot of the attestation data of slashableVoteData2
+- **slashable_vote_data_1_justified_slot**: `int` the justified slot of the attestation data of slashableVoteData1
+- **slashable_vote_data_2_justified_slot**: `int` the justified slot of the attestation data of slashableVoteData2
+- **slashable_vote_data_1_custody_0_indices**: `[int]` the custody indices 0 for slashableVoteData1
+- **slashable_vote_data_1_custody_1_indices**: `[int]` the custody indices 1 for slashableVoteData1
+- **slashable_vote_data_2_custody_0_indices**: `[int]` the custody indices 0 for slashableVoteData2
+- **slashable_vote_data_2_custody_1_indices**: `[int]` the custody indices 1 for slashableVoteData2
 
 **Validator Exit Config**
 - **slot**: `int` the slot at which a validator wants to voluntarily exit the validator registry

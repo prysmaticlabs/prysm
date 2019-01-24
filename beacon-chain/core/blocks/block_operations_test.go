@@ -406,7 +406,7 @@ func TestProcessCasperSlashings_ThresholdReached(t *testing.T) {
 func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 	slashings := []*pb.CasperSlashing{
 		{
-			Votes_1: &pb.SlashableVoteData{
+			Slashable_Vote_Data_1: &pb.SlashableVoteData{
 				CustodyBit_0Indices: make(
 					[]uint32,
 					params.BeaconConfig().MaxCasperVotes,
@@ -416,7 +416,7 @@ func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 					params.BeaconConfig().MaxCasperVotes,
 				),
 			},
-			Votes_2: &pb.SlashableVoteData{
+			Slashable_Vote_Data_2: &pb.SlashableVoteData{
 				CustodyBit_0Indices: make(
 					[]uint32,
 					params.BeaconConfig().MaxCasperVotes,
@@ -453,10 +453,10 @@ func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 
-	// Perform the same check for Votes_2.
+	// Perform the same check for Slashable_Vote_Data_2.
 	slashings = []*pb.CasperSlashing{
 		{
-			Votes_1: &pb.SlashableVoteData{
+			Slashable_Vote_Data_1: &pb.SlashableVoteData{
 				CustodyBit_0Indices: make(
 					[]uint32,
 					params.BeaconConfig().MaxCasperVotes,
@@ -466,7 +466,7 @@ func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 					params.BeaconConfig().MaxCasperVotes,
 				),
 			},
-			Votes_2: &pb.SlashableVoteData{
+			Slashable_Vote_Data_2: &pb.SlashableVoteData{
 				CustodyBit_0Indices: make(
 					[]uint32,
 					params.BeaconConfig().MaxCasperVotes,
@@ -501,10 +501,10 @@ func TestProcessCasperSlashings_UnmatchedAttestations(t *testing.T) {
 	}
 	slashings := []*pb.CasperSlashing{
 		{
-			Votes_1: &pb.SlashableVoteData{
+			Slashable_Vote_Data_1: &pb.SlashableVoteData{
 				Data: att1,
 			},
-			Votes_2: &pb.SlashableVoteData{
+			Slashable_Vote_Data_2: &pb.SlashableVoteData{
 				Data: att1,
 			},
 		},
@@ -586,10 +586,10 @@ func TestProcessCasperSlashings_SlotsInequalities(t *testing.T) {
 	for _, tt := range testCases {
 		slashings := []*pb.CasperSlashing{
 			{
-				Votes_1: &pb.SlashableVoteData{
+				Slashable_Vote_Data_1: &pb.SlashableVoteData{
 					Data: tt.att1,
 				},
-				Votes_2: &pb.SlashableVoteData{
+				Slashable_Vote_Data_2: &pb.SlashableVoteData{
 					Data: tt.att2,
 				},
 			},
@@ -644,12 +644,12 @@ func TestProcessCasperSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 	}
 	slashings := []*pb.CasperSlashing{
 		{
-			Votes_1: &pb.SlashableVoteData{
+			Slashable_Vote_Data_1: &pb.SlashableVoteData{
 				Data:                att1,
 				CustodyBit_0Indices: []uint32{1, 2},
 				CustodyBit_1Indices: []uint32{3, 4},
 			},
-			Votes_2: &pb.SlashableVoteData{
+			Slashable_Vote_Data_2: &pb.SlashableVoteData{
 				Data:                att2,
 				CustodyBit_0Indices: []uint32{5, 6},
 				CustodyBit_1Indices: []uint32{7, 8},
@@ -709,12 +709,12 @@ func TestProcessCasperSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 	slashings := []*pb.CasperSlashing{
 		{
-			Votes_1: &pb.SlashableVoteData{
+			Slashable_Vote_Data_1: &pb.SlashableVoteData{
 				Data:                att1,
 				CustodyBit_0Indices: []uint32{0, 1},
 				CustodyBit_1Indices: []uint32{2, 3},
 			},
-			Votes_2: &pb.SlashableVoteData{
+			Slashable_Vote_Data_2: &pb.SlashableVoteData{
 				Data:                att2,
 				CustodyBit_0Indices: []uint32{4, 5},
 				CustodyBit_1Indices: []uint32{6, 1},

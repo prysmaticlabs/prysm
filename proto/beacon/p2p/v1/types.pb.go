@@ -1669,8 +1669,8 @@ func (m *ProposerSlashing) GetProposalSignature_2() []byte {
 }
 
 type CasperSlashing struct {
-	SlashableVoteData_1  *SlashableVoteData `protobuf:"bytes,1,opt,name=slashableVoteData_1,json=slashableVoteData1" json:"slashableVoteData_1,omitempty"`
-	SlashableVoteData_2  *SlashableVoteData `protobuf:"bytes,2,opt,name=slashableVoteData_2,json=slashableVoteData2" json:"slashableVoteData_2,omitempty"`
+	Slashable_Vote_Data_1  *SlashableVoteData `protobuf:"bytes,1,opt,name=slashable_vote_data_1,json=slashableVoteData1" json:"slashable_vote_data_1,omitempty"`
+	Slashable_Vote_Data_2  *SlashableVoteData `protobuf:"bytes,2,opt,name=slashable_vote_data_2,json=slashableVoteData2" json:"slashable_vote_data_2,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
 	XXX_unrecognized     []byte             `json:"-"`
 	XXX_sizecache        int32              `json:"-"`
@@ -1711,14 +1711,14 @@ var xxx_messageInfo_CasperSlashing proto.InternalMessageInfo
 
 func (m *CasperSlashing) GetVotes_1() *SlashableVoteData {
 	if m != nil {
-		return m.Votes_1
+		return m.Slashable_Vote_Data_1
 	}
 	return nil
 }
 
 func (m *CasperSlashing) GetVotes_2() *SlashableVoteData {
 	if m != nil {
-		return m.Votes_2
+		return m.Slashable_Vote_Data_2
 	}
 	return nil
 }
@@ -3258,21 +3258,21 @@ func (m *CasperSlashing) MarshalTo(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if m.Votes_1 != nil {
+	if m.Slashable_Vote_Data_1 != nil {
 		dAtA[i] = 0xa
 		i++
-		i = encodeVarintTypes(dAtA, i, uint64(m.Votes_1.Size()))
-		n20, err := m.Votes_1.MarshalTo(dAtA[i:])
+		i = encodeVarintTypes(dAtA, i, uint64(m.Slashable_Vote_Data_1.Size()))
+		n20, err := m.Slashable_Vote_Data_1.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
 		i += n20
 	}
-	if m.Votes_2 != nil {
+	if m.Slashable_Vote_Data_2 != nil {
 		dAtA[i] = 0x12
 		i++
-		i = encodeVarintTypes(dAtA, i, uint64(m.Votes_2.Size()))
-		n21, err := m.Votes_2.MarshalTo(dAtA[i:])
+		i = encodeVarintTypes(dAtA, i, uint64(m.Slashable_Vote_Data_2.Size()))
+		n21, err := m.Slashable_Vote_Data_2.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -4047,12 +4047,12 @@ func (m *ProposerSlashing) Size() (n int) {
 func (m *CasperSlashing) Size() (n int) {
 	var l int
 	_ = l
-	if m.Votes_1 != nil {
-		l = m.Votes_1.Size()
+	if m.Slashable_Vote_Data_1 != nil {
+		l = m.Slashable_Vote_Data_1.Size()
 		n += 1 + l + sovTypes(uint64(l))
 	}
-	if m.Votes_2 != nil {
-		l = m.Votes_2.Size()
+	if m.Slashable_Vote_Data_2 != nil {
+		l = m.Slashable_Vote_Data_2.Size()
 		n += 1 + l + sovTypes(uint64(l))
 	}
 	if m.XXX_unrecognized != nil {
@@ -8115,7 +8115,7 @@ func (m *CasperSlashing) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Votes_1", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Slashable_Vote_Data_1", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -8139,16 +8139,16 @@ func (m *CasperSlashing) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.Votes_1 == nil {
-				m.Votes_1 = &SlashableVoteData{}
+			if m.Slashable_Vote_Data_1 == nil {
+				m.Slashable_Vote_Data_1 = &SlashableVoteData{}
 			}
-			if err := m.Votes_1.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.Slashable_Vote_Data_1.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Votes_2", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Slashable_Vote_Data_2", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -8172,10 +8172,10 @@ func (m *CasperSlashing) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.Votes_2 == nil {
-				m.Votes_2 = &SlashableVoteData{}
+			if m.Slashable_Vote_Data_2 == nil {
+				m.Slashable_Vote_Data_2 = &SlashableVoteData{}
 			}
-			if err := m.Votes_2.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.Slashable_Vote_Data_2.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex

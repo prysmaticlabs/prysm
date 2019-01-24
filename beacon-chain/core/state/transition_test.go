@@ -204,12 +204,12 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	}
 	casperSlashings := []*pb.CasperSlashing{
 		{
-			Votes_1: &pb.SlashableVoteData{
+			Slashable_Vote_Data_1: &pb.SlashableVoteData{
 				Data:                att1,
 				CustodyBit_0Indices: []uint32{0, 1},
 				CustodyBit_1Indices: []uint32{2, 3},
 			},
-			Votes_2: &pb.SlashableVoteData{
+			Slashable_Vote_Data_2: &pb.SlashableVoteData{
 				Data:                att2,
 				CustodyBit_0Indices: []uint32{4, 5},
 				CustodyBit_1Indices: []uint32{6, 1},
@@ -287,12 +287,12 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	}
 	casperSlashings := []*pb.CasperSlashing{
 		{
-			Votes_1: &pb.SlashableVoteData{
+			Slashable_Vote_Data_1: &pb.SlashableVoteData{
 				Data:                att1,
 				CustodyBit_0Indices: []uint32{0, 1},
 				CustodyBit_1Indices: []uint32{2, 3},
 			},
-			Votes_2: &pb.SlashableVoteData{
+			Slashable_Vote_Data_2: &pb.SlashableVoteData{
 				Data:                att2,
 				CustodyBit_0Indices: []uint32{4, 5},
 				CustodyBit_1Indices: []uint32{6, 1},
@@ -395,12 +395,12 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	casperSlashings := []*pb.CasperSlashing{
 		{
-			Votes_1: &pb.SlashableVoteData{
+			Slashable_Vote_Data_1: &pb.SlashableVoteData{
 				Data:                att1,
 				CustodyBit_0Indices: []uint32{0, 1},
 				CustodyBit_1Indices: []uint32{2, 3},
 			},
-			Votes_2: &pb.SlashableVoteData{
+			Slashable_Vote_Data_2: &pb.SlashableVoteData{
 				Data:                att2,
 				CustodyBit_0Indices: []uint32{4, 5},
 				CustodyBit_1Indices: []uint32{6, 1},
