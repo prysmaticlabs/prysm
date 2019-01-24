@@ -501,7 +501,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "770c60269bf0ef965e9e7ac8bedcb6bca2a1cefd",
+    commit = "c6b37f3e92850b723493d63fd35aad34e19e048d",
     importpath = "golang.org/x/sys",
 )
 
@@ -543,7 +543,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_crypto",
-    commit = "ff983b9c42bc9fbf91556e191cc8efb585c16908",
+    commit = "057139ce5d2bdbe6fe73c53679e24e9cf007f637",
     importpath = "golang.org/x/crypto",
 )
 
@@ -615,7 +615,7 @@ go_repository(
 
 go_repository(
     name = "io_opencensus_go",
-    tag = "v0.18.0",
+    tag = "v0.19.0",
     importpath = "go.opencensus.io",
 )
 
@@ -663,7 +663,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_common",
-    commit = "2998b132700a7d019ff618c06a234b47c1f3f681",
+    tag = "v0.1.0",
     importpath = "github.com/prometheus/common",
 )
 
@@ -984,4 +984,10 @@ go_repository(
     name = "com_github_pkg_errors",
     tag = "v0.8.1",
     importpath = "github.com/pkg/errors",
+)
+
+go_repository(
+    name = "in_gopkg_natefinch_npipe_v2",
+    commit = "c1b8fa8bdccecb0b8db834ee0b92fdbcfa606dd6",
+    importpath = "gopkg.in/natefinch/npipe.v2",
 )
