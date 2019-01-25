@@ -130,7 +130,7 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't initialze genesis state: %v", err)
 	}
-	beaconState, err := db.GetState()
+	beaconState, err := db.State()
 	if err != nil {
 		t.Fatalf("Can't get genesis state: %v", err)
 	}
@@ -493,7 +493,7 @@ func TestValidatorSlotAndResponsibility(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't initialze genesis state: %v", err)
 	}
-	beaconState, err := db.GetState()
+	beaconState, err := db.State()
 	if err != nil {
 		t.Fatalf("Can't get genesis state: %v", err)
 	}
@@ -575,7 +575,7 @@ func TestValidatorShardID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't initialze genesis state: %v", err)
 	}
-	beaconState, err := db.GetState()
+	beaconState, err := db.State()
 	if err != nil {
 		t.Fatalf("Can't get genesis state: %v", err)
 	}
@@ -613,7 +613,7 @@ func TestValidatorAssignments(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't initialze genesis state: %v", err)
 	}
-	beaconState, err := db.GetState()
+	beaconState, err := db.State()
 	if err != nil {
 		t.Fatalf("Can't get genesis state: %v", err)
 	}

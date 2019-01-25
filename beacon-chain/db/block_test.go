@@ -20,7 +20,7 @@ func TestNilDB(t *testing.T) {
 		t.Fatal("HashBlock should return false")
 	}
 
-	bPrime, err := db.GetBlock(h)
+	bPrime, err := db.Block(h)
 	if err != nil {
 		t.Fatalf("failed to get block: %v", err)
 	}
@@ -41,7 +41,7 @@ func TestSave(t *testing.T) {
 		t.Fatalf("save block failed: %v", err)
 	}
 
-	b1Prime, err := db.GetBlock(h1)
+	b1Prime, err := db.Block(h1)
 	if err != nil {
 		t.Fatalf("failed to get block: %v", err)
 	}
@@ -61,7 +61,7 @@ func TestSave(t *testing.T) {
 		t.Fatalf("save block failed: %v", err)
 	}
 
-	b2Prime, err := db.GetBlock(h2)
+	b2Prime, err := db.Block(h2)
 	if err != nil {
 		t.Fatalf("failed to get block: %v", err)
 	}
@@ -71,16 +71,16 @@ func TestSave(t *testing.T) {
 	}
 }
 
-func TestGetBlockBySlotEmptyChain(t *testing.T) {
+func TestBlockBySlotEmptyChain(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	block, err := db.GetBlockBySlot(0)
+	block, err := db.BlockBySlot(0)
 	if err != nil {
 		t.Errorf("failure when fetching block by slot: %v", err)
 	}
 	if block != nil {
-		t.Error("GetBlockBySlot should return nil for an empty chain")
+		t.Error("BlockBySlot should return nil for an empty chain")
 	}
 }
 
@@ -92,7 +92,7 @@ func TestUpdateChainHeadNoBlock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
-	beaconState, err := db.GetState()
+	beaconState, err := db.State()
 	if err != nil {
 		t.Fatalf("failed to get beacon state: %v", err)
 	}
@@ -112,7 +112,7 @@ func TestUpdateChainHead(t *testing.T) {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
 
-	block, err := db.GetBlockBySlot(0)
+	block, err := db.BlockBySlot(0)
 	if err != nil {
 		t.Fatalf("failed to get genesis block: %v", err)
 	}
@@ -121,7 +121,7 @@ func TestUpdateChainHead(t *testing.T) {
 		t.Fatalf("failed to get hash of b: %v", err)
 	}
 
-	beaconState, err := db.GetState()
+	beaconState, err := db.State()
 	if err != nil {
 		t.Fatalf("failed to get beacon state: %v", err)
 	}
@@ -141,11 +141,11 @@ func TestUpdateChainHead(t *testing.T) {
 		t.Fatalf("failed to record the new head of the main chain: %v", err)
 	}
 
-	b2Prime, err := db.GetBlockBySlot(1)
+	b2Prime, err := db.BlockBySlot(1)
 	if err != nil {
 		t.Fatalf("failed to retrieve slot 1: %v", err)
 	}
-	b2Sigma, err := db.GetChainHead()
+	b2Sigma, err := db.ChainHead()
 	if err != nil {
 		t.Fatalf("failed to retrieve head: %v", err)
 	}
@@ -176,7 +176,7 @@ func TestChainProgress(t *testing.T) {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
 
-	beaconState, err := db.GetState()
+	beaconState, err := db.State()
 	if err != nil {
 		t.Fatalf("Failed to get beacon state: %v", err)
 	}
@@ -189,7 +189,7 @@ func TestChainProgress(t *testing.T) {
 	if err := db.UpdateChainHead(block1, beaconState); err != nil {
 		t.Fatalf("failed to record the new head: %v", err)
 	}
-	heighestBlock, err := db.GetChainHead()
+	heighestBlock, err := db.ChainHead()
 	if err != nil {
 		t.Fatalf("failed to get chain head: %v", err)
 	}
@@ -204,7 +204,7 @@ func TestChainProgress(t *testing.T) {
 	if err := db.UpdateChainHead(block2, beaconState); err != nil {
 		t.Fatalf("failed to record the new head: %v", err)
 	}
-	heighestBlock, err = db.GetChainHead()
+	heighestBlock, err = db.ChainHead()
 	if err != nil {
 		t.Fatalf("failed to get block: %v", err)
 	}
@@ -219,7 +219,7 @@ func TestChainProgress(t *testing.T) {
 	if err := db.UpdateChainHead(block3, beaconState); err != nil {
 		t.Fatalf("failed to update head: %v", err)
 	}
-	heighestBlock, err = db.GetChainHead()
+	heighestBlock, err = db.ChainHead()
 	if err != nil {
 		t.Fatalf("failed to get chain head: %v", err)
 	}

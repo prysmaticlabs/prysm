@@ -4,11 +4,11 @@ import (
 	"testing"
 )
 
-func TestSaveAndGetSlot(t *testing.T) {
+func TestSimulatorSlotAndSaveSimulatorSlot(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	retSlot, err := db.GetSimulatorSlot()
+	retSlot, err := db.SimulatorSlot()
 
 	if err != nil {
 		t.Fatalf("get slot failed: %v", err)
@@ -24,7 +24,7 @@ func TestSaveAndGetSlot(t *testing.T) {
 		t.Fatalf("save slot failed: %v", err)
 	}
 
-	retSlot, err = db.GetSimulatorSlot()
+	retSlot, err = db.SimulatorSlot()
 
 	if err != nil {
 		t.Fatalf("get slot failed: %v", err)

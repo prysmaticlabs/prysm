@@ -5,13 +5,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/trie"
-
 	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/trie"
 )
 
 // Generates a simulated beacon block to use

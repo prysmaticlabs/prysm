@@ -90,7 +90,7 @@ func (d *CleanupService) cleanBlockVoteCache(latestFinalizedSlot uint64) error {
 	var lastCleanedFinalizedSlot uint64
 	var err error
 
-	lastCleanedFinalizedSlot, err = d.beaconDB.GetCleanedFinalizedSlot()
+	lastCleanedFinalizedSlot, err = d.beaconDB.CleanedFinalizedSlot()
 	if err != nil {
 		return fmt.Errorf("failed to read cleaned finalized slot from DB: %v", err)
 	}
@@ -101,7 +101,7 @@ func (d *CleanupService) cleanBlockVoteCache(latestFinalizedSlot uint64) error {
 	var blockHashes [][32]byte
 	for slot := lastCleanedFinalizedSlot + 1; slot <= latestFinalizedSlot; slot++ {
 		var block *pb.BeaconBlock
-		block, err = d.beaconDB.GetBlockBySlot(slot)
+		block, err = d.beaconDB.BlockBySlot(slot)
 		if err != nil {
 			return fmt.Errorf("failed to read block at slot %d: %v", slot, err)
 		}

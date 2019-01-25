@@ -152,7 +152,7 @@ func setupBeaconChain(t *testing.T, faultyPoWClient bool, beaconDB *db.BeaconDB)
 }
 
 func SetSlotInState(service *ChainService, slot uint64) error {
-	bState, err := service.beaconDB.GetState()
+	bState, err := service.beaconDB.State()
 	if err != nil {
 		return err
 	}
@@ -221,10 +221,9 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 		DepositRootHash32: []byte("a"),
 	}
 
-	blockChan := make(chan *pb.BeaconBlock)
 	exitRoutine := make(chan bool)
 	go func() {
-		chainService.blockProcessing(blockChan)
+		chainService.blockProcessing()
 		<-exitRoutine
 	}()
 
@@ -233,7 +232,6 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 	}
 
 	chainService.incomingBlockChan <- block
-	<-blockChan
 	chainService.cancel()
 	exitRoutine <- true
 
@@ -283,7 +281,7 @@ func TestRunningChainService(t *testing.T) {
 	if err := chainService.beaconDB.SaveState(beaconState); err != nil {
 		t.Fatalf("Can't save state to db %v", err)
 	}
-	beaconState, err = chainService.beaconDB.GetState()
+	beaconState, err = chainService.beaconDB.State()
 	if err != nil {
 		t.Fatalf("Can't get state from db %v", err)
 	}
@@ -329,10 +327,9 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	blockChan := make(chan *pb.BeaconBlock)
 	exitRoutine := make(chan bool)
 	go func() {
-		chainService.blockProcessing(blockChan)
+		chainService.blockProcessing()
 		<-exitRoutine
 	}()
 
@@ -341,7 +338,6 @@ func TestRunningChainService(t *testing.T) {
 	}
 
 	chainService.incomingBlockChan <- block
-	<-blockChan
 	chainService.cancel()
 	exitRoutine <- true
 
@@ -355,7 +351,7 @@ func TestDoesPOWBlockExist(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, true, db)
 
-	beaconState, err := chainService.beaconDB.GetState()
+	beaconState, err := chainService.beaconDB.State()
 	if err != nil {
 		t.Fatalf("Unable to retrieve beacon state %v", err)
 	}
@@ -425,28 +421,17 @@ func TestUpdateHead(t *testing.T) {
 			ParentRootHash32:  genesisHash[:],
 			DepositRootHash32: []byte("a"),
 		}
-		h, err := hashutil.HashBeaconBlock(block)
-		if err != nil {
+		if err := chainService.beaconDB.SaveBlock(block); err != nil {
 			t.Fatal(err)
 		}
-
-		exitRoutine := make(chan bool)
-		blockChan := make(chan *pb.BeaconBlock)
-		go func() {
-			chainService.updateHead(blockChan)
-			<-exitRoutine
-		}()
+		if err := chainService.ApplyForkChoiceRule(block, tt.state); err != nil {
+			t.Errorf("Expected head to update, received %v", err)
+		}
 
 		if err := chainService.beaconDB.SaveBlock(block); err != nil {
 			t.Fatal(err)
 		}
-		chainService.unfinalizedBlocks[h] = tt.state
-
-		// If blocks pending processing is empty, the updateHead routine does nothing.
-		blockChan <- block
 		chainService.cancel()
-		exitRoutine <- true
-
 		testutil.AssertLogsContain(t, hook, tt.logAssert)
 	}
 }
@@ -459,7 +444,7 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't initialze genesis state: %v", err)
 	}
-	beaconState, err := db.GetState()
+	beaconState, err := db.State()
 	if err != nil {
 		t.Fatalf("Can't get genesis state: %v", err)
 	}

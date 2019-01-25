@@ -223,7 +223,7 @@ func TestProcessFinalization(t *testing.T) {
 	}
 }
 
-func TestProcessCrosslinks_Ok(t *testing.T) {
+func TestProcessCrosslinksOk(t *testing.T) {
 	shardCommitteesAtSlot := []*pb.ShardCommitteeArray{
 		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
@@ -273,7 +273,7 @@ func TestProcessCrosslinks_Ok(t *testing.T) {
 	}
 }
 
-func TestProcessCrosslinks_NoRoot(t *testing.T) {
+func TestProcessCrosslinksNoRoot(t *testing.T) {
 	shardCommitteesAtSlot := []*pb.ShardCommitteeArray{
 		{ArrayShardCommittee: []*pb.ShardCommittee{
 			{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4, 5, 6, 7}},
@@ -297,7 +297,7 @@ func TestProcessCrosslinks_NoRoot(t *testing.T) {
 	}
 }
 
-func TestProcessEjections_Ok(t *testing.T) {
+func TestProcessEjectionsOk(t *testing.T) {
 	var ShardCommittees []*pb.ShardCommitteeArray
 	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
 		ShardCommittees = append(ShardCommittees, &pb.ShardCommitteeArray{
@@ -312,7 +312,7 @@ func TestProcessEjections_Ok(t *testing.T) {
 		ValidatorBalances: []uint64{
 			params.BeaconConfig().EjectionBalanceInGwei - 1,
 			params.BeaconConfig().EjectionBalanceInGwei + 1},
-		LatestPenalizedExitBalances: []uint64{0},
+		LatestPenalizedBalances: []uint64{0},
 		ValidatorRegistry: []*pb.ValidatorRecord{
 			{ExitSlot: params.BeaconConfig().FarFutureSlot},
 			{ExitSlot: params.BeaconConfig().FarFutureSlot}},
@@ -334,8 +334,8 @@ func TestProcessEjections_Ok(t *testing.T) {
 
 func TestCanProcessValidatorRegistry(t *testing.T) {
 	state := &pb.BeaconState{
-		FinalizedSlot:                     100,
-		ValidatorRegistryLatestChangeSlot: 99,
+		FinalizedSlot:               100,
+		ValidatorRegistryUpdateSlot: 99,
 		LatestCrosslinks: []*pb.CrosslinkRecord{
 			{Slot: 101}, {Slot: 102}, {Slot: 103}, {Slot: 104},
 		},
@@ -352,15 +352,15 @@ func TestCanProcessValidatorRegistry(t *testing.T) {
 
 func TestCanNotProcessValidatorRegistry(t *testing.T) {
 	state := &pb.BeaconState{
-		FinalizedSlot:                     100,
-		ValidatorRegistryLatestChangeSlot: 101,
+		FinalizedSlot:               100,
+		ValidatorRegistryUpdateSlot: 101,
 	}
 	if CanProcessValidatorRegistry(state) {
 		t.Errorf("Wanted False for CanProcessValidatorRegistry, but got %v", CanProcessValidatorRegistry(state))
 	}
 	state = &pb.BeaconState{
-		FinalizedSlot:                     100,
-		ValidatorRegistryLatestChangeSlot: 99,
+		FinalizedSlot:               100,
+		ValidatorRegistryUpdateSlot: 99,
 		LatestCrosslinks: []*pb.CrosslinkRecord{
 			{Slot: 99},
 		},
@@ -374,121 +374,67 @@ func TestCanNotProcessValidatorRegistry(t *testing.T) {
 	}
 }
 
-func TestProcessValidatorRegistry(t *testing.T) {
-	epochLength := params.BeaconConfig().EpochLength
-	shardCommittees := make([]*pb.ShardCommitteeArray, epochLength*2)
-	for i := 0; i < len(shardCommittees); i++ {
-		shardCommittees[i] = &pb.ShardCommitteeArray{
-			ArrayShardCommittee: []*pb.ShardCommittee{{Shard: uint64(i)}},
-		}
-	}
-
+func TestProcessPrevSlotShardOk(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot:                              64,
-		ValidatorRegistryLatestChangeSlot: 1,
-		ShardCommitteesAtSlots:            shardCommittees,
-		LatestRandaoMixesHash32S:          [][]byte{{'A'}},
-	}
-	copiedState := proto.Clone(state).(*pb.BeaconState)
-	newState, err := ProcessValidatorRegistry(copiedState)
-	if err != nil {
-		t.Fatalf("Could not execute ProcessValidatorRegistry: %v", err)
+		CurrentEpochCalculationSlot: 1,
+		CurrentEpochStartShard:      2,
 	}
 
-	if newState.ShardCommitteesAtSlots[0].ArrayShardCommittee[0].Shard != state.ShardCommitteesAtSlots[epochLength].ArrayShardCommittee[0].Shard {
-		t.Errorf("Incorrect rotation for shard committees, wanted shard: %d, got shard: %d",
-			state.ShardCommitteesAtSlots[0].ArrayShardCommittee[0].Shard,
-			newState.ShardCommitteesAtSlots[epochLength].ArrayShardCommittee[0].Shard)
+	newState := ProcessPrevSlotShard(
+		proto.Clone(state).(*pb.BeaconState))
+
+	if newState.PreviousEpochCalculationSlot != state.CurrentEpochCalculationSlot {
+		t.Errorf("Incorret prev epoch calculation slot: Wanted: %d, got: %d",
+			newState.PreviousEpochCalculationSlot, state.CurrentEpochCalculationSlot)
+	}
+	if newState.PreviousEpochStartShard != state.CurrentEpochStartShard {
+		t.Errorf("Incorret prev epoch start shard: Wanted: %d, got: %d",
+			newState.PreviousEpochStartShard, state.CurrentEpochStartShard)
 	}
 }
 
-func TestProcessValidatorRegistry_ReachedUpperBound(t *testing.T) {
-	epochLength := params.BeaconConfig().EpochLength
-	shardCommittees := make([]*pb.ShardCommitteeArray, epochLength*2)
-	for i := 0; i < len(shardCommittees); i++ {
-		shardCommittees[i] = &pb.ShardCommitteeArray{
-			ArrayShardCommittee: []*pb.ShardCommittee{{Shard: uint64(i)}},
-		}
-	}
-	validators := make([]*pb.ValidatorRecord, 1<<params.BeaconConfig().MaxNumLog2Validators-1)
-	balances := make([]uint64, 1<<params.BeaconConfig().MaxNumLog2Validators-1)
-	validator := &pb.ValidatorRecord{ExitSlot: params.BeaconConfig().FarFutureSlot}
-	for i := 0; i < len(validators); i++ {
-		validators[i] = validator
-		balances[i] = params.BeaconConfig().MaxDepositInGwei
-	}
+func TestProcessValidatorRegistryOk(t *testing.T) {
+	offset := uint64(1)
 	state := &pb.BeaconState{
-		Slot:                              64,
-		ValidatorRegistryLatestChangeSlot: 1,
-		ShardCommitteesAtSlots:            shardCommittees,
-		LatestRandaoMixesHash32S:          [][]byte{{'A'}},
-		ValidatorRegistry:                 validators,
-		ValidatorBalances:                 balances,
+		Slot:                        config.SeedLookahead + offset,
+		LatestRandaoMixesHash32S:    [][]byte{{'A'}, {'B'}},
+		CurrentEpochRandaoMixHash32: []byte{'C'},
 	}
-
-	if _, err := ProcessValidatorRegistry(state); err == nil {
-		t.Fatalf("ProcessValidatorRegistry should have failed with upperbound")
+	newState, err := ProcessValidatorRegistry(
+		proto.Clone(state).(*pb.BeaconState))
+	if err != nil {
+		t.Fatalf("Could not execute ProcessValidatorRegistry: %v", err)
+	}
+	if !bytes.Equal(newState.PreviousEpochRandaoMixHash32, state.CurrentEpochRandaoMixHash32) {
+		t.Errorf("Incorret prev epoch randao mix hash: Wanted: %v, got: %v",
+			state.CurrentEpochRandaoMixHash32, newState.PreviousEpochRandaoMixHash32)
+	}
+	if newState.CurrentEpochCalculationSlot != state.Slot {
+		t.Errorf("Incorret curr epoch calculation slot: Wanted: %d, got: %d",
+			newState.CurrentEpochCalculationSlot, state.Slot)
+	}
+	if !bytes.Equal(newState.CurrentEpochRandaoMixHash32, state.LatestRandaoMixesHash32S[offset]) {
+		t.Errorf("Incorret current epoch randao mix hash: Wanted: %v, got: %v",
+			state.LatestRandaoMixesHash32S[offset], newState.CurrentEpochRandaoMixHash32)
 	}
 }
 
 func TestProcessPartialValidatorRegistry(t *testing.T) {
-	epochLength := params.BeaconConfig().EpochLength
-	shardCommittees := make([]*pb.ShardCommitteeArray, epochLength*2)
-	for i := 0; i < len(shardCommittees); i++ {
-		shardCommittees[i] = &pb.ShardCommitteeArray{
-			ArrayShardCommittee: []*pb.ShardCommittee{{Shard: uint64(i)}},
-		}
-	}
-
+	offset := uint64(1)
 	state := &pb.BeaconState{
-		Slot:                              64,
-		ValidatorRegistryLatestChangeSlot: 1,
-		ShardCommitteesAtSlots:            shardCommittees,
-		LatestRandaoMixesHash32S:          [][]byte{{'A'}},
+		Slot:                        config.SeedLookahead + offset,
+		ValidatorRegistryUpdateSlot: offset,
+		LatestRandaoMixesHash32S:    [][]byte{{'A'}, {'B'}},
 	}
 	copiedState := proto.Clone(state).(*pb.BeaconState)
-	newState, err := ProcessPartialValidatorRegistry(copiedState)
-	if err != nil {
-		t.Fatalf("Could not execute ProcessValidatorRegistryNoUpdate: %v", err)
+	newState := ProcessPartialValidatorRegistry(copiedState)
+	if newState.CurrentEpochCalculationSlot != state.Slot {
+		t.Errorf("Incorrect CurrentEpochCalculationSlot, wanted: %d, got: %d",
+			state.Slot, newState.CurrentEpochCalculationSlot)
 	}
-	if newState.ValidatorRegistryLatestChangeSlot != state.ValidatorRegistryLatestChangeSlot {
-		t.Errorf("Incorrect ValidatorRegistryLatestChangeSlot, wanted: %d, got: %d",
-			state.ValidatorRegistryLatestChangeSlot, newState.ValidatorRegistryLatestChangeSlot)
-	}
-
-	if newState.ShardCommitteesAtSlots[0].ArrayShardCommittee[0].Shard != state.ShardCommitteesAtSlots[epochLength].ArrayShardCommittee[0].Shard {
-		t.Errorf("Incorrect rotation for shard committees, wanted shard: %d, got shard: %d",
-			state.ShardCommitteesAtSlots[0].ArrayShardCommittee[0].Shard,
-			newState.ShardCommitteesAtSlots[epochLength].ArrayShardCommittee[0].Shard)
-	}
-}
-
-func TestProcessPartialValidatorRegistry_ReachedUpperBound(t *testing.T) {
-	epochLength := params.BeaconConfig().EpochLength
-	shardCommittees := make([]*pb.ShardCommitteeArray, epochLength*2)
-	for i := 0; i < len(shardCommittees); i++ {
-		shardCommittees[i] = &pb.ShardCommitteeArray{
-			ArrayShardCommittee: []*pb.ShardCommittee{{Shard: uint64(i)}},
-		}
-	}
-	validators := make([]*pb.ValidatorRecord, 1<<params.BeaconConfig().MaxNumLog2Validators-1)
-	balances := make([]uint64, 1<<params.BeaconConfig().MaxNumLog2Validators-1)
-	validator := &pb.ValidatorRecord{ExitSlot: params.BeaconConfig().FarFutureSlot}
-	for i := 0; i < len(validators); i++ {
-		validators[i] = validator
-		balances[i] = params.BeaconConfig().MaxDepositInGwei
-	}
-	state := &pb.BeaconState{
-		Slot:                              64,
-		ValidatorRegistryLatestChangeSlot: 1,
-		ShardCommitteesAtSlots:            shardCommittees,
-		LatestRandaoMixesHash32S:          [][]byte{{'A'}},
-		ValidatorRegistry:                 validators,
-		ValidatorBalances:                 balances,
-	}
-
-	if _, err := ProcessPartialValidatorRegistry(state); err == nil {
-		t.Fatalf("ProcessValidatorRegistry should have failed with upperbound")
+	if !bytes.Equal(newState.CurrentEpochRandaoMixHash32, state.LatestRandaoMixesHash32S[offset]) {
+		t.Errorf("Incorret current epoch randao mix hash: Wanted: %v, got: %v",
+			state.LatestRandaoMixesHash32S[offset], newState.CurrentEpochRandaoMixHash32)
 	}
 }
 
@@ -557,15 +503,15 @@ func TestUpdatePenalizedExitBalances(t *testing.T) {
 			config.LatestPenalizedExitLength)
 		latestPenalizedExitBalances[epoch] = tt.balances
 		state := &pb.BeaconState{
-			Slot:                        tt.slot,
-			LatestPenalizedExitBalances: latestPenalizedExitBalances}
+			Slot:                    tt.slot,
+			LatestPenalizedBalances: latestPenalizedExitBalances}
 		newState := UpdatePenalizedExitBalances(state)
-		if newState.LatestPenalizedExitBalances[epoch+1] !=
+		if newState.LatestPenalizedBalances[epoch+1] !=
 			tt.balances {
 			t.Errorf(
-				"LatestPenalizedExitBalances didn't update for epoch %d,"+
+				"LatestPenalizedBalances didn't update for epoch %d,"+
 					"wanted: %d, got: %d", epoch+1, tt.balances,
-				newState.LatestPenalizedExitBalances[epoch+1],
+				newState.LatestPenalizedBalances[epoch+1],
 			)
 		}
 	}

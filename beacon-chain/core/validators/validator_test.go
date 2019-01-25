@@ -12,6 +12,18 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+var size = 1<<(config.RandBytes*8) - 1
+var validatorsUpperBound = make([]*pb.ValidatorRecord, size)
+var validator = &pb.ValidatorRecord{
+	ExitSlot: config.FarFutureSlot,
+}
+
+func populateValidatorsMax() {
+	for i := 0; i < len(validatorsUpperBound); i++ {
+		validatorsUpperBound[i] = validator
+	}
+}
+
 func TestHasVoted(t *testing.T) {
 	// Setting bit field to 11111111.
 	pendingAttestation := &pb.Attestation{
@@ -280,7 +292,7 @@ func TestShardCommitteesAtSlot_OutOfBounds(t *testing.T) {
 }
 
 func TestEffectiveBalance(t *testing.T) {
-	defaultBalance := params.BeaconConfig().MaxDeposit * params.BeaconConfig().Gwei
+	defaultBalance := params.BeaconConfig().MaxDepositInGwei
 
 	tests := []struct {
 		a uint64
@@ -854,7 +866,7 @@ func TestExitValidator_Ok(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                                 100,
 		ValidatorRegistryDeltaChainTipHash32: []byte{'A'},
-		LatestPenalizedExitBalances:          []uint64{0},
+		LatestPenalizedBalances:              []uint64{0},
 		ValidatorRegistry: []*pb.ValidatorRecord{
 			{ExitSlot: params.BeaconConfig().FarFutureSlot, Pubkey: []byte{'B'}},
 		},
@@ -910,9 +922,9 @@ func TestProcessPenaltiesExits_ValidatorPenalized(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                        config.LatestPenalizedExitLength / 2 * config.EpochLength,
-		LatestPenalizedExitBalances: latestPenalizedExits,
-		ValidatorBalances:           []uint64{config.MaxDepositInGwei, config.MaxDepositInGwei},
+		Slot:                    config.LatestPenalizedExitLength / 2 * config.EpochLength,
+		LatestPenalizedBalances: latestPenalizedExits,
+		ValidatorBalances:       []uint64{config.MaxDepositInGwei, config.MaxDepositInGwei},
 		ValidatorRegistry: []*pb.ValidatorRecord{
 			{ExitSlot: params.BeaconConfig().FarFutureSlot, ExitCount: 1},
 		},
@@ -981,9 +993,9 @@ func TestUpdateRegistry_NoRotation(t *testing.T) {
 				i, config.EntryExitDelay, validator.ExitSlot)
 		}
 	}
-	if newState.ValidatorRegistryLatestChangeSlot != state.Slot {
+	if newState.ValidatorRegistryUpdateSlot != state.Slot {
 		t.Errorf("wanted validator registry lastet change %d, got %d",
-			state.Slot, newState.ValidatorRegistryLatestChangeSlot)
+			state.Slot, newState.ValidatorRegistryUpdateSlot)
 	}
 }
 
@@ -1012,9 +1024,9 @@ func TestUpdateRegistry_Activate(t *testing.T) {
 				i, config.EntryExitDelay, validator.ExitSlot)
 		}
 	}
-	if newState.ValidatorRegistryLatestChangeSlot != state.Slot {
+	if newState.ValidatorRegistryUpdateSlot != state.Slot {
 		t.Errorf("wanted validator registry lastet change %d, got %d",
-			state.Slot, newState.ValidatorRegistryLatestChangeSlot)
+			state.Slot, newState.ValidatorRegistryUpdateSlot)
 	}
 
 	if bytes.Equal(newState.ValidatorRegistryDeltaChainTipHash32, []byte{'A'}) {
@@ -1051,9 +1063,9 @@ func TestUpdateRegistry_Exit(t *testing.T) {
 				validator.ExitSlot)
 		}
 	}
-	if newState.ValidatorRegistryLatestChangeSlot != state.Slot {
+	if newState.ValidatorRegistryUpdateSlot != state.Slot {
 		t.Errorf("wanted validator registry lastet change %d, got %d",
-			state.Slot, newState.ValidatorRegistryLatestChangeSlot)
+			state.Slot, newState.ValidatorRegistryUpdateSlot)
 	}
 
 	if bytes.Equal(newState.ValidatorRegistryDeltaChainTipHash32, []byte{'A'}) {

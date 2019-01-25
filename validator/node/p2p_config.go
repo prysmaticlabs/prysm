@@ -1,18 +1,26 @@
 package node
 
 import (
+	"fmt"
+
 	"github.com/gogo/protobuf/proto"
-	pb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
+	beaconpb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/p2p/adapter/tracer"
 	"github.com/urfave/cli"
 )
 
-var topicMappings = map[pb.Topic]proto.Message{
-	pb.Topic_COLLATION_BODY_REQUEST:  &pb.CollationBodyRequest{},
-	pb.Topic_COLLATION_BODY_RESPONSE: &pb.CollationBodyResponse{},
-	pb.Topic_TRANSACTIONS:            &pb.Transaction{},
+var topicMappings = map[fmt.Stringer]proto.Message{
+	// Beacon chain topics
+	beaconpb.Topic_BEACON_BLOCK_ANNOUNCE: &beaconpb.BeaconBlockAnnounce{},
+	beaconpb.Topic_BEACON_BLOCK_REQUEST:  &beaconpb.BeaconBlockRequest{},
+	beaconpb.Topic_BEACON_BLOCK_RESPONSE: &beaconpb.BeaconBlockResponse{},
+	beaconpb.Topic_ATTESTATION_ANNOUNCE:  &beaconpb.AttestationAnnounce{},
+	beaconpb.Topic_ATTESTATION_REQUEST:   &beaconpb.AttestationRequest{},
+	beaconpb.Topic_ATTESTATION_RESPONSE:  &beaconpb.AttestationResponse{},
+
+	// Shard chain topics
 }
 
 func configureP2P(ctx *cli.Context) (*p2p.Server, error) {

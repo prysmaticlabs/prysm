@@ -30,7 +30,7 @@ func InitialValidatorRegistry() []*pb.ValidatorRecord {
 		pubkey := hashutil.Hash([]byte{byte(i)})
 		validators[i] = &pb.ValidatorRecord{
 			ExitSlot:               config.FarFutureSlot,
-			Balance:                config.MaxDeposit * config.Gwei,
+			Balance:                config.MaxDepositInGwei,
 			Pubkey:                 pubkey[:],
 			RandaoCommitmentHash32: randaoReveal[:],
 		}
@@ -260,8 +260,8 @@ func NewRegistryDeltaChainTip(
 //     """
 //     return min(state.validator_balances[idx], MAX_DEPOSIT * GWEI_PER_ETH)
 func EffectiveBalance(state *pb.BeaconState, idx uint32) uint64 {
-	if state.ValidatorBalances[idx] > config.MaxDeposit*config.Gwei {
-		return config.MaxDeposit * config.Gwei
+	if state.ValidatorBalances[idx] > config.MaxDepositInGwei {
+		return config.MaxDepositInGwei
 	}
 	return state.ValidatorBalances[idx]
 }
@@ -563,7 +563,7 @@ func PenalizeValidator(state *pb.BeaconState, idx uint32) (*pb.BeaconState, erro
 
 	penalizedDuration := (state.Slot / config.EpochLength) %
 		config.LatestPenalizedExitLength
-	state.LatestPenalizedExitBalances[penalizedDuration] +=
+	state.LatestPenalizedBalances[penalizedDuration] +=
 		EffectiveBalance(state, idx)
 
 	whistleblowerIdx, err := BeaconProposerIdx(state, state.Slot)
@@ -679,7 +679,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 			}
 		}
 	}
-	state.ValidatorRegistryLatestChangeSlot = state.Slot
+	state.ValidatorRegistryUpdateSlot = state.Slot
 	return state, nil
 }
 
@@ -721,8 +721,8 @@ func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 		if state.Slot/config.EpochLength == penalized {
 			penalizedEpoch := (state.Slot / config.EpochLength) % config.LatestPenalizedExitLength
 			penalizedEpochStart := (penalizedEpoch + 1) % config.LatestPenalizedExitLength
-			totalAtStart := state.LatestPenalizedExitBalances[penalizedEpochStart]
-			totalAtEnd := state.LatestPenalizedExitBalances[penalizedEpoch]
+			totalAtStart := state.LatestPenalizedBalances[penalizedEpochStart]
+			totalAtEnd := state.LatestPenalizedBalances[penalizedEpoch]
 			totalPenalties := totalAtStart - totalAtEnd
 
 			penaltyMultiplier := totalPenalties * 3

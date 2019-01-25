@@ -154,10 +154,10 @@ func TestProcessBlockRoots(t *testing.T) {
 }
 
 func TestForkVersion(t *testing.T) {
-	forkData := &pb.ForkData{
-		ForkSlot:        10,
-		PreForkVersion:  2,
-		PostForkVersion: 3,
+	forkData := &pb.Fork{
+		Slot:            10,
+		PreviousVersion: 2,
+		CurrentVersion:  3,
 	}
 
 	if ForkVersion(forkData, 9) != 2 {
@@ -170,10 +170,10 @@ func TestForkVersion(t *testing.T) {
 }
 
 func TestDomainVersion(t *testing.T) {
-	forkData := &pb.ForkData{
-		ForkSlot:        10,
-		PreForkVersion:  2,
-		PostForkVersion: 3,
+	forkData := &pb.Fork{
+		Slot:            10,
+		PreviousVersion: 2,
+		CurrentVersion:  3,
 	}
 
 	constant := uint64(math.Pow(2, 32))
@@ -258,5 +258,34 @@ func TestDecodeDepositAmountAndTimeStamp(t *testing.T) {
 		if tt.timestamp != decTimestamp {
 			t.Errorf("Decoded timestamp not equal to given timestamp, %d : %d", decTimestamp, tt.timestamp)
 		}
+	}
+}
+
+func TestBlockChildren(t *testing.T) {
+	genesisBlock := NewGenesisBlock([]byte{})
+	genesisHash, err := hashutil.HashBeaconBlock(genesisBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	targets := []*pb.BeaconBlock{
+		{
+			Slot:             9,
+			ParentRootHash32: genesisHash[:],
+		},
+		{
+			Slot:             5,
+			ParentRootHash32: []byte{},
+		},
+		{
+			Slot:             8,
+			ParentRootHash32: genesisHash[:],
+		},
+	}
+	children, err := BlockChildren(genesisBlock, targets)
+	if err != nil {
+		t.Fatalf("Could not fetch block children: %v", err)
+	}
+	if len(children) != 2 {
+		t.Errorf("Expected %d children, received %d", 2, len(children))
 	}
 }

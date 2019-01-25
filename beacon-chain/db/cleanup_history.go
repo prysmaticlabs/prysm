@@ -6,8 +6,8 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-// GetCleanedFinalizedSlot returns the most recent finalized slot when we did a DB clean up.
-func (db *BeaconDB) GetCleanedFinalizedSlot() (uint64, error) {
+// CleanedFinalizedSlot returns the most recent finalized slot when we did a DB clean up.
+func (db *BeaconDB) CleanedFinalizedSlot() (uint64, error) {
 	var lastFinalizedSlot uint64
 
 	err := db.view(func(tx *bolt.Tx) error {

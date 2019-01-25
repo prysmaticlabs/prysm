@@ -104,7 +104,7 @@ func (sim *Simulator) Start() {
 		return
 	}
 
-	currentSlot, err := sim.beaconDB.GetSimulatorSlot()
+	currentSlot, err := sim.beaconDB.SimulatorSlot()
 	if err != nil {
 		log.Fatal(err)
 		return
@@ -147,7 +147,7 @@ func (sim *Simulator) run(slotInterval <-chan uint64) {
 		chainHdReqSub.Unsubscribe()
 	}()
 
-	lastBlock, err := sim.beaconDB.GetChainHead()
+	lastBlock, err := sim.beaconDB.ChainHead()
 	if err != nil {
 		log.Errorf("Could not fetch latest block: %v", err)
 		return
@@ -266,7 +266,7 @@ func (sim *Simulator) processBlockReqBySlot(msg p2p.Message) {
 func (sim *Simulator) processStateRequest(msg p2p.Message) {
 	data := msg.Data.(*pb.BeaconStateRequest)
 
-	beaconState, err := sim.beaconDB.GetState()
+	beaconState, err := sim.beaconDB.State()
 	if err != nil {
 		log.Errorf("Could not retrieve beacon state: %v", err)
 		return
@@ -325,7 +325,7 @@ func (sim *Simulator) processBatchRequest(msg p2p.Message) {
 
 // generateBlock generates fake blocks for the simulator.
 func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*pb.BeaconBlock, error) {
-	beaconState, err := sim.beaconDB.GetState()
+	beaconState, err := sim.beaconDB.State()
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
@@ -388,7 +388,7 @@ func (sim *Simulator) generateBlock(slot uint64, lastHash [32]byte) (*pb.BeaconB
 // SendChainHead sends the latest head of the local chain
 // to the peer who requested it.
 func (sim *Simulator) SendChainHead(peer p2p.Peer) error {
-	block, err := sim.beaconDB.GetChainHead()
+	block, err := sim.beaconDB.ChainHead()
 	if err != nil {
 		return err
 	}

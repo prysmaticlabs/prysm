@@ -16,9 +16,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
@@ -419,7 +418,7 @@ func (s *InitialSync) checkBlockValidity(block *pb.BeaconBlock) error {
 		return errors.New("received a block that already exists. Exiting")
 	}
 
-	beaconState, err := s.db.GetState()
+	beaconState, err := s.db.State()
 	if err != nil {
 		return fmt.Errorf("failed to get beacon state: %v", err)
 	}
