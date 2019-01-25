@@ -12,20 +12,17 @@ func TestBaseRewardQuotient(t *testing.T) {
 	if params.BeaconConfig().BaseRewardQuotient != 1<<10 {
 		t.Errorf("BaseRewardQuotient should be 1024 for these tests to pass")
 	}
-	if params.BeaconConfig().Gwei != 1e9 {
-		t.Errorf("BaseRewardQuotient should be 1e9 for these tests to pass")
-	}
 
 	tests := []struct {
 		a uint64
 		b uint64
 	}{
 		{0, 0},
-		{1e6 * params.BeaconConfig().Gwei, 1024000},  //1M ETH staked, 9.76% interest.
-		{2e6 * params.BeaconConfig().Gwei, 1447936},  //2M ETH staked, 6.91% interest.
-		{5e6 * params.BeaconConfig().Gwei, 2289664},  //5M ETH staked, 4.36% interest.
-		{10e6 * params.BeaconConfig().Gwei, 3237888}, // 10M ETH staked, 3.08% interest.
-		{20e6 * params.BeaconConfig().Gwei, 4579328}, // 20M ETH staked, 2.18% interest.
+		{1e6 * 1e9, 30881},   //1M ETH staked, 9.76% interest.
+		{2e6 * 1e9, 43673},   //2M ETH staked, 6.91% interest.
+		{5e6 * 1e9, 69053},   //5M ETH staked, 4.36% interest.
+		{10e6 * 1e9, 97656},  // 10M ETH staked, 3.08% interest.
+		{20e6 * 1e9, 138106}, // 20M ETH staked, 2.18% interest.
 	}
 	for _, tt := range tests {
 		b := baseRewardQuotient(tt.a)
@@ -42,7 +39,7 @@ func TestBaseReward(t *testing.T) {
 		b uint64
 	}{
 		{0, 0},
-		{params.BeaconConfig().MinDepositinGwei, 61},
+		{params.BeaconConfig().MinDepositInGwei, 61},
 		{30 * 1e9, 1853},
 		{params.BeaconConfig().MaxDepositInGwei, 1976},
 		{40 * 1e9, 1976},
@@ -92,9 +89,9 @@ func TestFFGSrcRewardsPenalties(t *testing.T) {
 		// voted represents the validator indices that voted for FFG source,
 		// balanceAfterSrcRewardPenalties represents their final balances,
 		// validators who voted should get an increase, who didn't should get a decrease.
-		{[]uint32{}, []uint64{31999431819, 31999431819, 31999431819, 31999431819}},
-		{[]uint32{0, 1}, []uint64{32000284090, 32000284090, 31999431819, 31999431819}},
-		{[]uint32{0, 1, 2, 3}, []uint64{32000568181, 32000568181, 32000568181, 32000568181}},
+		{[]uint32{}, []uint64{31981661892, 31981661892, 31981661892, 31981661892}},
+		{[]uint32{0, 1}, []uint64{32009169054, 32009169054, 31981661892, 31981661892}},
+		{[]uint32{0, 1, 2, 3}, []uint64{32018338108, 32018338108, 32018338108, 32018338108}},
 	}
 	for _, tt := range tests {
 		validatorBalances := make([]uint64, 4)
@@ -131,9 +128,9 @@ func TestFFGTargetRewardsPenalties(t *testing.T) {
 		// voted represents the validator indices that voted for FFG target,
 		// balanceAfterTgtRewardPenalties represents their final balances,
 		// validators who voted should get an increase, who didn't should get a decrease.
-		{[]uint32{}, []uint64{31999431819, 31999431819, 31999431819, 31999431819}},
-		{[]uint32{0, 1}, []uint64{32000284090, 32000284090, 31999431819, 31999431819}},
-		{[]uint32{0, 1, 2, 3}, []uint64{32000568181, 32000568181, 32000568181, 32000568181}},
+		{[]uint32{}, []uint64{31981661892, 31981661892, 31981661892, 31981661892}},
+		{[]uint32{0, 1}, []uint64{32009169054, 32009169054, 31981661892, 31981661892}},
+		{[]uint32{0, 1, 2, 3}, []uint64{32018338108, 32018338108, 32018338108, 32018338108}},
 	}
 	for _, tt := range tests {
 		validatorBalances := make([]uint64, 4)
@@ -170,9 +167,9 @@ func TestChainHeadRewardsPenalties(t *testing.T) {
 		// voted represents the validator indices that voted for canonical chain,
 		// balanceAfterHeadRewardPenalties represents their final balances,
 		// validators who voted should get an increase, who didn't should get a decrease.
-		{[]uint32{}, []uint64{31999431819, 31999431819, 31999431819, 31999431819}},
-		{[]uint32{0, 1}, []uint64{32000284090, 32000284090, 31999431819, 31999431819}},
-		{[]uint32{0, 1, 2, 3}, []uint64{32000568181, 32000568181, 32000568181, 32000568181}},
+		{[]uint32{}, []uint64{31981661892, 31981661892, 31981661892, 31981661892}},
+		{[]uint32{0, 1}, []uint64{32009169054, 32009169054, 31981661892, 31981661892}},
+		{[]uint32{0, 1, 2, 3}, []uint64{32018338108, 32018338108, 32018338108, 32018338108}},
 	}
 	for _, tt := range tests {
 		validatorBalances := make([]uint64, 4)
@@ -223,8 +220,8 @@ func TestInclusionDistRewards_Ok(t *testing.T) {
 		// Validators shouldn't get penalized.
 		{[]uint32{}, []uint64{32000000000, 32000000000, 32000000000, 32000000000}},
 		// Validators inclusion rewards are constant.
-		{[]uint32{0, 1}, []uint64{32000454544, 32000454544, 32000000000, 32000000000}},
-		{[]uint32{0, 1, 2, 3}, []uint64{32000454544, 32000454544, 32000454544, 32000454544}},
+		{[]uint32{0, 1}, []uint64{32014670486, 32014670486, 32000000000, 32000000000}},
+		{[]uint32{0, 1, 2, 3}, []uint64{32014670486, 32014670486, 32014670486, 32014670486}},
 	}
 	for _, tt := range tests {
 		validatorBalances := make([]uint64, 4)
@@ -285,10 +282,10 @@ func TestInactivityFFGSrcPenalty(t *testing.T) {
 		epochsSinceFinality       uint64
 	}{
 		// The higher the epochs since finality, the more penalties applied.
-		{[]uint32{0, 1}, []uint64{32000000000, 32000000000, 31999427051, 31999427051}, 5},
-		{[]uint32{}, []uint64{31999427051, 31999427051, 31999427051, 31999427051}, 5},
-		{[]uint32{}, []uint64{31999422283, 31999422283, 31999422283, 31999422283}, 10},
-		{[]uint32{}, []uint64{31999412746, 31999412746, 31999412746, 31999412746}, 20},
+		{[]uint32{0, 1}, []uint64{32000000000, 32000000000, 31981657124, 31981657124}, 5},
+		{[]uint32{}, []uint64{31981657124, 31981657124, 31981657124, 31981657124}, 5},
+		{[]uint32{}, []uint64{31981652356, 31981652356, 31981652356, 31981652356}, 10},
+		{[]uint32{}, []uint64{31981642819, 31981642819, 31981642819, 31981642819}, 20},
 	}
 	for _, tt := range tests {
 		validatorBalances := make([]uint64, 4)
@@ -324,10 +321,10 @@ func TestInactivityFFGTargetPenalty(t *testing.T) {
 		epochsSinceFinality          uint64
 	}{
 		// The higher the epochs since finality, the more penalties applied.
-		{[]uint32{0, 1}, []uint64{32000000000, 32000000000, 31999427051, 31999427051}, 5},
-		{[]uint32{}, []uint64{31999427051, 31999427051, 31999427051, 31999427051}, 5},
-		{[]uint32{}, []uint64{31999422283, 31999422283, 31999422283, 31999422283}, 10},
-		{[]uint32{}, []uint64{31999412746, 31999412746, 31999412746, 31999412746}, 20},
+		{[]uint32{0, 1}, []uint64{32000000000, 32000000000, 31981657124, 31981657124}, 5},
+		{[]uint32{}, []uint64{31981657124, 31981657124, 31981657124, 31981657124}, 5},
+		{[]uint32{}, []uint64{31981652356, 31981652356, 31981652356, 31981652356}, 10},
+		{[]uint32{}, []uint64{31981642819, 31981642819, 31981642819, 31981642819}, 20},
 	}
 	for _, tt := range tests {
 		validatorBalances := make([]uint64, 4)
@@ -361,8 +358,8 @@ func TestInactivityHeadPenalty(t *testing.T) {
 		voted                             []uint32
 		balanceAfterInactivityHeadPenalty []uint64
 	}{
-		{[]uint32{}, []uint64{31999431819, 31999431819, 31999431819, 31999431819}},
-		{[]uint32{0, 1}, []uint64{32000000000, 32000000000, 31999431819, 31999431819}},
+		{[]uint32{}, []uint64{31981661892, 31981661892, 31981661892, 31981661892}},
+		{[]uint32{0, 1}, []uint64{32000000000, 32000000000, 31981661892, 31981661892}},
 		{[]uint32{0, 1, 2, 3}, []uint64{32000000000, 32000000000, 32000000000, 32000000000}},
 	}
 	for _, tt := range tests {
@@ -396,9 +393,9 @@ func TestInactivityExitedPenality(t *testing.T) {
 		balanceAfterExitedPenalty []uint64
 		epochsSinceFinality       uint64
 	}{
-		{[]uint64{31998285921, 31998285921, 31998285921, 31998285921}, 5},
-		{[]uint64{31998276385, 31998276385, 31998276385, 31998276385}, 10},
-		{[]uint64{31997341783, 31997341783, 31997341783, 31997341783}, 500},
+		{[]uint64{31944976140, 31944976140, 31944976140, 31944976140}, 5},
+		{[]uint64{31944966604, 31944966604, 31944966604, 31944966604}, 10},
+		{[]uint64{31944032002, 31944032002, 31944032002, 31944032002}, 500},
 	}
 	for _, tt := range tests {
 		validatorBalances := make([]uint64, 4)
@@ -442,8 +439,8 @@ func TestInactivityInclusionPenalty_Ok(t *testing.T) {
 		balanceAfterInclusionPenalty []uint64
 	}{
 		{[]uint32{}, []uint64{32000000000, 32000000000, 32000000000, 32000000000}},
-		{[]uint32{0, 1}, []uint64{31999886363, 31999886363, 32000000000, 32000000000}},
-		{[]uint32{0, 1, 2, 3}, []uint64{31999886363, 31999886363, 31999886363, 31999886363}},
+		{[]uint32{0, 1}, []uint64{31996332378, 31996332378, 32000000000, 32000000000}},
+		{[]uint32{0, 1, 2, 3}, []uint64{31996332378, 31996332378, 31996332378, 31996332378}},
 	}
 	for _, tt := range tests {
 		validatorBalances := make([]uint64, 4)
@@ -513,7 +510,7 @@ func TestAttestationInclusionRewards(t *testing.T) {
 		balanceAfterAttestationInclusion []uint64
 	}{
 		{[]uint32{}, []uint64{32000000000, 32000000000, 32000000000, 32000000000}},
-		{[]uint32{0}, []uint64{32000071022, 32000000000, 32000000000, 32000000000}},
+		{[]uint32{0}, []uint64{32002292263, 32000000000, 32000000000, 32000000000}},
 	}
 	for _, tt := range tests {
 		validatorBalances := make([]uint64, 4)
@@ -617,11 +614,11 @@ func TestCrosslinksRewardsPenalties(t *testing.T) {
 		{[]byte{0x0}, []uint64{
 			32 * 1e9, 32 * 1e9, 32 * 1e9, 32 * 1e9, 32 * 1e9, 32 * 1e9, 32 * 1e9, 32 * 1e9}},
 		{[]byte{0xF}, []uint64{
-			31986681100, 31986681100, 31986681100, 31986681100,
-			32013321624, 32013321624, 32013321624, 32013321624}},
+			31585730498, 31585730498, 31585730498, 31585730498,
+			32416931985, 32416931985, 32416931985, 32416931985}},
 		{[]byte{0xFF}, []uint64{
-			32025000000, 32025000000, 32025000000, 32025000000,
-			32025000000, 32025000000, 32025000000, 32025000000}},
+			32829149760, 32829149760, 32829149760, 32829149760,
+			32829149760, 32829149760, 32829149760, 32829149760}},
 	}
 	for _, tt := range tests {
 		attestation := []*pb.PendingAttestationRecord{
