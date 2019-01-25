@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"errors"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
@@ -81,11 +80,8 @@ func (ss *Service) Stop() error {
 // with the rest of the network and no errors occurred. Otherwise, it returns an error.
 func (ss *Service) Status() error {
 	synced, err := ss.Querier.IsSynced()
-	if err != nil {
+	if !synced && err != nil {
 		return err
-	}
-	if !synced {
-		return errors.New("node is not in sync with the rest of the network")
 	}
 	return nil
 }
