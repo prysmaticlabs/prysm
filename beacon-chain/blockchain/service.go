@@ -157,6 +157,8 @@ func (c *ChainService) doesPoWBlockExist(hash [32]byte) bool {
 	return powBlock != nil
 }
 
+// blockProcessing subscribes to incoming blocks, processes them if possible, and then applies
+// the fork-choice rule to update the beacon chain's head.
 func (c *ChainService) blockProcessing() {
 	subBlock := c.incomingBlockFeed.Subscribe(c.incomingBlockChan)
 	defer subBlock.Unsubscribe()
@@ -170,24 +172,13 @@ func (c *ChainService) blockProcessing() {
 		// can be received either from the sync service, the RPC service,
 		// or via p2p.
 		case block := <-c.incomingBlockChan:
-			// Before sending the blocks for processing we check to see if the blocks
-			// are valid to continue being processed. If the slot number in the block
-			// has already been processed by the beacon node, we throw it away. If the
-			// slot number is too high to be processed in the current slot, we store
-			// it in a cache.
 			beaconState, err := c.beaconDB.State()
 			if err != nil {
 				log.Errorf("Unable to retrieve beacon state %v", err)
 				continue
 			}
 
-			currentSlot := beaconState.Slot
-			if currentSlot+1 < block.Slot {
-				log.Debugf("Received block with slot higher than current slot + 1: %d", block.Slot)
-				continue
-			}
-
-			if currentSlot+1 == block.Slot {
+			if block.Slot > beaconState.Slot {
 				computedState, err := c.ReceiveBlock(block, beaconState)
 				if err != nil {
 					log.Errorf("Could not process received block: %v", err)
