@@ -4,6 +4,7 @@ import (
 	"context"
 	"io/ioutil"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
@@ -47,7 +48,8 @@ func setupSimulator(t *testing.T, beaconDB *db.BeaconDB) (*Simulator, *mockP2P) 
 	ctx := context.Background()
 	p2pService := &mockP2P{}
 
-	err := beaconDB.InitializeState()
+	genesisTime := uint64(time.Now().Unix())
+	err := beaconDB.InitializeState(genesisTime)
 	if err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
