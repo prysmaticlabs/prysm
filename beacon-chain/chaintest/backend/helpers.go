@@ -131,7 +131,6 @@ func generateSimulatedRandaoHashOnions(numSlots uint64) [][32]byte {
 		prevHash := hashOnions[i]
 		hashOnions = append(hashOnions, hashutil.Hash(prevHash[:]))
 	}
-	fmt.Println(hashOnions)
 	return hashOnions
 }
 
