@@ -1,0 +1,214 @@
+package rpc
+
+import (
+	"context"
+	"errors"
+	"github.com/golang/mock/gomock"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	ptypes"github.com/gogo/protobuf/types"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"time"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+)
+
+func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	genesis := b.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+	err := db.InitializeState()
+	if err != nil {
+		t.Fatalf("Can't initialze genesis state: %v", err)
+	}
+	beaconState, err := db.State()
+	if err != nil {
+		t.Fatalf("Can't get genesis state: %v", err)
+	}
+
+	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+
+	beaconServer := &BeaconServer{
+		beaconDB: db,
+		ctx: context.Background(),
+	}
+
+	pubkey := hashutil.Hash([]byte{byte(0)})
+	key := &pb.PublicKey{PublicKey: pubkey[:]}
+	publicKeys := []*pb.PublicKey{key}
+	req := &pb.ValidatorAssignmentRequest{
+		PublicKeys: publicKeys,
+	}
+
+	res, err := beaconServer.CurrentAssignmentsAndGenesisTime(context.Background(), req)
+	if err != nil {
+		t.Errorf("Could not call CurrentAssignments correctly: %v", err)
+	}
+
+	genesisTimeStamp, err := ptypes.TimestampProto(time.Unix(int64(beaconState.GenesisTime), 0))
+	if err != nil {
+		t.Errorf("Could not generate genesis timestamp %v", err)
+	}
+
+	if res.GenesisTimestamp.String() != genesisTimeStamp.String() {
+		t.Errorf(
+			"Received different genesis timestamp, wanted: %v, received: %v",
+			genesisTimeStamp.String(),
+			res.GenesisTimestamp,
+		)
+	}
+}
+
+func TestLatestAttestationContextClosed(t *testing.T) {
+	hook := logTest.NewGlobal()
+	mockAttestationService := &mockAttestationService{}
+	beaconServer := &BeaconServer{
+		attestationService: mockAttestationService,
+	}
+	exitRoutine := make(chan bool)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := internal.NewMockBeaconService_LatestAttestationServer(ctrl)
+	go func(tt *testing.T) {
+		if err := beaconServer.LatestAttestation(&ptypes.Empty{}, mockStream); err != nil {
+			tt.Errorf("Could not call RPC method: %v", err)
+		}
+		<-exitRoutine
+	}(t)
+	beaconServer.cancel()
+	exitRoutine <- true
+	testutil.AssertLogsContain(t, hook, "RPC context closed, exiting goroutine")
+}
+
+func TestLatestAttestationFaulty(t *testing.T) {
+	attestationService := &mockAttestationService{}
+    beaconServer := &BeaconServer{
+		attestationService: attestationService,
+	}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	exitRoutine := make(chan bool)
+	attestation := &pbp2p.Attestation{}
+
+	mockStream := internal.NewMockBeaconService_LatestAttestationServer(ctrl)
+	mockStream.EXPECT().Send(attestation).Return(errors.New("something wrong"))
+	// Tests a faulty stream.
+	go func(tt *testing.T) {
+		if err := beaconServer.LatestAttestation(&ptypes.Empty{}, mockStream); err.Error() != "something wrong" {
+			tt.Errorf("Faulty stream should throw correct error, wanted 'something wrong', got %v", err)
+		}
+		<-exitRoutine
+	}(t)
+
+	beaconServer.incomingAttestation <- attestation
+	beaconServer.cancel()
+	exitRoutine <- true
+}
+
+func TestLatestAttestation(t *testing.T) {
+	hook := logTest.NewGlobal()
+	attestationService := &mockAttestationService{}
+    beaconServer := &BeaconServer{
+		attestationService: attestationService,
+	}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	exitRoutine := make(chan bool)
+	attestation := &pbp2p.Attestation{}
+	mockStream := internal.NewMockBeaconService_LatestAttestationServer(ctrl)
+	mockStream.EXPECT().Send(attestation).Return(nil)
+	// Tests a good stream.
+	go func(tt *testing.T) {
+		if err := beaconServer.LatestAttestation(&ptypes.Empty{}, mockStream); err != nil {
+			tt.Errorf("Could not call RPC method: %v", err)
+		}
+		<-exitRoutine
+	}(t)
+	beaconServer.incomingAttestation <- attestation
+	beaconServer.cancel()
+	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, "Sending attestation to RPC clients")
+}
+
+func TestValidatorAssignments(t *testing.T) {
+	hook := logTest.NewGlobal()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	mockChain := newMockChainService()
+
+	genesis := b.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+
+	err := db.InitializeState()
+	if err != nil {
+		t.Fatalf("Can't initialze genesis state: %v", err)
+	}
+	beaconState, err := db.State()
+	if err != nil {
+		t.Fatalf("Can't get genesis state: %v", err)
+	}
+
+	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+
+    beaconServer := &BeaconServer{
+		chainService: mockChain,
+		beaconDB:     db,
+	}
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockStream := internal.NewMockBeaconService_ValidatorAssignmentsServer(ctrl)
+	mockStream.EXPECT().Send(gomock.Any()).Return(nil)
+
+	pubkey := hashutil.Hash([]byte{byte(0)})
+	key := &pb.PublicKey{PublicKey: pubkey[:]}
+	publicKeys := []*pb.PublicKey{key}
+	req := &pb.ValidatorAssignmentRequest{
+		PublicKeys: publicKeys,
+	}
+
+	exitRoutine := make(chan bool)
+
+	// Tests a validator assignment stream.
+	go func(tt *testing.T) {
+		if err := beaconServer.ValidatorAssignments(req, mockStream); err != nil {
+			tt.Errorf("Could not stream validators: %v", err)
+		}
+		<-exitRoutine
+	}(t)
+
+	beaconServer.canonicalStateChan <- beaconState
+	beaconServer.cancel()
+	exitRoutine <- true
+	testutil.AssertLogsContain(t, hook, "Sending new cycle assignments to validator clients")
+}
+
+func TestAssignmentsForPublicKeys_emptyPubKey(t *testing.T) {
+	pks := []*pb.PublicKey{{}}
+
+	a, err := assignmentsForPublicKeys(pks, nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(a) > 0 {
+		t.Errorf("Expected no assignments, but got %v", a)
+	}
+}
