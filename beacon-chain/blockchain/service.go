@@ -84,28 +84,38 @@ func (c *ChainService) Start() {
 		subChainStart := c.web3Service.ChainStartFeed().Subscribe(c.genesisTimeChan)
 		go func() {
 			genesisTime := <-c.genesisTimeChan
-			log.Info("ChainStart time reached, starting the beacon chain!")
-			c.genesisTime = genesisTime
-			unixTime := uint64(genesisTime.Unix())
-			if err := c.beaconDB.InitializeState(unixTime); err != nil {
-				log.Fatalf("Could not initialize beacon state to disk: %v", err)
-			}
-			beaconState, err := c.beaconDB.State()
-			if err != nil {
-				log.Fatalf("Could not attempt fetch beacon state: %v", err)
-			}
-			// TODO(#1389): Replace by state tree hashing algorithm to determine root instead of a hash.
-			hash, err := state.Hash(beaconState)
-			if err != nil {
-				log.Fatalf("Could not hash beacon state: %v", err)
-			}
-			if err := c.beaconDB.SaveBlock(b.NewGenesisBlock(hash[:])); err != nil {
-				log.Fatalf("Could not save genesis block to disk: %v", err)
+			if err := c.initializeBeaconChain(genesisTime); err != nil {
+				log.Fatalf("Could not initialize beacon chain: %v", err)
 			}
 			go c.blockProcessing()
 			subChainStart.Unsubscribe()
 		}()
 	}
+}
+
+// initializes the state and genesis block of the beacon chain to persistent storage
+// based on a genesis timestamp value obtained from the ChainStart event emitted
+// by the ETH1.0 Deposit Contract and the POWChain service of the node.
+func (c *ChainService) initializeBeaconChain(genesisTime time.Time) error {
+	log.Info("ChainStart time reached, starting the beacon chain!")
+	c.genesisTime = genesisTime
+	unixTime := uint64(genesisTime.Unix())
+	if err := c.beaconDB.InitializeState(unixTime); err != nil {
+		return fmt.Errorf("could not initialize beacon state to disk: %v", err)
+	}
+	beaconState, err := c.beaconDB.State()
+	if err != nil {
+		return fmt.Errorf("could not attempt fetch beacon state: %v", err)
+	}
+	// TODO(#1389): Replace by state tree hashing algorithm to determine root instead of a hash.
+	hash, err := state.Hash(beaconState)
+	if err != nil {
+		return fmt.Errorf("could not hash beacon state: %v", err)
+	}
+	if err := c.beaconDB.SaveBlock(b.NewGenesisBlock(hash[:])); err != nil {
+		return fmt.Errorf("could not save genesis block to disk: %v", err)
+	}
+	return nil
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.

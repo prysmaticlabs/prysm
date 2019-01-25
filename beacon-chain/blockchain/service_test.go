@@ -168,15 +168,17 @@ func TestStartStopUninitializedChain(t *testing.T) {
 
 	// Test the start function.
 	chainService.Start()
-	chainService.genesisTimeChan <- time.Unix(0, 0)
+	if err := chainService.initializeBeaconChain(time.Unix(0, 0)); err != nil {
+		t.Fatalf("Error initializing: %v", err)
+	}
 
 	if err := chainService.Stop(); err != nil {
-		t.Fatalf("unable to stop chain service: %v", err)
+		t.Fatalf("Unable to stop chain service: %v", err)
 	}
 
 	// The context should have been canceled.
 	if chainService.ctx.Err() == nil {
-		t.Error("context was not canceled")
+		t.Error("Context was not canceled")
 	}
 	testutil.AssertLogsContain(t, hook, "Waiting for ChainStart log from the Validator Deposit Contract to start the beacon chain...")
 	testutil.AssertLogsContain(t, hook, "ChainStart time reached, starting the beacon chain!")
