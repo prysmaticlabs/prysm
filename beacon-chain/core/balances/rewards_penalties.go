@@ -368,9 +368,7 @@ func Crosslinks(
 //    base_reward_quotient =
 //    	BASE_REWARD_QUOTIENT * integer_squareroot(total_balance // GWEI_PER_ETH)
 func baseRewardQuotient(totalBalance uint64) uint64 {
-
-	baseRewardQuotient := params.BeaconConfig().BaseRewardQuotient * mathutil.IntegerSquareRoot(
-		totalBalance/params.BeaconConfig().Gwei)
+	baseRewardQuotient := mathutil.IntegerSquareRoot(totalBalance) / params.BeaconConfig().BaseRewardQuotient
 
 	return baseRewardQuotient
 }

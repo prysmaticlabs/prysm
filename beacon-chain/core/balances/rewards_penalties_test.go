@@ -12,20 +12,17 @@ func TestBaseRewardQuotient(t *testing.T) {
 	if params.BeaconConfig().BaseRewardQuotient != 1<<10 {
 		t.Errorf("BaseRewardQuotient should be 1024 for these tests to pass")
 	}
-	if params.BeaconConfig().Gwei != 1e9 {
-		t.Errorf("BaseRewardQuotient should be 1e9 for these tests to pass")
-	}
 
 	tests := []struct {
 		a uint64
 		b uint64
 	}{
 		{0, 0},
-		{1e6 * params.BeaconConfig().Gwei, 1024000},  //1M ETH staked, 9.76% interest.
-		{2e6 * params.BeaconConfig().Gwei, 1447936},  //2M ETH staked, 6.91% interest.
-		{5e6 * params.BeaconConfig().Gwei, 2289664},  //5M ETH staked, 4.36% interest.
-		{10e6 * params.BeaconConfig().Gwei, 3237888}, // 10M ETH staked, 3.08% interest.
-		{20e6 * params.BeaconConfig().Gwei, 4579328}, // 20M ETH staked, 2.18% interest.
+		{1e6 * 1e9, 1024000},  //1M ETH staked, 9.76% interest.
+		{2e6 * 1e9, 1447936},  //2M ETH staked, 6.91% interest.
+		{5e6 * 1e9, 2289664},  //5M ETH staked, 4.36% interest.
+		{10e6 * 1e9, 3237888}, // 10M ETH staked, 3.08% interest.
+		{20e6 * 1e9, 4579328}, // 20M ETH staked, 2.18% interest.
 	}
 	for _, tt := range tests {
 		b := baseRewardQuotient(tt.a)
@@ -589,7 +586,7 @@ func TestAttestationInclusionRewards_NoProposerIndex(t *testing.T) {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
 		}
 		state := &pb.BeaconState{
-			Slot:                   1000,
+			Slot: 1000,
 			ShardCommitteesAtSlots: ShardCommittees,
 			ValidatorBalances:      validatorBalances,
 			LatestAttestations:     attestation,
