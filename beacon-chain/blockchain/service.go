@@ -70,15 +70,48 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
-	log.Info("Waiting for ChainStart log from the Validator Deposit Contract to start the beacon chain...")
-	subChainStart := c.web3Service.ChainStartFeed().Subscribe(c.genesisTimeChan)
-	go func() {
-		genesisTime := <-c.genesisTimeChan
-		log.Info("ChainStart time reached, starting the beacon chain!")
-		c.genesisTime = genesisTime
+	beaconState, err := c.beaconDB.State()
+	if err != nil {
+		log.Fatalf("Could not attempt fetch beacon state: %v", err)
+	}
+	// If the chain has already been initialized, simply start the block processing routine.
+	if beaconState != nil {
+		log.Info("Beacon chain data already exists, starting service")
+		c.genesisTime = time.Unix(int64(beaconState.GenesisTime), 0)
 		go c.blockProcessing()
-		subChainStart.Unsubscribe()
-	}()
+	} else {
+		log.Info("Waiting for ChainStart log from the Validator Deposit Contract to start the beacon chain...")
+		subChainStart := c.web3Service.ChainStartFeed().Subscribe(c.genesisTimeChan)
+		go func() {
+			genesisTime := <-c.genesisTimeChan
+			log.Info("ChainStart time reached, starting the beacon chain!")
+			c.genesisTime = genesisTime
+			unixTime := uint64(genesisTime.Unix())
+			if err := c.beaconDB.InitializeState(unixTime); err != nil {
+				log.Fatalf("Could not initialize beacon state to disk: %v", err)
+			}
+			beaconState, err := c.beaconDB.State()
+			if err != nil {
+				log.Fatalf("Could not attempt fetch beacon state: %v", err)
+			}
+			// TODO(#1389): Replace by state tree hashing algorithm to determine root instead of a hash.
+			hash, err := state.Hash(beaconState)
+			if err != nil {
+				log.Fatalf("Could not hash beacon state: %v", err)
+			}
+			genesisBlock, err := c.beaconDB.BlockBySlot(0)
+			if err != nil {
+				log.Fatalf("Could not attempt to fetch genesis block: %v", err)
+			}
+			if genesisBlock == nil {
+				if err := c.beaconDB.SaveBlock(b.NewGenesisBlock(hash[:])); err != nil {
+					log.Fatalf("Could not save genesis block to disk: %v", err)
+				}
+			}
+			go c.blockProcessing()
+			subChainStart.Unsubscribe()
+		}()
+	}
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.
@@ -150,7 +183,7 @@ func (c *ChainService) blockProcessing() {
 
 			currentSlot := beaconState.Slot
 			if currentSlot+1 < block.Slot {
-                log.Debugf("Received block with slot higher than current slot + 1: %d", block.Slot)
+				log.Debugf("Received block with slot higher than current slot + 1: %d", block.Slot)
 				continue
 			}
 
@@ -279,4 +312,3 @@ func (c *ChainService) isBlockReadyForProcessing(block *pb.BeaconBlock, beaconSt
 	}
 	return nil
 }
-

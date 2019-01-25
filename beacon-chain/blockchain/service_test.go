@@ -130,9 +130,6 @@ func setupBeaconChain(t *testing.T, faultyPoWClient bool, beaconDB *db.BeaconDB)
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
 	}
-	if err := beaconDB.InitializeState(); err != nil {
-		t.Fatalf("failed to initialize state: %v", err)
-	}
 
 	cfg := &Config{
 		BeaconBlockBuf: 0,
@@ -161,7 +158,7 @@ func SetSlotInState(service *ChainService, slot uint64) error {
 	return service.beaconDB.SaveState(bState)
 }
 
-func TestStartStop(t *testing.T) {
+func TestStartStopUninitializedChain(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -192,11 +189,51 @@ func TestStartStop(t *testing.T) {
 	}
 }
 
+func TestStartStopInitializedChain(t *testing.T) {
+	hook := logTest.NewGlobal()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	chainService := setupBeaconChain(t, false, db)
+
+	unixTime := uint64(time.Now().Unix())
+	if err := db.InitializeState(unixTime); err != nil {
+		t.Fatalf("Could not initialize beacon state to disk: %v", err)
+	}
+	beaconState, err := db.State()
+	if err != nil {
+		t.Fatalf("Could not attempt fetch beacon state: %v", err)
+	}
+	// TODO(#1389): Replace by state tree hashing algorithm to determine root instead of a hash.
+	hash, err := state.Hash(beaconState)
+	if err != nil {
+		t.Fatalf("Could not hash beacon state: %v", err)
+	}
+	if err := db.SaveBlock(b.NewGenesisBlock(hash[:])); err != nil {
+		t.Fatalf("Could not save genesis block to disk: %v", err)
+	}
+	// Test the start function.
+	chainService.Start()
+
+	if err := chainService.Stop(); err != nil {
+		t.Fatalf("unable to stop chain service: %v", err)
+	}
+
+	// The context should have been canceled.
+	if chainService.ctx.Err() == nil {
+		t.Error("context was not canceled")
+	}
+	testutil.AssertLogsContain(t, hook, "Beacon chain data already exists, starting service")
+}
+
 func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, true, db)
+	unixTime := uint64(time.Now().Unix())
+	if err := db.InitializeState(unixTime); err != nil {
+		t.Fatalf("Could not initialize beacon state to disk: %v", err)
+	}
 
 	if err := SetSlotInState(chainService, 1); err != nil {
 		t.Fatal(err)
@@ -240,10 +277,14 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 
 func TestRunningChainService(t *testing.T) {
 	hook := logTest.NewGlobal()
-
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db)
+	unixTime := uint64(time.Now().Unix())
+	if err := db.InitializeState(unixTime); err != nil {
+		t.Fatalf("Could not initialize beacon state to disk: %v", err)
+	}
+
 	deposits := make([]*pb.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
 		depositInput := &pb.DepositInput{
@@ -350,6 +391,10 @@ func TestDoesPOWBlockExist(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, true, db)
+	unixTime := uint64(time.Now().Unix())
+	if err := db.InitializeState(unixTime); err != nil {
+		t.Fatalf("Could not initialize beacon state to disk: %v", err)
+	}
 
 	beaconState, err := chainService.beaconDB.State()
 	if err != nil {
@@ -412,6 +457,10 @@ func TestUpdateHead(t *testing.T) {
 		db := internal.SetupDB(t)
 		defer internal.TeardownDB(t, db)
 		chainService := setupBeaconChain(t, false, db)
+		unixTime := uint64(time.Now().Unix())
+		if err := db.InitializeState(unixTime); err != nil {
+			t.Fatalf("Could not initialize beacon state to disk: %v", err)
+		}
 
 		enc, _ := proto.Marshal(tt.state)
 		stateRoot := hashutil.Hash(enc)
@@ -440,9 +489,9 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db)
-	err := db.InitializeState()
-	if err != nil {
-		t.Fatalf("Can't initialze genesis state: %v", err)
+	unixTime := uint64(time.Now().Unix())
+	if err := db.InitializeState(unixTime); err != nil {
+		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 	beaconState, err := db.State()
 	if err != nil {
