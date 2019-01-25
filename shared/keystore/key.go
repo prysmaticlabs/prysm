@@ -129,10 +129,10 @@ func (k *Key) UnmarshalJSON(j []byte) (err error) {
 	}
 
 	if err := k.PublicKey.Deserialize(pubkey); err != nil {
-		return fmt.Errorf("Unable to deserialize public key: %v", err)
+		return fmt.Errorf("unable to deserialize public key: %v", err)
 	}
 	if err := k.SecretKey.SetLittleEndian(seckey); err != nil {
-		return fmt.Errorf("Unable to generate key in little endian format: %v", err)
+		return fmt.Errorf("unable to generate key in little endian format: %v", err)
 	}
 
 	return nil
