@@ -290,18 +290,15 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	}
 
 	// Process validator registry.
+	state = e.ProcessPrevSlotShard(state)
+	state = v.ProcessPenaltiesAndExits(state)
 	if e.CanProcessValidatorRegistry(state) {
-		state = v.ProcessPenaltiesAndExits(state)
 		state, err = e.ProcessValidatorRegistry(state)
 		if err != nil {
 			return nil, fmt.Errorf("could not process validator registry: %v", err)
 		}
 	} else {
-		state = v.ProcessPenaltiesAndExits(state)
-		state, err = e.ProcessPartialValidatorRegistry(state)
-		if err != nil {
-			return nil, fmt.Errorf("could not process partial validator registry: %v", err)
-		}
+		state = e.ProcessPartialValidatorRegistry(state)
 	}
 
 	// Clean up processed attestations.
