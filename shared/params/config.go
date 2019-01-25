@@ -33,10 +33,8 @@ type BeaconChainConfig struct {
 	// Deposit contract constants.
 	DepositContractAddress   []byte // DepositContractAddress is the address of the deposit contract in PoW chain.
 	DepositContractTreeDepth uint64 // Depth of the Merkle trie of deposits in the validator deposit contract on the PoW chain.
-	MaxDeposit               uint64 // MaxDeposit is the maximal amount of ETH a validator can send to the deposit contract at once.
 	MaxDepositInGwei         uint64 // MaxDepositInGwei is the maximal amount of Gwei a validator can send to the deposit contract at once.
-	MinDeposit               uint64 // MinDeposit is the minimal amount of ETH a validator can send to the deposit contract at once.
-	MinDepositinGwei         uint64 // MinDepositinGwei is the maximal amount of Gwei a validator can send to the deposit contract at once.
+	MinDepositInGwei         uint64 // MinDepositInGwei is the maximal amount of Gwei a validator can send to the deposit contract at once.
 
 	// Initial value constants.
 	GenesisForkVersion      uint64   // GenesisForkVersion is used to track fork version between state transitions.
@@ -108,10 +106,8 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// Deposit contract constants.
 	DepositContractTreeDepth: 32,
-	MaxDeposit:               32,
 	MaxDepositInGwei:         32 * 1e9,
-	MinDeposit:               1,
-	MinDepositinGwei:         1 * 1e9,
+	MinDepositInGwei:         1 * 1e9,
 
 	// Initial value constants.
 	GenesisForkVersion: 0,
@@ -167,9 +163,8 @@ var demoBeaconConfig = &BeaconChainConfig{
 
 	// Deposit contract constants.
 	DepositContractTreeDepth: defaultBeaconConfig.DepositContractTreeDepth,
-	MaxDeposit:               defaultBeaconConfig.MaxDeposit,
 	MaxDepositInGwei:         defaultBeaconConfig.MaxDepositInGwei,
-	MinDeposit:               defaultBeaconConfig.MinDeposit,
+	MinDepositInGwei:         defaultBeaconConfig.MinDepositInGwei,
 
 	// Initial value constants.
 	GenesisForkVersion: defaultBeaconConfig.GenesisForkVersion,
@@ -195,7 +190,7 @@ var demoBeaconConfig = &BeaconChainConfig{
 
 	// Max operations per block constants.
 	MaxExits:             defaultBeaconConfig.MaxExits,
-	MaxDeposits:          defaultBeaconConfig.MaxDeposit,
+	MaxDeposits:          defaultBeaconConfig.MaxDeposits,
 	MaxAttestations:      defaultBeaconConfig.MaxAttestations,
 	MaxProposerSlashings: defaultBeaconConfig.MaxProposerSlashings,
 	MaxCasperSlashings:   defaultBeaconConfig.MaxCasperSlashings,

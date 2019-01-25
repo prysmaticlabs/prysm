@@ -30,7 +30,7 @@ func InitialValidatorRegistry() []*pb.ValidatorRecord {
 		pubkey := hashutil.Hash([]byte{byte(i)})
 		validators[i] = &pb.ValidatorRecord{
 			ExitSlot:               config.FarFutureSlot,
-			Balance:                config.MaxDeposit * config.Gwei,
+			Balance:                config.MaxDepositInGwei,
 			Pubkey:                 pubkey[:],
 			RandaoCommitmentHash32: randaoReveal[:],
 		}
@@ -260,8 +260,8 @@ func NewRegistryDeltaChainTip(
 //     """
 //     return min(state.validator_balances[idx], MAX_DEPOSIT * GWEI_PER_ETH)
 func EffectiveBalance(state *pb.BeaconState, idx uint32) uint64 {
-	if state.ValidatorBalances[idx] > config.MaxDeposit*config.Gwei {
-		return config.MaxDeposit * config.Gwei
+	if state.ValidatorBalances[idx] > config.MaxDepositInGwei {
+		return config.MaxDepositInGwei
 	}
 	return state.ValidatorBalances[idx]
 }
