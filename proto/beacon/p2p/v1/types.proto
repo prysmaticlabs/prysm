@@ -37,9 +37,9 @@ message BeaconState {
   repeated uint64 latest_penalized_balances = 3005;
   repeated PendingAttestationRecord latest_attestations = 3006;
 
-  // Ethereum 1.0 deposit root [4001-5000]
-  bytes latest_deposit_root_hash32 = 4001;
-  repeated DepositRootVote deposit_root_votes = 4002;
+  // Ethereum 1.0 chain data [4001-5000]
+  Eth1Data latest_eth1_data = 4001;
+  repeated Eth1DataVote eth1_data_votes = 4002;
 
   // Miscellaneous [5001-6000]
   uint64 genesis_time = 5001;
@@ -56,11 +56,6 @@ message Fork {
   uint64 previous_version = 1;
   uint64 current_version = 2;
   uint64 slot = 3;
-}
-
-message DepositRootVote {
-  bytes deposit_root_hash32 = 1;
-  uint64 vote_count = 2;
 }
 
 message PendingAttestationRecord {
@@ -148,7 +143,7 @@ message BeaconBlock {
   bytes parent_root_hash32 = 2;
   bytes state_root_hash32 = 3;
   bytes randao_reveal_hash32 = 4;
-  bytes deposit_root_hash32 = 5;
+  Eth1Data eth1_data = 5;
   repeated bytes signature = 6; // Type of [uint384]?
 
   // Block Body
@@ -226,6 +221,16 @@ message ValidatorRegistryDeltaBlock {
       EXIT = 1;
   }
   ValidatorRegistryDeltaFlags flag = 5;
+}
+
+message Eth1Data {
+  bytes deposit_root_hash32 = 1;
+  bytes block_hash32 = 2;
+}
+
+message Eth1DataVote {
+  Eth1Data eth1_data = 1;
+  uint64 vote_count = 2;
 }
 
 message CustodyChallenge {} // Empty until phase 1
