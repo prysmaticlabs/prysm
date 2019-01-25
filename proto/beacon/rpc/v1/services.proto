@@ -39,6 +39,7 @@ service ValidatorService {
     rpc ValidatorShardID(PublicKey) returns (ShardIDResponse);
     rpc ValidatorIndex(PublicKey) returns (IndexResponse);
     rpc ValidatorSlotAndResponsibility(PublicKey) returns (SlotResponsibilityResponse);
+    rpc ValidatorEpochAssignments(ValidatorEpochAssignmentsRequest) returns (ValidatorEpochAssignmentsResponse);
 }
 
 message ProposeRequest {
@@ -119,4 +120,15 @@ message ShardIDResponse {
 message CurrentAssignmentsResponse {
     repeated Assignment assignments = 1;
     google.protobuf.Timestamp genesis_timestamp = 2;
+}
+
+
+message ValidatorEpochAssignmentsRequest {
+  uint64 epoch_start = 1;
+  PublicKey public_key = 2;
+}
+
+message ValidatorEpochAssignmentsResponse {
+  uint64 epoch_start = 1;
+  repeated Assignment assignments = 2;
 }

@@ -443,6 +443,11 @@ func (s *Service) ValidatorAssignments(
 	}
 }
 
+// ValidatorEpochAssignments ... WIP
+func (s *Service) ValidatorEpochAssignments(ctx context.Context, req *pb.ValidatorEpochAssignmentsRequest) (*pb.ValidatorEpochAssignmentsResponse, error) {
+	return nil, nil
+}
+
 // assignmentsForPublicKeys fetches the validator assignments for a subset of public keys
 // given a crystallized state.
 func assignmentsForPublicKeys(keys []*pb.PublicKey, beaconState *pbp2p.BeaconState) ([]*pb.Assignment, error) {
