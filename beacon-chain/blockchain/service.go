@@ -99,10 +99,6 @@ func (c *ChainService) Start() {
 			if err != nil {
 				log.Fatalf("Could not hash beacon state: %v", err)
 			}
-			genesisBlock, err := c.beaconDB.BlockBySlot(0)
-			if err != nil {
-				log.Fatalf("Could not attempt to fetch genesis block: %v", err)
-			}
 			if err := c.beaconDB.SaveBlock(b.NewGenesisBlock(hash[:])); err != nil {
 				log.Fatalf("Could not save genesis block to disk: %v", err)
 			}
