@@ -285,7 +285,7 @@ func TestHeadAttestationsNotOk(t *testing.T) {
 }
 
 func TestWinningRootOk(t *testing.T) {
-	defaultBalance := params.BeaconConfig().MaxDeposit
+	defaultBalance := params.BeaconConfig().MaxDepositInGwei
 
 	ShardCommittees := []*pb.ShardCommitteeArray{
 		{ArrayShardCommittee: []*pb.ShardCommittee{
@@ -375,7 +375,7 @@ func TestWinningRootOutOfBound(t *testing.T) {
 }
 
 func TestAttestingValidatorsOk(t *testing.T) {
-	defaultBalance := params.BeaconConfig().MaxDeposit
+	defaultBalance := params.BeaconConfig().MaxDepositInGwei
 
 	ShardCommittees := []*pb.ShardCommitteeArray{
 		{ArrayShardCommittee: []*pb.ShardCommittee{
