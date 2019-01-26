@@ -98,11 +98,7 @@ func (a *Service) attestationAggregate() {
 				continue
 			}
 			h := hashutil.Hash(enc)
-			if err := a.beaconDB.SaveAttestation(attestation); err != nil {
-				log.Errorf("Could not save attestation: %v", err)
-				continue
-			}
-
+			// TODO(1366): Aggregate attestation with the existing one in cache. We need BLS.
 			log.Debugf("Forwarding aggregated attestation %#x to proposers through RPC", h)
 		}
 	}
