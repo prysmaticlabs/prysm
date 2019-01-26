@@ -35,39 +35,6 @@ func VerifyProposerSignature(
 	return nil
 }
 
-// ProcessDepositRoots processes the proof-of-work chain's receipts
-// contained in a beacon block and appends them as candidate receipt roots
-// in the beacon state.
-//
-// Official spec definition for processing deposit roots:
-//   If block.deposit_root is deposit_root_vote.deposit_root
-//     for some deposit_root_vote in state.deposit_root_votes,
-//     set deposit_root_vote.vote_count += 1.
-//   Otherwise, append to state.deposit_root_votes a
-//   new DepositRootVote(
-//     deposit_root=block.deposit_root,
-//     vote_count=1
-//   )
-func ProcessDepositRoots(
-	beaconState *pb.BeaconState,
-	block *pb.BeaconBlock,
-) *pb.BeaconState {
-	var newCandidateReceiptRoots []*pb.DepositRootVote
-	currentCandidateReceiptRoots := beaconState.DepositRootVotes
-	for idx, root := range currentCandidateReceiptRoots {
-		if bytes.Equal(block.DepositRootHash32, root.DepositRootHash32) {
-			currentCandidateReceiptRoots[idx].VoteCount++
-		} else {
-			newCandidateReceiptRoots = append(newCandidateReceiptRoots, &pb.DepositRootVote{
-				DepositRootHash32: block.DepositRootHash32,
-				VoteCount:         1,
-			})
-		}
-	}
-	beaconState.DepositRootVotes = append(currentCandidateReceiptRoots, newCandidateReceiptRoots...)
-	return beaconState
-}
-
 // ProcessBlockRandao checks the block proposer's
 // randao commitment and generates a new randao mix to update
 // in the beacon state's latest randao mixes and set the proposer's randao fields.
@@ -125,24 +92,19 @@ func verifyBlockRandao(proposer *pb.ValidatorRecord, block *pb.BeaconBlock) erro
 // beacon block to ensure the ETH1 data votes are processed
 // into the beacon state.
 func ProcessETH1Data(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
-
 	if block.Eth1Data.DepositRootHash32 == nil {
-		return nil, fmt.Errorf("expected block eth1 data signature to not be nil: received %d", block.Eth1Data)
+		return nil, fmt.Errorf("expected block eth1 data deposit root hash to not be nil: received %d", block.Eth1Data.DepositRootHash32)
 	}
 
 	if block.Eth1Data.BlockHash32 == nil {
-		return nil, fmt.Errorf("expected block eth1 data to not be nil: received %d", block.Eth1Data)
-	}
-
-	if beaconState.Eth1DataVotes == nil {
-		return nil, fmt.Errorf("expected beacon state eth1 data votes to not be nil: received %d", block.Eth1Data)
+		return nil, fmt.Errorf("expected block eth1 data block hash to not be nil: received %d", block.Eth1Data.BlockHash32)
 	}
 
 	var eth1DataVoteAdded bool
 
-	for _, data := range beaconState.Eth1DataVotes {
+	for idx, data := range beaconState.Eth1DataVotes {
 		if data.Eth1Data == block.Eth1Data {
-			data.VoteCount++
+			beaconState.Eth1DataVotes[idx].VoteCount++
 			eth1DataVoteAdded = true
 			break
 		}
@@ -663,7 +625,7 @@ func ProcessValidatorDeposits(
 
 func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 	// Verify Merkle proof of deposit and deposit trie root.
-	receiptRoot := bytesutil.ToBytes32(beaconState.LatestDepositRootHash32)
+	receiptRoot := bytesutil.ToBytes32(beaconState.LatestEth1Data.DepositRootHash32)
 	if ok := trie.VerifyMerkleBranch(
 		hashutil.Hash(deposit.DepositData),
 		deposit.MerkleBranchHash32S,

@@ -74,7 +74,6 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock, verifySignatures
 		}
 	}
 	var err error
-	state = b.ProcessDepositRoots(state, block)
 	state, err = b.ProcessBlockRandao(state, block)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify and process block randao: %v", err)
@@ -82,6 +81,10 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock, verifySignatures
 	state, err = b.ProcessProposerSlashings(state, block, verifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify block proposer slashings: %v", err)
+	}
+	state, err = b.ProcessETH1Data(state, block)
+	if err != nil {
+		return nil, fmt.Errorf("could not process block eth1 data: %v", err)
 	}
 	state, err = b.ProcessAttesterSlashings(state, block, verifySignatures)
 	if err != nil {
