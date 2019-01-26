@@ -121,6 +121,46 @@ func verifyBlockRandao(proposer *pb.ValidatorRecord, block *pb.BeaconBlock) erro
 	return nil
 }
 
+// ProcessETH1Data is an operation performed on each
+// beacon block to ensure the ETH1 data votes are processed
+// into the beacon state.
+func ProcessETH1Data(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+
+	if block.Eth1Data.DepositRootHash32 == nil {
+		return nil, fmt.Errorf("expected block eth1 data signature to not be nil: received %d", block.Eth1Data)
+	}
+
+	if block.Eth1Data.BlockHash32 == nil {
+		return nil, fmt.Errorf("expected block eth1 data to not be nil: received %d", block.Eth1Data)
+	}
+
+	if beaconState.Eth1DataVotes == nil {
+		return nil, fmt.Errorf("expected beacon state eth1 data votes to not be nil: received %d", block.Eth1Data)
+	}
+
+	var eth1DataVoteAdded bool
+
+	for _, data := range beaconState.Eth1DataVotes {
+		if data.Eth1Data == block.Eth1Data {
+			data.VoteCount++
+			eth1DataVoteAdded = true
+			break
+		}
+	}
+
+	if !eth1DataVoteAdded {
+		beaconState.Eth1DataVotes = append(
+			beaconState.Eth1DataVotes,
+			&pb.Eth1DataVote{
+				Eth1Data:  block.Eth1Data,
+				VoteCount: 1,
+			},
+		)
+	}
+
+	return beaconState, nil
+}
+
 // ProcessProposerSlashings is one of the operations performed
 // on each processed beacon block to penalize proposers based on
 // slashing conditions if any slashable events occurred.
@@ -442,7 +482,7 @@ func ProcessBlockAttestations(
 			return nil, fmt.Errorf("could not verify attestation at index %d in block: %v", idx, err)
 		}
 		pendingAttestations = append(pendingAttestations, &pb.PendingAttestationRecord{
-			Data:                  attestation.Data,
+			Data: attestation.Data,
 			ParticipationBitfield: attestation.ParticipationBitfield,
 			CustodyBitfield:       attestation.CustodyBitfield,
 			SlotIncluded:          beaconState.Slot,

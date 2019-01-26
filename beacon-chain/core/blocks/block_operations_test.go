@@ -136,6 +136,62 @@ func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 	}
 }
 
+func TestProcessETH1Data(t *testing.T) {
+	block := &pb.BeaconBlock{
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{},
+			BlockHash32:       []byte{},
+		},
+	}
+	beaconState := &pb.BeaconState{
+		Eth1DataVotes: []*pb.Eth1DataVote{
+			&pb.Eth1DataVote{
+				Eth1Data: &pb.Eth1Data{
+					DepositRootHash32: []byte{},
+					BlockHash32:       []byte{},
+				},
+				Eth1Data: &pb.Eth1Data{
+					DepositRootHash32: []byte{},
+					BlockHash32:       []byte{},
+				},
+				Eth1Data: &pb.Eth1Data{
+					DepositRootHash32: []byte{},
+					BlockHash32:       []byte{},
+				},
+				Eth1Data: &pb.Eth1Data{
+					DepositRootHash32: []byte{},
+					BlockHash32:       []byte{},
+				},
+			},
+		},
+		// Slot:              1,
+		// ShardCommitteesAtSlots: []*pb.ShardCommitteeArray{
+		// 	{
+		// 		ArrayShardCommittee: []*pb.ShardCommittee{
+		// 			{
+		// 				Shard:               0,
+		// 				Committee:           []uint32{1, 0},
+		// 				TotalValidatorCount: 1,
+		// 			},
+		// 		},
+		// 	},
+		// 	{
+		// 		ArrayShardCommittee: []*pb.ShardCommittee{
+		// 			{
+		// 				Shard:               0,
+		// 				Committee:           []uint32{1, 0},
+		// 				TotalValidatorCount: 1,
+		// 			},
+		// 		},
+		// 	},
+		// },
+	}
+
+	if _, err := ProcessETH1Data(beaconState, block) {
+
+	}
+}
+
 func TestProcessProposerSlashings_ThresholdReached(t *testing.T) {
 	slashings := make([]*pb.ProposerSlashing, config.MaxProposerSlashings+1)
 	registry := []*pb.ValidatorRecord{}
@@ -875,7 +931,7 @@ func TestProcessBlockAttestations_BlockRootOutOfBounds(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                   64,
+		Slot: 64,
 		PreviousJustifiedSlot:  65,
 		LatestBlockRootHash32S: blockRoots,
 	}
@@ -911,7 +967,7 @@ func TestProcessBlockAttestations_BlockRootFailure(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                   64,
+		Slot: 64,
 		PreviousJustifiedSlot:  10,
 		LatestBlockRootHash32S: blockRoots,
 	}
@@ -960,7 +1016,7 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   64,
+		Slot: 64,
 		PreviousJustifiedSlot:  10,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
@@ -1006,7 +1062,7 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   64,
+		Slot: 64,
 		PreviousJustifiedSlot:  10,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
@@ -1053,7 +1109,7 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   64,
+		Slot: 64,
 		PreviousJustifiedSlot:  10,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
@@ -1206,7 +1262,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	// validator helper function to fail with error when the public key
 	// currently exists in the validator registry.
 	depositInput := &pb.DepositInput{
-		Pubkey:                      []byte{1},
+		Pubkey: []byte{1},
 		WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		ProofOfPossession:           []byte{},
 		RandaoCommitmentHash32:      []byte{0},
@@ -1260,7 +1316,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	// the one specified in the deposit input, causing a failure.
 	registry := []*pb.ValidatorRecord{
 		{
-			Pubkey:                      []byte{1},
+			Pubkey: []byte{1},
 			WithdrawalCredentialsHash32: []byte{4, 5, 6},
 		},
 	}
@@ -1270,8 +1326,8 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 		ValidatorRegistry:       registry,
 		ValidatorBalances:       balances,
 		LatestDepositRootHash32: root[:],
-		Slot:                    currentSlot,
-		GenesisTime:             uint64(genesisTime),
+		Slot:        currentSlot,
+		GenesisTime: uint64(genesisTime),
 	}
 	want := "expected withdrawal credentials to match"
 	if _, err := ProcessValidatorDeposits(
@@ -1284,7 +1340,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 
 func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	depositInput := &pb.DepositInput{
-		Pubkey:                      []byte{1},
+		Pubkey: []byte{1},
 		WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		ProofOfPossession:           []byte{},
 		RandaoCommitmentHash32:      []byte{0},
@@ -1337,7 +1393,7 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	}
 	registry := []*pb.ValidatorRecord{
 		{
-			Pubkey:                      []byte{1},
+			Pubkey: []byte{1},
 			WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		},
 	}
@@ -1347,8 +1403,8 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 		ValidatorRegistry:       registry,
 		ValidatorBalances:       balances,
 		LatestDepositRootHash32: root[:],
-		Slot:                    currentSlot,
-		GenesisTime:             uint64(genesisTime),
+		Slot:        currentSlot,
+		GenesisTime: uint64(genesisTime),
 	}
 	newState, err := ProcessValidatorDeposits(
 		beaconState,
