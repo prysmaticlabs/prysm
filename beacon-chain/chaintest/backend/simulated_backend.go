@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -160,10 +161,12 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	for i := uint64(0); i < testCase.Config.NumSlots; i++ {
 		prevBlockRoot := prevBlockRoots[len(prevBlockRoots)-1]
 
-		proposerIndex, err := findNextSlotProposerIndex(beaconState)
+		committeeArray, err := validators.CrosslinkCommitteesAtSlot(beaconState, i)
 		if err != nil {
-			return fmt.Errorf("could not fetch beacon proposer index: %v", err)
+			return fmt.Errorf("could not get crosslink committee: %v", err)
 		}
+		firstCommittee := committeeArray[0].Committee
+		proposerIndex := firstCommittee[i%uint64(len(firstCommittee))]
 
 		// If the slot is marked as skipped in the configuration options,
 		// we simply run the state transition with a nil block argument.
