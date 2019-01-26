@@ -7,6 +7,8 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bitutil"
+	"github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/sirupsen/logrus"
@@ -15,7 +17,7 @@ import (
 var log = logrus.WithField("prefix", "attestation")
 
 // Service represents a service that handles the internal
-// logic of managing aggregated attestation.
+// logic of managing single and aggregated attestation.
 type Service struct {
 	ctx           context.Context
 	cancel        context.CancelFunc
@@ -24,6 +26,9 @@ type Service struct {
 	broadcastChan chan *pb.Attestation
 	incomingFeed  *event.Feed
 	incomingChan  chan *pb.Attestation
+	// AttestationPool is the mapping of individual
+	// validator's public key to it's newest attestation.
+	LatestAttestation map[[48]byte]*pb.Attestation
 }
 
 // Config options for the service.
@@ -51,7 +56,8 @@ func NewAttestationService(ctx context.Context, cfg *Config) *Service {
 // Start an attestation service's main event loop.
 func (a *Service) Start() {
 	log.Info("Starting service")
-	go a.aggregateAttestations()
+	go a.attestationAggregate()
+	go a.attestationPool()
 }
 
 // Stop the Attestation service's main event loop and associated goroutines.
@@ -73,9 +79,9 @@ func (a *Service) IncomingAttestationFeed() *event.Feed {
 	return a.incomingFeed
 }
 
-// aggregateAttestations aggregates the newly broadcasted attestation that was
+// attestationAggregate aggregates the newly broadcasted attestation that was
 // received from sync service.
-func (a *Service) aggregateAttestations() {
+func (a *Service) attestationAggregate() {
 	incomingSub := a.incomingFeed.Subscribe(a.incomingChan)
 	defer incomingSub.Unsubscribe()
 
@@ -100,4 +106,69 @@ func (a *Service) aggregateAttestations() {
 			log.Debugf("Forwarding aggregated attestation %#x to proposers through RPC", h)
 		}
 	}
+}
+
+// attestationPool takes an newly received attestation from sync service
+// and updates attestation pool.
+func (a *Service) attestationPool() {
+	incomingSub := a.incomingFeed.Subscribe(a.incomingChan)
+	defer incomingSub.Unsubscribe()
+
+	for {
+		select {
+		case <-a.ctx.Done():
+			log.Debug("Attestation pool closed, exiting goroutine")
+		// Listen for a newly received incoming attestation from the sync service.
+		case attestation := <-a.incomingChan:
+			enc, err := proto.Marshal(attestation)
+			if err != nil {
+				log.Errorf("Could not marshal incoming attestation to bytes: %v", err)
+				continue
+			}
+			h := hashutil.Hash(enc)
+
+			if err := a.updateLatestAttestation(attestation); err != nil {
+				log.Errorf("Could not update attestation pool: %v", err)
+				continue
+			}
+
+			log.Debugf("Updated attestation pool for attestation %#x", h)
+		}
+	}
+}
+
+// updateLatestAttestation inputs an new attestation and checks whether
+// the attesters who submitted this attestation with the higher slot number
+// have been noted in the attestation pool. If not, it updates the
+// attestation pool with attester's public key to attestation.
+func (a *Service) updateLatestAttestation(attestation *pb.Attestation) error {
+	// Potential improvement, instead of getting the state,
+	// we could get a mapping of validator index to public key.
+	state, err := a.beaconDB.State()
+	if err != nil {
+		return err
+	}
+
+	bitfield := attestation.ParticipationBitfield
+	totalBits := len(bitfield) * 8
+	// Check each bit of participation bitfield to find out which
+	// attester has submitted new attestation.
+	// This is has O(n) run time and could be optimized down the line.
+	for i := 0; i < totalBits; i++ {
+		bitSet, err := bitutil.CheckBit(bitfield, i)
+		if err != nil {
+			return err
+		}
+		// If the attestation came from this attester.
+		if bitSet {
+			pubkey := bytes.ToBytes48(state.ValidatorRegistry[i].Pubkey)
+			newAttestationSlot := attestation.Data.Slot
+			currentAttestationSlot := a.LatestAttestation[pubkey].Data.Slot
+			// If the attestation is newer than this attester's one in pool.
+			if newAttestationSlot > currentAttestationSlot {
+				a.LatestAttestation[pubkey] = attestation
+			}
+		}
+	}
+	return nil
 }

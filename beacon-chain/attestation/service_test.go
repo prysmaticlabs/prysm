@@ -23,7 +23,7 @@ func TestIncomingAttestations(t *testing.T) {
 
 	exitRoutine := make(chan bool)
 	go func() {
-		service.aggregateAttestations()
+		service.attestationAggregate()
 		<-exitRoutine
 	}()
 
