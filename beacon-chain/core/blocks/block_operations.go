@@ -102,9 +102,9 @@ func ProcessETH1Data(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.Be
 
 	var eth1DataVoteAdded bool
 
-	for idx, data := range beaconState.Eth1DataVotes {
-		if data.Eth1Data == block.Eth1Data {
-			beaconState.Eth1DataVotes[idx].VoteCount++
+	for _, data := range beaconState.Eth1DataVotes {
+		if reflect.DeepEqual(data.Eth1Data, block.Eth1Data) {
+			data.VoteCount++
 			eth1DataVoteAdded = true
 			break
 		}

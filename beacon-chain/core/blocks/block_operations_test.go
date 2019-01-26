@@ -133,7 +133,8 @@ func TestProcessETH1Data_InvalidDepositRoot(t *testing.T) {
 		},
 	}
 	want := fmt.Sprintf(
-		"expected block eth1 data deposit root hash to not be nil: received nil",
+		"expected block eth1 data deposit root hash to not be nil: received %d",
+		[]byte{},
 	)
 	if _, err := ProcessETH1Data(beaconState, block); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
