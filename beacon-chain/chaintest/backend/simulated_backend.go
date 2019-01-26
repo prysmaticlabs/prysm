@@ -234,7 +234,10 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 			return fmt.Errorf("could not generate simulated beacon block %v", err)
 		}
 		latestRoot := depositsTrie.Root()
-		beaconState.LatestDepositRootHash32 = latestRoot[:]
+		beaconState.LatestEth1Data = &pb.Eth1Data{
+			DepositRootHash32: latestRoot[:],
+			BlockHash32:       latestRoot[:],
+		}
 
 		startTime := time.Now()
 		newState, err := state.ExecuteStateTransition(

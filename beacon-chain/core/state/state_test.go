@@ -153,10 +153,10 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	}
 
 	// deposit root checks.
-	if !bytes.Equal(state.LatestDepositRootHash32, processedPowReceiptRoot) {
-		t.Error("LatestDepositRootHash32 was not correctly initialized")
+	if !bytes.Equal(state.LatestEth1Data.DepositRootHash32, processedPowReceiptRoot) {
+		t.Error("LatestEth1Data DepositRootHash32 was not correctly initialized")
 	}
-	if !reflect.DeepEqual(state.DepositRootVotes, []*pb.DepositRootVote{}) {
+	if !reflect.DeepEqual(state.Eth1DataVotes, []*pb.Eth1DataVote{}) {
 		t.Error("DepositRootVotes was not correctly initialized")
 	}
 }

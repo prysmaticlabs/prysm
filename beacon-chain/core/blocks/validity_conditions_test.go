@@ -76,6 +76,7 @@ func TestBadBlock(t *testing.T) {
 	powClient.blockExists = false
 	beaconState.LatestEth1Data = &pb.Eth1Data{
 		DepositRootHash32: []byte{2},
+		BlockHash32:       []byte{2},
 	}
 
 	if err := IsValidBlock(ctx, beaconState, block, true,
@@ -112,6 +113,7 @@ func TestValidBlock(t *testing.T) {
 
 	beaconState.LatestEth1Data = &pb.Eth1Data{
 		DepositRootHash32: []byte{2},
+		BlockHash32:       []byte{2},
 	}
 
 	if err := IsValidBlock(ctx, beaconState, block, true,

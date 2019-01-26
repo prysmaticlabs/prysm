@@ -30,7 +30,7 @@ func CanProcessEpoch(state *pb.BeaconState) bool {
 // Spec pseudocode definition:
 //    If state.slot % DEPOSIT_ROOT_VOTING_PERIOD == 0:
 func CanProcessDepositRoots(state *pb.BeaconState) bool {
-	return state.Slot%config.DepositRootVotingPeriod == 0
+	return state.Slot%config.Eth1DataVotingPeriod == 0
 }
 
 // CanProcessValidatorRegistry checks the eligibility to process validator registry.
@@ -63,13 +63,14 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 // ProcessDeposits processes deposit roots by checking its vote count.
 // With sufficient votes (>2*DEPOSIT_ROOT_VOTING_PERIOD), it then
 // assigns root hash to processed receipt vote in state.
-func ProcessDeposits(state *pb.BeaconState) *pb.BeaconState {
-	for _, receiptRoot := range state.DepositRootVotes {
-		if receiptRoot.VoteCount*2 > config.DepositRootVotingPeriod {
-			state.LatestDepositRootHash32 = receiptRoot.DepositRootHash32
+func ProcessEth1Data(state *pb.BeaconState) *pb.BeaconState {
+	for _, eth1DataVote := range state.Eth1DataVotes {
+		if eth1DataVote.VoteCount*2 > config.Eth1DataVotingPeriod {
+			state.LatestEth1Data.DepositRootHash32 = eth1DataVote.Eth1Data.DepositRootHash32
+			state.LatestEth1Data.BlockHash32 = eth1DataVote.Eth1Data.BlockHash32
 		}
 	}
-	state.DepositRootVotes = make([]*pb.DepositRootVote, 0)
+	state.Eth1DataVotes = make([]*pb.Eth1DataVote, 0)
 	return state
 }
 

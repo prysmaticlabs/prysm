@@ -82,7 +82,7 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock, verifySignatures
 	if err != nil {
 		return nil, fmt.Errorf("could not verify block proposer slashings: %v", err)
 	}
-	state, err = b.ProcessETH1Data(state, block)
+	state, err = b.ProcessEth1Data(state, block)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block eth1 data: %v", err)
 	}
@@ -180,7 +180,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Process receipt roots.
 	if e.CanProcessDepositRoots(state) {
-		e.ProcessDeposits(state)
+		state = e.ProcessEth1Data(state)
 	}
 
 	// Update justification.

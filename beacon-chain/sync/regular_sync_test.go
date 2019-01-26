@@ -157,9 +157,12 @@ func TestProcessBlock(t *testing.T) {
 	}
 
 	data := &pb.BeaconBlock{
-		DepositRootHash32: []byte{1, 2, 3, 4, 5},
-		ParentRootHash32:  parentHash[:],
-		Slot:              1,
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{1, 2, 3, 4, 5},
+			BlockHash32:       []byte{1, 2, 3, 4, 5},
+		},
+		ParentRootHash32: parentHash[:],
+		Slot:             1,
 	}
 	attestation := &pb.Attestation{
 		Data: &pb.AttestationData{
@@ -237,9 +240,12 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}
 
 	data1 := &pb.BeaconBlock{
-		DepositRootHash32: []byte{1, 2, 3, 4, 5},
-		ParentRootHash32:  parentHash[:],
-		Slot:              1,
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{1, 2, 3, 4, 5},
+			BlockHash32:       []byte{1, 2, 3, 4, 5},
+		},
+		ParentRootHash32: parentHash[:],
+		Slot:             1,
 	}
 
 	responseBlock1 := &pb.BeaconBlockResponse{
@@ -260,9 +266,12 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}
 
 	data2 := &pb.BeaconBlock{
-		DepositRootHash32: []byte{6, 7, 8, 9, 10},
-		ParentRootHash32:  []byte{},
-		Slot:              1,
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{6, 7, 8, 9, 10},
+			BlockHash32:       []byte{6, 7, 8, 9, 10},
+		},
+		ParentRootHash32: []byte{},
+		Slot:             1,
 	}
 
 	responseBlock2 := &pb.BeaconBlockResponse{

@@ -88,10 +88,10 @@ func verifyBlockRandao(proposer *pb.ValidatorRecord, block *pb.BeaconBlock) erro
 	return nil
 }
 
-// ProcessETH1Data is an operation performed on each
+// ProcessEth1Data is an operation performed on each
 // beacon block to ensure the ETH1 data votes are processed
 // into the beacon state.
-func ProcessETH1Data(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+func ProcessEth1Data(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
 	if block.Eth1Data.DepositRootHash32 == nil {
 		return nil, fmt.Errorf("expected block eth1 data deposit root hash to not be nil: received %d", block.Eth1Data.DepositRootHash32)
 	}
@@ -103,10 +103,12 @@ func ProcessETH1Data(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.Be
 	var eth1DataVoteAdded bool
 
 	for _, data := range beaconState.Eth1DataVotes {
-		if reflect.DeepEqual(data.Eth1Data, block.Eth1Data) {
-			data.VoteCount++
-			eth1DataVoteAdded = true
-			break
+		if bytes.Equal(data.Eth1Data.GetBlockHash32(), block.Eth1Data.GetBlockHash32()) {
+			if bytes.Equal(data.Eth1Data.GetDepositRootHash32(), block.Eth1Data.GetDepositRootHash32()) {
+				data.VoteCount++
+				eth1DataVoteAdded = true
+				break
+			}
 		}
 	}
 

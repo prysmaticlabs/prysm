@@ -255,9 +255,12 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 	}
 
 	block := &pb.BeaconBlock{
-		Slot:              2,
-		ParentRootHash32:  parentHash[:],
-		DepositRootHash32: []byte("a"),
+		Slot:             2,
+		ParentRootHash32: parentHash[:],
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte("a"),
+			BlockHash32:       []byte("a"),
+		},
 	}
 
 	exitRoutine := make(chan bool)
@@ -347,16 +350,19 @@ func TestRunningChainService(t *testing.T) {
 	attestationSlot := uint64(0)
 
 	block := &pb.BeaconBlock{
-		Slot:              currentSlot + 1,
-		StateRootHash32:   stateRoot[:],
-		ParentRootHash32:  parentHash[:],
-		DepositRootHash32: []byte("a"),
+		Slot:             currentSlot + 1,
+		StateRootHash32:  stateRoot[:],
+		ParentRootHash32: parentHash[:],
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte("a"),
+			BlockHash32:       []byte("a"),
+		},
 		Body: &pb.BeaconBlockBody{
 			Attestations: []*pb.Attestation{{
 				ParticipationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Data: &pb.AttestationData{
-					Slot:                      attestationSlot,
+					Slot: attestationSlot,
 					JustifiedBlockRootHash32:  params.BeaconConfig().ZeroHash[:],
 					LatestCrosslinkRootHash32: params.BeaconConfig().ZeroHash[:],
 				},
@@ -402,7 +408,7 @@ func TestDoesPOWBlockExist(t *testing.T) {
 	}
 
 	// Using a faulty client should throw error.
-	powHash := bytesutil.ToBytes32(beaconState.LatestDepositRootHash32)
+	powHash := bytesutil.ToBytes32(beaconState.LatestEth1Data.DepositRootHash32)
 	exists := chainService.doesPoWBlockExist(powHash)
 	if exists {
 		t.Error("Block corresponding to nil powchain reference should not exist")
@@ -465,10 +471,13 @@ func TestUpdateHead(t *testing.T) {
 		enc, _ := proto.Marshal(tt.state)
 		stateRoot := hashutil.Hash(enc)
 		block := &pb.BeaconBlock{
-			Slot:              tt.blockSlot,
-			StateRootHash32:   stateRoot[:],
-			ParentRootHash32:  genesisHash[:],
-			DepositRootHash32: []byte("a"),
+			Slot:             tt.blockSlot,
+			StateRootHash32:  stateRoot[:],
+			ParentRootHash32: genesisHash[:],
+			Eth1Data: &pb.Eth1Data{
+				DepositRootHash32: []byte("a"),
+				BlockHash32:       []byte("a"),
+			},
 		}
 		if err := chainService.beaconDB.SaveBlock(block); err != nil {
 			t.Fatal(err)
@@ -527,24 +536,29 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 		t.Fatal("block processing succeeded despite block slot being invalid")
 	}
 
-	h := bytesutil.ToBytes32([]byte("a"))
-	beaconState.LatestDepositRootHash32 = h[:]
+	beaconState.LatestEth1Data = &pb.Eth1Data{
+		DepositRootHash32: []byte{2},
+		BlockHash32:       []byte{2},
+	}
 	beaconState.Slot = 0
 
 	currentSlot := uint64(1)
 	attestationSlot := uint64(0)
 
 	block3 := &pb.BeaconBlock{
-		Slot:              currentSlot,
-		StateRootHash32:   stateRoot[:],
-		ParentRootHash32:  parentHash[:],
-		DepositRootHash32: []byte("a"),
+		Slot:             currentSlot,
+		StateRootHash32:  stateRoot[:],
+		ParentRootHash32: parentHash[:],
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte("a"),
+			BlockHash32:       []byte("a"),
+		},
 		Body: &pb.BeaconBlockBody{
 			Attestations: []*pb.Attestation{{
 				ParticipationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Data: &pb.AttestationData{
-					Slot:                     attestationSlot,
+					Slot: attestationSlot,
 					JustifiedBlockRootHash32: parentHash[:],
 				},
 			}},
