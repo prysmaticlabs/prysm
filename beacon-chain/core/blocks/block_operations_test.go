@@ -59,8 +59,8 @@ func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 		RandaoRevealHash32: randaoCommit[:],
 	}
 	beaconState := &pb.BeaconState{
-		ValidatorRegistry:        validators,
-		Slot:                     1,
+		ValidatorRegistry: validators,
+		Slot:              1,
 		LatestRandaoMixesHash32S: make([][]byte, config.LatestRandaoMixesLength),
 	}
 
@@ -134,6 +134,34 @@ func TestProcessEth1Data_InvalidDepositRoot(t *testing.T) {
 	}
 	want := fmt.Sprintf(
 		"expected block eth1 data deposit root hash to not be nil: received %d",
+		[]byte{},
+	)
+	if _, err := ProcessEth1Data(beaconState, block); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessEth1Data_InvalidBlockHash(t *testing.T) {
+	beaconState := &pb.BeaconState{
+		Eth1DataVotes: []*pb.Eth1DataVote{
+			&pb.Eth1DataVote{
+				Eth1Data: &pb.Eth1Data{
+					DepositRootHash32: []byte{0},
+					BlockHash32:       []byte{0},
+				},
+				VoteCount: 5,
+			},
+		},
+	}
+
+	block := &pb.BeaconBlock{
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{1},
+			BlockHash32:       nil,
+		},
+	}
+	want := fmt.Sprintf(
+		"expected block eth1 data block hash to not be nil: received %d",
 		[]byte{},
 	)
 	if _, err := ProcessEth1Data(beaconState, block); !strings.Contains(err.Error(), want) {
@@ -898,7 +926,7 @@ func TestProcessBlockAttestations_PreviousJustifiedSlotVerificationFailure(t *te
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                  5 + config.EpochLength,
+		Slot: 5 + config.EpochLength,
 		PreviousJustifiedSlot: 3,
 	}
 

@@ -97,6 +97,10 @@ func TestProcessEth1Data(t *testing.T) {
 	}
 	requiredVoteCount := config.Eth1DataVotingPeriod
 	state := &pb.BeaconState{
+		LatestEth1Data: &pb.Eth1Data{
+			DepositRootHash32: nil,
+			BlockHash32:       nil,
+		},
 		Eth1DataVotes: []*pb.Eth1DataVote{
 			{
 				Eth1Data: &pb.Eth1Data{
@@ -107,18 +111,18 @@ func TestProcessEth1Data(t *testing.T) {
 			},
 			// DepositRootHash32 ['B'] gets to process with sufficient vote count.
 			{
-				VoteCount: requiredVoteCount/2 + 1,
 				Eth1Data: &pb.Eth1Data{
 					DepositRootHash32: []byte{'B'},
 					BlockHash32:       []byte{'B'},
 				},
+				VoteCount: requiredVoteCount/2 + 1,
 			},
 			{
-				VoteCount: requiredVoteCount / 2,
 				Eth1Data: &pb.Eth1Data{
 					DepositRootHash32: []byte{'C'},
 					BlockHash32:       []byte{'C'},
 				},
+				VoteCount: requiredVoteCount / 2,
 			},
 		},
 	}
