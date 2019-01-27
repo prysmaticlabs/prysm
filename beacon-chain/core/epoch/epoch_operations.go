@@ -225,21 +225,35 @@ func TotalBalance(
 //    Let inclusion_slot(state, index) =
 //    a.slot_included for the attestation a where index is in
 //    get_attestation_participants(state, a.data, a.participation_bitfield)
+//    If multiple attestations are applicable, the attestation with
+//    lowest `slot_included` is considered.
 func InclusionSlot(state *pb.BeaconState, validatorIndex uint32) (uint64, error) {
+	var attestationsIncluded []*pb.PendingAttestationRecord
 
 	for _, attestation := range state.LatestAttestations {
 		participatedValidators, err := validators.AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)
 		if err != nil {
 			return 0, fmt.Errorf("could not get attestation participants: %v", err)
 		}
-
 		for _, index := range participatedValidators {
 			if index == validatorIndex {
-				return attestation.SlotIncluded, nil
+				attestationsIncluded = append(attestationsIncluded, attestation)
 			}
 		}
 	}
-	return 0, fmt.Errorf("could not find inclusion slot for validator index %d", validatorIndex)
+
+	if len(attestationsIncluded) == 0 {
+		return 0, fmt.Errorf("could not find inclusion slot for validator index %d", validatorIndex)
+	}
+
+	lowestSlotIncluded := attestationsIncluded[0].SlotIncluded
+	for _, attestationIncluded := range attestationsIncluded[1:] {
+		if lowestSlotIncluded > attestationIncluded.SlotIncluded {
+			lowestSlotIncluded = attestationIncluded.SlotIncluded
+		}
+	}
+
+	return lowestSlotIncluded, nil
 }
 
 // InclusionDistance returns the difference in slot number of when attestation
