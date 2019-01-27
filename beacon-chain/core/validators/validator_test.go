@@ -70,38 +70,6 @@ func TestInitialValidatorRegistry(t *testing.T) {
 	}
 }
 
-func TestProposerShardAndIndex(t *testing.T) {
-	state := &pb.BeaconState{
-		ShardCommitteesAtSlots: []*pb.ShardCommitteeArray{
-			{ArrayShardCommittee: []*pb.ShardCommittee{
-				{Shard: 0, Committee: []uint32{0, 1, 2, 3, 4}},
-				{Shard: 1, Committee: []uint32{5, 6, 7, 8, 9}},
-			}},
-			{ArrayShardCommittee: []*pb.ShardCommittee{
-				{Shard: 2, Committee: []uint32{10, 11, 12, 13, 14}},
-				{Shard: 3, Committee: []uint32{15, 16, 17, 18, 19}},
-			}},
-			{ArrayShardCommittee: []*pb.ShardCommittee{
-				{Shard: 4, Committee: []uint32{20, 21, 22, 23, 24}},
-				{Shard: 5, Committee: []uint32{25, 26, 27, 28, 29}},
-			}},
-		}}
-
-	if _, _, err := ProposerShardAndIdx(state, 150); err == nil {
-		t.Error("ProposerShardAndIdx should have failed with invalid lcs")
-	}
-	shard, idx, err := ProposerShardAndIdx(state, 2)
-	if err != nil {
-		t.Fatalf("ProposerShardAndIdx failed with %v", err)
-	}
-	if shard != 4 {
-		t.Errorf("Invalid shard ID. Wanted 4, got %d", shard)
-	}
-	if idx != 2 {
-		t.Errorf("Invalid proposer index. Wanted 2, got %d", idx)
-	}
-}
-
 func TestValidatorIdx(t *testing.T) {
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 10; i++ {

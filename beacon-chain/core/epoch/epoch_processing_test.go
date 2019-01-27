@@ -338,6 +338,7 @@ func TestCanNotProcessValidatorRegistry(t *testing.T) {
 	}
 	state = &pb.BeaconState{
 		ValidatorRegistryUpdateSlot: 101,
+		FinalizedSlot: 102,
 		LatestCrosslinks: []*pb.CrosslinkRecord{
 			{Slot: 100},
 		},

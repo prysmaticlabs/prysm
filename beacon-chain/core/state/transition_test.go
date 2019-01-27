@@ -491,14 +491,9 @@ func TestProcessEpoch_CantGetCurrentValidatorIndices(t *testing.T) {
 		LatestBlockRootHash32S: latestBlockRoots,
 	}
 
-	//want := fmt.Sprintf(
-	//	"could not get current boundary attester indices: wanted participants bitfield length %d, got: %d",
-	//	len(shardCommittees[0].ArrayShardCommittee[0].Committee),
-	//	len(attestations[0].ParticipationBitfield),
-	//)
-	want := "test"
-	if _, err := ProcessEpoch(state); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected: %s, received: %v", want, err)
+	wanted := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 0, 1)
+	if _, err := ProcessEpoch(state); !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected: %s, received: %v", wanted, err)
 	}
 }
 

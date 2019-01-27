@@ -124,6 +124,17 @@ func BeaconProposerIdx(state *pb.BeaconState, slot uint64) (uint32, error) {
 	return firstCommittee[slot%uint64(len(firstCommittee))], nil
 }
 
+// BeaconProposerShard returns the shard of the proposer of a block at the
+// given slot.
+func BeaconProposerShard(state *pb.BeaconState, slot uint64) (uint64, error) {
+	committeeArray, err := CrosslinkCommitteesAtSlot(state, slot)
+	if err != nil {
+		return 0, err
+	}
+
+	return committeeArray[0].Shard, nil
+}
+
 // ProposerShardAndIdx returns the index and the shardID of a proposer from a given slot.
 func ProposerShardAndIdx(state *pb.BeaconState, slot uint64) (uint64, uint64, error) {
 	slotCommittees, err := ShardCommitteesAtSlot(

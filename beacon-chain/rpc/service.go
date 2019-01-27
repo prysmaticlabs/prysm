@@ -284,7 +284,7 @@ func (s *Service) ProposerIndex(ctx context.Context, req *pb.ProposerIndexReques
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
 
-	_, ProposerIndex, err := v.ProposerShardAndIdx(
+	ProposerIndex, err := v.BeaconProposerIdx(
 		beaconState,
 		req.SlotNumber,
 	)
