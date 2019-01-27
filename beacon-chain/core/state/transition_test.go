@@ -93,8 +93,8 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 	latestMixes := make([][]byte, config.LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
 		LatestRandaoMixesHash32S: latestMixes,
-		Slot:              5,
-		ValidatorRegistry: registry,
+		Slot:                     5,
+		ValidatorRegistry:        registry,
 	}
 	block := &pb.BeaconBlock{
 		Slot:               5,
@@ -158,8 +158,8 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	latestMixes := make([][]byte, config.LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
 		LatestRandaoMixesHash32S: latestMixes,
-		Slot:              5,
-		ValidatorRegistry: registry,
+		Slot:                     5,
+		ValidatorRegistry:        registry,
 	}
 	block := &pb.BeaconBlock{
 		Slot:               5,
@@ -246,9 +246,9 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		LatestRandaoMixesHash32S: latestMixes,
 		ValidatorRegistry:        registry,
 		Slot:                     64,
-		PreviousJustifiedSlot:  10,
-		LatestBlockRootHash32S: blockRoots,
-		LatestCrosslinks:       stateLatestCrosslinks,
+		PreviousJustifiedSlot:    10,
+		LatestBlockRootHash32S:   blockRoots,
+		LatestCrosslinks:         stateLatestCrosslinks,
 	}
 	exits := make([]*pb.Exit, config.MaxExits+1)
 	block := &pb.BeaconBlock{
@@ -337,9 +337,9 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		LatestRandaoMixesHash32S: latestMixes,
 		ValidatorRegistry:        registry,
 		Slot:                     64,
-		PreviousJustifiedSlot:  10,
-		LatestBlockRootHash32S: blockRoots,
-		LatestCrosslinks:       stateLatestCrosslinks,
+		PreviousJustifiedSlot:    10,
+		LatestBlockRootHash32S:   blockRoots,
+		LatestCrosslinks:         stateLatestCrosslinks,
 	}
 	exits := []*pb.Exit{
 		{
@@ -497,8 +497,8 @@ func TestProcessEpoch_CantGetCurrentValidatorIndices(t *testing.T) {
 	for i := uint64(0); i < config.EpochLength*2; i++ {
 		attestations = append(attestations, &pb.PendingAttestationRecord{
 			Data: &pb.AttestationData{
-				Slot:  1,
-				Shard: 1,
+				Slot:                     1,
+				Shard:                    1,
 				JustifiedBlockRootHash32: make([]byte, 32),
 			},
 			ParticipationBitfield: []byte{0xff},
@@ -527,8 +527,8 @@ func TestProcessEpoch_CantGetPrevValidatorIndices(t *testing.T) {
 	for i := uint64(0); i < config.EpochLength*2; i++ {
 		attestations = append(attestations, &pb.PendingAttestationRecord{
 			Data: &pb.AttestationData{
-				Slot:  1,
-				Shard: 1,
+				Slot:                     1,
+				Shard:                    1,
 				JustifiedBlockRootHash32: make([]byte, 32),
 			},
 			ParticipationBitfield: []byte{0xff},

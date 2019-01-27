@@ -60,21 +60,21 @@ func TestCanProcessReceiptRoots(t *testing.T) {
 		canProcessReceiptRoots bool
 	}{
 		{
-			slot: 1,
+			slot:                   1,
 			canProcessReceiptRoots: false,
 		},
 		{
-			slot: 1022,
+			slot:                   1022,
 			canProcessReceiptRoots: false,
 		},
 		{
-			slot: 1024,
+			slot:                   1024,
 			canProcessReceiptRoots: true,
 		}, {
-			slot: 4096,
+			slot:                   4096,
 			canProcessReceiptRoots: true,
 		}, {
-			slot: 234234,
+			slot:                   234234,
 			canProcessReceiptRoots: false,
 		},
 	}
@@ -398,7 +398,7 @@ func TestProcessPrevSlotShardOk(t *testing.T) {
 func TestProcessValidatorRegistryOk(t *testing.T) {
 	offset := uint64(1)
 	state := &pb.BeaconState{
-		Slot: config.SeedLookahead + offset,
+		Slot:                        config.SeedLookahead + offset,
 		LatestRandaoMixesHash32S:    [][]byte{{'A'}, {'B'}},
 		CurrentEpochRandaoMixHash32: []byte{'C'},
 	}
@@ -424,7 +424,7 @@ func TestProcessValidatorRegistryOk(t *testing.T) {
 func TestProcessPartialValidatorRegistry(t *testing.T) {
 	offset := uint64(1)
 	state := &pb.BeaconState{
-		Slot: config.SeedLookahead + offset,
+		Slot:                        config.SeedLookahead + offset,
 		ValidatorRegistryUpdateSlot: offset,
 		LatestRandaoMixesHash32S:    [][]byte{{'A'}, {'B'}},
 	}
@@ -505,7 +505,7 @@ func TestUpdatePenalizedExitBalances(t *testing.T) {
 			config.LatestPenalizedExitLength)
 		latestPenalizedExitBalances[epoch] = tt.balances
 		state := &pb.BeaconState{
-			Slot: tt.slot,
+			Slot:                    tt.slot,
 			LatestPenalizedBalances: latestPenalizedExitBalances}
 		newState := UpdatePenalizedExitBalances(state)
 		if newState.LatestPenalizedBalances[epoch+1] !=
