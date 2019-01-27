@@ -60,9 +60,9 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 	return true
 }
 
-// ProcessDeposits processes deposit roots by checking its vote count.
-// With sufficient votes (>2*DEPOSIT_ROOT_VOTING_PERIOD), it then
-// assigns root hash to processed receipt vote in state.
+// ProcessEth1Data processes eth1 block deposit roots by checking its vote count.
+// With sufficient votes (>2*ETH1_DATA_VOTING_PERIOD), it then
+// marks the voted Eth1 data as the latest data set.
 func ProcessEth1Data(state *pb.BeaconState) *pb.BeaconState {
 	for _, eth1DataVote := range state.Eth1DataVotes {
 		if eth1DataVote.VoteCount*2 > config.Eth1DataVotingPeriod {
