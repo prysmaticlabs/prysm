@@ -478,13 +478,19 @@ func TestInclusionSlotOk(t *testing.T) {
 		{Data: &pb.AttestationData{},
 			ParticipationBitfield: []byte{0xFF},
 			SlotIncluded:          100},
+		{Data: &pb.AttestationData{},
+			ParticipationBitfield: []byte{0xFF},
+			SlotIncluded:          99},
+		{Data: &pb.AttestationData{},
+			ParticipationBitfield: []byte{0xFF},
+			SlotIncluded:          88},
 	}
 	slot, err := InclusionSlot(state, 45)
 	if err != nil {
 		t.Fatalf("Could not execute InclusionSlot: %v", err)
 	}
 	// validator 45's attestation got included in slot 100.
-	if slot != 100 {
+	if slot != 88 {
 		t.Errorf("Incorrect slot. Wanted: 100, got: %d", slot)
 	}
 }
