@@ -29,3 +29,13 @@ func CeilDiv8(n int) int {
 func IsPowerOf2(n uint64) bool {
 	return (n & (n - 1)) == 0
 }
+
+// PowerOf2 returns an integer that is the provided
+// exponent of 2. Can only return powers of 2 till 63,
+// after that it overflows
+func PowerOf2(n uint64) uint64 {
+	if n >= 64 {
+		panic("integer overflow")
+	}
+	return 1 << n
+}
