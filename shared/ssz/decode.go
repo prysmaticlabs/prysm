@@ -257,16 +257,20 @@ func makeStructDecoder(typ reflect.Type) (decoder, error) {
 			return lengthBytes, nil
 		}
 
-		for i, decodeSize := 0, uint32(0); i < len(fields); i++ {
-			if decodeSize >= size {
-				return 0, errors.New("not enough input data to decode into specified struct")
-			}
+		i, decodeSize := 0, uint32(0)
+		for ; i < len(fields) && decodeSize < size; i++ {
 			f := fields[i]
 			fieldDecodeSize, err := f.sszUtils.decoder(r, val.Field(f.index))
 			if err != nil {
 				return 0, fmt.Errorf("failed to decode field of slice: %v", err)
 			}
 			decodeSize += fieldDecodeSize
+		}
+		if i < len(fields) {
+			return 0, errors.New("input is too short")
+		}
+		if decodeSize < size {
+			return 0, errors.New("input is too long")
 		}
 		return lengthBytes + size, nil
 	}
