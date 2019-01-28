@@ -16,13 +16,12 @@ message BeaconState {
   // TODO(#1300): shard_committees_at_slots and ShardCommitteeArray to be removed.
   repeated ShardCommitteeArray shard_committees_at_slots = 1003;
   repeated bytes latest_randao_mixes_hash32s = 1004;
-  repeated bytes latest_vdf_outputs_hash32s = 1005;
-  uint64 previous_epoch_start_shard = 1006;
-  uint64 current_epoch_start_shard = 1007;
-  uint64 previous_epoch_calculation_slot = 1008;
-  uint64 current_epoch_calculation_slot = 1009;
-  bytes previous_epoch_randao_mix_hash32 = 1010;
-  bytes current_epoch_randao_mix_hash32 = 1011;
+  uint64 previous_epoch_start_shard = 1005;
+  uint64 current_epoch_start_shard = 1006;
+  uint64 previous_epoch_calculation_slot = 1007;
+  uint64 current_epoch_calculation_slot = 1008;
+  bytes previous_epoch_randao_mix_hash32 = 1009;
+  bytes current_epoch_randao_mix_hash32 = 1010;
 
   // Finality [2001-3000] 
   uint64 previous_justified_slot = 2001;
@@ -45,11 +44,6 @@ message BeaconState {
   uint64 genesis_time = 5001;
   Fork fork = 5002;
   uint64 slot = 5003;
-
-  // Proof of custody [6001-7000]
-  // Placeholders, ProofOfCustodyChallenge is defined in phase 1,
-  // the list will remain empty throughout phase 0
-  repeated CustodyChallenge custody_challenges = 6001;
 }
 
 message Fork {
@@ -112,9 +106,6 @@ message ValidatorRecord {
     WITHDRAWABLE = 2; // validator is participating validator duties.
   }
   StatusFlags status_flags = 10;
-  bytes custody_commitment_hash32 = 11;
-  uint64 latest_custody_reseed_slot = 12;
-  uint64 penultimate_custody_reseed_slot = 13;
 
   // Deprecated fields
   // All fields must be annotated with [deprecated=true];
@@ -178,9 +169,7 @@ message ProposalSignedData {
   bytes block_root_hash32 = 3;
 }
 
-message SlashableVoteData {
-  repeated uint32 custody_bit_0_indices = 1; // proof of custody indices for 0 bits.
-  repeated uint32 custody_bit_1_indices = 2; // proof of custody indices for 1 bits.
+message SlashableVote {
   AttestationData data = 3;
   bytes aggregate_signature = 4; // Type of [uint384]?
 }
@@ -192,7 +181,7 @@ message DepositData {
 }
 
 message ProposerSlashing {
-  uint32 proposer_index = 1;
+  uint64 proposer_index = 1;
   ProposalSignedData proposal_data_1 = 2;
   bytes proposal_signature_1 = 3; // Type of [uint384]?
   ProposalSignedData proposal_data_2 = 4;
@@ -200,8 +189,8 @@ message ProposerSlashing {
 }
 
 message CasperSlashing {
-  SlashableVoteData slashable_vote_data_1 = 1;
-  SlashableVoteData slashable_vote_data_2 = 2;
+  SlashableVote slashable_vote_1 = 1;
+  SlashableVote slashable_vote_2 = 2;
 }
 
 message Deposit {
@@ -212,7 +201,7 @@ message Deposit {
 
 message Exit {
   uint64 slot = 1;
-  uint32 validator_index = 2;
+  uint64 validator_index = 2;
   bytes signature = 3; // Type of [uint384]?
 }
 
