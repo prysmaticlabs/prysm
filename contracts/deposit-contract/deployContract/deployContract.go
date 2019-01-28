@@ -14,7 +14,8 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
-	contracts "github.com/prysmaticlabs/prysm/contracts/validator-registration-contract"
+	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -40,7 +41,7 @@ func main() {
 
 	app := cli.NewApp()
 	app.Name = "deployVRC"
-	app.Usage = "this is a util to deploy validator registration contract"
+	app.Usage = "this is a util to deploy deposit contract"
 	app.Version = version.GetVersion()
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
@@ -72,7 +73,7 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:        "k8s-config",
-			Usage:       "Name of kubernetes config map to update with the VRC address",
+			Usage:       "Name of kubernetes config map to update with the contract address",
 			Destination: &k8sConfigMapName,
 		},
 	}
@@ -132,7 +133,9 @@ func main() {
 		}
 
 		// Deploy validator registration contract
-		addr, tx, _, err := contracts.DeployValidatorRegistration(txOps, client)
+		addr, tx, _, err := contracts.DeployDepositContract(
+			txOps, client, params.ContractConfig().DepositsForChainStart,
+			params.ContractConfig().MinDepositAmount, params.ContractConfig().MaxDepositAmount)
 		if err != nil {
 			log.Fatal(err)
 		}
