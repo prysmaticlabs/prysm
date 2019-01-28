@@ -33,9 +33,9 @@ http_archive(
     sha256 = "aed1c249d4ec8f703edddf35cbe9dfaca0b5f5ea6e4cd9e83e99f3b0d1136c3d",
 )
 
-load("@io_bazel_rules_docker//docker:docker.bzl", "docker_repositories")
+load("@io_bazel_rules_docker//docker:docker.bzl", "container_repositories")
 
-docker_repositories()
+container_repositories()
 
 http_archive(
     name = "build_bazel_rules_nodejs",
