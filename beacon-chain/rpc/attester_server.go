@@ -25,6 +25,5 @@ func (as *AttesterServer) AttestHead(ctx context.Context, req *pb.AttestRequest)
 	h := hashutil.Hash(enc)
 	// Relays the attestation to chain service.
 	as.attestationService.IncomingAttestationFeed().Send(req.Attestation)
-
 	return &pb.AttestResponse{AttestationHash: h[:]}, nil
 }

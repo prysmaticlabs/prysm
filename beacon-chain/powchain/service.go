@@ -146,7 +146,6 @@ func (w *Web3Service) Status() error {
 // initDataFromVRC calls the vrc contract and finds the deposit count
 // and deposit root.
 func (w *Web3Service) initDataFromVRC() error {
-
 	root, err := w.vrcCaller.GetDepositRoot(&bind.CallOpts{})
 	if err != nil {
 		return fmt.Errorf("could not retrieve deposit root %v", err)
@@ -160,7 +159,6 @@ func (w *Web3Service) initDataFromVRC() error {
 
 // run subscribes to all the services for the ETH1.0 chain.
 func (w *Web3Service) run(done <-chan struct{}) {
-
 	if err := w.initDataFromVRC(); err != nil {
 		log.Errorf("Unable to retrieve data from VRC %v", err)
 		return
@@ -234,7 +232,6 @@ func (w *Web3Service) ProcessLog(VRClog gethTypes.Log) {
 // the ETH1.0 chain by trying to ascertain which participant deposited
 // in the contract.
 func (w *Web3Service) ProcessDepositLog(VRClog gethTypes.Log) {
-
 	merkleRoot, depositData, MerkleTreeIndex, err := contracts.UnpackDepositLogData(VRClog.Data)
 	if err != nil {
 		log.Errorf("Could not unpack log %v", err)
