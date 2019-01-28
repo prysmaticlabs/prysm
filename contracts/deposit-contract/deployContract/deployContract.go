@@ -41,7 +41,7 @@ func main() {
 
 	app := cli.NewApp()
 	app.Name = "deployVRC"
-	app.Usage = "this is a util to deploy validator registration contract"
+	app.Usage = "this is a util to deploy deposit contract"
 	app.Version = version.GetVersion()
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
@@ -73,7 +73,7 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:        "k8s-config",
-			Usage:       "Name of kubernetes config map to update with the VRC address",
+			Usage:       "Name of kubernetes config map to update with the contract address",
 			Destination: &k8sConfigMapName,
 		},
 	}
