@@ -16,6 +16,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/trie"
 	"github.com/sirupsen/logrus"
@@ -56,6 +57,7 @@ type Web3Service struct {
 	logChan                chan gethTypes.Log
 	endpoint               string
 	depositContractAddress common.Address
+	chainStartFeed         *event.Feed
 	reader                 Reader
 	logger                 bind.ContractFilterer
 	blockNumber            *big.Int    // the latest ETH1.0 chain blockNumber.
@@ -105,6 +107,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		blockNumber:            nil,
 		blockHash:              common.BytesToHash([]byte{}),
 		depositContractAddress: config.DepositContract,
+		chainStartFeed:         new(event.Feed),
 		client:                 config.Client,
 		reader:                 config.Reader,
 		logger:                 config.Logger,
@@ -126,6 +129,12 @@ func (w *Web3Service) Stop() error {
 	defer close(w.headerChan)
 	log.Info("Stopping service")
 	return nil
+}
+
+// ChainStartFeed returns a feed that is written to
+// whenever the deposit contract fires a ChainStart log.
+func (w *Web3Service) ChainStartFeed() *event.Feed {
+	return w.chainStartFeed
 }
 
 // Status always returns nil.
@@ -271,6 +280,7 @@ func (w *Web3Service) ProcessChainStartLog(VRClog gethTypes.Log) {
 	log.WithFields(logrus.Fields{
 		"ChainStartTime": chainStartTime,
 	}).Info("Minimum Number of Validators Reached for beacon-chain to start")
+	w.chainStartFeed.Send(chainStartTime)
 }
 
 // saveInTrie saves in the in-memory deposit trie.

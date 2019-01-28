@@ -2,6 +2,7 @@ package db
 
 import (
 	"testing"
+	"time"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -88,7 +89,8 @@ func TestUpdateChainHeadNoBlock(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	err := db.InitializeState()
+	genesisTime := uint64(time.Now().Unix())
+	err := db.InitializeState(genesisTime)
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
@@ -107,7 +109,8 @@ func TestUpdateChainHead(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	err := db.InitializeState()
+	genesisTime := uint64(time.Now().Unix())
+	err := db.InitializeState(genesisTime)
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
@@ -171,7 +174,8 @@ func TestChainProgress(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	err := db.InitializeState()
+	genesisTime := uint64(time.Now().Unix())
+	err := db.InitializeState(genesisTime)
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}

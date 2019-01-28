@@ -15,8 +15,6 @@ import (
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/dbcleanup"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -161,39 +159,6 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 	}
 
 	log.Info("checking db")
-
-	beaconState, err := db.State()
-	if err != nil {
-		return err
-	}
-	// Ensure that state has been initialized.
-	if beaconState == nil {
-		if err := db.InitializeState(); err != nil {
-			return err
-		}
-	}
-
-	beaconState, err = db.State()
-	if err != nil {
-		return err
-	}
-
-	hash, err := state.Hash(beaconState)
-	if err != nil {
-		return err
-	}
-
-	genesisBlock, err := db.BlockBySlot(0)
-	if err != nil {
-		return err
-	}
-
-	if genesisBlock == nil {
-		if err := db.SaveBlock(blocks.NewGenesisBlock(hash[:])); err != nil {
-			return err
-		}
-	}
-
 	b.db = db
 	return nil
 }

@@ -637,7 +637,20 @@ func TestProcessChainStartLog(t *testing.T) {
 		web3Service.depositTrie.UpdateDepositTrie(depData)
 	}
 
+	genesisTimeChan := make(chan time.Time, 1)
+	sub := web3Service.chainStartFeed.Subscribe(genesisTimeChan)
+	defer sub.Unsubscribe()
+
 	web3Service.ProcessLog(logs[len(logs)-1])
+
+	genesisTime := <-genesisTimeChan
+	if genesisTime.Unix() > time.Now().Unix() {
+		t.Errorf(
+			"Timestamp from log is higher than the current time %d > %d",
+			genesisTime.Unix(),
+			time.Now().Unix(),
+		)
+	}
 
 	testutil.AssertLogsDoNotContain(t, hook, "Unable to unpack ChainStart log data")
 	testutil.AssertLogsDoNotContain(t, hook, "Receipt root from log doesn't match the root saved in memory")
@@ -695,7 +708,6 @@ func TestUnpackChainStartLogs(t *testing.T) {
 
 		testAcc.backend.Commit()
 	}
-
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
 			web3Service.depositContractAddress,
@@ -717,5 +729,4 @@ func TestUnpackChainStartLogs(t *testing.T) {
 	if timestamp > uint64(time.Now().Unix()) {
 		t.Errorf("Timestamp from log is higher than the current time %d > %d", timestamp, time.Now().Unix())
 	}
-
 }

@@ -126,7 +126,8 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 	if err := db.SaveBlock(genesis); err != nil {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
-	err := db.InitializeState()
+	genesisTime := uint64(time.Now().Unix())
+	err := db.InitializeState(genesisTime)
 	if err != nil {
 		t.Fatalf("Can't initialze genesis state: %v", err)
 	}
@@ -489,7 +490,8 @@ func TestValidatorSlotAndResponsibility(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	err := db.InitializeState()
+	genesisTime := uint64(time.Now().Unix())
+	err := db.InitializeState(genesisTime)
 	if err != nil {
 		t.Fatalf("Can't initialze genesis state: %v", err)
 	}
@@ -571,7 +573,8 @@ func TestValidatorShardID(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	err := db.InitializeState()
+	genesisTime := uint64(time.Now().Unix())
+	err := db.InitializeState(genesisTime)
 	if err != nil {
 		t.Fatalf("Can't initialze genesis state: %v", err)
 	}
@@ -609,7 +612,8 @@ func TestValidatorAssignments(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	err := db.InitializeState()
+	genesisTime := uint64(time.Now().Unix())
+	err := db.InitializeState(genesisTime)
 	if err != nil {
 		t.Fatalf("Can't initialze genesis state: %v", err)
 	}
