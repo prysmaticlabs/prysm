@@ -1,8 +1,8 @@
 package hashutil
 
 import (
-	"golang.org/x/crypto/sha3"
 	"github.com/gogo/protobuf/proto"
+	"golang.org/x/crypto/sha3"
 )
 
 // Hash defines a function that returns the
