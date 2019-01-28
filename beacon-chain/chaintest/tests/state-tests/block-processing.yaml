@@ -44,14 +44,14 @@ test_cases:
             LkmqmqoodLKAslkjdkajsdljasdkajlksjdasldjasdd
       casper_slashings:
         - slot: 59 # At slot 59, we trigger a casper slashing
-          votes_1_slot: 55
-          votes_2_slot: 55
-          votes_1_justified_slot: 0
-          votes_2_justified_slot: 1
-          votes_1_custody_0_indices: [16386]
-          votes_1_custody_1_indices: []
-          votes_2_custody_0_indices: []
-          votes_2_custody_1_indices: [16386]
+          slashable_vote_data_1_slot: 55
+          slashable_vote_data_2_slot: 55
+          slashable_vote_data_1_justified_slot: 0
+          slashable_vote_data_2_justified_slot: 1
+          slashable_vote_data_1_custody_0_indices: [16386]
+          slashable_vote_data_1_custody_1_indices: []
+          slashable_vote_data_2_custody_0_indices: []
+          slashable_vote_data_2_custody_1_indices: [16386]
       validator_exits:
         - slot: 60
           validator_index: 100 # At slot 60, validator at index 100 triggers a voluntary exit
@@ -60,22 +60,23 @@ test_cases:
       num_validators: 16387
       penalized_validators: [16385, 16386] # We test that the validators at indices 16385, 16386 were indeed penalized
       exited_validators: [100] # We confirm the indices of validators that willingly exited the registry
-  - config:
-      skip_slots: [10, 20]
-      epoch_length: 64
-      deposits_for_chain_start: 1000
-      num_slots: 128 # Testing advancing state's slot == 2*EpochLength
-      deposits:
-        - slot: 10
-          amount: 32
-          merkle_index: 0
-          pubkey: !!binary |
-            SlAAbShSkUg7PLiPHZI/rTS1uAvKiieOrifPN6Moso0=
-        - slot: 20
-          amount: 32
-          merkle_index: 1
-          pubkey: !!binary |
-            Oklajsjdkaklsdlkajsdjlajslkdjlkasjlkdjlajdsd
-    results:
-      slot: 128
-      num_validators: 1000 # Validator registry should not have grown if slots 10 and 20 were skipped
+# TODO(1387): Waiting for spec to stable to proceed with this test case
+#  - config:
+#      skip_slots: [10, 20]
+#      epoch_length: 64
+#      deposits_for_chain_start: 1000
+#      num_slots: 128 # Testing advancing state's slot == 2*EpochLength
+#      deposits:
+#        - slot: 10
+#          amount: 32
+#          merkle_index: 0
+#          pubkey: !!binary |
+#            SlAAbShSkUg7PLiPHZI/rTS1uAvKiieOrifPN6Moso0=
+#        - slot: 20
+#          amount: 32
+#          merkle_index: 1
+#          pubkey: !!binary |
+#            Oklajsjdkaklsdlkajsdjlajslkdjlkasjlkdjlajdsd
+#    results:
+#      slot: 128
+#      num_validators: 1000 # Validator registry should not have grown if slots 10 and 20 were skipped

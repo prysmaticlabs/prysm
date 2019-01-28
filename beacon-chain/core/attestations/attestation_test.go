@@ -51,10 +51,6 @@ func TestIsSurroundVote(t *testing.T) {
 		t.Error("It is a surround vote despite both attestations having the same epoch")
 	}
 
-	if IsSurroundVote(att1, att2) {
-		t.Error("It is a surround vote despite both attestations being on the same epoch")
-	}
-
 	att1.Slot = 192
 	att2.JustifiedSlot = 64
 	att2.Slot = 128

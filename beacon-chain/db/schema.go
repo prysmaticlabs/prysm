@@ -20,11 +20,9 @@ var (
 	mainChainBucket      = []byte("main-chain-bucket")
 	chainInfoBucket      = []byte("chain-info")
 	blockVoteCacheBucket = []byte("block-vote-cache")
-	simulatorBucket      = []byte("simulator-bucket")
 
 	mainChainHeightKey = []byte("chain-height")
 	stateLookupKey     = []byte("state")
-	simSlotLookupKey   = []byte("simulator-slot")
 
 	// DB internal use
 	cleanupHistoryBucket    = []byte("cleanup-history-bucket")
