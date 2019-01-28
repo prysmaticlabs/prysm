@@ -16,18 +16,18 @@ func makeEmptySignature() [][]byte {
 // BeaconChainConfig contains constant configs for node to participate in beacon chain.
 type BeaconChainConfig struct {
 	// Misc constants.
-	ShardCount                uint64 // ShardCount is the number of shard chains in Ethereum 2.0.
-	TargetCommitteeSize       uint64 // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
-	EjectionBalance           uint64 // EjectionBalance is the minimal ETH a validator needs to have before ejected.
-	EjectionBalanceInGwei     uint64 // EjectionBalance is the minimal GWei a validator needs to have before ejected.
-	MaxBalanceChurnQuotient   uint64 // MaxBalanceChurnQuotient is used to determine how many validators can rotate per epoch.
-	Gwei                      uint64 // Gwei is the denomination of Gwei in Ether.
-	BeaconChainShardNumber    uint64 // BeaconChainShardNumber is the shard number of the beacon chain.
-	MaxCasperVotes            uint64 // MaxCasperVotes is used to verify slashable Casper vote data.
-	LatestBlockRootsLength    uint64 // LatestBlockRootsLength is the number of block roots kept in the beacon state.
-	LatestRandaoMixesLength   uint64 // LatestRandaoMixesLength is the number of randao mixes kept in the beacon state.
-	LatestPenalizedExitLength uint64 // LatestPenalizedExitLength is used to track penalized exit balances per time interval.
-	MaxWithdrawalsPerEpoch    uint64 // MaxWithdrawalsPerEpoch is the max withdrawals can happen for a single epoch.
+	ShardCount                 uint64 // ShardCount is the number of shard chains in Ethereum 2.0.
+	TargetCommitteeSize        uint64 // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
+	EjectionBalance            uint64 // EjectionBalance is the minimal ETH a validator needs to have before ejected.
+	EjectionBalanceInGwei      uint64 // EjectionBalance is the minimal GWei a validator needs to have before ejected.
+	MaxBalanceChurnQuotient    uint64 // MaxBalanceChurnQuotient is used to determine how many validators can rotate per epoch.
+	Gwei                       uint64 // Gwei is the denomination of Gwei in Ether.
+	BeaconChainShardNumber     uint64 // BeaconChainShardNumber is the shard number of the beacon chain.
+	MaxIndicesPerSlashableVote uint64 // MaxIndicesPerSlashableVote is used to determine how many validators can be slashed per vote.
+	LatestBlockRootsLength     uint64 // LatestBlockRootsLength is the number of block roots kept in the beacon state.
+	LatestRandaoMixesLength    uint64 // LatestRandaoMixesLength is the number of randao mixes kept in the beacon state.
+	LatestPenalizedExitLength  uint64 // LatestPenalizedExitLength is used to track penalized exit balances per time interval.
+	MaxWithdrawalsPerEpoch     uint64 // MaxWithdrawalsPerEpoch is the max withdrawals can happen for a single epoch.
 
 	// Deposit contract constants.
 	DepositContractAddress   []byte // DepositContractAddress is the address of the deposit contract in PoW chain.
@@ -89,7 +89,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	EjectionBalanceInGwei:     16 * 1e9,
 	MaxBalanceChurnQuotient:   32,
 	BeaconChainShardNumber:    1<<64 - 1,
-	MaxCasperVotes:            1024,
+	MaxIndicesPerSlashableVote:            1,
 	LatestBlockRootsLength:    8192,
 	LatestRandaoMixesLength:   8192,
 	LatestPenalizedExitLength: 8192,
@@ -127,7 +127,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxDeposits:          16,
 	MaxAttestations:      128,
 	MaxProposerSlashings: 16,
-	MaxCasperSlashings:   16,
+	MaxCasperSlashings:   1,
 
 	// Prysm constants.
 	DepositsForChainStart: 16384,
@@ -145,7 +145,7 @@ var demoBeaconConfig = &BeaconChainConfig{
 	EjectionBalanceInGwei:     defaultBeaconConfig.EjectionBalanceInGwei,
 	MaxBalanceChurnQuotient:   defaultBeaconConfig.MaxBalanceChurnQuotient,
 	BeaconChainShardNumber:    defaultBeaconConfig.BeaconChainShardNumber,
-	MaxCasperVotes:            defaultBeaconConfig.MaxCasperVotes,
+	MaxIndicesPerSlashableVote:            defaultBeaconConfig.MaxIndicesPerSlashableVote,
 	LatestBlockRootsLength:    defaultBeaconConfig.LatestBlockRootsLength,
 	LatestRandaoMixesLength:   defaultBeaconConfig.LatestRandaoMixesLength,
 	LatestPenalizedExitLength: defaultBeaconConfig.LatestPenalizedExitLength,

@@ -170,6 +170,8 @@ message ProposalSignedData {
 }
 
 message SlashableVote {
+  repeated uint64 validator_indices = 1;
+  bytes custody_bitfield = 2;
   AttestationData data = 3;
   bytes aggregate_signature = 4; // Type of [uint384]?
 }
