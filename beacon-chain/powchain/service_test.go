@@ -73,6 +73,7 @@ func (g *goodLogger) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]
 }
 
 var amount32Eth, _ = new(big.Int).SetString("32000000000000000000", 10)
+var depositsReqForChainStart = 8
 
 type testAccount struct {
 	addr         common.Address
@@ -101,7 +102,7 @@ func setup() (*testAccount, error) {
 	genesis[addr] = core.GenesisAccount{Balance: startingBalance}
 	backend := backends.NewSimulatedBackend(genesis, 2100000000)
 
-	depositsRequired := big.NewInt(8)
+	depositsRequired := big.NewInt(int64(depositsReqForChainStart))
 	minDeposit := big.NewInt(1e9)
 	maxDeposit := big.NewInt(32e9)
 	contractAddr, _, contract, err := contracts.DeployDepositContract(txOpts, backend, depositsRequired, minDeposit, maxDeposit)
@@ -169,14 +170,14 @@ func TestStart(t *testing.T) {
 		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
-		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 	testAcc.backend.Commit()
 
 	web3Service.Start()
 
 	msg := hook.LastEntry().Message
-	want := "Could not connect to PoW chain RPC client"
+	want := "Could not connect to ETH1.0 chain RPC client"
 	if strings.Contains(want, msg) {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
@@ -200,13 +201,13 @@ func TestStop(t *testing.T) {
 		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
-		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
 	testAcc.backend.Commit()
 
 	if err := web3Service.Stop(); err != nil {
-		t.Fatalf("Unable to stop web3 PoW chain service: %v", err)
+		t.Fatalf("Unable to stop web3 ETH1.0 chain service: %v", err)
 	}
 
 	msg := hook.LastEntry().Message
@@ -236,7 +237,7 @@ func TestInitDataFromVRC(t *testing.T) {
 		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
-		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
 	testAcc.backend.Commit()
@@ -279,7 +280,7 @@ func TestSaveInTrie(t *testing.T) {
 		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
-		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
 	testAcc.backend.Commit()
@@ -309,7 +310,7 @@ func TestBadReader(t *testing.T) {
 		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
-		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
 	testAcc.backend.Commit()
@@ -317,7 +318,7 @@ func TestBadReader(t *testing.T) {
 	web3Service.logger = &goodLogger{}
 	web3Service.run(web3Service.ctx.Done())
 	msg := hook.LastEntry().Message
-	want := "Unable to subscribe to incoming PoW chain headers: subscription has failed"
+	want := "Unable to subscribe to incoming ETH1.0 chain headers: subscription has failed"
 	if msg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
@@ -338,7 +339,7 @@ func TestLatestMainchainInfo(t *testing.T) {
 		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
-		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 	testAcc.backend.Commit()
 	web3Service.reader = &goodReader{}
@@ -381,7 +382,7 @@ func TestBadLogger(t *testing.T) {
 		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
-		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 	testAcc.backend.Commit()
 
@@ -412,14 +413,12 @@ func TestProcessDepositLog(t *testing.T) {
 		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
-		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
 	testAcc.backend.Commit()
 
 	web3Service.depositTrie = trie.NewDepositTrie()
-
-	//currentRoot := web3Service.depositTrie.Root()
 
 	var stub [48]byte
 	copy(stub[:], []byte("testing"))
@@ -479,7 +478,7 @@ func TestUnpackDepositLogs(t *testing.T) {
 		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
-		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
 	testAcc.backend.Commit()
@@ -580,7 +579,7 @@ func TestProcessChainStartLog(t *testing.T) {
 		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
-		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
 	testAcc.backend.Commit()
@@ -609,7 +608,7 @@ func TestProcessChainStartLog(t *testing.T) {
 	// 8 Validators are used as size required for beacon-chain to start. This number
 	// is defined in the VRC as the number required for the testnet. The actual number
 	// is 2**14
-	for i := 0; i < 8; i++ {
+	for i := 0; i < depositsReqForChainStart; i++ {
 		testAcc.txOpts.Value = amount32Eth
 		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
 			t.Fatalf("Could not deposit to VRC %v", err)
@@ -629,7 +628,7 @@ func TestProcessChainStartLog(t *testing.T) {
 		t.Fatalf("Unable to retrieve logs %v", err)
 	}
 
-	for i := 0; i < 8; i++ {
+	for i := 0; i < depositsReqForChainStart; i++ {
 		_, depData, _, err := contracts.UnpackDepositLogData(logs[i].Data)
 		if err != nil {
 			t.Fatalf("Unable to unpack deposit logs %v", err)
@@ -663,7 +662,7 @@ func TestUnpackChainStartLogs(t *testing.T) {
 		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
-		t.Fatalf("unable to setup web3 PoW chain service: %v", err)
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
 	testAcc.backend.Commit()
@@ -688,7 +687,7 @@ func TestUnpackChainStartLogs(t *testing.T) {
 
 	// 8 Validators are used as size required for beacon-chain to start. This number
 	// is defined in the VRC as the number required for the testnet.
-	for i := 0; i < 8; i++ {
+	for i := 0; i < depositsReqForChainStart; i++ {
 		testAcc.txOpts.Value = amount32Eth
 		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
 			t.Fatalf("Could not deposit to VRC %v", err)
