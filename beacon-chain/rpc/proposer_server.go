@@ -17,12 +17,8 @@ import (
 
 type ProposerServer struct {
 	beaconDB *db.BeaconDB
-	ctx context.Context
-	cancel context.CancelFunc
 	chainService          chainService
-	attestationService    attestationService
 	powChainService    powChainService
-	incomingAttestation   chan *pbp2p.Attestation
 	canonicalStateChan    chan *pbp2p.BeaconState
 	enablePOWChain bool
 }

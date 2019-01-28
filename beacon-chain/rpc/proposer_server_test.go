@@ -1,24 +1,18 @@
 package rpc
 
 import (
-	"testing"
+	"bytes"
+	"context"
 	"github.com/ethereum/go-ethereum/common"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"context"
-	"errors"
-	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	ptypes"github.com/gogo/protobuf/types"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"strconv"
+	"testing"
 	"time"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestProposeBlock(t *testing.T) {
@@ -59,17 +53,16 @@ func TestProposeBlock(t *testing.T) {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
-	rpcService := NewRPCService(context.Background(), &Config{
-		Port:            "6372",
-		ChainService:    mockChain,
-		BeaconDB:        db,
-		POWChainService: &mockPOWChainService{},
-	})
+	proposerServer := &ProposerServer{
+        chainService: mockChain,
+        beaconDB: db,
+        powChainService: &mockPOWChainService{},
+	}
 	req := &pbp2p.BeaconBlock{
 		Slot:             5,
 		ParentRootHash32: []byte("parent-hash"),
 	}
-	if _, err := rpcService.ProposeBlock(context.Background(), req); err != nil {
+	if _, err := proposerServer.ProposeBlock(context.Background(), req); err != nil {
 		t.Errorf("Could not propose block correctly: %v", err)
 	}
 }
@@ -80,16 +73,13 @@ func TestLatestPOWChainBlockHash(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
-	rpcService := NewRPCService(context.Background(), &Config{
-		Port:            "6372",
-		ChainService:    mockChain,
-		BeaconDB:        db,
-		POWChainService: mockPOWChain,
-	})
+	proposerServer := &ProposerServer{
+		chainService: mockChain,
+		beaconDB: db,
+		powChainService: mockPOWChain,
+	}
 
-	rpcService.enablePOWChain = false
-
-	res, err := rpcService.LatestPOWChainBlockHash(context.Background(), nil)
+	res, err := proposerServer.LatestPOWChainBlockHash(context.Background(), nil)
 	if err != nil {
 		t.Fatalf("Could not get latest POW Chain block hash %v", err)
 	}
@@ -142,12 +132,11 @@ func TestComputeStateRoot(t *testing.T) {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
-	rpcService := NewRPCService(context.Background(), &Config{
-		Port:            "6372",
-		ChainService:    mockChain,
-		BeaconDB:        db,
-		POWChainService: &mockPOWChainService{},
-	})
+	proposerServer := &ProposerServer{
+		chainService: mockChain,
+		beaconDB: db,
+		powChainService: &mockPOWChainService{},
+	}
 
 	req := &pbp2p.BeaconBlock{
 		ParentRootHash32:   nil,
@@ -159,7 +148,7 @@ func TestComputeStateRoot(t *testing.T) {
 		},
 	}
 
-	_, _ = rpcService.ComputeStateRoot(context.Background(), req)
+	_, _ = proposerServer.ComputeStateRoot(context.Background(), req)
 }
 
 func TestProposerIndex(t *testing.T) {
@@ -204,12 +193,11 @@ func TestProposerIndex(t *testing.T) {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
-	rpcService := NewRPCService(context.Background(), &Config{
-		Port:            "6372",
-		ChainService:    mockChain,
-		BeaconDB:        db,
-		POWChainService: mockPOWChain,
-	})
+	proposerServer := &ProposerServer{
+		chainService: mockChain,
+		beaconDB: db,
+		powChainService: mockPOWChain,
+	}
 
 	expectedIndex := 1
 
@@ -217,7 +205,7 @@ func TestProposerIndex(t *testing.T) {
 		SlotNumber: 1,
 	}
 
-	res, err := rpcService.ProposerIndex(context.Background(), req)
+	res, err := proposerServer.ProposerIndex(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Could not get proposer index %v", err)
 	}

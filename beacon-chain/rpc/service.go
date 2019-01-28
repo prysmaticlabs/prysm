@@ -8,13 +8,11 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/gogo/protobuf/proto"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -128,10 +126,20 @@ func (s *Service) Start() {
 		incomingAttestation: s.incomingAttestation,
 		canonicalStateChan: s.canonicalStateChan,
 	}
+	proposerServer := &ProposerServer{
+        beaconDB: s.beaconDB,
+        chainService: s.chainService,
+        powChainService: s.powChainService,
+        canonicalStateChan: s.canonicalStateChan,
+        enablePOWChain: s.enablePOWChain,
+	}
+	attesterServer := &AttesterServer{
+		attestationService: s.attestationService,
+	}
 	pb.RegisterBeaconServiceServer(s.grpcServer, beaconServer)
+	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)
+	pb.RegisterAttesterServiceServer(s.grpcServer, attesterServer)
 	pb.RegisterValidatorServiceServer(s.grpcServer, s)
-	pb.RegisterProposerServiceServer(s.grpcServer, s)
-	pb.RegisterAttesterServiceServer(s.grpcServer, s)
 
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)
@@ -159,20 +167,6 @@ func (s *Service) Stop() error {
 // TODO(1205): Add service health checks.
 func (s *Service) Status() error {
 	return nil
-}
-
-// AttestHead is a function called by an attester in a sharding validator to vote
-// on a block.
-func (s *Service) AttestHead(ctx context.Context, req *pb.AttestRequest) (*pb.AttestResponse, error) {
-	enc, err := proto.Marshal(req.Attestation)
-	if err != nil {
-		return nil, fmt.Errorf("could not marshal attestation: %v", err)
-	}
-	h := hashutil.Hash(enc)
-	// Relays the attestation to chain service.
-	s.attestationService.IncomingAttestationFeed().Send(req.Attestation)
-
-	return &pb.AttestResponse{AttestationHash: h[:]}, nil
 }
 
 // ValidatorShardID is called by a validator to get the shard ID of where it's suppose

@@ -112,30 +112,6 @@ func TestInsecureEndpoint(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
 
-
-
-func TestAttestHead(t *testing.T) {
-	mockChain := &mockChainService{}
-	mockAttestationService := &mockAttestationService{}
-	rpcService := NewRPCService(context.Background(), &Config{
-		Port:               "6372",
-		ChainService:       mockChain,
-		AttestationService: mockAttestationService,
-	})
-	req := &pb.AttestRequest{
-		Attestation: &pbp2p.Attestation{
-			Data: &pbp2p.AttestationData{
-				Slot:                 999,
-				Shard:                1,
-				ShardBlockRootHash32: []byte{'a'},
-			},
-		},
-	}
-	if _, err := rpcService.AttestHead(context.Background(), req); err != nil {
-		t.Errorf("Could not attest head correctly: %v", err)
-	}
-}
-
 func TestValidatorSlotAndResponsibility(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
