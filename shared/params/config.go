@@ -130,7 +130,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	// Prysm constants.
 	DepositsForChainStart: 16384,
 	RandBytes:             3,
-	SyncPollingInterval:   16 * 4, // Query nodes over the network every 4 slots for sync status.
+	SyncPollingInterval:   6 * 4, // Query nodes over the network every 4 slots for sync status.
 	GenesisTime:           time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC),
 	MaxNumLog2Validators:  24,
 }
