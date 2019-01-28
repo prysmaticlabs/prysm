@@ -87,7 +87,6 @@ With the binary executable:
 ./beacon-chain \
   --datadir /path/to/your/datadir \
   --rpc-port 4000 \
-  --simulator \
   --demo-config \
   --p2p-port 9000
 ```
@@ -98,13 +97,10 @@ With bazel:
 bazel run //beacon-chain --\
   --datadir /path/to/your/datadir \
   --rpc-port 4000 \
-  --simulator \
   --demo-config \
   --p2p-port 9000
 ```
 
-
-We added a `--simulator` flag that simulates other nodes connected to you sending your node blocks for processing. Given this is a local development version and you'll only be running 1 validator client, this gives us a good idea of what the system will need to handle in the wild and will help advance the chain.
 
 We also have a `--demo-config` flag that configures some internal parameters for you to run a local demo version of the system.
 
@@ -161,7 +157,6 @@ if you want to run multiple validator clients, **each one needs to have its own 
 ```
 docker run -p 4000:4000 -v gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
   --rpc-port 4000 \
-  --simulator \
   --demo-config \
   --p2p-port 9000
 ```
@@ -189,7 +184,6 @@ The best way to run under Windows is to clone the repository and then run the no
 go run ./beacon-chain main.go \
    --datadir /path/to/your/datadir \
    --rpc-port 4000 \
-   --simulator \
    --demo-config \
    --p2p-port 9000
 ```
