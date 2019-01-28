@@ -100,7 +100,7 @@ func ProcessEth1Data(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.Be
 	var eth1DataVoteAdded bool
 
 	for _, Eth1DataVote := range beaconState.Eth1DataVotes {
-		if bytes.Equal(Eth1DataVote.Eth1Data.BlockHash32, block.Eth1Data.BlockHash32()) {
+		if bytes.Equal(Eth1DataVote.Eth1Data.BlockHash32, block.Eth1Data.BlockHash32) {
 			if bytes.Equal(Eth1DataVote.Eth1Data.DepositRootHash32, block.Eth1Data.DepositRootHash32) {
 				Eth1DataVote.VoteCount++
 				eth1DataVoteAdded = true
