@@ -65,8 +65,8 @@ func TestValidatorShard(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	err := db.InitializeState()
-	if err != nil {
+	unixTime := uint64(time.Now().Unix())
+	if err := db.InitializeState(unixTime); err != nil {
 		t.Fatalf("Can't initialze genesis state: %v", err)
 	}
 	beaconState, err := db.State()

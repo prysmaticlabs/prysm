@@ -1,7 +1,7 @@
-package vrc
+package depositcontract
 
 import (
-	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"encoding/binary"
 	"fmt"
@@ -9,11 +9,15 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 var (
@@ -23,10 +27,11 @@ var (
 )
 
 type testAccount struct {
-	addr     common.Address
-	contract *ValidatorRegistration
-	backend  *backends.SimulatedBackend
-	txOpts   *bind.TransactOpts
+	addr         common.Address
+	contract     *DepositContract
+	contractAddr common.Address
+	backend      *backends.SimulatedBackend
+	txOpts       *bind.TransactOpts
 }
 
 func setup() (*testAccount, error) {
@@ -44,16 +49,19 @@ func setup() (*testAccount, error) {
 
 	addr := crypto.PubkeyToAddress(privKey.PublicKey)
 	txOpts := bind.NewKeyedTransactor(privKey)
-	startingBalance, _ := new(big.Int).SetString("1000000000000000000000", 10)
+	startingBalance, _ := new(big.Int).SetString("100000000000000000000000000000000000000", 10)
 	genesis[addr] = core.GenesisAccount{Balance: startingBalance}
-	backend := backends.NewSimulatedBackend(genesis, 2100000)
+	backend := backends.NewSimulatedBackend(genesis, 210000000000)
 
-	_, _, contract, err := DeployValidatorRegistration(txOpts, backend)
+	depositsRequired := big.NewInt(8)
+	minDeposit := big.NewInt(1e9)
+	maxDeposit := big.NewInt(32e9)
+	contractAddr, _, contract, err := DeployDepositContract(txOpts, backend, depositsRequired, minDeposit, maxDeposit)
 	if err != nil {
 		return nil, err
 	}
 
-	return &testAccount{addr, contract, backend, txOpts}, nil
+	return &testAccount{addr, contract, contractAddr, backend, txOpts}, nil
 }
 
 func TestSetupAndContractRegistration(t *testing.T) {
@@ -114,49 +122,42 @@ func TestValidatorRegisters(t *testing.T) {
 	if err != nil {
 		t.Errorf("Validator registration failed: %v", err)
 	}
-	log, err := testAccount.contract.FilterDeposit(&bind.FilterOpts{}, [][]byte{})
 
-	defer func() {
-		err = log.Close()
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{
+			testAccount.contractAddr,
+		},
+	}
 
+	logs, err := testAccount.backend.FilterLogs(context.Background(), query)
 	if err != nil {
-		t.Fatal(err)
-	}
-	if log.Error() != nil {
-		t.Fatal(log.Error())
-	}
-	log.Next()
-
-	index := make([]byte, 8)
-	binary.BigEndian.PutUint64(index, 65536)
-
-	if !bytes.Equal(log.Event.MerkleTreeIndex, index) {
-		t.Errorf("HashChainValue event total desposit count miss matched. Want: %v, Got: %v", index, log.Event.MerkleTreeIndex)
-	}
-	if !bytes.Equal(log.Event.Data[len(log.Event.Data)-1:], []byte{'A'}) {
-		t.Errorf("validatorRegistered event randao commitment miss matched. Want: %v, Got: %v", []byte{'A'}, log.Event.Data[len(log.Event.Data)-1:])
+		t.Fatalf("Unable to get logs of deposit contract: %v", err)
 	}
 
-	log.Next()
-	binary.BigEndian.PutUint64(index, 65537)
-	if !bytes.Equal(log.Event.MerkleTreeIndex, index) {
-		t.Errorf("HashChainValue event total desposit count miss matched. Want: %v, Got: %v", index, log.Event.MerkleTreeIndex)
-	}
-	if !bytes.Equal(log.Event.Data[len(log.Event.Data)-1:], []byte{'B'}) {
-		t.Errorf("validatorRegistered event randao commitment miss matched. Want: %v, Got: %v", []byte{'B'}, log.Event.Data[len(log.Event.Data)-1:])
+	merkleTreeIndex := make([]uint64, 5)
+	depositData := make([][]byte, 5)
+
+	for i, log := range logs {
+		_, data, idx, err := UnpackDepositLogData(log.Data)
+		if err != nil {
+			t.Fatalf("Unable to unpack log data: %v", err)
+		}
+		merkleTreeIndex[i] = binary.BigEndian.Uint64(idx)
+		depositData[i] = data
 	}
 
-	log.Next()
-	binary.BigEndian.PutUint64(index, 65538)
-	if !bytes.Equal(log.Event.MerkleTreeIndex, index) {
-		t.Errorf("HashChainValue event total desposit count miss matched. Want: %v, Got: %v", index, log.Event.MerkleTreeIndex)
+	twoTothePowerOfTreeDepth := mathutil.PowerOf2(params.BeaconConfig().DepositContractTreeDepth)
+
+	if merkleTreeIndex[0] != twoTothePowerOfTreeDepth {
+		t.Errorf("Deposit event total desposit count miss matched. Want: %d, Got: %d", twoTothePowerOfTreeDepth+1, merkleTreeIndex[0])
 	}
-	if !bytes.Equal(log.Event.Data[len(log.Event.Data)-1:], []byte{'C'}) {
-		t.Errorf("validatorRegistered event randao commitment miss matched. Want: %v, Got: %v", []byte{'B'}, log.Event.Data[len(log.Event.Data)-1:])
+
+	if merkleTreeIndex[1] != twoTothePowerOfTreeDepth+1 {
+		t.Errorf("Deposit event total desposit count miss matched. Want: %d, Got: %d", twoTothePowerOfTreeDepth+2, merkleTreeIndex[1])
+	}
+
+	if merkleTreeIndex[2] != twoTothePowerOfTreeDepth+2 {
+		t.Errorf("Deposit event total desposit count miss matched. Want: %v, Got: %v", twoTothePowerOfTreeDepth+3, merkleTreeIndex[2])
 	}
 }
 
@@ -168,32 +169,27 @@ func TestChainStarts(t *testing.T) {
 	}
 	testAccount.txOpts.Value = amount32Eth
 
-	for i := 0; i < 9; i++ {
+	for i := 0; i < 8; i++ {
 		_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{'A'})
-		testAccount.backend.Commit()
 		if err != nil {
 			t.Errorf("Validator registration failed: %v", err)
 		}
 	}
 
-	log, err := testAccount.contract.FilterChainStart(&bind.FilterOpts{}, [][]byte{})
+	testAccount.backend.Commit()
 
-	defer func() {
-		err = log.Close()
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{
+			testAccount.contractAddr,
+		},
+	}
 
+	logs, err := testAccount.backend.FilterLogs(context.Background(), query)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Unable to get logs %v", err)
 	}
-	if log.Error() != nil {
-		t.Fatal(log.Error())
-	}
-	log.Next()
 
-	if len(log.Event.Time) == 0 {
-		t.Error("Chain start even did not get emitted, The start time is empty")
+	if logs[8].Topics[0] != hashutil.Hash([]byte("ChainStart(bytes32,bytes)")) {
+		t.Error("Chain start even did not get emitted")
 	}
 }

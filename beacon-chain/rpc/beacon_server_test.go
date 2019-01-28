@@ -19,7 +19,6 @@ func TestLatestAttestationContextClosed(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	beaconServer := &BeaconServer{
 		ctx:                ctx,
-		cancel:             cancel,
 		attestationService: mockAttestationService,
 	}
 	exitRoutine := make(chan bool)
@@ -32,7 +31,7 @@ func TestLatestAttestationContextClosed(t *testing.T) {
 		}
 		<-exitRoutine
 	}(t)
-	beaconServer.cancel()
+	cancel()
 	exitRoutine <- true
 	testutil.AssertLogsContain(t, hook, "RPC context closed, exiting goroutine")
 }
@@ -42,7 +41,6 @@ func TestLatestAttestationFaulty(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	beaconServer := &BeaconServer{
 		ctx:                 ctx,
-		cancel:              cancel,
 		attestationService:  attestationService,
 		incomingAttestation: make(chan *pbp2p.Attestation, 0),
 	}
@@ -63,7 +61,7 @@ func TestLatestAttestationFaulty(t *testing.T) {
 	}(t)
 
 	beaconServer.incomingAttestation <- attestation
-	beaconServer.cancel()
+	cancel()
 	exitRoutine <- true
 }
 
@@ -73,7 +71,6 @@ func TestLatestAttestation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	beaconServer := &BeaconServer{
 		ctx:                 ctx,
-		cancel:              cancel,
 		attestationService:  attestationService,
 		incomingAttestation: make(chan *pbp2p.Attestation, 0),
 	}
@@ -92,7 +89,7 @@ func TestLatestAttestation(t *testing.T) {
 		<-exitRoutine
 	}(t)
 	beaconServer.incomingAttestation <- attestation
-	beaconServer.cancel()
+	cancel()
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, "Sending attestation to RPC clients")

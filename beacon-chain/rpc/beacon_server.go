@@ -16,7 +16,6 @@ import (
 type BeaconServer struct {
 	beaconDB            *db.BeaconDB
 	ctx                 context.Context
-	cancel              context.CancelFunc
 	chainService        chainService
 	attestationService  attestationService
 	incomingAttestation chan *pbp2p.Attestation
