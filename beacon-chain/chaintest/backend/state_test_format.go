@@ -52,15 +52,15 @@ type StateTestProposerSlashing struct {
 
 // StateTestCasperSlashing --
 type StateTestCasperSlashing struct {
-	Slot                     uint64   `yaml:"slot"`
-	Votes1Slot               uint64   `yaml:"votes_1_slot"`
-	Votes1JustifiedSlot      uint64   `yaml:"votes_1_justified_slot"`
-	Votes1CustodyBit0Indices []uint32 `yaml:"votes_1_custody_0_indices"`
-	Votes1CustodyBit1Indices []uint32 `yaml:"votes_1_custody_1_indices"`
-	Votes2Slot               uint64   `yaml:"votes_2_slot"`
-	Votes2JustifiedSlot      uint64   `yaml:"votes_2_justified_slot"`
-	Votes2CustodyBit0Indices []uint32 `yaml:"votes_2_custody_0_indices"`
-	Votes2CustodyBit1Indices []uint32 `yaml:"votes_2_custody_1_indices"`
+	Slot                                 uint64   `yaml:"slot"`
+	SlashableVoteData1Slot               uint64   `yaml:"slashable_vote_data_1_slot"`
+	SlashableVoteData1JustifiedSlot      uint64   `yaml:"slashable_vote_data_1_justified_slot"`
+	SlashableVoteData1CustodyBit0Indices []uint32 `yaml:"slashable_vote_data_1_custody_0_indices"`
+	SlashableVoteData1CustodyBit1Indices []uint32 `yaml:"slashable_vote_data_1_custody_1_indices"`
+	SlashableVoteData2Slot               uint64   `yaml:"slashable_vote_data_2_slot"`
+	SlashableVoteData2JustifiedSlot      uint64   `yaml:"slashable_vote_data_2_justified_slot"`
+	SlashableVoteData2CustodyBit0Indices []uint32 `yaml:"slashable_vote_data_2_custody_0_indices"`
+	SlashableVoteData2CustodyBit1Indices []uint32 `yaml:"slashable_vote_data_2_custody_1_indices"`
 }
 
 // StateTestValidatorExit --
