@@ -325,7 +325,6 @@ func TestTotalEffectiveBalance(t *testing.T) {
 }
 
 func TestIsActiveValidator(t *testing.T) {
-
 	tests := []struct {
 		a uint64
 		b bool
@@ -363,7 +362,7 @@ func TestGetActiveValidatorRecord(t *testing.T) {
 		ValidatorRegistry: inputValidators,
 	}
 
-	validators := ActiveValidator(state, []uint32{1, 3})
+	validators := ActiveValidators(state, []uint32{1, 3})
 
 	if !reflect.DeepEqual(outputValidators, validators) {
 		t.Errorf("Active validators don't match. Wanted: %v, Got: %v", outputValidators, validators)

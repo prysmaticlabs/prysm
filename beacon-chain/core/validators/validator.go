@@ -59,11 +59,11 @@ func ActiveValidatorIndices(validators []*pb.ValidatorRecord, slot uint64) []uin
 	return indices
 }
 
-// ActiveValidator returns the active validator records in a list.
+// ActiveValidators returns the active validator records in a list.
 //
 // Spec pseudocode definition:
 //   [state.validator_registry[i] for i in get_active_validator_indices(state.validator_registry)]
-func ActiveValidator(state *pb.BeaconState, validatorIndices []uint32) []*pb.ValidatorRecord {
+func ActiveValidators(state *pb.BeaconState, validatorIndices []uint32) []*pb.ValidatorRecord {
 	activeValidators := make([]*pb.ValidatorRecord, 0, len(validatorIndices))
 	for _, validatorIndex := range validatorIndices {
 		activeValidators = append(activeValidators, state.ValidatorRegistry[validatorIndex])

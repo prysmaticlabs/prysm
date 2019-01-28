@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -60,5 +61,42 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 	ctx context.Context,
 	req *pb.ValidatorEpochAssignmentsRequest,
 ) (*pb.ValidatorEpochAssignmentsResponse, error) {
-	return nil, nil
+	beaconState, err := vs.beaconDB.State()
+	if err != nil {
+		return nil, fmt.Errorf("could not get beacon state: %v", err)
+	}
+	validatorIndex, err := v.ValidatorIdx(req.PublicKey.PublicKey, beaconState.ValidatorRegistry)
+	if err != nil {
+		return nil, fmt.Errorf("could not get active validator index: %v", err)
+	}
+	var shard uint64
+	var attesterSlot uint64
+	var proposerSlot uint64
+	for i := req.EpochStart; i < req.EpochStart+params.BeaconConfig().EpochLength; i++ {
+		crossLinkCommittees, err := v.CrosslinkCommitteesAtSlot(beaconState, i)
+		if err != nil {
+			return nil, fmt.Errorf("could not get crosslink committees at slot %d: %v", i, err)
+		}
+		firstCommittee := crossLinkCommittees[0].Committee
+		proposerIndex := firstCommittee[i%uint64(len(firstCommittee))]
+		if proposerIndex == validatorIndex {
+			proposerSlot = i
+		}
+		for _, committee := range crossLinkCommittees {
+            for _, idx := range committee.Committee {
+            	if idx == validatorIndex {
+            		attesterSlot = i
+            		shard = committee.Shard
+				}
+			}
+		}
+	}
+	return &pb.ValidatorEpochAssignmentsResponse{
+		Assignment: &pb.Assignment{
+			PublicKey:    req.PublicKey,
+			ShardId:      shard,
+			AttesterSlot: attesterSlot,
+			ProposerSlot: proposerSlot,
+		},
+	}, nil
 }
