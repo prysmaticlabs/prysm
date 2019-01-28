@@ -39,9 +39,9 @@ docker_repositories()
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    url = "https://github.com/bazelbuild/rules_nodejs/archive/0.16.2.tar.gz",
-    strip_prefix = "rules_nodejs-0.16.2",
-    sha256 = "5dea8b55e41caae044f4b1697f2bbf882d99563cf6c012929384063fddc801d4",
+    url = "https://github.com/bazelbuild/rules_nodejs/archive/0.16.5.tar.gz",
+    strip_prefix = "rules_nodejs-0.16.5",
+    sha256 = "63f29855b5e85d0db77362e1477864299697e1f200be8be8fa5faa43230b80d0",
 )
 
 load("@build_bazel_rules_nodejs//:package.bzl", "rules_nodejs_dependencies")
@@ -501,7 +501,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "c6b37f3e92850b723493d63fd35aad34e19e048d",
+    commit = "b90733256f2e882e81d52f9126de08df5615afd9",
     importpath = "golang.org/x/sys",
 )
 
