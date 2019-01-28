@@ -16,6 +16,7 @@ type fakeValidator struct {
 	NextSlotCalled          bool
 	UpdateAssignmentsCalled bool
 	UpdateAssignmentsArg1   uint64
+	UpdateAssignmentsRet    error
 	RoleAtCalled            bool
 	RoleAtArg1              uint64
 	RoleAtRet               pb.ValidatorRole
@@ -42,9 +43,10 @@ func (fv *fakeValidator) NextSlot() <-chan uint64 {
 	return fv.NextSlotRet
 }
 
-func (fv *fakeValidator) UpdateAssignments(_ context.Context, slot uint64) {
+func (fv *fakeValidator) UpdateAssignments(_ context.Context, slot uint64) error {
 	fv.UpdateAssignmentsCalled = true
 	fv.UpdateAssignmentsArg1 = slot
+	return fv.UpdateAssignmentsRet
 }
 
 func (fv *fakeValidator) RoleAt(slot uint64) pb.ValidatorRole {

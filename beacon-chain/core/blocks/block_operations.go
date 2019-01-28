@@ -621,9 +621,16 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 //     Verify that state.slot >= exit.slot.
 //     Verify that state.slot >= validator.latest_status_change_slot +
 //       SHARD_PERSISTENT_COMMITTEE_CHANGE_PERIOD.
+//     Let exit_message = hash_tree_root(
+//       Exit(
+//         slot=exit.slot,
+//         validator_index=exit.validator_index,
+//         signature=EMPTY_SIGNATURE
+//       )
+//     ).
 //     Verify that bls_verify(
 //       pubkey=validator.pubkey,
-//       message=ZERO_HASH,
+//       message=exit_message,
 //       signature=exit.signature,
 //       domain=get_domain(state.fork_data, exit.slot, DOMAIN_EXIT),
 //     )

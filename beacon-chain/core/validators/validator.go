@@ -21,7 +21,7 @@ import (
 var config = params.BeaconConfig()
 
 // InitialValidatorRegistry creates a new validator set that is used to
-// generate a new crystallized state.
+// generate a new bootstrapped state.
 func InitialValidatorRegistry() []*pb.ValidatorRecord {
 	randaoPreCommit := [32]byte{}
 	randaoReveal := hashutil.Hash(randaoPreCommit[:])
@@ -30,9 +30,10 @@ func InitialValidatorRegistry() []*pb.ValidatorRecord {
 		pubkey := hashutil.Hash([]byte{byte(i)})
 		validators[i] = &pb.ValidatorRecord{
 			ExitSlot:               config.FarFutureSlot,
-			Balance:                config.MaxDeposit * config.Gwei,
+			Balance:                config.MaxDepositInGwei,
 			Pubkey:                 pubkey[:],
 			RandaoCommitmentHash32: randaoReveal[:],
+			RandaoLayers:           1,
 		}
 	}
 	return validators
@@ -111,14 +112,14 @@ func ShardCommitteesAtSlot(state *pb.BeaconState, slot uint64) (*pb.ShardCommitt
 //    """
 //    Returns the beacon proposer index for the ``slot``.
 //    """
-//    first_committee = get_shard_committees_at_slot(state, slot)[0].committee
+//    first_committee, _ = get_crosslink_committees_at_slot(state, slot)[0]
 //    return first_committee[slot % len(first_committee)]
 func BeaconProposerIdx(state *pb.BeaconState, slot uint64) (uint32, error) {
-	committeeArray, err := ShardCommitteesAtSlot(state, slot)
+	committeeArray, err := CrosslinkCommitteesAtSlot(state, slot)
 	if err != nil {
 		return 0, err
 	}
-	firstCommittee := committeeArray.ArrayShardCommittee[0].Committee
+	firstCommittee := committeeArray[0].Committee
 
 	return firstCommittee[slot%uint64(len(firstCommittee))], nil
 }
@@ -260,8 +261,8 @@ func NewRegistryDeltaChainTip(
 //     """
 //     return min(state.validator_balances[idx], MAX_DEPOSIT * GWEI_PER_ETH)
 func EffectiveBalance(state *pb.BeaconState, idx uint32) uint64 {
-	if state.ValidatorBalances[idx] > config.MaxDeposit*config.Gwei {
-		return config.MaxDeposit * config.Gwei
+	if state.ValidatorBalances[idx] > config.MaxDepositInGwei {
+		return config.MaxDepositInGwei
 	}
 	return state.ValidatorBalances[idx]
 }
@@ -313,14 +314,14 @@ func ValidatorIndices(
 // if the validator shard committee matches the input attestations.
 //
 // Spec pseudocode definition:
-// Let attesting_validator_indices(shard_committee, shard_block_root)
+// Let attesting_validator_indices(crosslink_committee, shard_block_root)
 // be the union of the validator index sets given by
 // [get_attestation_participants(state, a.data, a.participation_bitfield)
 // for a in this_epoch_attestations + previous_epoch_attestations
 // if a.shard == shard_committee.shard and a.shard_block_root == shard_block_root]
 func AttestingValidatorIndices(
 	state *pb.BeaconState,
-	shardCommittee *pb.ShardCommittee,
+	shard uint64,
 	shardBlockRoot []byte,
 	thisEpochAttestations []*pb.PendingAttestationRecord,
 	prevEpochAttestations []*pb.PendingAttestationRecord) ([]uint32, error) {
@@ -329,7 +330,7 @@ func AttestingValidatorIndices(
 	attestations := append(thisEpochAttestations, prevEpochAttestations...)
 
 	for _, attestation := range attestations {
-		if attestation.Data.Shard == shardCommittee.Shard &&
+		if attestation.Data.Shard == shard &&
 			bytes.Equal(attestation.Data.ShardBlockRootHash32, shardBlockRoot) {
 
 			validatorIndicesCommittee, err := AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)
