@@ -8,7 +8,7 @@ test_cases:
   - config:
       validator_count: 100
       cycle_length: 8
-      shard_count: 32
+      shard_count: 64
       min_committee_size: 8
     slots:
       # "slot_number" has a minimum of 1

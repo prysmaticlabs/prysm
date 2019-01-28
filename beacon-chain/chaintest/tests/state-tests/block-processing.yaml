@@ -60,22 +60,23 @@ test_cases:
       num_validators: 16387
       penalized_validators: [16385, 16386] # We test that the validators at indices 16385, 16386 were indeed penalized
       exited_validators: [100] # We confirm the indices of validators that willingly exited the registry
-  - config:
-      skip_slots: [10, 20]
-      epoch_length: 64
-      deposits_for_chain_start: 1000
-      num_slots: 128 # Testing advancing state's slot == 2*EpochLength
-      deposits:
-        - slot: 10
-          amount: 32
-          merkle_index: 0
-          pubkey: !!binary |
-            SlAAbShSkUg7PLiPHZI/rTS1uAvKiieOrifPN6Moso0=
-        - slot: 20
-          amount: 32
-          merkle_index: 1
-          pubkey: !!binary |
-            Oklajsjdkaklsdlkajsdjlajslkdjlkasjlkdjlajdsd
-    results:
-      slot: 128
-      num_validators: 1000 # Validator registry should not have grown if slots 10 and 20 were skipped
+# TODO(1387): Waiting for spec to stable to proceed with this test case
+#  - config:
+#      skip_slots: [10, 20]
+#      epoch_length: 64
+#      deposits_for_chain_start: 1000
+#      num_slots: 128 # Testing advancing state's slot == 2*EpochLength
+#      deposits:
+#        - slot: 10
+#          amount: 32
+#          merkle_index: 0
+#          pubkey: !!binary |
+#            SlAAbShSkUg7PLiPHZI/rTS1uAvKiieOrifPN6Moso0=
+#        - slot: 20
+#          amount: 32
+#          merkle_index: 1
+#          pubkey: !!binary |
+#            Oklajsjdkaklsdlkajsdjlajslkdjlkasjlkdjlajdsd
+#    results:
+#      slot: 128
+#      num_validators: 1000 # Validator registry should not have grown if slots 10 and 20 were skipped
