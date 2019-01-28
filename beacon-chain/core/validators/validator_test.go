@@ -74,16 +74,16 @@ func TestProposerShardAndIndex(t *testing.T) {
 	state := &pb.BeaconState{
 		ShardCommitteesAtSlots: []*pb.ShardCommitteeArray{
 			{ArrayShardCommittee: []*pb.ShardCommittee{
-				{Shard: 0, Committee: []uint32{0, 1, 2, 3, 4}},
-				{Shard: 1, Committee: []uint32{5, 6, 7, 8, 9}},
+				{Shard: 0, Committee: []uint64{0, 1, 2, 3, 4}},
+				{Shard: 1, Committee: []uint64{5, 6, 7, 8, 9}},
 			}},
 			{ArrayShardCommittee: []*pb.ShardCommittee{
-				{Shard: 2, Committee: []uint32{10, 11, 12, 13, 14}},
-				{Shard: 3, Committee: []uint32{15, 16, 17, 18, 19}},
+				{Shard: 2, Committee: []uint64{10, 11, 12, 13, 14}},
+				{Shard: 3, Committee: []uint64{15, 16, 17, 18, 19}},
 			}},
 			{ArrayShardCommittee: []*pb.ShardCommittee{
-				{Shard: 4, Committee: []uint32{20, 21, 22, 23, 24}},
-				{Shard: 5, Committee: []uint32{25, 26, 27, 28, 29}},
+				{Shard: 4, Committee: []uint64{20, 21, 22, 23, 24}},
+				{Shard: 5, Committee: []uint64{25, 26, 27, 28, 29}},
 			}},
 		}}
 
@@ -127,9 +127,9 @@ func TestValidatorShard(t *testing.T) {
 	}
 	shardCommittees := []*pb.ShardCommitteeArray{
 		{ArrayShardCommittee: []*pb.ShardCommittee{
-			{Shard: 0, Committee: []uint32{0, 1, 2, 3, 4, 5, 6}},
-			{Shard: 1, Committee: []uint32{7, 8, 9, 10, 11, 12, 13}},
-			{Shard: 2, Committee: []uint32{14, 15, 16, 17, 18, 19}},
+			{Shard: 0, Committee: []uint64{0, 1, 2, 3, 4, 5, 6}},
+			{Shard: 1, Committee: []uint64{7, 8, 9, 10, 11, 12, 13}},
+			{Shard: 2, Committee: []uint64{14, 15, 16, 17, 18, 19}},
 		}},
 	}
 	validators[19].Pubkey = []byte("100")
@@ -159,19 +159,19 @@ func TestValidatorSlotAndResponsibility(t *testing.T) {
 	}
 	shardCommittees := []*pb.ShardCommitteeArray{
 		{ArrayShardCommittee: []*pb.ShardCommittee{
-			{Shard: 0, Committee: []uint32{0, 1, 2, 3, 4, 5, 6}},
-			{Shard: 1, Committee: []uint32{7, 8, 9, 10, 11, 12, 13}},
-			{Shard: 2, Committee: []uint32{14, 15, 16, 17, 18, 19}},
+			{Shard: 0, Committee: []uint64{0, 1, 2, 3, 4, 5, 6}},
+			{Shard: 1, Committee: []uint64{7, 8, 9, 10, 11, 12, 13}},
+			{Shard: 2, Committee: []uint64{14, 15, 16, 17, 18, 19}},
 		}},
 		{ArrayShardCommittee: []*pb.ShardCommittee{
-			{Shard: 3, Committee: []uint32{20, 21, 22, 23, 24, 25, 26}},
-			{Shard: 4, Committee: []uint32{27, 28, 29, 30, 31, 32, 33}},
-			{Shard: 5, Committee: []uint32{34, 35, 36, 37, 38, 39}},
+			{Shard: 3, Committee: []uint64{20, 21, 22, 23, 24, 25, 26}},
+			{Shard: 4, Committee: []uint64{27, 28, 29, 30, 31, 32, 33}},
+			{Shard: 5, Committee: []uint64{34, 35, 36, 37, 38, 39}},
 		}},
 		{ArrayShardCommittee: []*pb.ShardCommittee{
-			{Shard: 6, Committee: []uint32{40, 41, 42, 43, 44, 45, 46}},
-			{Shard: 7, Committee: []uint32{47, 48, 49, 50, 51, 52, 53}},
-			{Shard: 8, Committee: []uint32{54, 55, 56, 57, 58, 59}},
+			{Shard: 6, Committee: []uint64{40, 41, 42, 43, 44, 45, 46}},
+			{Shard: 7, Committee: []uint64{47, 48, 49, 50, 51, 52, 53}},
+			{Shard: 8, Committee: []uint64{54, 55, 56, 57, 58, 59}},
 		}},
 	}
 	if _, _, err := ValidatorSlotAndRole([]byte("100"), validators, shardCommittees); err == nil {
@@ -318,9 +318,9 @@ func TestTotalEffectiveBalance(t *testing.T) {
 	}}
 
 	// 27 + 28 + 32 + 32 = 119
-	if TotalEffectiveBalance(state, []uint32{0, 1, 2, 3}) != 119*1e9 {
+	if TotalEffectiveBalance(state, []uint64{0, 1, 2, 3}) != 119*1e9 {
 		t.Errorf("Incorrect TotalEffectiveBalance. Wanted: 119, got: %d",
-			TotalEffectiveBalance(state, []uint32{0, 1, 2, 3})/1e9)
+			TotalEffectiveBalance(state, []uint64{0, 1, 2, 3})/1e9)
 	}
 }
 
@@ -363,7 +363,7 @@ func TestGetActiveValidatorRecord(t *testing.T) {
 		ValidatorRegistry: inputValidators,
 	}
 
-	validators := ActiveValidator(state, []uint32{1, 3})
+	validators := ActiveValidator(state, []uint64{1, 3})
 
 	if !reflect.DeepEqual(outputValidators, validators) {
 		t.Errorf("Active validators don't match. Wanted: %v, Got: %v", outputValidators, validators)
@@ -375,7 +375,7 @@ func TestBoundaryAttestingBalance(t *testing.T) {
 		25 * 1e9, 26 * 1e9, 32 * 1e9, 33 * 1e9, 100 * 1e9,
 	}}
 
-	attestedBalances := AttestingBalance(state, []uint32{0, 1, 2, 3, 4})
+	attestedBalances := AttestingBalance(state, []uint64{0, 1, 2, 3, 4})
 
 	// 25 + 26 + 32 + 32 + 32 = 147
 	if attestedBalances != 147*1e9 {
@@ -392,7 +392,7 @@ func TestBoundaryAttesters(t *testing.T) {
 
 	state := &pb.BeaconState{ValidatorRegistry: validators}
 
-	boundaryAttesters := Attesters(state, []uint32{5, 2, 87, 42, 99, 0})
+	boundaryAttesters := Attesters(state, []uint64{5, 2, 87, 42, 99, 0})
 
 	expectedBoundaryAttesters := []*pb.ValidatorRecord{
 		{Pubkey: []byte{byte(5)}},
@@ -433,9 +433,9 @@ func TestBoundaryAttesterIndices(t *testing.T) {
 		t.Fatalf("Failed to run BoundaryAttesterIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(attesterIndices, []uint32{242, 237, 224, 2}) {
+	if !reflect.DeepEqual(attesterIndices, []uint64{242, 237, 224, 2}) {
 		t.Errorf("Incorrect boundary attester indices. Wanted: %v, got: %v",
-			[]uint32{242, 237, 224, 2}, attesterIndices)
+			[]uint64{242, 237, 224, 2}, attesterIndices)
 	}
 }
 
@@ -457,7 +457,7 @@ func TestBeaconProposerIdx(t *testing.T) {
 
 	tests := []struct {
 		slot  uint64
-		index uint32
+		index uint64
 	}{
 		{
 			slot:  1,
@@ -502,8 +502,8 @@ func TestAttestingValidatorIndices_Ok(t *testing.T) {
 		t.Errorf("EpochLength should be 64 for these tests to pass")
 	}
 
-	var committeeIndices []uint32
-	for i := uint32(0); i < 8; i++ {
+	var committeeIndices []uint64
+	for i := uint64(0); i < 8; i++ {
 		committeeIndices = append(committeeIndices, i)
 	}
 
@@ -547,9 +547,9 @@ func TestAttestingValidatorIndices_Ok(t *testing.T) {
 		t.Fatalf("Could not execute AttestingValidatorIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(indices, []uint32{267, 15}) {
+	if !reflect.DeepEqual(indices, []uint64{267, 15}) {
 		t.Errorf("Could not get incorrect validator indices. Wanted: %v, got: %v",
-			[]uint32{267, 15}, indices)
+			[]uint64{267, 15}, indices)
 	}
 }
 
@@ -591,11 +591,11 @@ func TestAttestingValidatorIndices_OutOfBound(t *testing.T) {
 func TestAllValidatorIndices(t *testing.T) {
 	tests := []struct {
 		registries []*pb.ValidatorRecord
-		indices    []uint32
+		indices    []uint64
 	}{
-		{registries: []*pb.ValidatorRecord{}, indices: []uint32{}},
-		{registries: []*pb.ValidatorRecord{{}}, indices: []uint32{0}},
-		{registries: []*pb.ValidatorRecord{{}, {}, {}, {}}, indices: []uint32{0, 1, 2, 3}},
+		{registries: []*pb.ValidatorRecord{}, indices: []uint64{}},
+		{registries: []*pb.ValidatorRecord{{}}, indices: []uint64{0}},
+		{registries: []*pb.ValidatorRecord{{}, {}, {}, {}}, indices: []uint64{0, 1, 2, 3}},
 	}
 	for _, tt := range tests {
 		state := &pb.BeaconState{ValidatorRegistry: tt.registries}
@@ -609,7 +609,7 @@ func TestAllValidatorIndices(t *testing.T) {
 func TestNewRegistryDeltaChainTip(t *testing.T) {
 	tests := []struct {
 		flag                         uint64
-		idx                          uint32
+		idx                          uint64
 		pubKey                       []byte
 		currentRegistryDeltaChainTip []byte
 		newRegistryDeltaChainTip     []byte

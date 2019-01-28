@@ -114,7 +114,7 @@ message ValidatorRecord {
 }
 
 message ShardReassignmentRecord {
-  uint32 validator_index = 1;
+  uint64 validator_index = 1;
   uint64 shard = 2;
   uint64 slot = 3;
 }
@@ -130,7 +130,7 @@ message ShardCommitteeArray {
 
 message ShardCommittee {
   uint64 shard = 1;
-  repeated uint32 committee = 2;
+  repeated uint64 committee = 2;
   uint64 total_validator_count = 3;
 }
 
@@ -207,7 +207,7 @@ message Exit {
 
 message ValidatorRegistryDeltaBlock {
   bytes latest_registry_delta_root_hash32 = 1;
-  uint32 validator_index = 2;
+  uint64 validator_index = 2;
   bytes pubkey = 3;
   uint64 slot = 4;
   enum ValidatorRegistryDeltaFlags {
@@ -216,5 +216,3 @@ message ValidatorRegistryDeltaBlock {
   }
   ValidatorRegistryDeltaFlags flag = 5;
 }
-
-message CustodyChallenge {} // Empty until phase 1

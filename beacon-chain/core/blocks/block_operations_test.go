@@ -365,21 +365,21 @@ func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 		{
 			SlashableVoteData_1: &pb.SlashableVoteData{
 				CustodyBit_0Indices: make(
-					[]uint32,
+					[]uint64,
 					config.MaxCasperVotes,
 				),
 				CustodyBit_1Indices: make(
-					[]uint32,
+					[]uint64,
 					config.MaxCasperVotes,
 				),
 			},
 			SlashableVoteData_2: &pb.SlashableVoteData{
 				CustodyBit_0Indices: make(
-					[]uint32,
+					[]uint64,
 					config.MaxCasperVotes,
 				),
 				CustodyBit_1Indices: make(
-					[]uint32,
+					[]uint64,
 					config.MaxCasperVotes,
 				),
 			},
@@ -415,21 +415,21 @@ func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 		{
 			SlashableVoteData_1: &pb.SlashableVoteData{
 				CustodyBit_0Indices: make(
-					[]uint32,
+					[]uint64,
 					config.MaxCasperVotes,
 				),
 				CustodyBit_1Indices: make(
-					[]uint32,
+					[]uint64,
 					config.MaxCasperVotes,
 				),
 			},
 			SlashableVoteData_2: &pb.SlashableVoteData{
 				CustodyBit_0Indices: make(
-					[]uint32,
+					[]uint64,
 					config.MaxCasperVotes,
 				),
 				CustodyBit_1Indices: make(
-					[]uint32,
+					[]uint64,
 					config.MaxCasperVotes,
 				),
 			},
@@ -606,13 +606,13 @@ func TestProcessCasperSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 		{
 			SlashableVoteData_1: &pb.SlashableVoteData{
 				Data:                att1,
-				CustodyBit_0Indices: []uint32{1, 2},
-				CustodyBit_1Indices: []uint32{3, 4},
+				CustodyBit_0Indices: []uint64{1, 2},
+				CustodyBit_1Indices: []uint64{3, 4},
 			},
 			SlashableVoteData_2: &pb.SlashableVoteData{
 				Data:                att2,
-				CustodyBit_0Indices: []uint32{5, 6},
-				CustodyBit_1Indices: []uint32{7, 8},
+				CustodyBit_0Indices: []uint64{5, 6},
+				CustodyBit_1Indices: []uint64{7, 8},
 			},
 		},
 	}
@@ -660,13 +660,13 @@ func TestProcessCasperSlashings_AppliesCorrectStatus(t *testing.T) {
 		{
 			SlashableVoteData_1: &pb.SlashableVoteData{
 				Data:                att1,
-				CustodyBit_0Indices: []uint32{0, 1},
-				CustodyBit_1Indices: []uint32{2, 3},
+				CustodyBit_0Indices: []uint64{0, 1},
+				CustodyBit_1Indices: []uint64{2, 3},
 			},
 			SlashableVoteData_2: &pb.SlashableVoteData{
 				Data:                att2,
-				CustodyBit_0Indices: []uint32{4, 5},
-				CustodyBit_1Indices: []uint32{6, 1},
+				CustodyBit_0Indices: []uint64{4, 5},
+				CustodyBit_1Indices: []uint64{6, 1},
 			},
 		},
 	}

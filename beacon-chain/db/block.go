@@ -144,7 +144,7 @@ func (db *BeaconDB) UpdateChainHead(block *pb.BeaconBlock, beaconState *pb.Beaco
 
 // BlockBySlot accepts a slot number and returns the corresponding block in the main chain.
 // Returns nil if a block was not recorded for the given slot.
-func (db *BeaconDB) BlockBySlot(slot uint64) (*pb.BeaconBlock, error) {
+func (db *BeaconDB) BlockBySlot(slot uint32) (*pb.BeaconBlock, error) {
 	var block *pb.BeaconBlock
 	slotEnc := encodeSlotNumber(slot)
 

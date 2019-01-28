@@ -293,7 +293,7 @@ func (s *Service) ProposerIndex(ctx context.Context, req *pb.ProposerIndexReques
 	}
 
 	return &pb.IndexResponse{
-		Index: uint32(ProposerIndex),
+		Index: uint64(ProposerIndex),
 	}, nil
 }
 

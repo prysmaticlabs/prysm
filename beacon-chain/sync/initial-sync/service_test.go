@@ -85,7 +85,7 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	block := &pb.BeaconBlock{
 		DepositRootHash32: []byte{1, 2, 3},
 		ParentRootHash32:  genericHash,
-		Slot:              uint64(1),
+		Slot:              uint32(1),
 		StateRootHash32:   genericHash,
 	}
 
@@ -161,7 +161,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 	}
 	beaconStateRootHash32 := hashutil.Hash(enc)
 
-	getBlockResponseMsg := func(Slot uint64) p2p.Message {
+	getBlockResponseMsg := func(Slot uint32) p2p.Message {
 		block := &pb.BeaconBlock{
 			DepositRootHash32: []byte{1, 2, 3},
 			ParentRootHash32:  genericHash,
@@ -275,7 +275,7 @@ func TestDelayChan(t *testing.T) {
 	block := &pb.BeaconBlock{
 		DepositRootHash32: []byte{1, 2, 3},
 		ParentRootHash32:  genericHash,
-		Slot:              uint64(1),
+		Slot:              uint32(1),
 		StateRootHash32:   beaconStateRootHash32[:],
 	}
 
@@ -350,7 +350,7 @@ func TestRequestBlocksBySlot(t *testing.T) {
 	genericHash := make([]byte, 32)
 	genericHash[0] = 'a'
 
-	getBlockResponseMsg := func(Slot uint64) (p2p.Message, [32]byte) {
+	getBlockResponseMsg := func(Slot uint32) (p2p.Message, [32]byte) {
 
 		block := &pb.BeaconBlock{
 			DepositRootHash32: []byte{1, 2, 3},
@@ -375,7 +375,7 @@ func TestRequestBlocksBySlot(t *testing.T) {
 	}
 
 	// sending all blocks except for the initial block
-	for i := uint64(2); i < 10; i++ {
+	for i := uint32(2); i < 10; i++ {
 		response, _ := getBlockResponseMsg(i)
 		ss.blockBuf <- response
 	}

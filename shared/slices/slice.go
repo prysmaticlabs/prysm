@@ -1,12 +1,12 @@
 package slices
 
-// Intersection of two uint32 slices with time
+// Intersection of two uint64 slices with time
 // complexity of approximately O(n) leveraging a map to
 // check for element existence off by a constant factor
 // of underlying map efficiency.
-func Intersection(a []uint32, b []uint32) []uint32 {
-	set := make([]uint32, 0)
-	m := make(map[uint32]bool)
+func Intersection(a []uint64, b []uint64) []uint64 {
+	set := make([]uint64, 0)
+	m := make(map[uint64]bool)
 
 	for i := 0; i < len(a); i++ {
 		m[a[i]] = true
@@ -19,13 +19,13 @@ func Intersection(a []uint32, b []uint32) []uint32 {
 	return set
 }
 
-// Union of two uint32 slices with time
+// Union of two uint64 slices with time
 // complexity of approximately O(n) leveraging a map to
 // check for element existence off by a constant factor
 // of underlying map efficiency.
-func Union(a []uint32, b []uint32) []uint32 {
-	set := make([]uint32, 0)
-	m := make(map[uint32]bool)
+func Union(a []uint64, b []uint64) []uint64 {
+	set := make([]uint64, 0)
+	m := make(map[uint64]bool)
 
 	for i := 0; i < len(a); i++ {
 		m[a[i]] = true
@@ -39,13 +39,13 @@ func Union(a []uint32, b []uint32) []uint32 {
 	return set
 }
 
-// Not returns the uint32 in slice a that are
+// Not returns the uint64 in slice a that are
 // not in slice b with time complexity of approximately
 // O(n) leveraging a map to check for element existence
 // off by a constant factor of underlying map efficiency.
-func Not(a []uint32, b []uint32) []uint32 {
-	set := make([]uint32, 0)
-	m := make(map[uint32]bool)
+func Not(a []uint64, b []uint64) []uint64 {
+	set := make([]uint64, 0)
+	m := make(map[uint64]bool)
 
 	for i := 0; i < len(a); i++ {
 		m[a[i]] = true
@@ -59,7 +59,7 @@ func Not(a []uint32, b []uint32) []uint32 {
 }
 
 // IsIn returns true if a is in b and False otherwise.
-func IsIn(a uint32, b []uint32) bool {
+func IsIn(a uint64, b []uint64) bool {
 	for _, v := range b {
 		if a == v {
 			return true

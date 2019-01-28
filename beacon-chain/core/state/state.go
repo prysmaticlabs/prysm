@@ -70,7 +70,6 @@ func InitialBeaconState(
 			Pubkey:                      depositInput.Pubkey,
 			RandaoCommitmentHash32:      depositInput.RandaoCommitmentHash32,
 			WithdrawalCredentialsHash32: depositInput.WithdrawalCredentialsHash32,
-			CustodyCommitmentHash32:     depositInput.CustodyCommitmentHash32,
 			Balance:                     amount,
 			ExitSlot:                    config.FarFutureSlot,
 			PenalizedSlot:               config.FarFutureSlot,
@@ -101,7 +100,6 @@ func InitialBeaconState(
 
 		// Randomness and committees.
 		LatestRandaoMixesHash32S:     latestRandaoMixes,
-		LatestVdfOutputsHash32S:      latestVDFOutputs,
 		ShardCommitteesAtSlots:       []*pb.ShardCommitteeArray{},
 		PreviousEpochStartShard:      config.GenesisStartShard,
 		CurrentEpochStartShard:       config.GenesisStartShard,
@@ -109,11 +107,6 @@ func InitialBeaconState(
 		CurrentEpochCalculationSlot:  config.GenesisSlot,
 		PreviousEpochRandaoMixHash32: config.ZeroHash[:],
 		CurrentEpochRandaoMixHash32:  config.ZeroHash[:],
-
-		// Proof of custody.
-		// Place holder, proof of custody challenge is defined in phase 1.
-		// This list will remain empty through out phase 0.
-		CustodyChallenges: []*pb.CustodyChallenge{},
 
 		// Finality.
 		PreviousJustifiedSlot: config.GenesisSlot,
@@ -160,9 +153,9 @@ func InitialBeaconState(
 		}
 	}
 	for i := 0; i < len(state.ValidatorRegistry); i++ {
-		if v.EffectiveBalance(state, uint32(i)) ==
+		if v.EffectiveBalance(state, uint64(i)) ==
 			config.MaxDepositInGwei {
-			state, err = v.ActivateValidator(state, uint32(i), true)
+			state, err = v.ActivateValidator(state, uint64(i), true)
 			if err != nil {
 				return nil, fmt.Errorf("could not activate validator: %v", err)
 			}

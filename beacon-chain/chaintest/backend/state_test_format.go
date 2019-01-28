@@ -41,7 +41,7 @@ type StateTestDeposit struct {
 // StateTestProposerSlashing --
 type StateTestProposerSlashing struct {
 	Slot           uint64 `yaml:"slot"`
-	ProposerIndex  uint32 `yaml:"proposer_index"`
+	ProposerIndex  uint64 `yaml:"proposer_index"`
 	Proposal1Shard uint64 `yaml:"proposal_1_shard"`
 	Proposal2Shard uint64 `yaml:"proposal_2_shard"`
 	Proposal1Slot  uint64 `yaml:"proposal_1_slot"`
@@ -55,24 +55,24 @@ type StateTestCasperSlashing struct {
 	Slot                                 uint64   `yaml:"slot"`
 	SlashableVoteData1Slot               uint64   `yaml:"slashable_vote_data_1_slot"`
 	SlashableVoteData1JustifiedSlot      uint64   `yaml:"slashable_vote_data_1_justified_slot"`
-	SlashableVoteData1CustodyBit0Indices []uint32 `yaml:"slashable_vote_data_1_custody_0_indices"`
-	SlashableVoteData1CustodyBit1Indices []uint32 `yaml:"slashable_vote_data_1_custody_1_indices"`
+	SlashableVoteData1CustodyBit0Indices []uint64 `yaml:"slashable_vote_data_1_custody_0_indices"`
+	SlashableVoteData1CustodyBit1Indices []uint64 `yaml:"slashable_vote_data_1_custody_1_indices"`
 	SlashableVoteData2Slot               uint64   `yaml:"slashable_vote_data_2_slot"`
 	SlashableVoteData2JustifiedSlot      uint64   `yaml:"slashable_vote_data_2_justified_slot"`
-	SlashableVoteData2CustodyBit0Indices []uint32 `yaml:"slashable_vote_data_2_custody_0_indices"`
-	SlashableVoteData2CustodyBit1Indices []uint32 `yaml:"slashable_vote_data_2_custody_1_indices"`
+	SlashableVoteData2CustodyBit0Indices []uint64 `yaml:"slashable_vote_data_2_custody_0_indices"`
+	SlashableVoteData2CustodyBit1Indices []uint64 `yaml:"slashable_vote_data_2_custody_1_indices"`
 }
 
 // StateTestValidatorExit --
 type StateTestValidatorExit struct {
 	Slot           uint64 `yaml:"slot"`
-	ValidatorIndex uint32 `yaml:"validator_index"`
+	ValidatorIndex uint64 `yaml:"validator_index"`
 }
 
 // StateTestResults --
 type StateTestResults struct {
 	Slot                uint64
 	NumValidators       int      `yaml:"num_validators"`
-	PenalizedValidators []uint32 `yaml:"penalized_validators"`
-	ExitedValidators    []uint32 `yaml:"exited_validators"`
+	PenalizedValidators []uint64 `yaml:"penalized_validators"`
+	ExitedValidators    []uint64 `yaml:"exited_validators"`
 }

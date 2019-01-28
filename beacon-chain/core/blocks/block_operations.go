@@ -247,15 +247,15 @@ func ProcessCasperSlashings(
 }
 
 func verifyCasperSlashing(slashing *pb.CasperSlashing) error {
-	slashableVoteData1 := slashing.SlashableVoteData_1
-	slashableVoteData2 := slashing.SlashableVoteData_2
-	slashableVoteData1Attestation := slashableVoteData1.Data
-	slashableVoteData2Attestation := slashableVoteData2.Data
+	slashableVote1 := slashing.SlashableVote_1
+	slashableVote2 := slashing.SlashableVote_2
+	slashableVoteData1Attestation := slashableVote1.Data
+	slashableVoteData2Attestation := slashableVote2.Data
 
-	if err := verifySlashableVoteData(slashableVoteData1); err != nil {
+	if err := verifySlashableVoteData(slashableVote1); err != nil {
 		return fmt.Errorf("could not verify casper slashable vote data 1: %v", err)
 	}
-	if err := verifySlashableVoteData(slashableVoteData2); err != nil {
+	if err := verifySlashableVoteData(slashableVote2); err != nil {
 		return fmt.Errorf("could not verify casper slashable vote data 2: %v", err)
 	}
 
@@ -308,9 +308,9 @@ func verifyCasperSlashing(slashing *pb.CasperSlashing) error {
 	return nil
 }
 
-func casperSlashingPenalizedIndices(slashing *pb.CasperSlashing) ([]uint32, error) {
-	slashableVoteData1 := slashing.SlashableVoteData_1
-	slashableVoteData2 := slashing.SlashableVoteData_2
+func casperSlashingPenalizedIndices(slashing *pb.CasperSlashing) ([]uint64, error) {
+	slashableVoteData1 := slashing.SlashableVote_1
+	slashableVoteData2 := slashing.SlashableVote_2
 	slashableVoteData1Indices := append(
 		slashableVoteData1.CustodyBit_0Indices,
 		slashableVoteData1.CustodyBit_1Indices...,
@@ -329,7 +329,7 @@ func casperSlashingPenalizedIndices(slashing *pb.CasperSlashing) ([]uint32, erro
 	return indicesIntersection, nil
 }
 
-func verifySlashableVoteData(votes *pb.SlashableVoteData) error {
+func verifySlashableVoteData(votes *pb.SlashableVote) error {
 	totalCustody := len(votes.CustodyBit_0Indices) +
 		len(votes.CustodyBit_1Indices)
 	if uint64(totalCustody) > params.BeaconConfig().MaxCasperVotes {

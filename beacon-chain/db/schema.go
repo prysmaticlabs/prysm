@@ -29,13 +29,13 @@ var (
 	cleanedFinalizedSlotKey = []byte("cleaned-finalized-slot")
 )
 
-// encodeSlotNumber encodes a slot number as big endian uint64.
-func encodeSlotNumber(number uint64) []byte {
+// encodeSlotNumber encodes a slot number as big endian uint32.
+func encodeSlotNumber(number uint32) []byte {
 	return bytes.Bytes8(number)
 }
 
 // decodeSlotNumber returns a slot number which has been
-// encoded as a big endian uint64 in the byte array.
-func decodeToSlotNumber(bytearray []byte) uint64 {
+// encoded as a big endian uint32 in the byte array.
+func decodeToSlotNumber(bytearray []byte) uint32 {
 	return bytes.FromBytes8(bytearray)
 }

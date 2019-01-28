@@ -372,7 +372,7 @@ func TestProposerIndex(t *testing.T) {
 		t.Fatalf("Could not get proposer index %v", err)
 	}
 
-	if res.Index != uint32(expectedIndex) {
+	if res.Index != uint64(expectedIndex) {
 		t.Errorf("Expected index of %d but got %d", expectedIndex, res.Index)
 	}
 }

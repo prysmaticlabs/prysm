@@ -135,13 +135,13 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		{
 			SlashableVoteData_1: &pb.SlashableVoteData{
 				Data:                att1,
-				CustodyBit_0Indices: []uint32{0, 1},
-				CustodyBit_1Indices: []uint32{2, 3},
+				CustodyBit_0Indices: []uint64{0, 1},
+				CustodyBit_1Indices: []uint64{2, 3},
 			},
 			SlashableVoteData_2: &pb.SlashableVoteData{
 				Data:                att2,
-				CustodyBit_0Indices: []uint32{4, 5},
-				CustodyBit_1Indices: []uint32{6, 1},
+				CustodyBit_0Indices: []uint64{4, 5},
+				CustodyBit_1Indices: []uint64{6, 1},
 			},
 		},
 	}
@@ -197,13 +197,13 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		{
 			SlashableVoteData_1: &pb.SlashableVoteData{
 				Data:                att1,
-				CustodyBit_0Indices: []uint32{0, 1},
-				CustodyBit_1Indices: []uint32{2, 3},
+				CustodyBit_0Indices: []uint64{0, 1},
+				CustodyBit_1Indices: []uint64{2, 3},
 			},
 			SlashableVoteData_2: &pb.SlashableVoteData{
 				Data:                att2,
-				CustodyBit_0Indices: []uint32{4, 5},
-				CustodyBit_1Indices: []uint32{6, 1},
+				CustodyBit_0Indices: []uint64{4, 5},
+				CustodyBit_1Indices: []uint64{6, 1},
 			},
 		},
 	}
@@ -284,13 +284,13 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		{
 			SlashableVoteData_1: &pb.SlashableVoteData{
 				Data:                att1,
-				CustodyBit_0Indices: []uint32{0, 1},
-				CustodyBit_1Indices: []uint32{2, 3},
+				CustodyBit_0Indices: []uint64{0, 1},
+				CustodyBit_1Indices: []uint64{2, 3},
 			},
 			SlashableVoteData_2: &pb.SlashableVoteData{
 				Data:                att2,
-				CustodyBit_0Indices: []uint32{4, 5},
-				CustodyBit_1Indices: []uint32{6, 1},
+				CustodyBit_0Indices: []uint64{4, 5},
+				CustodyBit_1Indices: []uint64{6, 1},
 			},
 		},
 	}

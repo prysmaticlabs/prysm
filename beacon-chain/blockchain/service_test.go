@@ -281,7 +281,7 @@ func TestRunningChainService(t *testing.T) {
 	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
 		ShardCommittees = append(ShardCommittees, &pb.ShardCommitteeArray{
 			ArrayShardCommittee: []*pb.ShardCommittee{
-				{Committee: []uint32{9, 8, 311, 12, 92, 1, 23, 17}},
+				{Committee: []uint64{9, 8, 311, 12, 92, 1, 23, 17}},
 			},
 		})
 	}

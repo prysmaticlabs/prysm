@@ -60,7 +60,7 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	}
 	latestPenalizedExitLength := int(params.BeaconConfig().LatestPenalizedExitLength)
 
-	genesisTime := uint64(99999)
+	genesisTime := uint32(99999)
 	processedPowReceiptRoot := []byte{'A', 'B', 'C'}
 	maxDeposit := params.BeaconConfig().MaxDepositInGwei
 	var deposits []*pb.Deposit
@@ -153,7 +153,7 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 		t.Error("Length of LatestCrosslinks was not correctly initialized")
 	}
 	if !reflect.DeepEqual(state.LatestPenalizedBalances,
-		make([]uint64, latestPenalizedExitLength)) {
+		make([]uint32, latestPenalizedExitLength)) {
 		t.Error("LatestPenalizedBalances was not correctly initialized")
 	}
 	if !reflect.DeepEqual(state.LatestAttestations, []*pb.PendingAttestationRecord{}) {

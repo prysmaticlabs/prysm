@@ -17,15 +17,15 @@ type ForkChoiceTestCase struct {
 
 // ForkChoiceTestConfig --
 type ForkChoiceTestConfig struct {
-	ValidatorCount   uint64 `yaml:"validator_count"`
-	CycleLength      uint64 `yaml:"cycle_length"`
-	ShardCount       uint64 `yaml:"shard_count"`
-	MinCommitteeSize uint64 `yaml:"min_committee_size"`
+	ValidatorCount   uint32 `yaml:"validator_count"`
+	CycleLength      uint32 `yaml:"cycle_length"`
+	ShardCount       uint32 `yaml:"shard_count"`
+	MinCommitteeSize uint32 `yaml:"min_committee_size"`
 }
 
 // ForkChoiceTestSlot --
 type ForkChoiceTestSlot struct {
-	SlotNumber   uint64             `yaml:"slot_number"`
+	SlotNumber   uint32             `yaml:"slot_number"`
 	NewBlock     *TestBlock         `yaml:"new_block"`
 	Attestations []*TestAttestation `yaml:",flow"`
 }
@@ -47,5 +47,5 @@ type TestBlock struct {
 type TestAttestation struct {
 	Block             string `yaml:"block"`
 	ValidatorRegistry string `yaml:"validators"`
-	CommitteeSlot     uint64 `yaml:"committee_slot"`
+	CommitteeSlot     uint32 `yaml:"committee_slot"`
 }
