@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"fmt"
+
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"

@@ -3,15 +3,15 @@ package rpc
 import (
 	"context"
 	"errors"
+	"testing"
+
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"testing"
 )
-
 
 func TestLatestAttestationContextClosed(t *testing.T) {
 	hook := logTest.NewGlobal()

@@ -62,4 +62,3 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 		StateRoot: beaconStateHash[:],
 	}, nil
 }
-
