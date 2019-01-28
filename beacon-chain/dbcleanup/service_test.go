@@ -3,6 +3,7 @@ package dbcleanup
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -63,7 +64,8 @@ func TestCleanBlockVoteCache(t *testing.T) {
 	var err error
 
 	// Pre-fill block vote cache in DB
-	if err = beaconDB.InitializeState(); err != nil {
+	genesisTime := uint64(time.Now().Unix())
+	if err = beaconDB.InitializeState(genesisTime); err != nil {
 		t.Fatalf("failed to initialize DB: %v", err)
 	}
 	oldBlock := &pb.BeaconBlock{Slot: 1}
