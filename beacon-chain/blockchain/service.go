@@ -72,7 +72,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 func (c *ChainService) Start() {
 	beaconState, err := c.beaconDB.State()
 	if err != nil {
-		log.Fatalf("Could not attempt fetch beacon state: %v", err)
+		log.Fatalf("Could not fetch beacon state: %v", err)
 	}
 	// If the chain has already been initialized, simply start the block processing routine.
 	if beaconState != nil {

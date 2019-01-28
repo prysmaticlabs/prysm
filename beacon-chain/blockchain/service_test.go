@@ -177,7 +177,7 @@ func TestStartStopUninitializedChain(t *testing.T) {
 	}
 
 	// The context should have been canceled.
-	if chainService.ctx.Err() == nil {
+	if chainService.ctx.Err() != context.Canceled {
 		t.Error("Context was not canceled")
 	}
 	testutil.AssertLogsContain(t, hook, "Waiting for ChainStart log from the Validator Deposit Contract to start the beacon chain...")
@@ -203,7 +203,7 @@ func TestStartStopInitializedChain(t *testing.T) {
 	}
 	beaconState, err := db.State()
 	if err != nil {
-		t.Fatalf("Could not attempt fetch beacon state: %v", err)
+		t.Fatalf("Could not fetch beacon state: %v", err)
 	}
 	// TODO(#1389): Replace by state tree hashing algorithm to determine root instead of a hash.
 	hash, err := state.Hash(beaconState)
@@ -221,7 +221,7 @@ func TestStartStopInitializedChain(t *testing.T) {
 	}
 
 	// The context should have been canceled.
-	if chainService.ctx.Err() == nil {
+	if chainService.ctx.Err() != context.Canceled {
 		t.Error("context was not canceled")
 	}
 	testutil.AssertLogsContain(t, hook, "Beacon chain data already exists, starting service")
