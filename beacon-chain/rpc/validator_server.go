@@ -1,19 +1,26 @@
 package rpc
 
-import "github.com/prysmaticlabs/prysm/beacon-chain/db"
+import (
+	"context"
+	"fmt"
 
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+)
+
+// ValidatorServer defines a server implementation of the gRPC Validator service,
+// providing RPC endpoints for obtaining validator assignments per epoch, the slots
+// and shards in which particular validators need to perform their responsibilities,
+// and more.
 type ValidatorServer struct {
 	beaconDB *db.BeaconDB
-	chainService          chainService
-	powChainService    powChainService
-	canonicalStateChan    chan *pbp2p.BeaconState
-	enablePOWChain bool
 }
 
 // ValidatorShardID is called by a validator to get the shard ID of where it's suppose
 // to proposer or attest.
-func (s *Service) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.ShardIDResponse, error) {
-	beaconState, err := s.beaconDB.State()
+func (vs *ValidatorServer) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.ShardIDResponse, error) {
+	beaconState, err := vs.beaconDB.State()
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
@@ -32,11 +39,11 @@ func (s *Service) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.
 
 // ValidatorSlotAndResponsibility fetches a validator's assigned slot number
 // and whether it should act as a proposer/attester.
-func (s *Service) ValidatorSlotAndResponsibility(
+func (vs *ValidatorServer) ValidatorSlotAndResponsibility(
 	ctx context.Context,
 	req *pb.PublicKey,
 ) (*pb.SlotResponsibilityResponse, error) {
-	beaconState, err := s.beaconDB.State()
+	beaconState, err := vs.beaconDB.State()
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
@@ -55,8 +62,8 @@ func (s *Service) ValidatorSlotAndResponsibility(
 
 // ValidatorIndex is called by a validator to get its index location that corresponds
 // to the attestation bit fields.
-func (s *Service) ValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.IndexResponse, error) {
-	beaconState, err := s.beaconDB.State()
+func (vs *ValidatorServer) ValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.IndexResponse, error) {
+	beaconState, err := vs.beaconDB.State()
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
@@ -72,6 +79,9 @@ func (s *Service) ValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.In
 }
 
 // ValidatorEpochAssignments ... WIP
-func (s *Service) ValidatorEpochAssignments(ctx context.Context, req *pb.ValidatorEpochAssignmentsRequest) (*pb.ValidatorEpochAssignmentsResponse, error) {
+func (vs *ValidatorServer) ValidatorEpochAssignments(
+	ctx context.Context,
+	req *pb.ValidatorEpochAssignmentsRequest,
+) (*pb.ValidatorEpochAssignmentsResponse, error) {
 	return nil, nil
 }

@@ -3,24 +3,28 @@ package rpc
 import (
 	"context"
 	"fmt"
+
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/gogo/protobuf/proto"
+	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytes"
-	ptypes"github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/gogo/protobuf/proto"
 )
 
+// ProposerServer defines a server implementation of the gRPC Proposer service,
+// providing RPC endpoints for computing state transitions and state roots, proposing
+// beacon blocks to a beacon node, and more.
 type ProposerServer struct {
-	beaconDB *db.BeaconDB
-	chainService          chainService
+	beaconDB           *db.BeaconDB
+	chainService       chainService
 	powChainService    powChainService
-	canonicalStateChan    chan *pbp2p.BeaconState
-	enablePOWChain bool
+	canonicalStateChan chan *pbp2p.BeaconState
+	enablePOWChain     bool
 }
 
 // ProposeBlock is called by a proposer in a sharding validator and a full beacon node

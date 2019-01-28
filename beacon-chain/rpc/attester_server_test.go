@@ -3,13 +3,14 @@ package rpc
 import (
 	"context"
 	"testing"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 )
 
 func TestAttestHead(t *testing.T) {
 	mockAttestationService := &mockAttestationService{}
-    attesterServer := &AttesterServer{
+	attesterServer := &AttesterServer{
 		attestationService: mockAttestationService,
 	}
 	req := &pb.AttestRequest{

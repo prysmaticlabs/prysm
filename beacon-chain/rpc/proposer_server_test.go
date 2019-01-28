@@ -3,6 +3,10 @@ package rpc
 import (
 	"bytes"
 	"context"
+	"strconv"
+	"testing"
+	"time"
+
 	"github.com/ethereum/go-ethereum/common"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -10,9 +14,6 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"strconv"
-	"testing"
-	"time"
 )
 
 func TestProposeBlock(t *testing.T) {
@@ -54,9 +55,9 @@ func TestProposeBlock(t *testing.T) {
 	}
 
 	proposerServer := &ProposerServer{
-        chainService: mockChain,
-        beaconDB: db,
-        powChainService: &mockPOWChainService{},
+		chainService:    mockChain,
+		beaconDB:        db,
+		powChainService: &mockPOWChainService{},
 	}
 	req := &pbp2p.BeaconBlock{
 		Slot:             5,
@@ -74,8 +75,8 @@ func TestLatestPOWChainBlockHash(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 
 	proposerServer := &ProposerServer{
-		chainService: mockChain,
-		beaconDB: db,
+		chainService:    mockChain,
+		beaconDB:        db,
 		powChainService: mockPOWChain,
 	}
 
@@ -133,8 +134,8 @@ func TestComputeStateRoot(t *testing.T) {
 	}
 
 	proposerServer := &ProposerServer{
-		chainService: mockChain,
-		beaconDB: db,
+		chainService:    mockChain,
+		beaconDB:        db,
 		powChainService: &mockPOWChainService{},
 	}
 
@@ -194,8 +195,8 @@ func TestProposerIndex(t *testing.T) {
 	}
 
 	proposerServer := &ProposerServer{
-		chainService: mockChain,
-		beaconDB: db,
+		chainService:    mockChain,
+		beaconDB:        db,
 		powChainService: mockPOWChain,
 	}
 

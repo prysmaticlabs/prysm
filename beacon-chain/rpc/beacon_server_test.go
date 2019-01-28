@@ -3,16 +3,17 @@ package rpc
 import (
 	"context"
 	"errors"
-	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	ptypes"github.com/gogo/protobuf/types"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"time"
+
+	ptypes "github.com/gogo/protobuf/types"
+	"github.com/golang/mock/gomock"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -39,7 +40,7 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 
 	beaconServer := &BeaconServer{
 		beaconDB: db,
-		ctx: context.Background(),
+		ctx:      context.Background(),
 	}
 
 	pubkey := hashutil.Hash([]byte{byte(0)})
@@ -71,7 +72,10 @@ func TestCurrentAssignmentsAndGenesisTime(t *testing.T) {
 func TestLatestAttestationContextClosed(t *testing.T) {
 	hook := logTest.NewGlobal()
 	mockAttestationService := &mockAttestationService{}
+	ctx, cancel := context.WithCancel(context.Background())
 	beaconServer := &BeaconServer{
+		ctx:                ctx,
+		cancel:             cancel,
 		attestationService: mockAttestationService,
 	}
 	exitRoutine := make(chan bool)
@@ -91,8 +95,12 @@ func TestLatestAttestationContextClosed(t *testing.T) {
 
 func TestLatestAttestationFaulty(t *testing.T) {
 	attestationService := &mockAttestationService{}
-    beaconServer := &BeaconServer{
-		attestationService: attestationService,
+	ctx, cancel := context.WithCancel(context.Background())
+	beaconServer := &BeaconServer{
+		ctx:                 ctx,
+		cancel:              cancel,
+		attestationService:  attestationService,
+		incomingAttestation: make(chan *pbp2p.Attestation, 0),
 	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -118,8 +126,12 @@ func TestLatestAttestationFaulty(t *testing.T) {
 func TestLatestAttestation(t *testing.T) {
 	hook := logTest.NewGlobal()
 	attestationService := &mockAttestationService{}
-    beaconServer := &BeaconServer{
-		attestationService: attestationService,
+	ctx, cancel := context.WithCancel(context.Background())
+	beaconServer := &BeaconServer{
+		ctx:                 ctx,
+		cancel:              cancel,
+		attestationService:  attestationService,
+		incomingAttestation: make(chan *pbp2p.Attestation, 0),
 	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -166,9 +178,13 @@ func TestValidatorAssignments(t *testing.T) {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
-    beaconServer := &BeaconServer{
-		chainService: mockChain,
-		beaconDB:     db,
+	ctx, cancel := context.WithCancel(context.Background())
+	beaconServer := &BeaconServer{
+		ctx:                ctx,
+		cancel:             cancel,
+		chainService:       mockChain,
+		beaconDB:           db,
+		canonicalStateChan: make(chan *pbp2p.BeaconState, 0),
 	}
 
 	ctrl := gomock.NewController(t)
