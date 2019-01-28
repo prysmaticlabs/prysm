@@ -91,21 +91,18 @@ func verifyBlockRandao(proposer *pb.ValidatorRecord, block *pb.BeaconBlock) erro
 // ProcessEth1Data is an operation performed on each
 // beacon block to ensure the ETH1 data votes are processed
 // into the beacon state.
+//
+// Official spec definition of ProcessEth1Data
+//   If block.eth1_data equals eth1_data_vote.eth1_data for some eth1_data_vote
+//   in state.eth1_data_votes, set eth1_data_vote.vote_count += 1.
+//   Otherwise, append to state.eth1_data_votes a new Eth1DataVote(eth1_data=block.eth1_data, vote_count=1).
 func ProcessEth1Data(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
-	if block.Eth1Data.DepositRootHash32 == nil {
-		return nil, fmt.Errorf("expected block eth1 data deposit root hash to not be nil: received %d", block.Eth1Data.DepositRootHash32)
-	}
-
-	if block.Eth1Data.BlockHash32 == nil {
-		return nil, fmt.Errorf("expected block eth1 data block hash to not be nil: received %d", block.Eth1Data.BlockHash32)
-	}
-
 	var eth1DataVoteAdded bool
 
-	for _, data := range beaconState.Eth1DataVotes {
-		if bytes.Equal(data.Eth1Data.GetBlockHash32(), block.Eth1Data.GetBlockHash32()) {
-			if bytes.Equal(data.Eth1Data.GetDepositRootHash32(), block.Eth1Data.GetDepositRootHash32()) {
-				data.VoteCount++
+	for _, Eth1DataVote := range beaconState.Eth1DataVotes {
+		if bytes.Equal(Eth1DataVote.Eth1Data.BlockHash32, block.Eth1Data.GetBlockHash32()) {
+			if bytes.Equal(Eth1DataVote.Eth1Data.DepositRootHash32, block.Eth1Data.GetDepositRootHash32()) {
+				Eth1DataVote.VoteCount++
 				eth1DataVoteAdded = true
 				break
 			}
@@ -446,7 +443,7 @@ func ProcessBlockAttestations(
 			return nil, fmt.Errorf("could not verify attestation at index %d in block: %v", idx, err)
 		}
 		pendingAttestations = append(pendingAttestations, &pb.PendingAttestationRecord{
-			Data:                  attestation.Data,
+			Data: attestation.Data,
 			ParticipationBitfield: attestation.ParticipationBitfield,
 			CustodyBitfield:       attestation.CustodyBitfield,
 			SlotIncluded:          beaconState.Slot,

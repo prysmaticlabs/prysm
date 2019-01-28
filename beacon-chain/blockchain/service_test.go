@@ -259,7 +259,7 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 		ParentRootHash32: parentHash[:],
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte("a"),
-			BlockHash32:       []byte("a"),
+			BlockHash32:       []byte("b"),
 		},
 	}
 
@@ -355,7 +355,7 @@ func TestRunningChainService(t *testing.T) {
 		ParentRootHash32: parentHash[:],
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte("a"),
-			BlockHash32:       []byte("a"),
+			BlockHash32:       []byte("b"),
 		},
 		Body: &pb.BeaconBlockBody{
 			Attestations: []*pb.Attestation{{
@@ -476,7 +476,7 @@ func TestUpdateHead(t *testing.T) {
 			ParentRootHash32: genesisHash[:],
 			Eth1Data: &pb.Eth1Data{
 				DepositRootHash32: []byte("a"),
-				BlockHash32:       []byte("a"),
+				BlockHash32:       []byte("b"),
 			},
 		}
 		if err := chainService.beaconDB.SaveBlock(block); err != nil {
@@ -538,7 +538,7 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 
 	beaconState.LatestEth1Data = &pb.Eth1Data{
 		DepositRootHash32: []byte{2},
-		BlockHash32:       []byte{2},
+		BlockHash32:       []byte{3},
 	}
 	beaconState.Slot = 0
 
@@ -551,7 +551,7 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 		ParentRootHash32: parentHash[:],
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte("a"),
-			BlockHash32:       []byte("a"),
+			BlockHash32:       []byte("b"),
 		},
 		Body: &pb.BeaconBlockBody{
 			Attestations: []*pb.Attestation{{

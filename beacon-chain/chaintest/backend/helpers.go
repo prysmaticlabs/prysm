@@ -39,7 +39,7 @@ func generateSimulatedBlock(
 		StateRootHash32:    stateRoot[:],
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte{1},
-			BlockHash32:       []byte{1},
+			BlockHash32:       []byte{2},
 		},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: []*pb.ProposerSlashing{},
@@ -51,7 +51,7 @@ func generateSimulatedBlock(
 	}
 	if simulatedDeposit != nil {
 		depositInput := &pb.DepositInput{
-			Pubkey:                      []byte(simulatedDeposit.Pubkey),
+			Pubkey: []byte(simulatedDeposit.Pubkey),
 			WithdrawalCredentialsHash32: []byte{},
 			ProofOfPossession:           []byte{},
 			RandaoCommitmentHash32:      depositRandaoCommit[:],

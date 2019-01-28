@@ -59,8 +59,8 @@ func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 		RandaoRevealHash32: randaoCommit[:],
 	}
 	beaconState := &pb.BeaconState{
-		ValidatorRegistry:        validators,
-		Slot:                     1,
+		ValidatorRegistry: validators,
+		Slot:              1,
 		LatestRandaoMixesHash32S: make([][]byte, config.LatestRandaoMixesLength),
 	}
 
@@ -91,7 +91,7 @@ func TestProcessEth1Data_SameRootHash(t *testing.T) {
 			&pb.Eth1DataVote{
 				Eth1Data: &pb.Eth1Data{
 					DepositRootHash32: []byte{1},
-					BlockHash32:       []byte{1},
+					BlockHash32:       []byte{2},
 				},
 				VoteCount: 5,
 			},
@@ -100,7 +100,7 @@ func TestProcessEth1Data_SameRootHash(t *testing.T) {
 	block := &pb.BeaconBlock{
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte{1},
-			BlockHash32:       []byte{1},
+			BlockHash32:       []byte{2},
 		},
 	}
 	beaconState, err := ProcessEth1Data(beaconState, block)
@@ -113,69 +113,13 @@ func TestProcessEth1Data_SameRootHash(t *testing.T) {
 	}
 }
 
-func TestProcessEth1Data_InvalidDepositRoot(t *testing.T) {
-	beaconState := &pb.BeaconState{
-		Eth1DataVotes: []*pb.Eth1DataVote{
-			&pb.Eth1DataVote{
-				Eth1Data: &pb.Eth1Data{
-					DepositRootHash32: []byte{0},
-					BlockHash32:       []byte{0},
-				},
-				VoteCount: 5,
-			},
-		},
-	}
-
-	block := &pb.BeaconBlock{
-		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: nil,
-			BlockHash32:       []byte{1},
-		},
-	}
-	want := fmt.Sprintf(
-		"expected block eth1 data deposit root hash to not be nil: received %d",
-		[]byte{},
-	)
-	if _, err := ProcessEth1Data(beaconState, block); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
-func TestProcessEth1Data_InvalidBlockHash(t *testing.T) {
-	beaconState := &pb.BeaconState{
-		Eth1DataVotes: []*pb.Eth1DataVote{
-			&pb.Eth1DataVote{
-				Eth1Data: &pb.Eth1Data{
-					DepositRootHash32: []byte{0},
-					BlockHash32:       []byte{0},
-				},
-				VoteCount: 5,
-			},
-		},
-	}
-
-	block := &pb.BeaconBlock{
-		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{1},
-			BlockHash32:       nil,
-		},
-	}
-	want := fmt.Sprintf(
-		"expected block eth1 data block hash to not be nil: received %d",
-		[]byte{},
-	)
-	if _, err := ProcessEth1Data(beaconState, block); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
 func TestProcessEth1Data_NewDepositRootHash(t *testing.T) {
 	beaconState := &pb.BeaconState{
 		Eth1DataVotes: []*pb.Eth1DataVote{
 			&pb.Eth1DataVote{
 				Eth1Data: &pb.Eth1Data{
 					DepositRootHash32: []byte{0},
-					BlockHash32:       []byte{0},
+					BlockHash32:       []byte{1},
 				},
 				VoteCount: 5,
 			},
@@ -184,8 +128,8 @@ func TestProcessEth1Data_NewDepositRootHash(t *testing.T) {
 
 	block := &pb.BeaconBlock{
 		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{1},
-			BlockHash32:       []byte{1},
+			DepositRootHash32: []byte{2},
+			BlockHash32:       []byte{3},
 		},
 	}
 
@@ -203,7 +147,7 @@ func TestProcessEth1Data_NewDepositRootHash(t *testing.T) {
 			newETH1DataVotes[1].VoteCount,
 		)
 	}
-	if !bytes.Equal(newETH1DataVotes[1].Eth1Data.DepositRootHash32, []byte{1}) {
+	if !bytes.Equal(newETH1DataVotes[1].Eth1Data.DepositRootHash32, []byte{2}) {
 		t.Errorf(
 			"expected new ETH1 data votes to have a new element with deposit root = %#x, received deposit root = %#x",
 			[]byte{1},
@@ -926,7 +870,7 @@ func TestProcessBlockAttestations_PreviousJustifiedSlotVerificationFailure(t *te
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                  5 + config.EpochLength,
+		Slot: 5 + config.EpochLength,
 		PreviousJustifiedSlot: 3,
 	}
 
@@ -951,7 +895,7 @@ func TestProcessBlockAttestations_BlockRootOutOfBounds(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                   64,
+		Slot: 64,
 		PreviousJustifiedSlot:  65,
 		LatestBlockRootHash32S: blockRoots,
 	}
@@ -987,7 +931,7 @@ func TestProcessBlockAttestations_BlockRootFailure(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                   64,
+		Slot: 64,
 		PreviousJustifiedSlot:  10,
 		LatestBlockRootHash32S: blockRoots,
 	}
@@ -1036,7 +980,7 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   64,
+		Slot: 64,
 		PreviousJustifiedSlot:  10,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
@@ -1082,7 +1026,7 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   64,
+		Slot: 64,
 		PreviousJustifiedSlot:  10,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
@@ -1129,7 +1073,7 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   64,
+		Slot: 64,
 		PreviousJustifiedSlot:  10,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
@@ -1267,8 +1211,8 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	}
 	beaconState := &pb.BeaconState{
 		LatestEth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{},
-			BlockHash32:       []byte{},
+			DepositRootHash32: []byte{0},
+			BlockHash32:       []byte{1},
 		},
 	}
 	want := "merkle branch of deposit root did not verify"
@@ -1285,7 +1229,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	// validator helper function to fail with error when the public key
 	// currently exists in the validator registry.
 	depositInput := &pb.DepositInput{
-		Pubkey:                      []byte{1},
+		Pubkey: []byte{1},
 		WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		ProofOfPossession:           []byte{},
 		RandaoCommitmentHash32:      []byte{0},
@@ -1339,7 +1283,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	// the one specified in the deposit input, causing a failure.
 	registry := []*pb.ValidatorRecord{
 		{
-			Pubkey:                      []byte{1},
+			Pubkey: []byte{1},
 			WithdrawalCredentialsHash32: []byte{4, 5, 6},
 		},
 	}
@@ -1366,7 +1310,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 
 func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	depositInput := &pb.DepositInput{
-		Pubkey:                      []byte{1},
+		Pubkey: []byte{1},
 		WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		ProofOfPossession:           []byte{},
 		RandaoCommitmentHash32:      []byte{0},
@@ -1419,7 +1363,7 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	}
 	registry := []*pb.ValidatorRecord{
 		{
-			Pubkey:                      []byte{1},
+			Pubkey: []byte{1},
 			WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		},
 	}

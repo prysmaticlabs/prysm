@@ -63,14 +63,24 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 // ProcessEth1Data processes eth1 block deposit roots by checking its vote count.
 // With sufficient votes (>2*ETH1_DATA_VOTING_PERIOD), it then
 // marks the voted Eth1 data as the latest data set.
+//
+// Official spec definition:
+//   if state.slot % ETH1_DATA_VOTING_PERIOD == 0:
+//     Set state.latest_eth1_data = eth1_data_vote.data
+//     if eth1_data_vote.vote_count * 2 > ETH1_DATA_VOTING_PERIOD for
+//       some eth1_data_vote in state.eth1_data_votes.
+//       Set state.eth1_data_votes = [].
+//
 func ProcessEth1Data(state *pb.BeaconState) *pb.BeaconState {
-	for _, eth1DataVote := range state.Eth1DataVotes {
-		if eth1DataVote.VoteCount*2 > config.Eth1DataVotingPeriod {
-			state.LatestEth1Data.DepositRootHash32 = eth1DataVote.Eth1Data.DepositRootHash32
-			state.LatestEth1Data.BlockHash32 = eth1DataVote.Eth1Data.BlockHash32
+	if state.Slot%config.Eth1DataVotingPeriod == 0 {
+		for _, eth1DataVote := range state.Eth1DataVotes {
+			if eth1DataVote.VoteCount*2 > config.Eth1DataVotingPeriod {
+				state.LatestEth1Data.DepositRootHash32 = eth1DataVote.Eth1Data.DepositRootHash32
+				state.LatestEth1Data.BlockHash32 = eth1DataVote.Eth1Data.BlockHash32
+			}
 		}
+		state.Eth1DataVotes = make([]*pb.Eth1DataVote, 0)
 	}
-	state.Eth1DataVotes = make([]*pb.Eth1DataVote, 0)
 	return state
 }
 

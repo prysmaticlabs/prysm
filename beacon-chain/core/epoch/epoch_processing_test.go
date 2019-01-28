@@ -60,21 +60,21 @@ func TestCanProcessReceiptRoots(t *testing.T) {
 		canProcessReceiptRoots bool
 	}{
 		{
-			slot:                   1,
+			slot: 1,
 			canProcessReceiptRoots: false,
 		},
 		{
-			slot:                   1022,
+			slot: 1022,
 			canProcessReceiptRoots: false,
 		},
 		{
-			slot:                   1024,
+			slot: 1024,
 			canProcessReceiptRoots: true,
 		}, {
-			slot:                   4096,
+			slot: 4096,
 			canProcessReceiptRoots: true,
 		}, {
-			slot:                   234234,
+			slot: 234234,
 			canProcessReceiptRoots: false,
 		},
 	}
@@ -105,52 +105,96 @@ func TestProcessEth1Data(t *testing.T) {
 			{
 				Eth1Data: &pb.Eth1Data{
 					DepositRootHash32: []byte{'A'},
-					BlockHash32:       []byte{'A'},
+					BlockHash32:       []byte{'B'},
 				},
 				VoteCount: 0,
 			},
 			// DepositRootHash32 ['B'] gets to process with sufficient vote count.
 			{
 				Eth1Data: &pb.Eth1Data{
-					DepositRootHash32: []byte{'B'},
-					BlockHash32:       []byte{'B'},
+					DepositRootHash32: []byte{'C'},
+					BlockHash32:       []byte{'D'},
 				},
 				VoteCount: requiredVoteCount/2 + 1,
 			},
 			{
 				Eth1Data: &pb.Eth1Data{
-					DepositRootHash32: []byte{'C'},
-					BlockHash32:       []byte{'C'},
+					DepositRootHash32: []byte{'E'},
+					BlockHash32:       []byte{'F'},
 				},
 				VoteCount: requiredVoteCount / 2,
 			},
 		},
 	}
 	newState := ProcessEth1Data(state)
-	if !bytes.Equal(newState.LatestEth1Data.DepositRootHash32, []byte{'B'}) {
+	if !bytes.Equal(newState.LatestEth1Data.DepositRootHash32, []byte{'C'}) {
 		t.Errorf("Incorrect DepositRootHash32. Wanted: %v, got: %v",
-			[]byte{'B'}, newState.LatestEth1Data.DepositRootHash32)
+			[]byte{'C'}, newState.LatestEth1Data.DepositRootHash32)
 	}
 
 	// Adding a new receipt root ['D'] which should be the new processed receipt root.
 	state.Eth1DataVotes = append(state.Eth1DataVotes,
 		&pb.Eth1DataVote{
 			Eth1Data: &pb.Eth1Data{
-				DepositRootHash32: []byte{'D'},
-				BlockHash32:       []byte{'D'},
+				DepositRootHash32: []byte{'G'},
+				BlockHash32:       []byte{'H'},
 			},
 			VoteCount: requiredVoteCount,
 		},
 	)
 	newState = ProcessEth1Data(state)
-	if !bytes.Equal(newState.LatestEth1Data.DepositRootHash32, []byte{'D'}) {
+	if !bytes.Equal(newState.LatestEth1Data.DepositRootHash32, []byte{'G'}) {
 		t.Errorf("Incorrect DepositRootHash32. Wanted: %v, got: %v",
-			[]byte{'D'}, newState.LatestEth1Data.DepositRootHash32)
+			[]byte{'G'}, newState.LatestEth1Data.DepositRootHash32)
 	}
 
 	if len(newState.Eth1DataVotes) != 0 {
 		t.Errorf("Failed to clean up Eth1DataVotes slice. Length: %d",
 			len(newState.Eth1DataVotes))
+	}
+}
+
+func TestProcessEth1Data_InactionSlot(t *testing.T) {
+	if config.Eth1DataVotingPeriod != 1024 {
+		t.Errorf("Eth1DataVotingPeriod should be 1024 for these tests to pass")
+	}
+	requiredVoteCount := config.Eth1DataVotingPeriod
+	state := &pb.BeaconState{
+		Slot: 4,
+		LatestEth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{'A'},
+			BlockHash32:       []byte{'B'},
+		},
+		Eth1DataVotes: []*pb.Eth1DataVote{
+			{
+				Eth1Data: &pb.Eth1Data{
+					DepositRootHash32: []byte{'C'},
+					BlockHash32:       []byte{'D'},
+				},
+				VoteCount: requiredVoteCount/2 + 1,
+			},
+			{
+				Eth1Data: &pb.Eth1Data{
+					DepositRootHash32: []byte{'E'},
+					BlockHash32:       []byte{'F'},
+				},
+				VoteCount: requiredVoteCount / 2,
+			},
+			{
+				Eth1Data: &pb.Eth1Data{
+					DepositRootHash32: []byte{'G'},
+					BlockHash32:       []byte{'H'},
+				},
+				VoteCount: requiredVoteCount,
+			},
+		},
+	}
+
+	// Adding a new receipt root ['D'] which should be the new processed receipt root.
+	newState := ProcessEth1Data(state)
+	if !bytes.Equal(newState.LatestEth1Data.DepositRootHash32, []byte{'A'}) {
+		t.Errorf("Incorrect DepositRootHash32. Wanted: %v, got: %v",
+			[]byte{'A'}, newState.LatestEth1Data.DepositRootHash32)
 	}
 }
 
@@ -398,7 +442,7 @@ func TestProcessPrevSlotShardOk(t *testing.T) {
 func TestProcessValidatorRegistryOk(t *testing.T) {
 	offset := uint64(1)
 	state := &pb.BeaconState{
-		Slot:                        config.SeedLookahead + offset,
+		Slot: config.SeedLookahead + offset,
 		LatestRandaoMixesHash32S:    [][]byte{{'A'}, {'B'}},
 		CurrentEpochRandaoMixHash32: []byte{'C'},
 	}
@@ -424,7 +468,7 @@ func TestProcessValidatorRegistryOk(t *testing.T) {
 func TestProcessPartialValidatorRegistry(t *testing.T) {
 	offset := uint64(1)
 	state := &pb.BeaconState{
-		Slot:                        config.SeedLookahead + offset,
+		Slot: config.SeedLookahead + offset,
 		ValidatorRegistryUpdateSlot: offset,
 		LatestRandaoMixesHash32S:    [][]byte{{'A'}, {'B'}},
 	}
@@ -505,7 +549,7 @@ func TestUpdatePenalizedExitBalances(t *testing.T) {
 			config.LatestPenalizedExitLength)
 		latestPenalizedExitBalances[epoch] = tt.balances
 		state := &pb.BeaconState{
-			Slot:                    tt.slot,
+			Slot: tt.slot,
 			LatestPenalizedBalances: latestPenalizedExitBalances}
 		newState := UpdatePenalizedExitBalances(state)
 		if newState.LatestPenalizedBalances[epoch+1] !=

@@ -85,7 +85,7 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	block := &pb.BeaconBlock{
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte{1, 2, 3},
-			BlockHash32:       []byte{1, 2, 3},
+			BlockHash32:       []byte{4, 5, 6},
 		},
 		ParentRootHash32: genericHash,
 		Slot:             uint64(1),
@@ -168,7 +168,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 		block := &pb.BeaconBlock{
 			Eth1Data: &pb.Eth1Data{
 				DepositRootHash32: []byte{1, 2, 3},
-				BlockHash32:       []byte{1, 2, 3},
+				BlockHash32:       []byte{4, 5, 6},
 			},
 			ParentRootHash32: genericHash,
 			Slot:             Slot,
@@ -281,7 +281,7 @@ func TestDelayChan(t *testing.T) {
 	block := &pb.BeaconBlock{
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte{1, 2, 3},
-			BlockHash32:       []byte{1, 2, 3},
+			BlockHash32:       []byte{4, 5, 6},
 		},
 		ParentRootHash32: genericHash,
 		Slot:             uint64(1),
@@ -364,7 +364,7 @@ func TestRequestBlocksBySlot(t *testing.T) {
 		block := &pb.BeaconBlock{
 			Eth1Data: &pb.Eth1Data{
 				DepositRootHash32: []byte{1, 2, 3},
-				BlockHash32:       []byte{1, 2, 3},
+				BlockHash32:       []byte{4, 5, 6},
 			},
 			ParentRootHash32: genericHash,
 			Slot:             Slot,
