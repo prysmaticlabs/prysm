@@ -17,9 +17,9 @@ type ValidatorServer struct {
 	beaconDB *db.BeaconDB
 }
 
-// ValidatorShardID is called by a validator to get the shard ID of where it's suppose
-// to proposer or attest.
-func (vs *ValidatorServer) ValidatorShardID(ctx context.Context, req *pb.PublicKey) (*pb.ShardIDResponse, error) {
+// ValidatorShard is called by a validator to get the shard of where it needs to act
+// as a proposer or attester based on the current active validator registry.
+func (vs *ValidatorServer) ValidatorShard(ctx context.Context, req *pb.PublicKey) (*pb.ValidatorShardResponse, error) {
 	beaconState, err := vs.beaconDB.State()
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
@@ -34,35 +34,12 @@ func (vs *ValidatorServer) ValidatorShardID(ctx context.Context, req *pb.PublicK
 		return nil, fmt.Errorf("could not get validator shard ID: %v", err)
 	}
 
-	return &pb.ShardIDResponse{ShardId: shardID}, nil
-}
-
-// ValidatorSlotAndResponsibility fetches a validator's assigned slot number
-// and whether it should act as a proposer/attester.
-func (vs *ValidatorServer) ValidatorSlotAndResponsibility(
-	ctx context.Context,
-	req *pb.PublicKey,
-) (*pb.SlotResponsibilityResponse, error) {
-	beaconState, err := vs.beaconDB.State()
-	if err != nil {
-		return nil, fmt.Errorf("could not get beacon state: %v", err)
-	}
-
-	slot, role, err := v.ValidatorSlotAndRole(
-		req.PublicKey,
-		beaconState.ValidatorRegistry,
-		beaconState.ShardCommitteesAtSlots,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("could not get assigned validator slot for attester/proposer: %v", err)
-	}
-
-	return &pb.SlotResponsibilityResponse{Slot: slot, Role: role}, nil
+	return &pb.ValidatorShardResponse{Shard: shardID}, nil
 }
 
 // ValidatorIndex is called by a validator to get its index location that corresponds
 // to the attestation bit fields.
-func (vs *ValidatorServer) ValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.IndexResponse, error) {
+func (vs *ValidatorServer) ValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.ValidatorIndexResponse, error) {
 	beaconState, err := vs.beaconDB.State()
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
@@ -75,7 +52,7 @@ func (vs *ValidatorServer) ValidatorIndex(ctx context.Context, req *pb.PublicKey
 		return nil, fmt.Errorf("could not get validator index: %v", err)
 	}
 
-	return &pb.IndexResponse{Index: index}, nil
+	return &pb.ValidatorIndexResponse{Index: index}, nil
 }
 
 // ValidatorEpochAssignments ... WIP
