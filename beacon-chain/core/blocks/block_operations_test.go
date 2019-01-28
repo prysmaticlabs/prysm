@@ -125,8 +125,8 @@ func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 		RandaoRevealHash32: []byte{1},
 	}
 	beaconState := &pb.BeaconState{
-		ValidatorRegistry:        registry,
-		Slot:                     1,
+		ValidatorRegistry: registry,
+		Slot:              1,
 		LatestRandaoMixesHash32S: make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 		ShardCommitteesAtSlots: []*pb.ShardCommitteeArray{
 			{
@@ -522,7 +522,7 @@ func TestProcessCasperSlashings_UnmatchedAttestations(t *testing.T) {
 		},
 	}
 	want := fmt.Sprintf(
-		"casper slashing inner vote attestation data should not match: %v, %v",
+		"casper slashing inner slashable vote data attestation should not match: %v, %v",
 		att1,
 		att1,
 	)
@@ -609,14 +609,17 @@ func TestProcessCasperSlashings_SlotsInequalities(t *testing.T) {
 		want := fmt.Sprintf(
 			`
 			Expected the following conditions to hold:
-			(vote1.JustifiedSlot < vote2.JustifiedSlot) &&
-			(vote2.JustifiedSlot + 1 == vote2.Slot) &&
-			(vote2.Slot < vote1.Slot)
+			(slashableVoteData1.JustifiedSlot <
+			slashableVoteData2.JustifiedSlot) &&
+			(slashableVoteData2.JustifiedSlot + 1
+			== slashableVoteData1.Slot) &&
+			(slashableVoteData2.Slot < slashableVoteData1.Slot)
 			OR
-			vote1.Slot == vote.Slot
+			slashableVoteData1.Slot == slashableVoteData2.Slot
 
-			Instead, received vote1.JustifiedSlot %d, vote2.JustifiedSlot %d
-			and vote1.Slot %d, vote2.Slot %d
+			Instead, received slashableVoteData1.JustifiedSlot %d,
+			slashableVoteData2.JustifiedSlot %d
+			and slashableVoteData1.Slot %d, slashableVoteData2.Slot %d
 			`,
 			tt.att1.JustifiedSlot,
 			tt.att2.JustifiedSlot,
@@ -898,7 +901,7 @@ func TestProcessBlockAttestations_PreviousJustifiedSlotVerificationFailure(t *te
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                  5 + params.BeaconConfig().EpochLength,
+		Slot: 5 + params.BeaconConfig().EpochLength,
 		PreviousJustifiedSlot: 3,
 	}
 
@@ -922,7 +925,7 @@ func TestProcessBlockAttestations_BlockRootOutOfBounds(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                   64,
+		Slot: 64,
 		PreviousJustifiedSlot:  65,
 		LatestBlockRootHash32S: blockRoots,
 	}
@@ -957,7 +960,7 @@ func TestProcessBlockAttestations_BlockRootFailure(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                   64,
+		Slot: 64,
 		PreviousJustifiedSlot:  10,
 		LatestBlockRootHash32S: blockRoots,
 	}
@@ -1005,7 +1008,7 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   64,
+		Slot: 64,
 		PreviousJustifiedSlot:  10,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
@@ -1050,7 +1053,7 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   64,
+		Slot: 64,
 		PreviousJustifiedSlot:  10,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
@@ -1096,7 +1099,7 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   64,
+		Slot: 64,
 		PreviousJustifiedSlot:  10,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
@@ -1248,7 +1251,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	// validator helper function to fail with error when the public key
 	// currently exists in the validator registry.
 	depositInput := &pb.DepositInput{
-		Pubkey:                      []byte{1},
+		Pubkey: []byte{1},
 		WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		ProofOfPossession:           []byte{},
 		RandaoCommitmentHash32:      []byte{0},
@@ -1302,7 +1305,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	// the one specified in the deposit input, causing a failure.
 	registry := []*pb.ValidatorRecord{
 		{
-			Pubkey:                      []byte{1},
+			Pubkey: []byte{1},
 			WithdrawalCredentialsHash32: []byte{4, 5, 6},
 		},
 	}
@@ -1312,8 +1315,8 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 		ValidatorRegistry:       registry,
 		ValidatorBalances:       balances,
 		LatestDepositRootHash32: root[:],
-		Slot:                    currentSlot,
-		GenesisTime:             uint64(genesisTime),
+		Slot:        currentSlot,
+		GenesisTime: uint64(genesisTime),
 	}
 	want := "expected withdrawal credentials to match"
 	if _, err := ProcessValidatorDeposits(
@@ -1326,7 +1329,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 
 func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	depositInput := &pb.DepositInput{
-		Pubkey:                      []byte{1},
+		Pubkey: []byte{1},
 		WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		ProofOfPossession:           []byte{},
 		RandaoCommitmentHash32:      []byte{0},
@@ -1379,7 +1382,7 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	}
 	registry := []*pb.ValidatorRecord{
 		{
-			Pubkey:                      []byte{1},
+			Pubkey: []byte{1},
 			WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		},
 	}
@@ -1389,8 +1392,8 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 		ValidatorRegistry:       registry,
 		ValidatorBalances:       balances,
 		LatestDepositRootHash32: root[:],
-		Slot:                    currentSlot,
-		GenesisTime:             uint64(genesisTime),
+		Slot:        currentSlot,
+		GenesisTime: uint64(genesisTime),
 	}
 	newState, err := ProcessValidatorDeposits(
 		beaconState,
