@@ -109,13 +109,13 @@ func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.Validator
 			pubKeyReq := &pb.PublicKey{
 				PublicKey: a.publicKey,
 			}
-			shardID, err := validator.ValidatorShardID(a.ctx, pubKeyReq)
+			shardAssignment, err := validator.ValidatorShard(a.ctx, pubKeyReq)
 			if err != nil {
 				log.Errorf("could not get attester Shard ID: %v", err)
 				continue
 			}
 
-			a.shardID = shardID.ShardId
+			a.shardID = shardAssignment.Shard
 
 			attesterIndex, err := validator.ValidatorIndex(a.ctx, pubKeyReq)
 			if err != nil {

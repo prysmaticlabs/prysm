@@ -13,13 +13,6 @@ service BeaconService {
     // LatestAttestation streams the latest aggregated attestation to connected
     // validator clients.
     rpc LatestAttestation(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.Attestation);
-    // CurrentAssignmentsAndGenesisTime is called by a validator client upon first connecting
-    // to a beacon node in order to determine the current validator assignments
-    // and genesis timestamp of the protocol.
-    rpc CurrentAssignmentsAndGenesisTime(ValidatorAssignmentRequest) returns (CurrentAssignmentsResponse);
-    // ValidatorAssignments streams validator assignments to clients
-    // for a subset of public keys in the active validator set.
-    rpc ValidatorAssignments(ValidatorAssignmentRequest) returns(stream ValidatorAssignmentResponse);
 }
 
 service AttesterService {
@@ -27,18 +20,14 @@ service AttesterService {
 }
 
 service ProposerService {
+    rpc ProposerIndex(ProposerIndexRequest) returns (ProposerIndexResponse);
     rpc ProposeBlock(ethereum.beacon.p2p.v1.BeaconBlock) returns (ProposeResponse);
-    rpc LatestPOWChainBlockHash(google.protobuf.Empty) returns (POWChainResponse);
     rpc ComputeStateRoot(ethereum.beacon.p2p.v1.BeaconBlock) returns (StateRootResponse);
-    rpc ProposerIndex(ProposerIndexRequest) returns (IndexResponse);
 }
 
 service ValidatorService {
-    // These endpoints can be called on demand in the future
-    // by some web3 API for users to conveniently know their assignment.
-    rpc ValidatorShardID(PublicKey) returns (ShardIDResponse);
-    rpc ValidatorIndex(PublicKey) returns (IndexResponse);
-    rpc ValidatorSlotAndResponsibility(PublicKey) returns (SlotResponsibilityResponse);
+    rpc ValidatorShard(PublicKey) returns (ValidatorShardResponse);
+    rpc ValidatorIndex(PublicKey) returns (ValidatorIndexResponse);
     rpc ValidatorEpochAssignments(ValidatorEpochAssignmentsRequest) returns (ValidatorEpochAssignmentsResponse);
 }
 
@@ -55,12 +44,12 @@ message ProposeResponse {
     bytes block_hash = 1;
 }
 
-message POWChainResponse {
-    bytes block_hash = 1;
-}
-
 message ProposerIndexRequest {
     uint64 slot_number = 1;
+}
+
+message ProposerIndexResponse {
+    uint32 index = 1;
 }
 
 message StateRootResponse {
@@ -109,12 +98,12 @@ message SlotResponsibilityResponse {
     ValidatorRole role = 2;
 }
 
-message IndexResponse {
+message ValidatorIndexResponse {
     uint32 index = 1;
 }
 
-message ShardIDResponse {
-    uint64 shard_id = 1;
+message ValidatorShardResponse {
+    uint64 shard = 1;
 }
 
 message CurrentAssignmentsResponse {
