@@ -32,7 +32,7 @@ func generateTestGenesisStateAndBlock(
 		depositInput := &pb.DepositInput{
 			Pubkey: pubkey,
 		}
-		balance := params.BeaconConfig().MaxDepositInGwei
+		balance := params.BeaconConfig().MaxDeposit
 		depositData, err := b.EncodeDepositData(depositInput, balance, time.Now().Unix())
 		if err != nil {
 			t.Fatalf("Could not encode deposit: %v", err)

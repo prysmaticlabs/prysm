@@ -286,7 +286,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 	validatorBalances := make([]uint64, config.EpochLength*2)
 	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = config.MaxDepositInGwei
+		validatorBalances[i] = config.MaxDeposit
 	}
 
 	slashings := []*pb.ProposerSlashing{

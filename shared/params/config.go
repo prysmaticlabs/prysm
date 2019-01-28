@@ -18,8 +18,7 @@ type BeaconChainConfig struct {
 	// Misc constants.
 	ShardCount                uint64 // ShardCount is the number of shard chains in Ethereum 2.0.
 	TargetCommitteeSize       uint64 // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
-	EjectionBalance           uint64 // EjectionBalance is the minimal ETH a validator needs to have before ejected.
-	EjectionBalanceInGwei     uint64 // EjectionBalance is the minimal GWei a validator needs to have before ejected.
+	EjectionBalance           uint64 // EjectionBalance is the minimal GWei a validator needs to have before ejected.
 	MaxBalanceChurnQuotient   uint64 // MaxBalanceChurnQuotient is used to determine how many validators can rotate per epoch.
 	Gwei                      uint64 // Gwei is the denomination of Gwei in Ether.
 	BeaconChainShardNumber    uint64 // BeaconChainShardNumber is the shard number of the beacon chain.
@@ -32,8 +31,8 @@ type BeaconChainConfig struct {
 	// Deposit contract constants.
 	DepositContractAddress   []byte // DepositContractAddress is the address of the deposit contract in PoW chain.
 	DepositContractTreeDepth uint64 // Depth of the Merkle trie of deposits in the validator deposit contract on the PoW chain.
-	MaxDepositInGwei         uint64 // MaxDepositInGwei is the maximal amount of Gwei a validator can send to the deposit contract at once.
-	MinDepositInGwei         uint64 // MinDepositInGwei is the maximal amount of Gwei a validator can send to the deposit contract at once.
+	MinDeposit               uint64 // MinDeposit is the maximal amount of Gwei a validator can send to the deposit contract at once.
+	MaxDeposit               uint64 // MaxDeposit is the maximal amount of Gwei a validator can send to the deposit contract at once.
 
 	// Initial value constants.
 	GenesisForkVersion      uint64   // GenesisForkVersion is used to track fork version between state transitions.
@@ -49,7 +48,7 @@ type BeaconChainConfig struct {
 	EpochLength                  uint64 // EpochLength is the number of slots in an epoch.
 	SeedLookahead                uint64 // SeedLookahead is the duration of randao look ahead seed.
 	EntryExitDelay               uint64 // EntryExitDelay is the duration a validator has to wait for entry and exit.
-	DepositRootVotingPeriod      uint64 // DepositRootVotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
+	DepositRootVotingPeriod      uint64 // DepositRootVotingPeriod defines how often the merkle root of the deposits get updated in beacon node.
 	MinValidatorWithdrawalTime   uint64 // MinValidatorWithdrawalTime is the shortest amount of time a validator can get the deposit out.
 	FarFutureSlot                uint64 // FarFutureSlot represents a slot extremely far away in the future used as the default penalization slot for validators.
 
@@ -85,8 +84,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	// Misc constant.
 	ShardCount:                1024,
 	TargetCommitteeSize:       128,
-	EjectionBalance:           16,
-	EjectionBalanceInGwei:     16 * 1e9,
+	EjectionBalance:           16 * 1e9,
 	MaxBalanceChurnQuotient:   32,
 	BeaconChainShardNumber:    1<<64 - 1,
 	MaxCasperVotes:            1024,
@@ -97,8 +95,8 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// Deposit contract constants.
 	DepositContractTreeDepth: 32,
-	MaxDepositInGwei:         32 * 1e9,
-	MinDepositInGwei:         1 * 1e9,
+	MinDeposit:               1 * 1e9,
+	MaxDeposit:               32 * 1e9,
 
 	// Initial value constants.
 	GenesisForkVersion: 0,
@@ -109,7 +107,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	EmptySignature:     makeEmptySignature(),
 
 	// Time parameter constants.
-	SlotDuration:                 16,
+	SlotDuration:                 6,
 	MinAttestationInclusionDelay: 4,
 	EpochLength:                  64,
 	SeedLookahead:                64,
@@ -117,7 +115,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	DepositRootVotingPeriod:      1024,
 
 	// Reward and penalty quotients constants.
-	BaseRewardQuotient:           1024,
+	BaseRewardQuotient:           32,
 	WhistlerBlowerRewardQuotient: 512,
 	IncluderRewardQuotient:       8,
 	InactivityPenaltyQuotient:    1 << 24,
@@ -142,7 +140,6 @@ var demoBeaconConfig = &BeaconChainConfig{
 	ShardCount:                5,
 	TargetCommitteeSize:       3,
 	EjectionBalance:           defaultBeaconConfig.EjectionBalance,
-	EjectionBalanceInGwei:     defaultBeaconConfig.EjectionBalanceInGwei,
 	MaxBalanceChurnQuotient:   defaultBeaconConfig.MaxBalanceChurnQuotient,
 	BeaconChainShardNumber:    defaultBeaconConfig.BeaconChainShardNumber,
 	MaxCasperVotes:            defaultBeaconConfig.MaxCasperVotes,
@@ -153,8 +150,8 @@ var demoBeaconConfig = &BeaconChainConfig{
 
 	// Deposit contract constants.
 	DepositContractTreeDepth: defaultBeaconConfig.DepositContractTreeDepth,
-	MaxDepositInGwei:         defaultBeaconConfig.MaxDepositInGwei,
-	MinDepositInGwei:         defaultBeaconConfig.MinDepositInGwei,
+	MaxDeposit:               defaultBeaconConfig.MaxDeposit,
+	MinDeposit:               defaultBeaconConfig.MinDeposit,
 
 	// Initial value constants.
 	GenesisForkVersion: defaultBeaconConfig.GenesisForkVersion,

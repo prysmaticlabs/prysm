@@ -189,7 +189,7 @@ func TestProposeBlock(t *testing.T) {
 				RandaoCommitmentHash32: []byte{41, 13, 236, 217, 84, 139, 98, 168, 214, 3, 69,
 					169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
 			},
-			params.BeaconConfig().MaxDepositInGwei,
+			params.BeaconConfig().MaxDeposit,
 			time.Now().Unix(),
 		)
 		if err != nil {
@@ -270,7 +270,7 @@ func TestComputeStateRoot(t *testing.T) {
 				RandaoCommitmentHash32: []byte{41, 13, 236, 217, 84, 139, 98, 168, 214, 3, 69,
 					169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
 			},
-			params.BeaconConfig().MaxDepositInGwei,
+			params.BeaconConfig().MaxDeposit,
 			time.Now().Unix(),
 		)
 		if err != nil {
@@ -332,7 +332,7 @@ func TestProposerIndex(t *testing.T) {
 				RandaoCommitmentHash32: []byte{41, 13, 236, 217, 84, 139, 98, 168, 214, 3, 69,
 					169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
 			},
-			params.BeaconConfig().MaxDepositInGwei,
+			params.BeaconConfig().MaxDeposit,
 			time.Now().Unix(),
 		)
 		if err != nil {
@@ -530,7 +530,7 @@ func TestValidatorIndex(t *testing.T) {
 		&pbp2p.DepositInput{
 			Pubkey: []byte{'A'},
 		},
-		params.BeaconConfig().MaxDepositInGwei,
+		params.BeaconConfig().MaxDeposit,
 		time.Now().Unix(),
 	)
 	if err != nil {
