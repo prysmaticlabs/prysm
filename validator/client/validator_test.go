@@ -3,7 +3,11 @@ package client
 import (
 	"context"
 	"errors"
+	"io"
 	"testing"
+	"time"
+
+	ptypes "github.com/gogo/protobuf/types"
 
 	"github.com/golang/mock/gomock"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -15,7 +19,35 @@ var _ = Validator(&validator{})
 
 var fakePubKey = []byte{1}
 
-func TestUpdateAssignmentsDoesNothingWhenNotEpochStart(t *testing.T) {
+func TestWaitForActivation_ReceivesChainStartGenesisTime(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := internal.NewMockBeaconServiceClient(ctrl)
+
+	v := validator{
+		pubKey:       fakePubKey,
+		beaconClient: client,
+	}
+	genesis := uint64(time.Unix(0, 0).Unix())
+	clientStream := internal.NewMockBeaconService_WaitForChainStartClient(ctrl)
+	client.EXPECT().WaitForChainStart(
+		gomock.Any(),
+		&ptypes.Empty{},
+	).Return(clientStream, nil)
+	clientStream.EXPECT().Recv().Return(
+		&pb.ChainStartResponse{
+			Started:     true,
+			GenesisTime: genesis,
+		},
+		io.EOF,
+	)
+	v.WaitForActivation(context.Background())
+	if v.genesisTime != genesis {
+		t.Errorf("Expected chain start time to equal %d, received %d", genesis, v.genesisTime)
+	}
+}
+
+func TestUpdateAssignments_DoesNothingWhenNotEpochStart(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := internal.NewMockValidatorServiceClient(ctrl)
@@ -33,7 +65,7 @@ func TestUpdateAssignmentsDoesNothingWhenNotEpochStart(t *testing.T) {
 	v.UpdateAssignments(context.Background(), slot)
 }
 
-func TestUpdateAssignmentsReturnsError(t *testing.T) {
+func TestUpdateAssignments_ReturnsError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := internal.NewMockValidatorServiceClient(ctrl)
@@ -56,7 +88,7 @@ func TestUpdateAssignmentsReturnsError(t *testing.T) {
 	}
 }
 
-func TestUpdateAssignmentsDoesUpdateAssignments(t *testing.T) {
+func TestUpdateAssignments_DoesUpdateAssignments(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := internal.NewMockValidatorServiceClient(ctrl)

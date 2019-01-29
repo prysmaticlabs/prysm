@@ -18,6 +18,7 @@ import (
 //
 // WIP - not done.
 type validator struct {
+	genesisTime     uint64
 	ticker          slotticker.SlotTicker
 	assignment      *pb.Assignment
 	validatorClient pb.ValidatorServiceClient
@@ -52,7 +53,6 @@ func (v *validator) WaitForActivation(ctx context.Context) {
 		log.Errorf("Could not setup beacon chain ChainStart streaming client: %v", err)
 		return
 	}
-	var genesisTime uint64
 	for {
 		chainStartRes, err := stream.Recv()
 		// If the stream is closed, we stop the loop.
@@ -68,11 +68,11 @@ func (v *validator) WaitForActivation(ctx context.Context) {
 			log.Errorf("Could not receive ChainStart from stream: %v", err)
 			continue
 		}
-		genesisTime = chainStartRes.GenesisTime
+		v.genesisTime = chainStartRes.GenesisTime
 	}
 	// Once the ChainStart log is received, we update the genesis time of the validator client
 	// and begin a slot ticker used to track the current slot the beacon node is in.
-	v.ticker = slotticker.GetSlotTicker(time.Unix(int64(genesisTime), 0), params.BeaconConfig().SlotDuration)
+	v.ticker = slotticker.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SlotDuration)
 	// Then, check if the validator has deposited into the Deposit Contract.
 	// If the validator has deposited, subscribe to a stream receiving the activation status
 	// of the validator until a final ACTIVATED check if received, then this function can return.
