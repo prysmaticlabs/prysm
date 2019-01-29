@@ -27,7 +27,7 @@ func TestValidatorIndex(t *testing.T) {
 		&pbp2p.DepositInput{
 			Pubkey: []byte{'A'},
 		},
-		params.BeaconConfig().MaxDepositInGwei,
+		params.BeaconConfig().MaxDeposit,
 		time.Now().Unix(),
 	)
 	if err != nil {

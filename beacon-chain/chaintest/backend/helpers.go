@@ -158,7 +158,7 @@ func generateInitialSimulatedDeposits(randaoCommit [32]byte) ([]*pb.Deposit, err
 		}
 		depositData, err := b.EncodeDepositData(
 			depositInput,
-			params.BeaconConfig().MaxDepositInGwei,
+			params.BeaconConfig().MaxDeposit,
 			genesisTime,
 		)
 		if err != nil {

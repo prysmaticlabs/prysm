@@ -296,7 +296,7 @@ func TestRunningChainService(t *testing.T) {
 		}
 		depositData, err := b.EncodeDepositData(
 			depositInput,
-			params.BeaconConfig().MaxDepositInGwei,
+			params.BeaconConfig().MaxDeposit,
 			time.Now().Unix(),
 		)
 		if err != nil {

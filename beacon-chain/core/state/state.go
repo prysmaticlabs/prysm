@@ -161,7 +161,7 @@ func InitialBeaconState(
 	}
 	for i := 0; i < len(state.ValidatorRegistry); i++ {
 		if v.EffectiveBalance(state, uint32(i)) ==
-			config.MaxDepositInGwei {
+			config.MaxDeposit {
 			state, err = v.ActivateValidator(state, uint32(i), true)
 			if err != nil {
 				return nil, fmt.Errorf("could not activate validator: %v", err)
