@@ -99,7 +99,7 @@ var decodeTests = []decodeTest{
 				{B: 4, A: 3},
 			},
 		}},
-	{input: "16000000 07000000 03 02000000 0600 07000000 05 02000002 0700", ptr: new([]outerStruct),
+	{input: "16000000 07000000 03 02000000 0600 07000000 05 02000000 0700", ptr: new([]outerStruct),
 		value: []outerStruct{
 			{V: 3, SubV: innerStruct{V: 6}},
 			{V: 5, SubV: innerStruct{V: 7}},
@@ -170,6 +170,12 @@ var decodeTests = []decodeTest{
 
 	// error: struct: wrong input
 	{input: "03000000 01 02", ptr: new(simpleStruct), error: "decode error: failed to decode field of slice: can only read 0 bytes while expected to read 1 bytes for output type ssz.simpleStruct"},
+
+	// error: struct: input too short
+	{input: "02000000 0200", ptr: new(simpleStruct), error: "decode error: input is too short for output type ssz.simpleStruct"},
+
+	// error: struct: input too long
+	{input: "04000000 0200 01 01", ptr: new(simpleStruct), error: "decode error: input is too long for output type ssz.simpleStruct"},
 }
 
 func runTests(t *testing.T, decode func([]byte, interface{}) error) {

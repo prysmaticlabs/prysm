@@ -342,13 +342,13 @@ func Crosslinks(
 	epochLength := config.EpochLength
 	startSlot := state.Slot - 2*epochLength
 	for i := startSlot; i < state.Slot; i++ {
-		shardCommittees, err := validators.CrosslinkCommitteesAtSlot(state, i)
+		crosslinkCommittees, err := validators.CrosslinkCommitteesAtSlot(state, i)
 		if err != nil {
 			return nil, fmt.Errorf("could not get shard committees for slot %d: %v", i, err)
 		}
-		for _, shardCommittee := range shardCommittees {
-			shard := shardCommittee.Shard
-			committee := shardCommittee.Committee
+		for _, crosslinkCommittee := range crosslinkCommittees {
+			shard := crosslinkCommittee.Shard
+			committee := crosslinkCommittee.Committee
 			totalAttestingBalance, err :=
 				epoch.TotalAttestingBalance(state, shard, thisEpochAttestations, prevEpochAttestations)
 			if err != nil {

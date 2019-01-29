@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"errors"
-	"reflect"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -14,7 +13,7 @@ import (
 
 var _ = Validator(&validator{})
 
-var fakePubKey = &pb.PublicKey{}
+var fakePubKey = []byte{1}
 
 func TestUpdateAssignmentsDoesNothingWhenNotEpochStart(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -64,16 +63,9 @@ func TestUpdateAssignmentsDoesUpdateAssignments(t *testing.T) {
 
 	slot := params.BeaconConfig().EpochLength
 	resp := &pb.ValidatorEpochAssignmentsResponse{
-		EpochStart: slot,
-		Assignments: []*pb.Assignment{
-			&pb.Assignment{
-				Role:         pb.ValidatorRole_PROPOSER,
-				AssignedSlot: 67,
-			},
-			&pb.Assignment{
-				Role:         pb.ValidatorRole_ATTESTER,
-				AssignedSlot: 78,
-			},
+		Assignment: &pb.Assignment{
+			ProposerSlot: 67,
+			AttesterSlot: 78,
 		},
 	}
 	v := validator{
@@ -87,11 +79,10 @@ func TestUpdateAssignmentsDoesUpdateAssignments(t *testing.T) {
 
 	v.UpdateAssignments(context.Background(), slot)
 
-	expected := map[uint64]*pb.Assignment{
-		67: resp.Assignments[0],
-		78: resp.Assignments[1],
+	if v.assignment.ProposerSlot != 67 {
+		t.Errorf("Unexpected validator assignments. want=%v got=%v", 67, v.assignment.ProposerSlot)
 	}
-	if !reflect.DeepEqual(v.assignments, expected) {
-		t.Errorf("Unexpected validator assignments. want=%v got=%v", expected, v.assignments)
+	if v.assignment.AttesterSlot != 78 {
+		t.Errorf("Unexpected validator assignments. want=%v got=%v", 78, v.assignment.AttesterSlot)
 	}
 }

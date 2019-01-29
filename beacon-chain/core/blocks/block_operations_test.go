@@ -286,7 +286,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 	validatorBalances := make([]uint64, config.EpochLength*2)
 	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = config.MaxDepositInGwei
+		validatorBalances[i] = config.MaxDeposit
 	}
 
 	slashings := []*pb.ProposerSlashing{
@@ -439,14 +439,14 @@ func TestProcessAttesterSlashings_UnmatchedAttestations(t *testing.T) {
 	slashings := []*pb.AttesterSlashing{
 		{
 			SlashableVote_1: &pb.SlashableVote{
-				Data: att1,
+				Data:             att1,
 				ValidatorIndices: []uint64{1},
-				CustodyBitfield: []byte{0xFF},
+				CustodyBitfield:  []byte{0xFF},
 			},
 			SlashableVote_2: &pb.SlashableVote{
-				Data: att1,
+				Data:             att1,
 				ValidatorIndices: []uint64{2},
-				CustodyBitfield: []byte{0xFF},
+				CustodyBitfield:  []byte{0xFF},
 			},
 		},
 	}
@@ -528,14 +528,14 @@ func TestProcessAttesterSlashings_SlotsInequalities(t *testing.T) {
 		slashings := []*pb.AttesterSlashing{
 			{
 				SlashableVote_1: &pb.SlashableVote{
-					Data: tt.att1,
+					Data:             tt.att1,
 					ValidatorIndices: []uint64{1},
-					CustodyBitfield: []byte{0xFF},
+					CustodyBitfield:  []byte{0xFF},
 				},
 				SlashableVote_2: &pb.SlashableVote{
-					Data: tt.att2,
+					Data:             tt.att2,
 					ValidatorIndices: []uint64{2},
-					CustodyBitfield: []byte{0xFF},
+					CustodyBitfield:  []byte{0xFF},
 				},
 			},
 		}

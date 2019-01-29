@@ -102,3 +102,32 @@ func TestIsPowerOf2(t *testing.T) {
 		}
 	}
 }
+
+func TestPowerOf2(t *testing.T) {
+	tests := []struct {
+		a uint64
+		b uint64
+	}{
+		{
+			a: 3,
+			b: 8,
+		},
+		{
+			a: 20,
+			b: 1048576,
+		},
+		{
+			a: 11,
+			b: 2048,
+		},
+		{
+			a: 8,
+			b: 256,
+		},
+	}
+	for _, tt := range tests {
+		if tt.b != PowerOf2(tt.a) {
+			t.Fatalf("PowerOf2(%d) = %d, wanted: %d", tt.a, PowerOf2(tt.a), tt.b)
+		}
+	}
+}

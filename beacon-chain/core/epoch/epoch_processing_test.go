@@ -284,8 +284,8 @@ func TestProcessEjectionsOk(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 1,
 		ValidatorBalances: []uint64{
-			config.EjectionBalanceInGwei - 1,
-			config.EjectionBalanceInGwei + 1},
+			config.EjectionBalance - 1,
+			config.EjectionBalance + 1},
 		LatestPenalizedBalances: []uint64{0},
 		ValidatorRegistry: []*pb.ValidatorRecord{
 			{ExitSlot: config.FarFutureSlot},
@@ -338,6 +338,7 @@ func TestCanNotProcessValidatorRegistry(t *testing.T) {
 	}
 	state = &pb.BeaconState{
 		ValidatorRegistryUpdateSlot: 101,
+		FinalizedSlot:               102,
 		LatestCrosslinks: []*pb.CrosslinkRecord{
 			{Slot: 100},
 		},

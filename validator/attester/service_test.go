@@ -72,16 +72,18 @@ func TestAttesterLoop(t *testing.T) {
 	att := NewAttester(context.Background(), cfg)
 
 	mockServiceValidator := internal.NewMockValidatorServiceClient(ctrl)
-	mockServiceValidator.EXPECT().ValidatorShardID(
+	mockServiceValidator.EXPECT().ValidatorEpochAssignments(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(&pb.ShardIDResponse{
-		ShardId: 100,
+	).Return(&pb.ValidatorEpochAssignmentsResponse{
+		Assignment: &pb.Assignment{
+			Shard: 100,
+		},
 	}, nil)
 	mockServiceValidator.EXPECT().ValidatorIndex(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(&pb.IndexResponse{
+	).Return(&pb.ValidatorIndexResponse{
 		Index: 0,
 	}, nil)
 
@@ -148,16 +150,18 @@ func TestAttesterErrorCantAttestHead(t *testing.T) {
 	att := NewAttester(context.Background(), cfg)
 
 	mockServiceValidator := internal.NewMockValidatorServiceClient(ctrl)
-	mockServiceValidator.EXPECT().ValidatorShardID(
+	mockServiceValidator.EXPECT().ValidatorEpochAssignments(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(&pb.ShardIDResponse{
-		ShardId: 100,
+	).Return(&pb.ValidatorEpochAssignmentsResponse{
+		Assignment: &pb.Assignment{
+			Shard: 100,
+		},
 	}, nil)
 	mockServiceValidator.EXPECT().ValidatorIndex(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(&pb.IndexResponse{
+	).Return(&pb.ValidatorIndexResponse{
 		Index: 0,
 	}, nil)
 
@@ -195,7 +199,7 @@ func TestAttesterErrorCantGetShardID(t *testing.T) {
 	att := NewAttester(context.Background(), cfg)
 
 	mockServiceValidator := internal.NewMockValidatorServiceClient(ctrl)
-	mockServiceValidator.EXPECT().ValidatorShardID(
+	mockServiceValidator.EXPECT().ValidatorEpochAssignments(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(nil, errors.New("could not get attester Shard ID"))
@@ -229,11 +233,13 @@ func TestAttesterErrorCantGetAttesterIndex(t *testing.T) {
 	att := NewAttester(context.Background(), cfg)
 
 	mockServiceValidator := internal.NewMockValidatorServiceClient(ctrl)
-	mockServiceValidator.EXPECT().ValidatorShardID(
+	mockServiceValidator.EXPECT().ValidatorEpochAssignments(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(&pb.ShardIDResponse{
-		ShardId: 100,
+	).Return(&pb.ValidatorEpochAssignmentsResponse{
+		Assignment: &pb.Assignment{
+			Shard: 100,
+		},
 	}, nil)
 	mockServiceValidator.EXPECT().ValidatorIndex(
 		gomock.Any(),

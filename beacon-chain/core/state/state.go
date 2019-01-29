@@ -100,7 +100,6 @@ func InitialBeaconState(
 
 		// Randomness and committees.
 		LatestRandaoMixesHash32S:     latestRandaoMixes,
-		ShardCommitteesAtSlots:       []*pb.ShardCommitteeArray{},
 		PreviousEpochStartShard:      config.GenesisStartShard,
 		CurrentEpochStartShard:       config.GenesisStartShard,
 		PreviousEpochCalculationSlot: config.GenesisSlot,
@@ -154,25 +153,13 @@ func InitialBeaconState(
 	}
 	for i := 0; i < len(state.ValidatorRegistry); i++ {
 		if v.EffectiveBalance(state, uint64(i)) ==
-			config.MaxDepositInGwei {
+			config.MaxDeposit {
 			state, err = v.ActivateValidator(state, uint64(i), true)
 			if err != nil {
 				return nil, fmt.Errorf("could not activate validator: %v", err)
 			}
 		}
 	}
-
-	// Set initial committee shuffling.
-	initialShuffling, err := v.ShuffleValidatorRegistryToCommittees(
-		config.ZeroHash,
-		state.ValidatorRegistry,
-		0,
-		config.GenesisSlot,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("could not shuffle initial committee: %v", err)
-	}
-	state.ShardCommitteesAtSlots = append(initialShuffling, initialShuffling...)
 
 	return state, nil
 }
