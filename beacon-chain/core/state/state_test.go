@@ -18,7 +18,6 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	if params.BeaconConfig().EpochLength != 64 {
 		t.Errorf("EpochLength should be 64 for these tests to pass")
 	}
-	epochLength := params.BeaconConfig().EpochLength
 
 	if params.BeaconConfig().GenesisSlot != 0 {
 		t.Error("GenesisSlot should be 0 for these tests to pass")
@@ -169,19 +168,6 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	}
 	if !reflect.DeepEqual(state.DepositRootVotes, []*pb.DepositRootVote{}) {
 		t.Error("DepositRootVotes was not correctly initialized")
-	}
-
-	// Initial committee shuffling check.
-	if len(state.ShardCommitteesAtSlots) != int(2*epochLength) {
-		t.Error("ShardCommitteesAtSlots was not correctly initialized")
-	}
-
-	for i := 0; i < len(state.ShardCommitteesAtSlots); i++ {
-		if len(state.ShardCommitteesAtSlots[i].ArrayShardCommittee[0].Committee) !=
-			int(params.BeaconConfig().TargetCommitteeSize) {
-			t.Errorf("ShardCommittees was not correctly initialized %d",
-				len(state.ShardCommitteesAtSlots[i].ArrayShardCommittee[0].Committee))
-		}
 	}
 }
 

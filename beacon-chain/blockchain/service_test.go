@@ -535,7 +535,6 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 
 	currentSlot := uint64(1)
 	attestationSlot := uint64(0)
-	shard := beaconState.ShardCommitteesAtSlots[attestationSlot].ArrayShardCommittee[0].Shard
 
 	block3 := &pb.BeaconBlock{
 		Slot:              currentSlot,
@@ -548,7 +547,6 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Data: &pb.AttestationData{
 					Slot:                     attestationSlot,
-					Shard:                    shard,
 					JustifiedBlockRootHash32: parentHash[:],
 				},
 			}},
