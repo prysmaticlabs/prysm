@@ -72,11 +72,13 @@ func TestAttesterLoop(t *testing.T) {
 	att := NewAttester(context.Background(), cfg)
 
 	mockServiceValidator := internal.NewMockValidatorServiceClient(ctrl)
-	mockServiceValidator.EXPECT().ValidatorShard(
+	mockServiceValidator.EXPECT().ValidatorEpochAssignments(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(&pb.ValidatorShardResponse{
-		Shard: 100,
+	).Return(&pb.ValidatorEpochAssignmentsResponse{
+		Assignment: &pb.Assignment{
+			Shard: 100,
+		},
 	}, nil)
 	mockServiceValidator.EXPECT().ValidatorIndex(
 		gomock.Any(),
@@ -148,11 +150,13 @@ func TestAttesterErrorCantAttestHead(t *testing.T) {
 	att := NewAttester(context.Background(), cfg)
 
 	mockServiceValidator := internal.NewMockValidatorServiceClient(ctrl)
-	mockServiceValidator.EXPECT().ValidatorShard(
+	mockServiceValidator.EXPECT().ValidatorEpochAssignments(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(&pb.ValidatorShardResponse{
-		Shard: 100,
+	).Return(&pb.ValidatorEpochAssignmentsResponse{
+		Assignment: &pb.Assignment{
+			Shard: 100,
+		},
 	}, nil)
 	mockServiceValidator.EXPECT().ValidatorIndex(
 		gomock.Any(),
@@ -195,7 +199,7 @@ func TestAttesterErrorCantGetShardID(t *testing.T) {
 	att := NewAttester(context.Background(), cfg)
 
 	mockServiceValidator := internal.NewMockValidatorServiceClient(ctrl)
-	mockServiceValidator.EXPECT().ValidatorShard(
+	mockServiceValidator.EXPECT().ValidatorEpochAssignments(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(nil, errors.New("could not get attester Shard ID"))
@@ -229,11 +233,13 @@ func TestAttesterErrorCantGetAttesterIndex(t *testing.T) {
 	att := NewAttester(context.Background(), cfg)
 
 	mockServiceValidator := internal.NewMockValidatorServiceClient(ctrl)
-	mockServiceValidator.EXPECT().ValidatorShard(
+	mockServiceValidator.EXPECT().ValidatorEpochAssignments(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(&pb.ValidatorShardResponse{
-		Shard: 100,
+	).Return(&pb.ValidatorEpochAssignmentsResponse{
+		Assignment: &pb.Assignment{
+			Shard: 100,
+		},
 	}, nil)
 	mockServiceValidator.EXPECT().ValidatorIndex(
 		gomock.Any(),
