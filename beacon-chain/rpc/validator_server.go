@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"fmt"
+
 	"github.com/prysmaticlabs/prysm/shared/params"
 
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -18,29 +19,9 @@ type ValidatorServer struct {
 	beaconDB *db.BeaconDB
 }
 
-// ValidatorShard is called by a validator to get the shard of where it needs to act
-// as a proposer or attester based on the current active validator registry.
-func (vs *ValidatorServer) ValidatorShard(ctx context.Context, req *pb.PublicKey) (*pb.ValidatorShardResponse, error) {
-	beaconState, err := vs.beaconDB.State()
-	if err != nil {
-		return nil, fmt.Errorf("could not get beacon state: %v", err)
-	}
-
-	shardID, err := v.ValidatorShardID(
-		req.PublicKey,
-		beaconState.ValidatorRegistry,
-		beaconState.ShardCommitteesAtSlots,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("could not get validator shard ID: %v", err)
-	}
-
-	return &pb.ValidatorShardResponse{Shard: shardID}, nil
-}
-
 // ValidatorIndex is called by a validator to get its index location that corresponds
 // to the attestation bit fields.
-func (vs *ValidatorServer) ValidatorIndex(ctx context.Context, req *pb.PublicKey) (*pb.ValidatorIndexResponse, error) {
+func (vs *ValidatorServer) ValidatorIndex(ctx context.Context, req *pb.ValidatorIndexRequest) (*pb.ValidatorIndexResponse, error) {
 	beaconState, err := vs.beaconDB.State()
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
@@ -56,7 +37,9 @@ func (vs *ValidatorServer) ValidatorIndex(ctx context.Context, req *pb.PublicKey
 	return &pb.ValidatorIndexResponse{Index: index}, nil
 }
 
-// ValidatorEpochAssignments ... WIP
+// ValidatorEpochAssignments fetches an assignment object for a validator by public key
+// such as the slot the validator needs to attest in during the epoch as well as a slot
+// in which the validator may need to propose during the epoch in addition to the assigned shard.
 func (vs *ValidatorServer) ValidatorEpochAssignments(
 	ctx context.Context,
 	req *pb.ValidatorEpochAssignmentsRequest,
@@ -65,7 +48,7 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
-	validatorIndex, err := v.ValidatorIdx(req.PublicKey.PublicKey, beaconState.ValidatorRegistry)
+	validatorIndex, err := v.ValidatorIdx(req.PublicKey, beaconState.ValidatorRegistry)
 	if err != nil {
 		return nil, fmt.Errorf("could not get active validator index: %v", err)
 	}
@@ -83,10 +66,10 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 			proposerSlot = i
 		}
 		for _, committee := range crossLinkCommittees {
-            for _, idx := range committee.Committee {
-            	if idx == validatorIndex {
-            		attesterSlot = i
-            		shard = committee.Shard
+			for _, idx := range committee.Committee {
+				if idx == validatorIndex {
+					attesterSlot = i
+					shard = committee.Shard
 				}
 			}
 		}
@@ -94,7 +77,7 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 	return &pb.ValidatorEpochAssignmentsResponse{
 		Assignment: &pb.Assignment{
 			PublicKey:    req.PublicKey,
-			ShardId:      shard,
+			Shard:        shard,
 			AttesterSlot: attesterSlot,
 			ProposerSlot: proposerSlot,
 		},
