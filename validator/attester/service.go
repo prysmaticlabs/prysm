@@ -106,18 +106,22 @@ func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.Validator
 			}
 			latestBlockHash := hashutil.Hash(data)
 
-			pubKeyReq := &pb.PublicKey{
-				PublicKey: a.publicKey,
+			req := &pb.ValidatorEpochAssignmentsRequest{
+				EpochStart: 0,
+				PublicKey:  a.publicKey,
 			}
-			shardAssignment, err := validator.ValidatorShard(a.ctx, pubKeyReq)
+			res, err := validator.ValidatorEpochAssignments(a.ctx, req)
 			if err != nil {
 				log.Errorf("could not get attester Shard ID: %v", err)
 				continue
 			}
 
-			a.shardID = shardAssignment.Shard
+			a.shardID = res.Assignment.Shard
 
-			attesterIndex, err := validator.ValidatorIndex(a.ctx, pubKeyReq)
+			indexReq := &pb.ValidatorIndexRequest{
+				PublicKey: a.publicKey,
+			}
+			attesterIndex, err := validator.ValidatorIndex(a.ctx, indexReq)
 			if err != nil {
 				log.Errorf("could not get attester index: %v", err)
 				continue
@@ -136,12 +140,12 @@ func (a *Attester) run(attester pb.AttesterServiceClient, validator pb.Validator
 				},
 			}
 
-			res, err := attester.AttestHead(a.ctx, attestReq)
+			attRes, err := attester.AttestHead(a.ctx, attestReq)
 			if err != nil {
 				log.Errorf("could not attest head: %v", err)
 				continue
 			}
-			log.Infof("Attestation proposed successfully with hash %#x", res.AttestationHash)
+			log.Infof("Attestation proposed successfully with hash %#x", attRes.AttestationHash)
 		}
 	}
 }
