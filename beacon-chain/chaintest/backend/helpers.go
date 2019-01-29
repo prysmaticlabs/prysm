@@ -39,7 +39,7 @@ func generateSimulatedBlock(
 		StateRootHash32:    stateRoot[:],
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: []*pb.ProposerSlashing{},
-			AttesterSlashings:   []*pb.AttesterSlashing{},
+			AttesterSlashings: []*pb.AttesterSlashing{},
 			Attestations:      []*pb.Attestation{},
 			Deposits:          []*pb.Deposit{},
 			Exits:             []*pb.Exit{},
@@ -92,7 +92,7 @@ func generateSimulatedBlock(
 					Slot:          simulatedAttesterSlashing.SlashableVote1Slot,
 					JustifiedSlot: simulatedAttesterSlashing.SlashableVote1JustifiedSlot,
 				},
-				CustodyBitfield:  simulatedAttesterSlashing.SlashableVote1CustodyBitField,
+				CustodyBitfield:  []byte(simulatedAttesterSlashing.SlashableVote1CustodyBitField),
 				ValidatorIndices: simulatedAttesterSlashing.SlashableVote1ValidatorIndices,
 			},
 			SlashableVote_2: &pb.SlashableVote{
@@ -100,7 +100,7 @@ func generateSimulatedBlock(
 					Slot:          simulatedAttesterSlashing.SlashableVote2Slot,
 					JustifiedSlot: simulatedAttesterSlashing.SlashableVote2JustifiedSlot,
 				},
-				CustodyBitfield:  simulatedAttesterSlashing.SlashableVote2CustodyBitField,
+				CustodyBitfield:  []byte(simulatedAttesterSlashing.SlashableVote2CustodyBitField),
 				ValidatorIndices: simulatedAttesterSlashing.SlashableVote2ValidatorIndices,
 			},
 		})

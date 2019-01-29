@@ -135,12 +135,12 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		{
 			SlashableVote_1: &pb.SlashableVote{
 				Data:             att1,
-				ValidatorIndices: []uint64{0, 1, 2, 3},
+				ValidatorIndices: []uint64{1},
 				CustodyBitfield:  []byte{0xFF},
 			},
 			SlashableVote_2: &pb.SlashableVote{
 				Data:             att2,
-				ValidatorIndices: []uint64{4, 5, 6, 1},
+				ValidatorIndices: []uint64{1},
 				CustodyBitfield:  []byte{0xFF},
 			},
 		},
@@ -197,12 +197,12 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		{
 			SlashableVote_1: &pb.SlashableVote{
 				Data:             att1,
-				ValidatorIndices: []uint64{0, 1, 2, 3},
+				ValidatorIndices: []uint64{1},
 				CustodyBitfield:  []byte{0xFF},
 			},
 			SlashableVote_2: &pb.SlashableVote{
 				Data:             att2,
-				ValidatorIndices: []uint64{4, 5, 6, 1},
+				ValidatorIndices: []uint64{1},
 				CustodyBitfield:  []byte{0xFF},
 			},
 		},
@@ -284,12 +284,12 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		{
 			SlashableVote_1: &pb.SlashableVote{
 				Data:             att1,
-				ValidatorIndices: []uint64{0, 1, 2, 3},
+				ValidatorIndices: []uint64{1},
 				CustodyBitfield:  []byte{0xFF},
 			},
 			SlashableVote_2: &pb.SlashableVote{
 				Data:             att2,
-				ValidatorIndices: []uint64{4, 5, 6, 1},
+				ValidatorIndices: []uint64{1},
 				CustodyBitfield:  []byte{0xFF},
 			},
 		},

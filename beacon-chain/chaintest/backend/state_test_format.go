@@ -56,11 +56,11 @@ type StateTestAttesterSlashing struct {
 	SlashableVote1Slot             uint64   `yaml:"slashable_vote_1_slot"`
 	SlashableVote1JustifiedSlot    uint64   `yaml:"slashable_vote_1_justified_slot"`
 	SlashableVote1ValidatorIndices []uint64 `yaml:"slashable_vote_1_validator_indices"`
-	SlashableVote1CustodyBitField  []byte   `yaml:"slashable_vote_1_custody_bitfield"`
+	SlashableVote1CustodyBitField  string   `yaml:"slashable_vote_1_custody_bitfield"`
 	SlashableVote2Slot             uint64   `yaml:"slashable_vote_2_slot"`
 	SlashableVote2JustifiedSlot    uint64   `yaml:"slashable_vote_2_justified_slot"`
 	SlashableVote2ValidatorIndices []uint64 `yaml:"slashable_vote_2_validator_indices"`
-	SlashableVote2CustodyBitField  []byte   `yaml:"slashable_vote_2_custody_bitfield"`
+	SlashableVote2CustodyBitField  string   `yaml:"slashable_vote_2_custody_bitfield"`
 }
 
 // StateTestValidatorExit --
