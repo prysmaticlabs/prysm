@@ -33,7 +33,6 @@ func (vs *ValidatorServer) ValidatorIndex(ctx context.Context, req *pb.Validator
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator index: %v", err)
 	}
-
 	return &pb.ValidatorIndexResponse{Index: index}, nil
 }
 
@@ -55,6 +54,7 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 	var shard uint64
 	var attesterSlot uint64
 	var proposerSlot uint64
+
 	for i := req.EpochStart; i < req.EpochStart+params.BeaconConfig().EpochLength; i++ {
 		crossLinkCommittees, err := v.CrosslinkCommitteesAtSlot(beaconState, i)
 		if err != nil {

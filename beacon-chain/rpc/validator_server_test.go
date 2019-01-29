@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"strconv"
 	"testing"
 	"time"
 
@@ -64,20 +65,24 @@ func TestValidatorEpochAssignments(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	depositData, err := b.EncodeDepositData(
-		&pbp2p.DepositInput{
-			Pubkey: []byte{'A'},
-		},
-		params.BeaconConfig().MaxDepositInGwei,
-		time.Now().Unix(),
-	)
-	if err != nil {
-		t.Fatalf("Could not encode deposit input: %v", err)
+	genesisTime := params.BeaconConfig().GenesisTime.Unix()
+	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(deposits); i++ {
+		depositInput := &pbp2p.DepositInput{
+			Pubkey:                 []byte(strconv.Itoa(i)),
+			RandaoCommitmentHash32: []byte{0},
+		}
+		depositData, err := b.EncodeDepositData(
+			depositInput,
+			params.BeaconConfig().MaxDepositInGwei,
+			genesisTime,
+		)
+		if err != nil {
+			t.Fatalf("Could not encode initial block deposits: %v", err)
+		}
+		deposits[i] = &pbp2p.Deposit{DepositData: depositData}
 	}
-	deposits := []*pbp2p.Deposit{
-		{DepositData: depositData},
-	}
-	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
+	beaconState, err := state.InitialBeaconState(deposits, uint64(genesisTime), nil)
 	if err != nil {
 		t.Fatalf("Could not instantiate initial state: %v", err)
 	}
@@ -91,11 +96,26 @@ func TestValidatorEpochAssignments(t *testing.T) {
 	}
 	req := &pb.ValidatorEpochAssignmentsRequest{
 		EpochStart: 0,
-		PublicKey:  []byte{'A'},
+		PublicKey:  []byte{'0'},
 	}
 	res, err := validatorServer.ValidatorEpochAssignments(context.Background(), req)
 	if err != nil {
 		t.Errorf("Could not get validator index: %v", err)
 	}
-	t.Log(res)
+	// With initial shuffling of default 16384 validators, the validator corresponding to
+	// public key 0 should correspond to an attester slot of 2 at shard 5.
+	if res.Assignment.Shard != 5 {
+		t.Errorf(
+			"Expected validator with pubkey %#x to be assigned to shard 5, received %d",
+			req.PublicKey,
+			res.Assignment.Shard,
+		)
+	}
+	if res.Assignment.AttesterSlot != 2 {
+		t.Errorf(
+			"Expected validator with pubkey %#x to be assigned as attester of slot 2, received %d",
+			req.PublicKey,
+			res.Assignment.AttesterSlot,
+		)
+	}
 }
