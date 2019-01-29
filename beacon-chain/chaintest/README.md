@@ -1,4 +1,4 @@
-'# Ethereum 2.0 E2E Test Suite
+# Ethereum 2.0 E2E Test Suite
 
 This is a test-suite for conformity end-2-end tests for Prysm's implementation of the Ethereum 2.0 specification. Implementation teams have decided to utilize YAML as a general conformity test format for the current beacon chain's runtime functionality.
 
