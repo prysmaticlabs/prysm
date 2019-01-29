@@ -8,7 +8,7 @@ func TestSaveCleanedFinalizedSlot(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	slot := uint32(100)
+	slot := uint64(100)
 	if err := db.SaveCleanedFinalizedSlot(slot); err != nil {
 		t.Errorf("failed to save cleaned finalized slot %v", err)
 	}
@@ -18,7 +18,7 @@ func TestCleanedFinalizedSlot_NotFound(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	var slot uint32
+	var slot uint64
 	slot, err := db.CleanedFinalizedSlot()
 	if err != nil {
 		t.Error("got DB error when reading cleaned finalized slot")
@@ -32,7 +32,7 @@ func TestCleanedFinalizedSlot(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	slot := uint32(100)
+	slot := uint64(100)
 	if err := db.SaveCleanedFinalizedSlot(slot); err != nil {
 		t.Fatalf("failed to save cleaned finalized slot %v", err)
 	}

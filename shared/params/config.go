@@ -83,17 +83,17 @@ type ShardChainConfig struct {
 
 var defaultBeaconConfig = &BeaconChainConfig{
 	// Misc constant.
-	ShardCount:                1024,
-	TargetCommitteeSize:       128,
-	EjectionBalance:           16,
-	EjectionBalanceInGwei:     16 * 1e9,
-	MaxBalanceChurnQuotient:   32,
-	BeaconChainShardNumber:    1<<64 - 1,
-	MaxIndicesPerSlashableVote:            1,
-	LatestBlockRootsLength:    8192,
-	LatestRandaoMixesLength:   8192,
-	LatestPenalizedExitLength: 8192,
-	MaxWithdrawalsPerEpoch:    4,
+	ShardCount:                 1024,
+	TargetCommitteeSize:        128,
+	EjectionBalance:            16,
+	EjectionBalanceInGwei:      16 * 1e9,
+	MaxBalanceChurnQuotient:    32,
+	BeaconChainShardNumber:     1<<64 - 1,
+	MaxIndicesPerSlashableVote: 1,
+	LatestBlockRootsLength:     8192,
+	LatestRandaoMixesLength:    8192,
+	LatestPenalizedExitLength:  8192,
+	MaxWithdrawalsPerEpoch:     4,
 
 	// Deposit contract constants.
 	DepositContractTreeDepth: 32,
@@ -139,17 +139,17 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 var demoBeaconConfig = &BeaconChainConfig{
 	// Misc constant.
-	ShardCount:                5,
-	TargetCommitteeSize:       3,
-	EjectionBalance:           defaultBeaconConfig.EjectionBalance,
-	EjectionBalanceInGwei:     defaultBeaconConfig.EjectionBalanceInGwei,
-	MaxBalanceChurnQuotient:   defaultBeaconConfig.MaxBalanceChurnQuotient,
-	BeaconChainShardNumber:    defaultBeaconConfig.BeaconChainShardNumber,
-	MaxIndicesPerSlashableVote:            defaultBeaconConfig.MaxIndicesPerSlashableVote,
-	LatestBlockRootsLength:    defaultBeaconConfig.LatestBlockRootsLength,
-	LatestRandaoMixesLength:   defaultBeaconConfig.LatestRandaoMixesLength,
-	LatestPenalizedExitLength: defaultBeaconConfig.LatestPenalizedExitLength,
-	MaxWithdrawalsPerEpoch:    defaultBeaconConfig.MaxWithdrawalsPerEpoch,
+	ShardCount:                 5,
+	TargetCommitteeSize:        3,
+	EjectionBalance:            defaultBeaconConfig.EjectionBalance,
+	EjectionBalanceInGwei:      defaultBeaconConfig.EjectionBalanceInGwei,
+	MaxBalanceChurnQuotient:    defaultBeaconConfig.MaxBalanceChurnQuotient,
+	BeaconChainShardNumber:     defaultBeaconConfig.BeaconChainShardNumber,
+	MaxIndicesPerSlashableVote: defaultBeaconConfig.MaxIndicesPerSlashableVote,
+	LatestBlockRootsLength:     defaultBeaconConfig.LatestBlockRootsLength,
+	LatestRandaoMixesLength:    defaultBeaconConfig.LatestRandaoMixesLength,
+	LatestPenalizedExitLength:  defaultBeaconConfig.LatestPenalizedExitLength,
+	MaxWithdrawalsPerEpoch:     defaultBeaconConfig.MaxWithdrawalsPerEpoch,
 
 	// Deposit contract constants.
 	DepositContractTreeDepth: defaultBeaconConfig.DepositContractTreeDepth,

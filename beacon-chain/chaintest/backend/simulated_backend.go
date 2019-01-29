@@ -75,7 +75,7 @@ func (sb *SimulatedBackend) RunForkChoiceTest(testCase *ForkChoiceTestCase) erro
 	randaoPreCommit := [32]byte{}
 	randaoReveal := hashutil.Hash(randaoPreCommit[:])
 	validators := make([]*pb.ValidatorRecord, testCase.Config.ValidatorCount)
-	for i := uint32(0); i < testCase.Config.ValidatorCount; i++ {
+	for i := uint64(0); i < testCase.Config.ValidatorCount; i++ {
 		validators[i] = &pb.ValidatorRecord{
 			ExitSlot:               params.BeaconConfig().EntryExitDelay,
 			Pubkey:                 []byte{},
@@ -131,7 +131,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	}
 
 	genesisTime := params.BeaconConfig().GenesisTime.Unix()
-	beaconState, err := state.InitialBeaconState(initialDeposits, uint32(genesisTime), nil)
+	beaconState, err := state.InitialBeaconState(initialDeposits, uint64(genesisTime), nil)
 	if err != nil {
 		return fmt.Errorf("could not initialize simulated beacon state")
 	}
@@ -151,14 +151,14 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	prevBlockRoots := [][32]byte{genesisBlockRoot}
 
 	// We keep track of the randao layers peeled for each proposer index in a map.
-	layersPeeledForProposer := make(map[uint32]int, len(beaconState.ValidatorRegistry))
+	layersPeeledForProposer := make(map[uint64]int, len(beaconState.ValidatorRegistry))
 	for idx := range beaconState.ValidatorRegistry {
-		layersPeeledForProposer[uint32(idx)] = 0
+		layersPeeledForProposer[uint64(idx)] = 0
 	}
 
 	depositsTrie := trie.NewDepositTrie()
 	averageTimesPerTransition := []time.Duration{}
-	for i := uint32(0); i < testCase.Config.NumSlots; i++ {
+	for i := uint64(0); i < testCase.Config.NumSlots; i++ {
 		prevBlockRoot := prevBlockRoots[len(prevBlockRoots)-1]
 
 		committeeArray, err := validators.CrosslinkCommitteesAtSlot(beaconState, i)
@@ -166,7 +166,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 			return fmt.Errorf("could not get crosslink committee: %v", err)
 		}
 		firstCommittee := committeeArray[0].Committee
-		proposerIndex := firstCommittee[i%uint32(len(firstCommittee))]
+		proposerIndex := firstCommittee[i%uint64(len(firstCommittee))]
 
 		// If the slot is marked as skipped in the configuration options,
 		// we simply run the state transition with a nil block argument.

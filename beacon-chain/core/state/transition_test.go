@@ -133,15 +133,15 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	}
 	casperSlashings := []*pb.CasperSlashing{
 		{
-			SlashableVoteData_1: &pb.SlashableVoteData{
-				Data:                att1,
-				CustodyBit_0Indices: []uint64{0, 1},
-				CustodyBit_1Indices: []uint64{2, 3},
+			SlashableVote_1: &pb.SlashableVote{
+				Data:             att1,
+				ValidatorIndices: []uint64{0, 1, 2, 3},
+				CustodyBitfield:  []byte{0xFF},
 			},
-			SlashableVoteData_2: &pb.SlashableVoteData{
-				Data:                att2,
-				CustodyBit_0Indices: []uint64{4, 5},
-				CustodyBit_1Indices: []uint64{6, 1},
+			SlashableVote_2: &pb.SlashableVote{
+				Data:             att2,
+				ValidatorIndices: []uint64{4, 5, 6, 1},
+				CustodyBitfield:  []byte{0xFF},
 			},
 		},
 	}
@@ -195,15 +195,15 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	}
 	casperSlashings := []*pb.CasperSlashing{
 		{
-			SlashableVoteData_1: &pb.SlashableVoteData{
-				Data:                att1,
-				CustodyBit_0Indices: []uint64{0, 1},
-				CustodyBit_1Indices: []uint64{2, 3},
+			SlashableVote_1: &pb.SlashableVote{
+				Data:             att1,
+				ValidatorIndices: []uint64{0, 1, 2, 3},
+				CustodyBitfield:  []byte{0xFF},
 			},
-			SlashableVoteData_2: &pb.SlashableVoteData{
-				Data:                att2,
-				CustodyBit_0Indices: []uint64{4, 5},
-				CustodyBit_1Indices: []uint64{6, 1},
+			SlashableVote_2: &pb.SlashableVote{
+				Data:             att2,
+				ValidatorIndices: []uint64{4, 5, 6, 1},
+				CustodyBitfield:  []byte{0xFF},
 			},
 		},
 	}
@@ -282,15 +282,15 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	casperSlashings := []*pb.CasperSlashing{
 		{
-			SlashableVoteData_1: &pb.SlashableVoteData{
-				Data:                att1,
-				CustodyBit_0Indices: []uint64{0, 1},
-				CustodyBit_1Indices: []uint64{2, 3},
+			SlashableVote_1: &pb.SlashableVote{
+				Data:             att1,
+				ValidatorIndices: []uint64{0, 1, 2, 3},
+				CustodyBitfield:  []byte{0xFF},
 			},
-			SlashableVoteData_2: &pb.SlashableVoteData{
-				Data:                att2,
-				CustodyBit_0Indices: []uint64{4, 5},
-				CustodyBit_1Indices: []uint64{6, 1},
+			SlashableVote_2: &pb.SlashableVote{
+				Data:             att2,
+				ValidatorIndices: []uint64{4, 5, 6, 1},
+				CustodyBitfield:  []byte{0xFF},
 			},
 		},
 	}

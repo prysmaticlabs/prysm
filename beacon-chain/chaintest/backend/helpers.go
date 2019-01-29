@@ -87,21 +87,21 @@ func generateSimulatedBlock(
 	}
 	if simulatedCasperSlashing != nil {
 		block.Body.CasperSlashings = append(block.Body.CasperSlashings, &pb.CasperSlashing{
-			SlashableVoteData_1: &pb.SlashableVoteData{
+			SlashableVote_1: &pb.SlashableVote{
 				Data: &pb.AttestationData{
-					Slot:          simulatedCasperSlashing.SlashableVoteData1Slot,
-					JustifiedSlot: simulatedCasperSlashing.SlashableVoteData1JustifiedSlot,
+					Slot:          simulatedCasperSlashing.SlashableVote1Slot,
+					JustifiedSlot: simulatedCasperSlashing.SlashableVote1JustifiedSlot,
 				},
-				CustodyBit_0Indices: simulatedCasperSlashing.SlashableVoteData1CustodyBit0Indices,
-				CustodyBit_1Indices: simulatedCasperSlashing.SlashableVoteData1CustodyBit1Indices,
+				CustodyBitfield:  simulatedCasperSlashing.SlashableVote1CustodyBitField,
+				ValidatorIndices: simulatedCasperSlashing.SlashableVote1ValidatorIndices,
 			},
-			SlashableVoteData_2: &pb.SlashableVoteData{
+			SlashableVote_2: &pb.SlashableVote{
 				Data: &pb.AttestationData{
-					Slot:          simulatedCasperSlashing.SlashableVoteData2Slot,
-					JustifiedSlot: simulatedCasperSlashing.SlashableVoteData2JustifiedSlot,
+					Slot:          simulatedCasperSlashing.SlashableVote2Slot,
+					JustifiedSlot: simulatedCasperSlashing.SlashableVote2JustifiedSlot,
 				},
-				CustodyBit_0Indices: simulatedCasperSlashing.SlashableVoteData2CustodyBit0Indices,
-				CustodyBit_1Indices: simulatedCasperSlashing.SlashableVoteData2CustodyBit1Indices,
+				CustodyBitfield:  simulatedCasperSlashing.SlashableVote2CustodyBitField,
+				ValidatorIndices: simulatedCasperSlashing.SlashableVote2ValidatorIndices,
 			},
 		})
 	}

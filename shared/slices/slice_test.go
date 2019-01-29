@@ -7,18 +7,18 @@ import (
 
 func TestIntersection(t *testing.T) {
 	testCases := []struct {
-		setA []uint32
-		setB []uint32
-		out  []uint32
+		setA []uint64
+		setB []uint64
+		out  []uint64
 	}{
-		{[]uint32{2, 3, 5}, []uint32{3}, []uint32{3}},
-		{[]uint32{2, 3, 5}, []uint32{3, 5}, []uint32{3, 5}},
-		{[]uint32{2, 3, 5}, []uint32{5, 3, 2}, []uint32{5, 3, 2}},
-		{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
-		{[]uint32{2, 3, 5}, []uint32{}, []uint32{}},
-		{[]uint32{}, []uint32{2, 3, 5}, []uint32{}},
-		{[]uint32{}, []uint32{}, []uint32{}},
-		{[]uint32{1}, []uint32{1}, []uint32{1}},
+		{[]uint64{2, 3, 5}, []uint64{3}, []uint64{3}},
+		{[]uint64{2, 3, 5}, []uint64{3, 5}, []uint64{3, 5}},
+		{[]uint64{2, 3, 5}, []uint64{5, 3, 2}, []uint64{5, 3, 2}},
+		{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
+		{[]uint64{2, 3, 5}, []uint64{}, []uint64{}},
+		{[]uint64{}, []uint64{2, 3, 5}, []uint64{}},
+		{[]uint64{}, []uint64{}, []uint64{}},
+		{[]uint64{1}, []uint64{1}, []uint64{1}},
 	}
 	for _, tt := range testCases {
 		result := Intersection(tt.setA, tt.setB)
@@ -30,17 +30,17 @@ func TestIntersection(t *testing.T) {
 
 func TestUnion(t *testing.T) {
 	testCases := []struct {
-		setA []uint32
-		setB []uint32
-		out  []uint32
+		setA []uint64
+		setB []uint64
+		out  []uint64
 	}{
-		{[]uint32{2, 3, 5}, []uint32{4, 6}, []uint32{2, 3, 5, 4, 6}},
-		{[]uint32{2, 3, 5}, []uint32{3, 5}, []uint32{2, 3, 5}},
-		{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
-		{[]uint32{2, 3, 5}, []uint32{}, []uint32{2, 3, 5}},
-		{[]uint32{}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
-		{[]uint32{}, []uint32{}, []uint32{}},
-		{[]uint32{1}, []uint32{1}, []uint32{1}},
+		{[]uint64{2, 3, 5}, []uint64{4, 6}, []uint64{2, 3, 5, 4, 6}},
+		{[]uint64{2, 3, 5}, []uint64{3, 5}, []uint64{2, 3, 5}},
+		{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
+		{[]uint64{2, 3, 5}, []uint64{}, []uint64{2, 3, 5}},
+		{[]uint64{}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
+		{[]uint64{}, []uint64{}, []uint64{}},
+		{[]uint64{1}, []uint64{1}, []uint64{1}},
 	}
 	for _, tt := range testCases {
 		result := Union(tt.setA, tt.setB)
@@ -52,17 +52,17 @@ func TestUnion(t *testing.T) {
 
 func TestNot(t *testing.T) {
 	testCases := []struct {
-		setA []uint32
-		setB []uint32
-		out  []uint32
+		setA []uint64
+		setB []uint64
+		out  []uint64
 	}{
-		{[]uint32{4, 6}, []uint32{2, 3, 5, 4, 6}, []uint32{2, 3, 5}},
-		{[]uint32{3, 5}, []uint32{2, 3, 5}, []uint32{2}},
-		{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{}},
-		{[]uint32{2}, []uint32{2, 3, 5}, []uint32{3, 5}},
-		{[]uint32{}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
-		{[]uint32{}, []uint32{}, []uint32{}},
-		{[]uint32{1}, []uint32{1}, []uint32{}},
+		{[]uint64{4, 6}, []uint64{2, 3, 5, 4, 6}, []uint64{2, 3, 5}},
+		{[]uint64{3, 5}, []uint64{2, 3, 5}, []uint64{2}},
+		{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{}},
+		{[]uint64{2}, []uint64{2, 3, 5}, []uint64{3, 5}},
+		{[]uint64{}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
+		{[]uint64{}, []uint64{}, []uint64{}},
+		{[]uint64{1}, []uint64{1}, []uint64{}},
 	}
 	for _, tt := range testCases {
 		result := Not(tt.setA, tt.setB)
@@ -74,14 +74,14 @@ func TestNot(t *testing.T) {
 
 func TestIsIn(t *testing.T) {
 	testCases := []struct {
-		a      uint32
-		b      []uint32
+		a      uint64
+		b      []uint64
 		result bool
 	}{
-		{0, []uint32{}, false},
-		{0, []uint32{0}, true},
-		{4, []uint32{2, 3, 5, 4, 6}, true},
-		{100, []uint32{2, 3, 5, 4, 6}, false},
+		{0, []uint64{}, false},
+		{0, []uint64{0}, true},
+		{4, []uint64{2, 3, 5, 4, 6}, true},
+		{100, []uint64{2, 3, 5, 4, 6}, false},
 	}
 	for _, tt := range testCases {
 		result := IsIn(tt.a, tt.b)

@@ -714,7 +714,7 @@ func TestUnpackChainStartLogs(t *testing.T) {
 
 	timestamp := binary.BigEndian.Uint64(timestampData)
 
-	if timestamp > uint32(time.Now().Unix()) {
+	if timestamp > uint64(time.Now().Unix()) {
 		t.Errorf("Timestamp from log is higher than the current time %d > %d", timestamp, time.Now().Unix())
 	}
 

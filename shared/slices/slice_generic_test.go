@@ -10,18 +10,18 @@ import (
 
 func TestGenericIntersection(t *testing.T) {
 	testCases := []struct {
-		setA []uint32
-		setB []uint32
-		out  []uint32
+		setA []uint64
+		setB []uint64
+		out  []uint64
 	}{
-		{[]uint32{2, 3, 5}, []uint32{3}, []uint32{3}},
-		{[]uint32{2, 3, 5}, []uint32{3, 5}, []uint32{3, 5}},
-		{[]uint32{2, 3, 5}, []uint32{5, 3, 2}, []uint32{5, 3, 2}},
-		{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
-		{[]uint32{2, 3, 5}, []uint32{}, []uint32{}},
-		{[]uint32{}, []uint32{2, 3, 5}, []uint32{}},
-		{[]uint32{}, []uint32{}, []uint32{}},
-		{[]uint32{1}, []uint32{1}, []uint32{1}},
+		{[]uint64{2, 3, 5}, []uint64{3}, []uint64{3}},
+		{[]uint64{2, 3, 5}, []uint64{3, 5}, []uint64{3, 5}},
+		{[]uint64{2, 3, 5}, []uint64{5, 3, 2}, []uint64{5, 3, 2}},
+		{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
+		{[]uint64{2, 3, 5}, []uint64{}, []uint64{}},
+		{[]uint64{}, []uint64{2, 3, 5}, []uint64{}},
+		{[]uint64{}, []uint64{}, []uint64{}},
+		{[]uint64{1}, []uint64{1}, []uint64{1}},
 	}
 	for _, tt := range testCases {
 		result, err := GenericIntersection(tt.setA, tt.setB)
@@ -37,18 +37,18 @@ func TestGenericIntersection(t *testing.T) {
 
 func TestGenericIntersectionWithSSZ(t *testing.T) {
 	testCases := []struct {
-		setA []uint32
-		setB []uint32
-		out  []uint32
+		setA []uint64
+		setB []uint64
+		out  []uint64
 	}{
-		{[]uint32{2, 3, 5}, []uint32{3}, []uint32{3}},
-		{[]uint32{2, 3, 5}, []uint32{3, 5}, []uint32{3, 5}},
-		{[]uint32{2, 3, 5}, []uint32{5, 3, 2}, []uint32{5, 3, 2}},
-		{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
-		{[]uint32{2, 3, 5}, []uint32{}, []uint32{}},
-		{[]uint32{}, []uint32{2, 3, 5}, []uint32{}},
-		{[]uint32{}, []uint32{}, []uint32{}},
-		{[]uint32{1}, []uint32{1}, []uint32{1}},
+		{[]uint64{2, 3, 5}, []uint64{3}, []uint64{3}},
+		{[]uint64{2, 3, 5}, []uint64{3, 5}, []uint64{3, 5}},
+		{[]uint64{2, 3, 5}, []uint64{5, 3, 2}, []uint64{5, 3, 2}},
+		{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
+		{[]uint64{2, 3, 5}, []uint64{}, []uint64{}},
+		{[]uint64{}, []uint64{2, 3, 5}, []uint64{}},
+		{[]uint64{}, []uint64{}, []uint64{}},
+		{[]uint64{1}, []uint64{1}, []uint64{1}},
 	}
 	for _, tt := range testCases {
 		b1 := new(bytes.Buffer)
@@ -150,17 +150,17 @@ func TestIntGenericIntersection(t *testing.T) {
 
 func TestGenericNot(t *testing.T) {
 	testCases := []struct {
-		setA []uint32
-		setB []uint32
-		out  []uint32
+		setA []uint64
+		setB []uint64
+		out  []uint64
 	}{
-		{[]uint32{4, 6}, []uint32{2, 3, 5, 4, 6}, []uint32{2, 3, 5}},
-		{[]uint32{3, 5}, []uint32{2, 3, 5}, []uint32{2}},
-		{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{}},
-		{[]uint32{2}, []uint32{2, 3, 5}, []uint32{3, 5}},
-		{[]uint32{}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
-		{[]uint32{}, []uint32{}, []uint32{}},
-		{[]uint32{1}, []uint32{1}, []uint32{}},
+		{[]uint64{4, 6}, []uint64{2, 3, 5, 4, 6}, []uint64{2, 3, 5}},
+		{[]uint64{3, 5}, []uint64{2, 3, 5}, []uint64{2}},
+		{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{}},
+		{[]uint64{2}, []uint64{2, 3, 5}, []uint64{3, 5}},
+		{[]uint64{}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
+		{[]uint64{}, []uint64{}, []uint64{}},
+		{[]uint64{1}, []uint64{1}, []uint64{}},
 	}
 	for _, tt := range testCases {
 		result, err := GenericNot(tt.setA, tt.setB)
@@ -249,17 +249,17 @@ func TestIntGenericNot(t *testing.T) {
 
 func TestGenericUnion(t *testing.T) {
 	testCases := []struct {
-		setA []uint32
-		setB []uint32
-		out  []uint32
+		setA []uint64
+		setB []uint64
+		out  []uint64
 	}{
-		{[]uint32{2, 3, 5}, []uint32{4, 6}, []uint32{2, 3, 5, 4, 6}},
-		{[]uint32{2, 3, 5}, []uint32{3, 5}, []uint32{2, 3, 5}},
-		{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
-		{[]uint32{2, 3, 5}, []uint32{}, []uint32{2, 3, 5}},
-		{[]uint32{}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
-		{[]uint32{}, []uint32{}, []uint32{}},
-		{[]uint32{1}, []uint32{1}, []uint32{1}},
+		{[]uint64{2, 3, 5}, []uint64{4, 6}, []uint64{2, 3, 5, 4, 6}},
+		{[]uint64{2, 3, 5}, []uint64{3, 5}, []uint64{2, 3, 5}},
+		{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
+		{[]uint64{2, 3, 5}, []uint64{}, []uint64{2, 3, 5}},
+		{[]uint64{}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
+		{[]uint64{}, []uint64{}, []uint64{}},
+		{[]uint64{1}, []uint64{1}, []uint64{1}},
 	}
 	for _, tt := range testCases {
 		result, err := GenericUnion(tt.setA, tt.setB)
@@ -301,14 +301,14 @@ func TestFloatGenericUnion(t *testing.T) {
 
 func TestGenericIsIn(t *testing.T) {
 	testCases := []struct {
-		a      uint32
-		b      []uint32
+		a      uint64
+		b      []uint64
 		result bool
 	}{
-		{0, []uint32{}, false},
-		{0, []uint32{0}, true},
-		{4, []uint32{2, 3, 5, 4, 6}, true},
-		{100, []uint32{2, 3, 5, 4, 6}, false},
+		{0, []uint64{}, false},
+		{0, []uint64{0}, true},
+		{4, []uint64{2, 3, 5, 4, 6}, true},
+		{100, []uint64{2, 3, 5, 4, 6}, false},
 	}
 	for _, tt := range testCases {
 		result := GenericIsIn(tt.a, tt.b)
@@ -322,18 +322,18 @@ func TestGenericIsIn(t *testing.T) {
 func BenchmarkGenericIntersection(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		testCases := []struct {
-			setA []uint32
-			setB []uint32
-			out  []uint32
+			setA []uint64
+			setB []uint64
+			out  []uint64
 		}{
-			{[]uint32{2, 3, 5}, []uint32{3}, []uint32{3}},
-			{[]uint32{2, 3, 5}, []uint32{3, 5}, []uint32{3, 5}},
-			{[]uint32{2, 3, 5}, []uint32{5, 3, 2}, []uint32{5, 3, 2}},
-			{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
-			{[]uint32{2, 3, 5}, []uint32{}, []uint32{}},
-			{[]uint32{}, []uint32{2, 3, 5}, []uint32{}},
-			{[]uint32{}, []uint32{}, []uint32{}},
-			{[]uint32{1}, []uint32{1}, []uint32{1}},
+			{[]uint64{2, 3, 5}, []uint64{3}, []uint64{3}},
+			{[]uint64{2, 3, 5}, []uint64{3, 5}, []uint64{3, 5}},
+			{[]uint64{2, 3, 5}, []uint64{5, 3, 2}, []uint64{5, 3, 2}},
+			{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
+			{[]uint64{2, 3, 5}, []uint64{}, []uint64{}},
+			{[]uint64{}, []uint64{2, 3, 5}, []uint64{}},
+			{[]uint64{}, []uint64{}, []uint64{}},
+			{[]uint64{1}, []uint64{1}, []uint64{1}},
 		}
 		for _, tt := range testCases {
 			res, err := GenericIntersection(tt.setA, tt.setB)
@@ -349,18 +349,18 @@ func BenchmarkGenericIntersection(b *testing.B) {
 func BenchmarkIntersection(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		testCases := []struct {
-			setA []uint32
-			setB []uint32
-			out  []uint32
+			setA []uint64
+			setB []uint64
+			out  []uint64
 		}{
-			{[]uint32{2, 3, 5}, []uint32{3}, []uint32{3}},
-			{[]uint32{2, 3, 5}, []uint32{3, 5}, []uint32{3, 5}},
-			{[]uint32{2, 3, 5}, []uint32{5, 3, 2}, []uint32{5, 3, 2}},
-			{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
-			{[]uint32{2, 3, 5}, []uint32{}, []uint32{}},
-			{[]uint32{}, []uint32{2, 3, 5}, []uint32{}},
-			{[]uint32{}, []uint32{}, []uint32{}},
-			{[]uint32{1}, []uint32{1}, []uint32{1}},
+			{[]uint64{2, 3, 5}, []uint64{3}, []uint64{3}},
+			{[]uint64{2, 3, 5}, []uint64{3, 5}, []uint64{3, 5}},
+			{[]uint64{2, 3, 5}, []uint64{5, 3, 2}, []uint64{5, 3, 2}},
+			{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
+			{[]uint64{2, 3, 5}, []uint64{}, []uint64{}},
+			{[]uint64{}, []uint64{2, 3, 5}, []uint64{}},
+			{[]uint64{}, []uint64{}, []uint64{}},
+			{[]uint64{1}, []uint64{1}, []uint64{1}},
 		}
 		for _, tt := range testCases {
 			Intersection(tt.setA, tt.setB)
@@ -372,18 +372,18 @@ func BenchmarkIntersection(b *testing.B) {
 func BenchmarkUnion(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		testCases := []struct {
-			setA []uint32
-			setB []uint32
-			out  []uint32
+			setA []uint64
+			setB []uint64
+			out  []uint64
 		}{
-			{[]uint32{2, 3, 5}, []uint32{3}, []uint32{3}},
-			{[]uint32{2, 3, 5}, []uint32{3, 5}, []uint32{3, 5}},
-			{[]uint32{2, 3, 5}, []uint32{5, 3, 2}, []uint32{5, 3, 2}},
-			{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
-			{[]uint32{2, 3, 5}, []uint32{}, []uint32{}},
-			{[]uint32{}, []uint32{2, 3, 5}, []uint32{}},
-			{[]uint32{}, []uint32{}, []uint32{}},
-			{[]uint32{1}, []uint32{1}, []uint32{1}},
+			{[]uint64{2, 3, 5}, []uint64{3}, []uint64{3}},
+			{[]uint64{2, 3, 5}, []uint64{3, 5}, []uint64{3, 5}},
+			{[]uint64{2, 3, 5}, []uint64{5, 3, 2}, []uint64{5, 3, 2}},
+			{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
+			{[]uint64{2, 3, 5}, []uint64{}, []uint64{}},
+			{[]uint64{}, []uint64{2, 3, 5}, []uint64{}},
+			{[]uint64{}, []uint64{}, []uint64{}},
+			{[]uint64{1}, []uint64{1}, []uint64{1}},
 		}
 		for _, tt := range testCases {
 			Union(tt.setA, tt.setB)
@@ -396,18 +396,18 @@ func BenchmarkUnion(b *testing.B) {
 func BenchmarkGenericUnion(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		testCases := []struct {
-			setA []uint32
-			setB []uint32
-			out  []uint32
+			setA []uint64
+			setB []uint64
+			out  []uint64
 		}{
-			{[]uint32{2, 3, 5}, []uint32{3}, []uint32{3}},
-			{[]uint32{2, 3, 5}, []uint32{3, 5}, []uint32{3, 5}},
-			{[]uint32{2, 3, 5}, []uint32{5, 3, 2}, []uint32{5, 3, 2}},
-			{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
-			{[]uint32{2, 3, 5}, []uint32{}, []uint32{}},
-			{[]uint32{}, []uint32{2, 3, 5}, []uint32{}},
-			{[]uint32{}, []uint32{}, []uint32{}},
-			{[]uint32{1}, []uint32{1}, []uint32{1}},
+			{[]uint64{2, 3, 5}, []uint64{3}, []uint64{3}},
+			{[]uint64{2, 3, 5}, []uint64{3, 5}, []uint64{3, 5}},
+			{[]uint64{2, 3, 5}, []uint64{5, 3, 2}, []uint64{5, 3, 2}},
+			{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
+			{[]uint64{2, 3, 5}, []uint64{}, []uint64{}},
+			{[]uint64{}, []uint64{2, 3, 5}, []uint64{}},
+			{[]uint64{}, []uint64{}, []uint64{}},
+			{[]uint64{1}, []uint64{1}, []uint64{1}},
 		}
 		for _, tt := range testCases {
 			res, err := GenericUnion(tt.setA, tt.setB)
@@ -422,18 +422,18 @@ func BenchmarkGenericUnion(b *testing.B) {
 func BenchmarkNot(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		testCases := []struct {
-			setA []uint32
-			setB []uint32
-			out  []uint32
+			setA []uint64
+			setB []uint64
+			out  []uint64
 		}{
-			{[]uint32{2, 3, 5}, []uint32{3}, []uint32{3}},
-			{[]uint32{2, 3, 5}, []uint32{3, 5}, []uint32{3, 5}},
-			{[]uint32{2, 3, 5}, []uint32{5, 3, 2}, []uint32{5, 3, 2}},
-			{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
-			{[]uint32{2, 3, 5}, []uint32{}, []uint32{}},
-			{[]uint32{}, []uint32{2, 3, 5}, []uint32{}},
-			{[]uint32{}, []uint32{}, []uint32{}},
-			{[]uint32{1}, []uint32{1}, []uint32{1}},
+			{[]uint64{2, 3, 5}, []uint64{3}, []uint64{3}},
+			{[]uint64{2, 3, 5}, []uint64{3, 5}, []uint64{3, 5}},
+			{[]uint64{2, 3, 5}, []uint64{5, 3, 2}, []uint64{5, 3, 2}},
+			{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
+			{[]uint64{2, 3, 5}, []uint64{}, []uint64{}},
+			{[]uint64{}, []uint64{2, 3, 5}, []uint64{}},
+			{[]uint64{}, []uint64{}, []uint64{}},
+			{[]uint64{1}, []uint64{1}, []uint64{1}},
 		}
 		for _, tt := range testCases {
 			Not(tt.setA, tt.setB)
@@ -446,18 +446,18 @@ func BenchmarkNot(b *testing.B) {
 func BenchmarkGenericNot(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		testCases := []struct {
-			setA []uint32
-			setB []uint32
-			out  []uint32
+			setA []uint64
+			setB []uint64
+			out  []uint64
 		}{
-			{[]uint32{2, 3, 5}, []uint32{3}, []uint32{3}},
-			{[]uint32{2, 3, 5}, []uint32{3, 5}, []uint32{3, 5}},
-			{[]uint32{2, 3, 5}, []uint32{5, 3, 2}, []uint32{5, 3, 2}},
-			{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
-			{[]uint32{2, 3, 5}, []uint32{}, []uint32{}},
-			{[]uint32{}, []uint32{2, 3, 5}, []uint32{}},
-			{[]uint32{}, []uint32{}, []uint32{}},
-			{[]uint32{1}, []uint32{1}, []uint32{1}},
+			{[]uint64{2, 3, 5}, []uint64{3}, []uint64{3}},
+			{[]uint64{2, 3, 5}, []uint64{3, 5}, []uint64{3, 5}},
+			{[]uint64{2, 3, 5}, []uint64{5, 3, 2}, []uint64{5, 3, 2}},
+			{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
+			{[]uint64{2, 3, 5}, []uint64{}, []uint64{}},
+			{[]uint64{}, []uint64{2, 3, 5}, []uint64{}},
+			{[]uint64{}, []uint64{}, []uint64{}},
+			{[]uint64{1}, []uint64{1}, []uint64{1}},
 		}
 		for _, tt := range testCases {
 			res, err := GenericNot(tt.setA, tt.setB)
@@ -473,14 +473,14 @@ func BenchmarkGenericNot(b *testing.B) {
 func BenchmarkIsIn(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		testCases := []struct {
-			a      uint32
-			b      []uint32
+			a      uint64
+			b      []uint64
 			result bool
 		}{
-			{0, []uint32{}, false},
-			{0, []uint32{0}, true},
-			{4, []uint32{2, 3, 5, 4, 6}, true},
-			{100, []uint32{2, 3, 5, 4, 6}, false},
+			{0, []uint64{}, false},
+			{0, []uint64{0}, true},
+			{4, []uint64{2, 3, 5, 4, 6}, true},
+			{100, []uint64{2, 3, 5, 4, 6}, false},
 		}
 		for _, tt := range testCases {
 			IsIn(tt.a, tt.b)
@@ -493,14 +493,14 @@ func BenchmarkIsIn(b *testing.B) {
 func BenchmarkGenericIsIn(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		testCases := []struct {
-			a      uint32
-			b      []uint32
+			a      uint64
+			b      []uint64
 			result bool
 		}{
-			{0, []uint32{}, false},
-			{0, []uint32{0}, true},
-			{4, []uint32{2, 3, 5, 4, 6}, true},
-			{100, []uint32{2, 3, 5, 4, 6}, false},
+			{0, []uint64{}, false},
+			{0, []uint64{0}, true},
+			{4, []uint64{2, 3, 5, 4, 6}, true},
+			{100, []uint64{2, 3, 5, 4, 6}, false},
 		}
 		for _, tt := range testCases {
 			GenericIsIn(tt.a, tt.b)
@@ -513,18 +513,18 @@ func BenchmarkGenericIsIn(b *testing.B) {
 func BenchmarkGenericIntersectionWithSSZ(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		testCases := []struct {
-			setA []uint32
-			setB []uint32
-			out  []uint32
+			setA []uint64
+			setB []uint64
+			out  []uint64
 		}{
-			{[]uint32{2, 3, 5}, []uint32{3}, []uint32{3}},
-			{[]uint32{2, 3, 5}, []uint32{3, 5}, []uint32{3, 5}},
-			{[]uint32{2, 3, 5}, []uint32{5, 3, 2}, []uint32{5, 3, 2}},
-			{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
-			{[]uint32{2, 3, 5}, []uint32{}, []uint32{}},
-			{[]uint32{}, []uint32{2, 3, 5}, []uint32{}},
-			{[]uint32{}, []uint32{}, []uint32{}},
-			{[]uint32{1}, []uint32{1}, []uint32{1}},
+			{[]uint64{2, 3, 5}, []uint64{3}, []uint64{3}},
+			{[]uint64{2, 3, 5}, []uint64{3, 5}, []uint64{3, 5}},
+			{[]uint64{2, 3, 5}, []uint64{5, 3, 2}, []uint64{5, 3, 2}},
+			{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
+			{[]uint64{2, 3, 5}, []uint64{}, []uint64{}},
+			{[]uint64{}, []uint64{2, 3, 5}, []uint64{}},
+			{[]uint64{}, []uint64{}, []uint64{}},
+			{[]uint64{1}, []uint64{1}, []uint64{1}},
 		}
 		for _, tt := range testCases {
 			b1 := new(bytes.Buffer)
@@ -547,18 +547,18 @@ func BenchmarkGenericIntersectionWithSSZ(b *testing.B) {
 func BenchmarkIntersectionWithSSZ(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		testCases := []struct {
-			setA []uint32
-			setB []uint32
-			out  []uint32
+			setA []uint64
+			setB []uint64
+			out  []uint64
 		}{
-			{[]uint32{2, 3, 5}, []uint32{3}, []uint32{3}},
-			{[]uint32{2, 3, 5}, []uint32{3, 5}, []uint32{3, 5}},
-			{[]uint32{2, 3, 5}, []uint32{5, 3, 2}, []uint32{5, 3, 2}},
-			{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
-			{[]uint32{2, 3, 5}, []uint32{}, []uint32{}},
-			{[]uint32{}, []uint32{2, 3, 5}, []uint32{}},
-			{[]uint32{}, []uint32{}, []uint32{}},
-			{[]uint32{1}, []uint32{1}, []uint32{1}},
+			{[]uint64{2, 3, 5}, []uint64{3}, []uint64{3}},
+			{[]uint64{2, 3, 5}, []uint64{3, 5}, []uint64{3, 5}},
+			{[]uint64{2, 3, 5}, []uint64{5, 3, 2}, []uint64{5, 3, 2}},
+			{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
+			{[]uint64{2, 3, 5}, []uint64{}, []uint64{}},
+			{[]uint64{}, []uint64{2, 3, 5}, []uint64{}},
+			{[]uint64{}, []uint64{}, []uint64{}},
+			{[]uint64{1}, []uint64{1}, []uint64{1}},
 		}
 		for _, tt := range testCases {
 			b1 := new(bytes.Buffer)
@@ -579,18 +579,18 @@ func BenchmarkIntersectionWithSSZ(b *testing.B) {
 func BenchmarkGenericUnionWithSSZ(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		testCases := []struct {
-			setA []uint32
-			setB []uint32
-			out  []uint32
+			setA []uint64
+			setB []uint64
+			out  []uint64
 		}{
-			{[]uint32{2, 3, 5}, []uint32{3}, []uint32{3}},
-			{[]uint32{2, 3, 5}, []uint32{3, 5}, []uint32{3, 5}},
-			{[]uint32{2, 3, 5}, []uint32{5, 3, 2}, []uint32{5, 3, 2}},
-			{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
-			{[]uint32{2, 3, 5}, []uint32{}, []uint32{}},
-			{[]uint32{}, []uint32{2, 3, 5}, []uint32{}},
-			{[]uint32{}, []uint32{}, []uint32{}},
-			{[]uint32{1}, []uint32{1}, []uint32{1}},
+			{[]uint64{2, 3, 5}, []uint64{3}, []uint64{3}},
+			{[]uint64{2, 3, 5}, []uint64{3, 5}, []uint64{3, 5}},
+			{[]uint64{2, 3, 5}, []uint64{5, 3, 2}, []uint64{5, 3, 2}},
+			{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
+			{[]uint64{2, 3, 5}, []uint64{}, []uint64{}},
+			{[]uint64{}, []uint64{2, 3, 5}, []uint64{}},
+			{[]uint64{}, []uint64{}, []uint64{}},
+			{[]uint64{1}, []uint64{1}, []uint64{1}},
 		}
 		for _, tt := range testCases {
 			b1 := new(bytes.Buffer)
@@ -613,18 +613,18 @@ func BenchmarkGenericUnionWithSSZ(b *testing.B) {
 func BenchmarkUnionWithSSZ(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		testCases := []struct {
-			setA []uint32
-			setB []uint32
-			out  []uint32
+			setA []uint64
+			setB []uint64
+			out  []uint64
 		}{
-			{[]uint32{2, 3, 5}, []uint32{3}, []uint32{3}},
-			{[]uint32{2, 3, 5}, []uint32{3, 5}, []uint32{3, 5}},
-			{[]uint32{2, 3, 5}, []uint32{5, 3, 2}, []uint32{5, 3, 2}},
-			{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
-			{[]uint32{2, 3, 5}, []uint32{}, []uint32{}},
-			{[]uint32{}, []uint32{2, 3, 5}, []uint32{}},
-			{[]uint32{}, []uint32{}, []uint32{}},
-			{[]uint32{1}, []uint32{1}, []uint32{1}},
+			{[]uint64{2, 3, 5}, []uint64{3}, []uint64{3}},
+			{[]uint64{2, 3, 5}, []uint64{3, 5}, []uint64{3, 5}},
+			{[]uint64{2, 3, 5}, []uint64{5, 3, 2}, []uint64{5, 3, 2}},
+			{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
+			{[]uint64{2, 3, 5}, []uint64{}, []uint64{}},
+			{[]uint64{}, []uint64{2, 3, 5}, []uint64{}},
+			{[]uint64{}, []uint64{}, []uint64{}},
+			{[]uint64{1}, []uint64{1}, []uint64{1}},
 		}
 		for _, tt := range testCases {
 			b1 := new(bytes.Buffer)
@@ -645,18 +645,18 @@ func BenchmarkUnionWithSSZ(b *testing.B) {
 func BenchmarkGenericNotWithSSZ(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		testCases := []struct {
-			setA []uint32
-			setB []uint32
-			out  []uint32
+			setA []uint64
+			setB []uint64
+			out  []uint64
 		}{
-			{[]uint32{2, 3, 5}, []uint32{3}, []uint32{3}},
-			{[]uint32{2, 3, 5}, []uint32{3, 5}, []uint32{3, 5}},
-			{[]uint32{2, 3, 5}, []uint32{5, 3, 2}, []uint32{5, 3, 2}},
-			{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
-			{[]uint32{2, 3, 5}, []uint32{}, []uint32{}},
-			{[]uint32{}, []uint32{2, 3, 5}, []uint32{}},
-			{[]uint32{}, []uint32{}, []uint32{}},
-			{[]uint32{1}, []uint32{1}, []uint32{1}},
+			{[]uint64{2, 3, 5}, []uint64{3}, []uint64{3}},
+			{[]uint64{2, 3, 5}, []uint64{3, 5}, []uint64{3, 5}},
+			{[]uint64{2, 3, 5}, []uint64{5, 3, 2}, []uint64{5, 3, 2}},
+			{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
+			{[]uint64{2, 3, 5}, []uint64{}, []uint64{}},
+			{[]uint64{}, []uint64{2, 3, 5}, []uint64{}},
+			{[]uint64{}, []uint64{}, []uint64{}},
+			{[]uint64{1}, []uint64{1}, []uint64{1}},
 		}
 		for _, tt := range testCases {
 			b1 := new(bytes.Buffer)
@@ -679,18 +679,18 @@ func BenchmarkGenericNotWithSSZ(b *testing.B) {
 func BenchmarkNotWithSSZ(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		testCases := []struct {
-			setA []uint32
-			setB []uint32
-			out  []uint32
+			setA []uint64
+			setB []uint64
+			out  []uint64
 		}{
-			{[]uint32{2, 3, 5}, []uint32{3}, []uint32{3}},
-			{[]uint32{2, 3, 5}, []uint32{3, 5}, []uint32{3, 5}},
-			{[]uint32{2, 3, 5}, []uint32{5, 3, 2}, []uint32{5, 3, 2}},
-			{[]uint32{2, 3, 5}, []uint32{2, 3, 5}, []uint32{2, 3, 5}},
-			{[]uint32{2, 3, 5}, []uint32{}, []uint32{}},
-			{[]uint32{}, []uint32{2, 3, 5}, []uint32{}},
-			{[]uint32{}, []uint32{}, []uint32{}},
-			{[]uint32{1}, []uint32{1}, []uint32{1}},
+			{[]uint64{2, 3, 5}, []uint64{3}, []uint64{3}},
+			{[]uint64{2, 3, 5}, []uint64{3, 5}, []uint64{3, 5}},
+			{[]uint64{2, 3, 5}, []uint64{5, 3, 2}, []uint64{5, 3, 2}},
+			{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
+			{[]uint64{2, 3, 5}, []uint64{}, []uint64{}},
+			{[]uint64{}, []uint64{2, 3, 5}, []uint64{}},
+			{[]uint64{}, []uint64{}, []uint64{}},
+			{[]uint64{1}, []uint64{1}, []uint64{1}},
 		}
 		for _, tt := range testCases {
 			b1 := new(bytes.Buffer)

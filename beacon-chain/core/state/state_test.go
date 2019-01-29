@@ -38,8 +38,6 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 		t.Error("LatestRandaoMixesLength should be 8192 for these tests to pass")
 	}
 	latestRandaoMixesLength := int(params.BeaconConfig().LatestRandaoMixesLength)
-	LatestVdfMixesLength := int(params.BeaconConfig().LatestRandaoMixesLength /
-		params.BeaconConfig().EpochLength)
 
 	if params.BeaconConfig().ShardCount != 1024 {
 		t.Error("ShardCount should be 1024 for these tests to pass")
@@ -60,7 +58,7 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	}
 	latestPenalizedExitLength := int(params.BeaconConfig().LatestPenalizedExitLength)
 
-	genesisTime := uint32(99999)
+	genesisTime := uint64(99999)
 	processedPowReceiptRoot := []byte{'A', 'B', 'C'}
 	maxDeposit := params.BeaconConfig().MaxDepositInGwei
 	var deposits []*pb.Deposit
@@ -125,14 +123,6 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	if len(state.LatestRandaoMixesHash32S) != latestRandaoMixesLength {
 		t.Error("Length of LatestRandaoMixesHash32S was not correctly initialized")
 	}
-	if len(state.LatestVdfOutputsHash32S) != LatestVdfMixesLength {
-		t.Error("Length of LatestRandaoMixesHash32S was not correctly initialized")
-	}
-
-	// Proof of custody field check.
-	if !reflect.DeepEqual(state.CustodyChallenges, []*pb.CustodyChallenge{}) {
-		t.Error("CustodyChallenges was not correctly initialized")
-	}
 
 	// Finality fields checks.
 	if state.PreviousJustifiedSlot != initialSlotNumber {
@@ -153,7 +143,7 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 		t.Error("Length of LatestCrosslinks was not correctly initialized")
 	}
 	if !reflect.DeepEqual(state.LatestPenalizedBalances,
-		make([]uint32, latestPenalizedExitLength)) {
+		make([]uint64, latestPenalizedExitLength)) {
 		t.Error("LatestPenalizedBalances was not correctly initialized")
 	}
 	if !reflect.DeepEqual(state.LatestAttestations, []*pb.PendingAttestationRecord{}) {
