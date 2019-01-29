@@ -90,7 +90,7 @@ message ProposerSlashingRequest {
   bytes hash = 1;
 }
 
-message ProposerSlashingRespond {
+message ProposerSlashingResponse {
   bytes hash = 1;
   ProposerSlashing proposer_slashing = 2;
 }
@@ -103,7 +103,7 @@ message CasperSlashingRequest {
   bytes hash = 1;
 }
 
-message CasperSlashingRespond {
+message CasperSlashingResponse {
   bytes hash = 1;
   CasperSlashing casper_slashing = 2;
 }
@@ -116,7 +116,7 @@ message DepositRequest {
   bytes hash = 1;
 }
 
-message DepositRespond {
+message DepositResponse {
   bytes hash = 1;
   Deposit deposit = 2;
 }
@@ -129,7 +129,7 @@ message ExitRequest {
   bytes hash = 1;
 }
 
-message ExitRespond {
+message ExitResponse {
   bytes hash = 1;
   Exit exit = 2;
 }
