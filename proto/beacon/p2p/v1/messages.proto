@@ -95,17 +95,17 @@ message ProposerSlashingResponse {
   ProposerSlashing proposer_slashing = 2;
 }
 
-message CasperSlashingAnnounce {
+message AttesterSlashingAnnounce {
   bytes hash = 1;
 }
 
-message CasperSlashingRequest {
+message AttesterSlashingRequest {
   bytes hash = 1;
 }
 
-message CasperSlashingResponse {
+message AttesterSlashingResponse {
   bytes hash = 1;
-  CasperSlashing casper_slashing = 2;
+  AttesterSlashing Attester_slashing = 2;
 }
 
 message DepositAnnounce {
