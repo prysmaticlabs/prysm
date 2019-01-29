@@ -54,6 +54,7 @@ func (v *validator) WaitForActivation(ctx context.Context) {
 		return
 	}
 	for {
+        log.Info("Waiting for beacon chain start log from the ETH 1.0 deposit contract...")
 		chainStartRes, err := stream.Recv()
 		// If the stream is closed, we stop the loop.
 		if err == io.EOF {
@@ -70,6 +71,7 @@ func (v *validator) WaitForActivation(ctx context.Context) {
 		}
 		v.genesisTime = chainStartRes.GenesisTime
 	}
+	log.Infof("Beacon chain initialized at unix time: %v", time.Unix(int64(v.genesisTime), 0))
 	// Once the ChainStart log is received, we update the genesis time of the validator client
 	// and begin a slot ticker used to track the current slot the beacon node is in.
 	v.ticker = slotticker.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SlotDuration)

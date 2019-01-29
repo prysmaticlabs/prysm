@@ -306,6 +306,7 @@ func (w *Web3Service) run(done <-chan struct{}) {
 				"blockHash":   w.blockHash.Hex(),
 			}).Debug("Latest web3 chain event")
 		case VRClog := <-w.logChan:
+			log.Info("Received deposit contract log")
 			w.ProcessLog(VRClog)
 
 		}
