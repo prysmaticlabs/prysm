@@ -183,7 +183,7 @@ func verifyProposerSlashing(
 	return nil
 }
 
-// ProcessCasperSlashings is one of the operations performed
+// ProcessAttesterSlashings is one of the operations performed
 // on each processed beacon block to penalize validators based on
 // Casper FFG slashing conditions if any slashable events occurred.
 //
@@ -213,20 +213,20 @@ func verifyProposerSlashing(
 //   For each validator index i in intersection,
 //     if state.validator_registry[i].penalized_slot > state.slot, then
 // 	   run penalize_validator(state, i)
-func ProcessCasperSlashings(
+func ProcessAttesterSlashings(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 ) (*pb.BeaconState, error) {
 	body := block.Body
 	registry := beaconState.ValidatorRegistry
-	if uint64(len(body.CasperSlashings)) > params.BeaconConfig().MaxCasperSlashings {
+	if uint64(len(body.AttesterSlashings)) > params.BeaconConfig().MaxAttesterSlashings {
 		return nil, fmt.Errorf(
 			"number of casper slashings (%d) exceeds allowed threshold of %d",
-			len(body.CasperSlashings),
-			params.BeaconConfig().MaxCasperSlashings,
+			len(body.AttesterSlashings),
+			params.BeaconConfig().MaxAttesterSlashings,
 		)
 	}
-	for idx, slashing := range body.CasperSlashings {
+	for idx, slashing := range body.AttesterSlashings {
 		if err := verifyCasperSlashing(slashing); err != nil {
 			return nil, fmt.Errorf("could not verify casper slashing #%d: %v", idx, err)
 		}
@@ -248,7 +248,7 @@ func ProcessCasperSlashings(
 	return beaconState, nil
 }
 
-func verifyCasperSlashing(slashing *pb.CasperSlashing) error {
+func verifyCasperSlashing(slashing *pb.AttesterSlashing) error {
 	slashableVote1 := slashing.SlashableVote_1
 	slashableVote2 := slashing.SlashableVote_2
 	slashableVoteData1Attestation := slashableVote1.Data
@@ -310,7 +310,7 @@ func verifyCasperSlashing(slashing *pb.CasperSlashing) error {
 	return nil
 }
 
-func casperSlashingPenalizedIndices(slashing *pb.CasperSlashing) ([]uint64, error) {
+func casperSlashingPenalizedIndices(slashing *pb.AttesterSlashing) ([]uint64, error) {
 	indicesIntersection := slices.Intersection(
 		slashing.SlashableVote_1.ValidatorIndices,
 		slashing.SlashableVote_2.ValidatorIndices)

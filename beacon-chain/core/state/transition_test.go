@@ -67,7 +67,7 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	}
 }
 
-func TestProcessBlock_IncorrectCasperSlashing(t *testing.T) {
+func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 	registry := validators.InitialValidatorRegistry()
 
 	slashings := []*pb.ProposerSlashing{
@@ -85,7 +85,7 @@ func TestProcessBlock_IncorrectCasperSlashing(t *testing.T) {
 			},
 		},
 	}
-	casperSlashings := make([]*pb.CasperSlashing, config.MaxCasperSlashings+1)
+	casperSlashings := make([]*pb.AttesterSlashing, config.MaxAttesterSlashings+1)
 	latestMixes := make([][]byte, config.LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
 		LatestRandaoMixesHash32S: latestMixes,
@@ -97,7 +97,7 @@ func TestProcessBlock_IncorrectCasperSlashing(t *testing.T) {
 		RandaoRevealHash32: []byte{},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: slashings,
-			CasperSlashings:   casperSlashings,
+			AttesterSlashings: casperSlashings,
 		},
 	}
 	want := "could not verify block casper slashing"
@@ -131,7 +131,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		Slot:          5,
 		JustifiedSlot: 4,
 	}
-	casperSlashings := []*pb.CasperSlashing{
+	casperSlashings := []*pb.AttesterSlashing{
 		{
 			SlashableVote_1: &pb.SlashableVote{
 				Data:             att1,
@@ -158,7 +158,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		RandaoRevealHash32: []byte{},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: proposerSlashings,
-			CasperSlashings:   casperSlashings,
+			AttesterSlashings: casperSlashings,
 			Attestations:      blockAttestations,
 		},
 	}
@@ -193,7 +193,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		Slot:          5,
 		JustifiedSlot: 4,
 	}
-	casperSlashings := []*pb.CasperSlashing{
+	casperSlashings := []*pb.AttesterSlashing{
 		{
 			SlashableVote_1: &pb.SlashableVote{
 				Data:             att1,
@@ -244,7 +244,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		RandaoRevealHash32: []byte{},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: proposerSlashings,
-			CasperSlashings:   casperSlashings,
+			AttesterSlashings: casperSlashings,
 			Attestations:      attestations,
 			Exits:             exits,
 		},
@@ -280,7 +280,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		Slot:          5,
 		JustifiedSlot: 4,
 	}
-	casperSlashings := []*pb.CasperSlashing{
+	casperSlashings := []*pb.AttesterSlashing{
 		{
 			SlashableVote_1: &pb.SlashableVote{
 				Data:             att1,
@@ -336,7 +336,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		RandaoRevealHash32: []byte{},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: proposerSlashings,
-			CasperSlashings:   casperSlashings,
+			AttesterSlashings: casperSlashings,
 			Attestations:      attestations,
 			Exits:             exits,
 		},

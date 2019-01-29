@@ -77,7 +77,7 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState
 	if err != nil {
 		return nil, fmt.Errorf("could not verify block proposer slashings: %v", err)
 	}
-	state, err = b.ProcessCasperSlashings(state, block)
+	state, err = b.ProcessAttesterSlashings(state, block)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify block casper slashings: %v", err)
 	}

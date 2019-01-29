@@ -149,7 +149,7 @@ message BeaconBlock {
 message BeaconBlockBody {
   repeated Attestation attestations = 1;
   repeated ProposerSlashing proposer_slashings  = 2;
-  repeated CasperSlashing casper_slashings = 3;
+  repeated AttesterSlashing attester_slashings = 3;
   repeated Deposit deposits = 4;
   repeated Exit exits = 5;
 }
@@ -190,7 +190,7 @@ message ProposerSlashing {
   bytes proposal_signature_2 = 5;
 }
 
-message CasperSlashing {
+message AttesterSlashing {
   SlashableVote slashable_vote_1 = 1;
   SlashableVote slashable_vote_2 = 2;
 }

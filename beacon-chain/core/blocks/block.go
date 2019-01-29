@@ -31,7 +31,7 @@ func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 		Signature:          config.EmptySignature,
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: []*pb.ProposerSlashing{},
-			CasperSlashings:   []*pb.CasperSlashing{},
+			AttesterSlashings: []*pb.AttesterSlashing{},
 			Attestations:      []*pb.Attestation{},
 			Deposits:          []*pb.Deposit{},
 			Exits:             []*pb.Exit{},

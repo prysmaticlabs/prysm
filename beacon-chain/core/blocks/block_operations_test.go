@@ -332,8 +332,8 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 }
 
-func TestProcessCasperSlashings_ThresholdReached(t *testing.T) {
-	slashings := make([]*pb.CasperSlashing, config.MaxCasperSlashings+1)
+func TestProcessAttesterSlashings_ThresholdReached(t *testing.T) {
+	slashings := make([]*pb.AttesterSlashing, config.MaxCasperSlashings+1)
 	registry := []*pb.ValidatorRecord{}
 	currentSlot := uint64(0)
 
@@ -343,7 +343,7 @@ func TestProcessCasperSlashings_ThresholdReached(t *testing.T) {
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
-			CasperSlashings: slashings,
+			AttesterSlashings: slashings,
 		},
 	}
 	want := fmt.Sprintf(
@@ -352,7 +352,7 @@ func TestProcessCasperSlashings_ThresholdReached(t *testing.T) {
 		config.MaxCasperSlashings,
 	)
 
-	if _, err := ProcessCasperSlashings(
+	if _, err := ProcessAttesterSlashings(
 		beaconState,
 		block,
 	); !strings.Contains(err.Error(), want) {
@@ -360,8 +360,8 @@ func TestProcessCasperSlashings_ThresholdReached(t *testing.T) {
 	}
 }
 
-func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
-	slashings := []*pb.CasperSlashing{
+func TestProcessAttesterSlashings_VoteThresholdReached(t *testing.T) {
+	slashings := []*pb.AttesterSlashing{
 		{
 			SlashableVote_1: &pb.SlashableVote{
 				ValidatorIndices: make(
@@ -386,7 +386,7 @@ func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
-			CasperSlashings: slashings,
+			AttesterSlashings: slashings,
 		},
 	}
 	want := fmt.Sprintf(
@@ -395,7 +395,7 @@ func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 		config.MaxIndicesPerSlashableVote*2,
 	)
 
-	if _, err := ProcessCasperSlashings(
+	if _, err := ProcessAttesterSlashings(
 		beaconState,
 		block,
 	); !strings.Contains(err.Error(), want) {
@@ -403,7 +403,7 @@ func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 	}
 
 	// Perform the same check for SlashableVoteData_2.
-	slashings = []*pb.CasperSlashing{
+	slashings = []*pb.AttesterSlashing{
 		{
 			SlashableVote_1: &pb.SlashableVote{
 				ValidatorIndices: make(
@@ -425,10 +425,10 @@ func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 	}
 	block = &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
-			CasperSlashings: slashings,
+			AttesterSlashings: slashings,
 		},
 	}
-	if _, err := ProcessCasperSlashings(
+	if _, err := ProcessAttesterSlashings(
 		beaconState,
 		block,
 	); !strings.Contains(err.Error(), want) {
@@ -436,11 +436,11 @@ func TestProcessCasperSlashings_VoteThresholdReached(t *testing.T) {
 	}
 }
 
-func TestProcessCasperSlashings_UnmatchedAttestations(t *testing.T) {
+func TestProcessAttesterSlashings_UnmatchedAttestations(t *testing.T) {
 	att1 := &pb.AttestationData{
 		Slot: 5,
 	}
-	slashings := []*pb.CasperSlashing{
+	slashings := []*pb.AttesterSlashing{
 		{
 			SlashableVote_1: &pb.SlashableVote{
 				Data: att1,
@@ -459,7 +459,7 @@ func TestProcessCasperSlashings_UnmatchedAttestations(t *testing.T) {
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
-			CasperSlashings: slashings,
+			AttesterSlashings: slashings,
 		},
 	}
 	want := fmt.Sprintf(
@@ -468,7 +468,7 @@ func TestProcessCasperSlashings_UnmatchedAttestations(t *testing.T) {
 		att1,
 	)
 
-	if _, err := ProcessCasperSlashings(
+	if _, err := ProcessAttesterSlashings(
 		beaconState,
 		block,
 	); !strings.Contains(err.Error(), want) {
@@ -476,7 +476,7 @@ func TestProcessCasperSlashings_UnmatchedAttestations(t *testing.T) {
 	}
 }
 
-func TestProcessCasperSlashings_SlotsInequalities(t *testing.T) {
+func TestProcessAttesterSlashings_SlotsInequalities(t *testing.T) {
 	testCases := []struct {
 		att1 *pb.AttestationData
 		att2 *pb.AttestationData
@@ -525,7 +525,7 @@ func TestProcessCasperSlashings_SlotsInequalities(t *testing.T) {
 		},
 	}
 	for _, tt := range testCases {
-		slashings := []*pb.CasperSlashing{
+		slashings := []*pb.AttesterSlashing{
 			{
 				SlashableVote_1: &pb.SlashableVote{
 					Data: tt.att1,
@@ -544,7 +544,7 @@ func TestProcessCasperSlashings_SlotsInequalities(t *testing.T) {
 		}
 		block := &pb.BeaconBlock{
 			Body: &pb.BeaconBlockBody{
-				CasperSlashings: slashings,
+				AttesterSlashings: slashings,
 			},
 		}
 		want := fmt.Sprintf(
@@ -568,7 +568,7 @@ func TestProcessCasperSlashings_SlotsInequalities(t *testing.T) {
 			tt.att2.Slot,
 		)
 
-		if _, err := ProcessCasperSlashings(
+		if _, err := ProcessAttesterSlashings(
 			beaconState,
 			block,
 		); !strings.Contains(err.Error(), want) {
@@ -577,7 +577,7 @@ func TestProcessCasperSlashings_SlotsInequalities(t *testing.T) {
 	}
 }
 
-func TestProcessCasperSlashings_EmptyVoteIndexIntersection(t *testing.T) {
+func TestProcessAttesterSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 	att1 := &pb.AttestationData{
 		Slot:          5,
 		JustifiedSlot: 5,
@@ -586,7 +586,7 @@ func TestProcessCasperSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 		Slot:          5,
 		JustifiedSlot: 4,
 	}
-	slashings := []*pb.CasperSlashing{
+	slashings := []*pb.AttesterSlashing{
 		{
 			SlashableVote_1: &pb.SlashableVote{
 				Data:             att1,
@@ -609,11 +609,11 @@ func TestProcessCasperSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
-			CasperSlashings: slashings,
+			AttesterSlashings: slashings,
 		},
 	}
 	want := "expected intersection of vote indices to be non-empty"
-	if _, err := ProcessCasperSlashings(
+	if _, err := ProcessAttesterSlashings(
 		beaconState,
 		block,
 	); !strings.Contains(err.Error(), want) {
@@ -621,7 +621,7 @@ func TestProcessCasperSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 	}
 }
 
-func TestProcessCasperSlashings_AppliesCorrectStatus(t *testing.T) {
+func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
 	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
@@ -640,7 +640,7 @@ func TestProcessCasperSlashings_AppliesCorrectStatus(t *testing.T) {
 		Slot:          5,
 		JustifiedSlot: 4,
 	}
-	slashings := []*pb.CasperSlashing{
+	slashings := []*pb.AttesterSlashing{
 		{
 			SlashableVote_1: &pb.SlashableVote{
 				Data:             att1,
@@ -664,10 +664,10 @@ func TestProcessCasperSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
-			CasperSlashings: slashings,
+			AttesterSlashings: slashings,
 		},
 	}
-	newState, err := ProcessCasperSlashings(
+	newState, err := ProcessAttesterSlashings(
 		beaconState,
 		block,
 	)

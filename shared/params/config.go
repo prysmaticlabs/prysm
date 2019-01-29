@@ -64,7 +64,7 @@ type BeaconChainConfig struct {
 	MaxDeposits          uint64 // MaxExits determines the maximum number of validator deposits in a block.
 	MaxAttestations      uint64 // MaxAttestations defines the maximum allowed attestations in a beacon block.
 	MaxProposerSlashings uint64 // MaxProposerSlashings defines the maximum number of slashings of proposers possible in a block.
-	MaxCasperSlashings   uint64 // MaxCasperSlashings defines the maximum number of casper FFG slashings possible in a block.
+	MaxAttesterSlashings uint64 // MaxAttesterSlashings defines the maximum number of casper FFG slashings possible in a block.
 
 	// Prysm constants.
 	DepositsForChainStart uint64    // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
@@ -127,7 +127,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxDeposits:          16,
 	MaxAttestations:      128,
 	MaxProposerSlashings: 16,
-	MaxCasperSlashings:   1,
+	MaxAttesterSlashings: 1,
 
 	// Prysm constants.
 	DepositsForChainStart: 16384,
@@ -183,7 +183,7 @@ var demoBeaconConfig = &BeaconChainConfig{
 	MaxDeposits:          defaultBeaconConfig.MaxDeposits,
 	MaxAttestations:      defaultBeaconConfig.MaxAttestations,
 	MaxProposerSlashings: defaultBeaconConfig.MaxProposerSlashings,
-	MaxCasperSlashings:   defaultBeaconConfig.MaxCasperSlashings,
+	MaxAttesterSlashings: defaultBeaconConfig.MaxAttesterSlashings,
 
 	// Prysm constants.
 	DepositsForChainStart: defaultBeaconConfig.DepositsForChainStart,
