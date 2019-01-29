@@ -187,29 +187,29 @@ func verifyProposerSlashing(
 // on each processed beacon block to penalize validators based on
 // Casper FFG slashing conditions if any slashable events occurred.
 //
-// Official spec definition for casper slashings:
+// Official spec definition for attester slashings:
 //
-//   Verify that len(block.body.casper_slashings) <= MAX_CASPER_SLASHINGS.
-//   For each casper_slashing in block.body.casper_slashings:
+//   Verify that len(block.body.attester_slashings) <= MAX_CASPER_SLASHINGS.
+//   For each attester_slashing in block.body.attester_slashings:
 //
-//   Verify that verify_casper_votes(state, casper_slashing.votes_1).
-//   Verify that verify_casper_votes(state, casper_slashing.votes_2).
-//   Verify that casper_slashing.votes_1.data != casper_slashing.votes_2.data.
+//   Verify that verify_attester_votes(state, attester_slashing.votes_1).
+//   Verify that verify_attester_votes(state, attester_slashing.votes_2).
+//   Verify that attester_slashing.votes_1.data != attester_slashing.votes_2.data.
 //   Let indices(vote) = vote.aggregate_signature_poc_0_indices +
 //     vote.aggregate_signature_poc_1_indices.
-//   Let intersection = [x for x in indices(casper_slashing.votes_1)
-//     if x in indices(casper_slashing.votes_2)].
+//   Let intersection = [x for x in indices(attester_slashing.votes_1)
+//     if x in indices(attester_slashing.votes_2)].
 //   Verify that len(intersection) >= 1.
-//	 Verify the following about the casper votes:
+//	 Verify the following about the attester votes:
 //     (vote1.justified_slot < vote2.justified_slot) &&
 //     (vote2.justified_slot + 1 == vote2.slot) &&
 //     (vote2.slot < vote1.slot)
 //     OR
 //     vote1.slot == vote.slot
-//   Verify that casper_slashing.votes_1.data.justified_slot + 1 <
-//     casper_slashing.votes_2.data.justified_slot + 1 ==
-//     casper_slashing.votes_2.data.slot < casper_slashing.votes_1.data.slot
-//     or casper_slashing.votes_1.data.slot == casper_slashing.votes_2.data.slot.
+//   Verify that attester_slashing.votes_1.data.justified_slot + 1 <
+//     attester_slashing.votes_2.data.justified_slot + 1 ==
+//     attester_slashing.votes_2.data.slot < attester_slashing.votes_1.data.slot
+//     or attester_slashing.votes_1.data.slot == attester_slashing.votes_2.data.slot.
 //   For each validator index i in intersection,
 //     if state.validator_registry[i].penalized_slot > state.slot, then
 // 	   run penalize_validator(state, i)
@@ -221,16 +221,16 @@ func ProcessAttesterSlashings(
 	registry := beaconState.ValidatorRegistry
 	if uint64(len(body.AttesterSlashings)) > params.BeaconConfig().MaxAttesterSlashings {
 		return nil, fmt.Errorf(
-			"number of casper slashings (%d) exceeds allowed threshold of %d",
+			"number of attester slashings (%d) exceeds allowed threshold of %d",
 			len(body.AttesterSlashings),
 			params.BeaconConfig().MaxAttesterSlashings,
 		)
 	}
 	for idx, slashing := range body.AttesterSlashings {
-		if err := verifyCasperSlashing(slashing); err != nil {
-			return nil, fmt.Errorf("could not verify casper slashing #%d: %v", idx, err)
+		if err := verifyAttesgerSlashing(slashing); err != nil {
+			return nil, fmt.Errorf("could not verify attester slashing #%d: %v", idx, err)
 		}
-		validatorIndices, err := casperSlashingPenalizedIndices(slashing)
+		validatorIndices, err := attesterSlashingPenalizedIndices(slashing)
 		if err != nil {
 			return nil, fmt.Errorf("could not determine validator indices to penalize: %v", err)
 		}
@@ -248,17 +248,17 @@ func ProcessAttesterSlashings(
 	return beaconState, nil
 }
 
-func verifyCasperSlashing(slashing *pb.AttesterSlashing) error {
+func verifyAttesgerSlashing(slashing *pb.AttesterSlashing) error {
 	slashableVote1 := slashing.SlashableVote_1
 	slashableVote2 := slashing.SlashableVote_2
 	slashableVoteData1Attestation := slashableVote1.Data
 	slashableVoteData2Attestation := slashableVote2.Data
 
 	if err := verifySlashableVote(slashableVote1); err != nil {
-		return fmt.Errorf("could not verify casper slashable vote data 1: %v", err)
+		return fmt.Errorf("could not verify attester slashable vote data 1: %v", err)
 	}
 	if err := verifySlashableVote(slashableVote2); err != nil {
-		return fmt.Errorf("could not verify casper slashable vote data 2: %v", err)
+		return fmt.Errorf("could not verify attester slashable vote data 2: %v", err)
 	}
 
 	// Inner attestation data structures for the votes should not be equal,
@@ -266,7 +266,7 @@ func verifyCasperSlashing(slashing *pb.AttesterSlashing) error {
 	// should occur.
 	if reflect.DeepEqual(slashableVoteData1Attestation, slashableVoteData2Attestation) {
 		return fmt.Errorf(
-			"casper slashing inner slashable vote data attestation should not match: %v, %v",
+			"attester slashing inner slashable vote data attestation should not match: %v, %v",
 			slashableVoteData1Attestation,
 			slashableVoteData2Attestation,
 		)
@@ -310,7 +310,7 @@ func verifyCasperSlashing(slashing *pb.AttesterSlashing) error {
 	return nil
 }
 
-func casperSlashingPenalizedIndices(slashing *pb.AttesterSlashing) ([]uint64, error) {
+func attesterSlashingPenalizedIndices(slashing *pb.AttesterSlashing) ([]uint64, error) {
 	indicesIntersection := slices.Intersection(
 		slashing.SlashableVote_1.ValidatorIndices,
 		slashing.SlashableVote_2.ValidatorIndices)
@@ -331,7 +331,7 @@ func verifySlashableVote(votes *pb.SlashableVote) error {
 	if len(votes.ValidatorIndices) == 0 {
 		return errors.New("empty validator indices")
 	}
-	for i := 0; i < len(votes.ValidatorIndices); i++ {
+	for i := 0; i < len(votes.ValidatorIndices)-1; i++ {
 		if votes.ValidatorIndices[i] >= votes.ValidatorIndices[i+1] {
 			return errors.New("validator indices not in descending order")
 		}

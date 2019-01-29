@@ -1,4 +1,4 @@
-# Ethereum 2.0 E2E Test Suite
+'# Ethereum 2.0 E2E Test Suite
 
 This is a test-suite for conformity end-2-end tests for Prysm's implementation of the Ethereum 2.0 specification. Implementation teams have decided to utilize YAML as a general conformity test format for the current beacon chain's runtime functionality.
 
@@ -63,8 +63,8 @@ test_cases:
           proposal_2_slot: 15
           proposal_2_root: !!binary |
             LkmqmqoodLKAslkjdkajsdljasdkajlksjdasldjasdd
-      casper_slashings:
-        - slot: 59 # At slot 59, we trigger a casper slashing
+      attester_slashings:
+        - slot: 59 # At slot 59, we trigger a attester slashing
           slashable_vote_data_1_slot: 55
           slashable_vote_data_2_slot: 55
           slashable_vote_data_1_justified_slot: 0
@@ -110,7 +110,7 @@ The following configuration options are available for state transition tests:
 - **num_slots**: `int` the number of times we run a state transition in the test
 - **deposits**: `[Deposit Config]` trigger a new validator deposit into the beacon state based on configuration options
 - **proposer_slashings**: `[Proposer Slashing Config]` trigger a proposer slashing at a certain slot for a certain proposer index
-- **casper_slashings**: `[Casper Slashing Config]` trigger a casper slashing at a certain slot
+- **attester_slashings**: `[Casper Slashing Config]` trigger a attester slashing at a certain slot
 - **validator_exits**: `[Validator Exit Config]` trigger a voluntary validator exit at a certain slot for a validator index
 
 **Deposit Config**
@@ -133,7 +133,7 @@ The following configuration options are available for state transition tests:
 
 **Casper Slashing Config**
 
-- **slot**: `int` a slot in which to trigger a casper slashing during a state transition test
+- **slot**: `int` a slot in which to trigger a attester slashing during a state transition test
 - **slashable_vote_data_1_slot**: `int` the slot of the attestation data of slashableVoteData1
 - **slashable_vote_data_2_slot**: `int` the slot of the attestation data of slashableVoteData2
 - **slashable_vote_data_1_justified_slot**: `int` the justified slot of the attestation data of slashableVoteData1

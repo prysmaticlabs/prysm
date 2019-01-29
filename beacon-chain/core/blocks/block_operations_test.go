@@ -333,7 +333,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 }
 
 func TestProcessAttesterSlashings_ThresholdReached(t *testing.T) {
-	slashings := make([]*pb.AttesterSlashing, config.MaxCasperSlashings+1)
+	slashings := make([]*pb.AttesterSlashing, config.MaxAttesterSlashings+1)
 	registry := []*pb.ValidatorRecord{}
 	currentSlot := uint64(0)
 
@@ -347,9 +347,9 @@ func TestProcessAttesterSlashings_ThresholdReached(t *testing.T) {
 		},
 	}
 	want := fmt.Sprintf(
-		"number of casper slashings (%d) exceeds allowed threshold of %d",
-		config.MaxCasperSlashings+1,
-		config.MaxCasperSlashings,
+		"number of attester slashings (%d) exceeds allowed threshold of %d",
+		config.MaxAttesterSlashings+1,
+		config.MaxAttesterSlashings,
 	)
 
 	if _, err := ProcessAttesterSlashings(
@@ -360,7 +360,7 @@ func TestProcessAttesterSlashings_ThresholdReached(t *testing.T) {
 	}
 }
 
-func TestProcessAttesterSlashings_VoteThresholdReached(t *testing.T) {
+func TestProcessAttesterSlashings_EmptyCustodyFields(t *testing.T) {
 	slashings := []*pb.AttesterSlashing{
 		{
 			SlashableVote_1: &pb.SlashableVote{
@@ -389,11 +389,7 @@ func TestProcessAttesterSlashings_VoteThresholdReached(t *testing.T) {
 			AttesterSlashings: slashings,
 		},
 	}
-	want := fmt.Sprintf(
-		"exceeded allowed casper votes (%d), received %d",
-		config.MaxIndicesPerSlashableVote,
-		config.MaxIndicesPerSlashableVote*2,
-	)
+	want := fmt.Sprint("custody bit field can't all be 0")
 
 	if _, err := ProcessAttesterSlashings(
 		beaconState,
@@ -444,9 +440,13 @@ func TestProcessAttesterSlashings_UnmatchedAttestations(t *testing.T) {
 		{
 			SlashableVote_1: &pb.SlashableVote{
 				Data: att1,
+				ValidatorIndices: []uint64{1},
+				CustodyBitfield: []byte{0xFF},
 			},
 			SlashableVote_2: &pb.SlashableVote{
 				Data: att1,
+				ValidatorIndices: []uint64{2},
+				CustodyBitfield: []byte{0xFF},
 			},
 		},
 	}
@@ -463,7 +463,7 @@ func TestProcessAttesterSlashings_UnmatchedAttestations(t *testing.T) {
 		},
 	}
 	want := fmt.Sprintf(
-		"casper slashing inner slashable vote data attestation should not match: %v, %v",
+		"attester slashing inner slashable vote data attestation should not match: %v, %v",
 		att1,
 		att1,
 	)
@@ -529,9 +529,13 @@ func TestProcessAttesterSlashings_SlotsInequalities(t *testing.T) {
 			{
 				SlashableVote_1: &pb.SlashableVote{
 					Data: tt.att1,
+					ValidatorIndices: []uint64{1},
+					CustodyBitfield: []byte{0xFF},
 				},
 				SlashableVote_2: &pb.SlashableVote{
 					Data: tt.att2,
+					ValidatorIndices: []uint64{2},
+					CustodyBitfield: []byte{0xFF},
 				},
 			},
 		}
@@ -590,12 +594,12 @@ func TestProcessAttesterSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 		{
 			SlashableVote_1: &pb.SlashableVote{
 				Data:             att1,
-				ValidatorIndices: []uint64{1, 2},
+				ValidatorIndices: []uint64{1},
 				CustodyBitfield:  []byte{0xFF},
 			},
 			SlashableVote_2: &pb.SlashableVote{
 				Data:             att2,
-				ValidatorIndices: []uint64{5, 6},
+				ValidatorIndices: []uint64{2},
 				CustodyBitfield:  []byte{0xFF},
 			},
 		},
@@ -644,12 +648,12 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		{
 			SlashableVote_1: &pb.SlashableVote{
 				Data:             att1,
-				ValidatorIndices: []uint64{0, 1, 2, 3},
+				ValidatorIndices: []uint64{0},
 				CustodyBitfield:  []byte{0xFF},
 			},
 			SlashableVote_2: &pb.SlashableVote{
 				Data:             att2,
-				ValidatorIndices: []uint64{4, 5, 6, 1},
+				ValidatorIndices: []uint64{0},
 				CustodyBitfield:  []byte{0xFF},
 			},
 		},

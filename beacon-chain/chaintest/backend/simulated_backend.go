@@ -195,10 +195,10 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 				break
 			}
 		}
-		var simulatedCasperSlashing *StateTestCasperSlashing
-		for _, cSlashing := range testCase.Config.CasperSlashings {
+		var simulatedAttesterSlashing *StateTestAttesterSlashing
+		for _, cSlashing := range testCase.Config.AttesterSlashings {
 			if cSlashing.Slot == i {
-				simulatedCasperSlashing = cSlashing
+				simulatedAttesterSlashing = cSlashing
 				break
 			}
 		}
@@ -222,7 +222,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 			simulatedDeposit,
 			depositsTrie,
 			simulatedProposerSlashing,
-			simulatedCasperSlashing,
+			simulatedAttesterSlashing,
 			simulatedValidatorExit,
 		)
 		if err != nil {
