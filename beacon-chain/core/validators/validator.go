@@ -30,7 +30,7 @@ func InitialValidatorRegistry() []*pb.ValidatorRecord {
 		pubkey := hashutil.Hash([]byte{byte(i)})
 		validators[i] = &pb.ValidatorRecord{
 			ExitSlot:               config.FarFutureSlot,
-			Balance:                config.MaxDepositInGwei,
+			Balance:                config.MaxDeposit,
 			Pubkey:                 pubkey[:],
 			RandaoCommitmentHash32: randaoReveal[:],
 			RandaoLayers:           1,
@@ -261,8 +261,8 @@ func NewRegistryDeltaChainTip(
 //     """
 //     return min(state.validator_balances[idx], MAX_DEPOSIT * GWEI_PER_ETH)
 func EffectiveBalance(state *pb.BeaconState, idx uint32) uint64 {
-	if state.ValidatorBalances[idx] > config.MaxDepositInGwei {
-		return config.MaxDepositInGwei
+	if state.ValidatorBalances[idx] > config.MaxDeposit {
+		return config.MaxDeposit
 	}
 	return state.ValidatorBalances[idx]
 }
@@ -653,7 +653,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	for idx, validator := range state.ValidatorRegistry {
 		// Activate validators within the allowable balance churn.
 		if validator.ActivationSlot > state.Slot+config.EntryExitDelay &&
-			state.ValidatorBalances[idx] >= config.MaxDepositInGwei {
+			state.ValidatorBalances[idx] >= config.MaxDeposit {
 			balChurn += EffectiveBalance(state, uint32(idx))
 			if balChurn > maxBalChurn {
 				break
@@ -765,10 +765,10 @@ func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 //        total_balance // (2 * MAX_BALANCE_CHURN_QUOTIENT))
 func maxBalanceChurn(totalBalance uint64) uint64 {
 	maxBalanceChurn := totalBalance / 2 * config.MaxBalanceChurnQuotient
-	if maxBalanceChurn > config.MaxDepositInGwei {
+	if maxBalanceChurn > config.MaxDeposit {
 		return maxBalanceChurn
 	}
-	return config.MaxDepositInGwei
+	return config.MaxDeposit
 }
 
 // eligibleToExit checks if a validator is eligible to exit whether it was

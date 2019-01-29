@@ -116,16 +116,10 @@ func TestProposerComputeBlock(t *testing.T) {
 
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
 
-	mockServiceClient.EXPECT().LatestPOWChainBlockHash(
-		gomock.Any(),
-		gomock.Any()).Return(
-		&pb.POWChainResponse{
-			BlockHash: []byte("hi"),
-		}, nil)
 	mockServiceClient.EXPECT().ProposerIndex(
 		gomock.Any(),
 		gomock.Any()).Return(
-		&pb.IndexResponse{
+		&pb.ProposerIndexResponse{
 			Index: 2,
 		}, nil)
 
@@ -212,16 +206,10 @@ func TestFullProposalOfBlock(t *testing.T) {
 	}
 	p := NewProposer(context.Background(), cfg)
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
-	mockServiceClient.EXPECT().LatestPOWChainBlockHash(
-		gomock.Any(),
-		gomock.Any()).Return(
-		&pb.POWChainResponse{
-			BlockHash: []byte("hi"),
-		}, nil)
 	mockServiceClient.EXPECT().ProposerIndex(
 		gomock.Any(),
 		gomock.Any()).Return(
-		&pb.IndexResponse{
+		&pb.ProposerIndexResponse{
 			Index: 2,
 		}, nil)
 
@@ -289,16 +277,10 @@ func TestProposerServiceErrors(t *testing.T) {
 
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
 
-	mockServiceClient.EXPECT().LatestPOWChainBlockHash(
-		gomock.Any(),
-		gomock.Any()).Return(
-		&pb.POWChainResponse{
-			BlockHash: []byte("hi"),
-		}, nil)
 	mockServiceClient.EXPECT().ProposerIndex(
 		gomock.Any(),
 		gomock.Any()).Return(
-		&pb.IndexResponse{
+		&pb.ProposerIndexResponse{
 			Index: 2,
 		}, nil)
 	// Expect call to throw an error
@@ -344,18 +326,10 @@ func TestProposedBlockError(t *testing.T) {
 	p := NewProposer(context.Background(), cfg)
 
 	mockServiceClient := internal.NewMockProposerServiceClient(ctrl)
-
-	mockServiceClient.EXPECT().LatestPOWChainBlockHash(
-		gomock.Any(),
-		gomock.Any()).Return(
-		&pb.POWChainResponse{
-			BlockHash: []byte("hi"),
-		}, nil)
-
 	mockServiceClient.EXPECT().ProposerIndex(
 		gomock.Any(),
 		gomock.Any()).Return(
-		&pb.IndexResponse{
+		&pb.ProposerIndexResponse{
 			Index: 2,
 		}, nil)
 

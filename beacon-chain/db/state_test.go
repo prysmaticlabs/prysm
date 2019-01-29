@@ -3,6 +3,7 @@ package db
 import (
 	"bytes"
 	"testing"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 )
@@ -11,7 +12,8 @@ func TestInitializeState(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	if err := db.InitializeState(); err != nil {
+	genesisTime := uint64(time.Now().Unix())
+	if err := db.InitializeState(genesisTime); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 	b, err := db.ChainHead()
@@ -52,17 +54,16 @@ func TestGenesisTime(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	time, err := db.GenesisTime()
+	genesisTime, err := db.GenesisTime()
 	if err == nil {
 		t.Fatal("expected GenesisTime to fail")
 	}
 
-	err = db.InitializeState()
-	if err != nil {
+	if err := db.InitializeState(uint64(genesisTime.Unix())); err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
 
-	time, err = db.GenesisTime()
+	time1, err := db.GenesisTime()
 	if err != nil {
 		t.Fatalf("GenesisTime failed on second attempt: %v", err)
 	}
@@ -71,7 +72,7 @@ func TestGenesisTime(t *testing.T) {
 		t.Fatalf("GenesisTime failed on second attempt: %v", err)
 	}
 
-	if time != time2 {
-		t.Fatalf("Expected %v and %v to be equal", time, time2)
+	if time1 != time2 {
+		t.Fatalf("Expected %v and %v to be equal", time1, time2)
 	}
 }

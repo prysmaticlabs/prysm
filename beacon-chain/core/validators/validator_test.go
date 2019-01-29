@@ -287,12 +287,11 @@ func TestShardCommitteesAtSlot_OutOfBounds(t *testing.T) {
 		if err != nil && err.Error() != tt.expectedErr {
 			t.Fatalf("Expected error \"%s\" got \"%v\"", tt.expectedErr, err)
 		}
-
 	}
 }
 
 func TestEffectiveBalance(t *testing.T) {
-	defaultBalance := params.BeaconConfig().MaxDepositInGwei
+	defaultBalance := params.BeaconConfig().MaxDeposit
 
 	tests := []struct {
 		a uint64
@@ -890,15 +889,15 @@ func TestExitValidator_AlreadyExited(t *testing.T) {
 
 func TestProcessPenaltiesExits_NothingHappened(t *testing.T) {
 	state := &pb.BeaconState{
-		ValidatorBalances: []uint64{config.MaxDepositInGwei},
+		ValidatorBalances: []uint64{config.MaxDeposit},
 		ValidatorRegistry: []*pb.ValidatorRecord{
 			{ExitSlot: params.BeaconConfig().FarFutureSlot},
 		},
 	}
 	if ProcessPenaltiesAndExits(state).ValidatorBalances[0] !=
-		config.MaxDepositInGwei {
+		config.MaxDeposit {
 		t.Errorf("wanted validator balance %d, got %d",
-			config.MaxDepositInGwei,
+			config.MaxDeposit,
 			ProcessPenaltiesAndExits(state).ValidatorBalances[0])
 	}
 }
@@ -907,13 +906,13 @@ func TestProcessPenaltiesExits_ValidatorPenalized(t *testing.T) {
 
 	latestPenalizedExits := make([]uint64, config.LatestPenalizedExitLength)
 	for i := 0; i < len(latestPenalizedExits); i++ {
-		latestPenalizedExits[i] = uint64(i) * config.MaxDepositInGwei
+		latestPenalizedExits[i] = uint64(i) * config.MaxDeposit
 	}
 
 	state := &pb.BeaconState{
 		Slot:                    config.LatestPenalizedExitLength / 2 * config.EpochLength,
 		LatestPenalizedBalances: latestPenalizedExits,
-		ValidatorBalances:       []uint64{config.MaxDepositInGwei, config.MaxDepositInGwei},
+		ValidatorBalances:       []uint64{config.MaxDeposit, config.MaxDeposit},
 		ValidatorRegistry: []*pb.ValidatorRecord{
 			{ExitSlot: params.BeaconConfig().FarFutureSlot, ExitCount: 1},
 		},
@@ -921,12 +920,12 @@ func TestProcessPenaltiesExits_ValidatorPenalized(t *testing.T) {
 
 	penalty := EffectiveBalance(state, 0) *
 		EffectiveBalance(state, 0) /
-		config.MaxDepositInGwei
+		config.MaxDeposit
 
 	newState := ProcessPenaltiesAndExits(state)
-	if newState.ValidatorBalances[0] != config.MaxDepositInGwei-penalty {
+	if newState.ValidatorBalances[0] != config.MaxDeposit-penalty {
 		t.Errorf("wanted validator balance %d, got %d",
-			config.MaxDepositInGwei-penalty,
+			config.MaxDeposit-penalty,
 			newState.ValidatorBalances[0])
 	}
 }
@@ -965,11 +964,11 @@ func TestUpdateRegistry_NoRotation(t *testing.T) {
 			{ExitSlot: params.BeaconConfig().EntryExitDelay},
 		},
 		ValidatorBalances: []uint64{
-			config.MaxDepositInGwei,
-			config.MaxDepositInGwei,
-			config.MaxDepositInGwei,
-			config.MaxDepositInGwei,
-			config.MaxDepositInGwei,
+			config.MaxDeposit,
+			config.MaxDeposit,
+			config.MaxDeposit,
+			config.MaxDeposit,
+			config.MaxDeposit,
 		},
 	}
 	newState, err := UpdateRegistry(state)
@@ -998,8 +997,8 @@ func TestUpdateRegistry_Activate(t *testing.T) {
 				ActivationSlot: 5 + config.EntryExitDelay + 1},
 		},
 		ValidatorBalances: []uint64{
-			config.MaxDepositInGwei,
-			config.MaxDepositInGwei,
+			config.MaxDeposit,
+			config.MaxDeposit,
 		},
 		ValidatorRegistryDeltaChainTipHash32: []byte{'A'},
 	}
@@ -1035,8 +1034,8 @@ func TestUpdateRegistry_Exit(t *testing.T) {
 				StatusFlags: pb.ValidatorRecord_INITIATED_EXIT},
 		},
 		ValidatorBalances: []uint64{
-			config.MaxDepositInGwei,
-			config.MaxDepositInGwei,
+			config.MaxDeposit,
+			config.MaxDeposit,
 		},
 		ValidatorRegistryDeltaChainTipHash32: []byte{'A'},
 	}
@@ -1067,10 +1066,10 @@ func TestMaxBalanceChurn(t *testing.T) {
 		totalBalance    uint64
 		maxBalanceChurn uint64
 	}{
-		{totalBalance: 1e9, maxBalanceChurn: config.MaxDepositInGwei},
-		{totalBalance: config.MaxDepositInGwei, maxBalanceChurn: 512 * 1e9},
-		{totalBalance: config.MaxDepositInGwei * 10, maxBalanceChurn: 512 * 1e10},
-		{totalBalance: config.MaxDepositInGwei * 1000, maxBalanceChurn: 512 * 1e12},
+		{totalBalance: 1e9, maxBalanceChurn: config.MaxDeposit},
+		{totalBalance: config.MaxDeposit, maxBalanceChurn: 512 * 1e9},
+		{totalBalance: config.MaxDeposit * 10, maxBalanceChurn: 512 * 1e10},
+		{totalBalance: config.MaxDeposit * 1000, maxBalanceChurn: 512 * 1e12},
 	}
 
 	for _, tt := range tests {

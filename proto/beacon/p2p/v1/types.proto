@@ -200,8 +200,8 @@ message ProposerSlashing {
 }
 
 message CasperSlashing {
-  SlashableVoteData votes_1 = 1;
-  SlashableVoteData votes_2 = 2;
+  SlashableVoteData slashable_vote_data_1 = 1;
+  SlashableVoteData slashable_vote_data_2 = 2;
 }
 
 message Deposit {

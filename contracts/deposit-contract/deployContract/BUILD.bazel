@@ -4,11 +4,12 @@ load("@io_bazel_rules_docker//container:container.bzl", "container_push")
 
 go_library(
     name = "go_default_library",
-    srcs = ["deployVRC.go"],
-    importpath = "github.com/prysmaticlabs/prysm/contracts/validator-registration-contract/deployVRC",
+    srcs = ["deployContract.go"],
+    importpath = "github.com/prysmaticlabs/prysm/contracts/deposit-contract/deployContract",
     visibility = ["//visibility:private"],
     deps = [
-        "//contracts/validator-registration-contract:go_default_library",
+        "//contracts/deposit-contract:go_default_library",
+        "//shared/params:go_default_library",
         "//shared/version:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/keystore:go_default_library",
@@ -24,17 +25,19 @@ go_library(
     ],
 )
 
+go_binary(
+    name = "deployContract",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)
+
 go_image(
     name = "image",
-    srcs = ["deployVRC.go"],
-    importpath = "github.com/prysmaticlabs/prysm/contracts/validator-registration-contract/deployVRC",
-    visibility = ["//visibility:private"],
-    static = "on",
-    tags = ["manual"],
-    goarch = "amd64",
-    goos = "linux",
+    srcs = ["deployContract.go"],
+    importpath = "github.com/prysmaticlabs/prysm/contracts/deposit-contract/deployContract",
     deps = [
-        "//contracts/validator-registration-contract:go_default_library",
+        "//contracts/deposit-contract:go_default_library",
+        "//shared/params:go_default_library",
         "//shared/version:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/keystore:go_default_library",
@@ -48,6 +51,12 @@ go_image(
         "@io_k8s_client_go//kubernetes:go_default_library",
         "@io_k8s_client_go//rest:go_default_library",
     ],
+    visibility = ["//visibility:private"],
+    pure = "off",  # depends on cgo for go-etheruem crypto
+    static = "on",
+    tags = ["manual"],
+    goarch = "amd64",
+    goos = "linux",
     race = "off",
 )
 
@@ -60,10 +69,4 @@ container_push(
     tag = "latest",
     tags = ["manual"],
     visibility = ["//visibility:private"],
-)
-
-go_binary(
-    name = "deployVRC",
-    embed = [":go_default_library"],
-    visibility = ["//visibility:public"],
 )

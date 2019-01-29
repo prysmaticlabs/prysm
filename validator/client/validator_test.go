@@ -66,11 +66,11 @@ func TestUpdateAssignmentsDoesUpdateAssignments(t *testing.T) {
 	resp := &pb.ValidatorEpochAssignmentsResponse{
 		EpochStart: slot,
 		Assignments: []*pb.Assignment{
-			&pb.Assignment{
+			{
 				Role:         pb.ValidatorRole_PROPOSER,
 				AssignedSlot: 67,
 			},
-			&pb.Assignment{
+			{
 				Role:         pb.ValidatorRole_ATTESTER,
 				AssignedSlot: 78,
 			},
