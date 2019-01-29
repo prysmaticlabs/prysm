@@ -10,6 +10,9 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/prysmaticlabs/prysm/validator/rpcclient"
+	"github.com/prysmaticlabs/prysm/validator/types"
+
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
@@ -46,6 +49,10 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 	}
 
 	if err := ValidatorClient.registerP2P(ctx); err != nil {
+		return nil, err
+	}
+
+	if err := ValidatorClient.registerRPCService(ctx); err != nil {
 		return nil, err
 	}
 
@@ -119,8 +126,22 @@ func (s *ValidatorClient) registerPrometheusService(ctx *cli.Context) error {
 	return s.services.RegisterService(service)
 }
 
-func (s *ValidatorClient) registerClientService() error {
-	v := client.NewValidatorService(context.TODO())
+func (s *ValidatorClient) registerRPCService(ctx *cli.Context) error {
+	endpoint := ctx.GlobalString(types.BeaconRPCProviderFlag.Name)
+	rpc := rpcclient.NewRPCClient(context.TODO(), &rpcclient.Config{
+		Endpoint: endpoint,
+	})
+	return s.services.RegisterService(rpc)
+}
 
+func (s *ValidatorClient) registerClientService() error {
+	var rpcService *rpcclient.Client
+	if err := s.services.FetchService(&rpcService); err != nil {
+		return err
+	}
+	v := client.NewValidatorService(context.TODO(), &client.Config{
+		BeaconClient:    rpcService.BeaconServiceClient(),
+		ValidatorClient: rpcService.ValidatorServiceClient(),
+	})
 	return s.services.RegisterService(v)
 }

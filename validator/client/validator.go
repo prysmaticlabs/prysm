@@ -2,6 +2,10 @@ package client
 
 import (
 	"context"
+	"io"
+	"time"
+
+	ptypes "github.com/gogo/protobuf/types"
 
 	"github.com/opentracing/opentracing-go"
 
@@ -17,6 +21,7 @@ type validator struct {
 	ticker          slotticker.SlotTicker
 	assignment      *pb.Assignment
 	validatorClient pb.ValidatorServiceClient
+	beaconClient    pb.BeaconServiceClient
 	pubKey          []byte
 }
 
@@ -26,9 +31,6 @@ type validator struct {
 func (v *validator) Initialize(ctx context.Context) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.Initialize")
 	defer span.Finish()
-
-	cfg := params.BeaconConfig()
-	v.ticker = slotticker.GetSlotTicker(cfg.GenesisTime, cfg.SlotDuration)
 }
 
 // Done cleans up the validator.
@@ -45,6 +47,32 @@ func (v *validator) WaitForActivation(ctx context.Context) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.WaitForActivation")
 	defer span.Finish()
 	// First, check if the beacon chain has started.
+	stream, err := v.beaconClient.WaitForChainStart(ctx, &ptypes.Empty{})
+	if err != nil {
+		log.Errorf("Could not setup beacon chain ChainStart streaming client: %v", err)
+		return
+	}
+	var genesisTime uint64
+	for {
+		chainStartRes, err := stream.Recv()
+		// If the stream is closed, we stop the loop.
+		if err == io.EOF {
+			break
+		}
+		// If context is canceled we stop the loop.
+		if ctx.Err() == context.Canceled {
+			log.Debugf("Context has been canceled so shutting down the loop: %v", ctx.Err())
+			break
+		}
+		if err != nil {
+			log.Errorf("Could not receive ChainStart from stream: %v", err)
+			continue
+		}
+		genesisTime = chainStartRes.GenesisTime
+	}
+	// Once the ChainStart log is received, we update the genesis time of the validator client
+	// and begin a slot ticker used to track the current slot the beacon node is in.
+	v.ticker = slotticker.GetSlotTicker(time.Unix(int64(genesisTime), 0), params.BeaconConfig().SlotDuration)
 	// Then, check if the validator has deposited into the Deposit Contract.
 	// If the validator has deposited, subscribe to a stream receiving the activation status
 	// of the validator until a final ACTIVATED check if received, then this function can return.

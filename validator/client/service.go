@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -16,13 +17,24 @@ type ValidatorService struct {
 	validator Validator
 }
 
+// Config for the validator service.
+type Config struct {
+	BeaconClient    pb.BeaconServiceClient
+	ValidatorClient pb.ValidatorServiceClient
+}
+
 // NewValidatorService creates a new validator service for the service
 // registry.
-func NewValidatorService(ctx context.Context) *ValidatorService {
+func NewValidatorService(ctx context.Context, cfg *Config) *ValidatorService {
 	ctx, cancel := context.WithCancel(ctx)
+	validator := &validator{
+		beaconClient:    cfg.BeaconClient,
+		validatorClient: cfg.ValidatorClient,
+	}
 	return &ValidatorService{
-		ctx:    ctx,
-		cancel: cancel,
+		ctx:       ctx,
+		cancel:    cancel,
+		validator: validator,
 	}
 }
 

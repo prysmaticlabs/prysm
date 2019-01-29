@@ -44,7 +44,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	beaconServer := &BeaconServer{
 		ctx: ctx,
-		powChainService: &mockPOWChainService{
+		powChainService: &faultyPOWChainService{
 			chainStartFeed: new(event.Feed),
 		},
 	}

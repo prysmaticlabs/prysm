@@ -15,8 +15,8 @@ import (
 
 var log = logrus.WithField("prefix", "rpc-client")
 
-// Service for an RPCClient to a Beacon Node.
-type Service struct {
+// Client defining a connection for an RPCClient to a Beacon Node.
+type Client struct {
 	ctx      context.Context
 	cancel   context.CancelFunc
 	conn     *grpc.ClientConn
@@ -31,9 +31,9 @@ type Config struct {
 }
 
 // NewRPCClient sets up a new beacon node RPC client connection.
-func NewRPCClient(ctx context.Context, cfg *Config) *Service {
+func NewRPCClient(ctx context.Context, cfg *Config) *Client {
 	ctx, cancel := context.WithCancel(ctx)
-	return &Service{
+	return &Client{
 		ctx:      ctx,
 		cancel:   cancel,
 		endpoint: cfg.Endpoint,
@@ -41,8 +41,8 @@ func NewRPCClient(ctx context.Context, cfg *Config) *Service {
 	}
 }
 
-// Start the grpc connection.
-func (s *Service) Start() {
+// Start the gRPC connection.
+func (s *Client) Start() {
 	log.Info("Starting service")
 	var server grpc.DialOption
 	if s.withCert != "" {
@@ -69,7 +69,7 @@ func (s *Service) Start() {
 }
 
 // Stop the dialed connection.
-func (s *Service) Stop() error {
+func (s *Client) Stop() error {
 	log.Info("Stopping service")
 	if s.conn != nil {
 		return s.conn.Close()
@@ -78,7 +78,7 @@ func (s *Service) Stop() error {
 }
 
 // Status returns error if there is no connection to the beacon chain RPC.
-func (s *Service) Status() error {
+func (s *Client) Status() error {
 	if s.conn == nil {
 		return errors.New("no connection to beacon RPC")
 	}
@@ -89,7 +89,7 @@ func (s *Service) Status() error {
 // an underlying connection object.
 // This wrapper is important because the underlying gRPC connection is
 // only defined after the service .Start() function is called.
-func (s *Service) BeaconServiceClient() pb.BeaconServiceClient {
+func (s *Client) BeaconServiceClient() pb.BeaconServiceClient {
 	return pb.NewBeaconServiceClient(s.conn)
 }
 
@@ -97,7 +97,7 @@ func (s *Service) BeaconServiceClient() pb.BeaconServiceClient {
 // an underlying connection object.
 // This wrapper is important because the underlying gRPC connection is
 // only defined after the service .Start() function is called.
-func (s *Service) ProposerServiceClient() pb.ProposerServiceClient {
+func (s *Client) ProposerServiceClient() pb.ProposerServiceClient {
 	return pb.NewProposerServiceClient(s.conn)
 }
 
@@ -105,7 +105,7 @@ func (s *Service) ProposerServiceClient() pb.ProposerServiceClient {
 // an underlying connection object.
 // This wrapper is important because the underlying gRPC connection is
 // only defined after the service .Start() function is called.
-func (s *Service) AttesterServiceClient() pb.AttesterServiceClient {
+func (s *Client) AttesterServiceClient() pb.AttesterServiceClient {
 	return pb.NewAttesterServiceClient(s.conn)
 }
 
@@ -113,6 +113,6 @@ func (s *Service) AttesterServiceClient() pb.AttesterServiceClient {
 // an underlying connection object.
 // This wrapper is important because the underlying gRPC connection is
 // only defined after the service .Start() function is called.
-func (s *Service) ValidatorServiceClient() pb.ValidatorServiceClient {
+func (s *Client) ValidatorServiceClient() pb.ValidatorServiceClient {
 	return pb.NewValidatorServiceClient(s.conn)
 }
