@@ -16,7 +16,6 @@ import (
 type validator struct {
 	ticker     slotticker.SlotTicker
 	assignment *pb.Assignment
-
 	validatorClient pb.ValidatorServiceClient
 	pubKey          []byte
 }
@@ -38,13 +37,17 @@ func (v *validator) Done() {
 }
 
 // WaitForActivation checks whether the validator pubkey is in the active
-// validator set. If not, this operation will block until an activation is
+// validator set. If not, this operation will block until an activation message is
 // received.
 //
 // WIP - not done.
 func (v *validator) WaitForActivation(ctx context.Context) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.WaitForActivation")
 	defer span.Finish()
+	// First, check if the beacon chain has started.
+	// Then, check if the validator has deposited into the Deposit Contract.
+	// If the validator has deposited, subscribe to a stream receiving the activation status
+	// of the validator until a final ACTIVATED check if received, then this function can return.
 }
 
 // NextSlot emits the next slot number at the start time of that slot.
@@ -99,7 +102,6 @@ func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
 func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.ProposeBlock")
 	defer span.Finish()
-
 }
 
 // AttestToBlockHead
@@ -108,5 +110,4 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.AttestToBlockHead")
 	defer span.Finish()
-
 }
