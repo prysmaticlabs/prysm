@@ -70,38 +70,6 @@ func TestInitialValidatorRegistry(t *testing.T) {
 	}
 }
 
-func TestProposerShardAndIndex(t *testing.T) {
-	state := &pb.BeaconState{
-		ShardCommitteesAtSlots: []*pb.ShardCommitteeArray{
-			{ArrayShardCommittee: []*pb.ShardCommittee{
-				{Shard: 0, Committee: []uint32{0, 1, 2, 3, 4}},
-				{Shard: 1, Committee: []uint32{5, 6, 7, 8, 9}},
-			}},
-			{ArrayShardCommittee: []*pb.ShardCommittee{
-				{Shard: 2, Committee: []uint32{10, 11, 12, 13, 14}},
-				{Shard: 3, Committee: []uint32{15, 16, 17, 18, 19}},
-			}},
-			{ArrayShardCommittee: []*pb.ShardCommittee{
-				{Shard: 4, Committee: []uint32{20, 21, 22, 23, 24}},
-				{Shard: 5, Committee: []uint32{25, 26, 27, 28, 29}},
-			}},
-		}}
-
-	if _, _, err := ProposerShardAndIdx(state, 150); err == nil {
-		t.Error("ProposerShardAndIdx should have failed with invalid lcs")
-	}
-	shard, idx, err := ProposerShardAndIdx(state, 2)
-	if err != nil {
-		t.Fatalf("ProposerShardAndIdx failed with %v", err)
-	}
-	if shard != 4 {
-		t.Errorf("Invalid shard ID. Wanted 4, got %d", shard)
-	}
-	if idx != 2 {
-		t.Errorf("Invalid proposer index. Wanted 2, got %d", idx)
-	}
-}
-
 func TestValidatorIdx(t *testing.T) {
 	var validators []*pb.ValidatorRecord
 	for i := 0; i < 10; i++ {
@@ -117,176 +85,6 @@ func TestValidatorIdx(t *testing.T) {
 	}
 	if idx != 5 {
 		t.Errorf("Incorrect validator index. Wanted 5, Got %v", idx)
-	}
-}
-
-func TestValidatorShard(t *testing.T) {
-	var validators []*pb.ValidatorRecord
-	for i := 0; i < 21; i++ {
-		validators = append(validators, &pb.ValidatorRecord{Pubkey: []byte{}, ExitSlot: params.BeaconConfig().FarFutureSlot})
-	}
-	shardCommittees := []*pb.ShardCommitteeArray{
-		{ArrayShardCommittee: []*pb.ShardCommittee{
-			{Shard: 0, Committee: []uint32{0, 1, 2, 3, 4, 5, 6}},
-			{Shard: 1, Committee: []uint32{7, 8, 9, 10, 11, 12, 13}},
-			{Shard: 2, Committee: []uint32{14, 15, 16, 17, 18, 19}},
-		}},
-	}
-	validators[19].Pubkey = []byte("100")
-	Shard, err := ValidatorShardID([]byte("100"), validators, shardCommittees)
-	if err != nil {
-		t.Fatalf("call ValidatorShard failed: %v", err)
-	}
-	if Shard != 2 {
-		t.Errorf("Incorrect validator shard ID. Wanted 2, Got %v", Shard)
-	}
-
-	validators[19].Pubkey = []byte{}
-	if _, err := ValidatorShardID([]byte("100"), validators, shardCommittees); err == nil {
-		t.Fatalf("ValidatorShard should have failed, there's no validator with pubkey 100")
-	}
-
-	validators[20].Pubkey = []byte("100")
-	if _, err := ValidatorShardID([]byte("100"), validators, shardCommittees); err == nil {
-		t.Fatalf("ValidatorShard should have failed, validator indexed at 20 is not in the committee")
-	}
-}
-
-func TestValidatorSlotAndResponsibility(t *testing.T) {
-	var validators []*pb.ValidatorRecord
-	for i := 0; i < 61; i++ {
-		validators = append(validators, &pb.ValidatorRecord{Pubkey: []byte{}, ExitSlot: params.BeaconConfig().FarFutureSlot})
-	}
-	shardCommittees := []*pb.ShardCommitteeArray{
-		{ArrayShardCommittee: []*pb.ShardCommittee{
-			{Shard: 0, Committee: []uint32{0, 1, 2, 3, 4, 5, 6}},
-			{Shard: 1, Committee: []uint32{7, 8, 9, 10, 11, 12, 13}},
-			{Shard: 2, Committee: []uint32{14, 15, 16, 17, 18, 19}},
-		}},
-		{ArrayShardCommittee: []*pb.ShardCommittee{
-			{Shard: 3, Committee: []uint32{20, 21, 22, 23, 24, 25, 26}},
-			{Shard: 4, Committee: []uint32{27, 28, 29, 30, 31, 32, 33}},
-			{Shard: 5, Committee: []uint32{34, 35, 36, 37, 38, 39}},
-		}},
-		{ArrayShardCommittee: []*pb.ShardCommittee{
-			{Shard: 6, Committee: []uint32{40, 41, 42, 43, 44, 45, 46}},
-			{Shard: 7, Committee: []uint32{47, 48, 49, 50, 51, 52, 53}},
-			{Shard: 8, Committee: []uint32{54, 55, 56, 57, 58, 59}},
-		}},
-	}
-	if _, _, err := ValidatorSlotAndRole([]byte("100"), validators, shardCommittees); err == nil {
-		t.Fatalf("ValidatorSlot should have failed, there's no validator with pubkey 100")
-	}
-
-	validators[59].Pubkey = []byte("100")
-	slot, _, err := ValidatorSlotAndRole([]byte("100"), validators, shardCommittees)
-	if err != nil {
-		t.Fatalf("call ValidatorSlot failed: %v", err)
-	}
-	if slot != 2 {
-		t.Errorf("Incorrect validator slot ID. Wanted 1, Got %v", slot)
-	}
-
-	validators[60].Pubkey = []byte("101")
-	if _, _, err := ValidatorSlotAndRole([]byte("101"), validators, shardCommittees); err == nil {
-		t.Fatalf("ValidatorSlot should have failed, validator indexed at 60 is not in the committee")
-	}
-}
-
-func TestShardCommitteesAtSlot_OK(t *testing.T) {
-	if params.BeaconConfig().EpochLength != 64 {
-		t.Errorf("EpochLength should be 64 for these tests to pass")
-	}
-
-	var ShardCommittees []*pb.ShardCommitteeArray
-	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
-		ShardCommittees = append(ShardCommittees, &pb.ShardCommitteeArray{
-			ArrayShardCommittee: []*pb.ShardCommittee{
-				{Shard: i},
-			},
-		})
-	}
-
-	state := &pb.BeaconState{
-		ShardCommitteesAtSlots: ShardCommittees,
-	}
-
-	tests := []struct {
-		slot          uint64
-		stateSlot     uint64
-		expectedShard uint64
-	}{
-		{
-			slot:          0,
-			stateSlot:     0,
-			expectedShard: 0,
-		},
-		{
-			slot:          1,
-			stateSlot:     5,
-			expectedShard: 1,
-		},
-		{
-			stateSlot:     1024,
-			slot:          1024,
-			expectedShard: 64 - 0,
-		}, {
-			stateSlot:     2048,
-			slot:          2000,
-			expectedShard: 64 - 48,
-		}, {
-			stateSlot:     2048,
-			slot:          2058,
-			expectedShard: 64 + 10,
-		},
-	}
-
-	for _, tt := range tests {
-		state.Slot = tt.stateSlot
-
-		result, err := ShardCommitteesAtSlot(state, tt.slot)
-		if err != nil {
-			t.Errorf("Failed to get shard and committees at slot: %v", err)
-		}
-
-		if result.ArrayShardCommittee[0].Shard != tt.expectedShard {
-			t.Errorf(
-				"Result shard was an unexpected value. Wanted %d, got %d",
-				tt.expectedShard,
-				result.ArrayShardCommittee[0].Shard,
-			)
-		}
-	}
-}
-
-func TestShardCommitteesAtSlot_OutOfBounds(t *testing.T) {
-	if params.BeaconConfig().EpochLength != 64 {
-		t.Errorf("EpochLength should be 64 for these tests to pass")
-	}
-
-	state := &pb.BeaconState{
-		Slot: params.BeaconConfig().EpochLength,
-	}
-
-	tests := []struct {
-		expectedErr string
-		slot        uint64
-	}{
-		{
-			expectedErr: "slot 5000 out of bounds: 0 <= slot < 128",
-			slot:        5000,
-		},
-		{
-			expectedErr: "slot 129 out of bounds: 0 <= slot < 128",
-			slot:        129,
-		},
-	}
-
-	for _, tt := range tests {
-		_, err := ShardCommitteesAtSlot(state, tt.slot)
-		if err != nil && err.Error() != tt.expectedErr {
-			t.Fatalf("Expected error \"%s\" got \"%v\"", tt.expectedErr, err)
-		}
 	}
 }
 
@@ -324,7 +122,6 @@ func TestTotalEffectiveBalance(t *testing.T) {
 }
 
 func TestIsActiveValidator(t *testing.T) {
-
 	tests := []struct {
 		a uint64
 		b bool
@@ -362,7 +159,7 @@ func TestGetActiveValidatorRecord(t *testing.T) {
 		ValidatorRegistry: inputValidators,
 	}
 
-	validators := ActiveValidator(state, []uint32{1, 3})
+	validators := ActiveValidators(state, []uint32{1, 3})
 
 	if !reflect.DeepEqual(outputValidators, validators) {
 		t.Errorf("Active validators don't match. Wanted: %v, Got: %v", outputValidators, validators)
