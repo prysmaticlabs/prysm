@@ -21,6 +21,7 @@ type BeaconServer struct {
 	attestationService  attestationService
 	incomingAttestation chan *pbp2p.Attestation
 	canonicalStateChan  chan *pbp2p.BeaconState
+	chainStartChan      chan time.Time
 }
 
 // WaitForChainStart queries the logs of the Deposit Contract in order to verify the beacon chain
@@ -40,12 +41,11 @@ func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconSer
 		return stream.Send(res)
 	}
 
-	chainStartChan := make(chan time.Time)
-	sub := bs.powChainService.ChainStartFeed().Subscribe(chainStartChan)
+	sub := bs.powChainService.ChainStartFeed().Subscribe(bs.chainStartChan)
 	defer sub.Unsubscribe()
 	for {
 		select {
-		case chainStartTime := <-chainStartChan:
+		case chainStartTime := <-bs.chainStartChan:
 			log.Info("Sending ChainStart log and genesis time to connected validator clients")
 			res := &pb.ChainStartResponse{
 				Started:     true,

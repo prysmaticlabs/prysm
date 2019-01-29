@@ -7,7 +7,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -35,7 +34,6 @@ type attestationService interface {
 }
 
 type powChainService interface {
-	LatestBlockHash() common.Hash
 	HasChainStartLogOccurred() (bool, time.Time, error)
 	ChainStartFeed() *event.Feed
 }
@@ -124,6 +122,7 @@ func (s *Service) Start() {
 		attestationService:  s.attestationService,
 		incomingAttestation: s.incomingAttestation,
 		canonicalStateChan:  s.canonicalStateChan,
+		chainStartChan:      make(chan time.Time, 1),
 	}
 	proposerServer := &ProposerServer{
 		beaconDB:           s.beaconDB,
