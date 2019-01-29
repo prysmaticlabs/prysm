@@ -110,7 +110,7 @@ message SlotResponsibilityResponse {
 }
 
 message IndexResponse {
-    uint32 index = 1;
+    uint64 index = 1;
 }
 
 message ShardIDResponse {

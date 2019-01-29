@@ -1,0 +1,15 @@
+    if slashable_vote.custody_bitfield != b'\x00' * len(slashable_vote.custody_bitfield):  # [TO BE REMOVED IN PHASE 1]
+        return False
+
+    if len(slashable_vote.validator_indices) == 0:
+        return False
+
+    for i in range(len(slashable_vote.validator_indices) - 1):
+        if slashable_vote.validator_indices[i] >= slashable_vote.validator_indices[i + 1]:
+            return False
+
+    if not verify_bitfield(slashable_vote.custody_bitfield, len(slashable_vote.validator_indices)):
+        return False
+
+    if len(slashable_vote.validator_indices) > MAX_INDICES_PER_SLASHABLE_VOTE:
+        return False

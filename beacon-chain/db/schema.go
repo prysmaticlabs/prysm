@@ -30,12 +30,12 @@ var (
 )
 
 // encodeSlotNumber encodes a slot number as big endian uint32.
-func encodeSlotNumber(number uint32) []byte {
+func encodeSlotNumber(number uint64) []byte {
 	return bytes.Bytes8(number)
 }
 
 // decodeSlotNumber returns a slot number which has been
 // encoded as a big endian uint32 in the byte array.
-func decodeToSlotNumber(bytearray []byte) uint32 {
+func decodeToSlotNumber(bytearray []byte) uint64 {
 	return bytes.FromBytes8(bytearray)
 }

@@ -86,8 +86,8 @@ func (d *CleanupService) cleanDB() {
 	}
 }
 
-func (d *CleanupService) cleanBlockVoteCache(latestFinalizedSlot uint32) error {
-	var lastCleanedFinalizedSlot uint32
+func (d *CleanupService) cleanBlockVoteCache(latestFinalizedSlot uint64) error {
+	var lastCleanedFinalizedSlot uint64
 	var err error
 
 	lastCleanedFinalizedSlot, err = d.beaconDB.CleanedFinalizedSlot()

@@ -6,6 +6,7 @@ package blocks
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -14,6 +15,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slices"
 	"github.com/prysmaticlabs/prysm/shared/trie"
@@ -252,10 +254,10 @@ func verifyCasperSlashing(slashing *pb.CasperSlashing) error {
 	slashableVoteData1Attestation := slashableVote1.Data
 	slashableVoteData2Attestation := slashableVote2.Data
 
-	if err := verifySlashableVoteData(slashableVote1); err != nil {
+	if err := verifySlashableVote(slashableVote1); err != nil {
 		return fmt.Errorf("could not verify casper slashable vote data 1: %v", err)
 	}
-	if err := verifySlashableVoteData(slashableVote2); err != nil {
+	if err := verifySlashableVote(slashableVote2); err != nil {
 		return fmt.Errorf("could not verify casper slashable vote data 2: %v", err)
 	}
 
@@ -309,17 +311,9 @@ func verifyCasperSlashing(slashing *pb.CasperSlashing) error {
 }
 
 func casperSlashingPenalizedIndices(slashing *pb.CasperSlashing) ([]uint64, error) {
-	slashableVoteData1 := slashing.SlashableVote_1
-	slashableVoteData2 := slashing.SlashableVote_2
-	slashableVoteData1Indices := append(
-		slashableVoteData1.CustodyBit_0Indices,
-		slashableVoteData1.CustodyBit_1Indices...,
-	)
-	slashableVoteData2Indices := append(
-		slashableVoteData2.CustodyBit_0Indices,
-		slashableVoteData2.CustodyBit_1Indices...,
-	)
-	indicesIntersection := slices.Intersection(slashableVoteData1Indices, slashableVoteData2Indices)
+	indicesIntersection := slices.Intersection(
+		slashing.SlashableVote_1.ValidatorIndices,
+		slashing.SlashableVote_2.ValidatorIndices)
 	if len(indicesIntersection) < 1 {
 		return nil, fmt.Errorf(
 			"expected intersection of vote indices to be non-empty: %v",
@@ -329,16 +323,26 @@ func casperSlashingPenalizedIndices(slashing *pb.CasperSlashing) ([]uint64, erro
 	return indicesIntersection, nil
 }
 
-func verifySlashableVoteData(votes *pb.SlashableVote) error {
-	totalCustody := len(votes.CustodyBit_0Indices) +
-		len(votes.CustodyBit_1Indices)
-	if uint64(totalCustody) > params.BeaconConfig().MaxCasperVotes {
-		return fmt.Errorf(
-			"exceeded allowed casper votes (%d), received %d",
-			params.BeaconConfig().MaxCasperVotes,
-			totalCustody,
-		)
+func verifySlashableVote(votes *pb.SlashableVote) error {
+	emptyCustody := make([]byte, len(votes.CustodyBitfield))
+	if bytes.Equal(votes.CustodyBitfield, emptyCustody) {
+		return errors.New("custody bit field can't all be 0s")
 	}
+	if len(votes.ValidatorIndices) == 0 {
+		return errors.New("empty validator indices")
+	}
+	for i := 0; i < len(votes.ValidatorIndices); i++ {
+		if votes.ValidatorIndices[i] >= votes.ValidatorIndices[i+1] {
+			return errors.New("validator indices not in descending order")
+		}
+	}
+	if len(votes.CustodyBitfield) != mathutil.CeilDiv8(len(votes.ValidatorIndices)) {
+		return errors.New("custody bit field don't match validator indices length")
+	}
+	if uint64(len(votes.ValidatorIndices)) > config.MaxIndicesPerSlashableVote {
+		return errors.New("validator indices length exceeded max indices per slashable vote")
+	}
+
 	// TODO(#258): Implement BLS verify multiple.
 	//  pubs = aggregate_pubkeys for each validator in registry for poc0 and poc1
 	//    indices

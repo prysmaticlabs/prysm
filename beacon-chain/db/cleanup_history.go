@@ -7,8 +7,8 @@ import (
 )
 
 // CleanedFinalizedSlot returns the most recent finalized slot when we did a DB clean up.
-func (db *BeaconDB) CleanedFinalizedSlot() (uint32, error) {
-	var lastFinalizedSlot uint32
+func (db *BeaconDB) CleanedFinalizedSlot() (uint64, error) {
+	var lastFinalizedSlot uint64
 
 	err := db.view(func(tx *bolt.Tx) error {
 		cleanupHistory := tx.Bucket(cleanupHistoryBucket)
@@ -27,7 +27,7 @@ func (db *BeaconDB) CleanedFinalizedSlot() (uint32, error) {
 }
 
 // SaveCleanedFinalizedSlot writes the slot when we did DB cleanup so we can start from here in future cleanup tasks.
-func (db *BeaconDB) SaveCleanedFinalizedSlot(slot uint32) error {
+func (db *BeaconDB) SaveCleanedFinalizedSlot(slot uint64) error {
 	slotEnc := encodeSlotNumber(slot)
 
 	err := db.update(func(tx *bolt.Tx) error {

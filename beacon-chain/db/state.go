@@ -31,7 +31,7 @@ func (db *BeaconDB) InitializeState() error {
 		}
 		deposits[i] = &pb.Deposit{DepositData: depositData}
 	}
-	genesisTime := uint32(params.BeaconConfig().GenesisTime.Unix())
+	genesisTime := uint64(params.BeaconConfig().GenesisTime.Unix())
 	beaconState, err := state.InitialBeaconState(deposits, genesisTime, nil)
 	if err != nil {
 		return err
