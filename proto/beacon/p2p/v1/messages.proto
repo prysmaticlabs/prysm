@@ -81,3 +81,55 @@ message AttestationResponse {
   bytes hash = 1;
   Attestation attestation = 2;
 }
+
+message ProposerSlashingAnnounce {
+  bytes hash = 1;
+}
+
+message ProposerSlashingRequest {
+  bytes hash = 1;
+}
+
+message ProposerSlashingRespond {
+  bytes hash = 1;
+  ProposerSlashing proposer_slashing = 2;
+}
+
+message CasperSlashingAnnounce {
+  bytes hash = 1;
+}
+
+message CasperSlashingRequest {
+  bytes hash = 1;
+}
+
+message CasperSlashingRespond {
+  bytes hash = 1;
+  CasperSlashing casper_slashing = 2;
+}
+
+message DepositAnnounce {
+  bytes hash = 1;
+}
+
+message DepositRequest {
+  bytes hash = 1;
+}
+
+message DepositRespond {
+  bytes hash = 1;
+  Deposit deposit = 2;
+}
+
+message ExitAnnounce {
+  bytes hash = 1;
+}
+
+message ExitRequest {
+  bytes hash = 1;
+}
+
+message ExitRespond {
+  bytes hash = 1;
+  Exit exit = 2;
+}
