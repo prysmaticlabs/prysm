@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"testing"
 	"time"
@@ -68,8 +69,11 @@ func TestValidatorEpochAssignments(t *testing.T) {
 	genesisTime := params.BeaconConfig().GenesisTime.Unix()
 	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
+		var pubKey [48]byte
+		copy(pubKey[:], []byte(strconv.Itoa(i)))
+		fmt.Println(len(pubKey))
 		depositInput := &pbp2p.DepositInput{
-			Pubkey:                 []byte(strconv.Itoa(i)),
+			Pubkey:                 pubKey[:],
 			RandaoCommitmentHash32: []byte{0},
 		}
 		depositData, err := b.EncodeDepositData(
@@ -94,9 +98,11 @@ func TestValidatorEpochAssignments(t *testing.T) {
 	validatorServer := &ValidatorServer{
 		beaconDB: db,
 	}
+	var pubKey [48]byte
+	copy(pubKey[:], []byte("0"))
 	req := &pb.ValidatorEpochAssignmentsRequest{
 		EpochStart: 0,
-		PublicKey:  []byte{'0'},
+		PublicKey:  pubKey[:],
 	}
 	res, err := validatorServer.ValidatorEpochAssignments(context.Background(), req)
 	if err != nil {

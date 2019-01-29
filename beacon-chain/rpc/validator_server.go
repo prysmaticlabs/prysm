@@ -43,6 +43,9 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 	ctx context.Context,
 	req *pb.ValidatorEpochAssignmentsRequest,
 ) (*pb.ValidatorEpochAssignmentsResponse, error) {
+	if len(req.PublicKey) != 48 {
+		return nil, fmt.Errorf("expected 48 byte public key, received %d", len(req.PublicKey))
+	}
 	beaconState, err := vs.beaconDB.State()
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
