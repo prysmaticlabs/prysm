@@ -11,7 +11,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -30,7 +29,7 @@ func InitialValidatorRegistry() []*pb.ValidatorRecord {
 		pubkey := hashutil.Hash([]byte{byte(i)})
 		validators[i] = &pb.ValidatorRecord{
 			ExitSlot:               config.FarFutureSlot,
-			Balance:                config.MaxDepositInGwei,
+			Balance:                config.MaxDeposit,
 			Pubkey:                 pubkey[:],
 			RandaoCommitmentHash32: randaoReveal[:],
 			RandaoLayers:           1,
@@ -59,49 +58,16 @@ func ActiveValidatorIndices(validators []*pb.ValidatorRecord, slot uint64) []uin
 	return indices
 }
 
-// ActiveValidator returns the active validator records in a list.
+// ActiveValidators returns the active validator records in a list.
 //
 // Spec pseudocode definition:
 //   [state.validator_registry[i] for i in get_active_validator_indices(state.validator_registry)]
-func ActiveValidator(state *pb.BeaconState, validatorIndices []uint32) []*pb.ValidatorRecord {
+func ActiveValidators(state *pb.BeaconState, validatorIndices []uint32) []*pb.ValidatorRecord {
 	activeValidators := make([]*pb.ValidatorRecord, 0, len(validatorIndices))
 	for _, validatorIndex := range validatorIndices {
 		activeValidators = append(activeValidators, state.ValidatorRegistry[validatorIndex])
 	}
 	return activeValidators
-}
-
-// ShardCommitteesAtSlot returns the shard and committee list for a given
-// slot within the range of 2 * epoch length within the same 2 epoch slot
-// window as the state slot.
-//
-// Spec pseudocode definition:
-//   def get_shard_committees_at_slot(state: BeaconState, slot: int) -> List[ShardCommittee]:
-//     """
-//     Returns the ``ShardCommittee`` for the ``slot``.
-//     """
-//     earliest_slot_in_array = state.Slot - (state.Slot % EPOCH_LENGTH) - EPOCH_LENGTH
-//     assert earliest_slot_in_array <= slot < earliest_slot_in_array + EPOCH_LENGTH * 2
-//     return state.shard_committees_at_slots[slot - earliest_slot_in_array]
-func ShardCommitteesAtSlot(state *pb.BeaconState, slot uint64) (*pb.ShardCommitteeArray, error) {
-	epochLength := config.EpochLength
-	var earliestSlot uint64
-
-	// If the state slot is less than epochLength, then the earliestSlot would
-	// result in a negative number. Therefore we should default to
-	// earliestSlot = 0 in this case.
-	if state.Slot > epochLength {
-		earliestSlot = state.Slot - (state.Slot % epochLength) - epochLength
-	}
-
-	if slot < earliestSlot || slot >= earliestSlot+(epochLength*2) {
-		return nil, fmt.Errorf("slot %d out of bounds: %d <= slot < %d",
-			slot,
-			earliestSlot,
-			earliestSlot+(epochLength*2),
-		)
-	}
-	return state.ShardCommitteesAtSlots[slot-earliestSlot], nil
 }
 
 // BeaconProposerIdx returns the index of the proposer of the block at a
@@ -124,31 +90,6 @@ func BeaconProposerIdx(state *pb.BeaconState, slot uint64) (uint32, error) {
 	return firstCommittee[slot%uint64(len(firstCommittee))], nil
 }
 
-// BeaconProposerShard returns the shard of the proposer of a block at the
-// given slot.
-func BeaconProposerShard(state *pb.BeaconState, slot uint64) (uint64, error) {
-	committeeArray, err := CrosslinkCommitteesAtSlot(state, slot)
-	if err != nil {
-		return 0, err
-	}
-
-	return committeeArray[0].Shard, nil
-}
-
-// ProposerShardAndIdx returns the index and the shardID of a proposer from a given slot.
-func ProposerShardAndIdx(state *pb.BeaconState, slot uint64) (uint64, uint64, error) {
-	slotCommittees, err := ShardCommitteesAtSlot(
-		state,
-		slot)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	proposerShardID := slotCommittees.ArrayShardCommittee[0].Shard
-	proposerIdx := slot % uint64(len(slotCommittees.ArrayShardCommittee[0].Committee))
-	return proposerShardID, proposerIdx, nil
-}
-
 // ValidatorIdx returns the idx of the validator given an input public key.
 func ValidatorIdx(pubKey []byte, validators []*pb.ValidatorRecord) (uint32, error) {
 
@@ -159,51 +100,6 @@ func ValidatorIdx(pubKey []byte, validators []*pb.ValidatorRecord) (uint32, erro
 	}
 
 	return 0, fmt.Errorf("can't find validator index for public key %#x", pubKey)
-}
-
-// ValidatorShardID returns the shard ID of the validator currently participates in.
-func ValidatorShardID(pubKey []byte, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardCommitteeArray) (uint64, error) {
-	idx, err := ValidatorIdx(pubKey, validators)
-	if err != nil {
-		return 0, err
-	}
-
-	for _, slotCommittee := range shardCommittees {
-		for _, committee := range slotCommittee.ArrayShardCommittee {
-			for _, validator := range committee.Committee {
-				if validator == idx {
-					return committee.Shard, nil
-				}
-			}
-		}
-	}
-
-	return 0, fmt.Errorf("can't find shard ID for validator with public key %#x", pubKey)
-}
-
-// ValidatorSlotAndRole returns a validator's assingned slot number
-// and whether it should act as an attester or proposer.
-func ValidatorSlotAndRole(pubKey []byte, validators []*pb.ValidatorRecord, shardCommittees []*pb.ShardCommitteeArray) (uint64, pbrpc.ValidatorRole, error) {
-	idx, err := ValidatorIdx(pubKey, validators)
-	if err != nil {
-		return 0, pbrpc.ValidatorRole_UNKNOWN, err
-	}
-
-	for slot, slotCommittee := range shardCommittees {
-		for i, committee := range slotCommittee.ArrayShardCommittee {
-			for v, validator := range committee.Committee {
-				if validator != idx {
-					continue
-				}
-				if i == 0 && v == slot%len(committee.Committee) {
-					return uint64(slot), pbrpc.ValidatorRole_PROPOSER, nil
-				}
-
-				return uint64(slot), pbrpc.ValidatorRole_ATTESTER, nil
-			}
-		}
-	}
-	return 0, pbrpc.ValidatorRole_UNKNOWN, fmt.Errorf("can't find slot number for validator with public key %#x", pubKey)
 }
 
 // TotalEffectiveBalance returns the total deposited amount at stake in Gwei
@@ -272,8 +168,8 @@ func NewRegistryDeltaChainTip(
 //     """
 //     return min(state.validator_balances[idx], MAX_DEPOSIT * GWEI_PER_ETH)
 func EffectiveBalance(state *pb.BeaconState, idx uint32) uint64 {
-	if state.ValidatorBalances[idx] > config.MaxDepositInGwei {
-		return config.MaxDepositInGwei
+	if state.ValidatorBalances[idx] > config.MaxDeposit {
+		return config.MaxDeposit
 	}
 	return state.ValidatorBalances[idx]
 }
@@ -664,7 +560,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	for idx, validator := range state.ValidatorRegistry {
 		// Activate validators within the allowable balance churn.
 		if validator.ActivationSlot > state.Slot+config.EntryExitDelay &&
-			state.ValidatorBalances[idx] >= config.MaxDepositInGwei {
+			state.ValidatorBalances[idx] >= config.MaxDeposit {
 			balChurn += EffectiveBalance(state, uint32(idx))
 			if balChurn > maxBalChurn {
 				break
@@ -776,10 +672,10 @@ func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 //        total_balance // (2 * MAX_BALANCE_CHURN_QUOTIENT))
 func maxBalanceChurn(totalBalance uint64) uint64 {
 	maxBalanceChurn := totalBalance / 2 * config.MaxBalanceChurnQuotient
-	if maxBalanceChurn > config.MaxDepositInGwei {
+	if maxBalanceChurn > config.MaxDeposit {
 		return maxBalanceChurn
 	}
-	return config.MaxDepositInGwei
+	return config.MaxDeposit
 }
 
 // eligibleToExit checks if a validator is eligible to exit whether it was

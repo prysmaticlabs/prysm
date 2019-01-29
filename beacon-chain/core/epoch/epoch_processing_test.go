@@ -284,8 +284,8 @@ func TestProcessEjectionsOk(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 1,
 		ValidatorBalances: []uint64{
-			config.EjectionBalanceInGwei - 1,
-			config.EjectionBalanceInGwei + 1},
+			config.EjectionBalance - 1,
+			config.EjectionBalance + 1},
 		LatestPenalizedBalances: []uint64{0},
 		ValidatorRegistry: []*pb.ValidatorRecord{
 			{ExitSlot: config.FarFutureSlot},

@@ -16,6 +16,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/trie"
 	"github.com/sirupsen/logrus"
@@ -56,6 +57,7 @@ type Web3Service struct {
 	logChan                chan gethTypes.Log
 	endpoint               string
 	depositContractAddress common.Address
+	chainStartFeed         *event.Feed
 	reader                 Reader
 	logger                 bind.ContractFilterer
 	blockNumber            *big.Int    // the latest ETH1.0 chain blockNumber.
@@ -105,6 +107,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		blockNumber:            nil,
 		blockHash:              common.BytesToHash([]byte{}),
 		depositContractAddress: config.DepositContract,
+		chainStartFeed:         new(event.Feed),
 		client:                 config.Client,
 		reader:                 config.Reader,
 		logger:                 config.Logger,
@@ -128,6 +131,12 @@ func (w *Web3Service) Stop() error {
 	return nil
 }
 
+// ChainStartFeed returns a feed that is written to
+// whenever the deposit contract fires a ChainStart log.
+func (w *Web3Service) ChainStartFeed() *event.Feed {
+	return w.chainStartFeed
+}
+
 // Status always returns nil.
 // TODO(1204): Add service health checks.
 func (w *Web3Service) Status() error {
@@ -137,7 +146,6 @@ func (w *Web3Service) Status() error {
 // initDataFromVRC calls the vrc contract and finds the deposit count
 // and deposit root.
 func (w *Web3Service) initDataFromVRC() error {
-
 	root, err := w.vrcCaller.GetDepositRoot(&bind.CallOpts{})
 	if err != nil {
 		return fmt.Errorf("could not retrieve deposit root %v", err)
@@ -151,7 +159,6 @@ func (w *Web3Service) initDataFromVRC() error {
 
 // run subscribes to all the services for the ETH1.0 chain.
 func (w *Web3Service) run(done <-chan struct{}) {
-
 	if err := w.initDataFromVRC(); err != nil {
 		log.Errorf("Unable to retrieve data from VRC %v", err)
 		return
@@ -225,7 +232,6 @@ func (w *Web3Service) ProcessLog(VRClog gethTypes.Log) {
 // the ETH1.0 chain by trying to ascertain which participant deposited
 // in the contract.
 func (w *Web3Service) ProcessDepositLog(VRClog gethTypes.Log) {
-
 	merkleRoot, depositData, MerkleTreeIndex, err := contracts.UnpackDepositLogData(VRClog.Data)
 	if err != nil {
 		log.Errorf("Could not unpack log %v", err)
@@ -271,6 +277,7 @@ func (w *Web3Service) ProcessChainStartLog(VRClog gethTypes.Log) {
 	log.WithFields(logrus.Fields{
 		"ChainStartTime": chainStartTime,
 	}).Info("Minimum Number of Validators Reached for beacon-chain to start")
+	w.chainStartFeed.Send(chainStartTime)
 }
 
 // saveInTrie saves in the in-memory deposit trie.

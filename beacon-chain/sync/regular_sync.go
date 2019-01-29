@@ -7,7 +7,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	att "github.com/prysmaticlabs/prysm/beacon-chain/core/attestations"
-	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
@@ -225,22 +224,6 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 
 	if block.Slot < beaconState.FinalizedSlot {
 		log.Debug("Discarding received block with a slot number smaller than the last finalized slot")
-		return
-	}
-
-	// Verify attestation coming from proposer then forward block to the subscribers.
-	proposerShardID, err := v.BeaconProposerShard(
-		beaconState,
-		block.Slot,
-	)
-	if err != nil {
-		log.Errorf("Failed to get proposer shard ID: %v", err)
-		return
-	}
-
-	// TODO(#258): stubbing public key with empty 32 bytes.
-	if err := att.VerifyProposerAttestation(response.Attestation.Data, [32]byte{}, proposerShardID); err != nil {
-		log.Errorf("Failed to verify proposer attestation: %v", err)
 		return
 	}
 
