@@ -62,7 +62,7 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 
 	genesisTime := uint64(99999)
 	processedPowReceiptRoot := []byte{'A', 'B', 'C'}
-	maxDeposit := params.BeaconConfig().MaxDepositInGwei
+	maxDeposit := params.BeaconConfig().MaxDeposit
 	var deposits []*pb.Deposit
 	for i := 0; i < depositsForChainStart; i++ {
 		depositData, err := b.EncodeDepositData(

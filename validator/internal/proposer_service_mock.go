@@ -71,3 +71,21 @@ func (mr *MockProposerServiceClientMockRecorder) ProposeBlock(arg0, arg1 interfa
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposeBlock", reflect.TypeOf((*MockProposerServiceClient)(nil).ProposeBlock), varargs...)
 }
+
+// ProposerIndex mocks base method
+func (m *MockProposerServiceClient) ProposerIndex(arg0 context.Context, arg1 *v10.ProposerIndexRequest, arg2 ...grpc.CallOption) (*v10.ProposerIndexResponse, error) {
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ProposerIndex", varargs...)
+	ret0, _ := ret[0].(*v10.ProposerIndexResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ProposerIndex indicates an expected call of ProposerIndex
+func (mr *MockProposerServiceClientMockRecorder) ProposerIndex(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposerIndex", reflect.TypeOf((*MockProposerServiceClient)(nil).ProposerIndex), varargs...)
+}

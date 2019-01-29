@@ -350,7 +350,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 	validatorRegistry := validators.InitialValidatorRegistry()
 	validatorBalances := make([]uint64, len(validatorRegistry))
 	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = config.MaxDepositInGwei
+		validatorBalances[i] = config.MaxDeposit
 	}
 
 	var attestations []*pb.PendingAttestationRecord
@@ -396,7 +396,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 }
 
 func TestProcessEpoch_InactiveConditions(t *testing.T) {
-	defaultBalance := config.MaxDepositInGwei
+	defaultBalance := config.MaxDeposit
 
 	validatorRegistry := []*pb.ValidatorRecord{
 		{ExitSlot: config.FarFutureSlot}, {ExitSlot: config.FarFutureSlot},
@@ -555,7 +555,7 @@ func TestProcessEpoch_CantProcessEjections(t *testing.T) {
 	validatorRegistries := validators.InitialValidatorRegistry()
 	validatorBalances := make([]uint64, len(validatorRegistries))
 	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = config.MaxDepositInGwei
+		validatorBalances[i] = config.MaxDeposit
 	}
 	var randaoHashes [][]byte
 	for i := uint64(0); i < 4*config.EpochLength; i++ {
@@ -567,7 +567,7 @@ func TestProcessEpoch_CantProcessEjections(t *testing.T) {
 	}
 	exitSlot := 4*config.EpochLength + 1
 	validatorRegistries[0].ExitSlot = exitSlot
-	validatorBalances[0] = config.EjectionBalanceInGwei - 1
+	validatorBalances[0] = config.EjectionBalance - 1
 	state := &pb.BeaconState{
 		Slot:                     config.EpochLength,
 		ValidatorBalances:        validatorBalances,

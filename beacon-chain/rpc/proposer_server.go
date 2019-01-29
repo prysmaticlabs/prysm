@@ -6,6 +6,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -22,6 +23,28 @@ type ProposerServer struct {
 	powChainService    powChainService
 	canonicalStateChan chan *pbp2p.BeaconState
 	enablePOWChain     bool
+}
+
+// ProposerIndex sends a response to the client which returns the proposer index for a given slot. Validators
+// are shuffled and assigned slots to attest/propose to. This method will look for the validator that is assigned
+// to propose a beacon block at the given slot.
+func (ps *ProposerServer) ProposerIndex(ctx context.Context, req *pb.ProposerIndexRequest) (*pb.ProposerIndexResponse, error) {
+	beaconState, err := ps.beaconDB.State()
+	if err != nil {
+		return nil, fmt.Errorf("could not get beacon state: %v", err)
+	}
+
+	proposerIndex, err := v.BeaconProposerIdx(
+		beaconState,
+		req.SlotNumber,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("could not get index of previous proposer: %v", err)
+	}
+
+	return &pb.ProposerIndexResponse{
+		Index: proposerIndex,
+	}, nil
 }
 
 // ProposeBlock is called by a proposer in a sharding validator and a full beacon node
