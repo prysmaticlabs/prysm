@@ -228,8 +228,7 @@ func TotalBalance(
 //    If multiple attestations are applicable, the attestation with
 //    lowest `slot_included` is considered.
 func InclusionSlot(state *pb.BeaconState, validatorIndex uint32) (uint64, error) {
-	var attestationsIncluded []*pb.PendingAttestationRecord
-
+	lowestSlotIncluded := uint64(1 << 63)
 	for _, attestation := range state.LatestAttestations {
 		participatedValidators, err := validators.AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)
 		if err != nil {
@@ -237,22 +236,15 @@ func InclusionSlot(state *pb.BeaconState, validatorIndex uint32) (uint64, error)
 		}
 		for _, index := range participatedValidators {
 			if index == validatorIndex {
-				attestationsIncluded = append(attestationsIncluded, attestation)
+				if attestation.SlotIncluded < lowestSlotIncluded {
+					lowestSlotIncluded = attestation.SlotIncluded
+				}
 			}
 		}
 	}
-
-	if len(attestationsIncluded) == 0 {
+	if lowestSlotIncluded == 1<<63 {
 		return 0, fmt.Errorf("could not find inclusion slot for validator index %d", validatorIndex)
 	}
-
-	lowestSlotIncluded := attestationsIncluded[0].SlotIncluded
-	for _, attestationIncluded := range attestationsIncluded[1:] {
-		if lowestSlotIncluded > attestationIncluded.SlotIncluded {
-			lowestSlotIncluded = attestationIncluded.SlotIncluded
-		}
-	}
-
 	return lowestSlotIncluded, nil
 }
 
