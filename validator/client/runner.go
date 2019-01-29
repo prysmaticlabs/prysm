@@ -34,16 +34,14 @@ func run(ctx context.Context, v Validator) {
 	v.Initialize(ctx)
 	defer v.Done()
 	v.WaitForActivation(ctx)
-
+	span, ctx := opentracing.StartSpanFromContext(ctx, "processSlot")
+	defer span.Finish()
 	for {
 		select {
 		case <-ctx.Done():
 			log.Info("Context cancelled, stopping validator")
 			return // Exit if context is cancelled.
 		case slot := <-v.NextSlot():
-			span, ctx := opentracing.StartSpanFromContext(ctx, "processSlot")
-			defer span.Finish()
-
 			if err := v.UpdateAssignments(ctx, slot); err != nil {
 				log.WithField("error", err).Error("Failed to update assignments")
 				continue

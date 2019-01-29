@@ -13,6 +13,9 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+func TestWaitForChainStart(t *testing.T) {
+}
+
 func TestLatestAttestationContextClosed(t *testing.T) {
 	hook := logTest.NewGlobal()
 	mockAttestationService := &mockAttestationService{}

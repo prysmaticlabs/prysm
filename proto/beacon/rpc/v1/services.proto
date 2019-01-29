@@ -7,11 +7,10 @@ import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 
 service BeaconService {
-    // CanonicalHead can be called on demand to fetch the current, head block of a
-    // beacon node.
+    rpc WaitForChainStart(google.protobuf.Empty) returns (stream ChainStartResponse);
+    // CanonicalHead can be called on demand to fetch the current, head block of a beacon node.
     rpc CanonicalHead(google.protobuf.Empty) returns (ethereum.beacon.p2p.v1.BeaconBlock);
-    // LatestAttestation streams the latest aggregated attestation to connected
-    // validator clients.
+    // LatestAttestation streams the latest aggregated attestation to connected validator clients.
     rpc LatestAttestation(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.Attestation);
 }
 
@@ -28,6 +27,11 @@ service ProposerService {
 service ValidatorService {
     rpc ValidatorIndex(ValidatorIndexRequest) returns (ValidatorIndexResponse);
     rpc ValidatorEpochAssignments(ValidatorEpochAssignmentsRequest) returns (ValidatorEpochAssignmentsResponse);
+}
+
+message ChainStartResponse {
+    bool started = 1;
+    uint64 genesis_time = 2;
 }
 
 message ProposeRequest {

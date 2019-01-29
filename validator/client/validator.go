@@ -14,8 +14,8 @@ import (
 //
 // WIP - not done.
 type validator struct {
-	ticker     slotticker.SlotTicker
-	assignment *pb.Assignment
+	ticker          slotticker.SlotTicker
+	assignment      *pb.Assignment
 	validatorClient pb.ValidatorServiceClient
 	pubKey          []byte
 }

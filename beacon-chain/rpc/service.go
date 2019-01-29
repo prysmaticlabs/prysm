@@ -36,6 +36,8 @@ type attestationService interface {
 
 type powChainService interface {
 	LatestBlockHash() common.Hash
+	HasChainStartLogOccurred() (bool, time.Time, error)
+	ChainStartFeed() *event.Feed
 }
 
 // Service defining an RPC server for a beacon node.
@@ -54,7 +56,6 @@ type Service struct {
 	canonicalBlockChan    chan *pbp2p.BeaconBlock
 	canonicalStateChan    chan *pbp2p.BeaconState
 	incomingAttestation   chan *pbp2p.Attestation
-	enablePOWChain        bool
 	slotAlignmentDuration time.Duration
 }
 
@@ -68,7 +69,6 @@ type Config struct {
 	ChainService       chainService
 	POWChainService    powChainService
 	AttestationService attestationService
-	EnablePOWChain     bool
 }
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
@@ -89,7 +89,6 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		canonicalBlockChan:    make(chan *pbp2p.BeaconBlock, cfg.SubscriptionBuf),
 		canonicalStateChan:    make(chan *pbp2p.BeaconState, cfg.SubscriptionBuf),
 		incomingAttestation:   make(chan *pbp2p.Attestation, cfg.SubscriptionBuf),
-		enablePOWChain:        cfg.EnablePOWChain,
 	}
 }
 
@@ -121,6 +120,7 @@ func (s *Service) Start() {
 	beaconServer := &BeaconServer{
 		beaconDB:            s.beaconDB,
 		ctx:                 s.ctx,
+		powChainService:     s.powChainService,
 		attestationService:  s.attestationService,
 		incomingAttestation: s.incomingAttestation,
 		canonicalStateChan:  s.canonicalStateChan,
@@ -130,7 +130,6 @@ func (s *Service) Start() {
 		chainService:       s.chainService,
 		powChainService:    s.powChainService,
 		canonicalStateChan: s.canonicalStateChan,
-		enablePOWChain:     s.enablePOWChain,
 	}
 	attesterServer := &AttesterServer{
 		attestationService: s.attestationService,
