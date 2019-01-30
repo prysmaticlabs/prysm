@@ -232,7 +232,12 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		beaconState.LatestDepositRootHash32 = latestRoot[:]
 
 		startTime := time.Now()
-		newState, err := state.ExecuteStateTransition(beaconState, newBlock, prevBlockRoot)
+		newState, err := state.ExecuteStateTransition(
+			beaconState,
+			newBlock,
+			prevBlockRoot,
+			false, /* verify sig */
+		)
 		if err != nil {
 			return fmt.Errorf("could not execute state transition: %v", err)
 		}
