@@ -14,7 +14,7 @@ import (
 func TestStoreandGetKey(t *testing.T) {
 	tmpdir := os.TempDir()
 	filedir := tmpdir + "/keystore"
-	ks := &keyStorePassphrase{
+	ks := &KeyStorePassphrase{
 		keysDirPath: filedir,
 		scryptN:     LightScryptN,
 		scryptP:     LightScryptP,

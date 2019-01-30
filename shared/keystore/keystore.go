@@ -44,7 +44,7 @@ var (
 	ErrDecrypt = errors.New("could not decrypt key with given passphrase")
 )
 
-type keyStorePassphrase struct {
+type KeyStorePassphrase struct {
 	keysDirPath string
 	scryptN     int
 	scryptP     int
@@ -52,7 +52,7 @@ type keyStorePassphrase struct {
 
 // RetrievePubKey retrieves the public key from the keystore.
 func RetrievePubKey(directory string, password string) (*bls.PublicKey, error) {
-	ks := keyStorePassphrase{
+	ks := KeyStorePassphrase{
 		keysDirPath: directory,
 		scryptN:     StandardScryptN,
 		scryptP:     StandardScryptP,
@@ -61,7 +61,16 @@ func RetrievePubKey(directory string, password string) (*bls.PublicKey, error) {
 	return key.PublicKey, err
 }
 
-func (ks keyStorePassphrase) GetKey(filename, password string) (*Key, error) {
+// NewKeystore from a directory.
+func NewKeystore(directory string) KeyStorePassphrase {
+	return KeyStorePassphrase{
+		keysDirPath: directory,
+		scryptN:     StandardScryptN,
+		scryptP:     StandardScryptP,
+	}
+}
+
+func (ks KeyStorePassphrase) GetKey(filename, password string) (*Key, error) {
 	// Load the key from the keystore and decrypt its contents
 	// #nosec G304
 	keyjson, err := ioutil.ReadFile(filename)
@@ -71,7 +80,7 @@ func (ks keyStorePassphrase) GetKey(filename, password string) (*Key, error) {
 	return DecryptKey(keyjson, password)
 }
 
-func (ks keyStorePassphrase) StoreKey(filename string, key *Key, auth string) error {
+func (ks KeyStorePassphrase) StoreKey(filename string, key *Key, auth string) error {
 	keyjson, err := EncryptKey(key, auth, ks.scryptN, ks.scryptP)
 	if err != nil {
 		return err
@@ -79,7 +88,7 @@ func (ks keyStorePassphrase) StoreKey(filename string, key *Key, auth string) er
 	return writeKeyFile(filename, keyjson)
 }
 
-func (ks keyStorePassphrase) JoinPath(filename string) string {
+func (ks KeyStorePassphrase) JoinPath(filename string) string {
 	if filepath.IsAbs(filename) {
 		return filename
 	}
@@ -88,7 +97,7 @@ func (ks keyStorePassphrase) JoinPath(filename string) string {
 
 // StoreRandomKey generates a key, encrypts with 'auth' and stores in the given directory
 func StoreRandomKey(dir, password string, scryptN, scryptP int) error {
-	err := storeNewRandomKey(keyStorePassphrase{dir, scryptN, scryptP}, rand.Reader, password)
+	err := storeNewRandomKey(KeyStorePassphrase{dir, scryptN, scryptP}, rand.Reader, password)
 	return err
 }
 

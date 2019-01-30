@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"os"
 	"runtime"
+
+	"github.com/prysmaticlabs/prysm/validator/accounts"
 
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
@@ -33,9 +34,10 @@ func startNode(ctx *cli.Context) error {
 	return nil
 }
 
-// TODO(#1436): Initialize validator secrets.
 func createValidatorAccount(ctx *cli.Context) error {
-	if err := accounts.NewValidatorAccount(); err != nil {
+	directory := ctx.String(types.KeystorePathFlag.Name)
+	password := ctx.String(types.PasswordFlag.Name)
+	if err := accounts.NewValidatorAccount(directory, password); err != nil {
 		return fmt.Errorf("could not initialize validator account: %v", err)
 	}
 	return nil
@@ -87,6 +89,7 @@ this command outputs a deposit data string which can be used to deposit Ether in
 contract in order to activate the validator client`,
 					Flags: []cli.Flag{
 						types.KeystorePathFlag,
+						types.PasswordFlag,
 					},
 					Action: createValidatorAccount,
 				},
