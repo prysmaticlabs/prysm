@@ -60,7 +60,7 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 
 	if err := db.update(func(tx *bolt.Tx) error {
 		return createBuckets(tx, blockBucket, attestationBucket, mainChainBucket,
-			chainInfoBucket, blockVoteCacheBucket, cleanupHistoryBucket, operationsBucket)
+			chainInfoBucket, blockVoteCacheBucket, cleanupHistoryBucket, blockOperationsBucket)
 
 	}); err != nil {
 		return nil, err

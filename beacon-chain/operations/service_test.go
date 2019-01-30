@@ -1,8 +1,10 @@
-package operation
+package operations
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -32,10 +34,23 @@ func TestStop(t *testing.T) {
 	}
 
 	// The context should have been canceled.
-	if opsService.ctx.Err() == nil {
+	if opsService.ctx.Err() != context.Canceled {
 		t.Error("context was not canceled")
 	}
 	hook.Reset()
+}
+
+func TestErrorStatus_Ok(t *testing.T) {
+	service := NewOperationService(context.Background(), &Config{})
+	if service.Status() != nil {
+		t.Errorf("service status should be nil to begin with, got: %v", service.errors)
+	}
+	errs := []error{errors.New("I"), errors.New("Have"), errors.New("Failed")}
+	service.errors = errs
+
+	if !reflect.DeepEqual(service.Status(), errs) {
+		t.Error("service status did not return wanted errors")
+	}
 }
 
 func TestIncomingExits_Ok(t *testing.T) {
@@ -55,7 +70,7 @@ func TestIncomingExits_Ok(t *testing.T) {
 		t.Fatalf("Could not hash exit proto: %v", err)
 	}
 
-	service.incomingExitChan <- exit
+	service.incomingValidatorExit <- exit
 	service.cancel()
 	exitRoutine <- true
 

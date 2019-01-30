@@ -19,7 +19,7 @@ func (db *BeaconDB) SaveExit(exit *pb.Exit) error {
 	}
 
 	return db.update(func(tx *bolt.Tx) error {
-		a := tx.Bucket(operationsBucket)
+		a := tx.Bucket(blockOperationsBucket)
 
 		return a.Put(hash[:], encodedState)
 	})
@@ -30,7 +30,7 @@ func (db *BeaconDB) HasExit(hash [32]byte) bool {
 	exists := false
 	// #nosec G104
 	db.view(func(tx *bolt.Tx) error {
-		b := tx.Bucket(operationsBucket)
+		b := tx.Bucket(blockOperationsBucket)
 
 		exists = b.Get(hash[:]) != nil
 		return nil

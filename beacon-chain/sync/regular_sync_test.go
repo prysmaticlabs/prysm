@@ -51,7 +51,7 @@ func (ms *mockAttestService) IncomingAttestationFeed() *event.Feed {
 
 type mockOperationService struct{}
 
-func (ms *mockOperationService) IncomingOperationFeed() *event.Feed {
+func (ms *mockOperationService) IncomingOperationsFeed() *event.Feed {
 	return new(event.Feed)
 }
 

@@ -1,5 +1,5 @@
-// Package operation defines the life-cycle of beacon block operations.
-package operation
+// Package operations defines the life-cycle of beacon block operations.
+package operations
 
 import (
 	"context"
@@ -16,11 +16,12 @@ var log = logrus.WithField("prefix", "operation")
 // Service represents a service that handles the internal
 // logic of beacon block operations.
 type Service struct {
-	ctx              context.Context
-	cancel           context.CancelFunc
-	beaconDB         *db.BeaconDB
-	incomingExitFeed *event.Feed
-	incomingExitChan chan *pb.Exit
+	ctx                   context.Context
+	cancel                context.CancelFunc
+	beaconDB              *db.BeaconDB
+	incomingExitFeed      *event.Feed
+	incomingValidatorExit chan *pb.Exit
+	errors                []error
 }
 
 // Config options for the service.
@@ -34,11 +35,11 @@ type Config struct {
 func NewOperationService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:              ctx,
-		cancel:           cancel,
-		beaconDB:         cfg.BeaconDB,
-		incomingExitFeed: new(event.Feed),
-		incomingExitChan: make(chan *pb.Exit, cfg.ReceiveExitBuf),
+		ctx:                   ctx,
+		cancel:                cancel,
+		beaconDB:              cfg.BeaconDB,
+		incomingExitFeed:      new(event.Feed),
+		incomingValidatorExit: make(chan *pb.Exit, cfg.ReceiveExitBuf),
 	}
 }
 
@@ -57,7 +58,10 @@ func (s *Service) Stop() error {
 }
 
 // Status always returns nil.
-func (s *Service) Status() error {
+func (s *Service) Status() []error {
+	if len(s.errors) != 0 {
+		return s.errors
+	}
 	return nil
 }
 
@@ -71,16 +75,19 @@ func (s *Service) IncomingExitFeed() *event.Feed {
 // that was received from sync service.
 func (s *Service) saveOperations() {
 	// TODO(1438): Add rest of operations (slashings, attestation, exists...etc)
-	incomingSub := s.incomingExitFeed.Subscribe(s.incomingExitChan)
+	incomingSub := s.incomingExitFeed.Subscribe(s.incomingValidatorExit)
 	defer incomingSub.Unsubscribe()
 
 	for {
 		select {
+		case <-incomingSub.Err():
+			log.Debug("Subscriber closed, exiting goroutine")
+			return
 		case <-s.ctx.Done():
-			log.Debug("Beacon block ops service context closed, exiting goroutine")
+			log.Debug("Beacon block operations service context closed, exiting goroutine")
 			return
 		// Listen for a newly received incoming exit from the sync service.
-		case exit := <-s.incomingExitChan:
+		case exit := <-s.incomingValidatorExit:
 			hash, err := hashutil.HashProto(exit)
 			if err != nil {
 				log.Errorf("Could not hash exit req proto: %v", err)
@@ -89,6 +96,7 @@ func (s *Service) saveOperations() {
 
 			if err := s.beaconDB.SaveExit(exit); err != nil {
 				log.Errorf("Could not save exit request: %v", err)
+				s.errors = append(s.errors, err)
 				continue
 			}
 

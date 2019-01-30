@@ -28,7 +28,7 @@ type attestationService interface {
 }
 
 type operationService interface {
-	IncomingOperationFeed() *event.Feed
+	IncomingOperationsFeed() *event.Feed
 }
 
 type p2pAPI interface {
@@ -55,7 +55,7 @@ type RegularSync struct {
 	p2p                   p2pAPI
 	chainService          chainService
 	attestationService    attestationService
-	operationService      operationService
+	operationsService      operationService
 	db                    *db.BeaconDB
 	blockAnnouncementFeed *event.Feed
 	announceBlockBuf      chan p2p.Message
@@ -109,7 +109,7 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		chainService:          cfg.ChainService,
 		db:                    cfg.BeaconDB,
 		attestationService:    cfg.AttestService,
-		operationService:      cfg.operationService,
+		operationsService:      cfg.operationService,
 		blockAnnouncementFeed: new(event.Feed),
 		announceBlockBuf:      make(chan p2p.Message, cfg.BlockAnnounceBufferSize),
 		blockBuf:              make(chan p2p.Message, cfg.BlockBufferSize),
@@ -351,7 +351,7 @@ func (rs *RegularSync) receiveExitRequest(msg p2p.Message) {
 
 	log.WithField("exitReqHash", fmt.Sprintf("%#x", h)).
 		Debug("Forwarding validator exit request to subscribed services")
-	rs.operationService.IncomingOperationFeed().Send(exit)
+	rs.operationsService.IncomingOperationsFeed().Send(exit)
 }
 
 func (rs *RegularSync) handleBlockRequestByHash(msg p2p.Message) {
