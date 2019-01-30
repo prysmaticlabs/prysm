@@ -404,9 +404,9 @@ func TestReceiveExitReq_Ok(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 
 	cfg := &RegularSyncConfig{
-		operationService:           os,
-		P2P:                     &mockP2P{},
-		BeaconDB:                db,
+		operationService: os,
+		P2P:              &mockP2P{},
+		BeaconDB:         db,
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
@@ -430,40 +430,4 @@ func TestReceiveExitReq_Ok(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 	testutil.AssertLogsContain(t, hook, "Forwarding validator exit request to subscribed services")
-}
-
-func TestReceiveExitReq_DuplicatedReqs(t *testing.T) {
-	hook := logTest.NewGlobal()
-	os := &mockOperationService{}
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-
-	cfg := &RegularSyncConfig{
-		operationService:           os,
-		P2P:                     &mockP2P{},
-		BeaconDB:                db,
-	}
-	ss := NewRegularSyncService(context.Background(), cfg)
-
-	exitRoutine := make(chan bool)
-	go func() {
-		ss.run()
-		exitRoutine <- true
-	}()
-
-	request1 := &pb.Exit{
-		Slot: 100,
-	}
-
-	msg1 := p2p.Message{
-		Ctx:  context.Background(),
-		Data: request1,
-		Peer: p2p.Peer{},
-	}
-
-	ss.exitBuf <- msg1
-	ss.exitBuf <- msg1
-	ss.cancel()
-	<-exitRoutine
-	testutil.AssertLogsContain(t, hook, "Received, skipping exit request")
 }
