@@ -33,16 +33,26 @@ http_archive(
     sha256 = "aed1c249d4ec8f703edddf35cbe9dfaca0b5f5ea6e4cd9e83e99f3b0d1136c3d",
 )
 
-load("@io_bazel_rules_docker//container:container.bzl", "container_repositories")
-
-container_repositories()
-
 http_archive(
     name = "build_bazel_rules_nodejs",
     url = "https://github.com/bazelbuild/rules_nodejs/archive/0.16.5.tar.gz",
     strip_prefix = "rules_nodejs-0.16.5",
     sha256 = "63f29855b5e85d0db77362e1477864299697e1f200be8be8fa5faa43230b80d0",
 )
+
+http_archive(
+    name = "io_bazel_rules_k8s",
+    url = "https://github.com/bazelbuild/rules_k8s/archive/2206972072d64e5d2d966d81cc6c5fb77fd58dcb.tar.gz",
+    strip_prefix = "rules_k8s-2206972072d64e5d2d966d81cc6c5fb77fd58dcb",
+    sha256 = "828fb1ac4c44280be95306b885a326e40110eeba50bffa05e72ddd3b5cdc5d33",
+)
+
+load(
+    "@io_bazel_rules_docker//repositories:repositories.bzl",
+    container_repositories = "repositories",
+)
+
+container_repositories()
 
 load("@build_bazel_rules_nodejs//:package.bzl", "rules_nodejs_dependencies")
 
@@ -59,13 +69,6 @@ yarn_install(
 )
 
 # This requires rules_docker to be fully instantiated before it is pulled in.
-http_archive(
-    name = "io_bazel_rules_k8s",
-    url = "https://github.com/bazelbuild/rules_k8s/archive/2206972072d64e5d2d966d81cc6c5fb77fd58dcb.tar.gz",
-    strip_prefix = "rules_k8s-2206972072d64e5d2d966d81cc6c5fb77fd58dcb",
-    sha256 = "828fb1ac4c44280be95306b885a326e40110eeba50bffa05e72ddd3b5cdc5d33",
-)
-
 load("@io_bazel_rules_k8s//k8s:k8s.bzl", "k8s_repositories", "k8s_defaults")
 
 k8s_repositories()
