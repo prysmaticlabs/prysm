@@ -8,12 +8,12 @@ import (
 )
 
 // SaveExit puts the exit request into the beacon chain db.
-func (db *BeaconDB) SaveExit(deposit *pb.Exit) error {
-	hash, err := hashutil.HashProto(deposit)
+func (db *BeaconDB) SaveExit(exit *pb.Exit) error {
+	hash, err := hashutil.HashProto(exit)
 	if err != nil {
 		return err
 	}
-	encodedState, err := proto.Marshal(deposit)
+	encodedState, err := proto.Marshal(exit)
 	if err != nil {
 		return err
 	}

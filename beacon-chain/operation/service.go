@@ -70,7 +70,7 @@ func (s *Service) IncomingExitFeed() *event.Feed {
 // saveOperations saves the newly broadcasted beacon block operations
 // that was received from sync service.
 func (s *Service) saveOperations() {
-	// TODO: Add rest of operations (slashings, attestation, exists...etc)
+	// TODO(1438): Add rest of operations (slashings, attestation, exists...etc)
 	incomingSub := s.incomingExitFeed.Subscribe(s.incomingExitChan)
 	defer incomingSub.Unsubscribe()
 
