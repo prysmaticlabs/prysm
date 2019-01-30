@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"io"
 	"time"
 
@@ -27,23 +26,11 @@ type validator struct {
 	pubKey          []byte
 }
 
-// Initialize sets up a validator client's secrets and generates the necessary deposit data
-// parameters needed to deposit into the deposit contract on the ETH1.0 chain. Specifically, this
-// generates a BLS private and public key, and then logs the serialized deposit input hex string
-// to be used in an ETH1.0 transaction by the validator.
-//
+// Initialize any validator parameters before runtime kicks off.
 // WIP - not done.
 func (v *validator) Initialize(ctx context.Context) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.Initialize")
 	defer span.Finish()
-	shardWithdrawalKey, err := keystore.NewKey()
-	if err != nil {
-
-	}
-	validatorKey, err := keystore.NewKey()
-	if err != nil {
-
-	}
 }
 
 // Done cleans up the validator.

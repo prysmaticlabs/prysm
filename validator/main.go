@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"os"
 	"runtime"
 
@@ -11,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/types"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
+	"github.com/x-cray/logrus-prefixed-formatter"
 )
 
 func startNode(ctx *cli.Context) error {
@@ -33,6 +35,9 @@ func startNode(ctx *cli.Context) error {
 
 // TODO(#1436): Initialize validator secrets.
 func createValidatorAccount(ctx *cli.Context) error {
+	if err := accounts.NewValidatorAccount(); err != nil {
+		return fmt.Errorf("could not initialize validator account: %v", err)
+	}
 	return nil
 }
 
