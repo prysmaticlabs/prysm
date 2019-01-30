@@ -2,11 +2,11 @@ package attestation
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/shared/bytes"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -88,7 +88,7 @@ func TestAttestationPool_Ok(t *testing.T) {
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 	attestation := &pb.Attestation{
 		ParticipationBitfield: []byte{0x80},
-		Data: &pb.AttestationData{},
+		Data:                  &pb.AttestationData{},
 	}
 
 	exitRoutine := make(chan bool)
