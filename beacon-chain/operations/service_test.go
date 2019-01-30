@@ -45,7 +45,7 @@ func TestErrorStatus_Ok(t *testing.T) {
 	if service.Status() != nil {
 		t.Errorf("service status should be nil to begin with, got: %v", service.errors)
 	}
-	errs := []error{errors.New("I"), errors.New("Have"), errors.New("Failed")}
+	errs := []error{errors.New("i"), errors.New("have"), errors.New("failed")}
 	service.errors = errs
 
 	if !reflect.DeepEqual(service.Status(), errs) {
