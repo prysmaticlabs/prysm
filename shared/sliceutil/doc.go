@@ -15,4 +15,4 @@ Currently types which are tested and supported are:
 Intersection, Union, Not , IsIn are the operations which are supported on slices
 
 */
-package slices
+package sliceutil

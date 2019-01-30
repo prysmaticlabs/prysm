@@ -1,8 +1,6 @@
 package db
 
-import (
-	"github.com/prysmaticlabs/prysm/shared/bytes"
-)
+import "github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 // The Schema will define how to store and retrieve data from the db.
 // Currently we store blocks by prefixing `block` to their hash and
@@ -31,11 +29,11 @@ var (
 
 // encodeSlotNumber encodes a slot number as big endian uint32.
 func encodeSlotNumber(number uint64) []byte {
-	return bytes.Bytes8(number)
+	return bytesutil.Bytes8(number)
 }
 
 // decodeSlotNumber returns a slot number which has been
 // encoded as a big endian uint32 in the byte array.
 func decodeToSlotNumber(bytearray []byte) uint64 {
-	return bytes.FromBytes8(bytearray)
+	return bytesutil.FromBytes8(bytearray)
 }

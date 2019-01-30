@@ -27,7 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/trie"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -285,7 +285,7 @@ func TestSaveInTrie(t *testing.T) {
 
 	testAcc.backend.Commit()
 
-	web3Service.depositTrie = trie.NewDepositTrie()
+	web3Service.depositTrie = trieutil.NewDepositTrie()
 
 	currentRoot := web3Service.depositTrie.Root()
 
@@ -418,7 +418,7 @@ func TestProcessDepositLog(t *testing.T) {
 
 	testAcc.backend.Commit()
 
-	web3Service.depositTrie = trie.NewDepositTrie()
+	web3Service.depositTrie = trieutil.NewDepositTrie()
 
 	var stub [48]byte
 	copy(stub[:], []byte("testing"))
@@ -585,7 +585,7 @@ func TestProcessChainStartLog(t *testing.T) {
 	testAcc.backend.Commit()
 	testAcc.backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
 
-	web3Service.depositTrie = trie.NewDepositTrie()
+	web3Service.depositTrie = trieutil.NewDepositTrie()
 
 	var stub [48]byte
 	copy(stub[:], []byte("testing"))

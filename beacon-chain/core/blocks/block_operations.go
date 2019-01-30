@@ -17,8 +17,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slices"
-	"github.com/prysmaticlabs/prysm/shared/trie"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 // ProcessDepositRoots processes the proof-of-work chain's receipts
@@ -311,7 +311,7 @@ func verifyAttesterSlashing(slashing *pb.AttesterSlashing) error {
 }
 
 func attesterSlashingPenalizedIndices(slashing *pb.AttesterSlashing) ([]uint64, error) {
-	indicesIntersection := slices.Intersection(
+	indicesIntersection := sliceutil.Intersection(
 		slashing.SlashableVote_1.ValidatorIndices,
 		slashing.SlashableVote_2.ValidatorIndices)
 	if len(indicesIntersection) < 1 {
@@ -597,7 +597,7 @@ func ProcessValidatorDeposits(
 func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 	// Verify Merkle proof of deposit and deposit trie root.
 	receiptRoot := bytesutil.ToBytes32(beaconState.LatestDepositRootHash32)
-	if ok := trie.VerifyMerkleBranch(
+	if ok := trieutil.VerifyMerkleBranch(
 		hashutil.Hash(deposit.DepositData),
 		deposit.MerkleBranchHash32S,
 		params.BeaconConfig().DepositContractTreeDepth,

@@ -1,4 +1,4 @@
-package slices
+package sliceutil
 
 // Intersection of two uint64 slices with time
 // complexity of approximately O(n) leveraging a map to

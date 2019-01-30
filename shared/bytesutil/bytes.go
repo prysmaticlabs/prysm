@@ -1,5 +1,5 @@
 // Package bytes defines helper methods for converting integers to byte slices.
-package bytes
+package bytesutil
 
 import (
 	"encoding/binary"

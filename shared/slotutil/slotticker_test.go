@@ -1,4 +1,4 @@
-package slotticker
+package slotutil
 
 import (
 	"testing"
