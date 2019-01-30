@@ -171,7 +171,12 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		// If the slot is marked as skipped in the configuration options,
 		// we simply run the state transition with a nil block argument.
 		if slices.IsInUint64(i, testCase.Config.SkipSlots) {
-			newState, err := state.ExecuteStateTransition(beaconState, nil, prevBlockRoot)
+			newState, err := state.ExecuteStateTransition(
+				beaconState,
+				nil,
+				prevBlockRoot,
+				false, /* no sig verify */
+			)
 			if err != nil {
 				return fmt.Errorf("could not execute state transition: %v", err)
 			}
@@ -232,7 +237,12 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		beaconState.LatestDepositRootHash32 = latestRoot[:]
 
 		startTime := time.Now()
-		newState, err := state.ExecuteStateTransition(beaconState, newBlock, prevBlockRoot)
+		newState, err := state.ExecuteStateTransition(
+			beaconState,
+			newBlock,
+			prevBlockRoot,
+			false, /*  no sig verify */
+		)
 		if err != nil {
 			return fmt.Errorf("could not execute state transition: %v", err)
 		}

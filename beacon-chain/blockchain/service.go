@@ -265,7 +265,7 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 		return nil, fmt.Errorf("could not retrieve chain head %v", err)
 	}
 
-	// TODO(#716):Replace with tree-hashing algorithm.
+	// TODO(#716): Replace with tree-hashing algorithm.
 	blockRoot, err := hashutil.HashBeaconBlock(prevBlock)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash block %v", err)
@@ -276,13 +276,23 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	// Check for skipped slots and update the corresponding proposers
 	// randao layer.
 	for beaconState.Slot < block.Slot-1 {
-		beaconState, err = state.ExecuteStateTransition(beaconState, nil, blockRoot)
+		beaconState, err = state.ExecuteStateTransition(
+			beaconState,
+			nil,
+			blockRoot,
+			true, /* no sig verify */
+		)
 		if err != nil {
 			return nil, fmt.Errorf("could not execute state transition %v", err)
 		}
 	}
 
-	beaconState, err = state.ExecuteStateTransition(beaconState, block, blockRoot)
+	beaconState, err = state.ExecuteStateTransition(
+		beaconState,
+		block,
+		blockRoot,
+		true, /* no sig verify */
+	)
 	if err != nil {
 		return nil, fmt.Errorf("could not execute state transition %v", err)
 	}

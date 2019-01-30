@@ -26,6 +26,7 @@ func ExecuteStateTransition(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 	prevBlockRoot [32]byte,
+	verifySignatures bool,
 ) (*pb.BeaconState, error) {
 	var err error
 
@@ -39,7 +40,7 @@ func ExecuteStateTransition(
 	beaconState = randao.UpdateRandaoMixes(beaconState)
 	beaconState = b.ProcessBlockRoots(beaconState, prevBlockRoot)
 	if block != nil {
-		beaconState, err = ProcessBlock(beaconState, block)
+		beaconState, err = ProcessBlock(beaconState, block, verifySignatures)
 		if err != nil {
 			return nil, fmt.Errorf("unable to process block: %v", err)
 		}
@@ -58,7 +59,7 @@ func ExecuteStateTransition(
 // ProcessBlock creates a new, modified beacon state by applying block operation
 // transformations as defined in the Ethereum Serenity specification, including processing proposer slashings,
 // processing block attestations, and more.
-func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock, verifySignatures bool) (*pb.BeaconState, error) {
 	if block.Slot != state.Slot {
 		return nil, fmt.Errorf(
 			"block.slot != state.slot, block.slot = %d, state.slot = %d",
@@ -66,22 +67,27 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState
 			state.Slot,
 		)
 	}
-	// TODO(#781): Verify Proposer Signature.
+	if verifySignatures {
+		// TODO(#781): Verify Proposer Signature.
+		if err := b.VerifyProposerSignature(block); err != nil {
+			return nil, fmt.Errorf("could not verify proposer signature: %v", err)
+		}
+	}
 	var err error
 	state = b.ProcessDepositRoots(state, block)
 	state, err = b.ProcessBlockRandao(state, block)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify and process block randao: %v", err)
 	}
-	state, err = b.ProcessProposerSlashings(state, block)
+	state, err = b.ProcessProposerSlashings(state, block, verifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify block proposer slashings: %v", err)
 	}
-	state, err = b.ProcessAttesterSlashings(state, block)
+	state, err = b.ProcessAttesterSlashings(state, block, verifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify block attester slashings: %v", err)
 	}
-	state, err = b.ProcessBlockAttestations(state, block)
+	state, err = b.ProcessBlockAttestations(state, block, verifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block attestations: %v", err)
 	}
@@ -89,7 +95,7 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState
 	if err != nil {
 		return nil, fmt.Errorf("could not process block validator deposits: %v", err)
 	}
-	state, err = b.ProcessValidatorExits(state, block)
+	state, err = b.ProcessValidatorExits(state, block, verifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not process validator exits: %v", err)
 	}
@@ -109,7 +115,6 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState
 // 	 update_validator_registry(state)
 // 	 final_book_keeping(state)
 func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
-
 	// Calculate total balances of active validators of the current state.
 	activeValidatorIndices := v.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
 	totalBalance := e.TotalBalance(state, activeValidatorIndices)
@@ -303,6 +308,5 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Clean up processed attestations.
 	state = e.CleanupAttestations(state)
-
 	return state, nil
 }
