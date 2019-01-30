@@ -55,7 +55,7 @@ type RegularSync struct {
 	p2p                   p2pAPI
 	chainService          chainService
 	attestationService    attestationService
-	operationsService      operationService
+	operationsService     operationService
 	db                    *db.BeaconDB
 	blockAnnouncementFeed *event.Feed
 	announceBlockBuf      chan p2p.Message
@@ -109,7 +109,7 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		chainService:          cfg.ChainService,
 		db:                    cfg.BeaconDB,
 		attestationService:    cfg.AttestService,
-		operationsService:      cfg.operationService,
+		operationsService:     cfg.operationService,
 		blockAnnouncementFeed: new(event.Feed),
 		announceBlockBuf:      make(chan p2p.Message, cfg.BlockAnnounceBufferSize),
 		blockBuf:              make(chan p2p.Message, cfg.BlockBufferSize),
