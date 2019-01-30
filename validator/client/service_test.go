@@ -7,7 +7,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -62,46 +61,4 @@ func TestInsecure(t *testing.T) {
 		t.Fatalf("Could not stop service: %v", err)
 	}
 	testutil.AssertLogsContain(t, hook, "Stopping service")
-}
-
-func TestBeaconServiceClient(t *testing.T) {
-	validatorService := NewValidatorService(
-		context.Background(),
-		&Config{
-			Endpoint: "merkle tries",
-		},
-	)
-	validatorService.conn = nil
-	client := validatorService.BeaconServiceClient()
-	if _, ok := client.(pb.BeaconServiceClient); !ok {
-		t.Error("Beacon service client function does not implement interface")
-	}
-}
-
-func TestProposerServiceClient(t *testing.T) {
-	validatorService := NewValidatorService(
-		context.Background(),
-		&Config{
-			Endpoint: "merkle tries",
-		},
-	)
-	validatorService.conn = nil
-	client := validatorService.ProposerServiceClient()
-	if _, ok := client.(pb.ProposerServiceClient); !ok {
-		t.Error("Beacon service client function does not implement interface")
-	}
-}
-
-func TestAttesterServiceClient(t *testing.T) {
-	validatorService := NewValidatorService(
-		context.Background(),
-		&Config{
-			Endpoint: "merkle tries",
-		},
-	)
-	validatorService.conn = nil
-	client := validatorService.AttesterServiceClient()
-	if _, ok := client.(pb.AttesterServiceClient); !ok {
-		t.Error("Beacon service client function does not implement interface")
-	}
 }

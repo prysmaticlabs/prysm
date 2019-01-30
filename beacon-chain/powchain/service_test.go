@@ -718,7 +718,6 @@ func TestUnpackChainStartLogs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to retrieve logs %v", err)
 	}
-	fmt.Printf("LOGS: %d\n", len(logs))
 
 	_, timestampData, err := contracts.UnpackChainStartLogData(logs[len(logs)-1].Data)
 	if err != nil {
