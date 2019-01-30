@@ -208,7 +208,7 @@ func PrevHeadAttestations(
 //    sum([get_effective_balance(state, i) for i in active_validator_indices])
 func TotalBalance(
 	state *pb.BeaconState,
-	activeValidatorIndices []uint32) uint64 {
+	activeValidatorIndices []uint64) uint64 {
 
 	var totalBalance uint64
 	for _, index := range activeValidatorIndices {
@@ -225,7 +225,7 @@ func TotalBalance(
 //    Let inclusion_slot(state, index) =
 //    a.slot_included for the attestation a where index is in
 //    get_attestation_participants(state, a.data, a.participation_bitfield)
-func InclusionSlot(state *pb.BeaconState, validatorIndex uint32) (uint64, error) {
+func InclusionSlot(state *pb.BeaconState, validatorIndex uint64) (uint64, error) {
 
 	for _, attestation := range state.LatestAttestations {
 		participatedValidators, err := validators.AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)
@@ -249,7 +249,7 @@ func InclusionSlot(state *pb.BeaconState, validatorIndex uint32) (uint64, error)
 //    Let inclusion_distance(state, index) =
 //    a.slot_included - a.data.slot where a is the above attestation same as
 //    inclusion_slot
-func InclusionDistance(state *pb.BeaconState, validatorIndex uint32) (uint64, error) {
+func InclusionDistance(state *pb.BeaconState, validatorIndex uint64) (uint64, error) {
 
 	for _, attestation := range state.LatestAttestations {
 		participatedValidators, err := validators.AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)
@@ -273,13 +273,12 @@ func InclusionDistance(state *pb.BeaconState, validatorIndex uint32) (uint64, er
 //    `attesting_validator_indices(shard_committee, winning_root(shard_committee))` for convenience
 func AttestingValidators(
 	state *pb.BeaconState,
-	shardCommittee *pb.ShardCommittee,
-	thisEpochAttestations []*pb.PendingAttestationRecord,
-	prevEpochAttestations []*pb.PendingAttestationRecord) ([]uint32, error) {
+	shard uint64, thisEpochAttestations []*pb.PendingAttestationRecord,
+	prevEpochAttestations []*pb.PendingAttestationRecord) ([]uint64, error) {
 
 	root, err := winningRoot(
 		state,
-		shardCommittee,
+		shard,
 		thisEpochAttestations,
 		prevEpochAttestations)
 	if err != nil {
@@ -288,7 +287,7 @@ func AttestingValidators(
 
 	indices, err := validators.AttestingValidatorIndices(
 		state,
-		shardCommittee,
+		shard,
 		root,
 		thisEpochAttestations,
 		prevEpochAttestations)
@@ -307,12 +306,12 @@ func AttestingValidators(
 //    sum([get_effective_balance(state, i) for i in shard_committee.committee])
 func TotalAttestingBalance(
 	state *pb.BeaconState,
-	shardCommittee *pb.ShardCommittee,
+	shard uint64,
 	thisEpochAttestations []*pb.PendingAttestationRecord,
 	prevEpochAttestations []*pb.PendingAttestationRecord) (uint64, error) {
 
 	var totalBalance uint64
-	attestedValidatorIndices, err := AttestingValidators(state, shardCommittee, thisEpochAttestations, prevEpochAttestations)
+	attestedValidatorIndices, err := AttestingValidators(state, shard, thisEpochAttestations, prevEpochAttestations)
 	if err != nil {
 		return 0, fmt.Errorf("could not get attesting validator indices: %v", err)
 	}
@@ -337,13 +336,13 @@ func SinceFinality(state *pb.BeaconState) uint64 {
 // effective balance. The ties broken by favoring lower shard block root values.
 //
 // Spec pseudocode definition:
-//   Let winning_root(shard_committee) be equal to the value of shard_block_root
+//   Let winning_root(crosslink_committee) be equal to the value of shard_block_root
 //   such that sum([get_effective_balance(state, i)
-//   for i in attesting_validator_indices(shard_committee, shard_block_root)])
+//   for i in attesting_validator_indices(crosslink_committee, shard_block_root)])
 //   is maximized (ties broken by favoring lower shard_block_root values)
 func winningRoot(
 	state *pb.BeaconState,
-	shardCommittee *pb.ShardCommittee,
+	shard uint64,
 	thisEpochAttestations []*pb.PendingAttestationRecord,
 	prevEpochAttestations []*pb.PendingAttestationRecord) ([]byte, error) {
 
@@ -353,7 +352,7 @@ func winningRoot(
 	attestations := append(thisEpochAttestations, prevEpochAttestations...)
 
 	for _, attestation := range attestations {
-		if attestation.Data.Shard == shardCommittee.Shard {
+		if attestation.Data.Shard == shard {
 			candidateRoots = append(candidateRoots, attestation.Data.ShardBlockRootHash32)
 		}
 	}
@@ -361,7 +360,7 @@ func winningRoot(
 	for _, candidateRoot := range candidateRoots {
 		indices, err := validators.AttestingValidatorIndices(
 			state,
-			shardCommittee,
+			shard,
 			candidateRoot,
 			thisEpochAttestations,
 			prevEpochAttestations)
@@ -381,4 +380,29 @@ func winningRoot(
 		}
 	}
 	return winnerRoot, nil
+}
+
+// randaoMix returns the randao mix (xor'ed seed)
+// of a given slot. It is used to shuffle validators.
+//
+// Spec pseudocode definition:
+//   def get_randao_mix(state: BeaconState,
+//                   slot: int) -> Hash32:
+//    """
+//    Returns the randao mix at a recent ``slot``.
+//    """
+//    assert state.slot <= slot + LATEST_RANDAO_MIXES_LENGTH
+//	  assert slot < state.slot
+//    return state.latest_block_roots[slot % LATEST_RANDAO_MIXES_LENGTH]
+func randaoMix(state *pb.BeaconState, slot uint64) ([]byte, error) {
+	var lowerBound uint64
+	if state.Slot > config.LatestRandaoMixesLength {
+		lowerBound = state.Slot - config.LatestRandaoMixesLength
+	}
+	upperBound := state.Slot
+	if lowerBound > slot || slot >= upperBound {
+		return nil, fmt.Errorf("input randaoMix slot %d out of bounds: %d <= slot < %d",
+			slot, lowerBound, upperBound)
+	}
+	return state.LatestRandaoMixesHash32S[slot%config.LatestRandaoMixesLength], nil
 }

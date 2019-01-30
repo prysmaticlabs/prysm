@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"testing"
 
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
@@ -33,5 +34,25 @@ func TestHash(t *testing.T) {
 
 	if hashOf0 == hashOf1 {
 		t.Fatalf("expected hash and computed hash are equal %d, %d", hash, hashOf1)
+	}
+}
+
+func TestHashProto(t *testing.T) {
+	msg1 := &pb.BeaconState{
+		Slot: 5,
+	}
+	msg2 := &pb.BeaconState{
+		Slot: 5,
+	}
+	h1, err := hashutil.HashProto(msg1)
+	if err != nil {
+		t.Fatalf("Could not hash proto message: %v", err)
+	}
+	h2, err := hashutil.HashProto(msg2)
+	if err != nil {
+		t.Fatalf("Could not hash proto message: %v", err)
+	}
+	if h1 != h2 {
+		t.Errorf("Expected hashes to equal, received %#x == %#x", h1, h2)
 	}
 }

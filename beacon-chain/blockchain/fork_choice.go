@@ -12,6 +12,14 @@ import (
 
 // LMDGhost applies the Latest Message Driven, Greediest Heaviest Observed Sub-Tree
 // fork-choice rule defined in the Ethereum Serenity specification for the beacon chain.
+//
+// Spec pseudocode definition:
+//    head = start_block
+//    while 1:
+//        children = get_children(store, head)
+//        if len(children) == 0:
+//            return head
+//        head = max(children, key=get_vote_count)
 func LMDGhost(
 	block *pb.BeaconBlock,
 	voteTargets map[[32]byte]*pb.BeaconBlock,
@@ -47,6 +55,11 @@ func LMDGhost(
 
 // VoteCount determines the number of votes on a beacon block by counting the number
 // of target blocks that have such beacon block as a common ancestor.
+//
+// Spec pseudocode definition:
+//	def get_vote_count(block: BeaconBlock) -> int:
+//		return len([target for target in attestation_targets
+//			if get_ancestor(store, target, block.slot) == block])
 func VoteCount(block *pb.BeaconBlock, targets map[[32]byte]*pb.BeaconBlock, beaconDB *db.BeaconDB) (int, error) {
 	votes := 0
 	for k := range targets {
@@ -70,12 +83,20 @@ func VoteCount(block *pb.BeaconBlock, targets map[[32]byte]*pb.BeaconBlock, beac
 }
 
 // BlockAncestor obtains the ancestor at of a block at a certain slot.
+//
+// Spec pseudocode definition:
+//	Let get_ancestor(store: Store, block: BeaconBlock, slot: SlotNumber) ->
+//	BeaconBlock be the ancestor of block with slot number slot.
+//	The get_ancestor function can be defined recursively as
+//		def get_ancestor(store: Store, block: BeaconBlock, slot: SlotNumber) ->
+//		BeaconBlock: return block if block.slot ==
+//		slot else get_ancestor(store, store.get_parent(block), slot)
 func BlockAncestor(block *pb.BeaconBlock, slot uint64, beaconDB *db.BeaconDB) (*pb.BeaconBlock, error) {
 	if block.Slot == slot {
 		return block, nil
 	}
 	parentHash := bytesutil.ToBytes32(block.ParentRootHash32)
-	parent, err := beaconDB.GetBlock(parentHash)
+	parent, err := beaconDB.Block(parentHash)
 	if err != nil {
 		return nil, fmt.Errorf("could not get parent block: %v", err)
 	}

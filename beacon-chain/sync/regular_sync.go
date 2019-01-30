@@ -7,7 +7,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	att "github.com/prysmaticlabs/prysm/beacon-chain/core/attestations"
-	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
@@ -217,7 +216,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 		return
 	}
 
-	beaconState, err := rs.db.GetState()
+	beaconState, err := rs.db.State()
 	if err != nil {
 		log.Errorf("Failed to get beacon state: %v", err)
 		return
@@ -225,22 +224,6 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 
 	if block.Slot < beaconState.FinalizedSlot {
 		log.Debug("Discarding received block with a slot number smaller than the last finalized slot")
-		return
-	}
-
-	// Verify attestation coming from proposer then forward block to the subscribers.
-	proposerShardID, _, err := v.ProposerShardAndIdx(
-		beaconState,
-		block.Slot,
-	)
-	if err != nil {
-		log.Errorf("Failed to get proposer shard ID: %v", err)
-		return
-	}
-
-	// TODO(#258): stubbing public key with empty 32 bytes.
-	if err := att.VerifyProposerAttestation(response.Attestation.Data, [32]byte{}, proposerShardID); err != nil {
-		log.Errorf("Failed to verify proposer attestation: %v", err)
 		return
 	}
 
@@ -268,7 +251,7 @@ func (rs *RegularSync) handleBlockRequestBySlot(msg p2p.Message) {
 	}
 
 	ctx, getBlockSpan := trace.StartSpan(ctx, "getBlockBySlot")
-	block, err := rs.db.GetBlockBySlot(request.SlotNumber)
+	block, err := rs.db.BlockBySlot(request.SlotNumber)
 	getBlockSpan.End()
 	if err != nil || block == nil {
 		log.Errorf("Error retrieving block from db: %v", err)
@@ -289,7 +272,7 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) {
 		return
 	}
 
-	block, err := rs.db.GetChainHead()
+	block, err := rs.db.ChainHead()
 	if err != nil {
 		log.Errorf("Could not retrieve chain head %v", err)
 		return
@@ -318,7 +301,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 	a := data
 	h := att.Key(a.Data)
 
-	attestation, err := rs.db.GetAttestation(h)
+	attestation, err := rs.db.Attestation(h)
 	if err != nil {
 		log.Errorf("Could not check for attestation in DB: %v", err)
 		return
@@ -341,7 +324,7 @@ func (rs *RegularSync) handleBlockRequestByHash(msg p2p.Message) {
 
 	hash := bytesutil.ToBytes32(data.Hash)
 
-	block, err := rs.db.GetBlock(hash)
+	block, err := rs.db.Block(hash)
 	if err != nil {
 		log.Error(err)
 		return
@@ -363,13 +346,13 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) {
 	data := msg.Data.(*pb.BatchedBeaconBlockRequest)
 	startSlot, endSlot := data.StartSlot, data.EndSlot
 
-	block, err := rs.db.GetChainHead()
+	block, err := rs.db.ChainHead()
 	if err != nil {
 		log.Errorf("Could not retrieve chain head %v", err)
 		return
 	}
 
-	finalizedSlot, err := rs.db.GetCleanedFinalizedSlot()
+	finalizedSlot, err := rs.db.CleanedFinalizedSlot()
 	if err != nil {
 		log.Errorf("Could not retrieve last finalized slot %v", err)
 		return
@@ -387,7 +370,7 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) {
 	response := make([]*pb.BeaconBlock, 0, endSlot-startSlot)
 
 	for i := startSlot; i <= endSlot; i++ {
-		block, err := rs.db.GetBlockBySlot(i)
+		block, err := rs.db.BlockBySlot(i)
 		if err != nil {
 			log.Errorf("Unable to retrieve block from db %v", err)
 			continue

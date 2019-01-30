@@ -30,40 +30,40 @@ var decodeTests = []decodeTest{
 
 	// uint16
 	{input: "0000", ptr: new(uint16), value: uint16(0)},
-	{input: "0001", ptr: new(uint16), value: uint16(1)},
-	{input: "0010", ptr: new(uint16), value: uint16(16)},
-	{input: "0080", ptr: new(uint16), value: uint16(128)},
-	{input: "00FF", ptr: new(uint16), value: uint16(255)},
+	{input: "0100", ptr: new(uint16), value: uint16(1)},
+	{input: "1000", ptr: new(uint16), value: uint16(16)},
+	{input: "8000", ptr: new(uint16), value: uint16(128)},
+	{input: "FF00", ptr: new(uint16), value: uint16(255)},
 	{input: "FFFF", ptr: new(uint16), value: uint16(65535)},
 
 	// uint32
 	{input: "00000000", ptr: new(uint32), value: uint32(0)},
-	{input: "00000001", ptr: new(uint32), value: uint32(1)},
-	{input: "00000010", ptr: new(uint32), value: uint32(16)},
-	{input: "00000080", ptr: new(uint32), value: uint32(128)},
-	{input: "000000FF", ptr: new(uint32), value: uint32(255)},
-	{input: "0000FFFF", ptr: new(uint32), value: uint32(65535)},
+	{input: "01000000", ptr: new(uint32), value: uint32(1)},
+	{input: "10000000", ptr: new(uint32), value: uint32(16)},
+	{input: "80000000", ptr: new(uint32), value: uint32(128)},
+	{input: "FF000000", ptr: new(uint32), value: uint32(255)},
+	{input: "FFFF0000", ptr: new(uint32), value: uint32(65535)},
 	{input: "FFFFFFFF", ptr: new(uint32), value: uint32(4294967295)},
 
 	// uint64
 	{input: "0000000000000000", ptr: new(uint64), value: uint64(0)},
-	{input: "0000000000000001", ptr: new(uint64), value: uint64(1)},
-	{input: "0000000000000010", ptr: new(uint64), value: uint64(16)},
-	{input: "0000000000000080", ptr: new(uint64), value: uint64(128)},
-	{input: "00000000000000FF", ptr: new(uint64), value: uint64(255)},
-	{input: "000000000000FFFF", ptr: new(uint64), value: uint64(65535)},
-	{input: "00000000FFFFFFFF", ptr: new(uint64), value: uint64(4294967295)},
+	{input: "0100000000000000", ptr: new(uint64), value: uint64(1)},
+	{input: "1000000000000000", ptr: new(uint64), value: uint64(16)},
+	{input: "8000000000000000", ptr: new(uint64), value: uint64(128)},
+	{input: "FF00000000000000", ptr: new(uint64), value: uint64(255)},
+	{input: "FFFF000000000000", ptr: new(uint64), value: uint64(65535)},
+	{input: "FFFFFFFF00000000", ptr: new(uint64), value: uint64(4294967295)},
 	{input: "FFFFFFFFFFFFFFFF", ptr: new(uint64), value: uint64(18446744073709551615)},
 
 	// bytes
 	{input: "00000000", ptr: new([]byte), value: []byte{}},
-	{input: "0000000101", ptr: new([]byte), value: []byte{1}},
-	{input: "00000006 010203040506", ptr: new([]byte), value: []byte{1, 2, 3, 4, 5, 6}},
+	{input: "0100000001", ptr: new([]byte), value: []byte{1}},
+	{input: "06000000 010203040506", ptr: new([]byte), value: []byte{1, 2, 3, 4, 5, 6}},
 
 	// slice
 	{input: "00000000", ptr: new([]uint16), value: []uint16(nil)},
-	{input: "00000004 0001 0002", ptr: new([]uint16), value: []uint16{1, 2}},
-	{input: "00000018 00000008 0001 0002 0003 0004 00000008 0005 0006 0007 0008", ptr: new([][]uint16),
+	{input: "04000000 0100 0200", ptr: new([]uint16), value: []uint16{1, 2}},
+	{input: "18000000 08000000 0100 0200 0300 0400 08000000 0500 0600 0700 0800", ptr: new([][]uint16),
 		value: [][]uint16{
 			{1, 2, 3, 4},
 			{5, 6, 7, 8},
@@ -71,11 +71,11 @@ var decodeTests = []decodeTest{
 	},
 
 	// array
-	{input: "00000001 01", ptr: new([1]byte), value: [1]byte{1}},
-	{input: "00000006 010203040506", ptr: new([6]byte), value: [6]byte{1, 2, 3, 4, 5, 6}},
-	{input: "00000002 0001", ptr: new([1]uint16), value: [1]uint16{1}},
-	{input: "00000004 0001 0002", ptr: new([2]uint16), value: [2]uint16{1, 2}},
-	{input: "00000018 00000008 0001 0002 0003 0004 00000008 0005 0006 0007 0008", ptr: new([2][4]uint16),
+	{input: "01000000 01", ptr: new([1]byte), value: [1]byte{1}},
+	{input: "06000000 010203040506", ptr: new([6]byte), value: [6]byte{1, 2, 3, 4, 5, 6}},
+	{input: "02000000 0100", ptr: new([1]uint16), value: [1]uint16{1}},
+	{input: "04000000 0100 0200", ptr: new([2]uint16), value: [2]uint16{1, 2}},
+	{input: "18000000 08000000 0100 0200 0300 0400 08000000 0500 0600 0700 0800", ptr: new([2][4]uint16),
 		value: [2][4]uint16{
 			{1, 2, 3, 4},
 			{5, 6, 7, 8},
@@ -83,49 +83,49 @@ var decodeTests = []decodeTest{
 	},
 
 	// struct
-	{input: "00000003 00 0000", ptr: new(simpleStruct), value: simpleStruct{}},
-	{input: "00000003 0002 01", ptr: new(simpleStruct), value: simpleStruct{B: 2, A: 1}},
-	{input: "00000007 03 00000002 0006", ptr: new(outerStruct),
+	{input: "03000000 00 0000", ptr: new(simpleStruct), value: simpleStruct{}},
+	{input: "03000000 0200 01", ptr: new(simpleStruct), value: simpleStruct{B: 2, A: 1}},
+	{input: "07000000 03 02000000 0600", ptr: new(outerStruct),
 		value: outerStruct{
 			V:    3,
 			SubV: innerStruct{6},
 		}},
 
 	// slice + struct
-	{input: "00000012 0000000E 00000003 000201 00000003 000403", ptr: new(arrayStruct),
+	{input: "12000000 0E000000 03000000 020001 03000000 040003", ptr: new(arrayStruct),
 		value: arrayStruct{
 			V: []simpleStruct{
 				{B: 2, A: 1},
 				{B: 4, A: 3},
 			},
 		}},
-	{input: "00000016 00000007 03 00000002 0006 00000007 05 00000002 0007", ptr: new([]outerStruct),
+	{input: "16000000 07000000 03 02000000 0600 07000000 05 02000000 0700", ptr: new([]outerStruct),
 		value: []outerStruct{
 			{V: 3, SubV: innerStruct{V: 6}},
 			{V: 5, SubV: innerStruct{V: 7}},
 		}},
 
 	// pointer
-	{input: "00000003 0002 01", ptr: new(*simpleStruct), value: &simpleStruct{B: 2, A: 1}},
-	{input: "00000008 00000003 0002 01 03", ptr: new(pointerStruct),
+	{input: "03000000 0200 01", ptr: new(*simpleStruct), value: &simpleStruct{B: 2, A: 1}},
+	{input: "08000000 03000000 0200 01 03", ptr: new(pointerStruct),
 		value: pointerStruct{P: &simpleStruct{B: 2, A: 1}, V: 3}},
-	{input: "00000008 00000003 0002 01 03", ptr: new(*pointerStruct),
+	{input: "08000000 03000000 0200 01 03", ptr: new(*pointerStruct),
 		value: &pointerStruct{P: &simpleStruct{B: 2, A: 1}, V: 3}},
-	{input: "00000004 01020304", ptr: new(*[]uint8), value: &[]uint8{1, 2, 3, 4}},
-	{input: "00000010 0000000000000001 0000000000000002", ptr: new(*[]uint64), value: &[]uint64{1, 2}},
-	{input: "0000000E 00000003 0002 01 00000003 0004 03", ptr: new([]*simpleStruct),
+	{input: "04000000 01020304", ptr: new(*[]uint8), value: &[]uint8{1, 2, 3, 4}},
+	{input: "10000000 0100000000000000 0200000000000000", ptr: new(*[]uint64), value: &[]uint64{1, 2}},
+	{input: "0E000000 03000000 0200 01 03000000 0400 03", ptr: new([]*simpleStruct),
 		value: []*simpleStruct{
 			{B: 2, A: 1},
 			{B: 4, A: 3},
 		},
 	},
-	{input: "0000000E 00000003 0002 01 00000003 0004 03", ptr: new([2]*simpleStruct),
+	{input: "0E000000 03000000 0200 01 03000000 0400 03", ptr: new([2]*simpleStruct),
 		value: [2]*simpleStruct{
 			{B: 2, A: 1},
 			{B: 4, A: 3},
 		},
 	},
-	{input: "00000018 00000008 00000003 0002 01 00 00000008 00000003 0004 03 01", ptr: new([]*pointerStruct),
+	{input: "18000000 08000000 03000000 0200 01 00 08000000 03000000 0400 03 01", ptr: new([]*pointerStruct),
 		value: []*pointerStruct{
 			{P: &simpleStruct{B: 2, A: 1}, V: 0},
 			{P: &simpleStruct{B: 4, A: 3}, V: 1},
@@ -148,28 +148,34 @@ var decodeTests = []decodeTest{
 	{input: "00", ptr: new(uint16), error: "decode error: can only read 1 bytes while expected to read 2 bytes for output type uint16"},
 
 	// error: bytes: wrong input
-	{input: "00000001", ptr: new([]byte), error: "decode error: can only read 0 bytes while expected to read 1 bytes for output type []uint8"},
+	{input: "01000000", ptr: new([]byte), error: "decode error: can only read 0 bytes while expected to read 1 bytes for output type []uint8"},
 
 	// error: slice: wrong header
-	{input: "000001", ptr: new([]uint16), error: "decode error: failed to decode header of slice: can only read 3 bytes while expected to read 4 bytes for output type []uint16"},
+	{input: "010000", ptr: new([]uint16), error: "decode error: failed to decode header of slice: can only read 3 bytes while expected to read 4 bytes for output type []uint16"},
 
 	// error: slice: wrong input
-	{input: "00000001", ptr: new([]uint16), error: "decode error: failed to decode element of slice: can only read 0 bytes while expected to read 2 bytes for output type []uint16"},
+	{input: "01000000", ptr: new([]uint16), error: "decode error: failed to decode element of slice: can only read 0 bytes while expected to read 2 bytes for output type []uint16"},
 
 	// error: byte array: wrong input
-	{input: "00000001 01", ptr: new([2]byte), error: "decode error: input byte array size (1) isn't euqal to output array size (2) for output type [2]uint8"},
+	{input: "01000000 01", ptr: new([2]byte), error: "decode error: input byte array size (1) isn't euqal to output array size (2) for output type [2]uint8"},
 
 	// error: array: input too short
-	{input: "00000002 0001", ptr: new([2]uint16), error: "decode error: input is too short for output type [2]uint16"},
+	{input: "02000000 0100", ptr: new([2]uint16), error: "decode error: input is too short for output type [2]uint16"},
 
 	// error: array: input too long
-	{input: "00000004 0001 0002", ptr: new([1]uint16), error: "decode error: input is too long for output type [1]uint16"},
+	{input: "04000000 0100 0200", ptr: new([1]uint16), error: "decode error: input is too long for output type [1]uint16"},
 
 	// error: struct: wrong header
-	{input: "000001", ptr: new(simpleStruct), error: "decode error: failed to decode header of struct: can only read 3 bytes while expected to read 4 bytes for output type ssz.simpleStruct"},
+	{input: "010000", ptr: new(simpleStruct), error: "decode error: failed to decode header of struct: can only read 3 bytes while expected to read 4 bytes for output type ssz.simpleStruct"},
 
 	// error: struct: wrong input
-	{input: "00000003 01 02", ptr: new(simpleStruct), error: "decode error: failed to decode field of slice: can only read 0 bytes while expected to read 1 bytes for output type ssz.simpleStruct"},
+	{input: "03000000 01 02", ptr: new(simpleStruct), error: "decode error: failed to decode field of slice: can only read 0 bytes while expected to read 1 bytes for output type ssz.simpleStruct"},
+
+	// error: struct: input too short
+	{input: "02000000 0200", ptr: new(simpleStruct), error: "decode error: input is too short for output type ssz.simpleStruct"},
+
+	// error: struct: input too long
+	{input: "04000000 0200 01 01", ptr: new(simpleStruct), error: "decode error: input is too long for output type ssz.simpleStruct"},
 }
 
 func runTests(t *testing.T, decode func([]byte, interface{}) error) {

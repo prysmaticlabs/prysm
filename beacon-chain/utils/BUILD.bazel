@@ -3,7 +3,6 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "POWlogs.go",
         "block_vote_cache.go",
         "clock.go",
         "flags.go",
@@ -12,10 +11,8 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/utils",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
-        "//contracts/validator-registration-contract:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
-        "@com_github_ethereum_go_ethereum//accounts/abi:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_urfave_cli//:go_default_library",
     ],

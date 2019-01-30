@@ -17,6 +17,9 @@ enum Topic {
   BEACON_STATE_HASH_ANNOUNCE = 9;
   BEACON_STATE_REQUEST = 10;
   BEACON_STATE_RESPONSE = 11;
+  ATTESTATION_ANNOUNCE = 12;
+  ATTESTATION_REQUEST = 13;
+  ATTESTATION_RESPONSE = 14;
 }
 
 message BeaconBlockAnnounce {
@@ -64,4 +67,69 @@ message BeaconStateRequest {
 
 message BeaconStateResponse {
   BeaconState beacon_state = 1;
+}
+
+message AttestationAnnounce {
+  bytes hash = 1;
+}
+
+message AttestationRequest {
+  bytes hash = 1;
+}
+
+message AttestationResponse {
+  bytes hash = 1;
+  Attestation attestation = 2;
+}
+
+message ProposerSlashingAnnounce {
+  bytes hash = 1;
+}
+
+message ProposerSlashingRequest {
+  bytes hash = 1;
+}
+
+message ProposerSlashingResponse {
+  bytes hash = 1;
+  ProposerSlashing proposer_slashing = 2;
+}
+
+message AttesterSlashingAnnounce {
+  bytes hash = 1;
+}
+
+message AttesterSlashingRequest {
+  bytes hash = 1;
+}
+
+message AttesterSlashingResponse {
+  bytes hash = 1;
+  AttesterSlashing Attester_slashing = 2;
+}
+
+message DepositAnnounce {
+  bytes hash = 1;
+}
+
+message DepositRequest {
+  bytes hash = 1;
+}
+
+message DepositResponse {
+  bytes hash = 1;
+  Deposit deposit = 2;
+}
+
+message ExitAnnounce {
+  bytes hash = 1;
+}
+
+message ExitRequest {
+  bytes hash = 1;
+}
+
+message ExitResponse {
+  bytes hash = 1;
+  Exit exit = 2;
 }

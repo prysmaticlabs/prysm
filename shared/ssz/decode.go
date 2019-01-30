@@ -101,7 +101,7 @@ func decodeUint16(r io.Reader, val reflect.Value) (uint32, error) {
 	if err := readBytes(r, 2, b); err != nil {
 		return 0, err
 	}
-	val.SetUint(uint64(binary.BigEndian.Uint16(b)))
+	val.SetUint(uint64(binary.LittleEndian.Uint16(b)))
 	return 2, nil
 }
 
@@ -110,7 +110,7 @@ func decodeUint32(r io.Reader, val reflect.Value) (uint32, error) {
 	if err := readBytes(r, 4, b); err != nil {
 		return 0, err
 	}
-	val.SetUint(uint64(binary.BigEndian.Uint32(b)))
+	val.SetUint(uint64(binary.LittleEndian.Uint32(b)))
 	return 4, nil
 }
 
@@ -119,7 +119,7 @@ func decodeUint64(r io.Reader, val reflect.Value) (uint32, error) {
 	if err := readBytes(r, 8, b); err != nil {
 		return 0, err
 	}
-	val.SetUint(uint64(binary.BigEndian.Uint64(b)))
+	val.SetUint(uint64(binary.LittleEndian.Uint64(b)))
 	return 8, nil
 }
 
@@ -128,7 +128,7 @@ func decodeBytes(r io.Reader, val reflect.Value) (uint32, error) {
 	if err := readBytes(r, lengthBytes, sizeEnc); err != nil {
 		return 0, err
 	}
-	size := binary.BigEndian.Uint32(sizeEnc)
+	size := binary.LittleEndian.Uint32(sizeEnc)
 
 	if size == 0 {
 		val.SetBytes([]byte{})
@@ -148,7 +148,7 @@ func decodeByteArray(r io.Reader, val reflect.Value) (uint32, error) {
 	if err := readBytes(r, lengthBytes, sizeEnc); err != nil {
 		return 0, err
 	}
-	size := binary.BigEndian.Uint32(sizeEnc)
+	size := binary.LittleEndian.Uint32(sizeEnc)
 
 	if size != uint32(val.Len()) {
 		return 0, fmt.Errorf("input byte array size (%d) isn't euqal to output array size (%d)", size, val.Len())
@@ -172,7 +172,7 @@ func makeSliceDecoder(typ reflect.Type) (decoder, error) {
 		if err := readBytes(r, lengthBytes, sizeEnc); err != nil {
 			return 0, fmt.Errorf("failed to decode header of slice: %v", err)
 		}
-		size := binary.BigEndian.Uint32(sizeEnc)
+		size := binary.LittleEndian.Uint32(sizeEnc)
 
 		if size == 0 {
 			// We prefer decode into nil, not empty slice
@@ -220,7 +220,7 @@ func makeArrayDecoder(typ reflect.Type) (decoder, error) {
 		if err := readBytes(r, lengthBytes, sizeEnc); err != nil {
 			return 0, fmt.Errorf("failed to decode header of slice: %v", err)
 		}
-		size := binary.BigEndian.Uint32(sizeEnc)
+		size := binary.LittleEndian.Uint32(sizeEnc)
 
 		i, decodeSize := 0, uint32(0)
 		for ; i < val.Len() && decodeSize < size; i++ {
@@ -251,22 +251,26 @@ func makeStructDecoder(typ reflect.Type) (decoder, error) {
 		if err := readBytes(r, lengthBytes, sizeEnc); err != nil {
 			return 0, fmt.Errorf("failed to decode header of struct: %v", err)
 		}
-		size := binary.BigEndian.Uint32(sizeEnc)
+		size := binary.LittleEndian.Uint32(sizeEnc)
 
 		if size == 0 {
 			return lengthBytes, nil
 		}
 
-		for i, decodeSize := 0, uint32(0); i < len(fields); i++ {
-			if decodeSize >= size {
-				return 0, errors.New("not enough input data to decode into specified struct")
-			}
+		i, decodeSize := 0, uint32(0)
+		for ; i < len(fields) && decodeSize < size; i++ {
 			f := fields[i]
 			fieldDecodeSize, err := f.sszUtils.decoder(r, val.Field(f.index))
 			if err != nil {
 				return 0, fmt.Errorf("failed to decode field of slice: %v", err)
 			}
 			decodeSize += fieldDecodeSize
+		}
+		if i < len(fields) {
+			return 0, errors.New("input is too short")
+		}
+		if decodeSize < size {
+			return 0, errors.New("input is too long")
 		}
 		return lengthBytes + size, nil
 	}

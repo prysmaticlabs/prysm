@@ -7,15 +7,21 @@ import "proto/common/messages.proto";
 message BeaconState {
   // Validator registry [1-1000] 
   repeated ValidatorRecord validator_registry = 1;
-  uint64 validator_registry_latest_change_slot = 2;
+  uint64 validator_registry_update_slot = 2;
   uint64 validator_registry_exit_count = 3;
   bytes validator_registry_delta_chain_tip_hash32 = 4;
   repeated uint64 validator_balances = 5; // Balance in Gwei
 
   // Randomness and committees [1001-2000]
+  // TODO(#1300): shard_committees_at_slots and ShardCommitteeArray to be removed.
   repeated ShardCommitteeArray shard_committees_at_slots = 1003;
   repeated bytes latest_randao_mixes_hash32s = 1004;
-  repeated bytes latest_vdf_outputs_hash32s = 1005;
+  uint64 previous_epoch_start_shard = 1005;
+  uint64 current_epoch_start_shard = 1006;
+  uint64 previous_epoch_calculation_slot = 1007;
+  uint64 current_epoch_calculation_slot = 1008;
+  bytes previous_epoch_randao_mix_hash32 = 1009;
+  bytes current_epoch_randao_mix_hash32 = 1010;
 
   // Finality [2001-3000] 
   uint64 previous_justified_slot = 2001;
@@ -27,7 +33,7 @@ message BeaconState {
   repeated CrosslinkRecord latest_crosslinks = 3001;
   repeated bytes latest_block_root_hash32s = 3003;
   repeated bytes batched_block_root_hash32s = 3004;
-  repeated uint64 latest_penalized_exit_balances = 3005;
+  repeated uint64 latest_penalized_balances = 3005;
   repeated PendingAttestationRecord latest_attestations = 3006;
 
   // Ethereum 1.0 deposit root [4001-5000]
@@ -36,19 +42,14 @@ message BeaconState {
 
   // Miscellaneous [5001-6000]
   uint64 genesis_time = 5001;
-  ForkData fork_data = 5002;
+  Fork fork = 5002;
   uint64 slot = 5003;
-
-  // Proof of custody [6001-7000]
-  // Placeholders, ProofOfCustodyChallenge is defined in phase 1,
-  // the list will remain empty throughout phase 0
-  repeated CustodyChallenge custody_challenges = 6001;
 }
 
-message ForkData {
-  uint64 pre_fork_version = 1;
-  uint64 post_fork_version = 2;
-  uint64 fork_slot = 3;
+message Fork {
+  uint64 previous_version = 1;
+  uint64 current_version = 2;
+  uint64 slot = 3;
 }
 
 message DepositRootVote {
@@ -105,9 +106,6 @@ message ValidatorRecord {
     WITHDRAWABLE = 2; // validator is participating validator duties.
   }
   StatusFlags status_flags = 10;
-  bytes custody_commitment_hash32 = 11;
-  uint64 latest_custody_reseed_slot = 12;
-  uint64 penultimate_custody_reseed_slot = 13;
 
   // Deprecated fields
   // All fields must be annotated with [deprecated=true];
@@ -116,7 +114,7 @@ message ValidatorRecord {
 }
 
 message ShardReassignmentRecord {
-  uint32 validator_index = 1;
+  uint64 validator_index = 1;
   uint64 shard = 2;
   uint64 slot = 3;
 }
@@ -132,7 +130,7 @@ message ShardCommitteeArray {
 
 message ShardCommittee {
   uint64 shard = 1;
-  repeated uint32 committee = 2;
+  repeated uint64 committee = 2;
   uint64 total_validator_count = 3;
 }
 
@@ -151,7 +149,7 @@ message BeaconBlock {
 message BeaconBlockBody {
   repeated Attestation attestations = 1;
   repeated ProposerSlashing proposer_slashings  = 2;
-  repeated CasperSlashing casper_slashings = 3;
+  repeated AttesterSlashing attester_slashings = 3;
   repeated Deposit deposits = 4;
   repeated Exit exits = 5;
 }
@@ -171,9 +169,9 @@ message ProposalSignedData {
   bytes block_root_hash32 = 3;
 }
 
-message SlashableVoteData {
-  repeated uint32 custody_bit_0_indices = 1; // proof of custody indices for 0 bits.
-  repeated uint32 custody_bit_1_indices = 2; // proof of custody indices for 1 bits.
+message SlashableVote {
+  repeated uint64 validator_indices = 1;
+  bytes custody_bitfield = 2;
   AttestationData data = 3;
   bytes aggregate_signature = 4; // Type of [uint384]?
 }
@@ -185,16 +183,16 @@ message DepositData {
 }
 
 message ProposerSlashing {
-  uint32 proposer_index = 1;
+  uint64 proposer_index = 1;
   ProposalSignedData proposal_data_1 = 2;
   bytes proposal_signature_1 = 3; // Type of [uint384]?
   ProposalSignedData proposal_data_2 = 4;
   bytes proposal_signature_2 = 5;
 }
 
-message CasperSlashing {
-  SlashableVoteData votes_1 = 1;
-  SlashableVoteData votes_2 = 2;
+message AttesterSlashing {
+  SlashableVote slashable_vote_1 = 1;
+  SlashableVote slashable_vote_2 = 2;
 }
 
 message Deposit {
@@ -205,13 +203,13 @@ message Deposit {
 
 message Exit {
   uint64 slot = 1;
-  uint32 validator_index = 2;
+  uint64 validator_index = 2;
   bytes signature = 3; // Type of [uint384]?
 }
 
 message ValidatorRegistryDeltaBlock {
   bytes latest_registry_delta_root_hash32 = 1;
-  uint32 validator_index = 2;
+  uint64 validator_index = 2;
   bytes pubkey = 3;
   uint64 slot = 4;
   enum ValidatorRegistryDeltaFlags {
@@ -220,5 +218,3 @@ message ValidatorRegistryDeltaBlock {
   }
   ValidatorRegistryDeltaFlags flag = 5;
 }
-
-message CustodyChallenge {} // Empty until phase 1
