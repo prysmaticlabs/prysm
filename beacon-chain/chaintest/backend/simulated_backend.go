@@ -253,7 +253,20 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		averageDuration(averageTimesPerTransition),
 	)
 
-	if beaconState.Slot != testCase.Results.Slot {
+	if err := sb.CompareTestCase(testCase); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (sb *SimulatedBackend) InitializeBeaconState() error {
+
+}
+
+func (sb *SimulatedBackend) CompareTestCase(testCase *StateTestCase) error {
+
+	if sb.state.Slot != testCase.Results.Slot {
 		return fmt.Errorf(
 			"incorrect state slot after %d state transitions without blocks, wanted %d, received %d",
 			testCase.Config.NumSlots,
@@ -261,16 +274,16 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 			testCase.Results.Slot,
 		)
 	}
-	if len(beaconState.ValidatorRegistry) != testCase.Results.NumValidators {
+	if len(sb.state.ValidatorRegistry) != testCase.Results.NumValidators {
 		return fmt.Errorf(
 			"incorrect num validators after %d state transitions without blocks, wanted %d, received %d",
 			testCase.Config.NumSlots,
 			testCase.Results.NumValidators,
-			len(beaconState.ValidatorRegistry),
+			len(sb.state.ValidatorRegistry),
 		)
 	}
 	for _, penalized := range testCase.Results.PenalizedValidators {
-		if beaconState.ValidatorRegistry[penalized].PenalizedSlot == params.BeaconConfig().FarFutureSlot {
+		if sb.state.ValidatorRegistry[penalized].PenalizedSlot == params.BeaconConfig().FarFutureSlot {
 			return fmt.Errorf(
 				"expected validator at index %d to have been penalized",
 				penalized,
@@ -278,7 +291,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		}
 	}
 	for _, exited := range testCase.Results.ExitedValidators {
-		if beaconState.ValidatorRegistry[exited].StatusFlags != pb.ValidatorRecord_INITIATED_EXIT {
+		if sb.state.ValidatorRegistry[exited].StatusFlags != pb.ValidatorRecord_INITIATED_EXIT {
 			return fmt.Errorf(
 				"expected validator at index %d to have exited",
 				exited,
@@ -286,10 +299,6 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		}
 	}
 	return nil
-}
-
-func (sb *SimulatedBackend) InitializeBeaconState() error {
-
 }
 
 func averageDuration(times []time.Duration) time.Duration {
