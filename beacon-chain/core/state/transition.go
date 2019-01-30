@@ -77,9 +77,9 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState
 	if err != nil {
 		return nil, fmt.Errorf("could not verify block proposer slashings: %v", err)
 	}
-	state, err = b.ProcessCasperSlashings(state, block)
+	state, err = b.ProcessAttesterSlashings(state, block)
 	if err != nil {
-		return nil, fmt.Errorf("could not verify block casper slashings: %v", err)
+		return nil, fmt.Errorf("could not verify block attester slashings: %v", err)
 	}
 	state, err = b.ProcessBlockAttestations(state, block)
 	if err != nil {
@@ -104,7 +104,7 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState
 // 	 update_justification(state)
 // 	 update_finalization(state)
 // 	 update_crosslinks(state)
-// 	 process_casper_reward_penalties(state)
+// 	 process_attester_reward_penalties(state)
 // 	 process_crosslink_reward_penalties(state)
 // 	 update_validator_registry(state)
 // 	 final_book_keeping(state)
@@ -194,7 +194,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 		return nil, fmt.Errorf("could not process crosslink records: %v", err)
 	}
 
-	// Process casper rewards and penalties.
+	// Process attester rewards and penalties.
 	epochsSinceFinality := e.SinceFinality(state)
 	switch {
 	case epochsSinceFinality <= 4:

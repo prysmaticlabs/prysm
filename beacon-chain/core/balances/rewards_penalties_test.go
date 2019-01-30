@@ -9,8 +9,8 @@ import (
 )
 
 func TestBaseRewardQuotient(t *testing.T) {
-	if params.BeaconConfig().BaseRewardQuotient != 1<<10 {
-		t.Errorf("BaseRewardQuotient should be 1024 for these tests to pass")
+	if params.BeaconConfig().BaseRewardQuotient != 1<<5 {
+		t.Errorf("BaseRewardQuotient should be 32 for these tests to pass")
 	}
 
 	tests := []struct {
@@ -18,11 +18,11 @@ func TestBaseRewardQuotient(t *testing.T) {
 		b uint64
 	}{
 		{0, 0},
-		{1e6 * 1e9, 30881},   //1M ETH staked, 9.76% interest.
-		{2e6 * 1e9, 43673},   //2M ETH staked, 6.91% interest.
-		{5e6 * 1e9, 69053},   //5M ETH staked, 4.36% interest.
-		{10e6 * 1e9, 97656},  // 10M ETH staked, 3.08% interest.
-		{20e6 * 1e9, 138106}, // 20M ETH staked, 2.18% interest.
+		{1e6 * 1e9, 988211},   //1M ETH staked, 9.76% interest.
+		{2e6 * 1e9, 1397542},  //2M ETH staked, 6.91% interest.
+		{5e6 * 1e9, 2209708},  //5M ETH staked, 4.36% interest.
+		{10e6 * 1e9, 3125000}, // 10M ETH staked, 3.08% interest.
+		{20e6 * 1e9, 4419417}, // 20M ETH staked, 2.18% interest.
 	}
 	for _, tt := range tests {
 		b := baseRewardQuotient(tt.a)
@@ -39,9 +39,9 @@ func TestBaseReward(t *testing.T) {
 		b uint64
 	}{
 		{0, 0},
-		{params.BeaconConfig().MinDepositInGwei, 61},
+		{params.BeaconConfig().MinDeposit, 61},
 		{30 * 1e9, 1853},
-		{params.BeaconConfig().MaxDepositInGwei, 1976},
+		{params.BeaconConfig().MaxDeposit, 1976},
 		{40 * 1e9, 1976},
 	}
 	for _, tt := range tests {
@@ -70,7 +70,7 @@ func TestInactivityPenalty(t *testing.T) {
 	}
 	for _, tt := range tests {
 		state := &pb.BeaconState{
-			ValidatorBalances: []uint64{params.BeaconConfig().MaxDepositInGwei},
+			ValidatorBalances: []uint64{params.BeaconConfig().MaxDeposit},
 		}
 		// Assume 10 ETH staked (base reward quotient: 3237888).
 		b := inactivityPenalty(state, 0, 3237888, tt.a)
@@ -83,20 +83,20 @@ func TestInactivityPenalty(t *testing.T) {
 
 func TestFFGSrcRewardsPenalties(t *testing.T) {
 	tests := []struct {
-		voted                          []uint32
+		voted                          []uint64
 		balanceAfterSrcRewardPenalties []uint64
 	}{
 		// voted represents the validator indices that voted for FFG source,
 		// balanceAfterSrcRewardPenalties represents their final balances,
 		// validators who voted should get an increase, who didn't should get a decrease.
-		{[]uint32{}, []uint64{31981661892, 31981661892, 31981661892, 31981661892}},
-		{[]uint32{0, 1}, []uint64{32009169054, 32009169054, 31981661892, 31981661892}},
-		{[]uint32{0, 1, 2, 3}, []uint64{32018338108, 32018338108, 32018338108, 32018338108}},
+		{[]uint64{}, []uint64{31999427550, 31999427550, 31999427550, 31999427550}},
+		{[]uint64{0, 1}, []uint64{32000286225, 32000286225, 31999427550, 31999427550}},
+		{[]uint64{0, 1, 2, 3}, []uint64{32000572450, 32000572450, 32000572450, 32000572450}},
 	}
 	for _, tt := range tests {
 		validatorBalances := make([]uint64, 4)
 		for i := 0; i < len(validatorBalances); i++ {
-			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
+			validatorBalances[i] = params.BeaconConfig().MaxDeposit
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry: []*pb.ValidatorRecord{
@@ -110,8 +110,8 @@ func TestFFGSrcRewardsPenalties(t *testing.T) {
 		state = ExpectedFFGSource(
 			state,
 			tt.voted,
-			uint64(len(tt.voted))*params.BeaconConfig().MaxDepositInGwei,
-			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositInGwei)
+			uint64(len(tt.voted))*params.BeaconConfig().MaxDeposit,
+			uint64(len(validatorBalances))*params.BeaconConfig().MaxDeposit)
 
 		if !reflect.DeepEqual(state.ValidatorBalances, tt.balanceAfterSrcRewardPenalties) {
 			t.Errorf("FFGSrcRewardsPenalties(%v) = %v, wanted: %v",
@@ -122,20 +122,20 @@ func TestFFGSrcRewardsPenalties(t *testing.T) {
 
 func TestFFGTargetRewardsPenalties(t *testing.T) {
 	tests := []struct {
-		voted                          []uint32
+		voted                          []uint64
 		balanceAfterTgtRewardPenalties []uint64
 	}{
 		// voted represents the validator indices that voted for FFG target,
 		// balanceAfterTgtRewardPenalties represents their final balances,
 		// validators who voted should get an increase, who didn't should get a decrease.
-		{[]uint32{}, []uint64{31981661892, 31981661892, 31981661892, 31981661892}},
-		{[]uint32{0, 1}, []uint64{32009169054, 32009169054, 31981661892, 31981661892}},
-		{[]uint32{0, 1, 2, 3}, []uint64{32018338108, 32018338108, 32018338108, 32018338108}},
+		{[]uint64{}, []uint64{31999427550, 31999427550, 31999427550, 31999427550}},
+		{[]uint64{0, 1}, []uint64{32000286225, 32000286225, 31999427550, 31999427550}},
+		{[]uint64{0, 1, 2, 3}, []uint64{32000572450, 32000572450, 32000572450, 32000572450}},
 	}
 	for _, tt := range tests {
 		validatorBalances := make([]uint64, 4)
 		for i := 0; i < len(validatorBalances); i++ {
-			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
+			validatorBalances[i] = params.BeaconConfig().MaxDeposit
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry: []*pb.ValidatorRecord{
@@ -149,8 +149,8 @@ func TestFFGTargetRewardsPenalties(t *testing.T) {
 		state = ExpectedFFGTarget(
 			state,
 			tt.voted,
-			uint64(len(tt.voted))*params.BeaconConfig().MaxDepositInGwei,
-			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositInGwei)
+			uint64(len(tt.voted))*params.BeaconConfig().MaxDeposit,
+			uint64(len(validatorBalances))*params.BeaconConfig().MaxDeposit)
 
 		if !reflect.DeepEqual(state.ValidatorBalances, tt.balanceAfterTgtRewardPenalties) {
 			t.Errorf("FFGTargetRewardsPenalties(%v) = %v, wanted: %v",
@@ -161,20 +161,20 @@ func TestFFGTargetRewardsPenalties(t *testing.T) {
 
 func TestChainHeadRewardsPenalties(t *testing.T) {
 	tests := []struct {
-		voted                           []uint32
+		voted                           []uint64
 		balanceAfterHeadRewardPenalties []uint64
 	}{
 		// voted represents the validator indices that voted for canonical chain,
 		// balanceAfterHeadRewardPenalties represents their final balances,
 		// validators who voted should get an increase, who didn't should get a decrease.
-		{[]uint32{}, []uint64{31981661892, 31981661892, 31981661892, 31981661892}},
-		{[]uint32{0, 1}, []uint64{32009169054, 32009169054, 31981661892, 31981661892}},
-		{[]uint32{0, 1, 2, 3}, []uint64{32018338108, 32018338108, 32018338108, 32018338108}},
+		{[]uint64{}, []uint64{31999427550, 31999427550, 31999427550, 31999427550}},
+		{[]uint64{0, 1}, []uint64{32000286225, 32000286225, 31999427550, 31999427550}},
+		{[]uint64{0, 1, 2, 3}, []uint64{32000572450, 32000572450, 32000572450, 32000572450}},
 	}
 	for _, tt := range tests {
 		validatorBalances := make([]uint64, 4)
 		for i := 0; i < len(validatorBalances); i++ {
-			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
+			validatorBalances[i] = params.BeaconConfig().MaxDeposit
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry: []*pb.ValidatorRecord{
@@ -188,8 +188,8 @@ func TestChainHeadRewardsPenalties(t *testing.T) {
 		state = ExpectedBeaconChainHead(
 			state,
 			tt.voted,
-			uint64(len(tt.voted))*params.BeaconConfig().MaxDepositInGwei,
-			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositInGwei)
+			uint64(len(tt.voted))*params.BeaconConfig().MaxDeposit,
+			uint64(len(validatorBalances))*params.BeaconConfig().MaxDeposit)
 
 		if !reflect.DeepEqual(state.ValidatorBalances, tt.balanceAfterHeadRewardPenalties) {
 			t.Errorf("ChainHeadRewardsPenalties(%v) = %v, wanted: %v",
@@ -213,16 +213,16 @@ func TestInclusionDistRewards_Ok(t *testing.T) {
 	}
 
 	tests := []struct {
-		voted []uint32
+		voted []uint64
 	}{
-		{[]uint32{}},
-		{[]uint32{237, 224}},
-		{[]uint32{237, 224, 2, 242}},
+		{[]uint64{}},
+		{[]uint64{237, 224}},
+		{[]uint64{237, 224, 2, 242}},
 	}
 	for _, tt := range tests {
 		validatorBalances := make([]uint64, config.EpochLength*4)
 		for i := 0; i < len(validatorBalances); i++ {
-			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
+			validatorBalances[i] = params.BeaconConfig().MaxDeposit
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry:  validators,
@@ -232,7 +232,7 @@ func TestInclusionDistRewards_Ok(t *testing.T) {
 		state, err := InclusionDistance(
 			state,
 			tt.voted,
-			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositInGwei)
+			uint64(len(validatorBalances))*params.BeaconConfig().MaxDeposit)
 		if err != nil {
 			t.Fatalf("could not execute InclusionDistRewards:%v", err)
 		}
@@ -262,10 +262,10 @@ func TestInclusionDistRewards_NotOk(t *testing.T) {
 	}
 
 	tests := []struct {
-		voted                        []uint32
+		voted                        []uint64
 		balanceAfterInclusionRewards []uint64
 	}{
-		{[]uint32{0, 1, 2, 3}, []uint64{}},
+		{[]uint64{0, 1, 2, 3}, []uint64{}},
 	}
 	for _, tt := range tests {
 		state := &pb.BeaconState{
@@ -281,20 +281,20 @@ func TestInclusionDistRewards_NotOk(t *testing.T) {
 
 func TestInactivityFFGSrcPenalty(t *testing.T) {
 	tests := []struct {
-		voted                     []uint32
+		voted                     []uint64
 		balanceAfterFFGSrcPenalty []uint64
 		epochsSinceFinality       uint64
 	}{
 		// The higher the epochs since finality, the more penalties applied.
-		{[]uint32{0, 1}, []uint64{32000000000, 32000000000, 31981657124, 31981657124}, 5},
-		{[]uint32{}, []uint64{31981657124, 31981657124, 31981657124, 31981657124}, 5},
-		{[]uint32{}, []uint64{31981652356, 31981652356, 31981652356, 31981652356}, 10},
-		{[]uint32{}, []uint64{31981642819, 31981642819, 31981642819, 31981642819}, 20},
+		{[]uint64{0, 1}, []uint64{32000000000, 32000000000, 31999422782, 31999422782}, 5},
+		{[]uint64{}, []uint64{31999422782, 31999422782, 31999422782, 31999422782}, 5},
+		{[]uint64{}, []uint64{31999418014, 31999418014, 31999418014, 31999418014}, 10},
+		{[]uint64{}, []uint64{31999408477, 31999408477, 31999408477, 31999408477}, 20},
 	}
 	for _, tt := range tests {
 		validatorBalances := make([]uint64, 4)
 		for i := 0; i < len(validatorBalances); i++ {
-			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
+			validatorBalances[i] = params.BeaconConfig().MaxDeposit
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry: []*pb.ValidatorRecord{
@@ -308,7 +308,7 @@ func TestInactivityFFGSrcPenalty(t *testing.T) {
 		state = InactivityFFGSource(
 			state,
 			tt.voted,
-			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositInGwei,
+			uint64(len(validatorBalances))*params.BeaconConfig().MaxDeposit,
 			tt.epochsSinceFinality)
 
 		if !reflect.DeepEqual(state.ValidatorBalances, tt.balanceAfterFFGSrcPenalty) {
@@ -320,20 +320,20 @@ func TestInactivityFFGSrcPenalty(t *testing.T) {
 
 func TestInactivityFFGTargetPenalty(t *testing.T) {
 	tests := []struct {
-		voted                        []uint32
+		voted                        []uint64
 		balanceAfterFFGTargetPenalty []uint64
 		epochsSinceFinality          uint64
 	}{
 		// The higher the epochs since finality, the more penalties applied.
-		{[]uint32{0, 1}, []uint64{32000000000, 32000000000, 31981657124, 31981657124}, 5},
-		{[]uint32{}, []uint64{31981657124, 31981657124, 31981657124, 31981657124}, 5},
-		{[]uint32{}, []uint64{31981652356, 31981652356, 31981652356, 31981652356}, 10},
-		{[]uint32{}, []uint64{31981642819, 31981642819, 31981642819, 31981642819}, 20},
+		{[]uint64{0, 1}, []uint64{32000000000, 32000000000, 31999422782, 31999422782}, 5},
+		{[]uint64{}, []uint64{31999422782, 31999422782, 31999422782, 31999422782}, 5},
+		{[]uint64{}, []uint64{31999418014, 31999418014, 31999418014, 31999418014}, 10},
+		{[]uint64{}, []uint64{31999408477, 31999408477, 31999408477, 31999408477}, 20},
 	}
 	for _, tt := range tests {
 		validatorBalances := make([]uint64, 4)
 		for i := 0; i < len(validatorBalances); i++ {
-			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
+			validatorBalances[i] = params.BeaconConfig().MaxDeposit
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry: []*pb.ValidatorRecord{
@@ -347,7 +347,7 @@ func TestInactivityFFGTargetPenalty(t *testing.T) {
 		state = InactivityFFGTarget(
 			state,
 			tt.voted,
-			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositInGwei,
+			uint64(len(validatorBalances))*params.BeaconConfig().MaxDeposit,
 			tt.epochsSinceFinality)
 
 		if !reflect.DeepEqual(state.ValidatorBalances, tt.balanceAfterFFGTargetPenalty) {
@@ -359,17 +359,17 @@ func TestInactivityFFGTargetPenalty(t *testing.T) {
 
 func TestInactivityHeadPenalty(t *testing.T) {
 	tests := []struct {
-		voted                             []uint32
+		voted                             []uint64
 		balanceAfterInactivityHeadPenalty []uint64
 	}{
-		{[]uint32{}, []uint64{31981661892, 31981661892, 31981661892, 31981661892}},
-		{[]uint32{0, 1}, []uint64{32000000000, 32000000000, 31981661892, 31981661892}},
-		{[]uint32{0, 1, 2, 3}, []uint64{32000000000, 32000000000, 32000000000, 32000000000}},
+		{[]uint64{}, []uint64{31999427550, 31999427550, 31999427550, 31999427550}},
+		{[]uint64{0, 1}, []uint64{32000000000, 32000000000, 31999427550, 31999427550}},
+		{[]uint64{0, 1, 2, 3}, []uint64{32000000000, 32000000000, 32000000000, 32000000000}},
 	}
 	for _, tt := range tests {
 		validatorBalances := make([]uint64, 4)
 		for i := 0; i < len(validatorBalances); i++ {
-			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
+			validatorBalances[i] = params.BeaconConfig().MaxDeposit
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry: []*pb.ValidatorRecord{
@@ -383,7 +383,7 @@ func TestInactivityHeadPenalty(t *testing.T) {
 		state = InactivityChainHead(
 			state,
 			tt.voted,
-			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositInGwei)
+			uint64(len(validatorBalances))*params.BeaconConfig().MaxDeposit)
 
 		if !reflect.DeepEqual(state.ValidatorBalances, tt.balanceAfterInactivityHeadPenalty) {
 			t.Errorf("InactivityHeadPenalty(%v) = %v, wanted: %v",
@@ -397,14 +397,14 @@ func TestInactivityExitedPenality(t *testing.T) {
 		balanceAfterExitedPenalty []uint64
 		epochsSinceFinality       uint64
 	}{
-		{[]uint64{31944976140, 31944976140, 31944976140, 31944976140}, 5},
-		{[]uint64{31944966604, 31944966604, 31944966604, 31944966604}, 10},
-		{[]uint64{31944032002, 31944032002, 31944032002, 31944032002}, 500},
+		{[]uint64{31998273114, 31998273114, 31998273114, 31998273114}, 5},
+		{[]uint64{31998263578, 31998263578, 31998263578, 31998263578}, 10},
+		{[]uint64{31997328976, 31997328976, 31997328976, 31997328976}, 500},
 	}
 	for _, tt := range tests {
 		validatorBalances := make([]uint64, 4)
 		for i := 0; i < len(validatorBalances); i++ {
-			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
+			validatorBalances[i] = params.BeaconConfig().MaxDeposit
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry: []*pb.ValidatorRecord{
@@ -416,7 +416,7 @@ func TestInactivityExitedPenality(t *testing.T) {
 		}
 		state = InactivityExitedPenalties(
 			state,
-			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositInGwei,
+			uint64(len(validatorBalances))*params.BeaconConfig().MaxDeposit,
 			tt.epochsSinceFinality,
 		)
 
@@ -441,16 +441,16 @@ func TestInactivityInclusionPenalty_Ok(t *testing.T) {
 	}
 
 	tests := []struct {
-		voted []uint32
+		voted []uint64
 	}{
-		{[]uint32{}},
-		{[]uint32{237, 224}},
-		{[]uint32{237, 224, 2, 242}},
+		{[]uint64{}},
+		{[]uint64{237, 224}},
+		{[]uint64{237, 224, 2, 242}},
 	}
 	for _, tt := range tests {
 		validatorBalances := make([]uint64, config.EpochLength*4)
 		for i := 0; i < len(validatorBalances); i++ {
-			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
+			validatorBalances[i] = params.BeaconConfig().MaxDeposit
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry:  validators,
@@ -460,7 +460,7 @@ func TestInactivityInclusionPenalty_Ok(t *testing.T) {
 		state, err := InactivityInclusionDistance(
 			state,
 			tt.voted,
-			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositInGwei)
+			uint64(len(validatorBalances))*params.BeaconConfig().MaxDeposit)
 
 		for _, i := range tt.voted {
 			validatorBalances[i] = 32000055555
@@ -489,10 +489,10 @@ func TestInactivityInclusionPenalty_NotOk(t *testing.T) {
 	}
 
 	tests := []struct {
-		voted                        []uint32
+		voted                        []uint64
 		balanceAfterInclusionRewards []uint64
 	}{
-		{[]uint32{0, 1, 2, 3}, []uint64{}},
+		{[]uint64{0, 1, 2, 3}, []uint64{}},
 	}
 	for _, tt := range tests {
 		state := &pb.BeaconState{
@@ -521,15 +521,15 @@ func TestAttestationInclusionRewards(t *testing.T) {
 	}
 
 	tests := []struct {
-		voted []uint32
+		voted []uint64
 	}{
-		{[]uint32{}},
-		{[]uint32{237}},
+		{[]uint64{}},
+		{[]uint64{237}},
 	}
 	for _, tt := range tests {
 		validatorBalances := make([]uint64, config.EpochLength*4)
 		for i := 0; i < len(validatorBalances); i++ {
-			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
+			validatorBalances[i] = params.BeaconConfig().MaxDeposit
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry:  validators,
@@ -538,7 +538,7 @@ func TestAttestationInclusionRewards(t *testing.T) {
 		}
 		state, err := AttestationInclusion(
 			state,
-			uint64(len(validatorBalances))*params.BeaconConfig().MaxDepositInGwei,
+			uint64(len(validatorBalances))*params.BeaconConfig().MaxDeposit,
 			tt.voted)
 
 		for _, i := range tt.voted {
@@ -564,15 +564,15 @@ func TestAttestationInclusionRewards_NoInclusionSlot(t *testing.T) {
 	}
 
 	tests := []struct {
-		voted                            []uint32
+		voted                            []uint64
 		balanceAfterAttestationInclusion []uint64
 	}{
-		{[]uint32{0, 1, 2, 3}, []uint64{32000000000, 32000000000, 32000000000, 32000000000}},
+		{[]uint64{0, 1, 2, 3}, []uint64{32000000000, 32000000000, 32000000000, 32000000000}},
 	}
 	for _, tt := range tests {
 		validatorBalances := make([]uint64, 4)
 		for i := 0; i < len(validatorBalances); i++ {
-			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
+			validatorBalances[i] = params.BeaconConfig().MaxDeposit
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry: validators,
@@ -598,15 +598,15 @@ func TestAttestationInclusionRewards_NoProposerIndex(t *testing.T) {
 	}
 
 	tests := []struct {
-		voted                            []uint32
+		voted                            []uint64
 		balanceAfterAttestationInclusion []uint64
 	}{
-		{[]uint32{0}, []uint64{32000071022, 32000000000, 32000000000, 32000000000}},
+		{[]uint64{0}, []uint64{32000071022, 32000000000, 32000000000, 32000000000}},
 	}
 	for _, tt := range tests {
 		validatorBalances := make([]uint64, 4)
 		for i := 0; i < len(validatorBalances); i++ {
-			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
+			validatorBalances[i] = params.BeaconConfig().MaxDeposit
 		}
 		state := &pb.BeaconState{
 			Slot:               1000,
@@ -644,7 +644,7 @@ func TestCrosslinksRewardsPenalties(t *testing.T) {
 	for _, tt := range tests {
 		validatorBalances := make([]uint64, config.EpochLength*4)
 		for i := 0; i < len(validatorBalances); i++ {
-			validatorBalances[i] = params.BeaconConfig().MaxDepositInGwei
+			validatorBalances[i] = params.BeaconConfig().MaxDeposit
 		}
 		attestation := []*pb.PendingAttestationRecord{
 			{Data: &pb.AttestationData{Shard: 1, Slot: 0},

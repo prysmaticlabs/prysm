@@ -34,23 +34,27 @@ func CanProcessDepositRoots(state *pb.BeaconState) bool {
 }
 
 // CanProcessValidatorRegistry checks the eligibility to process validator registry.
-// It checks shard committees last changed slot and finalized slot against
+// It checks crosslink committees last changed slot and finalized slot against
 // latest change slot.
 //
 // Spec pseudocode definition:
 //    If the following are satisfied:
 //		* state.finalized_slot > state.validator_registry_latest_change_slot
 //		* state.latest_crosslinks[shard].slot > state.validator_registry_latest_change_slot
-// 			for every shard number shard in state.shard_committees_at_slots
+// 			for every shard number shard in [(state.current_epoch_start_shard + i) %
+//	 			SHARD_COUNT for i in range(get_current_epoch_committees_per_slot(state) *
+//	 			EPOCH_LENGTH)] (that is, for every shard in the current committees)
 func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 	if state.FinalizedSlot <= state.ValidatorRegistryUpdateSlot {
 		return false
 	}
-	for _, shardCommitteesAtSlot := range state.ShardCommitteesAtSlots {
-		for _, shardCommittee := range shardCommitteesAtSlot.ArrayShardCommittee {
-			if state.LatestCrosslinks[shardCommittee.Shard].Slot <= state.ValidatorRegistryUpdateSlot {
-				return false
-			}
+	shardsProcessed := validators.CurrCommitteesCountPerSlot(state) * config.EpochLength
+	fmt.Println(shardsProcessed)
+	startShard := state.CurrentEpochStartShard
+	for i := startShard; i < shardsProcessed; i++ {
+		if state.LatestCrosslinks[i%config.ShardCount].Slot <=
+			state.ValidatorRegistryUpdateSlot {
+			return false
 		}
 	}
 	return true
@@ -201,7 +205,7 @@ func ProcessEjections(state *pb.BeaconState) (*pb.BeaconState, error) {
 	var err error
 	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
 	for _, index := range activeValidatorIndices {
-		if state.ValidatorBalances[index] < config.EjectionBalanceInGwei {
+		if state.ValidatorBalances[index] < config.EjectionBalance {
 			state, err = validators.ExitValidator(state, index)
 			if err != nil {
 				return nil, fmt.Errorf("could not exit validator %d: %v", index, err)
