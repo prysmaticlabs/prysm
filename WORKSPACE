@@ -543,7 +543,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_crypto",
-    commit = "c7b33c32a30bae9ba07d37eb4d86f1f8b0f644fb",
+    commit = "ccddf3741a0cfcee0a62d34c18c2c5417a3761af",
     importpath = "golang.org/x/crypto",
 )
 
@@ -657,7 +657,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_client_model",
-    commit = "56726106282f1985ea77d5305743db7231b0c0a8",
+    commit = "fd36f4220a901265f90734c3183c5f0c91daa0b8",
     importpath = "github.com/prometheus/client_model",
 )
 
@@ -669,7 +669,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_procfs",
-    commit = "bf6a532e95b1f7a62adf0ab5050a5bb2237ad2f4",
+    commit = "316cf8ccfec56d206735d46333ca162eb374da8b",
     importpath = "github.com/prometheus/procfs",
 )
 
@@ -910,7 +910,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_oauth2",
-    commit = "5dab4167f31cbd76b407f1486c86b40748bc5073",
+    commit = "99b60b757ec124ebb7d6b7e97f153b19c10ce163",
     importpath = "golang.org/x/oauth2",
 )
 
