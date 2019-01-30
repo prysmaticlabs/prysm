@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"testing"
 	"time"
@@ -71,7 +70,6 @@ func TestValidatorEpochAssignments(t *testing.T) {
 	for i := 0; i < len(deposits); i++ {
 		var pubKey [48]byte
 		copy(pubKey[:], []byte(strconv.Itoa(i)))
-		fmt.Println(len(pubKey))
 		depositInput := &pbp2p.DepositInput{
 			Pubkey:                 pubKey[:],
 			RandaoCommitmentHash32: []byte{0},

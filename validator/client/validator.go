@@ -2,6 +2,10 @@ package client
 
 import (
 	"context"
+	"io"
+	"time"
+
+	ptypes "github.com/gogo/protobuf/types"
 
 	"github.com/opentracing/opentracing-go"
 
@@ -14,10 +18,11 @@ import (
 //
 // WIP - not done.
 type validator struct {
-	ticker     slotticker.SlotTicker
-	assignment *pb.Assignment
-
+	genesisTime     uint64
+	ticker          *slotticker.SlotTicker
+	assignment      *pb.Assignment
 	validatorClient pb.ValidatorServiceClient
+	beaconClient    pb.BeaconServiceClient
 	pubKey          []byte
 }
 
@@ -27,9 +32,6 @@ type validator struct {
 func (v *validator) Initialize(ctx context.Context) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.Initialize")
 	defer span.Finish()
-
-	cfg := params.BeaconConfig()
-	v.ticker = slotticker.GetSlotTicker(cfg.GenesisTime, cfg.SlotDuration)
 }
 
 // Done cleans up the validator.
@@ -37,14 +39,55 @@ func (v *validator) Done() {
 	v.ticker.Done()
 }
 
+// WaitForChainStart checks whether the beacon node has started its runtime. That is,
+// it calls to the beacon node which then verifies the ETH1.0 deposit contract logs to check
+// for the ChainStart log to have been emitted. If so, it starts a ticker based on the ChainStart
+// unix timestamp which will be used to keep track of time within the validator client.
+func (v *validator) WaitForChainStart(ctx context.Context) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.WaitForChainStart")
+	defer span.Finish()
+	// First, check if the beacon chain has started.
+	stream, err := v.beaconClient.WaitForChainStart(ctx, &ptypes.Empty{})
+	if err != nil {
+		log.Errorf("Could not setup beacon chain ChainStart streaming client: %v", err)
+		return
+	}
+	for {
+		log.Info("Waiting for beacon chain start log from the ETH 1.0 deposit contract...")
+		chainStartRes, err := stream.Recv()
+		// If the stream is closed, we stop the loop.
+		if err == io.EOF {
+			break
+		}
+		// If context is canceled we stop the loop.
+		if ctx.Err() == context.Canceled {
+			log.Debugf("Context has been canceled so shutting down the loop: %v", ctx.Err())
+			break
+		}
+		if err != nil {
+			log.Errorf("Could not receive ChainStart from stream: %v", err)
+			continue
+		}
+		v.genesisTime = chainStartRes.GenesisTime
+		break
+	}
+	log.Infof("Beacon chain initialized at unix time: %v", time.Unix(int64(v.genesisTime), 0))
+	// Once the ChainStart log is received, we update the genesis time of the validator client
+	// and begin a slot ticker used to track the current slot the beacon node is in.
+	v.ticker = slotticker.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SlotDuration)
+}
+
 // WaitForActivation checks whether the validator pubkey is in the active
-// validator set. If not, this operation will block until an activation is
+// validator set. If not, this operation will block until an activation message is
 // received.
 //
 // WIP - not done.
 func (v *validator) WaitForActivation(ctx context.Context) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.WaitForActivation")
 	defer span.Finish()
+	// First, check if the validator has deposited into the Deposit Contract.
+	// If the validator has deposited, subscribe to a stream receiving the activation status.
+	// of the validator until a final ACTIVATED check if received, then this function can return.
 }
 
 // NextSlot emits the next slot number at the start time of that slot.
@@ -99,7 +142,6 @@ func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
 func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.ProposeBlock")
 	defer span.Finish()
-
 }
 
 // AttestToBlockHead
@@ -108,5 +150,4 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.AttestToBlockHead")
 	defer span.Finish()
-
 }

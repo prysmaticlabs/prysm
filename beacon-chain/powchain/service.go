@@ -143,18 +143,119 @@ func (w *Web3Service) Status() error {
 	return nil
 }
 
-// initDataFromVRC calls the vrc contract and finds the deposit count
-// and deposit root.
-func (w *Web3Service) initDataFromVRC() error {
-	root, err := w.vrcCaller.GetDepositRoot(&bind.CallOpts{})
+// LatestBlockNumber in the ETH1.0 chain.
+func (w *Web3Service) LatestBlockNumber() *big.Int {
+	return w.blockNumber
+}
+
+// LatestBlockHash in the ETH1.0 chain.
+func (w *Web3Service) LatestBlockHash() common.Hash {
+	return w.blockHash
+}
+
+// Client for interacting with the ETH1.0 chain.
+func (w *Web3Service) Client() Client {
+	return w.client
+}
+
+// HasChainStartLogOccurred queries all logs in the deposit contract to verify
+// if ChainStart has occurred. If so, it returns true alongside the ChainStart timestamp.
+func (w *Web3Service) HasChainStartLogOccurred() (bool, time.Time, error) {
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{
+			w.depositContractAddress,
+		},
+	}
+	logs, err := w.logger.FilterLogs(w.ctx, query)
 	if err != nil {
-		return fmt.Errorf("could not retrieve deposit root %v", err)
+		return false, time.Now(), fmt.Errorf("could not filter deposit contract logs: %v", err)
+	}
+	for _, log := range logs {
+		if log.Topics[0] == hashutil.Hash(chainStartEventSignature) {
+			_, timestampData, err := contracts.UnpackChainStartLogData(log.Data)
+			if err != nil {
+				return false, time.Now(), fmt.Errorf("unable to unpack ChainStart log data %v", err)
+			}
+			timestamp := binary.BigEndian.Uint64(timestampData)
+			if uint64(time.Now().Unix()) < timestamp {
+				return false, time.Now(), fmt.Errorf(
+					"invalid timestamp from log expected %d > %d",
+					time.Now().Unix(),
+					timestamp,
+				)
+			}
+			return true, time.Unix(int64(timestamp), 0), nil
+		}
+	}
+	return false, time.Now(), nil
+}
+
+// ProcessLog is the main method which handles the processing of all
+// logs from the deposit contract on the ETH1.0 chain.
+func (w *Web3Service) ProcessLog(VRClog gethTypes.Log) {
+	// Process logs according to their event signature.
+	if VRClog.Topics[0] == hashutil.Hash(depositEventSignature) {
+		w.ProcessDepositLog(VRClog)
+		return
 	}
 
-	w.depositRoot = root[:]
-	w.depositTrie = trie.NewDepositTrie()
+	if VRClog.Topics[0] == hashutil.Hash(chainStartEventSignature) {
+		w.ProcessChainStartLog(VRClog)
+		return
+	}
 
-	return nil
+	log.Debugf("Log is not of a valid event signature %#x", VRClog.Topics[0])
+}
+
+// ProcessDepositLog processes the log which had been received from
+// the ETH1.0 chain by trying to ascertain which participant deposited
+// in the contract.
+func (w *Web3Service) ProcessDepositLog(VRClog gethTypes.Log) {
+	merkleRoot, depositData, MerkleTreeIndex, err := contracts.UnpackDepositLogData(VRClog.Data)
+	if err != nil {
+		log.Errorf("Could not unpack log %v", err)
+		return
+	}
+	if err := w.saveInTrie(depositData, merkleRoot); err != nil {
+		log.Errorf("Could not save in trie %v", err)
+		return
+	}
+	depositInput, err := blocks.DecodeDepositInput(depositData)
+	if err != nil {
+		log.Errorf("Could not decode deposit input  %v", err)
+		return
+	}
+	index := binary.BigEndian.Uint64(MerkleTreeIndex)
+	log.WithFields(logrus.Fields{
+		"publicKey":         depositInput.Pubkey,
+		"merkle tree index": index,
+	}).Info("Validator registered in VRC with public key and index")
+}
+
+// ProcessChainStartLog processes the log which had been received from
+// the ETH1.0 chain by trying to determine when to start the beacon chain.
+func (w *Web3Service) ProcessChainStartLog(VRClog gethTypes.Log) {
+	receiptRoot, timestampData, err := contracts.UnpackChainStartLogData(VRClog.Data)
+	if err != nil {
+		log.Errorf("Unable to unpack ChainStart log data %v", err)
+		return
+	}
+	if w.depositTrie.Root() != receiptRoot {
+		log.Errorf("Receipt root from log doesn't match the root saved in memory,"+
+			" want %#x but got %#x", w.depositTrie.Root(), receiptRoot)
+		return
+	}
+
+	timestamp := binary.BigEndian.Uint64(timestampData)
+	if uint64(time.Now().Unix()) < timestamp {
+		log.Errorf("Invalid timestamp from log expected %d > %d", time.Now().Unix(), timestamp)
+	}
+
+	chainStartTime := time.Unix(int64(timestamp), 0)
+	log.WithFields(logrus.Fields{
+		"ChainStartTime": chainStartTime,
+	}).Info("Minimum Number of Validators Reached for beacon-chain to start")
+	w.chainStartFeed.Send(chainStartTime)
 }
 
 // run subscribes to all the services for the ETH1.0 chain.
@@ -205,79 +306,25 @@ func (w *Web3Service) run(done <-chan struct{}) {
 				"blockHash":   w.blockHash.Hex(),
 			}).Debug("Latest web3 chain event")
 		case VRClog := <-w.logChan:
+			log.Info("Received deposit contract log")
 			w.ProcessLog(VRClog)
 
 		}
 	}
 }
 
-// ProcessLog is the main method which handles the processing of all
-// logs from the deposit contract on the ETH1.0 chain.
-func (w *Web3Service) ProcessLog(VRClog gethTypes.Log) {
-	// Process logs according to their event signature.
-	if VRClog.Topics[0] == hashutil.Hash(depositEventSignature) {
-		w.ProcessDepositLog(VRClog)
-		return
-	}
-
-	if VRClog.Topics[0] == hashutil.Hash(chainStartEventSignature) {
-		w.ProcessChainStartLog(VRClog)
-		return
-	}
-
-	log.Debugf("Log is not of a valid event signature %#x", VRClog.Topics[0])
-}
-
-// ProcessDepositLog processes the log which had been received from
-// the ETH1.0 chain by trying to ascertain which participant deposited
-// in the contract.
-func (w *Web3Service) ProcessDepositLog(VRClog gethTypes.Log) {
-	merkleRoot, depositData, MerkleTreeIndex, err := contracts.UnpackDepositLogData(VRClog.Data)
+// initDataFromVRC calls the vrc contract and finds the deposit count
+// and deposit root.
+func (w *Web3Service) initDataFromVRC() error {
+	root, err := w.vrcCaller.GetDepositRoot(&bind.CallOpts{})
 	if err != nil {
-		log.Errorf("Could not unpack log %v", err)
-		return
-	}
-	if err := w.saveInTrie(depositData, merkleRoot); err != nil {
-		log.Errorf("Could not save in trie %v", err)
-		return
-	}
-	depositInput, err := blocks.DecodeDepositInput(depositData)
-	if err != nil {
-		log.Errorf("Could not decode deposit input  %v", err)
-		return
-	}
-	index := binary.BigEndian.Uint64(MerkleTreeIndex)
-	log.WithFields(logrus.Fields{
-		"publicKey":         depositInput.Pubkey,
-		"merkle tree index": index,
-	}).Info("Validator registered in VRC with public key and index")
-}
-
-// ProcessChainStartLog processes the log which had been received from
-// the ETH1.0 chain by trying to determine when to start the beacon chain.
-func (w *Web3Service) ProcessChainStartLog(VRClog gethTypes.Log) {
-
-	receiptRoot, timestampData, err := contracts.UnpackChainStartLogData(VRClog.Data)
-	if err != nil {
-		log.Errorf("Unable to unpack ChainStart log data %v", err)
-		return
-	}
-	if w.depositTrie.Root() != receiptRoot {
-		log.Errorf("Receipt root from log doesn't match the root saved in memory,"+
-			" want %#x but got %#x", w.depositTrie.Root(), receiptRoot)
-		return
+		return fmt.Errorf("could not retrieve deposit root %v", err)
 	}
 
-	timestamp := binary.BigEndian.Uint64(timestampData)
-	if uint64(time.Now().Unix()) < timestamp {
-		log.Errorf("Invalid timestamp from log expected %d > %d", time.Now().Unix(), timestamp)
-	}
+	w.depositRoot = root[:]
+	w.depositTrie = trie.NewDepositTrie()
 
-	chainStartTime := time.Unix(int64(timestamp), 0)
-	log.WithFields(logrus.Fields{
-		"ChainStartTime": chainStartTime,
-	}).Info("Minimum Number of Validators Reached for beacon-chain to start")
-	w.chainStartFeed.Send(chainStartTime)
+	return nil
 }
 
 // saveInTrie saves in the in-memory deposit trie.
@@ -302,19 +349,4 @@ func (w *Web3Service) processPastLogs(query ethereum.FilterQuery) error {
 		w.ProcessLog(log)
 	}
 	return nil
-}
-
-// LatestBlockNumber in the ETH1.0 chain.
-func (w *Web3Service) LatestBlockNumber() *big.Int {
-	return w.blockNumber
-}
-
-// LatestBlockHash in the ETH1.0 chain.
-func (w *Web3Service) LatestBlockHash() common.Hash {
-	return w.blockHash
-}
-
-// Client for interacting with the ETH1.0 chain.
-func (w *Web3Service) Client() Client {
-	return w.client
 }

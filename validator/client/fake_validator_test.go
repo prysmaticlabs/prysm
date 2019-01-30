@@ -12,6 +12,7 @@ type fakeValidator struct {
 	InitializeCalled        bool
 	DoneCalled              bool
 	WaitForActivationCalled bool
+	WaitForChainStartCalled bool
 	NextSlotRet             <-chan uint64
 	NextSlotCalled          bool
 	UpdateAssignmentsCalled bool
@@ -32,6 +33,10 @@ func (fv *fakeValidator) Initialize(_ context.Context) {
 
 func (fv *fakeValidator) Done() {
 	fv.DoneCalled = true
+}
+
+func (fv *fakeValidator) WaitForChainStart(_ context.Context) {
+	fv.WaitForChainStartCalled = true
 }
 
 func (fv *fakeValidator) WaitForActivation(_ context.Context) {
