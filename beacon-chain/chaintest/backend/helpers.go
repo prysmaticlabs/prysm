@@ -24,7 +24,7 @@ func generateSimulatedBlock(
 	simulatedDeposit *StateTestDeposit,
 	depositsTrie *trie.DepositTrie,
 	simulatedProposerSlashing *StateTestProposerSlashing,
-	simulatedCasperSlashing *StateTestCasperSlashing,
+	simulatedAttesterSlashing *StateTestAttesterSlashing,
 	simulatedExit *StateTestValidatorExit,
 ) (*pb.BeaconBlock, [32]byte, error) {
 	encodedState, err := proto.Marshal(beaconState)
@@ -39,7 +39,7 @@ func generateSimulatedBlock(
 		StateRootHash32:    stateRoot[:],
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: []*pb.ProposerSlashing{},
-			CasperSlashings:   []*pb.CasperSlashing{},
+			AttesterSlashings: []*pb.AttesterSlashing{},
 			Attestations:      []*pb.Attestation{},
 			Deposits:          []*pb.Deposit{},
 			Exits:             []*pb.Exit{},
@@ -85,23 +85,23 @@ func generateSimulatedBlock(
 			},
 		})
 	}
-	if simulatedCasperSlashing != nil {
-		block.Body.CasperSlashings = append(block.Body.CasperSlashings, &pb.CasperSlashing{
-			SlashableVoteData_1: &pb.SlashableVoteData{
+	if simulatedAttesterSlashing != nil {
+		block.Body.AttesterSlashings = append(block.Body.AttesterSlashings, &pb.AttesterSlashing{
+			SlashableVote_1: &pb.SlashableVote{
 				Data: &pb.AttestationData{
-					Slot:          simulatedCasperSlashing.SlashableVoteData1Slot,
-					JustifiedSlot: simulatedCasperSlashing.SlashableVoteData1JustifiedSlot,
+					Slot:          simulatedAttesterSlashing.SlashableVote1Slot,
+					JustifiedSlot: simulatedAttesterSlashing.SlashableVote1JustifiedSlot,
 				},
-				CustodyBit_0Indices: simulatedCasperSlashing.SlashableVoteData1CustodyBit0Indices,
-				CustodyBit_1Indices: simulatedCasperSlashing.SlashableVoteData1CustodyBit1Indices,
+				CustodyBitfield:  []byte(simulatedAttesterSlashing.SlashableVote1CustodyBitField),
+				ValidatorIndices: simulatedAttesterSlashing.SlashableVote1ValidatorIndices,
 			},
-			SlashableVoteData_2: &pb.SlashableVoteData{
+			SlashableVote_2: &pb.SlashableVote{
 				Data: &pb.AttestationData{
-					Slot:          simulatedCasperSlashing.SlashableVoteData2Slot,
-					JustifiedSlot: simulatedCasperSlashing.SlashableVoteData2JustifiedSlot,
+					Slot:          simulatedAttesterSlashing.SlashableVote2Slot,
+					JustifiedSlot: simulatedAttesterSlashing.SlashableVote2JustifiedSlot,
 				},
-				CustodyBit_0Indices: simulatedCasperSlashing.SlashableVoteData2CustodyBit0Indices,
-				CustodyBit_1Indices: simulatedCasperSlashing.SlashableVoteData2CustodyBit1Indices,
+				CustodyBitfield:  []byte(simulatedAttesterSlashing.SlashableVote2CustodyBitField),
+				ValidatorIndices: simulatedAttesterSlashing.SlashableVote2ValidatorIndices,
 			},
 		})
 	}

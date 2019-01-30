@@ -1,12 +1,12 @@
 package slices
 
-// Intersection of two uint32 slices with time
+// Intersection of two uint64 slices with time
 // complexity of approximately O(n) leveraging a map to
 // check for element existence off by a constant factor
 // of underlying map efficiency.
-func Intersection(a []uint32, b []uint32) []uint32 {
-	set := make([]uint32, 0)
-	m := make(map[uint32]bool)
+func Intersection(a []uint64, b []uint64) []uint64 {
+	set := make([]uint64, 0)
+	m := make(map[uint64]bool)
 
 	for i := 0; i < len(a); i++ {
 		m[a[i]] = true
@@ -19,13 +19,13 @@ func Intersection(a []uint32, b []uint32) []uint32 {
 	return set
 }
 
-// Union of two uint32 slices with time
+// Union of two uint64 slices with time
 // complexity of approximately O(n) leveraging a map to
 // check for element existence off by a constant factor
 // of underlying map efficiency.
-func Union(a []uint32, b []uint32) []uint32 {
-	set := make([]uint32, 0)
-	m := make(map[uint32]bool)
+func Union(a []uint64, b []uint64) []uint64 {
+	set := make([]uint64, 0)
+	m := make(map[uint64]bool)
 
 	for i := 0; i < len(a); i++ {
 		m[a[i]] = true
@@ -39,13 +39,13 @@ func Union(a []uint32, b []uint32) []uint32 {
 	return set
 }
 
-// Not returns the uint32 in slice a that are
+// Not returns the uint64 in slice a that are
 // not in slice b with time complexity of approximately
 // O(n) leveraging a map to check for element existence
 // off by a constant factor of underlying map efficiency.
-func Not(a []uint32, b []uint32) []uint32 {
-	set := make([]uint32, 0)
-	m := make(map[uint32]bool)
+func Not(a []uint64, b []uint64) []uint64 {
+	set := make([]uint64, 0)
+	m := make(map[uint64]bool)
 
 	for i := 0; i < len(a); i++ {
 		m[a[i]] = true
@@ -59,7 +59,7 @@ func Not(a []uint32, b []uint32) []uint32 {
 }
 
 // IsIn returns true if a is in b and False otherwise.
-func IsIn(a uint32, b []uint32) bool {
+func IsIn(a uint64, b []uint64) bool {
 	for _, v := range b {
 		if a == v {
 			return true
@@ -136,13 +136,13 @@ func IsInUint64(a uint64, b []uint64) bool {
 	return false
 }
 
-// IntersectionInt32 of two int32 slices with time
+// Intersectionint64 of two int64 slices with time
 // complexity of approximately O(n) leveraging a map to
 // check for element existence off by a constant factor
 // of underlying map efficiency.
-func IntersectionInt32(a []int32, b []int32) []int32 {
-	set := make([]int32, 0)
-	m := make(map[int32]bool)
+func Intersectionint64(a []int64, b []int64) []int64 {
+	set := make([]int64, 0)
+	m := make(map[int64]bool)
 
 	for i := 0; i < len(a); i++ {
 		m[a[i]] = true
@@ -155,13 +155,13 @@ func IntersectionInt32(a []int32, b []int32) []int32 {
 	return set
 }
 
-// UnionInt32 of two int32 slices with time
+// Unionint64 of two int64 slices with time
 // complexity of approximately O(n) leveraging a map to
 // check for element existence off by a constant factor
 // of underlying map efficiency.
-func UnionInt32(a []int32, b []int32) []int32 {
-	set := make([]int32, 0)
-	m := make(map[int32]bool)
+func Unionint64(a []int64, b []int64) []int64 {
+	set := make([]int64, 0)
+	m := make(map[int64]bool)
 
 	for i := 0; i < len(a); i++ {
 		m[a[i]] = true
@@ -175,13 +175,13 @@ func UnionInt32(a []int32, b []int32) []int32 {
 	return set
 }
 
-// NotInt32 returns the int32 in slice a that are
+// Notint64 returns the int64 in slice a that are
 // not in slice b with time complexity of approximately
 // O(n) leveraging a map to check for element existence
 // off by a constant factor of underlying map efficiency.
-func NotInt32(a []int32, b []int32) []int32 {
-	set := make([]int32, 0)
-	m := make(map[int32]bool)
+func Notint64(a []int64, b []int64) []int64 {
+	set := make([]int64, 0)
+	m := make(map[int64]bool)
 
 	for i := 0; i < len(a); i++ {
 		m[a[i]] = true
@@ -194,8 +194,8 @@ func NotInt32(a []int32, b []int32) []int32 {
 	return set
 }
 
-// IsInInt32 returns true if a is in b and False otherwise.
-func IsInInt32(a int32, b []int32) bool {
+// IsInint64 returns true if a is in b and False otherwise.
+func IsInint64(a int64, b []int64) bool {
 	for _, v := range b {
 		if a == v {
 			return true

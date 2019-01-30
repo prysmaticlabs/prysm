@@ -39,7 +39,7 @@ message ProposeRequest {
     uint64 slot_number = 2;
     bytes randao_reveal_hash32 = 3;
     bytes attestation_bitmask = 4;
-    repeated uint32 attestation_aggregate_sig = 5;
+    repeated uint64 attestation_aggregate_sig = 5;
     google.protobuf.Timestamp timestamp = 6;
 }
 
@@ -52,7 +52,7 @@ message ProposerIndexRequest {
 }
 
 message ProposerIndexResponse {
-    uint32 index = 1;
+    uint64 index = 1;
 }
 
 message StateRootResponse {
@@ -86,7 +86,7 @@ message ValidatorIndexRequest {
 }
 
 message ValidatorIndexResponse {
-    uint32 index = 1;
+    uint64 index = 1;
 }
 
 message ValidatorEpochAssignmentsRequest {
