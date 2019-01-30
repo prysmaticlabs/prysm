@@ -17,17 +17,17 @@ func makeEmptySignature() [][]byte {
 // BeaconChainConfig contains constant configs for node to participate in beacon chain.
 type BeaconChainConfig struct {
 	// Misc constants.
-	ShardCount                uint64 // ShardCount is the number of shard chains in Ethereum 2.0.
-	TargetCommitteeSize       uint64 // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
-	EjectionBalance           uint64 // EjectionBalance is the minimal GWei a validator needs to have before ejected.
-	MaxBalanceChurnQuotient   uint64 // MaxBalanceChurnQuotient is used to determine how many validators can rotate per epoch.
-	Gwei                      uint64 // Gwei is the denomination of Gwei in Ether.
-	BeaconChainShardNumber    uint64 // BeaconChainShardNumber is the shard number of the beacon chain.
-	MaxCasperVotes            uint64 // MaxCasperVotes is used to verify slashable Casper vote data.
-	LatestBlockRootsLength    uint64 // LatestBlockRootsLength is the number of block roots kept in the beacon state.
-	LatestRandaoMixesLength   uint64 // LatestRandaoMixesLength is the number of randao mixes kept in the beacon state.
-	LatestPenalizedExitLength uint64 // LatestPenalizedExitLength is used to track penalized exit balances per time interval.
-	MaxWithdrawalsPerEpoch    uint64 // MaxWithdrawalsPerEpoch is the max withdrawals can happen for a single epoch.
+	ShardCount                 uint64 // ShardCount is the number of shard chains in Ethereum 2.0.
+	TargetCommitteeSize        uint64 // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
+	EjectionBalance            uint64 // EjectionBalance is the minimal GWei a validator needs to have before ejected.
+	MaxBalanceChurnQuotient    uint64 // MaxBalanceChurnQuotient is used to determine how many validators can rotate per epoch.
+	Gwei                       uint64 // Gwei is the denomination of Gwei in Ether.
+	BeaconChainShardNumber     uint64 // BeaconChainShardNumber is the shard number of the beacon chain.
+	MaxIndicesPerSlashableVote uint64 // MaxIndicesPerSlashableVote is used to determine how many validators can be slashed per vote.
+	LatestBlockRootsLength     uint64 // LatestBlockRootsLength is the number of block roots kept in the beacon state.
+	LatestRandaoMixesLength    uint64 // LatestRandaoMixesLength is the number of randao mixes kept in the beacon state.
+	LatestPenalizedExitLength  uint64 // LatestPenalizedExitLength is used to track penalized exit balances per time interval.
+	MaxWithdrawalsPerEpoch     uint64 // MaxWithdrawalsPerEpoch is the max withdrawals can happen for a single epoch.
 
 	// Deposit contract constants.
 	DepositContractAddress   []byte // DepositContractAddress is the address of the deposit contract in PoW chain.
@@ -64,7 +64,7 @@ type BeaconChainConfig struct {
 	MaxDeposits          uint64 // MaxExits determines the maximum number of validator deposits in a block.
 	MaxAttestations      uint64 // MaxAttestations defines the maximum allowed attestations in a beacon block.
 	MaxProposerSlashings uint64 // MaxProposerSlashings defines the maximum number of slashings of proposers possible in a block.
-	MaxCasperSlashings   uint64 // MaxCasperSlashings defines the maximum number of casper FFG slashings possible in a block.
+	MaxAttesterSlashings uint64 // MaxAttesterSlashings defines the maximum number of casper FFG slashings possible in a block.
 
 	// Prysm constants.
 	DepositsForChainStart uint64    // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
@@ -90,16 +90,16 @@ type ShardChainConfig struct {
 
 var defaultBeaconConfig = &BeaconChainConfig{
 	// Misc constant.
-	ShardCount:                1024,
-	TargetCommitteeSize:       128,
-	EjectionBalance:           16 * 1e9,
-	MaxBalanceChurnQuotient:   32,
-	BeaconChainShardNumber:    1<<64 - 1,
-	MaxCasperVotes:            1024,
-	LatestBlockRootsLength:    8192,
-	LatestRandaoMixesLength:   8192,
-	LatestPenalizedExitLength: 8192,
-	MaxWithdrawalsPerEpoch:    4,
+	ShardCount:                 1024,
+	TargetCommitteeSize:        128,
+	EjectionBalance:            16 * 1e9,
+	MaxBalanceChurnQuotient:    32,
+	BeaconChainShardNumber:     1<<64 - 1,
+	MaxIndicesPerSlashableVote: 1,
+	LatestBlockRootsLength:     8192,
+	LatestRandaoMixesLength:    8192,
+	LatestPenalizedExitLength:  8192,
+	MaxWithdrawalsPerEpoch:     4,
 
 	// Deposit contract constants.
 	DepositContractTreeDepth: 32,
@@ -133,7 +133,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxDeposits:          16,
 	MaxAttestations:      128,
 	MaxProposerSlashings: 16,
-	MaxCasperSlashings:   16,
+	MaxAttesterSlashings: 1,
 
 	// Prysm constants.
 	DepositsForChainStart: 16384,
@@ -145,16 +145,16 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 var demoBeaconConfig = &BeaconChainConfig{
 	// Misc constant.
-	ShardCount:                5,
-	TargetCommitteeSize:       3,
-	EjectionBalance:           defaultBeaconConfig.EjectionBalance,
-	MaxBalanceChurnQuotient:   defaultBeaconConfig.MaxBalanceChurnQuotient,
-	BeaconChainShardNumber:    defaultBeaconConfig.BeaconChainShardNumber,
-	MaxCasperVotes:            defaultBeaconConfig.MaxCasperVotes,
-	LatestBlockRootsLength:    defaultBeaconConfig.LatestBlockRootsLength,
-	LatestRandaoMixesLength:   defaultBeaconConfig.LatestRandaoMixesLength,
-	LatestPenalizedExitLength: defaultBeaconConfig.LatestPenalizedExitLength,
-	MaxWithdrawalsPerEpoch:    defaultBeaconConfig.MaxWithdrawalsPerEpoch,
+	ShardCount:                 5,
+	TargetCommitteeSize:        3,
+	EjectionBalance:            defaultBeaconConfig.EjectionBalance,
+	MaxBalanceChurnQuotient:    defaultBeaconConfig.MaxBalanceChurnQuotient,
+	BeaconChainShardNumber:     defaultBeaconConfig.BeaconChainShardNumber,
+	MaxIndicesPerSlashableVote: defaultBeaconConfig.MaxIndicesPerSlashableVote,
+	LatestBlockRootsLength:     defaultBeaconConfig.LatestBlockRootsLength,
+	LatestRandaoMixesLength:    defaultBeaconConfig.LatestRandaoMixesLength,
+	LatestPenalizedExitLength:  defaultBeaconConfig.LatestPenalizedExitLength,
+	MaxWithdrawalsPerEpoch:     defaultBeaconConfig.MaxWithdrawalsPerEpoch,
 
 	// Deposit contract constants.
 	DepositContractTreeDepth: defaultBeaconConfig.DepositContractTreeDepth,
@@ -188,7 +188,7 @@ var demoBeaconConfig = &BeaconChainConfig{
 	MaxDeposits:          defaultBeaconConfig.MaxDeposits,
 	MaxAttestations:      defaultBeaconConfig.MaxAttestations,
 	MaxProposerSlashings: defaultBeaconConfig.MaxProposerSlashings,
-	MaxCasperSlashings:   defaultBeaconConfig.MaxCasperSlashings,
+	MaxAttesterSlashings: defaultBeaconConfig.MaxAttesterSlashings,
 
 	// Prysm constants.
 	DepositsForChainStart: defaultBeaconConfig.DepositsForChainStart,

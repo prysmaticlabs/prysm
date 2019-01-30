@@ -56,7 +56,6 @@ func TestNodeClose(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	set.String("web3provider", "ws//127.0.0.1:8546", "web3 provider ws or IPC endpoint")
 	set.String("datadir", tmp, "node data directory")
-	set.Bool("enable-powchain", false, "no powchain service")
 	set.Bool("demo-config", true, "demo configuration")
 
 	context := cli.NewContext(app, set, nil)

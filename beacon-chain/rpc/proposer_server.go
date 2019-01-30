@@ -22,7 +22,6 @@ type ProposerServer struct {
 	chainService       chainService
 	powChainService    powChainService
 	canonicalStateChan chan *pbp2p.BeaconState
-	enablePOWChain     bool
 }
 
 // ProposerIndex sends a response to the client which returns the proposer index for a given slot. Validators
@@ -69,7 +68,12 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 	}
 
 	parentHash := bytes.ToBytes32(req.ParentRootHash32)
-	beaconState, err = state.ExecuteStateTransition(beaconState, req, parentHash)
+	beaconState, err = state.ExecuteStateTransition(
+		beaconState,
+		req,
+		parentHash,
+		false, /* no sig verification */
+	)
 	if err != nil {
 		return nil, fmt.Errorf("could not execute state transition %v", err)
 	}
@@ -79,6 +83,7 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 		return nil, fmt.Errorf("could not marshal state %v", err)
 	}
 
+	// TOOD(#1389): Use tree hashing algorithm instead.
 	beaconStateHash := hashutil.Hash(encodedState)
 	log.WithField("beaconStateHash", fmt.Sprintf("%#x", beaconStateHash)).Debugf("Computed state hash")
 	return &pb.StateRootResponse{

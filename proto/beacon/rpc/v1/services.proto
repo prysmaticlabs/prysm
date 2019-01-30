@@ -7,11 +7,10 @@ import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 
 service BeaconService {
-    // CanonicalHead can be called on demand to fetch the current, head block of a
-    // beacon node.
+    rpc WaitForChainStart(google.protobuf.Empty) returns (stream ChainStartResponse);
+    // CanonicalHead can be called on demand to fetch the current, head block of a beacon node.
     rpc CanonicalHead(google.protobuf.Empty) returns (ethereum.beacon.p2p.v1.BeaconBlock);
-    // LatestAttestation streams the latest aggregated attestation to connected
-    // validator clients.
+    // LatestAttestation streams the latest aggregated attestation to connected validator clients.
     rpc LatestAttestation(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.Attestation);
 }
 
@@ -30,12 +29,17 @@ service ValidatorService {
     rpc ValidatorEpochAssignments(ValidatorEpochAssignmentsRequest) returns (ValidatorEpochAssignmentsResponse);
 }
 
+message ChainStartResponse {
+    bool started = 1;
+    uint64 genesis_time = 2;
+}
+
 message ProposeRequest {
     bytes parent_hash = 1;
     uint64 slot_number = 2;
     bytes randao_reveal_hash32 = 3;
     bytes attestation_bitmask = 4;
-    repeated uint32 attestation_aggregate_sig = 5;
+    repeated uint64 attestation_aggregate_sig = 5;
     google.protobuf.Timestamp timestamp = 6;
 }
 
@@ -48,7 +52,7 @@ message ProposerIndexRequest {
 }
 
 message ProposerIndexResponse {
-    uint32 index = 1;
+    uint64 index = 1;
 }
 
 message StateRootResponse {
@@ -82,7 +86,7 @@ message ValidatorIndexRequest {
 }
 
 message ValidatorIndexResponse {
-    uint32 index = 1;
+    uint64 index = 1;
 }
 
 message ValidatorEpochAssignmentsRequest {
