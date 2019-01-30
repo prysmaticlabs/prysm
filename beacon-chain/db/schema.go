@@ -16,6 +16,7 @@ import (
 // The fields below define the suffix of keys in the db.
 var (
 	attestationBucket    = []byte("attestation-bucket")
+	operationsBucket = []byte("operations-bucket")
 	blockBucket          = []byte("block-bucket")
 	mainChainBucket      = []byte("main-chain-bucket")
 	chainInfoBucket      = []byte("chain-info")
