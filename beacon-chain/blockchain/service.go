@@ -276,13 +276,23 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	// Check for skipped slots and update the corresponding proposers
 	// randao layer.
 	for beaconState.Slot < block.Slot-1 {
-		beaconState, err = state.ExecuteStateTransition(beaconState, nil, blockRoot, true /* verify sig */)
+		beaconState, err = state.ExecuteStateTransition(
+			beaconState,
+			nil,
+			blockRoot,
+			true, /* no sig verify */
+		)
 		if err != nil {
 			return nil, fmt.Errorf("could not execute state transition %v", err)
 		}
 	}
 
-	beaconState, err = state.ExecuteStateTransition(beaconState, block, blockRoot, true /* verify sig */)
+	beaconState, err = state.ExecuteStateTransition(
+		beaconState,
+		block,
+		blockRoot,
+		true, /* no sig verify */
+	)
 	if err != nil {
 		return nil, fmt.Errorf("could not execute state transition %v", err)
 	}
