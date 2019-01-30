@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -16,12 +15,6 @@ import (
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
-}
-
-type mockPOWChainService struct{}
-
-func (m *mockPOWChainService) LatestBlockHash() common.Hash {
-	return common.BytesToHash([]byte{})
 }
 
 type mockAttestationService struct{}

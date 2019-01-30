@@ -6,7 +6,7 @@ import (
 )
 
 func TestSlotTicker(t *testing.T) {
-	ticker := SlotTicker{
+	ticker := &SlotTicker{
 		c:    make(chan uint64),
 		done: make(chan struct{}),
 	}
@@ -54,7 +54,7 @@ func TestSlotTicker(t *testing.T) {
 }
 
 func TestSlotTickerGenesis(t *testing.T) {
-	ticker := SlotTicker{
+	ticker := &SlotTicker{
 		c:    make(chan uint64),
 		done: make(chan struct{}),
 	}
