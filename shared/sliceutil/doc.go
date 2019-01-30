@@ -1,5 +1,5 @@
 /*
-Package slices implements set operations for specified data type
+Package sliceutil implements set operations for specified data type
 
 Currently types which are tested and supported are:
 

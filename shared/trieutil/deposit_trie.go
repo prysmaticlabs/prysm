@@ -1,4 +1,4 @@
-// Package trie contains definitions for building a Merkle trie for validator deposits
+// Package trieutil contains definitions for building a Merkle trie for validator deposits
 // as defined in the Ethereum Serenity specification, as well as utilities to generate
 // and verify Merkle proofs.
 package trieutil

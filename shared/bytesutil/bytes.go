@@ -1,4 +1,4 @@
-// Package bytes defines helper methods for converting integers to byte slices.
+// Package bytesutil defines helper methods for converting integers to byte slices.
 package bytesutil
 
 import (
