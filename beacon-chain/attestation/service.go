@@ -3,7 +3,6 @@ package attestation
 
 import (
 	"context"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -43,13 +42,14 @@ type Config struct {
 func NewAttestationService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:           ctx,
-		cancel:        cancel,
-		beaconDB:      cfg.BeaconDB,
-		broadcastFeed: new(event.Feed),
-		broadcastChan: make(chan *pb.Attestation, cfg.BroadcastAttestationBuf),
-		incomingFeed:  new(event.Feed),
-		incomingChan:  make(chan *pb.Attestation, cfg.ReceiveAttestationBuf),
+		ctx:               ctx,
+		cancel:            cancel,
+		beaconDB:          cfg.BeaconDB,
+		broadcastFeed:     new(event.Feed),
+		broadcastChan:     make(chan *pb.Attestation, cfg.BroadcastAttestationBuf),
+		incomingFeed:      new(event.Feed),
+		incomingChan:      make(chan *pb.Attestation, cfg.ReceiveAttestationBuf),
+		LatestAttestation: make(map[[48]byte]*pb.Attestation),
 	}
 }
 
@@ -114,6 +114,7 @@ func (a *Service) attestationPool() {
 		select {
 		case <-a.ctx.Done():
 			log.Debug("Attestation pool closed, exiting goroutine")
+			return
 		// Listen for a newly received incoming attestation from the sync service.
 		case attestation := <-a.incomingChan:
 			enc, err := proto.Marshal(attestation)
@@ -159,7 +160,12 @@ func (a *Service) updateLatestAttestation(attestation *pb.Attestation) error {
 		if bitSet {
 			pubkey := bytes.ToBytes48(state.ValidatorRegistry[i].Pubkey)
 			newAttestationSlot := attestation.Data.Slot
-			currentAttestationSlot := a.LatestAttestation[pubkey].Data.Slot
+			var currentAttestationSlot uint64
+			if _, exists := a.LatestAttestation[pubkey]; !exists {
+				currentAttestationSlot = 0
+			} else {
+				currentAttestationSlot = a.LatestAttestation[pubkey].Data.Slot
+			}
 			// If the attestation is newer than this attester's one in pool.
 			if newAttestationSlot > currentAttestationSlot {
 				a.LatestAttestation[pubkey] = attestation
