@@ -145,7 +145,6 @@ func InitialBeaconState(
 			depositInput.ProofOfPossession,
 			depositInput.WithdrawalCredentialsHash32,
 			depositInput.RandaoCommitmentHash32,
-			depositInput.CustodyCommitmentHash32,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not process validator deposit: %v", err)

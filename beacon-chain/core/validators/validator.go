@@ -290,7 +290,6 @@ func ProcessDeposit(
 	_ /*proofOfPossession*/ []byte,
 	withdrawalCredentials []byte,
 	randaoCommitment []byte,
-	custodyCommitment []byte,
 ) (*pb.BeaconState, error) {
 	// TODO(#258): Validate proof of possession using BLS.
 	var publicKeyExists bool

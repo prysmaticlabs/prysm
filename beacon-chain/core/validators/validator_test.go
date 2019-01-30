@@ -453,7 +453,6 @@ func TestProcessDeposit_PublicKeyExistsBadWithdrawalCredentials(t *testing.T) {
 	proofOfPossession := []byte{}
 	withdrawalCredentials := []byte{1}
 	randaoCommitment := []byte{}
-	pocCommitment := []byte{}
 
 	want := "expected withdrawal credentials to match"
 	if _, err := ProcessDeposit(
@@ -464,7 +463,6 @@ func TestProcessDeposit_PublicKeyExistsBadWithdrawalCredentials(t *testing.T) {
 		proofOfPossession,
 		withdrawalCredentials,
 		randaoCommitment,
-		pocCommitment,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Wanted error to contain %s, received %v", want, err)
 	}
@@ -490,7 +488,6 @@ func TestProcessDeposit_PublicKeyExistsGoodWithdrawalCredentials(t *testing.T) {
 	proofOfPossession := []byte{}
 	withdrawalCredentials := []byte{1}
 	randaoCommitment := []byte{}
-	pocCommitment := []byte{}
 
 	newState, err := ProcessDeposit(
 		beaconState,
@@ -500,7 +497,6 @@ func TestProcessDeposit_PublicKeyExistsGoodWithdrawalCredentials(t *testing.T) {
 		proofOfPossession,
 		withdrawalCredentials,
 		randaoCommitment,
-		pocCommitment,
 	)
 	if err != nil {
 		t.Fatalf("Process deposit failed: %v", err)
@@ -531,7 +527,6 @@ func TestProcessDeposit_PublicKeyDoesNotExistNoEmptyValidator(t *testing.T) {
 	proofOfPossession := []byte{}
 	withdrawalCredentials := []byte{1}
 	randaoCommitment := []byte{}
-	pocCommitment := []byte{}
 
 	newState, err := ProcessDeposit(
 		beaconState,
@@ -541,7 +536,6 @@ func TestProcessDeposit_PublicKeyDoesNotExistNoEmptyValidator(t *testing.T) {
 		proofOfPossession,
 		withdrawalCredentials,
 		randaoCommitment,
-		pocCommitment,
 	)
 	if err != nil {
 		t.Fatalf("Process deposit failed: %v", err)
@@ -576,7 +570,6 @@ func TestProcessDeposit_PublicKeyDoesNotExistEmptyValidatorExists(t *testing.T) 
 	proofOfPossession := []byte{}
 	withdrawalCredentials := []byte{1}
 	randaoCommitment := []byte{}
-	pocCommitment := []byte{}
 
 	newState, err := ProcessDeposit(
 		beaconState,
@@ -586,7 +579,6 @@ func TestProcessDeposit_PublicKeyDoesNotExistEmptyValidatorExists(t *testing.T) 
 		proofOfPossession,
 		withdrawalCredentials,
 		randaoCommitment,
-		pocCommitment,
 	)
 	if err != nil {
 		t.Fatalf("Process deposit failed: %v", err)
