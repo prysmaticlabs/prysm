@@ -25,6 +25,7 @@ import (
 
 // Ensure that server implements service.
 var _ = shared.Service(&Server{})
+var _ = Broadcaster(&Server{})
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)

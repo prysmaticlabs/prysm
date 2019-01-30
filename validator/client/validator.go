@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/opentracing/opentracing-go"
 
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
