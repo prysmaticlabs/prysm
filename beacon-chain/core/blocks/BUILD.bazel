@@ -16,6 +16,7 @@ go_library(
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bytes:go_default_library",
         "//shared/hashutil:go_default_library",
+        "//shared/mathutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/slices:go_default_library",
         "//shared/ssz:go_default_library",

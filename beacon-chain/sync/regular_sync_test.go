@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -111,13 +112,14 @@ func TestProcessBlock(t *testing.T) {
 	validators := make([]*pb.ValidatorRecord, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			Balance: params.BeaconConfig().MaxDepositInGwei,
+			Balance: params.BeaconConfig().MaxDeposit,
 			Pubkey:  []byte(strconv.Itoa(i)),
 			RandaoCommitmentHash32: []byte{41, 13, 236, 217, 84, 139, 98, 168, 214, 3, 69,
 				169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
 		}
 	}
-	if err := db.InitializeState(); err != nil {
+	genesisTime := uint64(time.Now().Unix())
+	if err := db.InitializeState(genesisTime); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -189,13 +191,14 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	validators := make([]*pb.ValidatorRecord, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			Balance: params.BeaconConfig().MaxDepositInGwei,
+			Balance: params.BeaconConfig().MaxDeposit,
 			Pubkey:  []byte(strconv.Itoa(i)),
 			RandaoCommitmentHash32: []byte{41, 13, 236, 217, 84, 139, 98, 168, 214, 3, 69,
 				169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
 		}
 	}
-	if err := db.InitializeState(); err != nil {
+	genesisTime := uint64(time.Now().Unix())
+	if err := db.InitializeState(genesisTime); err != nil {
 		t.Fatal(err)
 	}
 

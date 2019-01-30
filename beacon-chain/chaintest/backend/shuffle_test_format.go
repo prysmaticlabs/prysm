@@ -12,7 +12,7 @@ type ShuffleTest struct {
 
 // ShuffleTestCase --
 type ShuffleTestCase struct {
-	Input  []uint32 `yaml:"input,flow"`
-	Output []uint32 `yaml:"output,flow"`
+	Input  []uint64 `yaml:"input,flow"`
+	Output []uint64 `yaml:"output,flow"`
 	Seed   string
 }
