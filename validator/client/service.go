@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"net/url"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
@@ -20,9 +21,9 @@ type ValidatorService struct {
 	ctx       context.Context
 	cancel    context.CancelFunc
 	validator Validator
-	conn     *grpc.ClientConn
-	endpoint string
-	withCert string
+	conn      *grpc.ClientConn
+	endpoint  string
+	withCert  string
 }
 
 // Config for the validator service.
@@ -36,8 +37,8 @@ type Config struct {
 func NewValidatorService(ctx context.Context, cfg *Config) *ValidatorService {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ValidatorService{
-		ctx:       ctx,
-		cancel:    cancel,
+		ctx:      ctx,
+		cancel:   cancel,
 		endpoint: cfg.Endpoint,
 		withCert: cfg.CertFlag,
 	}
@@ -70,7 +71,7 @@ func (v *ValidatorService) Start() {
 	log.Info("Successfully started gRPC connection")
 	v.conn = conn
 	v.validator = &validator{
-		beaconClient: v.BeaconServiceClient(),
+		beaconClient:    v.BeaconServiceClient(),
 		validatorClient: v.ValidatorServiceClient(),
 	}
 	go run(v.ctx, v.validator)

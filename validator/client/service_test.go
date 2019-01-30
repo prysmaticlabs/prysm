@@ -2,13 +2,14 @@ package client
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/prysmaticlabs/prysm/shared"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 var _ = shared.Service(&ValidatorService{})
@@ -41,8 +42,9 @@ func TestLifecycle(t *testing.T) {
 		},
 	)
 	validatorService.Start()
-	testutil.AssertLogsContain(t, hook, "Starting service")
-	validatorService.Stop()
+	if err := validatorService.Stop(); err != nil {
+		t.Fatalf("Could not stop service: %v", err)
+	}
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
 
@@ -55,9 +57,10 @@ func TestInsecure(t *testing.T) {
 		},
 	)
 	validatorService.Start()
-	testutil.AssertLogsContain(t, hook, "Starting service")
 	testutil.AssertLogsContain(t, hook, "You are using an insecure gRPC connection")
-	validatorService.Stop()
+	if err := validatorService.Stop(); err != nil {
+		t.Fatalf("Could not stop service: %v", err)
+	}
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
 

@@ -54,7 +54,7 @@ func (v *validator) WaitForActivation(ctx context.Context) {
 		return
 	}
 	for {
-        log.Info("Waiting for beacon chain start log from the ETH 1.0 deposit contract...")
+		log.Info("Waiting for beacon chain start log from the ETH 1.0 deposit contract...")
 		chainStartRes, err := stream.Recv()
 		// If the stream is closed, we stop the loop.
 		if err == io.EOF {
