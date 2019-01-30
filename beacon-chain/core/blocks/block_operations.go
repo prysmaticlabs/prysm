@@ -35,6 +35,38 @@ func VerifyProposerSignature(
 	return nil
 }
 
+// ProcessEth1Data is an operation performed on each
+// beacon block to ensure the ETH1 data votes are processed
+// into the beacon state.
+//
+// Official spec definition of ProcessEth1Data
+//   If block.eth1_data equals eth1_data_vote.eth1_data for some eth1_data_vote
+//   in state.eth1_data_votes, set eth1_data_vote.vote_count += 1.
+//   Otherwise, append to state.eth1_data_votes a new Eth1DataVote(eth1_data=block.eth1_data, vote_count=1).
+func ProcessEth1Data(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+	var eth1DataVoteAdded bool
+
+	for _, Eth1DataVote := range beaconState.Eth1DataVotes {
+		if bytes.Equal(Eth1DataVote.Eth1Data.BlockHash32, block.Eth1Data.BlockHash32) && bytes.Equal(Eth1DataVote.Eth1Data.DepositRootHash32, block.Eth1Data.DepositRootHash32) {
+			Eth1DataVote.VoteCount++
+			eth1DataVoteAdded = true
+			break
+		}
+	}
+
+	if !eth1DataVoteAdded {
+		beaconState.Eth1DataVotes = append(
+			beaconState.Eth1DataVotes,
+			&pb.Eth1DataVote{
+				Eth1Data:  block.Eth1Data,
+				VoteCount: 1,
+			},
+		)
+	}
+
+	return beaconState, nil
+}
+
 // ProcessBlockRandao checks the block proposer's
 // randao commitment and generates a new randao mix to update
 // in the beacon state's latest randao mixes and set the proposer's randao fields.
@@ -86,38 +118,6 @@ func verifyBlockRandao(proposer *pb.ValidatorRecord, block *pb.BeaconBlock) erro
 		)
 	}
 	return nil
-}
-
-// ProcessEth1Data is an operation performed on each
-// beacon block to ensure the ETH1 data votes are processed
-// into the beacon state.
-//
-// Official spec definition of ProcessEth1Data
-//   If block.eth1_data equals eth1_data_vote.eth1_data for some eth1_data_vote
-//   in state.eth1_data_votes, set eth1_data_vote.vote_count += 1.
-//   Otherwise, append to state.eth1_data_votes a new Eth1DataVote(eth1_data=block.eth1_data, vote_count=1).
-func ProcessEth1Data(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
-	var eth1DataVoteAdded bool
-
-	for _, Eth1DataVote := range beaconState.Eth1DataVotes {
-		if bytes.Equal(Eth1DataVote.Eth1Data.BlockHash32, block.Eth1Data.BlockHash32) && bytes.Equal(Eth1DataVote.Eth1Data.DepositRootHash32, block.Eth1Data.DepositRootHash32) {
-			Eth1DataVote.VoteCount++
-			eth1DataVoteAdded = true
-			break
-		}
-	}
-
-	if !eth1DataVoteAdded {
-		beaconState.Eth1DataVotes = append(
-			beaconState.Eth1DataVotes,
-			&pb.Eth1DataVote{
-				Eth1Data:  block.Eth1Data,
-				VoteCount: 1,
-			},
-		)
-	}
-
-	return beaconState, nil
 }
 
 // ProcessProposerSlashings is one of the operations performed

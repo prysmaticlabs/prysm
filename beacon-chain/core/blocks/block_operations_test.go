@@ -138,7 +138,7 @@ func TestProcessEth1Data_NewDepositRootHash(t *testing.T) {
 		t.Errorf("unexpected error processing ETH1 data %v", err)
 	}
 	newETH1DataVotes := beaconState.Eth1DataVotes
-	if len(newETH1DataVotes) == 1 {
+	if len(newETH1DataVotes) <= 1 {
 		t.Error("expected new ETH1 data votes to have length > 1")
 	}
 	if newETH1DataVotes[1].VoteCount != 1 {

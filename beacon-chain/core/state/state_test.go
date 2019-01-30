@@ -157,7 +157,7 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 		t.Error("LatestEth1Data DepositRootHash32 was not correctly initialized")
 	}
 	if !reflect.DeepEqual(state.Eth1DataVotes, []*pb.Eth1DataVote{}) {
-		t.Error("DepositRootVotes was not correctly initialized")
+		t.Error("Eth1DataVotes was not correctly initialized")
 	}
 }
 
