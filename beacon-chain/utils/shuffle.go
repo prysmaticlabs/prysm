@@ -11,7 +11,7 @@ import (
 
 // ShuffleIndices returns a list of pseudorandomly sampled
 // indices. This is used to shuffle validators on ETH2.0 beacon chain.
-func ShuffleIndices(seed common.Hash, indicesList []uint32) ([]uint32, error) {
+func ShuffleIndices(seed common.Hash, indicesList []uint64) ([]uint64, error) {
 	// Each entropy is consumed from the seed in randBytes chunks.
 	randBytes := params.BeaconConfig().RandBytes
 
@@ -60,8 +60,8 @@ func ShuffleIndices(seed common.Hash, indicesList []uint32) ([]uint32, error) {
 }
 
 // SplitIndices splits a list into n pieces.
-func SplitIndices(l []uint32, n uint64) [][]uint32 {
-	var divided [][]uint32
+func SplitIndices(l []uint64, n uint64) [][]uint64 {
+	var divided [][]uint64
 	var lSize = uint64(len(l))
 	for i := uint64(0); i < n; i++ {
 		start := lSize * i / n

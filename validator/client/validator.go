@@ -14,11 +14,11 @@ import (
 //
 // WIP - not done.
 type validator struct {
-	ticker      slotticker.SlotTicker
-	assignments map[uint64]*pb.Assignment
+	ticker     slotticker.SlotTicker
+	assignment *pb.Assignment
 
 	validatorClient pb.ValidatorServiceClient
-	pubKey          *pb.PublicKey
+	pubKey          []byte
 }
 
 // Initialize
@@ -74,12 +74,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 		return err
 	}
 
-	m := make(map[uint64]*pb.Assignment)
-	for _, a := range resp.Assignments {
-		m[a.AssignedSlot] = a
-	}
-	v.assignments = m
-
+	v.assignment = resp.Assignment
 	return nil
 }
 
@@ -87,13 +82,15 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 // validator is known to not have a role at the at slot. Returns UNKNOWN if the
 // validator assignments are unknown. Otherwise returns a valid ValidatorRole.
 func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
-	if v.assignments == nil {
+	if v.assignment == nil {
 		return pb.ValidatorRole_UNKNOWN
 	}
-	if v.assignments[slot] == nil {
-		return pb.ValidatorRole_UNKNOWN
+	if v.assignment.AttesterSlot == slot {
+		return pb.ValidatorRole_ATTESTER
+	} else if v.assignment.ProposerSlot == slot {
+		return pb.ValidatorRole_PROPOSER
 	}
-	return v.assignments[slot].Role
+	return pb.ValidatorRole_UNKNOWN
 }
 
 // ProposeBlock

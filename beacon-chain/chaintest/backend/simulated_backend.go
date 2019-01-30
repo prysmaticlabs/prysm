@@ -152,9 +152,9 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	prevBlockRoots := [][32]byte{genesisBlockRoot}
 
 	// We keep track of the randao layers peeled for each proposer index in a map.
-	layersPeeledForProposer := make(map[uint32]int, len(beaconState.ValidatorRegistry))
+	layersPeeledForProposer := make(map[uint64]int, len(beaconState.ValidatorRegistry))
 	for idx := range beaconState.ValidatorRegistry {
-		layersPeeledForProposer[uint32(idx)] = 0
+		layersPeeledForProposer[uint64(idx)] = 0
 	}
 
 	depositsTrie := trie.NewDepositTrie()
@@ -196,10 +196,10 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 				break
 			}
 		}
-		var simulatedCasperSlashing *StateTestCasperSlashing
-		for _, cSlashing := range testCase.Config.CasperSlashings {
+		var simulatedAttesterSlashing *StateTestAttesterSlashing
+		for _, cSlashing := range testCase.Config.AttesterSlashings {
 			if cSlashing.Slot == i {
-				simulatedCasperSlashing = cSlashing
+				simulatedAttesterSlashing = cSlashing
 				break
 			}
 		}
@@ -223,7 +223,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 			simulatedDeposit,
 			depositsTrie,
 			simulatedProposerSlashing,
-			simulatedCasperSlashing,
+			simulatedAttesterSlashing,
 			simulatedValidatorExit,
 		)
 		if err != nil {
