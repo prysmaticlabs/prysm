@@ -19,7 +19,7 @@ import (
 // WIP - not done.
 type validator struct {
 	genesisTime     uint64
-	ticker          slotticker.SlotTicker
+	ticker          *slotticker.SlotTicker
 	assignment      *pb.Assignment
 	validatorClient pb.ValidatorServiceClient
 	beaconClient    pb.BeaconServiceClient

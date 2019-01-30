@@ -55,6 +55,9 @@ func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 	if v.genesisTime != genesis {
 		t.Errorf("Expected chain start time to equal %d, received %d", genesis, v.genesisTime)
 	}
+	if v.ticker == nil {
+		t.Error("Expected ticker to be set, received nil")
+	}
 }
 
 func TestWaitForChainStart_ContextCanceled(t *testing.T) {
