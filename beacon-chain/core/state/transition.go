@@ -82,10 +82,7 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock, verifySignatures
 	if err != nil {
 		return nil, fmt.Errorf("could not verify block proposer slashings: %v", err)
 	}
-	state, err = b.ProcessEth1Data(state, block)
-	if err != nil {
-		return nil, fmt.Errorf("could not process block eth1 data: %v", err)
-	}
+	state = b.ProcessEth1Data(state, block)
 	state, err = b.ProcessAttesterSlashings(state, block, verifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify block attester slashings: %v", err)

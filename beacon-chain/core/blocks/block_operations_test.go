@@ -103,10 +103,7 @@ func TestProcessEth1Data_SameRootHash(t *testing.T) {
 			BlockHash32:       []byte{2},
 		},
 	}
-	beaconState, err := ProcessEth1Data(beaconState, block)
-	if err != nil {
-		t.Errorf("unexpected error processing ETH1 data %v", err)
-	}
+	beaconState = ProcessEth1Data(beaconState, block)
 	newETH1DataVotes := beaconState.Eth1DataVotes
 	if newETH1DataVotes[0].VoteCount != 6 {
 		t.Errorf("expected votes to increase from 5 to 6, received %d", newETH1DataVotes[0].VoteCount)
@@ -133,10 +130,7 @@ func TestProcessEth1Data_NewDepositRootHash(t *testing.T) {
 		},
 	}
 
-	beaconState, err := ProcessEth1Data(beaconState, block)
-	if err != nil {
-		t.Errorf("unexpected error processing ETH1 data %v", err)
-	}
+	beaconState = ProcessEth1Data(beaconState, block)
 	newETH1DataVotes := beaconState.Eth1DataVotes
 	if len(newETH1DataVotes) <= 1 {
 		t.Error("expected new ETH1 data votes to have length > 1")
