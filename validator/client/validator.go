@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"io"
 	"time"
 
@@ -35,6 +36,14 @@ type validator struct {
 func (v *validator) Initialize(ctx context.Context) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.Initialize")
 	defer span.Finish()
+	shardWithdrawalKey, err := keystore.NewKey()
+	if err != nil {
+
+	}
+	validatorKey, err := keystore.NewKey()
+	if err != nil {
+
+	}
 }
 
 // Done cleans up the validator.

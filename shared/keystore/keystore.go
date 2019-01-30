@@ -52,7 +52,6 @@ type keyStorePassphrase struct {
 
 // RetrievePubKey retrieves the public key from the keystore.
 func RetrievePubKey(directory string, password string) (*bls.PublicKey, error) {
-
 	ks := keyStorePassphrase{
 		keysDirPath: directory,
 		scryptN:     StandardScryptN,
@@ -150,7 +149,6 @@ func EncryptKey(key *Key, password string, scryptN, scryptP int) ([]byte, error)
 
 // DecryptKey decrypts a key from a json blob, returning the private key itself.
 func DecryptKey(keyjson []byte, password string) (*Key, error) {
-
 	var keyBytes, keyID []byte
 	var err error
 
