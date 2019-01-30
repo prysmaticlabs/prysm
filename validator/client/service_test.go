@@ -34,8 +34,11 @@ func TestStop_cancelsContext(t *testing.T) {
 
 func TestLifecycle(t *testing.T) {
 	hook := logTest.NewGlobal()
+	// Use cancelled context so that the run function exits immediately..
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
 	validatorService := NewValidatorService(
-		context.Background(),
+		ctx,
 		&Config{
 			Endpoint: "merkle tries",
 			CertFlag: "alice.crt",
@@ -48,10 +51,13 @@ func TestLifecycle(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
 
-func TestInsecure(t *testing.T) {
+func TestLifecycle_WithInsecure(t *testing.T) {
 	hook := logTest.NewGlobal()
+	// Use cancelled context so that the run function exits immediately.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
 	validatorService := NewValidatorService(
-		context.Background(),
+		ctx,
 		&Config{
 			Endpoint: "merkle tries",
 		},
