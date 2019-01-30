@@ -186,7 +186,6 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		Web3Service:      web3Service,
 		BeaconBlockBuf:   10,
 		IncomingBlockBuf: 100, // Big buffer to accommodate other feed subscribers.
-		EnablePOWChain:   enablePOWChain,
 	})
 	if err != nil {
 		return fmt.Errorf("could not register blockchain service: %v", err)
@@ -304,7 +303,6 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		ChainService:       chainService,
 		AttestationService: attestationService,
 		POWChainService:    web3Service,
-		EnablePOWChain:     enablePOWChain,
 	})
 
 	return b.services.RegisterService(rpcService)

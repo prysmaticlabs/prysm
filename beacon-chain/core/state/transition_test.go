@@ -21,7 +21,7 @@ func TestProcessBlock_IncorrectSlot(t *testing.T) {
 		4,
 		5,
 	)
-	if _, err := ProcessBlock(beaconState, block); !strings.Contains(err.Error(), want) {
+	if _, err := ProcessBlock(beaconState, block, false); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -39,7 +39,7 @@ func TestProcessBlock_IncorrectBlockRandao(t *testing.T) {
 		Body:               &pb.BeaconBlockBody{},
 	}
 	want := "could not verify and process block randao"
-	if _, err := ProcessBlock(beaconState, block); !strings.Contains(err.Error(), want) {
+	if _, err := ProcessBlock(beaconState, block, false); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -62,12 +62,12 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 		},
 	}
 	want := "could not verify block proposer slashing"
-	if _, err := ProcessBlock(beaconState, block); !strings.Contains(err.Error(), want) {
+	if _, err := ProcessBlock(beaconState, block, false); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
-func TestProcessBlock_IncorrectCasperSlashing(t *testing.T) {
+func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 	registry := validators.InitialValidatorRegistry()
 
 	slashings := []*pb.ProposerSlashing{
@@ -85,7 +85,7 @@ func TestProcessBlock_IncorrectCasperSlashing(t *testing.T) {
 			},
 		},
 	}
-	casperSlashings := make([]*pb.CasperSlashing, config.MaxCasperSlashings+1)
+	attesterSlashings := make([]*pb.AttesterSlashing, config.MaxAttesterSlashings+1)
 	latestMixes := make([][]byte, config.LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
 		LatestRandaoMixesHash32S: latestMixes,
@@ -97,11 +97,11 @@ func TestProcessBlock_IncorrectCasperSlashing(t *testing.T) {
 		RandaoRevealHash32: []byte{},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: slashings,
-			CasperSlashings:   casperSlashings,
+			AttesterSlashings: attesterSlashings,
 		},
 	}
-	want := "could not verify block casper slashing"
-	if _, err := ProcessBlock(beaconState, block); !strings.Contains(err.Error(), want) {
+	want := "could not verify block attester slashing"
+	if _, err := ProcessBlock(beaconState, block, false); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -131,17 +131,17 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		Slot:          5,
 		JustifiedSlot: 4,
 	}
-	casperSlashings := []*pb.CasperSlashing{
+	attesterSlashings := []*pb.AttesterSlashing{
 		{
-			SlashableVoteData_1: &pb.SlashableVoteData{
-				Data:                att1,
-				CustodyBit_0Indices: []uint32{0, 1},
-				CustodyBit_1Indices: []uint32{2, 3},
+			SlashableVote_1: &pb.SlashableVote{
+				Data:             att1,
+				ValidatorIndices: []uint64{1},
+				CustodyBitfield:  []byte{0xFF},
 			},
-			SlashableVoteData_2: &pb.SlashableVoteData{
-				Data:                att2,
-				CustodyBit_0Indices: []uint32{4, 5},
-				CustodyBit_1Indices: []uint32{6, 1},
+			SlashableVote_2: &pb.SlashableVote{
+				Data:             att2,
+				ValidatorIndices: []uint64{1},
+				CustodyBitfield:  []byte{0xFF},
 			},
 		},
 	}
@@ -158,12 +158,12 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		RandaoRevealHash32: []byte{},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: proposerSlashings,
-			CasperSlashings:   casperSlashings,
+			AttesterSlashings: attesterSlashings,
 			Attestations:      blockAttestations,
 		},
 	}
 	want := "could not process block attestations"
-	if _, err := ProcessBlock(beaconState, block); !strings.Contains(err.Error(), want) {
+	if _, err := ProcessBlock(beaconState, block, false); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -193,17 +193,17 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		Slot:          5,
 		JustifiedSlot: 4,
 	}
-	casperSlashings := []*pb.CasperSlashing{
+	attesterSlashings := []*pb.AttesterSlashing{
 		{
-			SlashableVoteData_1: &pb.SlashableVoteData{
-				Data:                att1,
-				CustodyBit_0Indices: []uint32{0, 1},
-				CustodyBit_1Indices: []uint32{2, 3},
+			SlashableVote_1: &pb.SlashableVote{
+				Data:             att1,
+				ValidatorIndices: []uint64{1},
+				CustodyBitfield:  []byte{0xFF},
 			},
-			SlashableVoteData_2: &pb.SlashableVoteData{
-				Data:                att2,
-				CustodyBit_0Indices: []uint32{4, 5},
-				CustodyBit_1Indices: []uint32{6, 1},
+			SlashableVote_2: &pb.SlashableVote{
+				Data:             att2,
+				ValidatorIndices: []uint64{1},
+				CustodyBitfield:  []byte{0xFF},
 			},
 		},
 	}
@@ -244,13 +244,13 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		RandaoRevealHash32: []byte{},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: proposerSlashings,
-			CasperSlashings:   casperSlashings,
+			AttesterSlashings: attesterSlashings,
 			Attestations:      attestations,
 			Exits:             exits,
 		},
 	}
 	want := "could not process validator exits"
-	if _, err := ProcessBlock(beaconState, block); !strings.Contains(err.Error(), want) {
+	if _, err := ProcessBlock(beaconState, block, false); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -280,17 +280,17 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		Slot:          5,
 		JustifiedSlot: 4,
 	}
-	casperSlashings := []*pb.CasperSlashing{
+	attesterSlashings := []*pb.AttesterSlashing{
 		{
-			SlashableVoteData_1: &pb.SlashableVoteData{
-				Data:                att1,
-				CustodyBit_0Indices: []uint32{0, 1},
-				CustodyBit_1Indices: []uint32{2, 3},
+			SlashableVote_1: &pb.SlashableVote{
+				Data:             att1,
+				ValidatorIndices: []uint64{1},
+				CustodyBitfield:  []byte{0xFF},
 			},
-			SlashableVoteData_2: &pb.SlashableVoteData{
-				Data:                att2,
-				CustodyBit_0Indices: []uint32{4, 5},
-				CustodyBit_1Indices: []uint32{6, 1},
+			SlashableVote_2: &pb.SlashableVote{
+				Data:             att2,
+				ValidatorIndices: []uint64{1},
+				CustodyBitfield:  []byte{0xFF},
 			},
 		},
 	}
@@ -336,12 +336,12 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		RandaoRevealHash32: []byte{},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: proposerSlashings,
-			CasperSlashings:   casperSlashings,
+			AttesterSlashings: attesterSlashings,
 			Attestations:      attestations,
 			Exits:             exits,
 		},
 	}
-	if _, err := ProcessBlock(beaconState, block); err != nil {
+	if _, err := ProcessBlock(beaconState, block, false); err != nil {
 		t.Errorf("Expected block to pass processing conditions: %v", err)
 	}
 }

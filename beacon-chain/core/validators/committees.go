@@ -17,7 +17,7 @@ import (
 
 // CrosslinkCommittee defines the validator committee of slot and shard combinations.
 type CrosslinkCommittee struct {
-	Committee []uint32
+	Committee []uint64
 	Shard     uint64
 }
 
@@ -42,7 +42,7 @@ func ShuffleValidatorRegistryToCommittees(
 // committee to a slot and a shard. If the validator set is large, multiple committees are assigned
 // to a single slot and shard. See getCommitteesPerSlot for more details.
 // To be deprecated by #1352.
-func splitBySlotShard(shuffledValidatorRegistry []uint32, crosslinkStartShard uint64) []*pb.ShardCommitteeArray {
+func splitBySlotShard(shuffledValidatorRegistry []uint64, crosslinkStartShard uint64) []*pb.ShardCommitteeArray {
 	committeesPerSlot := getCommitteesPerSlot(uint64(len(shuffledValidatorRegistry)))
 	committeBySlotAndShard := []*pb.ShardCommitteeArray{}
 
@@ -117,7 +117,7 @@ func getCommitteesPerSlot(numActiveValidatorRegistry uint64) uint64 {
 func AttestationParticipants(
 	state *pb.BeaconState,
 	attestationData *pb.AttestationData,
-	participationBitfield []byte) ([]uint32, error) {
+	participationBitfield []byte) ([]uint64, error) {
 
 	// Find the relevant committee.
 	crosslinkCommittees, err := CrosslinkCommitteesAtSlot(state, attestationData.Slot)
@@ -125,7 +125,7 @@ func AttestationParticipants(
 		return nil, err
 	}
 
-	var committee []uint32
+	var committee []uint64
 	for _, crosslinkCommittee := range crosslinkCommittees {
 		if crosslinkCommittee.Shard == attestationData.Shard {
 			committee = crosslinkCommittee.Committee
@@ -140,7 +140,7 @@ func AttestationParticipants(
 	}
 
 	// Find the participating validators in the committee.
-	var participants []uint32
+	var participants []uint64
 	for i, validatorIndex := range committee {
 		bitSet, err := bitutil.CheckBit(participationBitfield, i)
 		if err != nil {
@@ -209,7 +209,7 @@ func CrosslinkCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*Crosslink
 	var earliestSlot uint64
 	var countPerSlot uint64
 	var startShard uint64
-	var shuffledIndices [][]uint32
+	var shuffledIndices [][]uint64
 	var err error
 
 	epochLength := config.EpochLength
@@ -295,7 +295,7 @@ func CrosslinkCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*Crosslink
 func Shuffling(
 	seed [32]byte,
 	validators []*pb.ValidatorRecord,
-	slot uint64) ([][]uint32, error) {
+	slot uint64) ([][]uint64, error) {
 
 	// Normalize slot to start of epoch boundary.
 	slot -= slot % config.EpochLength

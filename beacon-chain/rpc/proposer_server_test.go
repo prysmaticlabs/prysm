@@ -118,7 +118,7 @@ func TestComputeStateRoot(t *testing.T) {
 		RandaoRevealHash32: nil,
 		Body: &pbp2p.BeaconBlockBody{
 			ProposerSlashings: nil,
-			CasperSlashings:   nil,
+			AttesterSlashings: nil,
 		},
 	}
 
