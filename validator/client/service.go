@@ -57,7 +57,7 @@ func (v *ValidatorService) Start() {
 		dialOpt = grpc.WithInsecure()
 		log.Warn("You are using an insecure gRPC connection! Please provide a certificate and key to use a secure connection.")
 	}
-	conn, err := grpc.DialContext(v.ctx, v.endpoint, grpc.WithBlock(), dialOpt)
+	conn, err := grpc.DialContext(v.ctx, v.endpoint, dialOpt)
 	if err != nil {
 		log.Errorf("Could not dial endpoint: %s, %v", v.endpoint, err)
 		return
