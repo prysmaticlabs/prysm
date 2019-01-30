@@ -12,6 +12,7 @@ import (
 type Validator interface {
 	Initialize(ctx context.Context)
 	Done()
+	WaitForChainStart(ctx context.Context)
 	WaitForActivation(ctx context.Context)
 	NextSlot() <-chan uint64
 	UpdateAssignments(ctx context.Context, slot uint64) error
@@ -33,6 +34,7 @@ type Validator interface {
 func run(ctx context.Context, v Validator) {
 	v.Initialize(ctx)
 	defer v.Done()
+	v.WaitForChainStart(ctx)
 	v.WaitForActivation(ctx)
 	span, ctx := opentracing.StartSpanFromContext(ctx, "processSlot")
 	defer span.Finish()

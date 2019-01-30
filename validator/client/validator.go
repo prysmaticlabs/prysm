@@ -39,13 +39,12 @@ func (v *validator) Done() {
 	v.ticker.Done()
 }
 
-// WaitForActivation checks whether the validator pubkey is in the active
-// validator set. If not, this operation will block until an activation message is
-// received.
-//
-// WIP - not done.
-func (v *validator) WaitForActivation(ctx context.Context) {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.WaitForActivation")
+// WaitForChainStart checks whether the beacon node has started its runtime. That is,
+// it calls to the beacon node which then verifies the ETH1.0 deposit contract logs to check
+// for the ChainStart log to have been emitted. If so, it starts a ticker based on the ChainStart
+// unix timestamp which will be used to keep track of time within the validator client.
+func (v *validator) WaitForChainStart(ctx context.Context) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.WaitForChainStart")
 	defer span.Finish()
 	// First, check if the beacon chain has started.
 	stream, err := v.beaconClient.WaitForChainStart(ctx, &ptypes.Empty{})
@@ -75,8 +74,18 @@ func (v *validator) WaitForActivation(ctx context.Context) {
 	// Once the ChainStart log is received, we update the genesis time of the validator client
 	// and begin a slot ticker used to track the current slot the beacon node is in.
 	v.ticker = slotticker.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SlotDuration)
-	// Then, check if the validator has deposited into the Deposit Contract.
-	// If the validator has deposited, subscribe to a stream receiving the activation status
+}
+
+// WaitForActivation checks whether the validator pubkey is in the active
+// validator set. If not, this operation will block until an activation message is
+// received.
+//
+// WIP - not done.
+func (v *validator) WaitForActivation(ctx context.Context) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.WaitForActivation")
+	defer span.Finish()
+	// First, check if the validator has deposited into the Deposit Contract.
+	// If the validator has deposited, subscribe to a stream receiving the activation status.
 	// of the validator until a final ACTIVATED check if received, then this function can return.
 }
 

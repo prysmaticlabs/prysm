@@ -19,7 +19,7 @@ var _ = Validator(&validator{})
 
 var fakePubKey = []byte{1}
 
-func TestWaitForActivation_ReceivesChainStartGenesisTime(t *testing.T) {
+func TestWaitForChainStart_ReceivesChainStartGenesisTime(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := internal.NewMockBeaconServiceClient(ctrl)
