@@ -13,11 +13,12 @@ import "github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 // The fields below define the suffix of keys in the db.
 var (
-	attestationBucket    = []byte("attestation-bucket")
-	blockBucket          = []byte("block-bucket")
-	mainChainBucket      = []byte("main-chain-bucket")
-	chainInfoBucket      = []byte("chain-info")
-	blockVoteCacheBucket = []byte("block-vote-cache")
+	attestationBucket     = []byte("attestation-bucket")
+	blockOperationsBucket = []byte("block-operations-bucket")
+	blockBucket           = []byte("block-bucket")
+	mainChainBucket       = []byte("main-chain-bucket")
+	chainInfoBucket       = []byte("chain-info")
+	blockVoteCacheBucket  = []byte("block-vote-cache")
 
 	mainChainHeightKey = []byte("chain-height")
 	stateLookupKey     = []byte("state")
