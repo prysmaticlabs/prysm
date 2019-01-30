@@ -16,17 +16,17 @@ var log = logrus.WithField("prefix", "operation")
 // Service represents a service that handles the internal
 // logic of beacon block operations.
 type Service struct {
-	ctx                 context.Context
-	cancel              context.CancelFunc
-	beaconDB            *db.BeaconDB
-	incomingDepositFeed *event.Feed
-	incomingDepositChan chan *pb.Deposit
+	ctx              context.Context
+	cancel           context.CancelFunc
+	beaconDB         *db.BeaconDB
+	incomingExitFeed *event.Feed
+	incomingExitChan chan *pb.Exit
 }
 
 // Config options for the service.
 type Config struct {
-	BeaconDB          *db.BeaconDB
-	ReceiveDepositBuf int
+	BeaconDB       *db.BeaconDB
+	ReceiveExitBuf int
 }
 
 // NewOperationService instantiates a new service instance that will
@@ -34,11 +34,11 @@ type Config struct {
 func NewOperationService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:                 ctx,
-		cancel:              cancel,
-		beaconDB:            cfg.BeaconDB,
-		incomingDepositFeed: new(event.Feed),
-		incomingDepositChan: make(chan *pb.Deposit, cfg.ReceiveDepositBuf),
+		ctx:              ctx,
+		cancel:           cancel,
+		beaconDB:         cfg.BeaconDB,
+		incomingExitFeed: new(event.Feed),
+		incomingExitChan: make(chan *pb.Exit, cfg.ReceiveExitBuf),
 	}
 }
 
@@ -61,17 +61,17 @@ func (s *Service) Status() error {
 	return nil
 }
 
-// IncomingDepositFeed returns a feed that any service can send incoming p2p deposit object into.
-// The beacon block operation service will subscribe to this feed in order to relay incoming deposits.
-func (s *Service) IncomingDepositFeed() *event.Feed {
-	return s.incomingDepositFeed
+// IncomingExitFeed returns a feed that any service can send incoming p2p exit object into.
+// The beacon block operation service will subscribe to this feed in order to relay incoming exits.
+func (s *Service) IncomingExitFeed() *event.Feed {
+	return s.incomingExitFeed
 }
 
 // saveOperations saves the newly broadcasted beacon block operations
 // that was received from sync service.
 func (s *Service) saveOperations() {
 	// TODO: Add rest of operations (slashings, attestation, exists...etc)
-	incomingSub := s.incomingDepositFeed.Subscribe(s.incomingDepositChan)
+	incomingSub := s.incomingExitFeed.Subscribe(s.incomingExitChan)
 	defer incomingSub.Unsubscribe()
 
 	for {
@@ -79,25 +79,20 @@ func (s *Service) saveOperations() {
 		case <-s.ctx.Done():
 			log.Debug("Beacon block ops service context closed, exiting goroutine")
 			return
-		// Listen for a newly received incoming deposit from the sync service.
-		case deposit := <-s.incomingDepositChan:
-			hash, err := hashutil.HashProto(deposit)
+		// Listen for a newly received incoming exit from the sync service.
+		case exit := <-s.incomingExitChan:
+			hash, err := hashutil.HashProto(exit)
 			if err != nil {
-				log.Errorf("Could not hash deposit proto: %v", err)
+				log.Errorf("Could not hash exit req proto: %v", err)
 				continue
 			}
 
-			if s.beaconDB.HasDeposit(hash) {
-				log.Debugf("Received. skipping deposit #%x", hash)
+			if err := s.beaconDB.SaveExit(exit); err != nil {
+				log.Errorf("Could not save exit request: %v", err)
 				continue
 			}
 
-			if err := s.beaconDB.SaveDeposit(deposit); err != nil {
-				log.Errorf("Could save deposit: %v", err)
-				continue
-			}
-
-			log.Debugf("Deposit %#x saved in db", hash)
+			log.Debugf("Exit request %#x saved in db", hash)
 		}
 	}
 }

@@ -7,8 +7,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
-// SaveDeposit puts the deposit record into the beacon chain db.
-func (db *BeaconDB) SaveDeposit(deposit *pb.Deposit) error {
+// SaveDeposit puts the exit request into the beacon chain db.
+func (db *BeaconDB) SaveExit(deposit *pb.Exit) error {
 	hash, err := hashutil.HashProto(deposit)
 	if err != nil {
 		return err
@@ -25,8 +25,8 @@ func (db *BeaconDB) SaveDeposit(deposit *pb.Deposit) error {
 	})
 }
 
-// HasDeposit checks if the deposit exists.
-func (db *BeaconDB) HasDeposit(hash [32]byte) bool {
+// HasExit checks if the exit request exists.
+func (db *BeaconDB) HasExit(hash [32]byte) bool {
 	exists := false
 	// #nosec G104
 	db.view(func(tx *bolt.Tx) error {

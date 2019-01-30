@@ -38,7 +38,7 @@ func TestStop(t *testing.T) {
 	hook.Reset()
 }
 
-func TestIncomingDeposits_1stDeposit(t *testing.T) {
+func TestIncomingExits_Ok(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
@@ -49,42 +49,16 @@ func TestIncomingDeposits_1stDeposit(t *testing.T) {
 		service.saveOperations()
 		<-exitRoutine
 	}()
-	deposit := &pb.Deposit{DepositData: []byte{'A'}}
-	hash, err := hashutil.HashProto(deposit)
+	exit := &pb.Exit{Slot: 100}
+	hash, err := hashutil.HashProto(exit)
 	if err != nil {
-		t.Fatalf("Could not hash deposit proto: %v", err)
+		t.Fatalf("Could not hash exit proto: %v", err)
 	}
 
-	service.incomingDepositChan <- deposit
+	service.incomingExitChan <- exit
 	service.cancel()
 	exitRoutine <- true
 
-	want := fmt.Sprintf("Deposit %#x saved in db", hash)
-	testutil.AssertLogsContain(t, hook, want)
-}
-
-func TestIncomingDeposits_2ndDeposit(t *testing.T) {
-	hook := logTest.NewGlobal()
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
-	service := NewOperationService(context.Background(), &Config{BeaconDB: beaconDB})
-
-	exitRoutine := make(chan bool)
-	go func() {
-		service.saveOperations()
-		<-exitRoutine
-	}()
-	deposit := &pb.Deposit{DepositData: []byte{'A'}}
-	hash, err := hashutil.HashProto(deposit)
-	if err != nil {
-		t.Fatalf("Could not hash deposit proto: %v", err)
-	}
-
-	service.incomingDepositChan <- deposit
-	service.incomingDepositChan <- deposit
-	service.cancel()
-	exitRoutine <- true
-
-	want := fmt.Sprintf("Received. skipping deposit #%x", hash)
+	want := fmt.Sprintf("Exit request %#x saved in db", hash)
 	testutil.AssertLogsContain(t, hook, want)
 }

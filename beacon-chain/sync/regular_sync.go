@@ -27,6 +27,10 @@ type attestationService interface {
 	IncomingAttestationFeed() *event.Feed
 }
 
+type operationService interface {
+	IncomingOperationFeed() *event.Feed
+}
+
 type p2pAPI interface {
 	Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription
 	Send(msg proto.Message, peer p2p.Peer)
@@ -51,6 +55,7 @@ type RegularSync struct {
 	p2p                   p2pAPI
 	chainService          chainService
 	attestationService    attestationService
+	operationService      operationService
 	db                    *db.BeaconDB
 	blockAnnouncementFeed *event.Feed
 	announceBlockBuf      chan p2p.Message
@@ -60,6 +65,7 @@ type RegularSync struct {
 	batchedRequestBuf     chan p2p.Message
 	chainHeadReqBuf       chan p2p.Message
 	attestationBuf        chan p2p.Message
+	exitBuf               chan p2p.Message
 }
 
 // RegularSyncConfig allows the channel's buffer sizes to be changed.
@@ -70,9 +76,11 @@ type RegularSyncConfig struct {
 	BlockReqHashBufferSize  int
 	BatchedBufferSize       int
 	AttestationBufferSize   int
+	ExitBufferSize          int
 	ChainHeadReqBufferSize  int
 	ChainService            chainService
 	AttestService           attestationService
+	operationService        operationService
 	BeaconDB                *db.BeaconDB
 	P2P                     p2pAPI
 }
@@ -87,6 +95,7 @@ func DefaultRegularSyncConfig() *RegularSyncConfig {
 		BatchedBufferSize:       100,
 		ChainHeadReqBufferSize:  100,
 		AttestationBufferSize:   100,
+		ExitBufferSize:          100,
 	}
 }
 
@@ -100,6 +109,7 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		chainService:          cfg.ChainService,
 		db:                    cfg.BeaconDB,
 		attestationService:    cfg.AttestService,
+		operationService:      cfg.operationService,
 		blockAnnouncementFeed: new(event.Feed),
 		announceBlockBuf:      make(chan p2p.Message, cfg.BlockAnnounceBufferSize),
 		blockBuf:              make(chan p2p.Message, cfg.BlockBufferSize),
@@ -107,6 +117,7 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		blockRequestByHash:    make(chan p2p.Message, cfg.BlockReqHashBufferSize),
 		batchedRequestBuf:     make(chan p2p.Message, cfg.BatchedBufferSize),
 		attestationBuf:        make(chan p2p.Message, cfg.AttestationBufferSize),
+		exitBuf:               make(chan p2p.Message, cfg.ExitBufferSize),
 		chainHeadReqBuf:       make(chan p2p.Message, cfg.ChainHeadReqBufferSize),
 	}
 }
@@ -142,6 +153,7 @@ func (rs *RegularSync) run() {
 	blockRequestHashSub := rs.p2p.Subscribe(&pb.BeaconBlockRequest{}, rs.blockRequestByHash)
 	batchedRequestSub := rs.p2p.Subscribe(&pb.BatchedBeaconBlockRequest{}, rs.batchedRequestBuf)
 	attestationSub := rs.p2p.Subscribe(&pb.Attestation{}, rs.attestationBuf)
+	exitSub := rs.p2p.Subscribe(&pb.Exit{}, rs.exitBuf)
 	chainHeadReqSub := rs.p2p.Subscribe(&pb.ChainHeadRequest{}, rs.chainHeadReqBuf)
 
 	defer announceBlockSub.Unsubscribe()
@@ -151,6 +163,7 @@ func (rs *RegularSync) run() {
 	defer batchedRequestSub.Unsubscribe()
 	defer chainHeadReqSub.Unsubscribe()
 	defer attestationSub.Unsubscribe()
+	defer exitSub.Unsubscribe()
 
 	for {
 		select {
@@ -161,6 +174,8 @@ func (rs *RegularSync) run() {
 			rs.receiveBlockAnnounce(msg)
 		case msg := <-rs.attestationBuf:
 			rs.receiveAttestation(msg)
+		case msg := <-rs.exitBuf:
+			rs.receiveExitRequest(msg)
 		case msg := <-rs.blockBuf:
 			rs.receiveBlock(msg)
 		case msg := <-rs.blockRequestBySlot:
@@ -315,8 +330,28 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 	}
 
 	log.WithField("attestationHash", fmt.Sprintf("%#x", h)).Debug("Forwarding attestation to subscribed services")
-	// Request the full block data from peer that sent the block hash.
 	rs.attestationService.IncomingAttestationFeed().Send(a)
+}
+
+// receiveExitRequest accepts an broadcasted exit from the p2p layer,
+// discard the exit if we have gotten before, send it to operation
+// service if we have not.
+func (rs *RegularSync) receiveExitRequest(msg p2p.Message) {
+	exit := msg.Data.(*pb.Exit)
+	h, err := hashutil.HashProto(exit)
+	if err != nil {
+		log.Errorf("Could not hash incoming exit request: %v", err)
+		return
+	}
+
+	if rs.db.HasExit(h) {
+		log.Debugf("Received, skipping exit request #%x", h)
+		return
+	}
+
+	log.WithField("exitReqHash", fmt.Sprintf("%#x", h)).
+		Debug("Forwarding validator exit request to subscribed services")
+	rs.operationService.IncomingOperationFeed().Send(exit)
 }
 
 func (rs *RegularSync) handleBlockRequestByHash(msg p2p.Message) {

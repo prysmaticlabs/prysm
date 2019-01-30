@@ -7,26 +7,26 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
-func TestHasDeposit(t *testing.T) {
+func TestBeaconDB_HasExit(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	d := &pb.Deposit{
-		DepositData: []byte{'A'},
+	d := &pb.Exit{
+		Slot: 100,
 	}
 	hash, err := hashutil.HashProto(d)
 	if err != nil {
-		t.Fatalf("could not hash deposit: %v", err)
+		t.Fatalf("could not hash exit request: %v", err)
 	}
 
-	if db.HasDeposit(hash) {
-		t.Fatal("Expected HasDeposit to return false")
+	if db.HasExit(hash) {
+		t.Fatal("Expected HasExit to return false")
 	}
 
-	if err := db.SaveDeposit(d); err != nil {
-		t.Fatalf("Failed to save deposit: %v", err)
+	if err := db.SaveExit(d); err != nil {
+		t.Fatalf("Failed to save exit request: %v", err)
 	}
-	if !db.HasDeposit(hash) {
-		t.Fatal("Expected HasDeposit to return true")
+	if !db.HasExit(hash) {
+		t.Fatal("Expected HasExit to return true")
 	}
 }
