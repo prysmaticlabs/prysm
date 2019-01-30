@@ -160,19 +160,22 @@ func (a *Service) updateLatestAttestation(attestation *pb.Attestation) error {
 		if err != nil {
 			return err
 		}
-		// If the attestation came from this attester.
-		if bitSet {
-			pubkey := bytes.ToBytes48(state.ValidatorRegistry[i].Pubkey)
-			newAttestationSlot := attestation.Data.Slot
-			currentAttestationSlot := uint64(0)
-			if _, exists := a.LatestAttestation[pubkey]; exists {
-				currentAttestationSlot = a.LatestAttestation[pubkey].Data.Slot
-			}
-			// If the attestation is newer than this attester's one in pool.
-			if newAttestationSlot > currentAttestationSlot {
-				a.LatestAttestation[pubkey] = attestation
-			}
+
+		if !bitSet {
+			continue
 		}
+		// If the attestation came from this attester.
+		pubkey := bytes.ToBytes48(state.ValidatorRegistry[i].Pubkey)
+		newAttestationSlot := attestation.Data.Slot
+		currentAttestationSlot := uint64(0)
+		if _, exists := a.LatestAttestation[pubkey]; exists {
+			currentAttestationSlot = a.LatestAttestation[pubkey].Data.Slot
+		}
+		// If the attestation is newer than this attester's one in pool.
+		if newAttestationSlot > currentAttestationSlot {
+			a.LatestAttestation[pubkey] = attestation
+		}
+
 	}
 	return nil
 }
