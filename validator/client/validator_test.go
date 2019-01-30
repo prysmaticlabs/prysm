@@ -41,7 +41,7 @@ func TestWaitForChainStart_ReceivesChainStartGenesisTime(t *testing.T) {
 		},
 		io.EOF,
 	)
-	v.WaitForActivation(context.Background())
+	v.WaitForChainStart(context.Background())
 	if v.genesisTime != genesis {
 		t.Errorf("Expected chain start time to equal %d, received %d", genesis, v.genesisTime)
 	}

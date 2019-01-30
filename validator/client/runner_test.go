@@ -32,6 +32,14 @@ func TestRunCleansUpValidator(t *testing.T) {
 	}
 }
 
+func TestRunWaitsForChainStart(t *testing.T) {
+	v := &fakeValidator{}
+	run(cancelledContext(), v)
+	if !v.WaitForChainStartCalled {
+		t.Error("Expected WaitForChainStart() to be called")
+	}
+}
+
 func TestRunWaitsForActivation(t *testing.T) {
 	v := &fakeValidator{}
 	run(cancelledContext(), v)
