@@ -31,6 +31,7 @@ import (
 type SimulatedBackend struct {
 	chainService *blockchain.ChainService
 	beaconDB     *db.BeaconDB
+	state        *pb.BeaconState
 }
 
 // NewSimulatedBackend creates an instance by initializing a chain service
@@ -131,7 +132,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	}
 
 	genesisTime := params.BeaconConfig().GenesisTime.Unix()
-	beaconState, err := state.InitialBeaconState(initialDeposits, uint64(genesisTime), nil)
+	sb.state, err = state.InitialBeaconState(initialDeposits, uint64(genesisTime), nil)
 	if err != nil {
 		return fmt.Errorf("could not initialize simulated beacon state")
 	}
@@ -285,6 +286,10 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		}
 	}
 	return nil
+}
+
+func (sb *SimulatedBackend) InitializeBeaconState() error {
+
 }
 
 func averageDuration(times []time.Duration) time.Duration {
