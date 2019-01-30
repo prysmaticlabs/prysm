@@ -37,8 +37,6 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 		t.Error("LatestRandaoMixesLength should be 8192 for these tests to pass")
 	}
 	latestRandaoMixesLength := int(params.BeaconConfig().LatestRandaoMixesLength)
-	LatestVdfMixesLength := int(params.BeaconConfig().LatestRandaoMixesLength /
-		params.BeaconConfig().EpochLength)
 
 	if params.BeaconConfig().ShardCount != 1024 {
 		t.Error("ShardCount should be 1024 for these tests to pass")
@@ -123,14 +121,6 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	// Randomness and committees fields checks.
 	if len(state.LatestRandaoMixesHash32S) != latestRandaoMixesLength {
 		t.Error("Length of LatestRandaoMixesHash32S was not correctly initialized")
-	}
-	if len(state.LatestVdfOutputsHash32S) != LatestVdfMixesLength {
-		t.Error("Length of LatestRandaoMixesHash32S was not correctly initialized")
-	}
-
-	// Proof of custody field check.
-	if !reflect.DeepEqual(state.CustodyChallenges, []*pb.CustodyChallenge{}) {
-		t.Error("CustodyChallenges was not correctly initialized")
 	}
 
 	// Finality fields checks.

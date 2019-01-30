@@ -208,7 +208,7 @@ func PrevHeadAttestations(
 //    sum([get_effective_balance(state, i) for i in active_validator_indices])
 func TotalBalance(
 	state *pb.BeaconState,
-	activeValidatorIndices []uint32) uint64 {
+	activeValidatorIndices []uint64) uint64 {
 
 	var totalBalance uint64
 	for _, index := range activeValidatorIndices {
@@ -225,7 +225,7 @@ func TotalBalance(
 //    Let inclusion_slot(state, index) =
 //    a.slot_included for the attestation a where index is in
 //    get_attestation_participants(state, a.data, a.participation_bitfield)
-func InclusionSlot(state *pb.BeaconState, validatorIndex uint32) (uint64, error) {
+func InclusionSlot(state *pb.BeaconState, validatorIndex uint64) (uint64, error) {
 
 	for _, attestation := range state.LatestAttestations {
 		participatedValidators, err := validators.AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)
@@ -249,7 +249,7 @@ func InclusionSlot(state *pb.BeaconState, validatorIndex uint32) (uint64, error)
 //    Let inclusion_distance(state, index) =
 //    a.slot_included - a.data.slot where a is the above attestation same as
 //    inclusion_slot
-func InclusionDistance(state *pb.BeaconState, validatorIndex uint32) (uint64, error) {
+func InclusionDistance(state *pb.BeaconState, validatorIndex uint64) (uint64, error) {
 
 	for _, attestation := range state.LatestAttestations {
 		participatedValidators, err := validators.AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)
@@ -274,7 +274,7 @@ func InclusionDistance(state *pb.BeaconState, validatorIndex uint32) (uint64, er
 func AttestingValidators(
 	state *pb.BeaconState,
 	shard uint64, thisEpochAttestations []*pb.PendingAttestationRecord,
-	prevEpochAttestations []*pb.PendingAttestationRecord) ([]uint32, error) {
+	prevEpochAttestations []*pb.PendingAttestationRecord) ([]uint64, error) {
 
 	root, err := winningRoot(
 		state,
