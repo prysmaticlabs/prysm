@@ -388,7 +388,7 @@ func TestAttestingValidatorsOk(t *testing.T) {
 	}
 
 	// Verify the winner root is attested by validator 45 based on shuffling.
-	if !reflect.DeepEqual(attestedValidators, []uint32{45}) {
+	if !reflect.DeepEqual(attestedValidators, []uint64{45}) {
 		t.Errorf("Active validators don't match. Wanted:[109, 97], Got: %v", attestedValidators)
 	}
 }
@@ -465,7 +465,7 @@ func TestTotalBalance(t *testing.T) {
 	}
 
 	// 20 + 25 + 30 + 30 + 32 + 32 + 32 + 32 = 233
-	totalBalance := TotalBalance(state, []uint32{0, 1, 2, 3, 4, 5, 6, 7})
+	totalBalance := TotalBalance(state, []uint64{0, 1, 2, 3, 4, 5, 6, 7})
 	if totalBalance != 233*1e9 {
 		t.Errorf("Incorrect total balance. Wanted: 233*1e9, got: %d", totalBalance)
 	}
@@ -506,7 +506,7 @@ func TestInclusionSlotBadBitfield(t *testing.T) {
 func TestInclusionSlotNotFound(t *testing.T) {
 	state := buildState(0, config.EpochLength)
 
-	badIndex := uint32(10000)
+	badIndex := uint64(10000)
 	want := fmt.Sprintf("could not find inclusion slot for validator index %d", badIndex)
 	if _, err := InclusionSlot(state, badIndex); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
@@ -552,7 +552,7 @@ func TestInclusionDistanceBadBitfield(t *testing.T) {
 func TestInclusionDistanceNotFound(t *testing.T) {
 	state := buildState(0, config.EpochLength)
 
-	badIndex := uint32(10000)
+	badIndex := uint64(10000)
 	want := fmt.Sprintf("could not find inclusion distance for validator index %d", badIndex)
 	if _, err := InclusionDistance(state, badIndex); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)

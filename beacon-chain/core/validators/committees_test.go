@@ -102,10 +102,10 @@ func TestGetCommitteesPerSlotSmallShardCount(t *testing.T) {
 }
 
 func TestValidatorRegistryBySlotShardRegularValidatorSet(t *testing.T) {
-	validatorIndices := []uint32{}
+	validatorIndices := []uint64{}
 	numValidatorRegistry := int(config.EpochLength * config.TargetCommitteeSize)
 	for i := 0; i < numValidatorRegistry; i++ {
-		validatorIndices = append(validatorIndices, uint32(i))
+		validatorIndices = append(validatorIndices, uint64(i))
 	}
 
 	ShardCommitteeArray := splitBySlotShard(validatorIndices, 0)
@@ -128,10 +128,10 @@ func TestValidatorRegistryBySlotShardRegularValidatorSet(t *testing.T) {
 }
 
 func TestValidatorRegistryBySlotShardLargeValidatorSet(t *testing.T) {
-	validatorIndices := []uint32{}
+	validatorIndices := []uint64{}
 	numValidatorRegistry := int(config.EpochLength*config.TargetCommitteeSize) * 2
 	for i := 0; i < numValidatorRegistry; i++ {
-		validatorIndices = append(validatorIndices, uint32(i))
+		validatorIndices = append(validatorIndices, uint64(i))
 	}
 
 	ShardCommitteeArray := splitBySlotShard(validatorIndices, 0)
@@ -157,10 +157,10 @@ func TestValidatorRegistryBySlotShardLargeValidatorSet(t *testing.T) {
 }
 
 func TestValidatorRegistryBySlotShardSmallValidatorSet(t *testing.T) {
-	validatorIndices := []uint32{}
+	validatorIndices := []uint64{}
 	numValidatorRegistry := int(config.EpochLength * config.TargetCommitteeSize)
 	for i := 0; i < numValidatorRegistry; i++ {
-		validatorIndices = append(validatorIndices, uint32(i))
+		validatorIndices = append(validatorIndices, uint64(i))
 	}
 
 	ShardCommitteeArray := splitBySlotShard(validatorIndices, 0)
@@ -208,42 +208,42 @@ func TestAttestationParticipants_ok(t *testing.T) {
 		stateSlot       uint64
 		shard           uint64
 		bitfield        []byte
-		wanted          []uint32
+		wanted          []uint64
 	}{
 		{
 			attestationSlot: 2,
 			stateSlot:       5,
 			shard:           2,
 			bitfield:        []byte{0xFF},
-			wanted:          []uint32{11, 121},
+			wanted:          []uint64{11, 121},
 		},
 		{
 			attestationSlot: 1,
 			stateSlot:       10,
 			shard:           1,
 			bitfield:        []byte{77},
-			wanted:          []uint32{117},
+			wanted:          []uint64{117},
 		},
 		{
 			attestationSlot: 10,
 			stateSlot:       20,
 			shard:           10,
 			bitfield:        []byte{0xFF},
-			wanted:          []uint32{14, 30},
+			wanted:          []uint64{14, 30},
 		},
 		{
 			attestationSlot: 64,
 			stateSlot:       100,
 			shard:           0,
 			bitfield:        []byte{0xFF},
-			wanted:          []uint32{109, 97},
+			wanted:          []uint64{109, 97},
 		},
 		{
 			attestationSlot: 999,
 			stateSlot:       1000,
 			shard:           39,
 			bitfield:        []byte{99},
-			wanted:          []uint32{89},
+			wanted:          []uint64{89},
 		},
 	}
 

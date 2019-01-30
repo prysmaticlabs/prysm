@@ -31,7 +31,7 @@ var config = params.BeaconConfig()
 //	  loses base_reward(state, index).
 func ExpectedFFGSource(
 	state *pb.BeaconState,
-	justifiedAttesterIndices []uint32,
+	justifiedAttesterIndices []uint64,
 	justifiedAttestingBalance uint64,
 	totalBalance uint64) *pb.BeaconState {
 
@@ -68,7 +68,7 @@ func ExpectedFFGSource(
 //	  base_reward(state, index).
 func ExpectedFFGTarget(
 	state *pb.BeaconState,
-	boundaryAttesterIndices []uint32,
+	boundaryAttesterIndices []uint64,
 	boundaryAttestingBalance uint64,
 	totalBalance uint64) *pb.BeaconState {
 
@@ -105,7 +105,7 @@ func ExpectedFFGTarget(
 //    base_reward(state, index).
 func ExpectedBeaconChainHead(
 	state *pb.BeaconState,
-	headAttesterIndices []uint32,
+	headAttesterIndices []uint64,
 	headAttestingBalance uint64,
 	totalBalance uint64) *pb.BeaconState {
 
@@ -138,7 +138,7 @@ func ExpectedBeaconChainHead(
 //    inclusion_distance(state, index)
 func InclusionDistance(
 	state *pb.BeaconState,
-	attesterIndices []uint32,
+	attesterIndices []uint64,
 	totalBalance uint64) (*pb.BeaconState, error) {
 
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
@@ -165,7 +165,7 @@ func InclusionDistance(
 //    loses inactivity_penalty(state, index, epochs_since_finality)
 func InactivityFFGSource(
 	state *pb.BeaconState,
-	justifiedAttesterIndices []uint32,
+	justifiedAttesterIndices []uint64,
 	totalBalance uint64,
 	epochsSinceFinality uint64) *pb.BeaconState {
 
@@ -189,7 +189,7 @@ func InactivityFFGSource(
 // 	  loses inactivity_penalty(state, index, epochs_since_finality)
 func InactivityFFGTarget(
 	state *pb.BeaconState,
-	boundaryAttesterIndices []uint32,
+	boundaryAttesterIndices []uint64,
 	totalBalance uint64,
 	epochsSinceFinality uint64) *pb.BeaconState {
 
@@ -213,7 +213,7 @@ func InactivityFFGTarget(
 // 	  loses base_reward(state, index)
 func InactivityChainHead(
 	state *pb.BeaconState,
-	headAttesterIndices []uint32,
+	headAttesterIndices []uint64,
 	totalBalance uint64) *pb.BeaconState {
 
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
@@ -261,7 +261,7 @@ func InactivityExitedPenalties(
 //    MIN_ATTESTATION_INCLUSION_DELAY // inclusion_distance(state, index)
 func InactivityInclusionDistance(
 	state *pb.BeaconState,
-	attesterIndices []uint32,
+	attesterIndices []uint64,
 	totalBalance uint64) (*pb.BeaconState, error) {
 
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
@@ -291,7 +291,7 @@ func InactivityInclusionDistance(
 func AttestationInclusion(
 	state *pb.BeaconState,
 	totalBalance uint64,
-	prevEpochAttesterIndices []uint32) (*pb.BeaconState, error) {
+	prevEpochAttesterIndices []uint64) (*pb.BeaconState, error) {
 
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
 	for _, index := range prevEpochAttesterIndices {
@@ -400,7 +400,7 @@ func baseRewardQuotient(totalBalance uint64) uint64 {
 //    	get_effective_balance(state, index) // base_reward_quotient // 5
 func baseReward(
 	state *pb.BeaconState,
-	validatorIndex uint32,
+	validatorIndex uint64,
 	baseRewardQuotient uint64) uint64 {
 
 	validatorBalance := validators.EffectiveBalance(state, validatorIndex)
@@ -416,7 +416,7 @@ func baseReward(
 //    	* epochs_since_finality // INACTIVITY_PENALTY_QUOTIENT // 2
 func inactivityPenalty(
 	state *pb.BeaconState,
-	validatorIndex uint32,
+	validatorIndex uint64,
 	baseRewardQuotient uint64,
 	epochsSinceFinality uint64) uint64 {
 
