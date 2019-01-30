@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -61,4 +62,16 @@ func TestInsecure(t *testing.T) {
 		t.Fatalf("Could not stop service: %v", err)
 	}
 	testutil.AssertLogsContain(t, hook, "Stopping service")
+}
+
+func TestStatus(t *testing.T) {
+	validatorService := NewValidatorService(
+		context.Background(),
+		&Config{
+			Endpoint: "merkle tries",
+		},
+	)
+	if err := validatorService.Status(); !strings.Contains(err.Error(), "no connection") {
+		t.Errorf("Expected status check to fail if no connection is found, received: %v", err)
+	}
 }

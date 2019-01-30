@@ -69,6 +69,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) {
 			continue
 		}
 		v.genesisTime = chainStartRes.GenesisTime
+		break
 	}
 	log.Infof("Beacon chain initialized at unix time: %v", time.Unix(int64(v.genesisTime), 0))
 	// Once the ChainStart log is received, we update the genesis time of the validator client
