@@ -18,7 +18,6 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	if params.BeaconConfig().EpochLength != 64 {
 		t.Errorf("EpochLength should be 64 for these tests to pass")
 	}
-	epochLength := params.BeaconConfig().EpochLength
 
 	if params.BeaconConfig().GenesisSlot != 0 {
 		t.Error("GenesisSlot should be 0 for these tests to pass")
@@ -26,7 +25,7 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	initialSlotNumber := params.BeaconConfig().GenesisSlot
 
 	if params.BeaconConfig().GenesisForkVersion != 0 {
-		t.Error("InitialForkSlot should be 0 for these tests to pass")
+		t.Error("InitialSlot should be 0 for these tests to pass")
 	}
 	initialForkVersion := params.BeaconConfig().GenesisForkVersion
 
@@ -38,8 +37,6 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 		t.Error("LatestRandaoMixesLength should be 8192 for these tests to pass")
 	}
 	latestRandaoMixesLength := int(params.BeaconConfig().LatestRandaoMixesLength)
-	LatestVdfMixesLength := int(params.BeaconConfig().LatestRandaoMixesLength /
-		params.BeaconConfig().EpochLength)
 
 	if params.BeaconConfig().ShardCount != 1024 {
 		t.Error("ShardCount should be 1024 for these tests to pass")
@@ -62,7 +59,7 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 
 	genesisTime := uint64(99999)
 	processedPowReceiptRoot := []byte{'A', 'B', 'C'}
-	maxDeposit := params.BeaconConfig().MaxDepositInGwei
+	maxDeposit := params.BeaconConfig().MaxDeposit
 	var deposits []*pb.Deposit
 	for i := 0; i < depositsForChainStart; i++ {
 		depositData, err := b.EncodeDepositData(
@@ -99,17 +96,17 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	if state.GenesisTime != genesisTime {
 		t.Error("GenesisTime was not correctly initialized")
 	}
-	if !reflect.DeepEqual(*state.ForkData, pb.ForkData{
-		PreForkVersion:  initialForkVersion,
-		PostForkVersion: initialForkVersion,
-		ForkSlot:        initialSlotNumber,
+	if !reflect.DeepEqual(*state.Fork, pb.Fork{
+		PreviousVersion: initialForkVersion,
+		CurrentVersion:  initialForkVersion,
+		Slot:            initialSlotNumber,
 	}) {
-		t.Error("ForkData was not correctly initialized")
+		t.Error("Fork was not correctly initialized")
 	}
 
 	// Validator registry fields checks.
-	if state.ValidatorRegistryLatestChangeSlot != initialSlotNumber {
-		t.Error("ValidatorRegistryLatestChangeSlot was not correctly initialized")
+	if state.ValidatorRegistryUpdateSlot != initialSlotNumber {
+		t.Error("ValidatorRegistryUpdateSlot was not correctly initialized")
 	}
 	if state.ValidatorRegistryExitCount != 0 {
 		t.Error("ValidatorRegistryExitCount was not correctly initialized")
@@ -124,14 +121,6 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	// Randomness and committees fields checks.
 	if len(state.LatestRandaoMixesHash32S) != latestRandaoMixesLength {
 		t.Error("Length of LatestRandaoMixesHash32S was not correctly initialized")
-	}
-	if len(state.LatestVdfOutputsHash32S) != LatestVdfMixesLength {
-		t.Error("Length of LatestRandaoMixesHash32S was not correctly initialized")
-	}
-
-	// Proof of custody field check.
-	if !reflect.DeepEqual(state.CustodyChallenges, []*pb.CustodyChallenge{}) {
-		t.Error("CustodyChallenges was not correctly initialized")
 	}
 
 	// Finality fields checks.
@@ -152,9 +141,9 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	if len(state.LatestCrosslinks) != shardCount {
 		t.Error("Length of LatestCrosslinks was not correctly initialized")
 	}
-	if !reflect.DeepEqual(state.LatestPenalizedExitBalances,
+	if !reflect.DeepEqual(state.LatestPenalizedBalances,
 		make([]uint64, latestPenalizedExitLength)) {
-		t.Error("LatestPenalizedExitBalances was not correctly initialized")
+		t.Error("LatestPenalizedBalances was not correctly initialized")
 	}
 	if !reflect.DeepEqual(state.LatestAttestations, []*pb.PendingAttestationRecord{}) {
 		t.Error("LatestAttestations was not correctly initialized")
@@ -169,19 +158,6 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	}
 	if !reflect.DeepEqual(state.DepositRootVotes, []*pb.DepositRootVote{}) {
 		t.Error("DepositRootVotes was not correctly initialized")
-	}
-
-	// Initial committee shuffling check.
-	if len(state.ShardCommitteesAtSlots) != int(2*epochLength) {
-		t.Error("ShardCommitteesAtSlots was not correctly initialized")
-	}
-
-	for i := 0; i < len(state.ShardCommitteesAtSlots); i++ {
-		if len(state.ShardCommitteesAtSlots[i].ArrayShardCommittee[0].Committee) !=
-			int(params.BeaconConfig().TargetCommitteeSize) {
-			t.Errorf("ShardCommittees was not correctly initialized %d",
-				len(state.ShardCommitteesAtSlots[i].ArrayShardCommittee[0].Committee))
-		}
 	}
 }
 

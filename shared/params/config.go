@@ -3,6 +3,7 @@
 package params
 
 import (
+	"math/big"
 	"time"
 )
 
@@ -16,30 +17,28 @@ func makeEmptySignature() [][]byte {
 // BeaconChainConfig contains constant configs for node to participate in beacon chain.
 type BeaconChainConfig struct {
 	// Misc constants.
-	ShardCount                uint64 // ShardCount is the number of shard chains in Ethereum 2.0.
-	TargetCommitteeSize       uint64 // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
-	EjectionBalance           uint64 // EjectionBalance is the minimal ETH a validator needs to have before ejected.
-	EjectionBalanceInGwei     uint64 // EjectionBalance is the minimal GWei a validator needs to have before ejected.
-	MaxBalanceChurnQuotient   uint64 // MaxBalanceChurnQuotient is used to determine how many validators can rotate per epoch.
-	Gwei                      uint64 // Gwei is the denomination of Gwei in Ether.
-	BeaconChainShardNumber    uint64 // BeaconChainShardNumber is the shard number of the beacon chain.
-	MaxCasperVotes            uint64 // MaxCasperVotes is used to verify slashable Casper vote data.
-	LatestBlockRootsLength    uint64 // LatestBlockRootsLength is the number of block roots kept in the beacon state.
-	LatestRandaoMixesLength   uint64 // LatestRandaoMixesLength is the number of randao mixes kept in the beacon state.
-	LatestPenalizedExitLength uint64 // LatestPenalizedExitLength is used to track penalized exit balances per time interval.
-	MaxWithdrawalsPerEpoch    uint64 // MaxWithdrawalsPerEpoch is the max withdrawals can happen for a single epoch.
+	ShardCount                 uint64 // ShardCount is the number of shard chains in Ethereum 2.0.
+	TargetCommitteeSize        uint64 // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
+	EjectionBalance            uint64 // EjectionBalance is the minimal GWei a validator needs to have before ejected.
+	MaxBalanceChurnQuotient    uint64 // MaxBalanceChurnQuotient is used to determine how many validators can rotate per epoch.
+	Gwei                       uint64 // Gwei is the denomination of Gwei in Ether.
+	BeaconChainShardNumber     uint64 // BeaconChainShardNumber is the shard number of the beacon chain.
+	MaxIndicesPerSlashableVote uint64 // MaxIndicesPerSlashableVote is used to determine how many validators can be slashed per vote.
+	LatestBlockRootsLength     uint64 // LatestBlockRootsLength is the number of block roots kept in the beacon state.
+	LatestRandaoMixesLength    uint64 // LatestRandaoMixesLength is the number of randao mixes kept in the beacon state.
+	LatestPenalizedExitLength  uint64 // LatestPenalizedExitLength is used to track penalized exit balances per time interval.
+	MaxWithdrawalsPerEpoch     uint64 // MaxWithdrawalsPerEpoch is the max withdrawals can happen for a single epoch.
 
 	// Deposit contract constants.
 	DepositContractAddress   []byte // DepositContractAddress is the address of the deposit contract in PoW chain.
 	DepositContractTreeDepth uint64 // Depth of the Merkle trie of deposits in the validator deposit contract on the PoW chain.
-	MaxDeposit               uint64 // MaxDeposit is the maximal amount of ETH a validator can send to the deposit contract at once.
-	MaxDepositInGwei         uint64 // MaxDepositInGwei is the maximal amount of Gwei a validator can send to the deposit contract at once.
-	MinDeposit               uint64 // MinDeposit is the minimal amount of ETH a validator can send to the deposit contract at once.
-	MinDepositinGwei         uint64 // MinDepositinGwei is the maximal amount of Gwei a validator can send to the deposit contract at once.
+	MinDeposit               uint64 // MinDeposit is the maximal amount of Gwei a validator can send to the deposit contract at once.
+	MaxDeposit               uint64 // MaxDeposit is the maximal amount of Gwei a validator can send to the deposit contract at once.
 
 	// Initial value constants.
 	GenesisForkVersion      uint64   // GenesisForkVersion is used to track fork version between state transitions.
-	GenesisSlot             uint64   // GenesisSlot is used to initialize the genesis state fields..
+	GenesisSlot             uint64   // GenesisSlot is used to initialize the genesis state fields.
+	GenesisStartShard       uint64   // GenesisStartShard is the first shard to assign validators.
 	ZeroHash                [32]byte // ZeroHash is used to represent a zeroed out 32 byte array.
 	EmptySignature          [][]byte // EmptySignature is used to represent a zeroed out BLS Signature.
 	BLSWithdrawalPrefixByte byte     // BLSWithdrawalPrefixByte is used for BLS withdrawal and it's the first byte.
@@ -65,7 +64,7 @@ type BeaconChainConfig struct {
 	MaxDeposits          uint64 // MaxExits determines the maximum number of validator deposits in a block.
 	MaxAttestations      uint64 // MaxAttestations defines the maximum allowed attestations in a beacon block.
 	MaxProposerSlashings uint64 // MaxProposerSlashings defines the maximum number of slashings of proposers possible in a block.
-	MaxCasperSlashings   uint64 // MaxCasperSlashings defines the maximum number of casper FFG slashings possible in a block.
+	MaxAttesterSlashings uint64 // MaxAttesterSlashings defines the maximum number of casper FFG slashings possible in a block.
 
 	// Prysm constants.
 	DepositsForChainStart uint64    // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
@@ -76,6 +75,13 @@ type BeaconChainConfig struct {
 	MaxNumLog2Validators  uint64    // MaxNumLog2Validators is the Max number of validators in Log2 exists given total ETH supply.
 }
 
+// DepositContractConfig contains the deposits for
+type DepositContractConfig struct {
+	DepositsForChainStart *big.Int // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
+	MinDepositAmount      *big.Int // MinDepositAmount defines the minimum deposit amount in gwei that is required in the deposit contract.
+	MaxDepositAmount      *big.Int // // MaxDepositAmount defines the minimum deposit amount in gwei that is required in the deposit contract.
+}
+
 // ShardChainConfig contains configs for node to participate in shard chains.
 type ShardChainConfig struct {
 	ChunkSize         uint64 // ChunkSize defines the size of each chunk in bytes.
@@ -84,35 +90,32 @@ type ShardChainConfig struct {
 
 var defaultBeaconConfig = &BeaconChainConfig{
 	// Misc constant.
-	ShardCount:                1024,
-	TargetCommitteeSize:       256,
-	EjectionBalance:           16,
-	EjectionBalanceInGwei:     16 * 1e9,
-	MaxBalanceChurnQuotient:   32,
-	Gwei:                      1e9,
-	BeaconChainShardNumber:    1<<64 - 1,
-	MaxCasperVotes:            1024,
-	LatestBlockRootsLength:    8192,
-	LatestRandaoMixesLength:   8192,
-	LatestPenalizedExitLength: 8192,
-	MaxWithdrawalsPerEpoch:    4,
+	ShardCount:                 1024,
+	TargetCommitteeSize:        128,
+	EjectionBalance:            16 * 1e9,
+	MaxBalanceChurnQuotient:    32,
+	BeaconChainShardNumber:     1<<64 - 1,
+	MaxIndicesPerSlashableVote: 1,
+	LatestBlockRootsLength:     8192,
+	LatestRandaoMixesLength:    8192,
+	LatestPenalizedExitLength:  8192,
+	MaxWithdrawalsPerEpoch:     4,
 
 	// Deposit contract constants.
 	DepositContractTreeDepth: 32,
-	MaxDeposit:               32,
-	MaxDepositInGwei:         32 * 1e9,
-	MinDeposit:               1,
-	MinDepositinGwei:         1 * 1e9,
+	MinDeposit:               1 * 1e9,
+	MaxDeposit:               32 * 1e9,
 
 	// Initial value constants.
 	GenesisForkVersion: 0,
 	GenesisSlot:        0,
+	GenesisStartShard:  0,
 	FarFutureSlot:      1<<64 - 1,
 	ZeroHash:           [32]byte{},
 	EmptySignature:     makeEmptySignature(),
 
 	// Time parameter constants.
-	SlotDuration:                 16,
+	SlotDuration:                 6,
 	MinAttestationInclusionDelay: 4,
 	EpochLength:                  64,
 	SeedLookahead:                64,
@@ -120,7 +123,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	DepositRootVotingPeriod:      1024,
 
 	// Reward and penalty quotients constants.
-	BaseRewardQuotient:           1024,
+	BaseRewardQuotient:           32,
 	WhistlerBlowerRewardQuotient: 512,
 	IncluderRewardQuotient:       8,
 	InactivityPenaltyQuotient:    1 << 24,
@@ -130,40 +133,38 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxDeposits:          16,
 	MaxAttestations:      128,
 	MaxProposerSlashings: 16,
-	MaxCasperSlashings:   16,
+	MaxAttesterSlashings: 1,
 
 	// Prysm constants.
 	DepositsForChainStart: 16384,
 	RandBytes:             3,
-	SyncPollingInterval:   16 * 4, // Query nodes over the network every 4 slots for sync status.
+	SyncPollingInterval:   6 * 4, // Query nodes over the network every 4 slots for sync status.
 	GenesisTime:           time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC),
 	MaxNumLog2Validators:  24,
 }
 
 var demoBeaconConfig = &BeaconChainConfig{
 	// Misc constant.
-	ShardCount:                5,
-	TargetCommitteeSize:       3,
-	EjectionBalance:           defaultBeaconConfig.EjectionBalance,
-	EjectionBalanceInGwei:     defaultBeaconConfig.EjectionBalanceInGwei,
-	MaxBalanceChurnQuotient:   defaultBeaconConfig.MaxBalanceChurnQuotient,
-	Gwei:                      defaultBeaconConfig.Gwei,
-	BeaconChainShardNumber:    defaultBeaconConfig.BeaconChainShardNumber,
-	MaxCasperVotes:            defaultBeaconConfig.MaxCasperVotes,
-	LatestBlockRootsLength:    defaultBeaconConfig.LatestBlockRootsLength,
-	LatestRandaoMixesLength:   defaultBeaconConfig.LatestRandaoMixesLength,
-	LatestPenalizedExitLength: defaultBeaconConfig.LatestPenalizedExitLength,
-	MaxWithdrawalsPerEpoch:    defaultBeaconConfig.MaxWithdrawalsPerEpoch,
+	ShardCount:                 5,
+	TargetCommitteeSize:        3,
+	EjectionBalance:            defaultBeaconConfig.EjectionBalance,
+	MaxBalanceChurnQuotient:    defaultBeaconConfig.MaxBalanceChurnQuotient,
+	BeaconChainShardNumber:     defaultBeaconConfig.BeaconChainShardNumber,
+	MaxIndicesPerSlashableVote: defaultBeaconConfig.MaxIndicesPerSlashableVote,
+	LatestBlockRootsLength:     defaultBeaconConfig.LatestBlockRootsLength,
+	LatestRandaoMixesLength:    defaultBeaconConfig.LatestRandaoMixesLength,
+	LatestPenalizedExitLength:  defaultBeaconConfig.LatestPenalizedExitLength,
+	MaxWithdrawalsPerEpoch:     defaultBeaconConfig.MaxWithdrawalsPerEpoch,
 
 	// Deposit contract constants.
 	DepositContractTreeDepth: defaultBeaconConfig.DepositContractTreeDepth,
 	MaxDeposit:               defaultBeaconConfig.MaxDeposit,
-	MaxDepositInGwei:         defaultBeaconConfig.MaxDepositInGwei,
 	MinDeposit:               defaultBeaconConfig.MinDeposit,
 
 	// Initial value constants.
 	GenesisForkVersion: defaultBeaconConfig.GenesisForkVersion,
 	GenesisSlot:        defaultBeaconConfig.GenesisSlot,
+	GenesisStartShard:  defaultBeaconConfig.GenesisStartShard,
 	FarFutureSlot:      defaultBeaconConfig.FarFutureSlot,
 	ZeroHash:           defaultBeaconConfig.ZeroHash,
 	EmptySignature:     defaultBeaconConfig.EmptySignature,
@@ -184,10 +185,10 @@ var demoBeaconConfig = &BeaconChainConfig{
 
 	// Max operations per block constants.
 	MaxExits:             defaultBeaconConfig.MaxExits,
-	MaxDeposits:          defaultBeaconConfig.MaxDeposit,
+	MaxDeposits:          defaultBeaconConfig.MaxDeposits,
 	MaxAttestations:      defaultBeaconConfig.MaxAttestations,
 	MaxProposerSlashings: defaultBeaconConfig.MaxProposerSlashings,
-	MaxCasperSlashings:   defaultBeaconConfig.MaxCasperSlashings,
+	MaxAttesterSlashings: defaultBeaconConfig.MaxAttesterSlashings,
 
 	// Prysm constants.
 	DepositsForChainStart: defaultBeaconConfig.DepositsForChainStart,
@@ -203,8 +204,15 @@ var defaultShardConfig = &ShardChainConfig{
 	MaxShardBlockSize: uint64(32768),
 }
 
+var defaultDepositContractConfig = &DepositContractConfig{
+	DepositsForChainStart: big.NewInt(16384),
+	MinDepositAmount:      big.NewInt(1e9),
+	MaxDepositAmount:      big.NewInt(32e9),
+}
+
 var beaconConfig = defaultBeaconConfig
 var shardConfig = defaultShardConfig
+var contractConfig = defaultDepositContractConfig
 
 // BeaconConfig retrieves beacon chain config.
 func BeaconConfig() *BeaconChainConfig {
@@ -214,6 +222,20 @@ func BeaconConfig() *BeaconChainConfig {
 // ShardConfig retrieves shard chain config.
 func ShardConfig() *ShardChainConfig {
 	return shardConfig
+}
+
+// ContractConfig retrieves the deposit contract config
+func ContractConfig() *DepositContractConfig {
+	return contractConfig
+}
+
+// DemoContractConfig uses the argument provided to initialize a fresh config.
+func DemoContractConfig(depositsReq *big.Int, minDeposit *big.Int, maxDeposit *big.Int) *DepositContractConfig {
+	return &DepositContractConfig{
+		DepositsForChainStart: depositsReq,
+		MinDepositAmount:      minDeposit,
+		MaxDepositAmount:      maxDeposit,
+	}
 }
 
 // UseDemoBeaconConfig for beacon chain services.

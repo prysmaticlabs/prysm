@@ -19,9 +19,9 @@ func createBlock(enc []byte) (*pb.BeaconBlock, error) {
 	return protoBlock, nil
 }
 
-// GetBlock accepts a block hash and returns the corresponding block.
+// Block accepts a block hash and returns the corresponding block.
 // Returns nil if the block does not exist.
-func (db *BeaconDB) GetBlock(hash [32]byte) (*pb.BeaconBlock, error) {
+func (db *BeaconDB) Block(hash [32]byte) (*pb.BeaconBlock, error) {
 	var block *pb.BeaconBlock
 	err := db.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blockBucket)
@@ -72,8 +72,8 @@ func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
 	})
 }
 
-// GetChainHead returns the head of the main chain.
-func (db *BeaconDB) GetChainHead() (*pb.BeaconBlock, error) {
+// ChainHead returns the head of the main chain.
+func (db *BeaconDB) ChainHead() (*pb.BeaconBlock, error) {
 	var block *pb.BeaconBlock
 	err := db.view(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
@@ -142,9 +142,9 @@ func (db *BeaconDB) UpdateChainHead(block *pb.BeaconBlock, beaconState *pb.Beaco
 	})
 }
 
-// GetBlockBySlot accepts a slot number and returns the corresponding block in the main chain.
+// BlockBySlot accepts a slot number and returns the corresponding block in the main chain.
 // Returns nil if a block was not recorded for the given slot.
-func (db *BeaconDB) GetBlockBySlot(slot uint64) (*pb.BeaconBlock, error) {
+func (db *BeaconDB) BlockBySlot(slot uint64) (*pb.BeaconBlock, error) {
 	var block *pb.BeaconBlock
 	slotEnc := encodeSlotNumber(slot)
 

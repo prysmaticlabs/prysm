@@ -24,8 +24,8 @@ func (db *BeaconDB) SaveAttestation(attestation *pb.Attestation) error {
 	})
 }
 
-// GetAttestation retrieves an attestation record from the db using its hash.
-func (db *BeaconDB) GetAttestation(hash [32]byte) (*pb.Attestation, error) {
+// Attestation retrieves an attestation record from the db using its hash.
+func (db *BeaconDB) Attestation(hash [32]byte) (*pb.Attestation, error) {
 	var attestation *pb.Attestation
 	err := db.view(func(tx *bolt.Tx) error {
 		a := tx.Bucket(attestationBucket)

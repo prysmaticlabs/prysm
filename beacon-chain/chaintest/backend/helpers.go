@@ -5,13 +5,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/trie"
-
 	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/trie"
 )
 
 // Generates a simulated beacon block to use
@@ -25,7 +24,7 @@ func generateSimulatedBlock(
 	simulatedDeposit *StateTestDeposit,
 	depositsTrie *trie.DepositTrie,
 	simulatedProposerSlashing *StateTestProposerSlashing,
-	simulatedCasperSlashing *StateTestCasperSlashing,
+	simulatedAttesterSlashing *StateTestAttesterSlashing,
 	simulatedExit *StateTestValidatorExit,
 ) (*pb.BeaconBlock, [32]byte, error) {
 	encodedState, err := proto.Marshal(beaconState)
@@ -40,7 +39,7 @@ func generateSimulatedBlock(
 		StateRootHash32:    stateRoot[:],
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: []*pb.ProposerSlashing{},
-			CasperSlashings:   []*pb.CasperSlashing{},
+			AttesterSlashings: []*pb.AttesterSlashing{},
 			Attestations:      []*pb.Attestation{},
 			Deposits:          []*pb.Deposit{},
 			Exits:             []*pb.Exit{},
@@ -86,23 +85,23 @@ func generateSimulatedBlock(
 			},
 		})
 	}
-	if simulatedCasperSlashing != nil {
-		block.Body.CasperSlashings = append(block.Body.CasperSlashings, &pb.CasperSlashing{
-			Votes_1: &pb.SlashableVoteData{
+	if simulatedAttesterSlashing != nil {
+		block.Body.AttesterSlashings = append(block.Body.AttesterSlashings, &pb.AttesterSlashing{
+			SlashableVote_1: &pb.SlashableVote{
 				Data: &pb.AttestationData{
-					Slot:          simulatedCasperSlashing.Votes1Slot,
-					JustifiedSlot: simulatedCasperSlashing.Votes1JustifiedSlot,
+					Slot:          simulatedAttesterSlashing.SlashableVote1Slot,
+					JustifiedSlot: simulatedAttesterSlashing.SlashableVote1JustifiedSlot,
 				},
-				CustodyBit_0Indices: simulatedCasperSlashing.Votes1CustodyBit0Indices,
-				CustodyBit_1Indices: simulatedCasperSlashing.Votes1CustodyBit1Indices,
+				CustodyBitfield:  []byte(simulatedAttesterSlashing.SlashableVote1CustodyBitField),
+				ValidatorIndices: simulatedAttesterSlashing.SlashableVote1ValidatorIndices,
 			},
-			Votes_2: &pb.SlashableVoteData{
+			SlashableVote_2: &pb.SlashableVote{
 				Data: &pb.AttestationData{
-					Slot:          simulatedCasperSlashing.Votes2Slot,
-					JustifiedSlot: simulatedCasperSlashing.Votes2JustifiedSlot,
+					Slot:          simulatedAttesterSlashing.SlashableVote2Slot,
+					JustifiedSlot: simulatedAttesterSlashing.SlashableVote2JustifiedSlot,
 				},
-				CustodyBit_0Indices: simulatedCasperSlashing.Votes2CustodyBit0Indices,
-				CustodyBit_1Indices: simulatedCasperSlashing.Votes2CustodyBit1Indices,
+				CustodyBitfield:  []byte(simulatedAttesterSlashing.SlashableVote2CustodyBitField),
+				ValidatorIndices: simulatedAttesterSlashing.SlashableVote2ValidatorIndices,
 			},
 		})
 	}
@@ -159,7 +158,7 @@ func generateInitialSimulatedDeposits(randaoCommit [32]byte) ([]*pb.Deposit, err
 		}
 		depositData, err := b.EncodeDepositData(
 			depositInput,
-			params.BeaconConfig().MaxDepositInGwei,
+			params.BeaconConfig().MaxDeposit,
 			genesisTime,
 		)
 		if err != nil {
@@ -168,30 +167,4 @@ func generateInitialSimulatedDeposits(randaoCommit [32]byte) ([]*pb.Deposit, err
 		deposits[i] = &pb.Deposit{DepositData: depositData}
 	}
 	return deposits, nil
-}
-
-// Finds the index of the next slot's proposer in the beacon state's
-// validator set.
-func findNextSlotProposerIndex(beaconState *pb.BeaconState) (uint32, error) {
-	nextSlot := beaconState.Slot + 1
-	epochLength := params.BeaconConfig().EpochLength
-	var earliestSlot uint64
-
-	// If the state slot is less than epochLength, then the earliestSlot would
-	// result in a negative number. Therefore we should default to
-	// earliestSlot = 0 in this case.
-	if nextSlot > epochLength {
-		earliestSlot = nextSlot - (nextSlot % epochLength) - epochLength
-	}
-
-	if nextSlot < earliestSlot || nextSlot >= earliestSlot+(epochLength*2) {
-		return 0, fmt.Errorf("slot %d out of bounds: %d <= slot < %d",
-			nextSlot,
-			earliestSlot,
-			earliestSlot+(epochLength*2),
-		)
-	}
-	committeeArray := beaconState.ShardCommitteesAtSlots[nextSlot-earliestSlot]
-	firstCommittee := committeeArray.ArrayShardCommittee[0].Committee
-	return firstCommittee[nextSlot%uint64(len(firstCommittee))], nil
 }
