@@ -123,7 +123,7 @@ func InitialBeaconState(
 		// Eth1 data.
 		LatestEth1Data: &pb.Eth1Data{
 			DepositRootHash32: processedPowReceiptRoot,
-			BlockHash32:       processedPowReceiptRoot,
+			BlockHash32:       []byte{},
 		},
 		Eth1DataVotes: []*pb.Eth1DataVote{},
 	}

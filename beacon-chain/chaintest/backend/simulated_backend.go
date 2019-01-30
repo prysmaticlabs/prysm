@@ -236,7 +236,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		latestRoot := depositsTrie.Root()
 		beaconState.LatestEth1Data = &pb.Eth1Data{
 			DepositRootHash32: latestRoot[:],
-			BlockHash32:       latestRoot[:],
+			BlockHash32:       []byte{},
 		}
 
 		startTime := time.Now()
