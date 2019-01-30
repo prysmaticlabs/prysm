@@ -546,7 +546,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_crypto",
-    commit = "ccddf3741a0cfcee0a62d34c18c2c5417a3761af",
+    commit = "b01c7a72566457eb1420261cdafef86638fc3861",
     importpath = "golang.org/x/crypto",
 )
 
