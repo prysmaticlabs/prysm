@@ -178,8 +178,8 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	}
 	prevHeadAttestingBalances := e.TotalBalance(state, prevHeadAttesterIndices)
 
-	// Process receipt roots.
-	if e.CanProcessDepositRoots(state) {
+	// Process eth1 data
+	if e.CanProcessEth1Data(state) {
 		state = e.ProcessEth1Data(state)
 	}
 

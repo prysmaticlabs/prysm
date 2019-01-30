@@ -24,12 +24,12 @@ func CanProcessEpoch(state *pb.BeaconState) bool {
 	return state.Slot%config.EpochLength == 0
 }
 
-// CanProcessDepositRoots checks the eligibility to process deposit root.
-// The deposit root can be processed every DEPOSIT_ROOT_VOTING_PERIOD.
+// CanProcessEth1Data checks the eligibility to process the eth1 data.
+// The eth1 data can be processed every ETH1_DATA_VOTING_PERIOD.
 //
 // Spec pseudocode definition:
-//    If state.slot % DEPOSIT_ROOT_VOTING_PERIOD == 0:
-func CanProcessDepositRoots(state *pb.BeaconState) bool {
+//    If state.slot % ETH1_DATA_VOTING_PERIOD == 0:
+func CanProcessEth1Data(state *pb.BeaconState) bool {
 	return state.Slot%config.Eth1DataVotingPeriod == 0
 }
 
