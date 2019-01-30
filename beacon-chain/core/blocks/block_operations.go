@@ -227,7 +227,7 @@ func ProcessAttesterSlashings(
 		)
 	}
 	for idx, slashing := range body.AttesterSlashings {
-		if err := verifyAttesgerSlashing(slashing); err != nil {
+		if err := verifyAttesterSlashing(slashing); err != nil {
 			return nil, fmt.Errorf("could not verify attester slashing #%d: %v", idx, err)
 		}
 		validatorIndices, err := attesterSlashingPenalizedIndices(slashing)
@@ -248,7 +248,7 @@ func ProcessAttesterSlashings(
 	return beaconState, nil
 }
 
-func verifyAttesgerSlashing(slashing *pb.AttesterSlashing) error {
+func verifyAttesterSlashing(slashing *pb.AttesterSlashing) error {
 	slashableVote1 := slashing.SlashableVote_1
 	slashableVote2 := slashing.SlashableVote_2
 	slashableVoteData1Attestation := slashableVote1.Data
@@ -333,14 +333,17 @@ func verifySlashableVote(votes *pb.SlashableVote) error {
 	}
 	for i := 0; i < len(votes.ValidatorIndices)-1; i++ {
 		if votes.ValidatorIndices[i] >= votes.ValidatorIndices[i+1] {
-			return errors.New("validator indices not in descending order")
+			return fmt.Errorf("validator indices not in descending order: %v",
+				votes.ValidatorIndices)
 		}
 	}
 	if len(votes.CustodyBitfield) != mathutil.CeilDiv8(len(votes.ValidatorIndices)) {
-		return errors.New("custody bit field don't match validator indices length")
+		return fmt.Errorf("custody bit field length (%d) don't match indices length (%d)",
+			len(votes.CustodyBitfield), mathutil.CeilDiv8(len(votes.ValidatorIndices)))
 	}
 	if uint64(len(votes.ValidatorIndices)) > config.MaxIndicesPerSlashableVote {
-		return errors.New("validator indices length exceeded max indices per slashable vote")
+		return fmt.Errorf("validator indices length (%d) exceeded max indices per slashable vote(%d)",
+			len(votes.ValidatorIndices), config.MaxIndicesPerSlashableVote)
 	}
 
 	// TODO(#258): Implement BLS verify multiple.
