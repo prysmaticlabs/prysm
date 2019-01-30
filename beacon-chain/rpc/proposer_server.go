@@ -22,7 +22,6 @@ type ProposerServer struct {
 	chainService       chainService
 	powChainService    powChainService
 	canonicalStateChan chan *pbp2p.BeaconState
-	enablePOWChain     bool
 }
 
 // ProposerIndex sends a response to the client which returns the proposer index for a given slot. Validators

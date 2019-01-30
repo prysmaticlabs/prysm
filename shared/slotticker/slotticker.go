@@ -29,8 +29,8 @@ func (s *SlotTicker) Done() {
 }
 
 // GetSlotTicker is the constructor for SlotTicker.
-func GetSlotTicker(genesisTime time.Time, slotDuration uint64) SlotTicker {
-	ticker := SlotTicker{
+func GetSlotTicker(genesisTime time.Time, slotDuration uint64) *SlotTicker {
+	ticker := &SlotTicker{
 		c:    make(chan uint64),
 		done: make(chan struct{}),
 	}
