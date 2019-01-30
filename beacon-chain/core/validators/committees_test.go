@@ -10,34 +10,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-func TestGetShardCommitteesAtSlots(t *testing.T) {
-	state := &pb.BeaconState{
-		ShardCommitteesAtSlots: []*pb.ShardCommitteeArray{
-			{ArrayShardCommittee: []*pb.ShardCommittee{
-				{Shard: 1, Committee: []uint32{0, 1, 2, 3, 4}},
-				{Shard: 2, Committee: []uint32{5, 6, 7, 8, 9}},
-			}},
-			{ArrayShardCommittee: []*pb.ShardCommittee{
-				{Shard: 3, Committee: []uint32{0, 1, 2, 3, 4}},
-				{Shard: 4, Committee: []uint32{5, 6, 7, 8, 9}},
-			}},
-		}}
-	if _, err := ShardCommitteesAtSlot(state, 1000); err == nil {
-		t.Error("getShardCommitteesForSlot should have failed with invalid slot")
-	}
-	committee, err := ShardCommitteesAtSlot(state, 0)
-	if err != nil {
-		t.Errorf("getShardCommitteesForSlot failed: %v", err)
-	}
-	if committee.ArrayShardCommittee[0].Shard != 1 {
-		t.Errorf("getShardCommitteesForSlot returns Shard should be 1, got: %v", committee.ArrayShardCommittee[0].Shard)
-	}
-	committee, _ = ShardCommitteesAtSlot(state, 1)
-	if committee.ArrayShardCommittee[0].Shard != 3 {
-		t.Errorf("getShardCommitteesForSlot returns Shard should be 3, got: %v", committee.ArrayShardCommittee[0].Shard)
-	}
-}
-
 func TestExceedingMaxValidatorRegistryFails(t *testing.T) {
 	populateValidatorsMax()
 	// use validatorsRegistry where its size exceeded upper bound.
