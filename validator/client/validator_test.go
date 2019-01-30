@@ -16,7 +16,6 @@ import (
 	"github.com/golang/mock/gomock"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	p2pmock "github.com/prysmaticlabs/prysm/shared/p2p/mock"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/internal"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -229,22 +228,4 @@ func TestUpdateAssignments_DoesUpdateAssignments(t *testing.T) {
 	if v.assignment.AttesterSlot != 78 {
 		t.Errorf("Unexpected validator assignments. want=%v got=%v", 78, v.assignment.AttesterSlot)
 	}
-}
-
-func TestProposeBlock_BroadcastsABlock(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	broadcaster := p2pmock.NewMockBroadcaster(ctrl)
-
-	validator := &validator{
-		p2p:             broadcaster,
-		blockThing:      &fakeBlockThing{},
-		attestationPool: &fakeAttestationPool{},
-	}
-
-	broadcaster.EXPECT().Broadcast(
-		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
-	)
-
-	validator.ProposeBlock(context.Background(), 55)
 }

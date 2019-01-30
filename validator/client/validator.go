@@ -11,7 +11,6 @@ import (
 
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotticker"
@@ -32,6 +31,7 @@ type validator struct {
 	genesisTime     uint64
 	ticker          *slotticker.SlotTicker
 	assignment      *pb.Assignment
+	proposerClient  pb.ProposerServiceClient
 	validatorClient pb.ValidatorServiceClient
 	beaconClient    pb.BeaconServiceClient
 	pubKey          []byte
@@ -148,48 +148,6 @@ func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
 		return pb.ValidatorRole_PROPOSER
 	}
 	return pb.ValidatorRole_UNKNOWN
-}
-
-// ProposeBlock
-//
-// WIP - not done.
-func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.ProposeBlock")
-	defer span.Finish()
-
-	// 1. Get current head beacon block.
-	headBlock := v.blockThing.HeadBlock()
-	parentHash, err := hashutil.HashBeaconBlock(headBlock)
-	if err != nil {
-		log.Errorf("Failed to hash parent block: %v", err)
-		return
-	}
-
-	// 2. Construct block
-	block := &pbp2p.BeaconBlock{
-		Slot:               slot,
-		ParentRootHash32:   parentHash[:], // tree root? in ssz pkg
-		RandaoRevealHash32: nil,           // TODO: generate randao reveal
-		Eth1Data: &pbp2p.Eth1Data{ // TODO(raul): will write rpc
-			DepositRootHash32: nil,
-			BlockHash32:       nil,
-		},
-		Body: &pbp2p.BeaconBlockBody{
-			Attestations: v.attestationPool.PendingAttestations(),
-			// TODO: slashings
-			ProposerSlashings: nil, // TODO later
-			AttesterSlashings: nil, // TODO later
-			Deposits:          nil, // TODO(raul): fetch from gRPC
-			Exits:             nil, // TODO: later
-		},
-	}
-
-	block.StateRootHash32 = nil // TODO(raul): Run state transition on unsigned block
-
-	// TODO: sign block
-	block.Signature = nil
-
-	v.p2p.Broadcast(block)
 }
 
 // AttestToBlockHead
