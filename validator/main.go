@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"runtime"
@@ -18,6 +19,12 @@ import (
 )
 
 func startNode(ctx *cli.Context) error {
+	keystoreDirectory := ctx.String(types.KeystorePathFlag.Name)
+	keystorePassword := ctx.String(types.PasswordFlag.Name)
+	if err := accounts.VerifyAccountNotExists(keystoreDirectory, keystorePassword); err	== nil {
+		return errors.New("no account found, use `validator accounts create` to generate a new keystore")
+	}
+
 	verbosity := ctx.GlobalString(cmd.VerbosityFlag.Name)
 	level, err := logrus.ParseLevel(verbosity)
 	if err != nil {
@@ -35,9 +42,9 @@ func startNode(ctx *cli.Context) error {
 }
 
 func createValidatorAccount(ctx *cli.Context) error {
-	directory := ctx.String(types.KeystorePathFlag.Name)
-	password := ctx.String(types.PasswordFlag.Name)
-	if err := accounts.NewValidatorAccount(directory, password); err != nil {
+	keystoreDirectory := ctx.String(types.KeystorePathFlag.Name)
+	keystorePassword := ctx.String(types.PasswordFlag.Name)
+	if err := accounts.NewValidatorAccount(keystoreDirectory, keystorePassword); err != nil {
 		return fmt.Errorf("could not initialize validator account: %v", err)
 	}
 	return nil
@@ -99,6 +106,8 @@ contract in order to activate the validator client`,
 
 	app.Flags = []cli.Flag{
 		types.BeaconRPCProviderFlag,
+		types.KeystorePathFlag,
+		types.PasswordFlag,
 		cmd.VerbosityFlag,
 		cmd.DataDirFlag,
 		cmd.EnableTracingFlag,
