@@ -66,7 +66,7 @@ spec:
               --nousb
               --lightserv=50
               --metrics
-              #--mine
+              --mine
               --etherbase=0xd9a5179f091d85051d3c982785efd1455cec8699
               --extradata="Prysm $HOSTNAME"
           volumeMounts:
