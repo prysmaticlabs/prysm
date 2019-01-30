@@ -147,8 +147,11 @@ func (a *Service) updateLatestAttestation(attestation *pb.Attestation) error {
 		return err
 	}
 
+	// The participation bitfield from attestation is represented in bytes,
+	// here we multiply by 8 to get an accurate validator count in bits.
 	bitfield := attestation.ParticipationBitfield
 	totalBits := len(bitfield) * 8
+
 	// Check each bit of participation bitfield to find out which
 	// attester has submitted new attestation.
 	// This is has O(n) run time and could be optimized down the line.
