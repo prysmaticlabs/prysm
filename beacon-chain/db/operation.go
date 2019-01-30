@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
-// SaveDeposit puts the exit request into the beacon chain db.
+// SaveExit puts the exit request into the beacon chain db.
 func (db *BeaconDB) SaveExit(deposit *pb.Exit) error {
 	hash, err := hashutil.HashProto(deposit)
 	if err != nil {
