@@ -15,13 +15,10 @@ import (
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/dbcleanup"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
-	"github.com/prysmaticlabs/prysm/beacon-chain/simulator"
 	rbcsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared"
@@ -86,10 +83,6 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	}
 
 	if err := beacon.registerAttestationService(); err != nil {
-		return nil, err
-	}
-
-	if err := beacon.registerSimulatorService(ctx); err != nil {
 		return nil, err
 	}
 
@@ -166,39 +159,6 @@ func (b *BeaconNode) startDB(ctx *cli.Context) error {
 	}
 
 	log.Info("checking db")
-
-	beaconState, err := db.State()
-	if err != nil {
-		return err
-	}
-	// Ensure that state has been initialized.
-	if beaconState == nil {
-		if err := db.InitializeState(); err != nil {
-			return err
-		}
-	}
-
-	beaconState, err = db.State()
-	if err != nil {
-		return err
-	}
-
-	hash, err := state.Hash(beaconState)
-	if err != nil {
-		return err
-	}
-
-	genesisBlock, err := db.BlockBySlot(0)
-	if err != nil {
-		return err
-	}
-
-	if genesisBlock == nil {
-		if err := db.SaveBlock(blocks.NewGenesisBlock(hash[:])); err != nil {
-			return err
-		}
-	}
-
 	b.db = db
 	return nil
 }
@@ -311,40 +271,6 @@ func (b *BeaconNode) registerSyncService() error {
 
 	syncService := rbcsync.NewSyncService(context.Background(), cfg)
 	return b.services.RegisterService(syncService)
-}
-
-func (b *BeaconNode) registerSimulatorService(ctx *cli.Context) error {
-	if !ctx.GlobalBool(utils.SimulatorFlag.Name) {
-		return nil
-	}
-	var p2pService *p2p.Server
-	if err := b.services.FetchService(&p2pService); err != nil {
-		return err
-	}
-
-	var web3Service *powchain.Web3Service
-	var enablePOWChain = ctx.GlobalBool(utils.EnablePOWChain.Name)
-	if enablePOWChain {
-		if err := b.services.FetchService(&web3Service); err != nil {
-			return err
-		}
-	}
-
-	var chainService *blockchain.ChainService
-	if err := b.services.FetchService(&chainService); err != nil {
-		return err
-	}
-
-	defaultConf := simulator.DefaultConfig()
-	cfg := &simulator.Config{
-		BlockRequestBuf: defaultConf.BlockRequestBuf,
-		BeaconDB:        b.db,
-		P2P:             p2pService,
-		Web3Service:     web3Service,
-		EnablePOWChain:  enablePOWChain,
-	}
-	simulatorService := simulator.NewSimulator(context.TODO(), cfg)
-	return b.services.RegisterService(simulatorService)
 }
 
 func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {

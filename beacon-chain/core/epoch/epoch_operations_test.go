@@ -21,7 +21,7 @@ func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 	}
 	validatorBalances := make([]uint64, len(validators))
 	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = config.MaxDepositInGwei
+		validatorBalances[i] = config.MaxDeposit
 	}
 	return &pb.BeaconState{
 		ValidatorRegistry: validators,
@@ -435,7 +435,7 @@ func TestTotalAttestingBalanceOk(t *testing.T) {
 		t.Fatalf("Could not execute totalAttestingBalance: %v", err)
 	}
 
-	if attestedBalance != config.MaxDepositInGwei*validatorsPerCommittee {
+	if attestedBalance != config.MaxDeposit*validatorsPerCommittee {
 		t.Errorf("Incorrect attested balance. Wanted:64*1e9, Got: %d", attestedBalance)
 	}
 }

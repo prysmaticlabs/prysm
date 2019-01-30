@@ -133,12 +133,12 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	}
 	casperSlashings := []*pb.CasperSlashing{
 		{
-			Votes_1: &pb.SlashableVoteData{
+			SlashableVoteData_1: &pb.SlashableVoteData{
 				Data:                att1,
 				CustodyBit_0Indices: []uint32{0, 1},
 				CustodyBit_1Indices: []uint32{2, 3},
 			},
-			Votes_2: &pb.SlashableVoteData{
+			SlashableVoteData_2: &pb.SlashableVoteData{
 				Data:                att2,
 				CustodyBit_0Indices: []uint32{4, 5},
 				CustodyBit_1Indices: []uint32{6, 1},
@@ -195,12 +195,12 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	}
 	casperSlashings := []*pb.CasperSlashing{
 		{
-			Votes_1: &pb.SlashableVoteData{
+			SlashableVoteData_1: &pb.SlashableVoteData{
 				Data:                att1,
 				CustodyBit_0Indices: []uint32{0, 1},
 				CustodyBit_1Indices: []uint32{2, 3},
 			},
-			Votes_2: &pb.SlashableVoteData{
+			SlashableVoteData_2: &pb.SlashableVoteData{
 				Data:                att2,
 				CustodyBit_0Indices: []uint32{4, 5},
 				CustodyBit_1Indices: []uint32{6, 1},
@@ -282,12 +282,12 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	casperSlashings := []*pb.CasperSlashing{
 		{
-			Votes_1: &pb.SlashableVoteData{
+			SlashableVoteData_1: &pb.SlashableVoteData{
 				Data:                att1,
 				CustodyBit_0Indices: []uint32{0, 1},
 				CustodyBit_1Indices: []uint32{2, 3},
 			},
-			Votes_2: &pb.SlashableVoteData{
+			SlashableVoteData_2: &pb.SlashableVoteData{
 				Data:                att2,
 				CustodyBit_0Indices: []uint32{4, 5},
 				CustodyBit_1Indices: []uint32{6, 1},
@@ -350,7 +350,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 	validatorRegistry := validators.InitialValidatorRegistry()
 	validatorBalances := make([]uint64, len(validatorRegistry))
 	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = config.MaxDepositInGwei
+		validatorBalances[i] = config.MaxDeposit
 	}
 
 	var attestations []*pb.PendingAttestationRecord
@@ -396,7 +396,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 }
 
 func TestProcessEpoch_InactiveConditions(t *testing.T) {
-	defaultBalance := config.MaxDepositInGwei
+	defaultBalance := config.MaxDeposit
 
 	validatorRegistry := []*pb.ValidatorRecord{
 		{ExitSlot: config.FarFutureSlot}, {ExitSlot: config.FarFutureSlot},
@@ -491,14 +491,9 @@ func TestProcessEpoch_CantGetCurrentValidatorIndices(t *testing.T) {
 		LatestBlockRootHash32S: latestBlockRoots,
 	}
 
-	//want := fmt.Sprintf(
-	//	"could not get current boundary attester indices: wanted participants bitfield length %d, got: %d",
-	//	len(shardCommittees[0].ArrayShardCommittee[0].Committee),
-	//	len(attestations[0].ParticipationBitfield),
-	//)
-	want := "test"
-	if _, err := ProcessEpoch(state); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected: %s, received: %v", want, err)
+	wanted := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 0, 1)
+	if _, err := ProcessEpoch(state); !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected: %s, received: %v", wanted, err)
 	}
 }
 
@@ -555,7 +550,7 @@ func TestProcessEpoch_CantProcessEjections(t *testing.T) {
 	validatorRegistries := validators.InitialValidatorRegistry()
 	validatorBalances := make([]uint64, len(validatorRegistries))
 	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = config.MaxDepositInGwei
+		validatorBalances[i] = config.MaxDeposit
 	}
 	var randaoHashes [][]byte
 	for i := uint64(0); i < 4*config.EpochLength; i++ {
@@ -567,7 +562,7 @@ func TestProcessEpoch_CantProcessEjections(t *testing.T) {
 	}
 	exitSlot := 4*config.EpochLength + 1
 	validatorRegistries[0].ExitSlot = exitSlot
-	validatorBalances[0] = config.EjectionBalanceInGwei - 1
+	validatorBalances[0] = config.EjectionBalance - 1
 	state := &pb.BeaconState{
 		Slot:                     config.EpochLength,
 		ValidatorBalances:        validatorBalances,
