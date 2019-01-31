@@ -14,17 +14,6 @@ func TestUpdateRandaoLayers(t *testing.T) {
 	genesisValidatorRegistry := v.InitialValidatorRegistry()
 	beaconState.ValidatorRegistry = genesisValidatorRegistry
 
-	var ShardCommittees []*pb.ShardCommitteeArray
-	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
-		ShardCommittees = append(ShardCommittees, &pb.ShardCommitteeArray{
-			ArrayShardCommittee: []*pb.ShardCommittee{
-				{Committee: []uint32{9, 8, 311, 12, 92, 1, 23, 17}},
-			},
-		})
-	}
-
-	beaconState.ShardCommitteesAtSlots = ShardCommittees
-
 	newState, err := UpdateRandaoLayers(beaconState, 1)
 	if err != nil {
 		t.Fatalf("failed to update randao layers: %v", err)
@@ -32,12 +21,12 @@ func TestUpdateRandaoLayers(t *testing.T) {
 
 	vreg := newState.ValidatorRegistry
 
-	// Since slot 1 has proposer index 8
-	if vreg[8].RandaoLayers != 1 {
-		t.Fatalf("randao layers not updated %d", vreg[9].RandaoLayers)
+	// Since slot 1 has proposer index 511
+	if vreg[511].RandaoLayers != 2 {
+		t.Fatalf("randao layers not updated %d", vreg[511].RandaoLayers)
 	}
 
-	if vreg[9].RandaoLayers != 0 {
+	if vreg[9].RandaoLayers != 1 {
 		t.Errorf("randao layers updated when they were not supposed to %d", vreg[9].RandaoLayers)
 	}
 }

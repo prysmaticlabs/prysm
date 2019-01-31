@@ -9,7 +9,7 @@ import (
 // and total deposit supported for such block hash.
 type BlockVote struct {
 	VoterIndices     []uint32
-	VoteTotalDeposit uint64
+	VoteTotalDeposit uint32
 }
 
 // BlockVoteCache is a map from hash to BlockVote object.

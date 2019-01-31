@@ -14,13 +14,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slices"
-	"github.com/prysmaticlabs/prysm/shared/trie"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -150,25 +151,32 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	prevBlockRoots := [][32]byte{genesisBlockRoot}
 
 	// We keep track of the randao layers peeled for each proposer index in a map.
-	layersPeeledForProposer := make(map[uint32]int, len(beaconState.ValidatorRegistry))
+	layersPeeledForProposer := make(map[uint64]int, len(beaconState.ValidatorRegistry))
 	for idx := range beaconState.ValidatorRegistry {
-		layersPeeledForProposer[uint32(idx)] = 0
+		layersPeeledForProposer[uint64(idx)] = 0
 	}
 
-	depositsTrie := trie.NewDepositTrie()
+	depositsTrie := trieutil.NewDepositTrie()
 	averageTimesPerTransition := []time.Duration{}
 	for i := uint64(0); i < testCase.Config.NumSlots; i++ {
 		prevBlockRoot := prevBlockRoots[len(prevBlockRoots)-1]
 
-		proposerIndex, err := findNextSlotProposerIndex(beaconState)
+		committeeArray, err := validators.CrosslinkCommitteesAtSlot(beaconState, i)
 		if err != nil {
-			return fmt.Errorf("could not fetch beacon proposer index: %v", err)
+			return fmt.Errorf("could not get crosslink committee: %v", err)
 		}
+		firstCommittee := committeeArray[0].Committee
+		proposerIndex := firstCommittee[i%uint64(len(firstCommittee))]
 
 		// If the slot is marked as skipped in the configuration options,
 		// we simply run the state transition with a nil block argument.
-		if slices.IsInUint64(i, testCase.Config.SkipSlots) {
-			newState, err := state.ExecuteStateTransition(beaconState, nil, prevBlockRoot)
+		if sliceutil.IsInUint64(i, testCase.Config.SkipSlots) {
+			newState, err := state.ExecuteStateTransition(
+				beaconState,
+				nil,
+				prevBlockRoot,
+				false, /* no sig verify */
+			)
 			if err != nil {
 				return fmt.Errorf("could not execute state transition: %v", err)
 			}
@@ -192,10 +200,10 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 				break
 			}
 		}
-		var simulatedCasperSlashing *StateTestCasperSlashing
-		for _, cSlashing := range testCase.Config.CasperSlashings {
+		var simulatedAttesterSlashing *StateTestAttesterSlashing
+		for _, cSlashing := range testCase.Config.AttesterSlashings {
 			if cSlashing.Slot == i {
-				simulatedCasperSlashing = cSlashing
+				simulatedAttesterSlashing = cSlashing
 				break
 			}
 		}
@@ -219,7 +227,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 			simulatedDeposit,
 			depositsTrie,
 			simulatedProposerSlashing,
-			simulatedCasperSlashing,
+			simulatedAttesterSlashing,
 			simulatedValidatorExit,
 		)
 		if err != nil {
@@ -229,7 +237,12 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		beaconState.LatestDepositRootHash32 = latestRoot[:]
 
 		startTime := time.Now()
-		newState, err := state.ExecuteStateTransition(beaconState, newBlock, prevBlockRoot)
+		newState, err := state.ExecuteStateTransition(
+			beaconState,
+			newBlock,
+			prevBlockRoot,
+			false, /*  no sig verify */
+		)
 		if err != nil {
 			return fmt.Errorf("could not execute state transition: %v", err)
 		}

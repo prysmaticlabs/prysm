@@ -22,19 +22,19 @@ func readTestsFromYaml(yamlDir string) ([]interface{}, error) {
 
 	dirs, err := ioutil.ReadDir(yamlDir)
 	if err != nil {
-		return nil, fmt.Errorf("could not read yaml tests directory: %v", err)
+		return nil, fmt.Errorf("could not read YAML tests directory: %v", err)
 	}
 	for _, dir := range dirs {
 		files, err := ioutil.ReadDir(path.Join(yamlDir, dir.Name()))
 		if err != nil {
-			return nil, fmt.Errorf("could not read yaml tests directory: %v", err)
+			return nil, fmt.Errorf("could not read YAML tests directory: %v", err)
 		}
 		for _, file := range files {
 			filePath := path.Join(yamlDir, dir.Name(), file.Name())
 			// #nosec G304
 			data, err := ioutil.ReadFile(filePath)
 			if err != nil {
-				return nil, fmt.Errorf("could not read yaml file: %v", err)
+				return nil, fmt.Errorf("could not read YAML file: %v", err)
 			}
 			switch dir.Name() {
 			case forkChoiceTestsFolderName:

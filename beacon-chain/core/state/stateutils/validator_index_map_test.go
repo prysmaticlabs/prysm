@@ -5,7 +5,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytes"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 func TestValidatorIndexMap(t *testing.T) {
@@ -26,15 +26,15 @@ func TestValidatorIndexMap(t *testing.T) {
 		ok  bool
 	}{
 		{
-			key: bytes.ToBytes32([]byte("zero")),
+			key: bytesutil.ToBytes32([]byte("zero")),
 			val: 0,
 			ok:  true,
 		}, {
-			key: bytes.ToBytes32([]byte("one")),
+			key: bytesutil.ToBytes32([]byte("one")),
 			val: 1,
 			ok:  true,
 		}, {
-			key: bytes.ToBytes32([]byte("no")),
+			key: bytesutil.ToBytes32([]byte("no")),
 			val: 0,
 			ok:  false,
 		},

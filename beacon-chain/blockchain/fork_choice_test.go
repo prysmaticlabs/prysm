@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -32,7 +32,7 @@ func generateTestGenesisStateAndBlock(
 		depositInput := &pb.DepositInput{
 			Pubkey: pubkey,
 		}
-		balance := params.BeaconConfig().MaxDepositInGwei
+		balance := params.BeaconConfig().MaxDeposit
 		depositData, err := b.EncodeDepositData(depositInput, balance, time.Now().Unix())
 		if err != nil {
 			t.Fatalf("Could not encode deposit: %v", err)
