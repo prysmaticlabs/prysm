@@ -7,6 +7,7 @@ package epoch
 import (
 	"bytes"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 
 	block "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -14,36 +15,6 @@ import (
 	b "github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
-
-// SlotToEpoch returns the epoch number of the input slot.
-//
-// Spec pseudocode definition:
-//   def slot_to_epoch(slot: SlotNumber) -> EpochNumber:
-//    return slot // EPOCH_LENGTH
-func SlotToEpoch(slot uint64) uint64 {
-	return slot / config.EpochLength
-}
-
-// CurrentEpoch returns the current epoch number calculated from
-// the slot number stored in beacon state.
-//
-// Spec pseudocode definition:
-//   def get_current_epoch(state: BeaconState) -> EpochNumber:
-//    return slot_to_epoch(state.slot)
-func CurrentEpoch(state *pb.BeaconState) uint64 {
-	return SlotToEpoch(state.Slot)
-}
-
-
-// StartSlot returns the first slot number of the
-// current epoch.
-//
-// Spec pseudocode definition:
-//   def get_epoch_start_slot(epoch: EpochNumber) -> SlotNumber:
-//    return epoch * EPOCH_LENGTH
-func StartSlot(epoch uint64) uint64 {
-	return epoch * config.EpochLength
-}
 
 // Attestations returns the pending attestations of slots in the epoch
 // (state.slot-EPOCH_LENGTH...state.slot-1), not attestations that got
@@ -54,10 +25,10 @@ func StartSlot(epoch uint64) uint64 {
 //   	current_epoch == slot_to_epoch(a.data.slot)
 func Attestations(state *pb.BeaconState) []*pb.PendingAttestationRecord {
 	var thisEpochAttestations []*pb.PendingAttestationRecord
-	currentEpoch := CurrentEpoch(state)
+	currentEpoch := helpers.CurrentEpoch(state)
 
 	for _, attestation := range state.LatestAttestations {
-		if currentEpoch == SlotToEpoch(attestation.Data.Slot){
+		if currentEpoch == helpers.SlotToEpoch(attestation.Data.Slot) {
 			thisEpochAttestations = append(thisEpochAttestations, attestation)
 		}
 	}
@@ -113,11 +84,11 @@ func PrevAttestations(state *pb.BeaconState) []*pb.PendingAttestationRecord {
 	var prevEpochAttestations []*pb.PendingAttestationRecord
 	var prevEpoch uint64
 
-	if CurrentEpoch(state) != 0 {
-		prevEpoch = CurrentEpoch(state) - 1
+	if helpers.CurrentEpoch(state) != 0 {
+		prevEpoch = helpers.CurrentEpoch(state) - 1
 	}
 	for _, attestation := range state.LatestAttestations {
-		if prevEpoch == SlotToEpoch(attestation.Data.Slot){
+		if prevEpoch == helpers.SlotToEpoch(attestation.Data.Slot) {
 			prevEpochAttestations = append(prevEpochAttestations, attestation)
 		}
 	}

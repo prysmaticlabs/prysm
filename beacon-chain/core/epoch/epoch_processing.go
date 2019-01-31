@@ -6,6 +6,7 @@ package epoch
 
 import (
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -297,11 +298,11 @@ func ProcessPartialValidatorRegistry(state *pb.BeaconState) *pb.BeaconState {
 // 		Remove any attestation in state.latest_attestations such
 // 		that attestation.data.slot < state.slot - EPOCH_LENGTH
 func CleanupAttestations(state *pb.BeaconState) *pb.BeaconState {
-	currEpoch := CurrentEpoch(state)
+	currEpoch := helpers.CurrentEpoch(state)
 
 	var latestAttestations []*pb.PendingAttestationRecord
 	for _, attestation := range state.LatestAttestations {
-		if SlotToEpoch(attestation.Data.Slot) >= currEpoch {
+		if helpers.SlotToEpoch(attestation.Data.Slot) >= currEpoch {
 			latestAttestations = append(latestAttestations, attestation)
 		}
 	}

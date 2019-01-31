@@ -7,7 +7,7 @@ package validators
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -148,8 +148,8 @@ func CrosslinkCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*Crosslink
 	var shuffledIndices [][]uint64
 	var err error
 
-	wantedEpoch := epoch.SlotToEpoch(slot)
-	currentEpoch := epoch.CurrentNumber(state)
+	wantedEpoch := helpers.SlotToEpoch(slot)
+	currentEpoch := helpers.CurrentEpoch(state)
 	var prevEpoch uint64
 	if currentEpoch != 0 {
 		prevEpoch = currentEpoch - 1

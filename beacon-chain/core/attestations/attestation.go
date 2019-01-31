@@ -5,8 +5,8 @@ package attestations
 
 import (
 	"encoding/binary"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -83,8 +83,8 @@ func ContainsValidator(attesterBitfield []byte, bitfield []byte) bool {
 //    target_epoch_2 = slot_to_epoch(attestation_data_2.slot)
 //    return target_epoch_1 == target_epoch_2
 func IsDoubleVote(attestation1 *pb.AttestationData, attestation2 *pb.AttestationData) bool {
-	targetEpoch1 := epoch.SlotToEpoch(attestation1.Slot)
-	targetEpoch2 := epoch.SlotToEpoch(attestation2.Slot)
+	targetEpoch1 := helpers.SlotToEpoch(attestation1.Slot)
+	targetEpoch2 := helpers.SlotToEpoch(attestation2.Slot)
 	return targetEpoch1 == targetEpoch2
 }
 
@@ -106,8 +106,8 @@ func IsSurroundVote(attestation1 *pb.AttestationData, attestation2 *pb.Attestati
 	epochLength := params.BeaconConfig().EpochLength
 	sourceEpoch1 := attestation1.JustifiedSlot / epochLength
 	sourceEpoch2 := attestation2.JustifiedSlot / epochLength
-	targetEpoch1 := epoch.SlotToEpoch(attestation1.Slot)
-	targetEpoch2 := epoch.SlotToEpoch(attestation2.Slot)
+	targetEpoch1 := helpers.SlotToEpoch(attestation1.Slot)
+	targetEpoch2 := helpers.SlotToEpoch(attestation2.Slot)
 
 	return sourceEpoch1 < sourceEpoch2 && targetEpoch2 < targetEpoch1
 }
