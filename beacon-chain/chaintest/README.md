@@ -63,16 +63,16 @@ test_cases:
           proposal_2_slot: 15
           proposal_2_root: !!binary |
             LkmqmqoodLKAslkjdkajsdljasdkajlksjdasldjasdd
-      casper_slashings:
-        - slot: 59 # At slot 59, we trigger a casper slashing
-          votes_1_slot: 55
-          votes_2_slot: 55
-          votes_1_justified_slot: 0
-          votes_2_justified_slot: 1
-          votes_1_custody_0_indices: [16386]
-          votes_1_custody_1_indices: []
-          votes_2_custody_0_indices: []
-          votes_2_custody_1_indices: [16386]
+      attester_slashings:
+        - slot: 59 # At slot 59, we trigger a attester slashing
+          slashable_vote_data_1_slot: 55
+          slashable_vote_data_2_slot: 55
+          slashable_vote_data_1_justified_slot: 0
+          slashable_vote_data_2_justified_slot: 1
+          slashable_vote_data_1_custody_0_indices: [16386]
+          slashable_vote_data_1_custody_1_indices: []
+          slashable_vote_data_2_custody_0_indices: []
+          slashable_vote_data_2_custody_1_indices: [16386]
     results:
       slot: 64
       num_validators: 16387
@@ -98,7 +98,6 @@ test_cases:
       num_validators: 1000 # Validator registry should not have grown if slots 10 and 20 were skipped
 ```
 
-
 #### Test Configuration Options
 
 The following configuration options are available for state transition tests:
@@ -111,43 +110,48 @@ The following configuration options are available for state transition tests:
 - **num_slots**: `int` the number of times we run a state transition in the test
 - **deposits**: `[Deposit Config]` trigger a new validator deposit into the beacon state based on configuration options
 - **proposer_slashings**: `[Proposer Slashing Config]` trigger a proposer slashing at a certain slot for a certain proposer index
-- **casper_slashings**: `[Casper Slashing Config]` trigger a casper slashing at a certain slot
+- **attester_slashings**: `[Casper Slashing Config]` trigger a attester slashing at a certain slot
 - **validator_exits**: `[Validator Exit Config]` trigger a voluntary validator exit at a certain slot for a validator index
 
 **Deposit Config**
+
 - **slot**: `int` a slot in which to trigger a deposit during a state transition test
 - **amount**: `int` the ETH deposit amount to trigger
 - **merkle_index**: `int` the index of the deposit in the validator deposit contract's Merkle trie
 - **pubkey**: `!!binary` the public key of the validator in the triggered deposit object
 
 **Proposer Slashing Config**
+
 - **slot**: `int` a slot in which to trigger a proposer slashing during a state transition test
 - **proposer_index**: `int` the proposer to penalize
 - **proposal_1_shard**: `int` the first proposal data's shard id
 - **proposal_1_slot**: `int` the first proposal data's slot
 - **proposal_1_root**: `!!binary` the second proposal data's block root
-- **proposal_2_shard**: `int`  the second proposal data's shard id
+- **proposal_2_shard**: `int` the second proposal data's shard id
 - **proposal_2_slot**: `int` the second proposal data's slot
 - **proposal_2_root**: `!!binary` the second proposal data's block root
 
 **Casper Slashing Config**
-- **slot**: `int` a slot in which to trigger a casper slashing during a state transition test
-- **votes_1_slot**: `int` the slot of the attestation data of votes1
-- **votes_2_slot**: `int` the slot of the attestation data of votes2
-- **votes_1_justified_slot**: `int` the justified slot of the attestation data of votes1
-- **votes_2_justified_slot**: `int` the justified slot of the attestation data of votes2
-- **votes_1_custody_0_indices**: `[int]` the custody indices 0 for votes1
-- **votes_1_custody_1_indices**: `[int]` the custody indices 1 for votes1
-- **votes_2_custody_0_indices**: `[int]` the custody indices 0 for votes2
-- **votes_2_custody_1_indices**: `[int]` the custody indices 1 for votes2
+
+- **slot**: `int` a slot in which to trigger a attester slashing during a state transition test
+- **slashable_vote_data_1_slot**: `int` the slot of the attestation data of slashableVoteData1
+- **slashable_vote_data_2_slot**: `int` the slot of the attestation data of slashableVoteData2
+- **slashable_vote_data_1_justified_slot**: `int` the justified slot of the attestation data of slashableVoteData1
+- **slashable_vote_data_2_justified_slot**: `int` the justified slot of the attestation data of slashableVoteData2
+- **slashable_vote_data_1_custody_0_indices**: `[int]` the custody indices 0 for slashableVoteData1
+- **slashable_vote_data_1_custody_1_indices**: `[int]` the custody indices 1 for slashableVoteData1
+- **slashable_vote_data_2_custody_0_indices**: `[int]` the custody indices 0 for slashableVoteData2
+- **slashable_vote_data_2_custody_1_indices**: `[int]` the custody indices 1 for slashableVoteData2
 
 **Validator Exit Config**
+
 - **slot**: `int` the slot at which a validator wants to voluntarily exit the validator registry
 - **validator_index**: `int` the index of the validator in the registry that is exiting
 
 #### Test Results
 
 The following are **mandatory** fields as they correspond to checks done at the end of the test run.
+
 - **slot**: `int` check the slot of the state resulting from applying N state transitions in the test
 - **num_validators** `[int]` check the number of validators in the validator registry after applying N state transitions
 - **penalized_validators** `[int]` the list of validator indices we verify were penalized during the test
@@ -175,32 +179,32 @@ fork: tchaikovsky
 version: 1.0
 
 test_cases:
-- input: []
-  output: []
-  seed: !!binary ""
-- name: boring_list
-  description: List with a single element, 0
-  input: [0]
-  output: [0]
-  seed: !!binary ""
-- input: [255]
-  output: [255]
-  seed: !!binary ""
-- input: [4, 6, 2, 6, 1, 4, 6, 2, 1, 5]
-  output: [1, 6, 4, 1, 6, 6, 2, 2, 4, 5]
-  seed: !!binary ""
-- input: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
-  output: [4, 7, 10, 13, 3, 1, 2, 9, 12, 6, 11, 8, 5]
-  seed: !!binary ""
-- input: [65, 6, 2, 6, 1, 4, 6, 2, 1, 5]
-  output: [6, 65, 2, 5, 4, 2, 6, 6, 1, 1]
-  seed: !!binary |
-    JlAYJ5H2j8g7PLiPHZI/rTS1uAvKiieOrifPN6Moso0=
+  - input: []
+    output: []
+    seed: !!binary ""
+  - name: boring_list
+    description: List with a single element, 0
+    input: [0]
+    output: [0]
+    seed: !!binary ""
+  - input: [255]
+    output: [255]
+    seed: !!binary ""
+  - input: [4, 6, 2, 6, 1, 4, 6, 2, 1, 5]
+    output: [1, 6, 4, 1, 6, 6, 2, 2, 4, 5]
+    seed: !!binary ""
+  - input: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+    output: [4, 7, 10, 13, 3, 1, 2, 9, 12, 6, 11, 8, 5]
+    seed: !!binary ""
+  - input: [65, 6, 2, 6, 1, 4, 6, 2, 1, 5]
+    output: [6, 65, 2, 5, 4, 2, 6, 6, 1, 1]
+    seed: !!binary |
+      JlAYJ5H2j8g7PLiPHZI/rTS1uAvKiieOrifPN6Moso0=
 ```
 
 # Using the Runner
 
-First, create a directory containing the YAML files you wish to test (or use the default `./sampletests` directory included with Prysm). 
+First, create a directory containing the YAML files you wish to test (or use the default `./sampletests` directory included with Prysm).
 Then, make sure you have the following folder structure for the directory:
 
 ```
@@ -217,7 +221,6 @@ yourtestdir/
 ```
 
 Then, navigate to the test runner's directory and use the go tool as follows:
-
 
 ```bash
 go run main.go -tests-dir /path/to/your/testsdir

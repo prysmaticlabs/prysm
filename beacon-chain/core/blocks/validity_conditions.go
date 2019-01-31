@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 // IsValidBlock ensures that the block is compliant with the block processing validity conditions.
