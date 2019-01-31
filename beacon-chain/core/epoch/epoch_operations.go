@@ -7,11 +7,12 @@ package epoch
 import (
 	"bytes"
 	"fmt"
+	"math"
 
 	block "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	b "github.com/prysmaticlabs/prysm/shared/bytes"
+	b "github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -225,21 +226,27 @@ func TotalBalance(
 //    Let inclusion_slot(state, index) =
 //    a.slot_included for the attestation a where index is in
 //    get_attestation_participants(state, a.data, a.participation_bitfield)
+//    If multiple attestations are applicable, the attestation with
+//    lowest `slot_included` is considered.
 func InclusionSlot(state *pb.BeaconState, validatorIndex uint64) (uint64, error) {
-
+	lowestSlotIncluded := uint64(math.MaxUint64)
 	for _, attestation := range state.LatestAttestations {
 		participatedValidators, err := validators.AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)
 		if err != nil {
 			return 0, fmt.Errorf("could not get attestation participants: %v", err)
 		}
-
 		for _, index := range participatedValidators {
 			if index == validatorIndex {
-				return attestation.SlotIncluded, nil
+				if attestation.SlotIncluded < lowestSlotIncluded {
+					lowestSlotIncluded = attestation.SlotIncluded
+				}
 			}
 		}
 	}
-	return 0, fmt.Errorf("could not find inclusion slot for validator index %d", validatorIndex)
+	if lowestSlotIncluded == math.MaxUint64 {
+		return 0, fmt.Errorf("could not find inclusion slot for validator index %d", validatorIndex)
+	}
+	return lowestSlotIncluded, nil
 }
 
 // InclusionDistance returns the difference in slot number of when attestation

@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
-	"github.com/prysmaticlabs/prysm/shared/bytes"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 )
 
@@ -166,7 +166,7 @@ func CrosslinkCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*Crosslink
 	if slot < startEpochSlot {
 		countPerSlot = prevCommitteesCountPerSlot(state)
 		shuffledIndices, err = Shuffling(
-			bytes.ToBytes32(state.PreviousEpochRandaoMixHash32),
+			bytesutil.ToBytes32(state.PreviousEpochRandaoMixHash32),
 			state.ValidatorRegistry,
 			state.PreviousEpochCalculationSlot)
 		if err != nil {
@@ -177,7 +177,7 @@ func CrosslinkCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*Crosslink
 	} else {
 		countPerSlot = CurrCommitteesCountPerSlot(state)
 		shuffledIndices, err = Shuffling(
-			bytes.ToBytes32(state.CurrentEpochRandaoMixHash32),
+			bytesutil.ToBytes32(state.CurrentEpochRandaoMixHash32),
 			state.ValidatorRegistry,
 			state.CurrentEpochCalculationSlot)
 		if err != nil {
@@ -239,7 +239,7 @@ func Shuffling(
 	// Convert slot to bytes and xor it with seed.
 	slotInBytes := make([]byte, 32)
 	binary.BigEndian.PutUint64(slotInBytes, slot)
-	seed = bytes.ToBytes32(bytes.Xor(seed[:], slotInBytes))
+	seed = bytesutil.ToBytes32(bytesutil.Xor(seed[:], slotInBytes))
 
 	shuffledIndices, err := utils.ShuffleIndices(seed, activeIndices)
 	if err != nil {

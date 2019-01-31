@@ -18,7 +18,7 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/trie"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -64,7 +64,7 @@ type Web3Service struct {
 	blockHash              common.Hash // the latest ETH1.0 chain blockHash.
 	vrcCaller              *contracts.DepositContractCaller
 	depositRoot            []byte
-	depositTrie            *trie.DepositTrie
+	depositTrie            *trieutil.DepositTrie
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -322,7 +322,7 @@ func (w *Web3Service) initDataFromVRC() error {
 	}
 
 	w.depositRoot = root[:]
-	w.depositTrie = trie.NewDepositTrie()
+	w.depositTrie = trieutil.NewDepositTrie()
 
 	return nil
 }
