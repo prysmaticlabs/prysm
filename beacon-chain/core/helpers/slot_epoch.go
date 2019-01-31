@@ -1,7 +1,7 @@
 package helpers
 
 import (
-	"github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -22,7 +22,7 @@ func SlotToEpoch(slot uint64) uint64 {
 // Spec pseudocode definition:
 //   def get_current_epoch(state: BeaconState) -> EpochNumber:
 //    return slot_to_epoch(state.slot)
-func CurrentEpoch(state *ethereum_beacon_p2p_v1.BeaconState) uint64 {
+func CurrentEpoch(state *pb.BeaconState) uint64 {
 	return SlotToEpoch(state.Slot)
 }
 
