@@ -258,8 +258,8 @@ func TestCrosslinkCommitteesAtSlot_Ok(t *testing.T) {
 
 func TestCrosslinkCommitteesAtSlot_OutOfBound(t *testing.T) {
 	want := fmt.Sprintf(
-		"input committee slot %d out of bounds: %d <= slot < %d",
-		config.EpochLength+1, 0, config.EpochLength,
+		"input committee epoch %d out of bounds: %d <= epoch < %d",
+		1, 0, 0,
 	)
 
 	if _, err := CrosslinkCommitteesAtSlot(&pb.BeaconState{}, config.EpochLength+1); !strings.Contains(err.Error(), want) {

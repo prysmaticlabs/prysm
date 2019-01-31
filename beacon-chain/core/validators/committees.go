@@ -64,6 +64,7 @@ func AttestationParticipants(
 			break
 		}
 	}
+
 	if len(participationBitfield) != mathutil.CeilDiv8(len(committee)) {
 		return nil, fmt.Errorf(
 			"wanted participants bitfield length %d, got: %d",
