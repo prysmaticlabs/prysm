@@ -34,6 +34,9 @@ type SimulatedBackend struct {
 	state        *pb.BeaconState
 }
 
+// SimulatedObjects is a container to hold the
+// required primitives for generation of a beacon
+// block.
 type SimulatedObjects struct {
 	simDeposit          *StateTestDeposit
 	simProposerSlashing *StateTestProposerSlashing
