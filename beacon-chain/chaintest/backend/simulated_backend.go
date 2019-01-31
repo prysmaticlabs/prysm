@@ -140,7 +140,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	// We do not expect hashing initial beacon state and genesis block to
 	// fail, so we can safely ignore the error below.
 	// #nosec G104
-	encodedState, _ := proto.Marshal(beaconState)
+	encodedState, _ := proto.Marshal(sb.state)
 	stateRoot := hashutil.Hash(encodedState)
 	genesisBlock := b.NewGenesisBlock(stateRoot[:])
 	// #nosec G104
@@ -152,8 +152,8 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	prevBlockRoots := [][32]byte{genesisBlockRoot}
 
 	// We keep track of the randao layers peeled for each proposer index in a map.
-	layersPeeledForProposer := make(map[uint64]int, len(beaconState.ValidatorRegistry))
-	for idx := range beaconState.ValidatorRegistry {
+	layersPeeledForProposer := make(map[uint64]int, len(sb.state.ValidatorRegistry))
+	for idx := range sb.state.ValidatorRegistry {
 		layersPeeledForProposer[uint64(idx)] = 0
 	}
 
@@ -162,7 +162,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	for i := uint64(0); i < testCase.Config.NumSlots; i++ {
 		prevBlockRoot := prevBlockRoots[len(prevBlockRoots)-1]
 
-		committeeArray, err := validators.CrosslinkCommitteesAtSlot(beaconState, i)
+		committeeArray, err := validators.CrosslinkCommitteesAtSlot(sb.state, i)
 		if err != nil {
 			return fmt.Errorf("could not get crosslink committee: %v", err)
 		}
@@ -172,51 +172,24 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		// If the slot is marked as skipped in the configuration options,
 		// we simply run the state transition with a nil block argument.
 		if slices.IsInUint64(i, testCase.Config.SkipSlots) {
-			newState, err := state.ExecuteStateTransition(beaconState, nil, prevBlockRoot)
+			newState, err := state.ExecuteStateTransition(sb.state, nil, prevBlockRoot)
 			if err != nil {
 				return fmt.Errorf("could not execute state transition: %v", err)
 			}
-			beaconState = newState
+			sb.state = newState
 			layersPeeledForProposer[proposerIndex]++
 			continue
 		}
 
-		// If the slot is not skipped, we check if we are simulating a deposit at the current slot.
-		var simulatedDeposit *StateTestDeposit
-		for _, deposit := range testCase.Config.Deposits {
-			if deposit.Slot == i {
-				simulatedDeposit = deposit
-				break
-			}
-		}
-		var simulatedProposerSlashing *StateTestProposerSlashing
-		for _, pSlashing := range testCase.Config.ProposerSlashings {
-			if pSlashing.Slot == i {
-				simulatedProposerSlashing = pSlashing
-				break
-			}
-		}
-		var simulatedAttesterSlashing *StateTestAttesterSlashing
-		for _, cSlashing := range testCase.Config.AttesterSlashings {
-			if cSlashing.Slot == i {
-				simulatedAttesterSlashing = cSlashing
-				break
-			}
-		}
-		var simulatedValidatorExit *StateTestValidatorExit
-		for _, exit := range testCase.Config.ValidatorExits {
-			if exit.Slot == i {
-				simulatedValidatorExit = exit
-				break
-			}
-		}
+		simulatedDeposit, simulatedProposerSlashing, simulatedAttesterSlashing, simulatedValidatorExit :=
+			sb.GenerateSimulatedObjects(testCase, i)
 
 		layersPeeled := layersPeeledForProposer[proposerIndex]
 		blockRandaoReveal := determineSimulatedBlockRandaoReveal(layersPeeled, hashOnions)
 
 		// We generate a new block to pass into the state transition.
 		newBlock, newBlockRoot, err := generateSimulatedBlock(
-			beaconState,
+			sb.state,
 			prevBlockRoot,
 			blockRandaoReveal,
 			lastRandaoLayer,
@@ -230,10 +203,10 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 			return fmt.Errorf("could not generate simulated beacon block %v", err)
 		}
 		latestRoot := depositsTrie.Root()
-		beaconState.LatestDepositRootHash32 = latestRoot[:]
+		sb.state.LatestDepositRootHash32 = latestRoot[:]
 
 		startTime := time.Now()
-		newState, err := state.ExecuteStateTransition(beaconState, newBlock, prevBlockRoot)
+		newState, err := state.ExecuteStateTransition(sb.state, newBlock, prevBlockRoot)
 		if err != nil {
 			return fmt.Errorf("could not execute state transition: %v", err)
 		}
@@ -242,7 +215,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 
 		// We then keep track of information about the state after the
 		// state transition was applied.
-		beaconState = newState
+		sb.state = newState
 		prevBlockRoots = append(prevBlockRoots, newBlockRoot)
 		layersPeeledForProposer[proposerIndex]++
 	}
@@ -262,6 +235,42 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 
 func (sb *SimulatedBackend) InitializeBeaconState() error {
 
+}
+
+func (sb *SimulatedBackend) GenerateSimulatedObjects(testCase *StateTestCase, slotNumber uint64) (*StateTestDeposit,
+	*StateTestProposerSlashing, *StateTestAttesterSlashing, *StateTestValidatorExit) {
+
+	// If the slot is not skipped, we check if we are simulating a deposit at the current slot.
+	var simulatedDeposit *StateTestDeposit
+	for _, deposit := range testCase.Config.Deposits {
+		if deposit.Slot == slotNumber {
+			simulatedDeposit = deposit
+			break
+		}
+	}
+	var simulatedProposerSlashing *StateTestProposerSlashing
+	for _, pSlashing := range testCase.Config.ProposerSlashings {
+		if pSlashing.Slot == slotNumber {
+			simulatedProposerSlashing = pSlashing
+			break
+		}
+	}
+	var simulatedAttesterSlashing *StateTestAttesterSlashing
+	for _, cSlashing := range testCase.Config.AttesterSlashings {
+		if cSlashing.Slot == slotNumber {
+			simulatedAttesterSlashing = cSlashing
+			break
+		}
+	}
+	var simulatedValidatorExit *StateTestValidatorExit
+	for _, exit := range testCase.Config.ValidatorExits {
+		if exit.Slot == slotNumber {
+			simulatedValidatorExit = exit
+			break
+		}
+	}
+
+	return simulatedDeposit, simulatedProposerSlashing, simulatedAttesterSlashing, simulatedValidatorExit
 }
 
 func (sb *SimulatedBackend) CompareTestCase(testCase *StateTestCase) error {
