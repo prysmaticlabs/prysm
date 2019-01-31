@@ -152,7 +152,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 			continue
 		}
 
-		simulatedObjects := sb.GenerateSimulatedObjects(testCase, i)
+		simulatedObjects := sb.generateSimulatedObjects(testCase, i)
 
 		layersPeeled := layersPeeledForProposer[proposerIndex]
 		blockRandaoReveal := determineSimulatedBlockRandaoReveal(layersPeeled, hashOnions)
@@ -198,13 +198,15 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		averageDuration(averageTimesPerTransition),
 	)
 
-	if err := sb.CompareTestCase(testCase); err != nil {
+	if err := sb.compareTestCase(testCase); err != nil {
 		return err
 	}
 
 	return nil
 }
 
+// initializeStateTest sets up the environment by generating all the required objects in order
+// to proceed with the state test.
 func (sb *SimulatedBackend) initializeStateTest(testCase *StateTestCase) (hashOnions [][32]byte,
 	lastRandaoLayer [32]byte, prevBlockRoots [][32]byte, layersPeeledForProposer map[uint64]int, err error) {
 
@@ -235,6 +237,8 @@ func (sb *SimulatedBackend) initializeStateTest(testCase *StateTestCase) (hashOn
 	return hashOnions, lastRandaoLayer, prevBlockRoots, layersPeeledForProposer, nil
 }
 
+// setupBeaconStateAndGenesisBlock creates the initial beacon state and genesis block in order to
+// proceed with the test.
 func (sb *SimulatedBackend) setupBeaconStateAndGenesisBlock(initialDeposits []*pb.Deposit) ([][32]byte, error) {
 
 	var err error
@@ -261,7 +265,8 @@ func (sb *SimulatedBackend) setupBeaconStateAndGenesisBlock(initialDeposits []*p
 	return prevBlockRoots, nil
 }
 
-func (sb *SimulatedBackend) GenerateSimulatedObjects(testCase *StateTestCase, slotNumber uint64) *SimulatedObjects {
+// generateSimulatedObjects generates the simulated objects depending on the testcase and current slot.
+func (sb *SimulatedBackend) generateSimulatedObjects(testCase *StateTestCase, slotNumber uint64) *SimulatedObjects {
 
 	// If the slot is not skipped, we check if we are simulating a deposit at the current slot.
 	var simulatedDeposit *StateTestDeposit
@@ -301,7 +306,7 @@ func (sb *SimulatedBackend) GenerateSimulatedObjects(testCase *StateTestCase, sl
 	}
 }
 
-func (sb *SimulatedBackend) CompareTestCase(testCase *StateTestCase) error {
+func (sb *SimulatedBackend) compareTestCase(testCase *StateTestCase) error {
 
 	if sb.state.Slot != testCase.Results.Slot {
 		return fmt.Errorf(
