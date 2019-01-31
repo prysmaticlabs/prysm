@@ -12,7 +12,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slices"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
 var config = params.BeaconConfig()
@@ -31,7 +31,7 @@ var config = params.BeaconConfig()
 //	  loses base_reward(state, index).
 func ExpectedFFGSource(
 	state *pb.BeaconState,
-	justifiedAttesterIndices []uint32,
+	justifiedAttesterIndices []uint64,
 	justifiedAttestingBalance uint64,
 	totalBalance uint64) *pb.BeaconState {
 
@@ -45,7 +45,7 @@ func ExpectedFFGSource(
 	}
 
 	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
-	didNotAttestIndices := slices.Not(justifiedAttesterIndices, activeValidatorIndices)
+	didNotAttestIndices := sliceutil.Not(justifiedAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
@@ -68,7 +68,7 @@ func ExpectedFFGSource(
 //	  base_reward(state, index).
 func ExpectedFFGTarget(
 	state *pb.BeaconState,
-	boundaryAttesterIndices []uint32,
+	boundaryAttesterIndices []uint64,
 	boundaryAttestingBalance uint64,
 	totalBalance uint64) *pb.BeaconState {
 
@@ -82,7 +82,7 @@ func ExpectedFFGTarget(
 	}
 
 	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
-	didNotAttestIndices := slices.Not(boundaryAttesterIndices, activeValidatorIndices)
+	didNotAttestIndices := sliceutil.Not(boundaryAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
@@ -105,7 +105,7 @@ func ExpectedFFGTarget(
 //    base_reward(state, index).
 func ExpectedBeaconChainHead(
 	state *pb.BeaconState,
-	headAttesterIndices []uint32,
+	headAttesterIndices []uint64,
 	headAttestingBalance uint64,
 	totalBalance uint64) *pb.BeaconState {
 
@@ -119,7 +119,7 @@ func ExpectedBeaconChainHead(
 	}
 
 	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
-	didNotAttestIndices := slices.Not(headAttesterIndices, activeValidatorIndices)
+	didNotAttestIndices := sliceutil.Not(headAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
@@ -138,7 +138,7 @@ func ExpectedBeaconChainHead(
 //    inclusion_distance(state, index)
 func InclusionDistance(
 	state *pb.BeaconState,
-	attesterIndices []uint32,
+	attesterIndices []uint64,
 	totalBalance uint64) (*pb.BeaconState, error) {
 
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
@@ -165,13 +165,13 @@ func InclusionDistance(
 //    loses inactivity_penalty(state, index, epochs_since_finality)
 func InactivityFFGSource(
 	state *pb.BeaconState,
-	justifiedAttesterIndices []uint32,
+	justifiedAttesterIndices []uint64,
 	totalBalance uint64,
 	epochsSinceFinality uint64) *pb.BeaconState {
 
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
 	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
-	didNotAttestIndices := slices.Not(justifiedAttesterIndices, activeValidatorIndices)
+	didNotAttestIndices := sliceutil.Not(justifiedAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
@@ -189,13 +189,13 @@ func InactivityFFGSource(
 // 	  loses inactivity_penalty(state, index, epochs_since_finality)
 func InactivityFFGTarget(
 	state *pb.BeaconState,
-	boundaryAttesterIndices []uint32,
+	boundaryAttesterIndices []uint64,
 	totalBalance uint64,
 	epochsSinceFinality uint64) *pb.BeaconState {
 
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
 	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
-	didNotAttestIndices := slices.Not(boundaryAttesterIndices, activeValidatorIndices)
+	didNotAttestIndices := sliceutil.Not(boundaryAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
@@ -213,12 +213,12 @@ func InactivityFFGTarget(
 // 	  loses base_reward(state, index)
 func InactivityChainHead(
 	state *pb.BeaconState,
-	headAttesterIndices []uint32,
+	headAttesterIndices []uint64,
 	totalBalance uint64) *pb.BeaconState {
 
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
 	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
-	didNotAttestIndices := slices.Not(headAttesterIndices, activeValidatorIndices)
+	didNotAttestIndices := sliceutil.Not(headAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
@@ -261,7 +261,7 @@ func InactivityExitedPenalties(
 //    MIN_ATTESTATION_INCLUSION_DELAY // inclusion_distance(state, index)
 func InactivityInclusionDistance(
 	state *pb.BeaconState,
-	attesterIndices []uint32,
+	attesterIndices []uint64,
 	totalBalance uint64) (*pb.BeaconState, error) {
 
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
@@ -291,7 +291,7 @@ func InactivityInclusionDistance(
 func AttestationInclusion(
 	state *pb.BeaconState,
 	totalBalance uint64,
-	prevEpochAttesterIndices []uint32) (*pb.BeaconState, error) {
+	prevEpochAttesterIndices []uint64) (*pb.BeaconState, error) {
 
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
 	for _, index := range prevEpochAttesterIndices {
@@ -342,13 +342,13 @@ func Crosslinks(
 	epochLength := config.EpochLength
 	startSlot := state.Slot - 2*epochLength
 	for i := startSlot; i < state.Slot; i++ {
-		shardCommittees, err := validators.CrosslinkCommitteesAtSlot(state, i)
+		crosslinkCommittees, err := validators.CrosslinkCommitteesAtSlot(state, i)
 		if err != nil {
 			return nil, fmt.Errorf("could not get shard committees for slot %d: %v", i, err)
 		}
-		for _, shardCommittee := range shardCommittees {
-			shard := shardCommittee.Shard
-			committee := shardCommittee.Committee
+		for _, crosslinkCommittee := range crosslinkCommittees {
+			shard := crosslinkCommittee.Shard
+			committee := crosslinkCommittee.Committee
 			totalAttestingBalance, err :=
 				epoch.TotalAttestingBalance(state, shard, thisEpochAttestations, prevEpochAttestations)
 			if err != nil {
@@ -369,7 +369,7 @@ func Crosslinks(
 			}
 			for _, index := range committee {
 				baseReward := baseReward(state, index, baseRewardQuotient)
-				if slices.IsIn(index, attestingIndices) {
+				if sliceutil.IsIn(index, attestingIndices) {
 					state.ValidatorBalances[index] +=
 						baseReward * totalAttestingBalance / totalBalance
 				} else {
@@ -400,7 +400,7 @@ func baseRewardQuotient(totalBalance uint64) uint64 {
 //    	get_effective_balance(state, index) // base_reward_quotient // 5
 func baseReward(
 	state *pb.BeaconState,
-	validatorIndex uint32,
+	validatorIndex uint64,
 	baseRewardQuotient uint64) uint64 {
 
 	validatorBalance := validators.EffectiveBalance(state, validatorIndex)
@@ -416,7 +416,7 @@ func baseReward(
 //    	* epochs_since_finality // INACTIVITY_PENALTY_QUOTIENT // 2
 func inactivityPenalty(
 	state *pb.BeaconState,
-	validatorIndex uint32,
+	validatorIndex uint64,
 	baseRewardQuotient uint64,
 	epochsSinceFinality uint64) uint64 {
 

@@ -22,12 +22,17 @@ func startNode(ctx *cli.Context) error {
 	}
 	logrus.SetLevel(level)
 
-	shardingNode, err := node.NewValidatorClient(ctx)
+	validatorClient, err := node.NewValidatorClient(ctx)
 	if err != nil {
 		return err
 	}
 
-	shardingNode.Start()
+	validatorClient.Start()
+	return nil
+}
+
+// TODO(#1436): Initialize validator secrets.
+func createValidatorAccount(ctx *cli.Context) error {
 	return nil
 }
 
@@ -59,13 +64,33 @@ VERSION:
 
 	app := cli.NewApp()
 	app.Name = "validator"
-	app.Usage = `launches an Ethereum Serenity validator client that interacts with a beacon chain, starts proposer services, shardp2p connections, and more
-`
+	app.Usage = `launches an Ethereum Serenity validator client that interacts with a beacon chain, 
+				 starts proposer services, shardp2p connections, and more`
 	app.Version = version.GetVersion()
 	app.Action = startNode
+
+	app.Commands = []cli.Command{
+		{
+			Name:     "accounts",
+			Category: "accounts",
+			Usage:    "defines useful functions for interacting with the validator client's account",
+			Subcommands: cli.Commands{
+				cli.Command{
+					Name: "create",
+					Description: `creates a new validator account keystore containing private keys for Ethereum Serenity - 
+this command outputs a deposit data string which can be used to deposit Ether into the ETH1.0 deposit 
+contract in order to activate the validator client`,
+					Flags: []cli.Flag{
+						types.KeystorePathFlag,
+					},
+					Action: createValidatorAccount,
+				},
+			},
+		},
+	}
+
 	app.Flags = []cli.Flag{
 		types.BeaconRPCProviderFlag,
-		types.PubKeyFlag,
 		cmd.VerbosityFlag,
 		cmd.DataDirFlag,
 		cmd.EnableTracingFlag,

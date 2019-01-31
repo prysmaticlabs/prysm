@@ -7,7 +7,7 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
-        "//shared/bytes:go_default_library",
+        "//shared/bytesutil:go_default_library",
     ],
 )
 
@@ -17,6 +17,6 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
-        "//shared/bytes:go_default_library",
+        "//shared/bytesutil:go_default_library",
     ],
 )

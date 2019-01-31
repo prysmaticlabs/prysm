@@ -1,8 +1,6 @@
 package db
 
-import (
-	"github.com/prysmaticlabs/prysm/shared/bytes"
-)
+import "github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 // The Schema will define how to store and retrieve data from the db.
 // Currently we store blocks by prefixing `block` to their hash and
@@ -15,29 +13,28 @@ import (
 
 // The fields below define the suffix of keys in the db.
 var (
-	attestationBucket    = []byte("attestation-bucket")
-	blockBucket          = []byte("block-bucket")
-	mainChainBucket      = []byte("main-chain-bucket")
-	chainInfoBucket      = []byte("chain-info")
-	blockVoteCacheBucket = []byte("block-vote-cache")
-	simulatorBucket      = []byte("simulator-bucket")
+	attestationBucket     = []byte("attestation-bucket")
+	blockOperationsBucket = []byte("block-operations-bucket")
+	blockBucket           = []byte("block-bucket")
+	mainChainBucket       = []byte("main-chain-bucket")
+	chainInfoBucket       = []byte("chain-info")
+	blockVoteCacheBucket  = []byte("block-vote-cache")
 
 	mainChainHeightKey = []byte("chain-height")
 	stateLookupKey     = []byte("state")
-	simSlotLookupKey   = []byte("simulator-slot")
 
 	// DB internal use
 	cleanupHistoryBucket    = []byte("cleanup-history-bucket")
 	cleanedFinalizedSlotKey = []byte("cleaned-finalized-slot")
 )
 
-// encodeSlotNumber encodes a slot number as big endian uint64.
+// encodeSlotNumber encodes a slot number as big endian uint32.
 func encodeSlotNumber(number uint64) []byte {
-	return bytes.Bytes8(number)
+	return bytesutil.Bytes8(number)
 }
 
 // decodeSlotNumber returns a slot number which has been
-// encoded as a big endian uint64 in the byte array.
+// encoded as a big endian uint32 in the byte array.
 func decodeToSlotNumber(bytearray []byte) uint64 {
-	return bytes.FromBytes8(bytearray)
+	return bytesutil.FromBytes8(bytearray)
 }

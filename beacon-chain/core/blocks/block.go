@@ -12,7 +12,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
@@ -31,7 +31,7 @@ func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 		Signature:          config.EmptySignature,
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: []*pb.ProposerSlashing{},
-			CasperSlashings:   []*pb.CasperSlashing{},
+			AttesterSlashings: []*pb.AttesterSlashing{},
 			Attestations:      []*pb.Attestation{},
 			Deposits:          []*pb.Deposit{},
 			Exits:             []*pb.Exit{},
@@ -204,6 +204,10 @@ func DecodeDepositAmountAndTimeStamp(depositData []byte) (uint64, int64, error) 
 
 // BlockChildren obtains the blocks in a list of observed blocks which have the current
 // beacon block's hash as their parent root hash.
+//
+// Spec pseudocode definition:
+//	Let get_children(store: Store, block: BeaconBlock) ->
+//		List[BeaconBlock] returns the child blocks of the given block.
 func BlockChildren(block *pb.BeaconBlock, observedBlocks []*pb.BeaconBlock) ([]*pb.BeaconBlock, error) {
 	var children []*pb.BeaconBlock
 	hash, err := hashutil.HashBeaconBlock(block)

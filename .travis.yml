@@ -10,16 +10,7 @@ matrix:
       script:
         - 
           go get github.com/alecthomas/gometalinter && gometalinter --install && gometalinter ./...
-    - os: linux
-      go: 1.11.x
-      env:
-        - coverage
-      script:
-        - ./scripts/coverage.sh
-        - bash <(curl -s https://codecov.io/bash)
-      notifications:
         email: false
-
       after_success:
         - wget https://raw.githubusercontent.com/k3rn31p4nic/travis-ci-discord-webhook/master/send.sh
         - chmod +x send.sh

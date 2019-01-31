@@ -12,7 +12,7 @@ import (
 	block "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	b "github.com/prysmaticlabs/prysm/shared/bytes"
+	b "github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -209,7 +209,7 @@ func PrevHeadAttestations(
 //    sum([get_effective_balance(state, i) for i in active_validator_indices])
 func TotalBalance(
 	state *pb.BeaconState,
-	activeValidatorIndices []uint32) uint64 {
+	activeValidatorIndices []uint64) uint64 {
 
 	var totalBalance uint64
 	for _, index := range activeValidatorIndices {
@@ -228,7 +228,7 @@ func TotalBalance(
 //    get_attestation_participants(state, a.data, a.participation_bitfield)
 //    If multiple attestations are applicable, the attestation with
 //    lowest `slot_included` is considered.
-func InclusionSlot(state *pb.BeaconState, validatorIndex uint32) (uint64, error) {
+func InclusionSlot(state *pb.BeaconState, validatorIndex uint64) (uint64, error) {
 	lowestSlotIncluded := uint64(math.MaxUint64)
 	for _, attestation := range state.LatestAttestations {
 		participatedValidators, err := validators.AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)
@@ -256,7 +256,7 @@ func InclusionSlot(state *pb.BeaconState, validatorIndex uint32) (uint64, error)
 //    Let inclusion_distance(state, index) =
 //    a.slot_included - a.data.slot where a is the above attestation same as
 //    inclusion_slot
-func InclusionDistance(state *pb.BeaconState, validatorIndex uint32) (uint64, error) {
+func InclusionDistance(state *pb.BeaconState, validatorIndex uint64) (uint64, error) {
 
 	for _, attestation := range state.LatestAttestations {
 		participatedValidators, err := validators.AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)
@@ -281,7 +281,7 @@ func InclusionDistance(state *pb.BeaconState, validatorIndex uint32) (uint64, er
 func AttestingValidators(
 	state *pb.BeaconState,
 	shard uint64, thisEpochAttestations []*pb.PendingAttestationRecord,
-	prevEpochAttestations []*pb.PendingAttestationRecord) ([]uint32, error) {
+	prevEpochAttestations []*pb.PendingAttestationRecord) ([]uint64, error) {
 
 	root, err := winningRoot(
 		state,
