@@ -9,8 +9,8 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_go",
-    url = "https://github.com/bazelbuild/rules_go/releases/download/0.16.6/rules_go-0.16.6.tar.gz",
-    sha256 = "ade51a315fa17347e5c31201fdc55aa5ffb913377aa315dceb56ee9725e620ee",
+    url = "https://github.com/bazelbuild/rules_go/releases/download/0.17.0/rules_go-0.17.0.tar.gz",
+    sha256 = "492c3ac68ed9dcf527a07e6a1b2dcbf199c6bf8b35517951467ac32e421c06c1",
 )
 
 http_archive(
@@ -35,9 +35,9 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    url = "https://github.com/bazelbuild/rules_nodejs/archive/0.16.5.tar.gz",
-    strip_prefix = "rules_nodejs-0.16.5",
-    sha256 = "63f29855b5e85d0db77362e1477864299697e1f200be8be8fa5faa43230b80d0",
+    url = "https://github.com/bazelbuild/rules_nodejs/archive/0.16.6.tar.gz",
+    strip_prefix = "rules_nodejs-0.16.6",
+    sha256 = "f5b0a45fb76f3506bcc9437c5e3198149765c1918a1dd10a9497afbcf7058c85",
 )
 
 http_archive(
@@ -91,7 +91,7 @@ k8s_repositories()
     "service_account",
 ]]
 
-load("@io_bazel_rules_go//go:def.bzl", "go_rules_dependencies", "go_register_toolchains")
+load("@io_bazel_rules_go//go:deps.bzl", "go_rules_dependencies", "go_register_toolchains")
 
 go_rules_dependencies()
 
@@ -137,7 +137,7 @@ go_repository(
     # code.
     remote = "https://github.com/prysmaticlabs/bazel-go-ethereum",
     vcs = "git",
-    commit = "6c700e8b788206dabf8577011cb0a338d6e88bde",
+    commit = "ec3d1d97a481e6cba542751a6defae7c76e322f1",
 )
 
 go_repository(
@@ -311,7 +311,7 @@ go_repository(
 
 go_repository(
     name = "com_github_minio_sha256_simd",
-    commit = "cc1980cb03383b1d46f518232672584432d7532d",
+    commit = "2d45a736cd16732fe6a57563cc20d8b035193e58",
     importpath = "github.com/minio/sha256-simd",
 )
 
@@ -456,7 +456,7 @@ go_repository(
 
 go_repository(
     name = "com_github_miekg_dns",
-    tag = "v1.1.3",
+    tag = "v1.1.4",
     importpath = "github.com/miekg/dns",
 )
 
@@ -504,7 +504,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "302c3dd5f1cc82baae8e44d9c3178e89b6e2b345",
+    commit = "aca44879d5644da7c5b8ec6a1115e9b6ea6c40d9",
     importpath = "golang.org/x/sys",
 )
 
@@ -546,7 +546,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_crypto",
-    commit = "ccddf3741a0cfcee0a62d34c18c2c5417a3761af",
+    commit = "b01c7a72566457eb1420261cdafef86638fc3861",
     importpath = "golang.org/x/crypto",
 )
 

@@ -12,7 +12,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
-	"github.com/prysmaticlabs/prysm/shared/trie"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 func TestProcessPOWReceiptRoots_SameRootHash(t *testing.T) {
@@ -159,6 +159,7 @@ func TestProcessProposerSlashings_ThresholdReached(t *testing.T) {
 	if _, err := ProcessProposerSlashings(
 		beaconState,
 		block,
+		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -192,6 +193,7 @@ func TestProcessProposerSlashings_UnmatchedSlotNumbers(t *testing.T) {
 	if _, err := ProcessProposerSlashings(
 		beaconState,
 		block,
+		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -227,6 +229,7 @@ func TestProcessProposerSlashings_UnmatchedShards(t *testing.T) {
 	if _, err := ProcessProposerSlashings(
 		beaconState,
 		block,
+		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -268,6 +271,7 @@ func TestProcessProposerSlashings_UnmatchedBlockRoots(t *testing.T) {
 	if _, err := ProcessProposerSlashings(
 		beaconState,
 		block,
+		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -320,6 +324,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	newState, err := ProcessProposerSlashings(
 		beaconState,
 		block,
+		false,
 	)
 	validators = newState.ValidatorRegistry
 	if err != nil {
@@ -355,6 +360,7 @@ func TestProcessAttesterSlashings_ThresholdReached(t *testing.T) {
 	if _, err := ProcessAttesterSlashings(
 		beaconState,
 		block,
+		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -394,6 +400,7 @@ func TestProcessAttesterSlashings_EmptyCustodyFields(t *testing.T) {
 	if _, err := ProcessAttesterSlashings(
 		beaconState,
 		block,
+		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -427,6 +434,7 @@ func TestProcessAttesterSlashings_EmptyCustodyFields(t *testing.T) {
 	if _, err := ProcessAttesterSlashings(
 		beaconState,
 		block,
+		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -471,6 +479,7 @@ func TestProcessAttesterSlashings_UnmatchedAttestations(t *testing.T) {
 	if _, err := ProcessAttesterSlashings(
 		beaconState,
 		block,
+		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -575,6 +584,7 @@ func TestProcessAttesterSlashings_SlotsInequalities(t *testing.T) {
 		if _, err := ProcessAttesterSlashings(
 			beaconState,
 			block,
+			false,
 		); !strings.Contains(err.Error(), want) {
 			t.Errorf("Expected %s, received %v", want, err)
 		}
@@ -620,6 +630,7 @@ func TestProcessAttesterSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 	if _, err := ProcessAttesterSlashings(
 		beaconState,
 		block,
+		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -674,6 +685,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	newState, err := ProcessAttesterSlashings(
 		beaconState,
 		block,
+		false,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -720,6 +732,7 @@ func TestProcessBlockAttestations_ThresholdReached(t *testing.T) {
 	if _, err := ProcessBlockAttestations(
 		state,
 		block,
+		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -751,6 +764,7 @@ func TestProcessBlockAttestations_InclusionDelayFailure(t *testing.T) {
 	if _, err := ProcessBlockAttestations(
 		state,
 		block,
+		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -782,6 +796,7 @@ func TestProcessBlockAttestations_EpochDistanceFailure(t *testing.T) {
 	if _, err := ProcessBlockAttestations(
 		state,
 		block,
+		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -814,6 +829,7 @@ func TestProcessBlockAttestations_JustifiedSlotVerificationFailure(t *testing.T)
 	if _, err := ProcessBlockAttestations(
 		state,
 		block,
+		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -846,6 +862,7 @@ func TestProcessBlockAttestations_PreviousJustifiedSlotVerificationFailure(t *te
 	if _, err := ProcessBlockAttestations(
 		state,
 		block,
+		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -881,6 +898,7 @@ func TestProcessBlockAttestations_BlockRootOutOfBounds(t *testing.T) {
 	if _, err := ProcessBlockAttestations(
 		state,
 		block,
+		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -920,6 +938,7 @@ func TestProcessBlockAttestations_BlockRootFailure(t *testing.T) {
 	if _, err := ProcessBlockAttestations(
 		state,
 		block,
+		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -970,6 +989,7 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 	if _, err := ProcessBlockAttestations(
 		state,
 		block,
+		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1016,6 +1036,7 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 	if _, err := ProcessBlockAttestations(
 		state,
 		block,
+		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1058,6 +1079,7 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 	newState, err := ProcessBlockAttestations(
 		state,
 		block,
+		false,
 	)
 	pendingAttestations := newState.LatestAttestations
 	if err != nil {
@@ -1153,7 +1175,7 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	data = append(data, timestamp...)
 
 	// We then create a merkle branch for the test.
-	depositTrie := trie.NewDepositTrie()
+	depositTrie := trieutil.NewDepositTrie()
 	depositTrie.UpdateDepositTrie(data)
 	branch := depositTrie.GenerateMerkleBranch(0)
 
@@ -1220,7 +1242,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	data = append(data, encodedInput...)
 
 	// We then create a merkle branch for the test.
-	depositTrie := trie.NewDepositTrie()
+	depositTrie := trieutil.NewDepositTrie()
 	depositTrie.UpdateDepositTrie(data)
 	branch := depositTrie.GenerateMerkleBranch(0)
 
@@ -1299,7 +1321,7 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	data = append(data, encodedInput...)
 
 	// We then create a merkle branch for the test.
-	depositTrie := trie.NewDepositTrie()
+	depositTrie := trieutil.NewDepositTrie()
 	depositTrie.UpdateDepositTrie(data)
 	branch := depositTrie.GenerateMerkleBranch(0)
 
@@ -1365,6 +1387,7 @@ func TestProcessValidatorExits_ThresholdReached(t *testing.T) {
 	if _, err := ProcessValidatorExits(
 		state,
 		block,
+		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1398,6 +1421,7 @@ func TestProcessValidatorExits_ValidatorNotActive(t *testing.T) {
 	if _, err := ProcessValidatorExits(
 		state,
 		block,
+		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1433,6 +1457,7 @@ func TestProcessValidatorExits_InvalidExitSlot(t *testing.T) {
 	if _, err := ProcessValidatorExits(
 		state,
 		block,
+		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1464,6 +1489,7 @@ func TestProcessValidatorExits_InvalidStatusChangeSlot(t *testing.T) {
 	if _, err := ProcessValidatorExits(
 		state,
 		block,
+		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -1490,7 +1516,7 @@ func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
 			Exits: exits,
 		},
 	}
-	newState, err := ProcessValidatorExits(state, block)
+	newState, err := ProcessValidatorExits(state, block, false)
 	if err != nil {
 		t.Fatalf("Could not process exits: %v", err)
 	}

@@ -21,7 +21,7 @@ func TestProcessBlock_IncorrectSlot(t *testing.T) {
 		4,
 		5,
 	)
-	if _, err := ProcessBlock(beaconState, block); !strings.Contains(err.Error(), want) {
+	if _, err := ProcessBlock(beaconState, block, false); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -39,7 +39,7 @@ func TestProcessBlock_IncorrectBlockRandao(t *testing.T) {
 		Body:               &pb.BeaconBlockBody{},
 	}
 	want := "could not verify and process block randao"
-	if _, err := ProcessBlock(beaconState, block); !strings.Contains(err.Error(), want) {
+	if _, err := ProcessBlock(beaconState, block, false); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -62,7 +62,7 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 		},
 	}
 	want := "could not verify block proposer slashing"
-	if _, err := ProcessBlock(beaconState, block); !strings.Contains(err.Error(), want) {
+	if _, err := ProcessBlock(beaconState, block, false); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -101,7 +101,7 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 		},
 	}
 	want := "could not verify block attester slashing"
-	if _, err := ProcessBlock(beaconState, block); !strings.Contains(err.Error(), want) {
+	if _, err := ProcessBlock(beaconState, block, false); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -163,7 +163,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		},
 	}
 	want := "could not process block attestations"
-	if _, err := ProcessBlock(beaconState, block); !strings.Contains(err.Error(), want) {
+	if _, err := ProcessBlock(beaconState, block, false); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -250,7 +250,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		},
 	}
 	want := "could not process validator exits"
-	if _, err := ProcessBlock(beaconState, block); !strings.Contains(err.Error(), want) {
+	if _, err := ProcessBlock(beaconState, block, false); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -341,7 +341,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			Exits:             exits,
 		},
 	}
-	if _, err := ProcessBlock(beaconState, block); err != nil {
+	if _, err := ProcessBlock(beaconState, block, false); err != nil {
 		t.Errorf("Expected block to pass processing conditions: %v", err)
 	}
 }

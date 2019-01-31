@@ -12,7 +12,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slices"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
 var config = params.BeaconConfig()
@@ -45,7 +45,7 @@ func ExpectedFFGSource(
 	}
 
 	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
-	didNotAttestIndices := slices.Not(justifiedAttesterIndices, activeValidatorIndices)
+	didNotAttestIndices := sliceutil.Not(justifiedAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
@@ -82,7 +82,7 @@ func ExpectedFFGTarget(
 	}
 
 	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
-	didNotAttestIndices := slices.Not(boundaryAttesterIndices, activeValidatorIndices)
+	didNotAttestIndices := sliceutil.Not(boundaryAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
@@ -119,7 +119,7 @@ func ExpectedBeaconChainHead(
 	}
 
 	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
-	didNotAttestIndices := slices.Not(headAttesterIndices, activeValidatorIndices)
+	didNotAttestIndices := sliceutil.Not(headAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
@@ -171,7 +171,7 @@ func InactivityFFGSource(
 
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
 	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
-	didNotAttestIndices := slices.Not(justifiedAttesterIndices, activeValidatorIndices)
+	didNotAttestIndices := sliceutil.Not(justifiedAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
@@ -195,7 +195,7 @@ func InactivityFFGTarget(
 
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
 	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
-	didNotAttestIndices := slices.Not(boundaryAttesterIndices, activeValidatorIndices)
+	didNotAttestIndices := sliceutil.Not(boundaryAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
@@ -218,7 +218,7 @@ func InactivityChainHead(
 
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
 	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
-	didNotAttestIndices := slices.Not(headAttesterIndices, activeValidatorIndices)
+	didNotAttestIndices := sliceutil.Not(headAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
@@ -369,7 +369,7 @@ func Crosslinks(
 			}
 			for _, index := range committee {
 				baseReward := baseReward(state, index, baseRewardQuotient)
-				if slices.IsIn(index, attestingIndices) {
+				if sliceutil.IsIn(index, attestingIndices) {
 					state.ValidatorBalances[index] +=
 						baseReward * totalAttestingBalance / totalBalance
 				} else {

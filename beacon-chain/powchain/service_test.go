@@ -27,7 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/trie"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -285,7 +285,7 @@ func TestSaveInTrie(t *testing.T) {
 
 	testAcc.backend.Commit()
 
-	web3Service.depositTrie = trie.NewDepositTrie()
+	web3Service.depositTrie = trieutil.NewDepositTrie()
 
 	currentRoot := web3Service.depositTrie.Root()
 
@@ -418,7 +418,7 @@ func TestProcessDepositLog(t *testing.T) {
 
 	testAcc.backend.Commit()
 
-	web3Service.depositTrie = trie.NewDepositTrie()
+	web3Service.depositTrie = trieutil.NewDepositTrie()
 
 	var stub [48]byte
 	copy(stub[:], []byte("testing"))
@@ -585,7 +585,7 @@ func TestProcessChainStartLog(t *testing.T) {
 	testAcc.backend.Commit()
 	testAcc.backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
 
-	web3Service.depositTrie = trie.NewDepositTrie()
+	web3Service.depositTrie = trieutil.NewDepositTrie()
 
 	var stub [48]byte
 	copy(stub[:], []byte("testing"))
@@ -728,5 +728,68 @@ func TestUnpackChainStartLogs(t *testing.T) {
 
 	if timestamp > uint64(time.Now().Unix()) {
 		t.Errorf("Timestamp from log is higher than the current time %d > %d", timestamp, time.Now().Unix())
+	}
+}
+
+func TestHasChainStartLogOccurred(t *testing.T) {
+	endpoint := "ws://127.0.0.1"
+	testAcc, err := setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint:        endpoint,
+		DepositContract: testAcc.contractAddr,
+		Reader:          &goodReader{},
+		Logger:          testAcc.backend,
+		ContractBackend: testAcc.backend,
+	})
+	if err != nil {
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+
+	testAcc.backend.Commit()
+
+	testAcc.backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
+
+	var stub [48]byte
+	copy(stub[:], []byte("testing"))
+
+	data := &pb.DepositInput{
+		Pubkey:                      stub[:],
+		ProofOfPossession:           stub[:],
+		WithdrawalCredentialsHash32: []byte("withdraw"),
+		RandaoCommitmentHash32:      []byte("randao"),
+		CustodyCommitmentHash32:     []byte("custody"),
+	}
+
+	serializedData := new(bytes.Buffer)
+	if err := ssz.Encode(serializedData, data); err != nil {
+		t.Fatalf("Could not serialize data %v", err)
+	}
+	ok, _, err := web3Service.HasChainStartLogOccurred()
+	if err != nil {
+		t.Fatalf("Could not check if chain start log occurred: %v", err)
+	}
+	if ok {
+		t.Error("Expected chain start log to not have occurred")
+	}
+
+	// 8 Validators are used as size required for beacon-chain to start. This number
+	// is defined in the VRC as the number required for the testnet.
+	for i := 0; i < depositsReqForChainStart; i++ {
+		testAcc.txOpts.Value = amount32Eth
+		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+			t.Fatalf("Could not deposit to VRC %v", err)
+		}
+
+		testAcc.backend.Commit()
+	}
+	ok, _, err = web3Service.HasChainStartLogOccurred()
+	if err != nil {
+		t.Fatalf("Could not check if chain start log occurred: %v", err)
+	}
+	if !ok {
+		t.Error("Expected chain start log to have occurred")
 	}
 }
