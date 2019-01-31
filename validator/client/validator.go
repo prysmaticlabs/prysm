@@ -26,14 +26,6 @@ type validator struct {
 	pubKey          []byte
 }
 
-// Initialize
-//
-// WIP - not done.
-func (v *validator) Initialize(ctx context.Context) {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.Initialize")
-	defer span.Finish()
-}
-
 // Done cleans up the validator.
 func (v *validator) Done() {
 	v.ticker.Done()
