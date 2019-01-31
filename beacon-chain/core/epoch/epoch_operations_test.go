@@ -477,7 +477,13 @@ func TestInclusionSlotOk(t *testing.T) {
 	state.LatestAttestations = []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{},
 			ParticipationBitfield: []byte{0xFF},
+			SlotIncluded:          101},
+		{Data: &pb.AttestationData{},
+			ParticipationBitfield: []byte{0xFF},
 			SlotIncluded:          100},
+		{Data: &pb.AttestationData{},
+			ParticipationBitfield: []byte{0xFF},
+			SlotIncluded:          102},
 	}
 	slot, err := InclusionSlot(state, 45)
 	if err != nil {
