@@ -83,7 +83,7 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 		return nil, fmt.Errorf("could not marshal state %v", err)
 	}
 
-	// TOOD(#1389): Use tree hashing algorithm instead.
+	// TODO(#1389): Use tree hashing algorithm instead.
 	beaconStateHash := hashutil.Hash(encodedState)
 	log.WithField("beaconStateHash", fmt.Sprintf("%#x", beaconStateHash)).Debugf("Computed state hash")
 	return &pb.StateRootResponse{

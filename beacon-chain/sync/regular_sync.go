@@ -23,12 +23,9 @@ type chainService interface {
 	IncomingBlockFeed() *event.Feed
 }
 
-type attestationService interface {
-	IncomingAttestationFeed() *event.Feed
-}
-
 type operationService interface {
-	IncomingOperationsFeed() *event.Feed
+	IncomingExitFeed() *event.Feed
+	IncomingAttFeed() *event.Feed
 }
 
 type p2pAPI interface {
@@ -54,7 +51,6 @@ type RegularSync struct {
 	cancel                context.CancelFunc
 	p2p                   p2pAPI
 	chainService          chainService
-	attestationService    attestationService
 	operationsService     operationService
 	db                    *db.BeaconDB
 	blockAnnouncementFeed *event.Feed
@@ -79,8 +75,7 @@ type RegularSyncConfig struct {
 	ExitBufferSize          int
 	ChainHeadReqBufferSize  int
 	ChainService            chainService
-	AttestService           attestationService
-	operationService        operationService
+	OperationService        operationService
 	BeaconDB                *db.BeaconDB
 	P2P                     p2pAPI
 }
@@ -108,8 +103,7 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		p2p:                   cfg.P2P,
 		chainService:          cfg.ChainService,
 		db:                    cfg.BeaconDB,
-		attestationService:    cfg.AttestService,
-		operationsService:     cfg.operationService,
+		operationsService:     cfg.OperationService,
 		blockAnnouncementFeed: new(event.Feed),
 		announceBlockBuf:      make(chan p2p.Message, cfg.BlockAnnounceBufferSize),
 		blockBuf:              make(chan p2p.Message, cfg.BlockBufferSize),
@@ -242,11 +236,6 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 		return
 	}
 
-	_, sendAttestationSpan := trace.StartSpan(ctx, "sendAttestation")
-	log.WithField("attestationHash", fmt.Sprintf("%#x", att.Key(response.Attestation.GetData()))).Debug("Sending newly received attestation to subscribers")
-	rs.attestationService.IncomingAttestationFeed().Send(response.Attestation)
-	sendAttestationSpan.End()
-
 	_, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
 	log.WithField("blockHash", fmt.Sprintf("%#x", blockHash)).Debug("Sending newly received block to subscribers")
 	rs.chainService.IncomingBlockFeed().Send(block)
@@ -321,16 +310,13 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 		log.Errorf("Could not check for attestation in DB: %v", err)
 		return
 	}
-	if attestation != nil {
-		validatorExists := att.ContainsValidator(attestation.ParticipationBitfield, a.ParticipationBitfield)
-		if validatorExists {
-			log.Debugf("Received attestation %#x already", h)
-			return
-		}
+	if rs.db.HasAttestation(h) {
+		log.Debugf("Received, skipping attestation #%x", h)
+		return
 	}
 
 	log.WithField("attestationHash", fmt.Sprintf("%#x", h)).Debug("Forwarding attestation to subscribed services")
-	rs.attestationService.IncomingAttestationFeed().Send(a)
+	rs.operationsService.IncomingAttFeed().Send(attestation)
 }
 
 // receiveExitRequest accepts an broadcasted exit from the p2p layer,
@@ -351,7 +337,7 @@ func (rs *RegularSync) receiveExitRequest(msg p2p.Message) {
 
 	log.WithField("exitReqHash", fmt.Sprintf("%#x", h)).
 		Debug("Forwarding validator exit request to subscribed services")
-	rs.operationsService.IncomingOperationsFeed().Send(exit)
+	rs.operationsService.IncomingExitFeed().Send(exit)
 }
 
 func (rs *RegularSync) handleBlockRequestByHash(msg p2p.Message) {

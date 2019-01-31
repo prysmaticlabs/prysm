@@ -22,8 +22,8 @@ type Service struct {
 	incomingExitFeed       *event.Feed
 	incomingValidatorExits chan *pb.Exit
 	incomingAttFeed        *event.Feed
-	incomingAtts           chan *pb.Attestation
-	errors                 []error
+	incomingAtt            chan *pb.Attestation
+	error                  error
 }
 
 // Config options for the service.
@@ -44,7 +44,7 @@ func NewOperationService(ctx context.Context, cfg *Config) *Service {
 		incomingExitFeed:       new(event.Feed),
 		incomingValidatorExits: make(chan *pb.Exit, cfg.ReceiveExitBuf),
 		incomingAttFeed:        new(event.Feed),
-		incomingAtts:           make(chan *pb.Attestation, cfg.ReceiveAttBuf),
+		incomingAtt:            make(chan *pb.Attestation, cfg.ReceiveAttBuf),
 	}
 }
 
@@ -63,9 +63,9 @@ func (s *Service) Stop() error {
 }
 
 // Status always returns nil.
-func (s *Service) Status() []error {
-	if len(s.errors) != 0 {
-		return s.errors
+func (s *Service) Status() error {
+	if s.error != nil {
+		return s.error
 	}
 	return nil
 }
@@ -79,7 +79,7 @@ func (s *Service) IncomingExitFeed() *event.Feed {
 // IncomingAttFeed returns a feed that any service can send incoming p2p attestations into.
 // The beacon block operation service will subscribe to this feed in order to relay incoming attestations.
 func (s *Service) IncomingAttFeed() *event.Feed {
-	return s.IncomingAttFeed
+	return s.incomingAttFeed
 }
 
 // saveOperations saves the newly broadcasted beacon block operations
@@ -106,11 +106,11 @@ func (s *Service) saveOperations() {
 			}
 			if err := s.beaconDB.SaveExit(exit); err != nil {
 				log.Errorf("Could not save exit request: %v", err)
-				s.errors = append(s.errors, err)
+				s.error = err
 				continue
 			}
 			log.Debugf("Exit request %#x saved in db", hash)
-		case attestation := <-s.incomingAtts:
+		case attestation := <-s.incomingAtt:
 			hash, err := hashutil.HashProto(attestation)
 			if err != nil {
 				log.Errorf("Could not hash attestation proto: %v", err)
@@ -118,7 +118,7 @@ func (s *Service) saveOperations() {
 			}
 			if err := s.beaconDB.SaveAttestation(attestation); err != nil {
 				log.Errorf("Could not save attestation: %v", err)
-				s.errors = append(s.errors, err)
+				s.error = err
 				continue
 			}
 			log.Debugf("Attestation %#x saved in db", hash)
