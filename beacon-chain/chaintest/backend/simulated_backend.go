@@ -11,6 +11,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/go-bls/bazel-go-bls/external/go_sdk/src/math"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -64,6 +65,36 @@ func NewSimulatedBackend() (*SimulatedBackend, error) {
 		chainService: cs,
 		beaconDB:     db,
 	}, nil
+}
+
+func (sb *SimulatedBackend) AdvanceChain() error {
+	// We create a list of randao hash onions for the given number of slots
+	// the simulation will attempt.
+	hashOnions := generateSimulatedRandaoHashOnions(math.MaxUint64)
+
+	// We then generate initial validator deposits for initializing the
+	// beacon state based where every validator will use the last layer in the randao
+	// onions list as the commitment in the deposit instance.
+	lastRandaoLayer := hashOnions[len(hashOnions)-1]
+	initialDeposits, err := generateInitialSimulatedDeposits(lastRandaoLayer)
+	if err != nil {
+		return fmt.Errorf("could not simulate initial validator deposits: %v", err)
+	}
+
+	prevBlockRoots, err := sb.setupBeaconStateAndGenesisBlock(initialDeposits)
+	if err != nil {
+		return fmt.Errorf("could not set up beacon state and initalize genesis block %v", err)
+	}
+
+	// We keep track of the randao layers peeled for each proposer index in a map.
+	layersPeeledForProposer := make(map[uint64]int, len(sb.state.ValidatorRegistry))
+	for idx := range sb.state.ValidatorRegistry {
+		layersPeeledForProposer[uint64(idx)] = 0
+	}
+}
+
+func (sim *SimulatedBackend) Shutdown() error {
+	return sim.beaconDB.Close()
 }
 
 // RunForkChoiceTest uses a parsed set of chaintests from a YAML file
