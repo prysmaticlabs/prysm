@@ -118,35 +118,11 @@ func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
 // of the state transition function.
 func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) error {
 	defer teardownDB(sb.beaconDB)
-	// We setup the initial configuration for running state
-	// transition tests below.
-	c := params.BeaconConfig()
-	c.EpochLength = testCase.Config.EpochLength
-	c.DepositsForChainStart = testCase.Config.DepositsForChainStart
-	params.OverrideBeaconConfig(c)
+	setTestConfig(testCase)
 
-	// We create a list of randao hash onions for the given number of slots
-	// the simulation will attempt.
-	hashOnions := generateSimulatedRandaoHashOnions(testCase.Config.NumSlots)
-
-	// We then generate initial validator deposits for initializing the
-	// beacon state based where every validator will use the last layer in the randao
-	// onions list as the commitment in the deposit instance.
-	lastRandaoLayer := hashOnions[len(hashOnions)-1]
-	initialDeposits, err := generateInitialSimulatedDeposits(lastRandaoLayer)
+	hashOnions, lastRandaoLayer, prevBlockRoots, layersPeeledForProposer, err := sb.initializeStateTest(testCase)
 	if err != nil {
-		return fmt.Errorf("could not simulate initial validator deposits: %v", err)
-	}
-
-	prevBlockRoots, err := sb.setupBeaconStateAndGenesisBlock(initialDeposits)
-	if err != nil {
-		return fmt.Errorf("could not set up beacon state and initalize genesis block %v", err)
-	}
-
-	// We keep track of the randao layers peeled for each proposer index in a map.
-	layersPeeledForProposer := make(map[uint64]int, len(sb.state.ValidatorRegistry))
-	for idx := range sb.state.ValidatorRegistry {
-		layersPeeledForProposer[uint64(idx)] = 0
+		return fmt.Errorf("could not initialize state test %v", err)
 	}
 
 	depositsTrie := trieutil.NewDepositTrie()
@@ -154,12 +130,10 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	for i := uint64(0); i < testCase.Config.NumSlots; i++ {
 		prevBlockRoot := prevBlockRoots[len(prevBlockRoots)-1]
 
-		committeeArray, err := validators.CrosslinkCommitteesAtSlot(sb.state, i)
+		proposerIndex, err := validators.BeaconProposerIdx(sb.state, i)
 		if err != nil {
-			return fmt.Errorf("could not get crosslink committee: %v", err)
+			return fmt.Errorf("could not compute proposer index %v", err)
 		}
-		firstCommittee := committeeArray[0].Committee
-		proposerIndex := firstCommittee[i%uint64(len(firstCommittee))]
 
 		// If the slot is marked as skipped in the configuration options,
 		// we simply run the state transition with a nil block argument.
@@ -229,6 +203,36 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	}
 
 	return nil
+}
+
+func (sb *SimulatedBackend) initializeStateTest(testCase *StateTestCase) (hashOnions [][32]byte,
+	lastRandaoLayer [32]byte, prevBlockRoots [][32]byte, layersPeeledForProposer map[uint64]int, err error) {
+
+	// We create a list of randao hash onions for the given number of slots
+	// the simulation will attempt.
+	hashOnions = generateSimulatedRandaoHashOnions(testCase.Config.NumSlots)
+
+	// We then generate initial validator deposits for initializing the
+	// beacon state based where every validator will use the last layer in the randao
+	// onions list as the commitment in the deposit instance.
+	lastRandaoLayer = hashOnions[len(hashOnions)-1]
+	initialDeposits, err := generateInitialSimulatedDeposits(lastRandaoLayer)
+	if err != nil {
+		return nil, [32]byte{}, nil, nil, fmt.Errorf("could not simulate initial validator deposits: %v", err)
+	}
+
+	prevBlockRoots, err = sb.setupBeaconStateAndGenesisBlock(initialDeposits)
+	if err != nil {
+		return nil, [32]byte{}, nil, nil, fmt.Errorf("could not set up beacon state and initalize genesis block %v", err)
+	}
+
+	// We keep track of the randao layers peeled for each proposer index in a map.
+	layersPeeledForProposer = make(map[uint64]int, len(sb.state.ValidatorRegistry))
+	for idx := range sb.state.ValidatorRegistry {
+		layersPeeledForProposer[uint64(idx)] = 0
+	}
+
+	return hashOnions, lastRandaoLayer, prevBlockRoots, layersPeeledForProposer, nil
 }
 
 func (sb *SimulatedBackend) setupBeaconStateAndGenesisBlock(initialDeposits []*pb.Deposit) ([][32]byte, error) {
@@ -332,6 +336,15 @@ func (sb *SimulatedBackend) CompareTestCase(testCase *StateTestCase) error {
 		}
 	}
 	return nil
+}
+
+func setTestConfig(testCase *StateTestCase) {
+	// We setup the initial configuration for running state
+	// transition tests below.
+	c := params.BeaconConfig()
+	c.EpochLength = testCase.Config.EpochLength
+	c.DepositsForChainStart = testCase.Config.DepositsForChainStart
+	params.OverrideBeaconConfig(c)
 }
 
 func averageDuration(times []time.Duration) time.Duration {
