@@ -12,7 +12,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
-	"github.com/prysmaticlabs/prysm/shared/trie"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 func TestProcessPOWReceiptRoots_SameRootHash(t *testing.T) {
@@ -1175,7 +1175,7 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	data = append(data, timestamp...)
 
 	// We then create a merkle branch for the test.
-	depositTrie := trie.NewDepositTrie()
+	depositTrie := trieutil.NewDepositTrie()
 	depositTrie.UpdateDepositTrie(data)
 	branch := depositTrie.GenerateMerkleBranch(0)
 
@@ -1242,7 +1242,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	data = append(data, encodedInput...)
 
 	// We then create a merkle branch for the test.
-	depositTrie := trie.NewDepositTrie()
+	depositTrie := trieutil.NewDepositTrie()
 	depositTrie.UpdateDepositTrie(data)
 	branch := depositTrie.GenerateMerkleBranch(0)
 
@@ -1321,7 +1321,7 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	data = append(data, encodedInput...)
 
 	// We then create a merkle branch for the test.
-	depositTrie := trie.NewDepositTrie()
+	depositTrie := trieutil.NewDepositTrie()
 	depositTrie.UpdateDepositTrie(data)
 	branch := depositTrie.GenerateMerkleBranch(0)
 

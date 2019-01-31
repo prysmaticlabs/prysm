@@ -35,9 +35,9 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    url = "https://github.com/bazelbuild/rules_nodejs/archive/0.16.5.tar.gz",
-    strip_prefix = "rules_nodejs-0.16.5",
-    sha256 = "63f29855b5e85d0db77362e1477864299697e1f200be8be8fa5faa43230b80d0",
+    url = "https://github.com/bazelbuild/rules_nodejs/archive/0.16.6.tar.gz",
+    strip_prefix = "rules_nodejs-0.16.6",
+    sha256 = "f5b0a45fb76f3506bcc9437c5e3198149765c1918a1dd10a9497afbcf7058c85",
 )
 
 http_archive(
@@ -311,7 +311,7 @@ go_repository(
 
 go_repository(
     name = "com_github_minio_sha256_simd",
-    commit = "cc1980cb03383b1d46f518232672584432d7532d",
+    commit = "2d45a736cd16732fe6a57563cc20d8b035193e58",
     importpath = "github.com/minio/sha256-simd",
 )
 
@@ -456,7 +456,7 @@ go_repository(
 
 go_repository(
     name = "com_github_miekg_dns",
-    tag = "v1.1.3",
+    tag = "v1.1.4",
     importpath = "github.com/miekg/dns",
 )
 

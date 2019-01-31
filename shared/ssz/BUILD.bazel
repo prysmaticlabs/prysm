@@ -12,7 +12,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/shared/ssz",
     visibility = ["//visibility:public"],
     deps = [
-        "//shared/bytes:go_default_library",
+        "//shared/bytesutil:go_default_library",
         "//shared/hashutil:go_default_library",
     ],
 )
