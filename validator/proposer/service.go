@@ -210,11 +210,6 @@ func (p *Proposer) computeBlockToBeProposed(latestBlock *pbp2p.BeaconBlock,
 		return nil, fmt.Errorf("could not hash latest beacon block: %v", err)
 	}
 
-	powChainHashRes, err := client.LatestPOWChainBlockHash(p.ctx, nil)
-	if err != nil {
-		return nil, fmt.Errorf("could not get latest pow chain blockhash %v", err)
-	}
-
 	indexRes, err := client.ProposerIndex(p.ctx, &pb.ProposerIndexRequest{SlotNumber: latestBlock.Slot})
 	if err != nil {
 		return nil, fmt.Errorf("could not get proposer index: %v", err)
@@ -234,7 +229,6 @@ func (p *Proposer) computeBlockToBeProposed(latestBlock *pbp2p.BeaconBlock,
 		Slot:               latestBlock.Slot + 1,
 		ParentRootHash32:   latestBlockHash[:],
 		RandaoRevealHash32: []byte{},
-		DepositRootHash32:  powChainHashRes.BlockHash,
 		Body: &pbp2p.BeaconBlockBody{
 			Attestations: []*pbp2p.Attestation{attestation},
 		},
@@ -264,7 +258,6 @@ func (p *Proposer) addStateRootToBlock(block *pbp2p.BeaconBlock, client pb.Propo
 }
 
 func (p *Proposer) createProposalDataFromBlock(block *pbp2p.BeaconBlock) (*pbp2p.ProposalSignedData, error) {
-
 	encodedBlock, err := proto.Marshal(block)
 	if err != nil {
 		return nil, fmt.Errorf("unable to marshal block %v", err)

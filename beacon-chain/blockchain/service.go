@@ -1,8 +1,9 @@
-// Package blockchain defines the life-cycle and status of the beacon chain.
+// Package blockchain defines the life-cycle and status of the beacon chain
+// as well as the Ethereum Serenity beacon chain fork-choice rule based on
+// Casper Proof of Stake finality.
 package blockchain
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -32,12 +33,10 @@ type ChainService struct {
 	web3Service        *powchain.Web3Service
 	incomingBlockFeed  *event.Feed
 	incomingBlockChan  chan *pb.BeaconBlock
-	processedBlockChan chan *pb.BeaconBlock
+	genesisTimeChan    chan time.Time
 	canonicalBlockFeed *event.Feed
 	canonicalStateFeed *event.Feed
 	genesisTime        time.Time
-	unProcessedBlocks  map[uint64]*pb.BeaconBlock
-	unfinalizedBlocks  map[[32]byte]*pb.BeaconState
 	enablePOWChain     bool
 }
 
@@ -61,29 +60,62 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		beaconDB:           cfg.BeaconDB,
 		web3Service:        cfg.Web3Service,
 		incomingBlockChan:  make(chan *pb.BeaconBlock, cfg.IncomingBlockBuf),
-		processedBlockChan: make(chan *pb.BeaconBlock),
+		genesisTimeChan:    make(chan time.Time),
 		incomingBlockFeed:  new(event.Feed),
 		canonicalBlockFeed: new(event.Feed),
 		canonicalStateFeed: new(event.Feed),
-		unProcessedBlocks:  make(map[uint64]*pb.BeaconBlock),
-		unfinalizedBlocks:  make(map[[32]byte]*pb.BeaconState),
 		enablePOWChain:     cfg.EnablePOWChain,
 	}, nil
 }
 
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
-	log.Info("Starting service")
-	var err error
-	c.genesisTime, err = c.beaconDB.GenesisTime()
+	beaconState, err := c.beaconDB.State()
 	if err != nil {
-		log.Fatalf("Unable to retrieve genesis time - blockchain service could not start: %v", err)
-		return
+		log.Fatalf("Could not fetch beacon state: %v", err)
 	}
-	// TODO(#675): Initialize unfinalizedBlocks map from disk in case this
-	// is a beacon node restarting.
-	go c.updateHead(c.processedBlockChan)
-	go c.blockProcessing(c.processedBlockChan)
+	// If the chain has already been initialized, simply start the block processing routine.
+	if beaconState != nil {
+		log.Info("Beacon chain data already exists, starting service")
+		c.genesisTime = time.Unix(int64(beaconState.GenesisTime), 0)
+		go c.blockProcessing()
+	} else {
+		log.Info("Waiting for ChainStart log from the Validator Deposit Contract to start the beacon chain...")
+		subChainStart := c.web3Service.ChainStartFeed().Subscribe(c.genesisTimeChan)
+		go func() {
+			genesisTime := <-c.genesisTimeChan
+			if err := c.initializeBeaconChain(genesisTime); err != nil {
+				log.Fatalf("Could not initialize beacon chain: %v", err)
+			}
+			go c.blockProcessing()
+			subChainStart.Unsubscribe()
+		}()
+	}
+}
+
+// initializes the state and genesis block of the beacon chain to persistent storage
+// based on a genesis timestamp value obtained from the ChainStart event emitted
+// by the ETH1.0 Deposit Contract and the POWChain service of the node.
+func (c *ChainService) initializeBeaconChain(genesisTime time.Time) error {
+	log.Info("ChainStart time reached, starting the beacon chain!")
+	c.genesisTime = genesisTime
+	unixTime := uint64(genesisTime.Unix())
+	if err := c.beaconDB.InitializeState(unixTime); err != nil {
+		return fmt.Errorf("could not initialize beacon state to disk: %v", err)
+	}
+	beaconState, err := c.beaconDB.State()
+	if err != nil {
+		return fmt.Errorf("could not attempt fetch beacon state: %v", err)
+	}
+	// TODO(#1389): Replace by state tree hashing algorithm to determine root instead of a hash.
+	hash, err := state.Hash(beaconState)
+	if err != nil {
+		return fmt.Errorf("could not hash beacon state: %v", err)
+	}
+	if err := c.beaconDB.SaveBlock(b.NewGenesisBlock(hash[:])); err != nil {
+		return fmt.Errorf("could not save genesis block to disk: %v", err)
+	}
+	return nil
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.
@@ -129,94 +161,9 @@ func (c *ChainService) doesPoWBlockExist(hash [32]byte) bool {
 	return powBlock != nil
 }
 
-// updateHead applies the fork choice rule to the beacon chain
-// at the start of each new slot interval. The function looks
-// at an in-memory slice of block hashes pending processing and
-// selects the best block according to the in-protocol fork choice
-// rule as canonical. This block is then persisted to storage.
-func (c *ChainService) updateHead(processedBlock <-chan *pb.BeaconBlock) {
-	for {
-		select {
-		case <-c.ctx.Done():
-			return
-		case block := <-processedBlock:
-			if block == nil {
-				continue
-			}
-
-			h, err := hashutil.HashBeaconBlock(block)
-			if err != nil {
-				log.Errorf("Could not hash incoming block: %v", err)
-				continue
-			}
-
-			log.Info("Updating chain head...")
-			currentHead, err := c.beaconDB.GetChainHead()
-			if err != nil {
-				log.Errorf("Could not get current chain head: %v", err)
-				continue
-			}
-			currentState, err := c.beaconDB.GetState()
-			if err != nil {
-				log.Errorf("Could not get current beacon state: %v", err)
-				continue
-			}
-
-			blockState := c.unfinalizedBlocks[h]
-
-			var headUpdated bool
-			newHead := currentHead
-			// If both blocks have the same crystallized state root, we favor one which has
-			// the higher slot.
-			if bytes.Equal(currentHead.StateRootHash32, block.StateRootHash32) {
-				if block.Slot > currentHead.Slot {
-					newHead = block
-					headUpdated = true
-				}
-				// 2a. Pick the block with the higher last_finalized_slot.
-				// 2b. If same, pick the block with the higher last_justified_slot.
-			} else if blockState.FinalizedSlot > currentState.FinalizedSlot {
-				newHead = block
-				headUpdated = true
-			} else if blockState.FinalizedSlot == currentState.FinalizedSlot {
-				if blockState.JustifiedSlot > currentState.JustifiedSlot {
-					newHead = block
-					headUpdated = true
-				} else if blockState.JustifiedSlot == currentState.JustifiedSlot {
-					if block.Slot > currentHead.Slot {
-						newHead = block
-						headUpdated = true
-					}
-				}
-			}
-
-			// If no new head was found, we do not update the chain.
-			if !headUpdated {
-				log.Info("Chain head not updated")
-				continue
-			}
-
-			// TODO(#674): Handle chain reorgs.
-			newState := blockState
-			if err := c.beaconDB.UpdateChainHead(newHead, newState); err != nil {
-				log.Errorf("Failed to update chain: %v", err)
-				continue
-			}
-			log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
-			// We fire events that notify listeners of a new block in
-			// the case of a state transition. This is useful for the beacon node's gRPC
-			// server to stream these events to beacon clients.
-			// When the transition is a cycle transition, we stream the state containing the new validator
-			// assignments to clients.
-			if block.Slot%params.BeaconConfig().EpochLength == 0 {
-				c.canonicalStateFeed.Send(newState)
-			}
-			c.canonicalBlockFeed.Send(newHead)
-		}
-	}
-}
-
-func (c *ChainService) blockProcessing(processedBlock chan<- *pb.BeaconBlock) {
+// blockProcessing subscribes to incoming blocks, processes them if possible, and then applies
+// the fork-choice rule to update the beacon chain's head.
+func (c *ChainService) blockProcessing() {
 	subBlock := c.incomingBlockFeed.Subscribe(c.incomingBlockChan)
 	defer subBlock.Unsubscribe()
 	for {
@@ -229,49 +176,60 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *pb.BeaconBlock) {
 		// can be received either from the sync service, the RPC service,
 		// or via p2p.
 		case block := <-c.incomingBlockChan:
-			// Before sending the blocks for processing we check to see if the blocks
-			// are valid to continue being processed. If the slot number in the block
-			// has already been processed by the beacon node, we throw it away. If the
-			// slot number is too high to be processed in the current slot, we store
-			// it in a cache.
-			beaconState, err := c.beaconDB.GetState()
+			beaconState, err := c.beaconDB.State()
 			if err != nil {
 				log.Errorf("Unable to retrieve beacon state %v", err)
 				continue
 			}
 
-			currentSlot := beaconState.Slot
-			if currentSlot+1 < block.Slot {
-				c.unProcessedBlocks[block.Slot] = block
-				continue
-			}
-
-			if currentSlot+1 == block.Slot {
-				if err := c.receiveBlock(block, beaconState); err != nil {
-					log.Error(err)
-					processedBlock <- nil
+			if block.Slot > beaconState.Slot {
+				computedState, err := c.ReceiveBlock(block, beaconState)
+				if err != nil {
+					log.Errorf("Could not process received block: %v", err)
 					continue
 				}
-				// Push the block to trigger the fork choice rule.
-				processedBlock <- block
-			} else {
-				log.Debugf(
-					"Block slot number is lower than the current slot in the beacon state %d",
-					block.Slot)
-				c.sendAndDeleteCachedBlocks(currentSlot, beaconState)
+				if err := c.ApplyForkChoiceRule(block, computedState); err != nil {
+					log.Errorf("Could not update chain head: %v", err)
+					continue
+				}
 			}
 		}
 	}
 }
 
-// receiveBlock is a function that defines the operations that are preformed on
+// ApplyForkChoiceRule determines the current beacon chain head using LMD GHOST as a block-vote
+// weighted function to select a canonical head in Ethereum Serenity.
+func (c *ChainService) ApplyForkChoiceRule(block *pb.BeaconBlock, computedState *pb.BeaconState) error {
+	h, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		return fmt.Errorf("could not hash incoming block: %v", err)
+	}
+	// TODO(#1307): Use LMD GHOST as the fork-choice rule for Ethereum Serenity.
+	// TODO(#674): Handle chain reorgs.
+	if err := c.beaconDB.UpdateChainHead(block, computedState); err != nil {
+		return fmt.Errorf("failed to update chain: %v", err)
+	}
+	log.WithField("blockHash", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
+	// We fire events that notify listeners of a new block in
+	// the case of a state transition. This is useful for the beacon node's gRPC
+	// server to stream these events to beacon clients.
+	// When the transition is a cycle transition, we stream the state containing the new validator
+	// assignments to clients.
+	if block.Slot%params.BeaconConfig().EpochLength == 0 {
+		c.canonicalStateFeed.Send(computedState)
+	}
+	c.canonicalBlockFeed.Send(block)
+	return nil
+}
+
+// ReceiveBlock is a function that defines the operations that are preformed on
 // any block that is received from p2p layer or rpc. It checks the block to see
 // if it passes the pre-processing conditions, if it does then the per slot
 // state transition function is carried out on the block.
 // spec:
 //  def process_block(block):
 //      if not block_pre_processing_conditions(block):
-//          return False
+//          return nil, error
 //
 //  	# process skipped slots
 //
@@ -283,36 +241,34 @@ func (c *ChainService) blockProcessing(processedBlock chan<- *pb.BeaconBlock) {
 //
 //		# check state root
 //      if block.state_root == hash(state):
-//			return state
+//			return state, error
 //		else:
-//			return False  # or throw or whatever
+//			return nil, error  # or throw or whatever
 //
-func (c *ChainService) receiveBlock(block *pb.BeaconBlock, beaconState *pb.BeaconState) error {
-
-	blockhash, err := hashutil.HashBeaconBlock(block)
+func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.BeaconState) (*pb.BeaconState, error) {
+	blockHash, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
-		return fmt.Errorf("could not hash incoming block: %v", err)
+		return nil, fmt.Errorf("could not hash incoming block: %v", err)
 	}
 
 	if block.Slot == 0 {
-		return errors.New("cannot process a genesis block: received block with slot 0")
+		return nil, errors.New("cannot process a genesis block: received block with slot 0")
 	}
 
 	// Save blocks with higher slot numbers in cache.
 	if err := c.isBlockReadyForProcessing(block, beaconState); err != nil {
-		log.Debugf("block with hash %#x is not ready for processing: %v", blockhash, err)
-		return nil
+		return nil, fmt.Errorf("block with hash %#x is not ready for processing: %v", blockHash, err)
 	}
 
-	prevBlock, err := c.beaconDB.GetChainHead()
+	prevBlock, err := c.beaconDB.ChainHead()
 	if err != nil {
-		return fmt.Errorf("could not retrieve chain head %v", err)
+		return nil, fmt.Errorf("could not retrieve chain head %v", err)
 	}
 
-	// TODO(#716):Replace with tree-hashing algorithm.
+	// TODO(#716): Replace with tree-hashing algorithm.
 	blockRoot, err := hashutil.HashBeaconBlock(prevBlock)
 	if err != nil {
-		return fmt.Errorf("could not hash block %v", err)
+		return nil, fmt.Errorf("could not hash block %v", err)
 	}
 
 	log.WithField("slotNumber", block.Slot).Info("Executing state transition")
@@ -320,38 +276,37 @@ func (c *ChainService) receiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	// Check for skipped slots and update the corresponding proposers
 	// randao layer.
 	for beaconState.Slot < block.Slot-1 {
-		beaconState, err = state.ExecuteStateTransition(beaconState, nil, blockRoot)
+		beaconState, err = state.ExecuteStateTransition(
+			beaconState,
+			nil,
+			blockRoot,
+			true, /* no sig verify */
+		)
 		if err != nil {
-			return fmt.Errorf("could not execute state transition %v", err)
+			return nil, fmt.Errorf("could not execute state transition %v", err)
 		}
 	}
 
-	beaconState, err = state.ExecuteStateTransition(beaconState, block, blockRoot)
+	beaconState, err = state.ExecuteStateTransition(
+		beaconState,
+		block,
+		blockRoot,
+		true, /* no sig verify */
+	)
 	if err != nil {
-		return fmt.Errorf("could not execute state transition %v", err)
+		return nil, fmt.Errorf("could not execute state transition %v", err)
 	}
 
 	// TODO(#1074): Verify block.state_root == hash_tree_root(state)
 	// if there exists a block for the slot being processed.
-
 	if err := c.beaconDB.SaveBlock(block); err != nil {
-		return fmt.Errorf("failed to save block: %v", err)
+		return nil, fmt.Errorf("failed to save block: %v", err)
 	}
-	if err := c.beaconDB.SaveUnfinalizedBlockState(beaconState); err != nil {
-		return fmt.Errorf("error persisting unfinalized block's state: %v", err)
-	}
-
-	log.WithField("hash", fmt.Sprintf("%#x", blockhash)).Debug("Processed beacon block")
-
-	// We keep a map of unfinalized blocks in memory along with their state
-	// pair to apply the fork choice rule.
-	c.unfinalizedBlocks[blockhash] = beaconState
-
-	return nil
+	log.WithField("hash", fmt.Sprintf("%#x", blockHash)).Debug("Processed beacon block")
+	return beaconState, nil
 }
 
 func (c *ChainService) isBlockReadyForProcessing(block *pb.BeaconBlock, beaconState *pb.BeaconState) error {
-
 	var powBlockFetcher func(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
 	if c.enablePOWChain {
 		powBlockFetcher = c.web3Service.Client().BlockByHash
@@ -361,16 +316,4 @@ func (c *ChainService) isBlockReadyForProcessing(block *pb.BeaconBlock, beaconSt
 		return fmt.Errorf("block does not fulfill pre-processing conditions %v", err)
 	}
 	return nil
-}
-
-// sendAndDeleteCachedBlocks checks if there is any block saved in the cache with a
-// slot number equivalent to the current slot. If there is then the block is
-// sent to the incoming block channel and deleted from the cache.
-func (c *ChainService) sendAndDeleteCachedBlocks(currentSlot uint64, beaconState *pb.BeaconState) {
-	if block, ok := c.unProcessedBlocks[currentSlot+1]; ok {
-		if err := c.isBlockReadyForProcessing(block, beaconState); err == nil {
-			c.incomingBlockChan <- block
-			delete(c.unProcessedBlocks, currentSlot)
-		}
-	}
 }

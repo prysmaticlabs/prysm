@@ -9,7 +9,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -35,23 +34,27 @@ func CanProcessDepositRoots(state *pb.BeaconState) bool {
 }
 
 // CanProcessValidatorRegistry checks the eligibility to process validator registry.
-// It checks shard committees last changed slot and finalized slot against
+// It checks crosslink committees last changed slot and finalized slot against
 // latest change slot.
 //
 // Spec pseudocode definition:
 //    If the following are satisfied:
 //		* state.finalized_slot > state.validator_registry_latest_change_slot
 //		* state.latest_crosslinks[shard].slot > state.validator_registry_latest_change_slot
-// 			for every shard number shard in state.shard_committees_at_slots
+// 			for every shard number shard in [(state.current_epoch_start_shard + i) %
+//	 			SHARD_COUNT for i in range(get_current_epoch_committees_per_slot(state) *
+//	 			EPOCH_LENGTH)] (that is, for every shard in the current committees)
 func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
-	if state.FinalizedSlot <= state.ValidatorRegistryLatestChangeSlot {
+	if state.FinalizedSlot <= state.ValidatorRegistryUpdateSlot {
 		return false
 	}
-	for _, shardCommitteesAtSlot := range state.ShardCommitteesAtSlots {
-		for _, shardCommittee := range shardCommitteesAtSlot.ArrayShardCommittee {
-			if state.LatestCrosslinks[shardCommittee.Shard].Slot <= state.ValidatorRegistryLatestChangeSlot {
-				return false
-			}
+	shardsProcessed := validators.CurrCommitteesCountPerSlot(state) * config.EpochLength
+	fmt.Println(shardsProcessed)
+	startShard := state.CurrentEpochStartShard
+	for i := startShard; i < shardsProcessed; i++ {
+		if state.LatestCrosslinks[i%config.ShardCount].Slot <=
+			state.ValidatorRegistryUpdateSlot {
+			return false
 		}
 	}
 	return true
@@ -61,7 +64,6 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 // With sufficient votes (>2*DEPOSIT_ROOT_VOTING_PERIOD), it then
 // assigns root hash to processed receipt vote in state.
 func ProcessDeposits(state *pb.BeaconState) *pb.BeaconState {
-
 	for _, receiptRoot := range state.DepositRootVotes {
 		if receiptRoot.VoteCount*2 > config.DepositRootVotingPeriod {
 			state.LatestDepositRootHash32 = receiptRoot.DepositRootHash32
@@ -137,34 +139,47 @@ func ProcessFinalization(state *pb.BeaconState) *pb.BeaconState {
 	return state
 }
 
-// ProcessCrosslinks goes through each shard committee and check
-// shard committee's attested balance * 3 was greater than total balance *2.
-// If it's greater then beacon node updates shard committee with
-// the latest state slot and wining root.
+// ProcessCrosslinks goes through each crosslink committee and check
+// crosslink committee's attested balance * 3 is greater than total balance *2.
+// If it's greater then beacon node updates crosslink committee with
+// the state slot and wining root.
 //
 // Spec pseudocode definition:
-//	For every shard_committee in state.shard_committees_at_slots:
-// 		Set state.latest_crosslinks[shard] = CrosslinkRecord(
-// 		slot=state.slot, block_root=winning_root(shard_committee))
-// 		if 3 * total_attesting_balance(shard_committee) >= 2 * total_balance(shard_committee)
+//	For every `slot in range(state.slot - 2 * EPOCH_LENGTH, state.slot)`,
+// 	let `crosslink_committees_at_slot = get_crosslink_committees_at_slot(state, slot)`.
+// 		For every `(crosslink_committee, shard)` in `crosslink_committees_at_slot`, compute:
+// 			Set state.latest_crosslinks[shard] = Crosslink(
+// 			slot=state.slot, shard_block_root=winning_root(crosslink_committee))
+// 			if 3 * total_attesting_balance(crosslink_committee) >= 2 * total_balance(crosslink_committee)
 func ProcessCrosslinks(
 	state *pb.BeaconState,
 	thisEpochAttestations []*pb.PendingAttestationRecord,
 	prevEpochAttestations []*pb.PendingAttestationRecord) (*pb.BeaconState, error) {
 
-	for _, shardCommitteesAtSlot := range state.ShardCommitteesAtSlots {
-		for _, shardCommittee := range shardCommitteesAtSlot.ArrayShardCommittee {
-			attestingBalance, err := TotalAttestingBalance(state, shardCommittee, thisEpochAttestations, prevEpochAttestations)
+	var startSlot uint64
+	if state.Slot > 2*config.EpochLength {
+		startSlot = state.Slot - 2*config.EpochLength
+	}
+
+	for i := startSlot; i < state.Slot; i++ {
+		crosslinkCommittees, err := validators.CrosslinkCommitteesAtSlot(state, i)
+		if err != nil {
+			return nil, fmt.Errorf("could not get committees for slot %d: %v", i, err)
+		}
+		for _, crosslinkCommittee := range crosslinkCommittees {
+			shard := crosslinkCommittee.Shard
+			committee := crosslinkCommittee.Committee
+			attestingBalance, err := TotalAttestingBalance(state, shard, thisEpochAttestations, prevEpochAttestations)
 			if err != nil {
-				return nil, fmt.Errorf("could not get attesting balance for shard committee %d: %v", shardCommittee.Shard, err)
+				return nil, fmt.Errorf("could not get attesting balance for shard committee %d: %v", shard, err)
 			}
-			totalBalance := TotalBalance(state, shardCommittee.Committee)
+			totalBalance := TotalBalance(state, committee)
 			if attestingBalance*3 > totalBalance*2 {
-				winningRoot, err := winningRoot(state, shardCommittee, thisEpochAttestations, prevEpochAttestations)
+				winningRoot, err := winningRoot(state, shard, thisEpochAttestations, prevEpochAttestations)
 				if err != nil {
 					return nil, fmt.Errorf("could not get winning root: %v", err)
 				}
-				state.LatestCrosslinks[shardCommittee.Shard] = &pb.CrosslinkRecord{
+				state.LatestCrosslinks[shard] = &pb.CrosslinkRecord{
 					Slot:                 state.Slot,
 					ShardBlockRootHash32: winningRoot,
 				}
@@ -190,7 +205,7 @@ func ProcessEjections(state *pb.BeaconState) (*pb.BeaconState, error) {
 	var err error
 	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
 	for _, index := range activeValidatorIndices {
-		if state.ValidatorBalances[index] < config.EjectionBalanceInGwei {
+		if state.ValidatorBalances[index] < config.EjectionBalance {
 			state, err = validators.ExitValidator(state, index)
 			if err != nil {
 				return nil, fmt.Errorf("could not exit validator %d: %v", index, err)
@@ -200,50 +215,47 @@ func ProcessEjections(state *pb.BeaconState) (*pb.BeaconState, error) {
 	return state, nil
 }
 
-// ProcessValidatorRegistry computes and sets new validator registry fields,
-// reshuffles shard committees and returns the recomputed state.
+// ProcessPrevSlotShard computes and sets current epoch's calculation slot
+// and start shard to previous epoch. Then it returns the updated state.
 //
 // Spec pseudocode definition:
-//	Set state.shard_committees_at_slots[:EPOCH_LENGTH] = state.shard_committees_at_slots[EPOCH_LENGTH:].
-//	Set state.shard_committees_at_slots[EPOCH_LENGTH:] =
-//  		get_new_shuffling(state.latest_randao_mixes[(state.slot - SEED_LOOKAHEAD) %
-//  		LATEST_RANDAO_MIXES_LENGTH], state.validator_registry, next_start_shard, state.slot)
-//  		where next_start_shard = (state.shard_committees_at_slots[-1][-1].shard + 1) % SHARD_COUNT
+//	Set state.previous_epoch_randao_mix = state.current_epoch_randao_mix
+//	Set state.current_epoch_calculation_slot = state.slot
+func ProcessPrevSlotShard(state *pb.BeaconState) *pb.BeaconState {
+	state.PreviousEpochCalculationSlot = state.CurrentEpochCalculationSlot
+	state.PreviousEpochStartShard = state.CurrentEpochStartShard
+	return state
+}
+
+// ProcessValidatorRegistry computes and sets new validator registry fields,
+// reshuffles shard committees and returns the recomputed state with the updated registry.
+//
+// Spec pseudocode definition:
+//	Set state.previous_epoch_randao_mix = state.current_epoch_randao_mix
+//	Set state.current_epoch_calculation_slot = state.slot
+//	Set state.current_epoch_start_shard = (state.current_epoch_start_shard + get_current_epoch_committees_per_slot(state) * EPOCH_LENGTH) % SHARD_COUNT
+//	Set state.current_epoch_randao_mix = get_randao_mix(state, state.current_epoch_calculation_slot - SEED_LOOKAHEAD)
 func ProcessValidatorRegistry(
 	state *pb.BeaconState) (*pb.BeaconState, error) {
+	state.PreviousEpochRandaoMixHash32 = state.CurrentEpochRandaoMixHash32
+	state.CurrentEpochCalculationSlot = state.Slot
 
-	epochLength := int(config.EpochLength)
-	randaoMixesLength := config.LatestRandaoMixesLength
-	seedLookahead := config.SeedLookahead
-	shardCount := config.ShardCount
+	nextStartShard := (state.CurrentEpochStartShard +
+		validators.CurrCommitteesCountPerSlot(state)*config.EpochLength) %
+		config.EpochLength
+	state.CurrentEpochStartShard = nextStartShard
 
-	state, err := validators.UpdateRegistry(state)
-
-	shardCommittees := state.ShardCommitteesAtSlots
-	lastSlot := len(shardCommittees) - 1
-	lastCommittee := len(shardCommittees[lastSlot].ArrayShardCommittee) - 1
-	nextStartShard := (shardCommittees[lastSlot].ArrayShardCommittee[lastCommittee].Shard + 1) %
-		shardCount
-
-	randaoHash32 := bytesutil.ToBytes32(state.LatestRandaoMixesHash32S[(state.Slot-
-		uint64(seedLookahead))%randaoMixesLength])
-
-	for i := 0; i < epochLength; i++ {
-		state.ShardCommitteesAtSlots[i] = state.ShardCommitteesAtSlots[epochLength+i]
+	var randaoMixSlot uint64
+	if state.CurrentEpochCalculationSlot > config.SeedLookahead {
+		randaoMixSlot = state.CurrentEpochCalculationSlot -
+			config.SeedLookahead
 	}
-	newShuffledCommittees, err := validators.ShuffleValidatorRegistryToCommittees(
-		randaoHash32,
-		state.ValidatorRegistry,
-		nextStartShard,
-		state.Slot,
-	)
+	mix, err := randaoMix(state, randaoMixSlot)
 	if err != nil {
-		return nil, fmt.Errorf("could not shuffle validator registry for commtitees: %v", err)
+		return nil, fmt.Errorf("could not get randao mix: %v", err)
 	}
+	state.CurrentEpochRandaoMixHash32 = mix
 
-	for i := 0; i < epochLength; i++ {
-		state.ShardCommitteesAtSlots[epochLength+i] = newShuffledCommittees[i]
-	}
 	return state, nil
 }
 
@@ -252,40 +264,31 @@ func ProcessValidatorRegistry(
 // validator registry update did not happen.
 //
 // Spec pseudocode definition:
-//	Set state.shard_committees_at_slots[:EPOCH_LENGTH] = state.shard_committees_at_slots[EPOCH_LENGTH:]
-//  Let epochs_since_last_registry_change =
-//  	(state.slot - state.validator_registry_latest_change_slot) // EPOCH_LENGTH
-//	If epochs_since_last_registry_change is an exact power of 2:
-// 		state.shard_committees_at_slots[EPOCH_LENGTH:] =
-// 			get_shuffling(state.latest_randao_mixes[(state.slot - SEED_LOOKAHEAD)
-// 			% LATEST_RANDAO_MIXES_LENGTH], state.validator_registry, start_shard, state.slot)
-func ProcessPartialValidatorRegistry(
-	state *pb.BeaconState) (*pb.BeaconState, error) {
+//	Set state.previous_epoch_calculation_slot = state.current_epoch_calculation_slot
+//	Set state.previous_epoch_start_shard = state.current_epoch_start_shard
+//	Let epochs_since_last_registry_change = (state.slot - state.validator_registry_latest_change_slot)
+// 		EPOCH_LENGTH.
+//	If epochs_since_last_registry_change is an exact power of 2,
+// 		set state.current_epoch_calculation_slot = state.slot
+// 		set state.current_epoch_randao_mix = state.latest_randao_mixes[
+// 			(state.current_epoch_calculation_slot - SEED_LOOKAHEAD) %
+// 			LATEST_RANDAO_MIXES_LENGTH].
+func ProcessPartialValidatorRegistry(state *pb.BeaconState) *pb.BeaconState {
+	epochsSinceLastRegistryChange := (state.Slot - state.ValidatorRegistryUpdateSlot) /
+		config.EpochLength
 
-	epochLength := int(config.EpochLength)
-	randaoMixesLength := config.LatestRandaoMixesLength
-	seedLookahead := config.SeedLookahead
-	randaoHash32 := bytesutil.ToBytes32(state.LatestRandaoMixesHash32S[(state.Slot-uint64(seedLookahead))%randaoMixesLength])
-	for i := 0; i < epochLength; i++ {
-		state.ShardCommitteesAtSlots[i] = state.ShardCommitteesAtSlots[epochLength+i]
-	}
-	epochsSinceLastRegistryChange := (state.Slot - state.ValidatorRegistryLatestChangeSlot) / uint64(epochLength)
-	startShard := state.ShardCommitteesAtSlots[0].ArrayShardCommittee[0].Shard
 	if mathutil.IsPowerOf2(epochsSinceLastRegistryChange) {
-		newShuffledCommittees, err := validators.ShuffleValidatorRegistryToCommittees(
-			randaoHash32,
-			state.ValidatorRegistry,
-			startShard,
-			state.Slot,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("could not shuffle validator registry for commtitees: %v", err)
+		state.CurrentEpochCalculationSlot = state.Slot
+
+		var randaoIndex uint64
+		if state.CurrentEpochCalculationSlot > config.SeedLookahead {
+			randaoIndex = state.CurrentEpochCalculationSlot - config.SeedLookahead
 		}
-		for i := 0; i < epochLength; i++ {
-			state.ShardCommitteesAtSlots[epochLength+i] = newShuffledCommittees[i]
-		}
+
+		randaoMix := state.LatestRandaoMixesHash32S[randaoIndex%config.LatestRandaoMixesLength]
+		state.CurrentEpochRandaoMixHash32 = randaoMix
 	}
-	return state, nil
+	return state
 }
 
 // CleanupAttestations removes any attestation in state's latest attestations
@@ -325,7 +328,7 @@ func UpdatePenalizedExitBalances(state *pb.BeaconState) *pb.BeaconState {
 	epoch := state.Slot / config.EpochLength
 	nextPenalizedEpoch := (epoch + 1) % config.LatestPenalizedExitLength
 	currPenalizedEpoch := (epoch) % config.LatestPenalizedExitLength
-	state.LatestPenalizedExitBalances[nextPenalizedEpoch] =
-		state.LatestPenalizedExitBalances[currPenalizedEpoch]
+	state.LatestPenalizedBalances[nextPenalizedEpoch] =
+		state.LatestPenalizedBalances[currPenalizedEpoch]
 	return state
 }

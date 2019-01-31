@@ -1,6 +1,7 @@
 package hashutil
 
 import (
+	"github.com/gogo/protobuf/proto"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -30,4 +31,13 @@ func RepeatHash(data [32]byte, numTimes uint64) [32]byte {
 		return data
 	}
 	return RepeatHash(Hash(data[:]), numTimes-1)
+}
+
+// HashProto hashes a protocol buffer message using Keccak-256/SHA3.
+func HashProto(msg proto.Message) ([32]byte, error) {
+	data, err := proto.Marshal(msg)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	return Hash(data), nil
 }

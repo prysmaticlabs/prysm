@@ -121,7 +121,7 @@ func encodeUint8(val reflect.Value, w *encbuf) error {
 func encodeUint16(val reflect.Value, w *encbuf) error {
 	v := val.Uint()
 	b := make([]byte, 2)
-	binary.BigEndian.PutUint16(b, uint16(v))
+	binary.LittleEndian.PutUint16(b, uint16(v))
 	w.str = append(w.str, b...)
 	return nil
 }
@@ -129,7 +129,7 @@ func encodeUint16(val reflect.Value, w *encbuf) error {
 func encodeUint32(val reflect.Value, w *encbuf) error {
 	v := val.Uint()
 	b := make([]byte, 4)
-	binary.BigEndian.PutUint32(b, uint32(v))
+	binary.LittleEndian.PutUint32(b, uint32(v))
 	w.str = append(w.str, b...)
 	return nil
 }
@@ -137,7 +137,7 @@ func encodeUint32(val reflect.Value, w *encbuf) error {
 func encodeUint64(val reflect.Value, w *encbuf) error {
 	v := val.Uint()
 	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, uint64(v))
+	binary.LittleEndian.PutUint64(b, uint64(v))
 	w.str = append(w.str, b...)
 	return nil
 }
@@ -149,7 +149,7 @@ func makeBytesEncoder() (encoder, encodeSizer, error) {
 		if len(val.Bytes()) >= 2<<32 {
 			return errors.New("bytes oversize")
 		}
-		binary.BigEndian.PutUint32(sizeEnc, uint32(len(b)))
+		binary.LittleEndian.PutUint32(sizeEnc, uint32(len(b)))
 		w.str = append(w.str, sizeEnc...)
 		w.str = append(w.str, val.Bytes()...)
 		return nil
@@ -176,7 +176,7 @@ func makeByteArrayEncoder() (encoder, encodeSizer, error) {
 		if val.Len() >= 2<<32 {
 			return errors.New("bytes oversize")
 		}
-		binary.BigEndian.PutUint32(sizeEnc, uint32(val.Len()))
+		binary.LittleEndian.PutUint32(sizeEnc, uint32(val.Len()))
 		w.str = append(w.str, sizeEnc...)
 		w.str = append(w.str, val.Slice(0, val.Len()).Bytes()...)
 		return nil
@@ -208,7 +208,7 @@ func makeSliceEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 		if totalSize >= 2<<32 {
 			return errors.New("slice oversize")
 		}
-		binary.BigEndian.PutUint32(totalSizeEnc, uint32(totalSize))
+		binary.LittleEndian.PutUint32(totalSizeEnc, uint32(totalSize))
 		copy(w.str[origBufSize:origBufSize+lengthBytes], totalSizeEnc)
 		return nil
 	}
@@ -243,7 +243,7 @@ func makeStructEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 		if totalSize >= 2<<32 {
 			return errors.New("struct oversize")
 		}
-		binary.BigEndian.PutUint32(totalSizeEnc, uint32(totalSize))
+		binary.LittleEndian.PutUint32(totalSizeEnc, uint32(totalSize))
 		copy(w.str[origBufSize:origBufSize+lengthBytes], totalSizeEnc)
 		return nil
 	}

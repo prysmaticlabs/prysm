@@ -11,12 +11,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // InitializeState creates an initial genesis state for the beacon
 // node using a set of genesis validators.
-func (db *BeaconDB) InitializeState() error {
+func (db *BeaconDB) InitializeState(genesisTime uint64) error {
 	// TODO(#1267): Remove initial validators once testnet startup procedure is finalized.
 	genesisValidatorRegistry := validators.InitialValidatorRegistry()
 	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
@@ -31,7 +30,6 @@ func (db *BeaconDB) InitializeState() error {
 		}
 		deposits[i] = &pb.Deposit{DepositData: depositData}
 	}
-	genesisTime := uint64(params.BeaconConfig().GenesisTime.Unix())
 	beaconState, err := state.InitialBeaconState(deposits, genesisTime, nil)
 	if err != nil {
 		return err
@@ -72,8 +70,8 @@ func (db *BeaconDB) InitializeState() error {
 	})
 }
 
-// GetState fetches the canonical beacon chain's state from the DB.
-func (db *BeaconDB) GetState() (*pb.BeaconState, error) {
+// State fetches the canonical beacon chain's state from the DB.
+func (db *BeaconDB) State() (*pb.BeaconState, error) {
 	var beaconState *pb.BeaconState
 	err := db.view(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
@@ -102,9 +100,9 @@ func (db *BeaconDB) SaveState(beaconState *pb.BeaconState) error {
 	})
 }
 
-// GetUnfinalizedBlockState fetches an unfinalized block's
+// UnfinalizedBlockState fetches an unfinalized block's
 // active and crystallized state pair.
-func (db *BeaconDB) GetUnfinalizedBlockState(stateRoot [32]byte) (*pb.BeaconState, error) {
+func (db *BeaconDB) UnfinalizedBlockState(stateRoot [32]byte) (*pb.BeaconState, error) {
 	var beaconState *pb.BeaconState
 	err := db.view(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
@@ -148,7 +146,7 @@ func createState(enc []byte) (*pb.BeaconState, error) {
 
 // GenesisTime returns the genesis timestamp for the state.
 func (db *BeaconDB) GenesisTime() (time.Time, error) {
-	state, err := db.GetState()
+	state, err := db.State()
 	if err != nil {
 		return time.Time{}, fmt.Errorf("could not retrieve state: %v", err)
 	}
