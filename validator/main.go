@@ -21,7 +21,7 @@ import (
 func startNode(ctx *cli.Context) error {
 	keystoreDirectory := ctx.String(types.KeystorePathFlag.Name)
 	keystorePassword := ctx.String(types.PasswordFlag.Name)
-	if err := accounts.VerifyAccountNotExists(keystoreDirectory, keystorePassword); err	== nil {
+	if err := accounts.VerifyAccountNotExists(keystoreDirectory, keystorePassword); err == nil {
 		return errors.New("no account found, use `validator accounts create` to generate a new keystore")
 	}
 

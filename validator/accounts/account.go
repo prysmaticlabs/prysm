@@ -79,7 +79,7 @@ func NewValidatorAccount(directory string, password string) error {
 
 	serializedData := new(bytes.Buffer)
 	if err := ssz.Encode(serializedData, data); err != nil {
-		return fmt.Errorf("could not serialize deposit data %v", err)
+		return fmt.Errorf("could not serialize deposit data: %v", err)
 	}
 	log.Info(`Account creation complete! Copy and paste the deposit data shown below when issuing a transaction into the ETH1.0 deposit contract to activate your validator client`)
 	log.Infof("%#x", serializedData)
