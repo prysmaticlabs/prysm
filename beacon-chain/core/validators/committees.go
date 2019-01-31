@@ -7,6 +7,7 @@ package validators
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -103,31 +104,36 @@ func CurrCommitteesCountPerSlot(state *pb.BeaconState) uint64 {
 // contains the shard associated with the committee and the validator indices
 // in that committee.
 //   def get_crosslink_committees_at_slot(state: BeaconState,
-//                                     slot: int) -> List[Tuple[List[int], int]]:
+//                                     slot: SlotNumber) -> List[Tuple[List[ValidatorIndex], ShardNumber]]:
 //    """
 //    Returns the list of ``(committee, shard)`` tuples for the ``slot``.
 //    """
-//    state_epoch_slot = state.slot - (state.slot % EPOCH_LENGTH)
-//    assert state_epoch_slot <= slot + EPOCH_LENGTH
-//    assert slot < state_epoch_slot + EPOCH_LENGTH
-//    offset = slot % EPOCH_LENGTH
+//    epoch = slot_to_epoch(slot)
+//    current_epoch = get_current_epoch(state)
+//    previous_epoch = current_epoch - 1 if current_epoch > GENESIS_EPOCH else current_epoch
+//    next_epoch = current_epoch + 1
 //
-//    if slot < state_epoch_slot:
-//        committees_per_slot = get_previous_epoch_committee_count_per_slot(state)
-//        shuffling = get_shuffling(
-//            state.previous_epoch_randao_mix,
-//            state.validator_registry,
-//            state.previous_epoch_calculation_slot,
-//        )
-//        slot_start_shard = (state.previous_epoch_start_shard + committees_per_slot * offset) % SHARD_COUNT
+//    assert previous_epoch <= epoch < next_epoch
+//
+//    if epoch < current_epoch:
+//        committees_per_epoch = get_previous_epoch_committee_count(state)
+//        seed = state.previous_epoch_seed
+//        shuffling_epoch = state.previous_calculation_epoch
+//        shuffling_start_shard = state.previous_epoch_start_shard
 //    else:
-//        committees_per_slot = get_current_epoch_committee_count_per_slot(state)
-//        shuffling = get_shuffling(
-//            state.current_epoch_randao_mix,
-//            state.validator_registry,
-//            state.current_epoch_calculation_slot,
-//        )
-//        slot_start_shard = (state.current_epoch_start_shard + committees_per_slot * offset) % SHARD_COUNT
+//        committees_per_epoch = get_current_epoch_committee_count(state)
+//        seed = state.current_epoch_seed
+//        shuffling_epoch = state.current_calculation_epoch
+//        shuffling_start_shard = state.current_epoch_start_shard
+//
+//    shuffling = get_shuffling(
+//        seed,
+//        state.validator_registry,
+//        shuffling_epoch,
+//    )
+//    offset = slot % EPOCH_LENGTH
+//    committees_per_slot = committees_per_epoch // EPOCH_LENGTH
+//    slot_start_shard = (shuffling_start_shard + committees_per_slot * offset) % SHARD_COUNT
 //
 //    return [
 //        (
@@ -137,33 +143,30 @@ func CurrCommitteesCountPerSlot(state *pb.BeaconState) uint64 {
 //        for i in range(committees_per_slot)
 //    ]
 func CrosslinkCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*CrosslinkCommittee, error) {
-	var earliestSlot uint64
 	var countPerSlot uint64
 	var startShard uint64
 	var shuffledIndices [][]uint64
 	var err error
 
-	epochLength := config.EpochLength
-	startEpochSlot := state.Slot - (state.Slot % epochLength)
-
-	// If the start epoch slot is less than epochLength, then the earliestSlot would
-	// result in a negative number. Therefore we should default to
-	// earliestSlot = 0 in this case.
-	if startEpochSlot > epochLength {
-		earliestSlot = startEpochSlot - epochLength
+	wantedEpoch := epoch.SlotToEpoch(slot)
+	currentEpoch := epoch.CurrentNumber(state)
+	var prevEpoch uint64
+	if currentEpoch != 0 {
+		prevEpoch = currentEpoch - 1
 	}
+	nextEpoch := currentEpoch + 1
 
-	if slot < earliestSlot || slot >= startEpochSlot+epochLength {
+	if wantedEpoch < prevEpoch || wantedEpoch >= nextEpoch {
 		return nil, fmt.Errorf(
-			"input committee slot %d out of bounds: %d <= slot < %d",
-			slot,
-			earliestSlot,
-			startEpochSlot+epochLength,
+			"input committee epoch %d out of bounds: %d <= epoch < %d",
+			wantedEpoch,
+			prevEpoch,
+			currentEpoch,
 		)
 	}
 
 	offSet := slot % config.EpochLength
-	if slot < startEpochSlot {
+	if wantedEpoch < currentEpoch {
 		countPerSlot = prevCommitteesCountPerSlot(state)
 		shuffledIndices, err = Shuffling(
 			bytesutil.ToBytes32(state.PreviousEpochRandaoMixHash32),

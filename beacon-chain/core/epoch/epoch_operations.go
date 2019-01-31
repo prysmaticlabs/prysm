@@ -15,13 +15,42 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+// SlotToEpoch returns the epoch number of the input slot.
+//
+// Spec pseudocode definition:
+//   def slot_to_epoch(slot: SlotNumber) -> EpochNumber:
+//    return slot // EPOCH_LENGTH
+func SlotToEpoch(slot uint64) uint64 {
+	return slot / config.EpochLength
+}
+
+// CurrentNumber returns the current epoch number calculated from
+// the slot number stored in beacon state.
+//
+// Spec pseudocode definition:
+//   def get_current_epoch(state: BeaconState) -> EpochNumber:
+//    return slot_to_epoch(state.slot)
+func CurrentNumber(state *pb.BeaconState) uint64 {
+	return SlotToEpoch(state.Slot)
+}
+
+// StartSlot returns the first slot number of the
+// current epoch.
+//
+// Spec pseudocode definition:
+//   def get_epoch_start_slot(epoch: EpochNumber) -> SlotNumber:
+//    return epoch * EPOCH_LENGTH
+func StartSlot(epoch uint64) uint64 {
+	return epoch * config.EpochLength
+}
+
 // Attestations returns the pending attestations of slots in the epoch
 // (state.slot-EPOCH_LENGTH...state.slot-1), not attestations that got
 // included in the chain during the epoch.
 //
 // Spec pseudocode definition:
-//   return [a for a in state.latest_attestations
-//   if state.slot - EPOCH_LENGTH <= a.data.slot < state.slot]
+//   return [a for a in state.latest_attestations if
+//   	current_epoch == slot_to_epoch(a.data.slot)
 func Attestations(state *pb.BeaconState) []*pb.PendingAttestationRecord {
 	epochLength := params.BeaconConfig().EpochLength
 	var thisEpochAttestations []*pb.PendingAttestationRecord
