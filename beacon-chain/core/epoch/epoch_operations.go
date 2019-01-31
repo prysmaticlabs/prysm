@@ -24,15 +24,16 @@ func SlotToEpoch(slot uint64) uint64 {
 	return slot / config.EpochLength
 }
 
-// CurrentNumber returns the current epoch number calculated from
+// CurrentEpoch returns the current epoch number calculated from
 // the slot number stored in beacon state.
 //
 // Spec pseudocode definition:
 //   def get_current_epoch(state: BeaconState) -> EpochNumber:
 //    return slot_to_epoch(state.slot)
-func CurrentNumber(state *pb.BeaconState) uint64 {
+func CurrentEpoch(state *pb.BeaconState) uint64 {
 	return SlotToEpoch(state.Slot)
 }
+
 
 // StartSlot returns the first slot number of the
 // current epoch.
@@ -52,20 +53,11 @@ func StartSlot(epoch uint64) uint64 {
 //   return [a for a in state.latest_attestations if
 //   	current_epoch == slot_to_epoch(a.data.slot)
 func Attestations(state *pb.BeaconState) []*pb.PendingAttestationRecord {
-	epochLength := params.BeaconConfig().EpochLength
 	var thisEpochAttestations []*pb.PendingAttestationRecord
-	var earliestSlot uint64
+	currentEpoch := CurrentEpoch(state)
 
 	for _, attestation := range state.LatestAttestations {
-
-		// If the state slot is less than epochLength, then the earliestSlot would
-		// result in a negative number. Therefore we should default to
-		// earliestSlot = 0 in this case.
-		if state.Slot > epochLength {
-			earliestSlot = state.Slot - epochLength
-		}
-
-		if earliestSlot <= attestation.Data.Slot && attestation.Data.Slot < state.Slot {
+		if currentEpoch == SlotToEpoch(attestation.Data.Slot){
 			thisEpochAttestations = append(thisEpochAttestations, attestation)
 		}
 	}
@@ -115,31 +107,17 @@ func BoundaryAttestations(
 // (state.slot - 2 * EPOCH_LENGTH...state.slot - EPOCH_LENGTH).
 //
 // Spec pseudocode definition:
-//   return [a for a in state.latest_attestations
-//   if state.slot - 2 * EPOCH_LENGTH <= a.slot < state.slot - EPOCH_LENGTH]
+//   return [a for a in state.latest_attestations if
+//   	previous_epoch == slot_to_epoch(a.data.slot)].
 func PrevAttestations(state *pb.BeaconState) []*pb.PendingAttestationRecord {
-	epochLength := params.BeaconConfig().EpochLength
 	var prevEpochAttestations []*pb.PendingAttestationRecord
-	var earliestSlot uint64
-	var lastSlot uint64
+	var prevEpoch uint64
 
+	if CurrentEpoch(state) != 0 {
+		prevEpoch = CurrentEpoch(state) - 1
+	}
 	for _, attestation := range state.LatestAttestations {
-
-		// If the state slot is less than 2 * epochLength, then the earliestSlot would
-		// result in a negative number. Therefore we should default to
-		// earliestSlot = 0 in this case.
-		if state.Slot > 2*epochLength {
-			earliestSlot = state.Slot - 2*epochLength
-		}
-		// If the state slot is less than epochLength, then the lastSlot would
-		// result in a negative number. Therefore we should default to
-		// lastSlot = 0 in this case.
-		if state.Slot > epochLength {
-			lastSlot = state.Slot - epochLength
-		}
-
-		if earliestSlot <= attestation.Data.Slot &&
-			attestation.Data.Slot < lastSlot {
+		if prevEpoch == SlotToEpoch(attestation.Data.Slot){
 			prevEpochAttestations = append(prevEpochAttestations, attestation)
 		}
 	}
