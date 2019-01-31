@@ -62,7 +62,7 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// Status always returns nil.
+// Status returns the current service error if there's any.
 func (s *Service) Status() error {
 	if s.error != nil {
 		return s.error
@@ -106,7 +106,6 @@ func (s *Service) saveOperations() {
 			}
 			if err := s.beaconDB.SaveExit(exit); err != nil {
 				log.Errorf("Could not save exit request: %v", err)
-				s.error = err
 				continue
 			}
 			log.Debugf("Exit request %#x saved in db", hash)
@@ -118,7 +117,6 @@ func (s *Service) saveOperations() {
 			}
 			if err := s.beaconDB.SaveAttestation(attestation); err != nil {
 				log.Errorf("Could not save attestation: %v", err)
-				s.error = err
 				continue
 			}
 			log.Debugf("Attestation %#x saved in db", hash)
