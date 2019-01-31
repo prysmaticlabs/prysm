@@ -45,7 +45,7 @@ func TestMarshalAndUnmarshal(t *testing.T) {
 func TestStoreRandomKey(t *testing.T) {
 	tmpdir := os.TempDir()
 	filedir := tmpdir + "/keystore"
-	ks := &keyStorePassphrase{
+	ks := &Store{
 		keysDirPath: filedir,
 		scryptN:     LightScryptN,
 		scryptP:     LightScryptP,
