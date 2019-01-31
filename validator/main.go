@@ -1,8 +1,12 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"runtime"
+
+	"github.com/prysmaticlabs/prysm/validator/accounts"
 
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
@@ -11,10 +15,16 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/types"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
+	"github.com/x-cray/logrus-prefixed-formatter"
 )
 
 func startNode(ctx *cli.Context) error {
+	keystoreDirectory := ctx.String(types.KeystorePathFlag.Name)
+	keystorePassword := ctx.String(types.PasswordFlag.Name)
+	if err := accounts.VerifyAccountNotExists(keystoreDirectory, keystorePassword); err == nil {
+		return errors.New("no account found, use `validator accounts create` to generate a new keystore")
+	}
+
 	verbosity := ctx.GlobalString(cmd.VerbosityFlag.Name)
 	level, err := logrus.ParseLevel(verbosity)
 	if err != nil {
@@ -31,8 +41,12 @@ func startNode(ctx *cli.Context) error {
 	return nil
 }
 
-// TODO(#1436): Initialize validator secrets.
 func createValidatorAccount(ctx *cli.Context) error {
+	keystoreDirectory := ctx.String(types.KeystorePathFlag.Name)
+	keystorePassword := ctx.String(types.PasswordFlag.Name)
+	if err := accounts.NewValidatorAccount(keystoreDirectory, keystorePassword); err != nil {
+		return fmt.Errorf("could not initialize validator account: %v", err)
+	}
 	return nil
 }
 
@@ -82,6 +96,7 @@ this command outputs a deposit data string which can be used to deposit Ether in
 contract in order to activate the validator client`,
 					Flags: []cli.Flag{
 						types.KeystorePathFlag,
+						types.PasswordFlag,
 					},
 					Action: createValidatorAccount,
 				},
@@ -91,6 +106,8 @@ contract in order to activate the validator client`,
 
 	app.Flags = []cli.Flag{
 		types.BeaconRPCProviderFlag,
+		types.KeystorePathFlag,
+		types.PasswordFlag,
 		cmd.VerbosityFlag,
 		cmd.DataDirFlag,
 		cmd.EnableTracingFlag,
