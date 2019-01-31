@@ -192,7 +192,7 @@ func TestProcessEth1Data_InactionSlot(t *testing.T) {
 		},
 	}
 
-	// Adding a new receipt root ['D'] which should be the new processed receipt root.
+	// Adding a new deposit root ['G'] which should be the new processed deposit root.
 	newState := ProcessEth1Data(state)
 	if !bytes.Equal(newState.LatestEth1Data.DepositRootHash32, []byte{'A'}) {
 		t.Errorf("Incorrect DepositRootHash32. Wanted: %v, got: %v",
