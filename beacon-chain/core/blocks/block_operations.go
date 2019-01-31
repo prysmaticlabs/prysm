@@ -13,12 +13,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slices"
-	"github.com/prysmaticlabs/prysm/shared/trie"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 // VerifyProposerSignature uses BLS signature verification to ensure
@@ -330,7 +330,7 @@ func verifyAttesterSlashing(slashing *pb.AttesterSlashing, verifySignatures bool
 }
 
 func attesterSlashingPenalizedIndices(slashing *pb.AttesterSlashing) ([]uint64, error) {
-	indicesIntersection := slices.Intersection(
+	indicesIntersection := sliceutil.Intersection(
 		slashing.SlashableVote_1.ValidatorIndices,
 		slashing.SlashableVote_2.ValidatorIndices)
 	if len(indicesIntersection) < 1 {
@@ -623,7 +623,7 @@ func ProcessValidatorDeposits(
 func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 	// Verify Merkle proof of deposit and deposit trie root.
 	receiptRoot := bytesutil.ToBytes32(beaconState.LatestEth1Data.DepositRootHash32)
-	if ok := trie.VerifyMerkleBranch(
+	if ok := trieutil.VerifyMerkleBranch(
 		hashutil.Hash(deposit.DepositData),
 		deposit.MerkleBranchHash32S,
 		params.BeaconConfig().DepositContractTreeDepth,
