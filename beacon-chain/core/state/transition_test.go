@@ -94,8 +94,8 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 	latestMixes := make([][]byte, config.LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
 		LatestRandaoMixesHash32S: latestMixes,
-		Slot:                     5,
-		ValidatorRegistry:        registry,
+		Slot:              5,
+		ValidatorRegistry: registry,
 	}
 	block := &pb.BeaconBlock{
 		Slot:               5,
@@ -159,8 +159,8 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	latestMixes := make([][]byte, config.LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
 		LatestRandaoMixesHash32S: latestMixes,
-		Slot:                     5,
-		ValidatorRegistry:        registry,
+		Slot:              5,
+		ValidatorRegistry: registry,
 	}
 	block := &pb.BeaconBlock{
 		Slot:               5,
@@ -247,9 +247,9 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		LatestRandaoMixesHash32S: latestMixes,
 		ValidatorRegistry:        registry,
 		Slot:                     64,
-		PreviousJustifiedSlot:    10,
-		LatestBlockRootHash32S:   blockRoots,
-		LatestCrosslinks:         stateLatestCrosslinks,
+		PreviousJustifiedSlot:  10,
+		LatestBlockRootHash32S: blockRoots,
+		LatestCrosslinks:       stateLatestCrosslinks,
 	}
 	exits := make([]*pb.Exit, config.MaxExits+1)
 	block := &pb.BeaconBlock{
@@ -338,9 +338,9 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		LatestRandaoMixesHash32S: latestMixes,
 		ValidatorRegistry:        registry,
 		Slot:                     64,
-		PreviousJustifiedSlot:    10,
-		LatestBlockRootHash32S:   blockRoots,
-		LatestCrosslinks:         stateLatestCrosslinks,
+		PreviousJustifiedSlot:  10,
+		LatestBlockRootHash32S: blockRoots,
+		LatestCrosslinks:       stateLatestCrosslinks,
 	}
 	exits := []*pb.Exit{
 		{
@@ -498,8 +498,8 @@ func TestProcessEpoch_CantGetCurrentValidatorIndices(t *testing.T) {
 	for i := uint64(0); i < config.EpochLength*2; i++ {
 		attestations = append(attestations, &pb.PendingAttestationRecord{
 			Data: &pb.AttestationData{
-				Slot:                     1,
-				Shard:                    1,
+				Slot:  1,
+				Shard: 1,
 				JustifiedBlockRootHash32: make([]byte, 32),
 			},
 			ParticipationBitfield: []byte{0xff},
@@ -525,28 +525,28 @@ func TestProcessEpoch_ProcessesEth1Data(t *testing.T) {
 		validatorBalances[i] = config.MaxDeposit
 	}
 
-	currentSlot := config.Eth1DataVotingPeriod
+	startingSlot := config.Eth1DataVotingPeriod - config.EpochLength
 	var attestations []*pb.PendingAttestationRecord
-	for i := uint64(0); i < config.EpochLength*2; i++ {
+	for i := uint64(startingSlot - config.EpochLength); i < config.Eth1DataVotingPeriod; i++ {
 		attestations = append(attestations, &pb.PendingAttestationRecord{
 			Data: &pb.AttestationData{
-				Slot:                     i + currentSlot,
+				Slot:                     i,
 				Shard:                    1,
-				JustifiedSlot:            currentSlot,
+				JustifiedSlot:            startingSlot,
 				JustifiedBlockRootHash32: []byte{0},
 			},
 			ParticipationBitfield: []byte{0xff},
-			SlotIncluded:          i + currentSlot + 1,
+			SlotIncluded:          i + 1,
 		})
 	}
 
 	var blockRoots [][]byte
-	for i := uint64(0); i < 2*config.EpochLength; i++ {
+	for i := uint64(startingSlot); i < config.Eth1DataVotingPeriod; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 
 	var randaoHashes [][]byte
-	for i := uint64(0); i < config.EpochLength; i++ {
+	for i := uint64(startingSlot); i < config.Eth1DataVotingPeriod; i++ {
 		randaoHashes = append(randaoHashes, []byte{byte(i)})
 	}
 
@@ -579,14 +579,14 @@ func TestProcessEpoch_ProcessesEth1Data(t *testing.T) {
 					DepositRootHash32: []byte{'C'},
 					BlockHash32:       []byte{'D'},
 				},
-				VoteCount: 1,
+				VoteCount: 0,
 			},
 		},
 	}
 
 	state, err := ProcessEpoch(state)
 	if err != nil {
-		t.Fatalf("Expected epoch transition to pass processing conditions: %v", err)
+		t.Errorf("Expected epoch transition to pass processing conditions: %v", err)
 	}
 
 	if !bytes.Equal(state.LatestEth1Data.DepositRootHash32, []byte{'A'}) {
