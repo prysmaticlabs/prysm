@@ -44,7 +44,8 @@ var (
 	ErrDecrypt = errors.New("could not decrypt key with given passphrase")
 )
 
-type KeyStorePassphrase struct {
+// Store defines a keystore with a directory path and scrypt values.
+type Store struct {
 	keysDirPath string
 	scryptN     int
 	scryptP     int
@@ -52,7 +53,7 @@ type KeyStorePassphrase struct {
 
 // RetrievePubKey retrieves the public key from the keystore.
 func RetrievePubKey(directory string, password string) (*bls.PublicKey, error) {
-	ks := KeyStorePassphrase{
+	ks := Store{
 		keysDirPath: directory,
 		scryptN:     StandardScryptN,
 		scryptP:     StandardScryptP,
@@ -62,15 +63,16 @@ func RetrievePubKey(directory string, password string) (*bls.PublicKey, error) {
 }
 
 // NewKeystore from a directory.
-func NewKeystore(directory string) KeyStorePassphrase {
-	return KeyStorePassphrase{
+func NewKeystore(directory string) Store {
+	return Store{
 		keysDirPath: directory,
 		scryptN:     StandardScryptN,
 		scryptP:     StandardScryptP,
 	}
 }
 
-func (ks KeyStorePassphrase) GetKey(filename, password string) (*Key, error) {
+// GetKey from file using the filename path and a decryption password.
+func (ks Store) GetKey(filename, password string) (*Key, error) {
 	// Load the key from the keystore and decrypt its contents
 	// #nosec G304
 	keyjson, err := ioutil.ReadFile(filename)
@@ -80,7 +82,8 @@ func (ks KeyStorePassphrase) GetKey(filename, password string) (*Key, error) {
 	return DecryptKey(keyjson, password)
 }
 
-func (ks KeyStorePassphrase) StoreKey(filename string, key *Key, auth string) error {
+// StoreKey in filepath and encrypt it with a password.
+func (ks Store) StoreKey(filename string, key *Key, auth string) error {
 	keyjson, err := EncryptKey(key, auth, ks.scryptN, ks.scryptP)
 	if err != nil {
 		return err
@@ -88,7 +91,8 @@ func (ks KeyStorePassphrase) StoreKey(filename string, key *Key, auth string) er
 	return writeKeyFile(filename, keyjson)
 }
 
-func (ks KeyStorePassphrase) JoinPath(filename string) string {
+// JoinPath joins the filename with the keystore directory path.
+func (ks Store) JoinPath(filename string) string {
 	if filepath.IsAbs(filename) {
 		return filename
 	}
@@ -97,7 +101,7 @@ func (ks KeyStorePassphrase) JoinPath(filename string) string {
 
 // StoreRandomKey generates a key, encrypts with 'auth' and stores in the given directory
 func StoreRandomKey(dir, password string, scryptN, scryptP int) error {
-	err := storeNewRandomKey(KeyStorePassphrase{dir, scryptN, scryptP}, rand.Reader, password)
+	err := storeNewRandomKey(Store{dir, scryptN, scryptP}, rand.Reader, password)
 	return err
 }
 
