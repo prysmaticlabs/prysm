@@ -7,6 +7,7 @@ package epoch
 import (
 	"bytes"
 	"fmt"
+	"math"
 
 	block "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -228,7 +229,7 @@ func TotalBalance(
 //    If multiple attestations are applicable, the attestation with
 //    lowest `slot_included` is considered.
 func InclusionSlot(state *pb.BeaconState, validatorIndex uint32) (uint64, error) {
-	lowestSlotIncluded := uint64(1 << 63)
+	lowestSlotIncluded := uint64(math.MaxUint64)
 	for _, attestation := range state.LatestAttestations {
 		participatedValidators, err := validators.AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)
 		if err != nil {
@@ -242,7 +243,7 @@ func InclusionSlot(state *pb.BeaconState, validatorIndex uint32) (uint64, error)
 			}
 		}
 	}
-	if lowestSlotIncluded == 1<<63 {
+	if lowestSlotIncluded == math.MaxUint64 {
 		return 0, fmt.Errorf("could not find inclusion slot for validator index %d", validatorIndex)
 	}
 	return lowestSlotIncluded, nil
