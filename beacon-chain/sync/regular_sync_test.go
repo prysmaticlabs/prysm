@@ -49,6 +49,12 @@ func (ms *mockAttestService) IncomingAttestationFeed() *event.Feed {
 	return new(event.Feed)
 }
 
+type mockOperationService struct{}
+
+func (ms *mockOperationService) IncomingOperationsFeed() *event.Feed {
+	return new(event.Feed)
+}
+
 func setupService(t *testing.T, db *db.BeaconDB) *RegularSync {
 	cfg := &RegularSyncConfig{
 		BlockAnnounceBufferSize: 0,
@@ -389,4 +395,39 @@ func TestReceiveAttestation(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 	testutil.AssertLogsContain(t, hook, "Forwarding attestation to subscribed services")
+}
+
+func TestReceiveExitReq_Ok(t *testing.T) {
+	hook := logTest.NewGlobal()
+	os := &mockOperationService{}
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	cfg := &RegularSyncConfig{
+		operationService: os,
+		P2P:              &mockP2P{},
+		BeaconDB:         db,
+	}
+	ss := NewRegularSyncService(context.Background(), cfg)
+
+	exitRoutine := make(chan bool)
+	go func() {
+		ss.run()
+		exitRoutine <- true
+	}()
+
+	request1 := &pb.Exit{
+		Slot: 100,
+	}
+
+	msg1 := p2p.Message{
+		Ctx:  context.Background(),
+		Data: request1,
+		Peer: p2p.Peer{},
+	}
+
+	ss.exitBuf <- msg1
+	ss.cancel()
+	<-exitRoutine
+	testutil.AssertLogsContain(t, hook, "Forwarding validator exit request to subscribed services")
 }
