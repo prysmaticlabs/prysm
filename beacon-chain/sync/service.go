@@ -19,10 +19,10 @@ type Service struct {
 
 // Config defines the configured services required for sync to work.
 type Config struct {
-	ChainService  chainService
-	AttestService attestationService
-	BeaconDB      *db.BeaconDB
-	P2P           p2pAPI
+	ChainService     chainService
+	BeaconDB         *db.BeaconDB
+	P2P              p2pAPI
+	OperationService operationService
 }
 
 // NewSyncService creates a new instance of SyncService using the config
@@ -39,7 +39,6 @@ func NewSyncService(ctx context.Context, cfg *Config) *Service {
 
 	rsCfg := DefaultRegularSyncConfig()
 	rsCfg.ChainService = cfg.ChainService
-	rsCfg.AttestService = cfg.AttestService
 	rsCfg.BeaconDB = cfg.BeaconDB
 	rsCfg.P2P = cfg.P2P
 

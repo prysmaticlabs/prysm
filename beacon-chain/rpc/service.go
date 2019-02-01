@@ -29,8 +29,9 @@ type chainService interface {
 	CanonicalStateFeed() *event.Feed
 }
 
-type attestationService interface {
-	IncomingAttestationFeed() *event.Feed
+type operationService interface {
+	IncomingExitFeed() *event.Feed
+	IncomingAttFeed() *event.Feed
 }
 
 type powChainService interface {
@@ -45,7 +46,7 @@ type Service struct {
 	beaconDB              *db.BeaconDB
 	chainService          chainService
 	powChainService       powChainService
-	attestationService    attestationService
+	operationService      operationService
 	port                  string
 	listener              net.Listener
 	withCert              string
@@ -59,14 +60,14 @@ type Service struct {
 
 // Config options for the beacon node RPC server.
 type Config struct {
-	Port               string
-	CertFlag           string
-	KeyFlag            string
-	SubscriptionBuf    int
-	BeaconDB           *db.BeaconDB
-	ChainService       chainService
-	POWChainService    powChainService
-	AttestationService attestationService
+	Port             string
+	CertFlag         string
+	KeyFlag          string
+	SubscriptionBuf  int
+	BeaconDB         *db.BeaconDB
+	ChainService     chainService
+	POWChainService  powChainService
+	OperationService operationService
 }
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
@@ -79,7 +80,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		beaconDB:              cfg.BeaconDB,
 		chainService:          cfg.ChainService,
 		powChainService:       cfg.POWChainService,
-		attestationService:    cfg.AttestationService,
+		operationService:      cfg.OperationService,
 		port:                  cfg.Port,
 		withCert:              cfg.CertFlag,
 		withKey:               cfg.KeyFlag,
@@ -119,7 +120,7 @@ func (s *Service) Start() {
 		beaconDB:            s.beaconDB,
 		ctx:                 s.ctx,
 		powChainService:     s.powChainService,
-		attestationService:  s.attestationService,
+		operationService:    s.operationService,
 		incomingAttestation: s.incomingAttestation,
 		canonicalStateChan:  s.canonicalStateChan,
 		chainStartChan:      make(chan time.Time, 1),
@@ -131,7 +132,7 @@ func (s *Service) Start() {
 		canonicalStateChan: s.canonicalStateChan,
 	}
 	attesterServer := &AttesterServer{
-		attestationService: s.attestationService,
+		operationService: s.operationService,
 	}
 	validatorServer := &ValidatorServer{
 		beaconDB: s.beaconDB,

@@ -9,9 +9,9 @@ import (
 )
 
 func TestAttestHead(t *testing.T) {
-	mockAttestationService := &mockAttestationService{}
+	mockOperationService := &mockOperationService{}
 	attesterServer := &AttesterServer{
-		attestationService: mockAttestationService,
+		operationService: mockOperationService,
 	}
 	req := &pb.AttestRequest{
 		Attestation: &pbp2p.Attestation{

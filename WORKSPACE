@@ -546,7 +546,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_crypto",
-    commit = "b01c7a72566457eb1420261cdafef86638fc3861",
+    commit = "b8fe1690c61389d7d2a8074a507d1d40c5d30448",
     importpath = "golang.org/x/crypto",
 )
 
@@ -678,7 +678,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_prometheus",
-    tag = "v2.7.0",
+    tag = "v2.7.1",
     importpath = "github.com/prometheus/prometheus",
 )
 
