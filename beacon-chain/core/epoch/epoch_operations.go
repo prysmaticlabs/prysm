@@ -83,11 +83,8 @@ func BoundaryAttestations(
 //   	previous_epoch == slot_to_epoch(a.data.slot)].
 func PrevAttestations(state *pb.BeaconState) []*pb.PendingAttestationRecord {
 	var prevEpochAttestations []*pb.PendingAttestationRecord
-	var prevEpoch uint64
+	prevEpoch := helpers.PrevEpoch(state)
 
-	if helpers.CurrentEpoch(state) != 0 {
-		prevEpoch = helpers.CurrentEpoch(state) - 1
-	}
 	for _, attestation := range state.LatestAttestations {
 		if prevEpoch == helpers.SlotToEpoch(attestation.Data.Slot) {
 			prevEpochAttestations = append(prevEpochAttestations, attestation)

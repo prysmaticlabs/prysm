@@ -43,6 +43,44 @@ func TestCurrentEpoch(t *testing.T) {
 	}
 }
 
+func TestPrevEpoch(t *testing.T) {
+	tests := []struct {
+		slot  uint64
+		epoch uint64
+	}{
+		{slot: 0, epoch: 0 / config.EpochLength},
+		{slot: 50, epoch: 0 / config.EpochLength},
+		{slot: 64, epoch: 64/config.EpochLength - 1},
+		{slot: 128, epoch: 128/config.EpochLength - 1},
+		{slot: 200, epoch: 200/config.EpochLength - 1},
+	}
+	for _, tt := range tests {
+		state := &pb.BeaconState{Slot: tt.slot}
+		if tt.epoch != PrevEpoch(state) {
+			t.Errorf("PrevEpoch(%d) = %d, wanted: %d", state.Slot, PrevEpoch(state), tt.epoch)
+		}
+	}
+}
+
+func TestNextEpoch(t *testing.T) {
+	tests := []struct {
+		slot  uint64
+		epoch uint64
+	}{
+		{slot: 0, epoch: 0/config.EpochLength + 1},
+		{slot: 50, epoch: 0/config.EpochLength + 1},
+		{slot: 64, epoch: 64/config.EpochLength + 1},
+		{slot: 128, epoch: 128/config.EpochLength + 1},
+		{slot: 200, epoch: 200/config.EpochLength + 1},
+	}
+	for _, tt := range tests {
+		state := &pb.BeaconState{Slot: tt.slot}
+		if tt.epoch != NextEpoch(state) {
+			t.Errorf("NextEpoch(%d) = %d, wanted: %d", state.Slot, NextEpoch(state), tt.epoch)
+		}
+	}
+}
+
 func TestEpochStartSlot(t *testing.T) {
 	tests := []struct {
 		epoch     uint64
