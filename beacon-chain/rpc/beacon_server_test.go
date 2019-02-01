@@ -116,11 +116,11 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 
 func TestLatestAttestation_ContextClosed(t *testing.T) {
 	hook := logTest.NewGlobal()
-	mockAttestationService := &mockAttestationService{}
+	mockOperationService := &mockOperationService{}
 	ctx, cancel := context.WithCancel(context.Background())
 	beaconServer := &BeaconServer{
-		ctx:                ctx,
-		attestationService: mockAttestationService,
+		ctx:              ctx,
+		operationService: mockOperationService,
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
@@ -138,11 +138,11 @@ func TestLatestAttestation_ContextClosed(t *testing.T) {
 }
 
 func TestLatestAttestation_FaultyServer(t *testing.T) {
-	attestationService := &mockAttestationService{}
+	mockOperationService := &mockOperationService{}
 	ctx, cancel := context.WithCancel(context.Background())
 	beaconServer := &BeaconServer{
 		ctx:                 ctx,
-		attestationService:  attestationService,
+		operationService:    mockOperationService,
 		incomingAttestation: make(chan *pbp2p.Attestation, 0),
 	}
 	ctrl := gomock.NewController(t)
@@ -168,11 +168,11 @@ func TestLatestAttestation_FaultyServer(t *testing.T) {
 
 func TestLatestAttestation_SendsCorrectly(t *testing.T) {
 	hook := logTest.NewGlobal()
-	attestationService := &mockAttestationService{}
+	operationService := &mockOperationService{}
 	ctx, cancel := context.WithCancel(context.Background())
 	beaconServer := &BeaconServer{
 		ctx:                 ctx,
-		attestationService:  attestationService,
+		operationService:    operationService,
 		incomingAttestation: make(chan *pbp2p.Attestation, 0),
 	}
 	ctrl := gomock.NewController(t)

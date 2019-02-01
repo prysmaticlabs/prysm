@@ -6,16 +6,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-func TestContainsValidator(t *testing.T) {
-	if !ContainsValidator([]byte{7}, []byte{4}) {
-		t.Error("Attestation should contain validator")
-	}
-
-	if ContainsValidator([]byte{7}, []byte{8}) {
-		t.Error("Attestation should not contain validator")
-	}
-}
-
 func TestIsDoubleVote(t *testing.T) {
 	att1 := &pb.AttestationData{
 		Slot: 0,

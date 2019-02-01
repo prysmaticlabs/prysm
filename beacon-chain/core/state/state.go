@@ -95,7 +95,6 @@ func InitialBeaconState(
 		ValidatorRegistry:                    validatorRegistry,
 		ValidatorBalances:                    latestBalances,
 		ValidatorRegistryUpdateSlot:          config.GenesisSlot,
-		ValidatorRegistryExitCount:           0,
 		ValidatorRegistryDeltaChainTipHash32: config.ZeroHash[:],
 
 		// Randomness and committees.
