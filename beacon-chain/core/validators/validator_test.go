@@ -143,16 +143,16 @@ func TestIsActiveValidator(t *testing.T) {
 
 func TestGetActiveValidatorRecord(t *testing.T) {
 	inputValidators := []*pb.ValidatorRecord{
-		{ExitCount: 0},
-		{ExitCount: 1},
-		{ExitCount: 2},
-		{ExitCount: 3},
-		{ExitCount: 4},
+		{RandaoLayers: 0},
+		{RandaoLayers: 1},
+		{RandaoLayers: 2},
+		{RandaoLayers: 3},
+		{RandaoLayers: 4},
 	}
 
 	outputValidators := []*pb.ValidatorRecord{
-		{ExitCount: 1},
-		{ExitCount: 3},
+		{RandaoLayers: 1},
+		{RandaoLayers: 3},
 	}
 
 	state := &pb.BeaconState{
@@ -659,9 +659,6 @@ func TestExitValidator_Ok(t *testing.T) {
 			state.Slot+params.BeaconConfig().EntryExitDelay,
 			newState.ValidatorRegistry[0].ExitSlot)
 	}
-	if newState.ValidatorRegistry[0].ExitCount != 1 {
-		t.Errorf("Wanted exit count 1, got %d", newState.ValidatorRegistry[0].ExitCount)
-	}
 }
 
 func TestExitValidator_AlreadyExited(t *testing.T) {
@@ -703,7 +700,7 @@ func TestProcessPenaltiesExits_ValidatorPenalized(t *testing.T) {
 		LatestPenalizedBalances: latestPenalizedExits,
 		ValidatorBalances:       []uint64{config.MaxDeposit, config.MaxDeposit},
 		ValidatorRegistry: []*pb.ValidatorRecord{
-			{ExitSlot: params.BeaconConfig().FarFutureSlot, ExitCount: 1},
+			{ExitSlot: params.BeaconConfig().FarFutureSlot, RandaoLayers: 1},
 		},
 	}
 

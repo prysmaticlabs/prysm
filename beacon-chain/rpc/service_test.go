@@ -17,9 +17,13 @@ func init() {
 	logrus.SetOutput(ioutil.Discard)
 }
 
-type mockAttestationService struct{}
+type mockOperationService struct{}
 
-func (m *mockAttestationService) IncomingAttestationFeed() *event.Feed {
+func (ms *mockOperationService) IncomingAttFeed() *event.Feed {
+	return new(event.Feed)
+}
+
+func (ms *mockOperationService) IncomingExitFeed() *event.Feed {
 	return new(event.Feed)
 }
 
