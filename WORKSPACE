@@ -510,7 +510,7 @@ go_repository(
 
 go_repository(
     name = "com_github_whyrusleeping_yamux",
-    tag = "v1.1.2",
+    tag = "v1.1.5",
     importpath = "github.com/whyrusleeping/yamux",
 )
 
