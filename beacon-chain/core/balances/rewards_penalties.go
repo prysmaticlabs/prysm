@@ -5,6 +5,7 @@
 package balances
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
@@ -147,6 +148,9 @@ func InclusionDistance(
 		inclusionDistance, err := epoch.InclusionDistance(state, index)
 		if err != nil {
 			return nil, fmt.Errorf("could not get inclusion distance: %v", err)
+		}
+		if inclusionDistance == 0 {
+			return nil, errors.New("could not process inclusion distance: 0")
 		}
 		state.ValidatorBalances[index] +=
 			baseReward(state, index, baseRewardQuotient) *
