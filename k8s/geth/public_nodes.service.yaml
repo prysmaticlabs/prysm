@@ -1,11 +1,11 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: geth-nodes
+  name: public-rpc-nodes
   namespace: pow
 spec:
   selector:
-    component: node
+    component: public-rpc-node
     universe: geth
   ports:
     - port: 8545

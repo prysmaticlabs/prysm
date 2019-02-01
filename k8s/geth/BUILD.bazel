@@ -29,22 +29,17 @@ _configs = [
 ]
 
 _deployments = [
-#    "bootnode",
-#    "ethstats",
 #    "faucet",
-#    "miners",
     "nodes",
+    "public_nodes",
 ]
 
 _services = [
-#    "bootnode",
-#    "ethstats",
 #    "faucet",
-    "nodes",
+    "public_nodes",
 ]
 
 _secrets = [
-#    "bootnode",
     "ethstats",
 #    "faucet",
     "goerli_validator",

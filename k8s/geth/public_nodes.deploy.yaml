@@ -1,27 +1,35 @@
 kind: StatefulSet
 apiVersion: apps/v1
 metadata:
-  name: miner
+  name: public-node
   namespace: pow
   labels:
     universe: geth
-    component: miner
+    component: public-rpc-node
 spec:
-  replicas: 1
-  serviceName: "miners"
+  replicas: 2
+  serviceName: "public-rpc-node"
   selector: 
     matchLabels:
       universe: geth
-      component: miner
+      component: public-rpc-node
   template:
     metadata:
+      annotations:
+        sidecar.istio.io/inject: "false"
       labels:
         universe: geth
-        component: miner
+        component: public-rpc-node
     spec:
       priorityClassName: production-priority
       containers:
-        - name: miner
+        - name: prober
+          image: gcr.io/prysmaticlabs/prysm/geth-prober 
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+        - name: node
           image: ethereum/client-go:alltools-stable
           ports: 
            - containerPort: 8545
@@ -42,75 +50,72 @@ spec:
             - "-c"
             - >
               geth
-              --networkid=1337
-              --bootnodesv4=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_V4_SERVICE_HOST):$(GETH_BOOTNODE_V4_SERVICE_PORT_BOOTNODE_UDP)
-              --bootnodesv5=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_V5_SERVICE_HOST):$(GETH_BOOTNODE_V5_SERVICE_PORT_BOOTNODE_UDP)
-              --ethstats=$HOSTNAME:$(ETHSTATS_WS_SECRET)@$(GETH_ETHSTATS_SERVICE_HOST):$(GETH_ETHSTATS_SERVICE_PORT)
+              --networkid=5
+              --ethstats=💎prylabs-$HOSTNAME:$(ETHSTATS_WS_SECRET)@wss://stats.goerli.net
               --rpc
               --rpcaddr=0.0.0.0
               --rpccorsdomain="*"
+              --rpcvhosts="*"
               --ws
+              --wsaddr=0.0.0.0
+              --wsorigins="*"
               --datadir=/ethereum
+              --keystore=/keystore
               --debug
-              --verbosity=4
-              --mine
-              --minerthreads=1
-              --etherbase=0x00c4ac4d2a14be6a9b55652f9aabdb70fdeb07bc
-              --extradata=$HOSTNAME
-              --ethash.dagsinmem=1
-              --ethash.dagsondisk=2
-              --ethash.dagdir="/dag"
+              --verbosity=3
               --nousb
-              --cache=1024
-              --gasprice=0
+              --lightserv=50
+              --metrics
           volumeMounts:
             - name: chaindata
-              mountPath: "/ethereum"
-            - name: dag
-              mountPath: "/dag"
+              mountPath: /ethereum
           env:
             - name: ETHSTATS_WS_SECRET
               valueFrom:
                 secretKeyRef:
                   name: ethstats-secrets
                   key: ws
-            - name: BOOTNODE_PUBKEY
-              valueFrom:
-                secretKeyRef:
-                  name: geth-bootnode-secret
-                  key: public_key
           resources:
             requests:
-              memory: "2Gi"
-              cpu: "500m"
+              memory: "1000Mi"
+              cpu: "200m"
             limits:
-              memory: "4Gi"
-              cpu: "500m"
+              memory: "1200Mi"
+              cpu: "200m"
       initContainers:
-        - name: genesis
+        - name: copy-staticnodes
+          image: busybox
+          command: ["cp", "/data/static-nodes.json", "/ethereum/static-nodes.json"] 
+          volumeMounts:
+            - name: networkdata
+              mountPath: "/data"
+              readOnly: true
+            - name: chaindata
+              mountPath: "/ethereum"
+        - name: init-genesis
           image: ethereum/client-go:alltools-stable
           command: ["geth"]
           args: ["--datadir=/ethereum", "init", "/data/genesis.json"]
           volumeMounts:
-            - name: genesis
+            - name: networkdata
               mountPath: "/data"
               readOnly: true
             - name: chaindata
               mountPath: "/ethereum"
       volumes:
-        - name: chaindata
-          emptyDir: {}
-        - name: genesis
+        - name: networkdata
           configMap: 
-            name: genesis
+            name: goerli
             items:
-              - key: json
+              - key: genesis
                 path: genesis.json
+              - key: staticnodes
+                path: static-nodes.json
   volumeClaimTemplates:
     - metadata:
-        name: dag
-      spec: 
+        name: chaindata
+      spec:
         accessModes: [ "ReadWriteOnce" ]
         resources:
           requests:
-            storage: 5Gi
+            storage: 50Gi

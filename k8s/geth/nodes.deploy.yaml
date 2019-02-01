@@ -7,7 +7,7 @@ metadata:
     universe: geth
     component: node
 spec:
-  replicas: 3
+  replicas: 1
   serviceName: "node"
   selector: 
     matchLabels:
@@ -21,7 +21,7 @@ spec:
         universe: geth
         component: node
     spec:
-      priorityClassName: batch-priority
+      priorityClassName: production-priority
       containers:
         - name: prober
           image: gcr.io/prysmaticlabs/prysm/geth-prober 
@@ -32,10 +32,6 @@ spec:
         - name: node
           image: ethereum/client-go:alltools-stable
           ports: 
-           - containerPort: 8545
-             name: rpc
-           - containerPort: 8546
-             name: ws
            - containerPort: 30303
              name: discovery-tcp
              protocol: TCP
@@ -50,30 +46,29 @@ spec:
             - "-c"
             - >
               geth
-              --networkid=6284
-              --ethstats=prysm-$HOSTNAME:$(ETHSTATS_WS_SECRET)@wss://stats.goerli.net
+              --networkid=5
+              --ethstats=💎prylabs-$HOSTNAME:$(ETHSTATS_WS_SECRET)@wss://stats.goerli.net
               --rpc
-              --rpcaddr=0.0.0.0
-              --rpccorsdomain="*"
-              --rpcvhosts="*"
-              --ws
-              --wsaddr=0.0.0.0
-              --wsorigins="*"
+              --rpcapi=eth
               --datadir=/ethereum
               --keystore=/keystore
-              --debug
               --verbosity=3
               --nousb
               --lightserv=50
               --metrics
               --mine
+              --unlock=0xd9a5179f091d85051d3c982785efd1455cec8699
+              --password=/secret/password
               --etherbase=0xd9a5179f091d85051d3c982785efd1455cec8699
-              --extradata="Prysm $HOSTNAME"
+              --extradata="💎 @prylabs $HOSTNAME 💎"
           volumeMounts:
             - name: chaindata
               mountPath: /ethereum
             - name: keystore
               mountPath: /keystore
+              readOnly: true
+            - name: validator-pk
+              mountPath: /secret
               readOnly: true
           env:
             - name: ETHSTATS_WS_SECRET
