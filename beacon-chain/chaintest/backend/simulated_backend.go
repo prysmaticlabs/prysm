@@ -274,7 +274,6 @@ func (sb *SimulatedBackend) initializeStateTest(testCase *StateTestCase) (hashOn
 // setupBeaconStateAndGenesisBlock creates the initial beacon state and genesis block in order to
 // proceed with the test.
 func (sb *SimulatedBackend) setupBeaconStateAndGenesisBlock(initialDeposits []*pb.Deposit) ([][32]byte, error) {
-
 	var err error
 	genesisTime := params.BeaconConfig().GenesisTime.Unix()
 	sb.state, err = state.InitialBeaconState(initialDeposits, uint64(genesisTime), nil)
@@ -340,6 +339,8 @@ func (sb *SimulatedBackend) generateSimulatedObjects(testCase *StateTestCase, sl
 	}
 }
 
+// compareTestCase compares the state in the simulated backend against the values in inputted test case. If
+// there are any discrepancies it returns an error.
 func (sb *SimulatedBackend) compareTestCase(testCase *StateTestCase) error {
 
 	if sb.state.Slot != testCase.Results.Slot {

@@ -13,10 +13,10 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
-	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/dbcleanup"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
 	rbcsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
@@ -82,7 +82,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if err := beacon.registerAttestationService(); err != nil {
+	if err := beacon.registerOperationService(); err != nil {
 		return nil, err
 	}
 
@@ -212,12 +212,12 @@ func (b *BeaconNode) registerDBCleanService(ctx *cli.Context) error {
 	return b.services.RegisterService(dbCleanService)
 }
 
-func (b *BeaconNode) registerAttestationService() error {
-	attestationService := attestation.NewAttestationService(context.TODO(), &attestation.Config{
+func (b *BeaconNode) registerOperationService() error {
+	operationService := operations.NewOperationService(context.TODO(), &operations.Config{
 		BeaconDB: b.db,
 	})
 
-	return b.services.RegisterService(attestationService)
+	return b.services.RegisterService(operationService)
 }
 
 func (b *BeaconNode) registerPOWChainService(ctx *cli.Context) error {
@@ -256,16 +256,16 @@ func (b *BeaconNode) registerSyncService() error {
 		return err
 	}
 
-	var attestationService *attestation.Service
-	if err := b.services.FetchService(&attestationService); err != nil {
+	var operationService *operations.Service
+	if err := b.services.FetchService(&operationService); err != nil {
 		return err
 	}
 
 	cfg := &rbcsync.Config{
-		ChainService:  chainService,
-		P2P:           p2pService,
-		BeaconDB:      b.db,
-		AttestService: attestationService,
+		ChainService:     chainService,
+		P2P:              p2pService,
+		BeaconDB:         b.db,
+		OperationService: operationService,
 	}
 
 	syncService := rbcsync.NewSyncService(context.Background(), cfg)
@@ -278,8 +278,8 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		return err
 	}
 
-	var attestationService *attestation.Service
-	if err := b.services.FetchService(&attestationService); err != nil {
+	var operationService *operations.Service
+	if err := b.services.FetchService(&operationService); err != nil {
 		return err
 	}
 
@@ -295,14 +295,14 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	cert := ctx.GlobalString(utils.CertFlag.Name)
 	key := ctx.GlobalString(utils.KeyFlag.Name)
 	rpcService := rpc.NewRPCService(context.TODO(), &rpc.Config{
-		Port:               port,
-		CertFlag:           cert,
-		KeyFlag:            key,
-		SubscriptionBuf:    100,
-		BeaconDB:           b.db,
-		ChainService:       chainService,
-		AttestationService: attestationService,
-		POWChainService:    web3Service,
+		Port:             port,
+		CertFlag:         cert,
+		KeyFlag:          key,
+		SubscriptionBuf:  100,
+		BeaconDB:         b.db,
+		ChainService:     chainService,
+		OperationService: operationService,
+		POWChainService:  web3Service,
 	})
 
 	return b.services.RegisterService(rpcService)
