@@ -6,8 +6,8 @@ package epoch
 
 import (
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
@@ -223,7 +223,7 @@ func ProcessEjections(state *pb.BeaconState) (*pb.BeaconState, error) {
 //	Set state.previous_epoch_randao_mix = state.current_epoch_randao_mix
 //	Set state.current_epoch_calculation_slot = state.slot
 //  Set state.previous_epoch_seed = state.current_epoch_seed.
-func ProcessPrevSlotShard(state *pb.BeaconState) *pb.BeaconState {
+func ProcessPrevSlotShardSeed(state *pb.BeaconState) *pb.BeaconState {
 	state.PreviousEpochCalculationSlot = state.CurrentEpochCalculationSlot
 	state.PreviousEpochStartShard = state.CurrentEpochStartShard
 	state.PreviousEpochSeedHash32 = state.CurrentEpochSeedHash32
@@ -252,7 +252,7 @@ func ProcessValidatorRegistry(
 		randaoMixSlot = state.CurrentEpochCalculationSlot -
 			config.SeedLookahead
 	}
-	mix, err := randaoMix(state, randaoMixSlot)
+	mix, err := helpers.RandaoMix(state, randaoMixSlot)
 	if err != nil {
 		return nil, fmt.Errorf("could not get randao mix: %v", err)
 	}

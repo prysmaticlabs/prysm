@@ -366,4 +366,3 @@ func winningRoot(
 	}
 	return winnerRoot, nil
 }
-

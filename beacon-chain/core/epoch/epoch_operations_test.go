@@ -2,7 +2,6 @@ package epoch
 
 import (
 	"bytes"
-	"encoding/binary"
 	"fmt"
 	"reflect"
 	"strings"
@@ -562,53 +561,5 @@ func TestInclusionDistanceNotFound(t *testing.T) {
 	want := fmt.Sprintf("could not find inclusion distance for validator index %d", badIndex)
 	if _, err := InclusionDistance(state, badIndex); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
-func TestRandaoMixOk(t *testing.T) {
-	randaoMixes := make([][]byte, config.LatestRandaoMixesLength)
-	for i := 0; i < len(randaoMixes); i++ {
-		intInBytes := make([]byte, 32)
-		binary.BigEndian.PutUint64(intInBytes, uint64(i))
-		randaoMixes[i] = intInBytes
-	}
-	state := &pb.BeaconState{LatestRandaoMixesHash32S: randaoMixes}
-	tests := []struct {
-		slot      uint64
-		randaoMix []byte
-	}{
-		{
-			slot:      10,
-			randaoMix: randaoMixes[10],
-		},
-		{
-			slot:      2344,
-			randaoMix: randaoMixes[2344],
-		},
-		{
-			slot:      99999,
-			randaoMix: randaoMixes[99999%config.LatestRandaoMixesLength],
-		},
-	}
-	for _, test := range tests {
-		state.Slot = test.slot + 1
-		mix, err := randaoMix(state, test.slot)
-		if err != nil {
-			t.Fatalf("Could not get randao mix: %v", err)
-		}
-		if !bytes.Equal(test.randaoMix, mix) {
-			t.Errorf("Incorrect randao mix. Wanted: %#x, got: %#x",
-				test.randaoMix, mix)
-		}
-	}
-}
-
-func TestRandaoMixOutOfBound(t *testing.T) {
-	wanted := fmt.Sprintf(
-		"input randaoMix slot %d out of bounds: %d <= slot < %d",
-		100, 0, 0,
-	)
-	if _, err := randaoMix(&pb.BeaconState{}, 100); !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected: %s, received: %s", wanted, err.Error())
 	}
 }

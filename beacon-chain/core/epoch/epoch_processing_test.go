@@ -352,10 +352,10 @@ func TestProcessPrevSlotShardOk(t *testing.T) {
 	state := &pb.BeaconState{
 		CurrentEpochCalculationSlot: 1,
 		CurrentEpochStartShard:      2,
-		CurrentEpochSeedHash32: []byte{'A'},
+		CurrentEpochSeedHash32:      []byte{'A'},
 	}
 
-	newState := ProcessPrevSlotShard(
+	newState := ProcessPrevSlotShardSeed(
 		proto.Clone(state).(*pb.BeaconState))
 
 	if newState.PreviousEpochCalculationSlot != state.CurrentEpochCalculationSlot {
@@ -373,11 +373,10 @@ func TestProcessPrevSlotShardOk(t *testing.T) {
 }
 
 func TestProcessValidatorRegistryOk(t *testing.T) {
-	offset := uint64(1)
 	state := &pb.BeaconState{
-		Slot:                        config.SeedLookahead + offset,
-		LatestRandaoMixesHash32S:    [][]byte{{'A'}, {'B'}},
-		CurrentEpochSeedHash32: []byte{'C'},
+		Slot:                     config.SeedLookahead,
+		LatestRandaoMixesHash32S: [][]byte{{'A'}, {'B'}},
+		CurrentEpochSeedHash32:   []byte{'C'},
 	}
 	newState, err := ProcessValidatorRegistry(
 		proto.Clone(state).(*pb.BeaconState))
@@ -388,9 +387,9 @@ func TestProcessValidatorRegistryOk(t *testing.T) {
 		t.Errorf("Incorret curr epoch calculation slot: Wanted: %d, got: %d",
 			newState.CurrentEpochCalculationSlot, state.Slot)
 	}
-	if !bytes.Equal(newState.CurrentEpochSeedHash32, state.LatestRandaoMixesHash32S[offset]) {
+	if !bytes.Equal(newState.CurrentEpochSeedHash32, state.LatestRandaoMixesHash32S[0]) {
 		t.Errorf("Incorret current epoch randao mix hash: Wanted: %v, got: %v",
-			state.LatestRandaoMixesHash32S[offset], newState.CurrentEpochSeedHash32)
+			state.LatestRandaoMixesHash32S[0], newState.CurrentEpochSeedHash32)
 	}
 }
 

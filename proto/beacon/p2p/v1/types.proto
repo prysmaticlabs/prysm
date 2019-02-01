@@ -33,6 +33,7 @@ message BeaconState {
   repeated bytes batched_block_root_hash32s = 3004;
   repeated uint64 latest_penalized_balances = 3005;
   repeated PendingAttestationRecord latest_attestations = 3006;
+  repeated bytes latest_index_root_hash32s = 3007;
 
   // Ethereum 1.0 deposit root [4001-5000]
   bytes latest_deposit_root_hash32 = 4001;

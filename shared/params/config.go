@@ -27,6 +27,7 @@ type BeaconChainConfig struct {
 	LatestBlockRootsLength     uint64 // LatestBlockRootsLength is the number of block roots kept in the beacon state.
 	LatestRandaoMixesLength    uint64 // LatestRandaoMixesLength is the number of randao mixes kept in the beacon state.
 	LatestPenalizedExitLength  uint64 // LatestPenalizedExitLength is used to track penalized exit balances per time interval.
+	LatestIndexRootsLength     uint64 // LatestIndexRootsLength is the number of index roots kept in beacon state, used by light client.
 	MaxWithdrawalsPerEpoch     uint64 // MaxWithdrawalsPerEpoch is the max withdrawals can happen for a single epoch.
 
 	// Deposit contract constants.
@@ -99,6 +100,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	LatestBlockRootsLength:     8192,
 	LatestRandaoMixesLength:    8192,
 	LatestPenalizedExitLength:  8192,
+	LatestIndexRootsLength:     8192,
 	MaxWithdrawalsPerEpoch:     4,
 
 	// Deposit contract constants.
@@ -154,6 +156,7 @@ var demoBeaconConfig = &BeaconChainConfig{
 	LatestBlockRootsLength:     defaultBeaconConfig.LatestBlockRootsLength,
 	LatestRandaoMixesLength:    defaultBeaconConfig.LatestRandaoMixesLength,
 	LatestPenalizedExitLength:  defaultBeaconConfig.LatestPenalizedExitLength,
+	LatestIndexRootsLength:     defaultBeaconConfig.LatestIndexRootsLength,
 	MaxWithdrawalsPerEpoch:     defaultBeaconConfig.MaxWithdrawalsPerEpoch,
 
 	// Deposit contract constants.
