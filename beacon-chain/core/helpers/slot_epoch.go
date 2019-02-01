@@ -36,7 +36,7 @@ func PrevEpoch(state *pb.BeaconState) uint64 {
 	return SlotToEpoch(state.Slot) - 1
 }
 
-// PrevEpoch returns the next epoch number calculated form
+// NextEpoch returns the next epoch number calculated form
 // the slot number stored in beacon state.
 func NextEpoch(state *pb.BeaconState) uint64 {
 	return SlotToEpoch(state.Slot) + 1
