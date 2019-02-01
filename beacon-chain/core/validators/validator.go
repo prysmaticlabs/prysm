@@ -7,8 +7,6 @@ package validators
 import (
 	"bytes"
 	"fmt"
-	"sort"
-
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -303,7 +301,6 @@ func ProcessDeposit(
 			Pubkey:                 pubkey,
 			RandaoCommitmentHash32: randaoCommitment,
 			RandaoLayers:           0,
-			ExitCount:              0,
 			ActivationSlot:         config.FarFutureSlot,
 			ExitSlot:               config.FarFutureSlot,
 			WithdrawalSlot:         config.FarFutureSlot,
@@ -428,8 +425,6 @@ func ExitValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) {
 
 	validator.ExitSlot = state.Slot + config.EntryExitDelay
 
-	state.ValidatorRegistryExitCount++
-	validator.ExitCount = state.ValidatorRegistryExitCount
 	newChainTip, err := NewRegistryDeltaChainTip(
 		pb.ValidatorRegistryDeltaBlock_EXIT,
 		idx,
@@ -645,9 +640,6 @@ func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 			eligibleIndices = append(eligibleIndices, idx)
 		}
 	}
-	sort.Slice(eligibleIndices, func(i, j int) bool {
-		return state.ValidatorRegistry[i].ExitCount < state.ValidatorRegistry[j].ExitCount
-	})
 	var withdrawnSoFar uint64
 	for _, idx := range eligibleIndices {
 		state = PrepareValidatorForWithdrawal(state, idx)
