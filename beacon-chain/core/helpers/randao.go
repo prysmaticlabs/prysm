@@ -45,14 +45,14 @@ func GenerateSeed(state *pb.BeaconState, wantedEpoch uint64) ([32]byte, error) {
 //    assert get_current_epoch(state) - LATEST_INDEX_ROOTS_LENGTH + ENTRY_EXIT_DELAY < epoch <= get_current_epoch(state) + ENTRY_EXIT_DELAY
 //    return state.latest_index_roots[epoch % LATEST_INDEX_ROOTS_LENGTH]
 func ActiveIndexRoot(state *pb.BeaconState, wantedEpoch uint64) ([]byte, error) {
-	var earlistEpoch uint64
+	var earliestEpoch uint64
 	currentEpoch := CurrentEpoch(state)
 	if currentEpoch > config.LatestIndexRootsLength+config.EntryExitDelay {
-		earlistEpoch = currentEpoch - (config.LatestIndexRootsLength + config.EntryExitDelay)
+		earliestEpoch = currentEpoch - (config.LatestIndexRootsLength + config.EntryExitDelay)
 	}
-	if earlistEpoch > wantedEpoch || wantedEpoch >= currentEpoch {
-		return nil, fmt.Errorf("input indexRoot epoch %d out of bounds: %d <= slot < %d",
-			wantedEpoch, earlistEpoch, currentEpoch)
+	if earliestEpoch > wantedEpoch || wantedEpoch >= currentEpoch {
+		return nil, fmt.Errorf("input indexRoot epoch %d out of bounds: %d <= epoch < %d",
+			wantedEpoch, earliestEpoch, currentEpoch)
 	}
 	return state.LatestIndexRootHash32S[wantedEpoch%config.LatestIndexRootsLength], nil
 }
@@ -69,14 +69,14 @@ func ActiveIndexRoot(state *pb.BeaconState, wantedEpoch uint64) ([]byte, error) 
 //    assert get_current_epoch(state) - LATEST_RANDAO_MIXES_LENGTH < epoch <= get_current_epoch(state)
 //    return state.latest_randao_mixes[epoch % LATEST_RANDAO_MIXES_LENGTH]
 func RandaoMix(state *pb.BeaconState, wantedEpoch uint64) ([]byte, error) {
-	var earlistEpoch uint64
+	var earliestEpoch uint64
 	currentEpoch := CurrentEpoch(state)
 	if currentEpoch > config.LatestRandaoMixesLength {
-		earlistEpoch = currentEpoch - config.LatestRandaoMixesLength
+		earliestEpoch = currentEpoch - config.LatestRandaoMixesLength
 	}
-	if earlistEpoch > wantedEpoch || wantedEpoch >= currentEpoch {
-		return nil, fmt.Errorf("input randaoMix epoch %d out of bounds: %d <= slot < %d",
-			wantedEpoch, earlistEpoch, currentEpoch)
+	if earliestEpoch > wantedEpoch || wantedEpoch >= currentEpoch {
+		return nil, fmt.Errorf("input randaoMix epoch %d out of bounds: %d <= epoch < %d",
+			wantedEpoch, earliestEpoch, currentEpoch)
 	}
 	return state.LatestRandaoMixesHash32S[wantedEpoch%config.LatestRandaoMixesLength], nil
 }
