@@ -1,5 +1,0 @@
-    'proposer_slashings': [ProposerSlashing],
-    'attester_slashings': [AttesterSlashing],
-    'attestations': [Attestation],
-    'deposits': [Deposit],
-    'exits': [Exit],
