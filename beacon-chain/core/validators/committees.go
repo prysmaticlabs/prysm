@@ -7,8 +7,8 @@ package validators
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
@@ -167,7 +167,7 @@ func CrosslinkCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*Crosslink
 	if wantedEpoch < currentEpoch {
 		countPerSlot = prevCommitteesCountPerSlot(state)
 		shuffledIndices, err = Shuffling(
-			bytesutil.ToBytes32(state.PreviousEpochRandaoMixHash32),
+			bytesutil.ToBytes32(state.PreviousEpochSeedHash32),
 			state.ValidatorRegistry,
 			state.PreviousEpochCalculationSlot)
 		if err != nil {
@@ -178,7 +178,7 @@ func CrosslinkCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*Crosslink
 	} else {
 		countPerSlot = CurrCommitteesCountPerSlot(state)
 		shuffledIndices, err = Shuffling(
-			bytesutil.ToBytes32(state.CurrentEpochRandaoMixHash32),
+			bytesutil.ToBytes32(state.CurrentEpochSeedHash32),
 			state.ValidatorRegistry,
 			state.CurrentEpochCalculationSlot)
 		if err != nil {
