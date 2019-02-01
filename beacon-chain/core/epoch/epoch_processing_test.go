@@ -418,7 +418,7 @@ func TestCleanupAttestations(t *testing.T) {
 	}
 	epochLength := config.EpochLength
 	state := &pb.BeaconState{
-		Slot: 2 * epochLength,
+		Slot: epochLength,
 		LatestAttestations: []*pb.PendingAttestationRecord{
 			{Data: &pb.AttestationData{Slot: 1}},
 			{Data: &pb.AttestationData{Slot: epochLength - 10}},
@@ -431,7 +431,7 @@ func TestCleanupAttestations(t *testing.T) {
 		},
 	}
 	wanted := &pb.BeaconState{
-		Slot: 2 * epochLength,
+		Slot: epochLength,
 		LatestAttestations: []*pb.PendingAttestationRecord{
 			{Data: &pb.AttestationData{Slot: epochLength}},
 			{Data: &pb.AttestationData{Slot: epochLength + 1}},

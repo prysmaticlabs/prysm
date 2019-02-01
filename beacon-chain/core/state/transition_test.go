@@ -2,6 +2,7 @@ package state
 
 import (
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"strings"
 	"testing"
 
@@ -347,7 +348,14 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 }
 
 func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
-	validatorRegistry := validators.InitialValidatorRegistry()
+	var validatorRegistry []*pb.ValidatorRecord
+	for i := uint64(0); i < 10; i++ {
+		validatorRegistry = append(validatorRegistry,
+			&pb.ValidatorRecord{
+				ExitSlot: config.FarFutureSlot,
+				Balance:  config.MaxDeposit,
+			})
+	}
 	validatorBalances := make([]uint64, len(validatorRegistry))
 	for i := 0; i < len(validatorBalances); i++ {
 		validatorBalances[i] = config.MaxDeposit
@@ -362,8 +370,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 				JustifiedSlot:            64,
 				JustifiedBlockRootHash32: []byte{0},
 			},
-			ParticipationBitfield: []byte{0xff},
-			SlotIncluded:          i + config.EpochLength + 1,
+			SlotIncluded: i + config.EpochLength + 1,
 		})
 	}
 
@@ -418,7 +425,7 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 				JustifiedSlot:            64,
 				JustifiedBlockRootHash32: []byte{0},
 			},
-			ParticipationBitfield: []byte{0xff},
+			ParticipationBitfield: []byte{},
 			SlotIncluded:          i + config.EpochLength + 1,
 		})
 	}
@@ -522,23 +529,23 @@ func TestProcessEpoch_CantGetPrevValidatorIndices(t *testing.T) {
 	}
 
 	want := fmt.Sprintf(
-		"input committee slot 1 out of bounds: %d <= slot < %d",
-		config.EpochLength,
-		config.EpochLength*3,
+		"input committee epoch 0 out of bounds: %d <= epoch < %d",
+		helpers.SlotToEpoch(config.EpochLength),
+		helpers.SlotToEpoch(config.EpochLength*2),
 	)
 	if _, err := ProcessEpoch(state); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected: %s, received: %v", want, err)
 	}
 }
 
-func TestProcessEpoch_CantProcessPrevBoundaryAttestations(t *testing.T) {
+func TestProcessEpoch_CantProcessCurrentBoundaryAttestations(t *testing.T) {
 	state := &pb.BeaconState{
 		LatestAttestations: []*pb.PendingAttestationRecord{
 			{Data: &pb.AttestationData{}},
 		}}
 
 	want := fmt.Sprintf(
-		"could not get prev boundary attestations: slot %d out of bounds: %d <= slot < %d",
+		"could not get current boundary attestations: slot %d out of bounds: %d <= slot < %d",
 		state.LatestAttestations[0].Data.Slot, state.Slot, state.Slot,
 	)
 	if _, err := ProcessEpoch(state); !strings.Contains(err.Error(), want) {
@@ -574,8 +581,7 @@ func TestProcessEpoch_CantProcessEjections(t *testing.T) {
 			{Data: &pb.AttestationData{}, ParticipationBitfield: participationBitfield},
 		}}
 
-	want := fmt.Sprintf(
-		"validator 0 could not exit until slot %d", 320)
+	want := fmt.Sprintf("could not process inclusion distance: 0")
 
 	if _, err := ProcessEpoch(state); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected: %s, received: %v", want, err)
