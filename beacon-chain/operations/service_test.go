@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -43,13 +42,13 @@ func TestStop(t *testing.T) {
 func TestErrorStatus_Ok(t *testing.T) {
 	service := NewOperationService(context.Background(), &Config{})
 	if service.Status() != nil {
-		t.Errorf("service status should be nil to begin with, got: %v", service.errors)
+		t.Errorf("service status should be nil to begin with, got: %v", service.error)
 	}
-	errs := []error{errors.New("i"), errors.New("have"), errors.New("failed")}
-	service.errors = errs
+	err := errors.New("error error error")
+	service.error = err
 
-	if !reflect.DeepEqual(service.Status(), errs) {
-		t.Error("service status did not return wanted errors")
+	if service.Status() != err {
+		t.Error("service status did not return wanted err")
 	}
 }
 
@@ -70,10 +69,39 @@ func TestIncomingExits_Ok(t *testing.T) {
 		t.Fatalf("Could not hash exit proto: %v", err)
 	}
 
-	service.incomingValidatorExit <- exit
+	service.incomingValidatorExits <- exit
 	service.cancel()
 	exitRoutine <- true
 
 	want := fmt.Sprintf("Exit request %#x saved in db", hash)
+	testutil.AssertLogsContain(t, hook, want)
+}
+
+func TestIncomingAttestation_Ok(t *testing.T) {
+	hook := logTest.NewGlobal()
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
+	service := NewOperationService(context.Background(), &Config{BeaconDB: beaconDB})
+
+	exitRoutine := make(chan bool)
+	go func() {
+		service.saveOperations()
+		<-exitRoutine
+	}()
+	attestation := &pb.Attestation{
+		ParticipationBitfield: []byte{'A'},
+		Data: &pb.AttestationData{
+			Slot: 100,
+		}}
+	hash, err := hashutil.HashProto(attestation)
+	if err != nil {
+		t.Fatalf("Could not hash exit proto: %v", err)
+	}
+
+	service.incomingAtt <- attestation
+	service.cancel()
+	exitRoutine <- true
+
+	want := fmt.Sprintf("Attestation %#x saved in db", hash)
 	testutil.AssertLogsContain(t, hook, want)
 }
