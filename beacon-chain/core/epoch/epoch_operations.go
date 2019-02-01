@@ -10,6 +10,7 @@ import (
 	"math"
 
 	block "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	b "github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -21,23 +22,14 @@ import (
 // included in the chain during the epoch.
 //
 // Spec pseudocode definition:
-//   return [a for a in state.latest_attestations
-//   if state.slot - EPOCH_LENGTH <= a.data.slot < state.slot]
+//   return [a for a in state.latest_attestations if
+//   	current_epoch == slot_to_epoch(a.data.slot)
 func Attestations(state *pb.BeaconState) []*pb.PendingAttestationRecord {
-	epochLength := params.BeaconConfig().EpochLength
 	var thisEpochAttestations []*pb.PendingAttestationRecord
-	var earliestSlot uint64
+	currentEpoch := helpers.CurrentEpoch(state)
 
 	for _, attestation := range state.LatestAttestations {
-
-		// If the state slot is less than epochLength, then the earliestSlot would
-		// result in a negative number. Therefore we should default to
-		// earliestSlot = 0 in this case.
-		if state.Slot > epochLength {
-			earliestSlot = state.Slot - epochLength
-		}
-
-		if earliestSlot <= attestation.Data.Slot && attestation.Data.Slot < state.Slot {
+		if currentEpoch == helpers.SlotToEpoch(attestation.Data.Slot) {
 			thisEpochAttestations = append(thisEpochAttestations, attestation)
 		}
 	}
@@ -87,31 +79,17 @@ func BoundaryAttestations(
 // (state.slot - 2 * EPOCH_LENGTH...state.slot - EPOCH_LENGTH).
 //
 // Spec pseudocode definition:
-//   return [a for a in state.latest_attestations
-//   if state.slot - 2 * EPOCH_LENGTH <= a.slot < state.slot - EPOCH_LENGTH]
+//   return [a for a in state.latest_attestations if
+//   	previous_epoch == slot_to_epoch(a.data.slot)].
 func PrevAttestations(state *pb.BeaconState) []*pb.PendingAttestationRecord {
-	epochLength := params.BeaconConfig().EpochLength
 	var prevEpochAttestations []*pb.PendingAttestationRecord
-	var earliestSlot uint64
-	var lastSlot uint64
+	var prevEpoch uint64
 
+	if helpers.CurrentEpoch(state) != 0 {
+		prevEpoch = helpers.CurrentEpoch(state) - 1
+	}
 	for _, attestation := range state.LatestAttestations {
-
-		// If the state slot is less than 2 * epochLength, then the earliestSlot would
-		// result in a negative number. Therefore we should default to
-		// earliestSlot = 0 in this case.
-		if state.Slot > 2*epochLength {
-			earliestSlot = state.Slot - 2*epochLength
-		}
-		// If the state slot is less than epochLength, then the lastSlot would
-		// result in a negative number. Therefore we should default to
-		// lastSlot = 0 in this case.
-		if state.Slot > epochLength {
-			lastSlot = state.Slot - epochLength
-		}
-
-		if earliestSlot <= attestation.Data.Slot &&
-			attestation.Data.Slot < lastSlot {
+		if prevEpoch == helpers.SlotToEpoch(attestation.Data.Slot) {
 			prevEpochAttestations = append(prevEpochAttestations, attestation)
 		}
 	}

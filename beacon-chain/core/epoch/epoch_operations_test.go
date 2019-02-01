@@ -36,7 +36,7 @@ func TestEpochAttestations(t *testing.T) {
 	}
 
 	var pendingAttestations []*pb.PendingAttestationRecord
-	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+	for i := uint64(0); i < params.BeaconConfig().EpochLength*3; i++ {
 		pendingAttestations = append(pendingAttestations, &pb.PendingAttestationRecord{
 			Data: &pb.AttestationData{
 				Slot: i,
@@ -52,21 +52,21 @@ func TestEpochAttestations(t *testing.T) {
 	}{
 		{
 			stateSlot:            10,
-			firstAttestationSlot: 0,
+			firstAttestationSlot: 10 - 10%config.EpochLength,
 		},
 		{
 			stateSlot:            63,
-			firstAttestationSlot: 0,
+			firstAttestationSlot: 63 - 63%config.EpochLength,
 		},
 		{
 			stateSlot:            64,
-			firstAttestationSlot: 64 - params.BeaconConfig().EpochLength,
+			firstAttestationSlot: 64 - 64%config.EpochLength,
 		}, {
 			stateSlot:            127,
-			firstAttestationSlot: 127 - params.BeaconConfig().EpochLength,
+			firstAttestationSlot: 127 - 127%config.EpochLength,
 		}, {
 			stateSlot:            128,
-			firstAttestationSlot: 128 - params.BeaconConfig().EpochLength,
+			firstAttestationSlot: 128 - 128%config.EpochLength,
 		},
 	}
 
@@ -131,7 +131,7 @@ func TestPrevEpochAttestations(t *testing.T) {
 	}
 
 	var pendingAttestations []*pb.PendingAttestationRecord
-	for i := uint64(0); i < params.BeaconConfig().EpochLength*4; i++ {
+	for i := uint64(0); i < params.BeaconConfig().EpochLength*5; i++ {
 		pendingAttestations = append(pendingAttestations, &pb.PendingAttestationRecord{
 			Data: &pb.AttestationData{
 				Slot: i,
@@ -147,23 +147,23 @@ func TestPrevEpochAttestations(t *testing.T) {
 	}{
 		{
 			stateSlot:            127,
-			firstAttestationSlot: 0,
+			firstAttestationSlot: 127 - config.EpochLength - 127%config.EpochLength,
 		},
 		{
 			stateSlot:            128,
-			firstAttestationSlot: 0,
+			firstAttestationSlot: 128 - config.EpochLength - 128%config.EpochLength,
 		},
 		{
 			stateSlot:            383,
-			firstAttestationSlot: 383 - 2*params.BeaconConfig().EpochLength,
+			firstAttestationSlot: 383 - config.EpochLength - 383%config.EpochLength,
 		},
 		{
 			stateSlot:            129,
-			firstAttestationSlot: 129 - 2*params.BeaconConfig().EpochLength,
+			firstAttestationSlot: 129 - config.EpochLength - 129%config.EpochLength,
 		},
 		{
 			stateSlot:            256,
-			firstAttestationSlot: 256 - 2*params.BeaconConfig().EpochLength,
+			firstAttestationSlot: 256 - config.EpochLength - 256%config.EpochLength,
 		},
 	}
 
