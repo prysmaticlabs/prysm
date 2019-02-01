@@ -151,11 +151,8 @@ func CrosslinkCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*Crosslink
 
 	wantedEpoch := helpers.SlotToEpoch(slot)
 	currentEpoch := helpers.CurrentEpoch(state)
-	var prevEpoch uint64
-	if currentEpoch != 0 {
-		prevEpoch = currentEpoch - 1
-	}
-	nextEpoch := currentEpoch + 1
+	prevEpoch := helpers.PrevEpoch(state)
+	nextEpoch := helpers.NextEpoch(state)
 
 	if wantedEpoch < prevEpoch || wantedEpoch >= nextEpoch {
 		return nil, fmt.Errorf(

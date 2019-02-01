@@ -50,7 +50,7 @@ func TestRandaoMix_Ok(t *testing.T) {
 
 func TestRandaoMix_OutOfBound(t *testing.T) {
 	wanted := fmt.Sprintf(
-		"input randaoMix epoch %d out of bounds: %d <= slot < %d",
+		"input randaoMix epoch %d out of bounds: %d <= epoch < %d",
 		100, 0, 0,
 	)
 	if _, err := RandaoMix(&pb.BeaconState{}, 100); !strings.Contains(err.Error(), wanted) {
@@ -98,7 +98,7 @@ func TestActiveIndexRoot_Ok(t *testing.T) {
 
 func TestActiveIndexRoot_OutOfBound(t *testing.T) {
 	wanted := fmt.Sprintf(
-		"input indexRoot epoch %d out of bounds: %d <= slot < %d",
+		"input indexRoot epoch %d out of bounds: %d <= epoch < %d",
 		100, 0, 0,
 	)
 	if _, err := ActiveIndexRoot(&pb.BeaconState{}, 100); !strings.Contains(err.Error(), wanted) {
@@ -108,7 +108,7 @@ func TestActiveIndexRoot_OutOfBound(t *testing.T) {
 
 func TestGenerateSeed_OutOfBound(t *testing.T) {
 	wanted := fmt.Sprintf(
-		"input randaoMix epoch %d out of bounds: %d <= slot < %d",
+		"input randaoMix epoch %d out of bounds: %d <= epoch < %d",
 		100-config.SeedLookahead, 0, 0,
 	)
 	if _, err := GenerateSeed(&pb.BeaconState{}, 100); !strings.Contains(err.Error(), wanted) {
