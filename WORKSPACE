@@ -708,7 +708,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_buffer_pool",
-    tag = "v0.1.1",
+    tag = "v0.1.3",
     importpath = "github.com/libp2p/go-buffer-pool",
 )
 
