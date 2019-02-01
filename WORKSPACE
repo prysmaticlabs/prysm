@@ -35,9 +35,9 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    url = "https://github.com/bazelbuild/rules_nodejs/archive/0.16.6.tar.gz",
-    strip_prefix = "rules_nodejs-0.16.6",
-    sha256 = "f5b0a45fb76f3506bcc9437c5e3198149765c1918a1dd10a9497afbcf7058c85",
+    url = "https://github.com/bazelbuild/rules_nodejs/archive/0.16.7.tar.gz",
+    strip_prefix = "rules_nodejs-0.16.7",
+    sha256 = "631795fef895f982cac2c6b6044a02d67d17179789dbbb5460f22a308d9a1862",
 )
 
 http_archive(
@@ -510,7 +510,7 @@ go_repository(
 
 go_repository(
     name = "com_github_whyrusleeping_yamux",
-    tag = "v1.1.2",
+    tag = "v1.1.5",
     importpath = "github.com/whyrusleeping/yamux",
 )
 
