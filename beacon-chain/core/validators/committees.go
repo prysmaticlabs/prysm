@@ -166,7 +166,7 @@ func CrosslinkCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*Crosslink
 	if slot < startEpochSlot {
 		countPerSlot = prevCommitteesCountPerSlot(state)
 		shuffledIndices, err = Shuffling(
-			bytesutil.ToBytes32(state.PreviousEpochRandaoMixHash32),
+			bytesutil.ToBytes32(state.PreviousEpochSeedHash32),
 			state.ValidatorRegistry,
 			state.PreviousEpochCalculationSlot)
 		if err != nil {
@@ -177,7 +177,7 @@ func CrosslinkCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*Crosslink
 	} else {
 		countPerSlot = CurrCommitteesCountPerSlot(state)
 		shuffledIndices, err = Shuffling(
-			bytesutil.ToBytes32(state.CurrentEpochRandaoMixHash32),
+			bytesutil.ToBytes32(state.CurrentEpochSeedHash32),
 			state.ValidatorRegistry,
 			state.CurrentEpochCalculationSlot)
 		if err != nil {

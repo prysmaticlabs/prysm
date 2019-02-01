@@ -215,15 +215,17 @@ func ProcessEjections(state *pb.BeaconState) (*pb.BeaconState, error) {
 	return state, nil
 }
 
-// ProcessPrevSlotShard computes and sets current epoch's calculation slot
+// ProcessPrevSlotShardSeed computes and sets current epoch's calculation slot
 // and start shard to previous epoch. Then it returns the updated state.
 //
 // Spec pseudocode definition:
 //	Set state.previous_epoch_randao_mix = state.current_epoch_randao_mix
 //	Set state.current_epoch_calculation_slot = state.slot
+//  Set state.previous_epoch_seed = state.current_epoch_seed.
 func ProcessPrevSlotShard(state *pb.BeaconState) *pb.BeaconState {
 	state.PreviousEpochCalculationSlot = state.CurrentEpochCalculationSlot
 	state.PreviousEpochStartShard = state.CurrentEpochStartShard
+	state.PreviousEpochSeedHash32 = state.CurrentEpochSeedHash32
 	return state
 }
 
@@ -231,13 +233,12 @@ func ProcessPrevSlotShard(state *pb.BeaconState) *pb.BeaconState {
 // reshuffles shard committees and returns the recomputed state with the updated registry.
 //
 // Spec pseudocode definition:
-//	Set state.previous_epoch_randao_mix = state.current_epoch_randao_mix
-//	Set state.current_epoch_calculation_slot = state.slot
-//	Set state.current_epoch_start_shard = (state.current_epoch_start_shard + get_current_epoch_committees_per_slot(state) * EPOCH_LENGTH) % SHARD_COUNT
-//	Set state.current_epoch_randao_mix = get_randao_mix(state, state.current_epoch_calculation_slot - SEED_LOOKAHEAD)
+//  Set state.current_calculation_epoch = next_epoch
+//  Set state.current_epoch_start_shard = (state.current_epoch_start_shard +
+//  	get_current_epoch_committee_count(state)) % SHARD_COUNT
+//	Set state.current_epoch_seed = generate_seed(state, state.current_calculation_epoch)
 func ProcessValidatorRegistry(
 	state *pb.BeaconState) (*pb.BeaconState, error) {
-	state.PreviousEpochRandaoMixHash32 = state.CurrentEpochRandaoMixHash32
 	state.CurrentEpochCalculationSlot = state.Slot
 
 	nextStartShard := (state.CurrentEpochStartShard +
@@ -254,7 +255,7 @@ func ProcessValidatorRegistry(
 	if err != nil {
 		return nil, fmt.Errorf("could not get randao mix: %v", err)
 	}
-	state.CurrentEpochRandaoMixHash32 = mix
+	state.CurrentEpochSeedHash32 = mix
 
 	return state, nil
 }
@@ -286,7 +287,7 @@ func ProcessPartialValidatorRegistry(state *pb.BeaconState) *pb.BeaconState {
 		}
 
 		randaoMix := state.LatestRandaoMixesHash32S[randaoIndex%config.LatestRandaoMixesLength]
-		state.CurrentEpochRandaoMixHash32 = randaoMix
+		state.CurrentEpochSeedHash32 = randaoMix
 	}
 	return state
 }
