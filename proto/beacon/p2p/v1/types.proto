@@ -211,4 +211,3 @@ message Eth1DataVote {
   uint64 vote_count = 2;
 }
 
-message CustodyChallenge {} // Empty until phase 1
