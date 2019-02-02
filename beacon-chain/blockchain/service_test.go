@@ -333,7 +333,7 @@ func TestRunningChainService(t *testing.T) {
 	randaoCommit := hashutil.RepeatHash([32]byte{}, 1)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot:               params.BeaconConfig().FarFutureSlot,
+			ExitEpoch:              params.BeaconConfig().FarFutureEpoch,
 			RandaoCommitmentHash32: randaoCommit[:],
 		}
 	}

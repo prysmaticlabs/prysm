@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"reflect"
 	"strings"
 	"testing"
@@ -10,7 +11,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -164,7 +164,7 @@ func TestLMDGhost_EveryActiveValidatorHasLatestAttestation(t *testing.T) {
 	)
 	candidate1, candidate2 := setupConflictingBlocks(t, beaconDB, genesisHash, stateHash)
 
-	activeIndices := validators.ActiveValidatorIndices(beaconState.ValidatorRegistry, 0)
+	activeIndices := helpers.ActiveValidatorIndices(beaconState.ValidatorRegistry, 0)
 	// We store some simulated latest attestation target for every active validator in a map.
 	voteTargets := make(map[[32]byte]*pb.BeaconBlock, len(activeIndices))
 	for i := 0; i < len(activeIndices); i++ {
