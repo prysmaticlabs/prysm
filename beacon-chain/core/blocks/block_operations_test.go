@@ -15,57 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
-func TestProcessPOWReceiptRoots_SameRootHash(t *testing.T) {
-	beaconState := &pb.BeaconState{
-		DepositRootVotes: []*pb.DepositRootVote{
-			{
-				DepositRootHash32: []byte{1},
-				VoteCount:         5,
-			},
-		},
-	}
-	block := &pb.BeaconBlock{
-		DepositRootHash32: []byte{1},
-	}
-	beaconState = ProcessDepositRoots(beaconState, block)
-	newRoots := beaconState.DepositRootVotes
-	if newRoots[0].VoteCount != 6 {
-		t.Errorf("expected votes to increase from 5 to 6, received %d", newRoots[0].VoteCount)
-	}
-}
-
-func TestProcessPOWReceiptRoots_NewCandidateRecord(t *testing.T) {
-	beaconState := &pb.BeaconState{
-		DepositRootVotes: []*pb.DepositRootVote{
-			{
-				DepositRootHash32: []byte{0},
-				VoteCount:         5,
-			},
-		},
-	}
-	block := &pb.BeaconBlock{
-		DepositRootHash32: []byte{1},
-	}
-	beaconState = ProcessDepositRoots(beaconState, block)
-	newRoots := beaconState.DepositRootVotes
-	if len(newRoots) == 1 {
-		t.Error("expected new receipt roots to have length > 1")
-	}
-	if newRoots[1].VoteCount != 1 {
-		t.Errorf(
-			"expected new receipt roots to have a new element with votes = 1, received votes = %d",
-			newRoots[1].VoteCount,
-		)
-	}
-	if !bytes.Equal(newRoots[1].DepositRootHash32, []byte{1}) {
-		t.Errorf(
-			"expected new receipt roots to have a new element with root = %#x, received root = %#x",
-			[]byte{1},
-			newRoots[1].DepositRootHash32,
-		)
-	}
-}
-
 func TestProcessBlockRandao_UnequalBlockAndProposerRandao(t *testing.T) {
 	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
 	for i := 0; i < len(validators); i++ {
@@ -132,6 +81,71 @@ func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 			"Expected proposer at index 0 to update randao commitment to block randao reveal = %#x, received %#x",
 			[]byte{1},
 			newState.ValidatorRegistry[0].RandaoCommitmentHash32,
+		)
+	}
+}
+
+func TestProcessEth1Data_SameRootHash(t *testing.T) {
+	beaconState := &pb.BeaconState{
+		Eth1DataVotes: []*pb.Eth1DataVote{
+			&pb.Eth1DataVote{
+				Eth1Data: &pb.Eth1Data{
+					DepositRootHash32: []byte{1},
+					BlockHash32:       []byte{2},
+				},
+				VoteCount: 5,
+			},
+		},
+	}
+	block := &pb.BeaconBlock{
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{1},
+			BlockHash32:       []byte{2},
+		},
+	}
+	beaconState = ProcessEth1Data(beaconState, block)
+	newETH1DataVotes := beaconState.Eth1DataVotes
+	if newETH1DataVotes[0].VoteCount != 6 {
+		t.Errorf("expected votes to increase from 5 to 6, received %d", newETH1DataVotes[0].VoteCount)
+	}
+}
+
+func TestProcessEth1Data_NewDepositRootHash(t *testing.T) {
+	beaconState := &pb.BeaconState{
+		Eth1DataVotes: []*pb.Eth1DataVote{
+			&pb.Eth1DataVote{
+				Eth1Data: &pb.Eth1Data{
+					DepositRootHash32: []byte{0},
+					BlockHash32:       []byte{1},
+				},
+				VoteCount: 5,
+			},
+		},
+	}
+
+	block := &pb.BeaconBlock{
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{2},
+			BlockHash32:       []byte{3},
+		},
+	}
+
+	beaconState = ProcessEth1Data(beaconState, block)
+	newETH1DataVotes := beaconState.Eth1DataVotes
+	if len(newETH1DataVotes) <= 1 {
+		t.Error("expected new ETH1 data votes to have length > 1")
+	}
+	if newETH1DataVotes[1].VoteCount != 1 {
+		t.Errorf(
+			"expected new ETH1 data votes to have a new element with votes = 1, received votes = %d",
+			newETH1DataVotes[1].VoteCount,
+		)
+	}
+	if !bytes.Equal(newETH1DataVotes[1].Eth1Data.DepositRootHash32, []byte{2}) {
+		t.Errorf(
+			"expected new ETH1 data votes to have a new element with deposit root = %#x, received deposit root = %#x",
+			[]byte{1},
+			newETH1DataVotes[1].Eth1Data.DepositRootHash32,
 		)
 	}
 }
@@ -1190,7 +1204,10 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 		},
 	}
 	beaconState := &pb.BeaconState{
-		LatestDepositRootHash32: []byte{},
+		LatestEth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{0},
+			BlockHash32:       []byte{1},
+		},
 	}
 	want := "merkle branch of deposit root did not verify"
 	if _, err := ProcessValidatorDeposits(
@@ -1267,11 +1284,14 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	balances := []uint64{0}
 	root := depositTrie.Root()
 	beaconState := &pb.BeaconState{
-		ValidatorRegistry:       registry,
-		ValidatorBalances:       balances,
-		LatestDepositRootHash32: root[:],
-		Slot:                    currentSlot,
-		GenesisTime:             uint64(genesisTime),
+		ValidatorRegistry: registry,
+		ValidatorBalances: balances,
+		LatestEth1Data: &pb.Eth1Data{
+			DepositRootHash32: root[:],
+			BlockHash32:       root[:],
+		},
+		Slot:        currentSlot,
+		GenesisTime: uint64(genesisTime),
 	}
 	want := "expected withdrawal credentials to match"
 	if _, err := ProcessValidatorDeposits(
@@ -1344,11 +1364,14 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	balances := []uint64{0}
 	root := depositTrie.Root()
 	beaconState := &pb.BeaconState{
-		ValidatorRegistry:       registry,
-		ValidatorBalances:       balances,
-		LatestDepositRootHash32: root[:],
-		Slot:                    currentSlot,
-		GenesisTime:             uint64(genesisTime),
+		ValidatorRegistry: registry,
+		ValidatorBalances: balances,
+		LatestEth1Data: &pb.Eth1Data{
+			DepositRootHash32: root[:],
+			BlockHash32:       root[:],
+		},
+		Slot:        currentSlot,
+		GenesisTime: uint64(genesisTime),
 	}
 	newState, err := ProcessValidatorDeposits(
 		beaconState,
