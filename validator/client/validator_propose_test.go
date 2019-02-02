@@ -5,6 +5,7 @@ import (
 	"context"
 	"testing"
 
+	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -15,6 +16,7 @@ import (
 type mocks struct {
 	broadcaster    *p2pmock.MockBroadcaster
 	proposerClient *internal.MockProposerServiceClient
+	beaconClient   *internal.MockBeaconServiceClient
 }
 
 func setup(t *testing.T) (*validator, *mocks, func()) {
@@ -22,13 +24,14 @@ func setup(t *testing.T) (*validator, *mocks, func()) {
 	m := &mocks{
 		broadcaster:    p2pmock.NewMockBroadcaster(ctrl),
 		proposerClient: internal.NewMockProposerServiceClient(ctrl),
+		beaconClient:   internal.NewMockBeaconServiceClient(ctrl),
 	}
 
 	validator := &validator{
 		p2p:             m.broadcaster,
-		blockThing:      &fakeBlockThing{},
 		attestationPool: &fakeAttestationPool{},
 		proposerClient:  m.proposerClient,
+		beaconClient:    m.beaconClient,
 	}
 
 	return validator, m, ctrl.Finish
@@ -37,6 +40,21 @@ func setup(t *testing.T) (*validator, *mocks, func()) {
 func TestProposeBlock_BroadcastsABlock(t *testing.T) {
 	validator, m, finish := setup(t)
 	defer finish()
+
+	m.beaconClient.EXPECT().CanonicalHead(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.BeaconBlock{}, nil /*err*/)
+
+	m.beaconClient.EXPECT().PendingDeposits(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pb.PendingDepositsResponse{}, nil /*err*/)
+
+	m.beaconClient.EXPECT().Eth1Data(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pb.Eth1DataResponse{}, nil /*err*/)
 
 	m.broadcaster.EXPECT().Broadcast(
 		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
@@ -55,6 +73,21 @@ func TestProposeBlock_BroadcastsABlock(t *testing.T) {
 func TestProposeBlock_UsesComputedState(t *testing.T) {
 	validator, m, finish := setup(t)
 	defer finish()
+
+	m.beaconClient.EXPECT().CanonicalHead(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.BeaconBlock{}, nil /*err*/)
+
+	m.beaconClient.EXPECT().PendingDeposits(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pb.PendingDepositsResponse{}, nil /*err*/)
+
+	m.beaconClient.EXPECT().Eth1Data(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pb.Eth1DataResponse{}, nil /*err*/)
 
 	var broadcastedBlock *pbp2p.BeaconBlock
 	m.broadcaster.EXPECT().Broadcast(

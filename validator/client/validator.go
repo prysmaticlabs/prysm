@@ -20,10 +20,6 @@ type AttestationPool interface {
 	PendingAttestations() []*pbp2p.Attestation
 }
 
-type BlockThing interface {
-	HeadBlock() *pbp2p.BeaconBlock
-}
-
 // validator
 //
 // WIP - not done.
@@ -37,7 +33,6 @@ type validator struct {
 	pubKey          []byte
 	attestationPool AttestationPool
 	p2p             p2p.Broadcaster
-	blockThing      BlockThing
 }
 
 // Done cleans up the validator.

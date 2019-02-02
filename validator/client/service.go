@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 )
 
@@ -22,12 +23,14 @@ type ValidatorService struct {
 	conn      *grpc.ClientConn
 	endpoint  string
 	withCert  string
+	p2p       p2p.Broadcaster
 }
 
 // Config for the validator service.
 type Config struct {
 	Endpoint string
 	CertFlag string
+	P2p      p2p.Broadcaster
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -39,6 +42,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) *ValidatorService {
 		cancel:   cancel,
 		endpoint: cfg.Endpoint,
 		withCert: cfg.CertFlag,
+		p2p:      cfg.P2p,
 	}
 }
 
@@ -67,6 +71,7 @@ func (v *ValidatorService) Start() {
 	v.validator = &validator{
 		beaconClient:    pb.NewBeaconServiceClient(v.conn),
 		validatorClient: pb.NewValidatorServiceClient(v.conn),
+		p2p:             v.p2p,
 	}
 	go run(v.ctx, v.validator)
 }

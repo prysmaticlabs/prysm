@@ -51,78 +51,152 @@ func TestCanProcessEpoch(t *testing.T) {
 	}
 }
 
-func TestCanProcessReceiptRoots(t *testing.T) {
-	if config.DepositRootVotingPeriod != 1024 {
-		t.Errorf("PowReceiptRootVotingPeriod should be 1024 for these tests to pass")
+func TestCanProcessEth1Data(t *testing.T) {
+	if config.Eth1DataVotingPeriod != 1024 {
+		t.Errorf("Eth1DataVotingPeriod should be 1024 for these tests to pass")
 	}
 	tests := []struct {
-		slot                   uint64
-		canProcessReceiptRoots bool
+		slot               uint64
+		canProcessEth1Data bool
 	}{
 		{
-			slot:                   1,
-			canProcessReceiptRoots: false,
+			slot:               1,
+			canProcessEth1Data: false,
 		},
 		{
-			slot:                   1022,
-			canProcessReceiptRoots: false,
+			slot:               1022,
+			canProcessEth1Data: false,
 		},
 		{
-			slot:                   1024,
-			canProcessReceiptRoots: true,
-		}, {
-			slot:                   4096,
-			canProcessReceiptRoots: true,
-		}, {
-			slot:                   234234,
-			canProcessReceiptRoots: false,
+			slot:               1024,
+			canProcessEth1Data: true,
+		},
+		{
+			slot:               4096,
+			canProcessEth1Data: true,
+		},
+		{
+			slot:               234234,
+			canProcessEth1Data: false,
 		},
 	}
 	for _, tt := range tests {
 		state := &pb.BeaconState{Slot: tt.slot}
-		if CanProcessDepositRoots(state) != tt.canProcessReceiptRoots {
+		if CanProcessEth1Data(state) != tt.canProcessEth1Data {
 			t.Errorf(
-				"CanProcessReceiptRoots(%d) = %v. Wanted %v",
+				"CanProcessEth1Data(%d) = %v. Wanted %v",
 				tt.slot,
-				CanProcessDepositRoots(state),
-				tt.canProcessReceiptRoots,
+				CanProcessEth1Data(state),
+				tt.canProcessEth1Data,
 			)
 		}
 	}
 }
 
-func TestProcessReceipt(t *testing.T) {
-	if config.DepositRootVotingPeriod != 1024 {
-		t.Errorf("PowReceiptRootVotingPeriod should be 1024 for these tests to pass")
+func TestProcessEth1Data(t *testing.T) {
+	if config.Eth1DataVotingPeriod != 1024 {
+		t.Errorf("Eth1DataVotingPeriod should be 1024 for these tests to pass")
 	}
-	requiredVoteCount := config.DepositRootVotingPeriod
+	requiredVoteCount := config.Eth1DataVotingPeriod
 	state := &pb.BeaconState{
-		DepositRootVotes: []*pb.DepositRootVote{
-			{VoteCount: 0, DepositRootHash32: []byte{'A'}},
+		LatestEth1Data: &pb.Eth1Data{
+			DepositRootHash32: nil,
+			BlockHash32:       nil,
+		},
+		Eth1DataVotes: []*pb.Eth1DataVote{
+			{
+				Eth1Data: &pb.Eth1Data{
+					DepositRootHash32: []byte{'A'},
+					BlockHash32:       []byte{'B'},
+				},
+				VoteCount: 0,
+			},
 			// DepositRootHash32 ['B'] gets to process with sufficient vote count.
-			{VoteCount: requiredVoteCount/2 + 1, DepositRootHash32: []byte{'B'}},
-			{VoteCount: requiredVoteCount / 2, DepositRootHash32: []byte{'C'}},
+			{
+				Eth1Data: &pb.Eth1Data{
+					DepositRootHash32: []byte{'C'},
+					BlockHash32:       []byte{'D'},
+				},
+				VoteCount: requiredVoteCount/2 + 1,
+			},
+			{
+				Eth1Data: &pb.Eth1Data{
+					DepositRootHash32: []byte{'E'},
+					BlockHash32:       []byte{'F'},
+				},
+				VoteCount: requiredVoteCount / 2,
+			},
 		},
 	}
-	newState := ProcessDeposits(state)
-	if !bytes.Equal(newState.LatestDepositRootHash32, []byte{'B'}) {
-		t.Errorf("Incorrect LatestDepositRootHash32. Wanted: %v, got: %v",
-			[]byte{'B'}, newState.LatestDepositRootHash32)
+	newState := ProcessEth1Data(state)
+	if !bytes.Equal(newState.LatestEth1Data.DepositRootHash32, []byte{'C'}) {
+		t.Errorf("Incorrect DepositRootHash32. Wanted: %v, got: %v",
+			[]byte{'C'}, newState.LatestEth1Data.DepositRootHash32)
 	}
 
 	// Adding a new receipt root ['D'] which should be the new processed receipt root.
-	state.DepositRootVotes = append(state.DepositRootVotes,
-		&pb.DepositRootVote{VoteCount: requiredVoteCount,
-			DepositRootHash32: []byte{'D'}})
-	newState = ProcessDeposits(state)
-	if !bytes.Equal(newState.LatestDepositRootHash32, []byte{'D'}) {
-		t.Errorf("Incorrect LatestDepositRootHash32. Wanted: %v, got: %v",
-			[]byte{'D'}, newState.LatestDepositRootHash32)
+	state.Eth1DataVotes = append(state.Eth1DataVotes,
+		&pb.Eth1DataVote{
+			Eth1Data: &pb.Eth1Data{
+				DepositRootHash32: []byte{'G'},
+				BlockHash32:       []byte{'H'},
+			},
+			VoteCount: requiredVoteCount,
+		},
+	)
+	newState = ProcessEth1Data(state)
+	if !bytes.Equal(newState.LatestEth1Data.DepositRootHash32, []byte{'G'}) {
+		t.Errorf("Incorrect DepositRootHash32. Wanted: %v, got: %v",
+			[]byte{'G'}, newState.LatestEth1Data.DepositRootHash32)
 	}
 
-	if len(newState.DepositRootVotes) != 0 {
-		t.Errorf("Failed to clean up DepositRootVotes slice. Length: %d",
-			len(newState.DepositRootVotes))
+	if len(newState.Eth1DataVotes) != 0 {
+		t.Errorf("Failed to clean up Eth1DataVotes slice. Length: %d",
+			len(newState.Eth1DataVotes))
+	}
+}
+
+func TestProcessEth1Data_InactionSlot(t *testing.T) {
+	if config.Eth1DataVotingPeriod != 1024 {
+		t.Errorf("Eth1DataVotingPeriod should be 1024 for these tests to pass")
+	}
+	requiredVoteCount := config.Eth1DataVotingPeriod
+	state := &pb.BeaconState{
+		Slot: 4,
+		LatestEth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{'A'},
+			BlockHash32:       []byte{'B'},
+		},
+		Eth1DataVotes: []*pb.Eth1DataVote{
+			{
+				Eth1Data: &pb.Eth1Data{
+					DepositRootHash32: []byte{'C'},
+					BlockHash32:       []byte{'D'},
+				},
+				VoteCount: requiredVoteCount/2 + 1,
+			},
+			{
+				Eth1Data: &pb.Eth1Data{
+					DepositRootHash32: []byte{'E'},
+					BlockHash32:       []byte{'F'},
+				},
+				VoteCount: requiredVoteCount / 2,
+			},
+			{
+				Eth1Data: &pb.Eth1Data{
+					DepositRootHash32: []byte{'G'},
+					BlockHash32:       []byte{'H'},
+				},
+				VoteCount: requiredVoteCount,
+			},
+		},
+	}
+
+	// Adding a new receipt root ['D'] which should be the new processed receipt root.
+	newState := ProcessEth1Data(state)
+	if !bytes.Equal(newState.LatestEth1Data.DepositRootHash32, []byte{'A'}) {
+		t.Errorf("Incorrect DepositRootHash32. Wanted: %v, got: %v",
+			[]byte{'A'}, newState.LatestEth1Data.DepositRootHash32)
 	}
 }
 

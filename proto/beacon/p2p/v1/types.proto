@@ -5,7 +5,7 @@ package ethereum.beacon.p2p.v1;
 import "proto/common/messages.proto";
 
 message BeaconState {
-  // Validator registry [1-1000] 
+  // Validator registry [1-1000]
   repeated ValidatorRecord validator_registry = 1;
   uint64 validator_registry_update_slot = 2;
   bytes validator_registry_delta_chain_tip_hash32 = 3;
@@ -20,7 +20,7 @@ message BeaconState {
   bytes previous_epoch_seed_hash32 = 1009;
   bytes current_epoch_seed_hash32 = 1010;
 
-  // Finality [2001-3000] 
+  // Finality [2001-3000]
   uint64 previous_justified_slot = 2001;
   uint64 justified_slot = 2002;
   uint64 justification_bitfield = 2003;

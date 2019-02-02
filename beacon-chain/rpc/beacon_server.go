@@ -92,3 +92,11 @@ func (bs *BeaconServer) LatestAttestation(req *ptypes.Empty, stream pb.BeaconSer
 		}
 	}
 }
+
+func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1DataResponse, error) {
+	return &pb.Eth1DataResponse{}, nil
+}
+
+func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*pb.PendingDepositsResponse, error) {
+	return &pb.PendingDepositsResponse{PendingDeposits: []*pbp2p.Deposit{}}, nil
+}
