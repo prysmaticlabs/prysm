@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"context"
+	"errors"
 	"testing"
 
 	ptypes "github.com/gogo/protobuf/types"
@@ -10,7 +11,9 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	p2pmock "github.com/prysmaticlabs/prysm/shared/p2p/mock"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/internal"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 type mocks struct {
@@ -37,37 +40,19 @@ func setup(t *testing.T) (*validator, *mocks, func()) {
 	return validator, m, ctrl.Finish
 }
 
-func TestProposeBlock_BroadcastsABlock(t *testing.T) {
+func TestProposeBlock_LogsCanonicalHeadFailure(t *testing.T) {
+	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
 	defer finish()
 
 	m.beaconClient.EXPECT().CanonicalHead(
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
-	).Return(&pbp2p.BeaconBlock{}, nil /*err*/)
-
-	m.beaconClient.EXPECT().PendingDeposits(
-		gomock.Any(), // ctx
-		gomock.Eq(&ptypes.Empty{}),
-	).Return(&pb.PendingDepositsResponse{}, nil /*err*/)
-
-	m.beaconClient.EXPECT().Eth1Data(
-		gomock.Any(), // ctx
-		gomock.Eq(&ptypes.Empty{}),
-	).Return(&pb.Eth1DataResponse{}, nil /*err*/)
-
-	m.broadcaster.EXPECT().Broadcast(
-		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
-	)
-
-	m.proposerClient.EXPECT().ComputeStateRoot(
-		gomock.Any(), // context
-		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
-	).Return(&pb.StateRootResponse{
-		StateRoot: []byte{'F'},
-	}, nil /*err*/)
+	).Return(nil /*beaconBlock*/, errors.New("something bad happened"))
 
 	validator.ProposeBlock(context.Background(), 55)
+
+	testutil.AssertLogsContain(t, hook, "something bad happened")
 }
 
 func TestProposeBlock_UsesComputedState(t *testing.T) {
@@ -112,4 +97,37 @@ func TestProposeBlock_UsesComputedState(t *testing.T) {
 	if !bytes.Equal(broadcastedBlock.StateRootHash32, computedStateRoot) {
 		t.Errorf("Unexpected state root hash. want=%#x got=%#x", computedStateRoot, broadcastedBlock.StateRootHash32)
 	}
+}
+
+func TestProposeBlock_BroadcastsABlock(t *testing.T) {
+	validator, m, finish := setup(t)
+	defer finish()
+
+	m.beaconClient.EXPECT().CanonicalHead(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.BeaconBlock{}, nil /*err*/)
+
+	m.beaconClient.EXPECT().PendingDeposits(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pb.PendingDepositsResponse{}, nil /*err*/)
+
+	m.beaconClient.EXPECT().Eth1Data(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pb.Eth1DataResponse{}, nil /*err*/)
+
+	m.broadcaster.EXPECT().Broadcast(
+		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
+	)
+
+	m.proposerClient.EXPECT().ComputeStateRoot(
+		gomock.Any(), // context
+		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
+	).Return(&pb.StateRootResponse{
+		StateRoot: []byte{'F'},
+	}, nil /*err*/)
+
+	validator.ProposeBlock(context.Background(), 55)
 }
