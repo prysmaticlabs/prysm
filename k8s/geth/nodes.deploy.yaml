@@ -15,8 +15,6 @@ spec:
       component: node
   template:
     metadata:
-      annotations:
-        sidecar.istio.io/inject: "false"
       labels:
         universe: geth
         component: node
@@ -78,10 +76,10 @@ spec:
                   key: ws
           resources:
             requests:
-              memory: "1000Mi"
+              memory: "250Mi"
               cpu: "200m"
             limits:
-              memory: "1200Mi"
+              memory: "1000Mi"
               cpu: "200m"
       initContainers:
         - name: copy-staticnodes

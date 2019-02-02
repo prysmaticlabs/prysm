@@ -15,8 +15,6 @@ spec:
       component: public-rpc-node
   template:
     metadata:
-      annotations:
-        sidecar.istio.io/inject: "false"
       labels:
         universe: geth
         component: public-rpc-node
@@ -29,6 +27,13 @@ spec:
             httpGet:
               path: /healthz
               port: 8080
+          resources:
+            requests:
+              memory: "10Mi"
+              cpu: "20m"
+            limits:
+              memory: "10Mi"
+              cpu: "20m"
         - name: node
           image: ethereum/client-go:alltools-stable
           ports: 
@@ -77,10 +82,10 @@ spec:
                   key: ws
           resources:
             requests:
-              memory: "1000Mi"
-              cpu: "200m"
+              memory: "500Mi"
+              cpu: "50m"
             limits:
-              memory: "1200Mi"
+              memory: "1000Mi"
               cpu: "200m"
       initContainers:
         - name: copy-staticnodes

@@ -17,3 +17,39 @@ spec:
       name: ws
       protocol: TCP
   type: ClusterIP
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: public-rpc-nodes-gateway
+  namespace: pow
+spec:
+  selector:
+    istio: ingressgateway 
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - goerli.prylabs.net
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: public-rpc-nodes
+  namespace: pow
+spec:
+  hosts:
+  - goerli.prylabs.net
+  gateways:
+  - public-rpc-nodes-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        port:
+          number: 8545
+        host: public-rpc-nodes
