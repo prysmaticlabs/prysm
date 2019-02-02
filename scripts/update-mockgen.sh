@@ -8,9 +8,9 @@ mocks=("./validator/internal/attester_service_mock.go AttesterServiceClient"
        "./validator/internal/proposer_service_mock.go ProposerServiceClient"
        "./validator/internal/validator_service_mock.go ValidatorServiceClient")
 
-for mock in ${mocks[@]}; do
-    file=${mock% *};
-    interfaces=${mock#* };
+for ((i = 0; i < ${#mocks[@]}; i++)); do
+    file=${mocks[i]% *};
+    interfaces=${mocks[i]#* };
     echo "generating $file for interfaces: $interfaces";
-    mockgen -package=internal -destination=$file github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1 $val
+    mockgen -package=internal -destination=$file github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1 $interfaces
 done
