@@ -71,8 +71,8 @@ func InitialBeaconState(
 			RandaoCommitmentHash32:      depositInput.RandaoCommitmentHash32,
 			WithdrawalCredentialsHash32: depositInput.WithdrawalCredentialsHash32,
 			Balance:                     amount,
-			ExitSlot:                    config.FarFutureSlot,
-			PenalizedSlot:               config.FarFutureSlot,
+			ExitEpoch:                   config.FarFutureEpoch,
+			PenalizedEpoch:              config.FarFutureEpoch,
 		}
 
 		validatorRegistry[i] = validator

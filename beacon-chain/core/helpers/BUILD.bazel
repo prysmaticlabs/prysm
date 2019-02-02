@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "randao.go",
         "slot_epoch.go",
+        "validators.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers",
     visibility = ["//beacon-chain:__subpackages__"],

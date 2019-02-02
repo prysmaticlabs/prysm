@@ -7,6 +7,7 @@ package balances
 import (
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -45,7 +46,7 @@ func ExpectedFFGSource(
 				totalBalance
 	}
 
-	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
 	didNotAttestIndices := sliceutil.Not(justifiedAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
@@ -82,7 +83,7 @@ func ExpectedFFGTarget(
 				totalBalance
 	}
 
-	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
 	didNotAttestIndices := sliceutil.Not(boundaryAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
@@ -119,7 +120,7 @@ func ExpectedBeaconChainHead(
 				totalBalance
 	}
 
-	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
 	didNotAttestIndices := sliceutil.Not(headAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
@@ -174,7 +175,7 @@ func InactivityFFGSource(
 	epochsSinceFinality uint64) *pb.BeaconState {
 
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
-	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
 	didNotAttestIndices := sliceutil.Not(justifiedAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
@@ -198,7 +199,7 @@ func InactivityFFGTarget(
 	epochsSinceFinality uint64) *pb.BeaconState {
 
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
-	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
 	didNotAttestIndices := sliceutil.Not(boundaryAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
@@ -221,7 +222,7 @@ func InactivityChainHead(
 	totalBalance uint64) *pb.BeaconState {
 
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
-	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
 	didNotAttestIndices := sliceutil.Not(headAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
@@ -235,7 +236,7 @@ func InactivityChainHead(
 // to inactive validators with status EXITED_WITH_PENALTY.
 //
 // Spec pseudocode definition:
-//    Any active_validator index with validator.penalized_slot <= state.slot,
+//    Any active_validator index with validator.penalized_epoch <= current_epoch,
 //    loses 2 * inactivity_penalty(state, index, epochs_since_finality) +
 //    base_reward(state, index).
 func InactivityExitedPenalties(
@@ -244,10 +245,10 @@ func InactivityExitedPenalties(
 	epochsSinceFinality uint64) *pb.BeaconState {
 
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
-	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
 
 	for _, index := range activeValidatorIndices {
-		if state.ValidatorRegistry[index].PenalizedSlot <= state.Slot {
+		if state.ValidatorRegistry[index].PenalizedEpoch <= helpers.CurrentEpoch(state) {
 			state.ValidatorBalances[index] -=
 				2*inactivityPenalty(state, index, baseRewardQuotient, epochsSinceFinality) +
 					baseReward(state, index, baseRewardQuotient)

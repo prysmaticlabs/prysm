@@ -5,6 +5,7 @@ package state
 
 import (
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 
 	bal "github.com/prysmaticlabs/prysm/beacon-chain/core/balances"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -116,7 +117,8 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock, verifySignatures
 // 	 final_book_keeping(state)
 func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	// Calculate total balances of active validators of the current state.
-	activeValidatorIndices := v.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
+	currentEpoch := helpers.CurrentEpoch(state)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, currentEpoch)
 	totalBalance := e.TotalBalance(state, activeValidatorIndices)
 
 	// Calculate the attesting balances of validators that justified the

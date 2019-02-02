@@ -96,7 +96,7 @@ func AttestationParticipants(
 // 			get_active_validator_indices(validators, state.current_epoch_calculation_slot)
 //        return get_committees_per_slot(len(current_active_validators))
 func CurrCommitteesCountPerSlot(state *pb.BeaconState) uint64 {
-	currActiveValidatorIndices := ActiveValidatorIndices(
+	currActiveValidatorIndices := helpers.ActiveValidatorIndices(
 		state.ValidatorRegistry, state.CurrentEpochCalculationSlot)
 	return committeeCountPerSlot(uint64(len(currActiveValidatorIndices)))
 }
@@ -233,7 +233,7 @@ func Shuffling(
 	slot -= slot % config.EpochLength
 
 	// Figure out how many committees can be in a single slot.
-	activeIndices := ActiveValidatorIndices(validators, slot)
+	activeIndices := helpers.ActiveValidatorIndices(validators, slot)
 	activeCount := uint64(len(activeIndices))
 	committeesPerSlot := committeeCountPerSlot(activeCount)
 
@@ -285,7 +285,7 @@ func committeeCountPerSlot(activeValidatorCount uint64) uint64 {
 // 			get_active_validator_indices(validators, state.previous_epoch_calculation_slot)
 //        return get_committees_per_slot(len(previous_active_validators))
 func prevCommitteesCountPerSlot(state *pb.BeaconState) uint64 {
-	prevActiveValidatorIndices := ActiveValidatorIndices(
+	prevActiveValidatorIndices := helpers.ActiveValidatorIndices(
 		state.ValidatorRegistry, state.PreviousEpochCalculationSlot)
 	return committeeCountPerSlot(uint64(len(prevActiveValidatorIndices)))
 }
