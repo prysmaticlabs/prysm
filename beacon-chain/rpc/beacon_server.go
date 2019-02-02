@@ -18,7 +18,7 @@ type BeaconServer struct {
 	beaconDB            *db.BeaconDB
 	ctx                 context.Context
 	powChainService     powChainService
-	attestationService  attestationService
+	operationService    operationService
 	incomingAttestation chan *pbp2p.Attestation
 	canonicalStateChan  chan *pbp2p.BeaconState
 	chainStartChan      chan time.Time
@@ -74,7 +74,7 @@ func (bs *BeaconServer) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*
 
 // LatestAttestation streams the latest processed attestations to the rpc clients.
 func (bs *BeaconServer) LatestAttestation(req *ptypes.Empty, stream pb.BeaconService_LatestAttestationServer) error {
-	sub := bs.attestationService.IncomingAttestationFeed().Subscribe(bs.incomingAttestation)
+	sub := bs.operationService.IncomingAttFeed().Subscribe(bs.incomingAttestation)
 	defer sub.Unsubscribe()
 	for {
 		select {

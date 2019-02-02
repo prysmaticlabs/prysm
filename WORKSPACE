@@ -35,9 +35,9 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    url = "https://github.com/bazelbuild/rules_nodejs/archive/0.16.5.tar.gz",
-    strip_prefix = "rules_nodejs-0.16.5",
-    sha256 = "63f29855b5e85d0db77362e1477864299697e1f200be8be8fa5faa43230b80d0",
+    url = "https://github.com/bazelbuild/rules_nodejs/archive/0.16.7.tar.gz",
+    strip_prefix = "rules_nodejs-0.16.7",
+    sha256 = "631795fef895f982cac2c6b6044a02d67d17179789dbbb5460f22a308d9a1862",
 )
 
 http_archive(
@@ -311,7 +311,7 @@ go_repository(
 
 go_repository(
     name = "com_github_minio_sha256_simd",
-    commit = "cc1980cb03383b1d46f518232672584432d7532d",
+    commit = "2d45a736cd16732fe6a57563cc20d8b035193e58",
     importpath = "github.com/minio/sha256-simd",
 )
 
@@ -456,7 +456,7 @@ go_repository(
 
 go_repository(
     name = "com_github_miekg_dns",
-    tag = "v1.1.3",
+    tag = "v1.1.4",
     importpath = "github.com/miekg/dns",
 )
 
@@ -504,13 +504,13 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "302c3dd5f1cc82baae8e44d9c3178e89b6e2b345",
+    commit = "afcc84fd7533758f95a6e93ae710aa945a0b7e73",
     importpath = "golang.org/x/sys",
 )
 
 go_repository(
     name = "com_github_whyrusleeping_yamux",
-    tag = "v1.1.2",
+    tag = "v1.1.5",
     importpath = "github.com/whyrusleeping/yamux",
 )
 
@@ -546,7 +546,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_crypto",
-    commit = "b01c7a72566457eb1420261cdafef86638fc3861",
+    commit = "b8fe1690c61389d7d2a8074a507d1d40c5d30448",
     importpath = "golang.org/x/crypto",
 )
 
@@ -678,7 +678,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_prometheus",
-    tag = "v2.7.0",
+    tag = "v2.7.1",
     importpath = "github.com/prometheus/prometheus",
 )
 
@@ -708,7 +708,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_buffer_pool",
-    tag = "v0.1.1",
+    tag = "v0.1.3",
     importpath = "github.com/libp2p/go-buffer-pool",
 )
 

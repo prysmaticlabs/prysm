@@ -13,7 +13,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slotticker"
+	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
 
 type AttestationPool interface {
@@ -29,7 +29,7 @@ type BlockThing interface {
 // WIP - not done.
 type validator struct {
 	genesisTime     uint64
-	ticker          *slotticker.SlotTicker
+	ticker          *slotutil.SlotTicker
 	assignment      *pb.Assignment
 	proposerClient  pb.ProposerServiceClient
 	validatorClient pb.ValidatorServiceClient
@@ -38,14 +38,6 @@ type validator struct {
 	attestationPool AttestationPool
 	p2p             p2p.Broadcaster
 	blockThing      BlockThing
-}
-
-// Initialize
-//
-// WIP - not done.
-func (v *validator) Initialize(ctx context.Context) {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.Initialize")
-	defer span.Finish()
 }
 
 // Done cleans up the validator.
@@ -88,7 +80,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) {
 	log.Infof("Beacon chain initialized at unix time: %v", time.Unix(int64(v.genesisTime), 0))
 	// Once the ChainStart log is received, we update the genesis time of the validator client
 	// and begin a slot ticker used to track the current slot the beacon node is in.
-	v.ticker = slotticker.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SlotDuration)
+	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SlotDuration)
 }
 
 // WaitForActivation checks whether the validator pubkey is in the active

@@ -10,7 +10,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/trie"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 // Generates a simulated beacon block to use
@@ -22,7 +22,7 @@ func generateSimulatedBlock(
 	randaoReveal [32]byte,
 	depositRandaoCommit [32]byte,
 	simulatedDeposit *StateTestDeposit,
-	depositsTrie *trie.DepositTrie,
+	depositsTrie *trieutil.DepositTrie,
 	simulatedProposerSlashing *StateTestProposerSlashing,
 	simulatedAttesterSlashing *StateTestAttesterSlashing,
 	simulatedExit *StateTestValidatorExit,

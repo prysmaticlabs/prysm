@@ -8,10 +8,11 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
-	"github.com/prysmaticlabs/prysm/shared/bytes"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 )
 
@@ -19,75 +20,6 @@ import (
 type CrosslinkCommittee struct {
 	Committee []uint64
 	Shard     uint64
-}
-
-// ShuffleValidatorRegistryToCommittees shuffles validator indices and splits them by slot and shard.
-// To be deprecated by #1352.
-func ShuffleValidatorRegistryToCommittees(
-	seed [32]byte,
-	validators []*pb.ValidatorRecord,
-	crosslinkStartShard uint64,
-	slot uint64,
-) ([]*pb.ShardCommitteeArray, error) {
-	indices := ActiveValidatorIndices(validators, slot)
-	// split the shuffled list for slot.
-	shuffledValidatorRegistry, err := utils.ShuffleIndices(seed, indices)
-	if err != nil {
-		return nil, err
-	}
-	return splitBySlotShard(shuffledValidatorRegistry, crosslinkStartShard), nil
-}
-
-// splitBySlotShard splits the validator list into evenly sized committees and assigns each
-// committee to a slot and a shard. If the validator set is large, multiple committees are assigned
-// to a single slot and shard. See getCommitteesPerSlot for more details.
-// To be deprecated by #1352.
-func splitBySlotShard(shuffledValidatorRegistry []uint64, crosslinkStartShard uint64) []*pb.ShardCommitteeArray {
-	committeesPerSlot := getCommitteesPerSlot(uint64(len(shuffledValidatorRegistry)))
-	committeBySlotAndShard := []*pb.ShardCommitteeArray{}
-
-	// split the validator indices by slot.
-	validatorsBySlot := utils.SplitIndices(shuffledValidatorRegistry, config.EpochLength)
-	for i, validatorsForSlot := range validatorsBySlot {
-		shardCommittees := []*pb.ShardCommittee{}
-		validatorsByShard := utils.SplitIndices(validatorsForSlot, committeesPerSlot)
-		shardStart := crosslinkStartShard + uint64(i)*committeesPerSlot
-
-		for j, validatorsForShard := range validatorsByShard {
-			shardID := (shardStart + uint64(j)) % config.ShardCount
-			shardCommittees = append(shardCommittees, &pb.ShardCommittee{
-				Shard:               shardID,
-				Committee:           validatorsForShard,
-				TotalValidatorCount: uint64(len(shuffledValidatorRegistry)),
-			})
-		}
-
-		committeBySlotAndShard = append(committeBySlotAndShard, &pb.ShardCommitteeArray{
-			ArrayShardCommittee: shardCommittees,
-		})
-	}
-	return committeBySlotAndShard
-}
-
-// getCommitteesPerSlot calculates the parameters for ShuffleValidatorRegistryToCommittees.
-// The minimum value for committeesPerSlot is 1.
-// Otherwise, the value for committeesPerSlot is the smaller of
-// numActiveValidatorRegistry / EpochLength / TargetCommitteeSize or
-// ShardCount / CycleLength.//
-// To be deprecated by #1352.
-func getCommitteesPerSlot(numActiveValidatorRegistry uint64) uint64 {
-	epochLength := config.EpochLength
-	targetCommitteeSize := config.TargetCommitteeSize
-
-	boundOnValidatorRegistry := numActiveValidatorRegistry / epochLength / targetCommitteeSize
-	boundOnShardCount := config.ShardCount / epochLength
-	// Ensure that comitteesPerSlot is at least 1.
-	if boundOnShardCount == 0 {
-		return 1
-	} else if boundOnValidatorRegistry > boundOnShardCount {
-		return boundOnShardCount
-	}
-	return boundOnValidatorRegistry
 }
 
 // AttestationParticipants returns the attesting participants indices.
@@ -132,6 +64,7 @@ func AttestationParticipants(
 			break
 		}
 	}
+
 	if len(participationBitfield) != mathutil.CeilDiv8(len(committee)) {
 		return nil, fmt.Errorf(
 			"wanted participants bitfield length %d, got: %d",
@@ -172,31 +105,36 @@ func CurrCommitteesCountPerSlot(state *pb.BeaconState) uint64 {
 // contains the shard associated with the committee and the validator indices
 // in that committee.
 //   def get_crosslink_committees_at_slot(state: BeaconState,
-//                                     slot: int) -> List[Tuple[List[int], int]]:
+//                                     slot: SlotNumber) -> List[Tuple[List[ValidatorIndex], ShardNumber]]:
 //    """
 //    Returns the list of ``(committee, shard)`` tuples for the ``slot``.
 //    """
-//    state_epoch_slot = state.slot - (state.slot % EPOCH_LENGTH)
-//    assert state_epoch_slot <= slot + EPOCH_LENGTH
-//    assert slot < state_epoch_slot + EPOCH_LENGTH
-//    offset = slot % EPOCH_LENGTH
+//    epoch = slot_to_epoch(slot)
+//    current_epoch = get_current_epoch(state)
+//    previous_epoch = current_epoch - 1 if current_epoch > GENESIS_EPOCH else current_epoch
+//    next_epoch = current_epoch + 1
 //
-//    if slot < state_epoch_slot:
-//        committees_per_slot = get_previous_epoch_committee_count_per_slot(state)
-//        shuffling = get_shuffling(
-//            state.previous_epoch_randao_mix,
-//            state.validator_registry,
-//            state.previous_epoch_calculation_slot,
-//        )
-//        slot_start_shard = (state.previous_epoch_start_shard + committees_per_slot * offset) % SHARD_COUNT
+//    assert previous_epoch <= epoch < next_epoch
+//
+//    if epoch < current_epoch:
+//        committees_per_epoch = get_previous_epoch_committee_count(state)
+//        seed = state.previous_epoch_seed
+//        shuffling_epoch = state.previous_calculation_epoch
+//        shuffling_start_shard = state.previous_epoch_start_shard
 //    else:
-//        committees_per_slot = get_current_epoch_committee_count_per_slot(state)
-//        shuffling = get_shuffling(
-//            state.current_epoch_randao_mix,
-//            state.validator_registry,
-//            state.current_epoch_calculation_slot,
-//        )
-//        slot_start_shard = (state.current_epoch_start_shard + committees_per_slot * offset) % SHARD_COUNT
+//        committees_per_epoch = get_current_epoch_committee_count(state)
+//        seed = state.current_epoch_seed
+//        shuffling_epoch = state.current_calculation_epoch
+//        shuffling_start_shard = state.current_epoch_start_shard
+//
+//    shuffling = get_shuffling(
+//        seed,
+//        state.validator_registry,
+//        shuffling_epoch,
+//    )
+//    offset = slot % EPOCH_LENGTH
+//    committees_per_slot = committees_per_epoch // EPOCH_LENGTH
+//    slot_start_shard = (shuffling_start_shard + committees_per_slot * offset) % SHARD_COUNT
 //
 //    return [
 //        (
@@ -206,36 +144,30 @@ func CurrCommitteesCountPerSlot(state *pb.BeaconState) uint64 {
 //        for i in range(committees_per_slot)
 //    ]
 func CrosslinkCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*CrosslinkCommittee, error) {
-	var earliestSlot uint64
 	var countPerSlot uint64
 	var startShard uint64
 	var shuffledIndices [][]uint64
 	var err error
 
-	epochLength := config.EpochLength
-	startEpochSlot := state.Slot - (state.Slot % epochLength)
+	wantedEpoch := helpers.SlotToEpoch(slot)
+	currentEpoch := helpers.CurrentEpoch(state)
+	prevEpoch := helpers.PrevEpoch(state)
+	nextEpoch := helpers.NextEpoch(state)
 
-	// If the start epoch slot is less than epochLength, then the earliestSlot would
-	// result in a negative number. Therefore we should default to
-	// earliestSlot = 0 in this case.
-	if startEpochSlot > epochLength {
-		earliestSlot = startEpochSlot - epochLength
-	}
-
-	if slot < earliestSlot || slot >= startEpochSlot+epochLength {
+	if wantedEpoch < prevEpoch || wantedEpoch >= nextEpoch {
 		return nil, fmt.Errorf(
-			"input committee slot %d out of bounds: %d <= slot < %d",
-			slot,
-			earliestSlot,
-			startEpochSlot+epochLength,
+			"input committee epoch %d out of bounds: %d <= epoch < %d",
+			wantedEpoch,
+			prevEpoch,
+			currentEpoch,
 		)
 	}
 
 	offSet := slot % config.EpochLength
-	if slot < startEpochSlot {
+	if wantedEpoch < currentEpoch {
 		countPerSlot = prevCommitteesCountPerSlot(state)
 		shuffledIndices, err = Shuffling(
-			bytes.ToBytes32(state.PreviousEpochRandaoMixHash32),
+			bytesutil.ToBytes32(state.PreviousEpochSeedHash32),
 			state.ValidatorRegistry,
 			state.PreviousEpochCalculationSlot)
 		if err != nil {
@@ -246,7 +178,7 @@ func CrosslinkCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*Crosslink
 	} else {
 		countPerSlot = CurrCommitteesCountPerSlot(state)
 		shuffledIndices, err = Shuffling(
-			bytes.ToBytes32(state.CurrentEpochRandaoMixHash32),
+			bytesutil.ToBytes32(state.CurrentEpochSeedHash32),
 			state.ValidatorRegistry,
 			state.CurrentEpochCalculationSlot)
 		if err != nil {
@@ -308,7 +240,7 @@ func Shuffling(
 	// Convert slot to bytes and xor it with seed.
 	slotInBytes := make([]byte, 32)
 	binary.BigEndian.PutUint64(slotInBytes, slot)
-	seed = bytes.ToBytes32(bytes.Xor(seed[:], slotInBytes))
+	seed = bytesutil.ToBytes32(bytesutil.Xor(seed[:], slotInBytes))
 
 	shuffledIndices, err := utils.ShuffleIndices(seed, activeIndices)
 	if err != nil {

@@ -95,7 +95,6 @@ func InitialBeaconState(
 		ValidatorRegistry:                    validatorRegistry,
 		ValidatorBalances:                    latestBalances,
 		ValidatorRegistryUpdateSlot:          config.GenesisSlot,
-		ValidatorRegistryExitCount:           0,
 		ValidatorRegistryDeltaChainTipHash32: config.ZeroHash[:],
 
 		// Randomness and committees.
@@ -104,8 +103,8 @@ func InitialBeaconState(
 		CurrentEpochStartShard:       config.GenesisStartShard,
 		PreviousEpochCalculationSlot: config.GenesisSlot,
 		CurrentEpochCalculationSlot:  config.GenesisSlot,
-		PreviousEpochRandaoMixHash32: config.ZeroHash[:],
-		CurrentEpochRandaoMixHash32:  config.ZeroHash[:],
+		PreviousEpochSeedHash32:      config.ZeroHash[:],
+		CurrentEpochSeedHash32:       config.ZeroHash[:],
 
 		// Finality.
 		PreviousJustifiedSlot: config.GenesisSlot,
