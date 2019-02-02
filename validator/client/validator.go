@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
 
+// TODO(1323): Replace with actual attestation pool.
 type AttestationPool interface {
 	PendingAttestations() []*pbp2p.Attestation
 }

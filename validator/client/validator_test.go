@@ -28,14 +28,7 @@ func init() {
 
 var _ = Validator(&validator{})
 
-// TODO: remove this
-type fakeBlockThing struct{}
-
-func (f *fakeBlockThing) HeadBlock() *pbp2p.BeaconBlock {
-	return &pbp2p.BeaconBlock{}
-}
-
-// TODO: remove this
+// TODO(1323): remove this
 type fakeAttestationPool struct{}
 
 func (f *fakeAttestationPool) PendingAttestations() []*pbp2p.Attestation {
