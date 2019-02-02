@@ -17,7 +17,7 @@ func TestAttestationParticipants_ok(t *testing.T) {
 	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot: config.FarFutureSlot,
+			ExitEpoch: config.FarFutureEpoch,
 		}
 	}
 
@@ -100,7 +100,7 @@ func TestAttestationParticipants_IncorrectBitfield(t *testing.T) {
 	validators := make([]*pb.ValidatorRecord, validatorsPerEpoch)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot: config.FarFutureSlot,
+			ExitEpoch: config.FarFutureEpoch,
 		}
 	}
 
@@ -144,7 +144,7 @@ func TestCurrCommitteesCountPerSlot_Ok(t *testing.T) {
 	validators := make([]*pb.ValidatorRecord, committeesPerEpoch*validatorsPerEpoch)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot: config.FarFutureSlot,
+			ExitEpoch: config.FarFutureEpoch,
 		}
 	}
 
@@ -165,7 +165,7 @@ func TestPrevCommitteesCountPerSlot_Ok(t *testing.T) {
 	validators := make([]*pb.ValidatorRecord, committeesPerEpoch*validatorsPerEpoch)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot: config.FarFutureSlot,
+			ExitEpoch: config.FarFutureEpoch,
 		}
 	}
 
@@ -186,7 +186,7 @@ func TestShuffling_Ok(t *testing.T) {
 	validators := make([]*pb.ValidatorRecord, committeesPerEpoch*validatorsPerEpoch)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot: config.FarFutureSlot,
+			ExitEpoch: config.FarFutureEpoch,
 		}
 	}
 
@@ -229,7 +229,7 @@ func TestCrosslinkCommitteesAtSlot_Ok(t *testing.T) {
 	validators := make([]*pb.ValidatorRecord, committeesPerEpoch*validatorsPerEpoch)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot: config.FarFutureSlot,
+			ExitEpoch: config.FarFutureEpoch,
 		}
 	}
 

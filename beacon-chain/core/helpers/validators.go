@@ -4,7 +4,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-// isActiveValidator returns the boolean value on whether the validator
+// IsActiveValidator returns the boolean value on whether the validator
 // is active or not.
 //
 // Spec pseudocode definition:
@@ -13,7 +13,7 @@ import (
 //    Check if ``validator`` is active.
 //    """
 //    return validator.activation_epoch <= epoch < validator.exit_epoch
-func isActiveValidator(validator *pb.ValidatorRecord, epoch uint64) bool {
+func IsActiveValidator(validator *pb.ValidatorRecord, epoch uint64) bool {
 	return validator.ActivationEpoch <= epoch &&
 		epoch < validator.ExitEpoch
 }
@@ -47,7 +47,7 @@ func isActiveValidator(validator *pb.ValidatorRecord, epoch uint64) bool {
 func ActiveValidatorIndices(validators []*pb.ValidatorRecord, epoch uint64) []uint64 {
 	indices := make([]uint64, 0, len(validators))
 	for i, v := range validators {
-		if isActiveValidator(v, epoch) {
+		if IsActiveValidator(v, epoch) {
 			indices = append(indices, uint64(i))
 		}
 
