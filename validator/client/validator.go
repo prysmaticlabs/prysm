@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
 
+// AttestationPool STUB interface. Final attestation pool pending design.
 // TODO(1323): Replace with actual attestation pool.
 type AttestationPool interface {
 	PendingAttestations() []*pbp2p.Attestation
