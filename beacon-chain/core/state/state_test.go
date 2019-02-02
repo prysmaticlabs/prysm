@@ -108,9 +108,6 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	if state.ValidatorRegistryUpdateSlot != initialSlotNumber {
 		t.Error("ValidatorRegistryUpdateSlot was not correctly initialized")
 	}
-	if state.ValidatorRegistryExitCount != 0 {
-		t.Error("ValidatorRegistryExitCount was not correctly initialized")
-	}
 	if len(state.ValidatorRegistry) != depositsForChainStart {
 		t.Error("ValidatorRegistry was not correctly initialized")
 	}

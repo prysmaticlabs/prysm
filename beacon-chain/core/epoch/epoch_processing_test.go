@@ -426,9 +426,10 @@ func TestProcessPrevSlotShardOk(t *testing.T) {
 	state := &pb.BeaconState{
 		CurrentEpochCalculationSlot: 1,
 		CurrentEpochStartShard:      2,
+		CurrentEpochSeedHash32:      []byte{'A'},
 	}
 
-	newState := ProcessPrevSlotShard(
+	newState := ProcessPrevSlotShardSeed(
 		proto.Clone(state).(*pb.BeaconState))
 
 	if newState.PreviousEpochCalculationSlot != state.CurrentEpochCalculationSlot {
@@ -439,31 +440,30 @@ func TestProcessPrevSlotShardOk(t *testing.T) {
 		t.Errorf("Incorret prev epoch start shard: Wanted: %d, got: %d",
 			newState.PreviousEpochStartShard, state.CurrentEpochStartShard)
 	}
+	if !bytes.Equal(newState.PreviousEpochSeedHash32, state.CurrentEpochSeedHash32) {
+		t.Errorf("Incorret prev epoch randao mix hash: Wanted: %v, got: %v",
+			state.CurrentEpochSeedHash32, newState.PreviousEpochSeedHash32)
+	}
 }
 
 func TestProcessValidatorRegistryOk(t *testing.T) {
-	offset := uint64(1)
 	state := &pb.BeaconState{
-		Slot:                        config.SeedLookahead + offset,
-		LatestRandaoMixesHash32S:    [][]byte{{'A'}, {'B'}},
-		CurrentEpochRandaoMixHash32: []byte{'C'},
+		Slot:                     config.SeedLookahead,
+		LatestRandaoMixesHash32S: [][]byte{{'A'}, {'B'}},
+		CurrentEpochSeedHash32:   []byte{'C'},
 	}
 	newState, err := ProcessValidatorRegistry(
 		proto.Clone(state).(*pb.BeaconState))
 	if err != nil {
 		t.Fatalf("Could not execute ProcessValidatorRegistry: %v", err)
 	}
-	if !bytes.Equal(newState.PreviousEpochRandaoMixHash32, state.CurrentEpochRandaoMixHash32) {
-		t.Errorf("Incorret prev epoch randao mix hash: Wanted: %v, got: %v",
-			state.CurrentEpochRandaoMixHash32, newState.PreviousEpochRandaoMixHash32)
-	}
 	if newState.CurrentEpochCalculationSlot != state.Slot {
 		t.Errorf("Incorret curr epoch calculation slot: Wanted: %d, got: %d",
 			newState.CurrentEpochCalculationSlot, state.Slot)
 	}
-	if !bytes.Equal(newState.CurrentEpochRandaoMixHash32, state.LatestRandaoMixesHash32S[offset]) {
+	if !bytes.Equal(newState.CurrentEpochSeedHash32, state.LatestRandaoMixesHash32S[0]) {
 		t.Errorf("Incorret current epoch randao mix hash: Wanted: %v, got: %v",
-			state.LatestRandaoMixesHash32S[offset], newState.CurrentEpochRandaoMixHash32)
+			state.LatestRandaoMixesHash32S[0], newState.CurrentEpochSeedHash32)
 	}
 }
 
@@ -480,9 +480,9 @@ func TestProcessPartialValidatorRegistry(t *testing.T) {
 		t.Errorf("Incorrect CurrentEpochCalculationSlot, wanted: %d, got: %d",
 			state.Slot, newState.CurrentEpochCalculationSlot)
 	}
-	if !bytes.Equal(newState.CurrentEpochRandaoMixHash32, state.LatestRandaoMixesHash32S[offset]) {
+	if !bytes.Equal(newState.CurrentEpochSeedHash32, state.LatestRandaoMixesHash32S[offset]) {
 		t.Errorf("Incorret current epoch randao mix hash: Wanted: %v, got: %v",
-			state.LatestRandaoMixesHash32S[offset], newState.CurrentEpochRandaoMixHash32)
+			state.LatestRandaoMixesHash32S[offset], newState.CurrentEpochSeedHash32)
 	}
 }
 
@@ -492,7 +492,7 @@ func TestCleanupAttestations(t *testing.T) {
 	}
 	epochLength := config.EpochLength
 	state := &pb.BeaconState{
-		Slot: 2 * epochLength,
+		Slot: epochLength,
 		LatestAttestations: []*pb.PendingAttestationRecord{
 			{Data: &pb.AttestationData{Slot: 1}},
 			{Data: &pb.AttestationData{Slot: epochLength - 10}},
@@ -505,7 +505,7 @@ func TestCleanupAttestations(t *testing.T) {
 		},
 	}
 	wanted := &pb.BeaconState{
-		Slot: 2 * epochLength,
+		Slot: epochLength,
 		LatestAttestations: []*pb.PendingAttestationRecord{
 			{Data: &pb.AttestationData{Slot: epochLength}},
 			{Data: &pb.AttestationData{Slot: epochLength + 1}},

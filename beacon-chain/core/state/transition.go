@@ -295,7 +295,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	}
 
 	// Process validator registry.
-	state = e.ProcessPrevSlotShard(state)
+	state = e.ProcessPrevSlotShardSeed(state)
 	state = v.ProcessPenaltiesAndExits(state)
 	if e.CanProcessValidatorRegistry(state) {
 		state, err = e.ProcessValidatorRegistry(state)
