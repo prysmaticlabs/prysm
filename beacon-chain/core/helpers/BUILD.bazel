@@ -21,6 +21,7 @@ go_test(
     srcs = [
         "randao_test.go",
         "slot_epoch_test.go",
+        "validators_test.go",
     ],
     embed = [":go_default_library"],
     deps = ["//proto/beacon/p2p/v1:go_default_library"],

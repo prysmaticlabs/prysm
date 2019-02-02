@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"reflect"
 	"strings"
 	"testing"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"

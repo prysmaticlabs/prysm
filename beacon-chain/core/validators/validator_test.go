@@ -2,11 +2,11 @@ package validators
 
 import (
 	"bytes"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"

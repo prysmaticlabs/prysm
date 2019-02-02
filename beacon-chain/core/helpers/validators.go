@@ -18,23 +18,6 @@ func IsActiveValidator(validator *pb.ValidatorRecord, epoch uint64) bool {
 		epoch < validator.ExitEpoch
 }
 
-// ActivateValidator takes in validator index and updates
-// validator's activation slot.
-//
-// Spec pseudocode definition:
-// def activate_validator(state: BeaconState, index: int, genesis: bool) -> None:
-//    validator = state.validator_registry[index]
-//
-//    validator.activation_slot = GENESIS_SLOT if genesis else (state.slot + ENTRY_EXIT_DELAY)
-//    state.validator_registry_delta_chain_tip = hash_tree_root(
-//        ValidatorRegistryDeltaBlock(
-//            current_validator_registry_delta_chain_tip=state.validator_registry_delta_chain_tip,
-//            validator_index=index,
-//            pubkey=validator.pubkey,
-//            slot=validator.activation_slot,
-//            flag=ACTIVATION,
-//        )
-//    )
 // ActiveValidatorIndices filters out active validators based on validator status
 // and returns their indices in a list.
 //

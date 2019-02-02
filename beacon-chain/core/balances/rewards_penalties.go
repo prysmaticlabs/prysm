@@ -7,9 +7,9 @@ package balances
 import (
 	"errors"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
