@@ -210,4 +210,3 @@ message Eth1DataVote {
   Eth1Data eth1_data = 1;
   uint64 vote_count = 2;
 }
-
