@@ -30,8 +30,8 @@ _configs = [
 
 _deployments = [
 #    "faucet",
-    "nodes",
-    "public_nodes",
+    #"nodes",
+    #"public_nodes",
 ]
 
 _services = [
