@@ -71,7 +71,7 @@ func TestPendingDeposits(t *testing.T) {
 		&depositContainer{block: big.NewInt(6), deposit: &pb.Deposit{MerkleTreeIndex: 6}},
 	}
 
-	deposits := db.PendingDeposits(context.Background(), big.NewInt(5))
+	deposits := db.PendingDeposits(context.Background(), big.NewInt(4))
 	expected := []*pb.Deposit{
 		&pb.Deposit{MerkleTreeIndex: 2},
 		&pb.Deposit{MerkleTreeIndex: 4},
