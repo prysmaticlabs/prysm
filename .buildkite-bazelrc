@@ -18,4 +18,3 @@ build --test_output=errors
 build --flaky_test_attempts=5
 # Disabled race detection due to unstable test results under constrained environment build kite
 # build --features=race
-build --build_manual_tests
