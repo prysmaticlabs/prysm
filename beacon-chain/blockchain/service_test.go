@@ -104,6 +104,23 @@ func (f *faultyClient) LatestBlockHash() common.Hash {
 	return common.BytesToHash([]byte{'A'})
 }
 
+func setupInitialDeposits(t *testing.T) []*pb.Deposit {
+	genesisValidatorRegistry := validators.InitialValidatorRegistry()
+	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
+	for i := 0; i < len(deposits); i++ {
+		depositInput := &pb.DepositInput{
+			Pubkey: genesisValidatorRegistry[i].Pubkey,
+		}
+		balance := genesisValidatorRegistry[i].Balance
+		depositData, err := b.EncodeDepositData(depositInput, balance, time.Now().Unix())
+		if err != nil {
+			t.Fatalf("Cannot encode data: %v", err)
+		}
+		deposits[i] = &pb.Deposit{DepositData: depositData}
+	}
+	return deposits
+}
+
 func setupBeaconChain(t *testing.T, faultyPoWClient bool, beaconDB *db.BeaconDB) *ChainService {
 	endpoint := "ws://127.0.0.1"
 	ctx := context.Background()
@@ -169,19 +186,7 @@ func TestStartStopUninitializedChain(t *testing.T) {
 
 	// Test the start function.
 	chainService.Start()
-	genesisValidatorRegistry := validators.InitialValidatorRegistry()
-	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
-	for i := 0; i < len(deposits); i++ {
-		depositInput := &pb.DepositInput{
-			Pubkey: genesisValidatorRegistry[i].Pubkey,
-		}
-		balance := genesisValidatorRegistry[i].Balance
-		depositData, err := b.EncodeDepositData(depositInput, balance, time.Now().Unix())
-		if err != nil {
-			t.Fatalf("Cannot encode data: %v", err)
-		}
-		deposits[i] = &pb.Deposit{DepositData: depositData}
-	}
+	deposits := setupInitialDeposits(t)
 	if err := chainService.initializeBeaconChain(time.Unix(0, 0), deposits); err != nil {
 		t.Fatalf("Error initializing: %v", err)
 	}
@@ -212,19 +217,7 @@ func TestStartStopInitializedChain(t *testing.T) {
 	chainService := setupBeaconChain(t, false, db)
 
 	unixTime := uint64(time.Now().Unix())
-	genesisValidatorRegistry := validators.InitialValidatorRegistry()
-	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
-	for i := 0; i < len(deposits); i++ {
-		depositInput := &pb.DepositInput{
-			Pubkey: genesisValidatorRegistry[i].Pubkey,
-		}
-		balance := genesisValidatorRegistry[i].Balance
-		depositData, err := b.EncodeDepositData(depositInput, balance, time.Now().Unix())
-		if err != nil {
-			t.Fatalf("Cannot encode data: %v", err)
-		}
-		deposits[i] = &pb.Deposit{DepositData: depositData}
-	}
+	deposits := setupInitialDeposits(t)
 	if err := db.InitializeState(unixTime, deposits); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
@@ -260,19 +253,7 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, true, db)
 	unixTime := uint64(time.Now().Unix())
-	genesisValidatorRegistry := validators.InitialValidatorRegistry()
-	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
-	for i := 0; i < len(deposits); i++ {
-		depositInput := &pb.DepositInput{
-			Pubkey: genesisValidatorRegistry[i].Pubkey,
-		}
-		balance := genesisValidatorRegistry[i].Balance
-		depositData, err := b.EncodeDepositData(depositInput, balance, time.Now().Unix())
-		if err != nil {
-			t.Fatalf("Cannot encode data: %v", err)
-		}
-		deposits[i] = &pb.Deposit{DepositData: depositData}
-	}
+	deposits := setupInitialDeposits(t)
 	if err := db.InitializeState(unixTime, deposits); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
@@ -326,19 +307,7 @@ func TestRunningChainService(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db)
 	unixTime := uint64(time.Now().Unix())
-	genesisValidatorRegistry := validators.InitialValidatorRegistry()
-	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
-	for i := 0; i < len(deposits); i++ {
-		depositInput := &pb.DepositInput{
-			Pubkey: genesisValidatorRegistry[i].Pubkey,
-		}
-		balance := genesisValidatorRegistry[i].Balance
-		depositData, err := b.EncodeDepositData(depositInput, balance, time.Now().Unix())
-		if err != nil {
-			t.Fatalf("Cannot encode data: %v", err)
-		}
-		deposits[i] = &pb.Deposit{DepositData: depositData}
-	}
+	deposits := setupInitialDeposits(t)
 	if err := db.InitializeState(unixTime, deposits); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
@@ -434,19 +403,7 @@ func TestDoesPOWBlockExist(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, true, db)
 	unixTime := uint64(time.Now().Unix())
-	genesisValidatorRegistry := validators.InitialValidatorRegistry()
-	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
-	for i := 0; i < len(deposits); i++ {
-		depositInput := &pb.DepositInput{
-			Pubkey: genesisValidatorRegistry[i].Pubkey,
-		}
-		balance := genesisValidatorRegistry[i].Balance
-		depositData, err := b.EncodeDepositData(depositInput, balance, time.Now().Unix())
-		if err != nil {
-			t.Fatalf("Cannot encode data: %v", err)
-		}
-		deposits[i] = &pb.Deposit{DepositData: depositData}
-	}
+	deposits := setupInitialDeposits(t)
 	if err := db.InitializeState(unixTime, deposits); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
@@ -513,19 +470,7 @@ func TestUpdateHead(t *testing.T) {
 		defer internal.TeardownDB(t, db)
 		chainService := setupBeaconChain(t, false, db)
 		unixTime := uint64(time.Now().Unix())
-		genesisValidatorRegistry := validators.InitialValidatorRegistry()
-		deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
-		for i := 0; i < len(deposits); i++ {
-			depositInput := &pb.DepositInput{
-				Pubkey: genesisValidatorRegistry[i].Pubkey,
-			}
-			balance := genesisValidatorRegistry[i].Balance
-			depositData, err := b.EncodeDepositData(depositInput, balance, time.Now().Unix())
-			if err != nil {
-				t.Fatalf("Cannot encode data: %v", err)
-			}
-			deposits[i] = &pb.Deposit{DepositData: depositData}
-		}
+		deposits := setupInitialDeposits(t)
 		if err := db.InitializeState(unixTime, deposits); err != nil {
 			t.Fatalf("Could not initialize beacon state to disk: %v", err)
 		}
@@ -561,19 +506,7 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db)
 	unixTime := uint64(time.Now().Unix())
-	genesisValidatorRegistry := validators.InitialValidatorRegistry()
-	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
-	for i := 0; i < len(deposits); i++ {
-		depositInput := &pb.DepositInput{
-			Pubkey: genesisValidatorRegistry[i].Pubkey,
-		}
-		balance := genesisValidatorRegistry[i].Balance
-		depositData, err := b.EncodeDepositData(depositInput, balance, time.Now().Unix())
-		if err != nil {
-			t.Fatalf("Cannot encode data: %v", err)
-		}
-		deposits[i] = &pb.Deposit{DepositData: depositData}
-	}
+	deposits := setupInitialDeposits(t)
 	if err := db.InitializeState(unixTime, deposits); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}

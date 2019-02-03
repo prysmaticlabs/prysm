@@ -12,11 +12,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
-func TestInitializeState(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
-
-	genesisTime := uint64(time.Now().Unix())
+func setupInitialDeposits(t *testing.T) []*pb.Deposit {
 	genesisValidatorRegistry := validators.InitialValidatorRegistry()
 	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
 	for i := 0; i < len(deposits); i++ {
@@ -30,6 +26,15 @@ func TestInitializeState(t *testing.T) {
 		}
 		deposits[i] = &pb.Deposit{DepositData: depositData}
 	}
+	return deposits
+}
+
+func TestInitializeState(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	genesisTime := uint64(time.Now().Unix())
+	deposits := setupInitialDeposits(t)
 	if err := db.InitializeState(genesisTime, deposits); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
@@ -76,19 +81,7 @@ func TestGenesisTime(t *testing.T) {
 		t.Fatal("expected GenesisTime to fail")
 	}
 
-	genesisValidatorRegistry := validators.InitialValidatorRegistry()
-	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
-	for i := 0; i < len(deposits); i++ {
-		depositInput := &pb.DepositInput{
-			Pubkey: genesisValidatorRegistry[i].Pubkey,
-		}
-		balance := genesisValidatorRegistry[i].Balance
-		depositData, err := blocks.EncodeDepositData(depositInput, balance, time.Now().Unix())
-		if err != nil {
-			t.Fatalf("Cannot encode data: %v", err)
-		}
-		deposits[i] = &pb.Deposit{DepositData: depositData}
-	}
+	deposits := setupInitialDeposits(t)
 	if err := db.InitializeState(uint64(genesisTime.Unix()), deposits); err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
