@@ -32,6 +32,9 @@ func main() {
 	var httpPath string
 	var privKeyString string
 	var k8sConfigMapName string
+	var depositsForChainStart int64
+	var minDepositAmount int64
+	var maxDepositAmount int64
 
 	customFormatter := new(prefixed.TextFormatter)
 	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
@@ -75,6 +78,24 @@ func main() {
 			Name:        "k8s-config",
 			Usage:       "Name of kubernetes config map to update with the contract address",
 			Destination: &k8sConfigMapName,
+		},
+		cli.Int64Flag{
+			Name:        "chain-start",
+			Value:       params.ContractConfig().DepositsForChainStart.Int64(),
+			Usage:       "Number of validators required for chain start",
+			Destination: &depositsForChainStart,
+		},
+		cli.Int64Flag{
+			Name:        "min-deposit",
+			Value:       params.ContractConfig().MinDepositAmount.Int64(),
+			Usage:       "Minimum deposit value allowed in contract",
+			Destination: &minDepositAmount,
+		},
+		cli.Int64Flag{
+			Name:        "max-deposit",
+			Value:       params.ContractConfig().MaxDepositAmount.Int64(),
+			Usage:       "Maximum deposit value allowed in contract",
+			Destination: &maxDepositAmount,
 		},
 	}
 
@@ -134,8 +155,8 @@ func main() {
 
 		// Deploy validator registration contract
 		addr, tx, _, err := contracts.DeployDepositContract(
-			txOps, client, params.ContractConfig().DepositsForChainStart,
-			params.ContractConfig().MinDepositAmount, params.ContractConfig().MaxDepositAmount)
+			txOps, client, big.NewInt(depositsForChainStart),
+			big.NewInt(minDepositAmount), big.NewInt(maxDepositAmount))
 		if err != nil {
 			log.Fatal(err)
 		}
