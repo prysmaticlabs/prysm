@@ -2,6 +2,8 @@ package sync
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"io/ioutil"
 	"strconv"
 	"testing"
@@ -51,6 +53,23 @@ func (ms *mockOperationService) IncomingAttFeed() *event.Feed {
 
 func (ms *mockOperationService) IncomingExitFeed() *event.Feed {
 	return new(event.Feed)
+}
+
+func setupInitialDeposits(t *testing.T) []*pb.Deposit {
+	genesisValidatorRegistry := validators.InitialValidatorRegistry()
+	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
+	for i := 0; i < len(deposits); i++ {
+		depositInput := &pb.DepositInput{
+			Pubkey: genesisValidatorRegistry[i].Pubkey,
+		}
+		balance := genesisValidatorRegistry[i].Balance
+		depositData, err := blocks.EncodeDepositData(depositInput, balance, time.Now().Unix())
+		if err != nil {
+			t.Fatalf("Cannot encode data: %v", err)
+		}
+		deposits[i] = &pb.Deposit{DepositData: depositData}
+	}
+	return deposits
 }
 
 func setupService(t *testing.T, db *db.BeaconDB) *RegularSync {
@@ -122,7 +141,8 @@ func TestProcessBlock(t *testing.T) {
 		}
 	}
 	genesisTime := uint64(time.Now().Unix())
-	if err := db.InitializeState(genesisTime); err != nil {
+	deposits := setupInitialDeposits(t)
+	if err := db.InitializeState(genesisTime, deposits); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -203,7 +223,8 @@ func TestProcessMultipleBlocks(t *testing.T) {
 		}
 	}
 	genesisTime := uint64(time.Now().Unix())
-	if err := db.InitializeState(genesisTime); err != nil {
+	deposits := setupInitialDeposits(t)
+	if err := db.InitializeState(genesisTime, deposits); err != nil {
 		t.Fatal(err)
 	}
 
