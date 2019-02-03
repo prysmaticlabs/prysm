@@ -112,8 +112,6 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 		t.Error("ValidatorRegistry was not correctly initialized")
 	}
 	if len(state.ValidatorBalances) != depositsForChainStart {
-		t.Log(len(state.ValidatorBalances))
-		t.Log(depositsForChainStart)
 		t.Error("ValidatorBalances was not correctly initialized")
 	}
 
