@@ -6,12 +6,12 @@ package backend
 import (
 	"context"
 	"fmt"
+	"math"
 	"reflect"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/go-bls/bazel-go-bls/external/go_sdk/src/math"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -81,7 +81,7 @@ func (sb *SimulatedBackend) AdvanceChain() error {
 		return fmt.Errorf("could not simulate initial validator deposits: %v", err)
 	}
 
-	prevBlockRoots, err := sb.setupBeaconStateAndGenesisBlock(initialDeposits)
+	_, err = sb.setupBeaconStateAndGenesisBlock(initialDeposits)
 	if err != nil {
 		return fmt.Errorf("could not set up beacon state and initalize genesis block %v", err)
 	}
@@ -91,6 +91,8 @@ func (sb *SimulatedBackend) AdvanceChain() error {
 	for idx := range sb.state.ValidatorRegistry {
 		layersPeeledForProposer[uint64(idx)] = 0
 	}
+
+	return nil
 }
 
 func (sim *SimulatedBackend) Shutdown() error {
