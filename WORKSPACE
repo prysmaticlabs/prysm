@@ -504,7 +504,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "afcc84fd7533758f95a6e93ae710aa945a0b7e73",
+    commit = "7ae0202eb74c2b534255c71b5a15fa4115aabbcc",
     importpath = "golang.org/x/sys",
 )
 
@@ -648,7 +648,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aristanetworks_goarista",
-    commit = "8f049bdb8feb7d7d5f1a9b9cd854396112fb0c0e",
+    commit = "e2363f69bde9cb44d6b7f31b741a5a65a8f73b39",
     importpath = "github.com/aristanetworks/goarista",
 )
 
