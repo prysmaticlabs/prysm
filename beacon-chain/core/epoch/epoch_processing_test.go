@@ -52,8 +52,8 @@ func TestCanProcessEpoch(t *testing.T) {
 }
 
 func TestCanProcessEth1Data(t *testing.T) {
-	if config.Eth1DataVotingPeriod != 1024 {
-		t.Errorf("Eth1DataVotingPeriod should be 1024 for these tests to pass")
+	if config.Eth1DataVotingPeriod != 16 {
+		t.Errorf("Eth1DataVotingPeriod should be 16 for these tests to pass")
 	}
 	tests := []struct {
 		slot               uint64
@@ -64,15 +64,15 @@ func TestCanProcessEth1Data(t *testing.T) {
 			canProcessEth1Data: false,
 		},
 		{
-			slot:               1022,
+			slot:               15,
 			canProcessEth1Data: false,
 		},
 		{
-			slot:               1024,
+			slot:               16,
 			canProcessEth1Data: true,
 		},
 		{
-			slot:               4096,
+			slot:               32,
 			canProcessEth1Data: true,
 		},
 		{
@@ -94,9 +94,6 @@ func TestCanProcessEth1Data(t *testing.T) {
 }
 
 func TestProcessEth1Data(t *testing.T) {
-	if config.Eth1DataVotingPeriod != 1024 {
-		t.Errorf("Eth1DataVotingPeriod should be 1024 for these tests to pass")
-	}
 	requiredVoteCount := config.Eth1DataVotingPeriod
 	state := &pb.BeaconState{
 		LatestEth1Data: &pb.Eth1Data{
@@ -157,9 +154,6 @@ func TestProcessEth1Data(t *testing.T) {
 }
 
 func TestProcessEth1Data_InactionSlot(t *testing.T) {
-	if config.Eth1DataVotingPeriod != 1024 {
-		t.Errorf("Eth1DataVotingPeriod should be 1024 for these tests to pass")
-	}
 	requiredVoteCount := config.Eth1DataVotingPeriod
 	state := &pb.BeaconState{
 		Slot: 4,
