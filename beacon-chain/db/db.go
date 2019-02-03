@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path"
+	"sync"
 	"time"
 
 	"github.com/boltdb/bolt"
@@ -17,6 +18,10 @@ import (
 type BeaconDB struct {
 	db           *bolt.DB
 	DatabasePath string
+
+	// Beacon chain deposits in memory
+	deposits     []*depositContainer
+	depositsLock sync.RWMutex
 }
 
 // Close closes the underlying leveldb database.
