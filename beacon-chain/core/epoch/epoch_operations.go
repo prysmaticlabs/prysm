@@ -238,7 +238,6 @@ func InclusionDistance(state *pb.BeaconState, validatorIndex uint64) (uint64, er
 		if err != nil {
 			return 0, fmt.Errorf("could not get attestation participants: %v", err)
 		}
-
 		for _, index := range participatedValidators {
 			if index == validatorIndex {
 				return attestation.SlotIncluded - attestation.Data.Slot, nil
