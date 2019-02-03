@@ -7,6 +7,8 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 
+	"github.com/opentracing/opentracing-go"
+
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"

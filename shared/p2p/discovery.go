@@ -5,7 +5,7 @@ import (
 	"time"
 
 	iaddr "github.com/ipfs/go-ipfs-addr"
-	host "github.com/libp2p/go-libp2p-host"
+	"github.com/libp2p/go-libp2p-host"
 	ps "github.com/libp2p/go-libp2p-peerstore"
 	mdns "github.com/libp2p/go-libp2p/p2p/discovery"
 	"github.com/sirupsen/logrus"

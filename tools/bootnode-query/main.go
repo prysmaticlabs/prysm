@@ -12,8 +12,11 @@ import (
 	"os"
 
 	ggio "github.com/gogo/protobuf/io"
+	"github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p-host"
 	dhtopts "github.com/libp2p/go-libp2p-kad-dht/opts"
 	dhtpb "github.com/libp2p/go-libp2p-kad-dht/pb"
+	"github.com/libp2p/go-libp2p-net"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 )
 
