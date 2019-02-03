@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"github.com/libp2p/go-libp2p-host"
+	"github.com/libp2p/go-libp2p-peerstore"
+	"github.com/multiformats/go-multiaddr"
 	"go.opencensus.io/trace"
 )
 
