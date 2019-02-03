@@ -119,9 +119,12 @@ func InitialBeaconState(
 		LatestAttestations:      []*pb.PendingAttestationRecord{},
 		BatchedBlockRootHash32S: [][]byte{},
 
-		// deposit root.
-		LatestDepositRootHash32: processedPowReceiptRoot,
-		DepositRootVotes:        []*pb.DepositRootVote{},
+		// Eth1 data.
+		LatestEth1Data: &pb.Eth1Data{
+			DepositRootHash32: processedPowReceiptRoot,
+			BlockHash32:       []byte{},
+		},
+		Eth1DataVotes: []*pb.Eth1DataVote{},
 	}
 
 	// Process initial deposits.

@@ -51,7 +51,7 @@ type BeaconChainConfig struct {
 	EpochLength                  uint64 // EpochLength is the number of slots in an epoch.
 	SeedLookahead                uint64 // SeedLookahead is the duration of randao look ahead seed.
 	EntryExitDelay               uint64 // EntryExitDelay is the duration a validator has to wait for entry and exit in epoch.
-	DepositRootVotingPeriod      uint64 // DepositRootVotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
+	Eth1DataVotingPeriod         uint64 // Eth1DataVotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
 	MinValidatorWithdrawalEpochs uint64 // MinValidatorWithdrawalEpochs is the shortest amount of time a validator can get the deposit out.
 	FarFutureEpoch               uint64 // FarFutureEpoch represents a epoch extremely far away in the future used as the default penalization slot for validators.
 
@@ -124,7 +124,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	EpochLength:                  64,
 	SeedLookahead:                64,
 	EntryExitDelay:               4,
-	DepositRootVotingPeriod:      1024,
+	Eth1DataVotingPeriod:      1024,
 
 	// Reward and penalty quotients constants.
 	BaseRewardQuotient:           32,
@@ -181,7 +181,7 @@ var demoBeaconConfig = &BeaconChainConfig{
 	EpochLength:                  defaultBeaconConfig.EpochLength,
 	SeedLookahead:                defaultBeaconConfig.SeedLookahead,
 	EntryExitDelay:               defaultBeaconConfig.EntryExitDelay,
-	DepositRootVotingPeriod:      defaultBeaconConfig.DepositRootVotingPeriod,
+	Eth1DataVotingPeriod:         defaultBeaconConfig.Eth1DataVotingPeriod,
 
 	// Reward and penalty quotients constants.
 	BaseRewardQuotient:           defaultBeaconConfig.BaseRewardQuotient,

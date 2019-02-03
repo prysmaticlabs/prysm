@@ -75,7 +75,6 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock, verifySignatures
 		}
 	}
 	var err error
-	state = b.ProcessDepositRoots(state, block)
 	state, err = b.ProcessBlockRandao(state, block)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify and process block randao: %v", err)
@@ -84,6 +83,7 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock, verifySignatures
 	if err != nil {
 		return nil, fmt.Errorf("could not verify block proposer slashings: %v", err)
 	}
+	state = b.ProcessEth1Data(state, block)
 	state, err = b.ProcessAttesterSlashings(state, block, verifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify block attester slashings: %v", err)
@@ -177,9 +177,9 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	}
 	prevHeadAttestingBalances := e.TotalBalance(state, prevHeadAttesterIndices)
 
-	// Process receipt roots.
-	if e.CanProcessDepositRoots(state) {
-		e.ProcessDeposits(state)
+	// Process eth1 data
+	if e.CanProcessEth1Data(state) {
+		state = e.ProcessEth1Data(state)
 	}
 
 	// Update justification.

@@ -25,13 +25,13 @@ func CanProcessEpoch(state *pb.BeaconState) bool {
 	return state.Slot%config.EpochLength == 0
 }
 
-// CanProcessDepositRoots checks the eligibility to process deposit root.
-// The deposit root can be processed every DEPOSIT_ROOT_VOTING_PERIOD.
+// CanProcessEth1Data checks the eligibility to process the eth1 data.
+// The eth1 data can be processed every ETH1_DATA_VOTING_PERIOD.
 //
 // Spec pseudocode definition:
-//    If state.slot % DEPOSIT_ROOT_VOTING_PERIOD == 0:
-func CanProcessDepositRoots(state *pb.BeaconState) bool {
-	return state.Slot%config.DepositRootVotingPeriod == 0
+//    If state.slot % ETH1_DATA_VOTING_PERIOD == 0:
+func CanProcessEth1Data(state *pb.BeaconState) bool {
+	return state.Slot%config.Eth1DataVotingPeriod == 0
 }
 
 // CanProcessValidatorRegistry checks the eligibility to process validator registry.
@@ -61,16 +61,27 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 	return true
 }
 
-// ProcessDeposits processes deposit roots by checking its vote count.
-// With sufficient votes (>2*DEPOSIT_ROOT_VOTING_PERIOD), it then
-// assigns root hash to processed receipt vote in state.
-func ProcessDeposits(state *pb.BeaconState) *pb.BeaconState {
-	for _, receiptRoot := range state.DepositRootVotes {
-		if receiptRoot.VoteCount*2 > config.DepositRootVotingPeriod {
-			state.LatestDepositRootHash32 = receiptRoot.DepositRootHash32
+// ProcessEth1Data processes eth1 block deposit roots by checking its vote count.
+// With sufficient votes (>2*ETH1_DATA_VOTING_PERIOD), it then
+// marks the voted Eth1 data as the latest data set.
+//
+// Official spec definition:
+//   if state.slot % ETH1_DATA_VOTING_PERIOD == 0:
+//     Set state.latest_eth1_data = eth1_data_vote.data
+//     if eth1_data_vote.vote_count * 2 > ETH1_DATA_VOTING_PERIOD for
+//       some eth1_data_vote in state.eth1_data_votes.
+//       Set state.eth1_data_votes = [].
+//
+func ProcessEth1Data(state *pb.BeaconState) *pb.BeaconState {
+	if state.Slot%config.Eth1DataVotingPeriod == 0 {
+		for _, eth1DataVote := range state.Eth1DataVotes {
+			if eth1DataVote.VoteCount*2 > config.Eth1DataVotingPeriod {
+				state.LatestEth1Data.DepositRootHash32 = eth1DataVote.Eth1Data.DepositRootHash32
+				state.LatestEth1Data.BlockHash32 = eth1DataVote.Eth1Data.BlockHash32
+			}
 		}
+		state.Eth1DataVotes = make([]*pb.Eth1DataVote, 0)
 	}
-	state.DepositRootVotes = make([]*pb.DepositRootVote, 0)
 	return state
 }
 

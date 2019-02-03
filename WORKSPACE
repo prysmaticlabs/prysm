@@ -504,7 +504,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "aca44879d5644da7c5b8ec6a1115e9b6ea6c40d9",
+    commit = "afcc84fd7533758f95a6e93ae710aa945a0b7e73",
     importpath = "golang.org/x/sys",
 )
 
@@ -600,7 +600,7 @@ go_repository(
 
 go_repository(
     name = "com_github_syndtr_goleveldb",
-    commit = "b001fa50d6b27f3f0bb175a87d0cb55426d0a0ae",
+    commit = "2f17a3356c6616cbfc4ae4c38147dc062a68fb0e",
     importpath = "github.com/syndtr/goleveldb",
 )
 
