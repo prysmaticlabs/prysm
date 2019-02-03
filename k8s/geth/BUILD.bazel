@@ -29,9 +29,10 @@ _configs = [
 ]
 
 _deployments = [
+    "bootnode",
 #    "faucet",
-    #"nodes",
-    #"public_nodes",
+    "nodes",
+    "public_nodes",
 ]
 
 _services = [
@@ -40,6 +41,7 @@ _services = [
 ]
 
 _secrets = [
+    "bootnode",
     "ethstats",
 #    "faucet",
     "goerli_validator",

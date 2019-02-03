@@ -6,6 +6,8 @@ metadata:
   labels:
     universe: geth
     component: node
+    app: prysm
+    version: v1
 spec:
   replicas: 1
   serviceName: "node"
@@ -13,11 +15,15 @@ spec:
     matchLabels:
       universe: geth
       component: node
+      app: prysm
+      version: v1
   template:
     metadata:
       labels:
         universe: geth
         component: node
+        app: prysm
+        version: v1
     spec:
       priorityClassName: production-priority
       containers:
@@ -27,6 +33,7 @@ spec:
             httpGet:
               path: /healthz
               port: 8080
+            initialDelaySeconds: 30
         - name: node
           image: ethereum/client-go:alltools-stable
           ports: 
@@ -45,6 +52,8 @@ spec:
             - >
               geth
               --networkid=5
+              --bootnodesv4=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_V4_SERVICE_HOST):$(GETH_BOOTNODE_V4_SERVICE_PORT_BOOTNODE_UDP)
+              --bootnodesv5=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_V5_SERVICE_HOST):$(GETH_BOOTNODE_V5_SERVICE_PORT_BOOTNODE_UDP)
               --ethstats=💎prylabs-$HOSTNAME:$(ETHSTATS_WS_SECRET)@wss://stats.goerli.net
               --rpc
               --rpcapi=eth
@@ -74,6 +83,11 @@ spec:
                 secretKeyRef:
                   name: ethstats-secrets
                   key: ws
+            - name: BOOTNODE_PUBKEY
+              valueFrom:
+                secretKeyRef:
+                  name: geth-bootnode-secret
+                  key: public_key
           resources:
             requests:
               memory: "250Mi"

@@ -5,19 +5,23 @@ metadata:
   namespace: pow
   labels:
     component: faucet
+    app: prysm
+    version: v1
 spec:
   replicas: 1
   selector: 
     matchLabels:
       universe: geth
       component: faucet
+      app: prysm
+      version: v1
   template:
     metadata:
-      annotations:
-        sidecar.istio.io/inject: "false"
       labels:
         universe: geth
         component: faucet
+        app: prysm
+        version: v1
     spec:
       priorityClassName: batch-priority
       containers:
