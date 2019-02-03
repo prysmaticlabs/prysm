@@ -21,11 +21,8 @@ func generateSimulatedBlock(
 	prevBlockRoot [32]byte,
 	randaoReveal [32]byte,
 	depositRandaoCommit [32]byte,
-	simulatedDeposit *StateTestDeposit,
 	depositsTrie *trieutil.DepositTrie,
-	simulatedProposerSlashing *StateTestProposerSlashing,
-	simulatedAttesterSlashing *StateTestAttesterSlashing,
-	simulatedExit *StateTestValidatorExit,
+	simObjects *SimulatedObjects,
 ) (*pb.BeaconBlock, [32]byte, error) {
 	encodedState, err := proto.Marshal(beaconState)
 	if err != nil {
@@ -49,16 +46,16 @@ func generateSimulatedBlock(
 			Exits:             []*pb.Exit{},
 		},
 	}
-	if simulatedDeposit != nil {
+	if simObjects.simDeposit != nil {
 		depositInput := &pb.DepositInput{
-			Pubkey:                      []byte(simulatedDeposit.Pubkey),
+			Pubkey:                      []byte(simObjects.simDeposit.Pubkey),
 			WithdrawalCredentialsHash32: []byte{},
 			ProofOfPossession:           []byte{},
 			RandaoCommitmentHash32:      depositRandaoCommit[:],
 			CustodyCommitmentHash32:     []byte{},
 		}
 
-		data, err := b.EncodeDepositData(depositInput, simulatedDeposit.Amount, time.Now().Unix())
+		data, err := b.EncodeDepositData(depositInput, simObjects.simDeposit.Amount, time.Now().Unix())
 		if err != nil {
 			return nil, [32]byte{}, fmt.Errorf("could not encode deposit data: %v", err)
 		}
@@ -66,53 +63,53 @@ func generateSimulatedBlock(
 		// We then update the deposits Merkle trie with the deposit data and return
 		// its Merkle branch leading up to the root of the trie.
 		depositsTrie.UpdateDepositTrie(data)
-		merkleBranch := depositsTrie.GenerateMerkleBranch(simulatedDeposit.MerkleIndex)
+		merkleBranch := depositsTrie.GenerateMerkleBranch(simObjects.simDeposit.MerkleIndex)
 
 		block.Body.Deposits = append(block.Body.Deposits, &pb.Deposit{
 			DepositData:         data,
 			MerkleBranchHash32S: merkleBranch,
-			MerkleTreeIndex:     simulatedDeposit.MerkleIndex,
+			MerkleTreeIndex:     simObjects.simDeposit.MerkleIndex,
 		})
 	}
-	if simulatedProposerSlashing != nil {
+	if simObjects.simProposerSlashing != nil {
 		block.Body.ProposerSlashings = append(block.Body.ProposerSlashings, &pb.ProposerSlashing{
-			ProposerIndex: simulatedProposerSlashing.ProposerIndex,
+			ProposerIndex: simObjects.simProposerSlashing.ProposerIndex,
 			ProposalData_1: &pb.ProposalSignedData{
-				Slot:            simulatedProposerSlashing.Proposal1Slot,
-				Shard:           simulatedProposerSlashing.Proposal1Shard,
-				BlockRootHash32: []byte(simulatedProposerSlashing.Proposal1Root),
+				Slot:            simObjects.simProposerSlashing.Proposal1Slot,
+				Shard:           simObjects.simProposerSlashing.Proposal1Shard,
+				BlockRootHash32: []byte(simObjects.simProposerSlashing.Proposal1Root),
 			},
 			ProposalData_2: &pb.ProposalSignedData{
-				Slot:            simulatedProposerSlashing.Proposal2Slot,
-				Shard:           simulatedProposerSlashing.Proposal2Shard,
-				BlockRootHash32: []byte(simulatedProposerSlashing.Proposal2Root),
+				Slot:            simObjects.simProposerSlashing.Proposal2Slot,
+				Shard:           simObjects.simProposerSlashing.Proposal2Shard,
+				BlockRootHash32: []byte(simObjects.simProposerSlashing.Proposal2Root),
 			},
 		})
 	}
-	if simulatedAttesterSlashing != nil {
+	if simObjects.simAttesterSlashing != nil {
 		block.Body.AttesterSlashings = append(block.Body.AttesterSlashings, &pb.AttesterSlashing{
 			SlashableVote_1: &pb.SlashableVote{
 				Data: &pb.AttestationData{
-					Slot:          simulatedAttesterSlashing.SlashableVote1Slot,
-					JustifiedSlot: simulatedAttesterSlashing.SlashableVote1JustifiedSlot,
+					Slot:          simObjects.simAttesterSlashing.SlashableVote1Slot,
+					JustifiedSlot: simObjects.simAttesterSlashing.SlashableVote1JustifiedSlot,
 				},
-				CustodyBitfield:  []byte(simulatedAttesterSlashing.SlashableVote1CustodyBitField),
-				ValidatorIndices: simulatedAttesterSlashing.SlashableVote1ValidatorIndices,
+				CustodyBitfield:  []byte(simObjects.simAttesterSlashing.SlashableVote1CustodyBitField),
+				ValidatorIndices: simObjects.simAttesterSlashing.SlashableVote1ValidatorIndices,
 			},
 			SlashableVote_2: &pb.SlashableVote{
 				Data: &pb.AttestationData{
-					Slot:          simulatedAttesterSlashing.SlashableVote2Slot,
-					JustifiedSlot: simulatedAttesterSlashing.SlashableVote2JustifiedSlot,
+					Slot:          simObjects.simAttesterSlashing.SlashableVote2Slot,
+					JustifiedSlot: simObjects.simAttesterSlashing.SlashableVote2JustifiedSlot,
 				},
-				CustodyBitfield:  []byte(simulatedAttesterSlashing.SlashableVote2CustodyBitField),
-				ValidatorIndices: simulatedAttesterSlashing.SlashableVote2ValidatorIndices,
+				CustodyBitfield:  []byte(simObjects.simAttesterSlashing.SlashableVote2CustodyBitField),
+				ValidatorIndices: simObjects.simAttesterSlashing.SlashableVote2ValidatorIndices,
 			},
 		})
 	}
-	if simulatedExit != nil {
+	if simObjects.simValidatorExit != nil {
 		block.Body.Exits = append(block.Body.Exits, &pb.Exit{
-			Slot:           simulatedExit.Slot,
-			ValidatorIndex: simulatedExit.ValidatorIndex,
+			Slot:           simObjects.simValidatorExit.Slot,
+			ValidatorIndex: simObjects.simValidatorExit.ValidatorIndex,
 		})
 	}
 	encodedBlock, err := proto.Marshal(block)
