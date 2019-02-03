@@ -232,7 +232,7 @@ func (sb *SimulatedBackend) initializeStateTest(testCase *StateTestCase) (hashOn
 
 	prevBlockRoots, err = sb.setupBeaconStateAndGenesisBlock(initialDeposits)
 	if err != nil {
-		return nil, [32]byte{}, nil, nil, fmt.Errorf("could not set up beacon state and initalize genesis block %v", err)
+		return nil, [32]byte{}, nil, nil, fmt.Errorf("could not set up beacon state and initialize genesis block %v", err)
 	}
 
 	// We keep track of the randao layers peeled for each proposer index in a map.
