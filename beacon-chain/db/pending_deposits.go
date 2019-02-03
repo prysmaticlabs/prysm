@@ -62,12 +62,13 @@ func (db *BeaconDB) PendingDeposits(ctx context.Context, beforeBlk *big.Int) []*
 func (db *BeaconDB) RemovePendingDeposit(ctx context.Context, d *pb.Deposit) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "BeaconDB.RemovePendingDeposit")
 	defer span.Finish()
-	db.depositsLock.Lock()
-	defer db.depositsLock.Unlock()
 
 	if d == nil {
 		return
 	}
+
+	db.depositsLock.Lock()
+	defer db.depositsLock.Unlock()
 
 	idx := -1
 	for i, ctnr := range db.deposits {
