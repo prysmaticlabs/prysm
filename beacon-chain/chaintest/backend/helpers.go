@@ -37,6 +37,10 @@ func generateSimulatedBlock(
 		RandaoRevealHash32: randaoReveal[:],
 		ParentRootHash32:   prevBlockRoot[:],
 		StateRootHash32:    stateRoot[:],
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{1},
+			BlockHash32:       []byte{2},
+		},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: []*pb.ProposerSlashing{},
 			AttesterSlashings: []*pb.AttesterSlashing{},
