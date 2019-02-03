@@ -10,11 +10,11 @@ spec:
   ports:
     - port: 8545
       targetPort: 8545
-      name: rpc
+      name: http-rpc
       protocol: TCP
     - port: 8546
       targetPort: 8546
-      name: ws
+      name: http-ws
       protocol: TCP
   type: ClusterIP
 ---
@@ -47,9 +47,19 @@ spec:
   http:
   - match:
     - uri:
+        prefix: /websocket
+    route:
+    - destination: 
+        port:
+          number: 8546
+        host: public-rpc-nodes
+    websocketUpgrade: true
+  - match:
+    - uri:
         prefix: /
     route:
     - destination:
         port:
           number: 8545
         host: public-rpc-nodes
+  
