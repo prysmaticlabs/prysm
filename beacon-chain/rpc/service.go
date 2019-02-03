@@ -35,7 +35,7 @@ type operationService interface {
 }
 
 type powChainService interface {
-	HasChainStartLogOccurred() (bool, time.Time, error)
+	HasChainStartLogOccurred() (bool, uint64)
 	ChainStartFeed() *event.Feed
 }
 

@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 
-	"github.com/opentracing/opentracing-go"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/sirupsen/logrus"
 )

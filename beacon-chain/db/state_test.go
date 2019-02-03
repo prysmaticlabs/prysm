@@ -2,10 +2,11 @@ package db
 
 import (
 	"bytes"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 
 	"github.com/gogo/protobuf/proto"
@@ -25,7 +26,7 @@ func TestInitializeState(t *testing.T) {
 		balance := genesisValidatorRegistry[i].Balance
 		depositData, err := blocks.EncodeDepositData(depositInput, balance, time.Now().Unix())
 		if err != nil {
-            t.Fatalf("Cannot encode data: %v", err)
+			t.Fatalf("Cannot encode data: %v", err)
 		}
 		deposits[i] = &pb.Deposit{DepositData: depositData}
 	}

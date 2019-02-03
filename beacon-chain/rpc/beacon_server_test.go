@@ -21,8 +21,8 @@ type faultyPOWChainService struct {
 	chainStartFeed *event.Feed
 }
 
-func (f *faultyPOWChainService) HasChainStartLogOccurred() (bool, time.Time, error) {
-	return false, time.Now(), nil
+func (f *faultyPOWChainService) HasChainStartLogOccurred() (bool, uint64) {
+	return false, uint64(time.Now().Unix())
 }
 func (f *faultyPOWChainService) ChainStartFeed() *event.Feed {
 	return f.chainStartFeed
@@ -32,8 +32,8 @@ type mockPOWChainService struct {
 	chainStartFeed *event.Feed
 }
 
-func (m *mockPOWChainService) HasChainStartLogOccurred() (bool, time.Time, error) {
-	return true, time.Unix(0, 0), nil
+func (m *mockPOWChainService) HasChainStartLogOccurred() (bool, uint64) {
+	return false, uint64(time.Unix(0, 0).Unix())
 }
 func (m *mockPOWChainService) ChainStartFeed() *event.Feed {
 	return m.chainStartFeed

@@ -10,12 +10,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
+	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -65,6 +66,8 @@ type Web3Service struct {
 	vrcCaller              *contracts.DepositContractCaller
 	depositRoot            []byte
 	depositTrie            *trieutil.DepositTrie
+	chainStartDeposits     []*pb.Deposit
+	chainStarted           bool
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -112,6 +115,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		reader:                 config.Reader,
 		logger:                 config.Logger,
 		vrcCaller:              vrcCaller,
+		chainStartDeposits:     []*pb.Deposit{},
 	}, nil
 }
 
@@ -135,6 +139,12 @@ func (w *Web3Service) Stop() error {
 // whenever the deposit contract fires a ChainStart log.
 func (w *Web3Service) ChainStartFeed() *event.Feed {
 	return w.chainStartFeed
+}
+
+// ChainStartDeposits returns a slice of validator deposits processed
+// by the deposit contract and cached in the powchain service.
+func (w *Web3Service) ChainStartDeposits() []*pb.Deposit {
+	return w.chainStartDeposits
 }
 
 // Status always returns nil.
@@ -225,6 +235,11 @@ func (w *Web3Service) ProcessDepositLog(VRClog gethTypes.Log) {
 		log.Errorf("Could not decode deposit input  %v", err)
 		return
 	}
+	if !w.chainStarted {
+		w.chainStartDeposits = append(w.chainStartDeposits, &pb.Deposit{
+			DepositData: depositData,
+		})
+	}
 	index := binary.BigEndian.Uint64(MerkleTreeIndex)
 	log.WithFields(logrus.Fields{
 		"publicKey":         depositInput.Pubkey,
@@ -250,7 +265,7 @@ func (w *Web3Service) ProcessChainStartLog(VRClog gethTypes.Log) {
 	if uint64(time.Now().Unix()) < timestamp {
 		log.Errorf("Invalid timestamp from log expected %d > %d", time.Now().Unix(), timestamp)
 	}
-
+	w.chainStarted = true
 	chainStartTime := time.Unix(int64(timestamp), 0)
 	log.WithFields(logrus.Fields{
 		"ChainStartTime": chainStartTime,

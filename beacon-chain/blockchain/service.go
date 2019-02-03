@@ -84,8 +84,8 @@ func (c *ChainService) Start() {
 		subChainStart := c.web3Service.ChainStartFeed().Subscribe(c.genesisTimeChan)
 		go func() {
 			genesisTime := <-c.genesisTimeChan
-			// TODO: Get the deposits themselves.
-			if err := c.initializeBeaconChain(genesisTime); err != nil {
+			initialDeposits := c.web3Service.ChainStartDeposits()
+			if err := c.initializeBeaconChain(genesisTime, initialDeposits); err != nil {
 				log.Fatalf("Could not initialize beacon chain: %v", err)
 			}
 			go c.blockProcessing()

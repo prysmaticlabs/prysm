@@ -3,9 +3,7 @@ package p2p
 import (
 	"context"
 
-	"github.com/libp2p/go-libp2p-host"
-	"github.com/libp2p/go-libp2p-peerstore"
-	"github.com/multiformats/go-multiaddr"
+	host "github.com/libp2p/go-libp2p-host"
 	"go.opencensus.io/trace"
 )
 
