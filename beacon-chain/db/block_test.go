@@ -1,6 +1,8 @@
 package db
 
 import (
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"testing"
 	"time"
 
@@ -90,7 +92,20 @@ func TestUpdateChainHeadNoBlock(t *testing.T) {
 	defer teardownDB(t, db)
 
 	genesisTime := uint64(time.Now().Unix())
-	err := db.InitializeState(genesisTime)
+	genesisValidatorRegistry := validators.InitialValidatorRegistry()
+	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
+	for i := 0; i < len(deposits); i++ {
+		depositInput := &pb.DepositInput{
+			Pubkey: genesisValidatorRegistry[i].Pubkey,
+		}
+		balance := genesisValidatorRegistry[i].Balance
+		depositData, err := blocks.EncodeDepositData(depositInput, balance, time.Now().Unix())
+		if err != nil {
+			t.Fatalf("Cannot encode data: %v", err)
+		}
+		deposits[i] = &pb.Deposit{DepositData: depositData}
+	}
+	err := db.InitializeState(genesisTime, deposits)
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
@@ -110,7 +125,20 @@ func TestUpdateChainHead(t *testing.T) {
 	defer teardownDB(t, db)
 
 	genesisTime := uint64(time.Now().Unix())
-	err := db.InitializeState(genesisTime)
+	genesisValidatorRegistry := validators.InitialValidatorRegistry()
+	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
+	for i := 0; i < len(deposits); i++ {
+		depositInput := &pb.DepositInput{
+			Pubkey: genesisValidatorRegistry[i].Pubkey,
+		}
+		balance := genesisValidatorRegistry[i].Balance
+		depositData, err := blocks.EncodeDepositData(depositInput, balance, time.Now().Unix())
+		if err != nil {
+			t.Fatalf("Cannot encode data: %v", err)
+		}
+		deposits[i] = &pb.Deposit{DepositData: depositData}
+	}
+	err := db.InitializeState(genesisTime, deposits)
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
@@ -175,7 +203,20 @@ func TestChainProgress(t *testing.T) {
 	defer teardownDB(t, db)
 
 	genesisTime := uint64(time.Now().Unix())
-	err := db.InitializeState(genesisTime)
+	genesisValidatorRegistry := validators.InitialValidatorRegistry()
+	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
+	for i := 0; i < len(deposits); i++ {
+		depositInput := &pb.DepositInput{
+			Pubkey: genesisValidatorRegistry[i].Pubkey,
+		}
+		balance := genesisValidatorRegistry[i].Balance
+		depositData, err := blocks.EncodeDepositData(depositInput, balance, time.Now().Unix())
+		if err != nil {
+			t.Fatalf("Cannot encode data: %v", err)
+		}
+		deposits[i] = &pb.Deposit{DepositData: depositData}
+	}
+	err := db.InitializeState(genesisTime, deposits)
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
