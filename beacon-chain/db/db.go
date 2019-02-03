@@ -19,7 +19,7 @@ type BeaconDB struct {
 	db           *bolt.DB
 	DatabasePath string
 
-	// Beacon chain deposits in memory
+	// Beacon chain deposits in memory.
 	deposits     []*depositContainer
 	depositsLock sync.RWMutex
 }
