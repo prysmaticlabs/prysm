@@ -170,7 +170,7 @@ func (w *Web3Service) Client() Client {
 
 // HasChainStartLogOccurred queries all logs in the deposit contract to verify
 // if ChainStart has occurred. If so, it returns true alongside the ChainStart timestamp.
-func (w *Web3Service) HasChainStartLogOccurred() (bool, time.Time, error) {
+func (w *Web3Service) HasChainStartLogOccurred() (bool, uint64, error) {
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
 			w.depositContractAddress,
@@ -178,26 +178,26 @@ func (w *Web3Service) HasChainStartLogOccurred() (bool, time.Time, error) {
 	}
 	logs, err := w.logger.FilterLogs(w.ctx, query)
 	if err != nil {
-		return false, time.Now(), fmt.Errorf("could not filter deposit contract logs: %v", err)
+		return false, 0, fmt.Errorf("could not filter deposit contract logs: %v", err)
 	}
 	for _, log := range logs {
 		if log.Topics[0] == hashutil.Hash(chainStartEventSignature) {
 			_, timestampData, err := contracts.UnpackChainStartLogData(log.Data)
 			if err != nil {
-				return false, time.Now(), fmt.Errorf("unable to unpack ChainStart log data %v", err)
+				return false, 0, fmt.Errorf("unable to unpack ChainStart log data %v", err)
 			}
 			timestamp := binary.BigEndian.Uint64(timestampData)
 			if uint64(time.Now().Unix()) < timestamp {
-				return false, time.Now(), fmt.Errorf(
+				return false, 0, fmt.Errorf(
 					"invalid timestamp from log expected %d > %d",
 					time.Now().Unix(),
 					timestamp,
 				)
 			}
-			return true, time.Unix(int64(timestamp), 0), nil
+			return true, timestamp, nil
 		}
 	}
-	return false, time.Now(), nil
+	return false, 0, nil
 }
 
 // ProcessLog is the main method which handles the processing of all

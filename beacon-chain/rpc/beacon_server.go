@@ -29,7 +29,10 @@ type BeaconServer struct {
 // subscribes to an event stream triggered by the powchain service whenever the ChainStart log does
 // occur in the Deposit Contract on ETH 1.0.
 func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconService_WaitForChainStartServer) error {
-	ok, genesisTime := bs.powChainService.HasChainStartLogOccurred()
+	ok, genesisTime, err := bs.powChainService.HasChainStartLogOccurred()
+	if err != nil {
+		return fmt.Errorf("could not determine if ChainStart log has occurred: %v", err)
+	}
 	if ok {
 		res := &pb.ChainStartResponse{
 			Started:     true,
