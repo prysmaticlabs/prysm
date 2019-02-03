@@ -1,18 +1,10 @@
 package helpers
 
 import (
-	"encoding/binary"
-	"fmt"
-
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bitutil"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 )
 
-// committeeCountPerSlot returns the number of crosslink committees of one slot.
+// EpochCommitteeCount returns the number of crosslink committees of an epoch.
 //
 // Spec pseudocode definition:
 //   def get_epoch_committee_count(active_validator_count: int) -> int:
@@ -31,17 +23,17 @@ func EpochCommitteeCount(activeValidatorCount uint64) uint64 {
 	var maxCommitteePerSlot = config.ShardCount / config.EpochLength
 	var currCommitteePerSlot = activeValidatorCount / config.EpochLength / config.TargetCommitteeSize
 	if currCommitteePerSlot > maxCommitteePerSlot {
-		return maxCommitteePerSlot
+		return maxCommitteePerSlot * config.EpochLength
 	}
 	if currCommitteePerSlot < 1 {
-		return minCommitteePerSlot
+		return minCommitteePerSlot * config.EpochLength
 	}
 	return currCommitteePerSlot * config.EpochLength
 }
 
 // CurrentEpochCommitteeCount returns the number of crosslink committees per epoch
 // of the current epoch.
-// Ex: Returns 8 means there's 8 committees assigned to current epoch.
+// Ex: Returns 100 means there's 8 committees assigned to current epoch.
 //
 // Spec pseudocode definition:
 //   def get_current_epoch_committee_count(state: BeaconState) -> int:
@@ -59,17 +51,40 @@ func CurrentEpochCommitteeCount(state *pb.BeaconState) uint64 {
 	return EpochCommitteeCount(uint64(len(currActiveValidatorIndices)))
 }
 
-// prevCommitteesCountPerSlot returns the number of committees per slot
+// PrevEpochCommitteeCount returns the number of committees per slot
 // of the previous epoch.
-// Ex: Returns 16 means there's 16 committees assigned to one slot in previous epoch.
 //
 // Spec pseudocode definition:
-//   def get_previous_epoch_committee_count_per_slot(state: BeaconState) -> int:
-//         previous_active_validators =
-// 			get_active_validator_indices(validators, state.previous_epoch_calculation_slot)
-//        return get_committees_per_slot(len(previous_active_validators))
-func prevCommitteesCountPerSlot(state *pb.BeaconState) uint64 {
+//   def get_previous_epoch_committee_count(state: BeaconState) -> int:
+//    """
+//    Return the number of committees in the previous epoch of the given ``state``.
+//    """
+//    previous_active_validators = get_active_validator_indices(
+//        state.validator_registry,
+//        state.previous_calculation_epoch,
+//    )
+//    return get_epoch_committee_count(len(previous_active_validators))
+func PrevEpochCommitteeCount(state *pb.BeaconState) uint64 {
 	prevActiveValidatorIndices := ActiveValidatorIndices(
 		state.ValidatorRegistry, state.PreviousEpochCalculationSlot)
-	return committeeCountPerSlot(uint64(len(prevActiveValidatorIndices)))
+	return EpochCommitteeCount(uint64(len(prevActiveValidatorIndices)))
+}
+
+// NextEpochCommitteeCount returns the number of committees per slot
+// of the next epoch.
+//
+// Spec pseudocode definition:
+//   def get_next_epoch_committee_count(state: BeaconState) -> int:
+//    """
+//    Return the number of committees in the next epoch of the given ``state``.
+//    """
+//    next_active_validators = get_active_validator_indices(
+//        state.validator_registry,
+//        get_current_epoch(state) + 1,
+//    )
+//    return get_epoch_committee_count(len(next_active_validators))
+func NextEpochCommitteeCount(state *pb.BeaconState) uint64 {
+	prevActiveValidatorIndices := ActiveValidatorIndices(
+		state.ValidatorRegistry, CurrentEpoch(state)+1)
+	return EpochCommitteeCount(uint64(len(prevActiveValidatorIndices)))
 }

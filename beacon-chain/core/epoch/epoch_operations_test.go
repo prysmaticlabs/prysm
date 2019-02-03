@@ -15,7 +15,7 @@ func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 	validators := make([]*pb.ValidatorRecord, validatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot: config.FarFutureSlot,
+			ExitEpoch: config.FarFutureEpoch,
 		}
 	}
 	validatorBalances := make([]uint64, len(validators))

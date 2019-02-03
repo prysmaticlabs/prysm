@@ -362,8 +362,8 @@ func TestProcessEjectionsOk(t *testing.T) {
 			config.EjectionBalance + 1},
 		LatestPenalizedBalances: []uint64{0},
 		ValidatorRegistry: []*pb.ValidatorRecord{
-			{ExitSlot: config.FarFutureSlot},
-			{ExitSlot: config.FarFutureSlot}},
+			{ExitEpoch: config.FarFutureEpoch},
+			{ExitEpoch: config.FarFutureEpoch}},
 	}
 
 	state, err := ProcessEjections(state)
@@ -371,14 +371,14 @@ func TestProcessEjectionsOk(t *testing.T) {
 		t.Fatalf("Could not execute ProcessEjections: %v", err)
 	}
 
-	if state.ValidatorRegistry[0].ExitSlot !=
+	if state.ValidatorRegistry[0].ExitEpoch !=
 		config.EntryExitDelay+state.Slot {
-		t.Errorf("Expected exit slot %d, but got %d",
-			state.ValidatorRegistry[0].ExitSlot, config.EntryExitDelay)
+		t.Errorf("Expected exit epoch %d, but got %d",
+			state.ValidatorRegistry[0].ExitEpoch, config.EntryExitDelay)
 	}
-	if state.ValidatorRegistry[1].ExitSlot !=
-		config.FarFutureSlot {
-		t.Errorf("Expected exit slot 0, but got %v", state.ValidatorRegistry[1].ExitSlot)
+	if state.ValidatorRegistry[1].ExitEpoch !=
+		config.FarFutureEpoch {
+		t.Errorf("Expected exit epoch 0, but got %v", state.ValidatorRegistry[1].ExitEpoch)
 	}
 }
 

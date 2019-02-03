@@ -77,7 +77,7 @@ func (sb *SimulatedBackend) RunForkChoiceTest(testCase *ForkChoiceTestCase) erro
 	validators := make([]*pb.ValidatorRecord, testCase.Config.ValidatorCount)
 	for i := uint64(0); i < testCase.Config.ValidatorCount; i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot:               params.BeaconConfig().EntryExitDelay,
+			ExitEpoch:              params.BeaconConfig().EntryExitDelay,
 			Pubkey:                 []byte{},
 			RandaoCommitmentHash32: randaoReveal[:],
 		}
@@ -282,7 +282,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		)
 	}
 	for _, penalized := range testCase.Results.PenalizedValidators {
-		if beaconState.ValidatorRegistry[penalized].PenalizedSlot == params.BeaconConfig().FarFutureSlot {
+		if beaconState.ValidatorRegistry[penalized].PenalizedEpoch == params.BeaconConfig().FarFutureEpoch {
 			return fmt.Errorf(
 				"expected validator at index %d to have been penalized",
 				penalized,

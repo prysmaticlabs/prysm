@@ -64,7 +64,6 @@ func AttestationParticipants(
 			break
 		}
 	}
-
 	if len(participationBitfield) != mathutil.CeilDiv8(len(committee)) {
 		return nil, fmt.Errorf(
 			"wanted participants bitfield length %d, got: %d",
@@ -150,7 +149,7 @@ func CrosslinkCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*Crosslink
 
 	offSet := slot % config.EpochLength
 	if wantedEpoch < currentEpoch {
-		countPerSlot = prevCommitteesCountPerSlot(state)
+		countPerSlot = helpers.PrevEpochCommitteeCount(state)
 		shuffledIndices, err = Shuffling(
 			bytesutil.ToBytes32(state.PreviousEpochSeedHash32),
 			state.ValidatorRegistry,
@@ -161,7 +160,7 @@ func CrosslinkCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*Crosslink
 		startShard = (state.PreviousEpochStartShard + countPerSlot*offSet) %
 			config.ShardCount
 	} else {
-		countPerSlot = CurrCommitteesCountPerSlot(state)
+		countPerSlot = helpers.CurrentEpochCommitteeCount(state)
 		shuffledIndices, err = Shuffling(
 			bytesutil.ToBytes32(state.CurrentEpochSeedHash32),
 			state.ValidatorRegistry,
@@ -218,9 +217,9 @@ func Shuffling(
 	slot -= slot % config.EpochLength
 
 	// Figure out how many committees can be in a single slot.
-	activeIndices := ActiveValidatorIndices(validators, slot)
+	activeIndices := helpers.ActiveValidatorIndices(validators, slot)
 	activeCount := uint64(len(activeIndices))
-	committeesPerSlot := committeeCountPerSlot(activeCount)
+	committeesPerSlot := helpers.EpochCommitteeCount(activeCount)
 
 	// Convert slot to bytes and xor it with seed.
 	slotInBytes := make([]byte, 32)
