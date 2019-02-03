@@ -55,6 +55,7 @@ def deposit(deposit_input: bytes[2048]):
     if deposit_amount == self.MAX_DEPOSIT_AMOUNT:
         self.full_deposit_count += 1
         if self.full_deposit_count == self.CHAIN_START_FULL_DEPOSIT_THRESHOLD:
+            # Temporarily commenting out the day boundary. 
             #timestamp_day_boundary: uint256 = deposit_timestamp - deposit_timestamp % SECONDS_PER_DAY + SECONDS_PER_DAY
             #log.ChainStart(self.get_deposit_root(), self.to_bytes(timestamp_day_boundary))
             log.ChainStart(self.get_deposit_root(), self.to_bytes(deposit_timestamp))
