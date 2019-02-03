@@ -504,13 +504,13 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "aca44879d5644da7c5b8ec6a1115e9b6ea6c40d9",
+    commit = "7ae0202eb74c2b534255c71b5a15fa4115aabbcc",
     importpath = "golang.org/x/sys",
 )
 
 go_repository(
     name = "com_github_whyrusleeping_yamux",
-    tag = "v1.1.2",
+    tag = "v1.1.5",
     importpath = "github.com/whyrusleeping/yamux",
 )
 
@@ -600,7 +600,7 @@ go_repository(
 
 go_repository(
     name = "com_github_syndtr_goleveldb",
-    commit = "b001fa50d6b27f3f0bb175a87d0cb55426d0a0ae",
+    commit = "2f17a3356c6616cbfc4ae4c38147dc062a68fb0e",
     importpath = "github.com/syndtr/goleveldb",
 )
 
@@ -648,7 +648,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aristanetworks_goarista",
-    commit = "8f049bdb8feb7d7d5f1a9b9cd854396112fb0c0e",
+    commit = "e2363f69bde9cb44d6b7f31b741a5a65a8f73b39",
     importpath = "github.com/aristanetworks/goarista",
 )
 

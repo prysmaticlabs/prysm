@@ -74,6 +74,10 @@ func TestBadBlock(t *testing.T) {
 
 	block.Slot = 4
 	powClient.blockExists = false
+	beaconState.LatestEth1Data = &pb.Eth1Data{
+		DepositRootHash32: []byte{2},
+		BlockHash32:       []byte{3},
+	}
 
 	if err := IsValidBlock(ctx, beaconState, block, true,
 		db.HasBlock, powClient.BlockByHash, genesisTime); err == nil {
@@ -107,9 +111,13 @@ func TestValidBlock(t *testing.T) {
 	genesisTime := params.BeaconConfig().GenesisTime
 	powClient.blockExists = true
 
+	beaconState.LatestEth1Data = &pb.Eth1Data{
+		DepositRootHash32: []byte{2},
+		BlockHash32:       []byte{3},
+	}
+
 	if err := IsValidBlock(ctx, beaconState, block, true,
 		db.HasBlock, powClient.BlockByHash, genesisTime); err != nil {
 		t.Fatal(err)
 	}
-
 }

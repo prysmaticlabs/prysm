@@ -2,10 +2,10 @@ package state
 
 import (
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
@@ -58,6 +58,10 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	block := &pb.BeaconBlock{
 		Slot:               5,
 		RandaoRevealHash32: []byte{},
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{2},
+			BlockHash32:       []byte{3},
+		},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: slashings,
 		},
@@ -96,6 +100,10 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 	block := &pb.BeaconBlock{
 		Slot:               5,
 		RandaoRevealHash32: []byte{},
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{2},
+			BlockHash32:       []byte{3},
+		},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: slashings,
 			AttesterSlashings: attesterSlashings,
@@ -157,6 +165,10 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	block := &pb.BeaconBlock{
 		Slot:               5,
 		RandaoRevealHash32: []byte{},
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{2},
+			BlockHash32:       []byte{3},
+		},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
@@ -243,6 +255,10 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	block := &pb.BeaconBlock{
 		Slot:               64,
 		RandaoRevealHash32: []byte{},
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{2},
+			BlockHash32:       []byte{3},
+		},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
@@ -335,6 +351,10 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	block := &pb.BeaconBlock{
 		Slot:               64,
 		RandaoRevealHash32: []byte{},
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{2},
+			BlockHash32:       []byte{3},
+		},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
