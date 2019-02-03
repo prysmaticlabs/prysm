@@ -186,6 +186,42 @@ func TestProposeBlock_UsesEth1Data(t *testing.T) {
 	}
 }
 
+func TestProposeBlock_ComputeStateFailure(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validator, m, finish := setup(t)
+	defer finish()
+
+	m.beaconClient.EXPECT().CanonicalHead(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.BeaconBlock{}, nil /*err*/)
+
+	m.beaconClient.EXPECT().PendingDeposits(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pb.PendingDepositsResponse{}, nil /*err*/)
+
+	m.beaconClient.EXPECT().Eth1Data(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pb.Eth1DataResponse{}, nil /*err*/)
+
+	var broadcastedBlock *pbp2p.BeaconBlock
+	m.broadcaster.EXPECT().Broadcast(
+		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
+	).Do(func(blk *pbp2p.BeaconBlock) {
+		broadcastedBlock = blk
+	})
+
+	m.proposerClient.EXPECT().ComputeStateRoot(
+		gomock.Any(), // context
+		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
+	).Return(nil /*response*/, errors.New("something bad happened"))
+
+	validator.ProposeBlock(context.Background(), 55)
+	testutil.AssertLogsContain(t, hook, "something bad happened")
+}
+
 func TestProposeBlock_UsesComputedState(t *testing.T) {
 	validator, m, finish := setup(t)
 	defer finish()
