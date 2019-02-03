@@ -70,7 +70,6 @@ func InitialBeaconState(
 			Pubkey:                      depositInput.Pubkey,
 			RandaoCommitmentHash32:      depositInput.RandaoCommitmentHash32,
 			WithdrawalCredentialsHash32: depositInput.WithdrawalCredentialsHash32,
-			CustodyCommitmentHash32:     depositInput.CustodyCommitmentHash32,
 			Balance:                     amount,
 			ExitSlot:                    config.FarFutureSlot,
 			PenalizedSlot:               config.FarFutureSlot,
@@ -96,23 +95,16 @@ func InitialBeaconState(
 		ValidatorRegistry:                    validatorRegistry,
 		ValidatorBalances:                    latestBalances,
 		ValidatorRegistryUpdateSlot:          config.GenesisSlot,
-		ValidatorRegistryExitCount:           0,
 		ValidatorRegistryDeltaChainTipHash32: config.ZeroHash[:],
 
 		// Randomness and committees.
 		LatestRandaoMixesHash32S:     latestRandaoMixes,
-		LatestVdfOutputsHash32S:      latestVDFOutputs,
 		PreviousEpochStartShard:      config.GenesisStartShard,
 		CurrentEpochStartShard:       config.GenesisStartShard,
 		PreviousEpochCalculationSlot: config.GenesisSlot,
 		CurrentEpochCalculationSlot:  config.GenesisSlot,
-		PreviousEpochRandaoMixHash32: config.ZeroHash[:],
-		CurrentEpochRandaoMixHash32:  config.ZeroHash[:],
-
-		// Proof of custody.
-		// Place holder, proof of custody challenge is defined in phase 1.
-		// This list will remain empty through out phase 0.
-		CustodyChallenges: []*pb.CustodyChallenge{},
+		PreviousEpochSeedHash32:      config.ZeroHash[:],
+		CurrentEpochSeedHash32:       config.ZeroHash[:],
 
 		// Finality.
 		PreviousJustifiedSlot: config.GenesisSlot,
@@ -127,9 +119,12 @@ func InitialBeaconState(
 		LatestAttestations:      []*pb.PendingAttestationRecord{},
 		BatchedBlockRootHash32S: [][]byte{},
 
-		// deposit root.
-		LatestDepositRootHash32: processedPowReceiptRoot,
-		DepositRootVotes:        []*pb.DepositRootVote{},
+		// Eth1 data.
+		LatestEth1Data: &pb.Eth1Data{
+			DepositRootHash32: processedPowReceiptRoot,
+			BlockHash32:       []byte{},
+		},
+		Eth1DataVotes: []*pb.Eth1DataVote{},
 	}
 
 	// Process initial deposits.
@@ -152,16 +147,15 @@ func InitialBeaconState(
 			depositInput.ProofOfPossession,
 			depositInput.WithdrawalCredentialsHash32,
 			depositInput.RandaoCommitmentHash32,
-			depositInput.CustodyCommitmentHash32,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not process validator deposit: %v", err)
 		}
 	}
 	for i := 0; i < len(state.ValidatorRegistry); i++ {
-		if v.EffectiveBalance(state, uint32(i)) ==
+		if v.EffectiveBalance(state, uint64(i)) ==
 			config.MaxDeposit {
-			state, err = v.ActivateValidator(state, uint32(i), true)
+			state, err = v.ActivateValidator(state, uint64(i), true)
 			if err != nil {
 				return nil, fmt.Errorf("could not activate validator: %v", err)
 			}

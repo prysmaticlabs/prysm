@@ -7,14 +7,13 @@ package validators
 import (
 	"bytes"
 	"fmt"
-	"sort"
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slices"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
 var config = params.BeaconConfig()
@@ -47,11 +46,11 @@ func InitialValidatorRegistry() []*pb.ValidatorRecord {
 //     Gets indices of active validators from ``validators``.
 //     """
 //     return [i for i, v in enumerate(validators) if is_active_validator(v, slot)]
-func ActiveValidatorIndices(validators []*pb.ValidatorRecord, slot uint64) []uint32 {
-	indices := make([]uint32, 0, len(validators))
+func ActiveValidatorIndices(validators []*pb.ValidatorRecord, slot uint64) []uint64 {
+	indices := make([]uint64, 0, len(validators))
 	for i, v := range validators {
 		if isActiveValidator(v, slot) {
-			indices = append(indices, uint32(i))
+			indices = append(indices, uint64(i))
 		}
 
 	}
@@ -80,7 +79,7 @@ func ActiveValidators(state *pb.BeaconState, validatorIndices []uint32) []*pb.Va
 //    """
 //    first_committee, _ = get_crosslink_committees_at_slot(state, slot)[0]
 //    return first_committee[slot % len(first_committee)]
-func BeaconProposerIdx(state *pb.BeaconState, slot uint64) (uint32, error) {
+func BeaconProposerIdx(state *pb.BeaconState, slot uint64) (uint64, error) {
 	committeeArray, err := CrosslinkCommitteesAtSlot(state, slot)
 	if err != nil {
 		return 0, err
@@ -91,11 +90,11 @@ func BeaconProposerIdx(state *pb.BeaconState, slot uint64) (uint32, error) {
 }
 
 // ValidatorIdx returns the idx of the validator given an input public key.
-func ValidatorIdx(pubKey []byte, validators []*pb.ValidatorRecord) (uint32, error) {
+func ValidatorIdx(pubKey []byte, validators []*pb.ValidatorRecord) (uint64, error) {
 
 	for idx := range validators {
 		if bytes.Equal(validators[idx].Pubkey, pubKey) {
-			return uint32(idx), nil
+			return uint64(idx), nil
 		}
 	}
 
@@ -107,7 +106,7 @@ func ValidatorIdx(pubKey []byte, validators []*pb.ValidatorRecord) (uint32, erro
 //
 // Spec pseudocode definition:
 //   sum([get_effective_balance(state, i) for i in active_validator_indices])
-func TotalEffectiveBalance(state *pb.BeaconState, validatorIndices []uint32) uint64 {
+func TotalEffectiveBalance(state *pb.BeaconState, validatorIndices []uint64) uint64 {
 	var totalDeposit uint64
 
 	for _, idx := range validatorIndices {
@@ -136,7 +135,7 @@ func TotalEffectiveBalance(state *pb.BeaconState, validatorIndices []uint32) uin
 //    )
 func NewRegistryDeltaChainTip(
 	flag pb.ValidatorRegistryDeltaBlock_ValidatorRegistryDeltaFlags,
-	idx uint32,
+	idx uint64,
 	slot uint64,
 	pubKey []byte,
 	currentValidatorRegistryDeltaChainTip []byte) ([32]byte, error) {
@@ -166,8 +165,8 @@ func NewRegistryDeltaChainTip(
 //     """
 //     Returns the effective balance (also known as "balance at stake") for a ``validator`` with the given ``index``.
 //     """
-//     return min(state.validator_balances[idx], MAX_DEPOSIT * GWEI_PER_ETH)
-func EffectiveBalance(state *pb.BeaconState, idx uint32) uint64 {
+//     return min(state.validator_balances[idx], MAX_DEPOSIT)
+func EffectiveBalance(state *pb.BeaconState, idx uint64) uint64 {
 	if state.ValidatorBalances[idx] > config.MaxDeposit {
 		return config.MaxDeposit
 	}
@@ -179,7 +178,7 @@ func EffectiveBalance(state *pb.BeaconState, idx uint32) uint64 {
 // Spec pseudocode definition:
 //   Let this_epoch_boundary_attesters = [state.validator_registry[i]
 //   for indices in this_epoch_boundary_attester_indices for i in indices].
-func Attesters(state *pb.BeaconState, attesterIndices []uint32) []*pb.ValidatorRecord {
+func Attesters(state *pb.BeaconState, attesterIndices []uint64) []*pb.ValidatorRecord {
 
 	var boundaryAttesters []*pb.ValidatorRecord
 	for _, attesterIdx := range attesterIndices {
@@ -199,9 +198,9 @@ func Attesters(state *pb.BeaconState, attesterIndices []uint32) []*pb.ValidatorR
 func ValidatorIndices(
 	state *pb.BeaconState,
 	attestations []*pb.PendingAttestationRecord,
-) ([]uint32, error) {
+) ([]uint64, error) {
 
-	var attesterIndicesIntersection []uint32
+	var attesterIndicesIntersection []uint64
 	for _, attestation := range attestations {
 		attesterIndices, err := AttestationParticipants(
 			state,
@@ -211,7 +210,7 @@ func ValidatorIndices(
 			return nil, err
 		}
 
-		attesterIndicesIntersection = slices.Union(attesterIndicesIntersection, attesterIndices)
+		attesterIndicesIntersection = sliceutil.Union(attesterIndicesIntersection, attesterIndices)
 	}
 
 	return attesterIndicesIntersection, nil
@@ -231,9 +230,9 @@ func AttestingValidatorIndices(
 	shard uint64,
 	shardBlockRoot []byte,
 	thisEpochAttestations []*pb.PendingAttestationRecord,
-	prevEpochAttestations []*pb.PendingAttestationRecord) ([]uint32, error) {
+	prevEpochAttestations []*pb.PendingAttestationRecord) ([]uint64, error) {
 
-	var validatorIndicesCommittees []uint32
+	var validatorIndicesCommittees []uint64
 	attestations := append(thisEpochAttestations, prevEpochAttestations...)
 
 	for _, attestation := range attestations {
@@ -244,7 +243,7 @@ func AttestingValidatorIndices(
 			if err != nil {
 				return nil, fmt.Errorf("could not get attester indices: %v", err)
 			}
-			validatorIndicesCommittees = slices.Union(validatorIndicesCommittees, validatorIndicesCommittee)
+			validatorIndicesCommittees = sliceutil.Union(validatorIndicesCommittees, validatorIndicesCommittee)
 		}
 	}
 	return validatorIndicesCommittees, nil
@@ -256,7 +255,7 @@ func AttestingValidatorIndices(
 // Spec pseudocode definition:
 //   Let this_epoch_boundary_attesting_balance =
 //   sum([get_effective_balance(state, i) for i in this_epoch_boundary_attester_indices])
-func AttestingBalance(state *pb.BeaconState, boundaryAttesterIndices []uint32) uint64 {
+func AttestingBalance(state *pb.BeaconState, boundaryAttesterIndices []uint64) uint64 {
 
 	var boundaryAttestingBalance uint64
 	for _, idx := range boundaryAttesterIndices {
@@ -268,10 +267,10 @@ func AttestingBalance(state *pb.BeaconState, boundaryAttesterIndices []uint32) u
 
 // AllValidatorsIndices returns all validator indices from 0 to
 // the last validator.
-func AllValidatorsIndices(state *pb.BeaconState) []uint32 {
-	validatorIndices := make([]uint32, len(state.ValidatorRegistry))
+func AllValidatorsIndices(state *pb.BeaconState) []uint64 {
+	validatorIndices := make([]uint64, len(state.ValidatorRegistry))
 	for i := 0; i < len(validatorIndices); i++ {
-		validatorIndices[i] = uint32(i)
+		validatorIndices[i] = uint64(i)
 	}
 	return validatorIndices
 }
@@ -290,7 +289,6 @@ func ProcessDeposit(
 	_ /*proofOfPossession*/ []byte,
 	withdrawalCredentials []byte,
 	randaoCommitment []byte,
-	custodyCommitment []byte,
 ) (*pb.BeaconState, error) {
 	// TODO(#258): Validate proof of possession using BLS.
 	var publicKeyExists bool
@@ -301,18 +299,14 @@ func ProcessDeposit(
 		// If public key does not exist in the registry, we add a new validator
 		// to the beacon state.
 		newValidator := &pb.ValidatorRecord{
-			Pubkey:                       pubkey,
-			RandaoCommitmentHash32:       randaoCommitment,
-			RandaoLayers:                 0,
-			ExitCount:                    0,
-			CustodyCommitmentHash32:      custodyCommitment,
-			LatestCustodyReseedSlot:      config.GenesisSlot,
-			PenultimateCustodyReseedSlot: config.GenesisSlot,
-			ActivationSlot:               config.FarFutureSlot,
-			ExitSlot:                     config.FarFutureSlot,
-			WithdrawalSlot:               config.FarFutureSlot,
-			PenalizedSlot:                config.FarFutureSlot,
-			StatusFlags:                  0,
+			Pubkey:                 pubkey,
+			RandaoCommitmentHash32: randaoCommitment,
+			RandaoLayers:           0,
+			ActivationSlot:         config.FarFutureSlot,
+			ExitSlot:               config.FarFutureSlot,
+			WithdrawalSlot:         config.FarFutureSlot,
+			PenalizedSlot:          config.FarFutureSlot,
+			StatusFlags:            0,
 		}
 		state.ValidatorRegistry = append(state.ValidatorRegistry, newValidator)
 		state.ValidatorBalances = append(state.ValidatorBalances, amount)
@@ -364,7 +358,7 @@ func isActiveValidator(validator *pb.ValidatorRecord, slot uint64) bool {
 //            flag=ACTIVATION,
 //        )
 //    )
-func ActivateValidator(state *pb.BeaconState, idx uint32, genesis bool) (*pb.BeaconState, error) {
+func ActivateValidator(state *pb.BeaconState, idx uint64, genesis bool) (*pb.BeaconState, error) {
 	validator := state.ValidatorRegistry[idx]
 	if genesis {
 		validator.ActivationSlot = config.GenesisSlot
@@ -393,7 +387,7 @@ func ActivateValidator(state *pb.BeaconState, idx uint32, genesis bool) (*pb.Bea
 // def initiate_validator_exit(state: BeaconState, index: int) -> None:
 //    validator = state.validator_registry[index]
 //    validator.status_flags |= INITIATED_EXIT
-func InitiateValidatorExit(state *pb.BeaconState, idx uint32) *pb.BeaconState {
+func InitiateValidatorExit(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 	state.ValidatorRegistry[idx].StatusFlags |=
 		pb.ValidatorRecord_INITIATED_EXIT
 	return state
@@ -422,7 +416,7 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint32) *pb.BeaconState {
 //            flag=EXIT,
 //        )
 //    )
-func ExitValidator(state *pb.BeaconState, idx uint32) (*pb.BeaconState, error) {
+func ExitValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) {
 	validator := state.ValidatorRegistry[idx]
 
 	if validator.ExitSlot < state.Slot+config.EntryExitDelay {
@@ -432,8 +426,6 @@ func ExitValidator(state *pb.BeaconState, idx uint32) (*pb.BeaconState, error) {
 
 	validator.ExitSlot = state.Slot + config.EntryExitDelay
 
-	state.ValidatorRegistryExitCount++
-	validator.ExitCount = state.ValidatorRegistryExitCount
 	newChainTip, err := NewRegistryDeltaChainTip(
 		pb.ValidatorRegistryDeltaBlock_EXIT,
 		idx,
@@ -463,7 +455,7 @@ func ExitValidator(state *pb.BeaconState, idx uint32) (*pb.BeaconState, error) {
 //    state.validator_balances[whistleblower_index] += whistleblower_reward
 //    state.validator_balances[index] -= whistleblower_reward
 //    validator.penalized_slot = state.slot
-func PenalizeValidator(state *pb.BeaconState, idx uint32) (*pb.BeaconState, error) {
+func PenalizeValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) {
 	state, err := ExitValidator(state, idx)
 	if err != nil {
 		return nil, fmt.Errorf("could not exit penalized validator: %v", err)
@@ -495,7 +487,7 @@ func PenalizeValidator(state *pb.BeaconState, idx uint32) (*pb.BeaconState, erro
 // def prepare_validator_for_withdrawal(state: BeaconState, index: int) -> None:
 //    validator = state.validator_registry[index]
 //    validator.status_flags |= WITHDRAWABLE
-func PrepareValidatorForWithdrawal(state *pb.BeaconState, idx uint32) *pb.BeaconState {
+func PrepareValidatorForWithdrawal(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 	state.ValidatorRegistry[idx].StatusFlags |=
 		pb.ValidatorRecord_WITHDRAWABLE
 	return state
@@ -561,11 +553,11 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 		// Activate validators within the allowable balance churn.
 		if validator.ActivationSlot > state.Slot+config.EntryExitDelay &&
 			state.ValidatorBalances[idx] >= config.MaxDeposit {
-			balChurn += EffectiveBalance(state, uint32(idx))
+			balChurn += EffectiveBalance(state, uint64(idx))
 			if balChurn > maxBalChurn {
 				break
 			}
-			state, err = ActivateValidator(state, uint32(idx), false)
+			state, err = ActivateValidator(state, uint64(idx), false)
 			if err != nil {
 				return nil, fmt.Errorf("could not activate validator %d: %v", idx, err)
 			}
@@ -577,11 +569,11 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 		// Exit validators within the allowable balance churn.
 		if validator.ExitSlot > state.Slot+config.EntryExitDelay &&
 			validator.StatusFlags == pb.ValidatorRecord_INITIATED_EXIT {
-			balChurn += EffectiveBalance(state, uint32(idx))
+			balChurn += EffectiveBalance(state, uint64(idx))
 			if balChurn > maxBalChurn {
 				break
 			}
-			state, err = ExitValidator(state, uint32(idx))
+			state, err = ExitValidator(state, uint64(idx))
 			if err != nil {
 				return nil, fmt.Errorf("could not exit validator %d: %v", idx, err)
 			}
@@ -637,21 +629,18 @@ func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 			if totalBalance < penaltyMultiplier {
 				penaltyMultiplier = totalBalance
 			}
-			penalty := EffectiveBalance(state, uint32(idx)) *
+			penalty := EffectiveBalance(state, uint64(idx)) *
 				penaltyMultiplier / totalBalance
 			state.ValidatorBalances[idx] -= penalty
 		}
 	}
 	allIndices := AllValidatorsIndices(state)
-	var eligibleIndices []uint32
+	var eligibleIndices []uint64
 	for _, idx := range allIndices {
 		if eligibleToExit(state, idx) {
 			eligibleIndices = append(eligibleIndices, idx)
 		}
 	}
-	sort.Slice(eligibleIndices, func(i, j int) bool {
-		return state.ValidatorRegistry[i].ExitCount < state.ValidatorRegistry[j].ExitCount
-	})
 	var withdrawnSoFar uint64
 	for _, idx := range eligibleIndices {
 		state = PrepareValidatorForWithdrawal(state, idx)
@@ -689,7 +678,7 @@ func maxBalanceChurn(totalBalance uint64) uint64 {
 //        return state.slot >= validator.penalized_slot + PENALIZED_WITHDRAWAL_TIME
 //    else:
 //        return state.slot >= validator.exit_slot + MIN_VALIDATOR_WITHDRAWAL_TIME
-func eligibleToExit(state *pb.BeaconState, idx uint32) bool {
+func eligibleToExit(state *pb.BeaconState, idx uint64) bool {
 	validator := state.ValidatorRegistry[idx]
 
 	if validator.PenalizedSlot <= state.Slot {

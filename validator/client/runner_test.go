@@ -16,19 +16,19 @@ func cancelledContext() context.Context {
 	return ctx
 }
 
-func TestRunInitializesValidator(t *testing.T) {
-	v := &fakeValidator{}
-	run(cancelledContext(), v)
-	if !v.InitializeCalled {
-		t.Error("Expected Initialize() to be called")
-	}
-}
-
 func TestRunCleansUpValidator(t *testing.T) {
 	v := &fakeValidator{}
 	run(cancelledContext(), v)
 	if !v.DoneCalled {
 		t.Error("Expected Done() to be called")
+	}
+}
+
+func TestRunWaitsForChainStart(t *testing.T) {
+	v := &fakeValidator{}
+	run(cancelledContext(), v)
+	if !v.WaitForChainStartCalled {
+		t.Error("Expected WaitForChainStart() to be called")
 	}
 }
 

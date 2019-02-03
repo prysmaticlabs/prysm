@@ -2,7 +2,7 @@ package stateutils
 
 import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 // ValidatorIndexMap builds a lookup map for quickly determining the index of

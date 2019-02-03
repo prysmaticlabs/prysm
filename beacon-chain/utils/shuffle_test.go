@@ -9,12 +9,12 @@ import (
 )
 
 func TestFaultyShuffleIndices(t *testing.T) {
-	var list []uint32
+	var list []uint64
 
 	upperBound := 1<<(params.BeaconConfig().RandBytes*8) - 1
 
 	for i := 0; i < upperBound+1; i++ {
-		list = append(list, uint32(i))
+		list = append(list, uint64(i))
 	}
 
 	if _, err := ShuffleIndices(common.Hash{'a'}, list); err == nil {
@@ -25,13 +25,13 @@ func TestFaultyShuffleIndices(t *testing.T) {
 func TestShuffleIndices(t *testing.T) {
 	hash1 := common.BytesToHash([]byte{'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g'})
 	hash2 := common.BytesToHash([]byte{'1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7'})
-	var list1 []uint32
+	var list1 []uint64
 
 	for i := 0; i < 10; i++ {
-		list1 = append(list1, uint32(i))
+		list1 = append(list1, uint64(i))
 	}
 
-	list2 := make([]uint32, len(list1))
+	list2 := make([]uint64, len(list1))
 	copy(list2, list1)
 
 	list1, err := ShuffleIndices(hash1, list1)
@@ -47,19 +47,19 @@ func TestShuffleIndices(t *testing.T) {
 	if reflect.DeepEqual(list1, list2) {
 		t.Errorf("2 shuffled lists shouldn't be equal")
 	}
-	if !reflect.DeepEqual(list1, []uint32{5, 4, 9, 6, 7, 3, 0, 1, 8, 2}) {
+	if !reflect.DeepEqual(list1, []uint64{5, 4, 9, 6, 7, 3, 0, 1, 8, 2}) {
 		t.Errorf("list 1 was incorrectly shuffled")
 	}
-	if !reflect.DeepEqual(list2, []uint32{9, 0, 1, 5, 3, 2, 4, 7, 8, 6}) {
+	if !reflect.DeepEqual(list2, []uint64{9, 0, 1, 5, 3, 2, 4, 7, 8, 6}) {
 		t.Errorf("list 2 was incorrectly shuffled")
 	}
 }
 
 func TestSplitIndices(t *testing.T) {
-	var l []uint32
+	var l []uint64
 	validators := 64000
 	for i := 0; i < validators; i++ {
-		l = append(l, uint32(i))
+		l = append(l, uint64(i))
 	}
 	split := SplitIndices(l, params.BeaconConfig().EpochLength)
 	if len(split) != int(params.BeaconConfig().EpochLength) {

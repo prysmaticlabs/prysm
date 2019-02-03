@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytes"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
@@ -22,7 +22,6 @@ type ProposerServer struct {
 	chainService       chainService
 	powChainService    powChainService
 	canonicalStateChan chan *pbp2p.BeaconState
-	enablePOWChain     bool
 }
 
 // ProposerIndex sends a response to the client which returns the proposer index for a given slot. Validators
@@ -68,8 +67,13 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
 
-	parentHash := bytes.ToBytes32(req.ParentRootHash32)
-	beaconState, err = state.ExecuteStateTransition(beaconState, req, parentHash)
+	parentHash := bytesutil.ToBytes32(req.ParentRootHash32)
+	beaconState, err = state.ExecuteStateTransition(
+		beaconState,
+		req,
+		parentHash,
+		false, /* no sig verification */
+	)
 	if err != nil {
 		return nil, fmt.Errorf("could not execute state transition %v", err)
 	}
@@ -79,6 +83,7 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 		return nil, fmt.Errorf("could not marshal state %v", err)
 	}
 
+	// TODO(#1389): Use tree hashing algorithm instead.
 	beaconStateHash := hashutil.Hash(encodedState)
 	log.WithField("beaconStateHash", fmt.Sprintf("%#x", beaconStateHash)).Debugf("Computed state hash")
 	return &pb.StateRootResponse{

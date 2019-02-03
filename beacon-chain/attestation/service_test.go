@@ -6,7 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytes"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -14,27 +14,6 @@ import (
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
-}
-
-func TestIncomingAttestations_Ok(t *testing.T) {
-	hook := logTest.NewGlobal()
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
-	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
-
-	exitRoutine := make(chan bool)
-	go func() {
-		service.attestationAggregate()
-		<-exitRoutine
-	}()
-
-	service.incomingChan <- &pb.Attestation{
-		Data: &pb.AttestationData{},
-	}
-	service.cancel()
-	exitRoutine <- true
-
-	testutil.AssertLogsContain(t, hook, "Forwarding aggregated attestation")
 }
 
 func TestUpdateLatestAttestation_Ok(t *testing.T) {
@@ -57,7 +36,7 @@ func TestUpdateLatestAttestation_Ok(t *testing.T) {
 	if err := service.updateLatestAttestation(attestation); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
-	pubkey := bytes.ToBytes48([]byte{'A'})
+	pubkey := bytesutil.ToBytes48([]byte{'A'})
 	if service.LatestAttestation[pubkey].Data.Slot !=
 		attestation.Data.Slot {
 		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",

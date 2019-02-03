@@ -37,8 +37,6 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 		t.Error("LatestRandaoMixesLength should be 8192 for these tests to pass")
 	}
 	latestRandaoMixesLength := int(params.BeaconConfig().LatestRandaoMixesLength)
-	LatestVdfMixesLength := int(params.BeaconConfig().LatestRandaoMixesLength /
-		params.BeaconConfig().EpochLength)
 
 	if params.BeaconConfig().ShardCount != 1024 {
 		t.Error("ShardCount should be 1024 for these tests to pass")
@@ -110,9 +108,6 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	if state.ValidatorRegistryUpdateSlot != initialSlotNumber {
 		t.Error("ValidatorRegistryUpdateSlot was not correctly initialized")
 	}
-	if state.ValidatorRegistryExitCount != 0 {
-		t.Error("ValidatorRegistryExitCount was not correctly initialized")
-	}
 	if len(state.ValidatorRegistry) != depositsForChainStart {
 		t.Error("ValidatorRegistry was not correctly initialized")
 	}
@@ -123,14 +118,6 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	// Randomness and committees fields checks.
 	if len(state.LatestRandaoMixesHash32S) != latestRandaoMixesLength {
 		t.Error("Length of LatestRandaoMixesHash32S was not correctly initialized")
-	}
-	if len(state.LatestVdfOutputsHash32S) != LatestVdfMixesLength {
-		t.Error("Length of LatestRandaoMixesHash32S was not correctly initialized")
-	}
-
-	// Proof of custody field check.
-	if !reflect.DeepEqual(state.CustodyChallenges, []*pb.CustodyChallenge{}) {
-		t.Error("CustodyChallenges was not correctly initialized")
 	}
 
 	// Finality fields checks.
@@ -163,11 +150,11 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	}
 
 	// deposit root checks.
-	if !bytes.Equal(state.LatestDepositRootHash32, processedPowReceiptRoot) {
-		t.Error("LatestDepositRootHash32 was not correctly initialized")
+	if !bytes.Equal(state.LatestEth1Data.DepositRootHash32, processedPowReceiptRoot) {
+		t.Error("LatestEth1Data DepositRootHash32 was not correctly initialized")
 	}
-	if !reflect.DeepEqual(state.DepositRootVotes, []*pb.DepositRootVote{}) {
-		t.Error("DepositRootVotes was not correctly initialized")
+	if !reflect.DeepEqual(state.Eth1DataVotes, []*pb.Eth1DataVote{}) {
+		t.Error("Eth1DataVotes was not correctly initialized")
 	}
 }
 

@@ -9,9 +9,9 @@ import (
 var _ = Validator(&fakeValidator{})
 
 type fakeValidator struct {
-	InitializeCalled        bool
 	DoneCalled              bool
 	WaitForActivationCalled bool
+	WaitForChainStartCalled bool
 	NextSlotRet             <-chan uint64
 	NextSlotCalled          bool
 	UpdateAssignmentsCalled bool
@@ -26,12 +26,12 @@ type fakeValidator struct {
 	ProposeBlockArg1        uint64
 }
 
-func (fv *fakeValidator) Initialize(_ context.Context) {
-	fv.InitializeCalled = true
-}
-
 func (fv *fakeValidator) Done() {
 	fv.DoneCalled = true
+}
+
+func (fv *fakeValidator) WaitForChainStart(_ context.Context) {
+	fv.WaitForChainStartCalled = true
 }
 
 func (fv *fakeValidator) WaitForActivation(_ context.Context) {

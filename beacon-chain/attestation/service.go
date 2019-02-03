@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
-	"github.com/prysmaticlabs/prysm/shared/bytes"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/sirupsen/logrus"
@@ -57,7 +57,6 @@ func NewAttestationService(ctx context.Context, cfg *Config) *Service {
 // Start an attestation service's main event loop.
 func (a *Service) Start() {
 	log.Info("Starting service")
-	go a.attestationAggregate()
 	go a.attestationPool()
 }
 
@@ -78,31 +77,6 @@ func (a *Service) Status() error {
 // The attestation service will subscribe to this feed in order to relay incoming attestations.
 func (a *Service) IncomingAttestationFeed() *event.Feed {
 	return a.incomingFeed
-}
-
-// attestationAggregate aggregates the newly broadcasted attestation that was
-// received from sync service.
-func (a *Service) attestationAggregate() {
-	incomingSub := a.incomingFeed.Subscribe(a.incomingChan)
-	defer incomingSub.Unsubscribe()
-
-	for {
-		select {
-		case <-a.ctx.Done():
-			log.Debug("Attestation service context closed, exiting goroutine")
-			return
-		// Listen for a newly received incoming attestation from the sync service.
-		case attestation := <-a.incomingChan:
-			enc, err := proto.Marshal(attestation)
-			if err != nil {
-				log.Errorf("Could not marshal incoming attestation to bytes: %v", err)
-				continue
-			}
-			h := hashutil.Hash(enc)
-			// TODO(1366): Aggregate attestation with the existing one in cache. We need BLS.
-			log.Debugf("Forwarding aggregated attestation %#x to proposers through RPC", h)
-		}
-	}
 }
 
 // attestationPool takes an newly received attestation from sync service
@@ -165,7 +139,7 @@ func (a *Service) updateLatestAttestation(attestation *pb.Attestation) error {
 			continue
 		}
 		// If the attestation came from this attester.
-		pubkey := bytes.ToBytes48(state.ValidatorRegistry[i].Pubkey)
+		pubkey := bytesutil.ToBytes48(state.ValidatorRegistry[i].Pubkey)
 		newAttestationSlot := attestation.Data.Slot
 		currentAttestationSlot := uint64(0)
 		if _, exists := a.LatestAttestation[pubkey]; exists {

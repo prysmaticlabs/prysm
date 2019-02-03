@@ -20,7 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -255,9 +255,12 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 	}
 
 	block := &pb.BeaconBlock{
-		Slot:              2,
-		ParentRootHash32:  parentHash[:],
-		DepositRootHash32: []byte("a"),
+		Slot:             2,
+		ParentRootHash32: parentHash[:],
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte("a"),
+			BlockHash32:       []byte("b"),
+		},
 	}
 
 	exitRoutine := make(chan bool)
@@ -329,36 +332,37 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatalf("Can't get state from db %v", err)
 	}
 
-	var ShardCommittees []*pb.ShardCommitteeArray
-	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
-		ShardCommittees = append(ShardCommittees, &pb.ShardCommitteeArray{
-			ArrayShardCommittee: []*pb.ShardCommittee{
-				{Committee: []uint32{9, 8, 311, 12, 92, 1, 23, 17}},
-			},
-		})
+	validators := make([]*pb.ValidatorRecord, params.BeaconConfig().EpochLength*2)
+	randaoCommit := hashutil.RepeatHash([32]byte{}, 1)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.ValidatorRecord{
+			ExitSlot:               params.BeaconConfig().FarFutureSlot,
+			RandaoCommitmentHash32: randaoCommit[:],
+		}
 	}
 
-	beaconState.ShardCommitteesAtSlots = ShardCommittees
+	beaconState.ValidatorRegistry = validators
 	if err := chainService.beaconDB.SaveState(beaconState); err != nil {
 		t.Fatal(err)
 	}
 
 	currentSlot := uint64(5)
 	attestationSlot := uint64(0)
-	shard := beaconState.ShardCommitteesAtSlots[attestationSlot].ArrayShardCommittee[0].Shard
 
 	block := &pb.BeaconBlock{
-		Slot:              currentSlot + 1,
-		StateRootHash32:   stateRoot[:],
-		ParentRootHash32:  parentHash[:],
-		DepositRootHash32: []byte("a"),
+		Slot:             currentSlot + 1,
+		StateRootHash32:  stateRoot[:],
+		ParentRootHash32: parentHash[:],
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte("a"),
+			BlockHash32:       []byte("b"),
+		},
 		Body: &pb.BeaconBlockBody{
 			Attestations: []*pb.Attestation{{
 				ParticipationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Data: &pb.AttestationData{
 					Slot:                      attestationSlot,
-					Shard:                     shard,
 					JustifiedBlockRootHash32:  params.BeaconConfig().ZeroHash[:],
 					LatestCrosslinkRootHash32: params.BeaconConfig().ZeroHash[:],
 				},
@@ -404,7 +408,7 @@ func TestDoesPOWBlockExist(t *testing.T) {
 	}
 
 	// Using a faulty client should throw error.
-	powHash := bytesutil.ToBytes32(beaconState.LatestDepositRootHash32)
+	powHash := bytesutil.ToBytes32(beaconState.LatestEth1Data.DepositRootHash32)
 	exists := chainService.doesPoWBlockExist(powHash)
 	if exists {
 		t.Error("Block corresponding to nil powchain reference should not exist")
@@ -467,10 +471,13 @@ func TestUpdateHead(t *testing.T) {
 		enc, _ := proto.Marshal(tt.state)
 		stateRoot := hashutil.Hash(enc)
 		block := &pb.BeaconBlock{
-			Slot:              tt.blockSlot,
-			StateRootHash32:   stateRoot[:],
-			ParentRootHash32:  genesisHash[:],
-			DepositRootHash32: []byte("a"),
+			Slot:             tt.blockSlot,
+			StateRootHash32:  stateRoot[:],
+			ParentRootHash32: genesisHash[:],
+			Eth1Data: &pb.Eth1Data{
+				DepositRootHash32: []byte("a"),
+				BlockHash32:       []byte("b"),
+			},
 		}
 		if err := chainService.beaconDB.SaveBlock(block); err != nil {
 			t.Fatal(err)
@@ -529,18 +536,23 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 		t.Fatal("block processing succeeded despite block slot being invalid")
 	}
 
-	h := bytesutil.ToBytes32([]byte("a"))
-	beaconState.LatestDepositRootHash32 = h[:]
+	beaconState.LatestEth1Data = &pb.Eth1Data{
+		DepositRootHash32: []byte{2},
+		BlockHash32:       []byte{3},
+	}
 	beaconState.Slot = 0
 
 	currentSlot := uint64(1)
 	attestationSlot := uint64(0)
 
 	block3 := &pb.BeaconBlock{
-		Slot:              currentSlot,
-		StateRootHash32:   stateRoot[:],
-		ParentRootHash32:  parentHash[:],
-		DepositRootHash32: []byte("a"),
+		Slot:             currentSlot,
+		StateRootHash32:  stateRoot[:],
+		ParentRootHash32: parentHash[:],
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte("a"),
+			BlockHash32:       []byte("b"),
+		},
 		Body: &pb.BeaconBlockBody{
 			Attestations: []*pb.Attestation{{
 				ParticipationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

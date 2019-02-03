@@ -43,7 +43,6 @@ func (s *ServiceRegistry) StartAll() {
 		log.Debugf("Starting service type %v", kind)
 		s.services[kind].Start()
 	}
-	log.Info("All services started")
 }
 
 // StopAll ends every service in reverse order of registration, logging a
