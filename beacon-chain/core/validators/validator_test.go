@@ -703,7 +703,7 @@ func TestEligibleToExit(t *testing.T) {
 	}
 
 	state = &pb.BeaconState{
-		Slot: config.MinValidatorWithdrawalTime,
+		Slot: config.MinValidatorWithdrawalEpochs,
 		ValidatorRegistry: []*pb.ValidatorRecord{
 			{ExitEpoch: params.BeaconConfig().EntryExitDelay,
 				PenalizedEpoch: 1},

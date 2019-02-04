@@ -638,5 +638,5 @@ func eligibleToExit(state *pb.BeaconState, idx uint64) bool {
 		penalizedWithdrawalEpochs := config.LatestPenalizedExitLength / 2
 		return currentEpoch >= validator.PenalizedEpoch+penalizedWithdrawalEpochs
 	}
-	return currentEpoch >= validator.ExitEpoch+config.MinValidatorWithdrawalTime
+	return currentEpoch >= validator.ExitEpoch+config.MinValidatorWithdrawalEpochs
 }
