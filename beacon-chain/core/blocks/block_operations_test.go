@@ -17,7 +17,7 @@ import (
 )
 
 func TestProcessBlockRandao_UnequalBlockAndProposerRandao(t *testing.T) {
-	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
+	validators := make([]*pb.ValidatorRecord, config.DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
 			ExitEpoch: config.FarFutureEpoch,
@@ -48,7 +48,7 @@ func TestProcessBlockRandao_UnequalBlockAndProposerRandao(t *testing.T) {
 
 func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 	randaoCommit := hashutil.RepeatHash([32]byte{}, 1)
-	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
+	validators := make([]*pb.ValidatorRecord, config.DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
 			ExitEpoch:              config.FarFutureEpoch,
@@ -296,14 +296,14 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
 
-	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
+	validators := make([]*pb.ValidatorRecord, config.DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
 			ExitEpoch:      config.FarFutureEpoch,
 			PenalizedEpoch: 2,
 		}
 	}
-	validatorBalances := make([]uint64, config.EpochLength*2)
+	validatorBalances := make([]uint64, len(validators))
 	for i := 0; i < len(validatorBalances); i++ {
 		validatorBalances[i] = config.MaxDeposit
 	}
@@ -654,12 +654,16 @@ func TestProcessAttesterSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
-	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
+	validators := make([]*pb.ValidatorRecord, config.DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
 			ExitEpoch:      config.FarFutureEpoch,
 			PenalizedEpoch: 6,
 		}
+	}
+	validatorBalances := make([]uint64, len(validators))
+	for i := 0; i < len(validatorBalances); i++ {
+		validatorBalances[i] = config.MaxDeposit
 	}
 
 	att1 := &pb.AttestationData{
@@ -689,7 +693,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	beaconState := &pb.BeaconState{
 		ValidatorRegistry:       validators,
 		Slot:                    currentSlot,
-		ValidatorBalances:       []uint64{32, 32, 32, 32, 32, 32},
+		ValidatorBalances:       validatorBalances,
 		LatestPenalizedBalances: []uint64{0},
 	}
 	block := &pb.BeaconBlock{

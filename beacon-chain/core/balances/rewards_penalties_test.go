@@ -199,7 +199,7 @@ func TestChainHeadRewardsPenalties(t *testing.T) {
 }
 
 func TestInclusionDistRewards_Ok(t *testing.T) {
-	validators := make([]*pb.ValidatorRecord, config.EpochLength*4)
+	validators := make([]*pb.ValidatorRecord, config.DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
 			ExitEpoch: config.FarFutureEpoch,
@@ -217,10 +217,9 @@ func TestInclusionDistRewards_Ok(t *testing.T) {
 	}{
 		{[]uint64{}},
 		{[]uint64{237, 224}},
-		{[]uint64{237, 224, 2, 242}},
 	}
 	for _, tt := range tests {
-		validatorBalances := make([]uint64, config.EpochLength*4)
+		validatorBalances := make([]uint64, len(validators))
 		for i := 0; i < len(validatorBalances); i++ {
 			validatorBalances[i] = params.BeaconConfig().MaxDeposit
 		}
@@ -428,7 +427,7 @@ func TestInactivityExitedPenality(t *testing.T) {
 }
 
 func TestInactivityInclusionPenalty_Ok(t *testing.T) {
-	validators := make([]*pb.ValidatorRecord, config.EpochLength*4)
+	validators := make([]*pb.ValidatorRecord, config.DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
 			ExitEpoch: config.FarFutureEpoch,
@@ -445,7 +444,6 @@ func TestInactivityInclusionPenalty_Ok(t *testing.T) {
 	}{
 		{[]uint64{}},
 		{[]uint64{237, 224}},
-		{[]uint64{237, 224, 2, 242}},
 	}
 	for _, tt := range tests {
 		validatorBalances := make([]uint64, config.EpochLength*4)
@@ -507,7 +505,7 @@ func TestInactivityInclusionPenalty_NotOk(t *testing.T) {
 }
 
 func TestAttestationInclusionRewards(t *testing.T) {
-	validators := make([]*pb.ValidatorRecord, config.EpochLength*4)
+	validators := make([]*pb.ValidatorRecord, config.DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
 			ExitEpoch: config.FarFutureEpoch,
