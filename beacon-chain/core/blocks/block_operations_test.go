@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
@@ -19,7 +20,7 @@ func TestProcessBlockRandao_UnequalBlockAndProposerRandao(t *testing.T) {
 	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot: config.FarFutureSlot,
+			ExitEpoch: config.FarFutureEpoch,
 		}
 	}
 
@@ -50,7 +51,7 @@ func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot:               config.FarFutureSlot,
+			ExitEpoch:              config.FarFutureEpoch,
 			RandaoCommitmentHash32: randaoCommit[:],
 		}
 	}
@@ -298,8 +299,8 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot:      config.FarFutureSlot,
-			PenalizedSlot: 2,
+			ExitEpoch:      config.FarFutureEpoch,
+			PenalizedEpoch: 2,
 		}
 	}
 	validatorBalances := make([]uint64, config.EpochLength*2)
@@ -344,10 +345,10 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unexpected error: %s", err)
 	}
-	if validators[1].ExitSlot !=
+	if validators[1].ExitEpoch !=
 		beaconState.Slot+config.EntryExitDelay {
 		t.Errorf("Proposer with index 1 did not correctly exit,"+"wanted slot:%d, got:%d",
-			beaconState.Slot+config.EntryExitDelay, validators[1].ExitSlot)
+			beaconState.Slot+config.EntryExitDelay, validators[1].ExitEpoch)
 	}
 }
 
@@ -656,8 +657,8 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot:      config.FarFutureSlot,
-			PenalizedSlot: 6,
+			ExitEpoch:      config.FarFutureEpoch,
+			PenalizedEpoch: 6,
 		}
 	}
 
@@ -708,22 +709,24 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 
 	// Given the intersection of slashable indices is [1], only validator
 	// at index 1 should be penalized and exited. We confirm this below.
-	if newRegistry[1].ExitSlot != config.EntryExitDelay+currentSlot {
+	if newRegistry[1].ExitEpoch !=
+		helpers.EntryExitEffectEpoch(helpers.CurrentEpoch(beaconState)) {
 		t.Errorf(
 			`
-			Expected validator at index 1's exit slot to change to
+			Expected validator at index 1's exit epoch to change to
 			%d, received %d instead
 			`,
-			config.EntryExitDelay+currentSlot, newRegistry[1].ExitSlot,
+			helpers.EntryExitEffectEpoch(helpers.CurrentEpoch(beaconState)),
+			newRegistry[1].ExitEpoch,
 		)
 	}
-	if newRegistry[0].ExitSlot != config.FarFutureSlot {
+	if newRegistry[0].ExitEpoch != config.FarFutureEpoch {
 		t.Errorf(
 			`
-			Expected validator at index 0's exit slot to not change,
+			Expected validator at index 0's exit epoch to not change,
 			received %d instead
 			`,
-			newRegistry[0].ExitSlot,
+			newRegistry[0].ExitEpoch,
 		)
 	}
 }
@@ -1424,7 +1427,7 @@ func TestProcessValidatorExits_ValidatorNotActive(t *testing.T) {
 	}
 	registry := []*pb.ValidatorRecord{
 		{
-			ExitSlot: 0,
+			ExitEpoch: 0,
 		},
 	}
 	state := &pb.BeaconState{
@@ -1450,7 +1453,7 @@ func TestProcessValidatorExits_ValidatorNotActive(t *testing.T) {
 	}
 }
 
-func TestProcessValidatorExits_InvalidExitSlot(t *testing.T) {
+func TestProcessValidatorExits_InvalidExitEpoch(t *testing.T) {
 	exits := []*pb.Exit{
 		{
 			Slot: 10,
@@ -1458,7 +1461,7 @@ func TestProcessValidatorExits_InvalidExitSlot(t *testing.T) {
 	}
 	registry := []*pb.ValidatorRecord{
 		{
-			ExitSlot: config.FarFutureSlot,
+			ExitEpoch: config.FarFutureEpoch,
 		},
 	}
 	state := &pb.BeaconState{
@@ -1495,7 +1498,7 @@ func TestProcessValidatorExits_InvalidStatusChangeSlot(t *testing.T) {
 	}
 	registry := []*pb.ValidatorRecord{
 		{
-			ExitSlot: 1,
+			ExitEpoch: 1,
 		},
 	}
 	state := &pb.BeaconState{
@@ -1527,7 +1530,7 @@ func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
 	}
 	registry := []*pb.ValidatorRecord{
 		{
-			ExitSlot: config.FarFutureSlot,
+			ExitEpoch: config.FarFutureEpoch,
 		},
 	}
 	state := &pb.BeaconState{

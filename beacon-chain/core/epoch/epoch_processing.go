@@ -215,7 +215,7 @@ func ProcessCrosslinks(
 //            exit_validator(state, index)
 func ProcessEjections(state *pb.BeaconState) (*pb.BeaconState, error) {
 	var err error
-	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
 	for _, index := range activeValidatorIndices {
 		if state.ValidatorBalances[index] < config.EjectionBalance {
 			state, err = validators.ExitValidator(state, index)
