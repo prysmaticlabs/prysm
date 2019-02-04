@@ -50,10 +50,10 @@ type BeaconChainConfig struct {
 	MinAttestationInclusionDelay uint64 // MinAttestationInclusionDelay defines how long validator has to wait to include attestation for beacon block.
 	EpochLength                  uint64 // EpochLength is the number of slots in an epoch.
 	SeedLookahead                uint64 // SeedLookahead is the duration of randao look ahead seed.
-	EntryExitDelay               uint64 // EntryExitDelay is the duration a validator has to wait for entry and exit.
-	Eth1DataVotingPeriod         uint64 // Eth1DataVotingPeriod defines how often (epochs) the merkle root of deposit receipts get updated in beacon node.
+	EntryExitDelay               uint64 // EntryExitDelay is the duration a validator has to wait for entry and exit in epoch.
+	Eth1DataVotingPeriod         uint64 // Eth1DataVotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
 	Eth1FollowDistance           uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
-	MinValidatorWithdrawalTime   uint64 // MinValidatorWithdrawalTime is the shortest amount of time a validator can get the deposit out.
+	MinValidatorWithdrawalEpochs uint64 // MinValidatorWithdrawalEpochs is the shortest amount of time a validator can get the deposit out.
 	FarFutureEpoch               uint64 // FarFutureEpoch represents a epoch extremely far away in the future used as the default penalization slot for validators.
 
 	// Reward and penalty quotients constants.

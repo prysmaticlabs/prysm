@@ -62,7 +62,7 @@ func setupInitialDeposits(t *testing.T) []*pb.Deposit {
 		depositInput := &pb.DepositInput{
 			Pubkey: genesisValidatorRegistry[i].Pubkey,
 		}
-		balance := genesisValidatorRegistry[i].Balance
+		balance := params.BeaconConfig().MaxDeposit
 		depositData, err := blocks.EncodeDepositData(depositInput, balance, time.Now().Unix())
 		if err != nil {
 			t.Fatalf("Cannot encode data: %v", err)
@@ -135,8 +135,7 @@ func TestProcessBlock(t *testing.T) {
 	validators := make([]*pb.ValidatorRecord, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			Balance: params.BeaconConfig().MaxDeposit,
-			Pubkey:  []byte(strconv.Itoa(i)),
+			Pubkey: []byte(strconv.Itoa(i)),
 			RandaoCommitmentHash32: []byte{41, 13, 236, 217, 84, 139, 98, 168, 214, 3, 69,
 				169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
 		}
@@ -218,8 +217,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	validators := make([]*pb.ValidatorRecord, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			Balance: params.BeaconConfig().MaxDeposit,
-			Pubkey:  []byte(strconv.Itoa(i)),
+			Pubkey: []byte(strconv.Itoa(i)),
 			RandaoCommitmentHash32: []byte{41, 13, 236, 217, 84, 139, 98, 168, 214, 3, 69,
 				169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
 		}

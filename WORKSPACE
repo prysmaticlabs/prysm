@@ -293,7 +293,7 @@ go_repository(
 
 go_repository(
     name = "com_github_mattn_go_colorable",
-    tag = "v0.0.9",
+    tag = "v0.1.0",
     importpath = "github.com/mattn/go-colorable",
 )
 
@@ -504,7 +504,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "7ae0202eb74c2b534255c71b5a15fa4115aabbcc",
+    commit = "980327fe3c65509adaad5a9ff06abdf7611b4411",
     importpath = "golang.org/x/sys",
 )
 
@@ -875,7 +875,7 @@ go_repository(
 
 go_repository(
     name = "com_github_shyiko_kubesec",
-    commit = "60b9dc76b678673960bc26619e5eca38dfaa1ad1",
+    commit = "7718facdb5e5529cecff1fe42fc3aaa4cc837d5d",
     importpath = "github.com/shyiko/kubesec",
 )
 
