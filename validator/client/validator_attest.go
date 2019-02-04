@@ -13,7 +13,7 @@ import (
 
 // AttestToBlockHead
 //
-// WIP - not done.
+// WIP - not done. TODO: needs to attest at slot + 0.5*SLOT_DURATION.
 func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.AttestToBlockHead")
 	defer span.Finish()
