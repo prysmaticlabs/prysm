@@ -23,6 +23,7 @@ type validator struct {
 	assignment      *pb.Assignment
 	validatorClient pb.ValidatorServiceClient
 	beaconClient    pb.BeaconServiceClient
+	attesterClient    pb.AttesterServiceClient
 	pubKey          []byte
 }
 
