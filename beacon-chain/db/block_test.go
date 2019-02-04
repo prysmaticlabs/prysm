@@ -90,7 +90,8 @@ func TestUpdateChainHeadNoBlock(t *testing.T) {
 	defer teardownDB(t, db)
 
 	genesisTime := uint64(time.Now().Unix())
-	err := db.InitializeState(genesisTime)
+	deposits := setupInitialDeposits(t)
+	err := db.InitializeState(genesisTime, deposits)
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
@@ -110,7 +111,8 @@ func TestUpdateChainHead(t *testing.T) {
 	defer teardownDB(t, db)
 
 	genesisTime := uint64(time.Now().Unix())
-	err := db.InitializeState(genesisTime)
+	deposits := setupInitialDeposits(t)
+	err := db.InitializeState(genesisTime, deposits)
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
@@ -175,7 +177,8 @@ func TestChainProgress(t *testing.T) {
 	defer teardownDB(t, db)
 
 	genesisTime := uint64(time.Now().Unix())
-	err := db.InitializeState(genesisTime)
+	deposits := setupInitialDeposits(t)
+	err := db.InitializeState(genesisTime, deposits)
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
