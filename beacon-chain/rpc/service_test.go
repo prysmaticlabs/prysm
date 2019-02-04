@@ -17,6 +17,15 @@ func init() {
 	logrus.SetOutput(ioutil.Discard)
 }
 
+type TestLogger struct {
+	logrus.FieldLogger
+	testMap map[string]interface{}
+}
+
+func (t *TestLogger) Errorf(format string, args ...interface{}) {
+	t.testMap["error"] = true
+}
+
 type mockOperationService struct{}
 
 func (ms *mockOperationService) IncomingAttFeed() *event.Feed {
@@ -68,21 +77,44 @@ func TestLifecycle(t *testing.T) {
 
 	rpcService.Stop()
 	testutil.AssertLogsContain(t, hook, "Stopping service")
+
 }
 
 func TestBadEndpoint(t *testing.T) {
-	hook := logTest.NewGlobal()
+	fl := logrus.WithField("prefix", "rpc")
+
+	log = &TestLogger{
+		FieldLogger: fl,
+		testMap:     make(map[string]interface{}),
+	}
+
+	hook := logTest.NewLocal(fl.Logger)
+
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port: "ralph merkle!!!",
 	})
 
+	if _, ok := log.(*TestLogger).testMap["error"]; ok {
+		t.Fatal("Error in Start() occurred before expected")
+	}
+
 	rpcService.Start()
 
-	testutil.AssertLogsContain(t, hook, "Starting service")
-	testutil.AssertLogsContain(t, hook, fmt.Sprintf("Could not listen to port :%s", rpcService.port))
+	if _, ok := log.(*TestLogger).testMap["error"]; !ok {
+		t.Fatal("No error occurred. Expected Start() to output an error")
+	}
 
-	rpcService.Stop()
-	testutil.AssertLogsContain(t, hook, "Stopping service")
+	testutil.AssertLogsContain(t, hook, "Starting service")
+
+}
+
+func TestStatus(t *testing.T) {
+	credentialErr := errors.New("credentialError")
+	s := &Service{credentialError: credentialErr}
+
+	if err := s.Status(); err != s.credentialError {
+		t.Errorf("Wanted: %v, got: %v", s.credentialError, s.Status())
+	}
 }
 
 func TestInsecureEndpoint(t *testing.T) {
