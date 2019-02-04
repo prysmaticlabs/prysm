@@ -4,10 +4,14 @@ import (
 	"errors"
 	"os"
 	"path"
+	"sync"
 	"time"
 
 	"github.com/boltdb/bolt"
+	"github.com/sirupsen/logrus"
 )
+
+var log = logrus.WithField("prefix", "beacondb")
 
 // BeaconDB manages the data layer of the beacon chain implementation.
 // The exposed methods do not have an opinion of the underlying data engine,
@@ -17,6 +21,10 @@ import (
 type BeaconDB struct {
 	db           *bolt.DB
 	DatabasePath string
+
+	// Beacon chain deposits in memory.
+	deposits     []*depositContainer
+	depositsLock sync.RWMutex
 }
 
 // Close closes the underlying leveldb database.
@@ -60,7 +68,7 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 
 	if err := db.update(func(tx *bolt.Tx) error {
 		return createBuckets(tx, blockBucket, attestationBucket, mainChainBucket,
-			chainInfoBucket, blockVoteCacheBucket, simulatorBucket, cleanupHistoryBucket)
+			chainInfoBucket, blockVoteCacheBucket, cleanupHistoryBucket, blockOperationsBucket)
 
 	}); err != nil {
 		return nil, err

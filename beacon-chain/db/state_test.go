@@ -2,16 +2,41 @@ package db
 
 import (
 	"bytes"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"testing"
+	"time"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 
 	"github.com/gogo/protobuf/proto"
 )
+
+func setupInitialDeposits(t *testing.T) []*pb.Deposit {
+	genesisValidatorRegistry := validators.InitialValidatorRegistry()
+	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
+	for i := 0; i < len(deposits); i++ {
+		depositInput := &pb.DepositInput{
+			Pubkey: genesisValidatorRegistry[i].Pubkey,
+		}
+		balance := params.BeaconConfig().MaxDeposit
+		depositData, err := blocks.EncodeDepositData(depositInput, balance, time.Now().Unix())
+		if err != nil {
+			t.Fatalf("Cannot encode data: %v", err)
+		}
+		deposits[i] = &pb.Deposit{DepositData: depositData}
+	}
+	return deposits
+}
 
 func TestInitializeState(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	if err := db.InitializeState(); err != nil {
+	genesisTime := uint64(time.Now().Unix())
+	deposits := setupInitialDeposits(t)
+	if err := db.InitializeState(genesisTime, deposits); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 	b, err := db.ChainHead()
@@ -52,17 +77,17 @@ func TestGenesisTime(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	time, err := db.GenesisTime()
+	genesisTime, err := db.GenesisTime()
 	if err == nil {
 		t.Fatal("expected GenesisTime to fail")
 	}
 
-	err = db.InitializeState()
-	if err != nil {
+	deposits := setupInitialDeposits(t)
+	if err := db.InitializeState(uint64(genesisTime.Unix()), deposits); err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
 
-	time, err = db.GenesisTime()
+	time1, err := db.GenesisTime()
 	if err != nil {
 		t.Fatalf("GenesisTime failed on second attempt: %v", err)
 	}
@@ -71,7 +96,7 @@ func TestGenesisTime(t *testing.T) {
 		t.Fatalf("GenesisTime failed on second attempt: %v", err)
 	}
 
-	if time != time2 {
-		t.Fatalf("Expected %v and %v to be equal", time, time2)
+	if time1 != time2 {
+		t.Fatalf("Expected %v and %v to be equal", time1, time2)
 	}
 }

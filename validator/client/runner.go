@@ -10,11 +10,11 @@ import (
 
 // Validator interface defines the primary methods of a validator client.
 type Validator interface {
-	Initialize(ctx context.Context)
 	Done()
+	WaitForChainStart(ctx context.Context)
 	WaitForActivation(ctx context.Context)
 	NextSlot() <-chan uint64
-	UpdateAssignments(ctx context.Context, slot uint64)
+	UpdateAssignments(ctx context.Context, slot uint64) error
 	RoleAt(slot uint64) pb.ValidatorRole
 	AttestToBlockHead(ctx context.Context, slot uint64)
 	ProposeBlock(ctx context.Context, slot uint64)
@@ -31,20 +31,21 @@ type Validator interface {
 // 5 - Determine role at current slot
 // 6 - Perform assigned role, if any
 func run(ctx context.Context, v Validator) {
-	v.Initialize(ctx)
 	defer v.Done()
+	v.WaitForChainStart(ctx)
 	v.WaitForActivation(ctx)
-
+	span, ctx := opentracing.StartSpanFromContext(ctx, "processSlot")
+	defer span.Finish()
 	for {
 		select {
 		case <-ctx.Done():
 			log.Info("Context cancelled, stopping validator")
 			return // Exit if context is cancelled.
 		case slot := <-v.NextSlot():
-			span, ctx := opentracing.StartSpanFromContext(ctx, "processSlot")
-			defer span.Finish()
-
-			v.UpdateAssignments(ctx, slot)
+			if err := v.UpdateAssignments(ctx, slot); err != nil {
+				log.WithField("error", err).Error("Failed to update assignments")
+				continue
+			}
 			role := v.RoleAt(slot)
 
 			switch role {
