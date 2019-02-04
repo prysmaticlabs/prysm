@@ -136,10 +136,3 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	defer span.Finish()
 }
 
-// AttestToBlockHead
-//
-// WIP - not done.
-func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.AttestToBlockHead")
-	defer span.Finish()
-}
