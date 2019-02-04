@@ -36,6 +36,7 @@ func (db *BeaconDB) InsertPendingDeposit(ctx context.Context, d *pb.Deposit, blo
 			"block":   blockNum,
 			"deposit": d,
 		}).Debug("Ignoring nil deposit insertion")
+		return
 	}
 	db.depositsLock.Lock()
 	defer db.depositsLock.Unlock()
