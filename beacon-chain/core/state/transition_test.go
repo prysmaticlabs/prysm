@@ -583,10 +583,7 @@ func TestProcessEpoch_CantProcessEjections(t *testing.T) {
 	for i := uint64(0); i < 4*config.EpochLength; i++ {
 		randaoHashes = append(randaoHashes, []byte{byte(i)})
 	}
-	var participationBitfield []byte
-	for i := 0; i < int(config.TargetCommitteeSize/8); i++ {
-		participationBitfield = append(participationBitfield, byte(255))
-	}
+
 	ExitEpoch := 4*config.EpochLength + 1
 	validatorRegistries[0].ExitEpoch = ExitEpoch
 	validatorBalances[0] = config.EjectionBalance - 1
@@ -598,7 +595,7 @@ func TestProcessEpoch_CantProcessEjections(t *testing.T) {
 		LatestRandaoMixesHash32S: randaoHashes,
 		LatestCrosslinks:         []*pb.CrosslinkRecord{{}},
 		LatestAttestations: []*pb.PendingAttestationRecord{
-			{Data: &pb.AttestationData{}, ParticipationBitfield: participationBitfield},
+			{Data: &pb.AttestationData{}, ParticipationBitfield: []byte{0xFF}},
 		}}
 
 	want := fmt.Sprintf("could not process inclusion distance: 0")
