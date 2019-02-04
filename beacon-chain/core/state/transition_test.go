@@ -373,7 +373,6 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 		validatorRegistry = append(validatorRegistry,
 			&pb.ValidatorRecord{
 				ExitEpoch: config.FarFutureEpoch,
-				Balance:   config.MaxDeposit,
 			})
 	}
 	validatorBalances := make([]uint64, len(validatorRegistry))
