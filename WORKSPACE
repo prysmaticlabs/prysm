@@ -35,9 +35,9 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    url = "https://github.com/bazelbuild/rules_nodejs/archive/0.16.5.tar.gz",
-    strip_prefix = "rules_nodejs-0.16.5",
-    sha256 = "63f29855b5e85d0db77362e1477864299697e1f200be8be8fa5faa43230b80d0",
+    url = "https://github.com/bazelbuild/rules_nodejs/archive/0.16.7.tar.gz",
+    strip_prefix = "rules_nodejs-0.16.7",
+    sha256 = "631795fef895f982cac2c6b6044a02d67d17179789dbbb5460f22a308d9a1862",
 )
 
 http_archive(
@@ -293,7 +293,7 @@ go_repository(
 
 go_repository(
     name = "com_github_mattn_go_colorable",
-    tag = "v0.0.9",
+    tag = "v0.1.0",
     importpath = "github.com/mattn/go-colorable",
 )
 
@@ -311,7 +311,7 @@ go_repository(
 
 go_repository(
     name = "com_github_minio_sha256_simd",
-    commit = "cc1980cb03383b1d46f518232672584432d7532d",
+    commit = "2d45a736cd16732fe6a57563cc20d8b035193e58",
     importpath = "github.com/minio/sha256-simd",
 )
 
@@ -456,7 +456,7 @@ go_repository(
 
 go_repository(
     name = "com_github_miekg_dns",
-    tag = "v1.1.3",
+    tag = "v1.1.4",
     importpath = "github.com/miekg/dns",
 )
 
@@ -504,13 +504,13 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "302c3dd5f1cc82baae8e44d9c3178e89b6e2b345",
+    commit = "980327fe3c65509adaad5a9ff06abdf7611b4411",
     importpath = "golang.org/x/sys",
 )
 
 go_repository(
     name = "com_github_whyrusleeping_yamux",
-    tag = "v1.1.2",
+    tag = "v1.1.5",
     importpath = "github.com/whyrusleeping/yamux",
 )
 
@@ -546,7 +546,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_crypto",
-    commit = "b01c7a72566457eb1420261cdafef86638fc3861",
+    commit = "b8fe1690c61389d7d2a8074a507d1d40c5d30448",
     importpath = "golang.org/x/crypto",
 )
 
@@ -600,7 +600,7 @@ go_repository(
 
 go_repository(
     name = "com_github_syndtr_goleveldb",
-    commit = "b001fa50d6b27f3f0bb175a87d0cb55426d0a0ae",
+    commit = "2f17a3356c6616cbfc4ae4c38147dc062a68fb0e",
     importpath = "github.com/syndtr/goleveldb",
 )
 
@@ -648,7 +648,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aristanetworks_goarista",
-    commit = "8f049bdb8feb7d7d5f1a9b9cd854396112fb0c0e",
+    commit = "e2363f69bde9cb44d6b7f31b741a5a65a8f73b39",
     importpath = "github.com/aristanetworks/goarista",
 )
 
@@ -672,13 +672,13 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_procfs",
-    commit = "316cf8ccfec56d206735d46333ca162eb374da8b",
+    commit = "488faf799f863e27e50c516468f76ae8f1da20a5",
     importpath = "github.com/prometheus/procfs",
 )
 
 go_repository(
     name = "com_github_prometheus_prometheus",
-    tag = "v2.7.0",
+    tag = "v2.7.1",
     importpath = "github.com/prometheus/prometheus",
 )
 
@@ -708,7 +708,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_buffer_pool",
-    tag = "v0.1.1",
+    tag = "v0.1.3",
     importpath = "github.com/libp2p/go-buffer-pool",
 )
 
@@ -875,7 +875,7 @@ go_repository(
 
 go_repository(
     name = "com_github_shyiko_kubesec",
-    commit = "60b9dc76b678673960bc26619e5eca38dfaa1ad1",
+    commit = "7718facdb5e5529cecff1fe42fc3aaa4cc837d5d",
     importpath = "github.com/shyiko/kubesec",
 )
 

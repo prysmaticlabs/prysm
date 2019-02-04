@@ -7,14 +7,13 @@ package validators
 import (
 	"bytes"
 	"fmt"
-	"sort"
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	bytesutil "github.com/prysmaticlabs/prysm/shared/bytes"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/slices"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
 var config = params.BeaconConfig()
@@ -29,7 +28,6 @@ func InitialValidatorRegistry() []*pb.ValidatorRecord {
 		pubkey := hashutil.Hash([]byte{byte(i)})
 		validators[i] = &pb.ValidatorRecord{
 			ExitSlot:               config.FarFutureSlot,
-			Balance:                config.MaxDeposit,
 			Pubkey:                 pubkey[:],
 			RandaoCommitmentHash32: randaoReveal[:],
 			RandaoLayers:           1,
@@ -211,7 +209,7 @@ func ValidatorIndices(
 			return nil, err
 		}
 
-		attesterIndicesIntersection = slices.Union(attesterIndicesIntersection, attesterIndices)
+		attesterIndicesIntersection = sliceutil.Union(attesterIndicesIntersection, attesterIndices)
 	}
 
 	return attesterIndicesIntersection, nil
@@ -244,7 +242,7 @@ func AttestingValidatorIndices(
 			if err != nil {
 				return nil, fmt.Errorf("could not get attester indices: %v", err)
 			}
-			validatorIndicesCommittees = slices.Union(validatorIndicesCommittees, validatorIndicesCommittee)
+			validatorIndicesCommittees = sliceutil.Union(validatorIndicesCommittees, validatorIndicesCommittee)
 		}
 	}
 	return validatorIndicesCommittees, nil
@@ -303,7 +301,6 @@ func ProcessDeposit(
 			Pubkey:                 pubkey,
 			RandaoCommitmentHash32: randaoCommitment,
 			RandaoLayers:           0,
-			ExitCount:              0,
 			ActivationSlot:         config.FarFutureSlot,
 			ExitSlot:               config.FarFutureSlot,
 			WithdrawalSlot:         config.FarFutureSlot,
@@ -428,8 +425,6 @@ func ExitValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) {
 
 	validator.ExitSlot = state.Slot + config.EntryExitDelay
 
-	state.ValidatorRegistryExitCount++
-	validator.ExitCount = state.ValidatorRegistryExitCount
 	newChainTip, err := NewRegistryDeltaChainTip(
 		pb.ValidatorRegistryDeltaBlock_EXIT,
 		idx,
@@ -645,9 +640,6 @@ func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 			eligibleIndices = append(eligibleIndices, idx)
 		}
 	}
-	sort.Slice(eligibleIndices, func(i, j int) bool {
-		return state.ValidatorRegistry[i].ExitCount < state.ValidatorRegistry[j].ExitCount
-	})
 	var withdrawnSoFar uint64
 	for _, idx := range eligibleIndices {
 		state = PrepareValidatorForWithdrawal(state, idx)

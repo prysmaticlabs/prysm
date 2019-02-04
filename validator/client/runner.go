@@ -10,7 +10,6 @@ import (
 
 // Validator interface defines the primary methods of a validator client.
 type Validator interface {
-	Initialize(ctx context.Context)
 	Done()
 	WaitForChainStart(ctx context.Context)
 	WaitForActivation(ctx context.Context)
@@ -32,7 +31,6 @@ type Validator interface {
 // 5 - Determine role at current slot
 // 6 - Perform assigned role, if any
 func run(ctx context.Context, v Validator) {
-	v.Initialize(ctx)
 	defer v.Done()
 	v.WaitForChainStart(ctx)
 	v.WaitForActivation(ctx)

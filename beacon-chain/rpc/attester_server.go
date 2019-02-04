@@ -11,7 +11,7 @@ import (
 // AttesterServer defines a server implementation of the gRPC Attester service,
 // providing RPC methods for validators acting as attesters to broadcast votes on beacon blocks.
 type AttesterServer struct {
-	attestationService attestationService
+	operationService operationService
 }
 
 // AttestHead is a function called by an attester in a sharding validator to vote
@@ -22,6 +22,6 @@ func (as *AttesterServer) AttestHead(ctx context.Context, req *pb.AttestRequest)
 		return nil, fmt.Errorf("could not hash attestation: %v", err)
 	}
 	// Relays the attestation to chain service.
-	as.attestationService.IncomingAttestationFeed().Send(req.Attestation)
+	as.operationService.IncomingAttFeed().Send(req.Attestation)
 	return &pb.AttestResponse{AttestationHash: h[:]}, nil
 }

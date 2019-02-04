@@ -2,7 +2,6 @@ package epoch
 
 import (
 	"bytes"
-	"encoding/binary"
 	"fmt"
 	"reflect"
 	"strings"
@@ -36,7 +35,7 @@ func TestEpochAttestations(t *testing.T) {
 	}
 
 	var pendingAttestations []*pb.PendingAttestationRecord
-	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+	for i := uint64(0); i < params.BeaconConfig().EpochLength*3; i++ {
 		pendingAttestations = append(pendingAttestations, &pb.PendingAttestationRecord{
 			Data: &pb.AttestationData{
 				Slot: i,
@@ -52,21 +51,21 @@ func TestEpochAttestations(t *testing.T) {
 	}{
 		{
 			stateSlot:            10,
-			firstAttestationSlot: 0,
+			firstAttestationSlot: 10 - 10%config.EpochLength,
 		},
 		{
 			stateSlot:            63,
-			firstAttestationSlot: 0,
+			firstAttestationSlot: 63 - 63%config.EpochLength,
 		},
 		{
 			stateSlot:            64,
-			firstAttestationSlot: 64 - params.BeaconConfig().EpochLength,
+			firstAttestationSlot: 64 - 64%config.EpochLength,
 		}, {
 			stateSlot:            127,
-			firstAttestationSlot: 127 - params.BeaconConfig().EpochLength,
+			firstAttestationSlot: 127 - 127%config.EpochLength,
 		}, {
 			stateSlot:            128,
-			firstAttestationSlot: 128 - params.BeaconConfig().EpochLength,
+			firstAttestationSlot: 128 - 128%config.EpochLength,
 		},
 	}
 
@@ -131,7 +130,7 @@ func TestPrevEpochAttestations(t *testing.T) {
 	}
 
 	var pendingAttestations []*pb.PendingAttestationRecord
-	for i := uint64(0); i < params.BeaconConfig().EpochLength*4; i++ {
+	for i := uint64(0); i < params.BeaconConfig().EpochLength*5; i++ {
 		pendingAttestations = append(pendingAttestations, &pb.PendingAttestationRecord{
 			Data: &pb.AttestationData{
 				Slot: i,
@@ -147,23 +146,23 @@ func TestPrevEpochAttestations(t *testing.T) {
 	}{
 		{
 			stateSlot:            127,
-			firstAttestationSlot: 0,
+			firstAttestationSlot: 127 - config.EpochLength - 127%config.EpochLength,
 		},
 		{
 			stateSlot:            128,
-			firstAttestationSlot: 0,
+			firstAttestationSlot: 128 - config.EpochLength - 128%config.EpochLength,
 		},
 		{
 			stateSlot:            383,
-			firstAttestationSlot: 383 - 2*params.BeaconConfig().EpochLength,
+			firstAttestationSlot: 383 - config.EpochLength - 383%config.EpochLength,
 		},
 		{
 			stateSlot:            129,
-			firstAttestationSlot: 129 - 2*params.BeaconConfig().EpochLength,
+			firstAttestationSlot: 129 - config.EpochLength - 129%config.EpochLength,
 		},
 		{
 			stateSlot:            256,
-			firstAttestationSlot: 256 - 2*params.BeaconConfig().EpochLength,
+			firstAttestationSlot: 256 - config.EpochLength - 256%config.EpochLength,
 		},
 	}
 
@@ -477,7 +476,13 @@ func TestInclusionSlotOk(t *testing.T) {
 	state.LatestAttestations = []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{},
 			ParticipationBitfield: []byte{0xFF},
+			SlotIncluded:          101},
+		{Data: &pb.AttestationData{},
+			ParticipationBitfield: []byte{0xFF},
 			SlotIncluded:          100},
+		{Data: &pb.AttestationData{},
+			ParticipationBitfield: []byte{0xFF},
+			SlotIncluded:          102},
 	}
 	slot, err := InclusionSlot(state, 45)
 	if err != nil {
@@ -556,53 +561,5 @@ func TestInclusionDistanceNotFound(t *testing.T) {
 	want := fmt.Sprintf("could not find inclusion distance for validator index %d", badIndex)
 	if _, err := InclusionDistance(state, badIndex); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
-func TestRandaoMixOk(t *testing.T) {
-	randaoMixes := make([][]byte, config.LatestRandaoMixesLength)
-	for i := 0; i < len(randaoMixes); i++ {
-		intInBytes := make([]byte, 32)
-		binary.BigEndian.PutUint64(intInBytes, uint64(i))
-		randaoMixes[i] = intInBytes
-	}
-	state := &pb.BeaconState{LatestRandaoMixesHash32S: randaoMixes}
-	tests := []struct {
-		slot      uint64
-		randaoMix []byte
-	}{
-		{
-			slot:      10,
-			randaoMix: randaoMixes[10],
-		},
-		{
-			slot:      2344,
-			randaoMix: randaoMixes[2344],
-		},
-		{
-			slot:      99999,
-			randaoMix: randaoMixes[99999%config.LatestRandaoMixesLength],
-		},
-	}
-	for _, test := range tests {
-		state.Slot = test.slot + 1
-		mix, err := randaoMix(state, test.slot)
-		if err != nil {
-			t.Fatalf("Could not get randao mix: %v", err)
-		}
-		if !bytes.Equal(test.randaoMix, mix) {
-			t.Errorf("Incorrect randao mix. Wanted: %#x, got: %#x",
-				test.randaoMix, mix)
-		}
-	}
-}
-
-func TestRandaoMixOutOfBound(t *testing.T) {
-	wanted := fmt.Sprintf(
-		"input randaoMix slot %d out of bounds: %d <= slot < %d",
-		100, 0, 0,
-	)
-	if _, err := randaoMix(&pb.BeaconState{}, 100); !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected: %s, received: %s", wanted, err.Error())
 	}
 }

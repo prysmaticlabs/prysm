@@ -11,14 +11,19 @@ var (
 		Usage: "Beacon node RPC provider endpoint",
 		Value: "localhost:4000",
 	}
-	// PubKeyFlag defines a flag for validator's public key on the mainchain
-	PubKeyFlag = cli.StringFlag{
-		Name:  "pubkey",
-		Usage: "Validator's public key. The public key will be used to identify the validator to the beacon-node",
-	}
 	// CertFlag defines a flag for the node's TLS certificate.
 	CertFlag = cli.StringFlag{
 		Name:  "tls-cert",
 		Usage: "Certificate for secure gRPC. Pass this and the tls-key flag in order to use gRPC securely.",
+	}
+	// KeystorePathFlag defines the location of the keystore directory for a validator's account.
+	KeystorePathFlag = cli.StringFlag{
+		Name:  "keystore-path",
+		Usage: "path to the desired keystore directory",
+	}
+	// PasswordFlag defines the password for storing and retrieving validator private keys from the keystore.
+	PasswordFlag = cli.StringFlag{
+		Name:  "password",
+		Usage: "password to your validator private keys",
 	}
 )

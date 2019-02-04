@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
+	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
@@ -27,7 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/trie"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -285,7 +285,7 @@ func TestSaveInTrie(t *testing.T) {
 
 	testAcc.backend.Commit()
 
-	web3Service.depositTrie = trie.NewDepositTrie()
+	web3Service.depositTrie = trieutil.NewDepositTrie()
 
 	currentRoot := web3Service.depositTrie.Root()
 
@@ -418,7 +418,7 @@ func TestProcessDepositLog(t *testing.T) {
 
 	testAcc.backend.Commit()
 
-	web3Service.depositTrie = trie.NewDepositTrie()
+	web3Service.depositTrie = trieutil.NewDepositTrie()
 
 	var stub [48]byte
 	copy(stub[:], []byte("testing"))
@@ -585,7 +585,7 @@ func TestProcessChainStartLog(t *testing.T) {
 	testAcc.backend.Commit()
 	testAcc.backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
 
-	web3Service.depositTrie = trie.NewDepositTrie()
+	web3Service.depositTrie = trieutil.NewDepositTrie()
 
 	var stub [48]byte
 	copy(stub[:], []byte("testing"))
@@ -628,20 +628,22 @@ func TestProcessChainStartLog(t *testing.T) {
 		t.Fatalf("Unable to retrieve logs %v", err)
 	}
 
-	for i := 0; i < depositsReqForChainStart; i++ {
-		_, depData, _, err := contracts.UnpackDepositLogData(logs[i].Data)
-		if err != nil {
-			t.Fatalf("Unable to unpack deposit logs %v", err)
-		}
-
-		web3Service.depositTrie.UpdateDepositTrie(depData)
-	}
-
 	genesisTimeChan := make(chan time.Time, 1)
 	sub := web3Service.chainStartFeed.Subscribe(genesisTimeChan)
 	defer sub.Unsubscribe()
 
-	web3Service.ProcessLog(logs[len(logs)-1])
+	for _, log := range logs {
+		web3Service.ProcessLog(log)
+	}
+
+	cachedDeposits := web3Service.ChainStartDeposits()
+	if len(cachedDeposits) != depositsReqForChainStart {
+		t.Errorf(
+			"Did not cache the chain start deposits correctly, received %d, wanted %d",
+			len(cachedDeposits),
+			depositsReqForChainStart,
+		)
+	}
 
 	genesisTime := <-genesisTimeChan
 	if genesisTime.Unix() > time.Now().Unix() {

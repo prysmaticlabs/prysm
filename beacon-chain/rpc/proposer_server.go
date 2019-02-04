@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytes"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
@@ -67,7 +67,7 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
 
-	parentHash := bytes.ToBytes32(req.ParentRootHash32)
+	parentHash := bytesutil.ToBytes32(req.ParentRootHash32)
 	beaconState, err = state.ExecuteStateTransition(
 		beaconState,
 		req,
@@ -83,7 +83,7 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 		return nil, fmt.Errorf("could not marshal state %v", err)
 	}
 
-	// TOOD(#1389): Use tree hashing algorithm instead.
+	// TODO(#1389): Use tree hashing algorithm instead.
 	beaconStateHash := hashutil.Hash(encodedState)
 	log.WithField("beaconStateHash", fmt.Sprintf("%#x", beaconStateHash)).Debugf("Computed state hash")
 	return &pb.StateRootResponse{
