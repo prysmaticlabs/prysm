@@ -44,7 +44,7 @@ func (db *BeaconDB) InsertPendingDeposit(ctx context.Context, d *pb.Deposit, blo
 	depositsCount.Inc()
 }
 
-// PendingDeposits returns a list of deposits before the given block
+// PendingDeposits returns a list of deposits until the given block number
 // (inclusive). If no block is specified then this method returns all pending
 // deposits.
 func (db *BeaconDB) PendingDeposits(ctx context.Context, beforeBlk *big.Int) []*pb.Deposit {
