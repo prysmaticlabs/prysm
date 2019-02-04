@@ -84,7 +84,8 @@ func (c *ChainService) Start() {
 		subChainStart := c.web3Service.ChainStartFeed().Subscribe(c.genesisTimeChan)
 		go func() {
 			genesisTime := <-c.genesisTimeChan
-			if err := c.initializeBeaconChain(genesisTime); err != nil {
+			initialDeposits := c.web3Service.ChainStartDeposits()
+			if err := c.initializeBeaconChain(genesisTime, initialDeposits); err != nil {
 				log.Fatalf("Could not initialize beacon chain: %v", err)
 			}
 			go c.blockProcessing()
@@ -96,11 +97,11 @@ func (c *ChainService) Start() {
 // initializes the state and genesis block of the beacon chain to persistent storage
 // based on a genesis timestamp value obtained from the ChainStart event emitted
 // by the ETH1.0 Deposit Contract and the POWChain service of the node.
-func (c *ChainService) initializeBeaconChain(genesisTime time.Time) error {
+func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*pb.Deposit) error {
 	log.Info("ChainStart time reached, starting the beacon chain!")
 	c.genesisTime = genesisTime
 	unixTime := uint64(genesisTime.Unix())
-	if err := c.beaconDB.InitializeState(unixTime); err != nil {
+	if err := c.beaconDB.InitializeState(unixTime, deposits); err != nil {
 		return fmt.Errorf("could not initialize beacon state to disk: %v", err)
 	}
 	beaconState, err := c.beaconDB.State()

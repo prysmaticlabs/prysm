@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
+	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
@@ -628,20 +628,22 @@ func TestProcessChainStartLog(t *testing.T) {
 		t.Fatalf("Unable to retrieve logs %v", err)
 	}
 
-	for i := 0; i < depositsReqForChainStart; i++ {
-		_, depData, _, err := contracts.UnpackDepositLogData(logs[i].Data)
-		if err != nil {
-			t.Fatalf("Unable to unpack deposit logs %v", err)
-		}
-
-		web3Service.depositTrie.UpdateDepositTrie(depData)
-	}
-
 	genesisTimeChan := make(chan time.Time, 1)
 	sub := web3Service.chainStartFeed.Subscribe(genesisTimeChan)
 	defer sub.Unsubscribe()
 
-	web3Service.ProcessLog(logs[len(logs)-1])
+	for _, log := range logs {
+		web3Service.ProcessLog(log)
+	}
+
+	cachedDeposits := web3Service.ChainStartDeposits()
+	if len(cachedDeposits) != depositsReqForChainStart {
+		t.Errorf(
+			"Did not cache the chain start deposits correctly, received %d, wanted %d",
+			len(cachedDeposits),
+			depositsReqForChainStart,
+		)
+	}
 
 	genesisTime := <-genesisTimeChan
 	if genesisTime.Unix() > time.Now().Unix() {

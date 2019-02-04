@@ -28,7 +28,6 @@ func InitialValidatorRegistry() []*pb.ValidatorRecord {
 		pubkey := hashutil.Hash([]byte{byte(i)})
 		validators[i] = &pb.ValidatorRecord{
 			ExitSlot:               config.FarFutureSlot,
-			Balance:                config.MaxDeposit,
 			Pubkey:                 pubkey[:],
 			RandaoCommitmentHash32: randaoReveal[:],
 			RandaoLayers:           1,
