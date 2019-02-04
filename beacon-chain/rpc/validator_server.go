@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
 
@@ -59,7 +60,7 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 	var proposerSlot uint64
 
 	for i := req.EpochStart; i < req.EpochStart+params.BeaconConfig().EpochLength; i++ {
-		crossLinkCommittees, err := v.CrosslinkCommitteesAtSlot(beaconState, i)
+		crossLinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(beaconState, i, false)
 		if err != nil {
 			return nil, fmt.Errorf("could not get crosslink committees at slot %d: %v", i, err)
 		}

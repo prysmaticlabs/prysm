@@ -2,6 +2,7 @@ package helpers
 
 import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // IsActiveValidator returns the boolean value on whether the validator
@@ -49,5 +50,5 @@ func ActiveValidatorIndices(validators []*pb.ValidatorRecord, epoch uint64) []ui
 //    """
 //    return epoch + 1 + ENTRY_EXIT_DELAY
 func EntryExitEffectEpoch(epoch uint64) uint64 {
-	return epoch + 1 + config.EntryExitDelay
+	return epoch + 1 + params.BeaconConfig().EntryExitDelay
 }

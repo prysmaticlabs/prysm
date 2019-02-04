@@ -17,18 +17,16 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
-var config = params.BeaconConfig()
-
 // InitialValidatorRegistry creates a new validator set that is used to
 // generate a new bootstrapped state.
 func InitialValidatorRegistry() []*pb.ValidatorRecord {
 	randaoPreCommit := [32]byte{}
 	randaoReveal := hashutil.Hash(randaoPreCommit[:])
-	validators := make([]*pb.ValidatorRecord, config.DepositsForChainStart)
-	for i := uint64(0); i < config.DepositsForChainStart; i++ {
+	validators := make([]*pb.ValidatorRecord, params.BeaconConfig().DepositsForChainStart)
+	for i := uint64(0); i < params.BeaconConfig().DepositsForChainStart; i++ {
 		pubkey := hashutil.Hash([]byte{byte(i)})
 		validators[i] = &pb.ValidatorRecord{
-			ExitEpoch:              config.FarFutureEpoch,
+			ExitEpoch:              params.BeaconConfig().FarFutureEpoch,
 			Pubkey:                 pubkey[:],
 			RandaoCommitmentHash32: randaoReveal[:],
 			RandaoLayers:           1,
@@ -60,7 +58,7 @@ func ActiveValidators(state *pb.BeaconState, validatorIndices []uint32) []*pb.Va
 //    first_committee, _ = get_crosslink_committees_at_slot(state, slot)[0]
 //    return first_committee[slot % len(first_committee)]
 func BeaconProposerIdx(state *pb.BeaconState, slot uint64) (uint64, error) {
-	committeeArray, err := CrosslinkCommitteesAtSlot(state, slot)
+	committeeArray, err := helpers.CrosslinkCommitteesAtSlot(state, slot, false)
 	if err != nil {
 		return 0, err
 	}
@@ -147,8 +145,8 @@ func NewRegistryDeltaChainTip(
 //     """
 //     return min(state.validator_balances[idx], MAX_DEPOSIT)
 func EffectiveBalance(state *pb.BeaconState, idx uint64) uint64 {
-	if state.ValidatorBalances[idx] > config.MaxDeposit {
-		return config.MaxDeposit
+	if state.ValidatorBalances[idx] > params.BeaconConfig().MaxDeposit {
+		return params.BeaconConfig().MaxDeposit
 	}
 	return state.ValidatorBalances[idx]
 }
@@ -282,10 +280,10 @@ func ProcessDeposit(
 			Pubkey:                 pubkey,
 			RandaoCommitmentHash32: randaoCommitment,
 			RandaoLayers:           0,
-			ActivationEpoch:        config.FarFutureEpoch,
-			ExitEpoch:              config.FarFutureEpoch,
-			WithdrawalEpoch:        config.FarFutureEpoch,
-			PenalizedEpoch:         config.FarFutureEpoch,
+			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch,
+			ExitEpoch:              params.BeaconConfig().FarFutureEpoch,
+			WithdrawalEpoch:        params.BeaconConfig().FarFutureEpoch,
+			PenalizedEpoch:         params.BeaconConfig().FarFutureEpoch,
 			StatusFlags:            0,
 		}
 		state.ValidatorRegistry = append(state.ValidatorRegistry, newValidator)
@@ -322,7 +320,7 @@ func ProcessDeposit(
 func ActivateValidator(state *pb.BeaconState, idx uint64, genesis bool) (*pb.BeaconState, error) {
 	validator := state.ValidatorRegistry[idx]
 	if genesis {
-		validator.ActivationEpoch = config.GenesisEpoch
+		validator.ActivationEpoch = params.BeaconConfig().GenesisEpoch
 	} else {
 		validator.ActivationEpoch = helpers.EntryExitEffectEpoch(helpers.CurrentEpoch(state))
 	}
@@ -397,7 +395,7 @@ func PenalizeValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, erro
 		return nil, fmt.Errorf("could not exit penalized validator: %v", err)
 	}
 
-	penalizedDuration := helpers.CurrentEpoch(state) % config.LatestPenalizedExitLength
+	penalizedDuration := helpers.CurrentEpoch(state) % params.BeaconConfig().LatestPenalizedExitLength
 	state.LatestPenalizedBalances[penalizedDuration] += EffectiveBalance(state, idx)
 
 	whistleblowerIdx, err := BeaconProposerIdx(state, state.Slot)
@@ -405,7 +403,7 @@ func PenalizeValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, erro
 		return nil, fmt.Errorf("could not get proposer idx: %v", err)
 	}
 	whistleblowerReward := EffectiveBalance(state, idx) /
-		config.WhistlerBlowerRewardQuotient
+		params.BeaconConfig().WhistlerBlowerRewardQuotient
 
 	state.ValidatorBalances[whistleblowerIdx] += whistleblowerReward
 	state.ValidatorBalances[idx] -= whistleblowerReward
@@ -488,7 +486,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	for idx, validator := range state.ValidatorRegistry {
 		// Activate validators within the allowable balance churn.
 		if validator.ActivationEpoch > helpers.EntryExitEffectEpoch(currentEpoch) &&
-			state.ValidatorBalances[idx] >= config.MaxDeposit {
+			state.ValidatorBalances[idx] >= params.BeaconConfig().MaxDeposit {
 			balChurn += EffectiveBalance(state, uint64(idx))
 			if balChurn > maxBalChurn {
 				break
@@ -569,10 +567,10 @@ func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 
 	for idx, validator := range state.ValidatorRegistry {
 		penalized := validator.PenalizedEpoch +
-			config.LatestPenalizedExitLength/2
+			params.BeaconConfig().LatestPenalizedExitLength/2
 		if currentEpoch == penalized {
-			penalizedEpoch := currentEpoch % config.LatestPenalizedExitLength
-			penalizedEpochStart := (penalizedEpoch + 1) % config.LatestPenalizedExitLength
+			penalizedEpoch := currentEpoch % params.BeaconConfig().LatestPenalizedExitLength
+			penalizedEpochStart := (penalizedEpoch + 1) % params.BeaconConfig().LatestPenalizedExitLength
 			totalAtStart := state.LatestPenalizedBalances[penalizedEpochStart]
 			totalAtEnd := state.LatestPenalizedBalances[penalizedEpoch]
 			totalPenalties := totalAtStart - totalAtEnd
@@ -597,7 +595,7 @@ func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 	for _, idx := range eligibleIndices {
 		state = PrepareValidatorForWithdrawal(state, idx)
 		withdrawnSoFar++
-		if withdrawnSoFar >= config.MaxWithdrawalsPerEpoch {
+		if withdrawnSoFar >= params.BeaconConfig().MaxWithdrawalsPerEpoch {
 			break
 		}
 	}
@@ -612,11 +610,11 @@ func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 //        MAX_DEPOSIT * GWEI_PER_ETH,
 //        total_balance // (2 * MAX_BALANCE_CHURN_QUOTIENT))
 func maxBalanceChurn(totalBalance uint64) uint64 {
-	maxBalanceChurn := totalBalance / 2 * config.MaxBalanceChurnQuotient
-	if maxBalanceChurn > config.MaxDeposit {
+	maxBalanceChurn := totalBalance / 2 * params.BeaconConfig().MaxBalanceChurnQuotient
+	if maxBalanceChurn > params.BeaconConfig().MaxDeposit {
 		return maxBalanceChurn
 	}
-	return config.MaxDeposit
+	return params.BeaconConfig().MaxDeposit
 }
 
 // eligibleToExit checks if a validator is eligible to exit whether it was
@@ -635,8 +633,8 @@ func eligibleToExit(state *pb.BeaconState, idx uint64) bool {
 	validator := state.ValidatorRegistry[idx]
 
 	if validator.PenalizedEpoch <= currentEpoch {
-		penalizedWithdrawalEpochs := config.LatestPenalizedExitLength / 2
+		penalizedWithdrawalEpochs := params.BeaconConfig().LatestPenalizedExitLength / 2
 		return currentEpoch >= validator.PenalizedEpoch+penalizedWithdrawalEpochs
 	}
-	return currentEpoch >= validator.ExitEpoch+config.MinValidatorWithdrawalEpochs
+	return currentEpoch >= validator.ExitEpoch+params.BeaconConfig().MinValidatorWithdrawalEpochs
 }
