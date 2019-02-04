@@ -189,7 +189,7 @@ func TestBoundaryAttesterIndices(t *testing.T) {
 	if params.BeaconConfig().EpochLength != 64 {
 		t.Errorf("EpochLength should be 64 for these tests to pass")
 	}
-	validators := make([]*pb.ValidatorRecord, config.EpochLength*4)
+	validators := make([]*pb.ValidatorRecord, config.DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
 			ExitEpoch: config.FarFutureEpoch,
@@ -210,9 +210,9 @@ func TestBoundaryAttesterIndices(t *testing.T) {
 		t.Fatalf("Failed to run BoundaryAttesterIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(attesterIndices, []uint64{242, 237, 224, 2}) {
+	if !reflect.DeepEqual(attesterIndices, []uint64{237, 224}) {
 		t.Errorf("Incorrect boundary attester indices. Wanted: %v, got: %v",
-			[]uint64{242, 237, 224, 2}, attesterIndices)
+			[]uint64{237, 224}, attesterIndices)
 	}
 }
 
@@ -221,7 +221,7 @@ func TestBeaconProposerIdx(t *testing.T) {
 		t.Errorf("EpochLength should be 64 for these tests to pass")
 	}
 
-	validators := make([]*pb.ValidatorRecord, config.EpochLength*4)
+	validators := make([]*pb.ValidatorRecord, config.DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
 			ExitEpoch: config.FarFutureEpoch,
@@ -238,23 +238,23 @@ func TestBeaconProposerIdx(t *testing.T) {
 	}{
 		{
 			slot:  1,
-			index: 244,
+			index: 511,
 		},
 		{
 			slot:  10,
-			index: 82,
+			index: 2797,
 		},
 		{
 			slot:  19,
-			index: 157,
+			index: 4658,
 		},
 		{
 			slot:  30,
-			index: 3,
+			index: 7917,
 		},
 		{
 			slot:  39,
-			index: 220,
+			index: 9778,
 		},
 	}
 
@@ -279,12 +279,7 @@ func TestAttestingValidatorIndices_Ok(t *testing.T) {
 		t.Errorf("EpochLength should be 64 for these tests to pass")
 	}
 
-	var committeeIndices []uint64
-	for i := uint64(0); i < 8; i++ {
-		committeeIndices = append(committeeIndices, i)
-	}
-
-	validators := make([]*pb.ValidatorRecord, config.EpochLength*8)
+	validators := make([]*pb.ValidatorRecord, config.DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
 			ExitEpoch: config.FarFutureEpoch,
@@ -299,24 +294,23 @@ func TestAttestingValidatorIndices_Ok(t *testing.T) {
 	prevAttestation := &pb.PendingAttestationRecord{
 		Data: &pb.AttestationData{
 			Slot:                 3,
-			Shard:                3,
+			Shard:                384,
 			ShardBlockRootHash32: []byte{'B'},
 		},
-		ParticipationBitfield: []byte{0x1}, //
+		ParticipationBitfield: []byte{0xFF},
 	}
 
 	thisAttestation := &pb.PendingAttestationRecord{
 		Data: &pb.AttestationData{
 			Slot:                 3,
-			Shard:                3,
+			Shard:                385,
 			ShardBlockRootHash32: []byte{'B'},
 		},
-		ParticipationBitfield: []byte{0x2},
 	}
 
 	indices, err := AttestingValidatorIndices(
 		state,
-		3,
+		384,
 		[]byte{'B'},
 		[]*pb.PendingAttestationRecord{thisAttestation},
 		[]*pb.PendingAttestationRecord{prevAttestation})
@@ -324,9 +318,9 @@ func TestAttestingValidatorIndices_Ok(t *testing.T) {
 		t.Fatalf("Could not execute AttestingValidatorIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(indices, []uint64{267, 15}) {
+	if !reflect.DeepEqual(indices, []uint64{213, 1024}) {
 		t.Errorf("Could not get incorrect validator indices. Wanted: %v, got: %v",
-			[]uint64{267, 15}, indices)
+			[]uint64{213, 1024}, indices)
 	}
 }
 

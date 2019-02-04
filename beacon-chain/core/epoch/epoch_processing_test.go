@@ -293,7 +293,7 @@ func TestProcessFinalization(t *testing.T) {
 }
 
 func TestProcessCrosslinksOk(t *testing.T) {
-	state := buildState(5, 2*config.EpochLength)
+	state := buildState(5, config.DepositsForChainStart)
 	state.LatestCrosslinks = []*pb.CrosslinkRecord{{}, {}}
 
 	var attestations []*pb.PendingAttestationRecord
@@ -331,7 +331,7 @@ func TestProcessCrosslinksOk(t *testing.T) {
 }
 
 func TestProcessCrosslinksNoParticipantsBitField(t *testing.T) {
-	state := buildState(5, 2*config.EpochLength)
+	state := buildState(5, config.DepositsForChainStart)
 	state.LatestCrosslinks = []*pb.CrosslinkRecord{{}, {}}
 
 	attestations := []*pb.PendingAttestationRecord{
@@ -377,7 +377,7 @@ func TestProcessEjectionsOk(t *testing.T) {
 }
 
 func TestCanProcessValidatorRegistry(t *testing.T) {
-	crosslinks := make([]*pb.CrosslinkRecord, config.EpochLength)
+	crosslinks := make([]*pb.CrosslinkRecord, config.DepositsForChainStart)
 	for i := 0; i < len(crosslinks); i++ {
 		crosslinks[i] = &pb.CrosslinkRecord{
 			Slot: 101,

@@ -49,7 +49,7 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 	if state.FinalizedSlot <= state.ValidatorRegistryUpdateSlot {
 		return false
 	}
-	shardsProcessed := validators.CurrCommitteesCountPerSlot(state) * config.EpochLength
+	shardsProcessed := helpers.CurrentEpochCommitteeCount(state) * config.EpochLength
 	fmt.Println(shardsProcessed)
 	startShard := state.CurrentEpochStartShard
 	for i := startShard; i < shardsProcessed; i++ {
@@ -254,7 +254,7 @@ func ProcessValidatorRegistry(
 	state.CurrentEpochCalculationSlot = state.Slot
 
 	nextStartShard := (state.CurrentEpochStartShard +
-		validators.CurrCommitteesCountPerSlot(state)*config.EpochLength) %
+		helpers.CurrentEpochCommitteeCount(state)*config.EpochLength) %
 		config.EpochLength
 	state.CurrentEpochStartShard = nextStartShard
 
