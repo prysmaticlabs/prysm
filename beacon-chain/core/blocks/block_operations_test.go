@@ -89,7 +89,7 @@ func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 func TestProcessEth1Data_SameRootHash(t *testing.T) {
 	beaconState := &pb.BeaconState{
 		Eth1DataVotes: []*pb.Eth1DataVote{
-			&pb.Eth1DataVote{
+			{
 				Eth1Data: &pb.Eth1Data{
 					DepositRootHash32: []byte{1},
 					BlockHash32:       []byte{2},
@@ -114,7 +114,7 @@ func TestProcessEth1Data_SameRootHash(t *testing.T) {
 func TestProcessEth1Data_NewDepositRootHash(t *testing.T) {
 	beaconState := &pb.BeaconState{
 		Eth1DataVotes: []*pb.Eth1DataVote{
-			&pb.Eth1DataVote{
+			{
 				Eth1Data: &pb.Eth1Data{
 					DepositRootHash32: []byte{0},
 					BlockHash32:       []byte{1},

@@ -293,7 +293,7 @@ go_repository(
 
 go_repository(
     name = "com_github_mattn_go_colorable",
-    tag = "v0.0.9",
+    tag = "v0.1.0",
     importpath = "github.com/mattn/go-colorable",
 )
 
@@ -504,7 +504,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "afcc84fd7533758f95a6e93ae710aa945a0b7e73",
+    commit = "980327fe3c65509adaad5a9ff06abdf7611b4411",
     importpath = "golang.org/x/sys",
 )
 
@@ -648,7 +648,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aristanetworks_goarista",
-    commit = "8f049bdb8feb7d7d5f1a9b9cd854396112fb0c0e",
+    commit = "e2363f69bde9cb44d6b7f31b741a5a65a8f73b39",
     importpath = "github.com/aristanetworks/goarista",
 )
 
@@ -672,7 +672,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_procfs",
-    commit = "316cf8ccfec56d206735d46333ca162eb374da8b",
+    commit = "488faf799f863e27e50c516468f76ae8f1da20a5",
     importpath = "github.com/prometheus/procfs",
 )
 
@@ -875,7 +875,7 @@ go_repository(
 
 go_repository(
     name = "com_github_shyiko_kubesec",
-    commit = "60b9dc76b678673960bc26619e5eca38dfaa1ad1",
+    commit = "7718facdb5e5529cecff1fe42fc3aaa4cc837d5d",
     importpath = "github.com/shyiko/kubesec",
 )
 
