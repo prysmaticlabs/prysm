@@ -98,11 +98,6 @@ message ValidatorRecord {
     WITHDRAWABLE = 2; // validator is participating validator duties.
   }
   StatusFlags status_flags = 10;
-
-  // Deprecated fields
-  // All fields must be annotated with [deprecated=true];
-  // Balance in Gwei
-  uint64 balance = 1000 [deprecated=true]; // Keeping this until we refactor epoch processing.
 }
 
 message ShardReassignmentRecord {
