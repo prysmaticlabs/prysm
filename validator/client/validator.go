@@ -23,7 +23,7 @@ type validator struct {
 	assignment      *pb.Assignment
 	validatorClient pb.ValidatorServiceClient
 	beaconClient    pb.BeaconServiceClient
-	attesterClient    pb.AttesterServiceClient
+	attesterClient  pb.AttesterServiceClient
 	pubKey          []byte
 }
 
@@ -136,4 +136,3 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.ProposeBlock")
 	defer span.Finish()
 }
-
