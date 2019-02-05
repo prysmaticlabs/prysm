@@ -102,7 +102,7 @@ func (sb *SimulatedBackend) InitializeChain() error {
 
 // GenerateBlockAndAdvanceChain generates a simulated block and runs that block though
 // state transition.
-func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain() error {
+func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain(objects *SimulatedObjects) error {
 	slotToGenerate := sb.state.Slot + 1
 	prevBlockRoot := sb.prevBlockRoots[len(sb.prevBlockRoots)-1]
 
@@ -121,7 +121,7 @@ func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain() error {
 		blockRandaoReveal,
 		sb.lastRandaoLayer,
 		sb.depositTrie,
-		&SimulatedObjects{},
+		objects,
 	)
 	if err != nil {
 		return fmt.Errorf("could not generate simulated beacon block %v", err)
@@ -148,6 +148,29 @@ func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain() error {
 	sb.layersPeeledForProposer[proposerIndex]++
 	sb.inMemoryBlocks = append(sb.inMemoryBlocks, newBlock)
 
+	return nil
+}
+
+func (sb *SimulatedBackend) GenerateNilBlockAndAdvanceChain() error {
+	slotToGenerate := sb.state.Slot + 1
+	prevBlockRoot := sb.prevBlockRoots[len(sb.prevBlockRoots)-1]
+
+	proposerIndex, err := validators.BeaconProposerIdx(sb.state, slotToGenerate)
+	if err != nil {
+		return fmt.Errorf("could not compute proposer index %v", err)
+	}
+
+	newState, err := state.ExecuteStateTransition(
+		sb.state,
+		nil,
+		prevBlockRoot,
+		false, /* no sig verify */
+	)
+	if err != nil {
+		return fmt.Errorf("could not execute state transition: %v", err)
+	}
+	sb.state = newState
+	sb.layersPeeledForProposer[proposerIndex]++
 	return nil
 }
 
@@ -220,72 +243,25 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	sb.depositTrie = trieutil.NewDepositTrie()
 	averageTimesPerTransition := []time.Duration{}
 	for i := uint64(0); i < testCase.Config.NumSlots; i++ {
-		prevBlockRoot := sb.prevBlockRoots[len(sb.prevBlockRoots)-1]
-
-		proposerIndex, err := validators.BeaconProposerIdx(sb.state, i)
-		if err != nil {
-			return fmt.Errorf("could not compute proposer index %v", err)
-		}
 
 		// If the slot is marked as skipped in the configuration options,
 		// we simply run the state transition with a nil block argument.
 		if sliceutil.IsInUint64(i, testCase.Config.SkipSlots) {
-			newState, err := state.ExecuteStateTransition(
-				sb.state,
-				nil,
-				prevBlockRoot,
-				false, /* no sig verify */
-			)
-			if err != nil {
-				return fmt.Errorf("could not execute state transition: %v", err)
+			if err := sb.GenerateNilBlockAndAdvanceChain(); err != nil {
+				return fmt.Errorf("could not advance the chain with a nil block %v", err)
 			}
-			sb.state = newState
-			sb.layersPeeledForProposer[proposerIndex]++
 			continue
 		}
 
 		simulatedObjects := sb.generateSimulatedObjects(testCase, i)
-
-		layersPeeled := sb.layersPeeledForProposer[proposerIndex]
-		blockRandaoReveal := determineSimulatedBlockRandaoReveal(layersPeeled, sb.hashOnions)
-
-		// We generate a new block to pass into the state transition.
-		newBlock, newBlockRoot, err := generateSimulatedBlock(
-			sb.state,
-			prevBlockRoot,
-			blockRandaoReveal,
-			sb.lastRandaoLayer,
-			sb.depositTrie,
-			simulatedObjects,
-		)
-		if err != nil {
-			return fmt.Errorf("could not generate simulated beacon block %v", err)
-		}
-		latestRoot := sb.depositTrie.Root()
-
-		sb.state.LatestEth1Data = &pb.Eth1Data{
-			DepositRootHash32: latestRoot[:],
-			BlockHash32:       []byte{},
-		}
-
 		startTime := time.Now()
-		newState, err := state.ExecuteStateTransition(
-			sb.state,
-			newBlock,
-			prevBlockRoot,
-			false, /*  no sig verify */
-		)
-		if err != nil {
-			return fmt.Errorf("could not execute state transition: %v", err)
+
+		if err := sb.GenerateBlockAndAdvanceChain(simulatedObjects); err != nil {
+			return fmt.Errorf("could not generate the block and advance the chain %v", err)
 		}
+
 		endTime := time.Now()
 		averageTimesPerTransition = append(averageTimesPerTransition, endTime.Sub(startTime))
-
-		// We then keep track of information about the state after the
-		// state transition was applied.
-		sb.state = newState
-		sb.prevBlockRoots = append(sb.prevBlockRoots, newBlockRoot)
-		sb.layersPeeledForProposer[proposerIndex]++
 	}
 
 	log.Infof(

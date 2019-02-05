@@ -31,7 +31,7 @@ func TestGenerateBlocks(t *testing.T) {
 	slotLimit := 300
 
 	for i := 0; i < slotLimit; i++ {
-		if err := backend.GenerateBlockAndAdvanceChain(); err != nil {
+		if err := backend.GenerateBlockAndAdvanceChain(&SimulatedObjects{}); err != nil {
 			t.Fatalf("Could not generate block and transition state successfully %v for slot %d", err, backend.state.Slot+1)
 		}
 		if backend.inMemoryBlocks[len(backend.inMemoryBlocks)-1].Slot != backend.state.Slot {
