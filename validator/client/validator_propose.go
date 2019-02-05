@@ -4,6 +4,7 @@ package client
 
 import (
 	"context"
+	"fmt"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/opentracing/opentracing-go"
@@ -73,6 +74,11 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	// TODO(1366): BLS sign block
 	block.Signature = nil
 
-	// 5. Broadcast to the network.
-	v.p2p.Broadcast(block)
+	// 5. Broadcast to the network via beacon chain node.
+	blkResp, err := v.proposerClient.ProposeBlock(ctx, block)
+	if err != nil {
+		log.WithField("error", err).Error("Failed to propose block")
+		return
+	}
+	log.WithField("hash", fmt.Sprintf("%#x", blkResp.BlockHash)).Info("Proposed new beacon block")
 }

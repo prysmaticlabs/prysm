@@ -10,14 +10,12 @@ import (
 	"github.com/golang/mock/gomock"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	p2pmock "github.com/prysmaticlabs/prysm/shared/p2p/mock"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/internal"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 type mocks struct {
-	broadcaster    *p2pmock.MockBroadcaster
 	proposerClient *internal.MockProposerServiceClient
 	beaconClient   *internal.MockBeaconServiceClient
 }
@@ -25,13 +23,11 @@ type mocks struct {
 func setup(t *testing.T) (*validator, *mocks, func()) {
 	ctrl := gomock.NewController(t)
 	m := &mocks{
-		broadcaster:    p2pmock.NewMockBroadcaster(ctrl),
 		proposerClient: internal.NewMockProposerServiceClient(ctrl),
 		beaconClient:   internal.NewMockBeaconServiceClient(ctrl),
 	}
 
 	validator := &validator{
-		p2p:             m.broadcaster,
 		attestationPool: &fakeAttestationPool{},
 		proposerClient:  m.proposerClient,
 		beaconClient:    m.beaconClient,
@@ -106,11 +102,12 @@ func TestProposeBlock_UsePendingDeposits(t *testing.T) {
 	}, nil /*err*/)
 
 	var broadcastedBlock *pbp2p.BeaconBlock
-	m.broadcaster.EXPECT().Broadcast(
+	m.proposerClient.EXPECT().ProposeBlock(
+		gomock.Any(), // context
 		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
-	).Do(func(blk *pbp2p.BeaconBlock) {
+	).Do(func(_ context.Context, blk *pbp2p.BeaconBlock) {
 		broadcastedBlock = blk
-	})
+	}).Return(&pb.ProposeResponse{}, nil /*error*/)
 
 	validator.ProposeBlock(context.Background(), 55)
 
@@ -173,11 +170,12 @@ func TestProposeBlock_UsesEth1Data(t *testing.T) {
 	}, nil /*err*/)
 
 	var broadcastedBlock *pbp2p.BeaconBlock
-	m.broadcaster.EXPECT().Broadcast(
+	m.proposerClient.EXPECT().ProposeBlock(
+		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
-	).Do(func(blk *pbp2p.BeaconBlock) {
+	).Do(func(_ context.Context, blk *pbp2p.BeaconBlock) {
 		broadcastedBlock = blk
-	})
+	}).Return(&pb.ProposeResponse{}, nil /*error*/)
 
 	validator.ProposeBlock(context.Background(), 55)
 
@@ -207,11 +205,12 @@ func TestProposeBlock_ComputeStateFailure(t *testing.T) {
 	).Return(&pb.Eth1DataResponse{}, nil /*err*/)
 
 	var broadcastedBlock *pbp2p.BeaconBlock
-	m.broadcaster.EXPECT().Broadcast(
+	m.proposerClient.EXPECT().ProposeBlock(
+		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
-	).Do(func(blk *pbp2p.BeaconBlock) {
+	).Do(func(_ context.Context, blk *pbp2p.BeaconBlock) {
 		broadcastedBlock = blk
-	})
+	}).Return(&pb.ProposeResponse{}, nil /*error*/)
 
 	m.proposerClient.EXPECT().ComputeStateRoot(
 		gomock.Any(), // context
@@ -242,11 +241,12 @@ func TestProposeBlock_UsesComputedState(t *testing.T) {
 	).Return(&pb.Eth1DataResponse{}, nil /*err*/)
 
 	var broadcastedBlock *pbp2p.BeaconBlock
-	m.broadcaster.EXPECT().Broadcast(
+	m.proposerClient.EXPECT().ProposeBlock(
+		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
-	).Do(func(blk *pbp2p.BeaconBlock) {
+	).Do(func(_ context.Context, blk *pbp2p.BeaconBlock) {
 		broadcastedBlock = blk
-	})
+	}).Return(&pb.ProposeResponse{}, nil /*error*/)
 
 	computedStateRoot := []byte{'T', 'E', 'S', 'T'}
 	m.proposerClient.EXPECT().ComputeStateRoot(
@@ -292,9 +292,10 @@ func TestProposeBlock_BroadcastsABlock(t *testing.T) {
 		StateRoot: []byte{'F'},
 	}, nil /*err*/)
 
-	m.broadcaster.EXPECT().Broadcast(
+	m.proposerClient.EXPECT().ProposeBlock(
+		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
-	)
+	).Return(&pb.ProposeResponse{}, nil /*error*/)
 
 	validator.ProposeBlock(context.Background(), 55)
 }

@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/client"
@@ -45,10 +44,6 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 	}
 
 	if err := ValidatorClient.registerPrometheusService(ctx); err != nil {
-		return nil, err
-	}
-
-	if err := ValidatorClient.registerP2P(ctx); err != nil {
 		return nil, err
 	}
 
@@ -104,15 +99,6 @@ func (s *ValidatorClient) Close() {
 	close(s.stop)
 }
 
-// registerP2P attaches a p2p server to the ValidatorClient instance.
-func (s *ValidatorClient) registerP2P(ctx *cli.Context) error {
-	shardp2p, err := configureP2P(ctx)
-	if err != nil {
-		return fmt.Errorf("could not register shardp2p service: %v", err)
-	}
-	return s.services.RegisterService(shardp2p)
-}
-
 func (s *ValidatorClient) registerPrometheusService(ctx *cli.Context) error {
 	service := prometheus.NewPrometheusService(
 		fmt.Sprintf(":%d", ctx.GlobalInt64(cmd.MonitoringPortFlag.Name)),
@@ -123,14 +109,9 @@ func (s *ValidatorClient) registerPrometheusService(ctx *cli.Context) error {
 }
 
 func (s *ValidatorClient) registerClientService(ctx *cli.Context) error {
-	var shardp2p *p2p.Server
-	if err := s.services.FetchService(&shardp2p); err != nil {
-		return err
-	}
 	endpoint := ctx.GlobalString(types.BeaconRPCProviderFlag.Name)
 	v := client.NewValidatorService(context.TODO(), &client.Config{
 		Endpoint: endpoint,
-		P2p:      shardp2p,
 	})
 	return s.services.RegisterService(v)
 }

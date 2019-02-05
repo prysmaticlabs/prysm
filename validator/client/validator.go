@@ -11,7 +11,6 @@ import (
 
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
@@ -34,7 +33,6 @@ type validator struct {
 	beaconClient    pb.BeaconServiceClient
 	pubKey          []byte
 	attestationPool AttestationPool
-	p2p             p2p.Broadcaster
 }
 
 // Done cleans up the validator.
