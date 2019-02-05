@@ -151,6 +151,7 @@ func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain(objects *SimulatedObjec
 	return nil
 }
 
+// GenerateNilBlockAndAdvanceChain would trigger a state transition with a nil block.
 func (sb *SimulatedBackend) GenerateNilBlockAndAdvanceChain() error {
 	slotToGenerate := sb.state.Slot + 1
 	prevBlockRoot := sb.prevBlockRoots[len(sb.prevBlockRoots)-1]
