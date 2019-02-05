@@ -3,34 +3,12 @@ package client
 import (
 	"context"
 	"errors"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"testing"
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/validator/internal"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+	"testing"
 )
-
-type mocks struct {
-	attesterClient *internal.MockAttesterServiceClient
-	validatorClient   *internal.MockValidatorServiceClient
-}
-
-func setup(t *testing.T) (*validator, *mocks, func()) {
-	ctrl := gomock.NewController(t)
-	m := &mocks{
-		attesterClient: internal.NewMockAttesterServiceClient(ctrl),
-		validatorClient:   internal.NewMockValidatorServiceClient(ctrl),
-	}
-
-	validator := &validator{
-		attesterClient:  m.attesterClient,
-		validatorClient:    m.validatorClient,
-	}
-
-	return validator, m, ctrl.Finish
-}
 
 func TestAttestToBlockHead_CrosslinkCommitteeRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
@@ -108,6 +86,7 @@ func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
 		gomock.Any(),
 	).Return(&pb.CrosslinkCommitteeResponse{
 		Shard: 5,
+		Committee: make([]uint64, 111),
 	}, nil)
 	m.attesterClient.EXPECT().AttestationInfoAtSlot(
 		gomock.Any(), // ctx
@@ -124,8 +103,12 @@ func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
 	).Return(&pb.ValidatorIndexResponse{
 		Index: 0,
 	}, nil)
+	m.attesterClient.EXPECT().AttestHead(
+		gomock.Any(), // ctx
+		gomock.Any(),
+	).Return(nil, errors.New("something went wrong"))
 
 	validator.AttestToBlockHead(context.Background(), 30)
 
-	testutil.AssertLogsContain(t, hook, "Could not fetch validator index")
+	testutil.AssertLogsContain(t, hook, "Could not submit attestation to beacon node")
 }

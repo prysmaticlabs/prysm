@@ -138,11 +138,3 @@ func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
 	}
 	return pb.ValidatorRole_UNKNOWN
 }
-
-// ProposeBlock
-//
-// WIP - not done.
-func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.ProposeBlock")
-	defer span.Finish()
-}
