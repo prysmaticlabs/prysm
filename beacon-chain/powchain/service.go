@@ -242,9 +242,9 @@ func (w *Web3Service) ProcessDepositLog(VRClog gethTypes.Log) {
 	}
 	index := binary.BigEndian.Uint64(MerkleTreeIndex)
 	log.WithFields(logrus.Fields{
-		"publicKey":         depositInput.Pubkey,
-		"merkle tree index": index,
-	}).Info("Validator registered in VRC with public key and index")
+		"publicKey":       fmt.Sprintf("%#x", depositInput.Pubkey),
+		"merkleTreeIndex": index,
+	}).Info("Validator registered in deposit contract")
 }
 
 // ProcessChainStartLog processes the log which had been received from
