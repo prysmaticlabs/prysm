@@ -7,9 +7,8 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestAttestationParticipants_ok(t *testing.T) {
@@ -196,11 +195,11 @@ func TestCrosslinkCommitteesAtSlot_Ok(t *testing.T) {
 
 func TestCrosslinkCommitteesAtSlot_OutOfBound(t *testing.T) {
 	want := fmt.Sprintf(
-		"input committee epoch %d out of bounds: %d <= epoch < %d",
-		1, 0, 0,
+		"input committee epoch %d out of bounds: %d <= epoch <= %d",
+		2, 0, 0,
 	)
 
-	if _, err := CrosslinkCommitteesAtSlot(&pb.BeaconState{}, params.BeaconConfig().EpochLength+1); !strings.Contains(err.Error(), want) {
+	if _, err := CrosslinkCommitteesAtSlot(&pb.BeaconState{}, params.BeaconConfig().EpochLength*2); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }

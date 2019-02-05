@@ -50,9 +50,9 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 		return false
 	}
 	shardsProcessed := helpers.CurrentEpochCommitteeCount(state) * config.EpochLength
-	fmt.Println(shardsProcessed)
 	startShard := state.CurrentEpochStartShard
 	for i := startShard; i < shardsProcessed; i++ {
+
 		if state.LatestCrosslinks[i%config.ShardCount].Slot <=
 			state.ValidatorRegistryUpdateSlot {
 			return false
