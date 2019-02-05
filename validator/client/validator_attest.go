@@ -10,9 +10,10 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 )
 
-// AttestToBlockHead
-//
-// WIP - not done.
+// AttestToBlockHead completes the validator client's attester responsibility at a given slot.
+// It fetches the latest beacon block head along with the latest canonical beacon state
+// information in order to sign the block and include information about the validator's
+// participation in voting on the block.
 func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.AttestToBlockHead")
 	defer span.Finish()
@@ -103,5 +104,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 		log.Errorf("Could not submit attestation to beacon node: %v", err)
 		return
 	}
-	log.Infof("Submitted attestation successfully with hash %#x", attestRes.AttestationHash)
+	log.WithField(
+		"hash", fmt.Sprintf("%#x", attestRes.AttestationHash),
+	).Info("Submitted attestation successfully with hash %#x", attestRes.AttestationHash)
 }
