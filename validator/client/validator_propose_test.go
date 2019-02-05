@@ -204,13 +204,10 @@ func TestProposeBlock_ComputeStateFailure(t *testing.T) {
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.Eth1DataResponse{}, nil /*err*/)
 
-	var broadcastedBlock *pbp2p.BeaconBlock
 	m.proposerClient.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
-	).Do(func(_ context.Context, blk *pbp2p.BeaconBlock) {
-		broadcastedBlock = blk
-	}).Return(&pb.ProposeResponse{}, nil /*error*/)
+	).Return(&pb.ProposeResponse{}, nil /*error*/)
 
 	m.proposerClient.EXPECT().ComputeStateRoot(
 		gomock.Any(), // context
