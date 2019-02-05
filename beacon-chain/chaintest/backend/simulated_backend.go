@@ -6,7 +6,6 @@ package backend
 import (
 	"context"
 	"fmt"
-	"math"
 	"reflect"
 	"time"
 
@@ -30,9 +29,12 @@ import (
 // of an in-memory beacon chain for client test runs
 // and other e2e use cases.
 type SimulatedBackend struct {
-	chainService *blockchain.ChainService
-	beaconDB     *db.BeaconDB
-	state        *pb.BeaconState
+	chainService            *blockchain.ChainService
+	beaconDB                *db.BeaconDB
+	state                   *pb.BeaconState
+	hashOnions              [][32]byte
+	layersPeeledForProposer map[uint64]int
+	prevBlockRoots          [][32]byte
 }
 
 // SimulatedObjects is a container to hold the
@@ -67,23 +69,48 @@ func NewSimulatedBackend() (*SimulatedBackend, error) {
 	}, nil
 }
 
-func (sb *SimulatedBackend) AdvanceChain() error {
-	// We create a list of randao hash onions for the given number of slots
-	// the simulation will attempt.
-	hashOnions := generateSimulatedRandaoHashOnions(math.MaxUint64)
+func (sb *SimulatedBackend) InitializeChain() error {
+	// Generating hash onion for 1000 slots.
+	sb.hashOnions = generateSimulatedRandaoHashOnions(1000)
 
-	// We then generate initial validator deposits for initializing the
-	// beacon state based where every validator will use the last layer in the randao
-	// onions list as the commitment in the deposit instance.
-	lastRandaoLayer := hashOnions[len(hashOnions)-1]
+	lastRandaoLayer := sb.hashOnions[len(sb.hashOnions)-1]
 	initialDeposits, err := generateInitialSimulatedDeposits(lastRandaoLayer)
 	if err != nil {
 		return fmt.Errorf("could not simulate initial validator deposits: %v", err)
 	}
 
-	_, err = sb.setupBeaconStateAndGenesisBlock(initialDeposits)
+	sb.prevBlockRoots, err = sb.setupBeaconStateAndGenesisBlock(initialDeposits)
 	if err != nil {
-		return fmt.Errorf("could not set up beacon state and initalize genesis block %v", err)
+		return err
+	}
+
+	// We keep track of the randao layers peeled for each proposer index in a map.
+	sb.layersPeeledForProposer = make(map[uint64]int, len(sb.state.ValidatorRegistry))
+	for idx := range sb.state.ValidatorRegistry {
+		sb.layersPeeledForProposer[uint64(idx)] = 0
+	}
+
+	return nil
+}
+
+func (sb *SimulatedBackend) GenerateBlock() error {
+	lengthOfOnion := len(sb.hashOnions)
+	if lengthOfOnion == 0 {
+		sb.hashOnions = append(sb.hashOnions, params.BeaconConfig().SimulatedBlockRandao)
+	} else {
+		prevHash := sb.hashOnions[lengthOfOnion-1]
+		sb.hashOnions = append(sb.hashOnions, hashutil.Hash(prevHash[:]))
+	}
+
+	lastRandaoLayer := sb.hashOnions[lengthOfOnion-1]
+	initialDeposits, err := generateInitialSimulatedDeposits(lastRandaoLayer)
+	if err != nil {
+		return fmt.Errorf("could not simulate initial validator deposits: %v", err)
+	}
+
+	prevBlockRoots, err := sb.setupBeaconStateAndGenesisBlock(initialDeposits)
+	if err != nil {
+		return err
 	}
 
 	// We keep track of the randao layers peeled for each proposer index in a map.
@@ -95,8 +122,8 @@ func (sb *SimulatedBackend) AdvanceChain() error {
 	return nil
 }
 
-func (sim *SimulatedBackend) Shutdown() error {
-	return sim.beaconDB.Close()
+func (sb *SimulatedBackend) Shutdown() error {
+	return sb.beaconDB.Close()
 }
 
 // RunForkChoiceTest uses a parsed set of chaintests from a YAML file
