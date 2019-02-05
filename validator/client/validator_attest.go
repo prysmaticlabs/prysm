@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+
 	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/opentracing/opentracing-go"
@@ -97,10 +98,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	// TODO(#1366): Use BLS to generate an aggregate signature.
 	attestation.AggregateSignature = []byte("signed")
 
-	attestReq := &pb.AttestRequest{
-		Attestation: attestation,
-	}
-	attestRes, err := v.attesterClient.AttestHead(ctx, attestReq)
+	attestRes, err := v.attesterClient.AttestHead(ctx, attestation)
 	if err != nil {
 		log.Errorf("Could not submit attestation to beacon node: %v", err)
 		return

@@ -5,9 +5,10 @@
 package mock_p2p
 
 import (
+	reflect "reflect"
+
 	proto "github.com/gogo/protobuf/proto"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
 // MockBroadcaster is a mock of Broadcaster interface

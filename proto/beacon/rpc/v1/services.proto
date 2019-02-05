@@ -17,7 +17,7 @@ service BeaconService {
 }
 
 service AttesterService {
-    rpc AttestHead(AttestRequest) returns (AttestResponse);
+    rpc AttestHead(ethereum.beacon.p2p.v1.Attestation) returns (AttestResponse);
     rpc CrosslinkCommitteesAtSlot(CrosslinkCommitteeRequest) returns (CrosslinkCommitteeResponse);
     rpc AttestationInfoAtSlot(AttestationInfoRequest) returns (AttestationInfoResponse);
 }
@@ -81,10 +81,6 @@ message ProposerIndexResponse {
 
 message StateRootResponse {
     bytes state_root = 1;
-}
-
-message AttestRequest {
-    ethereum.beacon.p2p.v1.Attestation attestation = 1;
 }
 
 message AttestResponse {
