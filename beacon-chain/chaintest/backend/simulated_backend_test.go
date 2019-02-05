@@ -64,12 +64,6 @@ func TestGenerateNilBlocks(t *testing.T) {
 		}
 	}
 
-	for _, block := range backend.inMemoryBlocks {
-		if block != nil {
-			t.Errorf("There are in memory blocks saved despit only nil blocks being provided %v", block)
-		}
-	}
-
 	if backend.state.Slot != uint64(slotLimit) {
 		t.Errorf("Unequal state slot and expected slot %d %d", backend.state.Slot, slotLimit)
 	}
