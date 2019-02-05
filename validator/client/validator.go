@@ -1,3 +1,4 @@
+// Package client represents the functionality to act as a validator.
 package client
 
 import (
