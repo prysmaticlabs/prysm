@@ -136,6 +136,7 @@ func (s *Service) Start() {
 		canonicalStateChan: s.canonicalStateChan,
 	}
 	attesterServer := &AttesterServer{
+		beaconDB:         s.beaconDB,
 		operationService: s.operationService,
 	}
 	validatorServer := &ValidatorServer{
