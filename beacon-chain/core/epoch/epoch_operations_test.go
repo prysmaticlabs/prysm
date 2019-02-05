@@ -15,7 +15,7 @@ func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 	validators := make([]*pb.ValidatorRecord, validatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot: config.FarFutureSlot,
+			ExitEpoch: config.FarFutureEpoch,
 		}
 	}
 	validatorBalances := make([]uint64, len(validators))
@@ -302,7 +302,7 @@ func TestHeadAttestationsNotOk(t *testing.T) {
 }
 
 func TestWinningRootOk(t *testing.T) {
-	state := buildState(0, config.EpochLength*2)
+	state := buildState(0, config.DepositsForChainStart)
 
 	// Generate 10 roots ([]byte{100}...[]byte{110})
 	var attestations []*pb.PendingAttestationRecord
@@ -347,7 +347,7 @@ func TestWinningRootOk(t *testing.T) {
 }
 
 func TestWinningRootCantGetParticipantBitfield(t *testing.T) {
-	state := buildState(0, config.EpochLength)
+	state := buildState(0, config.DepositsForChainStart)
 
 	attestations := []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{
@@ -364,7 +364,7 @@ func TestWinningRootCantGetParticipantBitfield(t *testing.T) {
 }
 
 func TestAttestingValidatorsOk(t *testing.T) {
-	state := buildState(0, config.EpochLength)
+	state := buildState(0, config.DepositsForChainStart)
 
 	var attestations []*pb.PendingAttestationRecord
 	for i := 0; i < 10; i++ {
@@ -386,14 +386,14 @@ func TestAttestingValidatorsOk(t *testing.T) {
 		t.Fatalf("Could not execute AttestingValidators: %v", err)
 	}
 
-	// Verify the winner root is attested by validator 45 based on shuffling.
-	if !reflect.DeepEqual(attestedValidators, []uint64{45}) {
-		t.Errorf("Active validators don't match. Wanted:[109, 97], Got: %v", attestedValidators)
+	// Verify the winner root is attested by validator 237 224 based on shuffling.
+	if !reflect.DeepEqual(attestedValidators, []uint64{237, 224}) {
+		t.Errorf("Active validators don't match. Wanted:[237,224], Got: %v", attestedValidators)
 	}
 }
 
 func TestAttestingValidatorsCantGetWinningRoot(t *testing.T) {
-	state := buildState(0, config.EpochLength)
+	state := buildState(0, config.DepositsForChainStart)
 
 	attestation := &pb.PendingAttestationRecord{
 		Data: &pb.AttestationData{
@@ -410,7 +410,7 @@ func TestAttestingValidatorsCantGetWinningRoot(t *testing.T) {
 
 func TestTotalAttestingBalanceOk(t *testing.T) {
 	validatorsPerCommittee := uint64(2)
-	state := buildState(0, config.EpochLength*validatorsPerCommittee)
+	state := buildState(0, config.DepositsForChainStart)
 
 	// Generate 10 roots ([]byte{100}...[]byte{110})
 	var attestations []*pb.PendingAttestationRecord
@@ -440,7 +440,7 @@ func TestTotalAttestingBalanceOk(t *testing.T) {
 }
 
 func TestTotalAttestingBalanceCantGetWinningRoot(t *testing.T) {
-	state := buildState(0, config.EpochLength)
+	state := buildState(0, config.DepositsForChainStart)
 
 	attestation := &pb.PendingAttestationRecord{
 		Data: &pb.AttestationData{
@@ -471,7 +471,7 @@ func TestTotalBalance(t *testing.T) {
 }
 
 func TestInclusionSlotOk(t *testing.T) {
-	state := buildState(0, config.EpochLength)
+	state := buildState(0, config.DepositsForChainStart)
 
 	state.LatestAttestations = []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{},
@@ -484,7 +484,7 @@ func TestInclusionSlotOk(t *testing.T) {
 			ParticipationBitfield: []byte{0xFF},
 			SlotIncluded:          102},
 	}
-	slot, err := InclusionSlot(state, 45)
+	slot, err := InclusionSlot(state, 237)
 	if err != nil {
 		t.Fatalf("Could not execute InclusionSlot: %v", err)
 	}
@@ -495,7 +495,7 @@ func TestInclusionSlotOk(t *testing.T) {
 }
 
 func TestInclusionSlotBadBitfield(t *testing.T) {
-	state := buildState(0, config.EpochLength)
+	state := buildState(0, config.DepositsForChainStart)
 	state.LatestAttestations = []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{},
 			ParticipationBitfield: []byte{},
@@ -519,14 +519,14 @@ func TestInclusionSlotNotFound(t *testing.T) {
 }
 
 func TestInclusionDistanceOk(t *testing.T) {
-	state := buildState(0, config.EpochLength)
+	state := buildState(0, config.DepositsForChainStart)
 
 	state.LatestAttestations = []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{},
 			ParticipationBitfield: []byte{0xFF},
 			SlotIncluded:          100},
 	}
-	distance, err := InclusionDistance(state, 45)
+	distance, err := InclusionDistance(state, 237)
 	if err != nil {
 		t.Fatalf("Could not execute InclusionDistance: %v", err)
 	}
@@ -540,7 +540,7 @@ func TestInclusionDistanceOk(t *testing.T) {
 }
 
 func TestInclusionDistanceBadBitfield(t *testing.T) {
-	state := buildState(0, config.EpochLength)
+	state := buildState(0, config.DepositsForChainStart)
 
 	state.LatestAttestations = []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{},

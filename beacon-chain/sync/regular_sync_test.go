@@ -2,6 +2,8 @@ package sync
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"io/ioutil"
 	"strconv"
 	"testing"
@@ -51,6 +53,23 @@ func (ms *mockOperationService) IncomingAttFeed() *event.Feed {
 
 func (ms *mockOperationService) IncomingExitFeed() *event.Feed {
 	return new(event.Feed)
+}
+
+func setupInitialDeposits(t *testing.T) []*pb.Deposit {
+	genesisValidatorRegistry := validators.InitialValidatorRegistry()
+	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
+	for i := 0; i < len(deposits); i++ {
+		depositInput := &pb.DepositInput{
+			Pubkey: genesisValidatorRegistry[i].Pubkey,
+		}
+		balance := params.BeaconConfig().MaxDeposit
+		depositData, err := blocks.EncodeDepositData(depositInput, balance, time.Now().Unix())
+		if err != nil {
+			t.Fatalf("Cannot encode data: %v", err)
+		}
+		deposits[i] = &pb.Deposit{DepositData: depositData}
+	}
+	return deposits
 }
 
 func setupService(t *testing.T, db *db.BeaconDB) *RegularSync {
@@ -116,14 +135,14 @@ func TestProcessBlock(t *testing.T) {
 	validators := make([]*pb.ValidatorRecord, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			Balance: params.BeaconConfig().MaxDeposit,
-			Pubkey:  []byte(strconv.Itoa(i)),
+			Pubkey: []byte(strconv.Itoa(i)),
 			RandaoCommitmentHash32: []byte{41, 13, 236, 217, 84, 139, 98, 168, 214, 3, 69,
 				169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
 		}
 	}
 	genesisTime := uint64(time.Now().Unix())
-	if err := db.InitializeState(genesisTime); err != nil {
+	deposits := setupInitialDeposits(t)
+	if err := db.InitializeState(genesisTime, deposits); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -198,14 +217,14 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	validators := make([]*pb.ValidatorRecord, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			Balance: params.BeaconConfig().MaxDeposit,
-			Pubkey:  []byte(strconv.Itoa(i)),
+			Pubkey: []byte(strconv.Itoa(i)),
 			RandaoCommitmentHash32: []byte{41, 13, 236, 217, 84, 139, 98, 168, 214, 3, 69,
 				169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
 		}
 	}
 	genesisTime := uint64(time.Now().Unix())
-	if err := db.InitializeState(genesisTime); err != nil {
+	deposits := setupInitialDeposits(t)
+	if err := db.InitializeState(genesisTime, deposits); err != nil {
 		t.Fatal(err)
 	}
 

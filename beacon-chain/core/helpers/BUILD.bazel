@@ -3,8 +3,10 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "committee.go",
         "randao.go",
         "slot_epoch.go",
+        "validators.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers",
     visibility = ["//beacon-chain:__subpackages__"],
@@ -18,8 +20,10 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "committee_test.go",
         "randao_test.go",
         "slot_epoch_test.go",
+        "validators_test.go",
     ],
     embed = [":go_default_library"],
     deps = ["//proto/beacon/p2p/v1:go_default_library"],

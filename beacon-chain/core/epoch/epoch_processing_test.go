@@ -52,8 +52,8 @@ func TestCanProcessEpoch(t *testing.T) {
 }
 
 func TestCanProcessEth1Data(t *testing.T) {
-	if config.Eth1DataVotingPeriod != 1024 {
-		t.Errorf("Eth1DataVotingPeriod should be 1024 for these tests to pass")
+	if config.Eth1DataVotingPeriod != 16 {
+		t.Errorf("Eth1DataVotingPeriod should be 16 for these tests to pass")
 	}
 	tests := []struct {
 		slot               uint64
@@ -64,15 +64,15 @@ func TestCanProcessEth1Data(t *testing.T) {
 			canProcessEth1Data: false,
 		},
 		{
-			slot:               1022,
+			slot:               15,
 			canProcessEth1Data: false,
 		},
 		{
-			slot:               1024,
+			slot:               16,
 			canProcessEth1Data: true,
 		},
 		{
-			slot:               4096,
+			slot:               32,
 			canProcessEth1Data: true,
 		},
 		{
@@ -94,9 +94,6 @@ func TestCanProcessEth1Data(t *testing.T) {
 }
 
 func TestProcessEth1Data(t *testing.T) {
-	if config.Eth1DataVotingPeriod != 1024 {
-		t.Errorf("Eth1DataVotingPeriod should be 1024 for these tests to pass")
-	}
 	requiredVoteCount := config.Eth1DataVotingPeriod
 	state := &pb.BeaconState{
 		LatestEth1Data: &pb.Eth1Data{
@@ -157,9 +154,6 @@ func TestProcessEth1Data(t *testing.T) {
 }
 
 func TestProcessEth1Data_InactionSlot(t *testing.T) {
-	if config.Eth1DataVotingPeriod != 1024 {
-		t.Errorf("Eth1DataVotingPeriod should be 1024 for these tests to pass")
-	}
 	requiredVoteCount := config.Eth1DataVotingPeriod
 	state := &pb.BeaconState{
 		Slot: 4,
@@ -299,7 +293,7 @@ func TestProcessFinalization(t *testing.T) {
 }
 
 func TestProcessCrosslinksOk(t *testing.T) {
-	state := buildState(5, 2*config.EpochLength)
+	state := buildState(5, config.DepositsForChainStart)
 	state.LatestCrosslinks = []*pb.CrosslinkRecord{{}, {}}
 
 	var attestations []*pb.PendingAttestationRecord
@@ -337,7 +331,7 @@ func TestProcessCrosslinksOk(t *testing.T) {
 }
 
 func TestProcessCrosslinksNoParticipantsBitField(t *testing.T) {
-	state := buildState(5, 2*config.EpochLength)
+	state := buildState(5, config.DepositsForChainStart)
 	state.LatestCrosslinks = []*pb.CrosslinkRecord{{}, {}}
 
 	attestations := []*pb.PendingAttestationRecord{
@@ -362,8 +356,8 @@ func TestProcessEjectionsOk(t *testing.T) {
 			config.EjectionBalance + 1},
 		LatestPenalizedBalances: []uint64{0},
 		ValidatorRegistry: []*pb.ValidatorRecord{
-			{ExitSlot: config.FarFutureSlot},
-			{ExitSlot: config.FarFutureSlot}},
+			{ExitEpoch: config.FarFutureEpoch},
+			{ExitEpoch: config.FarFutureEpoch}},
 	}
 
 	state, err := ProcessEjections(state)
@@ -371,19 +365,19 @@ func TestProcessEjectionsOk(t *testing.T) {
 		t.Fatalf("Could not execute ProcessEjections: %v", err)
 	}
 
-	if state.ValidatorRegistry[0].ExitSlot !=
+	if state.ValidatorRegistry[0].ExitEpoch !=
 		config.EntryExitDelay+state.Slot {
-		t.Errorf("Expected exit slot %d, but got %d",
-			state.ValidatorRegistry[0].ExitSlot, config.EntryExitDelay)
+		t.Errorf("Expected exit epoch %d, but got %d",
+			state.ValidatorRegistry[0].ExitEpoch, config.EntryExitDelay)
 	}
-	if state.ValidatorRegistry[1].ExitSlot !=
-		config.FarFutureSlot {
-		t.Errorf("Expected exit slot 0, but got %v", state.ValidatorRegistry[1].ExitSlot)
+	if state.ValidatorRegistry[1].ExitEpoch !=
+		config.FarFutureEpoch {
+		t.Errorf("Expected exit epoch 0, but got %v", state.ValidatorRegistry[1].ExitEpoch)
 	}
 }
 
 func TestCanProcessValidatorRegistry(t *testing.T) {
-	crosslinks := make([]*pb.CrosslinkRecord, config.EpochLength)
+	crosslinks := make([]*pb.CrosslinkRecord, config.DepositsForChainStart)
 	for i := 0; i < len(crosslinks); i++ {
 		crosslinks[i] = &pb.CrosslinkRecord{
 			Slot: 101,

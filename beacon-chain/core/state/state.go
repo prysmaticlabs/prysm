@@ -55,12 +55,6 @@ func InitialBeaconState(
 	validatorRegistry := make([]*pb.ValidatorRecord, len(initialValidatorDeposits))
 	latestBalances := make([]uint64, len(initialValidatorDeposits))
 	for i, d := range initialValidatorDeposits {
-
-		amount, _, err := b.DecodeDepositAmountAndTimeStamp(d.DepositData)
-		if err != nil {
-			return nil, fmt.Errorf("could not decode deposit amount and timestamp %v", err)
-		}
-
 		depositInput, err := b.DecodeDepositInput(d.DepositData)
 		if err != nil {
 			return nil, fmt.Errorf("could decode deposit input %v", err)
@@ -70,9 +64,8 @@ func InitialBeaconState(
 			Pubkey:                      depositInput.Pubkey,
 			RandaoCommitmentHash32:      depositInput.RandaoCommitmentHash32,
 			WithdrawalCredentialsHash32: depositInput.WithdrawalCredentialsHash32,
-			Balance:                     amount,
-			ExitSlot:                    config.FarFutureSlot,
-			PenalizedSlot:               config.FarFutureSlot,
+			ExitEpoch:                   config.FarFutureEpoch,
+			PenalizedEpoch:              config.FarFutureEpoch,
 		}
 
 		validatorRegistry[i] = validator
