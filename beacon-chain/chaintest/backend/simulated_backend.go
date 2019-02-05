@@ -72,6 +72,8 @@ func NewSimulatedBackend() (*SimulatedBackend, error) {
 	}, nil
 }
 
+// InitializeChain sets up the whole backend to be able to run a mock
+// beacon state and chain.
 func (sb *SimulatedBackend) InitializeChain() error {
 	// Generating hash onion for 1000 slots.
 	sb.hashOnions = generateSimulatedRandaoHashOnions(1000)
@@ -98,6 +100,8 @@ func (sb *SimulatedBackend) InitializeChain() error {
 	return nil
 }
 
+// GenerateBlockAndAdvanceChain generates a simulated block and runs that block though
+// state transition.
 func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain() error {
 	slotToGenerate := sb.state.Slot + 1
 	prevBlockRoot := sb.prevBlockRoots[len(sb.prevBlockRoots)-1]
@@ -147,6 +151,7 @@ func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain() error {
 	return nil
 }
 
+// Shutdown closes the db associated with the simulated backend.
 func (sb *SimulatedBackend) Shutdown() error {
 	return sb.beaconDB.Close()
 }
