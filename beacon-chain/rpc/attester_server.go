@@ -32,3 +32,10 @@ func (as *AttesterServer) AttestHead(ctx context.Context, req *pb.AttestRequest)
 func (as *AttesterServer) AttestationInfoAtSlot(ctx context.Context, req *pb.AttestationInfoRequest) (*pb.AttestationInfoResponse, error) {
 	return nil, nil
 }
+
+// CrosslinkCommitteesAtSlot --
+//
+// WIP: Not implemented in server.
+func (as *AttesterServer) CrosslinkCommitteesAtSlot(ctx context.Context, req *pb.CrosslinkCommitteeRequest) (*pb.CrosslinkCommitteeResponse, error) {
+	return nil, nil
+}

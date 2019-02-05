@@ -441,10 +441,10 @@ func ProcessBlockAttestations(
 			return nil, fmt.Errorf("could not verify attestation at index %d in block: %v", idx, err)
 		}
 		pendingAttestations = append(pendingAttestations, &pb.PendingAttestationRecord{
-			Data:                  attestation.Data,
-			ParticipationBitfield: attestation.ParticipationBitfield,
-			CustodyBitfield:       attestation.CustodyBitfield,
-			SlotIncluded:          beaconState.Slot,
+			Data:                attestation.Data,
+			AggregationBitfield: attestation.AggregationBitfield,
+			CustodyBitfield:     attestation.CustodyBitfield,
+			SlotIncluded:        beaconState.Slot,
 		})
 	}
 	beaconState.LatestAttestations = pendingAttestations

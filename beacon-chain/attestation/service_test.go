@@ -27,7 +27,7 @@ func TestUpdateLatestAttestation_Ok(t *testing.T) {
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	attestation := &pb.Attestation{
-		ParticipationBitfield: []byte{0x80},
+		AggregationBitfield: []byte{0x80},
 		Data: &pb.AttestationData{
 			Slot: 5,
 		},
@@ -66,8 +66,8 @@ func TestAttestationPool_Ok(t *testing.T) {
 
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 	attestation := &pb.Attestation{
-		ParticipationBitfield: []byte{0x80},
-		Data:                  &pb.AttestationData{},
+		AggregationBitfield: []byte{0x80},
+		Data:                &pb.AttestationData{},
 	}
 
 	exitRoutine := make(chan bool)

@@ -2,12 +2,13 @@ package sync
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"io/ioutil"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -405,7 +406,7 @@ func TestReceiveAttestation_Ok(t *testing.T) {
 	}()
 
 	request1 := &pb.Attestation{
-		ParticipationBitfield: []byte{99},
+		AggregationBitfield: []byte{99},
 		Data: &pb.AttestationData{
 			Slot: 0,
 		},

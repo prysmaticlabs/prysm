@@ -52,7 +52,7 @@ message Fork {
 
 message PendingAttestationRecord {
   AttestationData data = 1;
-  bytes participation_bitfield = 2;
+  bytes aggregation_bitfield = 2;
   bytes custody_bitfield = 3;
   uint64 slot_included = 4;
 }

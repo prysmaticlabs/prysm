@@ -238,8 +238,8 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			LatestCrosslinkRootHash32: []byte{1},
 			ShardBlockRootHash32:      []byte{},
 		},
-		ParticipationBitfield: []byte{1},
-		CustodyBitfield:       []byte{1},
+		AggregationBitfield: []byte{1},
+		CustodyBitfield:     []byte{1},
 	}
 	attestations := []*pb.Attestation{blockAtt}
 	latestMixes := make([][]byte, config.LatestRandaoMixesLength)
@@ -329,8 +329,8 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			LatestCrosslinkRootHash32: []byte{1},
 			ShardBlockRootHash32:      []byte{},
 		},
-		ParticipationBitfield: []byte{1},
-		CustodyBitfield:       []byte{1},
+		AggregationBitfield: []byte{1},
+		CustodyBitfield:     []byte{1},
 	}
 	attestations := []*pb.Attestation{blockAtt}
 	latestMixes := make([][]byte, config.LatestRandaoMixesLength)
@@ -444,8 +444,8 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 				JustifiedSlot:            64,
 				JustifiedBlockRootHash32: []byte{0},
 			},
-			ParticipationBitfield: []byte{},
-			SlotIncluded:          i + config.EpochLength + 1,
+			AggregationBitfield: []byte{},
+			SlotIncluded:        i + config.EpochLength + 1,
 		})
 	}
 
@@ -507,7 +507,7 @@ func TestProcessEpoch_CantGetCurrentValidatorIndices(t *testing.T) {
 				Shard:                    1,
 				JustifiedBlockRootHash32: make([]byte, 32),
 			},
-			ParticipationBitfield: []byte{0xff},
+			AggregationBitfield: []byte{0xff},
 		})
 	}
 
@@ -537,7 +537,7 @@ func TestProcessEpoch_CantGetPrevValidatorIndices(t *testing.T) {
 				Shard:                    1,
 				JustifiedBlockRootHash32: make([]byte, 32),
 			},
-			ParticipationBitfield: []byte{0xff},
+			AggregationBitfield: []byte{0xff},
 		})
 	}
 
@@ -594,7 +594,7 @@ func TestProcessEpoch_CantProcessEjections(t *testing.T) {
 		LatestRandaoMixesHash32S: randaoHashes,
 		LatestCrosslinks:         []*pb.CrosslinkRecord{{}},
 		LatestAttestations: []*pb.PendingAttestationRecord{
-			{Data: &pb.AttestationData{}, ParticipationBitfield: []byte{0xFF}},
+			{Data: &pb.AttestationData{}, AggregationBitfield: []byte{0xFF}},
 		}}
 
 	want := fmt.Sprintf("could not process inclusion distance: 0")

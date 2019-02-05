@@ -50,7 +50,7 @@ type CrosslinkCommittee struct {
 func AttestationParticipants(
 	state *pb.BeaconState,
 	attestationData *pb.AttestationData,
-	participationBitfield []byte) ([]uint64, error) {
+	AggregationBitfield []byte) ([]uint64, error) {
 
 	// Find the relevant committee.
 	crosslinkCommittees, err := CrosslinkCommitteesAtSlot(state, attestationData.Slot)
@@ -65,17 +65,17 @@ func AttestationParticipants(
 			break
 		}
 	}
-	if len(participationBitfield) != mathutil.CeilDiv8(len(committee)) {
+	if len(AggregationBitfield) != mathutil.CeilDiv8(len(committee)) {
 		return nil, fmt.Errorf(
 			"wanted participants bitfield length %d, got: %d",
 			mathutil.CeilDiv8(len(committee)),
-			len(participationBitfield))
+			len(AggregationBitfield))
 	}
 
 	// Find the participating validators in the committee.
 	var participants []uint64
 	for i, validatorIndex := range committee {
-		bitSet, err := bitutil.CheckBit(participationBitfield, i)
+		bitSet, err := bitutil.CheckBit(AggregationBitfield, i)
 		if err != nil {
 			return nil, fmt.Errorf("could not get participant bitfield: %v", err)
 		}
