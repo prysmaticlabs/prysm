@@ -2,6 +2,8 @@ package sync
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"io/ioutil"
 	"strconv"
 	"testing"
@@ -43,10 +45,31 @@ func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
 	return new(event.Feed)
 }
 
-type mockAttestService struct{}
+type mockOperationService struct{}
 
-func (ms *mockAttestService) IncomingAttestationFeed() *event.Feed {
+func (ms *mockOperationService) IncomingAttFeed() *event.Feed {
 	return new(event.Feed)
+}
+
+func (ms *mockOperationService) IncomingExitFeed() *event.Feed {
+	return new(event.Feed)
+}
+
+func setupInitialDeposits(t *testing.T) []*pb.Deposit {
+	genesisValidatorRegistry := validators.InitialValidatorRegistry()
+	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
+	for i := 0; i < len(deposits); i++ {
+		depositInput := &pb.DepositInput{
+			Pubkey: genesisValidatorRegistry[i].Pubkey,
+		}
+		balance := params.BeaconConfig().MaxDeposit
+		depositData, err := blocks.EncodeDepositData(depositInput, balance, time.Now().Unix())
+		if err != nil {
+			t.Fatalf("Cannot encode data: %v", err)
+		}
+		deposits[i] = &pb.Deposit{DepositData: depositData}
+	}
+	return deposits
 }
 
 func setupService(t *testing.T, db *db.BeaconDB) *RegularSync {
@@ -112,14 +135,14 @@ func TestProcessBlock(t *testing.T) {
 	validators := make([]*pb.ValidatorRecord, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			Balance: params.BeaconConfig().MaxDeposit,
-			Pubkey:  []byte(strconv.Itoa(i)),
+			Pubkey: []byte(strconv.Itoa(i)),
 			RandaoCommitmentHash32: []byte{41, 13, 236, 217, 84, 139, 98, 168, 214, 3, 69,
 				169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
 		}
 	}
 	genesisTime := uint64(time.Now().Unix())
-	if err := db.InitializeState(genesisTime); err != nil {
+	deposits := setupInitialDeposits(t)
+	if err := db.InitializeState(genesisTime, deposits); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -129,7 +152,7 @@ func TestProcessBlock(t *testing.T) {
 		ChainService:            &mockChainService{},
 		P2P:                     &mockP2P{},
 		BeaconDB:                db,
-		AttestService:           &mockAttestService{},
+		OperationService:        &mockOperationService{},
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
@@ -151,9 +174,12 @@ func TestProcessBlock(t *testing.T) {
 	}
 
 	data := &pb.BeaconBlock{
-		DepositRootHash32: []byte{1, 2, 3, 4, 5},
-		ParentRootHash32:  parentHash[:],
-		Slot:              1,
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{1, 2, 3, 4, 5},
+			BlockHash32:       []byte{6, 7, 8, 9, 10},
+		},
+		ParentRootHash32: parentHash[:],
+		Slot:             1,
 	}
 	attestation := &pb.Attestation{
 		Data: &pb.AttestationData{
@@ -191,14 +217,14 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	validators := make([]*pb.ValidatorRecord, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			Balance: params.BeaconConfig().MaxDeposit,
-			Pubkey:  []byte(strconv.Itoa(i)),
+			Pubkey: []byte(strconv.Itoa(i)),
 			RandaoCommitmentHash32: []byte{41, 13, 236, 217, 84, 139, 98, 168, 214, 3, 69,
 				169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
 		}
 	}
 	genesisTime := uint64(time.Now().Unix())
-	if err := db.InitializeState(genesisTime); err != nil {
+	deposits := setupInitialDeposits(t)
+	if err := db.InitializeState(genesisTime, deposits); err != nil {
 		t.Fatal(err)
 	}
 
@@ -208,7 +234,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 		ChainService:            &mockChainService{},
 		P2P:                     &mockP2P{},
 		BeaconDB:                db,
-		AttestService:           &mockAttestService{},
+		OperationService:        &mockOperationService{},
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
@@ -231,9 +257,12 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}
 
 	data1 := &pb.BeaconBlock{
-		DepositRootHash32: []byte{1, 2, 3, 4, 5},
-		ParentRootHash32:  parentHash[:],
-		Slot:              1,
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{1, 2, 3, 4, 5},
+			BlockHash32:       []byte{6, 7, 8, 9, 10},
+		},
+		ParentRootHash32: parentHash[:],
+		Slot:             1,
 	}
 
 	responseBlock1 := &pb.BeaconBlockResponse{
@@ -254,9 +283,12 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}
 
 	data2 := &pb.BeaconBlock{
-		DepositRootHash32: []byte{6, 7, 8, 9, 10},
-		ParentRootHash32:  []byte{},
-		Slot:              1,
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{11, 12, 13, 14, 15},
+			BlockHash32:       []byte{16, 17, 18, 19, 20},
+		},
+		ParentRootHash32: []byte{},
+		Slot:             1,
 	}
 
 	responseBlock2 := &pb.BeaconBlockResponse{
@@ -346,10 +378,10 @@ func TestBlockRequest(t *testing.T) {
 	testutil.AssertLogsDoNotContain(t, hook, "Sending requested block to peer")
 }
 
-func TestReceiveAttestation(t *testing.T) {
+func TestReceiveAttestation_Ok(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ms := &mockChainService{}
-	as := &mockAttestService{}
+	os := &mockOperationService{}
 
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -360,7 +392,7 @@ func TestReceiveAttestation(t *testing.T) {
 		BlockReqHashBufferSize:  0,
 		BlockReqSlotBufferSize:  0,
 		ChainService:            ms,
-		AttestService:           as,
+		OperationService:        os,
 		P2P:                     &mockP2P{},
 		BeaconDB:                db,
 	}
@@ -389,4 +421,39 @@ func TestReceiveAttestation(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 	testutil.AssertLogsContain(t, hook, "Forwarding attestation to subscribed services")
+}
+
+func TestReceiveExitReq_Ok(t *testing.T) {
+	hook := logTest.NewGlobal()
+	os := &mockOperationService{}
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	cfg := &RegularSyncConfig{
+		OperationService: os,
+		P2P:              &mockP2P{},
+		BeaconDB:         db,
+	}
+	ss := NewRegularSyncService(context.Background(), cfg)
+
+	exitRoutine := make(chan bool)
+	go func() {
+		ss.run()
+		exitRoutine <- true
+	}()
+
+	request1 := &pb.Exit{
+		Slot: 100,
+	}
+
+	msg1 := p2p.Message{
+		Ctx:  context.Background(),
+		Data: request1,
+		Peer: p2p.Peer{},
+	}
+
+	ss.exitBuf <- msg1
+	ss.cancel()
+	<-exitRoutine
+	testutil.AssertLogsContain(t, hook, "Forwarding validator exit request to subscribed services")
 }

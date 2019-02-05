@@ -100,10 +100,10 @@ func TestFFGSrcRewardsPenalties(t *testing.T) {
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry: []*pb.ValidatorRecord{
-				{ExitSlot: params.BeaconConfig().FarFutureSlot},
-				{ExitSlot: params.BeaconConfig().FarFutureSlot},
-				{ExitSlot: params.BeaconConfig().FarFutureSlot},
-				{ExitSlot: params.BeaconConfig().FarFutureSlot},
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 			},
 			ValidatorBalances: validatorBalances,
 		}
@@ -139,10 +139,10 @@ func TestFFGTargetRewardsPenalties(t *testing.T) {
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry: []*pb.ValidatorRecord{
-				{ExitSlot: params.BeaconConfig().FarFutureSlot},
-				{ExitSlot: params.BeaconConfig().FarFutureSlot},
-				{ExitSlot: params.BeaconConfig().FarFutureSlot},
-				{ExitSlot: params.BeaconConfig().FarFutureSlot},
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 			},
 			ValidatorBalances: validatorBalances,
 		}
@@ -178,10 +178,10 @@ func TestChainHeadRewardsPenalties(t *testing.T) {
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry: []*pb.ValidatorRecord{
-				{ExitSlot: params.BeaconConfig().FarFutureSlot},
-				{ExitSlot: params.BeaconConfig().FarFutureSlot},
-				{ExitSlot: params.BeaconConfig().FarFutureSlot},
-				{ExitSlot: params.BeaconConfig().FarFutureSlot},
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 			},
 			ValidatorBalances: validatorBalances,
 		}
@@ -199,10 +199,10 @@ func TestChainHeadRewardsPenalties(t *testing.T) {
 }
 
 func TestInclusionDistRewards_Ok(t *testing.T) {
-	validators := make([]*pb.ValidatorRecord, config.EpochLength*4)
+	validators := make([]*pb.ValidatorRecord, config.DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot: config.FarFutureSlot,
+			ExitEpoch: config.FarFutureEpoch,
 		}
 	}
 
@@ -217,10 +217,9 @@ func TestInclusionDistRewards_Ok(t *testing.T) {
 	}{
 		{[]uint64{}},
 		{[]uint64{237, 224}},
-		{[]uint64{237, 224, 2, 242}},
 	}
 	for _, tt := range tests {
-		validatorBalances := make([]uint64, config.EpochLength*4)
+		validatorBalances := make([]uint64, len(validators))
 		for i := 0; i < len(validatorBalances); i++ {
 			validatorBalances[i] = params.BeaconConfig().MaxDeposit
 		}
@@ -252,7 +251,7 @@ func TestInclusionDistRewards_NotOk(t *testing.T) {
 	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot: config.FarFutureSlot,
+			ExitEpoch: config.FarFutureEpoch,
 		}
 	}
 
@@ -298,10 +297,10 @@ func TestInactivityFFGSrcPenalty(t *testing.T) {
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry: []*pb.ValidatorRecord{
-				{ExitSlot: params.BeaconConfig().FarFutureSlot},
-				{ExitSlot: params.BeaconConfig().FarFutureSlot},
-				{ExitSlot: params.BeaconConfig().FarFutureSlot},
-				{ExitSlot: params.BeaconConfig().FarFutureSlot},
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 			},
 			ValidatorBalances: validatorBalances,
 		}
@@ -337,10 +336,10 @@ func TestInactivityFFGTargetPenalty(t *testing.T) {
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry: []*pb.ValidatorRecord{
-				{ExitSlot: params.BeaconConfig().FarFutureSlot},
-				{ExitSlot: params.BeaconConfig().FarFutureSlot},
-				{ExitSlot: params.BeaconConfig().FarFutureSlot},
-				{ExitSlot: params.BeaconConfig().FarFutureSlot},
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 			},
 			ValidatorBalances: validatorBalances,
 		}
@@ -373,10 +372,10 @@ func TestInactivityHeadPenalty(t *testing.T) {
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry: []*pb.ValidatorRecord{
-				{ExitSlot: params.BeaconConfig().FarFutureSlot},
-				{ExitSlot: params.BeaconConfig().FarFutureSlot},
-				{ExitSlot: params.BeaconConfig().FarFutureSlot},
-				{ExitSlot: params.BeaconConfig().FarFutureSlot},
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 			},
 			ValidatorBalances: validatorBalances,
 		}
@@ -408,10 +407,10 @@ func TestInactivityExitedPenality(t *testing.T) {
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry: []*pb.ValidatorRecord{
-				{ExitSlot: params.BeaconConfig().FarFutureSlot},
-				{ExitSlot: params.BeaconConfig().FarFutureSlot},
-				{ExitSlot: params.BeaconConfig().FarFutureSlot},
-				{ExitSlot: params.BeaconConfig().FarFutureSlot}},
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+				{ExitEpoch: params.BeaconConfig().FarFutureEpoch}},
 			ValidatorBalances: validatorBalances,
 		}
 		state = InactivityExitedPenalties(
@@ -428,10 +427,10 @@ func TestInactivityExitedPenality(t *testing.T) {
 }
 
 func TestInactivityInclusionPenalty_Ok(t *testing.T) {
-	validators := make([]*pb.ValidatorRecord, config.EpochLength*4)
+	validators := make([]*pb.ValidatorRecord, config.DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot: config.FarFutureSlot,
+			ExitEpoch: config.FarFutureEpoch,
 		}
 	}
 	attestation := []*pb.PendingAttestationRecord{
@@ -445,7 +444,6 @@ func TestInactivityInclusionPenalty_Ok(t *testing.T) {
 	}{
 		{[]uint64{}},
 		{[]uint64{237, 224}},
-		{[]uint64{237, 224, 2, 242}},
 	}
 	for _, tt := range tests {
 		validatorBalances := make([]uint64, config.EpochLength*4)
@@ -480,7 +478,7 @@ func TestInactivityInclusionPenalty_NotOk(t *testing.T) {
 	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot: config.FarFutureSlot,
+			ExitEpoch: config.FarFutureEpoch,
 		}
 	}
 	attestation := []*pb.PendingAttestationRecord{
@@ -507,10 +505,10 @@ func TestInactivityInclusionPenalty_NotOk(t *testing.T) {
 }
 
 func TestAttestationInclusionRewards(t *testing.T) {
-	validators := make([]*pb.ValidatorRecord, config.EpochLength*4)
+	validators := make([]*pb.ValidatorRecord, config.DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot: config.FarFutureSlot,
+			ExitEpoch: config.FarFutureEpoch,
 		}
 	}
 
@@ -559,7 +557,7 @@ func TestAttestationInclusionRewards_NoInclusionSlot(t *testing.T) {
 	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot: config.FarFutureSlot,
+			ExitEpoch: config.FarFutureEpoch,
 		}
 	}
 
@@ -588,7 +586,7 @@ func TestAttestationInclusionRewards_NoProposerIndex(t *testing.T) {
 	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot: config.FarFutureSlot,
+			ExitEpoch: config.FarFutureEpoch,
 		}
 	}
 	attestation := []*pb.PendingAttestationRecord{
@@ -624,7 +622,7 @@ func TestCrosslinksRewardsPenalties(t *testing.T) {
 	validators := make([]*pb.ValidatorRecord, config.EpochLength*4)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot: config.FarFutureSlot,
+			ExitEpoch: config.FarFutureEpoch,
 		}
 	}
 

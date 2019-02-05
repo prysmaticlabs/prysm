@@ -7,6 +7,7 @@ package epoch
 import (
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
@@ -24,13 +25,13 @@ func CanProcessEpoch(state *pb.BeaconState) bool {
 	return state.Slot%config.EpochLength == 0
 }
 
-// CanProcessDepositRoots checks the eligibility to process deposit root.
-// The deposit root can be processed every DEPOSIT_ROOT_VOTING_PERIOD.
+// CanProcessEth1Data checks the eligibility to process the eth1 data.
+// The eth1 data can be processed every ETH1_DATA_VOTING_PERIOD.
 //
 // Spec pseudocode definition:
-//    If state.slot % DEPOSIT_ROOT_VOTING_PERIOD == 0:
-func CanProcessDepositRoots(state *pb.BeaconState) bool {
-	return state.Slot%config.DepositRootVotingPeriod == 0
+//    If state.slot % ETH1_DATA_VOTING_PERIOD == 0:
+func CanProcessEth1Data(state *pb.BeaconState) bool {
+	return state.Slot%config.Eth1DataVotingPeriod == 0
 }
 
 // CanProcessValidatorRegistry checks the eligibility to process validator registry.
@@ -48,7 +49,7 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 	if state.FinalizedSlot <= state.ValidatorRegistryUpdateSlot {
 		return false
 	}
-	shardsProcessed := validators.CurrCommitteesCountPerSlot(state) * config.EpochLength
+	shardsProcessed := helpers.CurrentEpochCommitteeCount(state) * config.EpochLength
 	fmt.Println(shardsProcessed)
 	startShard := state.CurrentEpochStartShard
 	for i := startShard; i < shardsProcessed; i++ {
@@ -60,16 +61,27 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 	return true
 }
 
-// ProcessDeposits processes deposit roots by checking its vote count.
-// With sufficient votes (>2*DEPOSIT_ROOT_VOTING_PERIOD), it then
-// assigns root hash to processed receipt vote in state.
-func ProcessDeposits(state *pb.BeaconState) *pb.BeaconState {
-	for _, receiptRoot := range state.DepositRootVotes {
-		if receiptRoot.VoteCount*2 > config.DepositRootVotingPeriod {
-			state.LatestDepositRootHash32 = receiptRoot.DepositRootHash32
+// ProcessEth1Data processes eth1 block deposit roots by checking its vote count.
+// With sufficient votes (>2*ETH1_DATA_VOTING_PERIOD), it then
+// marks the voted Eth1 data as the latest data set.
+//
+// Official spec definition:
+//   if state.slot % ETH1_DATA_VOTING_PERIOD == 0:
+//     Set state.latest_eth1_data = eth1_data_vote.data
+//     if eth1_data_vote.vote_count * 2 > ETH1_DATA_VOTING_PERIOD for
+//       some eth1_data_vote in state.eth1_data_votes.
+//       Set state.eth1_data_votes = [].
+//
+func ProcessEth1Data(state *pb.BeaconState) *pb.BeaconState {
+	if state.Slot%config.Eth1DataVotingPeriod == 0 {
+		for _, eth1DataVote := range state.Eth1DataVotes {
+			if eth1DataVote.VoteCount*2 > config.Eth1DataVotingPeriod {
+				state.LatestEth1Data.DepositRootHash32 = eth1DataVote.Eth1Data.DepositRootHash32
+				state.LatestEth1Data.BlockHash32 = eth1DataVote.Eth1Data.BlockHash32
+			}
 		}
+		state.Eth1DataVotes = make([]*pb.Eth1DataVote, 0)
 	}
-	state.DepositRootVotes = make([]*pb.DepositRootVote, 0)
 	return state
 }
 
@@ -203,7 +215,7 @@ func ProcessCrosslinks(
 //            exit_validator(state, index)
 func ProcessEjections(state *pb.BeaconState) (*pb.BeaconState, error) {
 	var err error
-	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
 	for _, index := range activeValidatorIndices {
 		if state.ValidatorBalances[index] < config.EjectionBalance {
 			state, err = validators.ExitValidator(state, index)
@@ -215,15 +227,17 @@ func ProcessEjections(state *pb.BeaconState) (*pb.BeaconState, error) {
 	return state, nil
 }
 
-// ProcessPrevSlotShard computes and sets current epoch's calculation slot
+// ProcessPrevSlotShardSeed computes and sets current epoch's calculation slot
 // and start shard to previous epoch. Then it returns the updated state.
 //
 // Spec pseudocode definition:
 //	Set state.previous_epoch_randao_mix = state.current_epoch_randao_mix
 //	Set state.current_epoch_calculation_slot = state.slot
-func ProcessPrevSlotShard(state *pb.BeaconState) *pb.BeaconState {
+//  Set state.previous_epoch_seed = state.current_epoch_seed.
+func ProcessPrevSlotShardSeed(state *pb.BeaconState) *pb.BeaconState {
 	state.PreviousEpochCalculationSlot = state.CurrentEpochCalculationSlot
 	state.PreviousEpochStartShard = state.CurrentEpochStartShard
+	state.PreviousEpochSeedHash32 = state.CurrentEpochSeedHash32
 	return state
 }
 
@@ -231,17 +245,16 @@ func ProcessPrevSlotShard(state *pb.BeaconState) *pb.BeaconState {
 // reshuffles shard committees and returns the recomputed state with the updated registry.
 //
 // Spec pseudocode definition:
-//	Set state.previous_epoch_randao_mix = state.current_epoch_randao_mix
-//	Set state.current_epoch_calculation_slot = state.slot
-//	Set state.current_epoch_start_shard = (state.current_epoch_start_shard + get_current_epoch_committees_per_slot(state) * EPOCH_LENGTH) % SHARD_COUNT
-//	Set state.current_epoch_randao_mix = get_randao_mix(state, state.current_epoch_calculation_slot - SEED_LOOKAHEAD)
+//  Set state.current_calculation_epoch = next_epoch
+//  Set state.current_epoch_start_shard = (state.current_epoch_start_shard +
+//  	get_current_epoch_committee_count(state)) % SHARD_COUNT
+//	Set state.current_epoch_seed = generate_seed(state, state.current_calculation_epoch)
 func ProcessValidatorRegistry(
 	state *pb.BeaconState) (*pb.BeaconState, error) {
-	state.PreviousEpochRandaoMixHash32 = state.CurrentEpochRandaoMixHash32
 	state.CurrentEpochCalculationSlot = state.Slot
 
 	nextStartShard := (state.CurrentEpochStartShard +
-		validators.CurrCommitteesCountPerSlot(state)*config.EpochLength) %
+		helpers.CurrentEpochCommitteeCount(state)*config.EpochLength) %
 		config.EpochLength
 	state.CurrentEpochStartShard = nextStartShard
 
@@ -250,11 +263,11 @@ func ProcessValidatorRegistry(
 		randaoMixSlot = state.CurrentEpochCalculationSlot -
 			config.SeedLookahead
 	}
-	mix, err := randaoMix(state, randaoMixSlot)
+	mix, err := helpers.RandaoMix(state, randaoMixSlot)
 	if err != nil {
 		return nil, fmt.Errorf("could not get randao mix: %v", err)
 	}
-	state.CurrentEpochRandaoMixHash32 = mix
+	state.CurrentEpochSeedHash32 = mix
 
 	return state, nil
 }
@@ -286,7 +299,7 @@ func ProcessPartialValidatorRegistry(state *pb.BeaconState) *pb.BeaconState {
 		}
 
 		randaoMix := state.LatestRandaoMixesHash32S[randaoIndex%config.LatestRandaoMixesLength]
-		state.CurrentEpochRandaoMixHash32 = randaoMix
+		state.CurrentEpochSeedHash32 = randaoMix
 	}
 	return state
 }
@@ -297,19 +310,11 @@ func ProcessPartialValidatorRegistry(state *pb.BeaconState) *pb.BeaconState {
 // 		Remove any attestation in state.latest_attestations such
 // 		that attestation.data.slot < state.slot - EPOCH_LENGTH
 func CleanupAttestations(state *pb.BeaconState) *pb.BeaconState {
-	epochLength := config.EpochLength
-	var earliestSlot uint64
-
-	// If the state slot is less than epochLength, then the earliestSlot would
-	// result in a negative number. Therefore we should default to
-	// earliestSlot = 0 in this case.
-	if state.Slot > epochLength {
-		earliestSlot = state.Slot - epochLength
-	}
+	currEpoch := helpers.CurrentEpoch(state)
 
 	var latestAttestations []*pb.PendingAttestationRecord
 	for _, attestation := range state.LatestAttestations {
-		if attestation.Data.Slot >= earliestSlot {
+		if helpers.SlotToEpoch(attestation.Data.Slot) >= currEpoch {
 			latestAttestations = append(latestAttestations, attestation)
 		}
 	}

@@ -1,8 +1,12 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"runtime"
+
+	"github.com/prysmaticlabs/prysm/validator/accounts"
 
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
@@ -11,10 +15,16 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/types"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
+	"github.com/x-cray/logrus-prefixed-formatter"
 )
 
 func startNode(ctx *cli.Context) error {
+	keystoreDirectory := ctx.String(types.KeystorePathFlag.Name)
+	keystorePassword := ctx.String(types.PasswordFlag.Name)
+	if err := accounts.VerifyAccountNotExists(keystoreDirectory, keystorePassword); err == nil {
+		return errors.New("no account found, use `validator accounts create` to generate a new keystore")
+	}
+
 	verbosity := ctx.GlobalString(cmd.VerbosityFlag.Name)
 	level, err := logrus.ParseLevel(verbosity)
 	if err != nil {
@@ -22,12 +32,21 @@ func startNode(ctx *cli.Context) error {
 	}
 	logrus.SetLevel(level)
 
-	shardingNode, err := node.NewValidatorClient(ctx)
+	validatorClient, err := node.NewValidatorClient(ctx)
 	if err != nil {
 		return err
 	}
 
-	shardingNode.Start()
+	validatorClient.Start()
+	return nil
+}
+
+func createValidatorAccount(ctx *cli.Context) error {
+	keystoreDirectory := ctx.String(types.KeystorePathFlag.Name)
+	keystorePassword := ctx.String(types.PasswordFlag.Name)
+	if err := accounts.NewValidatorAccount(keystoreDirectory, keystorePassword); err != nil {
+		return fmt.Errorf("could not initialize validator account: %v", err)
+	}
 	return nil
 }
 
@@ -59,13 +78,36 @@ VERSION:
 
 	app := cli.NewApp()
 	app.Name = "validator"
-	app.Usage = `launches an Ethereum Serenity validator client that interacts with a beacon chain, starts proposer services, shardp2p connections, and more
-`
+	app.Usage = `launches an Ethereum Serenity validator client that interacts with a beacon chain, 
+				 starts proposer services, shardp2p connections, and more`
 	app.Version = version.GetVersion()
 	app.Action = startNode
+
+	app.Commands = []cli.Command{
+		{
+			Name:     "accounts",
+			Category: "accounts",
+			Usage:    "defines useful functions for interacting with the validator client's account",
+			Subcommands: cli.Commands{
+				cli.Command{
+					Name: "create",
+					Description: `creates a new validator account keystore containing private keys for Ethereum Serenity - 
+this command outputs a deposit data string which can be used to deposit Ether into the ETH1.0 deposit 
+contract in order to activate the validator client`,
+					Flags: []cli.Flag{
+						types.KeystorePathFlag,
+						types.PasswordFlag,
+					},
+					Action: createValidatorAccount,
+				},
+			},
+		},
+	}
+
 	app.Flags = []cli.Flag{
 		types.BeaconRPCProviderFlag,
-		types.PubKeyFlag,
+		types.KeystorePathFlag,
+		types.PasswordFlag,
 		cmd.VerbosityFlag,
 		cmd.DataDirFlag,
 		cmd.EnableTracingFlag,
