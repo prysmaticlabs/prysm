@@ -121,29 +121,31 @@ func setupInitialDeposits(t *testing.T) []*pb.Deposit {
 	return deposits
 }
 
-func setupBeaconChain(t *testing.T, faultyPoWClient bool, beaconDB *db.BeaconDB) *ChainService {
+func setupBeaconChain(t *testing.T, faultyPoWClient bool, beaconDB *db.BeaconDB, enablePOWChain bool) *ChainService {
 	endpoint := "ws://127.0.0.1"
 	ctx := context.Background()
 	var web3Service *powchain.Web3Service
 	var err error
-	if faultyPoWClient {
-		client := &faultyClient{}
-		web3Service, err = powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{
-			Endpoint:        endpoint,
-			DepositContract: common.Address{},
-			Reader:          client,
-			Client:          client,
-			Logger:          client,
-		})
-	} else {
-		client := &mockClient{}
-		web3Service, err = powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{
-			Endpoint:        endpoint,
-			DepositContract: common.Address{},
-			Reader:          client,
-			Client:          client,
-			Logger:          client,
-		})
+	if enablePOWChain {
+		if faultyPoWClient {
+			client := &faultyClient{}
+			web3Service, err = powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{
+				Endpoint:        endpoint,
+				DepositContract: common.Address{},
+				Reader:          client,
+				Client:          client,
+				Logger:          client,
+			})
+		} else {
+			client := &mockClient{}
+			web3Service, err = powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{
+				Endpoint:        endpoint,
+				DepositContract: common.Address{},
+				Reader:          client,
+				Client:          client,
+				Logger:          client,
+			})
+		}
 	}
 	if err != nil {
 		t.Fatalf("unable to set up web3 service: %v", err)
@@ -153,7 +155,7 @@ func setupBeaconChain(t *testing.T, faultyPoWClient bool, beaconDB *db.BeaconDB)
 		BeaconBlockBuf: 0,
 		BeaconDB:       beaconDB,
 		Web3Service:    web3Service,
-		EnablePOWChain: true,
+		EnablePOWChain: enablePOWChain,
 	}
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
@@ -180,7 +182,7 @@ func TestStartStopUninitializedChain(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	chainService := setupBeaconChain(t, false, db)
+	chainService := setupBeaconChain(t, false, db, true)
 
 	chainService.IncomingBlockFeed()
 
@@ -209,12 +211,24 @@ func TestStartStopUninitializedChain(t *testing.T) {
 		)
 	}
 }
+func TestStartUninitializedChainWithoutConfigPOWChain(t *testing.T) {
+	hook := logTest.NewGlobal()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	chainService := setupBeaconChain(t, false, db, false)
+
+	chainService.IncomingBlockFeed()
+
+	// Test the start function.
+	chainService.Start()
+	testutil.AssertLogsContain(t, hook, "Not configured web3Service for POW chain")
+}
 
 func TestStartStopInitializedChain(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	chainService := setupBeaconChain(t, false, db)
+	chainService := setupBeaconChain(t, false, db, true)
 
 	unixTime := uint64(time.Now().Unix())
 	deposits := setupInitialDeposits(t)
@@ -251,7 +265,7 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	chainService := setupBeaconChain(t, true, db)
+	chainService := setupBeaconChain(t, true, db, true)
 	unixTime := uint64(time.Now().Unix())
 	deposits := setupInitialDeposits(t)
 	if err := db.InitializeState(unixTime, deposits); err != nil {
@@ -305,7 +319,7 @@ func TestRunningChainService(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	chainService := setupBeaconChain(t, false, db)
+	chainService := setupBeaconChain(t, false, db, true)
 	unixTime := uint64(time.Now().Unix())
 	deposits := setupInitialDeposits(t)
 	if err := db.InitializeState(unixTime, deposits); err != nil {
@@ -401,7 +415,7 @@ func TestDoesPOWBlockExist(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	chainService := setupBeaconChain(t, true, db)
+	chainService := setupBeaconChain(t, true, db, true)
 	unixTime := uint64(time.Now().Unix())
 	deposits := setupInitialDeposits(t)
 	if err := db.InitializeState(unixTime, deposits); err != nil {
@@ -468,7 +482,7 @@ func TestUpdateHead(t *testing.T) {
 		hook := logTest.NewGlobal()
 		db := internal.SetupDB(t)
 		defer internal.TeardownDB(t, db)
-		chainService := setupBeaconChain(t, false, db)
+		chainService := setupBeaconChain(t, false, db, true)
 		unixTime := uint64(time.Now().Unix())
 		deposits := setupInitialDeposits(t)
 		if err := db.InitializeState(unixTime, deposits); err != nil {
@@ -504,7 +518,7 @@ func TestUpdateHead(t *testing.T) {
 func TestIsBlockReadyForProcessing(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	chainService := setupBeaconChain(t, false, db)
+	chainService := setupBeaconChain(t, false, db, true)
 	unixTime := uint64(time.Now().Unix())
 	deposits := setupInitialDeposits(t)
 	if err := db.InitializeState(unixTime, deposits); err != nil {
