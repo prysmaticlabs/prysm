@@ -319,9 +319,9 @@ func AttestationInclusion(
 // for attesting shard cross links.
 //
 // Spec pseudocode definition:
-// 	For every slot in range(state.slot - 2 * EPOCH_LENGTH, state.slot),
-// 		let shard_committee_at_slot = get_shard_committees_at_slot(slot).
-// 		For every (shard_committee, shard) in shard_committee_at_slot, compute:
+// 	For slot in range(get_epoch_start_slot(previous_epoch), get_epoch_start_slot(current_epoch)),
+// 		let crosslink_committees_at_slot = get_crosslink_committees_at_slot(slot).
+// 		For every (crosslink_committee, shard) in crosslink_committee_at_slot, compute:
 //
 //			Let shard_block_root be state.latest_crosslinks[shard].shard_block_root
 //			Let attesting_validator_indices(shard_committee, shard_block_root)
@@ -344,9 +344,12 @@ func Crosslinks(
 	thisEpochAttestations []*pb.PendingAttestationRecord,
 	prevEpochAttestations []*pb.PendingAttestationRecord) (*pb.BeaconState, error) {
 
-	epochLength := config.EpochLength
-	startSlot := state.Slot - 2*epochLength
-	for i := startSlot; i < state.Slot; i++ {
+	prevEpoch := helpers.PrevEpoch(state)
+	currentEpoch := helpers.CurrentEpoch(state)
+	startSlot := helpers.StartSlot(prevEpoch)
+	endSlot := helpers.StartSlot(currentEpoch)
+
+	for i := startSlot; i < endSlot; i++ {
 		crosslinkCommittees, err := validators.CrosslinkCommitteesAtSlot(state, i)
 		if err != nil {
 			return nil, fmt.Errorf("could not get shard committees for slot %d: %v", i, err)

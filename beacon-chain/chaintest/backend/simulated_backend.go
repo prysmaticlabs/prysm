@@ -36,7 +36,6 @@ type SimulatedBackend struct {
 	lastRandaoLayer         [32]byte
 	layersPeeledForProposer map[uint64]int
 	prevBlockRoots          [][32]byte
-	slot                    uint64
 	inMemoryBlocks          []*pb.BeaconBlock
 	depositTrie             *trieutil.DepositTrie
 }
@@ -100,7 +99,7 @@ func (sb *SimulatedBackend) InitializeChain() error {
 }
 
 func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain() error {
-	slotToGenerate := sb.slot + 1
+	slotToGenerate := sb.state.Slot + 1
 	prevBlockRoot := sb.prevBlockRoots[len(sb.prevBlockRoots)-1]
 
 	proposerIndex, err := validators.BeaconProposerIdx(sb.state, slotToGenerate)
@@ -144,7 +143,6 @@ func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain() error {
 	sb.prevBlockRoots = append(sb.prevBlockRoots, newBlockRoot)
 	sb.layersPeeledForProposer[proposerIndex]++
 	sb.inMemoryBlocks = append(sb.inMemoryBlocks, newBlock)
-	sb.slot++
 
 	return nil
 }
