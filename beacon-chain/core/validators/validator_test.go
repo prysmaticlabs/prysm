@@ -556,7 +556,6 @@ func TestProcessDeposit_PublicKeyDoesNotExistEmptyValidatorExists(t *testing.T) 
 
 func TestActivateValidatorGenesis_Ok(t *testing.T) {
 	state := &pb.BeaconState{
-		ValidatorRegistryDeltaChainTipHash32: []byte{'A'},
 		ValidatorRegistry: []*pb.ValidatorRecord{
 			{Pubkey: []byte{'A'}},
 		},
@@ -730,9 +729,9 @@ func TestUpdateRegistry_NoRotation(t *testing.T) {
 				i, params.BeaconConfig().EntryExitDelay, validator.ExitEpoch)
 		}
 	}
-	if newState.ValidatorRegistryUpdateSlot != state.Slot {
+	if newState.ValidatorRegistryUpdateEpoch != state.Slot {
 		t.Errorf("wanted validator registry lastet change %d, got %d",
-			state.Slot, newState.ValidatorRegistryUpdateSlot)
+			state.Slot, newState.ValidatorRegistryUpdateEpoch)
 	}
 }
 
@@ -749,7 +748,6 @@ func TestUpdateRegistry_Activate(t *testing.T) {
 			params.BeaconConfig().MaxDeposit,
 			params.BeaconConfig().MaxDeposit,
 		},
-		ValidatorRegistryDeltaChainTipHash32: []byte{'A'},
 	}
 	newState, err := UpdateRegistry(state)
 	if err != nil {
@@ -761,9 +759,9 @@ func TestUpdateRegistry_Activate(t *testing.T) {
 				i, params.BeaconConfig().EntryExitDelay, validator.ExitEpoch)
 		}
 	}
-	if newState.ValidatorRegistryUpdateSlot != state.Slot {
+	if newState.ValidatorRegistryUpdateEpoch != state.Slot {
 		t.Errorf("wanted validator registry lastet change %d, got %d",
-			state.Slot, newState.ValidatorRegistryUpdateSlot)
+			state.Slot, newState.ValidatorRegistryUpdateEpoch)
 	}
 }
 
@@ -797,9 +795,9 @@ func TestUpdateRegistry_Exit(t *testing.T) {
 				validator.ExitEpoch)
 		}
 	}
-	if newState.ValidatorRegistryUpdateSlot != state.Slot {
+	if newState.ValidatorRegistryUpdateEpoch != state.Slot {
 		t.Errorf("wanted validator registry lastet change %d, got %d",
-			state.Slot, newState.ValidatorRegistryUpdateSlot)
+			state.Slot, newState.ValidatorRegistryUpdateEpoch)
 	}
 }
 

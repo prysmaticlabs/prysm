@@ -85,19 +85,18 @@ func InitialBeaconState(
 		},
 
 		// Validator registry fields.
-		ValidatorRegistry:                    validatorRegistry,
-		ValidatorBalances:                    latestBalances,
-		ValidatorRegistryUpdateSlot:          config.GenesisSlot,
-		ValidatorRegistryDeltaChainTipHash32: config.ZeroHash[:],
+		ValidatorRegistry:            validatorRegistry,
+		ValidatorBalances:            latestBalances,
+		ValidatorRegistryUpdateEpoch: config.GenesisEpoch,
 
 		// Randomness and committees.
-		LatestRandaoMixesHash32S:     latestRandaoMixes,
-		PreviousEpochStartShard:      config.GenesisStartShard,
-		CurrentEpochStartShard:       config.GenesisStartShard,
-		PreviousEpochCalculationSlot: config.GenesisSlot,
-		CurrentEpochCalculationSlot:  config.GenesisSlot,
-		PreviousEpochSeedHash32:      config.ZeroHash[:],
-		CurrentEpochSeedHash32:       config.ZeroHash[:],
+		LatestRandaoMixesHash32S: latestRandaoMixes,
+		PreviousEpochStartShard:  config.GenesisStartShard,
+		CurrentEpochStartShard:   config.GenesisStartShard,
+		PreviousCalculationEpoch: config.GenesisSlot,
+		CurrentCalculationEpoch:  config.GenesisSlot,
+		PreviousEpochSeedHash32:  config.ZeroHash[:],
+		CurrentEpochSeedHash32:   config.ZeroHash[:],
 
 		// Finality.
 		PreviousJustifiedSlot: config.GenesisSlot,
