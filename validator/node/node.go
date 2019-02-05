@@ -47,10 +47,6 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 		return nil, err
 	}
 
-	if err := ValidatorClient.registerP2P(ctx); err != nil {
-		return nil, err
-	}
-
 	if err := ValidatorClient.registerClientService(ctx); err != nil {
 		return nil, err
 	}
@@ -101,15 +97,6 @@ func (s *ValidatorClient) Close() {
 	log.Info("Stopping sharding validator")
 
 	close(s.stop)
-}
-
-// registerP2P attaches a p2p server to the ValidatorClient instance.
-func (s *ValidatorClient) registerP2P(ctx *cli.Context) error {
-	shardp2p, err := configureP2P(ctx)
-	if err != nil {
-		return fmt.Errorf("could not register shardp2p service: %v", err)
-	}
-	return s.services.RegisterService(shardp2p)
 }
 
 func (s *ValidatorClient) registerPrometheusService(ctx *cli.Context) error {

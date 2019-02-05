@@ -1,3 +1,4 @@
+// Package client represents the functionality to act as a validator.
 package client
 
 import (
@@ -9,10 +10,17 @@ import (
 
 	"github.com/opentracing/opentracing-go"
 
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
+
+// AttestationPool STUB interface. Final attestation pool pending design.
+// TODO(1323): Replace with actual attestation pool.
+type AttestationPool interface {
+	PendingAttestations() []*pbp2p.Attestation
+}
 
 // validator
 //
@@ -21,9 +29,11 @@ type validator struct {
 	genesisTime     uint64
 	ticker          *slotutil.SlotTicker
 	assignment      *pb.Assignment
+	proposerClient  pb.ProposerServiceClient
 	validatorClient pb.ValidatorServiceClient
 	beaconClient    pb.BeaconServiceClient
 	pubKey          []byte
+	attestationPool AttestationPool
 }
 
 // Done cleans up the validator.
@@ -126,14 +136,6 @@ func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
 		return pb.ValidatorRole_PROPOSER
 	}
 	return pb.ValidatorRole_UNKNOWN
-}
-
-// ProposeBlock
-//
-// WIP - not done.
-func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.ProposeBlock")
-	defer span.Finish()
 }
 
 // AttestToBlockHead
