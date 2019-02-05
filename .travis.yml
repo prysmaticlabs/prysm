@@ -8,8 +8,7 @@ matrix:
       env:
         - lint
       script:
-        - 
-          go get github.com/alecthomas/gometalinter && gometalinter --install && gometalinter ./...
+        - go get github.com/alecthomas/gometalinter && gometalinter --install && gometalinter ./...
         email: false
       after_success:
         - wget https://raw.githubusercontent.com/k3rn31p4nic/travis-ci-discord-webhook/master/send.sh
