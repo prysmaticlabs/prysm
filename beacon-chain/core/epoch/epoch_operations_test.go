@@ -259,12 +259,12 @@ func TestHeadAttestationsOk(t *testing.T) {
 
 	prevAttestations := []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{Slot: 1, BeaconBlockRootHash32: []byte{'A'}}},
-		{Data: &pb.AttestationData{Slot: 2, BeaconBlockRootHash32: []byte{'B'}}},
-		{Data: &pb.AttestationData{Slot: 3, BeaconBlockRootHash32: []byte{'C'}}},
-		{Data: &pb.AttestationData{Slot: 4, BeaconBlockRootHash32: []byte{'D'}}},
+		{Data: &pb.AttestationData{Slot: 2, BeaconBlockRootHash32: []byte{'A'}}},
+		{Data: &pb.AttestationData{Slot: 3, BeaconBlockRootHash32: []byte{'A'}}},
+		{Data: &pb.AttestationData{Slot: 4, BeaconBlockRootHash32: []byte{'A'}}},
 	}
 
-	state := &pb.BeaconState{Slot: 5, LatestBlockRootHash32S: [][]byte{{'A'}, {'X'}, {'C'}, {'Y'}}}
+	state := &pb.BeaconState{Slot: 5, LatestBlockRootHash32S: [][]byte{{'A'}, {'A'}, {'A'}, {'A'}}}
 
 	headAttestations, err := PrevHeadAttestations(state, prevAttestations)
 	if err != nil {
@@ -274,15 +274,15 @@ func TestHeadAttestationsOk(t *testing.T) {
 	if headAttestations[0].Data.Slot != 1 {
 		t.Errorf("headAttestations[0] wanted slot 1, got slot %d", headAttestations[0].Data.Slot)
 	}
-	if headAttestations[1].Data.Slot != 3 {
-		t.Errorf("headAttestations[1] wanted slot 3, got slot %d", headAttestations[1].Data.Slot)
+	if headAttestations[1].Data.Slot != 2 {
+		t.Errorf("headAttestations[1] wanted slot 2, got slot %d", headAttestations[1].Data.Slot)
 	}
 	if !bytes.Equal([]byte{'A'}, headAttestations[0].Data.BeaconBlockRootHash32) {
 		t.Errorf("headAttestations[0] wanted hash [A], got slot %v",
 			headAttestations[0].Data.BeaconBlockRootHash32)
 	}
-	if !bytes.Equal([]byte{'C'}, headAttestations[1].Data.BeaconBlockRootHash32) {
-		t.Errorf("headAttestations[1] wanted hash [C], got slot %v",
+	if !bytes.Equal([]byte{'A'}, headAttestations[1].Data.BeaconBlockRootHash32) {
+		t.Errorf("headAttestations[1] wanted hash [A], got slot %v",
 			headAttestations[1].Data.BeaconBlockRootHash32)
 	}
 }
