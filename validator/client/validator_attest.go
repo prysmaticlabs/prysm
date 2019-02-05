@@ -3,6 +3,8 @@ package client
 import (
 	"context"
 
+	"fmt"
+
 	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/opentracing/opentracing-go"
@@ -55,7 +57,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	attData.EpochBoundaryRootHash32 = infoRes.EpochBoundaryRootHash32[:]
 	// Set the attestation data's justified epoch = state.justified_epoch where state
 	// is the beacon state at the head.
-	attData.JustifiedSlot = infoRes.JustifiedEpoch
+	attData.JustifiedEpoch = infoRes.JustifiedEpoch
 	// Set the attestation data's justified block root = hash_tree_root(justified_block) where
 	// justified_block is the block at state.justified_epoch in the chain defined by head.
 	// On the server side, this is fetched by calling get_block_root(state, justified_epoch).

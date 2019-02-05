@@ -5,6 +5,9 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
+	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -19,7 +22,7 @@ func TestAttestToBlockHead_CrosslinkCommitteeRequestFailure(t *testing.T) {
 	defer finish()
 	m.attesterClient.EXPECT().CrosslinkCommitteesAtSlot(
 		gomock.Any(), // ctx
-		gomock.Any(),
+		gomock.AssignableToTypeOf(&pb.CrosslinkCommitteeRequest{}),
 	).Return(nil /*Crosslinks Response*/, errors.New("something bad happened"))
 
 	validator.AttestToBlockHead(context.Background(), 30)
@@ -40,7 +43,7 @@ func TestAttestToBlockHead_AttestationInfoAtSlotRequestFailure(t *testing.T) {
 	}, nil)
 	m.attesterClient.EXPECT().AttestationInfoAtSlot(
 		gomock.Any(), // ctx
-		gomock.Any(),
+		gomock.AssignableToTypeOf(&pb.AttestationInfoRequest{}),
 	).Return(nil /* Attestation Info Response*/, errors.New("something bad happened"))
 
 	validator.AttestToBlockHead(context.Background(), 30)
@@ -55,13 +58,13 @@ func TestAttestToBlockHead_ValidatorIndexRequestFailure(t *testing.T) {
 	defer finish()
 	m.attesterClient.EXPECT().CrosslinkCommitteesAtSlot(
 		gomock.Any(), // ctx
-		gomock.Any(),
+		gomock.AssignableToTypeOf(&pb.CrosslinkCommitteeRequest{}),
 	).Return(&pb.CrosslinkCommitteeResponse{
 		Shard: 5,
 	}, nil)
 	m.attesterClient.EXPECT().AttestationInfoAtSlot(
 		gomock.Any(), // ctx
-		gomock.Any(),
+		gomock.AssignableToTypeOf(&pb.AttestationInfoRequest{}),
 	).Return(&pb.AttestationInfoResponse{
 		BeaconBlockRootHash32:    []byte{},
 		EpochBoundaryRootHash32:  []byte{},
@@ -70,7 +73,7 @@ func TestAttestToBlockHead_ValidatorIndexRequestFailure(t *testing.T) {
 	}, nil)
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
-		gomock.Any(),
+		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
 	).Return(nil /* Validator Index Response*/, errors.New("something bad happened"))
 
 	validator.AttestToBlockHead(context.Background(), 30)
@@ -85,14 +88,14 @@ func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
 	defer finish()
 	m.attesterClient.EXPECT().CrosslinkCommitteesAtSlot(
 		gomock.Any(), // ctx
-		gomock.Any(),
+		gomock.AssignableToTypeOf(&pb.CrosslinkCommitteeRequest{}),
 	).Return(&pb.CrosslinkCommitteeResponse{
 		Shard:     5,
 		Committee: make([]uint64, 111),
 	}, nil)
 	m.attesterClient.EXPECT().AttestationInfoAtSlot(
 		gomock.Any(), // ctx
-		gomock.Any(),
+		gomock.AssignableToTypeOf(&pb.AttestationInfoRequest{}),
 	).Return(&pb.AttestationInfoResponse{
 		BeaconBlockRootHash32:    []byte{},
 		EpochBoundaryRootHash32:  []byte{},
@@ -101,13 +104,13 @@ func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
 	}, nil)
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
-		gomock.Any(),
+		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
 	).Return(&pb.ValidatorIndexResponse{
 		Index: 0,
 	}, nil)
 	m.attesterClient.EXPECT().AttestHead(
 		gomock.Any(), // ctx
-		gomock.Any(),
+		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
 	).Return(nil, errors.New("something went wrong"))
 
 	validator.AttestToBlockHead(context.Background(), 30)
@@ -120,26 +123,27 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 
 	validator, m, finish := setup(t)
 	defer finish()
-	validatorIndex := 5
+	validatorIndex := uint64(5)
+	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	m.attesterClient.EXPECT().CrosslinkCommitteesAtSlot(
 		gomock.Any(), // ctx
-		gomock.Any(),
+		gomock.AssignableToTypeOf(&pb.CrosslinkCommitteeRequest{}),
 	).Return(&pb.CrosslinkCommitteeResponse{
 		Shard:     5,
-		Committee: []uint64{0, 3, 4, 2, 5, 6, 8, 9, 10},
+		Committee: committee,
 	}, nil)
 	m.attesterClient.EXPECT().AttestationInfoAtSlot(
 		gomock.Any(), // ctx
-		gomock.Any(),
+		gomock.AssignableToTypeOf(&pb.AttestationInfoRequest{}),
 	).Return(&pb.AttestationInfoResponse{
-		BeaconBlockRootHash32:    []byte{},
-		EpochBoundaryRootHash32:  []byte{},
-		JustifiedBlockRootHash32: []byte{},
-		JustifiedEpoch:           0,
+		BeaconBlockRootHash32:    []byte("A"),
+		EpochBoundaryRootHash32:  []byte("B"),
+		JustifiedBlockRootHash32: []byte("C"),
+		JustifiedEpoch:           3,
 	}, nil)
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
-		gomock.Any(),
+		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
 	).Return(&pb.ValidatorIndexResponse{
 		Index: uint64(validatorIndex),
 	}, nil)
@@ -153,19 +157,27 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	}).Return(&pb.AttestResponse{}, nil /* error */)
 
 	validator.AttestToBlockHead(context.Background(), 30)
-	if generatedAttestation.Data.Shard != 5 {
-		t.Errorf(
-			"Incorrect shard in attestation data, wanted %d, received %d",
-			5,
-			generatedAttestation.Data.Shard,
-		)
+
+	aggregationBitfield := make([]byte, (len(committee)+7)/8)
+	// Validator index is at index 4 in the mocked committee defined in this test.
+	indexIntoCommittee := uint64(4)
+	aggregationBitfield[indexIntoCommittee/8] |= 1 << (indexIntoCommittee % 8)
+	expectedAttestation := &pbp2p.Attestation{
+		Data: &pbp2p.AttestationData{
+			Slot:                     30,
+			Shard:                    5,
+			BeaconBlockRootHash32:    []byte("A"),
+			EpochBoundaryRootHash32:  []byte("B"),
+			JustifiedBlockRootHash32: []byte("C"),
+			ShardBlockRootHash32:     params.BeaconConfig().ZeroHash[:],
+			JustifiedEpoch:           3,
+		},
+		CustodyBitfield:     make([]byte, (len(committee)+7)/8),
+		AggregationBitfield: aggregationBitfield,
+		AggregateSignature:  []byte("signed"),
 	}
-	if generatedAttestation.Data.Slot != 30 {
-		t.Errorf(
-			"Incorrect slot in attestation data, wanted %d, received %d",
-			30,
-			generatedAttestation.Data.Slot,
-		)
+	if !proto.Equal(generatedAttestation, expectedAttestation) {
+		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
 	}
 	testutil.AssertLogsContain(t, hook, "Submitted attestation successfully")
 }
