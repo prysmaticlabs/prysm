@@ -33,8 +33,12 @@ type SimulatedBackend struct {
 	beaconDB                *db.BeaconDB
 	state                   *pb.BeaconState
 	hashOnions              [][32]byte
+	lastRandaoLayer         [32]byte
 	layersPeeledForProposer map[uint64]int
 	prevBlockRoots          [][32]byte
+	slot                    uint64
+	inMemoryBlocks          []*pb.BeaconBlock
+	depositTrie             *trieutil.DepositTrie
 }
 
 // SimulatedObjects is a container to hold the
@@ -73,14 +77,13 @@ func (sb *SimulatedBackend) InitializeChain() error {
 	// Generating hash onion for 1000 slots.
 	sb.hashOnions = generateSimulatedRandaoHashOnions(1000)
 
-	lastRandaoLayer := sb.hashOnions[len(sb.hashOnions)-1]
-	initialDeposits, err := generateInitialSimulatedDeposits(lastRandaoLayer)
+	sb.lastRandaoLayer = sb.hashOnions[len(sb.hashOnions)-1]
+	initialDeposits, err := generateInitialSimulatedDeposits(sb.lastRandaoLayer)
 	if err != nil {
 		return fmt.Errorf("could not simulate initial validator deposits: %v", err)
 	}
 
-	sb.prevBlockRoots, err = sb.setupBeaconStateAndGenesisBlock(initialDeposits)
-	if err != nil {
+	if err := sb.setupBeaconStateAndGenesisBlock(initialDeposits); err != nil {
 		return err
 	}
 
@@ -90,34 +93,58 @@ func (sb *SimulatedBackend) InitializeChain() error {
 		sb.layersPeeledForProposer[uint64(idx)] = 0
 	}
 
+	sb.depositTrie = trieutil.NewDepositTrie()
+	sb.inMemoryBlocks = make([]*pb.BeaconBlock, 1000)
+
 	return nil
 }
 
-func (sb *SimulatedBackend) GenerateBlock() error {
-	lengthOfOnion := len(sb.hashOnions)
-	if lengthOfOnion == 0 {
-		sb.hashOnions = append(sb.hashOnions, params.BeaconConfig().SimulatedBlockRandao)
-	} else {
-		prevHash := sb.hashOnions[lengthOfOnion-1]
-		sb.hashOnions = append(sb.hashOnions, hashutil.Hash(prevHash[:]))
-	}
+func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain() error {
+	slotToGenerate := sb.slot + 1
+	prevBlockRoot := sb.prevBlockRoots[len(sb.prevBlockRoots)-1]
 
-	lastRandaoLayer := sb.hashOnions[lengthOfOnion-1]
-	initialDeposits, err := generateInitialSimulatedDeposits(lastRandaoLayer)
+	proposerIndex, err := validators.BeaconProposerIdx(sb.state, slotToGenerate)
 	if err != nil {
-		return fmt.Errorf("could not simulate initial validator deposits: %v", err)
+		return fmt.Errorf("could not compute proposer index %v", err)
 	}
 
-	prevBlockRoots, err := sb.setupBeaconStateAndGenesisBlock(initialDeposits)
+	layersPeeled := sb.layersPeeledForProposer[proposerIndex]
+	blockRandaoReveal := determineSimulatedBlockRandaoReveal(layersPeeled, sb.hashOnions)
+
+	// We generate a new block to pass into the state transition.
+	newBlock, newBlockRoot, err := generateSimulatedBlock(
+		sb.state,
+		prevBlockRoot,
+		blockRandaoReveal,
+		sb.lastRandaoLayer,
+		sb.depositTrie,
+		&SimulatedObjects{},
+	)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not generate simulated beacon block %v", err)
+	}
+	latestRoot := sb.depositTrie.Root()
+
+	sb.state.LatestEth1Data = &pb.Eth1Data{
+		DepositRootHash32: latestRoot[:],
+		BlockHash32:       []byte{},
 	}
 
-	// We keep track of the randao layers peeled for each proposer index in a map.
-	layersPeeledForProposer := make(map[uint64]int, len(sb.state.ValidatorRegistry))
-	for idx := range sb.state.ValidatorRegistry {
-		layersPeeledForProposer[uint64(idx)] = 0
+	newState, err := state.ExecuteStateTransition(
+		sb.state,
+		newBlock,
+		prevBlockRoot,
+		false, /*  no sig verify */
+	)
+	if err != nil {
+		return fmt.Errorf("could not execute state transition: %v", err)
 	}
+
+	sb.state = newState
+	sb.prevBlockRoots = append(sb.prevBlockRoots, newBlockRoot)
+	sb.layersPeeledForProposer[proposerIndex]++
+	sb.inMemoryBlocks = append(sb.inMemoryBlocks, newBlock)
+	sb.slot++
 
 	return nil
 }
@@ -183,15 +210,14 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	defer teardownDB(sb.beaconDB)
 	setTestConfig(testCase)
 
-	hashOnions, lastRandaoLayer, prevBlockRoots, layersPeeledForProposer, err := sb.initializeStateTest(testCase)
-	if err != nil {
+	if err := sb.initializeStateTest(testCase); err != nil {
 		return fmt.Errorf("could not initialize state test %v", err)
 	}
 
-	depositsTrie := trieutil.NewDepositTrie()
+	sb.depositTrie = trieutil.NewDepositTrie()
 	averageTimesPerTransition := []time.Duration{}
 	for i := uint64(0); i < testCase.Config.NumSlots; i++ {
-		prevBlockRoot := prevBlockRoots[len(prevBlockRoots)-1]
+		prevBlockRoot := sb.prevBlockRoots[len(sb.prevBlockRoots)-1]
 
 		proposerIndex, err := validators.BeaconProposerIdx(sb.state, i)
 		if err != nil {
@@ -211,28 +237,28 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 				return fmt.Errorf("could not execute state transition: %v", err)
 			}
 			sb.state = newState
-			layersPeeledForProposer[proposerIndex]++
+			sb.layersPeeledForProposer[proposerIndex]++
 			continue
 		}
 
 		simulatedObjects := sb.generateSimulatedObjects(testCase, i)
 
-		layersPeeled := layersPeeledForProposer[proposerIndex]
-		blockRandaoReveal := determineSimulatedBlockRandaoReveal(layersPeeled, hashOnions)
+		layersPeeled := sb.layersPeeledForProposer[proposerIndex]
+		blockRandaoReveal := determineSimulatedBlockRandaoReveal(layersPeeled, sb.hashOnions)
 
 		// We generate a new block to pass into the state transition.
 		newBlock, newBlockRoot, err := generateSimulatedBlock(
 			sb.state,
 			prevBlockRoot,
 			blockRandaoReveal,
-			lastRandaoLayer,
-			depositsTrie,
+			sb.lastRandaoLayer,
+			sb.depositTrie,
 			simulatedObjects,
 		)
 		if err != nil {
 			return fmt.Errorf("could not generate simulated beacon block %v", err)
 		}
-		latestRoot := depositsTrie.Root()
+		latestRoot := sb.depositTrie.Root()
 
 		sb.state.LatestEth1Data = &pb.Eth1Data{
 			DepositRootHash32: latestRoot[:],
@@ -255,8 +281,8 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		// We then keep track of information about the state after the
 		// state transition was applied.
 		sb.state = newState
-		prevBlockRoots = append(prevBlockRoots, newBlockRoot)
-		layersPeeledForProposer[proposerIndex]++
+		sb.prevBlockRoots = append(sb.prevBlockRoots, newBlockRoot)
+		sb.layersPeeledForProposer[proposerIndex]++
 	}
 
 	log.Infof(
@@ -274,44 +300,42 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 
 // initializeStateTest sets up the environment by generating all the required objects in order
 // to proceed with the state test.
-func (sb *SimulatedBackend) initializeStateTest(testCase *StateTestCase) (hashOnions [][32]byte,
-	lastRandaoLayer [32]byte, prevBlockRoots [][32]byte, layersPeeledForProposer map[uint64]int, err error) {
+func (sb *SimulatedBackend) initializeStateTest(testCase *StateTestCase) error {
 
 	// We create a list of randao hash onions for the given number of slots
 	// the simulation will attempt.
-	hashOnions = generateSimulatedRandaoHashOnions(testCase.Config.NumSlots)
+	sb.hashOnions = generateSimulatedRandaoHashOnions(testCase.Config.NumSlots)
 
 	// We then generate initial validator deposits for initializing the
 	// beacon state based where every validator will use the last layer in the randao
 	// onions list as the commitment in the deposit instance.
-	lastRandaoLayer = hashOnions[len(hashOnions)-1]
-	initialDeposits, err := generateInitialSimulatedDeposits(lastRandaoLayer)
+	sb.lastRandaoLayer = sb.hashOnions[len(sb.hashOnions)-1]
+	initialDeposits, err := generateInitialSimulatedDeposits(sb.lastRandaoLayer)
 	if err != nil {
-		return nil, [32]byte{}, nil, nil, fmt.Errorf("could not simulate initial validator deposits: %v", err)
+		return fmt.Errorf("could not simulate initial validator deposits: %v", err)
 	}
 
-	prevBlockRoots, err = sb.setupBeaconStateAndGenesisBlock(initialDeposits)
-	if err != nil {
-		return nil, [32]byte{}, nil, nil, fmt.Errorf("could not set up beacon state and initialize genesis block %v", err)
+	if err := sb.setupBeaconStateAndGenesisBlock(initialDeposits); err != nil {
+		return fmt.Errorf("could not set up beacon state and initialize genesis block %v", err)
 	}
 
 	// We keep track of the randao layers peeled for each proposer index in a map.
-	layersPeeledForProposer = make(map[uint64]int, len(sb.state.ValidatorRegistry))
+	sb.layersPeeledForProposer = make(map[uint64]int, len(sb.state.ValidatorRegistry))
 	for idx := range sb.state.ValidatorRegistry {
-		layersPeeledForProposer[uint64(idx)] = 0
+		sb.layersPeeledForProposer[uint64(idx)] = 0
 	}
 
-	return hashOnions, lastRandaoLayer, prevBlockRoots, layersPeeledForProposer, nil
+	return nil
 }
 
 // setupBeaconStateAndGenesisBlock creates the initial beacon state and genesis block in order to
 // proceed with the test.
-func (sb *SimulatedBackend) setupBeaconStateAndGenesisBlock(initialDeposits []*pb.Deposit) ([][32]byte, error) {
+func (sb *SimulatedBackend) setupBeaconStateAndGenesisBlock(initialDeposits []*pb.Deposit) error {
 	var err error
 	genesisTime := params.BeaconConfig().GenesisTime.Unix()
 	sb.state, err = state.InitialBeaconState(initialDeposits, uint64(genesisTime), nil)
 	if err != nil {
-		return nil, fmt.Errorf("could not initialize simulated beacon state")
+		return fmt.Errorf("could not initialize simulated beacon state")
 	}
 
 	// We do not expect hashing initial beacon state and genesis block to
@@ -326,9 +350,9 @@ func (sb *SimulatedBackend) setupBeaconStateAndGenesisBlock(initialDeposits []*p
 
 	// We now keep track of generated blocks for each state transition in
 	// a slice.
-	prevBlockRoots := [][32]byte{genesisBlockRoot}
+	sb.prevBlockRoots = [][32]byte{genesisBlockRoot}
 
-	return prevBlockRoots, nil
+	return nil
 }
 
 // generateSimulatedObjects generates the simulated objects depending on the testcase and current slot.
