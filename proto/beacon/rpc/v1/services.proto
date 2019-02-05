@@ -18,6 +18,8 @@ service BeaconService {
 
 service AttesterService {
     rpc AttestHead(AttestRequest) returns (AttestResponse);
+    rpc CrosslinkCommitteesAtSlot(CrosslinkCommitteeRequest) returns (CrosslinkCommitteeResponse);
+    rpc AttestationInfoAtSlot(AttestationInfoRequest) returns (AttestationInfoResponse);
 }
 
 service ProposerService {
@@ -29,6 +31,26 @@ service ProposerService {
 service ValidatorService {
     rpc ValidatorIndex(ValidatorIndexRequest) returns (ValidatorIndexResponse);
     rpc ValidatorEpochAssignments(ValidatorEpochAssignmentsRequest) returns (ValidatorEpochAssignmentsResponse);
+}
+
+message AttestationInfoRequest {
+    uint64 slot = 1;
+}
+
+message AttestationInfoResponse {
+    bytes beacon_block_root_hash32 = 1;
+    bytes epoch_boundary_root_hash32 = 2;
+    uint64 justified_epoch = 3;
+    bytes justified_block_root_hash32 = 4;
+}
+
+message CrosslinkCommitteeRequest {
+    uint64 slot = 1;
+}
+
+message CrosslinkCommitteeResponse {
+    repeated uint64 committee = 1;
+    uint64 shard = 2;
 }
 
 message ChainStartResponse {

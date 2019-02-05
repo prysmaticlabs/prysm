@@ -59,7 +59,7 @@ message PendingAttestationRecord {
 
 message Attestation {
   AttestationData data = 1;
-  bytes participation_bitfield = 2;
+  bytes aggregation_bitfield = 2;
   bytes custody_bitfield = 3;
   bytes aggregate_signature = 4; // Type of [uint384] ?
 }
