@@ -548,7 +548,7 @@ func TestProcessEpoch_CantGetPrevValidatorIndices(t *testing.T) {
 	}
 
 	want := fmt.Sprintf(
-		"input committee epoch 0 out of bounds: %d <= epoch < %d",
+		"input committee epoch 0 out of bounds: %d <= epoch <= %d",
 		helpers.SlotToEpoch(config.EpochLength),
 		helpers.SlotToEpoch(config.EpochLength*2),
 	)
@@ -583,6 +583,10 @@ func TestProcessEpoch_CantProcessEjections(t *testing.T) {
 	for i := uint64(0); i < 4*config.EpochLength; i++ {
 		randaoHashes = append(randaoHashes, []byte{byte(i)})
 	}
+	var participationBitfield []byte
+	for i := 0; i < 16; i++ {
+		participationBitfield = append(participationBitfield, byte(0xff))
+	}
 
 	ExitEpoch := 4*config.EpochLength + 1
 	validatorRegistries[0].ExitEpoch = ExitEpoch
@@ -595,7 +599,7 @@ func TestProcessEpoch_CantProcessEjections(t *testing.T) {
 		LatestRandaoMixesHash32S: randaoHashes,
 		LatestCrosslinks:         []*pb.CrosslinkRecord{{}},
 		LatestAttestations: []*pb.PendingAttestationRecord{
-			{Data: &pb.AttestationData{}, ParticipationBitfield: []byte{0xFF}},
+			{Data: &pb.AttestationData{}, ParticipationBitfield: participationBitfield},
 		}}
 
 	want := fmt.Sprintf("could not process inclusion distance: 0")

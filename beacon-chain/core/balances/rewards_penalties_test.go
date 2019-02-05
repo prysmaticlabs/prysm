@@ -205,10 +205,16 @@ func TestInclusionDistRewards_Ok(t *testing.T) {
 			ExitEpoch: config.FarFutureEpoch,
 		}
 	}
+	var participationBitfield []byte
+	// participation byte length = number of validators / target committee size / bits in a byte.
+	byteLength := int(config.DepositsForChainStart / config.TargetCommitteeSize / 8)
+	for i := 0; i < byteLength; i++ {
+		participationBitfield = append(participationBitfield, byte(0xff))
+	}
 
 	attestation := []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{Slot: 0},
-			ParticipationBitfield: []byte{0xff},
+			ParticipationBitfield: participationBitfield,
 			SlotIncluded:          5},
 	}
 
@@ -433,9 +439,15 @@ func TestInactivityInclusionPenalty_Ok(t *testing.T) {
 			ExitEpoch: config.FarFutureEpoch,
 		}
 	}
+	var participationBitfield []byte
+	// participation byte length = number of validators / target committee size / bits in a byte.
+	byteLength := int(config.DepositsForChainStart / config.TargetCommitteeSize / 8)
+	for i := 0; i < byteLength; i++ {
+		participationBitfield = append(participationBitfield, byte(0xff))
+	}
 	attestation := []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{Slot: 0},
-			ParticipationBitfield: []byte{0xff},
+			ParticipationBitfield: participationBitfield,
 			SlotIncluded:          5},
 	}
 
@@ -511,10 +523,15 @@ func TestAttestationInclusionRewards(t *testing.T) {
 			ExitEpoch: config.FarFutureEpoch,
 		}
 	}
-
+	var participationBitfield []byte
+	// participation byte length = number of validators / target committee size / bits in a byte.
+	byteLength := int(config.DepositsForChainStart / config.TargetCommitteeSize / 8)
+	for i := 0; i < byteLength; i++ {
+		participationBitfield = append(participationBitfield, byte(0xff))
+	}
 	attestation := []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{Slot: 0},
-			ParticipationBitfield: []byte{0xff},
+			ParticipationBitfield: participationBitfield,
 			SlotIncluded:          0},
 	}
 
