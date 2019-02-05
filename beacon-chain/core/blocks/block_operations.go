@@ -163,7 +163,7 @@ func ProcessProposerSlashings(
 			return nil, fmt.Errorf("could not verify proposer slashing #%d: %v", idx, err)
 		}
 		proposer := registry[slashing.ProposerIndex]
-		if proposer.PenalizedSlot > beaconState.Slot {
+		if proposer.PenalizedEpoch > beaconState.Slot {
 			beaconState, err = v.PenalizeValidator(beaconState, slashing.ProposerIndex)
 			if err != nil {
 				return nil, fmt.Errorf("could not penalize proposer index %d: %v",
@@ -255,7 +255,7 @@ func ProcessAttesterSlashings(
 		}
 		for _, validatorIndex := range validatorIndices {
 			penalizedValidator := registry[validatorIndex]
-			if penalizedValidator.PenalizedSlot > beaconState.Slot {
+			if penalizedValidator.PenalizedEpoch > beaconState.Slot {
 				beaconState, err = v.PenalizeValidator(beaconState, validatorIndex)
 				if err != nil {
 					return nil, fmt.Errorf("could not penalize validator index %d: %v",
@@ -696,10 +696,10 @@ func ProcessValidatorExits(
 
 func verifyExit(beaconState *pb.BeaconState, exit *pb.Exit, verifySignatures bool) error {
 	validator := beaconState.ValidatorRegistry[exit.ValidatorIndex]
-	if validator.ExitSlot <= beaconState.Slot+params.BeaconConfig().EntryExitDelay {
+	if validator.ExitEpoch <= beaconState.Slot+params.BeaconConfig().EntryExitDelay {
 		return fmt.Errorf(
 			"expected exit.Slot > state.Slot + EntryExitDelay, received %d < %d",
-			validator.ExitSlot, beaconState.Slot+params.BeaconConfig().EntryExitDelay,
+			validator.ExitEpoch, beaconState.Slot+params.BeaconConfig().EntryExitDelay,
 		)
 	}
 	if beaconState.Slot < exit.Slot {

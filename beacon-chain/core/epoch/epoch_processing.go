@@ -49,7 +49,7 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 	if state.FinalizedSlot <= state.ValidatorRegistryUpdateSlot {
 		return false
 	}
-	shardsProcessed := validators.CurrCommitteesCountPerSlot(state) * config.EpochLength
+	shardsProcessed := helpers.CurrentEpochCommitteeCount(state) * config.EpochLength
 	fmt.Println(shardsProcessed)
 	startShard := state.CurrentEpochStartShard
 	for i := startShard; i < shardsProcessed; i++ {
@@ -215,7 +215,7 @@ func ProcessCrosslinks(
 //            exit_validator(state, index)
 func ProcessEjections(state *pb.BeaconState) (*pb.BeaconState, error) {
 	var err error
-	activeValidatorIndices := validators.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
+	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
 	for _, index := range activeValidatorIndices {
 		if state.ValidatorBalances[index] < config.EjectionBalance {
 			state, err = validators.ExitValidator(state, index)
@@ -254,7 +254,7 @@ func ProcessValidatorRegistry(
 	state.CurrentEpochCalculationSlot = state.Slot
 
 	nextStartShard := (state.CurrentEpochStartShard +
-		validators.CurrCommitteesCountPerSlot(state)*config.EpochLength) %
+		helpers.CurrentEpochCommitteeCount(state)*config.EpochLength) %
 		config.EpochLength
 	state.CurrentEpochStartShard = nextStartShard
 
