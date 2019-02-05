@@ -177,7 +177,7 @@ func TestBoundaryAttesterIndices(t *testing.T) {
 	if params.BeaconConfig().EpochLength != 64 {
 		t.Errorf("EpochLength should be 64 for these tests to pass")
 	}
-	validators := make([]*pb.ValidatorRecord, params.BeaconConfig().DepositsForChainStart)
+	validators := make([]*pb.ValidatorRecord, params.BeaconConfig().EpochLength*2)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -198,9 +198,9 @@ func TestBoundaryAttesterIndices(t *testing.T) {
 		t.Fatalf("Failed to run BoundaryAttesterIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(attesterIndices, []uint64{237, 224}) {
+	if !reflect.DeepEqual(attesterIndices, []uint64{109, 97}) {
 		t.Errorf("Incorrect boundary attester indices. Wanted: %v, got: %v",
-			[]uint64{237, 224}, attesterIndices)
+			[]uint64{109, 97}, attesterIndices)
 	}
 }
 
@@ -230,19 +230,19 @@ func TestBeaconProposerIdx(t *testing.T) {
 		},
 		{
 			slot:  10,
-			index: 2797,
+			index: 2807,
 		},
 		{
 			slot:  19,
-			index: 4658,
+			index: 5122,
 		},
 		{
 			slot:  30,
-			index: 7917,
+			index: 7947,
 		},
 		{
 			slot:  39,
-			index: 9778,
+			index: 10262,
 		},
 	}
 
@@ -276,39 +276,31 @@ func TestAttestingValidatorIndices_Ok(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ValidatorRegistry: validators,
-		Slot:              5,
+		Slot:              0,
 	}
 
 	prevAttestation := &pb.PendingAttestationRecord{
 		Data: &pb.AttestationData{
 			Slot:                 3,
-			Shard:                384,
+			Shard:                6,
 			ShardBlockRootHash32: []byte{'B'},
 		},
-		ParticipationBitfield: []byte{0xFF},
-	}
-
-	thisAttestation := &pb.PendingAttestationRecord{
-		Data: &pb.AttestationData{
-			Slot:                 3,
-			Shard:                385,
-			ShardBlockRootHash32: []byte{'B'},
-		},
+		ParticipationBitfield: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1},
 	}
 
 	indices, err := AttestingValidatorIndices(
 		state,
-		384,
+		6,
 		[]byte{'B'},
-		[]*pb.PendingAttestationRecord{thisAttestation},
+		nil,
 		[]*pb.PendingAttestationRecord{prevAttestation})
 	if err != nil {
 		t.Fatalf("Could not execute AttestingValidatorIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(indices, []uint64{213, 1024}) {
+	if !reflect.DeepEqual(indices, []uint64{1141, 688}) {
 		t.Errorf("Could not get incorrect validator indices. Wanted: %v, got: %v",
-			[]uint64{213, 1024}, indices)
+			[]uint64{1141, 688}, indices)
 	}
 }
 

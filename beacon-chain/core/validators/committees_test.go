@@ -1,11 +1,11 @@
 package validators
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"reflect"
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestAttestationParticipants_ok(t *testing.T) {
@@ -13,7 +13,7 @@ func TestAttestationParticipants_ok(t *testing.T) {
 		t.Errorf("EpochLength should be 64 for these tests to pass")
 	}
 
-	validators := make([]*pb.ValidatorRecord, params.BeaconConfig().DepositsForChainStart)
+	validators := make([]*pb.ValidatorRecord, 2*params.BeaconConfig().EpochLength)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -36,37 +36,37 @@ func TestAttestationParticipants_ok(t *testing.T) {
 		{
 			attestationSlot: 2,
 			stateSlot:       5,
-			shard:           256,
+			shard:           2,
 			bitfield:        []byte{0xFF},
-			wanted:          []uint64{766, 752},
+			wanted:          []uint64{11, 121},
 		},
 		{
 			attestationSlot: 1,
 			stateSlot:       10,
-			shard:           128,
+			shard:           1,
 			bitfield:        []byte{77},
-			wanted:          []uint64{511},
+			wanted:          []uint64{117},
 		},
 		{
 			attestationSlot: 10,
 			stateSlot:       20,
-			shard:           383,
+			shard:           10,
 			bitfield:        []byte{0xFF},
-			wanted:          []uint64{3069, 2608},
+			wanted:          []uint64{14, 30},
 		},
 		{
 			attestationSlot: 64,
 			stateSlot:       100,
 			shard:           0,
 			bitfield:        []byte{0xFF},
-			wanted:          []uint64{237, 224},
+			wanted:          []uint64{109, 97},
 		},
 		{
 			attestationSlot: 999,
 			stateSlot:       1000,
-			shard:           1023,
+			shard:           39,
 			bitfield:        []byte{99},
-			wanted:          []uint64{10494},
+			wanted:          []uint64{89},
 		},
 	}
 

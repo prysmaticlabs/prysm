@@ -2,10 +2,10 @@ package helpers
 
 import (
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/params"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // GenerateSeed generates the randao seed of a given epoch.
