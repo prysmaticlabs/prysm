@@ -32,7 +32,8 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 		return
 	}
 
-	// Get pending deposit data.
+	// Get validator ETH1 deposits which have not been included in the beacon
+	// chain.
 	pDepResp, err := v.beaconClient.PendingDeposits(ctx, &ptypes.Empty{})
 	if err != nil {
 		log.Errorf("Failed to get pending pendings: %v", err)
@@ -46,7 +47,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 		return
 	}
 
-	// 2. Construct block
+	// 2. Construct block.
 	block := &pbp2p.BeaconBlock{
 		Slot:               slot,
 		ParentRootHash32:   parentTreeHash[:],
@@ -61,17 +62,17 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 		},
 	}
 
-	// 3. Compute state root transition from parent block to the new block
+	// 3. Compute state root transition from parent block to the new block.
 	resp, err := v.proposerClient.ComputeStateRoot(ctx, block)
 	if err != nil {
 		log.Errorf("Unable to compute state root: %v", err)
 	}
 	block.StateRootHash32 = resp.GetStateRoot()
 
-	// 4. Sign the complete block
+	// 4. Sign the complete block.
 	// TODO(1366): BLS sign block
 	block.Signature = nil
 
-	// 5. Broadcast to the network
+	// 5. Broadcast to the network.
 	v.p2p.Broadcast(block)
 }
