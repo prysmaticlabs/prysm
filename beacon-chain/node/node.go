@@ -238,6 +238,7 @@ func (b *BeaconNode) registerPOWChainService(ctx *cli.Context) error {
 		Reader:          powClient,
 		Logger:          powClient,
 		ContractBackend: powClient,
+		BeaconDB:        b.db,
 	})
 	if err != nil {
 		return fmt.Errorf("could not register proof-of-work chain web3Service: %v", err)

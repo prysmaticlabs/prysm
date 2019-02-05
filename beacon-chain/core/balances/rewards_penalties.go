@@ -347,7 +347,7 @@ func Crosslinks(
 	epochLength := config.EpochLength
 	startSlot := state.Slot - 2*epochLength
 	for i := startSlot; i < state.Slot; i++ {
-		crosslinkCommittees, err := validators.CrosslinkCommitteesAtSlot(state, i)
+		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(state, i, false)
 		if err != nil {
 			return nil, fmt.Errorf("could not get shard committees for slot %d: %v", i, err)
 		}

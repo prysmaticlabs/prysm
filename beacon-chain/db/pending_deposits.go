@@ -55,7 +55,7 @@ func (db *BeaconDB) PendingDeposits(ctx context.Context, beforeBlk *big.Int) []*
 
 	var deposits []*pb.Deposit
 	for _, ctnr := range db.deposits {
-		if beforeBlk.Cmp(ctnr.block) > -1 {
+		if beforeBlk == nil || beforeBlk.Cmp(ctnr.block) > -1 {
 			deposits = append(deposits, ctnr.deposit)
 		}
 	}

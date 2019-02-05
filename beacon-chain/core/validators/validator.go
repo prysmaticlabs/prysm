@@ -58,11 +58,15 @@ func ActiveValidators(state *pb.BeaconState, validatorIndices []uint32) []*pb.Va
 //    first_committee, _ = get_crosslink_committees_at_slot(state, slot)[0]
 //    return first_committee[slot % len(first_committee)]
 func BeaconProposerIdx(state *pb.BeaconState, slot uint64) (uint64, error) {
-	committeeArray, err := CrosslinkCommitteesAtSlot(state, slot)
+	committeeArray, err := helpers.CrosslinkCommitteesAtSlot(state, slot, false)
 	if err != nil {
 		return 0, err
 	}
 	firstCommittee := committeeArray[0].Committee
+
+	if len(firstCommittee) == 0 {
+		return 0, fmt.Errorf("empty first committee at slot %d", slot)
+	}
 
 	return firstCommittee[slot%uint64(len(firstCommittee))], nil
 }
