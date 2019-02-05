@@ -372,7 +372,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 	for i := uint64(0); i < 10; i++ {
 		validatorRegistry = append(validatorRegistry,
 			&pb.ValidatorRecord{
-				ExitSlot: config.FarFutureSlot,
+				ExitEpoch: config.FarFutureEpoch,
 			})
 	}
 	validatorBalances := make([]uint64, len(validatorRegistry))
@@ -425,10 +425,10 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 	defaultBalance := config.MaxDeposit
 
 	validatorRegistry := []*pb.ValidatorRecord{
-		{ExitSlot: config.FarFutureSlot}, {ExitSlot: config.FarFutureSlot},
-		{ExitSlot: config.FarFutureSlot}, {ExitSlot: config.FarFutureSlot},
-		{ExitSlot: config.FarFutureSlot}, {ExitSlot: config.FarFutureSlot},
-		{ExitSlot: config.FarFutureSlot}, {ExitSlot: config.FarFutureSlot}}
+		{ExitEpoch: config.FarFutureEpoch}, {ExitEpoch: config.FarFutureEpoch},
+		{ExitEpoch: config.FarFutureEpoch}, {ExitEpoch: config.FarFutureEpoch},
+		{ExitEpoch: config.FarFutureEpoch}, {ExitEpoch: config.FarFutureEpoch},
+		{ExitEpoch: config.FarFutureEpoch}, {ExitEpoch: config.FarFutureEpoch}}
 
 	validatorBalances := []uint64{
 		defaultBalance, defaultBalance, defaultBalance, defaultBalance,
@@ -582,12 +582,9 @@ func TestProcessEpoch_CantProcessEjections(t *testing.T) {
 	for i := uint64(0); i < 4*config.EpochLength; i++ {
 		randaoHashes = append(randaoHashes, []byte{byte(i)})
 	}
-	var participationBitfield []byte
-	for i := 0; i < int(config.TargetCommitteeSize/8); i++ {
-		participationBitfield = append(participationBitfield, byte(255))
-	}
-	exitSlot := 4*config.EpochLength + 1
-	validatorRegistries[0].ExitSlot = exitSlot
+
+	ExitEpoch := 4*config.EpochLength + 1
+	validatorRegistries[0].ExitEpoch = ExitEpoch
 	validatorBalances[0] = config.EjectionBalance - 1
 	state := &pb.BeaconState{
 		Slot:                     config.EpochLength,
@@ -597,7 +594,7 @@ func TestProcessEpoch_CantProcessEjections(t *testing.T) {
 		LatestRandaoMixesHash32S: randaoHashes,
 		LatestCrosslinks:         []*pb.CrosslinkRecord{{}},
 		LatestAttestations: []*pb.PendingAttestationRecord{
-			{Data: &pb.AttestationData{}, ParticipationBitfield: participationBitfield},
+			{Data: &pb.AttestationData{}, ParticipationBitfield: []byte{0xFF}},
 		}}
 
 	want := fmt.Sprintf("could not process inclusion distance: 0")
