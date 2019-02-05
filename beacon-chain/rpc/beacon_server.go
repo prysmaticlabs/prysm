@@ -2,13 +2,16 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"math/big"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // BeaconServer defines a server implementation of the gRPC Beacon service,
@@ -104,5 +107,14 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 // inclusion in the next beacon block.
 // TODO(1464): Implement this.
 func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*pb.PendingDepositsResponse, error) {
-	return &pb.PendingDepositsResponse{PendingDeposits: []*pbp2p.Deposit{}}, nil
+	bNum := bs.powChainService.LatestBlockNumber()
+
+	if bNum == nil {
+		return nil, errors.New("latest PoW block number is unknown")
+	}
+
+	// Only request deposits that have passed the ETH1 follow distance window.
+	bNum = bNum.Sub(bNum, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
+
+	return &pb.PendingDepositsResponse{PendingDeposits: bs.beaconDB.PendingDeposits(ctx, bNum)}, nil
 }

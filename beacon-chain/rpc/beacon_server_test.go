@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"errors"
+	"math/big"
 	"testing"
 	"time"
 
@@ -27,9 +28,13 @@ func (f *faultyPOWChainService) HasChainStartLogOccurred() (bool, uint64, error)
 func (f *faultyPOWChainService) ChainStartFeed() *event.Feed {
 	return f.chainStartFeed
 }
+func (f *faultyPOWChainService) LatestBlockNumber() *big.Int {
+	return big.NewInt(0)
+}
 
 type mockPOWChainService struct {
-	chainStartFeed *event.Feed
+	chainStartFeed    *event.Feed
+	latestBlockNumber *big.Int
 }
 
 func (m *mockPOWChainService) HasChainStartLogOccurred() (bool, uint64, error) {
@@ -37,6 +42,9 @@ func (m *mockPOWChainService) HasChainStartLogOccurred() (bool, uint64, error) {
 }
 func (m *mockPOWChainService) ChainStartFeed() *event.Feed {
 	return m.chainStartFeed
+}
+func (m *mockPOWChainService) LatestBlockNumber() *big.Int {
+	return m.latestBlockNumber
 }
 
 func TestWaitForChainStart_ContextClosed(t *testing.T) {
