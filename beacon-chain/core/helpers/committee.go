@@ -178,9 +178,9 @@ func CrosslinkCommitteesAtSlot(
 	prevEpoch := PrevEpoch(state)
 	nextEpoch := NextEpoch(state)
 
-	if wantedEpoch < prevEpoch || wantedEpoch >= nextEpoch {
+	if wantedEpoch < prevEpoch || wantedEpoch > nextEpoch {
 		return nil, fmt.Errorf(
-			"input committee epoch %d out of bounds: %d <= epoch < %d",
+			"input committee epoch %d out of bounds: %d <= epoch <= %d",
 			wantedEpoch,
 			prevEpoch,
 			currentEpoch,

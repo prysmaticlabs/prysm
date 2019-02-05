@@ -13,18 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-var size = 1<<(params.BeaconConfig().RandBytes*8) - 1
-var validatorsUpperBound = make([]*pb.ValidatorRecord, size)
-var validator = &pb.ValidatorRecord{
-	ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-}
-
-func populateValidatorsMax() {
-	for i := 0; i < len(validatorsUpperBound); i++ {
-		validatorsUpperBound[i] = validator
-	}
-}
-
 func TestHasVoted(t *testing.T) {
 	// Setting bit field to 11111111.
 	pendingAttestation := &pb.Attestation{
