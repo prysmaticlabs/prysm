@@ -167,6 +167,5 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 			generatedAttestation.Data.Slot,
 		)
 	}
-
-	testutil.AssertLogsContain(t, hook, "Could not submit attestation to beacon node")
+	testutil.AssertLogsContain(t, hook, "Submitted attestation successfully")
 }
