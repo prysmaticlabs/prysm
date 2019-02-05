@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // CrosslinkCommittee defines the validator committee of slot and shard combinations.
@@ -147,7 +148,7 @@ func CrosslinkCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*Crosslink
 		)
 	}
 
-	offSet := slot % config.EpochLength
+	offSet := slot % params.BeaconConfig().EpochLength
 	if wantedEpoch < currentEpoch {
 		countPerSlot = helpers.PrevEpochCommitteeCount(state)
 		shuffledIndices, err = Shuffling(
@@ -158,7 +159,7 @@ func CrosslinkCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*Crosslink
 			return nil, fmt.Errorf("could not shuffle prev epoch validators: %v", err)
 		}
 		startShard = (state.PreviousEpochStartShard + countPerSlot*offSet) %
-			config.ShardCount
+			params.BeaconConfig().ShardCount
 	} else {
 		countPerSlot = helpers.CurrentEpochCommitteeCount(state)
 		shuffledIndices, err = Shuffling(
@@ -169,14 +170,14 @@ func CrosslinkCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*Crosslink
 			return nil, fmt.Errorf("could not shuffle current epoch validators: %v", err)
 		}
 		startShard = (state.CurrentEpochCalculationSlot + countPerSlot*offSet) %
-			config.ShardCount
+			params.BeaconConfig().ShardCount
 	}
 
 	var crosslinkCommittees []*CrosslinkCommittee
 	for i := uint64(0); i < countPerSlot; i++ {
 		crosslinkCommittees = append(crosslinkCommittees, &CrosslinkCommittee{
 			Committee: shuffledIndices[countPerSlot*offSet+i],
-			Shard:     (startShard + i) % config.ShardCount,
+			Shard:     (startShard + i) % params.BeaconConfig().ShardCount,
 		})
 	}
 
@@ -214,7 +215,7 @@ func Shuffling(
 	slot uint64) ([][]uint64, error) {
 
 	// Normalize slot to start of epoch boundary.
-	slot -= slot % config.EpochLength
+	slot -= slot % params.BeaconConfig().EpochLength
 
 	// Figure out how many committees can be in a single slot.
 	activeIndices := helpers.ActiveValidatorIndices(validators, slot)
@@ -232,5 +233,5 @@ func Shuffling(
 	}
 
 	// Split the shuffled list into epoch_length * committees_per_slot pieces.
-	return utils.SplitIndices(shuffledIndices, committeesPerSlot*config.EpochLength), nil
+	return utils.SplitIndices(shuffledIndices, committeesPerSlot*params.BeaconConfig().EpochLength), nil
 }

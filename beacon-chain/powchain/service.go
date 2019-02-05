@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -68,6 +69,7 @@ type Web3Service struct {
 	depositTrie            *trieutil.DepositTrie
 	chainStartDeposits     []*pb.Deposit
 	chainStarted           bool
+	beaconDB               *db.BeaconDB
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -78,6 +80,7 @@ type Web3ServiceConfig struct {
 	Reader          Reader
 	Logger          bind.ContractFilterer
 	ContractBackend bind.ContractBackend
+	BeaconDB        *db.BeaconDB
 }
 
 var (
@@ -116,6 +119,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		logger:                 config.Logger,
 		vrcCaller:              vrcCaller,
 		chainStartDeposits:     []*pb.Deposit{},
+		beaconDB:               config.BeaconDB,
 	}, nil
 }
 
@@ -235,16 +239,19 @@ func (w *Web3Service) ProcessDepositLog(VRClog gethTypes.Log) {
 		log.Errorf("Could not decode deposit input  %v", err)
 		return
 	}
+	deposit := &pb.Deposit{
+		DepositData: depositData,
+	}
 	if !w.chainStarted {
-		w.chainStartDeposits = append(w.chainStartDeposits, &pb.Deposit{
-			DepositData: depositData,
-		})
+		w.chainStartDeposits = append(w.chainStartDeposits, deposit)
+	} else {
+		w.beaconDB.InsertPendingDeposit(w.ctx, deposit, big.NewInt(int64(VRClog.BlockNumber)))
 	}
 	index := binary.BigEndian.Uint64(MerkleTreeIndex)
 	log.WithFields(logrus.Fields{
-		"publicKey":         depositInput.Pubkey,
-		"merkle tree index": index,
-	}).Info("Validator registered in VRC with public key and index")
+		"publicKey":       fmt.Sprintf("%#x", depositInput.Pubkey),
+		"merkleTreeIndex": index,
+	}).Info("Validator registered in deposit contract")
 }
 
 // ProcessChainStartLog processes the log which had been received from

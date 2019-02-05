@@ -7,6 +7,7 @@ go_library(
         "dial_relay_node.go",
         "discovery.go",
         "feed.go",
+        "interfaces.go",
         "message.go",
         "monitoring.go",
         "options.go",
