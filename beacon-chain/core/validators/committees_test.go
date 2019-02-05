@@ -2,23 +2,25 @@ package validators
 
 import (
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 func TestAttestationParticipants_ok(t *testing.T) {
-	if config.EpochLength != 64 {
+	if params.BeaconConfig().EpochLength != 64 {
 		t.Errorf("EpochLength should be 64 for these tests to pass")
 	}
 
-	validators := make([]*pb.ValidatorRecord, config.DepositsForChainStart)
+	validators := make([]*pb.ValidatorRecord, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitEpoch: config.FarFutureEpoch,
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
 
@@ -93,14 +95,14 @@ func TestAttestationParticipants_ok(t *testing.T) {
 }
 
 func TestAttestationParticipants_IncorrectBitfield(t *testing.T) {
-	if config.EpochLength != 64 {
+	if params.BeaconConfig().EpochLength != 64 {
 		t.Errorf("EpochLength should be 64 for these tests to pass")
 	}
 
-	validators := make([]*pb.ValidatorRecord, config.DepositsForChainStart)
+	validators := make([]*pb.ValidatorRecord, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitEpoch: config.FarFutureEpoch,
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
 
@@ -115,13 +117,13 @@ func TestAttestationParticipants_IncorrectBitfield(t *testing.T) {
 }
 
 func TestShuffling_Ok(t *testing.T) {
-	validatorsPerEpoch := config.EpochLength * config.TargetCommitteeSize
+	validatorsPerEpoch := params.BeaconConfig().EpochLength * params.BeaconConfig().TargetCommitteeSize
 	committeesPerEpoch := uint64(6)
 	// Set epoch total validators count to 6 committees per slot.
 	validators := make([]*pb.ValidatorRecord, committeesPerEpoch*validatorsPerEpoch)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitEpoch: config.FarFutureEpoch,
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
 
@@ -134,7 +136,7 @@ func TestShuffling_Ok(t *testing.T) {
 
 	// Verify shuffled list is correctly split into committees_per_slot pieces.
 	committeesPerEpoch = helpers.EpochCommitteeCount(uint64(len(validators)))
-	committeesPerSlot := committeesPerEpoch / config.EpochLength
+	committeesPerSlot := committeesPerEpoch / params.BeaconConfig().EpochLength
 	if committeesPerSlot != committeesPerSlot {
 		t.Errorf("Incorrect committee count after splitting. Wanted: %d, got: %d",
 			committeesPerSlot, len(committees))
@@ -143,9 +145,9 @@ func TestShuffling_Ok(t *testing.T) {
 	// Verify each shuffled committee is TARGET_COMMITTEE_SIZE.
 	for i := 0; i < len(committees); i++ {
 		committeeCount := uint64(len(committees[i]))
-		if committeeCount*config.EpochLength != config.TargetCommitteeSize {
+		if committeeCount*params.BeaconConfig().EpochLength != params.BeaconConfig().TargetCommitteeSize {
 			t.Errorf("Incorrect validator count per committee. Wanted: %d, got: %d",
-				config.TargetCommitteeSize, committeeCount*config.EpochLength)
+				params.BeaconConfig().TargetCommitteeSize, committeeCount*params.BeaconConfig().EpochLength)
 		}
 	}
 
@@ -159,13 +161,13 @@ func TestShuffling_OutOfBound(t *testing.T) {
 }
 
 func TestCrosslinkCommitteesAtSlot_Ok(t *testing.T) {
-	validatorsPerEpoch := config.EpochLength * config.TargetCommitteeSize
+	validatorsPerEpoch := params.BeaconConfig().EpochLength * params.BeaconConfig().TargetCommitteeSize
 	committeesPerEpoch := uint64(6)
 	// Set epoch total validators count to 6 committees per slot.
 	validators := make([]*pb.ValidatorRecord, committeesPerEpoch*validatorsPerEpoch)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitEpoch: config.FarFutureEpoch,
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
 
@@ -177,9 +179,9 @@ func TestCrosslinkCommitteesAtSlot_Ok(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get crosslink committee: %v", err)
 	}
-	if len(committees) != int(committeesPerEpoch*config.EpochLength) {
+	if len(committees) != int(committeesPerEpoch*params.BeaconConfig().EpochLength) {
 		t.Errorf("Incorrect committee count per slot. Wanted: %d, got: %d",
-			committeesPerEpoch*config.EpochLength, len(committees))
+			committeesPerEpoch*params.BeaconConfig().EpochLength, len(committees))
 	}
 
 	newCommittees, err := CrosslinkCommitteesAtSlot(state, 180)
@@ -198,7 +200,7 @@ func TestCrosslinkCommitteesAtSlot_OutOfBound(t *testing.T) {
 		1, 0, 0,
 	)
 
-	if _, err := CrosslinkCommitteesAtSlot(&pb.BeaconState{}, config.EpochLength+1); !strings.Contains(err.Error(), want) {
+	if _, err := CrosslinkCommitteesAtSlot(&pb.BeaconState{}, params.BeaconConfig().EpochLength+1); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
