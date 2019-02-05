@@ -81,7 +81,7 @@ func InitialBeaconState(
 		Fork: &pb.Fork{
 			PreviousVersion: config.GenesisForkVersion,
 			CurrentVersion:  config.GenesisForkVersion,
-			Slot:            config.GenesisSlot,
+			Epoch:           config.GenesisEpoch,
 		},
 
 		// Validator registry fields.
