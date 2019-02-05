@@ -262,6 +262,14 @@ func TestBeaconProposerIdx(t *testing.T) {
 	}
 }
 
+func TestBeaconProposerIdx_returnsErrorWithEmptyCommittee(t *testing.T) {
+	_, err := BeaconProposerIdx(&pb.BeaconState{}, 0)
+	expected := "empty first committee at slot 0"
+	if err.Error() != expected {
+		t.Errorf("Unexpected error. got=%v want=%s", err, expected)
+	}
+}
+
 func TestAttestingValidatorIndices_Ok(t *testing.T) {
 	if params.BeaconConfig().EpochLength != 64 {
 		t.Errorf("EpochLength should be 64 for these tests to pass")

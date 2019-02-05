@@ -33,8 +33,8 @@ func TestRemovePendingDeposit(t *testing.T) {
 	depToRemove := &pb.Deposit{MerkleTreeIndex: 1}
 	otherDep := &pb.Deposit{MerkleTreeIndex: 5}
 	db.deposits = []*depositContainer{
-		&depositContainer{deposit: depToRemove},
-		&depositContainer{deposit: otherDep},
+		{deposit: depToRemove},
+		{deposit: otherDep},
 	}
 	db.RemovePendingDeposit(context.Background(), depToRemove)
 
@@ -45,7 +45,7 @@ func TestRemovePendingDeposit(t *testing.T) {
 
 func TestRemovePendingDeposit_IgnoresNilDeposit(t *testing.T) {
 	db := BeaconDB{}
-	db.deposits = []*depositContainer{&depositContainer{deposit: &pb.Deposit{}}}
+	db.deposits = []*depositContainer{{deposit: &pb.Deposit{}}}
 	db.RemovePendingDeposit(context.Background(), nil /*deposit*/)
 	if len(db.deposits) != 1 {
 		t.Errorf("Deposit unexpectedly removed")
@@ -66,18 +66,23 @@ func TestPendingDeposits(t *testing.T) {
 	db := BeaconDB{}
 
 	db.deposits = []*depositContainer{
-		&depositContainer{block: big.NewInt(2), deposit: &pb.Deposit{MerkleTreeIndex: 2}},
-		&depositContainer{block: big.NewInt(4), deposit: &pb.Deposit{MerkleTreeIndex: 4}},
-		&depositContainer{block: big.NewInt(6), deposit: &pb.Deposit{MerkleTreeIndex: 6}},
+		{block: big.NewInt(2), deposit: &pb.Deposit{MerkleTreeIndex: 2}},
+		{block: big.NewInt(4), deposit: &pb.Deposit{MerkleTreeIndex: 4}},
+		{block: big.NewInt(6), deposit: &pb.Deposit{MerkleTreeIndex: 6}},
 	}
 
 	deposits := db.PendingDeposits(context.Background(), big.NewInt(4))
 	expected := []*pb.Deposit{
-		&pb.Deposit{MerkleTreeIndex: 2},
-		&pb.Deposit{MerkleTreeIndex: 4},
+		{MerkleTreeIndex: 2},
+		{MerkleTreeIndex: 4},
 	}
 
 	if !reflect.DeepEqual(deposits, expected) {
 		t.Errorf("Unexpected deposits. got=%+v want=%+v", deposits, expected)
+	}
+
+	all := db.PendingDeposits(context.Background(), nil)
+	if len(all) != len(db.deposits) {
+		t.Error("PendingDeposits(ctx, nil) did not return all deposits")
 	}
 }

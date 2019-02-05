@@ -479,14 +479,14 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 
 func TestProcessEpoch_CantGetBoundaryAttestation(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot: 1,
+		Slot: 5,
 		LatestAttestations: []*pb.PendingAttestationRecord{
-			{Data: &pb.AttestationData{}},
+			{Data: &pb.AttestationData{Slot: 4}},
 		}}
 
 	want := fmt.Sprintf(
-		"could not get current boundary attestations: slot %d out of bounds: %d <= slot < %d",
-		state.LatestAttestations[0].Data.Slot, state.Slot, state.Slot,
+		"could not get current boundary attestations: slot %d is not within expected range of %d to %d",
+		0, state.Slot, state.Slot-1,
 	)
 	if _, err := ProcessEpoch(state); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected: %s, received: %v", want, err)
@@ -559,13 +559,14 @@ func TestProcessEpoch_CantGetPrevValidatorIndices(t *testing.T) {
 
 func TestProcessEpoch_CantProcessCurrentBoundaryAttestations(t *testing.T) {
 	state := &pb.BeaconState{
+		Slot: 100,
 		LatestAttestations: []*pb.PendingAttestationRecord{
 			{Data: &pb.AttestationData{}},
 		}}
 
 	want := fmt.Sprintf(
-		"could not get current boundary attestations: slot %d out of bounds: %d <= slot < %d",
-		state.LatestAttestations[0].Data.Slot, state.Slot, state.Slot,
+		"could not get prev boundary attestations: slot %d is not within expected range of %d to %d",
+		0, state.Slot, state.Slot-1,
 	)
 	if _, err := ProcessEpoch(state); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected: %s, received: %v", want, err)

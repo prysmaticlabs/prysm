@@ -206,7 +206,9 @@ func TestInclusionDistRewards_Ok(t *testing.T) {
 		}
 	}
 	var participationBitfield []byte
-	for i := 0; i < 16; i++ {
+	// participation byte length = number of validators / target committee size / bits in a byte.
+	byteLength := int(config.DepositsForChainStart / config.TargetCommitteeSize / 8)
+	for i := 0; i < byteLength; i++ {
 		participationBitfield = append(participationBitfield, byte(0xff))
 	}
 
@@ -438,7 +440,9 @@ func TestInactivityInclusionPenalty_Ok(t *testing.T) {
 		}
 	}
 	var participationBitfield []byte
-	for i := 0; i < 16; i++ {
+	// participation byte length = number of validators / target committee size / bits in a byte.
+	byteLength := int(config.DepositsForChainStart / config.TargetCommitteeSize / 8)
+	for i := 0; i < byteLength; i++ {
 		participationBitfield = append(participationBitfield, byte(0xff))
 	}
 	attestation := []*pb.PendingAttestationRecord{
@@ -520,7 +524,9 @@ func TestAttestationInclusionRewards(t *testing.T) {
 		}
 	}
 	var participationBitfield []byte
-	for i := 0; i < 16; i++ {
+	// participation byte length = number of validators / target committee size / bits in a byte.
+	byteLength := int(config.DepositsForChainStart / config.TargetCommitteeSize / 8)
+	for i := 0; i < byteLength; i++ {
 		participationBitfield = append(participationBitfield, byte(0xff))
 	}
 	attestation := []*pb.PendingAttestationRecord{

@@ -40,7 +40,7 @@ func TestGenesisBlock(t *testing.T) {
 
 func TestBlockRootAtSlot_OK(t *testing.T) {
 	if params.BeaconConfig().EpochLength != 64 {
-		t.Errorf("EpochLength should be 64 for these tests to pass")
+		t.Errorf("epochLength should be 64 for these tests to pass")
 	}
 	var blockRoots [][]byte
 
@@ -73,22 +73,22 @@ func TestBlockRootAtSlot_OK(t *testing.T) {
 		}, {
 			slot:         2999,
 			stateSlot:    3000,
-			expectedRoot: []byte{127},
+			expectedRoot: []byte{55},
 		}, {
 			slot:         2873,
 			stateSlot:    3000,
-			expectedRoot: []byte{1},
+			expectedRoot: []byte{57},
 		},
 	}
 	for _, tt := range tests {
 		state.Slot = tt.stateSlot
 		result, err := BlockRoot(state, tt.slot)
 		if err != nil {
-			t.Errorf("Failed to get block root at slot %d: %v", tt.slot, err)
+			t.Errorf("failed to get block root at slot %d: %v", tt.slot, err)
 		}
 		if !bytes.Equal(result, tt.expectedRoot) {
 			t.Errorf(
-				"Result block root was an unexpected value. Wanted %d, got %d",
+				"result block root was an unexpected value. Wanted %d, got %d",
 				tt.expectedRoot,
 				result,
 			)
@@ -98,25 +98,36 @@ func TestBlockRootAtSlot_OK(t *testing.T) {
 
 func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 	if params.BeaconConfig().EpochLength != 64 {
-		t.Errorf("EpochLength should be 64 for these tests to pass")
+		t.Errorf("epochLength should be 64 for these tests to pass")
 	}
 
-	state := &pb.BeaconState{}
+	var blockRoots [][]byte
+
+	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+		blockRoots = append(blockRoots, []byte{byte(i)})
+	}
+	state := &pb.BeaconState{
+		LatestBlockRootHash32S: blockRoots,
+	}
 
 	tests := []struct {
 		slot        uint64
+		stateSlot   uint64
 		expectedErr string
 	}{
 		{
 			slot:        1000,
-			expectedErr: "slot 1000 out of bounds: 0 <= slot < 0",
+			stateSlot:   500,
+			expectedErr: "slot 1000 is not within expected range of 372 to 499",
 		},
 		{
 			slot:        129,
-			expectedErr: "slot 129 out of bounds: 0 <= slot < 0",
+			stateSlot:   400,
+			expectedErr: "slot 129 is not within expected range of 272 to 399",
 		},
 	}
 	for _, tt := range tests {
+		state.Slot = tt.stateSlot
 		_, err := BlockRoot(state, tt.slot)
 		if err != nil && err.Error() != tt.expectedErr {
 			t.Errorf("Expected error \"%s\" got \"%v\"", tt.expectedErr, err)
@@ -148,8 +159,8 @@ func TestProcessBlockRoots(t *testing.T) {
 	expectedRoot := hashutil.MerkleRoot(expectedHashes)
 
 	if !bytes.Equal(newState.BatchedBlockRootHash32S[0], expectedRoot[:]) {
-		t.Errorf("Saved merkle root is not equal to expected merkle root"+
-			"\n Expected %#x but got %#x", expectedRoot, newState.BatchedBlockRootHash32S[0])
+		t.Errorf("saved merkle root is not equal to expected merkle root"+
+			"\n expected %#x but got %#x", expectedRoot, newState.BatchedBlockRootHash32S[0])
 	}
 }
 
@@ -161,11 +172,11 @@ func TestForkVersion(t *testing.T) {
 	}
 
 	if ForkVersion(forkData, 9) != 2 {
-		t.Errorf("Fork Version not equal to 2 %d", ForkVersion(forkData, 9))
+		t.Errorf("fork Version not equal to 2 %d", ForkVersion(forkData, 9))
 	}
 
 	if ForkVersion(forkData, 11) != 3 {
-		t.Errorf("Fork Version not equal to 3 %d", ForkVersion(forkData, 11))
+		t.Errorf("fork Version not equal to 3 %d", ForkVersion(forkData, 11))
 	}
 }
 
@@ -179,11 +190,11 @@ func TestDomainVersion(t *testing.T) {
 	constant := uint64(math.Pow(2, 32))
 
 	if DomainVersion(forkData, 9, 2) != 2*constant+2 {
-		t.Errorf("Incorrect domain version %d", DomainVersion(forkData, 9, 2))
+		t.Errorf("incorrect domain version %d", DomainVersion(forkData, 9, 2))
 	}
 
 	if DomainVersion(forkData, 11, 3) != 3*constant+3 {
-		t.Errorf("Incorrect domain version %d", DomainVersion(forkData, 11, 3))
+		t.Errorf("incorrect domain version %d", DomainVersion(forkData, 11, 3))
 	}
 }
 
@@ -243,20 +254,20 @@ func TestDecodeDepositAmountAndTimeStamp(t *testing.T) {
 	for _, tt := range tests {
 		data, err := EncodeDepositData(tt.depositData, tt.amount, tt.timestamp)
 		if err != nil {
-			t.Fatalf("Could not encode data %v", err)
+			t.Fatalf("could not encode data %v", err)
 		}
 
 		decAmount, decTimestamp, err := DecodeDepositAmountAndTimeStamp(data)
 		if err != nil {
-			t.Fatalf("Could not decode data %v", err)
+			t.Fatalf("could not decode data %v", err)
 		}
 
 		if tt.amount != decAmount {
-			t.Errorf("Decoded amount not equal to given amount, %d : %d", decAmount, tt.amount)
+			t.Errorf("decoded amount not equal to given amount, %d : %d", decAmount, tt.amount)
 		}
 
 		if tt.timestamp != decTimestamp {
-			t.Errorf("Decoded timestamp not equal to given timestamp, %d : %d", decTimestamp, tt.timestamp)
+			t.Errorf("decoded timestamp not equal to given timestamp, %d : %d", decTimestamp, tt.timestamp)
 		}
 	}
 }

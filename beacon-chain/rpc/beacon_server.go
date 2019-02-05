@@ -92,3 +92,17 @@ func (bs *BeaconServer) LatestAttestation(req *ptypes.Empty, stream pb.BeaconSer
 		}
 	}
 }
+
+// Eth1Data fetches the current ETH 1 data which should be used when voting via
+// block proposal.
+// TODO(1463): Implement this.
+func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1DataResponse, error) {
+	return &pb.Eth1DataResponse{}, nil
+}
+
+// PendingDeposits returns a list of pending deposits that are ready for
+// inclusion in the next beacon block.
+// TODO(1464): Implement this.
+func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*pb.PendingDepositsResponse, error) {
+	return &pb.PendingDepositsResponse{PendingDeposits: []*pbp2p.Deposit{}}, nil
+}
