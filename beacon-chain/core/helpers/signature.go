@@ -6,6 +6,8 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
+// ForkVersion returns the fork version of the given epoch number.
+//
 // Spec pseudocode definition:
 //	def get_fork_version(fork: Fork,
 //                     epoch: EpochNumber) -> int:
@@ -23,6 +25,8 @@ func ForkVersion(fork *pb.Fork, epoch uint64) uint64 {
 	return fork.CurrentVersion
 }
 
+// DomainVersion returns the domain version for BLS private key to sign and verify.
+//
 // Spec pseudocode definition:
 //	def get_domain(fork: Fork,
 //               epoch: EpochNumber,
