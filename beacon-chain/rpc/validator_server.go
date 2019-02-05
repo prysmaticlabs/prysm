@@ -58,20 +58,22 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 	var attesterSlot uint64
 	var proposerSlot uint64
 
-	for i := req.EpochStart; i < req.EpochStart+params.BeaconConfig().EpochLength; i++ {
-		crossLinkCommittees, err := v.CrosslinkCommitteesAtSlot(beaconState, i)
+	for slot := req.EpochStart; slot < req.EpochStart+params.BeaconConfig().EpochLength; slot++ {
+		crossLinkCommittees, err := v.CrosslinkCommitteesAtSlot(beaconState, slot)
 		if err != nil {
-			return nil, fmt.Errorf("could not get crosslink committees at slot %d: %v", i, err)
+			return nil, err
 		}
-		firstCommittee := crossLinkCommittees[0].Committee
-		proposerIndex := firstCommittee[i%uint64(len(firstCommittee))]
+		proposerIndex, err := v.BeaconProposerIdx(beaconState, slot)
+		if err != nil {
+			return nil, err
+		}
 		if proposerIndex == validatorIndex {
-			proposerSlot = i
+			proposerSlot = slot
 		}
 		for _, committee := range crossLinkCommittees {
 			for _, idx := range committee.Committee {
 				if idx == validatorIndex {
-					attesterSlot = i
+					attesterSlot = slot
 					shard = committee.Shard
 				}
 			}

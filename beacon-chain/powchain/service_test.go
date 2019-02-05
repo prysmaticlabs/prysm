@@ -459,7 +459,7 @@ func TestProcessDepositLog(t *testing.T) {
 	testutil.AssertLogsDoNotContain(t, hook, "Could not unpack log")
 	testutil.AssertLogsDoNotContain(t, hook, "Could not save in trie")
 	testutil.AssertLogsDoNotContain(t, hook, "Could not decode deposit input")
-	testutil.AssertLogsContain(t, hook, "Validator registered in VRC with public key and index")
+	testutil.AssertLogsContain(t, hook, "Validator registered in deposit contract")
 
 	hook.Reset()
 }
