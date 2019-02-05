@@ -295,6 +295,10 @@ func TestProcessFinalization(t *testing.T) {
 func TestProcessCrosslinksOk(t *testing.T) {
 	state := buildState(5, config.DepositsForChainStart)
 	state.LatestCrosslinks = []*pb.CrosslinkRecord{{}, {}}
+	var participationBitfield []byte
+	for i := 0; i < 16; i++ {
+		participationBitfield = append(participationBitfield, byte(0xff))
+	}
 
 	var attestations []*pb.PendingAttestationRecord
 	for i := 0; i < 10; i++ {
@@ -303,7 +307,7 @@ func TestProcessCrosslinksOk(t *testing.T) {
 				ShardBlockRootHash32: []byte{'A'},
 			},
 			// All validators attested to the above roots.
-			ParticipationBitfield: []byte{0xff},
+			ParticipationBitfield: participationBitfield,
 		}
 		attestations = append(attestations, attestation)
 	}
@@ -341,7 +345,7 @@ func TestProcessCrosslinksNoParticipantsBitField(t *testing.T) {
 
 	wanted := fmt.Sprintf(
 		"wanted participants bitfield length %d, got: %d",
-		1, 0,
+		16, 0,
 	)
 	if _, err := ProcessCrosslinks(state, attestations, nil); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected: %s, received: %s", wanted, err.Error())
