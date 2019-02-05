@@ -7,6 +7,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/sirupsen/logrus"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
@@ -30,15 +31,20 @@ type depositContainer struct {
 func (db *BeaconDB) InsertPendingDeposit(ctx context.Context, d *pb.Deposit, blockNum *big.Int) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "BeaconDB.InsertPendingDeposit")
 	defer span.Finish()
-	if d != nil && blockNum != nil {
-		db.depositsLock.Lock()
-		defer db.depositsLock.Unlock()
-		db.deposits = append(db.deposits, &depositContainer{deposit: d, block: blockNum})
-		depositsCount.Inc()
+	if d == nil || blockNum == nil {
+		log.WithFields(logrus.Fields{
+			"block":   blockNum,
+			"deposit": d,
+		}).Debug("Ignoring nil deposit insertion")
+		return
 	}
+	db.depositsLock.Lock()
+	defer db.depositsLock.Unlock()
+	db.deposits = append(db.deposits, &depositContainer{deposit: d, block: blockNum})
+	depositsCount.Inc()
 }
 
-// PendingDeposits returns a list of deposits before the given block
+// PendingDeposits returns a list of deposits until the given block number
 // (inclusive). If no block is specified then this method returns all pending
 // deposits.
 func (db *BeaconDB) PendingDeposits(ctx context.Context, beforeBlk *big.Int) []*pb.Deposit {
@@ -64,6 +70,7 @@ func (db *BeaconDB) RemovePendingDeposit(ctx context.Context, d *pb.Deposit) {
 	defer span.Finish()
 
 	if d == nil {
+		log.Debug("Ignoring nil deposit removal")
 		return
 	}
 

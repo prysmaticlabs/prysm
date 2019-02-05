@@ -88,7 +88,7 @@ func (sb *SimulatedBackend) RunForkChoiceTest(testCase *ForkChoiceTestCase) erro
 	validators := make([]*pb.ValidatorRecord, testCase.Config.ValidatorCount)
 	for i := uint64(0); i < testCase.Config.ValidatorCount; i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot:               params.BeaconConfig().EntryExitDelay,
+			ExitEpoch:              params.BeaconConfig().EntryExitDelay,
 			Pubkey:                 []byte{},
 			RandaoCommitmentHash32: randaoReveal[:],
 		}
@@ -232,7 +232,7 @@ func (sb *SimulatedBackend) initializeStateTest(testCase *StateTestCase) (hashOn
 
 	prevBlockRoots, err = sb.setupBeaconStateAndGenesisBlock(initialDeposits)
 	if err != nil {
-		return nil, [32]byte{}, nil, nil, fmt.Errorf("could not set up beacon state and initalize genesis block %v", err)
+		return nil, [32]byte{}, nil, nil, fmt.Errorf("could not set up beacon state and initialize genesis block %v", err)
 	}
 
 	// We keep track of the randao layers peeled for each proposer index in a map.
@@ -333,7 +333,7 @@ func (sb *SimulatedBackend) compareTestCase(testCase *StateTestCase) error {
 		)
 	}
 	for _, penalized := range testCase.Results.PenalizedValidators {
-		if sb.state.ValidatorRegistry[penalized].PenalizedSlot == params.BeaconConfig().FarFutureSlot {
+		if sb.state.ValidatorRegistry[penalized].PenalizedEpoch == params.BeaconConfig().FarFutureEpoch {
 			return fmt.Errorf(
 				"expected validator at index %d to have been penalized",
 				penalized,

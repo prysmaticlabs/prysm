@@ -8,7 +8,10 @@ import (
 	"time"
 
 	"github.com/boltdb/bolt"
+	"github.com/sirupsen/logrus"
 )
+
+var log = logrus.WithField("prefix", "beacondb")
 
 // BeaconDB manages the data layer of the beacon chain implementation.
 // The exposed methods do not have an opinion of the underlying data engine,
@@ -19,7 +22,7 @@ type BeaconDB struct {
 	db           *bolt.DB
 	DatabasePath string
 
-	// Beacon chain deposits in memory
+	// Beacon chain deposits in memory.
 	deposits     []*depositContainer
 	depositsLock sync.RWMutex
 }

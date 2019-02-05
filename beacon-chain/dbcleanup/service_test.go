@@ -2,6 +2,7 @@ package dbcleanup
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"testing"
 	"time"
 
@@ -39,7 +40,7 @@ func setupInitialDeposits(t *testing.T) []*pb.Deposit {
 		depositInput := &pb.DepositInput{
 			Pubkey: genesisValidatorRegistry[i].Pubkey,
 		}
-		balance := genesisValidatorRegistry[i].Balance
+		balance := params.BeaconConfig().MaxDeposit
 		depositData, err := blocks.EncodeDepositData(depositInput, balance, time.Now().Unix())
 		if err != nil {
 			t.Fatalf("Cannot encode data: %v", err)

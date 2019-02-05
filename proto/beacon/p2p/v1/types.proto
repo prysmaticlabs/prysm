@@ -86,10 +86,10 @@ message ValidatorRecord {
   bytes withdrawal_credentials_hash32 = 2;
   bytes randao_commitment_hash32 = 3;
   uint64 randao_layers = 4;
-  uint64 activation_slot = 5;
-  uint64 exit_slot = 6;
-  uint64 withdrawal_slot = 7;
-  uint64 penalized_slot = 8;
+  uint64 activation_epoch = 5;
+  uint64 exit_epoch = 6;
+  uint64 withdrawal_epoch = 7;
+  uint64 penalized_epoch = 8;
   // Possible validator status code:
   // https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#constants
   enum StatusFlags {
@@ -98,11 +98,6 @@ message ValidatorRecord {
     WITHDRAWABLE = 2; // validator is participating validator duties.
   }
   StatusFlags status_flags = 10;
-
-  // Deprecated fields
-  // All fields must be annotated with [deprecated=true];
-  // Balance in Gwei
-  uint64 balance = 1000 [deprecated=true]; // Keeping this until we refactor epoch processing.
 }
 
 message ShardReassignmentRecord {
