@@ -12,6 +12,8 @@ service BeaconService {
     rpc CanonicalHead(google.protobuf.Empty) returns (ethereum.beacon.p2p.v1.BeaconBlock);
     // LatestAttestation streams the latest aggregated attestation to connected validator clients.
     rpc LatestAttestation(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.Attestation);
+    rpc PendingDeposits(google.protobuf.Empty) returns (PendingDepositsResponse);
+    rpc Eth1Data(google.protobuf.Empty) returns (Eth1DataResponse);
 }
 
 service AttesterService {
@@ -96,4 +98,12 @@ message ValidatorEpochAssignmentsRequest {
 
 message ValidatorEpochAssignmentsResponse {
   Assignment assignment = 2;
+}
+
+message PendingDepositsResponse {
+  repeated ethereum.beacon.p2p.v1.Deposit pending_deposits = 1;
+}
+
+message Eth1DataResponse {
+  ethereum.beacon.p2p.v1.Eth1Data eth1_data = 1;
 }
