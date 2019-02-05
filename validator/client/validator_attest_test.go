@@ -17,7 +17,7 @@ func TestAttestToBlockHead_CrosslinkCommitteeRequestFailure(t *testing.T) {
 	defer finish()
 	m.attesterClient.EXPECT().CrosslinkCommitteesAtSlot(
 		gomock.Any(), // ctx
-        gomock.Any(),
+		gomock.Any(),
 	).Return(nil /*Crosslinks Response*/, errors.New("something bad happened"))
 
 	validator.AttestToBlockHead(context.Background(), 30)
@@ -61,10 +61,10 @@ func TestAttestToBlockHead_ValidatorIndexRequestFailure(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Return(&pb.AttestationInfoResponse{
-		BeaconBlockRootHash32: []byte{},
-		EpochBoundaryRootHash32: []byte{},
+		BeaconBlockRootHash32:    []byte{},
+		EpochBoundaryRootHash32:  []byte{},
 		JustifiedBlockRootHash32: []byte{},
-		JustifiedEpoch: 0,
+		JustifiedEpoch:           0,
 	}, nil)
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
@@ -85,17 +85,17 @@ func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Return(&pb.CrosslinkCommitteeResponse{
-		Shard: 5,
+		Shard:     5,
 		Committee: make([]uint64, 111),
 	}, nil)
 	m.attesterClient.EXPECT().AttestationInfoAtSlot(
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Return(&pb.AttestationInfoResponse{
-		BeaconBlockRootHash32: []byte{},
-		EpochBoundaryRootHash32: []byte{},
+		BeaconBlockRootHash32:    []byte{},
+		EpochBoundaryRootHash32:  []byte{},
 		JustifiedBlockRootHash32: []byte{},
-		JustifiedEpoch: 0,
+		JustifiedEpoch:           0,
 	}, nil)
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx

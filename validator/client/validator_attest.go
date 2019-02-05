@@ -83,13 +83,13 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	// We set the attestation's aggregation bitfield by determining the index in the committee
 	// corresponding to the validator and modifying the bitfield itself.
 	aggregationBitfield := make([]byte, (len(resp.Committee)+7)/8)
-    var indexIntoCommittee uint
+	var indexIntoCommittee uint
 	for i, validator := range resp.Committee {
 		if validator == validatorIndexRes.Index {
 			indexIntoCommittee = uint(i)
 		}
 	}
-	aggregationBitfield[indexIntoCommittee/8] |= 1<<(indexIntoCommittee %8)
+	aggregationBitfield[indexIntoCommittee/8] |= 1 << (indexIntoCommittee % 8)
 	// Note: calling get_attestation_participants(state, attestation.data, attestation.aggregation_bitfield)
 	// should return a list of length equal to 1, containing validator_index.
 	attestation.AggregationBitfield = aggregationBitfield
@@ -105,5 +105,5 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 		log.Errorf("Could not submit attestation to beacon node: %v", err)
 		return
 	}
-    log.Infof("Submitted attestation successfully with hash %#x", attestRes.AttestationHash)
+	log.Infof("Submitted attestation successfully with hash %#x", attestRes.AttestationHash)
 }

@@ -25,3 +25,10 @@ func (as *AttesterServer) AttestHead(ctx context.Context, req *pb.AttestRequest)
 	as.operationService.IncomingAttFeed().Send(req.Attestation)
 	return &pb.AttestResponse{AttestationHash: h[:]}, nil
 }
+
+// AttestationInfoAtSlot --
+//
+// WIP: Not implemented in server.
+func (as *AttesterServer) AttestationInfoAtSlot(ctx context.Context, req *pb.AttestationInfoRequest) (*pb.AttestationInfoResponse, error) {
+	return nil, nil
+}
