@@ -13,6 +13,7 @@ go_library(
     deps = [
         "//beacon-chain/utils:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/bitutil:go_default_library",
         "//shared/bytesutil:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/mathutil:go_default_library",
