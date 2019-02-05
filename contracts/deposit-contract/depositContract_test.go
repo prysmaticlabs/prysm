@@ -138,7 +138,7 @@ func TestValidatorRegisters(t *testing.T) {
 	depositData := make([][]byte, 5)
 
 	for i, log := range logs {
-		_, data, idx, err := UnpackDepositLogData(log.Data)
+		_, data, idx, _, err := UnpackDepositLogData(log.Data)
 		if err != nil {
 			t.Fatalf("Unable to unpack log data: %v", err)
 		}

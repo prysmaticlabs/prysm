@@ -221,7 +221,7 @@ func (w *Web3Service) ProcessLog(VRClog gethTypes.Log) {
 // the ETH1.0 chain by trying to ascertain which participant deposited
 // in the contract.
 func (w *Web3Service) ProcessDepositLog(VRClog gethTypes.Log) {
-	merkleRoot, depositData, MerkleTreeIndex, err := contracts.UnpackDepositLogData(VRClog.Data)
+	merkleRoot, depositData, MerkleTreeIndex, merkleBranch, err := contracts.UnpackDepositLogData(VRClog.Data)
 	if err != nil {
 		log.Errorf("Could not unpack log %v", err)
 		return
@@ -244,6 +244,7 @@ func (w *Web3Service) ProcessDepositLog(VRClog gethTypes.Log) {
 	log.WithFields(logrus.Fields{
 		"publicKey":         depositInput.Pubkey,
 		"merkle tree index": index,
+		"merkle branch":     merkleBranch,
 	}).Info("Validator registered in VRC with public key and index")
 }
 
