@@ -295,7 +295,7 @@ func ActivateValidator(state *pb.BeaconState, idx uint64, genesis bool) (*pb.Bea
 // validator with INITIATED_EXIT status flag.
 //
 // Spec pseudocode definition:
-// def initiate_validator_exit(state: BeaconState, index: int) -> None:
+// def initiate_validator_exit(state: BeaconState, index: ValidatorIndex) -> None:
 //    validator = state.validator_registry[index]
 //    validator.status_flags |= INITIATED_EXIT
 func InitiateValidatorExit(state *pb.BeaconState, idx uint64) *pb.BeaconState {
@@ -378,7 +378,11 @@ func PenalizeValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, erro
 // WITHDRAWABLE.
 //
 // Spec pseudocode definition:
-// def prepare_validator_for_withdrawal(state: BeaconState, index: int) -> None:
+// def prepare_validator_for_withdrawal(state: BeaconState, index: ValidatorIndex) -> None:
+//    """
+//    Set the validator with the given ``index`` with ``WITHDRAWABLE`` flag.
+//    Note that this function mutates ``state``.
+//    """
 //    validator = state.validator_registry[index]
 //    validator.status_flags |= WITHDRAWABLE
 func PrepareValidatorForWithdrawal(state *pb.BeaconState, idx uint64) *pb.BeaconState {
@@ -475,7 +479,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 			}
 		}
 	}
-	state.ValidatorRegistryUpdateEpoch = state.Slot
+	state.ValidatorRegistryUpdateEpoch = currentEpoch
 	return state, nil
 }
 

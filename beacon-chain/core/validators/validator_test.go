@@ -669,7 +669,7 @@ func TestEligibleToExit(t *testing.T) {
 
 func TestUpdateRegistry_NoRotation(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot: 5,
+		Slot: 5 * params.BeaconConfig().EpochLength,
 		ValidatorRegistry: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().EntryExitDelay},
 			{ExitEpoch: params.BeaconConfig().EntryExitDelay},
@@ -695,7 +695,7 @@ func TestUpdateRegistry_NoRotation(t *testing.T) {
 				i, params.BeaconConfig().EntryExitDelay, validator.ExitEpoch)
 		}
 	}
-	if newState.ValidatorRegistryUpdateEpoch != state.Slot {
+	if newState.ValidatorRegistryUpdateEpoch != helpers.SlotToEpoch(state.Slot) {
 		t.Errorf("wanted validator registry lastet change %d, got %d",
 			state.Slot, newState.ValidatorRegistryUpdateEpoch)
 	}
@@ -703,7 +703,7 @@ func TestUpdateRegistry_NoRotation(t *testing.T) {
 
 func TestUpdateRegistry_Activate(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot: 5,
+		Slot: 5 * params.BeaconConfig().EpochLength,
 		ValidatorRegistry: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().EntryExitDelay,
 				ActivationEpoch: 5 + params.BeaconConfig().EntryExitDelay + 1},
@@ -725,7 +725,7 @@ func TestUpdateRegistry_Activate(t *testing.T) {
 				i, params.BeaconConfig().EntryExitDelay, validator.ExitEpoch)
 		}
 	}
-	if newState.ValidatorRegistryUpdateEpoch != state.Slot {
+	if newState.ValidatorRegistryUpdateEpoch != helpers.SlotToEpoch(state.Slot) {
 		t.Errorf("wanted validator registry lastet change %d, got %d",
 			state.Slot, newState.ValidatorRegistryUpdateEpoch)
 	}
@@ -761,7 +761,7 @@ func TestUpdateRegistry_Exit(t *testing.T) {
 				validator.ExitEpoch)
 		}
 	}
-	if newState.ValidatorRegistryUpdateEpoch != state.Slot {
+	if newState.ValidatorRegistryUpdateEpoch != helpers.SlotToEpoch(state.Slot) {
 		t.Errorf("wanted validator registry lastet change %d, got %d",
 			state.Slot, newState.ValidatorRegistryUpdateEpoch)
 	}
