@@ -211,7 +211,7 @@ func TestProcessJustification(t *testing.T) {
 		t.Errorf("New state's prev justified slot %d != old state's justified slot %d",
 			newState.PreviousJustifiedEpoch, state.JustifiedEpoch)
 	}
-	// Since this epoch was justified (not prev), justified_slot = state.slot - EPOCH_LENGTH.
+	// Since this epoch was justified (not prev), justified_epoch = slot_to_epoch(state.slot) -1.
 	if newState.JustifiedEpoch != helpers.PrevEpoch(state) {
 		t.Errorf("New state's justified epoch %d != state's slot - EPOCH_LENGTH %d",
 			newState.JustifiedEpoch, helpers.PrevEpoch(state))
@@ -223,7 +223,7 @@ func TestProcessJustification(t *testing.T) {
 	}
 
 	// Assume for the case where only prev epoch got justified. Verify
-	// justified_slot = state.slot - 2 * EPOCH_LENGTH.
+	// justified_epoch = slot_to_epoch(state.slot) -2.
 	newState = ProcessJustification(state, 0, 1, 1)
 	if newState.JustifiedEpoch != helpers.PrevEpoch(state)-1 {
 		t.Errorf("New state's justified epoch %d != state's epoch -2 %d",
@@ -236,8 +236,8 @@ func TestProcessFinalization(t *testing.T) {
 		t.Errorf("EpochLength should be 64 for these tests to pass")
 	}
 
-	// 2 consecutive justified slot in a row,
-	// and previous justified slot is state slot - 2 * EPOCH_LENGTH.
+	// 2 consecutive justified epoch in a row,
+	// and previous justified epoch is slot_to_epoch(state.slot) - 2.
 	state := &pb.BeaconState{
 		Slot:                   200,
 		JustifiedEpoch:         2,
@@ -250,8 +250,8 @@ func TestProcessFinalization(t *testing.T) {
 			state.JustifiedEpoch, newState.FinalizedEpoch)
 	}
 
-	// 3 consecutive justified slot in a row.
-	// and previous justified slot is state slot - 3 * EPOCH_LENGTH.
+	// 3 consecutive justified epoch in a row,
+	// and previous justified epoch is slot_to_epoch(state.slot) - 3.
 	state = &pb.BeaconState{
 		Slot:                   300,
 		JustifiedEpoch:         3,
@@ -264,8 +264,8 @@ func TestProcessFinalization(t *testing.T) {
 			state.JustifiedEpoch, newState.FinalizedEpoch)
 	}
 
-	// 4 consecutive justified slot in a row.
-	// and previous justified slot is state slot - 3 * EPOCH_LENGTH.
+	// 4 consecutive justified epoch in a row,
+	// and previous justified epoch is slot_to_epoch(state.slot) - 3.
 	state = &pb.BeaconState{
 		Slot:                   400,
 		JustifiedEpoch:         5,
