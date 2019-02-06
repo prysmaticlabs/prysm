@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -47,9 +48,9 @@ func VerifyProposerSignature(
 func ProcessEth1Data(beaconState *pb.BeaconState, block *pb.BeaconBlock) *pb.BeaconState {
 	var eth1DataVoteAdded bool
 
-	for _, Eth1DataVote := range beaconState.Eth1DataVotes {
-		if bytes.Equal(Eth1DataVote.Eth1Data.BlockHash32, block.Eth1Data.BlockHash32) && bytes.Equal(Eth1DataVote.Eth1Data.DepositRootHash32, block.Eth1Data.DepositRootHash32) {
-			Eth1DataVote.VoteCount++
+	for idx := range beaconState.Eth1DataVotes {
+		if proto.Equal(beaconState.Eth1DataVotes[idx].Eth1Data, block.Eth1Data) {
+			beaconState.Eth1DataVotes[idx].VoteCount++
 			eth1DataVoteAdded = true
 			break
 		}
