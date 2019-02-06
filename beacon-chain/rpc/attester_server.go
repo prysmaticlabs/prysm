@@ -63,14 +63,14 @@ func (as *AttesterServer) AttestationInfoAtSlot(ctx context.Context, req *pb.Att
 	// Fetch the justified block root = hash_tree_root(justified_block) where
 	// justified_block is the block at state.justified_epoch in the chain defined by head.
 	// On the server side, this is fetched by calling get_block_root(state, justified_epoch).
-	justifiedBlockRoot, err := blocks.BlockRoot(beaconState, beaconState.JustifiedSlot)
+	justifiedBlockRoot, err := blocks.BlockRoot(beaconState, beaconState.JustifiedEpoch)
 	if err != nil {
 		return nil, fmt.Errorf("could not get justified block: %v", err)
 	}
 	return &pb.AttestationInfoResponse{
 		BeaconBlockRootHash32:    blockRoot[:],
 		EpochBoundaryRootHash32:  epochBoundaryRoot[:],
-		JustifiedEpoch:           beaconState.JustifiedSlot, // TODO(#1489): Pending epoch refactor.
+		JustifiedEpoch:           beaconState.JustifiedEpoch,
 		JustifiedBlockRootHash32: justifiedBlockRoot[:],
 	}, nil
 }
