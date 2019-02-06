@@ -99,12 +99,6 @@ func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
 		LatestCrosslinkRootHash32: []byte{},
 		JustifiedEpoch:            0,
 	}, nil)
-	m.validatorClient.EXPECT().ValidatorIndex(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
-	).Return(&pb.ValidatorIndexResponse{
-		Index: 0,
-	}, nil)
 	m.attesterClient.EXPECT().AttestHead(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
@@ -138,10 +132,11 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.AttestationInfoRequest{}),
 	).Return(&pb.AttestationInfoResponse{
-		BeaconBlockRootHash32:    []byte("A"),
-		EpochBoundaryRootHash32:  []byte("B"),
-		JustifiedBlockRootHash32: []byte("C"),
-		JustifiedEpoch:           3,
+		BeaconBlockRootHash32:     []byte("A"),
+		EpochBoundaryRootHash32:   []byte("B"),
+		JustifiedBlockRootHash32:  []byte("C"),
+		LatestCrosslinkRootHash32: []byte("D"),
+		JustifiedEpoch:            3,
 	}, nil)
 
 	var generatedAttestation *pbp2p.Attestation
