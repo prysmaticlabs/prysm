@@ -211,16 +211,23 @@ func TestStartStopUninitializedChain(t *testing.T) {
 		)
 	}
 }
+
 func TestStartUninitializedChainWithoutConfigPOWChain(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db, false)
 
-	chainService.IncomingBlockFeed()
-
+	origExitFunc := logrus.StandardLogger().ExitFunc
+	defer func() { logrus.StandardLogger().ExitFunc = origExitFunc }()
+	fatal := false
+	logrus.StandardLogger().ExitFunc = func(int) { fatal = true }
 	// Test the start function.
 	chainService.Start()
+
+	if !fatal {
+		t.Fatalf("Not exists fatal for init BeaconChain without POW chain")
+	}
 	testutil.AssertLogsContain(t, hook, "Not configured web3Service for POW chain")
 }
 
