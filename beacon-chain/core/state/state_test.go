@@ -99,7 +99,7 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	if !reflect.DeepEqual(*state.Fork, pb.Fork{
 		PreviousVersion: initialForkVersion,
 		CurrentVersion:  initialForkVersion,
-		Slot:            initialEpochNumber,
+		Epoch:           initialEpochNumber,
 	}) {
 		t.Error("Fork was not correctly initialized")
 	}

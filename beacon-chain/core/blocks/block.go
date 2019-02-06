@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -97,33 +96,6 @@ func ProcessBlockRoots(state *pb.BeaconState, prevBlockRoot [32]byte) *pb.Beacon
 		state.BatchedBlockRootHash32S = append(state.BatchedBlockRootHash32S, merkleRoot)
 	}
 	return state
-}
-
-// ForkVersion Spec:
-//	def get_fork_version(fork_data: Fork,
-//                     slot: int) -> int:
-//    if slot < fork_data.fork_slot:
-//        return fork_data.pre_fork_version
-//    else:
-//        return fork_data.post_fork_version
-func ForkVersion(data *pb.Fork, slot uint64) uint64 {
-	if slot < data.Slot {
-		return data.PreviousVersion
-	}
-	return data.CurrentVersion
-}
-
-// DomainVersion Spec:
-//	def get_domain(fork_data: Fork,
-//               slot: int,
-//               domain_type: int) -> int:
-//    return get_fork_version(
-//        fork_data,
-//        slot
-//    ) * 2**32 + domain_type
-func DomainVersion(data *pb.Fork, slot uint64, domainType uint64) uint64 {
-	constant := uint64(math.Pow(2, 32))
-	return ForkVersion(data, slot)*constant + domainType
 }
 
 // EncodeDepositData converts a deposit input proto into an a byte slice
