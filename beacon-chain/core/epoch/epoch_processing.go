@@ -41,9 +41,9 @@ func CanProcessEth1Data(state *pb.BeaconState) bool {
 // Spec pseudocode definition:
 //    If the following are satisfied:
 //		* state.finalized_slot > state.validator_registry_latest_change_slot
-//		* state.latest_crosslinks[shard].slot > state.validator_registry_latest_change_slot
+//		* state.latest_crosslinks[shard].epoch > state.validator_registry_update_epoch
 // 			for every shard number shard in [(state.current_epoch_start_shard + i) %
-//	 			SHARD_COUNT for i in range(get_current_epoch_committees_per_slot(state) *
+//	 			SHARD_COUNT for i in range(get_current_epoch_committee_count(state) *
 //	 			EPOCH_LENGTH)] (that is, for every shard in the current committees)
 func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 	if state.FinalizedSlot <= state.ValidatorRegistryUpdateEpoch {
@@ -53,7 +53,7 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 	startShard := state.CurrentEpochStartShard
 	for i := startShard; i < shardsProcessed; i++ {
 
-		if state.LatestCrosslinks[i%config.ShardCount].Slot <=
+		if state.LatestCrosslinks[i%config.ShardCount].Epoch <=
 			state.ValidatorRegistryUpdateEpoch {
 			return false
 		}
@@ -169,6 +169,7 @@ func ProcessCrosslinks(
 	prevEpochAttestations []*pb.PendingAttestationRecord) (*pb.BeaconState, error) {
 
 	prevEpoch := helpers.PrevEpoch(state)
+	currentEpoch := helpers.CurrentEpoch(state)
 	nextEpoch := helpers.NextEpoch(state)
 	startSlot := helpers.StartSlot(prevEpoch)
 	endSlot := helpers.StartSlot(nextEpoch)
@@ -192,7 +193,7 @@ func ProcessCrosslinks(
 					return nil, fmt.Errorf("could not get winning root: %v", err)
 				}
 				state.LatestCrosslinks[shard] = &pb.CrosslinkRecord{
-					Slot:                 state.Slot,
+					Epoch:                currentEpoch,
 					ShardBlockRootHash32: winningRoot,
 				}
 			}

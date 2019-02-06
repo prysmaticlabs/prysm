@@ -50,7 +50,7 @@ func InitialBeaconState(
 	latestCrosslinks := make([]*pb.CrosslinkRecord, config.ShardCount)
 	for i := 0; i < len(latestCrosslinks); i++ {
 		latestCrosslinks[i] = &pb.CrosslinkRecord{
-			Slot:                 config.GenesisSlot,
+			Epoch:                config.GenesisEpoch,
 			ShardBlockRootHash32: config.ZeroHash[:],
 		}
 	}
@@ -89,7 +89,7 @@ func InitialBeaconState(
 		Fork: &pb.Fork{
 			PreviousVersion: config.GenesisForkVersion,
 			CurrentVersion:  config.GenesisForkVersion,
-			Slot:            config.GenesisSlot,
+			Epoch:           config.GenesisEpoch,
 		},
 
 		// Validator registry fields.
