@@ -3,7 +3,6 @@ package(default_visibility = ["//k8s:__subpackages__"])
 load("@io_bazel_rules_k8s//k8s:objects.bzl", "k8s_objects")
 load("@k8s_configmap//:defaults.bzl", "k8s_configmap")
 load("@k8s_deploy//:defaults.bzl", "k8s_deploy")
-load("@k8s_ingress//:defaults.bzl", "k8s_ingress")
 load("@k8s_namespace//:defaults.bzl", "k8s_namespace")
 load("@k8s_secret//:defaults.bzl", "k8s_secret")
 load("@k8s_service//:defaults.bzl", "k8s_service")
@@ -15,7 +14,6 @@ k8s_objects(
         ":namespace",  # Must be first
         ":configs",
         ":deployments",
-        ":ingress",
         ":secrets",
         ":services",
     ],
@@ -30,28 +28,22 @@ _configs = [
 
 _deployments = [
     "bootnode",
-#    "faucet",
+   "faucet",
     "nodes",
     "public_nodes",
 ]
 
 _services = [
-#    "faucet",
+    "faucet",
     "public_nodes",
 ]
 
 _secrets = [
     "bootnode",
     "ethstats",
-#    "faucet",
+    "faucet",
     "goerli_validator",
 ]
-
-k8s_ingress(
-    name = "ingress",
-    template = "ingress.yaml",
-    namespace = _NAMESPACE,
-)
 
 k8s_namespace(
     name = "namespace",
