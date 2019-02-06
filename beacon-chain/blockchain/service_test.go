@@ -363,7 +363,7 @@ func TestRunningChainService(t *testing.T) {
 		},
 		Body: &pb.BeaconBlockBody{
 			Attestations: []*pb.Attestation{{
-				ParticipationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				AggregationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Data: &pb.AttestationData{
 					Slot:                      attestationSlot,
@@ -562,7 +562,7 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 		},
 		Body: &pb.BeaconBlockBody{
 			Attestations: []*pb.Attestation{{
-				ParticipationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				AggregationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Data: &pb.AttestationData{
 					Slot:                     attestationSlot,

@@ -1088,8 +1088,8 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 			LatestCrosslinkRootHash32: []byte{1},
 			ShardBlockRootHash32:      []byte{},
 		},
-		ParticipationBitfield: []byte{1},
-		CustodyBitfield:       []byte{1},
+		AggregationBitfield: []byte{1},
+		CustodyBitfield:     []byte{1},
 	}
 	attestations := []*pb.Attestation{att1}
 	block := &pb.BeaconBlock{
