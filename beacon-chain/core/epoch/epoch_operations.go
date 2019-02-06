@@ -67,8 +67,8 @@ func BoundaryAttestations(
 
 		attestationData := attestation.Data
 		sameRoot := bytes.Equal(attestationData.JustifiedBlockRootHash32, boundaryBlockRoot)
-		sameSlotNum := attestationData.JustifiedSlot == state.JustifiedSlot
-		if sameRoot && sameSlotNum {
+		sameEpochNum := helpers.AttestationJustifiedEpoch(attestationData) == state.JustifiedEpoch
+		if sameRoot && sameEpochNum {
 			boundaryAttestations = append(boundaryAttestations, attestation)
 		}
 	}
@@ -110,7 +110,7 @@ func PrevJustifiedAttestations(
 	epochAttestations := append(thisEpochAttestations, prevEpochAttestations...)
 
 	for _, attestation := range epochAttestations {
-		if attestation.Data.JustifiedSlot == state.PreviousJustifiedSlot {
+		if helpers.AttestationJustifiedEpoch(attestation.Data) == state.PreviousJustifiedEpoch {
 			prevJustifiedAttestations = append(prevJustifiedAttestations, attestation)
 		}
 	}
@@ -310,7 +310,7 @@ func TotalAttestingBalance(
 // Spec pseudocode definition:
 //    epochs_since_finality = (state.slot - state.finalized_slot) // EPOCH_LENGTH
 func SinceFinality(state *pb.BeaconState) uint64 {
-	return (state.Slot - state.FinalizedSlot) / params.BeaconConfig().EpochLength
+	return helpers.CurrentEpoch(state) - state.FinalizedEpoch
 }
 
 // winningRoot returns the shard block root with the most combined validator

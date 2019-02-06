@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -473,19 +474,19 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	// state.JustifiedSlot if attestation.Slot >=
 	// state.Slot - (state.Slot % EPOCH_LENGTH) else state.PreviousJustifiedSlot.
 	if att.Data.Slot >= beaconState.Slot-(beaconState.Slot%params.BeaconConfig().EpochLength) {
-		if att.Data.JustifiedSlot != beaconState.JustifiedSlot {
+		if helpers.AttestationJustifiedEpoch(att.Data) != beaconState.JustifiedEpoch {
 			return fmt.Errorf(
 				"expected attestation.JustifiedSlot == state.JustifiedSlot, received %d == %d",
-				att.Data.JustifiedSlot,
-				beaconState.JustifiedSlot,
+				helpers.AttestationJustifiedEpoch(att.Data),
+				beaconState.JustifiedEpoch,
 			)
 		}
 	} else {
-		if att.Data.JustifiedSlot != beaconState.PreviousJustifiedSlot {
+		if helpers.AttestationJustifiedEpoch(att.Data) != beaconState.PreviousJustifiedEpoch {
 			return fmt.Errorf(
 				"expected attestation.JustifiedSlot == state.PreviousJustifiedSlot, received %d == %d",
-				att.Data.JustifiedSlot,
-				beaconState.PreviousJustifiedSlot,
+				helpers.AttestationJustifiedEpoch(att.Data),
+				beaconState.PreviousJustifiedEpoch,
 			)
 		}
 	}

@@ -46,7 +46,7 @@ func CanProcessEth1Data(state *pb.BeaconState) bool {
 //	 			SHARD_COUNT for i in range(get_current_epoch_committees_per_slot(state) *
 //	 			EPOCH_LENGTH)] (that is, for every shard in the current committees)
 func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
-	if state.FinalizedSlot <= state.ValidatorRegistryUpdateEpoch {
+	if state.FinalizedEpoch <= state.ValidatorRegistryUpdateEpoch {
 		return false
 	}
 	shardsProcessed := helpers.CurrentEpochCommitteeCount(state) * config.EpochLength
@@ -101,7 +101,7 @@ func ProcessJustification(
 	prevEpochBoundaryAttestingBalance uint64,
 	totalBalance uint64) *pb.BeaconState {
 
-	state.PreviousJustifiedSlot = state.JustifiedSlot
+	state.PreviousJustifiedEpoch = state.JustifiedEpoch
 	// Shifts all the bits over one to create a new bit for the recent epoch.
 	state.JustificationBitfield = state.JustificationBitfield * 2
 
@@ -109,14 +109,14 @@ func ProcessJustification(
 	// assign new justified slot to 2 * EPOCH_LENGTH before.
 	if 3*prevEpochBoundaryAttestingBalance >= 2*totalBalance {
 		state.JustificationBitfield |= 2
-		state.JustifiedSlot = state.Slot - 2*config.EpochLength
+		state.JustifiedEpoch = state.Slot - 2*config.EpochLength
 	}
 
 	// If this epoch was justified then we ensure the 1st bit in the bitfield is set,
 	// assign new justified slot to 1 * EPOCH_LENGTH before.
 	if 3*thisEpochBoundaryAttestingBalance >= 2*totalBalance {
 		state.JustificationBitfield |= 1
-		state.JustifiedSlot = state.Slot - 1*config.EpochLength
+		state.JustifiedEpoch = state.Slot - 1*config.EpochLength
 	}
 	return state
 }
@@ -130,22 +130,21 @@ func ProcessJustification(
 //		state.previous_justified_slot == state.slot - 3 * EPOCH_LENGTH and state.justification_bitfield % 8 == 7
 //		state.previous_justified_slot == state.slot - 4 * EPOCH_LENGTH and state.justification_bitfield % 16 in (15, 14)
 func ProcessFinalization(state *pb.BeaconState) *pb.BeaconState {
-	epochLength := config.EpochLength
 
-	if state.PreviousJustifiedSlot == state.Slot-2*epochLength &&
+	if state.PreviousJustifiedEpoch == helpers.CurrentEpoch(state)-2 &&
 		state.JustificationBitfield%4 == 3 {
-		state.FinalizedSlot = state.JustifiedSlot
+		state.FinalizedEpoch = state.JustifiedEpoch
 		return state
 	}
-	if state.PreviousJustifiedSlot == state.Slot-3*epochLength &&
+	if state.PreviousJustifiedEpoch == helpers.CurrentEpoch(state)-3 &&
 		state.JustificationBitfield%8 == 7 {
-		state.FinalizedSlot = state.JustifiedSlot
+		state.FinalizedEpoch = state.JustifiedEpoch
 		return state
 	}
-	if state.PreviousJustifiedSlot == state.Slot-4*epochLength &&
+	if state.PreviousJustifiedEpoch == helpers.CurrentEpoch(state)-4 &&
 		(state.JustificationBitfield%16 == 15 ||
 			state.JustificationBitfield%16 == 14) {
-		state.FinalizedSlot = state.JustifiedSlot
+		state.FinalizedEpoch = state.JustifiedEpoch
 		return state
 	}
 	return state

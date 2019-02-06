@@ -49,3 +49,11 @@ func NextEpoch(state *pb.BeaconState) uint64 {
 func StartSlot(epoch uint64) uint64 {
 	return epoch * params.BeaconConfig().EpochLength
 }
+
+func AttestationCurrentEpoch(att *pb.AttestationData) uint64 {
+	return SlotToEpoch(att.Slot)
+}
+
+func AttestationJustifiedEpoch(att *pb.AttestationData) uint64 {
+	return SlotToEpoch(att.JustifiedSlot)
+}
