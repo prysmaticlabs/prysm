@@ -33,6 +33,14 @@ func InitialBeaconState(
 		latestRandaoMixes[i] = config.ZeroHash[:]
 	}
 
+	latestIndexRoots := make(
+		[][]byte,
+		config.LatestIndexRootsLength,
+	)
+	for i := 0; i < len(latestIndexRoots); i++ {
+		latestRandaoMixes[i] = config.ZeroHash[:]
+	}
+
 	latestVDFOutputs := make([][]byte,
 		config.LatestRandaoMixesLength/config.EpochLength)
 	for i := 0; i < len(latestVDFOutputs); i++ {
@@ -91,6 +99,7 @@ func InitialBeaconState(
 
 		// Randomness and committees.
 		LatestRandaoMixesHash32S: latestRandaoMixes,
+		LatestIndexRootHash32S:   latestIndexRoots,
 		PreviousEpochStartShard:  config.GenesisStartShard,
 		CurrentEpochStartShard:   config.GenesisStartShard,
 		PreviousCalculationEpoch: config.GenesisSlot,
