@@ -29,14 +29,14 @@ func (as *AttesterServer) AttestHead(ctx context.Context, att *pbp2p.Attestation
 
 // AttestationInfoAtSlot --
 //
-// WIP: Not implemented in server.
+// TODO(#1505): WIP.
 func (as *AttesterServer) AttestationInfoAtSlot(ctx context.Context, req *pb.AttestationInfoRequest) (*pb.AttestationInfoResponse, error) {
 	return nil, nil
 }
 
 // CrosslinkCommitteesAtSlot --
 //
-// WIP: Not implemented in server.
+// TODO(#1505): WIP.
 func (as *AttesterServer) CrosslinkCommitteesAtSlot(ctx context.Context, req *pb.CrosslinkCommitteeRequest) (*pb.CrosslinkCommitteeResponse, error) {
 	return nil, nil
 }
