@@ -32,6 +32,7 @@ type validator struct {
 	proposerClient  pb.ProposerServiceClient
 	validatorClient pb.ValidatorServiceClient
 	beaconClient    pb.BeaconServiceClient
+	attesterClient  pb.AttesterServiceClient
 	pubKey          []byte
 	attestationPool AttestationPool
 }
@@ -136,12 +137,4 @@ func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
 		return pb.ValidatorRole_PROPOSER
 	}
 	return pb.ValidatorRole_UNKNOWN
-}
-
-// AttestToBlockHead
-//
-// WIP - not done.
-func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.AttestToBlockHead")
-	defer span.Finish()
 }

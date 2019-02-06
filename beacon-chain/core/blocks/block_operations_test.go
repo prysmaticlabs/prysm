@@ -827,8 +827,8 @@ func TestProcessBlockAttestations_JustifiedSlotVerificationFailure(t *testing.T)
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Slot:          10,
-				JustifiedSlot: 4,
+				Slot:          152,
+				JustifiedSlot: 130,
 			},
 		},
 	}
@@ -838,14 +838,14 @@ func TestProcessBlockAttestations_JustifiedSlotVerificationFailure(t *testing.T)
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:          config.EpochLength - 1,
-		JustifiedSlot: 0,
+		Slot:           158,
+		JustifiedEpoch: 1,
 	}
 
 	want := fmt.Sprintf(
 		"expected attestation.JustifiedSlot == state.JustifiedSlot, received %d == %d",
-		4,
-		0,
+		2,
+		1,
 	)
 	if _, err := ProcessBlockAttestations(
 		state,
@@ -860,8 +860,8 @@ func TestProcessBlockAttestations_PreviousJustifiedSlotVerificationFailure(t *te
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Slot:          5,
-				JustifiedSlot: 4,
+				Slot:          240,
+				JustifiedSlot: 234,
 			},
 		},
 	}
@@ -871,14 +871,14 @@ func TestProcessBlockAttestations_PreviousJustifiedSlotVerificationFailure(t *te
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                  5 + config.EpochLength,
-		PreviousJustifiedSlot: 3,
+		Slot:                   257,
+		PreviousJustifiedEpoch: 2,
 	}
 
 	want := fmt.Sprintf(
 		"expected attestation.JustifiedSlot == state.PreviousJustifiedSlot, received %d == %d",
-		4,
 		3,
+		2,
 	)
 	if _, err := ProcessBlockAttestations(
 		state,
@@ -897,13 +897,13 @@ func TestProcessBlockAttestations_BlockRootOutOfBounds(t *testing.T) {
 
 	state := &pb.BeaconState{
 		Slot:                   64,
-		PreviousJustifiedSlot:  65,
+		PreviousJustifiedEpoch: 1,
 		LatestBlockRootHash32S: blockRoots,
 	}
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Slot:                     20,
+				Slot:                     60,
 				JustifiedSlot:            65,
 				JustifiedBlockRootHash32: []byte{},
 			},
@@ -932,15 +932,15 @@ func TestProcessBlockAttestations_BlockRootFailure(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                   64,
-		PreviousJustifiedSlot:  10,
+		Slot:                   129,
+		PreviousJustifiedEpoch: 1,
 		LatestBlockRootHash32S: blockRoots,
 	}
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Slot:                     20,
-				JustifiedSlot:            10,
+				Slot:                     80,
+				JustifiedSlot:            64,
 				JustifiedBlockRootHash32: []byte{},
 			},
 		},
@@ -954,7 +954,7 @@ func TestProcessBlockAttestations_BlockRootFailure(t *testing.T) {
 	want := fmt.Sprintf(
 		"expected JustifiedBlockRoot == getBlockRoot(state, JustifiedSlot): got %#x = %#x",
 		[]byte{},
-		blockRoots[10],
+		blockRoots[64],
 	)
 	if _, err := ProcessBlockAttestations(
 		state,
@@ -981,8 +981,8 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   64,
-		PreviousJustifiedSlot:  10,
+		Slot:                   70,
+		PreviousJustifiedEpoch: 0,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
 	}
@@ -1027,8 +1027,8 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   64,
-		PreviousJustifiedSlot:  10,
+		Slot:                   70,
+		PreviousJustifiedEpoch: 0,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
 	}
@@ -1074,8 +1074,8 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   64,
-		PreviousJustifiedSlot:  10,
+		Slot:                   70,
+		PreviousJustifiedEpoch: 0,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
 	}
@@ -1088,8 +1088,8 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 			LatestCrosslinkRootHash32: []byte{1},
 			ShardBlockRootHash32:      []byte{},
 		},
-		ParticipationBitfield: []byte{1},
-		CustodyBitfield:       []byte{1},
+		AggregationBitfield: []byte{1},
+		CustodyBitfield:     []byte{1},
 	}
 	attestations := []*pb.Attestation{att1}
 	block := &pb.BeaconBlock{
@@ -1113,7 +1113,7 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 			pendingAttestations[0].Data,
 		)
 	}
-	if pendingAttestations[0].SlotIncluded != 64 {
+	if pendingAttestations[0].SlotIncluded != 70 {
 		t.Errorf(
 			"Pending attestation not included at correct slot: wanted %v, received %v",
 			64,

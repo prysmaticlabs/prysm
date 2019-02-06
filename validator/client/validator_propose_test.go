@@ -16,21 +16,27 @@ import (
 )
 
 type mocks struct {
-	proposerClient *internal.MockProposerServiceClient
-	beaconClient   *internal.MockBeaconServiceClient
+	proposerClient  *internal.MockProposerServiceClient
+	beaconClient    *internal.MockBeaconServiceClient
+	validatorClient *internal.MockValidatorServiceClient
+	attesterClient  *internal.MockAttesterServiceClient
 }
 
 func setup(t *testing.T) (*validator, *mocks, func()) {
 	ctrl := gomock.NewController(t)
 	m := &mocks{
-		proposerClient: internal.NewMockProposerServiceClient(ctrl),
-		beaconClient:   internal.NewMockBeaconServiceClient(ctrl),
+		proposerClient:  internal.NewMockProposerServiceClient(ctrl),
+		beaconClient:    internal.NewMockBeaconServiceClient(ctrl),
+		validatorClient: internal.NewMockValidatorServiceClient(ctrl),
+		attesterClient:  internal.NewMockAttesterServiceClient(ctrl),
 	}
 
 	validator := &validator{
 		attestationPool: &fakeAttestationPool{},
 		proposerClient:  m.proposerClient,
 		beaconClient:    m.beaconClient,
+		attesterClient:  m.attesterClient,
+		validatorClient: m.validatorClient,
 	}
 
 	return validator, m, ctrl.Finish
