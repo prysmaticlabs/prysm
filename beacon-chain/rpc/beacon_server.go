@@ -105,7 +105,6 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 
 // PendingDeposits returns a list of pending deposits that are ready for
 // inclusion in the next beacon block.
-// TODO(1464): Implement this.
 func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*pb.PendingDepositsResponse, error) {
 	bNum := bs.powChainService.LatestBlockNumber()
 

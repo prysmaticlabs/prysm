@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"math/big"
+	"reflect"
 	"testing"
 	"time"
 
@@ -11,9 +12,11 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -202,4 +205,73 @@ func TestLatestAttestation_SendsCorrectly(t *testing.T) {
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, "Sending attestation to RPC clients")
+}
+
+func TestPendingDeposits_ReturnsErrorOnUnknownBlockNum(t *testing.T) {
+	p := &mockPOWChainService{
+		latestBlockNumber: nil,
+	}
+	bs := BeaconServer{powChainService: p}
+
+	_, err := bs.PendingDeposits(context.Background(), nil)
+	if err.Error() != "latest PoW block number is unknown" {
+		t.Errorf("Received unexpected error: %v", err)
+	}
+}
+
+func TestPendingDeposits_ReturnsDepositsOutsideEth1FollowWindow(t *testing.T) {
+	p := &mockPOWChainService{
+		latestBlockNumber: big.NewInt(int64(10 + params.BeaconConfig().Eth1FollowDistance)),
+	}
+	d := &db.BeaconDB{}
+
+	// Using the merkleTreeIndex as the block number for this test...
+	readyDeposits := []*pbp2p.Deposit{
+		&pbp2p.Deposit{
+			MerkleTreeIndex: 1,
+		},
+		&pbp2p.Deposit{
+			MerkleTreeIndex: 2,
+		},
+	}
+
+	recentDeposits := []*pbp2p.Deposit{
+		&pbp2p.Deposit{
+			MerkleTreeIndex: params.BeaconConfig().Eth1FollowDistance + 100,
+		},
+		&pbp2p.Deposit{
+			MerkleTreeIndex: params.BeaconConfig().Eth1FollowDistance + 101,
+		},
+	}
+	ctx := context.Background()
+	for _, dp := range append(recentDeposits, readyDeposits...) {
+		d.InsertPendingDeposit(ctx, dp, big.NewInt(int64(dp.MerkleTreeIndex)))
+	}
+
+	bs := &BeaconServer{
+		beaconDB:        d,
+		powChainService: p,
+	}
+
+	result, err := bs.PendingDeposits(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(result.PendingDeposits, readyDeposits) {
+		t.Errorf("Received unexpected list of deposits: %+v, wanted: %+v", result, readyDeposits)
+	}
+
+	// It should also return the recent deposits after their follow window.
+	p.latestBlockNumber = big.NewInt(0).Add(p.latestBlockNumber, big.NewInt(10000))
+	allResp, err := bs.PendingDeposits(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(allResp.PendingDeposits) != len(recentDeposits)+len(readyDeposits) {
+		t.Errorf(
+			"Received unexpected number of pending deposits: %d, wanted: %d",
+			len(allResp.PendingDeposits),
+			len(recentDeposits)+len(readyDeposits),
+		)
+	}
 }
