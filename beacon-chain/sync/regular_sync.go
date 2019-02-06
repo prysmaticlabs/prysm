@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -231,7 +232,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 		return
 	}
 
-	if block.Slot < beaconState.FinalizedSlot {
+	if block.Slot < beaconState.FinalizedEpoch*params.BeaconConfig().EpochLength {
 		log.Debug("Discarding received block with a slot number smaller than the last finalized slot")
 		return
 	}

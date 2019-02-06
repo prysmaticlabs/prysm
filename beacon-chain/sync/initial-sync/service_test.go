@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -142,7 +143,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 	genericHash[0] = 'a'
 
 	beaconState := &pb.BeaconState{
-		FinalizedSlot: 99,
+		FinalizedEpoch: 1,
 	}
 
 	stateResponse := &pb.BeaconStateResponse{
@@ -150,8 +151,8 @@ func TestSavingBlocksInSync(t *testing.T) {
 	}
 
 	incorrectState := &pb.BeaconState{
-		FinalizedSlot: 9,
-		JustifiedSlot: 20,
+		FinalizedEpoch: 0,
+		JustifiedEpoch: 1,
 	}
 
 	incorrectStateResponse := &pb.BeaconStateResponse{
@@ -201,7 +202,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 
 	ss.stateBuf <- msg2
 
-	if ss.currentSlot == incorrectStateResponse.BeaconState.FinalizedSlot {
+	if ss.currentSlot == incorrectStateResponse.BeaconState.FinalizedEpoch*params.BeaconConfig().EpochLength {
 		t.Fatalf("Beacon state updated incorrectly: %d", ss.currentSlot)
 	}
 
@@ -218,11 +219,11 @@ func TestSavingBlocksInSync(t *testing.T) {
 	msg1 = getBlockResponseMsg(30)
 	ss.blockBuf <- msg1
 
-	if stateResponse.BeaconState.FinalizedSlot != ss.currentSlot {
-		t.Fatalf("Slot saved when it was not supposed too: %v", stateResponse.BeaconState.FinalizedSlot)
+	if stateResponse.BeaconState.FinalizedEpoch*params.BeaconConfig().EpochLength != ss.currentSlot {
+		t.Fatalf("Slot saved when it was not supposed too: %v", stateResponse.BeaconState.FinalizedEpoch*params.BeaconConfig().EpochLength)
 	}
 
-	msg1 = getBlockResponseMsg(100)
+	msg1 = getBlockResponseMsg(65)
 	ss.blockBuf <- msg1
 
 	ss.cancel()
@@ -265,7 +266,7 @@ func TestDelayChan(t *testing.T) {
 	genericHash[0] = 'a'
 
 	beaconState := &pb.BeaconState{
-		FinalizedSlot: 99,
+		FinalizedEpoch: 1,
 	}
 
 	stateResponse := &pb.BeaconStateResponse{
@@ -306,7 +307,7 @@ func TestDelayChan(t *testing.T) {
 
 	ss.stateBuf <- msg2
 
-	blockResponse.Block.Slot = 100
+	blockResponse.Block.Slot = 65
 	msg1.Data = blockResponse
 
 	ss.blockBuf <- msg1
