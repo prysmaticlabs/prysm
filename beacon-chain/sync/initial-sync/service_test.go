@@ -223,7 +223,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 		t.Fatalf("Slot saved when it was not supposed too: %v", stateResponse.BeaconState.FinalizedEpoch*params.BeaconConfig().EpochLength)
 	}
 
-	msg1 = getBlockResponseMsg(100)
+	msg1 = getBlockResponseMsg(65)
 	ss.blockBuf <- msg1
 
 	ss.cancel()
@@ -307,7 +307,7 @@ func TestDelayChan(t *testing.T) {
 
 	ss.stateBuf <- msg2
 
-	blockResponse.Block.Slot = 100
+	blockResponse.Block.Slot = 65
 	msg1.Data = blockResponse
 
 	ss.blockBuf <- msg1

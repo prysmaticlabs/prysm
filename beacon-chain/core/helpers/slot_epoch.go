@@ -50,10 +50,12 @@ func StartSlot(epoch uint64) uint64 {
 	return epoch * params.BeaconConfig().EpochLength
 }
 
+// AttestationCurrentEpoch returns the current epoch referenced by the attestation.
 func AttestationCurrentEpoch(att *pb.AttestationData) uint64 {
 	return SlotToEpoch(att.Slot)
 }
 
+// AttestationJustifiedEpoch returns the justified epoch referenced by the attestation.
 func AttestationJustifiedEpoch(att *pb.AttestationData) uint64 {
 	return SlotToEpoch(att.JustifiedSlot)
 }
