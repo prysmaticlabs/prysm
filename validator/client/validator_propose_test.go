@@ -85,7 +85,7 @@ func TestProposeBlock_UsePendingDeposits(t *testing.T) {
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.PendingDepositsResponse{
 		PendingDeposits: []*pbp2p.Deposit{
-			&pbp2p.Deposit{DepositData: []byte{'D', 'A', 'T', 'A'}},
+			{DepositData: []byte{'D', 'A', 'T', 'A'}},
 		},
 	}, nil /*err*/)
 
