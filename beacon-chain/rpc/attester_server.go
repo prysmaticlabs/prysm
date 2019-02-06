@@ -70,7 +70,7 @@ func (as *AttesterServer) AttestationInfoAtSlot(ctx context.Context, req *pb.Att
 	return &pb.AttestationInfoResponse{
 		BeaconBlockRootHash32:    blockRoot[:],
 		EpochBoundaryRootHash32:  epochBoundaryRoot[:],
-		JustifiedEpoch:           beaconState.JustifiedSlot, // TODO: Pending epoch refactor.
+		JustifiedEpoch:           beaconState.JustifiedSlot, // TODO(#1489): Pending epoch refactor.
 		JustifiedBlockRootHash32: justifiedBlockRoot[:],
 	}, nil
 }
