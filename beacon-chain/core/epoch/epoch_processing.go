@@ -50,9 +50,9 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 		return false
 	}
 	shardsProcessed := helpers.CurrentEpochCommitteeCount(state) * config.EpochLength
-	fmt.Println(shardsProcessed)
 	startShard := state.CurrentEpochStartShard
 	for i := startShard; i < shardsProcessed; i++ {
+
 		if state.LatestCrosslinks[i%config.ShardCount].Slot <=
 			state.ValidatorRegistryUpdateEpoch {
 			return false
@@ -154,26 +154,26 @@ func ProcessFinalization(state *pb.BeaconState) *pb.BeaconState {
 // ProcessCrosslinks goes through each crosslink committee and check
 // crosslink committee's attested balance * 3 is greater than total balance *2.
 // If it's greater then beacon node updates crosslink committee with
-// the state slot and wining root.
+// the state epoch and wining root.
 //
 // Spec pseudocode definition:
-//	For every `slot in range(state.slot - 2 * EPOCH_LENGTH, state.slot)`,
+//	For every slot in range(get_epoch_start_slot(previous_epoch), get_epoch_start_slot(next_epoch)),
 // 	let `crosslink_committees_at_slot = get_crosslink_committees_at_slot(state, slot)`.
 // 		For every `(crosslink_committee, shard)` in `crosslink_committees_at_slot`, compute:
 // 			Set state.latest_crosslinks[shard] = Crosslink(
-// 			slot=state.slot, shard_block_root=winning_root(crosslink_committee))
+// 			epoch=current_epoch, shard_block_root=winning_root(crosslink_committee))
 // 			if 3 * total_attesting_balance(crosslink_committee) >= 2 * total_balance(crosslink_committee)
 func ProcessCrosslinks(
 	state *pb.BeaconState,
 	thisEpochAttestations []*pb.PendingAttestationRecord,
 	prevEpochAttestations []*pb.PendingAttestationRecord) (*pb.BeaconState, error) {
 
-	var startSlot uint64
-	if state.Slot > 2*config.EpochLength {
-		startSlot = state.Slot - 2*config.EpochLength
-	}
+	prevEpoch := helpers.PrevEpoch(state)
+	nextEpoch := helpers.NextEpoch(state)
+	startSlot := helpers.StartSlot(prevEpoch)
+	endSlot := helpers.StartSlot(nextEpoch)
 
-	for i := startSlot; i < state.Slot; i++ {
+	for i := startSlot; i < endSlot; i++ {
 		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(state, i, false)
 		if err != nil {
 			return nil, fmt.Errorf("could not get committees for slot %d: %v", i, err)

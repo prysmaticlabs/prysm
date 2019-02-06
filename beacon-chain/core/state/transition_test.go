@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
@@ -520,40 +519,6 @@ func TestProcessEpoch_CantGetCurrentValidatorIndices(t *testing.T) {
 	wanted := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 0, 1)
 	if _, err := ProcessEpoch(state); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected: %s, received: %v", wanted, err)
-	}
-}
-
-func TestProcessEpoch_CantGetPrevValidatorIndices(t *testing.T) {
-	latestBlockRoots := make([][]byte, config.LatestBlockRootsLength)
-	for i := 0; i < len(latestBlockRoots); i++ {
-		latestBlockRoots[i] = config.ZeroHash[:]
-	}
-
-	var attestations []*pb.PendingAttestationRecord
-	for i := uint64(0); i < config.EpochLength*2; i++ {
-		attestations = append(attestations, &pb.PendingAttestationRecord{
-			Data: &pb.AttestationData{
-				Slot:                     1,
-				Shard:                    1,
-				JustifiedBlockRootHash32: make([]byte, 32),
-			},
-			ParticipationBitfield: []byte{0xff},
-		})
-	}
-
-	state := &pb.BeaconState{
-		Slot:                   config.EpochLength * 2,
-		LatestAttestations:     attestations,
-		LatestBlockRootHash32S: latestBlockRoots,
-	}
-
-	want := fmt.Sprintf(
-		"input committee epoch 0 out of bounds: %d <= epoch <= %d",
-		helpers.SlotToEpoch(config.EpochLength),
-		helpers.SlotToEpoch(config.EpochLength*2),
-	)
-	if _, err := ProcessEpoch(state); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected: %s, received: %v", want, err)
 	}
 }
 
