@@ -108,10 +108,10 @@ func InitialBeaconState(
 		CurrentEpochSeedHash32:   config.ZeroHash[:],
 
 		// Finality.
-		PreviousJustifiedSlot: config.GenesisSlot,
-		JustifiedSlot:         config.GenesisSlot,
-		JustificationBitfield: 0,
-		FinalizedSlot:         config.GenesisSlot,
+		PreviousJustifiedEpoch: config.GenesisEpoch,
+		JustifiedEpoch:         config.GenesisEpoch,
+		JustificationBitfield:  0,
+		FinalizedEpoch:         config.GenesisEpoch,
 
 		// Recent state.
 		LatestCrosslinks:        latestCrosslinks,

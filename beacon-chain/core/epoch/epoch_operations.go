@@ -41,8 +41,8 @@ func Attestations(state *pb.BeaconState) []*pb.PendingAttestationRecord {
 //
 // Spec pseudocode definition:
 //   return [a for a in this_epoch_attestations if a.data.epoch_boundary_root ==
-//   get_block_root(state, state.slot-EPOCH_LENGTH) and a.justified_slot ==
-//   state.justified_slot]
+//   get_block_root(state, state.slot-EPOCH_LENGTH) and slot_to_epoch(a.data.justified_slot) ==
+//   state.justified_epoch]
 func BoundaryAttestations(
 	state *pb.BeaconState,
 	thisEpochAttestations []*pb.PendingAttestationRecord,
@@ -67,8 +67,8 @@ func BoundaryAttestations(
 
 		attestationData := attestation.Data
 		sameRoot := bytes.Equal(attestationData.JustifiedBlockRootHash32, boundaryBlockRoot)
-		sameSlotNum := attestationData.JustifiedSlot == state.JustifiedSlot
-		if sameRoot && sameSlotNum {
+		sameEpochNum := helpers.AttestationJustifiedEpoch(attestationData) == state.JustifiedEpoch
+		if sameRoot && sameEpochNum {
 			boundaryAttestations = append(boundaryAttestations, attestation)
 		}
 	}
@@ -99,7 +99,7 @@ func PrevAttestations(state *pb.BeaconState) []*pb.PendingAttestationRecord {
 //
 // Spec pseudocode definition:
 //   return [a for a in this_epoch_attestations + previous_epoch_attestations
-//   if a.justified_slot == state.previous_justified_slot]
+//   if slot_to_epoch(a.data.justified_slot)  == state.previous_justified_epoch]
 func PrevJustifiedAttestations(
 	state *pb.BeaconState,
 	thisEpochAttestations []*pb.PendingAttestationRecord,
@@ -110,7 +110,7 @@ func PrevJustifiedAttestations(
 	epochAttestations := append(thisEpochAttestations, prevEpochAttestations...)
 
 	for _, attestation := range epochAttestations {
-		if attestation.Data.JustifiedSlot == state.PreviousJustifiedSlot {
+		if helpers.AttestationJustifiedEpoch(attestation.Data) == state.PreviousJustifiedEpoch {
 			prevJustifiedAttestations = append(prevJustifiedAttestations, attestation)
 		}
 	}
@@ -308,9 +308,9 @@ func TotalAttestingBalance(
 // a finalized slot.
 //
 // Spec pseudocode definition:
-//    epochs_since_finality = (state.slot - state.finalized_slot) // EPOCH_LENGTH
+//    epochs_since_finality = slot_to_epoch(state.slot)  - state.finalized_epoch)
 func SinceFinality(state *pb.BeaconState) uint64 {
-	return (state.Slot - state.FinalizedSlot) / params.BeaconConfig().EpochLength
+	return helpers.CurrentEpoch(state) - state.FinalizedEpoch
 }
 
 // winningRoot returns the shard block root with the most combined validator

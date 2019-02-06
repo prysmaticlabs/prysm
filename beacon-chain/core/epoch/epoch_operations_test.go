@@ -198,7 +198,7 @@ func TestPrevJustifiedAttestations(t *testing.T) {
 		{Data: &pb.AttestationData{JustifiedSlot: 888}},
 	}
 
-	state := &pb.BeaconState{PreviousJustifiedSlot: 100}
+	state := &pb.BeaconState{PreviousJustifiedEpoch: 1}
 
 	prevJustifiedAttestations := PrevJustifiedAttestations(state, thisEpochAttestations, prevEpochAttestations)
 

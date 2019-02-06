@@ -20,10 +20,10 @@ message BeaconState {
   bytes current_epoch_seed_hash32 = 1010;
 
   // Finality [2001-3000]
-  uint64 previous_justified_slot = 2001;
-  uint64 justified_slot = 2002;
+  uint64 previous_justified_epoch = 2001;
+  uint64 justified_epoch = 2002;
   uint64 justification_bitfield = 2003;
-  uint64 finalized_slot = 2004;
+  uint64 finalized_epoch = 2004;
 
   // Recent state [3001-4000]
   repeated CrosslinkRecord latest_crosslinks = 3001;
