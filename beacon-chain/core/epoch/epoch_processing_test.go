@@ -295,8 +295,12 @@ func TestProcessFinalization(t *testing.T) {
 func TestProcessCrosslinksOk(t *testing.T) {
 	state := buildState(5, config.DepositsForChainStart)
 	state.LatestCrosslinks = []*pb.CrosslinkRecord{{}, {}}
+	epoch := uint64(5)
+	state.Slot = epoch * config.EpochLength
+
+	byteLength := int(config.DepositsForChainStart / config.TargetCommitteeSize / 8)
 	var participationBitfield []byte
-	for i := 0; i < 16; i++ {
+	for i := 0; i < byteLength; i++ {
 		participationBitfield = append(participationBitfield, byte(0xff))
 	}
 
@@ -304,6 +308,7 @@ func TestProcessCrosslinksOk(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		attestation := &pb.PendingAttestationRecord{
 			Data: &pb.AttestationData{
+				Slot:                 state.Slot,
 				ShardBlockRootHash32: []byte{'A'},
 			},
 			// All validators attested to the above roots.
@@ -321,9 +326,9 @@ func TestProcessCrosslinksOk(t *testing.T) {
 		t.Fatalf("Could not execute ProcessCrosslinks: %v", err)
 	}
 	// Verify crosslink for shard 0([1]) was processed at state.slot (5).
-	if newState.LatestCrosslinks[0].Slot != state.Slot {
-		t.Errorf("Shard 0s got crosslinked at slot %d, wanted: %d",
-			newState.LatestCrosslinks[0].Slot, state.Slot)
+	if newState.LatestCrosslinks[0].Epoch != epoch {
+		t.Errorf("Shard 0s got crosslinked at epoch %d, wanted: %d",
+			newState.LatestCrosslinks[0].Epoch, epoch)
 	}
 	// Verify crosslink for shard 0 was root hashed for []byte{'A'}.
 	if !bytes.Equal(newState.LatestCrosslinks[0].ShardBlockRootHash32,
@@ -384,7 +389,7 @@ func TestCanProcessValidatorRegistry(t *testing.T) {
 	crosslinks := make([]*pb.CrosslinkRecord, config.DepositsForChainStart)
 	for i := 0; i < len(crosslinks); i++ {
 		crosslinks[i] = &pb.CrosslinkRecord{
-			Slot: 101,
+			Epoch: 101,
 		}
 	}
 
@@ -412,7 +417,7 @@ func TestCanNotProcessValidatorRegistry(t *testing.T) {
 		ValidatorRegistryUpdateEpoch: 101,
 		FinalizedEpoch:               1,
 		LatestCrosslinks: []*pb.CrosslinkRecord{
-			{Slot: 100},
+			{Epoch: 100},
 		},
 	}
 	if CanProcessValidatorRegistry(state) {

@@ -206,7 +206,7 @@ func TotalBalance(
 func InclusionSlot(state *pb.BeaconState, validatorIndex uint64) (uint64, error) {
 	lowestSlotIncluded := uint64(math.MaxUint64)
 	for _, attestation := range state.LatestAttestations {
-		participatedValidators, err := validators.AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)
+		participatedValidators, err := helpers.AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)
 		if err != nil {
 			return 0, fmt.Errorf("could not get attestation participants: %v", err)
 		}
@@ -234,7 +234,7 @@ func InclusionSlot(state *pb.BeaconState, validatorIndex uint64) (uint64, error)
 func InclusionDistance(state *pb.BeaconState, validatorIndex uint64) (uint64, error) {
 
 	for _, attestation := range state.LatestAttestations {
-		participatedValidators, err := validators.AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)
+		participatedValidators, err := helpers.AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)
 		if err != nil {
 			return 0, fmt.Errorf("could not get attestation participants: %v", err)
 		}

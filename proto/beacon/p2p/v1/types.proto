@@ -106,7 +106,7 @@ message ShardReassignmentRecord {
 }
 
 message CrosslinkRecord {
-  uint64 slot = 1;
+  uint64 epoch = 1;
   bytes shard_block_root_hash32 = 2;
 }
 
