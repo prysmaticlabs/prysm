@@ -109,14 +109,14 @@ func ProcessJustification(
 	// assign new justified slot to 2 * EPOCH_LENGTH before.
 	if 3*prevEpochBoundaryAttestingBalance >= 2*totalBalance {
 		state.JustificationBitfield |= 2
-		state.JustifiedEpoch = state.Slot - 2*config.EpochLength
+		state.JustifiedEpoch = helpers.CurrentEpoch(state) - 2
 	}
 
 	// If this epoch was justified then we ensure the 1st bit in the bitfield is set,
 	// assign new justified slot to 1 * EPOCH_LENGTH before.
 	if 3*thisEpochBoundaryAttestingBalance >= 2*totalBalance {
 		state.JustificationBitfield |= 1
-		state.JustifiedEpoch = state.Slot - 1*config.EpochLength
+		state.JustifiedEpoch = helpers.CurrentEpoch(state) - 1
 	}
 	return state
 }
