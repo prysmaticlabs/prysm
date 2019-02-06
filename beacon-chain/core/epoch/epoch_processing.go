@@ -46,7 +46,7 @@ func CanProcessEth1Data(state *pb.BeaconState) bool {
 //	 			SHARD_COUNT for i in range(get_current_epoch_committees_per_slot(state) *
 //	 			EPOCH_LENGTH)] (that is, for every shard in the current committees)
 func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
-	if state.FinalizedSlot <= state.ValidatorRegistryUpdateSlot {
+	if state.FinalizedSlot <= state.ValidatorRegistryUpdateEpoch {
 		return false
 	}
 	shardsProcessed := helpers.CurrentEpochCommitteeCount(state) * config.EpochLength
@@ -54,7 +54,7 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 	startShard := state.CurrentEpochStartShard
 	for i := startShard; i < shardsProcessed; i++ {
 		if state.LatestCrosslinks[i%config.ShardCount].Slot <=
-			state.ValidatorRegistryUpdateSlot {
+			state.ValidatorRegistryUpdateEpoch {
 			return false
 		}
 	}
@@ -235,7 +235,7 @@ func ProcessEjections(state *pb.BeaconState) (*pb.BeaconState, error) {
 //	Set state.current_epoch_calculation_slot = state.slot
 //  Set state.previous_epoch_seed = state.current_epoch_seed.
 func ProcessPrevSlotShardSeed(state *pb.BeaconState) *pb.BeaconState {
-	state.PreviousEpochCalculationSlot = state.CurrentEpochCalculationSlot
+	state.PreviousCalculationEpoch = state.CurrentCalculationEpoch
 	state.PreviousEpochStartShard = state.CurrentEpochStartShard
 	state.PreviousEpochSeedHash32 = state.CurrentEpochSeedHash32
 	return state
@@ -251,7 +251,7 @@ func ProcessPrevSlotShardSeed(state *pb.BeaconState) *pb.BeaconState {
 //	Set state.current_epoch_seed = generate_seed(state, state.current_calculation_epoch)
 func ProcessValidatorRegistry(
 	state *pb.BeaconState) (*pb.BeaconState, error) {
-	state.CurrentEpochCalculationSlot = state.Slot
+	state.CurrentCalculationEpoch = state.Slot
 
 	nextStartShard := (state.CurrentEpochStartShard +
 		helpers.CurrentEpochCommitteeCount(state)*config.EpochLength) %
@@ -259,8 +259,8 @@ func ProcessValidatorRegistry(
 	state.CurrentEpochStartShard = nextStartShard
 
 	var randaoMixSlot uint64
-	if state.CurrentEpochCalculationSlot > config.SeedLookahead {
-		randaoMixSlot = state.CurrentEpochCalculationSlot -
+	if state.CurrentCalculationEpoch > config.SeedLookahead {
+		randaoMixSlot = state.CurrentCalculationEpoch -
 			config.SeedLookahead
 	}
 	mix, err := helpers.RandaoMix(state, randaoMixSlot)
@@ -287,15 +287,15 @@ func ProcessValidatorRegistry(
 // 			(state.current_epoch_calculation_slot - SEED_LOOKAHEAD) %
 // 			LATEST_RANDAO_MIXES_LENGTH].
 func ProcessPartialValidatorRegistry(state *pb.BeaconState) *pb.BeaconState {
-	epochsSinceLastRegistryChange := (state.Slot - state.ValidatorRegistryUpdateSlot) /
+	epochsSinceLastRegistryChange := (state.Slot - state.ValidatorRegistryUpdateEpoch) /
 		config.EpochLength
 
 	if mathutil.IsPowerOf2(epochsSinceLastRegistryChange) {
-		state.CurrentEpochCalculationSlot = state.Slot
+		state.CurrentCalculationEpoch = state.Slot
 
 		var randaoIndex uint64
-		if state.CurrentEpochCalculationSlot > config.SeedLookahead {
-			randaoIndex = state.CurrentEpochCalculationSlot - config.SeedLookahead
+		if state.CurrentCalculationEpoch > config.SeedLookahead {
+			randaoIndex = state.CurrentCalculationEpoch - config.SeedLookahead
 		}
 
 		randaoMix := state.LatestRandaoMixesHash32S[randaoIndex%config.LatestRandaoMixesLength]

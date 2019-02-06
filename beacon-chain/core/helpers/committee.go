@@ -60,7 +60,7 @@ func EpochCommitteeCount(activeValidatorCount uint64) uint64 {
 //    return get_epoch_committee_count(len(current_active_validators)
 func CurrentEpochCommitteeCount(state *pb.BeaconState) uint64 {
 	currActiveValidatorIndices := ActiveValidatorIndices(
-		state.ValidatorRegistry, state.CurrentEpochCalculationSlot)
+		state.ValidatorRegistry, state.CurrentCalculationEpoch)
 	return EpochCommitteeCount(uint64(len(currActiveValidatorIndices)))
 }
 
@@ -79,7 +79,7 @@ func CurrentEpochCommitteeCount(state *pb.BeaconState) uint64 {
 //    return get_epoch_committee_count(len(previous_active_validators))
 func PrevEpochCommitteeCount(state *pb.BeaconState) uint64 {
 	prevActiveValidatorIndices := ActiveValidatorIndices(
-		state.ValidatorRegistry, state.PreviousEpochCalculationSlot)
+		state.ValidatorRegistry, state.PreviousCalculationEpoch)
 	return EpochCommitteeCount(uint64(len(prevActiveValidatorIndices)))
 }
 
@@ -190,19 +190,19 @@ func CrosslinkCommitteesAtSlot(
 	if wantedEpoch == prevEpoch {
 		committeesPerEpoch = PrevEpochCommitteeCount(state)
 		seed = bytesutil.ToBytes32(state.PreviousEpochSeedHash32)
-		shufflingEpoch = state.PreviousEpochCalculationSlot
+		shufflingEpoch = state.PreviousCalculationEpoch
 		shufflingStartShard = state.PreviousEpochStartShard
 	} else if wantedEpoch == currentEpoch {
 		committeesPerEpoch = PrevEpochCommitteeCount(state)
 		seed = bytesutil.ToBytes32(state.CurrentEpochSeedHash32)
-		shufflingEpoch = state.CurrentEpochCalculationSlot
+		shufflingEpoch = state.CurrentCalculationEpoch
 		shufflingStartShard = state.CurrentEpochStartShard
 	} else if wantedEpoch == nextEpoch {
 		currentCommitteesPerEpoch := CurrentEpochCommitteeCount(state)
 		committeesPerEpoch = NextEpochCommitteeCount(state)
 		shufflingEpoch = nextEpoch
 
-		epochsSinceLastRegistryUpdate := currentEpoch - state.ValidatorRegistryUpdateSlot
+		epochsSinceLastRegistryUpdate := currentEpoch - state.ValidatorRegistryUpdateEpoch
 		if registryChange {
 			seed, err = GenerateSeed(state, nextEpoch)
 			if err != nil {
