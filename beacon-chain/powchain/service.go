@@ -14,6 +14,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
@@ -25,6 +27,13 @@ import (
 )
 
 var log = logrus.WithField("prefix", "powchain")
+
+var (
+	depositsCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "powchain_deposits_received",
+		Help: "The number of deposits received in the deposit contract",
+	})
+)
 
 // Reader defines a struct that can fetch latest header events from a web3 endpoint.
 type Reader interface {
@@ -252,6 +261,8 @@ func (w *Web3Service) ProcessDepositLog(VRClog gethTypes.Log) {
 		"publicKey":       fmt.Sprintf("%#x", depositInput.Pubkey),
 		"merkleTreeIndex": index,
 	}).Info("Validator registered in deposit contract")
+
+	depositsCount.Inc()
 }
 
 // ProcessChainStartLog processes the log which had been received from
