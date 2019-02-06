@@ -2,6 +2,7 @@ package state
 
 import (
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"strings"
 	"testing"
 
@@ -478,14 +479,14 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 
 func TestProcessEpoch_CantGetBoundaryAttestation(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot: 1,
+		Slot: 5,
 		LatestAttestations: []*pb.PendingAttestationRecord{
-			{Data: &pb.AttestationData{}},
+			{Data: &pb.AttestationData{Slot: 4}},
 		}}
 
 	want := fmt.Sprintf(
-		"could not get current boundary attestations: slot %d out of bounds: %d <= slot < %d",
-		state.LatestAttestations[0].Data.Slot, state.Slot, state.Slot,
+		"could not get current boundary attestations: slot %d is not within expected range of %d to %d",
+		0, state.Slot, state.Slot-1,
 	)
 	if _, err := ProcessEpoch(state); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected: %s, received: %v", want, err)
@@ -522,15 +523,50 @@ func TestProcessEpoch_CantGetCurrentValidatorIndices(t *testing.T) {
 	}
 }
 
+func TestProcessEpoch_CantGetPrevValidatorIndices(t *testing.T) {
+	latestBlockRoots := make([][]byte, config.LatestBlockRootsLength)
+	for i := 0; i < len(latestBlockRoots); i++ {
+		latestBlockRoots[i] = config.ZeroHash[:]
+	}
+
+	var attestations []*pb.PendingAttestationRecord
+	for i := uint64(0); i < config.EpochLength*2; i++ {
+		attestations = append(attestations, &pb.PendingAttestationRecord{
+			Data: &pb.AttestationData{
+				Slot:                     1,
+				Shard:                    1,
+				JustifiedBlockRootHash32: make([]byte, 32),
+			},
+			ParticipationBitfield: []byte{0xff},
+		})
+	}
+
+	state := &pb.BeaconState{
+		Slot:                   config.EpochLength * 2,
+		LatestAttestations:     attestations,
+		LatestBlockRootHash32S: latestBlockRoots,
+	}
+
+	want := fmt.Sprintf(
+		"input committee epoch 0 out of bounds: %d <= epoch <= %d",
+		helpers.SlotToEpoch(config.EpochLength),
+		helpers.SlotToEpoch(config.EpochLength*2),
+	)
+	if _, err := ProcessEpoch(state); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected: %s, received: %v", want, err)
+	}
+}
+
 func TestProcessEpoch_CantProcessCurrentBoundaryAttestations(t *testing.T) {
 	state := &pb.BeaconState{
+		Slot: 100,
 		LatestAttestations: []*pb.PendingAttestationRecord{
 			{Data: &pb.AttestationData{}},
 		}}
 
 	want := fmt.Sprintf(
-		"could not get current boundary attestations: slot %d out of bounds: %d <= slot < %d",
-		state.LatestAttestations[0].Data.Slot, state.Slot, state.Slot,
+		"could not get prev boundary attestations: slot %d is not within expected range of %d to %d",
+		0, state.Slot, state.Slot-1,
 	)
 	if _, err := ProcessEpoch(state); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected: %s, received: %v", want, err)
@@ -547,6 +583,10 @@ func TestProcessEpoch_CantProcessEjections(t *testing.T) {
 	for i := uint64(0); i < 4*config.EpochLength; i++ {
 		randaoHashes = append(randaoHashes, []byte{byte(i)})
 	}
+	var participationBitfield []byte
+	for i := 0; i < 16; i++ {
+		participationBitfield = append(participationBitfield, byte(0xff))
+	}
 
 	ExitEpoch := 4*config.EpochLength + 1
 	validatorRegistries[0].ExitEpoch = ExitEpoch
@@ -559,7 +599,7 @@ func TestProcessEpoch_CantProcessEjections(t *testing.T) {
 		LatestRandaoMixesHash32S: randaoHashes,
 		LatestCrosslinks:         []*pb.CrosslinkRecord{{}},
 		LatestAttestations: []*pb.PendingAttestationRecord{
-			{Data: &pb.AttestationData{}, ParticipationBitfield: []byte{0xFF}},
+			{Data: &pb.AttestationData{}, ParticipationBitfield: participationBitfield},
 		}}
 
 	want := fmt.Sprintf("could not process inclusion distance: 0")

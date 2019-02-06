@@ -80,4 +80,9 @@ func TestPendingDeposits(t *testing.T) {
 	if !reflect.DeepEqual(deposits, expected) {
 		t.Errorf("Unexpected deposits. got=%+v want=%+v", deposits, expected)
 	}
+
+	all := db.PendingDeposits(context.Background(), nil)
+	if len(all) != len(db.deposits) {
+		t.Error("PendingDeposits(ctx, nil) did not return all deposits")
+	}
 }

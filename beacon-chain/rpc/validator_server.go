@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
-
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // ValidatorServer defines a server implementation of the gRPC Validator service,
@@ -59,7 +59,7 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 	var proposerSlot uint64
 
 	for slot := req.EpochStart; slot < req.EpochStart+params.BeaconConfig().EpochLength; slot++ {
-		crossLinkCommittees, err := v.CrosslinkCommitteesAtSlot(beaconState, slot)
+		crossLinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(beaconState, slot, false)
 		if err != nil {
 			return nil, err
 		}

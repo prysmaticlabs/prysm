@@ -20,6 +20,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -462,6 +463,71 @@ func TestProcessDepositLog(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Validator registered in deposit contract")
 
 	hook.Reset()
+}
+
+func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
+	endpoint := "ws://127.0.0.1"
+	testAcc, err := setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint:        endpoint,
+		DepositContract: testAcc.contractAddr,
+		Reader:          &goodReader{},
+		Logger:          &goodLogger{},
+		ContractBackend: testAcc.backend,
+		BeaconDB:        &db.BeaconDB{},
+	})
+	if err != nil {
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+
+	testAcc.backend.Commit()
+
+	web3Service.depositTrie = trieutil.NewDepositTrie()
+
+	var stub [48]byte
+	copy(stub[:], []byte("testing"))
+
+	data := &pb.DepositInput{
+		Pubkey:                      stub[:],
+		ProofOfPossession:           stub[:],
+		WithdrawalCredentialsHash32: []byte("withdraw"),
+		RandaoCommitmentHash32:      []byte("randao"),
+		CustodyCommitmentHash32:     []byte("custody"),
+	}
+
+	serializedData := new(bytes.Buffer)
+	if err := ssz.Encode(serializedData, data); err != nil {
+		t.Fatalf("Could not serialize data %v", err)
+	}
+
+	testAcc.txOpts.Value = amount32Eth
+	if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+		t.Fatalf("Could not deposit to VRC %v", err)
+	}
+
+	testAcc.backend.Commit()
+
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{
+			web3Service.depositContractAddress,
+		},
+	}
+
+	logs, err := testAcc.backend.FilterLogs(web3Service.ctx, query)
+	if err != nil {
+		t.Fatalf("Unable to retrieve logs %v", err)
+	}
+
+	web3Service.chainStarted = true
+
+	web3Service.ProcessDepositLog(logs[0])
+	pendingDeposits := web3Service.beaconDB.PendingDeposits(context.Background(), nil /*blockNum*/)
+	if len(pendingDeposits) != 1 {
+		t.Errorf("Unexpected number of deposits. Wanted 1 deposit, got %+v", pendingDeposits)
+	}
 }
 
 func TestUnpackDepositLogs(t *testing.T) {

@@ -58,7 +58,7 @@ func ActiveValidators(state *pb.BeaconState, validatorIndices []uint32) []*pb.Va
 //    first_committee, _ = get_crosslink_committees_at_slot(state, slot)[0]
 //    return first_committee[slot % len(first_committee)]
 func BeaconProposerIdx(state *pb.BeaconState, slot uint64) (uint64, error) {
-	committeeArray, err := CrosslinkCommitteesAtSlot(state, slot)
+	committeeArray, err := helpers.CrosslinkCommitteesAtSlot(state, slot, false)
 	if err != nil {
 		return 0, err
 	}
@@ -517,7 +517,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 			}
 		}
 	}
-	state.ValidatorRegistryUpdateSlot = state.Slot
+	state.ValidatorRegistryUpdateEpoch = state.Slot
 	return state, nil
 }
 

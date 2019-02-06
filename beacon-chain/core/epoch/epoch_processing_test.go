@@ -295,6 +295,10 @@ func TestProcessFinalization(t *testing.T) {
 func TestProcessCrosslinksOk(t *testing.T) {
 	state := buildState(5, config.DepositsForChainStart)
 	state.LatestCrosslinks = []*pb.CrosslinkRecord{{}, {}}
+	var participationBitfield []byte
+	for i := 0; i < 16; i++ {
+		participationBitfield = append(participationBitfield, byte(0xff))
+	}
 
 	var attestations []*pb.PendingAttestationRecord
 	for i := 0; i < 10; i++ {
@@ -303,7 +307,7 @@ func TestProcessCrosslinksOk(t *testing.T) {
 				ShardBlockRootHash32: []byte{'A'},
 			},
 			// All validators attested to the above roots.
-			ParticipationBitfield: []byte{0xff},
+			ParticipationBitfield: participationBitfield,
 		}
 		attestations = append(attestations, attestation)
 	}
@@ -341,7 +345,7 @@ func TestProcessCrosslinksNoParticipantsBitField(t *testing.T) {
 
 	wanted := fmt.Sprintf(
 		"wanted participants bitfield length %d, got: %d",
-		1, 0,
+		16, 0,
 	)
 	if _, err := ProcessCrosslinks(state, attestations, nil); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected: %s, received: %s", wanted, err.Error())
@@ -385,9 +389,9 @@ func TestCanProcessValidatorRegistry(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		FinalizedSlot:               100,
-		ValidatorRegistryUpdateSlot: 99,
-		LatestCrosslinks:            crosslinks,
+		FinalizedSlot:                100,
+		ValidatorRegistryUpdateEpoch: 99,
+		LatestCrosslinks:             crosslinks,
 	}
 
 	if !CanProcessValidatorRegistry(state) {
@@ -397,16 +401,16 @@ func TestCanProcessValidatorRegistry(t *testing.T) {
 
 func TestCanNotProcessValidatorRegistry(t *testing.T) {
 	state := &pb.BeaconState{
-		FinalizedSlot:               100,
-		ValidatorRegistryUpdateSlot: 101,
+		FinalizedSlot:                100,
+		ValidatorRegistryUpdateEpoch: 101,
 	}
 
 	if CanProcessValidatorRegistry(state) {
 		t.Errorf("Wanted False for CanProcessValidatorRegistry, but got %v", CanProcessValidatorRegistry(state))
 	}
 	state = &pb.BeaconState{
-		ValidatorRegistryUpdateSlot: 101,
-		FinalizedSlot:               102,
+		ValidatorRegistryUpdateEpoch: 101,
+		FinalizedSlot:                102,
 		LatestCrosslinks: []*pb.CrosslinkRecord{
 			{Slot: 100},
 		},
@@ -418,17 +422,17 @@ func TestCanNotProcessValidatorRegistry(t *testing.T) {
 
 func TestProcessPrevSlotShardOk(t *testing.T) {
 	state := &pb.BeaconState{
-		CurrentEpochCalculationSlot: 1,
-		CurrentEpochStartShard:      2,
-		CurrentEpochSeedHash32:      []byte{'A'},
+		CurrentCalculationEpoch: 1,
+		CurrentEpochStartShard:  2,
+		CurrentEpochSeedHash32:  []byte{'A'},
 	}
 
 	newState := ProcessPrevSlotShardSeed(
 		proto.Clone(state).(*pb.BeaconState))
 
-	if newState.PreviousEpochCalculationSlot != state.CurrentEpochCalculationSlot {
+	if newState.PreviousCalculationEpoch != state.CurrentCalculationEpoch {
 		t.Errorf("Incorret prev epoch calculation slot: Wanted: %d, got: %d",
-			newState.PreviousEpochCalculationSlot, state.CurrentEpochCalculationSlot)
+			newState.PreviousCalculationEpoch, state.CurrentCalculationEpoch)
 	}
 	if newState.PreviousEpochStartShard != state.CurrentEpochStartShard {
 		t.Errorf("Incorret prev epoch start shard: Wanted: %d, got: %d",
@@ -451,9 +455,9 @@ func TestProcessValidatorRegistryOk(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not execute ProcessValidatorRegistry: %v", err)
 	}
-	if newState.CurrentEpochCalculationSlot != state.Slot {
+	if newState.CurrentCalculationEpoch != state.Slot {
 		t.Errorf("Incorret curr epoch calculation slot: Wanted: %d, got: %d",
-			newState.CurrentEpochCalculationSlot, state.Slot)
+			newState.CurrentCalculationEpoch, state.Slot)
 	}
 	if !bytes.Equal(newState.CurrentEpochSeedHash32, state.LatestRandaoMixesHash32S[0]) {
 		t.Errorf("Incorret current epoch randao mix hash: Wanted: %v, got: %v",
@@ -464,15 +468,15 @@ func TestProcessValidatorRegistryOk(t *testing.T) {
 func TestProcessPartialValidatorRegistry(t *testing.T) {
 	offset := uint64(1)
 	state := &pb.BeaconState{
-		Slot:                        config.SeedLookahead + offset,
-		ValidatorRegistryUpdateSlot: offset,
-		LatestRandaoMixesHash32S:    [][]byte{{'A'}, {'B'}},
+		Slot:                         config.SeedLookahead + offset,
+		ValidatorRegistryUpdateEpoch: offset,
+		LatestRandaoMixesHash32S:     [][]byte{{'A'}, {'B'}},
 	}
 	copiedState := proto.Clone(state).(*pb.BeaconState)
 	newState := ProcessPartialValidatorRegistry(copiedState)
-	if newState.CurrentEpochCalculationSlot != state.Slot {
-		t.Errorf("Incorrect CurrentEpochCalculationSlot, wanted: %d, got: %d",
-			state.Slot, newState.CurrentEpochCalculationSlot)
+	if newState.CurrentCalculationEpoch != state.Slot {
+		t.Errorf("Incorrect CurrentCalculationEpoch, wanted: %d, got: %d",
+			state.Slot, newState.CurrentCalculationEpoch)
 	}
 	if !bytes.Equal(newState.CurrentEpochSeedHash32, state.LatestRandaoMixesHash32S[offset]) {
 		t.Errorf("Incorret current epoch randao mix hash: Wanted: %v, got: %v",
