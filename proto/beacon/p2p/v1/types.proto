@@ -46,7 +46,7 @@ message BeaconState {
 message Fork {
   uint64 previous_version = 1;
   uint64 current_version = 2;
-  uint64 slot = 3;
+  uint64 epoch = 3;
 }
 
 message PendingAttestationRecord {

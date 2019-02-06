@@ -51,7 +51,7 @@ func ActiveIndexRoot(state *pb.BeaconState, wantedEpoch uint64) ([]byte, error) 
 	if currentEpoch > params.BeaconConfig().LatestIndexRootsLength+params.BeaconConfig().EntryExitDelay {
 		earliestEpoch = currentEpoch - (params.BeaconConfig().LatestIndexRootsLength + params.BeaconConfig().EntryExitDelay)
 	}
-	if earliestEpoch > wantedEpoch || wantedEpoch >= currentEpoch {
+	if earliestEpoch > wantedEpoch || wantedEpoch > currentEpoch {
 		return nil, fmt.Errorf("input indexRoot epoch %d out of bounds: %d <= epoch < %d",
 			wantedEpoch, earliestEpoch, currentEpoch)
 	}
@@ -75,7 +75,7 @@ func RandaoMix(state *pb.BeaconState, wantedEpoch uint64) ([]byte, error) {
 	if currentEpoch > params.BeaconConfig().LatestRandaoMixesLength {
 		earliestEpoch = currentEpoch - params.BeaconConfig().LatestRandaoMixesLength
 	}
-	if earliestEpoch > wantedEpoch || wantedEpoch >= currentEpoch {
+	if earliestEpoch > wantedEpoch || wantedEpoch > currentEpoch {
 		return nil, fmt.Errorf("input randaoMix epoch %d out of bounds: %d <= epoch < %d",
 			wantedEpoch, earliestEpoch, currentEpoch)
 	}
