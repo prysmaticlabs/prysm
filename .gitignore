@@ -2,6 +2,7 @@
 bazel-*
 
 .DS_Store
+.swp
 
 # IntelliJ
 .idea
