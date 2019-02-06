@@ -7,8 +7,10 @@ matrix:
       go: 1.11.x
       env:
         - lint
+      install:
+        - go get ${gobuild_args} -t ./...
       script:
-        - go get github.com/alecthomas/gometalinter && gometalinter --install && gometalinter ./...
+        - go get ${gobuild_args} github.com/alecthomas/gometalinter && gometalinter --install && gometalinter ./...
       email: false
       after_success:
         - wget https://raw.githubusercontent.com/k3rn31p4nic/travis-ci-discord-webhook/master/send.sh
