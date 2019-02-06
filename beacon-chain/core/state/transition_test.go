@@ -2,7 +2,6 @@ package state
 
 import (
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"strings"
 	"testing"
 
@@ -58,6 +57,10 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	block := &pb.BeaconBlock{
 		Slot:               5,
 		RandaoRevealHash32: []byte{},
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{2},
+			BlockHash32:       []byte{3},
+		},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: slashings,
 		},
@@ -96,6 +99,10 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 	block := &pb.BeaconBlock{
 		Slot:               5,
 		RandaoRevealHash32: []byte{},
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{2},
+			BlockHash32:       []byte{3},
+		},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: slashings,
 			AttesterSlashings: attesterSlashings,
@@ -157,6 +164,10 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	block := &pb.BeaconBlock{
 		Slot:               5,
 		RandaoRevealHash32: []byte{},
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{2},
+			BlockHash32:       []byte{3},
+		},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
@@ -243,6 +254,10 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	block := &pb.BeaconBlock{
 		Slot:               64,
 		RandaoRevealHash32: []byte{},
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{2},
+			BlockHash32:       []byte{3},
+		},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
@@ -335,6 +350,10 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	block := &pb.BeaconBlock{
 		Slot:               64,
 		RandaoRevealHash32: []byte{},
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{2},
+			BlockHash32:       []byte{3},
+		},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
@@ -352,8 +371,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 	for i := uint64(0); i < 10; i++ {
 		validatorRegistry = append(validatorRegistry,
 			&pb.ValidatorRecord{
-				ExitSlot: config.FarFutureSlot,
-				Balance:  config.MaxDeposit,
+				ExitEpoch: config.FarFutureEpoch,
 			})
 	}
 	validatorBalances := make([]uint64, len(validatorRegistry))
@@ -406,10 +424,10 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 	defaultBalance := config.MaxDeposit
 
 	validatorRegistry := []*pb.ValidatorRecord{
-		{ExitSlot: config.FarFutureSlot}, {ExitSlot: config.FarFutureSlot},
-		{ExitSlot: config.FarFutureSlot}, {ExitSlot: config.FarFutureSlot},
-		{ExitSlot: config.FarFutureSlot}, {ExitSlot: config.FarFutureSlot},
-		{ExitSlot: config.FarFutureSlot}, {ExitSlot: config.FarFutureSlot}}
+		{ExitEpoch: config.FarFutureEpoch}, {ExitEpoch: config.FarFutureEpoch},
+		{ExitEpoch: config.FarFutureEpoch}, {ExitEpoch: config.FarFutureEpoch},
+		{ExitEpoch: config.FarFutureEpoch}, {ExitEpoch: config.FarFutureEpoch},
+		{ExitEpoch: config.FarFutureEpoch}, {ExitEpoch: config.FarFutureEpoch}}
 
 	validatorBalances := []uint64{
 		defaultBalance, defaultBalance, defaultBalance, defaultBalance,
@@ -460,14 +478,14 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 
 func TestProcessEpoch_CantGetBoundaryAttestation(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot: 1,
+		Slot: 5,
 		LatestAttestations: []*pb.PendingAttestationRecord{
-			{Data: &pb.AttestationData{}},
+			{Data: &pb.AttestationData{Slot: 4}},
 		}}
 
 	want := fmt.Sprintf(
-		"could not get current boundary attestations: slot %d out of bounds: %d <= slot < %d",
-		state.LatestAttestations[0].Data.Slot, state.Slot, state.Slot,
+		"could not get current boundary attestations: slot %d is not within expected range of %d to %d",
+		0, state.Slot, state.Slot-1,
 	)
 	if _, err := ProcessEpoch(state); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected: %s, received: %v", want, err)
@@ -504,49 +522,16 @@ func TestProcessEpoch_CantGetCurrentValidatorIndices(t *testing.T) {
 	}
 }
 
-func TestProcessEpoch_CantGetPrevValidatorIndices(t *testing.T) {
-	latestBlockRoots := make([][]byte, config.LatestBlockRootsLength)
-	for i := 0; i < len(latestBlockRoots); i++ {
-		latestBlockRoots[i] = config.ZeroHash[:]
-	}
-
-	var attestations []*pb.PendingAttestationRecord
-	for i := uint64(0); i < config.EpochLength*2; i++ {
-		attestations = append(attestations, &pb.PendingAttestationRecord{
-			Data: &pb.AttestationData{
-				Slot:                     1,
-				Shard:                    1,
-				JustifiedBlockRootHash32: make([]byte, 32),
-			},
-			ParticipationBitfield: []byte{0xff},
-		})
-	}
-
-	state := &pb.BeaconState{
-		Slot:                   config.EpochLength * 2,
-		LatestAttestations:     attestations,
-		LatestBlockRootHash32S: latestBlockRoots,
-	}
-
-	want := fmt.Sprintf(
-		"input committee epoch 0 out of bounds: %d <= epoch < %d",
-		helpers.SlotToEpoch(config.EpochLength),
-		helpers.SlotToEpoch(config.EpochLength*2),
-	)
-	if _, err := ProcessEpoch(state); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected: %s, received: %v", want, err)
-	}
-}
-
 func TestProcessEpoch_CantProcessCurrentBoundaryAttestations(t *testing.T) {
 	state := &pb.BeaconState{
+		Slot: 100,
 		LatestAttestations: []*pb.PendingAttestationRecord{
 			{Data: &pb.AttestationData{}},
 		}}
 
 	want := fmt.Sprintf(
-		"could not get current boundary attestations: slot %d out of bounds: %d <= slot < %d",
-		state.LatestAttestations[0].Data.Slot, state.Slot, state.Slot,
+		"could not get prev boundary attestations: slot %d is not within expected range of %d to %d",
+		0, state.Slot, state.Slot-1,
 	)
 	if _, err := ProcessEpoch(state); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected: %s, received: %v", want, err)
@@ -564,11 +549,12 @@ func TestProcessEpoch_CantProcessEjections(t *testing.T) {
 		randaoHashes = append(randaoHashes, []byte{byte(i)})
 	}
 	var participationBitfield []byte
-	for i := 0; i < int(config.TargetCommitteeSize/8); i++ {
-		participationBitfield = append(participationBitfield, byte(255))
+	for i := 0; i < 16; i++ {
+		participationBitfield = append(participationBitfield, byte(0xff))
 	}
-	exitSlot := 4*config.EpochLength + 1
-	validatorRegistries[0].ExitSlot = exitSlot
+
+	ExitEpoch := 4*config.EpochLength + 1
+	validatorRegistries[0].ExitEpoch = ExitEpoch
 	validatorBalances[0] = config.EjectionBalance - 1
 	state := &pb.BeaconState{
 		Slot:                     config.EpochLength,

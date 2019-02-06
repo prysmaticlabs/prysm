@@ -27,6 +27,7 @@ type BeaconChainConfig struct {
 	LatestBlockRootsLength     uint64 // LatestBlockRootsLength is the number of block roots kept in the beacon state.
 	LatestRandaoMixesLength    uint64 // LatestRandaoMixesLength is the number of randao mixes kept in the beacon state.
 	LatestPenalizedExitLength  uint64 // LatestPenalizedExitLength is used to track penalized exit balances per time interval.
+	LatestIndexRootsLength     uint64 // LatestIndexRootsLength is the number of index roots kept in beacon state, used by light client.
 	MaxWithdrawalsPerEpoch     uint64 // MaxWithdrawalsPerEpoch is the max withdrawals can happen for a single epoch.
 
 	// Deposit contract constants.
@@ -38,6 +39,7 @@ type BeaconChainConfig struct {
 	// Initial value constants.
 	GenesisForkVersion      uint64   // GenesisForkVersion is used to track fork version between state transitions.
 	GenesisSlot             uint64   // GenesisSlot is used to initialize the genesis state fields.
+	GenesisEpoch            uint64   // GenesisEpoch is used to initialize epoch.
 	GenesisStartShard       uint64   // GenesisStartShard is the first shard to assign validators.
 	ZeroHash                [32]byte // ZeroHash is used to represent a zeroed out 32 byte array.
 	EmptySignature          [][]byte // EmptySignature is used to represent a zeroed out BLS Signature.
@@ -48,10 +50,11 @@ type BeaconChainConfig struct {
 	MinAttestationInclusionDelay uint64 // MinAttestationInclusionDelay defines how long validator has to wait to include attestation for beacon block.
 	EpochLength                  uint64 // EpochLength is the number of slots in an epoch.
 	SeedLookahead                uint64 // SeedLookahead is the duration of randao look ahead seed.
-	EntryExitDelay               uint64 // EntryExitDelay is the duration a validator has to wait for entry and exit.
-	DepositRootVotingPeriod      uint64 // DepositRootVotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
-	MinValidatorWithdrawalTime   uint64 // MinValidatorWithdrawalTime is the shortest amount of time a validator can get the deposit out.
-	FarFutureSlot                uint64 // FarFutureSlot represents a slot extremely far away in the future used as the default penalization slot for validators.
+	EntryExitDelay               uint64 // EntryExitDelay is the duration a validator has to wait for entry and exit in epoch.
+	Eth1DataVotingPeriod         uint64 // Eth1DataVotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
+	Eth1FollowDistance           uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
+	MinValidatorWithdrawalEpochs uint64 // MinValidatorWithdrawalEpochs is the shortest amount of time a validator can get the deposit out.
+	FarFutureEpoch               uint64 // FarFutureEpoch represents a epoch extremely far away in the future used as the default penalization slot for validators.
 
 	// Reward and penalty quotients constants.
 	BaseRewardQuotient           uint64 // BaseRewardQuotient is used to calculate validator per-slot interest rate.
@@ -99,6 +102,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	LatestBlockRootsLength:     8192,
 	LatestRandaoMixesLength:    8192,
 	LatestPenalizedExitLength:  8192,
+	LatestIndexRootsLength:     8192,
 	MaxWithdrawalsPerEpoch:     4,
 
 	// Deposit contract constants.
@@ -109,8 +113,9 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	// Initial value constants.
 	GenesisForkVersion: 0,
 	GenesisSlot:        0,
+	GenesisEpoch:       0,
 	GenesisStartShard:  0,
-	FarFutureSlot:      1<<64 - 1,
+	FarFutureEpoch:     1<<64 - 1,
 	ZeroHash:           [32]byte{},
 	EmptySignature:     makeEmptySignature(),
 
@@ -118,9 +123,10 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	SlotDuration:                 6,
 	MinAttestationInclusionDelay: 4,
 	EpochLength:                  64,
-	SeedLookahead:                64,
-	EntryExitDelay:               256,
-	DepositRootVotingPeriod:      1024,
+	SeedLookahead:                1,
+	EntryExitDelay:               4,
+	Eth1DataVotingPeriod:         16,
+	Eth1FollowDistance:           1024,
 
 	// Reward and penalty quotients constants.
 	BaseRewardQuotient:           32,
@@ -154,6 +160,7 @@ var demoBeaconConfig = &BeaconChainConfig{
 	LatestBlockRootsLength:     defaultBeaconConfig.LatestBlockRootsLength,
 	LatestRandaoMixesLength:    defaultBeaconConfig.LatestRandaoMixesLength,
 	LatestPenalizedExitLength:  defaultBeaconConfig.LatestPenalizedExitLength,
+	LatestIndexRootsLength:     defaultBeaconConfig.LatestIndexRootsLength,
 	MaxWithdrawalsPerEpoch:     defaultBeaconConfig.MaxWithdrawalsPerEpoch,
 
 	// Deposit contract constants.
@@ -164,8 +171,9 @@ var demoBeaconConfig = &BeaconChainConfig{
 	// Initial value constants.
 	GenesisForkVersion: defaultBeaconConfig.GenesisForkVersion,
 	GenesisSlot:        defaultBeaconConfig.GenesisSlot,
+	GenesisEpoch:       defaultBeaconConfig.GenesisEpoch,
 	GenesisStartShard:  defaultBeaconConfig.GenesisStartShard,
-	FarFutureSlot:      defaultBeaconConfig.FarFutureSlot,
+	FarFutureEpoch:     defaultBeaconConfig.FarFutureEpoch,
 	ZeroHash:           defaultBeaconConfig.ZeroHash,
 	EmptySignature:     defaultBeaconConfig.EmptySignature,
 
@@ -175,7 +183,8 @@ var demoBeaconConfig = &BeaconChainConfig{
 	EpochLength:                  defaultBeaconConfig.EpochLength,
 	SeedLookahead:                defaultBeaconConfig.SeedLookahead,
 	EntryExitDelay:               defaultBeaconConfig.EntryExitDelay,
-	DepositRootVotingPeriod:      defaultBeaconConfig.DepositRootVotingPeriod,
+	Eth1DataVotingPeriod:         defaultBeaconConfig.Eth1DataVotingPeriod,
+	Eth1FollowDistance:           defaultBeaconConfig.Eth1FollowDistance,
 
 	// Reward and penalty quotients constants.
 	BaseRewardQuotient:           defaultBeaconConfig.BaseRewardQuotient,

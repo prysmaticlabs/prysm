@@ -5,22 +5,21 @@ package ethereum.beacon.p2p.v1;
 import "proto/common/messages.proto";
 
 message BeaconState {
-  // Validator registry [1-1000] 
+  // Validator registry [1-1000]
   repeated ValidatorRecord validator_registry = 1;
-  uint64 validator_registry_update_slot = 2;
-  bytes validator_registry_delta_chain_tip_hash32 = 3;
-  repeated uint64 validator_balances = 4; // Balance in Gwei
+  uint64 validator_registry_update_epoch = 2;
+  repeated uint64 validator_balances = 3; // Balance in Gwei
 
   // Randomness and committees [1001-2000]
   repeated bytes latest_randao_mixes_hash32s = 1004;
   uint64 previous_epoch_start_shard = 1005;
   uint64 current_epoch_start_shard = 1006;
-  uint64 previous_epoch_calculation_slot = 1007;
-  uint64 current_epoch_calculation_slot = 1008;
-  bytes previous_epoch_randao_mix_hash32 = 1009;
-  bytes current_epoch_randao_mix_hash32 = 1010;
+  uint64 previous_calculation_epoch = 1007;
+  uint64 current_calculation_epoch = 1008;
+  bytes previous_epoch_seed_hash32 = 1009;
+  bytes current_epoch_seed_hash32 = 1010;
 
-  // Finality [2001-3000] 
+  // Finality [2001-3000]
   uint64 previous_justified_slot = 2001;
   uint64 justified_slot = 2002;
   uint64 justification_bitfield = 2003;
@@ -32,10 +31,11 @@ message BeaconState {
   repeated bytes batched_block_root_hash32s = 3004;
   repeated uint64 latest_penalized_balances = 3005;
   repeated PendingAttestationRecord latest_attestations = 3006;
+  repeated bytes latest_index_root_hash32s = 3007;
 
-  // Ethereum 1.0 deposit root [4001-5000]
-  bytes latest_deposit_root_hash32 = 4001;
-  repeated DepositRootVote deposit_root_votes = 4002;
+  // Ethereum 1.0 chain data [4001-5000]
+  Eth1Data latest_eth1_data = 4001;
+  repeated Eth1DataVote eth1_data_votes = 4002;
 
   // Miscellaneous [5001-6000]
   uint64 genesis_time = 5001;
@@ -46,12 +46,7 @@ message BeaconState {
 message Fork {
   uint64 previous_version = 1;
   uint64 current_version = 2;
-  uint64 slot = 3;
-}
-
-message DepositRootVote {
-  bytes deposit_root_hash32 = 1;
-  uint64 vote_count = 2;
+  uint64 epoch = 3;
 }
 
 message PendingAttestationRecord {
@@ -90,10 +85,10 @@ message ValidatorRecord {
   bytes withdrawal_credentials_hash32 = 2;
   bytes randao_commitment_hash32 = 3;
   uint64 randao_layers = 4;
-  uint64 activation_slot = 5;
-  uint64 exit_slot = 6;
-  uint64 withdrawal_slot = 7;
-  uint64 penalized_slot = 8;
+  uint64 activation_epoch = 5;
+  uint64 exit_epoch = 6;
+  uint64 withdrawal_epoch = 7;
+  uint64 penalized_epoch = 8;
   // Possible validator status code:
   // https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#constants
   enum StatusFlags {
@@ -102,11 +97,6 @@ message ValidatorRecord {
     WITHDRAWABLE = 2; // validator is participating validator duties.
   }
   StatusFlags status_flags = 10;
-
-  // Deprecated fields
-  // All fields must be annotated with [deprecated=true];
-  // Balance in Gwei
-  uint64 balance = 1000 [deprecated=true]; // Keeping this until we refactor epoch processing.
 }
 
 message ShardReassignmentRecord {
@@ -116,7 +106,7 @@ message ShardReassignmentRecord {
 }
 
 message CrosslinkRecord {
-  uint64 slot = 1;
+  uint64 epoch = 1;
   bytes shard_block_root_hash32 = 2;
 }
 
@@ -125,7 +115,7 @@ message BeaconBlock {
   bytes parent_root_hash32 = 2;
   bytes state_root_hash32 = 3;
   bytes randao_reveal_hash32 = 4;
-  bytes deposit_root_hash32 = 5;
+  Eth1Data eth1_data = 5;
   repeated bytes signature = 6; // Type of [uint384]?
 
   // Block Body
@@ -203,4 +193,14 @@ message ValidatorRegistryDeltaBlock {
       EXIT = 1;
   }
   ValidatorRegistryDeltaFlags flag = 5;
+}
+
+message Eth1Data {
+  bytes deposit_root_hash32 = 1;
+  bytes block_hash32 = 2;
+}
+
+message Eth1DataVote {
+  Eth1Data eth1_data = 1;
+  uint64 vote_count = 2;
 }

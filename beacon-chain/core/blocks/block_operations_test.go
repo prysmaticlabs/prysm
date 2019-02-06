@@ -9,68 +9,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
-func TestProcessPOWReceiptRoots_SameRootHash(t *testing.T) {
-	beaconState := &pb.BeaconState{
-		DepositRootVotes: []*pb.DepositRootVote{
-			{
-				DepositRootHash32: []byte{1},
-				VoteCount:         5,
-			},
-		},
-	}
-	block := &pb.BeaconBlock{
-		DepositRootHash32: []byte{1},
-	}
-	beaconState = ProcessDepositRoots(beaconState, block)
-	newRoots := beaconState.DepositRootVotes
-	if newRoots[0].VoteCount != 6 {
-		t.Errorf("expected votes to increase from 5 to 6, received %d", newRoots[0].VoteCount)
-	}
-}
-
-func TestProcessPOWReceiptRoots_NewCandidateRecord(t *testing.T) {
-	beaconState := &pb.BeaconState{
-		DepositRootVotes: []*pb.DepositRootVote{
-			{
-				DepositRootHash32: []byte{0},
-				VoteCount:         5,
-			},
-		},
-	}
-	block := &pb.BeaconBlock{
-		DepositRootHash32: []byte{1},
-	}
-	beaconState = ProcessDepositRoots(beaconState, block)
-	newRoots := beaconState.DepositRootVotes
-	if len(newRoots) == 1 {
-		t.Error("expected new receipt roots to have length > 1")
-	}
-	if newRoots[1].VoteCount != 1 {
-		t.Errorf(
-			"expected new receipt roots to have a new element with votes = 1, received votes = %d",
-			newRoots[1].VoteCount,
-		)
-	}
-	if !bytes.Equal(newRoots[1].DepositRootHash32, []byte{1}) {
-		t.Errorf(
-			"expected new receipt roots to have a new element with root = %#x, received root = %#x",
-			[]byte{1},
-			newRoots[1].DepositRootHash32,
-		)
-	}
-}
-
 func TestProcessBlockRandao_UnequalBlockAndProposerRandao(t *testing.T) {
-	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
+	validators := make([]*pb.ValidatorRecord, config.DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot: config.FarFutureSlot,
+			ExitEpoch: config.FarFutureEpoch,
 		}
 	}
 
@@ -98,10 +48,10 @@ func TestProcessBlockRandao_UnequalBlockAndProposerRandao(t *testing.T) {
 
 func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 	randaoCommit := hashutil.RepeatHash([32]byte{}, 1)
-	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
+	validators := make([]*pb.ValidatorRecord, config.DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot:               config.FarFutureSlot,
+			ExitEpoch:              config.FarFutureEpoch,
 			RandaoCommitmentHash32: randaoCommit[:],
 		}
 	}
@@ -132,6 +82,71 @@ func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 			"Expected proposer at index 0 to update randao commitment to block randao reveal = %#x, received %#x",
 			[]byte{1},
 			newState.ValidatorRegistry[0].RandaoCommitmentHash32,
+		)
+	}
+}
+
+func TestProcessEth1Data_SameRootHash(t *testing.T) {
+	beaconState := &pb.BeaconState{
+		Eth1DataVotes: []*pb.Eth1DataVote{
+			{
+				Eth1Data: &pb.Eth1Data{
+					DepositRootHash32: []byte{1},
+					BlockHash32:       []byte{2},
+				},
+				VoteCount: 5,
+			},
+		},
+	}
+	block := &pb.BeaconBlock{
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{1},
+			BlockHash32:       []byte{2},
+		},
+	}
+	beaconState = ProcessEth1Data(beaconState, block)
+	newETH1DataVotes := beaconState.Eth1DataVotes
+	if newETH1DataVotes[0].VoteCount != 6 {
+		t.Errorf("expected votes to increase from 5 to 6, received %d", newETH1DataVotes[0].VoteCount)
+	}
+}
+
+func TestProcessEth1Data_NewDepositRootHash(t *testing.T) {
+	beaconState := &pb.BeaconState{
+		Eth1DataVotes: []*pb.Eth1DataVote{
+			{
+				Eth1Data: &pb.Eth1Data{
+					DepositRootHash32: []byte{0},
+					BlockHash32:       []byte{1},
+				},
+				VoteCount: 5,
+			},
+		},
+	}
+
+	block := &pb.BeaconBlock{
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{2},
+			BlockHash32:       []byte{3},
+		},
+	}
+
+	beaconState = ProcessEth1Data(beaconState, block)
+	newETH1DataVotes := beaconState.Eth1DataVotes
+	if len(newETH1DataVotes) <= 1 {
+		t.Error("expected new ETH1 data votes to have length > 1")
+	}
+	if newETH1DataVotes[1].VoteCount != 1 {
+		t.Errorf(
+			"expected new ETH1 data votes to have a new element with votes = 1, received votes = %d",
+			newETH1DataVotes[1].VoteCount,
+		)
+	}
+	if !bytes.Equal(newETH1DataVotes[1].Eth1Data.DepositRootHash32, []byte{2}) {
+		t.Errorf(
+			"expected new ETH1 data votes to have a new element with deposit root = %#x, received deposit root = %#x",
+			[]byte{1},
+			newETH1DataVotes[1].Eth1Data.DepositRootHash32,
 		)
 	}
 }
@@ -281,14 +296,14 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
 
-	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
+	validators := make([]*pb.ValidatorRecord, config.DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot:      config.FarFutureSlot,
-			PenalizedSlot: 2,
+			ExitEpoch:      config.FarFutureEpoch,
+			PenalizedEpoch: 2,
 		}
 	}
-	validatorBalances := make([]uint64, config.EpochLength*2)
+	validatorBalances := make([]uint64, len(validators))
 	for i := 0; i < len(validatorBalances); i++ {
 		validatorBalances[i] = config.MaxDeposit
 	}
@@ -330,10 +345,10 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unexpected error: %s", err)
 	}
-	if validators[1].ExitSlot !=
+	if validators[1].ExitEpoch !=
 		beaconState.Slot+config.EntryExitDelay {
 		t.Errorf("Proposer with index 1 did not correctly exit,"+"wanted slot:%d, got:%d",
-			beaconState.Slot+config.EntryExitDelay, validators[1].ExitSlot)
+			beaconState.Slot+config.EntryExitDelay, validators[1].ExitEpoch)
 	}
 }
 
@@ -639,12 +654,16 @@ func TestProcessAttesterSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
-	validators := make([]*pb.ValidatorRecord, config.EpochLength*2)
+	validators := make([]*pb.ValidatorRecord, config.DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot:      config.FarFutureSlot,
-			PenalizedSlot: 6,
+			ExitEpoch:      config.FarFutureEpoch,
+			PenalizedEpoch: 6,
 		}
+	}
+	validatorBalances := make([]uint64, len(validators))
+	for i := 0; i < len(validatorBalances); i++ {
+		validatorBalances[i] = config.MaxDeposit
 	}
 
 	att1 := &pb.AttestationData{
@@ -674,7 +693,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	beaconState := &pb.BeaconState{
 		ValidatorRegistry:       validators,
 		Slot:                    currentSlot,
-		ValidatorBalances:       []uint64{32, 32, 32, 32, 32, 32},
+		ValidatorBalances:       validatorBalances,
 		LatestPenalizedBalances: []uint64{0},
 	}
 	block := &pb.BeaconBlock{
@@ -694,22 +713,24 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 
 	// Given the intersection of slashable indices is [1], only validator
 	// at index 1 should be penalized and exited. We confirm this below.
-	if newRegistry[1].ExitSlot != config.EntryExitDelay+currentSlot {
+	if newRegistry[1].ExitEpoch !=
+		helpers.EntryExitEffectEpoch(helpers.CurrentEpoch(beaconState)) {
 		t.Errorf(
 			`
-			Expected validator at index 1's exit slot to change to
+			Expected validator at index 1's exit epoch to change to
 			%d, received %d instead
 			`,
-			config.EntryExitDelay+currentSlot, newRegistry[1].ExitSlot,
+			helpers.EntryExitEffectEpoch(helpers.CurrentEpoch(beaconState)),
+			newRegistry[1].ExitEpoch,
 		)
 	}
-	if newRegistry[0].ExitSlot != config.FarFutureSlot {
+	if newRegistry[0].ExitEpoch != config.FarFutureEpoch {
 		t.Errorf(
 			`
-			Expected validator at index 0's exit slot to not change,
+			Expected validator at index 0's exit epoch to not change,
 			received %d instead
 			`,
-			newRegistry[0].ExitSlot,
+			newRegistry[0].ExitEpoch,
 		)
 	}
 }
@@ -1190,7 +1211,10 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 		},
 	}
 	beaconState := &pb.BeaconState{
-		LatestDepositRootHash32: []byte{},
+		LatestEth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{0},
+			BlockHash32:       []byte{1},
+		},
 	}
 	want := "merkle branch of deposit root did not verify"
 	if _, err := ProcessValidatorDeposits(
@@ -1267,11 +1291,14 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	balances := []uint64{0}
 	root := depositTrie.Root()
 	beaconState := &pb.BeaconState{
-		ValidatorRegistry:       registry,
-		ValidatorBalances:       balances,
-		LatestDepositRootHash32: root[:],
-		Slot:                    currentSlot,
-		GenesisTime:             uint64(genesisTime),
+		ValidatorRegistry: registry,
+		ValidatorBalances: balances,
+		LatestEth1Data: &pb.Eth1Data{
+			DepositRootHash32: root[:],
+			BlockHash32:       root[:],
+		},
+		Slot:        currentSlot,
+		GenesisTime: uint64(genesisTime),
 	}
 	want := "expected withdrawal credentials to match"
 	if _, err := ProcessValidatorDeposits(
@@ -1344,11 +1371,14 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	balances := []uint64{0}
 	root := depositTrie.Root()
 	beaconState := &pb.BeaconState{
-		ValidatorRegistry:       registry,
-		ValidatorBalances:       balances,
-		LatestDepositRootHash32: root[:],
-		Slot:                    currentSlot,
-		GenesisTime:             uint64(genesisTime),
+		ValidatorRegistry: registry,
+		ValidatorBalances: balances,
+		LatestEth1Data: &pb.Eth1Data{
+			DepositRootHash32: root[:],
+			BlockHash32:       root[:],
+		},
+		Slot:        currentSlot,
+		GenesisTime: uint64(genesisTime),
 	}
 	newState, err := ProcessValidatorDeposits(
 		beaconState,
@@ -1401,7 +1431,7 @@ func TestProcessValidatorExits_ValidatorNotActive(t *testing.T) {
 	}
 	registry := []*pb.ValidatorRecord{
 		{
-			ExitSlot: 0,
+			ExitEpoch: 0,
 		},
 	}
 	state := &pb.BeaconState{
@@ -1427,7 +1457,7 @@ func TestProcessValidatorExits_ValidatorNotActive(t *testing.T) {
 	}
 }
 
-func TestProcessValidatorExits_InvalidExitSlot(t *testing.T) {
+func TestProcessValidatorExits_InvalidExitEpoch(t *testing.T) {
 	exits := []*pb.Exit{
 		{
 			Slot: 10,
@@ -1435,7 +1465,7 @@ func TestProcessValidatorExits_InvalidExitSlot(t *testing.T) {
 	}
 	registry := []*pb.ValidatorRecord{
 		{
-			ExitSlot: config.FarFutureSlot,
+			ExitEpoch: config.FarFutureEpoch,
 		},
 	}
 	state := &pb.BeaconState{
@@ -1472,7 +1502,7 @@ func TestProcessValidatorExits_InvalidStatusChangeSlot(t *testing.T) {
 	}
 	registry := []*pb.ValidatorRecord{
 		{
-			ExitSlot: 1,
+			ExitEpoch: 1,
 		},
 	}
 	state := &pb.BeaconState{
@@ -1504,7 +1534,7 @@ func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
 	}
 	registry := []*pb.ValidatorRecord{
 		{
-			ExitSlot: config.FarFutureSlot,
+			ExitEpoch: config.FarFutureEpoch,
 		},
 	}
 	state := &pb.BeaconState{

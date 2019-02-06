@@ -35,9 +35,9 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    url = "https://github.com/bazelbuild/rules_nodejs/archive/0.16.6.tar.gz",
-    strip_prefix = "rules_nodejs-0.16.6",
-    sha256 = "f5b0a45fb76f3506bcc9437c5e3198149765c1918a1dd10a9497afbcf7058c85",
+    url = "https://github.com/bazelbuild/rules_nodejs/archive/0.16.8.tar.gz",
+    strip_prefix = "rules_nodejs-0.16.8",
+    sha256 = "df74b6ef05d2307ba3245101aa4b4d05ab61a5a63195bfbb693d78851d43a548",
 )
 
 http_archive(
@@ -53,10 +53,6 @@ load(
 )
 
 container_repositories()
-
-load("@build_bazel_rules_nodejs//:package.bzl", "rules_nodejs_dependencies")
-
-rules_nodejs_dependencies()
 
 load("@build_bazel_rules_nodejs//:defs.bzl", "node_repositories", "yarn_install")
 
@@ -293,8 +289,8 @@ go_repository(
 
 go_repository(
     name = "com_github_mattn_go_colorable",
+    tag = "v0.1.0",
     importpath = "github.com/mattn/go-colorable",
-    tag = "v0.0.9",
 )
 
 go_repository(
@@ -504,14 +500,14 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "aca44879d5644da7c5b8ec6a1115e9b6ea6c40d9",
+    commit = "41f3e6584952bb034a481797859f6ab34b6803bd",
     importpath = "golang.org/x/sys",
 )
 
 go_repository(
     name = "com_github_whyrusleeping_yamux",
+    tag = "v1.1.5",
     importpath = "github.com/whyrusleeping/yamux",
-    tag = "v1.1.2",
 )
 
 go_repository(
@@ -600,7 +596,7 @@ go_repository(
 
 go_repository(
     name = "com_github_syndtr_goleveldb",
-    commit = "b001fa50d6b27f3f0bb175a87d0cb55426d0a0ae",
+    commit = "2f17a3356c6616cbfc4ae4c38147dc062a68fb0e",
     importpath = "github.com/syndtr/goleveldb",
 )
 
@@ -648,7 +644,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aristanetworks_goarista",
-    commit = "8f049bdb8feb7d7d5f1a9b9cd854396112fb0c0e",
+    commit = "2166578f34481200ec14ddd6b9c4115db36c7b62",
     importpath = "github.com/aristanetworks/goarista",
 )
 
@@ -672,7 +668,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_procfs",
-    commit = "316cf8ccfec56d206735d46333ca162eb374da8b",
+    commit = "488faf799f863e27e50c516468f76ae8f1da20a5",
     importpath = "github.com/prometheus/procfs",
 )
 
@@ -875,7 +871,7 @@ go_repository(
 
 go_repository(
     name = "com_github_shyiko_kubesec",
-    commit = "60b9dc76b678673960bc26619e5eca38dfaa1ad1",
+    commit = "7718facdb5e5529cecff1fe42fc3aaa4cc837d5d",
     importpath = "github.com/shyiko/kubesec",
 )
 

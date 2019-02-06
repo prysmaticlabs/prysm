@@ -31,12 +31,12 @@ type BeaconServer struct {
 func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconService_WaitForChainStartServer) error {
 	ok, genesisTime, err := bs.powChainService.HasChainStartLogOccurred()
 	if err != nil {
-		return fmt.Errorf("could not verify ChainStart log occurred: %v", err)
+		return fmt.Errorf("could not determine if ChainStart log has occurred: %v", err)
 	}
 	if ok {
 		res := &pb.ChainStartResponse{
 			Started:     true,
-			GenesisTime: uint64(genesisTime.Unix()),
+			GenesisTime: genesisTime,
 		}
 		return stream.Send(res)
 	}
@@ -91,4 +91,18 @@ func (bs *BeaconServer) LatestAttestation(req *ptypes.Empty, stream pb.BeaconSer
 			return nil
 		}
 	}
+}
+
+// Eth1Data fetches the current ETH 1 data which should be used when voting via
+// block proposal.
+// TODO(1463): Implement this.
+func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1DataResponse, error) {
+	return &pb.Eth1DataResponse{}, nil
+}
+
+// PendingDeposits returns a list of pending deposits that are ready for
+// inclusion in the next beacon block.
+// TODO(1464): Implement this.
+func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*pb.PendingDepositsResponse, error) {
+	return &pb.PendingDepositsResponse{PendingDeposits: []*pbp2p.Deposit{}}, nil
 }

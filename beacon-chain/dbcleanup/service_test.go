@@ -5,12 +5,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -27,6 +30,23 @@ func newMockChainService() *mockChainService {
 	return &mockChainService{
 		stateFeed: new(event.Feed),
 	}
+}
+
+func setupInitialDeposits(t *testing.T) []*pb.Deposit {
+	genesisValidatorRegistry := validators.InitialValidatorRegistry()
+	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
+	for i := 0; i < len(deposits); i++ {
+		depositInput := &pb.DepositInput{
+			Pubkey: genesisValidatorRegistry[i].Pubkey,
+		}
+		balance := params.BeaconConfig().MaxDeposit
+		depositData, err := blocks.EncodeDepositData(depositInput, balance, time.Now().Unix())
+		if err != nil {
+			t.Fatalf("Cannot encode data: %v", err)
+		}
+		deposits[i] = &pb.Deposit{DepositData: depositData}
+	}
+	return deposits
 }
 
 func createCleanupService(beaconDB *db.BeaconDB) *CleanupService {
@@ -65,7 +85,8 @@ func TestCleanBlockVoteCache(t *testing.T) {
 
 	// Pre-fill block vote cache in DB
 	genesisTime := uint64(time.Now().Unix())
-	if err = beaconDB.InitializeState(genesisTime); err != nil {
+	deposits := setupInitialDeposits(t)
+	if err = beaconDB.InitializeState(genesisTime, deposits); err != nil {
 		t.Fatalf("failed to initialize DB: %v", err)
 	}
 	oldBlock := &pb.BeaconBlock{Slot: 1}

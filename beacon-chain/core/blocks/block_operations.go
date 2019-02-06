@@ -35,36 +35,35 @@ func VerifyProposerSignature(
 	return nil
 }
 
-// ProcessDepositRoots processes the proof-of-work chain's receipts
-// contained in a beacon block and appends them as candidate receipt roots
-// in the beacon state.
+// ProcessEth1Data is an operation performed on each
+// beacon block to ensure the ETH1 data votes are processed
+// into the beacon state.
 //
-// Official spec definition for processing deposit roots:
-//   If block.deposit_root is deposit_root_vote.deposit_root
-//     for some deposit_root_vote in state.deposit_root_votes,
-//     set deposit_root_vote.vote_count += 1.
-//   Otherwise, append to state.deposit_root_votes a
-//   new DepositRootVote(
-//     deposit_root=block.deposit_root,
-//     vote_count=1
-//   )
-func ProcessDepositRoots(
-	beaconState *pb.BeaconState,
-	block *pb.BeaconBlock,
-) *pb.BeaconState {
-	var newCandidateReceiptRoots []*pb.DepositRootVote
-	currentCandidateReceiptRoots := beaconState.DepositRootVotes
-	for idx, root := range currentCandidateReceiptRoots {
-		if bytes.Equal(block.DepositRootHash32, root.DepositRootHash32) {
-			currentCandidateReceiptRoots[idx].VoteCount++
-		} else {
-			newCandidateReceiptRoots = append(newCandidateReceiptRoots, &pb.DepositRootVote{
-				DepositRootHash32: block.DepositRootHash32,
-				VoteCount:         1,
-			})
+// Official spec definition of ProcessEth1Data
+//   If block.eth1_data equals eth1_data_vote.eth1_data for some eth1_data_vote
+//   in state.eth1_data_votes, set eth1_data_vote.vote_count += 1.
+//   Otherwise, append to state.eth1_data_votes a new Eth1DataVote(eth1_data=block.eth1_data, vote_count=1).
+func ProcessEth1Data(beaconState *pb.BeaconState, block *pb.BeaconBlock) *pb.BeaconState {
+	var eth1DataVoteAdded bool
+
+	for _, Eth1DataVote := range beaconState.Eth1DataVotes {
+		if bytes.Equal(Eth1DataVote.Eth1Data.BlockHash32, block.Eth1Data.BlockHash32) && bytes.Equal(Eth1DataVote.Eth1Data.DepositRootHash32, block.Eth1Data.DepositRootHash32) {
+			Eth1DataVote.VoteCount++
+			eth1DataVoteAdded = true
+			break
 		}
 	}
-	beaconState.DepositRootVotes = append(currentCandidateReceiptRoots, newCandidateReceiptRoots...)
+
+	if !eth1DataVoteAdded {
+		beaconState.Eth1DataVotes = append(
+			beaconState.Eth1DataVotes,
+			&pb.Eth1DataVote{
+				Eth1Data:  block.Eth1Data,
+				VoteCount: 1,
+			},
+		)
+	}
+
 	return beaconState
 }
 
@@ -164,7 +163,7 @@ func ProcessProposerSlashings(
 			return nil, fmt.Errorf("could not verify proposer slashing #%d: %v", idx, err)
 		}
 		proposer := registry[slashing.ProposerIndex]
-		if proposer.PenalizedSlot > beaconState.Slot {
+		if proposer.PenalizedEpoch > beaconState.Slot {
 			beaconState, err = v.PenalizeValidator(beaconState, slashing.ProposerIndex)
 			if err != nil {
 				return nil, fmt.Errorf("could not penalize proposer index %d: %v",
@@ -256,7 +255,7 @@ func ProcessAttesterSlashings(
 		}
 		for _, validatorIndex := range validatorIndices {
 			penalizedValidator := registry[validatorIndex]
-			if penalizedValidator.PenalizedSlot > beaconState.Slot {
+			if penalizedValidator.PenalizedEpoch > beaconState.Slot {
 				beaconState, err = v.PenalizeValidator(beaconState, validatorIndex)
 				if err != nil {
 					return nil, fmt.Errorf("could not penalize validator index %d: %v",
@@ -623,7 +622,7 @@ func ProcessValidatorDeposits(
 
 func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 	// Verify Merkle proof of deposit and deposit trie root.
-	receiptRoot := bytesutil.ToBytes32(beaconState.LatestDepositRootHash32)
+	receiptRoot := bytesutil.ToBytes32(beaconState.LatestEth1Data.DepositRootHash32)
 	if ok := trieutil.VerifyMerkleBranch(
 		hashutil.Hash(deposit.DepositData),
 		deposit.MerkleBranchHash32S,
@@ -697,10 +696,10 @@ func ProcessValidatorExits(
 
 func verifyExit(beaconState *pb.BeaconState, exit *pb.Exit, verifySignatures bool) error {
 	validator := beaconState.ValidatorRegistry[exit.ValidatorIndex]
-	if validator.ExitSlot <= beaconState.Slot+params.BeaconConfig().EntryExitDelay {
+	if validator.ExitEpoch <= beaconState.Slot+params.BeaconConfig().EntryExitDelay {
 		return fmt.Errorf(
 			"expected exit.Slot > state.Slot + EntryExitDelay, received %d < %d",
-			validator.ExitSlot, beaconState.Slot+params.BeaconConfig().EntryExitDelay,
+			validator.ExitEpoch, beaconState.Slot+params.BeaconConfig().EntryExitDelay,
 		)
 	}
 	if beaconState.Slot < exit.Slot {

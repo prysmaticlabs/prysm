@@ -22,7 +22,7 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	if params.BeaconConfig().GenesisSlot != 0 {
 		t.Error("GenesisSlot should be 0 for these tests to pass")
 	}
-	initialSlotNumber := params.BeaconConfig().GenesisSlot
+	initialEpochNumber := params.BeaconConfig().GenesisEpoch
 
 	if params.BeaconConfig().GenesisForkVersion != 0 {
 		t.Error("InitialSlot should be 0 for these tests to pass")
@@ -90,7 +90,7 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	}
 
 	// Misc fields checks.
-	if state.Slot != initialSlotNumber {
+	if state.Slot != initialEpochNumber {
 		t.Error("Slot was not correctly initialized")
 	}
 	if state.GenesisTime != genesisTime {
@@ -99,13 +99,13 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	if !reflect.DeepEqual(*state.Fork, pb.Fork{
 		PreviousVersion: initialForkVersion,
 		CurrentVersion:  initialForkVersion,
-		Slot:            initialSlotNumber,
+		Epoch:           initialEpochNumber,
 	}) {
 		t.Error("Fork was not correctly initialized")
 	}
 
 	// Validator registry fields checks.
-	if state.ValidatorRegistryUpdateSlot != initialSlotNumber {
+	if state.ValidatorRegistryUpdateEpoch != initialEpochNumber {
 		t.Error("ValidatorRegistryUpdateSlot was not correctly initialized")
 	}
 	if len(state.ValidatorRegistry) != depositsForChainStart {
@@ -121,13 +121,13 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	}
 
 	// Finality fields checks.
-	if state.PreviousJustifiedSlot != initialSlotNumber {
+	if state.PreviousJustifiedSlot != initialEpochNumber {
 		t.Error("PreviousJustifiedSlot was not correctly initialized")
 	}
-	if state.JustifiedSlot != initialSlotNumber {
+	if state.JustifiedSlot != initialEpochNumber {
 		t.Error("JustifiedSlot was not correctly initialized")
 	}
-	if state.FinalizedSlot != initialSlotNumber {
+	if state.FinalizedSlot != initialEpochNumber {
 		t.Error("FinalizedSlot was not correctly initialized")
 	}
 	if state.JustificationBitfield != 0 {
@@ -150,11 +150,11 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	}
 
 	// deposit root checks.
-	if !bytes.Equal(state.LatestDepositRootHash32, processedPowReceiptRoot) {
-		t.Error("LatestDepositRootHash32 was not correctly initialized")
+	if !bytes.Equal(state.LatestEth1Data.DepositRootHash32, processedPowReceiptRoot) {
+		t.Error("LatestEth1Data DepositRootHash32 was not correctly initialized")
 	}
-	if !reflect.DeepEqual(state.DepositRootVotes, []*pb.DepositRootVote{}) {
-		t.Error("DepositRootVotes was not correctly initialized")
+	if !reflect.DeepEqual(state.Eth1DataVotes, []*pb.Eth1DataVote{}) {
+		t.Error("Eth1DataVotes was not correctly initialized")
 	}
 }
 

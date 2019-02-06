@@ -2,7 +2,6 @@ package epoch
 
 import (
 	"bytes"
-	"encoding/binary"
 	"fmt"
 	"reflect"
 	"strings"
@@ -16,7 +15,7 @@ func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 	validators := make([]*pb.ValidatorRecord, validatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.ValidatorRecord{
-			ExitSlot: config.FarFutureSlot,
+			ExitEpoch: config.FarFutureEpoch,
 		}
 	}
 	validatorBalances := make([]uint64, len(validators))
@@ -260,12 +259,12 @@ func TestHeadAttestationsOk(t *testing.T) {
 
 	prevAttestations := []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{Slot: 1, BeaconBlockRootHash32: []byte{'A'}}},
-		{Data: &pb.AttestationData{Slot: 2, BeaconBlockRootHash32: []byte{'B'}}},
-		{Data: &pb.AttestationData{Slot: 3, BeaconBlockRootHash32: []byte{'C'}}},
-		{Data: &pb.AttestationData{Slot: 4, BeaconBlockRootHash32: []byte{'D'}}},
+		{Data: &pb.AttestationData{Slot: 2, BeaconBlockRootHash32: []byte{'A'}}},
+		{Data: &pb.AttestationData{Slot: 3, BeaconBlockRootHash32: []byte{'A'}}},
+		{Data: &pb.AttestationData{Slot: 4, BeaconBlockRootHash32: []byte{'A'}}},
 	}
 
-	state := &pb.BeaconState{Slot: 5, LatestBlockRootHash32S: [][]byte{{'A'}, {'X'}, {'C'}, {'Y'}}}
+	state := &pb.BeaconState{Slot: 5, LatestBlockRootHash32S: [][]byte{{'A'}, {'A'}, {'A'}, {'A'}}}
 
 	headAttestations, err := PrevHeadAttestations(state, prevAttestations)
 	if err != nil {
@@ -275,15 +274,15 @@ func TestHeadAttestationsOk(t *testing.T) {
 	if headAttestations[0].Data.Slot != 1 {
 		t.Errorf("headAttestations[0] wanted slot 1, got slot %d", headAttestations[0].Data.Slot)
 	}
-	if headAttestations[1].Data.Slot != 3 {
-		t.Errorf("headAttestations[1] wanted slot 3, got slot %d", headAttestations[1].Data.Slot)
+	if headAttestations[1].Data.Slot != 2 {
+		t.Errorf("headAttestations[1] wanted slot 2, got slot %d", headAttestations[1].Data.Slot)
 	}
 	if !bytes.Equal([]byte{'A'}, headAttestations[0].Data.BeaconBlockRootHash32) {
 		t.Errorf("headAttestations[0] wanted hash [A], got slot %v",
 			headAttestations[0].Data.BeaconBlockRootHash32)
 	}
-	if !bytes.Equal([]byte{'C'}, headAttestations[1].Data.BeaconBlockRootHash32) {
-		t.Errorf("headAttestations[1] wanted hash [C], got slot %v",
+	if !bytes.Equal([]byte{'A'}, headAttestations[1].Data.BeaconBlockRootHash32) {
+		t.Errorf("headAttestations[1] wanted hash [A], got slot %v",
 			headAttestations[1].Data.BeaconBlockRootHash32)
 	}
 }
@@ -303,7 +302,11 @@ func TestHeadAttestationsNotOk(t *testing.T) {
 }
 
 func TestWinningRootOk(t *testing.T) {
-	state := buildState(0, config.EpochLength*2)
+	state := buildState(0, config.DepositsForChainStart)
+	var participationBitfield []byte
+	for i := 0; i < 16; i++ {
+		participationBitfield = append(participationBitfield, byte(0x01))
+	}
 
 	// Generate 10 roots ([]byte{100}...[]byte{110})
 	var attestations []*pb.PendingAttestationRecord
@@ -313,7 +316,7 @@ func TestWinningRootOk(t *testing.T) {
 				Slot:                 0,
 				ShardBlockRootHash32: []byte{byte(i + 100)},
 			},
-			ParticipationBitfield: []byte{'A'},
+			ParticipationBitfield: participationBitfield,
 		}
 		attestations = append(attestations, attestation)
 	}
@@ -331,24 +334,10 @@ func TestWinningRootOk(t *testing.T) {
 	if !bytes.Equal(winnerRoot, []byte{100}) {
 		t.Errorf("Incorrect winner root, wanted:[100], got: %v", winnerRoot)
 	}
-
-	// Give root [105] one more attester
-	attestations[5].ParticipationBitfield = []byte{0xff}
-	winnerRoot, err = winningRoot(
-		state,
-		0,
-		attestations,
-		nil)
-	if err != nil {
-		t.Fatalf("Could not execute winningRoot: %v", err)
-	}
-	if !bytes.Equal(winnerRoot, []byte{105}) {
-		t.Errorf("Incorrect winner root, wanted:[105], got: %v", winnerRoot)
-	}
 }
 
 func TestWinningRootCantGetParticipantBitfield(t *testing.T) {
-	state := buildState(0, config.EpochLength)
+	state := buildState(0, config.DepositsForChainStart)
 
 	attestations := []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{
@@ -358,14 +347,14 @@ func TestWinningRootCantGetParticipantBitfield(t *testing.T) {
 		},
 	}
 
-	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 1, 0)
+	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 16, 0)
 	if _, err := winningRoot(state, 0, attestations, nil); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
 func TestAttestingValidatorsOk(t *testing.T) {
-	state := buildState(0, config.EpochLength)
+	state := buildState(0, config.EpochLength*2)
 
 	var attestations []*pb.PendingAttestationRecord
 	for i := 0; i < 10; i++ {
@@ -387,14 +376,14 @@ func TestAttestingValidatorsOk(t *testing.T) {
 		t.Fatalf("Could not execute AttestingValidators: %v", err)
 	}
 
-	// Verify the winner root is attested by validator 45 based on shuffling.
-	if !reflect.DeepEqual(attestedValidators, []uint64{45}) {
-		t.Errorf("Active validators don't match. Wanted:[109, 97], Got: %v", attestedValidators)
+	// Verify the winner root is attested by validator 109 97 based on shuffling.
+	if !reflect.DeepEqual(attestedValidators, []uint64{109, 97}) {
+		t.Errorf("Active validators don't match. Wanted:[237,224], Got: %v", attestedValidators)
 	}
 }
 
 func TestAttestingValidatorsCantGetWinningRoot(t *testing.T) {
-	state := buildState(0, config.EpochLength)
+	state := buildState(0, config.DepositsForChainStart)
 
 	attestation := &pb.PendingAttestationRecord{
 		Data: &pb.AttestationData{
@@ -403,7 +392,7 @@ func TestAttestingValidatorsCantGetWinningRoot(t *testing.T) {
 		ParticipationBitfield: []byte{},
 	}
 
-	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 1, 0)
+	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 16, 0)
 	if _, err := AttestingValidators(state, 0, []*pb.PendingAttestationRecord{attestation}, nil); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -411,7 +400,7 @@ func TestAttestingValidatorsCantGetWinningRoot(t *testing.T) {
 
 func TestTotalAttestingBalanceOk(t *testing.T) {
 	validatorsPerCommittee := uint64(2)
-	state := buildState(0, config.EpochLength*validatorsPerCommittee)
+	state := buildState(0, 2*config.EpochLength)
 
 	// Generate 10 roots ([]byte{100}...[]byte{110})
 	var attestations []*pb.PendingAttestationRecord
@@ -441,7 +430,7 @@ func TestTotalAttestingBalanceOk(t *testing.T) {
 }
 
 func TestTotalAttestingBalanceCantGetWinningRoot(t *testing.T) {
-	state := buildState(0, config.EpochLength)
+	state := buildState(0, config.DepositsForChainStart)
 
 	attestation := &pb.PendingAttestationRecord{
 		Data: &pb.AttestationData{
@@ -450,7 +439,7 @@ func TestTotalAttestingBalanceCantGetWinningRoot(t *testing.T) {
 		ParticipationBitfield: []byte{},
 	}
 
-	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 1, 0)
+	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 16, 0)
 	if _, err := TotalAttestingBalance(state, 0, []*pb.PendingAttestationRecord{attestation}, nil); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -472,20 +461,24 @@ func TestTotalBalance(t *testing.T) {
 }
 
 func TestInclusionSlotOk(t *testing.T) {
-	state := buildState(0, config.EpochLength)
+	state := buildState(0, config.DepositsForChainStart)
+	var participationBitfield []byte
+	for i := 0; i < 16; i++ {
+		participationBitfield = append(participationBitfield, byte(0xff))
+	}
 
 	state.LatestAttestations = []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{},
-			ParticipationBitfield: []byte{0xFF},
+			ParticipationBitfield: participationBitfield,
 			SlotIncluded:          101},
 		{Data: &pb.AttestationData{},
-			ParticipationBitfield: []byte{0xFF},
+			ParticipationBitfield: participationBitfield,
 			SlotIncluded:          100},
 		{Data: &pb.AttestationData{},
-			ParticipationBitfield: []byte{0xFF},
+			ParticipationBitfield: participationBitfield,
 			SlotIncluded:          102},
 	}
-	slot, err := InclusionSlot(state, 45)
+	slot, err := InclusionSlot(state, 237)
 	if err != nil {
 		t.Fatalf("Could not execute InclusionSlot: %v", err)
 	}
@@ -496,14 +489,15 @@ func TestInclusionSlotOk(t *testing.T) {
 }
 
 func TestInclusionSlotBadBitfield(t *testing.T) {
-	state := buildState(0, config.EpochLength)
+	state := buildState(0, config.DepositsForChainStart)
+
 	state.LatestAttestations = []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{},
 			ParticipationBitfield: []byte{},
 			SlotIncluded:          100},
 	}
 
-	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 1, 0)
+	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 16, 0)
 	if _, err := InclusionSlot(state, 0); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -520,14 +514,18 @@ func TestInclusionSlotNotFound(t *testing.T) {
 }
 
 func TestInclusionDistanceOk(t *testing.T) {
-	state := buildState(0, config.EpochLength)
+	state := buildState(0, config.DepositsForChainStart)
+	var participationBitfield []byte
+	for i := 0; i < 16; i++ {
+		participationBitfield = append(participationBitfield, byte(0xff))
+	}
 
 	state.LatestAttestations = []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{},
-			ParticipationBitfield: []byte{0xFF},
+			ParticipationBitfield: participationBitfield,
 			SlotIncluded:          100},
 	}
-	distance, err := InclusionDistance(state, 45)
+	distance, err := InclusionDistance(state, 237)
 	if err != nil {
 		t.Fatalf("Could not execute InclusionDistance: %v", err)
 	}
@@ -541,7 +539,7 @@ func TestInclusionDistanceOk(t *testing.T) {
 }
 
 func TestInclusionDistanceBadBitfield(t *testing.T) {
-	state := buildState(0, config.EpochLength)
+	state := buildState(0, config.DepositsForChainStart)
 
 	state.LatestAttestations = []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{},
@@ -549,7 +547,7 @@ func TestInclusionDistanceBadBitfield(t *testing.T) {
 			SlotIncluded:          100},
 	}
 
-	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 1, 0)
+	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 16, 0)
 	if _, err := InclusionDistance(state, 0); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -562,53 +560,5 @@ func TestInclusionDistanceNotFound(t *testing.T) {
 	want := fmt.Sprintf("could not find inclusion distance for validator index %d", badIndex)
 	if _, err := InclusionDistance(state, badIndex); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
-func TestRandaoMixOk(t *testing.T) {
-	randaoMixes := make([][]byte, config.LatestRandaoMixesLength)
-	for i := 0; i < len(randaoMixes); i++ {
-		intInBytes := make([]byte, 32)
-		binary.BigEndian.PutUint64(intInBytes, uint64(i))
-		randaoMixes[i] = intInBytes
-	}
-	state := &pb.BeaconState{LatestRandaoMixesHash32S: randaoMixes}
-	tests := []struct {
-		slot      uint64
-		randaoMix []byte
-	}{
-		{
-			slot:      10,
-			randaoMix: randaoMixes[10],
-		},
-		{
-			slot:      2344,
-			randaoMix: randaoMixes[2344],
-		},
-		{
-			slot:      99999,
-			randaoMix: randaoMixes[99999%config.LatestRandaoMixesLength],
-		},
-	}
-	for _, test := range tests {
-		state.Slot = test.slot + 1
-		mix, err := randaoMix(state, test.slot)
-		if err != nil {
-			t.Fatalf("Could not get randao mix: %v", err)
-		}
-		if !bytes.Equal(test.randaoMix, mix) {
-			t.Errorf("Incorrect randao mix. Wanted: %#x, got: %#x",
-				test.randaoMix, mix)
-		}
-	}
-}
-
-func TestRandaoMixOutOfBound(t *testing.T) {
-	wanted := fmt.Sprintf(
-		"input randaoMix slot %d out of bounds: %d <= slot < %d",
-		100, 0, 0,
-	)
-	if _, err := randaoMix(&pb.BeaconState{}, 100); !strings.Contains(err.Error(), wanted) {
-		t.Errorf("Expected: %s, received: %s", wanted, err.Error())
 	}
 }

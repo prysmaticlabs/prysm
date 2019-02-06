@@ -206,7 +206,7 @@ func TotalBalance(
 func InclusionSlot(state *pb.BeaconState, validatorIndex uint64) (uint64, error) {
 	lowestSlotIncluded := uint64(math.MaxUint64)
 	for _, attestation := range state.LatestAttestations {
-		participatedValidators, err := validators.AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)
+		participatedValidators, err := helpers.AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)
 		if err != nil {
 			return 0, fmt.Errorf("could not get attestation participants: %v", err)
 		}
@@ -234,11 +234,10 @@ func InclusionSlot(state *pb.BeaconState, validatorIndex uint64) (uint64, error)
 func InclusionDistance(state *pb.BeaconState, validatorIndex uint64) (uint64, error) {
 
 	for _, attestation := range state.LatestAttestations {
-		participatedValidators, err := validators.AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)
+		participatedValidators, err := helpers.AttestationParticipants(state, attestation.Data, attestation.ParticipationBitfield)
 		if err != nil {
 			return 0, fmt.Errorf("could not get attestation participants: %v", err)
 		}
-
 		for _, index := range participatedValidators {
 			if index == validatorIndex {
 				return attestation.SlotIncluded - attestation.Data.Slot, nil
@@ -362,29 +361,4 @@ func winningRoot(
 		}
 	}
 	return winnerRoot, nil
-}
-
-// randaoMix returns the randao mix (xor'ed seed)
-// of a given slot. It is used to shuffle validators.
-//
-// Spec pseudocode definition:
-//   def get_randao_mix(state: BeaconState,
-//                   slot: int) -> Hash32:
-//    """
-//    Returns the randao mix at a recent ``slot``.
-//    """
-//    assert state.slot <= slot + LATEST_RANDAO_MIXES_LENGTH
-//	  assert slot < state.slot
-//    return state.latest_block_roots[slot % LATEST_RANDAO_MIXES_LENGTH]
-func randaoMix(state *pb.BeaconState, slot uint64) ([]byte, error) {
-	var lowerBound uint64
-	if state.Slot > config.LatestRandaoMixesLength {
-		lowerBound = state.Slot - config.LatestRandaoMixesLength
-	}
-	upperBound := state.Slot
-	if lowerBound > slot || slot >= upperBound {
-		return nil, fmt.Errorf("input randaoMix slot %d out of bounds: %d <= slot < %d",
-			slot, lowerBound, upperBound)
-	}
-	return state.LatestRandaoMixesHash32S[slot%config.LatestRandaoMixesLength], nil
 }

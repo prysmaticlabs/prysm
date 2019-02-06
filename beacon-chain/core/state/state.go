@@ -33,6 +33,14 @@ func InitialBeaconState(
 		latestRandaoMixes[i] = config.ZeroHash[:]
 	}
 
+	latestIndexRoots := make(
+		[][]byte,
+		config.LatestIndexRootsLength,
+	)
+	for i := 0; i < len(latestIndexRoots); i++ {
+		latestRandaoMixes[i] = config.ZeroHash[:]
+	}
+
 	latestVDFOutputs := make([][]byte,
 		config.LatestRandaoMixesLength/config.EpochLength)
 	for i := 0; i < len(latestVDFOutputs); i++ {
@@ -42,7 +50,7 @@ func InitialBeaconState(
 	latestCrosslinks := make([]*pb.CrosslinkRecord, config.ShardCount)
 	for i := 0; i < len(latestCrosslinks); i++ {
 		latestCrosslinks[i] = &pb.CrosslinkRecord{
-			Slot:                 config.GenesisSlot,
+			Epoch:                config.GenesisEpoch,
 			ShardBlockRootHash32: config.ZeroHash[:],
 		}
 	}
@@ -55,12 +63,6 @@ func InitialBeaconState(
 	validatorRegistry := make([]*pb.ValidatorRecord, len(initialValidatorDeposits))
 	latestBalances := make([]uint64, len(initialValidatorDeposits))
 	for i, d := range initialValidatorDeposits {
-
-		amount, _, err := b.DecodeDepositAmountAndTimeStamp(d.DepositData)
-		if err != nil {
-			return nil, fmt.Errorf("could not decode deposit amount and timestamp %v", err)
-		}
-
 		depositInput, err := b.DecodeDepositInput(d.DepositData)
 		if err != nil {
 			return nil, fmt.Errorf("could decode deposit input %v", err)
@@ -70,9 +72,8 @@ func InitialBeaconState(
 			Pubkey:                      depositInput.Pubkey,
 			RandaoCommitmentHash32:      depositInput.RandaoCommitmentHash32,
 			WithdrawalCredentialsHash32: depositInput.WithdrawalCredentialsHash32,
-			Balance:                     amount,
-			ExitSlot:                    config.FarFutureSlot,
-			PenalizedSlot:               config.FarFutureSlot,
+			ExitEpoch:                   config.FarFutureEpoch,
+			PenalizedEpoch:              config.FarFutureEpoch,
 		}
 
 		validatorRegistry[i] = validator
@@ -88,23 +89,23 @@ func InitialBeaconState(
 		Fork: &pb.Fork{
 			PreviousVersion: config.GenesisForkVersion,
 			CurrentVersion:  config.GenesisForkVersion,
-			Slot:            config.GenesisSlot,
+			Epoch:           config.GenesisEpoch,
 		},
 
 		// Validator registry fields.
-		ValidatorRegistry:                    validatorRegistry,
-		ValidatorBalances:                    latestBalances,
-		ValidatorRegistryUpdateSlot:          config.GenesisSlot,
-		ValidatorRegistryDeltaChainTipHash32: config.ZeroHash[:],
+		ValidatorRegistry:            validatorRegistry,
+		ValidatorBalances:            latestBalances,
+		ValidatorRegistryUpdateEpoch: config.GenesisEpoch,
 
 		// Randomness and committees.
-		LatestRandaoMixesHash32S:     latestRandaoMixes,
-		PreviousEpochStartShard:      config.GenesisStartShard,
-		CurrentEpochStartShard:       config.GenesisStartShard,
-		PreviousEpochCalculationSlot: config.GenesisSlot,
-		CurrentEpochCalculationSlot:  config.GenesisSlot,
-		PreviousEpochRandaoMixHash32: config.ZeroHash[:],
-		CurrentEpochRandaoMixHash32:  config.ZeroHash[:],
+		LatestRandaoMixesHash32S: latestRandaoMixes,
+		LatestIndexRootHash32S:   latestIndexRoots,
+		PreviousEpochStartShard:  config.GenesisStartShard,
+		CurrentEpochStartShard:   config.GenesisStartShard,
+		PreviousCalculationEpoch: config.GenesisSlot,
+		CurrentCalculationEpoch:  config.GenesisSlot,
+		PreviousEpochSeedHash32:  config.ZeroHash[:],
+		CurrentEpochSeedHash32:   config.ZeroHash[:],
 
 		// Finality.
 		PreviousJustifiedSlot: config.GenesisSlot,
@@ -119,9 +120,12 @@ func InitialBeaconState(
 		LatestAttestations:      []*pb.PendingAttestationRecord{},
 		BatchedBlockRootHash32S: [][]byte{},
 
-		// deposit root.
-		LatestDepositRootHash32: processedPowReceiptRoot,
-		DepositRootVotes:        []*pb.DepositRootVote{},
+		// Eth1 data.
+		LatestEth1Data: &pb.Eth1Data{
+			DepositRootHash32: processedPowReceiptRoot,
+			BlockHash32:       []byte{},
+		},
+		Eth1DataVotes: []*pb.Eth1DataVote{},
 	}
 
 	// Process initial deposits.

@@ -10,12 +10,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
+	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -23,6 +27,25 @@ import (
 )
 
 var log = logrus.WithField("prefix", "powchain")
+
+var (
+	validDepositsCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "powchain_valid_deposits_received",
+		Help: "The number of valid deposits received in the deposit contract",
+	})
+	totalDepositsCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "powchain_deposit_logs",
+		Help: "The total number of deposits received in the deposit contract",
+	})
+	chainStartCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "powchain_chainstart_logs",
+		Help: "The number of chainstart logs received from the deposit contract",
+	})
+	blockNumberGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "powchain_block_number",
+		Help: "The current block number in the proof-of-work chain",
+	})
+)
 
 // Reader defines a struct that can fetch latest header events from a web3 endpoint.
 type Reader interface {
@@ -65,6 +88,9 @@ type Web3Service struct {
 	vrcCaller              *contracts.DepositContractCaller
 	depositRoot            []byte
 	depositTrie            *trieutil.DepositTrie
+	chainStartDeposits     []*pb.Deposit
+	chainStarted           bool
+	beaconDB               *db.BeaconDB
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -75,6 +101,7 @@ type Web3ServiceConfig struct {
 	Reader          Reader
 	Logger          bind.ContractFilterer
 	ContractBackend bind.ContractBackend
+	BeaconDB        *db.BeaconDB
 }
 
 var (
@@ -112,6 +139,8 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		reader:                 config.Reader,
 		logger:                 config.Logger,
 		vrcCaller:              vrcCaller,
+		chainStartDeposits:     []*pb.Deposit{},
+		beaconDB:               config.BeaconDB,
 	}, nil
 }
 
@@ -137,6 +166,12 @@ func (w *Web3Service) ChainStartFeed() *event.Feed {
 	return w.chainStartFeed
 }
 
+// ChainStartDeposits returns a slice of validator deposits processed
+// by the deposit contract and cached in the powchain service.
+func (w *Web3Service) ChainStartDeposits() []*pb.Deposit {
+	return w.chainStartDeposits
+}
+
 // Status always returns nil.
 // TODO(1204): Add service health checks.
 func (w *Web3Service) Status() error {
@@ -160,7 +195,7 @@ func (w *Web3Service) Client() Client {
 
 // HasChainStartLogOccurred queries all logs in the deposit contract to verify
 // if ChainStart has occurred. If so, it returns true alongside the ChainStart timestamp.
-func (w *Web3Service) HasChainStartLogOccurred() (bool, time.Time, error) {
+func (w *Web3Service) HasChainStartLogOccurred() (bool, uint64, error) {
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
 			w.depositContractAddress,
@@ -168,26 +203,26 @@ func (w *Web3Service) HasChainStartLogOccurred() (bool, time.Time, error) {
 	}
 	logs, err := w.logger.FilterLogs(w.ctx, query)
 	if err != nil {
-		return false, time.Now(), fmt.Errorf("could not filter deposit contract logs: %v", err)
+		return false, 0, fmt.Errorf("could not filter deposit contract logs: %v", err)
 	}
 	for _, log := range logs {
 		if log.Topics[0] == hashutil.Hash(chainStartEventSignature) {
 			_, timestampData, err := contracts.UnpackChainStartLogData(log.Data)
 			if err != nil {
-				return false, time.Now(), fmt.Errorf("unable to unpack ChainStart log data %v", err)
+				return false, 0, fmt.Errorf("unable to unpack ChainStart log data %v", err)
 			}
 			timestamp := binary.BigEndian.Uint64(timestampData)
 			if uint64(time.Now().Unix()) < timestamp {
-				return false, time.Now(), fmt.Errorf(
+				return false, 0, fmt.Errorf(
 					"invalid timestamp from log expected %d > %d",
 					time.Now().Unix(),
 					timestamp,
 				)
 			}
-			return true, time.Unix(int64(timestamp), 0), nil
+			return true, timestamp, nil
 		}
 	}
-	return false, time.Now(), nil
+	return false, 0, nil
 }
 
 // ProcessLog is the main method which handles the processing of all
@@ -211,6 +246,7 @@ func (w *Web3Service) ProcessLog(VRClog gethTypes.Log) {
 // the ETH1.0 chain by trying to ascertain which participant deposited
 // in the contract.
 func (w *Web3Service) ProcessDepositLog(VRClog gethTypes.Log) {
+	totalDepositsCount.Inc()
 	merkleRoot, depositData, MerkleTreeIndex, err := contracts.UnpackDepositLogData(VRClog.Data)
 	if err != nil {
 		log.Errorf("Could not unpack log %v", err)
@@ -225,16 +261,27 @@ func (w *Web3Service) ProcessDepositLog(VRClog gethTypes.Log) {
 		log.Errorf("Could not decode deposit input  %v", err)
 		return
 	}
+	deposit := &pb.Deposit{
+		DepositData: depositData,
+	}
+	if !w.chainStarted {
+		w.chainStartDeposits = append(w.chainStartDeposits, deposit)
+	} else {
+		w.beaconDB.InsertPendingDeposit(w.ctx, deposit, big.NewInt(int64(VRClog.BlockNumber)))
+	}
 	index := binary.BigEndian.Uint64(MerkleTreeIndex)
 	log.WithFields(logrus.Fields{
-		"publicKey":         depositInput.Pubkey,
-		"merkle tree index": index,
-	}).Info("Validator registered in VRC with public key and index")
+		"publicKey":       fmt.Sprintf("%#x", depositInput.Pubkey),
+		"merkleTreeIndex": index,
+	}).Info("Validator registered in deposit contract")
+
+	validDepositsCount.Inc()
 }
 
 // ProcessChainStartLog processes the log which had been received from
 // the ETH1.0 chain by trying to determine when to start the beacon chain.
 func (w *Web3Service) ProcessChainStartLog(VRClog gethTypes.Log) {
+	chainStartCount.Inc()
 	receiptRoot, timestampData, err := contracts.UnpackChainStartLogData(VRClog.Data)
 	if err != nil {
 		log.Errorf("Unable to unpack ChainStart log data %v", err)
@@ -250,7 +297,7 @@ func (w *Web3Service) ProcessChainStartLog(VRClog gethTypes.Log) {
 	if uint64(time.Now().Unix()) < timestamp {
 		log.Errorf("Invalid timestamp from log expected %d > %d", time.Now().Unix(), timestamp)
 	}
-
+	w.chainStarted = true
 	chainStartTime := time.Unix(int64(timestamp), 0)
 	log.WithFields(logrus.Fields{
 		"ChainStartTime": chainStartTime,
@@ -299,6 +346,7 @@ func (w *Web3Service) run(done <-chan struct{}) {
 			log.Debug("Unsubscribed to log events, exiting goroutine")
 			return
 		case header := <-w.headerChan:
+			blockNumberGauge.Set(float64(header.Number.Int64()))
 			w.blockNumber = header.Number
 			w.blockHash = header.Hash()
 			log.WithFields(logrus.Fields{

@@ -18,7 +18,11 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-var log = logrus.WithField("prefix", "rpc")
+var log logrus.FieldLogger
+
+func init() {
+	log = logrus.WithField("prefix", "rpc")
+}
 
 type chainService interface {
 	IncomingBlockFeed() *event.Feed
@@ -35,7 +39,7 @@ type operationService interface {
 }
 
 type powChainService interface {
-	HasChainStartLogOccurred() (bool, time.Time, error)
+	HasChainStartLogOccurred() (bool, uint64, error)
 	ChainStartFeed() *event.Feed
 }
 
@@ -56,6 +60,7 @@ type Service struct {
 	canonicalStateChan    chan *pbp2p.BeaconState
 	incomingAttestation   chan *pbp2p.Attestation
 	slotAlignmentDuration time.Duration
+	credentialError       error
 }
 
 // Config options for the beacon node RPC server.
@@ -94,11 +99,9 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 // Start the gRPC server.
 func (s *Service) Start() {
 	log.Info("Starting service")
-
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", s.port))
 	if err != nil {
-		log.Errorf("Could not listen to port :%s: %v", s.port, err)
-		return
+		log.Errorf("Could not listen to port in Start() :%s: %v", s.port, err)
 	}
 	s.listener = lis
 	log.Infof("RPC server listening on port :%s", s.port)
@@ -109,6 +112,7 @@ func (s *Service) Start() {
 		creds, err := credentials.NewServerTLSFromFile(s.withCert, s.withKey)
 		if err != nil {
 			log.Errorf("Could not load TLS keys: %s", err)
+			s.credentialError = err
 		}
 		s.grpcServer = grpc.NewServer(grpc.Creds(creds))
 	} else {
@@ -146,9 +150,10 @@ func (s *Service) Start() {
 	reflection.Register(s.grpcServer)
 
 	go func() {
-		err = s.grpcServer.Serve(lis)
-		if err != nil {
-			log.Errorf("Could not serve gRPC: %v", err)
+		if s.listener != nil {
+			if err := s.grpcServer.Serve(s.listener); err != nil {
+				log.Errorf("Could not serve gRPC: %v", err)
+			}
 		}
 	}()
 }
@@ -164,8 +169,10 @@ func (s *Service) Stop() error {
 	return nil
 }
 
-// Status always returns nil.
-// TODO(1205): Add service health checks.
+// Status returns nil or credentialError
 func (s *Service) Status() error {
+	if s.credentialError != nil {
+		return s.credentialError
+	}
 	return nil
 }
