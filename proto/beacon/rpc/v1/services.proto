@@ -35,6 +35,7 @@ service ValidatorService {
 
 message AttestationInfoRequest {
     uint64 slot = 1;
+    uint64 shard = 2;
 }
 
 message AttestationInfoResponse {
@@ -42,6 +43,7 @@ message AttestationInfoResponse {
     bytes epoch_boundary_root_hash32 = 2;
     uint64 justified_epoch = 3;
     bytes justified_block_root_hash32 = 4;
+    bytes latest_crosslink_root_hash32 = 5;
 }
 
 message CrosslinkCommitteeRequest {
@@ -110,18 +112,19 @@ message ValidatorIndexResponse {
 }
 
 message ValidatorEpochAssignmentsRequest {
-  uint64 epoch_start = 1;
-  bytes public_key = 2;
+    uint64 epoch_start = 1;
+    bytes public_key = 2;
 }
 
 message ValidatorEpochAssignmentsResponse {
-  Assignment assignment = 2;
+    Assignment assignment = 2;
 }
 
 message PendingDepositsResponse {
-  repeated ethereum.beacon.p2p.v1.Deposit pending_deposits = 1;
+    repeated ethereum.beacon.p2p.v1.Deposit pending_deposits = 1;
 }
 
 message Eth1DataResponse {
-  ethereum.beacon.p2p.v1.Eth1Data eth1_data = 1;
+    ethereum.beacon.p2p.v1.Eth1Data eth1_data = 1;
 }
+

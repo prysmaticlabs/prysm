@@ -33,6 +33,10 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 		log.Errorf("Could not fetch crosslink committees at slot %d: %v", slot, err)
 		return
 	}
+	if len(resp.Committee) == 0 {
+		log.Error("Received an empty committee assignment")
+		return
+	}
 	// Set the attestation data's shard as the shard associated with the validator's
 	// committee as retrieved by CrosslinkCommitteesAtSlot.
 	attData.Shard = resp.Shard
@@ -40,7 +44,8 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	// Fetch other necessary information from the beacon node in order to attest
 	// including the justified epoch, epoch boundary information, and more.
 	infoReq := &pb.AttestationInfoRequest{
-		Slot: slot,
+		Slot:  slot,
+		Shard: resp.Shard,
 	}
 	infoRes, err := v.attesterClient.AttestationInfoAtSlot(ctx, infoReq)
 	if err != nil {
@@ -49,19 +54,22 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	}
 	// Set the attestation data's beacon block root = hash_tree_root(head) where head
 	// is the validator's view of the head block of the beacon chain during the slot.
-	attData.BeaconBlockRootHash32 = infoRes.BeaconBlockRootHash32[:]
+	attData.BeaconBlockRootHash32 = infoRes.BeaconBlockRootHash32
 	// Set the attestation data's epoch boundary root = hash_tree_root(epoch_boundary)
 	// where epoch_boundary is the block at the most recent epoch boundary in the
 	// chain defined by head -- i.e. the BeaconBlock where block.slot == get_epoch_start_slot(head.slot).
 	// On the server side, this is fetched by calling get_block_root(state, get_epoch_start_slot(head.slot)).
-	attData.EpochBoundaryRootHash32 = infoRes.EpochBoundaryRootHash32[:]
+	attData.EpochBoundaryRootHash32 = infoRes.EpochBoundaryRootHash32
+	// Set the attestation data's latest crosslink root = state.latest_crosslinks[shard].shard_block_root
+	// where state is the beacon state at head and shard is the validator's assigned shard.
+	attData.LatestCrosslinkRootHash32 = infoRes.LatestCrosslinkRootHash32
 	// Set the attestation data's justified epoch = state.justified_epoch where state
 	// is the beacon state at the head.
 	attData.JustifiedEpoch = infoRes.JustifiedEpoch
 	// Set the attestation data's justified block root = hash_tree_root(justified_block) where
 	// justified_block is the block at state.justified_epoch in the chain defined by head.
 	// On the server side, this is fetched by calling get_block_root(state, justified_epoch).
-	attData.JustifiedBlockRootHash32 = infoRes.JustifiedBlockRootHash32[:]
+	attData.JustifiedBlockRootHash32 = infoRes.JustifiedBlockRootHash32
 
 	// The validator now creates an Attestation object using the AttestationData as
 	// set in the code above after all properties have been set.
@@ -91,6 +99,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	for i, validator := range resp.Committee {
 		if validator == validatorIndexRes.Index {
 			indexIntoCommittee = uint(i)
+			break
 		}
 	}
 	aggregationBitfield[indexIntoCommittee/8] |= 1 << (indexIntoCommittee % 8)
