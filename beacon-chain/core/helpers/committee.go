@@ -3,7 +3,6 @@ package helpers
 import (
 	"encoding/binary"
 	"fmt"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
