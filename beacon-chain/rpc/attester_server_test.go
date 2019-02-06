@@ -2,10 +2,11 @@ package rpc
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"strings"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -32,7 +33,7 @@ func TestAttestationInfoAtSlot_NilHeadAtSlot(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	attesterServer := &AttesterServer{
-        beaconDB: db,
+		beaconDB: db,
 	}
 	want := "no block found at slot 5"
 	req := &pb.AttestationInfoRequest{
@@ -47,7 +48,7 @@ func TestAttestationInfoAtSlot_EpochBoundaryRootFailure(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	beaconState := &pbp2p.BeaconState{
-		Slot: 5,
+		Slot:                   5,
 		LatestBlockRootHash32S: make([][]byte, 20),
 	}
 	block := blocks.NewGenesisBlock([]byte("stateroot"))
