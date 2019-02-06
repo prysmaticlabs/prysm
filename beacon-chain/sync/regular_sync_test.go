@@ -405,7 +405,7 @@ func TestReceiveAttestation_Ok(t *testing.T) {
 	}()
 
 	request1 := &pb.Attestation{
-		ParticipationBitfield: []byte{99},
+		AggregationBitfield: []byte{99},
 		Data: &pb.AttestationData{
 			Slot: 0,
 		},

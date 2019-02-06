@@ -16,11 +16,11 @@ import (
 func TestHasVoted(t *testing.T) {
 	// Setting bit field to 11111111.
 	pendingAttestation := &pb.Attestation{
-		ParticipationBitfield: []byte{255},
+		AggregationBitfield: []byte{255},
 	}
 
-	for i := 0; i < len(pendingAttestation.ParticipationBitfield); i++ {
-		voted, err := bitutil.CheckBit(pendingAttestation.ParticipationBitfield, i)
+	for i := 0; i < len(pendingAttestation.AggregationBitfield); i++ {
+		voted, err := bitutil.CheckBit(pendingAttestation.AggregationBitfield, i)
 		if err != nil {
 			t.Errorf("checking bit failed at index: %d with : %v", i, err)
 		}
@@ -32,11 +32,11 @@ func TestHasVoted(t *testing.T) {
 
 	// Setting bit field to 01010101.
 	pendingAttestation = &pb.Attestation{
-		ParticipationBitfield: []byte{85},
+		AggregationBitfield: []byte{85},
 	}
 
-	for i := 0; i < len(pendingAttestation.ParticipationBitfield); i++ {
-		voted, err := bitutil.CheckBit(pendingAttestation.ParticipationBitfield, i)
+	for i := 0; i < len(pendingAttestation.AggregationBitfield); i++ {
+		voted, err := bitutil.CheckBit(pendingAttestation.AggregationBitfield, i)
 		if err != nil {
 			t.Errorf("checking bit failed at index: %d : %v", i, err)
 		}
@@ -189,8 +189,8 @@ func TestBoundaryAttesterIndices(t *testing.T) {
 	}
 
 	boundaryAttestations := []*pb.PendingAttestationRecord{
-		{Data: &pb.AttestationData{}, ParticipationBitfield: []byte{0x10}}, // returns indices 242
-		{Data: &pb.AttestationData{}, ParticipationBitfield: []byte{0xF0}}, // returns indices 237,224,2
+		{Data: &pb.AttestationData{}, AggregationBitfield: []byte{0x10}}, // returns indices 242
+		{Data: &pb.AttestationData{}, AggregationBitfield: []byte{0xF0}}, // returns indices 237,224,2
 	}
 
 	attesterIndices, err := ValidatorIndices(state, boundaryAttestations)
@@ -293,7 +293,7 @@ func TestAttestingValidatorIndices_Ok(t *testing.T) {
 			Shard:                6,
 			ShardBlockRootHash32: []byte{'B'},
 		},
-		ParticipationBitfield: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1},
+		AggregationBitfield: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1},
 	}
 
 	indices, err := AttestingValidatorIndices(
@@ -331,7 +331,7 @@ func TestAttestingValidatorIndices_OutOfBound(t *testing.T) {
 			Shard:                1,
 			ShardBlockRootHash32: []byte{'B'},
 		},
-		ParticipationBitfield: []byte{'A'}, // 01000001 = 1,7
+		AggregationBitfield: []byte{'A'}, // 01000001 = 1,7
 	}
 
 	_, err := AttestingValidatorIndices(

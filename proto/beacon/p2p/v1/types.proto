@@ -51,14 +51,14 @@ message Fork {
 
 message PendingAttestationRecord {
   AttestationData data = 1;
-  bytes participation_bitfield = 2;
+  bytes aggregation_bitfield = 2;
   bytes custody_bitfield = 3;
   uint64 slot_included = 4;
 }
 
 message Attestation {
   AttestationData data = 1;
-  bytes participation_bitfield = 2;
+  bytes aggregation_bitfield = 2;
   bytes custody_bitfield = 3;
   bytes aggregate_signature = 4; // Type of [uint384] ?
 }
@@ -70,8 +70,9 @@ message AttestationData {
   bytes epoch_boundary_root_hash32  = 4;
   bytes shard_block_root_hash32 = 5;
   bytes latest_crosslink_root_hash32 = 6;
-  uint64 justified_slot = 7;
+  uint64 justified_epoch = 7;
   bytes justified_block_root_hash32 = 8;
+  uint64 justified_slot = 1000 [deprecated=true];
 }
 
 message AttestationDataAndCustodyBit {
