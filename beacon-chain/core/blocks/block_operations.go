@@ -106,7 +106,7 @@ func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb
 	return beaconState, nil
 }
 
-func verifyBlockRandao(proposer *pb.ValidatorRecord, block *pb.BeaconBlock) error {
+func verifyBlockRandao(proposer *pb.Validator, block *pb.BeaconBlock) error {
 	blockRandaoReveal := bytesutil.ToBytes32(block.RandaoRevealHash32)
 	proposerRandaoCommit := bytesutil.ToBytes32(proposer.RandaoCommitmentHash32)
 	randaoHashLayers := hashutil.RepeatHash(blockRandaoReveal, proposer.RandaoLayers)

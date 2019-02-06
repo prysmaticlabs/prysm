@@ -202,9 +202,9 @@ func (sb *SimulatedBackend) RunForkChoiceTest(testCase *ForkChoiceTestCase) erro
 	// Then, we create the validators based on the custom test config.
 	randaoPreCommit := [32]byte{}
 	randaoReveal := hashutil.Hash(randaoPreCommit[:])
-	validators := make([]*pb.ValidatorRecord, testCase.Config.ValidatorCount)
+	validators := make([]*pb.Validator, testCase.Config.ValidatorCount)
 	for i := uint64(0); i < testCase.Config.ValidatorCount; i++ {
-		validators[i] = &pb.ValidatorRecord{
+		validators[i] = &pb.Validator{
 			ExitEpoch:              params.BeaconConfig().EntryExitDelay,
 			Pubkey:                 []byte{},
 			RandaoCommitmentHash32: randaoReveal[:],
@@ -408,7 +408,7 @@ func (sb *SimulatedBackend) compareTestCase(testCase *StateTestCase) error {
 		}
 	}
 	for _, exited := range testCase.Results.ExitedValidators {
-		if sb.state.ValidatorRegistry[exited].StatusFlags != pb.ValidatorRecord_INITIATED_EXIT {
+		if sb.state.ValidatorRegistry[exited].StatusFlags != pb.Validator_INITIATED_EXIT {
 			return fmt.Errorf(
 				"expected validator at index %d to have exited",
 				exited,

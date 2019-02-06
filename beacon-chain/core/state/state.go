@@ -60,7 +60,7 @@ func InitialBeaconState(
 		latestBlockRoots[i] = config.ZeroHash[:]
 	}
 
-	validatorRegistry := make([]*pb.ValidatorRecord, len(initialValidatorDeposits))
+	validatorRegistry := make([]*pb.Validator, len(initialValidatorDeposits))
 	latestBalances := make([]uint64, len(initialValidatorDeposits))
 	for i, d := range initialValidatorDeposits {
 		depositInput, err := b.DecodeDepositInput(d.DepositData)
@@ -68,7 +68,7 @@ func InitialBeaconState(
 			return nil, fmt.Errorf("could decode deposit input %v", err)
 		}
 
-		validator := &pb.ValidatorRecord{
+		validator := &pb.Validator{
 			Pubkey:                      depositInput.Pubkey,
 			RandaoCommitmentHash32:      depositInput.RandaoCommitmentHash32,
 			WithdrawalCredentialsHash32: depositInput.WithdrawalCredentialsHash32,
