@@ -517,7 +517,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 			}
 		}
 	}
-	state.ValidatorRegistryUpdateSlot = state.Slot
+	state.ValidatorRegistryUpdateEpoch = state.Slot
 	return state, nil
 }
 
