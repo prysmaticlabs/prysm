@@ -40,13 +40,13 @@ func CanProcessEth1Data(state *pb.BeaconState) bool {
 //
 // Spec pseudocode definition:
 //    If the following are satisfied:
-//		* state.finalized_slot > state.validator_registry_latest_change_slot
+//		* state.finalized_epoch > state.validator_registry_latest_change_epoch
 //		* state.latest_crosslinks[shard].epoch > state.validator_registry_update_epoch
 // 			for every shard number shard in [(state.current_epoch_start_shard + i) %
 //	 			SHARD_COUNT for i in range(get_current_epoch_committee_count(state) *
 //	 			EPOCH_LENGTH)] (that is, for every shard in the current committees)
 func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
-	if state.FinalizedSlot <= state.ValidatorRegistryUpdateEpoch {
+	if state.FinalizedEpoch <= state.ValidatorRegistryUpdateEpoch {
 		return false
 	}
 	shardsProcessed := helpers.CurrentEpochCommitteeCount(state) * config.EpochLength
@@ -89,19 +89,19 @@ func ProcessEth1Data(state *pb.BeaconState) *pb.BeaconState {
 // epoch boundary balance and total balance.
 //
 // Spec pseudocode definition:
-//    Set state.previous_justified_slot = state.justified_slot.
+//    Set state.previous_justified_epoch = state.justified_epoch.
 //    Set state.justification_bitfield = (state.justification_bitfield * 2) % 2**64.
-//    Set state.justification_bitfield |= 2 and state.justified_slot =
-//    state.slot - 2 * EPOCH_LENGTH if 3 * previous_epoch_boundary_attesting_balance >= 2 * total_balance
-//    Set state.justification_bitfield |= 1 and state.justified_slot =
-//    state.slot - 1 * EPOCH_LENGTH if 3 * this_epoch_boundary_attesting_balance >= 2 * total_balance
+//    Set state.justification_bitfield |= 2 and state.justified_epoch =
+//    slot_to_epoch(state.slot) - 2  if 3 * previous_epoch_boundary_attesting_balance >= 2 * total_balance
+//    Set state.justification_bitfield |= 1 and state.justified_epoch =
+//    slot_to_epoch(state.slot) - 1 if 3 * this_epoch_boundary_attesting_balance >= 2 * total_balance
 func ProcessJustification(
 	state *pb.BeaconState,
 	thisEpochBoundaryAttestingBalance uint64,
 	prevEpochBoundaryAttestingBalance uint64,
 	totalBalance uint64) *pb.BeaconState {
 
-	state.PreviousJustifiedSlot = state.JustifiedSlot
+	state.PreviousJustifiedEpoch = state.JustifiedEpoch
 	// Shifts all the bits over one to create a new bit for the recent epoch.
 	state.JustificationBitfield = state.JustificationBitfield * 2
 
@@ -109,14 +109,14 @@ func ProcessJustification(
 	// assign new justified slot to 2 * EPOCH_LENGTH before.
 	if 3*prevEpochBoundaryAttestingBalance >= 2*totalBalance {
 		state.JustificationBitfield |= 2
-		state.JustifiedSlot = state.Slot - 2*config.EpochLength
+		state.JustifiedEpoch = helpers.CurrentEpoch(state) - 2
 	}
 
 	// If this epoch was justified then we ensure the 1st bit in the bitfield is set,
 	// assign new justified slot to 1 * EPOCH_LENGTH before.
 	if 3*thisEpochBoundaryAttestingBalance >= 2*totalBalance {
 		state.JustificationBitfield |= 1
-		state.JustifiedSlot = state.Slot - 1*config.EpochLength
+		state.JustifiedEpoch = helpers.CurrentEpoch(state) - 1
 	}
 	return state
 }
@@ -125,27 +125,26 @@ func ProcessJustification(
 // consecutive justified slots.
 //
 // Spec pseudocode definition:
-//   Set state.finalized_slot = state.previous_justified_slot if any of the following are true:
-//		state.previous_justified_slot == state.slot - 2 * EPOCH_LENGTH and state.justification_bitfield % 4 == 3
-//		state.previous_justified_slot == state.slot - 3 * EPOCH_LENGTH and state.justification_bitfield % 8 == 7
-//		state.previous_justified_slot == state.slot - 4 * EPOCH_LENGTH and state.justification_bitfield % 16 in (15, 14)
+//   Set state.finalized_epoch = state.previous_justified_epoch if any of the following are true:
+//		state.previous_justified_epoch == slot_to_epoch(state.slot) - 2 and state.justification_bitfield % 4 == 3
+//		state.previous_justified_epoch == slot_to_epoch(state.slot) - 3 and state.justification_bitfield % 8 == 7
+//		state.previous_justified_epoch == slot_to_epoch(state.slot) - 4 and state.justification_bitfield % 16 in (15, 14)
 func ProcessFinalization(state *pb.BeaconState) *pb.BeaconState {
-	epochLength := config.EpochLength
 
-	if state.PreviousJustifiedSlot == state.Slot-2*epochLength &&
+	if state.PreviousJustifiedEpoch == helpers.CurrentEpoch(state)-2 &&
 		state.JustificationBitfield%4 == 3 {
-		state.FinalizedSlot = state.JustifiedSlot
+		state.FinalizedEpoch = state.JustifiedEpoch
 		return state
 	}
-	if state.PreviousJustifiedSlot == state.Slot-3*epochLength &&
+	if state.PreviousJustifiedEpoch == helpers.CurrentEpoch(state)-3 &&
 		state.JustificationBitfield%8 == 7 {
-		state.FinalizedSlot = state.JustifiedSlot
+		state.FinalizedEpoch = state.JustifiedEpoch
 		return state
 	}
-	if state.PreviousJustifiedSlot == state.Slot-4*epochLength &&
+	if state.PreviousJustifiedEpoch == helpers.CurrentEpoch(state)-4 &&
 		(state.JustificationBitfield%16 == 15 ||
 			state.JustificationBitfield%16 == 14) {
-		state.FinalizedSlot = state.JustifiedSlot
+		state.FinalizedEpoch = state.JustifiedEpoch
 		return state
 	}
 	return state
@@ -233,7 +232,7 @@ func ProcessEjections(state *pb.BeaconState) (*pb.BeaconState, error) {
 //
 // Spec pseudocode definition:
 //	Set state.previous_epoch_randao_mix = state.current_epoch_randao_mix
-//	Set state.current_epoch_calculation_slot = state.slot
+//	Set state.previous_calculation_epoch = state.current_calculation_epoch
 //  Set state.previous_epoch_seed = state.current_epoch_seed.
 func ProcessPrevSlotShardSeed(state *pb.BeaconState) *pb.BeaconState {
 	state.PreviousCalculationEpoch = state.CurrentCalculationEpoch
@@ -278,12 +277,12 @@ func ProcessValidatorRegistry(
 // validator registry update did not happen.
 //
 // Spec pseudocode definition:
-//	Set state.previous_epoch_calculation_slot = state.current_epoch_calculation_slot
-//	Set state.previous_epoch_start_shard = state.current_epoch_start_shard
+//	Set state.previous_calculation_epoch = state.current_calculation_epoch
+//	Set state.previous_epoch = state.current_epoch
 //	Let epochs_since_last_registry_change = (state.slot - state.validator_registry_latest_change_slot)
 // 		EPOCH_LENGTH.
 //	If epochs_since_last_registry_change is an exact power of 2,
-// 		set state.current_epoch_calculation_slot = state.slot
+// 		set state.current_calculation_epoch = state.slot
 // 		set state.current_epoch_randao_mix = state.latest_randao_mixes[
 // 			(state.current_epoch_calculation_slot - SEED_LOOKAHEAD) %
 // 			LATEST_RANDAO_MIXES_LENGTH].
@@ -309,7 +308,7 @@ func ProcessPartialValidatorRegistry(state *pb.BeaconState) *pb.BeaconState {
 // such that the attestation slot is lower than state slot minus epoch length.
 // Spec pseudocode definition:
 // 		Remove any attestation in state.latest_attestations such
-// 		that attestation.data.slot < state.slot - EPOCH_LENGTH
+// 		that slot_to_epoch(att.data.slot) < slot_to_epoch(state) - 1
 func CleanupAttestations(state *pb.BeaconState) *pb.BeaconState {
 	currEpoch := helpers.CurrentEpoch(state)
 
