@@ -43,6 +43,9 @@ func (as *AttesterServer) AttestationInfoAtSlot(ctx context.Context, req *pb.Att
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve chain head: %v", err)
 	}
+	if head == nil {
+		return nil, fmt.Errorf("no block found at slot %d", req.Slot)
+	}
 	blockRoot, err := ssz.TreeHash(head)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash chain head: %v", err)
@@ -55,24 +58,16 @@ func (as *AttesterServer) AttestationInfoAtSlot(ctx context.Context, req *pb.Att
 	// where epoch_boundary is the block at the most recent epoch boundary in the
 	// chain defined by head -- i.e. the BeaconBlock where block.slot == get_epoch_start_slot(head.slot).
 	// On the server side, this is fetched by calling get_block_root(state, get_epoch_start_slot(head.slot)).
-	epochBoundary, err := blocks.BlockRoot(beaconState, helpers.StartSlot(head.Slot))
+	epochBoundaryRoot, err := blocks.BlockRoot(beaconState, helpers.StartSlot(head.Slot))
 	if err != nil {
 		return nil, fmt.Errorf("could not get epoch boundary block: %v", err)
-	}
-	epochBoundaryRoot, err := ssz.TreeHash(epochBoundary)
-	if err != nil {
-		return nil, fmt.Errorf("could not tree hash epoch boundary block: %v", err)
 	}
 	// Fetch the justified block root = hash_tree_root(justified_block) where
 	// justified_block is the block at state.justified_epoch in the chain defined by head.
 	// On the server side, this is fetched by calling get_block_root(state, justified_epoch).
-	justifiedBlock, err := blocks.BlockRoot(beaconState, beaconState.JustifiedSlot)
+	justifiedBlockRoot, err := blocks.BlockRoot(beaconState, beaconState.JustifiedSlot)
 	if err != nil {
 		return nil, fmt.Errorf("could not get justified block: %v", err)
-	}
-	justifiedBlockRoot, err := ssz.TreeHash(justifiedBlock)
-	if err != nil {
-		return nil, fmt.Errorf("could not tree hash justified block: %v", err)
 	}
 	return &pb.AttestationInfoResponse{
 		BeaconBlockRootHash32:    blockRoot[:],
