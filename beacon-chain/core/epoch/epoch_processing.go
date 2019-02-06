@@ -173,7 +173,7 @@ func ProcessCrosslinks(
 	startSlot := helpers.StartSlot(prevEpoch)
 	endSlot := helpers.StartSlot(nextEpoch)
 
-	for i := startSlot; i < state.Slot; i++ {
+	for i := startSlot; i < endSlot; i++ {
 		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(state, i, false)
 		if err != nil {
 			return nil, fmt.Errorf("could not get committees for slot %d: %v", i, err)

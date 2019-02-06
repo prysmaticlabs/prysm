@@ -344,9 +344,12 @@ func Crosslinks(
 	thisEpochAttestations []*pb.PendingAttestationRecord,
 	prevEpochAttestations []*pb.PendingAttestationRecord) (*pb.BeaconState, error) {
 
-	epochLength := config.EpochLength
-	startSlot := state.Slot - 2*epochLength
-	for i := startSlot; i < state.Slot; i++ {
+	prevEpoch := helpers.PrevEpoch(state)
+	currentEpoch := helpers.CurrentEpoch(state)
+	startSlot := helpers.StartSlot(prevEpoch)
+	endSlot := helpers.StartSlot(currentEpoch)
+
+	for i := startSlot; i < endSlot; i++ {
 		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(state, i, false)
 		if err != nil {
 			return nil, fmt.Errorf("could not get shard committees for slot %d: %v", i, err)

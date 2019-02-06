@@ -28,7 +28,7 @@ func TestGenerateBlocks(t *testing.T) {
 		t.Fatalf("Could not initialize simulated backend %v", err)
 	}
 
-	slotLimit := 300
+	slotLimit := 250
 
 	for i := 0; i < slotLimit; i++ {
 		if err := backend.GenerateBlockAndAdvanceChain(&SimulatedObjects{}); err != nil {

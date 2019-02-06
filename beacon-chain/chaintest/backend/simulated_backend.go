@@ -50,6 +50,9 @@ type SimulatedObjects struct {
 	simValidatorExit    *StateTestValidatorExit
 }
 
+// Number of slots to have the randao reveal hashed for.
+var lengthOfOnion uint64 = 1000
+
 // NewSimulatedBackend creates an instance by initializing a chain service
 // utilizing a mockDB which will act according to test run parameters specified
 // in the common ETH 2.0 client test YAML format.
@@ -76,7 +79,7 @@ func NewSimulatedBackend() (*SimulatedBackend, error) {
 // beacon state and chain.
 func (sb *SimulatedBackend) InitializeChain() error {
 	// Generating hash onion for 1000 slots.
-	sb.hashOnions = generateSimulatedRandaoHashOnions(1000)
+	sb.hashOnions = generateSimulatedRandaoHashOnions(lengthOfOnion)
 
 	sb.lastRandaoLayer = sb.hashOnions[len(sb.hashOnions)-1]
 	initialDeposits, err := generateInitialSimulatedDeposits(sb.lastRandaoLayer)
