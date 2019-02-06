@@ -29,9 +29,21 @@ import (
 var log = logrus.WithField("prefix", "powchain")
 
 var (
-	depositsCount = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "powchain_deposits_received",
-		Help: "The number of deposits received in the deposit contract",
+	validDepositsCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "powchain_valid_deposits_received",
+		Help: "The number of valid deposits received in the deposit contract",
+	})
+	totalDepositsCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "powchain_deposit_logs",
+		Help: "The total number of deposits received in the deposit contract",
+	})
+	chainStartCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "powchain_chainstart_logs",
+		Help: "The number of chainstart logs received from the deposit contract",
+	})
+	blockNumberGuage = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "powchain_block_number",
+		Help: "The current block number in the proof-of-work chain",
 	})
 )
 
@@ -234,6 +246,7 @@ func (w *Web3Service) ProcessLog(VRClog gethTypes.Log) {
 // the ETH1.0 chain by trying to ascertain which participant deposited
 // in the contract.
 func (w *Web3Service) ProcessDepositLog(VRClog gethTypes.Log) {
+	totalDepositsCount.Inc()
 	merkleRoot, depositData, MerkleTreeIndex, err := contracts.UnpackDepositLogData(VRClog.Data)
 	if err != nil {
 		log.Errorf("Could not unpack log %v", err)
@@ -262,12 +275,13 @@ func (w *Web3Service) ProcessDepositLog(VRClog gethTypes.Log) {
 		"merkleTreeIndex": index,
 	}).Info("Validator registered in deposit contract")
 
-	depositsCount.Inc()
+	validDepositsCount.Inc()
 }
 
 // ProcessChainStartLog processes the log which had been received from
 // the ETH1.0 chain by trying to determine when to start the beacon chain.
 func (w *Web3Service) ProcessChainStartLog(VRClog gethTypes.Log) {
+	chainStartCount.Inc()
 	receiptRoot, timestampData, err := contracts.UnpackChainStartLogData(VRClog.Data)
 	if err != nil {
 		log.Errorf("Unable to unpack ChainStart log data %v", err)
@@ -332,6 +346,7 @@ func (w *Web3Service) run(done <-chan struct{}) {
 			log.Debug("Unsubscribed to log events, exiting goroutine")
 			return
 		case header := <-w.headerChan:
+			blockNumberGuage.Set(float64(header.Number.Int64()))
 			w.blockNumber = header.Number
 			w.blockHash = header.Hash()
 			log.WithFields(logrus.Fields{
