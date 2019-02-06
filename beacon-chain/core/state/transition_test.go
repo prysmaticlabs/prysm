@@ -367,10 +367,10 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 }
 
 func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
-	var validatorRegistry []*pb.ValidatorRecord
+	var validatorRegistry []*pb.Validator
 	for i := uint64(0); i < 10; i++ {
 		validatorRegistry = append(validatorRegistry,
-			&pb.ValidatorRecord{
+			&pb.Validator{
 				ExitEpoch: config.FarFutureEpoch,
 			})
 	}
@@ -423,7 +423,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 func TestProcessEpoch_InactiveConditions(t *testing.T) {
 	defaultBalance := config.MaxDeposit
 
-	validatorRegistry := []*pb.ValidatorRecord{
+	validatorRegistry := []*pb.Validator{
 		{ExitEpoch: config.FarFutureEpoch}, {ExitEpoch: config.FarFutureEpoch},
 		{ExitEpoch: config.FarFutureEpoch}, {ExitEpoch: config.FarFutureEpoch},
 		{ExitEpoch: config.FarFutureEpoch}, {ExitEpoch: config.FarFutureEpoch},

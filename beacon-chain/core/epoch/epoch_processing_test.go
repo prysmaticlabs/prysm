@@ -364,7 +364,7 @@ func TestProcessEjectionsOk(t *testing.T) {
 			config.EjectionBalance - 1,
 			config.EjectionBalance + 1},
 		LatestPenalizedBalances: []uint64{0},
-		ValidatorRegistry: []*pb.ValidatorRecord{
+		ValidatorRegistry: []*pb.Validator{
 			{ExitEpoch: config.FarFutureEpoch},
 			{ExitEpoch: config.FarFutureEpoch}},
 	}
