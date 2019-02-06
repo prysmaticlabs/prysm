@@ -312,7 +312,7 @@ func TestProcessCrosslinksOk(t *testing.T) {
 				ShardBlockRootHash32: []byte{'A'},
 			},
 			// All validators attested to the above roots.
-			ParticipationBitfield: participationBitfield,
+			AggregationBitfield: participationBitfield,
 		}
 		attestations = append(attestations, attestation)
 	}
@@ -346,7 +346,7 @@ func TestProcessCrosslinksNoParticipantsBitField(t *testing.T) {
 	attestations := []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{},
 			// Empty participation bitfield will trigger error.
-			ParticipationBitfield: []byte{}}}
+			AggregationBitfield: []byte{}}}
 
 	wanted := fmt.Sprintf(
 		"wanted participants bitfield length %d, got: %d",

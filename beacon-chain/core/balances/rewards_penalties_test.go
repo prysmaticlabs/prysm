@@ -214,8 +214,8 @@ func TestInclusionDistRewards_Ok(t *testing.T) {
 
 	attestation := []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{Slot: 0},
-			ParticipationBitfield: participationBitfield,
-			SlotIncluded:          5},
+			AggregationBitfield: participationBitfield,
+			SlotIncluded:        5},
 	}
 
 	tests := []struct {
@@ -263,7 +263,7 @@ func TestInclusionDistRewards_NotOk(t *testing.T) {
 
 	attestation := []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{Shard: 1, Slot: 0},
-			ParticipationBitfield: []byte{0xff}},
+			AggregationBitfield: []byte{0xff}},
 	}
 
 	tests := []struct {
@@ -447,8 +447,8 @@ func TestInactivityInclusionPenalty_Ok(t *testing.T) {
 	}
 	attestation := []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{Slot: 0},
-			ParticipationBitfield: participationBitfield,
-			SlotIncluded:          5},
+			AggregationBitfield: participationBitfield,
+			SlotIncluded:        5},
 	}
 
 	tests := []struct {
@@ -495,7 +495,7 @@ func TestInactivityInclusionPenalty_NotOk(t *testing.T) {
 	}
 	attestation := []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{Shard: 1, Slot: 0},
-			ParticipationBitfield: []byte{0xff}},
+			AggregationBitfield: []byte{0xff}},
 	}
 
 	tests := []struct {
@@ -531,8 +531,8 @@ func TestAttestationInclusionRewards(t *testing.T) {
 	}
 	attestation := []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{Slot: 0},
-			ParticipationBitfield: participationBitfield,
-			SlotIncluded:          0},
+			AggregationBitfield: participationBitfield,
+			SlotIncluded:        0},
 	}
 
 	tests := []struct {
@@ -608,8 +608,8 @@ func TestAttestationInclusionRewards_NoProposerIndex(t *testing.T) {
 	}
 	attestation := []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{Shard: 1, Slot: 0},
-			ParticipationBitfield: []byte{0xff},
-			SlotIncluded:          0},
+			AggregationBitfield: []byte{0xff},
+			SlotIncluded:        0},
 	}
 
 	tests := []struct {
@@ -663,8 +663,8 @@ func TestCrosslinksRewardsPenalties(t *testing.T) {
 		}
 		attestation := []*pb.PendingAttestationRecord{
 			{Data: &pb.AttestationData{Shard: 1, Slot: 0},
-				ParticipationBitfield: tt.voted,
-				SlotIncluded:          0},
+				AggregationBitfield: tt.voted,
+				SlotIncluded:        0},
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry:  validators,
