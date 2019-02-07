@@ -353,38 +353,18 @@ func isSurroundVote(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
 //   Verify that len(block.body.attestations) <= MAX_ATTESTATIONS.
 //
 //   For each attestation in block.body.attestations:
-//   Verify that attestation.data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot.
-//   Verify that attestation.data.slot + EPOCH_LENGTH >= state.slot.
-//   Verify that attestation.data.justified_slot is equal to
-//     state.justified_slot if attestation.data.slot >=
-//     state.slot - (state.slot % EPOCH_LENGTH) else state.previous_justified_slot.
-//   Verify that attestation.data.justified_block_root is equal to
-//     get_block_root(state, attestation.data.justified_slot).
-//   Verify that either attestation.data.latest_crosslink_root or
-//     attestation.data.shard_block_root equals
-//     state.latest_crosslinks[shard].shard_block_root
-//   Aggregate_signature verification:
-//     Let participants = get_attestation_participants(
-//       state,
-//       attestation.data,
-//       attestation.participation_bitfield,
-//     )
-//     Let group_public_key = BLSAddPubkeys([
-//       state.validator_registry[v].pubkey for v in participants
-//     ])
-//     Verify that bls_verify(
-//       pubkey=group_public_key,
-//       message=hash_tree_root(attestation.data) + bytes1(0),
-//       signature=attestation.aggregate_signature,
-//       domain=get_domain(state.fork_data, attestation.data.slot, DOMAIN_ATTESTATION)).
-//
-//   [TO BE REMOVED IN PHASE 1] Verify that attestation.data.shard_block_hash == ZERO_HASH.
-//   return PendingAttestationRecord(
-//     data=attestation.data,
-//     participation_bitfield=attestation.participation_bitfield,
-//     custody_bitfield=attestation.custody_bitfield,
-//     slot_included=state.slot,
-//   ) which can then be appended to state.latest_attestations.
+//     Verify that attestation.data.slot <= state.slot - MIN_ATTESTATION_INCLUSION_DELAY <
+//       attestation.data.slot + EPOCH_LENGTH.
+//     Verify that attestation.data.justified_epoch is equal to state.justified_epoch
+//       if attestation.data.slot >= get_epoch_start_slot(get_current_epoch(state)) else state.previous_justified_epoch.
+//     Verify that attestation.data.justified_block_root is equal to
+//       get_block_root(state, get_epoch_start_slot(attestation.data.justified_epoch)).
+//     Verify that either attestation.data.latest_crosslink_root or
+//       attestation.data.shard_block_root equals state.latest_crosslinks[shard].shard_block_root.
+//     Verify bitfields and aggregate signature using BLS.
+//     [TO BE REMOVED IN PHASE 1] Verify that attestation.data.shard_block_root == ZERO_HASH.
+//     Append PendingAttestation(data=attestation.data, aggregation_bitfield=attestation.aggregation_bitfield,
+//       custody_bitfield=attestation.custody_bitfield, inclusion_slot=state.slot) to state.latest_attestations
 func ProcessBlockAttestations(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
@@ -495,19 +475,18 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	}
 	if verifySignatures {
 		// TODO(#258): Integrate BLS signature verification for attestation.
-		//     Let participants = get_attestation_participants(
-		//       state,
-		//       attestation.data,
-		//       attestation.participation_bitfield,
-		//     )
-		//     Let group_public_key = BLSAddPubkeys([
-		//       state.validator_registry[v].pubkey for v in participants
-		//     ])
-		//     Verify that bls_verify(
-		//       pubkey=group_public_key,
-		//       message=hash_tree_root(attestation.data) + bytes1(0),
-		//       signature=attestation.aggregate_signature,
-		//       domain=get_domain(state.fork_data, attestation.data.slot, DOMAIN_ATTESTATION)).
+		// assert bls_verify_multiple(
+		//   pubkeys=[
+		//	 bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_0_participants]),
+		//   bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_1_participants]),
+		//   ],
+		//   messages=[
+		//   hash_tree_root(AttestationDataAndCustodyBit(data=attestation.data, custody_bit=0b0)),
+		//   hash_tree_root(AttestationDataAndCustodyBit(data=attestation.data, custody_bit=0b1)),
+		//   ],
+		//   signature=attestation.aggregate_signature,
+		//   domain=get_domain(state.fork, slot_to_epoch(attestation.data.slot), DOMAIN_ATTESTATION),
+		// )
 		return nil
 	}
 	return nil
