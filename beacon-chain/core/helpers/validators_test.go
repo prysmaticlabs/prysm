@@ -18,7 +18,7 @@ func TestIsActiveValidator(t *testing.T) {
 		{a: 64, b: true},
 	}
 	for _, test := range tests {
-		validator := &pb.ValidatorRecord{ActivationEpoch: 10, ExitEpoch: 100}
+		validator := &pb.Validator{ActivationEpoch: 10, ExitEpoch: 100}
 		if IsActiveValidator(validator, test.a) != test.b {
 			t.Errorf("IsActiveValidator(%d) = %v, want = %v",
 				test.a, IsActiveValidator(validator, test.a), test.b)

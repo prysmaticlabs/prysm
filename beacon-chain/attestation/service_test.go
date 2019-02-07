@@ -20,7 +20,7 @@ func TestUpdateLatestAttestation_Ok(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	if err := beaconDB.SaveState(&pb.BeaconState{
-		ValidatorRegistry: []*pb.ValidatorRecord{{Pubkey: []byte{'A'}}},
+		ValidatorRegistry: []*pb.Validator{{Pubkey: []byte{'A'}}},
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
@@ -59,7 +59,7 @@ func TestAttestationPool_Ok(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	if err := beaconDB.SaveState(&pb.BeaconState{
-		ValidatorRegistry: []*pb.ValidatorRecord{{Pubkey: []byte{'A'}}},
+		ValidatorRegistry: []*pb.Validator{{Pubkey: []byte{'A'}}},
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
