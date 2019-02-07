@@ -259,27 +259,32 @@ func ProcessAttesterSlashings(
 }
 
 func verifyAttesterSlashing(slashing *pb.AttesterSlashing, verifySignatures bool) error {
-	slashableVote1 := slashing.SlashableVote_1
-	slashableVote2 := slashing.SlashableVote_2
-	slashableVoteData1Attestation := slashableVote1.Data
-	slashableVoteData2Attestation := slashableVote2.Data
+	slashableAttestation1 := slashing.SlashableAttestation_1
+	slashableAttestation2 := slashing.SlashableAttestation_2
+	data1 := slashableAttestation1.Data
+	data2 := slashableAttestation2.Data
 
-	if err := verifySlashableVote(slashableVote1, verifySignatures); err != nil {
-		return fmt.Errorf("could not verify attester slashable vote data 1: %v", err)
+	if err := verifySlashableVote(slashableAttestation1, verifySignatures); err != nil {
+		return fmt.Errorf("could not verify attester slashable attestation data 1: %v", err)
 	}
-	if err := verifySlashableVote(slashableVote2, verifySignatures); err != nil {
-		return fmt.Errorf("could not verify attester slashable vote data 2: %v", err)
+	if err := verifySlashableVote(slashableAttestation2, verifySignatures); err != nil {
+		return fmt.Errorf("could not verify attester slashable attestation data 2: %v", err)
 	}
 
 	// Inner attestation data structures for the votes should not be equal,
 	// as that would mean both votes are the same and therefore no slashing
 	// should occur.
-	if reflect.DeepEqual(slashableVoteData1Attestation, slashableVoteData2Attestation) {
+	if reflect.DeepEqual(data1, data2) {
 		return fmt.Errorf(
 			"attester slashing inner slashable vote data attestation should not match: %v, %v",
-			slashableVoteData1Attestation,
-			slashableVoteData2Attestation,
+			data1,
+			data2,
 		)
+	}
+
+	// Verify the slashing is a double vote or a surround vote.
+	if !isDoubleVote(data1, data2) {
+		return errors.New("attester slashing is not a double vote")
 	}
 
 	// Unless the following holds, the slashing is invalid:
@@ -371,6 +376,10 @@ func verifySlashableVote(votes *pb.SlashableVote, verifySignatures bool) error {
 		return nil
 	}
 	return nil
+}
+
+func isDoubleVote(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
+	return helpers.SlotToEpoch(data1.Slot) == helpers.SlotToEpoch(data2.Slot)
 }
 
 // ProcessBlockAttestations applies processing operations to a block's inner attestation
