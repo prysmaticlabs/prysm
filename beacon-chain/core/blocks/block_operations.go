@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
@@ -221,14 +220,12 @@ func verifyProposerSlashing(
 //       state.validator_registry[index].penalized_epoch > get_current_epoch(state)].
 //     Verify that len(slashable_indices) >= 1.
 //     Run penalize_validator(state, index) for each index in slashable_indices.
-// TODO: PROTO REVAMP.
 func ProcessAttesterSlashings(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
 	body := block.Body
-	registry := beaconState.ValidatorRegistry
 	if uint64(len(body.AttesterSlashings)) > params.BeaconConfig().MaxAttesterSlashings {
 		return nil, fmt.Errorf(
 			"number of attester slashings (%d) exceeds allowed threshold of %d",
@@ -240,18 +237,15 @@ func ProcessAttesterSlashings(
 		if err := verifyAttesterSlashing(slashing, verifySignatures); err != nil {
 			return nil, fmt.Errorf("could not verify attester slashing #%d: %v", idx, err)
 		}
-		validatorIndices, err := attesterSlashingPenalizedIndices(slashing)
+		slashableIndices, err := attesterSlashableIndices(beaconState, slashing)
 		if err != nil {
-			return nil, fmt.Errorf("could not determine validator indices to penalize: %v", err)
+			return nil, fmt.Errorf("could not determine validator indices to slash: %v", err)
 		}
-		for _, validatorIndex := range validatorIndices {
-			penalizedValidator := registry[validatorIndex]
-			if penalizedValidator.PenalizedEpoch > beaconState.Slot {
-				beaconState, err = v.PenalizeValidator(beaconState, validatorIndex)
-				if err != nil {
-					return nil, fmt.Errorf("could not penalize validator index %d: %v",
-						validatorIndex, err)
-				}
+		for _, validatorIndex := range slashableIndices {
+			beaconState, err = v.PenalizeValidator(beaconState, validatorIndex)
+			if err != nil {
+				return nil, fmt.Errorf("could not penalize validator index %d: %v",
+					validatorIndex, err)
 			}
 		}
 	}
@@ -263,14 +257,6 @@ func verifyAttesterSlashing(slashing *pb.AttesterSlashing, verifySignatures bool
 	slashableAttestation2 := slashing.SlashableAttestation_2
 	data1 := slashableAttestation1.Data
 	data2 := slashableAttestation2.Data
-
-	if err := verifySlashableVote(slashableAttestation1, verifySignatures); err != nil {
-		return fmt.Errorf("could not verify attester slashable attestation data 1: %v", err)
-	}
-	if err := verifySlashableVote(slashableAttestation2, verifySignatures); err != nil {
-		return fmt.Errorf("could not verify attester slashable attestation data 2: %v", err)
-	}
-
 	// Inner attestation data structures for the votes should not be equal,
 	// as that would mean both votes are the same and therefore no slashing
 	// should occur.
@@ -281,98 +267,67 @@ func verifyAttesterSlashing(slashing *pb.AttesterSlashing, verifySignatures bool
 			data2,
 		)
 	}
-
 	// Verify the slashing is a double vote or a surround vote.
-	if !isDoubleVote(data1, data2) {
-		return errors.New("attester slashing is not a double vote")
+	if !(isDoubleVote(data1, data2) || isSurroundVote(data1, data2)) {
+		return errors.New("attester slashing is not a double vote nor surround vote")
 	}
-
-	// Unless the following holds, the slashing is invalid:
-	// (vote1.justified_slot < vote2.justified_slot) &&
-	// (vote2.justified_slot + 1 == vote2.slot) &&
-	// (vote2.slot < vote1.slot)
-	// OR
-	// vote1.slot == vote2.slot
-	justificationValidity :=
-		(slashableVoteData1Attestation.JustifiedSlot < slashableVoteData2Attestation.JustifiedSlot) &&
-			(slashableVoteData2Attestation.JustifiedSlot+1 == slashableVoteData2Attestation.Slot) &&
-			(slashableVoteData2Attestation.Slot < slashableVoteData1Attestation.Slot)
-
-	slotsEqual := slashableVoteData1Attestation.Slot == slashableVoteData2Attestation.Slot
-
-	if !(justificationValidity || slotsEqual) {
-		return fmt.Errorf(
-			`
-			Expected the following conditions to hold:
-			(slashableVoteData1.JustifiedSlot <
-			slashableVoteData2.JustifiedSlot) &&
-			(slashableVoteData2.JustifiedSlot + 1
-			== slashableVoteData1.Slot) &&
-			(slashableVoteData2.Slot < slashableVoteData1.Slot)
-			OR
-			slashableVoteData1.Slot == slashableVoteData2.Slot
-
-			Instead, received slashableVoteData1.JustifiedSlot %d,
-			slashableVoteData2.JustifiedSlot %d
-			and slashableVoteData1.Slot %d, slashableVoteData2.Slot %d
-			`,
-			slashableVoteData1Attestation.JustifiedSlot,
-			slashableVoteData2Attestation.JustifiedSlot,
-			slashableVoteData1Attestation.Slot,
-			slashableVoteData2Attestation.Slot,
-		)
+	if err := verifySlashableAttestation(slashableAttestation1, verifySignatures); err != nil {
+		return fmt.Errorf("could not verify attester slashable attestation data 1: %v", err)
+	}
+	if err := verifySlashableAttestation(slashableAttestation2, verifySignatures); err != nil {
+		return fmt.Errorf("could not verify attester slashable attestation data 2: %v", err)
 	}
 	return nil
 }
 
-func attesterSlashingPenalizedIndices(slashing *pb.AttesterSlashing) ([]uint64, error) {
-	indicesIntersection := sliceutil.Intersection(
-		slashing.SlashableVote_1.ValidatorIndices,
-		slashing.SlashableVote_2.ValidatorIndices)
-	if len(indicesIntersection) < 1 {
-		return nil, fmt.Errorf(
-			"expected intersection of vote indices to be non-empty: %v",
-			indicesIntersection,
-		)
-	}
-	return indicesIntersection, nil
-}
-
-func verifySlashableVote(votes *pb.SlashableVote, verifySignatures bool) error {
-	emptyCustody := make([]byte, len(votes.CustodyBitfield))
-	if bytes.Equal(votes.CustodyBitfield, emptyCustody) {
-		return errors.New("custody bit field can't all be 0s")
-	}
-	if len(votes.ValidatorIndices) == 0 {
-		return errors.New("empty validator indices")
-	}
-	for i := 0; i < len(votes.ValidatorIndices)-1; i++ {
-		if votes.ValidatorIndices[i] >= votes.ValidatorIndices[i+1] {
-			return fmt.Errorf("validator indices not in descending order: %v",
-				votes.ValidatorIndices)
+func attesterSlashableIndices(beaconState *pb.BeaconState, slashing *pb.AttesterSlashing) ([]uint64, error) {
+	slashableAttestation1 := slashing.SlashableAttestation_1
+	slashableAttestation2 := slashing.SlashableAttestation_2
+	// Let slashable_indices = [index for index in slashable_attestation_1.validator_indices if
+	//   index in slashable_attestation_2.validator_indices and
+	//   state.validator_registry[index].penalized_epoch > get_current_epoch(state)].
+	var slashableIndices []uint64
+	for _, idx1 := range slashableAttestation1.ValidatorIndices {
+		for _, idx2 := range slashableAttestation2.ValidatorIndices {
+			if idx1 == idx2 {
+				if beaconState.ValidatorRegistry[idx1].PenalizedEpoch > helpers.CurrentEpoch(beaconState) {
+					slashableIndices = append(slashableIndices, idx1)
+				}
+			}
 		}
 	}
-	if len(votes.CustodyBitfield) != mathutil.CeilDiv8(len(votes.ValidatorIndices)) {
-		return fmt.Errorf("custody bit field length (%d) don't match indices length (%d)",
-			len(votes.CustodyBitfield), mathutil.CeilDiv8(len(votes.ValidatorIndices)))
+	// Verify that len(slashable_indices) >= 1.
+	if len(slashableIndices) < 1 {
+		return nil, errors.New("expected a non-empty list of slashable indices")
 	}
-	if uint64(len(votes.ValidatorIndices)) > params.BeaconConfig().MaxIndicesPerSlashableVote {
+	return slashableIndices, nil
+}
+
+func verifySlashableAttestation(att *pb.SlashableAttestation, verifySignatures bool) error {
+	emptyCustody := make([]byte, len(att.CustodyBitfield))
+	if bytes.Equal(att.CustodyBitfield, emptyCustody) {
+		return errors.New("custody bit field can't all be 0s")
+	}
+	if len(att.ValidatorIndices) == 0 {
+		return errors.New("empty validator indices")
+	}
+	for i := 0; i < len(att.ValidatorIndices)-1; i++ {
+		if att.ValidatorIndices[i] >= att.ValidatorIndices[i+1] {
+			return fmt.Errorf("validator indices not in descending order: %v",
+				att.ValidatorIndices)
+		}
+	}
+	if len(att.CustodyBitfield) != mathutil.CeilDiv8(len(att.ValidatorIndices)) {
+		return fmt.Errorf("custody bit field length (%d) don't match indices length (%d)",
+			len(att.CustodyBitfield), mathutil.CeilDiv8(len(att.ValidatorIndices)))
+	}
+	if uint64(len(att.ValidatorIndices)) > params.BeaconConfig().MaxIndicesPerSlashableVote {
 		return fmt.Errorf("validator indices length (%d) exceeded max indices per slashable vote(%d)",
-			len(votes.ValidatorIndices), params.BeaconConfig().MaxIndicesPerSlashableVote)
+			len(att.ValidatorIndices), params.BeaconConfig().MaxIndicesPerSlashableVote)
 	}
 
 	if verifySignatures {
 		// TODO(#258): Implement BLS verify multiple.
-		//  pubs = aggregate_pubkeys for each validator in registry for poc0 and poc1
-		//    indices
-		//  bls_verify_multiple(
-		//    pubkeys=pubs,
-		//    messages=[
-		//      hash_tree_root(votes)+bytes1(0),
-		//      hash_tree_root(votes)+bytes1(1),
-		//      signature=aggregate_signature
-		//    ]
-		//  )
 		return nil
 	}
 	return nil
@@ -380,6 +335,14 @@ func verifySlashableVote(votes *pb.SlashableVote, verifySignatures bool) error {
 
 func isDoubleVote(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
 	return helpers.SlotToEpoch(data1.Slot) == helpers.SlotToEpoch(data2.Slot)
+}
+
+func isSurroundVote(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
+	sourceEpoch1 := data1.JustifiedEpoch
+	sourceEpoch2 := data2.JustifiedEpoch
+	targetEpoch1 := helpers.SlotToEpoch(data1.Slot)
+	targetEpoch2 := helpers.SlotToEpoch(data2.Slot)
+	return sourceEpoch1 < sourceEpoch2 && targetEpoch2 < targetEpoch1
 }
 
 // ProcessBlockAttestations applies processing operations to a block's inner attestation
