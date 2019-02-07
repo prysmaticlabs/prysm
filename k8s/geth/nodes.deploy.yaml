@@ -6,7 +6,7 @@ metadata:
   labels:
     universe: geth
     component: node
-    app: prysm
+    app: goerli
     version: v1
 spec:
   replicas: 1
@@ -15,14 +15,14 @@ spec:
     matchLabels:
       universe: geth
       component: node
-      app: prysm
+      app: goerli
       version: v1
   template:
     metadata:
       labels:
         universe: geth
         component: node
-        app: prysm
+        app: goerli
         version: v1
     spec:
       priorityClassName: production-priority

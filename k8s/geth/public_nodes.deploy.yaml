@@ -6,7 +6,7 @@ metadata:
   labels:
     universe: geth
     component: public-rpc-node
-    app: prysm
+    app: goerli
     version: v1
 spec:
   replicas: 3
@@ -15,14 +15,14 @@ spec:
     matchLabels:
       universe: geth
       component: public-rpc-node
-      app: prysm
+      app: goerli
       version: v1
   template:
     metadata:
       labels:
         universe: geth
         component: public-rpc-node
-        app: prysm
+        app: goerli
         version: v1
     spec:
       priorityClassName: production-priority
@@ -151,4 +151,4 @@ spec:
         accessModes: [ "ReadWriteOnce" ]
         resources:
           requests:
-            storage: 50Gi
+            storage: 10Gi

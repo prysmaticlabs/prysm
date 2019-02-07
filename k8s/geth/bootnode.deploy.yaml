@@ -10,7 +10,7 @@ spec:
       labels:
         component: bootnode-v4
         universe: geth
-        app: prysm
+        app: goerli
         version: v1
     spec:
       priorityClassName: production-priority
@@ -61,7 +61,7 @@ spec:
       labels:
         component: bootnode-v5
         universe: geth
-        app: prysm
+        app: goerli
         version: v1
     spec:
       priorityClassName: production-priority
