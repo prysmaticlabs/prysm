@@ -148,16 +148,16 @@ func TestValidatorRegisters(t *testing.T) {
 
 	twoTothePowerOfTreeDepth := mathutil.PowerOf2(params.BeaconConfig().DepositContractTreeDepth)
 
-	if merkleTreeIndex[0] != twoTothePowerOfTreeDepth {
-		t.Errorf("Deposit event total desposit count miss matched. Want: %d, Got: %d", twoTothePowerOfTreeDepth+1, merkleTreeIndex[0])
+	if merkleTreeIndex[0] != 0 {
+		t.Errorf("Deposit event total desposit count miss matched. Want: %d, Got: %d", 1, merkleTreeIndex[0])
 	}
 
-	if merkleTreeIndex[1] != twoTothePowerOfTreeDepth+1 {
-		t.Errorf("Deposit event total desposit count miss matched. Want: %d, Got: %d", twoTothePowerOfTreeDepth+2, merkleTreeIndex[1])
+	if merkleTreeIndex[1] != 1 {
+		t.Errorf("Deposit event total desposit count miss matched. Want: %d, Got: %d", 2, merkleTreeIndex[1])
 	}
 
-	if merkleTreeIndex[2] != twoTothePowerOfTreeDepth+2 {
-		t.Errorf("Deposit event total desposit count miss matched. Want: %v, Got: %v", twoTothePowerOfTreeDepth+3, merkleTreeIndex[2])
+	if merkleTreeIndex[2] != 2 {
+		t.Errorf("Deposit event total desposit count miss matched. Want: %v, Got: %v", 3, merkleTreeIndex[2])
 	}
 }
 

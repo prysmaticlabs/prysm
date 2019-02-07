@@ -82,10 +82,18 @@ func (d *DepositTrie) Root() [32]byte {
 	return root
 }
 
+func (d *DepositTrie) Branch() [][]byte {
+	nBranch := make([][]byte, 32)
+	for i, _ := range nBranch {
+		nBranch[i] = d.branch[i][:]
+	}
+	return nBranch
+}
+
 // VerifyMerkleBranch verifies a Merkle path in a trie
 // by checking the aggregated hash of contiguous leaves along a path
 // eventually equals the root hash of the Merkle trie.
-func VerifyMerkleBranch(branch [32][32]byte, root [32]byte, merkleTreeIndex []byte) bool {
+func VerifyMerkleBranch(branch [][]byte, root [32]byte, merkleTreeIndex []byte) bool {
 	computedRoot := params.BeaconConfig().ZeroHash
 	index := binary.BigEndian.Uint64(merkleTreeIndex)
 	size := index + 1
