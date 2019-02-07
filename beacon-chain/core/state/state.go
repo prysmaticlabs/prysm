@@ -16,8 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-var config = params.BeaconConfig()
-
 // InitialBeaconState gets called when DepositsForChainStart count of
 // full deposits were made to the deposit contract and the ChainStart log gets emitted.
 func InitialBeaconState(
@@ -27,37 +25,37 @@ func InitialBeaconState(
 ) (*pb.BeaconState, error) {
 	latestRandaoMixes := make(
 		[][]byte,
-		config.LatestRandaoMixesLength,
+		params.BeaconConfig().LatestRandaoMixesLength,
 	)
 	for i := 0; i < len(latestRandaoMixes); i++ {
-		latestRandaoMixes[i] = config.ZeroHash[:]
+		latestRandaoMixes[i] = params.BeaconConfig().ZeroHash[:]
 	}
 
 	latestIndexRoots := make(
 		[][]byte,
-		config.LatestIndexRootsLength,
+		params.BeaconConfig().LatestIndexRootsLength,
 	)
 	for i := 0; i < len(latestIndexRoots); i++ {
-		latestRandaoMixes[i] = config.ZeroHash[:]
+		latestRandaoMixes[i] = params.BeaconConfig().ZeroHash[:]
 	}
 
 	latestVDFOutputs := make([][]byte,
-		config.LatestRandaoMixesLength/config.EpochLength)
+		params.BeaconConfig().LatestRandaoMixesLength/params.BeaconConfig().EpochLength)
 	for i := 0; i < len(latestVDFOutputs); i++ {
-		latestVDFOutputs[i] = config.ZeroHash[:]
+		latestVDFOutputs[i] = params.BeaconConfig().ZeroHash[:]
 	}
 
-	latestCrosslinks := make([]*pb.CrosslinkRecord, config.ShardCount)
+	latestCrosslinks := make([]*pb.CrosslinkRecord, params.BeaconConfig().ShardCount)
 	for i := 0; i < len(latestCrosslinks); i++ {
 		latestCrosslinks[i] = &pb.CrosslinkRecord{
-			Epoch:                config.GenesisEpoch,
-			ShardBlockRootHash32: config.ZeroHash[:],
+			Epoch:                params.BeaconConfig().GenesisEpoch,
+			ShardBlockRootHash32: params.BeaconConfig().ZeroHash[:],
 		}
 	}
 
-	latestBlockRoots := make([][]byte, config.LatestBlockRootsLength)
+	latestBlockRoots := make([][]byte, params.BeaconConfig().LatestBlockRootsLength)
 	for i := 0; i < len(latestBlockRoots); i++ {
-		latestBlockRoots[i] = config.ZeroHash[:]
+		latestBlockRoots[i] = params.BeaconConfig().ZeroHash[:]
 	}
 
 	validatorRegistry := make([]*pb.ValidatorRecord, len(initialValidatorDeposits))
@@ -72,46 +70,46 @@ func InitialBeaconState(
 			Pubkey:                      depositInput.Pubkey,
 			RandaoCommitmentHash32:      depositInput.RandaoCommitmentHash32,
 			WithdrawalCredentialsHash32: depositInput.WithdrawalCredentialsHash32,
-			ExitEpoch:                   config.FarFutureEpoch,
-			PenalizedEpoch:              config.FarFutureEpoch,
+			ExitEpoch:                   params.BeaconConfig().FarFutureEpoch,
+			PenalizedEpoch:              params.BeaconConfig().FarFutureEpoch,
 		}
 
 		validatorRegistry[i] = validator
 
 	}
 
-	latestPenalizedExitBalances := make([]uint64, config.LatestPenalizedExitLength)
+	latestPenalizedExitBalances := make([]uint64, params.BeaconConfig().LatestPenalizedExitLength)
 
 	state := &pb.BeaconState{
 		// Misc fields.
-		Slot:        config.GenesisSlot,
+		Slot:        params.BeaconConfig().GenesisSlot,
 		GenesisTime: genesisTime,
 		Fork: &pb.Fork{
-			PreviousVersion: config.GenesisForkVersion,
-			CurrentVersion:  config.GenesisForkVersion,
-			Epoch:           config.GenesisEpoch,
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			Epoch:           params.BeaconConfig().GenesisEpoch,
 		},
 
 		// Validator registry fields.
 		ValidatorRegistry:            validatorRegistry,
 		ValidatorBalances:            latestBalances,
-		ValidatorRegistryUpdateEpoch: config.GenesisEpoch,
+		ValidatorRegistryUpdateEpoch: params.BeaconConfig().GenesisEpoch,
 
 		// Randomness and committees.
 		LatestRandaoMixesHash32S: latestRandaoMixes,
 		LatestIndexRootHash32S:   latestIndexRoots,
-		PreviousEpochStartShard:  config.GenesisStartShard,
-		CurrentEpochStartShard:   config.GenesisStartShard,
-		PreviousCalculationEpoch: config.GenesisSlot,
-		CurrentCalculationEpoch:  config.GenesisSlot,
-		PreviousEpochSeedHash32:  config.ZeroHash[:],
-		CurrentEpochSeedHash32:   config.ZeroHash[:],
+		PreviousEpochStartShard:  params.BeaconConfig().GenesisStartShard,
+		CurrentEpochStartShard:   params.BeaconConfig().GenesisStartShard,
+		PreviousCalculationEpoch: params.BeaconConfig().GenesisSlot,
+		CurrentCalculationEpoch:  params.BeaconConfig().GenesisSlot,
+		PreviousEpochSeedHash32:  params.BeaconConfig().ZeroHash[:],
+		CurrentEpochSeedHash32:   params.BeaconConfig().ZeroHash[:],
 
 		// Finality.
-		PreviousJustifiedEpoch: config.GenesisEpoch,
-		JustifiedEpoch:         config.GenesisEpoch,
+		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
+		JustifiedEpoch:         params.BeaconConfig().GenesisEpoch,
 		JustificationBitfield:  0,
-		FinalizedEpoch:         config.GenesisEpoch,
+		FinalizedEpoch:         params.BeaconConfig().GenesisEpoch,
 
 		// Recent state.
 		LatestCrosslinks:        latestCrosslinks,
@@ -155,7 +153,7 @@ func InitialBeaconState(
 	}
 	for i := 0; i < len(state.ValidatorRegistry); i++ {
 		if v.EffectiveBalance(state, uint64(i)) ==
-			config.MaxDeposit {
+			params.BeaconConfig().MaxDeposit {
 			state, err = v.ActivateValidator(state, uint64(i), true)
 			if err != nil {
 				return nil, fmt.Errorf("could not activate validator: %v", err)
