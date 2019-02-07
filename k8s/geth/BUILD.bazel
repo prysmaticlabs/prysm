@@ -28,7 +28,7 @@ _configs = [
 
 _deployments = [
     "bootnode",
-   "faucet",
+    "faucet",
     "nodes",
     "public_nodes",
 ]
