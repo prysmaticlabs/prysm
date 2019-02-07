@@ -117,7 +117,7 @@ http_archive(
 
 go_repository(
     name = "com_github_golang_mock",
-    commit = "8a44ef6e8be577e050008c7886f24fc705d709fb",
+    commit = "c20582278a829e4b3259747a3ce0eceb1763ee13",
     importpath = "github.com/golang/mock",
 )
 
@@ -927,7 +927,7 @@ go_repository(
 
 go_repository(
     name = "com_google_cloud_go",
-    tag = "v0.35.1",
+    tag = "v0.36.0",
     importpath = "cloud.google.com/go",
 )
 

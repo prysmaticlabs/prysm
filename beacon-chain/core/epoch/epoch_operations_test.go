@@ -12,9 +12,9 @@ import (
 )
 
 func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
-	validators := make([]*pb.ValidatorRecord, validatorCount)
+	validators := make([]*pb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.ValidatorRecord{
+		validators[i] = &pb.Validator{
 			ExitEpoch: config.FarFutureEpoch,
 		}
 	}
@@ -198,7 +198,7 @@ func TestPrevJustifiedAttestations(t *testing.T) {
 		{Data: &pb.AttestationData{JustifiedSlot: 888}},
 	}
 
-	state := &pb.BeaconState{PreviousJustifiedSlot: 100}
+	state := &pb.BeaconState{PreviousJustifiedEpoch: 1}
 
 	prevJustifiedAttestations := PrevJustifiedAttestations(state, thisEpochAttestations, prevEpochAttestations)
 
@@ -316,7 +316,7 @@ func TestWinningRootOk(t *testing.T) {
 				Slot:                 0,
 				ShardBlockRootHash32: []byte{byte(i + 100)},
 			},
-			ParticipationBitfield: participationBitfield,
+			AggregationBitfield: participationBitfield,
 		}
 		attestations = append(attestations, attestation)
 	}
@@ -343,7 +343,7 @@ func TestWinningRootCantGetParticipantBitfield(t *testing.T) {
 		{Data: &pb.AttestationData{
 			ShardBlockRootHash32: []byte{},
 		},
-			ParticipationBitfield: []byte{},
+			AggregationBitfield: []byte{},
 		},
 	}
 
@@ -362,7 +362,7 @@ func TestAttestingValidatorsOk(t *testing.T) {
 			Data: &pb.AttestationData{
 				ShardBlockRootHash32: []byte{byte(i + 100)},
 			},
-			ParticipationBitfield: []byte{0xFF},
+			AggregationBitfield: []byte{0xFF},
 		}
 		attestations = append(attestations, attestation)
 	}
@@ -389,7 +389,7 @@ func TestAttestingValidatorsCantGetWinningRoot(t *testing.T) {
 		Data: &pb.AttestationData{
 			ShardBlockRootHash32: []byte{},
 		},
-		ParticipationBitfield: []byte{},
+		AggregationBitfield: []byte{},
 	}
 
 	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 16, 0)
@@ -410,7 +410,7 @@ func TestTotalAttestingBalanceOk(t *testing.T) {
 				ShardBlockRootHash32: []byte{byte(i + 100)},
 			},
 			// All validators attested to the above roots.
-			ParticipationBitfield: []byte{0xff},
+			AggregationBitfield: []byte{0xff},
 		}
 		attestations = append(attestations, attestation)
 	}
@@ -436,7 +436,7 @@ func TestTotalAttestingBalanceCantGetWinningRoot(t *testing.T) {
 		Data: &pb.AttestationData{
 			ShardBlockRootHash32: []byte{},
 		},
-		ParticipationBitfield: []byte{},
+		AggregationBitfield: []byte{},
 	}
 
 	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 16, 0)
@@ -469,14 +469,14 @@ func TestInclusionSlotOk(t *testing.T) {
 
 	state.LatestAttestations = []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{},
-			ParticipationBitfield: participationBitfield,
-			SlotIncluded:          101},
+			AggregationBitfield: participationBitfield,
+			SlotIncluded:        101},
 		{Data: &pb.AttestationData{},
-			ParticipationBitfield: participationBitfield,
-			SlotIncluded:          100},
+			AggregationBitfield: participationBitfield,
+			SlotIncluded:        100},
 		{Data: &pb.AttestationData{},
-			ParticipationBitfield: participationBitfield,
-			SlotIncluded:          102},
+			AggregationBitfield: participationBitfield,
+			SlotIncluded:        102},
 	}
 	slot, err := InclusionSlot(state, 237)
 	if err != nil {
@@ -493,8 +493,8 @@ func TestInclusionSlotBadBitfield(t *testing.T) {
 
 	state.LatestAttestations = []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{},
-			ParticipationBitfield: []byte{},
-			SlotIncluded:          100},
+			AggregationBitfield: []byte{},
+			SlotIncluded:        100},
 	}
 
 	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 16, 0)
@@ -522,8 +522,8 @@ func TestInclusionDistanceOk(t *testing.T) {
 
 	state.LatestAttestations = []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{},
-			ParticipationBitfield: participationBitfield,
-			SlotIncluded:          100},
+			AggregationBitfield: participationBitfield,
+			SlotIncluded:        100},
 	}
 	distance, err := InclusionDistance(state, 237)
 	if err != nil {
@@ -543,8 +543,8 @@ func TestInclusionDistanceBadBitfield(t *testing.T) {
 
 	state.LatestAttestations = []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{},
-			ParticipationBitfield: []byte{},
-			SlotIncluded:          100},
+			AggregationBitfield: []byte{},
+			SlotIncluded:        100},
 	}
 
 	want := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 16, 0)
