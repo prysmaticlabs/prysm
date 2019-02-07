@@ -4,6 +4,8 @@
 package trieutil
 
 import (
+	"encoding/binary"
+
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -77,4 +79,36 @@ func (d *DepositTrie) Root() [32]byte {
 		size /= 2
 	}
 	return root
+}
+
+// VerifyMerkleBranch verifies a Merkle path in a trie
+// by checking the aggregated hash of contiguous leaves along a path
+// eventually equals the root hash of the Merkle trie.
+func VerifyMerkleBranch(branch [32][32]byte, root [32]byte, merkleTreeIndex []byte) bool {
+	computedRoot := params.BeaconConfig().ZeroHash
+	index := binary.BigEndian.Uint64(merkleTreeIndex)
+	size := index + 1
+	zHashes := zeroHashes()
+
+	for i := 0; i < 32; i++ {
+		if size%2 == 1 {
+			root = hashutil.Hash(append(branch[i][:], root[:]...))
+		} else {
+			root = hashutil.Hash(append(root[:], zHashes[i][:]...))
+		}
+
+		size /= 2
+	}
+
+	return computedRoot == root
+}
+
+func zeroHashes() [32][32]byte {
+	var zeroHashes [32][32]byte
+
+	zeroHashes[0] = params.BeaconConfig().ZeroHash
+	for i := 0; i < 31; i++ {
+		zeroHashes[i+1] = hashutil.Hash(append(zeroHashes[i][:], zeroHashes[i][:]...))
+	}
+	return zeroHashes
 }

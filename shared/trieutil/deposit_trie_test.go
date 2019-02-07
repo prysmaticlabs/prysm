@@ -2,9 +2,6 @@ package trieutil
 
 import (
 	"testing"
-
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestDepositTrie_UpdateDepositTrie(t *testing.T) {
@@ -34,11 +31,6 @@ func TestDepositTrie_UpdateDepositTrie(t *testing.T) {
 		if d.depositCount != 2 {
 			t.Errorf("Expected deposit count to increase by 1, received %d", d.depositCount)
 		}
-		hash := hashutil.Hash(tt.deposits[1])
-		twoToPowerOfTreeDepth := 1 << params.BeaconConfig().DepositContractTreeDepth
-		lastLeaf := d.branch[d.depositCount-1+uint64(twoToPowerOfTreeDepth)]
-		if lastLeaf != hash {
-			t.Errorf("Expected last leaf to equal %#x, received %#x", lastLeaf, hash)
-		}
+
 	}
 }
