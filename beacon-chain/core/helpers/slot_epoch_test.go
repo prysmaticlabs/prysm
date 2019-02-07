@@ -115,20 +115,3 @@ func TestAttestationCurrentEpoch(t *testing.T) {
 		}
 	}
 }
-
-func TestAttestationJustifiedEpoch(t *testing.T) {
-	tests := []struct {
-		justifiedSlot  uint64
-		justifiedEpoch uint64
-	}{
-		{justifiedSlot: 3 * params.BeaconConfig().EpochLength, justifiedEpoch: 3},
-		{justifiedSlot: 5 * params.BeaconConfig().EpochLength, justifiedEpoch: 5},
-		{justifiedSlot: 12 * params.BeaconConfig().EpochLength, justifiedEpoch: 12},
-	}
-	for _, tt := range tests {
-		attData := &pb.AttestationData{JustifiedSlot: tt.justifiedSlot}
-		if tt.justifiedEpoch != AttestationJustifiedEpoch(attData) {
-			t.Errorf("AttestationJustifiedEpoch(%d) = %d, wanted: %d", attData.Slot, AttestationCurrentEpoch(attData), tt.justifiedEpoch)
-		}
-	}
-}

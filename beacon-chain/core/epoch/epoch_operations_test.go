@@ -12,15 +12,15 @@ import (
 )
 
 func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
-	validators := make([]*pb.ValidatorRecord, validatorCount)
+	validators := make([]*pb.Validator, validatorCount)
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.ValidatorRecord{
-			ExitEpoch: config.FarFutureEpoch,
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
 	validatorBalances := make([]uint64, len(validators))
 	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = config.MaxDeposit
+		validatorBalances[i] = params.BeaconConfig().MaxDeposit
 	}
 	return &pb.BeaconState{
 		ValidatorRegistry: validators,
@@ -51,32 +51,32 @@ func TestEpochAttestations(t *testing.T) {
 	}{
 		{
 			stateSlot:            10,
-			firstAttestationSlot: 10 - 10%config.EpochLength,
+			firstAttestationSlot: 10 - 10%params.BeaconConfig().EpochLength,
 		},
 		{
 			stateSlot:            63,
-			firstAttestationSlot: 63 - 63%config.EpochLength,
+			firstAttestationSlot: 63 - 63%params.BeaconConfig().EpochLength,
 		},
 		{
 			stateSlot:            64,
-			firstAttestationSlot: 64 - 64%config.EpochLength,
+			firstAttestationSlot: 64 - 64%params.BeaconConfig().EpochLength,
 		}, {
 			stateSlot:            127,
-			firstAttestationSlot: 127 - 127%config.EpochLength,
+			firstAttestationSlot: 127 - 127%params.BeaconConfig().EpochLength,
 		}, {
 			stateSlot:            128,
-			firstAttestationSlot: 128 - 128%config.EpochLength,
+			firstAttestationSlot: 128 - 128%params.BeaconConfig().EpochLength,
 		},
 	}
 
 	for _, tt := range tests {
 		state.Slot = tt.stateSlot
 
-		if Attestations(state)[0].Data.Slot != tt.firstAttestationSlot {
+		if CurrentAttestations(state)[0].Data.Slot != tt.firstAttestationSlot {
 			t.Errorf(
 				"Result slot was an unexpected value. Wanted %d, got %d",
 				tt.firstAttestationSlot,
-				Attestations(state)[0].Data.Slot,
+				CurrentAttestations(state)[0].Data.Slot,
 			)
 		}
 	}
@@ -104,18 +104,19 @@ func TestEpochBoundaryAttestations(t *testing.T) {
 		LatestBlockRootHash32S: latestBlockRootHash,
 	}
 
-	if _, err := BoundaryAttestations(state, epochAttestations); err == nil {
-		t.Fatal("EpochBoundaryAttestations should have failed with empty block root hash")
+	if _, err := CurrentBoundaryAttestations(state, epochAttestations); err == nil {
+		t.Fatal("CurrentBoundaryAttestations should have failed with empty block root hash")
 	}
 
 	state.Slot = params.BeaconConfig().EpochLength
-	epochBoundaryAttestation, err := BoundaryAttestations(state, epochAttestations)
+	epochBoundaryAttestation, err := CurrentBoundaryAttestations(state, epochAttestations)
 	if err != nil {
-		t.Fatalf("EpochBoundaryAttestations failed: %v", err)
+		t.Fatalf("CurrentBoundaryAttestations failed: %v", err)
 	}
 
-	if epochBoundaryAttestation[0].Data.JustifiedSlot != 0 {
-		t.Errorf("Wanted justified slot 0 for epoch boundary attestation, got: %d", epochBoundaryAttestation[0].Data.JustifiedSlot)
+	if epochBoundaryAttestation[0].Data.JustifiedEpoch != 0 {
+		t.Errorf("Wanted justified epoch 0 for epoch boundary attestation, got: %d",
+			epochBoundaryAttestation[0].Data.JustifiedEpoch)
 	}
 
 	if !bytes.Equal(epochBoundaryAttestation[0].Data.JustifiedBlockRootHash32, []byte{0}) {
@@ -146,23 +147,23 @@ func TestPrevEpochAttestations(t *testing.T) {
 	}{
 		{
 			stateSlot:            127,
-			firstAttestationSlot: 127 - config.EpochLength - 127%config.EpochLength,
+			firstAttestationSlot: 127 - params.BeaconConfig().EpochLength - 127%params.BeaconConfig().EpochLength,
 		},
 		{
 			stateSlot:            128,
-			firstAttestationSlot: 128 - config.EpochLength - 128%config.EpochLength,
+			firstAttestationSlot: 128 - params.BeaconConfig().EpochLength - 128%params.BeaconConfig().EpochLength,
 		},
 		{
 			stateSlot:            383,
-			firstAttestationSlot: 383 - config.EpochLength - 383%config.EpochLength,
+			firstAttestationSlot: 383 - params.BeaconConfig().EpochLength - 383%params.BeaconConfig().EpochLength,
 		},
 		{
 			stateSlot:            129,
-			firstAttestationSlot: 129 - config.EpochLength - 129%config.EpochLength,
+			firstAttestationSlot: 129 - params.BeaconConfig().EpochLength - 129%params.BeaconConfig().EpochLength,
 		},
 		{
 			stateSlot:            256,
-			firstAttestationSlot: 256 - config.EpochLength - 256%config.EpochLength,
+			firstAttestationSlot: 256 - params.BeaconConfig().EpochLength - 256%params.BeaconConfig().EpochLength,
 		},
 	}
 
@@ -302,7 +303,7 @@ func TestHeadAttestationsNotOk(t *testing.T) {
 }
 
 func TestWinningRootOk(t *testing.T) {
-	state := buildState(0, config.DepositsForChainStart)
+	state := buildState(0, params.BeaconConfig().DepositsForChainStart)
 	var participationBitfield []byte
 	for i := 0; i < 16; i++ {
 		participationBitfield = append(participationBitfield, byte(0x01))
@@ -337,7 +338,7 @@ func TestWinningRootOk(t *testing.T) {
 }
 
 func TestWinningRootCantGetParticipantBitfield(t *testing.T) {
-	state := buildState(0, config.DepositsForChainStart)
+	state := buildState(0, params.BeaconConfig().DepositsForChainStart)
 
 	attestations := []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{
@@ -354,7 +355,7 @@ func TestWinningRootCantGetParticipantBitfield(t *testing.T) {
 }
 
 func TestAttestingValidatorsOk(t *testing.T) {
-	state := buildState(0, config.EpochLength*2)
+	state := buildState(0, params.BeaconConfig().EpochLength*2)
 
 	var attestations []*pb.PendingAttestationRecord
 	for i := 0; i < 10; i++ {
@@ -383,7 +384,7 @@ func TestAttestingValidatorsOk(t *testing.T) {
 }
 
 func TestAttestingValidatorsCantGetWinningRoot(t *testing.T) {
-	state := buildState(0, config.DepositsForChainStart)
+	state := buildState(0, params.BeaconConfig().DepositsForChainStart)
 
 	attestation := &pb.PendingAttestationRecord{
 		Data: &pb.AttestationData{
@@ -400,7 +401,7 @@ func TestAttestingValidatorsCantGetWinningRoot(t *testing.T) {
 
 func TestTotalAttestingBalanceOk(t *testing.T) {
 	validatorsPerCommittee := uint64(2)
-	state := buildState(0, 2*config.EpochLength)
+	state := buildState(0, 2*params.BeaconConfig().EpochLength)
 
 	// Generate 10 roots ([]byte{100}...[]byte{110})
 	var attestations []*pb.PendingAttestationRecord
@@ -424,13 +425,13 @@ func TestTotalAttestingBalanceOk(t *testing.T) {
 		t.Fatalf("Could not execute totalAttestingBalance: %v", err)
 	}
 
-	if attestedBalance != config.MaxDeposit*validatorsPerCommittee {
+	if attestedBalance != params.BeaconConfig().MaxDeposit*validatorsPerCommittee {
 		t.Errorf("Incorrect attested balance. Wanted:64*1e9, Got: %d", attestedBalance)
 	}
 }
 
 func TestTotalAttestingBalanceCantGetWinningRoot(t *testing.T) {
-	state := buildState(0, config.DepositsForChainStart)
+	state := buildState(0, params.BeaconConfig().DepositsForChainStart)
 
 	attestation := &pb.PendingAttestationRecord{
 		Data: &pb.AttestationData{
@@ -461,7 +462,7 @@ func TestTotalBalance(t *testing.T) {
 }
 
 func TestInclusionSlotOk(t *testing.T) {
-	state := buildState(0, config.DepositsForChainStart)
+	state := buildState(0, params.BeaconConfig().DepositsForChainStart)
 	var participationBitfield []byte
 	for i := 0; i < 16; i++ {
 		participationBitfield = append(participationBitfield, byte(0xff))
@@ -489,7 +490,7 @@ func TestInclusionSlotOk(t *testing.T) {
 }
 
 func TestInclusionSlotBadBitfield(t *testing.T) {
-	state := buildState(0, config.DepositsForChainStart)
+	state := buildState(0, params.BeaconConfig().DepositsForChainStart)
 
 	state.LatestAttestations = []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{},
@@ -504,7 +505,7 @@ func TestInclusionSlotBadBitfield(t *testing.T) {
 }
 
 func TestInclusionSlotNotFound(t *testing.T) {
-	state := buildState(0, config.EpochLength)
+	state := buildState(0, params.BeaconConfig().EpochLength)
 
 	badIndex := uint64(10000)
 	want := fmt.Sprintf("could not find inclusion slot for validator index %d", badIndex)
@@ -514,7 +515,7 @@ func TestInclusionSlotNotFound(t *testing.T) {
 }
 
 func TestInclusionDistanceOk(t *testing.T) {
-	state := buildState(0, config.DepositsForChainStart)
+	state := buildState(0, params.BeaconConfig().DepositsForChainStart)
 	var participationBitfield []byte
 	for i := 0; i < 16; i++ {
 		participationBitfield = append(participationBitfield, byte(0xff))
@@ -539,7 +540,7 @@ func TestInclusionDistanceOk(t *testing.T) {
 }
 
 func TestInclusionDistanceBadBitfield(t *testing.T) {
-	state := buildState(0, config.DepositsForChainStart)
+	state := buildState(0, params.BeaconConfig().DepositsForChainStart)
 
 	state.LatestAttestations = []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{},
@@ -554,7 +555,7 @@ func TestInclusionDistanceBadBitfield(t *testing.T) {
 }
 
 func TestInclusionDistanceNotFound(t *testing.T) {
-	state := buildState(0, config.EpochLength)
+	state := buildState(0, params.BeaconConfig().EpochLength)
 
 	badIndex := uint64(10000)
 	want := fmt.Sprintf("could not find inclusion distance for validator index %d", badIndex)
