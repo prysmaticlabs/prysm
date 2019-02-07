@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -376,11 +376,12 @@ func (w *Web3Service) initDataFromVRC() error {
 
 // saveInTrie saves in the in-memory deposit trie.
 func (w *Web3Service) saveInTrie(depositData []byte, merkleRoot common.Hash) error {
+
+	w.depositTrie.UpdateDepositTrie(depositData)
+
 	if w.depositTrie.Root() != merkleRoot {
 		return errors.New("saved root in trie is unequal to root received from log")
 	}
-
-	w.depositTrie.UpdateDepositTrie(depositData)
 	return nil
 }
 

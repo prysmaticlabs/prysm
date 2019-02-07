@@ -9,15 +9,13 @@ import (
 	"math/big"
 	"testing"
 
-	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 var (
@@ -145,8 +143,6 @@ func TestValidatorRegisters(t *testing.T) {
 		merkleTreeIndex[i] = binary.BigEndian.Uint64(idx)
 		depositData[i] = data
 	}
-
-	twoTothePowerOfTreeDepth := mathutil.PowerOf2(params.BeaconConfig().DepositContractTreeDepth)
 
 	if merkleTreeIndex[0] != 0 {
 		t.Errorf("Deposit event total desposit count miss matched. Want: %d, Got: %d", 1, merkleTreeIndex[0])
