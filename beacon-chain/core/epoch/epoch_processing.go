@@ -14,15 +14,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-var config = params.BeaconConfig()
-
 // CanProcessEpoch checks the eligibility to process epoch.
 // The epoch can be processed every EPOCH_LENGTH.
 //
 // Spec pseudocode definition:
 //    If state.slot % EPOCH_LENGTH == 0:
 func CanProcessEpoch(state *pb.BeaconState) bool {
-	return state.Slot%config.EpochLength == 0
+	return state.Slot%params.BeaconConfig().EpochLength == 0
 }
 
 // CanProcessEth1Data checks the eligibility to process the eth1 data.
@@ -31,7 +29,7 @@ func CanProcessEpoch(state *pb.BeaconState) bool {
 // Spec pseudocode definition:
 //    If state.slot % ETH1_DATA_VOTING_PERIOD == 0:
 func CanProcessEth1Data(state *pb.BeaconState) bool {
-	return state.Slot%config.Eth1DataVotingPeriod == 0
+	return state.Slot%params.BeaconConfig().Eth1DataVotingPeriod == 0
 }
 
 // CanProcessValidatorRegistry checks the eligibility to process validator registry.
@@ -49,11 +47,11 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 	if state.FinalizedEpoch <= state.ValidatorRegistryUpdateEpoch {
 		return false
 	}
-	shardsProcessed := helpers.CurrentEpochCommitteeCount(state) * config.EpochLength
+	shardsProcessed := helpers.CurrentEpochCommitteeCount(state) * params.BeaconConfig().EpochLength
 	startShard := state.CurrentEpochStartShard
 	for i := startShard; i < shardsProcessed; i++ {
 
-		if state.LatestCrosslinks[i%config.ShardCount].Epoch <=
+		if state.LatestCrosslinks[i%params.BeaconConfig().ShardCount].Epoch <=
 			state.ValidatorRegistryUpdateEpoch {
 			return false
 		}
@@ -73,9 +71,9 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 //       Set state.eth1_data_votes = [].
 //
 func ProcessEth1Data(state *pb.BeaconState) *pb.BeaconState {
-	if state.Slot%config.Eth1DataVotingPeriod == 0 {
+	if state.Slot%params.BeaconConfig().Eth1DataVotingPeriod == 0 {
 		for _, eth1DataVote := range state.Eth1DataVotes {
-			if eth1DataVote.VoteCount*2 > config.Eth1DataVotingPeriod {
+			if eth1DataVote.VoteCount*2 > params.BeaconConfig().Eth1DataVotingPeriod {
 				state.LatestEth1Data.DepositRootHash32 = eth1DataVote.Eth1Data.DepositRootHash32
 				state.LatestEth1Data.BlockHash32 = eth1DataVote.Eth1Data.BlockHash32
 			}
@@ -217,7 +215,7 @@ func ProcessEjections(state *pb.BeaconState) (*pb.BeaconState, error) {
 	var err error
 	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
 	for _, index := range activeValidatorIndices {
-		if state.ValidatorBalances[index] < config.EjectionBalance {
+		if state.ValidatorBalances[index] < params.BeaconConfig().EjectionBalance {
 			state, err = validators.ExitValidator(state, index)
 			if err != nil {
 				return nil, fmt.Errorf("could not exit validator %d: %v", index, err)
@@ -254,14 +252,14 @@ func ProcessValidatorRegistry(
 	state.CurrentCalculationEpoch = state.Slot
 
 	nextStartShard := (state.CurrentEpochStartShard +
-		helpers.CurrentEpochCommitteeCount(state)*config.EpochLength) %
-		config.EpochLength
+		helpers.CurrentEpochCommitteeCount(state)*params.BeaconConfig().EpochLength) %
+		params.BeaconConfig().EpochLength
 	state.CurrentEpochStartShard = nextStartShard
 
 	var randaoMixSlot uint64
-	if state.CurrentCalculationEpoch > config.SeedLookahead {
+	if state.CurrentCalculationEpoch > params.BeaconConfig().SeedLookahead {
 		randaoMixSlot = state.CurrentCalculationEpoch -
-			config.SeedLookahead
+			params.BeaconConfig().SeedLookahead
 	}
 	mix, err := helpers.RandaoMix(state, randaoMixSlot)
 	if err != nil {
@@ -288,17 +286,17 @@ func ProcessValidatorRegistry(
 // 			LATEST_RANDAO_MIXES_LENGTH].
 func ProcessPartialValidatorRegistry(state *pb.BeaconState) *pb.BeaconState {
 	epochsSinceLastRegistryChange := (state.Slot - state.ValidatorRegistryUpdateEpoch) /
-		config.EpochLength
+		params.BeaconConfig().EpochLength
 
 	if mathutil.IsPowerOf2(epochsSinceLastRegistryChange) {
 		state.CurrentCalculationEpoch = state.Slot
 
 		var randaoIndex uint64
-		if state.CurrentCalculationEpoch > config.SeedLookahead {
-			randaoIndex = state.CurrentCalculationEpoch - config.SeedLookahead
+		if state.CurrentCalculationEpoch > params.BeaconConfig().SeedLookahead {
+			randaoIndex = state.CurrentCalculationEpoch - params.BeaconConfig().SeedLookahead
 		}
 
-		randaoMix := state.LatestRandaoMixesHash32S[randaoIndex%config.LatestRandaoMixesLength]
+		randaoMix := state.LatestRandaoMixesHash32S[randaoIndex%params.BeaconConfig().LatestRandaoMixesLength]
 		state.CurrentEpochSeedHash32 = randaoMix
 	}
 	return state
@@ -330,9 +328,9 @@ func CleanupAttestations(state *pb.BeaconState) *pb.BeaconState {
 // Set state.latest_penalized_exit_balances[(e+1) % LATEST_PENALIZED_EXIT_LENGTH] =
 // 		state.latest_penalized_exit_balances[e % LATEST_PENALIZED_EXIT_LENGTH]
 func UpdatePenalizedExitBalances(state *pb.BeaconState) *pb.BeaconState {
-	epoch := state.Slot / config.EpochLength
-	nextPenalizedEpoch := (epoch + 1) % config.LatestPenalizedExitLength
-	currPenalizedEpoch := (epoch) % config.LatestPenalizedExitLength
+	epoch := state.Slot / params.BeaconConfig().EpochLength
+	nextPenalizedEpoch := (epoch + 1) % params.BeaconConfig().LatestPenalizedExitLength
+	currPenalizedEpoch := (epoch) % params.BeaconConfig().LatestPenalizedExitLength
 	state.LatestPenalizedBalances[nextPenalizedEpoch] =
 		state.LatestPenalizedBalances[currPenalizedEpoch]
 	return state
