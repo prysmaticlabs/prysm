@@ -372,7 +372,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 	for i := uint64(0); i < 10; i++ {
 		validatorRegistry = append(validatorRegistry,
 			&pb.Validator{
-				ExitEpoch: config.FarFutureEpoch,
+				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 			})
 	}
 	validatorBalances := make([]uint64, len(validatorRegistry))
@@ -425,10 +425,10 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 	defaultBalance := params.BeaconConfig().MaxDeposit
 
 	validatorRegistry := []*pb.Validator{
-		{ExitEpoch: config.FarFutureEpoch}, {ExitEpoch: config.FarFutureEpoch},
-		{ExitEpoch: config.FarFutureEpoch}, {ExitEpoch: config.FarFutureEpoch},
-		{ExitEpoch: config.FarFutureEpoch}, {ExitEpoch: config.FarFutureEpoch},
-		{ExitEpoch: config.FarFutureEpoch}, {ExitEpoch: config.FarFutureEpoch}}
+		{ExitEpoch: params.BeaconConfig().FarFutureEpoch}, {ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+		{ExitEpoch: params.BeaconConfig().FarFutureEpoch}, {ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+		{ExitEpoch: params.BeaconConfig().FarFutureEpoch}, {ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+		{ExitEpoch: params.BeaconConfig().FarFutureEpoch}, {ExitEpoch: params.BeaconConfig().FarFutureEpoch}}
 
 	validatorBalances := []uint64{
 		defaultBalance, defaultBalance, defaultBalance, defaultBalance,

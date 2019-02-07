@@ -366,8 +366,8 @@ func TestProcessEjectionsOk(t *testing.T) {
 			params.BeaconConfig().EjectionBalance + 1},
 		LatestPenalizedBalances: []uint64{0},
 		ValidatorRegistry: []*pb.Validator{
-			{ExitEpoch: config.FarFutureEpoch},
-			{ExitEpoch: config.FarFutureEpoch}},
+			{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+			{ExitEpoch: params.BeaconConfig().FarFutureEpoch}},
 	}
 
 	state, err := ProcessEjections(state)
