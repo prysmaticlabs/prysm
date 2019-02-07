@@ -81,6 +81,10 @@ func (c *ChainService) Start() {
 		go c.blockProcessing()
 	} else {
 		log.Info("Waiting for ChainStart log from the Validator Deposit Contract to start the beacon chain...")
+		if c.web3Service == nil {
+			log.Fatal("Not configured web3Service for POW chain")
+			return // return need for TestStartUninitializedChainWithoutConfigPOWChain
+		}
 		subChainStart := c.web3Service.ChainStartFeed().Subscribe(c.genesisTimeChan)
 		go func() {
 			genesisTime := <-c.genesisTimeChan
