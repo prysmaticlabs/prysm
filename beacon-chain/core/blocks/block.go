@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -53,36 +52,35 @@ func IsSlotValid(slot uint64, genesisTime time.Time) bool {
 	return clock.Now().After(validTimeThreshold)
 }
 
-// BlockRoot returns the block hash from input slot, the block hashes
-// are stored in BeaconState.
-//
+// BlockRoot returns the block root stored in the BeaconState for a given slot.
+// It returns an error if the requested block root is not within the BeaconState.
 // Spec pseudocode definition:
-//   def get_block_root(state: BeaconState, slot: int) -> Hash32:
-//     """
-//     Returns the block hash at a recent ``slot``.
-//     """
-//     earliest_slot_in_array = state.slot - len(state.latest_block_roots)
-//     assert earliest_slot_in_array <= slot < state.slot
-//     return state.latest_block_roots[slot - earliest_slot_in_array]
+// 	def get_block_root(state: BeaconState, slot: int) -> Hash32:
+//		"""
+//		returns the block root at a recent ``slot``.
+//		"""
+//		assert state.slot <= slot + LATEST_BLOCK_ROOTS_LENGTH
+//		assert slot < state.slot
+//		return state.latest_block_roots[slot % LATEST_BLOCK_ROOTS_LENGTH]
 func BlockRoot(state *pb.BeaconState, slot uint64) ([]byte, error) {
+	//	Check to see if the requested block root lies within LatestBlockRootHash32S
+	//	and if not generate error.
 	var earliestSlot uint64
-
-	// If the state slot is less than the length of state block root list, then
-	// the earliestSlot would result in a negative number. Therefore we should
-	// default earliestSlot = 0 in this case.
+	var previousSlot uint64
 	if state.Slot > uint64(len(state.LatestBlockRootHash32S)) {
 		earliestSlot = state.Slot - uint64(len(state.LatestBlockRootHash32S))
+	} else {
+		earliestSlot = 0
 	}
-
-	if slot < earliestSlot || slot >= state.Slot {
-		return []byte{}, fmt.Errorf("slot %d out of bounds: %d <= slot < %d",
+	previousSlot = state.Slot - 1
+	if state.Slot > slot+uint64(len(state.LatestBlockRootHash32S)) || slot >= state.Slot {
+		return []byte{}, fmt.Errorf("slot %d is not within expected range of %d to %d",
 			slot,
 			earliestSlot,
-			state.Slot,
+			previousSlot,
 		)
 	}
-
-	return state.LatestBlockRootHash32S[slot-earliestSlot], nil
+	return state.LatestBlockRootHash32S[slot%uint64(len(state.LatestBlockRootHash32S))], nil
 }
 
 // ProcessBlockRoots processes the previous block root into the state, by appending it
@@ -98,33 +96,6 @@ func ProcessBlockRoots(state *pb.BeaconState, prevBlockRoot [32]byte) *pb.Beacon
 		state.BatchedBlockRootHash32S = append(state.BatchedBlockRootHash32S, merkleRoot)
 	}
 	return state
-}
-
-// ForkVersion Spec:
-//	def get_fork_version(fork_data: Fork,
-//                     slot: int) -> int:
-//    if slot < fork_data.fork_slot:
-//        return fork_data.pre_fork_version
-//    else:
-//        return fork_data.post_fork_version
-func ForkVersion(data *pb.Fork, slot uint64) uint64 {
-	if slot < data.Slot {
-		return data.PreviousVersion
-	}
-	return data.CurrentVersion
-}
-
-// DomainVersion Spec:
-//	def get_domain(fork_data: Fork,
-//               slot: int,
-//               domain_type: int) -> int:
-//    return get_fork_version(
-//        fork_data,
-//        slot
-//    ) * 2**32 + domain_type
-func DomainVersion(data *pb.Fork, slot uint64, domainType uint64) uint64 {
-	constant := uint64(math.Pow(2, 32))
-	return ForkVersion(data, slot)*constant + domainType
 }
 
 // EncodeDepositData converts a deposit input proto into an a byte slice

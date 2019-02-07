@@ -33,6 +33,14 @@ func InitialBeaconState(
 		latestRandaoMixes[i] = config.ZeroHash[:]
 	}
 
+	latestIndexRoots := make(
+		[][]byte,
+		config.LatestIndexRootsLength,
+	)
+	for i := 0; i < len(latestIndexRoots); i++ {
+		latestRandaoMixes[i] = config.ZeroHash[:]
+	}
+
 	latestVDFOutputs := make([][]byte,
 		config.LatestRandaoMixesLength/config.EpochLength)
 	for i := 0; i < len(latestVDFOutputs); i++ {
@@ -42,7 +50,7 @@ func InitialBeaconState(
 	latestCrosslinks := make([]*pb.CrosslinkRecord, config.ShardCount)
 	for i := 0; i < len(latestCrosslinks); i++ {
 		latestCrosslinks[i] = &pb.CrosslinkRecord{
-			Slot:                 config.GenesisSlot,
+			Epoch:                config.GenesisEpoch,
 			ShardBlockRootHash32: config.ZeroHash[:],
 		}
 	}
@@ -52,7 +60,7 @@ func InitialBeaconState(
 		latestBlockRoots[i] = config.ZeroHash[:]
 	}
 
-	validatorRegistry := make([]*pb.ValidatorRecord, len(initialValidatorDeposits))
+	validatorRegistry := make([]*pb.Validator, len(initialValidatorDeposits))
 	latestBalances := make([]uint64, len(initialValidatorDeposits))
 	for i, d := range initialValidatorDeposits {
 		depositInput, err := b.DecodeDepositInput(d.DepositData)
@@ -60,7 +68,7 @@ func InitialBeaconState(
 			return nil, fmt.Errorf("could decode deposit input %v", err)
 		}
 
-		validator := &pb.ValidatorRecord{
+		validator := &pb.Validator{
 			Pubkey:                      depositInput.Pubkey,
 			RandaoCommitmentHash32:      depositInput.RandaoCommitmentHash32,
 			WithdrawalCredentialsHash32: depositInput.WithdrawalCredentialsHash32,
@@ -81,29 +89,29 @@ func InitialBeaconState(
 		Fork: &pb.Fork{
 			PreviousVersion: config.GenesisForkVersion,
 			CurrentVersion:  config.GenesisForkVersion,
-			Slot:            config.GenesisSlot,
+			Epoch:           config.GenesisEpoch,
 		},
 
 		// Validator registry fields.
-		ValidatorRegistry:                    validatorRegistry,
-		ValidatorBalances:                    latestBalances,
-		ValidatorRegistryUpdateSlot:          config.GenesisSlot,
-		ValidatorRegistryDeltaChainTipHash32: config.ZeroHash[:],
+		ValidatorRegistry:            validatorRegistry,
+		ValidatorBalances:            latestBalances,
+		ValidatorRegistryUpdateEpoch: config.GenesisEpoch,
 
 		// Randomness and committees.
-		LatestRandaoMixesHash32S:     latestRandaoMixes,
-		PreviousEpochStartShard:      config.GenesisStartShard,
-		CurrentEpochStartShard:       config.GenesisStartShard,
-		PreviousEpochCalculationSlot: config.GenesisSlot,
-		CurrentEpochCalculationSlot:  config.GenesisSlot,
-		PreviousEpochSeedHash32:      config.ZeroHash[:],
-		CurrentEpochSeedHash32:       config.ZeroHash[:],
+		LatestRandaoMixesHash32S: latestRandaoMixes,
+		LatestIndexRootHash32S:   latestIndexRoots,
+		PreviousEpochStartShard:  config.GenesisStartShard,
+		CurrentEpochStartShard:   config.GenesisStartShard,
+		PreviousCalculationEpoch: config.GenesisSlot,
+		CurrentCalculationEpoch:  config.GenesisSlot,
+		PreviousEpochSeedHash32:  config.ZeroHash[:],
+		CurrentEpochSeedHash32:   config.ZeroHash[:],
 
 		// Finality.
-		PreviousJustifiedSlot: config.GenesisSlot,
-		JustifiedSlot:         config.GenesisSlot,
-		JustificationBitfield: 0,
-		FinalizedSlot:         config.GenesisSlot,
+		PreviousJustifiedEpoch: config.GenesisEpoch,
+		JustifiedEpoch:         config.GenesisEpoch,
+		JustificationBitfield:  0,
+		FinalizedEpoch:         config.GenesisEpoch,
 
 		// Recent state.
 		LatestCrosslinks:        latestCrosslinks,

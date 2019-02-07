@@ -26,7 +26,7 @@ func TestMessageMetrics(t *testing.T) {
 		t.Error("Expected metric adapter")
 	}
 	data := &pb.Attestation{
-		ParticipationBitfield: []byte{99},
+		AggregationBitfield: []byte{99},
 		Data: &pb.AttestationData{
 			Slot: 0,
 		},

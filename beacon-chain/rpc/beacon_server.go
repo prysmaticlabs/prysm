@@ -2,13 +2,16 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"math/big"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // BeaconServer defines a server implementation of the gRPC Beacon service,
@@ -91,4 +94,26 @@ func (bs *BeaconServer) LatestAttestation(req *ptypes.Empty, stream pb.BeaconSer
 			return nil
 		}
 	}
+}
+
+// Eth1Data fetches the current ETH 1 data which should be used when voting via
+// block proposal.
+// TODO(1463): Implement this.
+func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1DataResponse, error) {
+	return &pb.Eth1DataResponse{}, nil
+}
+
+// PendingDeposits returns a list of pending deposits that are ready for
+// inclusion in the next beacon block.
+func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*pb.PendingDepositsResponse, error) {
+	bNum := bs.powChainService.LatestBlockNumber()
+
+	if bNum == nil {
+		return nil, errors.New("latest PoW block number is unknown")
+	}
+
+	// Only request deposits that have passed the ETH1 follow distance window.
+	bNum = bNum.Sub(bNum, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
+
+	return &pb.PendingDepositsResponse{PendingDeposits: bs.beaconDB.PendingDeposits(ctx, bNum)}, nil
 }

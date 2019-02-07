@@ -8,8 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -17,6 +15,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -337,10 +336,10 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatalf("Can't get state from db %v", err)
 	}
 
-	validators := make([]*pb.ValidatorRecord, params.BeaconConfig().DepositsForChainStart)
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
 	randaoCommit := hashutil.RepeatHash([32]byte{}, 1)
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.ValidatorRecord{
+		validators[i] = &pb.Validator{
 			ExitEpoch:              params.BeaconConfig().FarFutureEpoch,
 			RandaoCommitmentHash32: randaoCommit[:],
 		}
@@ -364,7 +363,7 @@ func TestRunningChainService(t *testing.T) {
 		},
 		Body: &pb.BeaconBlockBody{
 			Attestations: []*pb.Attestation{{
-				ParticipationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				AggregationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Data: &pb.AttestationData{
 					Slot:                      attestationSlot,
@@ -450,7 +449,7 @@ func TestUpdateHead(t *testing.T) {
 		// Higher slot, different crystallized state, but higher last finalized slot.
 		{
 			blockSlot: 64,
-			state:     &pb.BeaconState{FinalizedSlot: 10},
+			state:     &pb.BeaconState{FinalizedEpoch: 2},
 			logAssert: "Chain head block and state updated",
 		},
 		// Higher slot, different crystallized state, same last finalized slot,
@@ -458,8 +457,8 @@ func TestUpdateHead(t *testing.T) {
 		{
 			blockSlot: 64,
 			state: &pb.BeaconState{
-				FinalizedSlot: 0,
-				JustifiedSlot: 10,
+				FinalizedEpoch: 0,
+				JustifiedEpoch: 2,
 			},
 			logAssert: "Chain head block and state updated",
 		},
@@ -563,7 +562,7 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 		},
 		Body: &pb.BeaconBlockBody{
 			Attestations: []*pb.Attestation{{
-				ParticipationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+				AggregationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				Data: &pb.AttestationData{
 					Slot:                     attestationSlot,

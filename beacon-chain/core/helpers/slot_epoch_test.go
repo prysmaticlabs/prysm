@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestSlotToEpoch(t *testing.T) {
@@ -11,11 +12,11 @@ func TestSlotToEpoch(t *testing.T) {
 		slot  uint64
 		epoch uint64
 	}{
-		{slot: 0, epoch: 0 / config.EpochLength},
-		{slot: 50, epoch: 0 / config.EpochLength},
-		{slot: 64, epoch: 64 / config.EpochLength},
-		{slot: 128, epoch: 128 / config.EpochLength},
-		{slot: 200, epoch: 200 / config.EpochLength},
+		{slot: 0, epoch: 0 / params.BeaconConfig().EpochLength},
+		{slot: 50, epoch: 0 / params.BeaconConfig().EpochLength},
+		{slot: 64, epoch: 64 / params.BeaconConfig().EpochLength},
+		{slot: 128, epoch: 128 / params.BeaconConfig().EpochLength},
+		{slot: 200, epoch: 200 / params.BeaconConfig().EpochLength},
 	}
 	for _, tt := range tests {
 		if tt.epoch != SlotToEpoch(tt.slot) {
@@ -29,11 +30,11 @@ func TestCurrentEpoch(t *testing.T) {
 		slot  uint64
 		epoch uint64
 	}{
-		{slot: 0, epoch: 0 / config.EpochLength},
-		{slot: 50, epoch: 0 / config.EpochLength},
-		{slot: 64, epoch: 64 / config.EpochLength},
-		{slot: 128, epoch: 128 / config.EpochLength},
-		{slot: 200, epoch: 200 / config.EpochLength},
+		{slot: 0, epoch: 0 / params.BeaconConfig().EpochLength},
+		{slot: 50, epoch: 0 / params.BeaconConfig().EpochLength},
+		{slot: 64, epoch: 64 / params.BeaconConfig().EpochLength},
+		{slot: 128, epoch: 128 / params.BeaconConfig().EpochLength},
+		{slot: 200, epoch: 200 / params.BeaconConfig().EpochLength},
 	}
 	for _, tt := range tests {
 		state := &pb.BeaconState{Slot: tt.slot}
@@ -48,11 +49,11 @@ func TestPrevEpoch(t *testing.T) {
 		slot  uint64
 		epoch uint64
 	}{
-		{slot: 0, epoch: 0 / config.EpochLength},
-		{slot: 50, epoch: 0 / config.EpochLength},
-		{slot: 64, epoch: 64/config.EpochLength - 1},
-		{slot: 128, epoch: 128/config.EpochLength - 1},
-		{slot: 200, epoch: 200/config.EpochLength - 1},
+		{slot: 0, epoch: 0 / params.BeaconConfig().EpochLength},
+		{slot: 50, epoch: 0 / params.BeaconConfig().EpochLength},
+		{slot: 64, epoch: 64/params.BeaconConfig().EpochLength - 1},
+		{slot: 128, epoch: 128/params.BeaconConfig().EpochLength - 1},
+		{slot: 200, epoch: 200/params.BeaconConfig().EpochLength - 1},
 	}
 	for _, tt := range tests {
 		state := &pb.BeaconState{Slot: tt.slot}
@@ -67,11 +68,11 @@ func TestNextEpoch(t *testing.T) {
 		slot  uint64
 		epoch uint64
 	}{
-		{slot: 0, epoch: 0/config.EpochLength + 1},
-		{slot: 50, epoch: 0/config.EpochLength + 1},
-		{slot: 64, epoch: 64/config.EpochLength + 1},
-		{slot: 128, epoch: 128/config.EpochLength + 1},
-		{slot: 200, epoch: 200/config.EpochLength + 1},
+		{slot: 0, epoch: 0/params.BeaconConfig().EpochLength + 1},
+		{slot: 50, epoch: 0/params.BeaconConfig().EpochLength + 1},
+		{slot: 64, epoch: 64/params.BeaconConfig().EpochLength + 1},
+		{slot: 128, epoch: 128/params.BeaconConfig().EpochLength + 1},
+		{slot: 200, epoch: 200/params.BeaconConfig().EpochLength + 1},
 	}
 	for _, tt := range tests {
 		state := &pb.BeaconState{Slot: tt.slot}
@@ -86,14 +87,48 @@ func TestEpochStartSlot(t *testing.T) {
 		epoch     uint64
 		startSlot uint64
 	}{
-		{epoch: 0, startSlot: 0 * config.EpochLength},
-		{epoch: 1, startSlot: 1 * config.EpochLength},
-		{epoch: 10, startSlot: 10 * config.EpochLength},
+		{epoch: 0, startSlot: 0 * params.BeaconConfig().EpochLength},
+		{epoch: 1, startSlot: 1 * params.BeaconConfig().EpochLength},
+		{epoch: 10, startSlot: 10 * params.BeaconConfig().EpochLength},
 	}
 	for _, tt := range tests {
 		state := &pb.BeaconState{Slot: tt.epoch}
 		if tt.startSlot != StartSlot(tt.epoch) {
 			t.Errorf("StartSlot(%d) = %d, wanted: %d", state.Slot, StartSlot(tt.epoch), tt.startSlot)
+		}
+	}
+}
+
+func TestAttestationCurrentEpoch(t *testing.T) {
+	tests := []struct {
+		slot  uint64
+		epoch uint64
+	}{
+		{slot: 0 * params.BeaconConfig().EpochLength, epoch: 0},
+		{slot: 1 * params.BeaconConfig().EpochLength, epoch: 1},
+		{slot: 10 * params.BeaconConfig().EpochLength, epoch: 10},
+	}
+	for _, tt := range tests {
+		attData := &pb.AttestationData{Slot: tt.slot}
+		if tt.epoch != AttestationCurrentEpoch(attData) {
+			t.Errorf("AttestationEpoch(%d) = %d, wanted: %d", attData.Slot, AttestationCurrentEpoch(attData), tt.epoch)
+		}
+	}
+}
+
+func TestAttestationJustifiedEpoch(t *testing.T) {
+	tests := []struct {
+		justifiedSlot  uint64
+		justifiedEpoch uint64
+	}{
+		{justifiedSlot: 3 * params.BeaconConfig().EpochLength, justifiedEpoch: 3},
+		{justifiedSlot: 5 * params.BeaconConfig().EpochLength, justifiedEpoch: 5},
+		{justifiedSlot: 12 * params.BeaconConfig().EpochLength, justifiedEpoch: 12},
+	}
+	for _, tt := range tests {
+		attData := &pb.AttestationData{JustifiedSlot: tt.justifiedSlot}
+		if tt.justifiedEpoch != AttestationJustifiedEpoch(attData) {
+			t.Errorf("AttestationJustifiedEpoch(%d) = %d, wanted: %d", attData.Slot, AttestationCurrentEpoch(attData), tt.justifiedEpoch)
 		}
 	}
 }

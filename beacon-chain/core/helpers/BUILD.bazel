@@ -5,14 +5,19 @@ go_library(
     srcs = [
         "committee.go",
         "randao.go",
+        "signature.go",
         "slot_epoch.go",
         "validators.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
+        "//beacon-chain/utils:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/bitutil:go_default_library",
+        "//shared/bytesutil:go_default_library",
         "//shared/hashutil:go_default_library",
+        "//shared/mathutil:go_default_library",
         "//shared/params:go_default_library",
     ],
 )
@@ -22,9 +27,13 @@ go_test(
     srcs = [
         "committee_test.go",
         "randao_test.go",
+        "signature_test.go",
         "slot_epoch_test.go",
         "validators_test.go",
     ],
     embed = [":go_default_library"],
-    deps = ["//proto/beacon/p2p/v1:go_default_library"],
+    deps = [
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/params:go_default_library",
+    ],
 )

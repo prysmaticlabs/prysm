@@ -5,6 +5,7 @@ import (
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // GenerateSeed generates the randao seed of a given epoch.
@@ -20,8 +21,8 @@ import (
 //        get_active_index_root(state, epoch)
 //    )
 func GenerateSeed(state *pb.BeaconState, wantedEpoch uint64) ([32]byte, error) {
-	if wantedEpoch > config.SeedLookahead {
-		wantedEpoch -= config.SeedLookahead
+	if wantedEpoch > params.BeaconConfig().SeedLookahead {
+		wantedEpoch -= params.BeaconConfig().SeedLookahead
 	}
 	randaoMix, err := RandaoMix(state, wantedEpoch)
 	if err != nil {
@@ -47,14 +48,14 @@ func GenerateSeed(state *pb.BeaconState, wantedEpoch uint64) ([32]byte, error) {
 func ActiveIndexRoot(state *pb.BeaconState, wantedEpoch uint64) ([]byte, error) {
 	var earliestEpoch uint64
 	currentEpoch := CurrentEpoch(state)
-	if currentEpoch > config.LatestIndexRootsLength+config.EntryExitDelay {
-		earliestEpoch = currentEpoch - (config.LatestIndexRootsLength + config.EntryExitDelay)
+	if currentEpoch > params.BeaconConfig().LatestIndexRootsLength+params.BeaconConfig().EntryExitDelay {
+		earliestEpoch = currentEpoch - (params.BeaconConfig().LatestIndexRootsLength + params.BeaconConfig().EntryExitDelay)
 	}
-	if earliestEpoch > wantedEpoch || wantedEpoch >= currentEpoch {
+	if earliestEpoch > wantedEpoch || wantedEpoch > currentEpoch {
 		return nil, fmt.Errorf("input indexRoot epoch %d out of bounds: %d <= epoch < %d",
 			wantedEpoch, earliestEpoch, currentEpoch)
 	}
-	return state.LatestIndexRootHash32S[wantedEpoch%config.LatestIndexRootsLength], nil
+	return state.LatestIndexRootHash32S[wantedEpoch%params.BeaconConfig().LatestIndexRootsLength], nil
 }
 
 // RandaoMix returns the randao mix (xor'ed seed)
@@ -71,12 +72,12 @@ func ActiveIndexRoot(state *pb.BeaconState, wantedEpoch uint64) ([]byte, error) 
 func RandaoMix(state *pb.BeaconState, wantedEpoch uint64) ([]byte, error) {
 	var earliestEpoch uint64
 	currentEpoch := CurrentEpoch(state)
-	if currentEpoch > config.LatestRandaoMixesLength {
-		earliestEpoch = currentEpoch - config.LatestRandaoMixesLength
+	if currentEpoch > params.BeaconConfig().LatestRandaoMixesLength {
+		earliestEpoch = currentEpoch - params.BeaconConfig().LatestRandaoMixesLength
 	}
-	if earliestEpoch > wantedEpoch || wantedEpoch >= currentEpoch {
+	if earliestEpoch > wantedEpoch || wantedEpoch > currentEpoch {
 		return nil, fmt.Errorf("input randaoMix epoch %d out of bounds: %d <= epoch < %d",
 			wantedEpoch, earliestEpoch, currentEpoch)
 	}
-	return state.LatestRandaoMixesHash32S[wantedEpoch%config.LatestRandaoMixesLength], nil
+	return state.LatestRandaoMixesHash32S[wantedEpoch%params.BeaconConfig().LatestRandaoMixesLength], nil
 }

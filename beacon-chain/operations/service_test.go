@@ -89,7 +89,7 @@ func TestIncomingAttestation_Ok(t *testing.T) {
 		<-exitRoutine
 	}()
 	attestation := &pb.Attestation{
-		ParticipationBitfield: []byte{'A'},
+		AggregationBitfield: []byte{'A'},
 		Data: &pb.AttestationData{
 			Slot: 100,
 		}}

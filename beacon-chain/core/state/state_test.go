@@ -22,7 +22,7 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	if params.BeaconConfig().GenesisSlot != 0 {
 		t.Error("GenesisSlot should be 0 for these tests to pass")
 	}
-	initialSlotNumber := params.BeaconConfig().GenesisSlot
+	initialEpochNumber := params.BeaconConfig().GenesisEpoch
 
 	if params.BeaconConfig().GenesisForkVersion != 0 {
 		t.Error("InitialSlot should be 0 for these tests to pass")
@@ -90,7 +90,7 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	}
 
 	// Misc fields checks.
-	if state.Slot != initialSlotNumber {
+	if state.Slot != initialEpochNumber {
 		t.Error("Slot was not correctly initialized")
 	}
 	if state.GenesisTime != genesisTime {
@@ -99,13 +99,13 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	if !reflect.DeepEqual(*state.Fork, pb.Fork{
 		PreviousVersion: initialForkVersion,
 		CurrentVersion:  initialForkVersion,
-		Slot:            initialSlotNumber,
+		Epoch:           initialEpochNumber,
 	}) {
 		t.Error("Fork was not correctly initialized")
 	}
 
 	// Validator registry fields checks.
-	if state.ValidatorRegistryUpdateSlot != initialSlotNumber {
+	if state.ValidatorRegistryUpdateEpoch != initialEpochNumber {
 		t.Error("ValidatorRegistryUpdateSlot was not correctly initialized")
 	}
 	if len(state.ValidatorRegistry) != depositsForChainStart {
@@ -121,13 +121,13 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	}
 
 	// Finality fields checks.
-	if state.PreviousJustifiedSlot != initialSlotNumber {
+	if state.PreviousJustifiedEpoch != initialEpochNumber {
 		t.Error("PreviousJustifiedSlot was not correctly initialized")
 	}
-	if state.JustifiedSlot != initialSlotNumber {
+	if state.JustifiedEpoch != initialEpochNumber {
 		t.Error("JustifiedSlot was not correctly initialized")
 	}
-	if state.FinalizedSlot != initialSlotNumber {
+	if state.FinalizedEpoch != initialEpochNumber {
 		t.Error("FinalizedSlot was not correctly initialized")
 	}
 	if state.JustificationBitfield != 0 {
