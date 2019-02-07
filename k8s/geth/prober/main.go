@@ -52,14 +52,14 @@ func main() {
 			return
 		}
 		ok := jsonMap["result"] == false
-		if ok {
-			fmt.Fprint(w, "ok")
-			return
-		} else {
+		if !ok {
 			w.WriteHeader(500)
 			fmt.Fprintf(w, "Not synced: %v", jsonMap)
 			return
 		}
+
+		fmt.Fprint(w, "ok")
+		return
 	})
 
 	fmt.Println("Serving requests on port 8080")
