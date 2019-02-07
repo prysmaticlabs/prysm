@@ -470,22 +470,22 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 			beaconState.Slot,
 		)
 	}
-	// Verify that attestation.JustifiedSlot is equal to
-	// state.JustifiedSlot if attestation.Slot >=
-	// state.Slot - (state.Slot % EPOCH_LENGTH) else state.PreviousJustifiedSlot.
-	if att.Data.Slot >= beaconState.Slot-(beaconState.Slot%params.BeaconConfig().EpochLength) {
-		if helpers.AttestationJustifiedEpoch(att.Data) != beaconState.JustifiedEpoch {
+	// Verify that attestation.data.justified_epoch is equal to state.justified_epoch
+	// 	if attestation.data.slot >= get_epoch_start_slot(get_current_epoch(state))
+	// 	else state.previous_justified_epoch.
+	if att.Data.Slot >= helpers.StartSlot(helpers.SlotToEpoch(att.Data.Slot)) {
+		if att.Data.JustifiedEpoch != beaconState.JustifiedEpoch {
 			return fmt.Errorf(
-				"expected attestation.JustifiedSlot == state.JustifiedSlot, received %d == %d",
-				helpers.AttestationJustifiedEpoch(att.Data),
+				"expected attestation.JustifiedEpoch == state.JustifiedEpoch, received %d == %d",
+				att.Data.JustifiedEpoch,
 				beaconState.JustifiedEpoch,
 			)
 		}
 	} else {
-		if helpers.AttestationJustifiedEpoch(att.Data) != beaconState.PreviousJustifiedEpoch {
+		if att.Data.JustifiedEpoch != beaconState.PreviousJustifiedEpoch {
 			return fmt.Errorf(
-				"expected attestation.JustifiedSlot == state.PreviousJustifiedSlot, received %d == %d",
-				helpers.AttestationJustifiedEpoch(att.Data),
+				"expected attestation.JustifiedEpoch == state.PreviousJustifiedEpoch, received %d == %d",
+				att.Data.JustifiedEpoch,
 				beaconState.PreviousJustifiedEpoch,
 			)
 		}

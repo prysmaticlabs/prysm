@@ -72,11 +72,11 @@ func TestEpochAttestations(t *testing.T) {
 	for _, tt := range tests {
 		state.Slot = tt.stateSlot
 
-		if Attestations(state)[0].Data.Slot != tt.firstAttestationSlot {
+		if CurrentAttestations(state)[0].Data.Slot != tt.firstAttestationSlot {
 			t.Errorf(
 				"Result slot was an unexpected value. Wanted %d, got %d",
 				tt.firstAttestationSlot,
-				Attestations(state)[0].Data.Slot,
+				CurrentAttestations(state)[0].Data.Slot,
 			)
 		}
 	}
