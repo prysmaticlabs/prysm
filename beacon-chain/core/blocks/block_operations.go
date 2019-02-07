@@ -473,6 +473,8 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	// Verify that attestation.data.justified_epoch is equal to state.justified_epoch
 	// 	if attestation.data.slot >= get_epoch_start_slot(get_current_epoch(state))
 	// 	else state.previous_justified_epoch.
+	fmt.Println(att.Data.Slot)
+	fmt.Println(helpers.StartSlot(helpers.SlotToEpoch(att.Data.Slot)))
 	if att.Data.Slot >= helpers.StartSlot(helpers.SlotToEpoch(att.Data.Slot)) {
 		if att.Data.JustifiedEpoch != beaconState.JustifiedEpoch {
 			return fmt.Errorf(
@@ -492,8 +494,8 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	}
 
 	// Verify that attestation.data.justified_block_root is equal to
-	// get_block_root(state, attestation.data.justified_slot).
-	blockRoot, err := BlockRoot(beaconState, att.Data.JustifiedSlot)
+	// get_block_root(state, get_epoch_start_slot(attestation.data.justified_epoch)).
+	blockRoot, err := BlockRoot(beaconState, helpers.StartSlot(att.Data.JustifiedEpoch))
 	if err != nil {
 		return fmt.Errorf("could not get block root for justified slot: %v", err)
 	}

@@ -828,8 +828,8 @@ func TestProcessBlockAttestations_JustifiedSlotVerificationFailure(t *testing.T)
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Slot:          152,
-				JustifiedSlot: 130,
+				Slot:           152,
+				JustifiedEpoch: 2,
 			},
 		},
 	}
@@ -844,7 +844,7 @@ func TestProcessBlockAttestations_JustifiedSlotVerificationFailure(t *testing.T)
 	}
 
 	want := fmt.Sprintf(
-		"expected attestation.JustifiedSlot == state.JustifiedSlot, received %d == %d",
+		"expected attestation.JustifiedEpoch == state.JustifiedEpoch, received %d == %d",
 		2,
 		1,
 	)
@@ -861,8 +861,8 @@ func TestProcessBlockAttestations_PreviousJustifiedSlotVerificationFailure(t *te
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Slot:          240,
-				JustifiedSlot: 234,
+				Slot:           128,
+				JustifiedEpoch: 1,
 			},
 		},
 	}
@@ -872,12 +872,12 @@ func TestProcessBlockAttestations_PreviousJustifiedSlotVerificationFailure(t *te
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   257,
-		PreviousJustifiedEpoch: 2,
+		Slot:                   params.BeaconConfig().EpochLength * 2,
+		PreviousJustifiedEpoch: 1,
 	}
 
 	want := fmt.Sprintf(
-		"expected attestation.JustifiedSlot == state.PreviousJustifiedSlot, received %d == %d",
+		"expected attestation.JustifiedEpoch == state.PreviousJustifiedEpoch, received %d == %d",
 		3,
 		2,
 	)

@@ -104,18 +104,19 @@ func TestEpochBoundaryAttestations(t *testing.T) {
 		LatestBlockRootHash32S: latestBlockRootHash,
 	}
 
-	if _, err := BoundaryAttestations(state, epochAttestations); err == nil {
-		t.Fatal("EpochBoundaryAttestations should have failed with empty block root hash")
+	if _, err := CurrentBoundaryAttestations(state, epochAttestations); err == nil {
+		t.Fatal("CurrentBoundaryAttestations should have failed with empty block root hash")
 	}
 
 	state.Slot = params.BeaconConfig().EpochLength
-	epochBoundaryAttestation, err := BoundaryAttestations(state, epochAttestations)
+	epochBoundaryAttestation, err := CurrentBoundaryAttestations(state, epochAttestations)
 	if err != nil {
-		t.Fatalf("EpochBoundaryAttestations failed: %v", err)
+		t.Fatalf("CurrentBoundaryAttestations failed: %v", err)
 	}
 
-	if epochBoundaryAttestation[0].Data.JustifiedSlot != 0 {
-		t.Errorf("Wanted justified slot 0 for epoch boundary attestation, got: %d", epochBoundaryAttestation[0].Data.JustifiedSlot)
+	if epochBoundaryAttestation[0].Data.JustifiedEpoch != 0 {
+		t.Errorf("Wanted justified epoch 0 for epoch boundary attestation, got: %d",
+			epochBoundaryAttestation[0].Data.JustifiedEpoch)
 	}
 
 	if !bytes.Equal(epochBoundaryAttestation[0].Data.JustifiedBlockRootHash32, []byte{0}) {

@@ -54,4 +54,3 @@ func StartSlot(epoch uint64) uint64 {
 func AttestationCurrentEpoch(att *pb.AttestationData) uint64 {
 	return SlotToEpoch(att.Slot)
 }
-
