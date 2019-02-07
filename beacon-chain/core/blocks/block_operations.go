@@ -549,7 +549,7 @@ func ProcessValidatorDeposits(
 			validatorIndexMap,
 			depositInput.Pubkey,
 			binary.BigEndian.Uint64(depositValue),
-            depositInput.ProofOfPossession,
+			depositInput.ProofOfPossession,
 			depositInput.WithdrawalCredentialsHash32,
 		)
 		if err != nil {
