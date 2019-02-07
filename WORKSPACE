@@ -35,9 +35,9 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    url = "https://github.com/bazelbuild/rules_nodejs/archive/0.16.7.tar.gz",
-    strip_prefix = "rules_nodejs-0.16.7",
-    sha256 = "631795fef895f982cac2c6b6044a02d67d17179789dbbb5460f22a308d9a1862",
+    url = "https://github.com/bazelbuild/rules_nodejs/archive/0.16.8.tar.gz",
+    strip_prefix = "rules_nodejs-0.16.8",
+    sha256 = "df74b6ef05d2307ba3245101aa4b4d05ab61a5a63195bfbb693d78851d43a548",
 )
 
 http_archive(
@@ -53,10 +53,6 @@ load(
 )
 
 container_repositories()
-
-load("@build_bazel_rules_nodejs//:package.bzl", "rules_nodejs_dependencies")
-
-rules_nodejs_dependencies()
 
 load("@build_bazel_rules_nodejs//:defs.bzl", "node_repositories", "yarn_install")
 
@@ -121,7 +117,7 @@ http_archive(
 
 go_repository(
     name = "com_github_golang_mock",
-    commit = "8a44ef6e8be577e050008c7886f24fc705d709fb",
+    commit = "c20582278a829e4b3259747a3ce0eceb1763ee13",
     importpath = "github.com/golang/mock",
 )
 
@@ -504,7 +500,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "980327fe3c65509adaad5a9ff06abdf7611b4411",
+    commit = "41f3e6584952bb034a481797859f6ab34b6803bd",
     importpath = "golang.org/x/sys",
 )
 
@@ -648,7 +644,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aristanetworks_goarista",
-    commit = "e2363f69bde9cb44d6b7f31b741a5a65a8f73b39",
+    commit = "2166578f34481200ec14ddd6b9c4115db36c7b62",
     importpath = "github.com/aristanetworks/goarista",
 )
 

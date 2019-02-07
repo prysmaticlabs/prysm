@@ -2,13 +2,13 @@ package dbcleanup
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -120,8 +120,8 @@ func TestCleanBlockVoteCache(t *testing.T) {
 
 	// Now let the cleanup service do its job
 	cleanupService := createCleanupService(beaconDB)
-	state := &pb.BeaconState{FinalizedSlot: 1}
-	if err = cleanupService.cleanBlockVoteCache(state.FinalizedSlot); err != nil {
+	state := &pb.BeaconState{FinalizedEpoch: 1}
+	if err = cleanupService.cleanBlockVoteCache(state.FinalizedEpoch); err != nil {
 		t.Fatalf("failed to clean block vote cache")
 	}
 

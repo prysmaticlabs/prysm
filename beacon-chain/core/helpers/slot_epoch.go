@@ -5,15 +5,13 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-var config = params.BeaconConfig()
-
 // SlotToEpoch returns the epoch number of the input slot.
 //
 // Spec pseudocode definition:
 //   def slot_to_epoch(slot: SlotNumber) -> EpochNumber:
 //    return slot // EPOCH_LENGTH
 func SlotToEpoch(slot uint64) uint64 {
-	return slot / config.EpochLength
+	return slot / params.BeaconConfig().EpochLength
 }
 
 // CurrentEpoch returns the current epoch number calculated from
@@ -49,5 +47,15 @@ func NextEpoch(state *pb.BeaconState) uint64 {
 //   def get_epoch_start_slot(epoch: EpochNumber) -> SlotNumber:
 //    return epoch * EPOCH_LENGTH
 func StartSlot(epoch uint64) uint64 {
-	return epoch * config.EpochLength
+	return epoch * params.BeaconConfig().EpochLength
+}
+
+// AttestationCurrentEpoch returns the current epoch referenced by the attestation.
+func AttestationCurrentEpoch(att *pb.AttestationData) uint64 {
+	return SlotToEpoch(att.Slot)
+}
+
+// AttestationJustifiedEpoch returns the justified epoch referenced by the attestation.
+func AttestationJustifiedEpoch(att *pb.AttestationData) uint64 {
+	return SlotToEpoch(att.JustifiedSlot)
 }

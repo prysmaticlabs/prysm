@@ -6,25 +6,24 @@ import "proto/common/messages.proto";
 
 message BeaconState {
   // Validator registry [1-1000]
-  repeated ValidatorRecord validator_registry = 1;
-  uint64 validator_registry_update_slot = 2;
-  bytes validator_registry_delta_chain_tip_hash32 = 3;
-  repeated uint64 validator_balances = 4; // Balance in Gwei
+  repeated Validator validator_registry = 1;
+  uint64 validator_registry_update_epoch = 2;
+  repeated uint64 validator_balances = 3; // Balance in Gwei
 
   // Randomness and committees [1001-2000]
   repeated bytes latest_randao_mixes_hash32s = 1004;
   uint64 previous_epoch_start_shard = 1005;
   uint64 current_epoch_start_shard = 1006;
-  uint64 previous_epoch_calculation_slot = 1007;
-  uint64 current_epoch_calculation_slot = 1008;
+  uint64 previous_calculation_epoch = 1007;
+  uint64 current_calculation_epoch = 1008;
   bytes previous_epoch_seed_hash32 = 1009;
   bytes current_epoch_seed_hash32 = 1010;
 
   // Finality [2001-3000]
-  uint64 previous_justified_slot = 2001;
-  uint64 justified_slot = 2002;
+  uint64 previous_justified_epoch = 2001;
+  uint64 justified_epoch = 2002;
   uint64 justification_bitfield = 2003;
-  uint64 finalized_slot = 2004;
+  uint64 finalized_epoch = 2004;
 
   // Recent state [3001-4000]
   repeated CrosslinkRecord latest_crosslinks = 3001;
@@ -47,19 +46,19 @@ message BeaconState {
 message Fork {
   uint64 previous_version = 1;
   uint64 current_version = 2;
-  uint64 slot = 3;
+  uint64 epoch = 3;
 }
 
 message PendingAttestationRecord {
   AttestationData data = 1;
-  bytes participation_bitfield = 2;
+  bytes aggregation_bitfield = 2;
   bytes custody_bitfield = 3;
   uint64 slot_included = 4;
 }
 
 message Attestation {
   AttestationData data = 1;
-  bytes participation_bitfield = 2;
+  bytes aggregation_bitfield = 2;
   bytes custody_bitfield = 3;
   bytes aggregate_signature = 4; // Type of [uint384] ?
 }
@@ -71,8 +70,9 @@ message AttestationData {
   bytes epoch_boundary_root_hash32  = 4;
   bytes shard_block_root_hash32 = 5;
   bytes latest_crosslink_root_hash32 = 6;
-  uint64 justified_slot = 7;
+  uint64 justified_epoch = 7;
   bytes justified_block_root_hash32 = 8;
+  uint64 justified_slot = 1000 [deprecated=true];
 }
 
 message AttestationDataAndCustodyBit {
@@ -80,7 +80,7 @@ message AttestationDataAndCustodyBit {
   bool custody_bit = 2;
 }
 
-message ValidatorRecord {
+message Validator {
   bytes pubkey = 1;
   // TODO(781): The usage of withdrawal_credentials is not defined in spec. Not used in Prysm yet.
   bytes withdrawal_credentials_hash32 = 2;
@@ -107,7 +107,7 @@ message ShardReassignmentRecord {
 }
 
 message CrosslinkRecord {
-  uint64 slot = 1;
+  uint64 epoch = 1;
   bytes shard_block_root_hash32 = 2;
 }
 
@@ -182,18 +182,6 @@ message Exit {
   uint64 slot = 1;
   uint64 validator_index = 2;
   bytes signature = 3; // Type of [uint384]?
-}
-
-message ValidatorRegistryDeltaBlock {
-  bytes latest_registry_delta_root_hash32 = 1;
-  uint64 validator_index = 2;
-  bytes pubkey = 3;
-  uint64 slot = 4;
-  enum ValidatorRegistryDeltaFlags {
-      ACTIVATION = 0;
-      EXIT = 1;
-  }
-  ValidatorRegistryDeltaFlags flag = 5;
 }
 
 message Eth1Data {

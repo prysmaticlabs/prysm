@@ -123,7 +123,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	SlotDuration:                 6,
 	MinAttestationInclusionDelay: 4,
 	EpochLength:                  64,
-	SeedLookahead:                64,
+	SeedLookahead:                1,
 	EntryExitDelay:               4,
 	Eth1DataVotingPeriod:         16,
 	Eth1FollowDistance:           1024,
