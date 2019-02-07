@@ -12,70 +12,69 @@ import (
 // PoW chain contract created in Vyper.
 type DepositTrie struct {
 	depositCount uint64
-	merkleMap    map[uint64][32]byte
+	branch       [32][32]byte
+	zeroHashes   [32][32]byte
 }
 
 // NewDepositTrie creates a new struct instance representing a Merkle trie for deposits
 // and tracking an initial deposit count of 0.
 func NewDepositTrie() *DepositTrie {
+	var zeroHashes [32][32]byte
+	var branch [32][32]byte
+
+	zeroHashes[0] = params.BeaconConfig().ZeroHash
+	branch[0] = params.BeaconConfig().ZeroHash
+
+	for i := 0; i < 31; i++ {
+		zeroHashes[i+1] = hashutil.Hash(append(zeroHashes[i][:], zeroHashes[i][:]...))
+		branch[i+1] = zeroHashes[i+1]
+	}
 	return &DepositTrie{
 		depositCount: 0,
-		merkleMap:    make(map[uint64][32]byte),
+		zeroHashes:   zeroHashes,
+		branch:       branch,
 	}
 }
 
 // UpdateDepositTrie updates the Merkle trie representing deposits on
 // the ETH 1.0 PoW chain contract.
 func (d *DepositTrie) UpdateDepositTrie(depositData []byte) {
-	twoToPowerOfTreeDepth := 1 << params.BeaconConfig().DepositContractTreeDepth
-	index := d.depositCount + uint64(twoToPowerOfTreeDepth)
-	d.merkleMap[index] = hashutil.Hash(depositData)
-	for i := uint64(0); i < params.BeaconConfig().DepositContractTreeDepth; i++ {
-		index = index / 2
-		left := d.merkleMap[index*2]
-		right := d.merkleMap[index*2+1]
-		d.merkleMap[index] = hashutil.Hash(append(left[:], right[:]...))
-	}
-	d.depositCount++
-}
+	index := d.depositCount
+	i := 0
+	powerOf2 := uint64(2)
 
-// GenerateMerkleBranch for a value up to the root from a leaf in the trie.
-func (d *DepositTrie) GenerateMerkleBranch(index uint64) [][]byte {
-	twoToPowerOfTreeDepth := 1 << params.BeaconConfig().DepositContractTreeDepth
-	idx := index + uint64(twoToPowerOfTreeDepth)
-	branch := make([][]byte, params.BeaconConfig().DepositContractTreeDepth)
-	for i := uint64(0); i < params.BeaconConfig().DepositContractTreeDepth; i++ {
-		if idx%2 == 1 {
-			value := d.merkleMap[idx-1]
-			branch[i] = value[:]
-		} else {
-			value := d.merkleMap[idx+1]
-			branch[i] = value[:]
+	for j := 0; j < 32; j++ {
+		if (index+1)%powerOf2 != 0 {
+			break
 		}
-		idx = idx / 2
+
+		i += 1
+		powerOf2 *= 2
 	}
-	return branch
+	hashedData := hashutil.Hash(depositData)
+
+	for k := 0; k < 32; k++ {
+		if k < i {
+			hashedData = hashutil.Hash(append(d.branch[k][:], hashedData[:]...))
+		}
+	}
+	d.branch[i] = hashedData
+	d.depositCount++
 }
 
 // Root returns the Merkle root of the calculated deposit trie.
 func (d *DepositTrie) Root() [32]byte {
-	return d.merkleMap[1]
-}
+	root := params.BeaconConfig().ZeroHash
+	size := d.depositCount
 
-// VerifyMerkleBranch verifies a Merkle path in a trie
-// by checking the aggregated hash of contiguous leaves along a path
-// eventually equals the root hash of the Merkle trie.
-func VerifyMerkleBranch(leaf [32]byte, branch [][]byte, depth uint64, index uint64, root [32]byte) bool {
-	twoToPowerOfTreeDepth := 1 << params.BeaconConfig().DepositContractTreeDepth
-	idx := index + uint64(twoToPowerOfTreeDepth)
-	value := leaf
-	for i := uint64(0); i < depth; i++ {
-		if idx%2 == 1 {
-			value = hashutil.Hash(append(branch[i], value[:]...))
+	for i := 0; i < 32; i++ {
+		if size%2 == 1 {
+			root = hashutil.Hash(append(d.branch[i][:], root[:]...))
 		} else {
-			value = hashutil.Hash(append(value[:], branch[i]...))
+			root = hashutil.Hash(append(root[:], d.zeroHashes[i][:]...))
 		}
-		idx = idx / 2
+
+		size /= 2
 	}
-	return value == root
+	return root
 }

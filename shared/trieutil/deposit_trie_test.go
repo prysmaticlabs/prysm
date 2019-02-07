@@ -36,30 +36,9 @@ func TestDepositTrie_UpdateDepositTrie(t *testing.T) {
 		}
 		hash := hashutil.Hash(tt.deposits[1])
 		twoToPowerOfTreeDepth := 1 << params.BeaconConfig().DepositContractTreeDepth
-		lastLeaf := d.merkleMap[d.depositCount-1+uint64(twoToPowerOfTreeDepth)]
+		lastLeaf := d.branch[d.depositCount-1+uint64(twoToPowerOfTreeDepth)]
 		if lastLeaf != hash {
 			t.Errorf("Expected last leaf to equal %#x, received %#x", lastLeaf, hash)
 		}
-	}
-}
-
-func TestDepositTrie_GenerateMerkleBranch(t *testing.T) {
-	d := NewDepositTrie()
-	deposit1 := []byte{1, 2, 3}
-	d.UpdateDepositTrie(deposit1)
-	deposit2 := []byte{5, 6, 7}
-	d.UpdateDepositTrie(deposit2)
-	deposit3 := []byte{8, 9, 10}
-	d.UpdateDepositTrie(deposit3)
-	index := d.depositCount - 1
-	branch := d.GenerateMerkleBranch(index)
-	if ok := VerifyMerkleBranch(
-		hashutil.Hash(deposit3),
-		branch,
-		params.BeaconConfig().DepositContractTreeDepth,
-		index,
-		d.Root(),
-	); !ok {
-		t.Error("Expected Merkle branch to verify, received false")
 	}
 }
