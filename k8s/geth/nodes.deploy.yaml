@@ -147,11 +147,13 @@ spec:
             secretName: goerli-validator-pk
         - name: keystore
           emptyDir: {}
-  volumeClaimTemplates:
-    - metadata:
-        name: chaindata
-      spec:
-        accessModes: [ "ReadWriteOnce" ]
-        resources:
-          requests:
-            storage: 50Gi
+        - name: chaindata
+          emptyDir: {} # Caching the chain seems to have issues with impossible reorg
+#  volumeClaimTemplates:
+#    - metadata:
+#        name: chaindata
+#      spec:
+#        accessModes: [ "ReadWriteOnce" ]
+#        resources:
+#          requests:
+#            storage: 50Gi

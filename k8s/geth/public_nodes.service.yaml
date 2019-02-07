@@ -16,6 +16,9 @@ spec:
       targetPort: 8546
       name: http-ws
       protocol: TCP
+    - port: 8547
+      targetPort: 8547
+      name: http-graphql
   type: ClusterIP
 ---
 apiVersion: networking.istio.io/v1alpha3
@@ -68,12 +71,28 @@ spec:
     websocketUpgrade: true
   - match:
     - uri:
+        prefix: /graphql
+    route:
+    - destination: 
+        port:
+          number: 8547
+        host: public-rpc-nodes.pow.svc.cluster.local
+  - match: # Must be last
+    - uri:
         prefix: /
     route:
     - destination:
         port:
           number: 8545
         host: public-rpc-nodes.pow.svc.cluster.local
+        subset: v1
+      weight: 25
+    - destination:
+        port:
+          number: 8545
+        host: public-rpc-nodes.pow.svc.cluster.local
+        subset: v1-stable
+      weight: 75
 ---
  apiVersion: networking.istio.io/v1alpha3
  kind: DestinationRule
@@ -82,6 +101,13 @@ spec:
    namespace: pow
  spec:
    host: public-rpc-nodes.pow.svc.cluster.local
+   subsets:
+   - name: v1
+     labels:
+       version: v1
+   - name: v1-stable
+     labels:
+       version: v1-stable
    trafficPolicy:
      loadBalancer:
        consistentHash:
