@@ -130,21 +130,18 @@ func verifyBlockRandao(proposer *pb.ValidatorRecord, block *pb.BeaconBlock) erro
 //   Verify that len(block.body.proposer_slashings) <= MAX_PROPOSER_SLASHINGS.
 //
 //   For each proposer_slashing in block.body.proposer_slashings:
-//
-//   Let proposer = state.validator_registry[proposer_slashing.proposer_index].
-//   Verify that bls_verify(pubkey=proposer.pubkey, msg=hash_tree_root(
-//    proposer_slashing.proposal_data_1),
-//  	sig=proposer_slashing.proposal_signature_1,
-//    domain=get_domain(state.fork_data, proposer_slashing.proposal_data_1.slot, DOMAIN_PROPOSAL)).
-//   Verify that bls_verify(pubkey=proposer.pubkey, msg=hash_tree_root(
-//     proposer_slashing.proposal_data_2),
-//     sig=proposer_slashing.proposal_signature_2,
-//     domain=get_domain(state.fork_data, proposer_slashing.proposal_data_2.slot, DOMAIN_PROPOSAL)).
-//   Verify that proposer_slashing.proposal_data_1.slot == proposer_slashing.proposal_data_2.slot.
-//   Verify that proposer_slashing.proposal_data_1.shard == proposer_slashing.proposal_data_2.shard.
-//   Verify that proposer_slashing.proposal_data_1.block_root != proposer_slashing.proposal_data_2.block_root.
-//   Verify that validator.penalized_slot > state.slot.
-//   Run penalize_validator(state, proposer_slashing.proposer_index).
+//     Let proposer = state.validator_registry[proposer_slashing.proposer_index].
+//     Verify that proposer_slashing.proposal_data_1.slot == proposer_slashing.proposal_data_2.slot.
+//     Verify that proposer_slashing.proposal_data_1.shard == proposer_slashing.proposal_data_2.shard.
+//     Verify that proposer_slashing.proposal_data_1.block_root != proposer_slashing.proposal_data_2.block_root.
+//     Verify that proposer.penalized_epoch > get_current_epoch(state).
+//     Verify that bls_verify(pubkey=proposer.pubkey, message=hash_tree_root(proposer_slashing.proposal_data_1),
+//       signature=proposer_slashing.proposal_signature_1,
+//       domain=get_domain(state.fork, slot_to_epoch(proposer_slashing.proposal_data_1.slot), DOMAIN_PROPOSAL)).
+//     Verify that bls_verify(pubkey=proposer.pubkey, message=hash_tree_root(proposer_slashing.proposal_data_2),
+//       signature=proposer_slashing.proposal_signature_2,
+//       domain=get_domain(state.fork, slot_to_epoch(proposer_slashing.proposal_data_2.slot), DOMAIN_PROPOSAL)).
+//     Run penalize_validator(state, proposer_slashing.proposer_index).
 func ProcessProposerSlashings(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
@@ -165,7 +162,7 @@ func ProcessProposerSlashings(
 			return nil, fmt.Errorf("could not verify proposer slashing #%d: %v", idx, err)
 		}
 		proposer := registry[slashing.ProposerIndex]
-		if proposer.PenalizedEpoch > beaconState.Slot {
+		if proposer.PenalizedEpoch > helpers.CurrentEpoch(beaconState) {
 			beaconState, err = v.PenalizeValidator(beaconState, slashing.ProposerIndex)
 			if err != nil {
 				return nil, fmt.Errorf("could not penalize proposer index %d: %v",
@@ -204,35 +201,27 @@ func verifyProposerSlashing(
 }
 
 // ProcessAttesterSlashings is one of the operations performed
-// on each processed beacon block to penalize validators based on
+// on each processed beacon block to penalize attesters based on
 // Casper FFG slashing conditions if any slashable events occurred.
 //
 // Official spec definition for attester slashings:
 //
-//   Verify that len(block.body.attester_slashings) <= MAX_CASPER_SLASHINGS.
-//   For each attester_slashing in block.body.attester_slashings:
+//   Verify that len(block.body.attester_slashings) <= MAX_ATTESTER_SLASHINGS.
 //
-//   Verify that verify_attester_votes(state, attester_slashing.votes_1).
-//   Verify that verify_attester_votes(state, attester_slashing.votes_2).
-//   Verify that attester_slashing.votes_1.data != attester_slashing.votes_2.data.
-//   Let indices(vote) = vote.aggregate_signature_poc_0_indices +
-//     vote.aggregate_signature_poc_1_indices.
-//   Let intersection = [x for x in indices(attester_slashing.votes_1)
-//     if x in indices(attester_slashing.votes_2)].
-//   Verify that len(intersection) >= 1.
-//	 Verify the following about the attester votes:
-//     (vote1.justified_slot < vote2.justified_slot) &&
-//     (vote2.justified_slot + 1 == vote2.slot) &&
-//     (vote2.slot < vote1.slot)
-//     OR
-//     vote1.slot == vote.slot
-//   Verify that attester_slashing.votes_1.data.justified_slot + 1 <
-//     attester_slashing.votes_2.data.justified_slot + 1 ==
-//     attester_slashing.votes_2.data.slot < attester_slashing.votes_1.data.slot
-//     or attester_slashing.votes_1.data.slot == attester_slashing.votes_2.data.slot.
-//   For each validator index i in intersection,
-//     if state.validator_registry[i].penalized_slot > state.slot, then
-// 	   run penalize_validator(state, i)
+//   For each attester_slashing in block.body.attester_slashings:
+//     Let slashable_attestation_1 = attester_slashing.slashable_attestation_1.
+//     Let slashable_attestation_2 = attester_slashing.slashable_attestation_2.
+//     Verify that slashable_attestation_1.data != slashable_attestation_2.data.
+//     Verify that is_double_vote(slashable_attestation_1.data, slashable_attestation_2.data)
+//       or is_surround_vote(slashable_attestation_1.data, slashable_attestation_2.data).
+//     Verify that verify_slashable_attestation(state, slashable_attestation_1).
+//     Verify that verify_slashable_attestation(state, slashable_attestation_2).
+//     Let slashable_indices = [index for index in slashable_attestation_1.validator_indices if
+//       index in slashable_attestation_2.validator_indices and
+//       state.validator_registry[index].penalized_epoch > get_current_epoch(state)].
+//     Verify that len(slashable_indices) >= 1.
+//     Run penalize_validator(state, index) for each index in slashable_indices.
+// TODO: PROTO REVAMP.
 func ProcessAttesterSlashings(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
