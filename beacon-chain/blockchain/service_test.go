@@ -336,10 +336,10 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatalf("Can't get state from db %v", err)
 	}
 
-	validators := make([]*pb.ValidatorRecord, params.BeaconConfig().DepositsForChainStart)
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
 	randaoCommit := hashutil.RepeatHash([32]byte{}, 1)
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.ValidatorRecord{
+		validators[i] = &pb.Validator{
 			ExitEpoch:              params.BeaconConfig().FarFutureEpoch,
 			RandaoCommitmentHash32: randaoCommit[:],
 		}

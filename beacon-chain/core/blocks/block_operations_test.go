@@ -18,10 +18,10 @@ import (
 )
 
 func TestProcessBlockRandao_UnequalBlockAndProposerRandao(t *testing.T) {
-	validators := make([]*pb.ValidatorRecord, params.BeaconConfig().DepositsForChainStart)
+	validators := make([]*pb.Validator, config.DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.ValidatorRecord{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		validators[i] = &pb.Validator{
+			ExitEpoch: config.FarFutureEpoch,
 		}
 	}
 
@@ -49,10 +49,10 @@ func TestProcessBlockRandao_UnequalBlockAndProposerRandao(t *testing.T) {
 
 func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 	randaoCommit := hashutil.RepeatHash([32]byte{}, 1)
-	validators := make([]*pb.ValidatorRecord, params.BeaconConfig().DepositsForChainStart)
+	validators := make([]*pb.Validator, config.DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.ValidatorRecord{
-			ExitEpoch:              params.BeaconConfig().FarFutureEpoch,
+		validators[i] = &pb.Validator{
+			ExitEpoch:              config.FarFutureEpoch,
 			RandaoCommitmentHash32: randaoCommit[:],
 		}
 	}
@@ -153,8 +153,8 @@ func TestProcessEth1Data_NewDepositRootHash(t *testing.T) {
 }
 
 func TestProcessProposerSlashings_ThresholdReached(t *testing.T) {
-	slashings := make([]*pb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings+1)
-	registry := []*pb.ValidatorRecord{}
+	slashings := make([]*pb.ProposerSlashing, config.MaxProposerSlashings+1)
+	registry := []*pb.Validator{}
 	currentSlot := uint64(0)
 
 	want := fmt.Sprintf(
@@ -182,7 +182,7 @@ func TestProcessProposerSlashings_ThresholdReached(t *testing.T) {
 }
 
 func TestProcessProposerSlashings_UnmatchedSlotNumbers(t *testing.T) {
-	registry := []*pb.ValidatorRecord{}
+	registry := []*pb.Validator{}
 	currentSlot := uint64(0)
 	slashings := []*pb.ProposerSlashing{
 		{
@@ -216,7 +216,7 @@ func TestProcessProposerSlashings_UnmatchedSlotNumbers(t *testing.T) {
 }
 
 func TestProcessProposerSlashings_UnmatchedShards(t *testing.T) {
-	registry := []*pb.ValidatorRecord{}
+	registry := []*pb.Validator{}
 	currentSlot := uint64(0)
 	slashings := []*pb.ProposerSlashing{
 		{
@@ -252,7 +252,7 @@ func TestProcessProposerSlashings_UnmatchedShards(t *testing.T) {
 }
 
 func TestProcessProposerSlashings_UnmatchedBlockRoots(t *testing.T) {
-	registry := []*pb.ValidatorRecord{}
+	registry := []*pb.Validator{}
 	currentSlot := uint64(0)
 	slashings := []*pb.ProposerSlashing{
 		{
@@ -297,10 +297,10 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
 
-	validators := make([]*pb.ValidatorRecord, params.BeaconConfig().DepositsForChainStart)
+	validators := make([]*pb.Validator, config.DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.ValidatorRecord{
-			ExitEpoch:      params.BeaconConfig().FarFutureEpoch,
+		validators[i] = &pb.Validator{
+			ExitEpoch:      config.FarFutureEpoch,
 			PenalizedEpoch: 2,
 		}
 	}
@@ -354,8 +354,8 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 }
 
 func TestProcessAttesterSlashings_ThresholdReached(t *testing.T) {
-	slashings := make([]*pb.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings+1)
-	registry := []*pb.ValidatorRecord{}
+	slashings := make([]*pb.AttesterSlashing, config.MaxAttesterSlashings+1)
+	registry := []*pb.Validator{}
 	currentSlot := uint64(0)
 
 	beaconState := &pb.BeaconState{
@@ -399,7 +399,7 @@ func TestProcessAttesterSlashings_EmptyCustodyFields(t *testing.T) {
 			},
 		},
 	}
-	registry := []*pb.ValidatorRecord{}
+	registry := []*pb.Validator{}
 	currentSlot := uint64(0)
 
 	beaconState := &pb.BeaconState{
@@ -474,7 +474,7 @@ func TestProcessAttesterSlashings_UnmatchedAttestations(t *testing.T) {
 			},
 		},
 	}
-	registry := []*pb.ValidatorRecord{}
+	registry := []*pb.Validator{}
 	currentSlot := uint64(0)
 
 	beaconState := &pb.BeaconState{
@@ -564,7 +564,7 @@ func TestProcessAttesterSlashings_SlotsInequalities(t *testing.T) {
 				},
 			},
 		}
-		registry := []*pb.ValidatorRecord{}
+		registry := []*pb.Validator{}
 		currentSlot := uint64(0)
 
 		beaconState := &pb.BeaconState{
@@ -630,7 +630,7 @@ func TestProcessAttesterSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 			},
 		},
 	}
-	registry := []*pb.ValidatorRecord{}
+	registry := []*pb.Validator{}
 	currentSlot := uint64(0)
 
 	beaconState := &pb.BeaconState{
@@ -655,10 +655,10 @@ func TestProcessAttesterSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
-	validators := make([]*pb.ValidatorRecord, params.BeaconConfig().DepositsForChainStart)
+	validators := make([]*pb.Validator, config.DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.ValidatorRecord{
-			ExitEpoch:      params.BeaconConfig().FarFutureEpoch,
+		validators[i] = &pb.Validator{
+			ExitEpoch:      config.FarFutureEpoch,
 			PenalizedEpoch: 6,
 		}
 	}
@@ -1283,7 +1283,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	}
 	// The validator will have a mismatched withdrawal credential than
 	// the one specified in the deposit input, causing a failure.
-	registry := []*pb.ValidatorRecord{
+	registry := []*pb.Validator{
 		{
 			Pubkey:                      []byte{1},
 			WithdrawalCredentialsHash32: []byte{4, 5, 6},
@@ -1363,7 +1363,7 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 			Deposits: []*pb.Deposit{deposit},
 		},
 	}
-	registry := []*pb.ValidatorRecord{
+	registry := []*pb.Validator{
 		{
 			Pubkey:                      []byte{1},
 			WithdrawalCredentialsHash32: []byte{1, 2, 3},
@@ -1398,8 +1398,8 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 }
 
 func TestProcessValidatorExits_ThresholdReached(t *testing.T) {
-	exits := make([]*pb.Exit, params.BeaconConfig().MaxExits+1)
-	registry := []*pb.ValidatorRecord{}
+	exits := make([]*pb.Exit, config.MaxExits+1)
+	registry := []*pb.Validator{}
 	state := &pb.BeaconState{
 		ValidatorRegistry: registry,
 	}
@@ -1430,7 +1430,7 @@ func TestProcessValidatorExits_ValidatorNotActive(t *testing.T) {
 			ValidatorIndex: 0,
 		},
 	}
-	registry := []*pb.ValidatorRecord{
+	registry := []*pb.Validator{
 		{
 			ExitEpoch: 0,
 		},
@@ -1464,7 +1464,7 @@ func TestProcessValidatorExits_InvalidExitEpoch(t *testing.T) {
 			Slot: 10,
 		},
 	}
-	registry := []*pb.ValidatorRecord{
+	registry := []*pb.Validator{
 		{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
@@ -1501,7 +1501,7 @@ func TestProcessValidatorExits_InvalidStatusChangeSlot(t *testing.T) {
 			Slot:           0,
 		},
 	}
-	registry := []*pb.ValidatorRecord{
+	registry := []*pb.Validator{
 		{
 			ExitEpoch: 1,
 		},
@@ -1533,7 +1533,7 @@ func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
 			Slot:           0,
 		},
 	}
-	registry := []*pb.ValidatorRecord{
+	registry := []*pb.Validator{
 		{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
@@ -1552,7 +1552,7 @@ func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
 		t.Fatalf("Could not process exits: %v", err)
 	}
 	newRegistry := newState.ValidatorRegistry
-	if newRegistry[0].StatusFlags == pb.ValidatorRecord_INITIAL {
+	if newRegistry[0].StatusFlags == pb.Validator_INITIAL {
 		t.Error("Expected validator status to change, remained INITIAL")
 	}
 }
