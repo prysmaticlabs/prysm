@@ -228,7 +228,6 @@ func ProcessDeposit(
 	amount uint64,
 	_ /*proofOfPossession*/ []byte,
 	withdrawalCredentials []byte,
-	randaoCommitment []byte,
 ) (*pb.BeaconState, error) {
 	// TODO(#258): Validate proof of possession using BLS.
 	var publicKeyExists bool
@@ -240,7 +239,6 @@ func ProcessDeposit(
 		// to the beacon state.
 		newValidator := &pb.Validator{
 			Pubkey:                 pubkey,
-			RandaoCommitmentHash32: randaoCommitment,
 			RandaoLayers:           0,
 			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch,
 			ExitEpoch:              params.BeaconConfig().FarFutureEpoch,

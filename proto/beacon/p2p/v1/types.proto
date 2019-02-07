@@ -179,7 +179,7 @@ message Deposit {
 }
 
 message Exit {
-  uint64 slot = 1;
+  uint64 epoch = 1;
   uint64 validator_index = 2;
   bytes signature = 3; // Type of [uint384]?
 }

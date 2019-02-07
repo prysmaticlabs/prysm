@@ -526,8 +526,8 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 //     deposit_data in the Ethereum 1.0 deposit contract of which the hash
 //     was placed into the Merkle tree.
 //
-//     Verify deposit merkle_branch, setting leaf=serialized_deposit_data,
-//     depth=DEPOSIT_CONTRACT_TREE_DEPTH and root=state.latest_deposit_root:
+//     Verify deposit merkle_branch, setting leaf=hash(serialized_deposit_data), branch=deposit.branch,
+//     depth=DEPOSIT_CONTRACT_TREE_DEPTH and root=state.latest_eth1_data.deposit_root, index = deposit.index:
 //
 //     Run the following:
 //     process_deposit(
@@ -536,8 +536,6 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 //       deposit=deposit.deposit_data.value,
 //       proof_of_possession=deposit.deposit_data.deposit_input.proof_of_possession,
 //       withdrawal_credentials=deposit.deposit_data.deposit_input.withdrawal_credentials,
-//       randao_commitment=deposit.deposit_data.deposit_input.randao_commitment,
-//       poc_commitment=deposit.deposit_data.deposit_input.poc_commitment,
 //     )
 func ProcessValidatorDeposits(
 	beaconState *pb.BeaconState,
@@ -572,9 +570,8 @@ func ProcessValidatorDeposits(
 			validatorIndexMap,
 			depositInput.Pubkey,
 			binary.BigEndian.Uint64(depositValue),
-			depositInput.ProofOfPossession,
+            depositInput.ProofOfPossession,
 			depositInput.WithdrawalCredentialsHash32,
-			depositInput.RandaoCommitmentHash32,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not process deposit into beacon state: %v", err)
@@ -612,26 +609,14 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 //
 //   For each exit in block.body.exits:
 //     Let validator = state.validator_registry[exit.validator_index].
-//     Verify that validator.exit_slot > state.slot + ENTRY_EXIT_DELAY.
-//     Verify that state.slot >= exit.slot.
-//     Verify that state.slot >= validator.latest_status_change_slot +
-//       SHARD_PERSISTENT_COMMITTEE_CHANGE_PERIOD.
+//     Verify that validator.exit_epoch > get_entry_exit_effect_epoch(get_current_epoch(state)).
+//     Verify that get_current_epoch(state) >= exit.epoch.
 //     Let exit_message = hash_tree_root(
-//       Exit(
-//         slot=exit.slot,
-//         validator_index=exit.validator_index,
-//         signature=EMPTY_SIGNATURE
-//       )
-//     ).
-//     Verify that bls_verify(
-//       pubkey=validator.pubkey,
-//       message=exit_message,
-//       signature=exit.signature,
-//       domain=get_domain(state.fork_data, exit.slot, DOMAIN_EXIT),
+//       Exit(epoch=exit.epoch, validator_index=exit.validator_index, signature=EMPTY_SIGNATURE)
 //     )
-//     Run initiate_validator_exit(
-//       state, exit.validator_index,
-//     )
+//     Verify that bls_verify(pubkey=validator.pubkey, message=exit_message,
+//       signature=exit.signature, domain=get_domain(state.fork, exit.epoch, DOMAIN_EXIT)).
+//     Run initiate_validator_exit(state, exit.validator_index).
 func ProcessValidatorExits(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
@@ -659,27 +644,29 @@ func ProcessValidatorExits(
 
 func verifyExit(beaconState *pb.BeaconState, exit *pb.Exit, verifySignatures bool) error {
 	validator := beaconState.ValidatorRegistry[exit.ValidatorIndex]
-	if validator.ExitEpoch <= beaconState.Slot+params.BeaconConfig().EntryExitDelay {
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+	entryExitEffectEpoch := helpers.EntryExitEffectEpoch(currentEpoch)
+	if validator.ExitEpoch <= entryExitEffectEpoch {
 		return fmt.Errorf(
-			"expected exit.Slot > state.Slot + EntryExitDelay, received %d < %d",
-			validator.ExitEpoch, beaconState.Slot+params.BeaconConfig().EntryExitDelay,
+			"validator exit epoch should be > entry_exit_effect_epoch, received %d <= %d",
+			currentEpoch,
+			entryExitEffectEpoch,
 		)
 	}
-	if beaconState.Slot < exit.Slot {
+	if currentEpoch < exit.Epoch {
 		return fmt.Errorf(
-			"expected state.Slot >= exit.Slot, received %d < %d",
-			beaconState.Slot,
-			exit.Slot,
+			"expected current epoch >= exit.epoch, received %d < %d",
+			currentEpoch,
+			exit.Epoch,
 		)
 	}
 	if verifySignatures {
 		// TODO(#258): Verify using BLS signature verification below:
-		// Verify that bls_verify(
-		//   pubkey=validator.pubkey,
-		//   message=ZERO_HASH,
-		//   signature=exit.signature,
-		//   domain=get_domain(state.fork_data, exit.slot, DOMAIN_EXIT),
+		// Let exit_message = hash_tree_root(
+		//   Exit(epoch=exit.epoch, validator_index=exit.validator_index, signature=EMPTY_SIGNATURE)
 		// )
+		// Verify that bls_verify(pubkey=validator.pubkey, message=exit_message,
+		//   signature=exit.signature, domain=get_domain(state.fork, exit.epoch, DOMAIN_EXIT)).
 		return nil
 	}
 	return nil
