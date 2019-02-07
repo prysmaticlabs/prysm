@@ -6,7 +6,7 @@ import "proto/common/messages.proto";
 
 message BeaconState {
   // Validator registry [1-1000]
-  repeated ValidatorRecord validator_registry = 1;
+  repeated Validator validator_registry = 1;
   uint64 validator_registry_update_epoch = 2;
   repeated uint64 validator_balances = 3; // Balance in Gwei
 
@@ -80,7 +80,7 @@ message AttestationDataAndCustodyBit {
   bool custody_bit = 2;
 }
 
-message ValidatorRecord {
+message Validator {
   bytes pubkey = 1;
   // TODO(781): The usage of withdrawal_credentials is not defined in spec. Not used in Prysm yet.
   bytes withdrawal_credentials_hash32 = 2;
@@ -182,18 +182,6 @@ message Exit {
   uint64 slot = 1;
   uint64 validator_index = 2;
   bytes signature = 3; // Type of [uint384]?
-}
-
-message ValidatorRegistryDeltaBlock {
-  bytes latest_registry_delta_root_hash32 = 1;
-  uint64 validator_index = 2;
-  bytes pubkey = 3;
-  uint64 slot = 4;
-  enum ValidatorRegistryDeltaFlags {
-      ACTIVATION = 0;
-      EXIT = 1;
-  }
-  ValidatorRegistryDeltaFlags flag = 5;
 }
 
 message Eth1Data {

@@ -272,7 +272,7 @@ func CrosslinkCommitteesAtSlot(
 //    return split(shuffled_active_validator_indices, committees_per_epoch)
 func Shuffling(
 	seed [32]byte,
-	validators []*pb.ValidatorRecord,
+	validators []*pb.Validator,
 	slot uint64) ([][]uint64, error) {
 
 	// Normalize slot to start of epoch boundary.

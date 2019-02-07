@@ -106,7 +106,7 @@ func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb
 	return beaconState, nil
 }
 
-func verifyBlockRandao(proposer *pb.ValidatorRecord, block *pb.BeaconBlock) error {
+func verifyBlockRandao(proposer *pb.Validator, block *pb.BeaconBlock) error {
 	blockRandaoReveal := bytesutil.ToBytes32(block.RandaoRevealHash32)
 	proposerRandaoCommit := bytesutil.ToBytes32(proposer.RandaoCommitmentHash32)
 	randaoHashLayers := hashutil.RepeatHash(blockRandaoReveal, proposer.RandaoLayers)
@@ -361,9 +361,9 @@ func verifySlashableVote(votes *pb.SlashableVote, verifySignatures bool) error {
 		return fmt.Errorf("custody bit field length (%d) don't match indices length (%d)",
 			len(votes.CustodyBitfield), mathutil.CeilDiv8(len(votes.ValidatorIndices)))
 	}
-	if uint64(len(votes.ValidatorIndices)) > config.MaxIndicesPerSlashableVote {
+	if uint64(len(votes.ValidatorIndices)) > params.BeaconConfig().MaxIndicesPerSlashableVote {
 		return fmt.Errorf("validator indices length (%d) exceeded max indices per slashable vote(%d)",
-			len(votes.ValidatorIndices), config.MaxIndicesPerSlashableVote)
+			len(votes.ValidatorIndices), params.BeaconConfig().MaxIndicesPerSlashableVote)
 	}
 
 	if verifySignatures {
