@@ -116,8 +116,8 @@ func EffectiveBalance(state *pb.BeaconState, idx uint64) uint64 {
 // Attesters returns the validator records using validator indices.
 //
 // Spec pseudocode definition:
-//   Let this_epoch_boundary_attesters = [state.validator_registry[i]
-//   for indices in this_epoch_boundary_attester_indices for i in indices].
+//   Let current_epoch_boundary_attesters = [state.validator_registry[i]
+//   for indices in current_epoch_boundary_attester_indices for i in indices].
 func Attesters(state *pb.BeaconState, attesterIndices []uint64) []*pb.Validator {
 
 	var boundaryAttesters []*pb.Validator
@@ -132,8 +132,8 @@ func Attesters(state *pb.BeaconState, attesterIndices []uint64) []*pb.Validator 
 // and state.
 //
 // Spec pseudocode definition:
-//   Let this_epoch_boundary_attester_indices be the union of the validator
-//   index sets given by [get_attestation_participants(state, a.data, a.participation_bitfield)
+//   Let attester_indices be the union of the validator
+//   index sets given by [get_attestation_participants(state, a.data, a.a.aggregation_bitfield)
 //   for a in attestations]
 func ValidatorIndices(
 	state *pb.BeaconState,
@@ -163,7 +163,7 @@ func ValidatorIndices(
 // Let attesting_validator_indices(crosslink_committee, shard_block_root)
 // be the union of the validator index sets given by
 // [get_attestation_participants(state, a.data, a.participation_bitfield)
-// for a in this_epoch_attestations + previous_epoch_attestations
+// for a in current_epoch_attestations + previous_epoch_attestations
 // if a.shard == shard_committee.shard and a.shard_block_root == shard_block_root]
 func AttestingValidatorIndices(
 	state *pb.BeaconState,
@@ -193,8 +193,8 @@ func AttestingValidatorIndices(
 // records.
 //
 // Spec pseudocode definition:
-//   Let this_epoch_boundary_attesting_balance =
-//   sum([get_effective_balance(state, i) for i in this_epoch_boundary_attester_indices])
+//   Let current_epoch_boundary_attesting_balance =
+//   sum([get_effective_balance(state, i) for i in current_epoch_boundary_attester_indices])
 func AttestingBalance(state *pb.BeaconState, boundaryAttesterIndices []uint64) uint64 {
 
 	var boundaryAttestingBalance uint64
