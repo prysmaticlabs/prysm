@@ -246,8 +246,10 @@ func TestInitDataFromVRC(t *testing.T) {
 	if err := web3Service.initDataFromVRC(); err != nil {
 		t.Fatalf("Could not init from vrc %v", err)
 	}
-	empty32Byte := [32]byte{}
-	if !bytes.Equal(web3Service.depositRoot, empty32Byte[:]) {
+
+	computedRoot := web3Service.depositTrie.Root()
+
+	if !bytes.Equal(web3Service.depositRoot, computedRoot[:]) {
 		t.Errorf("Deposit root is not empty %v", web3Service.depositRoot)
 	}
 

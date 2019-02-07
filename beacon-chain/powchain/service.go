@@ -105,7 +105,7 @@ type Web3ServiceConfig struct {
 }
 
 var (
-	depositEventSignature    = []byte("Deposit(bytes32,bytes,bytes)")
+	depositEventSignature    = []byte("Deposit(bytes32,bytes,bytes,bytes32[32])")
 	chainStartEventSignature = []byte("ChainStart(bytes32,bytes)")
 )
 
