@@ -1,6 +1,7 @@
 package trieutil
 
 import (
+	"encoding/binary"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -56,5 +57,26 @@ func TestDepositTrie_UpdateDepositTrie(t *testing.T) {
 			t.Errorf("Expected %#x but got %#x", hashedData, d.Root())
 		}
 
+	}
+}
+
+func TestDepositTrie_VerifyMerkleBranch(t *testing.T) {
+	d := NewDepositTrie()
+	deposit1 := []byte{1, 2, 3}
+	d.UpdateDepositTrie(deposit1)
+	deposit2 := []byte{5, 6, 7}
+	d.UpdateDepositTrie(deposit2)
+	deposit3 := []byte{8, 9, 10}
+	d.UpdateDepositTrie(deposit3)
+	index := make([]byte, 8)
+	binary.BigEndian.PutUint64(index, d.depositCount-1)
+	branch := d.branch
+	root := d.Root()
+	if ok := VerifyMerkleBranch(
+		branch,
+		root,
+		index,
+	); !ok {
+		t.Error("Expected Merkle branch to verify, received false")
 	}
 }

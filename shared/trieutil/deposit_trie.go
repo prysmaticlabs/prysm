@@ -70,6 +70,7 @@ func (d *DepositTrie) Root() [32]byte {
 	size := d.depositCount
 
 	for i := 0; i < 32; i++ {
+
 		if size%2 == 1 {
 			root = hashutil.Hash(append(d.branch[i][:], root[:]...))
 		} else {
@@ -91,10 +92,11 @@ func VerifyMerkleBranch(branch [32][32]byte, root [32]byte, merkleTreeIndex []by
 	zHashes := zeroHashes()
 
 	for i := 0; i < 32; i++ {
+
 		if size%2 == 1 {
-			root = hashutil.Hash(append(branch[i][:], root[:]...))
+			computedRoot = hashutil.Hash(append(branch[i][:], computedRoot[:]...))
 		} else {
-			root = hashutil.Hash(append(root[:], zHashes[i][:]...))
+			computedRoot = hashutil.Hash(append(computedRoot[:], zHashes[i][:]...))
 		}
 
 		size /= 2
