@@ -332,11 +332,14 @@ func verifySlashableAttestation(att *pb.SlashableAttestation, verifySignatures b
 	}
 	return nil
 }
-
+// isDoubleVote checks if ``attestation_data_1`` and ``attestation_data_2`` have the same target.
 func isDoubleVote(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
 	return helpers.SlotToEpoch(data1.Slot) == helpers.SlotToEpoch(data2.Slot)
 }
 
+// isSurroundVote checks if attestation 1's source epoch is smaller than attestation 2
+// while simultaneously checking if its target epoch is greater than that of attestation 2
+// this is a Casper FFG slashing condition.
 func isSurroundVote(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
 	sourceEpoch1 := data1.JustifiedEpoch
 	sourceEpoch2 := data2.JustifiedEpoch
