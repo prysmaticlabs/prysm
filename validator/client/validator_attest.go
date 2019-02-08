@@ -112,6 +112,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	// TODO(#1366): Use BLS to generate an aggregate signature.
 	attestation.AggregateSignature = []byte("signed")
 
+	log.Error(delay)
 	duration := time.Duration(slot*params.BeaconConfig().SlotDuration+delay) * time.Second
 	timeToBroadcast := time.Unix(int64(v.genesisTime), 0).Add(duration)
 	time.Sleep(time.Until(timeToBroadcast))

@@ -15,7 +15,9 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-var delay = 0
+func init() {
+	delay = 0
+}
 
 func TestAttestToBlockHead_CrosslinkCommitteeRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
@@ -43,6 +45,7 @@ func TestAttestToBlockHead_CrosslinkCommitteeRequestEmptyCommittee(t *testing.T)
 		Committee: []uint64{},
 	}, nil)
 
+	delay = 0
 	validator.AttestToBlockHead(context.Background(), 30)
 	testutil.AssertLogsContain(t, hook, "Received an empty committee assignment")
 }
