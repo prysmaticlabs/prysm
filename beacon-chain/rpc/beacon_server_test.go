@@ -227,19 +227,19 @@ func TestPendingDeposits_ReturnsDepositsOutsideEth1FollowWindow(t *testing.T) {
 
 	// Using the merkleTreeIndex as the block number for this test...
 	readyDeposits := []*pbp2p.Deposit{
-		&pbp2p.Deposit{
+		{
 			MerkleTreeIndex: 1,
 		},
-		&pbp2p.Deposit{
+		{
 			MerkleTreeIndex: 2,
 		},
 	}
 
 	recentDeposits := []*pbp2p.Deposit{
-		&pbp2p.Deposit{
+		{
 			MerkleTreeIndex: params.BeaconConfig().Eth1FollowDistance + 100,
 		},
-		&pbp2p.Deposit{
+		{
 			MerkleTreeIndex: params.BeaconConfig().Eth1FollowDistance + 101,
 		},
 	}

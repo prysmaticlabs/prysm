@@ -33,10 +33,6 @@ var (
 		Name: "powchain_valid_deposits_received",
 		Help: "The number of valid deposits received in the deposit contract",
 	})
-	totalDepositsCount = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "powchain_deposit_logs",
-		Help: "The total number of deposits received in the deposit contract",
-	})
 	chainStartCount = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "powchain_chainstart_logs",
 		Help: "The number of chainstart logs received from the deposit contract",
