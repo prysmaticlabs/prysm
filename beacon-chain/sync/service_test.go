@@ -68,28 +68,10 @@ func setupTestSyncService(t *testing.T, synced bool) *Service {
 	return initializeTestSyncService(context.Background(), cfg, synced)
 }
 
-func TestStatusWithSyncedNetwork(t *testing.T) {
-	ss := setupTestSyncService(t, true)
-	_, querierErr := ss.Querier.IsSynced()
-
-	if querierErr != nil {
-		t.Errorf("querierErr expected to be nil but got %v", querierErr)
-	}
-	if statusErr := ss.Status(); statusErr != nil {
-		t.Errorf("Expected nil but got %v", statusErr)
+func TestStatus_ReturnsErrorWhenNotSynced(t *testing.T) {
+	serviceNotSynced := setupTestSyncService(t, false)
+	_, querierErr := serviceNotSynced.Querier.IsSynced()
+	if serviceNotSynced.Status() != querierErr {
+		t.Errorf("Wanted %v, but got %v", querierErr, serviceNotSynced.Status())
 	}
 }
-
-
-func TestStatusWithNotSyncedNetwork(t *testing.T) {
-	ss := setupTestSyncService(t, false)
-	_, querierErr := ss.Querier.IsSynced()
-
-	if querierErr == nil {
-		t.Errorf("querierErr expected to be not nil but got %v", querierErr)
-		}
-	if statusErr := ss.Status(); statusErr != querierErr {
-		t.Errorf("Expected %v, but got %v", querierErr, statusErr)
-	}
-}
-
