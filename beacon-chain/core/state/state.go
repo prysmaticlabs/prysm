@@ -145,7 +145,7 @@ func InitialBeaconState(
 			state,
 			validatorMap,
 			depositInput.Pubkey,
-			binary.BigEndian.Uint64(depositValue),
+			binary.LittleEndian.Uint64(depositValue),
 			depositInput.ProofOfPossession,
 			depositInput.WithdrawalCredentialsHash32,
 		)

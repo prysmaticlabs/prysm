@@ -69,7 +69,7 @@ func TestDepositTrie_VerifyMerkleBranch(t *testing.T) {
 	deposit3 := []byte{8, 9, 10}
 	d.UpdateDepositTrie(deposit3)
 	index := make([]byte, 8)
-	binary.BigEndian.PutUint64(index, d.depositCount-1)
+	binary.LittleEndian.PutUint64(index, d.depositCount-1)
 	branch := d.Branch()
 	root := d.Root()
 	if ok := VerifyMerkleBranch(

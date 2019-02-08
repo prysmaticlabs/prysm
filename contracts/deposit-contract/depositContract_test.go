@@ -140,7 +140,7 @@ func TestValidatorRegisters(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Unable to unpack log data: %v", err)
 		}
-		merkleTreeIndex[i] = binary.BigEndian.Uint64(idx)
+		merkleTreeIndex[i] = binary.LittleEndian.Uint64(idx)
 		depositData[i] = data
 	}
 

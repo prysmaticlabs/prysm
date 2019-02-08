@@ -597,7 +597,7 @@ func TestUnpackDepositLogs(t *testing.T) {
 		t.Fatalf("Unable to unpack logs %v", err)
 	}
 
-	if binary.BigEndian.Uint64(index) != 0 {
+	if binary.LittleEndian.Uint64(index) != 0 {
 		t.Errorf("Retrieved merkle tree index is incorrect %d", index)
 	}
 
@@ -790,7 +790,7 @@ func TestUnpackChainStartLogs(t *testing.T) {
 		t.Fatalf("Unable to unpack logs %v", err)
 	}
 
-	timestamp := binary.BigEndian.Uint64(timestampData)
+	timestamp := binary.LittleEndian.Uint64(timestampData)
 
 	if timestamp > uint64(time.Now().Unix()) {
 		t.Errorf("Timestamp from log is higher than the current time %d > %d", timestamp, time.Now().Unix())
