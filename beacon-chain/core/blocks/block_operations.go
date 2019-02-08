@@ -566,12 +566,12 @@ func ProcessValidatorDeposits(
 func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 	// Verify Merkle proof of deposit and deposit trie root.
 	receiptRoot := bytesutil.ToBytes32(beaconState.LatestEth1Data.DepositRootHash32)
+	index := make([]byte, 8)
+	binary.BigEndian.PutUint64(index, deposit.MerkleTreeIndex)
 	if ok := trieutil.VerifyMerkleBranch(
-		hashutil.Hash(deposit.DepositData),
 		deposit.MerkleBranchHash32S,
-		params.BeaconConfig().DepositContractTreeDepth,
-		deposit.MerkleTreeIndex,
 		receiptRoot,
+		index,
 	); !ok {
 		return fmt.Errorf(
 			"deposit merkle branch of deposit root did not verify for root: %#x",

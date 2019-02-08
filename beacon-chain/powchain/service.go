@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -32,10 +32,6 @@ var (
 	validDepositsCount = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "powchain_valid_deposits_received",
 		Help: "The number of valid deposits received in the deposit contract",
-	})
-	totalDepositsCount = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "powchain_deposit_logs",
-		Help: "The total number of deposits received in the deposit contract",
 	})
 	chainStartCount = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "powchain_chainstart_logs",
@@ -105,7 +101,7 @@ type Web3ServiceConfig struct {
 }
 
 var (
-	depositEventSignature    = []byte("Deposit(bytes32,bytes,bytes)")
+	depositEventSignature    = []byte("Deposit(bytes32,bytes,bytes,bytes32[32])")
 	chainStartEventSignature = []byte("ChainStart(bytes32,bytes)")
 )
 
@@ -246,8 +242,7 @@ func (w *Web3Service) ProcessLog(VRClog gethTypes.Log) {
 // the ETH1.0 chain by trying to ascertain which participant deposited
 // in the contract.
 func (w *Web3Service) ProcessDepositLog(VRClog gethTypes.Log) {
-	totalDepositsCount.Inc()
-	merkleRoot, depositData, MerkleTreeIndex, err := contracts.UnpackDepositLogData(VRClog.Data)
+	merkleRoot, depositData, MerkleTreeIndex, _, err := contracts.UnpackDepositLogData(VRClog.Data)
 	if err != nil {
 		log.Errorf("Could not unpack log %v", err)
 		return
@@ -274,7 +269,6 @@ func (w *Web3Service) ProcessDepositLog(VRClog gethTypes.Log) {
 		"publicKey":       fmt.Sprintf("%#x", depositInput.Pubkey),
 		"merkleTreeIndex": index,
 	}).Info("Validator registered in deposit contract")
-
 	validDepositsCount.Inc()
 }
 
@@ -377,11 +371,12 @@ func (w *Web3Service) initDataFromVRC() error {
 
 // saveInTrie saves in the in-memory deposit trie.
 func (w *Web3Service) saveInTrie(depositData []byte, merkleRoot common.Hash) error {
+
+	w.depositTrie.UpdateDepositTrie(depositData)
+
 	if w.depositTrie.Root() != merkleRoot {
 		return errors.New("saved root in trie is unequal to root received from log")
 	}
-
-	w.depositTrie.UpdateDepositTrie(depositData)
 	return nil
 }
 
