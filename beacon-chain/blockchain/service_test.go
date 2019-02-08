@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -460,6 +461,17 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	currentSlot := uint64(5)
 	attestationSlot := uint64(0)
 
+	pendingDeposits := []*pb.Deposit{
+		createDeposit(t, []byte{'F'}),
+	}
+	depositTrie := trieutil.NewDepositTrie()
+	for _, pd := range pendingDeposits {
+		depositTrie.UpdateDepositTrie(pd.DepositData)
+		pd.MerkleBranchHash32S = depositTrie.Branch()
+	}
+	depositRoot := depositTrie.Root()
+	beaconState.LatestEth1Data.DepositRootHash32 = depositRoot[:]
+
 	block := &pb.BeaconBlock{
 		Slot:             currentSlot + 1,
 		StateRootHash32:  stateRoot[:],
@@ -469,7 +481,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 			BlockHash32:       []byte("b"),
 		},
 		Body: &pb.BeaconBlockBody{
-			Deposits: deposits[:params.BeaconConfig().MaxDeposits],
+			Deposits: pendingDeposits,
 			Attestations: []*pb.Attestation{{
 				AggregationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -484,10 +496,6 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 
 	if err := SetSlotInState(chainService, currentSlot); err != nil {
 		t.Fatal(err)
-	}
-
-	pendingDeposits := []*pb.Deposit{
-		createDeposit(t, []byte{'F'}),
 	}
 
 	for _, dep := range pendingDeposits {
