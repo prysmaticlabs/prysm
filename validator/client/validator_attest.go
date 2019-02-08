@@ -12,6 +12,8 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 )
 
+var delay = params.BeaconConfig().SlotDuration / 2
+
 // AttestToBlockHead completes the validator client's attester responsibility at a given slot.
 // It fetches the latest beacon block head along with the latest canonical beacon state
 // information in order to sign the block and include information about the validator's
@@ -110,11 +112,9 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	// TODO(#1366): Use BLS to generate an aggregate signature.
 	attestation.AggregateSignature = []byte("signed")
 
-	// 5. Wait until the proper time to broadcast
-	slotDuration := params.BeaconConfig().SlotDuration
-	duration := time.Duration(slot*slotDuration+(slotDuration/2)) * time.Second
+	duration := time.Duration(slot*params.BeaconConfig().SlotDuration+delay) * time.Second
 	timeToBroadcast := time.Unix(int64(v.genesisTime), 0).Add(duration)
-	SleepUntil(timeToBroadcast)
+	time.Sleep(time.Until(timeToBroadcast))
 
 	attestRes, err := v.attesterClient.AttestHead(ctx, attestation)
 	if err != nil {
@@ -124,9 +124,4 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	log.WithField(
 		"hash", fmt.Sprintf("%#x", attestRes.AttestationHash),
 	).Info("Submitted attestation successfully with hash %#x", attestRes.AttestationHash)
-}
-
-func SleepUntil(breakfastTime time.Time) {
-	duration := time.Until(breakfastTime)
-	time.Sleep(duration)
 }

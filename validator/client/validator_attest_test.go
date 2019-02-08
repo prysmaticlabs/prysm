@@ -15,6 +15,8 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+var delay = 0
+
 func TestAttestToBlockHead_CrosslinkCommitteeRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 
