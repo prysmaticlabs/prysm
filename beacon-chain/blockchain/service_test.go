@@ -107,17 +107,19 @@ func setupInitialDeposits(t *testing.T) []*pb.Deposit {
 	genesisValidatorRegistry := validators.InitialValidatorRegistry()
 	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
 	for i := 0; i < len(deposits); i++ {
-		depositInput := &pb.DepositInput{
-			Pubkey: genesisValidatorRegistry[i].Pubkey,
-		}
-		balance := params.BeaconConfig().MaxDeposit
-		depositData, err := b.EncodeDepositData(depositInput, balance, time.Now().Unix())
-		if err != nil {
-			t.Fatalf("Cannot encode data: %v", err)
-		}
-		deposits[i] = &pb.Deposit{DepositData: depositData}
+		deposits[i] = createDeposit(t, genesisValidatorRegistry[i].Pubkey)
 	}
 	return deposits
+}
+
+func createDeposit(t *testing.T, pk []byte) *pb.Deposit {
+	depositInput := &pb.DepositInput{Pubkey: pk}
+	balance := params.BeaconConfig().MaxDeposit
+	depositData, err := b.EncodeDepositData(depositInput, balance, time.Now().Unix())
+	if err != nil {
+		t.Fatalf("Cannot encode data: %v", err)
+	}
+	return &pb.Deposit{DepositData: depositData}
 }
 
 func setupBeaconChain(t *testing.T, faultyPoWClient bool, beaconDB *db.BeaconDB, enablePOWChain bool) *ChainService {
@@ -484,12 +486,16 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, dep := range deposits {
+	pendingDeposits := []*pb.Deposit{
+		createDeposit(t, []byte{'F'}),
+	}
+
+	for _, dep := range pendingDeposits {
 		db.InsertPendingDeposit(chainService.ctx, dep, big.NewInt(0))
 	}
 
-	if len(db.PendingDeposits(chainService.ctx, nil)) != len(deposits) || len(deposits) == 0 {
-		t.Fatalf("Expected %d pending deposits", len(deposits))
+	if len(db.PendingDeposits(chainService.ctx, nil)) != len(pendingDeposits) || len(pendingDeposits) == 0 {
+		t.Fatalf("Expected %d pending deposits", len(pendingDeposits))
 	}
 
 	_, err = chainService.ReceiveBlock(block, beaconState)
@@ -497,8 +503,8 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(db.PendingDeposits(chainService.ctx, nil)) != len(deposits)-int(params.BeaconConfig().MaxDeposits) {
-		t.Fatalf("Expected %d pending deposits, but there are %+v", len(deposits)-int(params.BeaconConfig().MaxDeposits), db.PendingDeposits(chainService.ctx, nil))
+	if len(db.PendingDeposits(chainService.ctx, nil)) != 0 {
+		t.Fatalf("Expected 0 pending deposits, but there are %+v", db.PendingDeposits(chainService.ctx, nil))
 	}
 }
 
