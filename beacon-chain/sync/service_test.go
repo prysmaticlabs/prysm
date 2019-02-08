@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
 )
@@ -49,9 +50,8 @@ func initializeTestSyncService(ctx context.Context, cfg *Config, synced bool) *S
 
 }
 
-func setupTestSyncService(t *testing.T, synced bool) *Service {
+func setupTestSyncService(t *testing.T, synced bool) (*Service, *db.BeaconDB) {
 	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
 
 	unixTime := uint64(time.Now().Unix())
 	deposits := setupInitialDeposits(t)
@@ -65,11 +65,22 @@ func setupTestSyncService(t *testing.T, synced bool) *Service {
 		BeaconDB:         db,
 		OperationService: &mockOperationService{},
 	}
-	return initializeTestSyncService(context.Background(), cfg, synced)
+	service := initializeTestSyncService(context.Background(), cfg, synced)
+	return service, db
+
+}
+
+func TestStatus_ReturnsNoErrorWhenSynced(t *testing.T) {
+	serviceSynced, db := setupTestSyncService(t, true)
+	defer internal.TeardownDB(t, db)
+	if serviceSynced.Status() != nil {
+		t.Errorf("Wanted nil, but got %v", serviceSynced.Status())
+	}
 }
 
 func TestStatus_ReturnsErrorWhenNotSynced(t *testing.T) {
-	serviceNotSynced := setupTestSyncService(t, false)
+	serviceNotSynced, db := setupTestSyncService(t, false)
+	defer internal.TeardownDB(t, db)
 	_, querierErr := serviceNotSynced.Querier.IsSynced()
 	if serviceNotSynced.Status() != querierErr {
 		t.Errorf("Wanted %v, but got %v", querierErr, serviceNotSynced.Status())
