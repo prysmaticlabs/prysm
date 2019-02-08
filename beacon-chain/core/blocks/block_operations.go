@@ -337,8 +337,8 @@ func verifySlashableAttestation(att *pb.SlashableAttestation, verifySignatures b
 }
 
 // isSurroundVote checks if attestation 1's source epoch is smaller than attestation 2
-// while simultaneously checking if its target epoch is greater than that of attestation 2
-// this is a Casper FFG slashing condition. This is known as "surrounding" a vote
+// while simultaneously checking if its target epoch is greater than that of attestation 2.
+// This is a Casper FFG slashing condition. This is known as "surrounding" a vote
 // in Casper Proof of Stake literature.
 func isSurroundVote(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
 	sourceEpoch1 := data1.JustifiedEpoch
