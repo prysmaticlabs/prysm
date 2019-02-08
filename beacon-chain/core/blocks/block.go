@@ -127,15 +127,12 @@ func EncodeDepositData(
 	return depositData, nil
 }
 
-// DecodeDepositInput unmarshalls a depositData byte slice into
+// DecodeDepositInput unmarshals a depositData byte slice into
 // a proto *pb.DepositInput by using the Simple Serialize (SSZ)
 // algorithm.
 // TODO(#1253): Do not assume we will receive serialized proto objects - instead,
 // replace completely by a common struct which can be simple serialized.
 func DecodeDepositInput(depositData []byte) (*pb.DepositInput, error) {
-	// Last 16 bytes of deposit data are 8 bytes for value
-	// and 8 bytes for timestamp. Everything before that is a
-	// Simple Serialized deposit input value.
 	if len(depositData) < 16 {
 		return nil, fmt.Errorf(
 			"deposit data slice too small: len(depositData) = %d",
