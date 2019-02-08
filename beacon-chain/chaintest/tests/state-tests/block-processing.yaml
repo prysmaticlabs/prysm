@@ -46,8 +46,8 @@ test_cases:
         - slot: 59 # At slot 59, we trigger a attester slashing
           slashable_attestation_1_slot: 55
           slashable_attestation_2_slot: 55
-          slashable_attestation_1_justified_slot: 0
-          slashable_attestation_2_justified_slot: 1
+          slashable_attestation_1_justified_epoch: 0
+          slashable_attestation_2_justified_epoch: 1
           slashable_attestation_1_custody_bitfield: !binary "F"
           slashable_attestation_1_validator_indices: [16386]
           slashable_attestation_2_custody_bitfield: !binary "F"

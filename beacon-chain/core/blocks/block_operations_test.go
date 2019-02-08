@@ -386,12 +386,20 @@ func TestProcessAttesterSlashings_EmptyCustodyFields(t *testing.T) {
 	slashings := []*pb.AttesterSlashing{
 		{
 			SlashableAttestation_1: &pb.SlashableAttestation{
+				Data: &pb.AttestationData{
+					Slot:  5,
+					Shard: 4,
+				},
 				ValidatorIndices: make(
 					[]uint64,
 					params.BeaconConfig().MaxIndicesPerSlashableVote,
 				),
 			},
 			SlashableAttestation_2: &pb.SlashableAttestation{
+				Data: &pb.AttestationData{
+					Slot:  5,
+					Shard: 3,
+				},
 				ValidatorIndices: make(
 					[]uint64,
 					params.BeaconConfig().MaxIndicesPerSlashableVote,
@@ -425,12 +433,20 @@ func TestProcessAttesterSlashings_EmptyCustodyFields(t *testing.T) {
 	slashings = []*pb.AttesterSlashing{
 		{
 			SlashableAttestation_1: &pb.SlashableAttestation{
+				Data: &pb.AttestationData{
+					Slot:  5,
+					Shard: 4,
+				},
 				ValidatorIndices: make(
 					[]uint64,
 					params.BeaconConfig().MaxIndicesPerSlashableVote,
 				),
 			},
 			SlashableAttestation_2: &pb.SlashableAttestation{
+				Data: &pb.AttestationData{
+					Slot:  5,
+					Shard: 3,
+				},
 				ValidatorIndices: make(
 					[]uint64,
 					params.BeaconConfig().MaxIndicesPerSlashableVote,
@@ -536,7 +552,7 @@ func TestProcessAttesterSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 			AttesterSlashings: slashings,
 		},
 	}
-	want := "expected intersection of vote indices to be non-empty"
+	want := "expected a non-empty list"
 	if _, err := ProcessAttesterSlashings(
 		beaconState,
 		block,
@@ -1331,10 +1347,7 @@ func TestProcessValidatorExits_ValidatorNotActive(t *testing.T) {
 		},
 	}
 
-	want := fmt.Sprintf(
-		"expected exit.Slot > state.Slot + EntryExitDelay, received 0 < %d",
-		params.BeaconConfig().EntryExitDelay,
-	)
+	want := "validator exit epoch should be > entry_exit_effect_epoch"
 
 	if _, err := ProcessValidatorExits(
 		state,
@@ -1366,11 +1379,7 @@ func TestProcessValidatorExits_InvalidExitEpoch(t *testing.T) {
 		},
 	}
 
-	want := fmt.Sprintf(
-		"expected current_epoch(state) >= exit.Epoch, received %d < %d",
-		0,
-		10,
-	)
+	want := "expected current epoch >= exit.epoch"
 
 	if _, err := ProcessValidatorExits(
 		state,
@@ -1403,7 +1412,7 @@ func TestProcessValidatorExits_InvalidStatusChangeSlot(t *testing.T) {
 		},
 	}
 
-	want := "expected exit.Slot > state.Slot + EntryExitDelay"
+	want := "exit epoch should be > entry_exit_effect_epoch"
 	if _, err := ProcessValidatorExits(
 		state,
 		block,
