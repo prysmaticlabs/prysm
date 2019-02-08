@@ -1196,7 +1196,7 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	// We then create a merkle branch for the test.
 	depositTrie := trieutil.NewDepositTrie()
 	depositTrie.UpdateDepositTrie(data)
-	branch := depositTrie.GenerateMerkleBranch(0)
+	branch := depositTrie.Branch()
 
 	deposit := &pb.Deposit{
 		DepositData:         data,
@@ -1266,7 +1266,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	// We then create a merkle branch for the test.
 	depositTrie := trieutil.NewDepositTrie()
 	depositTrie.UpdateDepositTrie(data)
-	branch := depositTrie.GenerateMerkleBranch(0)
+	branch := depositTrie.Branch()
 
 	deposit := &pb.Deposit{
 		DepositData:         data,
@@ -1348,7 +1348,7 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	// We then create a merkle branch for the test.
 	depositTrie := trieutil.NewDepositTrie()
 	depositTrie.UpdateDepositTrie(data)
-	branch := depositTrie.GenerateMerkleBranch(0)
+	branch := depositTrie.Branch()
 
 	deposit := &pb.Deposit{
 		DepositData:         data,
