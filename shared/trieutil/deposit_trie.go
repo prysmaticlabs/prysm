@@ -50,7 +50,7 @@ func (d *DepositTrie) UpdateDepositTrie(depositData []byte) {
 			break
 		}
 
-		i += 1
+		i++
 		powerOf2 *= 2
 	}
 	hashedData := hashutil.Hash(depositData)
@@ -82,9 +82,10 @@ func (d *DepositTrie) Root() [32]byte {
 	return root
 }
 
+// Branch returns the merkle branch of the left most leaf of the trie.
 func (d *DepositTrie) Branch() [][]byte {
 	nBranch := make([][]byte, 32)
-	for i, _ := range nBranch {
+	for i := range nBranch {
 		nBranch[i] = d.branch[i][:]
 	}
 	return nBranch
