@@ -36,7 +36,7 @@ func InitialBeaconState(
 		params.BeaconConfig().LatestIndexRootsLength,
 	)
 	for i := 0; i < len(latestIndexRoots); i++ {
-		latestRandaoMixes[i] = params.BeaconConfig().ZeroHash[:]
+		latestIndexRoots[i] = params.BeaconConfig().ZeroHash[:]
 	}
 
 	latestVDFOutputs := make([][]byte,
@@ -100,8 +100,8 @@ func InitialBeaconState(
 		LatestIndexRootHash32S:   latestIndexRoots,
 		PreviousEpochStartShard:  params.BeaconConfig().GenesisStartShard,
 		CurrentEpochStartShard:   params.BeaconConfig().GenesisStartShard,
-		PreviousCalculationEpoch: params.BeaconConfig().GenesisSlot,
-		CurrentCalculationEpoch:  params.BeaconConfig().GenesisSlot,
+		PreviousCalculationEpoch: params.BeaconConfig().GenesisEpoch,
+		CurrentCalculationEpoch:  params.BeaconConfig().GenesisEpoch,
 		PreviousEpochSeedHash32:  params.BeaconConfig().ZeroHash[:],
 		CurrentEpochSeedHash32:   params.BeaconConfig().ZeroHash[:],
 
@@ -152,7 +152,7 @@ func InitialBeaconState(
 		}
 	}
 	for i := 0; i < len(state.ValidatorRegistry); i++ {
-		if v.EffectiveBalance(state, uint64(i)) ==
+		if v.EffectiveBalance(state, uint64(i)) >=
 			params.BeaconConfig().MaxDeposit {
 			state, err = v.ActivateValidator(state, uint64(i), true)
 			if err != nil {

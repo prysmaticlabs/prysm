@@ -828,8 +828,8 @@ func TestProcessBlockAttestations_JustifiedSlotVerificationFailure(t *testing.T)
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Slot:          152,
-				JustifiedSlot: 130,
+				Slot:           152,
+				JustifiedEpoch: 2,
 			},
 		},
 	}
@@ -844,7 +844,7 @@ func TestProcessBlockAttestations_JustifiedSlotVerificationFailure(t *testing.T)
 	}
 
 	want := fmt.Sprintf(
-		"expected attestation.JustifiedSlot == state.JustifiedSlot, received %d == %d",
+		"expected attestation.JustifiedEpoch == state.JustifiedEpoch, received %d == %d",
 		2,
 		1,
 	)
@@ -861,8 +861,8 @@ func TestProcessBlockAttestations_PreviousJustifiedSlotVerificationFailure(t *te
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Slot:          240,
-				JustifiedSlot: 234,
+				Slot:           params.BeaconConfig().EpochLength,
+				JustifiedEpoch: 3,
 			},
 		},
 	}
@@ -872,12 +872,12 @@ func TestProcessBlockAttestations_PreviousJustifiedSlotVerificationFailure(t *te
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   257,
+		Slot:                   params.BeaconConfig().EpochLength * 2,
 		PreviousJustifiedEpoch: 2,
 	}
 
 	want := fmt.Sprintf(
-		"expected attestation.JustifiedSlot == state.PreviousJustifiedSlot, received %d == %d",
+		"expected attestation.JustifiedEpoch == state.PreviousJustifiedEpoch, received %d == %d",
 		3,
 		2,
 	)
@@ -905,8 +905,8 @@ func TestProcessBlockAttestations_BlockRootOutOfBounds(t *testing.T) {
 		{
 			Data: &pb.AttestationData{
 				Slot:                     60,
-				JustifiedSlot:            65,
 				JustifiedBlockRootHash32: []byte{},
+				JustifiedEpoch:           1,
 			},
 		},
 	}
@@ -941,7 +941,7 @@ func TestProcessBlockAttestations_BlockRootFailure(t *testing.T) {
 		{
 			Data: &pb.AttestationData{
 				Slot:                     80,
-				JustifiedSlot:            64,
+				JustifiedEpoch:           1,
 				JustifiedBlockRootHash32: []byte{},
 			},
 		},
@@ -992,8 +992,7 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 			Data: &pb.AttestationData{
 				Shard:                     0,
 				Slot:                      20,
-				JustifiedSlot:             10,
-				JustifiedBlockRootHash32:  blockRoots[10],
+				JustifiedBlockRootHash32:  blockRoots[0],
 				LatestCrosslinkRootHash32: []byte{2},
 				ShardBlockRootHash32:      []byte{2},
 			},
@@ -1038,8 +1037,7 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 			Data: &pb.AttestationData{
 				Shard:                     0,
 				Slot:                      20,
-				JustifiedSlot:             10,
-				JustifiedBlockRootHash32:  blockRoots[10],
+				JustifiedBlockRootHash32:  blockRoots[0],
 				LatestCrosslinkRootHash32: []byte{1},
 				ShardBlockRootHash32:      []byte{1},
 			},
@@ -1084,8 +1082,7 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 		Data: &pb.AttestationData{
 			Shard:                     0,
 			Slot:                      20,
-			JustifiedSlot:             10,
-			JustifiedBlockRootHash32:  blockRoots[10],
+			JustifiedBlockRootHash32:  blockRoots[0],
 			LatestCrosslinkRootHash32: []byte{1},
 			ShardBlockRootHash32:      []byte{},
 		},

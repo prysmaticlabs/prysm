@@ -233,8 +233,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		Data: &pb.AttestationData{
 			Shard:                     0,
 			Slot:                      20,
-			JustifiedSlot:             10,
-			JustifiedBlockRootHash32:  blockRoots[10],
+			JustifiedBlockRootHash32:  blockRoots[0],
 			LatestCrosslinkRootHash32: []byte{1},
 			ShardBlockRootHash32:      []byte{},
 		},
@@ -324,8 +323,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		Data: &pb.AttestationData{
 			Shard:                     0,
 			Slot:                      20,
-			JustifiedSlot:             10,
-			JustifiedBlockRootHash32:  blockRoots[10],
+			JustifiedBlockRootHash32:  blockRoots[0],
 			LatestCrosslinkRootHash32: []byte{1},
 			ShardBlockRootHash32:      []byte{},
 		},
