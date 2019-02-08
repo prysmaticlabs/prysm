@@ -365,7 +365,7 @@ func (sb *SimulatedBackend) generateSimulatedObjects(testCase *StateTestCase, sl
 	}
 	var simulatedValidatorExit *StateTestValidatorExit
 	for _, exit := range testCase.Config.ValidatorExits {
-		if exit.Slot == slotNumber {
+		if exit.Epoch == slotNumber {
 			simulatedValidatorExit = exit
 			break
 		}
