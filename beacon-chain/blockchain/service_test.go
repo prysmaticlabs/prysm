@@ -108,12 +108,12 @@ func setupInitialDeposits(t *testing.T) []*pb.Deposit {
 	genesisValidatorRegistry := validators.InitialValidatorRegistry()
 	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
 	for i := 0; i < len(deposits); i++ {
-		deposits[i] = createDeposit(t, genesisValidatorRegistry[i].Pubkey)
+		deposits[i] = createPreChainStartDeposit(t, genesisValidatorRegistry[i].Pubkey)
 	}
 	return deposits
 }
 
-func createDeposit(t *testing.T, pk []byte) *pb.Deposit {
+func createPreChainStartDeposit(t *testing.T, pk []byte) *pb.Deposit {
 	depositInput := &pb.DepositInput{Pubkey: pk}
 	balance := params.BeaconConfig().MaxDeposit
 	depositData, err := b.EncodeDepositData(depositInput, balance, time.Now().Unix())
@@ -452,17 +452,15 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 			RandaoCommitmentHash32: randaoCommit[:],
 		}
 	}
-
 	beaconState.ValidatorRegistry = validators
 	if err := chainService.beaconDB.SaveState(beaconState); err != nil {
 		t.Fatal(err)
 	}
-
 	currentSlot := uint64(5)
 	attestationSlot := uint64(0)
 
 	pendingDeposits := []*pb.Deposit{
-		createDeposit(t, []byte{'F'}),
+		createPreChainStartDeposit(t, []byte{'F'}),
 	}
 	depositTrie := trieutil.NewDepositTrie()
 	for _, pd := range pendingDeposits {
