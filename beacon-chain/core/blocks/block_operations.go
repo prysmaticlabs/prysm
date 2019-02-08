@@ -95,6 +95,7 @@ func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb
 }
 
 func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) error {
+	// TODO(#1366): Integrate BLS into the repository.
 	// Verify that bls_verify(pubkey=proposer.pubkey, message_hash=int_to_bytes32(get_current_epoch(state)),
 	//   signature=block.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO)).
 	_ = beaconState
