@@ -1,10 +1,10 @@
 package trieutil
 
 import (
+	"encoding/binary"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestDepositTrie_UpdateDepositTrie(t *testing.T) {
@@ -30,20 +30,37 @@ func TestDepositTrie_UpdateDepositTrie(t *testing.T) {
 		if d.depositCount != 1 {
 			t.Errorf("Expected deposit count to increase by 1, received %d", d.depositCount)
 		}
+
+		hashedData := hashutil.Hash(tt.deposits[0])
+
+		for i := 0; i < 32; i++ {
+			hashedData = hashutil.Hash(append(hashedData[:], d.zeroHashes[i][:]...))
+		}
+		if d.Root() != hashedData {
+			t.Errorf("Expected %#x but got %#x", hashedData, d.Root())
+		}
+
 		d.UpdateDepositTrie(tt.deposits[1])
 		if d.depositCount != 2 {
 			t.Errorf("Expected deposit count to increase by 1, received %d", d.depositCount)
 		}
-		hash := hashutil.Hash(tt.deposits[1])
-		twoToPowerOfTreeDepth := 1 << params.BeaconConfig().DepositContractTreeDepth
-		lastLeaf := d.merkleMap[d.depositCount-1+uint64(twoToPowerOfTreeDepth)]
-		if lastLeaf != hash {
-			t.Errorf("Expected last leaf to equal %#x, received %#x", lastLeaf, hash)
+
+		hash1 := hashutil.Hash(tt.deposits[0])
+		hash2 := hashutil.Hash(tt.deposits[1])
+
+		hashedData = hashutil.Hash(append(hash1[:], hash2[:]...))
+
+		for i := 0; i < 31; i++ {
+			hashedData = hashutil.Hash(append(hashedData[:], d.zeroHashes[i+1][:]...))
 		}
+		if d.Root() != hashedData {
+			t.Errorf("Expected %#x but got %#x", hashedData, d.Root())
+		}
+
 	}
 }
 
-func TestDepositTrie_GenerateMerkleBranch(t *testing.T) {
+func TestDepositTrie_VerifyMerkleBranch(t *testing.T) {
 	d := NewDepositTrie()
 	deposit1 := []byte{1, 2, 3}
 	d.UpdateDepositTrie(deposit1)
@@ -51,14 +68,14 @@ func TestDepositTrie_GenerateMerkleBranch(t *testing.T) {
 	d.UpdateDepositTrie(deposit2)
 	deposit3 := []byte{8, 9, 10}
 	d.UpdateDepositTrie(deposit3)
-	index := d.depositCount - 1
-	branch := d.GenerateMerkleBranch(index)
+	index := make([]byte, 8)
+	binary.BigEndian.PutUint64(index, d.depositCount-1)
+	branch := d.Branch()
+	root := d.Root()
 	if ok := VerifyMerkleBranch(
-		hashutil.Hash(deposit3),
 		branch,
-		params.BeaconConfig().DepositContractTreeDepth,
+		root,
 		index,
-		d.Root(),
 	); !ok {
 		t.Error("Expected Merkle branch to verify, received false")
 	}

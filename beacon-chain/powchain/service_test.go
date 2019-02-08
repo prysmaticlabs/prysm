@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
@@ -24,8 +24,6 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -246,8 +244,10 @@ func TestInitDataFromVRC(t *testing.T) {
 	if err := web3Service.initDataFromVRC(); err != nil {
 		t.Fatalf("Could not init from vrc %v", err)
 	}
-	empty32Byte := [32]byte{}
-	if !bytes.Equal(web3Service.depositRoot, empty32Byte[:]) {
+
+	computedRoot := web3Service.depositTrie.Root()
+
+	if !bytes.Equal(web3Service.depositRoot, computedRoot[:]) {
 		t.Errorf("Deposit root is not empty %v", web3Service.depositRoot)
 	}
 
@@ -287,10 +287,10 @@ func TestSaveInTrie(t *testing.T) {
 	testAcc.backend.Commit()
 
 	web3Service.depositTrie = trieutil.NewDepositTrie()
+	mockTrie := trieutil.NewDepositTrie()
+	mockTrie.UpdateDepositTrie([]byte{'A'})
 
-	currentRoot := web3Service.depositTrie.Root()
-
-	if err := web3Service.saveInTrie([]byte{'A'}, currentRoot); err != nil {
+	if err := web3Service.saveInTrie([]byte{'A'}, mockTrie.Root()); err != nil {
 		t.Errorf("Unable to save deposit in trie %v", err)
 	}
 
@@ -460,7 +460,7 @@ func TestProcessDepositLog(t *testing.T) {
 	testutil.AssertLogsDoNotContain(t, hook, "Could not unpack log")
 	testutil.AssertLogsDoNotContain(t, hook, "Could not save in trie")
 	testutil.AssertLogsDoNotContain(t, hook, "Could not decode deposit input")
-	testutil.AssertLogsContain(t, hook, "Validator registered in deposit contract")
+	testutil.AssertLogsContain(t, hook, "Validator registered in VRC with public key and index")
 
 	hook.Reset()
 }
@@ -553,10 +553,10 @@ func TestUnpackDepositLogs(t *testing.T) {
 		t.Fatalf("Could not init from vrc %v", err)
 	}
 
-	empty32byte := [32]byte{}
+	computedRoot := web3Service.depositTrie.Root()
 
-	if !bytes.Equal(web3Service.depositRoot, empty32byte[:]) {
-		t.Errorf("Deposit root is not empty %v", web3Service.depositRoot)
+	if !bytes.Equal(web3Service.depositRoot, computedRoot[:]) {
+		t.Errorf("Deposit root is not equal to computed root Got: %#x , Expected: %#x", web3Service.depositRoot, computedRoot)
 	}
 
 	var stub [48]byte
@@ -592,14 +592,12 @@ func TestUnpackDepositLogs(t *testing.T) {
 		t.Fatalf("Unable to retrieve logs %v", err)
 	}
 
-	_, depositData, index, err := contracts.UnpackDepositLogData(logz[0].Data)
+	_, depositData, index, _, err := contracts.UnpackDepositLogData(logz[0].Data)
 	if err != nil {
 		t.Fatalf("Unable to unpack logs %v", err)
 	}
 
-	twoTothePowerOfTreeDepth := mathutil.PowerOf2(params.BeaconConfig().DepositContractTreeDepth)
-
-	if binary.BigEndian.Uint64(index) != twoTothePowerOfTreeDepth {
+	if binary.BigEndian.Uint64(index) != 0 {
 		t.Errorf("Retrieved merkle tree index is incorrect %d", index)
 	}
 
