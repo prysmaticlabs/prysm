@@ -321,6 +321,25 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "unable to retrieve POW chain reference block failed")
 }
 
+func setupGenesisState(t *testing.T, cs *ChainService, beaconState *pb.BeaconState) ([32]byte, *pb.BeaconState) {
+	genesis := b.NewGenesisBlock([]byte{})
+	if err := cs.beaconDB.SaveBlock(genesis); err != nil {
+		t.Fatalf("could not save block to db: %v", err)
+	}
+	parentHash, err := hashutil.HashBeaconBlock(genesis)
+	if err != nil {
+		t.Fatalf("unable to get hash of canonical head: %v", err)
+	}
+	if err := cs.beaconDB.SaveState(beaconState); err != nil {
+		t.Fatalf("Can't save state to db %v", err)
+	}
+	beaconState, err = cs.beaconDB.State()
+	if err != nil {
+		t.Fatalf("Can't get state from db %v", err)
+	}
+
+	return parentHash, beaconState
+}
 func TestRunningChainService(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
@@ -340,22 +359,7 @@ func TestRunningChainService(t *testing.T) {
 
 	enc, _ := proto.Marshal(beaconState)
 	stateRoot := hashutil.Hash(enc)
-
-	genesis := b.NewGenesisBlock([]byte{})
-	if err := chainService.beaconDB.SaveBlock(genesis); err != nil {
-		t.Fatalf("could not save block to db: %v", err)
-	}
-	parentHash, err := hashutil.HashBeaconBlock(genesis)
-	if err != nil {
-		t.Fatalf("unable to get hash of canonical head: %v", err)
-	}
-	if err := chainService.beaconDB.SaveState(beaconState); err != nil {
-		t.Fatalf("Can't save state to db %v", err)
-	}
-	beaconState, err = chainService.beaconDB.State()
-	if err != nil {
-		t.Fatalf("Can't get state from db %v", err)
-	}
+	parentHash, beaconState := setupGenesisState(t, chainService, beaconState)
 
 	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
 	randaoCommit := hashutil.RepeatHash([32]byte{}, 1)
@@ -415,6 +419,87 @@ func TestRunningChainService(t *testing.T) {
 
 	testutil.AssertLogsContain(t, hook, "Chain service context closed, exiting goroutine")
 	testutil.AssertLogsContain(t, hook, "Processed beacon block")
+}
+
+func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	chainService := setupBeaconChain(t, false, db, true)
+	unixTime := uint64(time.Now().Unix())
+	deposits := setupInitialDeposits(t)
+	if err := db.InitializeState(unixTime, deposits); err != nil {
+		t.Fatalf("Could not initialize beacon state to disk: %v", err)
+	}
+
+	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
+	if err != nil {
+		t.Fatalf("Can't generate genesis state: %v", err)
+	}
+	beaconState.Slot = 5
+
+	enc, _ := proto.Marshal(beaconState)
+	stateRoot := hashutil.Hash(enc)
+	parentHash, beaconState := setupGenesisState(t, chainService, beaconState)
+
+	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	randaoCommit := hashutil.RepeatHash([32]byte{}, 1)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch:              params.BeaconConfig().FarFutureEpoch,
+			RandaoCommitmentHash32: randaoCommit[:],
+		}
+	}
+
+	beaconState.ValidatorRegistry = validators
+	if err := chainService.beaconDB.SaveState(beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	currentSlot := uint64(5)
+	attestationSlot := uint64(0)
+
+	block := &pb.BeaconBlock{
+		Slot:             currentSlot + 1,
+		StateRootHash32:  stateRoot[:],
+		ParentRootHash32: parentHash[:],
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte("a"),
+			BlockHash32:       []byte("b"),
+		},
+		Body: &pb.BeaconBlockBody{
+			Deposits: deposits[:params.BeaconConfig().MaxDeposits],
+			Attestations: []*pb.Attestation{{
+				AggregationBitfield: []byte{128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+					0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				Data: &pb.AttestationData{
+					Slot:                      attestationSlot,
+					JustifiedBlockRootHash32:  params.BeaconConfig().ZeroHash[:],
+					LatestCrosslinkRootHash32: params.BeaconConfig().ZeroHash[:],
+				},
+			}},
+		},
+	}
+
+	if err := SetSlotInState(chainService, currentSlot); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, dep := range deposits {
+		db.InsertPendingDeposit(chainService.ctx, dep, big.NewInt(0))
+	}
+
+	if len(db.PendingDeposits(chainService.ctx, nil)) != len(deposits) || len(deposits) == 0 {
+		t.Fatalf("Expected %d pending deposits", len(deposits))
+	}
+
+	_, err = chainService.ReceiveBlock(block, beaconState)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(db.PendingDeposits(chainService.ctx, nil)) != len(deposits)-int(params.BeaconConfig().MaxDeposits) {
+		t.Fatalf("Expected %d pending deposits, but there are %+v", len(deposits)-int(params.BeaconConfig().MaxDeposits), db.PendingDeposits(chainService.ctx, nil))
+	}
 }
 
 func TestDoesPOWBlockExist(t *testing.T) {
