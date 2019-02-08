@@ -35,8 +35,8 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.18.1/rules_nodejs-0.18.1.tar.gz"],
-    sha256 = "04f91b18b1ea5ef589ecd5a820efc13581284f9b1062d9fcf6f8745794434a63",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.18.2/rules_nodejs-0.18.2.tar.gz"],
+    sha256 = "8f9866ffe3bb5da004348e41b89933818c968bd918da18da4b097e6e4fcd98f1",
 )
 
 http_archive(
@@ -814,7 +814,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_discovery",
-    commit = "cc4105e21706452e5b0f7e05390f987017188d31",
+    commit = "a666b9cafd4cd3c35405896c2121951c749979ea",
     importpath = "github.com/libp2p/go-libp2p-discovery",
 )
 
