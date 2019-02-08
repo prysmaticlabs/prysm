@@ -7,6 +7,9 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
+
 	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
@@ -96,7 +99,6 @@ func InitialBeaconState(
 
 		// Randomness and committees.
 		LatestRandaoMixesHash32S: latestRandaoMixes,
-		LatestIndexRootHash32S:   latestIndexRoots,
 		PreviousEpochStartShard:  params.BeaconConfig().GenesisStartShard,
 		CurrentEpochStartShard:   params.BeaconConfig().GenesisStartShard,
 		PreviousCalculationEpoch: params.BeaconConfig().GenesisEpoch,
@@ -113,6 +115,7 @@ func InitialBeaconState(
 		// Recent state.
 		LatestCrosslinks:        latestCrosslinks,
 		LatestBlockRootHash32S:  latestBlockRoots,
+		LatestIndexRootHash32S:  latestIndexRoots,
 		LatestPenalizedBalances: latestPenalizedExitBalances,
 		LatestAttestations:      []*pb.PendingAttestationRecord{},
 		BatchedBlockRootHash32S: [][]byte{},
@@ -158,7 +161,19 @@ func InitialBeaconState(
 			}
 		}
 	}
-
+	activeValidators := helpers.ActiveValidatorIndices(state.ValidatorRegistry, params.BeaconConfig().GenesisEpoch)
+	genesisActiveIndexRoot, err := ssz.TreeHash(activeValidators)
+	if err != nil {
+		return nil, fmt.Errorf("could not determine genesis active index root: %v", err)
+	}
+	for i := uint64(0); i < params.BeaconConfig().LatestIndexRootsLength; i++ {
+		state.LatestIndexRootHash32S[i] = genesisActiveIndexRoot[:]
+	}
+	seed, err := helpers.GenerateSeed(state, params.BeaconConfig().GenesisEpoch)
+	if err != nil {
+		return nil, fmt.Errorf("could not generate initial seed: %v", err)
+	}
+	state.CurrentEpochSeedHash32 = seed[:]
 	return state, nil
 }
 
