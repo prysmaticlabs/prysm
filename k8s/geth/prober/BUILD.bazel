@@ -1,0 +1,39 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@io_bazel_rules_docker//go:image.bzl", "go_image")
+load("@io_bazel_rules_docker//container:container.bzl", "container_push")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["main.go"],
+    importpath = "github.com/prysmaticlabs/prysm/k8s/geth/prober",
+    visibility = ["//visibility:private"],
+)
+
+go_binary(
+    name = "prober",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)
+
+go_image(
+    name = "image",
+    srcs = ["main.go"],
+    goarch = "amd64",
+    goos = "linux",
+    importpath = "github.com/prysmaticlabs/prysm/k8s/geth/prober",
+    static = "on",
+    visibility = ["//visibility:private"],
+    pure = "on",
+    tags = ["manual"],
+)
+
+container_push(
+    name = "push_image",
+    format = "Docker",
+    image = ":image",
+    registry = "gcr.io",
+    repository = "prysmaticlabs/prysm/geth-prober",
+    tag = "latest",
+    tags = ["manual"],
+    visibility = ["//visibility:private"],
+)
