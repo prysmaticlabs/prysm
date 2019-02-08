@@ -120,7 +120,7 @@ func TestGetActiveValidator(t *testing.T) {
 
 	outputValidators := []*pb.Validator{
 		{Pubkey: []byte("B")},
-		{Pubkey: []byte("C")},
+		{Pubkey: []byte("D")},
 	}
 
 	state := &pb.BeaconState{

@@ -72,12 +72,6 @@ func NewSimulatedBackend() (*SimulatedBackend, error) {
 	}, nil
 }
 
-// InitializeChain sets up the whole backend to be able to run a mock
-// beacon state and chain.
-func (sb *SimulatedBackend) InitializeChain() error {
-	return nil
-}
-
 // GenerateBlockAndAdvanceChain generates a simulated block and runs that block though
 // state transition.
 func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain(objects *SimulatedObjects) error {
@@ -194,7 +188,6 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	if err := sb.initializeStateTest(testCase); err != nil {
 		return fmt.Errorf("could not initialize state test %v", err)
 	}
-	sb.depositTrie = trieutil.NewDepositTrie()
 	averageTimesPerTransition := []time.Duration{}
 	for i := uint64(0); i < testCase.Config.NumSlots; i++ {
 
@@ -241,6 +234,7 @@ func (sb *SimulatedBackend) initializeStateTest(testCase *StateTestCase) error {
 	if err := sb.setupBeaconStateAndGenesisBlock(initialDeposits); err != nil {
 		return fmt.Errorf("could not set up beacon state and initialize genesis block %v", err)
 	}
+	sb.depositTrie = trieutil.NewDepositTrie()
 	return nil
 }
 

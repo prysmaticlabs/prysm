@@ -104,6 +104,7 @@ func EncodeDepositData(
 	}
 	encodedInput := wBuf.Bytes()
 	depositData := make([]byte, 0, 16+len(encodedInput))
+	fmt.Println(len(encodedInput))
 
 	value := make([]byte, 8)
 	binary.BigEndian.PutUint64(value, depositValue)
