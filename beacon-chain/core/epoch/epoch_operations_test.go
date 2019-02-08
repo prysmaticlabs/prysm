@@ -221,9 +221,9 @@ func TestPrevEpochBoundaryAttestations(t *testing.T) {
 	epochAttestations := []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{EpochBoundaryRootHash32: []byte{100}}},
 		{Data: &pb.AttestationData{EpochBoundaryRootHash32: []byte{0}}},
-		{Data: &pb.AttestationData{EpochBoundaryRootHash32: []byte{64}}}, // selected
+		{Data: &pb.AttestationData{EpochBoundaryRootHash32: []byte{2}}}, // selected
 		{Data: &pb.AttestationData{EpochBoundaryRootHash32: []byte{55}}},
-		{Data: &pb.AttestationData{EpochBoundaryRootHash32: []byte{64}}}, // selected
+		{Data: &pb.AttestationData{EpochBoundaryRootHash32: []byte{2}}}, // selected
 	}
 
 	var latestBlockRootHash [][]byte
@@ -243,11 +243,11 @@ func TestPrevEpochBoundaryAttestations(t *testing.T) {
 
 	// 64 is selected because we start off with 3 epochs (192 slots)
 	// The prev epoch boundary slot is 192 - 2 * epoch_length = 64
-	if !bytes.Equal(prevEpochBoundaryAttestation[0].Data.EpochBoundaryRootHash32, []byte{64}) {
+	if !bytes.Equal(prevEpochBoundaryAttestation[0].Data.EpochBoundaryRootHash32, []byte{2}) {
 		t.Errorf("Wanted justified block hash [64] for epoch boundary attestation, got: %v",
 			prevEpochBoundaryAttestation[0].Data.EpochBoundaryRootHash32)
 	}
-	if !bytes.Equal(prevEpochBoundaryAttestation[1].Data.EpochBoundaryRootHash32, []byte{64}) {
+	if !bytes.Equal(prevEpochBoundaryAttestation[1].Data.EpochBoundaryRootHash32, []byte{2}) {
 		t.Errorf("Wanted justified block hash [64] for epoch boundary attestation, got: %v",
 			prevEpochBoundaryAttestation[1].Data.EpochBoundaryRootHash32)
 	}
