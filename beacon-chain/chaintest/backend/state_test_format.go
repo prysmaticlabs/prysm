@@ -52,20 +52,20 @@ type StateTestProposerSlashing struct {
 
 // StateTestAttesterSlashing --
 type StateTestAttesterSlashing struct {
-	Slot                           uint64   `yaml:"slot"`
-	SlashableVote1Slot             uint64   `yaml:"slashable_vote_1_slot"`
-	SlashableVote1JustifiedSlot    uint64   `yaml:"slashable_vote_1_justified_slot"`
-	SlashableVote1ValidatorIndices []uint64 `yaml:"slashable_vote_1_validator_indices"`
-	SlashableVote1CustodyBitField  string   `yaml:"slashable_vote_1_custody_bitfield"`
-	SlashableVote2Slot             uint64   `yaml:"slashable_vote_2_slot"`
-	SlashableVote2JustifiedSlot    uint64   `yaml:"slashable_vote_2_justified_slot"`
-	SlashableVote2ValidatorIndices []uint64 `yaml:"slashable_vote_2_validator_indices"`
-	SlashableVote2CustodyBitField  string   `yaml:"slashable_vote_2_custody_bitfield"`
+	Slot                                  uint64   `yaml:"slot"`
+	SlashableAttestation1Slot             uint64   `yaml:"slashable_attestation_1_slot"`
+	SlashableAttestation1JustifiedEpoch   uint64   `yaml:"slashable_attestation_1_justified_epoch"`
+	SlashableAttestation1ValidatorIndices []uint64 `yaml:"slashable_attestation_1_validator_indices"`
+	SlashableAttestation1CustodyBitField  string   `yaml:"slashable_attestation_1_custody_bitfield"`
+	SlashableAttestation2Slot             uint64   `yaml:"slashable_attestation_2_slot"`
+	SlashableAttestation2JustifiedEpoch   uint64   `yaml:"slashable_attestation_2_justified_epoch"`
+	SlashableAttestation2ValidatorIndices []uint64 `yaml:"slashable_attestation_2_validator_indices"`
+	SlashableAttestation2CustodyBitField  string   `yaml:"slashable_attestation_2_custody_bitfield"`
 }
 
 // StateTestValidatorExit --
 type StateTestValidatorExit struct {
-	Slot           uint64 `yaml:"slot"`
+	Epoch          uint64 `yaml:"epoch"`
 	ValidatorIndex uint64 `yaml:"validator_index"`
 }
 

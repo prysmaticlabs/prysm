@@ -5,17 +5,23 @@ metadata:
   namespace: pow
   labels:
     component: faucet
+    app: goerli
+    version: v1
 spec:
   replicas: 1
   selector: 
     matchLabels:
       universe: geth
       component: faucet
+      app: goerli
+      version: v1
   template:
     metadata:
       labels:
         universe: geth
         component: faucet
+        app: goerli
+        version: v1
     spec:
       priorityClassName: batch-priority
       containers:
