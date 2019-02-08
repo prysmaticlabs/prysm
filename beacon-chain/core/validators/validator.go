@@ -243,7 +243,6 @@ func ProcessDeposit(
 		}
 		state.ValidatorRegistry = append(state.ValidatorRegistry, newValidator)
 		state.ValidatorBalances = append(state.ValidatorBalances, amount)
-		fmt.Println(amount)
 	} else {
 		if !bytes.Equal(
 			state.ValidatorRegistry[existingValidatorIdx].WithdrawalCredentialsHash32,

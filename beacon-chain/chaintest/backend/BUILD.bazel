@@ -33,4 +33,5 @@ go_test(
     name = "go_default_test",
     srcs = ["simulated_backend_test.go"],
     embed = [":go_default_library"],
+    deps = ["//shared/trieutil:go_default_library"],
 )

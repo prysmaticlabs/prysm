@@ -30,9 +30,6 @@ func TestGenerateBlocks(t *testing.T) {
 		t.Fatalf("Could not set up beacon state and initialize genesis block %v", err)
 	}
 	backend.depositTrie = trieutil.NewDepositTrie()
-	//for _, bal := range backend.state.ValidatorBalances {
-	//	fmt.Println(bal)
-	//}
 
 	slotLimit := 250
 
