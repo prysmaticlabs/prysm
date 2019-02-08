@@ -356,7 +356,6 @@ func TestRequestBlocksBySlot(t *testing.T) {
 		ss.run(delayChan)
 		exitRoutine <- true
 	}()
-
 	genericHash := make([]byte, 32)
 	genericHash[0] = 'a'
 
@@ -388,19 +387,20 @@ func TestRequestBlocksBySlot(t *testing.T) {
 	}
 
 	// sending all blocks except for the initial block
-	for i := uint64(2); i < 10; i++ {
+	for i := 1 + params.BeaconConfig().GenesisSlot; i < 10; i++ {
 		response, _ := getBlockResponseMsg(i)
 		ss.blockBuf <- response
 	}
 
-	initialResponse, _ := getBlockResponseMsg(1)
+	initialResponse, _ := getBlockResponseMsg(1 + params.BeaconConfig().GenesisSlot)
 
 	//sending initial block
 	ss.blockBuf <- initialResponse
 
-	_, hash := getBlockResponseMsg(9)
+	_, hash := getBlockResponseMsg(9 + params.BeaconConfig().GenesisSlot)
 
-	expString := fmt.Sprintf("Saved block with hash %#x and slot %d for initial sync", hash, 9)
+	expString := fmt.Sprintf("Saved block with hash %#x and slot %d for initial sync",
+		hash, 9 + params.BeaconConfig().GenesisSlot)
 
 	// waiting for the current slot to come up to the
 	// expected one.

@@ -4,35 +4,35 @@ test_suite: prysm
 fork: sapphire
 version: 1.0
 test_cases:
+#  - config:
+#      epoch_length: 64
+#      deposits_for_chain_start: 5000
+#      num_slots: 32 # Testing advancing state to slot < EpochLength
+#    results:
+#      slot: 9223372036854775840
+#      num_validators: 5000
   - config:
       epoch_length: 64
-      deposits_for_chain_start: 5000
-      num_slots: 32 # Testing advancing state to slot < EpochLength
-    results:
-      slot: 32
-      num_validators: 5000
-  - config:
-      epoch_length: 63
       deposits_for_chain_start: 16384
       num_slots: 64 # Testing advancing state to exactly slot == EpochLength
       deposits:
-        - slot: 1
+        - slot: 9223372036854775809
           amount: 32
           merkle_index: 0
           pubkey: !!binary |
             SlAAbShSkUg7PLiPHZI/rTS1uAvKiieOrifPN6Moso0=
-        - slot: 15
+        - slot: 9223372036854775823
           amount: 32
           merkle_index: 1
           pubkey: !!binary |
             Oklajsjdkaklsdlkajsdjlajslkdjlkasjlkdjlajdsd
-        - slot: 55
+        - slot: 9223372036854775863
           amount: 32
           merkle_index: 2
           pubkey: !!binary |
             LkmqmqoodLKAslkjdkajsdljasdkajlksjdasldjasdd
       proposer_slashings:
-        - slot: 16 # At slot 16, we trigger a proposal slashing occurring
+        - slot: 9223372036854775824 # At slot 9223372036854775824, we trigger a proposal slashing occurring
           proposer_index: 16385 # We penalize the proposer that was just added from slot 15
           proposal_1_shard: 0
           proposal_1_slot: 15
@@ -43,20 +43,20 @@ test_cases:
           proposal_2_root: !!binary |
             LkmqmqoodLKAslkjdkajsdljasdkajlksjdasldjasdd
       attester_slashings:
-        - slot: 59 # At slot 59, we trigger a attester slashing
-          slashable_vote_1_slot: 55
-          slashable_vote_2_slot: 55
-          slashable_vote_1_justified_slot: 0
-          slashable_vote_2_justified_slot: 1
+        - slot: 9223372036854775867 # At slot 9223372036854775867, we trigger a attester slashing
+          slashable_vote_1_slot: 9223372036854775863
+          slashable_vote_2_slot: 9223372036854775863
+          slashable_vote_1_justified_slot: 9223372036854775808
+          slashable_vote_2_justified_slot: 9223372036854775809
           slashable_vote_1_custody_bitfield: !binary "F"
           slashable_vote_1_validator_indices: [16386]
           slashable_vote_2_custody_bitfield: !binary "F"
           slashable_vote_2_validator_indices: [16386]
       validator_exits:
-        - slot: 60
+        - slot: 9223372036854775868
           validator_index: 100 # At slot 60, validator at index 100 triggers a voluntary exit
     results:
-      slot: 64
+      slot: 9223372036854775872
       num_validators: 16387
       penalized_validators: [16385, 16386] # We test that the validators at indices 16385, 16386 were indeed penalized
       exited_validators: [100] # We confirm the indices of validators that willingly exited the registry

@@ -99,7 +99,7 @@ func TestValidatorEpochAssignments(t *testing.T) {
 	var pubKey [48]byte
 	copy(pubKey[:], []byte("0"))
 	req := &pb.ValidatorEpochAssignmentsRequest{
-		EpochStart: 0,
+		EpochStart: params.BeaconConfig().GenesisSlot,
 		PublicKey:  pubKey[:],
 	}
 	res, err := validatorServer.ValidatorEpochAssignments(context.Background(), req)
@@ -107,17 +107,18 @@ func TestValidatorEpochAssignments(t *testing.T) {
 		t.Errorf("Could not get validator index: %v", err)
 	}
 	// With initial shuffling of default 16384 validators, the validator corresponding to
-	// public key 0 should correspond to an attester slot of 2 at shard 5.
-	if res.Assignment.Shard != 5 {
+	// public key 0 from genesis slot should correspond to an attester slot of 9223372036854775808 at shard 0.
+	if res.Assignment.Shard != 0  {
 		t.Errorf(
-			"Expected validator with pubkey %#x to be assigned to shard 5, received %d",
+			"Expected validator with pubkey %#x to be assigned to shard 0, received %d",
 			req.PublicKey,
 			res.Assignment.Shard,
 		)
 	}
-	if res.Assignment.AttesterSlot != 2 {
+	if res.Assignment.AttesterSlot != 9223372036854775808 {
 		t.Errorf(
-			"Expected validator with pubkey %#x to be assigned as attester of slot 2, received %d",
+			"Expected validator with pubkey %#x to be assigned as attester of slot 9223372036854775808, " +
+				"received %d",
 			req.PublicKey,
 			res.Assignment.AttesterSlot,
 		)

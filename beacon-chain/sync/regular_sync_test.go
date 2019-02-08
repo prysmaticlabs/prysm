@@ -163,7 +163,7 @@ func TestProcessBlock(t *testing.T) {
 	}()
 
 	parentBlock := &pb.BeaconBlock{
-		Slot: 0,
+		Slot: params.BeaconConfig().GenesisSlot,
 	}
 	if err := db.SaveBlock(parentBlock); err != nil {
 		t.Fatalf("failed to save block: %v", err)
@@ -179,7 +179,7 @@ func TestProcessBlock(t *testing.T) {
 			BlockHash32:       []byte{6, 7, 8, 9, 10},
 		},
 		ParentRootHash32: parentHash[:],
-		Slot:             1,
+		Slot:             params.BeaconConfig().GenesisSlot,
 	}
 	attestation := &pb.Attestation{
 		Data: &pb.AttestationData{
@@ -246,7 +246,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	}()
 
 	parentBlock := &pb.BeaconBlock{
-		Slot: 0,
+		Slot: params.BeaconConfig().GenesisSlot,
 	}
 	if err := db.SaveBlock(parentBlock); err != nil {
 		t.Fatalf("failed to save block: %v", err)
@@ -262,7 +262,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 			BlockHash32:       []byte{6, 7, 8, 9, 10},
 		},
 		ParentRootHash32: parentHash[:],
-		Slot:             1,
+		Slot:             params.BeaconConfig().GenesisSlot + 1,
 	}
 
 	responseBlock1 := &pb.BeaconBlockResponse{
@@ -270,8 +270,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 		Attestation: &pb.Attestation{
 			Data: &pb.AttestationData{
 				ShardBlockRootHash32: []byte{},
-				Slot:                 0,
-				JustifiedSlot:        0,
+				Slot:                 params.BeaconConfig().GenesisSlot,
 			},
 		},
 	}

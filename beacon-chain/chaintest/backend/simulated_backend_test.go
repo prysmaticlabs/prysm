@@ -1,6 +1,10 @@
 package backend
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/params"
+)
 
 func TestSimulatedBackendStartAndStop(t *testing.T) {
 
@@ -40,7 +44,7 @@ func TestGenerateBlocks(t *testing.T) {
 		}
 	}
 
-	if backend.state.Slot != uint64(slotLimit) {
+	if backend.state.Slot != params.BeaconConfig().GenesisSlot+uint64(slotLimit) {
 		t.Errorf("Unequal state slot and expected slot %d %d", backend.state.Slot, slotLimit)
 	}
 
@@ -64,7 +68,7 @@ func TestGenerateNilBlocks(t *testing.T) {
 		}
 	}
 
-	if backend.state.Slot != uint64(slotLimit) {
+	if backend.state.Slot != params.BeaconConfig().GenesisSlot+uint64(slotLimit) {
 		t.Errorf("Unequal state slot and expected slot %d %d", backend.state.Slot, slotLimit)
 	}
 

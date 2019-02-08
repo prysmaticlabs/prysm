@@ -371,8 +371,8 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	currentSlot := uint64(5)
-	attestationSlot := uint64(0)
+	currentSlot := params.BeaconConfig().GenesisSlot + 5
+	attestationSlot := params.BeaconConfig().GenesisSlot
 
 	block := &pb.BeaconBlock{
 		Slot:             currentSlot + 1,
@@ -390,6 +390,7 @@ func TestRunningChainService(t *testing.T) {
 					Slot:                      attestationSlot,
 					JustifiedBlockRootHash32:  params.BeaconConfig().ZeroHash[:],
 					LatestCrosslinkRootHash32: params.BeaconConfig().ZeroHash[:],
+					JustifiedEpoch: params.BeaconConfig().GenesisEpoch,
 				},
 			}},
 		},
