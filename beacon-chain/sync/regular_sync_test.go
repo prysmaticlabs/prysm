@@ -136,8 +136,6 @@ func TestProcessBlock(t *testing.T) {
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			Pubkey: []byte(strconv.Itoa(i)),
-			RandaoCommitmentHash32: []byte{41, 13, 236, 217, 84, 139, 98, 168, 214, 3, 69,
-				169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
 		}
 	}
 	genesisTime := uint64(time.Now().Unix())
@@ -218,8 +216,6 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			Pubkey: []byte(strconv.Itoa(i)),
-			RandaoCommitmentHash32: []byte{41, 13, 236, 217, 84, 139, 98, 168, 214, 3, 69,
-				169, 136, 56, 111, 200, 75, 166, 188, 149, 72, 64, 8, 246, 54, 47, 147, 22, 14, 243, 229, 99},
 		}
 	}
 	genesisTime := uint64(time.Now().Unix())

@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -50,9 +49,6 @@ type SimulatedObjects struct {
 	simValidatorExit    *StateTestValidatorExit
 }
 
-// Number of slots to have the randao reveal hashed for.
-var lengthOfOnion uint64 = 1000
-
 // NewSimulatedBackend creates an instance by initializing a chain service
 // utilizing a mockDB which will act according to test run parameters specified
 // in the common ETH 2.0 client test YAML format.
@@ -70,35 +66,22 @@ func NewSimulatedBackend() (*SimulatedBackend, error) {
 		return nil, err
 	}
 	return &SimulatedBackend{
-		chainService: cs,
-		beaconDB:     db,
+		chainService:   cs,
+		beaconDB:       db,
+		inMemoryBlocks: make([]*pb.BeaconBlock, 1000),
 	}, nil
 }
 
 // InitializeChain sets up the whole backend to be able to run a mock
 // beacon state and chain.
 func (sb *SimulatedBackend) InitializeChain() error {
-	initialDeposits, err := generateInitialSimulatedDeposits()
-	if err != nil {
-		return fmt.Errorf("could not simulate initial validator deposits: %v", err)
-	}
-	if err := sb.setupBeaconStateAndGenesisBlock(initialDeposits); err != nil {
-		return err
-	}
-	sb.depositTrie = trieutil.NewDepositTrie()
-	sb.inMemoryBlocks = make([]*pb.BeaconBlock, 1000)
 	return nil
 }
 
 // GenerateBlockAndAdvanceChain generates a simulated block and runs that block though
 // state transition.
 func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain(objects *SimulatedObjects) error {
-	slotToGenerate := sb.state.Slot + 1
 	prevBlockRoot := sb.prevBlockRoots[len(sb.prevBlockRoots)-1]
-	proposerIndex, err := validators.BeaconProposerIdx(sb.state, slotToGenerate)
-	if err != nil {
-		return fmt.Errorf("could not compute proposer index %v", err)
-	}
 	// We generate a new block to pass into the state transition.
 	newBlock, newBlockRoot, err := generateSimulatedBlock(
 		sb.state,
@@ -171,14 +154,11 @@ func (sb *SimulatedBackend) RunForkChoiceTest(testCase *ForkChoiceTestCase) erro
 	params.OverrideBeaconConfig(c)
 
 	// Then, we create the validators based on the custom test config.
-	randaoPreCommit := [32]byte{}
-	randaoReveal := hashutil.Hash(randaoPreCommit[:])
 	validators := make([]*pb.Validator, testCase.Config.ValidatorCount)
 	for i := uint64(0); i < testCase.Config.ValidatorCount; i++ {
 		validators[i] = &pb.Validator{
-			ExitEpoch:              params.BeaconConfig().EntryExitDelay,
-			Pubkey:                 []byte{},
-			RandaoCommitmentHash32: randaoReveal[:],
+			ExitEpoch: params.BeaconConfig().EntryExitDelay,
+			Pubkey:    []byte{},
 		}
 	}
 	// TODO(#718): Next step is to update and save the blocks specified
@@ -214,7 +194,6 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	if err := sb.initializeStateTest(testCase); err != nil {
 		return fmt.Errorf("could not initialize state test %v", err)
 	}
-
 	sb.depositTrie = trieutil.NewDepositTrie()
 	averageTimesPerTransition := []time.Duration{}
 	for i := uint64(0); i < testCase.Config.NumSlots; i++ {
@@ -255,7 +234,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 // initializeStateTest sets up the environment by generating all the required objects in order
 // to proceed with the state test.
 func (sb *SimulatedBackend) initializeStateTest(testCase *StateTestCase) error {
-	initialDeposits, err := generateInitialSimulatedDeposits()
+	initialDeposits, err := generateInitialSimulatedDeposits(testCase.Config.DepositsForChainStart)
 	if err != nil {
 		return fmt.Errorf("could not simulate initial validator deposits: %v", err)
 	}

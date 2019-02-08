@@ -19,16 +19,12 @@ import (
 // InitialValidatorRegistry creates a new validator set that is used to
 // generate a new bootstrapped state.
 func InitialValidatorRegistry() []*pb.Validator {
-	randaoPreCommit := [32]byte{}
-	randaoReveal := hashutil.Hash(randaoPreCommit[:])
 	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
 	for i := uint64(0); i < params.BeaconConfig().DepositsForChainStart; i++ {
 		pubkey := hashutil.Hash([]byte{byte(i)})
 		validators[i] = &pb.Validator{
-			ExitEpoch:              params.BeaconConfig().FarFutureEpoch,
-			Pubkey:                 pubkey[:],
-			RandaoCommitmentHash32: randaoReveal[:],
-			RandaoLayers:           1,
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			Pubkey:    pubkey[:],
 		}
 	}
 	return validators
@@ -239,7 +235,6 @@ func ProcessDeposit(
 		// to the beacon state.
 		newValidator := &pb.Validator{
 			Pubkey:          pubkey,
-			RandaoLayers:    0,
 			ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 			WithdrawalEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -248,7 +243,7 @@ func ProcessDeposit(
 		}
 		state.ValidatorRegistry = append(state.ValidatorRegistry, newValidator)
 		state.ValidatorBalances = append(state.ValidatorBalances, amount)
-
+		fmt.Println(amount)
 	} else {
 		if !bytes.Equal(
 			state.ValidatorRegistry[existingValidatorIdx].WithdrawalCredentialsHash32,

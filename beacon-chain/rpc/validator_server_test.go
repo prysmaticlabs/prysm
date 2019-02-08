@@ -71,8 +71,7 @@ func TestValidatorEpochAssignments(t *testing.T) {
 		var pubKey [48]byte
 		copy(pubKey[:], []byte(strconv.Itoa(i)))
 		depositInput := &pbp2p.DepositInput{
-			Pubkey:                 pubKey[:],
-			RandaoCommitmentHash32: []byte{0},
+			Pubkey: pubKey[:],
 		}
 		depositData, err := b.EncodeDepositData(
 			depositInput,

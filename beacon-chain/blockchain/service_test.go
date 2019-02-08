@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"math/big"
+	"strconv"
 	"testing"
 	"time"
 
@@ -358,11 +359,10 @@ func TestRunningChainService(t *testing.T) {
 	}
 
 	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
-	randaoCommit := hashutil.RepeatHash([32]byte{}, 1)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
-			ExitEpoch:              params.BeaconConfig().FarFutureEpoch,
-			RandaoCommitmentHash32: randaoCommit[:],
+			Pubkey:    []byte(strconv.Itoa(i)),
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
 

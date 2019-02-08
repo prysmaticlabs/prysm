@@ -68,7 +68,6 @@ func InitialBeaconState(
 
 		validator := &pb.Validator{
 			Pubkey:                      depositInput.Pubkey,
-			RandaoCommitmentHash32:      depositInput.RandaoCommitmentHash32,
 			WithdrawalCredentialsHash32: depositInput.WithdrawalCredentialsHash32,
 			ExitEpoch:                   params.BeaconConfig().FarFutureEpoch,
 			PenalizedEpoch:              params.BeaconConfig().FarFutureEpoch,

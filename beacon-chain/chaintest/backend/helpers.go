@@ -48,9 +48,8 @@ func generateSimulatedBlock(
 	if simObjects.simDeposit != nil {
 		depositInput := &pb.DepositInput{
 			Pubkey:                      []byte(simObjects.simDeposit.Pubkey),
-			WithdrawalCredentialsHash32: []byte{},
-			ProofOfPossession:           []byte{},
-			CustodyCommitmentHash32:     []byte{},
+			WithdrawalCredentialsHash32: make([]byte, 32),
+			ProofOfPossession:           make([]byte, 96),
 		}
 
 		data, err := b.EncodeDepositData(depositInput, simObjects.simDeposit.Amount, time.Now().Unix())
@@ -119,14 +118,14 @@ func generateSimulatedBlock(
 
 // Generates initial deposits for creating a beacon state in the simulated
 // backend based on the yaml configuration.
-func generateInitialSimulatedDeposits() ([]*pb.Deposit, error) {
+func generateInitialSimulatedDeposits(numDeposits uint64) ([]*pb.Deposit, error) {
 	genesisTime := params.BeaconConfig().GenesisTime.Unix()
-	deposits := make([]*pb.Deposit, params.BeaconConfig().DepositsForChainStart)
-	randaoCommit := params.BeaconConfig().SimulatedBlockRandao
+	deposits := make([]*pb.Deposit, numDeposits)
 	for i := 0; i < len(deposits); i++ {
 		depositInput := &pb.DepositInput{
-			Pubkey:                 []byte(strconv.Itoa(i)),
-			RandaoCommitmentHash32: randaoCommit[:],
+			Pubkey:                      []byte(strconv.Itoa(i)),
+			WithdrawalCredentialsHash32: make([]byte, 32),
+			ProofOfPossession:           make([]byte, 96),
 		}
 		depositData, err := b.EncodeDepositData(
 			depositInput,

@@ -167,8 +167,7 @@ func TestDecodeDepositAmountAndTimeStamp(t *testing.T) {
 		{
 			depositData: &pb.DepositInput{
 				Pubkey:                      []byte("testing"),
-				RandaoCommitmentHash32:      []byte("randao"),
-				CustodyCommitmentHash32:     []byte("commitment"),
+				ProofOfPossession:           []byte("pop"),
 				WithdrawalCredentialsHash32: []byte("withdraw"),
 			},
 			amount:    8749343850,
@@ -177,7 +176,7 @@ func TestDecodeDepositAmountAndTimeStamp(t *testing.T) {
 		{
 			depositData: &pb.DepositInput{
 				Pubkey:                      []byte("testing"),
-				CustodyCommitmentHash32:     []byte("commitment"),
+				ProofOfPossession:           []byte("pop"),
 				WithdrawalCredentialsHash32: []byte("withdraw"),
 			},
 			amount:    657660,
@@ -186,24 +185,24 @@ func TestDecodeDepositAmountAndTimeStamp(t *testing.T) {
 		{
 			depositData: &pb.DepositInput{
 				Pubkey:                      []byte("testing"),
-				RandaoCommitmentHash32:      []byte("randao"),
+				ProofOfPossession:           []byte("pop"),
 				WithdrawalCredentialsHash32: []byte("withdraw"),
 			},
 			amount:    5445540,
 			timestamp: 34340,
 		}, {
 			depositData: &pb.DepositInput{
-				RandaoCommitmentHash32:      []byte("randao"),
-				CustodyCommitmentHash32:     []byte("commitment"),
+				Pubkey:                      []byte("testing"),
+				ProofOfPossession:           []byte("pop"),
 				WithdrawalCredentialsHash32: []byte("withdraw"),
 			},
 			amount:    4545,
 			timestamp: 4343,
 		}, {
 			depositData: &pb.DepositInput{
-				Pubkey:                  []byte("testing"),
-				RandaoCommitmentHash32:  []byte("randao"),
-				CustodyCommitmentHash32: []byte("commitment"),
+				Pubkey:                      []byte("testing"),
+				ProofOfPossession:           []byte("pop"),
+				WithdrawalCredentialsHash32: []byte("withdraw"),
 			},
 			amount:    76706966,
 			timestamp: 34394393,
