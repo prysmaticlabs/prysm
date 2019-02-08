@@ -248,8 +248,11 @@ func verifyAttesterSlashing(slashing *pb.AttesterSlashing, verifySignatures bool
 			data2,
 		)
 	}
-	// Verify the slashing is a double vote or a surround vote.
-	if !(isDoubleVote(data1, data2) || isSurroundVote(data1, data2)) {
+	// Two attestations having the same epoch target are considered to be a "double vote" in Casper
+	// Proof of Stake literature and the Ethereum 2.0 specification. Below, we verify that either this is the case
+	// or that the two attestations are a "surround vote" instead.
+	isSameTarget := helpers.SlotToEpoch(data1.Slot) == helpers.SlotToEpoch(data2.Slot)
+	if !(isSameTarget || isSurroundVote(data1, data2)) {
 		return errors.New("attester slashing is not a double vote nor surround vote")
 	}
 	if err := verifySlashableAttestation(slashableAttestation1, verifySignatures); err != nil {
@@ -314,10 +317,10 @@ func verifySlashableAttestation(att *pb.SlashableAttestation, verifySignatures b
 	return nil
 }
 
-func isDoubleVote(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
-	return helpers.SlotToEpoch(data1.Slot) == helpers.SlotToEpoch(data2.Slot)
-}
-
+// isSurroundVote checks if attestation 1's source epoch is smaller than attestation 2
+// while simultaneously checking if its target epoch is greater than that of attestation 2.
+// This is a Casper FFG slashing condition. This is known as "surrounding" a vote
+// in Casper Proof of Stake literature.
 func isSurroundVote(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
 	sourceEpoch1 := data1.JustifiedEpoch
 	sourceEpoch2 := data2.JustifiedEpoch

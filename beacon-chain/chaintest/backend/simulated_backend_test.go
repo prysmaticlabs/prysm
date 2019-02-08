@@ -1,8 +1,9 @@
 package backend
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 func TestSimulatedBackendStop(t *testing.T) {
