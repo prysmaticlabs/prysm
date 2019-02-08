@@ -14,6 +14,22 @@ start a local cluster with v1.11.0, run the following:
 minikube start --kubernetes-version=v1.11.0 --cpus 4
 ```
 
+
+### Istio
+
+Be sure to update the loadBalancerIP and includeIPRanges as needed. Refer to
+[this guide](https://github.com/stefanprodan/istio-gke/blob/master/docs/istio/04-istio-setup.md) 
+if necessary.
+
+First download the release
+```
+curl -L https://git.io/getLatestIstio | sh -
+```
+
+```
+helm install install/kubernetes/helm/istio --name istio --namespace istio-system --set grafana.enabled=true --set tracing.enabled=true --set gateways.istio-ingressgateway.loadBalancerIP=35.224.249.2 --set global.proxy.includeIPRanges="10.52.0.0/14\,10.55.240.0/20" --set kiali.enabled=true --set telemetry-gateway.grafanaEnabled=true 
+```
+
 ### Geth's Genesis file
 
 This file is the default provided by geth-genesis secret. 

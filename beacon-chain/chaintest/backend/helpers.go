@@ -63,7 +63,7 @@ func generateSimulatedBlock(
 		// We then update the deposits Merkle trie with the deposit data and return
 		// its Merkle branch leading up to the root of the trie.
 		depositsTrie.UpdateDepositTrie(data)
-		merkleBranch := depositsTrie.GenerateMerkleBranch(simObjects.simDeposit.MerkleIndex)
+		merkleBranch := depositsTrie.Branch()
 
 		block.Body.Deposits = append(block.Body.Deposits, &pb.Deposit{
 			DepositData:         data,
