@@ -32,6 +32,7 @@ spec:
             - labelSelector:
                 matchLabels:
                   component: public-rpc-node
+                  version: v1
               topologyKey: kubernetes.io/hostname
           preferredDuringSchedulingIgnoredDuringExecution:
             - weight: 100
@@ -39,6 +40,7 @@ spec:
                 labelSelector:
                   matchLabels:
                     component: public-rpc-node
+                    version: v1
                 topologyKey: failure-domain.beta.kubernetes.io/zone
       containers:
         - name: prober
@@ -180,6 +182,11 @@ spec:
       component: public-rpc-node
       app: goerli
       version: v1-stable
+  strategy: 
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: "25%"
+  minReadySeconds: 15
   template:
     metadata:
       labels:
@@ -189,6 +196,16 @@ spec:
         version: v1-stable
     spec:
       priorityClassName: production-priority
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    component: public-rpc-node
+                    version: v1-stable
+                topologyKey: kubernetes.io/hostname
       containers:
         - name: prober
           image: gcr.io/prysmaticlabs/prysm/geth-prober 
