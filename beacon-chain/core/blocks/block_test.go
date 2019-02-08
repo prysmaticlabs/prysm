@@ -29,12 +29,6 @@ func TestGenesisBlock(t *testing.T) {
 	if !bytes.Equal(b1.StateRootHash32, stateHash) {
 		t.Error("genesis block StateRootHash32 isn't initialized correctly")
 	}
-
-	rd := []byte{}
-	if IsRandaoValid(b1.RandaoRevealHash32, rd) {
-		t.Error("RANDAO should be empty")
-	}
-
 }
 
 func TestBlockRootAtSlot_OK(t *testing.T) {
