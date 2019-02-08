@@ -2,8 +2,8 @@ package client
 
 import (
 	"context"
-
 	"fmt"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
 
@@ -110,6 +110,12 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	// TODO(#1366): Use BLS to generate an aggregate signature.
 	attestation.AggregateSignature = []byte("signed")
 
+	// 5. Wait until the proper time to broadcast
+	slotDuration := params.BeaconConfig().SlotDuration
+	duration := time.Duration(slot*slotDuration+(slotDuration/2)) * time.Second
+	timeToBroadcast := time.Unix(int64(v.genesisTime), 0).Add(duration)
+	SleepUntil(timeToBroadcast)
+
 	attestRes, err := v.attesterClient.AttestHead(ctx, attestation)
 	if err != nil {
 		log.Errorf("Could not submit attestation to beacon node: %v", err)
@@ -118,4 +124,9 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	log.WithField(
 		"hash", fmt.Sprintf("%#x", attestRes.AttestationHash),
 	).Info("Submitted attestation successfully with hash %#x", attestRes.AttestationHash)
+}
+
+func SleepUntil(breakfastTime time.Time) {
+	duration := time.Until(breakfastTime)
+	time.Sleep(duration)
 }
