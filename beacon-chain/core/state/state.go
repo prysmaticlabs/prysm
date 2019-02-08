@@ -4,7 +4,6 @@
 package state
 
 import (
-	"encoding/binary"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -137,14 +136,15 @@ func InitialBeaconState(
 		if err != nil {
 			return nil, fmt.Errorf("could not decode deposit input: %v", err)
 		}
-		// depositData consists of depositInput []byte + depositValue [8]byte +
-		// depositTimestamp [8]byte.
-		depositValue := depositData[len(depositData)-16 : len(depositData)-8]
+		value, _, err := b.DecodeDepositAmountAndTimeStamp(depositData)
+		if err != nil {
+			return nil, fmt.Errorf("could not decode deposit value and timestamp: %v", err)
+		}
 		state, err = v.ProcessDeposit(
 			state,
 			validatorMap,
 			depositInput.Pubkey,
-			binary.BigEndian.Uint64(depositValue),
+			value,
 			depositInput.ProofOfPossession,
 			depositInput.WithdrawalCredentialsHash32,
 		)
