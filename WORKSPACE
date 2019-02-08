@@ -35,9 +35,8 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    url = "https://github.com/bazelbuild/rules_nodejs/archive/0.16.8.tar.gz",
-    strip_prefix = "rules_nodejs-0.16.8",
-    sha256 = "df74b6ef05d2307ba3245101aa4b4d05ab61a5a63195bfbb693d78851d43a548",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.18.2/rules_nodejs-0.18.2.tar.gz"],
+    sha256 = "8f9866ffe3bb5da004348e41b89933818c968bd918da18da4b097e6e4fcd98f1",
 )
 
 http_archive(
@@ -815,13 +814,13 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_discovery",
-    commit = "cc4105e21706452e5b0f7e05390f987017188d31",
+    commit = "a666b9cafd4cd3c35405896c2121951c749979ea",
     importpath = "github.com/libp2p/go-libp2p-discovery",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_autonat",
-    commit = "93b1787f76de807b9ab3a7c7edd45cf906139bdb",
+    commit = "494f7fce997b6f5be4750dcc24350e06d3b4d67a",
     importpath = "github.com/libp2p/go-libp2p-autonat",
 )
 
