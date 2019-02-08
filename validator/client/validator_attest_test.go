@@ -45,7 +45,6 @@ func TestAttestToBlockHead_CrosslinkCommitteeRequestEmptyCommittee(t *testing.T)
 		Committee: []uint64{},
 	}, nil)
 
-	delay = 0
 	validator.AttestToBlockHead(context.Background(), 30)
 	testutil.AssertLogsContain(t, hook, "Received an empty committee assignment")
 }
