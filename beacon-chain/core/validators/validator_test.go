@@ -77,7 +77,7 @@ func TestValidatorIdx(t *testing.T) {
 }
 
 func TestEffectiveBalance(t *testing.T) {
-	defaultBalance := params.BeaconConfig().MaxDeposit
+	defaultBalance := params.BeaconConfig().MaxDepositAmount
 
 	tests := []struct {
 		a uint64
@@ -603,15 +603,15 @@ func TestExitValidator_AlreadyExited(t *testing.T) {
 
 func TestProcessPenaltiesExits_NothingHappened(t *testing.T) {
 	state := &pb.BeaconState{
-		ValidatorBalances: []uint64{params.BeaconConfig().MaxDeposit},
+		ValidatorBalances: []uint64{params.BeaconConfig().MaxDepositAmount},
 		ValidatorRegistry: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 		},
 	}
 	if ProcessPenaltiesAndExits(state).ValidatorBalances[0] !=
-		params.BeaconConfig().MaxDeposit {
+		params.BeaconConfig().MaxDepositAmount {
 		t.Errorf("wanted validator balance %d, got %d",
-			params.BeaconConfig().MaxDeposit,
+			params.BeaconConfig().MaxDepositAmount,
 			ProcessPenaltiesAndExits(state).ValidatorBalances[0])
 	}
 }
@@ -620,13 +620,13 @@ func TestProcessPenaltiesExits_ValidatorPenalized(t *testing.T) {
 
 	latestPenalizedExits := make([]uint64, params.BeaconConfig().LatestPenalizedExitLength)
 	for i := 0; i < len(latestPenalizedExits); i++ {
-		latestPenalizedExits[i] = uint64(i) * params.BeaconConfig().MaxDeposit
+		latestPenalizedExits[i] = uint64(i) * params.BeaconConfig().MaxDepositAmount
 	}
 
 	state := &pb.BeaconState{
 		Slot:                    params.BeaconConfig().LatestPenalizedExitLength / 2 * params.BeaconConfig().EpochLength,
 		LatestPenalizedBalances: latestPenalizedExits,
-		ValidatorBalances:       []uint64{params.BeaconConfig().MaxDeposit, params.BeaconConfig().MaxDeposit},
+		ValidatorBalances:       []uint64{params.BeaconConfig().MaxDepositAmount, params.BeaconConfig().MaxDepositAmount},
 		ValidatorRegistry: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().FarFutureEpoch, RandaoLayers: 1},
 		},
@@ -634,12 +634,12 @@ func TestProcessPenaltiesExits_ValidatorPenalized(t *testing.T) {
 
 	penalty := EffectiveBalance(state, 0) *
 		EffectiveBalance(state, 0) /
-		params.BeaconConfig().MaxDeposit
+		params.BeaconConfig().MaxDepositAmount
 
 	newState := ProcessPenaltiesAndExits(state)
-	if newState.ValidatorBalances[0] != params.BeaconConfig().MaxDeposit-penalty {
+	if newState.ValidatorBalances[0] != params.BeaconConfig().MaxDepositAmount-penalty {
 		t.Errorf("wanted validator balance %d, got %d",
-			params.BeaconConfig().MaxDeposit-penalty,
+			params.BeaconConfig().MaxDepositAmount-penalty,
 			newState.ValidatorBalances[0])
 	}
 }
@@ -678,11 +678,11 @@ func TestUpdateRegistry_NoRotation(t *testing.T) {
 			{ExitEpoch: params.BeaconConfig().EntryExitDelay},
 		},
 		ValidatorBalances: []uint64{
-			params.BeaconConfig().MaxDeposit,
-			params.BeaconConfig().MaxDeposit,
-			params.BeaconConfig().MaxDeposit,
-			params.BeaconConfig().MaxDeposit,
-			params.BeaconConfig().MaxDeposit,
+			params.BeaconConfig().MaxDepositAmount,
+			params.BeaconConfig().MaxDepositAmount,
+			params.BeaconConfig().MaxDepositAmount,
+			params.BeaconConfig().MaxDepositAmount,
+			params.BeaconConfig().MaxDepositAmount,
 		},
 	}
 	newState, err := UpdateRegistry(state)
@@ -711,8 +711,8 @@ func TestUpdateRegistry_Activate(t *testing.T) {
 				ActivationEpoch: 5 + params.BeaconConfig().EntryExitDelay + 1},
 		},
 		ValidatorBalances: []uint64{
-			params.BeaconConfig().MaxDeposit,
-			params.BeaconConfig().MaxDeposit,
+			params.BeaconConfig().MaxDepositAmount,
+			params.BeaconConfig().MaxDepositAmount,
 		},
 	}
 	newState, err := UpdateRegistry(state)
@@ -745,8 +745,8 @@ func TestUpdateRegistry_Exit(t *testing.T) {
 				StatusFlags: pb.Validator_INITIATED_EXIT},
 		},
 		ValidatorBalances: []uint64{
-			params.BeaconConfig().MaxDeposit,
-			params.BeaconConfig().MaxDeposit,
+			params.BeaconConfig().MaxDepositAmount,
+			params.BeaconConfig().MaxDepositAmount,
 		},
 	}
 	newState, err := UpdateRegistry(state)
@@ -772,10 +772,10 @@ func TestMaxBalanceChurn(t *testing.T) {
 		totalBalance    uint64
 		maxBalanceChurn uint64
 	}{
-		{totalBalance: 1e9, maxBalanceChurn: params.BeaconConfig().MaxDeposit},
-		{totalBalance: params.BeaconConfig().MaxDeposit, maxBalanceChurn: 512 * 1e9},
-		{totalBalance: params.BeaconConfig().MaxDeposit * 10, maxBalanceChurn: 512 * 1e10},
-		{totalBalance: params.BeaconConfig().MaxDeposit * 1000, maxBalanceChurn: 512 * 1e12},
+		{totalBalance: 1e9, maxBalanceChurn: params.BeaconConfig().MaxDepositAmount},
+		{totalBalance: params.BeaconConfig().MaxDepositAmount, maxBalanceChurn: 512 * 1e9},
+		{totalBalance: params.BeaconConfig().MaxDepositAmount * 10, maxBalanceChurn: 512 * 1e10},
+		{totalBalance: params.BeaconConfig().MaxDepositAmount * 1000, maxBalanceChurn: 512 * 1e12},
 	}
 
 	for _, tt := range tests {
