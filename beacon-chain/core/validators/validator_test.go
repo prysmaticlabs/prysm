@@ -111,16 +111,16 @@ func TestTotalEffectiveBalance(t *testing.T) {
 
 func TestGetActiveValidator(t *testing.T) {
 	inputValidators := []*pb.Validator{
-		{RandaoLayers: 0},
-		{RandaoLayers: 1},
-		{RandaoLayers: 2},
-		{RandaoLayers: 3},
-		{RandaoLayers: 4},
+		{Pubkey: []byte("A")},
+		{Pubkey: []byte("B")},
+		{Pubkey: []byte("C")},
+		{Pubkey: []byte("D")},
+		{Pubkey: []byte("E")},
 	}
 
 	outputValidators := []*pb.Validator{
-		{RandaoLayers: 1},
-		{RandaoLayers: 3},
+		{Pubkey: []byte("B")},
+		{Pubkey: []byte("D")},
 	}
 
 	state := &pb.BeaconState{
@@ -620,7 +620,7 @@ func TestProcessPenaltiesExits_ValidatorPenalized(t *testing.T) {
 		LatestPenalizedBalances: latestPenalizedExits,
 		ValidatorBalances:       []uint64{params.BeaconConfig().MaxDepositAmount, params.BeaconConfig().MaxDepositAmount},
 		ValidatorRegistry: []*pb.Validator{
-			{ExitEpoch: params.BeaconConfig().FarFutureEpoch, RandaoLayers: 1},
+			{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 		},
 	}
 

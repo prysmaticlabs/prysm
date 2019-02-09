@@ -29,24 +29,6 @@ func TestProcessBlock_IncorrectSlot(t *testing.T) {
 	}
 }
 
-func TestProcessBlock_IncorrectBlockRandao(t *testing.T) {
-	validators := validators.InitialValidatorRegistry()
-
-	beaconState := &pb.BeaconState{
-		Slot:              0,
-		ValidatorRegistry: validators,
-	}
-	block := &pb.BeaconBlock{
-		Slot:               0,
-		RandaoRevealHash32: []byte{1},
-		Body:               &pb.BeaconBlockBody{},
-	}
-	want := "could not verify and process block randao"
-	if _, err := ProcessBlock(beaconState, block, false); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
 func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	registry := validators.InitialValidatorRegistry()
 
@@ -118,17 +100,13 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
-	randaoPreCommit := [32]byte{}
-	randaoReveal := hashutil.Hash(randaoPreCommit[:])
 	validators := make([]*pb.Validator, 1000)
 	for i := uint64(0); i < 1000; i++ {
 		pubkey := hashutil.Hash([]byte{byte(i)})
 		validators[i] = &pb.Validator{
-			ExitEpoch:              params.BeaconConfig().FarFutureEpoch,
-			Pubkey:                 pubkey[:],
-			RandaoCommitmentHash32: randaoReveal[:],
-			RandaoLayers:           1,
-			PenalizedEpoch:         10,
+			ExitEpoch:      params.BeaconConfig().FarFutureEpoch,
+			Pubkey:         pubkey[:],
+			PenalizedEpoch: 10,
 		}
 	}
 	proposerSlashings := []*pb.ProposerSlashing{
@@ -198,17 +176,13 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
-	randaoPreCommit := [32]byte{}
-	randaoReveal := hashutil.Hash(randaoPreCommit[:])
 	validators := make([]*pb.Validator, 1000)
 	for i := uint64(0); i < 1000; i++ {
 		pubkey := hashutil.Hash([]byte{byte(i)})
 		validators[i] = &pb.Validator{
-			ExitEpoch:              params.BeaconConfig().FarFutureEpoch,
-			Pubkey:                 pubkey[:],
-			RandaoCommitmentHash32: randaoReveal[:],
-			RandaoLayers:           1,
-			PenalizedEpoch:         10,
+			ExitEpoch:      params.BeaconConfig().FarFutureEpoch,
+			Pubkey:         pubkey[:],
+			PenalizedEpoch: 10,
 		}
 	}
 	proposerSlashings := []*pb.ProposerSlashing{
@@ -302,17 +276,13 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 }
 
 func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
-	randaoPreCommit := [32]byte{}
-	randaoReveal := hashutil.Hash(randaoPreCommit[:])
 	validators := make([]*pb.Validator, 1000)
 	for i := uint64(0); i < 1000; i++ {
 		pubkey := hashutil.Hash([]byte{byte(i)})
 		validators[i] = &pb.Validator{
-			ExitEpoch:              params.BeaconConfig().FarFutureEpoch,
-			Pubkey:                 pubkey[:],
-			RandaoCommitmentHash32: randaoReveal[:],
-			RandaoLayers:           1,
-			PenalizedEpoch:         10,
+			ExitEpoch:      params.BeaconConfig().FarFutureEpoch,
+			Pubkey:         pubkey[:],
+			PenalizedEpoch: 10,
 		}
 	}
 	proposerSlashings := []*pb.ProposerSlashing{
@@ -455,6 +425,10 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 		LatestBlockRootHash32S:   blockRoots,
 		LatestCrosslinks:         crosslinkRecord,
 		LatestRandaoMixesHash32S: randaoHashes,
+		LatestIndexRootHash32S: make([][]byte,
+			params.BeaconConfig().LatestIndexRootsLength),
+		LatestPenalizedBalances: make([]uint64,
+			params.BeaconConfig().LatestPenalizedExitLength),
 	}
 
 	_, err := ProcessEpoch(state)
@@ -511,6 +485,10 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 		LatestBlockRootHash32S:   blockRoots,
 		LatestCrosslinks:         crosslinkRecord,
 		LatestRandaoMixesHash32S: randaoHashes,
+		LatestIndexRootHash32S: make([][]byte,
+			params.BeaconConfig().LatestIndexRootsLength),
+		LatestPenalizedBalances: make([]uint64,
+			params.BeaconConfig().LatestPenalizedExitLength),
 	}
 
 	_, err := ProcessEpoch(state)
