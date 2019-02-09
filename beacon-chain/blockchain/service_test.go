@@ -445,7 +445,6 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	parentHash, beaconState := setupGenesisState(t, chainService, beaconState)
 
 	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
-	randaoCommit := hashutil.RepeatHash([32]byte{}, 1)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
