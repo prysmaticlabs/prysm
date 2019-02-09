@@ -302,7 +302,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	if e.CanProcessValidatorRegistry(state) {
 		state, err = e.ProcessValidatorRegistry(state)
 		if err != nil {
-			return nil, fmt.Errorf("could not process validator registry: %v", err)
+			return nil, fmt.Errorf("can not process validator registry: %v", err)
 		}
 	} else {
 		state, err = e.ProcessPartialValidatorRegistry(state)
