@@ -455,6 +455,10 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 		LatestBlockRootHash32S:   blockRoots,
 		LatestCrosslinks:         crosslinkRecord,
 		LatestRandaoMixesHash32S: randaoHashes,
+		LatestIndexRootHash32S: make([][]byte,
+			params.BeaconConfig().LatestIndexRootsLength),
+		LatestPenalizedBalances: make([]uint64,
+			params.BeaconConfig().LatestPenalizedExitLength),
 	}
 
 	_, err := ProcessEpoch(state)
@@ -511,6 +515,10 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 		LatestBlockRootHash32S:   blockRoots,
 		LatestCrosslinks:         crosslinkRecord,
 		LatestRandaoMixesHash32S: randaoHashes,
+		LatestIndexRootHash32S: make([][]byte,
+			params.BeaconConfig().LatestIndexRootsLength),
+		LatestPenalizedBalances: make([]uint64,
+			params.BeaconConfig().LatestPenalizedExitLength),
 	}
 
 	_, err := ProcessEpoch(state)
