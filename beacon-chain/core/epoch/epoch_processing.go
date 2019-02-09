@@ -6,6 +6,7 @@ package epoch
 
 import (
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -345,7 +346,43 @@ func UpdatePenalizedExitBalances(state *pb.BeaconState) *pb.BeaconState {
 // 	LATEST_INDEX_ROOTS_LENGTH] =
 // 	hash_tree_root(get_active_validator_indices(state,
 // 	next_epoch + ENTRY_EXIT_DELAY))
-func UpdateLatestIndexRoots(state *pb.BeaconState) *pb.BeaconState {
-	index := helpers.NextEpoch(state) + params.BeaconConfig().EntryExitDelay %
-		params.BeaconConfig().LatestIndexRootsLength
+func UpdateLatestIndexRoots(state *pb.BeaconState) (*pb.BeaconState, error) {
+	nextEpoch := helpers.NextEpoch(state) + params.BeaconConfig().EntryExitDelay
+	validatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, nextEpoch)
+	indexRoot, err := ssz.TreeHash(validatorIndices)
+	if err != nil {
+		return nil, fmt.Errorf("could not hash tree root: %v", err)
+	}
+	state.LatestIndexRootHash32S[nextEpoch%params.BeaconConfig().LatestIndexRootsLength] =
+		indexRoot[:]
+	return state, nil
+}
+
+// UpdateLatestPenalizedBalances updates the latest penalized balances. It transfers
+// the amount from the current epoch index to next epoch index.
+//
+// Spec pseudocode definition:
+// Set state.latest_penalized_balances[(next_epoch) % LATEST_PENALIZED_EXIT_LENGTH] =
+// 	state.latest_penalized_balances[current_epoch % LATEST_PENALIZED_EXIT_LENGTH].
+func UpdateLatestPenalizedBalances(state *pb.BeaconState) *pb.BeaconState {
+	currentEpoch := helpers.CurrentEpoch(state) * params.BeaconConfig().LatestPenalizedExitLength
+	nextEpoch := helpers.NextEpoch(state) * params.BeaconConfig().LatestPenalizedExitLength
+	state.LatestPenalizedBalances[nextEpoch] = state.LatestPenalizedBalances[currentEpoch]
+	return state
+}
+
+// UpdateLatestRandaoMixes updates the latest randao mixes. It transfers
+// the randao mix of current epoch to next epoch.
+//
+// Spec pseudocode definition:
+// Set state.latest_randao_mixes[next_epoch % LATEST_RANDAO_MIXES_LENGTH] =
+// 	get_randao_mix(state, current_epoch).
+func UpdateLatestRandaoMixes(state *pb.BeaconState) (*pb.BeaconState, error) {
+	nextEpoch := helpers.NextEpoch(state) * params.BeaconConfig().LatestRandaoMixesLength
+	randaoMix, err := helpers.RandaoMix(state, helpers.CurrentEpoch(state))
+	if err != nil {
+		return nil, fmt.Errorf("could not get randao mix: %v", err)
+	}
+	state.LatestRandaoMixesHash32S[nextEpoch] = randaoMix
+	return state, nil
 }
