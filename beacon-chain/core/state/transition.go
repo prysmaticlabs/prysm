@@ -304,6 +304,22 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 		}
 	}
 
+	// Final housekeeping updates.
+	// Update index roots from current epoch to next epoch.
+	state, err = e.UpdateLatestIndexRoots(state)
+	if err != nil {
+		return nil, fmt.Errorf("could not update latest index roots: %v", err)
+	}
+
+	// Update accumulated penalized balances from current epoch to next epoch.
+	state = e.UpdateLatestPenalizedBalances(state)
+
+	// Update current epoch's randao seed to next epoch.
+	state, err = e.UpdateLatestRandaoMixes(state)
+	if err != nil {
+		return nil, fmt.Errorf("could not update latest randao mixes: %v", err)
+	}
+
 	// Clean up processed attestations.
 	state = e.CleanupAttestations(state)
 	return state, nil

@@ -12,6 +12,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 // CanProcessEpoch checks the eligibility to process epoch.
@@ -263,11 +264,11 @@ func ProcessValidatorRegistry(
 		randaoMixSlot = state.CurrentCalculationEpoch -
 			params.BeaconConfig().SeedLookahead
 	}
-	mix, err := helpers.RandaoMix(state, randaoMixSlot)
+	randaoMix, err := helpers.RandaoMix(state, randaoMixSlot)
 	if err != nil {
-		return nil, fmt.Errorf("could not get randao mix: %v", err)
+		return nil, fmt.Errorf("could not get randaoMix mix: %v", err)
 	}
-	state.CurrentEpochSeedHash32 = mix
+	state.CurrentEpochSeedHash32 = randaoMix
 
 	return state, nil
 }
@@ -317,18 +318,53 @@ func CleanupAttestations(state *pb.BeaconState) *pb.BeaconState {
 	return state
 }
 
-// UpdatePenalizedExitBalances ports over the current epoch's penalized exit balances
-// into next epoch.
+// UpdateLatestIndexRoots updates the latest index roots. Index root
+// is computed by hashing validator indices of the next epoch + delay.
 //
 // Spec pseudocode definition:
 // Let e = state.slot // EPOCH_LENGTH.
-// Set state.latest_penalized_exit_balances[(e+1) % LATEST_PENALIZED_EXIT_LENGTH] =
-// 		state.latest_penalized_exit_balances[e % LATEST_PENALIZED_EXIT_LENGTH]
-func UpdatePenalizedExitBalances(state *pb.BeaconState) *pb.BeaconState {
-	epoch := state.Slot / params.BeaconConfig().EpochLength
-	nextPenalizedEpoch := (epoch + 1) % params.BeaconConfig().LatestPenalizedExitLength
-	currPenalizedEpoch := (epoch) % params.BeaconConfig().LatestPenalizedExitLength
-	state.LatestPenalizedBalances[nextPenalizedEpoch] =
-		state.LatestPenalizedBalances[currPenalizedEpoch]
+// Set state.latest_index_roots[(next_epoch + ENTRY_EXIT_DELAY) %
+// 	LATEST_INDEX_ROOTS_LENGTH] =
+// 	hash_tree_root(get_active_validator_indices(state,
+// 	next_epoch + ENTRY_EXIT_DELAY))
+func UpdateLatestIndexRoots(state *pb.BeaconState) (*pb.BeaconState, error) {
+	nextEpoch := helpers.NextEpoch(state) + params.BeaconConfig().EntryExitDelay
+	validatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, nextEpoch)
+	indexRoot, err := ssz.TreeHash(validatorIndices)
+	if err != nil {
+		return nil, fmt.Errorf("could not hash tree root: %v", err)
+	}
+	state.LatestIndexRootHash32S[nextEpoch%params.BeaconConfig().LatestIndexRootsLength] =
+		indexRoot[:]
+	return state, nil
+}
+
+// UpdateLatestPenalizedBalances updates the latest penalized balances. It transfers
+// the amount from the current epoch index to next epoch index.
+//
+// Spec pseudocode definition:
+// Set state.latest_penalized_balances[(next_epoch) % LATEST_PENALIZED_EXIT_LENGTH] =
+// 	state.latest_penalized_balances[current_epoch % LATEST_PENALIZED_EXIT_LENGTH].
+func UpdateLatestPenalizedBalances(state *pb.BeaconState) *pb.BeaconState {
+	currentEpoch := helpers.CurrentEpoch(state) % params.BeaconConfig().LatestPenalizedExitLength
+	nextEpoch := helpers.NextEpoch(state) % params.BeaconConfig().LatestPenalizedExitLength
+	state.LatestPenalizedBalances[nextEpoch] = state.LatestPenalizedBalances[currentEpoch]
 	return state
+}
+
+// UpdateLatestRandaoMixes updates the latest seed mixes. It transfers
+// the seed mix of current epoch to next epoch.
+//
+// Spec pseudocode definition:
+// Set state.latest_randao_mixes[next_epoch % LATEST_RANDAO_MIXES_LENGTH] =
+// 	get_randao_mix(state, current_epoch).
+func UpdateLatestRandaoMixes(state *pb.BeaconState) (*pb.BeaconState, error) {
+	nextEpoch := helpers.NextEpoch(state) % params.BeaconConfig().LatestRandaoMixesLength
+	randaoMix, err := helpers.RandaoMix(state, helpers.CurrentEpoch(state))
+	if err != nil {
+		return nil, fmt.Errorf("could not get randaoMix mix: %v", err)
+	}
+
+	state.LatestRandaoMixesHash32S[nextEpoch] = randaoMix
+	return state, nil
 }
