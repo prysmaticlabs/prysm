@@ -133,7 +133,7 @@ func Attesters(state *pb.BeaconState, attesterIndices []uint64) []*pb.Validator 
 //
 // Spec pseudocode definition:
 //   Let attester_indices be the union of the validator
-//   index sets given by [get_attestation_participants(state, a.data, a.a.aggregation_bitfield)
+//   index sets given by [get_attestation_participants(state, a.data, a.aggregation_bitfield)
 //   for a in attestations]
 func ValidatorIndices(
 	state *pb.BeaconState,
