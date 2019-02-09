@@ -129,46 +129,46 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Calculate the attesting balances of validators that made an attestation
 	// during previous epoch.
-	prevAttestations := e.PrevAttestations(state)
-	prevAttesterIndices, err := v.ValidatorIndices(state, prevAttestations)
+	prevEpochAttestations := e.PrevAttestations(state)
+	prevAttesterIndices, err := v.ValidatorIndices(state, prevEpochAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not get prev epoch attester indices: %v", err)
 	}
 
 	// Calculate the attesting balances of validators that targeted
 	// previous justified hash.
-	prevJustifiedAttestations := e.PrevJustifiedAttestations(state,
-		currentAttestations, prevAttestations)
+	prevEpochJustifiedAttestations := e.PrevJustifiedAttestations(state,
+		currentAttestations, prevEpochAttestations)
 
-	prevJustifiedAttesterIndices, err := v.ValidatorIndices(state, prevJustifiedAttestations)
+	prevEpochJustifiedAttesterIndices, err := v.ValidatorIndices(state, prevEpochJustifiedAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not get prev epoch justified attester indices: %v", err)
 	}
-	prevJustifiedAttestingBalance := e.TotalBalance(state, prevJustifiedAttesterIndices)
+	prevEpochJustifiedAttestingBalance := e.TotalBalance(state, prevEpochJustifiedAttesterIndices)
 
 	// Calculate the attesting balances of validator justifying epoch boundary block
 	// at the start of previous epoch.
-	prevBoundaryAttestations, err := e.PrevBoundaryAttestations(state, prevJustifiedAttestations)
+	prevEpochBoundaryAttestations, err := e.PrevBoundaryAttestations(state, prevEpochJustifiedAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not get prev boundary attestations: %v", err)
 	}
-	prevBoundaryAttesterIndices, err := v.ValidatorIndices(state, prevBoundaryAttestations)
+	prevEpochBoundaryAttesterIndices, err := v.ValidatorIndices(state, prevEpochBoundaryAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not get prev boundary attester indices: %v", err)
 	}
-	prevBoundaryAttestingBalances := e.TotalBalance(state, prevBoundaryAttesterIndices)
+	prevEpochBoundaryAttestingBalances := e.TotalBalance(state, prevEpochBoundaryAttesterIndices)
 
 	// Calculate attesting balances of validator attesting to expected beacon chain head
 	// during previous epoch.
-	prevHeadAttestations, err := e.PrevHeadAttestations(state, prevAttestations)
+	prevEpochHeadAttestations, err := e.PrevHeadAttestations(state, prevEpochAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not get prev head attestations: %v", err)
 	}
-	prevHeadAttesterIndices, err := v.ValidatorIndices(state, prevHeadAttestations)
+	prevEpochHeadAttesterIndices, err := v.ValidatorIndices(state, prevEpochHeadAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not get prev head attester indices: %v", err)
 	}
-	prevHeadAttestingBalances := e.TotalBalance(state, prevHeadAttesterIndices)
+	prevEpochHeadAttestingBalances := e.TotalBalance(state, prevEpochHeadAttesterIndices)
 
 	// Process eth1 data
 	if e.CanProcessEth1Data(state) {
@@ -179,7 +179,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	state = e.ProcessJustification(
 		state,
 		currentBoundaryAttestingBalances,
-		prevBoundaryAttestingBalances,
+		prevEpochBoundaryAttestingBalances,
 		totalBalance)
 
 	// Update Finalization.
@@ -189,7 +189,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	state, err = e.ProcessCrosslinks(
 		state,
 		currentAttestations,
-		prevAttestations)
+		prevEpochAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not process crosslink records: %v", err)
 	}
@@ -202,22 +202,22 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 		// expected FFG source.
 		state = bal.ExpectedFFGSource(
 			state,
-			prevJustifiedAttesterIndices,
-			prevJustifiedAttestingBalance,
+			prevEpochJustifiedAttesterIndices,
+			prevEpochJustifiedAttestingBalance,
 			totalBalance)
 		// Apply rewards/penalties to validators for attesting
 		// expected FFG target.
 		state = bal.ExpectedFFGTarget(
 			state,
-			prevBoundaryAttesterIndices,
-			prevBoundaryAttestingBalances,
+			prevEpochBoundaryAttesterIndices,
+			prevEpochBoundaryAttestingBalances,
 			totalBalance)
 		// Apply rewards/penalties to validators for attesting
 		// expected beacon chain head.
 		state = bal.ExpectedBeaconChainHead(
 			state,
-			prevHeadAttesterIndices,
-			prevHeadAttestingBalances,
+			prevEpochHeadAttesterIndices,
+			prevEpochHeadAttestingBalances,
 			totalBalance)
 		// Apply rewards for to validators for including attestations
 		// based on inclusion distance.
@@ -233,20 +233,20 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 		// Apply penalties for long inactive FFG source participants.
 		state = bal.InactivityFFGSource(
 			state,
-			prevJustifiedAttesterIndices,
+			prevEpochJustifiedAttesterIndices,
 			totalBalance,
 			epochsSinceFinality)
 		// Apply penalties for long inactive FFG target participants.
 		state = bal.InactivityFFGTarget(
 			state,
-			prevBoundaryAttesterIndices,
+			prevEpochBoundaryAttesterIndices,
 			totalBalance,
 			epochsSinceFinality)
 		// Apply penalties for long inactive validators who didn't
 		// attest to head canonical chain.
 		state = bal.InactivityChainHead(
 			state,
-			prevHeadAttesterIndices,
+			prevEpochHeadAttesterIndices,
 			totalBalance)
 		// Apply penalties for long inactive validators who also
 		// exited with penalties.
@@ -278,7 +278,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	state, err = bal.Crosslinks(
 		state,
 		currentAttestations,
-		prevAttestations)
+		prevEpochAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not process crosslink rewards and penalties: %v", err)
 	}
@@ -298,7 +298,10 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 			return nil, fmt.Errorf("can not process validator registry: %v", err)
 		}
 	} else {
-		state = e.ProcessPartialValidatorRegistry(state)
+		state, err = e.ProcessPartialValidatorRegistry(state)
+		if err != nil {
+			return nil, fmt.Errorf("could not process partial validator registry: %v", err)
+		}
 	}
 
 	// Clean up processed attestations.
