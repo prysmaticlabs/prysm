@@ -107,8 +107,8 @@ func TotalEffectiveBalance(state *pb.BeaconState, validatorIndices []uint64) uin
 //     """
 //     return min(state.validator_balances[idx], MAX_DEPOSIT)
 func EffectiveBalance(state *pb.BeaconState, idx uint64) uint64 {
-	if state.ValidatorBalances[idx] > params.BeaconConfig().MaxDeposit {
-		return params.BeaconConfig().MaxDeposit
+	if state.ValidatorBalances[idx] > params.BeaconConfig().MaxDepositAmount {
+		return params.BeaconConfig().MaxDepositAmount
 	}
 	return state.ValidatorBalances[idx]
 }
@@ -450,7 +450,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	for idx, validator := range state.ValidatorRegistry {
 		// Activate validators within the allowable balance churn.
 		if validator.ActivationEpoch > helpers.EntryExitEffectEpoch(currentEpoch) &&
-			state.ValidatorBalances[idx] >= params.BeaconConfig().MaxDeposit {
+			state.ValidatorBalances[idx] >= params.BeaconConfig().MaxDepositAmount {
 			balChurn += EffectiveBalance(state, uint64(idx))
 			if balChurn > maxBalChurn {
 				break
@@ -575,10 +575,10 @@ func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 //        total_balance // (2 * MAX_BALANCE_CHURN_QUOTIENT))
 func maxBalanceChurn(totalBalance uint64) uint64 {
 	maxBalanceChurn := totalBalance / 2 * params.BeaconConfig().MaxBalanceChurnQuotient
-	if maxBalanceChurn > params.BeaconConfig().MaxDeposit {
+	if maxBalanceChurn > params.BeaconConfig().MaxDepositAmount {
 		return maxBalanceChurn
 	}
-	return params.BeaconConfig().MaxDeposit
+	return params.BeaconConfig().MaxDepositAmount
 }
 
 // eligibleToExit checks if a validator is eligible to exit whether it was
