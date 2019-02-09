@@ -272,7 +272,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
 	).Times(1)
 
-	delay = 1
+	delay = 0
 	go validator.AttestToBlockHead(context.Background(), 30)
 	time.Sleep(50 * time.Millisecond)
 }
