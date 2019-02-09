@@ -16,7 +16,6 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -70,54 +69,37 @@ func ProcessEth1Data(beaconState *pb.BeaconState, block *pb.BeaconBlock) *pb.Bea
 
 // ProcessBlockRandao checks the block proposer's
 // randao commitment and generates a new randao mix to update
-// in the beacon state's latest randao mixes and set the proposer's randao fields.
+// in the beacon state's latest randao mixes slice.
 //
 // Official spec definition for block randao verification:
-//   Let repeat_hash(x, n) = x if n == 0 else repeat_hash(hash(x), n-1).
 //   Let proposer = state.validator_registry[get_beacon_proposer_index(state, state.slot)].
-//   Verify that repeat_hash(block.randao_reveal, proposer.randao_layers) == proposer.randao_commitment.
-//   Set state.latest_randao_mixes[state.slot % LATEST_RANDAO_MIXES_LENGTH] =
-//     xor(state.latest_randao_mixes[state.slot % LATEST_RANDAO_MIXES_LENGTH], block.randao_reveal)
-//   Set proposer.randao_commitment = block.randao_reveal.
-//   Set proposer.randao_layers = 0
+//   Verify that bls_verify(pubkey=proposer.pubkey, message_hash=int_to_bytes32(get_current_epoch(state)),
+//     signature=block.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO)).
+//   Set state.latest_randao_mixes[get_current_epoch(state) % LATEST_RANDAO_MIXES_LENGTH] =
+//     xor(get_randao_mix(state, get_current_epoch(state)), hash(block.randao_reveal))
 func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
-	proposerIndex, err := v.BeaconProposerIdx(beaconState, beaconState.Slot)
-	if err != nil {
-		return nil, fmt.Errorf("could not fetch beacon proposer index: %v", err)
-	}
-	registry := beaconState.ValidatorRegistry
-	proposer := registry[proposerIndex]
-	if err := verifyBlockRandao(proposer, block); err != nil {
+	if err := verifyBlockRandao(beaconState, block); err != nil {
 		return nil, fmt.Errorf("could not verify block randao: %v", err)
 	}
 	// If block randao passed verification, we XOR the state's latest randao mix with the block's
 	// randao and update the state's corresponding latest randao mix value.
 	latestMixesLength := params.BeaconConfig().LatestRandaoMixesLength
-	latestMixSlice := beaconState.LatestRandaoMixesHash32S[beaconState.Slot%latestMixesLength]
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+	latestMixSlice := beaconState.LatestRandaoMixesHash32S[currentEpoch%latestMixesLength]
 	latestMix := bytesutil.ToBytes32(latestMixSlice)
 	for i, x := range block.RandaoRevealHash32 {
 		latestMix[i] ^= x
 	}
-	proposer.RandaoCommitmentHash32 = block.RandaoRevealHash32
-	proposer.RandaoLayers = 0
-	registry[proposerIndex] = proposer
 	beaconState.LatestRandaoMixesHash32S[beaconState.Slot%latestMixesLength] = latestMix[:]
-	beaconState.ValidatorRegistry = registry
 	return beaconState, nil
 }
 
-func verifyBlockRandao(proposer *pb.Validator, block *pb.BeaconBlock) error {
-	blockRandaoReveal := bytesutil.ToBytes32(block.RandaoRevealHash32)
-	proposerRandaoCommit := bytesutil.ToBytes32(proposer.RandaoCommitmentHash32)
-	randaoHashLayers := hashutil.RepeatHash(blockRandaoReveal, proposer.RandaoLayers)
-	// Verify that repeat_hash(block.randao_reveal, proposer.randao_layers) == proposer.randao_commitment.
-	if randaoHashLayers != proposerRandaoCommit {
-		return fmt.Errorf(
-			"expected hashed block randao layers to equal proposer randao: received %#x = %#x",
-			randaoHashLayers[:],
-			proposerRandaoCommit[:],
-		)
-	}
+func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) error {
+	// TODO(#1366): Integrate BLS into the repository.
+	// Verify that bls_verify(pubkey=proposer.pubkey, message_hash=int_to_bytes32(get_current_epoch(state)),
+	//   signature=block.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO)).
+	_ = beaconState
+	_ = block
 	return nil
 }
 
