@@ -443,7 +443,7 @@ func TestReceiveExitReq_Ok(t *testing.T) {
 	}()
 
 	request1 := &pb.Exit{
-		Slot: 100,
+		Epoch: 100,
 	}
 
 	msg1 := p2p.Message{
