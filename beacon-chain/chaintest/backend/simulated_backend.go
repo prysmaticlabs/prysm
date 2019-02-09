@@ -28,12 +28,12 @@ import (
 // of an in-memory beacon chain for client test runs
 // and other e2e use cases.
 type SimulatedBackend struct {
-	chainService            *blockchain.ChainService
-	beaconDB                *db.BeaconDB
-	state                   *pb.BeaconState
-	prevBlockRoots          [][32]byte
-	inMemoryBlocks          []*pb.BeaconBlock
-	depositTrie             *trieutil.DepositTrie
+	chainService   *blockchain.ChainService
+	beaconDB       *db.BeaconDB
+	state          *pb.BeaconState
+	prevBlockRoots [][32]byte
+	inMemoryBlocks []*pb.BeaconBlock
+	depositTrie    *trieutil.DepositTrie
 }
 
 // SimulatedObjects is a container to hold the
