@@ -35,8 +35,8 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.18.2/rules_nodejs-0.18.2.tar.gz"],
-    sha256 = "8f9866ffe3bb5da004348e41b89933818c968bd918da18da4b097e6e4fcd98f1",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.18.4/rules_nodejs-0.18.4.tar.gz"],
+    sha256 = "23987a5cf549146742aa6a0d2536e4906906e63a608d5b9b32dd9fe5523ef51c",
 )
 
 http_archive(
@@ -180,7 +180,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_crypto",
     build_file_proto_mode = "disable_global",
-    tag = "v2.0.1",
+    tag = "v2.0.5",
     importpath = "github.com/libp2p/go-libp2p-crypto",
 )
 
@@ -300,7 +300,7 @@ go_repository(
 
 go_repository(
     name = "com_github_btcsuite_btcd",
-    commit = "ed77733ec07dfc8a513741138419b8d9d3de9d2d",
+    commit = "12ce2fc7d32197bf00739e4167128285ae250124",
     importpath = "github.com/btcsuite/btcd",
 )
 
@@ -667,7 +667,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_procfs",
-    commit = "488faf799f863e27e50c516468f76ae8f1da20a5",
+    commit = "f8d8b3f739bd91a7c0462cb55235ef63c79c9abc",
     importpath = "github.com/prometheus/procfs",
 )
 
