@@ -88,27 +88,27 @@ func generateSimulatedBlock(
 	}
 	if simObjects.simAttesterSlashing != nil {
 		block.Body.AttesterSlashings = append(block.Body.AttesterSlashings, &pb.AttesterSlashing{
-			SlashableVote_1: &pb.SlashableVote{
+			SlashableAttestation_1: &pb.SlashableAttestation{
 				Data: &pb.AttestationData{
-					Slot:          simObjects.simAttesterSlashing.SlashableVote1Slot,
-					JustifiedSlot: simObjects.simAttesterSlashing.SlashableVote1JustifiedSlot,
+					Slot:           simObjects.simAttesterSlashing.SlashableAttestation1Slot,
+					JustifiedEpoch: simObjects.simAttesterSlashing.SlashableAttestation1JustifiedEpoch,
 				},
-				CustodyBitfield:  []byte(simObjects.simAttesterSlashing.SlashableVote1CustodyBitField),
-				ValidatorIndices: simObjects.simAttesterSlashing.SlashableVote1ValidatorIndices,
+				CustodyBitfield:  []byte(simObjects.simAttesterSlashing.SlashableAttestation1CustodyBitField),
+				ValidatorIndices: simObjects.simAttesterSlashing.SlashableAttestation1ValidatorIndices,
 			},
-			SlashableVote_2: &pb.SlashableVote{
+			SlashableAttestation_2: &pb.SlashableAttestation{
 				Data: &pb.AttestationData{
-					Slot:          simObjects.simAttesterSlashing.SlashableVote2Slot,
-					JustifiedSlot: simObjects.simAttesterSlashing.SlashableVote2JustifiedSlot,
+					Slot:           simObjects.simAttesterSlashing.SlashableAttestation2Slot,
+					JustifiedEpoch: simObjects.simAttesterSlashing.SlashableAttestation2JustifiedEpoch,
 				},
-				CustodyBitfield:  []byte(simObjects.simAttesterSlashing.SlashableVote2CustodyBitField),
-				ValidatorIndices: simObjects.simAttesterSlashing.SlashableVote2ValidatorIndices,
+				CustodyBitfield:  []byte(simObjects.simAttesterSlashing.SlashableAttestation2CustodyBitField),
+				ValidatorIndices: simObjects.simAttesterSlashing.SlashableAttestation2ValidatorIndices,
 			},
 		})
 	}
 	if simObjects.simValidatorExit != nil {
 		block.Body.Exits = append(block.Body.Exits, &pb.Exit{
-			Slot:           simObjects.simValidatorExit.Slot,
+			Epoch:          simObjects.simValidatorExit.Epoch,
 			ValidatorIndex: simObjects.simValidatorExit.ValidatorIndex,
 		})
 	}
