@@ -65,8 +65,7 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 // marks the voted Eth1 data as the latest data set.
 //
 // Official spec definition:
-//   if state.slot % ETH1_DATA_VOTING_PERIOD == 0:
-//     Set state.latest_eth1_data = eth1_data_vote.data
+//   if next_epoch % ETH1_DATA_VOTING_PERIOD == 0:
 //     if eth1_data_vote.vote_count * 2 > ETH1_DATA_VOTING_PERIOD * EPOCH_LENGTH for
 //       some eth1_data_vote in state.eth1_data_votes.
 //       (ie. more than half the votes in this voting period were for that value)
@@ -74,7 +73,7 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 //		 Set state.eth1_data_votes = [].
 //
 func ProcessEth1Data(state *pb.BeaconState) *pb.BeaconState {
-	if state.Slot%params.BeaconConfig().Eth1DataVotingPeriod == 0 {
+	if helpers.NextEpoch(state)%params.BeaconConfig().Eth1DataVotingPeriod == 0 {
 		for _, eth1DataVote := range state.Eth1DataVotes {
 			if eth1DataVote.VoteCount*2 > params.BeaconConfig().Eth1DataVotingPeriod {
 				state.LatestEth1Data.DepositRootHash32 = eth1DataVote.Eth1Data.DepositRootHash32
@@ -282,7 +281,7 @@ func ProcessValidatorRegistry(
 //		state.validator_registry_update_epoch
 //	If epochs_since_last_registry_update > 1 and
 //		epochs_since_last_registry_change is an exact power of 2:
-// 			set state.current_calculation_epoch = state.slot
+// 			set state.current_calculation_epoch = next_epoch
 // 			set state.current_epoch_seed = generate_seed(
 // 				state, state.current_calculation_epoch)
 func ProcessPartialValidatorRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {

@@ -98,6 +98,7 @@ func TestCanProcessEth1Data(t *testing.T) {
 func TestProcessEth1Data(t *testing.T) {
 	requiredVoteCount := params.BeaconConfig().Eth1DataVotingPeriod
 	state := &pb.BeaconState{
+		Slot: 15 * params.BeaconConfig().EpochLength,
 		LatestEth1Data: &pb.Eth1Data{
 			DepositRootHash32: nil,
 			BlockHash32:       nil,
