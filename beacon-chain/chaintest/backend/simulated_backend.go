@@ -31,9 +31,6 @@ type SimulatedBackend struct {
 	chainService            *blockchain.ChainService
 	beaconDB                *db.BeaconDB
 	state                   *pb.BeaconState
-	hashOnions              [][32]byte
-	lastRandaoLayer         [32]byte
-	layersPeeledForProposer map[uint64]int
 	prevBlockRoots          [][32]byte
 	inMemoryBlocks          []*pb.BeaconBlock
 	depositTrie             *trieutil.DepositTrie
