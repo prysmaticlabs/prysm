@@ -264,7 +264,7 @@ func ProcessValidatorRegistry(
 	}
 	mix, err := helpers.RandaoMix(state, randaoMixSlot)
 	if err != nil {
-		return nil, fmt.Errorf("could not get randao mix: %v", err)
+		return nil, fmt.Errorf("could not get seed mix: %v", err)
 	}
 	state.CurrentEpochSeedHash32 = mix
 
@@ -321,22 +321,6 @@ func CleanupAttestations(state *pb.BeaconState) *pb.BeaconState {
 	return state
 }
 
-// UpdatePenalizedExitBalances ports over the current epoch's penalized exit balances
-// into next epoch.
-//
-// Spec pseudocode definition:
-// Let e = state.slot // EPOCH_LENGTH.
-// Set state.latest_penalized_exit_balances[(e+1) % LATEST_PENALIZED_EXIT_LENGTH] =
-// 		state.latest_penalized_exit_balances[e % LATEST_PENALIZED_EXIT_LENGTH]
-func UpdatePenalizedExitBalances(state *pb.BeaconState) *pb.BeaconState {
-	epoch := state.Slot / params.BeaconConfig().EpochLength
-	nextPenalizedEpoch := (epoch + 1) % params.BeaconConfig().LatestPenalizedExitLength
-	currPenalizedEpoch := (epoch) % params.BeaconConfig().LatestPenalizedExitLength
-	state.LatestPenalizedBalances[nextPenalizedEpoch] =
-		state.LatestPenalizedBalances[currPenalizedEpoch]
-	return state
-}
-
 // UpdateLatestIndexRoots updates the latest index roots. Index root
 // is computed by hashing validator indices of the next epoch + delay.
 //
@@ -365,24 +349,25 @@ func UpdateLatestIndexRoots(state *pb.BeaconState) (*pb.BeaconState, error) {
 // Set state.latest_penalized_balances[(next_epoch) % LATEST_PENALIZED_EXIT_LENGTH] =
 // 	state.latest_penalized_balances[current_epoch % LATEST_PENALIZED_EXIT_LENGTH].
 func UpdateLatestPenalizedBalances(state *pb.BeaconState) *pb.BeaconState {
-	currentEpoch := helpers.CurrentEpoch(state) * params.BeaconConfig().LatestPenalizedExitLength
-	nextEpoch := helpers.NextEpoch(state) * params.BeaconConfig().LatestPenalizedExitLength
+	currentEpoch := helpers.CurrentEpoch(state) % params.BeaconConfig().LatestPenalizedExitLength
+	nextEpoch := helpers.NextEpoch(state) % params.BeaconConfig().LatestPenalizedExitLength
 	state.LatestPenalizedBalances[nextEpoch] = state.LatestPenalizedBalances[currentEpoch]
 	return state
 }
 
-// UpdateLatestRandaoMixes updates the latest randao mixes. It transfers
-// the randao mix of current epoch to next epoch.
+// UpdateLatestRandaoMixes updates the latest seed mixes. It transfers
+// the seed mix of current epoch to next epoch.
 //
 // Spec pseudocode definition:
 // Set state.latest_randao_mixes[next_epoch % LATEST_RANDAO_MIXES_LENGTH] =
 // 	get_randao_mix(state, current_epoch).
 func UpdateLatestRandaoMixes(state *pb.BeaconState) (*pb.BeaconState, error) {
-	nextEpoch := helpers.NextEpoch(state) * params.BeaconConfig().LatestRandaoMixesLength
+	nextEpoch := helpers.NextEpoch(state) % params.BeaconConfig().LatestRandaoMixesLength
 	randaoMix, err := helpers.RandaoMix(state, helpers.CurrentEpoch(state))
 	if err != nil {
-		return nil, fmt.Errorf("could not get randao mix: %v", err)
+		return nil, fmt.Errorf("could not get seed mix: %v", err)
 	}
+
 	state.LatestRandaoMixesHash32S[nextEpoch] = randaoMix
 	return state, nil
 }
