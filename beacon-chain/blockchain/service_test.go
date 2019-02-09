@@ -396,7 +396,7 @@ func TestRunningChainService(t *testing.T) {
 				Data: &pb.AttestationData{
 					Slot:                      attestationSlot,
 					JustifiedBlockRootHash32:  params.BeaconConfig().ZeroHash[:],
-					LatestCrosslinkRootHash32: params.BeaconConfig().ZeroHash[:],
+					LatestCrosslink: &pb.Crosslink{ShardBlockRootHash32: params.BeaconConfig().ZeroHash[:]},
 				},
 			}},
 		},
@@ -484,7 +484,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 				Data: &pb.AttestationData{
 					Slot:                      attestationSlot,
 					JustifiedBlockRootHash32:  params.BeaconConfig().ZeroHash[:],
-					LatestCrosslinkRootHash32: params.BeaconConfig().ZeroHash[:],
+					LatestCrosslink: &pb.Crosslink{ShardBlockRootHash32: params.BeaconConfig().ZeroHash[:]},
 				},
 			}},
 		},

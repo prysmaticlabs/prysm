@@ -85,7 +85,7 @@ func TestAttestToBlockHead_ValidatorIndexRequestFailure(t *testing.T) {
 		BeaconBlockRootHash32:     []byte{},
 		EpochBoundaryRootHash32:   []byte{},
 		JustifiedBlockRootHash32:  []byte{},
-		LatestCrosslinkRootHash32: []byte{},
+		LatestCrosslink: &pbp2p.Crosslink{},
 		JustifiedEpoch:            0,
 	}, nil)
 	m.validatorClient.EXPECT().ValidatorIndex(
@@ -116,7 +116,7 @@ func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
 		BeaconBlockRootHash32:     []byte{},
 		EpochBoundaryRootHash32:   []byte{},
 		JustifiedBlockRootHash32:  []byte{},
-		LatestCrosslinkRootHash32: []byte{},
+		LatestCrosslink: &pbp2p.Crosslink{},
 		JustifiedEpoch:            0,
 	}, nil)
 	m.validatorClient.EXPECT().ValidatorIndex(
@@ -155,7 +155,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		BeaconBlockRootHash32:     []byte("A"),
 		EpochBoundaryRootHash32:   []byte("B"),
 		JustifiedBlockRootHash32:  []byte("C"),
-		LatestCrosslinkRootHash32: []byte("D"),
+		LatestCrosslink: &pbp2p.Crosslink{ShardBlockRootHash32:[]byte{'D'}},
 		JustifiedEpoch:            3,
 	}, nil)
 	m.validatorClient.EXPECT().ValidatorIndex(
@@ -186,7 +186,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 			BeaconBlockRootHash32:     []byte("A"),
 			EpochBoundaryRootHash32:   []byte("B"),
 			JustifiedBlockRootHash32:  []byte("C"),
-			LatestCrosslinkRootHash32: []byte("D"),
+			LatestCrosslink: &pbp2p.Crosslink{ShardBlockRootHash32:[]byte{'D'}},
 			ShardBlockRootHash32:      params.BeaconConfig().ZeroHash[:],
 			JustifiedEpoch:            3,
 		},
