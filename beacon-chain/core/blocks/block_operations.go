@@ -267,9 +267,9 @@ func verifyAttesterSlashing(slashing *pb.AttesterSlashing, verifySignatures bool
 			data2,
 		)
 	}
-    // Two attestations having the same epoch target are considered to be a "double vote" in Casper
-    // Proof of Stake literature and the Ethereum 2.0 specification. Below, we verify that either this is the case
-    // or that the two attestations are a "surround vote" instead.
+	// Two attestations having the same epoch target are considered to be a "double vote" in Casper
+	// Proof of Stake literature and the Ethereum 2.0 specification. Below, we verify that either this is the case
+	// or that the two attestations are a "surround vote" instead.
 	isSameTarget := helpers.SlotToEpoch(data1.Slot) == helpers.SlotToEpoch(data2.Slot)
 	if !(isSameTarget || isSurroundVote(data1, data2)) {
 		return errors.New("attester slashing is not a double vote nor surround vote")

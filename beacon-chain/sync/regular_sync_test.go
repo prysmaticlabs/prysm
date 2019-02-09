@@ -62,7 +62,7 @@ func setupInitialDeposits(t *testing.T) []*pb.Deposit {
 		depositInput := &pb.DepositInput{
 			Pubkey: genesisValidatorRegistry[i].Pubkey,
 		}
-		balance := params.BeaconConfig().MaxDeposit
+		balance := params.BeaconConfig().MaxDepositAmount
 		depositData, err := blocks.EncodeDepositData(depositInput, balance, time.Now().Unix())
 		if err != nil {
 			t.Fatalf("Cannot encode data: %v", err)
