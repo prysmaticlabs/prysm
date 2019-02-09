@@ -385,13 +385,21 @@ func TestProcessAttesterSlashings_ThresholdReached(t *testing.T) {
 func TestProcessAttesterSlashings_EmptyCustodyFields(t *testing.T) {
 	slashings := []*pb.AttesterSlashing{
 		{
-			SlashableVote_1: &pb.SlashableVote{
+			SlashableAttestation_1: &pb.SlashableAttestation{
+				Data: &pb.AttestationData{
+					Slot:  5,
+					Shard: 4,
+				},
 				ValidatorIndices: make(
 					[]uint64,
 					params.BeaconConfig().MaxIndicesPerSlashableVote,
 				),
 			},
-			SlashableVote_2: &pb.SlashableVote{
+			SlashableAttestation_2: &pb.SlashableAttestation{
+				Data: &pb.AttestationData{
+					Slot:  5,
+					Shard: 3,
+				},
 				ValidatorIndices: make(
 					[]uint64,
 					params.BeaconConfig().MaxIndicesPerSlashableVote,
@@ -424,13 +432,21 @@ func TestProcessAttesterSlashings_EmptyCustodyFields(t *testing.T) {
 	// Perform the same check for SlashableVoteData_2.
 	slashings = []*pb.AttesterSlashing{
 		{
-			SlashableVote_1: &pb.SlashableVote{
+			SlashableAttestation_1: &pb.SlashableAttestation{
+				Data: &pb.AttestationData{
+					Slot:  5,
+					Shard: 4,
+				},
 				ValidatorIndices: make(
 					[]uint64,
 					params.BeaconConfig().MaxIndicesPerSlashableVote,
 				),
 			},
-			SlashableVote_2: &pb.SlashableVote{
+			SlashableAttestation_2: &pb.SlashableAttestation{
+				Data: &pb.AttestationData{
+					Slot:  5,
+					Shard: 3,
+				},
 				ValidatorIndices: make(
 					[]uint64,
 					params.BeaconConfig().MaxIndicesPerSlashableVote,
@@ -462,12 +478,12 @@ func TestProcessAttesterSlashings_UnmatchedAttestations(t *testing.T) {
 	}
 	slashings := []*pb.AttesterSlashing{
 		{
-			SlashableVote_1: &pb.SlashableVote{
+			SlashableAttestation_1: &pb.SlashableAttestation{
 				Data:             att1,
 				ValidatorIndices: []uint64{1},
 				CustodyBitfield:  []byte{0xFF},
 			},
-			SlashableVote_2: &pb.SlashableVote{
+			SlashableAttestation_2: &pb.SlashableAttestation{
 				Data:             att1,
 				ValidatorIndices: []uint64{2},
 				CustodyBitfield:  []byte{0xFF},
@@ -501,112 +517,6 @@ func TestProcessAttesterSlashings_UnmatchedAttestations(t *testing.T) {
 	}
 }
 
-func TestProcessAttesterSlashings_SlotsInequalities(t *testing.T) {
-	testCases := []struct {
-		att1 *pb.AttestationData
-		att2 *pb.AttestationData
-	}{
-		{
-			// Case 0: vote1.JustifiedSlot < vote2.JustifiedSlot is false
-			// vote2.JustifiedSlot + 1 == vote2.Slot is true
-			// vote2.Slot < vote1.Slot is true
-			// and slots are unequal.
-			att1: &pb.AttestationData{
-				JustifiedSlot: 4,
-				Slot:          6,
-			},
-			att2: &pb.AttestationData{
-				JustifiedSlot: 4,
-				Slot:          5,
-			},
-		},
-		{
-			// Case 1: vote1.JustifiedSlot < vote2.JustifiedSlot is false
-			// vote2.JustifiedSlot + 1 == vote2.Slot is false
-			// vote2.Slot < vote1.Slot is true
-			// and slots are unequal.
-			att1: &pb.AttestationData{
-				JustifiedSlot: 4,
-				Slot:          8,
-			},
-			att2: &pb.AttestationData{
-				JustifiedSlot: 4,
-				Slot:          7,
-			},
-		},
-		{
-			// Case 2: vote1.JustifiedSlot < vote2.JustifiedSlot is false
-			// vote2.JustifiedSlot + 1 == vote2.Slot is false
-			// vote2.Slot < vote1.Slot is false
-			// and slots are unequal.
-			att1: &pb.AttestationData{
-				JustifiedSlot: 4,
-				Slot:          6,
-			},
-			att2: &pb.AttestationData{
-				JustifiedSlot: 4,
-				Slot:          7,
-			},
-		},
-	}
-	for _, tt := range testCases {
-		slashings := []*pb.AttesterSlashing{
-			{
-				SlashableVote_1: &pb.SlashableVote{
-					Data:             tt.att1,
-					ValidatorIndices: []uint64{1},
-					CustodyBitfield:  []byte{0xFF},
-				},
-				SlashableVote_2: &pb.SlashableVote{
-					Data:             tt.att2,
-					ValidatorIndices: []uint64{2},
-					CustodyBitfield:  []byte{0xFF},
-				},
-			},
-		}
-		registry := []*pb.Validator{}
-		currentSlot := uint64(0)
-
-		beaconState := &pb.BeaconState{
-			ValidatorRegistry: registry,
-			Slot:              currentSlot,
-		}
-		block := &pb.BeaconBlock{
-			Body: &pb.BeaconBlockBody{
-				AttesterSlashings: slashings,
-			},
-		}
-		want := fmt.Sprintf(
-			`
-			Expected the following conditions to hold:
-			(slashableVoteData1.JustifiedSlot <
-			slashableVoteData2.JustifiedSlot) &&
-			(slashableVoteData2.JustifiedSlot + 1
-			== slashableVoteData1.Slot) &&
-			(slashableVoteData2.Slot < slashableVoteData1.Slot)
-			OR
-			slashableVoteData1.Slot == slashableVoteData2.Slot
-
-			Instead, received slashableVoteData1.JustifiedSlot %d,
-			slashableVoteData2.JustifiedSlot %d
-			and slashableVoteData1.Slot %d, slashableVoteData2.Slot %d
-			`,
-			tt.att1.JustifiedSlot,
-			tt.att2.JustifiedSlot,
-			tt.att1.Slot,
-			tt.att2.Slot,
-		)
-
-		if _, err := ProcessAttesterSlashings(
-			beaconState,
-			block,
-			false,
-		); !strings.Contains(err.Error(), want) {
-			t.Errorf("Expected %s, received %v", want, err)
-		}
-	}
-}
-
 func TestProcessAttesterSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 	att1 := &pb.AttestationData{
 		Slot:          5,
@@ -618,12 +528,12 @@ func TestProcessAttesterSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 	}
 	slashings := []*pb.AttesterSlashing{
 		{
-			SlashableVote_1: &pb.SlashableVote{
+			SlashableAttestation_1: &pb.SlashableAttestation{
 				Data:             att1,
 				ValidatorIndices: []uint64{1},
 				CustodyBitfield:  []byte{0xFF},
 			},
-			SlashableVote_2: &pb.SlashableVote{
+			SlashableAttestation_2: &pb.SlashableAttestation{
 				Data:             att2,
 				ValidatorIndices: []uint64{2},
 				CustodyBitfield:  []byte{0xFF},
@@ -642,7 +552,7 @@ func TestProcessAttesterSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 			AttesterSlashings: slashings,
 		},
 	}
-	want := "expected intersection of vote indices to be non-empty"
+	want := "expected a non-empty list"
 	if _, err := ProcessAttesterSlashings(
 		beaconState,
 		block,
@@ -677,12 +587,12 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 	slashings := []*pb.AttesterSlashing{
 		{
-			SlashableVote_1: &pb.SlashableVote{
+			SlashableAttestation_1: &pb.SlashableAttestation{
 				Data:             att1,
 				ValidatorIndices: []uint64{1},
 				CustodyBitfield:  []byte{0xFF},
 			},
-			SlashableVote_2: &pb.SlashableVote{
+			SlashableAttestation_2: &pb.SlashableAttestation{
 				Data:             att2,
 				ValidatorIndices: []uint64{1},
 				CustodyBitfield:  []byte{0xFF},
@@ -1231,8 +1141,6 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 		Pubkey:                      []byte{1},
 		WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		ProofOfPossession:           []byte{},
-		RandaoCommitmentHash32:      []byte{0},
-		CustodyCommitmentHash32:     []byte{0},
 	}
 	wBuf := new(bytes.Buffer)
 	if err := ssz.Encode(wBuf, depositInput); err != nil {
@@ -1312,8 +1220,6 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 		Pubkey:                      []byte{1},
 		WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		ProofOfPossession:           []byte{},
-		RandaoCommitmentHash32:      []byte{0},
-		CustodyCommitmentHash32:     []byte{0},
 	}
 	wBuf := new(bytes.Buffer)
 	if err := ssz.Encode(wBuf, depositInput); err != nil {
@@ -1441,10 +1347,7 @@ func TestProcessValidatorExits_ValidatorNotActive(t *testing.T) {
 		},
 	}
 
-	want := fmt.Sprintf(
-		"expected exit.Slot > state.Slot + EntryExitDelay, received 0 < %d",
-		params.BeaconConfig().EntryExitDelay,
-	)
+	want := "validator exit epoch should be > entry_exit_effect_epoch"
 
 	if _, err := ProcessValidatorExits(
 		state,
@@ -1458,7 +1361,7 @@ func TestProcessValidatorExits_ValidatorNotActive(t *testing.T) {
 func TestProcessValidatorExits_InvalidExitEpoch(t *testing.T) {
 	exits := []*pb.Exit{
 		{
-			Slot: 10,
+			Epoch: 10,
 		},
 	}
 	registry := []*pb.Validator{
@@ -1476,11 +1379,7 @@ func TestProcessValidatorExits_InvalidExitEpoch(t *testing.T) {
 		},
 	}
 
-	want := fmt.Sprintf(
-		"expected state.Slot >= exit.Slot, received %d < %d",
-		0,
-		10,
-	)
+	want := "expected current epoch >= exit.epoch"
 
 	if _, err := ProcessValidatorExits(
 		state,
@@ -1495,7 +1394,7 @@ func TestProcessValidatorExits_InvalidStatusChangeSlot(t *testing.T) {
 	exits := []*pb.Exit{
 		{
 			ValidatorIndex: 0,
-			Slot:           0,
+			Epoch:          0,
 		},
 	}
 	registry := []*pb.Validator{
@@ -1513,7 +1412,7 @@ func TestProcessValidatorExits_InvalidStatusChangeSlot(t *testing.T) {
 		},
 	}
 
-	want := "expected exit.Slot > state.Slot + EntryExitDelay"
+	want := "exit epoch should be > entry_exit_effect_epoch"
 	if _, err := ProcessValidatorExits(
 		state,
 		block,
@@ -1527,7 +1426,7 @@ func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
 	exits := []*pb.Exit{
 		{
 			ValidatorIndex: 0,
-			Slot:           0,
+			Epoch:          0,
 		},
 	}
 	registry := []*pb.Validator{

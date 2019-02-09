@@ -146,7 +146,7 @@ message ProposalSignedData {
   bytes block_root_hash32 = 3;
 }
 
-message SlashableVote {
+message SlashableAttestation {
   repeated uint64 validator_indices = 1;
   bytes custody_bitfield = 2;
   AttestationData data = 3;
@@ -168,8 +168,8 @@ message ProposerSlashing {
 }
 
 message AttesterSlashing {
-  SlashableVote slashable_vote_1 = 1;
-  SlashableVote slashable_vote_2 = 2;
+  SlashableAttestation slashable_attestation_1 = 1;
+  SlashableAttestation slashable_attestation_2 = 2;
 }
 
 message Deposit {
@@ -179,7 +179,7 @@ message Deposit {
 }
 
 message Exit {
-  uint64 slot = 1;
+  uint64 epoch = 1;
   uint64 validator_index = 2;
   bytes signature = 3; // Type of [uint384]?
 }
