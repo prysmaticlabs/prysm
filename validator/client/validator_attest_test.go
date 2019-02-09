@@ -202,8 +202,6 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 }
 
 func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
-	hook := logTest.NewGlobal()
-
 	validator, m, finish := setup(t)
 	defer finish()
 	validatorIndex := uint64(5)
@@ -231,14 +229,6 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 	).Return(&pb.ValidatorIndexResponse{
 		Index: uint64(validatorIndex),
 	}, nil)
-
-	var generatedAttestation *pbp2p.Attestation
-	m.attesterClient.EXPECT().AttestHead(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
-	).Do(func(_ context.Context, att *pbp2p.Attestation) {
-		generatedAttestation = att
-	}).Return(&pb.AttestResponse{}, nil /* error */)
 
 	m.attesterClient.EXPECT().AttestHead(
 		gomock.Any(), // ctx
@@ -246,35 +236,9 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 	).Times(0)
 	delay = 1
 	go validator.AttestToBlockHead(context.Background(), 30)
-
-	aggregationBitfield := make([]byte, (len(committee)+7)/8)
-	// Validator index is at index 4 in the mocked committee defined in this test.
-	indexIntoCommittee := uint64(4)
-	aggregationBitfield[indexIntoCommittee/8] |= 1 << (indexIntoCommittee % 8)
-	expectedAttestation := &pbp2p.Attestation{
-		Data: &pbp2p.AttestationData{
-			Slot:                      30,
-			Shard:                     5,
-			BeaconBlockRootHash32:     []byte("A"),
-			EpochBoundaryRootHash32:   []byte("B"),
-			JustifiedBlockRootHash32:  []byte("C"),
-			LatestCrosslinkRootHash32: []byte("D"),
-			ShardBlockRootHash32:      params.BeaconConfig().ZeroHash[:],
-			JustifiedEpoch:            3,
-		},
-		CustodyBitfield:     make([]byte, (len(committee)+7)/8),
-		AggregationBitfield: aggregationBitfield,
-		AggregateSignature:  []byte("signed"),
-	}
-	if !proto.Equal(generatedAttestation, expectedAttestation) {
-		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
-	}
-	testutil.AssertLogsContain(t, hook, "Submitted attestation successfully")
 }
 
 func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
-	hook := logTest.NewGlobal()
-
 	validator, m, finish := setup(t)
 	defer finish()
 	validatorIndex := uint64(5)
@@ -303,46 +267,14 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 		Index: uint64(validatorIndex),
 	}, nil)
 
-	var generatedAttestation *pbp2p.Attestation
-	m.attesterClient.EXPECT().AttestHead(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
-	).Do(func(_ context.Context, att *pbp2p.Attestation) {
-		generatedAttestation = att
-	}).Return(&pb.AttestResponse{}, nil /* error */)
-
 	m.attesterClient.EXPECT().AttestHead(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
 	).Times(1)
 
 	delay = 1
-	validator.AttestToBlockHead(context.Background(), 30)
-	time.Sleep(1500 * time.Millisecond)
-
-	aggregationBitfield := make([]byte, (len(committee)+7)/8)
-	// Validator index is at index 4 in the mocked committee defined in this test.
-	indexIntoCommittee := uint64(4)
-	aggregationBitfield[indexIntoCommittee/8] |= 1 << (indexIntoCommittee % 8)
-	expectedAttestation := &pbp2p.Attestation{
-		Data: &pbp2p.AttestationData{
-			Slot:                      30,
-			Shard:                     5,
-			BeaconBlockRootHash32:     []byte("A"),
-			EpochBoundaryRootHash32:   []byte("B"),
-			JustifiedBlockRootHash32:  []byte("C"),
-			LatestCrosslinkRootHash32: []byte("D"),
-			ShardBlockRootHash32:      params.BeaconConfig().ZeroHash[:],
-			JustifiedEpoch:            3,
-		},
-		CustodyBitfield:     make([]byte, (len(committee)+7)/8),
-		AggregationBitfield: aggregationBitfield,
-		AggregateSignature:  []byte("signed"),
-	}
-	if !proto.Equal(generatedAttestation, expectedAttestation) {
-		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
-	}
-	testutil.AssertLogsContain(t, hook, "Submitted attestation successfully")
+	go validator.AttestToBlockHead(context.Background(), 30)
+	time.Sleep(50 * time.Millisecond)
 }
 
 // func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
