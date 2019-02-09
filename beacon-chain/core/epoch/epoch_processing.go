@@ -335,3 +335,17 @@ func UpdatePenalizedExitBalances(state *pb.BeaconState) *pb.BeaconState {
 		state.LatestPenalizedBalances[currPenalizedEpoch]
 	return state
 }
+
+// UpdateLatestIndexRoots updates the latest index roots. Index root
+// is computed by hashing validator indices of the next epoch + delay.
+//
+// Spec pseudocode definition:
+// Let e = state.slot // EPOCH_LENGTH.
+// Set state.latest_index_roots[(next_epoch + ENTRY_EXIT_DELAY) %
+// 	LATEST_INDEX_ROOTS_LENGTH] =
+// 	hash_tree_root(get_active_validator_indices(state,
+// 	next_epoch + ENTRY_EXIT_DELAY))
+func UpdateLatestIndexRoots(state *pb.BeaconState) *pb.BeaconState {
+	index := helpers.NextEpoch(state) + params.BeaconConfig().EntryExitDelay %
+		params.BeaconConfig().LatestIndexRootsLength
+}
