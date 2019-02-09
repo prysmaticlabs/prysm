@@ -228,7 +228,6 @@ func ProcessDeposit(
 	amount uint64,
 	_ /*proofOfPossession*/ []byte,
 	withdrawalCredentials []byte,
-	randaoCommitment []byte,
 ) (*pb.BeaconState, error) {
 	// TODO(#258): Validate proof of possession using BLS.
 	var publicKeyExists bool
@@ -239,14 +238,13 @@ func ProcessDeposit(
 		// If public key does not exist in the registry, we add a new validator
 		// to the beacon state.
 		newValidator := &pb.Validator{
-			Pubkey:                 pubkey,
-			RandaoCommitmentHash32: randaoCommitment,
-			RandaoLayers:           0,
-			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch,
-			ExitEpoch:              params.BeaconConfig().FarFutureEpoch,
-			WithdrawalEpoch:        params.BeaconConfig().FarFutureEpoch,
-			PenalizedEpoch:         params.BeaconConfig().FarFutureEpoch,
-			StatusFlags:            0,
+			Pubkey:          pubkey,
+			RandaoLayers:    0,
+			ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+			WithdrawalEpoch: params.BeaconConfig().FarFutureEpoch,
+			PenalizedEpoch:  params.BeaconConfig().FarFutureEpoch,
+			StatusFlags:     0,
 		}
 		state.ValidatorRegistry = append(state.ValidatorRegistry, newValidator)
 		state.ValidatorBalances = append(state.ValidatorBalances, amount)

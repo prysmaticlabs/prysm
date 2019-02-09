@@ -15,8 +15,5 @@ go_test(
     name = "go_default_test",
     srcs = ["deposit_trie_test.go"],
     embed = [":go_default_library"],
-    deps = [
-        "//shared/hashutil:go_default_library",
-        "//shared/params:go_default_library",
-    ],
+    deps = ["//shared/hashutil:go_default_library"],
 )
