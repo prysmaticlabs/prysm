@@ -6,13 +6,13 @@ package epoch
 
 import (
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 // CanProcessEpoch checks the eligibility to process epoch.
