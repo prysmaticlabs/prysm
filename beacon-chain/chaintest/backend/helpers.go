@@ -129,7 +129,7 @@ func generateInitialSimulatedDeposits(numDeposits uint64) ([]*pb.Deposit, error)
 		}
 		depositData, err := b.EncodeDepositData(
 			depositInput,
-			params.BeaconConfig().MaxDeposit,
+			params.BeaconConfig().MaxDepositAmount,
 			genesisTime,
 		)
 		if err != nil {

@@ -269,7 +269,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 	validatorBalances := make([]uint64, len(validators))
 	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = params.BeaconConfig().MaxDeposit
+		validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 	}
 
 	slashings := []*pb.ProposerSlashing{
@@ -537,7 +537,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 	validatorBalances := make([]uint64, len(validators))
 	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = params.BeaconConfig().MaxDeposit
+		validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 	}
 
 	att1 := &pb.AttestationData{

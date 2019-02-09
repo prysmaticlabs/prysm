@@ -29,7 +29,7 @@ func TestProposeBlock(t *testing.T) {
 			&pbp2p.DepositInput{
 				Pubkey: []byte(strconv.Itoa(i)),
 			},
-			params.BeaconConfig().MaxDeposit,
+			params.BeaconConfig().MaxDepositAmount,
 			time.Now().Unix(),
 		)
 		if err != nil {
@@ -80,7 +80,7 @@ func TestComputeStateRoot(t *testing.T) {
 			&pbp2p.DepositInput{
 				Pubkey: []byte(strconv.Itoa(i)),
 			},
-			params.BeaconConfig().MaxDeposit,
+			params.BeaconConfig().MaxDepositAmount,
 			time.Now().Unix(),
 		)
 		if err != nil {

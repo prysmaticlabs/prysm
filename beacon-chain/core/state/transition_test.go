@@ -389,7 +389,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 	}
 	validatorBalances := make([]uint64, len(validatorRegistry))
 	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = params.BeaconConfig().MaxDeposit
+		validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 	}
 
 	var attestations []*pb.PendingAttestationRecord
@@ -434,7 +434,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 }
 
 func TestProcessEpoch_InactiveConditions(t *testing.T) {
-	defaultBalance := params.BeaconConfig().MaxDeposit
+	defaultBalance := params.BeaconConfig().MaxDepositAmount
 
 	validatorRegistry := []*pb.Validator{
 		{ExitEpoch: params.BeaconConfig().FarFutureEpoch}, {ExitEpoch: params.BeaconConfig().FarFutureEpoch},
@@ -555,7 +555,7 @@ func TestProcessEpoch_CantProcessEjections(t *testing.T) {
 	validatorRegistries := validators.InitialValidatorRegistry()
 	validatorBalances := make([]uint64, len(validatorRegistries))
 	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = params.BeaconConfig().MaxDeposit
+		validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 	}
 	var randaoHashes [][]byte
 	for i := uint64(0); i < 4*params.BeaconConfig().EpochLength; i++ {
