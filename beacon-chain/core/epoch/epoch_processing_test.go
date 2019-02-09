@@ -71,11 +71,11 @@ func TestCanProcessEth1Data(t *testing.T) {
 			canProcessEth1Data: false,
 		},
 		{
-			slot:               16,
+			slot:               15 * params.BeaconConfig().EpochLength,
 			canProcessEth1Data: true,
 		},
 		{
-			slot:               32,
+			slot:               127 * params.BeaconConfig().EpochLength,
 			canProcessEth1Data: true,
 		},
 		{
@@ -99,6 +99,7 @@ func TestCanProcessEth1Data(t *testing.T) {
 func TestProcessEth1Data(t *testing.T) {
 	requiredVoteCount := params.BeaconConfig().Eth1DataVotingPeriod
 	state := &pb.BeaconState{
+		Slot: 15 * params.BeaconConfig().EpochLength,
 		LatestEth1Data: &pb.Eth1Data{
 			DepositRootHash32: nil,
 			BlockHash32:       nil,
@@ -473,21 +474,19 @@ func TestProcessValidatorRegistryOk(t *testing.T) {
 }
 
 func TestProcessPartialValidatorRegistry(t *testing.T) {
-	offset := uint64(1)
 	state := &pb.BeaconState{
-		Slot:                         params.BeaconConfig().SeedLookahead + offset,
-		ValidatorRegistryUpdateEpoch: offset,
-		LatestRandaoMixesHash32S:     [][]byte{{'A'}, {'B'}},
+		Slot:                     params.BeaconConfig().EpochLength * 2,
+		LatestRandaoMixesHash32S: [][]byte{{'A'}, {'B'}, {'C'}},
+		LatestIndexRootHash32S:   [][]byte{{'D'}, {'E'}, {'F'}},
 	}
 	copiedState := proto.Clone(state).(*pb.BeaconState)
-	newState := ProcessPartialValidatorRegistry(copiedState)
-	if newState.CurrentCalculationEpoch != state.Slot {
-		t.Errorf("Incorrect CurrentCalculationEpoch, wanted: %d, got: %d",
-			state.Slot, newState.CurrentCalculationEpoch)
+	newState, err := ProcessPartialValidatorRegistry(copiedState)
+	if err != nil {
+		t.Fatalf("could not ProcessPartialValidatorRegistry: %v", err)
 	}
-	if !bytes.Equal(newState.CurrentEpochSeedHash32, state.LatestRandaoMixesHash32S[offset]) {
-		t.Errorf("Incorret current epoch seed mix hash: Wanted: %v, got: %v",
-			state.LatestRandaoMixesHash32S[offset], newState.CurrentEpochSeedHash32)
+	if newState.CurrentCalculationEpoch != helpers.NextEpoch(state) {
+		t.Errorf("Incorrect CurrentCalculationEpoch, wanted: %d, got: %d",
+			helpers.NextEpoch(state), newState.CurrentCalculationEpoch)
 	}
 }
 

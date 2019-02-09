@@ -62,14 +62,14 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 
 	genesisTime := uint64(99999)
 	processedPowReceiptRoot := []byte{'A', 'B', 'C'}
-	maxDeposit := params.BeaconConfig().MaxDeposit
+	maxDeposit := params.BeaconConfig().MaxDepositAmount
 	var deposits []*pb.Deposit
 	for i := 0; i < depositsForChainStart; i++ {
 		depositData, err := b.EncodeDepositData(
 			&pb.DepositInput{
-				Pubkey: []byte(strconv.Itoa(i)), ProofOfPossession: []byte{'B'},
-				WithdrawalCredentialsHash32: []byte{'C'}, RandaoCommitmentHash32: []byte{'D'},
-				CustodyCommitmentHash32: []byte{'D'},
+				Pubkey:                      []byte(strconv.Itoa(i)),
+				ProofOfPossession:           []byte{'B'},
+				WithdrawalCredentialsHash32: []byte{'C'},
 			},
 			maxDeposit,
 			time.Now().Unix(),
