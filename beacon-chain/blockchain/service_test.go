@@ -115,7 +115,7 @@ func setupInitialDeposits(t *testing.T) []*pb.Deposit {
 
 func createPreChainStartDeposit(t *testing.T, pk []byte) *pb.Deposit {
 	depositInput := &pb.DepositInput{Pubkey: pk}
-	balance := params.BeaconConfig().MaxDeposit
+	balance := params.BeaconConfig().MaxDepositAmount
 	depositData, err := b.EncodeDepositData(depositInput, balance, time.Now().Unix())
 	if err != nil {
 		t.Fatalf("Cannot encode data: %v", err)
