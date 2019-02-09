@@ -381,7 +381,6 @@ func TestProcessDeposit_PublicKeyExistsBadWithdrawalCredentials(t *testing.T) {
 	deposit := uint64(1000)
 	proofOfPossession := []byte{}
 	withdrawalCredentials := []byte{1}
-	randaoCommitment := []byte{}
 
 	want := "expected withdrawal credentials to match"
 	if _, err := ProcessDeposit(
@@ -391,7 +390,6 @@ func TestProcessDeposit_PublicKeyExistsBadWithdrawalCredentials(t *testing.T) {
 		deposit,
 		proofOfPossession,
 		withdrawalCredentials,
-		randaoCommitment,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Wanted error to contain %s, received %v", want, err)
 	}
@@ -416,7 +414,6 @@ func TestProcessDeposit_PublicKeyExistsGoodWithdrawalCredentials(t *testing.T) {
 	deposit := uint64(1000)
 	proofOfPossession := []byte{}
 	withdrawalCredentials := []byte{1}
-	randaoCommitment := []byte{}
 
 	newState, err := ProcessDeposit(
 		beaconState,
@@ -425,7 +422,6 @@ func TestProcessDeposit_PublicKeyExistsGoodWithdrawalCredentials(t *testing.T) {
 		deposit,
 		proofOfPossession,
 		withdrawalCredentials,
-		randaoCommitment,
 	)
 	if err != nil {
 		t.Fatalf("Process deposit failed: %v", err)
@@ -455,7 +451,6 @@ func TestProcessDeposit_PublicKeyDoesNotExistNoEmptyValidator(t *testing.T) {
 	deposit := uint64(2000)
 	proofOfPossession := []byte{}
 	withdrawalCredentials := []byte{1}
-	randaoCommitment := []byte{}
 
 	newState, err := ProcessDeposit(
 		beaconState,
@@ -464,7 +459,6 @@ func TestProcessDeposit_PublicKeyDoesNotExistNoEmptyValidator(t *testing.T) {
 		deposit,
 		proofOfPossession,
 		withdrawalCredentials,
-		randaoCommitment,
 	)
 	if err != nil {
 		t.Fatalf("Process deposit failed: %v", err)
@@ -498,7 +492,6 @@ func TestProcessDeposit_PublicKeyDoesNotExistEmptyValidatorExists(t *testing.T) 
 	deposit := uint64(2000)
 	proofOfPossession := []byte{}
 	withdrawalCredentials := []byte{1}
-	randaoCommitment := []byte{}
 
 	newState, err := ProcessDeposit(
 		beaconState,
@@ -507,7 +500,6 @@ func TestProcessDeposit_PublicKeyDoesNotExistEmptyValidatorExists(t *testing.T) 
 		deposit,
 		proofOfPossession,
 		withdrawalCredentials,
-		randaoCommitment,
 	)
 	if err != nil {
 		t.Fatalf("Process deposit failed: %v", err)
