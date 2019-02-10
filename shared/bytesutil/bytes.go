@@ -51,7 +51,7 @@ func FromBytes8(x []byte) uint64 {
 // Mentioned in spec as "ties broken by favoring lower `shard_block_root` values".
 func LowerThan(x []byte, y []byte) bool {
 	for i, b := range x {
-		if b < y[i] {
+		if b > y[i] {
 			return false
 		}
 	}

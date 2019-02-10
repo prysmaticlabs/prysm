@@ -275,7 +275,7 @@ func TestEncodeDecodeDepositInput_Ok(t *testing.T) {
 		ProofOfPossession:           []byte("pop"),
 	}
 	depositTime := time.Now().Unix()
-	enc, err := EncodeDepositData(input, params.BeaconConfig().MaxDeposit, depositTime)
+	enc, err := EncodeDepositData(input, params.BeaconConfig().MaxDepositAmount, depositTime)
 	if err != nil {
 		t.Errorf("Could not encode deposit input: %v", err)
 	}
@@ -290,11 +290,11 @@ func TestEncodeDecodeDepositInput_Ok(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not decode amount and timestamp: %v", err)
 	}
-	if value != params.BeaconConfig().MaxDeposit || timestamp != depositTime {
+	if value != params.BeaconConfig().MaxDepositAmount || timestamp != depositTime {
 		t.Errorf(
 			"Expected value to match, received %d == %d, expected timestamp to match received %d == %d",
 			value,
-			params.BeaconConfig().MaxDeposit,
+			params.BeaconConfig().MaxDepositAmount,
 			timestamp,
 			depositTime,
 		)
