@@ -434,19 +434,25 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 		)
 	}
 
-	// Verify that either: attestation.data.latest_crosslink_root or
-	// attestation.data.shard_block_root equals
-	// state.latest_crosslinks[shard].shard_block_root
-	crossLinkRoot := att.Data.LatestCrosslinkRootHash32
-	shardBlockRoot := att.Data.ShardBlockRootHash32
+	// Verify that either:
+	// 1.) Crosslink(shard_block_root=attestation.data.shard_block_root,
+	// 	epoch=slot_to_epoch(attestation.data.slot)) equals
+	// 	state.latest_crosslinks[attestation.data.shard]
+	// 2.) attestation.data.latest_crosslink
+	// 	equals state.latest_crosslinks[attestation.data.shard]
 	shard := att.Data.Shard
-	stateShardBlockRoot := beaconState.LatestCrosslinks[shard].ShardBlockRootHash32
+	crosslink := &pb.Crosslink{
+		ShardBlockRootHash32: att.Data.ShardBlockRootHash32,
+		Epoch:                helpers.SlotToEpoch(att.Data.Slot),
+	}
+	crosslinkFromAttestation := att.Data.LatestCrosslink
+	crosslinkFromState := beaconState.LatestCrosslinks[shard]
 
-	if !(bytes.Equal(crossLinkRoot, stateShardBlockRoot) ||
-		bytes.Equal(shardBlockRoot, stateShardBlockRoot)) {
+	if !(reflect.DeepEqual(crosslinkFromState, crosslink) ||
+		reflect.DeepEqual(crosslinkFromState, crosslinkFromAttestation)) {
 		return fmt.Errorf(
-			"attestation.CrossLinkRoot and ShardBlockRoot != %v (state.LatestCrosslinks' ShardBlockRoot)",
-			stateShardBlockRoot,
+			"incoming attestation does not match crosslink in state for shard %d",
+			shard,
 		)
 	}
 

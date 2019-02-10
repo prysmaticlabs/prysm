@@ -79,4 +79,3 @@ func TestGenerateNilBlocks(t *testing.T) {
 	}
 
 }
-

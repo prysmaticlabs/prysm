@@ -47,9 +47,9 @@ func InitialBeaconState(
 		latestVDFOutputs[i] = params.BeaconConfig().ZeroHash[:]
 	}
 
-	latestCrosslinks := make([]*pb.CrosslinkRecord, params.BeaconConfig().ShardCount)
+	latestCrosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
 	for i := 0; i < len(latestCrosslinks); i++ {
-		latestCrosslinks[i] = &pb.CrosslinkRecord{
+		latestCrosslinks[i] = &pb.Crosslink{
 			Epoch:                params.BeaconConfig().GenesisEpoch,
 			ShardBlockRootHash32: params.BeaconConfig().ZeroHash[:],
 		}

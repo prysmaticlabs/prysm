@@ -82,11 +82,11 @@ func TestAttestToBlockHead_ValidatorIndexRequestFailure(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.AttestationInfoRequest{}),
 	).Return(&pb.AttestationInfoResponse{
-		BeaconBlockRootHash32:     []byte{},
-		EpochBoundaryRootHash32:   []byte{},
-		JustifiedBlockRootHash32:  []byte{},
-		LatestCrosslinkRootHash32: []byte{},
-		JustifiedEpoch:            0,
+		BeaconBlockRootHash32:    []byte{},
+		EpochBoundaryRootHash32:  []byte{},
+		JustifiedBlockRootHash32: []byte{},
+		LatestCrosslink:          &pbp2p.Crosslink{},
+		JustifiedEpoch:           0,
 	}, nil)
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
@@ -113,11 +113,11 @@ func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.AttestationInfoRequest{}),
 	).Return(&pb.AttestationInfoResponse{
-		BeaconBlockRootHash32:     []byte{},
-		EpochBoundaryRootHash32:   []byte{},
-		JustifiedBlockRootHash32:  []byte{},
-		LatestCrosslinkRootHash32: []byte{},
-		JustifiedEpoch:            0,
+		BeaconBlockRootHash32:    []byte{},
+		EpochBoundaryRootHash32:  []byte{},
+		JustifiedBlockRootHash32: []byte{},
+		LatestCrosslink:          &pbp2p.Crosslink{},
+		JustifiedEpoch:           0,
 	}, nil)
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
@@ -152,11 +152,11 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.AttestationInfoRequest{}),
 	).Return(&pb.AttestationInfoResponse{
-		BeaconBlockRootHash32:     []byte("A"),
-		EpochBoundaryRootHash32:   []byte("B"),
-		JustifiedBlockRootHash32:  []byte("C"),
-		LatestCrosslinkRootHash32: []byte("D"),
-		JustifiedEpoch:            3,
+		BeaconBlockRootHash32:    []byte("A"),
+		EpochBoundaryRootHash32:  []byte("B"),
+		JustifiedBlockRootHash32: []byte("C"),
+		LatestCrosslink:          &pbp2p.Crosslink{ShardBlockRootHash32: []byte{'D'}},
+		JustifiedEpoch:           3,
 	}, nil)
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
@@ -181,14 +181,14 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	aggregationBitfield[indexIntoCommittee/8] |= 1 << (indexIntoCommittee % 8)
 	expectedAttestation := &pbp2p.Attestation{
 		Data: &pbp2p.AttestationData{
-			Slot:                      30,
-			Shard:                     5,
-			BeaconBlockRootHash32:     []byte("A"),
-			EpochBoundaryRootHash32:   []byte("B"),
-			JustifiedBlockRootHash32:  []byte("C"),
-			LatestCrosslinkRootHash32: []byte("D"),
-			ShardBlockRootHash32:      params.BeaconConfig().ZeroHash[:],
-			JustifiedEpoch:            3,
+			Slot:                     30,
+			Shard:                    5,
+			BeaconBlockRootHash32:    []byte("A"),
+			EpochBoundaryRootHash32:  []byte("B"),
+			JustifiedBlockRootHash32: []byte("C"),
+			LatestCrosslink:          &pbp2p.Crosslink{ShardBlockRootHash32: []byte{'D'}},
+			ShardBlockRootHash32:     params.BeaconConfig().ZeroHash[:],
+			JustifiedEpoch:           3,
 		},
 		CustodyBitfield:     make([]byte, (len(committee)+7)/8),
 		AggregationBitfield: aggregationBitfield,
