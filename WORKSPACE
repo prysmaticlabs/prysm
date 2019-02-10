@@ -35,8 +35,8 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.18.4/rules_nodejs-0.18.4.tar.gz"],
-    sha256 = "23987a5cf549146742aa6a0d2536e4906906e63a608d5b9b32dd9fe5523ef51c",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.18.5/rules_nodejs-0.18.5.tar.gz"],
+    sha256 = "c8cd6a77433f7d3bb1f4ac87f15822aa102989f8e9eb1907ca0cad718573985b",
 )
 
 http_archive(
