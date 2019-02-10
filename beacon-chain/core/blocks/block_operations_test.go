@@ -849,7 +849,7 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 	// AND
 	// attestation.data.shard_block_root != state.latest_crosslinks[shard].shard_block_root
 	// the attestation should be invalid.
-	stateLatestCrosslinks := []*pb.CrosslinkRecord{
+	stateLatestCrosslinks := []*pb.Crosslink{
 		{
 			ShardBlockRootHash32: []byte{1},
 		},
@@ -863,11 +863,11 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Shard:                     0,
-				Slot:                      20,
-				JustifiedBlockRootHash32:  blockRoots[0],
-				LatestCrosslinkRootHash32: []byte{2},
-				ShardBlockRootHash32:      []byte{2},
+				Shard:                    0,
+				Slot:                     20,
+				JustifiedBlockRootHash32: blockRoots[0],
+				LatestCrosslink:          &pb.Crosslink{ShardBlockRootHash32: []byte{2}},
+				ShardBlockRootHash32:     []byte{2},
 			},
 		},
 	}
@@ -877,8 +877,8 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 		},
 	}
 	want := fmt.Sprintf(
-		"attestation.CrossLinkRoot and ShardBlockRoot != %v (state.LatestCrosslinks' ShardBlockRoot)",
-		[]byte{1},
+		"incoming attestation does not match crosslink in state for shard %d",
+		attestations[0].Data.Shard,
 	)
 	if _, err := ProcessBlockAttestations(
 		state,
@@ -894,7 +894,7 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 	for i := uint64(0); i < 2*params.BeaconConfig().EpochLength; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
-	stateLatestCrosslinks := []*pb.CrosslinkRecord{
+	stateLatestCrosslinks := []*pb.Crosslink{
 		{
 			ShardBlockRootHash32: []byte{1},
 		},
@@ -908,11 +908,11 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Shard:                     0,
-				Slot:                      20,
-				JustifiedBlockRootHash32:  blockRoots[0],
-				LatestCrosslinkRootHash32: []byte{1},
-				ShardBlockRootHash32:      []byte{1},
+				Shard:                    0,
+				Slot:                     20,
+				JustifiedBlockRootHash32: blockRoots[0],
+				LatestCrosslink:          &pb.Crosslink{ShardBlockRootHash32: []byte{1}},
+				ShardBlockRootHash32:     []byte{1},
 			},
 		},
 	}
@@ -940,7 +940,7 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 	for i := uint64(0); i < 2*params.BeaconConfig().EpochLength; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
-	stateLatestCrosslinks := []*pb.CrosslinkRecord{
+	stateLatestCrosslinks := []*pb.Crosslink{
 		{
 			ShardBlockRootHash32: []byte{1},
 		},
@@ -953,11 +953,11 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 	}
 	att1 := &pb.Attestation{
 		Data: &pb.AttestationData{
-			Shard:                     0,
-			Slot:                      20,
-			JustifiedBlockRootHash32:  blockRoots[0],
-			LatestCrosslinkRootHash32: []byte{1},
-			ShardBlockRootHash32:      []byte{},
+			Shard:                    0,
+			Slot:                     20,
+			JustifiedBlockRootHash32: blockRoots[0],
+			LatestCrosslink:          &pb.Crosslink{ShardBlockRootHash32: []byte{1}},
+			ShardBlockRootHash32:     []byte{},
 		},
 		AggregationBitfield: []byte{1},
 		CustodyBitfield:     []byte{1},

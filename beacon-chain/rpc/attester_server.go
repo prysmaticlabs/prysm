@@ -67,14 +67,11 @@ func (as *AttesterServer) AttestationInfoAtSlot(ctx context.Context, req *pb.Att
 	if err != nil {
 		return nil, fmt.Errorf("could not get justified block: %v", err)
 	}
-	// fetch the latest crosslink root = state.latest_crosslinks[shard].shard_block_root
-	// where state is the beacon state at head and shard is the validator's assigned shard.
-	latestCrosslinkRoot := beaconState.LatestCrosslinks[req.Shard].ShardBlockRootHash32
 	return &pb.AttestationInfoResponse{
-		BeaconBlockRootHash32:     blockRoot[:],
-		EpochBoundaryRootHash32:   epochBoundaryRoot[:],
-		JustifiedEpoch:            beaconState.JustifiedEpoch,
-		JustifiedBlockRootHash32:  justifiedBlockRoot[:],
-		LatestCrosslinkRootHash32: latestCrosslinkRoot,
+		BeaconBlockRootHash32:    blockRoot[:],
+		EpochBoundaryRootHash32:  epochBoundaryRoot[:],
+		JustifiedEpoch:           beaconState.JustifiedEpoch,
+		JustifiedBlockRootHash32: justifiedBlockRoot[:],
+		LatestCrosslink:          beaconState.LatestCrosslinks[req.Shard],
 	}, nil
 }

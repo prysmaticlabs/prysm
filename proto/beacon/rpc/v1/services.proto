@@ -53,7 +53,7 @@ message AttestationInfoResponse {
     bytes epoch_boundary_root_hash32 = 2;
     uint64 justified_epoch = 3;
     bytes justified_block_root_hash32 = 4;
-    bytes latest_crosslink_root_hash32 = 5;
+    ethereum.beacon.p2p.v1.Crosslink latest_crosslink = 5;
 }
 
 message CrosslinkCommitteeRequest {

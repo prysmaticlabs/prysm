@@ -140,7 +140,7 @@ func TestAttestationInfoAtSlot_Ok(t *testing.T) {
 		Slot:                   3 * params.BeaconConfig().EpochLength,
 		JustifiedEpoch:         2 * params.BeaconConfig().EpochLength,
 		LatestBlockRootHash32S: make([][]byte, 3*params.BeaconConfig().EpochLength),
-		LatestCrosslinks: []*pbp2p.CrosslinkRecord{
+		LatestCrosslinks: []*pbp2p.Crosslink{
 			{
 				ShardBlockRootHash32: []byte("A"),
 			},
@@ -179,11 +179,13 @@ func TestAttestationInfoAtSlot_Ok(t *testing.T) {
 		t.Fatalf("Could not get attestation info at slot: %v", err)
 	}
 	expectedInfo := &pb.AttestationInfoResponse{
-		BeaconBlockRootHash32:     blockRoot[:],
-		EpochBoundaryRootHash32:   epochBoundaryRoot[:],
-		JustifiedEpoch:            2 * params.BeaconConfig().EpochLength,
-		JustifiedBlockRootHash32:  justifiedBlockRoot[:],
-		LatestCrosslinkRootHash32: []byte("A"),
+		BeaconBlockRootHash32:    blockRoot[:],
+		EpochBoundaryRootHash32:  epochBoundaryRoot[:],
+		JustifiedEpoch:           2 * params.BeaconConfig().EpochLength,
+		JustifiedBlockRootHash32: justifiedBlockRoot[:],
+		LatestCrosslink: &pbp2p.Crosslink{
+			ShardBlockRootHash32: []byte("A"),
+		},
 	}
 	if !proto.Equal(res, expectedInfo) {
 		t.Errorf("Expected attestation info to match, received %v, wanted %v", res, expectedInfo)
