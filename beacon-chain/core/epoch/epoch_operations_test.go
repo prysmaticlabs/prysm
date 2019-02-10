@@ -20,7 +20,7 @@ func buildState(slot uint64, validatorCount uint64) *pb.BeaconState {
 	}
 	validatorBalances := make([]uint64, len(validators))
 	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = params.BeaconConfig().MaxDeposit
+		validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 	}
 	return &pb.BeaconState{
 		ValidatorRegistry: validators,
@@ -221,9 +221,9 @@ func TestPrevEpochBoundaryAttestations(t *testing.T) {
 	epochAttestations := []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{EpochBoundaryRootHash32: []byte{100}}},
 		{Data: &pb.AttestationData{EpochBoundaryRootHash32: []byte{0}}},
-		{Data: &pb.AttestationData{EpochBoundaryRootHash32: []byte{64}}}, // selected
+		{Data: &pb.AttestationData{EpochBoundaryRootHash32: []byte{2}}}, // selected
 		{Data: &pb.AttestationData{EpochBoundaryRootHash32: []byte{55}}},
-		{Data: &pb.AttestationData{EpochBoundaryRootHash32: []byte{64}}}, // selected
+		{Data: &pb.AttestationData{EpochBoundaryRootHash32: []byte{2}}}, // selected
 	}
 
 	var latestBlockRootHash [][]byte
@@ -243,11 +243,11 @@ func TestPrevEpochBoundaryAttestations(t *testing.T) {
 
 	// 64 is selected because we start off with 3 epochs (192 slots)
 	// The prev epoch boundary slot is 192 - 2 * epoch_length = 64
-	if !bytes.Equal(prevEpochBoundaryAttestation[0].Data.EpochBoundaryRootHash32, []byte{64}) {
+	if !bytes.Equal(prevEpochBoundaryAttestation[0].Data.EpochBoundaryRootHash32, []byte{2}) {
 		t.Errorf("Wanted justified block hash [64] for epoch boundary attestation, got: %v",
 			prevEpochBoundaryAttestation[0].Data.EpochBoundaryRootHash32)
 	}
-	if !bytes.Equal(prevEpochBoundaryAttestation[1].Data.EpochBoundaryRootHash32, []byte{64}) {
+	if !bytes.Equal(prevEpochBoundaryAttestation[1].Data.EpochBoundaryRootHash32, []byte{2}) {
 		t.Errorf("Wanted justified block hash [64] for epoch boundary attestation, got: %v",
 			prevEpochBoundaryAttestation[1].Data.EpochBoundaryRootHash32)
 	}
@@ -425,7 +425,7 @@ func TestTotalAttestingBalanceOk(t *testing.T) {
 		t.Fatalf("Could not execute totalAttestingBalance: %v", err)
 	}
 
-	if attestedBalance != params.BeaconConfig().MaxDeposit*validatorsPerCommittee {
+	if attestedBalance != params.BeaconConfig().MaxDepositAmount*validatorsPerCommittee {
 		t.Errorf("Incorrect attested balance. Wanted:64*1e9, Got: %d", attestedBalance)
 	}
 }

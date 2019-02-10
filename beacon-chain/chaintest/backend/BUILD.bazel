@@ -16,7 +16,6 @@ go_library(
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/state:go_default_library",
-        "//beacon-chain/core/validators:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/utils:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
@@ -35,4 +34,5 @@ go_test(
     srcs = ["simulated_backend_test.go"],
     embed = [":go_default_library"],
     deps = ["//shared/params:go_default_library"],
+    deps = ["//shared/trieutil:go_default_library"],
 )

@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -22,24 +24,6 @@ func TestProcessBlock_IncorrectSlot(t *testing.T) {
 		4,
 		5,
 	)
-	if _, err := ProcessBlock(beaconState, block, false); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
-func TestProcessBlock_IncorrectBlockRandao(t *testing.T) {
-	validators := validators.InitialValidatorRegistry()
-
-	beaconState := &pb.BeaconState{
-		Slot:              0,
-		ValidatorRegistry: validators,
-	}
-	block := &pb.BeaconBlock{
-		Slot:               0,
-		RandaoRevealHash32: []byte{1},
-		Body:               &pb.BeaconBlockBody{},
-	}
-	want := "could not verify and process block randao"
 	if _, err := ProcessBlock(beaconState, block, false); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
@@ -116,7 +100,15 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
-	registry := validators.InitialValidatorRegistry()
+	validators := make([]*pb.Validator, 1000)
+	for i := uint64(0); i < 1000; i++ {
+		pubkey := hashutil.Hash([]byte{byte(i)})
+		validators[i] = &pb.Validator{
+			ExitEpoch:      params.BeaconConfig().FarFutureEpoch,
+			Pubkey:         pubkey[:],
+			PenalizedEpoch: 10,
+		}
+	}
 	proposerSlashings := []*pb.ProposerSlashing{
 		{
 			ProposerIndex: 1,
@@ -142,14 +134,14 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	}
 	attesterSlashings := []*pb.AttesterSlashing{
 		{
-			SlashableVote_1: &pb.SlashableVote{
+			SlashableAttestation_1: &pb.SlashableAttestation{
 				Data:             att1,
-				ValidatorIndices: []uint64{1},
+				ValidatorIndices: []uint64{0},
 				CustodyBitfield:  []byte{0xFF},
 			},
-			SlashableVote_2: &pb.SlashableVote{
+			SlashableAttestation_2: &pb.SlashableAttestation{
 				Data:             att2,
-				ValidatorIndices: []uint64{1},
+				ValidatorIndices: []uint64{0},
 				CustodyBitfield:  []byte{0xFF},
 			},
 		},
@@ -160,7 +152,9 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	beaconState := &pb.BeaconState{
 		LatestRandaoMixesHash32S: latestMixes,
 		Slot:                     5,
-		ValidatorRegistry:        registry,
+		ValidatorRegistry:        validators,
+		ValidatorBalances:        make([]uint64, len(validators)),
+		LatestPenalizedBalances:  make([]uint64, params.BeaconConfig().LatestPenalizedExitLength),
 	}
 	block := &pb.BeaconBlock{
 		Slot:               5,
@@ -182,7 +176,15 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
-	registry := validators.InitialValidatorRegistry()
+	validators := make([]*pb.Validator, 1000)
+	for i := uint64(0); i < 1000; i++ {
+		pubkey := hashutil.Hash([]byte{byte(i)})
+		validators[i] = &pb.Validator{
+			ExitEpoch:      params.BeaconConfig().FarFutureEpoch,
+			Pubkey:         pubkey[:],
+			PenalizedEpoch: 10,
+		}
+	}
 	proposerSlashings := []*pb.ProposerSlashing{
 		{
 			ProposerIndex: 1,
@@ -208,14 +210,14 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	}
 	attesterSlashings := []*pb.AttesterSlashing{
 		{
-			SlashableVote_1: &pb.SlashableVote{
+			SlashableAttestation_1: &pb.SlashableAttestation{
 				Data:             att1,
-				ValidatorIndices: []uint64{1},
+				ValidatorIndices: []uint64{0},
 				CustodyBitfield:  []byte{0xFF},
 			},
-			SlashableVote_2: &pb.SlashableVote{
+			SlashableAttestation_2: &pb.SlashableAttestation{
 				Data:             att2,
-				ValidatorIndices: []uint64{1},
+				ValidatorIndices: []uint64{0},
 				CustodyBitfield:  []byte{0xFF},
 			},
 		},
@@ -244,11 +246,13 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	latestMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
 		LatestRandaoMixesHash32S: latestMixes,
-		ValidatorRegistry:        registry,
+		ValidatorRegistry:        validators,
 		Slot:                     64,
 		PreviousJustifiedEpoch:   0,
 		LatestBlockRootHash32S:   blockRoots,
 		LatestCrosslinks:         stateLatestCrosslinks,
+		ValidatorBalances:        make([]uint64, len(validators)),
+		LatestPenalizedBalances:  make([]uint64, params.BeaconConfig().LatestPenalizedExitLength),
 	}
 	exits := make([]*pb.Exit, params.BeaconConfig().MaxExits+1)
 	block := &pb.BeaconBlock{
@@ -272,7 +276,15 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 }
 
 func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
-	registry := validators.InitialValidatorRegistry()
+	validators := make([]*pb.Validator, 1000)
+	for i := uint64(0); i < 1000; i++ {
+		pubkey := hashutil.Hash([]byte{byte(i)})
+		validators[i] = &pb.Validator{
+			ExitEpoch:      params.BeaconConfig().FarFutureEpoch,
+			Pubkey:         pubkey[:],
+			PenalizedEpoch: 10,
+		}
+	}
 	proposerSlashings := []*pb.ProposerSlashing{
 		{
 			ProposerIndex: 1,
@@ -298,14 +310,14 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	attesterSlashings := []*pb.AttesterSlashing{
 		{
-			SlashableVote_1: &pb.SlashableVote{
+			SlashableAttestation_1: &pb.SlashableAttestation{
 				Data:             att1,
-				ValidatorIndices: []uint64{1},
+				ValidatorIndices: []uint64{0},
 				CustodyBitfield:  []byte{0xFF},
 			},
-			SlashableVote_2: &pb.SlashableVote{
+			SlashableAttestation_2: &pb.SlashableAttestation{
 				Data:             att2,
-				ValidatorIndices: []uint64{1},
+				ValidatorIndices: []uint64{0},
 				CustodyBitfield:  []byte{0xFF},
 			},
 		},
@@ -334,16 +346,18 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	latestMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
 		LatestRandaoMixesHash32S: latestMixes,
-		ValidatorRegistry:        registry,
+		ValidatorRegistry:        validators,
 		Slot:                     64,
 		PreviousJustifiedEpoch:   0,
 		LatestBlockRootHash32S:   blockRoots,
 		LatestCrosslinks:         stateLatestCrosslinks,
+		ValidatorBalances:        make([]uint64, len(validators)),
+		LatestPenalizedBalances:  make([]uint64, params.BeaconConfig().LatestPenalizedExitLength),
 	}
 	exits := []*pb.Exit{
 		{
-			ValidatorIndex: 0,
-			Slot:           0,
+			ValidatorIndex: 10,
+			Epoch:          0,
 		},
 	}
 	block := &pb.BeaconBlock{
@@ -375,7 +389,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 	}
 	validatorBalances := make([]uint64, len(validatorRegistry))
 	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = params.BeaconConfig().MaxDeposit
+		validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 	}
 
 	var attestations []*pb.PendingAttestationRecord
@@ -411,6 +425,10 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 		LatestBlockRootHash32S:   blockRoots,
 		LatestCrosslinks:         crosslinkRecord,
 		LatestRandaoMixesHash32S: randaoHashes,
+		LatestIndexRootHash32S: make([][]byte,
+			params.BeaconConfig().LatestIndexRootsLength),
+		LatestPenalizedBalances: make([]uint64,
+			params.BeaconConfig().LatestPenalizedExitLength),
 	}
 
 	_, err := ProcessEpoch(state)
@@ -420,7 +438,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 }
 
 func TestProcessEpoch_InactiveConditions(t *testing.T) {
-	defaultBalance := params.BeaconConfig().MaxDeposit
+	defaultBalance := params.BeaconConfig().MaxDepositAmount
 
 	validatorRegistry := []*pb.Validator{
 		{ExitEpoch: params.BeaconConfig().FarFutureEpoch}, {ExitEpoch: params.BeaconConfig().FarFutureEpoch},
@@ -467,6 +485,10 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 		LatestBlockRootHash32S:   blockRoots,
 		LatestCrosslinks:         crosslinkRecord,
 		LatestRandaoMixesHash32S: randaoHashes,
+		LatestIndexRootHash32S: make([][]byte,
+			params.BeaconConfig().LatestIndexRootsLength),
+		LatestPenalizedBalances: make([]uint64,
+			params.BeaconConfig().LatestPenalizedExitLength),
 	}
 
 	_, err := ProcessEpoch(state)
@@ -541,7 +563,7 @@ func TestProcessEpoch_CantProcessEjections(t *testing.T) {
 	validatorRegistries := validators.InitialValidatorRegistry()
 	validatorBalances := make([]uint64, len(validatorRegistries))
 	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = params.BeaconConfig().MaxDeposit
+		validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 	}
 	var randaoHashes [][]byte
 	for i := uint64(0); i < 4*params.BeaconConfig().EpochLength; i++ {

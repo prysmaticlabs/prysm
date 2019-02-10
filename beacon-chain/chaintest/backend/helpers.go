@@ -19,16 +19,15 @@ import (
 func generateSimulatedBlock(
 	beaconState *pb.BeaconState,
 	prevBlockRoot [32]byte,
-	randaoReveal [32]byte,
-	depositRandaoCommit [32]byte,
 	depositsTrie *trieutil.DepositTrie,
 	simObjects *SimulatedObjects,
 ) (*pb.BeaconBlock, [32]byte, error) {
-	encodedState, err := proto.Marshal(beaconState)
+	encodedState, err := proto.Marshal(beaconState) // TODO(#1389): Use tree hash instead.
 	if err != nil {
 		return nil, [32]byte{}, fmt.Errorf("could not marshal beacon state: %v", err)
 	}
 	stateRoot := hashutil.Hash(encodedState)
+	randaoReveal := params.BeaconConfig().SimulatedBlockRandao
 	block := &pb.BeaconBlock{
 		Slot:               beaconState.Slot + 1,
 		RandaoRevealHash32: randaoReveal[:],
@@ -49,10 +48,8 @@ func generateSimulatedBlock(
 	if simObjects.simDeposit != nil {
 		depositInput := &pb.DepositInput{
 			Pubkey:                      []byte(simObjects.simDeposit.Pubkey),
-			WithdrawalCredentialsHash32: []byte{},
-			ProofOfPossession:           []byte{},
-			RandaoCommitmentHash32:      depositRandaoCommit[:],
-			CustodyCommitmentHash32:     []byte{},
+			WithdrawalCredentialsHash32: make([]byte, 32),
+			ProofOfPossession:           make([]byte, 96),
 		}
 
 		data, err := b.EncodeDepositData(depositInput, simObjects.simDeposit.Amount, time.Now().Unix())
@@ -88,27 +85,27 @@ func generateSimulatedBlock(
 	}
 	if simObjects.simAttesterSlashing != nil {
 		block.Body.AttesterSlashings = append(block.Body.AttesterSlashings, &pb.AttesterSlashing{
-			SlashableVote_1: &pb.SlashableVote{
+			SlashableAttestation_1: &pb.SlashableAttestation{
 				Data: &pb.AttestationData{
-					Slot:          simObjects.simAttesterSlashing.SlashableVote1Slot,
-					JustifiedSlot: simObjects.simAttesterSlashing.SlashableVote1JustifiedSlot,
+					Slot:           simObjects.simAttesterSlashing.SlashableAttestation1Slot,
+					JustifiedEpoch: simObjects.simAttesterSlashing.SlashableAttestation1JustifiedEpoch,
 				},
-				CustodyBitfield:  []byte(simObjects.simAttesterSlashing.SlashableVote1CustodyBitField),
-				ValidatorIndices: simObjects.simAttesterSlashing.SlashableVote1ValidatorIndices,
+				CustodyBitfield:  []byte(simObjects.simAttesterSlashing.SlashableAttestation1CustodyBitField),
+				ValidatorIndices: simObjects.simAttesterSlashing.SlashableAttestation1ValidatorIndices,
 			},
-			SlashableVote_2: &pb.SlashableVote{
+			SlashableAttestation_2: &pb.SlashableAttestation{
 				Data: &pb.AttestationData{
-					Slot:          simObjects.simAttesterSlashing.SlashableVote2Slot,
-					JustifiedSlot: simObjects.simAttesterSlashing.SlashableVote2JustifiedSlot,
+					Slot:           simObjects.simAttesterSlashing.SlashableAttestation2Slot,
+					JustifiedEpoch: simObjects.simAttesterSlashing.SlashableAttestation2JustifiedEpoch,
 				},
-				CustodyBitfield:  []byte(simObjects.simAttesterSlashing.SlashableVote2CustodyBitField),
-				ValidatorIndices: simObjects.simAttesterSlashing.SlashableVote2ValidatorIndices,
+				CustodyBitfield:  []byte(simObjects.simAttesterSlashing.SlashableAttestation2CustodyBitField),
+				ValidatorIndices: simObjects.simAttesterSlashing.SlashableAttestation2ValidatorIndices,
 			},
 		})
 	}
 	if simObjects.simValidatorExit != nil {
 		block.Body.Exits = append(block.Body.Exits, &pb.Exit{
-			Slot:           simObjects.simValidatorExit.Slot,
+			Epoch:          simObjects.simValidatorExit.Epoch,
 			ValidatorIndex: simObjects.simValidatorExit.ValidatorIndex,
 		})
 	}
@@ -119,47 +116,20 @@ func generateSimulatedBlock(
 	return block, hashutil.Hash(encodedBlock), nil
 }
 
-// Given a number of slots, we create a list of hash onions from an underlying randao reveal. For example,
-// if we have N slots, we create a list of [secret, hash(secret), hash(hash(secret)), hash(...(prev N-1 hashes))].
-func generateSimulatedRandaoHashOnions(numSlots uint64) [][32]byte {
-	// We create a list of randao hash onions for the given number of epochs
-	// we run the state transition.
-	numEpochs := numSlots % params.BeaconConfig().EpochLength
-	hashOnions := [][32]byte{params.BeaconConfig().SimulatedBlockRandao}
-
-	// We make the length of the hash onions list equal to the number of epochs + 10 to be safe.
-	for i := uint64(0); i < numEpochs+10; i++ {
-		prevHash := hashOnions[i]
-		hashOnions = append(hashOnions, hashutil.Hash(prevHash[:]))
-	}
-	return hashOnions
-}
-
-// This function determines the block randao reveal assuming there are no skipped slots,
-// given a list of randao hash onions such as [pre-image, 0x01, 0x02, 0x03], for the
-// 0th epoch, the block randao reveal will be 0x02 and the proposer commitment 0x03.
-// The next epoch, the block randao reveal will be 0x01 and the commitment 0x02,
-// so on and so forth until all randao layers are peeled off.
-func determineSimulatedBlockRandaoReveal(layersPeeled int, hashOnions [][32]byte) [32]byte {
-	if layersPeeled == 0 {
-		return hashOnions[len(hashOnions)-2]
-	}
-	return hashOnions[len(hashOnions)-layersPeeled-2]
-}
-
 // Generates initial deposits for creating a beacon state in the simulated
 // backend based on the yaml configuration.
-func generateInitialSimulatedDeposits(randaoCommit [32]byte) ([]*pb.Deposit, error) {
+func generateInitialSimulatedDeposits(numDeposits uint64) ([]*pb.Deposit, error) {
 	genesisTime := params.BeaconConfig().GenesisTime.Unix()
-	deposits := make([]*pb.Deposit, params.BeaconConfig().DepositsForChainStart)
+	deposits := make([]*pb.Deposit, numDeposits)
 	for i := 0; i < len(deposits); i++ {
 		depositInput := &pb.DepositInput{
-			Pubkey:                 []byte(strconv.Itoa(i)),
-			RandaoCommitmentHash32: randaoCommit[:],
+			Pubkey:                      []byte(strconv.Itoa(i)),
+			WithdrawalCredentialsHash32: make([]byte, 32),
+			ProofOfPossession:           make([]byte, 96),
 		}
 		depositData, err := b.EncodeDepositData(
 			depositInput,
-			params.BeaconConfig().MaxDeposit,
+			params.BeaconConfig().MaxDepositAmount,
 			genesisTime,
 		)
 		if err != nil {

@@ -84,8 +84,6 @@ message Validator {
   bytes pubkey = 1;
   // TODO(781): The usage of withdrawal_credentials is not defined in spec. Not used in Prysm yet.
   bytes withdrawal_credentials_hash32 = 2;
-  bytes randao_commitment_hash32 = 3;
-  uint64 randao_layers = 4;
   uint64 activation_epoch = 5;
   uint64 exit_epoch = 6;
   uint64 withdrawal_epoch = 7;
@@ -136,8 +134,6 @@ message DepositInput {
   bytes proof_of_possession = 2; // Type of ['uint384']??
   // TODO(781): The usage of withdrawal_credentials is not defined in spec. Not used in Prysm yet.
   bytes withdrawal_credentials_hash32 = 3;
-  bytes randao_commitment_hash32 = 4;
-  bytes custody_commitment_hash32 = 5;
 }
 
 message ProposalSignedData {
@@ -146,7 +142,7 @@ message ProposalSignedData {
   bytes block_root_hash32 = 3;
 }
 
-message SlashableVote {
+message SlashableAttestation {
   repeated uint64 validator_indices = 1;
   bytes custody_bitfield = 2;
   AttestationData data = 3;
@@ -168,8 +164,8 @@ message ProposerSlashing {
 }
 
 message AttesterSlashing {
-  SlashableVote slashable_vote_1 = 1;
-  SlashableVote slashable_vote_2 = 2;
+  SlashableAttestation slashable_attestation_1 = 1;
+  SlashableAttestation slashable_attestation_2 = 2;
 }
 
 message Deposit {
@@ -179,7 +175,7 @@ message Deposit {
 }
 
 message Exit {
-  uint64 slot = 1;
+  uint64 epoch = 1;
   uint64 validator_index = 2;
   bytes signature = 3; // Type of [uint384]?
 }

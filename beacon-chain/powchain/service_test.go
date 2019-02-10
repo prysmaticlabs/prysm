@@ -428,8 +428,6 @@ func TestProcessDepositLog(t *testing.T) {
 		Pubkey:                      stub[:],
 		ProofOfPossession:           stub[:],
 		WithdrawalCredentialsHash32: []byte("withdraw"),
-		RandaoCommitmentHash32:      []byte("randao"),
-		CustodyCommitmentHash32:     []byte("custody"),
 	}
 
 	serializedData := new(bytes.Buffer)
@@ -460,7 +458,7 @@ func TestProcessDepositLog(t *testing.T) {
 	testutil.AssertLogsDoNotContain(t, hook, "Could not unpack log")
 	testutil.AssertLogsDoNotContain(t, hook, "Could not save in trie")
 	testutil.AssertLogsDoNotContain(t, hook, "Could not decode deposit input")
-	testutil.AssertLogsContain(t, hook, "Validator registered in VRC with public key and index")
+	testutil.AssertLogsContain(t, hook, "Validator registered in deposit contract")
 
 	hook.Reset()
 }
@@ -494,8 +492,6 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 		Pubkey:                      stub[:],
 		ProofOfPossession:           stub[:],
 		WithdrawalCredentialsHash32: []byte("withdraw"),
-		RandaoCommitmentHash32:      []byte("randao"),
-		CustodyCommitmentHash32:     []byte("custody"),
 	}
 
 	serializedData := new(bytes.Buffer)
@@ -566,8 +562,6 @@ func TestUnpackDepositLogs(t *testing.T) {
 		Pubkey:                      stub[:],
 		ProofOfPossession:           stub[:],
 		WithdrawalCredentialsHash32: []byte("withdraw"),
-		RandaoCommitmentHash32:      []byte("randao"),
-		CustodyCommitmentHash32:     []byte("custody"),
 	}
 
 	serializedData := new(bytes.Buffer)
@@ -614,14 +608,6 @@ func TestUnpackDepositLogs(t *testing.T) {
 		t.Errorf("Proof of Possession is not the same as the data that was put in %v", deserializeData.ProofOfPossession)
 	}
 
-	if !bytes.Equal(deserializeData.CustodyCommitmentHash32, []byte("custody")) {
-		t.Errorf("Custody commitment is not the same as the data that was put in %v", deserializeData.CustodyCommitmentHash32)
-	}
-
-	if !bytes.Equal(deserializeData.RandaoCommitmentHash32, []byte("randao")) {
-		t.Errorf("Randao Commitment is not the same as the data that was put in %v", deserializeData.RandaoCommitmentHash32)
-	}
-
 	if !bytes.Equal(deserializeData.WithdrawalCredentialsHash32, []byte("withdraw")) {
 		t.Errorf("Withdrawal Credentials is not the same as the data that was put in %v", deserializeData.WithdrawalCredentialsHash32)
 	}
@@ -658,8 +644,6 @@ func TestProcessChainStartLog(t *testing.T) {
 		Pubkey:                      stub[:],
 		ProofOfPossession:           stub[:],
 		WithdrawalCredentialsHash32: []byte("withdraw"),
-		RandaoCommitmentHash32:      []byte("randao"),
-		CustodyCommitmentHash32:     []byte("custody"),
 	}
 
 	serializedData := new(bytes.Buffer)
@@ -755,8 +739,6 @@ func TestUnpackChainStartLogs(t *testing.T) {
 		Pubkey:                      stub[:],
 		ProofOfPossession:           stub[:],
 		WithdrawalCredentialsHash32: []byte("withdraw"),
-		RandaoCommitmentHash32:      []byte("randao"),
-		CustodyCommitmentHash32:     []byte("custody"),
 	}
 
 	serializedData := new(bytes.Buffer)
@@ -825,8 +807,6 @@ func TestHasChainStartLogOccurred(t *testing.T) {
 		Pubkey:                      stub[:],
 		ProofOfPossession:           stub[:],
 		WithdrawalCredentialsHash32: []byte("withdraw"),
-		RandaoCommitmentHash32:      []byte("randao"),
-		CustodyCommitmentHash32:     []byte("custody"),
 	}
 
 	serializedData := new(bytes.Buffer)

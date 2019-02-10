@@ -19,16 +19,12 @@ import (
 // InitialValidatorRegistry creates a new validator set that is used to
 // generate a new bootstrapped state.
 func InitialValidatorRegistry() []*pb.Validator {
-	randaoPreCommit := [32]byte{}
-	randaoReveal := hashutil.Hash(randaoPreCommit[:])
 	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
 	for i := uint64(0); i < params.BeaconConfig().DepositsForChainStart; i++ {
 		pubkey := hashutil.Hash([]byte{byte(i)})
 		validators[i] = &pb.Validator{
-			ExitEpoch:              params.BeaconConfig().FarFutureEpoch,
-			Pubkey:                 pubkey[:],
-			RandaoCommitmentHash32: randaoReveal[:],
-			RandaoLayers:           1,
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			Pubkey:    pubkey[:],
 		}
 	}
 	return validators
@@ -107,8 +103,8 @@ func TotalEffectiveBalance(state *pb.BeaconState, validatorIndices []uint64) uin
 //     """
 //     return min(state.validator_balances[idx], MAX_DEPOSIT)
 func EffectiveBalance(state *pb.BeaconState, idx uint64) uint64 {
-	if state.ValidatorBalances[idx] > params.BeaconConfig().MaxDeposit {
-		return params.BeaconConfig().MaxDeposit
+	if state.ValidatorBalances[idx] > params.BeaconConfig().MaxDepositAmount {
+		return params.BeaconConfig().MaxDepositAmount
 	}
 	return state.ValidatorBalances[idx]
 }
@@ -133,7 +129,7 @@ func Attesters(state *pb.BeaconState, attesterIndices []uint64) []*pb.Validator 
 //
 // Spec pseudocode definition:
 //   Let attester_indices be the union of the validator
-//   index sets given by [get_attestation_participants(state, a.data, a.a.aggregation_bitfield)
+//   index sets given by [get_attestation_participants(state, a.data, a.aggregation_bitfield)
 //   for a in attestations]
 func ValidatorIndices(
 	state *pb.BeaconState,
@@ -228,7 +224,6 @@ func ProcessDeposit(
 	amount uint64,
 	_ /*proofOfPossession*/ []byte,
 	withdrawalCredentials []byte,
-	randaoCommitment []byte,
 ) (*pb.BeaconState, error) {
 	// TODO(#258): Validate proof of possession using BLS.
 	var publicKeyExists bool
@@ -239,18 +234,15 @@ func ProcessDeposit(
 		// If public key does not exist in the registry, we add a new validator
 		// to the beacon state.
 		newValidator := &pb.Validator{
-			Pubkey:                 pubkey,
-			RandaoCommitmentHash32: randaoCommitment,
-			RandaoLayers:           0,
-			ActivationEpoch:        params.BeaconConfig().FarFutureEpoch,
-			ExitEpoch:              params.BeaconConfig().FarFutureEpoch,
-			WithdrawalEpoch:        params.BeaconConfig().FarFutureEpoch,
-			PenalizedEpoch:         params.BeaconConfig().FarFutureEpoch,
-			StatusFlags:            0,
+			Pubkey:          pubkey,
+			ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+			WithdrawalEpoch: params.BeaconConfig().FarFutureEpoch,
+			PenalizedEpoch:  params.BeaconConfig().FarFutureEpoch,
+			StatusFlags:     0,
 		}
 		state.ValidatorRegistry = append(state.ValidatorRegistry, newValidator)
 		state.ValidatorBalances = append(state.ValidatorBalances, amount)
-
 	} else {
 		if !bytes.Equal(
 			state.ValidatorRegistry[existingValidatorIdx].WithdrawalCredentialsHash32,
@@ -452,7 +444,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	for idx, validator := range state.ValidatorRegistry {
 		// Activate validators within the allowable balance churn.
 		if validator.ActivationEpoch > helpers.EntryExitEffectEpoch(currentEpoch) &&
-			state.ValidatorBalances[idx] >= params.BeaconConfig().MaxDeposit {
+			state.ValidatorBalances[idx] >= params.BeaconConfig().MaxDepositAmount {
 			balChurn += EffectiveBalance(state, uint64(idx))
 			if balChurn > maxBalChurn {
 				break
@@ -577,10 +569,10 @@ func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 //        total_balance // (2 * MAX_BALANCE_CHURN_QUOTIENT))
 func maxBalanceChurn(totalBalance uint64) uint64 {
 	maxBalanceChurn := totalBalance / 2 * params.BeaconConfig().MaxBalanceChurnQuotient
-	if maxBalanceChurn > params.BeaconConfig().MaxDeposit {
+	if maxBalanceChurn > params.BeaconConfig().MaxDepositAmount {
 		return maxBalanceChurn
 	}
-	return params.BeaconConfig().MaxDeposit
+	return params.BeaconConfig().MaxDepositAmount
 }
 
 // eligibleToExit checks if a validator is eligible to exit whether it was

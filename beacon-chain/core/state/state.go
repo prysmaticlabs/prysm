@@ -4,7 +4,6 @@
 package state
 
 import (
-	"encoding/binary"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -71,7 +70,6 @@ func InitialBeaconState(
 
 		validator := &pb.Validator{
 			Pubkey:                      depositInput.Pubkey,
-			RandaoCommitmentHash32:      depositInput.RandaoCommitmentHash32,
 			WithdrawalCredentialsHash32: depositInput.WithdrawalCredentialsHash32,
 			ExitEpoch:                   params.BeaconConfig().FarFutureEpoch,
 			PenalizedEpoch:              params.BeaconConfig().FarFutureEpoch,
@@ -138,17 +136,17 @@ func InitialBeaconState(
 		if err != nil {
 			return nil, fmt.Errorf("could not decode deposit input: %v", err)
 		}
-		// depositData consists of depositInput []byte + depositValue [8]byte +
-		// depositTimestamp [8]byte.
-		depositValue := depositData[len(depositData)-16 : len(depositData)-8]
+		value, _, err := b.DecodeDepositAmountAndTimeStamp(depositData)
+		if err != nil {
+			return nil, fmt.Errorf("could not decode deposit value and timestamp: %v", err)
+		}
 		state, err = v.ProcessDeposit(
 			state,
 			validatorMap,
 			depositInput.Pubkey,
-			binary.BigEndian.Uint64(depositValue),
+			value,
 			depositInput.ProofOfPossession,
 			depositInput.WithdrawalCredentialsHash32,
-			depositInput.RandaoCommitmentHash32,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not process validator deposit: %v", err)
@@ -156,7 +154,7 @@ func InitialBeaconState(
 	}
 	for i := 0; i < len(state.ValidatorRegistry); i++ {
 		if v.EffectiveBalance(state, uint64(i)) >=
-			params.BeaconConfig().MaxDeposit {
+			params.BeaconConfig().MaxDepositAmount {
 			state, err = v.ActivateValidator(state, uint64(i), true)
 			if err != nil {
 				return nil, fmt.Errorf("could not activate validator: %v", err)

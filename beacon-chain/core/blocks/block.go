@@ -11,7 +11,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
@@ -42,12 +41,6 @@ func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 	return block
 }
 
-// IsRandaoValid verifies the validity of randao from block by comparing it with
-// the proposer's randao from the beacon state.
-func IsRandaoValid(blockRandao []byte, stateRandao []byte) bool {
-	return hashutil.Hash(blockRandao) == bytesutil.ToBytes32(stateRandao)
-}
-
 // IsSlotValid compares the slot to the system clock to determine if the block is valid.
 func IsSlotValid(slot uint64, genesisTime time.Time) bool {
 	slotDuration := time.Duration(slot*params.BeaconConfig().SlotDuration) * time.Second
@@ -75,6 +68,7 @@ func BlockRoot(state *pb.BeaconState, slot uint64) ([]byte, error) {
 	} else {
 		earliestSlot = 0
 	}
+
 	previousSlot = state.Slot - 1
 	if state.Slot > slot+uint64(len(state.LatestBlockRootHash32S)) || slot >= state.Slot {
 		return []byte{}, fmt.Errorf("slot %d is not within expected range of %d to %d",
