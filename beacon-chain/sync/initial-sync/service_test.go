@@ -341,7 +341,7 @@ func TestRequestBlocksBySlot(t *testing.T) {
 
 	err = ss.db.SaveState(newState)
 	if err != nil {
-		t.Fatalf("Unable to save beacon state %v", err)
+		t.Fatalf("could not save beacon state %v", err)
 	}
 
 	exitRoutine := make(chan bool)
