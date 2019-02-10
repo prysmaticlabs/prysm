@@ -114,8 +114,8 @@ func NewInitialSyncService(ctx context.Context,
 		syncService:         cfg.SyncService,
 		chainService:        cfg.ChainService,
 		db:                  cfg.BeaconDB,
-		currentSlot:         0,
-		highestObservedSlot: 0,
+		currentSlot:         params.BeaconConfig().GenesisSlot,
+		highestObservedSlot: params.BeaconConfig().GenesisSlot,
 		blockBuf:            blockBuf,
 		stateBuf:            stateBuf,
 		batchedBlockBuf:     batchedBlockBuf,
@@ -167,7 +167,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 			log.Debug("Exiting goroutine")
 			return
 		case <-delayChan:
-			if s.currentSlot == 0 {
+			if s.currentSlot == params.BeaconConfig().GenesisSlot {
 				continue
 			}
 			if s.highestObservedSlot == s.currentSlot {
@@ -246,7 +246,7 @@ func (s *InitialSync) checkInMemoryBlocks() {
 				return
 			}
 
-			if block, ok := s.inMemoryBlocks[0]; ok && s.currentSlot == 0 {
+			if block, ok := s.inMemoryBlocks[0]; ok && s.currentSlot == params.BeaconConfig().GenesisSlot {
 				s.processBlock(block, p2p.Peer{})
 			}
 
@@ -270,13 +270,13 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 	}
 
 	// setting first block for sync.
-	if s.currentSlot == 0 {
+	if s.currentSlot == params.BeaconConfig().GenesisSlot {
 		if s.initialStateRootHash32 != [32]byte{} {
 			log.Errorf("State root hash %#x set despite current slot being 0", s.initialStateRootHash32)
 			return
 		}
 
-		if block.Slot != 1 {
+		if block.Slot != params.BeaconConfig().GenesisSlot+1 {
 
 			// saves block in memory if it isn't the initial block.
 			if _, ok := s.inMemoryBlocks[block.Slot]; !ok {
@@ -375,13 +375,12 @@ func (s *InitialSync) requestBatchedBlocks(endSlot uint64) {
 // validateAndSaveNextBlock will validate whether blocks received from the blockfetcher
 // routine can be added to the chain.
 func (s *InitialSync) validateAndSaveNextBlock(block *pb.BeaconBlock) error {
-
 	h, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return err
 	}
 
-	if s.currentSlot == uint64(0) {
+	if s.currentSlot == params.BeaconConfig().GenesisSlot {
 		return errors.New("invalid slot number for syncing")
 	}
 
