@@ -121,7 +121,7 @@ func PrevBoundaryAttestations(
 
 	var prevBoundaryAttestations []*pb.PendingAttestationRecord
 	prevBoundaryBlockRoot, err := block.BlockRoot(state,
-		helpers.PrevEpoch(state))
+		helpers.StartSlot(helpers.PrevEpoch(state)))
 	if err != nil {
 		return nil, err
 	}
