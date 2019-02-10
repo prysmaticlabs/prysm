@@ -2,10 +2,10 @@ package blocks
 
 import (
 	"bytes"
-	"math"
 	"reflect"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -30,12 +30,13 @@ func TestGenesisBlock(t *testing.T) {
 	if !bytes.Equal(b1.StateRootHash32, stateHash) {
 		t.Error("genesis block StateRootHash32 isn't initialized correctly")
 	}
-
-	rd := []byte{}
-	if IsRandaoValid(b1.RandaoRevealHash32, rd) {
-		t.Error("RANDAO should be empty")
+	expectedEth1 := &pb.Eth1Data{
+		DepositRootHash32: params.BeaconConfig().ZeroHash[:],
+		BlockHash32:       params.BeaconConfig().ZeroHash[:],
 	}
-
+	if !proto.Equal(b1.Eth1Data, expectedEth1) {
+		t.Error("genesis block Eth1Data isn't initialized correctly")
+	}
 }
 
 func TestBlockRootAtSlot_OK(t *testing.T) {
@@ -164,40 +165,6 @@ func TestProcessBlockRoots(t *testing.T) {
 	}
 }
 
-func TestForkVersion(t *testing.T) {
-	forkData := &pb.Fork{
-		Slot:            10,
-		PreviousVersion: 2,
-		CurrentVersion:  3,
-	}
-
-	if ForkVersion(forkData, 9) != 2 {
-		t.Errorf("fork Version not equal to 2 %d", ForkVersion(forkData, 9))
-	}
-
-	if ForkVersion(forkData, 11) != 3 {
-		t.Errorf("fork Version not equal to 3 %d", ForkVersion(forkData, 11))
-	}
-}
-
-func TestDomainVersion(t *testing.T) {
-	forkData := &pb.Fork{
-		Slot:            10,
-		PreviousVersion: 2,
-		CurrentVersion:  3,
-	}
-
-	constant := uint64(math.Pow(2, 32))
-
-	if DomainVersion(forkData, 9, 2) != 2*constant+2 {
-		t.Errorf("incorrect domain version %d", DomainVersion(forkData, 9, 2))
-	}
-
-	if DomainVersion(forkData, 11, 3) != 3*constant+3 {
-		t.Errorf("incorrect domain version %d", DomainVersion(forkData, 11, 3))
-	}
-}
-
 func TestDecodeDepositAmountAndTimeStamp(t *testing.T) {
 
 	tests := []struct {
@@ -208,8 +175,7 @@ func TestDecodeDepositAmountAndTimeStamp(t *testing.T) {
 		{
 			depositData: &pb.DepositInput{
 				Pubkey:                      []byte("testing"),
-				RandaoCommitmentHash32:      []byte("randao"),
-				CustodyCommitmentHash32:     []byte("commitment"),
+				ProofOfPossession:           []byte("pop"),
 				WithdrawalCredentialsHash32: []byte("withdraw"),
 			},
 			amount:    8749343850,
@@ -218,7 +184,7 @@ func TestDecodeDepositAmountAndTimeStamp(t *testing.T) {
 		{
 			depositData: &pb.DepositInput{
 				Pubkey:                      []byte("testing"),
-				CustodyCommitmentHash32:     []byte("commitment"),
+				ProofOfPossession:           []byte("pop"),
 				WithdrawalCredentialsHash32: []byte("withdraw"),
 			},
 			amount:    657660,
@@ -227,24 +193,24 @@ func TestDecodeDepositAmountAndTimeStamp(t *testing.T) {
 		{
 			depositData: &pb.DepositInput{
 				Pubkey:                      []byte("testing"),
-				RandaoCommitmentHash32:      []byte("randao"),
+				ProofOfPossession:           []byte("pop"),
 				WithdrawalCredentialsHash32: []byte("withdraw"),
 			},
 			amount:    5445540,
 			timestamp: 34340,
 		}, {
 			depositData: &pb.DepositInput{
-				RandaoCommitmentHash32:      []byte("randao"),
-				CustodyCommitmentHash32:     []byte("commitment"),
+				Pubkey:                      []byte("testing"),
+				ProofOfPossession:           []byte("pop"),
 				WithdrawalCredentialsHash32: []byte("withdraw"),
 			},
 			amount:    4545,
 			timestamp: 4343,
 		}, {
 			depositData: &pb.DepositInput{
-				Pubkey:                  []byte("testing"),
-				RandaoCommitmentHash32:  []byte("randao"),
-				CustodyCommitmentHash32: []byte("commitment"),
+				Pubkey:                      []byte("testing"),
+				ProofOfPossession:           []byte("pop"),
+				WithdrawalCredentialsHash32: []byte("withdraw"),
 			},
 			amount:    76706966,
 			timestamp: 34394393,

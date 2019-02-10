@@ -7,28 +7,29 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
-var config = params.BeaconConfig()
 var clock utils.Clock = &utils.RealClock{}
 
 // NewGenesisBlock returns the canonical, genesis block for the beacon chain protocol.
 func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 	block := &pb.BeaconBlock{
-		Slot:               config.GenesisSlot,
-		ParentRootHash32:   config.ZeroHash[:],
+		Slot:               params.BeaconConfig().GenesisSlot,
+		ParentRootHash32:   params.BeaconConfig().ZeroHash[:],
 		StateRootHash32:    stateRoot,
-		RandaoRevealHash32: config.ZeroHash[:],
-		Signature:          config.EmptySignature,
+		RandaoRevealHash32: params.BeaconConfig().ZeroHash[:],
+		Signature:          params.BeaconConfig().EmptySignature,
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: params.BeaconConfig().ZeroHash[:],
+			BlockHash32:       params.BeaconConfig().ZeroHash[:],
+		},
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: []*pb.ProposerSlashing{},
 			AttesterSlashings: []*pb.AttesterSlashing{},
@@ -40,15 +41,9 @@ func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 	return block
 }
 
-// IsRandaoValid verifies the validity of randao from block by comparing it with
-// the proposer's randao from the beacon state.
-func IsRandaoValid(blockRandao []byte, stateRandao []byte) bool {
-	return hashutil.Hash(blockRandao) == bytesutil.ToBytes32(stateRandao)
-}
-
 // IsSlotValid compares the slot to the system clock to determine if the block is valid.
 func IsSlotValid(slot uint64, genesisTime time.Time) bool {
-	slotDuration := time.Duration(slot*config.SlotDuration) * time.Second
+	slotDuration := time.Duration(slot*params.BeaconConfig().SlotDuration) * time.Second
 	validTimeThreshold := genesisTime.Add(slotDuration)
 	return clock.Now().After(validTimeThreshold)
 }
@@ -91,39 +86,12 @@ func BlockRoot(state *pb.BeaconState, slot uint64) ([]byte, error) {
 //	Set state.latest_block_roots[(state.slot - 1) % LATEST_BLOCK_ROOTS_LENGTH] = previous_block_root.
 //	If state.slot % LATEST_BLOCK_ROOTS_LENGTH == 0 append merkle_root(state.latest_block_roots) to state.batched_block_roots.
 func ProcessBlockRoots(state *pb.BeaconState, prevBlockRoot [32]byte) *pb.BeaconState {
-	state.LatestBlockRootHash32S[(state.Slot-1)%config.LatestBlockRootsLength] = prevBlockRoot[:]
-	if state.Slot%config.LatestBlockRootsLength == 0 {
+	state.LatestBlockRootHash32S[(state.Slot-1)%params.BeaconConfig().LatestBlockRootsLength] = prevBlockRoot[:]
+	if state.Slot%params.BeaconConfig().LatestBlockRootsLength == 0 {
 		merkleRoot := hashutil.MerkleRoot(state.LatestBlockRootHash32S)
 		state.BatchedBlockRootHash32S = append(state.BatchedBlockRootHash32S, merkleRoot)
 	}
 	return state
-}
-
-// ForkVersion Spec:
-//	def get_fork_version(fork_data: Fork,
-//                     slot: int) -> int:
-//    if slot < fork_data.fork_slot:
-//        return fork_data.pre_fork_version
-//    else:
-//        return fork_data.post_fork_version
-func ForkVersion(data *pb.Fork, slot uint64) uint64 {
-	if slot < data.Slot {
-		return data.PreviousVersion
-	}
-	return data.CurrentVersion
-}
-
-// DomainVersion Spec:
-//	def get_domain(fork_data: Fork,
-//               slot: int,
-//               domain_type: int) -> int:
-//    return get_fork_version(
-//        fork_data,
-//        slot
-//    ) * 2**32 + domain_type
-func DomainVersion(data *pb.Fork, slot uint64, domainType uint64) uint64 {
-	constant := uint64(math.Pow(2, 32))
-	return ForkVersion(data, slot)*constant + domainType
 }
 
 // EncodeDepositData converts a deposit input proto into an a byte slice

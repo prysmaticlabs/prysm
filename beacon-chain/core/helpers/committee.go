@@ -6,6 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -60,7 +61,7 @@ func EpochCommitteeCount(activeValidatorCount uint64) uint64 {
 //    return get_epoch_committee_count(len(current_active_validators)
 func CurrentEpochCommitteeCount(state *pb.BeaconState) uint64 {
 	currActiveValidatorIndices := ActiveValidatorIndices(
-		state.ValidatorRegistry, state.CurrentEpochCalculationSlot)
+		state.ValidatorRegistry, state.CurrentCalculationEpoch)
 	return EpochCommitteeCount(uint64(len(currActiveValidatorIndices)))
 }
 
@@ -79,7 +80,7 @@ func CurrentEpochCommitteeCount(state *pb.BeaconState) uint64 {
 //    return get_epoch_committee_count(len(previous_active_validators))
 func PrevEpochCommitteeCount(state *pb.BeaconState) uint64 {
 	prevActiveValidatorIndices := ActiveValidatorIndices(
-		state.ValidatorRegistry, state.PreviousEpochCalculationSlot)
+		state.ValidatorRegistry, state.PreviousCalculationEpoch)
 	return EpochCommitteeCount(uint64(len(prevActiveValidatorIndices)))
 }
 
@@ -190,19 +191,19 @@ func CrosslinkCommitteesAtSlot(
 	if wantedEpoch == prevEpoch {
 		committeesPerEpoch = PrevEpochCommitteeCount(state)
 		seed = bytesutil.ToBytes32(state.PreviousEpochSeedHash32)
-		shufflingEpoch = state.PreviousEpochCalculationSlot
+		shufflingEpoch = state.PreviousCalculationEpoch
 		shufflingStartShard = state.PreviousEpochStartShard
 	} else if wantedEpoch == currentEpoch {
 		committeesPerEpoch = PrevEpochCommitteeCount(state)
 		seed = bytesutil.ToBytes32(state.CurrentEpochSeedHash32)
-		shufflingEpoch = state.CurrentEpochCalculationSlot
+		shufflingEpoch = state.CurrentCalculationEpoch
 		shufflingStartShard = state.CurrentEpochStartShard
 	} else if wantedEpoch == nextEpoch {
 		currentCommitteesPerEpoch := CurrentEpochCommitteeCount(state)
 		committeesPerEpoch = NextEpochCommitteeCount(state)
 		shufflingEpoch = nextEpoch
 
-		epochsSinceLastRegistryUpdate := currentEpoch - state.ValidatorRegistryUpdateSlot
+		epochsSinceLastRegistryUpdate := currentEpoch - state.ValidatorRegistryUpdateEpoch
 		if registryChange {
 			seed, err = GenerateSeed(state, nextEpoch)
 			if err != nil {
@@ -271,7 +272,7 @@ func CrosslinkCommitteesAtSlot(
 //    return split(shuffled_active_validator_indices, committees_per_epoch)
 func Shuffling(
 	seed [32]byte,
-	validators []*pb.ValidatorRecord,
+	validators []*pb.Validator,
 	slot uint64) ([][]uint64, error) {
 
 	// Normalize slot to start of epoch boundary.
@@ -294,4 +295,68 @@ func Shuffling(
 
 	// Split the shuffled list into epoch_length * committees_per_slot pieces.
 	return utils.SplitIndices(shuffledIndices, committeesPerEpoch), nil
+}
+
+// AttestationParticipants returns the attesting participants indices.
+//
+// Spec pseudocode definition:
+//   def get_attestation_participants(state: BeaconState,
+//     attestation_data: AttestationData,
+//     bitfield: bytes) -> List[ValidatorIndex]:
+//     """
+//     Returns the participant indices at for the ``attestation_data`` and ``bitfield``.
+//     """
+//     # Find the committee in the list with the desired shard
+//     crosslink_committees = get_crosslink_committees_at_slot(state, attestation_data.slot)
+//
+//	   assert attestation_data.shard in [shard for _, shard in crosslink_committees]
+//     crosslink_committee = [committee for committee,
+//     		shard in crosslink_committees if shard == attestation_data.shard][0]
+//
+//	   assert verify_bitfield(bitfield, len(crosslink_committee))
+//
+//     # Find the participating attesters in the committee
+//     participants = []
+//     for i, validator_index in enumerate(crosslink_committee):
+//         aggregation_bit = get_bitfield_bit(bitfield, i)
+//         if aggregation_bit == 0b1:
+//            participants.append(validator_index)
+//    return participants
+func AttestationParticipants(
+	state *pb.BeaconState,
+	attestationData *pb.AttestationData,
+	bitfield []byte) ([]uint64, error) {
+
+	// Find the relevant committee.
+	crosslinkCommittees, err := CrosslinkCommitteesAtSlot(state, attestationData.Slot, false)
+	if err != nil {
+		return nil, err
+	}
+
+	var committee []uint64
+	for _, crosslinkCommittee := range crosslinkCommittees {
+		if crosslinkCommittee.Shard == attestationData.Shard {
+			committee = crosslinkCommittee.Committee
+			break
+		}
+	}
+	if len(bitfield) != mathutil.CeilDiv8(len(committee)) {
+		return nil, fmt.Errorf(
+			"wanted participants bitfield length %d, got: %d",
+			mathutil.CeilDiv8(len(committee)),
+			len(bitfield))
+	}
+
+	// Find the participating validators in the committee.
+	var participants []uint64
+	for i, validatorIndex := range committee {
+		bitSet, err := bitutil.CheckBit(bitfield, i)
+		if err != nil {
+			return nil, fmt.Errorf("could not get participant bitfield: %v", err)
+		}
+		if bitSet {
+			participants = append(participants, validatorIndex)
+		}
+	}
+	return participants, nil
 }

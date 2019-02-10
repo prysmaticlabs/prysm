@@ -7,6 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
+
 	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -22,7 +25,7 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	if params.BeaconConfig().GenesisSlot != 0 {
 		t.Error("GenesisSlot should be 0 for these tests to pass")
 	}
-	initialSlotNumber := params.BeaconConfig().GenesisSlot
+	initialEpochNumber := params.BeaconConfig().GenesisEpoch
 
 	if params.BeaconConfig().GenesisForkVersion != 0 {
 		t.Error("InitialSlot should be 0 for these tests to pass")
@@ -59,14 +62,14 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 
 	genesisTime := uint64(99999)
 	processedPowReceiptRoot := []byte{'A', 'B', 'C'}
-	maxDeposit := params.BeaconConfig().MaxDeposit
+	maxDeposit := params.BeaconConfig().MaxDepositAmount
 	var deposits []*pb.Deposit
 	for i := 0; i < depositsForChainStart; i++ {
 		depositData, err := b.EncodeDepositData(
 			&pb.DepositInput{
-				Pubkey: []byte(strconv.Itoa(i)), ProofOfPossession: []byte{'B'},
-				WithdrawalCredentialsHash32: []byte{'C'}, RandaoCommitmentHash32: []byte{'D'},
-				CustodyCommitmentHash32: []byte{'D'},
+				Pubkey:                      []byte(strconv.Itoa(i)),
+				ProofOfPossession:           []byte{'B'},
+				WithdrawalCredentialsHash32: []byte{'C'},
 			},
 			maxDeposit,
 			time.Now().Unix(),
@@ -90,7 +93,7 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	}
 
 	// Misc fields checks.
-	if state.Slot != initialSlotNumber {
+	if state.Slot != initialEpochNumber {
 		t.Error("Slot was not correctly initialized")
 	}
 	if state.GenesisTime != genesisTime {
@@ -99,13 +102,13 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	if !reflect.DeepEqual(*state.Fork, pb.Fork{
 		PreviousVersion: initialForkVersion,
 		CurrentVersion:  initialForkVersion,
-		Slot:            initialSlotNumber,
+		Epoch:           initialEpochNumber,
 	}) {
 		t.Error("Fork was not correctly initialized")
 	}
 
 	// Validator registry fields checks.
-	if state.ValidatorRegistryUpdateSlot != initialSlotNumber {
+	if state.ValidatorRegistryUpdateEpoch != initialEpochNumber {
 		t.Error("ValidatorRegistryUpdateSlot was not correctly initialized")
 	}
 	if len(state.ValidatorRegistry) != depositsForChainStart {
@@ -121,13 +124,13 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	}
 
 	// Finality fields checks.
-	if state.PreviousJustifiedSlot != initialSlotNumber {
+	if state.PreviousJustifiedEpoch != initialEpochNumber {
 		t.Error("PreviousJustifiedSlot was not correctly initialized")
 	}
-	if state.JustifiedSlot != initialSlotNumber {
+	if state.JustifiedEpoch != initialEpochNumber {
 		t.Error("JustifiedSlot was not correctly initialized")
 	}
-	if state.FinalizedSlot != initialSlotNumber {
+	if state.FinalizedEpoch != initialEpochNumber {
 		t.Error("FinalizedSlot was not correctly initialized")
 	}
 	if state.JustificationBitfield != 0 {
@@ -147,6 +150,24 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	}
 	if !reflect.DeepEqual(state.BatchedBlockRootHash32S, [][]byte{}) {
 		t.Error("BatchedBlockRootHash32S was not correctly initialized")
+	}
+	activeValidators := helpers.ActiveValidatorIndices(state.ValidatorRegistry, params.BeaconConfig().GenesisEpoch)
+	genesisActiveIndexRoot, err := ssz.TreeHash(activeValidators)
+	if err != nil {
+		t.Fatalf("Could not determine genesis active index root: %v", err)
+	}
+	if !bytes.Equal(state.LatestIndexRootHash32S[0], genesisActiveIndexRoot[:]) {
+		t.Errorf(
+			"Expected index roots to be the tree hash root of active validator indices, received %#x",
+			state.LatestIndexRootHash32S[0],
+		)
+	}
+	seed, err := helpers.GenerateSeed(state, params.BeaconConfig().GenesisEpoch)
+	if err != nil {
+		t.Fatalf("Could not generate initial seed: %v", err)
+	}
+	if !bytes.Equal(seed[:], state.CurrentEpochSeedHash32) {
+		t.Errorf("Expected current epoch seed to be %#x, received %#x", seed[:], state.CurrentEpochSeedHash32)
 	}
 
 	// deposit root checks.

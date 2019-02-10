@@ -17,8 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
-var config = params.BeaconConfig()
-
 // ExpectedFFGSource applies rewards or penalties
 // for an expected FFG source. It uses total justified
 // attesting balances, total validator balances and base
@@ -36,7 +34,6 @@ func ExpectedFFGSource(
 	justifiedAttesterIndices []uint64,
 	justifiedAttestingBalance uint64,
 	totalBalance uint64) *pb.BeaconState {
-
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
 
 	for _, index := range justifiedAttesterIndices {
@@ -155,7 +152,7 @@ func InclusionDistance(
 		}
 		state.ValidatorBalances[index] +=
 			baseReward(state, index, baseRewardQuotient) *
-				config.MinAttestationInclusionDelay /
+				params.BeaconConfig().MinAttestationInclusionDelay /
 				inclusionDistance
 	}
 	return state, nil
@@ -278,7 +275,7 @@ func InactivityInclusionDistance(
 		}
 		baseReward := baseReward(state, index, baseRewardQuotient)
 		state.ValidatorBalances[index] -= baseReward -
-			baseReward*config.MinAttestationInclusionDelay/
+			baseReward*params.BeaconConfig().MinAttestationInclusionDelay/
 				inclusionDistance
 	}
 	return state, nil
@@ -310,7 +307,7 @@ func AttestationInclusion(
 		}
 		state.ValidatorBalances[proposerIndex] +=
 			baseReward(state, proposerIndex, baseRewardQuotient) /
-				config.IncluderRewardQuotient
+				params.BeaconConfig().IncluderRewardQuotient
 	}
 	return state, nil
 }
@@ -319,9 +316,9 @@ func AttestationInclusion(
 // for attesting shard cross links.
 //
 // Spec pseudocode definition:
-// 	For every slot in range(state.slot - 2 * EPOCH_LENGTH, state.slot),
-// 		let shard_committee_at_slot = get_shard_committees_at_slot(slot).
-// 		For every (shard_committee, shard) in shard_committee_at_slot, compute:
+// 	For slot in range(get_epoch_start_slot(previous_epoch), get_epoch_start_slot(current_epoch)),
+// 		let crosslink_committees_at_slot = get_crosslink_committees_at_slot(slot).
+// 		For every (crosslink_committee, shard) in crosslink_committee_at_slot, compute:
 //
 //			Let shard_block_root be state.latest_crosslinks[shard].shard_block_root
 //			Let attesting_validator_indices(shard_committee, shard_block_root)
@@ -344,9 +341,12 @@ func Crosslinks(
 	thisEpochAttestations []*pb.PendingAttestationRecord,
 	prevEpochAttestations []*pb.PendingAttestationRecord) (*pb.BeaconState, error) {
 
-	epochLength := config.EpochLength
-	startSlot := state.Slot - 2*epochLength
-	for i := startSlot; i < state.Slot; i++ {
+	prevEpoch := helpers.PrevEpoch(state)
+	currentEpoch := helpers.CurrentEpoch(state)
+	startSlot := helpers.StartSlot(prevEpoch)
+	endSlot := helpers.StartSlot(currentEpoch)
+
+	for i := startSlot; i < endSlot; i++ {
 		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(state, i, false)
 		if err != nil {
 			return nil, fmt.Errorf("could not get shard committees for slot %d: %v", i, err)
@@ -427,5 +427,5 @@ func inactivityPenalty(
 
 	baseReward := baseReward(state, validatorIndex, baseRewardQuotient)
 	validatorBalance := validators.EffectiveBalance(state, validatorIndex)
-	return baseReward + validatorBalance*epochsSinceFinality/config.InactivityPenaltyQuotient/2
+	return baseReward + validatorBalance*epochsSinceFinality/params.BeaconConfig().InactivityPenaltyQuotient/2
 }

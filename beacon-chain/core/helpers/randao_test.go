@@ -136,12 +136,12 @@ func TestGenerateSeed_Ok(t *testing.T) {
 		LatestRandaoMixesHash32S: randaoMixes,
 		Slot:                     slot}
 
-	got, err := GenerateSeed(state, 10*params.BeaconConfig().EpochLength)
+	got, err := GenerateSeed(state, 10)
 	if err != nil {
 		t.Fatalf("Could not generate seed: %v", err)
 	}
-	wanted := [32]byte{180, 101, 143, 188, 76, 11, 89, 58, 240, 23, 26, 115, 123, 117, 241, 87,
-		150, 254, 168, 69, 44, 64, 142, 223, 32, 182, 2, 247, 191, 208, 189, 152}
+	wanted := [32]byte{248, 115, 47, 108, 244, 57, 89, 71, 186, 71, 181, 177, 17, 131, 75, 206, 67, 185, 184, 241,
+		97, 97, 248, 165, 161, 124, 236, 14, 150, 98, 179, 249}
 	if got != wanted {
 		t.Errorf("Incorrect generated seeds. Got: %v, wanted: %v",
 			got, wanted)
