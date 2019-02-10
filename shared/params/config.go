@@ -19,9 +19,7 @@ type BeaconChainConfig struct {
 	// Misc constants.
 	ShardCount                 uint64 // ShardCount is the number of shard chains in Ethereum 2.0.
 	TargetCommitteeSize        uint64 // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
-	EjectionBalance            uint64 // EjectionBalance is the minimal GWei a validator needs to have before ejected.
 	MaxBalanceChurnQuotient    uint64 // MaxBalanceChurnQuotient is used to determine how many validators can rotate per epoch.
-	Gwei                       uint64 // Gwei is the denomination of Gwei in Ether.
 	BeaconChainShardNumber     uint64 // BeaconChainShardNumber is the shard number of the beacon chain.
 	MaxIndicesPerSlashableVote uint64 // MaxIndicesPerSlashableVote is used to determine how many validators can be slashed per vote.
 	LatestBlockRootsLength     uint64 // LatestBlockRootsLength is the number of block roots kept in the beacon state.
@@ -33,8 +31,11 @@ type BeaconChainConfig struct {
 	// Deposit contract constants.
 	DepositContractAddress   []byte // DepositContractAddress is the address of the deposit contract in PoW chain.
 	DepositContractTreeDepth uint64 // Depth of the Merkle trie of deposits in the validator deposit contract on the PoW chain.
-	MinDeposit               uint64 // MinDeposit is the maximal amount of Gwei a validator can send to the deposit contract at once.
-	MaxDeposit               uint64 // MaxDeposit is the maximal amount of Gwei a validator can send to the deposit contract at once.
+
+	// Gwei Values
+	MinDepositAmount uint64 // MinDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
+	MaxDepositAmount uint64 // MaxDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
+	EjectionBalance  uint64 // EjectionBalance is the minimal GWei a validator needs to have before ejected.
 
 	// Initial value constants.
 	GenesisForkVersion      uint64   // GenesisForkVersion is used to track fork version between state transitions.
@@ -95,7 +96,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	// Misc constant.
 	ShardCount:                 1024,
 	TargetCommitteeSize:        128,
-	EjectionBalance:            16 * 1e9,
 	MaxBalanceChurnQuotient:    32,
 	BeaconChainShardNumber:     1<<64 - 1,
 	MaxIndicesPerSlashableVote: 1,
@@ -107,8 +107,11 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// Deposit contract constants.
 	DepositContractTreeDepth: 32,
-	MinDeposit:               1 * 1e9,
-	MaxDeposit:               32 * 1e9,
+
+	// Gwei values:
+	MinDepositAmount: 1 * 1e9,
+	MaxDepositAmount: 32 * 1e9,
+	EjectionBalance:  16 * 1e9,
 
 	// Initial value constants.
 	GenesisForkVersion: 0,
@@ -165,8 +168,8 @@ var demoBeaconConfig = &BeaconChainConfig{
 
 	// Deposit contract constants.
 	DepositContractTreeDepth: defaultBeaconConfig.DepositContractTreeDepth,
-	MaxDeposit:               defaultBeaconConfig.MaxDeposit,
-	MinDeposit:               defaultBeaconConfig.MinDeposit,
+	MaxDepositAmount:         defaultBeaconConfig.MaxDepositAmount,
+	MinDepositAmount:         defaultBeaconConfig.MinDepositAmount,
 
 	// Initial value constants.
 	GenesisForkVersion: defaultBeaconConfig.GenesisForkVersion,

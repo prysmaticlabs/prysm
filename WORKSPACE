@@ -2,9 +2,9 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
     name = "bazel_skylib",
-    url = "https://github.com/bazelbuild/bazel-skylib/archive/0.6.0.tar.gz",
-    sha256 = "eb5c57e4c12e68c0c20bc774bfbc60a568e800d025557bc4ea022c6479acc867",
-    strip_prefix = "bazel-skylib-0.6.0",
+    url = "https://github.com/bazelbuild/bazel-skylib/archive/0.7.0.tar.gz",
+    sha256 = "2c62d8cd4ab1e65c08647eb4afe38f51591f43f7f0885e7769832fa137633dcb",
+    strip_prefix = "bazel-skylib-0.7.0",
 )
 
 http_archive(
@@ -35,9 +35,8 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    url = "https://github.com/bazelbuild/rules_nodejs/archive/0.16.8.tar.gz",
-    strip_prefix = "rules_nodejs-0.16.8",
-    sha256 = "df74b6ef05d2307ba3245101aa4b4d05ab61a5a63195bfbb693d78851d43a548",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.18.4/rules_nodejs-0.18.4.tar.gz"],
+    sha256 = "23987a5cf549146742aa6a0d2536e4906906e63a608d5b9b32dd9fe5523ef51c",
 )
 
 http_archive(
@@ -181,7 +180,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_crypto",
     build_file_proto_mode = "disable_global",
-    tag = "v2.0.1",
+    tag = "v2.0.5",
     importpath = "github.com/libp2p/go-libp2p-crypto",
 )
 
@@ -301,7 +300,7 @@ go_repository(
 
 go_repository(
     name = "com_github_btcsuite_btcd",
-    commit = "ed77733ec07dfc8a513741138419b8d9d3de9d2d",
+    commit = "12ce2fc7d32197bf00739e4167128285ae250124",
     importpath = "github.com/btcsuite/btcd",
 )
 
@@ -500,7 +499,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "41f3e6584952bb034a481797859f6ab34b6803bd",
+    commit = "3b5209105503162ded1863c307ac66fec31120dd",
     importpath = "golang.org/x/sys",
 )
 
@@ -542,7 +541,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_crypto",
-    commit = "b8fe1690c61389d7d2a8074a507d1d40c5d30448",
+    commit = "193df9c0f06f8bb35fba505183eaf0acc0136505",
     importpath = "golang.org/x/crypto",
 )
 
@@ -668,7 +667,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_procfs",
-    commit = "488faf799f863e27e50c516468f76ae8f1da20a5",
+    commit = "f8d8b3f739bd91a7c0462cb55235ef63c79c9abc",
     importpath = "github.com/prometheus/procfs",
 )
 
@@ -815,13 +814,13 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_discovery",
-    commit = "cc4105e21706452e5b0f7e05390f987017188d31",
+    commit = "a666b9cafd4cd3c35405896c2121951c749979ea",
     importpath = "github.com/libp2p/go-libp2p-discovery",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_autonat",
-    commit = "93b1787f76de807b9ab3a7c7edd45cf906139bdb",
+    commit = "494f7fce997b6f5be4750dcc24350e06d3b4d67a",
     importpath = "github.com/libp2p/go-libp2p-autonat",
 )
 
@@ -927,7 +926,7 @@ go_repository(
 
 go_repository(
     name = "com_google_cloud_go",
-    tag = "v0.35.1",
+    tag = "v0.36.0",
     importpath = "cloud.google.com/go",
 )
 

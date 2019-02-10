@@ -7,6 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
+
 	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -59,14 +62,14 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 
 	genesisTime := uint64(99999)
 	processedPowReceiptRoot := []byte{'A', 'B', 'C'}
-	maxDeposit := params.BeaconConfig().MaxDeposit
+	maxDeposit := params.BeaconConfig().MaxDepositAmount
 	var deposits []*pb.Deposit
 	for i := 0; i < depositsForChainStart; i++ {
 		depositData, err := b.EncodeDepositData(
 			&pb.DepositInput{
-				Pubkey: []byte(strconv.Itoa(i)), ProofOfPossession: []byte{'B'},
-				WithdrawalCredentialsHash32: []byte{'C'}, RandaoCommitmentHash32: []byte{'D'},
-				CustodyCommitmentHash32: []byte{'D'},
+				Pubkey:                      []byte(strconv.Itoa(i)),
+				ProofOfPossession:           []byte{'B'},
+				WithdrawalCredentialsHash32: []byte{'C'},
 			},
 			maxDeposit,
 			time.Now().Unix(),
@@ -147,6 +150,24 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	}
 	if !reflect.DeepEqual(state.BatchedBlockRootHash32S, [][]byte{}) {
 		t.Error("BatchedBlockRootHash32S was not correctly initialized")
+	}
+	activeValidators := helpers.ActiveValidatorIndices(state.ValidatorRegistry, params.BeaconConfig().GenesisEpoch)
+	genesisActiveIndexRoot, err := ssz.TreeHash(activeValidators)
+	if err != nil {
+		t.Fatalf("Could not determine genesis active index root: %v", err)
+	}
+	if !bytes.Equal(state.LatestIndexRootHash32S[0], genesisActiveIndexRoot[:]) {
+		t.Errorf(
+			"Expected index roots to be the tree hash root of active validator indices, received %#x",
+			state.LatestIndexRootHash32S[0],
+		)
+	}
+	seed, err := helpers.GenerateSeed(state, params.BeaconConfig().GenesisEpoch)
+	if err != nil {
+		t.Fatalf("Could not generate initial seed: %v", err)
+	}
+	if !bytes.Equal(seed[:], state.CurrentEpochSeedHash32) {
+		t.Errorf("Expected current epoch seed to be %#x, received %#x", seed[:], state.CurrentEpochSeedHash32)
 	}
 
 	// deposit root checks.

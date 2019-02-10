@@ -28,7 +28,7 @@ func TestValidatorIndex_Ok(t *testing.T) {
 		&pbp2p.DepositInput{
 			Pubkey: []byte{'A'},
 		},
-		params.BeaconConfig().MaxDeposit,
+		params.BeaconConfig().MaxDepositAmount,
 		time.Now().Unix(),
 	)
 	if err != nil {
@@ -72,12 +72,11 @@ func TestValidatorEpochAssignments_Ok(t *testing.T) {
 		var pubKey [48]byte
 		copy(pubKey[:], []byte(strconv.Itoa(i)))
 		depositInput := &pbp2p.DepositInput{
-			Pubkey:                 pubKey[:],
-			RandaoCommitmentHash32: []byte{0},
+			Pubkey: pubKey[:],
 		}
 		depositData, err := b.EncodeDepositData(
 			depositInput,
-			params.BeaconConfig().MaxDeposit,
+			params.BeaconConfig().MaxDepositAmount,
 			genesisTime,
 		)
 		if err != nil {

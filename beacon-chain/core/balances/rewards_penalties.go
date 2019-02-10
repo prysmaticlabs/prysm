@@ -17,8 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
-var config = params.BeaconConfig()
-
 // ExpectedFFGSource applies rewards or penalties
 // for an expected FFG source. It uses total justified
 // attesting balances, total validator balances and base
@@ -36,7 +34,6 @@ func ExpectedFFGSource(
 	justifiedAttesterIndices []uint64,
 	justifiedAttestingBalance uint64,
 	totalBalance uint64) *pb.BeaconState {
-
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
 
 	for _, index := range justifiedAttesterIndices {
@@ -155,7 +152,7 @@ func InclusionDistance(
 		}
 		state.ValidatorBalances[index] +=
 			baseReward(state, index, baseRewardQuotient) *
-				config.MinAttestationInclusionDelay /
+				params.BeaconConfig().MinAttestationInclusionDelay /
 				inclusionDistance
 	}
 	return state, nil
@@ -278,7 +275,7 @@ func InactivityInclusionDistance(
 		}
 		baseReward := baseReward(state, index, baseRewardQuotient)
 		state.ValidatorBalances[index] -= baseReward -
-			baseReward*config.MinAttestationInclusionDelay/
+			baseReward*params.BeaconConfig().MinAttestationInclusionDelay/
 				inclusionDistance
 	}
 	return state, nil
@@ -310,7 +307,7 @@ func AttestationInclusion(
 		}
 		state.ValidatorBalances[proposerIndex] +=
 			baseReward(state, proposerIndex, baseRewardQuotient) /
-				config.IncluderRewardQuotient
+				params.BeaconConfig().IncluderRewardQuotient
 	}
 	return state, nil
 }
@@ -430,5 +427,5 @@ func inactivityPenalty(
 
 	baseReward := baseReward(state, validatorIndex, baseRewardQuotient)
 	validatorBalance := validators.EffectiveBalance(state, validatorIndex)
-	return baseReward + validatorBalance*epochsSinceFinality/config.InactivityPenaltyQuotient/2
+	return baseReward + validatorBalance*epochsSinceFinality/params.BeaconConfig().InactivityPenaltyQuotient/2
 }
