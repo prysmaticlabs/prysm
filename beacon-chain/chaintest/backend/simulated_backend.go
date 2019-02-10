@@ -186,7 +186,8 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		return fmt.Errorf("could not initialize state test %v", err)
 	}
 	averageTimesPerTransition := []time.Duration{}
-	for i := uint64(0); i < testCase.Config.NumSlots; i++ {
+	startSlot := params.BeaconConfig().GenesisSlot
+	for i := startSlot; i < startSlot+testCase.Config.NumSlots; i++ {
 
 		// If the slot is marked as skipped in the configuration options,
 		// we simply run the state transition with a nil block argument.
@@ -242,7 +243,7 @@ func (sb *SimulatedBackend) setupBeaconStateAndGenesisBlock(initialDeposits []*p
 	genesisTime := params.BeaconConfig().GenesisTime.Unix()
 	sb.state, err = state.InitialBeaconState(initialDeposits, uint64(genesisTime), nil)
 	if err != nil {
-		return fmt.Errorf("could not initialize simulated beacon state")
+		return fmt.Errorf("could not initialize simulated beacon state: %v", err)
 	}
 
 	// We do not expect hashing initial beacon state and genesis block to
@@ -287,7 +288,7 @@ func (sb *SimulatedBackend) generateSimulatedObjects(testCase *StateTestCase, sl
 	}
 	var simulatedValidatorExit *StateTestValidatorExit
 	for _, exit := range testCase.Config.ValidatorExits {
-		if exit.Epoch == slotNumber {
+		if exit.Epoch == slotNumber/params.BeaconConfig().EpochLength {
 			simulatedValidatorExit = exit
 			break
 		}
@@ -308,7 +309,7 @@ func (sb *SimulatedBackend) compareTestCase(testCase *StateTestCase) error {
 		return fmt.Errorf(
 			"incorrect state slot after %d state transitions without blocks, wanted %d, received %d",
 			testCase.Config.NumSlots,
-			testCase.Config.NumSlots,
+			sb.state.Slot,
 			testCase.Results.Slot,
 		)
 	}

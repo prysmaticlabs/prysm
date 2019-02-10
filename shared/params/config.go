@@ -115,8 +115,8 @@ var defaultBeaconConfig = &BeaconChainConfig{
 
 	// Initial value constants.
 	GenesisForkVersion: 0,
-	GenesisSlot:        0,
-	GenesisEpoch:       0,
+	GenesisSlot:        1 << 63,
+	GenesisEpoch:       1 << 63 / 64,
 	GenesisStartShard:  0,
 	FarFutureEpoch:     1<<64 - 1,
 	ZeroHash:           [32]byte{},
