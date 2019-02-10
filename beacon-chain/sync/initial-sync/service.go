@@ -170,6 +170,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 			if s.currentSlot == params.BeaconConfig().GenesisSlot {
 				continue
 			}
+
 			if s.highestObservedSlot == s.currentSlot {
 				log.Info("Exiting initial sync and starting normal sync")
 				s.syncService.ResumeSync()
@@ -282,7 +283,7 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 			if _, ok := s.inMemoryBlocks[block.Slot]; !ok {
 				s.inMemoryBlocks[block.Slot] = block
 			}
-			s.requestNextBlockBySlot(1)
+			s.requestNextBlockBySlot(params.BeaconConfig().GenesisSlot+1)
 			return
 		}
 
