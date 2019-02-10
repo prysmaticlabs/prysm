@@ -283,7 +283,7 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 			if _, ok := s.inMemoryBlocks[block.Slot]; !ok {
 				s.inMemoryBlocks[block.Slot] = block
 			}
-			s.requestNextBlockBySlot(params.BeaconConfig().GenesisSlot+1)
+			s.requestNextBlockBySlot(params.BeaconConfig().GenesisSlot + 1)
 			return
 		}
 
