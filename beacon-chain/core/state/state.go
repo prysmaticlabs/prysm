@@ -47,9 +47,9 @@ func InitialBeaconState(
 		latestVDFOutputs[i] = params.BeaconConfig().ZeroHash[:]
 	}
 
-	latestCrosslinks := make([]*pb.CrosslinkRecord, params.BeaconConfig().ShardCount)
+	latestCrosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
 	for i := 0; i < len(latestCrosslinks); i++ {
-		latestCrosslinks[i] = &pb.CrosslinkRecord{
+		latestCrosslinks[i] = &pb.Crosslink{
 			Epoch:                params.BeaconConfig().GenesisEpoch,
 			ShardBlockRootHash32: params.BeaconConfig().ZeroHash[:],
 		}
@@ -70,7 +70,6 @@ func InitialBeaconState(
 
 		validator := &pb.Validator{
 			Pubkey:                      depositInput.Pubkey,
-			RandaoCommitmentHash32:      depositInput.RandaoCommitmentHash32,
 			WithdrawalCredentialsHash32: depositInput.WithdrawalCredentialsHash32,
 			ExitEpoch:                   params.BeaconConfig().FarFutureEpoch,
 			PenalizedEpoch:              params.BeaconConfig().FarFutureEpoch,
@@ -139,7 +138,7 @@ func InitialBeaconState(
 		}
 		value, _, err := b.DecodeDepositAmountAndTimeStamp(depositData)
 		if err != nil {
-			return nil, fmt.Errorf("could not decode deposit amount: %v", err)
+			return nil, fmt.Errorf("could not decode deposit value and timestamp: %v", err)
 		}
 		state, err = v.ProcessDeposit(
 			state,
@@ -155,7 +154,7 @@ func InitialBeaconState(
 	}
 	for i := 0; i < len(state.ValidatorRegistry); i++ {
 		if v.EffectiveBalance(state, uint64(i)) >=
-			params.BeaconConfig().MaxDeposit {
+			params.BeaconConfig().MaxDepositAmount {
 			state, err = v.ActivateValidator(state, uint64(i), true)
 			if err != nil {
 				return nil, fmt.Errorf("could not activate validator: %v", err)

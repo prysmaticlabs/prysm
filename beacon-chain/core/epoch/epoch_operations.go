@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	b "github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // CurrentAttestations returns the pending attestations from current epoch.
@@ -114,26 +113,19 @@ func PrevJustifiedAttestations(
 //
 // Spec pseudocode definition:
 //   return [a for a in previous_epoch_justified_attestations
-// 	 if a.epoch_boundary_root == get_block_root(state, state.slot - 2 * EPOCH_LENGTH)]
+// 	 if a.epoch_boundary_root == get_block_root(state, get_epoch_start_slot(previous_epoch)]
 func PrevBoundaryAttestations(
 	state *pb.BeaconState,
 	prevEpochJustifiedAttestations []*pb.PendingAttestationRecord,
 ) ([]*pb.PendingAttestationRecord, error) {
-	var earliestSlot uint64
-
-	// If the state slot is less than 2 * epochLength, then the earliestSlot would
-	// result in a negative number. Therefore we should default to
-	// earliestSlot = 0 in this case.
-	if state.Slot > 2*params.BeaconConfig().EpochLength {
-		earliestSlot = state.Slot - 2*params.BeaconConfig().EpochLength
-	}
 
 	var prevBoundaryAttestations []*pb.PendingAttestationRecord
 	prevBoundaryBlockRoot, err := block.BlockRoot(state,
-		earliestSlot)
+		helpers.StartSlot(helpers.PrevEpoch(state)))
 	if err != nil {
 		return nil, err
 	}
+
 	for _, attestation := range prevEpochJustifiedAttestations {
 		if bytes.Equal(attestation.Data.EpochBoundaryRootHash32, prevBoundaryBlockRoot) {
 			prevBoundaryAttestations = append(prevBoundaryAttestations, attestation)

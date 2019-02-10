@@ -9,15 +9,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
-func TestProcessBlockRandao_UnequalBlockAndProposerRandao(t *testing.T) {
+func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -25,38 +26,7 @@ func TestProcessBlockRandao_UnequalBlockAndProposerRandao(t *testing.T) {
 		}
 	}
 
-	block := &pb.BeaconBlock{
-		RandaoRevealHash32: []byte{1},
-	}
-
-	beaconState := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              1,
-	}
-
-	want := fmt.Sprintf(
-		"expected hashed block randao layers to equal proposer randao: received %#x = %#x",
-		[32]byte{1},
-		[32]byte{0},
-	)
-	if _, err := ProcessBlockRandao(
-		beaconState,
-		block,
-	); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
-func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
-	randaoCommit := hashutil.RepeatHash([32]byte{}, 1)
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
-			ExitEpoch:              params.BeaconConfig().FarFutureEpoch,
-			RandaoCommitmentHash32: randaoCommit[:],
-		}
-	}
-
+	randaoCommit := bytesutil.ToBytes32([]byte("randao"))
 	block := &pb.BeaconBlock{
 		RandaoRevealHash32: randaoCommit[:],
 	}
@@ -77,13 +47,6 @@ func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 	updatedLatestMix := newState.LatestRandaoMixesHash32S[newState.Slot%params.BeaconConfig().LatestRandaoMixesLength]
 	if !bytes.Equal(updatedLatestMix, randaoCommit[:]) {
 		t.Errorf("Expected randao mix to XOR correctly: wanted %#x, received %#x", randaoCommit[:], updatedLatestMix)
-	}
-	if !bytes.Equal(newState.ValidatorRegistry[0].RandaoCommitmentHash32, randaoCommit[:]) {
-		t.Errorf(
-			"Expected proposer at index 0 to update randao commitment to block randao reveal = %#x, received %#x",
-			[]byte{1},
-			newState.ValidatorRegistry[0].RandaoCommitmentHash32,
-		)
 	}
 }
 
@@ -306,7 +269,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 	validatorBalances := make([]uint64, len(validators))
 	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = params.BeaconConfig().MaxDeposit
+		validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 	}
 
 	slashings := []*pb.ProposerSlashing{
@@ -574,7 +537,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 	validatorBalances := make([]uint64, len(validators))
 	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = params.BeaconConfig().MaxDeposit
+		validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 	}
 
 	att1 := &pb.AttestationData{
@@ -886,7 +849,7 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 	// AND
 	// attestation.data.shard_block_root != state.latest_crosslinks[shard].shard_block_root
 	// the attestation should be invalid.
-	stateLatestCrosslinks := []*pb.CrosslinkRecord{
+	stateLatestCrosslinks := []*pb.Crosslink{
 		{
 			ShardBlockRootHash32: []byte{1},
 		},
@@ -900,11 +863,11 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Shard:                     0,
-				Slot:                      20,
-				JustifiedBlockRootHash32:  blockRoots[0],
-				LatestCrosslinkRootHash32: []byte{2},
-				ShardBlockRootHash32:      []byte{2},
+				Shard:                    0,
+				Slot:                     20,
+				JustifiedBlockRootHash32: blockRoots[0],
+				LatestCrosslink:          &pb.Crosslink{ShardBlockRootHash32: []byte{2}},
+				ShardBlockRootHash32:     []byte{2},
 			},
 		},
 	}
@@ -914,8 +877,8 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 		},
 	}
 	want := fmt.Sprintf(
-		"attestation.CrossLinkRoot and ShardBlockRoot != %v (state.LatestCrosslinks' ShardBlockRoot)",
-		[]byte{1},
+		"incoming attestation does not match crosslink in state for shard %d",
+		attestations[0].Data.Shard,
 	)
 	if _, err := ProcessBlockAttestations(
 		state,
@@ -931,7 +894,7 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 	for i := uint64(0); i < 2*params.BeaconConfig().EpochLength; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
-	stateLatestCrosslinks := []*pb.CrosslinkRecord{
+	stateLatestCrosslinks := []*pb.Crosslink{
 		{
 			ShardBlockRootHash32: []byte{1},
 		},
@@ -945,11 +908,11 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Shard:                     0,
-				Slot:                      20,
-				JustifiedBlockRootHash32:  blockRoots[0],
-				LatestCrosslinkRootHash32: []byte{1},
-				ShardBlockRootHash32:      []byte{1},
+				Shard:                    0,
+				Slot:                     20,
+				JustifiedBlockRootHash32: blockRoots[0],
+				LatestCrosslink:          &pb.Crosslink{ShardBlockRootHash32: []byte{1}},
+				ShardBlockRootHash32:     []byte{1},
 			},
 		},
 	}
@@ -977,7 +940,7 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 	for i := uint64(0); i < 2*params.BeaconConfig().EpochLength; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
-	stateLatestCrosslinks := []*pb.CrosslinkRecord{
+	stateLatestCrosslinks := []*pb.Crosslink{
 		{
 			ShardBlockRootHash32: []byte{1},
 		},
@@ -990,11 +953,11 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 	}
 	att1 := &pb.Attestation{
 		Data: &pb.AttestationData{
-			Shard:                     0,
-			Slot:                      20,
-			JustifiedBlockRootHash32:  blockRoots[0],
-			LatestCrosslinkRootHash32: []byte{1},
-			ShardBlockRootHash32:      []byte{},
+			Shard:                    0,
+			Slot:                     20,
+			JustifiedBlockRootHash32: blockRoots[0],
+			LatestCrosslink:          &pb.Crosslink{ShardBlockRootHash32: []byte{1}},
+			ShardBlockRootHash32:     []byte{},
 		},
 		AggregationBitfield: []byte{1},
 		CustodyBitfield:     []byte{1},
