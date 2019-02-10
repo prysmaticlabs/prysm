@@ -378,8 +378,8 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	currentSlot := uint64(5)
-	attestationSlot := uint64(0)
+	currentSlot := params.BeaconConfig().GenesisSlot + 5
+	attestationSlot := params.BeaconConfig().GenesisSlot
 
 	block := &pb.BeaconBlock{
 		Slot:             currentSlot + 1,
@@ -397,6 +397,7 @@ func TestRunningChainService(t *testing.T) {
 					Slot:                      attestationSlot,
 					JustifiedBlockRootHash32:  params.BeaconConfig().ZeroHash[:],
 					LatestCrosslinkRootHash32: params.BeaconConfig().ZeroHash[:],
+					JustifiedEpoch: params.BeaconConfig().GenesisEpoch,
 				},
 			}},
 		},
@@ -438,7 +439,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	beaconState.Slot = 5
+	beaconState.Slot = params.BeaconConfig().GenesisSlot + 5
 
 	enc, _ := proto.Marshal(beaconState)
 	stateRoot := hashutil.Hash(enc)
@@ -454,8 +455,8 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	if err := chainService.beaconDB.SaveState(beaconState); err != nil {
 		t.Fatal(err)
 	}
-	currentSlot := uint64(5)
-	attestationSlot := uint64(0)
+	currentSlot := params.BeaconConfig().GenesisSlot + 5
+	attestationSlot := params.BeaconConfig().GenesisSlot
 
 	pendingDeposits := []*pb.Deposit{
 		createPreChainStartDeposit(t, []byte{'F'}),
@@ -485,6 +486,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 					Slot:                      attestationSlot,
 					JustifiedBlockRootHash32:  params.BeaconConfig().ZeroHash[:],
 					LatestCrosslinkRootHash32: params.BeaconConfig().ZeroHash[:],
+					JustifiedEpoch: currentSlot/params.BeaconConfig().EpochLength,
 				},
 			}},
 		},
