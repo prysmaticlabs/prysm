@@ -22,7 +22,7 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 		t.Errorf("EpochLength should be 64 for these tests to pass")
 	}
 
-	if params.BeaconConfig().GenesisSlot != 1 << 63 {
+	if params.BeaconConfig().GenesisSlot != 1<<63 {
 		t.Error("GenesisSlot should be 2^63 for these tests to pass")
 	}
 	initialEpochNumber := params.BeaconConfig().GenesisEpoch

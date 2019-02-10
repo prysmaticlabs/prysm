@@ -400,7 +400,7 @@ func TestRequestBlocksBySlot(t *testing.T) {
 	_, hash := getBlockResponseMsg(9 + params.BeaconConfig().GenesisSlot)
 
 	expString := fmt.Sprintf("Saved block with hash %#x and slot %d for initial sync",
-		hash, 9 + params.BeaconConfig().GenesisSlot)
+		hash, 9+params.BeaconConfig().GenesisSlot)
 
 	// waiting for the current slot to come up to the
 	// expected one.
