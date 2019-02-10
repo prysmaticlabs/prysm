@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -13,7 +15,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -39,7 +40,7 @@ func setupInitialDeposits(t *testing.T) []*pb.Deposit {
 		depositInput := &pb.DepositInput{
 			Pubkey: genesisValidatorRegistry[i].Pubkey,
 		}
-		balance := params.BeaconConfig().MaxDeposit
+		balance := params.BeaconConfig().MaxDepositAmount
 		depositData, err := blocks.EncodeDepositData(depositInput, balance, time.Now().Unix())
 		if err != nil {
 			t.Fatalf("Cannot encode data: %v", err)
@@ -119,8 +120,8 @@ func TestCleanBlockVoteCache(t *testing.T) {
 
 	// Now let the cleanup service do its job
 	cleanupService := createCleanupService(beaconDB)
-	state := &pb.BeaconState{FinalizedSlot: 1}
-	if err = cleanupService.cleanBlockVoteCache(state.FinalizedSlot); err != nil {
+	state := &pb.BeaconState{FinalizedEpoch: 1}
+	if err = cleanupService.cleanBlockVoteCache(state.FinalizedEpoch); err != nil {
 		t.Fatalf("failed to clean block vote cache")
 	}
 

@@ -20,14 +20,14 @@ func TestUpdateLatestAttestation_Ok(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	if err := beaconDB.SaveState(&pb.BeaconState{
-		ValidatorRegistry: []*pb.ValidatorRecord{{Pubkey: []byte{'A'}}},
+		ValidatorRegistry: []*pb.Validator{{Pubkey: []byte{'A'}}},
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	attestation := &pb.Attestation{
-		ParticipationBitfield: []byte{0x80},
+		AggregationBitfield: []byte{0x80},
 		Data: &pb.AttestationData{
 			Slot: 5,
 		},
@@ -59,15 +59,15 @@ func TestAttestationPool_Ok(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	if err := beaconDB.SaveState(&pb.BeaconState{
-		ValidatorRegistry: []*pb.ValidatorRecord{{Pubkey: []byte{'A'}}},
+		ValidatorRegistry: []*pb.Validator{{Pubkey: []byte{'A'}}},
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
 
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 	attestation := &pb.Attestation{
-		ParticipationBitfield: []byte{0x80},
-		Data:                  &pb.AttestationData{},
+		AggregationBitfield: []byte{0x80},
+		Data:                &pb.AttestationData{},
 	}
 
 	exitRoutine := make(chan bool)

@@ -9,15 +9,13 @@ import (
 	"math/big"
 	"testing"
 
-	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 var (
@@ -138,7 +136,7 @@ func TestValidatorRegisters(t *testing.T) {
 	depositData := make([][]byte, 5)
 
 	for i, log := range logs {
-		_, data, idx, err := UnpackDepositLogData(log.Data)
+		_, data, idx, _, err := UnpackDepositLogData(log.Data)
 		if err != nil {
 			t.Fatalf("Unable to unpack log data: %v", err)
 		}
@@ -146,18 +144,16 @@ func TestValidatorRegisters(t *testing.T) {
 		depositData[i] = data
 	}
 
-	twoTothePowerOfTreeDepth := mathutil.PowerOf2(params.BeaconConfig().DepositContractTreeDepth)
-
-	if merkleTreeIndex[0] != twoTothePowerOfTreeDepth {
-		t.Errorf("Deposit event total desposit count miss matched. Want: %d, Got: %d", twoTothePowerOfTreeDepth+1, merkleTreeIndex[0])
+	if merkleTreeIndex[0] != 0 {
+		t.Errorf("Deposit event total desposit count miss matched. Want: %d, Got: %d", 1, merkleTreeIndex[0])
 	}
 
-	if merkleTreeIndex[1] != twoTothePowerOfTreeDepth+1 {
-		t.Errorf("Deposit event total desposit count miss matched. Want: %d, Got: %d", twoTothePowerOfTreeDepth+2, merkleTreeIndex[1])
+	if merkleTreeIndex[1] != 1 {
+		t.Errorf("Deposit event total desposit count miss matched. Want: %d, Got: %d", 2, merkleTreeIndex[1])
 	}
 
-	if merkleTreeIndex[2] != twoTothePowerOfTreeDepth+2 {
-		t.Errorf("Deposit event total desposit count miss matched. Want: %v, Got: %v", twoTothePowerOfTreeDepth+3, merkleTreeIndex[2])
+	if merkleTreeIndex[2] != 2 {
+		t.Errorf("Deposit event total desposit count miss matched. Want: %v, Got: %v", 3, merkleTreeIndex[2])
 	}
 }
 
