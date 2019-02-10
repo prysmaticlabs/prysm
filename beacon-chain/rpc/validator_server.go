@@ -101,13 +101,20 @@ func (vs *ValidatorServer) ValidatorCommitteeAtSlot(ctx context.Context, req *pb
 	}
 	var committee []uint64
 	var shard uint64
+	var indexFound bool
 	for _, com := range crossLinkCommittees {
 		for _, i := range com.Committee {
 			if i == req.ValidatorIndex {
 				committee = com.Committee
 				shard = com.Shard
+				indexFound = true
 				break
 			}
+		}
+		// Do not keep iterating over committees once the validator's
+		// index has been found in the inner for loop.
+		if indexFound {
+			break
 		}
 	}
 	return &pb.CommitteeResponse{
