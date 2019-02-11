@@ -68,6 +68,7 @@ func BlockRoot(state *pb.BeaconState, slot uint64) ([]byte, error) {
 	} else {
 		earliestSlot = 0
 	}
+
 	previousSlot = state.Slot - 1
 	if state.Slot > slot+uint64(len(state.LatestBlockRootHash32S)) || slot >= state.Slot {
 		return []byte{}, fmt.Errorf("slot %d is not within expected range of %d to %d",
