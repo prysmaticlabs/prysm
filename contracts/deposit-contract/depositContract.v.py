@@ -15,7 +15,7 @@ branch: bytes32[32]
 deposit_count: uint256
 full_deposit_count: uint256
 skip_chainstart_delay: bool
-chainStarted: public(bool)
+genesisTime: public(bytes[8])
 
 @public
 def __init__(depositThreshold: uint256,minDeposit: uint256,maxDeposit: uint256, skipChainstartDelay: bool):
@@ -97,8 +97,9 @@ def deposit(deposit_input: bytes[512]):
         self.full_deposit_count += 1
         if self.full_deposit_count == self.CHAIN_START_FULL_DEPOSIT_THRESHOLD:
             if self.skip_chainstart_delay:
-                log.ChainStart(self.get_deposit_root(), self.to_little_endian_64(deposit_timestamp))
+                self.genesisTime = self.to_little_endian_64(deposit_timestamp)
+                log.ChainStart(self.get_deposit_root(), self.genesisTime)
             else:
                 timestamp_day_boundary: uint256 = as_unitless_number(block.timestamp) - as_unitless_number(block.timestamp) % SECONDS_PER_DAY + SECONDS_PER_DAY
-                log.ChainStart(new_deposit_root, self.to_little_endian_64(timestamp_day_boundary))
-            self.chainStarted = True
+                self.genesisTime = self.to_little_endian_64(timestamp_day_boundary)
+                log.ChainStart(new_deposit_root, self.genesisTime)
