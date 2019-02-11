@@ -1,18 +1,18 @@
 package backend
 
-import "testing"
+import (
+	"testing"
 
-func TestSimulatedBackendStartAndStop(t *testing.T) {
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
+)
+
+func TestSimulatedBackendStop(t *testing.T) {
 
 	backend, err := NewSimulatedBackend()
 	if err != nil {
 		t.Fatalf("Could not create a new simulated backedn %v", err)
 	}
-
-	if err := backend.InitializeChain(); err != nil {
-		t.Fatalf("Could not initialize simulated backend %v", err)
-	}
-
 	if err := backend.Shutdown(); err != nil {
 		t.Errorf("Could not successfully shutdown simulated backend %v", err)
 	}
@@ -24,9 +24,14 @@ func TestGenerateBlocks(t *testing.T) {
 		t.Fatalf("Could not create a new simulated backedn %v", err)
 	}
 
-	if err := backend.InitializeChain(); err != nil {
-		t.Fatalf("Could not initialize simulated backend %v", err)
+	initialDeposits, err := generateInitialSimulatedDeposits(1000)
+	if err != nil {
+		t.Fatalf("Could not simulate initial validator deposits: %v", err)
 	}
+	if err := backend.setupBeaconStateAndGenesisBlock(initialDeposits); err != nil {
+		t.Fatalf("Could not set up beacon state and initialize genesis block %v", err)
+	}
+	backend.depositTrie = trieutil.NewDepositTrie()
 
 	slotLimit := 250
 
@@ -40,7 +45,7 @@ func TestGenerateBlocks(t *testing.T) {
 		}
 	}
 
-	if backend.state.Slot != uint64(slotLimit) {
+	if backend.state.Slot != params.BeaconConfig().GenesisSlot+uint64(slotLimit) {
 		t.Errorf("Unequal state slot and expected slot %d %d", backend.state.Slot, slotLimit)
 	}
 
@@ -52,9 +57,14 @@ func TestGenerateNilBlocks(t *testing.T) {
 		t.Fatalf("Could not create a new simulated backedn %v", err)
 	}
 
-	if err := backend.InitializeChain(); err != nil {
-		t.Fatalf("Could not initialize simulated backend %v", err)
+	initialDeposits, err := generateInitialSimulatedDeposits(1000)
+	if err != nil {
+		t.Fatalf("Could not simulate initial validator deposits: %v", err)
 	}
+	if err := backend.setupBeaconStateAndGenesisBlock(initialDeposits); err != nil {
+		t.Fatalf("Could not set up beacon state and initialize genesis block %v", err)
+	}
+	backend.depositTrie = trieutil.NewDepositTrie()
 
 	slotLimit := 100
 
@@ -64,7 +74,7 @@ func TestGenerateNilBlocks(t *testing.T) {
 		}
 	}
 
-	if backend.state.Slot != uint64(slotLimit) {
+	if backend.state.Slot != params.BeaconConfig().GenesisSlot+uint64(slotLimit) {
 		t.Errorf("Unequal state slot and expected slot %d %d", backend.state.Slot, slotLimit)
 	}
 

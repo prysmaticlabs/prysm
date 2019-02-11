@@ -34,7 +34,6 @@ func ExpectedFFGSource(
 	justifiedAttesterIndices []uint64,
 	justifiedAttestingBalance uint64,
 	totalBalance uint64) *pb.BeaconState {
-
 	baseRewardQuotient := baseRewardQuotient(totalBalance)
 
 	for _, index := range justifiedAttesterIndices {

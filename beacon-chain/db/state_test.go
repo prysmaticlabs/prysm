@@ -19,7 +19,7 @@ func setupInitialDeposits(t *testing.T) []*pb.Deposit {
 		depositInput := &pb.DepositInput{
 			Pubkey: genesisValidatorRegistry[i].Pubkey,
 		}
-		balance := params.BeaconConfig().MaxDeposit
+		balance := params.BeaconConfig().MaxDepositAmount
 		depositData, err := blocks.EncodeDepositData(depositInput, balance, time.Now().Unix())
 		if err != nil {
 			t.Fatalf("Cannot encode data: %v", err)
@@ -42,7 +42,7 @@ func TestInitializeState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get chain head: %v", err)
 	}
-	if b.GetSlot() != 0 {
+	if b.GetSlot() != params.BeaconConfig().GenesisSlot {
 		t.Fatalf("Expected block height to equal 1. Got %d", b.GetSlot())
 	}
 

@@ -307,6 +307,11 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	if err := c.beaconDB.SaveBlock(block); err != nil {
 		return nil, fmt.Errorf("failed to save block: %v", err)
 	}
+	// Remove pending deposits from the deposit queue.
+	for _, dep := range block.Body.Deposits {
+		c.beaconDB.RemovePendingDeposit(c.ctx, dep)
+	}
+
 	log.WithField("hash", fmt.Sprintf("%#x", blockHash)).Debug("Processed beacon block")
 	return beaconState, nil
 }
