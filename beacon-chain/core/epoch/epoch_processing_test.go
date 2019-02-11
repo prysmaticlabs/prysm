@@ -297,7 +297,7 @@ func TestProcessFinalization(t *testing.T) {
 
 func TestProcessCrosslinksOk(t *testing.T) {
 	state := buildState(5, params.BeaconConfig().DepositsForChainStart)
-	state.LatestCrosslinks = []*pb.CrosslinkRecord{{}, {}}
+	state.LatestCrosslinks = []*pb.Crosslink{{}, {}}
 	epoch := uint64(5)
 	state.Slot = epoch * params.BeaconConfig().EpochLength
 
@@ -344,7 +344,7 @@ func TestProcessCrosslinksOk(t *testing.T) {
 
 func TestProcessCrosslinksNoParticipantsBitField(t *testing.T) {
 	state := buildState(5, params.BeaconConfig().DepositsForChainStart)
-	state.LatestCrosslinks = []*pb.CrosslinkRecord{{}, {}}
+	state.LatestCrosslinks = []*pb.Crosslink{{}, {}}
 
 	attestations := []*pb.PendingAttestationRecord{
 		{Data: &pb.AttestationData{},
@@ -389,9 +389,9 @@ func TestProcessEjectionsOk(t *testing.T) {
 }
 
 func TestCanProcessValidatorRegistry(t *testing.T) {
-	crosslinks := make([]*pb.CrosslinkRecord, params.BeaconConfig().DepositsForChainStart)
+	crosslinks := make([]*pb.Crosslink, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(crosslinks); i++ {
-		crosslinks[i] = &pb.CrosslinkRecord{
+		crosslinks[i] = &pb.Crosslink{
 			Epoch: 101,
 		}
 	}
@@ -419,7 +419,7 @@ func TestCanNotProcessValidatorRegistry(t *testing.T) {
 	state = &pb.BeaconState{
 		ValidatorRegistryUpdateEpoch: 101,
 		FinalizedEpoch:               1,
-		LatestCrosslinks: []*pb.CrosslinkRecord{
+		LatestCrosslinks: []*pb.Crosslink{
 			{Epoch: 100},
 		},
 	}

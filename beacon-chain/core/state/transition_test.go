@@ -226,18 +226,18 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	for i := uint64(0); i < 2*params.BeaconConfig().EpochLength; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
-	stateLatestCrosslinks := []*pb.CrosslinkRecord{
+	stateLatestCrosslinks := []*pb.Crosslink{
 		{
 			ShardBlockRootHash32: []byte{1},
 		},
 	}
 	blockAtt := &pb.Attestation{
 		Data: &pb.AttestationData{
-			Shard:                     0,
-			Slot:                      20,
-			JustifiedBlockRootHash32:  blockRoots[0],
-			LatestCrosslinkRootHash32: []byte{1},
-			ShardBlockRootHash32:      []byte{},
+			Shard:                    0,
+			Slot:                     20,
+			JustifiedBlockRootHash32: blockRoots[0],
+			LatestCrosslink:          &pb.Crosslink{ShardBlockRootHash32: []byte{1}},
+			ShardBlockRootHash32:     []byte{},
 		},
 		AggregationBitfield: []byte{1},
 		CustodyBitfield:     []byte{1},
@@ -326,18 +326,18 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	for i := uint64(0); i < 2*params.BeaconConfig().EpochLength; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
-	stateLatestCrosslinks := []*pb.CrosslinkRecord{
+	stateLatestCrosslinks := []*pb.Crosslink{
 		{
 			ShardBlockRootHash32: []byte{1},
 		},
 	}
 	blockAtt := &pb.Attestation{
 		Data: &pb.AttestationData{
-			Shard:                     0,
-			Slot:                      20,
-			JustifiedBlockRootHash32:  blockRoots[0],
-			LatestCrosslinkRootHash32: []byte{1},
-			ShardBlockRootHash32:      []byte{},
+			Shard:                    0,
+			Slot:                     20,
+			JustifiedBlockRootHash32: blockRoots[0],
+			LatestCrosslink:          &pb.Crosslink{ShardBlockRootHash32: []byte{1}},
+			ShardBlockRootHash32:     []byte{},
 		},
 		AggregationBitfield: []byte{1},
 		CustodyBitfield:     []byte{1},
@@ -415,7 +415,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 		randaoHashes = append(randaoHashes, []byte{byte(i)})
 	}
 
-	crosslinkRecord := []*pb.CrosslinkRecord{{}, {}}
+	crosslinkRecord := []*pb.Crosslink{{}, {}}
 
 	state := &pb.BeaconState{
 		Slot:                     params.BeaconConfig().EpochLength,
@@ -475,7 +475,7 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 		randaoHashes = append(randaoHashes, []byte{byte(i)})
 	}
 
-	crosslinkRecord := []*pb.CrosslinkRecord{{}, {}}
+	crosslinkRecord := []*pb.Crosslink{{}, {}}
 
 	state := &pb.BeaconState{
 		Slot:                     params.BeaconConfig().EpochLength,
@@ -583,7 +583,7 @@ func TestProcessEpoch_CantProcessEjections(t *testing.T) {
 		LatestBlockRootHash32S:   make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
 		ValidatorRegistry:        validatorRegistries,
 		LatestRandaoMixesHash32S: randaoHashes,
-		LatestCrosslinks:         []*pb.CrosslinkRecord{{}},
+		LatestCrosslinks:         []*pb.Crosslink{{}},
 		LatestAttestations: []*pb.PendingAttestationRecord{
 			{Data: &pb.AttestationData{}, AggregationBitfield: participationBitfield},
 		}}
