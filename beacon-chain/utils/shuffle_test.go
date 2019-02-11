@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestShuffleIndices_InvalidValidatorCount(t *testing.T) {
+func TestFaultyShuffleIndices(t *testing.T) {
 	var list []uint64
 
 	upperBound := 1<<(params.BeaconConfig().RandBytes*8) - 1
@@ -22,7 +22,43 @@ func TestShuffleIndices_InvalidValidatorCount(t *testing.T) {
 	}
 }
 
-func TestShuffleIndices_OK(t *testing.T) {
+
+func TestSwapOrNotShuffle(t *testing.T)  {
+	hash1 := common.BytesToHash([]byte{'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g'})
+	hash2 := common.BytesToHash([]byte{'1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7'})
+	var list1 []uint64
+
+	for i := 0; i < 10; i++ {
+		list1 = append(list1, uint64(i))
+	}
+
+	list2 := make([]uint64, len(list1))
+	copy(list2, list1)
+
+	list1, err := SwapOrNotShuffle(hash1, list1)
+	if err != nil {
+		t.Errorf("Shuffle failed with: %v", err)
+	}
+
+	list2, err = SwapOrNotShuffle(hash2, list2)
+	if err != nil {
+		t.Errorf("Shuffle failed with: %v", err)
+	}
+
+	if reflect.DeepEqual(list1, list2) {
+		t.Errorf("2 shuffled lists shouldn't be equal")
+	}
+	if !reflect.DeepEqual(list1, []uint64{5, 4, 9, 6, 7, 3, 0, 1, 8, 2}) {
+		t.Errorf("list 1 was incorrectly shuffled")
+	}
+	if !reflect.DeepEqual(list2, []uint64{9, 0, 1, 5, 3, 2, 4, 7, 8, 6}) {
+		t.Errorf("list 2 was incorrectly shuffled")
+	}
+
+}
+
+
+func TestShuffleIndices(t *testing.T) {
 	hash1 := common.BytesToHash([]byte{'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g'})
 	hash2 := common.BytesToHash([]byte{'1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7'})
 	var list1 []uint64
