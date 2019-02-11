@@ -81,24 +81,24 @@ func main() {
 			Destination: &privKeyString,
 		},
 		cli.StringFlag{
-			Name:        "k8s-config",
+			Name:        "k8sConfig",
 			Usage:       "Name of kubernetes config map to update with the contract address",
 			Destination: &k8sConfigMapName,
 		},
 		cli.Int64Flag{
-			Name:        "chain-start",
+			Name:        "chainStart",
 			Value:       params.ContractConfig().DepositsForChainStart.Int64(),
 			Usage:       "Number of validators required for chain start",
 			Destination: &depositsForChainStart,
 		},
 		cli.Int64Flag{
-			Name:        "min-deposit",
+			Name:        "minDeposit",
 			Value:       params.ContractConfig().MinDepositAmount.Int64(),
 			Usage:       "Minimum deposit value allowed in contract",
 			Destination: &minDepositAmount,
 		},
 		cli.Int64Flag{
-			Name:        "max-deposit",
+			Name:        "maxDeposit",
 			Value:       params.ContractConfig().MaxDepositAmount.Int64(),
 			Usage:       "Maximum deposit value allowed in contract",
 			Destination: &maxDepositAmount,

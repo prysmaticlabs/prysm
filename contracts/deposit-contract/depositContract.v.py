@@ -97,7 +97,7 @@ def deposit(deposit_input: bytes[512]):
         self.full_deposit_count += 1
         if self.full_deposit_count == self.CHAIN_START_FULL_DEPOSIT_THRESHOLD:
             if self.skip_chainstart_delay:
-                log.ChainStart(self.get_deposit_root(), self.to_bytes8(deposit_timestamp))
+                log.ChainStart(self.get_deposit_root(), self.to_little_endian_64(deposit_timestamp))
             else:
                 timestamp_day_boundary: uint256 = as_unitless_number(block.timestamp) - as_unitless_number(block.timestamp) % SECONDS_PER_DAY + SECONDS_PER_DAY
                 log.ChainStart(new_deposit_root, self.to_little_endian_64(timestamp_day_boundary))
