@@ -225,11 +225,11 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.AttestationInfoRequest{}),
 	).Return(&pb.AttestationInfoResponse{
-		BeaconBlockRootHash32:     []byte("A"),
-		EpochBoundaryRootHash32:   []byte("B"),
-		JustifiedBlockRootHash32:  []byte("C"),
-		LatestCrosslinkRootHash32: []byte("D"),
-		JustifiedEpoch:            3,
+		BeaconBlockRootHash32:    []byte("A"),
+		EpochBoundaryRootHash32:  []byte("B"),
+		JustifiedBlockRootHash32: []byte("C"),
+		LatestCrosslink:          &pbp2p.Crosslink{ShardBlockRootHash32: []byte{'D'}},
+		JustifiedEpoch:           3,
 	}, nil).Do(func(arg0, arg1 interface{}) {
 		wg.Done()
 	})
@@ -276,11 +276,11 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.AttestationInfoRequest{}),
 	).Return(&pb.AttestationInfoResponse{
-		BeaconBlockRootHash32:     []byte("A"),
-		EpochBoundaryRootHash32:   []byte("B"),
-		JustifiedBlockRootHash32:  []byte("C"),
-		LatestCrosslinkRootHash32: []byte("D"),
-		JustifiedEpoch:            3,
+		BeaconBlockRootHash32:    []byte("A"),
+		EpochBoundaryRootHash32:  []byte("B"),
+		JustifiedBlockRootHash32: []byte("C"),
+		LatestCrosslink:          &pbp2p.Crosslink{ShardBlockRootHash32: []byte{'D'}},
+		JustifiedEpoch:           3,
 	}, nil).Do(func(arg0, arg1 interface{}) {
 		wg.Done()
 	})
