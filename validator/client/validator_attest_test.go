@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -204,6 +205,11 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 	validator, m, finish := setup(t)
 	defer finish()
+
+	var wg sync.WaitGroup
+	wg.Add(4)
+	defer wg.Wait()
+
 	validatorIndex := uint64(5)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	m.attesterClient.EXPECT().CrosslinkCommitteesAtSlot(
@@ -212,7 +218,10 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 	).Return(&pb.CrosslinkCommitteeResponse{
 		Shard:     5,
 		Committee: committee,
-	}, nil)
+	}, nil).Do(func(arg0, arg1 interface{}) {
+		wg.Done()
+	})
+
 	m.attesterClient.EXPECT().AttestationInfoAtSlot(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.AttestationInfoRequest{}),
@@ -222,19 +231,27 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 		JustifiedBlockRootHash32:  []byte("C"),
 		LatestCrosslinkRootHash32: []byte("D"),
 		JustifiedEpoch:            3,
-	}, nil)
+	}, nil).Do(func(arg0, arg1 interface{}) {
+		wg.Done()
+	})
+
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
 	).Return(&pb.ValidatorIndexResponse{
 		Index: uint64(validatorIndex),
-	}, nil)
+	}, nil).Do(func(arg0, arg1 interface{}) {
+		wg.Done()
+	})
 
 	m.attesterClient.EXPECT().AttestHead(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
-	).Times(0)
-	delay = 1
+	).Do(func(arg0, arg1 interface{}) {
+		wg.Done()
+	})
+
+	delay = 4
 	go validator.AttestToBlockHead(context.Background(), 30)
 }
 
