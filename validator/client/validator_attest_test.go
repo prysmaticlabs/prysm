@@ -15,79 +15,11 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-func TestAttestToBlockHead_CrosslinkCommitteeRequestFailure(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	validator, m, finish := setup(t)
-	defer finish()
-	m.attesterClient.EXPECT().CrosslinkCommitteesAtSlot(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.CrosslinkCommitteeRequest{}),
-	).Return(nil /*Crosslinks Response*/, errors.New("something bad happened"))
-
-	validator.AttestToBlockHead(context.Background(), 30)
-	testutil.AssertLogsContain(t, hook, "Could not fetch crosslink committees at slot 30")
-}
-
-func TestAttestToBlockHead_CrosslinkCommitteeRequestEmptyCommittee(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	validator, m, finish := setup(t)
-	defer finish()
-	m.attesterClient.EXPECT().CrosslinkCommitteesAtSlot(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.CrosslinkCommitteeRequest{}),
-	).Return(&pb.CrosslinkCommitteeResponse{
-		Committee: []uint64{},
-	}, nil)
-
-	validator.AttestToBlockHead(context.Background(), 30)
-	testutil.AssertLogsContain(t, hook, "Received an empty committee assignment")
-}
-
-func TestAttestToBlockHead_AttestationInfoAtSlotRequestFailure(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	validator, m, finish := setup(t)
-	defer finish()
-	m.attesterClient.EXPECT().CrosslinkCommitteesAtSlot(
-		gomock.Any(), // ctx
-		gomock.Any(),
-	).Return(&pb.CrosslinkCommitteeResponse{
-		Shard:     5,
-		Committee: []uint64{1, 2, 3, 4},
-	}, nil)
-	m.attesterClient.EXPECT().AttestationInfoAtSlot(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.AttestationInfoRequest{}),
-	).Return(nil /* Attestation Info Response*/, errors.New("something bad happened"))
-
-	validator.AttestToBlockHead(context.Background(), 30)
-	testutil.AssertLogsContain(t, hook, "Could not fetch necessary info to produce attestation at slot 30")
-}
-
 func TestAttestToBlockHead_ValidatorIndexRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	validator, m, finish := setup(t)
 	defer finish()
-	m.attesterClient.EXPECT().CrosslinkCommitteesAtSlot(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.CrosslinkCommitteeRequest{}),
-	).Return(&pb.CrosslinkCommitteeResponse{
-		Shard:     5,
-		Committee: []uint64{1, 2, 3, 4},
-	}, nil)
-	m.attesterClient.EXPECT().AttestationInfoAtSlot(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.AttestationInfoRequest{}),
-	).Return(&pb.AttestationInfoResponse{
-		BeaconBlockRootHash32:    []byte{},
-		EpochBoundaryRootHash32:  []byte{},
-		JustifiedBlockRootHash32: []byte{},
-		LatestCrosslink:          &pbp2p.Crosslink{},
-		JustifiedEpoch:           0,
-	}, nil)
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
@@ -97,15 +29,63 @@ func TestAttestToBlockHead_ValidatorIndexRequestFailure(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Could not fetch validator index")
 }
 
+func TestAttestToBlockHead_ValidatorCommitteeAtSlotFailure(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	validator, m, finish := setup(t)
+	defer finish()
+	m.validatorClient.EXPECT().ValidatorIndex(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
+	).Return(&pb.ValidatorIndexResponse{Index: 5}, nil)
+	m.validatorClient.EXPECT().ValidatorCommitteeAtSlot(
+		gomock.Any(), // ctx
+		gomock.Any(),
+	).Return(nil, errors.New("something went wrong"))
+
+	validator.AttestToBlockHead(context.Background(), 30)
+	testutil.AssertLogsContain(t, hook, "Could not fetch crosslink committees at slot 30")
+}
+
+func TestAttestToBlockHead_AttestationInfoAtSlotFailure(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	validator, m, finish := setup(t)
+	defer finish()
+	m.validatorClient.EXPECT().ValidatorIndex(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
+	).Return(&pb.ValidatorIndexResponse{Index: 5}, nil)
+	m.validatorClient.EXPECT().ValidatorCommitteeAtSlot(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.CommitteeRequest{}),
+	).Return(&pb.CommitteeResponse{
+		Shard: 5,
+	}, nil)
+	m.attesterClient.EXPECT().AttestationInfoAtSlot(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.AttestationInfoRequest{}),
+	).Return(nil, errors.New("something went wrong"))
+
+	validator.AttestToBlockHead(context.Background(), 30)
+	testutil.AssertLogsContain(t, hook, "Could not fetch necessary info to produce attestation")
+}
+
 func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	validator, m, finish := setup(t)
 	defer finish()
-	m.attesterClient.EXPECT().CrosslinkCommitteesAtSlot(
+	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.CrosslinkCommitteeRequest{}),
-	).Return(&pb.CrosslinkCommitteeResponse{
+		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
+	).Return(&pb.ValidatorIndexResponse{
+		Index: 0,
+	}, nil)
+	m.validatorClient.EXPECT().ValidatorCommitteeAtSlot(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.CommitteeRequest{}),
+	).Return(&pb.CommitteeResponse{
 		Shard:     5,
 		Committee: make([]uint64, 111),
 	}, nil)
@@ -118,12 +98,6 @@ func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
 		JustifiedBlockRootHash32: []byte{},
 		LatestCrosslink:          &pbp2p.Crosslink{},
 		JustifiedEpoch:           0,
-	}, nil)
-	m.validatorClient.EXPECT().ValidatorIndex(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
-	).Return(&pb.ValidatorIndexResponse{
-		Index: 0,
 	}, nil)
 	m.attesterClient.EXPECT().AttestHead(
 		gomock.Any(), // ctx
@@ -141,10 +115,16 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	defer finish()
 	validatorIndex := uint64(5)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	m.attesterClient.EXPECT().CrosslinkCommitteesAtSlot(
+	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.CrosslinkCommitteeRequest{}),
-	).Return(&pb.CrosslinkCommitteeResponse{
+		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
+	).Return(&pb.ValidatorIndexResponse{
+		Index: uint64(validatorIndex),
+	}, nil)
+	m.validatorClient.EXPECT().ValidatorCommitteeAtSlot(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.CommitteeRequest{}),
+	).Return(&pb.CommitteeResponse{
 		Shard:     5,
 		Committee: committee,
 	}, nil)
@@ -157,12 +137,6 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		JustifiedBlockRootHash32: []byte("C"),
 		LatestCrosslink:          &pbp2p.Crosslink{ShardBlockRootHash32: []byte{'D'}},
 		JustifiedEpoch:           3,
-	}, nil)
-	m.validatorClient.EXPECT().ValidatorIndex(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
-	).Return(&pb.ValidatorIndexResponse{
-		Index: uint64(validatorIndex),
 	}, nil)
 
 	var generatedAttestation *pbp2p.Attestation
