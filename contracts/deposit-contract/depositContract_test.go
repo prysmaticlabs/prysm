@@ -1,4 +1,4 @@
-package depositContract
+package depositcontract
 
 import (
 	"context"
