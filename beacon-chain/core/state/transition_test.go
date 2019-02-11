@@ -29,24 +29,6 @@ func TestProcessBlock_IncorrectSlot(t *testing.T) {
 	}
 }
 
-func TestProcessBlock_IncorrectBlockRandao(t *testing.T) {
-	validators := validators.InitialValidatorRegistry()
-
-	beaconState := &pb.BeaconState{
-		Slot:              0,
-		ValidatorRegistry: validators,
-	}
-	block := &pb.BeaconBlock{
-		Slot:               0,
-		RandaoRevealHash32: []byte{1},
-		Body:               &pb.BeaconBlockBody{},
-	}
-	want := "could not verify and process block randao"
-	if _, err := ProcessBlock(beaconState, block, false); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
-	}
-}
-
 func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	registry := validators.InitialValidatorRegistry()
 
@@ -118,17 +100,13 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
-	randaoPreCommit := [32]byte{}
-	randaoReveal := hashutil.Hash(randaoPreCommit[:])
 	validators := make([]*pb.Validator, 1000)
 	for i := uint64(0); i < 1000; i++ {
 		pubkey := hashutil.Hash([]byte{byte(i)})
 		validators[i] = &pb.Validator{
-			ExitEpoch:              params.BeaconConfig().FarFutureEpoch,
-			Pubkey:                 pubkey[:],
-			RandaoCommitmentHash32: randaoReveal[:],
-			RandaoLayers:           1,
-			PenalizedEpoch:         10,
+			ExitEpoch:      params.BeaconConfig().FarFutureEpoch,
+			Pubkey:         pubkey[:],
+			PenalizedEpoch: 10,
 		}
 	}
 	proposerSlashings := []*pb.ProposerSlashing{
@@ -198,17 +176,13 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
-	randaoPreCommit := [32]byte{}
-	randaoReveal := hashutil.Hash(randaoPreCommit[:])
 	validators := make([]*pb.Validator, 1000)
 	for i := uint64(0); i < 1000; i++ {
 		pubkey := hashutil.Hash([]byte{byte(i)})
 		validators[i] = &pb.Validator{
-			ExitEpoch:              params.BeaconConfig().FarFutureEpoch,
-			Pubkey:                 pubkey[:],
-			RandaoCommitmentHash32: randaoReveal[:],
-			RandaoLayers:           1,
-			PenalizedEpoch:         10,
+			ExitEpoch:      params.BeaconConfig().FarFutureEpoch,
+			Pubkey:         pubkey[:],
+			PenalizedEpoch: 10,
 		}
 	}
 	proposerSlashings := []*pb.ProposerSlashing{
@@ -252,18 +226,18 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	for i := uint64(0); i < 2*params.BeaconConfig().EpochLength; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
-	stateLatestCrosslinks := []*pb.CrosslinkRecord{
+	stateLatestCrosslinks := []*pb.Crosslink{
 		{
 			ShardBlockRootHash32: []byte{1},
 		},
 	}
 	blockAtt := &pb.Attestation{
 		Data: &pb.AttestationData{
-			Shard:                     0,
-			Slot:                      20,
-			JustifiedBlockRootHash32:  blockRoots[0],
-			LatestCrosslinkRootHash32: []byte{1},
-			ShardBlockRootHash32:      []byte{},
+			Shard:                    0,
+			Slot:                     20,
+			JustifiedBlockRootHash32: blockRoots[0],
+			LatestCrosslink:          &pb.Crosslink{ShardBlockRootHash32: []byte{1}},
+			ShardBlockRootHash32:     []byte{},
 		},
 		AggregationBitfield: []byte{1},
 		CustodyBitfield:     []byte{1},
@@ -302,17 +276,13 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 }
 
 func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
-	randaoPreCommit := [32]byte{}
-	randaoReveal := hashutil.Hash(randaoPreCommit[:])
 	validators := make([]*pb.Validator, 1000)
 	for i := uint64(0); i < 1000; i++ {
 		pubkey := hashutil.Hash([]byte{byte(i)})
 		validators[i] = &pb.Validator{
-			ExitEpoch:              params.BeaconConfig().FarFutureEpoch,
-			Pubkey:                 pubkey[:],
-			RandaoCommitmentHash32: randaoReveal[:],
-			RandaoLayers:           1,
-			PenalizedEpoch:         10,
+			ExitEpoch:      params.BeaconConfig().FarFutureEpoch,
+			Pubkey:         pubkey[:],
+			PenalizedEpoch: 10,
 		}
 	}
 	proposerSlashings := []*pb.ProposerSlashing{
@@ -356,18 +326,18 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	for i := uint64(0); i < 2*params.BeaconConfig().EpochLength; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
-	stateLatestCrosslinks := []*pb.CrosslinkRecord{
+	stateLatestCrosslinks := []*pb.Crosslink{
 		{
 			ShardBlockRootHash32: []byte{1},
 		},
 	}
 	blockAtt := &pb.Attestation{
 		Data: &pb.AttestationData{
-			Shard:                     0,
-			Slot:                      20,
-			JustifiedBlockRootHash32:  blockRoots[0],
-			LatestCrosslinkRootHash32: []byte{1},
-			ShardBlockRootHash32:      []byte{},
+			Shard:                    0,
+			Slot:                     20,
+			JustifiedBlockRootHash32: blockRoots[0],
+			LatestCrosslink:          &pb.Crosslink{ShardBlockRootHash32: []byte{1}},
+			ShardBlockRootHash32:     []byte{},
 		},
 		AggregationBitfield: []byte{1},
 		CustodyBitfield:     []byte{1},
@@ -419,7 +389,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 	}
 	validatorBalances := make([]uint64, len(validatorRegistry))
 	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = params.BeaconConfig().MaxDeposit
+		validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 	}
 
 	var attestations []*pb.PendingAttestationRecord
@@ -445,7 +415,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 		randaoHashes = append(randaoHashes, []byte{byte(i)})
 	}
 
-	crosslinkRecord := []*pb.CrosslinkRecord{{}, {}}
+	crosslinkRecord := []*pb.Crosslink{{}, {}}
 
 	state := &pb.BeaconState{
 		Slot:                     params.BeaconConfig().EpochLength,
@@ -455,6 +425,10 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 		LatestBlockRootHash32S:   blockRoots,
 		LatestCrosslinks:         crosslinkRecord,
 		LatestRandaoMixesHash32S: randaoHashes,
+		LatestIndexRootHash32S: make([][]byte,
+			params.BeaconConfig().LatestIndexRootsLength),
+		LatestPenalizedBalances: make([]uint64,
+			params.BeaconConfig().LatestPenalizedExitLength),
 	}
 
 	_, err := ProcessEpoch(state)
@@ -464,7 +438,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 }
 
 func TestProcessEpoch_InactiveConditions(t *testing.T) {
-	defaultBalance := params.BeaconConfig().MaxDeposit
+	defaultBalance := params.BeaconConfig().MaxDepositAmount
 
 	validatorRegistry := []*pb.Validator{
 		{ExitEpoch: params.BeaconConfig().FarFutureEpoch}, {ExitEpoch: params.BeaconConfig().FarFutureEpoch},
@@ -501,7 +475,7 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 		randaoHashes = append(randaoHashes, []byte{byte(i)})
 	}
 
-	crosslinkRecord := []*pb.CrosslinkRecord{{}, {}}
+	crosslinkRecord := []*pb.Crosslink{{}, {}}
 
 	state := &pb.BeaconState{
 		Slot:                     params.BeaconConfig().EpochLength,
@@ -511,6 +485,10 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 		LatestBlockRootHash32S:   blockRoots,
 		LatestCrosslinks:         crosslinkRecord,
 		LatestRandaoMixesHash32S: randaoHashes,
+		LatestIndexRootHash32S: make([][]byte,
+			params.BeaconConfig().LatestIndexRootsLength),
+		LatestPenalizedBalances: make([]uint64,
+			params.BeaconConfig().LatestPenalizedExitLength),
 	}
 
 	_, err := ProcessEpoch(state)
@@ -585,7 +563,7 @@ func TestProcessEpoch_CantProcessEjections(t *testing.T) {
 	validatorRegistries := validators.InitialValidatorRegistry()
 	validatorBalances := make([]uint64, len(validatorRegistries))
 	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = params.BeaconConfig().MaxDeposit
+		validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 	}
 	var randaoHashes [][]byte
 	for i := uint64(0); i < 4*params.BeaconConfig().EpochLength; i++ {
@@ -605,7 +583,7 @@ func TestProcessEpoch_CantProcessEjections(t *testing.T) {
 		LatestBlockRootHash32S:   make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
 		ValidatorRegistry:        validatorRegistries,
 		LatestRandaoMixesHash32S: randaoHashes,
-		LatestCrosslinks:         []*pb.CrosslinkRecord{{}},
+		LatestCrosslinks:         []*pb.Crosslink{{}},
 		LatestAttestations: []*pb.PendingAttestationRecord{
 			{Data: &pb.AttestationData{}, AggregationBitfield: participationBitfield},
 		}}

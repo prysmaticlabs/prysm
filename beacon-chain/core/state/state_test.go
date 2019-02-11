@@ -22,8 +22,8 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 		t.Errorf("EpochLength should be 64 for these tests to pass")
 	}
 
-	if params.BeaconConfig().GenesisSlot != 0 {
-		t.Error("GenesisSlot should be 0 for these tests to pass")
+	if params.BeaconConfig().GenesisSlot != 1<<63 {
+		t.Error("GenesisSlot should be 2^63 for these tests to pass")
 	}
 	initialEpochNumber := params.BeaconConfig().GenesisEpoch
 
@@ -62,14 +62,14 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 
 	genesisTime := uint64(99999)
 	processedPowReceiptRoot := []byte{'A', 'B', 'C'}
-	maxDeposit := params.BeaconConfig().MaxDeposit
+	maxDeposit := params.BeaconConfig().MaxDepositAmount
 	var deposits []*pb.Deposit
 	for i := 0; i < depositsForChainStart; i++ {
 		depositData, err := b.EncodeDepositData(
 			&pb.DepositInput{
-				Pubkey: []byte(strconv.Itoa(i)), ProofOfPossession: []byte{'B'},
-				WithdrawalCredentialsHash32: []byte{'C'}, RandaoCommitmentHash32: []byte{'D'},
-				CustodyCommitmentHash32: []byte{'D'},
+				Pubkey:                      []byte(strconv.Itoa(i)),
+				ProofOfPossession:           []byte{'B'},
+				WithdrawalCredentialsHash32: []byte{'C'},
 			},
 			maxDeposit,
 			time.Now().Unix(),
@@ -93,7 +93,7 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	}
 
 	// Misc fields checks.
-	if state.Slot != initialEpochNumber {
+	if state.Slot != params.BeaconConfig().GenesisSlot {
 		t.Error("Slot was not correctly initialized")
 	}
 	if state.GenesisTime != genesisTime {

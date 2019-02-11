@@ -64,7 +64,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	attData.EpochBoundaryRootHash32 = infoRes.EpochBoundaryRootHash32
 	// Set the attestation data's latest crosslink root = state.latest_crosslinks[shard].shard_block_root
 	// where state is the beacon state at head and shard is the validator's assigned shard.
-	attData.LatestCrosslinkRootHash32 = infoRes.LatestCrosslinkRootHash32
+	attData.LatestCrosslink = infoRes.LatestCrosslink
 	// Set the attestation data's justified epoch = state.justified_epoch where state
 	// is the beacon state at the head.
 	attData.JustifiedEpoch = infoRes.JustifiedEpoch

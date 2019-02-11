@@ -16,7 +16,6 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -70,54 +69,37 @@ func ProcessEth1Data(beaconState *pb.BeaconState, block *pb.BeaconBlock) *pb.Bea
 
 // ProcessBlockRandao checks the block proposer's
 // randao commitment and generates a new randao mix to update
-// in the beacon state's latest randao mixes and set the proposer's randao fields.
+// in the beacon state's latest randao mixes slice.
 //
 // Official spec definition for block randao verification:
-//   Let repeat_hash(x, n) = x if n == 0 else repeat_hash(hash(x), n-1).
 //   Let proposer = state.validator_registry[get_beacon_proposer_index(state, state.slot)].
-//   Verify that repeat_hash(block.randao_reveal, proposer.randao_layers) == proposer.randao_commitment.
-//   Set state.latest_randao_mixes[state.slot % LATEST_RANDAO_MIXES_LENGTH] =
-//     xor(state.latest_randao_mixes[state.slot % LATEST_RANDAO_MIXES_LENGTH], block.randao_reveal)
-//   Set proposer.randao_commitment = block.randao_reveal.
-//   Set proposer.randao_layers = 0
+//   Verify that bls_verify(pubkey=proposer.pubkey, message_hash=int_to_bytes32(get_current_epoch(state)),
+//     signature=block.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO)).
+//   Set state.latest_randao_mixes[get_current_epoch(state) % LATEST_RANDAO_MIXES_LENGTH] =
+//     xor(get_randao_mix(state, get_current_epoch(state)), hash(block.randao_reveal))
 func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
-	proposerIndex, err := v.BeaconProposerIdx(beaconState, beaconState.Slot)
-	if err != nil {
-		return nil, fmt.Errorf("could not fetch beacon proposer index: %v", err)
-	}
-	registry := beaconState.ValidatorRegistry
-	proposer := registry[proposerIndex]
-	if err := verifyBlockRandao(proposer, block); err != nil {
+	if err := verifyBlockRandao(beaconState, block); err != nil {
 		return nil, fmt.Errorf("could not verify block randao: %v", err)
 	}
 	// If block randao passed verification, we XOR the state's latest randao mix with the block's
 	// randao and update the state's corresponding latest randao mix value.
 	latestMixesLength := params.BeaconConfig().LatestRandaoMixesLength
-	latestMixSlice := beaconState.LatestRandaoMixesHash32S[beaconState.Slot%latestMixesLength]
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+	latestMixSlice := beaconState.LatestRandaoMixesHash32S[currentEpoch%latestMixesLength]
 	latestMix := bytesutil.ToBytes32(latestMixSlice)
 	for i, x := range block.RandaoRevealHash32 {
 		latestMix[i] ^= x
 	}
-	proposer.RandaoCommitmentHash32 = block.RandaoRevealHash32
-	proposer.RandaoLayers = 0
-	registry[proposerIndex] = proposer
 	beaconState.LatestRandaoMixesHash32S[beaconState.Slot%latestMixesLength] = latestMix[:]
-	beaconState.ValidatorRegistry = registry
 	return beaconState, nil
 }
 
-func verifyBlockRandao(proposer *pb.Validator, block *pb.BeaconBlock) error {
-	blockRandaoReveal := bytesutil.ToBytes32(block.RandaoRevealHash32)
-	proposerRandaoCommit := bytesutil.ToBytes32(proposer.RandaoCommitmentHash32)
-	randaoHashLayers := hashutil.RepeatHash(blockRandaoReveal, proposer.RandaoLayers)
-	// Verify that repeat_hash(block.randao_reveal, proposer.randao_layers) == proposer.randao_commitment.
-	if randaoHashLayers != proposerRandaoCommit {
-		return fmt.Errorf(
-			"expected hashed block randao layers to equal proposer randao: received %#x = %#x",
-			randaoHashLayers[:],
-			proposerRandaoCommit[:],
-		)
-	}
+func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) error {
+	// TODO(#1366): Integrate BLS into the repository.
+	// Verify that bls_verify(pubkey=proposer.pubkey, message_hash=int_to_bytes32(get_current_epoch(state)),
+	//   signature=block.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO)).
+	_ = beaconState
+	_ = block
 	return nil
 }
 
@@ -267,9 +249,9 @@ func verifyAttesterSlashing(slashing *pb.AttesterSlashing, verifySignatures bool
 			data2,
 		)
 	}
-    // Two attestations having the same epoch target are considered to be a "double vote" in Casper
-    // Proof of Stake literature and the Ethereum 2.0 specification. Below, we verify that either this is the case
-    // or that the two attestations are a "surround vote" instead.
+	// Two attestations having the same epoch target are considered to be a "double vote" in Casper
+	// Proof of Stake literature and the Ethereum 2.0 specification. Below, we verify that either this is the case
+	// or that the two attestations are a "surround vote" instead.
 	isSameTarget := helpers.SlotToEpoch(data1.Slot) == helpers.SlotToEpoch(data2.Slot)
 	if !(isSameTarget || isSurroundVote(data1, data2)) {
 		return errors.New("attester slashing is not a double vote nor surround vote")
@@ -452,19 +434,25 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 		)
 	}
 
-	// Verify that either: attestation.data.latest_crosslink_root or
-	// attestation.data.shard_block_root equals
-	// state.latest_crosslinks[shard].shard_block_root
-	crossLinkRoot := att.Data.LatestCrosslinkRootHash32
-	shardBlockRoot := att.Data.ShardBlockRootHash32
+	// Verify that either:
+	// 1.) Crosslink(shard_block_root=attestation.data.shard_block_root,
+	// 	epoch=slot_to_epoch(attestation.data.slot)) equals
+	// 	state.latest_crosslinks[attestation.data.shard]
+	// 2.) attestation.data.latest_crosslink
+	// 	equals state.latest_crosslinks[attestation.data.shard]
 	shard := att.Data.Shard
-	stateShardBlockRoot := beaconState.LatestCrosslinks[shard].ShardBlockRootHash32
+	crosslink := &pb.Crosslink{
+		ShardBlockRootHash32: att.Data.ShardBlockRootHash32,
+		Epoch:                helpers.SlotToEpoch(att.Data.Slot),
+	}
+	crosslinkFromAttestation := att.Data.LatestCrosslink
+	crosslinkFromState := beaconState.LatestCrosslinks[shard]
 
-	if !(bytes.Equal(crossLinkRoot, stateShardBlockRoot) ||
-		bytes.Equal(shardBlockRoot, stateShardBlockRoot)) {
+	if !(reflect.DeepEqual(crosslinkFromState, crosslink) ||
+		reflect.DeepEqual(crosslinkFromState, crosslinkFromAttestation)) {
 		return fmt.Errorf(
-			"attestation.CrossLinkRoot and ShardBlockRoot != %v (state.LatestCrosslinks' ShardBlockRoot)",
-			stateShardBlockRoot,
+			"incoming attestation does not match crosslink in state for shard %d",
+			shard,
 		)
 	}
 
