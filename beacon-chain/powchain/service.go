@@ -64,12 +64,14 @@ type Web3Service struct {
 	logger                 bind.ContractFilterer
 	blockNumber            *big.Int    // the latest ETH1.0 chain blockNumber.
 	blockHash              common.Hash // the latest ETH1.0 chain blockHash.
+	blockTime              time.Time   // the latest ETH1.0 chain blockTime.
 	vrcCaller              *contracts.DepositContractCaller
 	depositRoot            []byte
 	depositTrie            *trieutil.DepositTrie
 	chainStartDeposits     []*pb.Deposit
 	chainStarted           bool
 	beaconDB               *db.BeaconDB
+	runError               error
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -154,6 +156,18 @@ func (w *Web3Service) ChainStartDeposits() []*pb.Deposit {
 // Status always returns nil.
 // TODO(1204): Add service health checks.
 func (w *Web3Service) Status() error {
+	// web3 client disconnected, but we are attempting to reconnect
+	if w.runError != nil {
+		return w.runError
+	}
+	// web3 client is not syncing
+	if w.blockNumber == nil {
+		return errors.New("web3 client is not syncing")
+	}
+	// web3 client hasn't reported a new block in some time
+	if w.blockTime.Add(10 * time.Second).Before(time.Now()) { //FIXME how big time wait before error?   historical max avg 99% duration
+		return fmt.Errorf("last received POW block time is %d", w.blockTime)
+	}
 	return nil
 }
 
@@ -282,14 +296,17 @@ func (w *Web3Service) ProcessChainStartLog(VRClog gethTypes.Log) {
 
 // run subscribes to all the services for the ETH1.0 chain.
 func (w *Web3Service) run(done <-chan struct{}) {
+	w.runError = nil // clear error, if restart Web3Service
 	if err := w.initDataFromVRC(); err != nil {
 		log.Errorf("Unable to retrieve data from VRC %v", err)
+		w.runError = err
 		return
 	}
 
 	headSub, err := w.reader.SubscribeNewHead(w.ctx, w.headerChan)
 	if err != nil {
 		log.Errorf("Unable to subscribe to incoming ETH1.0 chain headers: %v", err)
+		w.runError = err
 		return
 	}
 	query := ethereum.FilterQuery{
@@ -300,10 +317,12 @@ func (w *Web3Service) run(done <-chan struct{}) {
 	logSub, err := w.logger.SubscribeFilterLogs(w.ctx, query, w.logChan)
 	if err != nil {
 		log.Errorf("Unable to query logs from VRC: %v", err)
+		w.runError = err
 		return
 	}
 	if err := w.processPastLogs(query); err != nil {
 		log.Errorf("Unable to process past logs %v", err)
+		w.runError = err
 		return
 	}
 	defer logSub.Unsubscribe()
@@ -314,15 +333,16 @@ func (w *Web3Service) run(done <-chan struct{}) {
 		case <-done:
 			log.Debug("ETH1.0 chain service context closed, exiting goroutine")
 			return
-		case <-headSub.Err():
+		case w.runError = <-headSub.Err():
 			log.Debug("Unsubscribed to head events, exiting goroutine")
 			return
-		case <-logSub.Err():
+		case w.runError = <-logSub.Err():
 			log.Debug("Unsubscribed to log events, exiting goroutine")
 			return
 		case header := <-w.headerChan:
 			w.blockNumber = header.Number
 			w.blockHash = header.Hash()
+			w.blockTime = time.Unix(header.Time.Int64(), 0) //FIXME check time unit in test
 			log.WithFields(logrus.Fields{
 				"blockNumber": w.blockNumber,
 				"blockHash":   w.blockHash.Hex(),
