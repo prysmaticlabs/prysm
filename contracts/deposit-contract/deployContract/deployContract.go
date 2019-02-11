@@ -35,6 +35,7 @@ func main() {
 	var depositsForChainStart int64
 	var minDepositAmount int64
 	var maxDepositAmount int64
+	var skipChainstartDelay bool
 
 	customFormatter := new(prefixed.TextFormatter)
 	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
@@ -51,6 +52,11 @@ func main() {
 			Name:        "keystoreUTCPath",
 			Usage:       "Location of keystore",
 			Destination: &keystoreUTCPath,
+		},
+		cli.BoolFlag{
+			Name:        "skipChainstartDelay",
+			Usage:       "Whether to skip ChainStart log being fired a day later",
+			Destination: &skipChainstartDelay,
 		},
 		cli.StringFlag{
 			Name:        "ipcPath",
@@ -156,7 +162,10 @@ func main() {
 		// Deploy validator registration contract
 		addr, tx, _, err := contracts.DeployDepositContract(
 			txOps, client, big.NewInt(depositsForChainStart),
-			big.NewInt(minDepositAmount), big.NewInt(maxDepositAmount))
+			big.NewInt(minDepositAmount), big.NewInt(maxDepositAmount),
+			skipChainstartDelay,
+		)
+
 		if err != nil {
 			log.Fatal(err)
 		}

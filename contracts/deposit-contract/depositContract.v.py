@@ -18,11 +18,11 @@ skip_chainstart_delay: bool
 chainStarted: public(bool)
 
 @public
-def __init__(depositThreshold: uint256,minDeposit: uint256,maxDeposit: uint256, skip_chainstart_delay: bool):
+def __init__(depositThreshold: uint256,minDeposit: uint256,maxDeposit: uint256, skipChainstartDelay: bool):
     self.CHAIN_START_FULL_DEPOSIT_THRESHOLD = depositThreshold
     self.MIN_DEPOSIT_AMOUNT = minDeposit
     self.MAX_DEPOSIT_AMOUNT = maxDeposit
-    self.skip_chainstart_delay = skip_chainstart_delay
+    self.skip_chainstart_delay = skipChainstartDelay
     for i in range(31):
         self.zerohashes[i+1] = sha3(concat(self.zerohashes[i], self.zerohashes[i]))
         self.branch[i+1] = self.zerohashes[i+1]
@@ -96,6 +96,9 @@ def deposit(deposit_input: bytes[512]):
     if deposit_amount == self.MAX_DEPOSIT_AMOUNT:
         self.full_deposit_count += 1
         if self.full_deposit_count == self.CHAIN_START_FULL_DEPOSIT_THRESHOLD:
-            timestamp_day_boundary: uint256 = as_unitless_number(block.timestamp) - as_unitless_number(block.timestamp) % SECONDS_PER_DAY + SECONDS_PER_DAY
-            log.ChainStart(new_deposit_root, self.to_little_endian_64(timestamp_day_boundary))
+            if self.skip_chainstart_delay:
+                log.ChainStart(self.get_deposit_root(), self.to_bytes8(deposit_timestamp))
+            else:
+                timestamp_day_boundary: uint256 = as_unitless_number(block.timestamp) - as_unitless_number(block.timestamp) % SECONDS_PER_DAY + SECONDS_PER_DAY
+                log.ChainStart(new_deposit_root, self.to_little_endian_64(timestamp_day_boundary))
             self.chainStarted = True

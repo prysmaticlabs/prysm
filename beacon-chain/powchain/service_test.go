@@ -104,7 +104,14 @@ func setup() (*testAccount, error) {
 	depositsRequired := big.NewInt(int64(depositsReqForChainStart))
 	minDeposit := big.NewInt(1e9)
 	maxDeposit := big.NewInt(32e9)
-	contractAddr, _, contract, err := contracts.DeployDepositContract(txOpts, backend, depositsRequired, minDeposit, maxDeposit)
+	contractAddr, _, contract, err := contracts.DeployDepositContract(
+		txOpts,
+		backend,
+		depositsRequired,
+		minDeposit,
+		maxDeposit,
+		false,
+	)
 	if err != nil {
 		return nil, err
 	}
