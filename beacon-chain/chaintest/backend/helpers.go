@@ -139,5 +139,3 @@ func generateInitialSimulatedDeposits(numDeposits uint64) ([]*pb.Deposit, error)
 	}
 	return deposits, nil
 }
-
-
