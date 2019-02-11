@@ -82,7 +82,7 @@ type Web3Service struct {
 	logger                 bind.ContractFilterer
 	blockNumber            *big.Int    // the latest ETH1.0 chain blockNumber.
 	blockHash              common.Hash // the latest ETH1.0 chain blockHash.
-	depositContractCaller              *contracts.DepositContractCaller
+	depositContractCaller  *contracts.DepositContractCaller
 	depositRoot            []byte
 	depositTrie            *trieutil.DepositTrie
 	chainStartDeposits     []*pb.Deposit
@@ -135,7 +135,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		client:                 config.Client,
 		reader:                 config.Reader,
 		logger:                 config.Logger,
-		depositContractCaller:              depositContractCaller,
+		depositContractCaller:  depositContractCaller,
 		chainStartDeposits:     []*pb.Deposit{},
 		beaconDB:               config.BeaconDB,
 	}, nil
