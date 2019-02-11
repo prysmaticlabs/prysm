@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
 
@@ -209,6 +210,7 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 	wg.Add(3)
 	defer wg.Wait()
 
+	validator.genesisTime = uint64(time.Now().Unix())
 	validatorIndex := uint64(5)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	m.attesterClient.EXPECT().CrosslinkCommitteesAtSlot(
@@ -243,13 +245,13 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 		wg.Done()
 	})
 
-	delay = 4
-	go validator.AttestToBlockHead(context.Background(), 30)
-
 	m.attesterClient.EXPECT().AttestHead(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
 	).Return(&pb.AttestResponse{}, nil /* error */).Times(0)
+
+	delay = 4
+	go validator.AttestToBlockHead(context.Background(), 30)
 }
 
 func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
@@ -260,6 +262,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	wg.Add(3)
 	defer wg.Wait()
 
+	validator.genesisTime = uint64(time.Now().Unix())
 	validatorIndex := uint64(5)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	m.attesterClient.EXPECT().CrosslinkCommitteesAtSlot(
@@ -294,13 +297,14 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 		wg.Done()
 	})
 
-	delay = 1
-	go validator.AttestToBlockHead(context.Background(), 30)
-
 	m.attesterClient.EXPECT().AttestHead(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
-	).Return(&pb.AttestResponse{}, nil /* error */).Times(1)
+	).Return(&pb.AttestResponse{}, nil).Times(1)
+
+	delay = 1
+	go validator.AttestToBlockHead(context.Background(), 1)
+	time.Sleep(9 * time.Second)
 }
 
 // func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
