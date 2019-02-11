@@ -4,6 +4,7 @@ package rpc
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"net"
 	"time"
 
@@ -41,6 +42,7 @@ type operationService interface {
 type powChainService interface {
 	HasChainStartLogOccurred() (bool, uint64, error)
 	ChainStartFeed() *event.Feed
+	LatestBlockNumber() *big.Int
 }
 
 // Service defining an RPC server for a beacon node.
@@ -136,6 +138,7 @@ func (s *Service) Start() {
 		canonicalStateChan: s.canonicalStateChan,
 	}
 	attesterServer := &AttesterServer{
+		beaconDB:         s.beaconDB,
 		operationService: s.operationService,
 	}
 	validatorServer := &ValidatorServer{

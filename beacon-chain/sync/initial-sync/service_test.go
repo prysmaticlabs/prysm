@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -88,7 +89,7 @@ func TestSetBlockForInitialSync(t *testing.T) {
 			BlockHash32:       []byte{4, 5, 6},
 		},
 		ParentRootHash32: genericHash,
-		Slot:             uint64(1),
+		Slot:             params.BeaconConfig().GenesisSlot + 1,
 		StateRootHash32:  genericHash,
 	}
 
@@ -142,7 +143,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 	genericHash[0] = 'a'
 
 	beaconState := &pb.BeaconState{
-		FinalizedSlot: 99,
+		FinalizedEpoch: params.BeaconConfig().GenesisSlot + 1,
 	}
 
 	stateResponse := &pb.BeaconStateResponse{
@@ -150,8 +151,8 @@ func TestSavingBlocksInSync(t *testing.T) {
 	}
 
 	incorrectState := &pb.BeaconState{
-		FinalizedSlot: 9,
-		JustifiedSlot: 20,
+		FinalizedEpoch: params.BeaconConfig().GenesisSlot,
+		JustifiedEpoch: params.BeaconConfig().GenesisSlot + 1,
 	}
 
 	incorrectStateResponse := &pb.BeaconStateResponse{
@@ -189,7 +190,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 		t.Fatalf("Unable to hash block %v", err)
 	}
 
-	msg1 := getBlockResponseMsg(1)
+	msg1 := getBlockResponseMsg(params.BeaconConfig().GenesisSlot + 1)
 
 	// saving genesis block
 	ss.blockBuf <- msg1
@@ -201,7 +202,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 
 	ss.stateBuf <- msg2
 
-	if ss.currentSlot == incorrectStateResponse.BeaconState.FinalizedSlot {
+	if ss.currentSlot == incorrectStateResponse.BeaconState.FinalizedEpoch*params.BeaconConfig().EpochLength {
 		t.Fatalf("Beacon state updated incorrectly: %d", ss.currentSlot)
 	}
 
@@ -215,20 +216,20 @@ func TestSavingBlocksInSync(t *testing.T) {
 			ss.initialStateRootHash32)
 	}
 
-	msg1 = getBlockResponseMsg(30)
+	msg1 = getBlockResponseMsg(params.BeaconConfig().GenesisSlot + 1)
 	ss.blockBuf <- msg1
-
-	if stateResponse.BeaconState.FinalizedSlot != ss.currentSlot {
-		t.Fatalf("Slot saved when it was not supposed too: %v", stateResponse.BeaconState.FinalizedSlot)
+	if params.BeaconConfig().GenesisSlot+1 != ss.currentSlot {
+		t.Fatalf("Slot saved when it was not supposed too: %v", stateResponse.BeaconState.FinalizedEpoch*params.BeaconConfig().EpochLength)
 	}
 
-	msg1 = getBlockResponseMsg(100)
+	msg1 = getBlockResponseMsg(params.BeaconConfig().GenesisSlot + 2)
 	ss.blockBuf <- msg1
 
 	ss.cancel()
 	<-exitRoutine
 
 	br := msg1.Data.(*pb.BeaconBlockResponse)
+
 	if br.Block.Slot != ss.currentSlot {
 		t.Fatalf("Slot not updated despite receiving a valid block: %v", ss.currentSlot)
 	}
@@ -265,7 +266,7 @@ func TestDelayChan(t *testing.T) {
 	genericHash[0] = 'a'
 
 	beaconState := &pb.BeaconState{
-		FinalizedSlot: 99,
+		FinalizedEpoch: params.BeaconConfig().GenesisSlot + 1,
 	}
 
 	stateResponse := &pb.BeaconStateResponse{
@@ -284,7 +285,7 @@ func TestDelayChan(t *testing.T) {
 			BlockHash32:       []byte{4, 5, 6},
 		},
 		ParentRootHash32: genericHash,
-		Slot:             uint64(1),
+		Slot:             params.BeaconConfig().GenesisSlot + 1,
 		StateRootHash32:  beaconStateRootHash32[:],
 	}
 
@@ -306,7 +307,7 @@ func TestDelayChan(t *testing.T) {
 
 	ss.stateBuf <- msg2
 
-	blockResponse.Block.Slot = 100
+	blockResponse.Block.Slot = params.BeaconConfig().GenesisSlot + 1
 	msg1.Data = blockResponse
 
 	ss.blockBuf <- msg1
@@ -340,7 +341,7 @@ func TestRequestBlocksBySlot(t *testing.T) {
 
 	err = ss.db.SaveState(newState)
 	if err != nil {
-		t.Fatalf("Unable to save beacon state %v", err)
+		t.Fatalf("could not save beacon state %v", err)
 	}
 
 	exitRoutine := make(chan bool)
@@ -355,7 +356,6 @@ func TestRequestBlocksBySlot(t *testing.T) {
 		ss.run(delayChan)
 		exitRoutine <- true
 	}()
-
 	genericHash := make([]byte, 32)
 	genericHash[0] = 'a'
 
@@ -387,19 +387,21 @@ func TestRequestBlocksBySlot(t *testing.T) {
 	}
 
 	// sending all blocks except for the initial block
-	for i := uint64(2); i < 10; i++ {
+	startSlot := 1 + params.BeaconConfig().GenesisSlot
+	for i := startSlot; i < startSlot+10; i++ {
 		response, _ := getBlockResponseMsg(i)
 		ss.blockBuf <- response
 	}
 
-	initialResponse, _ := getBlockResponseMsg(1)
+	initialResponse, _ := getBlockResponseMsg(1 + params.BeaconConfig().GenesisSlot)
 
 	//sending initial block
 	ss.blockBuf <- initialResponse
 
-	_, hash := getBlockResponseMsg(9)
+	_, hash := getBlockResponseMsg(9 + params.BeaconConfig().GenesisSlot)
 
-	expString := fmt.Sprintf("Saved block with hash %#x and slot %d for initial sync", hash, 9)
+	expString := fmt.Sprintf("Saved block with hash %#x and slot %d for initial sync",
+		hash, 9+params.BeaconConfig().GenesisSlot)
 
 	// waiting for the current slot to come up to the
 	// expected one.

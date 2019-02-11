@@ -7,7 +7,6 @@ k8s_objects(
         ":priority_class",
         "//k8s/geth:everything",
         "//k8s/beacon-chain:everything",
-        "//k8s/nginx:everything",
     ],
     tags = ["manual"],
 )

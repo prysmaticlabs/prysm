@@ -49,3 +49,8 @@ func NextEpoch(state *pb.BeaconState) uint64 {
 func StartSlot(epoch uint64) uint64 {
 	return epoch * params.BeaconConfig().EpochLength
 }
+
+// AttestationCurrentEpoch returns the current epoch referenced by the attestation.
+func AttestationCurrentEpoch(att *pb.AttestationData) uint64 {
+	return SlotToEpoch(att.Slot)
+}

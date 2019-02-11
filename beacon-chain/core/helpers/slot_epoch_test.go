@@ -98,3 +98,20 @@ func TestEpochStartSlot(t *testing.T) {
 		}
 	}
 }
+
+func TestAttestationCurrentEpoch(t *testing.T) {
+	tests := []struct {
+		slot  uint64
+		epoch uint64
+	}{
+		{slot: 0 * params.BeaconConfig().EpochLength, epoch: 0},
+		{slot: 1 * params.BeaconConfig().EpochLength, epoch: 1},
+		{slot: 10 * params.BeaconConfig().EpochLength, epoch: 10},
+	}
+	for _, tt := range tests {
+		attData := &pb.AttestationData{Slot: tt.slot}
+		if tt.epoch != AttestationCurrentEpoch(attData) {
+			t.Errorf("AttestationEpoch(%d) = %d, wanted: %d", attData.Slot, AttestationCurrentEpoch(attData), tt.epoch)
+		}
+	}
+}

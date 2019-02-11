@@ -14,7 +14,7 @@ import (
 //    Check if ``validator`` is active.
 //    """
 //    return validator.activation_epoch <= epoch < validator.exit_epoch
-func IsActiveValidator(validator *pb.ValidatorRecord, epoch uint64) bool {
+func IsActiveValidator(validator *pb.Validator, epoch uint64) bool {
 	return validator.ActivationEpoch <= epoch &&
 		epoch < validator.ExitEpoch
 }
@@ -28,7 +28,7 @@ func IsActiveValidator(validator *pb.ValidatorRecord, epoch uint64) bool {
 //    Get indices of active validators from ``validators``.
 //    """
 //    return [i for i, v in enumerate(validators) if is_active_validator(v, epoch)]
-func ActiveValidatorIndices(validators []*pb.ValidatorRecord, epoch uint64) []uint64 {
+func ActiveValidatorIndices(validators []*pb.Validator, epoch uint64) []uint64 {
 	indices := make([]uint64, 0, len(validators))
 	for i, v := range validators {
 		if IsActiveValidator(v, epoch) {

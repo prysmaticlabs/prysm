@@ -17,6 +17,7 @@ type QuerierConfig struct {
 	ResponseBufferSize int
 	P2P                p2pAPI
 	BeaconDB           *db.BeaconDB
+	CurentHeadSlot     uint64
 }
 
 // DefaultQuerierConfig provides the default configuration for a sync service.
@@ -49,11 +50,12 @@ func NewQuerierService(ctx context.Context,
 	responseBuf := make(chan p2p.Message, cfg.ResponseBufferSize)
 
 	return &Querier{
-		ctx:         ctx,
-		cancel:      cancel,
-		p2p:         cfg.P2P,
-		db:          cfg.BeaconDB,
-		responseBuf: responseBuf,
+		ctx:            ctx,
+		cancel:         cancel,
+		p2p:            cfg.P2P,
+		db:             cfg.BeaconDB,
+		responseBuf:    responseBuf,
+		curentHeadSlot: cfg.CurentHeadSlot,
 	}
 }
 
@@ -123,5 +125,6 @@ func (q *Querier) IsSynced() (bool, error) {
 		return true, nil
 	}
 
-	return false, nil
+	return false, err
+
 }

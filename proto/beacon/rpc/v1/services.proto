@@ -17,7 +17,8 @@ service BeaconService {
 }
 
 service AttesterService {
-    rpc AttestHead(AttestRequest) returns (AttestResponse);
+    rpc AttestHead(ethereum.beacon.p2p.v1.Attestation) returns (AttestResponse);
+    rpc AttestationInfoAtSlot(AttestationInfoRequest) returns (AttestationInfoResponse);
 }
 
 service ProposerService {
@@ -29,6 +30,39 @@ service ProposerService {
 service ValidatorService {
     rpc ValidatorIndex(ValidatorIndexRequest) returns (ValidatorIndexResponse);
     rpc ValidatorEpochAssignments(ValidatorEpochAssignmentsRequest) returns (ValidatorEpochAssignmentsResponse);
+    rpc ValidatorCommitteeAtSlot(CommitteeRequest) returns (CommitteeResponse);
+}
+
+message CommitteeRequest {
+    uint64 slot = 1;
+    uint64 validator_index = 2;
+}
+
+message CommitteeResponse {
+    repeated uint64 committee = 1;
+    uint64 shard = 2;
+}
+
+message AttestationInfoRequest {
+    uint64 slot = 1;
+    uint64 shard = 2;
+}
+
+message AttestationInfoResponse {
+    bytes beacon_block_root_hash32 = 1;
+    bytes epoch_boundary_root_hash32 = 2;
+    uint64 justified_epoch = 3;
+    bytes justified_block_root_hash32 = 4;
+    ethereum.beacon.p2p.v1.Crosslink latest_crosslink = 5;
+}
+
+message CrosslinkCommitteeRequest {
+    uint64 slot = 1;
+}
+
+message CrosslinkCommitteeResponse {
+    repeated uint64 committee = 1;
+    uint64 shard = 2;
 }
 
 message ChainStartResponse {
@@ -61,10 +95,6 @@ message StateRootResponse {
     bytes state_root = 1;
 }
 
-message AttestRequest {
-    ethereum.beacon.p2p.v1.Attestation attestation = 1;
-}
-
 message AttestResponse {
     bytes attestation_hash = 1;
 }
@@ -92,18 +122,19 @@ message ValidatorIndexResponse {
 }
 
 message ValidatorEpochAssignmentsRequest {
-  uint64 epoch_start = 1;
-  bytes public_key = 2;
+    uint64 epoch_start = 1;
+    bytes public_key = 2;
 }
 
 message ValidatorEpochAssignmentsResponse {
-  Assignment assignment = 2;
+    Assignment assignment = 2;
 }
 
 message PendingDepositsResponse {
-  repeated ethereum.beacon.p2p.v1.Deposit pending_deposits = 1;
+    repeated ethereum.beacon.p2p.v1.Deposit pending_deposits = 1;
 }
 
 message Eth1DataResponse {
-  ethereum.beacon.p2p.v1.Eth1Data eth1_data = 1;
+    ethereum.beacon.p2p.v1.Eth1Data eth1_data = 1;
 }
+

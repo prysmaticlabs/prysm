@@ -114,8 +114,8 @@ func NewInitialSyncService(ctx context.Context,
 		syncService:         cfg.SyncService,
 		chainService:        cfg.ChainService,
 		db:                  cfg.BeaconDB,
-		currentSlot:         0,
-		highestObservedSlot: 0,
+		currentSlot:         params.BeaconConfig().GenesisSlot,
+		highestObservedSlot: params.BeaconConfig().GenesisSlot,
 		blockBuf:            blockBuf,
 		stateBuf:            stateBuf,
 		batchedBlockBuf:     batchedBlockBuf,
@@ -167,9 +167,10 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 			log.Debug("Exiting goroutine")
 			return
 		case <-delayChan:
-			if s.currentSlot == 0 {
+			if s.currentSlot == params.BeaconConfig().GenesisSlot {
 				continue
 			}
+
 			if s.highestObservedSlot == s.currentSlot {
 				log.Info("Exiting initial sync and starting normal sync")
 				s.syncService.ResumeSync()
@@ -215,14 +216,14 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 
 			log.Debug("Successfully saved beacon state to the db")
 
-			if s.currentSlot >= beaconState.FinalizedSlot {
+			if s.currentSlot >= beaconState.FinalizedEpoch*params.BeaconConfig().EpochLength {
 				continue
 			}
 
 			// sets the current slot to the last finalized slot of the
 			// crystallized state to begin our sync from.
-			s.currentSlot = beaconState.FinalizedSlot
-			log.Debugf("Successfully saved crystallized state with the last finalized slot: %d", beaconState.FinalizedSlot)
+			s.currentSlot = beaconState.FinalizedEpoch * params.BeaconConfig().EpochLength
+			log.Debugf("Successfully saved crystallized state with the last finalized slot: %d", beaconState.FinalizedEpoch*params.BeaconConfig().EpochLength)
 
 			s.requestNextBlockBySlot(s.currentSlot + 1)
 			beaconStateSub.Unsubscribe()
@@ -246,7 +247,7 @@ func (s *InitialSync) checkInMemoryBlocks() {
 				return
 			}
 
-			if block, ok := s.inMemoryBlocks[0]; ok && s.currentSlot == 0 {
+			if block, ok := s.inMemoryBlocks[0]; ok && s.currentSlot == params.BeaconConfig().GenesisSlot {
 				s.processBlock(block, p2p.Peer{})
 			}
 
@@ -270,19 +271,19 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 	}
 
 	// setting first block for sync.
-	if s.currentSlot == 0 {
+	if s.currentSlot == params.BeaconConfig().GenesisSlot {
 		if s.initialStateRootHash32 != [32]byte{} {
 			log.Errorf("State root hash %#x set despite current slot being 0", s.initialStateRootHash32)
 			return
 		}
 
-		if block.Slot != 1 {
+		if block.Slot != params.BeaconConfig().GenesisSlot+1 {
 
 			// saves block in memory if it isn't the initial block.
 			if _, ok := s.inMemoryBlocks[block.Slot]; !ok {
 				s.inMemoryBlocks[block.Slot] = block
 			}
-			s.requestNextBlockBySlot(1)
+			s.requestNextBlockBySlot(params.BeaconConfig().GenesisSlot + 1)
 			return
 		}
 
@@ -375,13 +376,12 @@ func (s *InitialSync) requestBatchedBlocks(endSlot uint64) {
 // validateAndSaveNextBlock will validate whether blocks received from the blockfetcher
 // routine can be added to the chain.
 func (s *InitialSync) validateAndSaveNextBlock(block *pb.BeaconBlock) error {
-
 	h, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return err
 	}
 
-	if s.currentSlot == uint64(0) {
+	if s.currentSlot == params.BeaconConfig().GenesisSlot {
 		return errors.New("invalid slot number for syncing")
 	}
 
@@ -423,7 +423,7 @@ func (s *InitialSync) checkBlockValidity(block *pb.BeaconBlock) error {
 		return fmt.Errorf("failed to get beacon state: %v", err)
 	}
 
-	if block.Slot < beaconState.FinalizedSlot {
+	if block.Slot < beaconState.FinalizedEpoch*params.BeaconConfig().EpochLength {
 		return errors.New("discarding received block with a slot number smaller than the last finalized slot")
 	}
 	// Attestation from proposer not verified as, other nodes only store blocks not proposer
