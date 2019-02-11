@@ -284,10 +284,10 @@ func makePtrDecoder(typ reflect.Type) (decoder, error) {
 		return nil, err
 	}
 
-	// TODO(1461): The decoding of nil pointer isn't defined in the spec.
+	// TODO(1461): The encoding of nil pointer isn't defined in the spec.
 	// After considered the use case in Prysm, we've decided that:
-	// - We assume we will only encode/decode pointer to array, slice or struct.
-	// - The encoding for such nil pointer shall be 0x00000000.
+	// - We assume we will only encode/decode pointer of array, slice or struct.
+	// - The encoding for nil pointer shall be 0x00000000.
 
 	decoder := func(r io.Reader, val reflect.Value) (uint32, error) {
 		newVal := reflect.New(elemType)
@@ -297,7 +297,7 @@ func makePtrDecoder(typ reflect.Type) (decoder, error) {
 		}
 		if elemDecodeSize != lengthBytes {
 			val.Set(newVal)
-		} // Else we leave val to its default value which is nil
+		} // Else we leave val to its default value which is nil.
 		return elemDecodeSize, nil
 	}
 	return decoder, nil
