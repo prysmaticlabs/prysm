@@ -25,16 +25,23 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 		Slot:                 slot,
 		ShardBlockRootHash32: params.BeaconConfig().ZeroHash[:], // Stub for Phase 0.
 	}
-	req := &pb.CrosslinkCommitteeRequest{
-		Slot: slot,
+	// We fetch the validator index as it is necessary to generate the aggregation
+	// bitfield of the attestation itself.
+	idxReq := &pb.ValidatorIndexRequest{
+		PublicKey: v.pubKey,
 	}
-	resp, err := v.attesterClient.CrosslinkCommitteesAtSlot(ctx, req)
+	validatorIndexRes, err := v.validatorClient.ValidatorIndex(ctx, idxReq)
 	if err != nil {
-		log.Errorf("Could not fetch crosslink committees at slot %d: %v", slot, err)
+		log.Errorf("Could not fetch validator index: %v", err)
 		return
 	}
-	if len(resp.Committee) == 0 {
-		log.Error("Received an empty committee assignment")
+	req := &pb.CommitteeRequest{
+		Slot:           slot,
+		ValidatorIndex: validatorIndexRes.Index,
+	}
+	resp, err := v.validatorClient.ValidatorCommitteeAtSlot(ctx, req)
+	if err != nil {
+		log.Errorf("Could not fetch crosslink committees at slot %d: %v", slot, err)
 		return
 	}
 	// Set the attestation data's shard as the shard associated with the validator's
@@ -81,17 +88,6 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	// of length len(committee)+7 // 8.
 	attestation.CustodyBitfield = make([]byte, (len(resp.Committee)+7)/8)
 
-	// We set the aggregation bitfield for the attestation.
-	idxReq := &pb.ValidatorIndexRequest{
-		PublicKey: v.pubKey,
-	}
-	// We fetch the validator index as it is necessary to generate the aggregation
-	// bitfield of the attestation itself.
-	validatorIndexRes, err := v.validatorClient.ValidatorIndex(ctx, idxReq)
-	if err != nil {
-		log.Errorf("Could not fetch validator index: %v", err)
-		return
-	}
 	// We set the attestation's aggregation bitfield by determining the index in the committee
 	// corresponding to the validator and modifying the bitfield itself.
 	aggregationBitfield := make([]byte, (len(resp.Committee)+7)/8)
