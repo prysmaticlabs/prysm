@@ -108,7 +108,7 @@ func TestValidatorEpochAssignments_Ok(t *testing.T) {
 	}
 	// With initial shuffling of default 16384 validators, the validator corresponding to
 	// public key 0 from genesis slot should correspond to an attester slot of 9223372036854775808 at shard 0.
-	if res.Assignment.Shard != 0 {
+	if res.Assignment.Shard != 1 {
 		t.Errorf(
 			"Expected validator with pubkey %#x to be assigned to shard 0, received %d",
 			req.PublicKey,
