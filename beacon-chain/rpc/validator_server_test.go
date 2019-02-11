@@ -209,14 +209,14 @@ func TestValidatorCommitteeAtSlot_Ok(t *testing.T) {
 		beaconDB: db,
 	}
 	req := &pb.CommitteeRequest{
-		Slot:           1,
+		Slot:           params.BeaconConfig().GenesisSlot + 1,
 		ValidatorIndex: 31,
 	}
 	res, err := validatorServer.ValidatorCommitteeAtSlot(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Unable to fetch committee at slot: %v", err)
 	}
-	if res.Shard != 2 {
+	if res.Shard != 0 {
 		t.Errorf("Shard for validator at index 31 should be 2, received %d", res.Shard)
 	}
 }
