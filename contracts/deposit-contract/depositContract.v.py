@@ -14,13 +14,15 @@ zerohashes: bytes32[32]
 branch: bytes32[32]
 deposit_count: uint256
 full_deposit_count: uint256
+skip_chainstart_delay: bool
 chainStarted: public(bool)
 
 @public
-def __init__(depositThreshold: uint256,minDeposit: uint256,maxDeposit: uint256):
+def __init__(depositThreshold: uint256,minDeposit: uint256,maxDeposit: uint256, skip_chainstart_delay: bool):
     self.CHAIN_START_FULL_DEPOSIT_THRESHOLD = depositThreshold
     self.MIN_DEPOSIT_AMOUNT = minDeposit
     self.MAX_DEPOSIT_AMOUNT = maxDeposit
+    self.skip_chainstart_delay = skip_chainstart_delay
     for i in range(31):
         self.zerohashes[i+1] = sha3(concat(self.zerohashes[i], self.zerohashes[i]))
         self.branch[i+1] = self.zerohashes[i+1]
