@@ -295,7 +295,7 @@ func makePtrDecoder(typ reflect.Type) (decoder, error) {
 		if err != nil {
 			return 0, fmt.Errorf("failed to decode to object pointed by pointer: %v", err)
 		}
-		if elemDecodeSize != lengthBytes {
+		if elemDecodeSize > lengthBytes {
 			val.Set(newVal)
 		} // Else we leave val to its default value which is nil.
 		return elemDecodeSize, nil
