@@ -407,28 +407,27 @@ func NextEpochCommitteeAssignment(
 	var selectedCommittees []*CrosslinkCommittee
 	nextEpoch := NextEpoch(state)
 	nextEpochStartSlot := StartSlot(nextEpoch)
-	for slot := nextEpochStartSlot; slot < nextEpochStartSlot+params.BeaconConfig().EpochLength; nextEpochStartSlot++ {
+	for slot := nextEpochStartSlot; slot < nextEpochStartSlot+params.BeaconConfig().EpochLength; slot++ {
 		crosslinkCommittees, err := CrosslinkCommitteesAtSlot(
-			state, nextEpochStartSlot, registryChange)
+			state, slot, registryChange)
 		if err != nil {
 			return []uint64{}, 0, 0, false, fmt.Errorf("could not get crosslink committee: %v", err)
 		}
-
 		for _, committee := range crosslinkCommittees {
 			for _, idx := range committee.Committee {
 				if idx == index {
 					selectedCommittees = append(selectedCommittees, committee)
 				}
-			}
-		}
 
-		if len(selectedCommittees) > 0 {
-			validators := selectedCommittees[0].Committee
-			shard := selectedCommittees[0].Shard
-			firstCommitteeAtSlot := crosslinkCommittees[0].Committee
-			isProposer := firstCommitteeAtSlot[slot%
-				uint64(len(firstCommitteeAtSlot))] == index
-			return validators, shard, slot, isProposer, nil
+				if len(selectedCommittees) > 0 {
+					validators := selectedCommittees[0].Committee
+					shard := selectedCommittees[0].Shard
+					firstCommitteeAtSlot := crosslinkCommittees[0].Committee
+					isProposer := firstCommitteeAtSlot[slot%
+						uint64(len(firstCommitteeAtSlot))] == index
+					return validators, shard, slot, isProposer, nil
+				}
+			}
 		}
 	}
 	return []uint64{}, 0, 0, false, fmt.Errorf("could not get assignment validator %d", index)
