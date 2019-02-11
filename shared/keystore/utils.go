@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/bls"
+	bls "github.com/prysmaticlabs/go-bls"
 )
 
 func aesCTRXOR(key, inText, iv []byte) ([]byte, error) {
@@ -52,7 +52,7 @@ func ensureInt(x interface{}) int {
 // UTC--<created_at UTC ISO8601>-<address hex>
 func keyFileName(pubkey *bls.PublicKey) string {
 	ts := time.Now().UTC()
-	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), hex.EncodeToString(pubkey.BufferedPublicKey()))
+	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), hex.EncodeToString(pubkey.Serialize()))
 }
 
 func toISO8601(t time.Time) string {
@@ -68,7 +68,7 @@ func toISO8601(t time.Time) string {
 
 // zeroKey zeroes a private key in memory.
 func zeroKey(k *bls.SecretKey) {
-	b := k.K.Bits()
+	b := k.LittleEndian()
 	for i := range b {
 		b[i] = 0
 	}
