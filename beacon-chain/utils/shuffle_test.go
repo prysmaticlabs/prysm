@@ -8,6 +8,31 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
+
+/*
+def shuffle(list_size, seed):
+    indices = list(range(list_size))
+    for round in range(90):
+        hash_bytes = b''.join([
+            hash(seed + round.to_bytes(1, 'little') + (i).to_bytes(4, 'little'))
+            for i in range((list_size + 255) // 256)
+        ])
+        pivot = int.from_bytes(hash(seed + round.to_bytes(1, 'little')), 'little') % list_size
+
+        powers_of_two = [1, 2, 4, 8, 16, 32, 64, 128]
+
+        for i, index in enumerate(indices):
+            flip = (pivot - index) % list_size
+            hash_pos = index if index > flip else flip
+            byte = hash_bytes[hash_pos // 8]
+            if byte & powers_of_two[hash_pos % 8]:
+                indices[i] = flip
+    return indices
+
+*/
+
+
+
 func TestFaultyShuffleIndices(t *testing.T) {
 	var list []uint64
 
