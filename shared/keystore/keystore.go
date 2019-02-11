@@ -176,7 +176,9 @@ func DecryptKey(keyjson []byte, password string) (*Key, error) {
 	}
 
 	key := &bls.SecretKey{}
-	key.SetLittleEndian(keyBytes)
+	if err := key.SetLittleEndian(keyBytes); err != nil {
+		return nil, err
+	}
 	pubkey := key.GetPublicKey()
 
 	return &Key{
