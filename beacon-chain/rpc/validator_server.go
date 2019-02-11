@@ -88,3 +88,37 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 		},
 	}, nil
 }
+
+// ValidatorCommitteeAtSlot gets the committee at a certain slot where a validator's index is contained.
+func (vs *ValidatorServer) ValidatorCommitteeAtSlot(ctx context.Context, req *pb.CommitteeRequest) (*pb.CommitteeResponse, error) {
+	beaconState, err := vs.beaconDB.State()
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
+	}
+	crossLinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(beaconState, req.Slot, false /* registry change */)
+	if err != nil {
+		return nil, fmt.Errorf("could not get crosslink committees at slot %d: %v", req.Slot, err)
+	}
+	var committee []uint64
+	var shard uint64
+	var indexFound bool
+	for _, com := range crossLinkCommittees {
+		for _, i := range com.Committee {
+			if i == req.ValidatorIndex {
+				committee = com.Committee
+				shard = com.Shard
+				indexFound = true
+				break
+			}
+		}
+		// Do not keep iterating over committees once the validator's
+		// index has been found in the inner for loop.
+		if indexFound {
+			break
+		}
+	}
+	return &pb.CommitteeResponse{
+		Committee: committee,
+		Shard:     shard,
+	}, nil
+}
