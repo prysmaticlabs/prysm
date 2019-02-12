@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/ssz"
+
 	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -22,11 +24,10 @@ func generateSimulatedBlock(
 	depositsTrie *trieutil.DepositTrie,
 	simObjects *SimulatedObjects,
 ) (*pb.BeaconBlock, [32]byte, error) {
-	encodedState, err := proto.Marshal(beaconState) // TODO(#1389): Use tree hash instead.
+	stateRoot, err := ssz.TreeHash(beaconState)
 	if err != nil {
-		return nil, [32]byte{}, fmt.Errorf("could not marshal beacon state: %v", err)
+		return nil, [32]byte{}, fmt.Errorf("could not tree hash state: %v", err)
 	}
-	stateRoot := hashutil.Hash(encodedState)
 	randaoReveal := params.BeaconConfig().SimulatedBlockRandao
 	block := &pb.BeaconBlock{
 		Slot:               beaconState.Slot + 1,

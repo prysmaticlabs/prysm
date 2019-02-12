@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/ssz"
+
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -112,12 +114,11 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	if err != nil {
 		return fmt.Errorf("could not attempt fetch beacon state: %v", err)
 	}
-	// TODO(#1389): Replace by state tree hashing algorithm to determine root instead of a hash.
-	hash, err := state.Hash(beaconState)
+	stateRoot, err := ssz.TreeHash(beaconState)
 	if err != nil {
 		return fmt.Errorf("could not hash beacon state: %v", err)
 	}
-	if err := c.beaconDB.SaveBlock(b.NewGenesisBlock(hash[:])); err != nil {
+	if err := c.beaconDB.SaveBlock(b.NewGenesisBlock(stateRoot[:])); err != nil {
 		return fmt.Errorf("could not save genesis block to disk: %v", err)
 	}
 	return nil

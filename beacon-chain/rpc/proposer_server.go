@@ -4,7 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -78,13 +79,10 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 		return nil, fmt.Errorf("could not execute state transition %v", err)
 	}
 
-	encodedState, err := proto.Marshal(beaconState)
+	beaconStateHash, err := ssz.TreeHash(beaconState)
 	if err != nil {
-		return nil, fmt.Errorf("could not marshal state %v", err)
+		return nil, fmt.Errorf("could not tree hash beacon state: %v", err)
 	}
-
-	// TODO(#1389): Use tree hashing algorithm instead.
-	beaconStateHash := hashutil.Hash(encodedState)
 	log.WithField("beaconStateHash", fmt.Sprintf("%#x", beaconStateHash)).Debugf("Computed state hash")
 	return &pb.StateRootResponse{
 		StateRoot: beaconStateHash[:],

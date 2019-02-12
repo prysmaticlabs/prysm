@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/ssz"
+
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -249,12 +251,11 @@ func TestStartStopInitializedChain(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not fetch beacon state: %v", err)
 	}
-	// TODO(#1389): Replace by state tree hashing algorithm to determine root instead of a hash.
-	hash, err := state.Hash(beaconState)
+	stateRoot, err := ssz.TreeHash(beaconState)
 	if err != nil {
-		t.Fatalf("Could not hash beacon state: %v", err)
+		t.Fatalf("Could not tree hash beacon state: %v", err)
 	}
-	if err := db.SaveBlock(b.NewGenesisBlock(hash[:])); err != nil {
+	if err := db.SaveBlock(b.NewGenesisBlock(stateRoot[:])); err != nil {
 		t.Fatalf("Could not save genesis block to disk: %v", err)
 	}
 	// Test the start function.

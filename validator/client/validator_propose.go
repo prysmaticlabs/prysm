@@ -28,8 +28,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 		log.Errorf("Failed to fetch CanonicalHead: %v", err)
 		return
 	}
-	_ = headBlock // TODO(1461): Actually tree hash the block.
-	parentTreeHash, err := ssz.TreeHash(false)
+	parentTreeHash, err := ssz.TreeHash(headBlock)
 	if err != nil {
 		log.Errorf("Failed to hash parent block: %v", err)
 		return
