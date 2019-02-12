@@ -125,7 +125,24 @@ func TestValidatorEpochAssignments_Ok(t *testing.T) {
 	}
 }
 
-func TestValidatorCommitteeAtSlot_CrosslinkCommitteesFailure(t *testing.T) {
+func TestValidatorEpochAssignments_EmptyPubkeyFailure(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	validatorServer := &ValidatorServer{
+		beaconDB: db,
+	}
+	req := &pb.ValidatorEpochAssignmentsRequest{
+		EpochStart: params.BeaconConfig().GenesisSlot,
+		PublicKey:  []byte{},
+	}
+	want := "expected non-empty public key"
+	if _, err := validatorServer.ValidatorEpochAssignments(context.Background(), req); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %v, received %v", want, err)
+	}
+}
+
+func TestValidatorEpochAssignments_CrosslinkCommitteesFailure(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	genesis := b.NewGenesisBlock([]byte{})
@@ -171,7 +188,7 @@ func TestValidatorCommitteeAtSlot_CrosslinkCommitteesFailure(t *testing.T) {
 	}
 }
 
-func TestValidatorCommitteeAtSlot_Ok(t *testing.T) {
+func TestValidatorEpochAssignments_CorrectAssign(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	genesis := b.NewGenesisBlock([]byte{})
