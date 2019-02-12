@@ -88,10 +88,10 @@ func TestEpochBoundaryAttestations(t *testing.T) {
 	}
 
 	epochAttestations := []*pb.PendingAttestationRecord{
-		{Data: &pb.AttestationData{JustifiedBlockRootHash32: []byte{0}, JustifiedSlot: 0}},
-		{Data: &pb.AttestationData{JustifiedBlockRootHash32: []byte{1}, JustifiedSlot: 1}},
-		{Data: &pb.AttestationData{JustifiedBlockRootHash32: []byte{2}, JustifiedSlot: 2}},
-		{Data: &pb.AttestationData{JustifiedBlockRootHash32: []byte{3}, JustifiedSlot: 3}},
+		{Data: &pb.AttestationData{JustifiedBlockRootHash32: []byte{0}}},
+		{Data: &pb.AttestationData{JustifiedBlockRootHash32: []byte{1}}},
+		{Data: &pb.AttestationData{JustifiedBlockRootHash32: []byte{2}}},
+		{Data: &pb.AttestationData{JustifiedBlockRootHash32: []byte{3}}},
 	}
 
 	var latestBlockRootHash [][]byte
@@ -182,21 +182,21 @@ func TestPrevEpochAttestations(t *testing.T) {
 
 func TestPrevJustifiedAttestations(t *testing.T) {
 	prevEpochAttestations := []*pb.PendingAttestationRecord{
-		{Data: &pb.AttestationData{JustifiedSlot: 0}},
-		{Data: &pb.AttestationData{JustifiedSlot: 2}},
-		{Data: &pb.AttestationData{JustifiedSlot: 5}},
-		{Data: &pb.AttestationData{Shard: 2, JustifiedSlot: 100}},
-		{Data: &pb.AttestationData{Shard: 3, JustifiedSlot: 100}},
-		{Data: &pb.AttestationData{JustifiedSlot: 999}},
+		{Data: &pb.AttestationData{JustifiedEpoch: 0}},
+		{Data: &pb.AttestationData{JustifiedEpoch: 0}},
+		{Data: &pb.AttestationData{JustifiedEpoch: 0}},
+		{Data: &pb.AttestationData{Shard: 2, JustifiedEpoch: 1}},
+		{Data: &pb.AttestationData{Shard: 3, JustifiedEpoch: 1}},
+		{Data: &pb.AttestationData{JustifiedEpoch: 15}},
 	}
 
 	thisEpochAttestations := []*pb.PendingAttestationRecord{
-		{Data: &pb.AttestationData{JustifiedSlot: 0}},
-		{Data: &pb.AttestationData{JustifiedSlot: 10}},
-		{Data: &pb.AttestationData{JustifiedSlot: 15}},
-		{Data: &pb.AttestationData{JustifiedSlot: 100}},
-		{Data: &pb.AttestationData{Shard: 1, JustifiedSlot: 100}},
-		{Data: &pb.AttestationData{JustifiedSlot: 888}},
+		{Data: &pb.AttestationData{JustifiedEpoch: 0}},
+		{Data: &pb.AttestationData{JustifiedEpoch: 0}},
+		{Data: &pb.AttestationData{JustifiedEpoch: 0}},
+		{Data: &pb.AttestationData{JustifiedEpoch: 1}},
+		{Data: &pb.AttestationData{Shard: 1, JustifiedEpoch: 1}},
+		{Data: &pb.AttestationData{JustifiedEpoch: 13}},
 	}
 
 	state := &pb.BeaconState{PreviousJustifiedEpoch: 1}
@@ -207,8 +207,8 @@ func TestPrevJustifiedAttestations(t *testing.T) {
 		if attestation.Data.Shard != uint64(i) {
 			t.Errorf("Wanted shard %d, got %d", i, attestation.Data.Shard)
 		}
-		if attestation.Data.JustifiedSlot != 100 {
-			t.Errorf("Wanted justified slot 100, got %d", attestation.Data.JustifiedSlot)
+		if attestation.Data.JustifiedEpoch != 1 {
+			t.Errorf("Wanted justified epoch 0, got %d", attestation.Data.JustifiedEpoch)
 		}
 	}
 }

@@ -72,7 +72,6 @@ message AttestationData {
   Crosslink latest_crosslink = 6;
   uint64 justified_epoch = 7;
   bytes justified_block_root_hash32 = 8;
-  uint64 justified_slot = 1000 [deprecated=true];
 }
 
 message AttestationDataAndCustodyBit {
