@@ -28,12 +28,12 @@ func TestIsDoubleVote(t *testing.T) {
 
 func TestIsSurroundVote(t *testing.T) {
 	att1 := &pb.AttestationData{
-		Slot:          0,
+		Slot:           0,
 		JustifiedEpoch: 0,
 	}
 
 	att2 := &pb.AttestationData{
-		Slot:          0,
+		Slot:           0,
 		JustifiedEpoch: 0,
 	}
 

@@ -482,11 +482,11 @@ func TestProcessAttesterSlashings_UnmatchedAttestations(t *testing.T) {
 
 func TestProcessAttesterSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 	att1 := &pb.AttestationData{
-		Slot:          5,
+		Slot:           5,
 		JustifiedEpoch: 5,
 	}
 	att2 := &pb.AttestationData{
-		Slot:          5,
+		Slot:           5,
 		JustifiedEpoch: 4,
 	}
 	slashings := []*pb.AttesterSlashing{
@@ -541,11 +541,11 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 
 	att1 := &pb.AttestationData{
-		Slot:          5,
+		Slot:           5,
 		JustifiedEpoch: 5,
 	}
 	att2 := &pb.AttestationData{
-		Slot:          5,
+		Slot:           5,
 		JustifiedEpoch: 4,
 	}
 	slashings := []*pb.AttesterSlashing{

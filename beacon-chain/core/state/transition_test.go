@@ -125,11 +125,11 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		},
 	}
 	att1 := &pb.AttestationData{
-		Slot:          5,
+		Slot:           5,
 		JustifiedEpoch: 5,
 	}
 	att2 := &pb.AttestationData{
-		Slot:          5,
+		Slot:           5,
 		JustifiedEpoch: 4,
 	}
 	attesterSlashings := []*pb.AttesterSlashing{
@@ -201,11 +201,11 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		},
 	}
 	att1 := &pb.AttestationData{
-		Slot:          5,
+		Slot:           5,
 		JustifiedEpoch: 5,
 	}
 	att2 := &pb.AttestationData{
-		Slot:          5,
+		Slot:           5,
 		JustifiedEpoch: 4,
 	}
 	attesterSlashings := []*pb.AttesterSlashing{
@@ -301,11 +301,11 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		},
 	}
 	att1 := &pb.AttestationData{
-		Slot:          5,
+		Slot:           5,
 		JustifiedEpoch: 5,
 	}
 	att2 := &pb.AttestationData{
-		Slot:          5,
+		Slot:           5,
 		JustifiedEpoch: 4,
 	}
 	attesterSlashings := []*pb.AttesterSlashing{
@@ -398,7 +398,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 			Data: &pb.AttestationData{
 				Slot:                     i + params.BeaconConfig().EpochLength,
 				Shard:                    1,
-				JustifiedEpoch:            1,
+				JustifiedEpoch:           1,
 				JustifiedBlockRootHash32: []byte{0},
 			},
 			SlotIncluded: i + params.BeaconConfig().EpochLength + 1,
@@ -457,7 +457,7 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 			Data: &pb.AttestationData{
 				Slot:                     i + params.BeaconConfig().EpochLength,
 				Shard:                    1,
-				JustifiedEpoch:            1,
+				JustifiedEpoch:           1,
 				JustifiedBlockRootHash32: []byte{0},
 			},
 			AggregationBitfield: []byte{},
