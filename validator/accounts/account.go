@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
@@ -20,8 +21,8 @@ func VerifyAccountNotExists(directory string, password string) error {
 	if directory == "" || password == "" {
 		return errors.New("expected a path to the validator keystore and password to be provided, received nil")
 	}
-	shardWithdrawalKeyFile := directory + "/shardwithdrawalkey"
-	validatorKeyFile := directory + "/validatorprivatekey"
+	shardWithdrawalKeyFile := directory + params.BeaconConfig().WithdrawalPrivkeyFileName
+	validatorKeyFile := directory + params.BeaconConfig().ValidatorPrivkeyFileName
 	// First, if the keystore already exists, throws an error as there can only be
 	// one keystore per validator client.
 	ks := keystore.NewKeystore(directory)
@@ -44,8 +45,8 @@ func NewValidatorAccount(directory string, password string) error {
 	if err := VerifyAccountNotExists(directory, password); err != nil {
 		return fmt.Errorf("validator account exists: %v", err)
 	}
-	shardWithdrawalKeyFile := directory + "/shardwithdrawalkey"
-	validatorKeyFile := directory + "/validatorprivatekey"
+	shardWithdrawalKeyFile := directory + params.BeaconConfig().WithdrawalPrivkeyFileName
+	validatorKeyFile := directory + params.BeaconConfig().ValidatorPrivkeyFileName
 	ks := keystore.NewKeystore(directory)
 	// If the keystore does not exists at the path, we create a new one for the validator.
 	shardWithdrawalKey, err := keystore.NewKey(rand.Reader)

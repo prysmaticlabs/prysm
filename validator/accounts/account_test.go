@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"os"
 	"testing"
 
@@ -21,7 +22,7 @@ func TestNewValidatorAccount_AccountExists(t *testing.T) {
 		t.Fatalf("Cannot create new key: %v", err)
 	}
 	ks := keystore.NewKeystore(directory)
-	if err := ks.StoreKey(directory+"/validatorprivatekey", validatorKey, ""); err != nil {
+	if err := ks.StoreKey(directory+params.BeaconConfig().ValidatorPrivkeyFileName, validatorKey, ""); err != nil {
 		t.Fatalf("Unable to store key %v", err)
 	}
 	if err := NewValidatorAccount(directory, ""); err == nil {
@@ -39,7 +40,7 @@ func TestNewValidatorAccount_PrintsDepositData(t *testing.T) {
 		t.Errorf("Expected new account to be created: %v", err)
 	}
 	ks := keystore.NewKeystore(directory)
-	valKey, err := ks.GetKey(directory+"/validatorprivatekey", "1234")
+	valKey, err := ks.GetKey(directory+params.BeaconConfig().ValidatorPrivkeyFileName, "1234")
 	if err != nil {
 		t.Fatalf("Could not retrieve key: %v", err)
 	}

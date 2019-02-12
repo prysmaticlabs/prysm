@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 
@@ -40,7 +41,7 @@ type Config struct {
 // registry.
 func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	validatorKeyFile := cfg.KeystorePath + "/validatorprivatekey"
+	validatorKeyFile := cfg.KeystorePath + params.BeaconConfig().ValidatorPrivkeyFileName
 	ks := keystore.NewKeystore(cfg.KeystorePath)
 	key, err := ks.GetKey(validatorKeyFile, cfg.Password)
 	if err != nil {

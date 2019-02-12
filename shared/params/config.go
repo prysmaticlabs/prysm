@@ -27,6 +27,8 @@ type BeaconChainConfig struct {
 	LatestPenalizedExitLength  uint64 // LatestPenalizedExitLength is used to track penalized exit balances per time interval.
 	LatestIndexRootsLength     uint64 // LatestIndexRootsLength is the number of index roots kept in beacon state, used by light client.
 	MaxWithdrawalsPerEpoch     uint64 // MaxWithdrawalsPerEpoch is the max withdrawals can happen for a single epoch.
+	ValidatorPrivkeyFileName string // ValidatorPrivKeyFileName specifies the string name of a validator private key file.
+	WithdrawalPrivkeyFileName string // WithdrawalPrivKeyFileName specifies the string name of a withdrawal private key file.
 
 	// Deposit contract constants.
 	DepositContractAddress   []byte // DepositContractAddress is the address of the deposit contract in PoW chain.
@@ -104,6 +106,8 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	LatestPenalizedExitLength:  8192,
 	LatestIndexRootsLength:     8192,
 	MaxWithdrawalsPerEpoch:     4,
+	ValidatorPrivkeyFileName: "/validatorprivatekey",
+	WithdrawalPrivkeyFileName: "/shardwithdrawalkey",
 
 	// Deposit contract constants.
 	DepositContractTreeDepth: 32,
@@ -165,6 +169,8 @@ var demoBeaconConfig = &BeaconChainConfig{
 	LatestPenalizedExitLength:  defaultBeaconConfig.LatestPenalizedExitLength,
 	LatestIndexRootsLength:     defaultBeaconConfig.LatestIndexRootsLength,
 	MaxWithdrawalsPerEpoch:     defaultBeaconConfig.MaxWithdrawalsPerEpoch,
+	ValidatorPrivkeyFileName: defaultBeaconConfig.ValidatorPrivkeyFileName,
+	WithdrawalPrivkeyFileName: defaultBeaconConfig.WithdrawalPrivkeyFileName,
 
 	// Deposit contract constants.
 	DepositContractTreeDepth: defaultBeaconConfig.DepositContractTreeDepth,
