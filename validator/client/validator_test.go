@@ -4,11 +4,12 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
-	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"io"
 	"io/ioutil"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/keystore"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -210,8 +211,7 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 		gomock.Any(),
 	).Return(nil, expected)
 
-	err := v.UpdateAssignments(context.Background(), params.BeaconConfig().EpochLength)
-	if err != expected {
+	if err := v.UpdateAssignments(context.Background(), params.BeaconConfig().EpochLength); err != expected {
 		t.Errorf("Bad error; want=%v got=%v", expected, err)
 	}
 }

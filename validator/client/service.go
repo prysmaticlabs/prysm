@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 
 	"google.golang.org/grpc"
