@@ -122,10 +122,14 @@ var encodeTests = []encTest{
 		{P: &simpleStruct{B: 4, A: 3}, V: 1},
 	}, output: "18000000 08000000 03000000 0200 01 00 08000000 03000000 0400 03 01"},
 
-	// error: nil pointer
-	{val: nil, error: "encode error: nil is not supported for input type <nil>"},
-	{val: (*[]uint8)(nil), error: "encode error: nil is not supported for input type *[]uint8"},
-	{val: pointerStruct{P: nil, V: 0}, error: "encode error: failed to encode field of struct: nil is not supported for input type ssz.pointerStruct"},
+	// nil pointer (not defined in spec)
+	{val: (*[]uint8)(nil), output: "00000000"},
+	{val: pointerStruct{}, output: "05000000 00000000 00"},
+	{val: &pointerStruct{}, output: "05000000 00000000 00"},
+	{val: []*pointerStruct{nil, nil}, output: "08000000 00000000 00000000"},
+
+	// error: untyped nil pointer
+	{val: nil, error: "encode error: untyped nil is not supported for input type <nil>"},
 
 	// error: unsupported type
 	{val: string("abc"), error: "encode error: type string is not serializable for input type string"},
@@ -210,10 +214,14 @@ var encodeSizeTests = []encSizeTest{
 		{P: &simpleStruct{B: 4, A: 3}, V: 1},
 	}, size: 28},
 
-	// error: nil pointer
-	{val: nil, error: "encode error: nil is not supported for input type <nil>"},
-	{val: (*[]uint8)(nil), error: "encode error: nil is not supported for input type *[]uint8"},
-	{val: pointerStruct{P: nil, V: 0}, error: "encode error: failed to get encode size for field of struct: nil is not supported for input type ssz.pointerStruct"},
+	// nil pointer (not defined in spec)
+	{val: (*[]uint8)(nil), size: 4},
+	{val: pointerStruct{}, size: 9},
+	{val: &pointerStruct{}, size: 9},
+	{val: []*pointerStruct{nil, nil}, size: 12},
+
+	// error: untyped nil pointer
+	{val: nil, error: "encode error: untyped nil is not supported for input type <nil>"},
 
 	// error: unsupported type
 	{val: string("abc"), error: "encode error: type string is not serializable for input type string"},

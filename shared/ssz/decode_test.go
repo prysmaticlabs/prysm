@@ -132,6 +132,12 @@ var decodeTests = []decodeTest{
 		},
 	},
 
+	// nil pointer
+	{input: "00000000", ptr: new(*[]uint8), value: (*[]uint8)(nil)},
+	{input: "05000000 00000000 00", ptr: new(pointerStruct), value: pointerStruct{}},
+	{input: "05000000 00000000 00", ptr: new(*pointerStruct), value: &pointerStruct{}},
+	{input: "08000000 00000000 00000000", ptr: new([]*pointerStruct), value: []*pointerStruct{nil, nil}},
+
 	// error: nil target
 	{input: "00", ptr: nil, value: nil, error: "decode error: cannot decode into nil for output type <nil>"},
 
