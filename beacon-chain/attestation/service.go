@@ -26,9 +26,9 @@ type Service struct {
 	broadcastChan chan *pb.Attestation
 	incomingFeed  *event.Feed
 	incomingChan  chan *pb.Attestation
-	// AttestationPool is the mapping of individual
-	// validator's public key to it's newest attestation.
-	LatestAttestation map[[48]byte]*pb.Attestation
+	// store is the mapping of individual
+	// validator's public key to it's latest attestation.
+	store map[[48]byte]*pb.Attestation
 }
 
 // Config options for the service.
@@ -50,7 +50,7 @@ func NewAttestationService(ctx context.Context, cfg *Config) *Service {
 		broadcastChan:     make(chan *pb.Attestation, cfg.BroadcastAttestationBuf),
 		incomingFeed:      new(event.Feed),
 		incomingChan:      make(chan *pb.Attestation, cfg.ReceiveAttestationBuf),
-		LatestAttestation: make(map[[48]byte]*pb.Attestation),
+		store: make(map[[48]byte]*pb.Attestation),
 	}
 }
 
@@ -79,6 +79,17 @@ func (a *Service) IncomingAttestationFeed() *event.Feed {
 	return a.incomingFeed
 }
 
+// LatestAttestation returns the attestation from the validator with the input index, the highest
+// slotNumber attestation in attestation pool gets returned.
+//
+// Spec pseudocode definition:
+//	Let `get_latest_attestation(store: Store, validator_index: ValidatorIndex) ->
+//		Attestation` be the attestation with the highest slot number in `store`
+//		from the validator with the given `validator_index`
+func (a *Service) LatestAttestation(index uint64) *pb.Attestation {
+
+}
+
 // attestationPool takes an newly received attestation from sync service
 // and updates attestation pool.
 func (a *Service) attestationPool() {
@@ -103,7 +114,6 @@ func (a *Service) attestationPool() {
 				log.Errorf("Could not update attestation pool: %v", err)
 				continue
 			}
-
 			log.Debugf("Updated attestation pool for attestation %#x", h)
 		}
 	}
@@ -120,7 +130,6 @@ func (a *Service) updateLatestAttestation(attestation *pb.Attestation) error {
 	if err != nil {
 		return err
 	}
-
 	// The participation bitfield from attestation is represented in bytes,
 	// here we multiply by 8 to get an accurate validator count in bits.
 	bitfield := attestation.AggregationBitfield
@@ -134,7 +143,6 @@ func (a *Service) updateLatestAttestation(attestation *pb.Attestation) error {
 		if err != nil {
 			return err
 		}
-
 		if !bitSet {
 			continue
 		}
@@ -142,14 +150,14 @@ func (a *Service) updateLatestAttestation(attestation *pb.Attestation) error {
 		pubkey := bytesutil.ToBytes48(state.ValidatorRegistry[i].Pubkey)
 		newAttestationSlot := attestation.Data.Slot
 		currentAttestationSlot := uint64(0)
-		if _, exists := a.LatestAttestation[pubkey]; exists {
-			currentAttestationSlot = a.LatestAttestation[pubkey].Data.Slot
+		if _, exists := a.store[pubkey]; exists {
+			currentAttestationSlot = a.store[pubkey].Data.Slot
 		}
 		// If the attestation is newer than this attester's one in pool.
 		if newAttestationSlot > currentAttestationSlot {
-			a.LatestAttestation[pubkey] = attestation
+			a.store[pubkey] = attestation
 		}
-
 	}
 	return nil
 }
+
