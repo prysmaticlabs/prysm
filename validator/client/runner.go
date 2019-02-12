@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/opentracing/opentracing-go"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -34,6 +35,9 @@ func run(ctx context.Context, v Validator) {
 	defer v.Done()
 	v.WaitForChainStart(ctx)
 	v.WaitForActivation(ctx)
+	if err := v.UpdateAssignments(ctx, params.BeaconConfig().GenesisSlot); err != nil {
+		log.WithField("error", err).Error("Failed to update assignments")
+	}
 	span, ctx := opentracing.StartSpanFromContext(ctx, "processSlot")
 	defer span.Finish()
 	for {
