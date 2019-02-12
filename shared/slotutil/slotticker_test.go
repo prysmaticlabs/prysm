@@ -1,9 +1,10 @@
 package slotutil
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestSlotTicker(t *testing.T) {

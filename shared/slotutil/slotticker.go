@@ -1,8 +1,9 @@
 package slotutil
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // SlotTicker is a special ticker for the beacon chain block.
