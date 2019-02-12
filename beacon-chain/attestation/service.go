@@ -3,6 +3,7 @@ package attestation
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/bazel-prysm/external/go_sdk/src/fmt"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -43,14 +44,14 @@ type Config struct {
 func NewAttestationService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:               ctx,
-		cancel:            cancel,
-		beaconDB:          cfg.BeaconDB,
-		broadcastFeed:     new(event.Feed),
-		broadcastChan:     make(chan *pb.Attestation, cfg.BroadcastAttestationBuf),
-		incomingFeed:      new(event.Feed),
-		incomingChan:      make(chan *pb.Attestation, cfg.ReceiveAttestationBuf),
-		store: make(map[[48]byte]*pb.Attestation),
+		ctx:           ctx,
+		cancel:        cancel,
+		beaconDB:      cfg.BeaconDB,
+		broadcastFeed: new(event.Feed),
+		broadcastChan: make(chan *pb.Attestation, cfg.BroadcastAttestationBuf),
+		incomingFeed:  new(event.Feed),
+		incomingChan:  make(chan *pb.Attestation, cfg.ReceiveAttestationBuf),
+		store:         make(map[[48]byte]*pb.Attestation),
 	}
 }
 
@@ -79,15 +80,44 @@ func (a *Service) IncomingAttestationFeed() *event.Feed {
 	return a.incomingFeed
 }
 
-// LatestAttestation returns the attestation from the validator with the input index, the highest
-// slotNumber attestation in attestation pool gets returned.
+// LatestAttestation returns the latest attestation from validator index, the highest
+// slotNumber attestation from the attestation pool gets returned.
 //
 // Spec pseudocode definition:
 //	Let `get_latest_attestation(store: Store, validator_index: ValidatorIndex) ->
 //		Attestation` be the attestation with the highest slot number in `store`
 //		from the validator with the given `validator_index`
-func (a *Service) LatestAttestation(index uint64) *pb.Attestation {
+func (a *Service) LatestAttestation(index uint64) (*pb.Attestation, error) {
+	state, err := a.beaconDB.State()
+	if err != nil {
+		return nil, err
+	}
+	pubKey := bytesutil.ToBytes48(state.ValidatorRegistry[index].Pubkey)
 
+	// return error if it's an invalid validator index.
+	// return error if validator has no attestation.
+
+	return a.store[pubKey], nil
+}
+
+// LatestAttestationTarget returns the target block the validator index attested to,
+// the highest slotNumber attestation in attestation pool gets returned.
+//
+// Spec pseudocode definition:
+//	Let `get_latest_attestation_target(store: Store, validator_index: ValidatorIndex) ->
+//		BeaconBlock` be the target block in the attestation
+//		`get_latest_attestation(store, validator_index)`.
+func (a *Service) LatestAttestationTarget(index uint64) (*pb.BeaconBlock, error) {
+	attestation, err := a.LatestAttestation(index)
+	if err != nil {
+		return nil, fmt.Errorf("could not get attestation: %v", err)
+	}
+	targetBlockHash := bytesutil.ToBytes32(attestation.Data.BeaconBlockRootHash32)
+	targetBlock, err := a.beaconDB.Block(targetBlockHash)
+	if err != nil {
+		return nil, fmt.Errorf("could not get target block: %v", err)
+	}
+	return targetBlock, nil
 }
 
 // attestationPool takes an newly received attestation from sync service
@@ -160,4 +190,3 @@ func (a *Service) updateLatestAttestation(attestation *pb.Attestation) error {
 	}
 	return nil
 }
-
