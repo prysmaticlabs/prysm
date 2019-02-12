@@ -70,7 +70,8 @@ func TestValidatorEpochAssignments_Ok(t *testing.T) {
 	genesisTime := params.BeaconConfig().GenesisTime.Unix()
 	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
-		var pubKey [48]byte
+		pubKeyLength := params.BeaconConfig().BLSPubkeyLength
+		var pubKey [pubKeyLength]byte
 		copy(pubKey[:], []byte(strconv.Itoa(i)))
 		depositInput := &pbp2p.DepositInput{
 			Pubkey: pubKey[:],
@@ -97,7 +98,8 @@ func TestValidatorEpochAssignments_Ok(t *testing.T) {
 	validatorServer := &ValidatorServer{
 		beaconDB: db,
 	}
-	var pubKey [48]byte
+	pubKeyLength := params.BeaconConfig().BLSPubkeyLength
+	var pubKey [pubKeyLength]byte
 	copy(pubKey[:], []byte("0"))
 	req := &pb.ValidatorEpochAssignmentsRequest{
 		EpochStart: params.BeaconConfig().GenesisSlot,
@@ -154,7 +156,8 @@ func TestValidatorCommitteeAtSlot_CrosslinkCommitteesFailure(t *testing.T) {
 	genesisTime := params.BeaconConfig().GenesisTime.Unix()
 	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
-		var pubKey [params.BeaconConfig().BLSPubkeyLength]byte
+		pubKeyLength := params.BeaconConfig().BLSPubkeyLength
+		var pubKey [pubKeyLength]byte
 		copy(pubKey[:], []byte(strconv.Itoa(i)))
 		depositInput := &pbp2p.DepositInput{
 			Pubkey: pubKey[:],
@@ -200,7 +203,8 @@ func TestValidatorCommitteeAtSlot_Ok(t *testing.T) {
 	genesisTime := params.BeaconConfig().GenesisTime.Unix()
 	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
-		var pubKey [params.BeaconConfig().BLSPubkeyLength]byte
+		pubKeyLength := params.BeaconConfig().BLSPubkeyLength
+		var pubKey [pubKeyLength]byte
 		copy(pubKey[:], []byte(strconv.Itoa(i)))
 		depositInput := &pbp2p.DepositInput{
 			Pubkey: pubKey[:],
