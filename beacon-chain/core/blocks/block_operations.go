@@ -539,7 +539,7 @@ func ProcessValidatorDeposits(
 			beaconState,
 			validatorIndexMap,
 			depositInput.Pubkey,
-			binary.BigEndian.Uint64(depositValue),
+			binary.LittleEndian.Uint64(depositValue),
 			depositInput.ProofOfPossession,
 			depositInput.WithdrawalCredentialsHash32,
 		)
@@ -554,7 +554,7 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 	// Verify Merkle proof of deposit and deposit trie root.
 	receiptRoot := bytesutil.ToBytes32(beaconState.LatestEth1Data.DepositRootHash32)
 	index := make([]byte, 8)
-	binary.BigEndian.PutUint64(index, deposit.MerkleTreeIndex)
+	binary.LittleEndian.PutUint64(index, deposit.MerkleTreeIndex)
 	if ok := trieutil.VerifyMerkleBranch(
 		deposit.MerkleBranchHash32S,
 		receiptRoot,
