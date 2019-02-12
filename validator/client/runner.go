@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+
 	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/opentracing/opentracing-go"
