@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
@@ -586,7 +585,6 @@ func TestProcessDepositLog_SkipDuplicateLog(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to retrieve logs %v", err)
 	}
-
 
 	web3Service.ProcessDepositLog(logs[0])
 	// We keep track of the current deposit root and make sure it doesn't change if we

@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -70,24 +69,24 @@ type Client interface {
 // Validator Registration Contract on the ETH1.0 chain to kick off the beacon
 // chain's validator registration process.
 type Web3Service struct {
-	ctx                    context.Context
-	cancel                 context.CancelFunc
-	client                 Client
-	headerChan             chan *gethTypes.Header
-	logChan                chan gethTypes.Log
-	endpoint               string
-	depositContractAddress common.Address
-	chainStartFeed         *event.Feed
-	reader                 Reader
-	logger                 bind.ContractFilterer
-	blockNumber            *big.Int    // the latest ETH1.0 chain blockNumber.
-	blockHash              common.Hash // the latest ETH1.0 chain blockHash.
-	depositContractCaller  *contracts.DepositContractCaller
-	depositRoot            []byte
-	depositTrie            *trieutil.DepositTrie
-	chainStartDeposits     []*pb.Deposit
-	chainStarted           bool
-	beaconDB               *db.BeaconDB
+	ctx                     context.Context
+	cancel                  context.CancelFunc
+	client                  Client
+	headerChan              chan *gethTypes.Header
+	logChan                 chan gethTypes.Log
+	endpoint                string
+	depositContractAddress  common.Address
+	chainStartFeed          *event.Feed
+	reader                  Reader
+	logger                  bind.ContractFilterer
+	blockNumber             *big.Int    // the latest ETH1.0 chain blockNumber.
+	blockHash               common.Hash // the latest ETH1.0 chain blockHash.
+	depositContractCaller   *contracts.DepositContractCaller
+	depositRoot             []byte
+	depositTrie             *trieutil.DepositTrie
+	chainStartDeposits      []*pb.Deposit
+	chainStarted            bool
+	beaconDB                *db.BeaconDB
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 }
 
@@ -124,21 +123,21 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 
 	ctx, cancel := context.WithCancel(ctx)
 	return &Web3Service{
-		ctx:                    ctx,
-		cancel:                 cancel,
-		headerChan:             make(chan *gethTypes.Header),
-		logChan:                make(chan gethTypes.Log),
-		endpoint:               config.Endpoint,
-		blockNumber:            nil,
-		blockHash:              common.BytesToHash([]byte{}),
-		depositContractAddress: config.DepositContract,
-		chainStartFeed:         new(event.Feed),
-		client:                 config.Client,
-		reader:                 config.Reader,
-		logger:                 config.Logger,
-		depositContractCaller:  depositContractCaller,
-		chainStartDeposits:     []*pb.Deposit{},
-		beaconDB:               config.BeaconDB,
+		ctx:                     ctx,
+		cancel:                  cancel,
+		headerChan:              make(chan *gethTypes.Header),
+		logChan:                 make(chan gethTypes.Log),
+		endpoint:                config.Endpoint,
+		blockNumber:             nil,
+		blockHash:               common.BytesToHash([]byte{}),
+		depositContractAddress:  config.DepositContract,
+		chainStartFeed:          new(event.Feed),
+		client:                  config.Client,
+		reader:                  config.Reader,
+		logger:                  config.Logger,
+		depositContractCaller:   depositContractCaller,
+		chainStartDeposits:      []*pb.Deposit{},
+		beaconDB:                config.BeaconDB,
 		lastReceivedMerkleIndex: -1,
 	}, nil
 }
