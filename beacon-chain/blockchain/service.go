@@ -27,17 +27,18 @@ var log = logrus.WithField("prefix", "blockchain")
 // ChainService represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type ChainService struct {
-	ctx                context.Context
-	cancel             context.CancelFunc
-	beaconDB           *db.BeaconDB
-	web3Service        *powchain.Web3Service
-	incomingBlockFeed  *event.Feed
-	incomingBlockChan  chan *pb.BeaconBlock
-	genesisTimeChan    chan time.Time
-	canonicalBlockFeed *event.Feed
-	canonicalStateFeed *event.Feed
-	genesisTime        time.Time
-	enablePOWChain     bool
+	ctx                  context.Context
+	cancel               context.CancelFunc
+	beaconDB             *db.BeaconDB
+	web3Service          *powchain.Web3Service
+	incomingBlockFeed    *event.Feed
+	incomingBlockChan    chan *pb.BeaconBlock
+	chainStartChan      chan time.Time
+	canonicalBlockFeed   *event.Feed
+	canonicalStateFeed   *event.Feed
+	genesisTime          time.Time
+	enablePOWChain       bool
+	stateInitializedFeed *event.Feed
 }
 
 // Config options for the service.
@@ -55,16 +56,17 @@ type Config struct {
 func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ChainService{
-		ctx:                ctx,
-		cancel:             cancel,
-		beaconDB:           cfg.BeaconDB,
-		web3Service:        cfg.Web3Service,
-		incomingBlockChan:  make(chan *pb.BeaconBlock, cfg.IncomingBlockBuf),
-		genesisTimeChan:    make(chan time.Time),
-		incomingBlockFeed:  new(event.Feed),
-		canonicalBlockFeed: new(event.Feed),
-		canonicalStateFeed: new(event.Feed),
-		enablePOWChain:     cfg.EnablePOWChain,
+		ctx:                  ctx,
+		cancel:               cancel,
+		beaconDB:             cfg.BeaconDB,
+		web3Service:          cfg.Web3Service,
+		incomingBlockChan:    make(chan *pb.BeaconBlock, cfg.IncomingBlockBuf),
+		chainStartChan:      make(chan time.Time),
+		incomingBlockFeed:    new(event.Feed),
+		canonicalBlockFeed:   new(event.Feed),
+		canonicalStateFeed:   new(event.Feed),
+		stateInitializedFeed: new(event.Feed),
+		enablePOWChain:       cfg.EnablePOWChain,
 	}, nil
 }
 
@@ -85,13 +87,14 @@ func (c *ChainService) Start() {
 			log.Fatal("Not configured web3Service for POW chain")
 			return // return need for TestStartUninitializedChainWithoutConfigPOWChain
 		}
-		subChainStart := c.web3Service.ChainStartFeed().Subscribe(c.genesisTimeChan)
+		subChainStart := c.web3Service.ChainStartFeed().Subscribe(c.chainStartChan)
 		go func() {
-			genesisTime := <-c.genesisTimeChan
+			genesisTime := <-c.chainStartChan
 			initialDeposits := c.web3Service.ChainStartDeposits()
 			if err := c.initializeBeaconChain(genesisTime, initialDeposits); err != nil {
 				log.Fatalf("Could not initialize beacon chain: %v", err)
 			}
+			c.stateInitializedFeed.Send(genesisTime)
 			go c.blockProcessing()
 			subChainStart.Unsubscribe()
 		}()
@@ -153,6 +156,12 @@ func (c *ChainService) CanonicalBlockFeed() *event.Feed {
 // whenever a new state is determined to be canonical in the chain.
 func (c *ChainService) CanonicalStateFeed() *event.Feed {
 	return c.canonicalStateFeed
+}
+
+// StateInitializedFeed returns a feed that is written to
+// when the beacon state is first initialized.
+func (c *ChainService) StateInitializedFeed() *event.Feed {
+	return c.stateInitializedFeed
 }
 
 // doesPoWBlockExist checks if the referenced PoW block exists.
