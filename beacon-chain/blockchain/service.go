@@ -33,7 +33,7 @@ type ChainService struct {
 	web3Service          *powchain.Web3Service
 	incomingBlockFeed    *event.Feed
 	incomingBlockChan    chan *pb.BeaconBlock
-	chainStartChan      chan time.Time
+	chainStartChan       chan time.Time
 	canonicalBlockFeed   *event.Feed
 	canonicalStateFeed   *event.Feed
 	genesisTime          time.Time
@@ -61,7 +61,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		beaconDB:             cfg.BeaconDB,
 		web3Service:          cfg.Web3Service,
 		incomingBlockChan:    make(chan *pb.BeaconBlock, cfg.IncomingBlockBuf),
-		chainStartChan:      make(chan time.Time),
+		chainStartChan:       make(chan time.Time),
 		incomingBlockFeed:    new(event.Feed),
 		canonicalBlockFeed:   new(event.Feed),
 		canonicalStateFeed:   new(event.Feed),
