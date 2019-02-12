@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -125,7 +126,7 @@ func TestValidatorEpochAssignments_Ok(t *testing.T) {
 	}
 }
 
-func TestValidatorEpochAssignments_EmptyPubkeyFailure(t *testing.T) {
+func TestValidatorEpochAssignments_WrongPubkeyLength(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
@@ -136,13 +137,13 @@ func TestValidatorEpochAssignments_EmptyPubkeyFailure(t *testing.T) {
 		EpochStart: params.BeaconConfig().GenesisSlot,
 		PublicKey:  []byte{},
 	}
-	want := "expected non-empty public key"
+	want := fmt.Sprintf("expected public key to have length %d", params.BeaconConfig().BLSPubkeyLength)
 	if _, err := validatorServer.ValidatorEpochAssignments(context.Background(), req); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
 }
 
-func TestValidatorEpochAssignments_CrosslinkCommitteesFailure(t *testing.T) {
+func TestValidatorCommitteeAtSlot_CrosslinkCommitteesFailure(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	genesis := b.NewGenesisBlock([]byte{})
@@ -188,7 +189,7 @@ func TestValidatorEpochAssignments_CrosslinkCommitteesFailure(t *testing.T) {
 	}
 }
 
-func TestValidatorEpochAssignments_CorrectAssign(t *testing.T) {
+func TestValidatorCommitteeAtSlot_Ok(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	genesis := b.NewGenesisBlock([]byte{})

@@ -43,8 +43,12 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 	ctx context.Context,
 	req *pb.ValidatorEpochAssignmentsRequest,
 ) (*pb.ValidatorEpochAssignmentsResponse, error) {
-	if len(req.PublicKey) == 0 {
-		return nil, fmt.Errorf("expected non-empty public key, received %d", len(req.PublicKey))
+	if len(req.PublicKey) != params.BeaconConfig().BLSPubkeyLength {
+		return nil, fmt.Errorf(
+			"expected public key to have length %d, received %d",
+			params.BeaconConfig().BLSPubkeyLength,
+			len(req.PublicKey),
+		)
 	}
 	beaconState, err := vs.beaconDB.State()
 	if err != nil {
