@@ -45,6 +45,7 @@ go_test(
         "//shared/keystore:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
+        "//validator/accounts:go_default_library",
         "//validator/internal:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_gogo_protobuf//types:go_default_library",

@@ -2,6 +2,8 @@ package client
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/validator/accounts"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -37,11 +39,18 @@ func TestLifecycle(t *testing.T) {
 	// Use cancelled context so that the run function exits immediately..
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
+	dir := os.TempDir() + "/keystore1"
+	defer os.RemoveAll(dir)
+	if err := accounts.NewValidatorAccount(dir, "1234"); err != nil {
+		t.Fatalf("Could not create validator account: %v", err)
+	}
 	validatorService, err := NewValidatorService(
 		ctx,
 		&Config{
-			Endpoint: "merkle tries",
-			CertFlag: "alice.crt",
+			Endpoint:     "merkle tries",
+			CertFlag:     "alice.crt",
+			KeystorePath: dir,
+			Password:     "1234",
 		},
 	)
 	if err != nil {
@@ -59,10 +68,17 @@ func TestLifecycle_WithInsecure(t *testing.T) {
 	// Use cancelled context so that the run function exits immediately.
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
+	dir := os.TempDir() + "/keystore1"
+	defer os.RemoveAll(dir)
+	if err := accounts.NewValidatorAccount(dir, "1234"); err != nil {
+		t.Fatalf("Could not create validator account: %v", err)
+	}
 	validatorService, err := NewValidatorService(
 		ctx,
 		&Config{
-			Endpoint: "merkle tries",
+			Endpoint:     "merkle tries",
+			KeystorePath: dir,
+			Password:     "1234",
 		},
 	)
 	if err != nil {
@@ -77,10 +93,17 @@ func TestLifecycle_WithInsecure(t *testing.T) {
 }
 
 func TestStatus(t *testing.T) {
+	dir := os.TempDir() + "/keystore1"
+	defer os.RemoveAll(dir)
+	if err := accounts.NewValidatorAccount(dir, "1234"); err != nil {
+		t.Fatalf("Could not create validator account: %v", err)
+	}
 	validatorService, err := NewValidatorService(
 		context.Background(),
 		&Config{
-			Endpoint: "merkle tries",
+			Endpoint:     "merkle tries",
+			KeystorePath: dir,
+			Password:     "1234",
 		},
 	)
 	if err != nil {
