@@ -145,7 +145,7 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 		make([]uint64, latestPenalizedExitLength)) {
 		t.Error("LatestPenalizedBalances was not correctly initialized")
 	}
-	if !reflect.DeepEqual(state.LatestAttestations, []*pb.PendingAttestationRecord{}) {
+	if !reflect.DeepEqual(state.LatestAttestations, []*pb.PendingAttestation{}) {
 		t.Error("LatestAttestations was not correctly initialized")
 	}
 	if !reflect.DeepEqual(state.BatchedBlockRootHash32S, [][]byte{}) {
