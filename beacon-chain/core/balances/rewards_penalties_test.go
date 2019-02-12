@@ -212,10 +212,10 @@ func TestInclusionDistRewards_Ok(t *testing.T) {
 		participationBitfield = append(participationBitfield, byte(0xff))
 	}
 
-	attestation := []*pb.PendingAttestationRecord{
+	attestation := []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{Slot: 0},
 			AggregationBitfield: participationBitfield,
-			SlotIncluded:        5},
+			InclusionSlot:       5},
 	}
 
 	tests := []struct {
@@ -261,7 +261,7 @@ func TestInclusionDistRewards_NotOk(t *testing.T) {
 		}
 	}
 
-	attestation := []*pb.PendingAttestationRecord{
+	attestation := []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{Shard: 1, Slot: 0},
 			AggregationBitfield: []byte{0xff}},
 	}
@@ -445,10 +445,10 @@ func TestInactivityInclusionPenalty_Ok(t *testing.T) {
 	for i := 0; i < byteLength; i++ {
 		participationBitfield = append(participationBitfield, byte(0xff))
 	}
-	attestation := []*pb.PendingAttestationRecord{
+	attestation := []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{Slot: 0},
 			AggregationBitfield: participationBitfield,
-			SlotIncluded:        5},
+			InclusionSlot:       5},
 	}
 
 	tests := []struct {
@@ -493,7 +493,7 @@ func TestInactivityInclusionPenalty_NotOk(t *testing.T) {
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
-	attestation := []*pb.PendingAttestationRecord{
+	attestation := []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{Shard: 1, Slot: 0},
 			AggregationBitfield: []byte{0xff}},
 	}
@@ -529,10 +529,10 @@ func TestAttestationInclusionRewards(t *testing.T) {
 	for i := 0; i < byteLength; i++ {
 		participationBitfield = append(participationBitfield, byte(0xff))
 	}
-	attestation := []*pb.PendingAttestationRecord{
+	attestation := []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{Slot: 0},
 			AggregationBitfield: participationBitfield,
-			SlotIncluded:        0},
+			InclusionSlot:       0},
 	}
 
 	tests := []struct {
@@ -606,10 +606,10 @@ func TestAttestationInclusionRewards_NoProposerIndex(t *testing.T) {
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
-	attestation := []*pb.PendingAttestationRecord{
+	attestation := []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{Shard: 1, Slot: 0},
 			AggregationBitfield: []byte{0xff},
-			SlotIncluded:        0},
+			InclusionSlot:       0},
 	}
 
 	tests := []struct {
@@ -661,10 +661,10 @@ func TestCrosslinksRewardsPenalties(t *testing.T) {
 		for i := 0; i < len(validatorBalances); i++ {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 		}
-		attestation := []*pb.PendingAttestationRecord{
+		attestation := []*pb.PendingAttestation{
 			{Data: &pb.AttestationData{Shard: 1, Slot: 0},
 				AggregationBitfield: tt.voted,
-				SlotIncluded:        0},
+				InclusionSlot:       0},
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry:  validators,
