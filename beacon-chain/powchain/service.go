@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
+	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -70,24 +70,25 @@ type Client interface {
 // Validator Registration Contract on the ETH1.0 chain to kick off the beacon
 // chain's validator registration process.
 type Web3Service struct {
-	ctx                    context.Context
-	cancel                 context.CancelFunc
-	client                 Client
-	headerChan             chan *gethTypes.Header
-	logChan                chan gethTypes.Log
-	endpoint               string
-	depositContractAddress common.Address
-	chainStartFeed         *event.Feed
-	reader                 Reader
-	logger                 bind.ContractFilterer
-	blockNumber            *big.Int    // the latest ETH1.0 chain blockNumber.
-	blockHash              common.Hash // the latest ETH1.0 chain blockHash.
-	depositContractCaller  *contracts.DepositContractCaller
-	depositRoot            []byte
-	depositTrie            *trieutil.DepositTrie
-	chainStartDeposits     []*pb.Deposit
-	chainStarted           bool
-	beaconDB               *db.BeaconDB
+	ctx                     context.Context
+	cancel                  context.CancelFunc
+	client                  Client
+	headerChan              chan *gethTypes.Header
+	logChan                 chan gethTypes.Log
+	endpoint                string
+	depositContractAddress  common.Address
+	chainStartFeed          *event.Feed
+	reader                  Reader
+	logger                  bind.ContractFilterer
+	blockNumber             *big.Int    // the latest ETH1.0 chain blockNumber.
+	blockHash               common.Hash // the latest ETH1.0 chain blockHash.
+	depositContractCaller   *contracts.DepositContractCaller
+	depositRoot             []byte
+	depositTrie             *trieutil.DepositTrie
+	chainStartDeposits      []*pb.Deposit
+	chainStarted            bool
+	beaconDB                *db.BeaconDB
+	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -123,21 +124,22 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 
 	ctx, cancel := context.WithCancel(ctx)
 	return &Web3Service{
-		ctx:                    ctx,
-		cancel:                 cancel,
-		headerChan:             make(chan *gethTypes.Header),
-		logChan:                make(chan gethTypes.Log),
-		endpoint:               config.Endpoint,
-		blockNumber:            nil,
-		blockHash:              common.BytesToHash([]byte{}),
-		depositContractAddress: config.DepositContract,
-		chainStartFeed:         new(event.Feed),
-		client:                 config.Client,
-		reader:                 config.Reader,
-		logger:                 config.Logger,
-		depositContractCaller:  depositContractCaller,
-		chainStartDeposits:     []*pb.Deposit{},
-		beaconDB:               config.BeaconDB,
+		ctx:                     ctx,
+		cancel:                  cancel,
+		headerChan:              make(chan *gethTypes.Header),
+		logChan:                 make(chan gethTypes.Log),
+		endpoint:                config.Endpoint,
+		blockNumber:             nil,
+		blockHash:               common.BytesToHash([]byte{}),
+		depositContractAddress:  config.DepositContract,
+		chainStartFeed:          new(event.Feed),
+		client:                  config.Client,
+		reader:                  config.Reader,
+		logger:                  config.Logger,
+		depositContractCaller:   depositContractCaller,
+		chainStartDeposits:      []*pb.Deposit{},
+		beaconDB:                config.BeaconDB,
+		lastReceivedMerkleIndex: -1,
 	}, nil
 }
 
@@ -227,15 +229,24 @@ func (w *Web3Service) ProcessLog(VRClog gethTypes.Log) {
 // the ETH1.0 chain by trying to ascertain which participant deposited
 // in the contract.
 func (w *Web3Service) ProcessDepositLog(VRClog gethTypes.Log) {
-	merkleRoot, depositData, MerkleTreeIndex, _, err := contracts.UnpackDepositLogData(VRClog.Data)
+	merkleRoot, depositData, merkleTreeIndex, _, err := contracts.UnpackDepositLogData(VRClog.Data)
 	if err != nil {
 		log.Errorf("Could not unpack log %v", err)
+		return
+	}
+	// If we have already seen this Merkle index, skip processing the log.
+	// This can happen sometimes when we receive the same log twice from the
+	// ETH1.0 network, and prevents us from updating our trie
+	// with the same log twice, causing an inconsistent state root.
+	index := binary.LittleEndian.Uint64(merkleTreeIndex)
+	if int64(index) <= w.lastReceivedMerkleIndex {
 		return
 	}
 	if err := w.saveInTrie(depositData, merkleRoot); err != nil {
 		log.Errorf("Could not save in trie %v", err)
 		return
 	}
+	w.lastReceivedMerkleIndex = int64(index)
 	depositInput, err := blocks.DecodeDepositInput(depositData)
 	if err != nil {
 		log.Errorf("Could not decode deposit input  %v", err)
@@ -250,7 +261,6 @@ func (w *Web3Service) ProcessDepositLog(VRClog gethTypes.Log) {
 	} else {
 		w.beaconDB.InsertPendingDeposit(w.ctx, deposit, big.NewInt(int64(VRClog.BlockNumber)))
 	}
-	index := binary.LittleEndian.Uint64(MerkleTreeIndex)
 	log.WithFields(logrus.Fields{
 		"publicKey":       fmt.Sprintf("%#x", depositInput.Pubkey),
 		"merkleTreeIndex": index,
