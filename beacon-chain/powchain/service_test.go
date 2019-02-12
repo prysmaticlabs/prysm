@@ -533,6 +533,72 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	}
 }
 
+func TestProcessDepositLog_SkipDuplicateLog(t *testing.T) {
+	endpoint := "ws://127.0.0.1"
+	testAcc, err := setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint:        endpoint,
+		DepositContract: testAcc.contractAddr,
+		Reader:          &goodReader{},
+		Logger:          &goodLogger{},
+		ContractBackend: testAcc.backend,
+		BeaconDB:        &db.BeaconDB{},
+	})
+	if err != nil {
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+
+	testAcc.backend.Commit()
+
+	web3Service.depositTrie = trieutil.NewDepositTrie()
+
+	var stub [48]byte
+	copy(stub[:], []byte("testing"))
+
+	data := &pb.DepositInput{
+		Pubkey:                      stub[:],
+		ProofOfPossession:           stub[:],
+		WithdrawalCredentialsHash32: []byte("withdraw"),
+	}
+
+	serializedData := new(bytes.Buffer)
+	if err := ssz.Encode(serializedData, data); err != nil {
+		t.Fatalf("Could not serialize data %v", err)
+	}
+
+	testAcc.txOpts.Value = amount32Eth
+	if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+		t.Fatalf("Could not deposit to VRC %v", err)
+	}
+
+	testAcc.backend.Commit()
+
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{
+			web3Service.depositContractAddress,
+		},
+	}
+
+	logs, err := testAcc.backend.FilterLogs(web3Service.ctx, query)
+	if err != nil {
+		t.Fatalf("Unable to retrieve logs %v", err)
+	}
+
+
+	web3Service.ProcessDepositLog(logs[0])
+	// We keep track of the current deposit root and make sure it doesn't change if we
+	// receive a duplicate log from the contract.
+	currentRoot := web3Service.depositTrie.Root()
+	web3Service.ProcessDepositLog(logs[0])
+	nextRoot := web3Service.depositTrie.Root()
+	if currentRoot != nextRoot {
+		t.Error("Processing a duplicate log should not update deposit trie")
+	}
+}
+
 func TestUnpackDepositLogs(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()

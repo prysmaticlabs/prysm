@@ -88,6 +88,7 @@ type Web3Service struct {
 	chainStartDeposits     []*pb.Deposit
 	chainStarted           bool
 	beaconDB               *db.BeaconDB
+	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -138,6 +139,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		depositContractCaller:  depositContractCaller,
 		chainStartDeposits:     []*pb.Deposit{},
 		beaconDB:               config.BeaconDB,
+		lastReceivedMerkleIndex: -1,
 	}, nil
 }
 
@@ -227,15 +229,24 @@ func (w *Web3Service) ProcessLog(VRClog gethTypes.Log) {
 // the ETH1.0 chain by trying to ascertain which participant deposited
 // in the contract.
 func (w *Web3Service) ProcessDepositLog(VRClog gethTypes.Log) {
-	merkleRoot, depositData, MerkleTreeIndex, _, err := contracts.UnpackDepositLogData(VRClog.Data)
+	merkleRoot, depositData, merkleTreeIndex, _, err := contracts.UnpackDepositLogData(VRClog.Data)
 	if err != nil {
 		log.Errorf("Could not unpack log %v", err)
+		return
+	}
+	// If we have already seen this Merkle index, skip processing the log.
+	// This can happen sometimes when we receive the same log twice from the
+	// ETH1.0 network, and prevents us from updating our trie
+	// with the same log twice, causing an inconsistent state root.
+	index := binary.LittleEndian.Uint64(merkleTreeIndex)
+	if int64(index) == w.lastReceivedMerkleIndex {
 		return
 	}
 	if err := w.saveInTrie(depositData, merkleRoot); err != nil {
 		log.Errorf("Could not save in trie %v", err)
 		return
 	}
+	w.lastReceivedMerkleIndex = int64(index)
 	depositInput, err := blocks.DecodeDepositInput(depositData)
 	if err != nil {
 		log.Errorf("Could not decode deposit input  %v", err)
@@ -250,7 +261,6 @@ func (w *Web3Service) ProcessDepositLog(VRClog gethTypes.Log) {
 	} else {
 		w.beaconDB.InsertPendingDeposit(w.ctx, deposit, big.NewInt(int64(VRClog.BlockNumber)))
 	}
-	index := binary.LittleEndian.Uint64(MerkleTreeIndex)
 	log.WithFields(logrus.Fields{
 		"publicKey":       fmt.Sprintf("%#x", depositInput.Pubkey),
 		"merkleTreeIndex": index,
