@@ -248,8 +248,8 @@ func TestInitDataFromVRC(t *testing.T) {
 
 	testAcc.backend.Commit()
 
-	if err := web3Service.initDataFromVRC(); err != nil {
-		t.Fatalf("Could not init from vrc %v", err)
+	if err := web3Service.initDataFromContract(); err != nil {
+		t.Fatalf("Could not init from deposit contract: %v", err)
 	}
 
 	computedRoot := web3Service.depositTrie.Root()
@@ -264,8 +264,8 @@ func TestInitDataFromVRC(t *testing.T) {
 	}
 	testAcc.backend.Commit()
 
-	if err := web3Service.initDataFromVRC(); err != nil {
-		t.Fatalf("Could not init from vrc %v", err)
+	if err := web3Service.initDataFromContract(); err != nil {
+		t.Fatalf("Could not init from vrc: %v", err)
 	}
 
 	if bytes.Equal(web3Service.depositRoot, []byte{}) {
@@ -552,8 +552,8 @@ func TestUnpackDepositLogs(t *testing.T) {
 
 	testAcc.backend.Commit()
 
-	if err := web3Service.initDataFromVRC(); err != nil {
-		t.Fatalf("Could not init from vrc %v", err)
+	if err := web3Service.initDataFromContract(); err != nil {
+		t.Fatalf("Could not init from contract: %v", err)
 	}
 
 	computedRoot := web3Service.depositTrie.Root()
@@ -835,7 +835,6 @@ func TestHasChainStartLogOccurred(t *testing.T) {
 		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
 			t.Fatalf("Could not deposit to VRC %v", err)
 		}
-
 		testAcc.backend.Commit()
 	}
 	ok, _, err = web3Service.HasChainStartLogOccurred()
