@@ -5,9 +5,9 @@ package client
 import (
 	"context"
 	"fmt"
+	"github.com/opentracing/opentracing-go"
 
 	ptypes "github.com/gogo/protobuf/types"
-	"github.com/opentracing/opentracing-go"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 )

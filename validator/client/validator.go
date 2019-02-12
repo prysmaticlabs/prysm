@@ -3,12 +3,13 @@ package client
 
 import (
 	"context"
+	"github.com/opentracing/opentracing-go"
 	"io"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
+	"github.com/prysmaticlabs/prysm/shared/keystore"
 
-	"github.com/opentracing/opentracing-go"
+	ptypes "github.com/gogo/protobuf/types"
 
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -33,8 +34,8 @@ type validator struct {
 	validatorClient pb.ValidatorServiceClient
 	beaconClient    pb.BeaconServiceClient
 	attesterClient  pb.AttesterServiceClient
-	pubKey          []byte
 	attestationPool AttestationPool
+	key             *keystore.Key
 }
 
 // Done cleans up the validator.
@@ -112,7 +113,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 
 	req := &pb.ValidatorEpochAssignmentsRequest{
 		EpochStart: slot,
-		PublicKey:  v.pubKey,
+		PublicKey:  v.key.PublicKey.Serialize(),
 	}
 
 	resp, err := v.validatorClient.ValidatorEpochAssignments(ctx, req)

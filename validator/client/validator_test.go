@@ -2,11 +2,14 @@ package client
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"io"
 	"io/ioutil"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/keystore"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -42,8 +45,12 @@ func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 	defer ctrl.Finish()
 	client := internal.NewMockBeaconServiceClient(ctrl)
 
+	k, err := keystore.NewKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
 	v := validator{
-		pubKey:       fakePubKey,
+		key:          k,
 		beaconClient: client,
 	}
 	genesis := uint64(time.Unix(0, 0).Unix())
@@ -74,8 +81,12 @@ func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 	defer ctrl.Finish()
 	client := internal.NewMockBeaconServiceClient(ctrl)
 
+	k, err := keystore.NewKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
 	v := validator{
-		pubKey:       fakePubKey,
+		key:          k,
 		beaconClient: client,
 	}
 	genesis := uint64(time.Unix(0, 0).Unix())
@@ -103,8 +114,12 @@ func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
 	defer ctrl.Finish()
 	client := internal.NewMockBeaconServiceClient(ctrl)
 
+	k, err := keystore.NewKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
 	v := validator{
-		pubKey:       fakePubKey,
+		key:          k,
 		beaconClient: client,
 	}
 	clientStream := internal.NewMockBeaconService_WaitForChainStartClient(ctrl)
@@ -122,8 +137,12 @@ func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 	defer ctrl.Finish()
 	client := internal.NewMockBeaconServiceClient(ctrl)
 
+	k, err := keystore.NewKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
 	v := validator{
-		pubKey:       fakePubKey,
+		key:          k,
 		beaconClient: client,
 	}
 	genesis := uint64(time.Unix(0, 0).Unix())
@@ -153,8 +172,12 @@ func TestUpdateAssignments_DoesNothingWhenNotEpochStart(t *testing.T) {
 	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	slot := uint64(1)
+	k, err := keystore.NewKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
 	v := validator{
-		pubKey:          fakePubKey,
+		key:             k,
 		validatorClient: client,
 	}
 	client.EXPECT().ValidatorEpochAssignments(
@@ -172,8 +195,12 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 	defer ctrl.Finish()
 	client := internal.NewMockValidatorServiceClient(ctrl)
 
+	k, err := keystore.NewKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
 	v := validator{
-		pubKey:          fakePubKey,
+		key:             k,
 		validatorClient: client,
 	}
 
@@ -184,8 +211,7 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 		gomock.Any(),
 	).Return(nil, expected)
 
-	err := v.UpdateAssignments(context.Background(), params.BeaconConfig().EpochLength)
-	if err != expected {
+	if err := v.UpdateAssignments(context.Background(), params.BeaconConfig().EpochLength); err != expected {
 		t.Errorf("Bad error; want=%v got=%v", expected, err)
 	}
 }
@@ -202,8 +228,12 @@ func TestUpdateAssignments_DoesUpdateAssignments(t *testing.T) {
 			AttesterSlot: 78,
 		},
 	}
+	k, err := keystore.NewKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
 	v := validator{
-		pubKey:          fakePubKey,
+		key:             k,
 		validatorClient: client,
 	}
 	client.EXPECT().ValidatorEpochAssignments(

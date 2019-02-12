@@ -37,13 +37,16 @@ func TestLifecycle(t *testing.T) {
 	// Use cancelled context so that the run function exits immediately..
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	validatorService := NewValidatorService(
+	validatorService, err := NewValidatorService(
 		ctx,
 		&Config{
 			Endpoint: "merkle tries",
 			CertFlag: "alice.crt",
 		},
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	validatorService.Start()
 	if err := validatorService.Stop(); err != nil {
 		t.Fatalf("Could not stop service: %v", err)
@@ -56,12 +59,15 @@ func TestLifecycle_WithInsecure(t *testing.T) {
 	// Use cancelled context so that the run function exits immediately.
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	validatorService := NewValidatorService(
+	validatorService, err := NewValidatorService(
 		ctx,
 		&Config{
 			Endpoint: "merkle tries",
 		},
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	validatorService.Start()
 	testutil.AssertLogsContain(t, hook, "You are using an insecure gRPC connection")
 	if err := validatorService.Stop(); err != nil {
@@ -71,12 +77,15 @@ func TestLifecycle_WithInsecure(t *testing.T) {
 }
 
 func TestStatus(t *testing.T) {
-	validatorService := NewValidatorService(
+	validatorService, err := NewValidatorService(
 		context.Background(),
 		&Config{
 			Endpoint: "merkle tries",
 		},
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := validatorService.Status(); !strings.Contains(err.Error(), "no connection") {
 		t.Errorf("Expected status check to fail if no connection is found, received: %v", err)
 	}
