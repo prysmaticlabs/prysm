@@ -18,7 +18,6 @@ service BeaconService {
 
 service AttesterService {
     rpc AttestHead(ethereum.beacon.p2p.v1.Attestation) returns (AttestResponse);
-    rpc CrosslinkCommitteesAtSlot(CrosslinkCommitteeRequest) returns (CrosslinkCommitteeResponse);
     rpc AttestationInfoAtSlot(AttestationInfoRequest) returns (AttestationInfoResponse);
 }
 
@@ -31,6 +30,17 @@ service ProposerService {
 service ValidatorService {
     rpc ValidatorIndex(ValidatorIndexRequest) returns (ValidatorIndexResponse);
     rpc ValidatorEpochAssignments(ValidatorEpochAssignmentsRequest) returns (ValidatorEpochAssignmentsResponse);
+    rpc ValidatorCommitteeAtSlot(CommitteeRequest) returns (CommitteeResponse);
+}
+
+message CommitteeRequest {
+    uint64 slot = 1;
+    uint64 validator_index = 2;
+}
+
+message CommitteeResponse {
+    repeated uint64 committee = 1;
+    uint64 shard = 2;
 }
 
 message AttestationInfoRequest {

@@ -1114,7 +1114,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 
 	// We set a deposit value of 1000.
 	value := make([]byte, 8)
-	binary.BigEndian.PutUint64(value, uint64(1000))
+	binary.LittleEndian.PutUint64(value, uint64(1000))
 
 	// We then serialize a unix time into the timestamp []byte slice
 	// and ensure it has size of 8 bytes.
@@ -1126,7 +1126,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	genesisTime := time.Unix(0, 0).Unix()
 
 	currentSlot := 1000 * params.BeaconConfig().SlotDuration
-	binary.BigEndian.PutUint64(timestamp, uint64(depositTime))
+	binary.LittleEndian.PutUint64(timestamp, uint64(depositTime))
 
 	// We then create a serialized deposit data slice of type []byte
 	// by appending all 3 items above together.
@@ -1194,7 +1194,7 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	// We set a deposit value of 1000.
 	value := make([]byte, 8)
 	depositValue := uint64(1000)
-	binary.BigEndian.PutUint64(value, depositValue)
+	binary.LittleEndian.PutUint64(value, depositValue)
 
 	// We then serialize a unix time into the timestamp []byte slice
 	// and ensure it has size of 8 bytes.
@@ -1206,7 +1206,7 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	genesisTime := time.Unix(0, 0).Unix()
 
 	currentSlot := 1000 * params.BeaconConfig().SlotDuration
-	binary.BigEndian.PutUint64(timestamp, uint64(depositTime))
+	binary.LittleEndian.PutUint64(timestamp, uint64(depositTime))
 
 	// We then create a serialized deposit data slice of type []byte
 	// by appending all 3 items above together.

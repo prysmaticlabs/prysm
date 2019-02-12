@@ -96,7 +96,7 @@ func (d *DepositTrie) Branch() [][]byte {
 // eventually equals the root hash of the Merkle trie.
 func VerifyMerkleBranch(branch [][]byte, root [32]byte, merkleTreeIndex []byte) bool {
 	computedRoot := params.BeaconConfig().ZeroHash
-	index := binary.BigEndian.Uint64(merkleTreeIndex)
+	index := binary.LittleEndian.Uint64(merkleTreeIndex)
 	size := index + 1
 	zHashes := zeroHashes()
 

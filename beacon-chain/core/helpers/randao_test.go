@@ -15,7 +15,7 @@ func TestRandaoMix_Ok(t *testing.T) {
 	randaoMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
 	for i := 0; i < len(randaoMixes); i++ {
 		intInBytes := make([]byte, 32)
-		binary.BigEndian.PutUint64(intInBytes, uint64(i))
+		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		randaoMixes[i] = intInBytes
 	}
 	state := &pb.BeaconState{LatestRandaoMixesHash32S: randaoMixes}
@@ -63,7 +63,7 @@ func TestActiveIndexRoot_Ok(t *testing.T) {
 	activeIndexRoots := make([][]byte, params.BeaconConfig().LatestIndexRootsLength)
 	for i := 0; i < len(activeIndexRoots); i++ {
 		intInBytes := make([]byte, 32)
-		binary.BigEndian.PutUint64(intInBytes, uint64(i))
+		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		activeIndexRoots[i] = intInBytes
 	}
 	state := &pb.BeaconState{LatestIndexRootHash32S: activeIndexRoots}
@@ -121,13 +121,13 @@ func TestGenerateSeed_Ok(t *testing.T) {
 	activeIndexRoots := make([][]byte, params.BeaconConfig().LatestIndexRootsLength)
 	for i := 0; i < len(activeIndexRoots); i++ {
 		intInBytes := make([]byte, 32)
-		binary.BigEndian.PutUint64(intInBytes, uint64(i))
+		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		activeIndexRoots[i] = intInBytes
 	}
 	randaoMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
 	for i := 0; i < len(randaoMixes); i++ {
 		intInBytes := make([]byte, 32)
-		binary.BigEndian.PutUint64(intInBytes, uint64(i))
+		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		randaoMixes[i] = intInBytes
 	}
 	slot := 10 * params.BeaconConfig().SeedLookahead * params.BeaconConfig().EpochLength
@@ -140,8 +140,8 @@ func TestGenerateSeed_Ok(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not generate seed: %v", err)
 	}
-	wanted := [32]byte{248, 115, 47, 108, 244, 57, 89, 71, 186, 71, 181, 177, 17, 131, 75, 206, 67, 185, 184, 241,
-		97, 97, 248, 165, 161, 124, 236, 14, 150, 98, 179, 249}
+	wanted := [32]byte{242, 35, 140, 234, 201, 60, 23, 152, 187, 111, 227, 129, 108, 254, 108, 63,
+		192, 111, 114, 225, 0, 159, 145, 106, 133, 217, 25, 25, 251, 58, 175, 168}
 	if got != wanted {
 		t.Errorf("Incorrect generated seeds. Got: %v, wanted: %v",
 			got, wanted)

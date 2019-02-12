@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -264,5 +265,38 @@ func TestBlockChildren(t *testing.T) {
 	}
 	if len(children) != 2 {
 		t.Errorf("Expected %d children, received %d", 2, len(children))
+	}
+}
+
+func TestEncodeDecodeDepositInput_Ok(t *testing.T) {
+	input := &pb.DepositInput{
+		Pubkey:                      []byte("key"),
+		WithdrawalCredentialsHash32: []byte("withdraw"),
+		ProofOfPossession:           []byte("pop"),
+	}
+	depositTime := time.Now().Unix()
+	enc, err := EncodeDepositData(input, params.BeaconConfig().MaxDepositAmount, depositTime)
+	if err != nil {
+		t.Errorf("Could not encode deposit input: %v", err)
+	}
+	dec, err := DecodeDepositInput(enc)
+	if err != nil {
+		t.Errorf("Could not decode deposit input: %v", err)
+	}
+	if !proto.Equal(input, dec) {
+		t.Errorf("Original and decoded messages do not match, wanted %v, received %v", input, dec)
+	}
+	value, timestamp, err := DecodeDepositAmountAndTimeStamp(enc)
+	if err != nil {
+		t.Errorf("Could not decode amount and timestamp: %v", err)
+	}
+	if value != params.BeaconConfig().MaxDepositAmount || timestamp != depositTime {
+		t.Errorf(
+			"Expected value to match, received %d == %d, expected timestamp to match received %d == %d",
+			value,
+			params.BeaconConfig().MaxDepositAmount,
+			timestamp,
+			depositTime,
+		)
 	}
 }

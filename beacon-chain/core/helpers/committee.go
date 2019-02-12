@@ -285,7 +285,7 @@ func Shuffling(
 
 	// Convert slot to bytes and xor it with seed.
 	slotInBytes := make([]byte, 32)
-	binary.BigEndian.PutUint64(slotInBytes, slot)
+	binary.LittleEndian.PutUint64(slotInBytes, slot)
 	seed = bytesutil.ToBytes32(bytesutil.Xor(seed[:], slotInBytes))
 
 	shuffledIndices, err := utils.ShuffleIndices(seed, activeIndices)
