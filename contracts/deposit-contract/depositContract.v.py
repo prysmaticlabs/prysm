@@ -103,3 +103,4 @@ def deposit(deposit_input: bytes[512]):
                 timestamp_day_boundary: uint256 = as_unitless_number(block.timestamp) - as_unitless_number(block.timestamp) % SECONDS_PER_DAY + SECONDS_PER_DAY
                 self.genesisTime = self.to_little_endian_64(timestamp_day_boundary)
                 log.ChainStart(new_deposit_root, self.genesisTime)
+
