@@ -1,6 +1,7 @@
 package slotutil
 
 import (
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"testing"
 	"time"
 )
@@ -38,18 +39,18 @@ func TestSlotTicker(t *testing.T) {
 	tick = make(chan time.Time, 2)
 	ticker.start(genesisTime, slotDuration, since, until, after)
 
-	// Tick once
+	// Tick once.
 	tick <- time.Now()
 	slot := <-ticker.C()
-	if slot != 1 {
-		t.Fatalf("Expected 1, got %d", slot)
+	if slot != 1+params.BeaconConfig().GenesisSlot {
+		t.Fatalf("Expected %d, got %d", params.BeaconConfig().GenesisSlot+1, slot)
 	}
 
-	// Tick twice
+	// Tick twice.
 	tick <- time.Now()
 	slot = <-ticker.C()
-	if slot != 2 {
-		t.Fatalf("Expected 2, got %d", slot)
+	if slot != 2+params.BeaconConfig().GenesisSlot {
+		t.Fatalf("Expected %d, got %d", params.BeaconConfig().GenesisSlot+2, slot)
 	}
 }
 
@@ -86,40 +87,40 @@ func TestSlotTickerGenesis(t *testing.T) {
 	tick = make(chan time.Time, 2)
 	ticker.start(genesisTime, slotDuration, since, until, after)
 
-	// Tick once
+	// Tick once.
 	tick <- time.Now()
 	slot := <-ticker.C()
-	if slot != 0 {
-		t.Fatalf("Expected 0, got %d", slot)
+	if slot != params.BeaconConfig().GenesisSlot {
+		t.Fatalf("Expected %d, got %d", params.BeaconConfig().GenesisSlot, slot)
 	}
 
-	// Tick twice
+	// Tick twice.
 	tick <- time.Now()
 	slot = <-ticker.C()
-	if slot != 1 {
-		t.Fatalf("Expected 1, got %d", slot)
+	if slot != 1+params.BeaconConfig().GenesisSlot {
+		t.Fatalf("Expected %d, got %d", params.BeaconConfig().GenesisSlot+1, slot)
 	}
 }
 
 func TestCurrentSlot(t *testing.T) {
-	// Test slot 0
+	// Test genesis slot
 	genesisTime := time.Now()
 	slot := CurrentSlot(genesisTime, 5, time.Since)
-	if slot != 0 {
-		t.Errorf("Expected 0, got: %d", slot)
+	if slot != params.BeaconConfig().GenesisSlot {
+		t.Errorf("Expected %d, got: %d", params.BeaconConfig().GenesisSlot, slot)
 	}
 
-	// Test a future genesis time
+	// Test a future genesis time.
 	genesisTime = genesisTime.Add(3 * time.Second)
 	slot = CurrentSlot(genesisTime, 5, time.Since)
-	if slot != 0 {
-		t.Errorf("Expected 0, got: %d", slot)
+	if slot != params.BeaconConfig().GenesisSlot {
+		t.Errorf("Expected %d, got: %d", params.BeaconConfig().GenesisSlot, slot)
 	}
 
-	// Test slot 3
+	// Test slot 3 after genesis.
 	genesisTime = genesisTime.Add(-18 * time.Second)
 	slot = CurrentSlot(genesisTime, 5, time.Since)
-	if slot != 3 {
-		t.Errorf("Expected 3, got: %d", slot)
+	if slot != 3+params.BeaconConfig().GenesisSlot {
+		t.Errorf("Expected %d, got: %d", params.BeaconConfig().GenesisSlot+3, slot)
 	}
 }
