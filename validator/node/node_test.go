@@ -17,6 +17,7 @@ func TestNode_Builds(t *testing.T) {
 	set.String("datadir", "/tmp/datadir", "the node data directory")
 	dir := os.TempDir() + "/keystore1"
 	defer os.RemoveAll(dir)
+	defer os.RemoveAll("/tmp/datadir")
 	set.String("keystore-path", dir, "path to keystore")
 	set.String("password", "1234", "validator account password")
 	context := cli.NewContext(app, set, nil)

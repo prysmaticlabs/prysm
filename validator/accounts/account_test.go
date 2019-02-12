@@ -18,6 +18,7 @@ import (
 
 func TestNewValidatorAccount_AccountExists(t *testing.T) {
 	directory := "/tmp/testkeystore"
+	defer os.RemoveAll(directory)
 	validatorKey, err := keystore.NewKey(rand.Reader)
 	if err != nil {
 		t.Fatalf("Cannot create new key: %v", err)
@@ -37,6 +38,7 @@ func TestNewValidatorAccount_AccountExists(t *testing.T) {
 func TestNewValidatorAccount_PrintsDepositData(t *testing.T) {
 	hook := logTest.NewGlobal()
 	directory := "/tmp/testkeystore"
+	defer os.RemoveAll(directory)
 	if err := NewValidatorAccount(directory, "1234"); err != nil {
 		t.Errorf("Expected new account to be created: %v", err)
 	}
