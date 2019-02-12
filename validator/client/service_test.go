@@ -2,11 +2,12 @@ package client
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"os"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/validator/accounts"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 

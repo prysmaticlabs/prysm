@@ -3,9 +3,10 @@ package client
 
 import (
 	"context"
-	"github.com/opentracing/opentracing-go"
 	"io"
 	"time"
+
+	"github.com/opentracing/opentracing-go"
 
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 

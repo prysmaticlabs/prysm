@@ -5,6 +5,7 @@ package client
 import (
 	"context"
 	"fmt"
+
 	"github.com/opentracing/opentracing-go"
 
 	ptypes "github.com/gogo/protobuf/types"

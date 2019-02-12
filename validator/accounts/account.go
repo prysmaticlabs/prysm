@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+
 	"github.com/prysmaticlabs/prysm/shared/params"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"

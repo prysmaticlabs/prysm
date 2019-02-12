@@ -2,9 +2,10 @@ package node
 
 import (
 	"flag"
-	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"os"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/validator/accounts"
 
 	"github.com/urfave/cli"
 )

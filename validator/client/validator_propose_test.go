@@ -5,8 +5,9 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
-	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/keystore"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
