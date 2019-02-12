@@ -58,7 +58,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 		powChainService: &faultyPOWChainService{
 			chainStartFeed: new(event.Feed),
 		},
-		chainService: &mockChainService{},
+		chainService: newMockChainService(),
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
@@ -81,7 +81,7 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 		powChainService: &mockPOWChainService{
 			chainStartFeed: new(event.Feed),
 		},
-		chainService: &mockChainService{},
+		chainService: newMockChainService(),
 	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -105,7 +105,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 		powChainService: &faultyPOWChainService{
 			chainStartFeed: new(event.Feed),
 		},
-		chainService: &mockChainService{},
+		chainService: newMockChainService(),
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
@@ -135,7 +135,7 @@ func TestLatestAttestation_ContextClosed(t *testing.T) {
 	beaconServer := &BeaconServer{
 		ctx:              ctx,
 		operationService: mockOperationService,
-		chainService:     &mockChainService{},
+		chainService:     newMockChainService(),
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
@@ -159,7 +159,7 @@ func TestLatestAttestation_FaultyServer(t *testing.T) {
 		ctx:                 ctx,
 		operationService:    mockOperationService,
 		incomingAttestation: make(chan *pbp2p.Attestation, 0),
-		chainService:        &mockChainService{},
+		chainService:        newMockChainService(),
 	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -190,7 +190,7 @@ func TestLatestAttestation_SendsCorrectly(t *testing.T) {
 		ctx:                 ctx,
 		operationService:    operationService,
 		incomingAttestation: make(chan *pbp2p.Attestation, 0),
-		chainService:        &mockChainService{},
+		chainService:        newMockChainService(),
 	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -257,7 +257,7 @@ func TestPendingDeposits_ReturnsDepositsOutsideEth1FollowWindow(t *testing.T) {
 	bs := &BeaconServer{
 		beaconDB:        d,
 		powChainService: p,
-		chainService:    &mockChainService{},
+		chainService:    newMockChainService(),
 	}
 
 	result, err := bs.PendingDeposits(ctx, nil)
