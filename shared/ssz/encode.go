@@ -38,7 +38,7 @@ type encbuf struct {
 
 func (w *encbuf) encode(val interface{}) error {
 	if val == nil {
-		return newEncodeError("nil is not supported", nil)
+		return newEncodeError("untyped nil is not supported", nil)
 	}
 	rval := reflect.ValueOf(val)
 	sszUtils, err := cachedSSZUtils(rval.Type())
@@ -53,7 +53,7 @@ func (w *encbuf) encode(val interface{}) error {
 
 func encodeSize(val interface{}) (uint32, error) {
 	if val == nil {
-		return 0, newEncodeError("nil is not supported", nil)
+		return 0, newEncodeError("untyped nil is not supported", nil)
 	}
 	rval := reflect.ValueOf(val)
 	sszUtils, err := cachedSSZUtils(rval.Type())
@@ -261,26 +261,29 @@ func makeStructEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 	return encoder, encodeSizer, nil
 }
 
-// Notice: Currently we don't support nil pointer:
-// - Input for encoding must not contain nil pointer
-// - Output for decoding will never contain nil pointer
-// (Not to be confused with empty slice. Empty slice is supported)
 func makePtrEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 	elemSSZUtils, err := cachedSSZUtilsNoAcquireLock(typ.Elem())
 	if err != nil {
 		return nil, nil, err
 	}
 
+	// TODO(1461): The encoding of nil pointer isn't defined in the spec.
+	// After considered the use case in Prysm, we've decided that:
+	// - We assume we will only encode/decode pointer of array, slice or struct.
+	// - The encoding for nil pointer shall be 0x00000000.
+
 	encoder := func(val reflect.Value, w *encbuf) error {
 		if val.IsNil() {
-			return errors.New("nil is not supported")
+			totalSizeEnc := make([]byte, lengthBytes)
+			w.str = append(w.str, totalSizeEnc...)
+			return nil
 		}
 		return elemSSZUtils.encoder(val.Elem(), w)
 	}
 
 	encodeSizer := func(val reflect.Value) (uint32, error) {
 		if val.IsNil() {
-			return 0, errors.New("nil is not supported")
+			return lengthBytes, nil
 		}
 		return elemSSZUtils.encodeSizer(val.Elem())
 	}

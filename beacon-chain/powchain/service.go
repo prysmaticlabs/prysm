@@ -207,7 +207,7 @@ func (w *Web3Service) HasChainStartLogOccurred() (bool, uint64, error) {
 			if err != nil {
 				return false, 0, fmt.Errorf("unable to unpack ChainStart log data %v", err)
 			}
-			timestamp := binary.BigEndian.Uint64(timestampData)
+			timestamp := binary.LittleEndian.Uint64(timestampData)
 			if uint64(time.Now().Unix()) < timestamp {
 				return false, 0, fmt.Errorf(
 					"invalid timestamp from log expected %d > %d",
@@ -264,7 +264,7 @@ func (w *Web3Service) ProcessDepositLog(VRClog gethTypes.Log) {
 	} else {
 		w.beaconDB.InsertPendingDeposit(w.ctx, deposit, big.NewInt(int64(VRClog.BlockNumber)))
 	}
-	index := binary.BigEndian.Uint64(MerkleTreeIndex)
+	index := binary.LittleEndian.Uint64(MerkleTreeIndex)
 	log.WithFields(logrus.Fields{
 		"publicKey":       fmt.Sprintf("%#x", depositInput.Pubkey),
 		"merkleTreeIndex": index,
@@ -287,7 +287,7 @@ func (w *Web3Service) ProcessChainStartLog(VRClog gethTypes.Log) {
 		return
 	}
 
-	timestamp := binary.BigEndian.Uint64(timestampData)
+	timestamp := binary.LittleEndian.Uint64(timestampData)
 	if uint64(time.Now().Unix()) < timestamp {
 		log.Errorf("Invalid timestamp from log expected %d > %d", time.Now().Unix(), timestamp)
 	}

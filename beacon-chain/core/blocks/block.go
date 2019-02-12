@@ -97,7 +97,7 @@ func ProcessBlockRoots(state *pb.BeaconState, prevBlockRoot [32]byte) *pb.Beacon
 
 // EncodeDepositData converts a deposit input proto into an a byte slice
 // of Simple Serialized deposit input followed by 8 bytes for a deposit value
-// and 8 bytes for a unix timestamp, all in BigEndian format.
+// and 8 bytes for a unix timestamp, all in LittleEndian format.
 func EncodeDepositData(
 	depositInput *pb.DepositInput,
 	depositValue uint64,
@@ -108,13 +108,11 @@ func EncodeDepositData(
 		return nil, fmt.Errorf("failed to encode deposit input: %v", err)
 	}
 	encodedInput := wBuf.Bytes()
-	depositData := make([]byte, 0, 16+len(encodedInput))
-
+	depositData := make([]byte, 0, 512)
 	value := make([]byte, 8)
-	binary.BigEndian.PutUint64(value, depositValue)
-
+	binary.LittleEndian.PutUint64(value, depositValue)
 	timestamp := make([]byte, 8)
-	binary.BigEndian.PutUint64(timestamp, uint64(depositTimestamp))
+	binary.LittleEndian.PutUint64(timestamp, uint64(depositTimestamp))
 
 	depositData = append(depositData, value...)
 	depositData = append(depositData, timestamp...)
@@ -123,15 +121,12 @@ func EncodeDepositData(
 	return depositData, nil
 }
 
-// DecodeDepositInput unmarshalls a depositData byte slice into
+// DecodeDepositInput unmarshals a depositData byte slice into
 // a proto *pb.DepositInput by using the Simple Serialize (SSZ)
 // algorithm.
 // TODO(#1253): Do not assume we will receive serialized proto objects - instead,
 // replace completely by a common struct which can be simple serialized.
 func DecodeDepositInput(depositData []byte) (*pb.DepositInput, error) {
-	// Last 16 bytes of deposit data are 8 bytes for value
-	// and 8 bytes for timestamp. Everything before that is a
-	// Simple Serialized deposit input value.
 	if len(depositData) < 16 {
 		return nil, fmt.Errorf(
 			"deposit data slice too small: len(depositData) = %d",
@@ -164,8 +159,8 @@ func DecodeDepositAmountAndTimeStamp(depositData []byte) (uint64, int64, error) 
 
 	// the amount occupies the first 8 bytes while the
 	// timestamp occupies the next 8 bytes.
-	amount := binary.BigEndian.Uint64(depositData[:8])
-	timestamp := binary.BigEndian.Uint64(depositData[8:16])
+	amount := binary.LittleEndian.Uint64(depositData[:8])
+	timestamp := binary.LittleEndian.Uint64(depositData[8:16])
 
 	return amount, int64(timestamp), nil
 }

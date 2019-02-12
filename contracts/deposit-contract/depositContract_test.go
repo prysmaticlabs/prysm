@@ -54,7 +54,7 @@ func setup() (*testAccount, error) {
 	depositsRequired := big.NewInt(8)
 	minDeposit := big.NewInt(1e9)
 	maxDeposit := big.NewInt(32e9)
-	contractAddr, _, contract, err := DeployDepositContract(txOpts, backend, depositsRequired, minDeposit, maxDeposit)
+	contractAddr, _, contract, err := DeployDepositContract(txOpts, backend, depositsRequired, minDeposit, maxDeposit, false)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +140,7 @@ func TestValidatorRegisters(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Unable to unpack log data: %v", err)
 		}
-		merkleTreeIndex[i] = binary.BigEndian.Uint64(idx)
+		merkleTreeIndex[i] = binary.LittleEndian.Uint64(idx)
 		depositData[i] = data
 	}
 
