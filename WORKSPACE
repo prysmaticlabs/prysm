@@ -541,7 +541,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_crypto",
-    commit = "193df9c0f06f8bb35fba505183eaf0acc0136505",
+    commit = "74369b46fc6756741c016591724fd1cb8e26845f",
     importpath = "golang.org/x/crypto",
 )
 
@@ -992,7 +992,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_bls",
-    commit = "76f5aa90f44469e06fc34a734a85e3c5f6e0bc8c",
+    commit = "0e61c30f21878172d57549ea1733c9808157ef08",
     importpath = "github.com/prysmaticlabs/go-bls",
 )
 
