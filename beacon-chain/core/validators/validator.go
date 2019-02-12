@@ -133,7 +133,7 @@ func Attesters(state *pb.BeaconState, attesterIndices []uint64) []*pb.Validator 
 //   for a in attestations]
 func ValidatorIndices(
 	state *pb.BeaconState,
-	attestations []*pb.PendingAttestationRecord,
+	attestations []*pb.PendingAttestation,
 ) ([]uint64, error) {
 
 	var attesterIndicesIntersection []uint64
@@ -165,8 +165,8 @@ func AttestingValidatorIndices(
 	state *pb.BeaconState,
 	shard uint64,
 	shardBlockRoot []byte,
-	thisEpochAttestations []*pb.PendingAttestationRecord,
-	prevEpochAttestations []*pb.PendingAttestationRecord) ([]uint64, error) {
+	thisEpochAttestations []*pb.PendingAttestation,
+	prevEpochAttestations []*pb.PendingAttestation) ([]uint64, error) {
 
 	var validatorIndicesCommittees []uint64
 	attestations := append(thisEpochAttestations, prevEpochAttestations...)

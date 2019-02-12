@@ -363,16 +363,16 @@ func ProcessBlockAttestations(
 			params.BeaconConfig().MaxAttestations,
 		)
 	}
-	var pendingAttestations []*pb.PendingAttestationRecord
+	var pendingAttestations []*pb.PendingAttestation
 	for idx, attestation := range atts {
 		if err := verifyAttestation(beaconState, attestation, verifySignatures); err != nil {
 			return nil, fmt.Errorf("could not verify attestation at index %d in block: %v", idx, err)
 		}
-		pendingAttestations = append(pendingAttestations, &pb.PendingAttestationRecord{
+		pendingAttestations = append(pendingAttestations, &pb.PendingAttestation{
 			Data:                attestation.Data,
 			AggregationBitfield: attestation.AggregationBitfield,
 			CustodyBitfield:     attestation.CustodyBitfield,
-			SlotIncluded:        beaconState.Slot,
+			InclusionSlot:       beaconState.Slot,
 		})
 	}
 	beaconState.LatestAttestations = pendingAttestations

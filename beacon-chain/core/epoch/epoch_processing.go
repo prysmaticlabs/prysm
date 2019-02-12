@@ -165,8 +165,8 @@ func ProcessFinalization(state *pb.BeaconState) *pb.BeaconState {
 // 			if 3 * total_attesting_balance(crosslink_committee) >= 2 * total_balance(crosslink_committee)
 func ProcessCrosslinks(
 	state *pb.BeaconState,
-	thisEpochAttestations []*pb.PendingAttestationRecord,
-	prevEpochAttestations []*pb.PendingAttestationRecord) (*pb.BeaconState, error) {
+	thisEpochAttestations []*pb.PendingAttestation,
+	prevEpochAttestations []*pb.PendingAttestation) (*pb.BeaconState, error) {
 
 	prevEpoch := helpers.PrevEpoch(state)
 	currentEpoch := helpers.CurrentEpoch(state)
@@ -308,7 +308,7 @@ func ProcessPartialValidatorRegistry(state *pb.BeaconState) (*pb.BeaconState, er
 func CleanupAttestations(state *pb.BeaconState) *pb.BeaconState {
 	currEpoch := helpers.CurrentEpoch(state)
 
-	var latestAttestations []*pb.PendingAttestationRecord
+	var latestAttestations []*pb.PendingAttestation
 	for _, attestation := range state.LatestAttestations {
 		if helpers.SlotToEpoch(attestation.Data.Slot) >= currEpoch {
 			latestAttestations = append(latestAttestations, attestation)

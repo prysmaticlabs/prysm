@@ -307,9 +307,9 @@ func TestProcessCrosslinksOk(t *testing.T) {
 		participationBitfield = append(participationBitfield, byte(0xff))
 	}
 
-	var attestations []*pb.PendingAttestationRecord
+	var attestations []*pb.PendingAttestation
 	for i := 0; i < 10; i++ {
-		attestation := &pb.PendingAttestationRecord{
+		attestation := &pb.PendingAttestation{
 			Data: &pb.AttestationData{
 				Slot:                 state.Slot,
 				ShardBlockRootHash32: []byte{'A'},
@@ -346,7 +346,7 @@ func TestProcessCrosslinksNoParticipantsBitField(t *testing.T) {
 	state := buildState(5, params.BeaconConfig().DepositsForChainStart)
 	state.LatestCrosslinks = []*pb.Crosslink{{}, {}}
 
-	attestations := []*pb.PendingAttestationRecord{
+	attestations := []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{},
 			// Empty participation bitfield will trigger error.
 			AggregationBitfield: []byte{}}}
@@ -497,7 +497,7 @@ func TestCleanupAttestations(t *testing.T) {
 	epochLength := params.BeaconConfig().EpochLength
 	state := &pb.BeaconState{
 		Slot: epochLength,
-		LatestAttestations: []*pb.PendingAttestationRecord{
+		LatestAttestations: []*pb.PendingAttestation{
 			{Data: &pb.AttestationData{Slot: 1}},
 			{Data: &pb.AttestationData{Slot: epochLength - 10}},
 			{Data: &pb.AttestationData{Slot: epochLength}},
@@ -510,7 +510,7 @@ func TestCleanupAttestations(t *testing.T) {
 	}
 	wanted := &pb.BeaconState{
 		Slot: epochLength,
-		LatestAttestations: []*pb.PendingAttestationRecord{
+		LatestAttestations: []*pb.PendingAttestation{
 			{Data: &pb.AttestationData{Slot: epochLength}},
 			{Data: &pb.AttestationData{Slot: epochLength + 1}},
 			{Data: &pb.AttestationData{Slot: epochLength + 20}},
