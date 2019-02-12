@@ -24,13 +24,13 @@ type ValidatorService struct {
 	conn      *grpc.ClientConn
 	endpoint  string
 	withCert  string
-	key *keystore.Key
+	key       *keystore.Key
 }
 
 // Config for the validator service.
 type Config struct {
-	Endpoint string
-	CertFlag string
+	Endpoint     string
+	CertFlag     string
 	KeystorePath string
 	Password     string
 }
@@ -50,7 +50,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		cancel:   cancel,
 		endpoint: cfg.Endpoint,
 		withCert: cfg.CertFlag,
-		key: key,
+		key:      key,
 	}, nil
 }
 
@@ -80,8 +80,8 @@ func (v *ValidatorService) Start() {
 		beaconClient:    pb.NewBeaconServiceClient(v.conn),
 		validatorClient: pb.NewValidatorServiceClient(v.conn),
 		attesterClient:  pb.NewAttesterServiceClient(v.conn),
-		proposerClient: pb.NewProposerServiceClient(v.conn),
-		key: v.key,
+		proposerClient:  pb.NewProposerServiceClient(v.conn),
+		key:             v.key,
 	}
 	go run(v.ctx, v.validator)
 }

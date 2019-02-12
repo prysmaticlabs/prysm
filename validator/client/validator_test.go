@@ -49,7 +49,7 @@ func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 		t.Fatal(err)
 	}
 	v := validator{
-        key: k,
+		key:          k,
 		beaconClient: client,
 	}
 	genesis := uint64(time.Unix(0, 0).Unix())
@@ -85,7 +85,7 @@ func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 		t.Fatal(err)
 	}
 	v := validator{
-		key: k,
+		key:          k,
 		beaconClient: client,
 	}
 	genesis := uint64(time.Unix(0, 0).Unix())
@@ -118,7 +118,7 @@ func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
 		t.Fatal(err)
 	}
 	v := validator{
-		key: k,
+		key:          k,
 		beaconClient: client,
 	}
 	clientStream := internal.NewMockBeaconService_WaitForChainStartClient(ctrl)
@@ -141,7 +141,7 @@ func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 		t.Fatal(err)
 	}
 	v := validator{
-		key: k,
+		key:          k,
 		beaconClient: client,
 	}
 	genesis := uint64(time.Unix(0, 0).Unix())
@@ -176,7 +176,7 @@ func TestUpdateAssignments_DoesNothingWhenNotEpochStart(t *testing.T) {
 		t.Fatal(err)
 	}
 	v := validator{
-		key: k,
+		key:             k,
 		validatorClient: client,
 	}
 	client.EXPECT().ValidatorEpochAssignments(
@@ -199,7 +199,7 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 		t.Fatal(err)
 	}
 	v := validator{
-		key: k,
+		key:             k,
 		validatorClient: client,
 	}
 
@@ -233,7 +233,7 @@ func TestUpdateAssignments_DoesUpdateAssignments(t *testing.T) {
 		t.Fatal(err)
 	}
 	v := validator{
-		key: k,
+		key:             k,
 		validatorClient: client,
 	}
 	client.EXPECT().ValidatorEpochAssignments(

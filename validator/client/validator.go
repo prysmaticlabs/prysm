@@ -35,7 +35,7 @@ type validator struct {
 	beaconClient    pb.BeaconServiceClient
 	attesterClient  pb.AttesterServiceClient
 	attestationPool AttestationPool
-	key *keystore.Key
+	key             *keystore.Key
 }
 
 // Done cleans up the validator.
