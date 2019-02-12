@@ -194,7 +194,7 @@ func TestStartStopUninitializedChain(t *testing.T) {
 	sub := chainService.stateInitializedFeed.Subscribe(genesisChan)
 	defer sub.Unsubscribe()
 	chainService.Start()
-	chainService.genesisTimeChan <- time.Unix(0, 0)
+	chainService.chainStartChan <- time.Unix(0, 0)
 	genesisTime := <-genesisChan
 	if genesisTime != time.Unix(0, 0) {
 		t.Errorf(
