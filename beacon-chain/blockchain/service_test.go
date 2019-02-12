@@ -190,10 +190,18 @@ func TestStartStopUninitializedChain(t *testing.T) {
 	chainService.IncomingBlockFeed()
 
 	// Test the start function.
+	genesisChan := make(chan time.Time, 0)
+	sub := chainService.stateInitializedFeed.Subscribe(genesisChan)
+	defer sub.Unsubscribe()
 	chainService.Start()
-	deposits := setupInitialDeposits(t)
-	if err := chainService.initializeBeaconChain(time.Unix(0, 0), deposits); err != nil {
-		t.Fatalf("Error initializing: %v", err)
+	chainService.genesisTimeChan <- time.Unix(0, 0)
+	genesisTime := <-genesisChan
+	if genesisTime != time.Unix(0, 0) {
+		t.Errorf(
+			"Expected genesis time to equal chainstart time (%v), received %v",
+			time.Unix(0, 0),
+			genesisTime,
+		)
 	}
 
 	if err := chainService.Stop(); err != nil {
@@ -206,13 +214,6 @@ func TestStartStopUninitializedChain(t *testing.T) {
 	}
 	testutil.AssertLogsContain(t, hook, "Waiting for ChainStart log from the Validator Deposit Contract to start the beacon chain...")
 	testutil.AssertLogsContain(t, hook, "ChainStart time reached, starting the beacon chain!")
-	if chainService.genesisTime != time.Unix(0, 0) {
-		t.Errorf(
-			"Expected genesis time to equal chainstart time (%v), received %v",
-			time.Unix(0, 0),
-			chainService.genesisTime,
-		)
-	}
 }
 
 func TestStartUninitializedChainWithoutConfigPOWChain(t *testing.T) {
