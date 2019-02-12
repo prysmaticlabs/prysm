@@ -154,7 +154,7 @@ func TestValidatorCommitteeAtSlot_CrosslinkCommitteesFailure(t *testing.T) {
 	genesisTime := params.BeaconConfig().GenesisTime.Unix()
 	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
-		var pubKey [48]byte
+		var pubKey [params.BeaconConfig().BLSPubkeyLength]byte
 		copy(pubKey[:], []byte(strconv.Itoa(i)))
 		depositInput := &pbp2p.DepositInput{
 			Pubkey: pubKey[:],
@@ -200,7 +200,7 @@ func TestValidatorCommitteeAtSlot_Ok(t *testing.T) {
 	genesisTime := params.BeaconConfig().GenesisTime.Unix()
 	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
-		var pubKey [48]byte
+		var pubKey [params.BeaconConfig().BLSPubkeyLength]byte
 		copy(pubKey[:], []byte(strconv.Itoa(i)))
 		depositInput := &pbp2p.DepositInput{
 			Pubkey: pubKey[:],
