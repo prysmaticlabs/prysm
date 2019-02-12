@@ -239,7 +239,7 @@ func (w *Web3Service) ProcessDepositLog(VRClog gethTypes.Log) {
 	// ETH1.0 network, and prevents us from updating our trie
 	// with the same log twice, causing an inconsistent state root.
 	index := binary.LittleEndian.Uint64(merkleTreeIndex)
-	if int64(index) == w.lastReceivedMerkleIndex {
+	if int64(index) <= w.lastReceivedMerkleIndex {
 		return
 	}
 	if err := w.saveInTrie(depositData, merkleRoot); err != nil {

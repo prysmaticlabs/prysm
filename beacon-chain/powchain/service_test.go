@@ -548,7 +548,7 @@ func TestProcessDepositLog_SkipDuplicateLog(t *testing.T) {
 		BeaconDB:        &db.BeaconDB{},
 	})
 	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
 	testAcc.backend.Commit()
