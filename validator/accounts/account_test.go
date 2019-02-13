@@ -44,7 +44,7 @@ func TestNewValidatorAccount_PrintsDepositData(t *testing.T) {
 		t.Fatalf("Could not retrieve key: %v", err)
 	}
 	data := &pb.DepositInput{
-		Pubkey:                      valKey.SecretKey.K.Bytes(), // TODO(#1367): Use real BLS public key here.
+		Pubkey:                      valKey.SecretKey.GetPublicKey().Serialize(),
 		ProofOfPossession:           []byte("pop"),
 		WithdrawalCredentialsHash32: []byte("withdraw"),
 	}

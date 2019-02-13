@@ -3,33 +3,33 @@ package keystore
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/binary"
 	"io/ioutil"
-	"math/big"
 	"os"
 	"testing"
 
 	"github.com/pborman/uuid"
-	"github.com/prysmaticlabs/prysm/shared/bls"
+	bls "github.com/prysmaticlabs/go-bls"
 )
 
 func TestMarshalAndUnmarshal(t *testing.T) {
 	testID := uuid.NewRandom()
-	blsKey := &bls.SecretKey{
-		K: big.NewInt(10),
-	}
+	blsKey := &bls.SecretKey{}
+	blsKey.SetValue(10)
 	key := &Key{
 		ID:        testID,
+		PublicKey: blsKey.GetPublicKey(),
 		SecretKey: blsKey,
 	}
 	marshalledObject, err := key.MarshalJSON()
 	if err != nil {
 		t.Fatalf("unable to marshall key %v", err)
 	}
+
 	newKey := &Key{
-		ID: []byte{},
-		SecretKey: &bls.SecretKey{
-			K: big.NewInt(0),
-		},
+		ID:        []byte{},
+		SecretKey: &bls.SecretKey{},
+		PublicKey: &bls.PublicKey{},
 	}
 
 	err = newKey.UnmarshalJSON(marshalledObject)
@@ -63,26 +63,18 @@ func TestStoreRandomKey(t *testing.T) {
 
 }
 func TestNewKeyFromBLS(t *testing.T) {
-	blskey := &bls.SecretKey{
-		K: big.NewInt(20),
-	}
+	blskey := &bls.SecretKey{}
 
-	key, err := newKeyFromBLS(blskey)
-	if err != nil {
-		t.Fatalf("could not get new key from bls %v", err)
-	}
+	expectedNum := int64(20)
+	blskey.SetValue(expectedNum)
 
-	expectedNum := big.NewInt(20)
+	key := newKeyFromBLS(blskey)
 
-	if expectedNum.Cmp(key.SecretKey.K) != 0 {
-		t.Fatalf("secret key is not of the expected value %d", key.SecretKey.K)
-	}
+	keyBuffer := make([]byte, len(key.SecretKey.LittleEndian()))
+	binary.LittleEndian.PutUint64(keyBuffer, uint64(expectedNum))
 
-	reader := rand.Reader
-
-	_, err = NewKey(reader)
-	if err != nil {
-		t.Fatalf("random key unable to be generated: %v", err)
+	if !bytes.Equal(key.SecretKey.LittleEndian(), keyBuffer) {
+		t.Fatalf("secret key is not of the expected value %v , %v", key.SecretKey.LittleEndian(), keyBuffer)
 	}
 
 }

@@ -28,7 +28,7 @@ import (
 	"path/filepath"
 
 	"github.com/pborman/uuid"
-	"github.com/prysmaticlabs/prysm/shared/bls"
+	bls "github.com/prysmaticlabs/go-bls"
 )
 
 const (
@@ -100,8 +100,8 @@ type cipherparamsJSON struct {
 // MarshalJSON marshalls a key struct into a JSON blob.
 func (k *Key) MarshalJSON() (j []byte, err error) {
 	jStruct := plainKeyJSON{
-		hex.EncodeToString(k.PublicKey.BufferedPublicKey()),
-		hex.EncodeToString(k.SecretKey.BufferedSecretKey()),
+		hex.EncodeToString(k.PublicKey.Serialize()),
+		hex.EncodeToString(k.SecretKey.LittleEndian()),
 		k.ID.String(),
 	}
 	j, err = json.Marshal(jStruct)
@@ -128,24 +128,26 @@ func (k *Key) UnmarshalJSON(j []byte) (err error) {
 		return err
 	}
 
-	k.PublicKey.UnBufferPublicKey(pubkey)
-	k.SecretKey.UnBufferSecretKey(seckey)
+	if err := k.PublicKey.Deserialize(pubkey); err != nil {
+		return fmt.Errorf("unable to deserialize public key: %v", err)
+	}
+	if err := k.SecretKey.SetLittleEndian(seckey); err != nil {
+		return fmt.Errorf("unable to generate key in little endian format: %v", err)
+	}
 
 	return nil
 }
 
-func newKeyFromBLS(blsKey *bls.SecretKey) (*Key, error) {
+func newKeyFromBLS(blsKey *bls.SecretKey) *Key {
 	id := uuid.NewRandom()
-	pubkey, err := blsKey.PublicKey()
-	if err != nil {
-		return nil, err
-	}
+	pubkey := blsKey.GetPublicKey()
+
 	key := &Key{
 		ID:        id,
 		PublicKey: pubkey,
 		SecretKey: blsKey,
 	}
-	return key, nil
+	return key
 }
 
 // NewKey generates a new random key.
@@ -155,9 +157,10 @@ func NewKey(rand io.Reader) (*Key, error) {
 	if err != nil {
 		return nil, fmt.Errorf("key generation: could not read from random source: %v", err)
 	}
-	secretKey := bls.GenerateKey(randBytes)
+	secretKey := &bls.SecretKey{}
+	secretKey.SetByCSPRNG()
 
-	return newKeyFromBLS(secretKey)
+	return newKeyFromBLS(secretKey), nil
 }
 
 func storeNewRandomKey(ks keyStore, rand io.Reader, password string) error {

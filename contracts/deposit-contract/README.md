@@ -8,7 +8,7 @@ the beacon chain will see it and will credit the validator with the validator bo
 At some point in the future, after a hard fork,
 the original deposit + interest can be withdrawn back on one of the shards.  
 To call the `registration` function, it takes arguments of `pubkey`, 
-`proof_of_possession`, `withdrawal_credentials` and `randao_commitment`. 
+`proof_of_possession`, `withdrawal_credentials`.
 If the user wants to deposit more than `DEPOSIT_SIZE` ETH, they would
 need to make multiple `deposit` calls.  
 When the contract publishes the `ChainStart` log, beacon nodes will

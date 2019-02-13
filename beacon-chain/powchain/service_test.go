@@ -104,7 +104,14 @@ func setup() (*testAccount, error) {
 	depositsRequired := big.NewInt(int64(depositsReqForChainStart))
 	minDeposit := big.NewInt(1e9)
 	maxDeposit := big.NewInt(32e9)
-	contractAddr, _, contract, err := contracts.DeployDepositContract(txOpts, backend, depositsRequired, minDeposit, maxDeposit)
+	contractAddr, _, contract, err := contracts.DeployDepositContract(
+		txOpts,
+		backend,
+		depositsRequired,
+		minDeposit,
+		maxDeposit,
+		false,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -241,8 +248,8 @@ func TestInitDataFromVRC(t *testing.T) {
 
 	testAcc.backend.Commit()
 
-	if err := web3Service.initDataFromVRC(); err != nil {
-		t.Fatalf("Could not init from vrc %v", err)
+	if err := web3Service.initDataFromContract(); err != nil {
+		t.Fatalf("Could not init from deposit contract: %v", err)
 	}
 
 	computedRoot := web3Service.depositTrie.Root()
@@ -257,8 +264,8 @@ func TestInitDataFromVRC(t *testing.T) {
 	}
 	testAcc.backend.Commit()
 
-	if err := web3Service.initDataFromVRC(); err != nil {
-		t.Fatalf("Could not init from vrc %v", err)
+	if err := web3Service.initDataFromContract(); err != nil {
+		t.Fatalf("Could not init from vrc: %v", err)
 	}
 
 	if bytes.Equal(web3Service.depositRoot, []byte{}) {
@@ -529,6 +536,71 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	}
 }
 
+func TestProcessDepositLog_SkipDuplicateLog(t *testing.T) {
+	endpoint := "ws://127.0.0.1"
+	testAcc, err := setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint:        endpoint,
+		DepositContract: testAcc.contractAddr,
+		Reader:          &goodReader{},
+		Logger:          &goodLogger{},
+		ContractBackend: testAcc.backend,
+		BeaconDB:        &db.BeaconDB{},
+	})
+	if err != nil {
+		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+
+	testAcc.backend.Commit()
+
+	web3Service.depositTrie = trieutil.NewDepositTrie()
+
+	var stub [48]byte
+	copy(stub[:], []byte("testing"))
+
+	data := &pb.DepositInput{
+		Pubkey:                      stub[:],
+		ProofOfPossession:           stub[:],
+		WithdrawalCredentialsHash32: []byte("withdraw"),
+	}
+
+	serializedData := new(bytes.Buffer)
+	if err := ssz.Encode(serializedData, data); err != nil {
+		t.Fatalf("Could not serialize data %v", err)
+	}
+
+	testAcc.txOpts.Value = amount32Eth
+	if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+		t.Fatalf("Could not deposit to VRC %v", err)
+	}
+
+	testAcc.backend.Commit()
+
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{
+			web3Service.depositContractAddress,
+		},
+	}
+
+	logs, err := testAcc.backend.FilterLogs(web3Service.ctx, query)
+	if err != nil {
+		t.Fatalf("Unable to retrieve logs %v", err)
+	}
+
+	web3Service.ProcessDepositLog(logs[0])
+	// We keep track of the current deposit root and make sure it doesn't change if we
+	// receive a duplicate log from the contract.
+	currentRoot := web3Service.depositTrie.Root()
+	web3Service.ProcessDepositLog(logs[0])
+	nextRoot := web3Service.depositTrie.Root()
+	if currentRoot != nextRoot {
+		t.Error("Processing a duplicate log should not update deposit trie")
+	}
+}
+
 func TestUnpackDepositLogs(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
@@ -548,8 +620,8 @@ func TestUnpackDepositLogs(t *testing.T) {
 
 	testAcc.backend.Commit()
 
-	if err := web3Service.initDataFromVRC(); err != nil {
-		t.Fatalf("Could not init from vrc %v", err)
+	if err := web3Service.initDataFromContract(); err != nil {
+		t.Fatalf("Could not init from contract: %v", err)
 	}
 
 	computedRoot := web3Service.depositTrie.Root()
@@ -594,7 +666,7 @@ func TestUnpackDepositLogs(t *testing.T) {
 		t.Fatalf("Unable to unpack logs %v", err)
 	}
 
-	if binary.BigEndian.Uint64(index) != 0 {
+	if binary.LittleEndian.Uint64(index) != 0 {
 		t.Errorf("Retrieved merkle tree index is incorrect %d", index)
 	}
 
@@ -775,7 +847,7 @@ func TestUnpackChainStartLogs(t *testing.T) {
 		t.Fatalf("Unable to unpack logs %v", err)
 	}
 
-	timestamp := binary.BigEndian.Uint64(timestampData)
+	timestamp := binary.LittleEndian.Uint64(timestampData)
 
 	if timestamp > uint64(time.Now().Unix()) {
 		t.Errorf("Timestamp from log is higher than the current time %d > %d", timestamp, time.Now().Unix())
@@ -831,7 +903,6 @@ func TestHasChainStartLogOccurred(t *testing.T) {
 		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
 			t.Fatalf("Could not deposit to VRC %v", err)
 		}
-
 		testAcc.backend.Commit()
 	}
 	ok, _, err = web3Service.HasChainStartLogOccurred()
