@@ -40,7 +40,7 @@ func TestLifecycle(t *testing.T) {
 	// Use cancelled context so that the run function exits immediately..
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	dir := os.TempDir() + "/keystore1"
+	dir := testutil.TempDir() + "/keystore1"
 	defer os.RemoveAll(dir)
 	if err := accounts.NewValidatorAccount(dir, "1234"); err != nil {
 		t.Fatalf("Could not create validator account: %v", err)
@@ -69,7 +69,7 @@ func TestLifecycle_WithInsecure(t *testing.T) {
 	// Use cancelled context so that the run function exits immediately.
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	dir := os.TempDir() + "/keystore1"
+	dir := testutil.TempDir() + "/keystore1"
 	defer os.RemoveAll(dir)
 	if err := accounts.NewValidatorAccount(dir, "1234"); err != nil {
 		t.Fatalf("Could not create validator account: %v", err)
@@ -94,7 +94,7 @@ func TestLifecycle_WithInsecure(t *testing.T) {
 }
 
 func TestStatus(t *testing.T) {
-	dir := os.TempDir() + "/keystore1"
+	dir := testutil.TempDir() + "/keystore1"
 	defer os.RemoveAll(dir)
 	if err := accounts.NewValidatorAccount(dir, "1234"); err != nil {
 		t.Fatalf("Could not create validator account: %v", err)

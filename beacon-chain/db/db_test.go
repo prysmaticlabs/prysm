@@ -3,6 +3,7 @@ package db
 import (
 	"crypto/rand"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"math/big"
 	"os"
 	"path"
@@ -15,7 +16,7 @@ func setupDB(t *testing.T) *BeaconDB {
 	if err != nil {
 		t.Fatalf("Could not generate random file path: %v", err)
 	}
-	path := path.Join(os.TempDir(), fmt.Sprintf("/%d", randPath))
+	path := path.Join(testutil.TempDir(), fmt.Sprintf("/%d", randPath))
 	if err := os.RemoveAll(path); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
 	}

@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 
 	"github.com/urfave/cli"
@@ -14,10 +15,10 @@ import (
 func TestNode_Builds(t *testing.T) {
 	app := cli.NewApp()
 	set := flag.NewFlagSet("test", 0)
-	set.String("datadir", "/tmp/datadir", "the node data directory")
-	dir := os.TempDir() + "/keystore1"
+	set.String("datadir", testutil.TempDir()+"/datadir", "the node data directory")
+	dir := testutil.TempDir() + "/keystore1"
 	defer os.RemoveAll(dir)
-	defer os.RemoveAll("/tmp/datadir")
+	defer os.RemoveAll(testutil.TempDir() + "/datadir")
 	set.String("keystore-path", dir, "path to keystore")
 	set.String("password", "1234", "validator account password")
 	context := cli.NewContext(app, set, nil)
