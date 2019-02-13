@@ -97,16 +97,7 @@ func TestLifecycle_WithInsecure(t *testing.T) {
 }
 
 func TestStatus(t *testing.T) {
-	validatorService, err := NewValidatorService(
-		context.Background(),
-		&Config{
-			Endpoint:     "merkle tries",
-			Password:     "1234",
-		},
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
+	validatorService := &ValidatorService{}
 	if err := validatorService.Status(); !strings.Contains(err.Error(), "no connection") {
 		t.Errorf("Expected status check to fail if no connection is found, received: %v", err)
 	}
