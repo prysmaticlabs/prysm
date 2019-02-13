@@ -10,10 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 
-	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -183,17 +181,15 @@ func TestGenesisState_HashEquality(t *testing.T) {
 	state1, _ := InitialBeaconState(nil, 0, nil)
 	state2, _ := InitialBeaconState(nil, 0, nil)
 
-	enc1, err1 := proto.Marshal(state1)
-	enc2, err2 := proto.Marshal(state2)
+	root1, err1 := ssz.TreeHash(state1)
+	root2, err2 := ssz.TreeHash(state2)
 
 	if err1 != nil || err2 != nil {
 		t.Fatalf("Failed to marshal state to bytes: %v %v", err1, err2)
 	}
 
-	h1 := hashutil.Hash(enc1)
-	h2 := hashutil.Hash(enc2)
-	if h1 != h2 {
-		t.Fatalf("Hash of two genesis states should be equal: %#x", h1)
+	if root1 != root2 {
+		t.Fatalf("Tree hash of two genesis states should be equal, received %#x == %#x", root1, root2)
 	}
 }
 

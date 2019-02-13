@@ -267,7 +267,6 @@ func makePtrEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 		return nil, nil, err
 	}
 
-	// TODO(1461): The encoding of nil pointer isn't defined in the spec.
 	// After considered the use case in Prysm, we've decided that:
 	// - We assume we will only encode/decode pointer of array, slice or struct.
 	// - The encoding for nil pointer shall be 0x00000000.

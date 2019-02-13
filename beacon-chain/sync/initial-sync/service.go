@@ -14,6 +14,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -22,7 +23,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -337,17 +337,17 @@ func (s *InitialSync) requestStateFromPeer(block *pb.BeaconBlock, peer p2p.Peer)
 // setBlockForInitialSync sets the first received block as the base finalized
 // block for initial sync.
 func (s *InitialSync) setBlockForInitialSync(block *pb.BeaconBlock) error {
-	h, err := hashutil.HashBeaconBlock(block)
+	root, err := ssz.TreeHash(block)
 	if err != nil {
 		return err
 	}
-	log.WithField("blockhash", fmt.Sprintf("%#x", h)).Debug("Beacon state hash exists locally")
+	log.WithField("blockRoot", fmt.Sprintf("%#x", root)).Debug("Beacon state hash exists locally")
 
 	s.chainService.IncomingBlockFeed().Send(block)
 
 	s.initialStateRootHash32 = bytesutil.ToBytes32(block.StateRootHash32)
 
-	log.Infof("Saved block with hash %#x for initial sync", h)
+	log.Infof("Saved block with root %#x for initial sync", root)
 	s.currentSlot = block.Slot
 	s.requestNextBlockBySlot(s.currentSlot + 1)
 	return nil
@@ -376,7 +376,7 @@ func (s *InitialSync) requestBatchedBlocks(endSlot uint64) {
 // validateAndSaveNextBlock will validate whether blocks received from the blockfetcher
 // routine can be added to the chain.
 func (s *InitialSync) validateAndSaveNextBlock(block *pb.BeaconBlock) error {
-	h, err := hashutil.HashBeaconBlock(block)
+	root, err := ssz.TreeHash(block)
 	if err != nil {
 		return err
 	}
@@ -391,7 +391,7 @@ func (s *InitialSync) validateAndSaveNextBlock(block *pb.BeaconBlock) error {
 			return err
 		}
 
-		log.Infof("Saved block with hash %#x and slot %d for initial sync", h, block.Slot)
+		log.Infof("Saved block with root %#x and slot %d for initial sync", root, block.Slot)
 		s.currentSlot = block.Slot
 
 		// delete block from memory
@@ -406,15 +406,14 @@ func (s *InitialSync) validateAndSaveNextBlock(block *pb.BeaconBlock) error {
 }
 
 func (s *InitialSync) checkBlockValidity(block *pb.BeaconBlock) error {
-
-	blockHash, err := hashutil.HashBeaconBlock(block)
+	blockRoot, err := ssz.TreeHash(block)
 	if err != nil {
-		return fmt.Errorf("could not hash received block: %v", err)
+		return fmt.Errorf("could not tree hash received block: %v", err)
 	}
 
-	log.Debugf("Processing response to block request: %#x", blockHash)
+	log.Debugf("Processing response to block request: %#x", blockRoot)
 
-	if s.db.HasBlock(blockHash) {
+	if s.db.HasBlock(blockRoot) {
 		return errors.New("received a block that already exists. Exiting")
 	}
 
@@ -428,6 +427,5 @@ func (s *InitialSync) checkBlockValidity(block *pb.BeaconBlock) error {
 	}
 	// Attestation from proposer not verified as, other nodes only store blocks not proposer
 	// attestations.
-
 	return nil
 }

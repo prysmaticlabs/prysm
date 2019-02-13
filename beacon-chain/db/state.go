@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"time"
 
 	"github.com/boltdb/bolt"
@@ -25,7 +26,7 @@ func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit) 
 	stateHash := hashutil.Hash(stateEnc)
 	genesisBlock := b.NewGenesisBlock(stateHash[:])
 	// #nosec G104
-	blockHash, _ := hashutil.HashBeaconBlock(genesisBlock)
+	blockRoot, _ := ssz.TreeHash(genesisBlock)
 	// #nosec G104
 	blockEnc, _ := proto.Marshal(genesisBlock)
 	zeroBinary := encodeSlotNumber(0)
@@ -39,19 +40,15 @@ func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit) 
 			return fmt.Errorf("failed to record block height: %v", err)
 		}
 
-		if err := mainChain.Put(zeroBinary, blockHash[:]); err != nil {
+		if err := mainChain.Put(zeroBinary, blockRoot[:]); err != nil {
 			return fmt.Errorf("failed to record block hash: %v", err)
 		}
 
-		if err := blockBkt.Put(blockHash[:], blockEnc); err != nil {
+		if err := blockBkt.Put(blockRoot[:], blockEnc); err != nil {
 			return err
 		}
 
-		if err := chainInfo.Put(stateLookupKey, stateEnc); err != nil {
-			return err
-		}
-
-		return nil
+		return chainInfo.Put(stateLookupKey, stateEnc)
 	})
 }
 
@@ -138,7 +135,6 @@ func (db *BeaconDB) GenesisTime() (time.Time, error) {
 	if state == nil {
 		return time.Time{}, fmt.Errorf("state not found: %v", err)
 	}
-
-	genesisTime := time.Unix(int64(state.GetGenesisTime()), int64(0))
+	genesisTime := time.Unix(int64(state.GenesisTime), int64(0))
 	return genesisTime, nil
 }

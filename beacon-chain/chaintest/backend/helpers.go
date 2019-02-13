@@ -7,10 +7,8 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 
-	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
@@ -110,11 +108,11 @@ func generateSimulatedBlock(
 			ValidatorIndex: simObjects.simValidatorExit.ValidatorIndex,
 		})
 	}
-	encodedBlock, err := proto.Marshal(block)
+	blockRoot, err := ssz.TreeHash(block)
 	if err != nil {
-		return nil, [32]byte{}, fmt.Errorf("could not marshal new block: %v", err)
+		return nil, [32]byte{}, fmt.Errorf("could not tree hash new block: %v", err)
 	}
-	return block, hashutil.Hash(encodedBlock), nil
+	return block, blockRoot, nil
 }
 
 // Generates initial deposits for creating a beacon state in the simulated

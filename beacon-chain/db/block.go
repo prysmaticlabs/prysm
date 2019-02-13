@@ -106,7 +106,7 @@ func (db *BeaconDB) ChainHead() (*pb.BeaconBlock, error) {
 // UpdateChainHead atomically updates the head of the chain as well as the corresponding state changes
 // Including a new crystallized state is optional.
 func (db *BeaconDB) UpdateChainHead(block *pb.BeaconBlock, beaconState *pb.BeaconState) error {
-    blockRoot, err := ssz.TreeHash(block)
+	blockRoot, err := ssz.TreeHash(block)
 	if err != nil {
 		return fmt.Errorf("unable to tree hash block: %v", err)
 	}

@@ -12,7 +12,6 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 // ProposerServer defines a server implementation of the gRPC Proposer service,
@@ -50,11 +49,11 @@ func (ps *ProposerServer) ProposerIndex(ctx context.Context, req *pb.ProposerInd
 // ProposeBlock is called by a proposer in a sharding validator and a full beacon node
 // sends the request into a beacon block that can then be included in a canonical chain.
 func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlock) (*pb.ProposeResponse, error) {
-	h, err := hashutil.HashBeaconBlock(blk)
+	h, err := ssz.TreeHash(blk)
 	if err != nil {
-		return nil, fmt.Errorf("could not hash block: %v", err)
+		return nil, fmt.Errorf("could not tree hash block: %v", err)
 	}
-	log.WithField("blockHash", fmt.Sprintf("%#x", h)).Debugf("Block proposal received via RPC")
+	log.WithField("blockRoot", fmt.Sprintf("%#x", h)).Debugf("Block proposal received via RPC")
 	// We relay the received block from the proposer to the chain service for processing.
 	ps.chainService.IncomingBlockFeed().Send(blk)
 	return &pb.ProposeResponse{BlockHash: h[:]}, nil

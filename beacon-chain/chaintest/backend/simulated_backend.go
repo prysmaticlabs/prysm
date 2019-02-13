@@ -6,18 +6,17 @@ package backend
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"reflect"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -249,12 +248,15 @@ func (sb *SimulatedBackend) setupBeaconStateAndGenesisBlock(initialDeposits []*p
 	// We do not expect hashing initial beacon state and genesis block to
 	// fail, so we can safely ignore the error below.
 	// #nosec G104
-	encodedState, _ := proto.Marshal(sb.state)
-	stateRoot := hashutil.Hash(encodedState)
+	stateRoot, err := ssz.TreeHash(sb.state)
+	if err != nil {
+		return fmt.Errorf("could not tree hash state: %v", err)
+	}
 	genesisBlock := b.NewGenesisBlock(stateRoot[:])
-	// #nosec G104
-	encodedGenesisBlock, _ := proto.Marshal(genesisBlock)
-	genesisBlockRoot := hashutil.Hash(encodedGenesisBlock)
+	genesisBlockRoot, err := ssz.TreeHash(genesisBlock)
+	if err != nil {
+		return fmt.Errorf("could not tree hash genesis block: %v", err)
+	}
 
 	// We now keep track of generated blocks for each state transition in
 	// a slice.
