@@ -300,7 +300,7 @@ go_repository(
 
 go_repository(
     name = "com_github_btcsuite_btcd",
-    commit = "12ce2fc7d32197bf00739e4167128285ae250124",
+    commit = "306aecffea325e97f513b3ff0cf7895a5310651d",
     importpath = "github.com/btcsuite/btcd",
 )
 
@@ -499,7 +499,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "3b5209105503162ded1863c307ac66fec31120dd",
+    commit = "983097b1a8a340cd1cc7df17d735154d89e10b1a",
     importpath = "golang.org/x/sys",
 )
 
