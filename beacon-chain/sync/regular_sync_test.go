@@ -292,7 +292,6 @@ func TestProcessMultipleBlocks(t *testing.T) {
 			Data: &pb.AttestationData{
 				ShardBlockRootHash32: []byte{},
 				Slot:                 0,
-				JustifiedSlot:        0,
 			},
 		},
 	}
