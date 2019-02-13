@@ -3,7 +3,6 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "block_vote_cache.go",
         "clock.go",
         "flags.go",
         "shuffle.go",
@@ -21,7 +20,6 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
-        "block_vote_cache_test.go",
         "clock_test.go",
         "shuffle_test.go",
     ],
