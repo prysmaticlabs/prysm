@@ -188,8 +188,8 @@ func TestBoundaryAttesterIndices(t *testing.T) {
 	}
 
 	boundaryAttestations := []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{}, AggregationBitfield: []byte{0x10}}, // returns indices 242
-		{Data: &pb.AttestationData{}, AggregationBitfield: []byte{0xF0}}, // returns indices 237,224,2
+		{Data: &pb.AttestationData{}, AggregationBitfield: []byte{0xC0}}, // returns indices 242
+		{Data: &pb.AttestationData{}, AggregationBitfield: []byte{0xC0}}, // returns indices 237,224,2
 	}
 
 	attesterIndices, err := ValidatorIndices(state, boundaryAttestations)

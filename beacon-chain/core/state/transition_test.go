@@ -5,10 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -136,12 +135,12 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		{
 			SlashableAttestation_1: &pb.SlashableAttestation{
 				Data:             att1,
-				ValidatorIndices: []uint64{0},
+				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
 				CustodyBitfield:  []byte{0xFF},
 			},
 			SlashableAttestation_2: &pb.SlashableAttestation{
 				Data:             att2,
-				ValidatorIndices: []uint64{0},
+				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
 				CustodyBitfield:  []byte{0xFF},
 			},
 		},
@@ -212,12 +211,12 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		{
 			SlashableAttestation_1: &pb.SlashableAttestation{
 				Data:             att1,
-				ValidatorIndices: []uint64{0},
+				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
 				CustodyBitfield:  []byte{0xFF},
 			},
 			SlashableAttestation_2: &pb.SlashableAttestation{
 				Data:             att2,
-				ValidatorIndices: []uint64{0},
+				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
 				CustodyBitfield:  []byte{0xFF},
 			},
 		},
@@ -312,12 +311,12 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		{
 			SlashableAttestation_1: &pb.SlashableAttestation{
 				Data:             att1,
-				ValidatorIndices: []uint64{0},
+				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
 				CustodyBitfield:  []byte{0xFF},
 			},
 			SlashableAttestation_2: &pb.SlashableAttestation{
 				Data:             att2,
-				ValidatorIndices: []uint64{0},
+				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
 				CustodyBitfield:  []byte{0xFF},
 			},
 		},
