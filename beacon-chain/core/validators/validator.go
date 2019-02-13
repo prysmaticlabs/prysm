@@ -87,26 +87,9 @@ func TotalEffectiveBalance(state *pb.BeaconState, validatorIndices []uint64) uin
 	var totalDeposit uint64
 
 	for _, idx := range validatorIndices {
-		totalDeposit += EffectiveBalance(state, idx)
+		totalDeposit += helpers.EffectiveBalance(state, idx)
 	}
 	return totalDeposit
-}
-
-// EffectiveBalance returns the balance at stake for the validator.
-// Beacon chain allows validators to top off their balance above MAX_DEPOSIT,
-// but they can be slashed at most MAX_DEPOSIT at any time.
-//
-// Spec pseudocode definition:
-//   def get_effective_balance(state: State, index: int) -> int:
-//     """
-//     Returns the effective balance (also known as "balance at stake") for a ``validator`` with the given ``index``.
-//     """
-//     return min(state.validator_balances[idx], MAX_DEPOSIT)
-func EffectiveBalance(state *pb.BeaconState, idx uint64) uint64 {
-	if state.ValidatorBalances[idx] > params.BeaconConfig().MaxDepositAmount {
-		return params.BeaconConfig().MaxDepositAmount
-	}
-	return state.ValidatorBalances[idx]
 }
 
 // Attesters returns the validator records using validator indices.
@@ -195,7 +178,7 @@ func AttestingBalance(state *pb.BeaconState, boundaryAttesterIndices []uint64) u
 
 	var boundaryAttestingBalance uint64
 	for _, idx := range boundaryAttesterIndices {
-		boundaryAttestingBalance += EffectiveBalance(state, idx)
+		boundaryAttestingBalance += helpers.EffectiveBalance(state, idx)
 	}
 
 	return boundaryAttestingBalance
@@ -350,13 +333,13 @@ func PenalizeValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, erro
 	}
 
 	penalizedDuration := helpers.CurrentEpoch(state) % params.BeaconConfig().LatestPenalizedExitLength
-	state.LatestPenalizedBalances[penalizedDuration] += EffectiveBalance(state, idx)
+	state.LatestPenalizedBalances[penalizedDuration] += helpers.EffectiveBalance(state, idx)
 
 	whistleblowerIdx, err := BeaconProposerIdx(state, state.Slot)
 	if err != nil {
 		return nil, fmt.Errorf("could not get proposer idx: %v", err)
 	}
-	whistleblowerReward := EffectiveBalance(state, idx) /
+	whistleblowerReward := helpers.EffectiveBalance(state, idx) /
 		params.BeaconConfig().WhistlerBlowerRewardQuotient
 
 	state.ValidatorBalances[whistleblowerIdx] += whistleblowerReward
@@ -445,7 +428,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 		// Activate validators within the allowable balance churn.
 		if validator.ActivationEpoch > helpers.EntryExitEffectEpoch(currentEpoch) &&
 			state.ValidatorBalances[idx] >= params.BeaconConfig().MaxDepositAmount {
-			balChurn += EffectiveBalance(state, uint64(idx))
+			balChurn += helpers.EffectiveBalance(state, uint64(idx))
 			if balChurn > maxBalChurn {
 				break
 			}
@@ -461,7 +444,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 		// Exit validators within the allowable balance churn.
 		if validator.ExitEpoch > helpers.EntryExitEffectEpoch(currentEpoch) &&
 			validator.StatusFlags == pb.Validator_INITIATED_EXIT {
-			balChurn += EffectiveBalance(state, uint64(idx))
+			balChurn += helpers.EffectiveBalance(state, uint64(idx))
 			if balChurn > maxBalChurn {
 				break
 			}
@@ -537,7 +520,7 @@ func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 			if totalBalance < penaltyMultiplier {
 				penaltyMultiplier = totalBalance
 			}
-			penalty := EffectiveBalance(state, uint64(idx)) *
+			penalty := helpers.EffectiveBalance(state, uint64(idx)) *
 				penaltyMultiplier / totalBalance
 			state.ValidatorBalances[idx] -= penalty
 		}
