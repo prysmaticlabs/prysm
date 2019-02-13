@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"math"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -29,14 +30,15 @@ func SwapOrNotShuffle(seed common.Hash, indicesList []uint64) ([]uint64, error) 
 	}
 
 	var round uint64
-	for round = 0; round < 90; round++ {
+	for round = 1; round < 90; round++ {
 		hashBytes := make([]byte, 0)
-        bs1 := make([]byte, 1)
+		bs1 := make([]byte, 8)
+		//https://stackoverflow.com/questions/35371385/how-can-i-convert-an-int64-into-a-byte-array-in-go
 		binary.LittleEndian.PutUint64(bs1, round)
 		num := uint64(math.Floor(float64((listSize + 255) / 256)))
 		var i uint64
-		for i = 0; i < num; i++ {
-			bs4 := make([]byte, 4)
+		for i = 1; i < num; i++ {
+			bs4 := make([]byte, 8)
 			binary.LittleEndian.PutUint64(bs4, i)
 			bs := append(bs1, bs4...)
 			hash := hashutil.Hash(append(seed[:], bs...))
@@ -57,10 +59,17 @@ func SwapOrNotShuffle(seed common.Hash, indicesList []uint64) ([]uint64, error) 
 			} else {
 				hashPos = flip
 			}
-			hashBytesIndex := uint64(math.Floor(float64((hashPos / 8))))
-			h := uint64(hashBytes[hashBytesIndex])
+			f64 := math.Floor(float64(hashPos / 8))
+			fmt.Printf("f64 is %v", f64)
+			if f64 >= math.MaxInt64 || f64 <= math.MinInt64 {
+				return nil, errors.New("f64 is out of int64 range.")
+			}
+			hashBytesIndex := uint64(f64)
+			fmt.Printf("hashBytesIndex is %v", hashBytesIndex)
+			hByte := hashBytes[hashBytesIndex]
+			hInt := uint64(hByte)
 			p := powersOfTwo[hashPos % 8]
-			if  h & p != 0 {
+			if  hInt & p != 0 {
 				indicesList[i] = flip
 			}
 			
