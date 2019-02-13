@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
+	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -82,12 +82,14 @@ type Web3Service struct {
 	blockNumber            *big.Int    // the latest ETH1.0 chain blockNumber.
 	blockHash              common.Hash // the latest ETH1.0 chain blockHash.
 	blockTime              time.Time   // the latest ETH1.0 chain blockTime.
+	lastHeadInteractTime   time.Time   // the time when we subscribed or the last heading was received
 	vrcCaller              *contracts.DepositContractCaller
 	depositRoot            []byte
 	depositTrie            *trieutil.DepositTrie
 	chainStartDeposits     []*pb.Deposit
 	chainStarted           bool
 	beaconDB               *db.BeaconDB
+	isRunning              bool
 	runError               error
 }
 
@@ -170,20 +172,25 @@ func (w *Web3Service) ChainStartDeposits() []*pb.Deposit {
 	return w.chainStartDeposits
 }
 
-// Status always returns nil.
-// TODO(1204): Add service health checks.
+// Status is service health checks. Return nil or error.
 func (w *Web3Service) Status() error {
-	// web3 client disconnected, but we are attempting to reconnect
+	// Web3Service don't start
+	if !w.isRunning {
+		return nil
+	}
+	// get error from run function
 	if w.runError != nil {
 		return w.runError
 	}
-	// web3 client is not syncing
-	if w.blockNumber == nil {
+	// use a 1 minute  timeout for syncing process (if start syncing from old block)
+	minuteTimeout := time.Now().Add(-time.Minute)
+	// use a 5 minutes timeout for block time, because the max mining time is 278 sec (block 7208027)
+	// (analyzed the time of the block from 2018-09-01 to 2019-02-13)
+	fiveMinutesTimeout := time.Now().Add(-5 * time.Minute)
+	// check that web3 client is syncing
+	if w.lastHeadInteractTime.Before(minuteTimeout) &&
+		(w.blockTime.Before(fiveMinutesTimeout)) {
 		return errors.New("web3 client is not syncing")
-	}
-	// web3 client hasn't reported a new block in some time
-	if w.blockTime.Add(10 * time.Second).Before(time.Now()) { //FIXME how big time wait before error?   historical max avg 99% duration
-		return fmt.Errorf("last received POW block time is %d", w.blockTime)
 	}
 	return nil
 }
@@ -196,6 +203,11 @@ func (w *Web3Service) LatestBlockNumber() *big.Int {
 // LatestBlockHash in the ETH1.0 chain.
 func (w *Web3Service) LatestBlockHash() common.Hash {
 	return w.blockHash
+}
+
+// LatestBlockTime in the ETH1.0 chain.
+func (w *Web3Service) LatestBlockTime() time.Time {
+	return w.blockTime
 }
 
 // Client for interacting with the ETH1.0 chain.
@@ -315,7 +327,9 @@ func (w *Web3Service) ProcessChainStartLog(VRClog gethTypes.Log) {
 
 // run subscribes to all the services for the ETH1.0 chain.
 func (w *Web3Service) run(done <-chan struct{}) {
-	w.runError = nil // clear error, if restart Web3Service
+	w.lastHeadInteractTime = time.Now()
+	w.isRunning = true
+	w.runError = nil
 	if err := w.initDataFromVRC(); err != nil {
 		log.Errorf("Unable to retrieve data from VRC %v", err)
 		w.runError = err
@@ -350,6 +364,8 @@ func (w *Web3Service) run(done <-chan struct{}) {
 	for {
 		select {
 		case <-done:
+			w.isRunning = false
+			w.runError = nil
 			log.Debug("ETH1.0 chain service context closed, exiting goroutine")
 			return
 		case w.runError = <-headSub.Err():
@@ -362,7 +378,8 @@ func (w *Web3Service) run(done <-chan struct{}) {
 			blockNumberGauge.Set(float64(header.Number.Int64()))
 			w.blockNumber = header.Number
 			w.blockHash = header.Hash()
-			w.blockTime = time.Unix(header.Time.Int64(), 0) //FIXME check time unit in test
+			w.blockTime = time.Unix(header.Time.Int64(), 0)
+			w.lastHeadInteractTime = time.Now()
 			log.WithFields(logrus.Fields{
 				"blockNumber": w.blockNumber,
 				"blockHash":   w.blockHash.Hex(),
