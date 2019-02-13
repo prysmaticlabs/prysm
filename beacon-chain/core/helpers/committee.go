@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -340,11 +341,13 @@ func AttestationParticipants(
 			break
 		}
 	}
-	if len(bitfield) != mathutil.CeilDiv8(len(committee)) {
-		return nil, fmt.Errorf(
-			"wanted participants bitfield length %d, got: %d",
-			mathutil.CeilDiv8(len(committee)),
-			len(bitfield))
+
+	if isValidated, err := VerifyBitfield(bitfield, len(committee)); !isValidated || err != nil {
+		if err != nil {
+			return nil, err
+		}
+
+		return nil, errors.New("bitfield is unable to be verified")
 	}
 
 	// Find the participating validators in the committee.
