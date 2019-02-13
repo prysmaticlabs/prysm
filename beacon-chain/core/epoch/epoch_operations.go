@@ -173,7 +173,7 @@ func TotalBalance(
 
 	var totalBalance uint64
 	for _, index := range activeValidatorIndices {
-		totalBalance += validators.EffectiveBalance(state, index)
+		totalBalance += helpers.EffectiveBalance(state, index)
 	}
 
 	return totalBalance
@@ -283,7 +283,7 @@ func TotalAttestingBalance(
 	}
 
 	for _, index := range attestedValidatorIndices {
-		totalBalance += validators.EffectiveBalance(state, index)
+		totalBalance += helpers.EffectiveBalance(state, index)
 	}
 
 	return totalBalance, nil
@@ -336,7 +336,7 @@ func winningRoot(
 
 		var rootBalance uint64
 		for _, index := range indices {
-			rootBalance += validators.EffectiveBalance(state, index)
+			rootBalance += helpers.EffectiveBalance(state, index)
 		}
 
 		if rootBalance > winnerBalance ||
