@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -22,7 +23,8 @@ import (
 //        head = max(children, key=get_vote_count)
 func LMDGhost(
 	block *pb.BeaconBlock,
-	voteTargets map[[32]byte]*pb.BeaconBlock,
+	state *pb.BeaconState,
+	voteTargets map[uint64]*pb.BeaconBlock,
 	observedBlocks []*pb.BeaconBlock,
 	beaconDB *db.BeaconDB,
 ) (*pb.BeaconBlock, error) {
@@ -36,12 +38,12 @@ func LMDGhost(
 			return head, nil
 		}
 		maxChild := children[0]
-		maxChildVotes, err := VoteCount(maxChild, voteTargets, beaconDB)
+		maxChildVotes, err := VoteCount(maxChild, state, voteTargets, beaconDB)
 		if err != nil {
 			return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
 		}
 		for i := 0; i < len(children); i++ {
-			candidateChildVotes, err := VoteCount(children[i], voteTargets, beaconDB)
+			candidateChildVotes, err := VoteCount(children[i], state, voteTargets, beaconDB)
 			if err != nil {
 				return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
 			}
@@ -57,13 +59,16 @@ func LMDGhost(
 // of target blocks that have such beacon block as a common ancestor.
 //
 // Spec pseudocode definition:
-//	def get_vote_count(block: BeaconBlock) -> int:
-//		return len([target for target in attestation_targets
-//			if get_ancestor(store, target, block.slot) == block])
-func VoteCount(block *pb.BeaconBlock, targets map[[32]byte]*pb.BeaconBlock, beaconDB *db.BeaconDB) (int, error) {
-	votes := 0
-	for k := range targets {
-		ancestor, err := BlockAncestor(targets[k], block.Slot, beaconDB)
+//  def get_vote_count(block: BeaconBlock) -> int:
+//        return sum(
+//            get_effective_balance(start_state.validator_balances[validator_index]) // FORK_CHOICE_BALANCE_INCREMENT
+//            for validator_index, target in attestation_targets
+//            if get_ancestor(store, target, block.slot) == block
+//        )
+func VoteCount(block *pb.BeaconBlock, state *pb.BeaconState, targets map[uint64]*pb.BeaconBlock, beaconDB *db.BeaconDB) (int, error) {
+	balances := 0
+	for validatorIndex, targetBlock := range targets {
+		ancestor, err := BlockAncestor(targetBlock, block.Slot, beaconDB)
 		if err != nil {
 			return 0, err
 		}
@@ -76,10 +81,10 @@ func VoteCount(block *pb.BeaconBlock, targets map[[32]byte]*pb.BeaconBlock, beac
 			return 0, err
 		}
 		if blockHash == ancestorHash {
-			votes++
+			balances += int(validators.EffectiveBalance(state, validatorIndex))
 		}
 	}
-	return votes, nil
+	return balances, nil
 }
 
 // BlockAncestor obtains the ancestor at of a block at a certain slot.
