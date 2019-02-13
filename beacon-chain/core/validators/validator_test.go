@@ -91,8 +91,8 @@ func TestEffectiveBalance(t *testing.T) {
 	}
 	for _, test := range tests {
 		state := &pb.BeaconState{ValidatorBalances: []uint64{test.a}}
-		if EffectiveBalance(state, 0) != test.b {
-			t.Errorf("EffectiveBalance(%d) = %d, want = %d", test.a, EffectiveBalance(state, 0), test.b)
+		if helpers.EffectiveBalance(state, 0) != test.b {
+			t.Errorf("EffectiveBalance(%d) = %d, want = %d", test.a, helpers.EffectiveBalance(state, 0), test.b)
 		}
 	}
 }
@@ -624,8 +624,8 @@ func TestProcessPenaltiesExits_ValidatorPenalized(t *testing.T) {
 		},
 	}
 
-	penalty := EffectiveBalance(state, 0) *
-		EffectiveBalance(state, 0) /
+	penalty := helpers.EffectiveBalance(state, 0) *
+		helpers.EffectiveBalance(state, 0) /
 		params.BeaconConfig().MaxDepositAmount
 
 	newState := ProcessPenaltiesAndExits(state)
