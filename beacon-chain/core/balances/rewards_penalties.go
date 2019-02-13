@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
@@ -34,11 +33,11 @@ func ExpectedFFGSource(
 	justifiedAttesterIndices []uint64,
 	justifiedAttestingBalance uint64,
 	totalBalance uint64) *pb.BeaconState {
-	baseRewardQuotient := baseRewardQuotient(totalBalance)
+	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 
 	for _, index := range justifiedAttesterIndices {
 		state.ValidatorBalances[index] +=
-			baseReward(state, index, baseRewardQuotient) *
+			helpers.BaseReward(state, index, baseRewardQuotient) *
 				justifiedAttestingBalance /
 				totalBalance
 	}
@@ -48,7 +47,7 @@ func ExpectedFFGSource(
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
-			baseReward(state, index, baseRewardQuotient)
+			helpers.BaseReward(state, index, baseRewardQuotient)
 	}
 	return state
 }
@@ -71,11 +70,11 @@ func ExpectedFFGTarget(
 	boundaryAttestingBalance uint64,
 	totalBalance uint64) *pb.BeaconState {
 
-	baseRewardQuotient := baseRewardQuotient(totalBalance)
+	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 
 	for _, index := range boundaryAttesterIndices {
 		state.ValidatorBalances[index] +=
-			baseReward(state, index, baseRewardQuotient) *
+			helpers.BaseReward(state, index, baseRewardQuotient) *
 				boundaryAttestingBalance /
 				totalBalance
 	}
@@ -85,7 +84,7 @@ func ExpectedFFGTarget(
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
-			baseReward(state, index, baseRewardQuotient)
+			helpers.BaseReward(state, index, baseRewardQuotient)
 	}
 	return state
 }
@@ -108,11 +107,11 @@ func ExpectedBeaconChainHead(
 	headAttestingBalance uint64,
 	totalBalance uint64) *pb.BeaconState {
 
-	baseRewardQuotient := baseRewardQuotient(totalBalance)
+	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 
 	for _, index := range headAttesterIndices {
 		state.ValidatorBalances[index] +=
-			baseReward(state, index, baseRewardQuotient) *
+			helpers.BaseReward(state, index, baseRewardQuotient) *
 				headAttestingBalance /
 				totalBalance
 	}
@@ -122,7 +121,7 @@ func ExpectedBeaconChainHead(
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
-			baseReward(state, index, baseRewardQuotient)
+			helpers.BaseReward(state, index, baseRewardQuotient)
 	}
 	return state
 }
@@ -140,7 +139,7 @@ func InclusionDistance(
 	attesterIndices []uint64,
 	totalBalance uint64) (*pb.BeaconState, error) {
 
-	baseRewardQuotient := baseRewardQuotient(totalBalance)
+	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 
 	for _, index := range attesterIndices {
 		inclusionDistance, err := epoch.InclusionDistance(state, index)
@@ -151,7 +150,7 @@ func InclusionDistance(
 			return nil, errors.New("could not process inclusion distance: 0")
 		}
 		state.ValidatorBalances[index] +=
-			baseReward(state, index, baseRewardQuotient) *
+			helpers.BaseReward(state, index, baseRewardQuotient) *
 				params.BeaconConfig().MinAttestationInclusionDelay /
 				inclusionDistance
 	}
@@ -171,13 +170,13 @@ func InactivityFFGSource(
 	totalBalance uint64,
 	epochsSinceFinality uint64) *pb.BeaconState {
 
-	baseRewardQuotient := baseRewardQuotient(totalBalance)
+	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
 	didNotAttestIndices := sliceutil.Not(justifiedAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
-			inactivityPenalty(state, index, baseRewardQuotient, epochsSinceFinality)
+			helpers.InactivityPenalty(state, index, baseRewardQuotient, epochsSinceFinality)
 	}
 	return state
 }
@@ -195,13 +194,13 @@ func InactivityFFGTarget(
 	totalBalance uint64,
 	epochsSinceFinality uint64) *pb.BeaconState {
 
-	baseRewardQuotient := baseRewardQuotient(totalBalance)
+	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
 	didNotAttestIndices := sliceutil.Not(boundaryAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
-			inactivityPenalty(state, index, baseRewardQuotient, epochsSinceFinality)
+			helpers.InactivityPenalty(state, index, baseRewardQuotient, epochsSinceFinality)
 	}
 	return state
 }
@@ -218,13 +217,13 @@ func InactivityChainHead(
 	headAttesterIndices []uint64,
 	totalBalance uint64) *pb.BeaconState {
 
-	baseRewardQuotient := baseRewardQuotient(totalBalance)
+	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
 	didNotAttestIndices := sliceutil.Not(headAttesterIndices, activeValidatorIndices)
 
 	for _, index := range didNotAttestIndices {
 		state.ValidatorBalances[index] -=
-			baseReward(state, index, baseRewardQuotient)
+			helpers.BaseReward(state, index, baseRewardQuotient)
 	}
 	return state
 }
@@ -241,14 +240,14 @@ func InactivityExitedPenalties(
 	totalBalance uint64,
 	epochsSinceFinality uint64) *pb.BeaconState {
 
-	baseRewardQuotient := baseRewardQuotient(totalBalance)
+	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
 
 	for _, index := range activeValidatorIndices {
 		if state.ValidatorRegistry[index].PenalizedEpoch <= helpers.CurrentEpoch(state) {
 			state.ValidatorBalances[index] -=
-				2*inactivityPenalty(state, index, baseRewardQuotient, epochsSinceFinality) +
-					baseReward(state, index, baseRewardQuotient)
+				2*helpers.InactivityPenalty(state, index, baseRewardQuotient, epochsSinceFinality) +
+					helpers.BaseReward(state, index, baseRewardQuotient)
 		}
 	}
 	return state
@@ -266,14 +265,14 @@ func InactivityInclusionDistance(
 	attesterIndices []uint64,
 	totalBalance uint64) (*pb.BeaconState, error) {
 
-	baseRewardQuotient := baseRewardQuotient(totalBalance)
+	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 
 	for _, index := range attesterIndices {
 		inclusionDistance, err := epoch.InclusionDistance(state, index)
 		if err != nil {
 			return nil, fmt.Errorf("could not get inclusion distance: %v", err)
 		}
-		baseReward := baseReward(state, index, baseRewardQuotient)
+		baseReward := helpers.BaseReward(state, index, baseRewardQuotient)
 		state.ValidatorBalances[index] -= baseReward -
 			baseReward*params.BeaconConfig().MinAttestationInclusionDelay/
 				inclusionDistance
@@ -295,7 +294,7 @@ func AttestationInclusion(
 	totalBalance uint64,
 	prevEpochAttesterIndices []uint64) (*pb.BeaconState, error) {
 
-	baseRewardQuotient := baseRewardQuotient(totalBalance)
+	baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 	for _, index := range prevEpochAttesterIndices {
 		slot, err := epoch.InclusionSlot(state, index)
 		if err != nil {
@@ -306,7 +305,7 @@ func AttestationInclusion(
 			return nil, fmt.Errorf("could not get propoer index: %v", err)
 		}
 		state.ValidatorBalances[proposerIndex] +=
-			baseReward(state, proposerIndex, baseRewardQuotient) /
+			helpers.BaseReward(state, proposerIndex, baseRewardQuotient) /
 				params.BeaconConfig().IncluderRewardQuotient
 	}
 	return state, nil
@@ -361,7 +360,7 @@ func Crosslinks(
 					fmt.Errorf("could not get attesting balance for shard committee %d: %v", shard, err)
 			}
 			totalBalance := epoch.TotalBalance(state, committee)
-			baseRewardQuotient := baseRewardQuotient(totalBalance)
+			baseRewardQuotient := helpers.BaseRewardQuotient(totalBalance)
 
 			attestingIndices, err := epoch.AttestingValidators(
 				state,
@@ -373,7 +372,7 @@ func Crosslinks(
 					fmt.Errorf("could not get attesting indices for shard committee %d: %v", shard, err)
 			}
 			for _, index := range committee {
-				baseReward := baseReward(state, index, baseRewardQuotient)
+				baseReward := helpers.BaseReward(state, index, baseRewardQuotient)
 				if sliceutil.IsIn(index, attestingIndices) {
 					state.ValidatorBalances[index] +=
 						baseReward * totalAttestingBalance / totalBalance
@@ -385,47 +384,4 @@ func Crosslinks(
 		}
 	}
 	return state, nil
-}
-
-// baseRewardQuotient takes the total balance and calculates for
-// the quotient of the base reward.
-//
-// Spec pseudocode definition:
-//    base_reward_quotient =
-//      integer_squareroot(total_balance) // BASE_REWARD_QUOTIENT
-func baseRewardQuotient(totalBalance uint64) uint64 {
-	return mathutil.IntegerSquareRoot(totalBalance) / params.BeaconConfig().BaseRewardQuotient
-}
-
-// baseReward takes state and validator index to calculate for
-// individual validator's base reward.
-//
-// Spec pseudocode definition:
-//    base_reward(state, index) =
-//    	get_effective_balance(state, index) // base_reward_quotient // 5
-func baseReward(
-	state *pb.BeaconState,
-	validatorIndex uint64,
-	baseRewardQuotient uint64) uint64 {
-
-	validatorBalance := validators.EffectiveBalance(state, validatorIndex)
-	return validatorBalance / baseRewardQuotient / 5
-}
-
-// inactivityPenalty takes state and validator index to calculate for
-// individual validator's penalty for being offline.
-//
-// Spec pseudocode definition:
-//    inactivity_penalty(state, index, epochs_since_finality) =
-//    	base_reward(state, index) + get_effective_balance(state, index)
-//    	* epochs_since_finality // INACTIVITY_PENALTY_QUOTIENT // 2
-func inactivityPenalty(
-	state *pb.BeaconState,
-	validatorIndex uint64,
-	baseRewardQuotient uint64,
-	epochsSinceFinality uint64) uint64 {
-
-	baseReward := baseReward(state, validatorIndex, baseRewardQuotient)
-	validatorBalance := validators.EffectiveBalance(state, validatorIndex)
-	return baseReward + validatorBalance*epochsSinceFinality/params.BeaconConfig().InactivityPenaltyQuotient/2
 }

@@ -123,10 +123,10 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 
 	// Finality fields checks.
 	if state.PreviousJustifiedEpoch != initialEpochNumber {
-		t.Error("PreviousJustifiedSlot was not correctly initialized")
+		t.Error("PreviousJustifiedEpoch was not correctly initialized")
 	}
 	if state.JustifiedEpoch != initialEpochNumber {
-		t.Error("JustifiedSlot was not correctly initialized")
+		t.Error("JustifiedEpoch was not correctly initialized")
 	}
 	if state.FinalizedEpoch != initialEpochNumber {
 		t.Error("FinalizedSlot was not correctly initialized")
