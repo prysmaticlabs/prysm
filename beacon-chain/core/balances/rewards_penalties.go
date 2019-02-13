@@ -338,8 +338,8 @@ func AttestationInclusion(
 // 				sum([get_effective_balance(state, i) for i in shard_committee]).
 func Crosslinks(
 	state *pb.BeaconState,
-	thisEpochAttestations []*pb.PendingAttestationRecord,
-	prevEpochAttestations []*pb.PendingAttestationRecord) (*pb.BeaconState, error) {
+	thisEpochAttestations []*pb.PendingAttestation,
+	prevEpochAttestations []*pb.PendingAttestation) (*pb.BeaconState, error) {
 
 	prevEpoch := helpers.PrevEpoch(state)
 	currentEpoch := helpers.CurrentEpoch(state)
