@@ -431,7 +431,7 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	justifiedBlockRoot := att.Data.JustifiedBlockRootHash32
 	if !bytes.Equal(justifiedBlockRoot, blockRoot) {
 		return fmt.Errorf(
-			"expected JustifiedBlockRoot == getBlockRoot(state, JustifiedSlot): got %#x = %#x",
+			"expected JustifiedBlockRoot == getBlockRoot(state, JustifiedEpoch): got %#x = %#x",
 			justifiedBlockRoot,
 			blockRoot,
 		)
