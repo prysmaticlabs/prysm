@@ -33,9 +33,9 @@ type BeaconChainConfig struct {
 	DepositContractTreeDepth uint64 // Depth of the Merkle trie of deposits in the validator deposit contract on the PoW chain.
 
 	// Gwei Values
-	MinDepositAmount uint64 // MinDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
-	MaxDepositAmount uint64 // MaxDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
-	EjectionBalance  uint64 // EjectionBalance is the minimal GWei a validator needs to have before ejected.
+	MinDepositAmount           uint64 // MinDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
+	MaxDepositAmount           uint64 // MaxDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
+	EjectionBalance            uint64 // EjectionBalance is the minimal GWei a validator needs to have before ejected.
 	ForkChoiceBalanceIncrement uint64 // ForkChoiceBalanceIncrement is used to track block score based on balances for fork choice.
 
 	// Initial value constants.
@@ -110,9 +110,9 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	DepositContractTreeDepth: 32,
 
 	// Gwei values:
-	MinDepositAmount: 1 * 1e9,
-	MaxDepositAmount: 32 * 1e9,
-	EjectionBalance:  16 * 1e9,
+	MinDepositAmount:           1 * 1e9,
+	MaxDepositAmount:           32 * 1e9,
+	EjectionBalance:            16 * 1e9,
 	ForkChoiceBalanceIncrement: 1 * 1e9,
 
 	// Initial value constants.
