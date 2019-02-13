@@ -116,10 +116,10 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) error
 //     Verify that proposer_slashing.proposal_data_1.shard == proposer_slashing.proposal_data_2.shard.
 //     Verify that proposer_slashing.proposal_data_1.block_root != proposer_slashing.proposal_data_2.block_root.
 //     Verify that proposer.penalized_epoch > get_current_epoch(state).
-//     Verify that bls_verify(pubkey=proposer.pubkey, message=hash_tree_root(proposer_slashing.proposal_data_1),
+//     Verify that bls_verify(pubkey=proposer.pubkey, message_hash=hash_tree_root(proposer_slashing.proposal_data_1),
 //       signature=proposer_slashing.proposal_signature_1,
 //       domain=get_domain(state.fork, slot_to_epoch(proposer_slashing.proposal_data_1.slot), DOMAIN_PROPOSAL)).
-//     Verify that bls_verify(pubkey=proposer.pubkey, message=hash_tree_root(proposer_slashing.proposal_data_2),
+//     Verify that bls_verify(pubkey=proposer.pubkey, message_hash=hash_tree_root(proposer_slashing.proposal_data_2),
 //       signature=proposer_slashing.proposal_signature_2,
 //       domain=get_domain(state.fork, slot_to_epoch(proposer_slashing.proposal_data_2.slot), DOMAIN_PROPOSAL)).
 //     Run penalize_validator(state, proposer_slashing.proposer_index).
@@ -363,16 +363,16 @@ func ProcessBlockAttestations(
 			params.BeaconConfig().MaxAttestations,
 		)
 	}
-	var pendingAttestations []*pb.PendingAttestationRecord
+	var pendingAttestations []*pb.PendingAttestation
 	for idx, attestation := range atts {
 		if err := verifyAttestation(beaconState, attestation, verifySignatures); err != nil {
 			return nil, fmt.Errorf("could not verify attestation at index %d in block: %v", idx, err)
 		}
-		pendingAttestations = append(pendingAttestations, &pb.PendingAttestationRecord{
+		pendingAttestations = append(pendingAttestations, &pb.PendingAttestation{
 			Data:                attestation.Data,
 			AggregationBitfield: attestation.AggregationBitfield,
 			CustodyBitfield:     attestation.CustodyBitfield,
-			SlotIncluded:        beaconState.Slot,
+			InclusionSlot:       beaconState.Slot,
 		})
 	}
 	beaconState.LatestAttestations = pendingAttestations
@@ -428,7 +428,7 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	justifiedBlockRoot := att.Data.JustifiedBlockRootHash32
 	if !bytes.Equal(justifiedBlockRoot, blockRoot) {
 		return fmt.Errorf(
-			"expected JustifiedBlockRoot == getBlockRoot(state, JustifiedSlot): got %#x = %#x",
+			"expected JustifiedBlockRoot == getBlockRoot(state, JustifiedEpoch): got %#x = %#x",
 			justifiedBlockRoot,
 			blockRoot,
 		)
@@ -471,7 +471,7 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 		//	 bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_0_participants]),
 		//   bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_1_participants]),
 		//   ],
-		//   messages=[
+		//   message_hash=[
 		//   hash_tree_root(AttestationDataAndCustodyBit(data=attestation.data, custody_bit=0b0)),
 		//   hash_tree_root(AttestationDataAndCustodyBit(data=attestation.data, custody_bit=0b1)),
 		//   ],
@@ -539,7 +539,7 @@ func ProcessValidatorDeposits(
 			beaconState,
 			validatorIndexMap,
 			depositInput.Pubkey,
-			binary.BigEndian.Uint64(depositValue),
+			binary.LittleEndian.Uint64(depositValue),
 			depositInput.ProofOfPossession,
 			depositInput.WithdrawalCredentialsHash32,
 		)
@@ -554,7 +554,7 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 	// Verify Merkle proof of deposit and deposit trie root.
 	receiptRoot := bytesutil.ToBytes32(beaconState.LatestEth1Data.DepositRootHash32)
 	index := make([]byte, 8)
-	binary.BigEndian.PutUint64(index, deposit.MerkleTreeIndex)
+	binary.LittleEndian.PutUint64(index, deposit.MerkleTreeIndex)
 	if ok := trieutil.VerifyMerkleBranch(
 		deposit.MerkleBranchHash32S,
 		receiptRoot,
@@ -584,7 +584,7 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 //     Let exit_message = hash_tree_root(
 //       Exit(epoch=exit.epoch, validator_index=exit.validator_index, signature=EMPTY_SIGNATURE)
 //     )
-//     Verify that bls_verify(pubkey=validator.pubkey, message=exit_message,
+//     Verify that bls_verify(pubkey=validator.pubkey, message_hash=exit_message,
 //       signature=exit.signature, domain=get_domain(state.fork, exit.epoch, DOMAIN_EXIT)).
 //     Run initiate_validator_exit(state, exit.validator_index).
 func ProcessValidatorExits(
@@ -635,7 +635,7 @@ func verifyExit(beaconState *pb.BeaconState, exit *pb.Exit, verifySignatures boo
 		// Let exit_message = hash_tree_root(
 		//   Exit(epoch=exit.epoch, validator_index=exit.validator_index, signature=EMPTY_SIGNATURE)
 		// )
-		// Verify that bls_verify(pubkey=validator.pubkey, message=exit_message,
+		// Verify that bls_verify(pubkey=validator.pubkey, message_hash=exit_message,
 		//   signature=exit.signature, domain=get_domain(state.fork, exit.epoch, DOMAIN_EXIT)).
 		return nil
 	}

@@ -116,7 +116,7 @@ func InitialBeaconState(
 		LatestBlockRootHash32S:  latestBlockRoots,
 		LatestIndexRootHash32S:  latestIndexRoots,
 		LatestPenalizedBalances: latestPenalizedExitBalances,
-		LatestAttestations:      []*pb.PendingAttestationRecord{},
+		LatestAttestations:      []*pb.PendingAttestation{},
 		BatchedBlockRootHash32S: [][]byte{},
 
 		// Eth1 data.
@@ -153,7 +153,7 @@ func InitialBeaconState(
 		}
 	}
 	for i := 0; i < len(state.ValidatorRegistry); i++ {
-		if v.EffectiveBalance(state, uint64(i)) >=
+		if helpers.EffectiveBalance(state, uint64(i)) >=
 			params.BeaconConfig().MaxDepositAmount {
 			state, err = v.ActivateValidator(state, uint64(i), true)
 			if err != nil {

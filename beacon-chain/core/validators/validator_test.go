@@ -91,8 +91,8 @@ func TestEffectiveBalance(t *testing.T) {
 	}
 	for _, test := range tests {
 		state := &pb.BeaconState{ValidatorBalances: []uint64{test.a}}
-		if EffectiveBalance(state, 0) != test.b {
-			t.Errorf("EffectiveBalance(%d) = %d, want = %d", test.a, EffectiveBalance(state, 0), test.b)
+		if helpers.EffectiveBalance(state, 0) != test.b {
+			t.Errorf("EffectiveBalance(%d) = %d, want = %d", test.a, helpers.EffectiveBalance(state, 0), test.b)
 		}
 	}
 }
@@ -187,7 +187,7 @@ func TestBoundaryAttesterIndices(t *testing.T) {
 		ValidatorRegistry: validators,
 	}
 
-	boundaryAttestations := []*pb.PendingAttestationRecord{
+	boundaryAttestations := []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{}, AggregationBitfield: []byte{0x10}}, // returns indices 242
 		{Data: &pb.AttestationData{}, AggregationBitfield: []byte{0xF0}}, // returns indices 237,224,2
 	}
@@ -286,7 +286,7 @@ func TestAttestingValidatorIndices_Ok(t *testing.T) {
 		Slot:              0,
 	}
 
-	prevAttestation := &pb.PendingAttestationRecord{
+	prevAttestation := &pb.PendingAttestation{
 		Data: &pb.AttestationData{
 			Slot:                 3,
 			Shard:                6,
@@ -300,7 +300,7 @@ func TestAttestingValidatorIndices_Ok(t *testing.T) {
 		6,
 		[]byte{'B'},
 		nil,
-		[]*pb.PendingAttestationRecord{prevAttestation})
+		[]*pb.PendingAttestation{prevAttestation})
 	if err != nil {
 		t.Fatalf("Could not execute AttestingValidatorIndices: %v", err)
 	}
@@ -324,7 +324,7 @@ func TestAttestingValidatorIndices_OutOfBound(t *testing.T) {
 		Slot:              5,
 	}
 
-	attestation := &pb.PendingAttestationRecord{
+	attestation := &pb.PendingAttestation{
 		Data: &pb.AttestationData{
 			Slot:                 0,
 			Shard:                1,
@@ -337,7 +337,7 @@ func TestAttestingValidatorIndices_OutOfBound(t *testing.T) {
 		state,
 		1,
 		[]byte{'B'},
-		[]*pb.PendingAttestationRecord{attestation},
+		[]*pb.PendingAttestation{attestation},
 		nil)
 
 	// This will fail because participation bitfield is length:1, committee bitfield is length 0.
@@ -624,8 +624,8 @@ func TestProcessPenaltiesExits_ValidatorPenalized(t *testing.T) {
 		},
 	}
 
-	penalty := EffectiveBalance(state, 0) *
-		EffectiveBalance(state, 0) /
+	penalty := helpers.EffectiveBalance(state, 0) *
+		helpers.EffectiveBalance(state, 0) /
 		params.BeaconConfig().MaxDepositAmount
 
 	newState := ProcessPenaltiesAndExits(state)

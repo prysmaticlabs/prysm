@@ -300,7 +300,7 @@ go_repository(
 
 go_repository(
     name = "com_github_btcsuite_btcd",
-    commit = "12ce2fc7d32197bf00739e4167128285ae250124",
+    commit = "306aecffea325e97f513b3ff0cf7895a5310651d",
     importpath = "github.com/btcsuite/btcd",
 )
 
@@ -499,7 +499,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "3b5209105503162ded1863c307ac66fec31120dd",
+    commit = "983097b1a8a340cd1cc7df17d735154d89e10b1a",
     importpath = "golang.org/x/sys",
 )
 
@@ -541,7 +541,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_crypto",
-    commit = "193df9c0f06f8bb35fba505183eaf0acc0136505",
+    commit = "74369b46fc6756741c016591724fd1cb8e26845f",
     importpath = "golang.org/x/crypto",
 )
 
@@ -643,7 +643,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aristanetworks_goarista",
-    commit = "2166578f34481200ec14ddd6b9c4115db36c7b62",
+    commit = "83ee463e1d9e2bb15f0793a53c37a385d73763a1",
     importpath = "github.com/aristanetworks/goarista",
 )
 
@@ -814,7 +814,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_discovery",
-    commit = "a666b9cafd4cd3c35405896c2121951c749979ea",
+    commit = "d4858e0322b6f8cd62ed33d6b5c846c3ebc0bb69",
     importpath = "github.com/libp2p/go-libp2p-discovery",
 )
 
@@ -908,7 +908,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_oauth2",
-    commit = "80673b4a4bfc6c2c58a0b44cf9106913fe293994",
+    commit = "3e8b2be1363542a95c52ea0796d4a40dacfb5b95",
     importpath = "golang.org/x/oauth2",
 )
 
@@ -992,7 +992,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prysmaticlabs_go_bls",
-    commit = "76f5aa90f44469e06fc34a734a85e3c5f6e0bc8c",
+    commit = "0e61c30f21878172d57549ea1733c9808157ef08",
     importpath = "github.com/prysmaticlabs/go-bls",
 )
 
