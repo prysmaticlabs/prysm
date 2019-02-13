@@ -27,6 +27,7 @@ type BeaconChainConfig struct {
 	LatestPenalizedExitLength  uint64 // LatestPenalizedExitLength is used to track penalized exit balances per time interval.
 	LatestIndexRootsLength     uint64 // LatestIndexRootsLength is the number of index roots kept in beacon state, used by light client.
 	MaxWithdrawalsPerEpoch     uint64 // MaxWithdrawalsPerEpoch is the max withdrawals can happen for a single epoch.
+	BLSPubkeyLength            int    // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
 
 	// Deposit contract constants.
 	DepositContractAddress   []byte // DepositContractAddress is the address of the deposit contract in PoW chain.
@@ -105,6 +106,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	LatestPenalizedExitLength:  8192,
 	LatestIndexRootsLength:     8192,
 	MaxWithdrawalsPerEpoch:     4,
+	BLSPubkeyLength:            96,
 
 	// Deposit contract constants.
 	DepositContractTreeDepth: 32,

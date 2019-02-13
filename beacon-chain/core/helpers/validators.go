@@ -1,6 +1,8 @@
 package helpers
 
 import (
+	"fmt"
+
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -51,4 +53,28 @@ func ActiveValidatorIndices(validators []*pb.Validator, epoch uint64) []uint64 {
 //    return epoch + 1 + ENTRY_EXIT_DELAY
 func EntryExitEffectEpoch(epoch uint64) uint64 {
 	return epoch + 1 + params.BeaconConfig().EntryExitDelay
+}
+
+// BeaconProposerIndex returns the index of the proposer of the block at a
+// given slot.
+//
+// Spec pseudocode definition:
+//  def get_beacon_proposer_index(state: BeaconState,slot: int) -> int:
+//    """
+//    Returns the beacon proposer index for the ``slot``.
+//    """
+//    first_committee, _ = get_crosslink_committees_at_slot(state, slot)[0]
+//    return first_committee[slot % len(first_committee)]
+func BeaconProposerIndex(state *pb.BeaconState, slot uint64) (uint64, error) {
+	committeeArray, err := CrosslinkCommitteesAtSlot(state, slot, false)
+	if err != nil {
+		return 0, err
+	}
+	firstCommittee := committeeArray[0].Committee
+
+	if len(firstCommittee) == 0 {
+		return 0, fmt.Errorf("empty first committee at slot %d", slot)
+	}
+
+	return firstCommittee[slot%uint64(len(firstCommittee))], nil
 }

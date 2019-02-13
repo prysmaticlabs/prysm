@@ -28,13 +28,13 @@ func TestIsDoubleVote(t *testing.T) {
 
 func TestIsSurroundVote(t *testing.T) {
 	att1 := &pb.AttestationData{
-		Slot:          0,
-		JustifiedSlot: 0,
+		Slot:           0,
+		JustifiedEpoch: 0,
 	}
 
 	att2 := &pb.AttestationData{
-		Slot:          0,
-		JustifiedSlot: 0,
+		Slot:           0,
+		JustifiedEpoch: 0,
 	}
 
 	if IsSurroundVote(att1, att2) {
@@ -42,7 +42,7 @@ func TestIsSurroundVote(t *testing.T) {
 	}
 
 	att1.Slot = 192
-	att2.JustifiedSlot = 64
+	att2.JustifiedEpoch = 1
 	att2.Slot = 128
 
 	if !IsSurroundVote(att1, att2) {
