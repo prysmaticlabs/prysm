@@ -482,12 +482,12 @@ func TestProcessAttesterSlashings_UnmatchedAttestations(t *testing.T) {
 
 func TestProcessAttesterSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 	att1 := &pb.AttestationData{
-		Slot:          5,
-		JustifiedSlot: 5,
+		Slot:           5,
+		JustifiedEpoch: 5,
 	}
 	att2 := &pb.AttestationData{
-		Slot:          5,
-		JustifiedSlot: 4,
+		Slot:           5,
+		JustifiedEpoch: 4,
 	}
 	slashings := []*pb.AttesterSlashing{
 		{
@@ -541,12 +541,12 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 
 	att1 := &pb.AttestationData{
-		Slot:          5,
-		JustifiedSlot: 5,
+		Slot:           5,
+		JustifiedEpoch: 5,
 	}
 	att2 := &pb.AttestationData{
-		Slot:          5,
-		JustifiedSlot: 4,
+		Slot:           5,
+		JustifiedEpoch: 4,
 	}
 	slashings := []*pb.AttesterSlashing{
 		{
@@ -697,7 +697,7 @@ func TestProcessBlockAttestations_EpochDistanceFailure(t *testing.T) {
 	}
 }
 
-func TestProcessBlockAttestations_JustifiedSlotVerificationFailure(t *testing.T) {
+func TestProcessBlockAttestations_JustifiedEpochVerificationFailure(t *testing.T) {
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
@@ -730,7 +730,7 @@ func TestProcessBlockAttestations_JustifiedSlotVerificationFailure(t *testing.T)
 	}
 }
 
-func TestProcessBlockAttestations_PreviousJustifiedSlotVerificationFailure(t *testing.T) {
+func TestProcessBlockAttestations_PreviousJustifiedEpochVerificationFailure(t *testing.T) {
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
@@ -826,7 +826,7 @@ func TestProcessBlockAttestations_BlockRootFailure(t *testing.T) {
 	}
 
 	want := fmt.Sprintf(
-		"expected JustifiedBlockRoot == getBlockRoot(state, JustifiedSlot): got %#x = %#x",
+		"expected JustifiedBlockRoot == getBlockRoot(state, JustifiedEpoch): got %#x = %#x",
 		[]byte{},
 		blockRoots[64],
 	)
@@ -984,11 +984,11 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 			pendingAttestations[0].Data,
 		)
 	}
-	if pendingAttestations[0].SlotIncluded != 70 {
+	if pendingAttestations[0].InclusionSlot != 70 {
 		t.Errorf(
 			"Pending attestation not included at correct slot: wanted %v, received %v",
 			64,
-			pendingAttestations[0].SlotIncluded,
+			pendingAttestations[0].InclusionSlot,
 		)
 	}
 }

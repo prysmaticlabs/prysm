@@ -125,12 +125,12 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		},
 	}
 	att1 := &pb.AttestationData{
-		Slot:          5,
-		JustifiedSlot: 5,
+		Slot:           5,
+		JustifiedEpoch: 5,
 	}
 	att2 := &pb.AttestationData{
-		Slot:          5,
-		JustifiedSlot: 4,
+		Slot:           5,
+		JustifiedEpoch: 4,
 	}
 	attesterSlashings := []*pb.AttesterSlashing{
 		{
@@ -201,12 +201,12 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		},
 	}
 	att1 := &pb.AttestationData{
-		Slot:          5,
-		JustifiedSlot: 5,
+		Slot:           5,
+		JustifiedEpoch: 5,
 	}
 	att2 := &pb.AttestationData{
-		Slot:          5,
-		JustifiedSlot: 4,
+		Slot:           5,
+		JustifiedEpoch: 4,
 	}
 	attesterSlashings := []*pb.AttesterSlashing{
 		{
@@ -301,12 +301,12 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		},
 	}
 	att1 := &pb.AttestationData{
-		Slot:          5,
-		JustifiedSlot: 5,
+		Slot:           5,
+		JustifiedEpoch: 5,
 	}
 	att2 := &pb.AttestationData{
-		Slot:          5,
-		JustifiedSlot: 4,
+		Slot:           5,
+		JustifiedEpoch: 4,
 	}
 	attesterSlashings := []*pb.AttesterSlashing{
 		{
@@ -392,16 +392,16 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 		validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 	}
 
-	var attestations []*pb.PendingAttestationRecord
+	var attestations []*pb.PendingAttestation
 	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
-		attestations = append(attestations, &pb.PendingAttestationRecord{
+		attestations = append(attestations, &pb.PendingAttestation{
 			Data: &pb.AttestationData{
 				Slot:                     i + params.BeaconConfig().EpochLength,
 				Shard:                    1,
-				JustifiedSlot:            64,
+				JustifiedEpoch:           1,
 				JustifiedBlockRootHash32: []byte{0},
 			},
-			SlotIncluded: i + params.BeaconConfig().EpochLength + 1,
+			InclusionSlot: i + params.BeaconConfig().EpochLength + 1,
 		})
 	}
 
@@ -451,17 +451,17 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 		defaultBalance, defaultBalance, defaultBalance, defaultBalance,
 	}
 
-	var attestations []*pb.PendingAttestationRecord
+	var attestations []*pb.PendingAttestation
 	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
-		attestations = append(attestations, &pb.PendingAttestationRecord{
+		attestations = append(attestations, &pb.PendingAttestation{
 			Data: &pb.AttestationData{
 				Slot:                     i + params.BeaconConfig().EpochLength,
 				Shard:                    1,
-				JustifiedSlot:            64,
+				JustifiedEpoch:           1,
 				JustifiedBlockRootHash32: []byte{0},
 			},
 			AggregationBitfield: []byte{},
-			SlotIncluded:        i + params.BeaconConfig().EpochLength + 1,
+			InclusionSlot:       i + params.BeaconConfig().EpochLength + 1,
 		})
 	}
 
@@ -500,7 +500,7 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 func TestProcessEpoch_CantGetBoundaryAttestation(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 5,
-		LatestAttestations: []*pb.PendingAttestationRecord{
+		LatestAttestations: []*pb.PendingAttestation{
 			{Data: &pb.AttestationData{Slot: 4}},
 		}}
 
@@ -519,9 +519,9 @@ func TestProcessEpoch_CantGetCurrentValidatorIndices(t *testing.T) {
 		latestBlockRoots[i] = params.BeaconConfig().ZeroHash[:]
 	}
 
-	var attestations []*pb.PendingAttestationRecord
+	var attestations []*pb.PendingAttestation
 	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
-		attestations = append(attestations, &pb.PendingAttestationRecord{
+		attestations = append(attestations, &pb.PendingAttestation{
 			Data: &pb.AttestationData{
 				Slot:                     1,
 				Shard:                    1,
@@ -546,7 +546,7 @@ func TestProcessEpoch_CantGetCurrentValidatorIndices(t *testing.T) {
 func TestProcessEpoch_CantProcessCurrentBoundaryAttestations(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 100,
-		LatestAttestations: []*pb.PendingAttestationRecord{
+		LatestAttestations: []*pb.PendingAttestation{
 			{Data: &pb.AttestationData{}},
 		}}
 
@@ -584,7 +584,7 @@ func TestProcessEpoch_CantProcessEjections(t *testing.T) {
 		ValidatorRegistry:        validatorRegistries,
 		LatestRandaoMixesHash32S: randaoHashes,
 		LatestCrosslinks:         []*pb.Crosslink{{}},
-		LatestAttestations: []*pb.PendingAttestationRecord{
+		LatestAttestations: []*pb.PendingAttestation{
 			{Data: &pb.AttestationData{}, AggregationBitfield: participationBitfield},
 		}}
 

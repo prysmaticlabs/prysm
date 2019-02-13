@@ -2,6 +2,8 @@ package slotutil
 
 import (
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // SlotTicker is a special ticker for the beacon chain block.
@@ -35,7 +37,6 @@ func GetSlotTicker(genesisTime time.Time, slotDuration uint64) *SlotTicker {
 		done: make(chan struct{}),
 	}
 	ticker.start(genesisTime, slotDuration, time.Since, time.Until, time.After)
-
 	return ticker
 }
 
@@ -47,11 +48,11 @@ func CurrentSlot(
 
 	sinceGenesis := since(genesisTime)
 	if sinceGenesis < 0 {
-		return 0
+		return params.BeaconConfig().GenesisSlot
 	}
 
 	durationInSeconds := time.Duration(slotDuration) * time.Second
-	return uint64(sinceGenesis / durationInSeconds)
+	return uint64(sinceGenesis/durationInSeconds) + params.BeaconConfig().GenesisSlot
 }
 
 func (s *SlotTicker) start(
@@ -69,13 +70,13 @@ func (s *SlotTicker) start(
 		var nextTickTime time.Time
 		var slot uint64
 		if sinceGenesis < 0 {
-			// Handle when the current time is before the genesis time
+			// Handle when the current time is before the genesis time.
 			nextTickTime = genesisTime
-			slot = 0
+			slot = params.BeaconConfig().GenesisSlot
 		} else {
 			nextTick := sinceGenesis.Truncate(d) + d
 			nextTickTime = genesisTime.Add(nextTick)
-			slot = uint64(nextTick / d)
+			slot = uint64(nextTick/d) + params.BeaconConfig().GenesisSlot
 		}
 
 		for {
