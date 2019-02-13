@@ -67,7 +67,7 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 		if err != nil {
 			return nil, err
 		}
-		proposerIndex, err := v.BeaconProposerIdx(beaconState, slot)
+		proposerIndex, err := helpers.BeaconProposerIndex(beaconState, slot)
 		if err != nil {
 			return nil, err
 		}

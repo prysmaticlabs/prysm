@@ -79,3 +79,36 @@ func TestInactivityPenalty(t *testing.T) {
 		}
 	}
 }
+
+func TestEffectiveBalance(t *testing.T) {
+	defaultBalance := params.BeaconConfig().MaxDepositAmount
+
+	tests := []struct {
+		a uint64
+		b uint64
+	}{
+		{a: 0, b: 0},
+		{a: defaultBalance - 1, b: defaultBalance - 1},
+		{a: defaultBalance, b: defaultBalance},
+		{a: defaultBalance + 1, b: defaultBalance},
+		{a: defaultBalance * 100, b: defaultBalance},
+	}
+	for _, test := range tests {
+		state := &pb.BeaconState{ValidatorBalances: []uint64{test.a}}
+		if EffectiveBalance(state, 0) != test.b {
+			t.Errorf("EffectiveBalance(%d) = %d, want = %d", test.a, EffectiveBalance(state, 0), test.b)
+		}
+	}
+}
+
+func TestTotalBalance(t *testing.T) {
+	state := &pb.BeaconState{ValidatorBalances: []uint64{
+		27 * 1e9, 28 * 1e9, 32 * 1e9, 40 * 1e9,
+	}}
+
+	// 27 + 28 + 32 + 32 = 119
+	if TotalBalance(state, []uint64{0, 1, 2, 3}) != 119*1e9 {
+		t.Errorf("Incorrect TotalEffectiveBalance. Wanted: 119, got: %d",
+			TotalBalance(state, []uint64{0, 1, 2, 3})/1e9)
+	}
+}
