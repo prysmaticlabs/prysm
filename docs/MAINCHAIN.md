@@ -52,7 +52,7 @@ bazel build //validator:validator
 
 ## Deploy a Validator Registation Contract
 
-Deploy the Validator Registration Contract into the chain of the running geth node by following the instructions [here](https://github.com/prysmaticlabs/prysm/blob/master/contracts/validator-registration-contract/deployVRC/README.md).
+Deploy the Validator Registration Contract into the chain of the running geth node by following the instructions [here](https://github.com/prysmaticlabs/prysm/blob/master/contracts/deposit-contract/deployContract/README.md).
 
 ## Running a Beacon Node as a Validator
 

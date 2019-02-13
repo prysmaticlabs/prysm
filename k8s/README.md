@@ -94,7 +94,7 @@ deployment yaml.
 
 TODO: This process is currently manual and needs to be improved!
 
-Using the private key above and the deployVRC tool, deploy the validator
+Using the private key above and the deployContract tool, deploy the validator
 registration contract.
 
 ```bash
@@ -109,10 +109,10 @@ http://192.168.99.100:30051
 http://192.168.99.100:31745
 ```
 
-Using the first port provided (RPC). Run the deploy VRC tool
+Using the first port provided (RPC). Run the deployContract tool
 
 ```
-bazel run //contracts/validator-registration-contract/deployVRC --\
+bazel run //contracts/deposit-contract/deployContract --\
   --privKey=783da8ef5343c3019748506305d400bca8c324a5819f3a7f7fbf0c0a0d799b09 \
   --httpPath=http://192.168.99.100:30051
 ```
@@ -123,7 +123,7 @@ Example output:
 INFO main: New contract deployed address=0x541AfaC5266c534de039B4A1a53519e76ea82846
 ```
 
-Set this value for the vrcaddr flag in 
+Set this value for the deposit contract addr flag in 
 k8s/beacon-chain/beacon-chain.deploy.yaml.
 
 Ensure that the beacon-chain and client docker images are up to date. 

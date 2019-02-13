@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -69,7 +70,7 @@ func TestValidatorEpochAssignments_Ok(t *testing.T) {
 	genesisTime := params.BeaconConfig().GenesisTime.Unix()
 	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
-		var pubKey [48]byte
+		var pubKey [96]byte
 		copy(pubKey[:], []byte(strconv.Itoa(i)))
 		depositInput := &pbp2p.DepositInput{
 			Pubkey: pubKey[:],
@@ -96,7 +97,7 @@ func TestValidatorEpochAssignments_Ok(t *testing.T) {
 	validatorServer := &ValidatorServer{
 		beaconDB: db,
 	}
-	var pubKey [48]byte
+	var pubKey [96]byte
 	copy(pubKey[:], []byte("0"))
 	req := &pb.ValidatorEpochAssignmentsRequest{
 		EpochStart: params.BeaconConfig().GenesisSlot,
@@ -125,6 +126,23 @@ func TestValidatorEpochAssignments_Ok(t *testing.T) {
 	}
 }
 
+func TestValidatorEpochAssignments_WrongPubkeyLength(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	validatorServer := &ValidatorServer{
+		beaconDB: db,
+	}
+	req := &pb.ValidatorEpochAssignmentsRequest{
+		EpochStart: params.BeaconConfig().GenesisSlot,
+		PublicKey:  []byte{},
+	}
+	want := fmt.Sprintf("expected public key to have length %d", params.BeaconConfig().BLSPubkeyLength)
+	if _, err := validatorServer.ValidatorEpochAssignments(context.Background(), req); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %v, received %v", want, err)
+	}
+}
+
 func TestValidatorCommitteeAtSlot_CrosslinkCommitteesFailure(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -136,7 +154,7 @@ func TestValidatorCommitteeAtSlot_CrosslinkCommitteesFailure(t *testing.T) {
 	genesisTime := params.BeaconConfig().GenesisTime.Unix()
 	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
-		var pubKey [48]byte
+		var pubKey [96]byte
 		copy(pubKey[:], []byte(strconv.Itoa(i)))
 		depositInput := &pbp2p.DepositInput{
 			Pubkey: pubKey[:],
@@ -182,7 +200,7 @@ func TestValidatorCommitteeAtSlot_Ok(t *testing.T) {
 	genesisTime := params.BeaconConfig().GenesisTime.Unix()
 	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
-		var pubKey [48]byte
+		var pubKey [96]byte
 		copy(pubKey[:], []byte(strconv.Itoa(i)))
 		depositInput := &pbp2p.DepositInput{
 			Pubkey: pubKey[:],

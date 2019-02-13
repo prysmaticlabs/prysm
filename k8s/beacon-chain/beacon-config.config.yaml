@@ -4,4 +4,4 @@ metadata:
   name: beacon-config
   namespace: beacon-chain
 data:
-  VALIDATOR_REGISTRATION_CONTRACT_ADDRESS: "0x0"
+  DEPOSIT_CONTRACT_ADDRESS: "0x0"

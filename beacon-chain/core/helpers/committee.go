@@ -1,3 +1,5 @@
+// Package helpers contains helper functions outlined in ETH2.0 spec:
+// https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#helper-functions
 package helpers
 
 import (
