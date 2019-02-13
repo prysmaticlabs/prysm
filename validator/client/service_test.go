@@ -2,6 +2,8 @@ package client
 
 import (
 	"context"
+	"crypto/rand"
+	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"os"
 	"strings"
 	"testing"
@@ -16,11 +18,13 @@ import (
 )
 
 var _ = shared.Service(&ValidatorService{})
+var validatorKey *keystore.Key
 
 func TestMain(m *testing.M) {
 	dir := testutil.TempDir() + "/keystore1"
 	defer os.RemoveAll(dir)
 	accounts.NewValidatorAccount(dir, "1234")
+	validatorKey, _ = keystore.NewKey(rand.Reader)
 	os.Exit(m.Run())
 }
 
