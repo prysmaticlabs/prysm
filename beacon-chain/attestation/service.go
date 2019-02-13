@@ -3,7 +3,7 @@ package attestation
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/bazel-prysm/external/go_sdk/src/fmt"
+	"fmt"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -87,15 +87,22 @@ func (a *Service) IncomingAttestationFeed() *event.Feed {
 //	Let `get_latest_attestation(store: Store, validator_index: ValidatorIndex) ->
 //		Attestation` be the attestation with the highest slot number in `store`
 //		from the validator with the given `validator_index`
-func (a *Service) LatestAttestation(index uint64) (*pb.Attestation, error) {
+func (a *Service) LatestAttestation(index int) (*pb.Attestation, error) {
 	state, err := a.beaconDB.State()
 	if err != nil {
 		return nil, err
 	}
-	pubKey := bytesutil.ToBytes48(state.ValidatorRegistry[index].Pubkey)
 
 	// return error if it's an invalid validator index.
+	if index >= len(state.ValidatorRegistry) {
+		return nil, fmt.Errorf("invalid validator index %d", index)
+	}
+	pubKey := bytesutil.ToBytes48(state.ValidatorRegistry[index].Pubkey)
+
 	// return error if validator has no attestation.
+	if _, exists := a.store[pubKey]; !exists {
+		return nil, fmt.Errorf("validator index %d does not have an attestation", index)
+	}
 
 	return a.store[pubKey], nil
 }
@@ -107,7 +114,7 @@ func (a *Service) LatestAttestation(index uint64) (*pb.Attestation, error) {
 //	Let `get_latest_attestation_target(store: Store, validator_index: ValidatorIndex) ->
 //		BeaconBlock` be the target block in the attestation
 //		`get_latest_attestation(store, validator_index)`.
-func (a *Service) LatestAttestationTarget(index uint64) (*pb.BeaconBlock, error) {
+func (a *Service) LatestAttestationTarget(index int) (*pb.BeaconBlock, error) {
 	attestation, err := a.LatestAttestation(index)
 	if err != nil {
 		return nil, fmt.Errorf("could not get attestation: %v", err)
