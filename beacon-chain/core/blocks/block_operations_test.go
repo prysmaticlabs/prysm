@@ -9,10 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -493,12 +492,12 @@ func TestProcessAttesterSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 		{
 			SlashableAttestation_1: &pb.SlashableAttestation{
 				Data:             att1,
-				ValidatorIndices: []uint64{1},
+				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
 				CustodyBitfield:  []byte{0xFF},
 			},
 			SlashableAttestation_2: &pb.SlashableAttestation{
 				Data:             att2,
-				ValidatorIndices: []uint64{2},
+				ValidatorIndices: []uint64{9, 10, 11, 12, 13, 14, 15, 16},
 				CustodyBitfield:  []byte{0xFF},
 			},
 		},
@@ -552,12 +551,12 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		{
 			SlashableAttestation_1: &pb.SlashableAttestation{
 				Data:             att1,
-				ValidatorIndices: []uint64{1},
+				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
 				CustodyBitfield:  []byte{0xFF},
 			},
 			SlashableAttestation_2: &pb.SlashableAttestation{
 				Data:             att2,
-				ValidatorIndices: []uint64{1},
+				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
 				CustodyBitfield:  []byte{0xFF},
 			},
 		},

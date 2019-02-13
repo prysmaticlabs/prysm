@@ -362,7 +362,7 @@ func TestAttestingValidatorsOk(t *testing.T) {
 			Data: &pb.AttestationData{
 				ShardBlockRootHash32: []byte{byte(i + 100)},
 			},
-			AggregationBitfield: []byte{0xFF},
+			AggregationBitfield: []byte{0xC0},
 		}
 		attestations = append(attestations, attestation)
 	}
@@ -378,7 +378,7 @@ func TestAttestingValidatorsOk(t *testing.T) {
 
 	// Verify the winner root is attested by validator 109 97 based on shuffling.
 	if !reflect.DeepEqual(attestedValidators, []uint64{109, 97}) {
-		t.Errorf("Active validators don't match. Wanted:[237,224], Got: %v", attestedValidators)
+		t.Errorf("Active validators don't match. Wanted:[109,97], Got: %v", attestedValidators)
 	}
 }
 
@@ -410,7 +410,7 @@ func TestTotalAttestingBalanceOk(t *testing.T) {
 				ShardBlockRootHash32: []byte{byte(i + 100)},
 			},
 			// All validators attested to the above roots.
-			AggregationBitfield: []byte{0xff},
+			AggregationBitfield: []byte{0xc0},
 		}
 		attestations = append(attestations, attestation)
 	}

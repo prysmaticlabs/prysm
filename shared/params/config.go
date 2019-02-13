@@ -98,7 +98,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	TargetCommitteeSize:        128,
 	MaxBalanceChurnQuotient:    32,
 	BeaconChainShardNumber:     1<<64 - 1,
-	MaxIndicesPerSlashableVote: 1,
+	MaxIndicesPerSlashableVote: 4096,
 	LatestBlockRootsLength:     8192,
 	LatestRandaoMixesLength:    8192,
 	LatestPenalizedExitLength:  8192,
