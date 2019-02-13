@@ -984,11 +984,11 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 			pendingAttestations[0].Data,
 		)
 	}
-	if pendingAttestations[0].SlotIncluded != 70 {
+	if pendingAttestations[0].InclusionSlot != 70 {
 		t.Errorf(
 			"Pending attestation not included at correct slot: wanted %v, received %v",
 			64,
-			pendingAttestations[0].SlotIncluded,
+			pendingAttestations[0].InclusionSlot,
 		)
 	}
 }
