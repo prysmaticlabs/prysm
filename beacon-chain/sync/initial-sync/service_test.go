@@ -3,9 +3,10 @@ package initialsync
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"

@@ -3,6 +3,7 @@ package db
 import (
 	"errors"
 	"fmt"
+
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 
 	"github.com/boltdb/bolt"

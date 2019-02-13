@@ -4,6 +4,7 @@ package sync
 import (
 	"context"
 	"fmt"
+
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 
 	"github.com/gogo/protobuf/proto"

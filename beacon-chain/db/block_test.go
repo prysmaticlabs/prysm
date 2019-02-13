@@ -1,9 +1,10 @@
 package db
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"

@@ -2,10 +2,11 @@ package blocks
 
 import (
 	"bytes"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"

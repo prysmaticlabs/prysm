@@ -2,8 +2,9 @@ package db
 
 import (
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"

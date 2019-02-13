@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"fmt"
+
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
