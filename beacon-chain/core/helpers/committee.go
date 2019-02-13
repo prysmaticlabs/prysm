@@ -381,15 +381,15 @@ func AttestationParticipants(
 // return False
 //
 // return True
-func VerifyBitfield(bitfield []byte, committee_size int) (bool, error) {
-	if len(bitfield) != mathutil.CeilDiv8(committee_size) {
+func VerifyBitfield(bitfield []byte, committeeSize int) (bool, error) {
+	if len(bitfield) != mathutil.CeilDiv8(committeeSize) {
 		return false, fmt.Errorf(
 			"wanted participants bitfield length %d, got: %d",
-			mathutil.CeilDiv8(committee_size),
+			mathutil.CeilDiv8(committeeSize),
 			len(bitfield))
 	}
 
-	for i := committee_size; i < len(bitfield)*8; i++ {
+	for i := committeeSize; i < len(bitfield)*8; i++ {
 		bitSet, err := bitutil.CheckBit(bitfield, i)
 		if err != nil {
 			return false, fmt.Errorf("unable to check bit in bitfield %v", err)
