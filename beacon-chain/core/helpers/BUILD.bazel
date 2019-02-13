@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "committee.go",
         "randao.go",
+        "rewards_penalties.go",
         "signature.go",
         "slot_epoch.go",
         "validators.go",
@@ -27,6 +28,7 @@ go_test(
     srcs = [
         "committee_test.go",
         "randao_test.go",
+        "rewards_penalties_test.go",
         "signature_test.go",
         "slot_epoch_test.go",
         "validators_test.go",
