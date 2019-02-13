@@ -29,46 +29,54 @@ func SwapOrNotShuffle(seed common.Hash, indicesList []uint64) ([]uint64, error) 
 		return nil, errors.New("input list exceeded upper bound and reached modulo bias")
 	}
 
-	var round uint64
-	for round = 1; round < 90; round++ {
-		hashBytes := make([]byte, 0)
+	
+	for round := 0; round < 90; round++ {
+		var hashBytes []byte
 		bs1 := make([]byte, 8)
-		//https://stackoverflow.com/questions/35371385/how-can-i-convert-an-int64-into-a-byte-array-in-go
-		binary.LittleEndian.PutUint64(bs1, round)
-		num := uint64(math.Floor(float64((listSize + 255) / 256)))
-		var i uint64
-		for i = 1; i < num; i++ {
+		binary.LittleEndian.PutUint64(bs1, uint64(round))
+		fmt.Printf("bs1 is %v\n", bs1)
+		num := int(math.Floor(float64((listSize + 255) / 256)))
+		fmt.Printf("num is %v\n", num)
+		for i := 0; i < num; i++ {
 			bs4 := make([]byte, 8)
-			binary.LittleEndian.PutUint64(bs4, i)
+			binary.LittleEndian.PutUint64(bs4, uint64(i))
+			fmt.Printf("bs4 is %v\n", bs4)
 			bs := append(bs1, bs4...)
+			fmt.Printf("bs is %v\n", bs)
 			hash := hashutil.Hash(append(seed[:], bs...))
+			fmt.Printf("hash is %v\n", hash)
 			hashBytes = append(hashBytes, hash[:]...)
+			fmt.Printf("hashBytes is %v\n", hashBytes)
+
 		}
 
 		hash := hashutil.Hash(append(seed[:], bs1...))
+		fmt.Printf("hash is %v\n", hash)
 		hashFromBytes := binary.LittleEndian.Uint64(hash[:])
+		fmt.Printf("hashFromBytes is %v\n", hashFromBytes)
 		pivot := hashFromBytes % uint64(listSize)
+		fmt.Printf("pivot is %v\n", pivot)
 
 		powersOfTwo := []uint64{1, 2, 4, 8, 16, 32, 64, 128}
 
 		for i, index := range(indicesList) {
 			flip := (pivot - index) % uint64(listSize)
+			fmt.Printf("flip is %v\n", flip)
 			var hashPos uint64
 			if index > flip {
 				hashPos = index
 			} else {
 				hashPos = flip
 			}
-			f64 := math.Floor(float64(hashPos / 8))
-			fmt.Printf("f64 is %v", f64)
-			if f64 >= math.MaxInt64 || f64 <= math.MinInt64 {
-				return nil, errors.New("f64 is out of int64 range.")
-			}
-			hashBytesIndex := uint64(f64)
-			fmt.Printf("hashBytesIndex is %v", hashBytesIndex)
+			fmt.Printf("hashPos is %v\n", hashPos)
+			hashBytesIndex := int(math.Floor((float64(hashPos) / 8)))
+			fmt.Printf("hashBytesIndex is %v\n", hashBytesIndex)
 			hByte := hashBytes[hashBytesIndex]
+			fmt.Printf("hByte is %v\n", hByte)
 			hInt := uint64(hByte)
+			fmt.Printf("hByte is %v\n", hByte)
 			p := powersOfTwo[hashPos % 8]
+			fmt.Printf("p is %v\n", p)
 			if  hInt & p != 0 {
 				indicesList[i] = flip
 			}
