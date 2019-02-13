@@ -116,7 +116,7 @@ func InitialBeaconState(
 		LatestBlockRootHash32S:  latestBlockRoots,
 		LatestIndexRootHash32S:  latestIndexRoots,
 		LatestPenalizedBalances: latestPenalizedExitBalances,
-		LatestAttestations:      []*pb.PendingAttestationRecord{},
+		LatestAttestations:      []*pb.PendingAttestation{},
 		BatchedBlockRootHash32S: [][]byte{},
 
 		// Eth1 data.

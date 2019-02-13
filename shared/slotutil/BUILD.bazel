@@ -2,19 +2,15 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = [
-        "simulatorticker.go",
-        "slotticker.go",
-    ],
+    srcs = ["slotticker.go"],
     importpath = "github.com/prysmaticlabs/prysm/shared/slotutil",
     visibility = ["//visibility:public"],
+    deps = ["//shared/params:go_default_library"],
 )
 
 go_test(
     name = "go_default_test",
-    srcs = [
-        "simulatorticker_test.go",
-        "slotticker_test.go",
-    ],
+    srcs = ["slotticker_test.go"],
     embed = [":go_default_library"],
+    deps = ["//shared/params:go_default_library"],
 )
