@@ -97,12 +97,10 @@ func TestLifecycle_WithInsecure(t *testing.T) {
 }
 
 func TestStatus(t *testing.T) {
-	dir := testutil.TempDir() + "/keystore1"
 	validatorService, err := NewValidatorService(
 		context.Background(),
 		&Config{
 			Endpoint:     "merkle tries",
-			KeystorePath: dir,
 			Password:     "1234",
 		},
 	)
