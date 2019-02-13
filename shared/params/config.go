@@ -172,6 +172,7 @@ func BeaconConfig() *BeaconChainConfig {
 	return beaconConfig
 }
 
+// DemoBeaconConfig retrieves the demo beacon chain config.
 func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig := *defaultBeaconConfig
 	demoConfig.ShardCount = 5
