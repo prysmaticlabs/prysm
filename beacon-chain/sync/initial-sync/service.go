@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -201,7 +200,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 
 			beaconState := data.BeaconState
 
-			h, err := state.Hash(beaconState)
+			h, err := ssz.TreeHash(beaconState)
 			if err != nil {
 				log.Error(err)
 				continue

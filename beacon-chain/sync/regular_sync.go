@@ -293,7 +293,7 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) {
 
 	req := &pb.ChainHeadResponse{
 		Slot:  block.Slot,
-		Hash:  root[:],
+		Hash:  blockRoot[:],
 		Block: block,
 	}
 

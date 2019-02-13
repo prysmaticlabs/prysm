@@ -9,7 +9,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 
-	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -46,10 +45,6 @@ func generateTestGenesisStateAndBlock(
 		t.Fatal(err)
 	}
 
-	stateEnc, err := proto.Marshal(beaconState)
-	if err != nil {
-		t.Fatal(err)
-	}
 	if err := beaconDB.SaveState(beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -193,7 +188,7 @@ func TestLMDGhost_EveryActiveValidatorHasLatestAttestation(t *testing.T) {
 func TestVoteCount_ParentDoesNotExist(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
-	genesisBlock := b.NewGenesisBlock([]byte{})
+	genesisBlock := b.NewGenesisBlock([]byte("stateroot"))
 	if err := beaconDB.SaveBlock(genesisBlock); err != nil {
 		t.Fatal(err)
 	}
@@ -216,7 +211,7 @@ func TestVoteCount_ParentDoesNotExist(t *testing.T) {
 func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
-	genesisBlock := b.NewGenesisBlock([]byte{})
+	genesisBlock := b.NewGenesisBlock([]byte("stateroot"))
 	genesisRoot, err := ssz.TreeHash(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
