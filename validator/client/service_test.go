@@ -17,6 +17,13 @@ import (
 
 var _ = shared.Service(&ValidatorService{})
 
+func TestMain(m *testing.M) {
+	dir := testutil.TempDir() + "/keystore1"
+	defer os.RemoveAll(dir)
+	accounts.NewValidatorAccount(dir, "1234")
+	os.Exit(m.Run())
+}
+
 func TestStop_cancelsContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	vs := &ValidatorService{
@@ -41,10 +48,6 @@ func TestLifecycle(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	dir := testutil.TempDir() + "/keystore1"
-	defer os.RemoveAll(dir)
-	if err := accounts.NewValidatorAccount(dir, "1234"); err != nil {
-		t.Fatalf("Could not create validator account: %v", err)
-	}
 	validatorService, err := NewValidatorService(
 		ctx,
 		&Config{
@@ -70,10 +73,6 @@ func TestLifecycle_WithInsecure(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	dir := testutil.TempDir() + "/keystore1"
-	defer os.RemoveAll(dir)
-	if err := accounts.NewValidatorAccount(dir, "1234"); err != nil {
-		t.Fatalf("Could not create validator account: %v", err)
-	}
 	validatorService, err := NewValidatorService(
 		ctx,
 		&Config{
@@ -95,10 +94,6 @@ func TestLifecycle_WithInsecure(t *testing.T) {
 
 func TestStatus(t *testing.T) {
 	dir := testutil.TempDir() + "/keystore1"
-	defer os.RemoveAll(dir)
-	if err := accounts.NewValidatorAccount(dir, "1234"); err != nil {
-		t.Fatalf("Could not create validator account: %v", err)
-	}
 	validatorService, err := NewValidatorService(
 		context.Background(),
 		&Config{
