@@ -152,7 +152,7 @@ func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignm
 
 	slot := uint64(1)
 	v := validator{
-		key:          validatorKey,
+		key:             validatorKey,
 		validatorClient: client,
 		assignment: &pb.Assignment{
 			PublicKey:    []byte{},
@@ -176,7 +176,7 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
-		key:          validatorKey,
+		key:             validatorKey,
 		validatorClient: client,
 	}
 
@@ -205,7 +205,7 @@ func TestUpdateAssignments_DoesUpdateAssignments(t *testing.T) {
 		},
 	}
 	v := validator{
-		key:          validatorKey,
+		key:             validatorKey,
 		validatorClient: client,
 	}
 	client.EXPECT().ValidatorEpochAssignments(

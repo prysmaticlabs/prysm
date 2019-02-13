@@ -3,11 +3,12 @@ package client
 import (
 	"context"
 	"crypto/rand"
-	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"os"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/keystore"
 
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 
