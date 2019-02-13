@@ -3,11 +3,12 @@ package db
 import (
 	"crypto/rand"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"math/big"
 	"os"
 	"path"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 // setupDB instantiates and returns a BeaconDB instance.

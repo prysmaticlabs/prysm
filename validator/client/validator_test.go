@@ -38,8 +38,6 @@ func (f *fakeAttestationPool) PendingAttestations() []*pbp2p.Attestation {
 	return nil
 }
 
-var fakePubKey = []byte{1}
-
 func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
