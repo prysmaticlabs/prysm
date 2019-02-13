@@ -314,3 +314,42 @@ func TestAttestationParticipants_IncorrectBitfield(t *testing.T) {
 		t.Error("attestation participants should have failed with incorrect bitfield")
 	}
 }
+
+func TestVerifyBitfield(t *testing.T) {
+	bitfield := []byte{0xff}
+	committeeSize := 8
+
+	isValidated, err := VerifyBitfield(bitfield, committeeSize)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !isValidated {
+		t.Error("bitfield is not validated when it was supposed to be")
+	}
+
+	// The second byte is represented as 01000000 , however we could only represent numbers as big endian
+	// so the bitwise operation is used here.
+	bitfield = []byte{0xff, 0xbf ^ 0xff}
+	committeeSize = 9
+
+	isValidated, err = VerifyBitfield(bitfield, committeeSize)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if isValidated {
+		t.Error("bitfield is validated when it was supposed to be")
+	}
+
+	committeeSize = 10
+
+	isValidated, err = VerifyBitfield(bitfield, committeeSize)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !isValidated {
+		t.Error("bitfield is not validated when it was supposed to be")
+	}
+}
