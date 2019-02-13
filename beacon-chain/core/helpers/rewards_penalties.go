@@ -23,6 +23,24 @@ func EffectiveBalance(state *pb.BeaconState, idx uint64) uint64 {
 	return state.ValidatorBalances[idx]
 }
 
+// TotalBalance returns the total deposited amount at stake in Gwei
+// of all active validators.
+//
+// Spec pseudocode definition:
+//   def get_total_balance(state: BeaconState, validators: List[ValidatorIndex]) -> Gwei:
+//    """
+//    Return the combined effective balance of an array of validators.
+//    """
+//    return sum([get_effective_balance(state, i) for i in validators])
+func TotalBalance(state *pb.BeaconState, validators []uint64) uint64 {
+	var totalBalance uint64
+
+	for _, idx := range validators {
+		totalBalance += EffectiveBalance(state, idx)
+	}
+	return totalBalance
+}
+
 // BaseRewardQuotient takes the previous total balance and calculates for
 // the quotient of the base reward.
 //
