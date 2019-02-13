@@ -154,66 +154,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxNumLog2Validators:  24,
 }
 
-var demoBeaconConfig = &BeaconChainConfig{
-	// Misc constant.
-	ShardCount:                 5,
-	TargetCommitteeSize:        3,
-	EjectionBalance:            defaultBeaconConfig.EjectionBalance,
-	MaxBalanceChurnQuotient:    defaultBeaconConfig.MaxBalanceChurnQuotient,
-	BeaconChainShardNumber:     defaultBeaconConfig.BeaconChainShardNumber,
-	MaxIndicesPerSlashableVote: defaultBeaconConfig.MaxIndicesPerSlashableVote,
-	LatestBlockRootsLength:     defaultBeaconConfig.LatestBlockRootsLength,
-	LatestRandaoMixesLength:    defaultBeaconConfig.LatestRandaoMixesLength,
-	LatestPenalizedExitLength:  defaultBeaconConfig.LatestPenalizedExitLength,
-	LatestIndexRootsLength:     defaultBeaconConfig.LatestIndexRootsLength,
-	MaxWithdrawalsPerEpoch:     defaultBeaconConfig.MaxWithdrawalsPerEpoch,
-	BLSPubkeyLength:            defaultBeaconConfig.BLSPubkeyLength,
-
-	// Deposit contract constants.
-	DepositContractTreeDepth: defaultBeaconConfig.DepositContractTreeDepth,
-	MaxDepositAmount:         defaultBeaconConfig.MaxDepositAmount,
-	MinDepositAmount:         defaultBeaconConfig.MinDepositAmount,
-
-	// Initial value constants.
-	GenesisForkVersion: defaultBeaconConfig.GenesisForkVersion,
-	GenesisSlot:        defaultBeaconConfig.GenesisSlot,
-	GenesisEpoch:       defaultBeaconConfig.GenesisEpoch,
-	GenesisStartShard:  defaultBeaconConfig.GenesisStartShard,
-	FarFutureEpoch:     defaultBeaconConfig.FarFutureEpoch,
-	ZeroHash:           defaultBeaconConfig.ZeroHash,
-	EmptySignature:     defaultBeaconConfig.EmptySignature,
-
-	// Time parameter constants.
-	SlotDuration:                 2,
-	MinAttestationInclusionDelay: defaultBeaconConfig.MinAttestationInclusionDelay,
-	EpochLength:                  defaultBeaconConfig.EpochLength,
-	SeedLookahead:                defaultBeaconConfig.SeedLookahead,
-	EntryExitDelay:               defaultBeaconConfig.EntryExitDelay,
-	Eth1DataVotingPeriod:         defaultBeaconConfig.Eth1DataVotingPeriod,
-	Eth1FollowDistance:           defaultBeaconConfig.Eth1FollowDistance,
-
-	// Reward and penalty quotients constants.
-	BaseRewardQuotient:           defaultBeaconConfig.BaseRewardQuotient,
-	WhistlerBlowerRewardQuotient: defaultBeaconConfig.WhistlerBlowerRewardQuotient,
-	IncluderRewardQuotient:       defaultBeaconConfig.IncluderRewardQuotient,
-	InactivityPenaltyQuotient:    defaultBeaconConfig.InactivityPenaltyQuotient,
-
-	// Max operations per block constants.
-	MaxExits:             defaultBeaconConfig.MaxExits,
-	MaxDeposits:          defaultBeaconConfig.MaxDeposits,
-	MaxAttestations:      defaultBeaconConfig.MaxAttestations,
-	MaxProposerSlashings: defaultBeaconConfig.MaxProposerSlashings,
-	MaxAttesterSlashings: defaultBeaconConfig.MaxAttesterSlashings,
-
-	// Prysm constants.
-	DepositsForChainStart: defaultBeaconConfig.DepositsForChainStart,
-	RandBytes:             defaultBeaconConfig.RandBytes,
-	SyncPollingInterval:   2 * 4, // Query nodes over the network every 4 slots for sync status.
-	GenesisTime:           time.Now(),
-	MaxNumLog2Validators:  defaultBeaconConfig.MaxNumLog2Validators,
-	SimulatedBlockRandao:  [32]byte{'S', 'I', 'M', 'U', 'L', 'A', 'T', 'O', 'R'},
-}
-
 var defaultShardConfig = &ShardChainConfig{
 	ChunkSize:         uint64(256),
 	MaxShardBlockSize: uint64(32768),
@@ -232,6 +172,19 @@ var contractConfig = defaultDepositContractConfig
 // BeaconConfig retrieves beacon chain config.
 func BeaconConfig() *BeaconChainConfig {
 	return beaconConfig
+}
+
+// DemoBeaconConfig retrieves the demo beacon chain config.
+func DemoBeaconConfig() *BeaconChainConfig {
+	demoConfig := *defaultBeaconConfig
+	demoConfig.ShardCount = 5
+	demoConfig.TargetCommitteeSize = 3
+	demoConfig.SlotDuration = 2
+	demoConfig.SyncPollingInterval = 2 * 4 // Query nodes over the network every 4 slots for sync status.
+	demoConfig.GenesisTime = time.Now()
+	demoConfig.SimulatedBlockRandao = [32]byte{'S', 'I', 'M', 'U', 'L', 'A', 'T', 'O', 'R'}
+
+	return &demoConfig
 }
 
 // ShardConfig retrieves shard chain config.
@@ -255,7 +208,7 @@ func DemoContractConfig(depositsReq *big.Int, minDeposit *big.Int, maxDeposit *b
 
 // UseDemoBeaconConfig for beacon chain services.
 func UseDemoBeaconConfig() {
-	beaconConfig = demoBeaconConfig
+	beaconConfig = DemoBeaconConfig()
 }
 
 // OverrideBeaconConfig by replacing the config. The preferred pattern is to
