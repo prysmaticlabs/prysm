@@ -25,7 +25,7 @@ spec:
           args: 
             - "--web3provider=ws://geth-nodes.pow.svc.cluster.local:8546"
             - "--verbosity=debug"
-            - "--vrcaddr=$(VALIDATOR_REGISTRATION_CONTRACT_ADDRESS)"
+            - "--deposit-contract=$(DEPOSIT_CONTRACT_ADDRESS)"
             - "--rpc-port=4000"
             - "--monitoring-port=9090"
             - "--bootstrap-node=/ip4/$(BOOTNODE_SERVICE_HOST)/tcp/$(BOOTNODE_SERVICE_PORT)/p2p/QmUWTsZwoJ51tey4fEE9EAqzQeHFHm4FE9aSfgTv8xyuG5" 
@@ -46,8 +46,8 @@ spec:
             - containerPort: 9090
               name: prometheus
           env:
-            - name: VALIDATOR_REGISTRATION_CONTRACT_ADDRESS
+            - name: DEPOSIT_CONTRACT_ADDRESS
               valueFrom:
                 configMapKeyRef:
                   name: beacon-config
-                  key: VALIDATOR_REGISTRATION_CONTRACT_ADDRESS
+                  key: DEPOSIT_CONTRACT_ADDRESS

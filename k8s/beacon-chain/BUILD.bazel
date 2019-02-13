@@ -32,7 +32,7 @@ _deployments = [
 ]
 
 _jobs = [
-    "deployvrc",
+    "deploydepositcontract",
 ]
 
 _services = [
@@ -42,7 +42,7 @@ _services = [
 ]
 
 _service_accounts = [
-    "deployvrc",
+    "deploydepositcontract",
 ]
 
 k8s_objects(
