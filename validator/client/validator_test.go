@@ -166,7 +166,7 @@ func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Could not receive ChainStart from stream")
 }
 
-func TestUpdateAssignments_DoesNothingWhenNotEpochStart(t *testing.T) {
+func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignments(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := internal.NewMockValidatorServiceClient(ctrl)
@@ -179,6 +179,11 @@ func TestUpdateAssignments_DoesNothingWhenNotEpochStart(t *testing.T) {
 	v := validator{
 		key:             k,
 		validatorClient: client,
+		assignment: &pb.Assignment{
+			PublicKey:    []byte{},
+			AttesterSlot: 10,
+			ProposerSlot: 20,
+		},
 	}
 	client.EXPECT().ValidatorEpochAssignments(
 		gomock.Any(),
