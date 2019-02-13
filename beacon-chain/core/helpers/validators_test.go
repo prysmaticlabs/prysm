@@ -92,3 +92,12 @@ func TestBeaconProposerIdx_returnsErrorWithEmptyCommittee(t *testing.T) {
 		t.Errorf("Unexpected error. got=%v want=%s", err, expected)
 	}
 }
+
+func TestEntryExitEffectEpoch_Ok(t *testing.T) {
+	epoch := uint64(9999)
+	got := EntryExitEffectEpoch(epoch)
+	wanted := epoch + 1 + params.BeaconConfig().EntryExitDelay
+	if wanted != got {
+		t.Errorf("Wanted: %d, received: %d", wanted, got)
+	}
+}
