@@ -208,11 +208,6 @@ func (w *Web3Service) LatestBlockHash() common.Hash {
 	return w.blockHash
 }
 
-// LatestBlockTime in the ETH1.0 chain.
-func (w *Web3Service) LatestBlockTime() time.Time {
-	return w.blockTime
-}
-
 // Client for interacting with the ETH1.0 chain.
 func (w *Web3Service) Client() Client {
 	return w.client
