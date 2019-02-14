@@ -187,10 +187,11 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 	validator.genesisTime = uint64(time.Now().Unix())
 	validatorIndex := uint64(5)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	m.attesterClient.EXPECT().CrosslinkCommitteesAtSlot(
+	m.validatorClient.EXPECT().ValidatorCommitteeAtSlot(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.CrosslinkCommitteeRequest{}),
-	).Return(&pb.CrosslinkCommitteeResponse{
+		gomock.AssignableToTypeOf(&pb.CommitteeRequest{}),
+		gomock.Any(), // ctx
+	).Return(&pb.CommitteeResponse{
 		Shard:     5,
 		Committee: committee,
 	}, nil).Do(func(arg0, arg1 interface{}) {
@@ -239,10 +240,11 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	validator.genesisTime = uint64(time.Now().Unix())
 	validatorIndex := uint64(5)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	m.attesterClient.EXPECT().CrosslinkCommitteesAtSlot(
+	m.validatorClient.EXPECT().ValidatorCommitteeAtSlot(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.CrosslinkCommitteeRequest{}),
-	).Return(&pb.CrosslinkCommitteeResponse{
+		gomock.AssignableToTypeOf(&pb.CommitteeRequest{}),
+		gomock.Any(), // ctx
+	).Return(&pb.CommitteeResponse{
 		Shard:     5,
 		Committee: committee,
 	}, nil).Do(func(arg0, arg1 interface{}) {
@@ -279,15 +281,3 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	delay = 0
 	go validator.AttestToBlockHead(context.Background(), 0)
 }
-
-// func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
-// 	validator, m, finish := setup(t)
-// 	defer finish()
-// 	m.attesterClient.EXPECT().AttestHead(
-// 		gomock.Any(), // ctx
-// 		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
-// 	).Times(1)
-// 	delay = 0
-// 	go validator.AttestToBlockHead(context.Background(), 100 /*slot*/)
-// 	time.Sleep(50 * time.Millisecond) // delay long enough for the AttestToHead go routine to finish
-// }
