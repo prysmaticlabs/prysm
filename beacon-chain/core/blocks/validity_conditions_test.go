@@ -17,7 +17,7 @@ func init() {
 }
 
 type mockDB struct {
-	hasBlock       bool
+	hasBlock bool
 }
 
 func (f *mockDB) HasBlock(h [32]byte) bool {

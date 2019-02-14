@@ -50,7 +50,7 @@ func makeDecoder(typ reflect.Type) (dec decoder, err error) {
 		return decodeUint8, nil
 	case kind == reflect.Uint16:
 		return decodeUint16, nil
-	case kind == reflect.Uint32:
+	case kind == reflect.Uint32 || kind == reflect.Int32:
 		return decodeUint32, nil
 	case kind == reflect.Uint64:
 		return decodeUint64, nil

@@ -6,8 +6,8 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -33,7 +33,7 @@ func (ps *ProposerServer) ProposerIndex(ctx context.Context, req *pb.ProposerInd
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
 
-	proposerIndex, err := v.BeaconProposerIdx(
+	proposerIndex, err := helpers.BeaconProposerIndex(
 		beaconState,
 		req.SlotNumber,
 	)
