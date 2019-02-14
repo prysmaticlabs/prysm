@@ -3,10 +3,11 @@ package attestation
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
