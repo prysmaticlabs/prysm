@@ -52,7 +52,8 @@ func (as *AttesterServer) AttestationInfoAtSlot(ctx context.Context, req *pb.Att
 	// where epoch_boundary is the block at the most recent epoch boundary in the
 	// chain defined by head -- i.e. the BeaconBlock where block.slot == get_epoch_start_slot(head.slot).
 	// On the server side, this is fetched by calling get_block_root(state, get_epoch_start_slot(head.slot)).
-	epochBoundaryRoot, err := blocks.BlockRoot(beaconState, helpers.StartSlot(helpers.SlotToEpoch(head.Slot)))
+	mostRecentEpochBoundary := helpers.CurrentEpoch(beaconState)
+	epochBoundaryRoot, err := blocks.BlockRoot(beaconState, helpers.StartSlot(mostRecentEpochBoundary))
 	if err != nil {
 		return nil, fmt.Errorf("could not get epoch boundary block: %v", err)
 	}

@@ -97,9 +97,9 @@ func TestAttestationInfoAtSlot_Ok(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	block := &pbp2p.BeaconBlock{
-		Slot: params.BeaconConfig().GenesisSlot,
+		Slot:                   params.BeaconConfig().GenesisSlot+ 3*params.BeaconConfig().EpochLength+1,
 	}
-	epochBoundarySlot := params.BeaconConfig().GenesisSlot+params.BeaconConfig().EpochLength
+	epochBoundarySlot := params.BeaconConfig().GenesisSlot+3*params.BeaconConfig().EpochLength
 	epochBoundaryBlock := &pbp2p.BeaconBlock{
 		Slot: epochBoundarySlot,
 	}
@@ -120,7 +120,7 @@ func TestAttestationInfoAtSlot_Ok(t *testing.T) {
 		t.Fatalf("Could not hash justified block: %v", err)
 	}
 	beaconState := &pbp2p.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot+ 3*params.BeaconConfig().EpochLength,
+		Slot:                   params.BeaconConfig().GenesisSlot+ 3*params.BeaconConfig().EpochLength+1,
 		JustifiedEpoch:         justifiedSlot,
 		LatestBlockRootHash32S: make([][]byte, 3*params.BeaconConfig().EpochLength),
 		LatestCrosslinks: []*pbp2p.Crosslink{
@@ -135,12 +135,6 @@ func TestAttestationInfoAtSlot_Ok(t *testing.T) {
 	attesterServer := &AttesterServer{
 		beaconDB: db,
 	}
-	if err := attesterServer.beaconDB.SaveBlock(block); err != nil {
-		t.Fatalf("Could not save block in test db: %v", err)
-	}
-	if err := attesterServer.beaconDB.UpdateChainHead(block, beaconState); err != nil {
-		t.Fatalf("Could not update chain head in test db: %v", err)
-	}
 	if err := attesterServer.beaconDB.SaveBlock(epochBoundaryBlock); err != nil {
 		t.Fatalf("Could not save block in test db: %v", err)
 	}
@@ -151,6 +145,12 @@ func TestAttestationInfoAtSlot_Ok(t *testing.T) {
 		t.Fatalf("Could not save block in test db: %v", err)
 	}
 	if err := attesterServer.beaconDB.UpdateChainHead(justifiedBlock, beaconState); err != nil {
+		t.Fatalf("Could not update chain head in test db: %v", err)
+	}
+	if err := attesterServer.beaconDB.SaveBlock(block); err != nil {
+		t.Fatalf("Could not save block in test db: %v", err)
+	}
+	if err := attesterServer.beaconDB.UpdateChainHead(block, beaconState); err != nil {
 		t.Fatalf("Could not update chain head in test db: %v", err)
 	}
 	req := &pb.AttestationInfoRequest{
