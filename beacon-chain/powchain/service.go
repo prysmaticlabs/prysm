@@ -352,9 +352,13 @@ func (w *Web3Service) run(done <-chan struct{}) {
 		log.Errorf("Unable to query logs from deposit contract: %v", err)
 		return
 	}
-	if err := w.processPastLogs(query); err != nil {
-		log.Errorf("Unable to process past logs %v", err)
-		return
+
+	// Only process logs if the chain start delay flag is not enabled.
+	if w.chainStartDelay == 0 {
+		if err := w.processPastLogs(query); err != nil {
+			log.Errorf("Unable to process past logs %v", err)
+			return
+		}
 	}
 	defer logSub.Unsubscribe()
 	defer headSub.Unsubscribe()
