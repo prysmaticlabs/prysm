@@ -4,10 +4,11 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/shared/ssz"
+
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 func createBlock(enc []byte) (*pb.BeaconBlock, error) {
@@ -19,14 +20,14 @@ func createBlock(enc []byte) (*pb.BeaconBlock, error) {
 	return protoBlock, nil
 }
 
-// Block accepts a block hash and returns the corresponding block.
+// Block accepts a block root and returns the corresponding block.
 // Returns nil if the block does not exist.
-func (db *BeaconDB) Block(hash [32]byte) (*pb.BeaconBlock, error) {
+func (db *BeaconDB) Block(root [32]byte) (*pb.BeaconBlock, error) {
 	var block *pb.BeaconBlock
 	err := db.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blockBucket)
 
-		enc := bucket.Get(hash[:])
+		enc := bucket.Get(root[:])
 		if enc == nil {
 			return nil
 		}
@@ -39,14 +40,14 @@ func (db *BeaconDB) Block(hash [32]byte) (*pb.BeaconBlock, error) {
 	return block, err
 }
 
-// HasBlock accepts a block hash and returns true if the block does not exist.
-func (db *BeaconDB) HasBlock(hash [32]byte) bool {
+// HasBlock accepts a block root and returns true if the block does not exist.
+func (db *BeaconDB) HasBlock(root [32]byte) bool {
 	hasBlock := false
 	// #nosec G104
 	_ = db.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blockBucket)
 
-		hasBlock = bucket.Get(hash[:]) != nil
+		hasBlock = bucket.Get(root[:]) != nil
 
 		return nil
 	})
@@ -56,9 +57,9 @@ func (db *BeaconDB) HasBlock(hash [32]byte) bool {
 
 // SaveBlock accepts a block and writes it to disk.
 func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
-	hash, err := hashutil.HashBeaconBlock(block)
+	root, err := ssz.TreeHash(block)
 	if err != nil {
-		return fmt.Errorf("failed to hash block: %v", err)
+		return fmt.Errorf("failed to tree hash block: %v", err)
 	}
 	enc, err := proto.Marshal(block)
 	if err != nil {
@@ -68,7 +69,7 @@ func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blockBucket)
 
-		return bucket.Put(hash[:], enc)
+		return bucket.Put(root[:], enc)
 	})
 }
 
@@ -85,14 +86,14 @@ func (db *BeaconDB) ChainHead() (*pb.BeaconBlock, error) {
 			return errors.New("unable to determine chain height")
 		}
 
-		blockhash := mainChain.Get(height)
-		if blockhash == nil {
-			return fmt.Errorf("hash at the current height not found: %d", height)
+		blockRoot := mainChain.Get(height)
+		if blockRoot == nil {
+			return fmt.Errorf("root at the current height not found: %d", height)
 		}
 
-		enc := blockBkt.Get(blockhash)
+		enc := blockBkt.Get(blockRoot)
 		if enc == nil {
-			return fmt.Errorf("block not found: %x", blockhash)
+			return fmt.Errorf("block not found: %x", blockRoot)
 		}
 
 		var err error
@@ -106,14 +107,14 @@ func (db *BeaconDB) ChainHead() (*pb.BeaconBlock, error) {
 // UpdateChainHead atomically updates the head of the chain as well as the corresponding state changes
 // Including a new crystallized state is optional.
 func (db *BeaconDB) UpdateChainHead(block *pb.BeaconBlock, beaconState *pb.BeaconState) error {
-	blockHash, err := hashutil.HashBeaconBlock(block)
+	blockRoot, err := ssz.TreeHash(block)
 	if err != nil {
-		return fmt.Errorf("unable to get the block hash: %v", err)
+		return fmt.Errorf("unable to tree hash block: %v", err)
 	}
 
 	beaconStateEnc, err := proto.Marshal(beaconState)
 	if err != nil {
-		return fmt.Errorf("unable to encode the beacon state: %v", err)
+		return fmt.Errorf("unable to encode beacon state: %v", err)
 	}
 
 	slotBinary := encodeSlotNumber(block.GetSlot())
@@ -123,11 +124,11 @@ func (db *BeaconDB) UpdateChainHead(block *pb.BeaconBlock, beaconState *pb.Beaco
 		chainInfo := tx.Bucket(chainInfoBucket)
 		mainChain := tx.Bucket(mainChainBucket)
 
-		if blockBucket.Get(blockHash[:]) == nil {
-			return fmt.Errorf("expected block %#x to have already been saved before updating head: %v", blockHash, err)
+		if blockBucket.Get(blockRoot[:]) == nil {
+			return fmt.Errorf("expected block %#x to have already been saved before updating head: %v", blockRoot, err)
 		}
 
-		if err := mainChain.Put(slotBinary, blockHash[:]); err != nil {
+		if err := mainChain.Put(slotBinary, blockRoot[:]); err != nil {
 			return fmt.Errorf("failed to include the block in the main chain bucket: %v", err)
 		}
 
@@ -152,14 +153,14 @@ func (db *BeaconDB) BlockBySlot(slot uint64) (*pb.BeaconBlock, error) {
 		mainChain := tx.Bucket(mainChainBucket)
 		blockBkt := tx.Bucket(blockBucket)
 
-		blockhash := mainChain.Get(slotEnc)
-		if blockhash == nil {
+		blockRoot := mainChain.Get(slotEnc)
+		if blockRoot == nil {
 			return nil
 		}
 
-		enc := blockBkt.Get(blockhash)
+		enc := blockBkt.Get(blockRoot)
 		if enc == nil {
-			return fmt.Errorf("block not found: %x", blockhash)
+			return fmt.Errorf("block not found: %#x", blockRoot)
 		}
 
 		var err error

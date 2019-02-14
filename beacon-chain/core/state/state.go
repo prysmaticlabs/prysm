@@ -9,12 +9,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 
-	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -175,13 +173,4 @@ func InitialBeaconState(
 	}
 	state.CurrentEpochSeedHash32 = seed[:]
 	return state, nil
-}
-
-// Hash the beacon state data structure.
-func Hash(state *pb.BeaconState) ([32]byte, error) {
-	data, err := proto.Marshal(state)
-	if err != nil {
-		return [32]byte{}, fmt.Errorf("could not marshal beacon state: %v", err)
-	}
-	return hashutil.Hash(data), nil
 }

@@ -84,6 +84,8 @@ func makeEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 		return encodeUint16, func(reflect.Value) (uint32, error) { return 2, nil }, nil
 	case kind == reflect.Uint32:
 		return encodeUint32, func(reflect.Value) (uint32, error) { return 4, nil }, nil
+	case kind == reflect.Int32:
+		return encodeInt32, func(reflect.Value) (uint32, error) { return 4, nil }, nil
 	case kind == reflect.Uint64:
 		return encodeUint64, func(reflect.Value) (uint32, error) { return 8, nil }, nil
 	case kind == reflect.Slice && typ.Elem().Kind() == reflect.Uint8:
@@ -128,6 +130,14 @@ func encodeUint16(val reflect.Value, w *encbuf) error {
 
 func encodeUint32(val reflect.Value, w *encbuf) error {
 	v := val.Uint()
+	b := make([]byte, 4)
+	binary.LittleEndian.PutUint32(b, uint32(v))
+	w.str = append(w.str, b...)
+	return nil
+}
+
+func encodeInt32(val reflect.Value, w *encbuf) error {
+	v := val.Int()
 	b := make([]byte, 4)
 	binary.LittleEndian.PutUint32(b, uint32(v))
 	w.str = append(w.str, b...)
@@ -267,11 +277,9 @@ func makePtrEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 		return nil, nil, err
 	}
 
-	// TODO(1461): The encoding of nil pointer isn't defined in the spec.
 	// After considered the use case in Prysm, we've decided that:
 	// - We assume we will only encode/decode pointer of array, slice or struct.
 	// - The encoding for nil pointer shall be 0x00000000.
-
 	encoder := func(val reflect.Value, w *encbuf) error {
 		if val.IsNil() {
 			totalSizeEnc := make([]byte, lengthBytes)
