@@ -33,21 +33,6 @@ func TestAttestHead(t *testing.T) {
 	}
 }
 
-func TestAttestationInfoAtSlot_NilHeadAtSlot(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	attesterServer := &AttesterServer{
-		beaconDB: db,
-	}
-	want := "no block found at slot 5"
-	req := &pb.AttestationInfoRequest{
-		Slot: 5,
-	}
-	if _, err := attesterServer.AttestationInfoAtSlot(context.Background(), req); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
-	}
-}
-
 func TestAttestationInfoAtSlot_EpochBoundaryFailure(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -67,9 +52,7 @@ func TestAttestationInfoAtSlot_EpochBoundaryFailure(t *testing.T) {
 		t.Fatalf("Could not update chain head in test db: %v", err)
 	}
 	want := "could not get epoch boundary block"
-	req := &pb.AttestationInfoRequest{
-		Slot: 100,
-	}
+	req := &pb.AttestationInfoRequest{}
 	if _, err := attesterServer.AttestationInfoAtSlot(context.Background(), req); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
@@ -104,9 +87,7 @@ func TestAttestationInfoAtSlot_JustifiedBlockFailure(t *testing.T) {
 		t.Fatalf("Could not update chain head in test db: %v", err)
 	}
 	want := "could not get justified block"
-	req := &pb.AttestationInfoRequest{
-		Slot: 1,
-	}
+	req := &pb.AttestationInfoRequest{}
 	if _, err := attesterServer.AttestationInfoAtSlot(context.Background(), req); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
@@ -171,7 +152,6 @@ func TestAttestationInfoAtSlot_Ok(t *testing.T) {
 		t.Fatalf("Could not update chain head in test db: %v", err)
 	}
 	req := &pb.AttestationInfoRequest{
-		Slot:  1,
 		Shard: 0,
 	}
 	res, err := attesterServer.AttestationInfoAtSlot(context.Background(), req)

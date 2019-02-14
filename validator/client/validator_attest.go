@@ -52,7 +52,6 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	// Fetch other necessary information from the beacon node in order to attest
 	// including the justified epoch, epoch boundary information, and more.
 	infoReq := &pb.AttestationInfoRequest{
-		Slot:  slot,
 		Shard: resp.Shard,
 	}
 	infoRes, err := v.attesterClient.AttestationInfoAtSlot(ctx, infoReq)

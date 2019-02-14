@@ -37,12 +37,9 @@ func (as *AttesterServer) AttestHead(ctx context.Context, att *pbp2p.Attestation
 func (as *AttesterServer) AttestationInfoAtSlot(ctx context.Context, req *pb.AttestationInfoRequest) (*pb.AttestationInfoResponse, error) {
 	// Set the attestation data's beacon block root = hash_tree_root(head) where head
 	// is the validator's view of the head block of the beacon chain during the slot.
-	head, err := as.beaconDB.BlockBySlot(req.Slot)
+	head, err := as.beaconDB.ChainHead()
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve chain head: %v", err)
-	}
-	if head == nil {
-		return nil, fmt.Errorf("no block found at slot %d", req.Slot)
 	}
 	blockRoot, err := hashutil.HashBeaconBlock(head) // TODO(#1461): Use Tree Hashing instead (IMPORTANT).
 	if err != nil {
