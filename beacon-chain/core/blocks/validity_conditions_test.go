@@ -49,7 +49,7 @@ func TestBadBlock(t *testing.T) {
 		Slot: 4,
 	}
 
-	genesisTime := params.BeaconConfig().GenesisTime
+	genesisTime := time.Unix(0, 0).Unix()
 
 	db.hasBlock = false
 
@@ -102,7 +102,7 @@ func TestValidBlock(t *testing.T) {
 		Slot: 4,
 	}
 
-	genesisTime := params.BeaconConfig().GenesisTime
+	genesisTime := time.Unix(0, 0)
 	powClient.blockExists = true
 
 	beaconState.LatestEth1Data = &pb.Eth1Data{

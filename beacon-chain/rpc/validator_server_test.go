@@ -67,7 +67,7 @@ func TestValidatorEpochAssignments_Ok(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	genesisTime := params.BeaconConfig().GenesisTime.Unix()
+	genesisTime := time.Unix(0, 0).Un
 	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
 		var pubKey [96]byte
@@ -151,7 +151,7 @@ func TestValidatorCommitteeAtSlot_CrosslinkCommitteesFailure(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	genesisTime := params.BeaconConfig().GenesisTime.Unix()
+	genesisTime := time.Unix(0, 0).Unix()
 	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
 		var pubKey [96]byte
@@ -197,7 +197,7 @@ func TestValidatorCommitteeAtSlot_Ok(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	genesisTime := params.BeaconConfig().GenesisTime.Unix()
+	genesisTime := time.Unix(0, 0).Unix()
 	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
 		var pubKey [96]byte
