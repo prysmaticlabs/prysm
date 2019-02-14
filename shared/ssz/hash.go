@@ -57,7 +57,8 @@ func makeHasher(typ reflect.Type) (hasher, error) {
 		kind == reflect.Uint8 ||
 		kind == reflect.Uint16 ||
 		kind == reflect.Uint32 ||
-		kind == reflect.Uint64:
+		kind == reflect.Uint64 ||
+		kind == reflect.Int32:
 		return getEncoding, nil
 	case kind == reflect.Slice && typ.Elem().Kind() == reflect.Uint8 ||
 		kind == reflect.Array && typ.Elem().Kind() == reflect.Uint8:
