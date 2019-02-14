@@ -27,15 +27,19 @@ type BeaconChainConfig struct {
 	LatestPenalizedExitLength  uint64 // LatestPenalizedExitLength is used to track penalized exit balances per time interval.
 	LatestIndexRootsLength     uint64 // LatestIndexRootsLength is the number of index roots kept in beacon state, used by light client.
 	MaxWithdrawalsPerEpoch     uint64 // MaxWithdrawalsPerEpoch is the max withdrawals can happen for a single epoch.
+	ValidatorPrivkeyFileName   string // ValidatorPrivKeyFileName specifies the string name of a validator private key file.
+	WithdrawalPrivkeyFileName  string // WithdrawalPrivKeyFileName specifies the string name of a withdrawal private key file.
+	BLSPubkeyLength            int    // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
 
 	// Deposit contract constants.
 	DepositContractAddress   []byte // DepositContractAddress is the address of the deposit contract in PoW chain.
 	DepositContractTreeDepth uint64 // Depth of the Merkle trie of deposits in the validator deposit contract on the PoW chain.
 
 	// Gwei Values
-	MinDepositAmount uint64 // MinDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
-	MaxDepositAmount uint64 // MaxDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
-	EjectionBalance  uint64 // EjectionBalance is the minimal GWei a validator needs to have before ejected.
+	MinDepositAmount           uint64 // MinDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
+	MaxDepositAmount           uint64 // MaxDepositAmount is the maximal amount of Gwei a validator can send to the deposit contract at once.
+	EjectionBalance            uint64 // EjectionBalance is the minimal GWei a validator needs to have before ejected.
+	ForkChoiceBalanceIncrement uint64 // ForkChoiceBalanceIncrement is used to track block score based on balances for fork choice.
 
 	// Initial value constants.
 	GenesisForkVersion      uint64   // GenesisForkVersion is used to track fork version between state transitions.
@@ -98,20 +102,24 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	TargetCommitteeSize:        128,
 	MaxBalanceChurnQuotient:    32,
 	BeaconChainShardNumber:     1<<64 - 1,
-	MaxIndicesPerSlashableVote: 1,
+	MaxIndicesPerSlashableVote: 4096,
 	LatestBlockRootsLength:     8192,
 	LatestRandaoMixesLength:    8192,
 	LatestPenalizedExitLength:  8192,
 	LatestIndexRootsLength:     8192,
 	MaxWithdrawalsPerEpoch:     4,
+	ValidatorPrivkeyFileName:   "/validatorprivatekey",
+	WithdrawalPrivkeyFileName:  "/shardwithdrawalkey",
+	BLSPubkeyLength:            96,
 
 	// Deposit contract constants.
 	DepositContractTreeDepth: 32,
 
 	// Gwei values:
-	MinDepositAmount: 1 * 1e9,
-	MaxDepositAmount: 32 * 1e9,
-	EjectionBalance:  16 * 1e9,
+	MinDepositAmount:           1 * 1e9,
+	MaxDepositAmount:           32 * 1e9,
+	EjectionBalance:            16 * 1e9,
+	ForkChoiceBalanceIncrement: 1 * 1e9,
 
 	// Initial value constants.
 	GenesisForkVersion: 0,

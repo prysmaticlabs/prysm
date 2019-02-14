@@ -8,10 +8,11 @@ import (
 
 	"github.com/pborman/uuid"
 	bls "github.com/prysmaticlabs/go-bls"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestStoreandGetKey(t *testing.T) {
-	tmpdir := os.TempDir()
+	tmpdir := testutil.TempDir()
 	filedir := tmpdir + "/keystore"
 	ks := &Store{
 		keysDirPath: filedir,

@@ -5,52 +5,32 @@ This is a utility to help users deploy deposit contract for running their own be
 ### Usage
 
 *Name:*  
-   **deployVRC** - this is a util to deploy deposit contract
+   **deployContract** - this is a util to deploy deposit contract
 
 *Usage:*  
-   deployVRC [global options] command [command options] [arguments...]
+   deployContract [global options] command [command options] [arguments...]
 
 *Flags:*  
-   **--keystoreUTCPath**    Keystore UTC file to unlock account (default: "./datadir/keystore/UTC...")   
-   **--ipcPath**        Filename for IPC socket/pipe within the datadir (default: "./geth.ipc")   
-   **--httpPath**      HTTP-RPC server listening interface (default: "http://localhost:8545/")   
-   **--passwordFile**   Password file for unlock account (default: "./password.txt")   
-   **--privKey**       Private key to unlock account   
-   **--help, -h**            show help     
-   **--version, -v**         print the version     
+- --skipChainstartDelay    Whether to skip ChainStart log being fired a day later
+- --ipcPath value          Filename for IPC socket/pipe within the datadir
+- --httpPath value         HTTP-RPC server listening interface (default: "http://localhost:8545/")
+- --passwordFile value     Password file for unlock account (default: "./password.txt")
+- --privKey value          Private key to unlock account
+- --k8sConfig value        Name of kubernetes config map to update with the contract address
+- --chainStart value       Number of validators required for chain start (default: 16384)
+- --minDeposit value       Minimum deposit value allowed in contract (default: 1000000000)
+- --maxDeposit value       Maximum deposit value allowed in contract (default: 32000000000)
+- --help, -h               show help
+- --version, -v            print the version
 
 ### Example
 
 To use private key with default RPC:
 
 ```
-bazel run //deployVRC -- --privKey yourPrivateKey
+bazel run //contracts/deposit-contract/deployContract -- --httpPath=https://goerli.prylabs.net --privKey=$(echo /path/to/private/key/file) --chainStart=8 --minDeposit=100 --maxDeposit=3200
 ```
 
-To use UTC JSON with IPC:
-```
-bazel run //deployVRC --\
-  --ipcPath /path/to/your/geth.ipc \
-  --keystoreUTCPath /path/to/your/keystore/UTCJSON \
-  --passwordFile /path/to/your/password.txt
-```
-
-To use UTC JSON with RPC:
-
-```
-bazel run //deployVRC --\
-  --httpPath http://localhost:8545/  \
-  --keystoreUTCPath /path/to/your/keystore/UTCJSON \
-  --passwordFile /path/to/your/password.txt
-```
-
-or
-
-```
-bazel run //deployVRC --\
-  --keystoreUTCPath /path/to/your/keystore/UTCJSON \
-  --passwordFile /path/to/your/password.txt
-```
 
 ### Output
 
