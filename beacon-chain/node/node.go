@@ -207,6 +207,8 @@ func (b *BeaconNode) registerPOWChainService(ctx *cli.Context) error {
 	}
 	powClient := ethclient.NewClient(rpcClient)
 
+	delay := ctx.GlobalUint64(utils.ChainStartDelay.Name)
+
 	web3Service, err := powchain.NewWeb3Service(context.TODO(), &powchain.Web3ServiceConfig{
 		Endpoint:        b.ctx.GlobalString(utils.Web3ProviderFlag.Name),
 		DepositContract: common.HexToAddress(b.ctx.GlobalString(utils.DepositContractFlag.Name)),
@@ -215,6 +217,7 @@ func (b *BeaconNode) registerPOWChainService(ctx *cli.Context) error {
 		Logger:          powClient,
 		ContractBackend: powClient,
 		BeaconDB:        b.db,
+		ChainStartDelay: delay,
 	})
 	if err != nil {
 		return fmt.Errorf("could not register proof-of-work chain web3Service: %v", err)

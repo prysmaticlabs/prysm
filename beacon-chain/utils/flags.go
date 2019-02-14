@@ -54,4 +54,10 @@ var (
 		Name:  "enable-db-cleanup",
 		Usage: "Enable automatic DB cleanup routine",
 	}
+	// ChainStartDelay tells the beacon node to wait for a period of time from the current time, before
+	// logging chainstart.
+	ChainStartDelay = cli.Uint64Flag{
+		Name:  "chain-start-delay",
+		Usage: "Delay the chain start so as to make local testing easier",
+	}
 )
