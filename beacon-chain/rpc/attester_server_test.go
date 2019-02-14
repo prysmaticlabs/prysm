@@ -37,11 +37,12 @@ func TestAttestationInfoAtSlot_EpochBoundaryFailure(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	beaconState := &pbp2p.BeaconState{
-		Slot:                   5,
+		Slot:                   params.BeaconConfig().GenesisSlot + 3*params.BeaconConfig().GenesisEpoch,
 		LatestBlockRootHash32S: make([][]byte, 20),
+		JustifiedEpoch:         params.BeaconConfig().GenesisEpoch,
 	}
 	block := blocks.NewGenesisBlock([]byte("stateroot"))
-	block.Slot = 100
+	block.Slot = params.BeaconConfig().GenesisSlot
 	attesterServer := &AttesterServer{
 		beaconDB: db,
 	}
@@ -97,13 +98,13 @@ func TestAttestationInfoAtSlot_Ok(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	block := &pbp2p.BeaconBlock{
-		Slot:                   params.BeaconConfig().GenesisSlot+ 3*params.BeaconConfig().EpochLength+1,
+		Slot: params.BeaconConfig().GenesisSlot + 3*params.BeaconConfig().EpochLength + 1,
 	}
-	epochBoundarySlot := params.BeaconConfig().GenesisSlot+3*params.BeaconConfig().EpochLength
+	epochBoundarySlot := params.BeaconConfig().GenesisSlot + 3*params.BeaconConfig().EpochLength
 	epochBoundaryBlock := &pbp2p.BeaconBlock{
 		Slot: epochBoundarySlot,
 	}
-	justifiedSlot := params.BeaconConfig().GenesisSlot+2*params.BeaconConfig().EpochLength
+	justifiedSlot := epochBoundarySlot
 	justifiedBlock := &pbp2p.BeaconBlock{
 		Slot: justifiedSlot,
 	}
@@ -120,18 +121,17 @@ func TestAttestationInfoAtSlot_Ok(t *testing.T) {
 		t.Fatalf("Could not hash justified block: %v", err)
 	}
 	beaconState := &pbp2p.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot+ 3*params.BeaconConfig().EpochLength+1,
-		JustifiedEpoch:         justifiedSlot,
-		LatestBlockRootHash32S: make([][]byte, 3*params.BeaconConfig().EpochLength),
+		Slot:                   params.BeaconConfig().GenesisSlot + 3*params.BeaconConfig().EpochLength + 1,
+		JustifiedEpoch:         epochBoundarySlot / params.BeaconConfig().EpochLength,
+		LatestBlockRootHash32S: make([][]byte, 2),
 		LatestCrosslinks: []*pbp2p.Crosslink{
 			{
 				ShardBlockRootHash32: []byte("A"),
 			},
 		},
 	}
-	beaconState.LatestBlockRootHash32S[1] = blockRoot[:]
-	beaconState.LatestBlockRootHash32S[epochBoundarySlot%uint64(len(beaconState.LatestBlockRootHash32S))] = epochBoundaryRoot[:]
-	beaconState.LatestBlockRootHash32S[justifiedSlot&uint64(len(beaconState.LatestBlockRootHash32S))] = justifiedBlockRoot[:]
+	beaconState.LatestBlockRootHash32S[epochBoundarySlot%2] = epochBoundaryRoot[:]
+	beaconState.LatestBlockRootHash32S[justifiedSlot%2] = justifiedBlockRoot[:]
 	attesterServer := &AttesterServer{
 		beaconDB: db,
 	}
@@ -163,7 +163,7 @@ func TestAttestationInfoAtSlot_Ok(t *testing.T) {
 	expectedInfo := &pb.AttestationInfoResponse{
 		BeaconBlockRootHash32:    blockRoot[:],
 		EpochBoundaryRootHash32:  epochBoundaryRoot[:],
-		JustifiedEpoch:           params.BeaconConfig().GenesisSlot+ 2* params.BeaconConfig().EpochLength,
+		JustifiedEpoch:           justifiedSlot / params.BeaconConfig().EpochLength,
 		JustifiedBlockRootHash32: justifiedBlockRoot[:],
 		LatestCrosslink: &pbp2p.Crosslink{
 			ShardBlockRootHash32: []byte("A"),
