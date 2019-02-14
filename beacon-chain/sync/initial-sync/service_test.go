@@ -6,13 +6,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/ssz"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -159,11 +160,11 @@ func TestSavingBlocksInSync(t *testing.T) {
 		BeaconState: incorrectState,
 	}
 
-	enc, err := proto.Marshal(beaconState)
+	stateRoot, err := ssz.TreeHash(beaconState)
 	if err != nil {
-		t.Fatalf("unable to get marshal state: %v", err)
+		t.Fatalf("unable to tree hash state: %v", err)
 	}
-	beaconStateRootHash32 := hashutil.Hash(enc)
+	beaconStateRootHash32 := stateRoot
 
 	getBlockResponseMsg := func(Slot uint64) p2p.Message {
 		block := &pb.BeaconBlock{
@@ -273,11 +274,11 @@ func TestDelayChan(t *testing.T) {
 		BeaconState: beaconState,
 	}
 
-	enc, err := proto.Marshal(beaconState)
+	stateRoot, err := ssz.TreeHash(beaconState)
 	if err != nil {
-		t.Fatalf("unable to get marshal state: %v", err)
+		t.Fatalf("unable to tree hash state: %v", err)
 	}
-	beaconStateRootHash32 := hashutil.Hash(enc)
+	beaconStateRootHash32 := stateRoot
 
 	block := &pb.BeaconBlock{
 		Eth1Data: &pb.Eth1Data{
@@ -375,15 +376,15 @@ func TestRequestBlocksBySlot(t *testing.T) {
 			Block: block,
 		}
 
-		hash, err := hashutil.HashBeaconBlock(block)
+		root, err := ssz.TreeHash(block)
 		if err != nil {
-			t.Fatalf("unable to hash block %v", err)
+			t.Fatalf("unable to tree hash block %v", err)
 		}
 
 		return p2p.Message{
 			Peer: p2p.Peer{},
 			Data: blockResponse,
-		}, hash
+		}, root
 	}
 
 	// sending all blocks except for the initial block
@@ -400,7 +401,7 @@ func TestRequestBlocksBySlot(t *testing.T) {
 
 	_, hash := getBlockResponseMsg(9 + params.BeaconConfig().GenesisSlot)
 
-	expString := fmt.Sprintf("Saved block with hash %#x and slot %d for initial sync",
+	expString := fmt.Sprintf("Saved block with root %#x and slot %d for initial sync",
 		hash, 9+params.BeaconConfig().GenesisSlot)
 
 	// waiting for the current slot to come up to the

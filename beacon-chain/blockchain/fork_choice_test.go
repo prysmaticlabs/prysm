@@ -6,14 +6,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
+
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -43,23 +43,22 @@ func generateTestGenesisStateAndBlock(
 		t.Fatal(err)
 	}
 
-	stateEnc, err := proto.Marshal(beaconState)
-	if err != nil {
-		t.Fatal(err)
-	}
 	if err := beaconDB.SaveState(beaconState); err != nil {
 		t.Fatal(err)
 	}
-	stateHash := hashutil.Hash(stateEnc)
-	genesisBlock := b.NewGenesisBlock(stateHash[:])
-	if err := beaconDB.SaveBlock(genesisBlock); err != nil {
-		t.Fatal(err)
-	}
-	genesisHash, err := hashutil.HashBeaconBlock(genesisBlock)
+	stateRoot, err := ssz.TreeHash(beaconState)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return beaconState, genesisBlock, stateHash, genesisHash
+	genesisBlock := b.NewGenesisBlock(stateRoot[:])
+	if err := beaconDB.SaveBlock(genesisBlock); err != nil {
+		t.Fatal(err)
+	}
+	genesisRoot, err := ssz.TreeHash(genesisBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return beaconState, genesisBlock, stateRoot, genesisRoot
 }
 
 func setupConflictingBlocks(
@@ -185,7 +184,7 @@ func TestLMDGhost_EveryActiveValidatorHasLatestAttestation(t *testing.T) {
 func TestVoteCount_ParentDoesNotExist(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
-	genesisBlock := b.NewGenesisBlock([]byte{})
+	genesisBlock := b.NewGenesisBlock([]byte("stateroot"))
 	if err := beaconDB.SaveBlock(genesisBlock); err != nil {
 		t.Fatal(err)
 	}
@@ -208,8 +207,8 @@ func TestVoteCount_ParentDoesNotExist(t *testing.T) {
 func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
-	genesisBlock := b.NewGenesisBlock([]byte{})
-	genesisHash, err := hashutil.HashBeaconBlock(genesisBlock)
+	genesisBlock := b.NewGenesisBlock([]byte("stateroot"))
+	genesisRoot, err := ssz.TreeHash(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -219,11 +218,11 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 
 	potentialHead := &pb.BeaconBlock{
 		Slot:             5,
-		ParentRootHash32: genesisHash[:],
+		ParentRootHash32: genesisRoot[:],
 	}
 	potentialHead2 := &pb.BeaconBlock{
 		Slot:             6,
-		ParentRootHash32: genesisHash[:],
+		ParentRootHash32: genesisRoot[:],
 	}
 	// We store these potential heads in the DB.
 	if err := beaconDB.SaveBlock(potentialHead); err != nil {

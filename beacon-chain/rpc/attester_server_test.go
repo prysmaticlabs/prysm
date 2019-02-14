@@ -5,7 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
+
 	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/gogo/protobuf/proto"
@@ -108,15 +109,15 @@ func TestAttestationInfoAtSlot_Ok(t *testing.T) {
 	justifiedBlock := &pbp2p.BeaconBlock{
 		Slot: justifiedSlot,
 	}
-	blockRoot, err := hashutil.HashBeaconBlock(block) // TODO(#1461): Use tree hashing instead.
+	blockRoot, err := ssz.TreeHash(block)
 	if err != nil {
 		t.Fatalf("Could not hash beacon block: %v", err)
 	}
-	justifiedBlockRoot, err := hashutil.HashBeaconBlock(justifiedBlock) // TODO(#1461): Use tree hashing instead.
+	justifiedBlockRoot, err := ssz.TreeHash(justifiedBlock)
 	if err != nil {
 		t.Fatalf("Could not hash justified block: %v", err)
 	}
-	epochBoundaryRoot, err := hashutil.HashBeaconBlock(epochBoundaryBlock) // TODO(#1461): Use tree hashing instead.
+	epochBoundaryRoot, err := ssz.TreeHash(epochBoundaryBlock)
 	if err != nil {
 		t.Fatalf("Could not hash justified block: %v", err)
 	}
