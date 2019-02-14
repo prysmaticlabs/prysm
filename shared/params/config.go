@@ -74,10 +74,10 @@ type BeaconChainConfig struct {
 	MaxAttesterSlashings uint64 // MaxAttesterSlashings defines the maximum number of casper FFG slashings possible in a block.
 
 	// Prysm constants.
-	DepositsForChainStart uint64    // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
-	RandBytes             uint64    // RandBytes is the number of bytes used as entropy to shuffle validators.
-	SyncPollingInterval   int64     // SyncPollingInterval queries network nodes for sync status.
-	MaxNumLog2Validators  uint64    // MaxNumLog2Validators is the Max number of validators in Log2 exists given total ETH supply.
+	DepositsForChainStart uint64 // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
+	RandBytes             uint64 // RandBytes is the number of bytes used as entropy to shuffle validators.
+	SyncPollingInterval   int64  // SyncPollingInterval queries network nodes for sync status.
+	MaxNumLog2Validators  uint64 // MaxNumLog2Validators is the Max number of validators in Log2 exists given total ETH supply.
 }
 
 // DepositContractConfig contains the deposits for

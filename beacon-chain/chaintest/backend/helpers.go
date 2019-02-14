@@ -26,7 +26,7 @@ func generateSimulatedBlock(
 	if err != nil {
 		return nil, [32]byte{}, fmt.Errorf("could not tree hash state: %v", err)
 	}
-	randaoReveal := [32byte{}
+	randaoReveal := [32]byte{}
 	block := &pb.BeaconBlock{
 		Slot:               beaconState.Slot + 1,
 		RandaoRevealHash32: randaoReveal[:],
