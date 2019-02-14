@@ -27,7 +27,7 @@ go_image(
     goos = "linux",
     importpath = "github.com/prysmaticlabs/prysm/validator",
     race = "off",
-    static = "on",
+    # static = "on", # TODO(1582): Reenable static linking for docker images.
     tags = ["manual"],
     visibility = ["//visibility:private"],
     deps = [
