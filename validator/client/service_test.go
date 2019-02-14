@@ -52,18 +52,12 @@ func TestLifecycle(t *testing.T) {
 	// Use cancelled context so that the run function exits immediately..
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	dir := testutil.TempDir() + "/keystore1"
-	validatorService, err := NewValidatorService(
-		ctx,
-		&Config{
-			Endpoint:     "merkle tries",
-			CertFlag:     "alice.crt",
-			KeystorePath: dir,
-			Password:     "1234",
-		},
-	)
-	if err != nil {
-		t.Fatal(err)
+	validatorService := &ValidatorService{
+		ctx:      ctx,
+		cancel:   cancel,
+		endpoint: "merkle tries",
+		withCert: "alice.crt",
+		key:      validatorKey,
 	}
 	validatorService.Start()
 	if err := validatorService.Stop(); err != nil {
@@ -77,17 +71,11 @@ func TestLifecycle_WithInsecure(t *testing.T) {
 	// Use cancelled context so that the run function exits immediately.
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	dir := testutil.TempDir() + "/keystore1"
-	validatorService, err := NewValidatorService(
-		ctx,
-		&Config{
-			Endpoint:     "merkle tries",
-			KeystorePath: dir,
-			Password:     "1234",
-		},
-	)
-	if err != nil {
-		t.Fatal(err)
+	validatorService := &ValidatorService{
+		ctx:      ctx,
+		cancel:   cancel,
+		endpoint: "merkle tries",
+		key:      validatorKey,
 	}
 	validatorService.Start()
 	testutil.AssertLogsContain(t, hook, "You are using an insecure gRPC connection")

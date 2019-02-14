@@ -71,6 +71,7 @@ VERSION:
 		utils.GenesisJSON,
 		utils.EnablePOWChain,
 		utils.EnableDBCleanup,
+		utils.ChainStartDelay,
 		cmd.BootstrapNode,
 		cmd.RelayNode,
 		cmd.P2PPort,

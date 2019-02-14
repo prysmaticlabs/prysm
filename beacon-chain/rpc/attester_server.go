@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/shared/ssz"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -44,7 +46,7 @@ func (as *AttesterServer) AttestationInfoAtSlot(ctx context.Context, req *pb.Att
 	if head == nil {
 		return nil, fmt.Errorf("no block found at slot %d", req.Slot)
 	}
-	blockRoot, err := hashutil.HashBeaconBlock(head) // TODO(#1461): Use Tree Hashing instead (IMPORTANT).
+	blockRoot, err := ssz.TreeHash(head)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash beacon block: %v", err)
 	}
