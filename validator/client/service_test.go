@@ -55,8 +55,8 @@ func TestLifecycle(t *testing.T) {
 	validatorService := &ValidatorService{
 		ctx:      ctx,
 		cancel:   cancel,
-		endpoint:     "merkle tries",
-		withCert:     "alice.crt",
+		endpoint: "merkle tries",
+		withCert: "alice.crt",
 		key:      validatorKey,
 	}
 	validatorService.Start()
@@ -74,7 +74,7 @@ func TestLifecycle_WithInsecure(t *testing.T) {
 	validatorService := &ValidatorService{
 		ctx:      ctx,
 		cancel:   cancel,
-		endpoint:     "merkle tries",
+		endpoint: "merkle tries",
 		key:      validatorKey,
 	}
 	validatorService.Start()
