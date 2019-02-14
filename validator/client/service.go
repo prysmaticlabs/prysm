@@ -3,6 +3,11 @@ package client
 import (
 	"context"
 	"errors"
+	"fmt"
+
+	"github.com/prysmaticlabs/prysm/shared/params"
+
+	"github.com/prysmaticlabs/prysm/shared/keystore"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -22,24 +27,34 @@ type ValidatorService struct {
 	conn      *grpc.ClientConn
 	endpoint  string
 	withCert  string
+	key       *keystore.Key
 }
 
 // Config for the validator service.
 type Config struct {
-	Endpoint string
-	CertFlag string
+	Endpoint     string
+	CertFlag     string
+	KeystorePath string
+	Password     string
 }
 
 // NewValidatorService creates a new validator service for the service
 // registry.
-func NewValidatorService(ctx context.Context, cfg *Config) *ValidatorService {
+func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, error) {
 	ctx, cancel := context.WithCancel(ctx)
+	validatorKeyFile := cfg.KeystorePath + params.BeaconConfig().ValidatorPrivkeyFileName
+	ks := keystore.NewKeystore(cfg.KeystorePath)
+	key, err := ks.GetKey(validatorKeyFile, cfg.Password)
+	if err != nil {
+		return nil, fmt.Errorf("could not get private key: %v", err)
+	}
 	return &ValidatorService{
 		ctx:      ctx,
 		cancel:   cancel,
 		endpoint: cfg.Endpoint,
 		withCert: cfg.CertFlag,
-	}
+		key:      key,
+	}, nil
 }
 
 // Start the validator service. Launches the main go routine for the validator
@@ -68,6 +83,8 @@ func (v *ValidatorService) Start() {
 		beaconClient:    pb.NewBeaconServiceClient(v.conn),
 		validatorClient: pb.NewValidatorServiceClient(v.conn),
 		attesterClient:  pb.NewAttesterServiceClient(v.conn),
+		proposerClient:  pb.NewProposerServiceClient(v.conn),
+		key:             v.key,
 	}
 	go run(v.ctx, v.validator)
 }
