@@ -39,6 +39,9 @@ func EpochCommitteeCount(activeValidatorCount uint64) uint64 {
 	var minCommitteePerSlot = uint64(1)
 	var maxCommitteePerSlot = params.BeaconConfig().ShardCount / params.BeaconConfig().EpochLength
 	var currCommitteePerSlot = activeValidatorCount / params.BeaconConfig().EpochLength / params.BeaconConfig().TargetCommitteeSize
+	if maxCommitteePerSlot == 0 {
+		maxCommitteePerSlot = 2
+	}
 	if currCommitteePerSlot > maxCommitteePerSlot {
 		return maxCommitteePerSlot * params.BeaconConfig().EpochLength
 	}

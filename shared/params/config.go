@@ -98,8 +98,8 @@ type ShardChainConfig struct {
 
 var defaultBeaconConfig = &BeaconChainConfig{
 	// Misc constant.
-	ShardCount:                 1024,
-	TargetCommitteeSize:        128,
+	ShardCount:                 1,
+	TargetCommitteeSize:        2,
 	MaxBalanceChurnQuotient:    32,
 	BeaconChainShardNumber:     1<<64 - 1,
 	MaxIndicesPerSlashableVote: 4096,
@@ -124,16 +124,16 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	// Initial value constants.
 	GenesisForkVersion: 0,
 	GenesisSlot:        1 << 63,
-	GenesisEpoch:       1 << 63 / 64,
+	GenesisEpoch:       1 << 63 / 4,
 	GenesisStartShard:  0,
 	FarFutureEpoch:     1<<64 - 1,
 	ZeroHash:           [32]byte{},
 	EmptySignature:     makeEmptySignature(),
 
 	// Time parameter constants.
-	SlotDuration:                 6,
+	SlotDuration:                 20,
 	MinAttestationInclusionDelay: 4,
-	EpochLength:                  64,
+	EpochLength:                  4,
 	SeedLookahead:                1,
 	EntryExitDelay:               4,
 	Eth1DataVotingPeriod:         16,
@@ -153,7 +153,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxAttesterSlashings: 1,
 
 	// Prysm constants.
-	DepositsForChainStart: 16384,
+	DepositsForChainStart: 8,
 	RandBytes:             3,
 	SyncPollingInterval:   6 * 4, // Query nodes over the network every 4 slots for sync status.
 	GenesisTime:           time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC),
@@ -166,9 +166,9 @@ var defaultShardConfig = &ShardChainConfig{
 }
 
 var defaultDepositContractConfig = &DepositContractConfig{
-	DepositsForChainStart: big.NewInt(16384),
-	MinDepositAmount:      big.NewInt(1e9),
-	MaxDepositAmount:      big.NewInt(32e9),
+	DepositsForChainStart: big.NewInt(8),
+	MinDepositAmount:      big.NewInt(100),
+	MaxDepositAmount:      big.NewInt(3200),
 }
 
 var beaconConfig = defaultBeaconConfig

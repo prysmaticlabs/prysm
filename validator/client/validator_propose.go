@@ -57,7 +57,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 		RandaoRevealHash32: nil, // TODO(1366): generate randao reveal from BLS
 		Eth1Data:           eth1DataResp.Eth1Data,
 		Body: &pbp2p.BeaconBlockBody{
-			Attestations:      v.attestationPool.PendingAttestations(),
+			Attestations:      nil,
 			ProposerSlashings: nil, // TODO(1438): Add after operations pool
 			AttesterSlashings: nil, // TODO(1438): Add after operations pool
 			Deposits:          pDepResp.PendingDeposits,

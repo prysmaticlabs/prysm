@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/ssz"
@@ -81,6 +82,22 @@ func (c *ChainService) Start() {
 	if beaconState != nil {
 		log.Info("Beacon chain data already exists, starting service")
 		c.genesisTime = time.Unix(int64(beaconState.GenesisTime), 0)
+		for slot := params.BeaconConfig().GenesisSlot; slot < params.BeaconConfig().GenesisSlot+params.BeaconConfig().EpochLength; slot++ {
+			crossLinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(beaconState, slot, false)
+			if err != nil {
+                log.Fatal(err)
+			}
+			proposerIndex, err := helpers.BeaconProposerIndex(beaconState, slot)
+			if err != nil {
+                log.Fatal(err)
+			}
+			log.Infof("Proposer index: %d, slot: %d", proposerIndex, slot)
+			for _, committee := range crossLinkCommittees {
+				for _, idx := range committee.Committee {
+                    log.Infof("Attester index: %d, shard: %d, slot: %d", idx, committee.Shard, slot)
+				}
+			}
+		}
 		go c.blockProcessing()
 	} else {
 		log.Info("Waiting for ChainStart log from the Validator Deposit Contract to start the beacon chain...")
