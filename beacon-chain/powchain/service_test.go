@@ -777,7 +777,7 @@ func TestProcessChainStartLog(t *testing.T) {
 	testutil.AssertLogsDoNotContain(t, hook, "Unable to unpack ChainStart log data")
 	testutil.AssertLogsDoNotContain(t, hook, "Receipt root from log doesn't match the root saved in memory")
 	testutil.AssertLogsDoNotContain(t, hook, "Invalid timestamp from log")
-	testutil.AssertLogsContain(t, hook, "Minimum Number of Validators Reached for beacon-chain to start")
+	testutil.AssertLogsContain(t, hook, "Minimum number of validators reached for beacon-chain to start")
 
 	hook.Reset()
 
