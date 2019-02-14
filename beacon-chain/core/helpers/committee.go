@@ -37,8 +37,16 @@ type CrosslinkCommittee struct {
 //    ) * EPOCH_LENGTH
 func EpochCommitteeCount(activeValidatorCount uint64) uint64 {
 	var minCommitteePerSlot = uint64(1)
-	var maxCommitteePerSlot = params.BeaconConfig().ShardCount / params.BeaconConfig().EpochLength
+
+	// Max committee count per slot will be 0 when shard count is less than epoch length, this
+	// covers the special case to ensure there's always 1 max committee count per slot.
+	var maxCommitteePerSlot = uint64(1)
+	if params.BeaconConfig().ShardCount/params.BeaconConfig().EpochLength > 0 {
+		maxCommitteePerSlot = params.BeaconConfig().ShardCount / params.BeaconConfig().EpochLength
+	}
+
 	var currCommitteePerSlot = activeValidatorCount / params.BeaconConfig().EpochLength / params.BeaconConfig().TargetCommitteeSize
+
 	if currCommitteePerSlot > maxCommitteePerSlot {
 		return maxCommitteePerSlot * params.BeaconConfig().EpochLength
 	}
