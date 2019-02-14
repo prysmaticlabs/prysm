@@ -240,7 +240,7 @@ func (sb *SimulatedBackend) initializeStateTest(testCase *StateTestCase) error {
 // proceed with the test.
 func (sb *SimulatedBackend) setupBeaconStateAndGenesisBlock(initialDeposits []*pb.Deposit) error {
 	var err error
-	genesisTime := params.BeaconConfig().GenesisTime.Unix()
+	genesisTime := time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC).Unix()
 	sb.state, err = state.InitialBeaconState(initialDeposits, uint64(genesisTime), nil)
 	if err != nil {
 		return fmt.Errorf("could not initialize simulated beacon state: %v", err)
