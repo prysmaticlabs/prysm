@@ -7,7 +7,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -18,16 +17,11 @@ func init() {
 }
 
 type mockDB struct {
-	hasBlock       bool
-	blockVoteCache utils.BlockVoteCache
+	hasBlock bool
 }
 
 func (f *mockDB) HasBlock(h [32]byte) bool {
 	return f.hasBlock
-}
-
-func (f *mockDB) ReadBlockVoteCache(blockHashes [][32]byte) (utils.BlockVoteCache, error) {
-	return f.blockVoteCache, nil
 }
 
 type mockPOWClient struct {
