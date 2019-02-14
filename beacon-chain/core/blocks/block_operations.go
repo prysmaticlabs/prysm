@@ -16,7 +16,6 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
@@ -302,10 +301,14 @@ func verifySlashableAttestation(att *pb.SlashableAttestation, verifySignatures b
 				att.ValidatorIndices)
 		}
 	}
-	if len(att.CustodyBitfield) != mathutil.CeilDiv8(len(att.ValidatorIndices)) {
-		return fmt.Errorf("custody bit field length (%d) don't match indices length (%d)",
-			len(att.CustodyBitfield), mathutil.CeilDiv8(len(att.ValidatorIndices)))
+
+	if isValidated, err := helpers.VerifyBitfield(att.CustodyBitfield, len(att.ValidatorIndices)); !isValidated || err != nil {
+		if err != nil {
+			return err
+		}
+		return errors.New("bitfield is unable to be verified")
 	}
+
 	if uint64(len(att.ValidatorIndices)) > params.BeaconConfig().MaxIndicesPerSlashableVote {
 		return fmt.Errorf("validator indices length (%d) exceeded max indices per slashable vote(%d)",
 			len(att.ValidatorIndices), params.BeaconConfig().MaxIndicesPerSlashableVote)

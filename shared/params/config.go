@@ -27,6 +27,8 @@ type BeaconChainConfig struct {
 	LatestPenalizedExitLength  uint64 // LatestPenalizedExitLength is used to track penalized exit balances per time interval.
 	LatestIndexRootsLength     uint64 // LatestIndexRootsLength is the number of index roots kept in beacon state, used by light client.
 	MaxWithdrawalsPerEpoch     uint64 // MaxWithdrawalsPerEpoch is the max withdrawals can happen for a single epoch.
+	ValidatorPrivkeyFileName   string // ValidatorPrivKeyFileName specifies the string name of a validator private key file.
+	WithdrawalPrivkeyFileName  string // WithdrawalPrivKeyFileName specifies the string name of a withdrawal private key file.
 	BLSPubkeyLength            int    // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
 
 	// Deposit contract constants.
@@ -100,12 +102,14 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	TargetCommitteeSize:        128,
 	MaxBalanceChurnQuotient:    32,
 	BeaconChainShardNumber:     1<<64 - 1,
-	MaxIndicesPerSlashableVote: 1,
+	MaxIndicesPerSlashableVote: 4096,
 	LatestBlockRootsLength:     8192,
 	LatestRandaoMixesLength:    8192,
 	LatestPenalizedExitLength:  8192,
 	LatestIndexRootsLength:     8192,
 	MaxWithdrawalsPerEpoch:     4,
+	ValidatorPrivkeyFileName:   "/validatorprivatekey",
+	WithdrawalPrivkeyFileName:  "/shardwithdrawalkey",
 	BLSPubkeyLength:            96,
 
 	// Deposit contract constants.

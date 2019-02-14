@@ -4,7 +4,11 @@ go_test(
     name = "go_default_test",
     srcs = ["node_test.go"],
     embed = [":go_default_library"],
-    deps = ["@com_github_urfave_cli//:go_default_library"],
+    deps = [
+        "//shared/testutil:go_default_library",
+        "//validator/accounts:go_default_library",
+        "@com_github_urfave_cli//:go_default_library",
+    ],
 )
 
 go_library(
