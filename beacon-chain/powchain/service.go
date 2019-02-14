@@ -298,7 +298,7 @@ func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
 	chainStartTime := time.Unix(int64(timestamp), 0)
 	log.WithFields(logrus.Fields{
 		"ChainStartTime": chainStartTime,
-	}).Info("Minimum Number of Validators Reached for beacon-chain to start")
+	}).Info("Minimum number of validators reached for beacon-chain to start")
 	w.chainStartFeed.Send(chainStartTime)
 }
 
@@ -316,7 +316,7 @@ func (w *Web3Service) runDelayTimer(done <-chan struct{}) {
 			w.chainStarted = true
 			log.WithFields(logrus.Fields{
 				"ChainStartTime": currentTime.Unix(),
-			}).Info("Minimum Number of Validators Reached for beacon-chain to start")
+			}).Info("Minimum number of validators reached for beacon-chain to start")
 			w.chainStartFeed.Send(currentTime)
 			timer.Stop()
 			return
