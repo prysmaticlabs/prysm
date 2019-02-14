@@ -229,7 +229,7 @@ func TestStop(t *testing.T) {
 	hook.Reset()
 }
 
-func TestInitDataFromVRC(t *testing.T) {
+func TestInitDataFromContract(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
@@ -260,12 +260,12 @@ func TestInitDataFromVRC(t *testing.T) {
 
 	testAcc.txOpts.Value = amount32Eth
 	if _, err := testAcc.contract.Deposit(testAcc.txOpts, []byte{'a'}); err != nil {
-		t.Fatalf("Could not deposit to VRC %v", err)
+		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 	testAcc.backend.Commit()
 
 	if err := web3Service.initDataFromContract(); err != nil {
-		t.Fatalf("Could not init from vrc: %v", err)
+		t.Fatalf("Could not init from deposit contract: %v", err)
 	}
 
 	if bytes.Equal(web3Service.depositRoot, []byte{}) {
@@ -399,7 +399,7 @@ func TestBadLogger(t *testing.T) {
 
 	web3Service.run(web3Service.ctx.Done())
 	msg := hook.LastEntry().Message
-	want := "Unable to query logs from VRC: subscription has failed"
+	want := "Unable to query logs from deposit contract: subscription has failed"
 	if msg != want {
 		t.Errorf("incorrect log, expected %s, got %s", want, msg)
 	}
@@ -444,7 +444,7 @@ func TestProcessDepositLog(t *testing.T) {
 
 	testAcc.txOpts.Value = amount32Eth
 	if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
-		t.Fatalf("Could not deposit to VRC %v", err)
+		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 
 	testAcc.backend.Commit()
@@ -508,7 +508,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 
 	testAcc.txOpts.Value = amount32Eth
 	if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
-		t.Fatalf("Could not deposit to VRC %v", err)
+		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 
 	testAcc.backend.Commit()
@@ -571,7 +571,7 @@ func TestProcessDepositLog_SkipDuplicateLog(t *testing.T) {
 
 	testAcc.txOpts.Value = amount32Eth
 	if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
-		t.Fatalf("Could not deposit to VRC %v", err)
+		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 
 	testAcc.backend.Commit()
@@ -643,7 +643,7 @@ func TestUnpackDepositLogs(t *testing.T) {
 
 	testAcc.txOpts.Value = amount32Eth
 	if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
-		t.Fatalf("Could not deposit to VRC %v", err)
+		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 	testAcc.backend.Commit()
 
@@ -726,12 +726,12 @@ func TestProcessChainStartLog(t *testing.T) {
 	blocks.EncodeDepositData(data, amount32Eth.Uint64(), time.Now().Unix())
 
 	// 8 Validators are used as size required for beacon-chain to start. This number
-	// is defined in the VRC as the number required for the testnet. The actual number
+	// is defined in the deposit contract as the number required for the testnet. The actual number
 	// is 2**14
 	for i := 0; i < depositsReqForChainStart; i++ {
 		testAcc.txOpts.Value = amount32Eth
 		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
-			t.Fatalf("Could not deposit to VRC %v", err)
+			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 
 		testAcc.backend.Commit()
@@ -777,7 +777,7 @@ func TestProcessChainStartLog(t *testing.T) {
 	testutil.AssertLogsDoNotContain(t, hook, "Unable to unpack ChainStart log data")
 	testutil.AssertLogsDoNotContain(t, hook, "Receipt root from log doesn't match the root saved in memory")
 	testutil.AssertLogsDoNotContain(t, hook, "Invalid timestamp from log")
-	testutil.AssertLogsContain(t, hook, "Minimum Number of Validators Reached for beacon-chain to start")
+	testutil.AssertLogsContain(t, hook, "Minimum number of validators reached for beacon-chain to start")
 
 	hook.Reset()
 
@@ -819,11 +819,11 @@ func TestUnpackChainStartLogs(t *testing.T) {
 	}
 
 	// 8 Validators are used as size required for beacon-chain to start. This number
-	// is defined in the VRC as the number required for the testnet.
+	// is defined in the deposit contract as the number required for the testnet.
 	for i := 0; i < depositsReqForChainStart; i++ {
 		testAcc.txOpts.Value = amount32Eth
 		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
-			t.Fatalf("Could not deposit to VRC %v", err)
+			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 
 		testAcc.backend.Commit()
@@ -894,11 +894,11 @@ func TestHasChainStartLogOccurred(t *testing.T) {
 	}
 
 	// 8 Validators are used as size required for beacon-chain to start. This number
-	// is defined in the VRC as the number required for the testnet.
+	// is defined in the deposit contract as the number required for the testnet.
 	for i := 0; i < depositsReqForChainStart; i++ {
 		testAcc.txOpts.Value = amount32Eth
 		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
-			t.Fatalf("Could not deposit to VRC %v", err)
+			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 		testAcc.backend.Commit()
 	}

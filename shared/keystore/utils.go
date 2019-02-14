@@ -50,9 +50,11 @@ func ensureInt(x interface{}) int {
 
 // keyFileName implements the naming convention for keyfiles:
 // UTC--<created_at UTC ISO8601>-<address hex>
+// Note: the address hex is truncated to the first 16 characters to avoid OS
+// filename length issues.
 func keyFileName(pubkey *bls.PublicKey) string {
 	ts := time.Now().UTC()
-	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), hex.EncodeToString(pubkey.Serialize()))
+	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), hex.EncodeToString(pubkey.Serialize())[16])
 }
 
 func toISO8601(t time.Time) string {

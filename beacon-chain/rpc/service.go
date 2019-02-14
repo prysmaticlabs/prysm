@@ -32,6 +32,7 @@ type chainService interface {
 	// time the canonical head changes in the chain service.
 	CanonicalBlockFeed() *event.Feed
 	CanonicalStateFeed() *event.Feed
+	StateInitializedFeed() *event.Feed
 }
 
 type operationService interface {
@@ -126,6 +127,7 @@ func (s *Service) Start() {
 		beaconDB:            s.beaconDB,
 		ctx:                 s.ctx,
 		powChainService:     s.powChainService,
+		chainService:        s.chainService,
 		operationService:    s.operationService,
 		incomingAttestation: s.incomingAttestation,
 		canonicalStateChan:  s.canonicalStateChan,

@@ -17,15 +17,10 @@ var (
 		Usage: "A mainchain web3 provider string endpoint. Can either be an IPC file string or a WebSocket endpoint. Uses WebSockets by default at ws://127.0.0.1:8546. Cannot be an HTTP endpoint.",
 		Value: "ws://127.0.0.1:8546",
 	}
-	// VrcContractFlag defines a flag for VRC contract address.
-	VrcContractFlag = cli.StringFlag{
-		Name:  "vrcaddr",
-		Usage: "Validator registration contract address. Beacon chain node will listen logs coming from VRC to determine when validator is eligible to participate.",
-	}
-	// PubKeyFlag defines a flag for validator's public key on the mainchain
-	PubKeyFlag = cli.StringFlag{
-		Name:  "pubkey",
-		Usage: "Validator's public key. Beacon chain node will listen to VRC log to determine when registration has completed based on this public key address.",
+	// DepositContractFlag defines a flag for the deposit contract address.
+	DepositContractFlag = cli.StringFlag{
+		Name:  "deposit-contract",
+		Usage: "Deposit contract address. Beacon chain node will listen logs coming from the deposit contract to determine when validator is eligible to participate.",
 	}
 	// RPCPort defines a beacon node RPC port to open.
 	RPCPort = cli.StringFlag{
@@ -58,5 +53,11 @@ var (
 	EnableDBCleanup = cli.BoolFlag{
 		Name:  "enable-db-cleanup",
 		Usage: "Enable automatic DB cleanup routine",
+	}
+	// ChainStartDelay tells the beacon node to wait for a period of time from the current time, before
+	// logging chainstart.
+	ChainStartDelay = cli.Uint64Flag{
+		Name:  "chain-start-delay",
+		Usage: "Delay the chain start so as to make local testing easier",
 	}
 )

@@ -7,9 +7,10 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/params"
 
-	"github.com/opentracing/opentracing-go"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+
+	"github.com/opentracing/opentracing-go"
 )
 
 var delay = params.BeaconConfig().SlotDuration / 2
@@ -30,7 +31,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	// We fetch the validator index as it is necessary to generate the aggregation
 	// bitfield of the attestation itself.
 	idxReq := &pb.ValidatorIndexRequest{
-		PublicKey: v.pubKey,
+		PublicKey: v.key.PublicKey.Serialize(),
 	}
 	validatorIndexRes, err := v.validatorClient.ValidatorIndex(ctx, idxReq)
 	if err != nil {

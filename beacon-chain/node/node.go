@@ -15,7 +15,6 @@ import (
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/dbcleanup"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
@@ -75,10 +74,6 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	}
 
 	if err := beacon.registerBlockchainService(ctx); err != nil {
-		return nil, err
-	}
-
-	if err := beacon.registerDBCleanService(ctx); err != nil {
 		return nil, err
 	}
 
@@ -193,25 +188,6 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	return b.services.RegisterService(blockchainService)
 }
 
-func (b *BeaconNode) registerDBCleanService(ctx *cli.Context) error {
-	if !ctx.GlobalBool(utils.EnableDBCleanup.Name) {
-		return nil
-	}
-
-	var chainService *blockchain.ChainService
-	if err := b.services.FetchService(&chainService); err != nil {
-		return err
-	}
-
-	dbCleanService := dbcleanup.NewCleanupService(context.TODO(), &dbcleanup.Config{
-		SubscriptionBuf: 100,
-		BeaconDB:        b.db,
-		ChainService:    chainService,
-	})
-
-	return b.services.RegisterService(dbCleanService)
-}
-
 func (b *BeaconNode) registerOperationService() error {
 	operationService := operations.NewOperationService(context.TODO(), &operations.Config{
 		BeaconDB: b.db,
@@ -231,14 +207,17 @@ func (b *BeaconNode) registerPOWChainService(ctx *cli.Context) error {
 	}
 	powClient := ethclient.NewClient(rpcClient)
 
+	delay := ctx.GlobalUint64(utils.ChainStartDelay.Name)
+
 	web3Service, err := powchain.NewWeb3Service(context.TODO(), &powchain.Web3ServiceConfig{
 		Endpoint:        b.ctx.GlobalString(utils.Web3ProviderFlag.Name),
-		DepositContract: common.HexToAddress(b.ctx.GlobalString(utils.VrcContractFlag.Name)),
+		DepositContract: common.HexToAddress(b.ctx.GlobalString(utils.DepositContractFlag.Name)),
 		Client:          powClient,
 		Reader:          powClient,
 		Logger:          powClient,
 		ContractBackend: powClient,
 		BeaconDB:        b.db,
+		ChainStartDelay: delay,
 	})
 	if err != nil {
 		return fmt.Errorf("could not register proof-of-work chain web3Service: %v", err)
