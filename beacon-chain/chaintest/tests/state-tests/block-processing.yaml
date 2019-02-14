@@ -49,9 +49,9 @@ test_cases:
           slashable_attestation_1_justified_epoch: 0
           slashable_attestation_2_justified_epoch: 1
           slashable_attestation_1_custody_bitfield: !binary "F"
-          slashable_attestation_1_validator_indices: [16386]
+          slashable_attestation_1_validator_indices: [1,2,3,4,5,6,7,16386]
           slashable_attestation_2_custody_bitfield: !binary "F"
-          slashable_attestation_2_validator_indices: [16386]
+          slashable_attestation_2_validator_indices: [1,2,3,4,5,6,7,16386]
       validator_exits:
         - epoch: 144115188075855872
           validator_index: 100 # At slot 9223372036854775868, validator at index 100 triggers a voluntary exit

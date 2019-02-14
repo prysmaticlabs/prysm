@@ -4,6 +4,7 @@ package helpers
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
@@ -342,11 +343,13 @@ func AttestationParticipants(
 			break
 		}
 	}
-	if len(bitfield) != mathutil.CeilDiv8(len(committee)) {
-		return nil, fmt.Errorf(
-			"wanted participants bitfield length %d, got: %d",
-			mathutil.CeilDiv8(len(committee)),
-			len(bitfield))
+
+	if isValidated, err := VerifyBitfield(bitfield, len(committee)); !isValidated || err != nil {
+		if err != nil {
+			return nil, err
+		}
+
+		return nil, errors.New("bitfield is unable to be verified")
 	}
 
 	// Find the participating validators in the committee.
@@ -361,6 +364,45 @@ func AttestationParticipants(
 		}
 	}
 	return participants, nil
+}
+
+// VerifyBitfield validates a bitfield with a given committee size.
+//
+// Spec pseudocode:
+//
+// def verify_bitfield(bitfield: bytes, committee_size: int) -> bool:
+// """
+// Verify ``bitfield`` against the ``committee_size``.
+// """
+// if len(bitfield) != (committee_size + 7) // 8:
+// return False
+//
+// # Check `bitfield` is padded with zero bits only
+// for i in range(committee_size, len(bitfield) * 8):
+// if get_bitfield_bit(bitfield, i) == 0b1:
+// return False
+//
+// return True
+func VerifyBitfield(bitfield []byte, committeeSize int) (bool, error) {
+	if len(bitfield) != mathutil.CeilDiv8(committeeSize) {
+		return false, fmt.Errorf(
+			"wanted participants bitfield length %d, got: %d",
+			mathutil.CeilDiv8(committeeSize),
+			len(bitfield))
+	}
+
+	for i := committeeSize; i < len(bitfield)*8; i++ {
+		bitSet, err := bitutil.CheckBit(bitfield, i)
+		if err != nil {
+			return false, fmt.Errorf("unable to check bit in bitfield %v", err)
+		}
+
+		if bitSet {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
 
 // NextEpochCommitteeAssignment query slots in the next epoch
