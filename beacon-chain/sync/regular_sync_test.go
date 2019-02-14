@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/ssz"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -83,7 +85,7 @@ func setupService(t *testing.T, db *db.BeaconDB) *RegularSync {
 	return NewRegularSyncService(context.Background(), cfg)
 }
 
-func TestProcessBlockHash(t *testing.T) {
+func TestProcessBlockRoot(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	db := internal.SetupDB(t)
@@ -166,9 +168,9 @@ func TestProcessBlock(t *testing.T) {
 	if err := db.SaveBlock(parentBlock); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
-	parentHash, err := hashutil.HashBeaconBlock(parentBlock)
+	parentRoot, err := ssz.TreeHash(parentBlock)
 	if err != nil {
-		t.Fatalf("failed to get parent hash: %v", err)
+		t.Fatalf("failed to get parent root: %v", err)
 	}
 
 	data := &pb.BeaconBlock{
@@ -176,7 +178,7 @@ func TestProcessBlock(t *testing.T) {
 			DepositRootHash32: []byte{1, 2, 3, 4, 5},
 			BlockHash32:       []byte{6, 7, 8, 9, 10},
 		},
-		ParentRootHash32: parentHash[:],
+		ParentRootHash32: parentRoot[:],
 		Slot:             params.BeaconConfig().GenesisSlot,
 	}
 	attestation := &pb.Attestation{
@@ -247,9 +249,9 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	if err := db.SaveBlock(parentBlock); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
-	parentHash, err := hashutil.HashBeaconBlock(parentBlock)
+	parentRoot, err := ssz.TreeHash(parentBlock)
 	if err != nil {
-		t.Fatalf("failed to get parent hash: %v", err)
+		t.Fatalf("failed to get parent root: %v", err)
 	}
 
 	data1 := &pb.BeaconBlock{
@@ -257,7 +259,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 			DepositRootHash32: []byte{1, 2, 3, 4, 5},
 			BlockHash32:       []byte{6, 7, 8, 9, 10},
 		},
-		ParentRootHash32: parentHash[:],
+		ParentRootHash32: parentRoot[:],
 		Slot:             params.BeaconConfig().GenesisSlot + 1,
 	}
 

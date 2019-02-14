@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/ssz"
+
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -241,14 +243,14 @@ func TestDecodeDepositAmountAndTimeStamp(t *testing.T) {
 
 func TestBlockChildren(t *testing.T) {
 	genesisBlock := NewGenesisBlock([]byte{})
-	genesisHash, err := hashutil.HashBeaconBlock(genesisBlock)
+	genesisRoot, err := ssz.TreeHash(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
 	targets := []*pb.BeaconBlock{
 		{
 			Slot:             9,
-			ParentRootHash32: genesisHash[:],
+			ParentRootHash32: genesisRoot[:],
 		},
 		{
 			Slot:             5,
@@ -256,7 +258,7 @@ func TestBlockChildren(t *testing.T) {
 		},
 		{
 			Slot:             8,
-			ParentRootHash32: genesisHash[:],
+			ParentRootHash32: genesisRoot[:],
 		},
 	}
 	children, err := BlockChildren(genesisBlock, targets)
