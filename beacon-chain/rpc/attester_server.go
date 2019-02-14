@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -55,8 +57,8 @@ func (as *AttesterServer) AttestationInfoAtSlot(ctx context.Context, req *pb.Att
 	// where epoch_boundary is the block at the most recent epoch boundary in the
 	// chain defined by head.
 	// On the server side, this is fetched by calling get_block_root(state, get_epoch_start_slot(latest_epoch_boundary)).
-	mostRecentEpochBoundary := helpers.CurrentEpoch(beaconState)
-	epochBoundaryRoot, err := blocks.BlockRoot(beaconState, helpers.StartSlot(mostRecentEpochBoundary))
+	epochBoundary := head.Slot / params.BeaconConfig().EpochLength
+	epochBoundaryRoot, err := blocks.BlockRoot(beaconState, helpers.StartSlot(epochBoundary))
 	if err != nil {
 		return nil, fmt.Errorf("could not get epoch boundary block: %v", err)
 	}

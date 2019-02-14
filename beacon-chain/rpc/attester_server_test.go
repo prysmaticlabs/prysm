@@ -80,7 +80,7 @@ func TestAttestationInfoAtSlot_JustifiedBlockFailure(t *testing.T) {
 		t.Fatalf("Could not update chain head in test db: %v", err)
 	}
 	epochBoundaryBlock := &pbp2p.BeaconBlock{
-		Slot: 1,
+		Slot: params.BeaconConfig().EpochLength + 1,
 	}
 	if err := attesterServer.beaconDB.SaveBlock(epochBoundaryBlock); err != nil {
 		t.Fatalf("Could not save block in test db: %v", err)
