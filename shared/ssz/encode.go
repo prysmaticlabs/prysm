@@ -82,8 +82,10 @@ func makeEncoder(typ reflect.Type) (encoder, encodeSizer, error) {
 		return encodeUint8, func(reflect.Value) (uint32, error) { return 1, nil }, nil
 	case kind == reflect.Uint16:
 		return encodeUint16, func(reflect.Value) (uint32, error) { return 2, nil }, nil
-	case kind == reflect.Uint32 || kind == reflect.Int32:
+	case kind == reflect.Uint32:
 		return encodeUint32, func(reflect.Value) (uint32, error) { return 4, nil }, nil
+	case kind == reflect.Int32:
+		return encodeInt32, func(reflect.Value) (uint32, error) { return 4, nil }, nil
 	case kind == reflect.Uint64:
 		return encodeUint64, func(reflect.Value) (uint32, error) { return 8, nil }, nil
 	case kind == reflect.Slice && typ.Elem().Kind() == reflect.Uint8:
@@ -128,6 +130,14 @@ func encodeUint16(val reflect.Value, w *encbuf) error {
 
 func encodeUint32(val reflect.Value, w *encbuf) error {
 	v := val.Uint()
+	b := make([]byte, 4)
+	binary.LittleEndian.PutUint32(b, uint32(v))
+	w.str = append(w.str, b...)
+	return nil
+}
+
+func encodeInt32(val reflect.Value, w *encbuf) error {
+	v := val.Int()
 	b := make([]byte, 4)
 	binary.LittleEndian.PutUint32(b, uint32(v))
 	w.str = append(w.str, b...)
