@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"time"
 
-	bls "github.com/prysmaticlabs/go-bls"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
 func aesCTRXOR(key, inText, iv []byte) ([]byte, error) {
@@ -50,11 +50,9 @@ func ensureInt(x interface{}) int {
 
 // keyFileName implements the naming convention for keyfiles:
 // UTC--<created_at UTC ISO8601>-<address hex>
-// Note: the address hex is truncated to the first 16 characters to avoid OS
-// filename length issues.
 func keyFileName(pubkey *bls.PublicKey) string {
 	ts := time.Now().UTC()
-	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), hex.EncodeToString(pubkey.Serialize())[16])
+	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), hex.EncodeToString(pubkey.BufferedPublicKey()))
 }
 
 func toISO8601(t time.Time) string {
@@ -70,7 +68,7 @@ func toISO8601(t time.Time) string {
 
 // zeroKey zeroes a private key in memory.
 func zeroKey(k *bls.SecretKey) {
-	b := k.LittleEndian()
+	b := k.K.Bits()
 	for i := range b {
 		b[i] = 0
 	}
