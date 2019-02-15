@@ -3,11 +3,14 @@ package operations
 
 import (
 	"context"
+	"fmt"
+	"sort"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -80,6 +83,32 @@ func (s *Service) IncomingExitFeed() *event.Feed {
 // The beacon block operation service will subscribe to this feed in order to relay incoming attestations.
 func (s *Service) IncomingAttFeed() *event.Feed {
 	return s.incomingAttFeed
+}
+
+// Attestations returns the attestations that have not seen on the beacon chain, the attestations are
+// returns in slot ascending order and up to MaxAttestations capacity. The attestations get
+// deleted in DB after they have been retrieved.
+func (s *Service) Attestations() ([]*pb.Attestation, error) {
+	var attestations []*pb.Attestation
+	attestationsFromDB, err := s.beaconDB.Attestations()
+	if err != nil {
+		return nil, fmt.Errorf("Could not retrieve attestations from DB")
+	}
+	sort.Slice(attestationsFromDB, func(i, j int) bool {
+		return attestationsFromDB[i].Data.Slot < attestationsFromDB[j].Data.Slot
+	})
+	for i, attestation := range attestationsFromDB {
+		// Stop the max attestation number per beacon block is reached.
+		if uint64(i) == params.BeaconConfig().MaxAttestations {
+			break
+		}
+		attestations = append(attestations, attestation)
+		// Delete attestation from DB after retrieval.
+		if err := s.beaconDB.DeleteAttestation(attestationsFromDB[i]); err != nil {
+			return nil, fmt.Errorf("could not delete attestation %v", attestationsFromDB[i])
+		}
+	}
+	return attestations, nil
 }
 
 // saveOperations saves the newly broadcasted beacon block operations

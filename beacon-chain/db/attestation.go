@@ -24,6 +24,17 @@ func (db *BeaconDB) SaveAttestation(attestation *pb.Attestation) error {
 	})
 }
 
+// DeleteAttestation deletes the attestation record into the beacon chain db.
+func (db *BeaconDB) DeleteAttestation(attestation *pb.Attestation) error {
+	hash := att.Key(attestation.Data)
+
+	return db.update(func(tx *bolt.Tx) error {
+		a := tx.Bucket(attestationBucket)
+
+		return a.Delete(hash[:])
+	})
+}
+
 // Attestation retrieves an attestation record from the db using its hash.
 func (db *BeaconDB) Attestation(hash [32]byte) (*pb.Attestation, error) {
 	var attestation *pb.Attestation
@@ -41,6 +52,28 @@ func (db *BeaconDB) Attestation(hash [32]byte) (*pb.Attestation, error) {
 	})
 
 	return attestation, err
+}
+
+// Attestation retrieves all the attestation records from the db.
+func (db *BeaconDB) Attestations() ([]*pb.Attestation, error) {
+	var attestations []*pb.Attestation
+	err := db.view(func(tx *bolt.Tx) error {
+		a := tx.Bucket(attestationBucket)
+
+		if err := a.ForEach(func(k, v []byte) error {
+			attestation, err := createAttestation(v)
+			if err != nil {
+				return err
+			}
+			attestations = append(attestations, attestation)
+			return nil
+		}); err != nil {
+			return err
+		}
+		return nil
+	})
+
+	return attestations, err
 }
 
 // HasAttestation checks if the attestation exists.
