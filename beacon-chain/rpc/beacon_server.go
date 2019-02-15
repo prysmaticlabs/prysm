@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"math/big"
 	"time"
 
@@ -104,7 +105,60 @@ func (bs *BeaconServer) LatestAttestation(req *ptypes.Empty, stream pb.BeaconSer
 // The deposit root can be calculated by calling the get_deposit_root() function of
 // the deposit contract using the post-state of the block hash.
 func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1DataResponse, error) {
-	return &pb.Eth1DataResponse{}, nil
+	// Let dataVoteObjects be the set of Eth1DataVote objects vote in state.eth1_data_votes where:
+	// vote.eth1_data.block_hash is the hash of an eth1.0 block that is:
+	//   (i) part of the canonical chain
+	//   (ii) >= ETH1_FOLLOW_DISTANCE blocks behind the head
+	//   (iii) newer than state.latest_eth1_data.block_data.
+	// vote.eth1_data.deposit_root is the deposit root of the eth1.0 deposit contract
+	// at the block defined by vote.eth1_data.block_hash.
+	beaconState, err := bs.beaconDB.State()
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
+	}
+	dataVoteObjects := []*pbp2p.Eth1DataVote{}
+	for _, vote := range beaconState.Eth1DataVotes {
+		eth1Hash := bytesutil.ToBytes32(vote.Eth1Data.BlockHash32)
+		blockExists, blockNumber, err := bs.powChainService.BlockExists(eth1Hash)
+		if err != nil {
+			log.Errorf("Could not verify block with hash exists in Eth1 chain: %#x: %v", eth1Hash, err)
+			continue
+		}
+		currentHeight, err := bs.powChainService.CurrentHeight()
+		if err != nil {
+			log.Errorf("Could not fetch current Eth1 chain height: %v", err)
+			continue
+		}
+		isBehindFollowDistance := blockNumber + params.BeaconConfig().Eth1FollowDistance < currentHeight
+		if blockExists && isBehindFollowDistance {
+			dataVoteObjects = append(dataVoteObjects, vote)
+		}
+	}
+
+	// Now we handle the following two scenarios:
+	// If dataVoteObjects is empty:
+	// Let block_hash be the block hash of the ETH1_FOLLOW_DISTANCE'th ancestor of the head of
+	// the canonical eth1.0 chain.
+	// Let deposit_root be the deposit root of the eth1.0 deposit contract in the
+	// post-state of the block referenced by block_hash.
+	if len(dataVoteObjects) == 0 {
+		eth1data := &pbp2p.Eth1Data{
+			BlockHash32: []byte{}, // Fetch the ancestor.
+			DepositRootHash32: []byte{}, // Fetch the root from the contract.
+		}
+		return &pb.Eth1DataResponse{Eth1Data: eth1data}, nil
+	}
+
+	// If dataVoteObjects is non-empty:
+	// Let best_vote be the member of D that has the highest vote.eth1_data.vote_count,
+	// breaking ties by favoring block hashes with higher associated block height.
+	// Let block_hash = best_vote.eth1_data.block_hash.
+	// Let deposit_root = best_vote.eth1_data.deposit_root.
+	eth1data := &pbp2p.Eth1Data{
+		BlockHash32: []byte{}, // Fetch the ancestor.
+		DepositRootHash32: []byte{}, // Fetch the root from the contract.
+	}
+	return &pb.Eth1DataResponse{Eth1Data: eth1data}, nil
 }
 
 // PendingDeposits returns a list of pending deposits that are ready for

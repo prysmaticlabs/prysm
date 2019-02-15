@@ -4,6 +4,7 @@ package rpc
 import (
 	"context"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"net"
 	"time"
@@ -44,6 +45,8 @@ type powChainService interface {
 	HasChainStartLogOccurred() (bool, uint64, error)
 	ChainStartFeed() *event.Feed
 	LatestBlockNumber() *big.Int
+	BlockExists(hash common.Hash) (bool, uint64, error)
+	CurrentHeight() (uint64, error)
 }
 
 // Service defining an RPC server for a beacon node.
