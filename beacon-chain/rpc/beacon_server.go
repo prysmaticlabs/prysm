@@ -176,11 +176,34 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 	// breaking ties by favoring block hashes with higher associated block height.
 	// Let block_hash = best_vote.eth1_data.block_hash.
 	// Let deposit_root = best_vote.eth1_data.deposit_root.
-	eth1data := &pbp2p.Eth1Data{
-		BlockHash32: []byte{}, // Fetch the ancestor.
-		DepositRootHash32: []byte{}, // Fetch the root from the contract.
+	var bestVote *pbp2p.Eth1DataVote
+	for _, vote := range dataVoteObjects {
+		if vote.VoteCount > bestVote.VoteCount {
+			bestVote = vote
+		} else if vote.VoteCount == bestVote.VoteCount {
+			bestVoteHash := bytesutil.ToBytes32(bestVote.Eth1Data.BlockHash32)
+			voteHash := bytesutil.ToBytes32(vote.Eth1Data.BlockHash32)
+			_, bestVoteHeight, err := bs.powChainService.BlockExists(bestVoteHash)
+			if err != nil {
+				log.Errorf("Could not fetch block height: %v", err)
+				continue
+			}
+			_, voteHeight, err := bs.powChainService.BlockExists(voteHash)
+			if err != nil {
+				log.Errorf("Could not fetch block height: %v", err)
+				continue
+			}
+			if voteHeight > bestVoteHeight {
+				bestVote = vote
+			}
+		}
 	}
-	return &pb.Eth1DataResponse{Eth1Data: eth1data}, nil
+	return &pb.Eth1DataResponse{
+		Eth1Data: &pbp2p.Eth1Data{
+			BlockHash32:       bestVote.Eth1Data.BlockHash32,
+			DepositRootHash32: bestVote.Eth1Data.DepositRootHash32,
+		},
+	}, nil
 }
 
 // PendingDeposits returns a list of pending deposits that are ready for
