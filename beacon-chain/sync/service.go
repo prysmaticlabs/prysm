@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
 	"github.com/sirupsen/logrus"
 )
 
@@ -23,6 +23,7 @@ type Config struct {
 	BeaconDB         *db.BeaconDB
 	P2P              p2pAPI
 	OperationService operationService
+	Powchain         powChainService
 }
 
 // NewSyncService creates a new instance of SyncService using the config
@@ -32,6 +33,7 @@ func NewSyncService(ctx context.Context, cfg *Config) *Service {
 	sqCfg := DefaultQuerierConfig()
 	sqCfg.BeaconDB = cfg.BeaconDB
 	sqCfg.P2P = cfg.P2P
+	sqCfg.PowChain = cfg.Powchain
 
 	isCfg := initialsync.DefaultConfig()
 	isCfg.BeaconDB = cfg.BeaconDB
