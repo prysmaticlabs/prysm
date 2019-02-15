@@ -9,8 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/ssz"
-
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -24,6 +22,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
@@ -75,6 +74,10 @@ func (m *mockClient) LatestBlockHash() common.Hash {
 	return common.BytesToHash([]byte{'A'})
 }
 
+func (m *mockClient) HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error) {
+	return nil, nil
+}
+
 type faultyClient struct{}
 
 func (f *faultyClient) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
@@ -103,6 +106,10 @@ func (f *faultyClient) CodeAt(ctx context.Context, account common.Address, block
 
 func (f *faultyClient) LatestBlockHash() common.Hash {
 	return common.BytesToHash([]byte{'A'})
+}
+
+func (f *faultyClient) HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error) {
+	return nil, nil
 }
 
 func setupInitialDeposits(t *testing.T) []*pb.Deposit {

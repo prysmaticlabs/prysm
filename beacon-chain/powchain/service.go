@@ -52,6 +52,7 @@ type Reader interface {
 // POWBlockFetcher defines a struct that can retrieve mainchain blocks.
 type POWBlockFetcher interface {
 	BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
+	HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error)
 }
 
 // Client defines a struct that combines all relevant ETH1.0 mainchain interactions required
@@ -74,12 +75,12 @@ type Web3Service struct {
 	cancel                  context.CancelFunc
 	client                  Client
 	headerChan              chan *gethTypes.Header
-	logChan                 chan gethTypes.Log
 	endpoint                string
 	depositContractAddress  common.Address
 	chainStartFeed          *event.Feed
 	reader                  Reader
 	logger                  bind.ContractFilterer
+	blockFetcher            POWBlockFetcher
 	blockNumber             *big.Int    // the latest ETH1.0 chain blockNumber.
 	blockHash               common.Hash // the latest ETH1.0 chain blockHash.
 	depositContractCaller   *contracts.DepositContractCaller
@@ -90,6 +91,7 @@ type Web3Service struct {
 	beaconDB                *db.BeaconDB
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	chainStartDelay         uint64
+	lastRequestedBlock      *big.Int
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -99,6 +101,7 @@ type Web3ServiceConfig struct {
 	Client          Client
 	Reader          Reader
 	Logger          bind.ContractFilterer
+	BlockFetcher    POWBlockFetcher
 	ContractBackend bind.ContractBackend
 	BeaconDB        *db.BeaconDB
 	ChainStartDelay uint64
@@ -129,7 +132,6 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		ctx:                     ctx,
 		cancel:                  cancel,
 		headerChan:              make(chan *gethTypes.Header),
-		logChan:                 make(chan gethTypes.Log),
 		endpoint:                config.Endpoint,
 		blockNumber:             nil,
 		blockHash:               common.BytesToHash([]byte{}),
@@ -138,11 +140,13 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		client:                  config.Client,
 		reader:                  config.Reader,
 		logger:                  config.Logger,
+		blockFetcher:            config.BlockFetcher,
 		depositContractCaller:   depositContractCaller,
 		chainStartDeposits:      []*pb.Deposit{},
 		beaconDB:                config.BeaconDB,
 		lastReceivedMerkleIndex: -1,
 		chainStartDelay:         config.ChainStartDelay,
+		lastRequestedBlock:      big.NewInt(0),
 	}, nil
 }
 
@@ -342,15 +346,20 @@ func (w *Web3Service) run(done <-chan struct{}) {
 		log.Errorf("Unable to subscribe to incoming ETH1.0 chain headers: %v", err)
 		return
 	}
+
+	header, err := w.blockFetcher.HeaderByNumber(w.ctx, nil)
+	if err != nil {
+		log.Errorf("Unable to retrieve latest ETH1.0 chain header: %v", err)
+		return
+	}
+
+	w.blockNumber = header.Number
+	w.blockHash = header.Hash()
+
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
 			w.depositContractAddress,
 		},
-	}
-	logSub, err := w.logger.SubscribeFilterLogs(w.ctx, query, w.logChan)
-	if err != nil {
-		log.Errorf("Unable to query logs from deposit contract: %v", err)
-		return
 	}
 
 	// Only process logs if the chain start delay flag is not enabled.
@@ -360,8 +369,10 @@ func (w *Web3Service) run(done <-chan struct{}) {
 			return
 		}
 	}
-	defer logSub.Unsubscribe()
+
+	ticker := time.NewTicker(1 * time.Second)
 	defer headSub.Unsubscribe()
+	defer ticker.Stop()
 
 	for {
 		select {
@@ -371,9 +382,6 @@ func (w *Web3Service) run(done <-chan struct{}) {
 		case <-headSub.Err():
 			log.Debug("Unsubscribed to head events, exiting goroutine")
 			return
-		case <-logSub.Err():
-			log.Debug("Unsubscribed to log events, exiting goroutine")
-			return
 		case header := <-w.headerChan:
 			blockNumberGauge.Set(float64(header.Number.Int64()))
 			w.blockNumber = header.Number
@@ -382,9 +390,13 @@ func (w *Web3Service) run(done <-chan struct{}) {
 				"blockNumber": w.blockNumber,
 				"blockHash":   w.blockHash.Hex(),
 			}).Debug("Latest web3 chain event")
-		case depositLog := <-w.logChan:
-			log.Info("Received deposit contract log")
-			w.ProcessLog(depositLog)
+		case <-ticker.C:
+			if w.lastRequestedBlock.Cmp(w.blockNumber) == 0 {
+				continue
+			}
+			if err := w.requestBatchedLogs(); err != nil {
+				log.Error(err)
+			}
 
 		}
 	}
@@ -422,5 +434,32 @@ func (w *Web3Service) processPastLogs(query ethereum.FilterQuery) error {
 	for _, log := range logs {
 		w.ProcessLog(log)
 	}
+	return nil
+}
+
+// requestBatchedLogs requests and processes all the logs from the period
+// last polled to now.
+func (w *Web3Service) requestBatchedLogs() error {
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{
+			w.depositContractAddress,
+		},
+		FromBlock: w.lastRequestedBlock.Add(w.lastRequestedBlock, big.NewInt(1)),
+		ToBlock:   w.blockNumber,
+	}
+	logs, err := w.logger.FilterLogs(w.ctx, query)
+	if err != nil {
+		return err
+	}
+
+	// Only process log slices which are larger than zero.
+	if len(logs) > 0 {
+		log.Info("Processing Batched Logs")
+		for _, log := range logs {
+			w.ProcessLog(log)
+		}
+	}
+
+	w.lastRequestedBlock.Set(w.blockNumber)
 	return nil
 }
