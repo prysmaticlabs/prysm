@@ -97,9 +97,12 @@ func (bs *BeaconServer) LatestAttestation(req *ptypes.Empty, stream pb.BeaconSer
 	}
 }
 
-// Eth1Data fetches the current ETH 1 data which should be used when voting via
-// block proposal.
-// TODO(1463): Implement this.
+// Eth1Data fetches the information required to vote on deposit root objects in the Eth1 Deposit Contract.
+// This is a mechanism used by block proposers vote on a recent Ethereum 1.0 block hash and an
+// associated deposit root found in the Ethereum 1.0 deposit contract. When consensus is formed,
+// state.latest_eth1_data is updated, and validator deposits up to this root can be processed.
+// The deposit root can be calculated by calling the get_deposit_root() function of
+// the deposit contract using the post-state of the block hash.
 func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1DataResponse, error) {
 	return &pb.Eth1DataResponse{}, nil
 }
