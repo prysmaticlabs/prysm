@@ -92,7 +92,7 @@ func (s *Service) Attestations() ([]*pb.Attestation, error) {
 	var attestations []*pb.Attestation
 	attestationsFromDB, err := s.beaconDB.Attestations()
 	if err != nil {
-		return nil, fmt.Errorf("Could not retrieve attestations from DB")
+		return nil, fmt.Errorf("could not retrieve attestations from DB")
 	}
 	sort.Slice(attestationsFromDB, func(i, j int) bool {
 		return attestationsFromDB[i].Data.Slot < attestationsFromDB[j].Data.Slot
