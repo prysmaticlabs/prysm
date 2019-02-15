@@ -121,13 +121,13 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 		expectedErr string
 	}{
 		{
-			slot:        1000,
-			stateSlot:   500,
+			slot:        params.BeaconConfig().GenesisSlot +1000,
+			stateSlot:   params.BeaconConfig().GenesisSlot +500,
 			expectedErr: "slot 1000 is not within expected range of 372 to 499",
 		},
 		{
-			slot:        129,
-			stateSlot:   400,
+			slot:        params.BeaconConfig().GenesisSlot +129,
+			stateSlot:   params.BeaconConfig().GenesisSlot +400,
 			expectedErr: "slot 129 is not within expected range of 272 to 399",
 		},
 	}

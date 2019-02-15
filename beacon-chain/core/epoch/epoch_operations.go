@@ -47,11 +47,10 @@ func CurrentBoundaryAttestations(
 	state *pb.BeaconState,
 	currentEpochAttestations []*pb.PendingAttestation,
 ) ([]*pb.PendingAttestation, error) {
-	var boundarySlot uint64
 	var boundaryAttestations []*pb.PendingAttestation
 
 	for _, attestation := range currentEpochAttestations {
-		boundaryBlockRoot, err := block.BlockRoot(state, boundarySlot)
+		boundaryBlockRoot, err := block.BlockRoot(state, helpers.StartSlot(helpers.CurrentEpoch(state)))
 		if err != nil {
 			return nil, err
 		}
