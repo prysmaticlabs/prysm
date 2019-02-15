@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -39,13 +38,6 @@ func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 		},
 	}
 	return block
-}
-
-// IsSlotValid compares the slot to the system clock to determine if the block is valid.
-func IsSlotValid(slot uint64, genesisTime time.Time) bool {
-	slotDuration := time.Duration(slot*params.BeaconConfig().SlotDuration) * time.Second
-	validTimeThreshold := genesisTime.Add(slotDuration)
-	return clock.Now().After(validTimeThreshold)
 }
 
 // BlockRoot returns the block root stored in the BeaconState for a given slot.
