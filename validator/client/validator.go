@@ -133,6 +133,9 @@ func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
 	if v.assignment == nil {
 		return pb.ValidatorRole_UNKNOWN
 	}
+	// A validator could be assigned to propose and attest in the same slot.
+	// Acting as a proposer will take priority as it is a more critical piece for
+	// the beacon chain to advance.
 	if v.assignment.ProposerSlot == slot {
 		return pb.ValidatorRole_PROPOSER
 	} else if v.assignment.AttesterSlot == slot {
