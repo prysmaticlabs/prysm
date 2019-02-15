@@ -55,6 +55,7 @@ func (db *BeaconDB) Attestation(hash [32]byte) (*pb.Attestation, error) {
 }
 
 // Attestations retrieves all the attestation records from the db.
+// These are the attestations that have not been seen on the beacon chain.
 func (db *BeaconDB) Attestations() ([]*pb.Attestation, error) {
 	var attestations []*pb.Attestation
 	err := db.view(func(tx *bolt.Tx) error {
