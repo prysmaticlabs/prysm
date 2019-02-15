@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"errors"
+	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"reflect"
 	"testing"
@@ -35,6 +36,18 @@ func (f *faultyPOWChainService) LatestBlockNumber() *big.Int {
 	return big.NewInt(0)
 }
 
+func (f *faultyPOWChainService) BlockExists(hash common.Hash) (bool, *big.Int, error) {
+	return false, big.NewInt(1), errors.New("failed")
+}
+
+func (f *faultyPOWChainService) BlockHashByHeight(height *big.Int) (common.Hash, error) {
+	return [32]byte{}, errors.New("failed")
+}
+
+func (f *faultyPOWChainService) DepositRoot() [32]byte {
+	return [32]byte{}
+}
+
 type mockPOWChainService struct {
 	chainStartFeed    *event.Feed
 	latestBlockNumber *big.Int
@@ -48,6 +61,18 @@ func (m *mockPOWChainService) ChainStartFeed() *event.Feed {
 }
 func (m *mockPOWChainService) LatestBlockNumber() *big.Int {
 	return m.latestBlockNumber
+}
+
+func (m *mockPOWChainService) BlockExists(hash common.Hash) (bool, *big.Int, error) {
+	return true, big.NewInt(1), nil
+}
+
+func (m *mockPOWChainService) BlockHashByHeight(height *big.Int) (common.Hash, error) {
+	return [32]byte{}, nil
+}
+
+func (m *mockPOWChainService) DepositRoot() [32]byte {
+	return [32]byte{}
 }
 
 func TestWaitForChainStart_ContextClosed(t *testing.T) {
@@ -280,5 +305,17 @@ func TestPendingDeposits_ReturnsDepositsOutsideEth1FollowWindow(t *testing.T) {
 			len(allResp.PendingDeposits),
 			len(recentDeposits)+len(readyDeposits),
 		)
+	}
+}
+
+func TestEth1Data_EmptyVotes(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	beaconServer := &BeaconServer{
+		beaconDB: db,
+	}
+	result, err := beaconServer.Eth1Data(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
 	}
 }
