@@ -989,39 +989,3 @@ go_repository(
     commit = "c1b8fa8bdccecb0b8db834ee0b92fdbcfa606dd6",
     importpath = "gopkg.in/natefinch/npipe.v2",
 )
-
-go_repository(
-    name = "com_github_prysmaticlabs_go_bls",
-    commit = "0e61c30f21878172d57549ea1733c9808157ef08",
-    importpath = "github.com/prysmaticlabs/go-bls",
-)
-
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
-
-git_repository(
-    name = "herumi_mcl",
-    commit = "79b3a33e21072712f00985ed2adf34b3bcf0d74e",
-    remote = "https://github.com/prysmaticlabs/mcl",
-)
-
-git_repository(
-    name = "bazelify_gmp",
-    commit = "bb4881b35e6864c90493980d035e1d984cafd093",
-    remote = "https://github.com/robin-thomas/bazelify-gmp",
-)
-
-git_repository(
-    name = "boringssl",
-    commit = "fafc4482e85c09e7af5f71b2eb287b73ccd1020a",
-    remote = "https://github.com/google/boringssl",
-)
-
-git_repository(
-    name = "io_bazel_rules_m4",
-    commit = "2bf69df77dfb6b3ba6b7fc95c304b0dc279375bc",
-    remote = "https://github.com/jmillikin/rules_m4",
-)
-
-load("@io_bazel_rules_m4//:m4.bzl", "m4_register_toolchains")
-
-m4_register_toolchains()

@@ -31,7 +31,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	// We fetch the validator index as it is necessary to generate the aggregation
 	// bitfield of the attestation itself.
 	idxReq := &pb.ValidatorIndexRequest{
-		PublicKey: v.key.PublicKey.Serialize(),
+		PublicKey: v.key.PublicKey.BufferedPublicKey(),
 	}
 	validatorIndexRes, err := v.validatorClient.ValidatorIndex(ctx, idxReq)
 	if err != nil {
