@@ -10,6 +10,7 @@ import (
 
 	"github.com/pborman/uuid"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
 func TestMarshalAndUnmarshal(t *testing.T) {
@@ -43,7 +44,7 @@ func TestMarshalAndUnmarshal(t *testing.T) {
 }
 
 func TestStoreRandomKey(t *testing.T) {
-	tmpdir := os.TempDir()
+	tmpdir := testutil.TempDir()
 	filedir := tmpdir + "/keystore"
 	ks := &Store{
 		keysDirPath: filedir,
