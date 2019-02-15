@@ -7,10 +7,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/ssz"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -177,7 +178,7 @@ func TestLatestAttestationTarget_Ok(t *testing.T) {
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatalf("could not save block: %v", err)
 	}
-	blockHash, err := hashutil.HashBeaconBlock(block)
+	blockRoot, err := ssz.TreeHash(block)
 	if err != nil {
 		log.Fatalf("could not hash block: %v", err)
 	}
@@ -186,7 +187,7 @@ func TestLatestAttestationTarget_Ok(t *testing.T) {
 
 	attestation := &pb.Attestation{
 		Data: &pb.AttestationData{
-			BeaconBlockRootHash32: blockHash[:],
+			BeaconBlockRootHash32: blockRoot[:],
 		}}
 	pubKey48 := bytesutil.ToBytes48(pubKey)
 	service.store[pubKey48] = attestation

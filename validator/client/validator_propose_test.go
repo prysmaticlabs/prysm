@@ -3,11 +3,8 @@ package client
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"errors"
 	"testing"
-
-	"github.com/prysmaticlabs/prysm/shared/keystore"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
@@ -34,17 +31,13 @@ func setup(t *testing.T) (*validator, *mocks, func()) {
 		attesterClient:  internal.NewMockAttesterServiceClient(ctrl),
 	}
 
-	k, err := keystore.NewKey(rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
 	validator := &validator{
 		attestationPool: &fakeAttestationPool{},
 		proposerClient:  m.proposerClient,
 		beaconClient:    m.beaconClient,
 		attesterClient:  m.attesterClient,
 		validatorClient: m.validatorClient,
-		key:             k,
+		key:             validatorKey,
 	}
 
 	return validator, m, ctrl.Finish

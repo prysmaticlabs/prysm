@@ -173,12 +173,12 @@ func DecodeDepositAmountAndTimeStamp(depositData []byte) (uint64, int64, error) 
 //		List[BeaconBlock] returns the child blocks of the given block.
 func BlockChildren(block *pb.BeaconBlock, observedBlocks []*pb.BeaconBlock) ([]*pb.BeaconBlock, error) {
 	var children []*pb.BeaconBlock
-	hash, err := hashutil.HashBeaconBlock(block)
+	root, err := ssz.TreeHash(block)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash block: %v", err)
 	}
 	for _, observed := range observedBlocks {
-		if bytes.Equal(observed.ParentRootHash32, hash[:]) {
+		if bytes.Equal(observed.ParentRootHash32, root[:]) {
 			children = append(children, observed)
 		}
 	}
