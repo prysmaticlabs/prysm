@@ -122,16 +122,16 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 		expectedErr string
 	}{
 		{
-			slot:        params.BeaconConfig().GenesisSlot +1000,
-			stateSlot:   params.BeaconConfig().GenesisSlot +500,
+			slot:      params.BeaconConfig().GenesisSlot + 1000,
+			stateSlot: params.BeaconConfig().GenesisSlot + 500,
 			expectedErr: fmt.Sprintf("slot %d is not within expected range of %d to %d",
-				params.BeaconConfig().GenesisSlot + 1000,
-				params.BeaconConfig().GenesisSlot + 500 - params.BeaconConfig().LatestBlockRootsLength,
-				params.BeaconConfig().GenesisSlot + 500),
+				params.BeaconConfig().GenesisSlot+1000,
+				params.BeaconConfig().GenesisSlot+500-params.BeaconConfig().LatestBlockRootsLength,
+				params.BeaconConfig().GenesisSlot+500),
 		},
 		{
-			slot:        params.BeaconConfig().GenesisSlot +129,
-			stateSlot:   params.BeaconConfig().GenesisSlot +400,
+			slot:        params.BeaconConfig().GenesisSlot + 129,
+			stateSlot:   params.BeaconConfig().GenesisSlot + 400,
 			expectedErr: "slot 129 is not within expected range of 272 to 399",
 		},
 	}

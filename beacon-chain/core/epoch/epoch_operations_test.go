@@ -102,7 +102,7 @@ func TestEpochBoundaryAttestations(t *testing.T) {
 	state := &pb.BeaconState{
 		LatestAttestations:     epochAttestations,
 		LatestBlockRootHash32S: latestBlockRootHash,
-		JustifiedEpoch: params.BeaconConfig().GenesisEpoch,
+		JustifiedEpoch:         params.BeaconConfig().GenesisEpoch,
 	}
 
 	if _, err := CurrentBoundaryAttestations(state, epochAttestations); err == nil {
@@ -233,9 +233,9 @@ func TestPrevEpochBoundaryAttestations(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                   3 * params.BeaconConfig().EpochLength + params.BeaconConfig().GenesisSlot,
+		Slot:                   3*params.BeaconConfig().EpochLength + params.BeaconConfig().GenesisSlot,
 		LatestBlockRootHash32S: latestBlockRootHash,
-		JustifiedEpoch: params.BeaconConfig().GenesisEpoch,
+		JustifiedEpoch:         params.BeaconConfig().GenesisEpoch,
 	}
 
 	prevEpochBoundaryAttestation, err := PrevBoundaryAttestations(state, epochAttestations)
@@ -272,19 +272,19 @@ func TestHeadAttestationsOk(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot +  5,
+		Slot:                   params.BeaconConfig().GenesisSlot + 5,
 		LatestBlockRootHash32S: latestBlockRootHash,
-	    JustifiedEpoch: params.BeaconConfig().GenesisEpoch}
+		JustifiedEpoch:         params.BeaconConfig().GenesisEpoch}
 
 	headAttestations, err := PrevHeadAttestations(state, prevAttestations)
 	if err != nil {
 		t.Fatalf("PrevHeadAttestations failed with %v", err)
 	}
 
-	if headAttestations[0].Data.Slot != params.BeaconConfig().GenesisSlot + 1 {
+	if headAttestations[0].Data.Slot != params.BeaconConfig().GenesisSlot+1 {
 		t.Errorf("headAttestations[0] wanted slot 9223372036854775809, got slot %d", headAttestations[0].Data.Slot)
 	}
-	if headAttestations[1].Data.Slot != params.BeaconConfig().GenesisSlot + 2 {
+	if headAttestations[1].Data.Slot != params.BeaconConfig().GenesisSlot+2 {
 		t.Errorf("headAttestations[1] wanted slot 9223372036854775810, got slot %d", headAttestations[1].Data.Slot)
 	}
 	if !bytes.Equal([]byte{'A'}, headAttestations[0].Data.BeaconBlockRootHash32) {
