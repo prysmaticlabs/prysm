@@ -124,7 +124,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ethereum_go_ethereum",
-    commit = "ec3d1d97a481e6cba542751a6defae7c76e322f1",
+    commit = "2ed4a57e9522dc2a023577f0b92ff623c3412303",
     importpath = "github.com/ethereum/go-ethereum",
     # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
     # a fork that has resolved these issues by disabling HID/USB support and
@@ -814,7 +814,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_discovery",
-    commit = "17aa7d7fe3729570415d00e6c46cbab8429d8d59",
+    commit = "ececb851d1718b7bc3d734009f156d4f38ec420d",
     importpath = "github.com/libp2p/go-libp2p-discovery",
 )
 

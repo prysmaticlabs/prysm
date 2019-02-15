@@ -8,7 +8,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -49,7 +48,7 @@ func TestBadBlock(t *testing.T) {
 		Slot: 4,
 	}
 
-	genesisTime := params.BeaconConfig().GenesisTime
+	genesisTime := time.Unix(0, 0)
 
 	db.hasBlock = false
 
@@ -102,7 +101,7 @@ func TestValidBlock(t *testing.T) {
 		Slot: 4,
 	}
 
-	genesisTime := params.BeaconConfig().GenesisTime
+	genesisTime := time.Unix(0, 0)
 	powClient.blockExists = true
 
 	beaconState.LatestEth1Data = &pb.Eth1Data{
