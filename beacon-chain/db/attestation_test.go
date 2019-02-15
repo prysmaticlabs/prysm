@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"reflect"
 	"sort"
+	"testing"
 
 	"github.com/gogo/protobuf/proto"
 	att "github.com/prysmaticlabs/prysm/beacon-chain/core/attestations"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"testing"
 )
 
 func TestSaveAndRetrieveAttestation(t *testing.T) {

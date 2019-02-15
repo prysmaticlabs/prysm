@@ -54,7 +54,7 @@ func (db *BeaconDB) Attestation(hash [32]byte) (*pb.Attestation, error) {
 	return attestation, err
 }
 
-// Attestation retrieves all the attestation records from the db.
+// Attestations retrieves all the attestation records from the db.
 func (db *BeaconDB) Attestations() ([]*pb.Attestation, error) {
 	var attestations []*pb.Attestation
 	err := db.view(func(tx *bolt.Tx) error {
