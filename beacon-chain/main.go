@@ -82,8 +82,6 @@ VERSION:
 		cmd.TraceSampleFractionFlag,
 		cmd.MonitoringPortFlag,
 		cmd.DisableMonitoringFlag,
-		cmd.KeystorePasswordFlag,
-		cmd.KeystoreDirectoryFlag,
 		debug.PProfFlag,
 		debug.PProfAddrFlag,
 		debug.PProfPortFlag,

@@ -71,12 +71,6 @@ var (
 		Usage: "Port used to listening and respond metrics for prometheus.",
 		Value: 8080,
 	}
-	// KeystoreDirectoryFlag defines a flag to indicate where the keystore of the user
-	// is located.
-	KeystoreDirectoryFlag = DirectoryFlag{
-		Name:  "keystore-dir",
-		Usage: "Keystore directory indicates which directory the keystore is located.",
-	}
 	// KeystorePasswordFlag defines the password that will unlock the keystore file.
 	KeystorePasswordFlag = cli.StringFlag{
 		Name:  "keystore-password",
