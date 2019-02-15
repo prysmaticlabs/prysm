@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"math/big"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -138,7 +139,7 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 		//   (iii) newer than state.latest_eth1_data.block_data.
 		// vote.eth1_data.deposit_root is the deposit root of the eth1.0 deposit contract
 		// at the block defined by vote.eth1_data.block_hash.
-		isBehindFollowDistance := blockNumber + params.BeaconConfig().Eth1FollowDistance < currentHeight
+		isBehindFollowDistance := blockNumber+params.BeaconConfig().Eth1FollowDistance < currentHeight
 		isAheadStateLatestEth1Data := blockNumber > stateLatestEth1Height
 		if blockExists && isBehindFollowDistance && isAheadStateLatestEth1Data {
 			dataVoteObjects = append(dataVoteObjects, vote)
@@ -165,7 +166,7 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 		return &pb.Eth1DataResponse{
 			Eth1Data: &pbp2p.Eth1Data{
 				DepositRootHash32: depositRoot[:],
-				BlockHash32: blockHash[:],
+				BlockHash32:       blockHash[:],
 			},
 		}, nil
 	}
