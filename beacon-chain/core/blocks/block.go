@@ -59,25 +59,17 @@ func IsSlotValid(slot uint64, genesisTime time.Time) bool {
 //		assert slot < state.slot
 //		return state.latest_block_roots[slot % LATEST_BLOCK_ROOTS_LENGTH]
 func BlockRoot(state *pb.BeaconState, slot uint64) ([]byte, error) {
-	//	Check to see if the requested block root lies within LatestBlockRootHash32S
-	//	and if not generate error.
-	var earliestSlot uint64
-	var previousSlot uint64
-	if state.Slot > uint64(len(state.LatestBlockRootHash32S)) {
-		earliestSlot = state.Slot - uint64(len(state.LatestBlockRootHash32S))
-	} else {
-		earliestSlot = 0
-	}
+	earliestSlot := state.Slot - params.BeaconConfig().LatestBlockRootsLength
 
-	previousSlot = state.Slot - 1
-	if state.Slot > slot+uint64(len(state.LatestBlockRootHash32S)) || slot >= state.Slot {
+	if slot < earliestSlot || slot >= state.Slot {
 		return []byte{}, fmt.Errorf("slot %d is not within expected range of %d to %d",
 			slot,
 			earliestSlot,
-			previousSlot,
+			state.Slot,
 		)
 	}
-	return state.LatestBlockRootHash32S[slot%uint64(len(state.LatestBlockRootHash32S))], nil
+
+	return state.LatestBlockRootHash32S[slot%params.BeaconConfig().LatestBlockRootsLength], nil
 }
 
 // ProcessBlockRoots processes the previous block root into the state, by appending it

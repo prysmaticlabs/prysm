@@ -48,7 +48,7 @@ func TestBlockRootAtSlot_OK(t *testing.T) {
 	}
 	var blockRoots [][]byte
 
-	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	state := &pb.BeaconState{
@@ -77,7 +77,7 @@ func TestBlockRootAtSlot_OK(t *testing.T) {
 		}, {
 			slot:         2999,
 			stateSlot:    3000,
-			expectedRoot: []byte{55},
+			expectedRoot: []byte{183},
 		}, {
 			slot:         2873,
 			stateSlot:    3000,
@@ -85,10 +85,11 @@ func TestBlockRootAtSlot_OK(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		state.Slot = tt.stateSlot
-		result, err := BlockRoot(state, tt.slot)
+		state.Slot = tt.stateSlot + params.BeaconConfig().GenesisSlot
+		wantedSlot := tt.slot + params.BeaconConfig().GenesisSlot
+		result, err := BlockRoot(state, wantedSlot)
 		if err != nil {
-			t.Errorf("failed to get block root at slot %d: %v", tt.slot, err)
+			t.Errorf("failed to get block root at slot %d: %v", wantedSlot, err)
 		}
 		if !bytes.Equal(result, tt.expectedRoot) {
 			t.Errorf(
