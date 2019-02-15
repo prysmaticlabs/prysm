@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"bytes"
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -108,7 +109,7 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 
 	var blockRoots [][]byte
 
-	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	state := &pb.BeaconState{
@@ -123,7 +124,10 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 		{
 			slot:        params.BeaconConfig().GenesisSlot +1000,
 			stateSlot:   params.BeaconConfig().GenesisSlot +500,
-			expectedErr: "slot 1000 is not within expected range of 372 to 499",
+			expectedErr: fmt.Sprintf("slot %d is not within expected range of %d to %d",
+				params.BeaconConfig().GenesisSlot + 1000,
+				params.BeaconConfig().GenesisSlot + 500 - params.BeaconConfig().LatestBlockRootsLength,
+				params.BeaconConfig().GenesisSlot + 500),
 		},
 		{
 			slot:        params.BeaconConfig().GenesisSlot +129,
