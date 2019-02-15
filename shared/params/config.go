@@ -4,7 +4,6 @@ package params
 
 import (
 	"math/big"
-	"time"
 )
 
 func makeEmptySignature() [][]byte {
@@ -75,12 +74,10 @@ type BeaconChainConfig struct {
 	MaxAttesterSlashings uint64 // MaxAttesterSlashings defines the maximum number of casper FFG slashings possible in a block.
 
 	// Prysm constants.
-	DepositsForChainStart uint64    // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
-	SimulatedBlockRandao  [32]byte  // SimulatedBlockRandao is a RANDAO seed stubbed in simulated block for advancing local beacon chain.
-	RandBytes             uint64    // RandBytes is the number of bytes used as entropy to shuffle validators.
-	SyncPollingInterval   int64     // SyncPollingInterval queries network nodes for sync status.
-	GenesisTime           time.Time // GenesisTime used by the protocol.
-	MaxNumLog2Validators  uint64    // MaxNumLog2Validators is the Max number of validators in Log2 exists given total ETH supply.
+	DepositsForChainStart uint64 // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
+	RandBytes             uint64 // RandBytes is the number of bytes used as entropy to shuffle validators.
+	SyncPollingInterval   int64  // SyncPollingInterval queries network nodes for sync status.
+	MaxNumLog2Validators  uint64 // MaxNumLog2Validators is the Max number of validators in Log2 exists given total ETH supply.
 }
 
 // DepositContractConfig contains the deposits for
@@ -156,7 +153,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	DepositsForChainStart: 16384,
 	RandBytes:             3,
 	SyncPollingInterval:   6 * 4, // Query nodes over the network every 4 slots for sync status.
-	GenesisTime:           time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC),
 	MaxNumLog2Validators:  24,
 }
 
@@ -183,12 +179,15 @@ func BeaconConfig() *BeaconChainConfig {
 // DemoBeaconConfig retrieves the demo beacon chain config.
 func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig := *defaultBeaconConfig
-	demoConfig.ShardCount = 5
-	demoConfig.TargetCommitteeSize = 3
-	demoConfig.SlotDuration = 2
+	demoConfig.ShardCount = 1
+	demoConfig.TargetCommitteeSize = 2
+	demoConfig.DepositsForChainStart = 8
+	demoConfig.EpochLength = 4
+	demoConfig.GenesisEpoch = demoConfig.GenesisSlot / 4
+	demoConfig.SlotDuration = 10
+	demoConfig.MinDepositAmount = 100
+	demoConfig.MaxDepositAmount = 3200
 	demoConfig.SyncPollingInterval = 2 * 4 // Query nodes over the network every 4 slots for sync status.
-	demoConfig.GenesisTime = time.Now()
-	demoConfig.SimulatedBlockRandao = [32]byte{'S', 'I', 'M', 'U', 'L', 'A', 'T', 'O', 'R'}
 
 	return &demoConfig
 }

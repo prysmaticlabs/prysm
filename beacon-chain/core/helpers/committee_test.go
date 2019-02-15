@@ -44,6 +44,23 @@ func TestEpochCommitteeCount_Ok(t *testing.T) {
 		}
 	}
 }
+
+func TestEpochCommitteeCount_LessShardsThanEpoch(t *testing.T) {
+	validatorCount := uint64(8)
+	productionConfig := params.BeaconConfig()
+	testConfig := &params.BeaconChainConfig{
+		ShardCount:          1,
+		EpochLength:         4,
+		TargetCommitteeSize: 2,
+	}
+	params.OverrideBeaconConfig(testConfig)
+	if EpochCommitteeCount(validatorCount) != validatorCount/testConfig.TargetCommitteeSize {
+		t.Errorf("wanted: %d, got: %d",
+			validatorCount/testConfig.TargetCommitteeSize, EpochCommitteeCount(validatorCount))
+	}
+	params.OverrideBeaconConfig(productionConfig)
+}
+
 func TestCurrentEpochCommitteeCount_Ok(t *testing.T) {
 	validatorsPerEpoch := params.BeaconConfig().EpochLength * params.BeaconConfig().TargetCommitteeSize
 	committeesPerEpoch := uint64(8)

@@ -26,7 +26,7 @@ func generateSimulatedBlock(
 	if err != nil {
 		return nil, [32]byte{}, fmt.Errorf("could not tree hash state: %v", err)
 	}
-	randaoReveal := params.BeaconConfig().SimulatedBlockRandao
+	randaoReveal := [32]byte{}
 	block := &pb.BeaconBlock{
 		Slot:               beaconState.Slot + 1,
 		RandaoRevealHash32: randaoReveal[:],
@@ -118,7 +118,7 @@ func generateSimulatedBlock(
 // Generates initial deposits for creating a beacon state in the simulated
 // backend based on the yaml configuration.
 func generateInitialSimulatedDeposits(numDeposits uint64) ([]*pb.Deposit, error) {
-	genesisTime := params.BeaconConfig().GenesisTime.Unix()
+	genesisTime := time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC).Unix()
 	deposits := make([]*pb.Deposit, numDeposits)
 	for i := 0; i < len(deposits); i++ {
 		depositInput := &pb.DepositInput{
