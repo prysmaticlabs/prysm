@@ -356,15 +356,9 @@ func (w *Web3Service) run(done <-chan struct{}) {
 	w.blockNumber = header.Number
 	w.blockHash = header.Hash()
 
-	query := ethereum.FilterQuery{
-		Addresses: []common.Address{
-			w.depositContractAddress,
-		},
-	}
-
 	// Only process logs if the chain start delay flag is not enabled.
 	if w.chainStartDelay == 0 {
-		if err := w.processPastLogs(query); err != nil {
+		if err := w.processPastLogs(); err != nil {
 			log.Errorf("Unable to process past logs %v", err)
 			return
 		}
@@ -425,7 +419,13 @@ func (w *Web3Service) saveInTrie(depositData []byte, merkleRoot common.Hash) err
 
 // processPastLogs processes all the past logs from the deposit contract and
 // updates the deposit trie with the data from each individual log.
-func (w *Web3Service) processPastLogs(query ethereum.FilterQuery) error {
+func (w *Web3Service) processPastLogs() error {
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{
+			w.depositContractAddress,
+		},
+	}
+
 	logs, err := w.logger.FilterLogs(w.ctx, query)
 	if err != nil {
 		return err
