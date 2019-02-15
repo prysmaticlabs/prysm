@@ -434,6 +434,7 @@ func (w *Web3Service) processPastLogs() error {
 	for _, log := range logs {
 		w.ProcessLog(log)
 	}
+	w.lastRequestedBlock.Set(w.blockNumber)
 	return nil
 }
 
