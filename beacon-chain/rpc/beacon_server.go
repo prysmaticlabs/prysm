@@ -110,6 +110,7 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
 	dataVoteObjects := []*pbp2p.Eth1DataVote{}
+	eth1FollowDistance := int64(params.BeaconConfig().Eth1FollowDistance)
 	for _, vote := range beaconState.Eth1DataVotes {
 		eth1Hash := bytesutil.ToBytes32(vote.Eth1Data.BlockHash32)
 		// Verify the block from the vote's block hash exists in the eth1.0 chain and fetch its height.
@@ -119,11 +120,7 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 			continue
 		}
 		// Fetch the current canonical chain height from the eth1.0 chain.
-		currentHeight, err := bs.powChainService.CurrentHeight()
-		if err != nil {
-			log.Errorf("Could not fetch current Eth1 chain height: %v", err)
-			continue
-		}
+		currentHeight := bs.powChainService.LatestBlockNumber()
 		// Fetch the height of the block pointed to by the beacon state's latest_eth1_data.block_hash
 		// in the canonical, eth1.0 chain.
 		stateLatestEth1Hash := bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockHash32)
@@ -139,8 +136,8 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 		//   (iii) newer than state.latest_eth1_data.block_data.
 		// vote.eth1_data.deposit_root is the deposit root of the eth1.0 deposit contract
 		// at the block defined by vote.eth1_data.block_hash.
-		isBehindFollowDistance := blockNumber+params.BeaconConfig().Eth1FollowDistance < currentHeight
-		isAheadStateLatestEth1Data := blockNumber > stateLatestEth1Height
+		isBehindFollowDistance := blockNumber.Add(blockNumber, big.NewInt(eth1FollowDistance)).Cmp(currentHeight) == -1
+		isAheadStateLatestEth1Data := blockNumber.Cmp(stateLatestEth1Height) == 1
 		if blockExists && isBehindFollowDistance && isAheadStateLatestEth1Data {
 			dataVoteObjects = append(dataVoteObjects, vote)
 		}
@@ -154,11 +151,9 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 	// post-state of the block referenced by block_hash.
 	if len(dataVoteObjects) == 0 {
 		// Fetch the current canonical chain height from the eth1.0 chain.
-		currentHeight, err := bs.powChainService.CurrentHeight()
-		if err != nil {
-			return nil, fmt.Errorf("could not fetch current Eth1 chain height: %v", err)
-		}
-		blockHash, err := bs.powChainService.BlockHashByHeight(currentHeight - params.BeaconConfig().Eth1FollowDistance)
+		currentHeight := bs.powChainService.LatestBlockNumber()
+		ancestorHeight := currentHeight.Sub(currentHeight, big.NewInt(eth1FollowDistance))
+		blockHash, err := bs.powChainService.BlockHashByHeight(ancestorHeight)
 		if err != nil {
 			return nil, fmt.Errorf("could not fetch ETH1_FOLLOW_DISTANCE ancestor: %v", err)
 		}
@@ -193,7 +188,7 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 				log.Errorf("Could not fetch block height: %v", err)
 				continue
 			}
-			if voteHeight > bestVoteHeight {
+			if voteHeight.Cmp(bestVoteHeight) == 1 {
 				bestVote = vote
 			}
 		}
@@ -210,13 +205,10 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 // inclusion in the next beacon block.
 func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*pb.PendingDepositsResponse, error) {
 	bNum := bs.powChainService.LatestBlockNumber()
-
 	if bNum == nil {
 		return nil, errors.New("latest PoW block number is unknown")
 	}
-
 	// Only request deposits that have passed the ETH1 follow distance window.
 	bNum = bNum.Sub(bNum, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
-
 	return &pb.PendingDepositsResponse{PendingDeposits: bs.beaconDB.PendingDeposits(ctx, bNum)}, nil
 }

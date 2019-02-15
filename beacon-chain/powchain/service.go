@@ -184,6 +184,12 @@ func (w *Web3Service) Status() error {
 	return nil
 }
 
+// DepositRoot returns the Merkle root of the latest deposit trie
+// from the ETH1.0 deposit contract.
+func (w *Web3Service) DepositRoot() [32]byte {
+	return w.depositTrie.Root()
+}
+
 // LatestBlockNumber in the ETH1.0 chain.
 func (w *Web3Service) LatestBlockNumber() *big.Int {
 	return w.blockNumber
@@ -192,6 +198,18 @@ func (w *Web3Service) LatestBlockNumber() *big.Int {
 // LatestBlockHash in the ETH1.0 chain.
 func (w *Web3Service) LatestBlockHash() common.Hash {
 	return w.blockHash
+}
+
+// BlockExists --
+// Unimplemented, Work in Progress.
+func BlockExists(hash common.Hash) (bool, *big.Int, error) {
+	return false, big.NewInt(0), nil
+}
+
+// BlockHashByHeight --
+// Unimplemented, Work in Progress.
+func BlockHashByHeight(height *big.Int) (common.Hash, error) {
+    return [32]byte{}, nil
 }
 
 // Client for interacting with the ETH1.0 chain.
