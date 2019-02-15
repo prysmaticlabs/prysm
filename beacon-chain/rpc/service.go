@@ -47,6 +47,8 @@ type powChainService interface {
 	LatestBlockNumber() *big.Int
 	BlockExists(hash common.Hash) (bool, uint64, error)
 	CurrentHeight() (uint64, error)
+	BlockHashByHeight(uint64) (common.Hash, error)
+	DepositRoot() [32]byte
 }
 
 // Service defining an RPC server for a beacon node.

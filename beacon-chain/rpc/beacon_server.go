@@ -105,13 +105,6 @@ func (bs *BeaconServer) LatestAttestation(req *ptypes.Empty, stream pb.BeaconSer
 // The deposit root can be calculated by calling the get_deposit_root() function of
 // the deposit contract using the post-state of the block hash.
 func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1DataResponse, error) {
-	// Let dataVoteObjects be the set of Eth1DataVote objects vote in state.eth1_data_votes where:
-	// vote.eth1_data.block_hash is the hash of an eth1.0 block that is:
-	//   (i) part of the canonical chain
-	//   (ii) >= ETH1_FOLLOW_DISTANCE blocks behind the head
-	//   (iii) newer than state.latest_eth1_data.block_data.
-	// vote.eth1_data.deposit_root is the deposit root of the eth1.0 deposit contract
-	// at the block defined by vote.eth1_data.block_hash.
 	beaconState, err := bs.beaconDB.State()
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
@@ -119,18 +112,36 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 	dataVoteObjects := []*pbp2p.Eth1DataVote{}
 	for _, vote := range beaconState.Eth1DataVotes {
 		eth1Hash := bytesutil.ToBytes32(vote.Eth1Data.BlockHash32)
+		// Verify the block from the vote's block hash exists in the eth1.0 chain and fetch its height.
 		blockExists, blockNumber, err := bs.powChainService.BlockExists(eth1Hash)
 		if err != nil {
 			log.Errorf("Could not verify block with hash exists in Eth1 chain: %#x: %v", eth1Hash, err)
 			continue
 		}
+		// Fetch the current canonical chain height from the eth1.0 chain.
 		currentHeight, err := bs.powChainService.CurrentHeight()
 		if err != nil {
 			log.Errorf("Could not fetch current Eth1 chain height: %v", err)
 			continue
 		}
+		// Fetch the height of the block pointed to by the beacon state's latest_eth1_data.block_hash
+		// in the canonical, eth1.0 chain.
+		stateLatestEth1Hash := bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockHash32)
+		_, stateLatestEth1Height, err := bs.powChainService.BlockExists(stateLatestEth1Hash)
+		if err != nil {
+			log.Errorf("Could not verify block with hash exists in Eth1 chain: %#x: %v", eth1Hash, err)
+			continue
+		}
+		// Let dataVoteObjects be the set of Eth1DataVote objects vote in state.eth1_data_votes where:
+		// vote.eth1_data.block_hash is the hash of an eth1.0 block that is:
+		//   (i) part of the canonical chain
+		//   (ii) >= ETH1_FOLLOW_DISTANCE blocks behind the head
+		//   (iii) newer than state.latest_eth1_data.block_data.
+		// vote.eth1_data.deposit_root is the deposit root of the eth1.0 deposit contract
+		// at the block defined by vote.eth1_data.block_hash.
 		isBehindFollowDistance := blockNumber + params.BeaconConfig().Eth1FollowDistance < currentHeight
-		if blockExists && isBehindFollowDistance {
+		isAheadStateLatestEth1Data := blockNumber > stateLatestEth1Height
+		if blockExists && isBehindFollowDistance && isAheadStateLatestEth1Data {
 			dataVoteObjects = append(dataVoteObjects, vote)
 		}
 	}
@@ -142,11 +153,22 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 	// Let deposit_root be the deposit root of the eth1.0 deposit contract in the
 	// post-state of the block referenced by block_hash.
 	if len(dataVoteObjects) == 0 {
-		eth1data := &pbp2p.Eth1Data{
-			BlockHash32: []byte{}, // Fetch the ancestor.
-			DepositRootHash32: []byte{}, // Fetch the root from the contract.
+		// Fetch the current canonical chain height from the eth1.0 chain.
+		currentHeight, err := bs.powChainService.CurrentHeight()
+		if err != nil {
+			return nil, fmt.Errorf("could not fetch current Eth1 chain height: %v", err)
 		}
-		return &pb.Eth1DataResponse{Eth1Data: eth1data}, nil
+		blockHash, err := bs.powChainService.BlockHashByHeight(currentHeight - params.BeaconConfig().Eth1FollowDistance)
+		if err != nil {
+			return nil, fmt.Errorf("could not fetch ETH1_FOLLOW_DISTANCE ancestor: %v", err)
+		}
+		depositRoot := bs.powChainService.DepositRoot()
+		return &pb.Eth1DataResponse{
+			Eth1Data: &pbp2p.Eth1Data{
+				DepositRootHash32: depositRoot[:],
+				BlockHash32: blockHash[:],
+			},
+		}, nil
 	}
 
 	// If dataVoteObjects is non-empty:
