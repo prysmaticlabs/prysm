@@ -5,7 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
+
 	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/gogo/protobuf/proto"
@@ -79,11 +80,11 @@ func TestAttestationInfoAtSlot_JustifiedBlockFailure(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	beaconState := &pbp2p.BeaconState{
-		Slot:                   params.BeaconConfig().EpochLength + 2,
-		LatestBlockRootHash32S: make([][]byte, 20),
+		Slot:                   params.BeaconConfig().GenesisSlot + params.BeaconConfig().EpochLength + 2,
+		LatestBlockRootHash32S: make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
 	}
 	block := &pbp2p.BeaconBlock{
-		Slot: 1,
+		Slot: params.BeaconConfig().GenesisSlot + 1,
 	}
 	attesterServer := &AttesterServer{
 		beaconDB: db,
@@ -95,7 +96,7 @@ func TestAttestationInfoAtSlot_JustifiedBlockFailure(t *testing.T) {
 		t.Fatalf("Could not update chain head in test db: %v", err)
 	}
 	epochBoundaryBlock := &pbp2p.BeaconBlock{
-		Slot: 1,
+		Slot: params.BeaconConfig().GenesisSlot + 1,
 	}
 	if err := attesterServer.beaconDB.SaveBlock(epochBoundaryBlock); err != nil {
 		t.Fatalf("Could not save block in test db: %v", err)
@@ -105,7 +106,7 @@ func TestAttestationInfoAtSlot_JustifiedBlockFailure(t *testing.T) {
 	}
 	want := "could not get justified block"
 	req := &pb.AttestationInfoRequest{
-		Slot: 1,
+		Slot: params.BeaconConfig().GenesisSlot + 1,
 	}
 	if _, err := attesterServer.AttestationInfoAtSlot(context.Background(), req); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
@@ -116,30 +117,30 @@ func TestAttestationInfoAtSlot_Ok(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	block := &pbp2p.BeaconBlock{
-		Slot: 1,
+		Slot: 1 + params.BeaconConfig().GenesisSlot,
 	}
 	epochBoundaryBlock := &pbp2p.BeaconBlock{
-		Slot: 1 * params.BeaconConfig().EpochLength,
+		Slot: 1*params.BeaconConfig().EpochLength + params.BeaconConfig().GenesisSlot,
 	}
 	justifiedBlock := &pbp2p.BeaconBlock{
-		Slot: 2 * params.BeaconConfig().EpochLength,
+		Slot: 2*params.BeaconConfig().EpochLength + params.BeaconConfig().GenesisSlot,
 	}
-	blockRoot, err := hashutil.HashBeaconBlock(block) // TODO(#1461): Use tree hashing instead.
+	blockRoot, err := ssz.TreeHash(block)
 	if err != nil {
 		t.Fatalf("Could not hash beacon block: %v", err)
 	}
-	justifiedBlockRoot, err := hashutil.HashBeaconBlock(justifiedBlock) // TODO(#1461): Use tree hashing instead.
+	justifiedBlockRoot, err := ssz.TreeHash(justifiedBlock)
 	if err != nil {
 		t.Fatalf("Could not hash justified block: %v", err)
 	}
-	epochBoundaryRoot, err := hashutil.HashBeaconBlock(epochBoundaryBlock) // TODO(#1461): Use tree hashing instead.
+	epochBoundaryRoot, err := ssz.TreeHash(epochBoundaryBlock)
 	if err != nil {
 		t.Fatalf("Could not hash justified block: %v", err)
 	}
 	beaconState := &pbp2p.BeaconState{
-		Slot:                   3 * params.BeaconConfig().EpochLength,
-		JustifiedEpoch:         2 * params.BeaconConfig().EpochLength,
-		LatestBlockRootHash32S: make([][]byte, 3*params.BeaconConfig().EpochLength),
+		Slot:                   3*params.BeaconConfig().EpochLength + params.BeaconConfig().GenesisSlot + 1,
+		JustifiedEpoch:         2 + params.BeaconConfig().GenesisEpoch,
+		LatestBlockRootHash32S: make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
 		LatestCrosslinks: []*pbp2p.Crosslink{
 			{
 				ShardBlockRootHash32: []byte("A"),
@@ -171,7 +172,7 @@ func TestAttestationInfoAtSlot_Ok(t *testing.T) {
 		t.Fatalf("Could not update chain head in test db: %v", err)
 	}
 	req := &pb.AttestationInfoRequest{
-		Slot:  1,
+		Slot:  1 + params.BeaconConfig().GenesisSlot,
 		Shard: 0,
 	}
 	res, err := attesterServer.AttestationInfoAtSlot(context.Background(), req)
@@ -180,13 +181,13 @@ func TestAttestationInfoAtSlot_Ok(t *testing.T) {
 	}
 	expectedInfo := &pb.AttestationInfoResponse{
 		BeaconBlockRootHash32:    blockRoot[:],
-		EpochBoundaryRootHash32:  epochBoundaryRoot[:],
-		JustifiedEpoch:           2 * params.BeaconConfig().EpochLength,
+		JustifiedEpoch:           2 + params.BeaconConfig().GenesisEpoch,
 		JustifiedBlockRootHash32: justifiedBlockRoot[:],
 		LatestCrosslink: &pbp2p.Crosslink{
 			ShardBlockRootHash32: []byte("A"),
 		},
 	}
+
 	if !proto.Equal(res, expectedInfo) {
 		t.Errorf("Expected attestation info to match, received %v, wanted %v", res, expectedInfo)
 	}

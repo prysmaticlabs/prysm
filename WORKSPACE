@@ -35,8 +35,8 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.18.5/rules_nodejs-0.18.5.tar.gz"],
-    sha256 = "c8cd6a77433f7d3bb1f4ac87f15822aa102989f8e9eb1907ca0cad718573985b",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.18.6/rules_nodejs-0.18.6.tar.gz"],
+    sha256 = "1416d03823fed624b49a0abbd9979f7c63bbedfd37890ddecedd2fe25cccebc6",
 )
 
 http_archive(
@@ -124,7 +124,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ethereum_go_ethereum",
-    commit = "ec3d1d97a481e6cba542751a6defae7c76e322f1",
+    commit = "2ed4a57e9522dc2a023577f0b92ff623c3412303",
     importpath = "github.com/ethereum/go-ethereum",
     # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
     # a fork that has resolved these issues by disabling HID/USB support and
@@ -499,7 +499,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "983097b1a8a340cd1cc7df17d735154d89e10b1a",
+    commit = "d0b11bdaac8adb652bff00e49bcacf992835621a",
     importpath = "golang.org/x/sys",
 )
 
@@ -643,7 +643,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aristanetworks_goarista",
-    commit = "83ee463e1d9e2bb15f0793a53c37a385d73763a1",
+    commit = "c1e4b37418775d8f5e0c0c1a68766d321b32d6ca",
     importpath = "github.com/aristanetworks/goarista",
 )
 
@@ -814,7 +814,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_discovery",
-    commit = "d4858e0322b6f8cd62ed33d6b5c846c3ebc0bb69",
+    commit = "ececb851d1718b7bc3d734009f156d4f38ec420d",
     importpath = "github.com/libp2p/go-libp2p-discovery",
 )
 
@@ -989,39 +989,3 @@ go_repository(
     commit = "c1b8fa8bdccecb0b8db834ee0b92fdbcfa606dd6",
     importpath = "gopkg.in/natefinch/npipe.v2",
 )
-
-go_repository(
-    name = "com_github_prysmaticlabs_go_bls",
-    commit = "0e61c30f21878172d57549ea1733c9808157ef08",
-    importpath = "github.com/prysmaticlabs/go-bls",
-)
-
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
-
-git_repository(
-    name = "herumi_mcl",
-    commit = "79b3a33e21072712f00985ed2adf34b3bcf0d74e",
-    remote = "https://github.com/prysmaticlabs/mcl",
-)
-
-git_repository(
-    name = "bazelify_gmp",
-    commit = "bb4881b35e6864c90493980d035e1d984cafd093",
-    remote = "https://github.com/robin-thomas/bazelify-gmp",
-)
-
-git_repository(
-    name = "boringssl",
-    commit = "fafc4482e85c09e7af5f71b2eb287b73ccd1020a",
-    remote = "https://github.com/google/boringssl",
-)
-
-git_repository(
-    name = "io_bazel_rules_m4",
-    commit = "2bf69df77dfb6b3ba6b7fc95c304b0dc279375bc",
-    remote = "https://github.com/jmillikin/rules_m4",
-)
-
-load("@io_bazel_rules_m4//:m4.bzl", "m4_register_toolchains")
-
-m4_register_toolchains()

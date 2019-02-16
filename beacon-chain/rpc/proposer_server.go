@@ -4,14 +4,16 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gogo/protobuf/proto"
+	ptypes "github.com/gogo/protobuf/types"
+
+	"github.com/prysmaticlabs/prysm/shared/ssz"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 // ProposerServer defines a server implementation of the gRPC Proposer service,
@@ -21,6 +23,7 @@ type ProposerServer struct {
 	beaconDB           *db.BeaconDB
 	chainService       chainService
 	powChainService    powChainService
+	operationService   operationService
 	canonicalStateChan chan *pbp2p.BeaconState
 }
 
@@ -49,14 +52,27 @@ func (ps *ProposerServer) ProposerIndex(ctx context.Context, req *pb.ProposerInd
 // ProposeBlock is called by a proposer in a sharding validator and a full beacon node
 // sends the request into a beacon block that can then be included in a canonical chain.
 func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlock) (*pb.ProposeResponse, error) {
-	h, err := hashutil.HashBeaconBlock(blk)
+	h, err := ssz.TreeHash(blk)
 	if err != nil {
-		return nil, fmt.Errorf("could not hash block: %v", err)
+		return nil, fmt.Errorf("could not tree hash block: %v", err)
 	}
-	log.WithField("blockHash", fmt.Sprintf("%#x", h)).Debugf("Block proposal received via RPC")
+	log.WithField("blockRoot", fmt.Sprintf("%#x", h)).Debugf("Block proposal received via RPC")
 	// We relay the received block from the proposer to the chain service for processing.
 	ps.chainService.IncomingBlockFeed().Send(blk)
 	return &pb.ProposeResponse{BlockHash: h[:]}, nil
+}
+
+// PendingAttestations retrieves attestations kept in the beacon node's operations pool which have
+// not yet been included into the beacon chain. Proposers include these pending attestations in their
+// proposed blocks when performing their responsibility.
+func (ps *ProposerServer) PendingAttestations(ctx context.Context, _ *ptypes.Empty) (*pb.PendingAttestationsResponse, error) {
+	atts, err := ps.operationService.PendingAttestations()
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve pending attestations from operations service: %v", err)
+	}
+	return &pb.PendingAttestationsResponse{
+		PendingAttestations: atts,
+	}, nil
 }
 
 // ComputeStateRoot computes the state root after a block has been processed through a state transition and
@@ -78,13 +94,10 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 		return nil, fmt.Errorf("could not execute state transition %v", err)
 	}
 
-	encodedState, err := proto.Marshal(beaconState)
+	beaconStateHash, err := ssz.TreeHash(beaconState)
 	if err != nil {
-		return nil, fmt.Errorf("could not marshal state %v", err)
+		return nil, fmt.Errorf("could not tree hash beacon state: %v", err)
 	}
-
-	// TODO(#1389): Use tree hashing algorithm instead.
-	beaconStateHash := hashutil.Hash(encodedState)
 	log.WithField("beaconStateHash", fmt.Sprintf("%#x", beaconStateHash)).Debugf("Computed state hash")
 	return &pb.StateRootResponse{
 		StateRoot: beaconStateHash[:],

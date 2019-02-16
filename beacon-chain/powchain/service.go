@@ -92,6 +92,7 @@ type Web3Service struct {
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	isRunning               bool
 	runError                error
+	chainStartDelay         uint64
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -103,6 +104,7 @@ type Web3ServiceConfig struct {
 	Logger          bind.ContractFilterer
 	ContractBackend bind.ContractBackend
 	BeaconDB        *db.BeaconDB
+	ChainStartDelay uint64
 }
 
 var (
@@ -143,6 +145,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		chainStartDeposits:      []*pb.Deposit{},
 		beaconDB:                config.BeaconDB,
 		lastReceivedMerkleIndex: -1,
+		chainStartDelay:         config.ChainStartDelay,
 	}, nil
 }
 
@@ -152,6 +155,10 @@ func (w *Web3Service) Start() {
 		"endpoint": w.endpoint,
 	}).Info("Starting service")
 	go w.run(w.ctx.Done())
+
+	if w.chainStartDelay > 0 {
+		go w.runDelayTimer(w.ctx.Done())
+	}
 }
 
 // Stop the web3 service's main event loop and associated goroutines.
@@ -308,8 +315,30 @@ func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
 	chainStartTime := time.Unix(int64(timestamp), 0)
 	log.WithFields(logrus.Fields{
 		"ChainStartTime": chainStartTime,
-	}).Info("Minimum Number of Validators Reached for beacon-chain to start")
+	}).Info("Minimum number of validators reached for beacon-chain to start")
 	w.chainStartFeed.Send(chainStartTime)
+}
+
+func (w *Web3Service) runDelayTimer(done <-chan struct{}) {
+	timer := time.NewTimer(time.Duration(w.chainStartDelay) * time.Second)
+
+	for {
+		select {
+		case <-done:
+			log.Debug("ETH1.0 chain service context closed, exiting goroutine")
+			timer.Stop()
+			return
+		case currentTime := <-timer.C:
+
+			w.chainStarted = true
+			log.WithFields(logrus.Fields{
+				"ChainStartTime": currentTime.Unix(),
+			}).Info("Minimum number of validators reached for beacon-chain to start")
+			w.chainStartFeed.Send(currentTime)
+			timer.Stop()
+			return
+		}
+	}
 }
 
 // run subscribes to all the services for the ETH1.0 chain.
@@ -344,10 +373,13 @@ func (w *Web3Service) run(done <-chan struct{}) {
 		w.runError = err
 		return
 	}
-	if err := w.processPastLogs(query); err != nil {
-		log.Errorf("Unable to process past logs %v", err)
-		w.runError = err
-		return
+	// Only process logs if the chain start delay flag is not enabled.
+	if w.chainStartDelay == 0 {
+		if err := w.processPastLogs(query); err != nil {
+			log.Errorf("Unable to process past logs %v", err)
+			w.runError = err
+			return
+		}
 	}
 	defer logSub.Unsubscribe()
 	defer headSub.Unsubscribe()

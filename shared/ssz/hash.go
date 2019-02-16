@@ -3,7 +3,6 @@ package ssz
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"reflect"
 
@@ -22,7 +21,7 @@ type Hashable interface {
 // TreeHash calculates tree-hash result for input value.
 func TreeHash(val interface{}) ([32]byte, error) {
 	if val == nil {
-		return [32]byte{}, newHashError("nil is not supported", nil)
+		return [32]byte{}, newHashError("untyped nil is not supported", nil)
 	}
 	rval := reflect.ValueOf(val)
 	sszUtils, err := cachedSSZUtils(rval.Type())
@@ -58,7 +57,8 @@ func makeHasher(typ reflect.Type) (hasher, error) {
 		kind == reflect.Uint8 ||
 		kind == reflect.Uint16 ||
 		kind == reflect.Uint32 ||
-		kind == reflect.Uint64:
+		kind == reflect.Uint64 ||
+		kind == reflect.Int32:
 		return getEncoding, nil
 	case kind == reflect.Slice && typ.Elem().Kind() == reflect.Uint8 ||
 		kind == reflect.Array && typ.Elem().Kind() == reflect.Uint8:
@@ -142,19 +142,20 @@ func makeStructHasher(typ reflect.Type) (hasher, error) {
 	return hasher, nil
 }
 
-// Notice: Currently we don't support nil pointer:
-// - Input for encoding must not contain nil pointer
-// - Output for decoding will never contain nil pointer
-// (Not to be confused with empty slice. Empty slice is supported)
 func makePtrHasher(typ reflect.Type) (hasher, error) {
 	elemSSZUtils, err := cachedSSZUtilsNoAcquireLock(typ.Elem())
 	if err != nil {
 		return nil, err
 	}
 
+	// TODO(1461): The tree-hash of nil pointer isn't defined in the spec.
+	// After considered the use case in Prysm, we've decided that:
+	// - We assume we will only tree-hash pointer of array, slice or struct.
+	// - The tree-hash for nil pointer shall be 0x00000000.
+
 	hasher := func(val reflect.Value) ([]byte, error) {
 		if val.IsNil() {
-			return nil, errors.New("nil is not supported")
+			return hashedEncoding(val)
 		}
 		return elemSSZUtils.hasher(val.Elem())
 	}

@@ -52,6 +52,8 @@ func makeDecoder(typ reflect.Type) (dec decoder, err error) {
 		return decodeUint16, nil
 	case kind == reflect.Uint32:
 		return decodeUint32, nil
+	case kind == reflect.Int32:
+		return decodeUint32, nil
 	case kind == reflect.Uint64:
 		return decodeUint64, nil
 	case kind == reflect.Slice && typ.Elem().Kind() == reflect.Uint8:
@@ -284,7 +286,6 @@ func makePtrDecoder(typ reflect.Type) (decoder, error) {
 		return nil, err
 	}
 
-	// TODO(1461): The encoding of nil pointer isn't defined in the spec.
 	// After considered the use case in Prysm, we've decided that:
 	// - We assume we will only encode/decode pointer of array, slice or struct.
 	// - The encoding for nil pointer shall be 0x00000000.

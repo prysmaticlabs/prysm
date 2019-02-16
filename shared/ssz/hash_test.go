@@ -119,10 +119,14 @@ var hashTests = []hashTest{
 		{P: &simpleStruct{B: 4, A: 3}, V: 1},
 	}, output: "4AC9B9E64A067F6C007C3FE8116519D86397BDA1D9FBEDEEDF39E50D132669C7"},
 
-	// error: nil pointer
-	{val: nil, error: "hash error: nil is not supported for input type <nil>"},
-	{val: (*[]uint8)(nil), error: "hash error: nil is not supported for input type *[]uint8"},
-	{val: pointerStruct{P: nil, V: 0}, error: "hash error: failed to hash field of struct: nil is not supported for input type ssz.pointerStruct"},
+	// nil pointer (not defined in spec)
+	{val: (*[]uint8)(nil), output: "E8E77626586F73B955364C7B4BBF0BB7F7685EBD40E852B164633A4ACBD3244C"},
+	{val: pointerStruct{}, output: "721B2869FA1238991B24C369E9ADB23142AFCD7C0B8454EF79C0EA82B7DEE977"},
+	{val: &pointerStruct{}, output: "721B2869FA1238991B24C369E9ADB23142AFCD7C0B8454EF79C0EA82B7DEE977"},
+	{val: []*pointerStruct{nil, nil}, output: "83CB52B40904E607A8E0AEF8A018A5A7489229CBCD591E7C6FB7E597BD4F76C3"},
+
+	// error: untyped nil pointer
+	{val: nil, error: "hash error: untyped nil is not supported for input type <nil>"},
 
 	// error: unsupported type
 	{val: string("abc"), error: "hash error: type string is not serializable for input type string"},

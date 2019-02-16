@@ -2,9 +2,12 @@ package blocks
 
 import (
 	"bytes"
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -46,7 +49,7 @@ func TestBlockRootAtSlot_OK(t *testing.T) {
 	}
 	var blockRoots [][]byte
 
-	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	state := &pb.BeaconState{
@@ -75,7 +78,7 @@ func TestBlockRootAtSlot_OK(t *testing.T) {
 		}, {
 			slot:         2999,
 			stateSlot:    3000,
-			expectedRoot: []byte{55},
+			expectedRoot: []byte{183},
 		}, {
 			slot:         2873,
 			stateSlot:    3000,
@@ -83,10 +86,11 @@ func TestBlockRootAtSlot_OK(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		state.Slot = tt.stateSlot
-		result, err := BlockRoot(state, tt.slot)
+		state.Slot = tt.stateSlot + params.BeaconConfig().GenesisSlot
+		wantedSlot := tt.slot + params.BeaconConfig().GenesisSlot
+		result, err := BlockRoot(state, wantedSlot)
 		if err != nil {
-			t.Errorf("failed to get block root at slot %d: %v", tt.slot, err)
+			t.Errorf("failed to get block root at slot %d: %v", wantedSlot, err)
 		}
 		if !bytes.Equal(result, tt.expectedRoot) {
 			t.Errorf(
@@ -105,7 +109,7 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 
 	var blockRoots [][]byte
 
-	for i := uint64(0); i < params.BeaconConfig().EpochLength*2; i++ {
+	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	state := &pb.BeaconState{
@@ -118,13 +122,16 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 		expectedErr string
 	}{
 		{
-			slot:        1000,
-			stateSlot:   500,
-			expectedErr: "slot 1000 is not within expected range of 372 to 499",
+			slot:      params.BeaconConfig().GenesisSlot + 1000,
+			stateSlot: params.BeaconConfig().GenesisSlot + 500,
+			expectedErr: fmt.Sprintf("slot %d is not within expected range of %d to %d",
+				params.BeaconConfig().GenesisSlot+1000,
+				params.BeaconConfig().GenesisSlot+500-params.BeaconConfig().LatestBlockRootsLength,
+				params.BeaconConfig().GenesisSlot+500),
 		},
 		{
-			slot:        129,
-			stateSlot:   400,
+			slot:        params.BeaconConfig().GenesisSlot + 129,
+			stateSlot:   params.BeaconConfig().GenesisSlot + 400,
 			expectedErr: "slot 129 is not within expected range of 272 to 399",
 		},
 	}
@@ -241,14 +248,14 @@ func TestDecodeDepositAmountAndTimeStamp(t *testing.T) {
 
 func TestBlockChildren(t *testing.T) {
 	genesisBlock := NewGenesisBlock([]byte{})
-	genesisHash, err := hashutil.HashBeaconBlock(genesisBlock)
+	genesisRoot, err := ssz.TreeHash(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
 	targets := []*pb.BeaconBlock{
 		{
 			Slot:             9,
-			ParentRootHash32: genesisHash[:],
+			ParentRootHash32: genesisRoot[:],
 		},
 		{
 			Slot:             5,
@@ -256,7 +263,7 @@ func TestBlockChildren(t *testing.T) {
 		},
 		{
 			Slot:             8,
-			ParentRootHash32: genesisHash[:],
+			ParentRootHash32: genesisRoot[:],
 		},
 	}
 	children, err := BlockChildren(genesisBlock, targets)

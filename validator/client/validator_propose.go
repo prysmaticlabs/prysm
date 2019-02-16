@@ -29,8 +29,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 		log.Errorf("Failed to fetch CanonicalHead: %v", err)
 		return
 	}
-	_ = headBlock // TODO(1461): Actually tree hash the block.
-	parentTreeHash, err := ssz.TreeHash(false)
+	parentTreeHash, err := ssz.TreeHash(headBlock)
 	if err != nil {
 		log.Errorf("Failed to hash parent block: %v", err)
 		return
@@ -51,6 +50,13 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 		return
 	}
 
+	// Fetch pending attestations seen by the beacon node.
+	attResp, err := v.proposerClient.PendingAttestations(ctx, &ptypes.Empty{})
+	if err != nil {
+		log.Errorf("Failed to fetch pending attestations from the beacon node: %v", err)
+		return
+	}
+
 	// 2. Construct block.
 	block := &pbp2p.BeaconBlock{
 		Slot:               slot,
@@ -58,7 +64,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 		RandaoRevealHash32: nil, // TODO(1366): generate randao reveal from BLS
 		Eth1Data:           eth1DataResp.Eth1Data,
 		Body: &pbp2p.BeaconBlockBody{
-			Attestations:      v.attestationPool.PendingAttestations(),
+			Attestations:      attResp.PendingAttestations,
 			ProposerSlashings: nil, // TODO(1438): Add after operations pool
 			AttesterSlashings: nil, // TODO(1438): Add after operations pool
 			Deposits:          pDepResp.PendingDeposits,
