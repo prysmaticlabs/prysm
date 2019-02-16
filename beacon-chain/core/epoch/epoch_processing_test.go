@@ -55,8 +55,8 @@ func TestCanProcessEpoch(t *testing.T) {
 }
 
 func TestCanProcessEth1Data(t *testing.T) {
-	if params.BeaconConfig().Eth1DataVotingPeriod != 16 {
-		t.Errorf("Eth1DataVotingPeriod should be 16 for these tests to pass")
+	if params.BeaconConfig().EpochsPerEth1VotingPeriod!= 16 {
+		t.Errorf("EpochsPerEth1VotingPeriodshould be 16 for these tests to pass")
 	}
 	tests := []struct {
 		slot               uint64
