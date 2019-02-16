@@ -171,8 +171,9 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 	// breaking ties by favoring block hashes with higher associated block height.
 	// Let block_hash = best_vote.eth1_data.block_hash.
 	// Let deposit_root = best_vote.eth1_data.deposit_root.
-	var bestVote *pbp2p.Eth1DataVote
-	for _, vote := range dataVoteObjects {
+	bestVote := dataVoteObjects[0]
+	for i := 1; i < len(dataVoteObjects); i++ {
+		vote := dataVoteObjects[i]
 		if vote.VoteCount > bestVote.VoteCount {
 			bestVote = vote
 		} else if vote.VoteCount == bestVote.VoteCount {
