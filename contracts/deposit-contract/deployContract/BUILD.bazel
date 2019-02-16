@@ -65,7 +65,7 @@ container_push(
     format = "Docker",
     image = ":image",
     registry = "gcr.io",
-    repository = "prysmaticlabs/prysm/deployvrc",
+    repository = "prysmaticlabs/prysm/deploy-deposit-contract",
     tag = "latest",
     tags = ["manual"],
     visibility = ["//visibility:private"],
