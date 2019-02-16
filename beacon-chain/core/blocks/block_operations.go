@@ -103,7 +103,7 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) error
 }
 
 // ProcessProposerSlashings is one of the operations performed
-// on each processed beacon block to penalize proposers based on
+// on each processed beacon block to slash proposers based on
 // slashing conditions if any slashable events occurred.
 //
 // Official spec definition for proposer slashings:
@@ -114,14 +114,14 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) error
 //     Verify that proposer_slashing.proposal_data_1.slot == proposer_slashing.proposal_data_2.slot.
 //     Verify that proposer_slashing.proposal_data_1.shard == proposer_slashing.proposal_data_2.shard.
 //     Verify that proposer_slashing.proposal_data_1.block_root != proposer_slashing.proposal_data_2.block_root.
-//     Verify that proposer.penalized_epoch > get_current_epoch(state).
+//     Verify that proposer.slashed_epoch > get_current_epoch(state).
 //     Verify that bls_verify(pubkey=proposer.pubkey, message_hash=hash_tree_root(proposer_slashing.proposal_data_1),
 //       signature=proposer_slashing.proposal_signature_1,
 //       domain=get_domain(state.fork, slot_to_epoch(proposer_slashing.proposal_data_1.slot), DOMAIN_PROPOSAL)).
 //     Verify that bls_verify(pubkey=proposer.pubkey, message_hash=hash_tree_root(proposer_slashing.proposal_data_2),
 //       signature=proposer_slashing.proposal_signature_2,
 //       domain=get_domain(state.fork, slot_to_epoch(proposer_slashing.proposal_data_2.slot), DOMAIN_PROPOSAL)).
-//     Run penalize_validator(state, proposer_slashing.proposer_index).
+//     Run slash_validator(state, proposer_slashing.proposer_index).
 func ProcessProposerSlashings(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
@@ -142,10 +142,10 @@ func ProcessProposerSlashings(
 			return nil, fmt.Errorf("could not verify proposer slashing #%d: %v", idx, err)
 		}
 		proposer := registry[slashing.ProposerIndex]
-		if proposer.PenalizedEpoch > helpers.CurrentEpoch(beaconState) {
-			beaconState, err = v.PenalizeValidator(beaconState, slashing.ProposerIndex)
+		if proposer.SlashedEpoch > helpers.CurrentEpoch(beaconState) {
+			beaconState, err = v.SlashValidator(beaconState, slashing.ProposerIndex)
 			if err != nil {
-				return nil, fmt.Errorf("could not penalize proposer index %d: %v",
+				return nil, fmt.Errorf("could not slash proposer index %d: %v",
 					slashing.ProposerIndex, err)
 			}
 		}
@@ -181,7 +181,7 @@ func verifyProposerSlashing(
 }
 
 // ProcessAttesterSlashings is one of the operations performed
-// on each processed beacon block to penalize attesters based on
+// on each processed beacon block to slash attesters based on
 // Casper FFG slashing conditions if any slashable events occurred.
 //
 // Official spec definition for attester slashings:
@@ -198,9 +198,9 @@ func verifyProposerSlashing(
 //     Verify that verify_slashable_attestation(state, slashable_attestation_2).
 //     Let slashable_indices = [index for index in slashable_attestation_1.validator_indices if
 //       index in slashable_attestation_2.validator_indices and
-//       state.validator_registry[index].penalized_epoch > get_current_epoch(state)].
+//       state.validator_registry[index].slashed_epoch > get_current_epoch(state)].
 //     Verify that len(slashable_indices) >= 1.
-//     Run penalize_validator(state, index) for each index in slashable_indices.
+//     Run slash_validator(state, index) for each index in slashable_indices.
 func ProcessAttesterSlashings(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
@@ -223,9 +223,9 @@ func ProcessAttesterSlashings(
 			return nil, fmt.Errorf("could not determine validator indices to slash: %v", err)
 		}
 		for _, validatorIndex := range slashableIndices {
-			beaconState, err = v.PenalizeValidator(beaconState, validatorIndex)
+			beaconState, err = v.SlashValidator(beaconState, validatorIndex)
 			if err != nil {
-				return nil, fmt.Errorf("could not penalize validator index %d: %v",
+				return nil, fmt.Errorf("could not slash validator index %d: %v",
 					validatorIndex, err)
 			}
 		}
@@ -269,12 +269,12 @@ func attesterSlashableIndices(beaconState *pb.BeaconState, slashing *pb.Attester
 	slashableAttestation2 := slashing.SlashableAttestation_2
 	// Let slashable_indices = [index for index in slashable_attestation_1.validator_indices if
 	//   index in slashable_attestation_2.validator_indices and
-	//   state.validator_registry[index].penalized_epoch > get_current_epoch(state)].
+	//   state.validator_registry[index].slashed_epoch > get_current_epoch(state)].
 	var slashableIndices []uint64
 	for _, idx1 := range slashableAttestation1.ValidatorIndices {
 		for _, idx2 := range slashableAttestation2.ValidatorIndices {
 			if idx1 == idx2 {
-				if beaconState.ValidatorRegistry[idx1].PenalizedEpoch > helpers.CurrentEpoch(beaconState) {
+				if beaconState.ValidatorRegistry[idx1].SlashedEpoch > helpers.CurrentEpoch(beaconState) {
 					slashableIndices = append(slashableIndices, idx1)
 				}
 			}

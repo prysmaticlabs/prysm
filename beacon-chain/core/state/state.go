@@ -70,14 +70,14 @@ func InitialBeaconState(
 			Pubkey:                      depositInput.Pubkey,
 			WithdrawalCredentialsHash32: depositInput.WithdrawalCredentialsHash32,
 			ExitEpoch:                   params.BeaconConfig().FarFutureEpoch,
-			PenalizedEpoch:              params.BeaconConfig().FarFutureEpoch,
+			SlashedEpoch:              params.BeaconConfig().FarFutureEpoch,
 		}
 
 		validatorRegistry[i] = validator
 
 	}
 
-	latestPenalizedExitBalances := make([]uint64, params.BeaconConfig().LatestPenalizedExitLength)
+	latestSlashedExitBalances := make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
 
 	state := &pb.BeaconState{
 		// Misc fields.
@@ -113,7 +113,7 @@ func InitialBeaconState(
 		LatestCrosslinks:        latestCrosslinks,
 		LatestBlockRootHash32S:  latestBlockRoots,
 		LatestIndexRootHash32S:  latestIndexRoots,
-		LatestPenalizedBalances: latestPenalizedExitBalances,
+		LatestSlashedBalances: latestSlashedExitBalances,
 		LatestAttestations:      []*pb.PendingAttestation{},
 		BatchedBlockRootHash32S: [][]byte{},
 

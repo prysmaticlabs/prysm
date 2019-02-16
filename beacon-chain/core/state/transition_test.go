@@ -105,7 +105,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		validators[i] = &pb.Validator{
 			ExitEpoch:      params.BeaconConfig().FarFutureEpoch,
 			Pubkey:         pubkey[:],
-			PenalizedEpoch: 10,
+			SlashedEpoch: 10,
 		}
 	}
 	proposerSlashings := []*pb.ProposerSlashing{
@@ -153,7 +153,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		Slot:                     5,
 		ValidatorRegistry:        validators,
 		ValidatorBalances:        make([]uint64, len(validators)),
-		LatestPenalizedBalances:  make([]uint64, params.BeaconConfig().LatestPenalizedExitLength),
+		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
 	}
 	block := &pb.BeaconBlock{
 		Slot:               5,
@@ -181,7 +181,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		validators[i] = &pb.Validator{
 			ExitEpoch:      params.BeaconConfig().FarFutureEpoch,
 			Pubkey:         pubkey[:],
-			PenalizedEpoch: params.BeaconConfig().GenesisEpoch + 10,
+			SlashedEpoch: params.BeaconConfig().GenesisEpoch + 10,
 		}
 	}
 	proposerSlashings := []*pb.ProposerSlashing{
@@ -252,7 +252,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		LatestBlockRootHash32S:   blockRoots,
 		LatestCrosslinks:         stateLatestCrosslinks,
 		ValidatorBalances:        make([]uint64, len(validators)),
-		LatestPenalizedBalances:  make([]uint64, params.BeaconConfig().LatestPenalizedExitLength),
+		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
 	}
 	exits := make([]*pb.Exit, params.BeaconConfig().MaxExits+1)
 	block := &pb.BeaconBlock{
@@ -282,7 +282,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		validators[i] = &pb.Validator{
 			ExitEpoch:      params.BeaconConfig().FarFutureEpoch,
 			Pubkey:         pubkey[:],
-			PenalizedEpoch: params.BeaconConfig().GenesisEpoch + 10,
+			SlashedEpoch: params.BeaconConfig().GenesisEpoch + 10,
 		}
 	}
 	proposerSlashings := []*pb.ProposerSlashing{
@@ -353,7 +353,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		LatestBlockRootHash32S:   blockRoots,
 		LatestCrosslinks:         stateLatestCrosslinks,
 		ValidatorBalances:        make([]uint64, len(validators)),
-		LatestPenalizedBalances:  make([]uint64, params.BeaconConfig().LatestPenalizedExitLength),
+		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
 	}
 	exits := []*pb.Exit{
 		{
@@ -428,8 +428,8 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 		LatestRandaoMixesHash32S: randaoHashes,
 		LatestIndexRootHash32S: make([][]byte,
 			params.BeaconConfig().LatestIndexRootsLength),
-		LatestPenalizedBalances: make([]uint64,
-			params.BeaconConfig().LatestPenalizedExitLength),
+		LatestSlashedBalances: make([]uint64,
+			params.BeaconConfig().LatestSlashedExitLength),
 	}
 
 	_, err := ProcessEpoch(state)
@@ -488,8 +488,8 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 		LatestRandaoMixesHash32S: randaoHashes,
 		LatestIndexRootHash32S: make([][]byte,
 			params.BeaconConfig().LatestIndexRootsLength),
-		LatestPenalizedBalances: make([]uint64,
-			params.BeaconConfig().LatestPenalizedExitLength),
+		LatestSlashedBalances: make([]uint64,
+			params.BeaconConfig().LatestSlashedExitLength),
 	}
 
 	_, err := ProcessEpoch(state)

@@ -400,7 +400,7 @@ func TestInitiateValidatorExit_Ok(t *testing.T) {
 func TestExitValidator_Ok(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                    100, // epoch 2
-		LatestPenalizedBalances: []uint64{0},
+		LatestSlashedBalances: []uint64{0},
 		ValidatorRegistry: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().FarFutureEpoch, Pubkey: []byte{'B'}},
 		},
@@ -446,16 +446,16 @@ func TestProcessPenaltiesExits_NothingHappened(t *testing.T) {
 	}
 }
 
-func TestProcessPenaltiesExits_ValidatorPenalized(t *testing.T) {
+func TestProcessPenaltiesExits_ValidatorSlashed(t *testing.T) {
 
-	latestPenalizedExits := make([]uint64, params.BeaconConfig().LatestPenalizedExitLength)
-	for i := 0; i < len(latestPenalizedExits); i++ {
-		latestPenalizedExits[i] = uint64(i) * params.BeaconConfig().MaxDepositAmount
+	latestSlashedExits := make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
+	for i := 0; i < len(latestSlashedExits); i++ {
+		latestSlashedExits[i] = uint64(i) * params.BeaconConfig().MaxDepositAmount
 	}
 
 	state := &pb.BeaconState{
-		Slot:                    params.BeaconConfig().LatestPenalizedExitLength / 2 * params.BeaconConfig().EpochLength,
-		LatestPenalizedBalances: latestPenalizedExits,
+		Slot:                    params.BeaconConfig().LatestSlashedExitLength / 2 * params.BeaconConfig().EpochLength,
+		LatestSlashedBalances: latestSlashedExits,
 		ValidatorBalances:       []uint64{params.BeaconConfig().MaxDepositAmount, params.BeaconConfig().MaxDepositAmount},
 		ValidatorRegistry: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
@@ -489,7 +489,7 @@ func TestEligibleToExit(t *testing.T) {
 		Slot: params.BeaconConfig().MinValidatorWithdrawalEpochs,
 		ValidatorRegistry: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().EntryExitDelay,
-				PenalizedEpoch: 1},
+				SlashedEpoch: 1},
 		},
 	}
 	if eligibleToExit(state, 0) {

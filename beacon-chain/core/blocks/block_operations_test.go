@@ -263,7 +263,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch:      params.BeaconConfig().FarFutureEpoch,
-			PenalizedEpoch: 2,
+			SlashedEpoch: 2,
 		}
 	}
 	validatorBalances := make([]uint64, len(validators))
@@ -291,7 +291,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		ValidatorRegistry:       validators,
 		Slot:                    currentSlot,
 		ValidatorBalances:       validatorBalances,
-		LatestPenalizedBalances: []uint64{0},
+		LatestSlashedBalances: []uint64{0},
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -531,7 +531,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch:      params.BeaconConfig().FarFutureEpoch,
-			PenalizedEpoch: 6,
+			SlashedEpoch: 6,
 		}
 	}
 	validatorBalances := make([]uint64, len(validators))
@@ -567,7 +567,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		ValidatorRegistry:       validators,
 		Slot:                    currentSlot,
 		ValidatorBalances:       validatorBalances,
-		LatestPenalizedBalances: []uint64{0},
+		LatestSlashedBalances: []uint64{0},
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -585,7 +585,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	newRegistry := newState.ValidatorRegistry
 
 	// Given the intersection of slashable indices is [1], only validator
-	// at index 1 should be penalized and exited. We confirm this below.
+	// at index 1 should be slashed and exited. We confirm this below.
 	if newRegistry[1].ExitEpoch !=
 		helpers.EntryExitEffectEpoch(helpers.CurrentEpoch(beaconState)) {
 		t.Errorf(

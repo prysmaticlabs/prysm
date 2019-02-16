@@ -366,7 +366,7 @@ func TestProcessEjectionsOk(t *testing.T) {
 		ValidatorBalances: []uint64{
 			params.BeaconConfig().EjectionBalance - 1,
 			params.BeaconConfig().EjectionBalance + 1},
-		LatestPenalizedBalances: []uint64{0},
+		LatestSlashedBalances: []uint64{0},
 		ValidatorRegistry: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 			{ExitEpoch: params.BeaconConfig().FarFutureEpoch}},
@@ -525,7 +525,7 @@ func TestCleanupAttestations(t *testing.T) {
 	}
 }
 
-func TestUpdateLatestPenalizedBalances_Ok(t *testing.T) {
+func TestUpdateLatestSlashedBalances_Ok(t *testing.T) {
 	tests := []struct {
 		epoch    uint64
 		balances uint64
@@ -535,35 +535,35 @@ func TestUpdateLatestPenalizedBalances_Ok(t *testing.T) {
 			balances: 100,
 		},
 		{
-			epoch:    params.BeaconConfig().LatestPenalizedExitLength,
+			epoch:    params.BeaconConfig().LatestSlashedExitLength,
 			balances: 324,
 		},
 		{
-			epoch:    params.BeaconConfig().LatestPenalizedExitLength + 1,
+			epoch:    params.BeaconConfig().LatestSlashedExitLength + 1,
 			balances: 234324,
 		}, {
-			epoch:    params.BeaconConfig().LatestPenalizedExitLength * 100,
+			epoch:    params.BeaconConfig().LatestSlashedExitLength * 100,
 			balances: 34,
 		}, {
-			epoch:    params.BeaconConfig().LatestPenalizedExitLength * 1000,
+			epoch:    params.BeaconConfig().LatestSlashedExitLength * 1000,
 			balances: 1,
 		},
 	}
 	for _, tt := range tests {
-		epoch := tt.epoch % params.BeaconConfig().LatestPenalizedExitLength
-		latestPenalizedExitBalances := make([]uint64,
-			params.BeaconConfig().LatestPenalizedExitLength)
-		latestPenalizedExitBalances[epoch] = tt.balances
+		epoch := tt.epoch % params.BeaconConfig().LatestSlashedExitLength
+		latestSlashedExitBalances := make([]uint64,
+			params.BeaconConfig().LatestSlashedExitLength)
+		latestSlashedExitBalances[epoch] = tt.balances
 		state := &pb.BeaconState{
 			Slot:                    tt.epoch * params.BeaconConfig().EpochLength,
-			LatestPenalizedBalances: latestPenalizedExitBalances}
-		newState := UpdateLatestPenalizedBalances(state)
-		if newState.LatestPenalizedBalances[epoch+1] !=
+			LatestSlashedBalances: latestSlashedExitBalances}
+		newState := UpdateLatestSlashedBalances(state)
+		if newState.LatestSlashedBalances[epoch+1] !=
 			tt.balances {
 			t.Errorf(
-				"LatestPenalizedBalances didn't update for epoch %d,"+
+				"LatestSlashedBalances didn't update for epoch %d,"+
 					"wanted: %d, got: %d", epoch+1, tt.balances,
-				newState.LatestPenalizedBalances[epoch+1],
+				newState.LatestSlashedBalances[epoch+1],
 			)
 		}
 	}
@@ -595,12 +595,12 @@ func TestUpdateLatestRandaoMixes_Ok(t *testing.T) {
 	}
 	for _, tt := range tests {
 		epoch := tt.epoch % params.BeaconConfig().LatestRandaoMixesLength
-		latestPenalizedRandaoMixes := make([][]byte,
+		latestSlashedRandaoMixes := make([][]byte,
 			params.BeaconConfig().LatestRandaoMixesLength)
-		latestPenalizedRandaoMixes[epoch] = tt.seed
+		latestSlashedRandaoMixes[epoch] = tt.seed
 		state := &pb.BeaconState{
 			Slot:                     tt.epoch * params.BeaconConfig().EpochLength,
-			LatestRandaoMixesHash32S: latestPenalizedRandaoMixes}
+			LatestRandaoMixesHash32S: latestSlashedRandaoMixes}
 		newState, err := UpdateLatestRandaoMixes(state)
 		if err != nil {
 			t.Fatalf("could not update latest randao mixes: %v", err)

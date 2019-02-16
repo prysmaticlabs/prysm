@@ -23,7 +23,7 @@ type BeaconChainConfig struct {
 	MaxIndicesPerSlashableVote uint64 // MaxIndicesPerSlashableVote is used to determine how many validators can be slashed per vote.
 	LatestBlockRootsLength     uint64 // LatestBlockRootsLength is the number of block roots kept in the beacon state.
 	LatestRandaoMixesLength    uint64 // LatestRandaoMixesLength is the number of randao mixes kept in the beacon state.
-	LatestPenalizedExitLength  uint64 // LatestPenalizedExitLength is used to track penalized exit balances per time interval.
+	LatestSlashedExitLength  uint64 // LatestSlashedExitLength is used to track penalized exit balances per time interval.
 	LatestIndexRootsLength     uint64 // LatestIndexRootsLength is the number of index roots kept in beacon state, used by light client.
 	MaxWithdrawalsPerEpoch     uint64 // MaxWithdrawalsPerEpoch is the max withdrawals can happen for a single epoch.
 	ValidatorPrivkeyFileName   string // ValidatorPrivKeyFileName specifies the string name of a validator private key file.
@@ -103,7 +103,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxIndicesPerSlashableVote: 4096,
 	LatestBlockRootsLength:     8192,
 	LatestRandaoMixesLength:    8192,
-	LatestPenalizedExitLength:  8192,
+	LatestSlashedExitLength:  8192,
 	LatestIndexRootsLength:     8192,
 	MaxWithdrawalsPerEpoch:     4,
 	ValidatorPrivkeyFileName:   "/validatorprivatekey",

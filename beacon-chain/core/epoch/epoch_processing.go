@@ -323,7 +323,6 @@ func CleanupAttestations(state *pb.BeaconState) *pb.BeaconState {
 //
 // Spec pseudocode definition:
 // Let e = state.slot // EPOCH_LENGTH.
-<<<<<<< HEAD
 // Set state.latest_index_roots[(next_epoch + ENTRY_EXIT_DELAY) %
 // 	LATEST_INDEX_ROOTS_LENGTH] =
 // 	hash_tree_root(get_active_validator_indices(state,
@@ -340,16 +339,16 @@ func UpdateLatestIndexRoots(state *pb.BeaconState) (*pb.BeaconState, error) {
 	return state, nil
 }
 
-// UpdateLatestPenalizedBalances updates the latest penalized balances. It transfers
+// UpdateLatestSlashedBalances updates the latest slashed balances. It transfers
 // the amount from the current epoch index to next epoch index.
 //
 // Spec pseudocode definition:
-// Set state.latest_penalized_balances[(next_epoch) % LATEST_PENALIZED_EXIT_LENGTH] =
-// 	state.latest_penalized_balances[current_epoch % LATEST_PENALIZED_EXIT_LENGTH].
-func UpdateLatestPenalizedBalances(state *pb.BeaconState) *pb.BeaconState {
-	currentEpoch := helpers.CurrentEpoch(state) % params.BeaconConfig().LatestPenalizedExitLength
-	nextEpoch := helpers.NextEpoch(state) % params.BeaconConfig().LatestPenalizedExitLength
-	state.LatestPenalizedBalances[nextEpoch] = state.LatestPenalizedBalances[currentEpoch]
+// Set state.latest_slashed_balances[(next_epoch) % LATEST_PENALIZED_EXIT_LENGTH] =
+// 	state.latest_slashed_balances[current_epoch % LATEST_PENALIZED_EXIT_LENGTH].
+func UpdateLatestSlashedBalances(state *pb.BeaconState) *pb.BeaconState {
+	currentEpoch := helpers.CurrentEpoch(state) % params.BeaconConfig().LatestSlashedExitLength
+	nextEpoch := helpers.NextEpoch(state) % params.BeaconConfig().LatestSlashedExitLength
+	state.LatestSlashedBalances[nextEpoch] = state.LatestSlashedBalances[currentEpoch]
 	return state
 }
 

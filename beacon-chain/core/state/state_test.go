@@ -53,10 +53,10 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	}
 	depositsForChainStart := int(params.BeaconConfig().DepositsForChainStart)
 
-	if params.BeaconConfig().LatestPenalizedExitLength != 8192 {
-		t.Error("LatestPenalizedExitLength should be 8192 for these tests to pass")
+	if params.BeaconConfig().LatestSlashedExitLength != 8192 {
+		t.Error("LatestSlashedExitLength should be 8192 for these tests to pass")
 	}
-	latestPenalizedExitLength := int(params.BeaconConfig().LatestPenalizedExitLength)
+	latestSlashedExitLength := int(params.BeaconConfig().LatestSlashedExitLength)
 
 	genesisTime := uint64(99999)
 	processedPowReceiptRoot := []byte{'A', 'B', 'C'}
@@ -139,9 +139,9 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	if len(state.LatestCrosslinks) != shardCount {
 		t.Error("Length of LatestCrosslinks was not correctly initialized")
 	}
-	if !reflect.DeepEqual(state.LatestPenalizedBalances,
-		make([]uint64, latestPenalizedExitLength)) {
-		t.Error("LatestPenalizedBalances was not correctly initialized")
+	if !reflect.DeepEqual(state.LatestSlashedBalances,
+		make([]uint64, latestSlashedExitLength)) {
+		t.Error("LatestSlashedBalances was not correctly initialized")
 	}
 	if !reflect.DeepEqual(state.LatestAttestations, []*pb.PendingAttestation{}) {
 		t.Error("LatestAttestations was not correctly initialized")

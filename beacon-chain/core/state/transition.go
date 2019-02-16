@@ -311,8 +311,8 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 		return nil, fmt.Errorf("could not update latest index roots: %v", err)
 	}
 
-	// Update accumulated penalized balances from current epoch to next epoch.
-	state = e.UpdateLatestPenalizedBalances(state)
+	// Update accumulated slashed balances from current epoch to next epoch.
+	state = e.UpdateLatestSlashedBalances(state)
 
 	// Update current epoch's randao seed to next epoch.
 	state, err = e.UpdateLatestRandaoMixes(state)
