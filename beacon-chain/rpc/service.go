@@ -38,6 +38,7 @@ type chainService interface {
 type operationService interface {
 	IncomingExitFeed() *event.Feed
 	IncomingAttFeed() *event.Feed
+	PendingAttestations() ([]*pbp2p.Attestation, error)
 }
 
 type powChainService interface {
@@ -137,6 +138,7 @@ func (s *Service) Start() {
 		beaconDB:           s.beaconDB,
 		chainService:       s.chainService,
 		powChainService:    s.powChainService,
+		operationService:   s.operationService,
 		canonicalStateChan: s.canonicalStateChan,
 	}
 	attesterServer := &AttesterServer{

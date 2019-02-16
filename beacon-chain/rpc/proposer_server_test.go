@@ -120,3 +120,18 @@ func TestComputeStateRoot(t *testing.T) {
 
 	_, _ = proposerServer.ComputeStateRoot(context.Background(), req)
 }
+
+func TestPendingAttestations_Ok(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	proposerServer := &ProposerServer{
+		operationService: &mockOperationService{},
+	}
+	res, err := proposerServer.PendingAttestations(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("Unexpected error fetching pending attestations: %v", err)
+	}
+	if len(res.PendingAttestations) == 0 {
+		t.Error("Expected pending attestations list to be non-empty")
+	}
+}
