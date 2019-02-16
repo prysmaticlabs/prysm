@@ -31,9 +31,10 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/pborman/uuid"
-	bls "github.com/prysmaticlabs/go-bls"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"
 )
@@ -119,7 +120,7 @@ func EncryptKey(key *Key, password string, scryptN, scryptP int) ([]byte, error)
 	}
 
 	encryptKey := derivedKey[:16]
-	keyBytes := key.SecretKey.LittleEndian()
+	keyBytes := math.PaddedBigBytes(key.SecretKey.K, 32)
 
 	iv := make([]byte, aes.BlockSize) // 16
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
@@ -152,7 +153,7 @@ func EncryptKey(key *Key, password string, scryptN, scryptP int) ([]byte, error)
 		MAC:          hex.EncodeToString(mac),
 	}
 	encryptedJSON := encryptedKeyJSON{
-		hex.EncodeToString(key.PublicKey.Serialize()),
+		hex.EncodeToString(key.PublicKey.BufferedPublicKey()),
 		cryptoStruct,
 		key.ID.String(),
 	}
@@ -176,10 +177,11 @@ func DecryptKey(keyjson []byte, password string) (*Key, error) {
 	}
 
 	key := &bls.SecretKey{}
-	if err := key.SetLittleEndian(keyBytes); err != nil {
+	key.UnBufferSecretKey(keyBytes)
+	pubkey, err := key.PublicKey()
+	if err != nil {
 		return nil, err
 	}
-	pubkey := key.GetPublicKey()
 
 	return &Key{
 		ID:        uuid.UUID(keyID),

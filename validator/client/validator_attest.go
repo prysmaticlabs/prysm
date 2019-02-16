@@ -2,16 +2,18 @@ package client
 
 import (
 	"context"
-
-	"github.com/opentracing/opentracing-go"
-
 	"fmt"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
 
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+
+	"github.com/opentracing/opentracing-go"
 )
+
+var delay = params.BeaconConfig().SlotDuration / 2
 
 // AttestToBlockHead completes the validator client's attester responsibility at a given slot.
 // It fetches the latest beacon block head along with the latest canonical beacon state
@@ -29,7 +31,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	// We fetch the validator index as it is necessary to generate the aggregation
 	// bitfield of the attestation itself.
 	idxReq := &pb.ValidatorIndexRequest{
-		PublicKey: v.key.PublicKey.Serialize(),
+		PublicKey: v.key.PublicKey.BufferedPublicKey(),
 	}
 	validatorIndexRes, err := v.validatorClient.ValidatorIndex(ctx, idxReq)
 	if err != nil {
@@ -107,6 +109,10 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	// TODO(#1366): Use BLS to generate an aggregate signature.
 	attestation.AggregateSignature = []byte("signed")
 
+	duration := time.Duration(slot*params.BeaconConfig().SlotDuration+delay) * time.Second
+	timeToBroadcast := time.Unix(int64(v.genesisTime), 0).Add(duration)
+	time.Sleep(time.Until(timeToBroadcast))
+
 	attestRes, err := v.attesterClient.AttestHead(ctx, attestation)
 	if err != nil {
 		log.Errorf("Could not submit attestation to beacon node: %v", err)
@@ -114,5 +120,5 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	}
 	log.WithField(
 		"hash", fmt.Sprintf("%#x", attestRes.AttestationHash),
-	).Info("Submitted attestation successfully with hash %#x", attestRes.AttestationHash)
+	).Infof("Submitted attestation successfully with hash %#x", attestRes.AttestationHash)
 }

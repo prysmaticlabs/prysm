@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"testing"
 
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -35,6 +36,20 @@ func (ms *mockOperationService) IncomingAttFeed() *event.Feed {
 
 func (ms *mockOperationService) IncomingExitFeed() *event.Feed {
 	return new(event.Feed)
+}
+
+func (ms *mockOperationService) PendingAttestations() ([]*pb.Attestation, error) {
+	return []*pb.Attestation{
+		{
+			AggregationBitfield: []byte("A"),
+		},
+		{
+			AggregationBitfield: []byte("B"),
+		},
+		{
+			AggregationBitfield: []byte("C"),
+		},
+	}, nil
 }
 
 type mockChainService struct {
