@@ -50,7 +50,7 @@ type BeaconChainConfig struct {
 	BLSWithdrawalPrefixByte byte     // BLSWithdrawalPrefixByte is used for BLS withdrawal and it's the first byte.
 
 	// Time parameters constants.
-	SecondsPerSlot                uint64 // SlotDuration is how many seconds are in a single slot.
+	SecondsPerSlot                uint64 // SecondsPerSlot is how many seconds are in a single slot.
 	MinAttestationInclusionDelay uint64 // MinAttestationInclusionDelay defines how long validator has to wait to include attestation for beacon block.
 	SlotsPerEpoch                  uint64 // EpochLength is the number of slots in an epoch.
 	MinSeedLookahead                uint64 // SeedLookahead is the duration of randao look ahead seed.
@@ -129,12 +129,12 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	EmptySignature:     makeEmptySignature(),
 
 	// Time parameter constants.
-	SlotDuration:                 6,
+	SecondsPerSlot:                 6,
 	MinAttestationInclusionDelay: 4,
 	SlotsPerEpoch:                  64,
 	MinSeedLookahead:                1,
 	ActivationExitDelay:               4,
-	Eth1DataVotingPeriod:         16,
+	EpochsPerEth1VotingPeriod:         16,
 	Eth1FollowDistance:           1024,
 
 	// Reward and penalty quotients constants.

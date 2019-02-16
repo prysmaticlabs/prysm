@@ -67,7 +67,7 @@ func IsValidBlock(
 
 // IsSlotValid compares the slot to the system clock to determine if the block is valid.
 func IsSlotValid(slot uint64, genesisTime time.Time) bool {
-	slotDuration := time.Duration((slot-params.BeaconConfig().GenesisSlot)*params.BeaconConfig().SlotDuration) * time.Second
+	slotDuration := time.Duration((slot-params.BeaconConfig().GenesisSlot)*params.BeaconConfig().SecondsPerSlot) * time.Second
 	validTimeThreshold := genesisTime.Add(slotDuration)
 	return clock.Now().After(validTimeThreshold)
 }

@@ -1127,7 +1127,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	// Set genesis time to unix time 0.
 	genesisTime := time.Unix(0, 0).Unix()
 
-	currentSlot := 1000 * params.BeaconConfig().SlotDuration
+	currentSlot := 1000 * params.BeaconConfig().SecondsPerSlot
 	binary.LittleEndian.PutUint64(timestamp, uint64(depositTime))
 
 	// We then create a serialized deposit data slice of type []byte
@@ -1207,7 +1207,7 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	// Set genesis time to unix time 0.
 	genesisTime := time.Unix(0, 0).Unix()
 
-	currentSlot := 1000 * params.BeaconConfig().SlotDuration
+	currentSlot := 1000 * params.BeaconConfig().SecondsPerSlot
 	binary.LittleEndian.PutUint64(timestamp, uint64(depositTime))
 
 	// We then create a serialized deposit data slice of type []byte
