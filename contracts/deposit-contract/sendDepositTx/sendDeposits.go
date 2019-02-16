@@ -165,7 +165,7 @@ func main() {
 			validatorKey, err := prysmKeyStore.NewKey(rand.Reader)
 
 			data := &pb.DepositInput{
-				Pubkey:                      validatorKey.SecretKey.GetPublicKey().Serialize(),
+				Pubkey:                      validatorKey.PublicKey.BufferedPublicKey(),
 				ProofOfPossession:           []byte("pop"),
 				WithdrawalCredentialsHash32: []byte("withdraw"),
 			}
@@ -184,7 +184,7 @@ func main() {
 
 			log.WithFields(logrus.Fields{
 				"Transaction Hash": tx.Hash(),
-			}).Infof("Deposit %d sent to contract for validator with a public key %#x", i, validatorKey.PublicKey.SerializeToHexStr())
+			}).Infof("Deposit %d sent to contract for validator with a public key %#x", i, validatorKey.PublicKey.BufferedPublicKey())
 		}
 
 	}
