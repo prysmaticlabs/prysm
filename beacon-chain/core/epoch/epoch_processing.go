@@ -31,7 +31,7 @@ func CanProcessEpoch(state *pb.BeaconState) bool {
 //    If next_epoch % ETH1_DATA_VOTING_PERIOD == 0
 func CanProcessEth1Data(state *pb.BeaconState) bool {
 	return helpers.NextEpoch(state)%
-		params.BeaconConfig().EpochsPerEth1VotingPeriod== 0
+		params.BeaconConfig().EpochsPerEth1VotingPeriod == 0
 }
 
 // CanProcessValidatorRegistry checks the eligibility to process validator registry.
@@ -74,9 +74,9 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 //		 Set state.eth1_data_votes = [].
 //
 func ProcessEth1Data(state *pb.BeaconState) *pb.BeaconState {
-	if helpers.NextEpoch(state)%params.BeaconConfig().EpochsPerEth1VotingPeriod== 0 {
+	if helpers.NextEpoch(state)%params.BeaconConfig().EpochsPerEth1VotingPeriod == 0 {
 		for _, eth1DataVote := range state.Eth1DataVotes {
-			if eth1DataVote.VoteCount*2 > params.BeaconConfig().EpochsPerEth1VotingPeriod{
+			if eth1DataVote.VoteCount*2 > params.BeaconConfig().EpochsPerEth1VotingPeriod {
 				state.LatestEth1Data.DepositRootHash32 = eth1DataVote.Eth1Data.DepositRootHash32
 				state.LatestEth1Data.BlockHash32 = eth1DataVote.Eth1Data.BlockHash32
 			}

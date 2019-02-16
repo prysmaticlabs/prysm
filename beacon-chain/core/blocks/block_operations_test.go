@@ -262,7 +262,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
-			ExitEpoch:      params.BeaconConfig().FarFutureEpoch,
+			ExitEpoch:    params.BeaconConfig().FarFutureEpoch,
 			SlashedEpoch: 2,
 		}
 	}
@@ -288,9 +288,9 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 	currentSlot := uint64(1)
 	beaconState := &pb.BeaconState{
-		ValidatorRegistry:       validators,
-		Slot:                    currentSlot,
-		ValidatorBalances:       validatorBalances,
+		ValidatorRegistry:     validators,
+		Slot:                  currentSlot,
+		ValidatorBalances:     validatorBalances,
 		LatestSlashedBalances: []uint64{0},
 	}
 	block := &pb.BeaconBlock{
@@ -530,7 +530,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
-			ExitEpoch:      params.BeaconConfig().FarFutureEpoch,
+			ExitEpoch:    params.BeaconConfig().FarFutureEpoch,
 			SlashedEpoch: 6,
 		}
 	}
@@ -564,9 +564,9 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 
 	currentSlot := uint64(5)
 	beaconState := &pb.BeaconState{
-		ValidatorRegistry:       validators,
-		Slot:                    currentSlot,
-		ValidatorBalances:       validatorBalances,
+		ValidatorRegistry:     validators,
+		Slot:                  currentSlot,
+		ValidatorBalances:     validatorBalances,
 		LatestSlashedBalances: []uint64{0},
 	}
 	block := &pb.BeaconBlock{

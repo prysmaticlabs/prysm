@@ -266,7 +266,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
 			Attestations:      attestations,
-			VoluntaryExits:exits,
+			VoluntaryExits:    exits,
 		},
 	}
 	want := "could not process validator exits"
@@ -372,7 +372,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
 			Attestations:      attestations,
-			VoluntaryExits:exits,
+			VoluntaryExits:    exits,
 		},
 	}
 	if _, err := ProcessBlock(beaconState, block, false); err != nil {

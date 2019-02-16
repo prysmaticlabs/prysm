@@ -16,19 +16,19 @@ func makeEmptySignature() [][]byte {
 // BeaconChainConfig contains constant configs for node to participate in beacon chain.
 type BeaconChainConfig struct {
 	// Misc constants.
-	ShardCount                 uint64 // ShardCount is the number of shard chains in Ethereum 2.0.
-	TargetCommitteeSize        uint64 // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
-	MaxBalanceChurnQuotient    uint64 // MaxBalanceChurnQuotient is used to determine how many validators can rotate per epoch.
-	BeaconChainShardNumber     uint64 // BeaconChainShardNumber is the shard number of the beacon chain.
-	MaxIndicesPerSlashableVote uint64 // MaxIndicesPerSlashableVote is used to determine how many validators can be slashed per vote.
-	LatestBlockRootsLength     uint64 // LatestBlockRootsLength is the number of block roots kept in the beacon state.
-	LatestRandaoMixesLength    uint64 // LatestRandaoMixesLength is the number of randao mixes kept in the beacon state.
-	LatestSlashedExitLength    uint64 // LatestSlashedExitLength is used to track penalized exit balances per time interval.
-	LatestActiveIndexRootsLength     uint64 // LatestIndexRootsLength is the number of index roots kept in beacon state, used by light client.
-	MaxExitDequeuesPerEpoch     uint64 // MaxWithdrawalsPerEpoch is the max withdrawals can happen for a single epoch.
-	ValidatorPrivkeyFileName   string // ValidatorPrivKeyFileName specifies the string name of a validator private key file.
-	WithdrawalPrivkeyFileName  string // WithdrawalPrivKeyFileName specifies the string name of a withdrawal private key file.
-	BLSPubkeyLength            int    // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
+	ShardCount                   uint64 // ShardCount is the number of shard chains in Ethereum 2.0.
+	TargetCommitteeSize          uint64 // TargetCommitteeSize is the number of validators in a committee when the chain is healthy.
+	MaxBalanceChurnQuotient      uint64 // MaxBalanceChurnQuotient is used to determine how many validators can rotate per epoch.
+	BeaconChainShardNumber       uint64 // BeaconChainShardNumber is the shard number of the beacon chain.
+	MaxIndicesPerSlashableVote   uint64 // MaxIndicesPerSlashableVote is used to determine how many validators can be slashed per vote.
+	LatestBlockRootsLength       uint64 // LatestBlockRootsLength is the number of block roots kept in the beacon state.
+	LatestRandaoMixesLength      uint64 // LatestRandaoMixesLength is the number of randao mixes kept in the beacon state.
+	LatestSlashedExitLength      uint64 // LatestSlashedExitLength is used to track penalized exit balances per time interval.
+	LatestActiveIndexRootsLength uint64 // LatestIndexRootsLength is the number of index roots kept in beacon state, used by light client.
+	MaxExitDequeuesPerEpoch      uint64 // MaxWithdrawalsPerEpoch is the max withdrawals can happen for a single epoch.
+	ValidatorPrivkeyFileName     string // ValidatorPrivKeyFileName specifies the string name of a validator private key file.
+	WithdrawalPrivkeyFileName    string // WithdrawalPrivKeyFileName specifies the string name of a withdrawal private key file.
+	BLSPubkeyLength              int    // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
 
 	// Deposit contract constants.
 	DepositContractAddress   []byte // DepositContractAddress is the address of the deposit contract in PoW chain.
@@ -50,21 +50,21 @@ type BeaconChainConfig struct {
 	BLSWithdrawalPrefixByte byte     // BLSWithdrawalPrefixByte is used for BLS withdrawal and it's the first byte.
 
 	// Time parameters constants.
-	SecondsPerSlot                uint64 // SecondsPerSlot is how many seconds are in a single slot.
+	SecondsPerSlot               uint64 // SecondsPerSlot is how many seconds are in a single slot.
 	MinAttestationInclusionDelay uint64 // MinAttestationInclusionDelay defines how long validator has to wait to include attestation for beacon block.
-	SlotsPerEpoch                  uint64 // EpochLength is the number of slots in an epoch.
-	MinSeedLookahead                uint64 // SeedLookahead is the duration of randao look ahead seed.
-	ActivationExitDelay               uint64 // EntryExitDelay is the duration a validator has to wait for entry and exit in epoch.
-	EpochsPerEth1VotingPeriod        uint64 //  defines how often the merkle root of deposit receipts get updated in beacon node.
+	SlotsPerEpoch                uint64 // EpochLength is the number of slots in an epoch.
+	MinSeedLookahead             uint64 // SeedLookahead is the duration of randao look ahead seed.
+	ActivationExitDelay          uint64 // EntryExitDelay is the duration a validator has to wait for entry and exit in epoch.
+	EpochsPerEth1VotingPeriod    uint64 //  defines how often the merkle root of deposit receipts get updated in beacon node.
 	Eth1FollowDistance           uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
-	MinValidatorWithdrawalDelay uint64 // MinValidatorWithdrawalEpochs is the shortest amount of time a validator can get the deposit out.
+	MinValidatorWithdrawalDelay  uint64 // MinValidatorWithdrawalEpochs is the shortest amount of time a validator can get the deposit out.
 	FarFutureEpoch               uint64 // FarFutureEpoch represents a epoch extremely far away in the future used as the default penalization slot for validators.
 
 	// Reward and penalty quotients constants.
-	BaseRewardQuotient           uint64 // BaseRewardQuotient is used to calculate validator per-slot interest rate.
-	WhistlerBlowerRewardQuotient uint64 // WhistlerBlowerRewardQuotient is used to calculate whistler blower reward.
-	AttestationInclusionRewardQuotient       uint64 // IncluderRewardQuotient defines the reward quotient of proposer for including attestations..
-	InactivityPenaltyQuotient    uint64 // InactivityPenaltyQuotient defines how much validator leaks out balances for offline.
+	BaseRewardQuotient                 uint64 // BaseRewardQuotient is used to calculate validator per-slot interest rate.
+	WhistlerBlowerRewardQuotient       uint64 // WhistlerBlowerRewardQuotient is used to calculate whistler blower reward.
+	AttestationInclusionRewardQuotient uint64 // IncluderRewardQuotient defines the reward quotient of proposer for including attestations..
+	InactivityPenaltyQuotient          uint64 // InactivityPenaltyQuotient defines how much validator leaks out balances for offline.
 
 	// Max operations per block constants.
 	MaxVoluntaryExits    uint64 // MaxVoluntaryExits determines the maximum number of validator exits in a block.
@@ -96,19 +96,19 @@ type ShardChainConfig struct {
 
 var defaultBeaconConfig = &BeaconChainConfig{
 	// Misc constant.
-	ShardCount:                 1024,
-	TargetCommitteeSize:        128,
-	MaxBalanceChurnQuotient:    32,
-	BeaconChainShardNumber:     1<<64 - 1,
-	MaxIndicesPerSlashableVote: 4096,
-	LatestBlockRootsLength:     8192,
-	LatestRandaoMixesLength:    8192,
-	LatestSlashedExitLength:    8192,
-	LatestActiveIndexRootsLength:     8192,
-	MaxExitDequeuesPerEpoch:     4,
-	ValidatorPrivkeyFileName:   "/validatorprivatekey",
-	WithdrawalPrivkeyFileName:  "/shardwithdrawalkey",
-	BLSPubkeyLength:            96,
+	ShardCount:                   1024,
+	TargetCommitteeSize:          128,
+	MaxBalanceChurnQuotient:      32,
+	BeaconChainShardNumber:       1<<64 - 1,
+	MaxIndicesPerSlashableVote:   4096,
+	LatestBlockRootsLength:       8192,
+	LatestRandaoMixesLength:      8192,
+	LatestSlashedExitLength:      8192,
+	LatestActiveIndexRootsLength: 8192,
+	MaxExitDequeuesPerEpoch:      4,
+	ValidatorPrivkeyFileName:     "/validatorprivatekey",
+	WithdrawalPrivkeyFileName:    "/shardwithdrawalkey",
+	BLSPubkeyLength:              96,
 
 	// Deposit contract constants.
 	DepositContractTreeDepth: 32,
@@ -129,19 +129,19 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	EmptySignature:     makeEmptySignature(),
 
 	// Time parameter constants.
-	SecondsPerSlot:                 6,
+	SecondsPerSlot:               6,
 	MinAttestationInclusionDelay: 4,
-	SlotsPerEpoch:                  64,
-	MinSeedLookahead:                1,
-	ActivationExitDelay:               4,
-	EpochsPerEth1VotingPeriod:         16,
+	SlotsPerEpoch:                64,
+	MinSeedLookahead:             1,
+	ActivationExitDelay:          4,
+	EpochsPerEth1VotingPeriod:    16,
 	Eth1FollowDistance:           1024,
 
 	// Reward and penalty quotients constants.
-	BaseRewardQuotient:           32,
-	WhistlerBlowerRewardQuotient: 512,
-	AttestationInclusionRewardQuotient:       8,
-	InactivityPenaltyQuotient:    1 << 24,
+	BaseRewardQuotient:                 32,
+	WhistlerBlowerRewardQuotient:       512,
+	AttestationInclusionRewardQuotient: 8,
+	InactivityPenaltyQuotient:          1 << 24,
 
 	// Max operations per block constants.
 	MaxVoluntaryExits:    16,
@@ -186,7 +186,7 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.DepositsForChainStart = 8
 	demoConfig.SlotsPerEpoch = 4
 	demoConfig.GenesisEpoch = demoConfig.GenesisSlot / 4
-	demoConfig.SecondsPerSlot= 10
+	demoConfig.SecondsPerSlot = 10
 	demoConfig.MinDepositAmount = 100
 	demoConfig.MaxDepositAmount = 3200
 	demoConfig.SyncPollingInterval = 2 * 4 // Query nodes over the network every 4 slots for sync status.

@@ -55,7 +55,7 @@ func TestCanProcessEpoch(t *testing.T) {
 }
 
 func TestCanProcessEth1Data(t *testing.T) {
-	if params.BeaconConfig().EpochsPerEth1VotingPeriod!= 16 {
+	if params.BeaconConfig().EpochsPerEth1VotingPeriod != 16 {
 		t.Errorf("EpochsPerEth1VotingPeriodshould be 16 for these tests to pass")
 	}
 	tests := []struct {
@@ -430,9 +430,9 @@ func TestCanNotProcessValidatorRegistry(t *testing.T) {
 
 func TestProcessPrevSlotShardOk(t *testing.T) {
 	state := &pb.BeaconState{
-		CurrentShufflingEpoch: 1,
-		CurrentShufflingStartShard:  2,
-		CurrentShufflingSeedHash32:  []byte{'A'},
+		CurrentShufflingEpoch:      1,
+		CurrentShufflingStartShard: 2,
+		CurrentShufflingSeedHash32: []byte{'A'},
 	}
 
 	newState := ProcessPrevSlotShardSeed(
@@ -454,9 +454,9 @@ func TestProcessPrevSlotShardOk(t *testing.T) {
 
 func TestProcessValidatorRegistryOk(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot:                     params.BeaconConfig().MinSeedLookahead,
-		LatestRandaoMixesHash32S: [][]byte{{'A'}, {'B'}},
-		CurrentShufflingSeedHash32:   []byte{'C'},
+		Slot:                       params.BeaconConfig().MinSeedLookahead,
+		LatestRandaoMixesHash32S:   [][]byte{{'A'}, {'B'}},
+		CurrentShufflingSeedHash32: []byte{'C'},
 	}
 	newState, err := ProcessValidatorRegistry(
 		proto.Clone(state).(*pb.BeaconState))

@@ -50,7 +50,7 @@ func TestEpochCommitteeCount_LessShardsThanEpoch(t *testing.T) {
 	productionConfig := params.BeaconConfig()
 	testConfig := &params.BeaconChainConfig{
 		ShardCount:          1,
-		SlotsPerEpoch:         4,
+		SlotsPerEpoch:       4,
 		TargetCommitteeSize: 2,
 	}
 	params.OverrideBeaconConfig(testConfig)
