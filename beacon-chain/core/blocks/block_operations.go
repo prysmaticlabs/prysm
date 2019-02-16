@@ -425,7 +425,7 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	// get_block_root(state, get_epoch_start_slot(attestation.data.justified_epoch)).
 	blockRoot, err := BlockRoot(beaconState, helpers.StartSlot(att.Data.JustifiedEpoch))
 	if err != nil {
-		return fmt.Errorf("could not get block root for justified slot: %v", err)
+		return fmt.Errorf("could not get block root for justified epoch: %v", err)
 	}
 
 	justifiedBlockRoot := att.Data.JustifiedBlockRootHash32
