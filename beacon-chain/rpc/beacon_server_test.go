@@ -56,7 +56,7 @@ func (f *faultyPOWChainService) DepositRoot() [32]byte {
 type mockPOWChainService struct {
 	chainStartFeed    *event.Feed
 	latestBlockNumber *big.Int
-	hashesByHeight map[int][]byte
+	hashesByHeight    map[int][]byte
 }
 
 func (m *mockPOWChainService) HasChainStartLogOccurred() (bool, uint64, error) {
@@ -89,7 +89,7 @@ func (m *mockPOWChainService) BlockHashByHeight(height *big.Int) (common.Hash, e
 	if !ok {
 		return [32]byte{}, fmt.Errorf("could not fetch hash for height: %v", height)
 	}
-    return bytesutil.ToBytes32(val), nil
+	return bytesutil.ToBytes32(val), nil
 }
 
 func (m *mockPOWChainService) DepositRoot() [32]byte {
@@ -334,7 +334,7 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	beaconServer := &BeaconServer{
-		beaconDB: db,
+		beaconDB:        db,
 		powChainService: &faultyPOWChainService{},
 	}
 	beaconState := &pbp2p.BeaconState{}
@@ -357,7 +357,7 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 		},
 	}
 	beaconServer := &BeaconServer{
-		beaconDB: db,
+		beaconDB:        db,
 		powChainService: powChainService,
 	}
 	beaconState := &pbp2p.BeaconState{}
@@ -387,14 +387,14 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 		{
 			VoteCount: 1,
 			Eth1Data: &pbp2p.Eth1Data{
-				BlockHash32: []byte("block0"),
+				BlockHash32:       []byte("block0"),
 				DepositRootHash32: []byte("deposit0"),
 			},
 		},
 		{
 			VoteCount: 2,
 			Eth1Data: &pbp2p.Eth1Data{
-				BlockHash32: []byte("block1"),
+				BlockHash32:       []byte("block1"),
 				DepositRootHash32: []byte("deposit1"),
 			},
 		},
@@ -404,14 +404,14 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 		{
 			VoteCount: 3,
 			Eth1Data: &pbp2p.Eth1Data{
-				BlockHash32: []byte("block2"),
+				BlockHash32:       []byte("block2"),
 				DepositRootHash32: []byte("deposit2"),
 			},
 		},
 		{
 			VoteCount: 3,
 			Eth1Data: &pbp2p.Eth1Data{
-				BlockHash32: []byte("block4"),
+				BlockHash32:       []byte("block4"),
 				DepositRootHash32: []byte("deposit3"),
 			},
 		},
@@ -425,7 +425,7 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 	if err := db.SaveState(beaconState); err != nil {
 		t.Fatal(err)
 	}
-	currentHeight := params.BeaconConfig().Eth1FollowDistance+5
+	currentHeight := params.BeaconConfig().Eth1FollowDistance + 5
 	beaconServer := &BeaconServer{
 		beaconDB: db,
 		powChainService: &mockPOWChainService{
@@ -451,7 +451,7 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 		t.Errorf(
 			"Expected block hashes to match, received %#x == %#x",
 			result.Eth1Data.BlockHash32,
-            beaconState.Eth1DataVotes[2].Eth1Data.BlockHash32,
+			beaconState.Eth1DataVotes[2].Eth1Data.BlockHash32,
 		)
 	}
 	if !bytes.Equal(result.Eth1Data.DepositRootHash32, beaconState.Eth1DataVotes[2].Eth1Data.DepositRootHash32) {
