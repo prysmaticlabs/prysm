@@ -78,6 +78,7 @@ type BeaconChainConfig struct {
 	RandBytes             uint64 // RandBytes is the number of bytes used as entropy to shuffle validators.
 	SyncPollingInterval   int64  // SyncPollingInterval queries network nodes for sync status.
 	MaxNumLog2Validators  uint64 // MaxNumLog2Validators is the Max number of validators in Log2 exists given total ETH supply.
+	LogBlockDelay         int64  // Number of blocks to wait from the current head before processing logs from the deposit contract.
 }
 
 // DepositContractConfig contains the deposits for
@@ -154,6 +155,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	RandBytes:             3,
 	SyncPollingInterval:   6 * 4, // Query nodes over the network every 4 slots for sync status.
 	MaxNumLog2Validators:  24,
+	LogBlockDelay:         2, //
 }
 
 var defaultShardConfig = &ShardChainConfig{

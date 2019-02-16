@@ -71,6 +71,18 @@ func (g *goodLogger) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]
 	return logs, nil
 }
 
+type goodFetcher struct{}
+
+func (g *goodFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
+	return nil, nil
+}
+
+func (g *goodFetcher) HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error) {
+	return &gethTypes.Header{
+		Number: big.NewInt(0),
+	}, nil
+}
+
 var amount32Eth, _ = new(big.Int).SetString("32000000000000000000", 10)
 var depositsReqForChainStart = 8
 
@@ -173,6 +185,7 @@ func TestStart(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		BlockFetcher:    &goodFetcher{},
 		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
@@ -204,6 +217,7 @@ func TestStop(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		BlockFetcher:    &goodFetcher{},
 		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
@@ -344,6 +358,7 @@ func TestLatestMainchainInfo(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		BlockFetcher:    &goodFetcher{},
 		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
@@ -373,37 +388,6 @@ func TestLatestMainchainInfo(t *testing.T) {
 	if web3Service.blockHash.Hex() != header.Hash().Hex() {
 		t.Errorf("block hash not set, expected %v, got %v", header.Hash().Hex(), web3Service.blockHash.Hex())
 	}
-}
-
-func TestBadLogger(t *testing.T) {
-	hook := logTest.NewGlobal()
-	endpoint := "ws://127.0.0.1"
-	testAcc, err := setup()
-	if err != nil {
-		t.Fatalf("Unable to set up simulated backend %v", err)
-	}
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
-		Endpoint:        endpoint,
-		DepositContract: testAcc.contractAddr,
-		Reader:          &goodReader{},
-		Logger:          &goodLogger{},
-		ContractBackend: testAcc.backend,
-	})
-	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
-	}
-	testAcc.backend.Commit()
-
-	web3Service.reader = &goodReader{}
-	web3Service.logger = &badLogger{}
-
-	web3Service.run(web3Service.ctx.Done())
-	msg := hook.LastEntry().Message
-	want := "Unable to query logs from deposit contract: subscription has failed"
-	if msg != want {
-		t.Errorf("incorrect log, expected %s, got %s", want, msg)
-	}
-	hook.Reset()
 }
 
 func TestProcessDepositLog(t *testing.T) {
