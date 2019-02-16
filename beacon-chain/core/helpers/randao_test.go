@@ -37,7 +37,7 @@ func TestRandaoMix_Ok(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		state.Slot = (test.epoch + 1) * params.BeaconConfig().EpochLength
+		state.Slot = (test.epoch + 1) * params.BeaconConfig().SlotsPerEpoch
 		mix, err := RandaoMix(state, test.epoch)
 		if err != nil {
 			t.Fatalf("Could not get randao mix: %v", err)
@@ -85,7 +85,7 @@ func TestActiveIndexRoot_Ok(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		state.Slot = (test.epoch + 1) * params.BeaconConfig().EpochLength
+		state.Slot = (test.epoch + 1) * params.BeaconConfig().SlotsPerEpoch
 		indexRoot, err := ActiveIndexRoot(state, test.epoch)
 		if err != nil {
 			t.Fatalf("Could not get index root: %v", err)
@@ -130,7 +130,7 @@ func TestGenerateSeed_Ok(t *testing.T) {
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		randaoMixes[i] = intInBytes
 	}
-	slot := 10 * params.BeaconConfig().MinSeedLookahead * params.BeaconConfig().EpochLength
+	slot := 10 * params.BeaconConfig().MinSeedLookahead * params.BeaconConfig().SlotsPerEpoch
 	state := &pb.BeaconState{
 		LatestIndexRootHash32S:   activeIndexRoots,
 		LatestRandaoMixesHash32S: randaoMixes,

@@ -15,8 +15,8 @@ import (
 )
 
 func TestCanProcessEpoch(t *testing.T) {
-	if params.BeaconConfig().EpochLength != 64 {
-		t.Errorf("EpochLength should be 64 for these tests to pass")
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 	tests := []struct {
 		slot            uint64
@@ -71,11 +71,11 @@ func TestCanProcessEth1Data(t *testing.T) {
 			canProcessEth1Data: false,
 		},
 		{
-			slot:               15 * params.BeaconConfig().EpochLength,
+			slot:               15 * params.BeaconConfig().SlotsPerEpoch,
 			canProcessEth1Data: true,
 		},
 		{
-			slot:               127 * params.BeaconConfig().EpochLength,
+			slot:               127 * params.BeaconConfig().SlotsPerEpoch,
 			canProcessEth1Data: true,
 		},
 		{
@@ -99,7 +99,7 @@ func TestCanProcessEth1Data(t *testing.T) {
 func TestProcessEth1Data(t *testing.T) {
 	requiredVoteCount := params.BeaconConfig().Eth1DataVotingPeriod
 	state := &pb.BeaconState{
-		Slot: 15 * params.BeaconConfig().EpochLength,
+		Slot: 15 * params.BeaconConfig().SlotsPerEpoch,
 		LatestEth1Data: &pb.Eth1Data{
 			DepositRootHash32: nil,
 			BlockHash32:       nil,
@@ -199,8 +199,8 @@ func TestProcessEth1Data_InactionSlot(t *testing.T) {
 }
 
 func TestProcessJustification(t *testing.T) {
-	if params.BeaconConfig().EpochLength != 64 {
-		t.Errorf("EpochLength should be 64 for these tests to pass")
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
 	state := &pb.BeaconState{
@@ -235,8 +235,8 @@ func TestProcessJustification(t *testing.T) {
 }
 
 func TestProcessFinalization(t *testing.T) {
-	if params.BeaconConfig().EpochLength != 64 {
-		t.Errorf("EpochLength should be 64 for these tests to pass")
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
 	// 2 consecutive justified epoch in a row,
@@ -299,7 +299,7 @@ func TestProcessCrosslinksOk(t *testing.T) {
 	state := buildState(5, params.BeaconConfig().DepositsForChainStart)
 	state.LatestCrosslinks = []*pb.Crosslink{{}, {}}
 	epoch := uint64(5)
-	state.Slot = epoch * params.BeaconConfig().EpochLength
+	state.Slot = epoch * params.BeaconConfig().SlotsPerEpoch
 
 	byteLength := int(params.BeaconConfig().DepositsForChainStart / params.BeaconConfig().TargetCommitteeSize / 8)
 	var participationBitfield []byte
@@ -475,7 +475,7 @@ func TestProcessValidatorRegistryOk(t *testing.T) {
 
 func TestProcessPartialValidatorRegistry(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot:                     params.BeaconConfig().EpochLength * 2,
+		Slot:                     params.BeaconConfig().SlotsPerEpoch * 2,
 		LatestRandaoMixesHash32S: [][]byte{{'A'}, {'B'}, {'C'}},
 		LatestIndexRootHash32S:   [][]byte{{'D'}, {'E'}, {'F'}},
 	}
@@ -491,10 +491,10 @@ func TestProcessPartialValidatorRegistry(t *testing.T) {
 }
 
 func TestCleanupAttestations(t *testing.T) {
-	if params.BeaconConfig().EpochLength != 64 {
-		t.Errorf("EpochLength should be 64 for these tests to pass")
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
-	epochLength := params.BeaconConfig().EpochLength
+	epochLength := params.BeaconConfig().SlotsPerEpoch
 	state := &pb.BeaconState{
 		Slot: epochLength,
 		LatestAttestations: []*pb.PendingAttestation{
@@ -555,7 +555,7 @@ func TestUpdateLatestSlashedBalances_Ok(t *testing.T) {
 			params.BeaconConfig().LatestSlashedExitLength)
 		latestSlashedExitBalances[epoch] = tt.balances
 		state := &pb.BeaconState{
-			Slot:                  tt.epoch * params.BeaconConfig().EpochLength,
+			Slot:                  tt.epoch * params.BeaconConfig().SlotsPerEpoch,
 			LatestSlashedBalances: latestSlashedExitBalances}
 		newState := UpdateLatestSlashedBalances(state)
 		if newState.LatestSlashedBalances[epoch+1] !=
@@ -599,7 +599,7 @@ func TestUpdateLatestRandaoMixes_Ok(t *testing.T) {
 			params.BeaconConfig().LatestRandaoMixesLength)
 		latestSlashedRandaoMixes[epoch] = tt.seed
 		state := &pb.BeaconState{
-			Slot:                     tt.epoch * params.BeaconConfig().EpochLength,
+			Slot:                     tt.epoch * params.BeaconConfig().SlotsPerEpoch,
 			LatestRandaoMixesHash32S: latestSlashedRandaoMixes}
 		newState, err := UpdateLatestRandaoMixes(state)
 		if err != nil {
@@ -620,7 +620,7 @@ func TestUpdateLatestActiveIndexRoots_Ok(t *testing.T) {
 	latestActiveIndexRoots := make([][]byte,
 		params.BeaconConfig().LatestActiveIndexRootsLength)
 	state := &pb.BeaconState{
-		Slot:                   epoch * params.BeaconConfig().EpochLength,
+		Slot:                   epoch * params.BeaconConfig().SlotsPerEpoch,
 		LatestIndexRootHash32S: latestActiveIndexRoots}
 	newState, err := UpdateLatestActiveIndexRoots(state)
 	if err != nil {

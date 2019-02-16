@@ -52,7 +52,7 @@ type BeaconChainConfig struct {
 	// Time parameters constants.
 	SecondsPerSlot                uint64 // SlotDuration is how many seconds are in a single slot.
 	MinAttestationInclusionDelay uint64 // MinAttestationInclusionDelay defines how long validator has to wait to include attestation for beacon block.
-	EpochLength                  uint64 // EpochLength is the number of slots in an epoch.
+	SlotsPerEpoch                  uint64 // EpochLength is the number of slots in an epoch.
 	MinSeedLookahead                uint64 // SeedLookahead is the duration of randao look ahead seed.
 	ActivationExitDelay               uint64 // EntryExitDelay is the duration a validator has to wait for entry and exit in epoch.
 	EpochsPerEth1VotingPeriod        uint64 // Eth1DataVotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
@@ -131,7 +131,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	// Time parameter constants.
 	SlotDuration:                 6,
 	MinAttestationInclusionDelay: 4,
-	EpochLength:                  64,
+	SlotsPerEpoch:                  64,
 	MinSeedLookahead:                1,
 	ActivationExitDelay:               4,
 	Eth1DataVotingPeriod:         16,
@@ -184,7 +184,7 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.ShardCount = 1
 	demoConfig.TargetCommitteeSize = 2
 	demoConfig.DepositsForChainStart = 8
-	demoConfig.EpochLength = 4
+	demoConfig.SlotsPerEpoch = 4
 	demoConfig.GenesisEpoch = demoConfig.GenesisSlot / 4
 	demoConfig.SecondsPerSlot= 10
 	demoConfig.MinDepositAmount = 100

@@ -40,7 +40,7 @@ func GenesisBeaconState(
 	}
 
 	latestVDFOutputs := make([][]byte,
-		params.BeaconConfig().LatestRandaoMixesLength/params.BeaconConfig().EpochLength)
+		params.BeaconConfig().LatestRandaoMixesLength/params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(latestVDFOutputs); i++ {
 		latestVDFOutputs[i] = params.BeaconConfig().ZeroHash[:]
 	}

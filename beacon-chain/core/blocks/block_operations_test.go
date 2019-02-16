@@ -678,14 +678,14 @@ func TestProcessBlockAttestations_EpochDistanceFailure(t *testing.T) {
 		},
 	}
 	state := &pb.BeaconState{
-		Slot: 5 + 2*params.BeaconConfig().EpochLength,
+		Slot: 5 + 2*params.BeaconConfig().SlotsPerEpoch,
 	}
 
 	want := fmt.Sprintf(
 		"attestation slot (slot %d) + epoch length (%d) less than current beacon state slot (%d)",
 		5,
-		params.BeaconConfig().EpochLength,
-		5+2*params.BeaconConfig().EpochLength,
+		params.BeaconConfig().SlotsPerEpoch,
+		5+2*params.BeaconConfig().SlotsPerEpoch,
 	)
 	if _, err := ProcessBlockAttestations(
 		state,
@@ -733,7 +733,7 @@ func TestProcessBlockAttestations_PreviousJustifiedEpochVerificationFailure(t *t
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Slot:           params.BeaconConfig().EpochLength,
+				Slot:           params.BeaconConfig().SlotsPerEpoch,
 				JustifiedEpoch: 3,
 			},
 		},
@@ -744,7 +744,7 @@ func TestProcessBlockAttestations_PreviousJustifiedEpochVerificationFailure(t *t
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().EpochLength * 2,
+		Slot:                   params.BeaconConfig().SlotsPerEpoch * 2,
 		PreviousJustifiedEpoch: 2,
 	}
 
@@ -764,7 +764,7 @@ func TestProcessBlockAttestations_PreviousJustifiedEpochVerificationFailure(t *t
 
 func TestProcessBlockAttestations_BlockRootOutOfBounds(t *testing.T) {
 	var blockRoots [][]byte
-	for i := uint64(0); i < 2*params.BeaconConfig().EpochLength; i++ {
+	for i := uint64(0); i < 2*params.BeaconConfig().SlotsPerEpoch; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 
@@ -800,7 +800,7 @@ func TestProcessBlockAttestations_BlockRootOutOfBounds(t *testing.T) {
 
 func TestProcessBlockAttestations_BlockRootFailure(t *testing.T) {
 	var blockRoots [][]byte
-	for i := uint64(0); i < 2*params.BeaconConfig().EpochLength; i++ {
+	for i := uint64(0); i < 2*params.BeaconConfig().SlotsPerEpoch; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 
@@ -840,7 +840,7 @@ func TestProcessBlockAttestations_BlockRootFailure(t *testing.T) {
 
 func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 	var blockRoots [][]byte
-	for i := uint64(0); i < 2*params.BeaconConfig().EpochLength; i++ {
+	for i := uint64(0); i < 2*params.BeaconConfig().SlotsPerEpoch; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 
@@ -891,7 +891,7 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 
 func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.T) {
 	var blockRoots [][]byte
-	for i := uint64(0); i < 2*params.BeaconConfig().EpochLength; i++ {
+	for i := uint64(0); i < 2*params.BeaconConfig().SlotsPerEpoch; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	stateLatestCrosslinks := []*pb.Crosslink{

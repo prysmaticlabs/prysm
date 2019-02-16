@@ -21,7 +21,7 @@ import (
 // Spec pseudocode definition:
 //    If state.slot % EPOCH_LENGTH == 0:
 func CanProcessEpoch(state *pb.BeaconState) bool {
-	return state.Slot%params.BeaconConfig().EpochLength == 0
+	return state.Slot%params.BeaconConfig().SlotsPerEpoch == 0
 }
 
 // CanProcessEth1Data checks the eligibility to process the eth1 data.
@@ -49,7 +49,7 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 	if state.FinalizedEpoch <= state.ValidatorRegistryUpdateEpoch {
 		return false
 	}
-	shardsProcessed := helpers.CurrentEpochCommitteeCount(state) * params.BeaconConfig().EpochLength
+	shardsProcessed := helpers.CurrentEpochCommitteeCount(state) * params.BeaconConfig().SlotsPerEpoch
 	startShard := state.CurrentEpochStartShard
 	for i := startShard; i < shardsProcessed; i++ {
 
@@ -255,8 +255,8 @@ func ProcessValidatorRegistry(
 	state.CurrentCalculationEpoch = state.Slot
 
 	nextStartShard := (state.CurrentEpochStartShard +
-		helpers.CurrentEpochCommitteeCount(state)*params.BeaconConfig().EpochLength) %
-		params.BeaconConfig().EpochLength
+		helpers.CurrentEpochCommitteeCount(state)*params.BeaconConfig().SlotsPerEpoch) %
+		params.BeaconConfig().SlotsPerEpoch
 	state.CurrentEpochStartShard = nextStartShard
 
 	var randaoMixSlot uint64

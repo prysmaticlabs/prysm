@@ -140,7 +140,7 @@ func (sb *SimulatedBackend) RunForkChoiceTest(testCase *ForkChoiceTestCase) erro
 	// test language specification.
 	c := params.BeaconConfig()
 	c.ShardCount = testCase.Config.ShardCount
-	c.EpochLength = testCase.Config.CycleLength
+	c.SlotsPerEpoch = testCase.Config.CycleLength
 	c.TargetCommitteeSize = testCase.Config.MinCommitteeSize
 	params.OverrideBeaconConfig(c)
 
@@ -291,7 +291,7 @@ func (sb *SimulatedBackend) generateSimulatedObjects(testCase *StateTestCase, sl
 	}
 	var simulatedValidatorExit *StateTestValidatorExit
 	for _, exit := range testCase.Config.ValidatorExits {
-		if exit.Epoch == slotNumber/params.BeaconConfig().EpochLength {
+		if exit.Epoch == slotNumber/params.BeaconConfig().SlotsPerEpoch {
 			simulatedValidatorExit = exit
 			break
 		}
@@ -347,7 +347,7 @@ func setTestConfig(testCase *StateTestCase) {
 	// We setup the initial configuration for running state
 	// transition tests below.
 	c := params.BeaconConfig()
-	c.EpochLength = testCase.Config.EpochLength
+	c.SlotsPerEpoch = testCase.Config.EpochLength
 	c.DepositsForChainStart = testCase.Config.DepositsForChainStart
 	params.OverrideBeaconConfig(c)
 }

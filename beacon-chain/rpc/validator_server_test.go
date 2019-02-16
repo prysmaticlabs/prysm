@@ -181,7 +181,7 @@ func TestValidatorCommitteeAtSlot_CrosslinkCommitteesFailure(t *testing.T) {
 		beaconDB: db,
 	}
 	req := &pb.CommitteeRequest{
-		Slot: params.BeaconConfig().EpochLength * 10,
+		Slot: params.BeaconConfig().SlotsPerEpoch * 10,
 	}
 	want := "could not get crosslink committees at slot"
 	if _, err := validatorServer.ValidatorCommitteeAtSlot(context.Background(), req); !strings.Contains(err.Error(), want) {

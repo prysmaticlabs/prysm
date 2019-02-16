@@ -392,11 +392,11 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 			beaconState.Slot,
 		)
 	}
-	if att.Data.Slot+params.BeaconConfig().EpochLength < beaconState.Slot {
+	if att.Data.Slot+params.BeaconConfig().SlotsPerEpoch < beaconState.Slot {
 		return fmt.Errorf(
 			"attestation slot (slot %d) + epoch length (%d) less than current beacon state slot (%d)",
 			att.Data.Slot,
-			params.BeaconConfig().EpochLength,
+			params.BeaconConfig().SlotsPerEpoch,
 			beaconState.Slot,
 		)
 	}
