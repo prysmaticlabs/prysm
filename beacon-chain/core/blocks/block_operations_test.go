@@ -1266,21 +1266,21 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 }
 
 func TestProcessValidatorExits_ThresholdReached(t *testing.T) {
-	exits := make([]*pb.Exit, params.BeaconConfig().MaxExits+1)
+	exits := make([]*pb.VoluntaryExit, params.BeaconConfig().MaxVoluntaryExits+1)
 	registry := []*pb.Validator{}
 	state := &pb.BeaconState{
 		ValidatorRegistry: registry,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
-			Exits: exits,
+			VoluntaryExits: exits,
 		},
 	}
 
 	want := fmt.Sprintf(
 		"number of exits (%d) exceeds allowed threshold of %d",
-		params.BeaconConfig().MaxExits+1,
-		params.BeaconConfig().MaxExits,
+		params.BeaconConfig().MaxVoluntaryExits+1,
+		params.BeaconConfig().MaxVoluntaryExits,
 	)
 
 	if _, err := ProcessValidatorExits(
@@ -1293,7 +1293,7 @@ func TestProcessValidatorExits_ThresholdReached(t *testing.T) {
 }
 
 func TestProcessValidatorExits_ValidatorNotActive(t *testing.T) {
-	exits := []*pb.Exit{
+	exits := []*pb.VoluntaryExit{
 		{
 			ValidatorIndex: 0,
 		},
@@ -1308,7 +1308,7 @@ func TestProcessValidatorExits_ValidatorNotActive(t *testing.T) {
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
-			Exits: exits,
+			VoluntaryExits: exits,
 		},
 	}
 
@@ -1324,7 +1324,7 @@ func TestProcessValidatorExits_ValidatorNotActive(t *testing.T) {
 }
 
 func TestProcessValidatorExits_InvalidExitEpoch(t *testing.T) {
-	exits := []*pb.Exit{
+	exits := []*pb.VoluntaryExit{
 		{
 			Epoch: 10,
 		},
@@ -1340,7 +1340,7 @@ func TestProcessValidatorExits_InvalidExitEpoch(t *testing.T) {
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
-			Exits: exits,
+			VoluntaryExits: exits,
 		},
 	}
 
@@ -1356,7 +1356,7 @@ func TestProcessValidatorExits_InvalidExitEpoch(t *testing.T) {
 }
 
 func TestProcessValidatorExits_InvalidStatusChangeSlot(t *testing.T) {
-	exits := []*pb.Exit{
+	exits := []*pb.VoluntaryExit{
 		{
 			ValidatorIndex: 0,
 			Epoch:          0,
@@ -1373,7 +1373,7 @@ func TestProcessValidatorExits_InvalidStatusChangeSlot(t *testing.T) {
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
-			Exits: exits,
+			VoluntaryExits: exits,
 		},
 	}
 
@@ -1388,7 +1388,7 @@ func TestProcessValidatorExits_InvalidStatusChangeSlot(t *testing.T) {
 }
 
 func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
-	exits := []*pb.Exit{
+	exits := []*pb.VoluntaryExit{
 		{
 			ValidatorIndex: 0,
 			Epoch:          0,
@@ -1405,7 +1405,7 @@ func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
-			Exits: exits,
+			VoluntaryExits: exits,
 		},
 	}
 	newState, err := ProcessValidatorExits(state, block, false)

@@ -70,7 +70,7 @@ func InitialBeaconState(
 			Pubkey:                      depositInput.Pubkey,
 			WithdrawalCredentialsHash32: depositInput.WithdrawalCredentialsHash32,
 			ExitEpoch:                   params.BeaconConfig().FarFutureEpoch,
-			SlashedEpoch:              params.BeaconConfig().FarFutureEpoch,
+			SlashedEpoch:                params.BeaconConfig().FarFutureEpoch,
 		}
 
 		validatorRegistry[i] = validator
@@ -113,7 +113,7 @@ func InitialBeaconState(
 		LatestCrosslinks:        latestCrosslinks,
 		LatestBlockRootHash32S:  latestBlockRoots,
 		LatestIndexRootHash32S:  latestIndexRoots,
-		LatestSlashedBalances: latestSlashedExitBalances,
+		LatestSlashedBalances:   latestSlashedExitBalances,
 		LatestAttestations:      []*pb.PendingAttestation{},
 		BatchedBlockRootHash32S: [][]byte{},
 

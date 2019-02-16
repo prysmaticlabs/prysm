@@ -578,9 +578,9 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 //
 // Official spec definition for processing exits:
 //
-//   Verify that len(block.body.exits) <= MAX_EXITS.
+//   Verify that len(block.body.voluntary_exits) <= MAX_VOLUNTARY_EXITS.
 //
-//   For each exit in block.body.exits:
+//   For each exit in block.body.voluntary_exits:
 //     Let validator = state.validator_registry[exit.validator_index].
 //     Verify that validator.exit_epoch > get_entry_exit_effect_epoch(get_current_epoch(state)).
 //     Verify that get_current_epoch(state) >= exit.epoch.
@@ -595,12 +595,12 @@ func ProcessValidatorExits(
 	block *pb.BeaconBlock,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
-	exits := block.Body.Exits
-	if uint64(len(exits)) > params.BeaconConfig().MaxExits {
+	exits := block.Body.VoluntaryExits
+	if uint64(len(exits)) > params.BeaconConfig().MaxVoluntaryExits {
 		return nil, fmt.Errorf(
 			"number of exits (%d) exceeds allowed threshold of %d",
 			len(exits),
-			params.BeaconConfig().MaxExits,
+			params.BeaconConfig().MaxVoluntaryExits,
 		)
 	}
 
@@ -615,7 +615,7 @@ func ProcessValidatorExits(
 	return beaconState, nil
 }
 
-func verifyExit(beaconState *pb.BeaconState, exit *pb.Exit, verifySignatures bool) error {
+func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySignatures bool) error {
 	validator := beaconState.ValidatorRegistry[exit.ValidatorIndex]
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	entryExitEffectEpoch := helpers.EntryExitEffectEpoch(currentEpoch)

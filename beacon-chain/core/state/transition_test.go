@@ -103,8 +103,8 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	for i := uint64(0); i < 1000; i++ {
 		pubkey := hashutil.Hash([]byte{byte(i)})
 		validators[i] = &pb.Validator{
-			ExitEpoch:      params.BeaconConfig().FarFutureEpoch,
-			Pubkey:         pubkey[:],
+			ExitEpoch:    params.BeaconConfig().FarFutureEpoch,
+			Pubkey:       pubkey[:],
 			SlashedEpoch: 10,
 		}
 	}
@@ -153,7 +153,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		Slot:                     5,
 		ValidatorRegistry:        validators,
 		ValidatorBalances:        make([]uint64, len(validators)),
-		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
+		LatestSlashedBalances:    make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
 	}
 	block := &pb.BeaconBlock{
 		Slot:               5,
@@ -179,8 +179,8 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	for i := uint64(0); i < 1000; i++ {
 		pubkey := hashutil.Hash([]byte{byte(i)})
 		validators[i] = &pb.Validator{
-			ExitEpoch:      params.BeaconConfig().FarFutureEpoch,
-			Pubkey:         pubkey[:],
+			ExitEpoch:    params.BeaconConfig().FarFutureEpoch,
+			Pubkey:       pubkey[:],
 			SlashedEpoch: params.BeaconConfig().GenesisEpoch + 10,
 		}
 	}
@@ -252,9 +252,9 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		LatestBlockRootHash32S:   blockRoots,
 		LatestCrosslinks:         stateLatestCrosslinks,
 		ValidatorBalances:        make([]uint64, len(validators)),
-		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
+		LatestSlashedBalances:    make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
 	}
-	exits := make([]*pb.Exit, params.BeaconConfig().MaxExits+1)
+	exits := make([]*pb.VoluntaryExit, params.BeaconConfig().MaxVoluntaryExits+1)
 	block := &pb.BeaconBlock{
 		Slot:               params.BeaconConfig().GenesisSlot + 64,
 		RandaoRevealHash32: []byte{},
@@ -266,7 +266,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
 			Attestations:      attestations,
-			Exits:             exits,
+			VoluntaryExits:exits,
 		},
 	}
 	want := "could not process validator exits"
@@ -280,8 +280,8 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	for i := uint64(0); i < 1000; i++ {
 		pubkey := hashutil.Hash([]byte{byte(i)})
 		validators[i] = &pb.Validator{
-			ExitEpoch:      params.BeaconConfig().FarFutureEpoch,
-			Pubkey:         pubkey[:],
+			ExitEpoch:    params.BeaconConfig().FarFutureEpoch,
+			Pubkey:       pubkey[:],
 			SlashedEpoch: params.BeaconConfig().GenesisEpoch + 10,
 		}
 	}
@@ -353,9 +353,9 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		LatestBlockRootHash32S:   blockRoots,
 		LatestCrosslinks:         stateLatestCrosslinks,
 		ValidatorBalances:        make([]uint64, len(validators)),
-		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
+		LatestSlashedBalances:    make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
 	}
-	exits := []*pb.Exit{
+	exits := []*pb.VoluntaryExit{
 		{
 			ValidatorIndex: 10,
 			Epoch:          params.BeaconConfig().GenesisEpoch,
@@ -372,7 +372,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
 			Attestations:      attestations,
-			Exits:             exits,
+			VoluntaryExits:exits,
 		},
 	}
 	if _, err := ProcessBlock(beaconState, block, false); err != nil {

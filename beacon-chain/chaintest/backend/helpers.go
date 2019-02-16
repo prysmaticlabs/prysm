@@ -41,7 +41,7 @@ func generateSimulatedBlock(
 			AttesterSlashings: []*pb.AttesterSlashing{},
 			Attestations:      []*pb.Attestation{},
 			Deposits:          []*pb.Deposit{},
-			Exits:             []*pb.Exit{},
+			VoluntaryExits:    []*pb.VoluntaryExit{},
 		},
 	}
 	if simObjects.simDeposit != nil {
@@ -103,7 +103,7 @@ func generateSimulatedBlock(
 		})
 	}
 	if simObjects.simValidatorExit != nil {
-		block.Body.Exits = append(block.Body.Exits, &pb.Exit{
+		block.Body.VoluntaryExits = append(block.Body.VoluntaryExits, &pb.VoluntaryExit{
 			Epoch:          simObjects.simValidatorExit.Epoch,
 			ValidatorIndex: simObjects.simValidatorExit.ValidatorIndex,
 		})

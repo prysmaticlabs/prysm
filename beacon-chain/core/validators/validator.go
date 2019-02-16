@@ -129,7 +129,7 @@ func ProcessDeposit(
 			ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 			WithdrawalEpoch: params.BeaconConfig().FarFutureEpoch,
-			SlashedEpoch:  params.BeaconConfig().FarFutureEpoch,
+			SlashedEpoch:    params.BeaconConfig().FarFutureEpoch,
 			StatusFlags:     0,
 		}
 		state.ValidatorRegistry = append(state.ValidatorRegistry, newValidator)

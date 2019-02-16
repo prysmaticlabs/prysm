@@ -125,7 +125,7 @@ message BeaconBlockBody {
   repeated ProposerSlashing proposer_slashings  = 2;
   repeated AttesterSlashing attester_slashings = 3;
   repeated Deposit deposits = 4;
-  repeated Exit exits = 5;
+  repeated VoluntaryExit voluntary_exits = 5;
 }
 
 message DepositInput {
@@ -173,7 +173,7 @@ message Deposit {
   bytes deposit_data = 3;
 }
 
-message Exit {
+message VoluntaryExit {
   uint64 epoch = 1;
   uint64 validator_index = 2;
   bytes signature = 3; // bytes96

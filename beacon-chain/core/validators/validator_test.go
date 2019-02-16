@@ -399,7 +399,7 @@ func TestInitiateValidatorExit_Ok(t *testing.T) {
 
 func TestExitValidator_Ok(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot:                    100, // epoch 2
+		Slot:                  100, // epoch 2
 		LatestSlashedBalances: []uint64{0},
 		ValidatorRegistry: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().FarFutureEpoch, Pubkey: []byte{'B'}},
@@ -454,9 +454,9 @@ func TestProcessPenaltiesExits_ValidatorSlashed(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                    params.BeaconConfig().LatestSlashedExitLength / 2 * params.BeaconConfig().EpochLength,
+		Slot:                  params.BeaconConfig().LatestSlashedExitLength / 2 * params.BeaconConfig().EpochLength,
 		LatestSlashedBalances: latestSlashedExits,
-		ValidatorBalances:       []uint64{params.BeaconConfig().MaxDepositAmount, params.BeaconConfig().MaxDepositAmount},
+		ValidatorBalances:     []uint64{params.BeaconConfig().MaxDepositAmount, params.BeaconConfig().MaxDepositAmount},
 		ValidatorRegistry: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 		},

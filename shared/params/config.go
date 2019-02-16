@@ -23,7 +23,7 @@ type BeaconChainConfig struct {
 	MaxIndicesPerSlashableVote uint64 // MaxIndicesPerSlashableVote is used to determine how many validators can be slashed per vote.
 	LatestBlockRootsLength     uint64 // LatestBlockRootsLength is the number of block roots kept in the beacon state.
 	LatestRandaoMixesLength    uint64 // LatestRandaoMixesLength is the number of randao mixes kept in the beacon state.
-	LatestSlashedExitLength  uint64 // LatestSlashedExitLength is used to track penalized exit balances per time interval.
+	LatestSlashedExitLength    uint64 // LatestSlashedExitLength is used to track penalized exit balances per time interval.
 	LatestIndexRootsLength     uint64 // LatestIndexRootsLength is the number of index roots kept in beacon state, used by light client.
 	MaxWithdrawalsPerEpoch     uint64 // MaxWithdrawalsPerEpoch is the max withdrawals can happen for a single epoch.
 	ValidatorPrivkeyFileName   string // ValidatorPrivKeyFileName specifies the string name of a validator private key file.
@@ -67,8 +67,8 @@ type BeaconChainConfig struct {
 	InactivityPenaltyQuotient    uint64 // InactivityPenaltyQuotient defines how much validator leaks out balances for offline.
 
 	// Max operations per block constants.
-	MaxExits             uint64 // MaxExits determines the maximum number of validator exits in a block.
-	MaxDeposits          uint64 // MaxExits determines the maximum number of validator deposits in a block.
+	MaxVoluntaryExits    uint64 // MaxVoluntaryExits determines the maximum number of validator exits in a block.
+	MaxDeposits          uint64 // MaxVoluntaryExits determines the maximum number of validator deposits in a block.
 	MaxAttestations      uint64 // MaxAttestations defines the maximum allowed attestations in a beacon block.
 	MaxProposerSlashings uint64 // MaxProposerSlashings defines the maximum number of slashings of proposers possible in a block.
 	MaxAttesterSlashings uint64 // MaxAttesterSlashings defines the maximum number of casper FFG slashings possible in a block.
@@ -103,7 +103,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	MaxIndicesPerSlashableVote: 4096,
 	LatestBlockRootsLength:     8192,
 	LatestRandaoMixesLength:    8192,
-	LatestSlashedExitLength:  8192,
+	LatestSlashedExitLength:    8192,
 	LatestIndexRootsLength:     8192,
 	MaxWithdrawalsPerEpoch:     4,
 	ValidatorPrivkeyFileName:   "/validatorprivatekey",
@@ -144,7 +144,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	InactivityPenaltyQuotient:    1 << 24,
 
 	// Max operations per block constants.
-	MaxExits:             16,
+	MaxVoluntaryExits:    16,
 	MaxDeposits:          16,
 	MaxAttestations:      128,
 	MaxProposerSlashings: 16,

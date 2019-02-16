@@ -150,7 +150,7 @@ func (rs *RegularSync) run() {
 	blockRequestHashSub := rs.p2p.Subscribe(&pb.BeaconBlockRequest{}, rs.blockRequestByHash)
 	batchedRequestSub := rs.p2p.Subscribe(&pb.BatchedBeaconBlockRequest{}, rs.batchedRequestBuf)
 	attestationSub := rs.p2p.Subscribe(&pb.Attestation{}, rs.attestationBuf)
-	exitSub := rs.p2p.Subscribe(&pb.Exit{}, rs.exitBuf)
+	exitSub := rs.p2p.Subscribe(&pb.VoluntaryExit{}, rs.exitBuf)
 	chainHeadReqSub := rs.p2p.Subscribe(&pb.ChainHeadRequest{}, rs.chainHeadReqBuf)
 
 	defer announceBlockSub.Unsubscribe()
@@ -326,7 +326,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 // discard the exit if we have gotten before, send it to operation
 // service if we have not.
 func (rs *RegularSync) receiveExitRequest(msg p2p.Message) {
-	exit := msg.Data.(*pb.Exit)
+	exit := msg.Data.(*pb.VoluntaryExit)
 	h, err := hashutil.HashProto(exit)
 	if err != nil {
 		log.Errorf("Could not hash incoming exit request: %v", err)

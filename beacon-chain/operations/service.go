@@ -23,7 +23,7 @@ type Service struct {
 	cancel                 context.CancelFunc
 	beaconDB               *db.BeaconDB
 	incomingExitFeed       *event.Feed
-	incomingValidatorExits chan *pb.Exit
+	incomingValidatorExits chan *pb.VoluntaryExit
 	incomingAttFeed        *event.Feed
 	incomingAtt            chan *pb.Attestation
 	error                  error
@@ -45,7 +45,7 @@ func NewOperationService(ctx context.Context, cfg *Config) *Service {
 		cancel:                 cancel,
 		beaconDB:               cfg.BeaconDB,
 		incomingExitFeed:       new(event.Feed),
-		incomingValidatorExits: make(chan *pb.Exit, cfg.ReceiveExitBuf),
+		incomingValidatorExits: make(chan *pb.VoluntaryExit, cfg.ReceiveExitBuf),
 		incomingAttFeed:        new(event.Feed),
 		incomingAtt:            make(chan *pb.Attestation, cfg.ReceiveAttBuf),
 	}

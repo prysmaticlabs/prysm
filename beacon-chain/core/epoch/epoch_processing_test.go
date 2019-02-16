@@ -555,7 +555,7 @@ func TestUpdateLatestSlashedBalances_Ok(t *testing.T) {
 			params.BeaconConfig().LatestSlashedExitLength)
 		latestSlashedExitBalances[epoch] = tt.balances
 		state := &pb.BeaconState{
-			Slot:                    tt.epoch * params.BeaconConfig().EpochLength,
+			Slot:                  tt.epoch * params.BeaconConfig().EpochLength,
 			LatestSlashedBalances: latestSlashedExitBalances}
 		newState := UpdateLatestSlashedBalances(state)
 		if newState.LatestSlashedBalances[epoch+1] !=

@@ -438,7 +438,7 @@ func TestReceiveExitReq_Ok(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	request1 := &pb.Exit{
+	request1 := &pb.VoluntaryExit{
 		Epoch: 100,
 	}
 

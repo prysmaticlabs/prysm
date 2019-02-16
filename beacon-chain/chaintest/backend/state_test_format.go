@@ -71,8 +71,8 @@ type StateTestValidatorExit struct {
 
 // StateTestResults --
 type StateTestResults struct {
-	Slot                uint64
-	NumValidators       int      `yaml:"num_validators"`
+	Slot              uint64
+	NumValidators     int      `yaml:"num_validators"`
 	SlashedValidators []uint64 `yaml:"slashed_validators"`
-	ExitedValidators    []uint64 `yaml:"exited_validators"`
+	ExitedValidators  []uint64 `yaml:"exited_validators"`
 }
