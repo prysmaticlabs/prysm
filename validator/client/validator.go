@@ -35,7 +35,6 @@ type validator struct {
 	validatorClient pb.ValidatorServiceClient
 	beaconClient    pb.BeaconServiceClient
 	attesterClient  pb.AttesterServiceClient
-	attestationPool AttestationPool
 	key             *keystore.Key
 }
 
