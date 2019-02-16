@@ -31,12 +31,12 @@ func GenesisBeaconState(
 		latestRandaoMixes[i] = params.BeaconConfig().ZeroHash[:]
 	}
 
-	latestIndexRoots := make(
+	latestActiveIndexRoots := make(
 		[][]byte,
-		params.BeaconConfig().LatestIndexRootsLength,
+		params.BeaconConfig().LatestActiveIndexRootsLength,
 	)
-	for i := 0; i < len(latestIndexRoots); i++ {
-		latestIndexRoots[i] = params.BeaconConfig().ZeroHash[:]
+	for i := 0; i < len(latestActiveIndexRoots); i++ {
+		latestActiveIndexRoots[i] = params.BeaconConfig().ZeroHash[:]
 	}
 
 	latestVDFOutputs := make([][]byte,
@@ -112,7 +112,7 @@ func GenesisBeaconState(
 		// Recent state.
 		LatestCrosslinks:        latestCrosslinks,
 		LatestBlockRootHash32S:  latestBlockRoots,
-		LatestIndexRootHash32S:  latestIndexRoots,
+		LatestIndexRootHash32S:  latestActiveIndexRoots,
 		LatestSlashedBalances:   latestSlashedExitBalances,
 		LatestAttestations:      []*pb.PendingAttestation{},
 		BatchedBlockRootHash32S: [][]byte{},
@@ -164,7 +164,7 @@ func GenesisBeaconState(
 	if err != nil {
 		return nil, fmt.Errorf("could not determine genesis active index root: %v", err)
 	}
-	for i := uint64(0); i < params.BeaconConfig().LatestIndexRootsLength; i++ {
+	for i := uint64(0); i < params.BeaconConfig().LatestActiveIndexRootsLength; i++ {
 		state.LatestIndexRootHash32S[i] = genesisActiveIndexRoot[:]
 	}
 	seed, err := helpers.GenerateSeed(state, params.BeaconConfig().GenesisEpoch)

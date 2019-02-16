@@ -306,7 +306,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Final housekeeping updates.
 	// Update index roots from current epoch to next epoch.
-	state, err = e.UpdateLatestIndexRoots(state)
+	state, err = e.UpdateLatestActiveIndexRoots(state)
 	if err != nil {
 		return nil, fmt.Errorf("could not update latest index roots: %v", err)
 	}

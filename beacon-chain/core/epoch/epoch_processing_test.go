@@ -615,14 +615,14 @@ func TestUpdateLatestRandaoMixes_Ok(t *testing.T) {
 	}
 }
 
-func TestUpdateLatestIndexRoots_Ok(t *testing.T) {
+func TestUpdateLatestActiveIndexRoots_Ok(t *testing.T) {
 	epoch := uint64(1234)
-	latestIndexRoots := make([][]byte,
-		params.BeaconConfig().LatestIndexRootsLength)
+	latestActiveIndexRoots := make([][]byte,
+		params.BeaconConfig().LatestActiveIndexRootsLength)
 	state := &pb.BeaconState{
 		Slot:                   epoch * params.BeaconConfig().EpochLength,
-		LatestIndexRootHash32S: latestIndexRoots}
-	newState, err := UpdateLatestIndexRoots(state)
+		LatestIndexRootHash32S: latestActiveIndexRoots}
+	newState, err := UpdateLatestActiveIndexRoots(state)
 	if err != nil {
 		t.Fatalf("could not update latest index roots: %v", err)
 	}

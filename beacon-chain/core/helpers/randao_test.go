@@ -60,7 +60,7 @@ func TestRandaoMix_OutOfBound(t *testing.T) {
 }
 
 func TestActiveIndexRoot_Ok(t *testing.T) {
-	activeIndexRoots := make([][]byte, params.BeaconConfig().LatestIndexRootsLength)
+	activeIndexRoots := make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength)
 	for i := 0; i < len(activeIndexRoots); i++ {
 		intInBytes := make([]byte, 32)
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
@@ -81,7 +81,7 @@ func TestActiveIndexRoot_Ok(t *testing.T) {
 		},
 		{
 			epoch:     999999,
-			indexRoot: activeIndexRoots[999999%params.BeaconConfig().LatestIndexRootsLength],
+			indexRoot: activeIndexRoots[999999%params.BeaconConfig().LatestActiveIndexRootsLength],
 		},
 	}
 	for _, test := range tests {
@@ -118,7 +118,7 @@ func TestGenerateSeed_OutOfBound(t *testing.T) {
 }
 
 func TestGenerateSeed_Ok(t *testing.T) {
-	activeIndexRoots := make([][]byte, params.BeaconConfig().LatestIndexRootsLength)
+	activeIndexRoots := make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength)
 	for i := 0; i < len(activeIndexRoots); i++ {
 		intInBytes := make([]byte, 32)
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))

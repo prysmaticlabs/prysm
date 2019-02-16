@@ -318,7 +318,7 @@ func CleanupAttestations(state *pb.BeaconState) *pb.BeaconState {
 	return state
 }
 
-// UpdateLatestIndexRoots updates the latest index roots. Index root
+// UpdateLatestActiveIndexRoots updates the latest index roots. Index root
 // is computed by hashing validator indices of the next epoch + delay.
 //
 // Spec pseudocode definition:
@@ -327,14 +327,14 @@ func CleanupAttestations(state *pb.BeaconState) *pb.BeaconState {
 // 	LATEST_INDEX_ROOTS_LENGTH] =
 // 	hash_tree_root(get_active_validator_indices(state,
 // 	next_epoch + ENTRY_EXIT_DELAY))
-func UpdateLatestIndexRoots(state *pb.BeaconState) (*pb.BeaconState, error) {
+func UpdateLatestActiveIndexRoots(state *pb.BeaconState) (*pb.BeaconState, error) {
 	nextEpoch := helpers.NextEpoch(state) + params.BeaconConfig().ActivationExitDelay
 	validatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, nextEpoch)
 	indexRoot, err := ssz.TreeHash(validatorIndices)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash tree root: %v", err)
 	}
-	state.LatestIndexRootHash32S[nextEpoch%params.BeaconConfig().LatestIndexRootsLength] =
+	state.LatestIndexRootHash32S[nextEpoch%params.BeaconConfig().LatestActiveIndexRootsLength] =
 		indexRoot[:]
 	return state, nil
 }

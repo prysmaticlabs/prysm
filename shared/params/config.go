@@ -24,7 +24,7 @@ type BeaconChainConfig struct {
 	LatestBlockRootsLength     uint64 // LatestBlockRootsLength is the number of block roots kept in the beacon state.
 	LatestRandaoMixesLength    uint64 // LatestRandaoMixesLength is the number of randao mixes kept in the beacon state.
 	LatestSlashedExitLength    uint64 // LatestSlashedExitLength is used to track penalized exit balances per time interval.
-	LatestIndexRootsLength     uint64 // LatestIndexRootsLength is the number of index roots kept in beacon state, used by light client.
+	LatestActiveIndexRootsLength     uint64 // LatestIndexRootsLength is the number of index roots kept in beacon state, used by light client.
 	MaxWithdrawalsPerEpoch     uint64 // MaxWithdrawalsPerEpoch is the max withdrawals can happen for a single epoch.
 	ValidatorPrivkeyFileName   string // ValidatorPrivKeyFileName specifies the string name of a validator private key file.
 	WithdrawalPrivkeyFileName  string // WithdrawalPrivKeyFileName specifies the string name of a withdrawal private key file.
@@ -63,7 +63,7 @@ type BeaconChainConfig struct {
 	// Reward and penalty quotients constants.
 	BaseRewardQuotient           uint64 // BaseRewardQuotient is used to calculate validator per-slot interest rate.
 	WhistlerBlowerRewardQuotient uint64 // WhistlerBlowerRewardQuotient is used to calculate whistler blower reward.
-	IncluderRewardQuotient       uint64 // IncluderRewardQuotient defines the reward quotient of proposer for including attestations..
+	AttestationInclusionRewardQuotient       uint64 // IncluderRewardQuotient defines the reward quotient of proposer for including attestations..
 	InactivityPenaltyQuotient    uint64 // InactivityPenaltyQuotient defines how much validator leaks out balances for offline.
 
 	// Max operations per block constants.
@@ -104,7 +104,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	LatestBlockRootsLength:     8192,
 	LatestRandaoMixesLength:    8192,
 	LatestSlashedExitLength:    8192,
-	LatestIndexRootsLength:     8192,
+	LatestActiveIndexRootsLength:     8192,
 	MaxWithdrawalsPerEpoch:     4,
 	ValidatorPrivkeyFileName:   "/validatorprivatekey",
 	WithdrawalPrivkeyFileName:  "/shardwithdrawalkey",
@@ -140,7 +140,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	// Reward and penalty quotients constants.
 	BaseRewardQuotient:           32,
 	WhistlerBlowerRewardQuotient: 512,
-	IncluderRewardQuotient:       8,
+	AttestationInclusionRewardQuotient:       8,
 	InactivityPenaltyQuotient:    1 << 24,
 
 	// Max operations per block constants.
