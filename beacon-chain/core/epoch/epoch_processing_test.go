@@ -97,7 +97,7 @@ func TestCanProcessEth1Data(t *testing.T) {
 }
 
 func TestProcessEth1Data(t *testing.T) {
-	requiredVoteCount := params.BeaconConfig().Eth1DataVotingPeriod
+	requiredVoteCount := params.BeaconConfig().EpochsPerEth1VotingPeriod
 	state := &pb.BeaconState{
 		Slot: 15 * params.BeaconConfig().SlotsPerEpoch,
 		LatestEth1Data: &pb.Eth1Data{
@@ -158,7 +158,7 @@ func TestProcessEth1Data(t *testing.T) {
 }
 
 func TestProcessEth1Data_InactionSlot(t *testing.T) {
-	requiredVoteCount := params.BeaconConfig().Eth1DataVotingPeriod
+	requiredVoteCount := params.BeaconConfig().EpochsPerEth1VotingPeriod
 	state := &pb.BeaconState{
 		Slot: 4,
 		LatestEth1Data: &pb.Eth1Data{

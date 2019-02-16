@@ -347,7 +347,7 @@ func setTestConfig(testCase *StateTestCase) {
 	// We setup the initial configuration for running state
 	// transition tests below.
 	c := params.BeaconConfig()
-	c.SlotsPerEpoch = testCase.Config.EpochLength
+	c.SlotsPerEpoch = testCase.Config.SlotsPerEpoch
 	c.DepositsForChainStart = testCase.Config.DepositsForChainStart
 	params.OverrideBeaconConfig(c)
 }

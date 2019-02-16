@@ -148,23 +148,23 @@ func TestPrevEpochAttestations(t *testing.T) {
 	}{
 		{
 			stateSlot:            127,
-			firstAttestationSlot: 127 - params.BeaconConfig().SlotsPerEpoch - 127%params.BeaconConfig().EpochLength,
+			firstAttestationSlot: 127 - params.BeaconConfig().SlotsPerEpoch - 127%params.BeaconConfig().SlotsPerEpoch,
 		},
 		{
 			stateSlot:            128,
-			firstAttestationSlot: 128 - params.BeaconConfig().SlotsPerEpoch - 128%params.BeaconConfig().EpochLength,
+			firstAttestationSlot: 128 - params.BeaconConfig().SlotsPerEpoch - 128%params.BeaconConfig().SlotsPerEpoch,
 		},
 		{
 			stateSlot:            383,
-			firstAttestationSlot: 383 - params.BeaconConfig().SlotsPerEpoch - 383%params.BeaconConfig().EpochLength,
+			firstAttestationSlot: 383 - params.BeaconConfig().SlotsPerEpoch - 383%params.BeaconConfig().SlotsPerEpoch,
 		},
 		{
 			stateSlot:            129,
-			firstAttestationSlot: 129 - params.BeaconConfig().SlotsPerEpoch - 129%params.BeaconConfig().EpochLength,
+			firstAttestationSlot: 129 - params.BeaconConfig().SlotsPerEpoch - 129%params.BeaconConfig().SlotsPerEpoch,
 		},
 		{
 			stateSlot:            256,
-			firstAttestationSlot: 256 - params.BeaconConfig().SlotsPerEpoch - 256%params.BeaconConfig().EpochLength,
+			firstAttestationSlot: 256 - params.BeaconConfig().SlotsPerEpoch - 256%params.BeaconConfig().SlotsPerEpoch,
 		},
 	}
 

@@ -24,7 +24,7 @@ type StateTestConfig struct {
 	ProposerSlashings     []*StateTestProposerSlashing `yaml:"proposer_slashings"`
 	AttesterSlashings     []*StateTestAttesterSlashing `yaml:"attester_slashings"`
 	ValidatorExits        []*StateTestValidatorExit    `yaml:"validator_exits"`
-	SlotsPerEpoch           uint64                       `yaml:"epoch_length"`
+	SlotsPerEpoch           uint64                     `yaml:"slots_per_epoch"`
 	ShardCount            uint64                       `yaml:"shard_count"`
 	DepositsForChainStart uint64                       `yaml:"deposits_for_chain_start"`
 	NumSlots              uint64                       `yaml:"num_slots"`
