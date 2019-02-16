@@ -16,10 +16,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-// InitialBeaconState gets called when DepositsForChainStart count of
+// GenesisBeaconState gets called when DepositsForChainStart count of
 // full deposits were made to the deposit contract and the ChainStart log gets emitted.
-func InitialBeaconState(
-	initialValidatorDeposits []*pb.Deposit,
+func GenesisBeaconState(
+	genesisValidatorDeposits []*pb.Deposit,
 	genesisTime uint64,
 	processedPowReceiptRoot []byte,
 ) (*pb.BeaconState, error) {
@@ -58,9 +58,9 @@ func InitialBeaconState(
 		latestBlockRoots[i] = params.BeaconConfig().ZeroHash[:]
 	}
 
-	validatorRegistry := make([]*pb.Validator, len(initialValidatorDeposits))
-	latestBalances := make([]uint64, len(initialValidatorDeposits))
-	for i, d := range initialValidatorDeposits {
+	validatorRegistry := make([]*pb.Validator, len(genesisValidatorDeposits))
+	latestBalances := make([]uint64, len(genesisValidatorDeposits))
+	for i, d := range genesisValidatorDeposits {
 		depositInput, err := b.DecodeDepositInput(d.DepositData)
 		if err != nil {
 			return nil, fmt.Errorf("could decode deposit input %v", err)
@@ -128,7 +128,7 @@ func InitialBeaconState(
 	// Process initial deposits.
 	var err error
 	validatorMap := stateutils.ValidatorIndexMap(state)
-	for _, deposit := range initialValidatorDeposits {
+	for _, deposit := range genesisValidatorDeposits {
 		depositData := deposit.DepositData
 		depositInput, err := b.DecodeDepositInput(depositData)
 		if err != nil {

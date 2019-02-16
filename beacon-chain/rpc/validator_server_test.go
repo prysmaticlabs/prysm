@@ -38,9 +38,9 @@ func TestValidatorIndex_Ok(t *testing.T) {
 	deposits := []*pbp2p.Deposit{
 		{DepositData: depositData},
 	}
-	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
-		t.Fatalf("Could not instantiate initial state: %v", err)
+		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
 
 	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
@@ -81,13 +81,13 @@ func TestValidatorEpochAssignments_Ok(t *testing.T) {
 			genesisTime,
 		)
 		if err != nil {
-			t.Fatalf("Could not encode initial block deposits: %v", err)
+			t.Fatalf("Could not encode genesis block deposits: %v", err)
 		}
 		deposits[i] = &pbp2p.Deposit{DepositData: depositData}
 	}
-	beaconState, err := state.InitialBeaconState(deposits, uint64(genesisTime), nil)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(genesisTime), nil)
 	if err != nil {
-		t.Fatalf("Could not instantiate initial state: %v", err)
+		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
 
 	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
@@ -165,13 +165,13 @@ func TestValidatorCommitteeAtSlot_CrosslinkCommitteesFailure(t *testing.T) {
 			genesisTime,
 		)
 		if err != nil {
-			t.Fatalf("Could not encode initial block deposits: %v", err)
+			t.Fatalf("Could not encode genesis block deposits: %v", err)
 		}
 		deposits[i] = &pbp2p.Deposit{DepositData: depositData}
 	}
-	beaconState, err := state.InitialBeaconState(deposits, uint64(genesisTime), nil)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(genesisTime), nil)
 	if err != nil {
-		t.Fatalf("Could not instantiate initial state: %v", err)
+		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
 
 	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
@@ -211,13 +211,13 @@ func TestValidatorCommitteeAtSlot_Ok(t *testing.T) {
 			genesisTime,
 		)
 		if err != nil {
-			t.Fatalf("Could not encode initial block deposits: %v", err)
+			t.Fatalf("Could not encode genesis block deposits: %v", err)
 		}
 		deposits[i] = &pbp2p.Deposit{DepositData: depositData}
 	}
-	beaconState, err := state.InitialBeaconState(deposits, uint64(genesisTime), nil)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(genesisTime), nil)
 	if err != nil {
-		t.Fatalf("Could not instantiate initial state: %v", err)
+		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
 
 	if err := db.UpdateChainHead(genesis, beaconState); err != nil {

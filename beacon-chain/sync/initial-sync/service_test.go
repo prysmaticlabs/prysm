@@ -107,7 +107,7 @@ func TestSetBlockForInitialSync(t *testing.T) {
 
 	stateHash := bytesutil.ToBytes32(blockResponse.Block.StateRootHash32)
 
-	if stateHash != ss.initialStateRootHash32 {
+	if stateHash != ss.genesisStateRootHash32 {
 		t.Fatalf("Beacon state hash not updated: %#x", blockResponse.Block.StateRootHash32)
 	}
 
@@ -211,10 +211,10 @@ func TestSavingBlocksInSync(t *testing.T) {
 
 	ss.stateBuf <- msg2
 
-	if beaconStateRootHash32 != ss.initialStateRootHash32 {
+	if beaconStateRootHash32 != ss.genesisStateRootHash32 {
 		br := msg1.Data.(*pb.BeaconBlockResponse)
 		t.Fatalf("state hash not updated to: %#x instead it is %#x", br.Block.StateRootHash32,
-			ss.initialStateRootHash32)
+			ss.genesisStateRootHash32)
 	}
 
 	msg1 = getBlockResponseMsg(params.BeaconConfig().GenesisSlot + 1)
@@ -335,7 +335,7 @@ func TestRequestBlocksBySlot(t *testing.T) {
 		BlockBufferSize: 100,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
-	newState, err := state.InitialBeaconState(nil, 0, nil)
+	newState, err := state.GenesisBeaconState(nil, 0, nil)
 	if err != nil {
 		t.Fatalf("could not create new state %v", err)
 	}
@@ -387,7 +387,7 @@ func TestRequestBlocksBySlot(t *testing.T) {
 		}, root
 	}
 
-	// sending all blocks except for the initial block
+	// sending all blocks except for the genesis block
 	startSlot := 1 + params.BeaconConfig().GenesisSlot
 	for i := startSlot; i < startSlot+10; i++ {
 		response, _ := getBlockResponseMsg(i)
@@ -396,7 +396,7 @@ func TestRequestBlocksBySlot(t *testing.T) {
 
 	initialResponse, _ := getBlockResponseMsg(1 + params.BeaconConfig().GenesisSlot)
 
-	//sending initial block
+	//sending genesis block
 	ss.blockBuf <- initialResponse
 
 	_, hash := getBlockResponseMsg(9 + params.BeaconConfig().GenesisSlot)

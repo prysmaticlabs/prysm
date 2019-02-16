@@ -454,7 +454,7 @@ func TestProcessPrevSlotShardOk(t *testing.T) {
 
 func TestProcessValidatorRegistryOk(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot:                     params.BeaconConfig().SeedLookahead,
+		Slot:                     params.BeaconConfig().MinSeedLookahead,
 		LatestRandaoMixesHash32S: [][]byte{{'A'}, {'B'}},
 		CurrentEpochSeedHash32:   []byte{'C'},
 	}

@@ -91,7 +91,7 @@ type InitialSync struct {
 	currentSlot            uint64
 	highestObservedSlot    uint64
 	syncPollingInterval    time.Duration
-	initialStateRootHash32 [32]byte
+	genesisStateRootHash32 [32]byte
 	inMemoryBlocks         map[uint64]*pb.BeaconBlock
 }
 
@@ -194,7 +194,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 		case msg := <-s.stateBuf:
 			data := msg.Data.(*pb.BeaconStateResponse)
 
-			if s.initialStateRootHash32 == [32]byte{} {
+			if s.genesisStateRootHash32 == [32]byte{} {
 				continue
 			}
 
@@ -206,7 +206,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 				continue
 			}
 
-			if h != s.initialStateRootHash32 {
+			if h != s.genesisStateRootHash32 {
 				continue
 			}
 
@@ -272,14 +272,14 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 
 	// setting first block for sync.
 	if s.currentSlot == params.BeaconConfig().GenesisSlot {
-		if s.initialStateRootHash32 != [32]byte{} {
-			log.Errorf("State root hash %#x set despite current slot being 0", s.initialStateRootHash32)
+		if s.genesisStateRootHash32 != [32]byte{} {
+			log.Errorf("State root hash %#x set despite current slot being 0", s.genesisStateRootHash32)
 			return
 		}
 
 		if block.Slot != params.BeaconConfig().GenesisSlot+1 {
 
-			// saves block in memory if it isn't the initial block.
+			// saves block in memory if it isn't the genesis block.
 			if _, ok := s.inMemoryBlocks[block.Slot]; !ok {
 				s.inMemoryBlocks[block.Slot] = block
 			}
@@ -345,7 +345,7 @@ func (s *InitialSync) setBlockForInitialSync(block *pb.BeaconBlock) error {
 
 	s.chainService.IncomingBlockFeed().Send(block)
 
-	s.initialStateRootHash32 = bytesutil.ToBytes32(block.StateRootHash32)
+	s.genesisStateRootHash32 = bytesutil.ToBytes32(block.StateRootHash32)
 
 	log.Infof("Saved block with root %#x for initial sync", root)
 	s.currentSlot = block.Slot

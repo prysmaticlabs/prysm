@@ -49,8 +49,8 @@ func TestHasVoted(t *testing.T) {
 	}
 }
 
-func TestInitialValidatorRegistry(t *testing.T) {
-	validators := InitialValidatorRegistry()
+func TestGenesisValidatorRegistry(t *testing.T) {
+	validators := GenesisValidatorRegistry()
 	for idx, validator := range validators {
 		if !helpers.IsActiveValidator(validator, 1) {
 			t.Errorf("validator %d status is not active", idx)

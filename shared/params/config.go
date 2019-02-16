@@ -53,7 +53,7 @@ type BeaconChainConfig struct {
 	SlotDuration                 uint64 // SlotDuration is how many seconds are in a single slot.
 	MinAttestationInclusionDelay uint64 // MinAttestationInclusionDelay defines how long validator has to wait to include attestation for beacon block.
 	EpochLength                  uint64 // EpochLength is the number of slots in an epoch.
-	SeedLookahead                uint64 // SeedLookahead is the duration of randao look ahead seed.
+	MinSeedLookahead                uint64 // SeedLookahead is the duration of randao look ahead seed.
 	EntryExitDelay               uint64 // EntryExitDelay is the duration a validator has to wait for entry and exit in epoch.
 	Eth1DataVotingPeriod         uint64 // Eth1DataVotingPeriod defines how often the merkle root of deposit receipts get updated in beacon node.
 	Eth1FollowDistance           uint64 // Eth1FollowDistance is the number of eth1.0 blocks to wait before considering a new deposit for voting. This only applies after the chain as been started.
@@ -132,7 +132,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	SlotDuration:                 6,
 	MinAttestationInclusionDelay: 4,
 	EpochLength:                  64,
-	SeedLookahead:                1,
+	MinSeedLookahead:                1,
 	EntryExitDelay:               4,
 	Eth1DataVotingPeriod:         16,
 	Eth1FollowDistance:           1024,

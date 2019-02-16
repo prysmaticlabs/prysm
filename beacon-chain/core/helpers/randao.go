@@ -21,8 +21,8 @@ import (
 //        get_active_index_root(state, epoch)
 //    )
 func GenerateSeed(state *pb.BeaconState, wantedEpoch uint64) ([32]byte, error) {
-	if wantedEpoch > params.BeaconConfig().SeedLookahead {
-		wantedEpoch -= params.BeaconConfig().SeedLookahead
+	if wantedEpoch > params.BeaconConfig().MinSeedLookahead {
+		wantedEpoch -= params.BeaconConfig().MinSeedLookahead
 	}
 	randaoMix, err := RandaoMix(state, wantedEpoch)
 	if err != nil {

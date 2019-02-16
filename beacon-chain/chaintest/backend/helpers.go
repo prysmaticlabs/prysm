@@ -132,7 +132,7 @@ func generateInitialSimulatedDeposits(numDeposits uint64) ([]*pb.Deposit, error)
 			genesisTime,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("could not encode initial block deposits: %v", err)
+			return nil, fmt.Errorf("could not encode genesis block deposits: %v", err)
 		}
 		deposits[i] = &pb.Deposit{DepositData: depositData}
 	}

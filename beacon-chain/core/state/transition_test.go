@@ -29,7 +29,7 @@ func TestProcessBlock_IncorrectSlot(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
-	registry := validators.InitialValidatorRegistry()
+	registry := validators.GenesisValidatorRegistry()
 
 	slashings := make([]*pb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings+1)
 	latestMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
@@ -56,7 +56,7 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
-	registry := validators.InitialValidatorRegistry()
+	registry := validators.GenesisValidatorRegistry()
 
 	slashings := []*pb.ProposerSlashing{
 		{

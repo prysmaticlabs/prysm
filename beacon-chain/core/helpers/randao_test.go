@@ -110,7 +110,7 @@ func TestActiveIndexRoot_OutOfBound(t *testing.T) {
 func TestGenerateSeed_OutOfBound(t *testing.T) {
 	wanted := fmt.Sprintf(
 		"input randaoMix epoch %d out of bounds: %d <= epoch < %d",
-		100-params.BeaconConfig().SeedLookahead, 0, 0,
+		100-params.BeaconConfig().MinSeedLookahead, 0, 0,
 	)
 	if _, err := GenerateSeed(&pb.BeaconState{}, 100); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected: %s, received: %s", wanted, err.Error())
@@ -130,7 +130,7 @@ func TestGenerateSeed_Ok(t *testing.T) {
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		randaoMixes[i] = intInBytes
 	}
-	slot := 10 * params.BeaconConfig().SeedLookahead * params.BeaconConfig().EpochLength
+	slot := 10 * params.BeaconConfig().MinSeedLookahead * params.BeaconConfig().EpochLength
 	state := &pb.BeaconState{
 		LatestIndexRootHash32S:   activeIndexRoots,
 		LatestRandaoMixesHash32S: randaoMixes,

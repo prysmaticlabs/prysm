@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestInitialBeaconState_Ok(t *testing.T) {
+func TestGenesisBeaconState_Ok(t *testing.T) {
 	if params.BeaconConfig().EpochLength != 64 {
 		t.Errorf("EpochLength should be 64 for these tests to pass")
 	}
@@ -23,12 +23,12 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	if params.BeaconConfig().GenesisSlot != 1<<63 {
 		t.Error("GenesisSlot should be 2^63 for these tests to pass")
 	}
-	initialEpochNumber := params.BeaconConfig().GenesisEpoch
+	genesisEpochNumber := params.BeaconConfig().GenesisEpoch
 
 	if params.BeaconConfig().GenesisForkVersion != 0 {
-		t.Error("InitialSlot should be 0 for these tests to pass")
+		t.Error("GenesisSlot( should be 0 for these tests to pass")
 	}
-	initialForkVersion := params.BeaconConfig().GenesisForkVersion
+	genesisForkVersion := params.BeaconConfig().GenesisForkVersion
 
 	if params.BeaconConfig().ZeroHash != [32]byte{} {
 		t.Error("ZeroHash should be all 0s for these tests to pass")
@@ -82,12 +82,12 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 		})
 	}
 
-	state, err := InitialBeaconState(
+	state, err := GenesisBeaconState(
 		deposits,
 		genesisTime,
 		processedPowReceiptRoot)
 	if err != nil {
-		t.Fatalf("could not execute InitialBeaconState: %v", err)
+		t.Fatalf("could not execute GenesisBeaconState: %v", err)
 	}
 
 	// Misc fields checks.
@@ -98,15 +98,15 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 		t.Error("GenesisTime was not correctly initialized")
 	}
 	if !reflect.DeepEqual(*state.Fork, pb.Fork{
-		PreviousVersion: initialForkVersion,
-		CurrentVersion:  initialForkVersion,
-		Epoch:           initialEpochNumber,
+		PreviousVersion: genesisForkVersion,
+		CurrentVersion:  genesisForkVersion,
+		Epoch:           genesisEpochNumber,
 	}) {
 		t.Error("Fork was not correctly initialized")
 	}
 
 	// Validator registry fields checks.
-	if state.ValidatorRegistryUpdateEpoch != initialEpochNumber {
+	if state.ValidatorRegistryUpdateEpoch != genesisEpochNumber {
 		t.Error("ValidatorRegistryUpdateSlot was not correctly initialized")
 	}
 	if len(state.ValidatorRegistry) != depositsForChainStart {
@@ -122,13 +122,13 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 	}
 
 	// Finality fields checks.
-	if state.PreviousJustifiedEpoch != initialEpochNumber {
+	if state.PreviousJustifiedEpoch != genesisEpochNumber {
 		t.Error("PreviousJustifiedEpoch was not correctly initialized")
 	}
-	if state.JustifiedEpoch != initialEpochNumber {
+	if state.JustifiedEpoch != genesisEpochNumber {
 		t.Error("JustifiedEpoch was not correctly initialized")
 	}
-	if state.FinalizedEpoch != initialEpochNumber {
+	if state.FinalizedEpoch != genesisEpochNumber {
 		t.Error("FinalizedSlot was not correctly initialized")
 	}
 	if state.JustificationBitfield != 0 {
@@ -178,8 +178,8 @@ func TestInitialBeaconState_Ok(t *testing.T) {
 }
 
 func TestGenesisState_HashEquality(t *testing.T) {
-	state1, _ := InitialBeaconState(nil, 0, nil)
-	state2, _ := InitialBeaconState(nil, 0, nil)
+	state1, _ := GenesisBeaconState(nil, 0, nil)
+	state2, _ := GenesisBeaconState(nil, 0, nil)
 
 	root1, err1 := ssz.TreeHash(state1)
 	root2, err2 := ssz.TreeHash(state2)
@@ -194,7 +194,7 @@ func TestGenesisState_HashEquality(t *testing.T) {
 }
 
 func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
-	s, _ := InitialBeaconState(nil, 0, nil)
+	s, _ := GenesisBeaconState(nil, 0, nil)
 	want, got := len(s.LatestBlockRootHash32S), int(params.BeaconConfig().LatestBlockRootsLength)
 	if want != got {
 		t.Errorf("Wrong number of recent block hashes. Got: %d Want: %d", got, want)

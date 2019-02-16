@@ -260,9 +260,9 @@ func ProcessValidatorRegistry(
 	state.CurrentEpochStartShard = nextStartShard
 
 	var randaoMixSlot uint64
-	if state.CurrentCalculationEpoch > params.BeaconConfig().SeedLookahead {
+	if state.CurrentCalculationEpoch > params.BeaconConfig().MinSeedLookahead {
 		randaoMixSlot = state.CurrentCalculationEpoch -
-			params.BeaconConfig().SeedLookahead
+			params.BeaconConfig().MinSeedLookahead
 	}
 	randaoMix, err := helpers.RandaoMix(state, randaoMixSlot)
 	if err != nil {
