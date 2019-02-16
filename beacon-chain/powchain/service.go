@@ -23,6 +23,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 )
@@ -441,12 +442,16 @@ func (w *Web3Service) processPastLogs() error {
 // requestBatchedLogs requests and processes all the logs from the period
 // last polled to now.
 func (w *Web3Service) requestBatchedLogs() error {
+
+	// We request for the nth block behind the current head, in order to have
+	// stabilised logs when we retrieve it from the 1.0 chain.
+	requestedBlock := big.NewInt(0).Sub(w.blockNumber, big.NewInt(params.BeaconConfig().LogBlockDelay))
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
 			w.depositContractAddress,
 		},
 		FromBlock: w.lastRequestedBlock.Add(w.lastRequestedBlock, big.NewInt(1)),
-		ToBlock:   w.blockNumber,
+		ToBlock:   requestedBlock,
 	}
 	logs, err := w.logger.FilterLogs(w.ctx, query)
 	if err != nil {
@@ -461,6 +466,6 @@ func (w *Web3Service) requestBatchedLogs() error {
 		}
 	}
 
-	w.lastRequestedBlock.Set(w.blockNumber)
+	w.lastRequestedBlock.Set(requestedBlock)
 	return nil
 }
