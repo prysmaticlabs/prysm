@@ -378,9 +378,9 @@ func TestProcessEjectionsOk(t *testing.T) {
 	}
 
 	if state.ValidatorRegistry[0].ExitEpoch !=
-		params.BeaconConfig().EntryExitDelay+state.Slot {
+		params.BeaconConfig().ActivationExitDelay+state.Slot {
 		t.Errorf("Expected exit epoch %d, but got %d",
-			state.ValidatorRegistry[0].ExitEpoch, params.BeaconConfig().EntryExitDelay)
+			state.ValidatorRegistry[0].ExitEpoch, params.BeaconConfig().ActivationExitDelay)
 	}
 	if state.ValidatorRegistry[1].ExitEpoch !=
 		params.BeaconConfig().FarFutureEpoch {
@@ -626,7 +626,7 @@ func TestUpdateLatestIndexRoots_Ok(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not update latest index roots: %v", err)
 	}
-	nextEpoch := helpers.NextEpoch(state) + params.BeaconConfig().EntryExitDelay
+	nextEpoch := helpers.NextEpoch(state) + params.BeaconConfig().ActivationExitDelay
 	indexRoot, err := ssz.TreeHash(helpers.ActiveValidatorIndices(state.ValidatorRegistry, nextEpoch))
 	if err != nil {
 		t.Fatalf("could not ssz index root: %v", err)

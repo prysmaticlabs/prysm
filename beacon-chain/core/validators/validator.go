@@ -509,5 +509,5 @@ func prepareValidatorForWithdrawal(state *pb.BeaconState, idx uint64) *pb.Beacon
 //    """
 //    return epoch + 1 + ENTRY_EXIT_DELAY
 func entryExitEffectEpoch(epoch uint64) uint64 {
-	return epoch + 1 + params.BeaconConfig().EntryExitDelay
+	return epoch + 1 + params.BeaconConfig().ActivationExitDelay
 }

@@ -48,8 +48,8 @@ func GenerateSeed(state *pb.BeaconState, wantedEpoch uint64) ([32]byte, error) {
 func ActiveIndexRoot(state *pb.BeaconState, wantedEpoch uint64) ([]byte, error) {
 	var earliestEpoch uint64
 	currentEpoch := CurrentEpoch(state)
-	if currentEpoch > params.BeaconConfig().LatestIndexRootsLength+params.BeaconConfig().EntryExitDelay {
-		earliestEpoch = currentEpoch - (params.BeaconConfig().LatestIndexRootsLength + params.BeaconConfig().EntryExitDelay)
+	if currentEpoch > params.BeaconConfig().LatestIndexRootsLength+params.BeaconConfig().ActivationExitDelay {
+		earliestEpoch = currentEpoch - (params.BeaconConfig().LatestIndexRootsLength + params.BeaconConfig().ActivationExitDelay)
 	}
 	if earliestEpoch > wantedEpoch || wantedEpoch > currentEpoch {
 		return nil, fmt.Errorf("input indexRoot epoch %d out of bounds: %d <= epoch < %d",

@@ -309,9 +309,9 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		t.Fatalf("Unexpected error: %s", err)
 	}
 	if validators[1].ExitEpoch !=
-		beaconState.Slot+params.BeaconConfig().EntryExitDelay {
+		beaconState.Slot+params.BeaconConfig().ActivationExitDelay {
 		t.Errorf("Proposer with index 1 did not correctly exit,"+"wanted slot:%d, got:%d",
-			beaconState.Slot+params.BeaconConfig().EntryExitDelay, validators[1].ExitEpoch)
+			beaconState.Slot+params.BeaconConfig().ActivationExitDelay, validators[1].ExitEpoch)
 	}
 }
 

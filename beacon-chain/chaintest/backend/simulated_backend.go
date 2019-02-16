@@ -148,7 +148,7 @@ func (sb *SimulatedBackend) RunForkChoiceTest(testCase *ForkChoiceTestCase) erro
 	validators := make([]*pb.Validator, testCase.Config.ValidatorCount)
 	for i := uint64(0); i < testCase.Config.ValidatorCount; i++ {
 		validators[i] = &pb.Validator{
-			ExitEpoch: params.BeaconConfig().EntryExitDelay,
+			ExitEpoch: params.BeaconConfig().ActivationExitDelay,
 			Pubkey:    []byte{},
 		}
 	}

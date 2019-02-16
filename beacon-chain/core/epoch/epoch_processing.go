@@ -328,7 +328,7 @@ func CleanupAttestations(state *pb.BeaconState) *pb.BeaconState {
 // 	hash_tree_root(get_active_validator_indices(state,
 // 	next_epoch + ENTRY_EXIT_DELAY))
 func UpdateLatestIndexRoots(state *pb.BeaconState) (*pb.BeaconState, error) {
-	nextEpoch := helpers.NextEpoch(state) + params.BeaconConfig().EntryExitDelay
+	nextEpoch := helpers.NextEpoch(state) + params.BeaconConfig().ActivationExitDelay
 	validatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, nextEpoch)
 	indexRoot, err := ssz.TreeHash(validatorIndices)
 	if err != nil {
