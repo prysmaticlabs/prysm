@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
-// GenesisValidatorRegistry( creates a new validator set that is used to
+// GenesisValidatorRegistry creates a new validator set that is used to
 // generate a new bootstrapped state.
 func GenesisValidatorRegistry() []*pb.Validator {
 	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
