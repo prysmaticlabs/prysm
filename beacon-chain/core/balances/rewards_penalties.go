@@ -305,7 +305,7 @@ func AttestationInclusion(
 		}
 		state.ValidatorBalances[proposerIndex] +=
 			helpers.BaseReward(state, proposerIndex, baseRewardQuotient) /
-				params.BeaconConfig().IncluderRewardQuotient
+				params.BeaconConfig().AttestationInclusionRewardQuotient
 	}
 	return state, nil
 }
