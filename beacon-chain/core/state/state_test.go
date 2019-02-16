@@ -164,8 +164,8 @@ func TestGenesisBeaconState_Ok(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not generate initial seed: %v", err)
 	}
-	if !bytes.Equal(seed[:], state.CurrentEpochSeedHash32) {
-		t.Errorf("Expected current epoch seed to be %#x, received %#x", seed[:], state.CurrentEpochSeedHash32)
+	if !bytes.Equal(seed[:], state.CurrentShufflingSeedHash32) {
+		t.Errorf("Expected current epoch seed to be %#x, received %#x", seed[:], state.CurrentShufflingSeedHash32)
 	}
 
 	// deposit root checks.

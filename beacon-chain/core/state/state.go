@@ -96,12 +96,12 @@ func GenesisBeaconState(
 
 		// Randomness and committees.
 		LatestRandaoMixesHash32S: latestRandaoMixes,
-		PreviousEpochStartShard:  params.BeaconConfig().GenesisStartShard,
-		CurrentEpochStartShard:   params.BeaconConfig().GenesisStartShard,
-		PreviousCalculationEpoch: params.BeaconConfig().GenesisEpoch,
-		CurrentCalculationEpoch:  params.BeaconConfig().GenesisEpoch,
-		PreviousEpochSeedHash32:  params.BeaconConfig().ZeroHash[:],
-		CurrentEpochSeedHash32:   params.BeaconConfig().ZeroHash[:],
+		PreviousShufflingStartShard:  params.BeaconConfig().GenesisStartShard,
+		CurrentShufflingStartShard:   params.BeaconConfig().GenesisStartShard,
+		PreviousShufflingEpoch: params.BeaconConfig().GenesisEpoch,
+		CurrentShufflingEpoch:  params.BeaconConfig().GenesisEpoch,
+		PreviousShufflingSeedHash32:  params.BeaconConfig().ZeroHash[:],
+		CurrentShufflingSeedHash32:   params.BeaconConfig().ZeroHash[:],
 
 		// Finality.
 		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
@@ -171,6 +171,6 @@ func GenesisBeaconState(
 	if err != nil {
 		return nil, fmt.Errorf("could not generate initial seed: %v", err)
 	}
-	state.CurrentEpochSeedHash32 = seed[:]
+	state.CurrentShufflingSeedHash32 = seed[:]
 	return state, nil
 }

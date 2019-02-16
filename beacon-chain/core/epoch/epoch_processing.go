@@ -50,7 +50,7 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 		return false
 	}
 	shardsProcessed := helpers.CurrentEpochCommitteeCount(state) * params.BeaconConfig().SlotsPerEpoch
-	startShard := state.CurrentEpochStartShard
+	startShard := state.CurrentShufflingStartShard
 	for i := startShard; i < shardsProcessed; i++ {
 
 		if state.LatestCrosslinks[i%params.BeaconConfig().ShardCount].Epoch <=
@@ -236,9 +236,9 @@ func ProcessEjections(state *pb.BeaconState) (*pb.BeaconState, error) {
 //	Set state.previous_calculation_epoch = state.current_calculation_epoch
 //  Set state.previous_epoch_seed = state.current_epoch_seed.
 func ProcessPrevSlotShardSeed(state *pb.BeaconState) *pb.BeaconState {
-	state.PreviousCalculationEpoch = state.CurrentCalculationEpoch
-	state.PreviousEpochStartShard = state.CurrentEpochStartShard
-	state.PreviousEpochSeedHash32 = state.CurrentEpochSeedHash32
+	state.PreviousShufflingEpoch = state.CurrentShufflingEpoch
+	state.PreviousShufflingStartShard = state.CurrentShufflingStartShard
+	state.PreviousShufflingSeedHash32 = state.CurrentShufflingSeedHash32
 	return state
 }
 
@@ -252,23 +252,23 @@ func ProcessPrevSlotShardSeed(state *pb.BeaconState) *pb.BeaconState {
 //	Set state.current_epoch_seed = generate_seed(state, state.current_calculation_epoch)
 func ProcessValidatorRegistry(
 	state *pb.BeaconState) (*pb.BeaconState, error) {
-	state.CurrentCalculationEpoch = state.Slot
+	state.CurrentShufflingEpoch = state.Slot
 
-	nextStartShard := (state.CurrentEpochStartShard +
+	nextStartShard := (state.CurrentShufflingStartShard +
 		helpers.CurrentEpochCommitteeCount(state)*params.BeaconConfig().SlotsPerEpoch) %
 		params.BeaconConfig().SlotsPerEpoch
-	state.CurrentEpochStartShard = nextStartShard
+	state.CurrentShufflingStartShard = nextStartShard
 
 	var randaoMixSlot uint64
-	if state.CurrentCalculationEpoch > params.BeaconConfig().MinSeedLookahead {
-		randaoMixSlot = state.CurrentCalculationEpoch -
+	if state.CurrentShufflingEpoch > params.BeaconConfig().MinSeedLookahead {
+		randaoMixSlot = state.CurrentShufflingEpoch -
 			params.BeaconConfig().MinSeedLookahead
 	}
 	randaoMix, err := helpers.RandaoMix(state, randaoMixSlot)
 	if err != nil {
 		return nil, fmt.Errorf("could not get randaoMix mix: %v", err)
 	}
-	state.CurrentEpochSeedHash32 = randaoMix
+	state.CurrentShufflingSeedHash32 = randaoMix
 
 	return state, nil
 }
@@ -290,12 +290,12 @@ func ProcessPartialValidatorRegistry(state *pb.BeaconState) (*pb.BeaconState, er
 		state.ValidatorRegistryUpdateEpoch
 	if epochsSinceLastRegistryChange > 1 &&
 		mathutil.IsPowerOf2(epochsSinceLastRegistryChange) {
-		state.CurrentCalculationEpoch = helpers.NextEpoch(state)
-		seed, err := helpers.GenerateSeed(state, state.CurrentCalculationEpoch)
+		state.CurrentShufflingEpoch = helpers.NextEpoch(state)
+		seed, err := helpers.GenerateSeed(state, state.CurrentShufflingEpoch)
 		if err != nil {
 			return nil, fmt.Errorf("could not generate seed: %v", err)
 		}
-		state.CurrentEpochSeedHash32 = seed[:]
+		state.CurrentShufflingSeedHash32 = seed[:]
 	}
 	return state, nil
 }

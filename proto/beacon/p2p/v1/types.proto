@@ -12,12 +12,12 @@ message BeaconState {
 
   // Randomness and committees [1001-2000]
   repeated bytes latest_randao_mixes_hash32s = 1004;
-  uint64 previous_epoch_start_shard = 1005;
-  uint64 current_epoch_start_shard = 1006;
-  uint64 previous_calculation_epoch = 1007;
-  uint64 current_calculation_epoch = 1008;
-  bytes previous_epoch_seed_hash32 = 1009;
-  bytes current_epoch_seed_hash32 = 1010;
+  uint64 previous_shuffling_start_shard = 1005;
+  uint64 current_shuffling_start_shard = 1006;
+  uint64 previous_shuffling_epoch = 1007;
+  uint64 current_shuffling_epoch = 1008;
+  bytes previous_shuffling_seed_hash32 = 1009;
+  bytes current_shuffling_seed_hash32 = 1010;
 
   // Finality [2001-3000]
   uint64 previous_justified_epoch = 2001;

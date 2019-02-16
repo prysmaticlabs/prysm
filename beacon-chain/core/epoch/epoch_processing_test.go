@@ -430,25 +430,25 @@ func TestCanNotProcessValidatorRegistry(t *testing.T) {
 
 func TestProcessPrevSlotShardOk(t *testing.T) {
 	state := &pb.BeaconState{
-		CurrentCalculationEpoch: 1,
-		CurrentEpochStartShard:  2,
-		CurrentEpochSeedHash32:  []byte{'A'},
+		CurrentShufflingEpoch: 1,
+		CurrentShufflingStartShard:  2,
+		CurrentShufflingSeedHash32:  []byte{'A'},
 	}
 
 	newState := ProcessPrevSlotShardSeed(
 		proto.Clone(state).(*pb.BeaconState))
 
-	if newState.PreviousCalculationEpoch != state.CurrentCalculationEpoch {
+	if newState.PreviousShufflingEpoch != state.CurrentShufflingEpoch {
 		t.Errorf("Incorret prev epoch calculation slot: Wanted: %d, got: %d",
-			newState.PreviousCalculationEpoch, state.CurrentCalculationEpoch)
+			newState.PreviousShufflingEpoch, state.CurrentShufflingEpoch)
 	}
-	if newState.PreviousEpochStartShard != state.CurrentEpochStartShard {
+	if newState.PreviousShufflingStartShard != state.CurrentShufflingStartShard {
 		t.Errorf("Incorret prev epoch start shard: Wanted: %d, got: %d",
-			newState.PreviousEpochStartShard, state.CurrentEpochStartShard)
+			newState.PreviousShufflingStartShard, state.CurrentShufflingStartShard)
 	}
-	if !bytes.Equal(newState.PreviousEpochSeedHash32, state.CurrentEpochSeedHash32) {
+	if !bytes.Equal(newState.PreviousShufflingSeedHash32, state.CurrentShufflingSeedHash32) {
 		t.Errorf("Incorret prev epoch seed mix hash: Wanted: %v, got: %v",
-			state.CurrentEpochSeedHash32, newState.PreviousEpochSeedHash32)
+			state.CurrentShufflingSeedHash32, newState.PreviousShufflingSeedHash32)
 	}
 }
 
@@ -456,20 +456,20 @@ func TestProcessValidatorRegistryOk(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                     params.BeaconConfig().MinSeedLookahead,
 		LatestRandaoMixesHash32S: [][]byte{{'A'}, {'B'}},
-		CurrentEpochSeedHash32:   []byte{'C'},
+		CurrentShufflingSeedHash32:   []byte{'C'},
 	}
 	newState, err := ProcessValidatorRegistry(
 		proto.Clone(state).(*pb.BeaconState))
 	if err != nil {
 		t.Fatalf("Could not execute ProcessValidatorRegistry: %v", err)
 	}
-	if newState.CurrentCalculationEpoch != state.Slot {
+	if newState.CurrentShufflingEpoch != state.Slot {
 		t.Errorf("Incorret curr epoch calculation slot: Wanted: %d, got: %d",
-			newState.CurrentCalculationEpoch, state.Slot)
+			newState.CurrentShufflingEpoch, state.Slot)
 	}
-	if !bytes.Equal(newState.CurrentEpochSeedHash32, state.LatestRandaoMixesHash32S[0]) {
+	if !bytes.Equal(newState.CurrentShufflingSeedHash32, state.LatestRandaoMixesHash32S[0]) {
 		t.Errorf("Incorret current epoch seed mix hash: Wanted: %v, got: %v",
-			state.LatestRandaoMixesHash32S[0], newState.CurrentEpochSeedHash32)
+			state.LatestRandaoMixesHash32S[0], newState.CurrentShufflingSeedHash32)
 	}
 }
 
@@ -484,9 +484,9 @@ func TestProcessPartialValidatorRegistry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not ProcessPartialValidatorRegistry: %v", err)
 	}
-	if newState.CurrentCalculationEpoch != helpers.NextEpoch(state) {
-		t.Errorf("Incorrect CurrentCalculationEpoch, wanted: %d, got: %d",
-			helpers.NextEpoch(state), newState.CurrentCalculationEpoch)
+	if newState.CurrentShufflingEpoch != helpers.NextEpoch(state) {
+		t.Errorf("Incorrect CurrentShufflingEpoch, wanted: %d, got: %d",
+			helpers.NextEpoch(state), newState.CurrentShufflingEpoch)
 	}
 }
 

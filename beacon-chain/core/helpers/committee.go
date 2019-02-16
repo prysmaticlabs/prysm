@@ -72,7 +72,7 @@ func EpochCommitteeCount(activeValidatorCount uint64) uint64 {
 //    return get_epoch_committee_count(len(current_active_validators)
 func CurrentEpochCommitteeCount(state *pb.BeaconState) uint64 {
 	currActiveValidatorIndices := ActiveValidatorIndices(
-		state.ValidatorRegistry, state.CurrentCalculationEpoch)
+		state.ValidatorRegistry, state.CurrentShufflingEpoch)
 	return EpochCommitteeCount(uint64(len(currActiveValidatorIndices)))
 }
 
@@ -91,7 +91,7 @@ func CurrentEpochCommitteeCount(state *pb.BeaconState) uint64 {
 //    return get_epoch_committee_count(len(previous_active_validators))
 func PrevEpochCommitteeCount(state *pb.BeaconState) uint64 {
 	prevActiveValidatorIndices := ActiveValidatorIndices(
-		state.ValidatorRegistry, state.PreviousCalculationEpoch)
+		state.ValidatorRegistry, state.PreviousShufflingEpoch)
 	return EpochCommitteeCount(uint64(len(prevActiveValidatorIndices)))
 }
 
@@ -201,14 +201,14 @@ func CrosslinkCommitteesAtSlot(
 
 	if wantedEpoch == prevEpoch {
 		committeesPerEpoch = PrevEpochCommitteeCount(state)
-		seed = bytesutil.ToBytes32(state.PreviousEpochSeedHash32)
-		shufflingEpoch = state.PreviousCalculationEpoch
-		shufflingStartShard = state.PreviousEpochStartShard
+		seed = bytesutil.ToBytes32(state.PreviousShufflingSeedHash32)
+		shufflingEpoch = state.PreviousShufflingEpoch
+		shufflingStartShard = state.PreviousShufflingStartShard
 	} else if wantedEpoch == currentEpoch {
 		committeesPerEpoch = PrevEpochCommitteeCount(state)
-		seed = bytesutil.ToBytes32(state.CurrentEpochSeedHash32)
-		shufflingEpoch = state.CurrentCalculationEpoch
-		shufflingStartShard = state.CurrentEpochStartShard
+		seed = bytesutil.ToBytes32(state.CurrentShufflingSeedHash32)
+		shufflingEpoch = state.CurrentShufflingEpoch
+		shufflingStartShard = state.CurrentShufflingStartShard
 	} else if wantedEpoch == nextEpoch {
 		currentCommitteesPerEpoch := CurrentEpochCommitteeCount(state)
 		committeesPerEpoch = NextEpochCommitteeCount(state)
@@ -220,7 +220,7 @@ func CrosslinkCommitteesAtSlot(
 			if err != nil {
 				return nil, fmt.Errorf("could not generate seed: %v", err)
 			}
-			shufflingStartShard = (state.CurrentEpochStartShard + currentCommitteesPerEpoch) %
+			shufflingStartShard = (state.CurrentShufflingStartShard + currentCommitteesPerEpoch) %
 				params.BeaconConfig().ShardCount
 		} else if epochsSinceLastRegistryUpdate > 1 &&
 			mathutil.IsPowerOf2(epochsSinceLastRegistryUpdate) {
@@ -228,10 +228,10 @@ func CrosslinkCommitteesAtSlot(
 			if err != nil {
 				return nil, fmt.Errorf("could not generate seed: %v", err)
 			}
-			shufflingStartShard = state.CurrentEpochStartShard
+			shufflingStartShard = state.CurrentShufflingStartShard
 		} else {
-			seed = bytesutil.ToBytes32(state.CurrentEpochSeedHash32)
-			shufflingStartShard = state.CurrentEpochStartShard
+			seed = bytesutil.ToBytes32(state.CurrentShufflingSeedHash32)
+			shufflingStartShard = state.CurrentShufflingStartShard
 		}
 	}
 
