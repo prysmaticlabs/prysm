@@ -478,7 +478,7 @@ func eligibleToExit(state *pb.BeaconState, idx uint64) bool {
 		slashedWithdrawalEpochs := params.BeaconConfig().LatestSlashedExitLength / 2
 		return currentEpoch >= validator.SlashedEpoch+slashedWithdrawalEpochs
 	}
-	return currentEpoch >= validator.ExitEpoch+params.BeaconConfig().MinValidatorWithdrawalEpochs
+	return currentEpoch >= validator.ExitEpoch+params.BeaconConfig().MinValidatorWithdrawalDelay
 }
 
 // prepareValidatorForWithdrawal sets validator's status flag to
