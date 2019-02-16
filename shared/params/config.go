@@ -25,7 +25,7 @@ type BeaconChainConfig struct {
 	LatestRandaoMixesLength    uint64 // LatestRandaoMixesLength is the number of randao mixes kept in the beacon state.
 	LatestSlashedExitLength    uint64 // LatestSlashedExitLength is used to track penalized exit balances per time interval.
 	LatestActiveIndexRootsLength     uint64 // LatestIndexRootsLength is the number of index roots kept in beacon state, used by light client.
-	MaxWithdrawalsPerEpoch     uint64 // MaxWithdrawalsPerEpoch is the max withdrawals can happen for a single epoch.
+	MaxExitDequeuesPerEpoch     uint64 // MaxWithdrawalsPerEpoch is the max withdrawals can happen for a single epoch.
 	ValidatorPrivkeyFileName   string // ValidatorPrivKeyFileName specifies the string name of a validator private key file.
 	WithdrawalPrivkeyFileName  string // WithdrawalPrivKeyFileName specifies the string name of a withdrawal private key file.
 	BLSPubkeyLength            int    // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
@@ -105,7 +105,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	LatestRandaoMixesLength:    8192,
 	LatestSlashedExitLength:    8192,
 	LatestActiveIndexRootsLength:     8192,
-	MaxWithdrawalsPerEpoch:     4,
+	MaxExitDequeuesPerEpoch:     4,
 	ValidatorPrivkeyFileName:   "/validatorprivatekey",
 	WithdrawalPrivkeyFileName:  "/shardwithdrawalkey",
 	BLSPubkeyLength:            96,

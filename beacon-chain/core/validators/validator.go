@@ -427,7 +427,7 @@ func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 	for _, idx := range eligibleIndices {
 		state = prepareValidatorForWithdrawal(state, idx)
 		withdrawnSoFar++
-		if withdrawnSoFar >= params.BeaconConfig().MaxWithdrawalsPerEpoch {
+		if withdrawnSoFar >= params.BeaconConfig().MaxExitDequeuesPerEpoch {
 			break
 		}
 	}
