@@ -455,7 +455,7 @@ func (w *Web3Service) requestBatchedLogs() error {
 
 	// Only process log slices which are larger than zero.
 	if len(logs) > 0 {
-		log.Info("Processing Batched Logs")
+		log.Debug("Processing Batched Logs")
 		for _, log := range logs {
 			w.ProcessLog(log)
 		}
