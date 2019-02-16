@@ -1,13 +1,16 @@
 package rpc
 
 import (
+	"bytes"
 	"context"
 	"errors"
-	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 	"github.com/prysmaticlabs/prysm/shared/event"
 
@@ -72,7 +75,8 @@ func (m *mockPOWChainService) BlockHashByHeight(height *big.Int) (common.Hash, e
 }
 
 func (m *mockPOWChainService) DepositRoot() [32]byte {
-	return [32]byte{}
+	root := []byte("depositroot")
+	return bytesutil.ToBytes32(root)
 }
 
 func TestWaitForChainStart_ContextClosed(t *testing.T) {
@@ -308,14 +312,31 @@ func TestPendingDeposits_ReturnsDepositsOutsideEth1FollowWindow(t *testing.T) {
 	}
 }
 
-func TestEth1Data_EmptyVotes(t *testing.T) {
+func TestEth1Data_EmptyVotesOk(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	beaconServer := &BeaconServer{
 		beaconDB: db,
+		powChainService: &mockPOWChainService{
+			latestBlockNumber: big.NewInt(1),
+		},
+	}
+	beaconState := &pbp2p.BeaconState{}
+	if err := beaconServer.beaconDB.SaveState(beaconState); err != nil {
+		t.Fatal(err)
 	}
 	result, err := beaconServer.Eth1Data(context.Background(), nil)
 	if err != nil {
 		t.Fatal(err)
+	}
+	// If the data vote objects are empty, the deposit root should be the one corresponding
+	// to the deposit contract in the powchain service, fetched using powChainService.DepositRoot()
+	depositRoot := beaconServer.powChainService.DepositRoot()
+	if !bytes.Equal(result.Eth1Data.DepositRootHash32, depositRoot[:]) {
+		t.Errorf(
+			"Expected deposit roots to match, received %#x == %#x",
+			result.Eth1Data.DepositRootHash32,
+			depositRoot,
+		)
 	}
 }

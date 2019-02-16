@@ -202,14 +202,14 @@ func (w *Web3Service) LatestBlockHash() common.Hash {
 
 // BlockExists --
 // Unimplemented, Work in Progress.
-func BlockExists(hash common.Hash) (bool, *big.Int, error) {
+func (w *Web3Service) BlockExists(hash common.Hash) (bool, *big.Int, error) {
 	return false, big.NewInt(0), nil
 }
 
 // BlockHashByHeight --
 // Unimplemented, Work in Progress.
-func BlockHashByHeight(height *big.Int) (common.Hash, error) {
-    return [32]byte{}, nil
+func (w *Web3Service) BlockHashByHeight(height *big.Int) (common.Hash, error) {
+	return [32]byte{}, nil
 }
 
 // Client for interacting with the ETH1.0 chain.
