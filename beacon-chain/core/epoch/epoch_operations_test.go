@@ -88,39 +88,40 @@ func TestEpochBoundaryAttestations(t *testing.T) {
 	}
 
 	epochAttestations := []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{JustifiedBlockRootHash32: []byte{0}}},
-		{Data: &pb.AttestationData{JustifiedBlockRootHash32: []byte{1}}},
-		{Data: &pb.AttestationData{JustifiedBlockRootHash32: []byte{2}}},
-		{Data: &pb.AttestationData{JustifiedBlockRootHash32: []byte{3}}},
+		{Data: &pb.AttestationData{JustifiedBlockRootHash32: []byte{64}, JustifiedEpoch: params.BeaconConfig().GenesisEpoch}},
+		{Data: &pb.AttestationData{JustifiedBlockRootHash32: []byte{64}, JustifiedEpoch: params.BeaconConfig().GenesisEpoch}},
+		{Data: &pb.AttestationData{JustifiedBlockRootHash32: []byte{64}, JustifiedEpoch: params.BeaconConfig().GenesisEpoch}},
+		{Data: &pb.AttestationData{JustifiedBlockRootHash32: []byte{64}, JustifiedEpoch: params.BeaconConfig().GenesisEpoch}},
 	}
 
 	var latestBlockRootHash [][]byte
-	for i := uint64(0); i < params.BeaconConfig().EpochLength; i++ {
+	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
 		latestBlockRootHash = append(latestBlockRootHash, []byte{byte(i)})
 	}
 
 	state := &pb.BeaconState{
 		LatestAttestations:     epochAttestations,
 		LatestBlockRootHash32S: latestBlockRootHash,
+		JustifiedEpoch:         params.BeaconConfig().GenesisEpoch,
 	}
 
 	if _, err := CurrentBoundaryAttestations(state, epochAttestations); err == nil {
 		t.Fatal("CurrentBoundaryAttestations should have failed with empty block root hash")
 	}
 
-	state.Slot = params.BeaconConfig().EpochLength
+	state.Slot = params.BeaconConfig().EpochLength + params.BeaconConfig().GenesisSlot + 1
 	epochBoundaryAttestation, err := CurrentBoundaryAttestations(state, epochAttestations)
 	if err != nil {
 		t.Fatalf("CurrentBoundaryAttestations failed: %v", err)
 	}
 
-	if epochBoundaryAttestation[0].Data.JustifiedEpoch != 0 {
+	if epochBoundaryAttestation[0].Data.JustifiedEpoch != params.BeaconConfig().GenesisEpoch {
 		t.Errorf("Wanted justified epoch 0 for epoch boundary attestation, got: %d",
 			epochBoundaryAttestation[0].Data.JustifiedEpoch)
 	}
 
-	if !bytes.Equal(epochBoundaryAttestation[0].Data.JustifiedBlockRootHash32, []byte{0}) {
-		t.Errorf("Wanted justified block hash [0] for epoch boundary attestation, got: %v",
+	if !bytes.Equal(epochBoundaryAttestation[0].Data.JustifiedBlockRootHash32, []byte{64}) {
+		t.Errorf("Wanted justified block hash [64] for epoch boundary attestation, got: %v",
 			epochBoundaryAttestation[0].Data.JustifiedBlockRootHash32)
 	}
 }
@@ -227,13 +228,14 @@ func TestPrevEpochBoundaryAttestations(t *testing.T) {
 	}
 
 	var latestBlockRootHash [][]byte
-	for i := uint64(0); i < params.BeaconConfig().EpochLength*3; i++ {
+	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
 		latestBlockRootHash = append(latestBlockRootHash, []byte{byte(i)})
 	}
 
 	state := &pb.BeaconState{
-		Slot:                   3 * params.BeaconConfig().EpochLength,
+		Slot:                   3*params.BeaconConfig().EpochLength + params.BeaconConfig().GenesisSlot,
 		LatestBlockRootHash32S: latestBlockRootHash,
+		JustifiedEpoch:         params.BeaconConfig().GenesisEpoch,
 	}
 
 	prevEpochBoundaryAttestation, err := PrevBoundaryAttestations(state, epochAttestations)
@@ -258,24 +260,32 @@ func TestHeadAttestationsOk(t *testing.T) {
 	}
 
 	prevAttestations := []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{Slot: 1, BeaconBlockRootHash32: []byte{'A'}}},
-		{Data: &pb.AttestationData{Slot: 2, BeaconBlockRootHash32: []byte{'A'}}},
-		{Data: &pb.AttestationData{Slot: 3, BeaconBlockRootHash32: []byte{'A'}}},
-		{Data: &pb.AttestationData{Slot: 4, BeaconBlockRootHash32: []byte{'A'}}},
+		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot + 1, BeaconBlockRootHash32: []byte{'A'}}},
+		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot + 2, BeaconBlockRootHash32: []byte{'A'}}},
+		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot + 3, BeaconBlockRootHash32: []byte{'A'}}},
+		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot + 4, BeaconBlockRootHash32: []byte{'A'}}},
 	}
 
-	state := &pb.BeaconState{Slot: 5, LatestBlockRootHash32S: [][]byte{{'A'}, {'A'}, {'A'}, {'A'}}}
+	var latestBlockRootHash [][]byte
+	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
+		latestBlockRootHash = append(latestBlockRootHash, []byte{byte('A')})
+	}
+
+	state := &pb.BeaconState{
+		Slot:                   params.BeaconConfig().GenesisSlot + 5,
+		LatestBlockRootHash32S: latestBlockRootHash,
+		JustifiedEpoch:         params.BeaconConfig().GenesisEpoch}
 
 	headAttestations, err := PrevHeadAttestations(state, prevAttestations)
 	if err != nil {
 		t.Fatalf("PrevHeadAttestations failed with %v", err)
 	}
 
-	if headAttestations[0].Data.Slot != 1 {
-		t.Errorf("headAttestations[0] wanted slot 1, got slot %d", headAttestations[0].Data.Slot)
+	if headAttestations[0].Data.Slot != params.BeaconConfig().GenesisSlot+1 {
+		t.Errorf("headAttestations[0] wanted slot 9223372036854775809, got slot %d", headAttestations[0].Data.Slot)
 	}
-	if headAttestations[1].Data.Slot != 2 {
-		t.Errorf("headAttestations[1] wanted slot 2, got slot %d", headAttestations[1].Data.Slot)
+	if headAttestations[1].Data.Slot != params.BeaconConfig().GenesisSlot+2 {
+		t.Errorf("headAttestations[1] wanted slot 9223372036854775810, got slot %d", headAttestations[1].Data.Slot)
 	}
 	if !bytes.Equal([]byte{'A'}, headAttestations[0].Data.BeaconBlockRootHash32) {
 		t.Errorf("headAttestations[0] wanted hash [A], got slot %v",

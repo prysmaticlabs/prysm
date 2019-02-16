@@ -85,10 +85,10 @@ func (s *Service) IncomingAttFeed() *event.Feed {
 	return s.incomingAttFeed
 }
 
-// Attestations returns the attestations that have not seen on the beacon chain, the attestations are
+// PendingAttestations returns the attestations that have not seen on the beacon chain, the attestations are
 // returns in slot ascending order and up to MaxAttestations capacity. The attestations get
 // deleted in DB after they have been retrieved.
-func (s *Service) Attestations() ([]*pb.Attestation, error) {
+func (s *Service) PendingAttestations() ([]*pb.Attestation, error) {
 	var attestations []*pb.Attestation
 	attestationsFromDB, err := s.beaconDB.Attestations()
 	if err != nil {
