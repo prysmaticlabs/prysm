@@ -83,7 +83,6 @@ type Web3Service struct {
 	blockNumber             *big.Int    // the latest ETH1.0 chain blockNumber.
 	blockHash               common.Hash // the latest ETH1.0 chain blockHash.
 	blockTime               time.Time   // the latest ETH1.0 chain blockTime.
-	lastHeadInteractTime    time.Time   // the time when we subscribed or the last heading was received
 	depositContractCaller   *contracts.DepositContractCaller
 	depositRoot             []byte
 	depositTrie             *trieutil.DepositTrie
@@ -185,14 +184,11 @@ func (w *Web3Service) Status() error {
 	if w.runError != nil {
 		return w.runError
 	}
-	// use a 1 minute  timeout for syncing process (if start syncing from old block)
-	minuteTimeout := time.Now().Add(-time.Minute)
 	// use a 5 minutes timeout for block time, because the max mining time is 278 sec (block 7208027)
 	// (analyzed the time of the block from 2018-09-01 to 2019-02-13)
 	fiveMinutesTimeout := time.Now().Add(-5 * time.Minute)
 	// check that web3 client is syncing
-	if w.lastHeadInteractTime.Before(minuteTimeout) &&
-		(w.blockTime.Before(fiveMinutesTimeout)) {
+	if w.blockTime.Before(fiveMinutesTimeout) {
 		return errors.New("web3 client is not syncing")
 	}
 	return nil
@@ -318,7 +314,6 @@ func (w *Web3Service) ProcessChainStartLog(VRClog gethTypes.Log) {
 
 // run subscribes to all the services for the ETH1.0 chain.
 func (w *Web3Service) run(done <-chan struct{}) {
-	w.lastHeadInteractTime = time.Now()
 	w.isRunning = true
 	w.runError = nil
 	if err := w.initDataFromContract(); err != nil {
@@ -375,7 +370,6 @@ func (w *Web3Service) run(done <-chan struct{}) {
 			w.blockNumber = header.Number
 			w.blockHash = header.Hash()
 			w.blockTime = time.Unix(header.Time.Int64(), 0)
-			w.lastHeadInteractTime = time.Now()
 			log.WithFields(logrus.Fields{
 				"blockNumber": w.blockNumber,
 				"blockHash":   w.blockHash.Hex(),

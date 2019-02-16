@@ -36,15 +36,9 @@ func (b *badReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.H
 	return nil, errors.New("subscription has failed")
 }
 
-type goodReader struct {
-	web3Service               *Web3Service
-	clearLastHeadInteractTime bool
-}
+type goodReader struct{}
 
 func (g *goodReader) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
-	if g.clearLastHeadInteractTime {
-		g.web3Service.lastHeadInteractTime = time.Time{}
-	}
 	return new(event.Feed).Subscribe(ch), nil
 }
 
@@ -339,39 +333,6 @@ func TestBadReader(t *testing.T) {
 	hook.Reset()
 }
 
-func TestSetLastHeadInteractTimeOnSubscribeNewHead(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
-	testAcc, err := setup()
-	if err != nil {
-		t.Fatalf("Unable to set up simulated backend %v", err)
-	}
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
-		Endpoint:        endpoint,
-		DepositContract: testAcc.contractAddr,
-		Reader:          &goodReader{},
-		Logger:          &goodLogger{},
-		ContractBackend: testAcc.backend,
-	})
-	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
-	}
-	exitRoutine := make(chan bool)
-
-	timeBeforeSubscribe := time.Now()
-
-	go func() {
-		web3Service.run(web3Service.ctx.Done())
-		<-exitRoutine
-	}()
-	web3Service.cancel()
-	exitRoutine <- true
-
-	if web3Service.lastHeadInteractTime.Before(timeBeforeSubscribe) ||
-		web3Service.lastHeadInteractTime.After(time.Now()) {
-		t.Errorf("lastHeadInteractTime not set before SubscribeNewHead, expected time.Now(), got %v", web3Service.lastHeadInteractTime)
-	}
-}
-
 func TestLatestMainchainInfo(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
@@ -390,9 +351,6 @@ func TestLatestMainchainInfo(t *testing.T) {
 	}
 	testAcc.backend.Commit()
 
-	web3Service.reader.(*goodReader).clearLastHeadInteractTime = true
-	web3Service.reader.(*goodReader).web3Service = web3Service
-
 	exitRoutine := make(chan bool)
 
 	go func() {
@@ -404,8 +362,6 @@ func TestLatestMainchainInfo(t *testing.T) {
 		Number: big.NewInt(42),
 		Time:   big.NewInt(308534400),
 	}
-
-	timeBeforeHeadInteract := time.Now()
 
 	web3Service.headerChan <- header
 	web3Service.cancel()
@@ -421,11 +377,6 @@ func TestLatestMainchainInfo(t *testing.T) {
 
 	if web3Service.blockTime != time.Unix(header.Time.Int64(), 0) {
 		t.Errorf("block time not set, expected %v, got %v", time.Unix(header.Time.Int64(), 0), web3Service.blockTime)
-	}
-
-	if web3Service.lastHeadInteractTime.Before(timeBeforeHeadInteract) ||
-		web3Service.lastHeadInteractTime.After(time.Now()) {
-		t.Errorf("lastHeadInteractTime not set, expected time.Now(), got %v", web3Service.lastHeadInteractTime)
 	}
 }
 
@@ -968,23 +919,19 @@ func TestHasChainStartLogOccurred(t *testing.T) {
 func TestStatus(t *testing.T) {
 	now := time.Now()
 
-	beforeMinuteAgo := now.Add(-time.Minute - 30*time.Second)
-	afterMinuteAgo := now.Add(-time.Minute + 30*time.Second)
 	beforeFiveMinutesAgo := now.Add(-5*time.Minute - 30*time.Second)
 	afterFiveMinutesAgo := now.Add(-5*time.Minute + 30*time.Second)
 
 	testCases := map[*Web3Service]string{
 		// "status is ok" cases
 		&Web3Service{}: "",
-		&Web3Service{isRunning: true, lastHeadInteractTime: now}:                                               "",
-		&Web3Service{isRunning: true, lastHeadInteractTime: afterMinuteAgo}:                                    "",
-		&Web3Service{isRunning: true, lastHeadInteractTime: beforeMinuteAgo, blockTime: afterFiveMinutesAgo}:   "",
-		&Web3Service{isRunning: false, lastHeadInteractTime: beforeMinuteAgo, blockTime: beforeFiveMinutesAgo}: "",
-		&Web3Service{isRunning: false, runError: errors.New("test runError")}:                                  "",
+		&Web3Service{isRunning: true, blockTime: afterFiveMinutesAgo}:         "",
+		&Web3Service{isRunning: false, blockTime: beforeFiveMinutesAgo}:       "",
+		&Web3Service{isRunning: false, runError: errors.New("test runError")}: "",
 		// "status is error" cases
-		&Web3Service{isRunning: true, lastHeadInteractTime: beforeMinuteAgo, blockTime: beforeFiveMinutesAgo}: "web3 client is not syncing",
-		&Web3Service{isRunning: true, lastHeadInteractTime: beforeMinuteAgo}:                                  "web3 client is not syncing",
-		&Web3Service{isRunning: true, runError: errors.New("test runError")}:                                  "test runError",
+		&Web3Service{isRunning: true, blockTime: beforeFiveMinutesAgo}:       "web3 client is not syncing",
+		&Web3Service{isRunning: true}:                                        "web3 client is not syncing",
+		&Web3Service{isRunning: true, runError: errors.New("test runError")}: "test runError",
 	}
 
 	for web3ServiceState, wantedErrorText := range testCases {
