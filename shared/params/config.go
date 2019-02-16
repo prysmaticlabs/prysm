@@ -50,7 +50,7 @@ type BeaconChainConfig struct {
 	BLSWithdrawalPrefixByte byte     // BLSWithdrawalPrefixByte is used for BLS withdrawal and it's the first byte.
 
 	// Time parameters constants.
-	SlotDuration                 uint64 // SlotDuration is how many seconds are in a single slot.
+	SecondsPerSlot                uint64 // SlotDuration is how many seconds are in a single slot.
 	MinAttestationInclusionDelay uint64 // MinAttestationInclusionDelay defines how long validator has to wait to include attestation for beacon block.
 	EpochLength                  uint64 // EpochLength is the number of slots in an epoch.
 	MinSeedLookahead                uint64 // SeedLookahead is the duration of randao look ahead seed.
@@ -186,7 +186,7 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.DepositsForChainStart = 8
 	demoConfig.EpochLength = 4
 	demoConfig.GenesisEpoch = demoConfig.GenesisSlot / 4
-	demoConfig.SlotDuration = 10
+	demoConfig.SecondsPerSlot= 10
 	demoConfig.MinDepositAmount = 100
 	demoConfig.MaxDepositAmount = 3200
 	demoConfig.SyncPollingInterval = 2 * 4 // Query nodes over the network every 4 slots for sync status.

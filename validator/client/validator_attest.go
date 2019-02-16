@@ -13,7 +13,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 )
 
-var delay = params.BeaconConfig().SlotDuration / 2
+var delay = params.BeaconConfig().SecondsPerSlot/ 2
 
 // AttestToBlockHead completes the validator client's attester responsibility at a given slot.
 // It fetches the latest beacon block head along with the latest canonical beacon state
