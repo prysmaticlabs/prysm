@@ -129,7 +129,7 @@ func TestRetrieveAttestations_Ok(t *testing.T) {
 		}
 	}
 	// Test we can retrieve attestations from slot0 - slot127 (Max attestation amount).
-	attestations, err := service.Attestations()
+	attestations, err := service.PendingAttestations()
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}
@@ -139,7 +139,7 @@ func TestRetrieveAttestations_Ok(t *testing.T) {
 	}
 
 	// Test we can retrieve attestations from slot128 - slot139.
-	attestations, err = service.Attestations()
+	attestations, err = service.PendingAttestations()
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}
@@ -149,7 +149,7 @@ func TestRetrieveAttestations_Ok(t *testing.T) {
 	}
 
 	// Verify attestation pool is empty now we have retrieved everything.
-	attestations, err = service.Attestations()
+	attestations, err = service.PendingAttestations()
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}

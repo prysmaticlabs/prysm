@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	ptypes "github.com/gogo/protobuf/types"
+
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -21,6 +23,7 @@ type ProposerServer struct {
 	beaconDB           *db.BeaconDB
 	chainService       chainService
 	powChainService    powChainService
+	operationService   operationService
 	canonicalStateChan chan *pbp2p.BeaconState
 }
 
@@ -57,6 +60,19 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 	// We relay the received block from the proposer to the chain service for processing.
 	ps.chainService.IncomingBlockFeed().Send(blk)
 	return &pb.ProposeResponse{BlockHash: h[:]}, nil
+}
+
+// PendingAttestations retrieves attestations kept in the beacon node's operations pool which have
+// not yet been included into the beacon chain. Proposers include these pending attestations in their
+// proposed blocks when performing their responsibility.
+func (ps *ProposerServer) PendingAttestations(ctx context.Context, _ *ptypes.Empty) (*pb.PendingAttestationsResponse, error) {
+	atts, err := ps.operationService.PendingAttestations()
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve pending attestations from operations service: %v", err)
+	}
+	return &pb.PendingAttestationsResponse{
+		PendingAttestations: atts,
+	}, nil
 }
 
 // ComputeStateRoot computes the state root after a block has been processed through a state transition and
