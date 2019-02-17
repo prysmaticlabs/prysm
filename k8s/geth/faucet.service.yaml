@@ -28,7 +28,7 @@ spec:
     hosts:
     - api.prylabs.net
     tls:
-      httpsRedirect: true 
+      httpsRedirect: false
   - port: 
       number: 443
       name: https
@@ -51,9 +51,7 @@ spec:
   gateways:
   - public-faucet-gateway
   http:
-  - match:
-    - port: 443 
-    route:
+  - route:
     - destination:
         port: 
           number: 8000
