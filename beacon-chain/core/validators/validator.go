@@ -225,8 +225,9 @@ func ExitValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) {
 //    Penalize the validator of the given ``index``.
 //    Note that this function mutates ``state``.
 //    """
-//    exit_validator(state, index)
 //    validator = state.validator_registry[index]
+//    assert state.slot < get_epoch_start_slot(validator.withdrawable_epoch)  # [TO BE REMOVED IN PHASE 2]
+//    exit_validator(state, index)
 //    state.latest_penalized_balances[get_current_epoch(state) % LATEST_PENALIZED_EXIT_LENGTH] += get_effective_balance(state, index)
 //
 //    whistleblower_index = get_beacon_proposer_index(state, state.slot)
@@ -235,6 +236,11 @@ func ExitValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) {
 //    state.validator_balances[index] -= whistleblower_reward
 //    validator.penalized_epoch = get_current_epoch(state)
 func PenalizeValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) {
+	if state.Slot >= helpers.StartSlot(state.ValidatorRegistry[idx].WithdrawalEpoch) {
+		return nil, fmt.Errorf("withdrawn validator %d could not get slashed, "+
+			"current slot: %d, withdrawn slot %d",
+			idx, state.Slot, helpers.StartSlot(state.ValidatorRegistry[idx].WithdrawalEpoch))
+	}
 	state, err := ExitValidator(state, idx)
 	if err != nil {
 		return nil, fmt.Errorf("could not exit penalized validator: %v", err)
