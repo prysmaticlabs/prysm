@@ -19,21 +19,24 @@ var log = logrus.WithField("prefix", "operation")
 // Service represents a service that handles the internal
 // logic of beacon block operations.
 type Service struct {
-	ctx                    context.Context
-	cancel                 context.CancelFunc
-	beaconDB               *db.BeaconDB
-	incomingExitFeed       *event.Feed
-	incomingValidatorExits chan *pb.Exit
-	incomingAttFeed        *event.Feed
-	incomingAtt            chan *pb.Attestation
-	error                  error
+	ctx                        context.Context
+	cancel                     context.CancelFunc
+	beaconDB                   *db.BeaconDB
+	incomingExitFeed           *event.Feed
+	incomingValidatorExits     chan *pb.Exit
+	incomingAttFeed            *event.Feed
+	incomingAtt                chan *pb.Attestation
+	incomingProcessedBlockFeed *event.Feed
+	incomingProcessedBlock     chan *pb.BeaconBlock
+	error                      error
 }
 
 // Config options for the service.
 type Config struct {
-	BeaconDB       *db.BeaconDB
-	ReceiveExitBuf int
-	ReceiveAttBuf  int
+	BeaconDB        *db.BeaconDB
+	ReceiveExitBuf  int
+	ReceiveAttBuf   int
+	ReceiveBlockBuf int
 }
 
 // NewOperationService instantiates a new service instance that will
@@ -41,13 +44,15 @@ type Config struct {
 func NewOperationService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:                    ctx,
-		cancel:                 cancel,
-		beaconDB:               cfg.BeaconDB,
-		incomingExitFeed:       new(event.Feed),
-		incomingValidatorExits: make(chan *pb.Exit, cfg.ReceiveExitBuf),
-		incomingAttFeed:        new(event.Feed),
-		incomingAtt:            make(chan *pb.Attestation, cfg.ReceiveAttBuf),
+		ctx:                        ctx,
+		cancel:                     cancel,
+		beaconDB:                   cfg.BeaconDB,
+		incomingExitFeed:           new(event.Feed),
+		incomingValidatorExits:     make(chan *pb.Exit, cfg.ReceiveExitBuf),
+		incomingAttFeed:            new(event.Feed),
+		incomingAtt:                make(chan *pb.Attestation, cfg.ReceiveAttBuf),
+		incomingProcessedBlockFeed: new(event.Feed),
+		incomingProcessedBlock:     make(chan *pb.BeaconBlock, cfg.ReceiveBlockBuf),
 	}
 }
 
@@ -55,6 +60,7 @@ func NewOperationService(ctx context.Context, cfg *Config) *Service {
 func (s *Service) Start() {
 	log.Info("Starting service")
 	go s.saveOperations()
+	go s.removeOperations()
 }
 
 // Stop the beacon block operation service's main event loop
@@ -82,6 +88,12 @@ func (s *Service) IncomingExitFeed() *event.Feed {
 // IncomingAttFeed returns a feed that any service can send incoming p2p attestations into.
 // The beacon block operation service will subscribe to this feed in order to relay incoming attestations.
 func (s *Service) IncomingAttFeed() *event.Feed {
+	return s.incomingAttFeed
+}
+
+// IncomingBlockFeed returns a feed that any service can send incoming p2p beacon blocks into.
+// The beacon block operation service will subscribe to this feed in order to receive incoming beacon blocks.
+func (s *Service) IncomingBlockFeed() *event.Feed {
 	return s.incomingAttFeed
 }
 
@@ -137,7 +149,7 @@ func (s *Service) saveOperations() {
 				log.Errorf("Could not save exit request: %v", err)
 				continue
 			}
-			log.Debugf("Exit request %#x saved in db", hash)
+			log.Debugf("Exit request %#x saved in DB", hash)
 		case attestation := <-s.incomingAtt:
 			hash, err := hashutil.HashProto(attestation)
 			if err != nil {
@@ -148,8 +160,46 @@ func (s *Service) saveOperations() {
 				log.Errorf("Could not save attestation: %v", err)
 				continue
 			}
-			log.Debugf("Attestation %#x saved in db", hash)
+			log.Debugf("Attestation %#x saved in DB", hash)
 		}
-
 	}
+}
+
+// removeOperations removes the processed operations from operation pool and DB.
+func (s *Service) removeOperations() {
+	incomingBlockSub := s.incomingProcessedBlockFeed.Subscribe(s.incomingProcessedBlock)
+	defer incomingBlockSub.Unsubscribe()
+
+	for {
+		select {
+		case <-incomingBlockSub.Err():
+			log.Debug("Subscriber closed, exiting goroutine")
+			return
+		case <-s.ctx.Done():
+			log.Debug("Beacon block operations service context closed, exiting goroutine")
+			return
+		// Listen for processed block from the block chain service.
+		case block := <-s.incomingProcessedBlock:
+			// Removes the pending attestations received from processed block body in DB.
+			if err := s.removePendingAttestations(block.Body.Attestations); err != nil {
+				log.Errorf("Could not remove processed attestations from DB: %v", err)
+				return
+			}
+		}
+	}
+}
+
+// removePendingAttestations removes a list of attestations from DB.
+func (s *Service) removePendingAttestations(attestations []*pb.Attestation) error {
+	for _, attestation := range attestations {
+		if err := s.beaconDB.DeleteAttestation(attestation); err != nil {
+			return err
+		}
+		h, err := hashutil.HashProto(attestation)
+		if err != nil {
+			return err
+		}
+		log.WithField("attestationRoot", fmt.Sprintf("0x%x", h)).Info("Attestation removed")
+	}
+	return nil
 }

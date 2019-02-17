@@ -75,7 +75,7 @@ func TestIncomingExits_Ok(t *testing.T) {
 	service.cancel()
 	exitRoutine <- true
 
-	want := fmt.Sprintf("Exit request %#x saved in db", hash)
+	want := fmt.Sprintf("Exit request %#x saved in DB", hash)
 	testutil.AssertLogsContain(t, hook, want)
 }
 
@@ -104,7 +104,7 @@ func TestIncomingAttestation_Ok(t *testing.T) {
 	service.cancel()
 	exitRoutine <- true
 
-	want := fmt.Sprintf("Attestation %#x saved in db", hash)
+	want := fmt.Sprintf("Attestation %#x saved in DB", hash)
 	testutil.AssertLogsContain(t, hook, want)
 }
 

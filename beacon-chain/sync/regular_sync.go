@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 
 	"github.com/gogo/protobuf/proto"
-	att "github.com/prysmaticlabs/prysm/beacon-chain/core/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -304,15 +303,13 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) {
 // discard the attestation if we have gotten before, send it to attestation
 // service if we have not.
 func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
-	data := msg.Data.(*pb.Attestation)
-	a := data
-	h := att.Key(a.Data)
-
-	attestation, err := rs.db.Attestation(h)
+	attestation := msg.Data.(*pb.Attestation)
+	h, err := hashutil.HashProto(attestation)
 	if err != nil {
-		log.Errorf("Could not check for attestation in DB: %v", err)
+		log.Errorf("Could not hash attestation: %v", err)
 		return
 	}
+
 	if rs.db.HasAttestation(h) {
 		log.Debugf("Received, skipping attestation #%x", h)
 		return
