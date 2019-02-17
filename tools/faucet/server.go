@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc/peer"
 )
 
-var minScore float64 = 0.5
+var minScore = 0.5
 
 type faucetServer struct {
 	r recaptcha.Recaptcha
