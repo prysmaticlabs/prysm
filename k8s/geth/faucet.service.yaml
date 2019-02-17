@@ -1,14 +1,75 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: geth-faucet
+  name: public-faucet
   namespace: pow
 spec:
   selector:
-    component: faucet
-    universe: geth
+    component: public-faucet
   ports:
-    - port: 8080
-      name: http
-      targetPort: 8080
+  - port: 8000
+    targetPort: 8000
+    name: grpc-web-port 
   type: ClusterIP
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata: 
+  name: public-faucet-gateway
+  namespace: pow
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: grpc-nonssl
+      protocol: HTTP
+    hosts:
+    - api.prylabs.net
+    tls:
+      httpsRedirect: false # maybe should be true?
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata: 
+  name: public-faucet
+  namespace: pow
+spec:
+  hosts:
+  - api.prylabs.net
+  gateways:
+  - public-faucet-gateway
+  http:
+  - match:
+    - port: 80 
+    route:
+    - destination:
+        port: 
+          number: 8000
+        host: public-faucet
+    corsPolicy:
+      allowOrigin:
+        - "*"
+      allowMethods:
+        - POST
+        - GET
+        - OPTIONS
+        - PUT
+        - DELETE
+      allowHeaders:
+        - grpc-timeout
+        - content-type
+        - keep-alive
+        - user-agent
+        - cache-control
+        - content-type
+        - content-transfer-encoding
+        - x-accept-content-transfer-encoding
+        - x-accept-response-streaming
+        - x-user-agent
+        - x-grpc-web
+      maxAge: 1728s
+      exposeHeaders:
+        - grpc-status
+        - grpc-message

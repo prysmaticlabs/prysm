@@ -108,6 +108,19 @@ load(
 _go_image_repos()
 
 http_archive(
+    name = "prysm_testnet_site",
+    url = "https://github.com/prestonvanloon/prysm-testnet-site/archive/ee6c0659223775395cd5e592a6c0e5c6d4abe7e1.tar.gz",
+    strip_prefix = "prysm-testnet-site-ee6c0659223775395cd5e592a6c0e5c6d4abe7e1",
+    sha256 = "c02fcf85202d184c6fa4e78fa16295729affbfd60e4827728ec189d7e3895d90",
+    build_file_content = """
+proto_library(
+  name = "faucet_proto",
+  srcs = ["src/proto/faucet.proto"],
+  visibility = ["//visibility:public"],
+)""",
+)
+
+http_archive(
     name = "io_kubernetes_build",
     sha256 = "b4e7819861f2ec89b7309bd0c44fb3348c3a4a8ee494ec7668edb3960ff11814",
     strip_prefix = "repo-infra-4ce715fbe67d8fbed05ec2bb47a148e754100a4b",
@@ -988,4 +1001,10 @@ go_repository(
     name = "in_gopkg_natefinch_npipe_v2",
     commit = "c1b8fa8bdccecb0b8db834ee0b92fdbcfa606dd6",
     importpath = "gopkg.in/natefinch/npipe.v2",
+)
+
+go_repository(
+    name = "com_github_prestonvanloon_go_recaptcha",
+    commit = "0834cef6e8bd3a7ebdb3ac7def9440ee47d501a4",
+    importpath = "github.com/prestonvanloon/go-recaptcha",
 )

@@ -1,0 +1,27 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: external-svc-ethstats
+  namespace: pow
+spec:
+  hosts:
+  - stats.goerli.net
+  location: MESH_EXTERNAL
+  ports:
+  - number: 443
+    name: goerli-ethstats-http
+    protocol: HTTPS
+  resolution: DNS
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: goerli-ethstats
+  namespace: pow
+spec:
+  hosts:
+  - stats.goerli.net
+  http:
+  - route:
+    - destination:
+        host: stats.goerli.net
