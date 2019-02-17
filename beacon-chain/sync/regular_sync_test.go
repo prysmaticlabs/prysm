@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/bazel-prysm/external/go_sdk/src/fmt"
 	"io/ioutil"
 	"strconv"
 	"testing"
@@ -381,16 +382,16 @@ func TestReceiveAttestation_Ok(t *testing.T) {
 
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-
+	if err := db.SaveState(&pb.BeaconState{
+		FinalizedEpoch: params.BeaconConfig().GenesisEpoch,
+	}); err != nil {
+		t.Fatalf("Could not save state: %v", err)
+	}
 	cfg := &RegularSyncConfig{
-		BlockAnnounceBufferSize: 0,
-		BlockBufferSize:         0,
-		BlockReqHashBufferSize:  0,
-		BlockReqSlotBufferSize:  0,
-		ChainService:            ms,
-		OperationService:        os,
-		P2P:                     &mockP2P{},
-		BeaconDB:                db,
+		ChainService:     ms,
+		OperationService: os,
+		P2P:              &mockP2P{},
+		BeaconDB:         db,
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
@@ -401,9 +402,8 @@ func TestReceiveAttestation_Ok(t *testing.T) {
 	}()
 
 	request1 := &pb.Attestation{
-		AggregationBitfield: []byte{99},
 		Data: &pb.AttestationData{
-			Slot: 0,
+			Slot: params.BeaconConfig().GenesisSlot + 1,
 		},
 	}
 
@@ -416,7 +416,53 @@ func TestReceiveAttestation_Ok(t *testing.T) {
 	ss.attestationBuf <- msg1
 	ss.cancel()
 	<-exitRoutine
-	testutil.AssertLogsContain(t, hook, "Forwarding attestation to subscribed services")
+	testutil.AssertLogsContain(t, hook, "Sending newly received attestation to subscribers")
+}
+
+func TestReceiveAttestation_OlderThanFinalizedEpoch(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ms := &mockChainService{}
+	os := &mockOperationService{}
+
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	state := &pb.BeaconState{FinalizedEpoch: params.BeaconConfig().GenesisEpoch + 1}
+	if err := db.SaveState(state); err != nil {
+		t.Fatalf("Could not save state: %v", err)
+	}
+	cfg := &RegularSyncConfig{
+		ChainService:     ms,
+		OperationService: os,
+		P2P:              &mockP2P{},
+		BeaconDB:         db,
+	}
+	ss := NewRegularSyncService(context.Background(), cfg)
+
+	exitRoutine := make(chan bool)
+	go func() {
+		ss.run()
+		exitRoutine <- true
+	}()
+
+	request1 := &pb.Attestation{
+		Data: &pb.AttestationData{
+			Slot: params.BeaconConfig().GenesisSlot + 1,
+		},
+	}
+
+	msg1 := p2p.Message{
+		Ctx:  context.Background(),
+		Data: request1,
+		Peer: p2p.Peer{},
+	}
+
+	ss.attestationBuf <- msg1
+	ss.cancel()
+	<-exitRoutine
+	want := fmt.Sprintf(
+		"Skipping received attestation with slot smaller than last finalized slot, %d < %d",
+		request1.Data.Slot, state.FinalizedEpoch*params.BeaconConfig().EpochLength)
+	testutil.AssertLogsContain(t, hook, want)
 }
 
 func TestReceiveExitReq_Ok(t *testing.T) {

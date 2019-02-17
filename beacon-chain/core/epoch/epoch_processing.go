@@ -323,7 +323,6 @@ func CleanupAttestations(state *pb.BeaconState) *pb.BeaconState {
 //
 // Spec pseudocode definition:
 // Let e = state.slot // EPOCH_LENGTH.
-<<<<<<< HEAD
 // Set state.latest_index_roots[(next_epoch + ENTRY_EXIT_DELAY) %
 // 	LATEST_INDEX_ROOTS_LENGTH] =
 // 	hash_tree_root(get_active_validator_indices(state,
