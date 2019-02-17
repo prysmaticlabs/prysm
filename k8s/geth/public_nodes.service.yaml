@@ -32,7 +32,7 @@ spec:
   servers:
   - port:
       number: 80
-      name: http
+      name: http-goerli-pubnodes
       protocol: HTTP
     hosts:
     - goerli.prylabs.net
@@ -40,7 +40,7 @@ spec:
       httpsRedirect: false
   - port:
       number: 443
-      name: https
+      name: https-goerli-pubnodes
       protocol: HTTPS
     hosts:
     - goerli.prylabs.net

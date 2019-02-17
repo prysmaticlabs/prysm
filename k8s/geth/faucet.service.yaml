@@ -23,15 +23,15 @@ spec:
   servers:
   - port:
       number: 80
-      name: http
+      name: http-faucet
       protocol: HTTP
     hosts:
     - api.prylabs.net
     tls:
-      httpsRedirect: false
+      httpsRedirect: true
   - port: 
       number: 443
-      name: https
+      name: grpc-web-faucet
       protocol: HTTPS
     hosts:
     - api.prylabs.net
