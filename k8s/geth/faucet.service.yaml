@@ -23,12 +23,22 @@ spec:
   servers:
   - port:
       number: 80
-      name: grpc-nonssl
+      name: http
       protocol: HTTP
     hosts:
     - api.prylabs.net
     tls:
-      httpsRedirect: false # maybe should be true?
+      httpsRedirect: true 
+  - port: 
+      number: 443
+      name: https
+      protocol: HTTPS
+    hosts:
+    - api.prylabs.net
+    tls:
+      mode: SIMPLE
+      privateKey: /etc/istio/ingressgateway-certs/tls.key
+      serverCertificate: /etc/istio/ingressgateway-certs/tls.crt
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
@@ -42,7 +52,7 @@ spec:
   - public-faucet-gateway
   http:
   - match:
-    - port: 80 
+    - port: 443 
     route:
     - destination:
         port: 

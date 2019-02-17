@@ -27,7 +27,6 @@ func (s *faucetServer) RequestFunds(ctx context.Context, req *faucetpb.FundingRe
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("Response: %+v\n", rr)
 	if !rr.Success {
 		fmt.Printf("Unsuccessful recaptcha request. Error codes: %+v\n", rr.ErrorCodes)
 		return &faucetpb.FundingResponse{Error: "Recaptcha failed"}, nil
