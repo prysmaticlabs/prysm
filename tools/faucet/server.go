@@ -10,12 +10,14 @@ import (
 	"google.golang.org/grpc/peer"
 )
 
-var MIN_SCORE float64 = 0.5
+var minScore float64 = 0.5
 
 type faucetServer struct {
 	r recaptcha.Recaptcha
 }
 
+// RequestFunds from the ethereum 1.x faucet. Requires a valid captcha
+// response.
 func (s *faucetServer) RequestFunds(ctx context.Context, req *faucetpb.FundingRequest) (*faucetpb.FundingResponse, error) {
 	p, ok := peer.FromContext(ctx)
 	if !ok {
@@ -31,7 +33,7 @@ func (s *faucetServer) RequestFunds(ctx context.Context, req *faucetpb.FundingRe
 		fmt.Printf("Unsuccessful recaptcha request. Error codes: %+v\n", rr.ErrorCodes)
 		return &faucetpb.FundingResponse{Error: "Recaptcha failed"}, nil
 	}
-	if rr.Score < MIN_SCORE {
+	if rr.Score < minScore {
 		return &faucetpb.FundingResponse{Error: "Recaptcha score too low"}, nil
 	}
 
