@@ -18,7 +18,7 @@ import (
 // Spec:
 //  We now define the state transition function. At a high level the state transition is made up of two parts:
 //  - The per-slot transitions, which happens every slot, and only affects a parts of the state.
-//  - The per-epoch transitions, which happens at every epoch boundary (i.e. state.slot % EPOCH_LENGTH == 0), and affects the entire state.
+//  - The per-epoch transitions, which happens at every epoch boundary (i.e. state.slot % SLOTS_PER_EPOCH == 0), and affects the entire state.
 //  The per-slot transitions generally focus on verifying aggregate signatures and saving temporary records relating to the per-slot
 //  activity in the BeaconState. The per-epoch transitions focus on the validator registry, including adjusting balances and activating
 //  and exiting validators, as well as processing crosslinks and managing block justification/finalization.

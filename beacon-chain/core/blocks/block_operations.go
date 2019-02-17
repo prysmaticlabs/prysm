@@ -342,7 +342,7 @@ func isSurroundVote(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
 //
 //   For each attestation in block.body.attestations:
 //     Verify that attestation.data.slot <= state.slot - MIN_ATTESTATION_INCLUSION_DELAY <
-//       attestation.data.slot + EPOCH_LENGTH.
+//       attestation.data.slot + SLOTS_PER_EPOCH.
 //     Verify that attestation.data.justified_epoch is equal to state.justified_epoch
 //       if attestation.data.slot >= get_epoch_start_slot(get_current_epoch(state)) else state.previous_justified_epoch.
 //     Verify that attestation.data.justified_block_root is equal to

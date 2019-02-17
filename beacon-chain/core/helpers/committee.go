@@ -31,10 +31,10 @@ type CrosslinkCommittee struct {
 //    return max(
 //        1,
 //        min(
-//            SHARD_COUNT // EPOCH_LENGTH,
-//            active_validator_count // EPOCH_LENGTH // TARGET_COMMITTEE_SIZE,
+//            SHARD_COUNT // SLOTS_PER_EPOCH,
+//            active_validator_count // SLOTS_PER_EPOCH // TARGET_COMMITTEE_SIZE,
 //        )
-//    ) * EPOCH_LENGTH
+//    ) * SLOTS_PER_EPOCH
 func EpochCommitteeCount(activeValidatorCount uint64) uint64 {
 	var minCommitteePerSlot = uint64(1)
 
@@ -164,8 +164,8 @@ func NextEpochCommitteeCount(state *pb.BeaconState) uint64 {
 //        state.validator_registry,
 //        shuffling_epoch,
 //    )
-//    offset = slot % EPOCH_LENGTH
-//    committees_per_slot = committees_per_epoch // EPOCH_LENGTH
+//    offset = slot % SLOTS_PER_EPOCH
+//    committees_per_slot = committees_per_epoch // SLOTS_PER_EPOCH
 //    slot_start_shard = (shuffling_start_shard + committees_per_slot * offset) % SHARD_COUNT
 //
 //    return [
@@ -433,7 +433,7 @@ func VerifyBitfield(bitfield []byte, committeeSize int) (bool, error) {
 //    current_epoch = get_current_epoch(state)
 //    next_epoch = current_epoch + 1
 //    next_epoch_start_slot = get_epoch_start_slot(next_epoch)
-//    for slot in range(next_epoch_start_slot, next_epoch_start_slot + EPOCH_LENGTH):
+//    for slot in range(next_epoch_start_slot, next_epoch_start_slot + SLOTS_PER_EPOCH):
 //        crosslink_committees = get_crosslink_committees_at_slot(
 //            state,
 //            slot,

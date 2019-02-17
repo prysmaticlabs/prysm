@@ -379,7 +379,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 //            slashed_withdrawal_epochs = LATEST_PENALIZED_EXIT_LENGTH // 2
 //            return current_epoch >= validator.slashed_epoch + slashd_withdrawal_epochs
 //        else:
-//            return current_epoch >= validator.exit_epoch + MIN_VALIDATOR_WITHDRAWAL_EPOCHS
+//            return current_epoch >= validator.exit_epoch + MIN_VALIDATOR_WITHDRAWAL_DELAY
 //
 //    all_indices = list(range(len(state.validator_registry)))
 //    eligible_indices = filter(eligible, all_indices)
@@ -389,7 +389,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 //    for index in sorted_indices:
 //        prepare_validator_for_withdrawal(state, index)
 //        withdrawn_so_far += 1
-//        if withdrawn_so_far >= MAX_WITHDRAWALS_PER_EPOCH:
+//        if withdrawn_so_far >= MAX_EXIT_DEQUEUES_PER_EPOCH:
 //            break
 func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 	currentEpoch := helpers.CurrentEpoch(state)
@@ -469,7 +469,7 @@ func maxBalanceChurn(totalBalance uint64) uint64 {
 //         slashed_withdrawal_epochs = LATEST_PENALIZED_EXIT_LENGTH // 2
 //        return current_epoch >= validator.slashed_epoch + slashd_withdrawal_epochs
 //    else:
-//        return current_epoch >= validator.exit_epoch + MIN_VALIDATOR_WITHDRAWAL_EPOCHS
+//        return current_epoch >= validator.exit_epoch + MIN_VALIDATOR_WITHDRAWAL_DELAY
 func eligibleToExit(state *pb.BeaconState, idx uint64) bool {
 	currentEpoch := helpers.CurrentEpoch(state)
 	validator := state.ValidatorRegistry[idx]
@@ -507,7 +507,7 @@ func prepareValidatorForWithdrawal(state *pb.BeaconState, idx uint64) *pb.Beacon
 //    An entry or exit triggered in the ``epoch`` given by the input takes effect at
 //    the epoch given by the output.
 //    """
-//    return epoch + 1 + ENTRY_EXIT_DELAY
+//    return epoch + 1 + ACTIVATION_EXIT_DELAY
 func entryExitEffectEpoch(epoch uint64) uint64 {
 	return epoch + 1 + params.BeaconConfig().ActivationExitDelay
 }

@@ -16,19 +16,19 @@ import (
 )
 
 // CanProcessEpoch checks the eligibility to process epoch.
-// The epoch can be processed every EPOCH_LENGTH.
+// The epoch can be processed every SLOTS_PER_EPOCH.
 //
 // Spec pseudocode definition:
-//    If state.slot % EPOCH_LENGTH == 0:
+//    If state.slot % SLOTS_PER_EPOCH == 0:
 func CanProcessEpoch(state *pb.BeaconState) bool {
 	return state.Slot%params.BeaconConfig().SlotsPerEpoch == 0
 }
 
 // CanProcessEth1Data checks the eligibility to process the eth1 data.
-// The eth1 data can be processed every ETH1_DATA_VOTING_PERIOD.
+// The eth1 data can be processed every EPOCHS_PER_ETH1_VOTING_PERIOD.
 //
 // Spec pseudocode definition:
-//    If next_epoch % ETH1_DATA_VOTING_PERIOD == 0
+//    If next_epoch % EPOCHS_PER_ETH1_VOTING_PERIOD == 0
 func CanProcessEth1Data(state *pb.BeaconState) bool {
 	return helpers.NextEpoch(state)%
 		params.BeaconConfig().EpochsPerEth1VotingPeriod == 0
@@ -44,7 +44,7 @@ func CanProcessEth1Data(state *pb.BeaconState) bool {
 //		* state.latest_crosslinks[shard].epoch > state.validator_registry_update_epoch
 // 			for every shard number shard in [(state.current_epoch_start_shard + i) %
 //	 			SHARD_COUNT for i in range(get_current_epoch_committee_count(state) *
-//	 			EPOCH_LENGTH)] (that is, for every shard in the current committees)
+//	 			SLOTS_PER_EPOCH)] (that is, for every shard in the current committees)
 func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 	if state.FinalizedEpoch <= state.ValidatorRegistryUpdateEpoch {
 		return false
@@ -62,12 +62,12 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 }
 
 // ProcessEth1Data processes eth1 block deposit roots by checking its vote count.
-// With sufficient votes (>2*ETH1_DATA_VOTING_PERIOD), it then
+// With sufficient votes (>2*EPOCHS_PER_ETH1_VOTING_PERIOD), it then
 // marks the voted Eth1 data as the latest data set.
 //
 // Official spec definition:
-//   if next_epoch % ETH1_DATA_VOTING_PERIOD == 0:
-//     if eth1_data_vote.vote_count * 2 > ETH1_DATA_VOTING_PERIOD * EPOCH_LENGTH for
+//   if next_epoch % EPOCHS_PER_ETH1_VOTING_PERIOD == 0:
+//     if eth1_data_vote.vote_count * 2 > EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH for
 //       some eth1_data_vote in state.eth1_data_votes.
 //       (ie. more than half the votes in this voting period were for that value)
 //       Set state.latest_eth1_data = eth1_data_vote.eth1_data.
@@ -107,14 +107,14 @@ func ProcessJustification(
 	state.JustificationBitfield = state.JustificationBitfield * 2
 
 	// If prev prev epoch was justified then we ensure the 2nd bit in the bitfield is set,
-	// assign new justified slot to 2 * EPOCH_LENGTH before.
+	// assign new justified slot to 2 * SLOTS_PER_EPOCH before.
 	if 3*prevEpochBoundaryAttestingBalance >= 2*totalBalance {
 		state.JustificationBitfield |= 2
 		state.JustifiedEpoch = helpers.CurrentEpoch(state) - 2
 	}
 
 	// If this epoch was justified then we ensure the 1st bit in the bitfield is set,
-	// assign new justified slot to 1 * EPOCH_LENGTH before.
+	// assign new justified slot to 1 * SLOTS_PER_EPOCH before.
 	if 3*thisEpochBoundaryAttestingBalance >= 2*totalBalance {
 		state.JustificationBitfield |= 1
 		state.JustifiedEpoch = helpers.CurrentEpoch(state) - 1
@@ -322,11 +322,11 @@ func CleanupAttestations(state *pb.BeaconState) *pb.BeaconState {
 // is computed by hashing validator indices of the next epoch + delay.
 //
 // Spec pseudocode definition:
-// Let e = state.slot // EPOCH_LENGTH.
-// Set state.latest_index_roots[(next_epoch + ENTRY_EXIT_DELAY) %
+// Let e = state.slot // SLOTS_PER_EPOCH.
+// Set state.latest_index_roots[(next_epoch + ACTIVATION_EXIT_DELAY) %
 // 	LATEST_INDEX_ROOTS_LENGTH] =
 // 	hash_tree_root(get_active_validator_indices(state,
-// 	next_epoch + ENTRY_EXIT_DELAY))
+// 	next_epoch + ACTIVATION_EXIT_DELAY))
 func UpdateLatestActiveIndexRoots(state *pb.BeaconState) (*pb.BeaconState, error) {
 	nextEpoch := helpers.NextEpoch(state) + params.BeaconConfig().ActivationExitDelay
 	validatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, nextEpoch)

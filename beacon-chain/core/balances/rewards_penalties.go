@@ -287,7 +287,7 @@ func InactivityInclusionDistance(
 //    we determine the proposer proposer_index =
 //    get_beacon_proposer_index(state, inclusion_slot(state, index))
 //    and set state.validator_balances[proposer_index] +=
-//    base_reward(state, index) // INCLUDER_REWARD_QUOTIENT
+//    base_reward(state, index) // ATTESTATION_INCLUSION_REWARD_QUOTIENT
 func AttestationInclusion(
 	state *pb.BeaconState,
 	totalBalance uint64,

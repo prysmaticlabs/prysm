@@ -216,7 +216,7 @@ func TestProcessJustification(t *testing.T) {
 	}
 	// Since this epoch was justified (not prev), justified_epoch = slot_to_epoch(state.slot) -1.
 	if newState.JustifiedEpoch != helpers.PrevEpoch(state) {
-		t.Errorf("New state's justified epoch %d != state's slot - EPOCH_LENGTH %d",
+		t.Errorf("New state's justified epoch %d != state's slot - SLOTS_PER_EPOCH %d",
 			newState.JustifiedEpoch, helpers.PrevEpoch(state))
 	}
 	// The new JustificationBitfield is 11, it went from 0100 to 1011. Two 1's were appended because both

@@ -17,7 +17,7 @@ import (
 //    Generate a seed for the given ``epoch``.
 //    """
 //    return hash(
-//        get_randao_mix(state, epoch - SEED_LOOKAHEAD) +
+//        get_randao_mix(state, epoch - MIN_SEED_LOOKAHED) +
 //        get_active_index_root(state, epoch)
 //    )
 func GenerateSeed(state *pb.BeaconState, wantedEpoch uint64) ([32]byte, error) {
@@ -43,7 +43,7 @@ func GenerateSeed(state *pb.BeaconState, wantedEpoch uint64) ([32]byte, error) {
 //    """
 //    Return the index root at a recent ``epoch``.
 //    """
-//    assert get_current_epoch(state) - LATEST_INDEX_ROOTS_LENGTH + ENTRY_EXIT_DELAY < epoch <= get_current_epoch(state) + ENTRY_EXIT_DELAY
+//    assert get_current_epoch(state) - LATEST_INDEX_ROOTS_LENGTH + ACTIVATION_EXIT_DELAY < epoch <= get_current_epoch(state) + ENTRY_EXIT_DELAY
 //    return state.latest_index_roots[epoch % LATEST_INDEX_ROOTS_LENGTH]
 func ActiveIndexRoot(state *pb.BeaconState, wantedEpoch uint64) ([]byte, error) {
 	var earliestEpoch uint64
