@@ -4,14 +4,6 @@ import (
 	"testing"
 )
 
-func TestSign(t *testing.T) {
-	sk := &SecretKey{}
-	msg := []byte{}
-	if _, err := Sign(sk, msg); err != nil {
-		t.Errorf("Expected nil error, received %v", err)
-	}
-}
-
 func TestPublicKey(t *testing.T) {
 	sk := &SecretKey{}
 	if _, err := sk.PublicKey(); err != nil {
