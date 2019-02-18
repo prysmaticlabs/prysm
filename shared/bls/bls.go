@@ -82,35 +82,19 @@ func (p *PublicKey) Aggregate(p2 *PublicKey) *PublicKey {
 }
 
 // Verify a bls signature given a public key, a message, and a domain.
-func (p *PublicKey) Verify(msg []byte, sig *Signature, domain uint64) bool {
-	return gobls.Verify(msg, p.val, sig.val, domain)
+func (s *Signature) Verify(msg []byte, pub *PublicKey, domain uint64) bool {
+	return gobls.Verify(msg, pub.val, s.val, domain)
 }
 
-// VerifyAggregate verifies each public key against each message.
-func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, messages [][]byte, domain uint64) bool {
-	var keys []*gobls.PublicKey
-	for _, v := range pubKeys {
-		keys = append(keys, v.val)
-	}
-	return s.val.VerifyAggregate(keys, messages, domain)
-}
-
-// VerifyAggregateCommon verifies each public key against a message.
+// VerifyAggregate verifies each public key against a message.
 // This is vulnerable to rogue public-key attack. Each user must
 // provide a proof-of-knowledge of the public key.
-func (s *Signature) VerifyAggregateCommon(pubKeys []*PublicKey, msg []byte, domain uint64) bool {
+func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg []byte, domain uint64) bool {
 	var keys []*gobls.PublicKey
 	for _, v := range pubKeys {
 		keys = append(keys, v.val)
 	}
 	return s.val.VerifyAggregateCommon(keys, msg, domain)
-}
-
-// Aggregate two signatures.
-func (s *Signature) Aggregate(s2 *Signature) *Signature {
-	s1 := s.val
-	s1.Aggregate(s2.val)
-	return &Signature{val: s1}
 }
 
 // AggregateSignatures converts a list of signatures into a single, aggregated sig.
@@ -120,13 +104,4 @@ func AggregateSignatures(sigs []*Signature) *Signature {
 		ss = append(ss, v.val)
 	}
 	return &Signature{val: gobls.AggregateSignatures(ss)}
-}
-
-// AggregatePublicKeys converts a list of public keys into a single, aggregated key.
-func AggregatePublicKeys(pubKeys []*PublicKey) *PublicKey {
-	var pks []*gobls.PublicKey
-	for _, v := range pubKeys {
-		pks = append(pks, v.val)
-	}
-	return &PublicKey{val: gobls.AggregatePublicKeys(pks)}
 }
