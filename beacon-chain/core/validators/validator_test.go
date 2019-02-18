@@ -432,7 +432,7 @@ func TestExitValidator_AlreadyExited(t *testing.T) {
 	}
 }
 
-func TestPenalizeValidator_AlreadyWithdrawn(t *testing.T) {
+func TestSlashValidator_AlreadyWithdrawn(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 100,
 		ValidatorRegistry: []*pb.Validator{
