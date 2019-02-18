@@ -136,7 +136,7 @@ func (s *Service) saveOperations() {
 			log.Debug("Subscriber closed, exiting goroutine")
 			return
 		case <-s.ctx.Done():
-			log.Debug("Beacon block operations service context closed, exiting goroutine")
+			log.Debug("operations service context closed, exiting save goroutine")
 			return
 		// Listen for a newly received incoming exit from the sync service.
 		case exit := <-s.incomingValidatorExits:
@@ -176,7 +176,7 @@ func (s *Service) removeOperations() {
 			log.Debug("Subscriber closed, exiting goroutine")
 			return
 		case <-s.ctx.Done():
-			log.Debug("Beacon block operations service context closed, exiting goroutine")
+			log.Debug("operations service context closed, exiting remove goroutine")
 			return
 		// Listen for processed block from the block chain service.
 		case block := <-s.incomingProcessedBlock:

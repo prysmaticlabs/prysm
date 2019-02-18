@@ -157,3 +157,57 @@ func TestRetrieveAttestations_Ok(t *testing.T) {
 		t.Errorf("Attestation pool should be empty but got a length of %d", len(attestations))
 	}
 }
+
+func TestRemovingPendingAttestations_Ok(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	s := NewOperationService(context.Background(), &Config{BeaconDB: db})
+
+	attestations := make([]*pb.Attestation, 10)
+	for i := 0; i < len(attestations); i++ {
+		attestations[i] = &pb.Attestation{
+			Data: &pb.AttestationData{
+				Slot:  uint64(i),
+				Shard: uint64(i),
+			},
+		}
+		if err := s.beaconDB.SaveAttestation(attestations[i]); err != nil {
+			t.Fatalf("Failed to save attestation: %v", err)
+		}
+	}
+
+	retrievedAtts, err := s.PendingAttestations()
+	if err != nil {
+		t.Fatalf("Could not retrieve attestations: %v", err)
+	}
+	if !reflect.DeepEqual(attestations, retrievedAtts) {
+		t.Error("Retrieved attestations did not match prev generated attestations")
+	}
+
+	if err := s.removePendingAttestations(attestations); err != nil {
+		t.Fatalf("Could not remove pending attestations: %v", err)
+	}
+
+	retrievedAtts, _ = s.PendingAttestations()
+	if len(retrievedAtts) != 0 {
+		t.Errorf("Attestation pool should be empty but got a length of %d", len(retrievedAtts))
+	}
+}
+
+func TestRoutineContextClosing_Ok(t *testing.T) {
+	hook := logTest.NewGlobal()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	s := NewOperationService(context.Background(), &Config{BeaconDB: db})
+
+	exitRoutine := make(chan bool)
+	go func(tt *testing.T) {
+		s.removeOperations()
+		s.saveOperations()
+		<-exitRoutine
+	}(t)
+	s.cancel()
+	exitRoutine <- true
+	testutil.AssertLogsContain(t, hook, "operations service context closed, exiting remove goroutine")
+	testutil.AssertLogsContain(t, hook, "operations service context closed, exiting save goroutine")
+}
