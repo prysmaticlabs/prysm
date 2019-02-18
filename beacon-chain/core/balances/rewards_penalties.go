@@ -231,7 +231,7 @@ func InactivityChainHead(
 // to inactive validators with status EXITED_WITH_PENALTY.
 //
 // Spec pseudocode definition:
-//    Any active_validator index with validator.penalized_epoch <= current_epoch,
+//    Any active_validator index with validator.slashed_epoch <= current_epoch,
 //    loses 2 * inactivity_penalty(state, index, epochs_since_finality) +
 //    base_reward(state, index).
 func InactivityExitedPenalties(
@@ -243,7 +243,7 @@ func InactivityExitedPenalties(
 	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
 
 	for _, index := range activeValidatorIndices {
-		if state.ValidatorRegistry[index].PenalizedEpoch <= helpers.CurrentEpoch(state) {
+		if state.ValidatorRegistry[index].SlashedEpoch <= helpers.CurrentEpoch(state) {
 			state.ValidatorBalances[index] -=
 				2*helpers.InactivityPenalty(state, index, baseRewardQuotient, epochsSinceFinality) +
 					helpers.BaseReward(state, index, baseRewardQuotient)
@@ -287,7 +287,7 @@ func InactivityInclusionDistance(
 //    we determine the proposer proposer_index =
 //    get_beacon_proposer_index(state, inclusion_slot(state, index))
 //    and set state.validator_balances[proposer_index] +=
-//    base_reward(state, index) // INCLUDER_REWARD_QUOTIENT
+//    base_reward(state, index) // ATTESTATION_INCLUSION_REWARD_QUOTIENT
 func AttestationInclusion(
 	state *pb.BeaconState,
 	totalBalance uint64,
@@ -305,12 +305,12 @@ func AttestationInclusion(
 		}
 		state.ValidatorBalances[proposerIndex] +=
 			helpers.BaseReward(state, proposerIndex, baseRewardQuotient) /
-				params.BeaconConfig().IncluderRewardQuotient
+				params.BeaconConfig().AttestationInclusionRewardQuotient
 	}
 	return state, nil
 }
 
-// Crosslinks awards or penalizes attesters
+// Crosslinks awards or slashs attesters
 // for attesting shard cross links.
 //
 // Spec pseudocode definition:

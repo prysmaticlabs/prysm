@@ -34,7 +34,7 @@ func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 			AttesterSlashings: []*pb.AttesterSlashing{},
 			Attestations:      []*pb.Attestation{},
 			Deposits:          []*pb.Deposit{},
-			Exits:             []*pb.Exit{},
+			VoluntaryExits:    []*pb.VoluntaryExit{},
 		},
 	}
 	return block

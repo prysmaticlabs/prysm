@@ -65,7 +65,7 @@ func TestIncomingExits_Ok(t *testing.T) {
 		service.saveOperations()
 		<-exitRoutine
 	}()
-	exit := &pb.Exit{Epoch: 100}
+	exit := &pb.VoluntaryExit{Epoch: 100}
 	hash, err := hashutil.HashProto(exit)
 	if err != nil {
 		t.Fatalf("Could not hash exit proto: %v", err)

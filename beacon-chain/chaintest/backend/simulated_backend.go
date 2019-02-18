@@ -140,7 +140,7 @@ func (sb *SimulatedBackend) RunForkChoiceTest(testCase *ForkChoiceTestCase) erro
 	// test language specification.
 	c := params.BeaconConfig()
 	c.ShardCount = testCase.Config.ShardCount
-	c.EpochLength = testCase.Config.CycleLength
+	c.SlotsPerEpoch = testCase.Config.CycleLength
 	c.TargetCommitteeSize = testCase.Config.MinCommitteeSize
 	params.OverrideBeaconConfig(c)
 
@@ -148,7 +148,7 @@ func (sb *SimulatedBackend) RunForkChoiceTest(testCase *ForkChoiceTestCase) erro
 	validators := make([]*pb.Validator, testCase.Config.ValidatorCount)
 	for i := uint64(0); i < testCase.Config.ValidatorCount; i++ {
 		validators[i] = &pb.Validator{
-			ExitEpoch: params.BeaconConfig().EntryExitDelay,
+			ExitEpoch: params.BeaconConfig().ActivationExitDelay,
 			Pubkey:    []byte{},
 		}
 	}
@@ -241,7 +241,7 @@ func (sb *SimulatedBackend) initializeStateTest(testCase *StateTestCase) error {
 func (sb *SimulatedBackend) setupBeaconStateAndGenesisBlock(initialDeposits []*pb.Deposit) error {
 	var err error
 	genesisTime := time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC).Unix()
-	sb.state, err = state.InitialBeaconState(initialDeposits, uint64(genesisTime), nil)
+	sb.state, err = state.GenesisBeaconState(initialDeposits, uint64(genesisTime), nil)
 	if err != nil {
 		return fmt.Errorf("could not initialize simulated beacon state: %v", err)
 	}
@@ -291,7 +291,7 @@ func (sb *SimulatedBackend) generateSimulatedObjects(testCase *StateTestCase, sl
 	}
 	var simulatedValidatorExit *StateTestValidatorExit
 	for _, exit := range testCase.Config.ValidatorExits {
-		if exit.Epoch == slotNumber/params.BeaconConfig().EpochLength {
+		if exit.Epoch == slotNumber/params.BeaconConfig().SlotsPerEpoch {
 			simulatedValidatorExit = exit
 			break
 		}
@@ -324,11 +324,11 @@ func (sb *SimulatedBackend) compareTestCase(testCase *StateTestCase) error {
 			len(sb.state.ValidatorRegistry),
 		)
 	}
-	for _, penalized := range testCase.Results.PenalizedValidators {
-		if sb.state.ValidatorRegistry[penalized].PenalizedEpoch == params.BeaconConfig().FarFutureEpoch {
+	for _, slashed := range testCase.Results.SlashedValidators {
+		if sb.state.ValidatorRegistry[slashed].SlashedEpoch == params.BeaconConfig().FarFutureEpoch {
 			return fmt.Errorf(
-				"expected validator at index %d to have been penalized",
-				penalized,
+				"expected validator at index %d to have been slashed",
+				slashed,
 			)
 		}
 	}
@@ -347,7 +347,7 @@ func setTestConfig(testCase *StateTestCase) {
 	// We setup the initial configuration for running state
 	// transition tests below.
 	c := params.BeaconConfig()
-	c.EpochLength = testCase.Config.EpochLength
+	c.SlotsPerEpoch = testCase.Config.SlotsPerEpoch
 	c.DepositsForChainStart = testCase.Config.DepositsForChainStart
 	params.OverrideBeaconConfig(c)
 }

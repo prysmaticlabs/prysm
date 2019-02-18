@@ -8,7 +8,7 @@ import (
 )
 
 // SaveExit puts the exit request into the beacon chain db.
-func (db *BeaconDB) SaveExit(exit *pb.Exit) error {
+func (db *BeaconDB) SaveExit(exit *pb.VoluntaryExit) error {
 	hash, err := hashutil.HashProto(exit)
 	if err != nil {
 		return err

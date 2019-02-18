@@ -179,7 +179,7 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 		gomock.Any(),
 	).Return(nil, expected)
 
-	if err := v.UpdateAssignments(context.Background(), params.BeaconConfig().EpochLength); err != expected {
+	if err := v.UpdateAssignments(context.Background(), params.BeaconConfig().SlotsPerEpoch); err != expected {
 		t.Errorf("Bad error; want=%v got=%v", expected, err)
 	}
 }
@@ -189,7 +189,7 @@ func TestUpdateAssignments_DoesUpdateAssignments(t *testing.T) {
 	defer ctrl.Finish()
 	client := internal.NewMockValidatorServiceClient(ctrl)
 
-	slot := params.BeaconConfig().EpochLength
+	slot := params.BeaconConfig().SlotsPerEpoch
 	resp := &pb.ValidatorEpochAssignmentsResponse{
 		Assignment: &pb.Assignment{
 			ProposerSlot: 67,
