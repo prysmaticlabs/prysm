@@ -6,7 +6,7 @@ import (
 	"net"
 
 	recaptcha "github.com/prestonvanloon/go-recaptcha"
-	faucetpb "github.com/prysmaticlabs/prysm/tools/faucet/proto"
+	faucetpb "github.com/prysmaticlabs/prysm/proto/faucet"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
