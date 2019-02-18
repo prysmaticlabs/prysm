@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -61,7 +60,7 @@ func GenesisBeaconState(
 	validatorRegistry := make([]*pb.Validator, len(genesisValidatorDeposits))
 	latestBalances := make([]uint64, len(genesisValidatorDeposits))
 	for i, d := range genesisValidatorDeposits {
-		depositInput, err := b.DecodeDepositInput(d.DepositData)
+		depositInput, err := helpers.DecodeDepositInput(d.DepositData)
 		if err != nil {
 			return nil, fmt.Errorf("could decode deposit input %v", err)
 		}
@@ -131,11 +130,11 @@ func GenesisBeaconState(
 	validatorMap := stateutils.ValidatorIndexMap(state)
 	for _, deposit := range genesisValidatorDeposits {
 		depositData := deposit.DepositData
-		depositInput, err := b.DecodeDepositInput(depositData)
+		depositInput, err := helpers.DecodeDepositInput(depositData)
 		if err != nil {
 			return nil, fmt.Errorf("could not decode deposit input: %v", err)
 		}
-		value, _, err := b.DecodeDepositAmountAndTimeStamp(depositData)
+		value, _, err := helpers.DecodeDepositAmountAndTimeStamp(depositData)
 		if err != nil {
 			return nil, fmt.Errorf("could not decode deposit value and timestamp: %v", err)
 		}

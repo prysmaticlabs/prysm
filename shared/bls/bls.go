@@ -51,6 +51,16 @@ func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 	return &PublicKey{val: k}, nil
 }
 
+// SignatureFromBytes creates a BLS signature from a byte slice.
+func SignatureFromBytes(sig []byte) (*Signature, error) {
+	b := bytesutil.ToBytes48(sig)
+	s, err := gobls.DeserializeSignature(b)
+	if err != nil {
+		return nil, fmt.Errorf("could not unmarshal bytes into signature: %v", err)
+	}
+	return &Signature{val: s}, nil
+}
+
 // PublicKey obtains the public key corresponding to the BLS secret key.
 func (s *SecretKey) PublicKey() *PublicKey {
 	return &PublicKey{val: gobls.PrivToPub(s.val)}
@@ -95,6 +105,12 @@ func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg []byte, domain uin
 		keys = append(keys, v.val)
 	}
 	return s.val.VerifyAggregateCommon(keys, msg, domain)
+}
+
+// Marshal a signature into a byte slice.
+func (s *Signature) Marshal() []byte {
+	k := s.val.Serialize()
+	return k[:]
 }
 
 // AggregateSignatures converts a list of signatures into a single, aggregated sig.

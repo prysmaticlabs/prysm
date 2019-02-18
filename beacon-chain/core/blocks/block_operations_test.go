@@ -1,7 +1,8 @@
-package blocks
+package blocks_test
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/binary"
 	"fmt"
 	"reflect"
@@ -9,43 +10,60 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/shared/bls"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
-func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T) {
+	privKeys := make([]*bls.SecretKey, params.BeaconConfig().DepositsForChainStart)
+	deposits := make([]*pb.Deposit, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(deposits); i++ {
+		priv, err := bls.RandKey(rand.Reader)
+		if err != nil {
+			t.Fatal(err)
 		}
+		depositInput := &pb.DepositInput{
+			Pubkey: priv.PublicKey().Marshal(),
+		}
+		balance := params.BeaconConfig().MaxDepositAmount
+		depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
+		if err != nil {
+			t.Fatalf("Cannot encode data: %v", err)
+		}
+		deposits[i] = &pb.Deposit{DepositData: depositData}
+		privKeys[i] = priv
 	}
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), []byte{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, params.BeaconConfig().GenesisSlot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	epoch := helpers.SlotToEpoch(params.BeaconConfig().GenesisSlot)
+	var buf []byte
+	binary.LittleEndian.PutUint64(buf, epoch)
+	domain := helpers.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
+	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 
-	randaoCommit := bytesutil.ToBytes32([]byte("randao"))
 	block := &pb.BeaconBlock{
-		RandaoRevealHash32: randaoCommit[:],
-	}
-	beaconState := &pb.BeaconState{
-		ValidatorRegistry:        validators,
-		Slot:                     1,
-		LatestRandaoMixesHash32S: make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		RandaoRevealHash32: epochSignature.Marshal(),
 	}
 
-	newState, err := ProcessBlockRandao(
+	if _, err := blocks.ProcessBlockRandao(
 		beaconState,
 		block,
-	)
-	if err != nil {
+	); err != nil {
 		t.Fatalf("Unexpected error processing block randao: %v", err)
-	}
-
-	updatedLatestMix := newState.LatestRandaoMixesHash32S[newState.Slot%params.BeaconConfig().LatestRandaoMixesLength]
-	if !bytes.Equal(updatedLatestMix, randaoCommit[:]) {
-		t.Errorf("Expected randao mix to XOR correctly: wanted %#x, received %#x", randaoCommit[:], updatedLatestMix)
 	}
 }
 
@@ -67,7 +85,7 @@ func TestProcessEth1Data_SameRootHash(t *testing.T) {
 			BlockHash32:       []byte{2},
 		},
 	}
-	beaconState = ProcessEth1Data(beaconState, block)
+	beaconState = blocks.ProcessEth1Data(beaconState, block)
 	newETH1DataVotes := beaconState.Eth1DataVotes
 	if newETH1DataVotes[0].VoteCount != 6 {
 		t.Errorf("expected votes to increase from 5 to 6, received %d", newETH1DataVotes[0].VoteCount)
@@ -94,7 +112,7 @@ func TestProcessEth1Data_NewDepositRootHash(t *testing.T) {
 		},
 	}
 
-	beaconState = ProcessEth1Data(beaconState, block)
+	beaconState = blocks.ProcessEth1Data(beaconState, block)
 	newETH1DataVotes := beaconState.Eth1DataVotes
 	if len(newETH1DataVotes) <= 1 {
 		t.Error("expected new ETH1 data votes to have length > 1")
@@ -134,7 +152,7 @@ func TestProcessProposerSlashings_ThresholdReached(t *testing.T) {
 		},
 	}
 
-	if _, err := ProcessProposerSlashings(
+	if _, err := blocks.ProcessProposerSlashings(
 		beaconState,
 		block,
 		false,
@@ -168,7 +186,7 @@ func TestProcessProposerSlashings_UnmatchedSlotNumbers(t *testing.T) {
 		},
 	}
 	want := "slashing proposal data slots do not match: 1, 0"
-	if _, err := ProcessProposerSlashings(
+	if _, err := blocks.ProcessProposerSlashings(
 		beaconState,
 		block,
 		false,
@@ -204,7 +222,7 @@ func TestProcessProposerSlashings_UnmatchedShards(t *testing.T) {
 		},
 	}
 	want := "slashing proposal data shards do not match: 0, 1"
-	if _, err := ProcessProposerSlashings(
+	if _, err := blocks.ProcessProposerSlashings(
 		beaconState,
 		block,
 		false,
@@ -246,7 +264,7 @@ func TestProcessProposerSlashings_UnmatchedBlockRoots(t *testing.T) {
 		[]byte{0, 1, 0}, []byte{1, 1, 0},
 	)
 
-	if _, err := ProcessProposerSlashings(
+	if _, err := blocks.ProcessProposerSlashings(
 		beaconState,
 		block,
 		false,
@@ -300,7 +318,7 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		},
 	}
 
-	newState, err := ProcessProposerSlashings(
+	newState, err := blocks.ProcessProposerSlashings(
 		beaconState,
 		block,
 		false,
@@ -337,7 +355,7 @@ func TestProcessAttesterSlashings_ThresholdReached(t *testing.T) {
 		params.BeaconConfig().MaxAttesterSlashings,
 	)
 
-	if _, err := ProcessAttesterSlashings(
+	if _, err := blocks.ProcessAttesterSlashings(
 		beaconState,
 		block,
 		false,
@@ -385,7 +403,7 @@ func TestProcessAttesterSlashings_EmptyCustodyFields(t *testing.T) {
 	}
 	want := fmt.Sprint("custody bit field can't all be 0")
 
-	if _, err := ProcessAttesterSlashings(
+	if _, err := blocks.ProcessAttesterSlashings(
 		beaconState,
 		block,
 		false,
@@ -427,7 +445,7 @@ func TestProcessAttesterSlashings_EmptyCustodyFields(t *testing.T) {
 			AttesterSlashings: slashings,
 		},
 	}
-	if _, err := ProcessAttesterSlashings(
+	if _, err := blocks.ProcessAttesterSlashings(
 		beaconState,
 		block,
 		false,
@@ -472,7 +490,7 @@ func TestProcessAttesterSlashings_UnmatchedAttestations(t *testing.T) {
 		att1,
 	)
 
-	if _, err := ProcessAttesterSlashings(
+	if _, err := blocks.ProcessAttesterSlashings(
 		beaconState,
 		block,
 		false,
@@ -517,7 +535,7 @@ func TestProcessAttesterSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 		},
 	}
 	want := "expected a non-empty list"
-	if _, err := ProcessAttesterSlashings(
+	if _, err := blocks.ProcessAttesterSlashings(
 		beaconState,
 		block,
 		false,
@@ -577,7 +595,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 			AttesterSlashings: slashings,
 		},
 	}
-	newState, err := ProcessAttesterSlashings(
+	newState, err := blocks.ProcessAttesterSlashings(
 		beaconState,
 		block,
 		false,
@@ -626,7 +644,7 @@ func TestProcessBlockAttestations_ThresholdReached(t *testing.T) {
 		params.BeaconConfig().MaxAttestations,
 	)
 
-	if _, err := ProcessBlockAttestations(
+	if _, err := blocks.ProcessBlockAttestations(
 		state,
 		block,
 		false,
@@ -658,7 +676,7 @@ func TestProcessBlockAttestations_InclusionDelayFailure(t *testing.T) {
 		params.BeaconConfig().MinAttestationInclusionDelay,
 		5,
 	)
-	if _, err := ProcessBlockAttestations(
+	if _, err := blocks.ProcessBlockAttestations(
 		state,
 		block,
 		false,
@@ -690,7 +708,7 @@ func TestProcessBlockAttestations_EpochDistanceFailure(t *testing.T) {
 		params.BeaconConfig().SlotsPerEpoch,
 		5+2*params.BeaconConfig().SlotsPerEpoch,
 	)
-	if _, err := ProcessBlockAttestations(
+	if _, err := blocks.ProcessBlockAttestations(
 		state,
 		block,
 		false,
@@ -723,7 +741,7 @@ func TestProcessBlockAttestations_JustifiedEpochVerificationFailure(t *testing.T
 		2,
 		1,
 	)
-	if _, err := ProcessBlockAttestations(
+	if _, err := blocks.ProcessBlockAttestations(
 		state,
 		block,
 		false,
@@ -756,7 +774,7 @@ func TestProcessBlockAttestations_PreviousJustifiedEpochVerificationFailure(t *t
 		3,
 		2,
 	)
-	if _, err := ProcessBlockAttestations(
+	if _, err := blocks.ProcessBlockAttestations(
 		state,
 		block,
 		false,
@@ -792,7 +810,7 @@ func TestProcessBlockAttestations_BlockRootOutOfBounds(t *testing.T) {
 	}
 
 	want := "could not get block root for justified epoch"
-	if _, err := ProcessBlockAttestations(
+	if _, err := blocks.ProcessBlockAttestations(
 		state,
 		block,
 		false,
@@ -832,7 +850,7 @@ func TestProcessBlockAttestations_BlockRootFailure(t *testing.T) {
 		[]byte{},
 		blockRoots[64],
 	)
-	if _, err := ProcessBlockAttestations(
+	if _, err := blocks.ProcessBlockAttestations(
 		state,
 		block,
 		false,
@@ -883,7 +901,7 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 		"incoming attestation does not match crosslink in state for shard %d",
 		attestations[0].Data.Shard,
 	)
-	if _, err := ProcessBlockAttestations(
+	if _, err := blocks.ProcessBlockAttestations(
 		state,
 		block,
 		false,
@@ -930,7 +948,7 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 		[]byte{},
 		[]byte{1},
 	)
-	if _, err := ProcessBlockAttestations(
+	if _, err := blocks.ProcessBlockAttestations(
 		state,
 		block,
 		false,
@@ -973,7 +991,7 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 			Attestations: attestations,
 		},
 	}
-	newState, err := ProcessBlockAttestations(
+	newState, err := blocks.ProcessBlockAttestations(
 		state,
 		block,
 		false,
@@ -1006,7 +1024,7 @@ func TestProcessValidatorDeposits_ThresholdReached(t *testing.T) {
 	}
 	beaconState := &pb.BeaconState{}
 	want := "exceeds allowed threshold"
-	if _, err := ProcessValidatorDeposits(
+	if _, err := blocks.ProcessValidatorDeposits(
 		beaconState,
 		block,
 	); !strings.Contains(err.Error(), want) {
@@ -1026,7 +1044,7 @@ func TestProcessValidatorDeposits_DepositDataSizeTooSmall(t *testing.T) {
 	}
 	beaconState := &pb.BeaconState{}
 	want := "deposit data slice too small"
-	if _, err := ProcessValidatorDeposits(
+	if _, err := blocks.ProcessValidatorDeposits(
 		beaconState,
 		block,
 	); !strings.Contains(err.Error(), want) {
@@ -1046,7 +1064,7 @@ func TestProcessValidatorDeposits_DepositInputDecodingFails(t *testing.T) {
 	}
 	beaconState := &pb.BeaconState{}
 	want := "ssz decode failed"
-	if _, err := ProcessValidatorDeposits(
+	if _, err := blocks.ProcessValidatorDeposits(
 		beaconState,
 		block,
 	); !strings.Contains(err.Error(), want) {
@@ -1093,7 +1111,7 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 		},
 	}
 	want := "merkle branch of deposit root did not verify"
-	if _, err := ProcessValidatorDeposits(
+	if _, err := blocks.ProcessValidatorDeposits(
 		beaconState,
 		block,
 	); !strings.Contains(err.Error(), want) {
@@ -1175,7 +1193,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 		GenesisTime: uint64(genesisTime),
 	}
 	want := "expected withdrawal credentials to match"
-	if _, err := ProcessValidatorDeposits(
+	if _, err := blocks.ProcessValidatorDeposits(
 		beaconState,
 		block,
 	); !strings.Contains(err.Error(), want) {
@@ -1252,7 +1270,7 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 		Slot:        currentSlot,
 		GenesisTime: uint64(genesisTime),
 	}
-	newState, err := ProcessValidatorDeposits(
+	newState, err := blocks.ProcessValidatorDeposits(
 		beaconState,
 		block,
 	)
@@ -1286,7 +1304,7 @@ func TestProcessValidatorExits_ThresholdReached(t *testing.T) {
 		params.BeaconConfig().MaxVoluntaryExits,
 	)
 
-	if _, err := ProcessValidatorExits(
+	if _, err := blocks.ProcessValidatorExits(
 		state,
 		block,
 		false,
@@ -1317,7 +1335,7 @@ func TestProcessValidatorExits_ValidatorNotActive(t *testing.T) {
 
 	want := "validator exit epoch should be > entry_exit_effect_epoch"
 
-	if _, err := ProcessValidatorExits(
+	if _, err := blocks.ProcessValidatorExits(
 		state,
 		block,
 		false,
@@ -1349,7 +1367,7 @@ func TestProcessValidatorExits_InvalidExitEpoch(t *testing.T) {
 
 	want := "expected current epoch >= exit.epoch"
 
-	if _, err := ProcessValidatorExits(
+	if _, err := blocks.ProcessValidatorExits(
 		state,
 		block,
 		false,
@@ -1381,7 +1399,7 @@ func TestProcessValidatorExits_InvalidStatusChangeSlot(t *testing.T) {
 	}
 
 	want := "exit epoch should be > entry_exit_effect_epoch"
-	if _, err := ProcessValidatorExits(
+	if _, err := blocks.ProcessValidatorExits(
 		state,
 		block,
 		false,
@@ -1411,7 +1429,7 @@ func TestProcessValidatorExits_AppliesCorrectStatus(t *testing.T) {
 			VoluntaryExits: exits,
 		},
 	}
-	newState, err := ProcessValidatorExits(state, block, false)
+	newState, err := blocks.ProcessValidatorExits(state, block, false)
 	if err != nil {
 		t.Fatalf("Could not process exits: %v", err)
 	}

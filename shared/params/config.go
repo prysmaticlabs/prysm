@@ -30,6 +30,14 @@ type BeaconChainConfig struct {
 	WithdrawalPrivkeyFileName    string // WithdrawalPrivKeyFileName specifies the string name of a withdrawal private key file.
 	BLSPubkeyLength              int    // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
 
+	// BLS domain values.
+	DomainDeposit     uint64 // DomainDeposit defines the BLS signature domain for deposit verification.
+	DomainAttestation uint64 // DomainAttestation defines the BLS signature domain for attestation verification.
+	DomainProposal    uint64 // DomainProposal defines the BLS signature domain for proposal verification.
+	DomainExit        uint64 // DomainExit defines the BLS signature domain for exit verification.
+	DomainRandao      uint64 // DomainRandao defines the BLS signature domain for randao verification.
+	DomainTransfer    uint64 // DomainTransfer defines the BLS signature domain for transfer verification.
+
 	// Deposit contract constants.
 	DepositContractAddress   []byte // DepositContractAddress is the address of the deposit contract in PoW chain.
 	DepositContractTreeDepth uint64 // Depth of the Merkle trie of deposits in the validator deposit contract on the PoW chain.
@@ -127,6 +135,14 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	FarFutureEpoch:     1<<64 - 1,
 	ZeroHash:           [32]byte{},
 	EmptySignature:     makeEmptySignature(),
+
+	// BLS domain values.
+	DomainDeposit:     0,
+	DomainAttestation: 1,
+	DomainProposal:    2,
+	DomainExit:        3,
+	DomainRandao:      4,
+	DomainTransfer:    5,
 
 	// Time parameter constants.
 	SecondsPerSlot:               6,

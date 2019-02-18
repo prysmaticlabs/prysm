@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -25,7 +27,7 @@ func TestValidatorIndex_Ok(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	depositData, err := b.EncodeDepositData(
+	depositData, err := helpers.EncodeDepositData(
 		&pbp2p.DepositInput{
 			Pubkey: []byte{'A'},
 		},
@@ -75,7 +77,7 @@ func TestValidatorEpochAssignments_Ok(t *testing.T) {
 		depositInput := &pbp2p.DepositInput{
 			Pubkey: pubKey[:],
 		}
-		depositData, err := b.EncodeDepositData(
+		depositData, err := helpers.EncodeDepositData(
 			depositInput,
 			params.BeaconConfig().MaxDepositAmount,
 			genesisTime,
@@ -159,7 +161,7 @@ func TestValidatorCommitteeAtSlot_CrosslinkCommitteesFailure(t *testing.T) {
 		depositInput := &pbp2p.DepositInput{
 			Pubkey: pubKey[:],
 		}
-		depositData, err := b.EncodeDepositData(
+		depositData, err := helpers.EncodeDepositData(
 			depositInput,
 			params.BeaconConfig().MaxDepositAmount,
 			genesisTime,
@@ -205,7 +207,7 @@ func TestValidatorCommitteeAtSlot_Ok(t *testing.T) {
 		depositInput := &pbp2p.DepositInput{
 			Pubkey: pubKey[:],
 		}
-		depositData, err := b.EncodeDepositData(
+		depositData, err := helpers.EncodeDepositData(
 			depositInput,
 			params.BeaconConfig().MaxDepositAmount,
 			genesisTime,

@@ -12,14 +12,15 @@ import (
 	"testing"
 	"time"
 
-	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -651,7 +652,7 @@ func TestUnpackDepositLogs(t *testing.T) {
 		t.Errorf("Retrieved merkle tree index is incorrect %d", index)
 	}
 
-	deserializeData, err := blocks.DecodeDepositInput(depositData)
+	deserializeData, err := helpers.DecodeDepositInput(depositData)
 	if err != nil {
 		t.Fatalf("Unable to decode deposit input %v", err)
 	}
@@ -707,7 +708,7 @@ func TestProcessChainStartLog(t *testing.T) {
 		t.Fatalf("Could not serialize data %v", err)
 	}
 
-	blocks.EncodeDepositData(data, amount32Eth.Uint64(), time.Now().Unix())
+	helpers.EncodeDepositData(data, amount32Eth.Uint64(), time.Now().Unix())
 
 	// 8 Validators are used as size required for beacon-chain to start. This number
 	// is defined in the deposit contract as the number required for the testnet. The actual number
