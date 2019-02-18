@@ -21,6 +21,54 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
+func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
+	privKeys := make([]*bls.SecretKey, 100)
+	deposits := make([]*pb.Deposit, 100)
+	for i := 0; i < len(deposits); i++ {
+		priv, err := bls.RandKey(rand.Reader)
+		if err != nil {
+			t.Fatal(err)
+		}
+		depositInput := &pb.DepositInput{
+			Pubkey: priv.PublicKey().Marshal(),
+		}
+		balance := params.BeaconConfig().MaxDepositAmount
+		depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
+		if err != nil {
+			t.Fatalf("Cannot encode data: %v", err)
+		}
+		deposits[i] = &pb.Deposit{DepositData: depositData}
+		privKeys[i] = priv
+	}
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), []byte{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, params.BeaconConfig().GenesisSlot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	epoch := helpers.SlotToEpoch(params.BeaconConfig().GenesisSlot)
+	buf := make([]byte, 32)
+	binary.LittleEndian.PutUint64(buf, epoch)
+	domain := helpers.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
+
+	// We make the previous validator's index sign the message instead of the proposer.
+	epochSignature := privKeys[proposerIdx-1].Sign(buf, domain)
+	block := &pb.BeaconBlock{
+		RandaoRevealHash32: epochSignature.Marshal(),
+	}
+
+	want := "block randao reveal signature did not verify"
+	if _, err := blocks.ProcessBlockRandao(
+		beaconState,
+		block,
+	); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %v, received %v", want, err)
+	}
+}
+
 func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T) {
 	privKeys := make([]*bls.SecretKey, 100)
 	deposits := make([]*pb.Deposit, 100)
@@ -59,11 +107,20 @@ func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testi
 		RandaoRevealHash32: epochSignature.Marshal(),
 	}
 
-	if _, err := blocks.ProcessBlockRandao(
+	newState, err := blocks.ProcessBlockRandao(
 		beaconState,
 		block,
-	); err != nil {
-		t.Fatalf("Unexpected error processing block randao: %v", err)
+	)
+	if err != nil {
+		t.Errorf("Unexpected error processing block randao: %v", err)
+	}
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+	mix := newState.LatestRandaoMixesHash32S[currentEpoch%params.BeaconConfig().LatestRandaoMixesLength]
+	if bytes.Equal(mix, params.BeaconConfig().EmptySignature[:]) {
+		t.Errorf(
+			"Expected empty signature to be overwritten by randao reveal, received %v",
+			params.BeaconConfig().EmptySignature,
+		)
 	}
 }
 

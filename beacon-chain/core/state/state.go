@@ -27,34 +27,37 @@ func GenesisBeaconState(
 		params.BeaconConfig().LatestRandaoMixesLength,
 	)
 	for i := 0; i < len(latestRandaoMixes); i++ {
-		latestRandaoMixes[i] = params.BeaconConfig().EmptySignature[:]
+		emptySig := params.BeaconConfig().EmptySignature
+		latestRandaoMixes[i] = emptySig[:]
 	}
+
+	zeroHash := params.BeaconConfig().ZeroHash[:]
 
 	latestActiveIndexRoots := make(
 		[][]byte,
 		params.BeaconConfig().LatestActiveIndexRootsLength,
 	)
 	for i := 0; i < len(latestActiveIndexRoots); i++ {
-		latestActiveIndexRoots[i] = params.BeaconConfig().ZeroHash[:]
+		latestActiveIndexRoots[i] = zeroHash
 	}
 
 	latestVDFOutputs := make([][]byte,
 		params.BeaconConfig().LatestRandaoMixesLength/params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(latestVDFOutputs); i++ {
-		latestVDFOutputs[i] = params.BeaconConfig().ZeroHash[:]
+		latestVDFOutputs[i] = zeroHash
 	}
 
 	latestCrosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
 	for i := 0; i < len(latestCrosslinks); i++ {
 		latestCrosslinks[i] = &pb.Crosslink{
 			Epoch:                params.BeaconConfig().GenesisEpoch,
-			ShardBlockRootHash32: params.BeaconConfig().ZeroHash[:],
+			ShardBlockRootHash32: zeroHash,
 		}
 	}
 
 	latestBlockRoots := make([][]byte, params.BeaconConfig().LatestBlockRootsLength)
 	for i := 0; i < len(latestBlockRoots); i++ {
-		latestBlockRoots[i] = params.BeaconConfig().ZeroHash[:]
+		latestBlockRoots[i] = zeroHash
 	}
 
 	validatorRegistry := make([]*pb.Validator, len(genesisValidatorDeposits))
@@ -100,8 +103,8 @@ func GenesisBeaconState(
 		CurrentShufflingStartShard:  params.BeaconConfig().GenesisStartShard,
 		PreviousShufflingEpoch:      params.BeaconConfig().GenesisEpoch,
 		CurrentShufflingEpoch:       params.BeaconConfig().GenesisEpoch,
-		PreviousShufflingSeedHash32: params.BeaconConfig().ZeroHash[:],
-		CurrentShufflingSeedHash32:  params.BeaconConfig().ZeroHash[:],
+		PreviousShufflingSeedHash32: zeroHash,
+		CurrentShufflingSeedHash32:  zeroHash,
 
 		// Finality.
 		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
