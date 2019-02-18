@@ -85,14 +85,6 @@ spec:
         port:
           number: 8545
         host: public-rpc-nodes.pow.svc.cluster.local
-        subset: v1
-      weight: 50
-    - destination:
-        port:
-          number: 8545
-        host: public-rpc-nodes.pow.svc.cluster.local
-        subset: v1-stable
-      weight: 50
 ---
  apiVersion: networking.istio.io/v1alpha3
  kind: DestinationRule
@@ -101,13 +93,6 @@ spec:
    namespace: pow
  spec:
    host: public-rpc-nodes.pow.svc.cluster.local
-   subsets:
-   - name: v1
-     labels:
-       version: v1
-   - name: v1-stable
-     labels:
-       version: v1-stable
    trafficPolicy:
      loadBalancer:
        consistentHash:

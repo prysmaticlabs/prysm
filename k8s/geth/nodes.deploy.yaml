@@ -52,8 +52,6 @@ spec:
             - >
               geth
               --networkid=5
-              --bootnodesv4=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_V4_SERVICE_HOST):$(GETH_BOOTNODE_V4_SERVICE_PORT_BOOTNODE_UDP)
-              --bootnodesv5=enode://$(BOOTNODE_PUBKEY)@$(GETH_BOOTNODE_V5_SERVICE_HOST):$(GETH_BOOTNODE_V5_SERVICE_PORT_BOOTNODE_UDP)
               --ethstats=💎prylabs-$HOSTNAME:$(ETHSTATS_WS_SECRET)@wss://stats.goerli.net
               --rpc
               --rpcapi=eth
@@ -61,7 +59,6 @@ spec:
               --keystore=/keystore
               --verbosity=3
               --nousb
-              --lightserv=50
               --metrics
               --mine
               --unlock=0xd9a5179f091d85051d3c982785efd1455cec8699
