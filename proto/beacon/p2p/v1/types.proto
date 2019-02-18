@@ -114,7 +114,7 @@ message BeaconBlock {
   bytes state_root_hash32 = 3;
   bytes randao_reveal_hash32 = 4;
   Eth1Data eth1_data = 5;
-  repeated bytes signature = 6; // bytes96
+  bytes signature = 6; // bytes96
 
   // Block Body
   BeaconBlockBody body = 7;

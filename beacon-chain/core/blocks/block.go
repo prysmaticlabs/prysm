@@ -23,7 +23,7 @@ func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 		ParentRootHash32:   params.BeaconConfig().ZeroHash[:],
 		StateRootHash32:    stateRoot,
 		RandaoRevealHash32: params.BeaconConfig().ZeroHash[:],
-		Signature:          params.BeaconConfig().EmptySignature,
+		Signature:          params.BeaconConfig().EmptySignature[:],
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: params.BeaconConfig().ZeroHash[:],
 			BlockHash32:       params.BeaconConfig().ZeroHash[:],

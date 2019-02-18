@@ -27,7 +27,7 @@ func GenesisBeaconState(
 		params.BeaconConfig().LatestRandaoMixesLength,
 	)
 	for i := 0; i < len(latestRandaoMixes); i++ {
-		latestRandaoMixes[i] = params.BeaconConfig().ZeroHash[:]
+		latestRandaoMixes[i] = params.BeaconConfig().EmptySignature[:]
 	}
 
 	latestActiveIndexRoots := make(

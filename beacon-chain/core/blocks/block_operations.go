@@ -93,11 +93,10 @@ func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb
 	latestMixesLength := params.BeaconConfig().LatestRandaoMixesLength
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	latestMixSlice := beaconState.LatestRandaoMixesHash32S[currentEpoch%latestMixesLength]
-	latestMix := bytesutil.ToBytes32(latestMixSlice)
 	for i, x := range block.RandaoRevealHash32 {
-		latestMix[i] ^= x
+		latestMixSlice[i] ^= x
 	}
-	beaconState.LatestRandaoMixesHash32S[currentEpoch%latestMixesLength] = latestMix[:]
+	beaconState.LatestRandaoMixesHash32S[currentEpoch%latestMixesLength] = latestMixSlice
 	return beaconState, nil
 }
 

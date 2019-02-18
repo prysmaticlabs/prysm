@@ -6,13 +6,6 @@ import (
 	"math/big"
 )
 
-func makeEmptySignature() [][]byte {
-	signature := make([][]byte, 2)
-	signature[0] = make([]byte, 48)
-	signature[1] = make([]byte, 48)
-	return signature
-}
-
 // BeaconChainConfig contains constant configs for node to participate in beacon chain.
 type BeaconChainConfig struct {
 	// Misc constants.
@@ -54,7 +47,7 @@ type BeaconChainConfig struct {
 	GenesisEpoch            uint64   // GenesisEpoch is used to initialize epoch.
 	GenesisStartShard       uint64   // GenesisStartShard is the first shard to assign validators.
 	ZeroHash                [32]byte // ZeroHash is used to represent a zeroed out 32 byte array.
-	EmptySignature          [][]byte // EmptySignature is used to represent a zeroed out BLS Signature.
+	EmptySignature          [96]byte // EmptySignature is used to represent a zeroed out BLS Signature.
 	BLSWithdrawalPrefixByte byte     // BLSWithdrawalPrefixByte is used for BLS withdrawal and it's the first byte.
 
 	// Time parameters constants.
@@ -134,7 +127,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	GenesisStartShard:  0,
 	FarFutureEpoch:     1<<64 - 1,
 	ZeroHash:           [32]byte{},
-	EmptySignature:     makeEmptySignature(),
+	EmptySignature:     [96]byte{},
 
 	// BLS domain values.
 	DomainDeposit:     0,

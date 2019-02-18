@@ -22,8 +22,8 @@ import (
 )
 
 func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T) {
-	privKeys := make([]*bls.SecretKey, params.BeaconConfig().DepositsForChainStart)
-	deposits := make([]*pb.Deposit, params.BeaconConfig().DepositsForChainStart)
+	privKeys := make([]*bls.SecretKey, 100)
+	deposits := make([]*pb.Deposit, 100)
 	for i := 0; i < len(deposits); i++ {
 		priv, err := bls.RandKey(rand.Reader)
 		if err != nil {
@@ -50,7 +50,7 @@ func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testi
 		t.Fatal(err)
 	}
 	epoch := helpers.SlotToEpoch(params.BeaconConfig().GenesisSlot)
-	var buf []byte
+	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
 	domain := helpers.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
