@@ -50,9 +50,9 @@ func ActiveValidatorIndices(validators []*pb.Validator, epoch uint64) []uint64 {
 //    An entry or exit triggered in the ``epoch`` given by the input takes effect at
 //    the epoch given by the output.
 //    """
-//    return epoch + 1 + ENTRY_EXIT_DELAY
+//    return epoch + 1 + ACTIVATION_EXIT_DELAY
 func EntryExitEffectEpoch(epoch uint64) uint64 {
-	return epoch + 1 + params.BeaconConfig().EntryExitDelay
+	return epoch + 1 + params.BeaconConfig().ActivationExitDelay
 }
 
 // BeaconProposerIndex returns the index of the proposer of the block at a
