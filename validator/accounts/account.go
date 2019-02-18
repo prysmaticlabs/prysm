@@ -6,10 +6,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/sirupsen/logrus"
 )

@@ -5,8 +5,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/ssz"
-
 	"github.com/gogo/protobuf/proto"
 	att "github.com/prysmaticlabs/prysm/beacon-chain/core/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -16,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )

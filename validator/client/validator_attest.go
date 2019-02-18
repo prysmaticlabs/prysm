@@ -2,15 +2,12 @@ package client
 
 import (
 	"context"
-
-	"github.com/opentracing/opentracing-go"
-
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
-
+	"github.com/opentracing/opentracing-go"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // AttestToBlockHead completes the validator client's attester responsibility at a given slot.
