@@ -103,9 +103,10 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	for i := uint64(0); i < 1000; i++ {
 		pubkey := hashutil.Hash([]byte{byte(i)})
 		validators[i] = &pb.Validator{
-			ExitEpoch:    params.BeaconConfig().FarFutureEpoch,
-			Pubkey:       pubkey[:],
-			SlashedEpoch: 10,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+			Pubkey:          pubkey[:],
+			SlashedEpoch:    params.BeaconConfig().GenesisEpoch,
+			WithdrawalEpoch: params.BeaconConfig().GenesisEpoch,
 		}
 	}
 	proposerSlashings := []*pb.ProposerSlashing{
@@ -179,9 +180,10 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	for i := uint64(0); i < 1000; i++ {
 		pubkey := hashutil.Hash([]byte{byte(i)})
 		validators[i] = &pb.Validator{
-			ExitEpoch:    params.BeaconConfig().FarFutureEpoch,
-			Pubkey:       pubkey[:],
-			SlashedEpoch: params.BeaconConfig().GenesisEpoch + 10,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+			Pubkey:          pubkey[:],
+			SlashedEpoch:    params.BeaconConfig().GenesisEpoch + 10,
+			WithdrawalEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
 	proposerSlashings := []*pb.ProposerSlashing{
@@ -280,9 +282,10 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	for i := uint64(0); i < 1000; i++ {
 		pubkey := hashutil.Hash([]byte{byte(i)})
 		validators[i] = &pb.Validator{
-			ExitEpoch:    params.BeaconConfig().FarFutureEpoch,
-			Pubkey:       pubkey[:],
-			SlashedEpoch: params.BeaconConfig().GenesisEpoch + 10,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+			Pubkey:          pubkey[:],
+			SlashedEpoch:    params.BeaconConfig().GenesisEpoch + 10,
+			WithdrawalEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
 	proposerSlashings := []*pb.ProposerSlashing{

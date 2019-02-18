@@ -234,6 +234,12 @@ func ExitValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) {
 //    state.validator_balances[index] -= whistleblower_reward
 //    validator.slashed_epoch = get_current_epoch(state)
 func SlashValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) {
+	if state.Slot >= helpers.StartSlot(state.ValidatorRegistry[idx].WithdrawalEpoch) {
+		return nil, fmt.Errorf("withdrawn validator %d could not get slashed, "+
+			"current slot: %d, withdrawn slot %d",
+			idx, state.Slot, helpers.StartSlot(state.ValidatorRegistry[idx].WithdrawalEpoch))
+	}
+
 	state, err := ExitValidator(state, idx)
 	if err != nil {
 		return nil, fmt.Errorf("could not exit slashed validator: %v", err)

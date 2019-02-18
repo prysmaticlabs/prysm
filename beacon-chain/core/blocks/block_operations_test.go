@@ -262,8 +262,9 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
-			ExitEpoch:    params.BeaconConfig().FarFutureEpoch,
-			SlashedEpoch: 2,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+			SlashedEpoch:    params.BeaconConfig().GenesisEpoch * 2,
+			WithdrawalEpoch: params.BeaconConfig().GenesisEpoch,
 		}
 	}
 	validatorBalances := make([]uint64, len(validators))
@@ -531,8 +532,9 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
-			ExitEpoch:    params.BeaconConfig().FarFutureEpoch,
-			SlashedEpoch: 6,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+			SlashedEpoch:    6,
+			WithdrawalEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
 	validatorBalances := make([]uint64, len(validators))

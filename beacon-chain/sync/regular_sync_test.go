@@ -460,7 +460,7 @@ func TestReceiveAttestation_OlderThanFinalizedEpoch(t *testing.T) {
 	<-exitRoutine
 	want := fmt.Sprintf(
 		"Skipping received attestation with slot smaller than last finalized slot, %d < %d",
-		request1.Data.Slot, state.FinalizedEpoch*params.BeaconConfig().EpochLength)
+		request1.Data.Slot, state.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch)
 	testutil.AssertLogsContain(t, hook, want)
 }
 

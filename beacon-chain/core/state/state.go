@@ -71,6 +71,7 @@ func GenesisBeaconState(
 			WithdrawalCredentialsHash32: depositInput.WithdrawalCredentialsHash32,
 			ExitEpoch:                   params.BeaconConfig().FarFutureEpoch,
 			SlashedEpoch:                params.BeaconConfig().FarFutureEpoch,
+			WithdrawalEpoch:             params.BeaconConfig().FarFutureEpoch,
 		}
 
 		validatorRegistry[i] = validator
