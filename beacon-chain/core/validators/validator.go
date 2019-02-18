@@ -225,7 +225,6 @@ func ExitValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) {
 //    Slash the validator of the given ``index``.
 //    Note that this function mutates ``state``.
 //    """
-//    exit_validator(state, index)
 //    validator = state.validator_registry[index]
 //    state.latest_slashed_balances[get_current_epoch(state) % LATEST_PENALIZED_EXIT_LENGTH] += get_effective_balance(state, index)
 //
