@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"io/ioutil"
+	"math"
 	"math/big"
 	"os"
 	"time"
@@ -23,6 +24,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	"github.com/x-cray/logrus-prefixed-formatter"
+	rand2 "golang.org/x/exp/rand"
+	"gonum.org/v1/gonum/stat/distuv"
 )
 
 func main() {
@@ -35,6 +38,7 @@ func main() {
 	var numberOfDeposits int64
 	var depositAmount int64
 	var depositDelay int64
+	var variableTx bool
 
 	customFormatter := new(prefixed.TextFormatter)
 	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
@@ -96,6 +100,11 @@ func main() {
 			Value:       5,
 			Usage:       "The time delay between sending the deposits to the contract(in seconds)",
 			Destination: &depositDelay,
+		},
+		cli.BoolFlag{
+			Name:        "variableTx",
+			Usage:       "This enables variable transaction latencies to simulate real-world transactions",
+			Destination: &variableTx,
 		},
 	}
 
@@ -160,6 +169,8 @@ func main() {
 			log.Fatal(err)
 		}
 
+		statDist := buildStatisticalDist(depositDelay, numberOfDeposits)
+
 		for i := int64(0); i < numberOfDeposits; i++ {
 
 			validatorKey, err := prysmKeyStore.NewKey(rand.Reader)
@@ -180,11 +191,17 @@ func main() {
 				log.Error("unable to send transaction to contract")
 			}
 
-			time.Sleep(time.Duration(depositDelay) * time.Second)
-
 			log.WithFields(logrus.Fields{
 				"Transaction Hash": tx.Hash(),
 			}).Infof("Deposit %d sent to contract for validator with a public key %#x", i, validatorKey.PublicKey.BufferedPublicKey())
+
+			// If flag is enabled make transaction times variable
+			if variableTx {
+				time.Sleep(time.Duration(math.Abs(statDist.Rand())) * time.Second)
+				continue
+			}
+
+			time.Sleep(time.Duration(depositDelay) * time.Second)
 		}
 
 	}
@@ -193,4 +210,17 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func buildStatisticalDist(depositDelay int64, numberOfDeposits int64) *distuv.StudentsT {
+
+	src := rand2.NewSource(uint64(time.Now().Unix()))
+	dist := &distuv.StudentsT{
+		Mu:    float64(depositDelay),
+		Sigma: 2,
+		Nu:    float64(numberOfDeposits - 1),
+		Src:   src,
+	}
+
+	return dist
 }
