@@ -1,6 +1,7 @@
 package validators
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -428,6 +429,20 @@ func TestExitValidator_AlreadyExited(t *testing.T) {
 	}
 	if _, err := ExitValidator(state, 0); err == nil {
 		t.Fatal("exitValidator should have failed with exiting again")
+	}
+}
+
+func TestPenalizeValidator_AlreadyWithdrawn(t *testing.T) {
+	state := &pb.BeaconState{
+		Slot: 100,
+		ValidatorRegistry: []*pb.Validator{
+			{WithdrawalEpoch: 1},
+		},
+	}
+	want := fmt.Sprintf("withdrawn validator 0 could not get slashed, current slot: %d, withdrawn slot %d",
+		state.Slot, helpers.StartSlot(state.ValidatorRegistry[0].WithdrawalEpoch))
+	if _, err := PenalizeValidator(state, 0); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected error: %s, received %v", want, err)
 	}
 }
 

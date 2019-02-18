@@ -304,10 +304,11 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		block,
 		false,
 	)
-	validators = newState.ValidatorRegistry
 	if err != nil {
 		t.Fatalf("Unexpected error: %s", err)
 	}
+
+	validators = newState.ValidatorRegistry
 	if validators[1].ExitEpoch !=
 		beaconState.Slot+params.BeaconConfig().ActivationExitDelay {
 		t.Errorf("Proposer with index 1 did not correctly exit,"+"wanted slot:%d, got:%d",
