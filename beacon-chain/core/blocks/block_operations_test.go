@@ -262,8 +262,9 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
-			ExitEpoch:      params.BeaconConfig().FarFutureEpoch,
-			PenalizedEpoch: 2,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+			PenalizedEpoch:  params.BeaconConfig().GenesisEpoch * 2,
+			WithdrawalEpoch: params.BeaconConfig().GenesisEpoch,
 		}
 	}
 	validatorBalances := make([]uint64, len(validators))
@@ -304,10 +305,11 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		block,
 		false,
 	)
-	validators = newState.ValidatorRegistry
 	if err != nil {
 		t.Fatalf("Unexpected error: %s", err)
 	}
+
+	validators = newState.ValidatorRegistry
 	if validators[1].ExitEpoch !=
 		beaconState.Slot+params.BeaconConfig().EntryExitDelay {
 		t.Errorf("Proposer with index 1 did not correctly exit,"+"wanted slot:%d, got:%d",
@@ -530,8 +532,9 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
-			ExitEpoch:      params.BeaconConfig().FarFutureEpoch,
-			PenalizedEpoch: 6,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+			PenalizedEpoch:  6,
+			WithdrawalEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
 	validatorBalances := make([]uint64, len(validators))
@@ -788,7 +791,7 @@ func TestProcessBlockAttestations_BlockRootOutOfBounds(t *testing.T) {
 		},
 	}
 
-	want := "could not get block root for justified slot"
+	want := "could not get block root for justified epoch"
 	if _, err := ProcessBlockAttestations(
 		state,
 		block,
@@ -805,15 +808,15 @@ func TestProcessBlockAttestations_BlockRootFailure(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                   129,
-		PreviousJustifiedEpoch: 1,
+		Slot:                   params.BeaconConfig().GenesisSlot + 129,
+		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch + 1,
 		LatestBlockRootHash32S: blockRoots,
 	}
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Slot:                     80,
-				JustifiedEpoch:           1,
+				Slot:                     params.BeaconConfig().GenesisSlot + 80,
+				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch + 1,
 				JustifiedBlockRootHash32: []byte{},
 			},
 		},
@@ -854,8 +857,8 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   70,
-		PreviousJustifiedEpoch: 0,
+		Slot:                   params.BeaconConfig().GenesisSlot + 70,
+		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
 	}
@@ -863,10 +866,11 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 		{
 			Data: &pb.AttestationData{
 				Shard:                    0,
-				Slot:                     20,
+				Slot:                     params.BeaconConfig().GenesisSlot + 20,
 				JustifiedBlockRootHash32: blockRoots[0],
 				LatestCrosslink:          &pb.Crosslink{ShardBlockRootHash32: []byte{2}},
 				ShardBlockRootHash32:     []byte{2},
+				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
 			},
 		},
 	}
@@ -899,8 +903,8 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   70,
-		PreviousJustifiedEpoch: 0,
+		Slot:                   params.BeaconConfig().GenesisSlot + 70,
+		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
 	}
@@ -908,10 +912,11 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 		{
 			Data: &pb.AttestationData{
 				Shard:                    0,
-				Slot:                     20,
+				Slot:                     params.BeaconConfig().GenesisSlot + 20,
 				JustifiedBlockRootHash32: blockRoots[0],
 				LatestCrosslink:          &pb.Crosslink{ShardBlockRootHash32: []byte{1}},
 				ShardBlockRootHash32:     []byte{1},
+				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
 			},
 		},
 	}
@@ -936,7 +941,7 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 
 func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 	var blockRoots [][]byte
-	for i := uint64(0); i < 2*params.BeaconConfig().EpochLength; i++ {
+	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	stateLatestCrosslinks := []*pb.Crosslink{
@@ -945,18 +950,19 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   70,
-		PreviousJustifiedEpoch: 0,
+		Slot:                   params.BeaconConfig().GenesisSlot + 70,
+		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
 		LatestBlockRootHash32S: blockRoots,
 		LatestCrosslinks:       stateLatestCrosslinks,
 	}
 	att1 := &pb.Attestation{
 		Data: &pb.AttestationData{
 			Shard:                    0,
-			Slot:                     20,
+			Slot:                     params.BeaconConfig().GenesisSlot + 20,
 			JustifiedBlockRootHash32: blockRoots[0],
 			LatestCrosslink:          &pb.Crosslink{ShardBlockRootHash32: []byte{1}},
 			ShardBlockRootHash32:     []byte{},
+			JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
 		},
 		AggregationBitfield: []byte{1},
 		CustodyBitfield:     []byte{1},
@@ -983,7 +989,7 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 			pendingAttestations[0].Data,
 		)
 	}
-	if pendingAttestations[0].InclusionSlot != 70 {
+	if pendingAttestations[0].InclusionSlot != params.BeaconConfig().GenesisSlot+70 {
 		t.Errorf(
 			"Pending attestation not included at correct slot: wanted %v, received %v",
 			64,

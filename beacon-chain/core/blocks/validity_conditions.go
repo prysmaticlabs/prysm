@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -38,35 +40,36 @@ func IsValidBlock(
 		return fmt.Errorf("unprocessed parent block as it is not saved in the db: %#x", parentRoot)
 	}
 
-	// Pre-Processing Condition 2:
-	// The state is updated up to block.slot -1.
-
-	if state.Slot != block.Slot-1 {
-		return fmt.Errorf(
-			"block slot is not valid %d as it is supposed to be %d", block.Slot, state.Slot+1)
-	}
-
 	if enablePOWChain {
-		h := common.BytesToHash(state.LatestEth1Data.DepositRootHash32)
+		h := common.BytesToHash(state.LatestEth1Data.BlockHash32)
 		powBlock, err := GetPOWBlock(ctx, h)
 		if err != nil {
-			return fmt.Errorf("unable to retrieve POW chain reference block %v", err)
+			return fmt.Errorf("unable to retrieve POW chain reference block: %v", err)
 		}
 
-		// Pre-Processing Condition 3:
+		// Pre-Processing Condition 2:
 		// The block pointed to by the state in state.processed_pow_receipt_root has
 		// been processed in the ETH 1.0 chain.
 		if powBlock == nil {
-			return fmt.Errorf("proof-of-Work chain reference in state does not exist %#x", state.LatestEth1Data.DepositRootHash32)
+			return fmt.Errorf("proof-of-Work chain reference in state does not exist: %#x", state.LatestEth1Data.BlockHash32)
 		}
 	}
 
 	// Pre-Processing Condition 4:
-	// The node's local time is greater than or equal to
-	// state.genesis_time + block.slot * SLOT_DURATION.
+	// The node's local Unix time is greater than or equal to
+	// state.genesis_time + (block.slot-GENESIS_SLOT) * SLOT_DURATION.
+	// (Note that leap seconds mean that slots will occasionally last SLOT_DURATION + 1 or
+	// SLOT_DURATION - 1 seconds, possibly several times a year.)
 	if !IsSlotValid(block.Slot, genesisTime) {
 		return fmt.Errorf("slot of block is too high: %d", block.Slot)
 	}
 
 	return nil
+}
+
+// IsSlotValid compares the slot to the system clock to determine if the block is valid.
+func IsSlotValid(slot uint64, genesisTime time.Time) bool {
+	slotDuration := time.Duration((slot-params.BeaconConfig().GenesisSlot)*params.BeaconConfig().SlotDuration) * time.Second
+	validTimeThreshold := genesisTime.Add(slotDuration)
+	return clock.Now().After(validTimeThreshold)
 }

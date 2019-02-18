@@ -10,6 +10,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
@@ -57,14 +58,15 @@ func (as *AttesterServer) AttestationInfoAtSlot(ctx context.Context, req *pb.Att
 	// where epoch_boundary is the block at the most recent epoch boundary in the
 	// chain defined by head -- i.e. the BeaconBlock where block.slot == get_epoch_start_slot(head.slot).
 	// On the server side, this is fetched by calling get_block_root(state, get_epoch_start_slot(head.slot)).
-	epochBoundaryRoot, err := blocks.BlockRoot(beaconState, helpers.StartSlot(head.Slot))
+	epochBoundary := head.Slot / params.BeaconConfig().EpochLength
+	epochBoundaryRoot, err := blocks.BlockRoot(beaconState, helpers.StartSlot(epochBoundary))
 	if err != nil {
 		return nil, fmt.Errorf("could not get epoch boundary block: %v", err)
 	}
 	// Fetch the justified block root = hash_tree_root(justified_block) where
 	// justified_block is the block at state.justified_epoch in the chain defined by head.
 	// On the server side, this is fetched by calling get_block_root(state, justified_epoch).
-	justifiedBlockRoot, err := blocks.BlockRoot(beaconState, beaconState.JustifiedEpoch)
+	justifiedBlockRoot, err := blocks.BlockRoot(beaconState, helpers.StartSlot(beaconState.JustifiedEpoch))
 	if err != nil {
 		return nil, fmt.Errorf("could not get justified block: %v", err)
 	}

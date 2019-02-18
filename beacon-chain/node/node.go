@@ -215,6 +215,7 @@ func (b *BeaconNode) registerPOWChainService(ctx *cli.Context) error {
 		Client:          powClient,
 		Reader:          powClient,
 		Logger:          powClient,
+		BlockFetcher:    powClient,
 		ContractBackend: powClient,
 		BeaconDB:        b.db,
 		ChainStartDelay: delay,

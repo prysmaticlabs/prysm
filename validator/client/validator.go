@@ -32,7 +32,6 @@ type validator struct {
 	validatorClient pb.ValidatorServiceClient
 	beaconClient    pb.BeaconServiceClient
 	attesterClient  pb.AttesterServiceClient
-	attestationPool AttestationPool
 	key             *keystore.Key
 }
 
@@ -111,7 +110,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 
 	req := &pb.ValidatorEpochAssignmentsRequest{
 		EpochStart: slot,
-		PublicKey:  v.key.PublicKey.Serialize(),
+		PublicKey:  v.key.PublicKey.BufferedPublicKey(),
 	}
 
 	resp, err := v.validatorClient.ValidatorEpochAssignments(ctx, req)

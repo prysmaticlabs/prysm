@@ -5,7 +5,6 @@ package blockchain
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -264,8 +263,8 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 		return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
 	}
 
-	if block.Slot == 0 {
-		return nil, errors.New("cannot process a genesis block: received block with slot 0")
+	if block.Slot == params.BeaconConfig().GenesisSlot {
+		return nil, fmt.Errorf("cannot process a genesis block: received block with slot %d", params.BeaconConfig().GenesisSlot)
 	}
 
 	// Save blocks with higher slot numbers in cache.

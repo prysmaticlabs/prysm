@@ -343,8 +343,8 @@ func isSurroundVote(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
 //   For each attestation in block.body.attestations:
 //     Verify that attestation.data.slot <= state.slot - MIN_ATTESTATION_INCLUSION_DELAY <
 //       attestation.data.slot + EPOCH_LENGTH.
-//     Verify that attestation.data.justified_epoch is equal to state.justified_epoch
-//       if attestation.data.slot >= get_epoch_start_slot(get_current_epoch(state)) else state.previous_justified_epoch.
+//     Verify that `attestation.data.justified_epoch` is equal to `state.justified_epoch
+//     	 if slot_to_epoch(attestation.data.slot + 1) >= get_current_epoch(state) else state.previous_justified_epoch`.
 //     Verify that attestation.data.justified_block_root is equal to
 //       get_block_root(state, get_epoch_start_slot(attestation.data.justified_epoch)).
 //     Verify that either attestation.data.latest_crosslink_root or
@@ -400,10 +400,10 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 			beaconState.Slot,
 		)
 	}
-	// Verify that attestation.data.justified_epoch is equal to state.justified_epoch
-	// 	if attestation.data.slot >= get_epoch_start_slot(get_current_epoch(state))
-	// 	else state.previous_justified_epoch.
-	if att.Data.Slot >= helpers.StartSlot(helpers.SlotToEpoch(beaconState.Slot)) {
+	// Verify that `attestation.data.justified_epoch` is equal to `state.justified_epoch
+	// 	if slot_to_epoch(attestation.data.slot + 1) >= get_current_epoch(state)
+	// 	else state.previous_justified_epoch`.
+	if helpers.SlotToEpoch(att.Data.Slot+1) >= helpers.CurrentEpoch(beaconState) {
 		if att.Data.JustifiedEpoch != beaconState.JustifiedEpoch {
 			return fmt.Errorf(
 				"expected attestation.JustifiedEpoch == state.JustifiedEpoch, received %d == %d",
@@ -425,7 +425,7 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	// get_block_root(state, get_epoch_start_slot(attestation.data.justified_epoch)).
 	blockRoot, err := BlockRoot(beaconState, helpers.StartSlot(att.Data.JustifiedEpoch))
 	if err != nil {
-		return fmt.Errorf("could not get block root for justified slot: %v", err)
+		return fmt.Errorf("could not get block root for justified epoch: %v", err)
 	}
 
 	justifiedBlockRoot := att.Data.JustifiedBlockRootHash32

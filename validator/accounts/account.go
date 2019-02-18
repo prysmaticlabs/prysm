@@ -73,7 +73,7 @@ func NewValidatorAccount(directory string, password string) error {
 	).Info("Keystore generated for validator signatures at path")
 
 	data := &pb.DepositInput{
-		Pubkey:                      validatorKey.SecretKey.GetPublicKey().Serialize(),
+		Pubkey:                      validatorKey.SecretKey.K.Bytes(), // TODO(#1367): Use real BLS public key here.
 		ProofOfPossession:           []byte("pop"),
 		WithdrawalCredentialsHash32: []byte("withdraw"),
 	}

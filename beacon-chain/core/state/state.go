@@ -70,6 +70,7 @@ func InitialBeaconState(
 			WithdrawalCredentialsHash32: depositInput.WithdrawalCredentialsHash32,
 			ExitEpoch:                   params.BeaconConfig().FarFutureEpoch,
 			PenalizedEpoch:              params.BeaconConfig().FarFutureEpoch,
+			WithdrawalEpoch:             params.BeaconConfig().FarFutureEpoch,
 		}
 
 		validatorRegistry[i] = validator

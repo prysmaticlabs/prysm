@@ -74,6 +74,10 @@ func (m *mockClient) LatestBlockHash() common.Hash {
 	return common.BytesToHash([]byte{'A'})
 }
 
+func (m *mockClient) HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error) {
+	return nil, nil
+}
+
 type faultyClient struct{}
 
 func (f *faultyClient) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
@@ -102,6 +106,10 @@ func (f *faultyClient) CodeAt(ctx context.Context, account common.Address, block
 
 func (f *faultyClient) LatestBlockHash() common.Hash {
 	return common.BytesToHash([]byte{'A'})
+}
+
+func (f *faultyClient) HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error) {
+	return nil, nil
 }
 
 func setupInitialDeposits(t *testing.T) []*pb.Deposit {
@@ -321,7 +329,7 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 	chainService.cancel()
 	exitRoutine <- true
 
-	testutil.AssertLogsContain(t, hook, "unable to retrieve POW chain reference block failed")
+	testutil.AssertLogsContain(t, hook, "unable to retrieve POW chain reference block")
 }
 
 func setupGenesisState(t *testing.T, cs *ChainService, beaconState *pb.BeaconState) ([32]byte, *pb.BeaconState) {
@@ -665,15 +673,6 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 		t.Fatalf("unable to get root of canonical head: %v", err)
 	}
 
-	block2 := &pb.BeaconBlock{
-		ParentRootHash32: parentRoot[:],
-		Slot:             10,
-	}
-
-	if err := chainService.isBlockReadyForProcessing(block2, beaconState); err == nil {
-		t.Fatal("block processing succeeded despite block slot being invalid")
-	}
-
 	beaconState.LatestEth1Data = &pb.Eth1Data{
 		DepositRootHash32: []byte{2},
 		BlockHash32:       []byte{3},
@@ -683,7 +682,7 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 	currentSlot := uint64(1)
 	attestationSlot := uint64(0)
 
-	block3 := &pb.BeaconBlock{
+	block2 := &pb.BeaconBlock{
 		Slot:             currentSlot,
 		StateRootHash32:  stateRoot[:],
 		ParentRootHash32: parentRoot[:],
@@ -705,7 +704,7 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 
 	chainService.enablePOWChain = true
 
-	if err := chainService.isBlockReadyForProcessing(block3, beaconState); err != nil {
+	if err := chainService.isBlockReadyForProcessing(block2, beaconState); err != nil {
 		t.Fatalf("block processing failed despite being a valid block: %v", err)
 	}
 }

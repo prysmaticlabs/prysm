@@ -1,6 +1,7 @@
 package validators
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -431,6 +432,20 @@ func TestExitValidator_AlreadyExited(t *testing.T) {
 	}
 }
 
+func TestPenalizeValidator_AlreadyWithdrawn(t *testing.T) {
+	state := &pb.BeaconState{
+		Slot: 100,
+		ValidatorRegistry: []*pb.Validator{
+			{WithdrawalEpoch: 1},
+		},
+	}
+	want := fmt.Sprintf("withdrawn validator 0 could not get slashed, current slot: %d, withdrawn slot %d",
+		state.Slot, helpers.StartSlot(state.ValidatorRegistry[0].WithdrawalEpoch))
+	if _, err := PenalizeValidator(state, 0); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected error: %s, received %v", want, err)
+	}
+}
+
 func TestProcessPenaltiesExits_NothingHappened(t *testing.T) {
 	state := &pb.BeaconState{
 		ValidatorBalances: []uint64{params.BeaconConfig().MaxDepositAmount},
@@ -447,7 +462,6 @@ func TestProcessPenaltiesExits_NothingHappened(t *testing.T) {
 }
 
 func TestProcessPenaltiesExits_ValidatorPenalized(t *testing.T) {
-
 	latestPenalizedExits := make([]uint64, params.BeaconConfig().LatestPenalizedExitLength)
 	for i := 0; i < len(latestPenalizedExits); i++ {
 		latestPenalizedExits[i] = uint64(i) * params.BeaconConfig().MaxDepositAmount
