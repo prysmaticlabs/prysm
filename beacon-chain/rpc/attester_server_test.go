@@ -80,7 +80,7 @@ func TestAttestationInfoAtSlot_JustifiedBlockFailure(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	beaconState := &pbp2p.BeaconState{
-		Slot:                   params.BeaconConfig().GenesisSlot + params.BeaconConfig().EpochLength + 2,
+		Slot:                   params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch + 2,
 		LatestBlockRootHash32S: make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
 	}
 	block := &pbp2p.BeaconBlock{
@@ -120,10 +120,10 @@ func TestAttestationInfoAtSlot_Ok(t *testing.T) {
 		Slot: 1 + params.BeaconConfig().GenesisSlot,
 	}
 	epochBoundaryBlock := &pbp2p.BeaconBlock{
-		Slot: 1*params.BeaconConfig().EpochLength + params.BeaconConfig().GenesisSlot,
+		Slot: 1*params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot,
 	}
 	justifiedBlock := &pbp2p.BeaconBlock{
-		Slot: 2*params.BeaconConfig().EpochLength + params.BeaconConfig().GenesisSlot,
+		Slot: 2*params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot,
 	}
 	blockRoot, err := ssz.TreeHash(block)
 	if err != nil {
@@ -138,7 +138,7 @@ func TestAttestationInfoAtSlot_Ok(t *testing.T) {
 		t.Fatalf("Could not hash justified block: %v", err)
 	}
 	beaconState := &pbp2p.BeaconState{
-		Slot:                   3*params.BeaconConfig().EpochLength + params.BeaconConfig().GenesisSlot + 1,
+		Slot:                   3*params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
 		JustifiedEpoch:         2 + params.BeaconConfig().GenesisEpoch,
 		LatestBlockRootHash32S: make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
 		LatestCrosslinks: []*pbp2p.Crosslink{
@@ -148,8 +148,8 @@ func TestAttestationInfoAtSlot_Ok(t *testing.T) {
 		},
 	}
 	beaconState.LatestBlockRootHash32S[1] = blockRoot[:]
-	beaconState.LatestBlockRootHash32S[1*params.BeaconConfig().EpochLength] = epochBoundaryRoot[:]
-	beaconState.LatestBlockRootHash32S[2*params.BeaconConfig().EpochLength] = justifiedBlockRoot[:]
+	beaconState.LatestBlockRootHash32S[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]
+	beaconState.LatestBlockRootHash32S[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
 	attesterServer := &AttesterServer{
 		beaconDB: db,
 	}

@@ -149,7 +149,7 @@ func (rs *RegularSync) run() {
 	blockRequestHashSub := rs.p2p.Subscribe(&pb.BeaconBlockRequest{}, rs.blockRequestByHash)
 	batchedRequestSub := rs.p2p.Subscribe(&pb.BatchedBeaconBlockRequest{}, rs.batchedRequestBuf)
 	attestationSub := rs.p2p.Subscribe(&pb.Attestation{}, rs.attestationBuf)
-	exitSub := rs.p2p.Subscribe(&pb.Exit{}, rs.exitBuf)
+	exitSub := rs.p2p.Subscribe(&pb.VoluntaryExit{}, rs.exitBuf)
 	chainHeadReqSub := rs.p2p.Subscribe(&pb.ChainHeadRequest{}, rs.chainHeadReqBuf)
 
 	defer announceBlockSub.Unsubscribe()
@@ -233,7 +233,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 		return
 	}
 
-	if block.Slot < beaconState.FinalizedEpoch*params.BeaconConfig().EpochLength {
+	if block.Slot < beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
 		log.Debug("Discarding received block with a slot number smaller than the last finalized slot")
 		return
 	}
@@ -301,29 +301,48 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) {
 
 // receiveAttestation accepts an broadcasted attestation from the p2p layer,
 // discard the attestation if we have gotten before, send it to attestation
-// service if we have not.
+// pool if we have not.
 func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
+	ctx, receiveAttestationSpan := trace.StartSpan(msg.Ctx, "RegularSync_receiveAttestation")
+	defer receiveAttestationSpan.End()
+
 	attestation := msg.Data.(*pb.Attestation)
-	h, err := hashutil.HashProto(attestation)
+	attestationRoot, err := ssz.TreeHash(attestation)
 	if err != nil {
-		log.Errorf("Could not hash attestation: %v", err)
+		log.Errorf("Could not hash received attestation: %v", err)
+	}
+
+	// Skip if attestation has been seen before.
+	if rs.db.HasAttestation(attestationRoot) {
+		log.Debugf("Received, skipping attestation #%x", attestationRoot)
 		return
 	}
 
-	if rs.db.HasAttestation(h) {
-		log.Debugf("Received, skipping attestation #%x", h)
+	// Skip if attestation slot is older than last finalized slot in state.
+	beaconState, err := rs.db.State()
+	if err != nil {
+		log.Errorf("Failed to get beacon state: %v", err)
 		return
 	}
 
-	log.WithField("attestationHash", fmt.Sprintf("%#x", h)).Debug("Forwarding attestation to subscribed services")
+	finalizedSlot := beaconState.FinalizedEpoch * params.BeaconConfig().SlotsPerEpoch
+	if attestation.Data.Slot < finalizedSlot {
+		log.Debugf("Skipping received attestation with slot smaller than last finalized slot, %d < %d",
+			attestation.Data.Slot, finalizedSlot)
+		return
+	}
+
+	_, sendAttestationSpan := trace.StartSpan(ctx, "sendAttestation")
+	log.WithField("attestationHash", fmt.Sprintf("%#x", attestationRoot)).Debug("Sending newly received attestation to subscribers")
 	rs.operationsService.IncomingAttFeed().Send(attestation)
+	sendAttestationSpan.End()
 }
 
 // receiveExitRequest accepts an broadcasted exit from the p2p layer,
 // discard the exit if we have gotten before, send it to operation
 // service if we have not.
 func (rs *RegularSync) receiveExitRequest(msg p2p.Message) {
-	exit := msg.Data.(*pb.Exit)
+	exit := msg.Data.(*pb.VoluntaryExit)
 	h, err := hashutil.HashProto(exit)
 	if err != nil {
 		log.Errorf("Could not hash incoming exit request: %v", err)

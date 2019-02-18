@@ -18,7 +18,7 @@ import (
 // Spec:
 //  We now define the state transition function. At a high level the state transition is made up of two parts:
 //  - The per-slot transitions, which happens every slot, and only affects a parts of the state.
-//  - The per-epoch transitions, which happens at every epoch boundary (i.e. state.slot % EPOCH_LENGTH == 0), and affects the entire state.
+//  - The per-epoch transitions, which happens at every epoch boundary (i.e. state.slot % SLOTS_PER_EPOCH == 0), and affects the entire state.
 //  The per-slot transitions generally focus on verifying aggregate signatures and saving temporary records relating to the per-slot
 //  activity in the BeaconState. The per-epoch transitions focus on the validator registry, including adjusting balances and activating
 //  and exiting validators, as well as processing crosslinks and managing block justification/finalization.
@@ -306,13 +306,13 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Final housekeeping updates.
 	// Update index roots from current epoch to next epoch.
-	state, err = e.UpdateLatestIndexRoots(state)
+	state, err = e.UpdateLatestActiveIndexRoots(state)
 	if err != nil {
 		return nil, fmt.Errorf("could not update latest index roots: %v", err)
 	}
 
-	// Update accumulated penalized balances from current epoch to next epoch.
-	state = e.UpdateLatestPenalizedBalances(state)
+	// Update accumulated slashed balances from current epoch to next epoch.
+	state = e.UpdateLatestSlashedBalances(state)
 
 	// Update current epoch's randao seed to next epoch.
 	state, err = e.UpdateLatestRandaoMixes(state)

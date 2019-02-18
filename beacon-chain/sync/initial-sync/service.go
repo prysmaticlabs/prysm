@@ -91,7 +91,7 @@ type InitialSync struct {
 	currentSlot            uint64
 	highestObservedSlot    uint64
 	syncPollingInterval    time.Duration
-	initialStateRootHash32 [32]byte
+	genesisStateRootHash32 [32]byte
 	inMemoryBlocks         map[uint64]*pb.BeaconBlock
 }
 
@@ -194,7 +194,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 		case msg := <-s.stateBuf:
 			data := msg.Data.(*pb.BeaconStateResponse)
 
-			if s.initialStateRootHash32 == [32]byte{} {
+			if s.genesisStateRootHash32 == [32]byte{} {
 				continue
 			}
 
@@ -206,7 +206,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 				continue
 			}
 
-			if h != s.initialStateRootHash32 {
+			if h != s.genesisStateRootHash32 {
 				continue
 			}
 
@@ -216,14 +216,14 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 
 			log.Debug("Successfully saved beacon state to the db")
 
-			if s.currentSlot >= beaconState.FinalizedEpoch*params.BeaconConfig().EpochLength {
+			if s.currentSlot >= beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
 				continue
 			}
 
 			// sets the current slot to the last finalized slot of the
 			// crystallized state to begin our sync from.
-			s.currentSlot = beaconState.FinalizedEpoch * params.BeaconConfig().EpochLength
-			log.Debugf("Successfully saved crystallized state with the last finalized slot: %d", beaconState.FinalizedEpoch*params.BeaconConfig().EpochLength)
+			s.currentSlot = beaconState.FinalizedEpoch * params.BeaconConfig().SlotsPerEpoch
+			log.Debugf("Successfully saved crystallized state with the last finalized slot: %d", beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch)
 
 			s.requestNextBlockBySlot(s.currentSlot + 1)
 			beaconStateSub.Unsubscribe()
@@ -272,14 +272,14 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 
 	// setting first block for sync.
 	if s.currentSlot == params.BeaconConfig().GenesisSlot {
-		if s.initialStateRootHash32 != [32]byte{} {
-			log.Errorf("State root hash %#x set despite current slot being 0", s.initialStateRootHash32)
+		if s.genesisStateRootHash32 != [32]byte{} {
+			log.Errorf("State root hash %#x set despite current slot being 0", s.genesisStateRootHash32)
 			return
 		}
 
 		if block.Slot != params.BeaconConfig().GenesisSlot+1 {
 
-			// saves block in memory if it isn't the initial block.
+			// saves block in memory if it isn't the genesis block.
 			if _, ok := s.inMemoryBlocks[block.Slot]; !ok {
 				s.inMemoryBlocks[block.Slot] = block
 			}
@@ -345,7 +345,7 @@ func (s *InitialSync) setBlockForInitialSync(block *pb.BeaconBlock) error {
 
 	s.chainService.IncomingBlockFeed().Send(block)
 
-	s.initialStateRootHash32 = bytesutil.ToBytes32(block.StateRootHash32)
+	s.genesisStateRootHash32 = bytesutil.ToBytes32(block.StateRootHash32)
 
 	log.Infof("Saved block with root %#x for initial sync", root)
 	s.currentSlot = block.Slot
@@ -422,7 +422,7 @@ func (s *InitialSync) checkBlockValidity(block *pb.BeaconBlock) error {
 		return fmt.Errorf("failed to get beacon state: %v", err)
 	}
 
-	if block.Slot < beaconState.FinalizedEpoch*params.BeaconConfig().EpochLength {
+	if block.Slot < beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
 		return errors.New("discarding received block with a slot number smaller than the last finalized slot")
 	}
 	// Attestation from proposer not verified as, other nodes only store blocks not proposer

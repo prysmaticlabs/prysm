@@ -54,6 +54,9 @@ func run(ctx context.Context, v Validator) {
 			role := v.RoleAt(slot)
 
 			switch role {
+			case pb.ValidatorRole_BOTH:
+				v.ProposeBlock(ctx, slot)
+				v.AttestToBlockHead(ctx, slot)
 			case pb.ValidatorRole_ATTESTER:
 				v.AttestToBlockHead(ctx, slot)
 			case pb.ValidatorRole_PROPOSER:

@@ -234,7 +234,7 @@ func (c *ChainService) ApplyForkChoiceRule(block *pb.BeaconBlock, computedState 
 	// server to stream these events to beacon clients.
 	// When the transition is a cycle transition, we stream the state containing the new validator
 	// assignments to clients.
-	if block.Slot%params.BeaconConfig().EpochLength == 0 {
+	if block.Slot%params.BeaconConfig().SlotsPerEpoch == 0 {
 		c.canonicalStateFeed.Send(computedState)
 	}
 	c.canonicalBlockFeed.Send(block)
