@@ -51,6 +51,7 @@ func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
 	return &PublicKey{val: k}, nil
 }
 
+// PublicKey obtains the public key corresponding to the BLS secret key.
 func (s *SecretKey) PublicKey() *PublicKey {
 	return &PublicKey{val: gobls.PrivToPub(s.val)}
 }
