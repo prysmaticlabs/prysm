@@ -58,7 +58,7 @@ func (ms *mockOperationService) IncomingExitFeed() *event.Feed {
 }
 
 func setupInitialDeposits(t *testing.T) []*pb.Deposit {
-	genesisValidatorRegistry := validators.InitialValidatorRegistry()
+	genesisValidatorRegistry := validators.GenesisValidatorRegistry()
 	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
 	for i := 0; i < len(deposits); i++ {
 		depositInput := &pb.DepositInput{
@@ -460,7 +460,7 @@ func TestReceiveAttestation_OlderThanFinalizedEpoch(t *testing.T) {
 	<-exitRoutine
 	want := fmt.Sprintf(
 		"Skipping received attestation with slot smaller than last finalized slot, %d < %d",
-		request1.Data.Slot, state.FinalizedEpoch*params.BeaconConfig().EpochLength)
+		request1.Data.Slot, state.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch)
 	testutil.AssertLogsContain(t, hook, want)
 }
 
@@ -483,7 +483,7 @@ func TestReceiveExitReq_Ok(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	request1 := &pb.Exit{
+	request1 := &pb.VoluntaryExit{
 		Epoch: 100,
 	}
 
