@@ -66,6 +66,7 @@ func NewQuerierService(ctx context.Context,
 		responseBuf:    responseBuf,
 		curentHeadSlot: cfg.CurentHeadSlot,
 		isChainStart:   false,
+		powchain:       cfg.PowChain,
 	}
 }
 

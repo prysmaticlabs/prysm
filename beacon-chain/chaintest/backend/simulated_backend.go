@@ -68,6 +68,20 @@ func NewSimulatedBackend() (*SimulatedBackend, error) {
 	}, nil
 }
 
+// SetupBackend sets up the simulated backend with simulated deposits, and initializes the
+// state and genesis block.
+func (sb *SimulatedBackend) SetupBackend(numOfDeposits uint64) error {
+	initialDeposits, err := generateInitialSimulatedDeposits(numOfDeposits)
+	if err != nil {
+		return fmt.Errorf("could not simulate initial validator deposits: %v", err)
+	}
+	if err := sb.setupBeaconStateAndGenesisBlock(initialDeposits); err != nil {
+		return fmt.Errorf("could not set up beacon state and initialize genesis block %v", err)
+	}
+	sb.depositTrie = trieutil.NewDepositTrie()
+	return nil
+}
+
 // GenerateBlockAndAdvanceChain generates a simulated block and runs that block though
 // state transition.
 func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain(objects *SimulatedObjects) error {

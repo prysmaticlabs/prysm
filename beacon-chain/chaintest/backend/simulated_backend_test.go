@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 func TestSimulatedBackendStop(t *testing.T) {
@@ -21,17 +20,12 @@ func TestSimulatedBackendStop(t *testing.T) {
 func TestGenerateBlocks(t *testing.T) {
 	backend, err := NewSimulatedBackend()
 	if err != nil {
-		t.Fatalf("Could not create a new simulated backedn %v", err)
+		t.Fatalf("Could not create a new simulated backend %v", err)
 	}
 
-	initialDeposits, err := generateInitialSimulatedDeposits(1000)
-	if err != nil {
-		t.Fatalf("Could not simulate initial validator deposits: %v", err)
+	if err := backend.SetupBackend(1000); err != nil {
+		t.Fatalf("Could not set up backend %v", err)
 	}
-	if err := backend.setupBeaconStateAndGenesisBlock(initialDeposits); err != nil {
-		t.Fatalf("Could not set up beacon state and initialize genesis block %v", err)
-	}
-	backend.depositTrie = trieutil.NewDepositTrie()
 
 	slotLimit := 250
 
@@ -57,14 +51,9 @@ func TestGenerateNilBlocks(t *testing.T) {
 		t.Fatalf("Could not create a new simulated backedn %v", err)
 	}
 
-	initialDeposits, err := generateInitialSimulatedDeposits(1000)
-	if err != nil {
-		t.Fatalf("Could not simulate initial validator deposits: %v", err)
+	if err := backend.SetupBackend(1000); err != nil {
+		t.Fatalf("Could not set up backend %v", err)
 	}
-	if err := backend.setupBeaconStateAndGenesisBlock(initialDeposits); err != nil {
-		t.Fatalf("Could not set up beacon state and initialize genesis block %v", err)
-	}
-	backend.depositTrie = trieutil.NewDepositTrie()
 
 	slotLimit := 100
 
