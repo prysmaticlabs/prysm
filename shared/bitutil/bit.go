@@ -7,22 +7,22 @@ import (
 	"github.com/steakknife/hamming"
 )
 
-// CheckBit checks if a bit in a bit field is one.
+// CheckBit checks if a bit in a bit field (small endian) is one.
 func CheckBit(bitfield []byte, index int) (bool, error) {
 	chunkLocation := (index + 1) / 8
 	indexLocation := (index + 1) % 8
+
 	if indexLocation == 0 {
 		indexLocation = 8
 	} else {
 		chunkLocation++
 	}
-
 	if chunkLocation > len(bitfield) {
 		return false, fmt.Errorf("index out of range for bitfield: length: %d, position: %d ",
 			len(bitfield), chunkLocation-1)
 	}
 
-	field := bitfield[chunkLocation-1] >> (8 - uint(indexLocation))
+	field := bitfield[chunkLocation-1] >> uint(indexLocation-1)
 	return field%2 != 0, nil
 }
 
