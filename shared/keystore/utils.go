@@ -52,7 +52,7 @@ func ensureInt(x interface{}) int {
 // UTC--<created_at UTC ISO8601>-<address hex>
 func keyFileName(pubkey *bls.PublicKey) string {
 	ts := time.Now().UTC()
-	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), hex.EncodeToString(pubkey.BufferedPublicKey()))
+	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), hex.EncodeToString(pubkey.Marshal()))
 }
 
 func toISO8601(t time.Time) string {
@@ -64,12 +64,4 @@ func toISO8601(t time.Time) string {
 		tz = fmt.Sprintf("%03d00", offset/3600)
 	}
 	return fmt.Sprintf("%04d-%02d-%02dT%02d-%02d-%02d.%09d%s", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), tz)
-}
-
-// zeroKey zeroes a private key in memory.
-func zeroKey(k *bls.SecretKey) {
-	b := k.K.Bits()
-	for i := range b {
-		b[i] = 0
-	}
 }

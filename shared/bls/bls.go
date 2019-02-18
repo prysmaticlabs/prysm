@@ -5,8 +5,10 @@ package bls
 
 import (
 	"fmt"
-	gobls "github.com/phoreproject/bls"
 	"io"
+
+	gobls "github.com/phoreproject/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 // Signature used in the BLS signature scheme.
@@ -16,7 +18,7 @@ type Signature struct {
 
 // SecretKey used in the BLS signature scheme.
 type SecretKey struct {
-    val *gobls.SecretKey
+	val *gobls.SecretKey
 }
 
 // PublicKey used in the BLS signature scheme.
@@ -35,13 +37,14 @@ func RandKey(r io.Reader) (*SecretKey, error) {
 
 // SecretKeyFromBytes creates a BLS private key from a byte slice.
 func SecretKeyFromBytes(priv []byte) (*SecretKey, error) {
-	gobls.
-	return &SecretKey{val: gobls.DeserializeSecretKey(priv)}, nil
+	k := bytesutil.ToBytes32(priv)
+	return &SecretKey{val: gobls.DeserializeSecretKey(k)}, nil
 }
 
 // PublicKeyFromBytes creates a BLS public key from a byte slice.
 func PublicKeyFromBytes(pub []byte) (*PublicKey, error) {
-	k, err := gobls.DeserializePublicKey(pub)
+	b := bytesutil.ToBytes96(pub)
+	k, err := gobls.DeserializePublicKey(b)
 	if err != nil {
 		return nil, fmt.Errorf("could not unmarshal bytes into public key: %v", err)
 	}
@@ -54,23 +57,20 @@ func (s *SecretKey) PublicKey() *PublicKey {
 
 // Sign a message using a secret key - in a beacon/validator client,
 func (s *SecretKey) Sign(msg []byte, domain uint64) *Signature {
-    sig := gobls.Sign(msg, s.val, domain)
-    return &Signature{val: sig}
+	sig := gobls.Sign(msg, s.val, domain)
+	return &Signature{val: sig}
 }
 
 // Marshal a secret key into a byte slice.
 func (s *SecretKey) Marshal() []byte {
-	return s.val.Serialize()
+	k := s.val.Serialize()
+	return k[:]
 }
 
 // Marshal a public key into a byte slice.
 func (p *PublicKey) Marshal() []byte {
-	return p.val.Serialize()
-}
-
-// String fetches the string representation of a public key.
-func (p *PublicKey) String() string {
-	return p.val.String()
+	k := p.val.Serialize()
+	return k[:]
 }
 
 // Aggregate two public keys.
@@ -82,7 +82,7 @@ func (p *PublicKey) Aggregate(p2 *PublicKey) *PublicKey {
 
 // Verify a bls signature given a public key, a message, and a domain.
 func (p *PublicKey) Verify(msg []byte, sig *Signature, domain uint64) bool {
-    return gobls.Verify(msg, p.val, sig.val, domain)
+	return gobls.Verify(msg, p.val, sig.val, domain)
 }
 
 // VerifyAggregate verifies each public key against each message.
@@ -102,13 +102,13 @@ func (s *Signature) VerifyAggregateCommon(pubKeys []*PublicKey, msg []byte, doma
 	for _, v := range pubKeys {
 		keys = append(keys, v.val)
 	}
-    return s.val.VerifyAggregateCommon(keys, msg, domain)
+	return s.val.VerifyAggregateCommon(keys, msg, domain)
 }
 
 // Aggregate two signatures.
 func (s *Signature) Aggregate(s2 *Signature) *Signature {
-    s1 := s.val
-    s1.Aggregate(s2.val)
+	s1 := s.val
+	s1.Aggregate(s2.val)
 	return &Signature{val: s1}
 }
 
