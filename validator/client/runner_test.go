@@ -83,7 +83,7 @@ func TestUpdateAssignments_HandlesError(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Failed to update assignments")
 }
 
-func TestRoleAt_OnNextSlot(t *testing.T) {
+func TestRoleAt_NextSlot(t *testing.T) {
 	v := &fakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -106,7 +106,7 @@ func TestRoleAt_OnNextSlot(t *testing.T) {
 	}
 }
 
-func TestAttests_OnNextSlot(t *testing.T) {
+func TestAttests_NextSlot(t *testing.T) {
 	v := &fakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -130,7 +130,7 @@ func TestAttests_OnNextSlot(t *testing.T) {
 	}
 }
 
-func TestProposes_OnNextSlot(t *testing.T) {
+func TestProposes_NextSlot(t *testing.T) {
 	v := &fakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())
 
