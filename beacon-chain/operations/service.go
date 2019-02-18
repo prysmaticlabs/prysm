@@ -39,9 +39,9 @@ type Config struct {
 	ReceiveBlockBuf int
 }
 
-// NewOperationService instantiates a new service instance that will
+// NewOpsPoolService instantiates a new service instance that will
 // be registered into a running beacon node.
-func NewOperationService(ctx context.Context, cfg *Config) *Service {
+func NewOpsPoolService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
 		ctx:                        ctx,
@@ -56,14 +56,14 @@ func NewOperationService(ctx context.Context, cfg *Config) *Service {
 	}
 }
 
-// Start an beacon block operation service's main event loop.
+// Start an beacon block operation pool service's main event loop.
 func (s *Service) Start() {
 	log.Info("Starting service")
 	go s.saveOperations()
 	go s.removeOperations()
 }
 
-// Stop the beacon block operation service's main event loop
+// Stop the beacon block operation pool service's main event loop
 // and associated goroutines.
 func (s *Service) Stop() error {
 	defer s.cancel()
@@ -80,19 +80,19 @@ func (s *Service) Status() error {
 }
 
 // IncomingExitFeed returns a feed that any service can send incoming p2p exits object into.
-// The beacon block operation service will subscribe to this feed in order to relay incoming exits.
+// The beacon block operation pool service will subscribe to this feed in order to relay incoming exits.
 func (s *Service) IncomingExitFeed() *event.Feed {
 	return s.incomingExitFeed
 }
 
 // IncomingAttFeed returns a feed that any service can send incoming p2p attestations into.
-// The beacon block operation service will subscribe to this feed in order to relay incoming attestations.
+// The beacon block operation pool service will subscribe to this feed in order to relay incoming attestations.
 func (s *Service) IncomingAttFeed() *event.Feed {
 	return s.incomingAttFeed
 }
 
 // IncomingBlockFeed returns a feed that any service can send incoming p2p beacon blocks into.
-// The beacon block operation service will subscribe to this feed in order to receive incoming beacon blocks.
+// The beacon block operation pool service will subscribe to this feed in order to receive incoming beacon blocks.
 func (s *Service) IncomingBlockFeed() *event.Feed {
 	return s.incomingAttFeed
 }
