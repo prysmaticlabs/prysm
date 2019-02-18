@@ -38,9 +38,9 @@ func TestValidatorIndex_Ok(t *testing.T) {
 	deposits := []*pbp2p.Deposit{
 		{DepositData: depositData},
 	}
-	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
-		t.Fatalf("Could not instantiate initial state: %v", err)
+		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
 
 	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
@@ -67,7 +67,7 @@ func TestValidatorEpochAssignments_Ok(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	genesisTime := params.BeaconConfig().GenesisTime.Unix()
+	genesisTime := time.Unix(0, 0).Unix()
 	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
 		var pubKey [96]byte
@@ -81,13 +81,13 @@ func TestValidatorEpochAssignments_Ok(t *testing.T) {
 			genesisTime,
 		)
 		if err != nil {
-			t.Fatalf("Could not encode initial block deposits: %v", err)
+			t.Fatalf("Could not encode genesis block deposits: %v", err)
 		}
 		deposits[i] = &pbp2p.Deposit{DepositData: depositData}
 	}
-	beaconState, err := state.InitialBeaconState(deposits, uint64(genesisTime), nil)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(genesisTime), nil)
 	if err != nil {
-		t.Fatalf("Could not instantiate initial state: %v", err)
+		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
 
 	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
@@ -151,7 +151,7 @@ func TestValidatorCommitteeAtSlot_CrosslinkCommitteesFailure(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	genesisTime := params.BeaconConfig().GenesisTime.Unix()
+	genesisTime := time.Unix(0, 0).Unix()
 	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
 		var pubKey [96]byte
@@ -165,13 +165,13 @@ func TestValidatorCommitteeAtSlot_CrosslinkCommitteesFailure(t *testing.T) {
 			genesisTime,
 		)
 		if err != nil {
-			t.Fatalf("Could not encode initial block deposits: %v", err)
+			t.Fatalf("Could not encode genesis block deposits: %v", err)
 		}
 		deposits[i] = &pbp2p.Deposit{DepositData: depositData}
 	}
-	beaconState, err := state.InitialBeaconState(deposits, uint64(genesisTime), nil)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(genesisTime), nil)
 	if err != nil {
-		t.Fatalf("Could not instantiate initial state: %v", err)
+		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
 
 	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
@@ -181,7 +181,7 @@ func TestValidatorCommitteeAtSlot_CrosslinkCommitteesFailure(t *testing.T) {
 		beaconDB: db,
 	}
 	req := &pb.CommitteeRequest{
-		Slot: params.BeaconConfig().EpochLength * 10,
+		Slot: params.BeaconConfig().SlotsPerEpoch * 10,
 	}
 	want := "could not get crosslink committees at slot"
 	if _, err := validatorServer.ValidatorCommitteeAtSlot(context.Background(), req); !strings.Contains(err.Error(), want) {
@@ -197,7 +197,7 @@ func TestValidatorCommitteeAtSlot_Ok(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	genesisTime := params.BeaconConfig().GenesisTime.Unix()
+	genesisTime := time.Unix(0, 0).Unix()
 	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
 		var pubKey [96]byte
@@ -211,13 +211,13 @@ func TestValidatorCommitteeAtSlot_Ok(t *testing.T) {
 			genesisTime,
 		)
 		if err != nil {
-			t.Fatalf("Could not encode initial block deposits: %v", err)
+			t.Fatalf("Could not encode genesis block deposits: %v", err)
 		}
 		deposits[i] = &pbp2p.Deposit{DepositData: depositData}
 	}
-	beaconState, err := state.InitialBeaconState(deposits, uint64(genesisTime), nil)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(genesisTime), nil)
 	if err != nil {
-		t.Fatalf("Could not instantiate initial state: %v", err)
+		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
 
 	if err := db.UpdateChainHead(genesis, beaconState); err != nil {

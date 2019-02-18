@@ -31,21 +31,29 @@ type CrosslinkCommittee struct {
 //    return max(
 //        1,
 //        min(
-//            SHARD_COUNT // EPOCH_LENGTH,
-//            active_validator_count // EPOCH_LENGTH // TARGET_COMMITTEE_SIZE,
+//            SHARD_COUNT // SLOTS_PER_EPOCH,
+//            active_validator_count // SLOTS_PER_EPOCH // TARGET_COMMITTEE_SIZE,
 //        )
-//    ) * EPOCH_LENGTH
+//    ) * SLOTS_PER_EPOCH
 func EpochCommitteeCount(activeValidatorCount uint64) uint64 {
 	var minCommitteePerSlot = uint64(1)
-	var maxCommitteePerSlot = params.BeaconConfig().ShardCount / params.BeaconConfig().EpochLength
-	var currCommitteePerSlot = activeValidatorCount / params.BeaconConfig().EpochLength / params.BeaconConfig().TargetCommitteeSize
+
+	// Max committee count per slot will be 0 when shard count is less than epoch length, this
+	// covers the special case to ensure there's always 1 max committee count per slot.
+	var maxCommitteePerSlot = minCommitteePerSlot
+	if params.BeaconConfig().ShardCount/params.BeaconConfig().SlotsPerEpoch > minCommitteePerSlot {
+		maxCommitteePerSlot = params.BeaconConfig().ShardCount / params.BeaconConfig().SlotsPerEpoch
+	}
+
+	var currCommitteePerSlot = activeValidatorCount / params.BeaconConfig().SlotsPerEpoch / params.BeaconConfig().TargetCommitteeSize
+
 	if currCommitteePerSlot > maxCommitteePerSlot {
-		return maxCommitteePerSlot * params.BeaconConfig().EpochLength
+		return maxCommitteePerSlot * params.BeaconConfig().SlotsPerEpoch
 	}
 	if currCommitteePerSlot < 1 {
-		return minCommitteePerSlot * params.BeaconConfig().EpochLength
+		return minCommitteePerSlot * params.BeaconConfig().SlotsPerEpoch
 	}
-	return currCommitteePerSlot * params.BeaconConfig().EpochLength
+	return currCommitteePerSlot * params.BeaconConfig().SlotsPerEpoch
 }
 
 // CurrentEpochCommitteeCount returns the number of crosslink committees per epoch
@@ -64,7 +72,7 @@ func EpochCommitteeCount(activeValidatorCount uint64) uint64 {
 //    return get_epoch_committee_count(len(current_active_validators)
 func CurrentEpochCommitteeCount(state *pb.BeaconState) uint64 {
 	currActiveValidatorIndices := ActiveValidatorIndices(
-		state.ValidatorRegistry, state.CurrentCalculationEpoch)
+		state.ValidatorRegistry, state.CurrentShufflingEpoch)
 	return EpochCommitteeCount(uint64(len(currActiveValidatorIndices)))
 }
 
@@ -83,7 +91,7 @@ func CurrentEpochCommitteeCount(state *pb.BeaconState) uint64 {
 //    return get_epoch_committee_count(len(previous_active_validators))
 func PrevEpochCommitteeCount(state *pb.BeaconState) uint64 {
 	prevActiveValidatorIndices := ActiveValidatorIndices(
-		state.ValidatorRegistry, state.PreviousCalculationEpoch)
+		state.ValidatorRegistry, state.PreviousShufflingEpoch)
 	return EpochCommitteeCount(uint64(len(prevActiveValidatorIndices)))
 }
 
@@ -156,8 +164,8 @@ func NextEpochCommitteeCount(state *pb.BeaconState) uint64 {
 //        state.validator_registry,
 //        shuffling_epoch,
 //    )
-//    offset = slot % EPOCH_LENGTH
-//    committees_per_slot = committees_per_epoch // EPOCH_LENGTH
+//    offset = slot % SLOTS_PER_EPOCH
+//    committees_per_slot = committees_per_epoch // SLOTS_PER_EPOCH
 //    slot_start_shard = (shuffling_start_shard + committees_per_slot * offset) % SHARD_COUNT
 //
 //    return [
@@ -193,14 +201,14 @@ func CrosslinkCommitteesAtSlot(
 
 	if wantedEpoch == prevEpoch {
 		committeesPerEpoch = PrevEpochCommitteeCount(state)
-		seed = bytesutil.ToBytes32(state.PreviousEpochSeedHash32)
-		shufflingEpoch = state.PreviousCalculationEpoch
-		shufflingStartShard = state.PreviousEpochStartShard
+		seed = bytesutil.ToBytes32(state.PreviousShufflingSeedHash32)
+		shufflingEpoch = state.PreviousShufflingEpoch
+		shufflingStartShard = state.PreviousShufflingStartShard
 	} else if wantedEpoch == currentEpoch {
 		committeesPerEpoch = PrevEpochCommitteeCount(state)
-		seed = bytesutil.ToBytes32(state.CurrentEpochSeedHash32)
-		shufflingEpoch = state.CurrentCalculationEpoch
-		shufflingStartShard = state.CurrentEpochStartShard
+		seed = bytesutil.ToBytes32(state.CurrentShufflingSeedHash32)
+		shufflingEpoch = state.CurrentShufflingEpoch
+		shufflingStartShard = state.CurrentShufflingStartShard
 	} else if wantedEpoch == nextEpoch {
 		currentCommitteesPerEpoch := CurrentEpochCommitteeCount(state)
 		committeesPerEpoch = NextEpochCommitteeCount(state)
@@ -212,7 +220,7 @@ func CrosslinkCommitteesAtSlot(
 			if err != nil {
 				return nil, fmt.Errorf("could not generate seed: %v", err)
 			}
-			shufflingStartShard = (state.CurrentEpochStartShard + currentCommitteesPerEpoch) %
+			shufflingStartShard = (state.CurrentShufflingStartShard + currentCommitteesPerEpoch) %
 				params.BeaconConfig().ShardCount
 		} else if epochsSinceLastRegistryUpdate > 1 &&
 			mathutil.IsPowerOf2(epochsSinceLastRegistryUpdate) {
@@ -220,10 +228,10 @@ func CrosslinkCommitteesAtSlot(
 			if err != nil {
 				return nil, fmt.Errorf("could not generate seed: %v", err)
 			}
-			shufflingStartShard = state.CurrentEpochStartShard
+			shufflingStartShard = state.CurrentShufflingStartShard
 		} else {
-			seed = bytesutil.ToBytes32(state.CurrentEpochSeedHash32)
-			shufflingStartShard = state.CurrentEpochStartShard
+			seed = bytesutil.ToBytes32(state.CurrentShufflingSeedHash32)
+			shufflingStartShard = state.CurrentShufflingStartShard
 		}
 	}
 
@@ -235,8 +243,8 @@ func CrosslinkCommitteesAtSlot(
 		return nil, fmt.Errorf("could not shuffle epoch validators: %v", err)
 	}
 
-	offSet := slot % params.BeaconConfig().EpochLength
-	committeesPerSlot := committeesPerEpoch / params.BeaconConfig().EpochLength
+	offSet := slot % params.BeaconConfig().SlotsPerEpoch
+	committeesPerSlot := committeesPerEpoch / params.BeaconConfig().SlotsPerEpoch
 	slotStardShard := (shufflingStartShard + committeesPerSlot*offSet) %
 		params.BeaconConfig().ShardCount
 
@@ -279,7 +287,7 @@ func Shuffling(
 	slot uint64) ([][]uint64, error) {
 
 	// Normalize slot to start of epoch boundary.
-	slot -= slot % params.BeaconConfig().EpochLength
+	slot -= slot % params.BeaconConfig().SlotsPerEpoch
 
 	// Figure out how many committees can be in a single slot.
 	activeIndices := ActiveValidatorIndices(validators, slot)
@@ -425,7 +433,7 @@ func VerifyBitfield(bitfield []byte, committeeSize int) (bool, error) {
 //    current_epoch = get_current_epoch(state)
 //    next_epoch = current_epoch + 1
 //    next_epoch_start_slot = get_epoch_start_slot(next_epoch)
-//    for slot in range(next_epoch_start_slot, next_epoch_start_slot + EPOCH_LENGTH):
+//    for slot in range(next_epoch_start_slot, next_epoch_start_slot + SLOTS_PER_EPOCH):
 //        crosslink_committees = get_crosslink_committees_at_slot(
 //            state,
 //            slot,
@@ -451,7 +459,7 @@ func NextEpochCommitteeAssignment(
 	var selectedCommittees []*CrosslinkCommittee
 	nextEpoch := NextEpoch(state)
 	nextEpochStartSlot := StartSlot(nextEpoch)
-	for slot := nextEpochStartSlot; slot < nextEpochStartSlot+params.BeaconConfig().EpochLength; slot++ {
+	for slot := nextEpochStartSlot; slot < nextEpochStartSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		crosslinkCommittees, err := CrosslinkCommitteesAtSlot(
 			state, slot, registryChange)
 		if err != nil {

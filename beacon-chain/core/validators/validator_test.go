@@ -1,6 +1,7 @@
 package validators
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -49,8 +50,8 @@ func TestHasVoted(t *testing.T) {
 	}
 }
 
-func TestInitialValidatorRegistry(t *testing.T) {
-	validators := InitialValidatorRegistry()
+func TestGenesisValidatorRegistry(t *testing.T) {
+	validators := GenesisValidatorRegistry()
 	for idx, validator := range validators {
 		if !helpers.IsActiveValidator(validator, 1) {
 			t.Errorf("validator %d status is not active", idx)
@@ -77,10 +78,10 @@ func TestValidatorIdx(t *testing.T) {
 }
 
 func TestBoundaryAttesterIndices(t *testing.T) {
-	if params.BeaconConfig().EpochLength != 64 {
-		t.Errorf("EpochLength should be 64 for these tests to pass")
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
-	validators := make([]*pb.Validator, params.BeaconConfig().EpochLength*2)
+	validators := make([]*pb.Validator, params.BeaconConfig().SlotsPerEpoch*2)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -108,8 +109,8 @@ func TestBoundaryAttesterIndices(t *testing.T) {
 }
 
 func TestAttestingValidatorIndices_Ok(t *testing.T) {
-	if params.BeaconConfig().EpochLength != 64 {
-		t.Errorf("EpochLength should be 64 for these tests to pass")
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
 	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
@@ -150,7 +151,7 @@ func TestAttestingValidatorIndices_Ok(t *testing.T) {
 }
 
 func TestAttestingValidatorIndices_OutOfBound(t *testing.T) {
-	validators := make([]*pb.Validator, params.BeaconConfig().EpochLength*9)
+	validators := make([]*pb.Validator, params.BeaconConfig().SlotsPerEpoch*9)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -322,7 +323,7 @@ func TestProcessDeposit_PublicKeyDoesNotExistEmptyValidatorExists(t *testing.T) 
 	}
 	balances := []uint64{0, 1000}
 	beaconState := &pb.BeaconState{
-		Slot:              params.BeaconConfig().EpochLength,
+		Slot:              params.BeaconConfig().SlotsPerEpoch,
 		ValidatorBalances: balances,
 		ValidatorRegistry: registry,
 	}
@@ -399,8 +400,8 @@ func TestInitiateValidatorExit_Ok(t *testing.T) {
 
 func TestExitValidator_Ok(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot:                    100, // epoch 2
-		LatestPenalizedBalances: []uint64{0},
+		Slot:                  100, // epoch 2
+		LatestSlashedBalances: []uint64{0},
 		ValidatorRegistry: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().FarFutureEpoch, Pubkey: []byte{'B'}},
 		},
@@ -423,11 +424,25 @@ func TestExitValidator_AlreadyExited(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 1,
 		ValidatorRegistry: []*pb.Validator{
-			{ExitEpoch: params.BeaconConfig().EntryExitDelay},
+			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
 		},
 	}
 	if _, err := ExitValidator(state, 0); err == nil {
 		t.Fatal("exitValidator should have failed with exiting again")
+	}
+}
+
+func TestSlashValidator_AlreadyWithdrawn(t *testing.T) {
+	state := &pb.BeaconState{
+		Slot: 100,
+		ValidatorRegistry: []*pb.Validator{
+			{WithdrawalEpoch: 1},
+		},
+	}
+	want := fmt.Sprintf("withdrawn validator 0 could not get slashed, current slot: %d, withdrawn slot %d",
+		state.Slot, helpers.StartSlot(state.ValidatorRegistry[0].WithdrawalEpoch))
+	if _, err := SlashValidator(state, 0); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected error: %s, received %v", want, err)
 	}
 }
 
@@ -446,17 +461,17 @@ func TestProcessPenaltiesExits_NothingHappened(t *testing.T) {
 	}
 }
 
-func TestProcessPenaltiesExits_ValidatorPenalized(t *testing.T) {
+func TestProcessPenaltiesExits_ValidatorSlashed(t *testing.T) {
 
-	latestPenalizedExits := make([]uint64, params.BeaconConfig().LatestPenalizedExitLength)
-	for i := 0; i < len(latestPenalizedExits); i++ {
-		latestPenalizedExits[i] = uint64(i) * params.BeaconConfig().MaxDepositAmount
+	latestSlashedExits := make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
+	for i := 0; i < len(latestSlashedExits); i++ {
+		latestSlashedExits[i] = uint64(i) * params.BeaconConfig().MaxDepositAmount
 	}
 
 	state := &pb.BeaconState{
-		Slot:                    params.BeaconConfig().LatestPenalizedExitLength / 2 * params.BeaconConfig().EpochLength,
-		LatestPenalizedBalances: latestPenalizedExits,
-		ValidatorBalances:       []uint64{params.BeaconConfig().MaxDepositAmount, params.BeaconConfig().MaxDepositAmount},
+		Slot:                  params.BeaconConfig().LatestSlashedExitLength / 2 * params.BeaconConfig().SlotsPerEpoch,
+		LatestSlashedBalances: latestSlashedExits,
+		ValidatorBalances:     []uint64{params.BeaconConfig().MaxDepositAmount, params.BeaconConfig().MaxDepositAmount},
 		ValidatorRegistry: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 		},
@@ -478,7 +493,7 @@ func TestEligibleToExit(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 1,
 		ValidatorRegistry: []*pb.Validator{
-			{ExitEpoch: params.BeaconConfig().EntryExitDelay},
+			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
 		},
 	}
 	if eligibleToExit(state, 0) {
@@ -486,10 +501,10 @@ func TestEligibleToExit(t *testing.T) {
 	}
 
 	state = &pb.BeaconState{
-		Slot: params.BeaconConfig().MinValidatorWithdrawalEpochs,
+		Slot: params.BeaconConfig().MinValidatorWithdrawalDelay,
 		ValidatorRegistry: []*pb.Validator{
-			{ExitEpoch: params.BeaconConfig().EntryExitDelay,
-				PenalizedEpoch: 1},
+			{ExitEpoch: params.BeaconConfig().ActivationExitDelay,
+				SlashedEpoch: 1},
 		},
 	}
 	if eligibleToExit(state, 0) {
@@ -499,13 +514,13 @@ func TestEligibleToExit(t *testing.T) {
 
 func TestUpdateRegistry_NoRotation(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot: 5 * params.BeaconConfig().EpochLength,
+		Slot: 5 * params.BeaconConfig().SlotsPerEpoch,
 		ValidatorRegistry: []*pb.Validator{
-			{ExitEpoch: params.BeaconConfig().EntryExitDelay},
-			{ExitEpoch: params.BeaconConfig().EntryExitDelay},
-			{ExitEpoch: params.BeaconConfig().EntryExitDelay},
-			{ExitEpoch: params.BeaconConfig().EntryExitDelay},
-			{ExitEpoch: params.BeaconConfig().EntryExitDelay},
+			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
+			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
+			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
+			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
+			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
 		},
 		ValidatorBalances: []uint64{
 			params.BeaconConfig().MaxDepositAmount,
@@ -520,9 +535,9 @@ func TestUpdateRegistry_NoRotation(t *testing.T) {
 		t.Fatalf("could not update validator registry:%v", err)
 	}
 	for i, validator := range newState.ValidatorRegistry {
-		if validator.ExitEpoch != params.BeaconConfig().EntryExitDelay {
+		if validator.ExitEpoch != params.BeaconConfig().ActivationExitDelay {
 			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
-				i, params.BeaconConfig().EntryExitDelay, validator.ExitEpoch)
+				i, params.BeaconConfig().ActivationExitDelay, validator.ExitEpoch)
 		}
 	}
 	if newState.ValidatorRegistryUpdateEpoch != helpers.SlotToEpoch(state.Slot) {
@@ -533,12 +548,12 @@ func TestUpdateRegistry_NoRotation(t *testing.T) {
 
 func TestUpdateRegistry_Activate(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot: 5 * params.BeaconConfig().EpochLength,
+		Slot: 5 * params.BeaconConfig().SlotsPerEpoch,
 		ValidatorRegistry: []*pb.Validator{
-			{ExitEpoch: params.BeaconConfig().EntryExitDelay,
-				ActivationEpoch: 5 + params.BeaconConfig().EntryExitDelay + 1},
-			{ExitEpoch: params.BeaconConfig().EntryExitDelay,
-				ActivationEpoch: 5 + params.BeaconConfig().EntryExitDelay + 1},
+			{ExitEpoch: params.BeaconConfig().ActivationExitDelay,
+				ActivationEpoch: 5 + params.BeaconConfig().ActivationExitDelay + 1},
+			{ExitEpoch: params.BeaconConfig().ActivationExitDelay,
+				ActivationEpoch: 5 + params.BeaconConfig().ActivationExitDelay + 1},
 		},
 		ValidatorBalances: []uint64{
 			params.BeaconConfig().MaxDepositAmount,
@@ -550,9 +565,9 @@ func TestUpdateRegistry_Activate(t *testing.T) {
 		t.Fatalf("could not update validator registry:%v", err)
 	}
 	for i, validator := range newState.ValidatorRegistry {
-		if validator.ExitEpoch != params.BeaconConfig().EntryExitDelay {
+		if validator.ExitEpoch != params.BeaconConfig().ActivationExitDelay {
 			t.Errorf("could not update registry %d, wanted exit slot %d got %d",
-				i, params.BeaconConfig().EntryExitDelay, validator.ExitEpoch)
+				i, params.BeaconConfig().ActivationExitDelay, validator.ExitEpoch)
 		}
 	}
 	if newState.ValidatorRegistryUpdateEpoch != helpers.SlotToEpoch(state.Slot) {
@@ -565,7 +580,7 @@ func TestUpdateRegistry_Exit(t *testing.T) {
 	epoch := uint64(5)
 	exitEpoch := helpers.EntryExitEffectEpoch(epoch)
 	state := &pb.BeaconState{
-		Slot: epoch * params.BeaconConfig().EpochLength,
+		Slot: epoch * params.BeaconConfig().SlotsPerEpoch,
 		ValidatorRegistry: []*pb.Validator{
 			{
 				ExitEpoch:   exitEpoch,

@@ -11,7 +11,7 @@ func TestBeaconDB_HasExit(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	d := &pb.Exit{
+	d := &pb.VoluntaryExit{
 		Epoch: 100,
 	}
 	hash, err := hashutil.HashProto(d)

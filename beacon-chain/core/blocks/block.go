@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -35,17 +34,10 @@ func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 			AttesterSlashings: []*pb.AttesterSlashing{},
 			Attestations:      []*pb.Attestation{},
 			Deposits:          []*pb.Deposit{},
-			Exits:             []*pb.Exit{},
+			VoluntaryExits:    []*pb.VoluntaryExit{},
 		},
 	}
 	return block
-}
-
-// IsSlotValid compares the slot to the system clock to determine if the block is valid.
-func IsSlotValid(slot uint64, genesisTime time.Time) bool {
-	slotDuration := time.Duration(slot*params.BeaconConfig().SlotDuration) * time.Second
-	validTimeThreshold := genesisTime.Add(slotDuration)
-	return clock.Now().After(validTimeThreshold)
 }
 
 // BlockRoot returns the block root stored in the BeaconState for a given slot.
@@ -59,25 +51,17 @@ func IsSlotValid(slot uint64, genesisTime time.Time) bool {
 //		assert slot < state.slot
 //		return state.latest_block_roots[slot % LATEST_BLOCK_ROOTS_LENGTH]
 func BlockRoot(state *pb.BeaconState, slot uint64) ([]byte, error) {
-	//	Check to see if the requested block root lies within LatestBlockRootHash32S
-	//	and if not generate error.
-	var earliestSlot uint64
-	var previousSlot uint64
-	if state.Slot > uint64(len(state.LatestBlockRootHash32S)) {
-		earliestSlot = state.Slot - uint64(len(state.LatestBlockRootHash32S))
-	} else {
-		earliestSlot = 0
-	}
+	earliestSlot := state.Slot - params.BeaconConfig().LatestBlockRootsLength
 
-	previousSlot = state.Slot - 1
-	if state.Slot > slot+uint64(len(state.LatestBlockRootHash32S)) || slot >= state.Slot {
+	if slot < earliestSlot || slot >= state.Slot {
 		return []byte{}, fmt.Errorf("slot %d is not within expected range of %d to %d",
 			slot,
 			earliestSlot,
-			previousSlot,
+			state.Slot,
 		)
 	}
-	return state.LatestBlockRootHash32S[slot%uint64(len(state.LatestBlockRootHash32S))], nil
+
+	return state.LatestBlockRootHash32S[slot%params.BeaconConfig().LatestBlockRootsLength], nil
 }
 
 // ProcessBlockRoots processes the previous block root into the state, by appending it
@@ -173,12 +157,12 @@ func DecodeDepositAmountAndTimeStamp(depositData []byte) (uint64, int64, error) 
 //		List[BeaconBlock] returns the child blocks of the given block.
 func BlockChildren(block *pb.BeaconBlock, observedBlocks []*pb.BeaconBlock) ([]*pb.BeaconBlock, error) {
 	var children []*pb.BeaconBlock
-	hash, err := hashutil.HashBeaconBlock(block)
+	root, err := ssz.TreeHash(block)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash block: %v", err)
 	}
 	for _, observed := range observedBlocks {
-		if bytes.Equal(observed.ParentRootHash32, hash[:]) {
+		if bytes.Equal(observed.ParentRootHash32, root[:]) {
 			children = append(children, observed)
 		}
 	}

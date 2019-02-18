@@ -3,11 +3,8 @@ package client
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"errors"
 	"testing"
-
-	"github.com/prysmaticlabs/prysm/shared/keystore"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
@@ -34,17 +31,12 @@ func setup(t *testing.T) (*validator, *mocks, func()) {
 		attesterClient:  internal.NewMockAttesterServiceClient(ctrl),
 	}
 
-	k, err := keystore.NewKey(rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
 	validator := &validator{
-		attestationPool: &fakeAttestationPool{},
 		proposerClient:  m.proposerClient,
 		beaconClient:    m.beaconClient,
 		attesterClient:  m.attesterClient,
 		validatorClient: m.validatorClient,
-		key:             k,
+		key:             validatorKey,
 	}
 
 	return validator, m, ctrl.Finish
@@ -107,6 +99,11 @@ func TestProposeBlock_UsePendingDeposits(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.Eth1DataResponse{}, nil /*err*/)
+
+	m.proposerClient.EXPECT().PendingAttestations(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pb.PendingAttestationsResponse{PendingAttestations: []*pbp2p.Attestation{}}, nil)
 
 	m.proposerClient.EXPECT().ComputeStateRoot(
 		gomock.Any(), // context
@@ -176,6 +173,11 @@ func TestProposeBlock_UsesEth1Data(t *testing.T) {
 		Eth1Data: &pbp2p.Eth1Data{BlockHash32: []byte{'B', 'L', 'O', 'C', 'K'}},
 	}, nil /*err*/)
 
+	m.proposerClient.EXPECT().PendingAttestations(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pb.PendingAttestationsResponse{PendingAttestations: []*pbp2p.Attestation{}}, nil)
+
 	m.proposerClient.EXPECT().ComputeStateRoot(
 		gomock.Any(), // context
 		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
@@ -198,6 +200,37 @@ func TestProposeBlock_UsesEth1Data(t *testing.T) {
 	}
 }
 
+func TestProposeBlock_PendingAttestationsFailure(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validator, m, finish := setup(t)
+	defer finish()
+
+	m.beaconClient.EXPECT().CanonicalHead(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.BeaconBlock{}, nil /*err*/)
+
+	m.beaconClient.EXPECT().PendingDeposits(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pb.PendingDepositsResponse{}, nil /*err*/)
+
+	m.beaconClient.EXPECT().Eth1Data(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pb.Eth1DataResponse{
+		Eth1Data: &pbp2p.Eth1Data{BlockHash32: []byte{'B', 'L', 'O', 'C', 'K'}},
+	}, nil /*err*/)
+
+	m.proposerClient.EXPECT().PendingAttestations(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(nil, errors.New("failed"))
+
+	validator.ProposeBlock(context.Background(), 55)
+	testutil.AssertLogsContain(t, hook, "Failed to fetch pending attestations")
+}
+
 func TestProposeBlock_ComputeStateFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
@@ -217,6 +250,11 @@ func TestProposeBlock_ComputeStateFailure(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.Eth1DataResponse{}, nil /*err*/)
+
+	m.proposerClient.EXPECT().PendingAttestations(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pb.PendingAttestationsResponse{PendingAttestations: []*pbp2p.Attestation{}}, nil)
 
 	m.proposerClient.EXPECT().ProposeBlock(
 		gomock.Any(), // ctx
@@ -250,6 +288,11 @@ func TestProposeBlock_UsesComputedState(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.Eth1DataResponse{}, nil /*err*/)
+
+	m.proposerClient.EXPECT().PendingAttestations(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pb.PendingAttestationsResponse{PendingAttestations: []*pbp2p.Attestation{}}, nil)
 
 	var broadcastedBlock *pbp2p.BeaconBlock
 	m.proposerClient.EXPECT().ProposeBlock(
@@ -295,6 +338,11 @@ func TestProposeBlock_BroadcastsABlock(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.Eth1DataResponse{}, nil /*err*/)
+
+	m.proposerClient.EXPECT().PendingAttestations(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pb.PendingAttestationsResponse{PendingAttestations: []*pbp2p.Attestation{}}, nil)
 
 	m.proposerClient.EXPECT().ComputeStateRoot(
 		gomock.Any(), // context

@@ -5,10 +5,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
+
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
@@ -22,12 +22,11 @@ func generateSimulatedBlock(
 	depositsTrie *trieutil.DepositTrie,
 	simObjects *SimulatedObjects,
 ) (*pb.BeaconBlock, [32]byte, error) {
-	encodedState, err := proto.Marshal(beaconState) // TODO(#1389): Use tree hash instead.
+	stateRoot, err := ssz.TreeHash(beaconState)
 	if err != nil {
-		return nil, [32]byte{}, fmt.Errorf("could not marshal beacon state: %v", err)
+		return nil, [32]byte{}, fmt.Errorf("could not tree hash state: %v", err)
 	}
-	stateRoot := hashutil.Hash(encodedState)
-	randaoReveal := params.BeaconConfig().SimulatedBlockRandao
+	randaoReveal := [32]byte{}
 	block := &pb.BeaconBlock{
 		Slot:               beaconState.Slot + 1,
 		RandaoRevealHash32: randaoReveal[:],
@@ -42,7 +41,7 @@ func generateSimulatedBlock(
 			AttesterSlashings: []*pb.AttesterSlashing{},
 			Attestations:      []*pb.Attestation{},
 			Deposits:          []*pb.Deposit{},
-			Exits:             []*pb.Exit{},
+			VoluntaryExits:    []*pb.VoluntaryExit{},
 		},
 	}
 	if simObjects.simDeposit != nil {
@@ -104,22 +103,22 @@ func generateSimulatedBlock(
 		})
 	}
 	if simObjects.simValidatorExit != nil {
-		block.Body.Exits = append(block.Body.Exits, &pb.Exit{
+		block.Body.VoluntaryExits = append(block.Body.VoluntaryExits, &pb.VoluntaryExit{
 			Epoch:          simObjects.simValidatorExit.Epoch,
 			ValidatorIndex: simObjects.simValidatorExit.ValidatorIndex,
 		})
 	}
-	encodedBlock, err := proto.Marshal(block)
+	blockRoot, err := ssz.TreeHash(block)
 	if err != nil {
-		return nil, [32]byte{}, fmt.Errorf("could not marshal new block: %v", err)
+		return nil, [32]byte{}, fmt.Errorf("could not tree hash new block: %v", err)
 	}
-	return block, hashutil.Hash(encodedBlock), nil
+	return block, blockRoot, nil
 }
 
 // Generates initial deposits for creating a beacon state in the simulated
 // backend based on the yaml configuration.
 func generateInitialSimulatedDeposits(numDeposits uint64) ([]*pb.Deposit, error) {
-	genesisTime := params.BeaconConfig().GenesisTime.Unix()
+	genesisTime := time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC).Unix()
 	deposits := make([]*pb.Deposit, numDeposits)
 	for i := 0; i < len(deposits); i++ {
 		depositInput := &pb.DepositInput{
@@ -133,7 +132,7 @@ func generateInitialSimulatedDeposits(numDeposits uint64) ([]*pb.Deposit, error)
 			genesisTime,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("could not encode initial block deposits: %v", err)
+			return nil, fmt.Errorf("could not encode genesis block deposits: %v", err)
 		}
 		deposits[i] = &pb.Deposit{DepositData: depositData}
 	}
