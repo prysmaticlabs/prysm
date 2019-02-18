@@ -372,7 +372,7 @@ func TestAttestingValidatorsOk(t *testing.T) {
 			Data: &pb.AttestationData{
 				ShardBlockRootHash32: []byte{byte(i + 100)},
 			},
-			AggregationBitfield: []byte{0xC0},
+			AggregationBitfield: []byte{0x03},
 		}
 		attestations = append(attestations, attestation)
 	}
@@ -420,7 +420,7 @@ func TestTotalAttestingBalanceOk(t *testing.T) {
 				ShardBlockRootHash32: []byte{byte(i + 100)},
 			},
 			// All validators attested to the above roots.
-			AggregationBitfield: []byte{0xc0},
+			AggregationBitfield: []byte{0x03},
 		}
 		attestations = append(attestations, attestation)
 	}

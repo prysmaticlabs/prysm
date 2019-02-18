@@ -24,15 +24,14 @@ func TestHasVoted(t *testing.T) {
 		if err != nil {
 			t.Errorf("checking bit failed at index: %d with : %v", i, err)
 		}
-
 		if !voted {
 			t.Error("validator voted but received didn't vote")
 		}
 	}
 
-	// Setting bit field to 01010101.
+	// Setting bit field to 10101000.
 	pendingAttestation = &pb.Attestation{
-		AggregationBitfield: []byte{85},
+		AggregationBitfield: []byte{84},
 	}
 
 	for i := 0; i < len(pendingAttestation.AggregationBitfield); i++ {
@@ -40,7 +39,6 @@ func TestHasVoted(t *testing.T) {
 		if err != nil {
 			t.Errorf("checking bit failed at index: %d : %v", i, err)
 		}
-
 		if i%2 == 0 && voted {
 			t.Error("validator didn't vote but received voted")
 		}
@@ -93,8 +91,8 @@ func TestBoundaryAttesterIndices(t *testing.T) {
 	}
 
 	boundaryAttestations := []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{}, AggregationBitfield: []byte{0xC0}}, // returns indices 242
-		{Data: &pb.AttestationData{}, AggregationBitfield: []byte{0xC0}}, // returns indices 237,224,2
+		{Data: &pb.AttestationData{}, AggregationBitfield: []byte{0x03}}, // returns indices 242
+		{Data: &pb.AttestationData{}, AggregationBitfield: []byte{0x03}}, // returns indices 237,224,2
 	}
 
 	attesterIndices, err := ValidatorIndices(state, boundaryAttestations)
@@ -144,9 +142,9 @@ func TestAttestingValidatorIndices_Ok(t *testing.T) {
 		t.Fatalf("Could not execute AttestingValidatorIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(indices, []uint64{1141, 688}) {
+	if !reflect.DeepEqual(indices, []uint64{1117, 333}) {
 		t.Errorf("Could not get incorrect validator indices. Wanted: %v, got: %v",
-			[]uint64{1141, 688}, indices)
+			[]uint64{1117, 333}, indices)
 	}
 }
 
