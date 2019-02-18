@@ -39,6 +39,7 @@ func main() {
 	var depositAmount int64
 	var depositDelay int64
 	var variableTx bool
+	var txDeviation int64
 
 	customFormatter := new(prefixed.TextFormatter)
 	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
@@ -106,6 +107,12 @@ func main() {
 			Usage:       "This enables variable transaction latencies to simulate real-world transactions",
 			Destination: &variableTx,
 		},
+		cli.Int64Flag{
+			Name:        "txDeviation",
+			Usage:       "The standard deviation between transaction times",
+			Value:       2,
+			Destination: &txDeviation,
+		},
 	}
 
 	app.Action = func(c *cli.Context) {
@@ -169,7 +176,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		statDist := buildStatisticalDist(depositDelay, numberOfDeposits)
+		statDist := buildStatisticalDist(depositDelay, numberOfDeposits, txDeviation)
 
 		for i := int64(0); i < numberOfDeposits; i++ {
 
@@ -212,12 +219,12 @@ func main() {
 	}
 }
 
-func buildStatisticalDist(depositDelay int64, numberOfDeposits int64) *distuv.StudentsT {
+func buildStatisticalDist(depositDelay int64, numberOfDeposits int64, txDeviation int64) *distuv.StudentsT {
 
 	src := rand2.NewSource(uint64(time.Now().Unix()))
 	dist := &distuv.StudentsT{
 		Mu:    float64(depositDelay),
-		Sigma: 2,
+		Sigma: float64(txDeviation),
 		Nu:    float64(numberOfDeposits - 1),
 		Src:   src,
 	}

@@ -20,6 +20,8 @@ This is a utility to help users deploy deposit contract for running their own be
 - --numberOfDeposits value  number of deposits to send to the contract (default: 8)
 - --depositAmount value     Maximum deposit value allowed in contract(in gwei) (default: 3200)
 - --depositDelay value      The time delay between sending the deposits to the contract(in seconds) (default: 5)
+- --variableTx              This enables variable transaction latencies to simulate real-world transactions
+- --txDeviation value       The standard deviation between transaction times (default: 2)
 - --help, -h                show help
 - --version, -v             print the version
 
