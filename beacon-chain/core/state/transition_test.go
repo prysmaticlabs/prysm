@@ -79,8 +79,8 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	slashings := make([]*pb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings+1)
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
-		Slot:               params.BeaconConfig().GenesisSlot,
-		RandaoRevealHash32: randaoReveal,
+		Slot:         params.BeaconConfig().GenesisSlot,
+		RandaoReveal: randaoReveal,
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte{2},
 			BlockHash32:       []byte{3},
@@ -119,8 +119,8 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 	attesterSlashings := make([]*pb.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings+1)
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
-		Slot:               params.BeaconConfig().GenesisSlot,
-		RandaoRevealHash32: randaoReveal,
+		Slot:         params.BeaconConfig().GenesisSlot,
+		RandaoReveal: randaoReveal,
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte{2},
 			BlockHash32:       []byte{3},
@@ -183,8 +183,8 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	blockAttestations := make([]*pb.Attestation, params.BeaconConfig().MaxAttestations+1)
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
-		Slot:               params.BeaconConfig().GenesisSlot,
-		RandaoRevealHash32: randaoReveal,
+		Slot:         params.BeaconConfig().GenesisSlot,
+		RandaoReveal: randaoReveal,
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte{2},
 			BlockHash32:       []byte{3},
@@ -271,8 +271,8 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	exits := make([]*pb.VoluntaryExit, params.BeaconConfig().MaxVoluntaryExits+1)
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
-		Slot:               params.BeaconConfig().GenesisSlot + 10,
-		RandaoRevealHash32: randaoReveal,
+		Slot:         params.BeaconConfig().GenesisSlot + 10,
+		RandaoReveal: randaoReveal,
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte{2},
 			BlockHash32:       []byte{3},
@@ -365,8 +365,8 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
-		Slot:               params.BeaconConfig().GenesisSlot + 10,
-		RandaoRevealHash32: randaoReveal,
+		Slot:         params.BeaconConfig().GenesisSlot + 10,
+		RandaoReveal: randaoReveal,
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte{2},
 			BlockHash32:       []byte{3},
@@ -421,13 +421,13 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 
 	crosslinkRecord := []*pb.Crosslink{{}, {}}
 	newState := &pb.BeaconState{
-		Slot:                     params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
-		LatestAttestations:       attestations,
-		ValidatorBalances:        validatorBalances,
-		ValidatorRegistry:        validatorRegistry,
-		LatestBlockRootHash32S:   blockRoots,
-		LatestCrosslinks:         crosslinkRecord,
-		LatestRandaoMixesHash32S: randaoHashes,
+		Slot:                   params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
+		LatestAttestations:     attestations,
+		ValidatorBalances:      validatorBalances,
+		ValidatorRegistry:      validatorRegistry,
+		LatestBlockRootHash32S: blockRoots,
+		LatestCrosslinks:       crosslinkRecord,
+		LatestRandaoMixes:      randaoHashes,
 		LatestIndexRootHash32S: make([][]byte,
 			params.BeaconConfig().LatestActiveIndexRootsLength),
 		LatestSlashedBalances: make([]uint64,
@@ -481,13 +481,13 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 	crosslinkRecord := []*pb.Crosslink{{}, {}}
 
 	newState := &pb.BeaconState{
-		Slot:                     params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
-		LatestAttestations:       attestations,
-		ValidatorBalances:        validatorBalances,
-		ValidatorRegistry:        validatorRegistry,
-		LatestBlockRootHash32S:   blockRoots,
-		LatestCrosslinks:         crosslinkRecord,
-		LatestRandaoMixesHash32S: randaoHashes,
+		Slot:                   params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
+		LatestAttestations:     attestations,
+		ValidatorBalances:      validatorBalances,
+		ValidatorRegistry:      validatorRegistry,
+		LatestBlockRootHash32S: blockRoots,
+		LatestCrosslinks:       crosslinkRecord,
+		LatestRandaoMixes:      randaoHashes,
 		LatestIndexRootHash32S: make([][]byte,
 			params.BeaconConfig().LatestActiveIndexRootsLength),
 		LatestSlashedBalances: make([]uint64,
