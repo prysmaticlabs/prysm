@@ -989,3 +989,9 @@ go_repository(
     commit = "c1b8fa8bdccecb0b8db834ee0b92fdbcfa606dd6",
     importpath = "gopkg.in/natefinch/npipe.v2",
 )
+
+go_repository(
+    name = "com_github_phoreproject_bls",
+    commit = "f70f3dbbcdbe519f3b60c88ffcd6afc29eb068e1",
+    importpath = "github.com/phoreproject/bls",
+)
