@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"math/big"
 	"testing"
@@ -155,7 +154,6 @@ func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*b
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println(proposerIdx)
 	epoch := helpers.SlotToEpoch(beaconState.Slot)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
@@ -396,9 +394,9 @@ func TestRunningChainService(t *testing.T) {
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 
 	block := &pb.BeaconBlock{
-		Slot:             currentSlot + 1,
-		StateRootHash32:  stateRoot[:],
-		ParentRootHash32: parentHash[:],
+		Slot:               currentSlot + 1,
+		StateRootHash32:    stateRoot[:],
+		ParentRootHash32:   parentHash[:],
 		RandaoRevealHash32: randaoReveal,
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte("a"),
@@ -462,9 +460,9 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	beaconState.LatestEth1Data.DepositRootHash32 = depositRoot[:]
 
 	block := &pb.BeaconBlock{
-		Slot:             currentSlot + 1,
-		StateRootHash32:  stateRoot[:],
-		ParentRootHash32: parentHash[:],
+		Slot:               currentSlot + 1,
+		StateRootHash32:    stateRoot[:],
+		ParentRootHash32:   parentHash[:],
 		RandaoRevealHash32: randaoReveal,
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte("a"),
@@ -653,9 +651,9 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block2 := &pb.BeaconBlock{
-		Slot:             currentSlot,
-		StateRootHash32:  stateRoot[:],
-		ParentRootHash32: parentRoot[:],
+		Slot:               currentSlot,
+		StateRootHash32:    stateRoot[:],
+		ParentRootHash32:   parentRoot[:],
 		RandaoRevealHash32: randaoReveal,
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte("a"),

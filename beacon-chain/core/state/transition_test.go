@@ -254,7 +254,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			ShardBlockRootHash32: []byte{1},
 		},
 	}
-	beaconState.Slot = params.BeaconConfig().GenesisSlot+10
+	beaconState.Slot = params.BeaconConfig().GenesisSlot + 10
 	blockAtt := &pb.Attestation{
 		Data: &pb.AttestationData{
 			Shard:                    0,
@@ -271,7 +271,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	exits := make([]*pb.VoluntaryExit, params.BeaconConfig().MaxVoluntaryExits+1)
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
-		Slot: params.BeaconConfig().GenesisSlot+10,
+		Slot:               params.BeaconConfig().GenesisSlot + 10,
 		RandaoRevealHash32: randaoReveal,
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte{2},
@@ -343,7 +343,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			ShardBlockRootHash32: []byte{1},
 		},
 	}
-	beaconState.Slot = params.BeaconConfig().GenesisSlot+10
+	beaconState.Slot = params.BeaconConfig().GenesisSlot + 10
 	blockAtt := &pb.Attestation{
 		Data: &pb.AttestationData{
 			Shard:                    0,
@@ -365,7 +365,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
-		Slot:               params.BeaconConfig().GenesisSlot+10,
+		Slot:               params.BeaconConfig().GenesisSlot + 10,
 		RandaoRevealHash32: randaoReveal,
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte{2},
