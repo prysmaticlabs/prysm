@@ -14,7 +14,6 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 
 	"github.com/golang/mock/gomock"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/internal"
@@ -27,13 +26,6 @@ func init() {
 }
 
 var _ = Validator(&validator{})
-
-// TODO(1323): remove this
-type fakeAttestationPool struct{}
-
-func (f *fakeAttestationPool) PendingAttestations() []*pbp2p.Attestation {
-	return nil
-}
 
 func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -187,7 +179,7 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 		gomock.Any(),
 	).Return(nil, expected)
 
-	if err := v.UpdateAssignments(context.Background(), params.BeaconConfig().EpochLength); err != expected {
+	if err := v.UpdateAssignments(context.Background(), params.BeaconConfig().SlotsPerEpoch); err != expected {
 		t.Errorf("Bad error; want=%v got=%v", expected, err)
 	}
 }
@@ -197,7 +189,7 @@ func TestUpdateAssignments_DoesUpdateAssignments(t *testing.T) {
 	defer ctrl.Finish()
 	client := internal.NewMockValidatorServiceClient(ctrl)
 
-	slot := params.BeaconConfig().EpochLength
+	slot := params.BeaconConfig().SlotsPerEpoch
 	resp := &pb.ValidatorEpochAssignmentsResponse{
 		Assignment: &pb.Assignment{
 			ProposerSlot: 67,

@@ -13,7 +13,7 @@ import (
 )
 
 func setupInitialDeposits(t *testing.T) []*pb.Deposit {
-	genesisValidatorRegistry := validators.InitialValidatorRegistry()
+	genesisValidatorRegistry := validators.GenesisValidatorRegistry()
 	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
 	for i := 0; i < len(deposits); i++ {
 		depositInput := &pb.DepositInput{

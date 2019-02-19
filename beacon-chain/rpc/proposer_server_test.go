@@ -40,9 +40,9 @@ func TestProposeBlock(t *testing.T) {
 		}
 	}
 
-	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
-		t.Fatalf("Could not instantiate initial state: %v", err)
+		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
 
 	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
@@ -91,9 +91,9 @@ func TestComputeStateRoot(t *testing.T) {
 		}
 	}
 
-	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
-		t.Fatalf("Could not instantiate initial state: %v", err)
+		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
 
 	beaconState.Slot = 10
@@ -119,4 +119,19 @@ func TestComputeStateRoot(t *testing.T) {
 	}
 
 	_, _ = proposerServer.ComputeStateRoot(context.Background(), req)
+}
+
+func TestPendingAttestations_Ok(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	proposerServer := &ProposerServer{
+		operationService: &mockOperationService{},
+	}
+	res, err := proposerServer.PendingAttestations(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("Unexpected error fetching pending attestations: %v", err)
+	}
+	if len(res.PendingAttestations) == 0 {
+		t.Error("Expected pending attestations list to be non-empty")
+	}
 }

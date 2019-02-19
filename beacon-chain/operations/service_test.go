@@ -22,7 +22,7 @@ func init() {
 
 func TestStop(t *testing.T) {
 	hook := logTest.NewGlobal()
-	opsService := NewOperationService(context.Background(), &Config{})
+	opsService := NewOpsPoolService(context.Background(), &Config{})
 
 	if err := opsService.Stop(); err != nil {
 		t.Fatalf("Unable to stop operation service: %v", err)
@@ -42,7 +42,7 @@ func TestStop(t *testing.T) {
 }
 
 func TestErrorStatus_Ok(t *testing.T) {
-	service := NewOperationService(context.Background(), &Config{})
+	service := NewOpsPoolService(context.Background(), &Config{})
 	if service.Status() != nil {
 		t.Errorf("service status should be nil to begin with, got: %v", service.error)
 	}
@@ -54,18 +54,36 @@ func TestErrorStatus_Ok(t *testing.T) {
 	}
 }
 
+func TestRoutineContextClosing_Ok(t *testing.T) {
+	hook := logTest.NewGlobal()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
+
+	exitRoutine := make(chan bool)
+	go func(tt *testing.T) {
+		s.removeOperations()
+		s.saveOperations()
+		<-exitRoutine
+	}(t)
+	s.cancel()
+	exitRoutine <- true
+	testutil.AssertLogsContain(t, hook, "operations service context closed, exiting remove goroutine")
+	testutil.AssertLogsContain(t, hook, "operations service context closed, exiting save goroutine")
+}
+
 func TestIncomingExits_Ok(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
-	service := NewOperationService(context.Background(), &Config{BeaconDB: beaconDB})
+	service := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	exitRoutine := make(chan bool)
 	go func() {
 		service.saveOperations()
 		<-exitRoutine
 	}()
-	exit := &pb.Exit{Epoch: 100}
+	exit := &pb.VoluntaryExit{Epoch: 100}
 	hash, err := hashutil.HashProto(exit)
 	if err != nil {
 		t.Fatalf("Could not hash exit proto: %v", err)
@@ -75,7 +93,7 @@ func TestIncomingExits_Ok(t *testing.T) {
 	service.cancel()
 	exitRoutine <- true
 
-	want := fmt.Sprintf("Exit request %#x saved in db", hash)
+	want := fmt.Sprintf("Exit request %#x saved in DB", hash)
 	testutil.AssertLogsContain(t, hook, want)
 }
 
@@ -83,7 +101,7 @@ func TestIncomingAttestation_Ok(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
-	service := NewOperationService(context.Background(), &Config{BeaconDB: beaconDB})
+	service := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	exitRoutine := make(chan bool)
 	go func() {
@@ -104,14 +122,14 @@ func TestIncomingAttestation_Ok(t *testing.T) {
 	service.cancel()
 	exitRoutine <- true
 
-	want := fmt.Sprintf("Attestation %#x saved in db", hash)
+	want := fmt.Sprintf("Attestation %#x saved in DB", hash)
 	testutil.AssertLogsContain(t, hook, want)
 }
 
 func TestRetrieveAttestations_Ok(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
-	service := NewOperationService(context.Background(), &Config{BeaconDB: beaconDB})
+	service := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	// Save 140 attestations for test. During 1st retrieval we should get slot:0 - slot:128 attestations,
 	// 2nd retrieval we should get slot:128 - slot:140 attestations.
@@ -129,7 +147,7 @@ func TestRetrieveAttestations_Ok(t *testing.T) {
 		}
 	}
 	// Test we can retrieve attestations from slot0 - slot127 (Max attestation amount).
-	attestations, err := service.Attestations()
+	attestations, err := service.PendingAttestations()
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}
@@ -139,7 +157,7 @@ func TestRetrieveAttestations_Ok(t *testing.T) {
 	}
 
 	// Test we can retrieve attestations from slot128 - slot139.
-	attestations, err = service.Attestations()
+	attestations, err = service.PendingAttestations()
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}
@@ -149,11 +167,93 @@ func TestRetrieveAttestations_Ok(t *testing.T) {
 	}
 
 	// Verify attestation pool is empty now we have retrieved everything.
-	attestations, err = service.Attestations()
+	attestations, err = service.PendingAttestations()
 	if err != nil {
 		t.Fatalf("Could not retrieve attestations: %v", err)
 	}
 	if len(attestations) != 0 {
 		t.Errorf("Attestation pool should be empty but got a length of %d", len(attestations))
+	}
+}
+
+func TestRemoveProcessedAttestations_Ok(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
+
+	attestations := make([]*pb.Attestation, 10)
+	for i := 0; i < len(attestations); i++ {
+		attestations[i] = &pb.Attestation{
+			Data: &pb.AttestationData{
+				Slot:  uint64(i),
+				Shard: uint64(i),
+			},
+		}
+		if err := s.beaconDB.SaveAttestation(attestations[i]); err != nil {
+			t.Fatalf("Failed to save attestation: %v", err)
+		}
+	}
+
+	retrievedAtts, err := s.PendingAttestations()
+	if err != nil {
+		t.Fatalf("Could not retrieve attestations: %v", err)
+	}
+	if !reflect.DeepEqual(attestations, retrievedAtts) {
+		t.Error("Retrieved attestations did not match prev generated attestations")
+	}
+
+	if err := s.removePendingAttestations(attestations); err != nil {
+		t.Fatalf("Could not remove pending attestations: %v", err)
+	}
+
+	retrievedAtts, _ = s.PendingAttestations()
+	if len(retrievedAtts) != 0 {
+		t.Errorf("Attestation pool should be empty but got a length of %d", len(retrievedAtts))
+	}
+}
+
+func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
+
+	attestations := make([]*pb.Attestation, 10)
+	for i := 0; i < len(attestations); i++ {
+		attestations[i] = &pb.Attestation{
+			Data: &pb.AttestationData{
+				Slot:  uint64(i),
+				Shard: uint64(i),
+			},
+		}
+		if err := s.beaconDB.SaveAttestation(attestations[i]); err != nil {
+			t.Fatalf("Failed to save attestation: %v", err)
+		}
+	}
+
+	atts, _ := s.PendingAttestations()
+	if len(atts) != len(attestations) {
+		t.Errorf("Attestation pool should be %d but got a length of %d",
+			len(attestations), len(atts))
+	}
+
+	block := &pb.BeaconBlock{
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
+	}
+
+	exitRoutine := make(chan bool)
+	go func() {
+		s.removeOperations()
+		exitRoutine <- true
+	}()
+
+	s.incomingProcessedBlock <- block
+	s.cancel()
+	<-exitRoutine
+
+	atts, _ = s.PendingAttestations()
+	if len(atts) != 0 {
+		t.Errorf("Attestation pool should be empty but got a length of %d", len(atts))
 	}
 }

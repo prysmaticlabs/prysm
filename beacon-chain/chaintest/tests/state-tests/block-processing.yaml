@@ -5,14 +5,14 @@ fork: sapphire
 version: 1.0
 test_cases:
   - config:
-      epoch_length: 64
+      slots_per_epoch: 64
       deposits_for_chain_start: 5000
       num_slots: 32 # Testing advancing state to slot < EpochLength
     results:
       slot: 9223372036854775840
       num_validators: 5000
   - config:
-      epoch_length: 64
+      slots_per_epoch: 64
       deposits_for_chain_start: 16384
       num_slots: 64 # Testing advancing state to exactly slot == EpochLength
       deposits:
@@ -63,7 +63,7 @@ test_cases:
 # TODO(1387): Waiting for spec to stable to proceed with this test case
 #  - config:
 #      skip_slots: [10, 20]
-#      epoch_length: 64
+#      slots_per_epoch: 64
 #      deposits_for_chain_start: 1000
 #      num_slots: 128 # Testing advancing state's slot == 2*EpochLength
 #      deposits:

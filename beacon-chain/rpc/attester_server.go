@@ -4,16 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
-
-	"github.com/prysmaticlabs/prysm/shared/ssz"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 // AttesterServer defines a server implementation of the gRPC Attester service,
@@ -55,9 +53,9 @@ func (as *AttesterServer) AttestationInfoAtSlot(ctx context.Context, req *pb.Att
 	}
 	// Fetch the epoch boundary root = hash_tree_root(epoch_boundary)
 	// where epoch_boundary is the block at the most recent epoch boundary in the
-	// chain defined by head.
-	// On the server side, this is fetched by calling get_block_root(state, get_epoch_start_slot(latest_epoch_boundary)).
-	epochBoundary := head.Slot / params.BeaconConfig().EpochLength
+	// chain defined by head -- i.e. the BeaconBlock where block.slot == get_epoch_start_slot(head.slot).
+	// On the server side, this is fetched by calling get_block_root(state, get_epoch_start_slot(head.slot)).
+	epochBoundary := head.Slot / params.BeaconConfig().SlotsPerEpoch
 	epochBoundaryRoot, err := blocks.BlockRoot(beaconState, helpers.StartSlot(epochBoundary))
 	if err != nil {
 		return nil, fmt.Errorf("could not get epoch boundary block: %v", err)

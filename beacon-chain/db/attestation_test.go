@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
-	att "github.com/prysmaticlabs/prysm/beacon-chain/core/attestations"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 func TestSaveAndRetrieveAttestation(t *testing.T) {
@@ -26,7 +26,10 @@ func TestSaveAndRetrieveAttestation(t *testing.T) {
 		t.Fatalf("Failed to save attestation: %v", err)
 	}
 
-	aHash := att.Key(a.GetData())
+	aHash, err := hashutil.HashProto(a)
+	if err != nil {
+		t.Fatalf("Failed to hash Attestation: %v", err)
+	}
 	aPrime, err := db.Attestation(aHash)
 	if err != nil {
 		t.Fatalf("Failed to call Attestation: %v", err)
@@ -92,7 +95,10 @@ func TestDeleteAttestation(t *testing.T) {
 		t.Fatalf("Could not save attestation: %v", err)
 	}
 
-	aHash := att.Key(a.GetData())
+	aHash, err := hashutil.HashProto(a)
+	if err != nil {
+		t.Fatalf("Failed to hash Attestation: %v", err)
+	}
 	aPrime, err := db.Attestation(aHash)
 	if err != nil {
 		t.Fatalf("Could not call Attestation: %v", err)
@@ -135,16 +141,19 @@ func TestHasAttestation(t *testing.T) {
 			Shard: 0,
 		},
 	}
-	hash := att.Key(a.GetData())
+	aHash, err := hashutil.HashProto(a)
+	if err != nil {
+		t.Fatalf("Failed to hash Attestation: %v", err)
+	}
 
-	if db.HasAttestation(hash) {
+	if db.HasAttestation(aHash) {
 		t.Fatal("Expected HasAttestation to return false")
 	}
 
 	if err := db.SaveAttestation(a); err != nil {
 		t.Fatalf("Failed to save attestation: %v", err)
 	}
-	if !db.HasAttestation(hash) {
+	if !db.HasAttestation(aHash) {
 		t.Fatal("Expected HasAttestation to return true")
 	}
 }

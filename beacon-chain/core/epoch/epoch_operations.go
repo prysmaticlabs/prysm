@@ -47,11 +47,10 @@ func CurrentBoundaryAttestations(
 	state *pb.BeaconState,
 	currentEpochAttestations []*pb.PendingAttestation,
 ) ([]*pb.PendingAttestation, error) {
-	var boundarySlot uint64
 	var boundaryAttestations []*pb.PendingAttestation
 
 	for _, attestation := range currentEpochAttestations {
-		boundaryBlockRoot, err := block.BlockRoot(state, boundarySlot)
+		boundaryBlockRoot, err := block.BlockRoot(state, helpers.StartSlot(helpers.CurrentEpoch(state)))
 		if err != nil {
 			return nil, err
 		}
@@ -59,6 +58,7 @@ func CurrentBoundaryAttestations(
 		attestationData := attestation.Data
 		sameRoot := bytes.Equal(attestationData.JustifiedBlockRootHash32, boundaryBlockRoot)
 		sameEpoch := attestation.Data.JustifiedEpoch == state.JustifiedEpoch
+
 		if sameRoot && sameEpoch {
 			boundaryAttestations = append(boundaryAttestations, attestation)
 		}
@@ -67,7 +67,7 @@ func CurrentBoundaryAttestations(
 }
 
 // PrevAttestations returns the attestations of the previous epoch
-// (state.slot - 2 * EPOCH_LENGTH...state.slot - EPOCH_LENGTH).
+// (state.slot - 2 * SLOTS_PER_EPOCH...state.slot - EPOCH_LENGTH).
 //
 // Spec pseudocode definition:
 //   return [a for a in state.latest_attestations if

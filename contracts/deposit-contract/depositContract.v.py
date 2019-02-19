@@ -7,12 +7,12 @@ MAX_64_BIT_VALUE: constant(uint256) = 18446744073709551615  # 2**64 - 1
 Deposit: event({deposit_root: bytes32, data: bytes[528], merkle_tree_index: bytes[8], branch: bytes32[32]})
 ChainStart: event({deposit_root: bytes32, time: bytes[8]})
 
-CHAIN_START_FULL_DEPOSIT_THRESHOLD: uint256
-MIN_DEPOSIT_AMOUNT: uint256 # Gwei
-MAX_DEPOSIT_AMOUNT: uint256 # Gwei
+CHAIN_START_FULL_DEPOSIT_THRESHOLD: public(uint256)
+MIN_DEPOSIT_AMOUNT: public(uint256) # Gwei
+MAX_DEPOSIT_AMOUNT: public(uint256) # Gwei
 zerohashes: bytes32[32]
 branch: bytes32[32]
-deposit_count: uint256
+deposit_count: public(uint256)
 full_deposit_count: public(uint256)
 skip_chainstart_delay: public(bool)
 genesisTime: public(bytes[8])

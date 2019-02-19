@@ -38,7 +38,7 @@ func generateTestGenesisStateAndBlock(
 		deposits[i] = &pb.Deposit{DepositData: depositData}
 	}
 	genesisTime := uint64(time.Unix(0, 0).Unix())
-	beaconState, err := state.InitialBeaconState(deposits, genesisTime, nil)
+	beaconState, err := state.GenesisBeaconState(deposits, genesisTime, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
