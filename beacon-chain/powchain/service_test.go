@@ -708,8 +708,6 @@ func TestProcessChainStartLog(t *testing.T) {
 		t.Fatalf("Could not serialize data %v", err)
 	}
 
-	helpers.EncodeDepositData(data, amount32Eth.Uint64(), time.Now().Unix())
-
 	// 8 Validators are used as size required for beacon-chain to start. This number
 	// is defined in the deposit contract as the number required for the testnet. The actual number
 	// is 2**14

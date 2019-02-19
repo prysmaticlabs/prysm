@@ -6,9 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/bls"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 
