@@ -992,6 +992,6 @@ go_repository(
 
 go_repository(
     name = "com_github_phoreproject_bls",
-    commit = "f70f3dbbcdbe519f3b60c88ffcd6afc29eb068e1",
+    commit = "afaefda3ea643e9292b6f4596403ed5c742561b4",
     importpath = "github.com/phoreproject/bls",
 )
