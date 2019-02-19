@@ -118,7 +118,7 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 		return fmt.Errorf("could not deserialize block randao reveal: %v", err)
 	}
 	if !sig.Verify(hashTreeRoot[:], pub, domain) {
-		return fmt.Errorf("block randao reveal signature did not verify: %v", err)
+		return fmt.Errorf("block randao reveal signature did not verify")
 	}
 	return nil
 }
