@@ -97,6 +97,15 @@ func (bs *BeaconServer) LatestAttestation(req *ptypes.Empty, stream pb.BeaconSer
 	}
 }
 
+// ForkData fetches the current fork information from the beacon state.
+func (bs *BeaconServer) ForkData(ctx context.Context, _ *ptypes.Empty) (*pbp2p.Fork, error) {
+	state, err := bs.beaconDB.State()
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
+	}
+	return state.Fork, nil
+}
+
 // Eth1Data fetches the current ETH 1 data which should be used when voting via
 // block proposal.
 // TODO(1463): Implement this.

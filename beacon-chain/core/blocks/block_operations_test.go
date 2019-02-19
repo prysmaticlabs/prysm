@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/forkutils"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -56,7 +58,7 @@ func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	epoch := helpers.SlotToEpoch(params.BeaconConfig().GenesisSlot)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := helpers.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
+	domain := forkutils.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
 
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx-1].Sign(buf, domain)
@@ -87,7 +89,7 @@ func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testi
 	epoch := helpers.SlotToEpoch(params.BeaconConfig().GenesisSlot)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := helpers.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
+	domain := forkutils.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 
 	block := &pb.BeaconBlock{
