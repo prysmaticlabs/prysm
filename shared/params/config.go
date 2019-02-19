@@ -6,13 +6,6 @@ import (
 	"math/big"
 )
 
-func makeEmptySignature() [][]byte {
-	signature := make([][]byte, 2)
-	signature[0] = make([]byte, 48)
-	signature[1] = make([]byte, 48)
-	return signature
-}
-
 // BeaconChainConfig contains constant configs for node to participate in beacon chain.
 type BeaconChainConfig struct {
 	// Misc constants.
@@ -30,6 +23,14 @@ type BeaconChainConfig struct {
 	WithdrawalPrivkeyFileName    string // WithdrawalPrivKeyFileName specifies the string name of a withdrawal private key file.
 	BLSPubkeyLength              int    // BLSPubkeyLength defines the expected length of BLS public keys in bytes.
 
+	// BLS domain values.
+	DomainDeposit     uint64 // DomainDeposit defines the BLS signature domain for deposit verification.
+	DomainAttestation uint64 // DomainAttestation defines the BLS signature domain for attestation verification.
+	DomainProposal    uint64 // DomainProposal defines the BLS signature domain for proposal verification.
+	DomainExit        uint64 // DomainExit defines the BLS signature domain for exit verification.
+	DomainRandao      uint64 // DomainRandao defines the BLS signature domain for randao verification.
+	DomainTransfer    uint64 // DomainTransfer defines the BLS signature domain for transfer verification.
+
 	// Deposit contract constants.
 	DepositContractAddress   []byte // DepositContractAddress is the address of the deposit contract in PoW chain.
 	DepositContractTreeDepth uint64 // Depth of the Merkle trie of deposits in the validator deposit contract on the PoW chain.
@@ -46,7 +47,7 @@ type BeaconChainConfig struct {
 	GenesisEpoch            uint64   // GenesisEpoch is used to initialize epoch.
 	GenesisStartShard       uint64   // GenesisStartShard is the first shard to assign validators.
 	ZeroHash                [32]byte // ZeroHash is used to represent a zeroed out 32 byte array.
-	EmptySignature          [][]byte // EmptySignature is used to represent a zeroed out BLS Signature.
+	EmptySignature          [96]byte // EmptySignature is used to represent a zeroed out BLS Signature.
 	BLSWithdrawalPrefixByte byte     // BLSWithdrawalPrefixByte is used for BLS withdrawal and it's the first byte.
 
 	// Time parameters constants.
@@ -110,6 +111,14 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	WithdrawalPrivkeyFileName:    "/shardwithdrawalkey",
 	BLSPubkeyLength:              96,
 
+	// BLS domain values.
+	DomainDeposit:     0,
+	DomainAttestation: 1,
+	DomainProposal:    2,
+	DomainExit:        3,
+	DomainRandao:      4,
+	DomainTransfer:    5,
+
 	// Deposit contract constants.
 	DepositContractTreeDepth: 32,
 
@@ -126,7 +135,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	GenesisStartShard:  0,
 	FarFutureEpoch:     1<<64 - 1,
 	ZeroHash:           [32]byte{},
-	EmptySignature:     makeEmptySignature(),
+	EmptySignature:     [96]byte{},
 
 	// Time parameter constants.
 	SecondsPerSlot:               6,
