@@ -221,11 +221,9 @@ func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not call next epoch committee assignment %v", err)
 	}
-	if res.Shard != 1 {
-		t.Errorf("Wanted shard 5, got: %d", res.Shard)
-	}
-	if res.Slot != 9223372036854775872 {
-		t.Errorf("Wanted slot 9223372036854775872, got: %d", res.Slot)
+	if res.Shard >= params.BeaconConfig().ShardCount {
+		t.Errorf("Assigned shard %d can't be higher than %d",
+			res.Shard, params.BeaconConfig().ShardCount)
 	}
 	if res.Slot < state.Slot+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
@@ -242,11 +240,9 @@ func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not call next epoch committee assignment %v", err)
 	}
-	if res.Shard != 126 {
-		t.Errorf("Wanted shard 126, got: %d", res.Shard)
-	}
-	if res.Slot != 9223372036854775935 {
-		t.Errorf("Wanted slot 9223372036854775935, got: %d", res.Slot)
+	if res.Shard >= params.BeaconConfig().ShardCount {
+		t.Errorf("Assigned shard %d can't be higher than %d",
+			res.Shard, params.BeaconConfig().ShardCount)
 	}
 	if res.Slot < state.Slot+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
