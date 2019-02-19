@@ -397,7 +397,7 @@ func TestRunningChainService(t *testing.T) {
 	}
 
 	currentSlot := params.BeaconConfig().GenesisSlot
-	beaconState.Slot += 1
+	beaconState.Slot++
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 
 	block := &pb.BeaconBlock{
@@ -447,7 +447,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
 	parentHash, genesisBlock := setupGenesisBlock(t, chainService, beaconState)
-	beaconState.Slot += 1
+	beaconState.Slot++
 	if err := chainService.beaconDB.UpdateChainHead(genesisBlock, beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -488,7 +488,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		t.Fatalf("Expected %d pending deposits", len(pendingDeposits))
 	}
 
-	beaconState.Slot -= 1
+	beaconState.Slot--
 	computedState, err := chainService.ReceiveBlock(block, beaconState)
 	if err != nil {
 		t.Fatal(err)
