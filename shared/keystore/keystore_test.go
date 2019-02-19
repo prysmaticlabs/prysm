@@ -3,6 +3,7 @@ package keystore
 import (
 	"bytes"
 	"crypto/rand"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"os"
 	"testing"
 
@@ -44,10 +45,11 @@ func TestStoreandGetKey(t *testing.T) {
 }
 func TestEncryptDecryptKey(t *testing.T) {
 	newID := uuid.NewRandom()
-	keyValue := []byte("hi")
+	b := []byte("hi")
+	b32 := bytesutil.ToBytes32(b)
 	password := "test"
 
-	pk, err := bls.SecretKeyFromBytes(keyValue)
+	pk, err := bls.SecretKeyFromBytes(b32[:])
 	if err != nil {
 		t.Fatal(err)
 	}
