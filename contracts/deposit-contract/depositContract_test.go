@@ -62,7 +62,7 @@ func setup() (*testAccount, error) {
 	return &testAccount{addr, contract, contractAddr, backend, txOpts}, nil
 }
 
-func TestSetupAndContractRegistration(t *testing.T) {
+func TestSetupRegistrationContract_OK(t *testing.T) {
 	_, err := setup()
 	if err != nil {
 		log.Fatalf("Can not deploy validator registration contract: %v", err)
@@ -70,7 +70,7 @@ func TestSetupAndContractRegistration(t *testing.T) {
 }
 
 // negative test case, deposit with less than 1 ETH which is less than the top off amount.
-func TestRegisterWithLessThan1Eth(t *testing.T) {
+func TestRegister_Below1ETH(t *testing.T) {
 	testAccount, err := setup()
 	if err != nil {
 		t.Fatal(err)
@@ -84,7 +84,7 @@ func TestRegisterWithLessThan1Eth(t *testing.T) {
 }
 
 // negative test case, deposit with more than 32 ETH which is more than the asked amount.
-func TestRegisterWithMoreThan32Eth(t *testing.T) {
+func TestRegister_Above32Eth(t *testing.T) {
 	testAccount, err := setup()
 	if err != nil {
 		t.Fatal(err)
@@ -98,7 +98,7 @@ func TestRegisterWithMoreThan32Eth(t *testing.T) {
 }
 
 // normal test case, test depositing 32 ETH and verify HashChainValue event is correctly emitted.
-func TestValidatorRegisters(t *testing.T) {
+func TestValidatorRegister_OK(t *testing.T) {
 	testAccount, err := setup()
 	if err != nil {
 		t.Fatal(err)
@@ -158,7 +158,7 @@ func TestValidatorRegisters(t *testing.T) {
 }
 
 // normal test case, test beacon chain start log event.
-func TestChainStarts(t *testing.T) {
+func TestChainStart_OK(t *testing.T) {
 	testAccount, err := setup()
 	if err != nil {
 		t.Fatal(err)

@@ -32,7 +32,7 @@ func init() {
 	ipfslog.SetDebugLogging()
 }
 
-func TestStartDialRelayNodeFails(t *testing.T) {
+func TestStartDialRelayNode_InvalidMultiaddress(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	s, err := NewServer(&ServerConfig{
@@ -47,10 +47,10 @@ func TestStartDialRelayNodeFails(t *testing.T) {
 	logContains(t, hook, "Could not dial relay node: invalid multiaddr, must begin with /", logrus.ErrorLevel)
 }
 
-func TestP2pPortTakenError(t *testing.T) {
-	thePort := 10000
+func TestP2P_PortTaken(t *testing.T) {
+	port := 10000
 	_, err := NewServer(&ServerConfig{
-		Port: thePort,
+		Port: port,
 	})
 
 	if err != nil {
@@ -58,15 +58,15 @@ func TestP2pPortTakenError(t *testing.T) {
 	}
 
 	_, err = NewServer(&ServerConfig{
-		Port: thePort,
+		Port: port,
 	})
 
-	if !strings.Contains(err.Error(), fmt.Sprintf("port %d already taken", thePort)) {
+	if !strings.Contains(err.Error(), fmt.Sprintf("port %d already taken", port)) {
 		t.Fatalf("expected fail when setting another server with same p2p port")
 	}
 }
 
-func TestBroadcast(t *testing.T) {
+func TestBroadcast_OK(t *testing.T) {
 	s, err := NewServer(&ServerConfig{})
 	if err != nil {
 		t.Fatalf("Could not start a new server: %v", err)
@@ -78,7 +78,7 @@ func TestBroadcast(t *testing.T) {
 	// TODO(543): test that topic was published
 }
 
-func TestEmit(t *testing.T) {
+func TestEmit_OK(t *testing.T) {
 	s, _ := NewServer(&ServerConfig{})
 	p := &testpb.TestMessage{Foo: "bar"}
 
@@ -95,7 +95,7 @@ func TestEmit(t *testing.T) {
 	}
 }
 
-func TestSubscribeToTopic(t *testing.T) {
+func TestSubscribeToTopic_OK(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
 	defer cancel()
 	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
@@ -122,7 +122,7 @@ func TestSubscribeToTopic(t *testing.T) {
 	testSubscribe(ctx, t, s, gsub, ch)
 }
 
-func TestSubscribe(t *testing.T) {
+func TestSubscribe_OK(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
 	defer cancel()
 	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
@@ -191,7 +191,7 @@ func testSubscribe(ctx context.Context, t *testing.T, s Server, gsub *pubsub.Pub
 	}
 }
 
-func TestRegisterTopic_HandleInvalidProtobufs(t *testing.T) {
+func TestRegisterTopic_InvalidProtobufs(t *testing.T) {
 	topic := shardpb.Topic_COLLATION_BODY_REQUEST
 	hook := logTest.NewGlobal()
 

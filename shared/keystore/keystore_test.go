@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
-func TestStoreandGetKey(t *testing.T) {
+func TestStoreAndGetKey(t *testing.T) {
 	tmpdir := testutil.TempDir()
 	filedir := tmpdir + "/keystore"
 	ks := &Store{
