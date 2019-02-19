@@ -34,8 +34,6 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/core/helpers:go_default_library",
-        "//beacon-chain/core/validators:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/internal:go_default_library",
         "//beacon-chain/sync/initial-sync:go_default_library",

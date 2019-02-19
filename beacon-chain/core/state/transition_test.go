@@ -5,7 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
+	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
+
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -29,17 +30,14 @@ func TestProcessBlock_IncorrectSlot(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
-	registry := validators.GenesisValidatorRegistry()
-
-	slashings := make([]*pb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings+1)
-	latestMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
-	beaconState := &pb.BeaconState{
-		LatestRandaoMixesHash32S: latestMixes,
-		ValidatorRegistry:        registry,
-		Slot:                     5,
+	deposits, _ := internal.GenerateTestDepositsAndKeys(t, 10)
+	beaconState, err := GenesisBeaconState(deposits, uint64(0), []byte{})
+	if err != nil {
+		t.Fatal(err)
 	}
+	slashings := make([]*pb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings+1)
 	block := &pb.BeaconBlock{
-		Slot:               5,
+		Slot:               1,
 		RandaoRevealHash32: []byte{},
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte{2},
@@ -56,8 +54,11 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
-	registry := validators.GenesisValidatorRegistry()
-
+	deposits, _ := internal.GenerateTestDepositsAndKeys(t, 10)
+	beaconState, err := GenesisBeaconState(deposits, uint64(0), []byte{})
+	if err != nil {
+		t.Fatal(err)
+	}
 	slashings := []*pb.ProposerSlashing{
 		{
 			ProposerIndex: 1,
@@ -74,14 +75,8 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 		},
 	}
 	attesterSlashings := make([]*pb.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings+1)
-	latestMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
-	beaconState := &pb.BeaconState{
-		LatestRandaoMixesHash32S: latestMixes,
-		Slot:                     5,
-		ValidatorRegistry:        registry,
-	}
 	block := &pb.BeaconBlock{
-		Slot:               5,
+		Slot:               1,
 		RandaoRevealHash32: []byte{},
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte{2},

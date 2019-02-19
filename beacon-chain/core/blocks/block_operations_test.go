@@ -2,7 +2,6 @@ package blocks_test
 
 import (
 	"bytes"
-	"crypto/rand"
 	"encoding/binary"
 	"fmt"
 	"reflect"
@@ -10,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
@@ -22,24 +21,7 @@ import (
 )
 
 func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
-	privKeys := make([]*bls.SecretKey, 100)
-	deposits := make([]*pb.Deposit, 100)
-	for i := 0; i < len(deposits); i++ {
-		priv, err := bls.RandKey(rand.Reader)
-		if err != nil {
-			t.Fatal(err)
-		}
-		depositInput := &pb.DepositInput{
-			Pubkey: priv.PublicKey().Marshal(),
-		}
-		balance := params.BeaconConfig().MaxDepositAmount
-		depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
-		if err != nil {
-			t.Fatalf("Cannot encode data: %v", err)
-		}
-		deposits[i] = &pb.Deposit{DepositData: depositData}
-		privKeys[i] = priv
-	}
+	deposits, privKeys := internal.GenerateTestDepositsAndKeys(t, 10)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), []byte{})
 	if err != nil {
 		t.Fatal(err)
@@ -70,24 +52,7 @@ func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
 }
 
 func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T) {
-	privKeys := make([]*bls.SecretKey, 100)
-	deposits := make([]*pb.Deposit, 100)
-	for i := 0; i < len(deposits); i++ {
-		priv, err := bls.RandKey(rand.Reader)
-		if err != nil {
-			t.Fatal(err)
-		}
-		depositInput := &pb.DepositInput{
-			Pubkey: priv.PublicKey().Marshal(),
-		}
-		balance := params.BeaconConfig().MaxDepositAmount
-		depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
-		if err != nil {
-			t.Fatalf("Cannot encode data: %v", err)
-		}
-		deposits[i] = &pb.Deposit{DepositData: depositData}
-		privKeys[i] = priv
-	}
+	deposits, privKeys := internal.GenerateTestDepositsAndKeys(t, 10)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), []byte{})
 	if err != nil {
 		t.Fatal(err)

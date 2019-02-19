@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
+
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -91,7 +93,7 @@ func TestUpdateChainHeadNoBlock(t *testing.T) {
 	defer teardownDB(t, db)
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits := setupInitialDeposits(t)
+	deposits, _ := internal.GenerateTestDepositsAndKeys(t, 10)
 	err := db.InitializeState(genesisTime, deposits)
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
@@ -112,7 +114,7 @@ func TestUpdateChainHead(t *testing.T) {
 	defer teardownDB(t, db)
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits := setupInitialDeposits(t)
+	deposits, _ := internal.GenerateTestDepositsAndKeys(t, 10)
 	err := db.InitializeState(genesisTime, deposits)
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
@@ -178,7 +180,7 @@ func TestChainProgress(t *testing.T) {
 	defer teardownDB(t, db)
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits := setupInitialDeposits(t)
+	deposits, _ := internal.GenerateTestDepositsAndKeys(t, 10)
 	err := db.InitializeState(genesisTime, deposits)
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
