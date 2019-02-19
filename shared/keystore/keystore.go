@@ -32,7 +32,6 @@ import (
 	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/pborman/uuid"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"golang.org/x/crypto/pbkdf2"
@@ -131,7 +130,8 @@ func EncryptKey(key *Key, password string, scryptN, scryptP int) ([]byte, error)
 	if err != nil {
 		return nil, err
 	}
-	mac := crypto.Keccak256(derivedKey[16:32], cipherText)
+
+	mac := Keccak256(derivedKey[16:32], cipherText)
 
 	scryptParamsJSON := make(map[string]interface{}, 5)
 	scryptParamsJSON["n"] = scryptN
@@ -216,7 +216,7 @@ func decryptKeyJSON(keyProtected *encryptedKeyJSON, auth string) (keyBytes []byt
 		return nil, nil, err
 	}
 
-	calculatedMAC := crypto.Keccak256(derivedKey[16:32], cipherText)
+	calculatedMAC := Keccak256(derivedKey[16:32], cipherText)
 	if !bytes.Equal(calculatedMAC, mac) {
 		return nil, nil, ErrDecrypt
 	}

@@ -45,8 +45,7 @@ message CommitteeResponse {
 }
 
 message AttestationInfoRequest {
-    uint64 slot = 1;
-    uint64 shard = 2;
+    uint64 shard = 1;
 }
 
 message AttestationInfoResponse {
