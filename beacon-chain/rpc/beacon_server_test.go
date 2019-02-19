@@ -37,7 +37,7 @@ func (f *faultyPOWChainService) HasChainStartLogOccurred() (bool, uint64, error)
 func (f *faultyPOWChainService) ChainStartFeed() *event.Feed {
 	return f.chainStartFeed
 }
-func (f *faultyPOWChainService) LatestBlockNumber() *big.Int {
+func (f *faultyPOWChainService) LatestBlockHeight() *big.Int {
 	return big.NewInt(0)
 }
 
@@ -65,7 +65,7 @@ func (m *mockPOWChainService) HasChainStartLogOccurred() (bool, uint64, error) {
 func (m *mockPOWChainService) ChainStartFeed() *event.Feed {
 	return m.chainStartFeed
 }
-func (m *mockPOWChainService) LatestBlockNumber() *big.Int {
+func (m *mockPOWChainService) LatestBlockHeight() *big.Int {
 	return m.latestBlockNumber
 }
 
