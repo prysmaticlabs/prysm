@@ -79,5 +79,5 @@ func RandaoMix(state *pb.BeaconState, wantedEpoch uint64) ([]byte, error) {
 		return nil, fmt.Errorf("input randaoMix epoch %d out of bounds: %d <= epoch < %d",
 			wantedEpoch, earliestEpoch, currentEpoch)
 	}
-	return state.LatestRandaoMixesHash32S[wantedEpoch%params.BeaconConfig().LatestRandaoMixesLength], nil
+	return state.LatestRandaoMixes[wantedEpoch%params.BeaconConfig().LatestRandaoMixesLength], nil
 }
