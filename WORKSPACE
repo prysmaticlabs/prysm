@@ -282,7 +282,7 @@ go_repository(
 
 go_repository(
     name = "com_github_gxed_hashland",
-    commit = "d9f6b97f8db22dd1e090fd0bbbe98f09cc7dd0a8",
+    tag = "v0.0.1",
     importpath = "github.com/gxed/hashland",
 )
 
