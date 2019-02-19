@@ -21,7 +21,7 @@ import (
 )
 
 func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
-	deposits, privKeys := internal.GenerateTestDepositsAndKeys(t, 10)
+	deposits, privKeys := internal.GenerateTestDepositsAndKeys(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), []byte{})
 	if err != nil {
 		t.Fatal(err)
@@ -52,7 +52,7 @@ func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
 }
 
 func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T) {
-	deposits, privKeys := internal.GenerateTestDepositsAndKeys(t, 10)
+	deposits, privKeys := internal.GenerateTestDepositsAndKeys(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), []byte{})
 	if err != nil {
 		t.Fatal(err)
