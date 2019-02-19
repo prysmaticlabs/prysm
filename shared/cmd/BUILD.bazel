@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "customflags.go",
+        "defaults.go",
         "flags.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/cmd",

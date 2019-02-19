@@ -14,17 +14,11 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-package node
+package cmd
 
 import (
-	"os"
-	"os/user"
 	"path/filepath"
 	"runtime"
-
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/nat"
-	"github.com/ethereum/go-ethereum/rpc"
 )
 
 const (
@@ -35,22 +29,6 @@ const (
 	DefaultGraphQLHost = "localhost" // Default host interface for the GraphQL server
 	DefaultGraphQLPort = 8547        // Default TCP port for the GraphQL server
 )
-
-// DefaultConfig contains reasonable default settings.
-var DefaultConfig = Config{
-	DataDir:          DefaultDataDir(),
-	HTTPPort:         DefaultHTTPPort,
-	HTTPModules:      []string{"net", "web3"},
-	HTTPVirtualHosts: []string{"localhost"},
-	HTTPTimeouts:     rpc.DefaultHTTPTimeouts,
-	WSPort:           DefaultWSPort,
-	WSModules:        []string{"net", "web3"},
-	P2P: p2p.Config{
-		ListenAddr: ":30303",
-		MaxPeers:   25,
-		NAT:        nat.Any(),
-	},
-}
 
 // DefaultDataDir is the default data directory to use for the databases and other
 // persistence requirements.
@@ -67,15 +45,5 @@ func DefaultDataDir() string {
 		}
 	}
 	// As we cannot guess a stable location, return empty and handle later
-	return ""
-}
-
-func homeDir() string {
-	if home := os.Getenv("HOME"); home != "" {
-		return home
-	}
-	if usr, err := user.Current(); err == nil {
-		return usr.HomeDir
-	}
 	return ""
 }
