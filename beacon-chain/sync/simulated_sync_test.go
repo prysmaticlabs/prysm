@@ -100,11 +100,12 @@ func TestSetupTestingEnvironment(t *testing.T) {
 			Block: blocks[3],
 		}})
 
-	mockChain.feed.Subscribe(newChan)
+	sub := mockChain.feed.Subscribe(newChan)
+	defer sub.Unsubscribe()
 
 	msg := <-newChan
 	blk := msg.Data.(*pb.BeaconBlockResponse)
-	log.Error(blk)
+	t.Log(blk)
 
 	ss.Stop()
 	bd.Shutdown()
