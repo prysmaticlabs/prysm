@@ -11,13 +11,14 @@ import (
 	"strings"
 	"time"
 
-	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -259,7 +260,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 		return
 	}
 	w.lastReceivedMerkleIndex = int64(index)
-	depositInput, err := blocks.DecodeDepositInput(depositData)
+	depositInput, err := helpers.DecodeDepositInput(depositData)
 	if err != nil {
 		log.Errorf("Could not decode deposit input  %v", err)
 		return
