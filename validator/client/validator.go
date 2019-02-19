@@ -134,10 +134,10 @@ func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
 	}
 	if v.assignment.AttesterSlot == slot && v.assignment.ProposerSlot == slot {
 		return pb.ValidatorRole_BOTH
-	} else if v.assignment.AttesterSlot == slot {
-		return pb.ValidatorRole_ATTESTER
 	} else if v.assignment.ProposerSlot == slot {
 		return pb.ValidatorRole_PROPOSER
+	} else if v.assignment.AttesterSlot == slot {
+		return pb.ValidatorRole_ATTESTER
 	}
 	return pb.ValidatorRole_UNKNOWN
 }
