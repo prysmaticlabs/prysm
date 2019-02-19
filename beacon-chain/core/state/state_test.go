@@ -2,11 +2,12 @@ package state_test
 
 import (
 	"bytes"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"reflect"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/ssz"

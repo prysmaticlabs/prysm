@@ -2,11 +2,14 @@ package blockchain
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"io/ioutil"
 	"math/big"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/bls"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 
@@ -110,6 +113,28 @@ func (f *faultyClient) LatestBlockHash() common.Hash {
 
 func (f *faultyClient) HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error) {
 	return nil, nil
+}
+
+func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.SecretKey) {
+	privKeys := make([]*bls.SecretKey, numDeposits)
+	deposits := make([]*pb.Deposit, numDeposits)
+	for i := 0; i < len(deposits); i++ {
+		priv, err := bls.RandKey(rand.Reader)
+		if err != nil {
+			t.Fatal(err)
+		}
+		depositInput := &pb.DepositInput{
+			Pubkey: priv.PublicKey().Marshal(),
+		}
+		balance := params.BeaconConfig().MaxDepositAmount
+		depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
+		if err != nil {
+			t.Fatalf("Cannot encode data: %v", err)
+		}
+		deposits[i] = &pb.Deposit{DepositData: depositData}
+		privKeys[i] = priv
+	}
+	return deposits, privKeys
 }
 
 func createPreChainStartDeposit(t *testing.T, pk []byte) *pb.Deposit {
@@ -240,7 +265,7 @@ func TestStartStopInitializedChain(t *testing.T) {
 	chainService := setupBeaconChain(t, false, db, true)
 
 	unixTime := uint64(time.Now().Unix())
-	deposits, _ := internal.GenerateTestDepositsAndKeys(t, 10)
+	deposits, _ := setupInitialDeposits(t, 100)
 	if err := db.InitializeState(unixTime, deposits); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
@@ -275,7 +300,7 @@ func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, true, db, true)
 	unixTime := uint64(time.Now().Unix())
-	deposits, _ := internal.GenerateTestDepositsAndKeys(t, 10)
+	deposits, _ := setupInitialDeposits(t, 100)
 	if err := db.InitializeState(unixTime, deposits); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
@@ -348,7 +373,7 @@ func TestRunningChainService(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db, true)
 	unixTime := uint64(time.Now().Unix())
-	deposits, _ := internal.GenerateTestDepositsAndKeys(t, 10)
+	deposits, _ := setupInitialDeposits(t, 100)
 	if err := db.InitializeState(unixTime, deposits); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
@@ -423,7 +448,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db, true)
 	unixTime := uint64(time.Now().Unix())
-	deposits, _ := internal.GenerateTestDepositsAndKeys(t, 10)
+	deposits, _ := setupInitialDeposits(t, 10)
 	if err := db.InitializeState(unixTime, deposits); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
@@ -517,7 +542,7 @@ func TestDoesPOWBlockExist(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, true, db, true)
 	unixTime := uint64(time.Now().Unix())
-	deposits, _ := internal.GenerateTestDepositsAndKeys(t, 10)
+	deposits, _ := setupInitialDeposits(t, 10)
 	if err := db.InitializeState(unixTime, deposits); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
@@ -586,7 +611,7 @@ func TestUpdateHead(t *testing.T) {
 		defer internal.TeardownDB(t, db)
 		chainService := setupBeaconChain(t, false, db, true)
 		unixTime := uint64(time.Now().Unix())
-		deposits, _ := internal.GenerateTestDepositsAndKeys(t, 10)
+		deposits, _ := setupInitialDeposits(t, 100)
 		if err := db.InitializeState(unixTime, deposits); err != nil {
 			t.Fatalf("Could not initialize beacon state to disk: %v", err)
 		}
@@ -624,7 +649,7 @@ func TestIsBlockReadyForProcessing(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db, true)
 	unixTime := uint64(time.Now().Unix())
-	deposits, _ := internal.GenerateTestDepositsAndKeys(t, 10)
+	deposits, _ := setupInitialDeposits(t, 100)
 	if err := db.InitializeState(unixTime, deposits); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}

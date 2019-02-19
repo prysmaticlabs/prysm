@@ -122,7 +122,7 @@ func TestProcessBlock(t *testing.T) {
 		}
 	}
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := internal.GenerateTestDepositsAndKeys(t, 10)
+	deposits, _ := setupInitialDeposits(t, 10)
 	if err := db.InitializeState(genesisTime, deposits); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
@@ -202,7 +202,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 		}
 	}
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := internal.GenerateTestDepositsAndKeys(t, 10)
+	deposits, _ := setupInitialDeposits(t, 10)
 	if err := db.InitializeState(genesisTime, deposits); err != nil {
 		t.Fatal(err)
 	}

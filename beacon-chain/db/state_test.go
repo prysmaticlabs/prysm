@@ -2,21 +2,46 @@ package db
 
 import (
 	"bytes"
+	"crypto/rand"
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 
 	"github.com/gogo/protobuf/proto"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.SecretKey) {
+	privKeys := make([]*bls.SecretKey, numDeposits)
+	deposits := make([]*pb.Deposit, numDeposits)
+	for i := 0; i < len(deposits); i++ {
+		priv, err := bls.RandKey(rand.Reader)
+		if err != nil {
+			t.Fatal(err)
+		}
+		depositInput := &pb.DepositInput{
+			Pubkey: priv.PublicKey().Marshal(),
+		}
+		balance := params.BeaconConfig().MaxDepositAmount
+		depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
+		if err != nil {
+			t.Fatalf("Cannot encode data: %v", err)
+		}
+		deposits[i] = &pb.Deposit{DepositData: depositData}
+		privKeys[i] = priv
+	}
+	return deposits, privKeys
+}
 
 func TestInitializeState(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := internal.GenerateTestDepositsAndKeys(t, 10)
+	deposits, _ := setupInitialDeposits(t, 10)
 	if err := db.InitializeState(genesisTime, deposits); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
@@ -63,7 +88,7 @@ func TestGenesisTime(t *testing.T) {
 		t.Fatal("expected GenesisTime to fail")
 	}
 
-	deposits, _ := internal.GenerateTestDepositsAndKeys(t, 10)
+	deposits, _ := setupInitialDeposits(t, 10)
 	if err := db.InitializeState(uint64(genesisTime.Unix()), deposits); err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
