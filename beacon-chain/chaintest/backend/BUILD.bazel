@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "fork_choice_test_format.go",
         "helpers.go",
-        "setup_db.go",
         "shuffle_test_format.go",
         "simulated_backend.go",
         "state_test_format.go",
@@ -32,8 +31,5 @@ go_test(
     name = "go_default_test",
     srcs = ["simulated_backend_test.go"],
     embed = [":go_default_library"],
-    deps = [
-        "//shared/params:go_default_library",
-        "//shared/trieutil:go_default_library",
-    ],
+    deps = ["//shared/params:go_default_library"],
 )
