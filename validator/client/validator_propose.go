@@ -22,7 +22,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.ProposeBlock")
 	defer span.Finish()
 
-	// Fetch data from Beacon Chain node.
+	// 1. Fetch data from Beacon Chain node.
 	// Get current head beacon block.
 	headBlock, err := v.beaconClient.CanonicalHead(ctx, &ptypes.Empty{})
 	if err != nil {
@@ -57,11 +57,11 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 		return
 	}
 
-	// Construct block.
+	// 2. Construct block.
 	block := &pbp2p.BeaconBlock{
 		Slot:               slot,
 		ParentRootHash32:   parentTreeHash[:],
-		RandaoRevealHash32: []byte{}, // TODO(1565): Add RANDAO.
+		RandaoRevealHash32: nil, // TODO(1366): generate randao reveal from BLS
 		Eth1Data:           eth1DataResp.Eth1Data,
 		Body: &pbp2p.BeaconBlockBody{
 			Attestations:      attResp.PendingAttestations,
@@ -72,18 +72,18 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 		},
 	}
 
-	// Compute state root transition from parent block to the new block.
+	// 3. Compute state root transition from parent block to the new block.
 	resp, err := v.proposerClient.ComputeStateRoot(ctx, block)
 	if err != nil {
 		log.Errorf("Unable to compute state root: %v", err)
 	}
 	block.StateRootHash32 = resp.GetStateRoot()
 
-	// Sign the complete block.
+	// 4. Sign the complete block.
 	// TODO(1366): BLS sign block
 	block.Signature = nil
 
-	// Broadcast to the network via beacon chain node.
+	// 5. Broadcast to the network via beacon chain node.
 	blkResp, err := v.proposerClient.ProposeBlock(ctx, block)
 	if err != nil {
 		log.WithField("error", err).Error("Failed to propose block")
