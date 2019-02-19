@@ -455,7 +455,7 @@ func TestProcessPrevSlotShardOk(t *testing.T) {
 func TestProcessValidatorRegistryOk(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                       params.BeaconConfig().MinSeedLookahead,
-		LatestRandaoMixes:   [][]byte{{'A'}, {'B'}},
+		LatestRandaoMixes:          [][]byte{{'A'}, {'B'}},
 		CurrentShufflingSeedHash32: []byte{'C'},
 	}
 	newState, err := ProcessValidatorRegistry(
@@ -475,9 +475,9 @@ func TestProcessValidatorRegistryOk(t *testing.T) {
 
 func TestProcessPartialValidatorRegistry(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot:                     params.BeaconConfig().SlotsPerEpoch * 2,
-		LatestRandaoMixes: [][]byte{{'A'}, {'B'}, {'C'}},
-		LatestIndexRootHash32S:   [][]byte{{'D'}, {'E'}, {'F'}},
+		Slot:                   params.BeaconConfig().SlotsPerEpoch * 2,
+		LatestRandaoMixes:      [][]byte{{'A'}, {'B'}, {'C'}},
+		LatestIndexRootHash32S: [][]byte{{'D'}, {'E'}, {'F'}},
 	}
 	copiedState := proto.Clone(state).(*pb.BeaconState)
 	newState, err := ProcessPartialValidatorRegistry(copiedState)
@@ -599,7 +599,7 @@ func TestUpdateLatestRandaoMixes_Ok(t *testing.T) {
 			params.BeaconConfig().LatestRandaoMixesLength)
 		latestSlashedRandaoMixes[epoch] = tt.seed
 		state := &pb.BeaconState{
-			Slot:                     tt.epoch * params.BeaconConfig().SlotsPerEpoch,
+			Slot:              tt.epoch * params.BeaconConfig().SlotsPerEpoch,
 			LatestRandaoMixes: latestSlashedRandaoMixes}
 		newState, err := UpdateLatestRandaoMixes(state)
 		if err != nil {

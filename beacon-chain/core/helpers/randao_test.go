@@ -132,9 +132,9 @@ func TestGenerateSeed_Ok(t *testing.T) {
 	}
 	slot := 10 * params.BeaconConfig().MinSeedLookahead * params.BeaconConfig().SlotsPerEpoch
 	state := &pb.BeaconState{
-		LatestIndexRootHash32S:   activeIndexRoots,
-		LatestRandaoMixes: randaoMixes,
-		Slot:                     slot}
+		LatestIndexRootHash32S: activeIndexRoots,
+		LatestRandaoMixes:      randaoMixes,
+		Slot:                   slot}
 
 	got, err := GenerateSeed(state, 10)
 	if err != nil {

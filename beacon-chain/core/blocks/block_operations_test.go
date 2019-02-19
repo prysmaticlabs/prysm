@@ -30,8 +30,8 @@ func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 		RandaoReveal: randaoCommit[:],
 	}
 	beaconState := &pb.BeaconState{
-		ValidatorRegistry:        validators,
-		Slot:                     1,
+		ValidatorRegistry: validators,
+		Slot:              1,
 		LatestRandaoMixes: make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 	}
 
