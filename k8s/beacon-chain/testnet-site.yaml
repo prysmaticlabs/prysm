@@ -34,6 +34,27 @@ spec:
             port: 80
           initialDelaySeconds: 3
           periodSeconds: 3
+        resources:
+          requests:
+            cpu: "100m"
+---
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: testnet-site-alpha
+  namespace: beacon-chain
+spec:
+  scaleTargetRef:
+    apiVersion: extensions/v1beta1
+    kind: Deployment
+    name: testnet-site-alpha
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      targetAverageUtilization: 80
 ---
 kind: Service
 apiVersion: v1
