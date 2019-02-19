@@ -84,12 +84,12 @@ func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb
 	// randao and update the state's corresponding latest randao mix value.
 	latestMixesLength := params.BeaconConfig().LatestRandaoMixesLength
 	currentEpoch := helpers.CurrentEpoch(beaconState)
-	latestMixSlice := beaconState.LatestRandaoMixesHash32S[currentEpoch%latestMixesLength]
+	latestMixSlice := beaconState.LatestRandaoMixes[currentEpoch%latestMixesLength]
 	latestMix := bytesutil.ToBytes32(latestMixSlice)
-	for i, x := range block.RandaoRevealHash32 {
+	for i, x := range block.RandaoReveal {
 		latestMix[i] ^= x
 	}
-	beaconState.LatestRandaoMixesHash32S[beaconState.Slot%latestMixesLength] = latestMix[:]
+	beaconState.LatestRandaoMixes[beaconState.Slot%latestMixesLength] = latestMix[:]
 	return beaconState, nil
 }
 
@@ -527,7 +527,7 @@ func ProcessValidatorDeposits(
 	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	for idx, deposit := range deposits {
 		depositData := deposit.DepositData
-		depositInput, err = DecodeDepositInput(depositData)
+		depositInput, err = helpers.DecodeDepositInput(depositData)
 		if err != nil {
 			return nil, fmt.Errorf("could not decode deposit input: %v", err)
 		}

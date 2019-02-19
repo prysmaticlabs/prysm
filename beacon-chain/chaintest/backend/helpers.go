@@ -5,9 +5,10 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -28,10 +29,10 @@ func generateSimulatedBlock(
 	}
 	randaoReveal := [32]byte{}
 	block := &pb.BeaconBlock{
-		Slot:               beaconState.Slot + 1,
-		RandaoRevealHash32: randaoReveal[:],
-		ParentRootHash32:   prevBlockRoot[:],
-		StateRootHash32:    stateRoot[:],
+		Slot:             beaconState.Slot + 1,
+		RandaoReveal:     randaoReveal[:],
+		ParentRootHash32: prevBlockRoot[:],
+		StateRootHash32:  stateRoot[:],
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte{1},
 			BlockHash32:       []byte{2},
@@ -51,7 +52,7 @@ func generateSimulatedBlock(
 			ProofOfPossession:           make([]byte, 96),
 		}
 
-		data, err := b.EncodeDepositData(depositInput, simObjects.simDeposit.Amount, time.Now().Unix())
+		data, err := helpers.EncodeDepositData(depositInput, simObjects.simDeposit.Amount, time.Now().Unix())
 		if err != nil {
 			return nil, [32]byte{}, fmt.Errorf("could not encode deposit data: %v", err)
 		}
@@ -126,7 +127,7 @@ func generateInitialSimulatedDeposits(numDeposits uint64) ([]*pb.Deposit, error)
 			WithdrawalCredentialsHash32: make([]byte, 32),
 			ProofOfPossession:           make([]byte, 96),
 		}
-		depositData, err := b.EncodeDepositData(
+		depositData, err := helpers.EncodeDepositData(
 			depositInput,
 			params.BeaconConfig().MaxDepositAmount,
 			genesisTime,

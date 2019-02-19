@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -63,7 +62,7 @@ func TestGenesisBeaconState_Ok(t *testing.T) {
 	maxDeposit := params.BeaconConfig().MaxDepositAmount
 	var deposits []*pb.Deposit
 	for i := 0; i < depositsForChainStart; i++ {
-		depositData, err := b.EncodeDepositData(
+		depositData, err := helpers.EncodeDepositData(
 			&pb.DepositInput{
 				Pubkey:                      []byte(strconv.Itoa(i)),
 				ProofOfPossession:           []byte{'B'},
@@ -117,8 +116,8 @@ func TestGenesisBeaconState_Ok(t *testing.T) {
 	}
 
 	// Randomness and committees fields checks.
-	if len(state.LatestRandaoMixesHash32S) != latestRandaoMixesLength {
-		t.Error("Length of LatestRandaoMixesHash32S was not correctly initialized")
+	if len(state.LatestRandaoMixes) != latestRandaoMixesLength {
+		t.Error("Length of LatestRandaoMixes was not correctly initialized")
 	}
 
 	// Finality fields checks.

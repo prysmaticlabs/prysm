@@ -27,12 +27,12 @@ func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 
 	randaoCommit := bytesutil.ToBytes32([]byte("randao"))
 	block := &pb.BeaconBlock{
-		RandaoRevealHash32: randaoCommit[:],
+		RandaoReveal: randaoCommit[:],
 	}
 	beaconState := &pb.BeaconState{
-		ValidatorRegistry:        validators,
-		Slot:                     1,
-		LatestRandaoMixesHash32S: make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
+		ValidatorRegistry: validators,
+		Slot:              1,
+		LatestRandaoMixes: make([][]byte, params.BeaconConfig().LatestRandaoMixesLength),
 	}
 
 	newState, err := ProcessBlockRandao(
@@ -43,7 +43,7 @@ func TestProcessBlockRandao_CreateRandaoMixAndUpdateProposer(t *testing.T) {
 		t.Fatalf("Unexpected error processing block randao: %v", err)
 	}
 
-	updatedLatestMix := newState.LatestRandaoMixesHash32S[newState.Slot%params.BeaconConfig().LatestRandaoMixesLength]
+	updatedLatestMix := newState.LatestRandaoMixes[newState.Slot%params.BeaconConfig().LatestRandaoMixesLength]
 	if !bytes.Equal(updatedLatestMix, randaoCommit[:]) {
 		t.Errorf("Expected randao mix to XOR correctly: wanted %#x, received %#x", randaoCommit[:], updatedLatestMix)
 	}

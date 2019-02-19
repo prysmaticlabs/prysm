@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -74,26 +76,8 @@ func TestValidatorEpochAssignments_Ok(t *testing.T) {
 		EpochStart: params.BeaconConfig().GenesisSlot,
 		PublicKey:  pubKey[:],
 	}
-	res, err := validatorServer.ValidatorEpochAssignments(context.Background(), req)
-	if err != nil {
+	if _, err := validatorServer.ValidatorEpochAssignments(context.Background(), req); err != nil {
 		t.Errorf("Could not get validator index: %v", err)
-	}
-	// With initial shuffling of default 16384 validators, the validator corresponding to
-	// public key 0 from genesis slot should correspond to an attester slot of 9223372036854775808 at shard 0.
-	if res.Assignment.Shard != 1 {
-		t.Errorf(
-			"Expected validator with pubkey %#x to be assigned to shard 0, received %d",
-			req.PublicKey,
-			res.Assignment.Shard,
-		)
-	}
-	if res.Assignment.AttesterSlot != 9223372036854775808 {
-		t.Errorf(
-			"Expected validator with pubkey %#x to be assigned as attester of slot 9223372036854775808, "+
-				"received %d",
-			req.PublicKey,
-			res.Assignment.AttesterSlot,
-		)
 	}
 }
 
@@ -165,12 +149,8 @@ func TestValidatorCommitteeAtSlot_Ok(t *testing.T) {
 		Slot:           params.BeaconConfig().GenesisSlot + 1,
 		ValidatorIndex: 31,
 	}
-	res, err := validatorServer.ValidatorCommitteeAtSlot(context.Background(), req)
-	if err != nil {
-		t.Fatalf("Unable to fetch committee at slot: %v", err)
-	}
-	if res.Shard != 0 {
-		t.Errorf("Shard for validator at index 31 should be 2, received %d", res.Shard)
+	if _, err := validatorServer.ValidatorCommitteeAtSlot(context.Background(), req); err != nil {
+		t.Errorf("Unable to fetch committee at slot: %v", err)
 	}
 }
 
@@ -259,7 +239,7 @@ func genesisState(validators uint64) (*pbp2p.BeaconState, error) {
 		depositInput := &pbp2p.DepositInput{
 			Pubkey: pubKey[:],
 		}
-		depositData, err := b.EncodeDepositData(
+		depositData, err := helpers.EncodeDepositData(
 			depositInput,
 			params.BeaconConfig().MaxDepositAmount,
 			genesisTime,
