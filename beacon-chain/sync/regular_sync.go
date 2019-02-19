@@ -377,7 +377,6 @@ func (rs *RegularSync) handleBlockRequestByHash(msg p2p.Message) {
 	rs.p2p.Send(&pb.BeaconBlockResponse{
 		Block: block,
 	}, msg.Peer)
-
 }
 
 // handleBatchedBlockRequest receives p2p messages which consist of requests for batched blocks
@@ -428,5 +427,55 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) {
 	rs.p2p.Send(&pb.BatchedBeaconBlockResponse{
 		BatchedBlocks: response,
 	}, msg.Peer)
+}
 
+func (rs *RegularSync) handleAttestationRequestByHash(msg p2p.Message) {
+	ctx, respondAttestationSpan := trace.StartSpan(msg.Ctx, "RegularSync_respondAttestation")
+	defer respondAttestationSpan.End()
+	req := msg.Data.(*pb.AttestationRequest)
+
+	root := bytesutil.ToBytes32(req.Hash)
+
+	att, err := rs.db.Attestation(root)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	if att == nil {
+		log.WithField("attestationRoot", fmt.Sprintf("%#x", root)).Debugf("Attestation is not in db")
+		return
+	}
+
+	_, sendAttestationSpan := trace.StartSpan(ctx, "sendAttestation")
+	log.WithField("attestationRoot", fmt.Sprintf("%#x", root)).Debugf("Sending response to peer %v", msg.Peer)
+	rs.p2p.Send(&pb.AttestationResponse{
+		Attestation: att,
+	}, msg.Peer)
+	sendAttestationSpan.End()
+}
+
+func (rs *RegularSync) handleUnseenAttestationsRequest(msg p2p.Message) {
+	ctx, respondAttestationxSpan := trace.StartSpan(msg.Ctx, "RegularSync_respondUnseenAttestations")
+	defer respondAttestationxSpan.End()
+	if _, ok := msg.Data.(*pb.UnseenAttestationsRequest); !ok {
+		log.Errorf("message is of the incorrect type")
+		return
+	}
+
+	atts, err := rs.db.Attestations()
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	if len(atts) == 0 {
+		log.Debug("There's no unseen attestation in db")
+		return
+	}
+
+	_, sendAttestationsSpan := trace.StartSpan(ctx, "sendAttestation")
+	log.Debugf("Sending response for batched unseen to peer %v", msg.Peer)
+	rs.p2p.Send(&pb.BatchedAttestationResponse{
+		Attestations: atts,
+	}, msg.Peer)
+	sendAttestationsSpan.End()
 }
