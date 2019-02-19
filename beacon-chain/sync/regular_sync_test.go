@@ -8,8 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -65,7 +66,7 @@ func setupInitialDeposits(t *testing.T) []*pb.Deposit {
 			Pubkey: genesisValidatorRegistry[i].Pubkey,
 		}
 		balance := params.BeaconConfig().MaxDepositAmount
-		depositData, err := blocks.EncodeDepositData(depositInput, balance, time.Now().Unix())
+		depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
 		if err != nil {
 			t.Fatalf("Cannot encode data: %v", err)
 		}

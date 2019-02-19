@@ -527,7 +527,7 @@ func ProcessValidatorDeposits(
 	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	for idx, deposit := range deposits {
 		depositData := deposit.DepositData
-		depositInput, err = DecodeDepositInput(depositData)
+		depositInput, err = helpers.DecodeDepositInput(depositData)
 		if err != nil {
 			return nil, fmt.Errorf("could not decode deposit input: %v", err)
 		}
