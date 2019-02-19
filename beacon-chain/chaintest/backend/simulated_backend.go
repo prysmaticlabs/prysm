@@ -49,7 +49,7 @@ type SimulatedObjects struct {
 // utilizing a mockDB which will act according to test run parameters specified
 // in the common ETH 2.0 client test YAML format.
 func NewSimulatedBackend() (*SimulatedBackend, error) {
-	db, err := setupDB()
+	db, err := db.SetupDB()
 	if err != nil {
 		return nil, fmt.Errorf("could not setup simulated backend db: %v", err)
 	}
@@ -157,7 +157,7 @@ func (sb *SimulatedBackend) InMemoryBlocks() []*pb.BeaconBlock {
 // according to the ETH 2.0 client chain test specification and runs them
 // against the simulated backend.
 func (sb *SimulatedBackend) RunForkChoiceTest(testCase *ForkChoiceTestCase) error {
-	defer teardownDB(sb.BeaconDB)
+	defer db.TeardownDB(sb.BeaconDB)
 	// Utilize the config parameters in the test case to setup
 	// the DB and set global config parameters accordingly.
 	// Config parameters include: ValidatorCount, ShardCount,
@@ -188,7 +188,7 @@ func (sb *SimulatedBackend) RunForkChoiceTest(testCase *ForkChoiceTestCase) erro
 // RunShuffleTest uses validator set specified from a YAML file, runs the validator shuffle
 // algorithm, then compare the output with the expected output from the YAML file.
 func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
-	defer teardownDB(sb.BeaconDB)
+	defer db.TeardownDB(sb.BeaconDB)
 	seed := common.BytesToHash([]byte(testCase.Seed))
 	output, err := utils.ShuffleIndices(seed, testCase.Input)
 	if err != nil {
@@ -204,7 +204,7 @@ func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
 // slots from a genesis state, with a block being processed at every iteration
 // of the state transition function.
 func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) error {
-	defer teardownDB(sb.BeaconDB)
+	defer db.TeardownDB(sb.BeaconDB)
 	setTestConfig(testCase)
 
 	if err := sb.initializeStateTest(testCase); err != nil {
@@ -349,11 +349,11 @@ func (sb *SimulatedBackend) compareTestCase(testCase *StateTestCase) error {
 			len(sb.state.ValidatorRegistry),
 		)
 	}
-	for _, slashed := range testCase.Results.SlashedValidators {
-		if sb.state.ValidatorRegistry[slashed].SlashedEpoch == params.BeaconConfig().FarFutureEpoch {
+	for _, penalized := range testCase.Results.SlashedValidators {
+		if sb.state.ValidatorRegistry[penalized].SlashedEpoch == params.BeaconConfig().FarFutureEpoch {
 			return fmt.Errorf(
-				"expected validator at index %d to have been slashed",
-				slashed,
+				"expected validator at index %d to have been penalized",
+				penalized,
 			)
 		}
 	}

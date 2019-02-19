@@ -22,6 +22,10 @@ func (mp *mockPowChain) ChainStartFeed() *event.Feed {
 	return mp.feed
 }
 
+func setupDB() {
+
+}
+
 func TestSetupTestingEnvironment(t *testing.T) {
 	bd, err := backend.NewSimulatedBackend()
 	if err != nil {
@@ -62,7 +66,8 @@ func TestSetupTestingEnvironment(t *testing.T) {
 	bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{})
 	bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{})
 	bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{})
-	t.Log(bd.State().Slot)
+	blocks := bd.InMemoryBlocks()
+
 	ss.Stop()
 	bd.Shutdown()
 }
