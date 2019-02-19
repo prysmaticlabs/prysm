@@ -7,16 +7,19 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 )
 
-type mockPowChain struct{}
+type mockPowChain struct {
+	feed *event.Feed
+}
 
 func (mp *mockPowChain) HasChainStartLogOccurred() (bool, uint64, error) {
 	return false, 0, nil
 }
 
 func (mp *mockPowChain) ChainStartFeed() *event.Feed {
-	return new(event.Feed)
+	return mp.feed
 }
 
 func TestSetupTestingEnvironment(t *testing.T) {
@@ -25,27 +28,41 @@ func TestSetupTestingEnvironment(t *testing.T) {
 		t.Fatalf("Could not set up simulated backend %v", err)
 	}
 
-	if err := bd.SetupBackend(1000); err != nil {
+	if err := bd.SetupBackend(100); err != nil {
 		t.Fatalf("Could not set up backend %v", err)
+	}
+
+	t.Log(bd.State().Slot)
+
+	mockPow := &mockPowChain{
+		feed: new(event.Feed),
+	}
+
+	mockServer, err := p2p.MockServer(t)
+	if err != nil {
+		t.Fatalf("Could not create p2p server %v", err)
 	}
 
 	cfg := &Config{
 		ChainService:     bd.ChainService,
 		BeaconDB:         bd.BeaconDB,
 		OperationService: &mockOperationService{},
-		P2P:              &mockP2P{},
-		Powchain:         &mockPowChain{},
+		P2P:              mockServer,
+		Powchain:         mockPow,
 	}
 
 	ss := NewSyncService(context.Background(), cfg)
 
 	go ss.run()
-	ss.Querier.powchain.ChainStartFeed().Send(time.Now())
+	for !ss.Querier.isChainStart {
+		mockPow.feed.Send(time.Now())
+	}
 
 	bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{})
 	bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{})
 	bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{})
 	bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{})
+	t.Log(bd.State().Slot)
 	ss.Stop()
-
+	bd.Shutdown()
 }

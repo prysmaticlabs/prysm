@@ -141,6 +141,18 @@ func (sb *SimulatedBackend) Shutdown() error {
 	return sb.BeaconDB.Close()
 }
 
+// State is a getter to return the current beacon state
+// of the backend.
+func (sb *SimulatedBackend) State() *pb.BeaconState {
+	return sb.state
+}
+
+// InMemoryBlocks returns the blocks that have been processed by the simulated
+// backend.
+func (sb *SimulatedBackend) InMemoryBlocks() []*pb.BeaconBlock {
+	return sb.inMemoryBlocks
+}
+
 // RunForkChoiceTest uses a parsed set of chaintests from a YAML file
 // according to the ETH 2.0 client chain test specification and runs them
 // against the simulated backend.
