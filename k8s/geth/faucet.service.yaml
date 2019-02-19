@@ -13,49 +13,21 @@ spec:
   type: ClusterIP
 ---
 apiVersion: networking.istio.io/v1alpha3
-kind: Gateway
-metadata: 
-  name: public-faucet-gateway
-  namespace: pow
-spec:
-  selector:
-    istio: ingressgateway
-  servers:
-  - port:
-      number: 80
-      name: http-faucet
-      protocol: HTTP
-    hosts:
-    - api.prylabs.net
-    tls:
-      httpsRedirect: true
-  - port: 
-      number: 443
-      name: grpc-web-faucet
-      protocol: HTTPS
-    hosts:
-    - api.prylabs.net
-    tls:
-      mode: SIMPLE
-      privateKey: /etc/istio/ingressgateway-certs/tls.key
-      serverCertificate: /etc/istio/ingressgateway-certs/tls.crt
----
-apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
 metadata: 
-  name: public-faucet
-  namespace: pow
+  name: api-prylabs-net
+  namespace: istio-system
 spec:
   hosts:
   - api.prylabs.net
   gateways:
-  - public-faucet-gateway
+  - prylabs-wildcard-gateway
   http:
   - route:
     - destination:
         port: 
           number: 8000
-        host: public-faucet
+        host: public-faucet.pow.svc.cluster.local
     corsPolicy:
       allowOrigin:
         - "*"
