@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
-func TestCanProcessEpoch(t *testing.T) {
+func TestCanProcessEpoch_OK(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
@@ -54,7 +54,7 @@ func TestCanProcessEpoch(t *testing.T) {
 	}
 }
 
-func TestCanProcessEth1Data(t *testing.T) {
+func TestCanProcessEth1Data_OK(t *testing.T) {
 	if params.BeaconConfig().EpochsPerEth1VotingPeriod != 16 {
 		t.Errorf("EpochsPerEth1VotingPeriodshould be 16 for these tests to pass")
 	}
@@ -96,7 +96,7 @@ func TestCanProcessEth1Data(t *testing.T) {
 	}
 }
 
-func TestProcessEth1Data(t *testing.T) {
+func TestProcessEth1Data_OK(t *testing.T) {
 	requiredVoteCount := params.BeaconConfig().EpochsPerEth1VotingPeriod
 	state := &pb.BeaconState{
 		Slot: 15 * params.BeaconConfig().SlotsPerEpoch,
@@ -198,7 +198,7 @@ func TestProcessEth1Data_InactionSlot(t *testing.T) {
 	}
 }
 
-func TestProcessJustification(t *testing.T) {
+func TestProcessJustification_OK(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
@@ -234,7 +234,7 @@ func TestProcessJustification(t *testing.T) {
 	}
 }
 
-func TestProcessFinalization(t *testing.T) {
+func TestProcessFinalization_OK(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
@@ -295,7 +295,7 @@ func TestProcessFinalization(t *testing.T) {
 	}
 }
 
-func TestProcessCrosslinksOk(t *testing.T) {
+func TestProcessCrosslinks_OK(t *testing.T) {
 	state := buildState(5, params.BeaconConfig().DepositsForChainStart)
 	state.LatestCrosslinks = []*pb.Crosslink{{}, {}}
 	epoch := uint64(5)
@@ -342,7 +342,7 @@ func TestProcessCrosslinksOk(t *testing.T) {
 	}
 }
 
-func TestProcessCrosslinksNoParticipantsBitField(t *testing.T) {
+func TestProcessCrosslinks_NoParticipantsBitField(t *testing.T) {
 	state := buildState(5, params.BeaconConfig().DepositsForChainStart)
 	state.LatestCrosslinks = []*pb.Crosslink{{}, {}}
 
@@ -360,7 +360,7 @@ func TestProcessCrosslinksNoParticipantsBitField(t *testing.T) {
 	}
 }
 
-func TestProcessEjectionsOk(t *testing.T) {
+func TestProcessEjections_OK(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 1,
 		ValidatorBalances: []uint64{
@@ -388,7 +388,7 @@ func TestProcessEjectionsOk(t *testing.T) {
 	}
 }
 
-func TestCanProcessValidatorRegistry(t *testing.T) {
+func TestCanProcessValidatorRegistry_OK(t *testing.T) {
 	crosslinks := make([]*pb.Crosslink, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(crosslinks); i++ {
 		crosslinks[i] = &pb.Crosslink{
@@ -402,19 +402,19 @@ func TestCanProcessValidatorRegistry(t *testing.T) {
 		LatestCrosslinks:             crosslinks,
 	}
 
-	if !CanProcessValidatorRegistry(state) {
-		t.Errorf("Wanted True for CanProcessValidatorRegistry, but got %v", CanProcessValidatorRegistry(state))
+	if processed := CanProcessValidatorRegistry(state); !processed {
+		t.Errorf("Wanted True for CanProcessValidatorRegistry, but got %v", processed)
 	}
 }
 
-func TestCanNotProcessValidatorRegistry(t *testing.T) {
+func TestCanProcessValidatorRegistry_OutOfBounds(t *testing.T) {
 	state := &pb.BeaconState{
 		FinalizedEpoch:               1,
 		ValidatorRegistryUpdateEpoch: 101,
 	}
 
-	if CanProcessValidatorRegistry(state) {
-		t.Errorf("Wanted False for CanProcessValidatorRegistry, but got %v", CanProcessValidatorRegistry(state))
+	if processed := CanProcessValidatorRegistry(state); processed {
+		t.Errorf("Wanted False for CanProcessValidatorRegistry, but got %v", processed)
 	}
 	state = &pb.BeaconState{
 		ValidatorRegistryUpdateEpoch: 101,
@@ -423,12 +423,12 @@ func TestCanNotProcessValidatorRegistry(t *testing.T) {
 			{Epoch: 100},
 		},
 	}
-	if CanProcessValidatorRegistry(state) {
-		t.Errorf("Wanted False for CanProcessValidatorRegistry, but got %v", CanProcessValidatorRegistry(state))
+	if processed := CanProcessValidatorRegistry(state); processed {
+		t.Errorf("Wanted False for CanProcessValidatorRegistry, but got %v", processed)
 	}
 }
 
-func TestProcessPrevSlotShardOk(t *testing.T) {
+func TestProcessPrevSlotShard_OK(t *testing.T) {
 	state := &pb.BeaconState{
 		CurrentShufflingEpoch:      1,
 		CurrentShufflingStartShard: 2,
@@ -452,7 +452,7 @@ func TestProcessPrevSlotShardOk(t *testing.T) {
 	}
 }
 
-func TestProcessValidatorRegistryOk(t *testing.T) {
+func TestProcessValidatorRegistry_OK(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                       params.BeaconConfig().MinSeedLookahead,
 		LatestRandaoMixesHash32S:   [][]byte{{'A'}, {'B'}},
@@ -473,7 +473,7 @@ func TestProcessValidatorRegistryOk(t *testing.T) {
 	}
 }
 
-func TestProcessPartialValidatorRegistry(t *testing.T) {
+func TestProcessPartialValidatorRegistry_OK(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                     params.BeaconConfig().SlotsPerEpoch * 2,
 		LatestRandaoMixesHash32S: [][]byte{{'A'}, {'B'}, {'C'}},
@@ -490,7 +490,7 @@ func TestProcessPartialValidatorRegistry(t *testing.T) {
 	}
 }
 
-func TestCleanupAttestations(t *testing.T) {
+func TestCleanupAttestations_OK(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
@@ -525,7 +525,7 @@ func TestCleanupAttestations(t *testing.T) {
 	}
 }
 
-func TestUpdateLatestSlashedBalances_Ok(t *testing.T) {
+func TestUpdateLatestSlashedBalances_OK(t *testing.T) {
 	tests := []struct {
 		epoch    uint64
 		balances uint64
@@ -569,7 +569,7 @@ func TestUpdateLatestSlashedBalances_Ok(t *testing.T) {
 	}
 }
 
-func TestUpdateLatestRandaoMixes_Ok(t *testing.T) {
+func TestUpdateLatestRandaoMixes_OK(t *testing.T) {
 	tests := []struct {
 		epoch uint64
 		seed  []byte
@@ -615,7 +615,7 @@ func TestUpdateLatestRandaoMixes_Ok(t *testing.T) {
 	}
 }
 
-func TestUpdateLatestActiveIndexRoots_Ok(t *testing.T) {
+func TestUpdateLatestActiveIndexRoots_OK(t *testing.T) {
 	epoch := uint64(1234)
 	latestActiveIndexRoots := make([][]byte,
 		params.BeaconConfig().LatestActiveIndexRootsLength)

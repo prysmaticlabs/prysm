@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestFFGSrcRewardsPenalties(t *testing.T) {
+func TestFFGSrcRewardsPenalties_OK(t *testing.T) {
 	tests := []struct {
 		voted                          []uint64
 		balanceAfterSrcRewardPenalties []uint64
@@ -47,7 +47,7 @@ func TestFFGSrcRewardsPenalties(t *testing.T) {
 	}
 }
 
-func TestFFGTargetRewardsPenalties(t *testing.T) {
+func TestFFGTargetRewardsPenalties_OK(t *testing.T) {
 	tests := []struct {
 		voted                          []uint64
 		balanceAfterTgtRewardPenalties []uint64
@@ -86,7 +86,7 @@ func TestFFGTargetRewardsPenalties(t *testing.T) {
 	}
 }
 
-func TestChainHeadRewardsPenalties(t *testing.T) {
+func TestChainHeadRewardsPenalties_OK(t *testing.T) {
 	tests := []struct {
 		voted                           []uint64
 		balanceAfterHeadRewardPenalties []uint64
@@ -125,7 +125,7 @@ func TestChainHeadRewardsPenalties(t *testing.T) {
 	}
 }
 
-func TestInclusionDistRewards_Ok(t *testing.T) {
+func TestInclusionDistRewards_OK(t *testing.T) {
 	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -180,7 +180,7 @@ func TestInclusionDistRewards_Ok(t *testing.T) {
 	}
 }
 
-func TestInclusionDistRewards_NotOk(t *testing.T) {
+func TestInclusionDistRewards_OutOfBounds(t *testing.T) {
 	validators := make([]*pb.Validator, params.BeaconConfig().SlotsPerEpoch*2)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -211,7 +211,7 @@ func TestInclusionDistRewards_NotOk(t *testing.T) {
 	}
 }
 
-func TestInactivityFFGSrcPenalty(t *testing.T) {
+func TestInactivityFFGSrcPenalty_OK(t *testing.T) {
 	tests := []struct {
 		voted                     []uint64
 		balanceAfterFFGSrcPenalty []uint64
@@ -250,7 +250,7 @@ func TestInactivityFFGSrcPenalty(t *testing.T) {
 	}
 }
 
-func TestInactivityFFGTargetPenalty(t *testing.T) {
+func TestInactivityFFGTargetPenalty_OK(t *testing.T) {
 	tests := []struct {
 		voted                        []uint64
 		balanceAfterFFGTargetPenalty []uint64
@@ -289,7 +289,7 @@ func TestInactivityFFGTargetPenalty(t *testing.T) {
 	}
 }
 
-func TestInactivityHeadPenalty(t *testing.T) {
+func TestInactivityHeadPenalty_OK(t *testing.T) {
 	tests := []struct {
 		voted                             []uint64
 		balanceAfterInactivityHeadPenalty []uint64
@@ -324,7 +324,7 @@ func TestInactivityHeadPenalty(t *testing.T) {
 	}
 }
 
-func TestInactivityExitedPenality(t *testing.T) {
+func TestInactivityExitedPenality_OK(t *testing.T) {
 	tests := []struct {
 		balanceAfterExitedPenalty []uint64
 		epochsSinceFinality       uint64
@@ -359,7 +359,7 @@ func TestInactivityExitedPenality(t *testing.T) {
 	}
 }
 
-func TestInactivityInclusionPenalty_Ok(t *testing.T) {
+func TestInactivityInclusionPenalty_OK(t *testing.T) {
 	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -413,7 +413,7 @@ func TestInactivityInclusionPenalty_Ok(t *testing.T) {
 	}
 }
 
-func TestInactivityInclusionPenalty_NotOk(t *testing.T) {
+func TestInactivityInclusionPenalty_OutOfBounds(t *testing.T) {
 	validators := make([]*pb.Validator, params.BeaconConfig().SlotsPerEpoch*2)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -443,7 +443,7 @@ func TestInactivityInclusionPenalty_NotOk(t *testing.T) {
 	}
 }
 
-func TestAttestationInclusionRewards(t *testing.T) {
+func TestAttestationInclusionRewards_OK(t *testing.T) {
 	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -562,7 +562,7 @@ func TestAttestationInclusionRewards_NoProposerIndex(t *testing.T) {
 	}
 }
 
-func TestCrosslinksRewardsPenalties(t *testing.T) {
+func TestCrosslinksRewardsPenalties_OK(t *testing.T) {
 	validators := make([]*pb.Validator, params.BeaconConfig().SlotsPerEpoch*4)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{

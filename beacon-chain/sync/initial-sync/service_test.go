@@ -55,7 +55,7 @@ func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
 	return &event.Feed{}
 }
 
-func TestSetBlockForInitialSync(t *testing.T) {
+func TestSetBlock_InitialSync(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -114,7 +114,7 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	hook.Reset()
 }
 
-func TestSavingBlocksInSync(t *testing.T) {
+func TestSavingBlock_InSync(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -238,7 +238,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 	hook.Reset()
 }
 
-func TestDelayChan(t *testing.T) {
+func TestDelayChan_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -323,7 +323,7 @@ func TestDelayChan(t *testing.T) {
 	hook.Reset()
 }
 
-func TestRequestBlocksBySlot(t *testing.T) {
+func TestRequestBlocksBySlot_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)

@@ -29,7 +29,7 @@ func setupInitialDeposits(t *testing.T) []*pb.Deposit {
 	return deposits
 }
 
-func TestInitializeState(t *testing.T) {
+func TestInitializeState_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
@@ -72,7 +72,7 @@ func TestInitializeState(t *testing.T) {
 	}
 }
 
-func TestGenesisTime(t *testing.T) {
+func TestGenesisTime_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 

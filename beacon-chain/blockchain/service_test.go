@@ -188,7 +188,7 @@ func SetSlotInState(service *ChainService, slot uint64) error {
 	return service.beaconDB.SaveState(bState)
 }
 
-func TestStartStopUninitializedChain(t *testing.T) {
+func TestChainStartStop_Uninitialized(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -223,7 +223,7 @@ func TestStartStopUninitializedChain(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "ChainStart time reached, starting the beacon chain!")
 }
 
-func TestStartUninitializedChainWithoutConfigPOWChain(t *testing.T) {
+func TestChainStartStop_UninitializedAndNoPOWChain(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -242,7 +242,7 @@ func TestStartUninitializedChainWithoutConfigPOWChain(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Not configured web3Service for POW chain")
 }
 
-func TestStartStopInitializedChain(t *testing.T) {
+func TestChainStartStop_Initialized(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -278,7 +278,7 @@ func TestStartStopInitializedChain(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Beacon chain data already exists, starting service")
 }
 
-func TestRunningChainServiceFaultyPOWChain(t *testing.T) {
+func TestChainService_FaultyPOWChain(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -351,7 +351,7 @@ func setupGenesisState(t *testing.T, cs *ChainService, beaconState *pb.BeaconSta
 
 	return parentHash, beaconState
 }
-func TestRunningChainService(t *testing.T) {
+func TestChainService_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -529,7 +529,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 }
 
-func TestDoesPOWBlockExist(t *testing.T) {
+func TestPOWBlockExists_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -554,7 +554,7 @@ func TestDoesPOWBlockExist(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "fetching PoW block corresponding to mainchain reference failed")
 }
 
-func TestUpdateHead(t *testing.T) {
+func TestUpdateHead_OK(t *testing.T) {
 	beaconState, err := state.GenesisBeaconState(nil, 0, nil)
 	if err != nil {
 		t.Fatalf("Cannot create genesis beacon state: %v", err)
@@ -637,7 +637,7 @@ func TestUpdateHead(t *testing.T) {
 	}
 }
 
-func TestIsBlockReadyForProcessing(t *testing.T) {
+func TestIsBlockReadyForProcessing_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db, true)

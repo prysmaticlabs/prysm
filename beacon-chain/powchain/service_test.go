@@ -131,7 +131,7 @@ func setup() (*testAccount, error) {
 	return &testAccount{addr, contract, contractAddr, backend, txOpts}, nil
 }
 
-func TestNewWeb3Service(t *testing.T) {
+func TestNewWeb3Service_OK(t *testing.T) {
 	endpoint := "http://127.0.0.1"
 	ctx := context.Background()
 	var err error
@@ -172,7 +172,7 @@ func TestNewWeb3Service(t *testing.T) {
 	}
 }
 
-func TestStart(t *testing.T) {
+func TestStart_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	endpoint := "ws://127.0.0.1"
@@ -204,7 +204,7 @@ func TestStart(t *testing.T) {
 	web3Service.cancel()
 }
 
-func TestStop(t *testing.T) {
+func TestStop_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	endpoint := "ws://127.0.0.1"
@@ -243,7 +243,7 @@ func TestStop(t *testing.T) {
 	hook.Reset()
 }
 
-func TestInitDataFromContract(t *testing.T) {
+func TestInitDataFromContract_OK(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
@@ -288,7 +288,7 @@ func TestInitDataFromContract(t *testing.T) {
 
 }
 
-func TestSaveInTrie(t *testing.T) {
+func TestSaveInTrie_OK(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
@@ -317,7 +317,7 @@ func TestSaveInTrie(t *testing.T) {
 
 }
 
-func TestBadReader(t *testing.T) {
+func TestWeb3Service_BadReader(t *testing.T) {
 	hook := logTest.NewGlobal()
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
@@ -347,7 +347,7 @@ func TestBadReader(t *testing.T) {
 	hook.Reset()
 }
 
-func TestLatestMainchainInfo(t *testing.T) {
+func TestLatestMainchainInfo_OK(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
@@ -390,7 +390,7 @@ func TestLatestMainchainInfo(t *testing.T) {
 	}
 }
 
-func TestProcessDepositLog(t *testing.T) {
+func TestProcessDepositLog_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
@@ -582,7 +582,7 @@ func TestProcessDepositLog_SkipDuplicateLog(t *testing.T) {
 	}
 }
 
-func TestUnpackDepositLogs(t *testing.T) {
+func TestUnpackDepositLogData_OK(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
@@ -670,7 +670,7 @@ func TestUnpackDepositLogs(t *testing.T) {
 
 }
 
-func TestProcessChainStartLog(t *testing.T) {
+func TestProcessChainStartLog_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
@@ -767,7 +767,7 @@ func TestProcessChainStartLog(t *testing.T) {
 
 }
 
-func TestUnpackChainStartLogs(t *testing.T) {
+func TestUnpackChainStartLogData_OK(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
@@ -835,7 +835,7 @@ func TestUnpackChainStartLogs(t *testing.T) {
 	}
 }
 
-func TestHasChainStartLogOccurred(t *testing.T) {
+func TestHasChainStartLogOccurred_OK(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {

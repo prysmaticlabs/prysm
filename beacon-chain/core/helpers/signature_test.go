@@ -7,7 +7,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-func TestForkVersion(t *testing.T) {
+func TestForkVersion_OK(t *testing.T) {
 	fork := &pb.Fork{
 		Epoch:           10,
 		PreviousVersion: 2,
@@ -23,7 +23,7 @@ func TestForkVersion(t *testing.T) {
 	}
 }
 
-func TestDomainVersion(t *testing.T) {
+func TestDomainVersion_OK(t *testing.T) {
 	fork := &pb.Fork{
 		Epoch:           10,
 		PreviousVersion: 2,

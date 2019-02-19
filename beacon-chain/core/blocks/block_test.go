@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestGenesisBlock(t *testing.T) {
+func TestGenesisBlock_OK(t *testing.T) {
 	stateHash := []byte{0}
 	b1 := NewGenesisBlock(stateHash)
 
@@ -144,7 +144,7 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 	}
 }
 
-func TestProcessBlockRoots(t *testing.T) {
+func TestProcessBlockRoots_OK(t *testing.T) {
 	state := &pb.BeaconState{}
 
 	state.LatestBlockRootHash32S = make([][]byte, params.BeaconConfig().LatestBlockRootsLength)
@@ -173,7 +173,7 @@ func TestProcessBlockRoots(t *testing.T) {
 	}
 }
 
-func TestDecodeDepositAmountAndTimeStamp(t *testing.T) {
+func TestDecodeDepositAmountAndTimeStamp_OK(t *testing.T) {
 
 	tests := []struct {
 		depositData *pb.DepositInput
@@ -246,7 +246,7 @@ func TestDecodeDepositAmountAndTimeStamp(t *testing.T) {
 	}
 }
 
-func TestBlockChildren(t *testing.T) {
+func TestBlockChildren_OK(t *testing.T) {
 	genesisBlock := NewGenesisBlock([]byte{})
 	genesisRoot, err := ssz.TreeHash(genesisBlock)
 	if err != nil {
@@ -275,7 +275,7 @@ func TestBlockChildren(t *testing.T) {
 	}
 }
 
-func TestEncodeDecodeDepositInput_Ok(t *testing.T) {
+func TestEncodeDecodeDepositInput_OK(t *testing.T) {
 	input := &pb.DepositInput{
 		Pubkey:                      []byte("key"),
 		WithdrawalCredentialsHash32: []byte("withdraw"),

@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestNilDB(t *testing.T) {
+func TestNilDB_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
@@ -31,7 +31,7 @@ func TestNilDB(t *testing.T) {
 	}
 }
 
-func TestSave(t *testing.T) {
+func TestSave_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
@@ -73,7 +73,7 @@ func TestSave(t *testing.T) {
 	}
 }
 
-func TestBlockBySlotEmptyChain(t *testing.T) {
+func TestBlockBySlotEmptyChain_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
@@ -86,7 +86,7 @@ func TestBlockBySlotEmptyChain(t *testing.T) {
 	}
 }
 
-func TestUpdateChainHeadNoBlock(t *testing.T) {
+func TestUpdateChainHead_NoBlock(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
@@ -107,7 +107,7 @@ func TestUpdateChainHeadNoBlock(t *testing.T) {
 	}
 }
 
-func TestUpdateChainHead(t *testing.T) {
+func TestUpdateChainHead_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
@@ -173,7 +173,7 @@ func TestUpdateChainHead(t *testing.T) {
 	}
 }
 
-func TestChainProgress(t *testing.T) {
+func TestChainProgress_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 

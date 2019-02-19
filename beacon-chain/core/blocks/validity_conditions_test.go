@@ -36,7 +36,7 @@ func (m *mockPOWClient) BlockByHash(ctx context.Context, hash common.Hash) (*get
 	return nil, nil
 }
 
-func TestBadBlock(t *testing.T) {
+func TestIsValidBlock_BadBlock(t *testing.T) {
 	beaconState := &pb.BeaconState{}
 
 	ctx := context.Background()
@@ -93,7 +93,7 @@ func TestBadBlock(t *testing.T) {
 
 }
 
-func TestValidBlock(t *testing.T) {
+func TestIsValidBlock_OK(t *testing.T) {
 	beaconState := &pb.BeaconState{}
 	ctx := context.Background()
 

@@ -11,7 +11,7 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-func TestStartStop(t *testing.T) {
+func TestQuerier_StartStop(t *testing.T) {
 	hook := logTest.NewGlobal()
 	cfg := &QuerierConfig{
 		P2P:                &mockP2P{},
@@ -38,7 +38,7 @@ func TestStartStop(t *testing.T) {
 	hook.Reset()
 }
 
-func TestChainReqResponse(t *testing.T) {
+func TestQuerier_ChainReqResponse(t *testing.T) {
 	hook := logTest.NewGlobal()
 	cfg := &QuerierConfig{
 		P2P:                &mockP2P{},
