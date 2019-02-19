@@ -1,7 +1,8 @@
-package state
+package state_test
 
 import (
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"strings"
 	"testing"
 
@@ -24,14 +25,14 @@ func TestProcessBlock_IncorrectSlot(t *testing.T) {
 		4,
 		5,
 	)
-	if _, err := ProcessBlock(beaconState, block, false); !strings.Contains(err.Error(), want) {
+	if _, err := state.ProcessBlock(beaconState, block, false); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
 func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	deposits, _ := internal.GenerateTestDepositsAndKeys(t, 10)
-	beaconState, err := GenesisBeaconState(deposits, uint64(0), []byte{})
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), []byte{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,14 +49,14 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 		},
 	}
 	want := "could not verify block proposer slashing"
-	if _, err := ProcessBlock(beaconState, block, false); !strings.Contains(err.Error(), want) {
+	if _, err := state.ProcessBlock(beaconState, block, false); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
 func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 	deposits, _ := internal.GenerateTestDepositsAndKeys(t, 10)
-	beaconState, err := GenesisBeaconState(deposits, uint64(0), []byte{})
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), []byte{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +89,7 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 		},
 	}
 	want := "could not verify block attester slashing"
-	if _, err := ProcessBlock(beaconState, block, false); !strings.Contains(err.Error(), want) {
+	if _, err := state.ProcessBlock(beaconState, block, false); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -165,7 +166,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		},
 	}
 	want := "could not process block attestations"
-	if _, err := ProcessBlock(beaconState, block, false); !strings.Contains(err.Error(), want) {
+	if _, err := state.ProcessBlock(beaconState, block, false); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -267,7 +268,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		},
 	}
 	want := "could not process validator exits"
-	if _, err := ProcessBlock(beaconState, block, false); !strings.Contains(err.Error(), want) {
+	if _, err := state.ProcessBlock(beaconState, block, false); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -373,7 +374,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			VoluntaryExits:    exits,
 		},
 	}
-	if _, err := ProcessBlock(beaconState, block, false); err != nil {
+	if _, err := state.ProcessBlock(beaconState, block, false); err != nil {
 		t.Errorf("Expected block to pass processing conditions: %v", err)
 	}
 }
@@ -416,7 +417,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 
 	crosslinkRecord := []*pb.Crosslink{{}, {}}
 
-	state := &pb.BeaconState{
+	newState := &pb.BeaconState{
 		Slot:                     params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
 		LatestAttestations:       attestations,
 		ValidatorBalances:        validatorBalances,
@@ -430,7 +431,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 			params.BeaconConfig().LatestSlashedExitLength),
 	}
 
-	_, err := ProcessEpoch(state)
+	_, err := state.ProcessEpoch(newState)
 	if err != nil {
 		t.Errorf("Expected epoch transition to pass processing conditions: %v", err)
 	}
@@ -476,7 +477,7 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 
 	crosslinkRecord := []*pb.Crosslink{{}, {}}
 
-	state := &pb.BeaconState{
+	newState := &pb.BeaconState{
 		Slot:                     params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
 		LatestAttestations:       attestations,
 		ValidatorBalances:        validatorBalances,
@@ -490,14 +491,14 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 			params.BeaconConfig().LatestSlashedExitLength),
 	}
 
-	_, err := ProcessEpoch(state)
+	_, err := state.ProcessEpoch(newState)
 	if err != nil {
 		t.Errorf("Expected epoch transition to pass processing conditions: %v", err)
 	}
 }
 
 func TestProcessEpoch_CantGetBoundaryAttestation(t *testing.T) {
-	state := &pb.BeaconState{
+	newState := &pb.BeaconState{
 		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
 		LatestAttestations: []*pb.PendingAttestation{
 			{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot + 100}},
@@ -505,11 +506,11 @@ func TestProcessEpoch_CantGetBoundaryAttestation(t *testing.T) {
 
 	want := fmt.Sprintf(
 		"could not get current boundary attestations: slot %d is not within expected range of %d to %d",
-		state.Slot,
-		state.Slot-params.BeaconConfig().LatestBlockRootsLength,
-		state.Slot,
+		newState.Slot,
+		newState.Slot-params.BeaconConfig().LatestBlockRootsLength,
+		newState.Slot,
 	)
-	if _, err := ProcessEpoch(state); !strings.Contains(err.Error(), want) {
+	if _, err := state.ProcessEpoch(newState); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected: %s, received: %v", want, err)
 	}
 }
@@ -532,14 +533,14 @@ func TestProcessEpoch_CantGetCurrentValidatorIndices(t *testing.T) {
 		})
 	}
 
-	state := &pb.BeaconState{
+	newState := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
 		LatestAttestations:     attestations,
 		LatestBlockRootHash32S: latestBlockRoots,
 	}
 
 	wanted := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 0, 1)
-	if _, err := ProcessEpoch(state); !strings.Contains(err.Error(), wanted) {
+	if _, err := state.ProcessEpoch(newState); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected: %s, received: %v", wanted, err)
 	}
 }
