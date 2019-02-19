@@ -455,7 +455,7 @@ func TestProcessPrevSlotShardOk(t *testing.T) {
 func TestProcessValidatorRegistryOk(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                       params.BeaconConfig().MinSeedLookahead,
-		LatestRandaoMixesHash32S:   [][]byte{{'A'}, {'B'}},
+		LatestRandaoMixes:   [][]byte{{'A'}, {'B'}},
 		CurrentShufflingSeedHash32: []byte{'C'},
 	}
 	newState, err := ProcessValidatorRegistry(
@@ -467,16 +467,16 @@ func TestProcessValidatorRegistryOk(t *testing.T) {
 		t.Errorf("Incorret curr epoch calculation slot: Wanted: %d, got: %d",
 			newState.CurrentShufflingEpoch, state.Slot)
 	}
-	if !bytes.Equal(newState.CurrentShufflingSeedHash32, state.LatestRandaoMixesHash32S[0]) {
+	if !bytes.Equal(newState.CurrentShufflingSeedHash32, state.LatestRandaoMixes[0]) {
 		t.Errorf("Incorret current epoch seed mix hash: Wanted: %v, got: %v",
-			state.LatestRandaoMixesHash32S[0], newState.CurrentShufflingSeedHash32)
+			state.LatestRandaoMixes[0], newState.CurrentShufflingSeedHash32)
 	}
 }
 
 func TestProcessPartialValidatorRegistry(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                     params.BeaconConfig().SlotsPerEpoch * 2,
-		LatestRandaoMixesHash32S: [][]byte{{'A'}, {'B'}, {'C'}},
+		LatestRandaoMixes: [][]byte{{'A'}, {'B'}, {'C'}},
 		LatestIndexRootHash32S:   [][]byte{{'D'}, {'E'}, {'F'}},
 	}
 	copiedState := proto.Clone(state).(*pb.BeaconState)
@@ -600,16 +600,16 @@ func TestUpdateLatestRandaoMixes_Ok(t *testing.T) {
 		latestSlashedRandaoMixes[epoch] = tt.seed
 		state := &pb.BeaconState{
 			Slot:                     tt.epoch * params.BeaconConfig().SlotsPerEpoch,
-			LatestRandaoMixesHash32S: latestSlashedRandaoMixes}
+			LatestRandaoMixes: latestSlashedRandaoMixes}
 		newState, err := UpdateLatestRandaoMixes(state)
 		if err != nil {
 			t.Fatalf("could not update latest randao mixes: %v", err)
 		}
-		if !bytes.Equal(newState.LatestRandaoMixesHash32S[epoch+1], tt.seed) {
+		if !bytes.Equal(newState.LatestRandaoMixes[epoch+1], tt.seed) {
 			t.Errorf(
 				"LatestRandaoMixes didn't update for epoch %d,"+
 					"wanted: %v, got: %v", epoch+1, tt.seed,
-				newState.LatestRandaoMixesHash32S[epoch+1],
+				newState.LatestRandaoMixes[epoch+1],
 			)
 		}
 	}

@@ -61,7 +61,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	block := &pbp2p.BeaconBlock{
 		Slot:               slot,
 		ParentRootHash32:   parentTreeHash[:],
-		RandaoRevealHash32: nil, // TODO(1366): generate randao reveal from BLS
+		RandaoReveal: nil, // TODO(1366): generate randao reveal from BLS
 		Eth1Data:           eth1DataResp.Eth1Data,
 		Body: &pbp2p.BeaconBlockBody{
 			Attestations:      attResp.PendingAttestations,

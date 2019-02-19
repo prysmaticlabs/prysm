@@ -34,13 +34,13 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	slashings := make([]*pb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings+1)
 	latestMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
-		LatestRandaoMixesHash32S: latestMixes,
+		LatestRandaoMixes: latestMixes,
 		ValidatorRegistry:        registry,
 		Slot:                     5,
 	}
 	block := &pb.BeaconBlock{
 		Slot:               5,
-		RandaoRevealHash32: []byte{},
+		RandaoReveal: []byte{},
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte{2},
 			BlockHash32:       []byte{3},
@@ -76,13 +76,13 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 	attesterSlashings := make([]*pb.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings+1)
 	latestMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
-		LatestRandaoMixesHash32S: latestMixes,
+		LatestRandaoMixes: latestMixes,
 		Slot:                     5,
 		ValidatorRegistry:        registry,
 	}
 	block := &pb.BeaconBlock{
 		Slot:               5,
-		RandaoRevealHash32: []byte{},
+		RandaoReveal: []byte{},
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte{2},
 			BlockHash32:       []byte{3},
@@ -150,7 +150,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	blockAttestations := make([]*pb.Attestation, params.BeaconConfig().MaxAttestations+1)
 	latestMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
-		LatestRandaoMixesHash32S: latestMixes,
+		LatestRandaoMixes: latestMixes,
 		Slot:                     5,
 		ValidatorRegistry:        validators,
 		ValidatorBalances:        make([]uint64, len(validators)),
@@ -158,7 +158,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	}
 	block := &pb.BeaconBlock{
 		Slot:               5,
-		RandaoRevealHash32: []byte{},
+		RandaoReveal: []byte{},
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte{2},
 			BlockHash32:       []byte{3},
@@ -247,7 +247,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	attestations := []*pb.Attestation{blockAtt}
 	latestMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
-		LatestRandaoMixesHash32S: latestMixes,
+		LatestRandaoMixes: latestMixes,
 		ValidatorRegistry:        validators,
 		Slot:                     params.BeaconConfig().GenesisSlot + 64,
 		PreviousJustifiedEpoch:   params.BeaconConfig().GenesisEpoch,
@@ -259,7 +259,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	exits := make([]*pb.VoluntaryExit, params.BeaconConfig().MaxVoluntaryExits+1)
 	block := &pb.BeaconBlock{
 		Slot:               params.BeaconConfig().GenesisSlot + 64,
-		RandaoRevealHash32: []byte{},
+		RandaoReveal: []byte{},
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte{2},
 			BlockHash32:       []byte{3},
@@ -349,7 +349,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	attestations := []*pb.Attestation{blockAtt}
 	latestMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
 	beaconState := &pb.BeaconState{
-		LatestRandaoMixesHash32S: latestMixes,
+		LatestRandaoMixes: latestMixes,
 		ValidatorRegistry:        validators,
 		Slot:                     params.BeaconConfig().GenesisSlot + 64,
 		PreviousJustifiedEpoch:   params.BeaconConfig().GenesisEpoch,
@@ -366,7 +366,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	}
 	block := &pb.BeaconBlock{
 		Slot:               params.BeaconConfig().GenesisSlot + 64,
-		RandaoRevealHash32: []byte{},
+		RandaoReveal: []byte{},
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte{2},
 			BlockHash32:       []byte{3},
@@ -428,7 +428,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 		ValidatorRegistry:        validatorRegistry,
 		LatestBlockRootHash32S:   blockRoots,
 		LatestCrosslinks:         crosslinkRecord,
-		LatestRandaoMixesHash32S: randaoHashes,
+		LatestRandaoMixes: randaoHashes,
 		LatestIndexRootHash32S: make([][]byte,
 			params.BeaconConfig().LatestActiveIndexRootsLength),
 		LatestSlashedBalances: make([]uint64,
@@ -488,7 +488,7 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 		ValidatorRegistry:        validatorRegistry,
 		LatestBlockRootHash32S:   blockRoots,
 		LatestCrosslinks:         crosslinkRecord,
-		LatestRandaoMixesHash32S: randaoHashes,
+		LatestRandaoMixes: randaoHashes,
 		LatestIndexRootHash32S: make([][]byte,
 			params.BeaconConfig().LatestActiveIndexRootsLength),
 		LatestSlashedBalances: make([]uint64,

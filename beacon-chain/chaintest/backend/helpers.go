@@ -30,7 +30,7 @@ func generateSimulatedBlock(
 	randaoReveal := [32]byte{}
 	block := &pb.BeaconBlock{
 		Slot:               beaconState.Slot + 1,
-		RandaoRevealHash32: randaoReveal[:],
+		RandaoReveal: randaoReveal[:],
 		ParentRootHash32:   prevBlockRoot[:],
 		StateRootHash32:    stateRoot[:],
 		Eth1Data: &pb.Eth1Data{

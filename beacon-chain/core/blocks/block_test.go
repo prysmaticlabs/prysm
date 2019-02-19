@@ -26,8 +26,8 @@ func TestGenesisBlock(t *testing.T) {
 		t.Errorf("genesis block should have 0 attestations")
 	}
 
-	if !bytes.Equal(b1.RandaoRevealHash32, params.BeaconConfig().ZeroHash[:]) {
-		t.Error("genesis block missing RandaoRevealHash32 field")
+	if !bytes.Equal(b1.RandaoReveal, params.BeaconConfig().ZeroHash[:]) {
+		t.Error("genesis block missing RandaoReveal field")
 	}
 
 	if !bytes.Equal(b1.StateRootHash32, stateHash) {
