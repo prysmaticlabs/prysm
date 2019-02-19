@@ -17,7 +17,6 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -25,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -36,6 +36,12 @@ import (
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
+}
+
+type mockOperationService struct{}
+
+func (ms *mockOperationService) IncomingProcessedBlockFeed() *event.Feed {
+	return new(event.Feed)
 }
 
 type mockClient struct{}
@@ -209,6 +215,7 @@ func setupBeaconChain(t *testing.T, faultyPoWClient bool, beaconDB *db.BeaconDB,
 		BeaconBlockBuf: 0,
 		BeaconDB:       beaconDB,
 		Web3Service:    web3Service,
+		OpsPoolService: &mockOperationService{},
 		EnablePOWChain: enablePOWChain,
 	}
 	if err != nil {

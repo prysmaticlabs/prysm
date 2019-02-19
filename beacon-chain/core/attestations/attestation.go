@@ -4,23 +4,9 @@
 package attestations
 
 import (
-	"encoding/binary"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
-
-// Key generates the blake2b hash of the following attestation fields:
-// slotNumber + shardID + blockHash + obliqueParentHash
-// This is used for attestation table look up in localDB.
-func Key(att *pb.AttestationData) [32]byte {
-	key := make([]byte, binary.MaxVarintLen64)
-	binary.PutUvarint(key, att.Slot)
-	binary.PutUvarint(key, att.Shard)
-	key = append(key, att.ShardBlockRootHash32...)
-	return hashutil.Hash(key)
-}
 
 // IsDoubleVote checks if both of the attestations have been used to vote for the same slot.
 // Spec:

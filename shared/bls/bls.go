@@ -37,6 +37,9 @@ func RandKey(r io.Reader) (*SecretKey, error) {
 
 // SecretKeyFromBytes creates a BLS private key from a byte slice.
 func SecretKeyFromBytes(priv []byte) (*SecretKey, error) {
+	if len(priv) != 32 {
+		return nil, fmt.Errorf("expected byte slice of length 32, received: %d", len(priv))
+	}
 	k := bytesutil.ToBytes32(priv)
 	return &SecretKey{val: gobls.DeserializeSecretKey(k)}, nil
 }

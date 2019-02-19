@@ -5,16 +5,19 @@ import (
 	"crypto/rand"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
 func TestMarshalUnmarshal(t *testing.T) {
-	val := []byte("hi")
-	pk, err := bls.SecretKeyFromBytes(val)
+	b := []byte("hi")
+	b32 := bytesutil.ToBytes32(b)
+	pk, err := bls.SecretKeyFromBytes(b32[:])
 	if err != nil {
 		t.Fatal(err)
 	}
-	pk2, err := bls.SecretKeyFromBytes(val)
+	pk2, err := bls.SecretKeyFromBytes(b32[:])
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -108,6 +108,19 @@ load(
 _go_image_repos()
 
 http_archive(
+    name = "prysm_testnet_site",
+    url = "https://github.com/prestonvanloon/prysm-testnet-site/archive/ee6c0659223775395cd5e592a6c0e5c6d4abe7e1.tar.gz",
+    strip_prefix = "prysm-testnet-site-ee6c0659223775395cd5e592a6c0e5c6d4abe7e1",
+    sha256 = "c02fcf85202d184c6fa4e78fa16295729affbfd60e4827728ec189d7e3895d90",
+    build_file_content = """
+proto_library(
+  name = "faucet_proto",
+  srcs = ["src/proto/faucet.proto"],
+  visibility = ["//visibility:public"],
+)""",
+)
+
+http_archive(
     name = "io_kubernetes_build",
     sha256 = "b4e7819861f2ec89b7309bd0c44fb3348c3a4a8ee494ec7668edb3960ff11814",
     strip_prefix = "repo-infra-4ce715fbe67d8fbed05ec2bb47a148e754100a4b",
@@ -282,7 +295,7 @@ go_repository(
 
 go_repository(
     name = "com_github_gxed_hashland",
-    commit = "d9f6b97f8db22dd1e090fd0bbbe98f09cc7dd0a8",
+    tag = "v0.0.1",
     importpath = "github.com/gxed/hashland",
 )
 
@@ -499,7 +512,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "d0b11bdaac8adb652bff00e49bcacf992835621a",
+    commit = "153ac476189d567564fda94622d7a8c0fb338f6b",
     importpath = "golang.org/x/sys",
 )
 
@@ -814,13 +827,13 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_discovery",
-    commit = "ececb851d1718b7bc3d734009f156d4f38ec420d",
+    commit = "d369eed95f2d5748d1fa5688d97b6ae162658e1a",
     importpath = "github.com/libp2p/go-libp2p-discovery",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_autonat",
-    commit = "494f7fce997b6f5be4750dcc24350e06d3b4d67a",
+    commit = "842b9c4919f5be0df3baee15b0f97e493f6d3fb2",
     importpath = "github.com/libp2p/go-libp2p-autonat",
 )
 
@@ -956,7 +969,7 @@ go_repository(
 
 go_repository(
     name = "com_github_golang_snappy",
-    commit = "2e65f85255dbc3072edf28d6b5b8efc472979f5a",
+    commit = "2a8bb927dd31d8daada140a5d09578521ce5c36a",
     importpath = "github.com/golang/snappy",
 )
 
@@ -991,7 +1004,13 @@ go_repository(
 )
 
 go_repository(
+    name = "com_github_prestonvanloon_go_recaptcha",
+    commit = "0834cef6e8bd3a7ebdb3ac7def9440ee47d501a4",
+    importpath = "github.com/prestonvanloon/go-recaptcha",
+)
+
+go_repository(
     name = "com_github_phoreproject_bls",
-    commit = "f70f3dbbcdbe519f3b60c88ffcd6afc29eb068e1",
+    commit = "afaefda3ea643e9292b6f4596403ed5c742561b4",
     importpath = "github.com/phoreproject/bls",
 )

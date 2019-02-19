@@ -16,7 +16,7 @@ func cancelledContext() context.Context {
 	return ctx
 }
 
-func TestRunCleansUpValidator(t *testing.T) {
+func TestCancelledContext_CleansUpValidator(t *testing.T) {
 	v := &fakeValidator{}
 	run(cancelledContext(), v)
 	if !v.DoneCalled {
@@ -24,7 +24,7 @@ func TestRunCleansUpValidator(t *testing.T) {
 	}
 }
 
-func TestRunWaitsForChainStart(t *testing.T) {
+func TestCancelledContext_WaitsForChainStart(t *testing.T) {
 	v := &fakeValidator{}
 	run(cancelledContext(), v)
 	if !v.WaitForChainStartCalled {
@@ -32,7 +32,7 @@ func TestRunWaitsForChainStart(t *testing.T) {
 	}
 }
 
-func TestRunWaitsForActivation(t *testing.T) {
+func TestCancelledContext_WaitsForActivation(t *testing.T) {
 	v := &fakeValidator{}
 	run(cancelledContext(), v)
 	if !v.WaitForActivationCalled {
@@ -40,7 +40,7 @@ func TestRunWaitsForActivation(t *testing.T) {
 	}
 }
 
-func TestRunOnNextSlotUpdatesAssignments(t *testing.T) {
+func TestUpdateAssignments_NextSlot(t *testing.T) {
 	v := &fakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -63,7 +63,7 @@ func TestRunOnNextSlotUpdatesAssignments(t *testing.T) {
 	}
 }
 
-func TestRunOnNextSlotUpdatesAssignmentsHandlesError(t *testing.T) {
+func TestUpdateAssignments_HandlesError(t *testing.T) {
 	hook := logTest.NewGlobal()
 	v := &fakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())
@@ -83,7 +83,7 @@ func TestRunOnNextSlotUpdatesAssignmentsHandlesError(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Failed to update assignments")
 }
 
-func TestRunOnNextSlotDeterminesRole(t *testing.T) {
+func TestRoleAt_NextSlot(t *testing.T) {
 	v := &fakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -106,7 +106,7 @@ func TestRunOnNextSlotDeterminesRole(t *testing.T) {
 	}
 }
 
-func TestRunOnNextSlotActsAsAttester(t *testing.T) {
+func TestAttests_NextSlot(t *testing.T) {
 	v := &fakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -130,7 +130,7 @@ func TestRunOnNextSlotActsAsAttester(t *testing.T) {
 	}
 }
 
-func TestRunOnNextSlotActsAsProposer(t *testing.T) {
+func TestProposes_NextSlot(t *testing.T) {
 	v := &fakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -146,6 +146,36 @@ func TestRunOnNextSlotActsAsProposer(t *testing.T) {
 
 	run(ctx, v)
 
+	if !v.ProposeBlockCalled {
+		t.Fatalf("ProposeBlock(%d) was not called", slot)
+	}
+	if v.ProposeBlockArg1 != slot {
+		t.Errorf("ProposeBlock was called with wrong arg. Want=%d, got=%d", slot, v.AttestToBlockHeadArg1)
+	}
+}
+
+func TestBothProposesAndAttests_NextSlot(t *testing.T) {
+	v := &fakeValidator{}
+	ctx, cancel := context.WithCancel(context.Background())
+
+	slot := uint64(55)
+	ticker := make(chan uint64)
+	v.NextSlotRet = ticker
+	v.RoleAtRet = pb.ValidatorRole_BOTH
+	go func() {
+		ticker <- slot
+
+		cancel()
+	}()
+
+	run(ctx, v)
+
+	if !v.AttestToBlockHeadCalled {
+		t.Fatalf("AttestToBlockHead(%d) was not called", slot)
+	}
+	if v.AttestToBlockHeadArg1 != slot {
+		t.Errorf("AttestToBlockHead was called with wrong arg. Want=%d, got=%d", slot, v.AttestToBlockHeadArg1)
+	}
 	if !v.ProposeBlockCalled {
 		t.Fatalf("ProposeBlock(%d) was not called", slot)
 	}

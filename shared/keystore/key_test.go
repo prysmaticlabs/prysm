@@ -7,6 +7,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	"github.com/pborman/uuid"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -64,7 +66,9 @@ func TestStoreRandomKey(t *testing.T) {
 
 }
 func TestNewKeyFromBLS(t *testing.T) {
-	blskey, err := bls.SecretKeyFromBytes([]byte("hi"))
+	b := []byte("hi")
+	b32 := bytesutil.ToBytes32(b)
+	blskey, err := bls.SecretKeyFromBytes(b32[:])
 	if err != nil {
 		t.Fatal(err)
 	}
