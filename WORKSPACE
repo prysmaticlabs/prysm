@@ -956,7 +956,7 @@ go_repository(
 
 go_repository(
     name = "com_github_golang_snappy",
-    commit = "2e65f85255dbc3072edf28d6b5b8efc472979f5a",
+    commit = "2a8bb927dd31d8daada140a5d09578521ce5c36a",
     importpath = "github.com/golang/snappy",
 )
 
