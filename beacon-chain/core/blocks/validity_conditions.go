@@ -21,7 +21,7 @@ import (
 //  The parent block with root block.parent_root has been processed and accepted.
 //  The node has processed its state up to slot, block.slot - 1.
 //  The Ethereum 1.0 block pointed to by the state.processed_pow_receipt_root has been processed and accepted.
-//  The node's local clock time is greater than or equal to state.genesis_time + block.slot * SLOT_DURATION.
+//  The node's local clock time is greater than or equal to state.genesis_time + block.slot * SECONDS_PER_SLOT.
 func IsValidBlock(
 	ctx context.Context,
 	state *pb.BeaconState,
@@ -55,10 +55,8 @@ func IsValidBlock(
 	}
 
 	// Pre-Processing Condition 4:
-	// The node's local Unix time is greater than or equal to
-	// state.genesis_time + (block.slot-GENESIS_SLOT) * SLOT_DURATION.
-	// (Note that leap seconds mean that slots will occasionally last SLOT_DURATION + 1 or
-	// SLOT_DURATION - 1 seconds, possibly several times a year.)
+	// The node's local time is greater than or equal to
+	// state.genesis_time + (block.slot-GENESIS_SLOT)* SECONDS_PER_SLOT.
 	if !IsSlotValid(block.Slot, genesisTime) {
 		return fmt.Errorf("slot of block is too high: %d", block.Slot)
 	}
@@ -68,7 +66,7 @@ func IsValidBlock(
 
 // IsSlotValid compares the slot to the system clock to determine if the block is valid.
 func IsSlotValid(slot uint64, genesisTime time.Time) bool {
-	slotDuration := time.Duration((slot-params.BeaconConfig().GenesisSlot)*params.BeaconConfig().SlotDuration) * time.Second
+	slotDuration := time.Duration((slot-params.BeaconConfig().GenesisSlot)*params.BeaconConfig().SecondsPerSlot) * time.Second
 	validTimeThreshold := genesisTime.Add(slotDuration)
 	return clock.Now().After(validTimeThreshold)
 }

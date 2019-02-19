@@ -5,17 +5,17 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
-	att "github.com/prysmaticlabs/prysm/beacon-chain/core/attestations"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 // SaveAttestation puts the attestation record into the beacon chain db.
 func (db *BeaconDB) SaveAttestation(attestation *pb.Attestation) error {
-	hash := att.Key(attestation.Data)
 	encodedState, err := proto.Marshal(attestation)
 	if err != nil {
 		return err
 	}
+	hash := hashutil.Hash(encodedState)
 
 	return db.update(func(tx *bolt.Tx) error {
 		a := tx.Bucket(attestationBucket)
@@ -26,7 +26,10 @@ func (db *BeaconDB) SaveAttestation(attestation *pb.Attestation) error {
 
 // DeleteAttestation deletes the attestation record into the beacon chain db.
 func (db *BeaconDB) DeleteAttestation(attestation *pb.Attestation) error {
-	hash := att.Key(attestation.Data)
+	hash, err := hashutil.HashProto(attestation)
+	if err != nil {
+		return err
+	}
 
 	return db.update(func(tx *bolt.Tx) error {
 		a := tx.Bucket(attestationBucket)

@@ -67,7 +67,7 @@ func CurrentBoundaryAttestations(
 }
 
 // PrevAttestations returns the attestations of the previous epoch
-// (state.slot - 2 * EPOCH_LENGTH...state.slot - EPOCH_LENGTH).
+// (state.slot - 2 * SLOTS_PER_EPOCH...state.slot - EPOCH_LENGTH).
 //
 // Spec pseudocode definition:
 //   return [a for a in state.latest_attestations if

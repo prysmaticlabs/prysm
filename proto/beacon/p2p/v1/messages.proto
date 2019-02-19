@@ -131,5 +131,5 @@ message ExitRequest {
 
 message ExitResponse {
   bytes hash = 1;
-  Exit exit = 2;
+  VoluntaryExit voluntary_exit = 2;
 }

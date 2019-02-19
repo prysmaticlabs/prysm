@@ -12,7 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -21,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -32,6 +32,12 @@ import (
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
+}
+
+type mockOperationService struct{}
+
+func (ms *mockOperationService) IncomingProcessedBlockFeed() *event.Feed {
+	return new(event.Feed)
 }
 
 type mockClient struct{}
@@ -113,7 +119,7 @@ func (f *faultyClient) HeaderByNumber(ctx context.Context, number *big.Int) (*ge
 }
 
 func setupInitialDeposits(t *testing.T) []*pb.Deposit {
-	genesisValidatorRegistry := validators.InitialValidatorRegistry()
+	genesisValidatorRegistry := validators.GenesisValidatorRegistry()
 	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
 	for i := 0; i < len(deposits); i++ {
 		deposits[i] = createPreChainStartDeposit(t, genesisValidatorRegistry[i].Pubkey)
@@ -165,6 +171,7 @@ func setupBeaconChain(t *testing.T, faultyPoWClient bool, beaconDB *db.BeaconDB,
 		BeaconBlockBuf: 0,
 		BeaconDB:       beaconDB,
 		Web3Service:    web3Service,
+		OpsPoolService: &mockOperationService{},
 		EnablePOWChain: enablePOWChain,
 	}
 	if err != nil {
@@ -351,6 +358,7 @@ func setupGenesisState(t *testing.T, cs *ChainService, beaconState *pb.BeaconSta
 
 	return parentHash, beaconState
 }
+
 func TestRunningChainService(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
@@ -362,7 +370,7 @@ func TestRunningChainService(t *testing.T) {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 
-	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -405,9 +413,9 @@ func TestRunningChainService(t *testing.T) {
 				Data: &pb.AttestationData{
 					Slot:                     attestationSlot,
 					JustifiedBlockRootHash32: params.BeaconConfig().ZeroHash[:],
-					JustifiedEpoch:           currentSlot / params.BeaconConfig().EpochLength,
+					JustifiedEpoch:           currentSlot / params.BeaconConfig().SlotsPerEpoch,
 					LatestCrosslink: &pb.Crosslink{
-						Epoch:                currentSlot / params.BeaconConfig().EpochLength,
+						Epoch:                currentSlot / params.BeaconConfig().SlotsPerEpoch,
 						ShardBlockRootHash32: params.BeaconConfig().ZeroHash[:]},
 				},
 			}},
@@ -446,7 +454,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 
-	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -498,9 +506,9 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 				Data: &pb.AttestationData{
 					Slot:                     attestationSlot,
 					JustifiedBlockRootHash32: params.BeaconConfig().ZeroHash[:],
-					JustifiedEpoch:           currentSlot / params.BeaconConfig().EpochLength,
+					JustifiedEpoch:           currentSlot / params.BeaconConfig().SlotsPerEpoch,
 					LatestCrosslink: &pb.Crosslink{
-						Epoch:                currentSlot / params.BeaconConfig().EpochLength,
+						Epoch:                currentSlot / params.BeaconConfig().SlotsPerEpoch,
 						ShardBlockRootHash32: params.BeaconConfig().ZeroHash[:]},
 				},
 			}},
@@ -555,7 +563,7 @@ func TestDoesPOWBlockExist(t *testing.T) {
 }
 
 func TestUpdateHead(t *testing.T) {
-	beaconState, err := state.InitialBeaconState(nil, 0, nil)
+	beaconState, err := state.GenesisBeaconState(nil, 0, nil)
 	if err != nil {
 		t.Fatalf("Cannot create genesis beacon state: %v", err)
 	}

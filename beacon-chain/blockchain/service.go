@@ -23,6 +23,10 @@ import (
 
 var log = logrus.WithField("prefix", "blockchain")
 
+type operationService interface {
+	IncomingProcessedBlockFeed() *event.Feed
+}
+
 // ChainService represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type ChainService struct {
@@ -30,6 +34,7 @@ type ChainService struct {
 	cancel               context.CancelFunc
 	beaconDB             *db.BeaconDB
 	web3Service          *powchain.Web3Service
+	opsPoolService       operationService
 	incomingBlockFeed    *event.Feed
 	incomingBlockChan    chan *pb.BeaconBlock
 	chainStartChan       chan time.Time
@@ -46,6 +51,7 @@ type Config struct {
 	IncomingBlockBuf int
 	Web3Service      *powchain.Web3Service
 	BeaconDB         *db.BeaconDB
+	OpsPoolService   operationService
 	DevMode          bool
 	EnablePOWChain   bool
 }
@@ -59,6 +65,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		cancel:               cancel,
 		beaconDB:             cfg.BeaconDB,
 		web3Service:          cfg.Web3Service,
+		opsPoolService:       cfg.OpsPoolService,
 		incomingBlockChan:    make(chan *pb.BeaconBlock, cfg.IncomingBlockBuf),
 		chainStartChan:       make(chan time.Time),
 		incomingBlockFeed:    new(event.Feed),
@@ -227,7 +234,7 @@ func (c *ChainService) ApplyForkChoiceRule(block *pb.BeaconBlock, computedState 
 	// server to stream these events to beacon clients.
 	// When the transition is a cycle transition, we stream the state containing the new validator
 	// assignments to clients.
-	if block.Slot%params.BeaconConfig().EpochLength == 0 {
+	if block.Slot%params.BeaconConfig().SlotsPerEpoch == 0 {
 		c.canonicalStateFeed.Send(computedState)
 	}
 	c.canonicalBlockFeed.Send(block)
@@ -312,6 +319,10 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	if err := c.beaconDB.SaveBlock(block); err != nil {
 		return nil, fmt.Errorf("failed to save block: %v", err)
 	}
+
+	// Forward processed block to operation pool to remove individual operation from DB.
+	c.opsPoolService.IncomingProcessedBlockFeed().Send(block)
+
 	// Remove pending deposits from the deposit queue.
 	for _, dep := range block.Body.Deposits {
 		c.beaconDB.RemovePendingDeposit(c.ctx, dep)

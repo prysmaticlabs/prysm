@@ -2,7 +2,6 @@
 package cmd
 
 import (
-	"github.com/ethereum/go-ethereum/node"
 	"github.com/urfave/cli"
 )
 
@@ -22,7 +21,7 @@ var (
 	DataDirFlag = DirectoryFlag{
 		Name:  "datadir",
 		Usage: "Data directory for the databases and keystore",
-		Value: DirectoryString{node.DefaultDataDir()},
+		Value: DirectoryString{DefaultDataDir()},
 	}
 	// NetworkIDFlag defines the specific network identifier.
 	NetworkIDFlag = cli.Uint64Flag{

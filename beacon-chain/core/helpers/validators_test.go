@@ -28,8 +28,8 @@ func TestIsActiveValidator(t *testing.T) {
 }
 
 func TestBeaconProposerIdx(t *testing.T) {
-	if params.BeaconConfig().EpochLength != 64 {
-		t.Errorf("EpochLength should be 64 for these tests to pass")
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
 
 	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
@@ -96,7 +96,7 @@ func TestBeaconProposerIdx_returnsErrorWithEmptyCommittee(t *testing.T) {
 func TestEntryExitEffectEpoch_Ok(t *testing.T) {
 	epoch := uint64(9999)
 	got := EntryExitEffectEpoch(epoch)
-	wanted := epoch + 1 + params.BeaconConfig().EntryExitDelay
+	wanted := epoch + 1 + params.BeaconConfig().ActivationExitDelay
 	if wanted != got {
 		t.Errorf("Wanted: %d, received: %d", wanted, got)
 	}

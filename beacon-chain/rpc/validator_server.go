@@ -62,7 +62,7 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 	var attesterSlot uint64
 	var proposerSlot uint64
 
-	for slot := req.EpochStart; slot < req.EpochStart+params.BeaconConfig().EpochLength; slot++ {
+	for slot := req.EpochStart; slot < req.EpochStart+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		crossLinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(beaconState, slot, false)
 		if err != nil {
 			return nil, err

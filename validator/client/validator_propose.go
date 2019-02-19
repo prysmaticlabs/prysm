@@ -67,7 +67,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 			ProposerSlashings: nil, // TODO(1438): Add after operations pool
 			AttesterSlashings: nil, // TODO(1438): Add after operations pool
 			Deposits:          pDepResp.PendingDeposits,
-			Exits:             nil, // TODO(1323): Add validator exits
+			VoluntaryExits:    nil, // TODO(1323): Add validator exits
 		},
 	}
 
