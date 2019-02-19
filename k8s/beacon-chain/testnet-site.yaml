@@ -28,6 +28,12 @@ spec:
         ports:
         - containerPort: 80
           name: http
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 80
+          initialDelaySeconds: 3
+          periodSeconds: 3
 ---
 kind: Service
 apiVersion: v1
