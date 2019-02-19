@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 )
@@ -22,10 +24,6 @@ func (mp *mockPowChain) ChainStartFeed() *event.Feed {
 	return mp.feed
 }
 
-func setupDB() {
-
-}
-
 func TestSetupTestingEnvironment(t *testing.T) {
 	bd, err := backend.NewSimulatedBackend()
 	if err != nil {
@@ -36,9 +34,21 @@ func TestSetupTestingEnvironment(t *testing.T) {
 		t.Fatalf("Could not set up backend %v", err)
 	}
 
-	t.Log(bd.State().Slot)
+	beacondb, err := db.SetupDB()
+	if err != nil {
+		t.Fatalf("Could not setup beacon db %v", err)
+	}
+	defer db.TeardownDB(beacondb)
+
+	if err := beacondb.SaveState(bd.State()); err != nil {
+		t.Fatalf("Could not save state %v", err)
+	}
 
 	mockPow := &mockPowChain{
+		feed: new(event.Feed),
+	}
+
+	mockChain := &mockChainService{
 		feed: new(event.Feed),
 	}
 
@@ -48,8 +58,8 @@ func TestSetupTestingEnvironment(t *testing.T) {
 	}
 
 	cfg := &Config{
-		ChainService:     bd.ChainService,
-		BeaconDB:         bd.BeaconDB,
+		ChainService:     mockChain,
+		BeaconDB:         beacondb,
 		OperationService: &mockOperationService{},
 		P2P:              mockServer,
 		Powchain:         mockPow,
@@ -66,7 +76,35 @@ func TestSetupTestingEnvironment(t *testing.T) {
 	bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{})
 	bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{})
 	bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{})
+	ctx := context.Background()
 	blocks := bd.InMemoryBlocks()
+	newChan := make(chan p2p.Message, 5)
+	mockServer.Feed(&pb.BeaconBlockResponse{}).Send(p2p.Message{
+		Ctx: ctx,
+		Data: &pb.BeaconBlockResponse{
+			Block: blocks[0],
+		}})
+	mockServer.Feed(&pb.BeaconBlockResponse{}).Send(p2p.Message{
+		Ctx: ctx,
+		Data: &pb.BeaconBlockResponse{
+			Block: blocks[1],
+		}})
+	mockServer.Feed(&pb.BeaconBlockResponse{}).Send(p2p.Message{
+		Ctx: ctx,
+		Data: &pb.BeaconBlockResponse{
+			Block: blocks[2],
+		}})
+	mockServer.Feed(&pb.BeaconBlockResponse{}).Send(p2p.Message{
+		Ctx: ctx,
+		Data: &pb.BeaconBlockResponse{
+			Block: blocks[3],
+		}})
+
+	mockChain.feed.Subscribe(newChan)
+
+	msg := <-newChan
+	blk := msg.Data.(*pb.BeaconBlockResponse)
+	log.Error(blk)
 
 	ss.Stop()
 	bd.Shutdown()
