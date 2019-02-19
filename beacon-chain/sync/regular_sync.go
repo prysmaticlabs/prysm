@@ -49,50 +49,56 @@ type p2pAPI interface {
 //     *  Drop peers that send invalid data
 //     *  Throttle incoming requests
 type RegularSync struct {
-	ctx                   context.Context
-	cancel                context.CancelFunc
-	p2p                   p2pAPI
-	chainService          chainService
-	operationsService     operationService
-	db                    *db.BeaconDB
-	blockAnnouncementFeed *event.Feed
-	announceBlockBuf      chan p2p.Message
-	blockBuf              chan p2p.Message
-	blockRequestBySlot    chan p2p.Message
-	blockRequestByHash    chan p2p.Message
-	batchedRequestBuf     chan p2p.Message
-	chainHeadReqBuf       chan p2p.Message
-	attestationBuf        chan p2p.Message
-	exitBuf               chan p2p.Message
+	ctx                      context.Context
+	cancel                   context.CancelFunc
+	p2p                      p2pAPI
+	chainService             chainService
+	operationsService        operationService
+	db                       *db.BeaconDB
+	blockAnnouncementFeed    *event.Feed
+	announceBlockBuf         chan p2p.Message
+	blockBuf                 chan p2p.Message
+	blockRequestBySlot       chan p2p.Message
+	blockRequestByHash       chan p2p.Message
+	batchedRequestBuf        chan p2p.Message
+	chainHeadReqBuf          chan p2p.Message
+	attestationBuf           chan p2p.Message
+	attestationReqByHashBuf  chan p2p.Message
+	unseenAttestationsReqBuf chan p2p.Message
+	exitBuf                  chan p2p.Message
 }
 
 // RegularSyncConfig allows the channel's buffer sizes to be changed.
 type RegularSyncConfig struct {
-	BlockAnnounceBufferSize int
-	BlockBufferSize         int
-	BlockReqSlotBufferSize  int
-	BlockReqHashBufferSize  int
-	BatchedBufferSize       int
-	AttestationBufferSize   int
-	ExitBufferSize          int
-	ChainHeadReqBufferSize  int
-	ChainService            chainService
-	OperationService        operationService
-	BeaconDB                *db.BeaconDB
-	P2P                     p2pAPI
+	BlockAnnounceBufferSize      int
+	BlockBufferSize              int
+	BlockReqSlotBufferSize       int
+	BlockReqHashBufferSize       int
+	BatchedBufferSize            int
+	AttestationBufferSize        int
+	AttestationReqHashBufSize    int
+	UnseenAttestationsReqBufSize int
+	ExitBufferSize               int
+	ChainHeadReqBufferSize       int
+	ChainService                 chainService
+	OperationService             operationService
+	BeaconDB                     *db.BeaconDB
+	P2P                          p2pAPI
 }
 
 // DefaultRegularSyncConfig provides the default configuration for a sync service.
 func DefaultRegularSyncConfig() *RegularSyncConfig {
 	return &RegularSyncConfig{
-		BlockAnnounceBufferSize: 100,
-		BlockBufferSize:         100,
-		BlockReqSlotBufferSize:  100,
-		BlockReqHashBufferSize:  100,
-		BatchedBufferSize:       100,
-		ChainHeadReqBufferSize:  100,
-		AttestationBufferSize:   100,
-		ExitBufferSize:          100,
+		BlockAnnounceBufferSize:      100,
+		BlockBufferSize:              100,
+		BlockReqSlotBufferSize:       100,
+		BlockReqHashBufferSize:       100,
+		BatchedBufferSize:            100,
+		ChainHeadReqBufferSize:       100,
+		AttestationBufferSize:        100,
+		AttestationReqHashBufSize:    100,
+		UnseenAttestationsReqBufSize: 100,
+		ExitBufferSize:               100,
 	}
 }
 
@@ -100,21 +106,23 @@ func DefaultRegularSyncConfig() *RegularSyncConfig {
 func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *RegularSync {
 	ctx, cancel := context.WithCancel(ctx)
 	return &RegularSync{
-		ctx:                   ctx,
-		cancel:                cancel,
-		p2p:                   cfg.P2P,
-		chainService:          cfg.ChainService,
-		db:                    cfg.BeaconDB,
-		operationsService:     cfg.OperationService,
-		blockAnnouncementFeed: new(event.Feed),
-		announceBlockBuf:      make(chan p2p.Message, cfg.BlockAnnounceBufferSize),
-		blockBuf:              make(chan p2p.Message, cfg.BlockBufferSize),
-		blockRequestBySlot:    make(chan p2p.Message, cfg.BlockReqSlotBufferSize),
-		blockRequestByHash:    make(chan p2p.Message, cfg.BlockReqHashBufferSize),
-		batchedRequestBuf:     make(chan p2p.Message, cfg.BatchedBufferSize),
-		attestationBuf:        make(chan p2p.Message, cfg.AttestationBufferSize),
-		exitBuf:               make(chan p2p.Message, cfg.ExitBufferSize),
-		chainHeadReqBuf:       make(chan p2p.Message, cfg.ChainHeadReqBufferSize),
+		ctx:                      ctx,
+		cancel:                   cancel,
+		p2p:                      cfg.P2P,
+		chainService:             cfg.ChainService,
+		db:                       cfg.BeaconDB,
+		operationsService:        cfg.OperationService,
+		blockAnnouncementFeed:    new(event.Feed),
+		announceBlockBuf:         make(chan p2p.Message, cfg.BlockAnnounceBufferSize),
+		blockBuf:                 make(chan p2p.Message, cfg.BlockBufferSize),
+		blockRequestBySlot:       make(chan p2p.Message, cfg.BlockReqSlotBufferSize),
+		blockRequestByHash:       make(chan p2p.Message, cfg.BlockReqHashBufferSize),
+		batchedRequestBuf:        make(chan p2p.Message, cfg.BatchedBufferSize),
+		attestationBuf:           make(chan p2p.Message, cfg.AttestationBufferSize),
+		attestationReqByHashBuf:  make(chan p2p.Message, cfg.AttestationReqHashBufSize),
+		unseenAttestationsReqBuf: make(chan p2p.Message, cfg.UnseenAttestationsReqBufSize),
+		exitBuf:                  make(chan p2p.Message, cfg.ExitBufferSize),
+		chainHeadReqBuf:          make(chan p2p.Message, cfg.ChainHeadReqBufferSize),
 	}
 }
 
@@ -147,8 +155,10 @@ func (rs *RegularSync) run() {
 	blockSub := rs.p2p.Subscribe(&pb.BeaconBlockResponse{}, rs.blockBuf)
 	blockRequestSub := rs.p2p.Subscribe(&pb.BeaconBlockRequestBySlotNumber{}, rs.blockRequestBySlot)
 	blockRequestHashSub := rs.p2p.Subscribe(&pb.BeaconBlockRequest{}, rs.blockRequestByHash)
-	batchedRequestSub := rs.p2p.Subscribe(&pb.BatchedBeaconBlockRequest{}, rs.batchedRequestBuf)
-	attestationSub := rs.p2p.Subscribe(&pb.Attestation{}, rs.attestationBuf)
+	batchedBlockRequestSub := rs.p2p.Subscribe(&pb.BatchedBeaconBlockRequest{}, rs.batchedRequestBuf)
+	attestationSub := rs.p2p.Subscribe(&pb.AttestationResponse{}, rs.attestationBuf)
+	attestationReqSub := rs.p2p.Subscribe(&pb.AttestationRequest{}, rs.attestationReqByHashBuf)
+	unseenAttestationsReqSub := rs.p2p.Subscribe(&pb.UnseenAttestationsRequest{}, rs.unseenAttestationsReqBuf)
 	exitSub := rs.p2p.Subscribe(&pb.VoluntaryExit{}, rs.exitBuf)
 	chainHeadReqSub := rs.p2p.Subscribe(&pb.ChainHeadRequest{}, rs.chainHeadReqBuf)
 
@@ -156,9 +166,11 @@ func (rs *RegularSync) run() {
 	defer blockSub.Unsubscribe()
 	defer blockRequestSub.Unsubscribe()
 	defer blockRequestHashSub.Unsubscribe()
-	defer batchedRequestSub.Unsubscribe()
+	defer batchedBlockRequestSub.Unsubscribe()
 	defer chainHeadReqSub.Unsubscribe()
 	defer attestationSub.Unsubscribe()
+	defer attestationReqSub.Unsubscribe()
+	defer unseenAttestationsReqSub.Unsubscribe()
 	defer exitSub.Unsubscribe()
 
 	for {
@@ -170,6 +182,10 @@ func (rs *RegularSync) run() {
 			rs.receiveBlockAnnounce(msg)
 		case msg := <-rs.attestationBuf:
 			rs.receiveAttestation(msg)
+		case msg := <-rs.attestationReqByHashBuf:
+			rs.handleAttestationRequestByHash(msg)
+		case msg := <-rs.unseenAttestationsReqBuf:
+			rs.handleUnseenAttestationsRequest(msg)
 		case msg := <-rs.exitBuf:
 			rs.receiveExitRequest(msg)
 		case msg := <-rs.blockBuf:
