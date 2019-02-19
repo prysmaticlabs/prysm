@@ -41,10 +41,10 @@ func generateSimulatedBlock(
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	block := &pb.BeaconBlock{
-		Slot:               beaconState.Slot + 1,
-		RandaoRevealHash32: epochSignature.Marshal(),
-		ParentRootHash32:   prevBlockRoot[:],
-		StateRootHash32:    stateRoot[:],
+		Slot:             beaconState.Slot + 1,
+		RandaoReveal:     randaoReveal[:],
+		ParentRootHash32: prevBlockRoot[:],
+		StateRootHash32:  stateRoot[:],
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte{1},
 			BlockHash32:       []byte{2},

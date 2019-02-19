@@ -111,6 +111,14 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	WithdrawalPrivkeyFileName:    "/shardwithdrawalkey",
 	BLSPubkeyLength:              96,
 
+	// BLS domain values.
+	DomainDeposit:     0,
+	DomainAttestation: 1,
+	DomainProposal:    2,
+	DomainExit:        3,
+	DomainRandao:      4,
+	DomainTransfer:    5,
+
 	// Deposit contract constants.
 	DepositContractTreeDepth: 32,
 
@@ -128,14 +136,6 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	FarFutureEpoch:     1<<64 - 1,
 	ZeroHash:           [32]byte{},
 	EmptySignature:     [96]byte{},
-
-	// BLS domain values.
-	DomainDeposit:     0,
-	DomainAttestation: 1,
-	DomainProposal:    2,
-	DomainExit:        3,
-	DomainRandao:      4,
-	DomainTransfer:    5,
 
 	// Time parameter constants.
 	SecondsPerSlot:               6,

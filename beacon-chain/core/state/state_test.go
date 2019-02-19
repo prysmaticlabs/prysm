@@ -118,8 +118,8 @@ func TestGenesisBeaconState_Ok(t *testing.T) {
 	}
 
 	// Randomness and committees fields checks.
-	if len(newState.LatestRandaoMixesHash32S) != latestRandaoMixesLength {
-		t.Error("Length of LatestRandaoMixesHash32S was not correctly initialized")
+	if len(state.LatestRandaoMixes) != latestRandaoMixesLength {
+		t.Error("Length of LatestRandaoMixes was not correctly initialized")
 	}
 
 	// Finality fields checks.

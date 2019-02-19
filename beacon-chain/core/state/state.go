@@ -98,7 +98,7 @@ func GenesisBeaconState(
 		ValidatorRegistryUpdateEpoch: params.BeaconConfig().GenesisEpoch,
 
 		// Randomness and committees.
-		LatestRandaoMixesHash32S:    latestRandaoMixes,
+		LatestRandaoMixes:           latestRandaoMixes,
 		PreviousShufflingStartShard: params.BeaconConfig().GenesisStartShard,
 		CurrentShufflingStartShard:  params.BeaconConfig().GenesisStartShard,
 		PreviousShufflingEpoch:      params.BeaconConfig().GenesisEpoch,

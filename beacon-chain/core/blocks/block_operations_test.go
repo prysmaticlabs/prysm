@@ -61,7 +61,7 @@ func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx-1].Sign(buf, domain)
 	block := &pb.BeaconBlock{
-		RandaoRevealHash32: epochSignature.Marshal(),
+		RandaoReveal: epochSignature.Marshal(),
 	}
 
 	want := "block randao reveal signature did not verify"
@@ -91,7 +91,7 @@ func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testi
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 
 	block := &pb.BeaconBlock{
-		RandaoRevealHash32: epochSignature.Marshal(),
+		RandaoReveal: epochSignature.Marshal(),
 	}
 
 	newState, err := blocks.ProcessBlockRandao(
@@ -102,7 +102,7 @@ func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testi
 		t.Errorf("Unexpected error processing block randao: %v", err)
 	}
 	currentEpoch := helpers.CurrentEpoch(beaconState)
-	mix := newState.LatestRandaoMixesHash32S[currentEpoch%params.BeaconConfig().LatestRandaoMixesLength]
+	mix := newState.LatestRandaoMixes[currentEpoch%params.BeaconConfig().LatestRandaoMixesLength]
 	if bytes.Equal(mix, params.BeaconConfig().EmptySignature[:]) {
 		t.Errorf(
 			"Expected empty signature to be overwritten by randao reveal, received %v",

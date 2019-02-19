@@ -420,7 +420,6 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 	}
 
 	crosslinkRecord := []*pb.Crosslink{{}, {}}
-
 	newState := &pb.BeaconState{
 		Slot:                     params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
 		LatestAttestations:       attestations,

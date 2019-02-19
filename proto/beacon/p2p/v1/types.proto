@@ -11,7 +11,7 @@ message BeaconState {
   repeated uint64 validator_balances = 3; // Balance in Gwei
 
   // Randomness and committees [1001-2000]
-  repeated bytes latest_randao_mixes_hash32s = 1004;
+  repeated bytes latest_randao_mixes = 1004;
   uint64 previous_shuffling_start_shard = 1005;
   uint64 current_shuffling_start_shard = 1006;
   uint64 previous_shuffling_epoch = 1007;
@@ -112,7 +112,7 @@ message BeaconBlock {
   uint64 slot = 1;
   bytes parent_root_hash32 = 2;
   bytes state_root_hash32 = 3;
-  bytes randao_reveal_hash32 = 4;
+  bytes randao_reveal = 4;
   Eth1Data eth1_data = 5;
   bytes signature = 6; // bytes96
 
