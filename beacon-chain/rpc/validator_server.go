@@ -129,10 +129,10 @@ func (vs *ValidatorServer) ValidatorCommitteeAtSlot(ctx context.Context, req *pb
 
 // NextEpochCommitteeAssignment returns the committee assignment response from a given validator public key.
 // The committee assignment response contains the following fields for the next epoch:
-// 	1.) The list of validators in the committee.
-// 	2.) The shard to which the committee is assigned.
-//  3.) The slot at which the committee is assigned.
-//  4.) The bool signalling if the validator is expected to propose a block at the assigned slot.
+//	1.) The list of validators in the committee.
+//	2.) The shard to which the committee is assigned.
+//	3.) The slot at which the committee is assigned.
+//	4.) The bool signalling if the validator is expected to propose a block at the assigned slot.
 func (vs *ValidatorServer) NextEpochCommitteeAssignment(
 	ctx context.Context,
 	req *pb.ValidatorIndexRequest) (*pb.CommitteeAssignmentResponse, error) {
