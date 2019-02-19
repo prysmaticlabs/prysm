@@ -5,11 +5,10 @@ package internal
 
 import (
 	context "context"
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	grpc "google.golang.org/grpc"
+	reflect "reflect"
 )
 
 // MockValidatorServiceClient is a mock of ValidatorServiceClient interface
@@ -33,6 +32,26 @@ func NewMockValidatorServiceClient(ctrl *gomock.Controller) *MockValidatorServic
 // EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockValidatorServiceClient) EXPECT() *MockValidatorServiceClientMockRecorder {
 	return m.recorder
+}
+
+// NextEpochCommitteeAssignment mocks base method
+func (m *MockValidatorServiceClient) NextEpochCommitteeAssignment(arg0 context.Context, arg1 *v1.ValidatorIndexRequest, arg2 ...grpc.CallOption) (*v1.CommitteeAssignmentResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "NextEpochCommitteeAssignment", varargs...)
+	ret0, _ := ret[0].(*v1.CommitteeAssignmentResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// NextEpochCommitteeAssignment indicates an expected call of NextEpochCommitteeAssignment
+func (mr *MockValidatorServiceClientMockRecorder) NextEpochCommitteeAssignment(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NextEpochCommitteeAssignment", reflect.TypeOf((*MockValidatorServiceClient)(nil).NextEpochCommitteeAssignment), varargs...)
 }
 
 // ValidatorCommitteeAtSlot mocks base method

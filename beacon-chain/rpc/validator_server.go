@@ -126,3 +126,36 @@ func (vs *ValidatorServer) ValidatorCommitteeAtSlot(ctx context.Context, req *pb
 		Shard:     shard,
 	}, nil
 }
+
+// NextEpochCommitteeAssignment returns the committee assignment response from a given validator public key.
+// The committee assignment response contains the following fields for the next epoch:
+// 	1.) The list of validators in the committee.
+// 	2.) The shard to which the committee is assigned.
+//  3.) The slot at which the committee is assigned.
+//  4.) The bool signalling if the validator is expected to propose a block at the assigned slot.
+func (vs *ValidatorServer) NextEpochCommitteeAssignment(
+	ctx context.Context,
+	req *pb.ValidatorIndexRequest) (*pb.CommitteeAssignmentResponse, error) {
+
+	state, err := vs.beaconDB.State()
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
+	}
+	idx, err := v.ValidatorIdx(req.PublicKey, state.ValidatorRegistry)
+	if err != nil {
+		return nil, fmt.Errorf("could not get active validator index: %v", err)
+	}
+
+	committee, shard, slot, isProposer, err :=
+		helpers.NextEpochCommitteeAssignment(state, idx, false)
+	if err != nil {
+		return nil, fmt.Errorf("could not get next epoch committee assignment: %v", err)
+	}
+
+	return &pb.CommitteeAssignmentResponse{
+		Committee:  committee,
+		Shard:      shard,
+		Slot:       slot,
+		IsProposer: isProposer,
+	}, nil
+}
