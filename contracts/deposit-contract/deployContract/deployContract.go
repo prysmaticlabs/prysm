@@ -11,6 +11,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -36,6 +37,7 @@ func main() {
 	var minDepositAmount int64
 	var maxDepositAmount int64
 	var skipChainstartDelay bool
+	var drainAddress string
 
 	customFormatter := new(prefixed.TextFormatter)
 	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
@@ -103,6 +105,12 @@ func main() {
 			Usage:       "Maximum deposit value allowed in contract",
 			Destination: &maxDepositAmount,
 		},
+		cli.StringFlag{
+			Name:        "drainAddress",
+			Value:       "",
+			Usage:       "The drain address to specify in the contract. The default will be msg.sender",
+			Destination: &drainAddress,
+		},
 	}
 
 	app.Action = func(c *cli.Context) {
@@ -160,11 +168,20 @@ func main() {
 			txOps.GasLimit = 4000000
 		}
 
+		drain := txOps.From
+		if drainAddress != "" {
+			drain = common.HexToAddress(drainAddress)
+		}
+
 		// Deploy validator registration contract
 		addr, tx, _, err := contracts.DeployDepositContract(
-			txOps, client, big.NewInt(depositsForChainStart),
-			big.NewInt(minDepositAmount), big.NewInt(maxDepositAmount),
+			txOps,
+			client,
+			big.NewInt(depositsForChainStart),
+			big.NewInt(minDepositAmount),
+			big.NewInt(maxDepositAmount),
 			skipChainstartDelay,
+			drain,
 		)
 
 		if err != nil {

@@ -124,6 +124,7 @@ func setup() (*testAccount, error) {
 		minDeposit,
 		maxDeposit,
 		false,
+		addr,
 	)
 	if err != nil {
 		return nil, err
