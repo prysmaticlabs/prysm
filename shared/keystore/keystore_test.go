@@ -3,9 +3,10 @@ package keystore
 import (
 	"bytes"
 	"crypto/rand"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"os"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 	"github.com/pborman/uuid"
 	"github.com/prysmaticlabs/prysm/shared/bls"

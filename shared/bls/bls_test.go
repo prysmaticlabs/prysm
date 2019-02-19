@@ -3,8 +3,9 @@ package bls_test
 import (
 	"bytes"
 	"crypto/rand"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
 )
