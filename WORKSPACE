@@ -295,7 +295,7 @@ go_repository(
 
 go_repository(
     name = "com_github_gxed_hashland",
-    commit = "d9f6b97f8db22dd1e090fd0bbbe98f09cc7dd0a8",
+    tag = "v0.0.1",
     importpath = "github.com/gxed/hashland",
 )
 
@@ -512,7 +512,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "d0b11bdaac8adb652bff00e49bcacf992835621a",
+    commit = "153ac476189d567564fda94622d7a8c0fb338f6b",
     importpath = "golang.org/x/sys",
 )
 
@@ -969,7 +969,7 @@ go_repository(
 
 go_repository(
     name = "com_github_golang_snappy",
-    commit = "2e65f85255dbc3072edf28d6b5b8efc472979f5a",
+    commit = "2a8bb927dd31d8daada140a5d09578521ce5c36a",
     importpath = "github.com/golang/snappy",
 )
 
@@ -1007,4 +1007,10 @@ go_repository(
     name = "com_github_prestonvanloon_go_recaptcha",
     commit = "0834cef6e8bd3a7ebdb3ac7def9440ee47d501a4",
     importpath = "github.com/prestonvanloon/go-recaptcha",
+)
+
+go_repository(
+    name = "com_github_phoreproject_bls",
+    commit = "afaefda3ea643e9292b6f4596403ed5c742561b4",
+    importpath = "github.com/phoreproject/bls",
 )

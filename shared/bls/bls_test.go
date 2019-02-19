@@ -1,54 +1,54 @@
-package bls
+package bls_test
 
 import (
+	"bytes"
+	"crypto/rand"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
+	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
-func TestSign(t *testing.T) {
-	sk := &SecretKey{}
-	msg := []byte{}
-	if _, err := Sign(sk, msg); err != nil {
-		t.Errorf("Expected nil error, received %v", err)
+func TestMarshalUnmarshal(t *testing.T) {
+	b := []byte("hi")
+	b32 := bytesutil.ToBytes32(b)
+	pk, err := bls.SecretKeyFromBytes(b32[:])
+	if err != nil {
+		t.Fatal(err)
+	}
+	pk2, err := bls.SecretKeyFromBytes(b32[:])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(pk.Marshal(), pk2.Marshal()) {
+		t.Errorf("Keys not equal, received %#x == %#x", pk.Marshal(), pk2.Marshal())
 	}
 }
 
-func TestPublicKey(t *testing.T) {
-	sk := &SecretKey{}
-	if _, err := sk.PublicKey(); err != nil {
-		t.Errorf("Expected nil error, received %v", err)
+func TestSignVerify(t *testing.T) {
+	priv, _ := bls.RandKey(rand.Reader)
+	pub := priv.PublicKey()
+	msg := []byte("hello")
+	sig := priv.Sign(msg, 0)
+	if !sig.Verify(msg, pub, 0) {
+		t.Error("Signature did not verify")
 	}
 }
 
-func TestVerifySig(t *testing.T) {
-	pk := &PublicKey{}
-	msg := []byte{}
-	sig := &Signature{}
-	if _, err := VerifySig(pk, msg, sig); err != nil {
-		t.Errorf("Expected nil error, received %v", err)
+func TestVerifyAggregate(t *testing.T) {
+	pubkeys := make([]*bls.PublicKey, 0, 100)
+	sigs := make([]*bls.Signature, 0, 100)
+	msg := []byte("hello")
+	for i := 0; i < 100; i++ {
+		priv, _ := bls.RandKey(rand.Reader)
+		pub := priv.PublicKey()
+		sig := priv.Sign(msg, 0)
+		pubkeys = append(pubkeys, pub)
+		sigs = append(sigs, sig)
 	}
-}
-
-func TestVerifyAggregateSig(t *testing.T) {
-	pk := &PublicKey{}
-	msg := []byte{}
-	asig := &Signature{}
-	if _, err := VerifyAggregateSig([]*PublicKey{pk}, msg, asig); err != nil {
-		t.Errorf("Expected nil error, received %v", err)
-	}
-}
-
-func TestBatchVerify(t *testing.T) {
-	pk := &PublicKey{}
-	msg := []byte{}
-	sig := &Signature{}
-	if _, err := BatchVerify([]*PublicKey{pk}, msg, []*Signature{sig}); err != nil {
-		t.Errorf("Expected nil error, received %v", err)
-	}
-}
-
-func TestAggregateSigs(t *testing.T) {
-	sig := &Signature{}
-	if _, err := AggregateSigs([]*Signature{sig}); err != nil {
-		t.Errorf("Expected nil error, received %v", err)
+	aggSig := bls.AggregateSignatures(sigs)
+	if !aggSig.VerifyAggregate(pubkeys, msg, 0) {
+		t.Error("Signature did not verify")
 	}
 }
