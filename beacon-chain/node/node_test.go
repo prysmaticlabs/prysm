@@ -31,7 +31,7 @@ func TestNodeValidator_NoPOWService(t *testing.T) {
 	}
 
 	// Start a subprocess to test beacon node crashes.
-	cmd := exec.Command(os.Args[0], "-test.run=TestNodeValidator_Builds")
+	cmd := exec.Command(os.Args[0], "-test.run=TestNodeValidator_NoPOWService")
 	cmd.Env = append(os.Environ(), "TEST_NODE_PANIC=1")
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
