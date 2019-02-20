@@ -383,8 +383,8 @@ func TestLatestMainchainInfo(t *testing.T) {
 	web3Service.cancel()
 	exitRoutine <- true
 
-	if web3Service.blockNumber.Cmp(header.Number) != 0 {
-		t.Errorf("block number not set, expected %v, got %v", header.Number, web3Service.blockNumber)
+	if web3Service.blockHeight.Cmp(header.Number) != 0 {
+		t.Errorf("block number not set, expected %v, got %v", header.Number, web3Service.blockHeight)
 	}
 
 	if web3Service.blockHash.Hex() != header.Hash().Hex() {
