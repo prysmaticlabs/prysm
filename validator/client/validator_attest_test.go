@@ -7,11 +7,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -39,13 +40,13 @@ func TestAttestToBlockHead_ValidatorCommitteeAtSlotFailure(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
 	).Return(&pb.ValidatorIndexResponse{Index: 5}, nil)
-	m.validatorClient.EXPECT().NextEpochCommitteeAssignment(
+	m.validatorClient.EXPECT().ValidatorCommitteeAtSlot(
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Return(nil, errors.New("something went wrong"))
 
 	validator.AttestToBlockHead(context.Background(), 30)
-	testutil.AssertLogsContain(t, hook, "Could not fetch committee assignment at slot 30")
+	testutil.AssertLogsContain(t, hook, "Could not fetch crosslink committees at slot 30")
 }
 
 func TestAttestToBlockHead_AttestationInfoAtSlotFailure(t *testing.T) {
@@ -57,10 +58,10 @@ func TestAttestToBlockHead_AttestationInfoAtSlotFailure(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
 	).Return(&pb.ValidatorIndexResponse{Index: 5}, nil)
-	m.validatorClient.EXPECT().NextEpochCommitteeAssignment(
+	m.validatorClient.EXPECT().ValidatorCommitteeAtSlot(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
-	).Return(&pb.CommitteeAssignmentResponse{
+		gomock.AssignableToTypeOf(&pb.CommitteeRequest{}),
+	).Return(&pb.CommitteeResponse{
 		Shard: 5,
 	}, nil)
 	m.attesterClient.EXPECT().AttestationInfoAtSlot(
@@ -83,10 +84,10 @@ func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
 	).Return(&pb.ValidatorIndexResponse{
 		Index: 0,
 	}, nil)
-	m.validatorClient.EXPECT().NextEpochCommitteeAssignment(
+	m.validatorClient.EXPECT().ValidatorCommitteeAtSlot(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
-	).Return(&pb.CommitteeAssignmentResponse{
+		gomock.AssignableToTypeOf(&pb.CommitteeRequest{}),
+	).Return(&pb.CommitteeResponse{
 		Shard:     5,
 		Committee: make([]uint64, 111),
 	}, nil)
@@ -122,10 +123,10 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	).Return(&pb.ValidatorIndexResponse{
 		Index: uint64(validatorIndex),
 	}, nil)
-	m.validatorClient.EXPECT().NextEpochCommitteeAssignment(
+	m.validatorClient.EXPECT().ValidatorCommitteeAtSlot(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
-	).Return(&pb.CommitteeAssignmentResponse{
+		gomock.AssignableToTypeOf(&pb.CommitteeRequest{}),
+	).Return(&pb.CommitteeResponse{
 		Shard:     5,
 		Committee: committee,
 	}, nil)
@@ -186,11 +187,11 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 	validator.genesisTime = uint64(time.Now().Unix())
 	validatorIndex := uint64(5)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	m.validatorClient.EXPECT().NextEpochCommitteeAssignment(
+	m.validatorClient.EXPECT().ValidatorCommitteeAtSlot(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
+		gomock.AssignableToTypeOf(&pb.CommitteeRequest{}),
 		gomock.Any(), // ctx
-	).Return(&pb.CommitteeAssignmentResponse{
+	).Return(&pb.CommitteeResponse{
 		Shard:     5,
 		Committee: committee,
 	}, nil).Do(func(arg0, arg1 interface{}) {
@@ -239,11 +240,11 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	validator.genesisTime = uint64(time.Now().Unix())
 	validatorIndex := uint64(5)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	m.validatorClient.EXPECT().NextEpochCommitteeAssignment(
+	m.validatorClient.EXPECT().ValidatorCommitteeAtSlot(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
+		gomock.AssignableToTypeOf(&pb.CommitteeRequest{}),
 		gomock.Any(), // ctx
-	).Return(&pb.CommitteeAssignmentResponse{
+	).Return(&pb.CommitteeResponse{
 		Shard:     5,
 		Committee: committee,
 	}, nil).Do(func(arg0, arg1 interface{}) {

@@ -8,13 +8,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/sirupsen/logrus"
+
 	ptypes "github.com/gogo/protobuf/types"
+
 	"github.com/golang/mock/gomock"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/internal"
-	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -144,12 +146,13 @@ func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignm
 	v := validator{
 		key:             validatorKey,
 		validatorClient: client,
-		assignment: &pb.CommitteeAssignmentResponse{
-			Committee: []uint64{0, 1, 2, 3},
-			Slot:      20,
+		assignment: &pb.Assignment{
+			PublicKey:    []byte{},
+			AttesterSlot: 10,
+			ProposerSlot: 20,
 		},
 	}
-	client.EXPECT().NextEpochCommitteeAssignment(
+	client.EXPECT().ValidatorEpochAssignments(
 		gomock.Any(),
 		gomock.Any(),
 	).Times(0)
@@ -171,7 +174,7 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 
 	expected := errors.New("bad")
 
-	client.EXPECT().NextEpochCommitteeAssignment(
+	client.EXPECT().ValidatorEpochAssignments(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(nil, expected)
@@ -187,17 +190,17 @@ func TestUpdateAssignments_DoesUpdateAssignments(t *testing.T) {
 	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	slot := params.BeaconConfig().SlotsPerEpoch
-	resp := &pb.CommitteeAssignmentResponse{
-		Slot:       params.BeaconConfig().SlotsPerEpoch,
-		Shard:      100,
-		Committee:  []uint64{0, 1, 2, 3},
-		IsProposer: true,
+	resp := &pb.ValidatorEpochAssignmentsResponse{
+		Assignment: &pb.Assignment{
+			ProposerSlot: 67,
+			AttesterSlot: 78,
+		},
 	}
 	v := validator{
 		key:             validatorKey,
 		validatorClient: client,
 	}
-	client.EXPECT().NextEpochCommitteeAssignment(
+	client.EXPECT().ValidatorEpochAssignments(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(resp, nil)
@@ -206,13 +209,10 @@ func TestUpdateAssignments_DoesUpdateAssignments(t *testing.T) {
 		t.Fatalf("Could not update assignments: %v", err)
 	}
 
-	if v.assignment.Slot != params.BeaconConfig().SlotsPerEpoch {
-		t.Errorf("Unexpected validator assignments. want=%v got=%v", params.BeaconConfig().SlotsPerEpoch, v.assignment.Slot)
+	if v.assignment.ProposerSlot != 67 {
+		t.Errorf("Unexpected validator assignments. want=%v got=%v", 67, v.assignment.ProposerSlot)
 	}
-	if v.assignment.Shard != resp.Shard {
-		t.Errorf("Unexpected validator assignments. want=%v got=%v", resp.Shard, v.assignment.Slot)
-	}
-	if !v.assignment.IsProposer {
-		t.Errorf("Unexpected validator assignments. want: proposer=true")
+	if v.assignment.AttesterSlot != 78 {
+		t.Errorf("Unexpected validator assignments. want=%v got=%v", 78, v.assignment.AttesterSlot)
 	}
 }

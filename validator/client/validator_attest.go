@@ -30,21 +30,21 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	}
 	// We fetch the validator index as it is necessary to generate the aggregation
 	// bitfield of the attestation itself.
-	pubKey := v.key.PublicKey.Marshal()
 	idxReq := &pb.ValidatorIndexRequest{
-		PublicKey: pubKey,
+		PublicKey: v.key.PublicKey.Marshal(),
 	}
 	validatorIndexRes, err := v.validatorClient.ValidatorIndex(ctx, idxReq)
 	if err != nil {
 		log.Errorf("Could not fetch validator index: %v", err)
 		return
 	}
-	req := &pb.ValidatorIndexRequest{
-		PublicKey: pubKey,
+	req := &pb.CommitteeRequest{
+		Slot:           slot,
+		ValidatorIndex: validatorIndexRes.Index,
 	}
-	resp, err := v.validatorClient.NextEpochCommitteeAssignment(ctx, req)
+	resp, err := v.validatorClient.ValidatorCommitteeAtSlot(ctx, req)
 	if err != nil {
-		log.Errorf("Could not fetch committee assignment at slot %d: %v", slot, err)
+		log.Errorf("Could not fetch crosslink committees at slot %d: %v", slot, err)
 		return
 	}
 	// Set the attestation data's shard as the shard associated with the validator's
