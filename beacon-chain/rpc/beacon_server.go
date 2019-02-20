@@ -160,6 +160,8 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 		if err != nil {
 			return nil, fmt.Errorf("could not fetch ETH1_FOLLOW_DISTANCE ancestor: %v", err)
 		}
+		// TODO(#1656): Fetch the deposit root of the post-state deposit contract of the block
+		// references by the block hash of the ancestor instead.
 		depositRoot := bs.powChainService.DepositRoot()
 		return &pb.Eth1DataResponse{
 			Eth1Data: &pbp2p.Eth1Data{

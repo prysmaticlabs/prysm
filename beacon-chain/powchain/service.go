@@ -195,7 +195,7 @@ func (w *Web3Service) DepositRoot() [32]byte {
 	return w.depositTrie.Root()
 }
 
-// LatestBlockNumber in the ETH1.0 chain.
+// LatestBlockHeight in the ETH1.0 chain.
 func (w *Web3Service) LatestBlockHeight() *big.Int {
 	return w.blockHeight
 }
@@ -206,13 +206,13 @@ func (w *Web3Service) LatestBlockHash() common.Hash {
 }
 
 // BlockExists --
-// Unimplemented, Work in Progress.
+// TODO(#1657): Unimplemented, Work in Progress.
 func (w *Web3Service) BlockExists(hash common.Hash) (bool, *big.Int, error) {
 	return false, big.NewInt(0), nil
 }
 
 // BlockHashByHeight --
-// Unimplemented, Work in Progress.
+// TODO(#1657): Unimplemented, Work in Progress.
 func (w *Web3Service) BlockHashByHeight(height *big.Int) (common.Hash, error) {
 	return [32]byte{}, nil
 }
