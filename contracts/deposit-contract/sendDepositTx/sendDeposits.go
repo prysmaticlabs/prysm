@@ -23,7 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	"github.com/x-cray/logrus-prefixed-formatter"
+	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	rand2 "golang.org/x/exp/rand"
 	"gonum.org/v1/gonum/stat/distuv"
 )
@@ -183,7 +183,7 @@ func main() {
 			validatorKey, err := prysmKeyStore.NewKey(rand.Reader)
 
 			data := &pb.DepositInput{
-				Pubkey:                      validatorKey.PublicKey.BufferedPublicKey(),
+				Pubkey:                      validatorKey.PublicKey.Marshal(),
 				ProofOfPossession:           []byte("pop"),
 				WithdrawalCredentialsHash32: []byte("withdraw"),
 			}
@@ -200,7 +200,7 @@ func main() {
 
 			log.WithFields(logrus.Fields{
 				"Transaction Hash": tx.Hash(),
-			}).Infof("Deposit %d sent to contract for validator with a public key %#x", i, validatorKey.PublicKey.BufferedPublicKey())
+			}).Infof("Deposit %d sent to contract for validator with a public key %#x", i, validatorKey.PublicKey.Marshal())
 
 			// If flag is enabled make transaction times variable
 			if variableTx {
