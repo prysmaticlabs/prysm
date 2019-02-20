@@ -72,7 +72,7 @@ func NewSimulatedBackend() (*SimulatedBackend, error) {
 // SetupBackend sets up the simulated backend with simulated deposits, and initializes the
 // state and genesis block.
 func (sb *SimulatedBackend) SetupBackend(numOfDeposits uint64) error {
-	initialDeposits, err := generateInitialSimulatedDeposits(numOfDeposits)
+	initialDeposits, _, err := generateInitialSimulatedDeposits(numOfDeposits)
 	if err != nil {
 		return fmt.Errorf("could not simulate initial validator deposits: %v", err)
 	}
