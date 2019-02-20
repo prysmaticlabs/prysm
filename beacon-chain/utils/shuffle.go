@@ -3,12 +3,53 @@ package utils
 
 import (
 	"encoding/binary"
+	"errors"
 	"math"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	//"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 )
+
+func GetPermutedIndex(index uint64, listSize uint64, seed common.Hash) (uint64, error) {
+	if index >= listSize {
+		err := errors.New("index is greater or equal than listSize")
+		return 0, err
+	}
+
+	if listSize > mathutil.PowerOf2(40) {
+		err := errors.New("listSize is greater than 2**40")
+		return 0, err
+	}
+
+	bs8 := make([]byte, 8)
+	bs4 := make([]byte, 4)
+
+	for round := 0; round < 90; round++ {
+		binary.LittleEndian.PutUint64(bs8[:], uint64(round)) 
+		bs1 := bs8[len(bs8)-1:]
+		hashedValue := hashutil.Hash(append(seed[:], bs1...))
+		hashedValue8 := hashedValue[:8]
+		pivot := binary.LittleEndian.Uint64(hashedValue8[:]) % listSize
+		flip := (pivot - index) % listSize
+		position := index
+		if flip > position {
+			position = flip
+		}
+		positionVal := uint32(math.Floor(float64(position / 256)))
+		binary.LittleEndian.PutUint32(bs4[:], positionVal)
+		bs := append(bs1, bs4...)
+		source := hashutil.Hash(append(seed[:], bs...))
+		positionIndex := mathutil.CeilDiv8(int(position) % 256) 
+		byteV := source[positionIndex]
+		bitV := (byteV >> (position % 8)) % 2
+		if bitV == 1 {
+			index = flip
+		}
+	}
+	return index, nil
+}
 
 // ShuffleIndices returns a list of pseudorandomly sampled
 // indices. This is used to shuffle validators on ETH2.0 beacon chain.
