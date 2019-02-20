@@ -98,7 +98,6 @@ func (m *mockPOWChainService) DepositRoot() [32]byte {
 }
 
 func TestWaitForChainStart_ContextClosed(t *testing.T) {
-	hook := logTest.NewGlobal()
 	ctx, cancel := context.WithCancel(context.Background())
 	beaconServer := &BeaconServer{
 		ctx: ctx,
@@ -112,14 +111,14 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	defer ctrl.Finish()
 	mockStream := internal.NewMockBeaconService_WaitForChainStartServer(ctrl)
 	go func(tt *testing.T) {
-		if err := beaconServer.WaitForChainStart(&ptypes.Empty{}, mockStream); err != nil {
+		want := "context closed"
+		if err := beaconServer.WaitForChainStart(&ptypes.Empty{}, mockStream); !strings.Contains(err.Error(), want) {
 			tt.Errorf("Could not call RPC method: %v", err)
 		}
 		<-exitRoutine
 	}(t)
 	cancel()
 	exitRoutine <- true
-	testutil.AssertLogsContain(t, hook, "RPC context closed, exiting goroutine")
 }
 
 func TestWaitForChainStart_AlreadyStarted(t *testing.T) {

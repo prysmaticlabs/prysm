@@ -277,15 +277,15 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	key := ctx.GlobalString(utils.KeyFlag.Name)
 	chainStartDelayFlag := ctx.GlobalUint64(utils.ChainStartDelay.Name)
 	rpcService := rpc.NewRPCService(context.TODO(), &rpc.Config{
-		Port:             port,
-		CertFlag:         cert,
-		KeyFlag:          key,
+		Port:                port,
+		CertFlag:            cert,
+		KeyFlag:             key,
 		ChainStartDelayFlag: chainStartDelayFlag,
-		SubscriptionBuf:  100,
-		BeaconDB:         b.db,
-		ChainService:     chainService,
-		OperationService: operationService,
-		POWChainService:  web3Service,
+		SubscriptionBuf:     100,
+		BeaconDB:            b.db,
+		ChainService:        chainService,
+		OperationService:    operationService,
+		POWChainService:     web3Service,
 	})
 
 	return b.services.RegisterService(rpcService)
