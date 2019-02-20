@@ -123,7 +123,7 @@ func setup() (*testAccount, error) {
 		depositsRequired,
 		minDeposit,
 		maxDeposit,
-		false,
+		1,
 		addr,
 	)
 	if err != nil {

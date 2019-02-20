@@ -36,7 +36,7 @@ func main() {
 	var depositsForChainStart int64
 	var minDepositAmount int64
 	var maxDepositAmount int64
-	var skipChainstartDelay bool
+	var customChainstartDelay uint64
 	var drainAddress string
 
 	customFormatter := new(prefixed.TextFormatter)
@@ -55,10 +55,11 @@ func main() {
 			Usage:       "Location of keystore",
 			Destination: &keystoreUTCPath,
 		},
-		cli.BoolFlag{
-			Name:        "skipChainstartDelay",
-			Usage:       "Whether to skip ChainStart log being fired a day later",
-			Destination: &skipChainstartDelay,
+		cli.Uint64Flag{
+			Name:        "customChainstartDelay",
+			Usage:       "Number of seconds to delay the ChainStart genesis timestamp",
+			Value:       0,
+			Destination: &customChainstartDelay,
 		},
 		cli.StringFlag{
 			Name:        "ipcPath",
@@ -180,7 +181,7 @@ func main() {
 			big.NewInt(depositsForChainStart),
 			big.NewInt(minDepositAmount),
 			big.NewInt(maxDepositAmount),
-			skipChainstartDelay,
+			customChainstartDelay,
 			drain,
 		)
 
