@@ -6,13 +6,13 @@ package state
 import (
 	"fmt"
 
-	"github.com/sirupsen/logrus"
 	bal "github.com/prysmaticlabs/prysm/beacon-chain/core/balances"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/sirupsen/logrus"
 )
 
 var log = logrus.WithField("prefix", "core/state")
@@ -67,7 +67,7 @@ func ExecuteStateTransition(
 //	If state.slot % LATEST_BLOCK_ROOTS_LENGTH == 0
 //		append merkle_root(state.latest_block_roots) to state.batched_block_roots
 func ProcessSlot(state *pb.BeaconState, headRoot [32]byte) *pb.BeaconState {
-	state.Slot ++
+	state.Slot++
 	state = b.ProcessBlockRoots(state, headRoot)
 	log.Info("Slot transition successfully processed slot %d", state.Slot)
 	return state
