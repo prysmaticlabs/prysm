@@ -1004,6 +1004,18 @@ go_repository(
 )
 
 go_repository(
+    name = "org_gonum_v1_gonum",
+    commit = "70a1e933af10e87000d2ccabdd509b87d8626153",
+    importpath = "gonum.org/v1/gonum",
+)
+
+go_repository(
+    name = "org_golang_x_exp",
+    commit = "21964bba6549f73cc16f1ddbc95bcbbb5b679985",
+    importpath = "golang.org/x/exp",
+)
+
+go_repository(
     name = "com_github_prestonvanloon_go_recaptcha",
     commit = "0834cef6e8bd3a7ebdb3ac7def9440ee47d501a4",
     importpath = "github.com/prestonvanloon/go-recaptcha",
