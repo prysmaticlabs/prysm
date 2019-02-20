@@ -91,10 +91,10 @@ func (s *Service) IncomingAttFeed() *event.Feed {
 	return s.incomingAttFeed
 }
 
-// IncomingBlockFeed returns a feed that any service can send incoming p2p beacon blocks into.
+// IncomingProcessedBlockFeed returns a feed that any service can send incoming p2p beacon blocks into.
 // The beacon block operation pool service will subscribe to this feed in order to receive incoming beacon blocks.
-func (s *Service) IncomingBlockFeed() *event.Feed {
-	return s.incomingAttFeed
+func (s *Service) IncomingProcessedBlockFeed() *event.Feed {
+	return s.incomingProcessedBlockFeed
 }
 
 // PendingAttestations returns the attestations that have not seen on the beacon chain, the attestations are

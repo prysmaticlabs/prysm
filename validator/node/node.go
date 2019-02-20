@@ -5,11 +5,12 @@ package node
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/prysmaticlabs/prysm/validator/types"
 

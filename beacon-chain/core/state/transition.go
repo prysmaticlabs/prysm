@@ -6,6 +6,8 @@ package state
 import (
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	bal "github.com/prysmaticlabs/prysm/beacon-chain/core/balances"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
@@ -69,7 +71,9 @@ func ExecuteStateTransition(
 func ProcessSlot(state *pb.BeaconState, headRoot [32]byte) *pb.BeaconState {
 	state.Slot++
 	state = b.ProcessBlockRoots(state, headRoot)
-	log.Infof("Slot transition successfully processed slot %d", state.Slot)
+	log.WithField(
+		"slotsSinceGenesis", state.Slot-params.BeaconConfig().GenesisSlot,
+	).Info("Slot transition successfully processed")
 	return state
 }
 
@@ -116,7 +120,9 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock, verifySignatures
 	if err != nil {
 		return nil, fmt.Errorf("could not process validator exits: %v", err)
 	}
-	log.Infof("Block transition successfully processed slot %d", state.Slot)
+	log.WithField(
+		"slotsSinceGenesis", state.Slot-params.BeaconConfig().GenesisSlot,
+	).Info("Block transition successfully processed")
 	return state, nil
 }
 
@@ -346,6 +352,8 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Clean up processed attestations.
 	state = e.CleanupAttestations(state)
-	log.Infof("Epoch transition successfully processed slot %d", state.Slot)
+	log.WithField(
+		"slotsSinceGenesis", state.Slot-params.BeaconConfig().GenesisSlot,
+	).Info("Epoch transition successfully processed")
 	return state, nil
 }

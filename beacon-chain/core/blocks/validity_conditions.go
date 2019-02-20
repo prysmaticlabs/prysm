@@ -6,8 +6,9 @@ package blocks
 import (
 	"context"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"time"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
 
