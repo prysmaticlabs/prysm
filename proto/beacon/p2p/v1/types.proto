@@ -11,13 +11,13 @@ message BeaconState {
   repeated uint64 validator_balances = 3; // Balance in Gwei
 
   // Randomness and committees [1001-2000]
-  repeated bytes latest_randao_mixes_hash32s = 1004;
-  uint64 previous_epoch_start_shard = 1005;
-  uint64 current_epoch_start_shard = 1006;
-  uint64 previous_calculation_epoch = 1007;
-  uint64 current_calculation_epoch = 1008;
-  bytes previous_epoch_seed_hash32 = 1009;
-  bytes current_epoch_seed_hash32 = 1010;
+  repeated bytes latest_randao_mixes = 1004;
+  uint64 previous_shuffling_start_shard = 1005;
+  uint64 current_shuffling_start_shard = 1006;
+  uint64 previous_shuffling_epoch = 1007;
+  uint64 current_shuffling_epoch = 1008;
+  bytes previous_shuffling_seed_hash32 = 1009;
+  bytes current_shuffling_seed_hash32 = 1010;
 
   // Finality [2001-3000]
   uint64 previous_justified_epoch = 2001;
@@ -29,7 +29,7 @@ message BeaconState {
   repeated Crosslink latest_crosslinks = 3001;
   repeated bytes latest_block_root_hash32s = 3003;
   repeated bytes batched_block_root_hash32s = 3004;
-  repeated uint64 latest_penalized_balances = 3005;
+  repeated uint64 latest_slashed_balances = 3005;
   repeated PendingAttestation latest_attestations = 3006;
   repeated bytes latest_index_root_hash32s = 3007;
 
@@ -86,7 +86,7 @@ message Validator {
   uint64 activation_epoch = 5;
   uint64 exit_epoch = 6;
   uint64 withdrawal_epoch = 7;
-  uint64 penalized_epoch = 8;
+  uint64 slashed_epoch = 8;
   // Possible validator status code:
   // https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#constants
   enum StatusFlags {
@@ -112,9 +112,9 @@ message BeaconBlock {
   uint64 slot = 1;
   bytes parent_root_hash32 = 2;
   bytes state_root_hash32 = 3;
-  bytes randao_reveal_hash32 = 4;
+  bytes randao_reveal = 4;
   Eth1Data eth1_data = 5;
-  repeated bytes signature = 6; // bytes96
+  bytes signature = 6; // bytes96
 
   // Block Body
   BeaconBlockBody body = 7;
@@ -125,7 +125,7 @@ message BeaconBlockBody {
   repeated ProposerSlashing proposer_slashings  = 2;
   repeated AttesterSlashing attester_slashings = 3;
   repeated Deposit deposits = 4;
-  repeated Exit exits = 5;
+  repeated VoluntaryExit voluntary_exits = 5;
 }
 
 message DepositInput {
@@ -173,7 +173,7 @@ message Deposit {
   bytes deposit_data = 3;
 }
 
-message Exit {
+message VoluntaryExit {
   uint64 epoch = 1;
   uint64 validator_index = 2;
   bytes signature = 3; // bytes96

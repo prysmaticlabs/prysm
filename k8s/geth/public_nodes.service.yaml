@@ -22,43 +22,15 @@ spec:
   type: ClusterIP
 ---
 apiVersion: networking.istio.io/v1alpha3
-kind: Gateway
-metadata:
-  name: public-rpc-nodes-gateway
-  namespace: pow
-spec:
-  selector:
-    istio: ingressgateway 
-  servers:
-  - port:
-      number: 80
-      name: http
-      protocol: HTTP
-    hosts:
-    - goerli.prylabs.net
-    tls:
-      httpsRedirect: false
-  - port:
-      number: 443
-      name: https
-      protocol: HTTPS
-    hosts:
-    - goerli.prylabs.net
-    tls:
-      mode: SIMPLE
-      privateKey: /etc/istio/ingressgateway-certs/tls.key
-      serverCertificate: /etc/istio/ingressgateway-certs/tls.crt
----
-apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
 metadata:
-  name: public-rpc-nodes
-  namespace: pow
+  name: goerli-prylabs-net
+  namespace: istio-system
 spec:
   hosts:
   - goerli.prylabs.net
   gateways:
-  - public-rpc-nodes-gateway
+  - prylabs-wildcard-gateway
   http:
   - match:
     - uri:
@@ -85,14 +57,6 @@ spec:
         port:
           number: 8545
         host: public-rpc-nodes.pow.svc.cluster.local
-        subset: v1
-      weight: 50
-    - destination:
-        port:
-          number: 8545
-        host: public-rpc-nodes.pow.svc.cluster.local
-        subset: v1-stable
-      weight: 50
 ---
  apiVersion: networking.istio.io/v1alpha3
  kind: DestinationRule
@@ -101,13 +65,6 @@ spec:
    namespace: pow
  spec:
    host: public-rpc-nodes.pow.svc.cluster.local
-   subsets:
-   - name: v1
-     labels:
-       version: v1
-   - name: v1-stable
-     labels:
-       version: v1-stable
    trafficPolicy:
      loadBalancer:
        consistentHash:

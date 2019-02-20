@@ -100,8 +100,8 @@ type cipherparamsJSON struct {
 // MarshalJSON marshalls a key struct into a JSON blob.
 func (k *Key) MarshalJSON() (j []byte, err error) {
 	jStruct := plainKeyJSON{
-		hex.EncodeToString(k.PublicKey.BufferedPublicKey()),
-		hex.EncodeToString(k.SecretKey.BufferedSecretKey()),
+		hex.EncodeToString(k.PublicKey.Marshal()),
+		hex.EncodeToString(k.SecretKey.Marshal()),
 		k.ID.String(),
 	}
 	j, err = json.Marshal(jStruct)
@@ -128,18 +128,20 @@ func (k *Key) UnmarshalJSON(j []byte) (err error) {
 		return err
 	}
 
-	k.PublicKey.UnBufferPublicKey(pubkey)
-	k.SecretKey.UnBufferSecretKey(seckey)
-
+	k.PublicKey, err = bls.PublicKeyFromBytes(pubkey)
+	if err != nil {
+		return err
+	}
+	k.SecretKey, err = bls.SecretKeyFromBytes(seckey)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
 func newKeyFromBLS(blsKey *bls.SecretKey) (*Key, error) {
 	id := uuid.NewRandom()
-	pubkey, err := blsKey.PublicKey()
-	if err != nil {
-		return nil, err
-	}
+	pubkey := blsKey.PublicKey()
 	key := &Key{
 		ID:        id,
 		PublicKey: pubkey,
@@ -150,13 +152,10 @@ func newKeyFromBLS(blsKey *bls.SecretKey) (*Key, error) {
 
 // NewKey generates a new random key.
 func NewKey(rand io.Reader) (*Key, error) {
-	randBytes := make([]byte, 64)
-	_, err := rand.Read(randBytes)
+	secretKey, err := bls.RandKey(rand)
 	if err != nil {
-		return nil, fmt.Errorf("key generation: could not read from random source: %v", err)
+		return nil, fmt.Errorf("could not generate random key: %v", err)
 	}
-	secretKey := bls.GenerateKey(randBytes)
-
 	return newKeyFromBLS(secretKey)
 }
 
@@ -165,9 +164,7 @@ func storeNewRandomKey(ks keyStore, rand io.Reader, password string) error {
 	if err != nil {
 		return err
 	}
-
 	if err := ks.StoreKey(ks.JoinPath(keyFileName(key.PublicKey)), key, password); err != nil {
-		zeroKey(key.SecretKey)
 		return err
 	}
 	return nil

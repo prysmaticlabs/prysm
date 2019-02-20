@@ -9,6 +9,8 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/bls"
+
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -71,7 +73,7 @@ func NewSimulatedBackend() (*SimulatedBackend, error) {
 
 // GenerateBlockAndAdvanceChain generates a simulated block and runs that block though
 // state transition.
-func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain(objects *SimulatedObjects) error {
+func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain(objects *SimulatedObjects, privKeys []*bls.SecretKey) error {
 	prevBlockRoot := sb.prevBlockRoots[len(sb.prevBlockRoots)-1]
 	// We generate a new block to pass into the state transition.
 	newBlock, newBlockRoot, err := generateSimulatedBlock(
@@ -79,6 +81,7 @@ func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain(objects *SimulatedObjec
 		prevBlockRoot,
 		sb.depositTrie,
 		objects,
+		privKeys,
 	)
 	if err != nil {
 		return fmt.Errorf("could not generate simulated beacon block %v", err)
@@ -140,7 +143,7 @@ func (sb *SimulatedBackend) RunForkChoiceTest(testCase *ForkChoiceTestCase) erro
 	// test language specification.
 	c := params.BeaconConfig()
 	c.ShardCount = testCase.Config.ShardCount
-	c.EpochLength = testCase.Config.CycleLength
+	c.SlotsPerEpoch = testCase.Config.CycleLength
 	c.TargetCommitteeSize = testCase.Config.MinCommitteeSize
 	params.OverrideBeaconConfig(c)
 
@@ -148,7 +151,7 @@ func (sb *SimulatedBackend) RunForkChoiceTest(testCase *ForkChoiceTestCase) erro
 	validators := make([]*pb.Validator, testCase.Config.ValidatorCount)
 	for i := uint64(0); i < testCase.Config.ValidatorCount; i++ {
 		validators[i] = &pb.Validator{
-			ExitEpoch: params.BeaconConfig().EntryExitDelay,
+			ExitEpoch: params.BeaconConfig().ActivationExitDelay,
 			Pubkey:    []byte{},
 		}
 	}
@@ -182,7 +185,8 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	defer teardownDB(sb.beaconDB)
 	setTestConfig(testCase)
 
-	if err := sb.initializeStateTest(testCase); err != nil {
+	privKeys, err := sb.initializeStateTest(testCase)
+	if err != nil {
 		return fmt.Errorf("could not initialize state test %v", err)
 	}
 	averageTimesPerTransition := []time.Duration{}
@@ -201,7 +205,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		simulatedObjects := sb.generateSimulatedObjects(testCase, i)
 		startTime := time.Now()
 
-		if err := sb.GenerateBlockAndAdvanceChain(simulatedObjects); err != nil {
+		if err := sb.GenerateBlockAndAdvanceChain(simulatedObjects, privKeys); err != nil {
 			return fmt.Errorf("could not generate the block and advance the chain %v", err)
 		}
 
@@ -224,16 +228,16 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 
 // initializeStateTest sets up the environment by generating all the required objects in order
 // to proceed with the state test.
-func (sb *SimulatedBackend) initializeStateTest(testCase *StateTestCase) error {
-	initialDeposits, err := generateInitialSimulatedDeposits(testCase.Config.DepositsForChainStart)
+func (sb *SimulatedBackend) initializeStateTest(testCase *StateTestCase) ([]*bls.SecretKey, error) {
+	initialDeposits, privKeys, err := generateInitialSimulatedDeposits(testCase.Config.DepositsForChainStart)
 	if err != nil {
-		return fmt.Errorf("could not simulate initial validator deposits: %v", err)
+		return nil, fmt.Errorf("could not simulate initial validator deposits: %v", err)
 	}
 	if err := sb.setupBeaconStateAndGenesisBlock(initialDeposits); err != nil {
-		return fmt.Errorf("could not set up beacon state and initialize genesis block %v", err)
+		return nil, fmt.Errorf("could not set up beacon state and initialize genesis block %v", err)
 	}
 	sb.depositTrie = trieutil.NewDepositTrie()
-	return nil
+	return privKeys, nil
 }
 
 // setupBeaconStateAndGenesisBlock creates the initial beacon state and genesis block in order to
@@ -241,7 +245,7 @@ func (sb *SimulatedBackend) initializeStateTest(testCase *StateTestCase) error {
 func (sb *SimulatedBackend) setupBeaconStateAndGenesisBlock(initialDeposits []*pb.Deposit) error {
 	var err error
 	genesisTime := time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC).Unix()
-	sb.state, err = state.InitialBeaconState(initialDeposits, uint64(genesisTime), nil)
+	sb.state, err = state.GenesisBeaconState(initialDeposits, uint64(genesisTime), nil)
 	if err != nil {
 		return fmt.Errorf("could not initialize simulated beacon state: %v", err)
 	}
@@ -291,7 +295,7 @@ func (sb *SimulatedBackend) generateSimulatedObjects(testCase *StateTestCase, sl
 	}
 	var simulatedValidatorExit *StateTestValidatorExit
 	for _, exit := range testCase.Config.ValidatorExits {
-		if exit.Epoch == slotNumber/params.BeaconConfig().EpochLength {
+		if exit.Epoch == slotNumber/params.BeaconConfig().SlotsPerEpoch {
 			simulatedValidatorExit = exit
 			break
 		}
@@ -324,11 +328,11 @@ func (sb *SimulatedBackend) compareTestCase(testCase *StateTestCase) error {
 			len(sb.state.ValidatorRegistry),
 		)
 	}
-	for _, penalized := range testCase.Results.PenalizedValidators {
-		if sb.state.ValidatorRegistry[penalized].PenalizedEpoch == params.BeaconConfig().FarFutureEpoch {
+	for _, slashed := range testCase.Results.SlashedValidators {
+		if sb.state.ValidatorRegistry[slashed].SlashedEpoch == params.BeaconConfig().FarFutureEpoch {
 			return fmt.Errorf(
-				"expected validator at index %d to have been penalized",
-				penalized,
+				"expected validator at index %d to have been slashed",
+				slashed,
 			)
 		}
 	}
@@ -347,7 +351,7 @@ func setTestConfig(testCase *StateTestCase) {
 	// We setup the initial configuration for running state
 	// transition tests below.
 	c := params.BeaconConfig()
-	c.EpochLength = testCase.Config.EpochLength
+	c.SlotsPerEpoch = testCase.Config.SlotsPerEpoch
 	c.DepositsForChainStart = testCase.Config.DepositsForChainStart
 	params.OverrideBeaconConfig(c)
 }

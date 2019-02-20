@@ -1,0 +1,94 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: testnet-site-alpha
+  namespace: beacon-chain
+  labels:
+    app: beacon-chain
+    component: testnet-site
+    version: alpha
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: beacon-chain
+      component: testnet-site
+      version: alpha
+  template:
+    metadata:
+      labels:
+        app: beacon-chain
+        component: testnet-site
+        version: alpha
+    spec:
+      priorityClassName: best-effort-priority
+      containers:
+      - name: site
+        image: gcr.io/prysmaticlabs/prysm-testnet-site:latest
+        ports:
+        - containerPort: 80
+          name: http
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 80
+          initialDelaySeconds: 3
+          periodSeconds: 3
+        resources:
+          requests:
+            cpu: "100m"
+---
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: testnet-site-alpha
+  namespace: beacon-chain
+spec:
+  scaleTargetRef:
+    apiVersion: extensions/v1beta1
+    kind: Deployment
+    name: testnet-site-alpha
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      targetAverageUtilization: 80
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: testnet-site-alpha
+  namespace: beacon-chain
+spec:
+  selector:
+    app: beacon-chain
+    component: testnet-site
+    version: alpha
+  ports:
+  - port: 80
+    targetPort: 80
+    name: http-nginx
+  type: ClusterIP
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: alpha-prylabs-net
+  namespace: istio-system
+spec:
+  hosts:
+  - alpha.prylabs.net
+  gateways:
+  - prylabs-wildcard-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        port: 
+          number: 80
+        host: testnet-site-alpha.beacon-chain.svc.cluster.local
+

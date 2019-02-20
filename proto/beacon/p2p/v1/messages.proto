@@ -82,6 +82,12 @@ message AttestationResponse {
   Attestation attestation = 2;
 }
 
+message UnseenAttestationsRequest {}
+
+message UnseenAttestationResponse {
+  repeated Attestation attestations = 1;
+}
+
 message ProposerSlashingAnnounce {
   bytes hash = 1;
 }
@@ -131,5 +137,5 @@ message ExitRequest {
 
 message ExitResponse {
   bytes hash = 1;
-  Exit exit = 2;
+  VoluntaryExit voluntary_exit = 2;
 }
