@@ -10,9 +10,8 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/prysmaticlabs/prysm/shared/forkutils"
-
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/forkutils"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 
 	"github.com/gogo/protobuf/proto"

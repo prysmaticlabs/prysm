@@ -512,7 +512,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "153ac476189d567564fda94622d7a8c0fb338f6b",
+    commit = "90b0e4468f9980bf79a2290394adaf7f045c5d24",
     importpath = "golang.org/x/sys",
 )
 
@@ -969,7 +969,7 @@ go_repository(
 
 go_repository(
     name = "com_github_golang_snappy",
-    commit = "2a8bb927dd31d8daada140a5d09578521ce5c36a",
+    tag = "v0.0.1",
     importpath = "github.com/golang/snappy",
 )
 
