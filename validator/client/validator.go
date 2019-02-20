@@ -30,7 +30,7 @@ type AttestationPool interface {
 type validator struct {
 	genesisTime     uint64
 	ticker          *slotutil.SlotTicker
-	assignment      *pb.Assignment
+	assignment      *pb.CommitteeAssignmentResponse
 	proposerClient  pb.ProposerServiceClient
 	validatorClient pb.ValidatorServiceClient
 	beaconClient    pb.BeaconServiceClient
@@ -111,17 +111,16 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 		return nil
 	}
 
-	req := &pb.ValidatorEpochAssignmentsRequest{
-		EpochStart: slot,
-		PublicKey:  v.key.PublicKey.Marshal(),
+	req := &pb.ValidatorIndexRequest{
+		PublicKey: v.key.PublicKey.Marshal(),
 	}
 
-	resp, err := v.validatorClient.ValidatorEpochAssignments(ctx, req)
+	resp, err := v.validatorClient.NextEpochCommitteeAssignment(ctx, req)
 	if err != nil {
 		return err
 	}
 
-	v.assignment = resp.Assignment
+	v.assignment = resp
 	return nil
 }
 
@@ -132,12 +131,14 @@ func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
 	if v.assignment == nil {
 		return pb.ValidatorRole_UNKNOWN
 	}
-	if v.assignment.AttesterSlot == slot && v.assignment.ProposerSlot == slot {
-		return pb.ValidatorRole_BOTH
-	} else if v.assignment.ProposerSlot == slot {
-		return pb.ValidatorRole_PROPOSER
-	} else if v.assignment.AttesterSlot == slot {
-		return pb.ValidatorRole_ATTESTER
+	if v.assignment.Slot == slot {
+		if v.assignment.IsProposer && len(v.assignment.Committee) == 1 {
+			return pb.ValidatorRole_BOTH
+		} else if v.assignment.IsProposer {
+			return pb.ValidatorRole_PROPOSER
+		} else {
+			return pb.ValidatorRole_ATTESTER
+		}
 	}
 	return pb.ValidatorRole_UNKNOWN
 }
