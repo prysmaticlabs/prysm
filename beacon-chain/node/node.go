@@ -189,7 +189,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerOperationService() error {
-	operationService := operations.NewOperationService(context.TODO(), &operations.Config{
+	operationService := operations.NewOpsPoolService(context.TODO(), &operations.Config{
 		BeaconDB: b.db,
 	})
 

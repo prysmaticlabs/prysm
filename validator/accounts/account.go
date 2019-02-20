@@ -74,7 +74,7 @@ func NewValidatorAccount(directory string, password string) error {
 	).Info("Keystore generated for validator signatures at path")
 
 	data := &pb.DepositInput{
-		Pubkey:                      validatorKey.SecretKey.K.Bytes(), // TODO(#1367): Use real BLS public key here.
+		Pubkey:                      validatorKey.SecretKey.PublicKey().Marshal(),
 		ProofOfPossession:           []byte("pop"),
 		WithdrawalCredentialsHash32: []byte("withdraw"),
 	}
@@ -84,6 +84,12 @@ func NewValidatorAccount(directory string, password string) error {
 		return fmt.Errorf("could not serialize deposit data: %v", err)
 	}
 	log.Info(`Account creation complete! Copy and paste the deposit data shown below when issuing a transaction into the ETH1.0 deposit contract to activate your validator client`)
-	log.Infof("%#x", serializedData)
+	fmt.Printf(`
+========================Deposit Data=======================
+
+%#x
+
+===========================================================
+`, serializedData)
 	return nil
 }

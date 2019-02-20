@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -25,7 +27,7 @@ func TestProposeBlock(t *testing.T) {
 
 	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
-		depositData, err := b.EncodeDepositData(
+		depositData, err := helpers.EncodeDepositData(
 			&pbp2p.DepositInput{
 				Pubkey: []byte(strconv.Itoa(i)),
 			},
@@ -40,9 +42,9 @@ func TestProposeBlock(t *testing.T) {
 		}
 	}
 
-	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
-		t.Fatalf("Could not instantiate initial state: %v", err)
+		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
 
 	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
@@ -76,7 +78,7 @@ func TestComputeStateRoot(t *testing.T) {
 
 	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
-		depositData, err := b.EncodeDepositData(
+		depositData, err := helpers.EncodeDepositData(
 			&pbp2p.DepositInput{
 				Pubkey: []byte(strconv.Itoa(i)),
 			},
@@ -91,9 +93,9 @@ func TestComputeStateRoot(t *testing.T) {
 		}
 	}
 
-	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
-		t.Fatalf("Could not instantiate initial state: %v", err)
+		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
 
 	beaconState.Slot = 10
@@ -109,9 +111,9 @@ func TestComputeStateRoot(t *testing.T) {
 	}
 
 	req := &pbp2p.BeaconBlock{
-		ParentRootHash32:   nil,
-		Slot:               11,
-		RandaoRevealHash32: nil,
+		ParentRootHash32: nil,
+		Slot:             11,
+		RandaoReveal:     nil,
 		Body: &pbp2p.BeaconBlockBody{
 			ProposerSlashings: nil,
 			AttesterSlashings: nil,

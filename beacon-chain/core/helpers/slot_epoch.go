@@ -9,9 +9,9 @@ import (
 //
 // Spec pseudocode definition:
 //   def slot_to_epoch(slot: SlotNumber) -> EpochNumber:
-//    return slot // EPOCH_LENGTH
+//    return slot // SLOTS_PER_EPOCH
 func SlotToEpoch(slot uint64) uint64 {
-	return slot / params.BeaconConfig().EpochLength
+	return slot / params.BeaconConfig().SlotsPerEpoch
 }
 
 // CurrentEpoch returns the current epoch number calculated from
@@ -45,9 +45,9 @@ func NextEpoch(state *pb.BeaconState) uint64 {
 //
 // Spec pseudocode definition:
 //   def get_epoch_start_slot(epoch: EpochNumber) -> SlotNumber:
-//    return epoch * EPOCH_LENGTH
+//    return epoch * SLOTS_PER_EPOCH
 func StartSlot(epoch uint64) uint64 {
-	return epoch * params.BeaconConfig().EpochLength
+	return epoch * params.BeaconConfig().SlotsPerEpoch
 }
 
 // AttestationCurrentEpoch returns the current epoch referenced by the attestation.
