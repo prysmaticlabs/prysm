@@ -54,7 +54,7 @@ func setup() (*testAccount, error) {
 	depositsRequired := big.NewInt(8)
 	minDeposit := big.NewInt(1e9)
 	maxDeposit := big.NewInt(32e9)
-	contractAddr, _, contract, err := DeployDepositContract(txOpts, backend, depositsRequired, minDeposit, maxDeposit, false)
+	contractAddr, _, contract, err := DeployDepositContract(txOpts, backend, depositsRequired, minDeposit, maxDeposit, false, addr)
 	if err != nil {
 		return nil, err
 	}
@@ -187,5 +187,44 @@ func TestChainStarts(t *testing.T) {
 
 	if logs[8].Topics[0] != hashutil.Hash([]byte("ChainStart(bytes32,bytes)")) {
 		t.Error("Chain start even did not get emitted")
+	}
+}
+
+func TestDrain(t *testing.T) {
+	testAccount, err := setup()
+	if err != nil {
+		t.Fatal(err)
+	}
+	testAccount.txOpts.Value = amount32Eth
+
+	_, err = testAccount.contract.Deposit(testAccount.txOpts, []byte{'A'})
+	if err != nil {
+		t.Errorf("Validator registration failed: %v", err)
+	}
+
+	testAccount.backend.Commit()
+
+	ctx := context.Background()
+	bal, err := testAccount.backend.BalanceAt(ctx, testAccount.contractAddr, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bal.Cmp(amount32Eth) != 0 {
+		t.Fatal("deposit didnt work")
+	}
+
+	testAccount.txOpts.Value = big.NewInt(0)
+	if _, err := testAccount.contract.Drain(testAccount.txOpts); err != nil {
+		t.Fatal(err)
+	}
+
+	testAccount.backend.Commit()
+
+	bal, err = testAccount.backend.BalanceAt(ctx, testAccount.contractAddr, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if big.NewInt(0).Cmp(bal) != 0 {
+		t.Errorf("Drain did not drain balance: %v", bal)
 	}
 }
