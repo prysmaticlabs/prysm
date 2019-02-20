@@ -30,11 +30,8 @@ import (
 //
 // WIP - this is stubbed out until BLS is integrated into Prysm.
 func VerifyProposerSignature(
-	block *pb.BeaconBlock,
+	_ *pb.BeaconBlock,
 ) error {
-	if block == nil {
-		return errors.New("received nil block")
-	}
 	return nil
 }
 
