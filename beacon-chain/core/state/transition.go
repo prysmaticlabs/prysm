@@ -5,8 +5,8 @@ package state
 
 import (
 	"fmt"
-	"github.com/prysmaticlabs/prysm/bazel-prysm/external/com_github_ethereum_go_ethereum/log"
 
+	"github.com/sirupsen/logrus"
 	bal "github.com/prysmaticlabs/prysm/beacon-chain/core/balances"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
@@ -15,11 +15,13 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
+var log = logrus.WithField("prefix", "core/state")
+
 // ExecuteStateTransition defines the procedure for a state transition function.
 // Spec:
 //  We now define the state transition function. At a high level the state transition is made up of three parts:
 //  - The per-slot transitions, which happens at the start of every slot.
-//	- The per-block transitions, which happens at every block.
+//  - The per-block transitions, which happens at every block.
 //  - The per-epoch transitions, which happens at the end of the last slot of every epoch (i.e. (state.slot + 1) % SLOTS_PER_EPOCH == 0).
 //  The per-slot transitions focus on the slot counter and block roots records updates.
 //  The per-block transitions focus on verifying aggregate signatures and saving temporary records relating to the per-block activity in the state.
@@ -65,7 +67,7 @@ func ExecuteStateTransition(
 //	If state.slot % LATEST_BLOCK_ROOTS_LENGTH == 0
 //		append merkle_root(state.latest_block_roots) to state.batched_block_roots
 func ProcessSlot(state *pb.BeaconState, headRoot [32]byte) *pb.BeaconState {
-	state.Slot += 1
+	state.Slot ++
 	state = b.ProcessBlockRoots(state, headRoot)
 	log.Info("Slot transition successfully processed slot %d", state.Slot)
 	return state
