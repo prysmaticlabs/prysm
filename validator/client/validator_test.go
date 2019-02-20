@@ -8,15 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/sirupsen/logrus"
-
 	ptypes "github.com/gogo/protobuf/types"
-
 	"github.com/golang/mock/gomock"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/internal"
+	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -147,8 +145,8 @@ func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignm
 		key:             validatorKey,
 		validatorClient: client,
 		assignment: &pb.CommitteeAssignmentResponse{
-			Committee: []uint64{0,1,2,3},
-			Slot: 20,
+			Committee: []uint64{0, 1, 2, 3},
+			Slot:      20,
 		},
 	}
 	client.EXPECT().NextEpochCommitteeAssignment(
@@ -190,10 +188,10 @@ func TestUpdateAssignments_DoesUpdateAssignments(t *testing.T) {
 
 	slot := params.BeaconConfig().SlotsPerEpoch
 	resp := &pb.CommitteeAssignmentResponse{
-			Slot: params.BeaconConfig().SlotsPerEpoch,
-			Shard: 100,
-			Committee: []uint64{0,1,2,3},
-			IsProposer: true,
+		Slot:       params.BeaconConfig().SlotsPerEpoch,
+		Shard:      100,
+		Committee:  []uint64{0, 1, 2, 3},
+		IsProposer: true,
 	}
 	v := validator{
 		key:             validatorKey,

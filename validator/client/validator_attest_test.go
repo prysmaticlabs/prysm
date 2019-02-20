@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"testing"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -13,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"testing"
 )
 
 func TestAttestToBlockHead_ValidatorIndexRequestFailure(t *testing.T) {
