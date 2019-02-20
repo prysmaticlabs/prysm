@@ -23,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/forkutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -161,7 +162,7 @@ func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*b
 	epoch := helpers.SlotToEpoch(beaconState.Slot)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := helpers.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
+	domain := forkutils.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	return epochSignature.Marshal()

@@ -14,6 +14,7 @@ service BeaconService {
     rpc LatestAttestation(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.Attestation);
     rpc PendingDeposits(google.protobuf.Empty) returns (PendingDepositsResponse);
     rpc Eth1Data(google.protobuf.Empty) returns (Eth1DataResponse);
+    rpc ForkData(google.protobuf.Empty) returns (ethereum.beacon.p2p.v1.Fork);
 }
 
 service AttesterService {

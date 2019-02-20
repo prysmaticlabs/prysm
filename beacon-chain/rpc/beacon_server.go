@@ -99,6 +99,15 @@ func (bs *BeaconServer) LatestAttestation(req *ptypes.Empty, stream pb.BeaconSer
 	}
 }
 
+// ForkData fetches the current fork information from the beacon state.
+func (bs *BeaconServer) ForkData(ctx context.Context, _ *ptypes.Empty) (*pbp2p.Fork, error) {
+	state, err := bs.beaconDB.State()
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
+	}
+	return state.Fork, nil
+}
+
 // Eth1Data is a mechanism used by block proposers vote on a recent Ethereum 1.0 block hash and an
 // associated deposit root found in the Ethereum 1.0 deposit contract. When consensus is formed,
 // state.latest_eth1_data is updated, and validator deposits up to this root can be processed.

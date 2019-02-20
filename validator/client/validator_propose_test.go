@@ -6,6 +6,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -100,6 +102,15 @@ func TestProposeBlock_UsePendingDeposits(t *testing.T) {
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.Eth1DataResponse{}, nil /*err*/)
 
+	m.beaconClient.EXPECT().ForkData(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.Fork{
+		Epoch:           params.BeaconConfig().GenesisEpoch,
+		CurrentVersion:  0,
+		PreviousVersion: 0,
+	}, nil /*err*/)
+
 	m.proposerClient.EXPECT().PendingAttestations(
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
@@ -173,6 +184,15 @@ func TestProposeBlock_UsesEth1Data(t *testing.T) {
 		Eth1Data: &pbp2p.Eth1Data{BlockHash32: []byte{'B', 'L', 'O', 'C', 'K'}},
 	}, nil /*err*/)
 
+	m.beaconClient.EXPECT().ForkData(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.Fork{
+		Epoch:           params.BeaconConfig().GenesisEpoch,
+		CurrentVersion:  0,
+		PreviousVersion: 0,
+	}, nil /*err*/)
+
 	m.proposerClient.EXPECT().PendingAttestations(
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
@@ -222,6 +242,15 @@ func TestProposeBlock_PendingAttestationsFailure(t *testing.T) {
 		Eth1Data: &pbp2p.Eth1Data{BlockHash32: []byte{'B', 'L', 'O', 'C', 'K'}},
 	}, nil /*err*/)
 
+	m.beaconClient.EXPECT().ForkData(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.Fork{
+		Epoch:           params.BeaconConfig().GenesisEpoch,
+		CurrentVersion:  0,
+		PreviousVersion: 0,
+	}, nil /*err*/)
+
 	m.proposerClient.EXPECT().PendingAttestations(
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
@@ -250,6 +279,15 @@ func TestProposeBlock_ComputeStateFailure(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.Eth1DataResponse{}, nil /*err*/)
+
+	m.beaconClient.EXPECT().ForkData(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.Fork{
+		Epoch:           params.BeaconConfig().GenesisEpoch,
+		CurrentVersion:  0,
+		PreviousVersion: 0,
+	}, nil /*err*/)
 
 	m.proposerClient.EXPECT().PendingAttestations(
 		gomock.Any(), // ctx
@@ -288,6 +326,15 @@ func TestProposeBlock_UsesComputedState(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.Eth1DataResponse{}, nil /*err*/)
+
+	m.beaconClient.EXPECT().ForkData(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.Fork{
+		Epoch:           params.BeaconConfig().GenesisEpoch,
+		CurrentVersion:  0,
+		PreviousVersion: 0,
+	}, nil /*err*/)
 
 	m.proposerClient.EXPECT().PendingAttestations(
 		gomock.Any(), // ctx
@@ -338,6 +385,15 @@ func TestProposeBlock_BroadcastsABlock(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.Eth1DataResponse{}, nil /*err*/)
+
+	m.beaconClient.EXPECT().ForkData(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.Fork{
+		Epoch:           params.BeaconConfig().GenesisEpoch,
+		CurrentVersion:  0,
+		PreviousVersion: 0,
+	}, nil /*err*/)
 
 	m.proposerClient.EXPECT().PendingAttestations(
 		gomock.Any(), // ctx

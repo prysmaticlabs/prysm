@@ -11,6 +11,7 @@ import (
 	"reflect"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/forkutils"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 
 	"github.com/gogo/protobuf/proto"
@@ -112,7 +113,7 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 	if err != nil {
 		return fmt.Errorf("could not fetch tree hash of current epoch: %v", err)
 	}
-	domain := helpers.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainRandao)
+	domain := forkutils.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainRandao)
 	sig, err := bls.SignatureFromBytes(block.RandaoReveal)
 	if err != nil {
 		return fmt.Errorf("could not deserialize block randao reveal: %v", err)
