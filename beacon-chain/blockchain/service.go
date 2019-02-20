@@ -169,6 +169,22 @@ func (c *ChainService) StateInitializedFeed() *event.Feed {
 	return c.stateInitializedFeed
 }
 
+// ChainHeadRoot returns the hash root of the last beacon block processed by the
+// block chain service.
+func (c *ChainService) ChainHeadRoot() ([32]byte, error) {
+	head, err := c.beaconDB.ChainHead()
+	if err != nil {
+		return [32]byte{}, fmt.Errorf("could not retrieve chain head: %v", err)
+	}
+
+	root, err := ssz.TreeHash(head)
+	if err != nil {
+		return [32]byte{}, fmt.Errorf("could not tree hash parent block: %v", err)
+	}
+	return root, nil
+}
+
+
 // doesPoWBlockExist checks if the referenced PoW block exists.
 func (c *ChainService) doesPoWBlockExist(hash [32]byte) bool {
 	powBlock, err := c.web3Service.Client().BlockByHash(c.ctx, hash)
@@ -279,14 +295,10 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 		return nil, fmt.Errorf("block with root %#x is not ready for processing: %v", blockRoot, err)
 	}
 
-	prevBlock, err := c.beaconDB.ChainHead()
+	// Retrieve the last processed beacon block's hash root.
+	headRoot, err := c.ChainHeadRoot()
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve chain head: %v", err)
-	}
-
-	parentRoot, err := ssz.TreeHash(prevBlock)
-	if err != nil {
-		return nil, fmt.Errorf("could not tree hash parent block: %v", err)
+		return nil, fmt.Errorf("could not retrieve chain head root: %v", err)
 	}
 
 	log.WithField("slotNumber", block.Slot).Info("Executing state transition")
@@ -297,7 +309,7 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 		beaconState, err = state.ExecuteStateTransition(
 			beaconState,
 			nil,
-			parentRoot,
+			headRoot,
 			true, /* no sig verify */
 		)
 		if err != nil {
@@ -308,7 +320,7 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	beaconState, err = state.ExecuteStateTransition(
 		beaconState,
 		block,
-		parentRoot,
+		headRoot,
 		true, /* no sig verify */
 	)
 	if err != nil {
