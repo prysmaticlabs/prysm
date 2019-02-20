@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestFFGSrcRewardsPenalties_OK(t *testing.T) {
+func TestFFGSrcRewardsPenalties_AccurateBalances(t *testing.T) {
 	tests := []struct {
 		voted                          []uint64
 		balanceAfterSrcRewardPenalties []uint64
@@ -47,7 +47,7 @@ func TestFFGSrcRewardsPenalties_OK(t *testing.T) {
 	}
 }
 
-func TestFFGTargetRewardsPenalties_OK(t *testing.T) {
+func TestFFGTargetRewardsPenalties_AccurateBalances(t *testing.T) {
 	tests := []struct {
 		voted                          []uint64
 		balanceAfterTgtRewardPenalties []uint64
@@ -86,7 +86,7 @@ func TestFFGTargetRewardsPenalties_OK(t *testing.T) {
 	}
 }
 
-func TestChainHeadRewardsPenalties_OK(t *testing.T) {
+func TestChainHeadRewardsPenalties_AccuratePenalties(t *testing.T) {
 	tests := []struct {
 		voted                           []uint64
 		balanceAfterHeadRewardPenalties []uint64
@@ -125,7 +125,7 @@ func TestChainHeadRewardsPenalties_OK(t *testing.T) {
 	}
 }
 
-func TestInclusionDistRewards_OK(t *testing.T) {
+func TestInclusionDistRewards_AccurateRewards(t *testing.T) {
 	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -211,7 +211,7 @@ func TestInclusionDistRewards_OutOfBounds(t *testing.T) {
 	}
 }
 
-func TestInactivityFFGSrcPenalty_OK(t *testing.T) {
+func TestInactivityFFGSrcPenalty_AccuratePenalties(t *testing.T) {
 	tests := []struct {
 		voted                     []uint64
 		balanceAfterFFGSrcPenalty []uint64
@@ -250,7 +250,7 @@ func TestInactivityFFGSrcPenalty_OK(t *testing.T) {
 	}
 }
 
-func TestInactivityFFGTargetPenalty_OK(t *testing.T) {
+func TestInactivityFFGTargetPenalty_AccuratePenalties(t *testing.T) {
 	tests := []struct {
 		voted                        []uint64
 		balanceAfterFFGTargetPenalty []uint64

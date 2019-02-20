@@ -6,7 +6,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-func TestIsDoubleVote_OK(t *testing.T) {
+func TestIsDoubleVote_SameAndDifferentEpochs(t *testing.T) {
 	att1 := &pb.AttestationData{
 		Slot: 0,
 	}
@@ -26,7 +26,7 @@ func TestIsDoubleVote_OK(t *testing.T) {
 	}
 }
 
-func TestIsSurroundVote_OK(t *testing.T) {
+func TestIsSurroundVote_SameAndDifferentEpochs(t *testing.T) {
 	att1 := &pb.AttestationData{
 		Slot:           0,
 		JustifiedEpoch: 0,
