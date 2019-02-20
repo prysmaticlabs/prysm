@@ -58,6 +58,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 
 	// Use demo config values if demo config flag is set.
 	if ctx.GlobalBool(utils.DemoConfigFlag.Name) {
+		log.Info("Using custom parameter configuration")
 		params.UseDemoBeaconConfig()
 	}
 

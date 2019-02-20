@@ -46,6 +46,7 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 
 	// Use demo config values if demo config flag is set.
 	if ctx.GlobalBool(types.DemoConfigFlag.Name) {
+		log.Info("Using custom parameter configuration")
 		params.UseDemoBeaconConfig()
 	}
 
