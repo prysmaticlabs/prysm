@@ -6,14 +6,13 @@ package internal
 
 import (
 	context "context"
-	reflect "reflect"
-
 	types "github.com/gogo/protobuf/types"
 	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	v10 "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	grpc "google.golang.org/grpc"
 	metadata "google.golang.org/grpc/metadata"
+	reflect "reflect"
 )
 
 // MockBeaconServiceClient is a mock of BeaconServiceClient interface
@@ -77,6 +76,26 @@ func (mr *MockBeaconServiceClientMockRecorder) Eth1Data(arg0, arg1 interface{}, 
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Eth1Data", reflect.TypeOf((*MockBeaconServiceClient)(nil).Eth1Data), varargs...)
+}
+
+// ForkData mocks base method
+func (m *MockBeaconServiceClient) ForkData(arg0 context.Context, arg1 *types.Empty, arg2 ...grpc.CallOption) (*v1.Fork, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ForkData", varargs...)
+	ret0, _ := ret[0].(*v1.Fork)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ForkData indicates an expected call of ForkData
+func (mr *MockBeaconServiceClientMockRecorder) ForkData(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForkData", reflect.TypeOf((*MockBeaconServiceClient)(nil).ForkData), varargs...)
 }
 
 // LatestAttestation mocks base method
