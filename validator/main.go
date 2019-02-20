@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/types"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
+	"github.com/x-cray/logrus-prefixed-formatter"
 )
 
 func startNode(ctx *cli.Context) error {
@@ -105,6 +105,7 @@ contract in order to activate the validator client`,
 	}
 
 	app.Flags = []cli.Flag{
+		types.DemoConfigFlag,
 		types.BeaconRPCProviderFlag,
 		types.KeystorePathFlag,
 		types.PasswordFlag,

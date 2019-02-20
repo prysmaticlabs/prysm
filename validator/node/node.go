@@ -5,6 +5,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"os"
 	"os/signal"
 	"sync"
@@ -41,6 +42,11 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 		ctx:      ctx,
 		services: registry,
 		stop:     make(chan struct{}),
+	}
+
+	// Use demo config values if demo config flag is set.
+	if ctx.GlobalBool(types.DemoConfigFlag.Name) {
+		params.UseDemoBeaconConfig()
 	}
 
 	if err := ValidatorClient.registerPrometheusService(ctx); err != nil {
