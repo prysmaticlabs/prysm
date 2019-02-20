@@ -77,7 +77,7 @@ func TestValidatorEpochAssignments_Ok(t *testing.T) {
 		PublicKey:  pubKey[:],
 	}
 	if _, err := validatorServer.ValidatorEpochAssignments(context.Background(), req); err != nil {
-		t.Errorf("Could not get validator index: %v", err)
+		t.Errorf("Validator epoch assignments should not fail, received: %v", err)
 	}
 }
 
