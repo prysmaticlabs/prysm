@@ -36,63 +36,6 @@ func (vs *ValidatorServer) ValidatorIndex(ctx context.Context, req *pb.Validator
 	return &pb.ValidatorIndexResponse{Index: index}, nil
 }
 
-// ValidatorEpochAssignments fetches an assignment object for a validator by public key
-// such as the slot the validator needs to attest in during the epoch as well as a slot
-// in which the validator may need to propose during the epoch in addition to the assigned shard.
-func (vs *ValidatorServer) ValidatorEpochAssignments(
-	ctx context.Context,
-	req *pb.ValidatorEpochAssignmentsRequest,
-) (*pb.ValidatorEpochAssignmentsResponse, error) {
-	if len(req.PublicKey) != params.BeaconConfig().BLSPubkeyLength {
-		return nil, fmt.Errorf(
-			"expected public key to have length %d, received %d",
-			params.BeaconConfig().BLSPubkeyLength,
-			len(req.PublicKey),
-		)
-	}
-	beaconState, err := vs.beaconDB.State()
-	if err != nil {
-		return nil, fmt.Errorf("could not get beacon state: %v", err)
-	}
-	validatorIndex, err := v.ValidatorIdx(req.PublicKey, beaconState.ValidatorRegistry)
-	if err != nil {
-		return nil, fmt.Errorf("could not get active validator index: %v", err)
-	}
-	var shard uint64
-	var attesterSlot uint64
-	var proposerSlot uint64
-
-	for slot := req.EpochStart; slot < req.EpochStart+params.BeaconConfig().SlotsPerEpoch; slot++ {
-		crossLinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(beaconState, slot, false)
-		if err != nil {
-			return nil, err
-		}
-		proposerIndex, err := helpers.BeaconProposerIndex(beaconState, slot)
-		if err != nil {
-			return nil, err
-		}
-		if proposerIndex == validatorIndex {
-			proposerSlot = slot
-		}
-		for _, committee := range crossLinkCommittees {
-			for _, idx := range committee.Committee {
-				if idx == validatorIndex {
-					attesterSlot = slot
-					shard = committee.Shard
-				}
-			}
-		}
-	}
-	return &pb.ValidatorEpochAssignmentsResponse{
-		Assignment: &pb.Assignment{
-			PublicKey:    req.PublicKey,
-			Shard:        shard,
-			AttesterSlot: attesterSlot,
-			ProposerSlot: proposerSlot,
-		},
-	}, nil
-}
-
 // NextEpochCommitteeAssignment returns the committee assignment response from a given validator public key.
 // The committee assignment response contains the following fields for the next epoch:
 //	1.) The list of validators in the committee.
@@ -102,6 +45,14 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 func (vs *ValidatorServer) NextEpochCommitteeAssignment(
 	ctx context.Context,
 	req *pb.ValidatorIndexRequest) (*pb.CommitteeAssignmentResponse, error) {
+
+	if len(req.PublicKey) != params.BeaconConfig().BLSPubkeyLength {
+		return nil, fmt.Errorf(
+			"expected public key to have length %d, received %d",
+			params.BeaconConfig().BLSPubkeyLength,
+			len(req.PublicKey),
+		)
+	}
 
 	state, err := vs.beaconDB.State()
 	if err != nil {
