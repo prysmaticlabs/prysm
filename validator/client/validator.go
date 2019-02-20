@@ -4,9 +4,10 @@ package client
 import (
 	"context"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"io"
 	"time"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/opentracing/opentracing-go"
 
@@ -125,7 +126,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	log.WithFields(logrus.Fields{
 		"proposerSlot": resp.Assignment.ProposerSlot,
 		"attesterSlot": resp.Assignment.AttesterSlot,
-		"shard": resp.Assignment.Shard,
+		"shard":        resp.Assignment.Shard,
 	}).Info("Updated validator assignments")
 	return nil
 }
@@ -134,7 +135,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 // validator is known to not have a role at the at slot. Returns UNKNOWN if the
 // validator assignments are unknown. Otherwise returns a valid ValidatorRole.
 func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
-	if v.assignment == nil {
+	if v.assignment == nil || slot == params.BeaconConfig().GenesisSlot {
 		return pb.ValidatorRole_UNKNOWN
 	}
 	if v.assignment.AttesterSlot == slot && v.assignment.ProposerSlot == slot {
