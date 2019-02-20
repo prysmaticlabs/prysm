@@ -110,7 +110,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 
 	req := &pb.ValidatorEpochAssignmentsRequest{
 		EpochStart: slot,
-		PublicKey:  v.key.PublicKey.BufferedPublicKey(),
+		PublicKey:  v.key.PublicKey.Marshal(),
 	}
 
 	resp, err := v.validatorClient.ValidatorEpochAssignments(ctx, req)

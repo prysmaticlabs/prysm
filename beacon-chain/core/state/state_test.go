@@ -1,4 +1,4 @@
-package state
+package state_test
 
 import (
 	"bytes"
@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
@@ -62,7 +62,7 @@ func TestGenesisBeaconState_Ok(t *testing.T) {
 	maxDeposit := params.BeaconConfig().MaxDepositAmount
 	var deposits []*pb.Deposit
 	for i := 0; i < depositsForChainStart; i++ {
-		depositData, err := b.EncodeDepositData(
+		depositData, err := helpers.EncodeDepositData(
 			&pb.DepositInput{
 				Pubkey:                      []byte(strconv.Itoa(i)),
 				ProofOfPossession:           []byte{'B'},
@@ -81,7 +81,7 @@ func TestGenesisBeaconState_Ok(t *testing.T) {
 		})
 	}
 
-	state, err := GenesisBeaconState(
+	newState, err := state.GenesisBeaconState(
 		deposits,
 		genesisTime,
 		processedPowReceiptRoot)
@@ -90,13 +90,13 @@ func TestGenesisBeaconState_Ok(t *testing.T) {
 	}
 
 	// Misc fields checks.
-	if state.Slot != params.BeaconConfig().GenesisSlot {
+	if newState.Slot != params.BeaconConfig().GenesisSlot {
 		t.Error("Slot was not correctly initialized")
 	}
-	if state.GenesisTime != genesisTime {
+	if newState.GenesisTime != genesisTime {
 		t.Error("GenesisTime was not correctly initialized")
 	}
-	if !reflect.DeepEqual(*state.Fork, pb.Fork{
+	if !reflect.DeepEqual(*newState.Fork, pb.Fork{
 		PreviousVersion: genesisForkVersion,
 		CurrentVersion:  genesisForkVersion,
 		Epoch:           genesisEpochNumber,
@@ -105,80 +105,80 @@ func TestGenesisBeaconState_Ok(t *testing.T) {
 	}
 
 	// Validator registry fields checks.
-	if state.ValidatorRegistryUpdateEpoch != genesisEpochNumber {
+	if newState.ValidatorRegistryUpdateEpoch != genesisEpochNumber {
 		t.Error("ValidatorRegistryUpdateSlot was not correctly initialized")
 	}
-	if len(state.ValidatorRegistry) != depositsForChainStart {
+	if len(newState.ValidatorRegistry) != depositsForChainStart {
 		t.Error("ValidatorRegistry was not correctly initialized")
 	}
-	if len(state.ValidatorBalances) != depositsForChainStart {
+	if len(newState.ValidatorBalances) != depositsForChainStart {
 		t.Error("ValidatorBalances was not correctly initialized")
 	}
 
 	// Randomness and committees fields checks.
-	if len(state.LatestRandaoMixesHash32S) != latestRandaoMixesLength {
-		t.Error("Length of LatestRandaoMixesHash32S was not correctly initialized")
+	if len(newState.LatestRandaoMixes) != latestRandaoMixesLength {
+		t.Error("Length of LatestRandaoMixes was not correctly initialized")
 	}
 
 	// Finality fields checks.
-	if state.PreviousJustifiedEpoch != genesisEpochNumber {
+	if newState.PreviousJustifiedEpoch != genesisEpochNumber {
 		t.Error("PreviousJustifiedEpoch was not correctly initialized")
 	}
-	if state.JustifiedEpoch != genesisEpochNumber {
+	if newState.JustifiedEpoch != genesisEpochNumber {
 		t.Error("JustifiedEpoch was not correctly initialized")
 	}
-	if state.FinalizedEpoch != genesisEpochNumber {
+	if newState.FinalizedEpoch != genesisEpochNumber {
 		t.Error("FinalizedSlot was not correctly initialized")
 	}
-	if state.JustificationBitfield != 0 {
+	if newState.JustificationBitfield != 0 {
 		t.Error("JustificationBitfield was not correctly initialized")
 	}
 
 	// Recent state checks.
-	if len(state.LatestCrosslinks) != shardCount {
+	if len(newState.LatestCrosslinks) != shardCount {
 		t.Error("Length of LatestCrosslinks was not correctly initialized")
 	}
-	if !reflect.DeepEqual(state.LatestSlashedBalances,
+	if !reflect.DeepEqual(newState.LatestSlashedBalances,
 		make([]uint64, latestSlashedExitLength)) {
 		t.Error("LatestSlashedBalances was not correctly initialized")
 	}
-	if !reflect.DeepEqual(state.LatestAttestations, []*pb.PendingAttestation{}) {
+	if !reflect.DeepEqual(newState.LatestAttestations, []*pb.PendingAttestation{}) {
 		t.Error("LatestAttestations was not correctly initialized")
 	}
-	if !reflect.DeepEqual(state.BatchedBlockRootHash32S, [][]byte{}) {
+	if !reflect.DeepEqual(newState.BatchedBlockRootHash32S, [][]byte{}) {
 		t.Error("BatchedBlockRootHash32S was not correctly initialized")
 	}
-	activeValidators := helpers.ActiveValidatorIndices(state.ValidatorRegistry, params.BeaconConfig().GenesisEpoch)
+	activeValidators := helpers.ActiveValidatorIndices(newState.ValidatorRegistry, params.BeaconConfig().GenesisEpoch)
 	genesisActiveIndexRoot, err := ssz.TreeHash(activeValidators)
 	if err != nil {
 		t.Fatalf("Could not determine genesis active index root: %v", err)
 	}
-	if !bytes.Equal(state.LatestIndexRootHash32S[0], genesisActiveIndexRoot[:]) {
+	if !bytes.Equal(newState.LatestIndexRootHash32S[0], genesisActiveIndexRoot[:]) {
 		t.Errorf(
 			"Expected index roots to be the tree hash root of active validator indices, received %#x",
-			state.LatestIndexRootHash32S[0],
+			newState.LatestIndexRootHash32S[0],
 		)
 	}
-	seed, err := helpers.GenerateSeed(state, params.BeaconConfig().GenesisEpoch)
+	seed, err := helpers.GenerateSeed(newState, params.BeaconConfig().GenesisEpoch)
 	if err != nil {
 		t.Fatalf("Could not generate initial seed: %v", err)
 	}
-	if !bytes.Equal(seed[:], state.CurrentShufflingSeedHash32) {
-		t.Errorf("Expected current epoch seed to be %#x, received %#x", seed[:], state.CurrentShufflingSeedHash32)
+	if !bytes.Equal(seed[:], newState.CurrentShufflingSeedHash32) {
+		t.Errorf("Expected current epoch seed to be %#x, received %#x", seed[:], newState.CurrentShufflingSeedHash32)
 	}
 
 	// deposit root checks.
-	if !bytes.Equal(state.LatestEth1Data.DepositRootHash32, processedPowReceiptRoot) {
+	if !bytes.Equal(newState.LatestEth1Data.DepositRootHash32, processedPowReceiptRoot) {
 		t.Error("LatestEth1Data DepositRootHash32 was not correctly initialized")
 	}
-	if !reflect.DeepEqual(state.Eth1DataVotes, []*pb.Eth1DataVote{}) {
+	if !reflect.DeepEqual(newState.Eth1DataVotes, []*pb.Eth1DataVote{}) {
 		t.Error("Eth1DataVotes was not correctly initialized")
 	}
 }
 
 func TestGenesisState_HashEquality(t *testing.T) {
-	state1, _ := GenesisBeaconState(nil, 0, nil)
-	state2, _ := GenesisBeaconState(nil, 0, nil)
+	state1, _ := state.GenesisBeaconState(nil, 0, nil)
+	state2, _ := state.GenesisBeaconState(nil, 0, nil)
 
 	root1, err1 := ssz.TreeHash(state1)
 	root2, err2 := ssz.TreeHash(state2)
@@ -193,7 +193,7 @@ func TestGenesisState_HashEquality(t *testing.T) {
 }
 
 func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
-	s, _ := GenesisBeaconState(nil, 0, nil)
+	s, _ := state.GenesisBeaconState(nil, 0, nil)
 	want, got := len(s.LatestBlockRootHash32S), int(params.BeaconConfig().LatestBlockRootsLength)
 	if want != got {
 		t.Errorf("Wrong number of recent block hashes. Got: %d Want: %d", got, want)

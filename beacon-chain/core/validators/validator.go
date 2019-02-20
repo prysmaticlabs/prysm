@@ -11,24 +11,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
-
-// GenesisValidatorRegistry creates a new validator set that is used to
-// generate a new bootstrapped state.
-func GenesisValidatorRegistry() []*pb.Validator {
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
-	for i := uint64(0); i < params.BeaconConfig().DepositsForChainStart; i++ {
-		pubkey := hashutil.Hash([]byte{byte(i)})
-		validators[i] = &pb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-			Pubkey:    pubkey[:],
-		}
-	}
-	return validators
-}
 
 // ValidatorIdx returns the idx of the validator given an input public key.
 func ValidatorIdx(pubKey []byte, validators []*pb.Validator) (uint64, error) {

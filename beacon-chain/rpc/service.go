@@ -8,6 +8,8 @@ import (
 	"net"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -44,7 +46,10 @@ type operationService interface {
 type powChainService interface {
 	HasChainStartLogOccurred() (bool, uint64, error)
 	ChainStartFeed() *event.Feed
-	LatestBlockNumber() *big.Int
+	LatestBlockHeight() *big.Int
+	BlockExists(hash common.Hash) (bool, *big.Int, error)
+	BlockHashByHeight(height *big.Int) (common.Hash, error)
+	DepositRoot() [32]byte
 }
 
 // Service defining an RPC server for a beacon node.

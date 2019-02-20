@@ -10,6 +10,9 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
@@ -77,28 +80,46 @@ func ProcessEth1Data(beaconState *pb.BeaconState, block *pb.BeaconBlock) *pb.Bea
 //   Set state.latest_randao_mixes[get_current_epoch(state) % LATEST_RANDAO_MIXES_LENGTH] =
 //     xor(get_randao_mix(state, get_current_epoch(state)), hash(block.randao_reveal))
 func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
-	if err := verifyBlockRandao(beaconState, block); err != nil {
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
+	if err != nil {
+		return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
+	}
+	proposer := beaconState.ValidatorRegistry[proposerIdx]
+	if err := verifyBlockRandao(beaconState, block, proposer); err != nil {
 		return nil, fmt.Errorf("could not verify block randao: %v", err)
 	}
 	// If block randao passed verification, we XOR the state's latest randao mix with the block's
 	// randao and update the state's corresponding latest randao mix value.
 	latestMixesLength := params.BeaconConfig().LatestRandaoMixesLength
 	currentEpoch := helpers.CurrentEpoch(beaconState)
-	latestMixSlice := beaconState.LatestRandaoMixesHash32S[currentEpoch%latestMixesLength]
-	latestMix := bytesutil.ToBytes32(latestMixSlice)
-	for i, x := range block.RandaoRevealHash32 {
-		latestMix[i] ^= x
+	latestMixSlice := beaconState.LatestRandaoMixes[currentEpoch%latestMixesLength]
+	for i, x := range block.RandaoReveal {
+		latestMixSlice[i] ^= x
 	}
-	beaconState.LatestRandaoMixesHash32S[beaconState.Slot%latestMixesLength] = latestMix[:]
+	beaconState.LatestRandaoMixes[currentEpoch%latestMixesLength] = latestMixSlice
 	return beaconState, nil
 }
 
-func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) error {
-	// TODO(#1366): Integrate BLS into the repository.
-	// Verify that bls_verify(pubkey=proposer.pubkey, message_hash=int_to_bytes32(get_current_epoch(state)),
-	//   signature=block.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO)).
-	_ = beaconState
-	_ = block
+// Verify that bls_verify(pubkey=proposer.pubkey, message_hash=hash_tree_root(get_current_epoch(state)),
+//   signature=block.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO))
+func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, proposer *pb.Validator) error {
+	pub, err := bls.PublicKeyFromBytes(proposer.Pubkey)
+	if err != nil {
+		return fmt.Errorf("could not deserialize proposer public key: %v", err)
+	}
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+	hashTreeRoot, err := ssz.TreeHash(currentEpoch)
+	if err != nil {
+		return fmt.Errorf("could not fetch tree hash of current epoch: %v", err)
+	}
+	domain := helpers.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainRandao)
+	sig, err := bls.SignatureFromBytes(block.RandaoReveal)
+	if err != nil {
+		return fmt.Errorf("could not deserialize block randao reveal: %v", err)
+	}
+	if !sig.Verify(hashTreeRoot[:], pub, domain) {
+		return fmt.Errorf("block randao reveal signature did not verify")
+	}
 	return nil
 }
 
@@ -527,7 +548,7 @@ func ProcessValidatorDeposits(
 	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	for idx, deposit := range deposits {
 		depositData := deposit.DepositData
-		depositInput, err = DecodeDepositInput(depositData)
+		depositInput, err = helpers.DecodeDepositInput(depositData)
 		if err != nil {
 			return nil, fmt.Errorf("could not decode deposit input: %v", err)
 		}

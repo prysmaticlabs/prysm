@@ -27,10 +27,10 @@ func TestGenerateBlocks(t *testing.T) {
 		t.Fatalf("Could not set up backend %v", err)
 	}
 
-	slotLimit := 250
+	slotLimit := params.BeaconConfig().SlotsPerEpoch + uint64(1)
 
-	for i := 0; i < slotLimit; i++ {
-		if err := backend.GenerateBlockAndAdvanceChain(&SimulatedObjects{}); err != nil {
+	for i := uint64(0); i < slotLimit; i++ {
+		if err := backend.GenerateBlockAndAdvanceChain(&SimulatedObjects{}, privKeys); err != nil {
 			t.Fatalf("Could not generate block and transition state successfully %v for slot %d", err, backend.state.Slot+1)
 		}
 		if backend.inMemoryBlocks[len(backend.inMemoryBlocks)-1].Slot != backend.state.Slot {
@@ -55,9 +55,9 @@ func TestGenerateNilBlocks(t *testing.T) {
 		t.Fatalf("Could not set up backend %v", err)
 	}
 
-	slotLimit := 100
+	slotLimit := params.BeaconConfig().SlotsPerEpoch + uint64(1)
 
-	for i := 0; i < slotLimit; i++ {
+	for i := uint64(0); i < slotLimit; i++ {
 		if err := backend.GenerateNilBlockAndAdvanceChain(); err != nil {
 			t.Fatalf("Could not generate block and transition state successfully %v for slot %d", err, backend.state.Slot+1)
 		}
