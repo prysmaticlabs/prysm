@@ -53,8 +53,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) {
 	// First, check if the beacon chain has started.
 	stream, err := v.beaconClient.WaitForChainStart(ctx, &ptypes.Empty{})
 	if err != nil {
-		log.Errorf("Could not setup beacon chain ChainStart streaming client: %v", err)
-		return
+		log.Fatalf("Could not setup beacon chain ChainStart streaming client: %v", err)
 	}
 	for {
 		log.Info("Waiting for beacon chain start log from the ETH 1.0 deposit contract...")
@@ -65,12 +64,10 @@ func (v *validator) WaitForChainStart(ctx context.Context) {
 		}
 		// If context is canceled we stop the loop.
 		if ctx.Err() == context.Canceled {
-			log.Debugf("Context has been canceled so shutting down the loop: %v", ctx.Err())
-			break
+			log.Fatalf("Context has been canceled so shutting down the loop: %v", ctx.Err())
 		}
 		if err != nil {
-			log.Errorf("Could not receive ChainStart from stream: %v", err)
-			continue
+			log.Fatalf("Could not receive ChainStart from stream: %v", err)
 		}
 		v.genesisTime = chainStartRes.GenesisTime
 		break
