@@ -98,62 +98,6 @@ func TestValidatorEpochAssignments_WrongPubkeyLength(t *testing.T) {
 	}
 }
 
-func TestValidatorCommitteeAtSlot_CrosslinkCommitteesFailure(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	genesis := b.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(genesis); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
-	}
-
-	state, err := genesisState(params.BeaconConfig().DepositsForChainStart)
-	if err != nil {
-		t.Fatalf("Could not setup genesis state: %v", err)
-	}
-
-	if err := db.UpdateChainHead(genesis, state); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
-	validatorServer := &ValidatorServer{
-		beaconDB: db,
-	}
-	req := &pb.CommitteeRequest{
-		Slot: params.BeaconConfig().SlotsPerEpoch * 10,
-	}
-	want := "could not get crosslink committees at slot"
-	if _, err := validatorServer.ValidatorCommitteeAtSlot(context.Background(), req); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
-	}
-}
-
-func TestValidatorCommitteeAtSlot_Ok(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	genesis := b.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(genesis); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
-	}
-
-	state, err := genesisState(params.BeaconConfig().DepositsForChainStart)
-	if err != nil {
-		t.Fatalf("Could not setup genesis state: %v", err)
-	}
-
-	if err := db.UpdateChainHead(genesis, state); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
-	validatorServer := &ValidatorServer{
-		beaconDB: db,
-	}
-	req := &pb.CommitteeRequest{
-		Slot:           params.BeaconConfig().GenesisSlot + 1,
-		ValidatorIndex: 31,
-	}
-	if _, err := validatorServer.ValidatorCommitteeAtSlot(context.Background(), req); err != nil {
-		t.Errorf("Unable to fetch committee at slot: %v", err)
-	}
-}
-
 func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
