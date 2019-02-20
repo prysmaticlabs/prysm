@@ -67,6 +67,7 @@ func run(ctx context.Context, v Validator) {
 				// This shouldn't happen normally, so it is considered a warning.
 				log.WithFields(logrus.Fields{
 					"slot": slot,
+					"slotsSinceGenesis": slot-params.BeaconConfig().GenesisSlot,
 					"role": role,
 				}).Warn("Unknown role, doing nothing")
 			default:

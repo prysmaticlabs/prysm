@@ -4,6 +4,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"io"
 	"time"
 
@@ -121,6 +122,11 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	}
 
 	v.assignment = resp.Assignment
+	log.WithFields(logrus.Fields{
+		"proposerSlot": resp.Assignment.ProposerSlot,
+		"attesterSlot": resp.Assignment.AttesterSlot,
+		"shard": resp.Assignment.Shard,
+	}).Info("Updated validator assignments")
 	return nil
 }
 
