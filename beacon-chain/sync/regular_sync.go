@@ -491,7 +491,7 @@ func (rs *RegularSync) handleUnseenAttestationsRequest(msg p2p.Message) {
 
 	_, sendAttestationsSpan := trace.StartSpan(ctx, "sendAttestation")
 	log.Debugf("Sending response for batched unseen attestations to peer %v", msg.Peer)
-	rs.p2p.Send(&pb.BatchedAttestationResponse{
+	rs.p2p.Send(&pb.UnseenAttestationResponse{
 		Attestations: atts,
 	}, msg.Peer)
 	sendAttestationsSpan.End()

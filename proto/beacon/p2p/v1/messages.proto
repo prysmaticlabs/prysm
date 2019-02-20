@@ -84,7 +84,7 @@ message AttestationResponse {
 
 message UnseenAttestationsRequest {}
 
-message BatchedAttestationResponse {
+message UnseenAttestationResponse {
   repeated Attestation attestations = 1;
 }
 

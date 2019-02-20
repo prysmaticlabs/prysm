@@ -79,7 +79,7 @@ func (x Topic) String() string {
 	return proto.EnumName(Topic_name, int32(x))
 }
 func (Topic) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{0}
+	return fileDescriptor_messages_d3945b1b4945a296, []int{0}
 }
 
 type BeaconBlockAnnounce struct {
@@ -94,7 +94,7 @@ func (m *BeaconBlockAnnounce) Reset()         { *m = BeaconBlockAnnounce{} }
 func (m *BeaconBlockAnnounce) String() string { return proto.CompactTextString(m) }
 func (*BeaconBlockAnnounce) ProtoMessage()    {}
 func (*BeaconBlockAnnounce) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{0}
+	return fileDescriptor_messages_d3945b1b4945a296, []int{0}
 }
 func (m *BeaconBlockAnnounce) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -148,7 +148,7 @@ func (m *BeaconBlockRequest) Reset()         { *m = BeaconBlockRequest{} }
 func (m *BeaconBlockRequest) String() string { return proto.CompactTextString(m) }
 func (*BeaconBlockRequest) ProtoMessage()    {}
 func (*BeaconBlockRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{1}
+	return fileDescriptor_messages_d3945b1b4945a296, []int{1}
 }
 func (m *BeaconBlockRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -195,7 +195,7 @@ func (m *BeaconBlockRequestBySlotNumber) Reset()         { *m = BeaconBlockReque
 func (m *BeaconBlockRequestBySlotNumber) String() string { return proto.CompactTextString(m) }
 func (*BeaconBlockRequestBySlotNumber) ProtoMessage()    {}
 func (*BeaconBlockRequestBySlotNumber) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{2}
+	return fileDescriptor_messages_d3945b1b4945a296, []int{2}
 }
 func (m *BeaconBlockRequestBySlotNumber) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -243,7 +243,7 @@ func (m *BeaconBlockResponse) Reset()         { *m = BeaconBlockResponse{} }
 func (m *BeaconBlockResponse) String() string { return proto.CompactTextString(m) }
 func (*BeaconBlockResponse) ProtoMessage()    {}
 func (*BeaconBlockResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{3}
+	return fileDescriptor_messages_d3945b1b4945a296, []int{3}
 }
 func (m *BeaconBlockResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -298,7 +298,7 @@ func (m *BatchedBeaconBlockRequest) Reset()         { *m = BatchedBeaconBlockReq
 func (m *BatchedBeaconBlockRequest) String() string { return proto.CompactTextString(m) }
 func (*BatchedBeaconBlockRequest) ProtoMessage()    {}
 func (*BatchedBeaconBlockRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{4}
+	return fileDescriptor_messages_d3945b1b4945a296, []int{4}
 }
 func (m *BatchedBeaconBlockRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -352,7 +352,7 @@ func (m *BatchedBeaconBlockResponse) Reset()         { *m = BatchedBeaconBlockRe
 func (m *BatchedBeaconBlockResponse) String() string { return proto.CompactTextString(m) }
 func (*BatchedBeaconBlockResponse) ProtoMessage()    {}
 func (*BatchedBeaconBlockResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{5}
+	return fileDescriptor_messages_d3945b1b4945a296, []int{5}
 }
 func (m *BatchedBeaconBlockResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -398,7 +398,7 @@ func (m *ChainHeadRequest) Reset()         { *m = ChainHeadRequest{} }
 func (m *ChainHeadRequest) String() string { return proto.CompactTextString(m) }
 func (*ChainHeadRequest) ProtoMessage()    {}
 func (*ChainHeadRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{6}
+	return fileDescriptor_messages_d3945b1b4945a296, []int{6}
 }
 func (m *ChainHeadRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -440,7 +440,7 @@ func (m *ChainHeadResponse) Reset()         { *m = ChainHeadResponse{} }
 func (m *ChainHeadResponse) String() string { return proto.CompactTextString(m) }
 func (*ChainHeadResponse) ProtoMessage()    {}
 func (*ChainHeadResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{7}
+	return fileDescriptor_messages_d3945b1b4945a296, []int{7}
 }
 func (m *ChainHeadResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -501,7 +501,7 @@ func (m *BeaconStateHashAnnounce) Reset()         { *m = BeaconStateHashAnnounce
 func (m *BeaconStateHashAnnounce) String() string { return proto.CompactTextString(m) }
 func (*BeaconStateHashAnnounce) ProtoMessage()    {}
 func (*BeaconStateHashAnnounce) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{8}
+	return fileDescriptor_messages_d3945b1b4945a296, []int{8}
 }
 func (m *BeaconStateHashAnnounce) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -548,7 +548,7 @@ func (m *BeaconStateRequest) Reset()         { *m = BeaconStateRequest{} }
 func (m *BeaconStateRequest) String() string { return proto.CompactTextString(m) }
 func (*BeaconStateRequest) ProtoMessage()    {}
 func (*BeaconStateRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{9}
+	return fileDescriptor_messages_d3945b1b4945a296, []int{9}
 }
 func (m *BeaconStateRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -595,7 +595,7 @@ func (m *BeaconStateResponse) Reset()         { *m = BeaconStateResponse{} }
 func (m *BeaconStateResponse) String() string { return proto.CompactTextString(m) }
 func (*BeaconStateResponse) ProtoMessage()    {}
 func (*BeaconStateResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{10}
+	return fileDescriptor_messages_d3945b1b4945a296, []int{10}
 }
 func (m *BeaconStateResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -642,7 +642,7 @@ func (m *AttestationAnnounce) Reset()         { *m = AttestationAnnounce{} }
 func (m *AttestationAnnounce) String() string { return proto.CompactTextString(m) }
 func (*AttestationAnnounce) ProtoMessage()    {}
 func (*AttestationAnnounce) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{11}
+	return fileDescriptor_messages_d3945b1b4945a296, []int{11}
 }
 func (m *AttestationAnnounce) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -689,7 +689,7 @@ func (m *AttestationRequest) Reset()         { *m = AttestationRequest{} }
 func (m *AttestationRequest) String() string { return proto.CompactTextString(m) }
 func (*AttestationRequest) ProtoMessage()    {}
 func (*AttestationRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{12}
+	return fileDescriptor_messages_d3945b1b4945a296, []int{12}
 }
 func (m *AttestationRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -737,7 +737,7 @@ func (m *AttestationResponse) Reset()         { *m = AttestationResponse{} }
 func (m *AttestationResponse) String() string { return proto.CompactTextString(m) }
 func (*AttestationResponse) ProtoMessage()    {}
 func (*AttestationResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{13}
+	return fileDescriptor_messages_d3945b1b4945a296, []int{13}
 }
 func (m *AttestationResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -790,7 +790,7 @@ func (m *UnseenAttestationsRequest) Reset()         { *m = UnseenAttestationsReq
 func (m *UnseenAttestationsRequest) String() string { return proto.CompactTextString(m) }
 func (*UnseenAttestationsRequest) ProtoMessage()    {}
 func (*UnseenAttestationsRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{14}
+	return fileDescriptor_messages_d3945b1b4945a296, []int{14}
 }
 func (m *UnseenAttestationsRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -819,25 +819,25 @@ func (m *UnseenAttestationsRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_UnseenAttestationsRequest proto.InternalMessageInfo
 
-type BatchedAttestationResponse struct {
+type UnseenAttestationResponse struct {
 	Attestations         []*Attestation `protobuf:"bytes,1,rep,name=attestations,proto3" json:"attestations,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
 	XXX_unrecognized     []byte         `json:"-"`
 	XXX_sizecache        int32          `json:"-"`
 }
 
-func (m *BatchedAttestationResponse) Reset()         { *m = BatchedAttestationResponse{} }
-func (m *BatchedAttestationResponse) String() string { return proto.CompactTextString(m) }
-func (*BatchedAttestationResponse) ProtoMessage()    {}
-func (*BatchedAttestationResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{15}
+func (m *UnseenAttestationResponse) Reset()         { *m = UnseenAttestationResponse{} }
+func (m *UnseenAttestationResponse) String() string { return proto.CompactTextString(m) }
+func (*UnseenAttestationResponse) ProtoMessage()    {}
+func (*UnseenAttestationResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_messages_d3945b1b4945a296, []int{15}
 }
-func (m *BatchedAttestationResponse) XXX_Unmarshal(b []byte) error {
+func (m *UnseenAttestationResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *BatchedAttestationResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *UnseenAttestationResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_BatchedAttestationResponse.Marshal(b, m, deterministic)
+		return xxx_messageInfo_UnseenAttestationResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalTo(b)
@@ -847,19 +847,19 @@ func (m *BatchedAttestationResponse) XXX_Marshal(b []byte, deterministic bool) (
 		return b[:n], nil
 	}
 }
-func (dst *BatchedAttestationResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_BatchedAttestationResponse.Merge(dst, src)
+func (dst *UnseenAttestationResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_UnseenAttestationResponse.Merge(dst, src)
 }
-func (m *BatchedAttestationResponse) XXX_Size() int {
+func (m *UnseenAttestationResponse) XXX_Size() int {
 	return m.Size()
 }
-func (m *BatchedAttestationResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_BatchedAttestationResponse.DiscardUnknown(m)
+func (m *UnseenAttestationResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_UnseenAttestationResponse.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_BatchedAttestationResponse proto.InternalMessageInfo
+var xxx_messageInfo_UnseenAttestationResponse proto.InternalMessageInfo
 
-func (m *BatchedAttestationResponse) GetAttestations() []*Attestation {
+func (m *UnseenAttestationResponse) GetAttestations() []*Attestation {
 	if m != nil {
 		return m.Attestations
 	}
@@ -877,7 +877,7 @@ func (m *ProposerSlashingAnnounce) Reset()         { *m = ProposerSlashingAnnoun
 func (m *ProposerSlashingAnnounce) String() string { return proto.CompactTextString(m) }
 func (*ProposerSlashingAnnounce) ProtoMessage()    {}
 func (*ProposerSlashingAnnounce) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{16}
+	return fileDescriptor_messages_d3945b1b4945a296, []int{16}
 }
 func (m *ProposerSlashingAnnounce) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -924,7 +924,7 @@ func (m *ProposerSlashingRequest) Reset()         { *m = ProposerSlashingRequest
 func (m *ProposerSlashingRequest) String() string { return proto.CompactTextString(m) }
 func (*ProposerSlashingRequest) ProtoMessage()    {}
 func (*ProposerSlashingRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{17}
+	return fileDescriptor_messages_d3945b1b4945a296, []int{17}
 }
 func (m *ProposerSlashingRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -972,7 +972,7 @@ func (m *ProposerSlashingResponse) Reset()         { *m = ProposerSlashingRespon
 func (m *ProposerSlashingResponse) String() string { return proto.CompactTextString(m) }
 func (*ProposerSlashingResponse) ProtoMessage()    {}
 func (*ProposerSlashingResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{18}
+	return fileDescriptor_messages_d3945b1b4945a296, []int{18}
 }
 func (m *ProposerSlashingResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1026,7 +1026,7 @@ func (m *AttesterSlashingAnnounce) Reset()         { *m = AttesterSlashingAnnoun
 func (m *AttesterSlashingAnnounce) String() string { return proto.CompactTextString(m) }
 func (*AttesterSlashingAnnounce) ProtoMessage()    {}
 func (*AttesterSlashingAnnounce) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{19}
+	return fileDescriptor_messages_d3945b1b4945a296, []int{19}
 }
 func (m *AttesterSlashingAnnounce) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1073,7 +1073,7 @@ func (m *AttesterSlashingRequest) Reset()         { *m = AttesterSlashingRequest
 func (m *AttesterSlashingRequest) String() string { return proto.CompactTextString(m) }
 func (*AttesterSlashingRequest) ProtoMessage()    {}
 func (*AttesterSlashingRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{20}
+	return fileDescriptor_messages_d3945b1b4945a296, []int{20}
 }
 func (m *AttesterSlashingRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1121,7 +1121,7 @@ func (m *AttesterSlashingResponse) Reset()         { *m = AttesterSlashingRespon
 func (m *AttesterSlashingResponse) String() string { return proto.CompactTextString(m) }
 func (*AttesterSlashingResponse) ProtoMessage()    {}
 func (*AttesterSlashingResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{21}
+	return fileDescriptor_messages_d3945b1b4945a296, []int{21}
 }
 func (m *AttesterSlashingResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1175,7 +1175,7 @@ func (m *DepositAnnounce) Reset()         { *m = DepositAnnounce{} }
 func (m *DepositAnnounce) String() string { return proto.CompactTextString(m) }
 func (*DepositAnnounce) ProtoMessage()    {}
 func (*DepositAnnounce) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{22}
+	return fileDescriptor_messages_d3945b1b4945a296, []int{22}
 }
 func (m *DepositAnnounce) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1222,7 +1222,7 @@ func (m *DepositRequest) Reset()         { *m = DepositRequest{} }
 func (m *DepositRequest) String() string { return proto.CompactTextString(m) }
 func (*DepositRequest) ProtoMessage()    {}
 func (*DepositRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{23}
+	return fileDescriptor_messages_d3945b1b4945a296, []int{23}
 }
 func (m *DepositRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1270,7 +1270,7 @@ func (m *DepositResponse) Reset()         { *m = DepositResponse{} }
 func (m *DepositResponse) String() string { return proto.CompactTextString(m) }
 func (*DepositResponse) ProtoMessage()    {}
 func (*DepositResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{24}
+	return fileDescriptor_messages_d3945b1b4945a296, []int{24}
 }
 func (m *DepositResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1324,7 +1324,7 @@ func (m *ExitAnnounce) Reset()         { *m = ExitAnnounce{} }
 func (m *ExitAnnounce) String() string { return proto.CompactTextString(m) }
 func (*ExitAnnounce) ProtoMessage()    {}
 func (*ExitAnnounce) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{25}
+	return fileDescriptor_messages_d3945b1b4945a296, []int{25}
 }
 func (m *ExitAnnounce) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1371,7 +1371,7 @@ func (m *ExitRequest) Reset()         { *m = ExitRequest{} }
 func (m *ExitRequest) String() string { return proto.CompactTextString(m) }
 func (*ExitRequest) ProtoMessage()    {}
 func (*ExitRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{26}
+	return fileDescriptor_messages_d3945b1b4945a296, []int{26}
 }
 func (m *ExitRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1419,7 +1419,7 @@ func (m *ExitResponse) Reset()         { *m = ExitResponse{} }
 func (m *ExitResponse) String() string { return proto.CompactTextString(m) }
 func (*ExitResponse) ProtoMessage()    {}
 func (*ExitResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_873c5955423327e3, []int{27}
+	return fileDescriptor_messages_d3945b1b4945a296, []int{27}
 }
 func (m *ExitResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1478,7 +1478,7 @@ func init() {
 	proto.RegisterType((*AttestationRequest)(nil), "ethereum.beacon.p2p.v1.AttestationRequest")
 	proto.RegisterType((*AttestationResponse)(nil), "ethereum.beacon.p2p.v1.AttestationResponse")
 	proto.RegisterType((*UnseenAttestationsRequest)(nil), "ethereum.beacon.p2p.v1.UnseenAttestationsRequest")
-	proto.RegisterType((*BatchedAttestationResponse)(nil), "ethereum.beacon.p2p.v1.BatchedAttestationResponse")
+	proto.RegisterType((*UnseenAttestationResponse)(nil), "ethereum.beacon.p2p.v1.UnseenAttestationResponse")
 	proto.RegisterType((*ProposerSlashingAnnounce)(nil), "ethereum.beacon.p2p.v1.ProposerSlashingAnnounce")
 	proto.RegisterType((*ProposerSlashingRequest)(nil), "ethereum.beacon.p2p.v1.ProposerSlashingRequest")
 	proto.RegisterType((*ProposerSlashingResponse)(nil), "ethereum.beacon.p2p.v1.ProposerSlashingResponse")
@@ -1943,7 +1943,7 @@ func (m *UnseenAttestationsRequest) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *BatchedAttestationResponse) Marshal() (dAtA []byte, err error) {
+func (m *UnseenAttestationResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -1953,7 +1953,7 @@ func (m *BatchedAttestationResponse) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *BatchedAttestationResponse) MarshalTo(dAtA []byte) (int, error) {
+func (m *UnseenAttestationResponse) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -2602,7 +2602,7 @@ func (m *UnseenAttestationsRequest) Size() (n int) {
 	return n
 }
 
-func (m *BatchedAttestationResponse) Size() (n int) {
+func (m *UnseenAttestationResponse) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -4145,7 +4145,7 @@ func (m *UnseenAttestationsRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *BatchedAttestationResponse) Unmarshal(dAtA []byte) error {
+func (m *UnseenAttestationResponse) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -4168,10 +4168,10 @@ func (m *BatchedAttestationResponse) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: BatchedAttestationResponse: wiretype end group for non-group")
+			return fmt.Errorf("proto: UnseenAttestationResponse: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: BatchedAttestationResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: UnseenAttestationResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -5449,17 +5449,17 @@ var (
 )
 
 func init() {
-	proto.RegisterFile("proto/beacon/p2p/v1/messages.proto", fileDescriptor_messages_873c5955423327e3)
+	proto.RegisterFile("proto/beacon/p2p/v1/messages.proto", fileDescriptor_messages_d3945b1b4945a296)
 }
 
-var fileDescriptor_messages_873c5955423327e3 = []byte{
-	// 814 bytes of a gzipped FileDescriptorProto
+var fileDescriptor_messages_d3945b1b4945a296 = []byte{
+	// 813 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x56, 0xdd, 0x6e, 0xe2, 0x46,
 	0x14, 0xae, 0x03, 0x09, 0xc9, 0x81, 0x50, 0x67, 0xd2, 0x26, 0x90, 0x36, 0x84, 0x38, 0x8d, 0x4a,
 	0x2b, 0x05, 0x94, 0xf4, 0x2a, 0x97, 0x36, 0x71, 0x4b, 0x7e, 0x6a, 0x52, 0xdb, 0xb4, 0xea, 0xc5,
 	0xca, 0x6b, 0x60, 0x14, 0xa3, 0x25, 0xb6, 0x97, 0x19, 0x50, 0xf2, 0x00, 0xfb, 0x0c, 0xfb, 0x04,
 	0xfb, 0x2e, 0x7b, 0xb9, 0x8f, 0xb0, 0xca, 0x93, 0xac, 0x6c, 0x8f, 0xc1, 0x80, 0x31, 0xac, 0xb4,
-	0x77, 0x9e, 0x73, 0xbe, 0xef, 0x9b, 0xf3, 0x9d, 0xf9, 0x90, 0x00, 0xc1, 0x1d, 0x38, 0xd4, 0xa9,
+	0x77, 0x9e, 0x73, 0xbe, 0xef, 0x9b, 0xef, 0x3b, 0x73, 0x90, 0x00, 0xc1, 0x1d, 0x38, 0xd4, 0xa9,
 	0xb5, 0xb1, 0xd9, 0x71, 0xec, 0x9a, 0x7b, 0xe1, 0xd6, 0x46, 0xe7, 0xb5, 0x47, 0x4c, 0x88, 0xf9,
 	0x80, 0x49, 0xd5, 0x6f, 0xa2, 0x3d, 0x4c, 0x2d, 0x3c, 0xc0, 0xc3, 0xc7, 0x6a, 0x00, 0xab, 0xba,
 	0x17, 0x6e, 0x75, 0x74, 0x7e, 0x70, 0x14, 0xc7, 0xa5, 0xcf, 0x6e, 0x48, 0x14, 0x6e, 0x60, 0x57,
@@ -5467,42 +5467,42 @@ var fileDescriptor_messages_873c5955423327e3 = []byte{
 	0x93, 0x58, 0x05, 0xae, 0xcc, 0x55, 0x72, 0xaa, 0xff, 0x8d, 0x8e, 0x20, 0x4b, 0xfa, 0x0e, 0x35,
 	0xec, 0xe1, 0x63, 0x1b, 0x0f, 0x0a, 0x6b, 0x65, 0xae, 0x92, 0x56, 0xc1, 0x2b, 0x29, 0x7e, 0x45,
 	0xa8, 0x00, 0x8a, 0x68, 0xa9, 0xf8, 0xed, 0x10, 0x13, 0x1a, 0x27, 0x25, 0x88, 0x50, 0x9a, 0x47,
-	0x4a, 0xcf, 0xda, 0x58, 0x6b, 0xf6, 0x32, 0x6e, 0xee, 0xb2, 0xf7, 0xdc, 0xd4, 0xe4, 0x2a, 0x26,
-	0xae, 0x63, 0x13, 0x8c, 0x2e, 0x61, 0xbd, 0xed, 0x15, 0x7c, 0x4a, 0xf6, 0xe2, 0xa4, 0x1a, 0xbf,
-	0x99, 0x6a, 0x94, 0x1b, 0x30, 0x90, 0x0c, 0x59, 0x93, 0x52, 0x4c, 0xa8, 0x49, 0x7b, 0x8e, 0xed,
-	0x1b, 0x4c, 0x10, 0x10, 0x27, 0x50, 0x35, 0xca, 0x13, 0x5a, 0x50, 0x94, 0x4c, 0xda, 0xb1, 0x70,
-	0x37, 0x66, 0x1b, 0x87, 0x00, 0x84, 0x9a, 0x03, 0x6a, 0x78, 0x56, 0x98, 0xad, 0x2d, 0xbf, 0xe2,
-	0x99, 0x47, 0x45, 0xd8, 0xc4, 0x76, 0x37, 0x68, 0x06, 0x0b, 0xce, 0x60, 0xbb, 0xeb, 0xb5, 0x04,
-	0x0b, 0x0e, 0xe2, 0x64, 0x99, 0xed, 0x1b, 0xc8, 0xb7, 0x83, 0xae, 0xe1, 0x9b, 0x21, 0x05, 0xae,
-	0x9c, 0x5a, 0xd5, 0xff, 0x36, 0xa3, 0xfa, 0x27, 0x22, 0x20, 0xe0, 0xeb, 0x96, 0xd9, 0xb3, 0x1b,
-	0xd8, 0xec, 0xb2, 0xb9, 0x85, 0x11, 0xec, 0x44, 0x6a, 0xec, 0xd2, 0xb8, 0x94, 0x20, 0x48, 0x47,
-	0xa6, 0xf7, 0xbf, 0x27, 0x6f, 0x92, 0xfa, 0xda, 0x37, 0x11, 0xce, 0x60, 0x3f, 0xa8, 0x6a, 0xd4,
-	0xa4, 0xb8, 0x61, 0x12, 0x2b, 0x29, 0xa3, 0x93, 0x08, 0xfa, 0xf0, 0xa4, 0x08, 0xbe, 0x0a, 0xe3,
-	0xc3, 0x90, 0xcc, 0xd2, 0x9f, 0x90, 0x0b, 0x66, 0x32, 0xbc, 0xe7, 0xc4, 0xab, 0xa5, 0x28, 0x90,
-	0xc8, 0xb6, 0x27, 0x07, 0xe1, 0x37, 0xd8, 0x8d, 0x04, 0x64, 0xd9, 0xcc, 0xd1, 0x2c, 0x25, 0xcc,
-	0xec, 0x4e, 0x89, 0x26, 0x3e, 0xc3, 0x37, 0xca, 0xf2, 0x4f, 0x50, 0x6c, 0xd9, 0x04, 0x63, 0x3b,
-	0x82, 0x20, 0x61, 0x26, 0xf0, 0x38, 0x91, 0x71, 0x53, 0xfd, 0x05, 0xb9, 0x88, 0xd2, 0xd2, 0x3c,
-	0x46, 0x25, 0xa6, 0x88, 0x42, 0x15, 0x0a, 0xf7, 0x03, 0xc7, 0x75, 0x08, 0x1e, 0x68, 0x7d, 0x93,
-	0x58, 0x3d, 0xfb, 0x21, 0x71, 0x9f, 0x67, 0xb0, 0x3f, 0x8b, 0x4f, 0x5a, 0xea, 0x3b, 0x6e, 0x5e,
-	0x3f, 0x71, 0xb5, 0x2d, 0xd8, 0x71, 0x19, 0xde, 0x20, 0x8c, 0xc0, 0x16, 0x5c, 0x59, 0xe4, 0x6e,
-	0xee, 0x02, 0xde, 0x9d, 0xa9, 0x78, 0x36, 0x83, 0x1d, 0xac, 0x6e, 0x73, 0x16, 0xbf, 0xcc, 0xe6,
-	0x3c, 0x3e, 0xd9, 0x66, 0x88, 0x5f, 0xd9, 0xe6, 0xdc, 0x05, 0xfc, 0x6c, 0x45, 0x38, 0x85, 0xef,
-	0xaf, 0xb0, 0xeb, 0x90, 0x1e, 0x4d, 0x74, 0xf7, 0x0b, 0xe4, 0x19, 0x2c, 0xc9, 0xd4, 0xeb, 0xb1,
-	0x58, 0xa2, 0x95, 0x4b, 0xc8, 0x74, 0x03, 0x18, 0x33, 0x70, 0xb4, 0xc8, 0x40, 0xa8, 0x16, 0xe2,
-	0x05, 0x01, 0x72, 0xf2, 0xd3, 0x92, 0x59, 0x8f, 0x21, 0xeb, 0x61, 0x92, 0x7f, 0xb9, 0xb9, 0x00,
-	0x92, 0x30, 0xe5, 0x1d, 0xe4, 0x47, 0x4e, 0x7f, 0x68, 0x53, 0x73, 0xf0, 0x6c, 0xe0, 0xa7, 0xf1,
-	0xb0, 0xa7, 0x8b, 0x86, 0xfd, 0x37, 0x44, 0xfb, 0xd2, 0xdb, 0xa3, 0xe8, 0xf1, 0xf7, 0x0f, 0x29,
-	0x58, 0xd7, 0x1d, 0xb7, 0xd7, 0x41, 0x59, 0xc8, 0xb4, 0x94, 0x5b, 0xa5, 0xf9, 0x9f, 0xc2, 0x7f,
-	0x87, 0x8a, 0xf0, 0xa3, 0x24, 0x8b, 0xf5, 0xa6, 0x62, 0x48, 0x77, 0xcd, 0xfa, 0xad, 0x21, 0x2a,
-	0x4a, 0xb3, 0xa5, 0xd4, 0x65, 0x9e, 0x43, 0x05, 0xf8, 0x61, 0xaa, 0xa5, 0xca, 0xff, 0xb4, 0x64,
-	0x4d, 0xe7, 0xd7, 0xd0, 0xaf, 0x70, 0x12, 0xd7, 0x31, 0xa4, 0xff, 0x0d, 0xed, 0xae, 0xa9, 0x1b,
-	0x4a, 0xeb, 0x6f, 0x49, 0x56, 0xf9, 0xd4, 0x9c, 0xba, 0x2a, 0x6b, 0xf7, 0x4d, 0x45, 0x93, 0xf9,
-	0x34, 0x2a, 0xc3, 0xcf, 0x92, 0xa8, 0xd7, 0x1b, 0xf2, 0x95, 0x11, 0x7b, 0xcb, 0x3a, 0x3a, 0x86,
-	0xc3, 0x05, 0x08, 0x26, 0xb2, 0x81, 0xf6, 0x00, 0xd5, 0x1b, 0xe2, 0xb5, 0x62, 0x34, 0x64, 0xf1,
-	0x6a, 0x4c, 0xcd, 0xa0, 0x7d, 0xd8, 0x9d, 0xaa, 0x33, 0xc2, 0x26, 0x2a, 0xc1, 0x01, 0xd3, 0xd2,
-	0x74, 0x51, 0x97, 0x8d, 0x86, 0xa8, 0x35, 0x26, 0x9e, 0xb7, 0x22, 0x9e, 0x83, 0x7e, 0x28, 0x09,
-	0x11, 0x2b, 0x61, 0x87, 0x89, 0x66, 0x3d, 0x92, 0xa8, 0xeb, 0xb2, 0x57, 0xbf, 0x6e, 0x2a, 0x13,
-	0xb9, 0x9c, 0x37, 0x47, 0xb4, 0x13, 0xaa, 0x6d, 0xcf, 0x52, 0xc6, 0x62, 0x79, 0x29, 0xf7, 0xf1,
-	0xa5, 0xc4, 0x7d, 0x7a, 0x29, 0x71, 0x9f, 0x5f, 0x4a, 0x5c, 0x7b, 0xc3, 0xff, 0x57, 0xf6, 0xc7,
-	0x97, 0x00, 0x00, 0x00, 0xff, 0xff, 0x57, 0x31, 0x9d, 0x73, 0xf4, 0x09, 0x00, 0x00,
+	0x4a, 0xcf, 0xda, 0x58, 0x6b, 0xf6, 0x32, 0x6e, 0xee, 0xb2, 0xf7, 0xdc, 0x94, 0x73, 0x15, 0x13,
+	0xd7, 0xb1, 0x09, 0x46, 0x97, 0xb0, 0xde, 0xf6, 0x0a, 0x3e, 0x25, 0x7b, 0x71, 0x52, 0x8d, 0x9f,
+	0x4c, 0x35, 0xca, 0x0d, 0x18, 0x48, 0x86, 0xac, 0x49, 0x29, 0x26, 0xd4, 0xa4, 0x3d, 0xc7, 0xf6,
+	0x03, 0x26, 0x08, 0x88, 0x13, 0xa8, 0x1a, 0xe5, 0x09, 0x2d, 0x28, 0x4a, 0x26, 0xed, 0x58, 0xb8,
+	0x1b, 0x33, 0x8d, 0x43, 0x00, 0x42, 0xcd, 0x01, 0x35, 0xbc, 0x28, 0x2c, 0xd6, 0x96, 0x5f, 0xf1,
+	0xc2, 0xa3, 0x22, 0x6c, 0x62, 0xbb, 0x1b, 0x34, 0x83, 0x01, 0x67, 0xb0, 0xdd, 0xf5, 0x5a, 0x82,
+	0x05, 0x07, 0x71, 0xb2, 0x2c, 0xf6, 0x0d, 0xe4, 0xdb, 0x41, 0xd7, 0xf0, 0xc3, 0x90, 0x02, 0x57,
+	0x4e, 0xad, 0x9a, 0x7f, 0x9b, 0x51, 0xfd, 0x13, 0x11, 0x10, 0xf0, 0x75, 0xcb, 0xec, 0xd9, 0x0d,
+	0x6c, 0x76, 0x99, 0x6f, 0x61, 0x04, 0x3b, 0x91, 0x1a, 0xbb, 0x34, 0x6e, 0x4b, 0x10, 0xa4, 0x23,
+	0xee, 0xfd, 0xef, 0xc9, 0x9b, 0xa4, 0xbe, 0xf6, 0x4d, 0x84, 0x33, 0xd8, 0x0f, 0xaa, 0x1a, 0x35,
+	0x29, 0x6e, 0x98, 0xc4, 0x4a, 0xda, 0xd1, 0xc9, 0x0a, 0xfa, 0xf0, 0xa4, 0x15, 0x7c, 0x15, 0xae,
+	0x0f, 0x43, 0xb2, 0x48, 0x7f, 0x42, 0x2e, 0xf0, 0x64, 0x78, 0xcf, 0x89, 0x57, 0xdb, 0xa2, 0x40,
+	0x22, 0xdb, 0x9e, 0x1c, 0x84, 0xdf, 0x60, 0x37, 0xb2, 0x20, 0xcb, 0x3c, 0x47, 0x77, 0x29, 0xc1,
+	0xb3, 0x3b, 0x25, 0x9a, 0xf8, 0x0c, 0xdf, 0x68, 0x97, 0x7f, 0x82, 0x62, 0xcb, 0x26, 0x18, 0xdb,
+	0x11, 0x04, 0x09, 0x77, 0xa2, 0x1b, 0xd3, 0x1c, 0x9b, 0xfa, 0x0b, 0x72, 0x11, 0xa1, 0xa5, 0xeb,
+	0x18, 0x95, 0x98, 0x22, 0x0a, 0x55, 0x28, 0xdc, 0x0f, 0x1c, 0xd7, 0x21, 0x78, 0xa0, 0xf5, 0x4d,
+	0x62, 0xf5, 0xec, 0x87, 0xc4, 0x71, 0x9e, 0xc1, 0xfe, 0x2c, 0x3e, 0x69, 0xa6, 0xef, 0xb8, 0x79,
+	0xfd, 0xc4, 0xc9, 0xb6, 0x60, 0xc7, 0x65, 0x78, 0x83, 0x30, 0x02, 0x9b, 0x6f, 0x65, 0x51, 0xba,
+	0xb9, 0x0b, 0x78, 0x77, 0xa6, 0xe2, 0xc5, 0x0c, 0x66, 0xb0, 0x7a, 0xcc, 0x59, 0xfc, 0xb2, 0x98,
+	0xf3, 0xf8, 0xe4, 0x98, 0x21, 0x7e, 0xe5, 0x98, 0x73, 0x17, 0xf0, 0xb3, 0x15, 0xe1, 0x14, 0xbe,
+	0xbf, 0xc2, 0xae, 0x43, 0x7a, 0x34, 0x31, 0xdd, 0x2f, 0x90, 0x67, 0xb0, 0xa4, 0x50, 0xaf, 0xc7,
+	0x62, 0x89, 0x51, 0x2e, 0x21, 0xd3, 0x0d, 0x60, 0x2c, 0xc0, 0xd1, 0xa2, 0x00, 0xa1, 0x5a, 0x88,
+	0x17, 0x04, 0xc8, 0xc9, 0x4f, 0x4b, 0xbc, 0x1e, 0x43, 0xd6, 0xc3, 0x24, 0xff, 0x70, 0x73, 0x01,
+	0x24, 0xc1, 0xe5, 0x1d, 0xe4, 0x47, 0x4e, 0x7f, 0x68, 0x53, 0x73, 0xf0, 0x6c, 0xe0, 0xa7, 0xb1,
+	0xd9, 0xd3, 0x45, 0x66, 0xff, 0x0d, 0xd1, 0xbe, 0xf4, 0xf6, 0x28, 0x7a, 0xfc, 0xfd, 0x43, 0x0a,
+	0xd6, 0x75, 0xc7, 0xed, 0x75, 0x50, 0x16, 0x32, 0x2d, 0xe5, 0x56, 0x69, 0xfe, 0xa7, 0xf0, 0xdf,
+	0xa1, 0x22, 0xfc, 0x28, 0xc9, 0x62, 0xbd, 0xa9, 0x18, 0xd2, 0x5d, 0xb3, 0x7e, 0x6b, 0x88, 0x8a,
+	0xd2, 0x6c, 0x29, 0x75, 0x99, 0xe7, 0x50, 0x01, 0x7e, 0x98, 0x6a, 0xa9, 0xf2, 0x3f, 0x2d, 0x59,
+	0xd3, 0xf9, 0x35, 0xf4, 0x2b, 0x9c, 0xc4, 0x75, 0x0c, 0xe9, 0x7f, 0x43, 0xbb, 0x6b, 0xea, 0x86,
+	0xd2, 0xfa, 0x5b, 0x92, 0x55, 0x3e, 0x35, 0xa7, 0xae, 0xca, 0xda, 0x7d, 0x53, 0xd1, 0x64, 0x3e,
+	0x8d, 0xca, 0xf0, 0xb3, 0x24, 0xea, 0xf5, 0x86, 0x7c, 0x65, 0xc4, 0xde, 0xb2, 0x8e, 0x8e, 0xe1,
+	0x70, 0x01, 0x82, 0x89, 0x6c, 0xa0, 0x3d, 0x40, 0xf5, 0x86, 0x78, 0xad, 0x18, 0x0d, 0x59, 0xbc,
+	0x1a, 0x53, 0x33, 0x68, 0x1f, 0x76, 0xa7, 0xea, 0x8c, 0xb0, 0x89, 0x4a, 0x70, 0xc0, 0xb4, 0x34,
+	0x5d, 0xd4, 0x65, 0xa3, 0x21, 0x6a, 0x8d, 0x49, 0xe6, 0xad, 0x48, 0xe6, 0xa0, 0x1f, 0x4a, 0x42,
+	0x24, 0x4a, 0xd8, 0x61, 0xa2, 0x59, 0x8f, 0x24, 0xea, 0xba, 0xec, 0xd5, 0xaf, 0x9b, 0xca, 0x44,
+	0x2e, 0xe7, 0xf9, 0x88, 0x76, 0x42, 0xb5, 0xed, 0x59, 0xca, 0x58, 0x2c, 0x2f, 0xe5, 0x3e, 0xbe,
+	0x94, 0xb8, 0x4f, 0x2f, 0x25, 0xee, 0xf3, 0x4b, 0x89, 0x6b, 0x6f, 0xf8, 0x7f, 0xca, 0xfe, 0xf8,
+	0x12, 0x00, 0x00, 0xff, 0xff, 0xf5, 0x91, 0x83, 0xcb, 0xf3, 0x09, 0x00, 0x00,
 }
