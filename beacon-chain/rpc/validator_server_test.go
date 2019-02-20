@@ -49,108 +49,19 @@ func TestValidatorIndex_Ok(t *testing.T) {
 	}
 }
 
-func TestValidatorEpochAssignments_Ok(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-
-	genesis := b.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(genesis); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
-	}
-
-	state, err := genesisState(params.BeaconConfig().DepositsForChainStart)
-	if err != nil {
-		t.Fatalf("Could not setup genesis state: %v", err)
-	}
-
-	if err := db.UpdateChainHead(genesis, state); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
-
-	validatorServer := &ValidatorServer{
-		beaconDB: db,
-	}
-	var pubKey [96]byte
-	copy(pubKey[:], []byte("0"))
-	req := &pb.ValidatorEpochAssignmentsRequest{
-		EpochStart: params.BeaconConfig().GenesisSlot,
-		PublicKey:  pubKey[:],
-	}
-	if _, err := validatorServer.ValidatorEpochAssignments(context.Background(), req); err != nil {
-		t.Errorf("Validator epoch assignments should not fail, received: %v", err)
-	}
-}
-
-func TestValidatorEpochAssignments_WrongPubkeyLength(t *testing.T) {
+func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
 	validatorServer := &ValidatorServer{
 		beaconDB: db,
 	}
-	req := &pb.ValidatorEpochAssignmentsRequest{
-		EpochStart: params.BeaconConfig().GenesisSlot,
-		PublicKey:  []byte{},
+	req := &pb.ValidatorIndexRequest{
+		PublicKey: []byte{},
 	}
 	want := fmt.Sprintf("expected public key to have length %d", params.BeaconConfig().BLSPubkeyLength)
-	if _, err := validatorServer.ValidatorEpochAssignments(context.Background(), req); !strings.Contains(err.Error(), want) {
+	if _, err := validatorServer.NextEpochCommitteeAssignment(context.Background(), req); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
-	}
-}
-
-func TestValidatorCommitteeAtSlot_CrosslinkCommitteesFailure(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	genesis := b.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(genesis); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
-	}
-
-	state, err := genesisState(params.BeaconConfig().DepositsForChainStart)
-	if err != nil {
-		t.Fatalf("Could not setup genesis state: %v", err)
-	}
-
-	if err := db.UpdateChainHead(genesis, state); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
-	validatorServer := &ValidatorServer{
-		beaconDB: db,
-	}
-	req := &pb.CommitteeRequest{
-		Slot: params.BeaconConfig().SlotsPerEpoch * 10,
-	}
-	want := "could not get crosslink committees at slot"
-	if _, err := validatorServer.ValidatorCommitteeAtSlot(context.Background(), req); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
-	}
-}
-
-func TestValidatorCommitteeAtSlot_Ok(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	genesis := b.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(genesis); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
-	}
-
-	state, err := genesisState(params.BeaconConfig().DepositsForChainStart)
-	if err != nil {
-		t.Fatalf("Could not setup genesis state: %v", err)
-	}
-
-	if err := db.UpdateChainHead(genesis, state); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
-	}
-	validatorServer := &ValidatorServer{
-		beaconDB: db,
-	}
-	req := &pb.CommitteeRequest{
-		Slot:           params.BeaconConfig().GenesisSlot + 1,
-		ValidatorIndex: 31,
-	}
-	if _, err := validatorServer.ValidatorCommitteeAtSlot(context.Background(), req); err != nil {
-		t.Errorf("Unable to fetch committee at slot: %v", err)
 	}
 }
 
@@ -164,8 +75,10 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	vs := &ValidatorServer{
 		beaconDB: db,
 	}
+	var pubKey [96]byte
+	copy(pubKey[:], []byte(strconv.Itoa(99999)))
 	req := &pb.ValidatorIndexRequest{
-		PublicKey: []byte{'A'},
+		PublicKey: pubKey[:],
 	}
 	want := fmt.Sprintf("can't find validator index for public key %#x", req.PublicKey)
 	if _, err := vs.NextEpochCommitteeAssignment(context.Background(), req); !strings.Contains(err.Error(), want) {
