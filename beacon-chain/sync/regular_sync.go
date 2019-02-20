@@ -458,12 +458,12 @@ func (rs *RegularSync) handleAttestationRequestByHash(msg p2p.Message) {
 		return
 	}
 	if att == nil {
-		log.WithField("attestationRoot", fmt.Sprintf("%#x", root)).Debugf("Attestation is not in db")
+		log.Debugf("Attestation %#x is not in db", root)
 		return
 	}
 
 	_, sendAttestationSpan := trace.StartSpan(ctx, "sendAttestation")
-	log.WithField("attestationRoot", fmt.Sprintf("%#x", root)).Debugf("Sending response to peer %v", msg.Peer)
+	log.Debugf("Sending attestation %#x to peer %v", root, msg.Peer)
 	rs.p2p.Send(&pb.AttestationResponse{
 		Attestation: att,
 	}, msg.Peer)
@@ -483,13 +483,14 @@ func (rs *RegularSync) handleUnseenAttestationsRequest(msg p2p.Message) {
 		log.Error(err)
 		return
 	}
+
 	if len(atts) == 0 {
 		log.Debug("There's no unseen attestation in db")
 		return
 	}
 
 	_, sendAttestationsSpan := trace.StartSpan(ctx, "sendAttestation")
-	log.Debugf("Sending response for batched unseen to peer %v", msg.Peer)
+	log.Debugf("Sending response for batched unseen attestations to peer %v", msg.Peer)
 	rs.p2p.Send(&pb.BatchedAttestationResponse{
 		Attestations: atts,
 	}, msg.Peer)

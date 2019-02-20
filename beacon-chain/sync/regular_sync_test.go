@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -497,4 +498,156 @@ func TestReceiveExitReq_Ok(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 	testutil.AssertLogsContain(t, hook, "Forwarding validator exit request to subscribed services")
+}
+
+func TestHandleAttReq_HashNotFound(t *testing.T) {
+	hook := logTest.NewGlobal()
+	os := &mockOperationService{}
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	cfg := &RegularSyncConfig{
+		OperationService: os,
+		P2P:              &mockP2P{},
+		BeaconDB:         db,
+	}
+	ss := NewRegularSyncService(context.Background(), cfg)
+
+	exitRoutine := make(chan bool)
+	go func() {
+		ss.run()
+		exitRoutine <- true
+	}()
+
+	req := &pb.AttestationRequest{
+		Hash: []byte{'A'},
+	}
+	msg := p2p.Message{
+		Ctx:  context.Background(),
+		Data: req,
+		Peer: p2p.Peer{},
+	}
+
+	ss.attestationReqByHashBuf <- msg
+	ss.cancel()
+	<-exitRoutine
+	want := fmt.Sprintf("Attestation %#x is not in db", bytesutil.ToBytes32(req.Hash))
+	testutil.AssertLogsContain(t, hook, want)
+}
+
+func TestHandleUnseenAttsReq_EmptyAttsPool(t *testing.T) {
+	hook := logTest.NewGlobal()
+	os := &mockOperationService{}
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	cfg := &RegularSyncConfig{
+		OperationService: os,
+		P2P:              &mockP2P{},
+		BeaconDB:         db,
+	}
+	ss := NewRegularSyncService(context.Background(), cfg)
+
+	exitRoutine := make(chan bool)
+	go func() {
+		ss.run()
+		exitRoutine <- true
+	}()
+
+	req := &pb.UnseenAttestationsRequest{}
+	msg := p2p.Message{
+		Ctx:  context.Background(),
+		Data: req,
+		Peer: p2p.Peer{},
+	}
+
+	ss.unseenAttestationsReqBuf <- msg
+	ss.cancel()
+	<-exitRoutine
+	testutil.AssertLogsContain(t, hook, "There's no unseen attestation in db")
+}
+
+func TestHandleAttReq_Ok(t *testing.T) {
+	hook := logTest.NewGlobal()
+	os := &mockOperationService{}
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	att := &pb.Attestation{
+		AggregationBitfield: []byte{'A', 'B', 'C'},
+	}
+	attRoot, err := hashutil.HashProto(att)
+	if err != nil {
+		t.Fatalf("Could not hash attestation: %v", err)
+	}
+	if err := db.SaveAttestation(att); err != nil {
+		t.Fatalf("Could not save attestation: %v", err)
+	}
+
+	cfg := &RegularSyncConfig{
+		OperationService: os,
+		P2P:              &mockP2P{},
+		BeaconDB:         db,
+	}
+	ss := NewRegularSyncService(context.Background(), cfg)
+
+	exitRoutine := make(chan bool)
+	go func() {
+		ss.run()
+		exitRoutine <- true
+	}()
+
+	req := &pb.AttestationRequest{
+		Hash: attRoot[:],
+	}
+	msg := p2p.Message{
+		Ctx:  context.Background(),
+		Data: req,
+		Peer: p2p.Peer{},
+	}
+
+	ss.attestationReqByHashBuf <- msg
+	ss.cancel()
+	<-exitRoutine
+	want := fmt.Sprintf("Sending attestation %#x to peer", attRoot)
+	testutil.AssertLogsContain(t, hook, want)
+}
+
+func TestHandleUnseenAttsReq_Ok(t *testing.T) {
+	hook := logTest.NewGlobal()
+	os := &mockOperationService{}
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	att := &pb.Attestation{
+		AggregationBitfield: []byte{'D', 'E', 'F'},
+	}
+	if err := db.SaveAttestation(att); err != nil {
+		t.Fatalf("Could not save attestation: %v", err)
+	}
+
+	cfg := &RegularSyncConfig{
+		OperationService: os,
+		P2P:              &mockP2P{},
+		BeaconDB:         db,
+	}
+	ss := NewRegularSyncService(context.Background(), cfg)
+
+	exitRoutine := make(chan bool)
+	go func() {
+		ss.run()
+		exitRoutine <- true
+	}()
+
+	req := &pb.UnseenAttestationsRequest{}
+	msg := p2p.Message{
+		Ctx:  context.Background(),
+		Data: req,
+		Peer: p2p.Peer{},
+	}
+
+	ss.unseenAttestationsReqBuf <- msg
+	ss.cancel()
+	<-exitRoutine
+	testutil.AssertLogsContain(t, hook, "Sending response for batched unseen attestations to peer")
 }
