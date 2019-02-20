@@ -512,7 +512,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "153ac476189d567564fda94622d7a8c0fb338f6b",
+    commit = "90b0e4468f9980bf79a2290394adaf7f045c5d24",
     importpath = "golang.org/x/sys",
 )
 
@@ -969,7 +969,7 @@ go_repository(
 
 go_repository(
     name = "com_github_golang_snappy",
-    commit = "2a8bb927dd31d8daada140a5d09578521ce5c36a",
+    tag = "v0.0.1",
     importpath = "github.com/golang/snappy",
 )
 
@@ -1001,6 +1001,18 @@ go_repository(
     name = "in_gopkg_natefinch_npipe_v2",
     commit = "c1b8fa8bdccecb0b8db834ee0b92fdbcfa606dd6",
     importpath = "gopkg.in/natefinch/npipe.v2",
+)
+
+go_repository(
+    name = "org_gonum_v1_gonum",
+    commit = "70a1e933af10e87000d2ccabdd509b87d8626153",
+    importpath = "gonum.org/v1/gonum",
+)
+
+go_repository(
+    name = "org_golang_x_exp",
+    commit = "21964bba6549f73cc16f1ddbc95bcbbb5b679985",
+    importpath = "golang.org/x/exp",
 )
 
 go_repository(
