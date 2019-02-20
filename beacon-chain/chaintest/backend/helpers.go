@@ -1,15 +1,16 @@
 package backend
 
 import (
+	"crypto/rand"
+	"encoding/binary"
 	"fmt"
-	"strconv"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/ssz"
-
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
@@ -21,17 +22,27 @@ func generateSimulatedBlock(
 	prevBlockRoot [32]byte,
 	depositsTrie *trieutil.DepositTrie,
 	simObjects *SimulatedObjects,
+	privKeys []*bls.SecretKey,
 ) (*pb.BeaconBlock, [32]byte, error) {
 	stateRoot, err := ssz.TreeHash(beaconState)
 	if err != nil {
 		return nil, [32]byte{}, fmt.Errorf("could not tree hash state: %v", err)
 	}
-	randaoReveal := [32]byte{}
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot+1)
+	if err != nil {
+		return nil, [32]byte{}, err
+	}
+	epoch := helpers.SlotToEpoch(beaconState.Slot + 1)
+	buf := make([]byte, 32)
+	binary.LittleEndian.PutUint64(buf, epoch)
+	domain := helpers.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
+	// We make the previous validator's index sign the message instead of the proposer.
+	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	block := &pb.BeaconBlock{
-		Slot:               beaconState.Slot + 1,
-		RandaoRevealHash32: randaoReveal[:],
-		ParentRootHash32:   prevBlockRoot[:],
-		StateRootHash32:    stateRoot[:],
+		Slot:             beaconState.Slot + 1,
+		RandaoReveal:     epochSignature.Marshal(),
+		ParentRootHash32: prevBlockRoot[:],
+		StateRootHash32:  stateRoot[:],
 		Eth1Data: &pb.Eth1Data{
 			DepositRootHash32: []byte{1},
 			BlockHash32:       []byte{2},
@@ -51,7 +62,7 @@ func generateSimulatedBlock(
 			ProofOfPossession:           make([]byte, 96),
 		}
 
-		data, err := b.EncodeDepositData(depositInput, simObjects.simDeposit.Amount, time.Now().Unix())
+		data, err := helpers.EncodeDepositData(depositInput, simObjects.simDeposit.Amount, time.Now().Unix())
 		if err != nil {
 			return nil, [32]byte{}, fmt.Errorf("could not encode deposit data: %v", err)
 		}
@@ -117,24 +128,30 @@ func generateSimulatedBlock(
 
 // Generates initial deposits for creating a beacon state in the simulated
 // backend based on the yaml configuration.
-func generateInitialSimulatedDeposits(numDeposits uint64) ([]*pb.Deposit, error) {
+func generateInitialSimulatedDeposits(numDeposits uint64) ([]*pb.Deposit, []*bls.SecretKey, error) {
 	genesisTime := time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC).Unix()
 	deposits := make([]*pb.Deposit, numDeposits)
+	privKeys := make([]*bls.SecretKey, numDeposits)
 	for i := 0; i < len(deposits); i++ {
+		priv, err := bls.RandKey(rand.Reader)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not initialize key: %v", err)
+		}
 		depositInput := &pb.DepositInput{
-			Pubkey:                      []byte(strconv.Itoa(i)),
+			Pubkey:                      priv.PublicKey().Marshal(),
 			WithdrawalCredentialsHash32: make([]byte, 32),
 			ProofOfPossession:           make([]byte, 96),
 		}
-		depositData, err := b.EncodeDepositData(
+		depositData, err := helpers.EncodeDepositData(
 			depositInput,
 			params.BeaconConfig().MaxDepositAmount,
 			genesisTime,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("could not encode genesis block deposits: %v", err)
+			return nil, nil, fmt.Errorf("could not encode genesis block deposits: %v", err)
 		}
 		deposits[i] = &pb.Deposit{DepositData: depositData}
+		privKeys[i] = priv
 	}
-	return deposits, nil
+	return deposits, privKeys, nil
 }

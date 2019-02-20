@@ -9,6 +9,8 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/bls"
+
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -71,7 +73,7 @@ func NewSimulatedBackend() (*SimulatedBackend, error) {
 
 // GenerateBlockAndAdvanceChain generates a simulated block and runs that block though
 // state transition.
-func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain(objects *SimulatedObjects) error {
+func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain(objects *SimulatedObjects, privKeys []*bls.SecretKey) error {
 	prevBlockRoot := sb.prevBlockRoots[len(sb.prevBlockRoots)-1]
 	// We generate a new block to pass into the state transition.
 	newBlock, newBlockRoot, err := generateSimulatedBlock(
@@ -79,6 +81,7 @@ func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain(objects *SimulatedObjec
 		prevBlockRoot,
 		sb.depositTrie,
 		objects,
+		privKeys,
 	)
 	if err != nil {
 		return fmt.Errorf("could not generate simulated beacon block %v", err)
@@ -182,7 +185,8 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 	defer teardownDB(sb.beaconDB)
 	setTestConfig(testCase)
 
-	if err := sb.initializeStateTest(testCase); err != nil {
+	privKeys, err := sb.initializeStateTest(testCase)
+	if err != nil {
 		return fmt.Errorf("could not initialize state test %v", err)
 	}
 	averageTimesPerTransition := []time.Duration{}
@@ -201,7 +205,7 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 		simulatedObjects := sb.generateSimulatedObjects(testCase, i)
 		startTime := time.Now()
 
-		if err := sb.GenerateBlockAndAdvanceChain(simulatedObjects); err != nil {
+		if err := sb.GenerateBlockAndAdvanceChain(simulatedObjects, privKeys); err != nil {
 			return fmt.Errorf("could not generate the block and advance the chain %v", err)
 		}
 
@@ -224,16 +228,16 @@ func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) erro
 
 // initializeStateTest sets up the environment by generating all the required objects in order
 // to proceed with the state test.
-func (sb *SimulatedBackend) initializeStateTest(testCase *StateTestCase) error {
-	initialDeposits, err := generateInitialSimulatedDeposits(testCase.Config.DepositsForChainStart)
+func (sb *SimulatedBackend) initializeStateTest(testCase *StateTestCase) ([]*bls.SecretKey, error) {
+	initialDeposits, privKeys, err := generateInitialSimulatedDeposits(testCase.Config.DepositsForChainStart)
 	if err != nil {
-		return fmt.Errorf("could not simulate initial validator deposits: %v", err)
+		return nil, fmt.Errorf("could not simulate initial validator deposits: %v", err)
 	}
 	if err := sb.setupBeaconStateAndGenesisBlock(initialDeposits); err != nil {
-		return fmt.Errorf("could not set up beacon state and initialize genesis block %v", err)
+		return nil, fmt.Errorf("could not set up beacon state and initialize genesis block %v", err)
 	}
 	sb.depositTrie = trieutil.NewDepositTrie()
-	return nil
+	return privKeys, nil
 }
 
 // setupBeaconStateAndGenesisBlock creates the initial beacon state and genesis block in order to
