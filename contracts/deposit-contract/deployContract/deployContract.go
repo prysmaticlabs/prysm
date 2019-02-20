@@ -181,7 +181,7 @@ func main() {
 			big.NewInt(depositsForChainStart),
 			big.NewInt(minDepositAmount),
 			big.NewInt(maxDepositAmount),
-			customChainstartDelay,
+			big.NewInt(int64(customChainstartDelay)),
 			drain,
 		)
 
