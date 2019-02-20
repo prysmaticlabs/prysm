@@ -12,42 +12,65 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/sirupsen/logrus"
 )
+
+var log = logrus.WithField("prefix", "core/state")
 
 // ExecuteStateTransition defines the procedure for a state transition function.
 // Spec:
-//  We now define the state transition function. At a high level the state transition is made up of two parts:
-//  - The per-slot transitions, which happens every slot, and only affects a parts of the state.
-//  - The per-epoch transitions, which happens at every epoch boundary (i.e. state.slot % SLOTS_PER_EPOCH == 0), and affects the entire state.
-//  The per-slot transitions generally focus on verifying aggregate signatures and saving temporary records relating to the per-slot
-//  activity in the BeaconState. The per-epoch transitions focus on the validator registry, including adjusting balances and activating
-//  and exiting validators, as well as processing crosslinks and managing block justification/finalization.
+//  We now define the state transition function. At a high level the state transition is made up of three parts:
+//  - The per-slot transitions, which happens at the start of every slot.
+//  - The per-block transitions, which happens at every block.
+//  - The per-epoch transitions, which happens at the end of the last slot of every epoch (i.e. (state.slot + 1) % SLOTS_PER_EPOCH == 0).
+//  The per-slot transitions focus on the slot counter and block roots records updates.
+//  The per-block transitions focus on verifying aggregate signatures and saving temporary records relating to the per-block activity in the state.
+//  The per-epoch transitions focus on the validator registry, including adjusting balances and activating and exiting validators,
+//  as well as processing crosslinks and managing block justification/finalization.
 func ExecuteStateTransition(
-	beaconState *pb.BeaconState,
+	state *pb.BeaconState,
 	block *pb.BeaconBlock,
-	prevBlockRoot [32]byte,
+	headRoot [32]byte,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
 	var err error
 
-	currentSlot := beaconState.Slot
-	beaconState.Slot = currentSlot + 1
-	beaconState = b.ProcessBlockRoots(beaconState, prevBlockRoot)
-	if block != nil {
-		beaconState, err = ProcessBlock(beaconState, block, verifySignatures)
-		if err != nil {
-			return nil, fmt.Errorf("unable to process block: %v", err)
-		}
+	// Execute per slot transition.
+	state = ProcessSlot(state, headRoot)
 
-		if e.CanProcessEpoch(beaconState) {
-			beaconState, err = ProcessEpoch(beaconState)
-		}
+	// Execute per block transition.
+	if block != nil {
+		state, err = ProcessBlock(state, block, verifySignatures)
 		if err != nil {
-			return nil, fmt.Errorf("unable to process epoch: %v", err)
+			return nil, fmt.Errorf("could not process block: %v", err)
 		}
 	}
 
-	return beaconState, nil
+	// Execute per epoch transition.
+	if e.CanProcessEpoch(state) {
+		state, err = ProcessEpoch(state)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("could not process epoch: %v", err)
+	}
+
+	return state, nil
+}
+
+// ProcessSlot happens every slot and focuses on the slot counter and block roots record updates.
+// It happens regardless if there's an incoming block or not.
+//
+// Spec pseudocode definition:
+//	Set state.slot += 1
+//	Let previous_block_root be the hash_tree_root of the previous beacon block processed in the chain
+//	Set state.latest_block_roots[(state.slot - 1) % LATEST_BLOCK_ROOTS_LENGTH] = previous_block_root
+//	If state.slot % LATEST_BLOCK_ROOTS_LENGTH == 0
+//		append merkle_root(state.latest_block_roots) to state.batched_block_roots
+func ProcessSlot(state *pb.BeaconState, headRoot [32]byte) *pb.BeaconState {
+	state.Slot++
+	state = b.ProcessBlockRoots(state, headRoot)
+	log.Info("Slot transition successfully processed slot %d", state.Slot)
+	return state
 }
 
 // ProcessBlock creates a new, modified beacon state by applying block operation
@@ -93,6 +116,7 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock, verifySignatures
 	if err != nil {
 		return nil, fmt.Errorf("could not process validator exits: %v", err)
 	}
+	log.Info("Block transition successfully processed slot %d", state.Slot)
 	return state, nil
 }
 
@@ -322,5 +346,6 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Clean up processed attestations.
 	state = e.CleanupAttestations(state)
+	log.Info("Epoch transition successfully processed slot %d", state.Slot)
 	return state, nil
 }
