@@ -47,7 +47,7 @@ type Querier struct {
 	currentHeadHash []byte
 	responseBuf     chan p2p.Message
 	powchain        powChainService
-	isChainStart    bool
+	chainStarted    bool
 }
 
 // NewQuerierService constructs a new Sync Querier Service.
@@ -66,7 +66,7 @@ func NewQuerierService(ctx context.Context,
 		db:             cfg.BeaconDB,
 		responseBuf:    responseBuf,
 		curentHeadSlot: cfg.CurentHeadSlot,
-		isChainStart:   false,
+		chainStarted:   false,
 		powchain:       cfg.PowChain,
 	}
 }
@@ -101,10 +101,10 @@ func (q *Querier) listenForChainStart() {
 	for {
 		select {
 		case <-chainStartChan:
-			q.isChainStart = true
+			q.chainStarted = true
 			return
 		case <-sub.Err():
-			log.Debug("Subscriber closed, exiting goroutine")
+			log.Fatal("Subscriber closed, unable to continue on with sync")
 			return
 		case <-q.ctx.Done():
 			log.Debug("RPC context closed, exiting goroutine")
@@ -158,7 +158,7 @@ func (q *Querier) RequestLatestHead() {
 // IsSynced checks if the node is cuurently synced with the
 // rest of the network.
 func (q *Querier) IsSynced() (bool, error) {
-	if q.isChainStart {
+	if q.chainStarted {
 		return true, nil
 	}
 	block, err := q.db.ChainHead()
