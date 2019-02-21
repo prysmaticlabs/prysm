@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"runtime"
 
@@ -21,12 +20,7 @@ import (
 
 func startNode(ctx *cli.Context) error {
 	keystoreDirectory := ctx.String(types.KeystorePathFlag.Name)
-	keystorePasswordPath := ctx.String(types.PasswordPathFlag.Name)
-	content, err := ioutil.ReadFile(keystorePasswordPath)
-	if err != nil {
-        return fmt.Errorf("couldn not read password file: %v", err)
-	}
-	keystorePassword := string(content)
+	keystorePassword := ctx.String(types.PasswordFlag.Name)
 	if err := accounts.VerifyAccountNotExists(keystoreDirectory, keystorePassword); err == nil {
 		return errors.New("no account found, use `validator accounts create` to generate a new keystore")
 	}
@@ -49,12 +43,7 @@ func startNode(ctx *cli.Context) error {
 
 func createValidatorAccount(ctx *cli.Context) error {
 	keystoreDirectory := ctx.String(types.KeystorePathFlag.Name)
-	keystorePasswordPath := ctx.String(types.PasswordPathFlag.Name)
-	content, err := ioutil.ReadFile(keystorePasswordPath)
-	if err != nil {
-		return fmt.Errorf("couldn not read password file: %v", err)
-	}
-	keystorePassword := string(content)
+	keystorePassword := ctx.String(types.PasswordFlag.Name)
 	if err := accounts.NewValidatorAccount(keystoreDirectory, keystorePassword); err != nil {
 		return fmt.Errorf("could not initialize validator account: %v", err)
 	}
