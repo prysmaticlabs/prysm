@@ -58,7 +58,7 @@ func (as *AttesterServer) AttestationInfoAtSlot(ctx context.Context, req *pb.Att
 	// If the epoch boundary slot is the same as state current slot,
 	// we set epoch boundary root to an empty root.
 	epochBoundarySlot := helpers.StartSlot(head.Slot / params.BeaconConfig().SlotsPerEpoch)
-	epochBoundaryRoot := make([]byte, 0)
+	epochBoundaryRoot := make([]byte, 32)
 	if epochBoundarySlot != beaconState.Slot {
 		epochBoundaryRoot, err = blocks.BlockRoot(beaconState, epochBoundarySlot)
 		if err != nil {
@@ -71,18 +71,24 @@ func (as *AttesterServer) AttestationInfoAtSlot(ctx context.Context, req *pb.Att
 	// If the last justified boundary slot is the same as state current slot (ex: slot 0),
 	// we set justified block root to an empty root.
 	lastJustifiedSlot := helpers.StartSlot(beaconState.JustifiedEpoch)
-	justifiedBlockRoot := make([]byte, 0)
+	justifiedBlockRoot := make([]byte, 32)
 	if lastJustifiedSlot != beaconState.Slot {
 		justifiedBlockRoot, err = blocks.BlockRoot(beaconState, lastJustifiedSlot)
 		if err != nil {
 			return nil, fmt.Errorf("could not get justified block: %v", err)
 		}
 	}
+	if beaconState.Slot == params.BeaconConfig().GenesisSlot {
+		epochBoundaryRoot = blockRoot[:]
+		justifiedBlockRoot = blockRoot[:]
+	}
+	log.Infof("Fetching epoch boundary root: %#x, state slot: %d", epochBoundaryRoot, beaconState.Slot-params.BeaconConfig().GenesisSlot)
+	log.Infof("Fetching justified block root: %#x, state slot: %d", justifiedBlockRoot, beaconState.Slot-params.BeaconConfig().GenesisSlot)
 	return &pb.AttestationInfoResponse{
 		BeaconBlockRootHash32:    blockRoot[:],
-		EpochBoundaryRootHash32:  epochBoundaryRoot[:],
+		EpochBoundaryRootHash32:  epochBoundaryRoot,
 		JustifiedEpoch:           beaconState.JustifiedEpoch,
-		JustifiedBlockRootHash32: justifiedBlockRoot[:],
+		JustifiedBlockRootHash32: justifiedBlockRoot,
 		LatestCrosslink:          beaconState.LatestCrosslinks[req.Shard],
 	}, nil
 }
