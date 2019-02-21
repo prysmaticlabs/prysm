@@ -153,6 +153,13 @@ func TestPendingAttestations_Ok(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	proposerServer := &ProposerServer{
 		operationService: &mockOperationService{},
+		beaconDB:         db,
+	}
+	beaconState := &pbp2p.BeaconState{
+		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().MinAttestationInclusionDelay,
+	}
+	if err := db.SaveState(beaconState); err != nil {
+		t.Fatal(err)
 	}
 	res, err := proposerServer.PendingAttestations(context.Background(), &pb.PendingAttestationsRequest{})
 	if err != nil {
