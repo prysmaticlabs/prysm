@@ -77,7 +77,10 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	slashings := make([]*pb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings+1)
+	var slashings []*pb.ProposerSlashing
+	for i:=uint64(0); i<params.BeaconConfig().MaxProposerSlashings+1; i++ {
+		slashings = append(slashings, &pb.ProposerSlashing{})
+	}
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
 		Slot:         params.BeaconConfig().GenesisSlot,
@@ -117,7 +120,10 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 			},
 		},
 	}
-	attesterSlashings := make([]*pb.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings+1)
+	var attesterSlashings []*pb.AttesterSlashing
+	for i:=uint64(0); i<params.BeaconConfig().MaxAttesterSlashings+1; i++ {
+		attesterSlashings = append(attesterSlashings, &pb.AttesterSlashing{})
+	}
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
 		Slot:         params.BeaconConfig().GenesisSlot,
@@ -181,7 +187,10 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		},
 	}
 
-	blockAttestations := make([]*pb.Attestation, params.BeaconConfig().MaxAttestations+1)
+	var blockAttestations []*pb.Attestation
+	for i:=uint64(0); i<params.BeaconConfig().MaxAttestations+1; i++ {
+		blockAttestations = append(blockAttestations, &pb.Attestation{})
+	}
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
 		Slot:         params.BeaconConfig().GenesisSlot,
@@ -269,7 +278,10 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		CustodyBitfield:     []byte{1},
 	}
 	attestations := []*pb.Attestation{blockAtt}
-	exits := make([]*pb.VoluntaryExit, params.BeaconConfig().MaxVoluntaryExits+1)
+	var exits []*pb.VoluntaryExit
+	for i:=uint64(0); i<params.BeaconConfig().MaxVoluntaryExits+1; i++ {
+		exits = append(exits, &pb.VoluntaryExit{})
+	}
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
 		Slot:         params.BeaconConfig().GenesisSlot + 10,
