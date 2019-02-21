@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package prysm.internal.cluster;
+
+service PrivateKeyService {
+  rpc Request(PrivateKeyRequest) returns (PrivateKeyResponse);
+}
+
+message PrivateKeyRequest {
+  string pod_name = 1;
+}
+
+message PrivateKeyResponse {
+  bytes private_key = 1;
+}

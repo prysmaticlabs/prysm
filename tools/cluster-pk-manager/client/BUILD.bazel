@@ -1,0 +1,54 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@io_bazel_rules_docker//go:image.bzl", "go_image")
+load("@io_bazel_rules_docker//container:container.bzl", "container_push")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["main.go"],
+    importpath = "github.com/prysmaticlabs/prysm/tools/cluster-pk-manager/client",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//proto/cluster:go_default_library",
+        "//shared/bls:go_default_library",
+        "//shared/keystore:go_default_library",
+        "//shared/params:go_default_library",
+        "@org_golang_google_grpc//:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "client",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)
+
+go_image(
+    name = "image",
+    srcs = ["main.go"],
+    importpath = "github.com/prysmaticlabs/prysm/tools/cluster-pk-manager/client",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//proto/cluster:go_default_library",
+        "//shared/bls:go_default_library",
+        "//shared/keystore:go_default_library",
+        "//shared/params:go_default_library",
+        "@org_golang_google_grpc//:go_default_library",
+    ],
+    pure = "on",
+    static = "on",
+    tags = ["manual"],
+    goarch = "amd64",
+    goos = "linux",
+    race = "off",
+)
+
+container_push(
+    name = "push_image",
+    format = "Docker",
+    image = ":image",
+    registry = "gcr.io",
+    repository = "prysmaticlabs/prysm/cluster-pk-manager/client",
+    tag = "latest",
+    tags = ["manual"],
+    visibility = ["//visibility:private"],
+)

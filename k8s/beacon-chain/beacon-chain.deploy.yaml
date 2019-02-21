@@ -4,7 +4,7 @@ metadata:
   name: beacon-chain
   namespace: beacon-chain
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       component: beacon-chain
@@ -23,14 +23,16 @@ spec:
         - name: beacon-chain
           image: gcr.io/prysmaticlabs/prysm/beacon-chain:latest
           args: 
-            - "--web3provider=ws://geth-nodes.pow.svc.cluster.local:8546"
-            - "--verbosity=debug"
-            - "--deposit-contract=$(DEPOSIT_CONTRACT_ADDRESS)"
-            - "--rpc-port=4000"
-            - "--monitoring-port=9090"
-            - "--bootstrap-node=/ip4/$(BOOTNODE_SERVICE_HOST)/tcp/$(BOOTNODE_SERVICE_PORT)/p2p/QmUWTsZwoJ51tey4fEE9EAqzQeHFHm4FE9aSfgTv8xyuG5" 
-            - "--relay-node=/ip4/35.221.47.224/tcp/20000/p2p/QmXNZeGdHYshgwyYyJnYG7u5iQ1Hej5R9QshgEZ5NACc1x" 
-            - "--p2p-port=5000"
+            - --enable-powchain
+            - --web3provider=ws://public-rpc-nodes.pow.svc.cluster.local:8546
+              #- --verbosity=debug
+            - --deposit-contract=$(DEPOSIT_CONTRACT_ADDRESS)
+            - --rpc-port=4000
+            - --monitoring-port=9090
+              #- --bootstrap-node=/ip4/$(BOOTNODE_SERVICE_HOST)/tcp/$(BOOTNODE_SERVICE_PORT)/p2p/QmUWTsZwoJ51tey4fEE9EAqzQeHFHm4FE9aSfgTv8xyuG5 
+              #- --relay-node=/ip4/35.221.47.224/tcp/20000/p2p/QmXNZeGdHYshgwyYyJnYG7u5iQ1Hej5R9QshgEZ5NACc1x 
+            - --p2p-port=5000
+            - --demo-config
           resources:
             requests:
               memory: "100Mi"
