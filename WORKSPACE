@@ -212,7 +212,7 @@ go_repository(
 go_repository(
     name = "com_github_multiformats_go_multihash",
     importpath = "github.com/multiformats/go-multihash",
-    tag = "v1.0.8",
+    tag = "v1.0.10",
 )
 
 go_repository(
