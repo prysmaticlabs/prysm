@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"runtime"
 
@@ -20,7 +21,12 @@ import (
 
 func startNode(ctx *cli.Context) error {
 	keystoreDirectory := ctx.String(types.KeystorePathFlag.Name)
-	keystorePassword := ctx.String(types.PasswordFlag.Name)
+	keystorePasswordPath := ctx.String(types.PasswordPathFlag.Name)
+	content, err := ioutil.ReadFile(keystorePasswordPath)
+	if err != nil {
+        return fmt.Errorf("couldn not read password file: %v", err)
+	}
+	keystorePassword := string(content)
 	if err := accounts.VerifyAccountNotExists(keystoreDirectory, keystorePassword); err == nil {
 		return errors.New("no account found, use `validator accounts create` to generate a new keystore")
 	}
@@ -43,7 +49,12 @@ func startNode(ctx *cli.Context) error {
 
 func createValidatorAccount(ctx *cli.Context) error {
 	keystoreDirectory := ctx.String(types.KeystorePathFlag.Name)
-	keystorePassword := ctx.String(types.PasswordFlag.Name)
+	keystorePasswordPath := ctx.String(types.PasswordPathFlag.Name)
+	content, err := ioutil.ReadFile(keystorePasswordPath)
+	if err != nil {
+		return fmt.Errorf("couldn not read password file: %v", err)
+	}
+	keystorePassword := string(content)
 	if err := accounts.NewValidatorAccount(keystoreDirectory, keystorePassword); err != nil {
 		return fmt.Errorf("could not initialize validator account: %v", err)
 	}
@@ -96,7 +107,7 @@ this command outputs a deposit data string which can be used to deposit Ether in
 contract in order to activate the validator client`,
 					Flags: []cli.Flag{
 						types.KeystorePathFlag,
-						types.PasswordFlag,
+						types.PasswordPathFlag,
 					},
 					Action: createValidatorAccount,
 				},
@@ -107,13 +118,12 @@ contract in order to activate the validator client`,
 	app.Flags = []cli.Flag{
 		types.BeaconRPCProviderFlag,
 		types.KeystorePathFlag,
-		types.PasswordFlag,
+		types.PasswordPathFlag,
 		cmd.VerbosityFlag,
 		cmd.DataDirFlag,
 		cmd.EnableTracingFlag,
 		cmd.TracingEndpointFlag,
 		cmd.TraceSampleFractionFlag,
-		cmd.KeystorePasswordFlag,
 		cmd.BootstrapNode,
 		cmd.MonitoringPortFlag,
 		debug.PProfFlag,
