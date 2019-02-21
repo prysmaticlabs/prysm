@@ -365,6 +365,6 @@ func UpdateLatestRandaoMixes(state *pb.BeaconState) (*pb.BeaconState, error) {
 		return nil, fmt.Errorf("could not get randaoMix mix: %v", err)
 	}
 
-	state.LatestRandaoMixesHash32S[nextEpoch] = randaoMix
+	state.LatestRandaoMixes[nextEpoch] = randaoMix
 	return state, nil
 }

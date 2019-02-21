@@ -18,7 +18,7 @@ func TestRandaoMix_OK(t *testing.T) {
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		randaoMixes[i] = intInBytes
 	}
-	state := &pb.BeaconState{LatestRandaoMixesHash32S: randaoMixes}
+	state := &pb.BeaconState{LatestRandaoMixes: randaoMixes}
 	tests := []struct {
 		epoch     uint64
 		randaoMix []byte
@@ -132,9 +132,9 @@ func TestGenerateSeed_OK(t *testing.T) {
 	}
 	slot := 10 * params.BeaconConfig().MinSeedLookahead * params.BeaconConfig().SlotsPerEpoch
 	state := &pb.BeaconState{
-		LatestIndexRootHash32S:   activeIndexRoots,
-		LatestRandaoMixesHash32S: randaoMixes,
-		Slot:                     slot}
+		LatestIndexRootHash32S: activeIndexRoots,
+		LatestRandaoMixes:      randaoMixes,
+		Slot:                   slot}
 
 	got, err := GenerateSeed(state, 10)
 	if err != nil {

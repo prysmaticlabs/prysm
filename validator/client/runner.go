@@ -13,7 +13,7 @@ import (
 // Validator interface defines the primary methods of a validator client.
 type Validator interface {
 	Done()
-	WaitForChainStart(ctx context.Context)
+	WaitForChainStart(ctx context.Context) error
 	WaitForActivation(ctx context.Context)
 	NextSlot() <-chan uint64
 	UpdateAssignments(ctx context.Context, slot uint64) error
@@ -34,7 +34,9 @@ type Validator interface {
 // 6 - Perform assigned role, if any
 func run(ctx context.Context, v Validator) {
 	defer v.Done()
-	v.WaitForChainStart(ctx)
+	if err := v.WaitForChainStart(ctx); err != nil {
+		log.Fatalf("Could not determine if beacon chain started: %v", err)
+	}
 	v.WaitForActivation(ctx)
 	if err := v.UpdateAssignments(ctx, params.BeaconConfig().GenesisSlot); err != nil {
 		log.WithField("error", err).Error("Failed to update assignments")

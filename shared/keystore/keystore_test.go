@@ -3,9 +3,10 @@ package keystore
 import (
 	"bytes"
 	"crypto/rand"
-	"math/big"
 	"os"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 	"github.com/pborman/uuid"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -35,8 +36,8 @@ func TestStoreAndGetKey(t *testing.T) {
 		t.Fatalf("unable to get key %v", err)
 	}
 
-	if newkey.SecretKey.K.Cmp(key.SecretKey.K) != 0 {
-		t.Fatalf("retrieved secret keys are not equal %v , %v", newkey.SecretKey.K, key.SecretKey.K)
+	if !bytes.Equal(newkey.SecretKey.Marshal(), key.SecretKey.Marshal()) {
+		t.Fatalf("retrieved secret keys are not equal %v , %v", newkey.SecretKey.Marshal(), key.SecretKey.Marshal())
 	}
 
 	if err := os.RemoveAll(filedir); err != nil {
@@ -45,14 +46,18 @@ func TestStoreAndGetKey(t *testing.T) {
 }
 func TestEncryptDecryptKey(t *testing.T) {
 	newID := uuid.NewRandom()
-	keyValue := big.NewInt(1e16)
+	b := []byte("hi")
+	b32 := bytesutil.ToBytes32(b)
 	password := "test"
 
+	pk, err := bls.SecretKeyFromBytes(b32[:])
+	if err != nil {
+		t.Fatal(err)
+	}
 	key := &Key{
-		ID: newID,
-		SecretKey: &bls.SecretKey{
-			K: keyValue,
-		},
+		ID:        newID,
+		SecretKey: pk,
+		PublicKey: pk.PublicKey(),
 	}
 
 	keyjson, err := EncryptKey(key, password, LightScryptN, LightScryptP)
@@ -69,8 +74,9 @@ func TestEncryptDecryptKey(t *testing.T) {
 		t.Fatalf("decrypted key's uuid doesn't match %v", newkey.ID)
 	}
 
-	if newkey.SecretKey.K.Cmp(keyValue) != 0 {
-		t.Fatalf("decrypted key's value is not equal %v", newkey.SecretKey.K)
+	expected := pk.Marshal()
+	if !bytes.Equal(newkey.SecretKey.Marshal(), expected) {
+		t.Fatalf("decrypted key's value is not equal %v", newkey.SecretKey.Marshal())
 	}
 
 }

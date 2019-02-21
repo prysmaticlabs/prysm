@@ -48,15 +48,6 @@ func TestHasVoted_OK(t *testing.T) {
 	}
 }
 
-func TestGenesisValidatorRegistry_OK(t *testing.T) {
-	validators := GenesisValidatorRegistry()
-	for idx, validator := range validators {
-		if !helpers.IsActiveValidator(validator, 1) {
-			t.Errorf("validator %d status is not active", idx)
-		}
-	}
-}
-
 func TestValidatorIndex_OK(t *testing.T) {
 	var validators []*pb.Validator
 	for i := 0; i < 10; i++ {

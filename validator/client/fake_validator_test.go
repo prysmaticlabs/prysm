@@ -30,8 +30,9 @@ func (fv *fakeValidator) Done() {
 	fv.DoneCalled = true
 }
 
-func (fv *fakeValidator) WaitForChainStart(_ context.Context) {
+func (fv *fakeValidator) WaitForChainStart(_ context.Context) error {
 	fv.WaitForChainStartCalled = true
+	return nil
 }
 
 func (fv *fakeValidator) WaitForActivation(_ context.Context) {

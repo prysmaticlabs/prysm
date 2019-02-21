@@ -14,15 +14,22 @@ zerohashes: bytes32[32]
 branch: bytes32[32]
 deposit_count: public(uint256)
 full_deposit_count: public(uint256)
-skip_chainstart_delay: public(bool)
+custom_chainstart_delay: public(uint256)
 genesisTime: public(bytes[8])
+drain_address: public(address)
 
 @public
-def __init__(depositThreshold: uint256,minDeposit: uint256,maxDeposit: uint256, skipChainstartDelay: bool):
+def __init__( # Parameters for debugging, not for production use!
+        depositThreshold: uint256, 
+        minDeposit: uint256,
+        maxDeposit: uint256, 
+        customChainstartDelay: uint256,
+        _drain_address: address):
     self.CHAIN_START_FULL_DEPOSIT_THRESHOLD = depositThreshold
     self.MIN_DEPOSIT_AMOUNT = minDeposit
     self.MAX_DEPOSIT_AMOUNT = maxDeposit
-    self.skip_chainstart_delay = skipChainstartDelay
+    self.custom_chainstart_delay = customChainstartDelay
+    self.drain_address = _drain_address
     for i in range(31):
         self.zerohashes[i+1] = sha3(concat(self.zerohashes[i], self.zerohashes[i]))
         self.branch[i+1] = self.zerohashes[i+1]
@@ -96,11 +103,19 @@ def deposit(deposit_input: bytes[512]):
     if deposit_amount == self.MAX_DEPOSIT_AMOUNT:
         self.full_deposit_count += 1
         if self.full_deposit_count == self.CHAIN_START_FULL_DEPOSIT_THRESHOLD:
-            if self.skip_chainstart_delay:
-                self.genesisTime = self.to_little_endian_64(deposit_timestamp)
+            if self.custom_chainstart_delay > 0:
+                timestamp_boundary: uint256 = as_unitless_number(block.timestamp) - as_unitless_number(block.timestamp) % self.custom_chainstart_delay + self.custom_chainstart_delay
+                self.genesisTime = self.to_little_endian_64(timestamp_boundary)
                 log.ChainStart(self.get_deposit_root(), self.genesisTime)
             else:
                 timestamp_day_boundary: uint256 = as_unitless_number(block.timestamp) - as_unitless_number(block.timestamp) % SECONDS_PER_DAY + SECONDS_PER_DAY
                 self.genesisTime = self.to_little_endian_64(timestamp_day_boundary)
                 log.ChainStart(new_deposit_root, self.genesisTime)
 
+
+# !!! DEBUG ONLY !!!
+# This method is NOT part of the final ETH2.0 deposit contract, but we use it 
+# to recover test funds.
+@public
+def drain():
+    send(self.drain_address, self.balance)

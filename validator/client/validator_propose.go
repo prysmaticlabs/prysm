@@ -4,7 +4,11 @@ package client
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
+
+	"github.com/prysmaticlabs/prysm/shared/forkutils"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/opentracing/opentracing-go"
 
@@ -50,6 +54,29 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 		return
 	}
 
+	// Retrieve the current fork data from the beacon node.
+	fork, err := v.beaconClient.ForkData(ctx, &ptypes.Empty{})
+	if err != nil {
+		log.Errorf("Failed to get fork data from beacon node's state: %v", err)
+		return
+	}
+	// Then, we generate a RandaoReveal by signing the block's slot information using
+	// the validator's private key.
+	// epoch_signature = bls_sign(
+	//   privkey=validator.privkey,
+	//   message_hash=int_to_bytes32(slot_to_epoch(block.slot)),
+	//   domain=get_domain(
+	//     fork=fork,  # `fork` is the fork object at the slot `block.slot`
+	//     epoch=slot_to_epoch(block.slot),
+	//	   domain_type=DOMAIN_RANDAO,
+	//   )
+	// )
+	epoch := slot / params.BeaconConfig().SlotsPerEpoch
+	buf := make([]byte, 32)
+	binary.LittleEndian.PutUint64(buf, epoch)
+	domain := forkutils.DomainVersion(fork, epoch, params.BeaconConfig().DomainRandao)
+	epochSignature := v.key.SecretKey.Sign(buf, domain)
+
 	// Fetch pending attestations seen by the beacon node.
 	attResp, err := v.proposerClient.PendingAttestations(ctx, &ptypes.Empty{})
 	if err != nil {
@@ -59,10 +86,10 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 
 	// 2. Construct block.
 	block := &pbp2p.BeaconBlock{
-		Slot:               slot,
-		ParentRootHash32:   parentTreeHash[:],
-		RandaoRevealHash32: nil, // TODO(1366): generate randao reveal from BLS
-		Eth1Data:           eth1DataResp.Eth1Data,
+		Slot:             slot,
+		ParentRootHash32: parentTreeHash[:],
+		RandaoReveal:     epochSignature.Marshal(),
+		Eth1Data:         eth1DataResp.Eth1Data,
 		Body: &pbp2p.BeaconBlockBody{
 			Attestations:      attResp.PendingAttestations,
 			ProposerSlashings: nil, // TODO(1438): Add after operations pool

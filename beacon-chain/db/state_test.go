@@ -2,31 +2,38 @@ package db
 
 import (
 	"bytes"
+	"crypto/rand"
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func setupInitialDeposits(t *testing.T) []*pb.Deposit {
-	genesisValidatorRegistry := validators.GenesisValidatorRegistry()
-	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
+func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.SecretKey) {
+	privKeys := make([]*bls.SecretKey, numDeposits)
+	deposits := make([]*pb.Deposit, numDeposits)
 	for i := 0; i < len(deposits); i++ {
+		priv, err := bls.RandKey(rand.Reader)
+		if err != nil {
+			t.Fatal(err)
+		}
 		depositInput := &pb.DepositInput{
-			Pubkey: genesisValidatorRegistry[i].Pubkey,
+			Pubkey: priv.PublicKey().Marshal(),
 		}
 		balance := params.BeaconConfig().MaxDepositAmount
-		depositData, err := blocks.EncodeDepositData(depositInput, balance, time.Now().Unix())
+		depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
 		if err != nil {
 			t.Fatalf("Cannot encode data: %v", err)
 		}
 		deposits[i] = &pb.Deposit{DepositData: depositData}
+		privKeys[i] = priv
 	}
-	return deposits
+	return deposits, privKeys
 }
 
 func TestInitializeState_OK(t *testing.T) {
@@ -34,7 +41,7 @@ func TestInitializeState_OK(t *testing.T) {
 	defer teardownDB(t, db)
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits := setupInitialDeposits(t)
+	deposits, _ := setupInitialDeposits(t, 10)
 	if err := db.InitializeState(genesisTime, deposits); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
@@ -81,7 +88,7 @@ func TestGenesisTime_OK(t *testing.T) {
 		t.Fatal("expected GenesisTime to fail")
 	}
 
-	deposits := setupInitialDeposits(t)
+	deposits, _ := setupInitialDeposits(t, 10)
 	if err := db.InitializeState(uint64(genesisTime.Unix()), deposits); err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}

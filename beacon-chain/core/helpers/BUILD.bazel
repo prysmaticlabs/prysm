@@ -4,9 +4,9 @@ go_library(
     name = "go_default_library",
     srcs = [
         "committee.go",
+        "deposits.go",
         "randao.go",
         "rewards_penalties.go",
-        "signature.go",
         "slot_epoch.go",
         "validators.go",
     ],
@@ -20,6 +20,7 @@ go_library(
         "//shared/hashutil:go_default_library",
         "//shared/mathutil:go_default_library",
         "//shared/params:go_default_library",
+        "//shared/ssz:go_default_library",
     ],
 )
 
@@ -27,9 +28,9 @@ go_test(
     name = "go_default_test",
     srcs = [
         "committee_test.go",
+        "deposits_test.go",
         "randao_test.go",
         "rewards_penalties_test.go",
-        "signature_test.go",
         "slot_epoch_test.go",
         "validators_test.go",
     ],
@@ -37,5 +38,6 @@ go_test(
     deps = [
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/params:go_default_library",
+        "@com_github_gogo_protobuf//proto:go_default_library",
     ],
 )

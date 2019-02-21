@@ -81,7 +81,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if err := beacon.registerSyncService(); err != nil {
+	if err := beacon.registerSyncService(ctx); err != nil {
 		return nil, err
 	}
 
@@ -226,7 +226,7 @@ func (b *BeaconNode) registerPOWChainService(ctx *cli.Context) error {
 	return b.services.RegisterService(web3Service)
 }
 
-func (b *BeaconNode) registerSyncService() error {
+func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 	var chainService *blockchain.ChainService
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err
@@ -242,11 +242,20 @@ func (b *BeaconNode) registerSyncService() error {
 		return err
 	}
 
+	var web3Service *powchain.Web3Service
+	var enablePOWChain = ctx.GlobalBool(utils.EnablePOWChain.Name)
+	if enablePOWChain {
+		if err := b.services.FetchService(&web3Service); err != nil {
+			return err
+		}
+	}
+
 	cfg := &rbcsync.Config{
 		ChainService:     chainService,
 		P2P:              p2pService,
 		BeaconDB:         b.db,
 		OperationService: operationService,
+		PowChainService:  web3Service,
 	}
 
 	syncService := rbcsync.NewSyncService(context.Background(), cfg)
@@ -275,15 +284,17 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	port := ctx.GlobalString(utils.RPCPort.Name)
 	cert := ctx.GlobalString(utils.CertFlag.Name)
 	key := ctx.GlobalString(utils.KeyFlag.Name)
+	chainStartDelayFlag := ctx.GlobalUint64(utils.ChainStartDelay.Name)
 	rpcService := rpc.NewRPCService(context.TODO(), &rpc.Config{
-		Port:             port,
-		CertFlag:         cert,
-		KeyFlag:          key,
-		SubscriptionBuf:  100,
-		BeaconDB:         b.db,
-		ChainService:     chainService,
-		OperationService: operationService,
-		POWChainService:  web3Service,
+		Port:                port,
+		CertFlag:            cert,
+		KeyFlag:             key,
+		ChainStartDelayFlag: chainStartDelayFlag,
+		SubscriptionBuf:     100,
+		BeaconDB:            b.db,
+		ChainService:        chainService,
+		OperationService:    operationService,
+		POWChainService:     web3Service,
 	})
 
 	return b.services.RegisterService(rpcService)

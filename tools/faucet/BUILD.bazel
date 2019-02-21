@@ -1,0 +1,56 @@
+# gazelle:ignore
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
+load("@io_bazel_rules_docker//go:image.bzl", "go_image")
+load("@io_bazel_rules_docker//container:container.bzl", "container_push")
+
+IMPORT_PATH = "github.com/prysmaticlabs/prysm/tools/faucet"
+SRCS = [
+    "main.go",
+    "server.go",
+]
+DEPS = [
+    "//proto/faucet:faucet_go_proto",
+    "@org_golang_google_grpc//:go_default_library",
+    "@org_golang_google_grpc//peer:go_default_library",
+    "@org_golang_google_grpc//reflection:go_default_library",
+    "@com_github_prestonvanloon_go_recaptcha//:go_default_library",
+]
+
+go_library(
+    name = "go_default_library",
+    srcs = SRCS,  
+    importpath = IMPORT_PATH,
+    visibility = ["//visibility:private"],
+    deps = DEPS,
+)
+
+go_binary(
+    name = "faucet",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)
+
+go_image(
+    name = "image",
+    srcs = SRCS,
+    importpath = IMPORT_PATH,
+    deps = DEPS,
+    pure = "off", # depends on cgo for go-ethereum crypto
+    static = "on",
+    tags = ["manual"],
+    goarch = "amd64",
+    goos = "linux",
+    race = "off",
+)
+
+container_push(
+    name = "push_image",
+    format = "Docker",
+    image = ":image",
+    registry = "gcr.io",
+    repository = "prysmaticlabs/prysm/faucet",
+    tag = "latest",
+    tags = ["manual"],
+    visibility = ["//visibility:private"],
+)

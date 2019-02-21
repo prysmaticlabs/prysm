@@ -24,7 +24,7 @@ func TestGenerateBlockAndAdvanceChain_IncreasesSlot(t *testing.T) {
 		t.Fatalf("Could not create a new simulated backedn %v", err)
 	}
 
-	initialDeposits, err := generateInitialSimulatedDeposits(1000)
+	initialDeposits, privKeys, err := generateInitialSimulatedDeposits(params.BeaconConfig().SlotsPerEpoch)
 	if err != nil {
 		t.Fatalf("Could not simulate initial validator deposits: %v", err)
 	}
@@ -33,10 +33,10 @@ func TestGenerateBlockAndAdvanceChain_IncreasesSlot(t *testing.T) {
 	}
 	backend.depositTrie = trieutil.NewDepositTrie()
 
-	slotLimit := 250
+	slotLimit := params.BeaconConfig().SlotsPerEpoch + uint64(1)
 
-	for i := 0; i < slotLimit; i++ {
-		if err := backend.GenerateBlockAndAdvanceChain(&SimulatedObjects{}); err != nil {
+	for i := uint64(0); i < slotLimit; i++ {
+		if err := backend.GenerateBlockAndAdvanceChain(&SimulatedObjects{}, privKeys); err != nil {
 			t.Fatalf("Could not generate block and transition state successfully %v for slot %d", err, backend.state.Slot+1)
 		}
 		if backend.inMemoryBlocks[len(backend.inMemoryBlocks)-1].Slot != backend.state.Slot {
@@ -57,7 +57,7 @@ func TestGenerateNilBlockAndAdvanceChain_IncreasesSlot(t *testing.T) {
 		t.Fatalf("Could not create a new simulated backedn %v", err)
 	}
 
-	initialDeposits, err := generateInitialSimulatedDeposits(1000)
+	initialDeposits, _, err := generateInitialSimulatedDeposits(params.BeaconConfig().SlotsPerEpoch)
 	if err != nil {
 		t.Fatalf("Could not simulate initial validator deposits: %v", err)
 	}
@@ -66,9 +66,9 @@ func TestGenerateNilBlockAndAdvanceChain_IncreasesSlot(t *testing.T) {
 	}
 	backend.depositTrie = trieutil.NewDepositTrie()
 
-	slotLimit := 100
+	slotLimit := params.BeaconConfig().SlotsPerEpoch + uint64(1)
 
-	for i := 0; i < slotLimit; i++ {
+	for i := uint64(0); i < slotLimit; i++ {
 		if err := backend.GenerateNilBlockAndAdvanceChain(); err != nil {
 			t.Fatalf("Could not generate block and transition state successfully %v for slot %d", err, backend.state.Slot+1)
 		}
