@@ -488,10 +488,10 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	}
 
 	// Verify attestation.shard_block_root == ZERO_HASH [TO BE REMOVED IN PHASE 1].
-	if !bytes.Equal(att.Data.ShardBlockRootHash32, []byte{}) {
+	if !bytes.Equal(att.Data.ShardBlockRootHash32, params.BeaconConfig().ZeroHash[:]) {
 		return fmt.Errorf(
 			"expected attestation.ShardBlockRoot == %#x, received %#x instead",
-			[]byte{},
+			params.BeaconConfig().ZeroHash[:],
 			att.Data.ShardBlockRootHash32,
 		)
 	}

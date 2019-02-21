@@ -109,17 +109,14 @@ func (s *Service) PendingAttestations() ([]*pb.Attestation, error) {
 	sort.Slice(attestationsFromDB, func(i, j int) bool {
 		return attestationsFromDB[i].Data.Slot < attestationsFromDB[j].Data.Slot
 	})
-	for i, attestation := range attestationsFromDB {
+	for i := range attestationsFromDB {
 		// Stop the max attestation number per beacon block is reached.
 		if uint64(i) == params.BeaconConfig().MaxAttestations {
 			break
 		}
-		attestations = append(attestations, attestation)
-		// Delete attestation from DB after retrieval.
-		if err := s.beaconDB.DeleteAttestation(attestationsFromDB[i]); err != nil {
-			return nil, fmt.Errorf("could not delete attestation %v", attestationsFromDB[i])
-		}
+		attestations = append(attestations, attestationsFromDB[i])
 	}
+	log.Infof("%d Attestations obtained from DB in operations service", len(attestations))
 	return attestations, nil
 }
 

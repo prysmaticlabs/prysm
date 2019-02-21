@@ -934,7 +934,7 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 				Slot:                     params.BeaconConfig().GenesisSlot + 20,
 				JustifiedBlockRootHash32: blockRoots[0],
 				LatestCrosslink:          &pb.Crosslink{ShardBlockRootHash32: []byte{2}},
-				ShardBlockRootHash32:     []byte{2},
+				ShardBlockRootHash32:     params.BeaconConfig().ZeroHash[:],
 				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
 			},
 		},
@@ -992,7 +992,7 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 	}
 	want := fmt.Sprintf(
 		"expected attestation.ShardBlockRoot == %#x, received %#x instead",
-		[]byte{},
+		params.BeaconConfig().ZeroHash[:],
 		[]byte{1},
 	)
 	if _, err := blocks.ProcessBlockAttestations(
@@ -1026,7 +1026,7 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 			Slot:                     params.BeaconConfig().GenesisSlot + 20,
 			JustifiedBlockRootHash32: blockRoots[0],
 			LatestCrosslink:          &pb.Crosslink{ShardBlockRootHash32: []byte{1}},
-			ShardBlockRootHash32:     []byte{},
+			ShardBlockRootHash32:     params.BeaconConfig().ZeroHash[:],
 			JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
 		},
 		AggregationBitfield: []byte{1},

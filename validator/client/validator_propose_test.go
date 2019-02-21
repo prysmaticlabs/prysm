@@ -113,7 +113,7 @@ func TestProposeBlock_UsePendingDeposits(t *testing.T) {
 
 	m.proposerClient.EXPECT().PendingAttestations(
 		gomock.Any(), // ctx
-        gomock.Any(),
+		gomock.Any(),
 	).Return(&pb.PendingAttestationsResponse{PendingAttestations: []*pbp2p.Attestation{}}, nil)
 
 	m.proposerClient.EXPECT().ComputeStateRoot(
