@@ -66,8 +66,8 @@ func run(ctx context.Context, v Validator) {
 			case pb.ValidatorRole_UNKNOWN:
 				// This shouldn't happen normally, so it is considered a warning.
 				log.WithFields(logrus.Fields{
-					"slot":              slot - params.BeaconConfig().GenesisSlot,
-					"role":              role,
+					"slot": slot - params.BeaconConfig().GenesisSlot,
+					"role": role,
 				}).Warn("Unknown role, doing nothing")
 			default:
 				// Do nothing :)

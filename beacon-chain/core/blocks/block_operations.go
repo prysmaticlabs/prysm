@@ -415,17 +415,17 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	if att.Data.Slot+inclusionDelay > beaconState.Slot {
 		return fmt.Errorf(
 			"attestation slot (slot %d) + inclusion delay (%d) beyond current beacon state slot (%d)",
-			att.Data.Slot - params.BeaconConfig().GenesisSlot,
+			att.Data.Slot-params.BeaconConfig().GenesisSlot,
 			inclusionDelay,
-			beaconState.Slot - params.BeaconConfig().GenesisSlot,
+			beaconState.Slot-params.BeaconConfig().GenesisSlot,
 		)
 	}
 	if att.Data.Slot+params.BeaconConfig().SlotsPerEpoch < beaconState.Slot {
 		return fmt.Errorf(
 			"attestation slot (slot %d) + epoch length (%d) less than current beacon state slot (%d)",
-			att.Data.Slot - params.BeaconConfig().GenesisSlot,
+			att.Data.Slot-params.BeaconConfig().GenesisSlot,
 			params.BeaconConfig().SlotsPerEpoch,
-			beaconState.Slot - params.BeaconConfig().GenesisSlot,
+			beaconState.Slot-params.BeaconConfig().GenesisSlot,
 		)
 	}
 	// Verify that `attestation.data.justified_epoch` is equal to `state.justified_epoch

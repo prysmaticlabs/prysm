@@ -56,10 +56,10 @@ func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*b
 
 func TestProcessBlock_IncorrectSlot(t *testing.T) {
 	beaconState := &pb.BeaconState{
-		Slot: 5,
+		Slot: params.BeaconConfig().GenesisSlot + 5,
 	}
 	block := &pb.BeaconBlock{
-		Slot: 4,
+		Slot: params.BeaconConfig().GenesisSlot + 4,
 	}
 	want := fmt.Sprintf(
 		"block.slot != state.slot, block.slot = %d, state.slot = %d",

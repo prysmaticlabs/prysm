@@ -704,7 +704,7 @@ func TestProcessBlockAttestations_InclusionDelayFailure(t *testing.T) {
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Slot: 5,
+				Slot: params.BeaconConfig().GenesisSlot + 5,
 			},
 		},
 	}
@@ -714,7 +714,7 @@ func TestProcessBlockAttestations_InclusionDelayFailure(t *testing.T) {
 		},
 	}
 	state := &pb.BeaconState{
-		Slot: 5,
+		Slot: params.BeaconConfig().GenesisSlot + 5,
 	}
 
 	want := fmt.Sprintf(
@@ -736,7 +736,7 @@ func TestProcessBlockAttestations_EpochDistanceFailure(t *testing.T) {
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Slot: 5,
+				Slot: params.BeaconConfig().GenesisSlot + 5,
 			},
 		},
 	}
@@ -746,7 +746,7 @@ func TestProcessBlockAttestations_EpochDistanceFailure(t *testing.T) {
 		},
 	}
 	state := &pb.BeaconState{
-		Slot: 5 + 2*params.BeaconConfig().SlotsPerEpoch,
+		Slot: params.BeaconConfig().GenesisSlot + 5 + 2*params.BeaconConfig().SlotsPerEpoch,
 	}
 
 	want := fmt.Sprintf(
