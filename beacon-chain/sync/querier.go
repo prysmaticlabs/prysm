@@ -46,6 +46,7 @@ type Querier struct {
 	curentHeadSlot  uint64
 	currentHeadHash []byte
 	responseBuf     chan p2p.Message
+	chainStartBuf   chan time.Time
 	powchain        powChainService
 	chainStarted    bool
 }
@@ -68,6 +69,7 @@ func NewQuerierService(ctx context.Context,
 		curentHeadSlot: cfg.CurentHeadSlot,
 		chainStarted:   false,
 		powchain:       cfg.PowChain,
+		chainStartBuf:  make(chan time.Time, 1),
 	}
 }
 
@@ -94,13 +96,11 @@ func (q *Querier) Stop() error {
 
 func (q *Querier) listenForChainStart() {
 
-	chainStartChan := make(chan time.Time, 1)
-
-	sub := q.powchain.ChainStartFeed().Subscribe(chainStartChan)
+	sub := q.powchain.ChainStartFeed().Subscribe(q.chainStartBuf)
 	defer sub.Unsubscribe()
 	for {
 		select {
-		case <-chainStartChan:
+		case <-q.chainStartBuf:
 			q.chainStarted = true
 			return
 		case <-sub.Err():

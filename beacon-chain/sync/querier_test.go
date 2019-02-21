@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/event"
 
@@ -63,6 +64,25 @@ func TestStartStop(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 
 	hook.Reset()
+}
+
+func TestListenForChainStart(t *testing.T) {
+	cfg := &QuerierConfig{
+		P2P:                &mockP2P{},
+		ResponseBufferSize: 100,
+		PowChain: &afterGenesisPowChain{
+			feed: new(event.Feed),
+		},
+	}
+	sq := NewQuerierService(context.Background(), cfg)
+
+	sq.chainStartBuf <- time.Now()
+	sq.listenForChainStart()
+
+	if !sq.chainStarted {
+		t.Fatal("ChainStart in the querier service is not true despite the log being fired")
+	}
+	sq.cancel()
 }
 
 func TestChainReqResponse(t *testing.T) {
