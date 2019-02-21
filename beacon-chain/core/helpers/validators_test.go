@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"fmt"
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -86,8 +87,9 @@ func TestBeaconProposerIdx(t *testing.T) {
 }
 
 func TestBeaconProposerIdx_returnsErrorWithEmptyCommittee(t *testing.T) {
-	_, err := BeaconProposerIndex(&pb.BeaconState{}, 0)
-	expected := "empty first committee at slot 0"
+	slot := uint64(0)
+	_, err := BeaconProposerIndex(&pb.BeaconState{}, slot)
+	expected := fmt.Sprintf("empty first committee at slot %d", slot-params.BeaconConfig().GenesisSlot)
 	if err.Error() != expected {
 		t.Errorf("Unexpected error. got=%v want=%s", err, expected)
 	}

@@ -5,6 +5,7 @@ package state
 
 import (
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
 
@@ -20,7 +21,7 @@ import (
 var log = logrus.WithField("prefix", "core/state")
 
 // ExecuteStateTransition defines the procedure for a state transition function.
-// Spec:
+// Spec pseudocode definition:
 //  We now define the state transition function. At a high level the state transition is made up of three parts:
 //  - The per-slot transitions, which happens at the start of every slot.
 //  - The per-block transitions, which happens at every block.
@@ -81,33 +82,51 @@ func ProcessSlot(state *pb.BeaconState, headRoot [32]byte) *pb.BeaconState {
 // transformations as defined in the Ethereum Serenity specification, including processing proposer slashings,
 // processing block attestations, and more.
 func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock, verifySignatures bool) (*pb.BeaconState, error) {
+	r, err := hashutil.HashProto(block)
+	if err != nil {
+		return nil, fmt.Errorf("could not hash block: %v", err)
+	}
+
+	// Below are the processing steps to verify every block.
+	// Verify block slot.
 	if block.Slot != state.Slot {
 		return nil, fmt.Errorf(
 			"block.slot != state.slot, block.slot = %d, state.slot = %d",
-			block.Slot,
-			state.Slot,
+			block.Slot - params.BeaconConfig().GenesisSlot,
+			state.Slot - params.BeaconConfig().GenesisSlot,
 		)
 	}
+	log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Verified block slot == state slot")
+
+	// Verify block signature.
 	if verifySignatures {
 		// TODO(#781): Verify Proposer Signature.
 		if err := b.VerifyProposerSignature(block); err != nil {
 			return nil, fmt.Errorf("could not verify proposer signature: %v", err)
 		}
 	}
-	var err error
+	log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Verified block signature")
+
+	// Verify block RANDAO.
 	state, err = b.ProcessBlockRandao(state, block, verifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify and process block randao: %v", err)
 	}
-	state, err = b.ProcessProposerSlashings(state, block, verifySignatures)
-	if err != nil {
-		return nil, fmt.Errorf("could not verify block proposer slashings: %v", err)
-	}
+	log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Verified and processed block RANDAO")
+
+	// Process ETH1 data.
 	state = b.ProcessEth1Data(state, block)
 	state, err = b.ProcessAttesterSlashings(state, block, verifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify block attester slashings: %v", err)
 	}
+	log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Processed ETH1 data")
+
+	state, err = b.ProcessProposerSlashings(state, block, verifySignatures)
+	if err != nil {
+		return nil, fmt.Errorf("could not verify block proposer slashings: %v", err)
+	}
+
 	state, err = b.ProcessBlockAttestations(state, block, verifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block attestations: %v", err)

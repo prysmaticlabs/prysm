@@ -124,8 +124,8 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 
 	v.assignment = resp.Assignment
 	log.WithFields(logrus.Fields{
-		"proposerSlot": resp.Assignment.ProposerSlot,
-		"attesterSlot": resp.Assignment.AttesterSlot,
+		"proposerSlot": resp.Assignment.ProposerSlot - params.BeaconConfig().GenesisSlot,
+		"attesterSlot": resp.Assignment.AttesterSlot - params.BeaconConfig().GenesisSlot,
 		"shard":        resp.Assignment.Shard,
 	}).Info("Updated validator assignments")
 	return nil

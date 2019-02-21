@@ -30,11 +30,8 @@ import (
 //
 // WIP - this is stubbed out until BLS is integrated into Prysm.
 func VerifyProposerSignature(
-	block *pb.BeaconBlock,
+	_ *pb.BeaconBlock,
 ) error {
-	if block == nil {
-		return errors.New("received nil block")
-	}
 	return nil
 }
 
@@ -189,7 +186,14 @@ func verifyProposerSlashing(
 	root1 := slashing.ProposalData_1.BlockRootHash32
 	root2 := slashing.ProposalData_2.BlockRootHash32
 	if slot1 != slot2 {
-		return fmt.Errorf("slashing proposal data slots do not match: %d, %d", slot1, slot2)
+		if slot1 > params.BeaconConfig().GenesisSlot {
+			slot1 -= params.BeaconConfig().GenesisSlot
+		}
+		if slot2 > params.BeaconConfig().GenesisSlot {
+			slot2 -= params.BeaconConfig().GenesisSlot
+		}
+		return fmt.Errorf("slashing proposal data slots do not match: %d, %d",
+			slot1, slot2)
 	}
 	if shard1 != shard2 {
 		return fmt.Errorf("slashing proposal data shards do not match: %d, %d", shard1, shard2)
@@ -411,17 +415,17 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	if att.Data.Slot+inclusionDelay > beaconState.Slot {
 		return fmt.Errorf(
 			"attestation slot (slot %d) + inclusion delay (%d) beyond current beacon state slot (%d)",
-			att.Data.Slot,
+			att.Data.Slot - params.BeaconConfig().GenesisSlot,
 			inclusionDelay,
-			beaconState.Slot,
+			beaconState.Slot - params.BeaconConfig().GenesisSlot,
 		)
 	}
 	if att.Data.Slot+params.BeaconConfig().SlotsPerEpoch < beaconState.Slot {
 		return fmt.Errorf(
 			"attestation slot (slot %d) + epoch length (%d) less than current beacon state slot (%d)",
-			att.Data.Slot,
+			att.Data.Slot - params.BeaconConfig().GenesisSlot,
 			params.BeaconConfig().SlotsPerEpoch,
-			beaconState.Slot,
+			beaconState.Slot - params.BeaconConfig().GenesisSlot,
 		)
 	}
 	// Verify that `attestation.data.justified_epoch` is equal to `state.justified_epoch
