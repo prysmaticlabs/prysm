@@ -184,8 +184,14 @@ func verifyProposerSlashing(
 	root1 := slashing.ProposalData_1.BlockRootHash32
 	root2 := slashing.ProposalData_2.BlockRootHash32
 	if slot1 != slot2 {
+		if slot1 > params.BeaconConfig().GenesisSlot {
+			slot1 -= params.BeaconConfig().GenesisSlot
+		}
+		if slot2 > params.BeaconConfig().GenesisSlot {
+			slot2 -= params.BeaconConfig().GenesisSlot
+		}
 		return fmt.Errorf("slashing proposal data slots do not match: %d, %d",
-			slot1 - params.BeaconConfig().GenesisSlot, slot2  - params.BeaconConfig().GenesisSlot )
+			slot1 , slot2 )
 	}
 	if shard1 != shard2 {
 		return fmt.Errorf("slashing proposal data shards do not match: %d, %d", shard1, shard2)
