@@ -1011,7 +1011,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_exp",
-    commit = "21964bba6549f73cc16f1ddbc95bcbbb5b679985",
+    commit = "3d75e7a16e39f0cd41d10ecec5eca840c3abd6f0",
     importpath = "golang.org/x/exp",
 )
 
