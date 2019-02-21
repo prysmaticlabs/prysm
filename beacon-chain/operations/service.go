@@ -99,8 +99,9 @@ func (s *Service) IncomingProcessedBlockFeed() *event.Feed {
 
 // PendingAttestations returns the attestations that have not seen on the beacon chain, the attestations are
 // returns in slot ascending order and up to MaxAttestations capacity. The attestations get
-// deleted in DB after they have been retrieved.
-func (s *Service) PendingAttestations() ([]*pb.Attestation, error) {
+// deleted in DB after they have been retrieved. If a bool flag is provided, we only retrieve those
+// attestations that satisfy attestation.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot.
+func (s *Service) PendingAttestations(beaconStateSlot uint64, readyForInclusion bool) ([]*pb.Attestation, error) {
 	var attestations []*pb.Attestation
 	attestationsFromDB, err := s.beaconDB.Attestations()
 	if err != nil {
@@ -114,10 +115,20 @@ func (s *Service) PendingAttestations() ([]*pb.Attestation, error) {
 		if uint64(i) == params.BeaconConfig().MaxAttestations {
 			break
 		}
-		attestations = append(attestations, attestation)
-		// Delete attestation from DB after retrieval.
-		if err := s.beaconDB.DeleteAttestation(attestationsFromDB[i]); err != nil {
-			return nil, fmt.Errorf("could not delete attestation %v", attestationsFromDB[i])
+		if readyForInclusion {
+			if attestation.Data.Slot+params.BeaconConfig().MinAttestationInclusionDelay <= beaconStateSlot {
+				attestations = append(attestations, attestation)
+				// Delete attestation from DB after retrieval.
+				if err := s.beaconDB.DeleteAttestation(attestationsFromDB[i]); err != nil {
+					return nil, fmt.Errorf("could not delete attestation %v", attestationsFromDB[i])
+				}
+			}
+		} else {
+			attestations = append(attestations, attestation)
+			// Delete attestation from DB after retrieval.
+			if err := s.beaconDB.DeleteAttestation(attestationsFromDB[i]); err != nil {
+				return nil, fmt.Errorf("could not delete attestation %v", attestationsFromDB[i])
+			}
 		}
 	}
 	return attestations, nil
@@ -129,6 +140,8 @@ func (s *Service) saveOperations() {
 	// TODO(1438): Add rest of operations (slashings, attestation, exists...etc)
 	incomingSub := s.incomingExitFeed.Subscribe(s.incomingValidatorExits)
 	defer incomingSub.Unsubscribe()
+	incomingAttSub := s.incomingAttFeed.Subscribe(s.incomingAtt)
+	defer incomingAttSub.Unsubscribe()
 
 	for {
 		select {
@@ -149,7 +162,7 @@ func (s *Service) saveOperations() {
 				log.Errorf("Could not save exit request: %v", err)
 				continue
 			}
-			log.Debugf("Exit request %#x saved in DB", hash)
+			log.Infof("Exit request %#x saved in DB", hash)
 		case attestation := <-s.incomingAtt:
 			hash, err := hashutil.HashProto(attestation)
 			if err != nil {
@@ -160,7 +173,7 @@ func (s *Service) saveOperations() {
 				log.Errorf("Could not save attestation: %v", err)
 				continue
 			}
-			log.Debugf("Attestation %#x saved in DB", hash)
+			log.Infof("Attestation %#x saved in DB", hash)
 		}
 	}
 }

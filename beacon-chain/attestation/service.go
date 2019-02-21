@@ -151,7 +151,7 @@ func (a *Service) attestationPool() {
 				log.Errorf("Could not update attestation pool: %v", err)
 				continue
 			}
-			log.Debugf("Updated attestation pool for attestation %#x", h)
+			log.Infof("Updated attestation pool for attestation %#x", h)
 		}
 	}
 }
