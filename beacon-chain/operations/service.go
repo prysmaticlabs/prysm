@@ -109,7 +109,7 @@ func (s *Service) PendingAttestations() ([]*pb.Attestation, error) {
 	sort.Slice(attestationsFromDB, func(i, j int) bool {
 		return attestationsFromDB[i].Data.Slot < attestationsFromDB[j].Data.Slot
 	})
-	for i, _ := range attestationsFromDB {
+	for i := range attestationsFromDB {
 		// Stop the max attestation number per beacon block is reached.
 		if uint64(i) == params.BeaconConfig().MaxAttestations {
 			break
