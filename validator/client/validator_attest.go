@@ -6,10 +6,8 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
-
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-
 	"github.com/opentracing/opentracing-go"
 )
 
@@ -44,7 +42,8 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	}
 	resp, err := v.validatorClient.ValidatorCommitteeAtSlot(ctx, req)
 	if err != nil {
-		log.Errorf("Could not fetch crosslink committees at slot %d: %v", slot, err)
+		log.Errorf("Could not fetch crosslink committees at slot %d: %v",
+			slot - params.BeaconConfig().GenesisSlot, err)
 		return
 	}
 	// Set the attestation data's shard as the shard associated with the validator's
@@ -58,7 +57,8 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	}
 	infoRes, err := v.attesterClient.AttestationInfoAtSlot(ctx, infoReq)
 	if err != nil {
-		log.Errorf("Could not fetch necessary info to produce attestation at slot %d: %v", slot, err)
+		log.Errorf("Could not fetch necessary info to produce attestation at slot %d: %v",
+			slot - params.BeaconConfig().GenesisSlot, err)
 		return
 	}
 	// Set the attestation data's beacon block root = hash_tree_root(head) where head

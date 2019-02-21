@@ -510,9 +510,9 @@ func TestProcessEpoch_CantGetBoundaryAttestation(t *testing.T) {
 
 	want := fmt.Sprintf(
 		"could not get current boundary attestations: slot %d is not within expected range of %d to %d",
-		newState.Slot,
+		newState.Slot - params.BeaconConfig().GenesisSlot,
 		newState.Slot-params.BeaconConfig().LatestBlockRootsLength,
-		newState.Slot,
+		newState.Slot - params.BeaconConfig().GenesisSlot,
 	)
 	if _, err := state.ProcessEpoch(newState); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected: %s, received: %v", want, err)
