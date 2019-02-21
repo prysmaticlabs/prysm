@@ -96,7 +96,7 @@ this command outputs a deposit data string which can be used to deposit Ether in
 contract in order to activate the validator client`,
 					Flags: []cli.Flag{
 						types.KeystorePathFlag,
-						types.PasswordPathFlag,
+						types.PasswordFlag,
 					},
 					Action: createValidatorAccount,
 				},
@@ -107,7 +107,7 @@ contract in order to activate the validator client`,
 	app.Flags = []cli.Flag{
 		types.BeaconRPCProviderFlag,
 		types.KeystorePathFlag,
-		types.PasswordPathFlag,
+		types.PasswordFlag,
 		cmd.VerbosityFlag,
 		cmd.DataDirFlag,
 		cmd.EnableTracingFlag,
