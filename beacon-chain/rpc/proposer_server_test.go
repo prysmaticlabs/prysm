@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -123,13 +124,37 @@ func TestComputeStateRoot(t *testing.T) {
 	_, _ = proposerServer.ComputeStateRoot(context.Background(), req)
 }
 
+func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	proposerServer := &ProposerServer{
+		operationService: &mockOperationService{},
+		beaconDB:         db,
+	}
+	beaconState := &pbp2p.BeaconState{
+		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().MinAttestationInclusionDelay,
+	}
+	if err := db.SaveState(beaconState); err != nil {
+		t.Fatal(err)
+	}
+	res, err := proposerServer.PendingAttestations(context.Background(), &pb.PendingAttestationsRequest{
+		FilterReadyForInclusion: true,
+	})
+	if err != nil {
+		t.Fatalf("Unexpected error fetching pending attestations: %v", err)
+	}
+	if len(res.PendingAttestations) == 0 {
+		t.Error("Expected pending attestations list to be non-empty")
+	}
+}
+
 func TestPendingAttestations_Ok(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	proposerServer := &ProposerServer{
 		operationService: &mockOperationService{},
 	}
-	res, err := proposerServer.PendingAttestations(context.Background(), nil)
+	res, err := proposerServer.PendingAttestations(context.Background(), &pb.PendingAttestationsRequest{})
 	if err != nil {
 		t.Fatalf("Unexpected error fetching pending attestations: %v", err)
 	}

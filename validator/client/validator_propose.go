@@ -14,6 +14,7 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
@@ -78,7 +79,9 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	epochSignature := v.key.SecretKey.Sign(buf, domain)
 
 	// Fetch pending attestations seen by the beacon node.
-	attResp, err := v.proposerClient.PendingAttestations(ctx, &ptypes.Empty{})
+	attResp, err := v.proposerClient.PendingAttestations(ctx, &pb.PendingAttestationsRequest{
+		FilterReadyForInclusion: true,
+	})
 	if err != nil {
 		log.Errorf("Failed to fetch pending attestations from the beacon node: %v", err)
 		return
