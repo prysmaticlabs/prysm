@@ -92,8 +92,8 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock, verifySignatures
 	if block.Slot != state.Slot {
 		return nil, fmt.Errorf(
 			"block.slot != state.slot, block.slot = %d, state.slot = %d",
-			block.Slot,
-			state.Slot,
+			block.Slot - params.BeaconConfig().GenesisSlot,
+			state.Slot - params.BeaconConfig().GenesisSlot,
 		)
 	}
 	log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Verified block slot == state slot")
