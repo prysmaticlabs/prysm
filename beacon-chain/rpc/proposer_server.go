@@ -68,15 +68,15 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 // attestations which are ready for inclusion. That is, attestations that satisfy:
 // attestation.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot.
 func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.PendingAttestationsRequest) (*pb.PendingAttestationsResponse, error) {
+	beaconState, err := ps.beaconDB.State()
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
+	}
 	atts, err := ps.operationService.PendingAttestations()
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve pending attestations from operations service: %v", err)
 	}
 	if req.FilterReadyForInclusion {
-		beaconState, err := ps.beaconDB.State()
-		if err != nil {
-			return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
-		}
 		var attsReadyForInclusion []*pbp2p.Attestation
 		for _, val := range atts {
 			if val.Data.Slot+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot {

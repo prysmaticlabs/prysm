@@ -167,18 +167,17 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 			log.Debug("Exiting goroutine")
 			return
 		case <-delayChan:
+			// requests multiple blocks so as to save and sync quickly.
+			s.requestBatchedBlocks(s.highestObservedSlot)
 			if s.currentSlot == params.BeaconConfig().GenesisSlot {
 				continue
 			}
-
+			log.Info("Post chan")
 			if s.highestObservedSlot == s.currentSlot {
 				log.Info("Exiting initial sync and starting normal sync")
 				s.syncService.ResumeSync()
 				return
 			}
-
-			// requests multiple blocks so as to save and sync quickly.
-			s.requestBatchedBlocks(s.highestObservedSlot)
 		case msg := <-s.blockAnnounceBuf:
 			data := msg.Data.(*pb.BeaconBlockAnnounce)
 
