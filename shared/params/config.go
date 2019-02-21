@@ -191,6 +191,7 @@ func BeaconConfig() *BeaconChainConfig {
 func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig := *defaultBeaconConfig
 	demoConfig.ShardCount = 1
+	demoConfig.MinAttestationInclusionDelay = 1
 	demoConfig.TargetCommitteeSize = 2
 	demoConfig.DepositsForChainStart = 8
 	demoConfig.SlotsPerEpoch = 4
