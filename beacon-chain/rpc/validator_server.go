@@ -101,7 +101,7 @@ func (vs *ValidatorServer) ValidatorCommitteeAtSlot(ctx context.Context, req *pb
 	}
 	crossLinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(beaconState, req.Slot, false /* registry change */)
 	if err != nil {
-		return nil, fmt.Errorf("could not get crosslink committees at slot %d: %v", req.Slot - params.BeaconConfig().GenesisSlot, err)
+		return nil, fmt.Errorf("could not get crosslink committees at slot %d: %v", req.Slot-params.BeaconConfig().GenesisSlot, err)
 	}
 	var committee []uint64
 	var shard uint64

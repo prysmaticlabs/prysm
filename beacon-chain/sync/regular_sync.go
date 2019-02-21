@@ -282,7 +282,7 @@ func (rs *RegularSync) handleBlockRequestBySlot(msg p2p.Message) {
 
 	_, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
 	log.WithField("slotNumber",
-		fmt.Sprintf("%d", request.SlotNumber - params.BeaconConfig().GenesisSlot)).Debug("Sending requested block to peer")
+		fmt.Sprintf("%d", request.SlotNumber-params.BeaconConfig().GenesisSlot)).Debug("Sending requested block to peer")
 	rs.p2p.Send(&pb.BeaconBlockResponse{
 		Block: block,
 	}, msg.Peer)

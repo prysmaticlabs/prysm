@@ -78,7 +78,7 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 		t.Fatal(err)
 	}
 	var slashings []*pb.ProposerSlashing
-	for i:=uint64(0); i<params.BeaconConfig().MaxProposerSlashings+1; i++ {
+	for i := uint64(0); i < params.BeaconConfig().MaxProposerSlashings+1; i++ {
 		slashings = append(slashings, &pb.ProposerSlashing{})
 	}
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
@@ -121,7 +121,7 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 		},
 	}
 	var attesterSlashings []*pb.AttesterSlashing
-	for i:=uint64(0); i<params.BeaconConfig().MaxAttesterSlashings+1; i++ {
+	for i := uint64(0); i < params.BeaconConfig().MaxAttesterSlashings+1; i++ {
 		attesterSlashings = append(attesterSlashings, &pb.AttesterSlashing{})
 	}
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
@@ -188,7 +188,7 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 	}
 
 	var blockAttestations []*pb.Attestation
-	for i:=uint64(0); i<params.BeaconConfig().MaxAttestations+1; i++ {
+	for i := uint64(0); i < params.BeaconConfig().MaxAttestations+1; i++ {
 		blockAttestations = append(blockAttestations, &pb.Attestation{})
 	}
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
@@ -279,7 +279,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	}
 	attestations := []*pb.Attestation{blockAtt}
 	var exits []*pb.VoluntaryExit
-	for i:=uint64(0); i<params.BeaconConfig().MaxVoluntaryExits+1; i++ {
+	for i := uint64(0); i < params.BeaconConfig().MaxVoluntaryExits+1; i++ {
 		exits = append(exits, &pb.VoluntaryExit{})
 	}
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
@@ -522,9 +522,9 @@ func TestProcessEpoch_CantGetBoundaryAttestation(t *testing.T) {
 
 	want := fmt.Sprintf(
 		"could not get current boundary attestations: slot %d is not within expected range of %d to %d",
-		newState.Slot - params.BeaconConfig().GenesisSlot,
-		newState.Slot-params.BeaconConfig().LatestBlockRootsLength,
-		newState.Slot - params.BeaconConfig().GenesisSlot,
+		newState.Slot-params.BeaconConfig().GenesisSlot,
+		0,
+		newState.Slot-params.BeaconConfig().GenesisSlot,
 	)
 	if _, err := state.ProcessEpoch(newState); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected: %s, received: %v", want, err)

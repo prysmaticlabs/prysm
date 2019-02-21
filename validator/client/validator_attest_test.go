@@ -45,7 +45,7 @@ func TestAttestToBlockHead_ValidatorCommitteeAtSlotFailure(t *testing.T) {
 		gomock.Any(),
 	).Return(nil, errors.New("something went wrong"))
 
-	validator.AttestToBlockHead(context.Background(), 30)
+	validator.AttestToBlockHead(context.Background(), 30+params.BeaconConfig().GenesisSlot)
 	testutil.AssertLogsContain(t, hook, "Could not fetch crosslink committees at slot 30")
 }
 

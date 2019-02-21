@@ -287,7 +287,7 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 
 	if block.Slot == params.BeaconConfig().GenesisSlot {
 		return nil, fmt.Errorf("cannot process a genesis block: received block with slot %d",
-			block.Slot - params.BeaconConfig().GenesisSlot)
+			block.Slot-params.BeaconConfig().GenesisSlot)
 	}
 
 	// Save blocks with higher slot numbers in cache.
@@ -301,7 +301,7 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 		return nil, fmt.Errorf("could not retrieve chain head root: %v", err)
 	}
 
-	log.WithField("slotNumber", block.Slot - params.BeaconConfig().GenesisSlot).Info(
+	log.WithField("slotNumber", block.Slot-params.BeaconConfig().GenesisSlot).Info(
 		"Executing state transition")
 
 	// Check for skipped slots and update the corresponding proposers

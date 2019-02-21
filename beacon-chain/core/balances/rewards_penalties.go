@@ -348,7 +348,7 @@ func Crosslinks(
 		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(state, i, false)
 		if err != nil {
 			return nil, fmt.Errorf("could not get shard committees for slot %d: %v",
-				i - params.BeaconConfig().GenesisSlot, err)
+				i-params.BeaconConfig().GenesisSlot, err)
 		}
 		for _, crosslinkCommittee := range crosslinkCommittees {
 			shard := crosslinkCommittee.Shard

@@ -89,7 +89,7 @@ func TestBeaconProposerIdx(t *testing.T) {
 func TestBeaconProposerIdx_returnsErrorWithEmptyCommittee(t *testing.T) {
 	slot := uint64(0)
 	_, err := BeaconProposerIndex(&pb.BeaconState{}, slot)
-	expected := fmt.Sprintf("empty first committee at slot %d", slot - params.BeaconConfig().GenesisSlot)
+	expected := fmt.Sprintf("empty first committee at slot %d", slot-params.BeaconConfig().GenesisSlot)
 	if err.Error() != expected {
 		t.Errorf("Unexpected error. got=%v want=%s", err, expected)
 	}

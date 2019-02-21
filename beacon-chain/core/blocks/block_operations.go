@@ -191,7 +191,7 @@ func verifyProposerSlashing(
 			slot2 -= params.BeaconConfig().GenesisSlot
 		}
 		return fmt.Errorf("slashing proposal data slots do not match: %d, %d",
-			slot1 , slot2 )
+			slot1, slot2)
 	}
 	if shard1 != shard2 {
 		return fmt.Errorf("slashing proposal data shards do not match: %d, %d", shard1, shard2)
