@@ -123,6 +123,15 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock, verifySignatures
 	log.WithField(
 		"slotsSinceGenesis", state.Slot-params.BeaconConfig().GenesisSlot,
 	).Info("Block transition successfully processed")
+	log.WithField(
+		"attestationsInBlock", len(block.Body.Attestations),
+	).Info("Block attestations")
+	log.WithField(
+		"depositsInBlock", len(block.Body.Deposits),
+	).Info("Block deposits")
+	log.WithField(
+		"exitsInBlock", len(block.Body.VoluntaryExits),
+	).Info("Block voluntary exits")
 	return state, nil
 }
 
@@ -355,5 +364,18 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	log.WithField(
 		"slotsSinceGenesis", state.Slot-params.BeaconConfig().GenesisSlot,
 	).Info("Epoch transition successfully processed")
+	log.WithField(
+		"epochsSinceGenesis", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch,
+	).Info("Finalized epoch")
+	log.WithField(
+		"epochsSinceGenesis", state.PreviousJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
+	).Info("Previous justified epoch")
+	log.WithField(
+		"epochsSinceGenesis", state.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
+	).Info("Justified epoch")
+	log.WithField(
+		"numValidators", len(state.ValidatorRegistry),
+	).Info("Validator registry length")
+	log.Infof("Validator balances: %v", state.ValidatorBalances)
 	return state, nil
 }

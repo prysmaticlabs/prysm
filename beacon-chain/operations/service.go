@@ -149,7 +149,7 @@ func (s *Service) saveOperations() {
 				log.Errorf("Could not save exit request: %v", err)
 				continue
 			}
-			log.Debugf("Exit request %#x saved in DB", hash)
+			log.Infof("Exit request %#x saved in DB", hash)
 		case attestation := <-s.incomingAtt:
 			hash, err := hashutil.HashProto(attestation)
 			if err != nil {
@@ -160,7 +160,7 @@ func (s *Service) saveOperations() {
 				log.Errorf("Could not save attestation: %v", err)
 				continue
 			}
-			log.Debugf("Attestation %#x saved in DB", hash)
+			log.Infof("Attestation %#x saved in DB", hash)
 		}
 	}
 }
