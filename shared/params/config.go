@@ -198,7 +198,7 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.GenesisEpoch = demoConfig.GenesisSlot / 4
 	demoConfig.SecondsPerSlot = 10
 	demoConfig.MinDepositAmount = 100
-	demoConfig.MaxDepositAmount = 3200
+	demoConfig.MaxDepositAmount = 320000
 	demoConfig.SyncPollingInterval = 2 * 4 // Query nodes over the network every 4 slots for sync status.
 
 	return &demoConfig
