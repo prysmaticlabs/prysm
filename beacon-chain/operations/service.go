@@ -129,6 +129,8 @@ func (s *Service) saveOperations() {
 	// TODO(1438): Add rest of operations (slashings, attestation, exists...etc)
 	incomingSub := s.incomingExitFeed.Subscribe(s.incomingValidatorExits)
 	defer incomingSub.Unsubscribe()
+	incomingAttSub := s.incomingAttFeed.Subscribe(s.incomingAtt)
+	defer incomingAttSub.Unsubscribe()
 
 	for {
 		select {

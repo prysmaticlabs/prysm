@@ -80,14 +80,16 @@ func ProcessEth1Data(beaconState *pb.BeaconState, block *pb.BeaconBlock) *pb.Bea
 //     signature=block.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO)).
 //   Set state.latest_randao_mixes[get_current_epoch(state) % LATEST_RANDAO_MIXES_LENGTH] =
 //     xor(get_randao_mix(state, get_current_epoch(state)), hash(block.randao_reveal))
-func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, verifySignatures bool) (*pb.BeaconState, error) {
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
 	}
 	proposer := beaconState.ValidatorRegistry[proposerIdx]
-	if err := verifyBlockRandao(beaconState, block, proposer); err != nil {
-		return nil, fmt.Errorf("could not verify block randao: %v", err)
+	if verifySignatures {
+		if err := verifyBlockRandao(beaconState, block, proposer); err != nil {
+			return nil, fmt.Errorf("could not verify block randao: %v", err)
+		}
 	}
 	// If block randao passed verification, we XOR the state's latest randao mix with the block's
 	// randao and update the state's corresponding latest randao mix value.
