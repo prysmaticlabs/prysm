@@ -23,7 +23,8 @@ func TestGenerateBlocks(t *testing.T) {
 		t.Fatalf("Could not create a new simulated backend %v", err)
 	}
 
-	if err := backend.SetupBackend(1000); err != nil {
+	privKeys, err := backend.SetupBackend(1000)
+	if err != nil {
 		t.Fatalf("Could not set up backend %v", err)
 	}
 
@@ -51,7 +52,7 @@ func TestGenerateNilBlocks(t *testing.T) {
 		t.Fatalf("Could not create a new simulated backedn %v", err)
 	}
 
-	if err := backend.SetupBackend(1000); err != nil {
+	if _, err := backend.SetupBackend(1000); err != nil {
 		t.Fatalf("Could not set up backend %v", err)
 	}
 

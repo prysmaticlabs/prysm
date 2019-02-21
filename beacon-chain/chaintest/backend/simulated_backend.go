@@ -71,16 +71,16 @@ func NewSimulatedBackend() (*SimulatedBackend, error) {
 
 // SetupBackend sets up the simulated backend with simulated deposits, and initializes the
 // state and genesis block.
-func (sb *SimulatedBackend) SetupBackend(numOfDeposits uint64) error {
-	initialDeposits, _, err := generateInitialSimulatedDeposits(numOfDeposits)
+func (sb *SimulatedBackend) SetupBackend(numOfDeposits uint64) ([]*bls.SecretKey, error) {
+	initialDeposits, privKeys, err := generateInitialSimulatedDeposits(numOfDeposits)
 	if err != nil {
-		return fmt.Errorf("could not simulate initial validator deposits: %v", err)
+		return nil, fmt.Errorf("could not simulate initial validator deposits: %v", err)
 	}
 	if err := sb.setupBeaconStateAndGenesisBlock(initialDeposits); err != nil {
-		return fmt.Errorf("could not set up beacon state and initialize genesis block %v", err)
+		return nil, fmt.Errorf("could not set up beacon state and initialize genesis block %v", err)
 	}
 	sb.depositTrie = trieutil.NewDepositTrie()
-	return nil
+	return privKeys, nil
 }
 
 // GenerateBlockAndAdvanceChain generates a simulated block and runs that block though

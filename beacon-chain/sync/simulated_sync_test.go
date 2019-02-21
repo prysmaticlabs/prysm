@@ -12,37 +12,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 )
 
-type genesisPowChain struct {
-	feed *event.Feed
-}
-
-func (mp *genesisPowChain) HasChainStartLogOccurred() (bool, uint64, error) {
-	return false, 0, nil
-}
-
-func (mp *genesisPowChain) ChainStartFeed() *event.Feed {
-	return mp.feed
-}
-
-type afterGenesisPowChain struct {
-	feed *event.Feed
-}
-
-func (mp *afterGenesisPowChain) HasChainStartLogOccurred() (bool, uint64, error) {
-	return true, 0, nil
-}
-
-func (mp *afterGenesisPowChain) ChainStartFeed() *event.Feed {
-	return mp.feed
-}
-
 func setUpSyncedService(numOfBlocks int, t *testing.T) (*Service, *db.BeaconDB) {
 	bd, err := backend.NewSimulatedBackend()
 	if err != nil {
 		t.Fatalf("Could not set up simulated backend %v", err)
 	}
 
-	if err := bd.SetupBackend(100); err != nil {
+	privKeys, err := bd.SetupBackend(100)
+	if err != nil {
 		t.Fatalf("Could not set up backend %v", err)
 	}
 
@@ -74,18 +51,18 @@ func setUpSyncedService(numOfBlocks int, t *testing.T) (*Service, *db.BeaconDB) 
 		BeaconDB:         beacondb,
 		OperationService: &mockOperationService{},
 		P2P:              mockServer,
-		Powchain:         mockPow,
+		PowChainService:  mockPow,
 	}
 
 	ss := NewSyncService(context.Background(), cfg)
 
 	go ss.run()
-	for !ss.Querier.isChainStart {
+	for !ss.Querier.chainStarted {
 		mockPow.feed.Send(time.Now())
 	}
 
 	for i := 0; i < numOfBlocks; i++ {
-		bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{})
+		bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys)
 		blocks := bd.InMemoryBlocks()
 		beacondb.SaveBlock(blocks[i])
 	}
@@ -99,7 +76,7 @@ func setUpUnSyncedService(numOfBlocks int, t *testing.T) (*Service, *db.BeaconDB
 		t.Fatalf("Could not set up simulated backend %v", err)
 	}
 
-	if err := bd.SetupBackend(100); err != nil {
+	if _, err := bd.SetupBackend(100); err != nil {
 		t.Fatalf("Could not set up backend %v", err)
 	}
 
@@ -131,7 +108,7 @@ func setUpUnSyncedService(numOfBlocks int, t *testing.T) (*Service, *db.BeaconDB
 		BeaconDB:         beacondb,
 		OperationService: &mockOperationService{},
 		P2P:              mockServer,
-		Powchain:         mockPow,
+		PowChainService:  mockPow,
 	}
 
 	ss := NewSyncService(context.Background(), cfg)
@@ -163,7 +140,8 @@ func TestSetupTestingEnvironment(t *testing.T) {
 		t.Fatalf("Could not set up simulated backend %v", err)
 	}
 
-	if err := bd.SetupBackend(100); err != nil {
+	privKeys, err := bd.SetupBackend(100)
+	if err != nil {
 		t.Fatalf("Could not set up backend %v", err)
 	}
 
@@ -195,20 +173,20 @@ func TestSetupTestingEnvironment(t *testing.T) {
 		BeaconDB:         beacondb,
 		OperationService: &mockOperationService{},
 		P2P:              mockServer,
-		Powchain:         mockPow,
+		PowChainService:  mockPow,
 	}
 
 	ss := NewSyncService(context.Background(), cfg)
 
 	go ss.run()
-	for !ss.Querier.isChainStart {
+	for !ss.Querier.chainStarted {
 		mockPow.feed.Send(time.Now())
 	}
 
-	bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{})
-	bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{})
-	bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{})
-	bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{})
+	bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys)
+	bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys)
+	bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys)
+	bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys)
 	ctx := context.Background()
 	blocks := bd.InMemoryBlocks()
 	newChan := make(chan *pb.BeaconBlock, 5)
