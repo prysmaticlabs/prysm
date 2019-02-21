@@ -290,6 +290,7 @@ func (sb *SimulatedBackend) setupBeaconStateAndGenesisBlock(initialDeposits []*p
 	// We now keep track of generated blocks for each state transition in
 	// a slice.
 	sb.prevBlockRoots = [][32]byte{genesisBlockRoot}
+	sb.inMemoryBlocks = append(sb.inMemoryBlocks, genesisBlock)
 	return nil
 }
 

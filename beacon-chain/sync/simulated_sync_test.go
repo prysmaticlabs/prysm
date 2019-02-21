@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -27,10 +29,15 @@ func setUpSyncedService(numOfBlocks int, t *testing.T) (*Service, *db.BeaconDB) 
 	if err != nil {
 		t.Fatalf("Could not setup beacon db %v", err)
 	}
-	defer db.TeardownDB(beacondb)
 
 	if err := beacondb.SaveState(bd.State()); err != nil {
 		t.Fatalf("Could not save state %v", err)
+	}
+
+	memBlocks := bd.InMemoryBlocks()
+
+	if err := beacondb.UpdateChainHead(memBlocks[0], bd.State()); err != nil {
+		t.Fatalf("Could not update chain head %v", err)
 	}
 
 	mockPow := &genesisPowChain{
@@ -64,7 +71,7 @@ func setUpSyncedService(numOfBlocks int, t *testing.T) (*Service, *db.BeaconDB) 
 	for i := 0; i < numOfBlocks; i++ {
 		bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys)
 		blocks := bd.InMemoryBlocks()
-		beacondb.SaveBlock(blocks[i])
+		beacondb.SaveBlock(blocks[i+1])
 	}
 
 	return ss, beacondb
@@ -84,10 +91,19 @@ func setUpUnSyncedService(numOfBlocks int, t *testing.T) (*Service, *db.BeaconDB
 	if err != nil {
 		t.Fatalf("Could not setup beacon db %v", err)
 	}
-	defer db.TeardownDB(beacondb)
 
 	if err := beacondb.SaveState(bd.State()); err != nil {
 		t.Fatalf("Could not save state %v", err)
+	}
+
+	memBlocks := bd.InMemoryBlocks()
+
+	if err := beacondb.SaveBlock(memBlocks[0]); err != nil {
+		t.Fatalf("Could not save block %v", err)
+	}
+
+	if err := beacondb.UpdateChainHead(memBlocks[0], bd.State()); err != nil {
+		t.Fatalf("Could not update chain head %v", err)
 	}
 
 	mockPow := &afterGenesisPowChain{
@@ -115,23 +131,27 @@ func setUpUnSyncedService(numOfBlocks int, t *testing.T) (*Service, *db.BeaconDB
 
 	go ss.run()
 
-	ss.Querier.responseBuf <- p2p.Message{
-		Ctx: context.Background(),
-		Data: &pb.ChainHeadResponse{
-			Slot: 10,
-			Hash: []byte{'t', 'e', 's', 't'},
-		},
-	}
-
-	for len(ss.Querier.responseBuf) != 0 {
-
+	for ss.Querier.curentHeadSlot == 0 {
+		mockServer.Feed(&pb.ChainHeadResponse{}).Send(p2p.Message{
+			Ctx: context.Background(),
+			Data: &pb.ChainHeadResponse{
+				Slot: params.BeaconConfig().GenesisSlot + 10,
+				Hash: []byte{'t', 'e', 's', 't'},
+			},
+		})
 	}
 
 	return ss, beacondb
 }
 
 func TestServices(t *testing.T) {
-	setUpUnSyncedService(10, t)
+	ss, beaconDB := setUpUnSyncedService(10, t)
+	defer ss.Stop()
+	defer db.TeardownDB(beaconDB)
+
+	for ss.Querier.curentHeadSlot != 0 {
+
+	}
 }
 
 func TestSetupTestingEnvironment(t *testing.T) {

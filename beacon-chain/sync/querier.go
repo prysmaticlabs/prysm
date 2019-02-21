@@ -4,8 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/event"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -27,7 +25,6 @@ type QuerierConfig struct {
 	BeaconDB           *db.BeaconDB
 	PowChain           powChainService
 	CurentHeadSlot     uint64
-	PowChain           powChainService
 }
 
 // DefaultQuerierConfig provides the default configuration for a sync service.
