@@ -1014,3 +1014,9 @@ go_repository(
     commit = "afaefda3ea643e9292b6f4596403ed5c742561b4",
     importpath = "github.com/phoreproject/bls",
 )
+
+go_repository(
+    name = "com_github_gbrlsnchs_jwt",
+    commit = "def8ed7bb1d84da6d33b97b1e72d3d5cac0ad5ba",
+    importpath = "github.com/gbrlsnchs/jwt",
+)

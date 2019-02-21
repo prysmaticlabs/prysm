@@ -16,6 +16,7 @@ var (
 	recaptchaSecret = flag.String("recaptcha_secret", "", "Secret to verify recaptcha")
 	rpcPath         = flag.String("rpc", "", "RPC address of a running geth node")
 	privateKey      = flag.String("private-key", "", "The private key of funder")
+	rsaPubKeyPath   = flag.String("rsa-pub-path", "", "The path of the RSA public key")
 )
 
 func main() {
@@ -32,6 +33,7 @@ func main() {
 			recaptcha.Recaptcha{RecaptchaPrivateKey: *recaptchaSecret},
 			*rpcPath,
 			*privateKey,
+			*rsaPubKeyPath,
 		),
 	)
 

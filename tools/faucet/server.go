@@ -3,17 +3,25 @@ package main
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/gbrlsnchs/jwt"
 	recaptcha "github.com/prestonvanloon/go-recaptcha"
 	faucetpb "github.com/prysmaticlabs/prysm/proto/faucet"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 )
 
@@ -21,19 +29,25 @@ var minScore = 0.5
 var fundingAmount = big.NewInt(0.5 * params.Ether)
 
 type faucetServer struct {
-	r      recaptcha.Recaptcha
-	client *ethclient.Client
-	funder common.Address
-	pk     *ecdsa.PrivateKey
+	r        recaptcha.Recaptcha
+	client   *ethclient.Client
+	funder   common.Address
+	pk       *ecdsa.PrivateKey
+	verifier jwt.Signer
 }
 
-func NewFaucetServer(r recaptcha.Recaptcha, rpcPath, privateKey string) *faucetServer {
+func NewFaucetServer(
+	r recaptcha.Recaptcha,
+	rpcPath string,
+	funderPrivateKey string,
+	rsaPubKeyPath string,
+) *faucetServer {
 	client, err := ethclient.DialContext(context.Background(), rpcPath)
 	if err != nil {
 		panic(err)
 	}
 
-	pk, err := crypto.HexToECDSA(privateKey)
+	pk, err := crypto.HexToECDSA(funderPrivateKey)
 	if err != nil {
 		panic(err)
 	}
@@ -45,36 +59,91 @@ func NewFaucetServer(r recaptcha.Recaptcha, rpcPath, privateKey string) *faucetS
 		panic(err)
 	}
 
+	b, err := ioutil.ReadFile(rsaPubKeyPath)
+	if err != nil {
+		panic(err)
+	}
+
+	block, _ := pem.Decode(b)
+	if block == nil {
+		panic("failed to parse PEM block containing public key")
+	}
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		panic("failed to parse DER encoded public key: " + err.Error())
+	}
+
+	rsaPK := pub.(*rsa.PublicKey)
+
 	fmt.Printf("Funder is %s\n", funder.Hex())
 	fmt.Printf("Funder has %d\n", bal)
 
 	return &faucetServer{
-		r,
-		client,
-		funder,
-		pk,
+		r:        r,
+		client:   client,
+		funder:   funder,
+		pk:       pk,
+		verifier: jwt.NewRS256(nil /*privateKey*/, rsaPK),
 	}
 }
 
-// RequestFunds from the ethereum 1.x faucet. Requires a valid captcha
-// response.
-func (s *faucetServer) RequestFunds(ctx context.Context, req *faucetpb.FundingRequest) (*faucetpb.FundingResponse, error) {
+func (s *faucetServer) verifyRecaptcha(ctx context.Context, req *faucetpb.FundingRequest) error {
 	p, ok := peer.FromContext(ctx)
 	if !ok {
-		return nil, errors.New("peer from ctx not ok")
+		return errors.New("peer from ctx not ok")
 	}
 	fmt.Printf("Sending captcha request for peer %s\n", p.Addr.String())
 
 	rr, err := s.r.Check(p.Addr.String(), req.RecaptchaResponse)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if !rr.Success {
 		fmt.Printf("Unsuccessful recaptcha request. Error codes: %+v\n", rr.ErrorCodes)
-		return &faucetpb.FundingResponse{Error: "Recaptcha failed"}, nil
+		return errors.New("failed")
 	}
 	if rr.Score < minScore {
-		return &faucetpb.FundingResponse{Error: "Recaptcha score too low"}, nil
+		return errors.New("recaptcha score too low")
+	}
+
+	return nil
+}
+
+func (s *faucetServer) isAuthenticatedRequest(ctx context.Context) (bool, error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return false, errors.New("bad metadata")
+	}
+
+	token := md["authorization"][0]
+	if token == "" {
+		return false, nil
+	}
+
+	payload, sig, err := jwt.Parse(token)
+	if err != nil {
+		return false, err
+	}
+	if err := s.verifier.Verify(payload, sig); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+// RequestFunds from the ethereum 1.x faucet. Requires a valid captcha
+// response.
+func (s *faucetServer) RequestFunds(ctx context.Context, req *faucetpb.FundingRequest) (*faucetpb.FundingResponse, error) {
+
+	authenticated, err := s.isAuthenticatedRequest(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if !authenticated {
+		if err := s.verifyRecaptcha(ctx, req); err != nil {
+			return &faucetpb.FundingResponse{Error: fmt.Sprintf("Recaptcha failure: %v", err)}, nil
+		}
 	}
 
 	txHash, err := s.fundAndWait(common.HexToAddress(req.WalletAddress))
@@ -104,6 +173,14 @@ func (s *faucetServer) fundAndWait(to common.Address) (string, error) {
 
 	if err := s.client.SendTransaction(context.Background(), tx); err != nil {
 		return "", err
+	}
+
+	// Wait for contract to mine
+	for pending := true; pending; _, pending, err = s.client.TransactionByHash(context.Background(), tx.Hash()) {
+		if err != nil {
+			log.Fatal(err)
+		}
+		time.Sleep(1 * time.Second)
 	}
 
 	return tx.Hash().Hex(), nil
