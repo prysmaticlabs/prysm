@@ -141,6 +141,11 @@ func (s *InitialSync) Stop() error {
 	return nil
 }
 
+// InitializeObservedSlot sets the highest observed slot.
+func (s *InitialSync) HighestObservedSlot(slot uint64) {
+	s.highestObservedSlot = slot
+}
+
 // run is the main goroutine for the initial sync service.
 // delayChan is explicitly passed into this function to facilitate tests that don't require a timeout.
 // It is assumed that the goroutine `run` is only called once per instance.
@@ -167,6 +172,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 			return
 		case <-delayChan:
 			if s.currentSlot == params.BeaconConfig().GenesisSlot {
+				s.requestBatchedBlocks(s.highestObservedSlot)
 				continue
 			}
 

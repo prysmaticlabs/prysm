@@ -100,5 +100,8 @@ func (ss *Service) run() {
 		return
 	}
 
+	// Sets the highest observed slot from querier.
+	ss.InitialSync.HighestObservedSlot(ss.Querier.curentHeadSlot)
+
 	ss.InitialSync.Start()
 }
