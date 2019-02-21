@@ -289,7 +289,7 @@ func TestInactivityFFGTargetPenalty_AccuratePenalties(t *testing.T) {
 	}
 }
 
-func TestInactivityHeadPenalty_OK(t *testing.T) {
+func TestInactivityHeadPenalty_AccuratePenalties(t *testing.T) {
 	tests := []struct {
 		voted                             []uint64
 		balanceAfterInactivityHeadPenalty []uint64
@@ -324,7 +324,7 @@ func TestInactivityHeadPenalty_OK(t *testing.T) {
 	}
 }
 
-func TestInactivityExitedPenality_OK(t *testing.T) {
+func TestInactivityExitedPenality_AccuratePenalties(t *testing.T) {
 	tests := []struct {
 		balanceAfterExitedPenalty []uint64
 		epochsSinceFinality       uint64
@@ -359,7 +359,7 @@ func TestInactivityExitedPenality_OK(t *testing.T) {
 	}
 }
 
-func TestInactivityInclusionPenalty_OK(t *testing.T) {
+func TestInactivityInclusionPenalty_AccuratePenalties(t *testing.T) {
 	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -443,7 +443,7 @@ func TestInactivityInclusionPenalty_OutOfBounds(t *testing.T) {
 	}
 }
 
-func TestAttestationInclusionRewards_OK(t *testing.T) {
+func TestAttestationInclusionRewards_AccurateRewards(t *testing.T) {
 	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -562,7 +562,7 @@ func TestAttestationInclusionRewards_NoProposerIndex(t *testing.T) {
 	}
 }
 
-func TestCrosslinksRewardsPenalties_OK(t *testing.T) {
+func TestCrosslinksRewardsPenalties_AccurateBalances(t *testing.T) {
 	validators := make([]*pb.Validator, params.BeaconConfig().SlotsPerEpoch*4)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{

@@ -6,7 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend"
 )
 
-func TestFromYaml(t *testing.T) {
+func TestFromYaml_Pass(t *testing.T) {
 	tests, err := readTestsFromYaml("./tests")
 	if err != nil {
 		t.Fatalf("Failed to read yaml files: %v", err)
