@@ -63,7 +63,7 @@ func IsValidBlock(
 	// The node's local time is greater than or equal to
 	// state.genesis_time + (block.slot-GENESIS_SLOT)* SECONDS_PER_SLOT.
 	if !IsSlotValid(block.Slot, genesisTime) {
-		return fmt.Errorf("slot of block is too high: %d", block.Slot)
+		return fmt.Errorf("slot of block is too high: %d", block.Slot - params.BeaconConfig().GenesisSlot)
 	}
 
 	return nil
