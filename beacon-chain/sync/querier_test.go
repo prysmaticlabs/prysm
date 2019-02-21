@@ -66,6 +66,34 @@ func TestStartStop(t *testing.T) {
 	hook.Reset()
 }
 
+func TestListenForChainStart_ContextCancelled(t *testing.T) {
+	cfg := &QuerierConfig{
+		P2P:                &mockP2P{},
+		ResponseBufferSize: 100,
+		PowChain: &afterGenesisPowChain{
+			feed: new(event.Feed),
+		},
+	}
+	sq := NewQuerierService(context.Background(), cfg)
+	exitRoutine := make(chan bool)
+
+	defer func() {
+		close(exitRoutine)
+	}()
+
+	go func() {
+		sq.listenForChainStart()
+		exitRoutine <- true
+	}()
+
+	sq.cancel()
+	<-exitRoutine
+
+	if sq.ctx.Done() == nil {
+		t.Error("Despite context being cancelled, the done channel is nil")
+	}
+}
+
 func TestListenForChainStart(t *testing.T) {
 	cfg := &QuerierConfig{
 		P2P:                &mockP2P{},
