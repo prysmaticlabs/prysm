@@ -35,8 +35,8 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.18.6/rules_nodejs-0.18.6.tar.gz"],
-    sha256 = "1416d03823fed624b49a0abbd9979f7c63bbedfd37890ddecedd2fe25cccebc6",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.18.7/rules_nodejs-0.18.7.tar.gz"],
+    sha256 = "a69c5bd317beef982298ea7b5ed8b5c5275d1b55ee199e98a0ca088f8e0c6cce",
 )
 
 http_archive(
@@ -212,7 +212,7 @@ go_repository(
 go_repository(
     name = "com_github_multiformats_go_multihash",
     importpath = "github.com/multiformats/go-multihash",
-    tag = "v1.0.8",
+    tag = "v1.0.10",
 )
 
 go_repository(
@@ -512,7 +512,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "90b0e4468f9980bf79a2290394adaf7f045c5d24",
+    commit = "b4e8571b14e03cc164df06f72b640ebce3899579",
     importpath = "golang.org/x/sys",
 )
 
@@ -827,7 +827,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_discovery",
-    commit = "d369eed95f2d5748d1fa5688d97b6ae162658e1a",
+    commit = "5e0d40c7c8803e06c9eebe6dd3a0525a1d774a82",
     importpath = "github.com/libp2p/go-libp2p-discovery",
 )
 
@@ -921,7 +921,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_oauth2",
-    commit = "4b83411ed2b36bd4e3302e9b1d3c973fb1ba24db",
+    commit = "9b3c75971fc92dd27c6436a37c05c831498658f1",
     importpath = "golang.org/x/oauth2",
 )
 
