@@ -24,6 +24,7 @@ type BeaconServer struct {
 	ctx                 context.Context
 	powChainService     powChainService
 	chainService        chainService
+	chainStartDelayFlag uint64
 	operationService    operationService
 	incomingAttestation chan *pbp2p.Attestation
 	canonicalStateChan  chan *pbp2p.BeaconState
@@ -39,7 +40,7 @@ func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconSer
 	if err != nil {
 		return fmt.Errorf("could not determine if ChainStart log has occurred: %v", err)
 	}
-	if ok {
+	if ok && bs.chainStartDelayFlag == 0 {
 		res := &pb.ChainStartResponse{
 			Started:     true,
 			GenesisTime: genesisTime,
@@ -59,11 +60,9 @@ func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconSer
 			}
 			return stream.Send(res)
 		case <-sub.Err():
-			log.Debug("Subscriber closed, exiting goroutine")
-			return nil
+			return errors.New("subscriber closed, exiting goroutine")
 		case <-bs.ctx.Done():
-			log.Debug("RPC context closed, exiting goroutine")
-			return nil
+			return errors.New("rpc context closed, exiting goroutine")
 		}
 	}
 }
@@ -97,6 +96,15 @@ func (bs *BeaconServer) LatestAttestation(req *ptypes.Empty, stream pb.BeaconSer
 			return nil
 		}
 	}
+}
+
+// ForkData fetches the current fork information from the beacon state.
+func (bs *BeaconServer) ForkData(ctx context.Context, _ *ptypes.Empty) (*pbp2p.Fork, error) {
+	state, err := bs.beaconDB.State()
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
+	}
+	return state.Fork, nil
 }
 
 // Eth1Data is a mechanism used by block proposers vote on a recent Ethereum 1.0 block hash and an

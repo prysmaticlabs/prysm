@@ -61,6 +61,7 @@ type Service struct {
 	powChainService       powChainService
 	operationService      operationService
 	port                  string
+	chainStartDelayFlag   uint64
 	listener              net.Listener
 	withCert              string
 	withKey               string
@@ -74,14 +75,15 @@ type Service struct {
 
 // Config options for the beacon node RPC server.
 type Config struct {
-	Port             string
-	CertFlag         string
-	KeyFlag          string
-	SubscriptionBuf  int
-	BeaconDB         *db.BeaconDB
-	ChainService     chainService
-	POWChainService  powChainService
-	OperationService operationService
+	Port                string
+	CertFlag            string
+	KeyFlag             string
+	ChainStartDelayFlag uint64
+	SubscriptionBuf     int
+	BeaconDB            *db.BeaconDB
+	ChainService        chainService
+	POWChainService     powChainService
+	OperationService    operationService
 }
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
@@ -98,6 +100,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		port:                  cfg.Port,
 		withCert:              cfg.CertFlag,
 		withKey:               cfg.KeyFlag,
+		chainStartDelayFlag:   cfg.ChainStartDelayFlag,
 		slotAlignmentDuration: time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
 		canonicalBlockChan:    make(chan *pbp2p.BeaconBlock, cfg.SubscriptionBuf),
 		canonicalStateChan:    make(chan *pbp2p.BeaconState, cfg.SubscriptionBuf),
@@ -137,6 +140,7 @@ func (s *Service) Start() {
 		operationService:    s.operationService,
 		incomingAttestation: s.incomingAttestation,
 		canonicalStateChan:  s.canonicalStateChan,
+		chainStartDelayFlag: s.chainStartDelayFlag,
 		chainStartChan:      make(chan time.Time, 1),
 	}
 	proposerServer := &ProposerServer{

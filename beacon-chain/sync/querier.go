@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/event"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -25,6 +27,7 @@ type QuerierConfig struct {
 	BeaconDB           *db.BeaconDB
 	PowChain           powChainService
 	CurentHeadSlot     uint64
+	PowChain           powChainService
 }
 
 // DefaultQuerierConfig provides the default configuration for a sync service.
@@ -45,8 +48,9 @@ type Querier struct {
 	curentHeadSlot  uint64
 	currentHeadHash []byte
 	responseBuf     chan p2p.Message
+	chainStartBuf   chan time.Time
 	powchain        powChainService
-	isChainStart    bool
+	chainStarted    bool
 }
 
 // NewQuerierService constructs a new Sync Querier Service.
@@ -65,8 +69,9 @@ func NewQuerierService(ctx context.Context,
 		db:             cfg.BeaconDB,
 		responseBuf:    responseBuf,
 		curentHeadSlot: cfg.CurentHeadSlot,
-		isChainStart:   false,
+		chainStarted:   false,
 		powchain:       cfg.PowChain,
+		chainStartBuf:  make(chan time.Time, 1),
 	}
 }
 
@@ -93,17 +98,15 @@ func (q *Querier) Stop() error {
 
 func (q *Querier) listenForChainStart() {
 
-	chainStartChan := make(chan time.Time, 1)
-
-	sub := q.powchain.ChainStartFeed().Subscribe(chainStartChan)
+	sub := q.powchain.ChainStartFeed().Subscribe(q.chainStartBuf)
 	defer sub.Unsubscribe()
 	for {
 		select {
-		case <-chainStartChan:
-			q.isChainStart = true
+		case <-q.chainStartBuf:
+			q.chainStarted = true
 			return
 		case <-sub.Err():
-			log.Debug("Subscriber closed, exiting goroutine")
+			log.Fatal("Subscriber closed, unable to continue on with sync")
 			return
 		case <-q.ctx.Done():
 			log.Debug("RPC context closed, exiting goroutine")
@@ -158,7 +161,7 @@ func (q *Querier) RequestLatestHead() {
 // IsSynced checks if the node is cuurently synced with the
 // rest of the network.
 func (q *Querier) IsSynced() (bool, error) {
-	if q.isChainStart {
+	if q.chainStarted {
 		return true, nil
 	}
 	block, err := q.db.ChainHead()

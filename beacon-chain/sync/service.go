@@ -23,7 +23,7 @@ type Config struct {
 	BeaconDB         *db.BeaconDB
 	P2P              p2pAPI
 	OperationService operationService
-	Powchain         powChainService
+	PowChainService  powChainService
 }
 
 // NewSyncService creates a new instance of SyncService using the config
@@ -33,7 +33,7 @@ func NewSyncService(ctx context.Context, cfg *Config) *Service {
 	sqCfg := DefaultQuerierConfig()
 	sqCfg.BeaconDB = cfg.BeaconDB
 	sqCfg.P2P = cfg.P2P
-	sqCfg.PowChain = cfg.Powchain
+	sqCfg.PowChain = cfg.PowChainService
 
 	isCfg := initialsync.DefaultConfig()
 	isCfg.BeaconDB = cfg.BeaconDB
