@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -15,6 +17,8 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
+
+var log = logrus.WithField("prefix", "core/state")
 
 // IsValidBlock ensures that the block is compliant with the block processing validity conditions.
 // Spec:
@@ -69,5 +73,7 @@ func IsValidBlock(
 func IsSlotValid(slot uint64, genesisTime time.Time) bool {
 	slotDuration := time.Duration((slot-params.BeaconConfig().GenesisSlot)*params.BeaconConfig().SecondsPerSlot) * time.Second
 	validTimeThreshold := genesisTime.Add(slotDuration)
-	return clock.Now().After(validTimeThreshold)
+	now := clock.Now()
+	log.Infof("Current clock: %v, genesis+slot: %v", now, validTimeThreshold)
+	return now.After(validTimeThreshold)
 }

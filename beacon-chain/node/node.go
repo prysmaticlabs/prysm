@@ -58,6 +58,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 
 	// Use demo config values if demo config flag is set.
 	if ctx.GlobalBool(utils.DemoConfigFlag.Name) {
+		log.Info("Using custom parameter configuration")
 		params.UseDemoBeaconConfig()
 	}
 
@@ -73,11 +74,11 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if err := beacon.registerBlockchainService(ctx); err != nil {
+	if err := beacon.registerOperationService(); err != nil {
 		return nil, err
 	}
 
-	if err := beacon.registerOperationService(); err != nil {
+	if err := beacon.registerBlockchainService(ctx); err != nil {
 		return nil, err
 	}
 
@@ -175,10 +176,15 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 			return err
 		}
 	}
+	var opsService *operations.Service
+	if err := b.services.FetchService(&opsService); err != nil {
+		return err
+	}
 
 	blockchainService, err := blockchain.NewChainService(context.TODO(), &blockchain.Config{
 		BeaconDB:         b.db,
 		Web3Service:      web3Service,
+		OpsPoolService:   opsService,
 		BeaconBlockBuf:   10,
 		IncomingBlockBuf: 100, // Big buffer to accommodate other feed subscribers.
 	})
