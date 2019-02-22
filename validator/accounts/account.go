@@ -8,7 +8,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/params"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/sirupsen/logrus"
@@ -73,12 +72,10 @@ func NewValidatorAccount(directory string, password string) error {
 		validatorKeyFile,
 	).Info("Keystore generated for validator signatures at path")
 
-	data := &pb.DepositInput{
-		Pubkey:                      validatorKey.SecretKey.PublicKey().Marshal(),
-		ProofOfPossession:           []byte("pop"),
-		WithdrawalCredentialsHash32: []byte("withdraw"),
+	data, err := keystore.DepositInput(validatorKey, shardWithdrawalKey)
+	if err != nil {
+		return fmt.Errorf("unable to generate deposit data: %v", err)
 	}
-
 	serializedData := new(bytes.Buffer)
 	if err := ssz.Encode(serializedData, data); err != nil {
 		return fmt.Errorf("could not serialize deposit data: %v", err)

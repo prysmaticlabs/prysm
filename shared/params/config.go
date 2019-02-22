@@ -129,13 +129,14 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	ForkChoiceBalanceIncrement: 1 * 1e9,
 
 	// Initial value constants.
-	GenesisForkVersion: 0,
-	GenesisSlot:        1 << 63,
-	GenesisEpoch:       1 << 63 / 64,
-	GenesisStartShard:  0,
-	FarFutureEpoch:     1<<64 - 1,
-	ZeroHash:           [32]byte{},
-	EmptySignature:     [96]byte{},
+	GenesisForkVersion:      0,
+	GenesisSlot:             1 << 63,
+	GenesisEpoch:            1 << 63 / 64,
+	GenesisStartShard:       0,
+	FarFutureEpoch:          1<<64 - 1,
+	ZeroHash:                [32]byte{},
+	EmptySignature:          [96]byte{},
+	BLSWithdrawalPrefixByte: byte(0),
 
 	// Time parameter constants.
 	SecondsPerSlot:               6,
