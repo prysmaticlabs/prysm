@@ -76,7 +76,7 @@ type goodFetcher struct{}
 
 func (g *goodFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
 	if bytes.Equal(hash.Bytes(), common.BytesToHash([]byte{0}).Bytes()) {
-		return nil, fmt.Errorf("Expected block hash to be nonzero %v", hash)
+		return nil, fmt.Errorf("expected block hash to be nonzero %v", hash)
 	}
 
 	block := gethTypes.NewBlock(
@@ -93,7 +93,7 @@ func (g *goodFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethT
 
 func (g *goodFetcher) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
 	if number.Cmp(big.NewInt(0)) < 0 {
-		return nil, fmt.Errorf("Cannot put block number lower than 0. Received %v", number)
+		return nil, fmt.Errorf("cannot put block number lower than 0. Received %v", number)
 	}
 
 	block := gethTypes.NewBlock(
