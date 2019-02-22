@@ -9,7 +9,7 @@ import (
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 )
 
-func TestFeed_ReturnsSameFeed(t *testing.T) {
+func TestFeed_SameFeed(t *testing.T) {
 	tests := []struct {
 		a    proto.Message
 		b    proto.Message

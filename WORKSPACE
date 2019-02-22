@@ -512,7 +512,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "b4e8571b14e03cc164df06f72b640ebce3899579",
+    commit = "a9d3bda3a223baa6bba6ef412cb273f0fd163c05",
     importpath = "golang.org/x/sys",
 )
 
@@ -608,7 +608,7 @@ go_repository(
 
 go_repository(
     name = "com_github_syndtr_goleveldb",
-    commit = "2f17a3356c6616cbfc4ae4c38147dc062a68fb0e",
+    tag = "v1.0.0",
     importpath = "github.com/syndtr/goleveldb",
 )
 
@@ -656,7 +656,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aristanetworks_goarista",
-    commit = "c1e4b37418775d8f5e0c0c1a68766d321b32d6ca",
+    commit = "728bce664cf5dfb921941b240828f989a2c8f8e3",
     importpath = "github.com/aristanetworks/goarista",
 )
 
@@ -1011,7 +1011,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_exp",
-    commit = "21964bba6549f73cc16f1ddbc95bcbbb5b679985",
+    commit = "438050ddec5e7f808979ed57d041cebbc8e2d8a9",
     importpath = "golang.org/x/exp",
 )
 

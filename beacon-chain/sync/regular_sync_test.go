@@ -67,7 +67,7 @@ func setupService(t *testing.T, db *db.BeaconDB) *RegularSync {
 	return NewRegularSyncService(context.Background(), cfg)
 }
 
-func TestProcessBlockRoot(t *testing.T) {
+func TestProcessBlockRoot_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	db := internal.SetupDB(t)
@@ -111,7 +111,7 @@ func TestProcessBlockRoot(t *testing.T) {
 	hook.Reset()
 }
 
-func TestProcessBlock(t *testing.T) {
+func TestProcessBlock_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	db := internal.SetupDB(t)
@@ -190,7 +190,7 @@ func TestProcessBlock(t *testing.T) {
 	hook.Reset()
 }
 
-func TestProcessMultipleBlocks(t *testing.T) {
+func TestProcessBlock_MultipleBlocks(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	db := internal.SetupDB(t)
@@ -295,7 +295,7 @@ func TestProcessMultipleBlocks(t *testing.T) {
 	hook.Reset()
 }
 
-func TestBlockRequestErrors(t *testing.T) {
+func TestBlockRequest_InvalidMsg(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	db := internal.SetupDB(t)
@@ -325,7 +325,7 @@ func TestBlockRequestErrors(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Received malformed beacon block request p2p message")
 }
 
-func TestBlockRequest(t *testing.T) {
+func TestBlockRequest_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	db := internal.SetupDB(t)
@@ -356,7 +356,7 @@ func TestBlockRequest(t *testing.T) {
 	testutil.AssertLogsDoNotContain(t, hook, "Sending requested block to peer")
 }
 
-func TestReceiveAttestation_Ok(t *testing.T) {
+func TestReceiveAttestation_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ms := &mockChainService{}
 	os := &mockOperationService{}
@@ -446,7 +446,7 @@ func TestReceiveAttestation_OlderThanFinalizedEpoch(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, want)
 }
 
-func TestReceiveExitReq_Ok(t *testing.T) {
+func TestReceiveExitReq_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	os := &mockOperationService{}
 	db := internal.SetupDB(t)

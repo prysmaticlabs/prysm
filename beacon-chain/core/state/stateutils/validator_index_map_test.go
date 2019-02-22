@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
-func TestValidatorIndexMap(t *testing.T) {
+func TestValidatorIndexMap_OK(t *testing.T) {
 	state := &pb.BeaconState{
 		ValidatorRegistry: []*pb.Validator{
 			{

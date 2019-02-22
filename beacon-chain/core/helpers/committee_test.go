@@ -22,7 +22,7 @@ func populateValidatorsMax() {
 	}
 }
 
-func TestEpochCommitteeCount_Ok(t *testing.T) {
+func TestEpochCommitteeCount_OK(t *testing.T) {
 	// this defines the # of validators required to have 1 committee
 	// per slot for epoch length.
 	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
@@ -61,7 +61,7 @@ func TestEpochCommitteeCount_LessShardsThanEpoch(t *testing.T) {
 	params.OverrideBeaconConfig(productionConfig)
 }
 
-func TestCurrentEpochCommitteeCount_Ok(t *testing.T) {
+func TestCurrentEpochCommitteeCount_OK(t *testing.T) {
 	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
 	committeesPerEpoch := uint64(8)
 	// set curr epoch total validators count to 8 committees per slot.
@@ -82,7 +82,7 @@ func TestCurrentEpochCommitteeCount_Ok(t *testing.T) {
 	}
 }
 
-func TestPrevEpochCommitteeCount_Ok(t *testing.T) {
+func TestPrevEpochCommitteeCount_OK(t *testing.T) {
 	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
 	committeesPerEpoch := uint64(3)
 	// set prev epoch total validators count to 3 committees per slot.
@@ -103,7 +103,7 @@ func TestPrevEpochCommitteeCount_Ok(t *testing.T) {
 	}
 }
 
-func TestNextEpochCommitteeCount_Ok(t *testing.T) {
+func TestNextEpochCommitteeCount_OK(t *testing.T) {
 	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
 	committeesPerEpoch := uint64(6)
 	// set prev epoch total validators count to 3 committees per slot.
@@ -123,7 +123,7 @@ func TestNextEpochCommitteeCount_Ok(t *testing.T) {
 	}
 }
 
-func TestShuffling_Ok(t *testing.T) {
+func TestShuffling_OK(t *testing.T) {
 	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
 	committeesPerEpoch := uint64(6)
 	// Set epoch total validators count to 6 committees per slot.
@@ -167,7 +167,7 @@ func TestShuffling_OutOfBound(t *testing.T) {
 	}
 }
 
-func TestCrosslinkCommitteesAtSlot_Ok(t *testing.T) {
+func TestCrosslinkCommitteesAtSlot_OK(t *testing.T) {
 	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
 	committeesPerEpoch := uint64(6)
 	// Set epoch total validators count to 6 committees per slot.
@@ -228,7 +228,7 @@ func TestCrosslinkCommitteesAtSlot_ShuffleFailed(t *testing.T) {
 	}
 }
 
-func TestAttestationParticipants_ok(t *testing.T) {
+func TestAttestationParticipants_OK(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
@@ -332,7 +332,7 @@ func TestAttestationParticipants_IncorrectBitfield(t *testing.T) {
 	}
 }
 
-func TestVerifyBitfield(t *testing.T) {
+func TestVerifyBitfield_OK(t *testing.T) {
 	bitfield := []byte{0xff}
 	committeeSize := 8
 
@@ -368,7 +368,7 @@ func TestVerifyBitfield(t *testing.T) {
 		t.Error("bitfield is not validated when it was supposed to be")
 	}
 }
-func TestNextEpochCommitteeAssignment_ok(t *testing.T) {
+func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
 	// Initialize test with 128 validators, each slot and each shard gets 2 validators.
 	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
