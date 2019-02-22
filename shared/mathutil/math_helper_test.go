@@ -95,6 +95,10 @@ func TestIsPowerOf2(t *testing.T) {
 			a: 1024,
 			b: true,
 		},
+		{
+			a: 0,
+			b: false,
+		},
 	}
 	for _, tt := range tests {
 		if tt.b != IsPowerOf2(tt.a) {
