@@ -64,7 +64,7 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 
 	for slot := req.EpochStart; slot < req.EpochStart+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		var crossLinkCommittees []*helpers.CrosslinkCommittee
-		if beaconState.ValidatorRegistryUpdateEpoch == helpers.SlotToEpoch(req.EpochStart) - 1 {
+		if beaconState.ValidatorRegistryUpdateEpoch == helpers.SlotToEpoch(req.EpochStart)-1 {
 			crossLinkCommittees, err = helpers.CrosslinkCommitteesAtSlot(beaconState, slot, true)
 			if err != nil {
 				return nil, err

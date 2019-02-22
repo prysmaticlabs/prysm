@@ -8,8 +8,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"reflect"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/forkutils"

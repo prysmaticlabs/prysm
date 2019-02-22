@@ -40,10 +40,10 @@ func TestAttestationInfoAtSlot_EpochBoundaryFailure(t *testing.T) {
 	beaconState := &pbp2p.BeaconState{
 		Slot:                   params.BeaconConfig().GenesisSlot + 3*params.BeaconConfig().SlotsPerEpoch,
 		LatestBlockRootHash32S: make([][]byte, 20),
-		JustifiedEpoch:         params.BeaconConfig().GenesisEpoch+1*params.BeaconConfig().GenesisEpoch,
+		JustifiedEpoch:         params.BeaconConfig().GenesisEpoch + 1*params.BeaconConfig().GenesisEpoch,
 	}
 	block := blocks.NewGenesisBlock([]byte("stateroot"))
-	block.Slot = params.BeaconConfig().GenesisSlot+3*params.BeaconConfig().SlotsPerEpoch+1
+	block.Slot = params.BeaconConfig().GenesisSlot + 3*params.BeaconConfig().SlotsPerEpoch + 1
 	attesterServer := &AttesterServer{
 		beaconDB: db,
 	}
