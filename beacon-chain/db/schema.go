@@ -18,6 +18,7 @@ var (
 	blockBucket           = []byte("block-bucket")
 	mainChainBucket       = []byte("main-chain-bucket")
 	chainInfoBucket       = []byte("chain-info")
+	validatorBucket = []byte("validator")
 
 	mainChainHeightKey = []byte("chain-height")
 	stateLookupKey     = []byte("state")
