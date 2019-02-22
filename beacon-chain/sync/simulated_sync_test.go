@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -30,7 +31,46 @@ var topicMappings = map[pb.Topic]proto.Message{
 	pb.Topic_BEACON_STATE_RESPONSE:               &pb.BeaconStateResponse{},
 }
 
-func setUpSyncedService(numOfBlocks int, t *testing.T) (*Service, *db.BeaconDB, *p2p.Server) {
+type simulatedP2P struct {
+	subsChannels map[proto.Message]*event.Feed
+	mutex        *sync.Mutex
+}
+
+func (sim *simulatedP2P) Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription {
+	sim.mutex.Lock()
+	defer sim.mutex.Unlock()
+
+	feed, ok := sim.subsChannels[msg]
+	if !ok {
+		nFeed := new(event.Feed)
+		sim.subsChannels[msg] = nFeed
+		return nFeed.Subscribe(channel)
+	}
+	return feed.Subscribe(channel)
+}
+
+func (sim *simulatedP2P) Broadcast(msg proto.Message) {
+	feed, ok := sim.subsChannels[msg]
+	if !ok {
+		return
+	}
+
+	feed.Send(msg)
+}
+
+func (sim *simulatedP2P) Send(msg proto.Message, peer p2p.Peer) {
+	sim.mutex.Lock()
+	defer sim.mutex.Unlock()
+
+	feed, ok := sim.subsChannels[msg]
+	if !ok {
+		return
+	}
+
+	feed.Send(msg)
+}
+
+func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*Service, *db.BeaconDB) {
 	bd, err := backend.NewSimulatedBackend()
 	if err != nil {
 		t.Fatalf("Could not set up simulated backend %v", err)
@@ -67,35 +107,32 @@ func setUpSyncedService(numOfBlocks int, t *testing.T) (*Service, *db.BeaconDB, 
 		feed: new(event.Feed),
 	}
 
-	mockServer, err := p2p.MockServer(t)
-	if err != nil {
-		t.Fatalf("Could not create p2p server %v", err)
-	}
-
-	for k, v := range topicMappings {
-		mockServer.RegisterTopic(k.String(), v)
-	}
-
 	cfg := &Config{
 		ChainService:     mockChain,
 		BeaconDB:         beacondb,
 		OperationService: &mockOperationService{},
-		P2P:              mockServer,
+		P2P:              simP2P,
 		PowChainService:  mockPow,
 	}
 
 	ss := NewSyncService(context.Background(), cfg)
 
-	mockServer.Start()
 	go ss.run()
 	for !ss.Querier.chainStarted {
 		mockPow.feed.Send(time.Now())
 	}
 
-	for i := 0; i < numOfBlocks; i++ {
-		bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys)
+	for i := 1; i <= numOfBlocks; i++ {
+		if err := bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys); err != nil {
+			t.Fatalf("Unable to generate block in simulated backend %v", err)
+		}
 		blocks := bd.InMemoryBlocks()
-		beacondb.SaveBlock(blocks[i+1])
+		if err := beacondb.SaveBlock(blocks[i]); err != nil {
+			t.Fatalf("Unable to save block %v", err)
+		}
+		if err := beacondb.UpdateChainHead(blocks[i], bd.State()); err != nil {
+			t.Fatalf("Unable to update chain head %v", err)
+		}
 	}
 
 	memBlocks = bd.InMemoryBlocks()
@@ -104,10 +141,10 @@ func setUpSyncedService(numOfBlocks int, t *testing.T) (*Service, *db.BeaconDB, 
 		t.Fatalf("Could not update chain head %v", err)
 	}
 
-	return ss, beacondb, mockServer
+	return ss, beacondb
 }
 
-func setUpUnSyncedService(t *testing.T) (*Service, *db.BeaconDB, *p2p.Server) {
+func setUpUnSyncedService(simP2P *simulatedP2P, t *testing.T) (*Service, *db.BeaconDB) {
 	bd, err := backend.NewSimulatedBackend()
 	if err != nil {
 		t.Fatalf("Could not set up simulated backend %v", err)
@@ -144,53 +181,42 @@ func setUpUnSyncedService(t *testing.T) (*Service, *db.BeaconDB, *p2p.Server) {
 		feed: new(event.Feed),
 	}
 
-	mockServer, err := p2p.MockServer(t)
-	if err != nil {
-		t.Fatalf("Could not create p2p server %v", err)
-	}
-
-	for k, v := range topicMappings {
-		mockServer.RegisterTopic(k.String(), v)
-	}
-
 	cfg := &Config{
 		ChainService:     mockChain,
 		BeaconDB:         beacondb,
 		OperationService: &mockOperationService{},
-		P2P:              mockServer,
+		P2P:              simP2P,
 		PowChainService:  mockPow,
 	}
 
 	ss := NewSyncService(context.Background(), cfg)
 
-	mockServer.Start()
 	go ss.run()
 
 	for ss.Querier.curentHeadSlot == 0 {
-		mockServer.Feed(&pb.ChainHeadResponse{}).Send(p2p.Message{
-			Ctx: context.Background(),
-			Data: &pb.ChainHeadResponse{
-				Slot: params.BeaconConfig().GenesisSlot + 10,
-				Hash: []byte{'t', 'e', 's', 't'},
-			},
-		})
+		simP2P.Send(&pb.ChainHeadResponse{
+			Slot: params.BeaconConfig().GenesisSlot + 10,
+			Hash: []byte{'t', 'e', 's', 't'},
+		}, p2p.Peer{})
 	}
 
-	return ss, beacondb, mockServer
+	return ss, beacondb
 }
 
 func TestServices(t *testing.T) {
-	ss, syncedDB, sp2p := setUpSyncedService(10, t)
+	newP2P := &simulatedP2P{
+		subsChannels: make(map[proto.Message]*event.Feed),
+		mutex:        new(sync.Mutex),
+	}
+	ss, syncedDB := setUpSyncedService(10, newP2P, t)
 	defer ss.Stop()
 	defer db.TeardownDB(syncedDB)
-	defer sp2p.Stop()
 
-	us, unSyncedDB, up2p := setUpUnSyncedService(t)
+	us, unSyncedDB := setUpUnSyncedService(newP2P, t)
 	defer us.Stop()
 	defer db.TeardownDB(unSyncedDB)
-	defer up2p.Stop()
 
-	for us.Querier.curentHeadSlot != 0 {
+	for !us.InitialSync.IsSynced() {
 
 	}
 }

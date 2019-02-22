@@ -10,7 +10,7 @@ go_library(
         "state_test_format.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend",
-    visibility = ["//beacon-chain/chaintest:__subpackages__"],
+    visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",

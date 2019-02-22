@@ -146,6 +146,11 @@ func (s *InitialSync) HighestObservedSlot(slot uint64) {
 	s.highestObservedSlot = slot
 }
 
+// IsSynced checks if the node is fully synced.
+func (s *InitialSync) IsSynced() bool {
+	return s.currentSlot == s.highestObservedSlot
+}
+
 // run is the main goroutine for the initial sync service.
 // delayChan is explicitly passed into this function to facilitate tests that don't require a timeout.
 // It is assumed that the goroutine `run` is only called once per instance.
