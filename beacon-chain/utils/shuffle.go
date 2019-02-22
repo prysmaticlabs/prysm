@@ -2,6 +2,7 @@
 package utils
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"math"
@@ -23,12 +24,14 @@ func GetPermutedIndex(index uint64, listSize uint64, seed common.Hash) (uint64, 
 		return 0, err
 	}
 
-	bs8 := make([]byte, 8)
 	bs4 := make([]byte, 4)
+	buf := new(bytes.Buffer)
 
 	for round := 0; round < 90; round++ {
-		binary.LittleEndian.PutUint64(bs8[:], uint64(round)) 
-		bs1 := bs8[len(bs8)-1:]
+		if err := binary.Write(buf, binary.LittleEndian, uint8(round)); err != nil {
+			return 0, err
+		}
+		bs1 := buf.Bytes()
 		hashedValue := hashutil.Hash(append(seed[:], bs1...))
 		hashedValue8 := hashedValue[:8]
 		pivot := binary.LittleEndian.Uint64(hashedValue8[:]) % listSize
@@ -54,45 +57,15 @@ func GetPermutedIndex(index uint64, listSize uint64, seed common.Hash) (uint64, 
 // ShuffleIndices returns a list of pseudorandomly sampled
 // indices. This is used to shuffle validators on ETH2.0 beacon chain.
 func ShuffleIndices(seed common.Hash, indicesList []uint64) ([]uint64, error) {
-	var hashBytes []byte
-	bs1 := make([]byte, 8)
-	bs4 := make([]byte, 8)
-	listSize := len(indicesList)
-	num := int(math.Floor(float64((listSize + 255) / 256)))
-	powersOfTwo := []uint64{1, 2, 4, 8, 16, 32, 64, 128}
-
-	for round := 0; round < 90; round++ {
-		binary.LittleEndian.PutUint64(bs1[:], uint64(round))
-
-		for i := 0; i < num; i++ {
-			binary.LittleEndian.PutUint64(bs4[:], uint64(i))
-			bs := append(bs1, bs4...)
-			hash := hashutil.Hash(append(seed[:], bs...))
-			hashBytes = append(hashBytes, hash[:]...)
+	var permutedIndicesList []uint64
+	for _, index := range indicesList {
+		permutedIndex, err := GetPermutedIndex(index, uint64(len(indicesList)), seed)
+		if err != nil {
+			return nil, errors.New("GetPermutedIndex error")
 		}
-
-		hash := hashutil.Hash(append(seed[:], bs1...))
-		hashFromBytes := binary.LittleEndian.Uint64(hash[:])
-		pivot := hashFromBytes % uint64(listSize)
-
-		for i, index := range indicesList {
-			flip := (pivot - index) % uint64(listSize)
-			var hashPos uint64
-			if index > flip {
-				hashPos = index
-			} else {
-				hashPos = flip
-			}
-			hashBytesIndex := int(math.Floor((float64(hashPos) / 8)))
-			hByte := hashBytes[hashBytesIndex]
-			hInt := uint64(hByte)
-			p := powersOfTwo[hashPos%8]
-			if hInt&p != 0 {
-				indicesList[i] = flip
-			}
-		}
+		permutedIndicesList = append(permutedIndicesList, permutedIndex)
 	}
-	return indicesList, nil
+	return permutedIndicesList, nil
 }
 
 // SplitIndices splits a list into n pieces.
