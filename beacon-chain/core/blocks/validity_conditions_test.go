@@ -36,7 +36,7 @@ func (m *mockPOWClient) BlockByHash(ctx context.Context, hash common.Hash) (*get
 	return nil, nil
 }
 
-func TestBadBlock(t *testing.T) {
+func TestIsValidBlock_NoParent(t *testing.T) {
 	beaconState := &pb.BeaconState{}
 
 	ctx := context.Background()
@@ -58,6 +58,23 @@ func TestBadBlock(t *testing.T) {
 		db.HasBlock, powClient.BlockByHash, genesisTime); err == nil {
 		t.Fatal("block is valid despite not having a parent")
 	}
+}
+
+func TestIsValidBlock_InvalidSlot(t *testing.T) {
+	beaconState := &pb.BeaconState{}
+
+	ctx := context.Background()
+
+	db := &mockDB{}
+	powClient := &mockPOWClient{}
+
+	beaconState.Slot = params.BeaconConfig().GenesisSlot + 3
+
+	block := &pb.BeaconBlock{
+		Slot: params.BeaconConfig().GenesisSlot + 4,
+	}
+
+	genesisTime := time.Unix(0, 0)
 
 	block.Slot = params.BeaconConfig().GenesisSlot + 3
 	db.hasBlock = true
@@ -70,7 +87,25 @@ func TestBadBlock(t *testing.T) {
 		db.HasBlock, powClient.BlockByHash, genesisTime); err == nil {
 		t.Fatalf("block is valid despite having an invalid slot %d", block.Slot)
 	}
+}
 
+func TestIsValidBlock_InvalidPoWReference(t *testing.T) {
+	beaconState := &pb.BeaconState{}
+
+	ctx := context.Background()
+
+	db := &mockDB{}
+	powClient := &mockPOWClient{}
+
+	beaconState.Slot = params.BeaconConfig().GenesisSlot + 3
+
+	block := &pb.BeaconBlock{
+		Slot: params.BeaconConfig().GenesisSlot + 4,
+	}
+
+	genesisTime := time.Unix(0, 0)
+
+	db.hasBlock = true
 	block.Slot = params.BeaconConfig().GenesisSlot + 4
 	powClient.blockExists = false
 	beaconState.LatestEth1Data = &pb.Eth1Data{
@@ -83,8 +118,30 @@ func TestBadBlock(t *testing.T) {
 		t.Fatalf("block is valid despite having an invalid pow reference block")
 	}
 
-	invalidTime := time.Now().AddDate(1, 2, 3)
+}
+func TestIsValidBlock_InvalidGenesis(t *testing.T) {
+	beaconState := &pb.BeaconState{}
+
+	ctx := context.Background()
+
+	db := &mockDB{}
+	db.hasBlock = true
+
+	powClient := &mockPOWClient{}
 	powClient.blockExists = false
+
+	beaconState.Slot = params.BeaconConfig().GenesisSlot + 3
+	beaconState.LatestEth1Data = &pb.Eth1Data{
+		DepositRootHash32: []byte{2},
+		BlockHash32:       []byte{3},
+	}
+
+	genesisTime := time.Unix(0, 0)
+	block := &pb.BeaconBlock{
+		Slot: params.BeaconConfig().GenesisSlot + 4,
+	}
+
+	invalidTime := time.Now().AddDate(1, 2, 3)
 
 	if err := IsValidBlock(ctx, beaconState, block, true,
 		db.HasBlock, powClient.BlockByHash, genesisTime); err == nil {
@@ -93,26 +150,26 @@ func TestBadBlock(t *testing.T) {
 
 }
 
-func TestValidBlock(t *testing.T) {
+func TestIsValidBlock_GoodBlock(t *testing.T) {
 	beaconState := &pb.BeaconState{}
 	ctx := context.Background()
 
 	db := &mockDB{}
-	powClient := &mockPOWClient{}
-
-	beaconState.Slot = params.BeaconConfig().GenesisSlot + 3
 	db.hasBlock = true
 
-	block := &pb.BeaconBlock{
-		Slot: params.BeaconConfig().GenesisSlot + 4,
-	}
-
-	genesisTime := time.Unix(0, 0)
+	powClient := &mockPOWClient{}
 	powClient.blockExists = true
 
+	beaconState.Slot = params.BeaconConfig().GenesisSlot + 3
 	beaconState.LatestEth1Data = &pb.Eth1Data{
 		DepositRootHash32: []byte{2},
 		BlockHash32:       []byte{3},
+	}
+
+	genesisTime := time.Unix(0, 0)
+
+	block := &pb.BeaconBlock{
+		Slot: params.BeaconConfig().GenesisSlot + 4,
 	}
 
 	if err := IsValidBlock(ctx, beaconState, block, true,

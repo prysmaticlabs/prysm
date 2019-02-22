@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 )
 
-func TestNewTracer(t *testing.T) {
+func TestNewTracer_OK(t *testing.T) {
 	a, err := New("test", "test:1234", 0.25, false)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
@@ -32,7 +32,7 @@ func TestNewTracer(t *testing.T) {
 	}
 }
 
-func TestNewTracerBad(t *testing.T) {
+func TestNewTracer_EmptyData(t *testing.T) {
 	_, err := New("", "test:1234", 0.25, true)
 	if err == nil {
 		t.Errorf("Expected error with empty name")

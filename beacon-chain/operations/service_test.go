@@ -20,7 +20,7 @@ func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 }
 
-func TestStop(t *testing.T) {
+func TestStop_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	opsService := NewOpsPoolService(context.Background(), &Config{})
 
@@ -41,7 +41,7 @@ func TestStop(t *testing.T) {
 	hook.Reset()
 }
 
-func TestErrorStatus_Ok(t *testing.T) {
+func TestServiceStatus_Error(t *testing.T) {
 	service := NewOpsPoolService(context.Background(), &Config{})
 	if service.Status() != nil {
 		t.Errorf("service status should be nil to begin with, got: %v", service.error)
@@ -97,7 +97,7 @@ func TestIncomingExits_Ok(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, want)
 }
 
-func TestIncomingAttestation_Ok(t *testing.T) {
+func TestIncomingAttestation_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
@@ -126,7 +126,7 @@ func TestIncomingAttestation_Ok(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, want)
 }
 
-func TestRetrieveAttestations_Ok(t *testing.T) {
+func TestRetrieveAttestations_OK(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	service := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})

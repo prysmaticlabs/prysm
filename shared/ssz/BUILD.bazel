@@ -23,6 +23,7 @@ go_test(
         "decode_test.go",
         "encode_test.go",
         "example_and_test.go",
+        "example_encode_test.go",
         "hash_test.go",
     ],
     embed = [":go_default_library"],

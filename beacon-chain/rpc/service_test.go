@@ -95,7 +95,7 @@ func newMockChainService() *mockChainService {
 	}
 }
 
-func TestLifecycle(t *testing.T) {
+func TestLifecycle_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port:     "7348",
@@ -113,7 +113,7 @@ func TestLifecycle(t *testing.T) {
 
 }
 
-func TestBadEndpoint(t *testing.T) {
+func TestRPC_BadEndpoint(t *testing.T) {
 	fl := logrus.WithField("prefix", "rpc")
 
 	log = &TestLogger{
@@ -141,7 +141,7 @@ func TestBadEndpoint(t *testing.T) {
 
 }
 
-func TestStatus(t *testing.T) {
+func TestStatus_CredentialError(t *testing.T) {
 	credentialErr := errors.New("credentialError")
 	s := &Service{credentialError: credentialErr}
 
@@ -150,7 +150,7 @@ func TestStatus(t *testing.T) {
 	}
 }
 
-func TestInsecureEndpoint(t *testing.T) {
+func TestRPC_InsecureEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
 	rpcService := NewRPCService(context.Background(), &Config{
 		Port: "7777",

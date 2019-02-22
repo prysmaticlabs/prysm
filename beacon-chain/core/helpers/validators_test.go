@@ -1,14 +1,13 @@
 package helpers
 
 import (
-	"fmt"
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestIsActiveValidator(t *testing.T) {
+func TestIsActiveValidator_OK(t *testing.T) {
 	tests := []struct {
 		a uint64
 		b bool
@@ -28,7 +27,7 @@ func TestIsActiveValidator(t *testing.T) {
 	}
 }
 
-func TestBeaconProposerIdx(t *testing.T) {
+func TestBeaconProposerIndex_OK(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
@@ -86,16 +85,15 @@ func TestBeaconProposerIdx(t *testing.T) {
 	}
 }
 
-func TestBeaconProposerIdx_returnsErrorWithEmptyCommittee(t *testing.T) {
-	slot := uint64(0)
-	_, err := BeaconProposerIndex(&pb.BeaconState{}, slot)
-	expected := fmt.Sprintf("empty first committee at slot %d", slot-params.BeaconConfig().GenesisSlot)
+func TestBeaconProposerIndex_EmptyCommittee(t *testing.T) {
+	_, err := BeaconProposerIndex(&pb.BeaconState{}, 0)
+	expected := "empty first committee at slot 0"
 	if err.Error() != expected {
 		t.Errorf("Unexpected error. got=%v want=%s", err, expected)
 	}
 }
 
-func TestEntryExitEffectEpoch_Ok(t *testing.T) {
+func TestEntryExitEffectEpoch_OK(t *testing.T) {
 	epoch := uint64(9999)
 	got := EntryExitEffectEpoch(epoch)
 	wanted := epoch + 1 + params.BeaconConfig().ActivationExitDelay

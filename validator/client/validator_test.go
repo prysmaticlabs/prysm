@@ -182,7 +182,7 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 	}
 }
 
-func TestUpdateAssignments_DoesUpdateAssignments(t *testing.T) {
+func TestUpdateAssignments_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := internal.NewMockValidatorServiceClient(ctrl)

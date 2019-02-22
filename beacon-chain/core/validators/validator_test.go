@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestHasVoted(t *testing.T) {
+func TestHasVoted_OK(t *testing.T) {
 	// Setting bit field to 11111111.
 	pendingAttestation := &pb.Attestation{
 		AggregationBitfield: []byte{255},
@@ -48,7 +48,7 @@ func TestHasVoted(t *testing.T) {
 	}
 }
 
-func TestValidatorIdx(t *testing.T) {
+func TestValidatorIndex_OK(t *testing.T) {
 	var validators []*pb.Validator
 	for i := 0; i < 10; i++ {
 		validators = append(validators, &pb.Validator{Pubkey: []byte{}, ExitEpoch: params.BeaconConfig().FarFutureEpoch})
@@ -66,7 +66,7 @@ func TestValidatorIdx(t *testing.T) {
 	}
 }
 
-func TestBoundaryAttesterIndices(t *testing.T) {
+func TestBoundaryAttesterIndices_OK(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
@@ -97,7 +97,7 @@ func TestBoundaryAttesterIndices(t *testing.T) {
 	}
 }
 
-func TestAttestingValidatorIndices_Ok(t *testing.T) {
+func TestAttestingValidatorIndices_OK(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
@@ -174,7 +174,7 @@ func TestAttestingValidatorIndices_OutOfBound(t *testing.T) {
 	}
 }
 
-func TestAllValidatorIndices(t *testing.T) {
+func TestAllValidatorIndices_OK(t *testing.T) {
 	tests := []struct {
 		registries []*pb.Validator
 		indices    []uint64
@@ -192,7 +192,7 @@ func TestAllValidatorIndices(t *testing.T) {
 	}
 }
 
-func TestProcessDeposit_PublicKeyExistsBadWithdrawalCredentials(t *testing.T) {
+func TestProcessDeposit_BadWithdrawalCredentials(t *testing.T) {
 	registry := []*pb.Validator{
 		{
 			Pubkey: []byte{1, 2, 3},
@@ -223,7 +223,7 @@ func TestProcessDeposit_PublicKeyExistsBadWithdrawalCredentials(t *testing.T) {
 	}
 }
 
-func TestProcessDeposit_PublicKeyExistsGoodWithdrawalCredentials(t *testing.T) {
+func TestProcessDeposit_GoodWithdrawalCredentials(t *testing.T) {
 	registry := []*pb.Validator{
 		{
 			Pubkey: []byte{1, 2, 3},
@@ -259,7 +259,7 @@ func TestProcessDeposit_PublicKeyExistsGoodWithdrawalCredentials(t *testing.T) {
 	}
 }
 
-func TestProcessDeposit_PublicKeyDoesNotExistNoEmptyValidator(t *testing.T) {
+func TestProcessDeposit_PublicKeyDoesNotExist(t *testing.T) {
 	registry := []*pb.Validator{
 		{
 			Pubkey:                      []byte{1, 2, 3},
@@ -299,7 +299,7 @@ func TestProcessDeposit_PublicKeyDoesNotExistNoEmptyValidator(t *testing.T) {
 	}
 }
 
-func TestProcessDeposit_PublicKeyDoesNotExistEmptyValidatorExists(t *testing.T) {
+func TestProcessDeposit_PublicKeyDoesNotExistAndEmptyValidator(t *testing.T) {
 	registry := []*pb.Validator{
 		{
 			Pubkey:                      []byte{1, 2, 3},
@@ -340,7 +340,7 @@ func TestProcessDeposit_PublicKeyDoesNotExistEmptyValidatorExists(t *testing.T) 
 	}
 }
 
-func TestActivateValidatorGenesis_Ok(t *testing.T) {
+func TestActivateValidatorGenesis_OK(t *testing.T) {
 	state := &pb.BeaconState{
 		ValidatorRegistry: []*pb.Validator{
 			{Pubkey: []byte{'A'}},
@@ -356,7 +356,7 @@ func TestActivateValidatorGenesis_Ok(t *testing.T) {
 	}
 }
 
-func TestActivateValidator_Ok(t *testing.T) {
+func TestActivateValidator_OK(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 100, // epoch 2
 		ValidatorRegistry: []*pb.Validator{
@@ -376,7 +376,7 @@ func TestActivateValidator_Ok(t *testing.T) {
 	}
 }
 
-func TestInitiateValidatorExit_Ok(t *testing.T) {
+func TestInitiateValidatorExit_OK(t *testing.T) {
 	state := &pb.BeaconState{ValidatorRegistry: []*pb.Validator{{}, {}, {}}}
 	newState := InitiateValidatorExit(state, 2)
 	if newState.ValidatorRegistry[0].StatusFlags != pb.Validator_INITIAL {
@@ -387,7 +387,7 @@ func TestInitiateValidatorExit_Ok(t *testing.T) {
 	}
 }
 
-func TestExitValidator_Ok(t *testing.T) {
+func TestExitValidator_OK(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                  100, // epoch 2
 		LatestSlashedBalances: []uint64{0},
@@ -476,7 +476,7 @@ func TestProcessPenaltiesExits_ValidatorSlashed(t *testing.T) {
 	}
 }
 
-func TestEligibleToExit(t *testing.T) {
+func TestEligibleToExit_OK(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 1,
 		ValidatorRegistry: []*pb.Validator{
@@ -533,7 +533,7 @@ func TestUpdateRegistry_NoRotation(t *testing.T) {
 	}
 }
 
-func TestUpdateRegistry_Activate(t *testing.T) {
+func TestUpdateRegistry_Activations(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 5 * params.BeaconConfig().SlotsPerEpoch,
 		ValidatorRegistry: []*pb.Validator{
@@ -563,7 +563,7 @@ func TestUpdateRegistry_Activate(t *testing.T) {
 	}
 }
 
-func TestUpdateRegistry_Exit(t *testing.T) {
+func TestUpdateRegistry_Exits(t *testing.T) {
 	epoch := uint64(5)
 	exitEpoch := helpers.EntryExitEffectEpoch(epoch)
 	state := &pb.BeaconState{
@@ -599,7 +599,7 @@ func TestUpdateRegistry_Exit(t *testing.T) {
 	}
 }
 
-func TestMaxBalanceChurn(t *testing.T) {
+func TestMaxBalanceChurn_OK(t *testing.T) {
 	tests := []struct {
 		totalBalance    uint64
 		maxBalanceChurn uint64
