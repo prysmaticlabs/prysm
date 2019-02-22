@@ -76,7 +76,7 @@ type goodFetcher struct{}
 
 func (g *goodFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
 	if bytes.Equal(hash.Bytes(), common.BytesToHash([]byte{0}).Bytes()) {
-		return nil, fmt.Errorf("Expected block hash to be nonzero. %v", hash)
+		return nil, fmt.Errorf("Expected block hash to be nonzero %v", hash)
 	}
 
 	block := gethTypes.NewBlock(
@@ -967,7 +967,7 @@ func TestBlockHashByHeight_NegativeSlot(t *testing.T) {
 
 	_, err = web3Service.BlockHashByHeight(big.NewInt(-1))
 	if err == nil {
-		t.Fatal("Expected BlockHashByHeight to error with negative slot.")
+		t.Fatal("Expected BlockHashByHeight to error with negative slot")
 	}
 }
 
@@ -1015,6 +1015,6 @@ func TestBlockExists_InvalidHash(t *testing.T) {
 
 	_, _, err = web3Service.BlockExists(common.BytesToHash([]byte{0}))
 	if err == nil {
-		t.Fatal("Expected BlockExists to error with invalid hash.")
+		t.Fatal("Expected BlockExists to error with invalid hash")
 	}
 }
