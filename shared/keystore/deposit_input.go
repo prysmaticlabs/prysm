@@ -1,16 +1,18 @@
 package keystore
 
 import (
-	"github.com/gogo/protobuf/proto"
+	"bytes"
+
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 // DepositInput for a given key. This input data can be used to when making a
 // validator deposit. The input data includes a proof of possession field
 // signed by the deposit key.
 //
-// Spec details:
+// Spec details about general deposit workflow:
 //   To submit a deposit:
 //
 //   - Pack the validator's initialization parameters into deposit_input, a DepositInput SSZ object.
@@ -21,17 +23,19 @@ import (
 //   - Send a transaction on the Ethereum 1.0 chain to DEPOSIT_CONTRACT_ADDRESS executing deposit along with serialize(deposit_input) as the singular bytes input along with a deposit amount in Gwei.
 //
 // See: https://github.com/ethereum/eth2.0-specs/blob/dev/specs/validator/0_beacon-chain-validator.md#submit-deposit
-func DepositInput(depositKey *Key, withdrawalKey *Key) *pb.DepositInput {
+func DepositInput(depositKey *Key, withdrawalKey *Key) (*pb.DepositInput, error) {
 	di := &pb.DepositInput{
 		Pubkey:                      depositKey.PublicKey.Marshal(),
 		WithdrawalCredentialsHash32: withdrawalCredentialsHash(withdrawalKey),
 	}
 
-	// #nosec G104 -- This can only throw if di is nil so lets ignore the error.
-	b, _ := proto.Marshal(di)
-	di.ProofOfPossession = depositKey.SecretKey.Sign(b, params.BeaconConfig().DomainDeposit).Marshal()
+	buf := new(bytes.Buffer)
+	if err := ssz.Encode(buf, di); err != nil {
+		return nil, err
+	}
+	di.ProofOfPossession = depositKey.SecretKey.Sign(buf.Bytes(), params.BeaconConfig().DomainDeposit).Marshal()
 
-	return di
+	return di, nil
 }
 
 // withdrawalCredentialsHash forms a 32 byte hash of the withdrawal public
