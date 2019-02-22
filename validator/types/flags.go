@@ -21,9 +21,9 @@ var (
 		Name:  "keystore-path",
 		Usage: "path to the desired keystore directory",
 	}
-	// PasswordFlag defines the password for storing and retrieving validator private keys from the keystore.
+	// PasswordFlag defines the password value for storing and retrieving validator private keys from the keystore.
 	PasswordFlag = cli.StringFlag{
 		Name:  "password",
-		Usage: "password to your validator private keys",
+		Usage: "string value of the password for your validator private keys",
 	}
 )

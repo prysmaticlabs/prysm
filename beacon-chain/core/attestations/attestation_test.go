@@ -6,7 +6,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-func TestIsDoubleVote(t *testing.T) {
+func TestIsDoubleVote_SameAndDifferentEpochs(t *testing.T) {
 	att1 := &pb.AttestationData{
 		Slot: 0,
 	}
@@ -26,7 +26,7 @@ func TestIsDoubleVote(t *testing.T) {
 	}
 }
 
-func TestIsSurroundVote(t *testing.T) {
+func TestIsSurroundVote_SameAndDifferentEpochs(t *testing.T) {
 	att1 := &pb.AttestationData{
 		Slot:           0,
 		JustifiedEpoch: 0,
@@ -48,5 +48,4 @@ func TestIsSurroundVote(t *testing.T) {
 	if !IsSurroundVote(att1, att2) {
 		t.Error("It is not a surround vote despite all the surround conditions being fulfilled")
 	}
-
 }

@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
-func TestAttestHead(t *testing.T) {
+func TestAttestHead_OK(t *testing.T) {
 	mockOperationService := &mockOperationService{}
 	attesterServer := &AttesterServer{
 		operationService: mockOperationService,
@@ -92,7 +92,7 @@ func TestAttestationInfoAtSlot_JustifiedBlockFailure(t *testing.T) {
 	}
 }
 
-func TestAttestationInfoAtSlot_Ok(t *testing.T) {
+func TestAttestationInfoAtSlot_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	block := &pbp2p.BeaconBlock{

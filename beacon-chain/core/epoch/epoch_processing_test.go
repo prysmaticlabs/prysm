@@ -14,10 +14,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
-func TestCanProcessEpoch(t *testing.T) {
+func TestCanProcessEpoch_TrueOnEpochs(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
+
 	tests := []struct {
 		slot            uint64
 		canProcessEpoch bool
@@ -25,12 +26,10 @@ func TestCanProcessEpoch(t *testing.T) {
 		{
 			slot:            1,
 			canProcessEpoch: false,
-		},
-		{
+		}, {
 			slot:            63,
 			canProcessEpoch: false,
-		},
-		{
+		}, {
 			slot:            64,
 			canProcessEpoch: true,
 		}, {
@@ -41,6 +40,7 @@ func TestCanProcessEpoch(t *testing.T) {
 			canProcessEpoch: true,
 		},
 	}
+
 	for _, tt := range tests {
 		state := &pb.BeaconState{Slot: tt.slot}
 		if CanProcessEpoch(state) != tt.canProcessEpoch {
@@ -54,10 +54,11 @@ func TestCanProcessEpoch(t *testing.T) {
 	}
 }
 
-func TestCanProcessEth1Data(t *testing.T) {
+func TestCanProcessEth1Data_TrueOnVotingPeriods(t *testing.T) {
 	if params.BeaconConfig().EpochsPerEth1VotingPeriod != 16 {
 		t.Errorf("EpochsPerEth1VotingPeriodshould be 16 for these tests to pass")
 	}
+
 	tests := []struct {
 		slot               uint64
 		canProcessEth1Data bool
@@ -83,6 +84,7 @@ func TestCanProcessEth1Data(t *testing.T) {
 			canProcessEth1Data: false,
 		},
 	}
+
 	for _, tt := range tests {
 		state := &pb.BeaconState{Slot: tt.slot}
 		if CanProcessEth1Data(state) != tt.canProcessEth1Data {
@@ -96,7 +98,7 @@ func TestCanProcessEth1Data(t *testing.T) {
 	}
 }
 
-func TestProcessEth1Data(t *testing.T) {
+func TestProcessEth1Data_UpdatesStateAndCleans(t *testing.T) {
 	requiredVoteCount := params.BeaconConfig().EpochsPerEth1VotingPeriod
 	state := &pb.BeaconState{
 		Slot: 15 * params.BeaconConfig().SlotsPerEpoch,
@@ -129,6 +131,7 @@ func TestProcessEth1Data(t *testing.T) {
 			},
 		},
 	}
+
 	newState := ProcessEth1Data(state)
 	if !bytes.Equal(newState.LatestEth1Data.DepositRootHash32, []byte{'C'}) {
 		t.Errorf("Incorrect DepositRootHash32. Wanted: %v, got: %v",
@@ -198,7 +201,7 @@ func TestProcessEth1Data_InactionSlot(t *testing.T) {
 	}
 }
 
-func TestProcessJustification(t *testing.T) {
+func TestProcessJustification_PreviousEpochJustified(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
@@ -234,7 +237,7 @@ func TestProcessJustification(t *testing.T) {
 	}
 }
 
-func TestProcessFinalization(t *testing.T) {
+func TestProcessFinalization_2EpochsInARow(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
@@ -247,55 +250,76 @@ func TestProcessFinalization(t *testing.T) {
 		PreviousJustifiedEpoch: 1,
 		JustificationBitfield:  3,
 	}
+
 	newState := ProcessFinalization(state)
 	if newState.FinalizedEpoch != state.JustifiedEpoch {
 		t.Errorf("Wanted finalized epoch to be %d, got %d:",
 			state.JustifiedEpoch, newState.FinalizedEpoch)
 	}
+}
+
+func TestProcessFinalization_3EpochsInARow(t *testing.T) {
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
+	}
 
 	// 3 consecutive justified epoch in a row,
 	// and previous justified epoch is slot_to_epoch(state.slot) - 3.
-	state = &pb.BeaconState{
+	state := &pb.BeaconState{
 		Slot:                   300,
 		JustifiedEpoch:         3,
 		PreviousJustifiedEpoch: 1,
 		JustificationBitfield:  7,
 	}
-	newState = ProcessFinalization(state)
+
+	newState := ProcessFinalization(state)
 	if newState.FinalizedEpoch != state.JustifiedEpoch {
 		t.Errorf("Wanted finalized epoch to be %d, got %d:",
 			state.JustifiedEpoch, newState.FinalizedEpoch)
 	}
+}
+
+func TestProcessFinalization_4EpochsInARow(t *testing.T) {
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
+	}
 
 	// 4 consecutive justified epoch in a row,
 	// and previous justified epoch is slot_to_epoch(state.slot) - 3.
-	state = &pb.BeaconState{
+	state := &pb.BeaconState{
 		Slot:                   400,
 		JustifiedEpoch:         5,
 		PreviousJustifiedEpoch: 2,
 		JustificationBitfield:  15,
 	}
-	newState = ProcessFinalization(state)
+
+	newState := ProcessFinalization(state)
 	if newState.FinalizedEpoch != state.JustifiedEpoch {
 		t.Errorf("Wanted finalized epoch to be %d, got %d:",
 			state.JustifiedEpoch, newState.FinalizedEpoch)
 	}
+}
+
+func TestProcessFinalization_NoFinalizationYet(t *testing.T) {
+	if params.BeaconConfig().SlotsPerEpoch != 64 {
+		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
+	}
 
 	// if nothing gets finalized it just returns the same state.
-	state = &pb.BeaconState{
+	state := &pb.BeaconState{
 		Slot:                   100,
 		JustifiedEpoch:         1,
 		PreviousJustifiedEpoch: 0,
 		JustificationBitfield:  1,
 	}
-	newState = ProcessFinalization(state)
+	newState := ProcessFinalization(state)
 	if newState.FinalizedEpoch != 0 {
 		t.Errorf("Wanted finalized epoch to be %d, got %d:",
 			0, newState.FinalizedEpoch)
 	}
 }
 
-func TestProcessCrosslinksOk(t *testing.T) {
+func TestProcessCrosslinks_CrosslinksCorrectEpoch(t *testing.T) {
 	state := buildState(5, params.BeaconConfig().DepositsForChainStart)
 	state.LatestCrosslinks = []*pb.Crosslink{{}, {}}
 	epoch := uint64(5)
@@ -342,7 +366,7 @@ func TestProcessCrosslinksOk(t *testing.T) {
 	}
 }
 
-func TestProcessCrosslinksNoParticipantsBitField(t *testing.T) {
+func TestProcessCrosslinks_NoParticipantsBitField(t *testing.T) {
 	state := buildState(5, params.BeaconConfig().DepositsForChainStart)
 	state.LatestCrosslinks = []*pb.Crosslink{{}, {}}
 
@@ -360,7 +384,7 @@ func TestProcessCrosslinksNoParticipantsBitField(t *testing.T) {
 	}
 }
 
-func TestProcessEjectionsOk(t *testing.T) {
+func TestProcessEjections_EjectsAtCorrectSlot(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: 1,
 		ValidatorBalances: []uint64{
@@ -388,7 +412,7 @@ func TestProcessEjectionsOk(t *testing.T) {
 	}
 }
 
-func TestCanProcessValidatorRegistry(t *testing.T) {
+func TestCanProcessValidatorRegistry_OnFarEpoch(t *testing.T) {
 	crosslinks := make([]*pb.Crosslink, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(crosslinks); i++ {
 		crosslinks[i] = &pb.Crosslink{
@@ -402,19 +426,19 @@ func TestCanProcessValidatorRegistry(t *testing.T) {
 		LatestCrosslinks:             crosslinks,
 	}
 
-	if !CanProcessValidatorRegistry(state) {
-		t.Errorf("Wanted True for CanProcessValidatorRegistry, but got %v", CanProcessValidatorRegistry(state))
+	if processed := CanProcessValidatorRegistry(state); !processed {
+		t.Errorf("Wanted True for CanProcessValidatorRegistry, but got %v", processed)
 	}
 }
 
-func TestCanNotProcessValidatorRegistry(t *testing.T) {
+func TestCanProcessValidatorRegistry_OutOfBounds(t *testing.T) {
 	state := &pb.BeaconState{
 		FinalizedEpoch:               1,
 		ValidatorRegistryUpdateEpoch: 101,
 	}
 
-	if CanProcessValidatorRegistry(state) {
-		t.Errorf("Wanted False for CanProcessValidatorRegistry, but got %v", CanProcessValidatorRegistry(state))
+	if processed := CanProcessValidatorRegistry(state); processed {
+		t.Errorf("Wanted False for CanProcessValidatorRegistry, but got %v", processed)
 	}
 	state = &pb.BeaconState{
 		ValidatorRegistryUpdateEpoch: 101,
@@ -423,12 +447,12 @@ func TestCanNotProcessValidatorRegistry(t *testing.T) {
 			{Epoch: 100},
 		},
 	}
-	if CanProcessValidatorRegistry(state) {
-		t.Errorf("Wanted False for CanProcessValidatorRegistry, but got %v", CanProcessValidatorRegistry(state))
+	if processed := CanProcessValidatorRegistry(state); processed {
+		t.Errorf("Wanted False for CanProcessValidatorRegistry, but got %v", processed)
 	}
 }
 
-func TestProcessPrevSlotShardOk(t *testing.T) {
+func TestProcessPrevSlotShard_CorrectPrevEpochData(t *testing.T) {
 	state := &pb.BeaconState{
 		CurrentShufflingEpoch:      1,
 		CurrentShufflingStartShard: 2,
@@ -439,20 +463,20 @@ func TestProcessPrevSlotShardOk(t *testing.T) {
 		proto.Clone(state).(*pb.BeaconState))
 
 	if newState.PreviousShufflingEpoch != state.CurrentShufflingEpoch {
-		t.Errorf("Incorret prev epoch calculation slot: Wanted: %d, got: %d",
+		t.Errorf("Incorrect prev epoch calculation slot: Wanted: %d, got: %d",
 			newState.PreviousShufflingEpoch, state.CurrentShufflingEpoch)
 	}
 	if newState.PreviousShufflingStartShard != state.CurrentShufflingStartShard {
-		t.Errorf("Incorret prev epoch start shard: Wanted: %d, got: %d",
+		t.Errorf("Incorrect prev epoch start shard: Wanted: %d, got: %d",
 			newState.PreviousShufflingStartShard, state.CurrentShufflingStartShard)
 	}
 	if !bytes.Equal(newState.PreviousShufflingSeedHash32, state.CurrentShufflingSeedHash32) {
-		t.Errorf("Incorret prev epoch seed mix hash: Wanted: %v, got: %v",
+		t.Errorf("Incorrect prev epoch seed mix hash: Wanted: %v, got: %v",
 			state.CurrentShufflingSeedHash32, newState.PreviousShufflingSeedHash32)
 	}
 }
 
-func TestProcessValidatorRegistryOk(t *testing.T) {
+func TestProcessValidatorRegistry_CorrectCurrentEpochData(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                       params.BeaconConfig().MinSeedLookahead,
 		LatestRandaoMixes:          [][]byte{{'A'}, {'B'}},
@@ -464,16 +488,16 @@ func TestProcessValidatorRegistryOk(t *testing.T) {
 		t.Fatalf("Could not execute ProcessValidatorRegistry: %v", err)
 	}
 	if newState.CurrentShufflingEpoch != state.Slot {
-		t.Errorf("Incorret curr epoch calculation slot: Wanted: %d, got: %d",
+		t.Errorf("Incorrect current epoch calculation slot: Wanted: %d, got: %d",
 			newState.CurrentShufflingEpoch, state.Slot)
 	}
 	if !bytes.Equal(newState.CurrentShufflingSeedHash32, state.LatestRandaoMixes[0]) {
-		t.Errorf("Incorret current epoch seed mix hash: Wanted: %v, got: %v",
+		t.Errorf("Incorrect current epoch seed mix hash: Wanted: %v, got: %v",
 			state.LatestRandaoMixes[0], newState.CurrentShufflingSeedHash32)
 	}
 }
 
-func TestProcessPartialValidatorRegistry(t *testing.T) {
+func TestProcessPartialValidatorRegistry_CorrectShufflingEpoch(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().SlotsPerEpoch * 2,
 		LatestRandaoMixes:      [][]byte{{'A'}, {'B'}, {'C'}},
@@ -490,7 +514,7 @@ func TestProcessPartialValidatorRegistry(t *testing.T) {
 	}
 }
 
-func TestCleanupAttestations(t *testing.T) {
+func TestCleanupAttestations_RemovesFromLastEpoch(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
@@ -525,7 +549,7 @@ func TestCleanupAttestations(t *testing.T) {
 	}
 }
 
-func TestUpdateLatestSlashedBalances_Ok(t *testing.T) {
+func TestUpdateLatestSlashedBalances_UpdatesBalances(t *testing.T) {
 	tests := []struct {
 		epoch    uint64
 		balances uint64
@@ -569,7 +593,7 @@ func TestUpdateLatestSlashedBalances_Ok(t *testing.T) {
 	}
 }
 
-func TestUpdateLatestRandaoMixes_Ok(t *testing.T) {
+func TestUpdateLatestRandaoMixes_UpdatesRandao(t *testing.T) {
 	tests := []struct {
 		epoch uint64
 		seed  []byte
@@ -615,7 +639,7 @@ func TestUpdateLatestRandaoMixes_Ok(t *testing.T) {
 	}
 }
 
-func TestUpdateLatestActiveIndexRoots_Ok(t *testing.T) {
+func TestUpdateLatestActiveIndexRoots_UpdatesActiveIndexRoots(t *testing.T) {
 	epoch := uint64(1234)
 	latestActiveIndexRoots := make([][]byte,
 		params.BeaconConfig().LatestActiveIndexRootsLength)

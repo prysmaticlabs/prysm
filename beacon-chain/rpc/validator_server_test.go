@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestValidatorIndex_Ok(t *testing.T) {
+func TestValidatorIndex_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
@@ -49,7 +49,7 @@ func TestValidatorIndex_Ok(t *testing.T) {
 	}
 }
 
-func TestValidatorEpochAssignments_Ok(t *testing.T) {
+func TestValidatorEpochAssignments_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
@@ -126,7 +126,7 @@ func TestValidatorCommitteeAtSlot_CrosslinkCommitteesFailure(t *testing.T) {
 	}
 }
 
-func TestValidatorCommitteeAtSlot_Ok(t *testing.T) {
+func TestValidatorCommitteeAtSlot_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	genesis := b.NewGenesisBlock([]byte{})

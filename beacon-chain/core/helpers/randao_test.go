@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestRandaoMix_Ok(t *testing.T) {
+func TestRandaoMix_OK(t *testing.T) {
 	randaoMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
 	for i := 0; i < len(randaoMixes); i++ {
 		intInBytes := make([]byte, 32)
@@ -59,7 +59,7 @@ func TestRandaoMix_OutOfBound(t *testing.T) {
 	}
 }
 
-func TestActiveIndexRoot_Ok(t *testing.T) {
+func TestActiveIndexRoot_OK(t *testing.T) {
 	activeIndexRoots := make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength)
 	for i := 0; i < len(activeIndexRoots); i++ {
 		intInBytes := make([]byte, 32)
@@ -117,7 +117,7 @@ func TestGenerateSeed_OutOfBound(t *testing.T) {
 	}
 }
 
-func TestGenerateSeed_Ok(t *testing.T) {
+func TestGenerateSeed_OK(t *testing.T) {
 	activeIndexRoots := make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength)
 	for i := 0; i < len(activeIndexRoots); i++ {
 		intInBytes := make([]byte, 32)

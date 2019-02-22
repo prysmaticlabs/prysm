@@ -232,16 +232,16 @@ func checkAttesterPoolLength(smc *SMC, n *big.Int) error {
 	return nil
 }
 
-// TestContractCreation tests SMC smart contract can successfully be deployed.
-func TestContractCreation(t *testing.T) {
+// TestContractCreation_OK tests SMC smart contract can successfully be deployed.
+func TestContractCreation_OK(t *testing.T) {
 	_, err := newSMCTestHelper(1)
 	if err != nil {
 		t.Fatalf("can't deploy SMC: %v", err)
 	}
 }
 
-// TestAttesterRegister tests attester registers in a normal condition.
-func TestAttesterRegister(t *testing.T) {
+// TestRegisterAttesters_OK tests attester registers in a normal condition.
+func TestRegisterAttesters_OK(t *testing.T) {
 	// Initializes 3 accounts to register as attesters.
 	const attesterCount = 3
 	s, _ := newSMCTestHelper(attesterCount)
@@ -272,16 +272,16 @@ func TestAttesterRegister(t *testing.T) {
 	}
 }
 
-// TestAttesterRegisterInsufficientEther tests attester registers with insufficient deposit.
-func TestAttesterRegisterInsufficientEther(t *testing.T) {
+// TestRegisterAttesters_InsufficientEther tests attester registration with insufficient deposit.
+func TestRegisterAttesters_InsufficientEther(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
 	if err := s.registerAttesters(attesterDepositInsufficient, 0, 1); err == nil {
 		t.Errorf("Attester register should have failed with insufficient deposit")
 	}
 }
 
-// TestAttesterDoubleRegisters tests attester registers twice.
-func TestAttesterDoubleRegisters(t *testing.T) {
+// TestRegisterAttesters_DoubleRegister tests the same attester registering twice.
+func TestRegisterAttesters_DoubleRegister(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
 
 	// Attester 0 registers.
@@ -304,8 +304,8 @@ func TestAttesterDoubleRegisters(t *testing.T) {
 	}
 }
 
-// TestAttesterDeregister tests attester deregisters in a normal condition.
-func TestAttesterDeregister(t *testing.T) {
+// TestDeregisterAttesters_OK tests attester deregisters in a normal condition.
+func TestDeregisterAttesters_OK(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
 
 	// Attester 0 registers.
@@ -328,8 +328,8 @@ func TestAttesterDeregister(t *testing.T) {
 	}
 }
 
-// TestAttesterDeregisterThenRegister tests attester deregisters then registers before lock up ends.
-func TestAttesterDeregisterThenRegister(t *testing.T) {
+// TestDeregisterAttesters_RegisterAgain tests attester deregisteration and then registers before lock up ends.
+func TestDeregisterAttesters_RegisterAgain(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
 
 	// Attester 0 registers.
@@ -362,7 +362,7 @@ func TestAttesterDeregisterThenRegister(t *testing.T) {
 }
 
 // TestAttesterRelease tests attester releases in a normal condition.
-func TestAttesterRelease(t *testing.T) {
+func TestReleaseAttester_OK(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
 
 	// Attester 0 registers.
@@ -409,7 +409,7 @@ func TestAttesterRelease(t *testing.T) {
 }
 
 // TestAttesterInstantRelease tests attester releases before lockup ends.
-func TestAttesterInstantRelease(t *testing.T) {
+func TestReleaseAttester_BeforeLockup(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
 
 	// Attester 0 registers.
@@ -448,8 +448,8 @@ func TestAttesterInstantRelease(t *testing.T) {
 	}
 }
 
-// TestCommitteeListsAreDifferent tests different shards have different attester committee.
-func TestCommitteeListsAreDifferent(t *testing.T) {
+// TestCommitteeListsAreDifferent tests that different shards should have different attester committee.
+func TestCommitteeListsAreDifferent_OK(t *testing.T) {
 	const attesterCount = 1000
 	s, _ := newSMCTestHelper(attesterCount)
 
@@ -473,8 +473,8 @@ func TestCommitteeListsAreDifferent(t *testing.T) {
 	}
 }
 
-// TestGetCommitteeWithNonMember tests unregistered attester tries to be in the committee.
-func TestGetCommitteeWithNonMember(t *testing.T) {
+// TestGetAttesterInCommittee_NonMember tests unregistered attester trying to be in the committee.
+func TestGetAttesterInCommittee_NonMember(t *testing.T) {
 	const attesterCount = 11
 	s, _ := newSMCTestHelper(attesterCount)
 
@@ -497,8 +497,8 @@ func TestGetCommitteeWithNonMember(t *testing.T) {
 	}
 }
 
-// TestGetCommitteeWithinSamePeriod tests attester registers and samples within the same period.
-func TestGetCommitteeWithinSamePeriod(t *testing.T) {
+// TestGetAttesterInCommittee_SamePeriod tests attester registeration and samples within the same period.
+func TestGetAttesterInCommittee_SamePeriod(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
 
 	// Attester 0 registers.
@@ -519,7 +519,7 @@ func TestGetCommitteeWithinSamePeriod(t *testing.T) {
 }
 
 // TestGetCommitteeAfterDeregisters tests attester tries to be in committee after deregistered.
-func TestGetCommitteeAfterDeregisters(t *testing.T) {
+func TestGetAttesterInCommittee_AfterDeregister(t *testing.T) {
 	const attesterCount = 10
 	s, _ := newSMCTestHelper(attesterCount)
 
@@ -549,8 +549,8 @@ func TestGetCommitteeAfterDeregisters(t *testing.T) {
 	}
 }
 
-// TestNormalAddHeader tests proposer add header in normal condition.
-func TestNormalAddHeader(t *testing.T) {
+// TestAddHeader_OK tests proposer adding header in normal condition.
+func TestAddHeader_OK(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
 	s.fastForward(1)
 
@@ -574,7 +574,7 @@ func TestNormalAddHeader(t *testing.T) {
 }
 
 // TestAddTwoHeadersAtSamePeriod tests we can't add two headers within the same period.
-func TestAddTwoHeadersAtSamePeriod(t *testing.T) {
+func TestAddHeader_TwoSamePeriod(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
 	s.fastForward(1)
 
@@ -591,8 +591,8 @@ func TestAddTwoHeadersAtSamePeriod(t *testing.T) {
 	}
 }
 
-// TestAddHeadersAtWrongPeriod tests proposer adds header in the wrong period.
-func TestAddHeadersAtWrongPeriod(t *testing.T) {
+// TestAddHeader_WrongPeriod tests proposer adding the header in the wrong period.
+func TestAddHeader_WrongPeriod(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
 	s.fastForward(1)
 
@@ -613,8 +613,8 @@ func TestAddHeadersAtWrongPeriod(t *testing.T) {
 	}
 }
 
-// TestSubmitVote tests attester submit votes in normal condition.
-func TestSubmitVote(t *testing.T) {
+// TestSubmitVote_OK tests attester submitting votes in normal condition.
+func TestSubmitVote_OK(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
 	// Attester 0 registers.
 	if err := s.registerAttesters(attesterDeposit, 0, 1); err != nil {
@@ -664,8 +664,8 @@ func TestSubmitVote(t *testing.T) {
 
 }
 
-// TestSubmitVoteTwice tests attester tries to submit same vote twice.
-func TestSubmitVoteTwice(t *testing.T) {
+// TestSubmitVote_Twice tests attester trying to submit same vote twice.
+func TestSubmitVote_Twice(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
 	// Attester 0 registers.
 	if err := s.registerAttesters(attesterDeposit, 0, 1); err != nil {
@@ -699,8 +699,8 @@ func TestSubmitVoteTwice(t *testing.T) {
 	}
 }
 
-// TestSubmitVoteByNonEligibleAttester tests a non-eligible attester tries to submit vote.
-func TestSubmitVoteByNonEligibleAttester(t *testing.T) {
+// TestSubmitVote_IneligibleAttester tests a ineligible attester tries to submit vote.
+func TestSubmitVote_IneligibleAttester(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
 	s.fastForward(1)
 
@@ -726,8 +726,8 @@ func TestSubmitVoteByNonEligibleAttester(t *testing.T) {
 	}
 }
 
-// TestSubmitVoteWithOutAHeader tests a attester tries to submit vote before header gets added.
-func TestSubmitVoteWithOutAHeader(t *testing.T) {
+// TestSubmitVote_NoHeader tests a attester tries to submit vote before header gets added.
+func TestSubmitVote_NoHeader(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
 	// Attester 0 registers.
 	if err := s.registerAttesters(attesterDeposit, 0, 1); err != nil {
@@ -753,8 +753,8 @@ func TestSubmitVoteWithOutAHeader(t *testing.T) {
 	}
 }
 
-// TestSubmitVoteWithInvalidArgs tests attester submits vote using wrong chunkroot and period.
-func TestSubmitVoteWithInvalidArgs(t *testing.T) {
+// TestSubmitVote_InvalidArgs tests attester submits vote using wrong chunkroot and period.
+func TestSubmitVote_InvalidArgs(t *testing.T) {
 	s, _ := newSMCTestHelper(1)
 	// Attester 0 registers.
 	if err := s.registerAttesters(attesterDeposit, 0, 1); err != nil {

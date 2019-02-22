@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestSimulatedBackendStop(t *testing.T) {
+func TestSimulatedBackendStop_ShutsDown(t *testing.T) {
 
 	backend, err := NewSimulatedBackend()
 	if err != nil {
@@ -21,7 +21,7 @@ func TestSimulatedBackendStop(t *testing.T) {
 	db.TeardownDB(backend.beaconDB)
 }
 
-func TestGenerateBlocks(t *testing.T) {
+func TestGenerateBlockAndAdvanceChain_IncreasesSlot(t *testing.T) {
 	backend, err := NewSimulatedBackend()
 	if err != nil {
 		t.Fatalf("Could not create a new simulated backend %v", err)
@@ -52,7 +52,7 @@ func TestGenerateBlocks(t *testing.T) {
 
 }
 
-func TestGenerateNilBlocks(t *testing.T) {
+func TestGenerateNilBlockAndAdvanceChain_IncreasesSlot(t *testing.T) {
 	backend, err := NewSimulatedBackend()
 	if err != nil {
 		t.Fatalf("Could not create a new simulated backedn %v", err)

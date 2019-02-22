@@ -82,7 +82,7 @@ func setupTestSyncService(t *testing.T, synced bool) (*Service, *db.BeaconDB) {
 
 }
 
-func TestStatus_ReturnsNoErrorWhenSynced(t *testing.T) {
+func TestStatus_Synced(t *testing.T) {
 	serviceSynced, db := setupTestSyncService(t, true)
 	defer internal.TeardownDB(t, db)
 	if serviceSynced.Status() != nil {
@@ -90,7 +90,7 @@ func TestStatus_ReturnsNoErrorWhenSynced(t *testing.T) {
 	}
 }
 
-func TestStatus_ReturnsErrorWhenNotSynced(t *testing.T) {
+func TestStatus_NotSynced(t *testing.T) {
 	serviceNotSynced, db := setupTestSyncService(t, false)
 	defer internal.TeardownDB(t, db)
 	_, querierErr := serviceNotSynced.Querier.IsSynced()
