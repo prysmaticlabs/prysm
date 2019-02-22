@@ -28,17 +28,17 @@ func TestCanProcessEpoch(t *testing.T) {
 		},
 		{
 			slot:            63,
-			canProcessEpoch: false,
+			canProcessEpoch: true,
 		},
 		{
 			slot:            64,
-			canProcessEpoch: true,
+			canProcessEpoch: false,
 		}, {
-			slot:            128,
+			slot:            127,
 			canProcessEpoch: true,
 		}, {
 			slot:            1000000000,
-			canProcessEpoch: true,
+			canProcessEpoch: false,
 		},
 	}
 	for _, tt := range tests {

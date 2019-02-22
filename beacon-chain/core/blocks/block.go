@@ -54,11 +54,11 @@ func BlockRoot(state *pb.BeaconState, slot uint64) ([]byte, error) {
 
 	if slot < earliestSlot || slot >= state.Slot {
 		if earliestSlot < params.BeaconConfig().GenesisSlot {
-			earliestSlot = 0
+			earliestSlot = params.BeaconConfig().GenesisSlot
 		}
 		return []byte{}, fmt.Errorf("slot %d is not within expected range of %d to %d",
 			slot-params.BeaconConfig().GenesisSlot,
-			earliestSlot,
+			earliestSlot-params.BeaconConfig().GenesisSlot,
 			state.Slot-params.BeaconConfig().GenesisSlot,
 		)
 	}

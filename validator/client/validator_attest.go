@@ -113,7 +113,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	duration := time.Duration(slot*params.BeaconConfig().SecondsPerSlot+delay) * time.Second
 	timeToBroadcast := time.Unix(int64(v.genesisTime), 0).Add(duration)
 	time.Sleep(time.Until(timeToBroadcast))
-    log.Infof("Produced attestation: %v", attestation)
+	log.Infof("Produced attestation: %v", attestation)
 	attestRes, err := v.attesterClient.AttestHead(ctx, attestation)
 	if err != nil {
 		log.Errorf("Could not submit attestation to beacon node: %v", err)

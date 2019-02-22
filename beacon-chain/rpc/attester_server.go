@@ -57,14 +57,24 @@ func (as *AttesterServer) AttestationInfoAtSlot(ctx context.Context, req *pb.Att
 	// On the server side, this is fetched by calling get_block_root(state, get_epoch_start_slot(head.slot)).
 	// If the epoch boundary slot is the same as state current slot,
 	// we set epoch boundary root to an empty root.
-	epochBoundarySlot := helpers.StartSlot(head.Slot / params.BeaconConfig().SlotsPerEpoch)
 	epochBoundaryRoot := make([]byte, 32)
-	if epochBoundarySlot != beaconState.Slot {
-		epochBoundaryRoot, err = blocks.BlockRoot(beaconState, epochBoundarySlot)
+	epochStartSlot := helpers.StartSlot(helpers.SlotToEpoch(head.Slot))
+	fmt.Println(epochStartSlot-params.BeaconConfig().GenesisSlot)
+	fmt.Println(head.Slot-params.BeaconConfig().GenesisSlot)
+	if epochStartSlot == head.Slot {
+		hash, err := ssz.TreeHash(head)
+		if err != nil {
+			return nil, fmt.Errorf("could not tree hash head block: %v", err)
+		}
+		epochBoundaryRoot = hash[:]
+	} else {
+		fmt.Println("trigger")
+		epochBoundaryRoot, err = blocks.BlockRoot(beaconState, epochStartSlot)
 		if err != nil {
 			return nil, fmt.Errorf("could not get epoch boundary block: %v", err)
 		}
 	}
+	// epoch_start_slot = get_epoch_start_slot(slot_to_epoch(head.slot))
 	// Fetch the justified block root = hash_tree_root(justified_block) where
 	// justified_block is the block at state.justified_epoch in the chain defined by head.
 	// On the server side, this is fetched by calling get_block_root(state, justified_epoch).
@@ -78,6 +88,7 @@ func (as *AttesterServer) AttestationInfoAtSlot(ctx context.Context, req *pb.Att
 			return nil, fmt.Errorf("could not get justified block: %v", err)
 		}
 	}
+
 	if beaconState.Slot == params.BeaconConfig().GenesisSlot {
 		epochBoundaryRoot = blockRoot[:]
 		justifiedBlockRoot = blockRoot[:]

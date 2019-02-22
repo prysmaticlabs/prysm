@@ -264,6 +264,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 			prevEpochJustifiedAttesterIndices,
 			prevEpochJustifiedAttestingBalance,
 			totalBalance)
+		log.Infof("Balance after FFG src calculation: %v", state.ValidatorBalances)
 		// Apply rewards/penalties to validators for attesting
 		// expected FFG target.
 		state = bal.ExpectedFFGTarget(
@@ -271,6 +272,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 			prevEpochBoundaryAttesterIndices,
 			prevEpochBoundaryAttestingBalances,
 			totalBalance)
+		log.Infof("Balance after FFG target calculation: %v", state.ValidatorBalances)
 		// Apply rewards/penalties to validators for attesting
 		// expected beacon chain head.
 		state = bal.ExpectedBeaconChainHead(
@@ -278,6 +280,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 			prevEpochHeadAttesterIndices,
 			prevEpochHeadAttestingBalances,
 			totalBalance)
+		log.Infof("Balance after chain head calculation: %v", state.ValidatorBalances)
 		// Apply rewards for to validators for including attestations
 		// based on inclusion distance.
 		state, err = bal.InclusionDistance(
@@ -287,8 +290,10 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 		if err != nil {
 			return nil, fmt.Errorf("could not calculate inclusion dist rewards: %v", err)
 		}
+		log.Infof("Balance after inclusion distance calculation: %v", state.ValidatorBalances)
 
 	case epochsSinceFinality > 4:
+		log.Infof("Applying more penalties. ESF %d greater than 4", epochsSinceFinality)
 		// Apply penalties for long inactive FFG source participants.
 		state = bal.InactivityFFGSource(
 			state,
@@ -385,17 +390,21 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 		"slotsSinceGenesis", state.Slot-params.BeaconConfig().GenesisSlot,
 	).Info("Epoch transition successfully processed")
 	log.WithField(
-		"epochsSinceGenesis", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch,
-	).Info("Finalized epoch")
-	log.WithField(
-		"epochsSinceGenesis", state.PreviousJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
+		"PreviousJustifiedEpoch", state.PreviousJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 	).Info("Previous justified epoch")
 	log.WithField(
-		"epochsSinceGenesis", state.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
+		"JustifiedEpoch", state.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 	).Info("Justified epoch")
 	log.WithField(
-		"numValidators", len(state.ValidatorRegistry),
+		"FinalizedEpoch", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch,
+	).Info("Finalized epoch")
+	log.WithField(
+		"ValidatorRegistryUpdateEpoch", state.ValidatorRegistryUpdateEpoch-params.BeaconConfig().GenesisEpoch,
+	).Info("Validator Registry Update Epoch")
+	log.WithField(
+		"NumValidators", len(state.ValidatorRegistry),
 	).Info("Validator registry length")
 	log.Infof("Validator balances: %v", state.ValidatorBalances)
+
 	return state, nil
 }
