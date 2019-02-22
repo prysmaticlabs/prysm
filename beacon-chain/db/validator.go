@@ -20,7 +20,6 @@ func (db *BeaconDB) SaveValidatorIndex(pubKey []byte, index int) error {
 }
 
 // ValidatorIndex accepts a public key and returns the corresponding validator index.
-// Returns nil if the block does not exist.
 func (db *BeaconDB) ValidatorIndex(pubKey []byte) (int, error) {
 	if !db.HasValidator(pubKey) {
 		return -1, fmt.Errorf("validator %#x does not exist", pubKey)
@@ -44,7 +43,7 @@ func (db *BeaconDB) ValidatorIndex(pubKey []byte) (int, error) {
 	return index, err
 }
 
-// DeleteValidatorIndex deletes the validator index record.
+// DeleteValidatorIndex deletes the validator index map record.
 func (db *BeaconDB) DeleteValidatorIndex(pubKey []byte) error {
 	h := hashutil.Hash(pubKey)
 
@@ -55,7 +54,7 @@ func (db *BeaconDB) DeleteValidatorIndex(pubKey []byte) error {
 	})
 }
 
-// HasValidator checks if a validator exists.
+// HasValidator checks if a validator index map exists.
 func (db *BeaconDB) HasValidator(pubKey []byte) bool {
 	exists := false
 	h := hashutil.Hash(pubKey)
