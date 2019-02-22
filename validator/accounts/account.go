@@ -72,10 +72,10 @@ func NewValidatorAccount(directory string, password string) error {
 		validatorKeyFile,
 	).Info("Keystore generated for validator signatures at path")
 
-	// TODO(1510): handle alternative withdrawal address.
-	// NOTE: This is temporarily generating deposit input where the validator
-	// pubkey and the withdrawal pubkey are the same address.
-	data := keystore.DepositInput(validatorKey, validatorKey)
+	data, err := keystore.DepositInput(validatorKey, shardWithdrawalKey)
+	if err != nil {
+		return fmt.Errorf("unable to generate deposit data: %v", err)
+	}
 	serializedData := new(bytes.Buffer)
 	if err := ssz.Encode(serializedData, data); err != nil {
 		return fmt.Errorf("could not serialize deposit data: %v", err)
