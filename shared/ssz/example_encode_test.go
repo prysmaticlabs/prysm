@@ -28,6 +28,7 @@ func ExampleEncode() {
 	// ssz.Encode writes the encoded data to the buffer.
 	if err := ssz.Encode(buffer, d); err != nil {
 		// There was some failure with encoding SSZ.
+		// You should probably handle this error in a non-fatal way.
 		panic(err)
 	}
 	// And we can return the bytes from the buffer.
