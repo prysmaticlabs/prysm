@@ -132,6 +132,8 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock, verifySignatures
 	if err != nil {
 		return nil, fmt.Errorf("could not process block attestations: %v", err)
 	}
+	log.WithField("state.LatestAttestations", fmt.Sprintf("%v", state.LatestAttestations)).Infof("Post-block attestation processing")
+
 	state, err = b.ProcessValidatorDeposits(state, block)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block validator deposits: %v", err)
@@ -176,14 +178,20 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	// Calculate the attesting balances of validators that justified the
 	// epoch boundary block at the start of the current epoch.
 	currentAttestations := e.CurrentAttestations(state)
+	log.Infof("Current epoch attestations: %v", currentAttestations)
+
 	currentBoundaryAttestations, err := e.CurrentBoundaryAttestations(state, currentAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not get current boundary attestations: %v", err)
 	}
+	log.Infof("Current epoch epoch boundary attestations: %v", currentBoundaryAttestations)
+
 	currentBoundaryAttesterIndices, err := v.ValidatorIndices(state, currentBoundaryAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not get current boundary attester indices: %v", err)
 	}
+	log.Infof("Current epoch attester indices: %v", currentBoundaryAttesterIndices)
+
 	currentBoundaryAttestingBalances := e.TotalBalance(state, currentBoundaryAttesterIndices)
 
 	// Calculate the attesting balances of validators that made an attestation
@@ -211,10 +219,14 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not get prev boundary attestations: %v", err)
 	}
+	log.Infof("Previous epoch boundary attestations: %v", prevEpochBoundaryAttestations)
+
 	prevEpochBoundaryAttesterIndices, err := v.ValidatorIndices(state, prevEpochBoundaryAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not get prev boundary attester indices: %v", err)
 	}
+	log.Infof("Previous epoch attester indices: %v", prevEpochBoundaryAttesterIndices)
+
 	prevEpochBoundaryAttestingBalances := e.TotalBalance(state, prevEpochBoundaryAttesterIndices)
 
 	// Calculate attesting balances of validator attesting to expected beacon chain head
