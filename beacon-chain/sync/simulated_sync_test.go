@@ -200,6 +200,11 @@ func TestSyncFromAFullySyncedNode(t *testing.T) {
 	defer us.Stop()
 	defer db.TeardownDB(unSyncedDB)
 
+	// Sets up another sync service which has its current head at genesis.
+	us2, unSyncedDB2 := setUpUnSyncedService(newP2P, t)
+	defer us2.Stop()
+	defer db.TeardownDB(unSyncedDB2)
+
 	syncedChan := make(chan uint64)
 
 	// Waits for the unsynced node to fire a message signifying it is
@@ -207,10 +212,22 @@ func TestSyncFromAFullySyncedNode(t *testing.T) {
 	sub := us.InitialSync.SyncedFeed().Subscribe(syncedChan)
 	defer sub.Unsubscribe()
 
+	syncedChan2 := make(chan uint64)
+
+	sub2 := us2.InitialSync.SyncedFeed().Subscribe(syncedChan2)
+	defer sub2.Unsubscribe()
+
 	highestSlot := <-syncedChan
+
+	highestSlot2 := <-syncedChan2
 
 	if highestSlot != uint64(numOfBlocks)+params.BeaconConfig().GenesisSlot {
 		t.Errorf("Sync services didnt sync to expectecd slot, expected %d but got %d",
 			uint64(numOfBlocks)+params.BeaconConfig().GenesisSlot, highestSlot)
+	}
+
+	if highestSlot2 != uint64(numOfBlocks)+params.BeaconConfig().GenesisSlot {
+		t.Errorf("Sync services didnt sync to expectecd slot, expected %d but got %d",
+			uint64(numOfBlocks)+params.BeaconConfig().GenesisSlot, highestSlot2)
 	}
 }
