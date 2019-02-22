@@ -13,7 +13,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
+	"github.com/sirupsen/logrus"
 )
+
+var log = logrus.WithField("prefix", "core/state")
 
 // CanProcessEpoch checks the eligibility to process epoch.
 // The epoch can be processed at the end of the last slot of every epoch
@@ -105,17 +108,20 @@ func ProcessJustification(
 	state.PreviousJustifiedEpoch = state.JustifiedEpoch
 	// Shifts all the bits over one to create a new bit for the recent epoch.
 	state.JustificationBitfield = state.JustificationBitfield * 2
-
+	log.Info("Total Balance: %d", totalBalance)
 	// If prev prev epoch was justified then we ensure the 2nd bit in the bitfield is set,
 	// assign new justified slot to 2 * SLOTS_PER_EPOCH before.
+	log.Info("Previous Epoch Attesting Balance: %d", prevEpochBoundaryAttestingBalance)
 	if 3*prevEpochBoundaryAttestingBalance >= 2*totalBalance {
+		log.Info("Prev epoch %d was justified", state.JustifiedEpoch-params.BeaconConfig().GenesisEpoch)
 		state.JustificationBitfield |= 2
 		state.JustifiedEpoch = helpers.CurrentEpoch(state) - 2
 	}
-
+	log.Info("Current Epoch Attesting Balance: %d", thisEpochBoundaryAttestingBalance)
 	// If this epoch was justified then we ensure the 1st bit in the bitfield is set,
 	// assign new justified slot to 1 * SLOTS_PER_EPOCH before.
 	if 3*thisEpochBoundaryAttestingBalance >= 2*totalBalance {
+		log.Info("Current epoch %d was justified", state.JustifiedEpoch-params.BeaconConfig().GenesisEpoch)
 		state.JustificationBitfield |= 1
 		state.JustifiedEpoch = helpers.CurrentEpoch(state) - 1
 	}
@@ -135,17 +141,20 @@ func ProcessFinalization(state *pb.BeaconState) *pb.BeaconState {
 	if state.PreviousJustifiedEpoch == helpers.CurrentEpoch(state)-2 &&
 		state.JustificationBitfield%4 == 3 {
 		state.FinalizedEpoch = state.JustifiedEpoch
+		log.Info("New Finalized Epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
 		return state
 	}
 	if state.PreviousJustifiedEpoch == helpers.CurrentEpoch(state)-3 &&
 		state.JustificationBitfield%8 == 7 {
 		state.FinalizedEpoch = state.JustifiedEpoch
+		log.Info("New Finalized Epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
 		return state
 	}
 	if state.PreviousJustifiedEpoch == helpers.CurrentEpoch(state)-4 &&
 		(state.JustificationBitfield%16 == 15 ||
 			state.JustificationBitfield%16 == 14) {
 		state.FinalizedEpoch = state.JustifiedEpoch
+		log.Info("New Finalized Epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
 		return state
 	}
 	return state
