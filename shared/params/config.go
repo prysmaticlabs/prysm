@@ -192,13 +192,15 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig := *defaultBeaconConfig
 	demoConfig.ShardCount = 1
 	demoConfig.MinAttestationInclusionDelay = 1
-	demoConfig.TargetCommitteeSize = 2
+	demoConfig.TargetCommitteeSize = 1
 	demoConfig.DepositsForChainStart = 8
-	demoConfig.SlotsPerEpoch = 4
-	demoConfig.GenesisEpoch = demoConfig.GenesisSlot / 4
+	demoConfig.SlotsPerEpoch = 8
+	demoConfig.GenesisEpoch = demoConfig.GenesisSlot / 8
 	demoConfig.SecondsPerSlot = 10
 	demoConfig.MinDepositAmount = 100
 	demoConfig.MaxDepositAmount = 3200000
+	demoConfig.EjectionBalance = 1600000
+	demoConfig.SyncPollingInterval = 2 * 4 // Query nodes over the network every 4 slots
 	demoConfig.SyncPollingInterval = 2 * 4 // Query nodes over the network every 4 slots for sync status.
 
 	return &demoConfig
