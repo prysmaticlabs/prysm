@@ -29,7 +29,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func TestStop_cancelsContext(t *testing.T) {
+func TestStop_CancelsContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	vs := &ValidatorService{
 		ctx:    ctx,
@@ -66,7 +66,7 @@ func TestLifecycle(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
 
-func TestLifecycle_WithInsecure(t *testing.T) {
+func TestLifecycle_Insecure(t *testing.T) {
 	hook := logTest.NewGlobal()
 	// Use cancelled context so that the run function exits immediately.
 	ctx, cancel := context.WithCancel(context.Background())
@@ -85,7 +85,7 @@ func TestLifecycle_WithInsecure(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
 
-func TestStatus(t *testing.T) {
+func TestStatus_NoConnectionError(t *testing.T) {
 	validatorService := &ValidatorService{}
 	if err := validatorService.Status(); !strings.Contains(err.Error(), "no connection") {
 		t.Errorf("Expected status check to fail if no connection is found, received: %v", err)

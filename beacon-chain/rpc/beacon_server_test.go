@@ -259,7 +259,7 @@ func TestLatestAttestation_SendsCorrectly(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Sending attestation to RPC clients")
 }
 
-func TestPendingDeposits_ReturnsErrorOnUnknownBlockNum(t *testing.T) {
+func TestPendingDeposits_UnknownBlockNum(t *testing.T) {
 	p := &mockPOWChainService{
 		latestBlockNumber: nil,
 	}
@@ -271,7 +271,7 @@ func TestPendingDeposits_ReturnsErrorOnUnknownBlockNum(t *testing.T) {
 	}
 }
 
-func TestPendingDeposits_ReturnsDepositsOutsideEth1FollowWindow(t *testing.T) {
+func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	p := &mockPOWChainService{
 		latestBlockNumber: big.NewInt(int64(10 + params.BeaconConfig().Eth1FollowDistance)),
 	}

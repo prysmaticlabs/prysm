@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
-func TestDepositTrie_UpdateDepositTrie(t *testing.T) {
+func TestDepositTrie_UpdateDeposit(t *testing.T) {
 	tests := []struct {
 		deposits [][]byte
 	}{
@@ -60,7 +60,7 @@ func TestDepositTrie_UpdateDepositTrie(t *testing.T) {
 	}
 }
 
-func TestDepositTrie_VerifyMerkleBranch(t *testing.T) {
+func TestVerifyMerkleBranch_OK(t *testing.T) {
 	d := NewDepositTrie()
 	deposit1 := []byte{1, 2, 3}
 	d.UpdateDepositTrie(deposit1)
