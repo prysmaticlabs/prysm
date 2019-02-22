@@ -16,12 +16,12 @@ import (
 )
 
 // CanProcessEpoch checks the eligibility to process epoch.
-// The epoch can be processed every SLOTS_PER_EPOCH.
+// The epoch can be processed at the end of the last slot of every epoch
 //
 // Spec pseudocode definition:
-//    If state.slot % SLOTS_PER_EPOCH == 0:
+//    If (state.slot + 1) % SLOTS_PER_EPOCH == 0:
 func CanProcessEpoch(state *pb.BeaconState) bool {
-	return state.Slot%params.BeaconConfig().SlotsPerEpoch == 0
+	return (state.Slot+1)%params.BeaconConfig().SlotsPerEpoch == 0
 }
 
 // CanProcessEth1Data checks the eligibility to process the eth1 data.

@@ -85,6 +85,7 @@ func (as *AttesterServer) AttestationInfoAtSlot(ctx context.Context, req *pb.Att
 			return nil, fmt.Errorf("could not get justified block: %v", err)
 		}
 	}
+
 	if beaconState.Slot == params.BeaconConfig().GenesisSlot {
 		epochBoundaryRoot = blockRoot[:]
 		justifiedBlockRoot = blockRoot[:]
