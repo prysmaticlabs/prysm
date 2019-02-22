@@ -172,7 +172,6 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 			if s.currentSlot == params.BeaconConfig().GenesisSlot {
 				continue
 			}
-			log.Info("Post chan")
 			if s.highestObservedSlot == s.currentSlot {
 				log.Info("Exiting initial sync and starting normal sync")
 				s.syncService.ResumeSync()
