@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-
 	"github.com/prysmaticlabs/prysm/shared/forkutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 
@@ -75,8 +74,11 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	epoch := slot / params.BeaconConfig().SlotsPerEpoch
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
+	log.Infof("Signing randao epoch: %d", epoch)
 	domain := forkutils.DomainVersion(fork, epoch, params.BeaconConfig().DomainRandao)
 	epochSignature := v.key.SecretKey.Sign(buf, domain)
+	log.Infof("Pubkey: %#x", v.key.PublicKey.Marshal())
+	log.Infof("Epoch signature: %#x", epochSignature.Marshal())
 
 	// Fetch pending attestations seen by the beacon node.
 	attResp, err := v.proposerClient.PendingAttestations(ctx, &pb.PendingAttestationsRequest{

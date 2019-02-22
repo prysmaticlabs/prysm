@@ -387,7 +387,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	// Clean up processed attestations.
 	state = e.CleanupAttestations(state)
 	log.WithField(
-		"slotsSinceGenesis", state.Slot-params.BeaconConfig().GenesisSlot,
+		"SlotsSinceGenesis", state.Slot-params.BeaconConfig().GenesisSlot,
 	).Info("Epoch transition successfully processed")
 	log.WithField(
 		"PreviousJustifiedEpoch", state.PreviousJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
@@ -405,6 +405,9 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 		"NumValidators", len(state.ValidatorRegistry),
 	).Info("Validator registry length")
 	log.Infof("Validator balances: %v", state.ValidatorBalances)
+	log.WithField(
+		"ValidatorRegistryUpdateEpoch", state.ValidatorRegistryUpdateEpoch-params.BeaconConfig().GenesisEpoch,
+	).Info("Validator registry update epoch")
 
 	return state, nil
 }

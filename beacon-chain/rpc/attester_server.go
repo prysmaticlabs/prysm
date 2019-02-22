@@ -59,8 +59,6 @@ func (as *AttesterServer) AttestationInfoAtSlot(ctx context.Context, req *pb.Att
 	// we set epoch boundary root to an empty root.
 	epochBoundaryRoot := make([]byte, 32)
 	epochStartSlot := helpers.StartSlot(helpers.SlotToEpoch(head.Slot))
-	fmt.Println(epochStartSlot-params.BeaconConfig().GenesisSlot)
-	fmt.Println(head.Slot-params.BeaconConfig().GenesisSlot)
 	if epochStartSlot == head.Slot {
 		hash, err := ssz.TreeHash(head)
 		if err != nil {
@@ -68,7 +66,6 @@ func (as *AttesterServer) AttestationInfoAtSlot(ctx context.Context, req *pb.Att
 		}
 		epochBoundaryRoot = hash[:]
 	} else {
-		fmt.Println("trigger")
 		epochBoundaryRoot, err = blocks.BlockRoot(beaconState, epochStartSlot)
 		if err != nil {
 			return nil, fmt.Errorf("could not get epoch boundary block: %v", err)

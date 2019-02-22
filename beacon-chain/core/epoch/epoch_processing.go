@@ -227,6 +227,7 @@ func ProcessEjections(state *pb.BeaconState) (*pb.BeaconState, error) {
 	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
 	for _, index := range activeValidatorIndices {
 		if state.ValidatorBalances[index] < params.BeaconConfig().EjectionBalance {
+			log.Infof("Validator at index %d EJECTED", index)
 			state = validators.ExitValidator(state, index)
 		}
 	}

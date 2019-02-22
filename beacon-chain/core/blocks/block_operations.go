@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"reflect"
 
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -117,6 +118,11 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 	if err != nil {
 		return fmt.Errorf("could not deserialize block randao reveal: %v", err)
 	}
+	log.WithFields(logrus.Fields{
+		"epoch": helpers.CurrentEpoch(beaconState),
+	}).Info("Verifying randao")
+	log.Infof("Pubkey: %#x", proposer.Pubkey)
+	log.Infof("Epoch signature: %#x", sig.Marshal())
 	if !sig.Verify(hashTreeRoot[:], pub, domain) {
 		return fmt.Errorf("block randao reveal signature did not verify")
 	}

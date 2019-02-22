@@ -107,7 +107,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.UpdateAssignments")
 	defer span.Finish()
 
-	if slot%params.BeaconConfig().SlotsPerEpoch != 0 && v.assignment != nil {
+	if (slot+1)%params.BeaconConfig().SlotsPerEpoch != 0 && v.assignment != nil {
 		// Do nothing if not epoch start AND assignments already exist.
 		return nil
 	}
