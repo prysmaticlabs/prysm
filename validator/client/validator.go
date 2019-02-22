@@ -6,9 +6,11 @@ import (
 	"io"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
-
 	"github.com/opentracing/opentracing-go"
+
+	"github.com/prysmaticlabs/prysm/shared/keystore"
+
+	ptypes "github.com/gogo/protobuf/types"
 
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -33,8 +35,7 @@ type validator struct {
 	validatorClient pb.ValidatorServiceClient
 	beaconClient    pb.BeaconServiceClient
 	attesterClient  pb.AttesterServiceClient
-	pubKey          []byte
-	attestationPool AttestationPool
+	key             *keystore.Key
 }
 
 // Done cleans up the validator.
@@ -77,7 +78,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) {
 	log.Infof("Beacon chain initialized at unix time: %v", time.Unix(int64(v.genesisTime), 0))
 	// Once the ChainStart log is received, we update the genesis time of the validator client
 	// and begin a slot ticker used to track the current slot the beacon node is in.
-	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SlotDuration)
+	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
 }
 
 // WaitForActivation checks whether the validator pubkey is in the active
@@ -105,14 +106,14 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.UpdateAssignments")
 	defer span.Finish()
 
-	if slot%params.BeaconConfig().EpochLength != 0 {
-		// Do nothing if not epoch start.
+	if slot%params.BeaconConfig().SlotsPerEpoch != 0 && v.assignment != nil {
+		// Do nothing if not epoch start AND assignments already exist.
 		return nil
 	}
 
 	req := &pb.ValidatorEpochAssignmentsRequest{
 		EpochStart: slot,
-		PublicKey:  v.pubKey,
+		PublicKey:  v.key.PublicKey.Marshal(),
 	}
 
 	resp, err := v.validatorClient.ValidatorEpochAssignments(ctx, req)
@@ -131,10 +132,12 @@ func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
 	if v.assignment == nil {
 		return pb.ValidatorRole_UNKNOWN
 	}
-	if v.assignment.AttesterSlot == slot {
-		return pb.ValidatorRole_ATTESTER
+	if v.assignment.AttesterSlot == slot && v.assignment.ProposerSlot == slot {
+		return pb.ValidatorRole_BOTH
 	} else if v.assignment.ProposerSlot == slot {
 		return pb.ValidatorRole_PROPOSER
+	} else if v.assignment.AttesterSlot == slot {
+		return pb.ValidatorRole_ATTESTER
 	}
 	return pb.ValidatorRole_UNKNOWN
 }

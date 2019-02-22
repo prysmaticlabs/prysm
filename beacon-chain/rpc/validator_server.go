@@ -43,8 +43,12 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 	ctx context.Context,
 	req *pb.ValidatorEpochAssignmentsRequest,
 ) (*pb.ValidatorEpochAssignmentsResponse, error) {
-	if len(req.PublicKey) != 48 {
-		return nil, fmt.Errorf("expected 48 byte public key, received %d", len(req.PublicKey))
+	if len(req.PublicKey) != params.BeaconConfig().BLSPubkeyLength {
+		return nil, fmt.Errorf(
+			"expected public key to have length %d, received %d",
+			params.BeaconConfig().BLSPubkeyLength,
+			len(req.PublicKey),
+		)
 	}
 	beaconState, err := vs.beaconDB.State()
 	if err != nil {
@@ -58,12 +62,12 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 	var attesterSlot uint64
 	var proposerSlot uint64
 
-	for slot := req.EpochStart; slot < req.EpochStart+params.BeaconConfig().EpochLength; slot++ {
+	for slot := req.EpochStart; slot < req.EpochStart+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		crossLinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(beaconState, slot, false)
 		if err != nil {
 			return nil, err
 		}
-		proposerIndex, err := v.BeaconProposerIdx(beaconState, slot)
+		proposerIndex, err := helpers.BeaconProposerIndex(beaconState, slot)
 		if err != nil {
 			return nil, err
 		}

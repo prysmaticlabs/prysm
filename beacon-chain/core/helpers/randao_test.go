@@ -15,7 +15,7 @@ func TestRandaoMix_Ok(t *testing.T) {
 	randaoMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
 	for i := 0; i < len(randaoMixes); i++ {
 		intInBytes := make([]byte, 32)
-		binary.BigEndian.PutUint64(intInBytes, uint64(i))
+		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		randaoMixes[i] = intInBytes
 	}
 	state := &pb.BeaconState{LatestRandaoMixesHash32S: randaoMixes}
@@ -37,7 +37,7 @@ func TestRandaoMix_Ok(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		state.Slot = (test.epoch + 1) * params.BeaconConfig().EpochLength
+		state.Slot = (test.epoch + 1) * params.BeaconConfig().SlotsPerEpoch
 		mix, err := RandaoMix(state, test.epoch)
 		if err != nil {
 			t.Fatalf("Could not get randao mix: %v", err)
@@ -60,10 +60,10 @@ func TestRandaoMix_OutOfBound(t *testing.T) {
 }
 
 func TestActiveIndexRoot_Ok(t *testing.T) {
-	activeIndexRoots := make([][]byte, params.BeaconConfig().LatestIndexRootsLength)
+	activeIndexRoots := make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength)
 	for i := 0; i < len(activeIndexRoots); i++ {
 		intInBytes := make([]byte, 32)
-		binary.BigEndian.PutUint64(intInBytes, uint64(i))
+		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		activeIndexRoots[i] = intInBytes
 	}
 	state := &pb.BeaconState{LatestIndexRootHash32S: activeIndexRoots}
@@ -81,11 +81,11 @@ func TestActiveIndexRoot_Ok(t *testing.T) {
 		},
 		{
 			epoch:     999999,
-			indexRoot: activeIndexRoots[999999%params.BeaconConfig().LatestIndexRootsLength],
+			indexRoot: activeIndexRoots[999999%params.BeaconConfig().LatestActiveIndexRootsLength],
 		},
 	}
 	for _, test := range tests {
-		state.Slot = (test.epoch + 1) * params.BeaconConfig().EpochLength
+		state.Slot = (test.epoch + 1) * params.BeaconConfig().SlotsPerEpoch
 		indexRoot, err := ActiveIndexRoot(state, test.epoch)
 		if err != nil {
 			t.Fatalf("Could not get index root: %v", err)
@@ -110,7 +110,7 @@ func TestActiveIndexRoot_OutOfBound(t *testing.T) {
 func TestGenerateSeed_OutOfBound(t *testing.T) {
 	wanted := fmt.Sprintf(
 		"input randaoMix epoch %d out of bounds: %d <= epoch < %d",
-		100-params.BeaconConfig().SeedLookahead, 0, 0,
+		100-params.BeaconConfig().MinSeedLookahead, 0, 0,
 	)
 	if _, err := GenerateSeed(&pb.BeaconState{}, 100); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected: %s, received: %s", wanted, err.Error())
@@ -118,19 +118,19 @@ func TestGenerateSeed_OutOfBound(t *testing.T) {
 }
 
 func TestGenerateSeed_Ok(t *testing.T) {
-	activeIndexRoots := make([][]byte, params.BeaconConfig().LatestIndexRootsLength)
+	activeIndexRoots := make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength)
 	for i := 0; i < len(activeIndexRoots); i++ {
 		intInBytes := make([]byte, 32)
-		binary.BigEndian.PutUint64(intInBytes, uint64(i))
+		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		activeIndexRoots[i] = intInBytes
 	}
 	randaoMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
 	for i := 0; i < len(randaoMixes); i++ {
 		intInBytes := make([]byte, 32)
-		binary.BigEndian.PutUint64(intInBytes, uint64(i))
+		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		randaoMixes[i] = intInBytes
 	}
-	slot := 10 * params.BeaconConfig().SeedLookahead * params.BeaconConfig().EpochLength
+	slot := 10 * params.BeaconConfig().MinSeedLookahead * params.BeaconConfig().SlotsPerEpoch
 	state := &pb.BeaconState{
 		LatestIndexRootHash32S:   activeIndexRoots,
 		LatestRandaoMixesHash32S: randaoMixes,
@@ -140,8 +140,8 @@ func TestGenerateSeed_Ok(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not generate seed: %v", err)
 	}
-	wanted := [32]byte{248, 115, 47, 108, 244, 57, 89, 71, 186, 71, 181, 177, 17, 131, 75, 206, 67, 185, 184, 241,
-		97, 97, 248, 165, 161, 124, 236, 14, 150, 98, 179, 249}
+	wanted := [32]byte{242, 35, 140, 234, 201, 60, 23, 152, 187, 111, 227, 129, 108, 254, 108, 63,
+		192, 111, 114, 225, 0, 159, 145, 106, 133, 217, 25, 25, 251, 58, 175, 168}
 	if got != wanted {
 		t.Errorf("Incorrect generated seeds. Got: %v, wanted: %v",
 			got, wanted)

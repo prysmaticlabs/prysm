@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
+	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
@@ -71,6 +71,18 @@ func (g *goodLogger) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]
 	return logs, nil
 }
 
+type goodFetcher struct{}
+
+func (g *goodFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
+	return nil, nil
+}
+
+func (g *goodFetcher) HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error) {
+	return &gethTypes.Header{
+		Number: big.NewInt(0),
+	}, nil
+}
+
 var amount32Eth, _ = new(big.Int).SetString("32000000000000000000", 10)
 var depositsReqForChainStart = 8
 
@@ -104,7 +116,14 @@ func setup() (*testAccount, error) {
 	depositsRequired := big.NewInt(int64(depositsReqForChainStart))
 	minDeposit := big.NewInt(1e9)
 	maxDeposit := big.NewInt(32e9)
-	contractAddr, _, contract, err := contracts.DeployDepositContract(txOpts, backend, depositsRequired, minDeposit, maxDeposit)
+	contractAddr, _, contract, err := contracts.DeployDepositContract(
+		txOpts,
+		backend,
+		depositsRequired,
+		minDeposit,
+		maxDeposit,
+		false,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -166,6 +185,7 @@ func TestStart(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		BlockFetcher:    &goodFetcher{},
 		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
@@ -197,6 +217,7 @@ func TestStop(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		BlockFetcher:    &goodFetcher{},
 		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
@@ -222,7 +243,7 @@ func TestStop(t *testing.T) {
 	hook.Reset()
 }
 
-func TestInitDataFromVRC(t *testing.T) {
+func TestInitDataFromContract(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
@@ -241,8 +262,8 @@ func TestInitDataFromVRC(t *testing.T) {
 
 	testAcc.backend.Commit()
 
-	if err := web3Service.initDataFromVRC(); err != nil {
-		t.Fatalf("Could not init from vrc %v", err)
+	if err := web3Service.initDataFromContract(); err != nil {
+		t.Fatalf("Could not init from deposit contract: %v", err)
 	}
 
 	computedRoot := web3Service.depositTrie.Root()
@@ -253,12 +274,12 @@ func TestInitDataFromVRC(t *testing.T) {
 
 	testAcc.txOpts.Value = amount32Eth
 	if _, err := testAcc.contract.Deposit(testAcc.txOpts, []byte{'a'}); err != nil {
-		t.Fatalf("Could not deposit to VRC %v", err)
+		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 	testAcc.backend.Commit()
 
-	if err := web3Service.initDataFromVRC(); err != nil {
-		t.Fatalf("Could not init from vrc %v", err)
+	if err := web3Service.initDataFromContract(); err != nil {
+		t.Fatalf("Could not init from deposit contract: %v", err)
 	}
 
 	if bytes.Equal(web3Service.depositRoot, []byte{}) {
@@ -337,6 +358,7 @@ func TestLatestMainchainInfo(t *testing.T) {
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		BlockFetcher:    &goodFetcher{},
 		ContractBackend: testAcc.backend,
 	})
 	if err != nil {
@@ -366,37 +388,6 @@ func TestLatestMainchainInfo(t *testing.T) {
 	if web3Service.blockHash.Hex() != header.Hash().Hex() {
 		t.Errorf("block hash not set, expected %v, got %v", header.Hash().Hex(), web3Service.blockHash.Hex())
 	}
-}
-
-func TestBadLogger(t *testing.T) {
-	hook := logTest.NewGlobal()
-	endpoint := "ws://127.0.0.1"
-	testAcc, err := setup()
-	if err != nil {
-		t.Fatalf("Unable to set up simulated backend %v", err)
-	}
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
-		Endpoint:        endpoint,
-		DepositContract: testAcc.contractAddr,
-		Reader:          &goodReader{},
-		Logger:          &goodLogger{},
-		ContractBackend: testAcc.backend,
-	})
-	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
-	}
-	testAcc.backend.Commit()
-
-	web3Service.reader = &goodReader{}
-	web3Service.logger = &badLogger{}
-
-	web3Service.run(web3Service.ctx.Done())
-	msg := hook.LastEntry().Message
-	want := "Unable to query logs from VRC: subscription has failed"
-	if msg != want {
-		t.Errorf("incorrect log, expected %s, got %s", want, msg)
-	}
-	hook.Reset()
 }
 
 func TestProcessDepositLog(t *testing.T) {
@@ -437,7 +428,7 @@ func TestProcessDepositLog(t *testing.T) {
 
 	testAcc.txOpts.Value = amount32Eth
 	if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
-		t.Fatalf("Could not deposit to VRC %v", err)
+		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 
 	testAcc.backend.Commit()
@@ -501,7 +492,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 
 	testAcc.txOpts.Value = amount32Eth
 	if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
-		t.Fatalf("Could not deposit to VRC %v", err)
+		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 
 	testAcc.backend.Commit()
@@ -526,6 +517,71 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	}
 }
 
+func TestProcessDepositLog_SkipDuplicateLog(t *testing.T) {
+	endpoint := "ws://127.0.0.1"
+	testAcc, err := setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint:        endpoint,
+		DepositContract: testAcc.contractAddr,
+		Reader:          &goodReader{},
+		Logger:          &goodLogger{},
+		ContractBackend: testAcc.backend,
+		BeaconDB:        &db.BeaconDB{},
+	})
+	if err != nil {
+		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+
+	testAcc.backend.Commit()
+
+	web3Service.depositTrie = trieutil.NewDepositTrie()
+
+	var stub [48]byte
+	copy(stub[:], []byte("testing"))
+
+	data := &pb.DepositInput{
+		Pubkey:                      stub[:],
+		ProofOfPossession:           stub[:],
+		WithdrawalCredentialsHash32: []byte("withdraw"),
+	}
+
+	serializedData := new(bytes.Buffer)
+	if err := ssz.Encode(serializedData, data); err != nil {
+		t.Fatalf("Could not serialize data %v", err)
+	}
+
+	testAcc.txOpts.Value = amount32Eth
+	if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+		t.Fatalf("Could not deposit to deposit contract %v", err)
+	}
+
+	testAcc.backend.Commit()
+
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{
+			web3Service.depositContractAddress,
+		},
+	}
+
+	logs, err := testAcc.backend.FilterLogs(web3Service.ctx, query)
+	if err != nil {
+		t.Fatalf("Unable to retrieve logs %v", err)
+	}
+
+	web3Service.ProcessDepositLog(logs[0])
+	// We keep track of the current deposit root and make sure it doesn't change if we
+	// receive a duplicate log from the contract.
+	currentRoot := web3Service.depositTrie.Root()
+	web3Service.ProcessDepositLog(logs[0])
+	nextRoot := web3Service.depositTrie.Root()
+	if currentRoot != nextRoot {
+		t.Error("Processing a duplicate log should not update deposit trie")
+	}
+}
+
 func TestUnpackDepositLogs(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
@@ -545,8 +601,8 @@ func TestUnpackDepositLogs(t *testing.T) {
 
 	testAcc.backend.Commit()
 
-	if err := web3Service.initDataFromVRC(); err != nil {
-		t.Fatalf("Could not init from vrc %v", err)
+	if err := web3Service.initDataFromContract(); err != nil {
+		t.Fatalf("Could not init from contract: %v", err)
 	}
 
 	computedRoot := web3Service.depositTrie.Root()
@@ -571,7 +627,7 @@ func TestUnpackDepositLogs(t *testing.T) {
 
 	testAcc.txOpts.Value = amount32Eth
 	if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
-		t.Fatalf("Could not deposit to VRC %v", err)
+		t.Fatalf("Could not deposit to deposit contract %v", err)
 	}
 	testAcc.backend.Commit()
 
@@ -591,7 +647,7 @@ func TestUnpackDepositLogs(t *testing.T) {
 		t.Fatalf("Unable to unpack logs %v", err)
 	}
 
-	if binary.BigEndian.Uint64(index) != 0 {
+	if binary.LittleEndian.Uint64(index) != 0 {
 		t.Errorf("Retrieved merkle tree index is incorrect %d", index)
 	}
 
@@ -654,12 +710,12 @@ func TestProcessChainStartLog(t *testing.T) {
 	blocks.EncodeDepositData(data, amount32Eth.Uint64(), time.Now().Unix())
 
 	// 8 Validators are used as size required for beacon-chain to start. This number
-	// is defined in the VRC as the number required for the testnet. The actual number
+	// is defined in the deposit contract as the number required for the testnet. The actual number
 	// is 2**14
 	for i := 0; i < depositsReqForChainStart; i++ {
 		testAcc.txOpts.Value = amount32Eth
 		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
-			t.Fatalf("Could not deposit to VRC %v", err)
+			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 
 		testAcc.backend.Commit()
@@ -705,7 +761,7 @@ func TestProcessChainStartLog(t *testing.T) {
 	testutil.AssertLogsDoNotContain(t, hook, "Unable to unpack ChainStart log data")
 	testutil.AssertLogsDoNotContain(t, hook, "Receipt root from log doesn't match the root saved in memory")
 	testutil.AssertLogsDoNotContain(t, hook, "Invalid timestamp from log")
-	testutil.AssertLogsContain(t, hook, "Minimum Number of Validators Reached for beacon-chain to start")
+	testutil.AssertLogsContain(t, hook, "Minimum number of validators reached for beacon-chain to start")
 
 	hook.Reset()
 
@@ -747,11 +803,11 @@ func TestUnpackChainStartLogs(t *testing.T) {
 	}
 
 	// 8 Validators are used as size required for beacon-chain to start. This number
-	// is defined in the VRC as the number required for the testnet.
+	// is defined in the deposit contract as the number required for the testnet.
 	for i := 0; i < depositsReqForChainStart; i++ {
 		testAcc.txOpts.Value = amount32Eth
 		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
-			t.Fatalf("Could not deposit to VRC %v", err)
+			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
 
 		testAcc.backend.Commit()
@@ -772,7 +828,7 @@ func TestUnpackChainStartLogs(t *testing.T) {
 		t.Fatalf("Unable to unpack logs %v", err)
 	}
 
-	timestamp := binary.BigEndian.Uint64(timestampData)
+	timestamp := binary.LittleEndian.Uint64(timestampData)
 
 	if timestamp > uint64(time.Now().Unix()) {
 		t.Errorf("Timestamp from log is higher than the current time %d > %d", timestamp, time.Now().Unix())
@@ -822,13 +878,12 @@ func TestHasChainStartLogOccurred(t *testing.T) {
 	}
 
 	// 8 Validators are used as size required for beacon-chain to start. This number
-	// is defined in the VRC as the number required for the testnet.
+	// is defined in the deposit contract as the number required for the testnet.
 	for i := 0; i < depositsReqForChainStart; i++ {
 		testAcc.txOpts.Value = amount32Eth
 		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
-			t.Fatalf("Could not deposit to VRC %v", err)
+			t.Fatalf("Could not deposit to deposit contract %v", err)
 		}
-
 		testAcc.backend.Commit()
 	}
 	ok, _, err = web3Service.HasChainStartLogOccurred()

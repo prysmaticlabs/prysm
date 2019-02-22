@@ -21,6 +21,7 @@ type BeaconServer struct {
 	beaconDB            *db.BeaconDB
 	ctx                 context.Context
 	powChainService     powChainService
+	chainService        chainService
 	operationService    operationService
 	incomingAttestation chan *pbp2p.Attestation
 	canonicalStateChan  chan *pbp2p.BeaconState
@@ -44,7 +45,7 @@ func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconSer
 		return stream.Send(res)
 	}
 
-	sub := bs.powChainService.ChainStartFeed().Subscribe(bs.chainStartChan)
+	sub := bs.chainService.StateInitializedFeed().Subscribe(bs.chainStartChan)
 	defer sub.Unsubscribe()
 	for {
 		select {

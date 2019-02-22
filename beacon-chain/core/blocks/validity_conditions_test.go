@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -18,16 +18,11 @@ func init() {
 }
 
 type mockDB struct {
-	hasBlock       bool
-	blockVoteCache utils.BlockVoteCache
+	hasBlock bool
 }
 
 func (f *mockDB) HasBlock(h [32]byte) bool {
 	return f.hasBlock
-}
-
-func (f *mockDB) ReadBlockVoteCache(blockHashes [][32]byte) (utils.BlockVoteCache, error) {
-	return f.blockVoteCache, nil
 }
 
 type mockPOWClient struct {
@@ -49,13 +44,13 @@ func TestBadBlock(t *testing.T) {
 	db := &mockDB{}
 	powClient := &mockPOWClient{}
 
-	beaconState.Slot = 3
+	beaconState.Slot = params.BeaconConfig().GenesisSlot + 3
 
 	block := &pb.BeaconBlock{
-		Slot: 4,
+		Slot: params.BeaconConfig().GenesisSlot + 4,
 	}
 
-	genesisTime := params.BeaconConfig().GenesisTime
+	genesisTime := time.Unix(0, 0)
 
 	db.hasBlock = false
 
@@ -64,15 +59,19 @@ func TestBadBlock(t *testing.T) {
 		t.Fatal("block is valid despite not having a parent")
 	}
 
-	block.Slot = 3
+	block.Slot = params.BeaconConfig().GenesisSlot + 3
 	db.hasBlock = true
 
+	beaconState.LatestEth1Data = &pb.Eth1Data{
+		DepositRootHash32: []byte{2},
+		BlockHash32:       []byte{3},
+	}
 	if err := IsValidBlock(ctx, beaconState, block, true,
 		db.HasBlock, powClient.BlockByHash, genesisTime); err == nil {
 		t.Fatalf("block is valid despite having an invalid slot %d", block.Slot)
 	}
 
-	block.Slot = 4
+	block.Slot = params.BeaconConfig().GenesisSlot + 4
 	powClient.blockExists = false
 	beaconState.LatestEth1Data = &pb.Eth1Data{
 		DepositRootHash32: []byte{2},
@@ -101,14 +100,14 @@ func TestValidBlock(t *testing.T) {
 	db := &mockDB{}
 	powClient := &mockPOWClient{}
 
-	beaconState.Slot = 3
+	beaconState.Slot = params.BeaconConfig().GenesisSlot + 3
 	db.hasBlock = true
 
 	block := &pb.BeaconBlock{
-		Slot: 4,
+		Slot: params.BeaconConfig().GenesisSlot + 4,
 	}
 
-	genesisTime := params.BeaconConfig().GenesisTime
+	genesisTime := time.Unix(0, 0)
 	powClient.blockExists = true
 
 	beaconState.LatestEth1Data = &pb.Eth1Data{

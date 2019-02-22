@@ -52,6 +52,8 @@ func makeDecoder(typ reflect.Type) (dec decoder, err error) {
 		return decodeUint16, nil
 	case kind == reflect.Uint32:
 		return decodeUint32, nil
+	case kind == reflect.Int32:
+		return decodeUint32, nil
 	case kind == reflect.Uint64:
 		return decodeUint64, nil
 	case kind == reflect.Slice && typ.Elem().Kind() == reflect.Uint8:
@@ -277,26 +279,26 @@ func makeStructDecoder(typ reflect.Type) (decoder, error) {
 	return decoder, nil
 }
 
-// Notice: Currently we don't support nil pointer:
-// - Input for encoding must not contain nil pointer
-// - Output for decoding will never contain nil pointer
-// (Not to be confused with empty slice. Empty slice is supported)
 func makePtrDecoder(typ reflect.Type) (decoder, error) {
 	elemType := typ.Elem()
 	elemSSZUtils, err := cachedSSZUtilsNoAcquireLock(elemType)
 	if err != nil {
 		return nil, err
 	}
+
+	// After considered the use case in Prysm, we've decided that:
+	// - We assume we will only encode/decode pointer of array, slice or struct.
+	// - The encoding for nil pointer shall be 0x00000000.
+
 	decoder := func(r io.Reader, val reflect.Value) (uint32, error) {
-		newVal := val
-		if val.IsNil() {
-			newVal = reflect.New(elemType)
-		}
+		newVal := reflect.New(elemType)
 		elemDecodeSize, err := elemSSZUtils.decoder(r, newVal.Elem())
 		if err != nil {
 			return 0, fmt.Errorf("failed to decode to object pointed by pointer: %v", err)
 		}
-		val.Set(newVal)
+		if elemDecodeSize > lengthBytes {
+			val.Set(newVal)
+		} // Else we leave val to its default value which is nil.
 		return elemDecodeSize, nil
 	}
 	return decoder, nil

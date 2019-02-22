@@ -110,8 +110,15 @@ func (s *ValidatorClient) registerPrometheusService(ctx *cli.Context) error {
 
 func (s *ValidatorClient) registerClientService(ctx *cli.Context) error {
 	endpoint := ctx.GlobalString(types.BeaconRPCProviderFlag.Name)
-	v := client.NewValidatorService(context.TODO(), &client.Config{
-		Endpoint: endpoint,
+	keystoreDirectory := ctx.GlobalString(types.KeystorePathFlag.Name)
+	keystorePassword := ctx.GlobalString(types.PasswordFlag.Name)
+	v, err := client.NewValidatorService(context.TODO(), &client.Config{
+		Endpoint:     endpoint,
+		KeystorePath: keystoreDirectory,
+		Password:     keystorePassword,
 	})
+	if err != nil {
+		return fmt.Errorf("could not initialize client service: %v", err)
+	}
 	return s.services.RegisterService(v)
 }

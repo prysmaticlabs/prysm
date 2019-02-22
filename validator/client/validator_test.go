@@ -14,7 +14,6 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 
 	"github.com/golang/mock/gomock"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/internal"
@@ -28,22 +27,13 @@ func init() {
 
 var _ = Validator(&validator{})
 
-// TODO(1323): remove this
-type fakeAttestationPool struct{}
-
-func (f *fakeAttestationPool) PendingAttestations() []*pbp2p.Attestation {
-	return nil
-}
-
-var fakePubKey = []byte{1}
-
 func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := internal.NewMockBeaconServiceClient(ctrl)
 
 	v := validator{
-		pubKey:       fakePubKey,
+		key:          validatorKey,
 		beaconClient: client,
 	}
 	genesis := uint64(time.Unix(0, 0).Unix())
@@ -75,7 +65,7 @@ func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 	client := internal.NewMockBeaconServiceClient(ctrl)
 
 	v := validator{
-		pubKey:       fakePubKey,
+		key:          validatorKey,
 		beaconClient: client,
 	}
 	genesis := uint64(time.Unix(0, 0).Unix())
@@ -104,7 +94,7 @@ func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
 	client := internal.NewMockBeaconServiceClient(ctrl)
 
 	v := validator{
-		pubKey:       fakePubKey,
+		key:          validatorKey,
 		beaconClient: client,
 	}
 	clientStream := internal.NewMockBeaconService_WaitForChainStartClient(ctrl)
@@ -123,7 +113,7 @@ func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 	client := internal.NewMockBeaconServiceClient(ctrl)
 
 	v := validator{
-		pubKey:       fakePubKey,
+		key:          validatorKey,
 		beaconClient: client,
 	}
 	genesis := uint64(time.Unix(0, 0).Unix())
@@ -147,15 +137,20 @@ func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Could not receive ChainStart from stream")
 }
 
-func TestUpdateAssignments_DoesNothingWhenNotEpochStart(t *testing.T) {
+func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignments(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	slot := uint64(1)
 	v := validator{
-		pubKey:          fakePubKey,
+		key:             validatorKey,
 		validatorClient: client,
+		assignment: &pb.Assignment{
+			PublicKey:    []byte{},
+			AttesterSlot: 10,
+			ProposerSlot: 20,
+		},
 	}
 	client.EXPECT().ValidatorEpochAssignments(
 		gomock.Any(),
@@ -173,7 +168,7 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
-		pubKey:          fakePubKey,
+		key:             validatorKey,
 		validatorClient: client,
 	}
 
@@ -184,8 +179,7 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 		gomock.Any(),
 	).Return(nil, expected)
 
-	err := v.UpdateAssignments(context.Background(), params.BeaconConfig().EpochLength)
-	if err != expected {
+	if err := v.UpdateAssignments(context.Background(), params.BeaconConfig().SlotsPerEpoch); err != expected {
 		t.Errorf("Bad error; want=%v got=%v", expected, err)
 	}
 }
@@ -195,7 +189,7 @@ func TestUpdateAssignments_DoesUpdateAssignments(t *testing.T) {
 	defer ctrl.Finish()
 	client := internal.NewMockValidatorServiceClient(ctrl)
 
-	slot := params.BeaconConfig().EpochLength
+	slot := params.BeaconConfig().SlotsPerEpoch
 	resp := &pb.ValidatorEpochAssignmentsResponse{
 		Assignment: &pb.Assignment{
 			ProposerSlot: 67,
@@ -203,7 +197,7 @@ func TestUpdateAssignments_DoesUpdateAssignments(t *testing.T) {
 		},
 	}
 	v := validator{
-		pubKey:          fakePubKey,
+		key:             validatorKey,
 		validatorClient: client,
 	}
 	client.EXPECT().ValidatorEpochAssignments(

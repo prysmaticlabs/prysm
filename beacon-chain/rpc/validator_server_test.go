@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -37,9 +38,9 @@ func TestValidatorIndex_Ok(t *testing.T) {
 	deposits := []*pbp2p.Deposit{
 		{DepositData: depositData},
 	}
-	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
-		t.Fatalf("Could not instantiate initial state: %v", err)
+		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
 
 	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
@@ -66,10 +67,10 @@ func TestValidatorEpochAssignments_Ok(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	genesisTime := params.BeaconConfig().GenesisTime.Unix()
+	genesisTime := time.Unix(0, 0).Unix()
 	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
-		var pubKey [48]byte
+		var pubKey [96]byte
 		copy(pubKey[:], []byte(strconv.Itoa(i)))
 		depositInput := &pbp2p.DepositInput{
 			Pubkey: pubKey[:],
@@ -80,13 +81,13 @@ func TestValidatorEpochAssignments_Ok(t *testing.T) {
 			genesisTime,
 		)
 		if err != nil {
-			t.Fatalf("Could not encode initial block deposits: %v", err)
+			t.Fatalf("Could not encode genesis block deposits: %v", err)
 		}
 		deposits[i] = &pbp2p.Deposit{DepositData: depositData}
 	}
-	beaconState, err := state.InitialBeaconState(deposits, uint64(genesisTime), nil)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(genesisTime), nil)
 	if err != nil {
-		t.Fatalf("Could not instantiate initial state: %v", err)
+		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
 
 	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
@@ -96,7 +97,7 @@ func TestValidatorEpochAssignments_Ok(t *testing.T) {
 	validatorServer := &ValidatorServer{
 		beaconDB: db,
 	}
-	var pubKey [48]byte
+	var pubKey [96]byte
 	copy(pubKey[:], []byte("0"))
 	req := &pb.ValidatorEpochAssignmentsRequest{
 		EpochStart: params.BeaconConfig().GenesisSlot,
@@ -108,7 +109,7 @@ func TestValidatorEpochAssignments_Ok(t *testing.T) {
 	}
 	// With initial shuffling of default 16384 validators, the validator corresponding to
 	// public key 0 from genesis slot should correspond to an attester slot of 9223372036854775808 at shard 0.
-	if res.Assignment.Shard != 0 {
+	if res.Assignment.Shard != 1 {
 		t.Errorf(
 			"Expected validator with pubkey %#x to be assigned to shard 0, received %d",
 			req.PublicKey,
@@ -125,6 +126,23 @@ func TestValidatorEpochAssignments_Ok(t *testing.T) {
 	}
 }
 
+func TestValidatorEpochAssignments_WrongPubkeyLength(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	validatorServer := &ValidatorServer{
+		beaconDB: db,
+	}
+	req := &pb.ValidatorEpochAssignmentsRequest{
+		EpochStart: params.BeaconConfig().GenesisSlot,
+		PublicKey:  []byte{},
+	}
+	want := fmt.Sprintf("expected public key to have length %d", params.BeaconConfig().BLSPubkeyLength)
+	if _, err := validatorServer.ValidatorEpochAssignments(context.Background(), req); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %v, received %v", want, err)
+	}
+}
+
 func TestValidatorCommitteeAtSlot_CrosslinkCommitteesFailure(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -133,10 +151,10 @@ func TestValidatorCommitteeAtSlot_CrosslinkCommitteesFailure(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	genesisTime := params.BeaconConfig().GenesisTime.Unix()
+	genesisTime := time.Unix(0, 0).Unix()
 	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
-		var pubKey [48]byte
+		var pubKey [96]byte
 		copy(pubKey[:], []byte(strconv.Itoa(i)))
 		depositInput := &pbp2p.DepositInput{
 			Pubkey: pubKey[:],
@@ -147,13 +165,13 @@ func TestValidatorCommitteeAtSlot_CrosslinkCommitteesFailure(t *testing.T) {
 			genesisTime,
 		)
 		if err != nil {
-			t.Fatalf("Could not encode initial block deposits: %v", err)
+			t.Fatalf("Could not encode genesis block deposits: %v", err)
 		}
 		deposits[i] = &pbp2p.Deposit{DepositData: depositData}
 	}
-	beaconState, err := state.InitialBeaconState(deposits, uint64(genesisTime), nil)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(genesisTime), nil)
 	if err != nil {
-		t.Fatalf("Could not instantiate initial state: %v", err)
+		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
 
 	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
@@ -163,7 +181,7 @@ func TestValidatorCommitteeAtSlot_CrosslinkCommitteesFailure(t *testing.T) {
 		beaconDB: db,
 	}
 	req := &pb.CommitteeRequest{
-		Slot: params.BeaconConfig().EpochLength * 10,
+		Slot: params.BeaconConfig().SlotsPerEpoch * 10,
 	}
 	want := "could not get crosslink committees at slot"
 	if _, err := validatorServer.ValidatorCommitteeAtSlot(context.Background(), req); !strings.Contains(err.Error(), want) {
@@ -179,10 +197,10 @@ func TestValidatorCommitteeAtSlot_Ok(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
-	genesisTime := params.BeaconConfig().GenesisTime.Unix()
+	genesisTime := time.Unix(0, 0).Unix()
 	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
-		var pubKey [48]byte
+		var pubKey [96]byte
 		copy(pubKey[:], []byte(strconv.Itoa(i)))
 		depositInput := &pbp2p.DepositInput{
 			Pubkey: pubKey[:],
@@ -193,13 +211,13 @@ func TestValidatorCommitteeAtSlot_Ok(t *testing.T) {
 			genesisTime,
 		)
 		if err != nil {
-			t.Fatalf("Could not encode initial block deposits: %v", err)
+			t.Fatalf("Could not encode genesis block deposits: %v", err)
 		}
 		deposits[i] = &pbp2p.Deposit{DepositData: depositData}
 	}
-	beaconState, err := state.InitialBeaconState(deposits, uint64(genesisTime), nil)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(genesisTime), nil)
 	if err != nil {
-		t.Fatalf("Could not instantiate initial state: %v", err)
+		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
 
 	if err := db.UpdateChainHead(genesis, beaconState); err != nil {

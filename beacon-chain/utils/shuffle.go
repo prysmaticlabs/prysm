@@ -4,13 +4,56 @@ package utils
 import (
 	"encoding/binary"
 	"errors"
-	"math"
 	"fmt"
+	"math"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	//"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 )
+
+func GetPermutedIndex(index uint64, listSize uint64, seed common.Hash) (uint64, error) {
+	if index >= listSize {
+		err := errors.New("index is greater or equal than listSize")
+		return 0, err
+	}
+
+	if listSize > mathutil.PowerOf2(40) {
+		err := errors.New("listSize is greater than 2**40")
+		return 0, err
+	}
+
+	bs8 := make([]byte, 8)
+	bs4 := make([]byte, 4)
+	bs1 := make([]byte, 1)
+
+	for round := 0; round < 90; round++ {
+		if err := binary.Write(bs1, binary.LittleEndian, round); err != nil {
+			return 0, err
+		}
+		hashedValue := hashutil.Hash(append(seed[:], bs1...))
+		hashedValue8 := hashedValue[:8]
+		pivot := binary.LittleEndian.Uint64(hashedValue8[:]) % listSize
+		flip := (pivot - index) % listSize
+		position := index
+		if flip > position {
+			position = flip
+		}
+		positionVal := uint32(math.Floor(float64(position / 256)))
+		binary.LittleEndian.PutUint32(bs4[:], positionVal)
+		bs := append(bs1, bs4...)
+		source := hashutil.Hash(append(seed[:], bs...))
+		positionIndex := mathutil.CeilDiv8(int(position) % 256)
+		byteV := source[positionIndex]
+		bitV := (byteV >> (position % 8)) % 2
+		if bitV == 1 {
+			index = flip
+		}
+	}
+	return index, nil
+}
 
 // ShuffleIndices returns a list of pseudorandomly sampled
 // indices. This is used to shuffle validators on ETH2.0 beacon chain.
@@ -28,7 +71,6 @@ func SwapOrNotShuffle(seed common.Hash, indicesList []uint64) ([]uint64, error) 
 		return nil, errors.New("input list exceeded upper bound and reached modulo bias")
 	}
 
-	
 	for round := 0; round < 90; round++ {
 		var hashBytes []byte
 		bs1 := make([]byte, 8)
@@ -58,7 +100,7 @@ func SwapOrNotShuffle(seed common.Hash, indicesList []uint64) ([]uint64, error) 
 
 		powersOfTwo := []uint64{1, 2, 4, 8, 16, 32, 64, 128}
 
-		for i, index := range(indicesList) {
+		for i, index := range indicesList {
 			flip := (pivot - index) % uint64(listSize)
 			fmt.Printf("flip is %v\n", flip)
 			var hashPos uint64
@@ -74,59 +116,53 @@ func SwapOrNotShuffle(seed common.Hash, indicesList []uint64) ([]uint64, error) 
 			fmt.Printf("hByte is %v\n", hByte)
 			hInt := uint64(hByte)
 			fmt.Printf("hByte is %v\n", hByte)
-			p := powersOfTwo[hashPos % 8]
+			p := powersOfTwo[hashPos%8]
 			fmt.Printf("p is %v\n", p)
-			if  hInt & p != 0 {
+			if hInt&p != 0 {
 				indicesList[i] = flip
 			}
-			
+
 		}
 	}
 	return indicesList, nil
 }
 
 func ShuffleIndices(seed common.Hash, indicesList []uint64) ([]uint64, error) {
-	// Each entropy is consumed from the seed in randBytes chunks.
-	randBytes := params.BeaconConfig().RandBytes
+	var hashBytes []byte
+	bs1 := make([]byte, 8)
+	bs4 := make([]byte, 8)
+	listSize := len(indicesList)
+	num := int(math.Floor(float64((listSize + 255) / 256)))
+	powersOfTwo := []uint64{1, 2, 4, 8, 16, 32, 64, 128}
 
-	maxValidatorsPerRandBytes := params.BeaconConfig().MaxNumLog2Validators / randBytes
-	upperBound := 1<<(randBytes*maxValidatorsPerRandBytes) - 1
-	// Since we are consuming randBytes of entropy at a time in the loop,
-	// we have a bias at 2**24, this check defines our max list size and is used to remove the bias.
-	// more info on modulo bias: https://stackoverflow.com/questions/10984974/why-do-people-say-there-is-modulo-bias-when-using-a-random-number-generator.
-	if len(indicesList) >= upperBound {
-		return nil, errors.New("input list exceeded upper bound and reached modulo bias")
-	}
+	for round := 0; round < 90; round++ {
+		binary.LittleEndian.PutUint64(bs1[:], uint64(round))
 
-	// Rehash the seed to obtain a new pattern of bytes.
-	hashSeed := hashutil.Hash(seed[:])
-	totalCount := len(indicesList)
-	index := 0
-	for index < totalCount-1 {
-		// Iterate through the hashSeed bytes in chunks of size randBytes.
-		for i := 0; i < 32-(32%int(randBytes)); i += int(randBytes) {
-			// Determine the number of indices remaining and exit if last index reached.
-			remaining := totalCount - index
-			if remaining == 1 {
-				break
+		for i := 0; i < num; i++ {
+			binary.LittleEndian.PutUint64(bs4[:], uint64(i))
+			bs := append(bs1, bs4...)
+			hash := hashutil.Hash(append(seed[:], bs...))
+			hashBytes = append(hashBytes, hash[:]...)
+		}
+
+		hash := hashutil.Hash(append(seed[:], bs1...))
+		hashFromBytes := binary.LittleEndian.Uint64(hash[:])
+		pivot := hashFromBytes % uint64(listSize)
+
+		for i, index := range indicesList {
+			flip := (pivot - index) % uint64(listSize)
+			var hashPos uint64
+			if index > flip {
+				hashPos = index
+			} else {
+				hashPos = flip
 			}
-			// Read randBytes of hashSeed as a maxValidatorsPerRandBytes x randBytes big-endian integer.
-			randChunk := hashSeed[i : i+int(randBytes)]
-			var randValue int
-			for j := 0; j < int(randBytes); j++ {
-				randValue |= int(randChunk[j])
-			}
-
-			// Sample values greater than or equal to sampleMax will cause
-			// modulo bias when mapped into the remaining range.
-			randMax := upperBound - upperBound%remaining
-
-			// Perform swap if the consumed entropy will not cause modulo bias.
-			if randValue < randMax {
-				// Select replacement index from the current index.
-				replacementIndex := (randValue % remaining) + index
-				indicesList[index], indicesList[replacementIndex] = indicesList[replacementIndex], indicesList[index]
-				index++
+			hashBytesIndex := int(math.Floor((float64(hashPos) / 8)))
+			hByte := hashBytes[hashBytesIndex]
+			hInt := uint64(hByte)
+			p := powersOfTwo[hashPos%8]
+			if hInt&p != 0 {
+				indicesList[i] = flip
 			}
 		}
 	}

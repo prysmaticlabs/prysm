@@ -18,7 +18,6 @@ var (
 	blockBucket           = []byte("block-bucket")
 	mainChainBucket       = []byte("main-chain-bucket")
 	chainInfoBucket       = []byte("chain-info")
-	blockVoteCacheBucket  = []byte("block-vote-cache")
 
 	mainChainHeightKey = []byte("chain-height")
 	stateLookupKey     = []byte("state")
@@ -28,13 +27,13 @@ var (
 	cleanedFinalizedSlotKey = []byte("cleaned-finalized-slot")
 )
 
-// encodeSlotNumber encodes a slot number as big endian uint32.
+// encodeSlotNumber encodes a slot number as little-endian uint32.
 func encodeSlotNumber(number uint64) []byte {
 	return bytesutil.Bytes8(number)
 }
 
 // decodeSlotNumber returns a slot number which has been
-// encoded as a big endian uint32 in the byte array.
+// encoded as a little-endian uint32 in the byte array.
 func decodeToSlotNumber(bytearray []byte) uint64 {
 	return bytesutil.FromBytes8(bytearray)
 }

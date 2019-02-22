@@ -32,11 +32,13 @@ type chainService interface {
 	// time the canonical head changes in the chain service.
 	CanonicalBlockFeed() *event.Feed
 	CanonicalStateFeed() *event.Feed
+	StateInitializedFeed() *event.Feed
 }
 
 type operationService interface {
 	IncomingExitFeed() *event.Feed
 	IncomingAttFeed() *event.Feed
+	PendingAttestations() ([]*pbp2p.Attestation, error)
 }
 
 type powChainService interface {
@@ -91,7 +93,7 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		port:                  cfg.Port,
 		withCert:              cfg.CertFlag,
 		withKey:               cfg.KeyFlag,
-		slotAlignmentDuration: time.Duration(params.BeaconConfig().SlotDuration) * time.Second,
+		slotAlignmentDuration: time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
 		canonicalBlockChan:    make(chan *pbp2p.BeaconBlock, cfg.SubscriptionBuf),
 		canonicalStateChan:    make(chan *pbp2p.BeaconState, cfg.SubscriptionBuf),
 		incomingAttestation:   make(chan *pbp2p.Attestation, cfg.SubscriptionBuf),
@@ -126,6 +128,7 @@ func (s *Service) Start() {
 		beaconDB:            s.beaconDB,
 		ctx:                 s.ctx,
 		powChainService:     s.powChainService,
+		chainService:        s.chainService,
 		operationService:    s.operationService,
 		incomingAttestation: s.incomingAttestation,
 		canonicalStateChan:  s.canonicalStateChan,
@@ -135,6 +138,7 @@ func (s *Service) Start() {
 		beaconDB:           s.beaconDB,
 		chainService:       s.chainService,
 		powChainService:    s.powChainService,
+		operationService:   s.operationService,
 		canonicalStateChan: s.canonicalStateChan,
 	}
 	attesterServer := &AttesterServer{

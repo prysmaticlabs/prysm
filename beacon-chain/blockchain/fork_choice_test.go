@@ -1,21 +1,19 @@
 package blockchain
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
+
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -39,29 +37,28 @@ func generateTestGenesisStateAndBlock(
 		}
 		deposits[i] = &pb.Deposit{DepositData: depositData}
 	}
-	genesisTime := uint64(params.BeaconConfig().GenesisTime.Unix())
-	beaconState, err := state.InitialBeaconState(deposits, genesisTime, nil)
+	genesisTime := uint64(time.Unix(0, 0).Unix())
+	beaconState, err := state.GenesisBeaconState(deposits, genesisTime, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	stateEnc, err := proto.Marshal(beaconState)
-	if err != nil {
-		t.Fatal(err)
-	}
 	if err := beaconDB.SaveState(beaconState); err != nil {
 		t.Fatal(err)
 	}
-	stateHash := hashutil.Hash(stateEnc)
-	genesisBlock := b.NewGenesisBlock(stateHash[:])
-	if err := beaconDB.SaveBlock(genesisBlock); err != nil {
-		t.Fatal(err)
-	}
-	genesisHash, err := hashutil.HashBeaconBlock(genesisBlock)
+	stateRoot, err := ssz.TreeHash(beaconState)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return beaconState, genesisBlock, stateHash, genesisHash
+	genesisBlock := b.NewGenesisBlock(stateRoot[:])
+	if err := beaconDB.SaveBlock(genesisBlock); err != nil {
+		t.Fatal(err)
+	}
+	genesisRoot, err := ssz.TreeHash(genesisBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return beaconState, genesisBlock, stateRoot, genesisRoot
 }
 
 func setupConflictingBlocks(
@@ -112,11 +109,10 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	// We then test LMD Ghost was applied as the fork-choice rule with a single observed block.
 	observedBlocks := []*pb.BeaconBlock{potentialHead}
 
-	voteTargets := make(map[[32]byte]*pb.BeaconBlock)
-	key := bytesutil.ToBytes32(beaconState.ValidatorRegistry[0].Pubkey)
-	voteTargets[key] = potentialHead
+	voteTargets := make(map[uint64]*pb.BeaconBlock)
+	voteTargets[0] = potentialHead
 
-	head, err := LMDGhost(genesisBlock, voteTargets, observedBlocks, beaconDB)
+	head, err := LMDGhost(genesisBlock, beaconState, voteTargets, observedBlocks, beaconDB)
 	if err != nil {
 		t.Fatalf("Could not run LMD GHOST: %v", err)
 	}
@@ -136,13 +132,12 @@ func TestLMDGhost_TrivialHigherVoteCountWins(t *testing.T) {
 
 	candidate1, candidate2 := setupConflictingBlocks(t, beaconDB, genesisHash, stateHash)
 
-	voteTargets := make(map[[32]byte]*pb.BeaconBlock)
-	key := bytesutil.ToBytes32(beaconState.ValidatorRegistry[0].Pubkey)
-	voteTargets[key] = candidate2
+	voteTargets := make(map[uint64]*pb.BeaconBlock)
+	voteTargets[0] = candidate2
 
 	// We then test LMD Ghost was applied as the fork-choice rule.
 	observedBlocks := []*pb.BeaconBlock{candidate1, candidate2}
-	head, err := LMDGhost(genesisBlock, voteTargets, observedBlocks, beaconDB)
+	head, err := LMDGhost(genesisBlock, beaconState, voteTargets, observedBlocks, beaconDB)
 	if err != nil {
 		t.Fatalf("Could not run LMD GHOST: %v", err)
 	}
@@ -162,19 +157,19 @@ func TestLMDGhost_EveryActiveValidatorHasLatestAttestation(t *testing.T) {
 		params.BeaconConfig().DepositsForChainStart,
 		beaconDB,
 	)
+	beaconState.ValidatorBalances[0] = 32e9
 	candidate1, candidate2 := setupConflictingBlocks(t, beaconDB, genesisHash, stateHash)
 
 	activeIndices := helpers.ActiveValidatorIndices(beaconState.ValidatorRegistry, 0)
 	// We store some simulated latest attestation target for every active validator in a map.
-	voteTargets := make(map[[32]byte]*pb.BeaconBlock, len(activeIndices))
+	voteTargets := make(map[uint64]*pb.BeaconBlock, len(activeIndices))
 	for i := 0; i < len(activeIndices); i++ {
-		key := bytesutil.ToBytes32([]byte(fmt.Sprintf("%d", i)))
-		voteTargets[key] = candidate2
+		voteTargets[uint64(i)] = candidate2
 	}
 
 	// We then test LMD Ghost was applied as the fork-choice rule.
 	observedBlocks := []*pb.BeaconBlock{candidate1, candidate2}
-	head, err := LMDGhost(genesisBlock, voteTargets, observedBlocks, beaconDB)
+	head, err := LMDGhost(genesisBlock, beaconState, voteTargets, observedBlocks, beaconDB)
 	if err != nil {
 		t.Fatalf("Could not run LMD GHOST: %v", err)
 	}
@@ -189,7 +184,7 @@ func TestLMDGhost_EveryActiveValidatorHasLatestAttestation(t *testing.T) {
 func TestVoteCount_ParentDoesNotExist(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
-	genesisBlock := b.NewGenesisBlock([]byte{})
+	genesisBlock := b.NewGenesisBlock([]byte("stateroot"))
 	if err := beaconDB.SaveBlock(genesisBlock); err != nil {
 		t.Fatal(err)
 	}
@@ -201,10 +196,10 @@ func TestVoteCount_ParentDoesNotExist(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	voteTargets := make(map[[32]byte]*pb.BeaconBlock)
-	voteTargets[[32]byte{}] = potentialHead
+	voteTargets := make(map[uint64]*pb.BeaconBlock)
+	voteTargets[0] = potentialHead
 	want := "parent block does not exist"
-	if _, err := VoteCount(genesisBlock, voteTargets, beaconDB); !strings.Contains(err.Error(), want) {
+	if _, err := VoteCount(genesisBlock, &pb.BeaconState{}, voteTargets, beaconDB); !strings.Contains(err.Error(), want) {
 		t.Fatalf("Expected %s, received %v", want, err)
 	}
 }
@@ -212,8 +207,8 @@ func TestVoteCount_ParentDoesNotExist(t *testing.T) {
 func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
-	genesisBlock := b.NewGenesisBlock([]byte{})
-	genesisHash, err := hashutil.HashBeaconBlock(genesisBlock)
+	genesisBlock := b.NewGenesisBlock([]byte("stateroot"))
+	genesisRoot, err := ssz.TreeHash(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -223,11 +218,11 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 
 	potentialHead := &pb.BeaconBlock{
 		Slot:             5,
-		ParentRootHash32: genesisHash[:],
+		ParentRootHash32: genesisRoot[:],
 	}
 	potentialHead2 := &pb.BeaconBlock{
 		Slot:             6,
-		ParentRootHash32: genesisHash[:],
+		ParentRootHash32: genesisRoot[:],
 	}
 	// We store these potential heads in the DB.
 	if err := beaconDB.SaveBlock(potentialHead); err != nil {
@@ -236,15 +231,15 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 	if err := beaconDB.SaveBlock(potentialHead2); err != nil {
 		t.Fatal(err)
 	}
-
-	voteTargets := make(map[[32]byte]*pb.BeaconBlock)
-	voteTargets[[32]byte{0}] = potentialHead
-	voteTargets[[32]byte{1}] = potentialHead2
-	count, err := VoteCount(genesisBlock, voteTargets, beaconDB)
+	beaconState := &pb.BeaconState{ValidatorBalances: []uint64{1e9, 1e9}}
+	voteTargets := make(map[uint64]*pb.BeaconBlock)
+	voteTargets[0] = potentialHead
+	voteTargets[1] = potentialHead2
+	count, err := VoteCount(genesisBlock, beaconState, voteTargets, beaconDB)
 	if err != nil {
-		t.Fatalf("Could not fetch vote count: %v", err)
+		t.Fatalf("Could not fetch vote balances: %v", err)
 	}
-	if count != 2 {
-		t.Errorf("Expected 1 vote, received %d", count)
+	if count != 2e9 {
+		t.Errorf("Expected total balances 2e9, received %d", count)
 	}
 }

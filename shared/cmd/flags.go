@@ -2,7 +2,6 @@
 package cmd
 
 import (
-	"github.com/ethereum/go-ethereum/node"
 	"github.com/urfave/cli"
 )
 
@@ -22,7 +21,7 @@ var (
 	DataDirFlag = DirectoryFlag{
 		Name:  "datadir",
 		Usage: "Data directory for the databases and keystore",
-		Value: DirectoryString{node.DefaultDataDir()},
+		Value: DirectoryString{DefaultDataDir()},
 	}
 	// NetworkIDFlag defines the specific network identifier.
 	NetworkIDFlag = cli.Uint64Flag{
@@ -70,12 +69,6 @@ var (
 		Name:  "monitoring-port",
 		Usage: "Port used to listening and respond metrics for prometheus.",
 		Value: 8080,
-	}
-	// KeystoreDirectoryFlag defines a flag to indicate where the keystore of the user
-	// is located.
-	KeystoreDirectoryFlag = DirectoryFlag{
-		Name:  "keystore-dir",
-		Usage: "Keystore directory indicates which directory the keystore is located.",
 	}
 	// KeystorePasswordFlag defines the password that will unlock the keystore file.
 	KeystorePasswordFlag = cli.StringFlag{

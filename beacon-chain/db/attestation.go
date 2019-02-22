@@ -5,14 +5,28 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
-	att "github.com/prysmaticlabs/prysm/beacon-chain/core/attestations"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 // SaveAttestation puts the attestation record into the beacon chain db.
 func (db *BeaconDB) SaveAttestation(attestation *pb.Attestation) error {
-	hash := att.Key(attestation.Data)
 	encodedState, err := proto.Marshal(attestation)
+	if err != nil {
+		return err
+	}
+	hash := hashutil.Hash(encodedState)
+
+	return db.update(func(tx *bolt.Tx) error {
+		a := tx.Bucket(attestationBucket)
+
+		return a.Put(hash[:], encodedState)
+	})
+}
+
+// DeleteAttestation deletes the attestation record into the beacon chain db.
+func (db *BeaconDB) DeleteAttestation(attestation *pb.Attestation) error {
+	hash, err := hashutil.HashProto(attestation)
 	if err != nil {
 		return err
 	}
@@ -20,7 +34,7 @@ func (db *BeaconDB) SaveAttestation(attestation *pb.Attestation) error {
 	return db.update(func(tx *bolt.Tx) error {
 		a := tx.Bucket(attestationBucket)
 
-		return a.Put(hash[:], encodedState)
+		return a.Delete(hash[:])
 	})
 }
 
@@ -41,6 +55,29 @@ func (db *BeaconDB) Attestation(hash [32]byte) (*pb.Attestation, error) {
 	})
 
 	return attestation, err
+}
+
+// Attestations retrieves all the attestation records from the db.
+// These are the attestations that have not been seen on the beacon chain.
+func (db *BeaconDB) Attestations() ([]*pb.Attestation, error) {
+	var attestations []*pb.Attestation
+	err := db.view(func(tx *bolt.Tx) error {
+		a := tx.Bucket(attestationBucket)
+
+		if err := a.ForEach(func(k, v []byte) error {
+			attestation, err := createAttestation(v)
+			if err != nil {
+				return err
+			}
+			attestations = append(attestations, attestation)
+			return nil
+		}); err != nil {
+			return err
+		}
+		return nil
+	})
+
+	return attestations, err
 }
 
 // HasAttestation checks if the attestation exists.

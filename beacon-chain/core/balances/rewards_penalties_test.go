@@ -8,79 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestBaseRewardQuotient(t *testing.T) {
-	if params.BeaconConfig().BaseRewardQuotient != 1<<5 {
-		t.Errorf("BaseRewardQuotient should be 32 for these tests to pass")
-	}
-
-	tests := []struct {
-		a uint64
-		b uint64
-	}{
-		{0, 0},
-		{1e6 * 1e9, 988211},   //1M ETH staked, 9.76% interest.
-		{2e6 * 1e9, 1397542},  //2M ETH staked, 6.91% interest.
-		{5e6 * 1e9, 2209708},  //5M ETH staked, 4.36% interest.
-		{10e6 * 1e9, 3125000}, // 10M ETH staked, 3.08% interest.
-		{20e6 * 1e9, 4419417}, // 20M ETH staked, 2.18% interest.
-	}
-	for _, tt := range tests {
-		b := baseRewardQuotient(tt.a)
-		if b != tt.b {
-			t.Errorf("BaseRewardQuotient(%d) = %d, want = %d",
-				tt.a, b, tt.b)
-		}
-	}
-}
-
-func TestBaseReward(t *testing.T) {
-	tests := []struct {
-		a uint64
-		b uint64
-	}{
-		{0, 0},
-		{params.BeaconConfig().MinDepositAmount, 61},
-		{30 * 1e9, 1853},
-		{params.BeaconConfig().MaxDepositAmount, 1976},
-		{40 * 1e9, 1976},
-	}
-	for _, tt := range tests {
-		state := &pb.BeaconState{
-			ValidatorBalances: []uint64{tt.a},
-		}
-		// Assume 10M Eth staked (base reward quotient: 3237888).
-		b := baseReward(state, 0, 3237888)
-		if b != tt.b {
-			t.Errorf("BaseReward(%d) = %d, want = %d",
-				tt.a, b, tt.b)
-		}
-	}
-}
-
-func TestInactivityPenalty(t *testing.T) {
-	tests := []struct {
-		a uint64
-		b uint64
-	}{
-		{1, 2929},
-		{2, 3883},
-		{5, 6744},
-		{10, 11512},
-		{50, 49659},
-	}
-	for _, tt := range tests {
-		state := &pb.BeaconState{
-			ValidatorBalances: []uint64{params.BeaconConfig().MaxDepositAmount},
-		}
-		// Assume 10 ETH staked (base reward quotient: 3237888).
-		b := inactivityPenalty(state, 0, 3237888, tt.a)
-		if b != tt.b {
-			t.Errorf("InactivityPenalty(%d) = %d, want = %d",
-				tt.a, b, tt.b)
-		}
-	}
-}
-
 func TestFFGSrcRewardsPenalties(t *testing.T) {
 	tests := []struct {
 		voted                          []uint64
@@ -212,10 +139,10 @@ func TestInclusionDistRewards_Ok(t *testing.T) {
 		participationBitfield = append(participationBitfield, byte(0xff))
 	}
 
-	attestation := []*pb.PendingAttestationRecord{
+	attestation := []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{Slot: 0},
 			AggregationBitfield: participationBitfield,
-			SlotIncluded:        5},
+			InclusionSlot:       5},
 	}
 
 	tests := []struct {
@@ -254,14 +181,14 @@ func TestInclusionDistRewards_Ok(t *testing.T) {
 }
 
 func TestInclusionDistRewards_NotOk(t *testing.T) {
-	validators := make([]*pb.Validator, params.BeaconConfig().EpochLength*2)
+	validators := make([]*pb.Validator, params.BeaconConfig().SlotsPerEpoch*2)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
 
-	attestation := []*pb.PendingAttestationRecord{
+	attestation := []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{Shard: 1, Slot: 0},
 			AggregationBitfield: []byte{0xff}},
 	}
@@ -445,10 +372,10 @@ func TestInactivityInclusionPenalty_Ok(t *testing.T) {
 	for i := 0; i < byteLength; i++ {
 		participationBitfield = append(participationBitfield, byte(0xff))
 	}
-	attestation := []*pb.PendingAttestationRecord{
+	attestation := []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{Slot: 0},
 			AggregationBitfield: participationBitfield,
-			SlotIncluded:        5},
+			InclusionSlot:       5},
 	}
 
 	tests := []struct {
@@ -458,7 +385,7 @@ func TestInactivityInclusionPenalty_Ok(t *testing.T) {
 		{[]uint64{237, 224}},
 	}
 	for _, tt := range tests {
-		validatorBalances := make([]uint64, params.BeaconConfig().EpochLength*4)
+		validatorBalances := make([]uint64, params.BeaconConfig().SlotsPerEpoch*4)
 		for i := 0; i < len(validatorBalances); i++ {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 		}
@@ -487,13 +414,13 @@ func TestInactivityInclusionPenalty_Ok(t *testing.T) {
 }
 
 func TestInactivityInclusionPenalty_NotOk(t *testing.T) {
-	validators := make([]*pb.Validator, params.BeaconConfig().EpochLength*2)
+	validators := make([]*pb.Validator, params.BeaconConfig().SlotsPerEpoch*2)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
-	attestation := []*pb.PendingAttestationRecord{
+	attestation := []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{Shard: 1, Slot: 0},
 			AggregationBitfield: []byte{0xff}},
 	}
@@ -529,10 +456,10 @@ func TestAttestationInclusionRewards(t *testing.T) {
 	for i := 0; i < byteLength; i++ {
 		participationBitfield = append(participationBitfield, byte(0xff))
 	}
-	attestation := []*pb.PendingAttestationRecord{
+	attestation := []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{Slot: 0},
 			AggregationBitfield: participationBitfield,
-			SlotIncluded:        0},
+			InclusionSlot:       0},
 	}
 
 	tests := []struct {
@@ -542,7 +469,7 @@ func TestAttestationInclusionRewards(t *testing.T) {
 		{[]uint64{237}},
 	}
 	for _, tt := range tests {
-		validatorBalances := make([]uint64, params.BeaconConfig().EpochLength*4)
+		validatorBalances := make([]uint64, params.BeaconConfig().SlotsPerEpoch*4)
 		for i := 0; i < len(validatorBalances); i++ {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 		}
@@ -571,7 +498,7 @@ func TestAttestationInclusionRewards(t *testing.T) {
 }
 
 func TestAttestationInclusionRewards_NoInclusionSlot(t *testing.T) {
-	validators := make([]*pb.Validator, params.BeaconConfig().EpochLength*2)
+	validators := make([]*pb.Validator, params.BeaconConfig().SlotsPerEpoch*2)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -600,16 +527,16 @@ func TestAttestationInclusionRewards_NoInclusionSlot(t *testing.T) {
 }
 
 func TestAttestationInclusionRewards_NoProposerIndex(t *testing.T) {
-	validators := make([]*pb.Validator, params.BeaconConfig().EpochLength*2)
+	validators := make([]*pb.Validator, params.BeaconConfig().SlotsPerEpoch*2)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
 		}
 	}
-	attestation := []*pb.PendingAttestationRecord{
+	attestation := []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{Shard: 1, Slot: 0},
 			AggregationBitfield: []byte{0xff},
-			SlotIncluded:        0},
+			InclusionSlot:       0},
 	}
 
 	tests := []struct {
@@ -636,7 +563,7 @@ func TestAttestationInclusionRewards_NoProposerIndex(t *testing.T) {
 }
 
 func TestCrosslinksRewardsPenalties(t *testing.T) {
-	validators := make([]*pb.Validator, params.BeaconConfig().EpochLength*4)
+	validators := make([]*pb.Validator, params.BeaconConfig().SlotsPerEpoch*4)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
 			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -657,14 +584,14 @@ func TestCrosslinksRewardsPenalties(t *testing.T) {
 			32829149760, 32829149760, 32829149760, 32829149760}},
 	}
 	for _, tt := range tests {
-		validatorBalances := make([]uint64, params.BeaconConfig().EpochLength*4)
+		validatorBalances := make([]uint64, params.BeaconConfig().SlotsPerEpoch*4)
 		for i := 0; i < len(validatorBalances); i++ {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 		}
-		attestation := []*pb.PendingAttestationRecord{
+		attestation := []*pb.PendingAttestation{
 			{Data: &pb.AttestationData{Shard: 1, Slot: 0},
 				AggregationBitfield: tt.voted,
-				SlotIncluded:        0},
+				InclusionSlot:       0},
 		}
 		state := &pb.BeaconState{
 			ValidatorRegistry:  validators,

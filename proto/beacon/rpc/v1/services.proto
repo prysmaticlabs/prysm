@@ -23,6 +23,7 @@ service AttesterService {
 
 service ProposerService {
     rpc ProposerIndex(ProposerIndexRequest) returns (ProposerIndexResponse);
+    rpc PendingAttestations(google.protobuf.Empty) returns (PendingAttestationsResponse);
     rpc ProposeBlock(ethereum.beacon.p2p.v1.BeaconBlock) returns (ProposeResponse);
     rpc ComputeStateRoot(ethereum.beacon.p2p.v1.BeaconBlock) returns (StateRootResponse);
 }
@@ -44,8 +45,7 @@ message CommitteeResponse {
 }
 
 message AttestationInfoRequest {
-    uint64 slot = 1;
-    uint64 shard = 2;
+    uint64 shard = 1;
 }
 
 message AttestationInfoResponse {
@@ -54,6 +54,10 @@ message AttestationInfoResponse {
     uint64 justified_epoch = 3;
     bytes justified_block_root_hash32 = 4;
     ethereum.beacon.p2p.v1.Crosslink latest_crosslink = 5;
+}
+
+message PendingAttestationsResponse {
+    repeated ethereum.beacon.p2p.v1.Attestation pending_attestations = 1;
 }
 
 message CrosslinkCommitteeRequest {
@@ -103,6 +107,7 @@ enum ValidatorRole {
     UNKNOWN = 0;
     ATTESTER = 1;
     PROPOSER = 2;
+    BOTH = 3;
 }
 
 // Assignment defines a validator's assignment responsibilities.

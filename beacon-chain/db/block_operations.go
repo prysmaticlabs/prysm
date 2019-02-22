@@ -8,32 +8,30 @@ import (
 )
 
 // SaveExit puts the exit request into the beacon chain db.
-func (db *BeaconDB) SaveExit(exit *pb.Exit) error {
+func (db *BeaconDB) SaveExit(exit *pb.VoluntaryExit) error {
 	hash, err := hashutil.HashProto(exit)
 	if err != nil {
 		return err
 	}
-	encodedState, err := proto.Marshal(exit)
+	encodedExit, err := proto.Marshal(exit)
 	if err != nil {
 		return err
 	}
-
 	return db.update(func(tx *bolt.Tx) error {
 		a := tx.Bucket(blockOperationsBucket)
-
-		return a.Put(hash[:], encodedState)
+		return a.Put(hash[:], encodedExit)
 	})
 }
 
 // HasExit checks if the exit request exists.
 func (db *BeaconDB) HasExit(hash [32]byte) bool {
 	exists := false
-	// #nosec G104
-	db.view(func(tx *bolt.Tx) error {
+	if err := db.view(func(tx *bolt.Tx) error {
 		b := tx.Bucket(blockOperationsBucket)
-
 		exists = b.Get(hash[:]) != nil
 		return nil
-	})
+	}); err != nil {
+		return false
+	}
 	return exists
 }

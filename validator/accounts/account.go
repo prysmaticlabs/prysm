@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
@@ -20,8 +22,8 @@ func VerifyAccountNotExists(directory string, password string) error {
 	if directory == "" || password == "" {
 		return errors.New("expected a path to the validator keystore and password to be provided, received nil")
 	}
-	shardWithdrawalKeyFile := directory + "/shardwithdrawalkey"
-	validatorKeyFile := directory + "/validatorprivatekey"
+	shardWithdrawalKeyFile := directory + params.BeaconConfig().WithdrawalPrivkeyFileName
+	validatorKeyFile := directory + params.BeaconConfig().ValidatorPrivkeyFileName
 	// First, if the keystore already exists, throws an error as there can only be
 	// one keystore per validator client.
 	ks := keystore.NewKeystore(directory)
@@ -44,8 +46,8 @@ func NewValidatorAccount(directory string, password string) error {
 	if err := VerifyAccountNotExists(directory, password); err != nil {
 		return fmt.Errorf("validator account exists: %v", err)
 	}
-	shardWithdrawalKeyFile := directory + "/shardwithdrawalkey"
-	validatorKeyFile := directory + "/validatorprivatekey"
+	shardWithdrawalKeyFile := directory + params.BeaconConfig().WithdrawalPrivkeyFileName
+	validatorKeyFile := directory + params.BeaconConfig().ValidatorPrivkeyFileName
 	ks := keystore.NewKeystore(directory)
 	// If the keystore does not exists at the path, we create a new one for the validator.
 	shardWithdrawalKey, err := keystore.NewKey(rand.Reader)
@@ -72,7 +74,7 @@ func NewValidatorAccount(directory string, password string) error {
 	).Info("Keystore generated for validator signatures at path")
 
 	data := &pb.DepositInput{
-		Pubkey:                      validatorKey.SecretKey.K.Bytes(), // TODO(#1367): Use real BLS public key here.
+		Pubkey:                      validatorKey.SecretKey.PublicKey().Marshal(),
 		ProofOfPossession:           []byte("pop"),
 		WithdrawalCredentialsHash32: []byte("withdraw"),
 	}
@@ -82,6 +84,12 @@ func NewValidatorAccount(directory string, password string) error {
 		return fmt.Errorf("could not serialize deposit data: %v", err)
 	}
 	log.Info(`Account creation complete! Copy and paste the deposit data shown below when issuing a transaction into the ETH1.0 deposit contract to activate your validator client`)
-	log.Infof("%#x", serializedData)
+	fmt.Printf(`
+========================Deposit Data=======================
+
+%#x
+
+===========================================================
+`, serializedData)
 	return nil
 }

@@ -35,6 +35,7 @@ func main() {
 	var depositsForChainStart int64
 	var minDepositAmount int64
 	var maxDepositAmount int64
+	var skipChainstartDelay bool
 
 	customFormatter := new(prefixed.TextFormatter)
 	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
@@ -43,7 +44,7 @@ func main() {
 	log := logrus.WithField("prefix", "main")
 
 	app := cli.NewApp()
-	app.Name = "deployVRC"
+	app.Name = "deployDepositContract"
 	app.Usage = "this is a util to deploy deposit contract"
 	app.Version = version.GetVersion()
 	app.Flags = []cli.Flag{
@@ -51,6 +52,11 @@ func main() {
 			Name:        "keystoreUTCPath",
 			Usage:       "Location of keystore",
 			Destination: &keystoreUTCPath,
+		},
+		cli.BoolFlag{
+			Name:        "skipChainstartDelay",
+			Usage:       "Whether to skip ChainStart log being fired a day later",
+			Destination: &skipChainstartDelay,
 		},
 		cli.StringFlag{
 			Name:        "ipcPath",
@@ -75,24 +81,24 @@ func main() {
 			Destination: &privKeyString,
 		},
 		cli.StringFlag{
-			Name:        "k8s-config",
+			Name:        "k8sConfig",
 			Usage:       "Name of kubernetes config map to update with the contract address",
 			Destination: &k8sConfigMapName,
 		},
 		cli.Int64Flag{
-			Name:        "chain-start",
+			Name:        "chainStart",
 			Value:       params.ContractConfig().DepositsForChainStart.Int64(),
 			Usage:       "Number of validators required for chain start",
 			Destination: &depositsForChainStart,
 		},
 		cli.Int64Flag{
-			Name:        "min-deposit",
+			Name:        "minDeposit",
 			Value:       params.ContractConfig().MinDepositAmount.Int64(),
 			Usage:       "Minimum deposit value allowed in contract",
 			Destination: &minDepositAmount,
 		},
 		cli.Int64Flag{
-			Name:        "max-deposit",
+			Name:        "maxDeposit",
 			Value:       params.ContractConfig().MaxDepositAmount.Int64(),
 			Usage:       "Maximum deposit value allowed in contract",
 			Destination: &maxDepositAmount,
@@ -125,7 +131,7 @@ func main() {
 			}
 			txOps = bind.NewKeyedTransactor(privKey)
 			txOps.Value = big.NewInt(0)
-
+			txOps.GasLimit = 4000000
 			// User inputs keystore json file, sign tx with keystore json
 		} else {
 			// #nosec - Inclusion of file via variable is OK for this tool.
@@ -151,12 +157,16 @@ func main() {
 
 			txOps = bind.NewKeyedTransactor(privKey.PrivateKey)
 			txOps.Value = big.NewInt(0)
+			txOps.GasLimit = 4000000
 		}
 
 		// Deploy validator registration contract
 		addr, tx, _, err := contracts.DeployDepositContract(
 			txOps, client, big.NewInt(depositsForChainStart),
-			big.NewInt(minDepositAmount), big.NewInt(maxDepositAmount))
+			big.NewInt(minDepositAmount), big.NewInt(maxDepositAmount),
+			skipChainstartDelay,
+		)
+
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -189,8 +199,8 @@ func main() {
 }
 
 // updateKubernetesConfigMap in the beacon-chain namespace. This specifically
-// updates the data value for VALIDATOR_REGISTRATION_CONTRACT_ADDRESS.
-func updateKubernetesConfigMap(configMapName string, vrcAddr string) error {
+// updates the data value for DEPOSIT_CONTRACT_ADDRESS.
+func updateKubernetesConfigMap(configMapName string, contractAddr string) error {
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		return err
@@ -206,10 +216,10 @@ func updateKubernetesConfigMap(configMapName string, vrcAddr string) error {
 		return err
 	}
 
-	if cm.Data["VALIDATOR_REGISTRATION_CONTRACT_ADDRESS"] != "0x0" {
-		return fmt.Errorf("existing vcr address in config map = %v", cm.Data["VALIDATOR_REGISTRATION_CONTRACT_ADDRESS"])
+	if cm.Data["DEPOSIT_CONTRACT_ADDRESS"] != "0x0" {
+		return fmt.Errorf("existing vcr address in config map = %v", cm.Data["DEPOSIT_CONTRACT_ADDRESS"])
 	}
-	cm.Data["VALIDATOR_REGISTRATION_CONTRACT_ADDRESS"] = vrcAddr
+	cm.Data["DEPOSIT_CONTRACT_ADDRESS"] = contractAddr
 
 	_, err = client.CoreV1().ConfigMaps("beacon-chain").Update(cm)
 

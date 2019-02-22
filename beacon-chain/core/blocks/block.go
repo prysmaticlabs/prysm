@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -35,17 +34,10 @@ func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 			AttesterSlashings: []*pb.AttesterSlashing{},
 			Attestations:      []*pb.Attestation{},
 			Deposits:          []*pb.Deposit{},
-			Exits:             []*pb.Exit{},
+			VoluntaryExits:    []*pb.VoluntaryExit{},
 		},
 	}
 	return block
-}
-
-// IsSlotValid compares the slot to the system clock to determine if the block is valid.
-func IsSlotValid(slot uint64, genesisTime time.Time) bool {
-	slotDuration := time.Duration(slot*params.BeaconConfig().SlotDuration) * time.Second
-	validTimeThreshold := genesisTime.Add(slotDuration)
-	return clock.Now().After(validTimeThreshold)
 }
 
 // BlockRoot returns the block root stored in the BeaconState for a given slot.
@@ -59,25 +51,17 @@ func IsSlotValid(slot uint64, genesisTime time.Time) bool {
 //		assert slot < state.slot
 //		return state.latest_block_roots[slot % LATEST_BLOCK_ROOTS_LENGTH]
 func BlockRoot(state *pb.BeaconState, slot uint64) ([]byte, error) {
-	//	Check to see if the requested block root lies within LatestBlockRootHash32S
-	//	and if not generate error.
-	var earliestSlot uint64
-	var previousSlot uint64
-	if state.Slot > uint64(len(state.LatestBlockRootHash32S)) {
-		earliestSlot = state.Slot - uint64(len(state.LatestBlockRootHash32S))
-	} else {
-		earliestSlot = 0
-	}
+	earliestSlot := state.Slot - params.BeaconConfig().LatestBlockRootsLength
 
-	previousSlot = state.Slot - 1
-	if state.Slot > slot+uint64(len(state.LatestBlockRootHash32S)) || slot >= state.Slot {
+	if slot < earliestSlot || slot >= state.Slot {
 		return []byte{}, fmt.Errorf("slot %d is not within expected range of %d to %d",
 			slot,
 			earliestSlot,
-			previousSlot,
+			state.Slot,
 		)
 	}
-	return state.LatestBlockRootHash32S[slot%uint64(len(state.LatestBlockRootHash32S))], nil
+
+	return state.LatestBlockRootHash32S[slot%params.BeaconConfig().LatestBlockRootsLength], nil
 }
 
 // ProcessBlockRoots processes the previous block root into the state, by appending it
@@ -97,7 +81,7 @@ func ProcessBlockRoots(state *pb.BeaconState, prevBlockRoot [32]byte) *pb.Beacon
 
 // EncodeDepositData converts a deposit input proto into an a byte slice
 // of Simple Serialized deposit input followed by 8 bytes for a deposit value
-// and 8 bytes for a unix timestamp, all in BigEndian format.
+// and 8 bytes for a unix timestamp, all in LittleEndian format.
 func EncodeDepositData(
 	depositInput *pb.DepositInput,
 	depositValue uint64,
@@ -108,13 +92,11 @@ func EncodeDepositData(
 		return nil, fmt.Errorf("failed to encode deposit input: %v", err)
 	}
 	encodedInput := wBuf.Bytes()
-	depositData := make([]byte, 0, 16+len(encodedInput))
-
+	depositData := make([]byte, 0, 512)
 	value := make([]byte, 8)
-	binary.BigEndian.PutUint64(value, depositValue)
-
+	binary.LittleEndian.PutUint64(value, depositValue)
 	timestamp := make([]byte, 8)
-	binary.BigEndian.PutUint64(timestamp, uint64(depositTimestamp))
+	binary.LittleEndian.PutUint64(timestamp, uint64(depositTimestamp))
 
 	depositData = append(depositData, value...)
 	depositData = append(depositData, timestamp...)
@@ -123,15 +105,12 @@ func EncodeDepositData(
 	return depositData, nil
 }
 
-// DecodeDepositInput unmarshalls a depositData byte slice into
+// DecodeDepositInput unmarshals a depositData byte slice into
 // a proto *pb.DepositInput by using the Simple Serialize (SSZ)
 // algorithm.
 // TODO(#1253): Do not assume we will receive serialized proto objects - instead,
 // replace completely by a common struct which can be simple serialized.
 func DecodeDepositInput(depositData []byte) (*pb.DepositInput, error) {
-	// Last 16 bytes of deposit data are 8 bytes for value
-	// and 8 bytes for timestamp. Everything before that is a
-	// Simple Serialized deposit input value.
 	if len(depositData) < 16 {
 		return nil, fmt.Errorf(
 			"deposit data slice too small: len(depositData) = %d",
@@ -164,8 +143,8 @@ func DecodeDepositAmountAndTimeStamp(depositData []byte) (uint64, int64, error) 
 
 	// the amount occupies the first 8 bytes while the
 	// timestamp occupies the next 8 bytes.
-	amount := binary.BigEndian.Uint64(depositData[:8])
-	timestamp := binary.BigEndian.Uint64(depositData[8:16])
+	amount := binary.LittleEndian.Uint64(depositData[:8])
+	timestamp := binary.LittleEndian.Uint64(depositData[8:16])
 
 	return amount, int64(timestamp), nil
 }
@@ -178,12 +157,12 @@ func DecodeDepositAmountAndTimeStamp(depositData []byte) (uint64, int64, error) 
 //		List[BeaconBlock] returns the child blocks of the given block.
 func BlockChildren(block *pb.BeaconBlock, observedBlocks []*pb.BeaconBlock) ([]*pb.BeaconBlock, error) {
 	var children []*pb.BeaconBlock
-	hash, err := hashutil.HashBeaconBlock(block)
+	root, err := ssz.TreeHash(block)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash block: %v", err)
 	}
 	for _, observed := range observedBlocks {
-		if bytes.Equal(observed.ParentRootHash32, hash[:]) {
+		if bytes.Equal(observed.ParentRootHash32, root[:]) {
 			children = append(children, observed)
 		}
 	}

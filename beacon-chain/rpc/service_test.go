@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"testing"
 
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -37,10 +38,25 @@ func (ms *mockOperationService) IncomingExitFeed() *event.Feed {
 	return new(event.Feed)
 }
 
+func (ms *mockOperationService) PendingAttestations() ([]*pb.Attestation, error) {
+	return []*pb.Attestation{
+		{
+			AggregationBitfield: []byte("A"),
+		},
+		{
+			AggregationBitfield: []byte("B"),
+		},
+		{
+			AggregationBitfield: []byte("C"),
+		},
+	}, nil
+}
+
 type mockChainService struct {
-	blockFeed       *event.Feed
-	stateFeed       *event.Feed
-	attestationFeed *event.Feed
+	blockFeed            *event.Feed
+	stateFeed            *event.Feed
+	attestationFeed      *event.Feed
+	stateInitializedFeed *event.Feed
 }
 
 func (m *mockChainService) IncomingBlockFeed() *event.Feed {
@@ -55,11 +71,16 @@ func (m *mockChainService) CanonicalStateFeed() *event.Feed {
 	return m.stateFeed
 }
 
+func (m *mockChainService) StateInitializedFeed() *event.Feed {
+	return m.stateInitializedFeed
+}
+
 func newMockChainService() *mockChainService {
 	return &mockChainService{
-		blockFeed:       new(event.Feed),
-		stateFeed:       new(event.Feed),
-		attestationFeed: new(event.Feed),
+		blockFeed:            new(event.Feed),
+		stateFeed:            new(event.Feed),
+		attestationFeed:      new(event.Feed),
+		stateInitializedFeed: new(event.Feed),
 	}
 }
 

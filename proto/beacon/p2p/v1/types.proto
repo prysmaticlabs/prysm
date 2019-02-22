@@ -12,12 +12,12 @@ message BeaconState {
 
   // Randomness and committees [1001-2000]
   repeated bytes latest_randao_mixes_hash32s = 1004;
-  uint64 previous_epoch_start_shard = 1005;
-  uint64 current_epoch_start_shard = 1006;
-  uint64 previous_calculation_epoch = 1007;
-  uint64 current_calculation_epoch = 1008;
-  bytes previous_epoch_seed_hash32 = 1009;
-  bytes current_epoch_seed_hash32 = 1010;
+  uint64 previous_shuffling_start_shard = 1005;
+  uint64 current_shuffling_start_shard = 1006;
+  uint64 previous_shuffling_epoch = 1007;
+  uint64 current_shuffling_epoch = 1008;
+  bytes previous_shuffling_seed_hash32 = 1009;
+  bytes current_shuffling_seed_hash32 = 1010;
 
   // Finality [2001-3000]
   uint64 previous_justified_epoch = 2001;
@@ -29,8 +29,8 @@ message BeaconState {
   repeated Crosslink latest_crosslinks = 3001;
   repeated bytes latest_block_root_hash32s = 3003;
   repeated bytes batched_block_root_hash32s = 3004;
-  repeated uint64 latest_penalized_balances = 3005;
-  repeated PendingAttestationRecord latest_attestations = 3006;
+  repeated uint64 latest_slashed_balances = 3005;
+  repeated PendingAttestation latest_attestations = 3006;
   repeated bytes latest_index_root_hash32s = 3007;
 
   // Ethereum 1.0 chain data [4001-5000]
@@ -49,11 +49,11 @@ message Fork {
   uint64 epoch = 3;
 }
 
-message PendingAttestationRecord {
+message PendingAttestation {
   AttestationData data = 1;
   bytes aggregation_bitfield = 2;
   bytes custody_bitfield = 3;
-  uint64 slot_included = 4;
+  uint64 inclusion_slot = 4;
 }
 
 message Attestation {
@@ -72,7 +72,6 @@ message AttestationData {
   Crosslink latest_crosslink = 6;
   uint64 justified_epoch = 7;
   bytes justified_block_root_hash32 = 8;
-  uint64 justified_slot = 1000 [deprecated=true];
 }
 
 message AttestationDataAndCustodyBit {
@@ -87,7 +86,7 @@ message Validator {
   uint64 activation_epoch = 5;
   uint64 exit_epoch = 6;
   uint64 withdrawal_epoch = 7;
-  uint64 penalized_epoch = 8;
+  uint64 slashed_epoch = 8;
   // Possible validator status code:
   // https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#constants
   enum StatusFlags {
@@ -115,7 +114,7 @@ message BeaconBlock {
   bytes state_root_hash32 = 3;
   bytes randao_reveal_hash32 = 4;
   Eth1Data eth1_data = 5;
-  repeated bytes signature = 6; // Type of [uint384]?
+  repeated bytes signature = 6; // bytes96
 
   // Block Body
   BeaconBlockBody body = 7;
@@ -126,7 +125,7 @@ message BeaconBlockBody {
   repeated ProposerSlashing proposer_slashings  = 2;
   repeated AttesterSlashing attester_slashings = 3;
   repeated Deposit deposits = 4;
-  repeated Exit exits = 5;
+  repeated VoluntaryExit voluntary_exits = 5;
 }
 
 message DepositInput {
@@ -146,7 +145,7 @@ message SlashableAttestation {
   repeated uint64 validator_indices = 1;
   bytes custody_bitfield = 2;
   AttestationData data = 3;
-  bytes aggregate_signature = 4; // Type of [uint384]?
+  bytes aggregate_signature = 4; // bytes96
 }
 
 message DepositData {
@@ -158,7 +157,7 @@ message DepositData {
 message ProposerSlashing {
   uint64 proposer_index = 1;
   ProposalSignedData proposal_data_1 = 2;
-  bytes proposal_signature_1 = 3; // Type of [uint384]?
+  bytes proposal_signature_1 = 3; // bytes96
   ProposalSignedData proposal_data_2 = 4;
   bytes proposal_signature_2 = 5;
 }
@@ -174,10 +173,10 @@ message Deposit {
   bytes deposit_data = 3;
 }
 
-message Exit {
+message VoluntaryExit {
   uint64 epoch = 1;
   uint64 validator_index = 2;
-  bytes signature = 3; // Type of [uint384]?
+  bytes signature = 3; // bytes96
 }
 
 message Eth1Data {

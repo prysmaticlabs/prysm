@@ -16,13 +16,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/ssz"
+
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -91,7 +91,7 @@ type InitialSync struct {
 	currentSlot            uint64
 	highestObservedSlot    uint64
 	syncPollingInterval    time.Duration
-	initialStateRootHash32 [32]byte
+	genesisStateRootHash32 [32]byte
 	inMemoryBlocks         map[uint64]*pb.BeaconBlock
 }
 
@@ -194,19 +194,19 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 		case msg := <-s.stateBuf:
 			data := msg.Data.(*pb.BeaconStateResponse)
 
-			if s.initialStateRootHash32 == [32]byte{} {
+			if s.genesisStateRootHash32 == [32]byte{} {
 				continue
 			}
 
 			beaconState := data.BeaconState
 
-			h, err := state.Hash(beaconState)
+			h, err := ssz.TreeHash(beaconState)
 			if err != nil {
 				log.Error(err)
 				continue
 			}
 
-			if h != s.initialStateRootHash32 {
+			if h != s.genesisStateRootHash32 {
 				continue
 			}
 
@@ -216,14 +216,14 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 
 			log.Debug("Successfully saved beacon state to the db")
 
-			if s.currentSlot >= beaconState.FinalizedEpoch*params.BeaconConfig().EpochLength {
+			if s.currentSlot >= beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
 				continue
 			}
 
 			// sets the current slot to the last finalized slot of the
 			// crystallized state to begin our sync from.
-			s.currentSlot = beaconState.FinalizedEpoch * params.BeaconConfig().EpochLength
-			log.Debugf("Successfully saved crystallized state with the last finalized slot: %d", beaconState.FinalizedEpoch*params.BeaconConfig().EpochLength)
+			s.currentSlot = beaconState.FinalizedEpoch * params.BeaconConfig().SlotsPerEpoch
+			log.Debugf("Successfully saved crystallized state with the last finalized slot: %d", beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch)
 
 			s.requestNextBlockBySlot(s.currentSlot + 1)
 			beaconStateSub.Unsubscribe()
@@ -272,14 +272,14 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 
 	// setting first block for sync.
 	if s.currentSlot == params.BeaconConfig().GenesisSlot {
-		if s.initialStateRootHash32 != [32]byte{} {
-			log.Errorf("State root hash %#x set despite current slot being 0", s.initialStateRootHash32)
+		if s.genesisStateRootHash32 != [32]byte{} {
+			log.Errorf("State root hash %#x set despite current slot being 0", s.genesisStateRootHash32)
 			return
 		}
 
 		if block.Slot != params.BeaconConfig().GenesisSlot+1 {
 
-			// saves block in memory if it isn't the initial block.
+			// saves block in memory if it isn't the genesis block.
 			if _, ok := s.inMemoryBlocks[block.Slot]; !ok {
 				s.inMemoryBlocks[block.Slot] = block
 			}
@@ -337,17 +337,17 @@ func (s *InitialSync) requestStateFromPeer(block *pb.BeaconBlock, peer p2p.Peer)
 // setBlockForInitialSync sets the first received block as the base finalized
 // block for initial sync.
 func (s *InitialSync) setBlockForInitialSync(block *pb.BeaconBlock) error {
-	h, err := hashutil.HashBeaconBlock(block)
+	root, err := ssz.TreeHash(block)
 	if err != nil {
 		return err
 	}
-	log.WithField("blockhash", fmt.Sprintf("%#x", h)).Debug("Beacon state hash exists locally")
+	log.WithField("blockRoot", fmt.Sprintf("%#x", root)).Debug("Beacon state hash exists locally")
 
 	s.chainService.IncomingBlockFeed().Send(block)
 
-	s.initialStateRootHash32 = bytesutil.ToBytes32(block.StateRootHash32)
+	s.genesisStateRootHash32 = bytesutil.ToBytes32(block.StateRootHash32)
 
-	log.Infof("Saved block with hash %#x for initial sync", h)
+	log.Infof("Saved block with root %#x for initial sync", root)
 	s.currentSlot = block.Slot
 	s.requestNextBlockBySlot(s.currentSlot + 1)
 	return nil
@@ -376,7 +376,7 @@ func (s *InitialSync) requestBatchedBlocks(endSlot uint64) {
 // validateAndSaveNextBlock will validate whether blocks received from the blockfetcher
 // routine can be added to the chain.
 func (s *InitialSync) validateAndSaveNextBlock(block *pb.BeaconBlock) error {
-	h, err := hashutil.HashBeaconBlock(block)
+	root, err := ssz.TreeHash(block)
 	if err != nil {
 		return err
 	}
@@ -391,7 +391,7 @@ func (s *InitialSync) validateAndSaveNextBlock(block *pb.BeaconBlock) error {
 			return err
 		}
 
-		log.Infof("Saved block with hash %#x and slot %d for initial sync", h, block.Slot)
+		log.Infof("Saved block with root %#x and slot %d for initial sync", root, block.Slot)
 		s.currentSlot = block.Slot
 
 		// delete block from memory
@@ -406,15 +406,14 @@ func (s *InitialSync) validateAndSaveNextBlock(block *pb.BeaconBlock) error {
 }
 
 func (s *InitialSync) checkBlockValidity(block *pb.BeaconBlock) error {
-
-	blockHash, err := hashutil.HashBeaconBlock(block)
+	blockRoot, err := ssz.TreeHash(block)
 	if err != nil {
-		return fmt.Errorf("could not hash received block: %v", err)
+		return fmt.Errorf("could not tree hash received block: %v", err)
 	}
 
-	log.Debugf("Processing response to block request: %#x", blockHash)
+	log.Debugf("Processing response to block request: %#x", blockRoot)
 
-	if s.db.HasBlock(blockHash) {
+	if s.db.HasBlock(blockRoot) {
 		return errors.New("received a block that already exists. Exiting")
 	}
 
@@ -423,11 +422,10 @@ func (s *InitialSync) checkBlockValidity(block *pb.BeaconBlock) error {
 		return fmt.Errorf("failed to get beacon state: %v", err)
 	}
 
-	if block.Slot < beaconState.FinalizedEpoch*params.BeaconConfig().EpochLength {
+	if block.Slot < beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
 		return errors.New("discarding received block with a slot number smaller than the last finalized slot")
 	}
 	// Attestation from proposer not verified as, other nodes only store blocks not proposer
 	// attestations.
-
 	return nil
 }
