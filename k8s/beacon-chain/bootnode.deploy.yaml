@@ -17,7 +17,7 @@ spec:
     spec:
       priorityClassName: production-priority
       containers:
-        - name: relay
+        - name: bootnode
           image: gcr.io/prysmaticlabs/prysm/bootnode:latest
           args:
             - "-debug"

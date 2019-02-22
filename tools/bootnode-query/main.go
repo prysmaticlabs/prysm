@@ -42,7 +42,8 @@ func main() {
 
 	s, err := h.NewStream(ctx, pi.ID, dhtopts.ProtocolDHT)
 	if err != nil {
-		log.Fatalf("Error: Failed to create ProtocolDHT stream")
+		log.Printf("proto = %s", dhtopts.ProtocolDHT)
+		log.Fatalf("Error: Failed to create ProtocolDHT stream: %v", err)
 	}
 
 	resp := sendMessageAndWait(s, dhtpb.NewMessage(dhtpb.Message_FIND_NODE, []byte{}, 0))

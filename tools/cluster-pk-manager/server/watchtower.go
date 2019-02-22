@@ -10,7 +10,7 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-var queryInterval = 10 * time.Second
+var queryInterval = 3 * time.Second
 var namespace = "beacon-chain"
 var podSelector = "component=validator"
 
