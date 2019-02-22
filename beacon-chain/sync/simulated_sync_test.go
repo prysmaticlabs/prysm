@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/bls"
+
 	"github.com/gogo/protobuf/proto"
 
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -67,7 +69,7 @@ func (sim *simulatedP2P) Send(msg proto.Message, peer p2p.Peer) {
 	feed.Send(p2p.Message{Ctx: sim.ctx, Data: msg})
 }
 
-func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*Service, *db.BeaconDB) {
+func setupSimBackendAndDB(t *testing.T) (*backend.SimulatedBackend, *db.BeaconDB, []*bls.SecretKey) {
 	bd, err := backend.NewSimulatedBackend()
 	if err != nil {
 		t.Fatalf("Could not set up simulated backend %v", err)
@@ -77,7 +79,6 @@ func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*S
 	if err != nil {
 		t.Fatalf("Could not set up backend %v", err)
 	}
-	defer db.TeardownDB(bd.BeaconDB)
 
 	beacondb, err := db.SetupDB()
 	if err != nil {
@@ -96,6 +97,14 @@ func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*S
 	if err := beacondb.UpdateChainHead(memBlocks[0], bd.State()); err != nil {
 		t.Fatalf("Could not update chain head %v", err)
 	}
+
+	return bd, beacondb, privKeys
+}
+
+func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*Service, *db.BeaconDB) {
+	bd, beacondb, privKeys := setupSimBackendAndDB(t)
+	defer bd.Shutdown()
+	defer db.TeardownDB(bd.DB())
 
 	mockPow := &genesisPowChain{
 		feed: new(event.Feed),
@@ -137,34 +146,9 @@ func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*S
 }
 
 func setUpUnSyncedService(simP2P *simulatedP2P, t *testing.T) (*Service, *db.BeaconDB) {
-	bd, err := backend.NewSimulatedBackend()
-	if err != nil {
-		t.Fatalf("Could not set up simulated backend %v", err)
-	}
-
-	if _, err := bd.SetupBackend(100); err != nil {
-		t.Fatalf("Could not set up backend %v", err)
-	}
-	defer db.TeardownDB(bd.BeaconDB)
-
-	beacondb, err := db.SetupDB()
-	if err != nil {
-		t.Fatalf("Could not setup beacon db %v", err)
-	}
-
-	if err := beacondb.SaveState(bd.State()); err != nil {
-		t.Fatalf("Could not save state %v", err)
-	}
-
-	memBlocks := bd.InMemoryBlocks()
-
-	if err := beacondb.SaveBlock(memBlocks[0]); err != nil {
-		t.Fatalf("Could not save block %v", err)
-	}
-
-	if err := beacondb.UpdateChainHead(memBlocks[0], bd.State()); err != nil {
-		t.Fatalf("Could not update chain head %v", err)
-	}
+	bd, beacondb, _ := setupSimBackendAndDB(t)
+	defer bd.Shutdown()
+	defer db.TeardownDB(bd.DB())
 
 	mockPow := &afterGenesisPowChain{
 		feed: new(event.Feed),

@@ -28,8 +28,8 @@ import (
 // of an in-memory beacon chain for client test runs
 // and other e2e use cases.
 type SimulatedBackend struct {
-	ChainService   *blockchain.ChainService
-	BeaconDB       *db.BeaconDB
+	chainService   *blockchain.ChainService
+	beaconDB       *db.BeaconDB
 	state          *pb.BeaconState
 	prevBlockRoots [][32]byte
 	inMemoryBlocks []*pb.BeaconBlock
@@ -63,8 +63,8 @@ func NewSimulatedBackend() (*SimulatedBackend, error) {
 		return nil, err
 	}
 	return &SimulatedBackend{
-		ChainService:   cs,
-		BeaconDB:       db,
+		chainService:   cs,
+		beaconDB:       db,
 		inMemoryBlocks: make([]*pb.BeaconBlock, 0),
 	}, nil
 }
@@ -81,6 +81,12 @@ func (sb *SimulatedBackend) SetupBackend(numOfDeposits uint64) ([]*bls.SecretKey
 	}
 	sb.depositTrie = trieutil.NewDepositTrie()
 	return privKeys, nil
+}
+
+// DB returns the underlying db instance in the simulated
+// backend.
+func (sb *SimulatedBackend) DB() *db.BeaconDB {
+	return sb.beaconDB
 }
 
 // GenerateBlockAndAdvanceChain generates a simulated block and runs that block though
@@ -140,7 +146,7 @@ func (sb *SimulatedBackend) GenerateNilBlockAndAdvanceChain() error {
 
 // Shutdown closes the db associated with the simulated backend.
 func (sb *SimulatedBackend) Shutdown() error {
-	return sb.BeaconDB.Close()
+	return sb.beaconDB.Close()
 }
 
 // State is a getter to return the current beacon state
@@ -159,7 +165,7 @@ func (sb *SimulatedBackend) InMemoryBlocks() []*pb.BeaconBlock {
 // according to the ETH 2.0 client chain test specification and runs them
 // against the simulated backend.
 func (sb *SimulatedBackend) RunForkChoiceTest(testCase *ForkChoiceTestCase) error {
-	defer db.TeardownDB(sb.BeaconDB)
+	defer db.TeardownDB(sb.beaconDB)
 	// Utilize the config parameters in the test case to setup
 	// the DB and set global config parameters accordingly.
 	// Config parameters include: ValidatorCount, ShardCount,
@@ -190,7 +196,7 @@ func (sb *SimulatedBackend) RunForkChoiceTest(testCase *ForkChoiceTestCase) erro
 // RunShuffleTest uses validator set specified from a YAML file, runs the validator shuffle
 // algorithm, then compare the output with the expected output from the YAML file.
 func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
-	defer db.TeardownDB(sb.BeaconDB)
+	defer db.TeardownDB(sb.beaconDB)
 	seed := common.BytesToHash([]byte(testCase.Seed))
 	output, err := utils.ShuffleIndices(seed, testCase.Input)
 	if err != nil {
@@ -206,7 +212,7 @@ func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
 // slots from a genesis state, with a block being processed at every iteration
 // of the state transition function.
 func (sb *SimulatedBackend) RunStateTransitionTest(testCase *StateTestCase) error {
-	defer db.TeardownDB(sb.BeaconDB)
+	defer db.TeardownDB(sb.beaconDB)
 	setTestConfig(testCase)
 
 	privKeys, err := sb.initializeStateTest(testCase)

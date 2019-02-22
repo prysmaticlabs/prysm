@@ -3,6 +3,8 @@ package backend
 import (
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -15,6 +17,8 @@ func TestSimulatedBackendStop(t *testing.T) {
 	if err := backend.Shutdown(); err != nil {
 		t.Errorf("Could not successfully shutdown simulated backend %v", err)
 	}
+
+	db.TeardownDB(backend.beaconDB)
 }
 
 func TestGenerateBlocks(t *testing.T) {
@@ -27,6 +31,8 @@ func TestGenerateBlocks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not set up backend %v", err)
 	}
+	defer backend.Shutdown()
+	defer db.TeardownDB(backend.beaconDB)
 
 	slotLimit := params.BeaconConfig().SlotsPerEpoch + uint64(1)
 
@@ -55,6 +61,8 @@ func TestGenerateNilBlocks(t *testing.T) {
 	if _, err := backend.SetupBackend(1000); err != nil {
 		t.Fatalf("Could not set up backend %v", err)
 	}
+	defer backend.Shutdown()
+	defer db.TeardownDB(backend.beaconDB)
 
 	slotLimit := params.BeaconConfig().SlotsPerEpoch + uint64(1)
 
