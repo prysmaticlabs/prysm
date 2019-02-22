@@ -35,7 +35,7 @@ func (s *secondMockService) Status() error {
 	return s.status
 }
 
-func TestRegisterServiceTwice(t *testing.T) {
+func TestRegisterService_Twice(t *testing.T) {
 	registry := &ServiceRegistry{
 		services: make(map[reflect.Type]Service),
 	}
@@ -55,7 +55,7 @@ func TestRegisterServiceTwice(t *testing.T) {
 	}
 }
 
-func TestRegisterDifferentServices(t *testing.T) {
+func TestRegisterService_Different(t *testing.T) {
 	registry := &ServiceRegistry{
 		services: make(map[reflect.Type]Service),
 	}
@@ -83,7 +83,7 @@ func TestRegisterDifferentServices(t *testing.T) {
 	}
 }
 
-func TestFetchService(t *testing.T) {
+func TestFetchService_OK(t *testing.T) {
 	registry := &ServiceRegistry{
 		services: make(map[reflect.Type]Service),
 	}
@@ -112,7 +112,7 @@ func TestFetchService(t *testing.T) {
 	}
 }
 
-func TestServiceStatus(t *testing.T) {
+func TestServiceStatus_OK(t *testing.T) {
 	registry := &ServiceRegistry{
 		services: make(map[reflect.Type]Service),
 	}

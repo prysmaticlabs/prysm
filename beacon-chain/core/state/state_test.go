@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestGenesisBeaconState_Ok(t *testing.T) {
+func TestGenesisBeaconState_OK(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
