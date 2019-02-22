@@ -359,11 +359,11 @@ func (sb *SimulatedBackend) compareTestCase(testCase *StateTestCase) error {
 			len(sb.state.ValidatorRegistry),
 		)
 	}
-	for _, penalized := range testCase.Results.SlashedValidators {
-		if sb.state.ValidatorRegistry[penalized].SlashedEpoch == params.BeaconConfig().FarFutureEpoch {
+	for _, slashed := range testCase.Results.SlashedValidators {
+		if sb.state.ValidatorRegistry[slashed].SlashedEpoch == params.BeaconConfig().FarFutureEpoch {
 			return fmt.Errorf(
-				"expected validator at index %d to have been penalized",
-				penalized,
+				"expected validator at index %d to have been slashed",
+				slashed,
 			)
 		}
 	}
