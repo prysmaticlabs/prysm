@@ -180,23 +180,30 @@ func setUpUnSyncedService(simP2P *simulatedP2P, t *testing.T) (*Service, *db.Bea
 	return ss, beacondb
 }
 
-func TestServices(t *testing.T) {
+func TestSyncFromAFullySyncedNode(t *testing.T) {
 	numOfBlocks := 10
 	newP2P := &simulatedP2P{
 		subsChannels: make(map[reflect.Type]*event.Feed),
 		mutex:        new(sync.RWMutex),
 		ctx:          context.Background(),
 	}
+
+	// Sets up a synced service which has its head at the current
+	// numOfBlocks from genesis. The blocks are generated through
+	// simulated backend
 	ss, syncedDB := setUpSyncedService(numOfBlocks, newP2P, t)
 	defer ss.Stop()
 	defer db.TeardownDB(syncedDB)
 
+	// Sets up a sync service which has its current head at genesis.
 	us, unSyncedDB := setUpUnSyncedService(newP2P, t)
 	defer us.Stop()
 	defer db.TeardownDB(unSyncedDB)
 
 	syncedChan := make(chan uint64)
 
+	// Waits for the unsynced node to fire a message signifying it is
+	// synced with its current slot number.
 	sub := us.InitialSync.SyncedFeed().Subscribe(syncedChan)
 	defer sub.Unsubscribe()
 
