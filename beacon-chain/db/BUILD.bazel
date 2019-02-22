@@ -11,6 +11,7 @@ go_library(
         "pending_deposits.go",
         "schema.go",
         "state.go",
+        "validator.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/db",
     visibility = ["//beacon-chain:__subpackages__"],
@@ -40,6 +41,7 @@ go_test(
         "db_test.go",
         "pending_deposits_test.go",
         "state_test.go",
+        "validator_test.go",
     ],
     embed = [":go_default_library"],
     deps = [

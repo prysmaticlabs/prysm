@@ -49,6 +49,12 @@ func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit) 
 			return err
 		}
 
+		for i, validator := range beaconState.ValidatorRegistry {
+			if err := db.SaveValidatorIndex(validator.Pubkey, i); err != nil {
+				return err
+			}
+		}
+
 		return chainInfo.Put(stateLookupKey, stateEnc)
 	})
 }

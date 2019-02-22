@@ -1,7 +1,7 @@
 package db
 
 import (
-	"github.com/prysmaticlabs/prysm/bazel-prysm/external/go_sdk/src/fmt"
+	"fmt"
 	"strconv"
 
 	"github.com/boltdb/bolt"
