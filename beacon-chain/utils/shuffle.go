@@ -44,7 +44,7 @@ func GetPermutedIndex(index uint64, listSize uint64, seed common.Hash) (uint64, 
 		binary.LittleEndian.PutUint32(bs4[:], positionVal)
 		bs := append(bs1, bs4...)
 		source := hashutil.Hash(append(seed[:], bs...))
-		positionIndex := mathutil.CeilDiv8(int(position) % 256) 
+		positionIndex := uint64(mathutil.CeilDiv8(int(position) % 256))
 		byteV := source[positionIndex]
 		bitV := (byteV >> (position % 8)) % 2
 		if bitV == 1 {
