@@ -95,7 +95,7 @@ func GenesisBeaconState(
 		// Validator registry fields.
 		ValidatorRegistry:            validatorRegistry,
 		ValidatorBalances:            latestBalances,
-		ValidatorRegistryUpdateEpoch: params.BeaconConfig().GenesisEpoch,
+		ValidatorRegistryUpdateEpoch: params.BeaconConfig().FarFutureEpoch,
 
 		// Randomness and committees.
 		LatestRandaoMixes:           latestRandaoMixes,
