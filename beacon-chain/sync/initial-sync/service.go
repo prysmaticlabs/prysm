@@ -92,6 +92,7 @@ type InitialSync struct {
 	syncPollingInterval    time.Duration
 	genesisStateRootHash32 [32]byte
 	inMemoryBlocks         map[uint64]*pb.BeaconBlock
+	syncedFeed             *event.Feed
 }
 
 // NewInitialSyncService constructs a new InitialSyncService.
@@ -121,6 +122,7 @@ func NewInitialSyncService(ctx context.Context,
 		blockAnnounceBuf:    blockAnnounceBuf,
 		syncPollingInterval: cfg.SyncPollingInterval,
 		inMemoryBlocks:      map[uint64]*pb.BeaconBlock{},
+		syncedFeed:          new(event.Feed),
 	}
 }
 
@@ -146,9 +148,9 @@ func (s *InitialSync) HighestObservedSlot(slot uint64) {
 	s.highestObservedSlot = slot
 }
 
-// IsSynced checks if the node is fully synced.
-func (s *InitialSync) IsSynced() bool {
-	return s.currentSlot == s.highestObservedSlot
+// SyncedFeed returns a feed which fires a message once the node is synced
+func (s *InitialSync) SyncedFeed() *event.Feed {
+	return s.syncedFeed
 }
 
 // run is the main goroutine for the initial sync service.
@@ -183,6 +185,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 
 			if s.highestObservedSlot == s.currentSlot {
 				log.Info("Exiting initial sync and starting normal sync")
+				s.syncedFeed.Send(s.currentSlot)
 				s.syncService.ResumeSync()
 				return
 			}

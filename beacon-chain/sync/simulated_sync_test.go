@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -17,57 +18,53 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 )
 
-var topicMappings = map[pb.Topic]proto.Message{
-	pb.Topic_BEACON_BLOCK_ANNOUNCE:               &pb.BeaconBlockAnnounce{},
-	pb.Topic_BEACON_BLOCK_REQUEST:                &pb.BeaconBlockRequest{},
-	pb.Topic_BEACON_BLOCK_REQUEST_BY_SLOT_NUMBER: &pb.BeaconBlockRequestBySlotNumber{},
-	pb.Topic_BEACON_BLOCK_RESPONSE:               &pb.BeaconBlockResponse{},
-	pb.Topic_BATCHED_BEACON_BLOCK_REQUEST:        &pb.BatchedBeaconBlockRequest{},
-	pb.Topic_BATCHED_BEACON_BLOCK_RESPONSE:       &pb.BatchedBeaconBlockResponse{},
-	pb.Topic_CHAIN_HEAD_REQUEST:                  &pb.ChainHeadRequest{},
-	pb.Topic_CHAIN_HEAD_RESPONSE:                 &pb.ChainHeadResponse{},
-	pb.Topic_BEACON_STATE_HASH_ANNOUNCE:          &pb.BeaconStateHashAnnounce{},
-	pb.Topic_BEACON_STATE_REQUEST:                &pb.BeaconStateRequest{},
-	pb.Topic_BEACON_STATE_RESPONSE:               &pb.BeaconStateResponse{},
-}
-
 type simulatedP2P struct {
-	subsChannels map[proto.Message]*event.Feed
-	mutex        *sync.Mutex
+	subsChannels map[reflect.Type]*event.Feed
+	mutex        *sync.RWMutex
+	ctx          context.Context
 }
 
 func (sim *simulatedP2P) Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription {
 	sim.mutex.Lock()
 	defer sim.mutex.Unlock()
 
-	feed, ok := sim.subsChannels[msg]
+	protoType := reflect.TypeOf(msg)
+
+	feed, ok := sim.subsChannels[protoType]
 	if !ok {
 		nFeed := new(event.Feed)
-		sim.subsChannels[msg] = nFeed
+		sim.subsChannels[protoType] = nFeed
 		return nFeed.Subscribe(channel)
 	}
 	return feed.Subscribe(channel)
 }
 
 func (sim *simulatedP2P) Broadcast(msg proto.Message) {
-	feed, ok := sim.subsChannels[msg]
+	sim.mutex.Lock()
+	defer sim.mutex.Unlock()
+
+	protoType := reflect.TypeOf(msg)
+
+	feed, ok := sim.subsChannels[protoType]
 	if !ok {
 		return
 	}
 
-	feed.Send(msg)
+	feed.Send(p2p.Message{Ctx: sim.ctx, Data: msg})
 }
 
 func (sim *simulatedP2P) Send(msg proto.Message, peer p2p.Peer) {
 	sim.mutex.Lock()
 	defer sim.mutex.Unlock()
 
-	feed, ok := sim.subsChannels[msg]
+	protoType := reflect.TypeOf(msg)
+
+	feed, ok := sim.subsChannels[protoType]
 	if !ok {
 		return
 	}
 
-	feed.Send(msg)
+	feed.Send(p2p.Message{Ctx: sim.ctx, Data: msg})
 }
 
 func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*Service, *db.BeaconDB) {
@@ -80,6 +77,7 @@ func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*S
 	if err != nil {
 		t.Fatalf("Could not set up backend %v", err)
 	}
+	defer db.TeardownDB(bd.BeaconDB)
 
 	beacondb, err := db.SetupDB()
 	if err != nil {
@@ -135,12 +133,6 @@ func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*S
 		}
 	}
 
-	memBlocks = bd.InMemoryBlocks()
-
-	if err := beacondb.UpdateChainHead(memBlocks[len(memBlocks)-1], bd.State()); err != nil {
-		t.Fatalf("Could not update chain head %v", err)
-	}
-
 	return ss, beacondb
 }
 
@@ -153,6 +145,7 @@ func setUpUnSyncedService(simP2P *simulatedP2P, t *testing.T) (*Service, *db.Bea
 	if _, err := bd.SetupBackend(100); err != nil {
 		t.Fatalf("Could not set up backend %v", err)
 	}
+	defer db.TeardownDB(bd.BeaconDB)
 
 	beacondb, err := db.SetupDB()
 	if err != nil {
@@ -204,11 +197,13 @@ func setUpUnSyncedService(simP2P *simulatedP2P, t *testing.T) (*Service, *db.Bea
 }
 
 func TestServices(t *testing.T) {
+	numOfBlocks := 10
 	newP2P := &simulatedP2P{
-		subsChannels: make(map[proto.Message]*event.Feed),
-		mutex:        new(sync.Mutex),
+		subsChannels: make(map[reflect.Type]*event.Feed),
+		mutex:        new(sync.RWMutex),
+		ctx:          context.Background(),
 	}
-	ss, syncedDB := setUpSyncedService(10, newP2P, t)
+	ss, syncedDB := setUpSyncedService(numOfBlocks, newP2P, t)
 	defer ss.Stop()
 	defer db.TeardownDB(syncedDB)
 
@@ -216,90 +211,15 @@ func TestServices(t *testing.T) {
 	defer us.Stop()
 	defer db.TeardownDB(unSyncedDB)
 
-	for !us.InitialSync.IsSynced() {
+	syncedChan := make(chan uint64)
 
-	}
-}
-
-func TestSetupTestingEnvironment(t *testing.T) {
-	bd, err := backend.NewSimulatedBackend()
-	if err != nil {
-		t.Fatalf("Could not set up simulated backend %v", err)
-	}
-
-	privKeys, err := bd.SetupBackend(100)
-	if err != nil {
-		t.Fatalf("Could not set up backend %v", err)
-	}
-
-	beacondb, err := db.SetupDB()
-	if err != nil {
-		t.Fatalf("Could not setup beacon db %v", err)
-	}
-	defer db.TeardownDB(beacondb)
-
-	if err := beacondb.SaveState(bd.State()); err != nil {
-		t.Fatalf("Could not save state %v", err)
-	}
-
-	mockPow := &genesisPowChain{
-		feed: new(event.Feed),
-	}
-
-	mockChain := &mockChainService{
-		feed: new(event.Feed),
-	}
-
-	mockServer, err := p2p.MockServer(t)
-	if err != nil {
-		t.Fatalf("Could not create p2p server %v", err)
-	}
-
-	cfg := &Config{
-		ChainService:     mockChain,
-		BeaconDB:         beacondb,
-		OperationService: &mockOperationService{},
-		P2P:              mockServer,
-		PowChainService:  mockPow,
-	}
-
-	ss := NewSyncService(context.Background(), cfg)
-
-	go ss.run()
-	for !ss.Querier.chainStarted {
-		mockPow.feed.Send(time.Now())
-	}
-
-	bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys)
-	bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys)
-	bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys)
-	bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys)
-	ctx := context.Background()
-	blocks := bd.InMemoryBlocks()
-	newChan := make(chan *pb.BeaconBlock, 5)
-	sub := mockChain.feed.Subscribe(newChan)
+	sub := us.InitialSync.SyncedFeed().Subscribe(syncedChan)
 	defer sub.Unsubscribe()
 
-	go func() {
-		for {
-			select {
-			case <-sub.Err():
-				return
-			case blk := <-newChan:
-				beacondb.SaveBlock(blk)
-				t.Log(blk)
-			}
-		}
-	}()
+	highestSlot := <-syncedChan
 
-	for i := 0; i < 4; i++ {
-		mockServer.Feed(&pb.BeaconBlockResponse{}).Send(p2p.Message{
-			Ctx: ctx,
-			Data: &pb.BeaconBlockResponse{
-				Block: blocks[i],
-			}})
+	if highestSlot != uint64(numOfBlocks)+params.BeaconConfig().GenesisSlot {
+		t.Errorf("Sync services didnt sync to expectecd slot, expected %d but got %d",
+			uint64(numOfBlocks)+params.BeaconConfig().GenesisSlot, highestSlot)
 	}
-
-	ss.Stop()
-	bd.Shutdown()
 }
