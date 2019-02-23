@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -135,13 +134,13 @@ func (vs *ValidatorServer) NextEpochCommitteeAssignment(
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
-	idx, err := v.ValidatorIdx(req.PublicKey, state.ValidatorRegistry)
+	idx, err := vs.beaconDB.ValidatorIndex(req.PublicKey)
 	if err != nil {
 		return nil, fmt.Errorf("could not get active validator index: %v", err)
 	}
 
 	committee, shard, slot, isProposer, err :=
-		helpers.NextEpochCommitteeAssignment(state, idx, false)
+		helpers.NextEpochCommitteeAssignment(state, uint64(idx), false)
 	if err != nil {
 		return nil, fmt.Errorf("could not get next epoch committee assignment: %v", err)
 	}
