@@ -180,7 +180,7 @@ func setUpUnSyncedService(simP2P *simulatedP2P, t *testing.T) (*Service, *db.Bea
 	return ss, beacondb
 }
 
-func TestSyncFromAFullySyncedNode(t *testing.T) {
+func TestSync_AFullySyncedNode(t *testing.T) {
 	numOfBlocks := 10
 	newP2P := &simulatedP2P{
 		subsChannels: make(map[reflect.Type]*event.Feed),
@@ -190,7 +190,7 @@ func TestSyncFromAFullySyncedNode(t *testing.T) {
 
 	// Sets up a synced service which has its head at the current
 	// numOfBlocks from genesis. The blocks are generated through
-	// simulated backend
+	// simulated backend.
 	ss, syncedDB := setUpSyncedService(numOfBlocks, newP2P, t)
 	defer ss.Stop()
 	defer db.TeardownDB(syncedDB)
@@ -222,12 +222,12 @@ func TestSyncFromAFullySyncedNode(t *testing.T) {
 	highestSlot2 := <-syncedChan2
 
 	if highestSlot != uint64(numOfBlocks)+params.BeaconConfig().GenesisSlot {
-		t.Errorf("Sync services didnt sync to expectecd slot, expected %d but got %d",
+		t.Errorf("Sync services didn't sync to expectecd slot, expected %d but got %d",
 			uint64(numOfBlocks)+params.BeaconConfig().GenesisSlot, highestSlot)
 	}
 
 	if highestSlot2 != uint64(numOfBlocks)+params.BeaconConfig().GenesisSlot {
-		t.Errorf("Sync services didnt sync to expectecd slot, expected %d but got %d",
+		t.Errorf("Sync services didn't sync to expectecd slot, expected %d but got %d",
 			uint64(numOfBlocks)+params.BeaconConfig().GenesisSlot, highestSlot2)
 	}
 }

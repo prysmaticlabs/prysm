@@ -27,7 +27,7 @@ func TestGenerateBlockAndAdvanceChain_IncreasesSlot(t *testing.T) {
 		t.Fatalf("Could not create a new simulated backend %v", err)
 	}
 
-	privKeys, err := backend.SetupBackend(1000)
+	privKeys, err := backend.SetupBackend(100)
 	if err != nil {
 		t.Fatalf("Could not set up backend %v", err)
 	}
@@ -58,7 +58,7 @@ func TestGenerateNilBlockAndAdvanceChain_IncreasesSlot(t *testing.T) {
 		t.Fatalf("Could not create a new simulated backedn %v", err)
 	}
 
-	if _, err := backend.SetupBackend(1000); err != nil {
+	if _, err := backend.SetupBackend(100); err != nil {
 		t.Fatalf("Could not set up backend %v", err)
 	}
 	defer backend.Shutdown()

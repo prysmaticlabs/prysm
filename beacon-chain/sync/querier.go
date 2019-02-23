@@ -24,7 +24,7 @@ type QuerierConfig struct {
 	P2P                p2pAPI
 	BeaconDB           *db.BeaconDB
 	PowChain           powChainService
-	CurentHeadSlot     uint64
+	CurrentHeadSlot    uint64
 }
 
 // DefaultQuerierConfig provides the default configuration for a sync service.
@@ -65,7 +65,7 @@ func NewQuerierService(ctx context.Context,
 		p2p:            cfg.P2P,
 		db:             cfg.BeaconDB,
 		responseBuf:    responseBuf,
-		curentHeadSlot: cfg.CurentHeadSlot,
+		curentHeadSlot: cfg.CurrentHeadSlot,
 		chainStarted:   false,
 		powchain:       cfg.PowChain,
 		chainStartBuf:  make(chan time.Time, 1),

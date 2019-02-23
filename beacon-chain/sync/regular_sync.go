@@ -424,18 +424,18 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) {
 	response := make([]*pb.BeaconBlock, 0, endSlot-startSlot)
 
 	for i := startSlot; i <= endSlot; i++ {
-		retblock, err := rs.db.BlockBySlot(i)
+		retBlock, err := rs.db.BlockBySlot(i)
 		if err != nil {
 			log.Errorf("Unable to retrieve block from db %v", err)
 			continue
 		}
 
-		if retblock == nil {
+		if retBlock == nil {
 			log.Debug("Block does not exist in db")
 			continue
 		}
 
-		response = append(response, retblock)
+		response = append(response, retBlock)
 	}
 
 	log.Debugf("Sending response for batch blocks to peer %v", msg.Peer)
