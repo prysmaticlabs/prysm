@@ -301,7 +301,7 @@ go_repository(
 
 go_repository(
     name = "com_github_mattn_go_colorable",
-    tag = "v0.1.0",
+    tag = "v0.1.1",
     importpath = "github.com/mattn/go-colorable",
 )
 
@@ -399,7 +399,7 @@ go_repository(
 go_repository(
     name = "com_github_mattn_go_isatty",
     importpath = "github.com/mattn/go-isatty",
-    tag = "v0.0.4",
+    tag = "v0.0.5",
 )
 
 go_repository(
@@ -512,7 +512,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "a9d3bda3a223baa6bba6ef412cb273f0fd163c05",
+    commit = "cd391775e71e684db52b63df9affd58269495083",
     importpath = "golang.org/x/sys",
 )
 
