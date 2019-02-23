@@ -48,6 +48,12 @@ func TestValidatorEpochAssignments_OK(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
+	var pubKey [96]byte
+	copy(pubKey[:], []byte("0"))
+	if err := db.SaveValidatorIndex(pubKey[:], 0); err != nil {
+		t.Fatalf("Could not save validator index: %v", err)
+	}
+
 	state, err := genesisState(params.BeaconConfig().DepositsForChainStart)
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
@@ -60,8 +66,7 @@ func TestValidatorEpochAssignments_OK(t *testing.T) {
 	validatorServer := &ValidatorServer{
 		beaconDB: db,
 	}
-	var pubKey [96]byte
-	copy(pubKey[:], []byte("0"))
+
 	req := &pb.ValidatorEpochAssignmentsRequest{
 		EpochStart: params.BeaconConfig().GenesisSlot,
 		PublicKey:  pubKey[:],
@@ -157,7 +162,7 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: []byte{'A'},
 	}
-	want := fmt.Sprintf("can't find validator index for public key %#x", req.PublicKey)
+	want := fmt.Sprintf("validator %#x does not exist", req.PublicKey)
 	if _, err := vs.NextEpochCommitteeAssignment(context.Background(), req); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
@@ -177,13 +182,20 @@ func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
 	if err := db.UpdateChainHead(genesis, state); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
+
+	var pubKey [96]byte
+	for i := 0; i < int(params.BeaconConfig().DepositsForChainStart); i++ {
+		copy(pubKey[:], strconv.Itoa(i))
+		if err := db.SaveValidatorIndex(pubKey[:], 0); err != nil {
+			t.Fatalf("Could not save validator index: %v", err)
+		}
+	}
+
 	vs := &ValidatorServer{
 		beaconDB: db,
 	}
 
 	// Test the first validator in registry.
-	var pubKey [96]byte
-	copy(pubKey[:], []byte(strconv.Itoa(0)))
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey[:],
 	}
