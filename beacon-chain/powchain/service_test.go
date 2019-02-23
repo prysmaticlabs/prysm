@@ -92,10 +92,6 @@ func (g *goodFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethT
 }
 
 func (g *goodFetcher) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
-	if number.Cmp(big.NewInt(0)) < 0 {
-		return nil, fmt.Errorf("cannot put block number lower than 0. Received %v", number)
-	}
-
 	block := gethTypes.NewBlock(
 		&gethTypes.Header{
 			Number: big.NewInt(0),

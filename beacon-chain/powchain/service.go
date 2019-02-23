@@ -207,7 +207,7 @@ func (w *Web3Service) LatestBlockHash() common.Hash {
 	return w.blockHash
 }
 
-// BlockExists returns a bool if the block exists, it's height and any possible error encountered.
+// BlockExists returns true if the block exists, it's height and any possible error encountered.
 func (w *Web3Service) BlockExists(hash common.Hash) (bool, *big.Int, error) {
 	header, err := w.blockFetcher.BlockByHash(w.ctx, hash)
 	if err != nil {
@@ -221,7 +221,7 @@ func (w *Web3Service) BlockExists(hash common.Hash) (bool, *big.Int, error) {
 func (w *Web3Service) BlockHashByHeight(height *big.Int) (common.Hash, error) {
 	block, err := w.blockFetcher.BlockByNumber(w.ctx, height)
 	if err != nil {
-		return [32]byte{}, fmt.Errorf("could not query block with given height: %v", err)
+		return nil, fmt.Errorf("could not query block with given height: %v", err)
 	}
 
 	return block.Hash(), nil
