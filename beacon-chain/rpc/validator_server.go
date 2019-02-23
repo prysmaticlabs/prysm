@@ -22,18 +22,12 @@ type ValidatorServer struct {
 // ValidatorIndex is called by a validator to get its index location that corresponds
 // to the attestation bit fields.
 func (vs *ValidatorServer) ValidatorIndex(ctx context.Context, req *pb.ValidatorIndexRequest) (*pb.ValidatorIndexResponse, error) {
-	beaconState, err := vs.beaconDB.State()
-	if err != nil {
-		return nil, fmt.Errorf("could not get beacon state: %v", err)
-	}
-	index, err := v.ValidatorIdx(
-		req.PublicKey,
-		beaconState.ValidatorRegistry,
-	)
+	index, err := vs.beaconDB.ValidatorIndex(req.PublicKey)
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator index: %v", err)
 	}
-	return &pb.ValidatorIndexResponse{Index: index}, nil
+
+	return &pb.ValidatorIndexResponse{Index: uint64(index)}, nil
 }
 
 // ValidatorEpochAssignments fetches an assignment object for a validator by public key

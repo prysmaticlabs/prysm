@@ -22,27 +22,17 @@ func TestValidatorIndex_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
-	genesis := b.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(genesis); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
-	}
-
-	state, err := genesisState(1)
-	if err != nil {
-		t.Fatalf("Could not setup genesis state: %v", err)
-	}
-
-	if err := db.UpdateChainHead(genesis, state); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
+	pubKey := []byte(strconv.Itoa(0))
+	if err := db.SaveValidatorIndex(pubKey, 0); err != nil {
+		t.Fatalf("Could not save validator index: %v", err)
 	}
 
 	validatorServer := &ValidatorServer{
 		beaconDB: db,
 	}
-	var pubKey [96]byte
-	copy(pubKey[:], []byte(strconv.Itoa(0)))
+
 	req := &pb.ValidatorIndexRequest{
-		PublicKey: pubKey[:],
+		PublicKey: pubKey,
 	}
 	if _, err := validatorServer.ValidatorIndex(context.Background(), req); err != nil {
 		t.Errorf("Could not get validator index: %v", err)
