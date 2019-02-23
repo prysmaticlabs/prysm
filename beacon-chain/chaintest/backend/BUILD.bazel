@@ -5,13 +5,12 @@ go_library(
     srcs = [
         "fork_choice_test_format.go",
         "helpers.go",
-        "setup_db.go",
         "shuffle_test_format.go",
         "simulated_backend.go",
         "state_test_format.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend",
-    visibility = ["//beacon-chain/chaintest:__subpackages__"],
+    visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
@@ -36,7 +35,7 @@ go_test(
     srcs = ["simulated_backend_test.go"],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/db:go_default_library",
         "//shared/params:go_default_library",
-        "//shared/trieutil:go_default_library",
     ],
 )
