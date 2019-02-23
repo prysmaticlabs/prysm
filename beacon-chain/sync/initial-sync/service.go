@@ -144,7 +144,7 @@ func (s *InitialSync) Stop() error {
 }
 
 // InitializeObservedSlot sets the highest observed slot.
-func (s *InitialSync) HighestObservedSlot(slot uint64) {
+func (s *InitialSync) InitializeObservedSlot(slot uint64) {
 	s.highestObservedSlot = slot
 }
 

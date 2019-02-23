@@ -17,7 +17,7 @@ import (
 func NotSyncQuerierConfig() *QuerierConfig {
 	return &QuerierConfig{
 		ResponseBufferSize: 100,
-		CurentHeadSlot:     10,
+		CurrentHeadSlot:    10,
 	}
 }
 
