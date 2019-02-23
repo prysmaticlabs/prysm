@@ -4,10 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/event"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 )
@@ -24,8 +23,8 @@ type QuerierConfig struct {
 	ResponseBufferSize int
 	P2P                p2pAPI
 	BeaconDB           *db.BeaconDB
-	CurentHeadSlot     uint64
 	PowChain           powChainService
+	CurrentHeadSlot    uint64
 }
 
 // DefaultQuerierConfig provides the default configuration for a sync service.
@@ -66,7 +65,7 @@ func NewQuerierService(ctx context.Context,
 		p2p:            cfg.P2P,
 		db:             cfg.BeaconDB,
 		responseBuf:    responseBuf,
-		curentHeadSlot: cfg.CurentHeadSlot,
+		curentHeadSlot: cfg.CurrentHeadSlot,
 		chainStarted:   false,
 		powchain:       cfg.PowChain,
 		chainStartBuf:  make(chan time.Time, 1),
@@ -114,6 +113,7 @@ func (q *Querier) listenForChainStart() {
 }
 
 func (q *Querier) run() {
+
 	responseSub := q.p2p.Subscribe(&pb.ChainHeadResponse{}, q.responseBuf)
 
 	// Ticker so that service will keep on requesting for chain head
@@ -171,5 +171,4 @@ func (q *Querier) IsSynced() (bool, error) {
 	}
 
 	return false, err
-
 }

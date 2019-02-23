@@ -5,19 +5,16 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/ssz"
-
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
-
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
-func TestAttestHead(t *testing.T) {
+func TestAttestHead_OK(t *testing.T) {
 	mockOperationService := &mockOperationService{}
 	attesterServer := &AttesterServer{
 		operationService: mockOperationService,
@@ -95,7 +92,7 @@ func TestAttestationInfoAtSlot_JustifiedBlockFailure(t *testing.T) {
 	}
 }
 
-func TestAttestationInfoAtSlot_Ok(t *testing.T) {
+func TestAttestationInfoAtSlot_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	block := &pbp2p.BeaconBlock{

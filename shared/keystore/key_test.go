@@ -63,8 +63,8 @@ func TestStoreRandomKey(t *testing.T) {
 	if err := os.RemoveAll(filedir); err != nil {
 		t.Errorf("unable to remove temporary files %v", err)
 	}
-
 }
+
 func TestNewKeyFromBLS(t *testing.T) {
 	b := []byte("hi")
 	b32 := bytesutil.ToBytes32(b)
@@ -88,7 +88,6 @@ func TestNewKeyFromBLS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("random key unable to be generated: %v", err)
 	}
-
 }
 
 func TestWriteFile(t *testing.T) {

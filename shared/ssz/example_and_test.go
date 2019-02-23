@@ -68,7 +68,7 @@ func (e *exampleStruct2) TreeHashSSZ() ([32]byte, error) {
 	})
 }
 
-func TestEncodeDecodeExampleStruct1(t *testing.T) {
+func TestEncodeDecode_Struct1(t *testing.T) {
 	var err error
 	e1 := &exampleStruct1{
 		Field1: 10,
@@ -107,7 +107,7 @@ func TestEncodeDecodeExampleStruct1(t *testing.T) {
 	}
 }
 
-func TestEncodeDecodeExampleStruct2(t *testing.T) {
+func TestEncodeDecode_Struct2(t *testing.T) {
 	var err error
 	e1 := &exampleStruct2{
 		Field1: 10,

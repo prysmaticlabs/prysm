@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestSlotToEpoch(t *testing.T) {
+func TestSlotToEpoch_OK(t *testing.T) {
 	tests := []struct {
 		slot  uint64
 		epoch uint64
@@ -25,7 +25,7 @@ func TestSlotToEpoch(t *testing.T) {
 	}
 }
 
-func TestCurrentEpoch(t *testing.T) {
+func TestCurrentEpoch_OK(t *testing.T) {
 	tests := []struct {
 		slot  uint64
 		epoch uint64
@@ -44,7 +44,7 @@ func TestCurrentEpoch(t *testing.T) {
 	}
 }
 
-func TestPrevEpoch(t *testing.T) {
+func TestPrevEpoch_OK(t *testing.T) {
 	tests := []struct {
 		slot  uint64
 		epoch uint64
@@ -63,7 +63,7 @@ func TestPrevEpoch(t *testing.T) {
 	}
 }
 
-func TestNextEpoch(t *testing.T) {
+func TestNextEpoch_OK(t *testing.T) {
 	tests := []struct {
 		slot  uint64
 		epoch uint64
@@ -82,7 +82,7 @@ func TestNextEpoch(t *testing.T) {
 	}
 }
 
-func TestEpochStartSlot(t *testing.T) {
+func TestEpochStartSlot_OK(t *testing.T) {
 	tests := []struct {
 		epoch     uint64
 		startSlot uint64
@@ -99,7 +99,7 @@ func TestEpochStartSlot(t *testing.T) {
 	}
 }
 
-func TestAttestationCurrentEpoch(t *testing.T) {
+func TestAttestationCurrentEpoch_OK(t *testing.T) {
 	tests := []struct {
 		slot  uint64
 		epoch uint64

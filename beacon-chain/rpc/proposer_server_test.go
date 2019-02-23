@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestProposeBlock(t *testing.T) {
+func TestProposeBlock_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	mockChain := &mockChainService{}
@@ -65,7 +65,7 @@ func TestProposeBlock(t *testing.T) {
 	}
 }
 
-func TestComputeStateRoot(t *testing.T) {
+func TestComputeStateRoot_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
@@ -123,7 +123,7 @@ func TestComputeStateRoot(t *testing.T) {
 	_, _ = proposerServer.ComputeStateRoot(context.Background(), req)
 }
 
-func TestPendingAttestations_Ok(t *testing.T) {
+func TestPendingAttestations_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	proposerServer := &ProposerServer{
