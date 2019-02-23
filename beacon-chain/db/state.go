@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/ssz"
@@ -34,6 +35,7 @@ func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit) 
 
 	return db.update(func(tx *bolt.Tx) error {
 		blockBkt := tx.Bucket(blockBucket)
+		validatorBkt := tx.Bucket(validatorBucket)
 		mainChain := tx.Bucket(mainChainBucket)
 		chainInfo := tx.Bucket(chainInfoBucket)
 
@@ -50,7 +52,7 @@ func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit) 
 		}
 
 		for i, validator := range beaconState.ValidatorRegistry {
-			if err := db.SaveValidatorIndex(validator.Pubkey, i); err != nil {
+			if err := validatorBkt.Put(validator.Pubkey, []byte(strconv.Itoa(i))); err != nil {
 				return err
 			}
 		}
