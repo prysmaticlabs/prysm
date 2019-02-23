@@ -951,22 +951,6 @@ func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 	}
 }
 
-func TestBlockHashByHeight_NegativeSlot(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
-		Endpoint:     endpoint,
-		BlockFetcher: &goodFetcher{},
-	})
-	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
-	}
-
-	_, err = web3Service.BlockHashByHeight(big.NewInt(-1))
-	if err == nil {
-		t.Fatal("Expected BlockHashByHeight to error with negative slot")
-	}
-}
-
 func TestBlockExists_ValidHash(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{

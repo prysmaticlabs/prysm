@@ -209,19 +209,19 @@ func (w *Web3Service) LatestBlockHash() common.Hash {
 
 // BlockExists returns true if the block exists, it's height and any possible error encountered.
 func (w *Web3Service) BlockExists(hash common.Hash) (bool, *big.Int, error) {
-	header, err := w.blockFetcher.BlockByHash(w.ctx, hash)
+	block, err := w.blockFetcher.BlockByHash(w.ctx, hash)
 	if err != nil {
 		return false, big.NewInt(0), fmt.Errorf("could not query block with given hash: %v", err)
 	}
 
-	return true, header.Number(), nil
+	return true, block.Number(), nil
 }
 
 // BlockHashByHeight returns the block hash of the block at the given height.
 func (w *Web3Service) BlockHashByHeight(height *big.Int) (common.Hash, error) {
 	block, err := w.blockFetcher.BlockByNumber(w.ctx, height)
 	if err != nil {
-		return nil, fmt.Errorf("could not query block with given height: %v", err)
+		return [32]byte{}, fmt.Errorf("could not query block with given height: %v", err)
 	}
 
 	return block.Hash(), nil
