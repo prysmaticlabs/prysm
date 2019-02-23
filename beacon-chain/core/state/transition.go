@@ -132,7 +132,6 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock, verifySignatures
 	if err != nil {
 		return nil, fmt.Errorf("could not process block attestations: %v", err)
 	}
-	log.WithField("state.LatestAttestations", fmt.Sprintf("%v", state.LatestAttestations)).Infof("Post-block attestation processing")
 
 	state, err = b.ProcessValidatorDeposits(state, block)
 	if err != nil {
