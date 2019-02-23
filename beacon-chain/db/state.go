@@ -52,7 +52,8 @@ func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit) 
 		}
 
 		for i, validator := range beaconState.ValidatorRegistry {
-			if err := validatorBkt.Put(validator.Pubkey, []byte(strconv.Itoa(i))); err != nil {
+			h := hashutil.Hash(validator.Pubkey)
+			if err := validatorBkt.Put(h[:], []byte(strconv.Itoa(i))); err != nil {
 				return err
 			}
 		}

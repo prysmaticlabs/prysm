@@ -48,9 +48,9 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
-	validatorIndex, err := v.ValidatorIdx(req.PublicKey, beaconState.ValidatorRegistry)
+	validatorIndex, err := vs.beaconDB.ValidatorIndex(req.PublicKey)
 	if err != nil {
-		return nil, fmt.Errorf("could not get active validator index: %v", err)
+		return nil, fmt.Errorf("could not get validator index: %v", err)
 	}
 	var shard uint64
 	var attesterSlot uint64
@@ -65,12 +65,12 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 		if err != nil {
 			return nil, err
 		}
-		if proposerIndex == validatorIndex {
+		if proposerIndex == uint64(validatorIndex) {
 			proposerSlot = slot
 		}
 		for _, committee := range crossLinkCommittees {
 			for _, idx := range committee.Committee {
-				if idx == validatorIndex {
+				if idx == uint64(validatorIndex) {
 					attesterSlot = slot
 					shard = committee.Shard
 				}
