@@ -54,6 +54,15 @@ func (m *mockClient) BlockByHash(ctx context.Context, hash common.Hash) (*gethTy
 	return gethTypes.NewBlockWithHeader(head), nil
 }
 
+func (m *mockClient) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
+	head := &gethTypes.Header{Number: big.NewInt(0), Difficulty: big.NewInt(100)}
+	return gethTypes.NewBlockWithHeader(head), nil
+}
+
+func (m *mockClient) HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error) {
+	return &gethTypes.Header{Number: big.NewInt(0), Difficulty: big.NewInt(100)}, nil
+}
+
 func (m *mockClient) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- gethTypes.Log) (ethereum.Subscription, error) {
 	return new(event.Feed).Subscribe(ch), nil
 }
@@ -83,10 +92,6 @@ func (m *mockClient) LatestBlockHash() common.Hash {
 	return common.BytesToHash([]byte{'A'})
 }
 
-func (m *mockClient) HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error) {
-	return nil, nil
-}
-
 type faultyClient struct{}
 
 func (f *faultyClient) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {
@@ -94,6 +99,14 @@ func (f *faultyClient) SubscribeNewHead(ctx context.Context, ch chan<- *gethType
 }
 
 func (f *faultyClient) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
+	return nil, errors.New("failed")
+}
+
+func (f *faultyClient) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
+	return nil, errors.New("failed")
+}
+
+func (f *faultyClient) HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error) {
 	return nil, errors.New("failed")
 }
 
@@ -116,11 +129,6 @@ func (f *faultyClient) CodeAt(ctx context.Context, account common.Address, block
 func (f *faultyClient) LatestBlockHash() common.Hash {
 	return common.BytesToHash([]byte{'A'})
 }
-
-func (f *faultyClient) HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error) {
-	return nil, nil
-}
-
 func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.SecretKey) {
 	privKeys := make([]*bls.SecretKey, numDeposits)
 	deposits := make([]*pb.Deposit, numDeposits)

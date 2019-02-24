@@ -347,5 +347,8 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	// Clean up processed attestations.
 	state = e.CleanupAttestations(state)
 	log.Info("Epoch transition successfully processed slot %d", state.Slot)
+
+	// Report interesting metrics.
+	reportEpochTransitionMetrics(state)
 	return state, nil
 }
