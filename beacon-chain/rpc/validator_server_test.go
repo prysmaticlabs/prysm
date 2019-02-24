@@ -2,14 +2,15 @@ package rpc
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -182,10 +183,10 @@ func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
-	var pubKey [96]byte
 	for i := 0; i < int(params.BeaconConfig().DepositsForChainStart); i++ {
-		copy(pubKey[:], strconv.Itoa(i))
-		if err := db.SaveValidatorIndex(pubKey[:], 0); err != nil {
+		pubKeyBuf := make([]byte, binary.MaxVarintLen64)
+		n := binary.PutUvarint(pubKeyBuf, uint64(i))
+		if err := db.SaveValidatorIndex(pubKeyBuf[:n], i); err != nil {
 			t.Fatalf("Could not save validator index: %v", err)
 		}
 	}
@@ -194,9 +195,11 @@ func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
 		beaconDB: db,
 	}
 
+	pubKeyBuf := make([]byte, binary.MaxVarintLen64)
+	n := binary.PutUvarint(pubKeyBuf, 0)
 	// Test the first validator in registry.
 	req := &pb.ValidatorIndexRequest{
-		PublicKey: pubKey[:],
+		PublicKey: pubKeyBuf[:n],
 	}
 	res, err := vs.NextEpochCommitteeAssignment(context.Background(), req)
 	if err != nil {
@@ -212,10 +215,11 @@ func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
 	}
 
 	// Test the last validator in registry.
-	lastValidatorIndex := int(params.BeaconConfig().DepositsForChainStart - 1)
-	copy(pubKey[:], []byte(strconv.Itoa(lastValidatorIndex)))
+	lastValidatorIndex := params.BeaconConfig().DepositsForChainStart - 1
+	pubKeyBuf = make([]byte, binary.MaxVarintLen64)
+	n = binary.PutUvarint(pubKeyBuf, lastValidatorIndex)
 	req = &pb.ValidatorIndexRequest{
-		PublicKey: pubKey[:],
+		PublicKey: pubKeyBuf[:n],
 	}
 	res, err = vs.NextEpochCommitteeAssignment(context.Background(), req)
 	if err != nil {
