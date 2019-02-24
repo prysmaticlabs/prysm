@@ -90,7 +90,6 @@ type InitialSync struct {
 	currentSlot                    uint64
 	highestObservedSlot            uint64
 	syncPollingInterval            time.Duration
-	genesisStateRootHash32         [32]byte
 	inMemoryBlocks                 map[uint64]*pb.BeaconBlock
 	syncedFeed                     *event.Feed
 	noGenesis                      bool
@@ -245,14 +244,14 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 				continue
 			}
 
+			if err := s.db.SaveState(beaconState); err != nil {
+				log.Errorf("Unable to set beacon state for initial sync %v", err)
+			}
+
 			h, err := ssz.TreeHash(beaconState)
 			if err != nil {
 				log.Error(err)
 				continue
-			}
-
-			if err := s.db.SaveState(beaconState); err != nil {
-				log.Errorf("Unable to set beacon state for initial sync %v", err)
 			}
 
 			if h == s.stateRootOfHighestObservedSlot {
@@ -265,7 +264,6 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 			log.Debugf("Successfully saved crystallized state with the last finalized slot: %d", beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch)
 
 			s.requestNextBlockBySlot(s.currentSlot + 1)
-			beaconStateSub.Unsubscribe()
 
 		case msg := <-s.batchedBlockBuf:
 			s.processBatchedBlocks(msg)
@@ -303,36 +301,18 @@ func (s *InitialSync) checkInMemoryBlocks() {
 func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 	if block.Slot > s.highestObservedSlot {
 		s.highestObservedSlot = block.Slot
+		s.stateRootOfHighestObservedSlot = bytesutil.ToBytes32(block.StateRootHash32)
 	}
 
 	if block.Slot < s.currentSlot {
 		return
 	}
 
-	// setting first block for sync.
-	if s.currentSlot == params.BeaconConfig().GenesisSlot {
-		if s.genesisStateRootHash32 != [32]byte{} {
-			log.Errorf("State root hash %#x set despite current slot being 0", s.genesisStateRootHash32)
-			return
-		}
-
-		if block.Slot != params.BeaconConfig().GenesisSlot+1 {
-
-			// saves block in memory if it isn't the genesis block.
-			if _, ok := s.inMemoryBlocks[block.Slot]; !ok {
-				s.inMemoryBlocks[block.Slot] = block
-			}
-			s.requestNextBlockBySlot(params.BeaconConfig().GenesisSlot + 1)
-			return
-		}
-
-		if err := s.setBlockForInitialSync(block); err != nil {
-			log.Errorf("Could not set block for initial sync: %v", err)
-		}
+	// requesting beacon state if there is no saved state.
+	if s.noGenesis {
 		if err := s.requestStateFromPeer(block.StateRootHash32, peer); err != nil {
 			log.Errorf("Could not request beacon state from peer: %v", err)
 		}
-
 		return
 	}
 	// if it isn't the block in the next slot it saves it in memory.
@@ -369,25 +349,6 @@ func (s *InitialSync) processBatchedBlocks(msg p2p.Message) {
 func (s *InitialSync) requestStateFromPeer(stateRoot []byte, peer p2p.Peer) error {
 	log.Debugf("Successfully processed incoming block with state hash: %#x", stateRoot)
 	s.p2p.Send(&pb.BeaconStateRequest{Hash: stateRoot}, peer)
-	return nil
-}
-
-// setBlockForInitialSync sets the first received block as the base finalized
-// block for initial sync.
-func (s *InitialSync) setBlockForInitialSync(block *pb.BeaconBlock) error {
-	root, err := ssz.TreeHash(block)
-	if err != nil {
-		return err
-	}
-	log.WithField("blockRoot", fmt.Sprintf("%#x", root)).Debug("Beacon state hash exists locally")
-
-	s.chainService.IncomingBlockFeed().Send(block)
-
-	s.genesisStateRootHash32 = bytesutil.ToBytes32(block.StateRootHash32)
-
-	log.Infof("Saved block with root %#x for initial sync", root)
-	s.currentSlot = block.Slot
-	s.requestNextBlockBySlot(s.currentSlot + 1)
 	return nil
 }
 
