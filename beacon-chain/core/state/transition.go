@@ -218,7 +218,6 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not get prev boundary attestations: %v", err)
 	}
-	log.Infof("Previous epoch boundary attestations: %v", prevEpochBoundaryAttestations)
 
 	prevEpochBoundaryAttesterIndices, err := v.ValidatorIndices(state, prevEpochBoundaryAttestations)
 	if err != nil {

@@ -138,6 +138,7 @@ func ProcessJustification(
 //		state.previous_justified_epoch == slot_to_epoch(state.slot) - 4 and state.justification_bitfield % 16 in (15, 14)
 func ProcessFinalization(state *pb.BeaconState) *pb.BeaconState {
 
+	log.Infof("Processing finality, justification bitfield: %v", state.JustificationBitfield)
 	if state.PreviousJustifiedEpoch == helpers.CurrentEpoch(state)-2 &&
 		state.JustificationBitfield%4 == 3 {
 		state.FinalizedEpoch = state.JustifiedEpoch
