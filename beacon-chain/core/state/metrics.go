@@ -1,7 +1,7 @@
 package state
 
 import (
-	"fmt"
+	"encoding/hex"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -21,7 +21,7 @@ func reportEpochTransitionMetrics(state *pb.BeaconState) {
 	// Validator balances
 	for i, bal := range state.ValidatorBalances {
 		validatorBalancesGauge.WithLabelValues(
-			fmt.Sprintf("%#x", state.ValidatorRegistry[i].Pubkey), // Validator
+			"0x" + hex.EncodeToString(state.ValidatorRegistry[i].Pubkey), // Validator
 		).Set(float64(bal))
 	}
 }
