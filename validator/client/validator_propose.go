@@ -7,14 +7,12 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/forkutils"
-	"github.com/prysmaticlabs/prysm/shared/params"
-
-	"github.com/opentracing/opentracing-go"
-
 	ptypes "github.com/gogo/protobuf/types"
+	"github.com/opentracing/opentracing-go"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/forkutils"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 

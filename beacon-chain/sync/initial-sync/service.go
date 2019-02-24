@@ -16,8 +16,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/ssz"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -25,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/sirupsen/logrus"
 )
 
@@ -93,6 +92,7 @@ type InitialSync struct {
 	syncPollingInterval    time.Duration
 	genesisStateRootHash32 [32]byte
 	inMemoryBlocks         map[uint64]*pb.BeaconBlock
+	syncedFeed             *event.Feed
 }
 
 // NewInitialSyncService constructs a new InitialSyncService.
@@ -122,6 +122,7 @@ func NewInitialSyncService(ctx context.Context,
 		blockAnnounceBuf:    blockAnnounceBuf,
 		syncPollingInterval: cfg.SyncPollingInterval,
 		inMemoryBlocks:      map[uint64]*pb.BeaconBlock{},
+		syncedFeed:          new(event.Feed),
 	}
 }
 
@@ -140,6 +141,16 @@ func (s *InitialSync) Stop() error {
 	log.Info("Stopping service")
 	s.cancel()
 	return nil
+}
+
+// InitializeObservedSlot sets the highest observed slot.
+func (s *InitialSync) InitializeObservedSlot(slot uint64) {
+	s.highestObservedSlot = slot
+}
+
+// SyncedFeed returns a feed which fires a message once the node is synced
+func (s *InitialSync) SyncedFeed() *event.Feed {
+	return s.syncedFeed
 }
 
 // run is the main goroutine for the initial sync service.
@@ -168,10 +179,12 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 			return
 		case <-delayChan:
 			if s.currentSlot == params.BeaconConfig().GenesisSlot {
+				s.requestBatchedBlocks(s.highestObservedSlot)
 				continue
 			}
 			if s.highestObservedSlot == s.currentSlot {
 				log.Info("Exiting initial sync and starting normal sync")
+				s.syncedFeed.Send(s.currentSlot)
 				s.syncService.ResumeSync()
 				return
 			}

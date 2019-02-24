@@ -9,13 +9,11 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 var log = logrus.WithField("prefix", "core/blocks")

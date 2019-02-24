@@ -10,6 +10,7 @@ go_library(
         "db.go",
         "pending_deposits.go",
         "schema.go",
+        "setup_db.go",
         "state.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/db",

@@ -8,15 +8,11 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-
-	"github.com/opentracing/opentracing-go"
-
-	"github.com/prysmaticlabs/prysm/shared/keystore"
-
 	ptypes "github.com/gogo/protobuf/types"
-
+	"github.com/opentracing/opentracing-go"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
