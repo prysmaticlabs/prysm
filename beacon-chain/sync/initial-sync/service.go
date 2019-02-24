@@ -195,7 +195,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 			log.Debug("Exiting goroutine")
 			return
 		case <-delayChan:
-			if s.currentSlot == params.BeaconConfig().GenesisSlot {
+			if s.noGenesis {
 				s.requestBatchedBlocks(s.highestObservedSlot)
 				continue
 			}
@@ -396,6 +396,10 @@ func (s *InitialSync) requestNextBlockBySlot(slotNumber uint64) {
 // requestBatchedBlocks sends out a request for multiple blocks till a
 // specified bound slot number.
 func (s *InitialSync) requestBatchedBlocks(endSlot uint64) {
+	blockLimit := params.BeaconConfig().BatchBlockLimit
+	if s.currentSlot+blockLimit < endSlot {
+		endSlot = s.currentSlot + blockLimit
+	}
 	log.Debugf("Requesting batched blocks from slot %d to %d", s.currentSlot+1, endSlot)
 	s.p2p.Broadcast(&pb.BatchedBeaconBlockRequest{
 		StartSlot: s.currentSlot + 1,
