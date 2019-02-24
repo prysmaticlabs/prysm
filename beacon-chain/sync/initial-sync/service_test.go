@@ -6,8 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/ssz"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -16,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -55,7 +54,7 @@ func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
 	return &event.Feed{}
 }
 
-func TestSetBlockForInitialSync(t *testing.T) {
+func TestSetBlock_InitialSync(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -114,7 +113,7 @@ func TestSetBlockForInitialSync(t *testing.T) {
 	hook.Reset()
 }
 
-func TestSavingBlocksInSync(t *testing.T) {
+func TestSavingBlock_InSync(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -238,7 +237,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 	hook.Reset()
 }
 
-func TestDelayChan(t *testing.T) {
+func TestDelayChan_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -323,7 +322,7 @@ func TestDelayChan(t *testing.T) {
 	hook.Reset()
 }
 
-func TestRequestBlocksBySlot(t *testing.T) {
+func TestRequestBlocksBySlot_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)

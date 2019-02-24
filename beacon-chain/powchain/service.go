@@ -54,6 +54,7 @@ type Reader interface {
 // POWBlockFetcher defines a struct that can retrieve mainchain blocks.
 type POWBlockFetcher interface {
 	BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
+	BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error)
 	HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error)
 }
 
@@ -83,7 +84,7 @@ type Web3Service struct {
 	reader                  Reader
 	logger                  bind.ContractFilterer
 	blockFetcher            POWBlockFetcher
-	blockNumber             *big.Int    // the latest ETH1.0 chain blockNumber.
+	blockHeight             *big.Int    // the latest ETH1.0 chain blockHeight.
 	blockHash               common.Hash // the latest ETH1.0 chain blockHash.
 	depositContractCaller   *contracts.DepositContractCaller
 	depositRoot             []byte
@@ -135,7 +136,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		cancel:                  cancel,
 		headerChan:              make(chan *gethTypes.Header),
 		endpoint:                config.Endpoint,
-		blockNumber:             nil,
+		blockHeight:             nil,
 		blockHash:               common.BytesToHash([]byte{}),
 		depositContractAddress:  config.DepositContract,
 		chainStartFeed:          new(event.Feed),
@@ -190,14 +191,40 @@ func (w *Web3Service) Status() error {
 	return nil
 }
 
-// LatestBlockNumber in the ETH1.0 chain.
-func (w *Web3Service) LatestBlockNumber() *big.Int {
-	return w.blockNumber
+// DepositRoot returns the Merkle root of the latest deposit trie
+// from the ETH1.0 deposit contract.
+func (w *Web3Service) DepositRoot() [32]byte {
+	return w.depositTrie.Root()
+}
+
+// LatestBlockHeight in the ETH1.0 chain.
+func (w *Web3Service) LatestBlockHeight() *big.Int {
+	return w.blockHeight
 }
 
 // LatestBlockHash in the ETH1.0 chain.
 func (w *Web3Service) LatestBlockHash() common.Hash {
 	return w.blockHash
+}
+
+// BlockExists returns true if the block exists, it's height and any possible error encountered.
+func (w *Web3Service) BlockExists(hash common.Hash) (bool, *big.Int, error) {
+	block, err := w.blockFetcher.BlockByHash(w.ctx, hash)
+	if err != nil {
+		return false, big.NewInt(0), fmt.Errorf("could not query block with given hash: %v", err)
+	}
+
+	return true, block.Number(), nil
+}
+
+// BlockHashByHeight returns the block hash of the block at the given height.
+func (w *Web3Service) BlockHashByHeight(height *big.Int) (common.Hash, error) {
+	block, err := w.blockFetcher.BlockByNumber(w.ctx, height)
+	if err != nil {
+		return [32]byte{}, fmt.Errorf("could not query block with given height: %v", err)
+	}
+
+	return block.Hash(), nil
 }
 
 // Client for interacting with the ETH1.0 chain.
@@ -355,7 +382,7 @@ func (w *Web3Service) run(done <-chan struct{}) {
 		return
 	}
 
-	w.blockNumber = header.Number
+	w.blockHeight = header.Number
 	w.blockHash = header.Hash()
 
 	// Only process logs if the chain start delay flag is not enabled.
@@ -380,14 +407,14 @@ func (w *Web3Service) run(done <-chan struct{}) {
 			return
 		case header := <-w.headerChan:
 			blockNumberGauge.Set(float64(header.Number.Int64()))
-			w.blockNumber = header.Number
+			w.blockHeight = header.Number
 			w.blockHash = header.Hash()
 			log.WithFields(logrus.Fields{
-				"blockNumber": w.blockNumber,
+				"blockNumber": w.blockHeight,
 				"blockHash":   w.blockHash.Hex(),
 			}).Debug("Latest web3 chain event")
 		case <-ticker.C:
-			if w.lastRequestedBlock.Cmp(w.blockNumber) == 0 {
+			if w.lastRequestedBlock.Cmp(w.blockHeight) == 0 {
 				continue
 			}
 			if err := w.requestBatchedLogs(); err != nil {
@@ -436,7 +463,7 @@ func (w *Web3Service) processPastLogs() error {
 	for _, log := range logs {
 		w.ProcessLog(log)
 	}
-	w.lastRequestedBlock.Set(w.blockNumber)
+	w.lastRequestedBlock.Set(w.blockHeight)
 	return nil
 }
 
@@ -446,7 +473,7 @@ func (w *Web3Service) requestBatchedLogs() error {
 
 	// We request for the nth block behind the current head, in order to have
 	// stabilised logs when we retrieve it from the 1.0 chain.
-	requestedBlock := big.NewInt(0).Sub(w.blockNumber, big.NewInt(params.BeaconConfig().LogBlockDelay))
+	requestedBlock := big.NewInt(0).Sub(w.blockHeight, big.NewInt(params.BeaconConfig().LogBlockDelay))
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
 			w.depositContractAddress,

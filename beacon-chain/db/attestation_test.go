@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
-func TestSaveAndRetrieveAttestation(t *testing.T) {
+func TestSaveAndRetrieveAttestation_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
@@ -48,7 +48,7 @@ func TestSaveAndRetrieveAttestation(t *testing.T) {
 	}
 }
 
-func TestRetrieveAttestations(t *testing.T) {
+func TestRetrieveAttestations_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
@@ -80,7 +80,7 @@ func TestRetrieveAttestations(t *testing.T) {
 	}
 }
 
-func TestDeleteAttestation(t *testing.T) {
+func TestDeleteAttestation_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
@@ -117,7 +117,7 @@ func TestDeleteAttestation(t *testing.T) {
 	}
 }
 
-func TestNilAttestation(t *testing.T) {
+func TestNilAttestation_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
@@ -131,7 +131,7 @@ func TestNilAttestation(t *testing.T) {
 	}
 }
 
-func TestHasAttestation(t *testing.T) {
+func TestHasAttestation_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 

@@ -13,10 +13,10 @@ func TestMerkleRoot(t *testing.T) {
 		{'d'},
 	}
 
-	hashedV1 := Hash([]byte{'a'})
-	hashedV2 := Hash([]byte{'b'})
-	hashedV3 := Hash([]byte{'c'})
-	hashedV4 := Hash([]byte{'d'})
+	hashedV1 := []byte{'a'}
+	hashedV2 := []byte{'b'}
+	hashedV3 := []byte{'c'}
+	hashedV4 := []byte{'d'}
 
 	leftNode := Hash(append(hashedV1[:], hashedV2[:]...))
 	rightNode := Hash(append(hashedV3[:], hashedV4[:]...))

@@ -3,17 +3,15 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"time"
 
-	"github.com/opentracing/opentracing-go"
-
-	"github.com/prysmaticlabs/prysm/shared/keystore"
-
 	ptypes "github.com/gogo/protobuf/types"
-
+	"github.com/opentracing/opentracing-go"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 )
@@ -47,14 +45,13 @@ func (v *validator) Done() {
 // it calls to the beacon node which then verifies the ETH1.0 deposit contract logs to check
 // for the ChainStart log to have been emitted. If so, it starts a ticker based on the ChainStart
 // unix timestamp which will be used to keep track of time within the validator client.
-func (v *validator) WaitForChainStart(ctx context.Context) {
+func (v *validator) WaitForChainStart(ctx context.Context) error {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.WaitForChainStart")
 	defer span.Finish()
 	// First, check if the beacon chain has started.
 	stream, err := v.beaconClient.WaitForChainStart(ctx, &ptypes.Empty{})
 	if err != nil {
-		log.Errorf("Could not setup beacon chain ChainStart streaming client: %v", err)
-		return
+		return fmt.Errorf("could not setup beacon chain ChainStart streaming client: %v", err)
 	}
 	for {
 		log.Info("Waiting for beacon chain start log from the ETH 1.0 deposit contract...")
@@ -65,12 +62,10 @@ func (v *validator) WaitForChainStart(ctx context.Context) {
 		}
 		// If context is canceled we stop the loop.
 		if ctx.Err() == context.Canceled {
-			log.Debugf("Context has been canceled so shutting down the loop: %v", ctx.Err())
-			break
+			return fmt.Errorf("context has been canceled so shutting down the loop: %v", ctx.Err())
 		}
 		if err != nil {
-			log.Errorf("Could not receive ChainStart from stream: %v", err)
-			continue
+			return fmt.Errorf("could not receive ChainStart from stream: %v", err)
 		}
 		v.genesisTime = chainStartRes.GenesisTime
 		break
@@ -79,6 +74,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) {
 	// Once the ChainStart log is received, we update the genesis time of the validator client
 	// and begin a slot ticker used to track the current slot the beacon node is in.
 	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
+	return nil
 }
 
 // WaitForActivation checks whether the validator pubkey is in the active

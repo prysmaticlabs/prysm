@@ -6,18 +6,25 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 )
 
 var queryLog = logrus.WithField("prefix", "syncQuerier")
 
+type powChainService interface {
+	HasChainStartLogOccurred() (bool, uint64, error)
+	ChainStartFeed() *event.Feed
+}
+
 // QuerierConfig defines the configurable properties of SyncQuerier.
 type QuerierConfig struct {
 	ResponseBufferSize int
 	P2P                p2pAPI
 	BeaconDB           *db.BeaconDB
-	CurentHeadSlot     uint64
+	PowChain           powChainService
+	CurrentHeadSlot    uint64
 }
 
 // DefaultQuerierConfig provides the default configuration for a sync service.
@@ -38,6 +45,9 @@ type Querier struct {
 	curentHeadSlot  uint64
 	currentHeadHash []byte
 	responseBuf     chan p2p.Message
+	chainStartBuf   chan time.Time
+	powchain        powChainService
+	chainStarted    bool
 }
 
 // NewQuerierService constructs a new Sync Querier Service.
@@ -55,12 +65,24 @@ func NewQuerierService(ctx context.Context,
 		p2p:            cfg.P2P,
 		db:             cfg.BeaconDB,
 		responseBuf:    responseBuf,
-		curentHeadSlot: cfg.CurentHeadSlot,
+		curentHeadSlot: cfg.CurrentHeadSlot,
+		chainStarted:   false,
+		powchain:       cfg.PowChain,
+		chainStartBuf:  make(chan time.Time, 1),
 	}
 }
 
 // Start begins the goroutine.
 func (q *Querier) Start() {
+	hasChainStarted, _, err := q.powchain.HasChainStartLogOccurred()
+	if err != nil {
+		queryLog.Errorf("Unable to get current state of the deposit contract %v", err)
+		return
+	}
+	if !hasChainStarted {
+		q.listenForChainStart()
+		return
+	}
 	q.run()
 }
 
@@ -71,7 +93,27 @@ func (q *Querier) Stop() error {
 	return nil
 }
 
+func (q *Querier) listenForChainStart() {
+
+	sub := q.powchain.ChainStartFeed().Subscribe(q.chainStartBuf)
+	defer sub.Unsubscribe()
+	for {
+		select {
+		case <-q.chainStartBuf:
+			q.chainStarted = true
+			return
+		case <-sub.Err():
+			log.Fatal("Subscriber closed, unable to continue on with sync")
+			return
+		case <-q.ctx.Done():
+			log.Debug("RPC context closed, exiting goroutine")
+			return
+		}
+	}
+}
+
 func (q *Querier) run() {
+
 	responseSub := q.p2p.Subscribe(&pb.ChainHeadResponse{}, q.responseBuf)
 
 	// Ticker so that service will keep on requesting for chain head
@@ -116,6 +158,9 @@ func (q *Querier) RequestLatestHead() {
 // IsSynced checks if the node is cuurently synced with the
 // rest of the network.
 func (q *Querier) IsSynced() (bool, error) {
+	if q.chainStarted {
+		return true, nil
+	}
 	block, err := q.db.ChainHead()
 	if err != nil {
 		return false, err
@@ -126,5 +171,4 @@ func (q *Querier) IsSynced() (bool, error) {
 	}
 
 	return false, err
-
 }

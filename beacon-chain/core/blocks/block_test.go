@@ -6,15 +6,14 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/ssz"
-
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
-func TestGenesisBlock(t *testing.T) {
+func TestGenesisBlock_InitializedCorrectly(t *testing.T) {
 	stateHash := []byte{0}
 	b1 := NewGenesisBlock(stateHash)
 
@@ -42,7 +41,7 @@ func TestGenesisBlock(t *testing.T) {
 	}
 }
 
-func TestBlockRootAtSlot_OK(t *testing.T) {
+func TestBlockRootAtSlot_AccurateBlockRoot(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("epochLength should be 64 for these tests to pass")
 	}
@@ -143,7 +142,7 @@ func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 	}
 }
 
-func TestProcessBlockRoots(t *testing.T) {
+func TestProcessBlockRoots_AccurateMerkleTree(t *testing.T) {
 	state := &pb.BeaconState{}
 
 	state.LatestBlockRootHash32S = make([][]byte, params.BeaconConfig().LatestBlockRootsLength)
@@ -172,7 +171,7 @@ func TestProcessBlockRoots(t *testing.T) {
 	}
 }
 
-func TestBlockChildren(t *testing.T) {
+func TestBlockChildren_Fetches2Children(t *testing.T) {
 	genesisBlock := NewGenesisBlock([]byte{})
 	genesisRoot, err := ssz.TreeHash(genesisBlock)
 	if err != nil {

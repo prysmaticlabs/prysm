@@ -4,13 +4,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/ssz"
-
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
-func TestNilDB(t *testing.T) {
+func TestNilDB_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
@@ -31,7 +30,7 @@ func TestNilDB(t *testing.T) {
 	}
 }
 
-func TestSave(t *testing.T) {
+func TestSave_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
@@ -73,7 +72,7 @@ func TestSave(t *testing.T) {
 	}
 }
 
-func TestBlockBySlotEmptyChain(t *testing.T) {
+func TestBlockBySlotEmptyChain_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
@@ -86,12 +85,12 @@ func TestBlockBySlotEmptyChain(t *testing.T) {
 	}
 }
 
-func TestUpdateChainHeadNoBlock(t *testing.T) {
+func TestUpdateChainHead_NoBlock(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits := setupInitialDeposits(t)
+	deposits, _ := setupInitialDeposits(t, 10)
 	err := db.InitializeState(genesisTime, deposits)
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
@@ -107,12 +106,12 @@ func TestUpdateChainHeadNoBlock(t *testing.T) {
 	}
 }
 
-func TestUpdateChainHead(t *testing.T) {
+func TestUpdateChainHead_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits := setupInitialDeposits(t)
+	deposits, _ := setupInitialDeposits(t, 10)
 	err := db.InitializeState(genesisTime, deposits)
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
@@ -173,12 +172,12 @@ func TestUpdateChainHead(t *testing.T) {
 	}
 }
 
-func TestChainProgress(t *testing.T) {
+func TestChainProgress_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits := setupInitialDeposits(t)
+	deposits, _ := setupInitialDeposits(t, 10)
 	err := db.InitializeState(genesisTime, deposits)
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)

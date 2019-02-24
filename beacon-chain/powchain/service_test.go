@@ -75,7 +75,33 @@ func (g *goodLogger) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]
 type goodFetcher struct{}
 
 func (g *goodFetcher) BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error) {
-	return nil, nil
+	if bytes.Equal(hash.Bytes(), common.BytesToHash([]byte{0}).Bytes()) {
+		return nil, fmt.Errorf("expected block hash to be nonzero %v", hash)
+	}
+
+	block := gethTypes.NewBlock(
+		&gethTypes.Header{
+			Number: big.NewInt(0),
+		},
+		[]*gethTypes.Transaction{},
+		[]*gethTypes.Header{},
+		[]*gethTypes.Receipt{},
+	)
+
+	return block, nil
+}
+
+func (g *goodFetcher) BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error) {
+	block := gethTypes.NewBlock(
+		&gethTypes.Header{
+			Number: big.NewInt(0),
+		},
+		[]*gethTypes.Transaction{},
+		[]*gethTypes.Header{},
+		[]*gethTypes.Receipt{},
+	)
+
+	return block, nil
 }
 
 func (g *goodFetcher) HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error) {
@@ -123,7 +149,7 @@ func setup() (*testAccount, error) {
 		depositsRequired,
 		minDeposit,
 		maxDeposit,
-		false,
+		big.NewInt(1),
 		addr,
 	)
 	if err != nil {
@@ -133,7 +159,7 @@ func setup() (*testAccount, error) {
 	return &testAccount{addr, contract, contractAddr, backend, txOpts}, nil
 }
 
-func TestNewWeb3Service(t *testing.T) {
+func TestNewWeb3Service_OK(t *testing.T) {
 	endpoint := "http://127.0.0.1"
 	ctx := context.Background()
 	var err error
@@ -174,7 +200,7 @@ func TestNewWeb3Service(t *testing.T) {
 	}
 }
 
-func TestStart(t *testing.T) {
+func TestStart_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	endpoint := "ws://127.0.0.1"
@@ -206,7 +232,7 @@ func TestStart(t *testing.T) {
 	web3Service.cancel()
 }
 
-func TestStop(t *testing.T) {
+func TestStop_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	endpoint := "ws://127.0.0.1"
@@ -245,7 +271,7 @@ func TestStop(t *testing.T) {
 	hook.Reset()
 }
 
-func TestInitDataFromContract(t *testing.T) {
+func TestInitDataFromContract_OK(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
@@ -290,7 +316,7 @@ func TestInitDataFromContract(t *testing.T) {
 
 }
 
-func TestSaveInTrie(t *testing.T) {
+func TestSaveInTrie_OK(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
@@ -319,7 +345,7 @@ func TestSaveInTrie(t *testing.T) {
 
 }
 
-func TestBadReader(t *testing.T) {
+func TestWeb3Service_BadReader(t *testing.T) {
 	hook := logTest.NewGlobal()
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
@@ -349,7 +375,7 @@ func TestBadReader(t *testing.T) {
 	hook.Reset()
 }
 
-func TestLatestMainchainInfo(t *testing.T) {
+func TestLatestMainchainInfo_OK(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
@@ -383,8 +409,8 @@ func TestLatestMainchainInfo(t *testing.T) {
 	web3Service.cancel()
 	exitRoutine <- true
 
-	if web3Service.blockNumber.Cmp(header.Number) != 0 {
-		t.Errorf("block number not set, expected %v, got %v", header.Number, web3Service.blockNumber)
+	if web3Service.blockHeight.Cmp(header.Number) != 0 {
+		t.Errorf("block number not set, expected %v, got %v", header.Number, web3Service.blockHeight)
 	}
 
 	if web3Service.blockHash.Hex() != header.Hash().Hex() {
@@ -392,7 +418,7 @@ func TestLatestMainchainInfo(t *testing.T) {
 	}
 }
 
-func TestProcessDepositLog(t *testing.T) {
+func TestProcessDepositLog_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
@@ -584,7 +610,7 @@ func TestProcessDepositLog_SkipDuplicateLog(t *testing.T) {
 	}
 }
 
-func TestUnpackDepositLogs(t *testing.T) {
+func TestUnpackDepositLogData_OK(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
@@ -672,7 +698,7 @@ func TestUnpackDepositLogs(t *testing.T) {
 
 }
 
-func TestProcessChainStartLog(t *testing.T) {
+func TestProcessChainStartLog_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
@@ -767,7 +793,7 @@ func TestProcessChainStartLog(t *testing.T) {
 
 }
 
-func TestUnpackChainStartLogs(t *testing.T) {
+func TestUnpackChainStartLogData_OK(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
@@ -835,7 +861,7 @@ func TestUnpackChainStartLogs(t *testing.T) {
 	}
 }
 
-func TestHasChainStartLogOccurred(t *testing.T) {
+func TestHasChainStartLogOccurred_OK(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
 	if err != nil {
@@ -892,5 +918,83 @@ func TestHasChainStartLogOccurred(t *testing.T) {
 	}
 	if !ok {
 		t.Error("Expected chain start log to have occurred")
+	}
+}
+
+func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
+	endpoint := "ws://127.0.0.1"
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint:     endpoint,
+		BlockFetcher: &goodFetcher{},
+	})
+	if err != nil {
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+
+	block := gethTypes.NewBlock(
+		&gethTypes.Header{
+			Number: big.NewInt(0),
+		},
+		[]*gethTypes.Transaction{},
+		[]*gethTypes.Header{},
+		[]*gethTypes.Receipt{},
+	)
+	wanted := block.Hash()
+
+	hash, err := web3Service.BlockHashByHeight(big.NewInt(0))
+	if err != nil {
+		t.Fatalf("Could not get block hash with given height %v", err)
+	}
+
+	if !bytes.Equal(hash.Bytes(), wanted.Bytes()) {
+		t.Fatalf("Block hash did not equal expected hash, expected: %v, got: %v", wanted, hash)
+	}
+}
+
+func TestBlockExists_ValidHash(t *testing.T) {
+	endpoint := "ws://127.0.0.1"
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint:     endpoint,
+		BlockFetcher: &goodFetcher{},
+	})
+	if err != nil {
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+
+	block := gethTypes.NewBlock(
+		&gethTypes.Header{
+			Number: big.NewInt(0),
+		},
+		[]*gethTypes.Transaction{},
+		[]*gethTypes.Header{},
+		[]*gethTypes.Receipt{},
+	)
+
+	exists, height, err := web3Service.BlockExists(block.Hash())
+	if err != nil {
+		t.Fatalf("Could not get block hash with given height %v", err)
+	}
+
+	if !exists {
+		t.Fatal("Expected BlockExists to return true.")
+	}
+	if height.Cmp(block.Number()) != 0 {
+		t.Fatalf("Block height did not equal expected height, expected: %v, got: %v", big.NewInt(42), height)
+	}
+}
+
+func TestBlockExists_InvalidHash(t *testing.T) {
+	endpoint := "ws://127.0.0.1"
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint:     endpoint,
+		BlockFetcher: &goodFetcher{},
+	})
+	if err != nil {
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+
+	_, _, err = web3Service.BlockExists(common.BytesToHash([]byte{0}))
+	if err == nil {
+		t.Fatal("Expected BlockExists to error with invalid hash")
 	}
 }

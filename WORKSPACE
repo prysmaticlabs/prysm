@@ -35,8 +35,8 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.18.6/rules_nodejs-0.18.6.tar.gz"],
-    sha256 = "1416d03823fed624b49a0abbd9979f7c63bbedfd37890ddecedd2fe25cccebc6",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.18.7/rules_nodejs-0.18.7.tar.gz"],
+    sha256 = "a69c5bd317beef982298ea7b5ed8b5c5275d1b55ee199e98a0ca088f8e0c6cce",
 )
 
 http_archive(
@@ -212,7 +212,7 @@ go_repository(
 go_repository(
     name = "com_github_multiformats_go_multihash",
     importpath = "github.com/multiformats/go-multihash",
-    tag = "v1.0.8",
+    tag = "v1.0.10",
 )
 
 go_repository(
@@ -301,7 +301,7 @@ go_repository(
 
 go_repository(
     name = "com_github_mattn_go_colorable",
-    tag = "v0.1.0",
+    tag = "v0.1.1",
     importpath = "github.com/mattn/go-colorable",
 )
 
@@ -399,7 +399,7 @@ go_repository(
 go_repository(
     name = "com_github_mattn_go_isatty",
     importpath = "github.com/mattn/go-isatty",
-    tag = "v0.0.4",
+    tag = "v0.0.5",
 )
 
 go_repository(
@@ -512,7 +512,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "153ac476189d567564fda94622d7a8c0fb338f6b",
+    commit = "cd391775e71e684db52b63df9affd58269495083",
     importpath = "golang.org/x/sys",
 )
 
@@ -554,7 +554,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_crypto",
-    commit = "a4c6cb3142f211c99e4bf4cd769535b29a9b616f",
+    commit = "ffb98f73852f696ea2bb21a617a5c4b3e067a439",
     importpath = "golang.org/x/crypto",
 )
 
@@ -608,7 +608,7 @@ go_repository(
 
 go_repository(
     name = "com_github_syndtr_goleveldb",
-    commit = "2f17a3356c6616cbfc4ae4c38147dc062a68fb0e",
+    tag = "v1.0.0",
     importpath = "github.com/syndtr/goleveldb",
 )
 
@@ -656,7 +656,7 @@ go_repository(
 
 go_repository(
     name = "com_github_aristanetworks_goarista",
-    commit = "c1e4b37418775d8f5e0c0c1a68766d321b32d6ca",
+    commit = "728bce664cf5dfb921941b240828f989a2c8f8e3",
     importpath = "github.com/aristanetworks/goarista",
 )
 
@@ -827,7 +827,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_discovery",
-    commit = "d369eed95f2d5748d1fa5688d97b6ae162658e1a",
+    commit = "5e0d40c7c8803e06c9eebe6dd3a0525a1d774a82",
     importpath = "github.com/libp2p/go-libp2p-discovery",
 )
 
@@ -921,7 +921,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_oauth2",
-    commit = "4b83411ed2b36bd4e3302e9b1d3c973fb1ba24db",
+    commit = "9b3c75971fc92dd27c6436a37c05c831498658f1",
     importpath = "golang.org/x/oauth2",
 )
 
@@ -969,7 +969,7 @@ go_repository(
 
 go_repository(
     name = "com_github_golang_snappy",
-    commit = "2a8bb927dd31d8daada140a5d09578521ce5c36a",
+    tag = "v0.0.1",
     importpath = "github.com/golang/snappy",
 )
 
@@ -1001,6 +1001,18 @@ go_repository(
     name = "in_gopkg_natefinch_npipe_v2",
     commit = "c1b8fa8bdccecb0b8db834ee0b92fdbcfa606dd6",
     importpath = "gopkg.in/natefinch/npipe.v2",
+)
+
+go_repository(
+    name = "org_gonum_v1_gonum",
+    commit = "70a1e933af10e87000d2ccabdd509b87d8626153",
+    importpath = "gonum.org/v1/gonum",
+)
+
+go_repository(
+    name = "org_golang_x_exp",
+    commit = "438050ddec5e7f808979ed57d041cebbc8e2d8a9",
+    importpath = "golang.org/x/exp",
 )
 
 go_repository(

@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func TestRealClockIsAccurate(t *testing.T) {
+func TestRealClock_IsAccurate(t *testing.T) {
 	var clock Clock = &RealClock{}
 	clockTime := clock.Now().Second()
 	actualTime := time.Now().Second()
