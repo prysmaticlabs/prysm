@@ -1,8 +1,9 @@
 package db
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
-	"strconv"
 
 	"github.com/boltdb/bolt"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -15,17 +16,20 @@ func (db *BeaconDB) SaveValidatorIndex(pubKey []byte, index int) error {
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(validatorBucket)
 
-		return bucket.Put(h[:], []byte(strconv.Itoa(index)))
+		buf := make([]byte, binary.MaxVarintLen64)
+		n := binary.PutUvarint(buf, uint64(index))
+
+		return bucket.Put(h[:], buf[:n])
 	})
 }
 
 // ValidatorIndex accepts a public key and returns the corresponding validator index.
-func (db *BeaconDB) ValidatorIndex(pubKey []byte) (int, error) {
+func (db *BeaconDB) ValidatorIndex(pubKey []byte) (uint64, error) {
 	if !db.HasValidator(pubKey) {
-		return -1, fmt.Errorf("validator %#x does not exist", pubKey)
+		return 0, fmt.Errorf("validator %#x does not exist", pubKey)
 	}
 
-	var index int
+	var index uint64
 	h := hashutil.Hash(pubKey)
 
 	err := db.view(func(tx *bolt.Tx) error {
@@ -36,7 +40,8 @@ func (db *BeaconDB) ValidatorIndex(pubKey []byte) (int, error) {
 			return nil
 		}
 		var err error
-		index, err = strconv.Atoi(string(enc))
+		buf := bytes.NewBuffer(enc)
+		index, err = binary.ReadUvarint(buf)
 		return err
 	})
 

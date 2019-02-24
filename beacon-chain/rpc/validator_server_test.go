@@ -3,12 +3,11 @@ package rpc
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -22,7 +21,7 @@ func TestValidatorIndex_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
-	pubKey := []byte(strconv.Itoa(0))
+	pubKey := []byte{'A'}
 	if err := db.SaveValidatorIndex(pubKey, 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}

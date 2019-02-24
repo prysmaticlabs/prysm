@@ -2,7 +2,7 @@ package db
 
 import (
 	"fmt"
-	"strconv"
+	"encoding/binary"
 	"time"
 
 	"github.com/boltdb/bolt"
@@ -52,7 +52,9 @@ func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit) 
 
 		for i, validator := range beaconState.ValidatorRegistry {
 			h := hashutil.Hash(validator.Pubkey)
-			if err := validatorBkt.Put(h[:], []byte(strconv.Itoa(i))); err != nil {
+			buf := make([]byte, binary.MaxVarintLen64)
+			n := binary.PutUvarint(buf, uint64(i))
+			if err := validatorBkt.Put(h[:], buf[:n]); err != nil {
 				return err
 			}
 		}
