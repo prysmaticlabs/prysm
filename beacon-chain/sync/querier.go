@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -38,16 +40,17 @@ func DefaultQuerierConfig() *QuerierConfig {
 // Querier defines the main class in this package.
 // See the package comments for a general description of the service's functions.
 type Querier struct {
-	ctx             context.Context
-	cancel          context.CancelFunc
-	p2p             p2pAPI
-	db              *db.BeaconDB
-	currentHeadSlot uint64
-	currentHeadHash []byte
-	responseBuf     chan p2p.Message
-	chainStartBuf   chan time.Time
-	powchain        powChainService
-	chainStarted    bool
+	ctx              context.Context
+	cancel           context.CancelFunc
+	p2p              p2pAPI
+	db               *db.BeaconDB
+	currentHeadSlot  uint64
+	currentHeadHash  []byte
+	currentStateRoot [32]byte
+	responseBuf      chan p2p.Message
+	chainStartBuf    chan time.Time
+	powchain         powChainService
+	chainStarted     bool
 }
 
 // NewQuerierService constructs a new Sync Querier Service.
@@ -140,6 +143,7 @@ func (q *Querier) run() {
 			queryLog.Infof("Latest chain head is at slot: %d and hash %#x", response.Slot, response.Hash)
 			q.currentHeadSlot = response.Slot
 			q.currentHeadHash = response.Hash
+			q.currentStateRoot = bytesutil.ToBytes32(response.Block.StateRootHash32)
 
 			ticker.Stop()
 			responseSub.Unsubscribe()

@@ -77,23 +77,24 @@ type syncService interface {
 // InitialSync defines the main class in this package.
 // See the package comments for a general description of the service's functions.
 type InitialSync struct {
-	ctx                    context.Context
-	cancel                 context.CancelFunc
-	p2p                    p2pAPI
-	syncService            syncService
-	chainService           chainService
-	db                     *db.BeaconDB
-	blockAnnounceBuf       chan p2p.Message
-	batchedBlockBuf        chan p2p.Message
-	blockBuf               chan p2p.Message
-	stateBuf               chan p2p.Message
-	currentSlot            uint64
-	highestObservedSlot    uint64
-	syncPollingInterval    time.Duration
-	genesisStateRootHash32 [32]byte
-	inMemoryBlocks         map[uint64]*pb.BeaconBlock
-	syncedFeed             *event.Feed
-	noGenesis              bool
+	ctx                            context.Context
+	cancel                         context.CancelFunc
+	p2p                            p2pAPI
+	syncService                    syncService
+	chainService                   chainService
+	db                             *db.BeaconDB
+	blockAnnounceBuf               chan p2p.Message
+	batchedBlockBuf                chan p2p.Message
+	blockBuf                       chan p2p.Message
+	stateBuf                       chan p2p.Message
+	currentSlot                    uint64
+	highestObservedSlot            uint64
+	syncPollingInterval            time.Duration
+	genesisStateRootHash32         [32]byte
+	inMemoryBlocks                 map[uint64]*pb.BeaconBlock
+	syncedFeed                     *event.Feed
+	noGenesis                      bool
+	stateRootOfHighestObservedSlot [32]byte
 }
 
 // NewInitialSyncService constructs a new InitialSyncService.
@@ -124,22 +125,23 @@ func NewInitialSyncService(ctx context.Context,
 	}
 
 	return &InitialSync{
-		ctx:                 ctx,
-		cancel:              cancel,
-		p2p:                 cfg.P2P,
-		syncService:         cfg.SyncService,
-		chainService:        cfg.ChainService,
-		db:                  cfg.BeaconDB,
-		currentSlot:         currentSlot,
-		highestObservedSlot: params.BeaconConfig().GenesisSlot,
-		blockBuf:            blockBuf,
-		stateBuf:            stateBuf,
-		batchedBlockBuf:     batchedBlockBuf,
-		blockAnnounceBuf:    blockAnnounceBuf,
-		syncPollingInterval: cfg.SyncPollingInterval,
-		inMemoryBlocks:      map[uint64]*pb.BeaconBlock{},
-		syncedFeed:          new(event.Feed),
-		noGenesis:           noGenesis,
+		ctx:                            ctx,
+		cancel:                         cancel,
+		p2p:                            cfg.P2P,
+		syncService:                    cfg.SyncService,
+		chainService:                   cfg.ChainService,
+		db:                             cfg.BeaconDB,
+		currentSlot:                    currentSlot,
+		highestObservedSlot:            params.BeaconConfig().GenesisSlot,
+		blockBuf:                       blockBuf,
+		stateBuf:                       stateBuf,
+		batchedBlockBuf:                batchedBlockBuf,
+		blockAnnounceBuf:               blockAnnounceBuf,
+		syncPollingInterval:            cfg.SyncPollingInterval,
+		inMemoryBlocks:                 map[uint64]*pb.BeaconBlock{},
+		syncedFeed:                     new(event.Feed),
+		noGenesis:                      noGenesis,
+		stateRootOfHighestObservedSlot: [32]byte{},
 	}
 }
 
@@ -163,6 +165,11 @@ func (s *InitialSync) Stop() error {
 // InitializeObservedSlot sets the highest observed slot.
 func (s *InitialSync) InitializeObservedSlot(slot uint64) {
 	s.highestObservedSlot = slot
+}
+
+// InitalizeStateRoot sets the state root of the highest observed slot.
+func (s *InitialSync) InitializeStateRoot(root [32]byte) {
+	s.stateRootOfHighestObservedSlot = root
 }
 
 // SyncedFeed returns a feed which fires a message once the node is synced
@@ -196,7 +203,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 			return
 		case <-delayChan:
 			if s.noGenesis {
-				s.requestBatchedBlocks(s.highestObservedSlot)
+				s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
 				continue
 			}
 
@@ -208,7 +215,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 			}
 
 			// requests multiple blocks so as to save and sync quickly.
-			s.requestBatchedBlocks(s.highestObservedSlot)
+			s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
 		case msg := <-s.blockAnnounceBuf:
 			data := msg.Data.(*pb.BeaconBlockAnnounce)
 
@@ -216,7 +223,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 				s.highestObservedSlot = data.SlotNumber
 			}
 
-			s.requestBatchedBlocks(s.highestObservedSlot)
+			s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
 			log.Debugf("Successfully requested the next block with slot: %d", data.SlotNumber)
 		case msg := <-s.blockBuf:
 			data := msg.Data.(*pb.BeaconBlockResponse)
@@ -395,14 +402,14 @@ func (s *InitialSync) requestNextBlockBySlot(slotNumber uint64) {
 
 // requestBatchedBlocks sends out a request for multiple blocks till a
 // specified bound slot number.
-func (s *InitialSync) requestBatchedBlocks(endSlot uint64) {
+func (s *InitialSync) requestBatchedBlocks(startSlot uint64, endSlot uint64) {
 	blockLimit := params.BeaconConfig().BatchBlockLimit
-	if s.currentSlot+blockLimit < endSlot {
-		endSlot = s.currentSlot + blockLimit
+	if startSlot+blockLimit < endSlot {
+		endSlot = startSlot + blockLimit
 	}
-	log.Debugf("Requesting batched blocks from slot %d to %d", s.currentSlot+1, endSlot)
+	log.Debugf("Requesting batched blocks from slot %d to %d", startSlot, endSlot)
 	s.p2p.Broadcast(&pb.BatchedBeaconBlockRequest{
-		StartSlot: s.currentSlot + 1,
+		StartSlot: startSlot,
 		EndSlot:   endSlot,
 	})
 }
