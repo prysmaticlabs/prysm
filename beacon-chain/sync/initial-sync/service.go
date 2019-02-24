@@ -203,7 +203,9 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 			return
 		case <-delayChan:
 			if s.noGenesis {
-				s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
+				if err := s.requestStateFromPeer(s.stateRootOfHighestObservedSlot[:], p2p.Peer{}); err != nil {
+					log.Errorf("Could not request state from peer %v", err)
+				}
 				continue
 			}
 
@@ -219,6 +221,13 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 		case msg := <-s.blockAnnounceBuf:
 			data := msg.Data.(*pb.BeaconBlockAnnounce)
 
+			if s.noGenesis {
+				if err := s.requestStateFromPeer(s.stateRootOfHighestObservedSlot[:], p2p.Peer{}); err != nil {
+					log.Errorf("Could not request state from peer %v", err)
+				}
+				continue
+			}
+
 			if data.SlotNumber > s.highestObservedSlot {
 				s.highestObservedSlot = data.SlotNumber
 			}
@@ -230,12 +239,11 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 			s.processBlock(data.Block, msg.Peer)
 		case msg := <-s.stateBuf:
 			data := msg.Data.(*pb.BeaconStateResponse)
+			beaconState := data.BeaconState
 
-			if s.genesisStateRootHash32 == [32]byte{} {
+			if s.currentSlot >= beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
 				continue
 			}
-
-			beaconState := data.BeaconState
 
 			h, err := ssz.TreeHash(beaconState)
 			if err != nil {
@@ -243,18 +251,12 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 				continue
 			}
 
-			if h != s.genesisStateRootHash32 {
-				continue
-			}
-
 			if err := s.db.SaveState(beaconState); err != nil {
 				log.Errorf("Unable to set beacon state for initial sync %v", err)
 			}
 
-			log.Debug("Successfully saved beacon state to the db")
-
-			if s.currentSlot >= beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
-				continue
+			if h == s.stateRootOfHighestObservedSlot {
+				s.noGenesis = false
 			}
 
 			// sets the current slot to the last finalized slot of the
@@ -327,7 +329,7 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 		if err := s.setBlockForInitialSync(block); err != nil {
 			log.Errorf("Could not set block for initial sync: %v", err)
 		}
-		if err := s.requestStateFromPeer(block, peer); err != nil {
+		if err := s.requestStateFromPeer(block.StateRootHash32, peer); err != nil {
 			log.Errorf("Could not request beacon state from peer: %v", err)
 		}
 
@@ -364,10 +366,9 @@ func (s *InitialSync) processBatchedBlocks(msg p2p.Message) {
 
 // requestStateFromPeer sends a request to a peer for the corresponding state
 // for a beacon block.
-func (s *InitialSync) requestStateFromPeer(block *pb.BeaconBlock, peer p2p.Peer) error {
-	h := block.ParentRootHash32
-	log.Debugf("Successfully processed incoming block with state hash: %#x", h)
-	s.p2p.Send(&pb.BeaconStateRequest{Hash: h[:]}, peer)
+func (s *InitialSync) requestStateFromPeer(stateRoot []byte, peer p2p.Peer) error {
+	log.Debugf("Successfully processed incoming block with state hash: %#x", stateRoot)
+	s.p2p.Send(&pb.BeaconStateRequest{Hash: stateRoot}, peer)
 	return nil
 }
 
