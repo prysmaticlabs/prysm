@@ -110,7 +110,7 @@ func NewInitialSyncService(ctx context.Context,
 
 	cHead, err := cfg.BeaconDB.ChainHead()
 	if err != nil {
-		log.Error("Unable to get chain head %v", err)
+		log.Errorf("Unable to get chain head %v", err)
 	}
 
 	// setting current slot

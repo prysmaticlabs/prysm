@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -52,65 +51,6 @@ type mockChainService struct{}
 
 func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
 	return &event.Feed{}
-}
-
-func TestSetBlock_InitialSync(t *testing.T) {
-	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-
-	cfg := &Config{
-		P2P:          &mockP2P{},
-		SyncService:  &mockSyncService{},
-		BeaconDB:     db,
-		ChainService: &mockChainService{},
-	}
-
-	ss := NewInitialSyncService(context.Background(), cfg)
-
-	exitRoutine := make(chan bool)
-	delayChan := make(chan time.Time)
-	defer func() {
-		close(exitRoutine)
-		close(delayChan)
-	}()
-
-	go func() {
-		ss.run(delayChan)
-		exitRoutine <- true
-	}()
-
-	genericHash := make([]byte, 32)
-	genericHash[0] = 'a'
-
-	block := &pb.BeaconBlock{
-		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{1, 2, 3},
-			BlockHash32:       []byte{4, 5, 6},
-		},
-		ParentRootHash32: genericHash,
-		Slot:             params.BeaconConfig().GenesisSlot + 1,
-		StateRootHash32:  genericHash,
-	}
-
-	blockResponse := &pb.BeaconBlockResponse{Block: block}
-	msg1 := p2p.Message{
-		Peer: p2p.Peer{},
-		Data: blockResponse,
-	}
-
-	ss.blockBuf <- msg1
-
-	ss.cancel()
-	<-exitRoutine
-
-	stateHash := bytesutil.ToBytes32(blockResponse.Block.StateRootHash32)
-
-	if stateHash != ss.genesisStateRootHash32 {
-		t.Fatalf("Beacon state hash not updated: %#x", blockResponse.Block.StateRootHash32)
-	}
-
-	hook.Reset()
 }
 
 func TestSavingBlock_InSync(t *testing.T) {
@@ -209,12 +149,6 @@ func TestSavingBlock_InSync(t *testing.T) {
 	msg2.Data = stateResponse
 
 	ss.stateBuf <- msg2
-
-	if beaconStateRootHash32 != ss.genesisStateRootHash32 {
-		br := msg1.Data.(*pb.BeaconBlockResponse)
-		t.Fatalf("state hash not updated to: %#x instead it is %#x", br.Block.StateRootHash32,
-			ss.genesisStateRootHash32)
-	}
 
 	msg1 = getBlockResponseMsg(params.BeaconConfig().GenesisSlot + 1)
 	ss.blockBuf <- msg1

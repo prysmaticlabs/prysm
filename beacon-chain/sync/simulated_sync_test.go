@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/ssz"
+
 	"github.com/prysmaticlabs/prysm/shared/bls"
 
 	"github.com/gogo/protobuf/proto"
@@ -145,7 +147,7 @@ func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*S
 	return ss, beacondb
 }
 
-func setUpUnSyncedService(simP2P *simulatedP2P, t *testing.T) (*Service, *db.BeaconDB) {
+func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T) (*Service, *db.BeaconDB) {
 	bd, beacondb, _ := setupSimBackendAndDB(t)
 	defer bd.Shutdown()
 	defer db.TeardownDB(bd.DB())
@@ -170,10 +172,13 @@ func setUpUnSyncedService(simP2P *simulatedP2P, t *testing.T) (*Service, *db.Bea
 
 	go ss.run()
 
-	for ss.Querier.curentHeadSlot == 0 {
+	for ss.Querier.currentHeadSlot == 0 {
 		simP2P.Send(&pb.ChainHeadResponse{
 			Slot: params.BeaconConfig().GenesisSlot + 10,
 			Hash: []byte{'t', 'e', 's', 't'},
+			Block: &pb.BeaconBlock{
+				StateRootHash32: stateRoot[:],
+			},
 		}, p2p.Peer{})
 	}
 
@@ -195,13 +200,23 @@ func TestSync_AFullySyncedNode(t *testing.T) {
 	defer ss.Stop()
 	defer db.TeardownDB(syncedDB)
 
+	bState, err := syncedDB.State()
+	if err != nil {
+		t.Fatalf("Could not retrieve state %v", err)
+	}
+
+	h, err := ssz.TreeHash(bState)
+	if err != nil {
+		t.Fatalf("Could not hash state %v", err)
+	}
+
 	// Sets up a sync service which has its current head at genesis.
-	us, unSyncedDB := setUpUnSyncedService(newP2P, t)
+	us, unSyncedDB := setUpUnSyncedService(newP2P, h, t)
 	defer us.Stop()
 	defer db.TeardownDB(unSyncedDB)
 
 	// Sets up another sync service which has its current head at genesis.
-	us2, unSyncedDB2 := setUpUnSyncedService(newP2P, t)
+	us2, unSyncedDB2 := setUpUnSyncedService(newP2P, h, t)
 	defer us2.Stop()
 	defer db.TeardownDB(unSyncedDB2)
 
