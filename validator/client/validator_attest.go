@@ -26,19 +26,10 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 		Slot:                 slot,
 		ShardBlockRootHash32: params.BeaconConfig().ZeroHash[:], // Stub for Phase 0.
 	}
-	// We fetch the validator index as it is necessary to generate the aggregation
-	// bitfield of the attestation itself.
-	idxReq := &pb.ValidatorIndexRequest{
-		PublicKey: v.key.PublicKey.Marshal(),
-	}
-	validatorIndexRes, err := v.validatorClient.ValidatorIndex(ctx, idxReq)
-	if err != nil {
-		log.Errorf("Could not fetch validator index: %v", err)
-		return
-	}
+
 	req := &pb.CommitteeRequest{
 		Slot:           slot,
-		ValidatorIndex: validatorIndexRes.Index,
+		ValidatorIndex: v.index,
 	}
 	resp, err := v.validatorClient.ValidatorCommitteeAtSlot(ctx, req)
 	if err != nil {
@@ -93,7 +84,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	aggregationBitfield := make([]byte, (len(resp.Committee)+7)/8)
 	var indexIntoCommittee uint
 	for i, validator := range resp.Committee {
-		if validator == validatorIndexRes.Index {
+		if validator == v.index {
 			indexIntoCommittee = uint(i)
 			break
 		}
