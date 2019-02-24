@@ -119,7 +119,7 @@ func (d *db) RemovePKAssignment(ctx context.Context, podName string) error {
 	return d.db.Update(func(tx *bolt.Tx) error {
 		pk := tx.Bucket(assignedPkBucket).Get([]byte(podName))
 		if pk == nil {
-			// TODO: complain?
+			log.WithField("podName", podName).Warn("Nil private key returned from db")
 			return nil
 		}
 		if err := tx.Bucket(assignedPkBucket).Delete([]byte(podName)); err != nil {
