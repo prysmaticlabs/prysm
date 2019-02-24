@@ -1,8 +1,8 @@
 package db
 
 import (
-	"fmt"
 	"encoding/binary"
+	"fmt"
 	"time"
 
 	"github.com/boltdb/bolt"
