@@ -116,7 +116,10 @@ func (s *server) allocateNewKey(ctx context.Context, podName string) (*pb.Privat
 
 	// Make the validator deposit
 	// NOTE: This uses the validator key as the withdrawal key
-	di := keystore.DepositInput(key /*depositKey*/, key /*withdrawalKey*/)
+	di, err := keystore.DepositInput(key /*depositKey*/, key /*withdrawalKey*/)
+	if err != nil {
+		return nil, err
+	}
 	serializedData := new(bytes.Buffer)
 	if err := ssz.Encode(serializedData, di); err != nil {
 		return nil, fmt.Errorf("could not serialize deposit data: %v", err)

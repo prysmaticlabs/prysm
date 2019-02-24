@@ -1,5 +1,5 @@
-kind: Deployment
-apiVersion: apps/v1beta1
+kind: StatefulSet
+apiVersion: apps/v1
 metadata: 
   name: bootnode
   namespace: beacon-chain
@@ -7,6 +7,7 @@ metadata:
     prometheus.io/scrape: 'true'
 spec:
   replicas: 1
+  serviceName: bootnode
   selector:
     matchLabels:
       component: bootnode

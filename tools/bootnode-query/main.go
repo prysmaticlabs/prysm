@@ -20,6 +20,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 )
 
+func init() {
+}
+
 func main() {
 	if len(os.Args) == 1 {
 		log.Fatal("Error: Bootnode address not provided.")

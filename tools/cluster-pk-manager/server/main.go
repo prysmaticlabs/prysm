@@ -6,12 +6,14 @@ import (
 	"net"
 
 	pb "github.com/prysmaticlabs/prysm/proto/cluster"
+	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
 
 var (
 	port                = flag.Int("port", 8000, "The port to server gRPC")
+	metricsPort         = flag.Int("metrics-port", 9090, "The port to serve /metrics")
 	privateKey          = flag.String("private-key", "", "The private key of funder")
 	rpcPath             = flag.String("rpc", "", "RPC address of a running ETH1 node")
 	depositContractAddr = flag.String("deposit-contract", "", "Address of the deposit contract")
@@ -37,7 +39,7 @@ func main() {
 	s := grpc.NewServer()
 	pb.RegisterPrivateKeyServiceServer(s, srv)
 
-	// TODO: expose prometheus metrics
+	go prometheus.RunSimpleServerOrDie(fmt.Sprintf(":%d", *metricsPort))
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {

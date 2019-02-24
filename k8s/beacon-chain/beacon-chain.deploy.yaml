@@ -30,7 +30,7 @@ spec:
             - --rpc-port=4000
             - --monitoring-port=9090
             - --bootstrap-node=/ip4/$(BOOTNODE_SERVICE_HOST)/tcp/$(BOOTNODE_SERVICE_PORT)/p2p/QmUWTsZwoJ51tey4fEE9EAqzQeHFHm4FE9aSfgTv8xyuG5 
-            - --relay-node=/ip4/35.224.249.2/tcp/30000/p2p/Qmd4btEB4Hu8EQ5xXzeAgmhxV9FdWwmXJwtzExRZDmbyCE
+            - --relay-node=/ip4/35.224.249.2/tcp/30000/p2p/QmUk4joE2SP6uApekTaxji6PGnZjgRpUmb1RfsmYyqvL4m
             - --p2p-port=5000
             - --demo-config
           resources:

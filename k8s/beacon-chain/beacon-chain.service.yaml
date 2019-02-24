@@ -1,3 +1,19 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: beacon-gateway
+  namespace: beacon-chain
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 30002
+      name: grpc-beacon-chain 
+      protocol: GRPC
+    hosts:
+    - beacon.prylabs.net
+---
 kind: Service
 apiVersion: v1
 metadata:
@@ -10,5 +26,27 @@ spec:
   ports:
     - port: 4000
       targetPort: 4000
-      name: grpc
+      name: grpc-service
+    - port: 9090
+      targetPort: 9090
+      name: prometheus
   type: ClusterIP
+---
+kind: VirtualService
+apiVersion: networking.istio.io/v1alpha3
+metadata:
+  name: beacon-prylabs-net
+  namespace: beacon-chain
+spec:
+  hosts:
+  - beacon.prylabs.net
+  gateways:
+  - beacon-gateway
+  http:
+  - match:
+    - port: 30002
+    route:
+    - destination:
+        port:
+          number: 4000
+        host: beacon-chain.beacon-chain.svc.cluster.local

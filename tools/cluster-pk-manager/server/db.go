@@ -54,6 +54,16 @@ func NewDB(dbPath string) *db {
 		panic(err)
 	}
 
+	if err := boltdb.View(func(tx *bolt.Tx) error {
+		keys := tx.Bucket(assignedPkBucket).Stats().KeyN
+		assignedPkCount.Set(float64(keys))
+		keys += tx.Bucket(unassignedPkBucket).Stats().KeyN
+		allocatedPkCount.Add(float64(keys))
+		return nil
+	}); err != nil {
+		panic(err)
+	}
+
 	return &db{db: boltdb}
 }
 
