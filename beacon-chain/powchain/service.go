@@ -54,6 +54,7 @@ type Reader interface {
 // POWBlockFetcher defines a struct that can retrieve mainchain blocks.
 type POWBlockFetcher interface {
 	BlockByHash(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
+	BlockByNumber(ctx context.Context, number *big.Int) (*gethTypes.Block, error)
 	HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error)
 }
 
@@ -206,16 +207,24 @@ func (w *Web3Service) LatestBlockHash() common.Hash {
 	return w.blockHash
 }
 
-// BlockExists --
-// TODO(#1657): Unimplemented, Work in Progress.
+// BlockExists returns true if the block exists, it's height and any possible error encountered.
 func (w *Web3Service) BlockExists(hash common.Hash) (bool, *big.Int, error) {
-	return false, big.NewInt(0), nil
+	block, err := w.blockFetcher.BlockByHash(w.ctx, hash)
+	if err != nil {
+		return false, big.NewInt(0), fmt.Errorf("could not query block with given hash: %v", err)
+	}
+
+	return true, block.Number(), nil
 }
 
-// BlockHashByHeight --
-// TODO(#1657): Unimplemented, Work in Progress.
+// BlockHashByHeight returns the block hash of the block at the given height.
 func (w *Web3Service) BlockHashByHeight(height *big.Int) (common.Hash, error) {
-	return [32]byte{}, nil
+	block, err := w.blockFetcher.BlockByNumber(w.ctx, height)
+	if err != nil {
+		return [32]byte{}, fmt.Errorf("could not query block with given height: %v", err)
+	}
+
+	return block.Hash(), nil
 }
 
 // Client for interacting with the ETH1.0 chain.

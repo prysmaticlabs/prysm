@@ -40,10 +40,15 @@ func (mp *mockP2P) Broadcast(msg proto.Message) {}
 func (mp *mockP2P) Send(msg proto.Message, peer p2p.Peer) {
 }
 
-type mockChainService struct{}
+type mockChainService struct {
+	feed *event.Feed
+}
 
 func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
-	return new(event.Feed)
+	if ms.feed == nil {
+		return new(event.Feed)
+	}
+	return ms.feed
 }
 
 type mockOperationService struct{}

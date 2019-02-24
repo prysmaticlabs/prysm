@@ -5,8 +5,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/ssz"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -15,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -425,18 +424,18 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) {
 	response := make([]*pb.BeaconBlock, 0, endSlot-startSlot)
 
 	for i := startSlot; i <= endSlot; i++ {
-		block, err := rs.db.BlockBySlot(i)
+		retBlock, err := rs.db.BlockBySlot(i)
 		if err != nil {
 			log.Errorf("Unable to retrieve block from db %v", err)
 			continue
 		}
 
-		if block == nil {
+		if retBlock == nil {
 			log.Debug("Block does not exist in db")
 			continue
 		}
 
-		response = append(response, block)
+		response = append(response, retBlock)
 	}
 
 	log.Debugf("Sending response for batch blocks to peer %v", msg.Peer)
