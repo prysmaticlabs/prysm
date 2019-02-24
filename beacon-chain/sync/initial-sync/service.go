@@ -93,6 +93,7 @@ type InitialSync struct {
 	genesisStateRootHash32 [32]byte
 	inMemoryBlocks         map[uint64]*pb.BeaconBlock
 	syncedFeed             *event.Feed
+	noGenesis              bool
 }
 
 // NewInitialSyncService constructs a new InitialSyncService.
@@ -107,6 +108,21 @@ func NewInitialSyncService(ctx context.Context,
 	blockAnnounceBuf := make(chan p2p.Message, cfg.BlockAnnounceBufferSize)
 	batchedBlockBuf := make(chan p2p.Message, cfg.BatchedBlockBufferSize)
 
+	cHead, err := cfg.BeaconDB.ChainHead()
+	if err != nil {
+		log.Error("Unable to get chain head %v", err)
+	}
+
+	// setting current slot
+	currentSlot := params.BeaconConfig().GenesisSlot
+	noGenesis := false
+
+	if cHead == nil {
+		noGenesis = true
+	} else {
+		currentSlot = cHead.Slot
+	}
+
 	return &InitialSync{
 		ctx:                 ctx,
 		cancel:              cancel,
@@ -114,7 +130,7 @@ func NewInitialSyncService(ctx context.Context,
 		syncService:         cfg.SyncService,
 		chainService:        cfg.ChainService,
 		db:                  cfg.BeaconDB,
-		currentSlot:         params.BeaconConfig().GenesisSlot,
+		currentSlot:         currentSlot,
 		highestObservedSlot: params.BeaconConfig().GenesisSlot,
 		blockBuf:            blockBuf,
 		stateBuf:            stateBuf,
@@ -123,6 +139,7 @@ func NewInitialSyncService(ctx context.Context,
 		syncPollingInterval: cfg.SyncPollingInterval,
 		inMemoryBlocks:      map[uint64]*pb.BeaconBlock{},
 		syncedFeed:          new(event.Feed),
+		noGenesis:           noGenesis,
 	}
 }
 
@@ -234,7 +251,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 			}
 
 			// sets the current slot to the last finalized slot of the
-			// crystallized state to begin our sync from.
+			// beacon state to begin our sync from.
 			s.currentSlot = beaconState.FinalizedEpoch * params.BeaconConfig().SlotsPerEpoch
 			log.Debugf("Successfully saved crystallized state with the last finalized slot: %d", beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch)
 

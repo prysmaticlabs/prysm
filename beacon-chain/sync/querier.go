@@ -42,7 +42,7 @@ type Querier struct {
 	cancel          context.CancelFunc
 	p2p             p2pAPI
 	db              *db.BeaconDB
-	curentHeadSlot  uint64
+	currentHeadSlot uint64
 	currentHeadHash []byte
 	responseBuf     chan p2p.Message
 	chainStartBuf   chan time.Time
@@ -60,15 +60,15 @@ func NewQuerierService(ctx context.Context,
 	responseBuf := make(chan p2p.Message, cfg.ResponseBufferSize)
 
 	return &Querier{
-		ctx:            ctx,
-		cancel:         cancel,
-		p2p:            cfg.P2P,
-		db:             cfg.BeaconDB,
-		responseBuf:    responseBuf,
-		curentHeadSlot: cfg.CurrentHeadSlot,
-		chainStarted:   false,
-		powchain:       cfg.PowChain,
-		chainStartBuf:  make(chan time.Time, 1),
+		ctx:             ctx,
+		cancel:          cancel,
+		p2p:             cfg.P2P,
+		db:              cfg.BeaconDB,
+		responseBuf:     responseBuf,
+		currentHeadSlot: cfg.CurrentHeadSlot,
+		chainStarted:    false,
+		powchain:        cfg.PowChain,
+		chainStartBuf:   make(chan time.Time, 1),
 	}
 }
 
@@ -138,7 +138,7 @@ func (q *Querier) run() {
 		case msg := <-q.responseBuf:
 			response := msg.Data.(*pb.ChainHeadResponse)
 			queryLog.Infof("Latest chain head is at slot: %d and hash %#x", response.Slot, response.Hash)
-			q.curentHeadSlot = response.Slot
+			q.currentHeadSlot = response.Slot
 			q.currentHeadHash = response.Hash
 
 			ticker.Stop()
@@ -166,7 +166,11 @@ func (q *Querier) IsSynced() (bool, error) {
 		return false, err
 	}
 
-	if block.Slot >= q.curentHeadSlot {
+	if block == nil {
+		return false, nil
+	}
+
+	if block.Slot >= q.currentHeadSlot {
 		return true, nil
 	}
 
