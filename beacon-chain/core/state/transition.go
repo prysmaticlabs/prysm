@@ -6,6 +6,8 @@ package state
 import (
 	"fmt"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	bal "github.com/prysmaticlabs/prysm/beacon-chain/core/balances"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
@@ -16,6 +18,15 @@ import (
 )
 
 var log = logrus.WithField("prefix", "core/state")
+
+var (
+	validatorBalancesGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "state_validator_balances",
+		Help: "Balances of validators, updated on epoch transition",
+	}, []string{
+		"validator",
+	})
+)
 
 // ExecuteStateTransition defines the procedure for a state transition function.
 // Spec:
@@ -347,5 +358,14 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	// Clean up processed attestations.
 	state = e.CleanupAttestations(state)
 	log.Info("Epoch transition successfully processed slot %d", state.Slot)
+
+	// Report interesting metrics
+	// Validator balances
+	for i, bal := range state.ValidatorBalances {
+		validatorBalancesGauge.WithLabelValues(
+			"validator",
+			fmt.Sprintf("%#x", state.ValidatorRegistry[i].Pubkey),
+		).Set(float64(bal))
+	}
 	return state, nil
 }
