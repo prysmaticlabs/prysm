@@ -1,0 +1,6 @@
+# Cross compile to windows
+build:windows --platforms=@io_bazel_rules_go//go/toolchain:windows_amd64
+build:windows --compiler=mingw-gcc
+build:windows --crosstool_top=@bazel_toolchains//configs/experimental/windows/0.1.0/bazel_experimental:toolchain 
+build:windows --cpu=x64_windows
+build:windows --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
