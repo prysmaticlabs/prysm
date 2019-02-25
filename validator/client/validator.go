@@ -35,6 +35,7 @@ type validator struct {
 	beaconClient    pb.BeaconServiceClient
 	attesterClient  pb.AttesterServiceClient
 	key             *keystore.Key
+	index uint64
 }
 
 // Done cleans up the validator.
@@ -143,3 +144,21 @@ func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
 	}
 	return pb.ValidatorRole_UNKNOWN
 }
+
+// Index retrieves validator index. A validator index is guaranteed to
+// not change from the time of initial deposit until validator exits. It is used
+// through out validator life cycle.
+func (v *validator) Index(ctx context.Context) error {
+	req := &pb.ValidatorIndexRequest{
+		PublicKey:  v.key.PublicKey.Marshal(),
+	}
+
+	resp, err := v.validatorClient.ValidatorIndex(ctx, req)
+	if err != nil {
+		return err
+	}
+
+	v.index = resp.Index
+	return nil
+}
+

@@ -19,6 +19,7 @@ type Validator interface {
 	RoleAt(slot uint64) pb.ValidatorRole
 	AttestToBlockHead(ctx context.Context, slot uint64)
 	ProposeBlock(ctx context.Context, slot uint64)
+	Index(ctx context.Context) error
 }
 
 // Run the main validator routine. This routine exits if the context is
@@ -37,6 +38,7 @@ func run(ctx context.Context, v Validator) {
 		log.Fatalf("Could not determine if beacon chain started: %v", err)
 	}
 	v.WaitForActivation(ctx)
+	v.Index(ctx)
 	if err := v.UpdateAssignments(ctx, params.BeaconConfig().GenesisSlot); err != nil {
 		log.WithField("error", err).Error("Failed to update assignments")
 	}
