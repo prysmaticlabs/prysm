@@ -90,25 +90,25 @@ func TestEpochBoundaryAttestations_AccurateAttestationData(t *testing.T) {
 	epochAttestations := []*pb.PendingAttestation{
 		{
 			Data: &pb.AttestationData{
-				JustifiedBlockRootHash32: []byte{64},
+				EpochBoundaryRootHash32: []byte{64},
 				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
 			},
 		},
 		{
 			Data: &pb.AttestationData{
-				JustifiedBlockRootHash32: []byte{64},
+				EpochBoundaryRootHash32: []byte{64},
 				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
 			},
 		},
 		{
 			Data: &pb.AttestationData{
-				JustifiedBlockRootHash32: []byte{64},
+				EpochBoundaryRootHash32: []byte{64},
 				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
 			},
 		},
 		{
 			Data: &pb.AttestationData{
-				JustifiedBlockRootHash32: []byte{64},
+				EpochBoundaryRootHash32: []byte{64},
 				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
 			},
 		},
@@ -140,9 +140,9 @@ func TestEpochBoundaryAttestations_AccurateAttestationData(t *testing.T) {
 			epochBoundaryAttestation[0].Data.JustifiedEpoch)
 	}
 
-	if !bytes.Equal(epochBoundaryAttestation[0].Data.JustifiedBlockRootHash32, []byte{64}) {
-		t.Errorf("Wanted justified block hash [64] for epoch boundary attestation, got: %v",
-			epochBoundaryAttestation[0].Data.JustifiedBlockRootHash32)
+	if !bytes.Equal(epochBoundaryAttestation[0].Data.EpochBoundaryRootHash32, []byte{64}) {
+		t.Errorf("Wanted epoch boundary block hash [64] for epoch boundary attestation, got: %v",
+			epochBoundaryAttestation[0].Data.EpochBoundaryRootHash32)
 	}
 }
 
