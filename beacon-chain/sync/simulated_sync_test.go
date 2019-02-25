@@ -145,7 +145,7 @@ func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*S
 }
 
 func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T) (*Service, *db.BeaconDB) {
-	bd, beacondb, _ := setupSimBackendAndDB(t)
+	bd, beacondb, privKeys := setupSimBackendAndDB(t)
 	defer bd.Shutdown()
 	defer db.TeardownDB(bd.DB())
 
@@ -180,11 +180,26 @@ func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T
 		}, p2p.Peer{})
 	}
 
+	// we add in 2 blocks to the unsynced node so that, we dont request the beacon state from the
+	// synced node to reduce test time.
+	for i := 1; i <= 2; i++ {
+		if err := bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys); err != nil {
+			t.Fatalf("Unable to generate block in simulated backend %v", err)
+		}
+		blocks := bd.InMemoryBlocks()
+		if err := beacondb.SaveBlock(blocks[i]); err != nil {
+			t.Fatalf("Unable to save block %v", err)
+		}
+		if err := beacondb.UpdateChainHead(blocks[i], bd.State()); err != nil {
+			t.Fatalf("Unable to update chain head %v", err)
+		}
+	}
+
 	return ss, beacondb
 }
 
 func TestSyncing_AFullySyncedNode(t *testing.T) {
-	numOfBlocks := 10
+	numOfBlocks := 12
 	newP2P := &simulatedP2P{
 		subsChannels: make(map[reflect.Type]*event.Feed),
 		mutex:        new(sync.RWMutex),

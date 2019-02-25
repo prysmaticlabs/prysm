@@ -110,7 +110,31 @@ func NewInitialSyncService(ctx context.Context,
 	blockAnnounceBuf := make(chan p2p.Message, cfg.BlockAnnounceBufferSize)
 	batchedBlockBuf := make(chan p2p.Message, cfg.BatchedBlockBufferSize)
 
-	cHead, err := cfg.BeaconDB.ChainHead()
+	return &InitialSync{
+		ctx:                            ctx,
+		cancel:                         cancel,
+		p2p:                            cfg.P2P,
+		syncService:                    cfg.SyncService,
+		chainService:                   cfg.ChainService,
+		db:                             cfg.BeaconDB,
+		currentSlot:                    params.BeaconConfig().GenesisSlot,
+		highestObservedSlot:            params.BeaconConfig().GenesisSlot,
+		blockBuf:                       blockBuf,
+		stateBuf:                       stateBuf,
+		batchedBlockBuf:                batchedBlockBuf,
+		blockAnnounceBuf:               blockAnnounceBuf,
+		syncPollingInterval:            cfg.SyncPollingInterval,
+		inMemoryBlocks:                 map[uint64]*pb.BeaconBlock{},
+		syncedFeed:                     new(event.Feed),
+		atGenesis:                      false,
+		stateRootOfHighestObservedSlot: [32]byte{},
+		mutex:                          new(sync.Mutex),
+	}
+}
+
+// Start begins the goroutine.
+func (s *InitialSync) Start() {
+	cHead, err := s.db.ChainHead()
 	if err != nil {
 		log.Errorf("Unable to get chain head %v", err)
 	}
@@ -120,31 +144,9 @@ func NewInitialSyncService(ctx context.Context,
 	if cHead.Slot == params.BeaconConfig().GenesisSlot {
 		atGenesis = true
 	}
+	s.atGenesis = atGenesis
+	s.currentSlot = cHead.Slot
 
-	return &InitialSync{
-		ctx:                            ctx,
-		cancel:                         cancel,
-		p2p:                            cfg.P2P,
-		syncService:                    cfg.SyncService,
-		chainService:                   cfg.ChainService,
-		db:                             cfg.BeaconDB,
-		currentSlot:                    cHead.Slot,
-		highestObservedSlot:            params.BeaconConfig().GenesisSlot,
-		blockBuf:                       blockBuf,
-		stateBuf:                       stateBuf,
-		batchedBlockBuf:                batchedBlockBuf,
-		blockAnnounceBuf:               blockAnnounceBuf,
-		syncPollingInterval:            cfg.SyncPollingInterval,
-		inMemoryBlocks:                 map[uint64]*pb.BeaconBlock{},
-		syncedFeed:                     new(event.Feed),
-		atGenesis:                      atGenesis,
-		stateRootOfHighestObservedSlot: [32]byte{},
-		mutex:                          new(sync.Mutex),
-	}
-}
-
-// Start begins the goroutine.
-func (s *InitialSync) Start() {
 	go func() {
 		ticker := time.NewTicker(s.syncPollingInterval)
 		s.run(ticker.C)
@@ -239,7 +241,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 			data := msg.Data.(*pb.BeaconStateResponse)
 			beaconState := data.BeaconState
 
-			if s.currentSlot >= beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
+			if s.currentSlot > beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
 				continue
 			}
 
@@ -262,7 +264,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 			s.currentSlot = beaconState.FinalizedEpoch * params.BeaconConfig().SlotsPerEpoch
 			log.Debugf("Successfully saved crystallized state with the last finalized slot: %d", beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch)
 
-			s.requestNextBlockBySlot(s.currentSlot + 1)
+			s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
 
 		case msg := <-s.batchedBlockBuf:
 			s.processBatchedBlocks(msg)
