@@ -56,10 +56,10 @@ func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*b
 
 func TestProcessBlock_IncorrectSlot(t *testing.T) {
 	beaconState := &pb.BeaconState{
-		Slot: 5,
+		Slot: params.BeaconConfig().GenesisSlot + 5,
 	}
 	block := &pb.BeaconBlock{
-		Slot: 4,
+		Slot: params.BeaconConfig().GenesisSlot + 4,
 	}
 	want := fmt.Sprintf(
 		"block.slot != state.slot, block.slot = %d, state.slot = %d",
@@ -77,7 +77,10 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	slashings := make([]*pb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings+1)
+	var slashings []*pb.ProposerSlashing
+	for i := uint64(0); i < params.BeaconConfig().MaxProposerSlashings+1; i++ {
+		slashings = append(slashings, &pb.ProposerSlashing{})
+	}
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
 		Slot:         params.BeaconConfig().GenesisSlot,
@@ -117,7 +120,10 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 			},
 		},
 	}
-	attesterSlashings := make([]*pb.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings+1)
+	var attesterSlashings []*pb.AttesterSlashing
+	for i := uint64(0); i < params.BeaconConfig().MaxAttesterSlashings+1; i++ {
+		attesterSlashings = append(attesterSlashings, &pb.AttesterSlashing{})
+	}
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
 		Slot:         params.BeaconConfig().GenesisSlot,
@@ -181,7 +187,10 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 		},
 	}
 
-	blockAttestations := make([]*pb.Attestation, params.BeaconConfig().MaxAttestations+1)
+	var blockAttestations []*pb.Attestation
+	for i := uint64(0); i < params.BeaconConfig().MaxAttestations+1; i++ {
+		blockAttestations = append(blockAttestations, &pb.Attestation{})
+	}
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
 		Slot:         params.BeaconConfig().GenesisSlot,
@@ -263,13 +272,16 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
 			JustifiedBlockRootHash32: blockRoots[0],
 			LatestCrosslink:          &pb.Crosslink{ShardBlockRootHash32: []byte{1}},
-			ShardBlockRootHash32:     []byte{},
+			ShardBlockRootHash32:     params.BeaconConfig().ZeroHash[:],
 		},
 		AggregationBitfield: []byte{1},
 		CustodyBitfield:     []byte{1},
 	}
 	attestations := []*pb.Attestation{blockAtt}
-	exits := make([]*pb.VoluntaryExit, params.BeaconConfig().MaxVoluntaryExits+1)
+	var exits []*pb.VoluntaryExit
+	for i := uint64(0); i < params.BeaconConfig().MaxVoluntaryExits+1; i++ {
+		exits = append(exits, &pb.VoluntaryExit{})
+	}
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
 		Slot:         params.BeaconConfig().GenesisSlot + 10,
@@ -352,7 +364,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
 			JustifiedBlockRootHash32: blockRoots[0],
 			LatestCrosslink:          &pb.Crosslink{ShardBlockRootHash32: []byte{1}},
-			ShardBlockRootHash32:     []byte{},
+			ShardBlockRootHash32:     params.BeaconConfig().ZeroHash[:],
 		},
 		AggregationBitfield: []byte{1},
 		CustodyBitfield:     []byte{1},
@@ -510,9 +522,9 @@ func TestProcessEpoch_CantGetBoundaryAttestation(t *testing.T) {
 
 	want := fmt.Sprintf(
 		"could not get current boundary attestations: slot %d is not within expected range of %d to %d",
-		newState.Slot,
-		newState.Slot-params.BeaconConfig().LatestBlockRootsLength,
-		newState.Slot,
+		newState.Slot-params.BeaconConfig().GenesisSlot,
+		0,
+		newState.Slot-params.BeaconConfig().GenesisSlot,
 	)
 	if _, err := state.ProcessEpoch(newState); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected: %s, received: %v", want, err)

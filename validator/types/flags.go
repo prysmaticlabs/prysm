@@ -5,6 +5,12 @@ import (
 )
 
 var (
+	// DemoConfigFlag determines whether to launch a beacon chain using demo parameters
+	// such as shorter cycle length, fewer shards, and more.
+	DemoConfigFlag = cli.BoolFlag{
+		Name:  "demo-config",
+		Usage: " Run the validator using demo paramteres (i.e. shorter cycles, fewer shards and committees)",
+	}
 	// BeaconRPCProviderFlag defines a beacon node RPC endpoint.
 	BeaconRPCProviderFlag = cli.StringFlag{
 		Name:  "beacon-rpc-provider",

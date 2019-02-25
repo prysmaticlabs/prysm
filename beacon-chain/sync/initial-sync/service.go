@@ -208,7 +208,6 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 				}
 				continue
 			}
-
 			if s.highestObservedSlot == s.currentSlot {
 				log.Info("Exiting initial sync and starting normal sync")
 				s.syncedFeed.Send(s.currentSlot)

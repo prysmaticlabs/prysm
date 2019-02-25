@@ -104,6 +104,7 @@ contract in order to activate the validator client`,
 	}
 
 	app.Flags = []cli.Flag{
+		types.DemoConfigFlag,
 		types.BeaconRPCProviderFlag,
 		types.KeystorePathFlag,
 		types.PasswordFlag,

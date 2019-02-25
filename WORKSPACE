@@ -199,7 +199,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr",
-    commit = "312b9db3552cf2045efb3ab5d10104c3ec8ff79d",
+    tag = "v0.0.1",
     importpath = "github.com/multiformats/go-multiaddr",
 )
 
@@ -512,7 +512,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "cd391775e71e684db52b63df9affd58269495083",
+    commit = "cc5685c2db1239775905f3911f0067c0fa74762f",
     importpath = "golang.org/x/sys",
 )
 
@@ -554,7 +554,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_crypto",
-    commit = "6635ad9975e2df3ac42b2a95a40b4803628ff68a",
+    commit = "ffb98f73852f696ea2bb21a617a5c4b3e067a439",
     importpath = "golang.org/x/crypto",
 )
 

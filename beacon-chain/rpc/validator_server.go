@@ -63,9 +63,17 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 	var proposerSlot uint64
 
 	for slot := req.EpochStart; slot < req.EpochStart+params.BeaconConfig().SlotsPerEpoch; slot++ {
-		crossLinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(beaconState, slot, false)
-		if err != nil {
-			return nil, err
+		var crossLinkCommittees []*helpers.CrosslinkCommittee
+		if beaconState.ValidatorRegistryUpdateEpoch == helpers.SlotToEpoch(req.EpochStart) {
+			crossLinkCommittees, err = helpers.CrosslinkCommitteesAtSlot(beaconState, slot, true)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			crossLinkCommittees, err = helpers.CrosslinkCommitteesAtSlot(beaconState, slot, false)
+			if err != nil {
+				return nil, err
+			}
 		}
 		proposerIndex, err := helpers.BeaconProposerIndex(beaconState, slot)
 		if err != nil {
@@ -101,7 +109,7 @@ func (vs *ValidatorServer) ValidatorCommitteeAtSlot(ctx context.Context, req *pb
 	}
 	crossLinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(beaconState, req.Slot, false /* registry change */)
 	if err != nil {
-		return nil, fmt.Errorf("could not get crosslink committees at slot %d: %v", req.Slot, err)
+		return nil, fmt.Errorf("could not get crosslink committees at slot %d: %v", req.Slot-params.BeaconConfig().GenesisSlot, err)
 	}
 	var committee []uint64
 	var shard uint64
