@@ -200,7 +200,7 @@ func TestSync_AFullySyncedNode(t *testing.T) {
 	defer us.Stop()
 	defer db.TeardownDB(unSyncedDB)
 
-	//// Sets up another sync service which has its current head at genesis.
+	// Sets up another sync service which has its current head at genesis.
 	us2, unSyncedDB2 := setUpUnSyncedService(newP2P, t)
 	defer us2.Stop()
 	defer db.TeardownDB(unSyncedDB2)

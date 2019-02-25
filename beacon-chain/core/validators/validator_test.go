@@ -48,24 +48,6 @@ func TestHasVoted_OK(t *testing.T) {
 	}
 }
 
-func TestValidatorIndex_OK(t *testing.T) {
-	var validators []*pb.Validator
-	for i := 0; i < 10; i++ {
-		validators = append(validators, &pb.Validator{Pubkey: []byte{}, ExitEpoch: params.BeaconConfig().FarFutureEpoch})
-	}
-	if _, err := ValidatorIdx([]byte("100"), validators); err == nil {
-		t.Fatalf("ValidatorIdx should have failed,  there's no validator with pubkey 100")
-	}
-	validators[5].Pubkey = []byte("100")
-	idx, err := ValidatorIdx([]byte("100"), validators)
-	if err != nil {
-		t.Fatalf("call ValidatorIdx failed: %v", err)
-	}
-	if idx != 5 {
-		t.Errorf("Incorrect validator index. Wanted 5, Got %v", idx)
-	}
-}
-
 func TestBoundaryAttesterIndices_OK(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")

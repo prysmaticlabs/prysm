@@ -65,7 +65,3 @@ func (fv *fakeValidator) ProposeBlock(_ context.Context, slot uint64) {
 	fv.ProposeBlockCalled = true
 	fv.ProposeBlockArg1 = slot
 }
-
-func (fv *fakeValidator) Index(_ context.Context) error {
-	return nil
-}

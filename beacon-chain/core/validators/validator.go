@@ -15,17 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
-// ValidatorIdx returns the idx of the validator given an input public key.
-func ValidatorIdx(pubKey []byte, validators []*pb.Validator) (uint64, error) {
-	for idx := range validators {
-		if bytes.Equal(validators[idx].Pubkey, pubKey) {
-			return uint64(idx), nil
-		}
-	}
-
-	return 0, fmt.Errorf("can't find validator index for public key %#x", pubKey)
-}
-
 // ValidatorIndices returns all the validator indices from the input attestations
 // and state.
 //
