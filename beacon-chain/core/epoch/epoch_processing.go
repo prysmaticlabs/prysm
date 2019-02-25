@@ -91,14 +91,25 @@ func ProcessEth1Data(state *pb.BeaconState) *pb.BeaconState {
 
 // ProcessJustification processes for justified slot by comparing
 // epoch boundary balance and total balance.
-//
-// Spec pseudocode definition:
-//    Set state.previous_justified_epoch = state.justified_epoch.
-//    Set state.justification_bitfield = (state.justification_bitfield * 2) % 2**64.
-//    Set state.justification_bitfield |= 2 and state.justified_epoch =
-//    slot_to_epoch(state.slot) - 2  if 3 * previous_epoch_boundary_attesting_balance >= 2 * total_balance
-//    Set state.justification_bitfield |= 1 and state.justified_epoch =
-//    slot_to_epoch(state.slot) - 1 if 3 * this_epoch_boundary_attesting_balance >= 2 * total_balance
+//   First, update the justification bitfield:
+//     Let new_justified_epoch = state.justified_epoch.
+//     Set state.justification_bitfield = state.justification_bitfield << 1.
+//     Set state.justification_bitfield |= 2 and new_justified_epoch = previous_epoch if
+//       3 * previous_epoch_boundary_attesting_balance >= 2 * previous_total_balance.
+//     Set state.justification_bitfield |= 1 and new_justified_epoch = current_epoch if
+//       3 * current_epoch_boundary_attesting_balance >= 2 * current_total_balance.
+//   Next, update last finalized epoch if possible:
+//     Set state.finalized_epoch = state.previous_justified_epoch if (state.justification_bitfield >> 1) % 8
+//       == 0b111 and state.previous_justified_epoch == previous_epoch - 2.
+//     Set state.finalized_epoch = state.previous_justified_epoch if (state.justification_bitfield >> 1) % 4
+//       == 0b11 and state.previous_justified_epoch == previous_epoch - 1.
+//     Set state.finalized_epoch = state.justified_epoch if (state.justification_bitfield >> 0) % 8
+//       == 0b111 and state.justified_epoch == previous_epoch - 1.
+//     Set state.finalized_epoch = state.justified_epoch if (state.justification_bitfield >> 0) % 4
+//       == 0b11 and state.justified_epoch == previous_epoch.
+//   Finally, update the following:
+//     Set state.previous_justified_epoch = state.justified_epoch.
+//     Set state.justified_epoch = new_justified_epoch
 func ProcessJustification(
 	state *pb.BeaconState,
 	thisEpochBoundaryAttestingBalance uint64,
