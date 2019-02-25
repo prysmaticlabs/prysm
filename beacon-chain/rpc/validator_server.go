@@ -56,19 +56,14 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 	var proposerSlot uint64
 
 	for slot := req.EpochStart; slot < req.EpochStart+params.BeaconConfig().SlotsPerEpoch; slot++ {
-		var crossLinkCommittees []*helpers.CrosslinkCommittee
-		if beaconState.ValidatorRegistryUpdateEpoch == helpers.SlotToEpoch(req.EpochStart) &&
+		var registryChanged bool
+		if beaconState.ValidatorRegistryUpdateEpoch == helpers.SlotToEpoch(slot) &&
 			beaconState.ValidatorRegistryUpdateEpoch != params.BeaconConfig().GenesisEpoch {
-			log.Infof("Registry change happened at slot: %d", beaconState.ValidatorRegistryUpdateEpoch-params.BeaconConfig().GenesisSlot)
-			crossLinkCommittees, err = helpers.CrosslinkCommitteesAtSlot(beaconState, slot, true)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			crossLinkCommittees, err = helpers.CrosslinkCommitteesAtSlot(beaconState, slot, false)
-			if err != nil {
-				return nil, err
-			}
+			registryChanged = true
+		}
+		crossLinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(beaconState, slot, registryChanged /* registry change */)
+		if err != nil {
+			return nil, fmt.Errorf("could not get crosslink committees at slot %d: %v", slot-params.BeaconConfig().GenesisSlot, err)
 		}
 		proposerIndex, err := helpers.BeaconProposerIndex(beaconState, slot)
 		if err != nil {
@@ -103,7 +98,12 @@ func (vs *ValidatorServer) ValidatorCommitteeAtSlot(ctx context.Context, req *pb
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
-	crossLinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(beaconState, req.Slot, false /* registry change */)
+	var registryChanged bool
+	if beaconState.ValidatorRegistryUpdateEpoch == helpers.SlotToEpoch(req.Slot) &&
+		beaconState.ValidatorRegistryUpdateEpoch != params.BeaconConfig().GenesisEpoch {
+		registryChanged = true
+	}
+	crossLinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(beaconState, req.Slot, registryChanged /* registry change */)
 	if err != nil {
 		return nil, fmt.Errorf("could not get crosslink committees at slot %d: %v", req.Slot-params.BeaconConfig().GenesisSlot, err)
 	}
