@@ -7,8 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -394,27 +392,6 @@ func TestProcessPrevSlotShard_CorrectPrevEpochData(t *testing.T) {
 	if !bytes.Equal(newState.PreviousShufflingSeedHash32, state.CurrentShufflingSeedHash32) {
 		t.Errorf("Incorrect prev epoch seed mix hash: Wanted: %v, got: %v",
 			state.CurrentShufflingSeedHash32, newState.PreviousShufflingSeedHash32)
-	}
-}
-
-func TestProcessValidatorRegistry_CorrectCurrentEpochData(t *testing.T) {
-	state := &pb.BeaconState{
-		Slot:                       params.BeaconConfig().MinSeedLookahead,
-		LatestRandaoMixes:          [][]byte{{'A'}, {'B'}},
-		CurrentShufflingSeedHash32: []byte{'C'},
-	}
-	newState, err := validators.UpdateRegistry(
-		proto.Clone(state).(*pb.BeaconState))
-	if err != nil {
-		t.Fatalf("Could not execute ProcessValidatorRegistry: %v", err)
-	}
-	if newState.CurrentShufflingEpoch != state.Slot {
-		t.Errorf("Incorrect current epoch calculation slot: Wanted: %d, got: %d",
-			newState.CurrentShufflingEpoch, state.Slot)
-	}
-	if !bytes.Equal(newState.CurrentShufflingSeedHash32, state.LatestRandaoMixes[0]) {
-		t.Errorf("Incorrect current epoch seed mix hash: Wanted: %v, got: %v",
-			state.LatestRandaoMixes[0], newState.CurrentShufflingSeedHash32)
 	}
 }
 
