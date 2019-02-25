@@ -116,7 +116,7 @@ func NewInitialSyncService(ctx context.Context,
 	}
 
 	var atGenesis bool
-	// setting current slot
+	// setting genesis bool
 	if cHead.Slot == params.BeaconConfig().GenesisSlot {
 		atGenesis = true
 	}
