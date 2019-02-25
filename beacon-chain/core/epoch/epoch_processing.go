@@ -106,7 +106,7 @@ func ProcessJustification(
 	prevTotalBalance uint64,
 	totalBalance uint64) *pb.BeaconState {
 	newJustifiedEpoch := state.JustifiedEpoch
-	prevEpoch := helpers.CurrentEpoch(state)-1
+	prevEpoch := helpers.CurrentEpoch(state) - 1
 	currentEpoch := helpers.CurrentEpoch(state)
 	// Shifts all the bits over one to create a new bit for the recent epoch.
 	state.JustificationBitfield = state.JustificationBitfield * 2

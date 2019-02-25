@@ -91,25 +91,25 @@ func TestEpochBoundaryAttestations_AccurateAttestationData(t *testing.T) {
 		{
 			Data: &pb.AttestationData{
 				EpochBoundaryRootHash32: []byte{64},
-				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
+				JustifiedEpoch:          params.BeaconConfig().GenesisEpoch,
 			},
 		},
 		{
 			Data: &pb.AttestationData{
 				EpochBoundaryRootHash32: []byte{64},
-				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
+				JustifiedEpoch:          params.BeaconConfig().GenesisEpoch,
 			},
 		},
 		{
 			Data: &pb.AttestationData{
 				EpochBoundaryRootHash32: []byte{64},
-				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
+				JustifiedEpoch:          params.BeaconConfig().GenesisEpoch,
 			},
 		},
 		{
 			Data: &pb.AttestationData{
 				EpochBoundaryRootHash32: []byte{64},
-				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
+				JustifiedEpoch:          params.BeaconConfig().GenesisEpoch,
 			},
 		},
 	}
