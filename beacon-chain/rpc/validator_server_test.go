@@ -2,15 +2,15 @@ package rpc
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -22,27 +22,17 @@ func TestValidatorIndex_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
-	genesis := b.NewGenesisBlock([]byte{})
-	if err := db.SaveBlock(genesis); err != nil {
-		t.Fatalf("Could not save genesis block: %v", err)
-	}
-
-	state, err := genesisState(1)
-	if err != nil {
-		t.Fatalf("Could not setup genesis state: %v", err)
-	}
-
-	if err := db.UpdateChainHead(genesis, state); err != nil {
-		t.Fatalf("Could not save genesis state: %v", err)
+	pubKey := []byte{'A'}
+	if err := db.SaveValidatorIndex(pubKey, 0); err != nil {
+		t.Fatalf("Could not save validator index: %v", err)
 	}
 
 	validatorServer := &ValidatorServer{
 		beaconDB: db,
 	}
-	var pubKey [96]byte
-	copy(pubKey[:], []byte(strconv.Itoa(0)))
+
 	req := &pb.ValidatorIndexRequest{
-		PublicKey: pubKey[:],
+		PublicKey: pubKey,
 	}
 	if _, err := validatorServer.ValidatorIndex(context.Background(), req); err != nil {
 		t.Errorf("Could not get validator index: %v", err)
@@ -58,6 +48,12 @@ func TestValidatorEpochAssignments_OK(t *testing.T) {
 		t.Fatalf("Could not save genesis block: %v", err)
 	}
 
+	var pubKey [96]byte
+	copy(pubKey[:], []byte("0"))
+	if err := db.SaveValidatorIndex(pubKey[:], 0); err != nil {
+		t.Fatalf("Could not save validator index: %v", err)
+	}
+
 	state, err := genesisState(params.BeaconConfig().DepositsForChainStart)
 	if err != nil {
 		t.Fatalf("Could not setup genesis state: %v", err)
@@ -70,8 +66,7 @@ func TestValidatorEpochAssignments_OK(t *testing.T) {
 	validatorServer := &ValidatorServer{
 		beaconDB: db,
 	}
-	var pubKey [96]byte
-	copy(pubKey[:], []byte("0"))
+
 	req := &pb.ValidatorEpochAssignmentsRequest{
 		EpochStart: params.BeaconConfig().GenesisSlot,
 		PublicKey:  pubKey[:],
@@ -167,7 +162,7 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	req := &pb.ValidatorIndexRequest{
 		PublicKey: []byte{'A'},
 	}
-	want := fmt.Sprintf("can't find validator index for public key %#x", req.PublicKey)
+	want := fmt.Sprintf("validator %#x does not exist", req.PublicKey)
 	if _, err := vs.NextEpochCommitteeAssignment(context.Background(), req); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
@@ -187,15 +182,24 @@ func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
 	if err := db.UpdateChainHead(genesis, state); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
+
+	for i := 0; i < int(params.BeaconConfig().DepositsForChainStart); i++ {
+		pubKeyBuf := make([]byte, binary.MaxVarintLen64)
+		n := binary.PutUvarint(pubKeyBuf, uint64(i))
+		if err := db.SaveValidatorIndex(pubKeyBuf[:n], i); err != nil {
+			t.Fatalf("Could not save validator index: %v", err)
+		}
+	}
+
 	vs := &ValidatorServer{
 		beaconDB: db,
 	}
 
+	pubKeyBuf := make([]byte, binary.MaxVarintLen64)
+	n := binary.PutUvarint(pubKeyBuf, 0)
 	// Test the first validator in registry.
-	var pubKey [96]byte
-	copy(pubKey[:], []byte(strconv.Itoa(0)))
 	req := &pb.ValidatorIndexRequest{
-		PublicKey: pubKey[:],
+		PublicKey: pubKeyBuf[:n],
 	}
 	res, err := vs.NextEpochCommitteeAssignment(context.Background(), req)
 	if err != nil {
@@ -211,10 +215,11 @@ func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
 	}
 
 	// Test the last validator in registry.
-	lastValidatorIndex := int(params.BeaconConfig().DepositsForChainStart - 1)
-	copy(pubKey[:], []byte(strconv.Itoa(lastValidatorIndex)))
+	lastValidatorIndex := params.BeaconConfig().DepositsForChainStart - 1
+	pubKeyBuf = make([]byte, binary.MaxVarintLen64)
+	n = binary.PutUvarint(pubKeyBuf, lastValidatorIndex)
 	req = &pb.ValidatorIndexRequest{
-		PublicKey: pubKey[:],
+		PublicKey: pubKeyBuf[:n],
 	}
 	res, err = vs.NextEpochCommitteeAssignment(context.Background(), req)
 	if err != nil {
