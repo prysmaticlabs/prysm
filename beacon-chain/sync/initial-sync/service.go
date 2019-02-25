@@ -14,6 +14,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -94,6 +95,7 @@ type InitialSync struct {
 	syncedFeed                     *event.Feed
 	noGenesis                      bool
 	stateRootOfHighestObservedSlot [32]byte
+	mutex                          *sync.Mutex
 }
 
 // NewInitialSyncService constructs a new InitialSyncService.
@@ -141,6 +143,7 @@ func NewInitialSyncService(ctx context.Context,
 		syncedFeed:                     new(event.Feed),
 		noGenesis:                      noGenesis,
 		stateRootOfHighestObservedSlot: [32]byte{},
+		mutex:                          new(sync.Mutex),
 	}
 }
 
@@ -283,14 +286,11 @@ func (s *InitialSync) checkInMemoryBlocks() {
 			if s.currentSlot == s.highestObservedSlot {
 				return
 			}
-
-			if block, ok := s.inMemoryBlocks[0]; ok && s.currentSlot == params.BeaconConfig().GenesisSlot {
-				s.processBlock(block, p2p.Peer{})
-			}
-
+			s.mutex.Lock()
 			if block, ok := s.inMemoryBlocks[s.currentSlot+1]; ok && s.currentSlot+1 <= s.highestObservedSlot {
 				s.processBlock(block, p2p.Peer{})
 			}
+			s.mutex.Unlock()
 		}
 	}
 }
@@ -317,6 +317,8 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 	}
 	// if it isn't the block in the next slot it saves it in memory.
 	if block.Slot != (s.currentSlot + 1) {
+		s.mutex.Lock()
+		defer s.mutex.Unlock()
 		if _, ok := s.inMemoryBlocks[block.Slot]; !ok {
 			s.inMemoryBlocks[block.Slot] = block
 		}
@@ -355,6 +357,8 @@ func (s *InitialSync) requestStateFromPeer(stateRoot []byte, peer p2p.Peer) erro
 // requestNextBlock broadcasts a request for a block with the entered slotnumber.
 func (s *InitialSync) requestNextBlockBySlot(slotNumber uint64) {
 	log.Debugf("Requesting block %d ", slotNumber)
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	if block, ok := s.inMemoryBlocks[slotNumber]; ok {
 		s.processBlock(block, p2p.Peer{})
 		return
@@ -384,10 +388,6 @@ func (s *InitialSync) validateAndSaveNextBlock(block *pb.BeaconBlock) error {
 		return err
 	}
 
-	if s.currentSlot == params.BeaconConfig().GenesisSlot {
-		return errors.New("invalid slot number for syncing")
-	}
-
 	if (s.currentSlot + 1) == block.Slot {
 
 		if err := s.checkBlockValidity(block); err != nil {
@@ -397,6 +397,8 @@ func (s *InitialSync) validateAndSaveNextBlock(block *pb.BeaconBlock) error {
 		log.Infof("Saved block with root %#x and slot %d for initial sync", root, block.Slot)
 		s.currentSlot = block.Slot
 
+		s.mutex.Lock()
+		defer s.mutex.Unlock()
 		// delete block from memory
 		if _, ok := s.inMemoryBlocks[block.Slot]; ok {
 			delete(s.inMemoryBlocks, block.Slot)

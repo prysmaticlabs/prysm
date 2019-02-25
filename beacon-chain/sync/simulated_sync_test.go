@@ -7,19 +7,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/ssz"
-
-	"github.com/prysmaticlabs/prysm/shared/bls"
-
 	"github.com/gogo/protobuf/proto"
-
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 type simulatedP2P struct {
@@ -185,7 +181,7 @@ func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T
 	return ss, beacondb
 }
 
-func TestSync_AFullySyncedNode(t *testing.T) {
+func TestSyncing_AFullySyncedNode(t *testing.T) {
 	numOfBlocks := 10
 	newP2P := &simulatedP2P{
 		subsChannels: make(map[reflect.Type]*event.Feed),
