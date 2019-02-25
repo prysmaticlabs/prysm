@@ -78,7 +78,7 @@ func TestBoundaryAttesterIndices_OK(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot,
+		Slot:              params.BeaconConfig().GenesisSlot,
 		ValidatorRegistry: validators,
 	}
 
@@ -119,7 +119,7 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 
 	prevAttestation := &pb.PendingAttestation{
 		Data: &pb.AttestationData{
-			Slot:                 params.BeaconConfig().GenesisSlot+3,
+			Slot:                 params.BeaconConfig().GenesisSlot + 3,
 			Shard:                6,
 			ShardBlockRootHash32: []byte{'B'},
 		},

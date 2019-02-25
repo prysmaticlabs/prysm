@@ -42,7 +42,7 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ValidatorRegistry: validators,
-		Slot: params.BeaconConfig().GenesisSlot,
+		Slot:              params.BeaconConfig().GenesisSlot,
 	}
 
 	tests := []struct {
@@ -50,23 +50,23 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 		index uint64
 	}{
 		{
-			slot:  params.BeaconConfig().GenesisSlot+1,
+			slot:  params.BeaconConfig().GenesisSlot + 1,
 			index: 511,
 		},
 		{
-			slot:  params.BeaconConfig().GenesisSlot+10,
+			slot:  params.BeaconConfig().GenesisSlot + 10,
 			index: 2807,
 		},
 		{
-			slot:  params.BeaconConfig().GenesisSlot+19,
+			slot:  params.BeaconConfig().GenesisSlot + 19,
 			index: 5122,
 		},
 		{
-			slot:  params.BeaconConfig().GenesisSlot+30,
+			slot:  params.BeaconConfig().GenesisSlot + 30,
 			index: 7947,
 		},
 		{
-			slot:  params.BeaconConfig().GenesisSlot+39,
+			slot:  params.BeaconConfig().GenesisSlot + 39,
 			index: 10262,
 		},
 	}

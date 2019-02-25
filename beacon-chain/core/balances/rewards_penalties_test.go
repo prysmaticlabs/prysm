@@ -142,7 +142,7 @@ func TestInclusionDistRewards_AccurateRewards(t *testing.T) {
 	attestation := []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
 			AggregationBitfield: participationBitfield,
-			InclusionSlot:       params.BeaconConfig().GenesisSlot+5},
+			InclusionSlot:       params.BeaconConfig().GenesisSlot + 5},
 	}
 
 	tests := []struct {
@@ -157,7 +157,7 @@ func TestInclusionDistRewards_AccurateRewards(t *testing.T) {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 		}
 		state := &pb.BeaconState{
-			Slot: params.BeaconConfig().GenesisSlot,
+			Slot:               params.BeaconConfig().GenesisSlot,
 			ValidatorRegistry:  validators,
 			ValidatorBalances:  validatorBalances,
 			LatestAttestations: attestation,
@@ -391,7 +391,7 @@ func TestInactivityInclusionPenalty_AccuratePenalties(t *testing.T) {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 		}
 		state := &pb.BeaconState{
-			Slot: params.BeaconConfig().GenesisSlot,
+			Slot:               params.BeaconConfig().GenesisSlot,
 			ValidatorRegistry:  validators,
 			ValidatorBalances:  validatorBalances,
 			LatestAttestations: attestation,
@@ -476,7 +476,7 @@ func TestAttestationInclusionRewards_AccurateRewards(t *testing.T) {
 			validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
 		}
 		state := &pb.BeaconState{
-			Slot: params.BeaconConfig().GenesisSlot,
+			Slot:               params.BeaconConfig().GenesisSlot,
 			ValidatorRegistry:  validators,
 			ValidatorBalances:  validatorBalances,
 			LatestAttestations: attestation,

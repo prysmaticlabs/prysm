@@ -219,9 +219,9 @@ func TestProcessJustification_PreviousEpochJustified(t *testing.T) {
 			newState.PreviousJustifiedEpoch, state.JustifiedEpoch)
 	}
 	// Since this epoch was justified (not prev), justified_epoch = slot_to_epoch(state.slot) -1.
-	if newState.JustifiedEpoch != helpers.PrevEpoch(state) {
-		t.Errorf("New state's justified epoch %d != state's slot - SLOTS_PER_EPOCH %d",
-			newState.JustifiedEpoch, helpers.PrevEpoch(state))
+	if newState.JustifiedEpoch != helpers.CurrentEpoch(state) {
+		t.Errorf("New state's justified epoch %d != state's slot - SLOTS_PER_EPOCH: %d",
+			newState.JustifiedEpoch, helpers.CurrentEpoch(state))
 	}
 	// The new JustificationBitfield is 11, it went from 0100 to 1011. Two 1's were appended because both
 	// prev epoch and this epoch were justified.
@@ -232,9 +232,9 @@ func TestProcessJustification_PreviousEpochJustified(t *testing.T) {
 	// Assume for the case where only prev epoch got justified. Verify
 	// justified_epoch = slot_to_epoch(state.slot) -2.
 	newState = ProcessJustification(state, 0, 1, 1, 1)
-	if newState.JustifiedEpoch != helpers.PrevEpoch(state)-1 {
-		t.Errorf("New state's justified epoch %d != state's epoch -2 %d",
-			newState.JustifiedEpoch, helpers.PrevEpoch(state)-1)
+	if newState.JustifiedEpoch != helpers.CurrentEpoch(state)-1 {
+		t.Errorf("New state's justified epoch %d != state's epoch -2: %d",
+			newState.JustifiedEpoch, helpers.CurrentEpoch(state)-1)
 	}
 }
 
@@ -286,11 +286,11 @@ func TestProcessCrosslinks_CrosslinksCorrectEpoch(t *testing.T) {
 }
 
 func TestProcessCrosslinks_NoParticipantsBitField(t *testing.T) {
-	state := buildState(5, params.BeaconConfig().DepositsForChainStart)
+	state := buildState(params.BeaconConfig().GenesisSlot+5, params.BeaconConfig().DepositsForChainStart)
 	state.LatestCrosslinks = []*pb.Crosslink{{}, {}}
 
 	attestations := []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{},
+		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
 			// Empty participation bitfield will trigger error.
 			AggregationBitfield: []byte{}}}
 
