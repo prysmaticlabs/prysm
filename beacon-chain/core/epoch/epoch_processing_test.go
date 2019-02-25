@@ -212,7 +212,7 @@ func TestProcessJustification_PreviousEpochJustified(t *testing.T) {
 		JustifiedEpoch:        3,
 		JustificationBitfield: 4,
 	}
-	newState := ProcessJustification(state, 1, 1, 1)
+	newState := ProcessJustification(state, 1, 1, 1, 1)
 
 	if newState.PreviousJustifiedEpoch != 3 {
 		t.Errorf("New state's prev justified slot %d != old state's justified slot %d",
@@ -231,92 +231,10 @@ func TestProcessJustification_PreviousEpochJustified(t *testing.T) {
 
 	// Assume for the case where only prev epoch got justified. Verify
 	// justified_epoch = slot_to_epoch(state.slot) -2.
-	newState = ProcessJustification(state, 0, 1, 1)
+	newState = ProcessJustification(state, 0, 1, 1, 1)
 	if newState.JustifiedEpoch != helpers.PrevEpoch(state)-1 {
 		t.Errorf("New state's justified epoch %d != state's epoch -2 %d",
 			newState.JustifiedEpoch, helpers.PrevEpoch(state)-1)
-	}
-}
-
-func TestProcessFinalization_2EpochsInARow(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
-	// 2 consecutive justified epoch in a row,
-	// and previous justified epoch is slot_to_epoch(state.slot) - 2.
-	state := &pb.BeaconState{
-		Slot:                   200,
-		JustifiedEpoch:         2,
-		PreviousJustifiedEpoch: 1,
-		JustificationBitfield:  3,
-	}
-
-	newState := ProcessFinalization(state)
-	if newState.FinalizedEpoch != state.JustifiedEpoch {
-		t.Errorf("Wanted finalized epoch to be %d, got %d:",
-			state.JustifiedEpoch, newState.FinalizedEpoch)
-	}
-}
-
-func TestProcessFinalization_3EpochsInARow(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
-	// 3 consecutive justified epoch in a row,
-	// and previous justified epoch is slot_to_epoch(state.slot) - 3.
-	state := &pb.BeaconState{
-		Slot:                   300,
-		JustifiedEpoch:         3,
-		PreviousJustifiedEpoch: 1,
-		JustificationBitfield:  7,
-	}
-
-	newState := ProcessFinalization(state)
-	if newState.FinalizedEpoch != state.JustifiedEpoch {
-		t.Errorf("Wanted finalized epoch to be %d, got %d:",
-			state.JustifiedEpoch, newState.FinalizedEpoch)
-	}
-}
-
-func TestProcessFinalization_4EpochsInARow(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
-	// 4 consecutive justified epoch in a row,
-	// and previous justified epoch is slot_to_epoch(state.slot) - 3.
-	state := &pb.BeaconState{
-		Slot:                   400,
-		JustifiedEpoch:         5,
-		PreviousJustifiedEpoch: 2,
-		JustificationBitfield:  15,
-	}
-
-	newState := ProcessFinalization(state)
-	if newState.FinalizedEpoch != state.JustifiedEpoch {
-		t.Errorf("Wanted finalized epoch to be %d, got %d:",
-			state.JustifiedEpoch, newState.FinalizedEpoch)
-	}
-}
-
-func TestProcessFinalization_NoFinalizationYet(t *testing.T) {
-	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
-	}
-
-	// if nothing gets finalized it just returns the same state.
-	state := &pb.BeaconState{
-		Slot:                   100,
-		JustifiedEpoch:         1,
-		PreviousJustifiedEpoch: 0,
-		JustificationBitfield:  1,
-	}
-	newState := ProcessFinalization(state)
-	if newState.FinalizedEpoch != 0 {
-		t.Errorf("Wanted finalized epoch to be %d, got %d:",
-			0, newState.FinalizedEpoch)
 	}
 }
 

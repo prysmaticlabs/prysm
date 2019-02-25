@@ -103,19 +103,21 @@ func ProcessJustification(
 	state *pb.BeaconState,
 	thisEpochBoundaryAttestingBalance uint64,
 	prevEpochBoundaryAttestingBalance uint64,
+	prevTotalBalance uint64,
 	totalBalance uint64) *pb.BeaconState {
-
-	state.PreviousJustifiedEpoch = state.JustifiedEpoch
+	newJustifiedEpoch := state.JustifiedEpoch
+	prevEpoch := helpers.CurrentEpoch(state)-1
+	currentEpoch := helpers.CurrentEpoch(state)
 	// Shifts all the bits over one to create a new bit for the recent epoch.
 	state.JustificationBitfield = state.JustificationBitfield * 2
 	log.Infof("Total Balance: %d", totalBalance)
 	// If prev prev epoch was justified then we ensure the 2nd bit in the bitfield is set,
 	// assign new justified slot to 2 * SLOTS_PER_EPOCH before.
 	log.Infof("Previous Epoch Attesting Balance: %d", prevEpochBoundaryAttestingBalance)
-	if 3*prevEpochBoundaryAttestingBalance >= 2*totalBalance {
+	if 3*prevEpochBoundaryAttestingBalance >= 2*prevTotalBalance {
 		log.Infof("Prev epoch %d was justified", state.JustifiedEpoch-params.BeaconConfig().GenesisEpoch)
 		state.JustificationBitfield |= 2
-		state.JustifiedEpoch = helpers.CurrentEpoch(state) - 2
+		newJustifiedEpoch = prevEpoch
 	}
 	log.Infof("Current Epoch Attesting Balance: %d", thisEpochBoundaryAttestingBalance)
 	// If this epoch was justified then we ensure the 1st bit in the bitfield is set,
@@ -123,41 +125,36 @@ func ProcessJustification(
 	if 3*thisEpochBoundaryAttestingBalance >= 2*totalBalance {
 		log.Infof("Current epoch %d was justified", state.JustifiedEpoch-params.BeaconConfig().GenesisEpoch)
 		state.JustificationBitfield |= 1
-		state.JustifiedEpoch = helpers.CurrentEpoch(state) - 1
+		newJustifiedEpoch = currentEpoch
 	}
-	return state
-}
 
-// ProcessFinalization processes for finalized slot by checking
-// consecutive justified slots.
-//
-// Spec pseudocode definition:
-//   Set state.finalized_epoch = state.previous_justified_epoch if any of the following are true:
-//		state.previous_justified_epoch == slot_to_epoch(state.slot) - 2 and state.justification_bitfield % 4 == 3
-//		state.previous_justified_epoch == slot_to_epoch(state.slot) - 3 and state.justification_bitfield % 8 == 7
-//		state.previous_justified_epoch == slot_to_epoch(state.slot) - 4 and state.justification_bitfield % 16 in (15, 14)
-func ProcessFinalization(state *pb.BeaconState) *pb.BeaconState {
-
-	log.Infof("Processing finality, justification bitfield: %v", state.JustificationBitfield)
-	if state.PreviousJustifiedEpoch == helpers.CurrentEpoch(state)-2 &&
-		state.JustificationBitfield%4 == 3 {
+	// Process finality.
+	if state.PreviousJustifiedEpoch == prevEpoch-2 &&
+		(state.JustificationBitfield>>1)%8 == 7 {
+		state.FinalizedEpoch = state.PreviousJustifiedEpoch
+		log.Infof("New Finalized Epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
+		return state
+	}
+	if state.PreviousJustifiedEpoch == prevEpoch-1 &&
+		(state.JustificationBitfield>>1)%4 == 3 {
+		state.FinalizedEpoch = state.PreviousJustifiedEpoch
+		log.Infof("New Finalized Epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
+		return state
+	}
+	if state.JustifiedEpoch == prevEpoch-1 &&
+		(state.JustificationBitfield>>0)%8 == 7 {
 		state.FinalizedEpoch = state.JustifiedEpoch
 		log.Infof("New Finalized Epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
 		return state
 	}
-	if state.PreviousJustifiedEpoch == helpers.CurrentEpoch(state)-3 &&
-		state.JustificationBitfield%8 == 7 {
+	if state.JustifiedEpoch == prevEpoch &&
+		(state.JustificationBitfield>>0)%4 == 3 {
 		state.FinalizedEpoch = state.JustifiedEpoch
 		log.Infof("New Finalized Epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
 		return state
 	}
-	if state.PreviousJustifiedEpoch == helpers.CurrentEpoch(state)-4 &&
-		(state.JustificationBitfield%16 == 15 ||
-			state.JustificationBitfield%16 == 14) {
-		state.FinalizedEpoch = state.JustifiedEpoch
-		log.Infof("New Finalized Epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
-		return state
-	}
+	state.PreviousJustifiedEpoch = state.JustifiedEpoch
+	state.JustifiedEpoch = newJustifiedEpoch
 	return state
 }
 

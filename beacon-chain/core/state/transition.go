@@ -171,6 +171,7 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock, verifySignatures
 func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	// Calculate total balances of active validators of the current state.
 	currentEpoch := helpers.CurrentEpoch(state)
+	prevEpoch := helpers.CurrentEpoch(state)-1
 	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, currentEpoch)
 	totalBalance := e.TotalBalance(state, activeValidatorIndices)
 
@@ -192,6 +193,8 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	currentBoundaryAttestingBalances := e.TotalBalance(state, currentBoundaryAttesterIndices)
 
+	previousActiveValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, prevEpoch)
+	prevTotalBalance := e.TotalBalance(state, previousActiveValidatorIndices)
 	// Calculate the attesting balances of validators that made an attestation
 	// during previous epoch.
 	prevEpochAttestations := e.PrevAttestations(state)
@@ -229,20 +232,19 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	}
 	prevEpochHeadAttestingBalances := e.TotalBalance(state, prevEpochHeadAttesterIndices)
 
-	// Process eth1 data
+	// Process eth1 data.
 	if e.CanProcessEth1Data(state) {
 		state = e.ProcessEth1Data(state)
 	}
 
-	// Update justification.
+	// Update justification and finality.
 	state = e.ProcessJustification(
 		state,
 		currentBoundaryAttestingBalances,
 		prevEpochAttestingBalance,
-		totalBalance)
-
-	// Update Finalization.
-	state = e.ProcessFinalization(state)
+		prevTotalBalance,
+		totalBalance,
+	)
 
 	// Process crosslinks records.
 	state, err = e.ProcessCrosslinks(
