@@ -27,6 +27,7 @@ type QuerierConfig struct {
 	BeaconDB           *db.BeaconDB
 	PowChain           powChainService
 	CurrentHeadSlot    uint64
+	ChainService       chainService
 }
 
 // DefaultQuerierConfig provides the default configuration for a sync service.
@@ -44,6 +45,7 @@ type Querier struct {
 	cancel           context.CancelFunc
 	p2p              p2pAPI
 	db               *db.BeaconDB
+	chainService     chainService
 	currentHeadSlot  uint64
 	currentHeadHash  []byte
 	currentStateRoot [32]byte
@@ -67,6 +69,7 @@ func NewQuerierService(ctx context.Context,
 		cancel:          cancel,
 		p2p:             cfg.P2P,
 		db:              cfg.BeaconDB,
+		chainService:    cfg.ChainService,
 		responseBuf:     responseBuf,
 		currentHeadSlot: cfg.CurrentHeadSlot,
 		chainStarted:    false,
@@ -82,8 +85,18 @@ func (q *Querier) Start() {
 		queryLog.Errorf("Unable to get current state of the deposit contract %v", err)
 		return
 	}
-	if !hasChainStarted {
-		q.listenForChainStart()
+
+	bState, err := q.db.State()
+	if err != nil {
+		queryLog.Errorf("Unable to retrieve beacon state %v", err)
+	}
+
+	// we handle both the cases where either chainstart has not occurred or
+	// if beacon state has been initialized. If chain start has occurred but
+	// beacon state has not been initialized we wait for the POW chain service
+	// to accumulate all the deposits and process them.
+	if !hasChainStarted || bState == nil {
+		q.listenForStateInitialization()
 		return
 	}
 	q.run()
@@ -96,9 +109,9 @@ func (q *Querier) Stop() error {
 	return nil
 }
 
-func (q *Querier) listenForChainStart() {
+func (q *Querier) listenForStateInitialization() {
 
-	sub := q.powchain.ChainStartFeed().Subscribe(q.chainStartBuf)
+	sub := q.chainService.StateInitializedFeed().Subscribe(q.chainStartBuf)
 	defer sub.Unsubscribe()
 	for {
 		select {

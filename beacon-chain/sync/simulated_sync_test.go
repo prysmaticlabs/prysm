@@ -109,7 +109,8 @@ func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*S
 	}
 
 	mockChain := &mockChainService{
-		feed: new(event.Feed),
+		bFeed: new(event.Feed),
+		sFeed: new(event.Feed),
 	}
 
 	cfg := &Config{
@@ -153,7 +154,8 @@ func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T
 	}
 
 	mockChain := &mockChainService{
-		feed: new(event.Feed),
+		bFeed: new(event.Feed),
+		sFeed: new(event.Feed),
 	}
 
 	cfg := &Config{

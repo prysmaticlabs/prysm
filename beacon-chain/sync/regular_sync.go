@@ -22,6 +22,7 @@ var log = logrus.WithField("prefix", "regular-sync")
 
 type chainService interface {
 	IncomingBlockFeed() *event.Feed
+	StateInitializedFeed() *event.Feed
 }
 
 type operationService interface {
