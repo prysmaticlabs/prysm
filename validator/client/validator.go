@@ -7,7 +7,6 @@ import (
 	"io"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/opentracing/opentracing-go"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -15,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/sirupsen/logrus"
 )
 
 // AttestationPool STUB interface. Final attestation pool pending design.

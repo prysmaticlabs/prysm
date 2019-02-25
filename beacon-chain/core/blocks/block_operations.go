@@ -120,8 +120,8 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 		return fmt.Errorf("could not deserialize block randao reveal: %v", err)
 	}
 	log.WithFields(logrus.Fields{
-		"epoch": helpers.CurrentEpoch(beaconState),
-		"pubkey": fmt.Sprintf("%#x", proposer.Pubkey),
+		"epoch":    helpers.CurrentEpoch(beaconState),
+		"pubkey":   fmt.Sprintf("%#x", proposer.Pubkey),
 		"epochSig": fmt.Sprintf("%#x", sig.Marshal()),
 	}).Info("Verifying randao")
 	if !sig.Verify(hashTreeRoot[:], pub, domain) {
