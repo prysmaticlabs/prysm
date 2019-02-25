@@ -359,9 +359,13 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	state = e.ProcessPrevSlotShardSeed(state)
 	state = v.ProcessPenaltiesAndExits(state)
 	if e.CanProcessValidatorRegistry(state) {
-		state, err = e.ProcessValidatorRegistry(state)
+		state, err = v.UpdateRegistry(state)
 		if err != nil {
-			return nil, fmt.Errorf("can not process validator registry: %v", err)
+			return nil, fmt.Errorf("can not update validator registry: %v", err)
+		}
+		state, err = e.ProcessCurrSlotShardSeed(state)
+		if err != nil {
+			return nil, fmt.Errorf("can not update current shard shuffling seeds: %v", err)
 		}
 	} else {
 		state, err = e.ProcessPartialValidatorRegistry(state)

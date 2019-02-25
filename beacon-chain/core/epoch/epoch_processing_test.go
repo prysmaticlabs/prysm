@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -401,7 +403,7 @@ func TestProcessValidatorRegistry_CorrectCurrentEpochData(t *testing.T) {
 		LatestRandaoMixes:          [][]byte{{'A'}, {'B'}},
 		CurrentShufflingSeedHash32: []byte{'C'},
 	}
-	newState, err := ProcessValidatorRegistry(
+	newState, err := validators.UpdateRegistry(
 		proto.Clone(state).(*pb.BeaconState))
 	if err != nil {
 		t.Fatalf("Could not execute ProcessValidatorRegistry: %v", err)
