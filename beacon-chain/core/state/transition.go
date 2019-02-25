@@ -419,5 +419,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 		"ValidatorRegistryUpdateEpoch", state.ValidatorRegistryUpdateEpoch-params.BeaconConfig().GenesisEpoch,
 	).Info("Validator registry update epoch")
 
+	// Report interesting metrics.
+	reportEpochTransitionMetrics(state)
 	return state, nil
 }
