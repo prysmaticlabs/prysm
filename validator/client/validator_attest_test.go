@@ -274,7 +274,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 
 	m.attesterClient.EXPECT().AttestHead(
 		gomock.Any(), // ctx
-        gomock.Any(),
+		gomock.Any(),
 	).Return(&pb.AttestResponse{}, nil).Times(1)
 
 	delay = 0
