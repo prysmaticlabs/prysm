@@ -1,6 +1,7 @@
 package db
 
 import (
+	"encoding/binary"
 	"fmt"
 	"time"
 
@@ -33,6 +34,7 @@ func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit) 
 
 	return db.update(func(tx *bolt.Tx) error {
 		blockBkt := tx.Bucket(blockBucket)
+		validatorBkt := tx.Bucket(validatorBucket)
 		mainChain := tx.Bucket(mainChainBucket)
 		chainInfo := tx.Bucket(chainInfoBucket)
 
@@ -46,6 +48,15 @@ func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit) 
 
 		if err := blockBkt.Put(blockRoot[:], blockEnc); err != nil {
 			return err
+		}
+
+		for i, validator := range beaconState.ValidatorRegistry {
+			h := hashutil.Hash(validator.Pubkey)
+			buf := make([]byte, binary.MaxVarintLen64)
+			n := binary.PutUvarint(buf, uint64(i))
+			if err := validatorBkt.Put(h[:], buf[:n]); err != nil {
+				return err
+			}
 		}
 
 		return chainInfo.Put(stateLookupKey, stateEnc)
