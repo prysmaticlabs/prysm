@@ -155,25 +155,6 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 		t.Errorf("Retrieved attestations did not match prev generated attestations for the first %d",
 			params.BeaconConfig().MaxAttestations)
 	}
-
-	// Test we can retrieve attestations from slot128 - slot139.
-	attestations, err = service.PendingAttestations()
-	if err != nil {
-		t.Fatalf("Could not retrieve attestations: %v", err)
-	}
-	if !reflect.DeepEqual(attestations, origAttestations[params.BeaconConfig().MaxAttestations:]) {
-		t.Errorf("Retrieved attestations did not match prev generated attestations for the first %d",
-			params.BeaconConfig().MaxAttestations)
-	}
-
-	// Verify attestation pool is empty now we have retrieved everything.
-	attestations, err = service.PendingAttestations()
-	if err != nil {
-		t.Fatalf("Could not retrieve attestations: %v", err)
-	}
-	if len(attestations) != 0 {
-		t.Errorf("Attestation pool should be empty but got a length of %d", len(attestations))
-	}
 }
 
 func TestRemoveProcessedAttestations_Ok(t *testing.T) {
