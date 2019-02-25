@@ -10,6 +10,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/opentracing/opentracing-go"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/forkutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
@@ -23,7 +24,7 @@ import (
 func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.ProposeBlock")
 	defer span.Finish()
-
+	log.Info("Proposing...")
 	// 1. Fetch data from Beacon Chain node.
 	// Get current head beacon block.
 	headBlock, err := v.beaconClient.CanonicalHead(ctx, &ptypes.Empty{})
@@ -72,11 +73,16 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	epoch := slot / params.BeaconConfig().SlotsPerEpoch
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
+	log.Infof("Signing randao epoch: %d", epoch)
 	domain := forkutils.DomainVersion(fork, epoch, params.BeaconConfig().DomainRandao)
 	epochSignature := v.key.SecretKey.Sign(buf, domain)
+	log.Infof("Pubkey: %#x", v.key.PublicKey.Marshal())
+	log.Infof("Epoch signature: %#x", epochSignature.Marshal())
 
 	// Fetch pending attestations seen by the beacon node.
-	attResp, err := v.proposerClient.PendingAttestations(ctx, &ptypes.Empty{})
+	attResp, err := v.proposerClient.PendingAttestations(ctx, &pb.PendingAttestationsRequest{
+		FilterReadyForInclusion: true,
+	})
 	if err != nil {
 		log.Errorf("Failed to fetch pending attestations from the beacon node: %v", err)
 		return

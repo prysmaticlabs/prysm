@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"fmt"
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -41,6 +42,7 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ValidatorRegistry: validators,
+		Slot:              params.BeaconConfig().GenesisSlot,
 	}
 
 	tests := []struct {
@@ -48,23 +50,23 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 		index uint64
 	}{
 		{
-			slot:  1,
+			slot:  params.BeaconConfig().GenesisSlot + 1,
 			index: 511,
 		},
 		{
-			slot:  10,
+			slot:  params.BeaconConfig().GenesisSlot + 10,
 			index: 2807,
 		},
 		{
-			slot:  19,
+			slot:  params.BeaconConfig().GenesisSlot + 19,
 			index: 5122,
 		},
 		{
-			slot:  30,
+			slot:  params.BeaconConfig().GenesisSlot + 30,
 			index: 7947,
 		},
 		{
-			slot:  39,
+			slot:  params.BeaconConfig().GenesisSlot + 39,
 			index: 10262,
 		},
 	}
@@ -86,8 +88,8 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 }
 
 func TestBeaconProposerIndex_EmptyCommittee(t *testing.T) {
-	_, err := BeaconProposerIndex(&pb.BeaconState{}, 0)
-	expected := "empty first committee at slot 0"
+	_, err := BeaconProposerIndex(&pb.BeaconState{Slot: params.BeaconConfig().GenesisSlot}, params.BeaconConfig().GenesisSlot)
+	expected := fmt.Sprintf("empty first committee at slot %d", 0)
 	if err.Error() != expected {
 		t.Errorf("Unexpected error. got=%v want=%s", err, expected)
 	}

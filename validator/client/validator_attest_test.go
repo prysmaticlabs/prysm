@@ -44,7 +44,7 @@ func TestAttestToBlockHead_ValidatorCommitteeAtSlotFailure(t *testing.T) {
 		gomock.Any(),
 	).Return(nil, errors.New("something went wrong"))
 
-	validator.AttestToBlockHead(context.Background(), 30)
+	validator.AttestToBlockHead(context.Background(), 30+params.BeaconConfig().GenesisSlot)
 	testutil.AssertLogsContain(t, hook, "Could not fetch crosslink committees at slot 30")
 }
 
@@ -274,9 +274,9 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 
 	m.attesterClient.EXPECT().AttestHead(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
+		gomock.Any(),
 	).Return(&pb.AttestResponse{}, nil).Times(1)
 
 	delay = 0
-	go validator.AttestToBlockHead(context.Background(), 0)
+	validator.AttestToBlockHead(context.Background(), 0)
 }

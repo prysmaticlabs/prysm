@@ -91,10 +91,10 @@ func (s *Service) IncomingAttFeed() *event.Feed {
 	return s.incomingAttFeed
 }
 
-// IncomingBlockFeed returns a feed that any service can send incoming p2p beacon blocks into.
+// IncomingProcessedBlockFeed returns a feed that any service can send incoming p2p beacon blocks into.
 // The beacon block operation pool service will subscribe to this feed in order to receive incoming beacon blocks.
-func (s *Service) IncomingBlockFeed() *event.Feed {
-	return s.incomingAttFeed
+func (s *Service) IncomingProcessedBlockFeed() *event.Feed {
+	return s.incomingProcessedBlockFeed
 }
 
 // PendingAttestations returns the attestations that have not seen on the beacon chain, the attestations are
@@ -109,17 +109,14 @@ func (s *Service) PendingAttestations() ([]*pb.Attestation, error) {
 	sort.Slice(attestationsFromDB, func(i, j int) bool {
 		return attestationsFromDB[i].Data.Slot < attestationsFromDB[j].Data.Slot
 	})
-	for i, attestation := range attestationsFromDB {
+	for i := range attestationsFromDB {
 		// Stop the max attestation number per beacon block is reached.
 		if uint64(i) == params.BeaconConfig().MaxAttestations {
 			break
 		}
-		attestations = append(attestations, attestation)
-		// Delete attestation from DB after retrieval.
-		if err := s.beaconDB.DeleteAttestation(attestationsFromDB[i]); err != nil {
-			return nil, fmt.Errorf("could not delete attestation %v", attestationsFromDB[i])
-		}
+		attestations = append(attestations, attestationsFromDB[i])
 	}
+	log.Infof("%d Attestations obtained from DB in operations service", len(attestations))
 	return attestations, nil
 }
 
@@ -129,6 +126,8 @@ func (s *Service) saveOperations() {
 	// TODO(1438): Add rest of operations (slashings, attestation, exists...etc)
 	incomingSub := s.incomingExitFeed.Subscribe(s.incomingValidatorExits)
 	defer incomingSub.Unsubscribe()
+	incomingAttSub := s.incomingAttFeed.Subscribe(s.incomingAtt)
+	defer incomingAttSub.Unsubscribe()
 
 	for {
 		select {
@@ -149,7 +148,7 @@ func (s *Service) saveOperations() {
 				log.Errorf("Could not save exit request: %v", err)
 				continue
 			}
-			log.Debugf("Exit request %#x saved in DB", hash)
+			log.Infof("Exit request %#x saved in DB", hash)
 		case attestation := <-s.incomingAtt:
 			hash, err := hashutil.HashProto(attestation)
 			if err != nil {
@@ -160,7 +159,7 @@ func (s *Service) saveOperations() {
 				log.Errorf("Could not save attestation: %v", err)
 				continue
 			}
-			log.Debugf("Attestation %#x saved in DB", hash)
+			log.Infof("Attestation %#x saved in DB", hash)
 		}
 	}
 }

@@ -48,24 +48,6 @@ func TestHasVoted_OK(t *testing.T) {
 	}
 }
 
-func TestValidatorIndex_OK(t *testing.T) {
-	var validators []*pb.Validator
-	for i := 0; i < 10; i++ {
-		validators = append(validators, &pb.Validator{Pubkey: []byte{}, ExitEpoch: params.BeaconConfig().FarFutureEpoch})
-	}
-	if _, err := ValidatorIdx([]byte("100"), validators); err == nil {
-		t.Fatalf("ValidatorIdx should have failed,  there's no validator with pubkey 100")
-	}
-	validators[5].Pubkey = []byte("100")
-	idx, err := ValidatorIdx([]byte("100"), validators)
-	if err != nil {
-		t.Fatalf("call ValidatorIdx failed: %v", err)
-	}
-	if idx != 5 {
-		t.Errorf("Incorrect validator index. Wanted 5, Got %v", idx)
-	}
-}
-
 func TestBoundaryAttesterIndices_OK(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
@@ -78,12 +60,15 @@ func TestBoundaryAttesterIndices_OK(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
+		Slot:              params.BeaconConfig().GenesisSlot,
 		ValidatorRegistry: validators,
 	}
 
 	boundaryAttestations := []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{}, AggregationBitfield: []byte{0x03}}, // returns indices 242
-		{Data: &pb.AttestationData{}, AggregationBitfield: []byte{0x03}}, // returns indices 237,224,2
+		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
+			AggregationBitfield: []byte{0x03}}, // returns indices 242
+		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
+			AggregationBitfield: []byte{0x03}}, // returns indices 237,224,2
 	}
 
 	attesterIndices, err := ValidatorIndices(state, boundaryAttestations)
@@ -111,12 +96,12 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ValidatorRegistry: validators,
-		Slot:              0,
+		Slot:              params.BeaconConfig().GenesisSlot,
 	}
 
 	prevAttestation := &pb.PendingAttestation{
 		Data: &pb.AttestationData{
-			Slot:                 3,
+			Slot:                 params.BeaconConfig().GenesisSlot + 3,
 			Shard:                6,
 			ShardBlockRootHash32: []byte{'B'},
 		},
@@ -395,10 +380,7 @@ func TestExitValidator_OK(t *testing.T) {
 			{ExitEpoch: params.BeaconConfig().FarFutureEpoch, Pubkey: []byte{'B'}},
 		},
 	}
-	newState, err := ExitValidator(state, 0)
-	if err != nil {
-		t.Fatalf("could not execute ExitValidator:%v", err)
-	}
+	newState := ExitValidator(state, 0)
 
 	currentEpoch := helpers.CurrentEpoch(state)
 	wantedEpoch := helpers.EntryExitEffectEpoch(currentEpoch)
@@ -416,8 +398,9 @@ func TestExitValidator_AlreadyExited(t *testing.T) {
 			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
 		},
 	}
-	if _, err := ExitValidator(state, 0); err == nil {
-		t.Fatal("exitValidator should have failed with exiting again")
+	state = ExitValidator(state, 0)
+	if len(state.ValidatorRegistry) != 1 {
+		t.Error("Expected validator to have failed exiting")
 	}
 }
 

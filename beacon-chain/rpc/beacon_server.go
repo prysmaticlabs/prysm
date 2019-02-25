@@ -124,7 +124,7 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 		// Verify the block from the vote's block hash exists in the eth1.0 chain and fetch its height.
 		blockExists, blockHeight, err := bs.powChainService.BlockExists(eth1Hash)
 		if err != nil {
-			log.Errorf("Could not verify block with hash exists in Eth1 chain: %#x: %v", eth1Hash, err)
+			log.Debugf("Could not verify block with hash exists in Eth1 chain: %#x: %v", eth1Hash, err)
 			continue
 		}
 		if !blockExists {
@@ -137,7 +137,7 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 		stateLatestEth1Hash := bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockHash32)
 		_, stateLatestEth1Height, err := bs.powChainService.BlockExists(stateLatestEth1Hash)
 		if err != nil {
-			log.Errorf("Could not verify block with hash exists in Eth1 chain: %#x: %v", eth1Hash, err)
+			log.Debugf("Could not verify block with hash exists in Eth1 chain: %#x: %v", eth1Hash, err)
 			continue
 		}
 		// Let dataVotes be the set of Eth1DataVote objects vote in state.eth1_data_votes where:
@@ -194,12 +194,12 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 			voteHash := bytesutil.ToBytes32(vote.Eth1Data.BlockHash32)
 			_, bestVoteHeight, err := bs.powChainService.BlockExists(bestVoteHash)
 			if err != nil {
-				log.Errorf("Could not fetch block height: %v", err)
+				log.Debugf("Could not fetch block height: %v", err)
 				continue
 			}
 			_, voteHeight, err := bs.powChainService.BlockExists(voteHash)
 			if err != nil {
-				log.Errorf("Could not fetch block height: %v", err)
+				log.Debugf("Could not fetch block height: %v", err)
 				continue
 			}
 			if voteHeight.Cmp(bestVoteHeight) == 1 {

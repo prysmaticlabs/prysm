@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -42,12 +44,21 @@ func (ms *mockOperationService) PendingAttestations() ([]*pb.Attestation, error)
 	return []*pb.Attestation{
 		{
 			AggregationBitfield: []byte("A"),
+			Data: &pb.AttestationData{
+				Slot: params.BeaconConfig().GenesisSlot,
+			},
 		},
 		{
 			AggregationBitfield: []byte("B"),
+			Data: &pb.AttestationData{
+				Slot: params.BeaconConfig().GenesisSlot,
+			},
 		},
 		{
 			AggregationBitfield: []byte("C"),
+			Data: &pb.AttestationData{
+				Slot: params.BeaconConfig().GenesisSlot,
+			},
 		},
 	}, nil
 }

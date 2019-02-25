@@ -639,7 +639,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 		t.Fatal("block processing succeeded despite block having no parent saved")
 	}
 
-	beaconState.Slot = 10
+	beaconState.Slot = params.BeaconConfig().GenesisSlot + 10
 
 	stateRoot, err := ssz.TreeHash(beaconState)
 	if err != nil {
@@ -658,10 +658,10 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 		DepositRootHash32: []byte{2},
 		BlockHash32:       []byte{3},
 	}
-	beaconState.Slot = 0
+	beaconState.Slot = params.BeaconConfig().GenesisSlot
 
-	currentSlot := uint64(1)
-	attestationSlot := uint64(0)
+	currentSlot := params.BeaconConfig().GenesisSlot + 1
+	attestationSlot := params.BeaconConfig().GenesisSlot
 
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block2 := &pb.BeaconBlock{

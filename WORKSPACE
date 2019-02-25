@@ -181,25 +181,25 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p",
     importpath = "github.com/libp2p/go-libp2p",
-    tag = "v6.0.29",
+    tag = "gx/v6.0.29",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_peer",
     importpath = "github.com/libp2p/go-libp2p-peer",
-    tag = "v2.4.0",
+    tag = "gx/v2.4.0",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_crypto",
     build_file_proto_mode = "disable_global",
-    tag = "v2.0.5",
+    tag = "gx/v2.0.5",
     importpath = "github.com/libp2p/go-libp2p-crypto",
 )
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr",
-    commit = "312b9db3552cf2045efb3ab5d10104c3ec8ff79d",
+    tag = "v0.0.1",
     importpath = "github.com/multiformats/go-multiaddr",
 )
 
@@ -212,31 +212,31 @@ go_repository(
 go_repository(
     name = "com_github_multiformats_go_multihash",
     importpath = "github.com/multiformats/go-multihash",
-    tag = "v1.0.10",
+    tag = "gx/v1.0.10",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_swarm",
     importpath = "github.com/libp2p/go-libp2p-swarm",
-    tag = "v3.0.22",
+    tag = "gx/v3.0.22",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_host",
     importpath = "github.com/libp2p/go-libp2p-host",
-    tag = "v3.0.15",
+    tag = "gx/v3.0.15",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_peerstore",
     importpath = "github.com/libp2p/go-libp2p-peerstore",
-    tag = "v2.0.6",
+    tag = "gx/v2.0.6",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_circuit",
     importpath = "github.com/libp2p/go-libp2p-circuit",
-    tag = "v2.3.2",
+    tag = "gx/v2.3.2",
 )
 
 go_repository(
@@ -248,25 +248,25 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_interface_connmgr",
     importpath = "github.com/libp2p/go-libp2p-interface-connmgr",
-    tag = "v0.0.21",
+    tag = "gx/v0.0.21",
 )
 
 go_repository(
     name = "com_github_libp2p_go_conn_security_multistream",
     importpath = "github.com/libp2p/go-conn-security-multistream",
-    tag = "v0.1.15",
+    tag = "gx/v0.1.15",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_metrics",
     importpath = "github.com/libp2p/go-libp2p-metrics",
-    tag = "v2.1.7",
+    tag = "gx/v2.1.7",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_net",
     importpath = "github.com/libp2p/go-libp2p-net",
-    tag = "v3.0.15",
+    tag = "gx/v3.0.15",
 )
 
 go_repository(
@@ -277,7 +277,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr_net",
-    commit = "c75d1cac17a0d84dbf8b2c53c61f0ebf0575183a",
+    commit = "c8d587e921c095d128ac4e0c0e87e54968725a4d",
     importpath = "github.com/multiformats/go-multiaddr-net",
 )
 
@@ -339,19 +339,19 @@ go_repository(
     name = "com_github_libp2p_go_libp2p_secio",
     build_file_proto_mode = "disable_global",
     importpath = "github.com/libp2p/go-libp2p-secio",
-    tag = "v2.0.17",
+    tag = "gx/v2.0.17",
 )
 
 go_repository(
     name = "com_github_libp2p_go_tcp_transport",
     importpath = "github.com/libp2p/go-tcp-transport",
-    tag = "v2.0.16",
+    tag = "gx/v2.0.16",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_protocol",
     importpath = "github.com/libp2p/go-libp2p-protocol",
-    tag = "v1.0.0",
+    tag = "gx/v1.0.0",
 )
 
 go_repository(
@@ -369,19 +369,19 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_loggables",
     importpath = "github.com/libp2p/go-libp2p-loggables",
-    tag = "v1.1.24",
+    tag = "gx/v1.1.24",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_nat",
     importpath = "github.com/libp2p/go-libp2p-nat",
-    tag = "v0.8.8",
+    tag = "gx/v0.8.8",
 )
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr_dns",
     importpath = "github.com/multiformats/go-multiaddr-dns",
-    tag = "v0.2.5",
+    tag = "gx/v0.2.5",
 )
 
 go_repository(
@@ -405,19 +405,19 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_stream_muxer",
     importpath = "github.com/libp2p/go-stream-muxer",
-    tag = "v3.0.1",
+    tag = "gx/v3.0.1",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_transport_upgrader",
     importpath = "github.com/libp2p/go-libp2p-transport-upgrader",
-    tag = "v0.1.16",
+    tag = "gx/v0.1.16",
 )
 
 go_repository(
     name = "com_github_libp2p_go_testutil",
     importpath = "github.com/libp2p/go-testutil",
-    tag = "v1.2.10",
+    tag = "gx/v1.2.10",
 )
 
 go_repository(
@@ -429,31 +429,31 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_maddr_filter",
     importpath = "github.com/libp2p/go-maddr-filter",
-    tag = "v1.1.10",
+    tag = "gx/v1.1.10",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_transport",
     importpath = "github.com/libp2p/go-libp2p-transport",
-    tag = "v3.0.15",
+    tag = "gx/v3.0.15",
 )
 
 go_repository(
     name = "com_github_libp2p_go_addr_util",
     importpath = "github.com/libp2p/go-addr-util",
-    tag = "v2.0.7",
+    tag = "gx/v2.0.7",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_interface_pnet",
     importpath = "github.com/libp2p/go-libp2p-interface-pnet",
-    tag = "v3.0.0",
+    tag = "gx/v3.0.0",
 )
 
 go_repository(
     name = "com_github_libp2p_go_conn_security",
     importpath = "github.com/libp2p/go-conn-security",
-    tag = "v0.1.15",
+    tag = "gx/v0.1.15",
 )
 
 go_repository(
@@ -477,7 +477,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_reuseport",
     importpath = "github.com/libp2p/go-reuseport",
-    tag = "v0.2.0",
+    tag = "gx/v0.2.0",
 )
 
 go_repository(
@@ -512,7 +512,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "cd391775e71e684db52b63df9affd58269495083",
+    commit = "cc5685c2db1239775905f3911f0067c0fa74762f",
     importpath = "golang.org/x/sys",
 )
 
@@ -525,13 +525,13 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_flow_metrics",
     importpath = "github.com/libp2p/go-flow-metrics",
-    tag = "v0.2.0",
+    tag = "gx/v0.2.0",
 )
 
 go_repository(
     name = "com_github_libp2p_go_msgio",
     importpath = "github.com/libp2p/go-msgio",
-    tag = "v0.0.6",
+    tag = "gx/v0.0.6",
 )
 
 go_repository(
@@ -549,12 +549,12 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_ws_transport",
     importpath = "github.com/libp2p/go-ws-transport",
-    tag = "v2.0.15",
+    tag = "gx/v2.0.15",
 )
 
 go_repository(
     name = "org_golang_x_crypto",
-    commit = "ffb98f73852f696ea2bb21a617a5c4b3e067a439",
+    commit = "7f87c0fbb88b590338857bcb720678c2583d4dea",
     importpath = "golang.org/x/crypto",
 )
 
@@ -567,13 +567,13 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_reuseport_transport",
     importpath = "github.com/libp2p/go-reuseport-transport",
-    tag = "v0.2.0",
+    tag = "gx/v0.2.0",
 )
 
 go_repository(
     name = "com_github_libp2p_go_sockaddr",
     importpath = "github.com/libp2p/go-sockaddr",
-    tag = "v1.0.3",
+    tag = "gx/v1.0.3",
 )
 
 go_repository(
@@ -615,7 +615,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_blankhost",
     importpath = "github.com/libp2p/go-libp2p-blankhost",
-    tag = "v0.3.15",
+    tag = "gx/v0.3.15",
 )
 
 go_repository(
@@ -680,7 +680,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_procfs",
-    commit = "e4d4a2206da023361ed100d85c5f2cf9c8364e9f",
+    commit = "6ed1f7e1041181781dd2826d3001075d011a80cc",
     importpath = "github.com/prometheus/procfs",
 )
 
@@ -716,21 +716,21 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_buffer_pool",
-    tag = "v0.1.3",
+    tag = "gx/v0.1.3",
     importpath = "github.com/libp2p/go-buffer-pool",
 )
 
 go_repository(
     name = "com_github_libp2p_go_mplex",
     importpath = "github.com/libp2p/go-mplex",
-    tag = "v0.2.30",
+    tag = "gx/v0.2.30",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_pubsub",
     build_file_proto_mode = "disable_global",
     importpath = "github.com/libp2p/go-libp2p-pubsub",
-    tag = "v0.11.10",
+    tag = "gx/v0.11.10",
 )
 
 go_repository(
@@ -749,7 +749,7 @@ go_repository(
     name = "com_github_libp2p_go_libp2p_kad_dht",
     build_file_proto_mode = "disable_global",
     importpath = "github.com/libp2p/go-libp2p-kad-dht",
-    tag = "v4.4.12",
+    tag = "gx/v4.4.12",
 )
 
 go_repository(
@@ -774,19 +774,19 @@ go_repository(
     name = "com_github_libp2p_go_libp2p_record",
     build_file_proto_mode = "disable_global",
     importpath = "github.com/libp2p/go-libp2p-record",
-    tag = "v4.1.7",
+    tag = "gx/v4.1.7",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_routing",
     importpath = "github.com/libp2p/go-libp2p-routing",
-    tag = "v2.7.1",
+    tag = "gx/v2.7.1",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_kbucket",
     importpath = "github.com/libp2p/go-libp2p-kbucket",
-    tag = "v2.2.12",
+    tag = "gx/v2.2.12",
 )
 
 go_repository(
@@ -810,7 +810,7 @@ go_repository(
 go_repository(
     name = "com_github_multiformats_go_multibase",
     importpath = "github.com/multiformats/go-multibase",
-    tag = "v0.3.0",
+    tag = "gx/v0.3.0",
 )
 
 go_repository(

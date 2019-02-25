@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/sirupsen/logrus"
 )
 
 // AttestationPool STUB interface. Final attestation pool pending design.
@@ -118,6 +119,11 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	}
 
 	v.assignment = resp.Assignment
+	log.WithFields(logrus.Fields{
+		"proposerSlot": resp.Assignment.ProposerSlot - params.BeaconConfig().GenesisSlot,
+		"attesterSlot": resp.Assignment.AttesterSlot - params.BeaconConfig().GenesisSlot,
+		"shard":        resp.Assignment.Shard,
+	}).Info("Updated validator assignments")
 	return nil
 }
 
@@ -125,7 +131,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 // validator is known to not have a role at the at slot. Returns UNKNOWN if the
 // validator assignments are unknown. Otherwise returns a valid ValidatorRole.
 func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
-	if v.assignment == nil {
+	if v.assignment == nil || slot == params.BeaconConfig().GenesisSlot {
 		return pb.ValidatorRole_UNKNOWN
 	}
 	if v.assignment.AttesterSlot == slot && v.assignment.ProposerSlot == slot {

@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/forkutils"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
@@ -30,11 +32,8 @@ import (
 //
 // WIP - this is stubbed out until BLS is integrated into Prysm.
 func VerifyProposerSignature(
-	block *pb.BeaconBlock,
+	_ *pb.BeaconBlock,
 ) error {
-	if block == nil {
-		return errors.New("received nil block")
-	}
 	return nil
 }
 
@@ -80,14 +79,16 @@ func ProcessEth1Data(beaconState *pb.BeaconState, block *pb.BeaconBlock) *pb.Bea
 //     signature=block.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO)).
 //   Set state.latest_randao_mixes[get_current_epoch(state) % LATEST_RANDAO_MIXES_LENGTH] =
 //     xor(get_randao_mix(state, get_current_epoch(state)), hash(block.randao_reveal))
-func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, verifySignatures bool) (*pb.BeaconState, error) {
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
 	}
 	proposer := beaconState.ValidatorRegistry[proposerIdx]
-	if err := verifyBlockRandao(beaconState, block, proposer); err != nil {
-		return nil, fmt.Errorf("could not verify block randao: %v", err)
+	if verifySignatures {
+		if err := verifyBlockRandao(beaconState, block, proposer); err != nil {
+			return nil, fmt.Errorf("could not verify block randao: %v", err)
+		}
 	}
 	// If block randao passed verification, we XOR the state's latest randao mix with the block's
 	// randao and update the state's corresponding latest randao mix value.
@@ -118,6 +119,11 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 	if err != nil {
 		return fmt.Errorf("could not deserialize block randao reveal: %v", err)
 	}
+	log.WithFields(logrus.Fields{
+		"epoch":    helpers.CurrentEpoch(beaconState) - params.BeaconConfig().GenesisEpoch,
+		"pubkey":   fmt.Sprintf("%#x", proposer.Pubkey),
+		"epochSig": fmt.Sprintf("%#x", sig.Marshal()),
+	}).Info("Verifying randao")
 	if !sig.Verify(hashTreeRoot[:], pub, domain) {
 		return fmt.Errorf("block randao reveal signature did not verify")
 	}
@@ -187,7 +193,14 @@ func verifyProposerSlashing(
 	root1 := slashing.ProposalData_1.BlockRootHash32
 	root2 := slashing.ProposalData_2.BlockRootHash32
 	if slot1 != slot2 {
-		return fmt.Errorf("slashing proposal data slots do not match: %d, %d", slot1, slot2)
+		if slot1 > params.BeaconConfig().GenesisSlot {
+			slot1 -= params.BeaconConfig().GenesisSlot
+		}
+		if slot2 > params.BeaconConfig().GenesisSlot {
+			slot2 -= params.BeaconConfig().GenesisSlot
+		}
+		return fmt.Errorf("slashing proposal data slots do not match: %d, %d",
+			slot1, slot2)
 	}
 	if shard1 != shard2 {
 		return fmt.Errorf("slashing proposal data shards do not match: %d, %d", shard1, shard2)
@@ -388,19 +401,19 @@ func ProcessBlockAttestations(
 			params.BeaconConfig().MaxAttestations,
 		)
 	}
-	var pendingAttestations []*pb.PendingAttestation
+
 	for idx, attestation := range atts {
 		if err := verifyAttestation(beaconState, attestation, verifySignatures); err != nil {
 			return nil, fmt.Errorf("could not verify attestation at index %d in block: %v", idx, err)
 		}
-		pendingAttestations = append(pendingAttestations, &pb.PendingAttestation{
+		beaconState.LatestAttestations = append(beaconState.LatestAttestations, &pb.PendingAttestation{
 			Data:                attestation.Data,
 			AggregationBitfield: attestation.AggregationBitfield,
 			CustodyBitfield:     attestation.CustodyBitfield,
 			InclusionSlot:       beaconState.Slot,
 		})
 	}
-	beaconState.LatestAttestations = pendingAttestations
+
 	return beaconState, nil
 }
 
@@ -409,23 +422,23 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	if att.Data.Slot+inclusionDelay > beaconState.Slot {
 		return fmt.Errorf(
 			"attestation slot (slot %d) + inclusion delay (%d) beyond current beacon state slot (%d)",
-			att.Data.Slot,
+			att.Data.Slot-params.BeaconConfig().GenesisSlot,
 			inclusionDelay,
-			beaconState.Slot,
+			beaconState.Slot-params.BeaconConfig().GenesisSlot,
 		)
 	}
 	if att.Data.Slot+params.BeaconConfig().SlotsPerEpoch < beaconState.Slot {
 		return fmt.Errorf(
 			"attestation slot (slot %d) + epoch length (%d) less than current beacon state slot (%d)",
-			att.Data.Slot,
+			att.Data.Slot-params.BeaconConfig().GenesisSlot,
 			params.BeaconConfig().SlotsPerEpoch,
-			beaconState.Slot,
+			beaconState.Slot-params.BeaconConfig().GenesisSlot,
 		)
 	}
 	// Verify that `attestation.data.justified_epoch` is equal to `state.justified_epoch
-	// 	if slot_to_epoch(attestation.data.slot + 1) >= get_current_epoch(state)
+	// 	if slot_to_epoch(attestation.data.slot) >= get_current_epoch(state)
 	// 	else state.previous_justified_epoch`.
-	if helpers.SlotToEpoch(att.Data.Slot+1) >= helpers.CurrentEpoch(beaconState) {
+	if helpers.SlotToEpoch(att.Data.Slot) >= helpers.CurrentEpoch(beaconState) {
 		if att.Data.JustifiedEpoch != beaconState.JustifiedEpoch {
 			return fmt.Errorf(
 				"expected attestation.JustifiedEpoch == state.JustifiedEpoch, received %d == %d",
@@ -472,7 +485,6 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	}
 	crosslinkFromAttestation := att.Data.LatestCrosslink
 	crosslinkFromState := beaconState.LatestCrosslinks[shard]
-
 	if !(reflect.DeepEqual(crosslinkFromState, crosslink) ||
 		reflect.DeepEqual(crosslinkFromState, crosslinkFromAttestation)) {
 		return fmt.Errorf(
@@ -482,10 +494,10 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	}
 
 	// Verify attestation.shard_block_root == ZERO_HASH [TO BE REMOVED IN PHASE 1].
-	if !bytes.Equal(att.Data.ShardBlockRootHash32, []byte{}) {
+	if !bytes.Equal(att.Data.ShardBlockRootHash32, params.BeaconConfig().ZeroHash[:]) {
 		return fmt.Errorf(
 			"expected attestation.ShardBlockRoot == %#x, received %#x instead",
-			[]byte{},
+			params.BeaconConfig().ZeroHash[:],
 			att.Data.ShardBlockRootHash32,
 		)
 	}
