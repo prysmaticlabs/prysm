@@ -34,6 +34,7 @@ func NewSyncService(ctx context.Context, cfg *Config) *Service {
 	sqCfg.BeaconDB = cfg.BeaconDB
 	sqCfg.P2P = cfg.P2P
 	sqCfg.PowChain = cfg.PowChainService
+	sqCfg.ChainService = cfg.ChainService
 
 	isCfg := initialsync.DefaultConfig()
 	isCfg.BeaconDB = cfg.BeaconDB

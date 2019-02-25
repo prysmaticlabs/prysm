@@ -61,6 +61,7 @@ type RegularSync struct {
 	blockRequestBySlot       chan p2p.Message
 	blockRequestByHash       chan p2p.Message
 	batchedRequestBuf        chan p2p.Message
+	stateRequestBuf          chan p2p.Message
 	chainHeadReqBuf          chan p2p.Message
 	attestationBuf           chan p2p.Message
 	attestationReqByHashBuf  chan p2p.Message
@@ -75,6 +76,7 @@ type RegularSyncConfig struct {
 	BlockReqSlotBufferSize       int
 	BlockReqHashBufferSize       int
 	BatchedBufferSize            int
+	StateReqBufferSize           int
 	AttestationBufferSize        int
 	AttestationReqHashBufSize    int
 	UnseenAttestationsReqBufSize int
@@ -94,6 +96,7 @@ func DefaultRegularSyncConfig() *RegularSyncConfig {
 		BlockReqSlotBufferSize:       100,
 		BlockReqHashBufferSize:       100,
 		BatchedBufferSize:            100,
+		StateReqBufferSize:           100,
 		ChainHeadReqBufferSize:       100,
 		AttestationBufferSize:        100,
 		AttestationReqHashBufSize:    100,
@@ -118,6 +121,7 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		blockRequestBySlot:       make(chan p2p.Message, cfg.BlockReqSlotBufferSize),
 		blockRequestByHash:       make(chan p2p.Message, cfg.BlockReqHashBufferSize),
 		batchedRequestBuf:        make(chan p2p.Message, cfg.BatchedBufferSize),
+		stateRequestBuf:          make(chan p2p.Message, cfg.StateReqBufferSize),
 		attestationBuf:           make(chan p2p.Message, cfg.AttestationBufferSize),
 		attestationReqByHashBuf:  make(chan p2p.Message, cfg.AttestationReqHashBufSize),
 		unseenAttestationsReqBuf: make(chan p2p.Message, cfg.UnseenAttestationsReqBufSize),
@@ -156,6 +160,7 @@ func (rs *RegularSync) run() {
 	blockRequestSub := rs.p2p.Subscribe(&pb.BeaconBlockRequestBySlotNumber{}, rs.blockRequestBySlot)
 	blockRequestHashSub := rs.p2p.Subscribe(&pb.BeaconBlockRequest{}, rs.blockRequestByHash)
 	batchedBlockRequestSub := rs.p2p.Subscribe(&pb.BatchedBeaconBlockRequest{}, rs.batchedRequestBuf)
+	stateRequestSub := rs.p2p.Subscribe(&pb.BeaconStateRequest{}, rs.stateRequestBuf)
 	attestationSub := rs.p2p.Subscribe(&pb.AttestationResponse{}, rs.attestationBuf)
 	attestationReqSub := rs.p2p.Subscribe(&pb.AttestationRequest{}, rs.attestationReqByHashBuf)
 	unseenAttestationsReqSub := rs.p2p.Subscribe(&pb.UnseenAttestationsRequest{}, rs.unseenAttestationsReqBuf)
@@ -167,6 +172,7 @@ func (rs *RegularSync) run() {
 	defer blockRequestSub.Unsubscribe()
 	defer blockRequestHashSub.Unsubscribe()
 	defer batchedBlockRequestSub.Unsubscribe()
+	defer stateRequestSub.Unsubscribe()
 	defer chainHeadReqSub.Unsubscribe()
 	defer attestationSub.Unsubscribe()
 	defer attestationReqSub.Unsubscribe()
@@ -196,6 +202,8 @@ func (rs *RegularSync) run() {
 			rs.handleBlockRequestByHash(msg)
 		case msg := <-rs.batchedRequestBuf:
 			rs.handleBatchedBlockRequest(msg)
+		case msg := <-rs.stateRequestBuf:
+			rs.handleStateRequest(msg)
 		case msg := <-rs.chainHeadReqBuf:
 			rs.handleChainHeadRequest(msg)
 		}
@@ -286,6 +294,30 @@ func (rs *RegularSync) handleBlockRequestBySlot(msg p2p.Message) {
 		Block: block,
 	}, msg.Peer)
 	sendBlockSpan.End()
+}
+
+func (rs *RegularSync) handleStateRequest(msg p2p.Message) {
+	req, ok := msg.Data.(*pb.BeaconStateRequest)
+	if !ok {
+		log.Errorf("Message is of the incorrect type")
+		return
+	}
+	state, err := rs.db.State()
+	if err != nil {
+		log.Errorf("Unable to retrieve beacon state, %v", err)
+		return
+	}
+	root, err := ssz.TreeHash(state)
+	if err != nil {
+		log.Errorf("Unable to tree hash beacon state, %v", err)
+		return
+	}
+	if root != bytesutil.ToBytes32(req.Hash) {
+		log.Debugf("Requested state root is different from locally stored state root %#x", req.Hash)
+		return
+	}
+	log.WithField("beaconState", fmt.Sprintf("%#x", root)).Debug("Sending beacon state to peer")
+	rs.p2p.Send(&pb.BeaconStateResponse{BeaconState: state}, msg.Peer)
 }
 
 func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) {

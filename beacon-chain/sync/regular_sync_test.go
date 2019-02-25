@@ -645,3 +645,83 @@ func TestHandleUnseenAttsReq_Ok(t *testing.T) {
 	<-exitRoutine
 	testutil.AssertLogsContain(t, hook, "Sending response for batched unseen attestations to peer")
 }
+
+func TestHandleStateReq_NOState(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	ss := setupService(t, db)
+
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.run()
+		<-exitRoutine
+	}()
+
+	request1 := &pb.BeaconStateRequest{
+		Hash: []byte{'a'},
+	}
+
+	msg1 := p2p.Message{
+		Ctx:  context.Background(),
+		Data: request1,
+		Peer: p2p.Peer{},
+	}
+
+	ss.stateRequestBuf <- msg1
+
+	ss.cancel()
+	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, "Requested state root is different from locally stored state root")
+
+}
+
+func TestHandleStateReq_OK(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	genesisTime := time.Now()
+	unixTime := uint64(genesisTime.Unix())
+	if err := db.InitializeState(unixTime, []*pb.Deposit{}); err != nil {
+		t.Fatalf("could not initialize beacon state to disk: %v", err)
+	}
+	beaconState, err := db.State()
+	if err != nil {
+		t.Fatalf("could not attempt fetch beacon state: %v", err)
+	}
+	stateRoot, err := ssz.TreeHash(beaconState)
+	if err != nil {
+		t.Fatalf("could not hash beacon state: %v", err)
+	}
+
+	ss := setupService(t, db)
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.run()
+		<-exitRoutine
+	}()
+
+	request1 := &pb.BeaconStateRequest{
+		Hash: stateRoot[:],
+	}
+
+	msg1 := p2p.Message{
+		Ctx:  context.Background(),
+		Data: request1,
+		Peer: p2p.Peer{},
+	}
+
+	ss.stateRequestBuf <- msg1
+
+	ss.cancel()
+	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, "Sending beacon state to peer")
+}

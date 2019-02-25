@@ -125,7 +125,7 @@ func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*S
 
 	go ss.run()
 	for !ss.Querier.chainStarted {
-		mockPow.feed.Send(time.Now())
+		mockChain.sFeed.Send(time.Now())
 	}
 
 	for i := 1; i <= numOfBlocks; i++ {
