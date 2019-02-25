@@ -57,6 +57,8 @@ func CurrentBoundaryAttestations(
 
 		attestationData := attestation.Data
 		sameRoot := bytes.Equal(attestationData.JustifiedBlockRootHash32, boundaryBlockRoot)
+		log.Infof("Boundary attestation: att justified root: %v, state justified root: %d", attestationData.JustifiedBlockRootHash32, boundaryBlockRoot)
+		log.Infof("Boundary attestation: att justified epoch: %v, state justified epoch: %d", attestation.Data.JustifiedEpoch, state.JustifiedEpoch)
 		sameEpoch := attestation.Data.JustifiedEpoch == state.JustifiedEpoch
 
 		if sameRoot && sameEpoch {

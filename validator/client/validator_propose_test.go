@@ -113,7 +113,7 @@ func TestProposeBlock_UsePendingDeposits(t *testing.T) {
 
 	m.proposerClient.EXPECT().PendingAttestations(
 		gomock.Any(), // ctx
-		gomock.Any(),
+		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.PendingAttestationsResponse{PendingAttestations: []*pbp2p.Attestation{}}, nil)
 
 	m.proposerClient.EXPECT().ComputeStateRoot(
@@ -195,7 +195,7 @@ func TestProposeBlock_UsesEth1Data(t *testing.T) {
 
 	m.proposerClient.EXPECT().PendingAttestations(
 		gomock.Any(), // ctx
-		gomock.Any(),
+		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.PendingAttestationsResponse{PendingAttestations: []*pbp2p.Attestation{}}, nil)
 
 	m.proposerClient.EXPECT().ComputeStateRoot(
@@ -253,7 +253,7 @@ func TestProposeBlock_PendingAttestationsFailure(t *testing.T) {
 
 	m.proposerClient.EXPECT().PendingAttestations(
 		gomock.Any(), // ctx
-		gomock.Any(),
+		gomock.Eq(&ptypes.Empty{}),
 	).Return(nil, errors.New("failed"))
 
 	validator.ProposeBlock(context.Background(), 55)
@@ -291,7 +291,7 @@ func TestProposeBlock_ComputeStateFailure(t *testing.T) {
 
 	m.proposerClient.EXPECT().PendingAttestations(
 		gomock.Any(), // ctx
-		gomock.Any(),
+		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.PendingAttestationsResponse{PendingAttestations: []*pbp2p.Attestation{}}, nil)
 
 	m.proposerClient.EXPECT().ProposeBlock(
@@ -338,7 +338,7 @@ func TestProposeBlock_UsesComputedState(t *testing.T) {
 
 	m.proposerClient.EXPECT().PendingAttestations(
 		gomock.Any(), // ctx
-		gomock.Any(),
+		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.PendingAttestationsResponse{PendingAttestations: []*pbp2p.Attestation{}}, nil)
 
 	var broadcastedBlock *pbp2p.BeaconBlock
@@ -397,7 +397,7 @@ func TestProposeBlock_BroadcastsABlock(t *testing.T) {
 
 	m.proposerClient.EXPECT().PendingAttestations(
 		gomock.Any(), // ctx
-		gomock.Any(),
+		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.PendingAttestationsResponse{PendingAttestations: []*pbp2p.Attestation{}}, nil)
 
 	m.proposerClient.EXPECT().ComputeStateRoot(
