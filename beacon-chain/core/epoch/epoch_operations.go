@@ -7,8 +7,9 @@ package epoch
 import (
 	"bytes"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"math"
+
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	block "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
