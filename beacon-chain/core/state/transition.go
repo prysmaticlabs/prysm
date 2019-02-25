@@ -177,7 +177,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	// Calculate the attesting balances of validators that justified the
 	// epoch boundary block at the start of the current epoch.
 	currentAttestations := e.CurrentAttestations(state)
-	log.Infof("Current epoch attestations: %v", currentAttestations)
+	log.Infof("Number of current epoch attestations: %d", len(currentAttestations))
 
 	currentBoundaryAttestations, err := e.CurrentBoundaryAttestations(state, currentAttestations)
 	if err != nil {
