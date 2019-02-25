@@ -7,10 +7,17 @@ http_archive(
     strip_prefix = "bazel-skylib-0.7.0",
 )
 
-http_archive(
+#http_archive(
+#    name = "io_bazel_rules_go",
+#    url = "https://github.com/bazelbuild/rules_go/releases/download/0.17.0/rules_go-0.17.0.tar.gz",
+#    sha256 = "492c3ac68ed9dcf527a07e6a1b2dcbf199c6bf8b35517951467ac32e421c06c1",
+#)
+
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+git_repository(
     name = "io_bazel_rules_go",
-    url = "https://github.com/bazelbuild/rules_go/releases/download/0.17.0/rules_go-0.17.0.tar.gz",
-    sha256 = "492c3ac68ed9dcf527a07e6a1b2dcbf199c6bf8b35517951467ac32e421c06c1",
+    remote = "https://github.com/bazelbuild/rules_go.git",
+    commit = "e4e97e45dd9e55d5ff9b0a8fa1384fa4123d8ffc",
 )
 
 http_archive(

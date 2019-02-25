@@ -1,0 +1,36 @@
+# Proto: https://github.com/bazelbuild/bazel/blob/master/src/main/protobuf/crosstool_config.proto
+
+major_version: "local"
+minor_version: ""
+
+toolchain {
+  toolchain_identifier: "mingw-gcc"
+  host_system_name: "linux"
+  target_system_name: "x64_windows"
+  target_cpu: "x64_windows"
+  target_libc: "x64_windows"
+  compiler: "mingw-gcc"
+  abi_libc_version: "unknown"
+  abi_version: "unknown"
+
+  tool_path { name: "ar" path: "/bin/false" }
+  tool_path { name: "compat-ld" path: "/bin/false" }
+  tool_path { name: "cpp" path: "/bin/false" }
+  tool_path { name: "dwp" path: "/bin/false" }
+  tool_path { name: "gcc" path: "/usr/bin/i686-w64-mingw32-gcc" }
+  tool_path { name: "gcov" path: "/bin/false" }
+  tool_path { name: "ld" path: "/bin/false" }
+
+  tool_path { name: "nm" path: "/bin/false" }
+  tool_path { name: "objcopy" path: "/bin/false" }
+  tool_path { name: "objdump" path: "/bin/false" }
+  tool_path { name: "strip" path: "/bin/false" }
+
+  compiler_flag: "-v"
+  cxx_builtin_include_directory: "/usr/include"
+}
+
+default_toolchain {
+  cpu: "x64_windows"
+  toolchain_identifier: "mingw-gcc"
+}

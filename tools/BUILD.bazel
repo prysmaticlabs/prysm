@@ -4,3 +4,30 @@ alias(
     name = "kubesec",
     actual = "@com_github_shyiko_kubesec//:kubesec",
 )
+
+filegroup(
+    name = "empty",
+    srcs = [],
+)
+
+cc_toolchain_suite(
+    name = "mingw-gcc-toolchain",
+    toolchains = {
+        "x64_windows|mingw-gcc": ":cc-compiler-mingw-gcc",
+    },
+)
+
+cc_toolchain(
+    name = "cc-compiler-mingw-gcc",
+    all_files = ":empty",
+    compiler_files = ":empty",
+    cpu = "x64_windows",
+    dwp_files = ":empty",
+    dynamic_runtime_libs = [":empty"],
+    linker_files = ":empty",
+    objcopy_files = ":empty",
+    static_runtime_libs = [":empty"],
+    strip_files = ":empty",
+    supports_param_files = 1,
+    toolchain_identifier = "mingw-gcc",
+)
