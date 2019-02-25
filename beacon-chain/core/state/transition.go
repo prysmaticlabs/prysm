@@ -171,7 +171,7 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock, verifySignatures
 func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	// Calculate total balances of active validators of the current state.
 	currentEpoch := helpers.CurrentEpoch(state)
-	prevEpoch := helpers.CurrentEpoch(state) - 1
+	prevEpoch := helpers.PrevEpoch(state)
 	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, currentEpoch)
 	totalBalance := e.TotalBalance(state, activeValidatorIndices)
 

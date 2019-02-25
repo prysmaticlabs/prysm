@@ -117,16 +117,15 @@ func ProcessJustification(
 	prevTotalBalance uint64,
 	totalBalance uint64) *pb.BeaconState {
 	newJustifiedEpoch := state.JustifiedEpoch
-	prevEpoch := helpers.CurrentEpoch(state) - 1
+	prevEpoch := helpers.PrevEpoch(state)
 	currentEpoch := helpers.CurrentEpoch(state)
 	// Shifts all the bits over one to create a new bit for the recent epoch.
-	state.JustificationBitfield = state.JustificationBitfield * 2
+	state.JustificationBitfield = state.JustificationBitfield << 1
 	log.Infof("Total Balance: %d", totalBalance)
 	// If prev prev epoch was justified then we ensure the 2nd bit in the bitfield is set,
 	// assign new justified slot to 2 * SLOTS_PER_EPOCH before.
 	log.Infof("Previous Epoch Attesting Balance: %d", prevEpochBoundaryAttestingBalance)
 	if 3*prevEpochBoundaryAttestingBalance >= 2*prevTotalBalance {
-		log.Infof("Prev epoch %d was justified", state.JustifiedEpoch-params.BeaconConfig().GenesisEpoch)
 		state.JustificationBitfield |= 2
 		newJustifiedEpoch = prevEpoch
 	}
@@ -134,9 +133,9 @@ func ProcessJustification(
 	// If this epoch was justified then we ensure the 1st bit in the bitfield is set,
 	// assign new justified slot to 1 * SLOTS_PER_EPOCH before.
 	if 3*thisEpochBoundaryAttestingBalance >= 2*totalBalance {
-		log.Infof("Current epoch %d was justified", state.JustifiedEpoch-params.BeaconConfig().GenesisEpoch)
 		state.JustificationBitfield |= 1
 		newJustifiedEpoch = currentEpoch
+		log.Infof("Current epoch %d was justified", newJustifiedEpoch-params.BeaconConfig().GenesisEpoch)
 	}
 
 	// Process finality.
@@ -144,25 +143,21 @@ func ProcessJustification(
 		(state.JustificationBitfield>>1)%8 == 7 {
 		state.FinalizedEpoch = state.PreviousJustifiedEpoch
 		log.Infof("New Finalized Epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
-		return state
 	}
 	if state.PreviousJustifiedEpoch == prevEpoch-1 &&
 		(state.JustificationBitfield>>1)%4 == 3 {
 		state.FinalizedEpoch = state.PreviousJustifiedEpoch
 		log.Infof("New Finalized Epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
-		return state
 	}
 	if state.JustifiedEpoch == prevEpoch-1 &&
 		(state.JustificationBitfield>>0)%8 == 7 {
 		state.FinalizedEpoch = state.JustifiedEpoch
 		log.Infof("New Finalized Epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
-		return state
 	}
 	if state.JustifiedEpoch == prevEpoch &&
 		(state.JustificationBitfield>>0)%4 == 3 {
 		state.FinalizedEpoch = state.JustifiedEpoch
 		log.Infof("New Finalized Epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
-		return state
 	}
 	state.PreviousJustifiedEpoch = state.JustifiedEpoch
 	state.JustifiedEpoch = newJustifiedEpoch
