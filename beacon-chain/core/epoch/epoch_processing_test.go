@@ -28,16 +28,17 @@ func TestCanProcessEpoch_TrueOnEpochs(t *testing.T) {
 			canProcessEpoch: false,
 		}, {
 			slot:            63,
+			canProcessEpoch: true,
+		},
+		{
+			slot:            64,
 			canProcessEpoch: false,
 		}, {
-			slot:            64,
-			canProcessEpoch: true,
-		}, {
-			slot:            128,
+			slot:            127,
 			canProcessEpoch: true,
 		}, {
 			slot:            1000000000,
-			canProcessEpoch: true,
+			canProcessEpoch: false,
 		},
 	}
 

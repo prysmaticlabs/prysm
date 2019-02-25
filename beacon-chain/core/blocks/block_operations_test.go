@@ -69,6 +69,7 @@ func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	if _, err := blocks.ProcessBlockRandao(
 		beaconState,
 		block,
+		true,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
@@ -98,6 +99,7 @@ func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testi
 	newState, err := blocks.ProcessBlockRandao(
 		beaconState,
 		block,
+		true,
 	)
 	if err != nil {
 		t.Errorf("Unexpected error processing block randao: %v", err)
@@ -702,7 +704,7 @@ func TestProcessBlockAttestations_InclusionDelayFailure(t *testing.T) {
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Slot: 5,
+				Slot: params.BeaconConfig().GenesisSlot + 5,
 			},
 		},
 	}
@@ -712,7 +714,7 @@ func TestProcessBlockAttestations_InclusionDelayFailure(t *testing.T) {
 		},
 	}
 	state := &pb.BeaconState{
-		Slot: 5,
+		Slot: params.BeaconConfig().GenesisSlot + 5,
 	}
 
 	want := fmt.Sprintf(
@@ -734,7 +736,7 @@ func TestProcessBlockAttestations_EpochDistanceFailure(t *testing.T) {
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Slot: 5,
+				Slot: params.BeaconConfig().GenesisSlot + 5,
 			},
 		},
 	}
@@ -744,7 +746,7 @@ func TestProcessBlockAttestations_EpochDistanceFailure(t *testing.T) {
 		},
 	}
 	state := &pb.BeaconState{
-		Slot: 5 + 2*params.BeaconConfig().SlotsPerEpoch,
+		Slot: params.BeaconConfig().GenesisSlot + 5 + 2*params.BeaconConfig().SlotsPerEpoch,
 	}
 
 	want := fmt.Sprintf(
@@ -932,7 +934,7 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 				Slot:                     params.BeaconConfig().GenesisSlot + 20,
 				JustifiedBlockRootHash32: blockRoots[0],
 				LatestCrosslink:          &pb.Crosslink{ShardBlockRootHash32: []byte{2}},
-				ShardBlockRootHash32:     []byte{2},
+				ShardBlockRootHash32:     params.BeaconConfig().ZeroHash[:],
 				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
 			},
 		},
@@ -990,7 +992,7 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 	}
 	want := fmt.Sprintf(
 		"expected attestation.ShardBlockRoot == %#x, received %#x instead",
-		[]byte{},
+		params.BeaconConfig().ZeroHash[:],
 		[]byte{1},
 	)
 	if _, err := blocks.ProcessBlockAttestations(
@@ -1024,7 +1026,7 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 			Slot:                     params.BeaconConfig().GenesisSlot + 20,
 			JustifiedBlockRootHash32: blockRoots[0],
 			LatestCrosslink:          &pb.Crosslink{ShardBlockRootHash32: []byte{1}},
-			ShardBlockRootHash32:     []byte{},
+			ShardBlockRootHash32:     params.BeaconConfig().ZeroHash[:],
 			JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
 		},
 		AggregationBitfield: []byte{1},

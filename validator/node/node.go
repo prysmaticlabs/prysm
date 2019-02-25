@@ -10,6 +10,8 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	"github.com/prysmaticlabs/prysm/validator/types"
 
 	"github.com/prysmaticlabs/prysm/shared"
@@ -41,6 +43,12 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 		ctx:      ctx,
 		services: registry,
 		stop:     make(chan struct{}),
+	}
+
+	// Use demo config values if demo config flag is set.
+	if ctx.GlobalBool(types.DemoConfigFlag.Name) {
+		log.Info("Using custom parameter configuration")
+		params.UseDemoBeaconConfig()
 	}
 
 	if err := ValidatorClient.registerPrometheusService(ctx); err != nil {

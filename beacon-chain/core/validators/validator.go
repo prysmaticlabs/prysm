@@ -177,17 +177,15 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 //        return
 //
 //    validator.exit_epoch = get_entry_exit_effect_epoch(get_current_epoch(state))
-func ExitValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) {
+func ExitValidator(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 	validator := state.ValidatorRegistry[idx]
 
 	exitEpoch := entryExitEffectEpoch(helpers.CurrentEpoch(state))
 	if validator.ExitEpoch <= exitEpoch {
-		return nil, fmt.Errorf("validator %d could not exit until epoch %d",
-			idx, exitEpoch)
+		return state
 	}
-
 	validator.ExitEpoch = exitEpoch
-	return state, nil
+	return state
 }
 
 // SlashValidator slashes the malicious validator's balance and awards
@@ -214,10 +212,7 @@ func SlashValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) 
 			idx, state.Slot, helpers.StartSlot(state.ValidatorRegistry[idx].WithdrawalEpoch))
 	}
 
-	state, err := ExitValidator(state, idx)
-	if err != nil {
-		return nil, fmt.Errorf("could not exit slashed validator: %v", err)
-	}
+	state = ExitValidator(state, idx)
 
 	slashedDuration := helpers.CurrentEpoch(state) % params.BeaconConfig().LatestSlashedExitLength
 	state.LatestSlashedBalances[slashedDuration] += helpers.EffectiveBalance(state, idx)
@@ -318,10 +313,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 			if balChurn > maxBalChurn {
 				break
 			}
-			state, err = ExitValidator(state, uint64(idx))
-			if err != nil {
-				return nil, fmt.Errorf("could not exit validator %d: %v", idx, err)
-			}
+			state = ExitValidator(state, uint64(idx))
 		}
 	}
 	state.ValidatorRegistryUpdateEpoch = currentEpoch

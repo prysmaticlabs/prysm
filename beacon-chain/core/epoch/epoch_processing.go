@@ -13,15 +13,18 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
+	"github.com/sirupsen/logrus"
 )
 
+var log = logrus.WithField("prefix", "core/state")
+
 // CanProcessEpoch checks the eligibility to process epoch.
-// The epoch can be processed every SLOTS_PER_EPOCH.
+// The epoch can be processed at the end of the last slot of every epoch
 //
 // Spec pseudocode definition:
-//    If state.slot % SLOTS_PER_EPOCH == 0:
+//    If (state.slot + 1) % SLOTS_PER_EPOCH == 0:
 func CanProcessEpoch(state *pb.BeaconState) bool {
-	return state.Slot%params.BeaconConfig().SlotsPerEpoch == 0
+	return (state.Slot+1)%params.BeaconConfig().SlotsPerEpoch == 0
 }
 
 // CanProcessEth1Data checks the eligibility to process the eth1 data.
@@ -105,17 +108,20 @@ func ProcessJustification(
 	state.PreviousJustifiedEpoch = state.JustifiedEpoch
 	// Shifts all the bits over one to create a new bit for the recent epoch.
 	state.JustificationBitfield = state.JustificationBitfield * 2
-
+	log.Infof("Total Balance: %d", totalBalance)
 	// If prev prev epoch was justified then we ensure the 2nd bit in the bitfield is set,
 	// assign new justified slot to 2 * SLOTS_PER_EPOCH before.
+	log.Infof("Previous Epoch Attesting Balance: %d", prevEpochBoundaryAttestingBalance)
 	if 3*prevEpochBoundaryAttestingBalance >= 2*totalBalance {
+		log.Infof("Prev epoch %d was justified", state.JustifiedEpoch-params.BeaconConfig().GenesisEpoch)
 		state.JustificationBitfield |= 2
 		state.JustifiedEpoch = helpers.CurrentEpoch(state) - 2
 	}
-
+	log.Infof("Current Epoch Attesting Balance: %d", thisEpochBoundaryAttestingBalance)
 	// If this epoch was justified then we ensure the 1st bit in the bitfield is set,
 	// assign new justified slot to 1 * SLOTS_PER_EPOCH before.
 	if 3*thisEpochBoundaryAttestingBalance >= 2*totalBalance {
+		log.Infof("Current epoch %d was justified", state.JustifiedEpoch-params.BeaconConfig().GenesisEpoch)
 		state.JustificationBitfield |= 1
 		state.JustifiedEpoch = helpers.CurrentEpoch(state) - 1
 	}
@@ -132,20 +138,24 @@ func ProcessJustification(
 //		state.previous_justified_epoch == slot_to_epoch(state.slot) - 4 and state.justification_bitfield % 16 in (15, 14)
 func ProcessFinalization(state *pb.BeaconState) *pb.BeaconState {
 
+	log.Infof("Processing finality, justification bitfield: %v", state.JustificationBitfield)
 	if state.PreviousJustifiedEpoch == helpers.CurrentEpoch(state)-2 &&
 		state.JustificationBitfield%4 == 3 {
 		state.FinalizedEpoch = state.JustifiedEpoch
+		log.Infof("New Finalized Epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
 		return state
 	}
 	if state.PreviousJustifiedEpoch == helpers.CurrentEpoch(state)-3 &&
 		state.JustificationBitfield%8 == 7 {
 		state.FinalizedEpoch = state.JustifiedEpoch
+		log.Infof("New Finalized Epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
 		return state
 	}
 	if state.PreviousJustifiedEpoch == helpers.CurrentEpoch(state)-4 &&
 		(state.JustificationBitfield%16 == 15 ||
 			state.JustificationBitfield%16 == 14) {
 		state.FinalizedEpoch = state.JustifiedEpoch
+		log.Infof("New Finalized Epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
 		return state
 	}
 	return state
@@ -177,7 +187,7 @@ func ProcessCrosslinks(
 	for i := startSlot; i < endSlot; i++ {
 		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(state, i, false)
 		if err != nil {
-			return nil, fmt.Errorf("could not get committees for slot %d: %v", i, err)
+			return nil, fmt.Errorf("could not get committees for slot %d: %v", i-params.BeaconConfig().GenesisSlot, err)
 		}
 		for _, crosslinkCommittee := range crosslinkCommittees {
 			shard := crosslinkCommittee.Shard
@@ -215,14 +225,11 @@ func ProcessCrosslinks(
 //        if state.validator_balances[index] < EJECTION_BALANCE:
 //            exit_validator(state, index)
 func ProcessEjections(state *pb.BeaconState) (*pb.BeaconState, error) {
-	var err error
 	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
 	for _, index := range activeValidatorIndices {
 		if state.ValidatorBalances[index] < params.BeaconConfig().EjectionBalance {
-			state, err = validators.ExitValidator(state, index)
-			if err != nil {
-				return nil, fmt.Errorf("could not exit validator %d: %v", index, err)
-			}
+			log.Infof("Validator at index %d EJECTED", index)
+			state = validators.ExitValidator(state, index)
 		}
 	}
 	return state, nil

@@ -12,8 +12,8 @@ func TestReportEpochTransitionMetrics_validatorBalances(t *testing.T) {
 	state := &pb.BeaconState{
 		ValidatorBalances: []uint64{1, 15},
 		ValidatorRegistry: []*pb.Validator{
-			&pb.Validator{Pubkey: []byte{1}},
-			&pb.Validator{Pubkey: []byte{2}},
+			{Pubkey: []byte{1}},
+			{Pubkey: []byte{2}},
 		},
 	}
 
