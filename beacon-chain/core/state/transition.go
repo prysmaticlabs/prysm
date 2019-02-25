@@ -183,7 +183,6 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not get current boundary attestations: %v", err)
 	}
-	log.Infof("Current epoch epoch boundary attestations: %v", currentBoundaryAttestations)
 
 	currentBoundaryAttesterIndices, err := v.ValidatorIndices(state, currentBoundaryAttestations)
 	if err != nil {
@@ -196,25 +195,16 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	// Calculate the attesting balances of validators that made an attestation
 	// during previous epoch.
 	prevEpochAttestations := e.PrevAttestations(state)
-	prevAttesterIndices, err := v.ValidatorIndices(state, prevEpochAttestations)
+	log.Infof("Number of prev epoch attestations: %d", len(prevEpochAttestations))
+	prevEpochAttesterIndices, err := v.ValidatorIndices(state, prevEpochAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not get prev epoch attester indices: %v", err)
 	}
-
-	// Calculate the attesting balances of validators that targeted
-	// previous justified hash.
-	prevEpochJustifiedAttestations := e.PrevJustifiedAttestations(state,
-		currentAttestations, prevEpochAttestations)
-
-	prevEpochJustifiedAttesterIndices, err := v.ValidatorIndices(state, prevEpochJustifiedAttestations)
-	if err != nil {
-		return nil, fmt.Errorf("could not get prev epoch justified attester indices: %v", err)
-	}
-	prevEpochJustifiedAttestingBalance := e.TotalBalance(state, prevEpochJustifiedAttesterIndices)
+	prevEpochAttestingBalance := e.TotalBalance(state, prevEpochAttesterIndices)
 
 	// Calculate the attesting balances of validator justifying epoch boundary block
 	// at the start of previous epoch.
-	prevEpochBoundaryAttestations, err := e.PrevBoundaryAttestations(state, prevEpochJustifiedAttestations)
+	prevEpochBoundaryAttestations, err := e.PrevBoundaryAttestations(state, prevEpochAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not get prev boundary attestations: %v", err)
 	}
@@ -248,7 +238,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	state = e.ProcessJustification(
 		state,
 		currentBoundaryAttestingBalances,
-		prevEpochBoundaryAttestingBalances,
+		prevEpochAttestingBalance,
 		totalBalance)
 
 	// Update Finalization.
@@ -271,8 +261,8 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 		// expected FFG source.
 		state = bal.ExpectedFFGSource(
 			state,
-			prevEpochJustifiedAttesterIndices,
-			prevEpochJustifiedAttestingBalance,
+			prevEpochAttesterIndices,
+			prevEpochAttestingBalance,
 			totalBalance)
 		log.Infof("Balance after FFG src calculation: %v", state.ValidatorBalances)
 		// Apply rewards/penalties to validators for attesting
@@ -295,7 +285,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 		// based on inclusion distance.
 		state, err = bal.InclusionDistance(
 			state,
-			prevAttesterIndices,
+			prevEpochAttesterIndices,
 			totalBalance)
 		if err != nil {
 			return nil, fmt.Errorf("could not calculate inclusion dist rewards: %v", err)
@@ -307,7 +297,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 		// Apply penalties for long inactive FFG source participants.
 		state = bal.InactivityFFGSource(
 			state,
-			prevEpochJustifiedAttesterIndices,
+			prevEpochAttesterIndices,
 			totalBalance,
 			epochsSinceFinality)
 		// Apply penalties for long inactive FFG target participants.
@@ -332,7 +322,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 		// don't include attestations.
 		state, err = bal.InactivityInclusionDistance(
 			state,
-			prevAttesterIndices,
+			prevEpochAttesterIndices,
 			totalBalance)
 		if err != nil {
 			return nil, fmt.Errorf("could not calculate inclusion penalties: %v", err)
@@ -343,7 +333,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	state, err = bal.AttestationInclusion(
 		state,
 		totalBalance,
-		prevAttesterIndices)
+		prevEpochAttesterIndices)
 	if err != nil {
 		return nil, fmt.Errorf("could not process attestation inclusion rewards: %v", err)
 	}

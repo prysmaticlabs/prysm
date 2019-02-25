@@ -59,9 +59,7 @@ func CurrentBoundaryAttestations(
 
 		attestationData := attestation.Data
 		sameRoot := bytes.Equal(attestationData.EpochBoundaryRootHash32, boundaryBlockRoot)
-		sameEpoch := attestation.Data.JustifiedEpoch == state.JustifiedEpoch
-
-		if sameRoot && sameEpoch {
+		if sameRoot {
 			boundaryAttestations = append(boundaryAttestations, attestation)
 		}
 	}
