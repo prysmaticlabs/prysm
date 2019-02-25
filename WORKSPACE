@@ -199,7 +199,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr",
-    commit = "312b9db3552cf2045efb3ab5d10104c3ec8ff79d",
+    commit = "19d7396df1055360753d180f17d498d20466716e",
     importpath = "github.com/multiformats/go-multiaddr",
 )
 
