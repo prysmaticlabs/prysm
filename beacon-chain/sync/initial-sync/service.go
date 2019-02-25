@@ -167,7 +167,7 @@ func (s *InitialSync) InitializeObservedSlot(slot uint64) {
 	s.highestObservedSlot = slot
 }
 
-// InitalizeStateRoot sets the state root of the highest observed slot.
+// InitializeStateRoot sets the state root of the highest observed slot.
 func (s *InitialSync) InitializeStateRoot(root [32]byte) {
 	s.stateRootOfHighestObservedSlot = root
 }
