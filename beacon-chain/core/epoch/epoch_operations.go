@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	block "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -48,7 +50,7 @@ func CurrentBoundaryAttestations(
 	currentEpochAttestations []*pb.PendingAttestation,
 ) ([]*pb.PendingAttestation, error) {
 	var boundaryAttestations []*pb.PendingAttestation
-
+	log.Infof("Fetching boundary attestations, current epoch: %d", helpers.CurrentEpoch(state)-params.BeaconConfig().GenesisEpoch)
 	for _, attestation := range currentEpochAttestations {
 		boundaryBlockRoot, err := block.BlockRoot(state, helpers.StartSlot(helpers.CurrentEpoch(state)))
 		if err != nil {
@@ -56,12 +58,8 @@ func CurrentBoundaryAttestations(
 		}
 
 		attestationData := attestation.Data
-		sameRoot := bytes.Equal(attestationData.JustifiedBlockRootHash32, boundaryBlockRoot)
-		log.Infof("Boundary attestation: att justified root: %v, state justified root: %d", attestationData.JustifiedBlockRootHash32, boundaryBlockRoot)
-		log.Infof("Boundary attestation: att justified epoch: %v, state justified epoch: %d", attestation.Data.JustifiedEpoch, state.JustifiedEpoch)
-		sameEpoch := attestation.Data.JustifiedEpoch == state.JustifiedEpoch
-
-		if sameRoot && sameEpoch {
+		sameRoot := bytes.Equal(attestationData.EpochBoundaryRootHash32, boundaryBlockRoot)
+		if sameRoot {
 			boundaryAttestations = append(boundaryAttestations, attestation)
 		}
 	}
@@ -77,6 +75,7 @@ func CurrentBoundaryAttestations(
 func PrevAttestations(state *pb.BeaconState) []*pb.PendingAttestation {
 	var prevEpochAttestations []*pb.PendingAttestation
 	prevEpoch := helpers.PrevEpoch(state)
+	log.Infof("Fetching prev boundary attestations, prev epoch: %d", helpers.PrevEpoch(state)-params.BeaconConfig().GenesisEpoch)
 
 	for _, attestation := range state.LatestAttestations {
 		if prevEpoch == helpers.SlotToEpoch(attestation.Data.Slot) {

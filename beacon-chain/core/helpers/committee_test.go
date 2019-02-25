@@ -258,39 +258,25 @@ func TestAttestationParticipants_OK(t *testing.T) {
 		wanted          []uint64
 	}{
 		{
-			attestationSlot: 2,
-			stateSlot:       5,
+			attestationSlot: params.BeaconConfig().GenesisSlot + 2,
+			stateSlot:       params.BeaconConfig().GenesisSlot + 5,
 			shard:           2,
 			bitfield:        []byte{0x03},
 			wanted:          []uint64{11, 121},
 		},
 		{
-			attestationSlot: 1,
-			stateSlot:       10,
+			attestationSlot: params.BeaconConfig().GenesisSlot + 1,
+			stateSlot:       params.BeaconConfig().GenesisSlot + 10,
 			shard:           1,
 			bitfield:        []byte{0x01},
 			wanted:          []uint64{4},
 		},
 		{
-			attestationSlot: 10,
-			stateSlot:       20,
+			attestationSlot: params.BeaconConfig().GenesisSlot + 10,
+			stateSlot:       params.BeaconConfig().GenesisSlot + 10,
 			shard:           10,
 			bitfield:        []byte{0x03},
 			wanted:          []uint64{14, 30},
-		},
-		{
-			attestationSlot: 64,
-			stateSlot:       100,
-			shard:           0,
-			bitfield:        []byte{0x03},
-			wanted:          []uint64{109, 97},
-		},
-		{
-			attestationSlot: 999,
-			stateSlot:       1000,
-			shard:           39,
-			bitfield:        []byte{0x01},
-			wanted:          []uint64{6},
 		},
 	}
 
