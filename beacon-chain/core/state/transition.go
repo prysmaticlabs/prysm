@@ -6,6 +6,10 @@ package state
 import (
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	bal "github.com/prysmaticlabs/prysm/beacon-chain/core/balances"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
@@ -18,7 +22,7 @@ import (
 var log = logrus.WithField("prefix", "core/state")
 
 // ExecuteStateTransition defines the procedure for a state transition function.
-// Spec:
+// Spec pseudocode definition:
 //  We now define the state transition function. At a high level the state transition is made up of three parts:
 //  - The per-slot transitions, which happens at the start of every slot.
 //  - The per-block transitions, which happens at every block.
@@ -69,7 +73,9 @@ func ExecuteStateTransition(
 func ProcessSlot(state *pb.BeaconState, headRoot [32]byte) *pb.BeaconState {
 	state.Slot++
 	state = b.ProcessBlockRoots(state, headRoot)
-	log.Info("Slot transition successfully processed slot %d", state.Slot)
+	log.WithField(
+		"slotsSinceGenesis", state.Slot-params.BeaconConfig().GenesisSlot,
+	).Info("Slot transition successfully processed")
 	return state
 }
 
@@ -77,37 +83,56 @@ func ProcessSlot(state *pb.BeaconState, headRoot [32]byte) *pb.BeaconState {
 // transformations as defined in the Ethereum Serenity specification, including processing proposer slashings,
 // processing block attestations, and more.
 func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock, verifySignatures bool) (*pb.BeaconState, error) {
+	r, err := hashutil.HashProto(block)
+	if err != nil {
+		return nil, fmt.Errorf("could not hash block: %v", err)
+	}
+
+	// Below are the processing steps to verify every block.
+	// Verify block slot.
 	if block.Slot != state.Slot {
 		return nil, fmt.Errorf(
 			"block.slot != state.slot, block.slot = %d, state.slot = %d",
-			block.Slot,
-			state.Slot,
+			block.Slot-params.BeaconConfig().GenesisSlot,
+			state.Slot-params.BeaconConfig().GenesisSlot,
 		)
 	}
+	log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Verified block slot == state slot")
+
+	// Verify block signature.
 	if verifySignatures {
 		// TODO(#781): Verify Proposer Signature.
 		if err := b.VerifyProposerSignature(block); err != nil {
 			return nil, fmt.Errorf("could not verify proposer signature: %v", err)
 		}
 	}
-	var err error
-	state, err = b.ProcessBlockRandao(state, block)
+	log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Verified block signature")
+
+	// Verify block RANDAO.
+	state, err = b.ProcessBlockRandao(state, block, verifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify and process block randao: %v", err)
 	}
-	state, err = b.ProcessProposerSlashings(state, block, verifySignatures)
-	if err != nil {
-		return nil, fmt.Errorf("could not verify block proposer slashings: %v", err)
-	}
+	log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Verified and processed block RANDAO")
+
+	// Process ETH1 data.
 	state = b.ProcessEth1Data(state, block)
 	state, err = b.ProcessAttesterSlashings(state, block, verifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify block attester slashings: %v", err)
 	}
+	log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Processed ETH1 data")
+
+	state, err = b.ProcessProposerSlashings(state, block, verifySignatures)
+	if err != nil {
+		return nil, fmt.Errorf("could not verify block proposer slashings: %v", err)
+	}
+
 	state, err = b.ProcessBlockAttestations(state, block, verifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block attestations: %v", err)
 	}
+
 	state, err = b.ProcessValidatorDeposits(state, block)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block validator deposits: %v", err)
@@ -116,7 +141,18 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock, verifySignatures
 	if err != nil {
 		return nil, fmt.Errorf("could not process validator exits: %v", err)
 	}
-	log.Info("Block transition successfully processed slot %d", state.Slot)
+	log.WithField(
+		"slotsSinceGenesis", state.Slot-params.BeaconConfig().GenesisSlot,
+	).Info("Block transition successfully processed")
+	log.WithField(
+		"attestationsInBlock", len(block.Body.Attestations),
+	).Info("Block attestations")
+	log.WithField(
+		"depositsInBlock", len(block.Body.Deposits),
+	).Info("Block deposits")
+	log.WithField(
+		"exitsInBlock", len(block.Body.VoluntaryExits),
+	).Info("Block voluntary exits")
 	return state, nil
 }
 
@@ -141,14 +177,20 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	// Calculate the attesting balances of validators that justified the
 	// epoch boundary block at the start of the current epoch.
 	currentAttestations := e.CurrentAttestations(state)
+	log.Infof("Current epoch attestations: %v", currentAttestations)
+
 	currentBoundaryAttestations, err := e.CurrentBoundaryAttestations(state, currentAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not get current boundary attestations: %v", err)
 	}
+	log.Infof("Current epoch epoch boundary attestations: %v", currentBoundaryAttestations)
+
 	currentBoundaryAttesterIndices, err := v.ValidatorIndices(state, currentBoundaryAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not get current boundary attester indices: %v", err)
 	}
+	log.Infof("Current epoch attester indices: %v", currentBoundaryAttesterIndices)
+
 	currentBoundaryAttestingBalances := e.TotalBalance(state, currentBoundaryAttesterIndices)
 
 	// Calculate the attesting balances of validators that made an attestation
@@ -176,10 +218,13 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not get prev boundary attestations: %v", err)
 	}
+
 	prevEpochBoundaryAttesterIndices, err := v.ValidatorIndices(state, prevEpochBoundaryAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not get prev boundary attester indices: %v", err)
 	}
+	log.Infof("Previous epoch attester indices: %v", prevEpochBoundaryAttesterIndices)
+
 	prevEpochBoundaryAttestingBalances := e.TotalBalance(state, prevEpochBoundaryAttesterIndices)
 
 	// Calculate attesting balances of validator attesting to expected beacon chain head
@@ -229,6 +274,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 			prevEpochJustifiedAttesterIndices,
 			prevEpochJustifiedAttestingBalance,
 			totalBalance)
+		log.Infof("Balance after FFG src calculation: %v", state.ValidatorBalances)
 		// Apply rewards/penalties to validators for attesting
 		// expected FFG target.
 		state = bal.ExpectedFFGTarget(
@@ -236,6 +282,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 			prevEpochBoundaryAttesterIndices,
 			prevEpochBoundaryAttestingBalances,
 			totalBalance)
+		log.Infof("Balance after FFG target calculation: %v", state.ValidatorBalances)
 		// Apply rewards/penalties to validators for attesting
 		// expected beacon chain head.
 		state = bal.ExpectedBeaconChainHead(
@@ -243,6 +290,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 			prevEpochHeadAttesterIndices,
 			prevEpochHeadAttestingBalances,
 			totalBalance)
+		log.Infof("Balance after chain head calculation: %v", state.ValidatorBalances)
 		// Apply rewards for to validators for including attestations
 		// based on inclusion distance.
 		state, err = bal.InclusionDistance(
@@ -252,8 +300,10 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 		if err != nil {
 			return nil, fmt.Errorf("could not calculate inclusion dist rewards: %v", err)
 		}
+		log.Infof("Balance after inclusion distance calculation: %v", state.ValidatorBalances)
 
 	case epochsSinceFinality > 4:
+		log.Infof("Applying more penalties. ESF %d greater than 4", epochsSinceFinality)
 		// Apply penalties for long inactive FFG source participants.
 		state = bal.InactivityFFGSource(
 			state,
@@ -346,7 +396,28 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Clean up processed attestations.
 	state = e.CleanupAttestations(state)
-	log.Info("Epoch transition successfully processed slot %d", state.Slot)
+	log.WithField(
+		"SlotsSinceGenesis", state.Slot-params.BeaconConfig().GenesisSlot,
+	).Info("Epoch transition successfully processed")
+	log.WithField(
+		"PreviousJustifiedEpoch", state.PreviousJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
+	).Info("Previous justified epoch")
+	log.WithField(
+		"JustifiedEpoch", state.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
+	).Info("Justified epoch")
+	log.WithField(
+		"FinalizedEpoch", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch,
+	).Info("Finalized epoch")
+	log.WithField(
+		"ValidatorRegistryUpdateEpoch", state.ValidatorRegistryUpdateEpoch-params.BeaconConfig().GenesisEpoch,
+	).Info("Validator Registry Update Epoch")
+	log.WithField(
+		"NumValidators", len(state.ValidatorRegistry),
+	).Info("Validator registry length")
+	log.Infof("Validator balances: %v", state.ValidatorBalances)
+	log.WithField(
+		"ValidatorRegistryUpdateEpoch", state.ValidatorRegistryUpdateEpoch-params.BeaconConfig().GenesisEpoch,
+	).Info("Validator registry update epoch")
 
 	// Report interesting metrics.
 	reportEpochTransitionMetrics(state)

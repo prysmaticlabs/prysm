@@ -377,10 +377,7 @@ func TestExitValidator_OK(t *testing.T) {
 			{ExitEpoch: params.BeaconConfig().FarFutureEpoch, Pubkey: []byte{'B'}},
 		},
 	}
-	newState, err := ExitValidator(state, 0)
-	if err != nil {
-		t.Fatalf("could not execute ExitValidator:%v", err)
-	}
+	newState := ExitValidator(state, 0)
 
 	currentEpoch := helpers.CurrentEpoch(state)
 	wantedEpoch := helpers.EntryExitEffectEpoch(currentEpoch)
@@ -398,8 +395,9 @@ func TestExitValidator_AlreadyExited(t *testing.T) {
 			{ExitEpoch: params.BeaconConfig().ActivationExitDelay},
 		},
 	}
-	if _, err := ExitValidator(state, 0); err == nil {
-		t.Fatal("exitValidator should have failed with exiting again")
+	state = ExitValidator(state, 0)
+	if len(state.ValidatorRegistry) != 1 {
+		t.Error("Expected validator to have failed exiting")
 	}
 }
 

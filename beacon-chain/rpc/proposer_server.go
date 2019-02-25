@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	ptypes "github.com/gogo/protobuf/types"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 
@@ -64,11 +64,28 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 
 // PendingAttestations retrieves attestations kept in the beacon node's operations pool which have
 // not yet been included into the beacon chain. Proposers include these pending attestations in their
-// proposed blocks when performing their responsibility.
-func (ps *ProposerServer) PendingAttestations(ctx context.Context, _ *ptypes.Empty) (*pb.PendingAttestationsResponse, error) {
+// proposed blocks when performing their responsibility. If desired, callers can choose to filter pending
+// attestations which are ready for inclusion. That is, attestations that satisfy:
+// attestation.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot.
+func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.PendingAttestationsRequest) (*pb.PendingAttestationsResponse, error) {
+	beaconState, err := ps.beaconDB.State()
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
+	}
 	atts, err := ps.operationService.PendingAttestations()
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve pending attestations from operations service: %v", err)
+	}
+	if req.FilterReadyForInclusion {
+		var attsReadyForInclusion []*pbp2p.Attestation
+		for _, val := range atts {
+			if val.Data.Slot+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot {
+				attsReadyForInclusion = append(attsReadyForInclusion, val)
+			}
+		}
+		return &pb.PendingAttestationsResponse{
+			PendingAttestations: attsReadyForInclusion,
+		}, nil
 	}
 	return &pb.PendingAttestationsResponse{
 		PendingAttestations: atts,
@@ -84,6 +101,18 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 	}
 
 	parentHash := bytesutil.ToBytes32(req.ParentRootHash32)
+	// Check for skipped slots.
+	for beaconState.Slot < req.Slot-1 {
+		beaconState, err = state.ExecuteStateTransition(
+			beaconState,
+			nil,
+			parentHash,
+			false, /* no sig verify */
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could not execute state transition %v", err)
+		}
+	}
 	beaconState, err = state.ExecuteStateTransition(
 		beaconState,
 		req,
