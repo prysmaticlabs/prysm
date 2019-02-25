@@ -29,16 +29,14 @@ func TestShuffleIndices(t *testing.T) {
 	if err != nil {
 		t.Errorf("Shuffle failed with: %v", err)
 	} 
-	
-
 	if reflect.DeepEqual(list1, list2) {
 		t.Errorf("2 shuffled lists shouldn't be equal")
 	}
 
-	if !reflect.DeepEqual(list1, []uint64{2, 5, 5, 5, 2, 5, 2, 5, 5, 5}) {
+	if !reflect.DeepEqual(list1, []uint64{8, 6, 8, 8, 8, 8, 8, 6, 8, 6}) {
 		t.Errorf("list 1 was incorrectly shuffled")
 	}
-	if !reflect.DeepEqual(list2, []uint64{5, 5, 5, 5, 5, 0, 0, 5, 5, 5}) {
+	if !reflect.DeepEqual(list2, []uint64{4, 4, 4, 4, 4, 4, 4, 4, 4, 4}) {
 		t.Errorf("list 2 was incorrectly shuffled")
 	}
 
