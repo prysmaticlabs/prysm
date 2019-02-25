@@ -313,8 +313,11 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 			true, /* sig verify */
 		)
 		if err != nil {
-			return nil, fmt.Errorf("could not execute state transition %v", err)
+			return nil, fmt.Errorf("could not execute state transition without block %v", err)
 		}
+		log.WithField(
+			"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
+		).Info("Slot transition successfully processed")
 	}
 
 	beaconState, err = state.ExecuteStateTransition(
@@ -324,7 +327,18 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 		true, /* no sig verify */
 	)
 	if err != nil {
-		return nil, fmt.Errorf("could not execute state transition %v", err)
+		return nil, fmt.Errorf("could not execute state transition with block %v", err)
+	}
+	log.WithField(
+		"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
+	).Info("Slot transition successfully processed")
+	log.WithField(
+		"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
+	).Info("Block transition successfully processed")
+	if (beaconState.Slot+1)%params.BeaconConfig().SlotsPerEpoch == 0 {
+		log.WithField(
+			"SlotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
+		).Info("Epoch transition successfully processed")
 	}
 
 	// if there exists a block for the slot being processed.
