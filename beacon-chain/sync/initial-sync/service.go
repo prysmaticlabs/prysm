@@ -93,7 +93,7 @@ type InitialSync struct {
 	syncPollingInterval            time.Duration
 	inMemoryBlocks                 map[uint64]*pb.BeaconBlock
 	syncedFeed                     *event.Feed
-	noGenesis                      bool
+	atGenesis                      bool
 	stateRootOfHighestObservedSlot [32]byte
 	mutex                          *sync.Mutex
 }
@@ -115,14 +115,10 @@ func NewInitialSyncService(ctx context.Context,
 		log.Errorf("Unable to get chain head %v", err)
 	}
 
+	var atGenesis bool
 	// setting current slot
-	currentSlot := params.BeaconConfig().GenesisSlot
-	noGenesis := false
-
-	if cHead == nil {
-		noGenesis = true
-	} else {
-		currentSlot = cHead.Slot
+	if cHead.Slot == params.BeaconConfig().GenesisSlot {
+		atGenesis = true
 	}
 
 	return &InitialSync{
@@ -132,7 +128,7 @@ func NewInitialSyncService(ctx context.Context,
 		syncService:                    cfg.SyncService,
 		chainService:                   cfg.ChainService,
 		db:                             cfg.BeaconDB,
-		currentSlot:                    currentSlot,
+		currentSlot:                    cHead.Slot,
 		highestObservedSlot:            params.BeaconConfig().GenesisSlot,
 		blockBuf:                       blockBuf,
 		stateBuf:                       stateBuf,
@@ -141,7 +137,7 @@ func NewInitialSyncService(ctx context.Context,
 		syncPollingInterval:            cfg.SyncPollingInterval,
 		inMemoryBlocks:                 map[uint64]*pb.BeaconBlock{},
 		syncedFeed:                     new(event.Feed),
-		noGenesis:                      noGenesis,
+		atGenesis:                      atGenesis,
 		stateRootOfHighestObservedSlot: [32]byte{},
 		mutex:                          new(sync.Mutex),
 	}
@@ -204,7 +200,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 			log.Debug("Exiting goroutine")
 			return
 		case <-delayChan:
-			if s.noGenesis {
+			if s.atGenesis {
 				if err := s.requestStateFromPeer(s.stateRootOfHighestObservedSlot[:], p2p.Peer{}); err != nil {
 					log.Errorf("Could not request state from peer %v", err)
 				}
@@ -223,7 +219,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 		case msg := <-s.blockAnnounceBuf:
 			data := msg.Data.(*pb.BeaconBlockAnnounce)
 
-			if s.noGenesis {
+			if s.atGenesis {
 				if err := s.requestStateFromPeer(s.stateRootOfHighestObservedSlot[:], p2p.Peer{}); err != nil {
 					log.Errorf("Could not request state from peer %v", err)
 				}
@@ -258,7 +254,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 			}
 
 			if h == s.stateRootOfHighestObservedSlot {
-				s.noGenesis = false
+				s.atGenesis = false
 			}
 
 			// sets the current slot to the last finalized slot of the
@@ -309,7 +305,7 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 	}
 
 	// requesting beacon state if there is no saved state.
-	if s.noGenesis {
+	if s.atGenesis {
 		if err := s.requestStateFromPeer(block.StateRootHash32, peer); err != nil {
 			log.Errorf("Could not request beacon state from peer: %v", err)
 		}
