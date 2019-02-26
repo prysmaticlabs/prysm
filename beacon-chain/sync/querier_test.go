@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
+
 	"github.com/prysmaticlabs/prysm/shared/event"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -40,10 +42,14 @@ func (mp *afterGenesisPowChain) ChainStartFeed() *event.Feed {
 
 func TestQuerier_StartStop(t *testing.T) {
 	hook := logTest.NewGlobal()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	cfg := &QuerierConfig{
 		P2P:                &mockP2P{},
 		ResponseBufferSize: 100,
 		PowChain:           &afterGenesisPowChain{},
+		BeaconDB:           db,
+		ChainService:       &mockChainService{},
 	}
 	sq := NewQuerierService(context.Background(), cfg)
 
@@ -66,13 +72,14 @@ func TestQuerier_StartStop(t *testing.T) {
 	hook.Reset()
 }
 
-func TestListenForChainStart_ContextCancelled(t *testing.T) {
+func TestListenForStateInitialization_ContextCancelled(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	cfg := &QuerierConfig{
 		P2P:                &mockP2P{},
 		ResponseBufferSize: 100,
-		PowChain: &afterGenesisPowChain{
-			feed: new(event.Feed),
-		},
+		ChainService:       &mockChainService{},
+		BeaconDB:           db,
 	}
 	sq := NewQuerierService(context.Background(), cfg)
 	exitRoutine := make(chan bool)
@@ -82,7 +89,7 @@ func TestListenForChainStart_ContextCancelled(t *testing.T) {
 	}()
 
 	go func() {
-		sq.listenForChainStart()
+		sq.listenForStateInitialization()
 		exitRoutine <- true
 	}()
 
@@ -94,18 +101,19 @@ func TestListenForChainStart_ContextCancelled(t *testing.T) {
 	}
 }
 
-func TestListenForChainStart(t *testing.T) {
+func TestListenForStateInitialization(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
 	cfg := &QuerierConfig{
 		P2P:                &mockP2P{},
 		ResponseBufferSize: 100,
-		PowChain: &afterGenesisPowChain{
-			feed: new(event.Feed),
-		},
+		ChainService:       &mockChainService{},
+		BeaconDB:           db,
 	}
 	sq := NewQuerierService(context.Background(), cfg)
 
 	sq.chainStartBuf <- time.Now()
-	sq.listenForChainStart()
+	sq.listenForStateInitialization()
 
 	if !sq.chainStarted {
 		t.Fatal("ChainStart in the querier service is not true despite the log being fired")
@@ -136,6 +144,9 @@ func TestQuerier_ChainReqResponse(t *testing.T) {
 	response := &pb.ChainHeadResponse{
 		Slot: 0,
 		Hash: []byte{'a', 'b'},
+		Block: &pb.BeaconBlock{
+			StateRootHash32: []byte{'c', 'd'},
+		},
 	}
 
 	msg := p2p.Message{
