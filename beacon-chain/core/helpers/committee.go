@@ -339,7 +339,12 @@ func AttestationParticipants(
 	bitfield []byte) ([]uint64, error) {
 
 	// Find the relevant committee.
-	crosslinkCommittees, err := CrosslinkCommitteesAtSlot(state, attestationData.Slot, false)
+	var registryChanged bool
+	if state.ValidatorRegistryUpdateEpoch == SlotToEpoch(attestationData.Slot)-1 &&
+		state.ValidatorRegistryUpdateEpoch != params.BeaconConfig().GenesisEpoch {
+		registryChanged = true
+	}
+	crosslinkCommittees, err := CrosslinkCommitteesAtSlot(state, attestationData.Slot, registryChanged)
 	if err != nil {
 		return nil, err
 	}
