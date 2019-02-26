@@ -121,7 +121,7 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	if err != nil {
 		return fmt.Errorf("could not attempt fetch beacon state: %v", err)
 	}
-	stateRoot, err := ssz.TreeHash(beaconState)
+	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		return fmt.Errorf("could not hash beacon state: %v", err)
 	}
