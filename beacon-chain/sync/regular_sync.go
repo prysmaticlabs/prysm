@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -230,7 +229,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 
 	response := msg.Data.(*pb.BeaconBlockResponse)
 	block := response.Block
-	blockRoot, err := ssz.TreeHash(block)
+	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		log.Errorf("Could not hash received block: %v", err)
 	}
@@ -300,7 +299,7 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) {
 		return
 	}
 
-	blockRoot, err := ssz.TreeHash(block)
+	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		log.Errorf("Could not tree hash block %v", err)
 		return
@@ -323,7 +322,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 	defer receiveAttestationSpan.End()
 
 	attestation := msg.Data.(*pb.Attestation)
-	attestationRoot, err := ssz.TreeHash(attestation)
+	attestationRoot, err := hashutil.HashProto(attestation)
 	if err != nil {
 		log.Errorf("Could not hash received attestation: %v", err)
 	}

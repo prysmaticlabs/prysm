@@ -12,16 +12,14 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/forkutils"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/forkutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
@@ -84,6 +82,7 @@ func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, veri
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
 	}
+	log.WithField("proposerIndex", proposerIdx).Info("Verifying randao")
 	proposer := beaconState.ValidatorRegistry[proposerIdx]
 	if verifySignatures {
 		if err := verifyBlockRandao(beaconState, block, proposer); err != nil {
@@ -110,21 +109,19 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 		return fmt.Errorf("could not deserialize proposer public key: %v", err)
 	}
 	currentEpoch := helpers.CurrentEpoch(beaconState)
-	hashTreeRoot, err := ssz.TreeHash(currentEpoch)
-	if err != nil {
-		return fmt.Errorf("could not fetch tree hash of current epoch: %v", err)
-	}
+	buf := make([]byte, 32)
+	binary.LittleEndian.PutUint64(buf, currentEpoch)
 	domain := forkutils.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainRandao)
 	sig, err := bls.SignatureFromBytes(block.RandaoReveal)
 	if err != nil {
 		return fmt.Errorf("could not deserialize block randao reveal: %v", err)
 	}
 	log.WithFields(logrus.Fields{
-		"epoch":    helpers.CurrentEpoch(beaconState),
+		"epoch":    helpers.CurrentEpoch(beaconState) - params.BeaconConfig().GenesisEpoch,
 		"pubkey":   fmt.Sprintf("%#x", proposer.Pubkey),
 		"epochSig": fmt.Sprintf("%#x", sig.Marshal()),
 	}).Info("Verifying randao")
-	if !sig.Verify(hashTreeRoot[:], pub, domain) {
+	if !sig.Verify(buf, pub, domain) {
 		return fmt.Errorf("block randao reveal signature did not verify")
 	}
 	return nil

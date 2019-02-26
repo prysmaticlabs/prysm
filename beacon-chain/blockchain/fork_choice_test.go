@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -13,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 // Generates an initial genesis block and state using a custom number of initial
@@ -45,7 +46,7 @@ func generateTestGenesisStateAndBlock(
 	if err := beaconDB.SaveState(beaconState); err != nil {
 		t.Fatal(err)
 	}
-	stateRoot, err := ssz.TreeHash(beaconState)
+	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +54,7 @@ func generateTestGenesisStateAndBlock(
 	if err := beaconDB.SaveBlock(genesisBlock); err != nil {
 		t.Fatal(err)
 	}
-	genesisRoot, err := ssz.TreeHash(genesisBlock)
+	genesisRoot, err := hashutil.HashBeaconBlock(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -207,7 +208,7 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	genesisBlock := b.NewGenesisBlock([]byte("stateroot"))
-	genesisRoot, err := ssz.TreeHash(genesisBlock)
+	genesisRoot, err := hashutil.HashBeaconBlock(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}

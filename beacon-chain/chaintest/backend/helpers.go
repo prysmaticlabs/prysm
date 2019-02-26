@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/forkutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
@@ -25,7 +26,7 @@ func generateSimulatedBlock(
 	simObjects *SimulatedObjects,
 	privKeys []*bls.SecretKey,
 ) (*pb.BeaconBlock, [32]byte, error) {
-	stateRoot, err := ssz.TreeHash(beaconState)
+	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		return nil, [32]byte{}, fmt.Errorf("could not tree hash state: %v", err)
 	}
@@ -120,7 +121,7 @@ func generateSimulatedBlock(
 			ValidatorIndex: simObjects.simValidatorExit.ValidatorIndex,
 		})
 	}
-	blockRoot, err := ssz.TreeHash(block)
+	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return nil, [32]byte{}, fmt.Errorf("could not tree hash new block: %v", err)
 	}
