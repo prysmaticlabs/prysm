@@ -57,7 +57,7 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 
 	for slot := req.EpochStart; slot < req.EpochStart+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		var registryChanged bool
-		if beaconState.ValidatorRegistryUpdateEpoch == helpers.SlotToEpoch(slot) &&
+		if beaconState.ValidatorRegistryUpdateEpoch == helpers.SlotToEpoch(slot)-1 &&
 			beaconState.ValidatorRegistryUpdateEpoch != params.BeaconConfig().GenesisEpoch {
 			registryChanged = true
 		}
@@ -99,7 +99,7 @@ func (vs *ValidatorServer) ValidatorCommitteeAtSlot(ctx context.Context, req *pb
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
 	var registryChanged bool
-	if beaconState.ValidatorRegistryUpdateEpoch == helpers.SlotToEpoch(req.Slot) &&
+	if beaconState.ValidatorRegistryUpdateEpoch == helpers.SlotToEpoch(req.Slot)-1 &&
 		beaconState.ValidatorRegistryUpdateEpoch != params.BeaconConfig().GenesisEpoch {
 		registryChanged = true
 	}
