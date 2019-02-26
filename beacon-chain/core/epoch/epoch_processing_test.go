@@ -210,7 +210,7 @@ func TestProcessJustification_PreviousEpochJustified(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                  300,
+		Slot:                  300 + params.BeaconConfig().GenesisSlot,
 		JustifiedEpoch:        3,
 		JustificationBitfield: 4,
 	}
@@ -244,7 +244,7 @@ func TestProcessCrosslinks_CrosslinksCorrectEpoch(t *testing.T) {
 	state := buildState(5, params.BeaconConfig().DepositsForChainStart)
 	state.LatestCrosslinks = []*pb.Crosslink{{}, {}}
 	epoch := uint64(5)
-	state.Slot = epoch * params.BeaconConfig().SlotsPerEpoch
+	state.Slot = params.BeaconConfig().GenesisSlot + epoch*params.BeaconConfig().SlotsPerEpoch
 
 	byteLength := int(params.BeaconConfig().DepositsForChainStart / params.BeaconConfig().TargetCommitteeSize / 8)
 	var participationBitfield []byte
@@ -273,10 +273,10 @@ func TestProcessCrosslinks_CrosslinksCorrectEpoch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not execute ProcessCrosslinks: %v", err)
 	}
-	// Verify crosslink for shard 0([1]) was processed at state.slot (5).
-	if newState.LatestCrosslinks[0].Epoch != epoch {
+	// Verify crosslink for shard 0([1]) was processed at genesis epoch + 5.
+	if newState.LatestCrosslinks[0].Epoch != params.BeaconConfig().GenesisEpoch+epoch {
 		t.Errorf("Shard 0s got crosslinked at epoch %d, wanted: %d",
-			newState.LatestCrosslinks[0].Epoch, epoch)
+			newState.LatestCrosslinks[0].Epoch, +params.BeaconConfig().GenesisSlot)
 	}
 	// Verify crosslink for shard 0 was root hashed for []byte{'A'}.
 	if !bytes.Equal(newState.LatestCrosslinks[0].ShardBlockRootHash32,
