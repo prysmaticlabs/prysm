@@ -11,7 +11,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 var clock utils.Clock = &utils.RealClock{}
@@ -89,7 +88,7 @@ func ProcessBlockRoots(state *pb.BeaconState, prevBlockRoot [32]byte) *pb.Beacon
 //		List[BeaconBlock] returns the child blocks of the given block.
 func BlockChildren(block *pb.BeaconBlock, observedBlocks []*pb.BeaconBlock) ([]*pb.BeaconBlock, error) {
 	var children []*pb.BeaconBlock
-	root, err := ssz.TreeHash(block)
+	root, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash block: %v", err)
 	}

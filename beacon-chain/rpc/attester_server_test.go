@@ -5,13 +5,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 func TestAttestHead_OK(t *testing.T) {
@@ -104,15 +105,15 @@ func TestAttestationInfoAtSlot_OK(t *testing.T) {
 	justifiedBlock := &pbp2p.BeaconBlock{
 		Slot: 2*params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot,
 	}
-	blockRoot, err := ssz.TreeHash(block)
+	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		t.Fatalf("Could not hash beacon block: %v", err)
 	}
-	justifiedBlockRoot, err := ssz.TreeHash(justifiedBlock)
+	justifiedBlockRoot, err := hashutil.HashBeaconBlock(justifiedBlock)
 	if err != nil {
 		t.Fatalf("Could not hash justified block: %v", err)
 	}
-	epochBoundaryRoot, err := ssz.TreeHash(epochBoundaryBlock)
+	epochBoundaryRoot, err := hashutil.HashBeaconBlock(epochBoundaryBlock)
 	if err != nil {
 		t.Fatalf("Could not hash justified block: %v", err)
 	}

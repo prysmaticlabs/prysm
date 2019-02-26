@@ -4,14 +4,16 @@
 package state
 
 import (
+	"encoding/binary"
 	"fmt"
+
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 // GenesisBeaconState gets called when DepositsForChainStart count of
@@ -94,7 +96,7 @@ func GenesisBeaconState(
 		// Validator registry fields.
 		ValidatorRegistry:            validatorRegistry,
 		ValidatorBalances:            latestBalances,
-		ValidatorRegistryUpdateEpoch: params.BeaconConfig().FarFutureEpoch,
+		ValidatorRegistryUpdateEpoch: params.BeaconConfig().GenesisEpoch,
 
 		// Randomness and committees.
 		LatestRandaoMixes:           latestRandaoMixes,
@@ -162,10 +164,13 @@ func GenesisBeaconState(
 		}
 	}
 	activeValidators := helpers.ActiveValidatorIndices(state.ValidatorRegistry, params.BeaconConfig().GenesisEpoch)
-	genesisActiveIndexRoot, err := ssz.TreeHash(activeValidators)
-	if err != nil {
-		return nil, fmt.Errorf("could not determine genesis active index root: %v", err)
+	indicesBytes := []byte{}
+	for _, val := range activeValidators {
+		buf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(buf, val)
+		indicesBytes = append(indicesBytes, buf...)
 	}
+	genesisActiveIndexRoot := hashutil.Hash(indicesBytes)
 	for i := uint64(0); i < params.BeaconConfig().LatestActiveIndexRootsLength; i++ {
 		state.LatestIndexRootHash32S[i] = genesisActiveIndexRoot[:]
 	}

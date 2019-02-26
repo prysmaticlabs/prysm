@@ -324,12 +324,12 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
 
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	validators := make([]*pb.Validator, 10)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
-			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-			SlashedEpoch:    params.BeaconConfig().GenesisEpoch * 2,
-			WithdrawalEpoch: params.BeaconConfig().GenesisEpoch,
+			ExitEpoch:       params.BeaconConfig().GenesisEpoch + 1,
+			SlashedEpoch:    params.BeaconConfig().GenesisEpoch + 1,
+			WithdrawalEpoch: params.BeaconConfig().GenesisEpoch + 1,
 		}
 	}
 	validatorBalances := make([]uint64, len(validators))
@@ -341,18 +341,18 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		{
 			ProposerIndex: 1,
 			ProposalData_1: &pb.ProposalSignedData{
-				Slot:            1,
+				Slot:            params.BeaconConfig().GenesisSlot + 1,
 				Shard:           1,
 				BlockRootHash32: []byte{0, 1, 0},
 			},
 			ProposalData_2: &pb.ProposalSignedData{
-				Slot:            1,
+				Slot:            params.BeaconConfig().GenesisSlot + 1,
 				Shard:           1,
 				BlockRootHash32: []byte{0, 1, 0},
 			},
 		},
 	}
-	currentSlot := uint64(1)
+	currentSlot := params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch
 	beaconState := &pb.BeaconState{
 		ValidatorRegistry:     validators,
 		Slot:                  currentSlot,
@@ -374,11 +374,10 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		t.Fatalf("Unexpected error: %s", err)
 	}
 
-	validators = newState.ValidatorRegistry
-	if validators[1].ExitEpoch !=
-		beaconState.Slot+params.BeaconConfig().ActivationExitDelay {
+	newStateVals := newState.ValidatorRegistry
+	if newStateVals[1].ExitEpoch != validators[1].ExitEpoch {
 		t.Errorf("Proposer with index 1 did not correctly exit,"+"wanted slot:%d, got:%d",
-			beaconState.Slot+params.BeaconConfig().ActivationExitDelay, validators[1].ExitEpoch)
+			newStateVals[1], validators[1].ExitEpoch)
 	}
 }
 
@@ -594,12 +593,12 @@ func TestProcessAttesterSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	validators := make([]*pb.Validator, 100)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
-			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-			SlashedEpoch:    6,
-			WithdrawalEpoch: params.BeaconConfig().FarFutureEpoch,
+			ExitEpoch:       params.BeaconConfig().GenesisEpoch + 1,
+			SlashedEpoch:    params.BeaconConfig().FarFutureEpoch,
+			WithdrawalEpoch: params.BeaconConfig().GenesisEpoch + 1*params.BeaconConfig().SlotsPerEpoch,
 		}
 	}
 	validatorBalances := make([]uint64, len(validators))
@@ -608,11 +607,11 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 
 	att1 := &pb.AttestationData{
-		Slot:           5,
+		Slot:           params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch,
 		JustifiedEpoch: 5,
 	}
 	att2 := &pb.AttestationData{
-		Slot:           5,
+		Slot:           params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch,
 		JustifiedEpoch: 4,
 	}
 	slashings := []*pb.AttesterSlashing{
@@ -630,12 +629,12 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		},
 	}
 
-	currentSlot := uint64(5)
+	currentSlot := params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch
 	beaconState := &pb.BeaconState{
 		ValidatorRegistry:     validators,
 		Slot:                  currentSlot,
 		ValidatorBalances:     validatorBalances,
-		LatestSlashedBalances: []uint64{0},
+		LatestSlashedBalances: make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -654,24 +653,14 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 
 	// Given the intersection of slashable indices is [1], only validator
 	// at index 1 should be slashed and exited. We confirm this below.
-	if newRegistry[1].ExitEpoch !=
-		helpers.EntryExitEffectEpoch(helpers.CurrentEpoch(beaconState)) {
+	if newRegistry[1].ExitEpoch != validators[1].ExitEpoch {
 		t.Errorf(
 			`
-			Expected validator at index 1's exit epoch to change to
+			Expected validator at index 1's exit epoch to match
 			%d, received %d instead
 			`,
-			helpers.EntryExitEffectEpoch(helpers.CurrentEpoch(beaconState)),
+			validators[1].ExitEpoch,
 			newRegistry[1].ExitEpoch,
-		)
-	}
-	if newRegistry[0].ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-		t.Errorf(
-			`
-			Expected validator at index 0's exit epoch to not change,
-			received %d instead
-			`,
-			newRegistry[0].ExitEpoch,
 		)
 	}
 }

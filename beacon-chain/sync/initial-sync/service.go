@@ -16,6 +16,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -23,7 +25,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/sirupsen/logrus"
 )
 
@@ -212,7 +213,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 
 			beaconState := data.BeaconState
 
-			h, err := ssz.TreeHash(beaconState)
+			h, err := hashutil.HashProto(beaconState)
 			if err != nil {
 				log.Error(err)
 				continue
@@ -349,7 +350,7 @@ func (s *InitialSync) requestStateFromPeer(block *pb.BeaconBlock, peer p2p.Peer)
 // setBlockForInitialSync sets the first received block as the base finalized
 // block for initial sync.
 func (s *InitialSync) setBlockForInitialSync(block *pb.BeaconBlock) error {
-	root, err := ssz.TreeHash(block)
+	root, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return err
 	}
@@ -388,7 +389,7 @@ func (s *InitialSync) requestBatchedBlocks(endSlot uint64) {
 // validateAndSaveNextBlock will validate whether blocks received from the blockfetcher
 // routine can be added to the chain.
 func (s *InitialSync) validateAndSaveNextBlock(block *pb.BeaconBlock) error {
-	root, err := ssz.TreeHash(block)
+	root, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return err
 	}
@@ -418,7 +419,7 @@ func (s *InitialSync) validateAndSaveNextBlock(block *pb.BeaconBlock) error {
 }
 
 func (s *InitialSync) checkBlockValidity(block *pb.BeaconBlock) error {
-	blockRoot, err := ssz.TreeHash(block)
+	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return fmt.Errorf("could not tree hash received block: %v", err)
 	}

@@ -28,8 +28,8 @@ func CurrentEpoch(state *pb.BeaconState) uint64 {
 // the slot number stored in beacon state. It also checks for
 // underflow condition.
 func PrevEpoch(state *pb.BeaconState) uint64 {
-	if SlotToEpoch(state.Slot) == 0 {
-		return 0
+	if SlotToEpoch(state.Slot) == params.BeaconConfig().GenesisEpoch {
+		return params.BeaconConfig().GenesisEpoch
 	}
 	return SlotToEpoch(state.Slot) - 1
 }
