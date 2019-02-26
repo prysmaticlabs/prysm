@@ -9,6 +9,8 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -19,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	log "github.com/sirupsen/logrus"
 )
@@ -283,12 +284,12 @@ func (sb *SimulatedBackend) setupBeaconStateAndGenesisBlock(initialDeposits []*p
 	// We do not expect hashing initial beacon state and genesis block to
 	// fail, so we can safely ignore the error below.
 	// #nosec G104
-	stateRoot, err := ssz.TreeHash(sb.state)
+	stateRoot, err := hashutil.HashProto(sb.state)
 	if err != nil {
 		return fmt.Errorf("could not tree hash state: %v", err)
 	}
 	genesisBlock := b.NewGenesisBlock(stateRoot[:])
-	genesisBlockRoot, err := ssz.TreeHash(genesisBlock)
+	genesisBlockRoot, err := hashutil.HashBeaconBlock(genesisBlock)
 	if err != nil {
 		return fmt.Errorf("could not tree hash genesis block: %v", err)
 	}

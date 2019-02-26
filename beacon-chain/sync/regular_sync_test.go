@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -163,7 +162,7 @@ func TestProcessBlock_OK(t *testing.T) {
 	if err := db.SaveBlock(parentBlock); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
-	parentRoot, err := ssz.TreeHash(parentBlock)
+	parentRoot, err := hashutil.HashBeaconBlock(parentBlock)
 	if err != nil {
 		t.Fatalf("failed to get parent root: %v", err)
 	}
@@ -244,7 +243,7 @@ func TestProcessBlock_MultipleBlocks(t *testing.T) {
 	if err := db.SaveBlock(parentBlock); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
-	parentRoot, err := ssz.TreeHash(parentBlock)
+	parentRoot, err := hashutil.HashBeaconBlock(parentBlock)
 	if err != nil {
 		t.Fatalf("failed to get parent root: %v", err)
 	}
