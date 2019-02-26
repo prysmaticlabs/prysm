@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -18,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -126,8 +125,12 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	if err != nil {
 		return fmt.Errorf("could not hash beacon state: %v", err)
 	}
-	if err := c.beaconDB.SaveBlock(b.NewGenesisBlock(stateRoot[:])); err != nil {
+	genBlock := b.NewGenesisBlock(stateRoot[:])
+	if err := c.beaconDB.SaveBlock(genBlock); err != nil {
 		return fmt.Errorf("could not save genesis block to disk: %v", err)
+	}
+	if err := c.beaconDB.UpdateChainHead(genBlock, beaconState); err != nil {
+		return fmt.Errorf("could not set chain head, %v", err)
 	}
 	return nil
 }
