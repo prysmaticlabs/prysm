@@ -155,7 +155,7 @@ func TestPrevEpochAttestations_AccurateAttestationSlots(t *testing.T) {
 	for i := uint64(0); i < params.BeaconConfig().SlotsPerEpoch*5; i++ {
 		pendingAttestations = append(pendingAttestations, &pb.PendingAttestation{
 			Data: &pb.AttestationData{
-				Slot: i,
+				Slot: i + params.BeaconConfig().GenesisSlot,
 			},
 		})
 	}
@@ -167,24 +167,34 @@ func TestPrevEpochAttestations_AccurateAttestationSlots(t *testing.T) {
 		firstAttestationSlot uint64
 	}{
 		{
-			stateSlot:            127,
-			firstAttestationSlot: 127 - params.BeaconConfig().SlotsPerEpoch - 127%params.BeaconConfig().SlotsPerEpoch,
+			stateSlot: 127 + params.BeaconConfig().GenesisSlot,
+			firstAttestationSlot: 127 - params.BeaconConfig().SlotsPerEpoch -
+				127%params.BeaconConfig().SlotsPerEpoch +
+				params.BeaconConfig().GenesisSlot,
 		},
 		{
-			stateSlot:            128,
-			firstAttestationSlot: 128 - params.BeaconConfig().SlotsPerEpoch - 128%params.BeaconConfig().SlotsPerEpoch,
+			stateSlot: 128 + params.BeaconConfig().GenesisSlot,
+			firstAttestationSlot: 128 - params.BeaconConfig().SlotsPerEpoch -
+				128%params.BeaconConfig().SlotsPerEpoch +
+				params.BeaconConfig().GenesisSlot,
 		},
 		{
-			stateSlot:            383,
-			firstAttestationSlot: 383 - params.BeaconConfig().SlotsPerEpoch - 383%params.BeaconConfig().SlotsPerEpoch,
+			stateSlot: 383 + params.BeaconConfig().GenesisSlot,
+			firstAttestationSlot: 383 - params.BeaconConfig().SlotsPerEpoch -
+				383%params.BeaconConfig().SlotsPerEpoch +
+				params.BeaconConfig().GenesisSlot,
 		},
 		{
-			stateSlot:            129,
-			firstAttestationSlot: 129 - params.BeaconConfig().SlotsPerEpoch - 129%params.BeaconConfig().SlotsPerEpoch,
+			stateSlot: 129 + params.BeaconConfig().GenesisSlot,
+			firstAttestationSlot: 129 - params.BeaconConfig().SlotsPerEpoch -
+				129%params.BeaconConfig().SlotsPerEpoch +
+				params.BeaconConfig().GenesisSlot,
 		},
 		{
-			stateSlot:            256,
-			firstAttestationSlot: 256 - params.BeaconConfig().SlotsPerEpoch - 256%params.BeaconConfig().SlotsPerEpoch,
+			stateSlot: 256 + params.BeaconConfig().GenesisSlot,
+			firstAttestationSlot: 256 - params.BeaconConfig().SlotsPerEpoch -
+				256%params.BeaconConfig().SlotsPerEpoch +
+				params.BeaconConfig().GenesisSlot,
 		},
 	}
 
