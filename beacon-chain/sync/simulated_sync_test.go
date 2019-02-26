@@ -219,11 +219,10 @@ func TestSyncing_AFullySyncedNode(t *testing.T) {
 		t.Fatalf("Could not retrieve state %v", err)
 	}
 
-	enc, err := proto.Marshal(bState)
+	h, err := hashutil.HashProto(bState)
 	if err != nil {
 		t.Fatalf("unable to marshal the beacon state: %v", err)
 	}
-	h := hashutil.Hash(enc)
 
 	// Sets up a sync service which has its current head at genesis.
 	us, unSyncedDB := setUpUnSyncedService(newP2P, h, t)
