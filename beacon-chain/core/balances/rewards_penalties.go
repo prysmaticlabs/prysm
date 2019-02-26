@@ -345,7 +345,12 @@ func Crosslinks(
 	endSlot := helpers.StartSlot(currentEpoch)
 
 	for i := startSlot; i < endSlot; i++ {
-		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(state, i, false)
+		var registryChange bool
+		if state.ValidatorRegistryUpdateEpoch == i-1 &&
+			state.ValidatorRegistryUpdateEpoch != params.BeaconConfig().GenesisEpoch {
+			registryChange = true
+		}
+		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(state, i, registryChange)
 		if err != nil {
 			return nil, fmt.Errorf("could not get shard committees for slot %d: %v",
 				i-params.BeaconConfig().GenesisSlot, err)
