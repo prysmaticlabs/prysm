@@ -23,7 +23,7 @@ func TestShuffleIndices(t *testing.T) {
 	list1, err := ShuffleIndices(hash1, list1)
 	if err != nil {
 		t.Errorf("Shuffle failed with: %v", err)
-	}
+	} 
 
 	list2, err = ShuffleIndices(hash2, list2)
 	if err != nil {
@@ -40,7 +40,6 @@ func TestShuffleIndices(t *testing.T) {
 	if !reflect.DeepEqual(list2, []uint64{4, 4, 4, 4, 4, 4, 4, 4, 4, 4}) {
 		t.Errorf("list 2 was incorrectly shuffled")
 	}
-
 
 }
 
