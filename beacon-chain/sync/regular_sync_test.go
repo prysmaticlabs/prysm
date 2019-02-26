@@ -653,6 +653,12 @@ func TestHandleStateReq_NOState(t *testing.T) {
 
 	ss := setupService(t, db)
 
+	genesisTime := uint64(time.Now().Unix())
+	deposits, _ := setupInitialDeposits(t, 10)
+	if err := db.InitializeState(genesisTime, deposits); err != nil {
+		t.Fatalf("Failed to initialize state: %v", err)
+	}
+
 	exitRoutine := make(chan bool)
 
 	go func() {
@@ -694,7 +700,7 @@ func TestHandleStateReq_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not attempt fetch beacon state: %v", err)
 	}
-	stateRoot, err := ssz.TreeHash(beaconState)
+	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		t.Fatalf("could not hash beacon state: %v", err)
 	}

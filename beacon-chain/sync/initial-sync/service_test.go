@@ -65,9 +65,10 @@ func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not attempt fetch beacon state: %v", err)
 	}
-	stateRoot, err := ssz.TreeHash(beaconState)
+	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
-		t.Fatalf("could not hash beacon state: %v", err)
+		log.Errorf("unable to marshal the beacon state: %v", err)
+		return
 	}
 	genBlock := b.NewGenesisBlock(stateRoot[:])
 	if err := beaconDB.SaveBlock(genBlock); err != nil {

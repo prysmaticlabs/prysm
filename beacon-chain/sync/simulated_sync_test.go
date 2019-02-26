@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -15,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 type simulatedP2P struct {
@@ -218,10 +219,11 @@ func TestSyncing_AFullySyncedNode(t *testing.T) {
 		t.Fatalf("Could not retrieve state %v", err)
 	}
 
-	h, err := ssz.TreeHash(bState)
+	enc, err := proto.Marshal(bState)
 	if err != nil {
-		t.Fatalf("Could not hash state %v", err)
+		t.Fatalf("unable to marshal the beacon state: %v", err)
 	}
+	h := hashutil.Hash(enc)
 
 	// Sets up a sync service which has its current head at genesis.
 	us, unSyncedDB := setUpUnSyncedService(newP2P, h, t)

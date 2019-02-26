@@ -297,6 +297,8 @@ func (rs *RegularSync) handleBlockRequestBySlot(msg p2p.Message) {
 }
 
 func (rs *RegularSync) handleStateRequest(msg p2p.Message) {
+	ctx, handleStateReqSpan := trace.StartSpan(msg.Ctx, "RegularSync_handleStateReq")
+	defer handleStateReqSpan.End()
 	req, ok := msg.Data.(*pb.BeaconStateRequest)
 	if !ok {
 		log.Errorf("Message is of the incorrect type")
@@ -307,17 +309,19 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) {
 		log.Errorf("Unable to retrieve beacon state, %v", err)
 		return
 	}
-	root, err := ssz.TreeHash(state)
+	root, err := hashutil.HashProto(state)
 	if err != nil {
-		log.Errorf("Unable to tree hash beacon state, %v", err)
+		log.Errorf("unable to marshal the beacon state: %v", err)
 		return
 	}
 	if root != bytesutil.ToBytes32(req.Hash) {
 		log.Debugf("Requested state root is different from locally stored state root %#x", req.Hash)
 		return
 	}
+	_, sendStateSpan := trace.StartSpan(ctx, "sendState")
 	log.WithField("beaconState", fmt.Sprintf("%#x", root)).Debug("Sending beacon state to peer")
 	rs.p2p.Send(&pb.BeaconStateResponse{BeaconState: state}, msg.Peer)
+	sendStateSpan.End()
 }
 
 func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) {
