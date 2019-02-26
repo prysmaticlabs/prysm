@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 // InitializeState creates an initial genesis state for the beacon
@@ -27,7 +26,7 @@ func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit) 
 	stateHash := hashutil.Hash(stateEnc)
 	genesisBlock := b.NewGenesisBlock(stateHash[:])
 	// #nosec G104
-	blockRoot, _ := ssz.TreeHash(genesisBlock)
+	blockRoot, _ := hashutil.HashBeaconBlock(genesisBlock)
 	// #nosec G104
 	blockEnc, _ := proto.Marshal(genesisBlock)
 	zeroBinary := encodeSlotNumber(0)

@@ -3,7 +3,7 @@ package blockchain
 import (
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/ssz"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -73,11 +73,11 @@ func VoteCount(block *pb.BeaconBlock, state *pb.BeaconState, targets map[uint64]
 		if err != nil {
 			return 0, err
 		}
-		ancestorRoot, err := ssz.TreeHash(ancestor)
+		ancestorRoot, err := hashutil.HashBeaconBlock(ancestor)
 		if err != nil {
 			return 0, err
 		}
-		blockRoot, err := ssz.TreeHash(block)
+		blockRoot, err := hashutil.HashBeaconBlock(block)
 		if err != nil {
 			return 0, err
 		}
