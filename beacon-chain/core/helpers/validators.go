@@ -67,7 +67,7 @@ func EntryExitEffectEpoch(epoch uint64) uint64 {
 //    return first_committee[slot % len(first_committee)]
 func BeaconProposerIndex(state *pb.BeaconState, slot uint64) (uint64, error) {
 	var registryChanged bool
-	if state.ValidatorRegistryUpdateEpoch == SlotToEpoch(slot) &&
+	if state.ValidatorRegistryUpdateEpoch == SlotToEpoch(slot)-1 &&
 		state.ValidatorRegistryUpdateEpoch != params.BeaconConfig().GenesisEpoch {
 		registryChanged = true
 	}
