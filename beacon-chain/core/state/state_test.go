@@ -105,7 +105,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	// Validator registry fields checks.
-	if newState.ValidatorRegistryUpdateEpoch != params.BeaconConfig().FarFutureEpoch {
+	if newState.ValidatorRegistryUpdateEpoch != params.BeaconConfig().GenesisEpoch {
 		t.Error("ValidatorRegistryUpdateSlot was not correctly initialized")
 	}
 	if len(newState.ValidatorRegistry) != depositsForChainStart {

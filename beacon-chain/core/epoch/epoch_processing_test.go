@@ -395,27 +395,6 @@ func TestProcessPrevSlotShard_CorrectPrevEpochData(t *testing.T) {
 	}
 }
 
-func TestProcessValidatorRegistry_CorrectCurrentEpochData(t *testing.T) {
-	state := &pb.BeaconState{
-		Slot:                       params.BeaconConfig().MinSeedLookahead,
-		LatestRandaoMixes:          [][]byte{{'A'}, {'B'}},
-		CurrentShufflingSeedHash32: []byte{'C'},
-	}
-	newState, err := ProcessValidatorRegistry(
-		proto.Clone(state).(*pb.BeaconState))
-	if err != nil {
-		t.Fatalf("Could not execute ProcessValidatorRegistry: %v", err)
-	}
-	if newState.CurrentShufflingEpoch != state.Slot {
-		t.Errorf("Incorrect current epoch calculation slot: Wanted: %d, got: %d",
-			newState.CurrentShufflingEpoch, state.Slot)
-	}
-	if !bytes.Equal(newState.CurrentShufflingSeedHash32, state.LatestRandaoMixes[0]) {
-		t.Errorf("Incorrect current epoch seed mix hash: Wanted: %v, got: %v",
-			state.LatestRandaoMixes[0], newState.CurrentShufflingSeedHash32)
-	}
-}
-
 func TestProcessPartialValidatorRegistry_CorrectShufflingEpoch(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().SlotsPerEpoch * 2,

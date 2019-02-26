@@ -66,7 +66,12 @@ func EntryExitEffectEpoch(epoch uint64) uint64 {
 //    first_committee, _ = get_crosslink_committees_at_slot(state, slot)[0]
 //    return first_committee[slot % len(first_committee)]
 func BeaconProposerIndex(state *pb.BeaconState, slot uint64) (uint64, error) {
-	committeeArray, err := CrosslinkCommitteesAtSlot(state, slot, false)
+	var registryChanged bool
+	if state.ValidatorRegistryUpdateEpoch == SlotToEpoch(slot) &&
+		state.ValidatorRegistryUpdateEpoch != params.BeaconConfig().GenesisEpoch {
+		registryChanged = true
+	}
+	committeeArray, err := CrosslinkCommitteesAtSlot(state, slot, registryChanged)
 	if err != nil {
 		return 0, err
 	}

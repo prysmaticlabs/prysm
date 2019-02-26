@@ -252,34 +252,20 @@ func ProcessPrevSlotShardSeed(state *pb.BeaconState) *pb.BeaconState {
 	return state
 }
 
-// ProcessValidatorRegistry computes and sets new validator registry fields,
-// reshuffles shard committees and returns the recomputed state with the updated registry.
-//
-// Spec pseudocode definition:
-//  Set state.current_calculation_epoch = next_epoch
-//  Set state.current_epoch_start_shard = (state.current_epoch_start_shard +
-//  	get_current_epoch_committee_count(state)) % SHARD_COUNT
-//	Set state.current_epoch_seed = generate_seed(state, state.current_calculation_epoch)
-func ProcessValidatorRegistry(
-	state *pb.BeaconState) (*pb.BeaconState, error) {
-	state.CurrentShufflingEpoch = state.Slot
-
-	nextStartShard := (state.CurrentShufflingStartShard +
-		helpers.CurrentEpochCommitteeCount(state)*params.BeaconConfig().SlotsPerEpoch) %
-		params.BeaconConfig().SlotsPerEpoch
-	state.CurrentShufflingStartShard = nextStartShard
-
-	var randaoMixSlot uint64
-	if state.CurrentShufflingEpoch > params.BeaconConfig().MinSeedLookahead {
-		randaoMixSlot = state.CurrentShufflingEpoch -
-			params.BeaconConfig().MinSeedLookahead
-	}
-	randaoMix, err := helpers.RandaoMix(state, randaoMixSlot)
+// ProcessCurrSlotShardSeed sets the current shuffling information in the beacon state.
+//   Set state.current_shuffling_epoch = next_epoch
+//   Set state.current_shuffling_start_shard = (state.current_shuffling_start_shard +
+//     get_current_epoch_committee_count(state)) % SHARD_COUNT
+//   Set state.current_shuffling_seed = generate_seed(state, state.current_shuffling_epoch)
+func ProcessCurrSlotShardSeed(state *pb.BeaconState) (*pb.BeaconState, error) {
+	state.CurrentShufflingEpoch = helpers.NextEpoch(state)
+	state.CurrentShufflingStartShard = (state.CurrentShufflingStartShard +
+		helpers.CurrentEpochCommitteeCount(state)) % params.BeaconConfig().ShardCount
+	seed, err := helpers.GenerateSeed(state, state.CurrentShufflingEpoch)
 	if err != nil {
-		return nil, fmt.Errorf("could not get randaoMix mix: %v", err)
+		return nil, fmt.Errorf("could not update current shuffling seed: %v", err)
 	}
-	state.CurrentShufflingSeedHash32 = randaoMix
-
+	state.CurrentShufflingSeedHash32 = seed[:]
 	return state, nil
 }
 
