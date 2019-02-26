@@ -196,6 +196,9 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 		close(s.stateBuf)
 	}()
 
+	// Send out a batch request
+	s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
+
 	for {
 		select {
 		case <-s.ctx.Done():
