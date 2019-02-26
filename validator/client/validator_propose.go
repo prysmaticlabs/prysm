@@ -7,13 +7,14 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/opentracing/opentracing-go"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/forkutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 // ProposeBlock A new beacon block for a given slot. This method collects the
@@ -32,7 +33,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 		log.Errorf("Failed to fetch CanonicalHead: %v", err)
 		return
 	}
-	parentTreeHash, err := ssz.TreeHash(headBlock)
+	parentTreeRoot, err := hashutil.HashBeaconBlock(headBlock)
 	if err != nil {
 		log.Errorf("Failed to hash parent block: %v", err)
 		return
@@ -91,7 +92,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	// 2. Construct block.
 	block := &pbp2p.BeaconBlock{
 		Slot:             slot,
-		ParentRootHash32: parentTreeHash[:],
+		ParentRootHash32: parentTreeRoot[:],
 		RandaoReveal:     epochSignature.Marshal(),
 		Eth1Data:         eth1DataResp.Eth1Data,
 		Body: &pbp2p.BeaconBlockBody{
