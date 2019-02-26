@@ -13,6 +13,7 @@ go_library(
         "setup_db.go",
         "state.go",
         "validator.go",
+        "verify_contract.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/db",
     visibility = ["//beacon-chain:__subpackages__"],
@@ -23,6 +24,7 @@ go_library(
         "//shared/bytesutil:go_default_library",
         "//shared/hashutil:go_default_library",
         "@com_github_boltdb_bolt//:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_opentracing_opentracing_go//:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
@@ -42,6 +44,7 @@ go_test(
         "pending_deposits_test.go",
         "state_test.go",
         "validator_test.go",
+        "verify_contract_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
@@ -51,6 +54,7 @@ go_test(
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
     ],
 )
