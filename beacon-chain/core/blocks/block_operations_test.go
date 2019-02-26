@@ -801,7 +801,7 @@ func TestProcessBlockAttestations_PreviousJustifiedEpochVerificationFailure(t *t
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().SlotsPerEpoch,
+		Slot:                   2 * params.BeaconConfig().SlotsPerEpoch,
 		PreviousJustifiedEpoch: 2,
 	}
 
