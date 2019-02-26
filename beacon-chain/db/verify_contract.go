@@ -12,6 +12,10 @@ import (
 
 var depositContractAddressKey = []byte("deposit-contract")
 
+// VerifyContractAddress that represents the data in this database. The
+// contract address is the address of the deposit contract on the proof of work
+// Ethereum chain. This value will never change or all of the data in the
+// database would be made invalid.
 func (db *BeaconDB) VerifyContractAddress(ctx context.Context, addr common.Address) error {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "BeaconDB.VerifyContractAddress")
 	defer span.Finish()
