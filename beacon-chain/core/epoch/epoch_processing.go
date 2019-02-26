@@ -91,73 +91,76 @@ func ProcessEth1Data(state *pb.BeaconState) *pb.BeaconState {
 
 // ProcessJustification processes for justified slot by comparing
 // epoch boundary balance and total balance.
-//
-// Spec pseudocode definition:
-//    Set state.previous_justified_epoch = state.justified_epoch.
-//    Set state.justification_bitfield = (state.justification_bitfield * 2) % 2**64.
-//    Set state.justification_bitfield |= 2 and state.justified_epoch =
-//    slot_to_epoch(state.slot) - 2  if 3 * previous_epoch_boundary_attesting_balance >= 2 * total_balance
-//    Set state.justification_bitfield |= 1 and state.justified_epoch =
-//    slot_to_epoch(state.slot) - 1 if 3 * this_epoch_boundary_attesting_balance >= 2 * total_balance
+//   First, update the justification bitfield:
+//     Let new_justified_epoch = state.justified_epoch.
+//     Set state.justification_bitfield = state.justification_bitfield << 1.
+//     Set state.justification_bitfield |= 2 and new_justified_epoch = previous_epoch if
+//       3 * previous_epoch_boundary_attesting_balance >= 2 * previous_total_balance.
+//     Set state.justification_bitfield |= 1 and new_justified_epoch = current_epoch if
+//       3 * current_epoch_boundary_attesting_balance >= 2 * current_total_balance.
+//   Next, update last finalized epoch if possible:
+//     Set state.finalized_epoch = state.previous_justified_epoch if (state.justification_bitfield >> 1) % 8
+//       == 0b111 and state.previous_justified_epoch == previous_epoch - 2.
+//     Set state.finalized_epoch = state.previous_justified_epoch if (state.justification_bitfield >> 1) % 4
+//       == 0b11 and state.previous_justified_epoch == previous_epoch - 1.
+//     Set state.finalized_epoch = state.justified_epoch if (state.justification_bitfield >> 0) % 8
+//       == 0b111 and state.justified_epoch == previous_epoch - 1.
+//     Set state.finalized_epoch = state.justified_epoch if (state.justification_bitfield >> 0) % 4
+//       == 0b11 and state.justified_epoch == previous_epoch.
+//   Finally, update the following:
+//     Set state.previous_justified_epoch = state.justified_epoch.
+//     Set state.justified_epoch = new_justified_epoch
 func ProcessJustification(
 	state *pb.BeaconState,
 	thisEpochBoundaryAttestingBalance uint64,
 	prevEpochBoundaryAttestingBalance uint64,
+	prevTotalBalance uint64,
 	totalBalance uint64) *pb.BeaconState {
-
-	state.PreviousJustifiedEpoch = state.JustifiedEpoch
+	newJustifiedEpoch := state.JustifiedEpoch
+	prevEpoch := helpers.PrevEpoch(state)
+	currentEpoch := helpers.CurrentEpoch(state)
 	// Shifts all the bits over one to create a new bit for the recent epoch.
-	state.JustificationBitfield = state.JustificationBitfield * 2
+	state.JustificationBitfield = state.JustificationBitfield << 1
 	log.Infof("Total Balance: %d", totalBalance)
 	// If prev prev epoch was justified then we ensure the 2nd bit in the bitfield is set,
 	// assign new justified slot to 2 * SLOTS_PER_EPOCH before.
 	log.Infof("Previous Epoch Attesting Balance: %d", prevEpochBoundaryAttestingBalance)
-	if 3*prevEpochBoundaryAttestingBalance >= 2*totalBalance {
-		log.Infof("Prev epoch %d was justified", state.JustifiedEpoch-params.BeaconConfig().GenesisEpoch)
+	if 3*prevEpochBoundaryAttestingBalance >= 2*prevTotalBalance {
 		state.JustificationBitfield |= 2
-		state.JustifiedEpoch = helpers.CurrentEpoch(state) - 2
+		newJustifiedEpoch = prevEpoch
 	}
 	log.Infof("Current Epoch Attesting Balance: %d", thisEpochBoundaryAttestingBalance)
 	// If this epoch was justified then we ensure the 1st bit in the bitfield is set,
 	// assign new justified slot to 1 * SLOTS_PER_EPOCH before.
 	if 3*thisEpochBoundaryAttestingBalance >= 2*totalBalance {
-		log.Infof("Current epoch %d was justified", state.JustifiedEpoch-params.BeaconConfig().GenesisEpoch)
 		state.JustificationBitfield |= 1
-		state.JustifiedEpoch = helpers.CurrentEpoch(state) - 1
+		newJustifiedEpoch = currentEpoch
+		log.Infof("Current epoch %d was justified", newJustifiedEpoch-params.BeaconConfig().GenesisEpoch)
 	}
-	return state
-}
 
-// ProcessFinalization processes for finalized slot by checking
-// consecutive justified slots.
-//
-// Spec pseudocode definition:
-//   Set state.finalized_epoch = state.previous_justified_epoch if any of the following are true:
-//		state.previous_justified_epoch == slot_to_epoch(state.slot) - 2 and state.justification_bitfield % 4 == 3
-//		state.previous_justified_epoch == slot_to_epoch(state.slot) - 3 and state.justification_bitfield % 8 == 7
-//		state.previous_justified_epoch == slot_to_epoch(state.slot) - 4 and state.justification_bitfield % 16 in (15, 14)
-func ProcessFinalization(state *pb.BeaconState) *pb.BeaconState {
-
-	log.Infof("Processing finality, justification bitfield: %v", state.JustificationBitfield)
-	if state.PreviousJustifiedEpoch == helpers.CurrentEpoch(state)-2 &&
-		state.JustificationBitfield%4 == 3 {
+	// Process finality.
+	if state.PreviousJustifiedEpoch == prevEpoch-2 &&
+		(state.JustificationBitfield>>1)%8 == 7 {
+		state.FinalizedEpoch = state.PreviousJustifiedEpoch
+		log.Infof("New Finalized Epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
+	}
+	if state.PreviousJustifiedEpoch == prevEpoch-1 &&
+		(state.JustificationBitfield>>1)%4 == 3 {
+		state.FinalizedEpoch = state.PreviousJustifiedEpoch
+		log.Infof("New Finalized Epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
+	}
+	if state.JustifiedEpoch == prevEpoch-1 &&
+		(state.JustificationBitfield>>0)%8 == 7 {
 		state.FinalizedEpoch = state.JustifiedEpoch
 		log.Infof("New Finalized Epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
-		return state
 	}
-	if state.PreviousJustifiedEpoch == helpers.CurrentEpoch(state)-3 &&
-		state.JustificationBitfield%8 == 7 {
+	if state.JustifiedEpoch == prevEpoch &&
+		(state.JustificationBitfield>>0)%4 == 3 {
 		state.FinalizedEpoch = state.JustifiedEpoch
 		log.Infof("New Finalized Epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
-		return state
 	}
-	if state.PreviousJustifiedEpoch == helpers.CurrentEpoch(state)-4 &&
-		(state.JustificationBitfield%16 == 15 ||
-			state.JustificationBitfield%16 == 14) {
-		state.FinalizedEpoch = state.JustifiedEpoch
-		log.Infof("New Finalized Epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
-		return state
-	}
+	state.PreviousJustifiedEpoch = state.JustifiedEpoch
+	state.JustifiedEpoch = newJustifiedEpoch
 	return state
 }
 
@@ -249,34 +252,20 @@ func ProcessPrevSlotShardSeed(state *pb.BeaconState) *pb.BeaconState {
 	return state
 }
 
-// ProcessValidatorRegistry computes and sets new validator registry fields,
-// reshuffles shard committees and returns the recomputed state with the updated registry.
-//
-// Spec pseudocode definition:
-//  Set state.current_calculation_epoch = next_epoch
-//  Set state.current_epoch_start_shard = (state.current_epoch_start_shard +
-//  	get_current_epoch_committee_count(state)) % SHARD_COUNT
-//	Set state.current_epoch_seed = generate_seed(state, state.current_calculation_epoch)
-func ProcessValidatorRegistry(
-	state *pb.BeaconState) (*pb.BeaconState, error) {
-	state.CurrentShufflingEpoch = state.Slot
-
-	nextStartShard := (state.CurrentShufflingStartShard +
-		helpers.CurrentEpochCommitteeCount(state)*params.BeaconConfig().SlotsPerEpoch) %
-		params.BeaconConfig().SlotsPerEpoch
-	state.CurrentShufflingStartShard = nextStartShard
-
-	var randaoMixSlot uint64
-	if state.CurrentShufflingEpoch > params.BeaconConfig().MinSeedLookahead {
-		randaoMixSlot = state.CurrentShufflingEpoch -
-			params.BeaconConfig().MinSeedLookahead
-	}
-	randaoMix, err := helpers.RandaoMix(state, randaoMixSlot)
+// ProcessCurrSlotShardSeed sets the current shuffling information in the beacon state.
+//   Set state.current_shuffling_epoch = next_epoch
+//   Set state.current_shuffling_start_shard = (state.current_shuffling_start_shard +
+//     get_current_epoch_committee_count(state)) % SHARD_COUNT
+//   Set state.current_shuffling_seed = generate_seed(state, state.current_shuffling_epoch)
+func ProcessCurrSlotShardSeed(state *pb.BeaconState) (*pb.BeaconState, error) {
+	state.CurrentShufflingEpoch = helpers.NextEpoch(state)
+	state.CurrentShufflingStartShard = (state.CurrentShufflingStartShard +
+		helpers.CurrentEpochCommitteeCount(state)) % params.BeaconConfig().ShardCount
+	seed, err := helpers.GenerateSeed(state, state.CurrentShufflingEpoch)
 	if err != nil {
-		return nil, fmt.Errorf("could not get randaoMix mix: %v", err)
+		return nil, fmt.Errorf("could not update current shuffling seed: %v", err)
 	}
-	state.CurrentShufflingSeedHash32 = randaoMix
-
+	state.CurrentShufflingSeedHash32 = seed[:]
 	return state, nil
 }
 

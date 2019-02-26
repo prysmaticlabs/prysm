@@ -15,17 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
-// ValidatorIdx returns the idx of the validator given an input public key.
-func ValidatorIdx(pubKey []byte, validators []*pb.Validator) (uint64, error) {
-	for idx := range validators {
-		if bytes.Equal(validators[idx].Pubkey, pubKey) {
-			return uint64(idx), nil
-		}
-	}
-
-	return 0, fmt.Errorf("can't find validator index for public key %#x", pubKey)
-}
-
 // ValidatorIndices returns all the validator indices from the input attestations
 // and state.
 //
@@ -302,7 +291,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	var err error
 	for idx, validator := range state.ValidatorRegistry {
 		// Activate validators within the allowable balance churn.
-		if validator.ActivationEpoch > helpers.EntryExitEffectEpoch(currentEpoch) &&
+		if validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch &&
 			state.ValidatorBalances[idx] >= params.BeaconConfig().MaxDepositAmount {
 			balChurn += helpers.EffectiveBalance(state, uint64(idx))
 			if balChurn > maxBalChurn {
@@ -318,7 +307,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	balChurn = 0
 	for idx, validator := range state.ValidatorRegistry {
 		// Exit validators within the allowable balance churn.
-		if validator.ExitEpoch > helpers.EntryExitEffectEpoch(currentEpoch) &&
+		if validator.ExitEpoch == params.BeaconConfig().FarFutureEpoch &&
 			validator.StatusFlags == pb.Validator_INITIATED_EXIT {
 			balChurn += helpers.EffectiveBalance(state, uint64(idx))
 			if balChurn > maxBalChurn {
