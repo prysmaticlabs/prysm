@@ -126,8 +126,12 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	if err != nil {
 		return fmt.Errorf("could not hash beacon state: %v", err)
 	}
-	if err := c.beaconDB.SaveBlock(b.NewGenesisBlock(stateRoot[:])); err != nil {
+	genBlock := b.NewGenesisBlock(stateRoot[:])
+	if err := c.beaconDB.SaveBlock(genBlock); err != nil {
 		return fmt.Errorf("could not save genesis block to disk: %v", err)
+	}
+	if err := c.beaconDB.UpdateChainHead(genBlock, beaconState); err != nil {
+		return fmt.Errorf("could not set chain head, %v", err)
 	}
 	return nil
 }
