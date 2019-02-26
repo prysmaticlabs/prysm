@@ -291,7 +291,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	var err error
 	for idx, validator := range state.ValidatorRegistry {
 		// Activate validators within the allowable balance churn.
-		if validator.ActivationEpoch > helpers.EntryExitEffectEpoch(currentEpoch) &&
+		if validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch &&
 			state.ValidatorBalances[idx] >= params.BeaconConfig().MaxDepositAmount {
 			balChurn += helpers.EffectiveBalance(state, uint64(idx))
 			if balChurn > maxBalChurn {
@@ -307,7 +307,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	balChurn = 0
 	for idx, validator := range state.ValidatorRegistry {
 		// Exit validators within the allowable balance churn.
-		if validator.ExitEpoch > helpers.EntryExitEffectEpoch(currentEpoch) &&
+		if validator.ExitEpoch == params.BeaconConfig().FarFutureEpoch &&
 			validator.StatusFlags == pb.Validator_INITIATED_EXIT {
 			balChurn += helpers.EffectiveBalance(state, uint64(idx))
 			if balChurn > maxBalChurn {
