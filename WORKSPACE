@@ -399,7 +399,7 @@ go_repository(
 go_repository(
     name = "com_github_mattn_go_isatty",
     importpath = "github.com/mattn/go-isatty",
-    tag = "v0.0.5",
+    tag = "v0.0.6",
 )
 
 go_repository(
