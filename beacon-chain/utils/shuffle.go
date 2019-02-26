@@ -2,7 +2,6 @@
 package utils
 
 import (
-	"bytes"
 	"encoding/binary"
 	"errors"
 	"math"
@@ -25,13 +24,11 @@ func GetPermutedIndex(index uint64, listSize uint64, seed common.Hash) (uint64, 
 	}
 
 	bs4 := make([]byte, 4)
-	buf := new(bytes.Buffer)
+	bs2 := make([]byte, 2)
 
 	for round := 0; round < 90; round++ {
-		if err := binary.Write(buf, binary.LittleEndian, uint8(round)); err != nil {
-			return 0, err
-		}
-		bs1 := buf.Bytes()
+		binary.LittleEndian.PutUint16(bs2[:], uint16(round))
+		bs1 := bs2[:1]
 		hashedValue := hashutil.Hash(append(seed[:], bs1...))
 		hashedValue8 := hashedValue[:8]
 		pivot := binary.LittleEndian.Uint64(hashedValue8[:]) % listSize
