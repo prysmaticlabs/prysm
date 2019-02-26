@@ -363,12 +363,6 @@ func (w *Web3Service) run(done <-chan struct{}) {
 		log.Errorf("Unable to retrieve data from deposit contract %v", err)
 		return
 	}
-	hasChainStarted, _, err := w.HasChainStartLogOccurred()
-	if err != nil {
-		log.Errorf("Unable to verify chain has started: %v", err)
-		return
-	}
-	w.chainStarted = hasChainStarted
 
 	headSub, err := w.reader.SubscribeNewHead(w.ctx, w.headerChan)
 	if err != nil {

@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -18,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -318,8 +317,11 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 			true, /* sig verify */
 		)
 		if err != nil {
-			return nil, fmt.Errorf("could not execute state transition %v", err)
+			return nil, fmt.Errorf("could not execute state transition without block %v", err)
 		}
+		log.WithField(
+			"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
+		).Info("Slot transition successfully processed")
 	}
 
 	beaconState, err = state.ExecuteStateTransition(
@@ -329,7 +331,18 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 		true, /* no sig verify */
 	)
 	if err != nil {
-		return nil, fmt.Errorf("could not execute state transition %v", err)
+		return nil, fmt.Errorf("could not execute state transition with block %v", err)
+	}
+	log.WithField(
+		"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
+	).Info("Slot transition successfully processed")
+	log.WithField(
+		"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
+	).Info("Block transition successfully processed")
+	if (beaconState.Slot+1)%params.BeaconConfig().SlotsPerEpoch == 0 {
+		log.WithField(
+			"SlotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
+		).Info("Epoch transition successfully processed")
 	}
 
 	// if there exists a block for the slot being processed.
