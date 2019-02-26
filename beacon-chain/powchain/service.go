@@ -244,9 +244,6 @@ func (w *Web3Service) HasChainStartLogOccurred() (bool, uint64, error) {
 		return false, 0, nil
 	}
 	timestamp := binary.LittleEndian.Uint64(genesisTime)
-	if uint64(time.Now().Unix()) < timestamp {
-		return false, 0, fmt.Errorf("invalid timestamp from log expected %d > %d", time.Now().Unix(), timestamp)
-	}
 	return true, timestamp, nil
 }
 

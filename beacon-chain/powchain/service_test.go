@@ -775,15 +775,7 @@ func TestProcessChainStartLog_OK(t *testing.T) {
 		)
 	}
 
-	genesisTime := <-genesisTimeChan
-	if genesisTime.Unix() > time.Now().Unix() {
-		t.Errorf(
-			"Timestamp from log is higher than the current time %d > %d",
-			genesisTime.Unix(),
-			time.Now().Unix(),
-		)
-	}
-
+	<-genesisTimeChan
 	testutil.AssertLogsDoNotContain(t, hook, "Unable to unpack ChainStart log data")
 	testutil.AssertLogsDoNotContain(t, hook, "Receipt root from log doesn't match the root saved in memory")
 	testutil.AssertLogsDoNotContain(t, hook, "Invalid timestamp from log")
