@@ -790,7 +790,7 @@ func TestProcessBlockAttestations_PreviousJustifiedEpochVerificationFailure(t *t
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Slot:           params.BeaconConfig().SlotsPerEpoch,
+				Slot:           params.BeaconConfig().SlotsPerEpoch + 1,
 				JustifiedEpoch: 3,
 			},
 		},
@@ -801,7 +801,7 @@ func TestProcessBlockAttestations_PreviousJustifiedEpochVerificationFailure(t *t
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().SlotsPerEpoch * 2,
+		Slot:                   2 * params.BeaconConfig().SlotsPerEpoch,
 		PreviousJustifiedEpoch: 2,
 	}
 
