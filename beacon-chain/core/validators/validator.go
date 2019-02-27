@@ -473,7 +473,7 @@ func prepareValidatorForWithdrawal(state *pb.BeaconState, idx uint64) *pb.Beacon
 // the validator is eligible for activation and exit.
 //
 // Spec pseudocode definition:
-// def get_entry_exit_effect_epoch(epoch: EpochNumber) -> EpochNumber:
+// def get_entry_exit_effect_epoch(epoch: Epoch) -> Epoch:
 //    """
 //    An entry or exit triggered in the ``epoch`` given by the input takes effect at
 //    the epoch given by the output.

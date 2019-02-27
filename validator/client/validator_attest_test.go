@@ -48,7 +48,7 @@ func TestAttestToBlockHead_ValidatorCommitteeAtSlotFailure(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Could not fetch crosslink committees at slot 30")
 }
 
-func TestAttestToBlockHead_AttestationInfoAtSlotFailure(t *testing.T) {
+func TestAttestToBlockHead_AttestationDataAtSlotFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	validator, m, finish := setup(t)
@@ -63,9 +63,9 @@ func TestAttestToBlockHead_AttestationInfoAtSlotFailure(t *testing.T) {
 	).Return(&pb.CommitteeResponse{
 		Shard: 5,
 	}, nil)
-	m.attesterClient.EXPECT().AttestationInfoAtSlot(
+	m.attesterClient.EXPECT().AttestationDataAtSlot(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.AttestationInfoRequest{}),
+		gomock.AssignableToTypeOf(&pb.AttestationDataRequest{}),
 	).Return(nil, errors.New("something went wrong"))
 
 	validator.AttestToBlockHead(context.Background(), 30)
@@ -90,10 +90,10 @@ func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
 		Shard:     5,
 		Committee: make([]uint64, 111),
 	}, nil)
-	m.attesterClient.EXPECT().AttestationInfoAtSlot(
+	m.attesterClient.EXPECT().AttestationDataAtSlot(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.AttestationInfoRequest{}),
-	).Return(&pb.AttestationInfoResponse{
+		gomock.AssignableToTypeOf(&pb.AttestationDataRequest{}),
+	).Return(&pb.AttestationDataResponse{
 		BeaconBlockRootHash32:    []byte{},
 		EpochBoundaryRootHash32:  []byte{},
 		JustifiedBlockRootHash32: []byte{},
@@ -129,10 +129,10 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		Shard:     5,
 		Committee: committee,
 	}, nil)
-	m.attesterClient.EXPECT().AttestationInfoAtSlot(
+	m.attesterClient.EXPECT().AttestationDataAtSlot(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.AttestationInfoRequest{}),
-	).Return(&pb.AttestationInfoResponse{
+		gomock.AssignableToTypeOf(&pb.AttestationDataRequest{}),
+	).Return(&pb.AttestationDataResponse{
 		BeaconBlockRootHash32:    []byte("A"),
 		EpochBoundaryRootHash32:  []byte("B"),
 		JustifiedBlockRootHash32: []byte("C"),
@@ -197,10 +197,10 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 		wg.Done()
 	})
 
-	m.attesterClient.EXPECT().AttestationInfoAtSlot(
+	m.attesterClient.EXPECT().AttestationDataAtSlot(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.AttestationInfoRequest{}),
-	).Return(&pb.AttestationInfoResponse{
+		gomock.AssignableToTypeOf(&pb.AttestationDataRequest{}),
+	).Return(&pb.AttestationDataResponse{
 		BeaconBlockRootHash32:    []byte("A"),
 		EpochBoundaryRootHash32:  []byte("B"),
 		JustifiedBlockRootHash32: []byte("C"),
@@ -250,10 +250,10 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 		wg.Done()
 	})
 
-	m.attesterClient.EXPECT().AttestationInfoAtSlot(
+	m.attesterClient.EXPECT().AttestationDataAtSlot(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.AttestationInfoRequest{}),
-	).Return(&pb.AttestationInfoResponse{
+		gomock.AssignableToTypeOf(&pb.AttestationDataRequest{}),
+	).Return(&pb.AttestationDataResponse{
 		BeaconBlockRootHash32:    []byte("A"),
 		EpochBoundaryRootHash32:  []byte("B"),
 		JustifiedBlockRootHash32: []byte("C"),

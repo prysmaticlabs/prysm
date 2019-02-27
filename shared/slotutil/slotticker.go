@@ -31,19 +31,19 @@ func (s *SlotTicker) Done() {
 }
 
 // GetSlotTicker is the constructor for SlotTicker.
-func GetSlotTicker(genesisTime time.Time, slotDuration uint64) *SlotTicker {
+func GetSlotTicker(genesisTime time.Time, secondsPerSlot uint64) *SlotTicker {
 	ticker := &SlotTicker{
 		c:    make(chan uint64),
 		done: make(chan struct{}),
 	}
-	ticker.start(genesisTime, slotDuration, time.Since, time.Until, time.After)
+	ticker.start(genesisTime, secondsPerSlot, time.Since, time.Until, time.After)
 	return ticker
 }
 
 // CurrentSlot accepts the genesis time and returns the current time's slot.
 func CurrentSlot(
 	genesisTime time.Time,
-	slotDuration uint64,
+	secondsPerSlot uint64,
 	since func(time.Time) time.Duration) uint64 {
 
 	sinceGenesis := since(genesisTime)
@@ -51,18 +51,18 @@ func CurrentSlot(
 		return params.BeaconConfig().GenesisSlot
 	}
 
-	durationInSeconds := time.Duration(slotDuration) * time.Second
+	durationInSeconds := time.Duration(secondsPerSlot) * time.Second
 	return uint64(sinceGenesis/durationInSeconds) + params.BeaconConfig().GenesisSlot
 }
 
 func (s *SlotTicker) start(
 	genesisTime time.Time,
-	slotDuration uint64,
+	secondsPerSlot uint64,
 	since func(time.Time) time.Duration,
 	until func(time.Time) time.Duration,
 	after func(time.Duration) <-chan time.Time) {
 
-	d := time.Duration(slotDuration) * time.Second
+	d := time.Duration(secondsPerSlot) * time.Second
 
 	go func() {
 		sinceGenesis := since(genesisTime)
