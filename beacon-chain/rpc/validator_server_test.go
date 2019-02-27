@@ -190,7 +190,11 @@ func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
 		pubKeyBuf := make([]byte, binary.MaxVarintLen64)
 		n := binary.PutUvarint(pubKeyBuf, uint64(i))
 		wg.Add(1)
-		errs <- db.SaveValidatorIndexBatch(pubKeyBuf[:n], i, &wg)
+		go func(itemID string) {
+			errs <- db.SaveValidatorIndexBatch(pubKeyBuf[:n], i)
+			wg.Done()
+		}(string(i))
+
 		fmt.Printf("%v of %v\n", i, numOfValidators)
 	}
 	wg.Wait()
