@@ -31,8 +31,7 @@ func (db *BeaconDB) SaveValidatorIndexBatch(pubKey []byte, index int) error {
 		bucket := tx.Bucket(validatorBucket)
 		buf := make([]byte, binary.MaxVarintLen64)
 		n := binary.PutUvarint(buf, uint64(index))
-		err := bucket.Put(h[:], buf[:n])
-		return err
+		return bucket.Put(h[:], buf[:n])
 	})
 
 }
