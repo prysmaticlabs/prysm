@@ -261,7 +261,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	beaconState.LatestBlockRootHash32S = blockRoots
 	beaconState.LatestCrosslinks = []*pb.Crosslink{
 		{
-			ShardBlockRootHash32: []byte{1},
+			CrosslinkDataRootHash32: []byte{1},
 		},
 	}
 	beaconState.Slot = params.BeaconConfig().GenesisSlot + 10
@@ -271,8 +271,8 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			Slot:                     params.BeaconConfig().GenesisSlot,
 			JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
 			JustifiedBlockRootHash32: blockRoots[0],
-			LatestCrosslink:          &pb.Crosslink{ShardBlockRootHash32: []byte{1}},
-			ShardBlockRootHash32:     params.BeaconConfig().ZeroHash[:],
+			LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
+			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
 		},
 		AggregationBitfield: []byte{1},
 		CustodyBitfield:     []byte{1},
@@ -353,7 +353,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	beaconState.LatestBlockRootHash32S = blockRoots
 	beaconState.LatestCrosslinks = []*pb.Crosslink{
 		{
-			ShardBlockRootHash32: []byte{1},
+			CrosslinkDataRootHash32: []byte{1},
 		},
 	}
 	beaconState.Slot = params.BeaconConfig().GenesisSlot + 10
@@ -363,8 +363,8 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			Slot:                     params.BeaconConfig().GenesisSlot,
 			JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
 			JustifiedBlockRootHash32: blockRoots[0],
-			LatestCrosslink:          &pb.Crosslink{ShardBlockRootHash32: []byte{1}},
-			ShardBlockRootHash32:     params.BeaconConfig().ZeroHash[:],
+			LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
+			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
 		},
 		AggregationBitfield: []byte{1},
 		CustodyBitfield:     []byte{1},

@@ -136,7 +136,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		BeaconBlockRootHash32:    []byte("A"),
 		EpochBoundaryRootHash32:  []byte("B"),
 		JustifiedBlockRootHash32: []byte("C"),
-		LatestCrosslink:          &pbp2p.Crosslink{ShardBlockRootHash32: []byte{'D'}},
+		LatestCrosslink:          &pbp2p.Crosslink{CrosslinkDataRootHash32: []byte{'D'}},
 		JustifiedEpoch:           3,
 	}, nil)
 
@@ -161,8 +161,8 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 			BeaconBlockRootHash32:    []byte("A"),
 			EpochBoundaryRootHash32:  []byte("B"),
 			JustifiedBlockRootHash32: []byte("C"),
-			LatestCrosslink:          &pbp2p.Crosslink{ShardBlockRootHash32: []byte{'D'}},
-			ShardBlockRootHash32:     params.BeaconConfig().ZeroHash[:],
+			LatestCrosslink:          &pbp2p.Crosslink{CrosslinkDataRootHash32: []byte{'D'}},
+			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
 			JustifiedEpoch:           3,
 		},
 		CustodyBitfield:     make([]byte, (len(committee)+7)/8),
@@ -204,7 +204,7 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 		BeaconBlockRootHash32:    []byte("A"),
 		EpochBoundaryRootHash32:  []byte("B"),
 		JustifiedBlockRootHash32: []byte("C"),
-		LatestCrosslink:          &pbp2p.Crosslink{ShardBlockRootHash32: []byte{'D'}},
+		LatestCrosslink:          &pbp2p.Crosslink{CrosslinkDataRootHash32: []byte{'D'}},
 		JustifiedEpoch:           3,
 	}, nil).Do(func(arg0, arg1 interface{}) {
 		wg.Done()
@@ -257,7 +257,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 		BeaconBlockRootHash32:    []byte("A"),
 		EpochBoundaryRootHash32:  []byte("B"),
 		JustifiedBlockRootHash32: []byte("C"),
-		LatestCrosslink:          &pbp2p.Crosslink{ShardBlockRootHash32: []byte{'D'}},
+		LatestCrosslink:          &pbp2p.Crosslink{CrosslinkDataRootHash32: []byte{'D'}},
 		JustifiedEpoch:           3,
 	}, nil).Do(func(arg0, arg1 interface{}) {
 		wg.Done()

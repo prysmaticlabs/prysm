@@ -213,8 +213,8 @@ func ProcessCrosslinks(
 					return nil, fmt.Errorf("could not get winning root: %v", err)
 				}
 				state.LatestCrosslinks[shard] = &pb.Crosslink{
-					Epoch:                currentEpoch,
-					ShardBlockRootHash32: winningRoot,
+					Epoch:                   currentEpoch,
+					CrosslinkDataRootHash32: winningRoot,
 				}
 			}
 		}

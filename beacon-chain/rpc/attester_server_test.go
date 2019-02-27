@@ -22,9 +22,9 @@ func TestAttestHead_OK(t *testing.T) {
 	}
 	req := &pbp2p.Attestation{
 		Data: &pbp2p.AttestationData{
-			Slot:                 999,
-			Shard:                1,
-			ShardBlockRootHash32: []byte{'a'},
+			Slot:                    999,
+			Shard:                   1,
+			CrosslinkDataRootHash32: []byte{'a'},
 		},
 	}
 	if _, err := attesterServer.AttestHead(context.Background(), req); err != nil {
@@ -123,7 +123,7 @@ func TestAttestationDataAtSlot_OK(t *testing.T) {
 		LatestBlockRootHash32S: make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
 		LatestCrosslinks: []*pbp2p.Crosslink{
 			{
-				ShardBlockRootHash32: []byte("A"),
+				CrosslinkDataRootHash32: []byte("A"),
 			},
 		},
 	}
@@ -163,7 +163,7 @@ func TestAttestationDataAtSlot_OK(t *testing.T) {
 		JustifiedEpoch:           2 + params.BeaconConfig().GenesisEpoch,
 		JustifiedBlockRootHash32: justifiedBlockRoot[:],
 		LatestCrosslink: &pbp2p.Crosslink{
-			ShardBlockRootHash32: []byte("A"),
+			CrosslinkDataRootHash32: []byte("A"),
 		},
 	}
 

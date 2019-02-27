@@ -256,8 +256,8 @@ func TestProcessCrosslinks_CrosslinksCorrectEpoch(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		attestation := &pb.PendingAttestation{
 			Data: &pb.AttestationData{
-				Slot:                 state.Slot,
-				ShardBlockRootHash32: []byte{'A'},
+				Slot:                    state.Slot,
+				CrosslinkDataRootHash32: []byte{'A'},
 			},
 			// All validators attested to the above roots.
 			AggregationBitfield: participationBitfield,
@@ -279,11 +279,11 @@ func TestProcessCrosslinks_CrosslinksCorrectEpoch(t *testing.T) {
 			newState.LatestCrosslinks[0].Epoch, +params.BeaconConfig().GenesisSlot)
 	}
 	// Verify crosslink for shard 0 was root hashed for []byte{'A'}.
-	if !bytes.Equal(newState.LatestCrosslinks[0].ShardBlockRootHash32,
-		attestations[0].Data.ShardBlockRootHash32) {
+	if !bytes.Equal(newState.LatestCrosslinks[0].CrosslinkDataRootHash32,
+		attestations[0].Data.CrosslinkDataRootHash32) {
 		t.Errorf("Shard 0's root hash is %#x, wanted: %#x",
-			newState.LatestCrosslinks[0].ShardBlockRootHash32,
-			attestations[0].Data.ShardBlockRootHash32)
+			newState.LatestCrosslinks[0].CrosslinkDataRootHash32,
+			attestations[0].Data.CrosslinkDataRootHash32)
 	}
 }
 
