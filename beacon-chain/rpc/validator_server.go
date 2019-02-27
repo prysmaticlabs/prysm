@@ -3,6 +3,8 @@ package rpc
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -46,6 +48,15 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 	beaconState, err := vs.beaconDB.State()
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
+	}
+	head, err := vs.beaconDB.ChainHead()
+	if err != nil {
+		return nil, fmt.Errorf("could not get chain head: %v", err)
+	}
+	headRoot := bytesutil.ToBytes32(head.ParentRootHash32)
+	beaconState, err = state.ExecuteStateTransition(beaconState, nil, headRoot, false)
+	if err != nil {
+		return nil, fmt.Errorf("could not execute head transition: %v", err)
 	}
 	validatorIndex, err := vs.beaconDB.ValidatorIndex(req.PublicKey)
 	if err != nil {
@@ -141,7 +152,7 @@ func (vs *ValidatorServer) NextEpochCommitteeAssignment(
 	ctx context.Context,
 	req *pb.ValidatorIndexRequest) (*pb.CommitteeAssignmentResponse, error) {
 
-	state, err := vs.beaconDB.State()
+	beaconState, err := vs.beaconDB.State()
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
@@ -151,7 +162,7 @@ func (vs *ValidatorServer) NextEpochCommitteeAssignment(
 	}
 
 	committee, shard, slot, isProposer, err :=
-		helpers.NextEpochCommitteeAssignment(state, uint64(idx), false)
+		helpers.NextEpochCommitteeAssignment(beaconState, uint64(idx), false)
 	if err != nil {
 		return nil, fmt.Errorf("could not get next epoch committee assignment: %v", err)
 	}

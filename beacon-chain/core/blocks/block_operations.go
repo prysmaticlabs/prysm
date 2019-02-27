@@ -82,7 +82,7 @@ func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, veri
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
 	}
-	log.WithField("proposerIndex", proposerIdx).Info("Verifying randao")
+	log.WithField("proposerIndex", proposerIdx).Info("RANDAO expected proposer")
 	proposer := beaconState.ValidatorRegistry[proposerIdx]
 	if verifySignatures {
 		if err := verifyBlockRandao(beaconState, block, proposer); err != nil {
