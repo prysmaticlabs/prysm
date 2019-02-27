@@ -55,7 +55,7 @@ func ValidatorIndices(
 func AttestingValidatorIndices(
 	state *pb.BeaconState,
 	shard uint64,
-	shardBlockRoot []byte,
+	crosslinkDataRoot []byte,
 	thisEpochAttestations []*pb.PendingAttestation,
 	prevEpochAttestations []*pb.PendingAttestation) ([]uint64, error) {
 
@@ -64,7 +64,7 @@ func AttestingValidatorIndices(
 
 	for _, attestation := range attestations {
 		if attestation.Data.Shard == shard &&
-			bytes.Equal(attestation.Data.ShardBlockRootHash32, shardBlockRoot) {
+			bytes.Equal(attestation.Data.CrosslinkDataRootHash32, crosslinkDataRoot) {
 
 			validatorIndicesCommittee, err := helpers.AttestationParticipants(state, attestation.Data, attestation.AggregationBitfield)
 			if err != nil {

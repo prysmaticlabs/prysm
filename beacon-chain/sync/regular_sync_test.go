@@ -179,7 +179,7 @@ func TestProcessBlock_OK(t *testing.T) {
 		Data: &pb.AttestationData{
 			Slot:                 0,
 			Shard:                0,
-			ShardBlockRootHash32: []byte{'A'},
+			CrosslinkDataRootHash32: []byte{'A'},
 		},
 	}
 
@@ -261,7 +261,7 @@ func TestProcessBlock_MultipleBlocks(t *testing.T) {
 		Block: data1,
 		Attestation: &pb.Attestation{
 			Data: &pb.AttestationData{
-				ShardBlockRootHash32: []byte{},
+				CrosslinkDataRootHash32: []byte{},
 				Slot:                 params.BeaconConfig().GenesisSlot,
 			},
 		},
@@ -286,7 +286,7 @@ func TestProcessBlock_MultipleBlocks(t *testing.T) {
 		Block: data2,
 		Attestation: &pb.Attestation{
 			Data: &pb.AttestationData{
-				ShardBlockRootHash32: []byte{},
+				CrosslinkDataRootHash32: []byte{},
 				Slot:                 0,
 			},
 		},
