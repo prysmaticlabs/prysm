@@ -319,7 +319,7 @@ func winningRoot(
 
 	for _, attestation := range attestations {
 		if attestation.Data.Shard == shard {
-			candidateRoots = append(candidateRoots, attestation.Data.ShardBlockRootHash32)
+			candidateRoots = append(candidateRoots, attestation.Data.CrosslinkDataRootHash32)
 		}
 	}
 
