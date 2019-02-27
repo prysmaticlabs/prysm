@@ -426,16 +426,17 @@ func VerifyBitfield(bitfield []byte, committeeSize int) (bool, error) {
 	return true, nil
 }
 
-// NextEpochCommitteeAssignment query slots in the next epoch
-// for it to discover which shard and slot a validator gets assigned.
+// CommitteeAssignment is used to query committee assignment from
+// current and previous epoch.
 //
 // Spec pseudocode definition:
-//   def get_next_epoch_committee_assignment(
+//   def get_committee_assignment(
 //        state: BeaconState,
+//        epoch: Epoch,
 //        validator_index: ValidatorIndex,
-//        registry_change: bool) -> Tuple[List[ValidatorIndex], Shard, SlotNumber, bool]:
+//        registry_change: bool=False) -> Tuple[List[ValidatorIndex], Shard, Slot, bool]:
 //    """
-//    Return the committee assignment in the next epoch for ``validator_index`` and ``registry_change``.
+//    Return the committee assignment in the ``epoch`` for ``validator_index`` and ``registry_change``.
 //    ``assignment`` returned is a tuple of the following form:
 //        * ``assignment[0]`` is the list of validators in the committee
 //        * ``assignment[1]`` is the shard to which the committee is assigned
@@ -443,10 +444,12 @@ func VerifyBitfield(bitfield []byte, committeeSize int) (bool, error) {
 //        * ``assignment[3]`` is a bool signalling if the validator is expected to propose
 //            a beacon block at the assigned slot.
 //    """
-//    current_epoch = get_current_epoch(state)
-//    next_epoch = current_epoch + 1
-//    next_epoch_start_slot = get_epoch_start_slot(next_epoch)
-//    for slot in range(next_epoch_start_slot, next_epoch_start_slot + SLOTS_PER_EPOCH):
+//    previous_epoch = get_previous_epoch(state)
+//    next_epoch = get_current_epoch(state)
+//    assert previous_epoch <= epoch <= next_epoch
+//
+//    epoch_start_slot = get_epoch_start_slot(epoch)
+//    for slot in range(epoch_start_slot, epoch_start_slot + SLOTS_PER_EPOCH):
 //        crosslink_committees = get_crosslink_committees_at_slot(
 //            state,
 //            slot,
@@ -465,14 +468,27 @@ func VerifyBitfield(bitfield []byte, committeeSize int) (bool, error) {
 //
 //            assignment = (validators, shard, slot, is_proposer)
 //            return assignment
-func NextEpochCommitteeAssignment(
+func CommitteeAssignment(
 	state *pb.BeaconState,
-	index uint64,
+	epoch uint64,
+	validatorIndex uint64,
 	registryChange bool) ([]uint64, uint64, uint64, bool, error) {
 	var selectedCommittees []*CrosslinkCommittee
+
+	prevEpoch := PrevEpoch(state)
 	nextEpoch := NextEpoch(state)
-	nextEpochStartSlot := StartSlot(nextEpoch)
-	for slot := nextEpochStartSlot; slot < nextEpochStartSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
+
+	if epoch < prevEpoch || epoch > nextEpoch {
+		return nil, 0, 0, false, fmt.Errorf(
+			"epoch %d out of bounds: %d <= epoch <= %d",
+			epoch-params.BeaconConfig().GenesisEpoch,
+			prevEpoch-params.BeaconConfig().GenesisEpoch,
+			nextEpoch-params.BeaconConfig().GenesisEpoch,
+		)
+	}
+
+	startSlot := StartSlot(epoch)
+	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		crosslinkCommittees, err := CrosslinkCommitteesAtSlot(
 			state, slot, registryChange)
 		if err != nil {
@@ -480,7 +496,7 @@ func NextEpochCommitteeAssignment(
 		}
 		for _, committee := range crosslinkCommittees {
 			for _, idx := range committee.Committee {
-				if idx == index {
+				if idx == validatorIndex {
 					selectedCommittees = append(selectedCommittees, committee)
 				}
 
@@ -489,11 +505,12 @@ func NextEpochCommitteeAssignment(
 					shard := selectedCommittees[0].Shard
 					firstCommitteeAtSlot := crosslinkCommittees[0].Committee
 					isProposer := firstCommitteeAtSlot[slot%
-						uint64(len(firstCommitteeAtSlot))] == index
+						uint64(len(firstCommitteeAtSlot))] == validatorIndex
 					return validators, shard, slot, isProposer, nil
 				}
 			}
 		}
 	}
-	return []uint64{}, 0, 0, false, fmt.Errorf("could not get assignment validator %d", index)
+	return []uint64{}, 0, 0, false, fmt.Errorf("could not get assignment validator %d", validatorIndex)
 }
+

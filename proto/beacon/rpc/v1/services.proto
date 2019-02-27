@@ -33,7 +33,7 @@ service ValidatorService {
     rpc ValidatorIndex(ValidatorIndexRequest) returns (ValidatorIndexResponse);
     rpc ValidatorEpochAssignments(ValidatorEpochAssignmentsRequest) returns (ValidatorEpochAssignmentsResponse);
     rpc ValidatorCommitteeAtSlot(CommitteeRequest) returns (CommitteeResponse);
-    rpc NextEpochCommitteeAssignment(ValidatorIndexRequest) returns (CommitteeAssignmentResponse);
+    rpc CommitteeAssignment(ValidatorEpochAssignmentsRequest) returns (CommitteeAssignmentResponse);
 }
 
 message CommitteeRequest {
