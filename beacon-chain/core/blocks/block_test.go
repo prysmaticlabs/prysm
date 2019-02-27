@@ -10,7 +10,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 func TestGenesisBlock_InitializedCorrectly(t *testing.T) {
@@ -173,7 +172,7 @@ func TestProcessBlockRoots_AccurateMerkleTree(t *testing.T) {
 
 func TestBlockChildren_Fetches2Children(t *testing.T) {
 	genesisBlock := NewGenesisBlock([]byte{})
-	genesisRoot, err := ssz.TreeHash(genesisBlock)
+	genesisRoot, err := hashutil.HashBeaconBlock(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}

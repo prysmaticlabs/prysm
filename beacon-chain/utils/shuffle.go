@@ -4,11 +4,9 @@ package utils
 import (
 	"encoding/binary"
 	"errors"
-	"math"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	//"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 )
 
@@ -37,11 +35,11 @@ func GetPermutedIndex(index uint64, listSize uint64, seed common.Hash) (uint64, 
 		if flip > position {
 			position = flip
 		}
-		positionVal := uint32(math.Floor(float64(position / 256)))
+		positionVal := uint32(position/256)
 		binary.LittleEndian.PutUint32(bs4[:], positionVal)
 		bs := append(bs1, bs4...)
 		source := hashutil.Hash(append(seed[:], bs...))
-		positionIndex := uint64(mathutil.CeilDiv8(int(position) % 256))
+		positionIndex := mathutil.CeilDiv8(int(position) % 256)
 		byteV := source[positionIndex]
 		bitV := (byteV >> (position % 8)) % 2
 		if bitV == 1 {

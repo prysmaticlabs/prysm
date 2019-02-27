@@ -12,16 +12,14 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/forkutils"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/forkutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
@@ -111,10 +109,8 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 		return fmt.Errorf("could not deserialize proposer public key: %v", err)
 	}
 	currentEpoch := helpers.CurrentEpoch(beaconState)
-	hashTreeRoot, err := ssz.TreeHash(currentEpoch)
-	if err != nil {
-		return fmt.Errorf("could not fetch tree hash of current epoch: %v", err)
-	}
+	buf := make([]byte, 32)
+	binary.LittleEndian.PutUint64(buf, currentEpoch)
 	domain := forkutils.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainRandao)
 	sig, err := bls.SignatureFromBytes(block.RandaoReveal)
 	if err != nil {
@@ -125,7 +121,7 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 		"pubkey":   fmt.Sprintf("%#x", proposer.Pubkey),
 		"epochSig": fmt.Sprintf("%#x", sig.Marshal()),
 	}).Info("Verifying randao")
-	if !sig.Verify(hashTreeRoot[:], pub, domain) {
+	if !sig.Verify(buf, pub, domain) {
 		return fmt.Errorf("block randao reveal signature did not verify")
 	}
 	return nil
@@ -377,8 +373,8 @@ func isSurroundVote(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
 //   Verify that len(block.body.attestations) <= MAX_ATTESTATIONS.
 //
 //   For each attestation in block.body.attestations:
-//     Verify that attestation.data.slot <= state.slot - MIN_ATTESTATION_INCLUSION_DELAY <
-//       attestation.data.slot + SLOTS_PER_EPOCH.
+//     Verify that `attestation.data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot`.
+//     Verify that `state.slot < attestation.data.slot + SLOTS_PER_EPOCH.
 //     Verify that attestation.data.justified_epoch is equal to state.justified_epoch
 //       if attestation.data.slot >= get_epoch_start_slot(get_current_epoch(state)) else state.previous_justified_epoch.
 //     Verify that attestation.data.justified_block_root is equal to
@@ -428,7 +424,7 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 			beaconState.Slot-params.BeaconConfig().GenesisSlot,
 		)
 	}
-	if att.Data.Slot+params.BeaconConfig().SlotsPerEpoch < beaconState.Slot {
+	if att.Data.Slot+params.BeaconConfig().SlotsPerEpoch <= beaconState.Slot {
 		return fmt.Errorf(
 			"attestation slot (slot %d) + epoch length (%d) less than current beacon state slot (%d)",
 			att.Data.Slot-params.BeaconConfig().GenesisSlot,

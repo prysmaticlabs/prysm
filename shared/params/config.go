@@ -78,6 +78,7 @@ type BeaconChainConfig struct {
 	DepositsForChainStart uint64 // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
 	RandBytes             uint64 // RandBytes is the number of bytes used as entropy to shuffle validators.
 	SyncPollingInterval   int64  // SyncPollingInterval queries network nodes for sync status.
+	BatchBlockLimit       uint64 // BatchBlockLimit is maximum number of blocks that can be requested for initial sync.
 	MaxNumLog2Validators  uint64 // MaxNumLog2Validators is the Max number of validators in Log2 exists given total ETH supply.
 	LogBlockDelay         int64  // Number of blocks to wait from the current head before processing logs from the deposit contract.
 }
@@ -163,7 +164,8 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	// Prysm constants.
 	DepositsForChainStart: 16384,
 	RandBytes:             3,
-	SyncPollingInterval:   6 * 4, // Query nodes over the network every 4 slots for sync status.
+	SyncPollingInterval:   6 * 1, // Query nodes over the network every slot for sync status.
+	BatchBlockLimit:       100,
 	MaxNumLog2Validators:  24,
 	LogBlockDelay:         2, //
 }
@@ -201,8 +203,7 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.MinDepositAmount = 100
 	demoConfig.MaxDepositAmount = 3200000
 	demoConfig.EjectionBalance = 1600000
-	demoConfig.SyncPollingInterval = 2 * 4 // Query nodes over the network every 4 slots
-	demoConfig.SyncPollingInterval = 2 * 4 // Query nodes over the network every 4 slots for sync status.
+	demoConfig.SyncPollingInterval = 1 * 10 // Query nodes over the network every slot.
 
 	return &demoConfig
 }
