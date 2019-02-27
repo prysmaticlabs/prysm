@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -182,11 +183,20 @@ func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
 	if err := db.UpdateChainHead(genesis, state); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
-
-	for i := 0; i < int(params.BeaconConfig().DepositsForChainStart); i++ {
+	var wg sync.WaitGroup
+	numOfValidators := int(params.BeaconConfig().DepositsForChainStart)
+	errs := make(chan error, numOfValidators)
+	for i := 0; i < numOfValidators; i++ {
 		pubKeyBuf := make([]byte, binary.MaxVarintLen64)
 		n := binary.PutUvarint(pubKeyBuf, uint64(i))
-		if err := db.SaveValidatorIndex(pubKeyBuf[:n], i); err != nil {
+		wg.Add(1)
+		errs <- db.SaveValidatorIndexBatch(pubKeyBuf[:n], i, &wg)
+		fmt.Printf("%v of %v\n", i, numOfValidators)
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
 			t.Fatalf("Could not save validator index: %v", err)
 		}
 	}

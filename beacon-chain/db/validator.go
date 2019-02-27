@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"sync"
 
 	"github.com/boltdb/bolt"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -21,6 +22,21 @@ func (db *BeaconDB) SaveValidatorIndex(pubKey []byte, index int) error {
 
 		return bucket.Put(h[:], buf[:n])
 	})
+}
+
+// SaveValidatorIndexBatch accepts a public key and validator index and writes them to disk.
+func (db *BeaconDB) SaveValidatorIndexBatch(pubKey []byte, index int, wg *sync.WaitGroup) error {
+	h := hashutil.Hash(pubKey)
+
+	return db.batch(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(validatorBucket)
+		buf := make([]byte, binary.MaxVarintLen64)
+		n := binary.PutUvarint(buf, uint64(index))
+		err := bucket.Put(h[:], buf[:n])
+		wg.Done()
+		return err
+	})
+
 }
 
 // ValidatorIndex accepts a public key and returns the corresponding validator index.
