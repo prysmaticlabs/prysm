@@ -644,7 +644,7 @@ go_repository(
 
 go_repository(
     name = "com_github_golang_lint",
-    commit = "8f45f776aaf18cebc8d65861cc70c33c60471952",
+    commit = "5b3e6a55c961c61f4836ae6868c17b070744c590",
     importpath = "github.com/golang/lint",
 )
 
