@@ -73,9 +73,6 @@ func ExecuteStateTransition(
 func ProcessSlot(state *pb.BeaconState, headRoot [32]byte) *pb.BeaconState {
 	state.Slot++
 	state = b.ProcessBlockRoots(state, headRoot)
-	log.WithField(
-		"slotsSinceGenesis", state.Slot-params.BeaconConfig().GenesisSlot,
-	).Info("Slot transition successfully processed")
 	return state
 }
 
@@ -141,9 +138,7 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock, verifySignatures
 	if err != nil {
 		return nil, fmt.Errorf("could not process validator exits: %v", err)
 	}
-	log.WithField(
-		"slotsSinceGenesis", state.Slot-params.BeaconConfig().GenesisSlot,
-	).Info("Block transition successfully processed")
+
 	log.WithField(
 		"attestationsInBlock", len(block.Body.Attestations),
 	).Info("Block attestations")
@@ -392,9 +387,6 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Clean up processed attestations.
 	state = e.CleanupAttestations(state)
-	log.WithField(
-		"SlotsSinceGenesis", state.Slot-params.BeaconConfig().GenesisSlot,
-	).Info("Epoch transition successfully processed")
 	log.WithField(
 		"PreviousJustifiedEpoch", state.PreviousJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 	).Info("Previous justified epoch")

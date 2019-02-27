@@ -34,6 +34,7 @@ func NewSyncService(ctx context.Context, cfg *Config) *Service {
 	sqCfg.BeaconDB = cfg.BeaconDB
 	sqCfg.P2P = cfg.P2P
 	sqCfg.PowChain = cfg.PowChainService
+	sqCfg.ChainService = cfg.ChainService
 
 	isCfg := initialsync.DefaultConfig()
 	isCfg.BeaconDB = cfg.BeaconDB
@@ -102,7 +103,10 @@ func (ss *Service) run() {
 	}
 
 	// Sets the highest observed slot from querier.
-	ss.InitialSync.InitializeObservedSlot(ss.Querier.curentHeadSlot)
+	ss.InitialSync.InitializeObservedSlot(ss.Querier.currentHeadSlot)
+
+	// Sets the state root of the highest observed slot.
+	ss.InitialSync.InitializeStateRoot(ss.Querier.currentStateRoot)
 
 	ss.InitialSync.Start()
 }

@@ -11,7 +11,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 // AttesterServer defines a server implementation of the gRPC Attester service,
@@ -43,7 +42,7 @@ func (as *AttesterServer) AttestationInfoAtSlot(ctx context.Context, req *pb.Att
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve chain head: %v", err)
 	}
-	blockRoot, err := ssz.TreeHash(head)
+	blockRoot, err := hashutil.HashBeaconBlock(head)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash beacon block: %v", err)
 	}
@@ -60,7 +59,7 @@ func (as *AttesterServer) AttestationInfoAtSlot(ctx context.Context, req *pb.Att
 	epochBoundaryRoot := make([]byte, 32)
 	epochStartSlot := helpers.StartSlot(helpers.SlotToEpoch(head.Slot))
 	if epochStartSlot == head.Slot {
-		hash, err := ssz.TreeHash(head)
+		hash, err := hashutil.HashBeaconBlock(head)
 		if err != nil {
 			return nil, fmt.Errorf("could not tree hash head block: %v", err)
 		}

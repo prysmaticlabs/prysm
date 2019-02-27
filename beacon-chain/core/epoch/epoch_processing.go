@@ -5,14 +5,16 @@
 package epoch
 
 import (
+	"encoding/binary"
 	"fmt"
+
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/sirupsen/logrus"
 )
 
@@ -326,10 +328,13 @@ func CleanupAttestations(state *pb.BeaconState) *pb.BeaconState {
 func UpdateLatestActiveIndexRoots(state *pb.BeaconState) (*pb.BeaconState, error) {
 	nextEpoch := helpers.NextEpoch(state) + params.BeaconConfig().ActivationExitDelay
 	validatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, nextEpoch)
-	indexRoot, err := ssz.TreeHash(validatorIndices)
-	if err != nil {
-		return nil, fmt.Errorf("could not hash tree root: %v", err)
+	indicesBytes := []byte{}
+	for _, val := range validatorIndices {
+		buf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(buf, val)
+		indicesBytes = append(indicesBytes, buf...)
 	}
+	indexRoot := hashutil.Hash(indicesBytes)
 	state.LatestIndexRootHash32S[nextEpoch%params.BeaconConfig().LatestActiveIndexRootsLength] =
 		indexRoot[:]
 	return state, nil
