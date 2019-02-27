@@ -260,18 +260,18 @@ func ProcessPrevSlotShardSeed(state *pb.BeaconState) *pb.BeaconState {
 }
 
 // ProcessCurrSlotShardSeed sets the current shuffling information in the beacon state.
-//   Set state.current_shuffling_epoch = next_epoch
 //   Set state.current_shuffling_start_shard = (state.current_shuffling_start_shard +
 //     get_current_epoch_committee_count(state)) % SHARD_COUNT
+//   Set state.current_shuffling_epoch = next_epoch
 //   Set state.current_shuffling_seed = generate_seed(state, state.current_shuffling_epoch)
 func ProcessCurrSlotShardSeed(state *pb.BeaconState) (*pb.BeaconState, error) {
-	state.CurrentShufflingEpoch = helpers.NextEpoch(state)
 	state.CurrentShufflingStartShard = (state.CurrentShufflingStartShard +
 		helpers.CurrentEpochCommitteeCount(state)) % params.BeaconConfig().ShardCount
 	seed, err := helpers.GenerateSeed(state, state.CurrentShufflingEpoch)
 	if err != nil {
 		return nil, fmt.Errorf("could not update current shuffling seed: %v", err)
 	}
+	state.CurrentShufflingEpoch = helpers.NextEpoch(state)
 	state.CurrentShufflingSeedHash32 = seed[:]
 	return state, nil
 }
