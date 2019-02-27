@@ -38,14 +38,13 @@ func CurrentAttestations(state *pb.BeaconState) []*pb.PendingAttestation {
 	return currentEpochAttestations
 }
 
-// CurrentBoundaryAttestations returns the pending attestations from
+// CurrentEpochBoundaryAttestations returns the pending attestations from
 // the epoch's boundary block.
 //
 // Spec pseudocode definition:
 //   return [a for a in current_epoch_attestations if a.data.epoch_boundary_root ==
-//   	get_block_root(state, get_epoch_start_slot(current_epoch)) and
-//   	a.data.justified_epoch == state.justified_epoch].
-func CurrentBoundaryAttestations(
+//   	get_block_root(state, get_epoch_start_slot(current_epoch))
+func CurrentEpochBoundaryAttestations(
 	state *pb.BeaconState,
 	currentEpochAttestations []*pb.PendingAttestation,
 ) ([]*pb.PendingAttestation, error) {
@@ -109,18 +108,18 @@ func PrevJustifiedAttestations(
 	return prevJustifiedAttestations
 }
 
-// PrevBoundaryAttestations returns the boundary attestations
+// PrevEpochBoundaryAttestations returns the boundary attestations
 // at the start of the previous epoch.
 //
 // Spec pseudocode definition:
-//   return [a for a in previous_epoch_justified_attestations
+//   return [a for a in previous_epoch_attestations
 // 	 if a.epoch_boundary_root == get_block_root(state, get_epoch_start_slot(previous_epoch)]
-func PrevBoundaryAttestations(
+func PrevEpochBoundaryAttestations(
 	state *pb.BeaconState,
-	prevEpochJustifiedAttestations []*pb.PendingAttestation,
+	prevEpochAttestations []*pb.PendingAttestation,
 ) ([]*pb.PendingAttestation, error) {
 
-	var prevBoundaryAttestations []*pb.PendingAttestation
+	var prevEpochBoundaryAttestations []*pb.PendingAttestation
 
 	prevBoundaryBlockRoot, err := block.BlockRoot(state,
 		helpers.StartSlot(helpers.PrevEpoch(state)))
@@ -128,12 +127,12 @@ func PrevBoundaryAttestations(
 		return nil, err
 	}
 
-	for _, attestation := range prevEpochJustifiedAttestations {
+	for _, attestation := range prevEpochAttestations {
 		if bytes.Equal(attestation.Data.EpochBoundaryRootHash32, prevBoundaryBlockRoot) {
-			prevBoundaryAttestations = append(prevBoundaryAttestations, attestation)
+			prevEpochBoundaryAttestations = append(prevEpochBoundaryAttestations, attestation)
 		}
 	}
-	return prevBoundaryAttestations, nil
+	return prevEpochBoundaryAttestations, nil
 }
 
 // PrevHeadAttestations returns the pending attestations from

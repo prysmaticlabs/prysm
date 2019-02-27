@@ -32,7 +32,7 @@ func TestAttestHead_OK(t *testing.T) {
 	}
 }
 
-func TestAttestationInfoAtSlot_EpochBoundaryFailure(t *testing.T) {
+func TestAttestationDataAtSlot_EpochBoundaryFailure(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	beaconState := &pbp2p.BeaconState{
@@ -52,13 +52,13 @@ func TestAttestationInfoAtSlot_EpochBoundaryFailure(t *testing.T) {
 		t.Fatalf("Could not update chain head in test db: %v", err)
 	}
 	want := "could not get epoch boundary block"
-	req := &pb.AttestationInfoRequest{}
-	if _, err := attesterServer.AttestationInfoAtSlot(context.Background(), req); !strings.Contains(err.Error(), want) {
+	req := &pb.AttestationDataRequest{}
+	if _, err := attesterServer.AttestationDataAtSlot(context.Background(), req); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
 }
 
-func TestAttestationInfoAtSlot_JustifiedBlockFailure(t *testing.T) {
+func TestAttestationDataAtSlot_JustifiedBlockFailure(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	beaconState := &pbp2p.BeaconState{
@@ -87,13 +87,13 @@ func TestAttestationInfoAtSlot_JustifiedBlockFailure(t *testing.T) {
 		t.Fatalf("Could not update chain head in test db: %v", err)
 	}
 	want := "could not get justified block"
-	req := &pb.AttestationInfoRequest{}
-	if _, err := attesterServer.AttestationInfoAtSlot(context.Background(), req); !strings.Contains(err.Error(), want) {
+	req := &pb.AttestationDataRequest{}
+	if _, err := attesterServer.AttestationDataAtSlot(context.Background(), req); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
 }
 
-func TestAttestationInfoAtSlot_OK(t *testing.T) {
+func TestAttestationDataAtSlot_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	block := &pbp2p.BeaconBlock{
@@ -151,14 +151,14 @@ func TestAttestationInfoAtSlot_OK(t *testing.T) {
 	if err := attesterServer.beaconDB.UpdateChainHead(block, beaconState); err != nil {
 		t.Fatalf("Could not update chain head in test db: %v", err)
 	}
-	req := &pb.AttestationInfoRequest{
+	req := &pb.AttestationDataRequest{
 		Shard: 0,
 	}
-	res, err := attesterServer.AttestationInfoAtSlot(context.Background(), req)
+	res, err := attesterServer.AttestationDataAtSlot(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Could not get attestation info at slot: %v", err)
 	}
-	expectedInfo := &pb.AttestationInfoResponse{
+	expectedInfo := &pb.AttestationDataResponse{
 		BeaconBlockRootHash32:    blockRoot[:],
 		JustifiedEpoch:           2 + params.BeaconConfig().GenesisEpoch,
 		JustifiedBlockRootHash32: justifiedBlockRoot[:],

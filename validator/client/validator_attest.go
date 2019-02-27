@@ -53,10 +53,10 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 
 	// Fetch other necessary information from the beacon node in order to attest
 	// including the justified epoch, epoch boundary information, and more.
-	infoReq := &pb.AttestationInfoRequest{
+	infoReq := &pb.AttestationDataRequest{
 		Shard: resp.Shard,
 	}
-	infoRes, err := v.attesterClient.AttestationInfoAtSlot(ctx, infoReq)
+	infoRes, err := v.attesterClient.AttestationDataAtSlot(ctx, infoReq)
 	if err != nil {
 		log.Errorf("Could not fetch necessary info to produce attestation at slot %d: %v",
 			slot-params.BeaconConfig().GenesisSlot, err)
@@ -68,8 +68,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	attData.BeaconBlockRootHash32 = infoRes.BeaconBlockRootHash32
 	// Set the attestation data's epoch boundary root = hash_tree_root(epoch_boundary)
 	// where epoch_boundary is the block at the most recent epoch boundary in the
-	// chain defined by head -- i.e. the BeaconBlock where block.slot == get_epoch_start_slot(head.slot).
-	// On the server side, this is fetched by calling get_block_root(state, get_epoch_start_slot(head.slot)).
+	// chain defined by head -- i.e. the BeaconBlock where block.slot == get_epoch_start_slot(slot_to_epoch(head.slot)).
 	attData.EpochBoundaryRootHash32 = infoRes.EpochBoundaryRootHash32
 	// Set the attestation data's latest crosslink root = state.latest_crosslinks[shard].shard_block_root
 	// where state is the beacon state at head and shard is the validator's assigned shard.
