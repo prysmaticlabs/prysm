@@ -277,7 +277,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr_net",
-    commit = "c8d587e921c095d128ac4e0c0e87e54968725a4d",
+    tag = "v0.0.1",
     importpath = "github.com/multiformats/go-multiaddr-net",
 )
 
@@ -362,7 +362,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multistream",
-    commit = "0c61f185f3d6e16bcda416874e7a0fca4696e7e0",
+    tag = "v0.0.1",
     importpath = "github.com/multiformats/go-multistream",
 )
 
@@ -512,7 +512,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "cc5685c2db1239775905f3911f0067c0fa74762f",
+    commit = "775f8194d0f9e65c46913c7be783d3d95a29333c",
     importpath = "golang.org/x/sys",
 )
 
@@ -638,7 +638,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sync",
-    commit = "37e7f081c4d4c64e13b10787722085407fe5d15f",
+    commit = "e225da77a7e68af35c70ccbf71af2b83e6acac3c",
     importpath = "golang.org/x/sync",
 )
 
@@ -827,20 +827,20 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_discovery",
-    commit = "5e0d40c7c8803e06c9eebe6dd3a0525a1d774a82",
+    commit = "39a8e5c39a9035dbe7d83ce5d5d22c27669126b2",
     importpath = "github.com/libp2p/go-libp2p-discovery",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_autonat",
-    commit = "842b9c4919f5be0df3baee15b0f97e493f6d3fb2",
+    commit = "4fdddcbadc9e80a9c726f74e4b2dbf9c779b7651",
     importpath = "github.com/libp2p/go-libp2p-autonat",
 )
 
 go_repository(
     name = "com_github_konsorten_go_windows_terminal_sequences",
     importpath = "github.com/konsorten/go-windows-terminal-sequences",
-    tag = "v1.0.1",
+    tag = "v1.0.2",
 )
 
 go_repository(
@@ -921,7 +921,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_oauth2",
-    commit = "9b3c75971fc92dd27c6436a37c05c831498658f1",
+    commit = "e64efc72b421e893cbf63f17ba2221e7d6d0b0f3",
     importpath = "golang.org/x/oauth2",
 )
 
