@@ -27,11 +27,17 @@ func CurrentEpoch(state *pb.BeaconState) uint64 {
 // PrevEpoch returns the previous epoch number calculated from
 // the slot number stored in beacon state. It also checks for
 // underflow condition.
+//
+// def get_previous_epoch(state: BeaconState) -> Epoch:
+//    """`
+//    Return the previous epoch of the given ``state``.
+//    """
+//    return max(get_current_epoch(state) - 1, GENESIS_EPOCH)
 func PrevEpoch(state *pb.BeaconState) uint64 {
-	if SlotToEpoch(state.Slot) == params.BeaconConfig().GenesisEpoch {
-		return params.BeaconConfig().GenesisEpoch
+	if CurrentEpoch(state) > params.BeaconConfig().GenesisEpoch {
+		return CurrentEpoch(state) - 1
 	}
-	return SlotToEpoch(state.Slot) - 1
+	return params.BeaconConfig().GenesisEpoch
 }
 
 // NextEpoch returns the next epoch number calculated form

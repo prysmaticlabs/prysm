@@ -244,9 +244,6 @@ func (w *Web3Service) HasChainStartLogOccurred() (bool, uint64, error) {
 		return false, 0, nil
 	}
 	timestamp := binary.LittleEndian.Uint64(genesisTime)
-	if uint64(time.Now().Unix()) < timestamp {
-		return false, 0, fmt.Errorf("invalid timestamp from log expected %d > %d", time.Now().Unix(), timestamp)
-	}
 	return true, timestamp, nil
 }
 
@@ -464,7 +461,6 @@ func (w *Web3Service) processPastLogs() error {
 // requestBatchedLogs requests and processes all the logs from the period
 // last polled to now.
 func (w *Web3Service) requestBatchedLogs() error {
-
 	// We request for the nth block behind the current head, in order to have
 	// stabilised logs when we retrieve it from the 1.0 chain.
 	requestedBlock := big.NewInt(0).Sub(w.blockHeight, big.NewInt(params.BeaconConfig().LogBlockDelay))

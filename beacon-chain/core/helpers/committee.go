@@ -133,16 +133,16 @@ func NextEpochCommitteeCount(state *pb.BeaconState) uint64 {
 //
 //    assert previous_epoch <= epoch <= next_epoch
 //
-//    if epoch == previous_epoch:
-//        committees_per_epoch = get_previous_epoch_committee_count(state)
-//        seed = state.previous_epoch_seed
-//        shuffling_epoch = state.previous_calculation_epoch
-//        shuffling_start_shard = state.previous_epoch_start_shard
-//    elif epoch == current_epoch:
+//    if epoch == current_epoch:
 //        committees_per_epoch = get_current_epoch_committee_count(state)
 //        seed = state.current_epoch_seed
 //        shuffling_epoch = state.current_calculation_epoch
 //        shuffling_start_shard = state.current_epoch_start_shard
+//    elif epoch == previous_epoch:
+//        committees_per_epoch = get_previous_epoch_committee_count(state)
+//        seed = state.previous_shuffling_seed
+//        shuffling_epoch = state.previous_shuffling_epoch
+//        shuffling_start_shard = state.previous_shuffling_start_shard
 //    elif epoch == next_epoch:
 //        current_committees_per_epoch = get_current_epoch_committee_count(state)
 //        committees_per_epoch = get_next_epoch_committee_count(state)
@@ -193,22 +193,22 @@ func CrosslinkCommitteesAtSlot(
 	if wantedEpoch < prevEpoch || wantedEpoch > nextEpoch {
 		return nil, fmt.Errorf(
 			"input committee epoch %d out of bounds: %d <= epoch <= %d",
-			wantedEpoch-params.BeaconConfig().GenesisEpoch,
-			prevEpoch-params.BeaconConfig().GenesisEpoch,
-			currentEpoch-params.BeaconConfig().GenesisEpoch,
+			wantedEpoch,
+			prevEpoch,
+			currentEpoch,
 		)
 	}
 
-	if wantedEpoch == prevEpoch {
-		committeesPerEpoch = PrevEpochCommitteeCount(state)
-		seed = bytesutil.ToBytes32(state.PreviousShufflingSeedHash32)
-		shufflingEpoch = state.PreviousShufflingEpoch
-		shufflingStartShard = state.PreviousShufflingStartShard
-	} else if wantedEpoch == currentEpoch {
+	if wantedEpoch == currentEpoch {
 		committeesPerEpoch = PrevEpochCommitteeCount(state)
 		seed = bytesutil.ToBytes32(state.CurrentShufflingSeedHash32)
 		shufflingEpoch = state.CurrentShufflingEpoch
 		shufflingStartShard = state.CurrentShufflingStartShard
+	} else if wantedEpoch == prevEpoch {
+		committeesPerEpoch = PrevEpochCommitteeCount(state)
+		seed = bytesutil.ToBytes32(state.PreviousShufflingSeedHash32)
+		shufflingEpoch = state.PreviousShufflingEpoch
+		shufflingStartShard = state.PreviousShufflingStartShard
 	} else if wantedEpoch == nextEpoch {
 		currentCommitteesPerEpoch := CurrentEpochCommitteeCount(state)
 		committeesPerEpoch = NextEpochCommitteeCount(state)
@@ -339,7 +339,12 @@ func AttestationParticipants(
 	bitfield []byte) ([]uint64, error) {
 
 	// Find the relevant committee.
-	crosslinkCommittees, err := CrosslinkCommitteesAtSlot(state, attestationData.Slot, false)
+	var registryChanged bool
+	if state.ValidatorRegistryUpdateEpoch == SlotToEpoch(attestationData.Slot)-1 &&
+		state.ValidatorRegistryUpdateEpoch != params.BeaconConfig().GenesisEpoch {
+		registryChanged = true
+	}
+	crosslinkCommittees, err := CrosslinkCommitteesAtSlot(state, attestationData.Slot, registryChanged)
 	if err != nil {
 		return nil, err
 	}

@@ -757,7 +757,7 @@ func TestProcessBlockAttestations_JustifiedEpochVerificationFailure(t *testing.T
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Slot:           152,
+				Slot:           params.BeaconConfig().GenesisSlot + 152,
 				JustifiedEpoch: 2,
 			},
 		},
@@ -768,7 +768,7 @@ func TestProcessBlockAttestations_JustifiedEpochVerificationFailure(t *testing.T
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:           158,
+		Slot:           params.BeaconConfig().GenesisSlot + 158,
 		JustifiedEpoch: 1,
 	}
 
@@ -790,7 +790,7 @@ func TestProcessBlockAttestations_PreviousJustifiedEpochVerificationFailure(t *t
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Slot:           params.BeaconConfig().SlotsPerEpoch + 1,
+				Slot:           params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch + 1,
 				JustifiedEpoch: 3,
 			},
 		},
@@ -801,7 +801,7 @@ func TestProcessBlockAttestations_PreviousJustifiedEpochVerificationFailure(t *t
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   2 * params.BeaconConfig().SlotsPerEpoch,
+		Slot:                   params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch,
 		PreviousJustifiedEpoch: 2,
 	}
 
@@ -826,14 +826,14 @@ func TestProcessBlockAttestations_BlockRootOutOfBounds(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                   64,
+		Slot:                   params.BeaconConfig().GenesisSlot + 64,
 		PreviousJustifiedEpoch: 1,
 		LatestBlockRootHash32S: blockRoots,
 	}
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Slot:                     60,
+				Slot:                     params.BeaconConfig().GenesisSlot + 60,
 				JustifiedBlockRootHash32: []byte{},
 				JustifiedEpoch:           1,
 			},

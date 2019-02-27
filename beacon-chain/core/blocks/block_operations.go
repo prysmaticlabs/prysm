@@ -373,6 +373,7 @@ func isSurroundVote(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
 //   Verify that len(block.body.attestations) <= MAX_ATTESTATIONS.
 //
 //   For each attestation in block.body.attestations:
+//     Verify that `attestation.data.slot >= GENESIS_SLOT`.
 //     Verify that `attestation.data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot`.
 //     Verify that `state.slot < attestation.data.slot + SLOTS_PER_EPOCH.
 //     Verify that attestation.data.justified_epoch is equal to state.justified_epoch
@@ -415,6 +416,13 @@ func ProcessBlockAttestations(
 }
 
 func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifySignatures bool) error {
+	if att.Data.Slot < params.BeaconConfig().GenesisSlot {
+		return fmt.Errorf(
+			"attestation slot (slot %d) less than genesis slot (%d)",
+			att.Data.Slot,
+			params.BeaconConfig().GenesisSlot,
+		)
+	}
 	inclusionDelay := params.BeaconConfig().MinAttestationInclusionDelay
 	if att.Data.Slot+inclusionDelay > beaconState.Slot {
 		return fmt.Errorf(
