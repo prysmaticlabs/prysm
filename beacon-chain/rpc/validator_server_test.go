@@ -194,8 +194,6 @@ func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
 			errs <- db.SaveValidatorIndexBatch(pubKeyBuf[:n], i)
 			wg.Done()
 		}(string(i))
-
-		fmt.Printf("%v of %v\n", i, numOfValidators)
 	}
 	wg.Wait()
 	close(errs)
