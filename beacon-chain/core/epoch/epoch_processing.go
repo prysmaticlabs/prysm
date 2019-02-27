@@ -214,7 +214,7 @@ func ProcessCrosslinks(
 				}
 				state.LatestCrosslinks[shard] = &pb.Crosslink{
 					Epoch:                currentEpoch,
-					ShardBlockRootHash32: winningRoot,
+					CrosslinkDataRootHash32: winningRoot,
 				}
 			}
 		}

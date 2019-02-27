@@ -52,7 +52,7 @@ func GenesisBeaconState(
 	for i := 0; i < len(latestCrosslinks); i++ {
 		latestCrosslinks[i] = &pb.Crosslink{
 			Epoch:                params.BeaconConfig().GenesisEpoch,
-			ShardBlockRootHash32: zeroHash,
+			CrosslinkDataRootHash32: zeroHash,
 		}
 	}
 
