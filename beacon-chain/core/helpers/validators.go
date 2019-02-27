@@ -11,7 +11,7 @@ import (
 // is active or not.
 //
 // Spec pseudocode definition:
-//   def is_active_validator(validator: Validator, epoch: EpochNumber) -> bool:
+//   def is_active_validator(validator: Validator, epoch: Epoch) -> bool:
 //    """
 //    Check if ``validator`` is active.
 //    """
@@ -25,7 +25,7 @@ func IsActiveValidator(validator *pb.Validator, epoch uint64) bool {
 // and returns their indices in a list.
 //
 // Spec pseudocode definition:
-//   def get_active_validator_indices(validators: List[Validator], epoch: EpochNumber) -> List[ValidatorIndex]:
+//   def get_active_validator_indices(validators: List[Validator], epoch: Epoch) -> List[ValidatorIndex]:
 //    """
 //    Get indices of active validators from ``validators``.
 //    """
@@ -45,7 +45,7 @@ func ActiveValidatorIndices(validators []*pb.Validator, epoch uint64) []uint64 {
 // the validator is eligible for activation and exit.
 //
 // Spec pseudocode definition:
-// def get_entry_exit_effect_epoch(epoch: EpochNumber) -> EpochNumber:
+// def get_entry_exit_effect_epoch(epoch: Epoch) -> Epoch:
 //    """
 //    An entry or exit triggered in the ``epoch`` given by the input takes effect at
 //    the epoch given by the output.

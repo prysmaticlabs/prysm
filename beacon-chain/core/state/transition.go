@@ -175,12 +175,12 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	currentAttestations := e.CurrentAttestations(state)
 	log.Infof("Number of current epoch attestations: %d", len(currentAttestations))
 
-	currentBoundaryAttestations, err := e.CurrentBoundaryAttestations(state, currentAttestations)
+	currentEpochBoundaryAttestations, err := e.CurrentEpochBoundaryAttestations(state, currentAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not get current boundary attestations: %v", err)
 	}
 
-	currentBoundaryAttesterIndices, err := v.ValidatorIndices(state, currentBoundaryAttestations)
+	currentBoundaryAttesterIndices, err := v.ValidatorIndices(state, currentEpochBoundaryAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not get current boundary attester indices: %v", err)
 	}
@@ -202,7 +202,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Calculate the attesting balances of validator justifying epoch boundary block
 	// at the start of previous epoch.
-	prevEpochBoundaryAttestations, err := e.PrevBoundaryAttestations(state, prevEpochAttestations)
+	prevEpochBoundaryAttestations, err := e.PrevEpochBoundaryAttestations(state, prevEpochAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not get prev boundary attestations: %v", err)
 	}

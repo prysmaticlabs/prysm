@@ -8,7 +8,7 @@ import (
 // SlotToEpoch returns the epoch number of the input slot.
 //
 // Spec pseudocode definition:
-//   def slot_to_epoch(slot: SlotNumber) -> EpochNumber:
+//   def slot_to_epoch(slot: SlotNumber) -> Epoch:
 //    return slot // SLOTS_PER_EPOCH
 func SlotToEpoch(slot uint64) uint64 {
 	return slot / params.BeaconConfig().SlotsPerEpoch
@@ -18,7 +18,7 @@ func SlotToEpoch(slot uint64) uint64 {
 // the slot number stored in beacon state.
 //
 // Spec pseudocode definition:
-//   def get_current_epoch(state: BeaconState) -> EpochNumber:
+//   def get_current_epoch(state: BeaconState) -> Epoch:
 //    return slot_to_epoch(state.slot)
 func CurrentEpoch(state *pb.BeaconState) uint64 {
 	return SlotToEpoch(state.Slot)
@@ -50,7 +50,7 @@ func NextEpoch(state *pb.BeaconState) uint64 {
 // current epoch.
 //
 // Spec pseudocode definition:
-//   def get_epoch_start_slot(epoch: EpochNumber) -> SlotNumber:
+//   def get_epoch_start_slot(epoch: Epoch) -> SlotNumber:
 //    return epoch * SLOTS_PER_EPOCH
 func StartSlot(epoch uint64) uint64 {
 	return epoch * params.BeaconConfig().SlotsPerEpoch

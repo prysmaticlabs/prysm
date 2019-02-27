@@ -418,27 +418,27 @@ func TestCleanupAttestations_RemovesFromLastEpoch(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
-	epochLength := params.BeaconConfig().SlotsPerEpoch
+	secondsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	state := &pb.BeaconState{
-		Slot: epochLength,
+		Slot: secondsPerEpoch,
 		LatestAttestations: []*pb.PendingAttestation{
 			{Data: &pb.AttestationData{Slot: 1}},
-			{Data: &pb.AttestationData{Slot: epochLength - 10}},
-			{Data: &pb.AttestationData{Slot: epochLength}},
-			{Data: &pb.AttestationData{Slot: epochLength + 1}},
-			{Data: &pb.AttestationData{Slot: epochLength + 20}},
+			{Data: &pb.AttestationData{Slot: secondsPerEpoch - 10}},
+			{Data: &pb.AttestationData{Slot: secondsPerEpoch}},
+			{Data: &pb.AttestationData{Slot: secondsPerEpoch + 1}},
+			{Data: &pb.AttestationData{Slot: secondsPerEpoch + 20}},
 			{Data: &pb.AttestationData{Slot: 32}},
 			{Data: &pb.AttestationData{Slot: 33}},
-			{Data: &pb.AttestationData{Slot: 2 * epochLength}},
+			{Data: &pb.AttestationData{Slot: 2 * secondsPerEpoch}},
 		},
 	}
 	wanted := &pb.BeaconState{
-		Slot: epochLength,
+		Slot: secondsPerEpoch,
 		LatestAttestations: []*pb.PendingAttestation{
-			{Data: &pb.AttestationData{Slot: epochLength}},
-			{Data: &pb.AttestationData{Slot: epochLength + 1}},
-			{Data: &pb.AttestationData{Slot: epochLength + 20}},
-			{Data: &pb.AttestationData{Slot: 2 * epochLength}},
+			{Data: &pb.AttestationData{Slot: secondsPerEpoch}},
+			{Data: &pb.AttestationData{Slot: secondsPerEpoch + 1}},
+			{Data: &pb.AttestationData{Slot: secondsPerEpoch + 20}},
+			{Data: &pb.AttestationData{Slot: 2 * secondsPerEpoch}},
 		},
 	}
 	newState := CleanupAttestations(state)
