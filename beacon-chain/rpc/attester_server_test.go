@@ -22,8 +22,8 @@ func TestAttestHead_OK(t *testing.T) {
 	}
 	req := &pbp2p.Attestation{
 		Data: &pbp2p.AttestationData{
-			Slot:                 999,
-			Shard:                1,
+			Slot:                    999,
+			Shard:                   1,
 			CrosslinkDataRootHash32: []byte{'a'},
 		},
 	}

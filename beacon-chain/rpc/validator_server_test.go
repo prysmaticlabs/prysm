@@ -160,7 +160,7 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 		beaconDB: db,
 	}
 	req := &pb.ValidatorEpochAssignmentsRequest{
-		PublicKey: []byte{'A'},
+		PublicKey:  []byte{'A'},
 		EpochStart: params.BeaconConfig().GenesisEpoch,
 	}
 	want := fmt.Sprintf("validator %#x does not exist", req.PublicKey)
@@ -200,7 +200,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	n := binary.PutUvarint(pubKeyBuf, 0)
 	// Test the first validator in registry.
 	req := &pb.ValidatorEpochAssignmentsRequest{
-		PublicKey: pubKeyBuf[:n],
+		PublicKey:  pubKeyBuf[:n],
 		EpochStart: params.BeaconConfig().GenesisEpoch,
 	}
 	res, err := vs.CommitteeAssignment(context.Background(), req)
@@ -221,7 +221,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	pubKeyBuf = make([]byte, binary.MaxVarintLen64)
 	n = binary.PutUvarint(pubKeyBuf, lastValidatorIndex)
 	req = &pb.ValidatorEpochAssignmentsRequest{
-		PublicKey: pubKeyBuf[:n],
+		PublicKey:  pubKeyBuf[:n],
 		EpochStart: params.BeaconConfig().GenesisEpoch,
 	}
 	res, err = vs.CommitteeAssignment(context.Background(), req)

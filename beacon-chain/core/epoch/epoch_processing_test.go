@@ -256,7 +256,7 @@ func TestProcessCrosslinks_CrosslinksCorrectEpoch(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		attestation := &pb.PendingAttestation{
 			Data: &pb.AttestationData{
-				Slot:                 state.Slot,
+				Slot:                    state.Slot,
 				CrosslinkDataRootHash32: []byte{'A'},
 			},
 			// All validators attested to the above roots.

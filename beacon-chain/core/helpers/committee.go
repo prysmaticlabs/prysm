@@ -513,4 +513,3 @@ func CommitteeAssignment(
 	}
 	return []uint64{}, 0, 0, false, fmt.Errorf("could not get assignment validator %d", validatorIndex)
 }
-
