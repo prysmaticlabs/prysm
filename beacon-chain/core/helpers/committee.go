@@ -220,7 +220,7 @@ func CrosslinkCommitteesAtSlot(
 			committeesPerEpoch = NextEpochCommitteeCount(state)
 			shufflingEpoch = nextEpoch
 			seed, err = GenerateSeed(state, nextEpoch)
-			committeesPerEpoch = CurrentEpochCommitteeCount(state)
+			currentCommitteesPerEpoch := CurrentEpochCommitteeCount(state)
 			if err != nil {
 				return nil, fmt.Errorf("could not generate seed: %v", err)
 			}
