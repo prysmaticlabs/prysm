@@ -1032,6 +1032,11 @@ func TestBlockCache_OK(t *testing.T) {
 
 	web3Service.addToCache(blk)
 
+	exists, _ = web3Service.checkCache(blk.Hash())
+	if !exists {
+		t.Fatalf("Block with hash %#x doesn't exist in cache", blk.Hash())
+	}
+
 	exists, info2 := web3Service.checkCache(blk.Number().Uint64())
 	if !exists {
 		t.Fatalf("Block with number %d doesn't exist in cache", blk.Number().Uint64())
