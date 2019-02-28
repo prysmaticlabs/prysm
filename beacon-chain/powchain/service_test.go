@@ -990,3 +990,59 @@ func TestBlockExists_InvalidHash(t *testing.T) {
 		t.Fatal("Expected BlockExists to error with invalid hash")
 	}
 }
+
+func TestBlockCache_OK(t *testing.T) {
+	endpoint := "ws://127.0.0.1"
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint:     endpoint,
+		BlockFetcher: &goodFetcher{},
+	})
+	if err != nil {
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+
+	blk := gethTypes.NewBlockWithHeader(&gethTypes.Header{
+		Number: big.NewInt(20),
+	})
+
+	blkInfo := &blockInfo{
+		blkNumber: blk.Number(),
+		blkHash:   blk.Hash(),
+	}
+
+	web3Service.blockCache[blk.Number().Uint64()] = blkInfo
+	web3Service.blockCache[blk.Hash()] = blkInfo
+
+	exists, info := web3Service.checkCache(blk.Number().Uint64())
+	if !exists {
+		t.Fatalf("Block with number %d doesn't exist in cache", blk.Number().Uint64())
+	}
+
+	if info.blkHash != blkInfo.blkHash {
+		t.Errorf("block hash saved in cache is different from what is expected. Got %#x but expected %#x", info.blkHash, blkInfo.blkHash)
+	}
+
+	if info.blkNumber.Cmp(blkInfo.blkNumber) != 0 {
+		t.Errorf("block number saved in cache is different from what is expected. Got %d but expected %d", info.blkNumber, blkInfo.blkNumber)
+	}
+
+	blk = gethTypes.NewBlockWithHeader(&gethTypes.Header{
+		Number: big.NewInt(40),
+	})
+
+	web3Service.addToCache(blk)
+
+	exists, info2 := web3Service.checkCache(blk.Number().Uint64())
+	if !exists {
+		t.Fatalf("Block with number %d doesn't exist in cache", blk.Number().Uint64())
+	}
+
+	if info2.blkHash != blk.Hash() {
+		t.Errorf("block hash saved in cache is different from what is expected. Got %#x but expected %#x", info2.blkHash, blk.Hash())
+	}
+
+	if info2.blkNumber.Cmp(blk.Number()) != 0 {
+		t.Errorf("block number saved in cache is different from what is expected. Got %d but expected %d", info2.blkNumber, blk.Number())
+	}
+
+}

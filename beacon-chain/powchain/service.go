@@ -67,6 +67,12 @@ type Client interface {
 	bind.ContractCaller
 }
 
+// blockInfo specifies the block information in the ETH 1.0 chain.
+type blockInfo struct {
+	blkNumber *big.Int
+	blkHash   common.Hash
+}
+
 // Web3Service fetches important information about the canonical
 // Ethereum ETH1.0 chain via a web3 endpoint using an ethclient. The Random
 // Beacon Chain requires synchronization with the ETH1.0 chain's current
@@ -84,8 +90,9 @@ type Web3Service struct {
 	reader                  Reader
 	logger                  bind.ContractFilterer
 	blockFetcher            POWBlockFetcher
-	blockHeight             *big.Int    // the latest ETH1.0 chain blockHeight.
-	blockHash               common.Hash // the latest ETH1.0 chain blockHash.
+	blockHeight             *big.Int                   // the latest ETH1.0 chain blockHeight.
+	blockHash               common.Hash                // the latest ETH1.0 chain blockHash.
+	blockCache              map[interface{}]*blockInfo // cache to store block hash/block height.
 	depositContractCaller   *contracts.DepositContractCaller
 	depositRoot             []byte
 	depositTrie             *trieutil.DepositTrie
@@ -138,6 +145,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		endpoint:                config.Endpoint,
 		blockHeight:             nil,
 		blockHash:               common.BytesToHash([]byte{}),
+		blockCache:              make(map[interface{}]*blockInfo),
 		depositContractAddress:  config.DepositContract,
 		chainStartFeed:          new(event.Feed),
 		client:                  config.Client,
@@ -211,20 +219,33 @@ func (w *Web3Service) LatestBlockHash() common.Hash {
 func (w *Web3Service) BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockExists")
 	defer span.End()
+
+	if exists, blkInfo := w.checkCache(hash); exists {
+		return true, blkInfo.blkNumber, nil
+	}
 	block, err := w.blockFetcher.BlockByHash(ctx, hash)
 	if err != nil {
 		return false, big.NewInt(0), fmt.Errorf("could not query block with given hash: %v", err)
 	}
+
+	w.addToCache(block)
 
 	return true, block.Number(), nil
 }
 
 // BlockHashByHeight returns the block hash of the block at the given height.
 func (w *Web3Service) BlockHashByHeight(height *big.Int) (common.Hash, error) {
+
+	if exists, blkInfo := w.checkCache(height.Uint64()); exists {
+		return blkInfo.blkHash, nil
+	}
+
 	block, err := w.blockFetcher.BlockByNumber(w.ctx, height)
 	if err != nil {
 		return [32]byte{}, fmt.Errorf("could not query block with given height: %v", err)
 	}
+
+	w.addToCache(block)
 
 	return block.Hash(), nil
 }
@@ -332,6 +353,29 @@ func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
 		"ChainStartTime": chainStartTime,
 	}).Info("Minimum number of validators reached for beacon-chain to start")
 	w.chainStartFeed.Send(chainStartTime)
+}
+
+func (w *Web3Service) checkCache(val interface{}) (bool, *blockInfo) {
+	_, ok := val.(uint64)
+	_, ok2 := val.(common.Hash)
+	if !ok && !ok2 {
+		return false, nil
+	}
+	blkInfo, ok := w.blockCache[val]
+	if !ok {
+		return false, nil
+	}
+	return true, blkInfo
+}
+
+func (w *Web3Service) addToCache(blk *gethTypes.Block) {
+	blkInfo := &blockInfo{
+		blkHash:   blk.Hash(),
+		blkNumber: blk.Number(),
+	}
+
+	w.blockCache[blk.Hash()] = blkInfo
+	w.blockCache[blk.Number().Uint64()] = blkInfo
 }
 
 func (w *Web3Service) runDelayTimer(done <-chan struct{}) {
