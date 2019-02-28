@@ -7,12 +7,11 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -100,7 +99,7 @@ func (bs *BeaconServer) LatestAttestation(req *ptypes.Empty, stream pb.BeaconSer
 
 // ForkData fetches the current fork information from the beacon state.
 func (bs *BeaconServer) ForkData(ctx context.Context, _ *ptypes.Empty) (*pbp2p.Fork, error) {
-	state, err := bs.beaconDB.State()
+	state, err := bs.beaconDB.State(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
@@ -113,8 +112,7 @@ func (bs *BeaconServer) ForkData(ctx context.Context, _ *ptypes.Empty) (*pbp2p.F
 // The deposit root can be calculated by calling the get_deposit_root() function of
 // the deposit contract using the post-state of the block hash.
 func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1DataResponse, error) {
-
-	beaconState, err := bs.beaconDB.State()
+	beaconState, err := bs.beaconDB.State(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
@@ -134,7 +132,7 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 	for _, vote := range beaconState.Eth1DataVotes {
 		eth1Hash := bytesutil.ToBytes32(vote.Eth1Data.BlockHash32)
 		// Verify the block from the vote's block hash exists in the eth1.0 chain and fetch its height.
-		blockExists, blockHeight, err := bs.powChainService.BlockExists(eth1Hash)
+		blockExists, blockHeight, err := bs.powChainService.BlockExists(ctx, eth1Hash)
 		if err != nil {
 			log.Debugf("Could not verify block with hash exists in Eth1 chain: %#x: %v", eth1Hash, err)
 			continue
@@ -142,7 +140,6 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 		if !blockExists {
 			continue
 		}
-
 		// Let dataVotes be the set of Eth1DataVote objects vote in state.eth1_data_votes where:
 		// vote.eth1_data.block_hash is the hash of an eth1.0 block that is:
 		//   (i) part of the canonical chain

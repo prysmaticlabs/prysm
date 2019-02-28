@@ -7,7 +7,7 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/opentracing/opentracing-go"
+	"go.opencensus.io/trace"
 )
 
 var depositContractAddressKey = []byte("deposit-contract")
@@ -17,8 +17,8 @@ var depositContractAddressKey = []byte("deposit-contract")
 // Ethereum chain. This value will never change or all of the data in the
 // database would be made invalid.
 func (db *BeaconDB) VerifyContractAddress(ctx context.Context, addr common.Address) error {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "BeaconDB.VerifyContractAddress")
-	defer span.Finish()
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.VerifyContractAddress")
+	defer span.End()
 
 	return db.update(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
