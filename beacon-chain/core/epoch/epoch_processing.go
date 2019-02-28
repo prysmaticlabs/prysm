@@ -71,7 +71,6 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 // marks the voted Eth1 data as the latest data set.
 //
 // Official spec definition:
-//   if next_epoch % EPOCHS_PER_ETH1_VOTING_PERIOD == 0:
 //     if eth1_data_vote.vote_count * 2 > EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH for
 //       some eth1_data_vote in state.eth1_data_votes.
 //       (ie. more than half the votes in this voting period were for that value)
@@ -79,15 +78,13 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 //		 Set state.eth1_data_votes = [].
 //
 func ProcessEth1Data(state *pb.BeaconState) *pb.BeaconState {
-	if helpers.NextEpoch(state)%params.BeaconConfig().EpochsPerEth1VotingPeriod == 0 {
-		for _, eth1DataVote := range state.Eth1DataVotes {
-			if eth1DataVote.VoteCount*2 > params.BeaconConfig().EpochsPerEth1VotingPeriod {
-				state.LatestEth1Data.DepositRootHash32 = eth1DataVote.Eth1Data.DepositRootHash32
-				state.LatestEth1Data.BlockHash32 = eth1DataVote.Eth1Data.BlockHash32
-			}
+	for _, eth1DataVote := range state.Eth1DataVotes {
+		if eth1DataVote.VoteCount*2 > params.BeaconConfig().SlotsPerEpoch *
+			params.BeaconConfig().EpochsPerEth1VotingPeriod {
+			state.LatestEth1Data = eth1DataVote.Eth1Data
 		}
-		state.Eth1DataVotes = make([]*pb.Eth1DataVote, 0)
 	}
+	state.Eth1DataVotes = make([]*pb.Eth1DataVote, 0)
 	return state
 }
 
