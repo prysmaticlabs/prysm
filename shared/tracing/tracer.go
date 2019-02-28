@@ -1,25 +1,24 @@
-package tracer
+package tracing
 
 import (
 	"errors"
 
-	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/exporter/jaeger"
 	"go.opencensus.io/trace"
 )
 
-var log = logrus.WithField("prefix", "tracer")
+var log = logrus.WithField("prefix", "tracing")
 
 // New creates and initializes a new tracing adapter.
-func New(name, endpoint string, sampleFraction float64, enable bool) (p2p.Adapter, error) {
+func Setup(name, endpoint string, sampleFraction float64, enable bool) error {
 	if !enable {
 		trace.ApplyConfig(trace.Config{DefaultSampler: trace.NeverSample()})
-		return adapter, nil
+		return nil
 	}
 
 	if name == "" {
-		return nil, errors.New("tracing service name cannot be empty")
+		return errors.New("tracing service name cannot be empty")
 	}
 
 	trace.ApplyConfig(trace.Config{DefaultSampler: trace.ProbabilitySampler(sampleFraction)})
@@ -32,18 +31,9 @@ func New(name, endpoint string, sampleFraction float64, enable bool) (p2p.Adapte
 		},
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
 	trace.RegisterExporter(exporter)
 
-	return adapter, nil
-}
-
-var adapter p2p.Adapter = func(next p2p.Handler) p2p.Handler {
-	return func(msg p2p.Message) {
-		var messageSpan *trace.Span
-		msg.Ctx, messageSpan = trace.StartSpan(msg.Ctx, "handleP2pMessage")
-		next(msg)
-		messageSpan.End()
-	}
+	return nil
 }
