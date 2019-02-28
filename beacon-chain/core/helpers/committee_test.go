@@ -360,7 +360,7 @@ func TestVerifyBitfield_OK(t *testing.T) {
 		t.Error("bitfield is not validated when it was supposed to be")
 	}
 }
-func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
+func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 	// Initialize test with 128 validators, each slot and each shard gets 2 validators.
 	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
@@ -411,8 +411,8 @@ func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		committee, shard, slot, isProposer, err := NextEpochCommitteeAssignment(
-			state, tt.index, false)
+		committee, shard, slot, isProposer, err := CommitteeAssignment(
+			state, SlotToEpoch(tt.slot), tt.index, false)
 		if err != nil {
 			t.Fatalf("failed to execute NextEpochCommitteeAssignment: %v", err)
 		}
@@ -435,7 +435,7 @@ func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
 	}
 }
 
-func TestNextEpochCommitteeAssignment_CantFindValidator(t *testing.T) {
+func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
 	}
@@ -444,8 +444,7 @@ func TestNextEpochCommitteeAssignment_CantFindValidator(t *testing.T) {
 		"could not get assignment validator %d",
 		index,
 	)
-	if _, _, _, _, err := NextEpochCommitteeAssignment(
-		state, index, false); !strings.Contains(err.Error(), want) {
+	if _, _, _, _, err := CommitteeAssignment(state, SlotToEpoch(state.Slot), index, false); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
