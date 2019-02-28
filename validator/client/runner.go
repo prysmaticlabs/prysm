@@ -49,6 +49,7 @@ func run(ctx context.Context, v Validator) {
 			log.Info("Context cancelled, stopping validator")
 			return // Exit if context is cancelled.
 		case slot := <-v.NextSlot():
+			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
 			if err := v.UpdateAssignments(ctx, slot); err != nil {
 				log.WithField("error", err).Error("Failed to update assignments")
 				continue
