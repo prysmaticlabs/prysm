@@ -350,7 +350,7 @@ func AttestationParticipants(
 	// RegistryChange is a no-op when requesting slot in current and previous epoch.
 	// AttestationParticipants is used to calculate justification and finality hence won't be used
 	// to request crosslink committees of future epoch.
-	crosslinkCommittees, err := CrosslinkCommitteesAtSlot(state, attestationData.Slot, false) //registryChange = false
+	crosslinkCommittees, err := CrosslinkCommitteesAtSlot(state, i, false /* registryChange */)
 	if err != nil {
 		return nil, err
 	}
