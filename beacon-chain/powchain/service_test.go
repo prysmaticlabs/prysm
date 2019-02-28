@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/params"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 
 	"github.com/ethereum/go-ethereum"
@@ -1026,13 +1028,25 @@ func TestBlockCache_OK(t *testing.T) {
 		t.Errorf("block number saved in cache is different from what is expected. Got %d but expected %d", info.blkNumber, blkInfo.blkNumber)
 	}
 
-	blk = gethTypes.NewBlockWithHeader(&gethTypes.Header{
+}
+
+func TestBlockCache_AddToCache(t *testing.T) {
+	endpoint := "ws://127.0.0.1"
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint:     endpoint,
+		BlockFetcher: &goodFetcher{},
+	})
+	if err != nil {
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+
+	blk := gethTypes.NewBlockWithHeader(&gethTypes.Header{
 		Number: big.NewInt(40),
 	})
 
 	web3Service.addToCache(blk)
 
-	exists, _ = web3Service.checkCache(blk.Hash())
+	exists, _ := web3Service.checkCache(blk.Hash())
 	if !exists {
 		t.Fatalf("Block with hash %#x doesn't exist in cache", blk.Hash())
 	}
@@ -1050,4 +1064,60 @@ func TestBlockCache_OK(t *testing.T) {
 		t.Errorf("block number saved in cache is different from what is expected. Got %d but expected %d", info2.blkNumber, blk.Number())
 	}
 
+}
+
+func TestBlockCache_DeleteFromCache(t *testing.T) {
+	endpoint := "ws://127.0.0.1"
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint:     endpoint,
+		BlockFetcher: &goodFetcher{},
+	})
+	if err != nil {
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+
+	blk := gethTypes.NewBlockWithHeader(&gethTypes.Header{
+		Number: big.NewInt(40),
+	})
+
+	web3Service.addToCache(blk)
+	web3Service.deleteFromCache(blk.Hash())
+
+	exists, _ := web3Service.checkCache(blk.Number().Uint64())
+	if exists {
+		t.Errorf("Block info exists despite it being deleted from cache")
+	}
+	exists, _ = web3Service.checkCache(blk.Hash())
+	if exists {
+		t.Errorf("Block info exists despite it being deleted from cache")
+	}
+}
+
+func TestBlockCache_PruneCache(t *testing.T) {
+	endpoint := "ws://127.0.0.1"
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint:     endpoint,
+		BlockFetcher: &goodFetcher{},
+	})
+	if err != nil {
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+
+	numOfBlocks := 3 * params.BeaconConfig().Eth1FollowDistance
+
+	for i := 1; i < int(numOfBlocks); i++ {
+		web3Service.blockHeight = big.NewInt(int64(i))
+		blk := gethTypes.NewBlockWithHeader(&gethTypes.Header{
+			Number: big.NewInt(int64(i)),
+		})
+
+		web3Service.addToCache(blk)
+		web3Service.pruneCache()
+	}
+
+	for i := 1; i < int(params.BeaconConfig().Eth1FollowDistance); i++ {
+		if exists, _ := web3Service.checkCache(uint64(i)); exists {
+			t.Errorf("Block with height %d exists despite being pruned", i)
+		}
+	}
 }

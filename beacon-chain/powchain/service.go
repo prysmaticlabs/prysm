@@ -378,6 +378,32 @@ func (w *Web3Service) addToCache(blk *gethTypes.Block) {
 	w.blockCache[blk.Number().Uint64()] = blkInfo
 }
 
+func (w *Web3Service) deleteFromCache(val interface{}) {
+	_, ok := val.(uint64)
+	_, ok2 := val.(common.Hash)
+	if !ok && !ok2 {
+		return
+	}
+
+	blkInfo, ok := w.blockCache[val]
+	if !ok {
+		return
+	}
+	delete(w.blockCache, blkInfo.blkNumber.Uint64())
+	delete(w.blockCache, blkInfo.blkHash)
+}
+
+func (w *Web3Service) pruneCache() {
+	// The max distance limit till which we can store block data in our cache.
+	pruneDistance := 2 * params.BeaconConfig().Eth1FollowDistance
+	blkInfo, ok := w.blockCache[w.blockHeight.Uint64()-pruneDistance]
+	if !ok {
+		return
+	}
+	delete(w.blockCache, blkInfo.blkNumber.Uint64())
+	delete(w.blockCache, blkInfo.blkHash)
+}
+
 func (w *Web3Service) runDelayTimer(done <-chan struct{}) {
 	timer := time.NewTimer(time.Duration(w.chainStartDelay) * time.Second)
 
@@ -446,6 +472,9 @@ func (w *Web3Service) run(done <-chan struct{}) {
 			blockNumberGauge.Set(float64(header.Number.Int64()))
 			w.blockHeight = header.Number
 			w.blockHash = header.Hash()
+
+			w.addToCache(gethTypes.NewBlockWithHeader(header))
+			w.pruneCache()
 			log.WithFields(logrus.Fields{
 				"blockNumber": w.blockHeight,
 				"blockHash":   w.blockHash.Hex(),
