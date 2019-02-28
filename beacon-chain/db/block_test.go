@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -89,6 +90,7 @@ func TestBlockBySlotEmptyChain_OK(t *testing.T) {
 func TestUpdateChainHead_NoBlock(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
+	ctx := context.Background()
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
@@ -96,7 +98,7 @@ func TestUpdateChainHead_NoBlock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
-	beaconState, err := db.State()
+	beaconState, err := db.State(ctx)
 	if err != nil {
 		t.Fatalf("failed to get beacon state: %v", err)
 	}
@@ -110,6 +112,7 @@ func TestUpdateChainHead_NoBlock(t *testing.T) {
 func TestUpdateChainHead_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
+	ctx := context.Background()
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
@@ -127,7 +130,7 @@ func TestUpdateChainHead_OK(t *testing.T) {
 		t.Fatalf("failed to get hash of b: %v", err)
 	}
 
-	beaconState, err := db.State()
+	beaconState, err := db.State(ctx)
 	if err != nil {
 		t.Fatalf("failed to get beacon state: %v", err)
 	}
@@ -176,6 +179,7 @@ func TestUpdateChainHead_OK(t *testing.T) {
 func TestChainProgress_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
+	ctx := context.Background()
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
@@ -184,7 +188,7 @@ func TestChainProgress_OK(t *testing.T) {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
 
-	beaconState, err := db.State()
+	beaconState, err := db.State(ctx)
 	if err != nil {
 		t.Fatalf("Failed to get beacon state: %v", err)
 	}
