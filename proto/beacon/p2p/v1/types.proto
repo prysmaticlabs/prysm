@@ -68,7 +68,7 @@ message AttestationData {
   uint64 shard = 2;
   bytes beacon_block_root_hash32 = 3;
   bytes epoch_boundary_root_hash32  = 4;
-  bytes shard_block_root_hash32 = 5;
+  bytes crosslink_data_root_hash32 = 5;
   Crosslink latest_crosslink = 6;
   uint64 justified_epoch = 7;
   bytes justified_block_root_hash32 = 8;
@@ -105,7 +105,7 @@ message ShardReassignmentRecord {
 
 message Crosslink {
   uint64 epoch = 1;
-  bytes shard_block_root_hash32 = 2;
+  bytes crosslink_data_root_hash32 = 2;
 }
 
 message BeaconBlock {

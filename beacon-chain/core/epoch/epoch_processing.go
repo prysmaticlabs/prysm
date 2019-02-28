@@ -213,8 +213,8 @@ func ProcessCrosslinks(
 					return nil, fmt.Errorf("could not get winning root: %v", err)
 				}
 				state.LatestCrosslinks[shard] = &pb.Crosslink{
-					Epoch:                currentEpoch,
-					ShardBlockRootHash32: winningRoot,
+					Epoch:                   currentEpoch,
+					CrosslinkDataRootHash32: winningRoot,
 				}
 			}
 		}
@@ -251,7 +251,7 @@ func ProcessEjections(state *pb.BeaconState) (*pb.BeaconState, error) {
 // Spec pseudocode definition:
 //	Set state.previous_epoch_randao_mix = state.current_epoch_randao_mix
 //	Set state.previous_calculation_epoch = state.current_calculation_epoch
-//  Set state.previous_epoch_seed = state.current_epoch_seed.
+//  Set state.previous_shuffling_seed = state.current_shuffling_seed.
 func ProcessPrevSlotShardSeed(state *pb.BeaconState) *pb.BeaconState {
 	state.PreviousShufflingEpoch = state.CurrentShufflingEpoch
 	state.PreviousShufflingStartShard = state.CurrentShufflingStartShard
@@ -260,18 +260,18 @@ func ProcessPrevSlotShardSeed(state *pb.BeaconState) *pb.BeaconState {
 }
 
 // ProcessCurrSlotShardSeed sets the current shuffling information in the beacon state.
-//   Set state.current_shuffling_epoch = next_epoch
 //   Set state.current_shuffling_start_shard = (state.current_shuffling_start_shard +
 //     get_current_epoch_committee_count(state)) % SHARD_COUNT
+//   Set state.current_shuffling_epoch = next_epoch
 //   Set state.current_shuffling_seed = generate_seed(state, state.current_shuffling_epoch)
 func ProcessCurrSlotShardSeed(state *pb.BeaconState) (*pb.BeaconState, error) {
-	state.CurrentShufflingEpoch = helpers.NextEpoch(state)
 	state.CurrentShufflingStartShard = (state.CurrentShufflingStartShard +
 		helpers.CurrentEpochCommitteeCount(state)) % params.BeaconConfig().ShardCount
 	seed, err := helpers.GenerateSeed(state, state.CurrentShufflingEpoch)
 	if err != nil {
 		return nil, fmt.Errorf("could not update current shuffling seed: %v", err)
 	}
+	state.CurrentShufflingEpoch = helpers.NextEpoch(state)
 	state.CurrentShufflingSeedHash32 = seed[:]
 	return state, nil
 }
@@ -286,7 +286,7 @@ func ProcessCurrSlotShardSeed(state *pb.BeaconState) (*pb.BeaconState, error) {
 //	If epochs_since_last_registry_update > 1 and
 //		epochs_since_last_registry_change is an exact power of 2:
 // 			set state.current_calculation_epoch = next_epoch
-// 			set state.current_epoch_seed = generate_seed(
+// 			set state.current_shuffling_seed = generate_seed(
 // 				state, state.current_calculation_epoch)
 func ProcessPartialValidatorRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	epochsSinceLastRegistryChange := helpers.CurrentEpoch(state) -

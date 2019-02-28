@@ -9,14 +9,14 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_go",
-    url = "https://github.com/bazelbuild/rules_go/releases/download/0.17.0/rules_go-0.17.0.tar.gz",
-    sha256 = "492c3ac68ed9dcf527a07e6a1b2dcbf199c6bf8b35517951467ac32e421c06c1",
+    url = "https://github.com/bazelbuild/rules_go/releases/download/0.17.1/rules_go-0.17.1.tar.gz",
+    sha256 = "6776d68ebb897625dead17ae510eac3d5f6342367327875210df44dbe2aeeb19",
 )
 
 http_archive(
     name = "bazel_gazelle",
-    sha256 = "7949fc6cc17b5b191103e97481cf8889217263acf52e00b560683413af204fcb",
-    urls = ["https://github.com/bazelbuild/bazel-gazelle/releases/download/0.16.0/bazel-gazelle-0.16.0.tar.gz"],
+    sha256 = "3c681998538231a2d24d0c07ed5a7658cb72bfb5fd4bf9911157c0e9ac6a2687",
+    urls = ["https://github.com/bazelbuild/bazel-gazelle/releases/download/0.17.0/bazel-gazelle-0.17.0.tar.gz"],
 )
 
 http_archive(
@@ -277,7 +277,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr_net",
-    commit = "c8d587e921c095d128ac4e0c0e87e54968725a4d",
+    tag = "v0.0.1",
     importpath = "github.com/multiformats/go-multiaddr-net",
 )
 
@@ -362,7 +362,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multistream",
-    commit = "0c61f185f3d6e16bcda416874e7a0fca4696e7e0",
+    tag = "v0.0.1",
     importpath = "github.com/multiformats/go-multistream",
 )
 
@@ -512,7 +512,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sys",
-    commit = "cc5685c2db1239775905f3911f0067c0fa74762f",
+    commit = "775f8194d0f9e65c46913c7be783d3d95a29333c",
     importpath = "golang.org/x/sys",
 )
 
@@ -554,7 +554,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_crypto",
-    commit = "7f87c0fbb88b590338857bcb720678c2583d4dea",
+    commit = "215aa809caaf1f5be699aef5e3ccebeb15d67b0b",
     importpath = "golang.org/x/crypto",
 )
 
@@ -638,13 +638,13 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_sync",
-    commit = "37e7f081c4d4c64e13b10787722085407fe5d15f",
+    commit = "e225da77a7e68af35c70ccbf71af2b83e6acac3c",
     importpath = "golang.org/x/sync",
 )
 
 go_repository(
     name = "com_github_golang_lint",
-    commit = "8f45f776aaf18cebc8d65861cc70c33c60471952",
+    commit = "5b3e6a55c961c61f4836ae6868c17b070744c590",
     importpath = "github.com/golang/lint",
 )
 
@@ -827,20 +827,20 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_discovery",
-    commit = "5e0d40c7c8803e06c9eebe6dd3a0525a1d774a82",
+    commit = "39a8e5c39a9035dbe7d83ce5d5d22c27669126b2",
     importpath = "github.com/libp2p/go-libp2p-discovery",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_autonat",
-    commit = "842b9c4919f5be0df3baee15b0f97e493f6d3fb2",
+    commit = "20af83cfbf8c25bd878167ac182f98e662d3e196",
     importpath = "github.com/libp2p/go-libp2p-autonat",
 )
 
 go_repository(
     name = "com_github_konsorten_go_windows_terminal_sequences",
     importpath = "github.com/konsorten/go-windows-terminal-sequences",
-    tag = "v1.0.1",
+    tag = "v1.0.2",
 )
 
 go_repository(
@@ -921,7 +921,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_oauth2",
-    commit = "9b3c75971fc92dd27c6436a37c05c831498658f1",
+    commit = "e64efc72b421e893cbf63f17ba2221e7d6d0b0f3",
     importpath = "golang.org/x/oauth2",
 )
 

@@ -907,7 +907,7 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 	// the attestation should be invalid.
 	stateLatestCrosslinks := []*pb.Crosslink{
 		{
-			ShardBlockRootHash32: []byte{1},
+			CrosslinkDataRootHash32: []byte{1},
 		},
 	}
 	state := &pb.BeaconState{
@@ -922,8 +922,8 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 				Shard:                    0,
 				Slot:                     params.BeaconConfig().GenesisSlot + 20,
 				JustifiedBlockRootHash32: blockRoots[0],
-				LatestCrosslink:          &pb.Crosslink{ShardBlockRootHash32: []byte{2}},
-				ShardBlockRootHash32:     params.BeaconConfig().ZeroHash[:],
+				LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{2}},
+				CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
 				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
 			},
 		},
@@ -953,7 +953,7 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 	}
 	stateLatestCrosslinks := []*pb.Crosslink{
 		{
-			ShardBlockRootHash32: []byte{1},
+			CrosslinkDataRootHash32: []byte{1},
 		},
 	}
 	state := &pb.BeaconState{
@@ -968,8 +968,8 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 				Shard:                    0,
 				Slot:                     params.BeaconConfig().GenesisSlot + 20,
 				JustifiedBlockRootHash32: blockRoots[0],
-				LatestCrosslink:          &pb.Crosslink{ShardBlockRootHash32: []byte{1}},
-				ShardBlockRootHash32:     []byte{1},
+				LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
+				CrosslinkDataRootHash32:  []byte{1},
 				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
 			},
 		},
@@ -1000,7 +1000,7 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 	}
 	stateLatestCrosslinks := []*pb.Crosslink{
 		{
-			ShardBlockRootHash32: []byte{1},
+			CrosslinkDataRootHash32: []byte{1},
 		},
 	}
 	state := &pb.BeaconState{
@@ -1014,8 +1014,8 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 			Shard:                    0,
 			Slot:                     params.BeaconConfig().GenesisSlot + 20,
 			JustifiedBlockRootHash32: blockRoots[0],
-			LatestCrosslink:          &pb.Crosslink{ShardBlockRootHash32: []byte{1}},
-			ShardBlockRootHash32:     params.BeaconConfig().ZeroHash[:],
+			LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
+			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
 			JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
 		},
 		AggregationBitfield: []byte{1},
