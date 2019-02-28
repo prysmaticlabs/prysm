@@ -100,13 +100,13 @@ func (v *validator) NextSlot() <-chan uint64 {
 // list of upcoming assignments needs to be updated. For example, at the
 // beginning of a new epoch.
 func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
-	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
-	defer span.End()
-
 	if slot%params.BeaconConfig().SlotsPerEpoch != 0 && v.assignment != nil {
 		// Do nothing if not epoch start AND assignments already exist.
 		return nil
 	}
+
+	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
+	defer span.End()
 
 	req := &pb.ValidatorEpochAssignmentsRequest{
 		EpochStart: slot,
