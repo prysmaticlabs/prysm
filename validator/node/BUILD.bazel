@@ -22,6 +22,7 @@ go_library(
         "//shared/debug:go_default_library",
         "//shared/params:go_default_library",
         "//shared/prometheus:go_default_library",
+        "//shared/tracing:go_default_library",
         "//shared/version:go_default_library",
         "//validator/client:go_default_library",
         "//validator/types:go_default_library",
