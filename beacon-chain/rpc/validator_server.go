@@ -110,6 +110,18 @@ func (vs *ValidatorServer) ValidatorCommitteeAtSlot(ctx context.Context, req *pb
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
+	if req.Slot%params.BeaconConfig().SlotsPerEpoch == 0 {
+		log.Info("Committee at slot is at epoch start")
+		head, err := vs.beaconDB.ChainHead()
+		if err != nil {
+			return nil, fmt.Errorf("could not get chain head: %v", err)
+		}
+		headRoot := bytesutil.ToBytes32(head.ParentRootHash32)
+		beaconState, err = state.ExecuteStateTransition(beaconState, nil, headRoot, false)
+		if err != nil {
+			return nil, fmt.Errorf("could not execute head transition: %v", err)
+		}
+	}
 	var registryChanged bool
 	if beaconState.ValidatorRegistryUpdateEpoch == helpers.SlotToEpoch(req.Slot)-1 &&
 		beaconState.ValidatorRegistryUpdateEpoch != params.BeaconConfig().GenesisEpoch {
