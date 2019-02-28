@@ -10,16 +10,15 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
-
-	"github.com/prysmaticlabs/prysm/validator/types"
-
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
+	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/client"
+	"github.com/prysmaticlabs/prysm/validator/types"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -38,6 +37,14 @@ type ValidatorClient struct {
 
 // NewValidatorClient creates a new, Ethereum Serenity validator client.
 func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
+	if err := tracing.Setup(
+		"validator", // service name
+		ctx.GlobalString(cmd.TracingEndpointFlag.Name),
+		ctx.GlobalFloat64(cmd.TraceSampleFractionFlag.Name),
+		ctx.GlobalBool(cmd.EnableTracingFlag.Name),
+	); err != nil {
+		return nil, err
+	}
 	registry := shared.NewServiceRegistry()
 	ValidatorClient := &ValidatorClient{
 		ctx:      ctx,

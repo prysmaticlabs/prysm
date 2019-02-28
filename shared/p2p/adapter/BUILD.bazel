@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["tracer.go"],
+    importpath = "github.com/prysmaticlabs/prysm/shared/p2p/adapter",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//shared/p2p:go_default_library",
+        "@io_opencensus_go//trace:go_default_library",
+    ],
+)

@@ -41,7 +41,7 @@ func (f *faultyPOWChainService) LatestBlockHeight() *big.Int {
 	return big.NewInt(0)
 }
 
-func (f *faultyPOWChainService) BlockExists(hash common.Hash) (bool, *big.Int, error) {
+func (f *faultyPOWChainService) BlockExists(_ context.Context, hash common.Hash) (bool, *big.Int, error) {
 	return false, big.NewInt(1), errors.New("failed")
 }
 
@@ -69,7 +69,7 @@ func (m *mockPOWChainService) LatestBlockHeight() *big.Int {
 	return m.latestBlockNumber
 }
 
-func (m *mockPOWChainService) BlockExists(hash common.Hash) (bool, *big.Int, error) {
+func (m *mockPOWChainService) BlockExists(_ context.Context, hash common.Hash) (bool, *big.Int, error) {
 	// Reverse the map of heights by hash.
 	heightsByHash := make(map[[32]byte]int)
 	for k, v := range m.hashesByHeight {

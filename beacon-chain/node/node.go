@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
+	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -48,6 +49,14 @@ type BeaconNode struct {
 // NewBeaconNode creates a new node instance, sets up configuration options, and registers
 // every required service to the node.
 func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
+	if err := tracing.Setup(
+		"beacon-chain", // service name
+		ctx.GlobalString(cmd.TracingEndpointFlag.Name),
+		ctx.GlobalFloat64(cmd.TraceSampleFractionFlag.Name),
+		ctx.GlobalBool(cmd.EnableTracingFlag.Name),
+	); err != nil {
+		return nil, err
+	}
 	registry := shared.NewServiceRegistry()
 
 	beacon := &BeaconNode{
@@ -207,6 +216,12 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 		return nil
 	}
 
+	depAddress := b.ctx.GlobalString(utils.DepositContractFlag.Name)
+
+	if !common.IsHexAddress(depAddress) {
+		log.Fatalf("Invalid deposit contract address given: %s", depAddress)
+	}
+
 	rpcClient, err := gethRPC.Dial(b.ctx.GlobalString(utils.Web3ProviderFlag.Name))
 	if err != nil {
 		log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
@@ -218,7 +233,7 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 	ctx := context.Background()
 	cfg := &powchain.Web3ServiceConfig{
 		Endpoint:        b.ctx.GlobalString(utils.Web3ProviderFlag.Name),
-		DepositContract: common.HexToAddress(b.ctx.GlobalString(utils.DepositContractFlag.Name)),
+		DepositContract: common.HexToAddress(depAddress),
 		Client:          powClient,
 		Reader:          powClient,
 		Logger:          powClient,
