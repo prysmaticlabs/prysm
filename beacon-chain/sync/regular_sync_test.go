@@ -687,16 +687,16 @@ func TestHandleStateReq_NOState(t *testing.T) {
 
 func TestHandleStateReq_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
 
 	genesisTime := time.Now()
 	unixTime := uint64(genesisTime.Unix())
 	if err := db.InitializeState(unixTime, []*pb.Deposit{}); err != nil {
 		t.Fatalf("could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := db.State()
+	beaconState, err := db.State(ctx)
 	if err != nil {
 		t.Fatalf("could not attempt fetch beacon state: %v", err)
 	}

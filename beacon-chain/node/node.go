@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
+	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -48,6 +49,14 @@ type BeaconNode struct {
 // NewBeaconNode creates a new node instance, sets up configuration options, and registers
 // every required service to the node.
 func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
+	if err := tracing.Setup(
+		"beacon-chain", // service name
+		ctx.GlobalString(cmd.TracingEndpointFlag.Name),
+		ctx.GlobalFloat64(cmd.TraceSampleFractionFlag.Name),
+		ctx.GlobalBool(cmd.EnableTracingFlag.Name),
+	); err != nil {
+		return nil, err
+	}
 	registry := shared.NewServiceRegistry()
 
 	beacon := &BeaconNode{

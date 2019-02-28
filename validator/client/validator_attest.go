@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/opentracing/opentracing-go"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 )
 
 var delay = params.BeaconConfig().SecondsPerSlot / 2
@@ -18,8 +18,8 @@ var delay = params.BeaconConfig().SecondsPerSlot / 2
 // information in order to sign the block and include information about the validator's
 // participation in voting on the block.
 func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.AttestToBlockHead")
-	defer span.Finish()
+	ctx, span := trace.StartSpan(ctx, "validator.AttestToBlockHead")
+	defer span.End()
 	log.Info("Attesting...")
 	// First the validator should construct attestation_data, an AttestationData
 	// object based upon the state at the assigned slot.
@@ -111,7 +111,9 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 
 	duration := time.Duration(slot*params.BeaconConfig().SecondsPerSlot+delay) * time.Second
 	timeToBroadcast := time.Unix(int64(v.genesisTime), 0).Add(duration)
+	_, sleepSpan := trace.StartSpan(ctx, "validator.AttestToBlockHead_sleepUntilTimeToBroadcast")
 	time.Sleep(time.Until(timeToBroadcast))
+	sleepSpan.End()
 	log.Infof("Produced attestation: %v", attestation)
 	attestRes, err := v.attesterClient.AttestHead(ctx, attestation)
 	if err != nil {
