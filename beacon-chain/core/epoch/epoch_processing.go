@@ -188,12 +188,9 @@ func ProcessCrosslinks(
 	endSlot := helpers.StartSlot(nextEpoch)
 
 	for i := startSlot; i < endSlot; i++ {
-		var registryChange bool
-		if state.ValidatorRegistryUpdateEpoch == i-1 &&
-			state.ValidatorRegistryUpdateEpoch != params.BeaconConfig().GenesisEpoch {
-			registryChange = true
-		}
-		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(state, i, registryChange)
+		// RegistryChange is a no-op when requesting slot in current and previous epoch.
+		// ProcessCrosslinks will never ask for slot in next epoch.
+		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(state, i, false /* registryChange */)
 		if err != nil {
 			return nil, fmt.Errorf("could not get committees for slot %d: %v", i-params.BeaconConfig().GenesisSlot, err)
 		}
