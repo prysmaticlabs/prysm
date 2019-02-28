@@ -342,7 +342,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	// Process crosslink rewards and penalties.
 	state, err = bal.Crosslinks(
 		state,
-		currentAttestations,
+		currentEpochAttestations,
 		prevEpochAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not process crosslink rewards and penalties: %v", err)

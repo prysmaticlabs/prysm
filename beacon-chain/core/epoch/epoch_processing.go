@@ -120,15 +120,16 @@ func ProcessJustification(
 	currentEpoch := helpers.CurrentEpoch(state)
 	// Shifts all the bits over one to create a new bit for the recent epoch.
 	state.JustificationBitfield = state.JustificationBitfield << 1
-	log.Infof("Total Balance: %d", totalBalance)
+	log.Infof("Processing Total Balance: %d", totalBalance)
 	// If prev prev epoch was justified then we ensure the 2nd bit in the bitfield is set,
 	// assign new justified slot to 2 * SLOTS_PER_EPOCH before.
-	log.Infof("Previous Epoch Attesting Balance: %d", prevEpochBoundaryAttestingBalance)
+	log.Infof("Previous Epoch Boundary Attesting Balance: %d", prevEpochBoundaryAttestingBalance)
 	if 3*prevEpochBoundaryAttestingBalance >= 2*prevTotalBalance {
 		state.JustificationBitfield |= 2
 		newJustifiedEpoch = prevEpoch
+		log.Infof("Previous epoch %d was justified", newJustifiedEpoch-params.BeaconConfig().GenesisEpoch)
 	}
-	log.Infof("Current Epoch Attesting Balance: %d", thisEpochBoundaryAttestingBalance)
+	log.Infof("Current Epoch Boundary Attesting Balance: %d", thisEpochBoundaryAttestingBalance)
 	// If this epoch was justified then we ensure the 1st bit in the bitfield is set,
 	// assign new justified slot to 1 * SLOTS_PER_EPOCH before.
 	if 3*thisEpochBoundaryAttestingBalance >= 2*totalBalance {
@@ -173,7 +174,7 @@ func ProcessJustification(
 // 	let `crosslink_committees_at_slot = get_crosslink_committees_at_slot(state, slot)`.
 // 		For every `(crosslink_committee, shard)` in `crosslink_committees_at_slot`, compute:
 // 			Set state.latest_crosslinks[shard] = Crosslink(
-// 			epoch=current_epoch, shard_block_root=winning_root(crosslink_committee))
+// 			epoch=slot_to_epoch(slot), crosslink_data_root=winning_root(crosslink_committee))
 // 			if 3 * total_attesting_balance(crosslink_committee) >= 2 * total_balance(crosslink_committee)
 func ProcessCrosslinks(
 	state *pb.BeaconState,
