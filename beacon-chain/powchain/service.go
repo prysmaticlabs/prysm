@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/client-go/tools/cache"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -90,9 +92,9 @@ type Web3Service struct {
 	reader                  Reader
 	logger                  bind.ContractFilterer
 	blockFetcher            POWBlockFetcher
-	blockHeight             *big.Int                   // the latest ETH1.0 chain blockHeight.
-	blockHash               common.Hash                // the latest ETH1.0 chain blockHash.
-	blockCache              map[interface{}]*blockInfo // cache to store block hash/block height.
+	blockHeight             *big.Int    // the latest ETH1.0 chain blockHeight.
+	blockHash               common.Hash // the latest ETH1.0 chain blockHash.
+	blockCache              *cache.FIFO // cache to store block hash/block height.
 	depositContractCaller   *contracts.DepositContractCaller
 	depositRoot             []byte
 	depositTrie             *trieutil.DepositTrie
@@ -137,6 +139,8 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		return nil, fmt.Errorf("could not create deposit contract caller %v", err)
 	}
 
+	fifoQueue := cache.NewFIFO(keyFunc)
+
 	ctx, cancel := context.WithCancel(ctx)
 	return &Web3Service{
 		ctx:                     ctx,
@@ -145,7 +149,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		endpoint:                config.Endpoint,
 		blockHeight:             nil,
 		blockHash:               common.BytesToHash([]byte{}),
-		blockCache:              make(map[interface{}]*blockInfo),
+		blockCache:              fifoQueue,
 		depositContractAddress:  config.DepositContract,
 		chainStartFeed:          new(event.Feed),
 		client:                  config.Client,
@@ -220,7 +224,10 @@ func (w *Web3Service) BlockExists(ctx context.Context, hash common.Hash) (bool, 
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockExists")
 	defer span.End()
 
-	if exists, blkInfo := w.checkCache(hash); exists {
+	if exists, blkInfo, err := w.checkCache(hash); exists || err != nil {
+		if err != nil {
+			return false, nil, err
+		}
 		return true, blkInfo.blkNumber, nil
 	}
 	block, err := w.blockFetcher.BlockByHash(ctx, hash)
@@ -236,7 +243,10 @@ func (w *Web3Service) BlockExists(ctx context.Context, hash common.Hash) (bool, 
 // BlockHashByHeight returns the block hash of the block at the given height.
 func (w *Web3Service) BlockHashByHeight(height *big.Int) (common.Hash, error) {
 
-	if exists, blkInfo := w.checkCache(height.Uint64()); exists {
+	if exists, blkInfo, err := w.checkCache(height.Uint64()); exists || err != nil {
+		if err != nil {
+			return [32]byte{}, err
+		}
 		return blkInfo.blkHash, nil
 	}
 
@@ -355,17 +365,38 @@ func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
 	w.chainStartFeed.Send(chainStartTime)
 }
 
-func (w *Web3Service) checkCache(val interface{}) (bool, *blockInfo) {
+func keyFunc(obj interface{}) (string, error) {
+	val1, ok := obj.(uint64)
+	val2, ok2 := obj.(common.Hash)
+	if !ok && !ok2 {
+		return "", errors.New("object type is neither uint64 or common hash")
+	}
+	if ok {
+		return string(val1), nil
+	}
+	return string(val2[:]), nil
+}
+
+func (w *Web3Service) checkCache(val interface{}) (bool, *blockInfo, error) {
 	_, ok := val.(uint64)
 	_, ok2 := val.(common.Hash)
 	if !ok && !ok2 {
-		return false, nil
+		return false, nil, errors.New("value type is neither uint64 or common hash")
 	}
-	blkInfo, ok := w.blockCache[val]
+
+	item, exists, err := w.blockCache.Get(val)
+	if err != nil {
+		return false, nil, err
+	}
+	if !exists {
+		return false, nil, nil
+	}
+
+	blockInfo, ok := item.(*blockInfo)
 	if !ok {
-		return false, nil
+		return false, nil, errors.New("retrieved object from the map is not of the correct type")
 	}
-	return true, blkInfo
+	return true, blockInfo, nil
 }
 
 func (w *Web3Service) addToCache(blk *gethTypes.Block) {
@@ -374,7 +405,8 @@ func (w *Web3Service) addToCache(blk *gethTypes.Block) {
 		blkNumber: blk.Number(),
 	}
 
-	w.blockCache[blk.Hash()] = blkInfo
+	w.blockCache.
+		w.blockCache[blk.Hash()] = blkInfo
 	w.blockCache[blk.Number().Uint64()] = blkInfo
 }
 
