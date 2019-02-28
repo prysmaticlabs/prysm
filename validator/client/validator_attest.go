@@ -111,7 +111,9 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 
 	duration := time.Duration(slot*params.BeaconConfig().SecondsPerSlot+delay) * time.Second
 	timeToBroadcast := time.Unix(int64(v.genesisTime), 0).Add(duration)
+	_, sleepSpan := trace.StartSpan(ctx, "validator.AttestToBlockHead_sleepUntilTimeToBroadcast")
 	time.Sleep(time.Until(timeToBroadcast))
+	sleepSpan.End()
 	log.Infof("Produced attestation: %v", attestation)
 	attestRes, err := v.attesterClient.AttestHead(ctx, attestation)
 	if err != nil {

@@ -962,7 +962,7 @@ func TestBlockExists_ValidHash(t *testing.T) {
 		[]*gethTypes.Receipt{},
 	)
 
-	exists, height, err := web3Service.BlockExists(block.Hash())
+	exists, height, err := web3Service.BlockExists(context.Background(), block.Hash())
 	if err != nil {
 		t.Fatalf("Could not get block hash with given height %v", err)
 	}
@@ -985,7 +985,7 @@ func TestBlockExists_InvalidHash(t *testing.T) {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
-	_, _, err = web3Service.BlockExists(common.BytesToHash([]byte{0}))
+	_, _, err = web3Service.BlockExists(context.Background(), common.BytesToHash([]byte{0}))
 	if err == nil {
 		t.Fatal("Expected BlockExists to error with invalid hash")
 	}
