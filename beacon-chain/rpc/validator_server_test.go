@@ -159,16 +159,17 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	vs := &ValidatorServer{
 		beaconDB: db,
 	}
-	req := &pb.ValidatorIndexRequest{
-		PublicKey: []byte{'A'},
+	req := &pb.ValidatorEpochAssignmentsRequest{
+		PublicKey:  []byte{'A'},
+		EpochStart: params.BeaconConfig().GenesisEpoch,
 	}
 	want := fmt.Sprintf("validator %#x does not exist", req.PublicKey)
-	if _, err := vs.NextEpochCommitteeAssignment(context.Background(), req); !strings.Contains(err.Error(), want) {
+	if _, err := vs.CommitteeAssignment(context.Background(), req); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
 }
 
-func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
+func TestCommitteeAssignment_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	genesis := b.NewGenesisBlock([]byte{})
@@ -198,10 +199,11 @@ func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
 	pubKeyBuf := make([]byte, binary.MaxVarintLen64)
 	n := binary.PutUvarint(pubKeyBuf, 0)
 	// Test the first validator in registry.
-	req := &pb.ValidatorIndexRequest{
-		PublicKey: pubKeyBuf[:n],
+	req := &pb.ValidatorEpochAssignmentsRequest{
+		PublicKey:  pubKeyBuf[:n],
+		EpochStart: params.BeaconConfig().GenesisEpoch,
 	}
-	res, err := vs.NextEpochCommitteeAssignment(context.Background(), req)
+	res, err := vs.CommitteeAssignment(context.Background(), req)
 	if err != nil {
 		t.Errorf("Could not call next epoch committee assignment %v", err)
 	}
@@ -209,7 +211,7 @@ func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
 		t.Errorf("Assigned shard %d can't be higher than %d",
 			res.Shard, params.BeaconConfig().ShardCount)
 	}
-	if res.Slot < state.Slot+params.BeaconConfig().SlotsPerEpoch {
+	if res.Slot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
 			res.Slot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
 	}
@@ -218,10 +220,11 @@ func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
 	lastValidatorIndex := params.BeaconConfig().DepositsForChainStart - 1
 	pubKeyBuf = make([]byte, binary.MaxVarintLen64)
 	n = binary.PutUvarint(pubKeyBuf, lastValidatorIndex)
-	req = &pb.ValidatorIndexRequest{
-		PublicKey: pubKeyBuf[:n],
+	req = &pb.ValidatorEpochAssignmentsRequest{
+		PublicKey:  pubKeyBuf[:n],
+		EpochStart: params.BeaconConfig().GenesisEpoch,
 	}
-	res, err = vs.NextEpochCommitteeAssignment(context.Background(), req)
+	res, err = vs.CommitteeAssignment(context.Background(), req)
 	if err != nil {
 		t.Errorf("Could not call next epoch committee assignment %v", err)
 	}
@@ -229,7 +232,7 @@ func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
 		t.Errorf("Assigned shard %d can't be higher than %d",
 			res.Shard, params.BeaconConfig().ShardCount)
 	}
-	if res.Slot < state.Slot+params.BeaconConfig().SlotsPerEpoch {
+	if res.Slot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
 			res.Slot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
 	}
