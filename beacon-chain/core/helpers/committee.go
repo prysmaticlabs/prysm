@@ -347,12 +347,10 @@ func AttestationParticipants(
 	bitfield []byte) ([]uint64, error) {
 
 	// Find the relevant committee.
-	var registryChanged bool
-	if state.ValidatorRegistryUpdateEpoch == SlotToEpoch(attestationData.Slot)-1 &&
-		state.ValidatorRegistryUpdateEpoch != params.BeaconConfig().GenesisEpoch {
-		registryChanged = true
-	}
-	crosslinkCommittees, err := CrosslinkCommitteesAtSlot(state, attestationData.Slot, registryChanged)
+	// RegistryChange is a no-op when requesting slot in current and previous epoch.
+	// AttestationParticipants is used to calculate justification and finality hence won't be used
+	// to request crosslink committees of future epoch.
+	crosslinkCommittees, err := CrosslinkCommitteesAtSlot(state, attestationData.Slot, false) //registryChange = false
 	if err != nil {
 		return nil, err
 	}
