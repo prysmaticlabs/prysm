@@ -129,7 +129,7 @@ func (s *Service) Start() {
 		s.grpcServer = grpc.NewServer(grpc.Creds(creds), grpc.StatsHandler(&ocgrpc.ServerHandler{}))
 	} else {
 		log.Warn("You are using an insecure gRPC connection! Provide a certificate and key to connect securely")
-		s.grpcServer = grpc.NewServer()
+		s.grpcServer = grpc.NewServer(grpc.StatsHandler(&ocgrpc.ServerHandler{}))
 	}
 
 	beaconServer := &BeaconServer{
