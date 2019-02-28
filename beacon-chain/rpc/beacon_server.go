@@ -13,7 +13,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"go.opencensus.io/trace"
 )
 
 // BeaconServer defines a server implementation of the gRPC Beacon service,
@@ -113,8 +112,6 @@ func (bs *BeaconServer) ForkData(ctx context.Context, _ *ptypes.Empty) (*pbp2p.F
 // The deposit root can be calculated by calling the get_deposit_root() function of
 // the deposit contract using the post-state of the block hash.
 func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1DataResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.rpc.beacon.Eth1Data")
-	defer span.End()
 	beaconState, err := bs.beaconDB.State()
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
