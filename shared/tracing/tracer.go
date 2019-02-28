@@ -10,7 +10,7 @@ import (
 
 var log = logrus.WithField("prefix", "tracing")
 
-// New creates and initializes a new tracing adapter.
+// Setup creates and initializes a new tracing configuration..
 func Setup(name, endpoint string, sampleFraction float64, enable bool) error {
 	if !enable {
 		trace.ApplyConfig(trace.Config{DefaultSampler: trace.NeverSample()})
