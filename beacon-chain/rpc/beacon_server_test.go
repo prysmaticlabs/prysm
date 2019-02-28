@@ -482,3 +482,51 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 		)
 	}
 }
+
+func Benchmark_Eth1Data(b *testing.B) {
+	db := internal.SetupDB(b)
+	defer internal.TeardownDB(b, db)
+
+	hashesByHeight := make(map[int][]byte)
+
+	beaconState := &pbp2p.BeaconState{
+		Eth1DataVotes: []*pbp2p.Eth1DataVote{},
+		LatestEth1Data: &pbp2p.Eth1Data{
+			BlockHash32: []byte("stub"),
+		},
+	}
+	numOfVotes := 1000
+	for i := 0; i < numOfVotes; i++ {
+		blockhash := []byte{'b', 'l', 'o', 'c', 'k', byte(i)}
+		deposit := []byte{'d', 'e', 'p', 'o', 's', 'i', 't', byte(i)}
+		beaconState.Eth1DataVotes = append(beaconState.Eth1DataVotes,
+			&pbp2p.Eth1DataVote{
+				VoteCount: uint64(i),
+				Eth1Data: &pbp2p.Eth1Data{
+					BlockHash32:       blockhash,
+					DepositRootHash32: deposit,
+				},
+			})
+		hashesByHeight[i] = blockhash
+	}
+	hashesByHeight[numOfVotes+1] = []byte("stub")
+
+	if err := db.SaveState(beaconState); err != nil {
+		b.Fatal(err)
+	}
+	currentHeight := params.BeaconConfig().Eth1FollowDistance + 5
+	beaconServer := &BeaconServer{
+		beaconDB: db,
+		powChainService: &mockPOWChainService{
+			latestBlockNumber: big.NewInt(int64(currentHeight)),
+			hashesByHeight:    hashesByHeight,
+		},
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := beaconServer.Eth1Data(context.Background(), nil)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
