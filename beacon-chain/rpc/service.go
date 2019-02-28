@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
@@ -126,7 +126,7 @@ func (s *Service) Start() {
 			log.Errorf("Could not load TLS keys: %s", err)
 			s.credentialError = err
 		}
-		s.grpcServer = grpc.NewServer(grpc.Creds(creds))
+		s.grpcServer = grpc.NewServer(grpc.Creds(creds), grpc.StatsHandler(&ocgrpc.ServerHandler{}))
 	} else {
 		log.Warn("You are using an insecure gRPC connection! Provide a certificate and key to connect securely")
 		s.grpcServer = grpc.NewServer()

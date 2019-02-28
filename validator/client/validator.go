@@ -8,13 +8,13 @@ import (
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
-	"github.com/opentracing/opentracing-go"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 // AttestationPool STUB interface. Final attestation pool pending design.
@@ -47,8 +47,8 @@ func (v *validator) Done() {
 // for the ChainStart log to have been emitted. If so, it starts a ticker based on the ChainStart
 // unix timestamp which will be used to keep track of time within the validator client.
 func (v *validator) WaitForChainStart(ctx context.Context) error {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.WaitForChainStart")
-	defer span.Finish()
+	ctx, span := trace.StartSpan(ctx, "validator.WaitForChainStart")
+	defer span.End()
 	// First, check if the beacon chain has started.
 	stream, err := v.beaconClient.WaitForChainStart(ctx, &ptypes.Empty{})
 	if err != nil {
@@ -84,8 +84,8 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 //
 // WIP - not done.
 func (v *validator) WaitForActivation(ctx context.Context) {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.WaitForActivation")
-	defer span.Finish()
+	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
+	defer span.End()
 	// First, check if the validator has deposited into the Deposit Contract.
 	// If the validator has deposited, subscribe to a stream receiving the activation status.
 	// of the validator until a final ACTIVATED check if received, then this function can return.
@@ -100,8 +100,8 @@ func (v *validator) NextSlot() <-chan uint64 {
 // list of upcoming assignments needs to be updated. For example, at the
 // beginning of a new epoch.
 func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.UpdateAssignments")
-	defer span.Finish()
+	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
+	defer span.End()
 
 	if slot%params.BeaconConfig().SlotsPerEpoch != 0 && v.assignment != nil {
 		// Do nothing if not epoch start AND assignments already exist.
