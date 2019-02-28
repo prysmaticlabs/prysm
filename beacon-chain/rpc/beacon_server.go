@@ -121,7 +121,7 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 	// Fetch the height of the block pointed to by the beacon state's latest_eth1_data.block_hash
 	// in the canonical, eth1.0 chain.
 	stateLatestEth1Hash := bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockHash32)
-	_, stateLatestEth1Height, err := bs.powChainService.BlockExists(stateLatestEth1Hash)
+	_, stateLatestEth1Height, err := bs.powChainService.BlockExists(ctx, stateLatestEth1Hash)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify block with hash exists in Eth1 chain: %#x: %v", stateLatestEth1Hash, err)
 	}
