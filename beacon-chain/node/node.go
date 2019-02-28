@@ -216,6 +216,12 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 		return nil
 	}
 
+	depAddress := b.ctx.GlobalString(utils.DepositContractFlag.Name)
+
+	if !common.IsHexAddress(depAddress) {
+		log.Fatalf("Invalid deposit contract address given: %s", depAddress)
+	}
+
 	rpcClient, err := gethRPC.Dial(b.ctx.GlobalString(utils.Web3ProviderFlag.Name))
 	if err != nil {
 		log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
@@ -227,7 +233,7 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 	ctx := context.Background()
 	cfg := &powchain.Web3ServiceConfig{
 		Endpoint:        b.ctx.GlobalString(utils.Web3ProviderFlag.Name),
-		DepositContract: common.HexToAddress(b.ctx.GlobalString(utils.DepositContractFlag.Name)),
+		DepositContract: common.HexToAddress(depAddress),
 		Client:          powClient,
 		Reader:          powClient,
 		Logger:          powClient,
