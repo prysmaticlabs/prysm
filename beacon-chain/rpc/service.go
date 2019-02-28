@@ -47,7 +47,7 @@ type powChainService interface {
 	HasChainStartLogOccurred() (bool, uint64, error)
 	ChainStartFeed() *event.Feed
 	LatestBlockHeight() *big.Int
-	BlockExists(hash common.Hash) (bool, *big.Int, error)
+	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
 	BlockHashByHeight(height *big.Int) (common.Hash, error)
 	DepositRoot() [32]byte
 }

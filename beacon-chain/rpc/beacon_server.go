@@ -7,13 +7,13 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 )
 
 // BeaconServer defines a server implementation of the gRPC Beacon service,
@@ -113,6 +113,8 @@ func (bs *BeaconServer) ForkData(ctx context.Context, _ *ptypes.Empty) (*pbp2p.F
 // The deposit root can be calculated by calling the get_deposit_root() function of
 // the deposit contract using the post-state of the block hash.
 func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1DataResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.rpc.beacon.Eth1Data")
+	defer span.End()
 	beaconState, err := bs.beaconDB.State()
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
@@ -122,7 +124,7 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 	for _, vote := range beaconState.Eth1DataVotes {
 		eth1Hash := bytesutil.ToBytes32(vote.Eth1Data.BlockHash32)
 		// Verify the block from the vote's block hash exists in the eth1.0 chain and fetch its height.
-		blockExists, blockHeight, err := bs.powChainService.BlockExists(eth1Hash)
+		blockExists, blockHeight, err := bs.powChainService.BlockExists(ctx, eth1Hash)
 		if err != nil {
 			log.Debugf("Could not verify block with hash exists in Eth1 chain: %#x: %v", eth1Hash, err)
 			continue
@@ -135,7 +137,7 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 		// Fetch the height of the block pointed to by the beacon state's latest_eth1_data.block_hash
 		// in the canonical, eth1.0 chain.
 		stateLatestEth1Hash := bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockHash32)
-		_, stateLatestEth1Height, err := bs.powChainService.BlockExists(stateLatestEth1Hash)
+		_, stateLatestEth1Height, err := bs.powChainService.BlockExists(ctx, stateLatestEth1Hash)
 		if err != nil {
 			log.Debugf("Could not verify block with hash exists in Eth1 chain: %#x: %v", eth1Hash, err)
 			continue
@@ -192,12 +194,12 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 		} else if vote.VoteCount == bestVote.VoteCount {
 			bestVoteHash := bytesutil.ToBytes32(bestVote.Eth1Data.BlockHash32)
 			voteHash := bytesutil.ToBytes32(vote.Eth1Data.BlockHash32)
-			_, bestVoteHeight, err := bs.powChainService.BlockExists(bestVoteHash)
+			_, bestVoteHeight, err := bs.powChainService.BlockExists(ctx, bestVoteHash)
 			if err != nil {
 				log.Debugf("Could not fetch block height: %v", err)
 				continue
 			}
-			_, voteHeight, err := bs.powChainService.BlockExists(voteHash)
+			_, voteHeight, err := bs.powChainService.BlockExists(ctx, voteHash)
 			if err != nil {
 				log.Debugf("Could not fetch block height: %v", err)
 				continue

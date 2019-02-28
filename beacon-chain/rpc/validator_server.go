@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 )
 
 // ValidatorServer defines a server implementation of the gRPC Validator service,
@@ -21,6 +22,8 @@ type ValidatorServer struct {
 // ValidatorIndex is called by a validator to get its index location that corresponds
 // to the attestation bit fields.
 func (vs *ValidatorServer) ValidatorIndex(ctx context.Context, req *pb.ValidatorIndexRequest) (*pb.ValidatorIndexResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.rpc.validator.ValidatorIndex")
+	defer span.End()
 	index, err := vs.beaconDB.ValidatorIndex(req.PublicKey)
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator index: %v", err)
@@ -36,6 +39,8 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 	ctx context.Context,
 	req *pb.ValidatorEpochAssignmentsRequest,
 ) (*pb.ValidatorEpochAssignmentsResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.rpc.validator.ValidatorEpochAssignments")
+	defer span.End()
 	if len(req.PublicKey) != params.BeaconConfig().BLSPubkeyLength {
 		return nil, fmt.Errorf(
 			"expected public key to have length %d, received %d",
@@ -94,6 +99,8 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 
 // ValidatorCommitteeAtSlot gets the committee at a certain slot where a validator's index is contained.
 func (vs *ValidatorServer) ValidatorCommitteeAtSlot(ctx context.Context, req *pb.CommitteeRequest) (*pb.CommitteeResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.rpc.validator.ValidatorCommitteeAtSlot")
+	defer span.End()
 	beaconState, err := vs.beaconDB.State()
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
@@ -140,6 +147,8 @@ func (vs *ValidatorServer) ValidatorCommitteeAtSlot(ctx context.Context, req *pb
 func (vs *ValidatorServer) NextEpochCommitteeAssignment(
 	ctx context.Context,
 	req *pb.ValidatorIndexRequest) (*pb.CommitteeAssignmentResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.rpc.validator.NextEpochCommitteeAssignment")
+	defer span.End()
 
 	state, err := vs.beaconDB.State()
 	if err != nil {

@@ -40,9 +40,10 @@ func run(ctx context.Context, v Validator) {
 	if err := v.UpdateAssignments(ctx, params.BeaconConfig().GenesisSlot); err != nil {
 		log.WithField("error", err).Error("Failed to update assignments")
 	}
-	ctx, span := trace.StartSpan(ctx, "processSlot")
-	defer span.End()
 	for {
+		ctx, span := trace.StartSpan(ctx, "processSlot")
+		defer span.End()
+
 		select {
 		case <-ctx.Done():
 			log.Info("Context cancelled, stopping validator")
