@@ -43,7 +43,7 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 			len(req.PublicKey),
 		)
 	}
-	beaconState, err := vs.beaconDB.State()
+	beaconState, err := vs.beaconDB.State(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
@@ -94,7 +94,7 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 
 // ValidatorCommitteeAtSlot gets the committee at a certain slot where a validator's index is contained.
 func (vs *ValidatorServer) ValidatorCommitteeAtSlot(ctx context.Context, req *pb.CommitteeRequest) (*pb.CommitteeResponse, error) {
-	beaconState, err := vs.beaconDB.State()
+	beaconState, err := vs.beaconDB.State(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
@@ -141,7 +141,7 @@ func (vs *ValidatorServer) NextEpochCommitteeAssignment(
 	ctx context.Context,
 	req *pb.ValidatorIndexRequest) (*pb.CommitteeAssignmentResponse, error) {
 
-	state, err := vs.beaconDB.State()
+	state, err := vs.beaconDB.State(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}

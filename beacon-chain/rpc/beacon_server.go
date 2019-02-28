@@ -99,7 +99,7 @@ func (bs *BeaconServer) LatestAttestation(req *ptypes.Empty, stream pb.BeaconSer
 
 // ForkData fetches the current fork information from the beacon state.
 func (bs *BeaconServer) ForkData(ctx context.Context, _ *ptypes.Empty) (*pbp2p.Fork, error) {
-	state, err := bs.beaconDB.State()
+	state, err := bs.beaconDB.State(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
@@ -112,7 +112,7 @@ func (bs *BeaconServer) ForkData(ctx context.Context, _ *ptypes.Empty) (*pbp2p.F
 // The deposit root can be calculated by calling the get_deposit_root() function of
 // the deposit contract using the post-state of the block hash.
 func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1DataResponse, error) {
-	beaconState, err := bs.beaconDB.State()
+	beaconState, err := bs.beaconDB.State(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
