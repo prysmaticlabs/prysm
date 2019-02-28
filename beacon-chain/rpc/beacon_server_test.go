@@ -29,6 +29,7 @@ import (
 
 type faultyPOWChainService struct {
 	chainStartFeed *event.Feed
+	hashesByHeight map[int][]byte
 }
 
 func (f *faultyPOWChainService) HasChainStartLogOccurred() (bool, uint64, error) {
@@ -42,7 +43,11 @@ func (f *faultyPOWChainService) LatestBlockHeight() *big.Int {
 }
 
 func (f *faultyPOWChainService) BlockExists(hash common.Hash) (bool, *big.Int, error) {
-	return false, big.NewInt(1), errors.New("failed")
+	if f.hashesByHeight == nil {
+		return false, big.NewInt(1), errors.New("failed")
+	}
+
+	return true, big.NewInt(1), nil
 }
 
 func (f *faultyPOWChainService) BlockHashByHeight(height *big.Int) (common.Hash, error) {
@@ -333,10 +338,17 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	beaconServer := &BeaconServer{
-		beaconDB:        db,
-		powChainService: &faultyPOWChainService{},
+		beaconDB: db,
+		powChainService: &faultyPOWChainService{
+			hashesByHeight: make(map[int][]byte),
+		},
 	}
-	beaconState := &pbp2p.BeaconState{}
+	beaconState := &pbp2p.BeaconState{
+		LatestEth1Data: &pbp2p.Eth1Data{
+			BlockHash32: []byte{'a'},
+		},
+		Eth1DataVotes: []*pbp2p.Eth1DataVote{},
+	}
 	if err := beaconServer.beaconDB.SaveState(beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -349,17 +361,26 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 func TestEth1Data_EmptyVotesOk(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+
+	beaconState := &pbp2p.BeaconState{
+		LatestEth1Data: &pbp2p.Eth1Data{
+			BlockHash32: []byte{'a'},
+		},
+		Eth1DataVotes: []*pbp2p.Eth1DataVote{},
+	}
+
 	powChainService := &mockPOWChainService{
 		latestBlockNumber: big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)),
 		hashesByHeight: map[int][]byte{
 			0: []byte("hash0"),
+			1: beaconState.LatestEth1Data.BlockHash32,
 		},
 	}
 	beaconServer := &BeaconServer{
 		beaconDB:        db,
 		powChainService: powChainService,
 	}
-	beaconState := &pbp2p.BeaconState{}
+
 	if err := beaconServer.beaconDB.SaveState(beaconState); err != nil {
 		t.Fatal(err)
 	}
