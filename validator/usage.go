@@ -5,9 +5,9 @@ import (
 	"io"
 	"sort"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/validator/types"
 	"github.com/urfave/cli"
 )
 
@@ -43,16 +43,13 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "cmd",
 		Flags: []cli.Flag{
-			cmd.BootstrapNode,
-			cmd.RelayNode,
-			cmd.P2PPort,
-			cmd.DataDirFlag,
 			cmd.VerbosityFlag,
+			cmd.DataDirFlag,
 			cmd.EnableTracingFlag,
 			cmd.TracingEndpointFlag,
 			cmd.TraceSampleFractionFlag,
+			cmd.BootstrapNode,
 			cmd.MonitoringPortFlag,
-			cmd.DisableMonitoringFlag,
 		},
 	},
 	{
@@ -67,18 +64,12 @@ var appHelpFlagGroups = []flagGroup{
 		},
 	},
 	{
-		Name: "utils",
+		Name: "types",
 		Flags: []cli.Flag{
-			utils.DemoConfigFlag,
-			utils.DepositContractFlag,
-			utils.Web3ProviderFlag,
-			utils.RPCPort,
-			utils.CertFlag,
-			utils.KeyFlag,
-			utils.GenesisJSON,
-			utils.EnablePOWChain,
-			utils.EnableDBCleanup,
-			utils.ChainStartDelay,
+			types.DemoConfigFlag,
+			types.BeaconRPCProviderFlag,
+			types.KeystorePathFlag,
+			types.PasswordFlag,
 		},
 	},
 }
