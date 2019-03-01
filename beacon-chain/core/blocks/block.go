@@ -74,7 +74,6 @@ func BlockRoot(state *pb.BeaconState, slot uint64) ([]byte, error) {
 func ProcessBlockRoots(state *pb.BeaconState, prevBlockRoot [32]byte) *pb.BeaconState {
 	state.LatestBlockRootHash32S[(state.Slot-1)%params.BeaconConfig().LatestBlockRootsLength] = prevBlockRoot[:]
 	if state.Slot%params.BeaconConfig().LatestBlockRootsLength == 0 {
-		log.Info("Condition in process block roots filled")
 		merkleRoot := hashutil.MerkleRoot(state.LatestBlockRootHash32S)
 		state.BatchedBlockRootHash32S = append(state.BatchedBlockRootHash32S, merkleRoot)
 	}
