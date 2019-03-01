@@ -2,7 +2,10 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["service.go"],
+    srcs = [
+        "block_cache.go",
+        "service.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/powchain",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
@@ -28,7 +31,10 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["service_test.go"],
+    srcs = [
+        "block_cache_test.go",
+        "service_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",
@@ -36,7 +42,6 @@ go_test(
         "//contracts/deposit-contract:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/event:go_default_library",
-        "//shared/params:go_default_library",
         "//shared/ssz:go_default_library",
         "//shared/testutil:go_default_library",
         "//shared/trieutil:go_default_library",

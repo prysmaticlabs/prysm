@@ -11,8 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/client-go/tools/cache"
-
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -69,13 +67,6 @@ type Client interface {
 	bind.ContractCaller
 }
 
-// blockInfo specifies the block information in the ETH 1.0 chain.
-type blockInfo struct {
-	key       interface{}
-	blkNumber *big.Int
-	blkHash   common.Hash
-}
-
 // Web3Service fetches important information about the canonical
 // Ethereum ETH1.0 chain via a web3 endpoint using an ethclient. The Random
 // Beacon Chain requires synchronization with the ETH1.0 chain's current
@@ -95,7 +86,7 @@ type Web3Service struct {
 	blockFetcher            POWBlockFetcher
 	blockHeight             *big.Int    // the latest ETH1.0 chain blockHeight.
 	blockHash               common.Hash // the latest ETH1.0 chain blockHash.
-	blockCache              *cache.FIFO // cache to store block hash/block height.
+	blockCache              *blockCache // cache to store block hash/block height.
 	depositContractCaller   *contracts.DepositContractCaller
 	depositRoot             []byte
 	depositTrie             *trieutil.DepositTrie
@@ -123,7 +114,6 @@ type Web3ServiceConfig struct {
 var (
 	depositEventSignature    = []byte("Deposit(bytes32,bytes,bytes,bytes32[32])")
 	chainStartEventSignature = []byte("ChainStart(bytes32,bytes)")
-	pruneDistance            = 2 * params.BeaconConfig().Eth1FollowDistance
 )
 
 // NewWeb3Service sets up a new instance with an ethclient when
@@ -141,8 +131,6 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		return nil, fmt.Errorf("could not create deposit contract caller %v", err)
 	}
 
-	fifoQueue := cache.NewFIFO(keyFunc)
-
 	ctx, cancel := context.WithCancel(ctx)
 	return &Web3Service{
 		ctx:                     ctx,
@@ -151,7 +139,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		endpoint:                config.Endpoint,
 		blockHeight:             nil,
 		blockHash:               common.BytesToHash([]byte{}),
-		blockCache:              fifoQueue,
+		blockCache:              NewBlockCache(),
 		depositContractAddress:  config.DepositContract,
 		chainStartFeed:          new(event.Feed),
 		client:                  config.Client,
@@ -226,38 +214,48 @@ func (w *Web3Service) BlockExists(ctx context.Context, hash common.Hash) (bool, 
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockExists")
 	defer span.End()
 
-	if exists, blkInfo, err := w.checkCache(hash); exists || err != nil {
+	if exists, blkInfo, err := w.blockCache.BlockInfoByHash(hash); exists || err != nil {
 		if err != nil {
 			return false, nil, err
 		}
-		return true, blkInfo.blkNumber, nil
+		span.AddAttributes(trace.BoolAttribute("blockCacheHit", true))
+		return true, blkInfo.Number, nil
 	}
+	span.AddAttributes(trace.BoolAttribute("blockCacheHit", false))
 	block, err := w.blockFetcher.BlockByHash(ctx, hash)
 	if err != nil {
 		return false, big.NewInt(0), fmt.Errorf("could not query block with given hash: %v", err)
 	}
 
-	w.addToCache(block)
+	if err := w.blockCache.AddBlock(block); err != nil {
+		return false, big.NewInt(0), err
+	}
 
 	return true, block.Number(), nil
 }
 
 // BlockHashByHeight returns the block hash of the block at the given height.
-func (w *Web3Service) BlockHashByHeight(height *big.Int) (common.Hash, error) {
+func (w *Web3Service) BlockHashByHeight(ctx context.Context, height *big.Int) (common.Hash, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockHashByHeight")
+	defer span.End()
 
-	if exists, blkInfo, err := w.checkCache(height.Uint64()); exists || err != nil {
+	if exists, blkInfo, err := w.blockCache.BlockInfoByHeight(height); exists || err != nil {
 		if err != nil {
 			return [32]byte{}, err
 		}
-		return blkInfo.blkHash, nil
+		span.AddAttributes(trace.BoolAttribute("blockCacheHit", true))
+		return blkInfo.Hash, nil
 	}
+	span.AddAttributes(trace.BoolAttribute("blockCacheHit", false))
 
 	block, err := w.blockFetcher.BlockByNumber(w.ctx, height)
 	if err != nil {
 		return [32]byte{}, fmt.Errorf("could not query block with given height: %v", err)
 	}
 
-	w.addToCache(block)
+	if err := w.blockCache.AddBlock(block); err != nil {
+		return [32]byte{}, err
+	}
 
 	return block.Hash(), nil
 }
@@ -367,129 +365,6 @@ func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
 	w.chainStartFeed.Send(chainStartTime)
 }
 
-func keyFunc(obj interface{}) (string, error) {
-	// if object is a key, returns the string casted version
-	// of it.
-	if key, ok := obj.(uint64); ok {
-		return string(key), nil
-	}
-	if key, ok := obj.(common.Hash); ok {
-		return string(key[:]), nil
-	}
-
-	// if object is blockInfo it retrieves the key field from it
-	blkInfo, ok := obj.(*blockInfo)
-	if !ok {
-		return "", errors.New("object type is neither blockInfo,uint64 or common hash")
-	}
-
-	switch key := blkInfo.key.(type) {
-	case uint64:
-		return string(key), nil
-	case common.Hash:
-		return string(key[:]), nil
-	default:
-		return "", errors.New("key type in blockInfo is neither uint64 or common hash")
-	}
-}
-
-func (w *Web3Service) checkCache(val interface{}) (bool, *blockInfo, error) {
-
-	item, exists, err := w.blockCache.Get(val)
-	if err != nil {
-		return false, nil, err
-	}
-
-	if !exists {
-		return false, nil, nil
-	}
-
-	blockInfo, ok := item.(*blockInfo)
-	if !ok {
-		return false, nil, errors.New("retrieved object from the map is not of the correct type")
-	}
-	return true, blockInfo, nil
-}
-
-func (w *Web3Service) addToCache(blk *gethTypes.Block) error {
-	blkInfo := &blockInfo{
-		blkHash:   blk.Hash(),
-		blkNumber: blk.Number(),
-	}
-
-	blkInfo.key = blk.Hash()
-	if err := w.blockCache.AddIfNotPresent(blkInfo); err != nil {
-		return err
-	}
-	blkInfo.key = blk.Number().Uint64()
-	if err := w.blockCache.AddIfNotPresent(blkInfo); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (w *Web3Service) deleteFromCache(val interface{}) error {
-	var item interface{}
-	var exists bool
-	var err error
-	// check that the key is either a uint64 or common hash
-	if key1, ok := val.(common.Hash); ok {
-		item, exists, err = w.blockCache.Get(key1)
-		if err != nil {
-			return err
-		}
-		if !exists {
-			return nil
-		}
-	} else if key2, ok2 := val.(uint64); ok2 {
-
-		item, exists, err = w.blockCache.Get(key2)
-		if err != nil {
-			return err
-		}
-		if !exists {
-			return nil
-		}
-	} else {
-		return nil
-	}
-
-	// if the key is either a uint64 or common hash, we can now delete them.
-	blockInfo, ok := item.(*blockInfo)
-	if !ok {
-		return errors.New("retrieved object from the map is not of the correct type")
-	}
-
-	if err := w.blockCache.Delete(blockInfo.blkNumber.Uint64()); err != nil {
-		return err
-	}
-	if err := w.blockCache.Delete(blockInfo.blkHash); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (w *Web3Service) pruneCache() error {
-	// It is twice the prune distance because we save two keys for each block object
-	cacheLimit := 2 * pruneDistance
-	queueSize := len(w.blockCache.ListKeys())
-
-	// pop elements from the queue until the size of the queue is equal to the
-	// cache limit.
-	for int(cacheLimit) < queueSize {
-		_, err := w.blockCache.Pop(func(val interface{}) error {
-			log.Debugf("Removed blockInfo object from queue %v", val)
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-		queueSize--
-	}
-	return nil
-}
-
 func (w *Web3Service) runDelayTimer(done <-chan struct{}) {
 	timer := time.NewTimer(time.Duration(w.chainStartDelay) * time.Second)
 
@@ -563,13 +438,9 @@ func (w *Web3Service) run(done <-chan struct{}) {
 				"blockHash":   w.blockHash.Hex(),
 			}).Debug("Latest web3 chain event")
 
-			if err := w.addToCache(gethTypes.NewBlockWithHeader(header)); err != nil {
+			if err := w.blockCache.AddBlock(gethTypes.NewBlockWithHeader(header)); err != nil {
 				log.Errorf("Unable to add block data to cache %v", err)
 			}
-			if err := w.pruneCache(); err != nil {
-				log.Errorf("Pruning from cache not successful %v", err)
-			}
-
 		case <-ticker.C:
 			if w.lastRequestedBlock.Cmp(w.blockHeight) == 0 {
 				continue

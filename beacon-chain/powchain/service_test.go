@@ -12,8 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 
 	"github.com/ethereum/go-ethereum"
@@ -924,6 +922,7 @@ func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
+	ctx := context.Background()
 
 	block := gethTypes.NewBlock(
 		&gethTypes.Header{
@@ -935,7 +934,7 @@ func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 	)
 	wanted := block.Hash()
 
-	hash, err := web3Service.BlockHashByHeight(big.NewInt(0))
+	hash, err := web3Service.BlockHashByHeight(ctx, big.NewInt(0))
 	if err != nil {
 		t.Fatalf("Could not get block hash with given height %v", err)
 	}
@@ -990,115 +989,5 @@ func TestBlockExists_InvalidHash(t *testing.T) {
 	_, _, err = web3Service.BlockExists(context.Background(), common.BytesToHash([]byte{0}))
 	if err == nil {
 		t.Fatal("Expected BlockExists to error with invalid hash")
-	}
-}
-
-func TestBlockCache_AddToCache(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
-		Endpoint:     endpoint,
-		BlockFetcher: &goodFetcher{},
-	})
-	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
-	}
-
-	blk := gethTypes.NewBlockWithHeader(&gethTypes.Header{
-		Number: big.NewInt(40),
-	})
-
-	if err := web3Service.addToCache(blk); err != nil {
-		t.Fatalf("Unable to add to cacher %v", err)
-	}
-
-	exists, _, err := web3Service.checkCache(blk.Hash())
-	if err != nil {
-		t.Fatalf("Unable to check cache %v", err)
-	}
-	if !exists {
-		t.Fatalf("Block with hash %#x doesn't exist in cache", blk.Hash())
-	}
-
-	exists, info2, err := web3Service.checkCache(blk.Number().Uint64())
-
-	if err != nil {
-		t.Fatalf("Unable to check cache %v", err)
-	}
-	if !exists {
-		t.Fatalf("Block with number %d doesn't exist in cache", blk.Number().Uint64())
-	}
-
-	if info2.blkHash != blk.Hash() {
-		t.Errorf("block hash saved in cache is different from what is expected. Got %#x but expected %#x", info2.blkHash, blk.Hash())
-	}
-
-	if info2.blkNumber.Cmp(blk.Number()) != 0 {
-		t.Errorf("block number saved in cache is different from what is expected. Got %d but expected %d", info2.blkNumber, blk.Number())
-	}
-
-}
-
-func TestBlockCache_DeleteFromCache(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
-		Endpoint:     endpoint,
-		BlockFetcher: &goodFetcher{},
-	})
-	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
-	}
-
-	blk := gethTypes.NewBlockWithHeader(&gethTypes.Header{
-		Number: big.NewInt(40),
-	})
-
-	if err := web3Service.addToCache(blk); err != nil {
-		t.Fatalf("Unable to add to cacher %v", err)
-	}
-	if err := web3Service.deleteFromCache(blk.Hash()); err != nil {
-		t.Fatalf("Unable to delete from cache %v", err)
-	}
-
-	exists, _, err := web3Service.checkCache(blk.Number().Uint64())
-	if exists {
-		t.Errorf("Block info exists despite it being deleted from cache")
-	}
-	exists, _, err = web3Service.checkCache(blk.Hash())
-	if exists {
-		t.Errorf("Block info exists despite it being deleted from cache")
-	}
-}
-
-func TestBlockCache_PruneCache(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
-		Endpoint:     endpoint,
-		BlockFetcher: &goodFetcher{},
-	})
-	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
-	}
-
-	numOfBlocks := 3 * params.BeaconConfig().Eth1FollowDistance
-
-	for i := 1; i < int(numOfBlocks); i++ {
-		web3Service.blockHeight = big.NewInt(int64(i))
-		blk := gethTypes.NewBlockWithHeader(&gethTypes.Header{
-			Number: big.NewInt(int64(i)),
-		})
-
-		if err := web3Service.addToCache(blk); err != nil {
-			t.Errorf("Unable to add to cache")
-		}
-	}
-
-	if err := web3Service.pruneCache(); err != nil {
-		t.Errorf("Unable to prune from cache %v", err)
-	}
-
-	for i := 1; i < int(params.BeaconConfig().Eth1FollowDistance); i++ {
-		if exists, _, _ := web3Service.checkCache(uint64(i)); exists {
-			t.Errorf("Block with height %d exists despite being pruned", i)
-		}
 	}
 }
