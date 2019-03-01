@@ -202,7 +202,7 @@ func ProcessCrosslinks(
 				return nil, fmt.Errorf("could not get attesting balance for shard committee %d: %v", shard, err)
 			}
 			totalBalance := TotalBalance(state, committee)
-			if attestingBalance*3 > totalBalance*2 {
+			if attestingBalance*3 >= totalBalance*2 {
 				winningRoot, err := winningRoot(state, shard, thisEpochAttestations, prevEpochAttestations)
 				if err != nil {
 					return nil, fmt.Errorf("could not get winning root: %v", err)

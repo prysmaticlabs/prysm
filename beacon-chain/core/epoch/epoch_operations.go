@@ -237,11 +237,12 @@ func InclusionDistance(state *pb.BeaconState, validatorIndex uint64) (uint64, er
 // AttestingValidators returns the validators of the winning root.
 //
 // Spec pseudocode definition:
-//    Let `attesting_validators(shard_committee)` be equal to
-//    `attesting_validator_indices(shard_committee, winning_root(shard_committee))` for convenience
+//    Let `attesting_validators(crosslink_committee)` be equal to
+//    `attesting_validator_indices(crosslink_committee, winning_root(crosslink_committee))` for convenience
 func AttestingValidators(
 	state *pb.BeaconState,
-	shard uint64, currentEpochAttestations []*pb.PendingAttestation,
+	shard uint64,
+	currentEpochAttestations []*pb.PendingAttestation,
 	prevEpochAttestations []*pb.PendingAttestation) ([]uint64, error) {
 
 	root, err := winningRoot(
@@ -270,8 +271,8 @@ func AttestingValidators(
 // attested to the winning root.
 //
 // Spec pseudocode definition:
-//    Let total_balance(shard_committee) =
-//    sum([get_effective_balance(state, i) for i in shard_committee.committee])
+//    Let total_balance(crosslink_committee) =
+//    sum([get_effective_balance(state, i) for i in crosslink_committee.committee])
 func TotalAttestingBalance(
 	state *pb.BeaconState,
 	shard uint64,
@@ -295,9 +296,9 @@ func TotalAttestingBalance(
 // a finalized slot.
 //
 // Spec pseudocode definition:
-//    epochs_since_finality = slot_to_epoch(state.slot)  - state.finalized_epoch)
+//    epochs_since_finality = next_epoch - state.finalized_epoch
 func SinceFinality(state *pb.BeaconState) uint64 {
-	return helpers.CurrentEpoch(state) - state.FinalizedEpoch
+	return helpers.NextEpoch(state) - state.FinalizedEpoch
 }
 
 // winningRoot returns the shard block root with the most combined validator
