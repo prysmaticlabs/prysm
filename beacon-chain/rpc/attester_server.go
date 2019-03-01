@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"fmt"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
