@@ -55,7 +55,9 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 		return nil, fmt.Errorf("could not get chain head: %v", err)
 	}
 	headRoot := bytesutil.ToBytes32(head.ParentRootHash32)
-	beaconState, err = state.ExecuteStateTransition(beaconState, nil, headRoot, false)
+	beaconState, err = state.ExecuteStateTransition(
+		beaconState, nil /* block */, headRoot, false /* verify signatures */,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("could not execute head transition: %v", err)
 	}
@@ -111,13 +113,14 @@ func (vs *ValidatorServer) ValidatorCommitteeAtSlot(ctx context.Context, req *pb
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
 	if req.Slot%params.BeaconConfig().SlotsPerEpoch == 0 {
-		log.Info("Committee at slot is at epoch start")
 		head, err := vs.beaconDB.ChainHead()
 		if err != nil {
 			return nil, fmt.Errorf("could not get chain head: %v", err)
 		}
 		headRoot := bytesutil.ToBytes32(head.ParentRootHash32)
-		beaconState, err = state.ExecuteStateTransition(beaconState, nil, headRoot, false)
+		beaconState, err = state.ExecuteStateTransition(
+			beaconState, nil /* block */ , headRoot, false /* verify signatures */,
+		)
 		if err != nil {
 			return nil, fmt.Errorf("could not execute head transition: %v", err)
 		}
