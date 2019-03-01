@@ -70,42 +70,39 @@ func TestValidatorEpochAssignments_CorrectAssignmentsAtEpochBoundary(t *testing.
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
 
-	lastSlotInEpoch0 := params.BeaconConfig().GenesisSlot+(params.BeaconConfig().SlotsPerEpoch)-1
-	for beaconState.Slot < lastSlotInEpoch0-1 {
-		beaconState, err = state.ExecuteStateTransition(
-			beaconState,
-			nil,
-            genesisRoot,
-			true, /* sig verify */
-		)
-		if err != nil {
-            t.Fatalf("could not execute state transition")
-		}
-	}
-	beaconState.CurrentShufflingSeedHash32 = []byte("random seed")
-	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
-		t.Fatalf("Could not save state: %v", err)
-	}
-
 	validatorServer := &ValidatorServer{
 		beaconDB: db,
 	}
 	req := &pb.ValidatorEpochAssignmentsRequest{
-		EpochStart: lastSlotInEpoch0,
+		EpochStart: params.BeaconConfig().GenesisSlot,
 		PublicKey:  pubKey[:],
 	}
 	assignmentsForEpoch0, err := validatorServer.ValidatorEpochAssignments(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Could not fetch assignments for epoch 1: %v", err)
 	}
-	fmt.Println("FIRST CALL")
 
-	firstSlotForEpoch1 := lastSlotInEpoch0+1
+	lastSlotInEpoch0 := params.BeaconConfig().GenesisSlot + (params.BeaconConfig().SlotsPerEpoch) - 1
+	for beaconState.Slot < lastSlotInEpoch0 {
+		beaconState, err = state.ExecuteStateTransition(
+			beaconState,
+			nil,
+			genesisRoot,
+			true, /* sig verify */
+		)
+		if err != nil {
+			t.Fatalf("could not execute state transition")
+		}
+	}
+	beaconState.CurrentShufflingSeedHash32 = []byte("random seed")
+	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
+		t.Fatalf("Could not save state: %v", err)
+	}
+	firstSlotForEpoch1 := lastSlotInEpoch0 + 1
 	req2 := &pb.ValidatorEpochAssignmentsRequest{
 		EpochStart: firstSlotForEpoch1,
 		PublicKey:  pubKey[:],
 	}
-	fmt.Println("FIRST CALL")
 	assignmentsForEpoch2, err := validatorServer.ValidatorEpochAssignments(context.Background(), req2)
 	if err != nil {
 		t.Fatalf("Could not fetch assignments for epoch 2: %v", err)

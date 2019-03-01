@@ -208,7 +208,6 @@ func CrosslinkCommitteesAtSlot(
 		seed = bytesutil.ToBytes32(state.CurrentShufflingSeedHash32)
 		shufflingEpoch = state.CurrentShufflingEpoch
 		shufflingStartShard = state.CurrentShufflingStartShard
-		fmt.Printf("Shuffling seed %#x\n", seed)
 	} else if wantedEpoch == prevEpoch {
 		committeesPerEpoch = PrevEpochCommitteeCount(state)
 		seed = bytesutil.ToBytes32(state.PreviousShufflingSeedHash32)
