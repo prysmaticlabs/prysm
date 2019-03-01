@@ -66,12 +66,10 @@ func EntryExitEffectEpoch(epoch uint64) uint64 {
 //    first_committee, _ = get_crosslink_committees_at_slot(state, slot)[0]
 //    return first_committee[slot % len(first_committee)]
 func BeaconProposerIndex(state *pb.BeaconState, slot uint64) (uint64, error) {
-	var registryChanged bool
-	if state.ValidatorRegistryUpdateEpoch == SlotToEpoch(slot)-1 &&
-		state.ValidatorRegistryUpdateEpoch != params.BeaconConfig().GenesisEpoch {
-		registryChanged = true
-	}
-	committeeArray, err := CrosslinkCommitteesAtSlot(state, slot, registryChanged)
+	// RegistryChange is false because BeaconProposerIndex is only written
+	// to be able to get proposers from current and previous epoch following
+	// ETH2.0 beacon chain spec.
+	committeeArray, err := CrosslinkCommitteesAtSlot(state, slot, false /* registryChange */)
 	if err != nil {
 		return 0, err
 	}

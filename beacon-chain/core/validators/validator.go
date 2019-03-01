@@ -420,7 +420,7 @@ func allValidatorsIndices(state *pb.BeaconState) []uint64 {
 // in and out of the validator pool.
 // Spec pseudocode definition:
 //     max_balance_churn = max(
-//        MAX_DEPOSIT * GWEI_PER_ETH,
+//        MAX_DEPOSIT_AMOUNT,
 //        total_balance // (2 * MAX_BALANCE_CHURN_QUOTIENT))
 func maxBalanceChurn(totalBalance uint64) uint64 {
 	maxBalanceChurn := totalBalance / 2 * params.BeaconConfig().MaxBalanceChurnQuotient
