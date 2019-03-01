@@ -3,7 +3,6 @@
 package helpers
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
 
@@ -302,14 +301,10 @@ func Shuffling(
 	activeCount := uint64(len(activeIndices))
 	committeesPerEpoch := EpochCommitteeCount(activeCount)
 
-	// Convert slot to bytes and xor it with seed.
-	slotInBytes := make([]byte, 32)
-	binary.LittleEndian.PutUint64(slotInBytes, slot)
-	seed = bytesutil.ToBytes32(bytesutil.Xor(seed[:], slotInBytes))
 	shuffledIndices := make([]uint64, 0, activeCount)
 
-	for i := range activeIndices {
-		id, err := utils.PermutedIndex(uint64(i), activeCount, seed)
+	for _, v := range activeIndices {
+		id, err := utils.PermutedIndex(uint64(v), activeCount, seed)
 		if err != nil {
 			return nil, err
 		}

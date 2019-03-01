@@ -2,15 +2,16 @@
 package utils
 
 import (
-	"encoding/binary"
 	"errors"
+
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 )
 
-// Permuted Index returns pseudo random permutation of the active index with p as entropy.
+// Permuted Index returns pseudo random permutation of the active index.
 func PermutedIndex(index uint64, listSize uint64, seed common.Hash) (uint64, error) {
 	if index >= listSize {
 		err := errors.New("index is greater or equal than listSize")
@@ -22,26 +23,19 @@ func PermutedIndex(index uint64, listSize uint64, seed common.Hash) (uint64, err
 		return 0, err
 	}
 
-	bs4 := make([]byte, 4)
-	bs2 := make([]byte, 2)
+	for round := 0; round < 1; round++ {
 
-	for round := 0; round < 90; round++ {
-		binary.LittleEndian.PutUint16(bs2[:], uint16(round))
-		bs1 := bs2[:1]
-		hashedValue := hashutil.Hash(append(seed[:], bs1...))
-		hashedValue8 := hashedValue[:8]
-		pivot := binary.LittleEndian.Uint64(hashedValue8[:]) % listSize
-		flip := (pivot - index) % listSize
+		hashedValue := hashutil.Hash(append(seed[:], bytesutil.Bytes1(uint64(round))...))
+		pivot := bytesutil.FromBytes8(hashedValue[:8]) % listSize
+		flip := (pivot + (listSize - index)) % listSize
 		position := index
-		if flip > position {
+		if flip > index {
 			position = flip
 		}
-		positionVal := uint32(position / 256)
-		binary.LittleEndian.PutUint32(bs4[:], positionVal)
-		bs := append(bs1, bs4...)
-		source := hashutil.Hash(append(seed[:], bs...))
-		positionIndex := mathutil.CeilDiv8(int(position) % 256)
-		byteV := source[positionIndex]
+		valuesToBeHashed := append(seed[:], bytesutil.Bytes1(uint64(round))...)
+		valuesToBeHashed = append(valuesToBeHashed, bytesutil.Bytes4(position/256)...)
+		source := hashutil.Hash(valuesToBeHashed)
+		byteV := source[(int(position)%256)/8]
 		bitV := (byteV >> (position % 8)) % 2
 		if bitV == 1 {
 			index = flip

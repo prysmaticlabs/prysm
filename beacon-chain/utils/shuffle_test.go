@@ -26,7 +26,6 @@ func TestPermutedIndex(t *testing.T) {
 			t.Errorf("Shuffle failed with: %v", err)
 		}
 		list1[i] = indice
-		t.Log(list1)
 	}
 
 	for i, v := range list2 {
@@ -40,10 +39,10 @@ func TestPermutedIndex(t *testing.T) {
 	if reflect.DeepEqual(list1, list2) {
 		t.Errorf("2 shuffled lists shouldn't be equal list1: %v , list2: %v", list1, list2)
 	}
-	if !reflect.DeepEqual(list1, []uint64{8, 6, 8, 8, 8, 8, 8, 6, 8, 6}) {
+	if !reflect.DeepEqual(list1, []uint64{6, 3, 2, 5, 8, 0, 4, 7, 1, 9}) {
 		t.Errorf("list 1 was incorrectly shuffled")
 	}
-	if !reflect.DeepEqual(list2, []uint64{4, 4, 4, 4, 4, 4, 4, 4, 4, 4}) {
+	if !reflect.DeepEqual(list2, []uint64{6, 2, 0, 9, 4, 1, 8, 5, 3, 7}) {
 		t.Errorf("list 2 was incorrectly shuffled")
 	}
 
