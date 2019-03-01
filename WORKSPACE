@@ -1026,3 +1026,9 @@ go_repository(
     commit = "afaefda3ea643e9292b6f4596403ed5c742561b4",
     importpath = "github.com/phoreproject/bls",
 )
+
+go_repository(
+    name = "com_github_multiformats_go_base32",
+    commit = "a9c2755c3d1672dbe6a7e4a5d182169fa30b6a8e",
+    importpath = "github.com/multiformats/go-base32",
+)
