@@ -86,6 +86,7 @@ type Web3Service struct {
 	blockFetcher            POWBlockFetcher
 	blockHeight             *big.Int    // the latest ETH1.0 chain blockHeight.
 	blockHash               common.Hash // the latest ETH1.0 chain blockHash.
+	blockCache              *blockCache // cache to store block hash/block height.
 	depositContractCaller   *contracts.DepositContractCaller
 	depositRoot             []byte
 	depositTrie             *trieutil.DepositTrie
@@ -138,6 +139,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		endpoint:                config.Endpoint,
 		blockHeight:             nil,
 		blockHash:               common.BytesToHash([]byte{}),
+		blockCache:              newBlockCache(),
 		depositContractAddress:  config.DepositContract,
 		chainStartFeed:          new(event.Feed),
 		client:                  config.Client,
@@ -211,19 +213,48 @@ func (w *Web3Service) LatestBlockHash() common.Hash {
 func (w *Web3Service) BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockExists")
 	defer span.End()
+
+	if exists, blkInfo, err := w.blockCache.BlockInfoByHash(hash); exists || err != nil {
+		if err != nil {
+			return false, nil, err
+		}
+		span.AddAttributes(trace.BoolAttribute("blockCacheHit", true))
+		return true, blkInfo.Number, nil
+	}
+	span.AddAttributes(trace.BoolAttribute("blockCacheHit", false))
 	block, err := w.blockFetcher.BlockByHash(ctx, hash)
 	if err != nil {
 		return false, big.NewInt(0), fmt.Errorf("could not query block with given hash: %v", err)
+	}
+
+	if err := w.blockCache.AddBlock(block); err != nil {
+		return false, big.NewInt(0), err
 	}
 
 	return true, block.Number(), nil
 }
 
 // BlockHashByHeight returns the block hash of the block at the given height.
-func (w *Web3Service) BlockHashByHeight(height *big.Int) (common.Hash, error) {
+func (w *Web3Service) BlockHashByHeight(ctx context.Context, height *big.Int) (common.Hash, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockHashByHeight")
+	defer span.End()
+
+	if exists, blkInfo, err := w.blockCache.BlockInfoByHeight(height); exists || err != nil {
+		if err != nil {
+			return [32]byte{}, err
+		}
+		span.AddAttributes(trace.BoolAttribute("blockCacheHit", true))
+		return blkInfo.Hash, nil
+	}
+	span.AddAttributes(trace.BoolAttribute("blockCacheHit", false))
+
 	block, err := w.blockFetcher.BlockByNumber(w.ctx, height)
 	if err != nil {
 		return [32]byte{}, fmt.Errorf("could not query block with given height: %v", err)
+	}
+
+	if err := w.blockCache.AddBlock(block); err != nil {
+		return [32]byte{}, err
 	}
 
 	return block.Hash(), nil
@@ -406,6 +437,10 @@ func (w *Web3Service) run(done <-chan struct{}) {
 				"blockNumber": w.blockHeight,
 				"blockHash":   w.blockHash.Hex(),
 			}).Debug("Latest web3 chain event")
+
+			if err := w.blockCache.AddBlock(gethTypes.NewBlockWithHeader(header)); err != nil {
+				log.Errorf("Unable to add block data to cache %v", err)
+			}
 		case <-ticker.C:
 			if w.lastRequestedBlock.Cmp(w.blockHeight) == 0 {
 				continue
