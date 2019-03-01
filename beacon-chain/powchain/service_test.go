@@ -993,43 +993,6 @@ func TestBlockExists_InvalidHash(t *testing.T) {
 	}
 }
 
-func TestBlockCache_OK(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
-		Endpoint:     endpoint,
-		BlockFetcher: &goodFetcher{},
-	})
-	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
-	}
-
-	blk := gethTypes.NewBlockWithHeader(&gethTypes.Header{
-		Number: big.NewInt(20),
-	})
-
-	blkInfo := &blockInfo{
-		blkNumber: blk.Number(),
-		blkHash:   blk.Hash(),
-	}
-
-	web3Service.blockCache[blk.Number().Uint64()] = blkInfo
-	web3Service.blockCache[blk.Hash()] = blkInfo
-
-	exists, info := web3Service.checkCache(blk.Number().Uint64())
-	if !exists {
-		t.Fatalf("Block with number %d doesn't exist in cache", blk.Number().Uint64())
-	}
-
-	if info.blkHash != blkInfo.blkHash {
-		t.Errorf("block hash saved in cache is different from what is expected. Got %#x but expected %#x", info.blkHash, blkInfo.blkHash)
-	}
-
-	if info.blkNumber.Cmp(blkInfo.blkNumber) != 0 {
-		t.Errorf("block number saved in cache is different from what is expected. Got %d but expected %d", info.blkNumber, blkInfo.blkNumber)
-	}
-
-}
-
 func TestBlockCache_AddToCache(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
@@ -1044,14 +1007,23 @@ func TestBlockCache_AddToCache(t *testing.T) {
 		Number: big.NewInt(40),
 	})
 
-	web3Service.addToCache(blk)
+	if err := web3Service.addToCache(blk); err != nil {
+		t.Fatalf("Unable to add to cacher %v", err)
+	}
 
-	exists, _ := web3Service.checkCache(blk.Hash())
+	exists, _, err := web3Service.checkCache(blk.Hash())
+	if err != nil {
+		t.Fatalf("Unable to check cache %v", err)
+	}
 	if !exists {
 		t.Fatalf("Block with hash %#x doesn't exist in cache", blk.Hash())
 	}
 
-	exists, info2 := web3Service.checkCache(blk.Number().Uint64())
+	exists, info2, err := web3Service.checkCache(blk.Number().Uint64())
+
+	if err != nil {
+		t.Fatalf("Unable to check cache %v", err)
+	}
 	if !exists {
 		t.Fatalf("Block with number %d doesn't exist in cache", blk.Number().Uint64())
 	}
@@ -1080,14 +1052,18 @@ func TestBlockCache_DeleteFromCache(t *testing.T) {
 		Number: big.NewInt(40),
 	})
 
-	web3Service.addToCache(blk)
-	web3Service.deleteFromCache(blk.Hash())
+	if err := web3Service.addToCache(blk); err != nil {
+		t.Fatalf("Unable to add to cacher %v", err)
+	}
+	if err := web3Service.deleteFromCache(blk.Hash()); err != nil {
+		t.Fatalf("Unable to delete from cache %v", err)
+	}
 
-	exists, _ := web3Service.checkCache(blk.Number().Uint64())
+	exists, _, err := web3Service.checkCache(blk.Number().Uint64())
 	if exists {
 		t.Errorf("Block info exists despite it being deleted from cache")
 	}
-	exists, _ = web3Service.checkCache(blk.Hash())
+	exists, _, err = web3Service.checkCache(blk.Hash())
 	if exists {
 		t.Errorf("Block info exists despite it being deleted from cache")
 	}
@@ -1111,12 +1087,17 @@ func TestBlockCache_PruneCache(t *testing.T) {
 			Number: big.NewInt(int64(i)),
 		})
 
-		web3Service.addToCache(blk)
-		web3Service.pruneCache()
+		if err := web3Service.addToCache(blk); err != nil {
+			t.Errorf("Unable to add to cache")
+		}
+	}
+
+	if err := web3Service.pruneCache(); err != nil {
+		t.Errorf("Unable to prune from cache %v", err)
 	}
 
 	for i := 1; i < int(params.BeaconConfig().Eth1FollowDistance); i++ {
-		if exists, _ := web3Service.checkCache(uint64(i)); exists {
+		if exists, _, _ := web3Service.checkCache(uint64(i)); exists {
 			t.Errorf("Block with height %d exists despite being pruned", i)
 		}
 	}

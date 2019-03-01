@@ -123,7 +123,7 @@ type Web3ServiceConfig struct {
 var (
 	depositEventSignature    = []byte("Deposit(bytes32,bytes,bytes,bytes32[32])")
 	chainStartEventSignature = []byte("ChainStart(bytes32,bytes)")
-	pruneDistance            = params.BeaconConfig().Eth1FollowDistance
+	pruneDistance            = 2 * params.BeaconConfig().Eth1FollowDistance
 )
 
 // NewWeb3Service sets up a new instance with an ethclient when
@@ -429,28 +429,44 @@ func (w *Web3Service) addToCache(blk *gethTypes.Block) error {
 }
 
 func (w *Web3Service) deleteFromCache(val interface{}) error {
+	var item interface{}
+	var exists bool
+	var err error
 	// check that the key is either a uint64 or common hash
-	_, ok := val.(common.Hash)
-	if key1, ok2 := val.(uint64); ok2 || ok {
-		item, exists, err := w.blockCache.Get(key1)
+	if key1, ok := val.(common.Hash); ok {
+		item, exists, err = w.blockCache.Get(key1)
 		if err != nil {
 			return err
 		}
 		if !exists {
 			return nil
 		}
-		blockInfo, ok := item.(*blockInfo)
-		if !ok {
-			return errors.New("retrieved object from the map is not of the correct type")
-		}
+	} else if key2, ok2 := val.(uint64); ok2 {
 
-		if err := w.blockCache.Delete(blockInfo.blkNumber.Uint64()); err != nil {
+		item, exists, err = w.blockCache.Get(key2)
+		if err != nil {
 			return err
 		}
-		if err := w.blockCache.Delete(blockInfo.blkHash); err != nil {
-			return err
+		if !exists {
+			return nil
 		}
+	} else {
+		return nil
 	}
+
+	// if the key is either a uint64 or common hash, we can now delete them.
+	blockInfo, ok := item.(*blockInfo)
+	if !ok {
+		return errors.New("retrieved object from the map is not of the correct type")
+	}
+
+	if err := w.blockCache.Delete(blockInfo.blkNumber.Uint64()); err != nil {
+		return err
+	}
+	if err := w.blockCache.Delete(blockInfo.blkHash); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -466,11 +482,9 @@ func (w *Web3Service) pruneCache() error {
 			log.Debugf("Removed blockInfo object from queue %v", val)
 			return nil
 		})
-
 		if err != nil {
 			return err
 		}
-
 		queueSize--
 	}
 	return nil
