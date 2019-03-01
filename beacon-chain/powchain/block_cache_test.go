@@ -24,8 +24,8 @@ func TestHashKeyFn_OK(t *testing.T) {
 
 func TestHashKeyFn_InvalidObj(t *testing.T) {
 	_, err := hashKeyFn("bad")
-	if err != NotABlockInfoErr {
-		t.Errorf("Expected error %v, got %v", NotABlockInfoErr, err)
+	if err != ErrNotABlockInfo {
+		t.Errorf("Expected error %v, got %v", ErrNotABlockInfo, err)
 	}
 }
 
@@ -45,13 +45,13 @@ func TestHeightKeyFn_OK(t *testing.T) {
 
 func TestHeightKeyFn_InvalidObj(t *testing.T) {
 	_, err := heightKeyFn("bad")
-	if err != NotABlockInfoErr {
-		t.Errorf("Expected error %v, got %v", NotABlockInfoErr, err)
+	if err != ErrNotABlockInfo {
+		t.Errorf("Expected error %v, got %v", ErrNotABlockInfo, err)
 	}
 }
 
 func TestBlockCache_byHash(t *testing.T) {
-	cache := NewBlockCache()
+	cache := newBlockCache()
 
 	header := &gethTypes.Header{
 		ParentHash: common.HexToHash("0x12345"),
@@ -94,7 +94,7 @@ func TestBlockCache_byHash(t *testing.T) {
 }
 
 func TestBlockCache_byHeight(t *testing.T) {
-	cache := NewBlockCache()
+	cache := newBlockCache()
 
 	header := &gethTypes.Header{
 		ParentHash: common.HexToHash("0x12345"),
@@ -137,7 +137,7 @@ func TestBlockCache_byHeight(t *testing.T) {
 }
 
 func TestBlockCache_maxSize(t *testing.T) {
-	cache := NewBlockCache()
+	cache := newBlockCache()
 
 	for i := int64(0); i < int64(maxCacheSize+10); i++ {
 		header := &gethTypes.Header{

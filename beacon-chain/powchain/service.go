@@ -139,7 +139,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		endpoint:                config.Endpoint,
 		blockHeight:             nil,
 		blockHash:               common.BytesToHash([]byte{}),
-		blockCache:              NewBlockCache(),
+		blockCache:              newBlockCache(),
 		depositContractAddress:  config.DepositContract,
 		chainStartFeed:          new(event.Feed),
 		client:                  config.Client,

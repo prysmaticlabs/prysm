@@ -14,9 +14,9 @@ import (
 )
 
 var (
-	// NotABlockInfoErr will be returned when a cache object is not a pointer to
+	// ErrNotABlockInfo will be returned when a cache object is not a pointer to
 	// a blockInfo struct.
-	NotABlockInfoErr = errors.New("object is not a block info")
+	ErrNotABlockInfo = errors.New("object is not a block info")
 
 	// maxCacheSize is 2x of the follow distance for additional cache padding.
 	// Requests should be only accessing blocks within recent blocks within the
@@ -48,7 +48,7 @@ type blockInfo struct {
 func hashKeyFn(obj interface{}) (string, error) {
 	bInfo, ok := obj.(*blockInfo)
 	if !ok {
-		return "", NotABlockInfoErr
+		return "", ErrNotABlockInfo
 	}
 
 	return bInfo.Hash.Hex(), nil
@@ -59,7 +59,7 @@ func hashKeyFn(obj interface{}) (string, error) {
 func heightKeyFn(obj interface{}) (string, error) {
 	bInfo, ok := obj.(*blockInfo)
 	if !ok {
-		return "", NotABlockInfoErr
+		return "", ErrNotABlockInfo
 	}
 
 	return bInfo.Number.String(), nil
@@ -72,9 +72,9 @@ type blockCache struct {
 	lock        sync.RWMutex
 }
 
-// NewBlockCache creates a new block cache for storing/accessing blockInfo from
+// newBlockCache creates a new block cache for storing/accessing blockInfo from
 // memory.
-func NewBlockCache() *blockCache {
+func newBlockCache() *blockCache {
 	return &blockCache{
 		hashCache:   cache.NewFIFO(hashKeyFn),
 		heightCache: cache.NewFIFO(heightKeyFn),
@@ -101,7 +101,7 @@ func (b *blockCache) BlockInfoByHash(hash common.Hash) (bool, *blockInfo, error)
 
 	bInfo, ok := obj.(*blockInfo)
 	if !ok {
-		return false, nil, NotABlockInfoErr
+		return false, nil, ErrNotABlockInfo
 	}
 
 	return true, bInfo, nil
@@ -127,7 +127,7 @@ func (b *blockCache) BlockInfoByHeight(height *big.Int) (bool, *blockInfo, error
 
 	bInfo, ok := obj.(*blockInfo)
 	if !ok {
-		return false, nil, NotABlockInfoErr
+		return false, nil, ErrNotABlockInfo
 	}
 
 	return exists, bInfo, nil
