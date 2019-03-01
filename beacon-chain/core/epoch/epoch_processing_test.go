@@ -102,7 +102,8 @@ func TestCanProcessEth1Data_TrueOnVotingPeriods(t *testing.T) {
 }
 
 func TestProcessEth1Data_UpdatesStateAndCleans(t *testing.T) {
-	requiredVoteCount := params.BeaconConfig().EpochsPerEth1VotingPeriod
+	requiredVoteCount := params.BeaconConfig().EpochsPerEth1VotingPeriod *
+		params.BeaconConfig().SlotsPerEpoch
 	state := &pb.BeaconState{
 		Slot: 15 * params.BeaconConfig().SlotsPerEpoch,
 		LatestEth1Data: &pb.Eth1Data{
