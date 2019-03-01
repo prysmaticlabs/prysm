@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -46,6 +49,17 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 	beaconState, err := vs.beaconDB.State(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
+	}
+	head, err := vs.beaconDB.ChainHead()
+	if err != nil {
+		return nil, fmt.Errorf("could not get chain head: %v", err)
+	}
+	headRoot := bytesutil.ToBytes32(head.ParentRootHash32)
+	beaconState, err = state.ExecuteStateTransition(
+		beaconState, nil /* block */, headRoot, false, /* verify signatures */
+	)
+	if err != nil {
+		return nil, fmt.Errorf("could not execute head transition: %v", err)
 	}
 	validatorIndex, err := vs.beaconDB.ValidatorIndex(req.PublicKey)
 	if err != nil {
@@ -98,6 +112,19 @@ func (vs *ValidatorServer) ValidatorCommitteeAtSlot(ctx context.Context, req *pb
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
+	if req.Slot%params.BeaconConfig().SlotsPerEpoch == 0 {
+		head, err := vs.beaconDB.ChainHead()
+		if err != nil {
+			return nil, fmt.Errorf("could not get chain head: %v", err)
+		}
+		headRoot := bytesutil.ToBytes32(head.ParentRootHash32)
+		beaconState, err = state.ExecuteStateTransition(
+			beaconState, nil /* block */, headRoot, false, /* verify signatures */
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could not execute head transition: %v", err)
+		}
+	}
 	var registryChanged bool
 	if beaconState.ValidatorRegistryUpdateEpoch == helpers.SlotToEpoch(req.Slot)-1 &&
 		beaconState.ValidatorRegistryUpdateEpoch != params.BeaconConfig().GenesisEpoch {
@@ -141,7 +168,7 @@ func (vs *ValidatorServer) CommitteeAssignment(
 	ctx context.Context,
 	req *pb.ValidatorEpochAssignmentsRequest) (*pb.CommitteeAssignmentResponse, error) {
 
-	state, err := vs.beaconDB.State(ctx)
+	beaconState, err := vs.beaconDB.State(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
@@ -151,7 +178,7 @@ func (vs *ValidatorServer) CommitteeAssignment(
 	}
 
 	committee, shard, slot, isProposer, err :=
-		helpers.CommitteeAssignment(state, req.EpochStart, uint64(idx), false)
+		helpers.CommitteeAssignment(beaconState, req.EpochStart, uint64(idx), false)
 	if err != nil {
 		return nil, fmt.Errorf("could not get next epoch committee assignment: %v", err)
 	}
