@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestShuffleIndices(t *testing.T) {
+func TestPermutedIndex(t *testing.T) {
 	hash1 := common.BytesToHash([]byte{'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g'})
 	hash2 := common.BytesToHash([]byte{'1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7'})
 	var list1 []uint64
@@ -20,19 +20,25 @@ func TestShuffleIndices(t *testing.T) {
 	list2 := make([]uint64, len(list1))
 	copy(list2, list1)
 
-	list1, err := ShuffleIndices(hash1, list1)
-	if err != nil {
-		t.Errorf("Shuffle failed with: %v", err)
-	} 
+	for i, v := range list1 {
+		indice, err := PermutedIndex(v, uint64(len(list1)), hash1)
+		if err != nil {
+			t.Errorf("Shuffle failed with: %v", err)
+		}
+		list1[i] = indice
+		t.Log(list1)
+	}
 
-	list2, err = ShuffleIndices(hash2, list2)
-	if err != nil {
-		t.Errorf("Shuffle failed with: %v", err)
-	} 
-	
+	for i, v := range list2 {
+		indice, err := PermutedIndex(v, uint64(len(list2)), hash2)
+		if err != nil {
+			t.Errorf("Shuffle failed with: %v", err)
+		}
+		list2[i] = indice
+	}
 
 	if reflect.DeepEqual(list1, list2) {
-		t.Errorf("2 shuffled lists shouldn't be equal")
+		t.Errorf("2 shuffled lists shouldn't be equal list1: %v , list2: %v", list1, list2)
 	}
 	if !reflect.DeepEqual(list1, []uint64{8, 6, 8, 8, 8, 8, 8, 6, 8, 6}) {
 		t.Errorf("list 1 was incorrectly shuffled")

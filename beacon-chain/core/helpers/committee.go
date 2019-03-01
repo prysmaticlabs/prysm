@@ -306,10 +306,15 @@ func Shuffling(
 	slotInBytes := make([]byte, 32)
 	binary.LittleEndian.PutUint64(slotInBytes, slot)
 	seed = bytesutil.ToBytes32(bytesutil.Xor(seed[:], slotInBytes))
+	shuffledIndices := make([]uint64, 0, activeCount)
 
-	shuffledIndices, err := utils.ShuffleIndices(seed, activeIndices)
-	if err != nil {
-		return nil, err
+	for i := range activeIndices {
+		id, err := utils.PermutedIndex(uint64(i), activeCount, seed)
+		if err != nil {
+			return nil, err
+		}
+
+		shuffledIndices = append(shuffledIndices, id)
 	}
 
 	// Split the shuffled list into epoch_length * committees_per_slot pieces.

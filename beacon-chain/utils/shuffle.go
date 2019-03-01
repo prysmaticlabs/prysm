@@ -10,7 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 )
 
-func GetPermutedIndex(index uint64, listSize uint64, seed common.Hash) (uint64, error) {
+// Permuted Index returns pseudo random permutation of the active index with p as entropy.
+func PermutedIndex(index uint64, listSize uint64, seed common.Hash) (uint64, error) {
 	if index >= listSize {
 		err := errors.New("index is greater or equal than listSize")
 		return 0, err
@@ -35,7 +36,7 @@ func GetPermutedIndex(index uint64, listSize uint64, seed common.Hash) (uint64, 
 		if flip > position {
 			position = flip
 		}
-		positionVal := uint32(position/256)
+		positionVal := uint32(position / 256)
 		binary.LittleEndian.PutUint32(bs4[:], positionVal)
 		bs := append(bs1, bs4...)
 		source := hashutil.Hash(append(seed[:], bs...))
@@ -47,20 +48,6 @@ func GetPermutedIndex(index uint64, listSize uint64, seed common.Hash) (uint64, 
 		}
 	}
 	return index, nil
-}
-
-// ShuffleIndices returns a list of pseudorandomly sampled
-// indices. This is used to shuffle validators on ETH2.0 beacon chain.
-func ShuffleIndices(seed common.Hash, indicesList []uint64) ([]uint64, error) {
-	var permutedIndicesList []uint64
-	for _, index := range indicesList {
-		permutedIndex, err := GetPermutedIndex(index, uint64(len(indicesList)), seed)
-		if err != nil {
-			return nil,err
-		}
-		permutedIndicesList = append(permutedIndicesList, permutedIndex)
-	}
-	return permutedIndicesList, nil
 }
 
 // SplitIndices splits a list into n pieces.
