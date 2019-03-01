@@ -55,33 +55,12 @@ func main() {
 	customFormatter.FullTimestamp = true
 	logrus.SetFormatter(customFormatter)
 	log := logrus.WithField("prefix", "main")
-
-	cli.AppHelpTemplate = `NAME:
-   {{.Name}} - {{.Usage}}
-USAGE:
-   {{.HelpName}} {{if .VisibleFlags}}[global options]{{end}}
-   {{if len .Authors}}
-AUTHOR:
-   {{range .Authors}}{{ . }}{{end}}
-   {{end}}{{if .Commands}}
-GLOBAL OPTIONS:
-   {{range .VisibleFlags}}{{.}}
-   {{end}}{{end}}{{if .Copyright }}
-COPYRIGHT:
-   {{.Copyright}}
-   {{end}}{{if .Version}}
-VERSION:
-   {{.Version}}
-   {{end}}
-`
-
 	app := cli.NewApp()
 	app.Name = "validator"
 	app.Usage = `launches an Ethereum Serenity validator client that interacts with a beacon chain, 
 				 starts proposer services, shardp2p connections, and more`
 	app.Version = version.GetVersion()
 	app.Action = startNode
-
 	app.Commands = []cli.Command{
 		{
 			Name:     "accounts",
@@ -102,7 +81,6 @@ contract in order to activate the validator client`,
 			},
 		},
 	}
-
 	app.Flags = []cli.Flag{
 		types.DemoConfigFlag,
 		types.BeaconRPCProviderFlag,

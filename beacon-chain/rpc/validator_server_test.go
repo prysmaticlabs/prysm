@@ -10,12 +10,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -37,6 +39,76 @@ func TestValidatorIndex_OK(t *testing.T) {
 	}
 	if _, err := validatorServer.ValidatorIndex(context.Background(), req); err != nil {
 		t.Errorf("Could not get validator index: %v", err)
+	}
+}
+
+func TestValidatorEpochAssignments_CorrectAssignmentsAtEpochBoundary(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	genesis := b.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+	genesisRoot, err := hashutil.HashBeaconBlock(genesis)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var pubKey [96]byte
+	copy(pubKey[:], []byte("0"))
+	if err := db.SaveValidatorIndex(pubKey[:], 0); err != nil {
+		t.Fatalf("Could not save validator index: %v", err)
+	}
+
+	beaconState, err := genesisState(1000)
+	if err != nil {
+		t.Fatalf("Could not setup genesis state: %v", err)
+	}
+
+	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+
+	validatorServer := &ValidatorServer{
+		beaconDB: db,
+	}
+	req := &pb.ValidatorEpochAssignmentsRequest{
+		EpochStart: params.BeaconConfig().GenesisSlot,
+		PublicKey:  pubKey[:],
+	}
+	assignmentsForEpoch0, err := validatorServer.ValidatorEpochAssignments(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Could not fetch assignments for epoch 1: %v", err)
+	}
+
+	lastSlotInEpoch0 := params.BeaconConfig().GenesisSlot + (params.BeaconConfig().SlotsPerEpoch) - 1
+	for beaconState.Slot < lastSlotInEpoch0 {
+		beaconState, err = state.ExecuteStateTransition(
+			beaconState,
+			nil,
+			genesisRoot,
+			true, /* sig verify */
+		)
+		if err != nil {
+			t.Fatalf("could not execute state transition")
+		}
+	}
+	beaconState.CurrentShufflingSeedHash32 = []byte("random seed")
+	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
+		t.Fatalf("Could not save state: %v", err)
+	}
+	firstSlotForEpoch1 := lastSlotInEpoch0 + 1
+	req2 := &pb.ValidatorEpochAssignmentsRequest{
+		EpochStart: firstSlotForEpoch1,
+		PublicKey:  pubKey[:],
+	}
+	assignmentsForEpoch2, err := validatorServer.ValidatorEpochAssignments(context.Background(), req2)
+	if err != nil {
+		t.Fatalf("Could not fetch assignments for epoch 2: %v", err)
+	}
+	if proto.Equal(assignmentsForEpoch0, assignmentsForEpoch2) {
+		t.Error("Expected assignments to change from previous epoch, did not")
 	}
 }
 
