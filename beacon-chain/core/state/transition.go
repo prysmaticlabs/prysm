@@ -360,11 +360,11 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	if e.CanProcessValidatorRegistry(state) {
 		state, err = v.UpdateRegistry(state)
 		if err != nil {
-			return nil, fmt.Errorf("can not update validator registry: %v", err)
+			return nil, fmt.Errorf("could not update validator registry: %v", err)
 		}
 		state, err = e.ProcessCurrSlotShardSeed(state)
 		if err != nil {
-			return nil, fmt.Errorf("can not update current shard shuffling seeds: %v", err)
+			return nil, fmt.Errorf("could not update current shard shuffling seeds: %v", err)
 		}
 	} else {
 		state, err = e.ProcessPartialValidatorRegistry(state)
@@ -380,6 +380,10 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 		return nil, fmt.Errorf("could not update latest index roots: %v", err)
 	}
 
+	// TODO(1763): Implement process_slashings from ETH2.0 beacon chain spec.
+
+	// TODO(1764): Implement process_exit_queue from ETH2.0 beacon chain spec.
+
 	// Update accumulated slashed balances from current epoch to next epoch.
 	state = e.UpdateLatestSlashedBalances(state)
 
@@ -391,6 +395,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Clean up processed attestations.
 	state = e.CleanupAttestations(state)
+
 	log.WithField(
 		"PreviousJustifiedEpoch", state.PreviousJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 	).Info("Previous justified epoch")

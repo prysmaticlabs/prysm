@@ -245,7 +245,7 @@ func ProcessEjections(state *pb.BeaconState) (*pb.BeaconState, error) {
 //
 // Spec pseudocode definition:
 //	Set state.previous_epoch_randao_mix = state.current_epoch_randao_mix
-//	Set state.previous_calculation_epoch = state.current_calculation_epoch
+//	Set state.previous_shuffling_start_shard = state.current_shuffling_start_shard
 //  Set state.previous_shuffling_seed = state.current_shuffling_seed.
 func ProcessPrevSlotShardSeed(state *pb.BeaconState) *pb.BeaconState {
 	state.PreviousShufflingEpoch = state.CurrentShufflingEpoch
@@ -279,7 +279,7 @@ func ProcessCurrSlotShardSeed(state *pb.BeaconState) (*pb.BeaconState, error) {
 //	Let epochs_since_last_registry_change = current_epoch -
 //		state.validator_registry_update_epoch
 //	If epochs_since_last_registry_update > 1 and
-//		epochs_since_last_registry_change is an exact power of 2:
+//		is_power_of_two(epochs_since_last_registry_update):
 // 			set state.current_calculation_epoch = next_epoch
 // 			set state.current_shuffling_seed = generate_seed(
 // 				state, state.current_calculation_epoch)
