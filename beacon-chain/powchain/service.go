@@ -71,6 +71,7 @@ type Client interface {
 
 // blockInfo specifies the block information in the ETH 1.0 chain.
 type blockInfo struct {
+	key       interface{}
 	blkNumber *big.Int
 	blkHash   common.Hash
 }
@@ -366,28 +367,38 @@ func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
 }
 
 func keyFunc(obj interface{}) (string, error) {
-	val1, ok := obj.(uint64)
-	val2, ok2 := obj.(common.Hash)
-	if !ok && !ok2 {
-		return "", errors.New("object type is neither uint64 or common hash")
+	// if object is a key, returns the string casted version
+	// of it.
+	if key, ok := obj.(uint64); ok {
+		return string(key), nil
 	}
-	if ok {
-		return string(val1), nil
+	if key, ok := obj.(common.Hash); ok {
+		return string(key[:]), nil
 	}
-	return string(val2[:]), nil
+
+	// if object is blockInfo it retrieves the key field from it
+	blkInfo, ok := obj.(*blockInfo)
+	if !ok {
+		return "", errors.New("object type is neither blockInfo,uint64 or common hash")
+	}
+
+	switch key := blkInfo.key.(type) {
+	case uint64:
+		return string(key), nil
+	case common.Hash:
+		return string(key[:]), nil
+	default:
+		return "", errors.New("key type in blockInfo is neither uint64 or common hash")
+	}
 }
 
 func (w *Web3Service) checkCache(val interface{}) (bool, *blockInfo, error) {
-	_, ok := val.(uint64)
-	_, ok2 := val.(common.Hash)
-	if !ok && !ok2 {
-		return false, nil, errors.New("value type is neither uint64 or common hash")
-	}
 
 	item, exists, err := w.blockCache.Get(val)
 	if err != nil {
 		return false, nil, err
 	}
+
 	if !exists {
 		return false, nil, nil
 	}
@@ -399,30 +410,47 @@ func (w *Web3Service) checkCache(val interface{}) (bool, *blockInfo, error) {
 	return true, blockInfo, nil
 }
 
-func (w *Web3Service) addToCache(blk *gethTypes.Block) {
+func (w *Web3Service) addToCache(blk *gethTypes.Block) error {
 	blkInfo := &blockInfo{
 		blkHash:   blk.Hash(),
 		blkNumber: blk.Number(),
 	}
 
-	w.blockCache.
-		w.blockCache[blk.Hash()] = blkInfo
-	w.blockCache[blk.Number().Uint64()] = blkInfo
+	blkInfo.key = blk.Hash()
+	if err := w.blockCache.Add(blkInfo); err != nil {
+		return err
+	}
+	blkInfo.key = blk.Number().Uint64()
+	if err := w.blockCache.Add(blkInfo); err != nil {
+		return err
+	}
+	return nil
 }
 
-func (w *Web3Service) deleteFromCache(val interface{}) {
-	_, ok := val.(uint64)
-	_, ok2 := val.(common.Hash)
-	if !ok && !ok2 {
-		return
-	}
+func (w *Web3Service) deleteFromCache(val interface{}) error {
+	// check that the key is either a uint64 or common hash
+	_, ok := val.(common.Hash)
+	if key1, ok2 := val.(uint64); ok2 || ok {
+		item, exists, err := w.blockCache.Get(key1)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return nil
+		}
+		blockInfo, ok := item.(*blockInfo)
+		if !ok {
+			return errors.New("retrieved object from the map is not of the correct type")
+		}
 
-	blkInfo, ok := w.blockCache[val]
-	if !ok {
-		return
+		if err := w.blockCache.Delete(blockInfo.blkNumber.Uint64()); err != nil {
+			return err
+		}
+		if err := w.blockCache.Delete(blockInfo.blkHash); err != nil {
+			return err
+		}
 	}
-	delete(w.blockCache, blkInfo.blkNumber.Uint64())
-	delete(w.blockCache, blkInfo.blkHash)
+	return nil
 }
 
 func (w *Web3Service) pruneCache() {
