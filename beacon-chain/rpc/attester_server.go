@@ -3,7 +3,6 @@ package rpc
 import (
 	"context"
 	"fmt"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -52,7 +51,7 @@ func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.Att
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
-	for head.Slot < req.Slot {
+	for beaconState.Slot < req.Slot {
 		beaconState, err = state.ExecuteStateTransition(
 			beaconState, nil /* block */, blockRoot, false, /* verify signatures */
 		)
