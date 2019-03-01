@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -159,16 +160,17 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	vs := &ValidatorServer{
 		beaconDB: db,
 	}
-	req := &pb.ValidatorIndexRequest{
-		PublicKey: []byte{'A'},
+	req := &pb.ValidatorEpochAssignmentsRequest{
+		PublicKey:  []byte{'A'},
+		EpochStart: params.BeaconConfig().GenesisEpoch,
 	}
 	want := fmt.Sprintf("validator %#x does not exist", req.PublicKey)
-	if _, err := vs.NextEpochCommitteeAssignment(context.Background(), req); !strings.Contains(err.Error(), want) {
+	if _, err := vs.CommitteeAssignment(context.Background(), req); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
 }
 
-func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
+func TestCommitteeAssignment_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	genesis := b.NewGenesisBlock([]byte{})
@@ -182,11 +184,22 @@ func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
 	if err := db.UpdateChainHead(genesis, state); err != nil {
 		t.Fatalf("Could not save genesis state: %v", err)
 	}
-
-	for i := 0; i < int(params.BeaconConfig().DepositsForChainStart); i++ {
+	var wg sync.WaitGroup
+	numOfValidators := int(params.BeaconConfig().DepositsForChainStart)
+	errs := make(chan error, numOfValidators)
+	for i := 0; i < numOfValidators; i++ {
 		pubKeyBuf := make([]byte, binary.MaxVarintLen64)
 		n := binary.PutUvarint(pubKeyBuf, uint64(i))
-		if err := db.SaveValidatorIndex(pubKeyBuf[:n], i); err != nil {
+		wg.Add(1)
+		go func(index int) {
+			errs <- db.SaveValidatorIndexBatch(pubKeyBuf[:n], index)
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
 			t.Fatalf("Could not save validator index: %v", err)
 		}
 	}
@@ -198,10 +211,11 @@ func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
 	pubKeyBuf := make([]byte, binary.MaxVarintLen64)
 	n := binary.PutUvarint(pubKeyBuf, 0)
 	// Test the first validator in registry.
-	req := &pb.ValidatorIndexRequest{
-		PublicKey: pubKeyBuf[:n],
+	req := &pb.ValidatorEpochAssignmentsRequest{
+		PublicKey:  pubKeyBuf[:n],
+		EpochStart: params.BeaconConfig().GenesisEpoch,
 	}
-	res, err := vs.NextEpochCommitteeAssignment(context.Background(), req)
+	res, err := vs.CommitteeAssignment(context.Background(), req)
 	if err != nil {
 		t.Errorf("Could not call next epoch committee assignment %v", err)
 	}
@@ -209,7 +223,7 @@ func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
 		t.Errorf("Assigned shard %d can't be higher than %d",
 			res.Shard, params.BeaconConfig().ShardCount)
 	}
-	if res.Slot < state.Slot+params.BeaconConfig().SlotsPerEpoch {
+	if res.Slot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
 			res.Slot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
 	}
@@ -218,10 +232,11 @@ func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
 	lastValidatorIndex := params.BeaconConfig().DepositsForChainStart - 1
 	pubKeyBuf = make([]byte, binary.MaxVarintLen64)
 	n = binary.PutUvarint(pubKeyBuf, lastValidatorIndex)
-	req = &pb.ValidatorIndexRequest{
-		PublicKey: pubKeyBuf[:n],
+	req = &pb.ValidatorEpochAssignmentsRequest{
+		PublicKey:  pubKeyBuf[:n],
+		EpochStart: params.BeaconConfig().GenesisEpoch,
 	}
-	res, err = vs.NextEpochCommitteeAssignment(context.Background(), req)
+	res, err = vs.CommitteeAssignment(context.Background(), req)
 	if err != nil {
 		t.Errorf("Could not call next epoch committee assignment %v", err)
 	}
@@ -229,7 +244,7 @@ func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
 		t.Errorf("Assigned shard %d can't be higher than %d",
 			res.Shard, params.BeaconConfig().ShardCount)
 	}
-	if res.Slot < state.Slot+params.BeaconConfig().SlotsPerEpoch {
+	if res.Slot > state.Slot+params.BeaconConfig().SlotsPerEpoch {
 		t.Errorf("Assigned slot %d can't be higher than %d",
 			res.Slot, state.Slot+params.BeaconConfig().SlotsPerEpoch)
 	}

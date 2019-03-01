@@ -15,8 +15,8 @@ http_archive(
 
 http_archive(
     name = "bazel_gazelle",
-    sha256 = "7949fc6cc17b5b191103e97481cf8889217263acf52e00b560683413af204fcb",
-    urls = ["https://github.com/bazelbuild/bazel-gazelle/releases/download/0.16.0/bazel-gazelle-0.16.0.tar.gz"],
+    sha256 = "3c681998538231a2d24d0c07ed5a7658cb72bfb5fd4bf9911157c0e9ac6a2687",
+    urls = ["https://github.com/bazelbuild/bazel-gazelle/releases/download/0.17.0/bazel-gazelle-0.17.0.tar.gz"],
 )
 
 http_archive(
@@ -554,7 +554,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_crypto",
-    commit = "7f87c0fbb88b590338857bcb720678c2583d4dea",
+    commit = "31a38585487a4b1fd6ff4f8f3db26f1fb296ac82",
     importpath = "golang.org/x/crypto",
 )
 
@@ -650,7 +650,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_x_lint",
-    commit = "8f45f776aaf18cebc8d65861cc70c33c60471952",
+    commit = "5b3e6a55c961c61f4836ae6868c17b070744c590",
     importpath = "golang.org/x/lint",
 )
 
@@ -680,7 +680,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_procfs",
-    commit = "6ed1f7e1041181781dd2826d3001075d011a80cc",
+    commit = "bbced9601137e764853b2fad7ec3e2dc4c504e02",
     importpath = "github.com/prometheus/procfs",
 )
 
@@ -742,7 +742,7 @@ go_repository(
 go_repository(
     name = "com_github_google_uuid",
     importpath = "github.com/google/uuid",
-    tag = "v1.1.0",
+    tag = "v1.1.1",
 )
 
 go_repository(
@@ -816,7 +816,7 @@ go_repository(
 go_repository(
     name = "com_github_hashicorp_golang_lru",
     importpath = "github.com/hashicorp/golang-lru",
-    tag = "v0.5.0",
+    tag = "v0.5.1",
 )
 
 go_repository(
@@ -827,13 +827,13 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_discovery",
-    commit = "39a8e5c39a9035dbe7d83ce5d5d22c27669126b2",
+    commit = "f6df2e8dcd01e739e4c0d06c799c4de736c0aab2",
     importpath = "github.com/libp2p/go-libp2p-discovery",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_autonat",
-    commit = "20af83cfbf8c25bd878167ac182f98e662d3e196",
+    commit = "ca1e8793f443d0219b265e2d14bedf8c7ae04c9b",
     importpath = "github.com/libp2p/go-libp2p-autonat",
 )
 

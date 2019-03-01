@@ -177,9 +177,9 @@ func TestProcessBlock_OK(t *testing.T) {
 	}
 	attestation := &pb.Attestation{
 		Data: &pb.AttestationData{
-			Slot:                 0,
-			Shard:                0,
-			ShardBlockRootHash32: []byte{'A'},
+			Slot:                    0,
+			Shard:                   0,
+			CrosslinkDataRootHash32: []byte{'A'},
 		},
 	}
 
@@ -261,8 +261,8 @@ func TestProcessBlock_MultipleBlocks(t *testing.T) {
 		Block: data1,
 		Attestation: &pb.Attestation{
 			Data: &pb.AttestationData{
-				ShardBlockRootHash32: []byte{},
-				Slot:                 params.BeaconConfig().GenesisSlot,
+				CrosslinkDataRootHash32: []byte{},
+				Slot:                    params.BeaconConfig().GenesisSlot,
 			},
 		},
 	}
@@ -286,8 +286,8 @@ func TestProcessBlock_MultipleBlocks(t *testing.T) {
 		Block: data2,
 		Attestation: &pb.Attestation{
 			Data: &pb.AttestationData{
-				ShardBlockRootHash32: []byte{},
-				Slot:                 0,
+				CrosslinkDataRootHash32: []byte{},
+				Slot:                    0,
 			},
 		},
 	}
@@ -687,16 +687,16 @@ func TestHandleStateReq_NOState(t *testing.T) {
 
 func TestHandleStateReq_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
 
 	genesisTime := time.Now()
 	unixTime := uint64(genesisTime.Unix())
 	if err := db.InitializeState(unixTime, []*pb.Deposit{}); err != nil {
 		t.Fatalf("could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := db.State()
+	beaconState, err := db.State(ctx)
 	if err != nil {
 		t.Fatalf("could not attempt fetch beacon state: %v", err)
 	}

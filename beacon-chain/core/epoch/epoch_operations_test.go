@@ -125,14 +125,14 @@ func TestEpochBoundaryAttestations_AccurateAttestationData(t *testing.T) {
 		JustifiedEpoch:         params.BeaconConfig().GenesisEpoch,
 	}
 
-	if _, err := CurrentBoundaryAttestations(state, epochAttestations); err == nil {
-		t.Fatal("CurrentBoundaryAttestations should have failed with empty block root hash")
+	if _, err := CurrentEpochBoundaryAttestations(state, epochAttestations); err == nil {
+		t.Fatal("CurrentEpochBoundaryAttestations should have failed with empty block root hash")
 	}
 
 	state.Slot = params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1
-	epochBoundaryAttestation, err := CurrentBoundaryAttestations(state, epochAttestations)
+	epochBoundaryAttestation, err := CurrentEpochBoundaryAttestations(state, epochAttestations)
 	if err != nil {
-		t.Fatalf("CurrentBoundaryAttestations failed: %v", err)
+		t.Fatalf("CurrentEpochBoundaryAttestations failed: %v", err)
 	}
 
 	if epochBoundaryAttestation[0].Data.JustifiedEpoch != params.BeaconConfig().GenesisEpoch {
@@ -268,7 +268,7 @@ func TestPrevEpochBoundaryAttestations_AccurateAttestationData(t *testing.T) {
 		JustifiedEpoch:         params.BeaconConfig().GenesisEpoch,
 	}
 
-	prevEpochBoundaryAttestation, err := PrevBoundaryAttestations(state, epochAttestations)
+	prevEpochBoundaryAttestation, err := PrevEpochBoundaryAttestations(state, epochAttestations)
 	if err != nil {
 		t.Fatalf("EpochBoundaryAttestations failed: %v", err)
 	}
@@ -351,8 +351,8 @@ func TestWinningRoot_AccurateRoot(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		attestation := &pb.PendingAttestation{
 			Data: &pb.AttestationData{
-				Slot:                 params.BeaconConfig().GenesisSlot,
-				ShardBlockRootHash32: []byte{byte(i + 100)},
+				Slot:                    params.BeaconConfig().GenesisSlot,
+				CrosslinkDataRootHash32: []byte{byte(i + 100)},
 			},
 			AggregationBitfield: participationBitfield,
 		}
@@ -379,8 +379,8 @@ func TestWinningRoot_EmptyParticipantBitfield(t *testing.T) {
 
 	attestations := []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{
-			Slot:                 params.BeaconConfig().GenesisSlot,
-			ShardBlockRootHash32: []byte{},
+			Slot:                    params.BeaconConfig().GenesisSlot,
+			CrosslinkDataRootHash32: []byte{},
 		},
 			AggregationBitfield: []byte{},
 		},
@@ -399,8 +399,8 @@ func TestAttestingValidators_MatchActive(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		attestation := &pb.PendingAttestation{
 			Data: &pb.AttestationData{
-				Slot:                 params.BeaconConfig().GenesisSlot,
-				ShardBlockRootHash32: []byte{byte(i + 100)},
+				Slot:                    params.BeaconConfig().GenesisSlot,
+				CrosslinkDataRootHash32: []byte{byte(i + 100)},
 			},
 			AggregationBitfield: []byte{0x03},
 		}
@@ -427,8 +427,8 @@ func TestAttestingValidators_EmptyWinningRoot(t *testing.T) {
 
 	attestation := &pb.PendingAttestation{
 		Data: &pb.AttestationData{
-			Slot:                 params.BeaconConfig().GenesisSlot,
-			ShardBlockRootHash32: []byte{},
+			Slot:                    params.BeaconConfig().GenesisSlot,
+			CrosslinkDataRootHash32: []byte{},
 		},
 		AggregationBitfield: []byte{},
 	}
@@ -448,8 +448,8 @@ func TestTotalAttestingBalance_CorrectBalance(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		attestation := &pb.PendingAttestation{
 			Data: &pb.AttestationData{
-				Slot:                 params.BeaconConfig().GenesisSlot,
-				ShardBlockRootHash32: []byte{byte(i + 100)},
+				Slot:                    params.BeaconConfig().GenesisSlot,
+				CrosslinkDataRootHash32: []byte{byte(i + 100)},
 			},
 			// All validators attested to the above roots.
 			AggregationBitfield: []byte{0x03},
@@ -476,8 +476,8 @@ func TestTotalAttestingBalance_EmptyWinningRoot(t *testing.T) {
 
 	attestation := &pb.PendingAttestation{
 		Data: &pb.AttestationData{
-			Slot:                 params.BeaconConfig().GenesisSlot,
-			ShardBlockRootHash32: []byte{},
+			Slot:                    params.BeaconConfig().GenesisSlot,
+			CrosslinkDataRootHash32: []byte{},
 		},
 		AggregationBitfield: []byte{},
 	}
