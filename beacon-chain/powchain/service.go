@@ -123,6 +123,7 @@ type Web3ServiceConfig struct {
 var (
 	depositEventSignature    = []byte("Deposit(bytes32,bytes,bytes,bytes32[32])")
 	chainStartEventSignature = []byte("ChainStart(bytes32,bytes)")
+	pruneDistance            = params.BeaconConfig().Eth1FollowDistance
 )
 
 // NewWeb3Service sets up a new instance with an ethclient when
@@ -417,11 +418,11 @@ func (w *Web3Service) addToCache(blk *gethTypes.Block) error {
 	}
 
 	blkInfo.key = blk.Hash()
-	if err := w.blockCache.Add(blkInfo); err != nil {
+	if err := w.blockCache.AddIfNotPresent(blkInfo); err != nil {
 		return err
 	}
 	blkInfo.key = blk.Number().Uint64()
-	if err := w.blockCache.Add(blkInfo); err != nil {
+	if err := w.blockCache.AddIfNotPresent(blkInfo); err != nil {
 		return err
 	}
 	return nil
@@ -453,15 +454,26 @@ func (w *Web3Service) deleteFromCache(val interface{}) error {
 	return nil
 }
 
-func (w *Web3Service) pruneCache() {
-	// The max distance limit till which we can store block data in our cache.
-	pruneDistance := 2 * params.BeaconConfig().Eth1FollowDistance
-	blkInfo, ok := w.blockCache[w.blockHeight.Uint64()-pruneDistance]
-	if !ok {
-		return
+func (w *Web3Service) pruneCache() error {
+	// It is twice the prune distance because we save two keys for each block object
+	cacheLimit := 2 * pruneDistance
+	queueSize := len(w.blockCache.ListKeys())
+
+	// pop elements from the queue until the size of the queue is equal to the
+	// cache limit.
+	for int(cacheLimit) < queueSize {
+		_, err := w.blockCache.Pop(func(val interface{}) error {
+			log.Debugf("Removed blockInfo object from queue %v", val)
+			return nil
+		})
+
+		if err != nil {
+			return err
+		}
+
+		queueSize--
 	}
-	delete(w.blockCache, blkInfo.blkNumber.Uint64())
-	delete(w.blockCache, blkInfo.blkHash)
+	return nil
 }
 
 func (w *Web3Service) runDelayTimer(done <-chan struct{}) {
@@ -532,13 +544,18 @@ func (w *Web3Service) run(done <-chan struct{}) {
 			blockNumberGauge.Set(float64(header.Number.Int64()))
 			w.blockHeight = header.Number
 			w.blockHash = header.Hash()
-
-			w.addToCache(gethTypes.NewBlockWithHeader(header))
-			w.pruneCache()
 			log.WithFields(logrus.Fields{
 				"blockNumber": w.blockHeight,
 				"blockHash":   w.blockHash.Hex(),
 			}).Debug("Latest web3 chain event")
+
+			if err := w.addToCache(gethTypes.NewBlockWithHeader(header)); err != nil {
+				log.Errorf("Unable to add block data to cache %v", err)
+			}
+			if err := w.pruneCache(); err != nil {
+				log.Errorf("Pruning from cache not successful %v", err)
+			}
+
 		case <-ticker.C:
 			if w.lastRequestedBlock.Cmp(w.blockHeight) == 0 {
 				continue
