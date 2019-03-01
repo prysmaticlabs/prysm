@@ -22,7 +22,6 @@ type CrosslinkCommittee struct {
 }
 
 type shufflingInput struct {
-	state              *pb.BeaconState
 	seed               []byte
 	shufflingEpoch     uint64
 	slot               uint64
