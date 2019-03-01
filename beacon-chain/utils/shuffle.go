@@ -23,7 +23,7 @@ func PermutedIndex(index uint64, listSize uint64, seed common.Hash) (uint64, err
 		return 0, err
 	}
 
-	for round := 0; round < 1; round++ {
+	for round := 0; round < 90; round++ {
 
 		hashedValue := hashutil.Hash(append(seed[:], bytesutil.Bytes1(uint64(round))...))
 		pivot := bytesutil.FromBytes8(hashedValue[:8]) % listSize
