@@ -316,24 +316,14 @@ func AttestationInclusion(
 // Spec pseudocode definition:
 // 	For slot in range(get_epoch_start_slot(previous_epoch), get_epoch_start_slot(current_epoch)),
 // 		let crosslink_committees_at_slot = get_crosslink_committees_at_slot(slot).
-// 		For every (crosslink_committee, shard) in crosslink_committee_at_slot, compute:
-//
-//			Let shard_block_root be state.latest_crosslinks[shard].shard_block_root
-//			Let attesting_validator_indices(shard_committee, shard_block_root)
-// 				be the union of the validator index sets given by [get_attestation_participants(
-// 				state, a.data, a.participation_bitfield) for a in current_epoch_attestations +
-// 				previous_epoch_attestations if a.shard == shard and a.shard_block_root == shard_block_root].
-//			Let winning_root(shard_committee)
-// 				be equal to the value of shard_block_root such that sum([get_effective_balance(state, i)
-// 				for i in attesting_validator_indices(shard_committee, shard_block_root)])
-// 				is maximized (ties broken by favoring lower shard_block_root values).
-//			Let attesting_validators(shard_committee)
-// 				be equal to attesting_validator_indices(
-// 				shard_committee, winning_root(shard_committee)) for convenience.
-//			Let total_attesting_balance(shard_committee) =
-// 				sum([get_effective_balance(state, i) for i in attesting_validators(shard_committee)]).
-//			Let total_balance(shard_committee) =
-// 				sum([get_effective_balance(state, i) for i in shard_committee]).
+// 		For every (crosslink_committee, shard) in crosslink_committee_at_slot,
+// 		and every index in crosslink_committee:
+//			If index in attesting_validators(crosslink_committee),
+//			state.validator_balances[index] += base_reward(state, index) *
+//			total_attesting_balance(crosslink_committee) //
+//			get_total_balance(state, crosslink_committee)).
+//			If index not in attesting_validators(crosslink_committee),
+//			state.validator_balances[index] -= base_reward(state, index).
 func Crosslinks(
 	state *pb.BeaconState,
 	thisEpochAttestations []*pb.PendingAttestation,
@@ -345,12 +335,9 @@ func Crosslinks(
 	endSlot := helpers.StartSlot(currentEpoch)
 
 	for i := startSlot; i < endSlot; i++ {
-		var registryChange bool
-		if state.ValidatorRegistryUpdateEpoch == i-1 &&
-			state.ValidatorRegistryUpdateEpoch != params.BeaconConfig().GenesisEpoch {
-			registryChange = true
-		}
-		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(state, i, registryChange)
+		// RegistryChange is a no-op when requesting slot in current and previous epoch.
+		// Process crosslinks rewards will never request crosslink committees of next epoch.
+		crosslinkCommittees, err := helpers.CrosslinkCommitteesAtSlot(state, i, false /* registryChange */)
 		if err != nil {
 			return nil, fmt.Errorf("could not get shard committees for slot %d: %v",
 				i-params.BeaconConfig().GenesisSlot, err)
@@ -382,8 +369,7 @@ func Crosslinks(
 					state.ValidatorBalances[index] +=
 						baseReward * totalAttestingBalance / totalBalance
 				} else {
-					state.ValidatorBalances[index] -=
-						baseReward * totalAttestingBalance / totalBalance
+					state.ValidatorBalances[index] -= baseReward
 				}
 			}
 		}
