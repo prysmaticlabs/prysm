@@ -206,7 +206,7 @@ go_repository(
 go_repository(
     name = "com_github_ipfs_go_log",
     importpath = "github.com/ipfs/go-log",
-    tag = "v1.5.7",
+    tag = "gx/v1.5.7",
 )
 
 go_repository(
@@ -736,7 +736,7 @@ go_repository(
 go_repository(
     name = "com_github_ipfs_go_ipfs_util",
     importpath = "github.com/ipfs/go-ipfs-util",
-    tag = "v1.2.8",
+    tag = "gx/v1.2.8",
 )
 
 go_repository(
@@ -755,7 +755,7 @@ go_repository(
 go_repository(
     name = "com_github_ipfs_go_datastore",
     importpath = "github.com/ipfs/go-datastore",
-    tag = "v3.2.0",
+    tag = "gx/v3.2.0",
 )
 
 go_repository(
@@ -767,7 +767,7 @@ go_repository(
 go_repository(
     name = "com_github_ipfs_go_cid",
     importpath = "github.com/ipfs/go-cid",
-    tag = "v0.9.0",
+    tag = "gx/v0.9.0",
 )
 
 go_repository(
@@ -798,7 +798,7 @@ go_repository(
 go_repository(
     name = "com_github_ipfs_go_todocounter",
     importpath = "github.com/ipfs/go-todocounter",
-    tag = "v1.0.1",
+    tag = "gx/v1.0.1",
 )
 
 go_repository(
@@ -822,7 +822,7 @@ go_repository(
 go_repository(
     name = "com_github_ipfs_go_ipfs_addr",
     importpath = "github.com/ipfs/go-ipfs-addr",
-    tag = "v0.1.25",
+    tag = "gx/v0.1.25",
 )
 
 go_repository(
