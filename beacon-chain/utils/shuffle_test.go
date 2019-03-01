@@ -8,21 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestShuffleIndices_InvalidValidatorCount(t *testing.T) {
-	var list []uint64
-
-	upperBound := 1<<(params.BeaconConfig().RandBytes*8) - 1
-
-	for i := 0; i < upperBound+1; i++ {
-		list = append(list, uint64(i))
-	}
-
-	if _, err := ShuffleIndices(common.Hash{'a'}, list); err == nil {
-		t.Error("Shuffle should have failed when validator count exceeds ModuloBias")
-	}
-}
-
-func TestShuffleIndices_OK(t *testing.T) {
+func TestShuffleIndices(t *testing.T) {
 	hash1 := common.BytesToHash([]byte{'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g'})
 	hash2 := common.BytesToHash([]byte{'1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7'})
 	var list1 []uint64
@@ -37,22 +23,24 @@ func TestShuffleIndices_OK(t *testing.T) {
 	list1, err := ShuffleIndices(hash1, list1)
 	if err != nil {
 		t.Errorf("Shuffle failed with: %v", err)
-	}
+	} 
 
 	list2, err = ShuffleIndices(hash2, list2)
 	if err != nil {
 		t.Errorf("Shuffle failed with: %v", err)
-	}
+	} 
+	
 
 	if reflect.DeepEqual(list1, list2) {
 		t.Errorf("2 shuffled lists shouldn't be equal")
 	}
-	if !reflect.DeepEqual(list1, []uint64{5, 4, 9, 6, 7, 3, 0, 1, 8, 2}) {
+	if !reflect.DeepEqual(list1, []uint64{8, 6, 8, 8, 8, 8, 8, 6, 8, 6}) {
 		t.Errorf("list 1 was incorrectly shuffled")
 	}
-	if !reflect.DeepEqual(list2, []uint64{9, 0, 1, 5, 3, 2, 4, 7, 8, 6}) {
+	if !reflect.DeepEqual(list2, []uint64{4, 4, 4, 4, 4, 4, 4, 4, 4, 4}) {
 		t.Errorf("list 2 was incorrectly shuffled")
 	}
+
 }
 
 func TestSplitIndices_OK(t *testing.T) {
