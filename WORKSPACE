@@ -241,7 +241,7 @@ go_repository(
 
 go_repository(
     name = "com_github_coreos_go_semver",
-    commit = "e214231b295a8ea9479f11b70b35d5acf3556d9b",
+    commit = "9cad4c6d4f6940ce86a0b3797e849b89bb65a593", # v0.2.0
     importpath = "github.com/coreos/go-semver",
 )
 
