@@ -59,6 +59,7 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 	if err != nil {
 		return nil, fmt.Errorf("could not execute head transition: %v", err)
 	}
+	fmt.Printf("BEACON STATE EPOCH: %d\n", helpers.CurrentEpoch(beaconState)-params.BeaconConfig().GenesisEpoch)
 	validatorIndex, err := vs.beaconDB.ValidatorIndex(req.PublicKey)
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator index: %v", err)
