@@ -79,7 +79,7 @@ func CanProcessValidatorRegistry(state *pb.BeaconState) bool {
 //
 func ProcessEth1Data(state *pb.BeaconState) *pb.BeaconState {
 	for _, eth1DataVote := range state.Eth1DataVotes {
-		if eth1DataVote.VoteCount*2 > params.BeaconConfig().SlotsPerEpoch *
+		if eth1DataVote.VoteCount*2 > params.BeaconConfig().SlotsPerEpoch*
 			params.BeaconConfig().EpochsPerEth1VotingPeriod {
 			state.LatestEth1Data = eth1DataVote.Eth1Data
 		}
