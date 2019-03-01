@@ -432,7 +432,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 		randaoHashes = append(randaoHashes, []byte{byte(i)})
 	}
 
-	crosslinkRecord := []*pb.Crosslink{{}, {}}
+	crosslinkRecord := make([]*pb.Crosslink, 64)
 	newState := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
 		LatestAttestations:     attestations,
@@ -491,7 +491,7 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 		randaoHashes = append(randaoHashes, []byte{byte(i)})
 	}
 
-	crosslinkRecord := []*pb.Crosslink{{}, {}}
+	crosslinkRecord := make([]*pb.Crosslink, 64)
 
 	newState := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
