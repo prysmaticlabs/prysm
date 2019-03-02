@@ -45,7 +45,7 @@ func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.
 
 func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	deposits, privKeys := setupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), []byte{})
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +77,7 @@ func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
 
 func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T) {
 	deposits, privKeys := setupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), []byte{})
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,7 +133,7 @@ func TestProcessEth1Data_SameRootHash(t *testing.T) {
 			BlockHash32:       []byte{2},
 		},
 	}
-	beaconState = blocks.ProcessEth1Data(beaconState, block)
+	beaconState = blocks.ProcessEth1DataInBlock(beaconState, block)
 	newETH1DataVotes := beaconState.Eth1DataVotes
 	if newETH1DataVotes[0].VoteCount != 6 {
 		t.Errorf("expected votes to increase from 5 to 6, received %d", newETH1DataVotes[0].VoteCount)
@@ -160,7 +160,7 @@ func TestProcessEth1Data_NewDepositRootHash(t *testing.T) {
 		},
 	}
 
-	beaconState = blocks.ProcessEth1Data(beaconState, block)
+	beaconState = blocks.ProcessEth1DataInBlock(beaconState, block)
 	newETH1DataVotes := beaconState.Eth1DataVotes
 	if len(newETH1DataVotes) <= 1 {
 		t.Error("expected new ETH1 data votes to have length > 1")
