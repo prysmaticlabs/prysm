@@ -20,7 +20,7 @@ import (
 var (
 	stateBytes = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "beacondb_state_size_bytes",
-		Help: "The size of the last saved state in the beaconDB",
+		Help: "The protobuf encoded size of the last saved state in the beaconDB",
 	})
 )
 
