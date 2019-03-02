@@ -89,6 +89,13 @@ message AttestResponse {
     bytes attestation_hash = 1;
 }
 
+enum ValidatorRole {
+    UNKNOWN = 0;
+    ATTESTER = 1;
+    PROPOSER = 2;
+    BOTH = 3;
+}
+
 message ValidatorIndexRequest {
     bytes public_key = 1;
 }
