@@ -524,7 +524,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_flow_metrics",
-    commit = "5b4a5750cdd34754b1a417b4c7c7d1c24790b4d4",
+    commit = "1f5b3acc846b2c8ce4c4e713296af74f5c24df55",  # v0.0.1
     importpath = "github.com/libp2p/go-flow-metrics",
 )
 
