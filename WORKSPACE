@@ -70,7 +70,7 @@ k8s_repositories()
 
 [k8s_defaults(
     name = "k8s_" + kind,
-    cluster = "minikube", # DO NOT CHANGE THIS!
+    cluster = "minikube",  # DO NOT CHANGE THIS!
     kind = kind,
 ) for kind in [
     "cluster_role",
@@ -1033,4 +1033,10 @@ go_repository(
     name = "com_github_multiformats_go_base32",
     commit = "a9c2755c3d1672dbe6a7e4a5d182169fa30b6a8e",
     importpath = "github.com/multiformats/go-base32",
+)
+
+go_repository(
+    name = "com_github_gbrlsnchs_jwt",
+    commit = "ad902494bf9857ef93c4838d0c3c027e48fa6329",
+    importpath = "github.com/gbrlsnchs/jwt",
 )
