@@ -106,7 +106,8 @@ func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testi
 	}
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	mix := newState.LatestRandaoMixes[currentEpoch%params.BeaconConfig().LatestRandaoMixesLength]
-	if bytes.Equal(mix, params.BeaconConfig().EmptySignature[:]) {
+
+	if bytes.Equal(mix, params.BeaconConfig().ZeroHash[:]) {
 		t.Errorf(
 			"Expected empty signature to be overwritten by randao reveal, received %v",
 			params.BeaconConfig().EmptySignature,
