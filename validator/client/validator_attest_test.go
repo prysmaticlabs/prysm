@@ -280,3 +280,38 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	delay = 0
 	validator.AttestToBlockHead(context.Background(), 0)
 }
+
+func TestAttestToBlockHead_EmptyAggregationBitfield(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validator, m, finish := setup(t)
+	defer finish()
+
+	validatorIndex := uint64(5)
+	committee := []uint64{}
+	m.validatorClient.EXPECT().ValidatorIndex(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
+	).Return(&pb.ValidatorIndexResponse{
+		Index: uint64(validatorIndex),
+	}, nil)
+	m.validatorClient.EXPECT().ValidatorCommitteeAtSlot(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.CommitteeRequest{}),
+	).Return(&pb.CommitteeResponse{
+		Shard:     5,
+		Committee: committee,
+	}, nil)
+	m.attesterClient.EXPECT().AttestationDataAtSlot(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.AttestationDataRequest{}),
+	).Return(&pb.AttestationDataResponse{
+		BeaconBlockRootHash32:    []byte("A"),
+		EpochBoundaryRootHash32:  []byte("B"),
+		JustifiedBlockRootHash32: []byte("C"),
+		LatestCrosslink:          &pbp2p.Crosslink{CrosslinkDataRootHash32: []byte{'D'}},
+		JustifiedEpoch:           3,
+	}, nil)
+
+	validator.AttestToBlockHead(context.Background(), 30)
+	testutil.AssertLogsContain(t, hook, "Aggregation bitfield is empty so unable to attest to block head")
+}
