@@ -614,7 +614,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_blankhost",
-    commit = "19c1feb9386425afc25c2931e44eb57dffc78a89",
+    commit = "177484ab3c284e75a9fa25b3114b2c5a4395deaa",  # v0.0.1
     importpath = "github.com/libp2p/go-libp2p-blankhost",
 )
 
