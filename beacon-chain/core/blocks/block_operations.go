@@ -35,7 +35,7 @@ func VerifyProposerSignature(
 	return nil
 }
 
-// ProcessEth1Data is an operation performed on each
+// ProcessEth1DataInBlock is an operation performed on each
 // beacon block to ensure the ETH1 data votes are processed
 // into the beacon state.
 //
