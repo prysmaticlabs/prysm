@@ -122,7 +122,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	// Test the first validator in registry.
 	req := &pb.ValidatorEpochAssignmentsRequest{
 		PublicKey:  pubKeyBuf,
-		EpochStart: params.BeaconConfig().GenesisEpoch,
+		EpochStart: params.BeaconConfig().GenesisSlot,
 	}
 	res, err := vs.CommitteeAssignment(context.Background(), req)
 	if err != nil {
@@ -143,7 +143,7 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	binary.PutUvarint(pubKeyBuf, lastValidatorIndex)
 	req = &pb.ValidatorEpochAssignmentsRequest{
 		PublicKey:  pubKeyBuf,
-		EpochStart: params.BeaconConfig().GenesisEpoch,
+		EpochStart: params.BeaconConfig().GenesisSlot,
 	}
 	res, err = vs.CommitteeAssignment(context.Background(), req)
 	if err != nil {
