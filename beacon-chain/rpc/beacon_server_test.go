@@ -50,7 +50,7 @@ func (f *faultyPOWChainService) BlockExists(_ context.Context, hash common.Hash)
 	return true, big.NewInt(1), nil
 }
 
-func (f *faultyPOWChainService) BlockHashByHeight(height *big.Int) (common.Hash, error) {
+func (f *faultyPOWChainService) BlockHashByHeight(_ context.Context, height *big.Int) (common.Hash, error) {
 	return [32]byte{}, errors.New("failed")
 }
 
@@ -88,7 +88,7 @@ func (m *mockPOWChainService) BlockExists(_ context.Context, hash common.Hash) (
 	return true, big.NewInt(int64(val)), nil
 }
 
-func (m *mockPOWChainService) BlockHashByHeight(height *big.Int) (common.Hash, error) {
+func (m *mockPOWChainService) BlockHashByHeight(_ context.Context, height *big.Int) (common.Hash, error) {
 	k := int(height.Int64())
 	val, ok := m.hashesByHeight[k]
 	if !ok {
