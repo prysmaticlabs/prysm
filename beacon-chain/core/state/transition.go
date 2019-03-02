@@ -113,7 +113,7 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock, verifySignatures
 	log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Verified and processed block RANDAO")
 
 	// Process ETH1 data.
-	state = b.ProcessEth1Data(state, block)
+	state = b.ProcessEth1DataInBlock(state, block)
 	state, err = b.ProcessAttesterSlashings(state, block, verifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify block attester slashings: %v", err)
