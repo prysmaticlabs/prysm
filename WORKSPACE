@@ -833,7 +833,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_autonat",
-    commit = "ca1e8793f443d0219b265e2d14bedf8c7ae04c9b",
+    commit = "1d196ecb101a968e32426714ba6aa33d12858a2e",  # v0.0.1
     importpath = "github.com/libp2p/go-libp2p-autonat",
 )
 
