@@ -109,3 +109,48 @@ func TestGenesisTime_OK(t *testing.T) {
 		t.Fatalf("Expected %v and %v to be equal", time1, time2)
 	}
 }
+
+func TestState_ReadsFromCache(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	ctx := context.Background()
+
+	genesisTime := uint64(time.Now().Unix())
+	deposits, _ := setupInitialDeposits(t, 10)
+	if err := db.InitializeState(genesisTime, deposits); err != nil {
+		t.Fatalf("Failed to initialize state: %v", err)
+	}
+
+	// Initial read should not be from DB
+	if db.currentState != nil {
+		t.Fatal("cache should not be prepared on newly initialized state")
+	}
+	state, err := db.State(ctx)
+	if err != nil {
+		t.Fatalf("Could not read beacon state from DB: %v", err)
+	}
+
+	state.Slot++
+	db.SaveState(state)
+
+	// State should be cached after saving
+	if db.currentState.Slot == params.BeaconConfig().GenesisSlot {
+		t.Fatal("cache did not take state changes after saving into DB")
+	}
+	state, err = db.State(ctx)
+	if err != nil {
+		t.Fatalf("Could not read beacon state from DB: %v", err)
+	}
+
+	state.Slot++
+	db.SaveState(state)
+
+	// Repeated attempt to make cache updates
+	if db.currentState.Slot == params.BeaconConfig().GenesisSlot+1 {
+		t.Fatal("cache should not be prepared on newly initialized state")
+	}
+	state, err = db.State(ctx)
+	if err != nil {
+		t.Fatalf("Could not read beacon state from DB: %v", err)
+	}
+}

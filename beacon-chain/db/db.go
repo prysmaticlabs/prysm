@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+
 	"github.com/boltdb/bolt"
 	"github.com/sirupsen/logrus"
 )
@@ -19,6 +21,8 @@ var log = logrus.WithField("prefix", "beacondb")
 // For example, instead of defining get, put, remove
 // This defines methods such as getBlock, saveBlocksAndAttestations, etc.
 type BeaconDB struct {
+	stateLock    sync.RWMutex
+	currentState *pb.BeaconState
 	db           *bolt.DB
 	DatabasePath string
 
