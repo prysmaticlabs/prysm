@@ -28,8 +28,7 @@ func GenesisBeaconState(
 		params.BeaconConfig().LatestRandaoMixesLength,
 	)
 	for i := 0; i < len(latestRandaoMixes); i++ {
-		emptySig := params.BeaconConfig().EmptySignature
-		latestRandaoMixes[i] = emptySig[:]
+		latestRandaoMixes[i] = make([]byte, 32)
 	}
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
