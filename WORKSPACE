@@ -247,7 +247,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_interface_connmgr",
-    commit = "6a96ea29ac65d4ee4cc52c25ac41c036bbb7992a",
+    commit = "8bddc198c80e6242d016361b3c5f02fb920e9faa",  # v0.0.1
     importpath = "github.com/libp2p/go-libp2p-interface-connmgr",
 )
 
