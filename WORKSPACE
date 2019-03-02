@@ -137,7 +137,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ethereum_go_ethereum",
-    commit = "2ed4a57e9522dc2a023577f0b92ff623c3412303",
+    commit = "86c88456c94c6a58ac48f0e192f520dc9aeb14a4",
     importpath = "github.com/ethereum/go-ethereum",
     # Note: go-ethereum is not bazel-friendly with regards to cgo. We have a
     # a fork that has resolved these issues by disabling HID/USB support and
@@ -1031,4 +1031,10 @@ go_repository(
     name = "com_github_multiformats_go_base32",
     commit = "a9c2755c3d1672dbe6a7e4a5d182169fa30b6a8e",
     importpath = "github.com/multiformats/go-base32",
+)
+
+go_repository(
+    name = "com_github_allegro_bigcache",
+    commit = "e24eb225f15679bbe54f91bfa7da3b00e59b9768",
+    importpath = "github.com/allegro/bigcache",
 )
