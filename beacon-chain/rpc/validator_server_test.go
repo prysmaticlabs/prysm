@@ -341,5 +341,5 @@ func genesisState(validators uint64) (*pbp2p.BeaconState, error) {
 		}
 		deposits[i] = &pbp2p.Deposit{DepositData: depositData}
 	}
-	return state.GenesisBeaconState(deposits, uint64(genesisTime), nil, nil)
+	return state.GenesisBeaconState(deposits, uint64(genesisTime), nil)
 }

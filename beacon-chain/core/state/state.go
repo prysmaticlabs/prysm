@@ -21,8 +21,7 @@ import (
 func GenesisBeaconState(
 	genesisValidatorDeposits []*pb.Deposit,
 	genesisTime uint64,
-	depositRoot []byte,
-	eth1BlockHash []byte,
+	eth1Data *pb.Eth1Data,
 ) (*pb.BeaconState, error) {
 	latestRandaoMixes := make(
 		[][]byte,
@@ -123,11 +122,8 @@ func GenesisBeaconState(
 		BatchedBlockRootHash32S: [][]byte{},
 
 		// Eth1 data.
-		LatestEth1Data: &pb.Eth1Data{
-			DepositRootHash32: depositRoot,
-			BlockHash32:       eth1BlockHash,
-		},
-		Eth1DataVotes: []*pb.Eth1DataVote{},
+		LatestEth1Data: eth1Data,
+		Eth1DataVotes:  []*pb.Eth1DataVote{},
 	}
 
 	// Process initial deposits.

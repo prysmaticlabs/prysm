@@ -99,7 +99,11 @@ func (c *ChainService) Start() {
 			initialDeposits := c.web3Service.ChainStartDeposits()
 			depositRoot := c.web3Service.DepositRoot()
 			latestBlockHash := c.web3Service.LatestBlockHash()
-			if err := c.initializeBeaconChain(genesisTime, initialDeposits, depositRoot[:], latestBlockHash[:]); err != nil {
+			eth1Data := &pb.Eth1Data{
+				DepositRootHash32: depositRoot[:],
+				BlockHash32:       latestBlockHash[:],
+			}
+			if err := c.initializeBeaconChain(genesisTime, initialDeposits, eth1Data); err != nil {
 				log.Fatalf("Could not initialize beacon chain: %v", err)
 			}
 			c.stateInitializedFeed.Send(genesisTime)
@@ -113,11 +117,11 @@ func (c *ChainService) Start() {
 // based on a genesis timestamp value obtained from the ChainStart event emitted
 // by the ETH1.0 Deposit Contract and the POWChain service of the node.
 func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*pb.Deposit,
-	depositRoot []byte, eth1BlockHash []byte) error {
+	eth1data *pb.Eth1Data) error {
 	log.Info("ChainStart time reached, starting the beacon chain!")
 	c.genesisTime = genesisTime
 	unixTime := uint64(genesisTime.Unix())
-	if err := c.beaconDB.InitializeState(unixTime, deposits, depositRoot, eth1BlockHash); err != nil {
+	if err := c.beaconDB.InitializeState(unixTime, deposits, eth1data); err != nil {
 		return fmt.Errorf("could not initialize beacon state to disk: %v", err)
 	}
 	beaconState, err := c.beaconDB.State(context.TODO())
