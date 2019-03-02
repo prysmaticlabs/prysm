@@ -126,34 +126,55 @@ func BenchmarkState_ReadingFromCache(b *testing.B) {
 		b.Fatal("cache should not be prepared on newly initialized state")
 	}
 
-	var state *pb.BeaconState
-	var err error
-	b.Run("no-cache", func(b *testing.B) {
-		state, err = db.State(ctx)
-		if err != nil {
-			b.Fatalf("Could not read beacon state from DB: %v", err)
-		}
-	})
-
-	state.Slot++
-	db.SaveState(state)
-
-	// State should be cached after saving
-	if db.currentState.Slot == params.BeaconConfig().GenesisSlot {
-		b.Fatal("cache did not take state changes after saving into DB")
+	state, err := db.State(ctx)
+	if err != nil {
+		b.Fatalf("Could not read DV beacon state from DB: %v", err)
 	}
-	b.Run("cache", func(b *testing.B) {
-		state, err = db.State(ctx)
+	state.Slot++
+	err = db.SaveState(state)
+	if err != nil {
+		b.Fatalf("Could not save beacon state to cache from DB: %v", err)
+	}
+
+	if db.currentState == nil {
+		b.Fatal("cache should be prepared on state after saving to DB")
+	}
+	b.ResetTimer()
+
+	b.N = 20
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_, err := db.State(ctx)
 		if err != nil {
 			b.Fatalf("Could not read beacon state from DB: %v", err)
 		}
-	})
+	}
+}
 
-	state.Slot++
-	db.SaveState(state)
+func BenchmarkState_ReadingFromDB(b *testing.B) {
+	db := setupDB(b)
+	defer teardownDB(b, db)
+	ctx := context.Background()
 
-	// Repeated attempt to make cache updates
-	if db.currentState.Slot == params.BeaconConfig().GenesisSlot+1 {
+	genesisTime := uint64(time.Now().Unix())
+	deposits, _ := setupInitialDeposits(b, 10)
+	if err := db.InitializeState(genesisTime, deposits); err != nil {
+		b.Fatalf("Failed to initialize state: %v", err)
+	}
+
+	// Initial read should not be from DB
+	if db.currentState != nil {
 		b.Fatal("cache should not be prepared on newly initialized state")
+	}
+
+	b.ResetTimer()
+
+	b.N = 20
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_, err := db.State(ctx)
+		if err != nil {
+			b.Fatalf("Could not read beacon state from DB: %v", err)
+		}
 	}
 }
