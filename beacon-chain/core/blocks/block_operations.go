@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/forkutils"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
@@ -94,7 +95,8 @@ func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, veri
 	latestMixesLength := params.BeaconConfig().LatestRandaoMixesLength
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	latestMixSlice := beaconState.LatestRandaoMixes[currentEpoch%latestMixesLength]
-	for i, x := range block.RandaoReveal {
+	blockRandaoReveal := hashutil.Hash(block.RandaoReveal)
+	for i, x := range blockRandaoReveal {
 		latestMixSlice[i] ^= x
 	}
 	beaconState.LatestRandaoMixes[currentEpoch%latestMixesLength] = latestMixSlice
