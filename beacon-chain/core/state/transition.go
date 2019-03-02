@@ -145,9 +145,6 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock, verifySignatures
 	log.WithField(
 		"depositsInBlock", len(block.Body.Deposits),
 	).Info("Block deposits")
-	log.WithField(
-		"exitsInBlock", len(block.Body.VoluntaryExits),
-	).Info("Block voluntary exits")
 	return state, nil
 }
 
