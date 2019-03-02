@@ -754,7 +754,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_datastore",
-    commit = "1b371980cb3fe9edba40c0f0584042e5cb4477a4",
+    commit = "1b371980cb3fe9edba40c0f0584042e5cb4477a4",  # v0.0.1
     importpath = "github.com/ipfs/go-datastore",
 )
 
