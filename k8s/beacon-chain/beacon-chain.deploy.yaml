@@ -33,6 +33,8 @@ spec:
             - --relay-node=/ip4/35.224.249.2/tcp/30000/p2p/QmfAgkmjiZNZhr2wFN9TwaRgHouMTBT6HELyzE5A3BT2wK
             - --p2p-port=5000
             - --demo-config
+            - --enable-tracing
+            - --tracing-endpoint=http://jaeger-collector.istio-system.svc.cluster.local:14268
           resources:
             requests:
               memory: "100Mi"

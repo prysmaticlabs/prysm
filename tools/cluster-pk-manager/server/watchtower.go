@@ -40,7 +40,7 @@ func (wt *watchtower) WatchPods() {
 
 // Query k8s pods for existence.
 func (wt *watchtower) queryPodsAndUpdateDB() error {
-	log.Debug("Checking pods")
+	//	log.Debug("Checking pods")
 	ctx := context.Background()
 	podNames, err := wt.db.AllocatedPodNames(ctx)
 	if err != nil {
@@ -52,8 +52,10 @@ func (wt *watchtower) queryPodsAndUpdateDB() error {
 	}
 	podExist := make(map[string]bool)
 	for _, p := range pList.Items {
-		if p.Status.Phase == v1.PodRunning {
+		if p.Status.Phase == v1.PodRunning || p.Status.Phase == v1.PodPending {
 			podExist[p.Name] = true
+		} else {
+			log.Debugf("ignoring pod with phase %s", p.Status.Phase)
 		}
 	}
 
