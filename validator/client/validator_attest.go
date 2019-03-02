@@ -102,6 +102,10 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 			break
 		}
 	}
+	if len(aggregationBitfield) == 0 {
+		log.Error("Aggregation bitfield is empty so unable to attest to block head")
+		return
+	}
 	aggregationBitfield[indexIntoCommittee/8] |= 1 << (indexIntoCommittee % 8)
 	// Note: calling get_attestation_participants(state, attestation.data, attestation.aggregation_bitfield)
 	// should return a list of length equal to 1, containing validator_index.
