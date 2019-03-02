@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.SecretKey) {
+func setupInitialDeposits(t testing.TB, numDeposits int) ([]*pb.Deposit, []*bls.SecretKey) {
 	privKeys := make([]*bls.SecretKey, numDeposits)
 	deposits := make([]*pb.Deposit, numDeposits)
 	for i := 0; i < len(deposits); i++ {
@@ -110,47 +110,50 @@ func TestGenesisTime_OK(t *testing.T) {
 	}
 }
 
-func TestState_ReadsFromCache(t *testing.T) {
-	db := setupDB(t)
-	defer teardownDB(t, db)
+func BenchmarkState_ReadingFromCache(b *testing.B) {
+	db := setupDB(b)
+	defer teardownDB(b, db)
 	ctx := context.Background()
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t, 10)
+	deposits, _ := setupInitialDeposits(b, 10)
 	if err := db.InitializeState(genesisTime, deposits); err != nil {
-		t.Fatalf("Failed to initialize state: %v", err)
+		b.Fatalf("Failed to initialize state: %v", err)
 	}
 
 	// Initial read should not be from DB
 	if db.currentState != nil {
-		t.Fatal("cache should not be prepared on newly initialized state")
+		b.Fatal("cache should not be prepared on newly initialized state")
 	}
-	state, err := db.State(ctx)
-	if err != nil {
-		t.Fatalf("Could not read beacon state from DB: %v", err)
-	}
+
+	var state *pb.BeaconState
+	var err error
+	b.Run("no-cache", func(b *testing.B) {
+		state, err = db.State(ctx)
+		if err != nil {
+			b.Fatalf("Could not read beacon state from DB: %v", err)
+		}
+	})
 
 	state.Slot++
 	db.SaveState(state)
 
 	// State should be cached after saving
 	if db.currentState.Slot == params.BeaconConfig().GenesisSlot {
-		t.Fatal("cache did not take state changes after saving into DB")
+		b.Fatal("cache did not take state changes after saving into DB")
 	}
-	state, err = db.State(ctx)
-	if err != nil {
-		t.Fatalf("Could not read beacon state from DB: %v", err)
-	}
+	b.Run("cache", func(b *testing.B) {
+		state, err = db.State(ctx)
+		if err != nil {
+			b.Fatalf("Could not read beacon state from DB: %v", err)
+		}
+	})
 
 	state.Slot++
 	db.SaveState(state)
 
 	// Repeated attempt to make cache updates
 	if db.currentState.Slot == params.BeaconConfig().GenesisSlot+1 {
-		t.Fatal("cache should not be prepared on newly initialized state")
-	}
-	state, err = db.State(ctx)
-	if err != nil {
-		t.Fatalf("Could not read beacon state from DB: %v", err)
+		b.Fatal("cache should not be prepared on newly initialized state")
 	}
 }
