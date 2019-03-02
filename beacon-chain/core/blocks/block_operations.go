@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"reflect"
 
 	"github.com/sirupsen/logrus"
@@ -94,7 +95,8 @@ func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, veri
 	latestMixesLength := params.BeaconConfig().LatestRandaoMixesLength
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	latestMixSlice := beaconState.LatestRandaoMixes[currentEpoch%latestMixesLength]
-	for i, x := range block.RandaoReveal {
+	blockRandaoReveal := hashutil.Hash(block.RandaoReveal)
+	for i, x := range blockRandaoReveal {
 		latestMixSlice[i] ^= x
 	}
 	beaconState.LatestRandaoMixes[currentEpoch%latestMixesLength] = latestMixSlice
