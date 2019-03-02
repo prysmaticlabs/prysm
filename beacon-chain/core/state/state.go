@@ -23,14 +23,15 @@ func GenesisBeaconState(
 	genesisTime uint64,
 	processedPowReceiptRoot []byte,
 ) (*pb.BeaconState, error) {
-	zeroHash := params.BeaconConfig().ZeroHash[:]
 	latestRandaoMixes := make(
 		[][]byte,
 		params.BeaconConfig().LatestRandaoMixesLength,
 	)
 	for i := 0; i < len(latestRandaoMixes); i++ {
-		latestRandaoMixes[i] = zeroHash
+		latestRandaoMixes[i] = make([]byte, 32)
 	}
+
+	zeroHash := params.BeaconConfig().ZeroHash[:]
 
 	latestActiveIndexRoots := make(
 		[][]byte,
