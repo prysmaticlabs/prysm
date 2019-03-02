@@ -28,7 +28,7 @@ test_cases:
   - config:
       epoch_length: 64
       deposits_for_chain_start: 1000
-      num_slots: 32 # Testing advancing state to slot < EpochLength
+      num_slots: 32 # Testing advancing state to slot < SlotsPerEpoch
     results:
       slot: 32
       num_validators: 1000
@@ -81,7 +81,7 @@ test_cases:
       skip_slots: [10, 20]
       epoch_length: 64
       deposits_for_chain_start: 1000
-      num_slots: 128 # Testing advancing state's slot == 2*EpochLength
+      num_slots: 128 # Testing advancing state's slot == 2*SlotsPerEpoch
       deposits:
         - slot: 10
           amount: 32

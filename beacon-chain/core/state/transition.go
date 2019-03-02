@@ -73,9 +73,6 @@ func ExecuteStateTransition(
 func ProcessSlot(state *pb.BeaconState, headRoot [32]byte) *pb.BeaconState {
 	state.Slot++
 	state = b.ProcessBlockRoots(state, headRoot)
-	log.WithField(
-		"slotsSinceGenesis", state.Slot-params.BeaconConfig().GenesisSlot,
-	).Info("Slot transition successfully processed")
 	return state
 }
 
@@ -141,9 +138,7 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock, verifySignatures
 	if err != nil {
 		return nil, fmt.Errorf("could not process validator exits: %v", err)
 	}
-	log.WithField(
-		"slotsSinceGenesis", state.Slot-params.BeaconConfig().GenesisSlot,
-	).Info("Block transition successfully processed")
+
 	log.WithField(
 		"attestationsInBlock", len(block.Body.Attestations),
 	).Info("Block attestations")
@@ -169,54 +164,58 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock, verifySignatures
 // 	 update_validator_registry(state)
 // 	 final_book_keeping(state)
 func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
-	// Calculate total balances of active validators of the current state.
 	currentEpoch := helpers.CurrentEpoch(state)
 	prevEpoch := helpers.PrevEpoch(state)
+
+	// Calculate total balances of active validators of the current epoch.
 	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, currentEpoch)
 	totalBalance := e.TotalBalance(state, activeValidatorIndices)
 
 	// Calculate the attesting balances of validators that justified the
 	// epoch boundary block at the start of the current epoch.
-	currentAttestations := e.CurrentAttestations(state)
-	log.Infof("Number of current epoch attestations: %d", len(currentAttestations))
+	currentEpochAttestations := e.CurrentAttestations(state)
+	log.Infof("Number of current epoch attestations: %d", len(currentEpochAttestations))
 
-	currentBoundaryAttestations, err := e.CurrentBoundaryAttestations(state, currentAttestations)
+	currentEpochBoundaryAttestations, err := e.CurrentEpochBoundaryAttestations(state, currentEpochAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not get current boundary attestations: %v", err)
 	}
 
-	currentBoundaryAttesterIndices, err := v.ValidatorIndices(state, currentBoundaryAttestations)
+	currentBoundaryAttesterIndices, err := v.ValidatorIndices(state, currentEpochBoundaryAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not get current boundary attester indices: %v", err)
 	}
-	log.Infof("Current epoch attester indices: %v", currentBoundaryAttesterIndices)
+	log.Infof("Current epoch boundary attester indices: %v", currentBoundaryAttesterIndices)
 
 	currentBoundaryAttestingBalances := e.TotalBalance(state, currentBoundaryAttesterIndices)
 
+	// Calculate the attesting balances of validators from previous epoch.
 	previousActiveValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, prevEpoch)
 	prevTotalBalance := e.TotalBalance(state, previousActiveValidatorIndices)
-	// Calculate the attesting balances of validators that made an attestation
-	// during previous epoch.
+
 	prevEpochAttestations := e.PrevAttestations(state)
 	log.Infof("Number of prev epoch attestations: %d", len(prevEpochAttestations))
 	prevEpochAttesterIndices, err := v.ValidatorIndices(state, prevEpochAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not get prev epoch attester indices: %v", err)
 	}
+	log.Infof("Previous epoch attester indices: %v", prevEpochAttesterIndices)
+
 	prevEpochAttestingBalance := e.TotalBalance(state, prevEpochAttesterIndices)
 
 	// Calculate the attesting balances of validator justifying epoch boundary block
 	// at the start of previous epoch.
-	prevEpochBoundaryAttestations, err := e.PrevBoundaryAttestations(state, prevEpochAttestations)
+	prevEpochBoundaryAttestations, err := e.PrevEpochBoundaryAttestations(state, prevEpochAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not get prev boundary attestations: %v", err)
 	}
+	log.Infof("Number of prev epoch boundary attestations: %d", len(prevEpochAttestations))
 
 	prevEpochBoundaryAttesterIndices, err := v.ValidatorIndices(state, prevEpochBoundaryAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not get prev boundary attester indices: %v", err)
 	}
-	log.Infof("Previous epoch attester indices: %v", prevEpochBoundaryAttesterIndices)
+	log.Infof("Previous epoch boundary attester indices: %v", prevEpochBoundaryAttesterIndices)
 
 	prevEpochBoundaryAttestingBalances := e.TotalBalance(state, prevEpochBoundaryAttesterIndices)
 
@@ -249,7 +248,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	// Process crosslinks records.
 	state, err = e.ProcessCrosslinks(
 		state,
-		currentAttestations,
+		currentEpochAttestations,
 		prevEpochAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not process crosslink records: %v", err)
@@ -343,7 +342,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	// Process crosslink rewards and penalties.
 	state, err = bal.Crosslinks(
 		state,
-		currentAttestations,
+		currentEpochAttestations,
 		prevEpochAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not process crosslink rewards and penalties: %v", err)
@@ -359,9 +358,13 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 	state = e.ProcessPrevSlotShardSeed(state)
 	state = v.ProcessPenaltiesAndExits(state)
 	if e.CanProcessValidatorRegistry(state) {
-		state, err = e.ProcessValidatorRegistry(state)
+		state, err = v.UpdateRegistry(state)
 		if err != nil {
-			return nil, fmt.Errorf("can not process validator registry: %v", err)
+			return nil, fmt.Errorf("could not update validator registry: %v", err)
+		}
+		state, err = e.ProcessCurrSlotShardSeed(state)
+		if err != nil {
+			return nil, fmt.Errorf("could not update current shard shuffling seeds: %v", err)
 		}
 	} else {
 		state, err = e.ProcessPartialValidatorRegistry(state)
@@ -377,6 +380,10 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 		return nil, fmt.Errorf("could not update latest index roots: %v", err)
 	}
 
+	// TODO(1763): Implement process_slashings from ETH2.0 beacon chain spec.
+
+	// TODO(1764): Implement process_exit_queue from ETH2.0 beacon chain spec.
+
 	// Update accumulated slashed balances from current epoch to next epoch.
 	state = e.UpdateLatestSlashedBalances(state)
 
@@ -388,9 +395,7 @@ func ProcessEpoch(state *pb.BeaconState) (*pb.BeaconState, error) {
 
 	// Clean up processed attestations.
 	state = e.CleanupAttestations(state)
-	log.WithField(
-		"SlotsSinceGenesis", state.Slot-params.BeaconConfig().GenesisSlot,
-	).Info("Epoch transition successfully processed")
+
 	log.WithField(
 		"PreviousJustifiedEpoch", state.PreviousJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 	).Info("Previous justified epoch")

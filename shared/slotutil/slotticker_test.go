@@ -30,7 +30,7 @@ func TestSlotTicker(t *testing.T) {
 	}
 
 	genesisTime := time.Date(2018, 1, 1, 0, 0, 0, 0, time.UTC)
-	slotDuration := uint64(8)
+	secondsPerSlot := uint64(8)
 
 	// Test when the ticker starts immediately after genesis time.
 	sinceDuration = 1 * time.Second
@@ -38,7 +38,7 @@ func TestSlotTicker(t *testing.T) {
 	// Make this a buffered channel to prevent a deadlock since
 	// the other goroutine calls a function in this goroutine.
 	tick = make(chan time.Time, 2)
-	ticker.start(genesisTime, slotDuration, since, until, after)
+	ticker.start(genesisTime, secondsPerSlot, since, until, after)
 
 	// Tick once.
 	tick <- time.Now()
@@ -78,7 +78,7 @@ func TestSlotTickerGenesis(t *testing.T) {
 	}
 
 	genesisTime := time.Date(2018, 1, 1, 0, 0, 0, 0, time.UTC)
-	slotDuration := uint64(8)
+	secondsPerSlot := uint64(8)
 
 	// Test when the ticker starts before genesis time.
 	sinceDuration = -1 * time.Second
@@ -86,7 +86,7 @@ func TestSlotTickerGenesis(t *testing.T) {
 	// Make this a buffered channel to prevent a deadlock since
 	// the other goroutine calls a function in this goroutine.
 	tick = make(chan time.Time, 2)
-	ticker.start(genesisTime, slotDuration, since, until, after)
+	ticker.start(genesisTime, secondsPerSlot, since, until, after)
 
 	// Tick once.
 	tick <- time.Now()
@@ -106,14 +106,14 @@ func TestSlotTickerGenesis(t *testing.T) {
 func TestCurrentSlot(t *testing.T) {
 	// Test genesis slot
 	genesisTime := time.Now()
-	slotDurationSeconds := time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot)
+	secondsPerSlot := time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot)
 	slot := CurrentSlot(genesisTime, params.BeaconConfig().SecondsPerSlot, time.Since)
 	if slot != params.BeaconConfig().GenesisSlot {
 		t.Errorf("Expected %d, got: %d", params.BeaconConfig().GenesisSlot, slot)
 	}
 
 	// Test slot 3 after genesis.
-	genesisTime = genesisTime.Add(slotDurationSeconds * 3)
+	genesisTime = genesisTime.Add(secondsPerSlot * 3)
 	slot = CurrentSlot(genesisTime, params.BeaconConfig().SecondsPerSlot, time.Since)
 	if slot != 3*params.BeaconConfig().GenesisSlot {
 		t.Errorf("Expected %d, got: %d", params.BeaconConfig().GenesisSlot*3, slot)

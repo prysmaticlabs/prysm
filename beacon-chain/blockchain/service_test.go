@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -25,7 +27,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/forkutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
@@ -181,7 +182,7 @@ func setupGenesisBlock(t *testing.T, cs *ChainService, beaconState *pb.BeaconSta
 	if err := cs.beaconDB.SaveBlock(genesis); err != nil {
 		t.Fatalf("could not save block to db: %v", err)
 	}
-	parentHash, err := ssz.TreeHash(genesis)
+	parentHash, err := hashutil.HashBeaconBlock(genesis)
 	if err != nil {
 		t.Fatalf("unable to get tree hash root of canonical head: %v", err)
 	}
@@ -237,7 +238,7 @@ func setupBeaconChain(t *testing.T, faultyPoWClient bool, beaconDB *db.BeaconDB,
 }
 
 func SetSlotInState(service *ChainService, slot uint64) error {
-	bState, err := service.beaconDB.State()
+	bState, err := service.beaconDB.State(context.Background())
 	if err != nil {
 		return err
 	}
@@ -304,6 +305,8 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
 	chainService := setupBeaconChain(t, false, db, true)
 
 	unixTime := uint64(time.Now().Unix())
@@ -311,7 +314,7 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	if err := db.InitializeState(unixTime, deposits); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := db.State()
+	beaconState, err := db.State(ctx)
 	if err != nil {
 		t.Fatalf("Could not fetch beacon state: %v", err)
 	}
@@ -349,7 +352,7 @@ func TestChainService_FaultyPOWChain(t *testing.T) {
 		Slot: 1,
 	}
 
-	parentRoot, err := ssz.TreeHash(parentBlock)
+	parentRoot, err := hashutil.HashBeaconBlock(parentBlock)
 	if err != nil {
 		t.Fatalf("Unable to tree hash block %v", err)
 	}
@@ -394,7 +397,7 @@ func TestChainService_Starts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	stateRoot, err := ssz.TreeHash(beaconState)
+	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
@@ -449,7 +452,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
-	stateRoot, err := ssz.TreeHash(beaconState)
+	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
@@ -514,6 +517,8 @@ func TestPOWBlockExists_UsingDepositRootHash(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
 	chainService := setupBeaconChain(t, true, db, true)
 	unixTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
@@ -521,7 +526,7 @@ func TestPOWBlockExists_UsingDepositRootHash(t *testing.T) {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 
-	beaconState, err := chainService.beaconDB.State()
+	beaconState, err := chainService.beaconDB.State(ctx)
 	if err != nil {
 		t.Fatalf("Unable to retrieve beacon state %v", err)
 	}
@@ -540,13 +545,13 @@ func TestUpdateHead_SavesBlock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Cannot create genesis beacon state: %v", err)
 	}
-	stateRoot, err := ssz.TreeHash(beaconState)
+	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
-	genesisRoot, err := ssz.TreeHash(genesis)
+	genesisRoot, err := hashutil.HashProto(genesis)
 	if err != nil {
 		t.Fatalf("Could not get genesis block root: %v", err)
 	}
@@ -590,7 +595,7 @@ func TestUpdateHead_SavesBlock(t *testing.T) {
 			t.Fatalf("Could not initialize beacon state to disk: %v", err)
 		}
 
-		stateRoot, err := ssz.TreeHash(tt.state)
+		stateRoot, err := hashutil.HashProto(tt.state)
 		if err != nil {
 			t.Fatalf("Could not tree hash state: %v", err)
 		}
@@ -621,13 +626,15 @@ func TestUpdateHead_SavesBlock(t *testing.T) {
 func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
 	chainService := setupBeaconChain(t, false, db, true)
 	unixTime := uint64(time.Now().Unix())
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	if err := db.InitializeState(unixTime, deposits); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := db.State()
+	beaconState, err := db.State(ctx)
 	if err != nil {
 		t.Fatalf("Can't get genesis state: %v", err)
 	}
@@ -641,7 +648,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 
 	beaconState.Slot = params.BeaconConfig().GenesisSlot + 10
 
-	stateRoot, err := ssz.TreeHash(beaconState)
+	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
@@ -649,7 +656,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 	if err := chainService.beaconDB.SaveBlock(genesis); err != nil {
 		t.Fatalf("cannot save block: %v", err)
 	}
-	parentRoot, err := ssz.TreeHash(genesis)
+	parentRoot, err := hashutil.HashBeaconBlock(genesis)
 	if err != nil {
 		t.Fatalf("unable to get root of canonical head: %v", err)
 	}

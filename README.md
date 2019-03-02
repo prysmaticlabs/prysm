@@ -19,7 +19,7 @@ Also, read our [Sharding Reference Implementation Doc](https://github.com/prysma
     - [Run Our Pre-Compiled Binaries](#run-our-pre-compiled-binaries)
     - [Run Via Bazel (Recommended)](#run-via-bazel-recommended)
     - [Running The Beacon Chain](#running-the-beacon-chain)
-    - [Running an ETH2.0 Validator Client](#running-an-eth2.0-validator-client)
+    - [Running an ETH2.0 Validator Client](#running-an-eth20-validator-client)
     - [Running Via Docker](#running-via-docker)
     - [Running Under Windows](#running-under-windows)
 -   [Testing](#testing)

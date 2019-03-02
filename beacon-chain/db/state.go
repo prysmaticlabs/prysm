@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
 	"time"
@@ -11,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
+	"go.opencensus.io/trace"
 )
 
 // InitializeState creates an initial genesis state for the beacon
@@ -27,7 +28,7 @@ func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit) 
 	stateHash := hashutil.Hash(stateEnc)
 	genesisBlock := b.NewGenesisBlock(stateHash[:])
 	// #nosec G104
-	blockRoot, _ := ssz.TreeHash(genesisBlock)
+	blockRoot, _ := hashutil.HashBeaconBlock(genesisBlock)
 	// #nosec G104
 	blockEnc, _ := proto.Marshal(genesisBlock)
 	zeroBinary := encodeSlotNumber(0)
@@ -64,7 +65,9 @@ func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit) 
 }
 
 // State fetches the canonical beacon chain's state from the DB.
-func (db *BeaconDB) State() (*pb.BeaconState, error) {
+func (db *BeaconDB) State(ctx context.Context) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.State")
+	defer span.End()
 	var beaconState *pb.BeaconState
 	err := db.view(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
@@ -138,8 +141,8 @@ func createState(enc []byte) (*pb.BeaconState, error) {
 }
 
 // GenesisTime returns the genesis timestamp for the state.
-func (db *BeaconDB) GenesisTime() (time.Time, error) {
-	state, err := db.State()
+func (db *BeaconDB) GenesisTime(ctx context.Context) (time.Time, error) {
+	state, err := db.State(ctx)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("could not retrieve state: %v", err)
 	}

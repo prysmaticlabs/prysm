@@ -180,9 +180,9 @@ func TestCrosslinkCommitteesAtSlot_OK(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ValidatorRegistry: validators,
-		Slot:              200,
+		Slot:              params.BeaconConfig().GenesisSlot + 200,
 	}
-	committees, err := CrosslinkCommitteesAtSlot(state, 132, false)
+	committees, err := CrosslinkCommitteesAtSlot(state, params.BeaconConfig().GenesisSlot+132, false)
 	if err != nil {
 		t.Fatalf("Could not get crosslink committee: %v", err)
 	}
@@ -191,7 +191,7 @@ func TestCrosslinkCommitteesAtSlot_OK(t *testing.T) {
 			committeesPerEpoch, len(committees))
 	}
 
-	newCommittees, err := CrosslinkCommitteesAtSlot(state, 180, false)
+	newCommittees, err := CrosslinkCommitteesAtSlot(state, params.BeaconConfig().GenesisSlot+180, false)
 	if err != nil {
 		t.Fatalf("Could not get crosslink committee: %v", err)
 	}
@@ -204,7 +204,9 @@ func TestCrosslinkCommitteesAtSlot_OK(t *testing.T) {
 func TestCrosslinkCommitteesAtSlot_OutOfBound(t *testing.T) {
 	want := fmt.Sprintf(
 		"input committee epoch %d out of bounds: %d <= epoch <= %d",
-		0, 1, 2,
+		params.BeaconConfig().GenesisEpoch,
+		params.BeaconConfig().GenesisEpoch+1,
+		params.BeaconConfig().GenesisEpoch+2,
 	)
 	slot := params.BeaconConfig().GenesisSlot
 	beaconState := &pb.BeaconState{
@@ -219,7 +221,7 @@ func TestCrosslinkCommitteesAtSlot_OutOfBound(t *testing.T) {
 func TestCrosslinkCommitteesAtSlot_ShuffleFailed(t *testing.T) {
 	state := &pb.BeaconState{
 		ValidatorRegistry: validatorsUpperBound,
-		Slot:              100,
+		Slot:              params.BeaconConfig().GenesisSlot + 100,
 	}
 
 	want := fmt.Sprint(
@@ -227,7 +229,7 @@ func TestCrosslinkCommitteesAtSlot_ShuffleFailed(t *testing.T) {
 			"input list exceeded upper bound and reached modulo bias",
 	)
 
-	if _, err := CrosslinkCommitteesAtSlot(state, 1, false); !strings.Contains(err.Error(), want) {
+	if _, err := CrosslinkCommitteesAtSlot(state, params.BeaconConfig().GenesisSlot+1, false); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected: %s, received: %v", want, err)
 	}
 }
@@ -358,7 +360,7 @@ func TestVerifyBitfield_OK(t *testing.T) {
 		t.Error("bitfield is not validated when it was supposed to be")
 	}
 }
-func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
+func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 	// Initialize test with 128 validators, each slot and each shard gets 2 validators.
 	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
@@ -368,7 +370,7 @@ func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
 	}
 	state := &pb.BeaconState{
 		ValidatorRegistry: validators,
-		Slot:              params.BeaconConfig().SlotsPerEpoch,
+		Slot:              params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot,
 	}
 
 	tests := []struct {
@@ -380,28 +382,28 @@ func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
 	}{
 		{
 			index:      0,
-			slot:       146,
+			slot:       params.BeaconConfig().GenesisSlot + 146,
 			committee:  []uint64{105, 0},
 			shard:      18,
 			isProposer: false,
 		},
 		{
 			index:      105,
-			slot:       146,
+			slot:       params.BeaconConfig().GenesisSlot + 146,
 			committee:  []uint64{105, 0},
 			shard:      18,
 			isProposer: true,
 		},
 		{
 			index:      64,
-			slot:       139,
+			slot:       params.BeaconConfig().GenesisSlot + 139,
 			committee:  []uint64{64, 52},
 			shard:      11,
 			isProposer: false,
 		},
 		{
 			index:      11,
-			slot:       130,
+			slot:       params.BeaconConfig().GenesisSlot + 130,
 			committee:  []uint64{11, 121},
 			shard:      2,
 			isProposer: true,
@@ -409,8 +411,8 @@ func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		committee, shard, slot, isProposer, err := NextEpochCommitteeAssignment(
-			state, tt.index, false)
+		committee, shard, slot, isProposer, err := CommitteeAssignment(
+			state, SlotToEpoch(tt.slot), tt.index, false)
 		if err != nil {
 			t.Fatalf("failed to execute NextEpochCommitteeAssignment: %v", err)
 		}
@@ -433,17 +435,16 @@ func TestNextEpochCommitteeAssignment_OK(t *testing.T) {
 	}
 }
 
-func TestNextEpochCommitteeAssignment_CantFindValidator(t *testing.T) {
+func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 	state := &pb.BeaconState{
-		Slot: params.BeaconConfig().SlotsPerEpoch,
+		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
 	}
 	index := uint64(10000)
 	want := fmt.Sprintf(
 		"could not get assignment validator %d",
 		index,
 	)
-	if _, _, _, _, err := NextEpochCommitteeAssignment(
-		state, index, false); !strings.Contains(err.Error(), want) {
+	if _, _, _, _, err := CommitteeAssignment(state, SlotToEpoch(state.Slot), index, false); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
