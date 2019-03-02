@@ -766,7 +766,7 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_cid",
-    commit = "e7e67e08cfba888a4297224402e12832bdc15ea0",
+    commit = "e7e67e08cfba888a4297224402e12832bdc15ea0",  # v0.0.1
     importpath = "github.com/ipfs/go-cid",
 )
 
