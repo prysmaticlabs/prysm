@@ -117,7 +117,7 @@ func BenchmarkState_ReadingFromCache(b *testing.B) {
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(b, 10)
-	if err := db.InitializeState(genesisTime, deposits); err != nil {
+	if err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{}); err != nil {
 		b.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -159,7 +159,7 @@ func BenchmarkState_ReadingFromDB(b *testing.B) {
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(b, 10)
-	if err := db.InitializeState(genesisTime, deposits); err != nil {
+	if err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{}); err != nil {
 		b.Fatalf("Failed to initialize state: %v", err)
 	}
 
