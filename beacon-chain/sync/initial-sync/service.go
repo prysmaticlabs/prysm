@@ -17,13 +17,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -48,7 +47,7 @@ type Config struct {
 // DefaultConfig provides the default configuration for a sync service.
 // SyncPollingInterval determines how frequently the service checks that initial sync is complete.
 // BlockBufferSize determines that buffer size of the `blockBuf` channel.
-// CrystallizedStateBufferSize determines the buffer size of thhe `crystallizedStateBuf` channel.
+// StateBufferSize determines the buffer size of thhe `stateBuf` channel.
 func DefaultConfig() *Config {
 	return &Config{
 		SyncPollingInterval:     time.Duration(params.BeaconConfig().SyncPollingInterval) * time.Second,
@@ -265,7 +264,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 			// sets the current slot to the last finalized slot of the
 			// beacon state to begin our sync from.
 			s.currentSlot = beaconState.FinalizedEpoch * params.BeaconConfig().SlotsPerEpoch
-			log.Debugf("Successfully saved crystallized state with the last finalized slot: %d", beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch)
+			log.Debugf("Successfully saved state with the last finalized slot: %d", beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch)
 
 			s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
 

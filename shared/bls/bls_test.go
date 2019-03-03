@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	"github.com/prysmaticlabs/prysm/shared/bls"
 )
 
