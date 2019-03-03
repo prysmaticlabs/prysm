@@ -197,8 +197,14 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 		close(s.stateBuf)
 	}()
 
-	// Send out a batch request
-	s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
+	if s.atGenesis {
+		if err := s.requestStateFromPeer(s.stateRootOfHighestObservedSlot[:], p2p.Peer{}); err != nil {
+			log.Errorf("Could not request state from peer %v", err)
+		}
+	} else {
+		// Send out a batch request
+		s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
+	}
 
 	for {
 		select {
@@ -271,6 +277,16 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 
 		case msg := <-s.batchedBlockBuf:
 			s.processBatchedBlocks(context.TODO(), msg)
+		default:
+			log.Info("sending out requests at current slot %d", s.currentSlot)
+			if s.atGenesis {
+				if err := s.requestStateFromPeer(s.stateRootOfHighestObservedSlot[:], p2p.Peer{}); err != nil {
+					log.Errorf("Could not request state from peer %v", err)
+				}
+			} else {
+				// Send out a batch request
+				s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
+			}
 		}
 	}
 }
