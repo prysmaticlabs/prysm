@@ -573,7 +573,6 @@ func TestInclusionDistance_CorrectDistance(t *testing.T) {
 		t.Fatalf("Could not execute InclusionDistance: %v", err)
 	}
 
-	fmt.Println(state.LatestAttestations[0].InclusionSlot)
 	// Inclusion distance is 100 because input validator index is 45,
 	// validator 45's attested slot 0 and got included slot 100.
 	if distance != 100 {

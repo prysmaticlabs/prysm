@@ -44,7 +44,7 @@ func TestInitializeState_OK(t *testing.T) {
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	if err := db.InitializeState(genesisTime, deposits); err != nil {
+	if err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 	b, err := db.ChainHead()
@@ -92,7 +92,7 @@ func TestGenesisTime_OK(t *testing.T) {
 	}
 
 	deposits, _ := setupInitialDeposits(t, 10)
-	if err := db.InitializeState(uint64(genesisTime.Unix()), deposits); err != nil {
+	if err := db.InitializeState(uint64(genesisTime.Unix()), deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
 

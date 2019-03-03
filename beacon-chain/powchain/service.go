@@ -141,6 +141,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		blockHash:               common.BytesToHash([]byte{}),
 		blockCache:              newBlockCache(),
 		depositContractAddress:  config.DepositContract,
+		depositTrie:             trieutil.NewDepositTrie(),
 		chainStartFeed:          new(event.Feed),
 		client:                  config.Client,
 		reader:                  config.Reader,
@@ -461,7 +462,6 @@ func (w *Web3Service) initDataFromContract() error {
 		return fmt.Errorf("could not retrieve deposit root %v", err)
 	}
 	w.depositRoot = root[:]
-	w.depositTrie = trieutil.NewDepositTrie()
 	return nil
 }
 
