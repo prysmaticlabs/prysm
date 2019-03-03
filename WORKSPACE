@@ -530,7 +530,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_msgio",
-    commit = "2efd92d62d528c56c6711346e82df0c74a5742a8",
+    commit = "2efd92d62d528c56c6711346e82df0c74a5742a8",  # v0.0.1
     importpath = "github.com/libp2p/go-msgio",
 )
 
