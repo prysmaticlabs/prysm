@@ -111,6 +111,7 @@ func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*S
 	mockChain := &mockChainService{
 		bFeed: new(event.Feed),
 		sFeed: new(event.Feed),
+		cFeed: new(event.Feed),
 	}
 
 	cfg := &Config{
@@ -156,6 +157,7 @@ func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T
 	mockChain := &mockChainService{
 		bFeed: new(event.Feed),
 		sFeed: new(event.Feed),
+		cFeed: new(event.Feed),
 	}
 
 	// we add in 2 blocks to the unsynced node so that, we dont request the beacon state from the
@@ -187,7 +189,7 @@ func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T
 
 	for ss.Querier.currentHeadSlot == 0 {
 		simP2P.Send(&pb.ChainHeadResponse{
-			Slot: params.BeaconConfig().GenesisSlot + 10,
+			Slot: params.BeaconConfig().GenesisSlot + 12,
 			Hash: []byte{'t', 'e', 's', 't'},
 			Block: &pb.BeaconBlock{
 				StateRootHash32: stateRoot[:],

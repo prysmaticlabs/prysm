@@ -52,6 +52,7 @@ type Querier struct {
 	chainStartBuf    chan time.Time
 	powchain         powChainService
 	chainStarted     bool
+	atGenesis        bool
 }
 
 // NewQuerierService constructs a new Sync Querier Service.
@@ -85,6 +86,8 @@ func (q *Querier) Start() {
 		return
 	}
 
+	q.atGenesis = !hasChainStarted
+
 	bState, err := q.db.State(context.TODO())
 	if err != nil {
 		queryLog.Errorf("Unable to retrieve beacon state %v", err)
@@ -96,7 +99,11 @@ func (q *Querier) Start() {
 	// to accumulate all the deposits and process them.
 	if !hasChainStarted || bState == nil {
 		q.listenForStateInitialization()
-		return
+
+		// Return, if the node is at genesis.
+		if q.atGenesis {
+			return
+		}
 	}
 	q.run()
 }
@@ -115,6 +122,7 @@ func (q *Querier) listenForStateInitialization() {
 	for {
 		select {
 		case <-q.chainStartBuf:
+			queryLog.Info("state initialized")
 			q.chainStarted = true
 			return
 		case <-sub.Err():
@@ -174,7 +182,7 @@ func (q *Querier) RequestLatestHead() {
 // IsSynced checks if the node is cuurently synced with the
 // rest of the network.
 func (q *Querier) IsSynced() (bool, error) {
-	if q.chainStarted {
+	if q.chainStarted && q.atGenesis {
 		return true, nil
 	}
 	block, err := q.db.ChainHead()
