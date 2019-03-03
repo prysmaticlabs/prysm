@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 	"strings"
 	"time"
@@ -17,6 +18,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	dto "github.com/prometheus/client_model/go"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
@@ -347,6 +349,16 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	deposit := &pb.Deposit{
 		DepositData: depositData,
 	}
+	if w.LatestBlockHeight() != nil {
+		powDepState := &pb.POWDepositState{}
+		(*powDepState).LatestBlockHash = w.LatestBlockHash().Bytes()
+		(*powDepState).LastBlockHeight = w.LatestBlockHeight().Uint64()
+		(*powDepState).DepositCount = uint64(PrometheusToFloat64(validDepositsCount))
+		if powDepState.LastBlockHeight != uint64(0) {
+			w.beaconDB.SaveDepositState(powDepState)
+		}
+	}
+
 	// If chain has not started, do not update the merkle trie
 	if !w.chainStarted {
 		w.chainStartDeposits = append(w.chainStartDeposits, deposit)
@@ -431,7 +443,9 @@ func (w *Web3Service) run(done <-chan struct{}) {
 
 	w.blockHeight = header.Number
 	w.blockHash = header.Hash()
-
+	if err := w.initFromDB(); err != nil {
+		log.Errorf("Unable to retrieve latest ETH1.0 state from db: %v", err)
+	}
 	// Only process logs if the chain start delay flag is not enabled.
 	if w.chainStartDelay == 0 {
 		if err := w.processPastLogs(); err != nil {
@@ -514,10 +528,12 @@ func (w *Web3Service) saveInTrie(depositData []byte, merkleRoot common.Hash) err
 // processPastLogs processes all the past logs from the deposit contract and
 // updates the deposit trie with the data from each individual log.
 func (w *Web3Service) processPastLogs() error {
+
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
 			w.depositContractAddress,
 		},
+		FromBlock: w.LatestBlockHeight(),
 	}
 
 	logs, err := w.logger.FilterLogs(w.ctx, query)
@@ -529,6 +545,22 @@ func (w *Web3Service) processPastLogs() error {
 		w.ProcessLog(log)
 	}
 	w.lastRequestedBlock.Set(w.blockHeight)
+	return nil
+}
+
+func (w *Web3Service) initFromDB() error {
+	powDepositState, err := w.beaconDB.DepositState()
+	if err != nil {
+		return err
+	}
+	if powDepositState == nil {
+		return nil
+	}
+	w.blockHeight = new(big.Int).SetBytes((*powDepositState).LatestBlockHash)
+	w.blockHash = common.BytesToHash((*powDepositState).LatestBlockHash)
+	w.depositTrie.UpdateDepositTrie((*powDepositState).DepositTrie)
+	validDepositsCount.Add(float64((*powDepositState).DepositCount))
+
 	return nil
 }
 
@@ -570,4 +602,19 @@ func safelyHandlePanic() {
 			"r": r,
 		}).Error("Panicked when handling data from ETH 1.0 Chain! Recovering...")
 	}
+}
+// PrometheusToFloat64 convert counters to float64
+func PrometheusToFloat64(m prometheus.Metric) float64 {
+	pb := &dto.Metric{}
+	m.Write(pb)
+	if pb.Gauge != nil {
+		return pb.Gauge.GetValue()
+	}
+	if pb.Counter != nil {
+		return pb.Counter.GetValue()
+	}
+	if pb.Untyped != nil {
+		return pb.Untyped.GetValue()
+	}
+	return math.NaN()
 }

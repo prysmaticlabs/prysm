@@ -43,6 +43,14 @@ message BeaconState {
   uint64 slot = 5003;
 }
 
+message POWDepositState {
+  bytes latest_block_hash = 1;
+  uint64 last_block_height = 2;
+  bytes deposit_trie = 3;
+  uint64 deposit_count = 4;
+  uint64 pending_deposits_count = 5;
+}
+
 message Fork {
   uint64 previous_version = 1;
   uint64 current_version = 2;
