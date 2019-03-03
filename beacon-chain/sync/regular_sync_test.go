@@ -42,6 +42,7 @@ func (mp *mockP2P) Send(msg proto.Message, peer p2p.Peer) {
 type mockChainService struct {
 	bFeed *event.Feed
 	sFeed *event.Feed
+	cFeed *event.Feed
 }
 
 func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
@@ -52,6 +53,13 @@ func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
 }
 
 func (ms *mockChainService) StateInitializedFeed() *event.Feed {
+	if ms.sFeed == nil {
+		return new(event.Feed)
+	}
+	return ms.sFeed
+}
+
+func (ms *mockChainService) CanonicalBlockFeed() *event.Feed {
 	if ms.sFeed == nil {
 		return new(event.Feed)
 	}
