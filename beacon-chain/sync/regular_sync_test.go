@@ -476,6 +476,7 @@ func TestReceiveExitReq_OK(t *testing.T) {
 		OperationService: os,
 		P2P:              &mockP2P{},
 		BeaconDB:         db,
+		ChainService:     &mockChainService{},
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
@@ -511,6 +512,7 @@ func TestHandleAttReq_HashNotFound(t *testing.T) {
 		OperationService: os,
 		P2P:              &mockP2P{},
 		BeaconDB:         db,
+		ChainService:     &mockChainService{},
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
@@ -546,6 +548,7 @@ func TestHandleUnseenAttsReq_EmptyAttsPool(t *testing.T) {
 		OperationService: os,
 		P2P:              &mockP2P{},
 		BeaconDB:         db,
+		ChainService:     &mockChainService{},
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
@@ -589,6 +592,7 @@ func TestHandleAttReq_Ok(t *testing.T) {
 		OperationService: os,
 		P2P:              &mockP2P{},
 		BeaconDB:         db,
+		ChainService:     &mockChainService{},
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
@@ -631,6 +635,7 @@ func TestHandleUnseenAttsReq_Ok(t *testing.T) {
 		OperationService: os,
 		P2P:              &mockP2P{},
 		BeaconDB:         db,
+		ChainService:     &mockChainService{},
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
