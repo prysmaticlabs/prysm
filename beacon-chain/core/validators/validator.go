@@ -55,7 +55,7 @@ func ValidatorIndices(
 func AttestingValidatorIndices(
 	state *pb.BeaconState,
 	shard uint64,
-	shardBlockRoot []byte,
+	crosslinkDataRoot []byte,
 	thisEpochAttestations []*pb.PendingAttestation,
 	prevEpochAttestations []*pb.PendingAttestation) ([]uint64, error) {
 
@@ -64,7 +64,7 @@ func AttestingValidatorIndices(
 
 	for _, attestation := range attestations {
 		if attestation.Data.Shard == shard &&
-			bytes.Equal(attestation.Data.ShardBlockRootHash32, shardBlockRoot) {
+			bytes.Equal(attestation.Data.CrosslinkDataRootHash32, crosslinkDataRoot) {
 
 			validatorIndicesCommittee, err := helpers.AttestationParticipants(state, attestation.Data, attestation.AggregationBitfield)
 			if err != nil {
@@ -227,7 +227,7 @@ func SlashValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) 
 	state.ValidatorBalances[whistleblowerIdx] += whistleblowerReward
 	state.ValidatorBalances[idx] -= whistleblowerReward
 
-	state.ValidatorRegistry[idx].SlashedEpoch = helpers.CurrentEpoch(state)
+	state.ValidatorRegistry[idx].SlashedEpoch = helpers.CurrentEpoch(state) + params.BeaconConfig().LatestSlashedExitLength
 	return state, nil
 }
 
@@ -420,7 +420,7 @@ func allValidatorsIndices(state *pb.BeaconState) []uint64 {
 // in and out of the validator pool.
 // Spec pseudocode definition:
 //     max_balance_churn = max(
-//        MAX_DEPOSIT * GWEI_PER_ETH,
+//        MAX_DEPOSIT_AMOUNT,
 //        total_balance // (2 * MAX_BALANCE_CHURN_QUOTIENT))
 func maxBalanceChurn(totalBalance uint64) uint64 {
 	maxBalanceChurn := totalBalance / 2 * params.BeaconConfig().MaxBalanceChurnQuotient
@@ -473,7 +473,7 @@ func prepareValidatorForWithdrawal(state *pb.BeaconState, idx uint64) *pb.Beacon
 // the validator is eligible for activation and exit.
 //
 // Spec pseudocode definition:
-// def get_entry_exit_effect_epoch(epoch: EpochNumber) -> EpochNumber:
+// def get_entry_exit_effect_epoch(epoch: Epoch) -> Epoch:
 //    """
 //    An entry or exit triggered in the ``epoch`` given by the input takes effect at
 //    the epoch given by the output.

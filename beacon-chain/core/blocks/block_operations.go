@@ -82,7 +82,7 @@ func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, veri
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
 	}
-	log.WithField("proposerIndex", proposerIdx).Info("Verifying randao")
+	log.WithField("proposerIndex", proposerIdx).Info("RANDAO expected proposer")
 	proposer := beaconState.ValidatorRegistry[proposerIdx]
 	if verifySignatures {
 		if err := verifyBlockRandao(beaconState, block, proposer); err != nil {
@@ -373,6 +373,7 @@ func isSurroundVote(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
 //   Verify that len(block.body.attestations) <= MAX_ATTESTATIONS.
 //
 //   For each attestation in block.body.attestations:
+//     Verify that `attestation.data.slot >= GENESIS_SLOT`.
 //     Verify that `attestation.data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot`.
 //     Verify that `state.slot < attestation.data.slot + SLOTS_PER_EPOCH.
 //     Verify that attestation.data.justified_epoch is equal to state.justified_epoch
@@ -415,6 +416,13 @@ func ProcessBlockAttestations(
 }
 
 func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifySignatures bool) error {
+	if att.Data.Slot < params.BeaconConfig().GenesisSlot {
+		return fmt.Errorf(
+			"attestation slot (slot %d) less than genesis slot (%d)",
+			att.Data.Slot,
+			params.BeaconConfig().GenesisSlot,
+		)
+	}
 	inclusionDelay := params.BeaconConfig().MinAttestationInclusionDelay
 	if att.Data.Slot+inclusionDelay > beaconState.Slot {
 		return fmt.Errorf(
@@ -477,8 +485,8 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	// 	equals state.latest_crosslinks[attestation.data.shard]
 	shard := att.Data.Shard
 	crosslink := &pb.Crosslink{
-		ShardBlockRootHash32: att.Data.ShardBlockRootHash32,
-		Epoch:                helpers.SlotToEpoch(att.Data.Slot),
+		CrosslinkDataRootHash32: att.Data.CrosslinkDataRootHash32,
+		Epoch:                   helpers.SlotToEpoch(att.Data.Slot),
 	}
 	crosslinkFromAttestation := att.Data.LatestCrosslink
 	crosslinkFromState := beaconState.LatestCrosslinks[shard]
@@ -491,11 +499,11 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	}
 
 	// Verify attestation.shard_block_root == ZERO_HASH [TO BE REMOVED IN PHASE 1].
-	if !bytes.Equal(att.Data.ShardBlockRootHash32, params.BeaconConfig().ZeroHash[:]) {
+	if !bytes.Equal(att.Data.CrosslinkDataRootHash32, params.BeaconConfig().ZeroHash[:]) {
 		return fmt.Errorf(
 			"expected attestation.ShardBlockRoot == %#x, received %#x instead",
 			params.BeaconConfig().ZeroHash[:],
-			att.Data.ShardBlockRootHash32,
+			att.Data.CrosslinkDataRootHash32,
 		)
 	}
 	if verifySignatures {
