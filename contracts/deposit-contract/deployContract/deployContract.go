@@ -11,6 +11,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -35,7 +36,8 @@ func main() {
 	var depositsForChainStart int64
 	var minDepositAmount int64
 	var maxDepositAmount int64
-	var skipChainstartDelay bool
+	var customChainstartDelay uint64
+	var drainAddress string
 
 	customFormatter := new(prefixed.TextFormatter)
 	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
@@ -53,10 +55,11 @@ func main() {
 			Usage:       "Location of keystore",
 			Destination: &keystoreUTCPath,
 		},
-		cli.BoolFlag{
-			Name:        "skipChainstartDelay",
-			Usage:       "Whether to skip ChainStart log being fired a day later",
-			Destination: &skipChainstartDelay,
+		cli.Uint64Flag{
+			Name:        "customChainstartDelay",
+			Usage:       "Number of seconds to delay the ChainStart genesis timestamp",
+			Value:       0,
+			Destination: &customChainstartDelay,
 		},
 		cli.StringFlag{
 			Name:        "ipcPath",
@@ -102,6 +105,12 @@ func main() {
 			Value:       params.ContractConfig().MaxDepositAmount.Int64(),
 			Usage:       "Maximum deposit value allowed in contract",
 			Destination: &maxDepositAmount,
+		},
+		cli.StringFlag{
+			Name:        "drainAddress",
+			Value:       "",
+			Usage:       "The drain address to specify in the contract. The default will be msg.sender",
+			Destination: &drainAddress,
 		},
 	}
 
@@ -160,11 +169,20 @@ func main() {
 			txOps.GasLimit = 4000000
 		}
 
+		drain := txOps.From
+		if drainAddress != "" {
+			drain = common.HexToAddress(drainAddress)
+		}
+
 		// Deploy validator registration contract
 		addr, tx, _, err := contracts.DeployDepositContract(
-			txOps, client, big.NewInt(depositsForChainStart),
-			big.NewInt(minDepositAmount), big.NewInt(maxDepositAmount),
-			skipChainstartDelay,
+			txOps,
+			client,
+			big.NewInt(depositsForChainStart),
+			big.NewInt(minDepositAmount),
+			big.NewInt(maxDepositAmount),
+			big.NewInt(int64(customChainstartDelay)),
+			drain,
 		)
 
 		if err != nil {

@@ -10,14 +10,15 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/prysmaticlabs/prysm/validator/types"
-
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
+	"github.com/prysmaticlabs/prysm/shared/tracing"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/client"
+	"github.com/prysmaticlabs/prysm/validator/types"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -36,11 +37,25 @@ type ValidatorClient struct {
 
 // NewValidatorClient creates a new, Ethereum Serenity validator client.
 func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
+	if err := tracing.Setup(
+		"validator", // service name
+		ctx.GlobalString(cmd.TracingEndpointFlag.Name),
+		ctx.GlobalFloat64(cmd.TraceSampleFractionFlag.Name),
+		ctx.GlobalBool(cmd.EnableTracingFlag.Name),
+	); err != nil {
+		return nil, err
+	}
 	registry := shared.NewServiceRegistry()
 	ValidatorClient := &ValidatorClient{
 		ctx:      ctx,
 		services: registry,
 		stop:     make(chan struct{}),
+	}
+
+	// Use demo config values if demo config flag is set.
+	if ctx.GlobalBool(types.DemoConfigFlag.Name) {
+		log.Info("Using custom parameter configuration")
+		params.UseDemoBeaconConfig()
 	}
 
 	if err := ValidatorClient.registerPrometheusService(ctx); err != nil {
@@ -111,7 +126,7 @@ func (s *ValidatorClient) registerPrometheusService(ctx *cli.Context) error {
 func (s *ValidatorClient) registerClientService(ctx *cli.Context) error {
 	endpoint := ctx.GlobalString(types.BeaconRPCProviderFlag.Name)
 	keystoreDirectory := ctx.GlobalString(types.KeystorePathFlag.Name)
-	keystorePassword := ctx.GlobalString(types.PasswordFlag.Name)
+	keystorePassword := ctx.String(types.PasswordFlag.Name)
 	v, err := client.NewValidatorService(context.TODO(), &client.Config{
 		Endpoint:     endpoint,
 		KeystorePath: keystoreDirectory,

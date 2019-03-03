@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/ssz"
-
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -18,11 +16,16 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
 var log = logrus.WithField("prefix", "blockchain")
+
+type operationService interface {
+	IncomingProcessedBlockFeed() *event.Feed
+}
 
 // ChainService represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
@@ -31,6 +34,7 @@ type ChainService struct {
 	cancel               context.CancelFunc
 	beaconDB             *db.BeaconDB
 	web3Service          *powchain.Web3Service
+	opsPoolService       operationService
 	incomingBlockFeed    *event.Feed
 	incomingBlockChan    chan *pb.BeaconBlock
 	chainStartChan       chan time.Time
@@ -47,6 +51,7 @@ type Config struct {
 	IncomingBlockBuf int
 	Web3Service      *powchain.Web3Service
 	BeaconDB         *db.BeaconDB
+	OpsPoolService   operationService
 	DevMode          bool
 	EnablePOWChain   bool
 }
@@ -60,6 +65,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		cancel:               cancel,
 		beaconDB:             cfg.BeaconDB,
 		web3Service:          cfg.Web3Service,
+		opsPoolService:       cfg.OpsPoolService,
 		incomingBlockChan:    make(chan *pb.BeaconBlock, cfg.IncomingBlockBuf),
 		chainStartChan:       make(chan time.Time),
 		incomingBlockFeed:    new(event.Feed),
@@ -72,7 +78,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
-	beaconState, err := c.beaconDB.State()
+	beaconState, err := c.beaconDB.State(context.TODO())
 	if err != nil {
 		log.Fatalf("Could not fetch beacon state: %v", err)
 	}
@@ -91,7 +97,13 @@ func (c *ChainService) Start() {
 		go func() {
 			genesisTime := <-c.chainStartChan
 			initialDeposits := c.web3Service.ChainStartDeposits()
-			if err := c.initializeBeaconChain(genesisTime, initialDeposits); err != nil {
+			depositRoot := c.web3Service.DepositRoot()
+			latestBlockHash := c.web3Service.LatestBlockHash()
+			eth1Data := &pb.Eth1Data{
+				DepositRootHash32: depositRoot[:],
+				BlockHash32:       latestBlockHash[:],
+			}
+			if err := c.initializeBeaconChain(genesisTime, initialDeposits, eth1Data); err != nil {
 				log.Fatalf("Could not initialize beacon chain: %v", err)
 			}
 			c.stateInitializedFeed.Send(genesisTime)
@@ -104,23 +116,28 @@ func (c *ChainService) Start() {
 // initializes the state and genesis block of the beacon chain to persistent storage
 // based on a genesis timestamp value obtained from the ChainStart event emitted
 // by the ETH1.0 Deposit Contract and the POWChain service of the node.
-func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*pb.Deposit) error {
+func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*pb.Deposit,
+	eth1data *pb.Eth1Data) error {
 	log.Info("ChainStart time reached, starting the beacon chain!")
 	c.genesisTime = genesisTime
 	unixTime := uint64(genesisTime.Unix())
-	if err := c.beaconDB.InitializeState(unixTime, deposits); err != nil {
+	if err := c.beaconDB.InitializeState(unixTime, deposits, eth1data); err != nil {
 		return fmt.Errorf("could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := c.beaconDB.State()
+	beaconState, err := c.beaconDB.State(context.TODO())
 	if err != nil {
 		return fmt.Errorf("could not attempt fetch beacon state: %v", err)
 	}
-	stateRoot, err := ssz.TreeHash(beaconState)
+	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		return fmt.Errorf("could not hash beacon state: %v", err)
 	}
-	if err := c.beaconDB.SaveBlock(b.NewGenesisBlock(stateRoot[:])); err != nil {
+	genBlock := b.NewGenesisBlock(stateRoot[:])
+	if err := c.beaconDB.SaveBlock(genBlock); err != nil {
 		return fmt.Errorf("could not save genesis block to disk: %v", err)
+	}
+	if err := c.beaconDB.UpdateChainHead(genBlock, beaconState); err != nil {
+		return fmt.Errorf("could not set chain head, %v", err)
 	}
 	return nil
 }
@@ -163,6 +180,21 @@ func (c *ChainService) StateInitializedFeed() *event.Feed {
 	return c.stateInitializedFeed
 }
 
+// ChainHeadRoot returns the hash root of the last beacon block processed by the
+// block chain service.
+func (c *ChainService) ChainHeadRoot() ([32]byte, error) {
+	head, err := c.beaconDB.ChainHead()
+	if err != nil {
+		return [32]byte{}, fmt.Errorf("could not retrieve chain head: %v", err)
+	}
+
+	root, err := hashutil.HashBeaconBlock(head)
+	if err != nil {
+		return [32]byte{}, fmt.Errorf("could not tree hash parent block: %v", err)
+	}
+	return root, nil
+}
+
 // doesPoWBlockExist checks if the referenced PoW block exists.
 func (c *ChainService) doesPoWBlockExist(hash [32]byte) bool {
 	powBlock, err := c.web3Service.Client().BlockByHash(c.ctx, hash)
@@ -189,7 +221,7 @@ func (c *ChainService) blockProcessing() {
 		// can be received either from the sync service, the RPC service,
 		// or via p2p.
 		case block := <-c.incomingBlockChan:
-			beaconState, err := c.beaconDB.State()
+			beaconState, err := c.beaconDB.State(context.TODO())
 			if err != nil {
 				log.Errorf("Unable to retrieve beacon state %v", err)
 				continue
@@ -213,7 +245,7 @@ func (c *ChainService) blockProcessing() {
 // ApplyForkChoiceRule determines the current beacon chain head using LMD GHOST as a block-vote
 // weighted function to select a canonical head in Ethereum Serenity.
 func (c *ChainService) ApplyForkChoiceRule(block *pb.BeaconBlock, computedState *pb.BeaconState) error {
-	h, err := ssz.TreeHash(block)
+	h, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return fmt.Errorf("could not tree hash incoming block: %v", err)
 	}
@@ -228,7 +260,7 @@ func (c *ChainService) ApplyForkChoiceRule(block *pb.BeaconBlock, computedState 
 	// server to stream these events to beacon clients.
 	// When the transition is a cycle transition, we stream the state containing the new validator
 	// assignments to clients.
-	if block.Slot%params.BeaconConfig().EpochLength == 0 {
+	if block.Slot%params.BeaconConfig().SlotsPerEpoch == 0 {
 		c.canonicalStateFeed.Send(computedState)
 	}
 	c.canonicalBlockFeed.Send(block)
@@ -259,13 +291,14 @@ func (c *ChainService) ApplyForkChoiceRule(block *pb.BeaconBlock, computedState 
 //			return nil, error  # or throw or whatever
 //
 func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.BeaconState) (*pb.BeaconState, error) {
-	blockRoot, err := ssz.TreeHash(block)
+	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
 	}
 
 	if block.Slot == params.BeaconConfig().GenesisSlot {
-		return nil, fmt.Errorf("cannot process a genesis block: received block with slot %d", params.BeaconConfig().GenesisSlot)
+		return nil, fmt.Errorf("cannot process a genesis block: received block with slot %d",
+			block.Slot-params.BeaconConfig().GenesisSlot)
 	}
 
 	// Save blocks with higher slot numbers in cache.
@@ -273,46 +306,60 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 		return nil, fmt.Errorf("block with root %#x is not ready for processing: %v", blockRoot, err)
 	}
 
-	prevBlock, err := c.beaconDB.ChainHead()
+	// Retrieve the last processed beacon block's hash root.
+	headRoot, err := c.ChainHeadRoot()
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve chain head: %v", err)
+		return nil, fmt.Errorf("could not retrieve chain head root: %v", err)
 	}
 
-	parentRoot, err := ssz.TreeHash(prevBlock)
-	if err != nil {
-		return nil, fmt.Errorf("could not tree hash parent block: %v", err)
-	}
+	log.WithField("slotNumber", block.Slot-params.BeaconConfig().GenesisSlot).Info(
+		"Executing state transition")
 
-	log.WithField("slotNumber", block.Slot).Info("Executing state transition")
-
-	// Check for skipped slots and update the corresponding proposers
-	// randao layer.
+	// Check for skipped slots.
 	for beaconState.Slot < block.Slot-1 {
 		beaconState, err = state.ExecuteStateTransition(
 			beaconState,
 			nil,
-			parentRoot,
-			true, /* no sig verify */
+			headRoot,
+			true, /* sig verify */
 		)
 		if err != nil {
-			return nil, fmt.Errorf("could not execute state transition %v", err)
+			return nil, fmt.Errorf("could not execute state transition without block %v", err)
 		}
+		log.WithField(
+			"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
+		).Info("Slot transition successfully processed")
 	}
 
 	beaconState, err = state.ExecuteStateTransition(
 		beaconState,
 		block,
-		parentRoot,
+		headRoot,
 		true, /* no sig verify */
 	)
 	if err != nil {
-		return nil, fmt.Errorf("could not execute state transition %v", err)
+		return nil, fmt.Errorf("could not execute state transition with block %v", err)
+	}
+	log.WithField(
+		"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
+	).Info("Slot transition successfully processed")
+	log.WithField(
+		"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
+	).Info("Block transition successfully processed")
+	if (beaconState.Slot+1)%params.BeaconConfig().SlotsPerEpoch == 0 {
+		log.WithField(
+			"SlotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
+		).Info("Epoch transition successfully processed")
 	}
 
 	// if there exists a block for the slot being processed.
 	if err := c.beaconDB.SaveBlock(block); err != nil {
 		return nil, fmt.Errorf("failed to save block: %v", err)
 	}
+
+	// Forward processed block to operation pool to remove individual operation from DB.
+	c.opsPoolService.IncomingProcessedBlockFeed().Send(block)
+
 	// Remove pending deposits from the deposit queue.
 	for _, dep := range block.Body.Deposits {
 		c.beaconDB.RemovePendingDeposit(c.ctx, dep)

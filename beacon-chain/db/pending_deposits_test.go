@@ -10,7 +10,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-func TestInsertPendingDeposit(t *testing.T) {
+func TestInsertPendingDeposit_OK(t *testing.T) {
 	db := BeaconDB{}
 	db.InsertPendingDeposit(context.Background(), &pb.Deposit{}, big.NewInt(111))
 
@@ -28,7 +28,7 @@ func TestInsertPendingDeposit_ignoresNilDeposit(t *testing.T) {
 	}
 }
 
-func TestRemovePendingDeposit(t *testing.T) {
+func TestRemovePendingDeposit_OK(t *testing.T) {
 	db := BeaconDB{}
 	depToRemove := &pb.Deposit{MerkleTreeIndex: 1}
 	otherDep := &pb.Deposit{MerkleTreeIndex: 5}
@@ -62,7 +62,7 @@ func TestPendingDeposit_RoundTrip(t *testing.T) {
 	}
 }
 
-func TestPendingDeposits(t *testing.T) {
+func TestPendingDeposits_OK(t *testing.T) {
 	db := BeaconDB{}
 
 	db.deposits = []*depositContainer{

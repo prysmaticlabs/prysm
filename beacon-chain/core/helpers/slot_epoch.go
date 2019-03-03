@@ -8,17 +8,17 @@ import (
 // SlotToEpoch returns the epoch number of the input slot.
 //
 // Spec pseudocode definition:
-//   def slot_to_epoch(slot: SlotNumber) -> EpochNumber:
-//    return slot // EPOCH_LENGTH
+//   def slot_to_epoch(slot: SlotNumber) -> Epoch:
+//    return slot // SLOTS_PER_EPOCH
 func SlotToEpoch(slot uint64) uint64 {
-	return slot / params.BeaconConfig().EpochLength
+	return slot / params.BeaconConfig().SlotsPerEpoch
 }
 
 // CurrentEpoch returns the current epoch number calculated from
 // the slot number stored in beacon state.
 //
 // Spec pseudocode definition:
-//   def get_current_epoch(state: BeaconState) -> EpochNumber:
+//   def get_current_epoch(state: BeaconState) -> Epoch:
 //    return slot_to_epoch(state.slot)
 func CurrentEpoch(state *pb.BeaconState) uint64 {
 	return SlotToEpoch(state.Slot)
@@ -27,11 +27,17 @@ func CurrentEpoch(state *pb.BeaconState) uint64 {
 // PrevEpoch returns the previous epoch number calculated from
 // the slot number stored in beacon state. It also checks for
 // underflow condition.
+//
+// def get_previous_epoch(state: BeaconState) -> Epoch:
+//    """`
+//    Return the previous epoch of the given ``state``.
+//    """
+//    return max(get_current_epoch(state) - 1, GENESIS_EPOCH)
 func PrevEpoch(state *pb.BeaconState) uint64 {
-	if SlotToEpoch(state.Slot) == 0 {
-		return 0
+	if CurrentEpoch(state) > params.BeaconConfig().GenesisEpoch {
+		return CurrentEpoch(state) - 1
 	}
-	return SlotToEpoch(state.Slot) - 1
+	return params.BeaconConfig().GenesisEpoch
 }
 
 // NextEpoch returns the next epoch number calculated form
@@ -44,10 +50,10 @@ func NextEpoch(state *pb.BeaconState) uint64 {
 // current epoch.
 //
 // Spec pseudocode definition:
-//   def get_epoch_start_slot(epoch: EpochNumber) -> SlotNumber:
-//    return epoch * EPOCH_LENGTH
+//   def get_epoch_start_slot(epoch: Epoch) -> SlotNumber:
+//    return epoch * SLOTS_PER_EPOCH
 func StartSlot(epoch uint64) uint64 {
-	return epoch * params.BeaconConfig().EpochLength
+	return epoch * params.BeaconConfig().SlotsPerEpoch
 }
 
 // AttestationCurrentEpoch returns the current epoch referenced by the attestation.

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/ssz"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -31,14 +31,14 @@ func generateTestGenesisStateAndBlock(
 			Pubkey: pubkey,
 		}
 		balance := params.BeaconConfig().MaxDepositAmount
-		depositData, err := b.EncodeDepositData(depositInput, balance, time.Now().Unix())
+		depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
 		if err != nil {
 			t.Fatalf("Could not encode deposit: %v", err)
 		}
 		deposits[i] = &pb.Deposit{DepositData: depositData}
 	}
 	genesisTime := uint64(time.Unix(0, 0).Unix())
-	beaconState, err := state.InitialBeaconState(deposits, genesisTime, nil)
+	beaconState, err := state.GenesisBeaconState(deposits, genesisTime, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +46,7 @@ func generateTestGenesisStateAndBlock(
 	if err := beaconDB.SaveState(beaconState); err != nil {
 		t.Fatal(err)
 	}
-	stateRoot, err := ssz.TreeHash(beaconState)
+	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +54,7 @@ func generateTestGenesisStateAndBlock(
 	if err := beaconDB.SaveBlock(genesisBlock); err != nil {
 		t.Fatal(err)
 	}
-	genesisRoot, err := ssz.TreeHash(genesisBlock)
+	genesisRoot, err := hashutil.HashBeaconBlock(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -208,7 +208,7 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	genesisBlock := b.NewGenesisBlock([]byte("stateroot"))
-	genesisRoot, err := ssz.TreeHash(genesisBlock)
+	genesisRoot, err := hashutil.HashBeaconBlock(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}

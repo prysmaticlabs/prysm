@@ -3,21 +3,17 @@ package client
 import (
 	"context"
 	"errors"
-	"io"
 	"io/ioutil"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/sirupsen/logrus"
-
 	ptypes "github.com/gogo/protobuf/types"
-
 	"github.com/golang/mock/gomock"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/validator/internal"
-	logTest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -49,7 +45,9 @@ func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 		},
 		nil,
 	)
-	v.WaitForChainStart(context.Background())
+	if err := v.WaitForChainStart(context.Background()); err != nil {
+		t.Fatal(err)
+	}
 	if v.genesisTime != genesis {
 		t.Errorf("Expected chain start time to equal %d, received %d", genesis, v.genesisTime)
 	}
@@ -59,7 +57,6 @@ func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 }
 
 func TestWaitForChainStart_ContextCanceled(t *testing.T) {
-	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := internal.NewMockBeaconServiceClient(ctrl)
@@ -83,12 +80,14 @@ func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 	)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	v.WaitForChainStart(ctx)
-	testutil.AssertLogsContain(t, hook, "Context has been canceled")
+	err := v.WaitForChainStart(ctx)
+	want := "context has been canceled"
+	if !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %v, received %v", want, err)
+	}
 }
 
 func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
-	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := internal.NewMockBeaconServiceClient(ctrl)
@@ -102,12 +101,14 @@ func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
 		gomock.Any(),
 		&ptypes.Empty{},
 	).Return(clientStream, errors.New("failed stream"))
-	v.WaitForChainStart(context.Background())
-	testutil.AssertLogsContain(t, hook, "Could not setup beacon chain ChainStart streaming client")
+	err := v.WaitForChainStart(context.Background())
+	want := "could not setup beacon chain ChainStart streaming client"
+	if !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %v, received %v", want, err)
+	}
 }
 
 func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
-	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := internal.NewMockBeaconServiceClient(ctrl)
@@ -116,7 +117,6 @@ func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 		key:          validatorKey,
 		beaconClient: client,
 	}
-	genesis := uint64(time.Unix(0, 0).Unix())
 	clientStream := internal.NewMockBeaconService_WaitForChainStartClient(ctrl)
 	client.EXPECT().WaitForChainStart(
 		gomock.Any(),
@@ -126,15 +126,11 @@ func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 		nil,
 		errors.New("fails"),
 	)
-	clientStream.EXPECT().Recv().Return(
-		&pb.ChainStartResponse{
-			Started:     true,
-			GenesisTime: genesis,
-		},
-		io.EOF,
-	)
-	v.WaitForChainStart(context.Background())
-	testutil.AssertLogsContain(t, hook, "Could not receive ChainStart from stream")
+	err := v.WaitForChainStart(context.Background())
+	want := "could not receive ChainStart from stream"
+	if !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %v, received %v", want, err)
+	}
 }
 
 func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignments(t *testing.T) {
@@ -179,17 +175,17 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 		gomock.Any(),
 	).Return(nil, expected)
 
-	if err := v.UpdateAssignments(context.Background(), params.BeaconConfig().EpochLength); err != expected {
+	if err := v.UpdateAssignments(context.Background(), params.BeaconConfig().SlotsPerEpoch); err != expected {
 		t.Errorf("Bad error; want=%v got=%v", expected, err)
 	}
 }
 
-func TestUpdateAssignments_DoesUpdateAssignments(t *testing.T) {
+func TestUpdateAssignments_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := internal.NewMockValidatorServiceClient(ctrl)
 
-	slot := params.BeaconConfig().EpochLength
+	slot := params.BeaconConfig().SlotsPerEpoch
 	resp := &pb.ValidatorEpochAssignmentsResponse{
 		Assignment: &pb.Assignment{
 			ProposerSlot: 67,

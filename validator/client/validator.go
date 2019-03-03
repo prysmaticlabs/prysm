@@ -3,19 +3,18 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"time"
 
-	"github.com/opentracing/opentracing-go"
-
-	"github.com/prysmaticlabs/prysm/shared/keystore"
-
 	ptypes "github.com/gogo/protobuf/types"
-
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
+	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 // AttestationPool STUB interface. Final attestation pool pending design.
@@ -47,14 +46,13 @@ func (v *validator) Done() {
 // it calls to the beacon node which then verifies the ETH1.0 deposit contract logs to check
 // for the ChainStart log to have been emitted. If so, it starts a ticker based on the ChainStart
 // unix timestamp which will be used to keep track of time within the validator client.
-func (v *validator) WaitForChainStart(ctx context.Context) {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.WaitForChainStart")
-	defer span.Finish()
+func (v *validator) WaitForChainStart(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "validator.WaitForChainStart")
+	defer span.End()
 	// First, check if the beacon chain has started.
 	stream, err := v.beaconClient.WaitForChainStart(ctx, &ptypes.Empty{})
 	if err != nil {
-		log.Errorf("Could not setup beacon chain ChainStart streaming client: %v", err)
-		return
+		return fmt.Errorf("could not setup beacon chain ChainStart streaming client: %v", err)
 	}
 	for {
 		log.Info("Waiting for beacon chain start log from the ETH 1.0 deposit contract...")
@@ -65,12 +63,10 @@ func (v *validator) WaitForChainStart(ctx context.Context) {
 		}
 		// If context is canceled we stop the loop.
 		if ctx.Err() == context.Canceled {
-			log.Debugf("Context has been canceled so shutting down the loop: %v", ctx.Err())
-			break
+			return fmt.Errorf("context has been canceled so shutting down the loop: %v", ctx.Err())
 		}
 		if err != nil {
-			log.Errorf("Could not receive ChainStart from stream: %v", err)
-			continue
+			return fmt.Errorf("could not receive ChainStart from stream: %v", err)
 		}
 		v.genesisTime = chainStartRes.GenesisTime
 		break
@@ -78,7 +74,8 @@ func (v *validator) WaitForChainStart(ctx context.Context) {
 	log.Infof("Beacon chain initialized at unix time: %v", time.Unix(int64(v.genesisTime), 0))
 	// Once the ChainStart log is received, we update the genesis time of the validator client
 	// and begin a slot ticker used to track the current slot the beacon node is in.
-	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SlotDuration)
+	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
+	return nil
 }
 
 // WaitForActivation checks whether the validator pubkey is in the active
@@ -87,8 +84,8 @@ func (v *validator) WaitForChainStart(ctx context.Context) {
 //
 // WIP - not done.
 func (v *validator) WaitForActivation(ctx context.Context) {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.WaitForActivation")
-	defer span.Finish()
+	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
+	defer span.End()
 	// First, check if the validator has deposited into the Deposit Contract.
 	// If the validator has deposited, subscribe to a stream receiving the activation status.
 	// of the validator until a final ACTIVATED check if received, then this function can return.
@@ -103,17 +100,17 @@ func (v *validator) NextSlot() <-chan uint64 {
 // list of upcoming assignments needs to be updated. For example, at the
 // beginning of a new epoch.
 func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.UpdateAssignments")
-	defer span.Finish()
-
-	if slot%params.BeaconConfig().EpochLength != 0 && v.assignment != nil {
+	if slot%params.BeaconConfig().SlotsPerEpoch != 0 && v.assignment != nil {
 		// Do nothing if not epoch start AND assignments already exist.
 		return nil
 	}
 
+	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
+	defer span.End()
+
 	req := &pb.ValidatorEpochAssignmentsRequest{
 		EpochStart: slot,
-		PublicKey:  v.key.PublicKey.BufferedPublicKey(),
+		PublicKey:  v.key.PublicKey.Marshal(),
 	}
 
 	resp, err := v.validatorClient.ValidatorEpochAssignments(ctx, req)
@@ -122,6 +119,11 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	}
 
 	v.assignment = resp.Assignment
+	log.WithFields(logrus.Fields{
+		"proposerSlot": resp.Assignment.ProposerSlot - params.BeaconConfig().GenesisSlot,
+		"attesterSlot": resp.Assignment.AttesterSlot - params.BeaconConfig().GenesisSlot,
+		"shard":        resp.Assignment.Shard,
+	}).Info("Updated validator assignments")
 	return nil
 }
 
@@ -129,13 +131,15 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 // validator is known to not have a role at the at slot. Returns UNKNOWN if the
 // validator assignments are unknown. Otherwise returns a valid ValidatorRole.
 func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
-	if v.assignment == nil {
+	if v.assignment == nil || slot == params.BeaconConfig().GenesisSlot {
 		return pb.ValidatorRole_UNKNOWN
 	}
-	if v.assignment.AttesterSlot == slot {
-		return pb.ValidatorRole_ATTESTER
+	if v.assignment.AttesterSlot == slot && v.assignment.ProposerSlot == slot {
+		return pb.ValidatorRole_BOTH
 	} else if v.assignment.ProposerSlot == slot {
 		return pb.ValidatorRole_PROPOSER
+	} else if v.assignment.AttesterSlot == slot {
+		return pb.ValidatorRole_ATTESTER
 	}
 	return pb.ValidatorRole_UNKNOWN
 }

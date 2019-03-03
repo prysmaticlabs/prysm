@@ -11,35 +11,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
-
-// InitialValidatorRegistry creates a new validator set that is used to
-// generate a new bootstrapped state.
-func InitialValidatorRegistry() []*pb.Validator {
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
-	for i := uint64(0); i < params.BeaconConfig().DepositsForChainStart; i++ {
-		pubkey := hashutil.Hash([]byte{byte(i)})
-		validators[i] = &pb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-			Pubkey:    pubkey[:],
-		}
-	}
-	return validators
-}
-
-// ValidatorIdx returns the idx of the validator given an input public key.
-func ValidatorIdx(pubKey []byte, validators []*pb.Validator) (uint64, error) {
-	for idx := range validators {
-		if bytes.Equal(validators[idx].Pubkey, pubKey) {
-			return uint64(idx), nil
-		}
-	}
-
-	return 0, fmt.Errorf("can't find validator index for public key %#x", pubKey)
-}
 
 // ValidatorIndices returns all the validator indices from the input attestations
 // and state.
@@ -81,7 +55,7 @@ func ValidatorIndices(
 func AttestingValidatorIndices(
 	state *pb.BeaconState,
 	shard uint64,
-	shardBlockRoot []byte,
+	crosslinkDataRoot []byte,
 	thisEpochAttestations []*pb.PendingAttestation,
 	prevEpochAttestations []*pb.PendingAttestation) ([]uint64, error) {
 
@@ -90,7 +64,7 @@ func AttestingValidatorIndices(
 
 	for _, attestation := range attestations {
 		if attestation.Data.Shard == shard &&
-			bytes.Equal(attestation.Data.ShardBlockRootHash32, shardBlockRoot) {
+			bytes.Equal(attestation.Data.CrosslinkDataRootHash32, crosslinkDataRoot) {
 
 			validatorIndicesCommittee, err := helpers.AttestationParticipants(state, attestation.Data, attestation.AggregationBitfield)
 			if err != nil {
@@ -129,7 +103,7 @@ func ProcessDeposit(
 			ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
 			WithdrawalEpoch: params.BeaconConfig().FarFutureEpoch,
-			PenalizedEpoch:  params.BeaconConfig().FarFutureEpoch,
+			SlashedEpoch:    params.BeaconConfig().FarFutureEpoch,
 			StatusFlags:     0,
 		}
 		state.ValidatorRegistry = append(state.ValidatorRegistry, newValidator)
@@ -203,45 +177,45 @@ func InitiateValidatorExit(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 //        return
 //
 //    validator.exit_epoch = get_entry_exit_effect_epoch(get_current_epoch(state))
-func ExitValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) {
+func ExitValidator(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 	validator := state.ValidatorRegistry[idx]
 
 	exitEpoch := entryExitEffectEpoch(helpers.CurrentEpoch(state))
 	if validator.ExitEpoch <= exitEpoch {
-		return nil, fmt.Errorf("validator %d could not exit until epoch %d",
-			idx, exitEpoch)
+		return state
 	}
-
 	validator.ExitEpoch = exitEpoch
-	return state, nil
+	return state
 }
 
-// PenalizeValidator slashes the malicious validator's balance and awards
+// SlashValidator slashes the malicious validator's balance and awards
 // the whistleblower's balance.
 //
 // Spec pseudocode definition:
-// def penalize_validator(state: BeaconState, index: ValidatorIndex) -> None:
+// def slash_validator(state: BeaconState, index: ValidatorIndex) -> None:
 //    """
-//    Penalize the validator of the given ``index``.
+//    Slash the validator of the given ``index``.
 //    Note that this function mutates ``state``.
 //    """
-//    exit_validator(state, index)
 //    validator = state.validator_registry[index]
-//    state.latest_penalized_balances[get_current_epoch(state) % LATEST_PENALIZED_EXIT_LENGTH] += get_effective_balance(state, index)
+//    state.latest_slashed_balances[get_current_epoch(state) % LATEST_PENALIZED_EXIT_LENGTH] += get_effective_balance(state, index)
 //
 //    whistleblower_index = get_beacon_proposer_index(state, state.slot)
 //    whistleblower_reward = get_effective_balance(state, index) // WHISTLEBLOWER_REWARD_QUOTIENT
 //    state.validator_balances[whistleblower_index] += whistleblower_reward
 //    state.validator_balances[index] -= whistleblower_reward
-//    validator.penalized_epoch = get_current_epoch(state)
-func PenalizeValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) {
-	state, err := ExitValidator(state, idx)
-	if err != nil {
-		return nil, fmt.Errorf("could not exit penalized validator: %v", err)
+//    validator.slashed_epoch = get_current_epoch(state)
+func SlashValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) {
+	if state.Slot >= helpers.StartSlot(state.ValidatorRegistry[idx].WithdrawalEpoch) {
+		return nil, fmt.Errorf("withdrawn validator %d could not get slashed, "+
+			"current slot: %d, withdrawn slot %d",
+			idx, state.Slot, helpers.StartSlot(state.ValidatorRegistry[idx].WithdrawalEpoch))
 	}
 
-	penalizedDuration := helpers.CurrentEpoch(state) % params.BeaconConfig().LatestPenalizedExitLength
-	state.LatestPenalizedBalances[penalizedDuration] += helpers.EffectiveBalance(state, idx)
+	state = ExitValidator(state, idx)
+
+	slashedDuration := helpers.CurrentEpoch(state) % params.BeaconConfig().LatestSlashedExitLength
+	state.LatestSlashedBalances[slashedDuration] += helpers.EffectiveBalance(state, idx)
 
 	whistleblowerIdx, err := helpers.BeaconProposerIndex(state, state.Slot)
 	if err != nil {
@@ -253,7 +227,7 @@ func PenalizeValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, erro
 	state.ValidatorBalances[whistleblowerIdx] += whistleblowerReward
 	state.ValidatorBalances[idx] -= whistleblowerReward
 
-	state.ValidatorRegistry[idx].PenalizedEpoch = helpers.CurrentEpoch(state)
+	state.ValidatorRegistry[idx].SlashedEpoch = helpers.CurrentEpoch(state) + params.BeaconConfig().LatestSlashedExitLength
 	return state, nil
 }
 
@@ -317,7 +291,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	var err error
 	for idx, validator := range state.ValidatorRegistry {
 		// Activate validators within the allowable balance churn.
-		if validator.ActivationEpoch > helpers.EntryExitEffectEpoch(currentEpoch) &&
+		if validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch &&
 			state.ValidatorBalances[idx] >= params.BeaconConfig().MaxDepositAmount {
 			balChurn += helpers.EffectiveBalance(state, uint64(idx))
 			if balChurn > maxBalChurn {
@@ -333,23 +307,20 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	balChurn = 0
 	for idx, validator := range state.ValidatorRegistry {
 		// Exit validators within the allowable balance churn.
-		if validator.ExitEpoch > helpers.EntryExitEffectEpoch(currentEpoch) &&
+		if validator.ExitEpoch == params.BeaconConfig().FarFutureEpoch &&
 			validator.StatusFlags == pb.Validator_INITIATED_EXIT {
 			balChurn += helpers.EffectiveBalance(state, uint64(idx))
 			if balChurn > maxBalChurn {
 				break
 			}
-			state, err = ExitValidator(state, uint64(idx))
-			if err != nil {
-				return nil, fmt.Errorf("could not exit validator %d: %v", idx, err)
-			}
+			state = ExitValidator(state, uint64(idx))
 		}
 	}
 	state.ValidatorRegistryUpdateEpoch = currentEpoch
 	return state, nil
 }
 
-// ProcessPenaltiesAndExits prepares the validators and the penalized validators
+// ProcessPenaltiesAndExits prepares the validators and the slashed validators
 // for withdrawal.
 //
 // Spec pseudocode definition:
@@ -365,21 +336,21 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 //    total_balance = sum(get_effective_balance(state, i) for i in active_validator_indices)
 //
 //    for index, validator in enumerate(state.validator_registry):
-//        if current_epoch == validator.penalized_epoch + LATEST_PENALIZED_EXIT_LENGTH // 2:
+//        if current_epoch == validator.slashed_epoch + LATEST_PENALIZED_EXIT_LENGTH // 2:
 //            epoch_index = current_epoch % LATEST_PENALIZED_EXIT_LENGTH
-//            total_at_start = state.latest_penalized_balances[(epoch_index + 1) % LATEST_PENALIZED_EXIT_LENGTH]
-//            total_at_end = state.latest_penalized_balances[epoch_index]
+//            total_at_start = state.latest_slashed_balances[(epoch_index + 1) % LATEST_PENALIZED_EXIT_LENGTH]
+//            total_at_end = state.latest_slashed_balances[epoch_index]
 //            total_penalties = total_at_end - total_at_start
 //            penalty = get_effective_balance(state, index) * min(total_penalties * 3, total_balance) // total_balance
 //            state.validator_balances[index] -= penalty
 //
 //    def eligible(index):
 //        validator = state.validator_registry[index]
-//        if validator.penalized_epoch <= current_epoch:
-//            penalized_withdrawal_epochs = LATEST_PENALIZED_EXIT_LENGTH // 2
-//            return current_epoch >= validator.penalized_epoch + penalized_withdrawal_epochs
+//        if validator.slashed_epoch <= current_epoch:
+//            slashed_withdrawal_epochs = LATEST_PENALIZED_EXIT_LENGTH // 2
+//            return current_epoch >= validator.slashed_epoch + slashd_withdrawal_epochs
 //        else:
-//            return current_epoch >= validator.exit_epoch + MIN_VALIDATOR_WITHDRAWAL_EPOCHS
+//            return current_epoch >= validator.exit_epoch + MIN_VALIDATOR_WITHDRAWAL_DELAY
 //
 //    all_indices = list(range(len(state.validator_registry)))
 //    eligible_indices = filter(eligible, all_indices)
@@ -389,7 +360,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 //    for index in sorted_indices:
 //        prepare_validator_for_withdrawal(state, index)
 //        withdrawn_so_far += 1
-//        if withdrawn_so_far >= MAX_WITHDRAWALS_PER_EPOCH:
+//        if withdrawn_so_far >= MAX_EXIT_DEQUEUES_PER_EPOCH:
 //            break
 func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 	currentEpoch := helpers.CurrentEpoch(state)
@@ -398,13 +369,13 @@ func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 	totalBalance := helpers.TotalBalance(state, activeValidatorIndices)
 
 	for idx, validator := range state.ValidatorRegistry {
-		penalized := validator.PenalizedEpoch +
-			params.BeaconConfig().LatestPenalizedExitLength/2
-		if currentEpoch == penalized {
-			penalizedEpoch := currentEpoch % params.BeaconConfig().LatestPenalizedExitLength
-			penalizedEpochStart := (penalizedEpoch + 1) % params.BeaconConfig().LatestPenalizedExitLength
-			totalAtStart := state.LatestPenalizedBalances[penalizedEpochStart]
-			totalAtEnd := state.LatestPenalizedBalances[penalizedEpoch]
+		slashed := validator.SlashedEpoch +
+			params.BeaconConfig().LatestSlashedExitLength/2
+		if currentEpoch == slashed {
+			slashedEpoch := currentEpoch % params.BeaconConfig().LatestSlashedExitLength
+			slashedEpochStart := (slashedEpoch + 1) % params.BeaconConfig().LatestSlashedExitLength
+			totalAtStart := state.LatestSlashedBalances[slashedEpochStart]
+			totalAtEnd := state.LatestSlashedBalances[slashedEpoch]
 			totalPenalties := totalAtStart - totalAtEnd
 
 			penaltyMultiplier := totalPenalties * 3
@@ -427,7 +398,7 @@ func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 	for _, idx := range eligibleIndices {
 		state = prepareValidatorForWithdrawal(state, idx)
 		withdrawnSoFar++
-		if withdrawnSoFar >= params.BeaconConfig().MaxWithdrawalsPerEpoch {
+		if withdrawnSoFar >= params.BeaconConfig().MaxExitDequeuesPerEpoch {
 			break
 		}
 	}
@@ -449,7 +420,7 @@ func allValidatorsIndices(state *pb.BeaconState) []uint64 {
 // in and out of the validator pool.
 // Spec pseudocode definition:
 //     max_balance_churn = max(
-//        MAX_DEPOSIT * GWEI_PER_ETH,
+//        MAX_DEPOSIT_AMOUNT,
 //        total_balance // (2 * MAX_BALANCE_CHURN_QUOTIENT))
 func maxBalanceChurn(totalBalance uint64) uint64 {
 	maxBalanceChurn := totalBalance / 2 * params.BeaconConfig().MaxBalanceChurnQuotient
@@ -460,25 +431,25 @@ func maxBalanceChurn(totalBalance uint64) uint64 {
 }
 
 // eligibleToExit checks if a validator is eligible to exit whether it was
-// penalized or not.
+// slashed or not.
 //
 // Spec pseudocode definition:
 // def eligible(index):
 //    validator = state.validator_registry[index]
-//    if validator.penalized_epoch <= current_epoch:
-//         penalized_withdrawal_epochs = LATEST_PENALIZED_EXIT_LENGTH // 2
-//        return current_epoch >= validator.penalized_epoch + penalized_withdrawal_epochs
+//    if validator.slashed_epoch <= current_epoch:
+//         slashed_withdrawal_epochs = LATEST_PENALIZED_EXIT_LENGTH // 2
+//        return current_epoch >= validator.slashed_epoch + slashd_withdrawal_epochs
 //    else:
-//        return current_epoch >= validator.exit_epoch + MIN_VALIDATOR_WITHDRAWAL_EPOCHS
+//        return current_epoch >= validator.exit_epoch + MIN_VALIDATOR_WITHDRAWAL_DELAY
 func eligibleToExit(state *pb.BeaconState, idx uint64) bool {
 	currentEpoch := helpers.CurrentEpoch(state)
 	validator := state.ValidatorRegistry[idx]
 
-	if validator.PenalizedEpoch <= currentEpoch {
-		penalizedWithdrawalEpochs := params.BeaconConfig().LatestPenalizedExitLength / 2
-		return currentEpoch >= validator.PenalizedEpoch+penalizedWithdrawalEpochs
+	if validator.SlashedEpoch <= currentEpoch {
+		slashedWithdrawalEpochs := params.BeaconConfig().LatestSlashedExitLength / 2
+		return currentEpoch >= validator.SlashedEpoch+slashedWithdrawalEpochs
 	}
-	return currentEpoch >= validator.ExitEpoch+params.BeaconConfig().MinValidatorWithdrawalEpochs
+	return currentEpoch >= validator.ExitEpoch+params.BeaconConfig().MinValidatorWithdrawalDelay
 }
 
 // prepareValidatorForWithdrawal sets validator's status flag to
@@ -502,12 +473,12 @@ func prepareValidatorForWithdrawal(state *pb.BeaconState, idx uint64) *pb.Beacon
 // the validator is eligible for activation and exit.
 //
 // Spec pseudocode definition:
-// def get_entry_exit_effect_epoch(epoch: EpochNumber) -> EpochNumber:
+// def get_entry_exit_effect_epoch(epoch: Epoch) -> Epoch:
 //    """
 //    An entry or exit triggered in the ``epoch`` given by the input takes effect at
 //    the epoch given by the output.
 //    """
-//    return epoch + 1 + ENTRY_EXIT_DELAY
+//    return epoch + 1 + ACTIVATION_EXIT_DELAY
 func entryExitEffectEpoch(epoch uint64) uint64 {
-	return epoch + 1 + params.BeaconConfig().EntryExitDelay
+	return epoch + 1 + params.BeaconConfig().ActivationExitDelay
 }

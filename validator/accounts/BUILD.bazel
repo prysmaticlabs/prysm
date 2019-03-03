@@ -6,7 +6,6 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/validator/accounts",
     visibility = ["//validator:__subpackages__"],
     deps = [
-        "//proto/beacon/p2p/v1:go_default_library",
         "//shared/keystore:go_default_library",
         "//shared/params:go_default_library",
         "//shared/ssz:go_default_library",
@@ -19,11 +18,8 @@ go_test(
     srcs = ["account_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//proto/beacon/p2p/v1:go_default_library",
         "//shared/keystore:go_default_library",
         "//shared/params:go_default_library",
-        "//shared/ssz:go_default_library",
         "//shared/testutil:go_default_library",
-        "@com_github_sirupsen_logrus//hooks/test:go_default_library",
     ],
 )

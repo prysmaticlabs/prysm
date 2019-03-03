@@ -2,40 +2,49 @@ package db
 
 import (
 	"bytes"
+	"context"
+	"crypto/rand"
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+
 	"github.com/gogo/protobuf/proto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func setupInitialDeposits(t *testing.T) []*pb.Deposit {
-	genesisValidatorRegistry := validators.InitialValidatorRegistry()
-	deposits := make([]*pb.Deposit, len(genesisValidatorRegistry))
+func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.SecretKey) {
+	privKeys := make([]*bls.SecretKey, numDeposits)
+	deposits := make([]*pb.Deposit, numDeposits)
 	for i := 0; i < len(deposits); i++ {
+		priv, err := bls.RandKey(rand.Reader)
+		if err != nil {
+			t.Fatal(err)
+		}
 		depositInput := &pb.DepositInput{
-			Pubkey: genesisValidatorRegistry[i].Pubkey,
+			Pubkey: priv.PublicKey().Marshal(),
 		}
 		balance := params.BeaconConfig().MaxDepositAmount
-		depositData, err := blocks.EncodeDepositData(depositInput, balance, time.Now().Unix())
+		depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
 		if err != nil {
 			t.Fatalf("Cannot encode data: %v", err)
 		}
 		deposits[i] = &pb.Deposit{DepositData: depositData}
+		privKeys[i] = priv
 	}
-	return deposits
+	return deposits, privKeys
 }
 
-func TestInitializeState(t *testing.T) {
+func TestInitializeState_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
+	ctx := context.Background()
 
 	genesisTime := uint64(time.Now().Unix())
-	deposits := setupInitialDeposits(t)
-	if err := db.InitializeState(genesisTime, deposits); err != nil {
+	deposits, _ := setupInitialDeposits(t, 10)
+	if err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 	b, err := db.ChainHead()
@@ -46,7 +55,7 @@ func TestInitializeState(t *testing.T) {
 		t.Fatalf("Expected block height to equal 1. Got %d", b.GetSlot())
 	}
 
-	beaconState, err := db.State()
+	beaconState, err := db.State(ctx)
 	if err != nil {
 		t.Fatalf("Failed to get state: %v", err)
 	}
@@ -58,7 +67,7 @@ func TestInitializeState(t *testing.T) {
 		t.Fatalf("Failed to encode state: %v", err)
 	}
 
-	statePrime, err := db.State()
+	statePrime, err := db.State(ctx)
 	if err != nil {
 		t.Fatalf("Failed to get state: %v", err)
 	}
@@ -72,25 +81,26 @@ func TestInitializeState(t *testing.T) {
 	}
 }
 
-func TestGenesisTime(t *testing.T) {
+func TestGenesisTime_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
+	ctx := context.Background()
 
-	genesisTime, err := db.GenesisTime()
+	genesisTime, err := db.GenesisTime(ctx)
 	if err == nil {
 		t.Fatal("expected GenesisTime to fail")
 	}
 
-	deposits := setupInitialDeposits(t)
-	if err := db.InitializeState(uint64(genesisTime.Unix()), deposits); err != nil {
+	deposits, _ := setupInitialDeposits(t, 10)
+	if err := db.InitializeState(uint64(genesisTime.Unix()), deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
 
-	time1, err := db.GenesisTime()
+	time1, err := db.GenesisTime(ctx)
 	if err != nil {
 		t.Fatalf("GenesisTime failed on second attempt: %v", err)
 	}
-	time2, err := db.GenesisTime()
+	time2, err := db.GenesisTime(ctx)
 	if err != nil {
 		t.Fatalf("GenesisTime failed on second attempt: %v", err)
 	}

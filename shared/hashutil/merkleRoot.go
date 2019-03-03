@@ -3,6 +3,8 @@ package hashutil
 // MerkleRoot derives the merkle root from a 2d byte array with each element
 // in the outer array signifying the data that is to be represented in the
 // merkle tree.
+// Note: This function is only used to merklize a list of block root hashes.
+// As such, we assume the input comes pre-hashed and do NOT hash the leaves.
 // Spec:
 //	def merkle_root(values):
 //		o = [0] * len(values) + values
@@ -11,12 +13,6 @@ package hashutil
 //		return o[1]
 func MerkleRoot(values [][]byte) []byte {
 	length := len(values)
-
-	// Data is hashed so as to be stored as leaves in the tree.
-	for i, v := range values {
-		hashedValue := Hash(v)
-		values[i] = hashedValue[:]
-	}
 
 	newSet := make([][]byte, length, length*2)
 	newSet = append(newSet, values...)

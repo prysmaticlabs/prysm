@@ -11,14 +11,14 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestRandaoMix_Ok(t *testing.T) {
+func TestRandaoMix_OK(t *testing.T) {
 	randaoMixes := make([][]byte, params.BeaconConfig().LatestRandaoMixesLength)
 	for i := 0; i < len(randaoMixes); i++ {
 		intInBytes := make([]byte, 32)
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		randaoMixes[i] = intInBytes
 	}
-	state := &pb.BeaconState{LatestRandaoMixesHash32S: randaoMixes}
+	state := &pb.BeaconState{LatestRandaoMixes: randaoMixes}
 	tests := []struct {
 		epoch     uint64
 		randaoMix []byte
@@ -37,7 +37,7 @@ func TestRandaoMix_Ok(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		state.Slot = (test.epoch + 1) * params.BeaconConfig().EpochLength
+		state.Slot = (test.epoch + 1) * params.BeaconConfig().SlotsPerEpoch
 		mix, err := RandaoMix(state, test.epoch)
 		if err != nil {
 			t.Fatalf("Could not get randao mix: %v", err)
@@ -59,8 +59,8 @@ func TestRandaoMix_OutOfBound(t *testing.T) {
 	}
 }
 
-func TestActiveIndexRoot_Ok(t *testing.T) {
-	activeIndexRoots := make([][]byte, params.BeaconConfig().LatestIndexRootsLength)
+func TestActiveIndexRoot_OK(t *testing.T) {
+	activeIndexRoots := make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength)
 	for i := 0; i < len(activeIndexRoots); i++ {
 		intInBytes := make([]byte, 32)
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
@@ -81,11 +81,11 @@ func TestActiveIndexRoot_Ok(t *testing.T) {
 		},
 		{
 			epoch:     999999,
-			indexRoot: activeIndexRoots[999999%params.BeaconConfig().LatestIndexRootsLength],
+			indexRoot: activeIndexRoots[999999%params.BeaconConfig().LatestActiveIndexRootsLength],
 		},
 	}
 	for _, test := range tests {
-		state.Slot = (test.epoch + 1) * params.BeaconConfig().EpochLength
+		state.Slot = (test.epoch + 1) * params.BeaconConfig().SlotsPerEpoch
 		indexRoot, err := ActiveIndexRoot(state, test.epoch)
 		if err != nil {
 			t.Fatalf("Could not get index root: %v", err)
@@ -110,15 +110,15 @@ func TestActiveIndexRoot_OutOfBound(t *testing.T) {
 func TestGenerateSeed_OutOfBound(t *testing.T) {
 	wanted := fmt.Sprintf(
 		"input randaoMix epoch %d out of bounds: %d <= epoch < %d",
-		100-params.BeaconConfig().SeedLookahead, 0, 0,
+		100-params.BeaconConfig().MinSeedLookahead, 0, 0,
 	)
 	if _, err := GenerateSeed(&pb.BeaconState{}, 100); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected: %s, received: %s", wanted, err.Error())
 	}
 }
 
-func TestGenerateSeed_Ok(t *testing.T) {
-	activeIndexRoots := make([][]byte, params.BeaconConfig().LatestIndexRootsLength)
+func TestGenerateSeed_OK(t *testing.T) {
+	activeIndexRoots := make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength)
 	for i := 0; i < len(activeIndexRoots); i++ {
 		intInBytes := make([]byte, 32)
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
@@ -130,11 +130,11 @@ func TestGenerateSeed_Ok(t *testing.T) {
 		binary.LittleEndian.PutUint64(intInBytes, uint64(i))
 		randaoMixes[i] = intInBytes
 	}
-	slot := 10 * params.BeaconConfig().SeedLookahead * params.BeaconConfig().EpochLength
+	slot := 10 * params.BeaconConfig().MinSeedLookahead * params.BeaconConfig().SlotsPerEpoch
 	state := &pb.BeaconState{
-		LatestIndexRootHash32S:   activeIndexRoots,
-		LatestRandaoMixesHash32S: randaoMixes,
-		Slot:                     slot}
+		LatestIndexRootHash32S: activeIndexRoots,
+		LatestRandaoMixes:      randaoMixes,
+		Slot:                   slot}
 
 	got, err := GenerateSeed(state, 10)
 	if err != nil {

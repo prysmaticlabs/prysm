@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/ssz"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
@@ -57,7 +57,7 @@ func (db *BeaconDB) HasBlock(root [32]byte) bool {
 
 // SaveBlock accepts a block and writes it to disk.
 func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
-	root, err := ssz.TreeHash(block)
+	root, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return fmt.Errorf("failed to tree hash block: %v", err)
 	}
@@ -107,7 +107,7 @@ func (db *BeaconDB) ChainHead() (*pb.BeaconBlock, error) {
 // UpdateChainHead atomically updates the head of the chain as well as the corresponding state changes
 // Including a new crystallized state is optional.
 func (db *BeaconDB) UpdateChainHead(block *pb.BeaconBlock, beaconState *pb.BeaconState) error {
-	blockRoot, err := ssz.TreeHash(block)
+	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return fmt.Errorf("unable to tree hash block: %v", err)
 	}
@@ -117,7 +117,7 @@ func (db *BeaconDB) UpdateChainHead(block *pb.BeaconBlock, beaconState *pb.Beaco
 		return fmt.Errorf("unable to encode beacon state: %v", err)
 	}
 
-	slotBinary := encodeSlotNumber(block.GetSlot())
+	slotBinary := encodeSlotNumber(block.Slot)
 
 	return db.update(func(tx *bolt.Tx) error {
 		blockBucket := tx.Bucket(blockBucket)

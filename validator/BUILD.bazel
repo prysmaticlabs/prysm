@@ -4,7 +4,10 @@ load("@io_bazel_rules_docker//container:container.bzl", "container_push")
 
 go_library(
     name = "go_default_library",
-    srcs = ["main.go"],
+    srcs = [
+        "main.go",
+        "usage.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/validator",
     visibility = ["//validator:__subpackages__"],
     deps = [
@@ -22,12 +25,16 @@ go_library(
 
 go_image(
     name = "image",
-    srcs = ["main.go"],
+    srcs = [
+        "main.go",
+        "usage.go",
+    ],
     goarch = "amd64",
     goos = "linux",
     importpath = "github.com/prysmaticlabs/prysm/validator",
     race = "off",
     static = "on",
+    pure = "on",
     tags = ["manual"],
     visibility = ["//visibility:private"],
     deps = [
@@ -56,5 +63,6 @@ container_push(
 go_binary(
     name = "validator",
     embed = [":go_default_library"],
+    pure = "on",  # Enabled unless there is a valid reason to include cgo dep.
     visibility = ["//validator:__subpackages__"],
 )

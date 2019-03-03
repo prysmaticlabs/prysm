@@ -5,16 +5,16 @@ fork: sapphire
 version: 1.0
 test_cases:
   - config:
-      epoch_length: 64
-      deposits_for_chain_start: 5000
-      num_slots: 32 # Testing advancing state to slot < EpochLength
+      slots_per_epoch: 64
+      deposits_for_chain_start: 64
+      num_slots: 32 # Testing advancing state to slot < SlotsPerEpoch
     results:
       slot: 9223372036854775840
-      num_validators: 5000
+      num_validators: 64
   - config:
-      epoch_length: 64
-      deposits_for_chain_start: 16384
-      num_slots: 64 # Testing advancing state to exactly slot == EpochLength
+      slots_per_epoch: 64
+      deposits_for_chain_start: 64
+      num_slots: 64 # Testing advancing state to exactly slot == SlotsPerEpoch
       deposits:
         - slot: 9223372036854775809
           amount: 32
@@ -33,7 +33,7 @@ test_cases:
             LkmqmqoodLKAslkjdkajsdljasdkajlksjdasldjasdd
       proposer_slashings:
         - slot: 9223372036854775824 # At slot 9223372036854775824, we trigger a proposal slashing occurring
-          proposer_index: 16385 # We penalize the proposer that was just added from slot 15
+          proposer_index: 50 # We penalize the proposer that was just added from slot 15
           proposal_1_shard: 0
           proposal_1_slot: 15
           proposal_1_root: !!binary |
@@ -49,23 +49,23 @@ test_cases:
           slashable_attestation_1_justified_epoch: 0
           slashable_attestation_2_justified_epoch: 1
           slashable_attestation_1_custody_bitfield: !binary "F"
-          slashable_attestation_1_validator_indices: [1,2,3,4,5,6,7,16386]
+          slashable_attestation_1_validator_indices: [1, 2, 3, 4, 5, 6, 7, 51]
           slashable_attestation_2_custody_bitfield: !binary "F"
-          slashable_attestation_2_validator_indices: [1,2,3,4,5,6,7,16386]
+          slashable_attestation_2_validator_indices: [1, 2, 3, 4, 5, 6, 7, 51]
       validator_exits:
         - epoch: 144115188075855872
-          validator_index: 100 # At slot 9223372036854775868, validator at index 100 triggers a voluntary exit
+          validator_index: 45 # At slot 9223372036854775868, validator at index 45 triggers a voluntary exit
     results:
       slot: 9223372036854775872
-      num_validators: 16387
-      penalized_validators: [16385, 16386] # We test that the validators at indices 16385, 16386 were indeed penalized
-      exited_validators: [100] # We confirm the indices of validators that willingly exited the registry
+      num_validators: 67
+      penalized_validators: [50, 51] # We test that the validators at indices were indeed penalized
+      exited_validators: [45] # We confirm the indices of validators that willingly exited the registry
 # TODO(1387): Waiting for spec to stable to proceed with this test case
 #  - config:
 #      skip_slots: [10, 20]
-#      epoch_length: 64
+#      slots_per_epoch: 64
 #      deposits_for_chain_start: 1000
-#      num_slots: 128 # Testing advancing state's slot == 2*EpochLength
+#      num_slots: 128 # Testing advancing state's slot == 2*SlotsPerEpoch
 #      deposits:
 #        - slot: 10
 #          amount: 32

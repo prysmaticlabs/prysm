@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestFaultyShuffleIndices(t *testing.T) {
+func TestShuffleIndices_InvalidValidatorCount(t *testing.T) {
 	var list []uint64
 
 	upperBound := 1<<(params.BeaconConfig().RandBytes*8) - 1
@@ -22,7 +22,7 @@ func TestFaultyShuffleIndices(t *testing.T) {
 	}
 }
 
-func TestShuffleIndices(t *testing.T) {
+func TestShuffleIndices_OK(t *testing.T) {
 	hash1 := common.BytesToHash([]byte{'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g'})
 	hash2 := common.BytesToHash([]byte{'1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7', '1', '2', '3', '4', '5', '6', '7'})
 	var list1 []uint64
@@ -55,20 +55,20 @@ func TestShuffleIndices(t *testing.T) {
 	}
 }
 
-func TestSplitIndices(t *testing.T) {
+func TestSplitIndices_OK(t *testing.T) {
 	var l []uint64
 	validators := 64000
 	for i := 0; i < validators; i++ {
 		l = append(l, uint64(i))
 	}
-	split := SplitIndices(l, params.BeaconConfig().EpochLength)
-	if len(split) != int(params.BeaconConfig().EpochLength) {
-		t.Errorf("Split list failed due to incorrect length, wanted:%v, got:%v", params.BeaconConfig().EpochLength, len(split))
+	split := SplitIndices(l, params.BeaconConfig().SlotsPerEpoch)
+	if len(split) != int(params.BeaconConfig().SlotsPerEpoch) {
+		t.Errorf("Split list failed due to incorrect length, wanted:%v, got:%v", params.BeaconConfig().SlotsPerEpoch, len(split))
 	}
 
 	for _, s := range split {
-		if len(s) != validators/int(params.BeaconConfig().EpochLength) {
-			t.Errorf("Split list failed due to incorrect length, wanted:%v, got:%v", validators/int(params.BeaconConfig().EpochLength), len(s))
+		if len(s) != validators/int(params.BeaconConfig().SlotsPerEpoch) {
+			t.Errorf("Split list failed due to incorrect length, wanted:%v, got:%v", validators/int(params.BeaconConfig().SlotsPerEpoch), len(s))
 		}
 	}
 }

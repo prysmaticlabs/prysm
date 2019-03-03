@@ -3,11 +3,12 @@ package backend
 import (
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
-func TestSimulatedBackendStop(t *testing.T) {
+func TestSimulatedBackendStop_ShutsDown(t *testing.T) {
 
 	backend, err := NewSimulatedBackend()
 	if err != nil {
@@ -16,27 +17,27 @@ func TestSimulatedBackendStop(t *testing.T) {
 	if err := backend.Shutdown(); err != nil {
 		t.Errorf("Could not successfully shutdown simulated backend %v", err)
 	}
+
+	db.TeardownDB(backend.beaconDB)
 }
 
-func TestGenerateBlocks(t *testing.T) {
+func TestGenerateBlockAndAdvanceChain_IncreasesSlot(t *testing.T) {
 	backend, err := NewSimulatedBackend()
 	if err != nil {
-		t.Fatalf("Could not create a new simulated backedn %v", err)
+		t.Fatalf("Could not create a new simulated backend %v", err)
 	}
 
-	initialDeposits, err := generateInitialSimulatedDeposits(1000)
+	privKeys, err := backend.SetupBackend(100)
 	if err != nil {
-		t.Fatalf("Could not simulate initial validator deposits: %v", err)
+		t.Fatalf("Could not set up backend %v", err)
 	}
-	if err := backend.setupBeaconStateAndGenesisBlock(initialDeposits); err != nil {
-		t.Fatalf("Could not set up beacon state and initialize genesis block %v", err)
-	}
-	backend.depositTrie = trieutil.NewDepositTrie()
+	defer backend.Shutdown()
+	defer db.TeardownDB(backend.beaconDB)
 
-	slotLimit := 250
+	slotLimit := params.BeaconConfig().SlotsPerEpoch + uint64(1)
 
-	for i := 0; i < slotLimit; i++ {
-		if err := backend.GenerateBlockAndAdvanceChain(&SimulatedObjects{}); err != nil {
+	for i := uint64(0); i < slotLimit; i++ {
+		if err := backend.GenerateBlockAndAdvanceChain(&SimulatedObjects{}, privKeys); err != nil {
 			t.Fatalf("Could not generate block and transition state successfully %v for slot %d", err, backend.state.Slot+1)
 		}
 		if backend.inMemoryBlocks[len(backend.inMemoryBlocks)-1].Slot != backend.state.Slot {
@@ -51,24 +52,21 @@ func TestGenerateBlocks(t *testing.T) {
 
 }
 
-func TestGenerateNilBlocks(t *testing.T) {
+func TestGenerateNilBlockAndAdvanceChain_IncreasesSlot(t *testing.T) {
 	backend, err := NewSimulatedBackend()
 	if err != nil {
 		t.Fatalf("Could not create a new simulated backedn %v", err)
 	}
 
-	initialDeposits, err := generateInitialSimulatedDeposits(1000)
-	if err != nil {
-		t.Fatalf("Could not simulate initial validator deposits: %v", err)
+	if _, err := backend.SetupBackend(100); err != nil {
+		t.Fatalf("Could not set up backend %v", err)
 	}
-	if err := backend.setupBeaconStateAndGenesisBlock(initialDeposits); err != nil {
-		t.Fatalf("Could not set up beacon state and initialize genesis block %v", err)
-	}
-	backend.depositTrie = trieutil.NewDepositTrie()
+	defer backend.Shutdown()
+	defer db.TeardownDB(backend.beaconDB)
 
-	slotLimit := 100
+	slotLimit := params.BeaconConfig().SlotsPerEpoch + uint64(1)
 
-	for i := 0; i < slotLimit; i++ {
+	for i := uint64(0); i < slotLimit; i++ {
 		if err := backend.GenerateNilBlockAndAdvanceChain(); err != nil {
 			t.Fatalf("Could not generate block and transition state successfully %v for slot %d", err, backend.state.Slot+1)
 		}

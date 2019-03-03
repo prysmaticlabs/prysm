@@ -6,14 +6,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/ssz"
-
 	"github.com/gogo/protobuf/proto"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -55,69 +55,36 @@ func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
 	return &event.Feed{}
 }
 
-func TestSetBlockForInitialSync(t *testing.T) {
-	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-
-	cfg := &Config{
-		P2P:          &mockP2P{},
-		SyncService:  &mockSyncService{},
-		BeaconDB:     db,
-		ChainService: &mockChainService{},
+func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
+	ctx := context.Background()
+	genesisTime := time.Now()
+	unixTime := uint64(genesisTime.Unix())
+	if err := beaconDB.InitializeState(unixTime, []*pb.Deposit{}, nil); err != nil {
+		t.Fatalf("could not initialize beacon state to disk: %v", err)
 	}
-
-	ss := NewInitialSyncService(context.Background(), cfg)
-
-	exitRoutine := make(chan bool)
-	delayChan := make(chan time.Time)
-	defer func() {
-		close(exitRoutine)
-		close(delayChan)
-	}()
-
-	go func() {
-		ss.run(delayChan)
-		exitRoutine <- true
-	}()
-
-	genericHash := make([]byte, 32)
-	genericHash[0] = 'a'
-
-	block := &pb.BeaconBlock{
-		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{1, 2, 3},
-			BlockHash32:       []byte{4, 5, 6},
-		},
-		ParentRootHash32: genericHash,
-		Slot:             params.BeaconConfig().GenesisSlot + 1,
-		StateRootHash32:  genericHash,
+	beaconState, err := beaconDB.State(ctx)
+	if err != nil {
+		t.Fatalf("could not attempt fetch beacon state: %v", err)
 	}
-
-	blockResponse := &pb.BeaconBlockResponse{Block: block}
-	msg1 := p2p.Message{
-		Peer: p2p.Peer{},
-		Data: blockResponse,
+	stateRoot, err := hashutil.HashProto(beaconState)
+	if err != nil {
+		log.Errorf("unable to marshal the beacon state: %v", err)
+		return
 	}
-
-	ss.blockBuf <- msg1
-
-	ss.cancel()
-	<-exitRoutine
-
-	stateHash := bytesutil.ToBytes32(blockResponse.Block.StateRootHash32)
-
-	if stateHash != ss.initialStateRootHash32 {
-		t.Fatalf("Beacon state hash not updated: %#x", blockResponse.Block.StateRootHash32)
+	genBlock := b.NewGenesisBlock(stateRoot[:])
+	if err := beaconDB.SaveBlock(genBlock); err != nil {
+		t.Fatalf("could not save genesis block to disk: %v", err)
 	}
-
-	hook.Reset()
+	if err := beaconDB.UpdateChainHead(genBlock, beaconState); err != nil {
+		t.Fatalf("could not set chain head, %v", err)
+	}
 }
 
-func TestSavingBlocksInSync(t *testing.T) {
+func TestSavingBlock_InSync(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	setUpGenesisStateAndBlock(db, t)
 
 	cfg := &Config{
 		P2P:          &mockP2P{},
@@ -126,6 +93,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 		ChainService: &mockChainService{},
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
+	ss.atGenesis = false
 
 	exitRoutine := make(chan bool)
 	delayChan := make(chan time.Time)
@@ -160,7 +128,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 		BeaconState: incorrectState,
 	}
 
-	stateRoot, err := ssz.TreeHash(beaconState)
+	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		t.Fatalf("unable to tree hash state: %v", err)
 	}
@@ -203,7 +171,7 @@ func TestSavingBlocksInSync(t *testing.T) {
 
 	ss.stateBuf <- msg2
 
-	if ss.currentSlot == incorrectStateResponse.BeaconState.FinalizedEpoch*params.BeaconConfig().EpochLength {
+	if ss.currentSlot == incorrectStateResponse.BeaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
 		t.Fatalf("Beacon state updated incorrectly: %d", ss.currentSlot)
 	}
 
@@ -211,16 +179,10 @@ func TestSavingBlocksInSync(t *testing.T) {
 
 	ss.stateBuf <- msg2
 
-	if beaconStateRootHash32 != ss.initialStateRootHash32 {
-		br := msg1.Data.(*pb.BeaconBlockResponse)
-		t.Fatalf("state hash not updated to: %#x instead it is %#x", br.Block.StateRootHash32,
-			ss.initialStateRootHash32)
-	}
-
 	msg1 = getBlockResponseMsg(params.BeaconConfig().GenesisSlot + 1)
 	ss.blockBuf <- msg1
 	if params.BeaconConfig().GenesisSlot+1 != ss.currentSlot {
-		t.Fatalf("Slot saved when it was not supposed too: %v", stateResponse.BeaconState.FinalizedEpoch*params.BeaconConfig().EpochLength)
+		t.Fatalf("Slot saved when it was not supposed too: %v", stateResponse.BeaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch)
 	}
 
 	msg1 = getBlockResponseMsg(params.BeaconConfig().GenesisSlot + 2)
@@ -238,10 +200,12 @@ func TestSavingBlocksInSync(t *testing.T) {
 	hook.Reset()
 }
 
-func TestDelayChan(t *testing.T) {
+func TestDelayChan_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	setUpGenesisStateAndBlock(db, t)
+
 	cfg := &Config{
 		P2P:          &mockP2P{},
 		SyncService:  &mockSyncService{},
@@ -249,6 +213,7 @@ func TestDelayChan(t *testing.T) {
 		ChainService: &mockChainService{},
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
+	ss.atGenesis = false
 
 	exitRoutine := make(chan bool)
 	delayChan := make(chan time.Time)
@@ -274,7 +239,7 @@ func TestDelayChan(t *testing.T) {
 		BeaconState: beaconState,
 	}
 
-	stateRoot, err := ssz.TreeHash(beaconState)
+	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		t.Fatalf("unable to tree hash state: %v", err)
 	}
@@ -323,10 +288,12 @@ func TestDelayChan(t *testing.T) {
 	hook.Reset()
 }
 
-func TestRequestBlocksBySlot(t *testing.T) {
+func TestRequestBlocksBySlot_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	setUpGenesisStateAndBlock(db, t)
+
 	cfg := &Config{
 		P2P:             &mockP2P{},
 		SyncService:     &mockSyncService{},
@@ -335,7 +302,7 @@ func TestRequestBlocksBySlot(t *testing.T) {
 		BlockBufferSize: 100,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
-	newState, err := state.InitialBeaconState(nil, 0, nil)
+	newState, err := state.GenesisBeaconState(nil, 0, nil)
 	if err != nil {
 		t.Fatalf("could not create new state %v", err)
 	}
@@ -344,6 +311,8 @@ func TestRequestBlocksBySlot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not save beacon state %v", err)
 	}
+
+	ss.atGenesis = false
 
 	exitRoutine := make(chan bool)
 	delayChan := make(chan time.Time)
@@ -376,7 +345,7 @@ func TestRequestBlocksBySlot(t *testing.T) {
 			Block: block,
 		}
 
-		root, err := ssz.TreeHash(block)
+		root, err := hashutil.HashBeaconBlock(block)
 		if err != nil {
 			t.Fatalf("unable to tree hash block %v", err)
 		}
@@ -387,7 +356,7 @@ func TestRequestBlocksBySlot(t *testing.T) {
 		}, root
 	}
 
-	// sending all blocks except for the initial block
+	// sending all blocks except for the genesis block
 	startSlot := 1 + params.BeaconConfig().GenesisSlot
 	for i := startSlot; i < startSlot+10; i++ {
 		response, _ := getBlockResponseMsg(i)
@@ -396,7 +365,7 @@ func TestRequestBlocksBySlot(t *testing.T) {
 
 	initialResponse, _ := getBlockResponseMsg(1 + params.BeaconConfig().GenesisSlot)
 
-	//sending initial block
+	//sending genesis block
 	ss.blockBuf <- initialResponse
 
 	_, hash := getBlockResponseMsg(9 + params.BeaconConfig().GenesisSlot)

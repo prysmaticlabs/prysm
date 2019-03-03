@@ -24,7 +24,7 @@ func expectPeers(t *testing.T, h *bhost.BasicHost, n int) {
 	}
 }
 
-func TestStartDiscovery_HandlePeerFound(t *testing.T) {
+func TestStartDiscovery_PeerFound(t *testing.T) {
 	discoveryInterval = 50 * time.Millisecond // Short interval for testing.
 
 	ctx, cancel := context.WithCancel(context.TODO())

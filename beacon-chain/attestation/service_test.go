@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/ssz"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -21,9 +21,11 @@ func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 }
 
-func TestUpdateLatestAttestation_Ok(t *testing.T) {
+func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
+
 	if err := beaconDB.SaveState(&pb.BeaconState{
 		ValidatorRegistry: []*pb.Validator{{Pubkey: []byte{'A'}}},
 	}); err != nil {
@@ -32,13 +34,13 @@ func TestUpdateLatestAttestation_Ok(t *testing.T) {
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	attestation := &pb.Attestation{
-		AggregationBitfield: []byte{0x80},
+		AggregationBitfield: []byte{0x01},
 		Data: &pb.AttestationData{
 			Slot: 5,
 		},
 	}
 
-	if err := service.updateLatestAttestation(attestation); err != nil {
+	if err := service.updateLatestAttestation(ctx, attestation); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
 	pubkey := bytesutil.ToBytes48([]byte{'A'})
@@ -49,7 +51,7 @@ func TestUpdateLatestAttestation_Ok(t *testing.T) {
 	}
 
 	attestation.Data.Slot = 100
-	if err := service.updateLatestAttestation(attestation); err != nil {
+	if err := service.updateLatestAttestation(ctx, attestation); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
 	if service.store[pubkey].Data.Slot !=
@@ -59,7 +61,7 @@ func TestUpdateLatestAttestation_Ok(t *testing.T) {
 	}
 }
 
-func TestAttestationPool_Ok(t *testing.T) {
+func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
@@ -71,7 +73,7 @@ func TestAttestationPool_Ok(t *testing.T) {
 
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 	attestation := &pb.Attestation{
-		AggregationBitfield: []byte{0x80},
+		AggregationBitfield: []byte{0x01},
 		Data:                &pb.AttestationData{},
 	}
 
@@ -88,9 +90,11 @@ func TestAttestationPool_Ok(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Updated attestation pool for attestation")
 }
 
-func TestLatestAttestation_Ok(t *testing.T) {
+func TestLatestAttestation_ReturnsLatestAttestation(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
+
 	pubKey := []byte{'A'}
 	if err := beaconDB.SaveState(&pb.BeaconState{
 		ValidatorRegistry: []*pb.Validator{{Pubkey: pubKey}},
@@ -103,7 +107,7 @@ func TestLatestAttestation_Ok(t *testing.T) {
 	attestation := &pb.Attestation{AggregationBitfield: []byte{'B'}}
 	service.store[pubKey48] = attestation
 
-	latestAttestation, err := service.LatestAttestation(0)
+	latestAttestation, err := service.LatestAttestation(ctx, 0)
 	if err != nil {
 		t.Fatalf("Could not get latest attestation: %v", err)
 	}
@@ -115,6 +119,8 @@ func TestLatestAttestation_Ok(t *testing.T) {
 func TestLatestAttestation_InvalidIndex(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
+
 	if err := beaconDB.SaveState(&pb.BeaconState{
 		ValidatorRegistry: []*pb.Validator{},
 	}); err != nil {
@@ -124,7 +130,7 @@ func TestLatestAttestation_InvalidIndex(t *testing.T) {
 
 	index := 0
 	want := fmt.Sprintf("invalid validator index %d", index)
-	if _, err := service.LatestAttestation(index); !strings.Contains(err.Error(), want) {
+	if _, err := service.LatestAttestation(ctx, index); !strings.Contains(err.Error(), want) {
 		t.Errorf("Wanted error to contain %s, received %v", want, err)
 	}
 }
@@ -132,6 +138,8 @@ func TestLatestAttestation_InvalidIndex(t *testing.T) {
 func TestLatestAttestation_NoAttestation(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
+
 	if err := beaconDB.SaveState(&pb.BeaconState{
 		ValidatorRegistry: []*pb.Validator{{}},
 	}); err != nil {
@@ -141,7 +149,7 @@ func TestLatestAttestation_NoAttestation(t *testing.T) {
 
 	index := 0
 	want := fmt.Sprintf("validator index %d does not have an attestation", index)
-	if _, err := service.LatestAttestation(index); !strings.Contains(err.Error(), want) {
+	if _, err := service.LatestAttestation(ctx, index); !strings.Contains(err.Error(), want) {
 		t.Errorf("Wanted error to contain %s, received %v", want, err)
 	}
 }
@@ -149,6 +157,8 @@ func TestLatestAttestation_NoAttestation(t *testing.T) {
 func TestLatestAttestationTarget_CantGetAttestation(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
+
 	if err := beaconDB.SaveState(&pb.BeaconState{
 		ValidatorRegistry: []*pb.Validator{{}},
 	}); err != nil {
@@ -158,14 +168,15 @@ func TestLatestAttestationTarget_CantGetAttestation(t *testing.T) {
 
 	index := 100
 	want := fmt.Sprintf("could not get attestation: invalid validator index %d", index)
-	if _, err := service.LatestAttestationTarget(index); !strings.Contains(err.Error(), want) {
+	if _, err := service.LatestAttestationTarget(ctx, index); !strings.Contains(err.Error(), want) {
 		t.Errorf("Wanted error to contain %s, received %v", want, err)
 	}
 }
 
-func TestLatestAttestationTarget_Ok(t *testing.T) {
+func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
+	ctx := context.Background()
 
 	pubKey := []byte{'A'}
 	if err := beaconDB.SaveState(&pb.BeaconState{
@@ -178,7 +189,7 @@ func TestLatestAttestationTarget_Ok(t *testing.T) {
 	if err := beaconDB.SaveBlock(block); err != nil {
 		t.Fatalf("could not save block: %v", err)
 	}
-	blockRoot, err := ssz.TreeHash(block)
+	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		log.Fatalf("could not hash block: %v", err)
 	}
@@ -192,7 +203,7 @@ func TestLatestAttestationTarget_Ok(t *testing.T) {
 	pubKey48 := bytesutil.ToBytes48(pubKey)
 	service.store[pubKey48] = attestation
 
-	latestAttestedBlock, err := service.LatestAttestationTarget(0)
+	latestAttestedBlock, err := service.LatestAttestationTarget(ctx, 0)
 	if err != nil {
 		t.Fatalf("Could not get latest attestation: %v", err)
 	}

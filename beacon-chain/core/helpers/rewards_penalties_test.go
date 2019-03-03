@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestBaseRewardQuotient(t *testing.T) {
+func TestBaseRewardQuotient_OK(t *testing.T) {
 	if params.BeaconConfig().BaseRewardQuotient != 1<<5 {
 		t.Errorf("BaseRewardQuotient should be 32 for these tests to pass")
 	}
@@ -32,7 +32,7 @@ func TestBaseRewardQuotient(t *testing.T) {
 	}
 }
 
-func TestBaseReward(t *testing.T) {
+func TestBaseReward_OK(t *testing.T) {
 	tests := []struct {
 		a uint64
 		b uint64
@@ -56,7 +56,7 @@ func TestBaseReward(t *testing.T) {
 	}
 }
 
-func TestInactivityPenalty(t *testing.T) {
+func TestInactivityPenalty_OK(t *testing.T) {
 	tests := []struct {
 		a uint64
 		b uint64
@@ -80,7 +80,7 @@ func TestInactivityPenalty(t *testing.T) {
 	}
 }
 
-func TestEffectiveBalance(t *testing.T) {
+func TestEffectiveBalance_OK(t *testing.T) {
 	defaultBalance := params.BeaconConfig().MaxDepositAmount
 
 	tests := []struct {
@@ -101,7 +101,7 @@ func TestEffectiveBalance(t *testing.T) {
 	}
 }
 
-func TestTotalBalance(t *testing.T) {
+func TestTotalBalance_OK(t *testing.T) {
 	state := &pb.BeaconState{ValidatorBalances: []uint64{
 		27 * 1e9, 28 * 1e9, 32 * 1e9, 40 * 1e9,
 	}}

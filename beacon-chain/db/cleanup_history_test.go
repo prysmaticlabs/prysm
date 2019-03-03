@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestSaveCleanedFinalizedSlot(t *testing.T) {
+func TestSaveCleanedFinalizedSlot_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
@@ -28,7 +28,7 @@ func TestCleanedFinalizedSlot_NotFound(t *testing.T) {
 	}
 }
 
-func TestCleanedFinalizedSlot(t *testing.T) {
+func TestCleanedFinalizedSlot_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 

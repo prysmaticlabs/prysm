@@ -10,12 +10,17 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/forkutils"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
@@ -26,15 +31,12 @@ import (
 //
 // WIP - this is stubbed out until BLS is integrated into Prysm.
 func VerifyProposerSignature(
-	block *pb.BeaconBlock,
+	_ *pb.BeaconBlock,
 ) error {
-	if block == nil {
-		return errors.New("received nil block")
-	}
 	return nil
 }
 
-// ProcessEth1Data is an operation performed on each
+// ProcessEth1DataInBlock is an operation performed on each
 // beacon block to ensure the ETH1 data votes are processed
 // into the beacon state.
 //
@@ -42,7 +44,7 @@ func VerifyProposerSignature(
 //   If block.eth1_data equals eth1_data_vote.eth1_data for some eth1_data_vote
 //   in state.eth1_data_votes, set eth1_data_vote.vote_count += 1.
 //   Otherwise, append to state.eth1_data_votes a new Eth1DataVote(eth1_data=block.eth1_data, vote_count=1).
-func ProcessEth1Data(beaconState *pb.BeaconState, block *pb.BeaconBlock) *pb.BeaconState {
+func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) *pb.BeaconState {
 	var eth1DataVoteAdded bool
 
 	for idx := range beaconState.Eth1DataVotes {
@@ -76,34 +78,59 @@ func ProcessEth1Data(beaconState *pb.BeaconState, block *pb.BeaconBlock) *pb.Bea
 //     signature=block.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO)).
 //   Set state.latest_randao_mixes[get_current_epoch(state) % LATEST_RANDAO_MIXES_LENGTH] =
 //     xor(get_randao_mix(state, get_current_epoch(state)), hash(block.randao_reveal))
-func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) (*pb.BeaconState, error) {
-	if err := verifyBlockRandao(beaconState, block); err != nil {
-		return nil, fmt.Errorf("could not verify block randao: %v", err)
+func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, verifySignatures bool) (*pb.BeaconState, error) {
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
+	if err != nil {
+		return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
+	}
+	log.WithField("proposerIndex", proposerIdx).Info("RANDAO expected proposer")
+	proposer := beaconState.ValidatorRegistry[proposerIdx]
+	if verifySignatures {
+		if err := verifyBlockRandao(beaconState, block, proposer); err != nil {
+			return nil, fmt.Errorf("could not verify block randao: %v", err)
+		}
 	}
 	// If block randao passed verification, we XOR the state's latest randao mix with the block's
 	// randao and update the state's corresponding latest randao mix value.
 	latestMixesLength := params.BeaconConfig().LatestRandaoMixesLength
 	currentEpoch := helpers.CurrentEpoch(beaconState)
-	latestMixSlice := beaconState.LatestRandaoMixesHash32S[currentEpoch%latestMixesLength]
-	latestMix := bytesutil.ToBytes32(latestMixSlice)
-	for i, x := range block.RandaoRevealHash32 {
-		latestMix[i] ^= x
+	latestMixSlice := beaconState.LatestRandaoMixes[currentEpoch%latestMixesLength]
+	blockRandaoReveal := hashutil.Hash(block.RandaoReveal)
+	for i, x := range blockRandaoReveal {
+		latestMixSlice[i] ^= x
 	}
-	beaconState.LatestRandaoMixesHash32S[beaconState.Slot%latestMixesLength] = latestMix[:]
+	beaconState.LatestRandaoMixes[currentEpoch%latestMixesLength] = latestMixSlice
 	return beaconState, nil
 }
 
-func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) error {
-	// TODO(#1366): Integrate BLS into the repository.
-	// Verify that bls_verify(pubkey=proposer.pubkey, message_hash=int_to_bytes32(get_current_epoch(state)),
-	//   signature=block.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO)).
-	_ = beaconState
-	_ = block
+// Verify that bls_verify(pubkey=proposer.pubkey, message_hash=hash_tree_root(get_current_epoch(state)),
+//   signature=block.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO))
+func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, proposer *pb.Validator) error {
+	pub, err := bls.PublicKeyFromBytes(proposer.Pubkey)
+	if err != nil {
+		return fmt.Errorf("could not deserialize proposer public key: %v", err)
+	}
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+	buf := make([]byte, 32)
+	binary.LittleEndian.PutUint64(buf, currentEpoch)
+	domain := forkutils.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainRandao)
+	sig, err := bls.SignatureFromBytes(block.RandaoReveal)
+	if err != nil {
+		return fmt.Errorf("could not deserialize block randao reveal: %v", err)
+	}
+	log.WithFields(logrus.Fields{
+		"epoch":    helpers.CurrentEpoch(beaconState) - params.BeaconConfig().GenesisEpoch,
+		"pubkey":   fmt.Sprintf("%#x", proposer.Pubkey),
+		"epochSig": fmt.Sprintf("%#x", sig.Marshal()),
+	}).Info("Verifying randao")
+	if !sig.Verify(buf, pub, domain) {
+		return fmt.Errorf("block randao reveal signature did not verify")
+	}
 	return nil
 }
 
 // ProcessProposerSlashings is one of the operations performed
-// on each processed beacon block to penalize proposers based on
+// on each processed beacon block to slash proposers based on
 // slashing conditions if any slashable events occurred.
 //
 // Official spec definition for proposer slashings:
@@ -114,14 +141,14 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock) error
 //     Verify that proposer_slashing.proposal_data_1.slot == proposer_slashing.proposal_data_2.slot.
 //     Verify that proposer_slashing.proposal_data_1.shard == proposer_slashing.proposal_data_2.shard.
 //     Verify that proposer_slashing.proposal_data_1.block_root != proposer_slashing.proposal_data_2.block_root.
-//     Verify that proposer.penalized_epoch > get_current_epoch(state).
+//     Verify that proposer.slashed_epoch > get_current_epoch(state).
 //     Verify that bls_verify(pubkey=proposer.pubkey, message_hash=hash_tree_root(proposer_slashing.proposal_data_1),
 //       signature=proposer_slashing.proposal_signature_1,
 //       domain=get_domain(state.fork, slot_to_epoch(proposer_slashing.proposal_data_1.slot), DOMAIN_PROPOSAL)).
 //     Verify that bls_verify(pubkey=proposer.pubkey, message_hash=hash_tree_root(proposer_slashing.proposal_data_2),
 //       signature=proposer_slashing.proposal_signature_2,
 //       domain=get_domain(state.fork, slot_to_epoch(proposer_slashing.proposal_data_2.slot), DOMAIN_PROPOSAL)).
-//     Run penalize_validator(state, proposer_slashing.proposer_index).
+//     Run slash_validator(state, proposer_slashing.proposer_index).
 func ProcessProposerSlashings(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
@@ -142,10 +169,10 @@ func ProcessProposerSlashings(
 			return nil, fmt.Errorf("could not verify proposer slashing #%d: %v", idx, err)
 		}
 		proposer := registry[slashing.ProposerIndex]
-		if proposer.PenalizedEpoch > helpers.CurrentEpoch(beaconState) {
-			beaconState, err = v.PenalizeValidator(beaconState, slashing.ProposerIndex)
+		if proposer.SlashedEpoch > helpers.CurrentEpoch(beaconState) {
+			beaconState, err = v.SlashValidator(beaconState, slashing.ProposerIndex)
 			if err != nil {
-				return nil, fmt.Errorf("could not penalize proposer index %d: %v",
+				return nil, fmt.Errorf("could not slash proposer index %d: %v",
 					slashing.ProposerIndex, err)
 			}
 		}
@@ -165,7 +192,14 @@ func verifyProposerSlashing(
 	root1 := slashing.ProposalData_1.BlockRootHash32
 	root2 := slashing.ProposalData_2.BlockRootHash32
 	if slot1 != slot2 {
-		return fmt.Errorf("slashing proposal data slots do not match: %d, %d", slot1, slot2)
+		if slot1 > params.BeaconConfig().GenesisSlot {
+			slot1 -= params.BeaconConfig().GenesisSlot
+		}
+		if slot2 > params.BeaconConfig().GenesisSlot {
+			slot2 -= params.BeaconConfig().GenesisSlot
+		}
+		return fmt.Errorf("slashing proposal data slots do not match: %d, %d",
+			slot1, slot2)
 	}
 	if shard1 != shard2 {
 		return fmt.Errorf("slashing proposal data shards do not match: %d, %d", shard1, shard2)
@@ -181,7 +215,7 @@ func verifyProposerSlashing(
 }
 
 // ProcessAttesterSlashings is one of the operations performed
-// on each processed beacon block to penalize attesters based on
+// on each processed beacon block to slash attesters based on
 // Casper FFG slashing conditions if any slashable events occurred.
 //
 // Official spec definition for attester slashings:
@@ -198,9 +232,9 @@ func verifyProposerSlashing(
 //     Verify that verify_slashable_attestation(state, slashable_attestation_2).
 //     Let slashable_indices = [index for index in slashable_attestation_1.validator_indices if
 //       index in slashable_attestation_2.validator_indices and
-//       state.validator_registry[index].penalized_epoch > get_current_epoch(state)].
+//       state.validator_registry[index].slashed_epoch > get_current_epoch(state)].
 //     Verify that len(slashable_indices) >= 1.
-//     Run penalize_validator(state, index) for each index in slashable_indices.
+//     Run slash_validator(state, index) for each index in slashable_indices.
 func ProcessAttesterSlashings(
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
@@ -223,9 +257,9 @@ func ProcessAttesterSlashings(
 			return nil, fmt.Errorf("could not determine validator indices to slash: %v", err)
 		}
 		for _, validatorIndex := range slashableIndices {
-			beaconState, err = v.PenalizeValidator(beaconState, validatorIndex)
+			beaconState, err = v.SlashValidator(beaconState, validatorIndex)
 			if err != nil {
-				return nil, fmt.Errorf("could not penalize validator index %d: %v",
+				return nil, fmt.Errorf("could not slash validator index %d: %v",
 					validatorIndex, err)
 			}
 		}
@@ -269,12 +303,12 @@ func attesterSlashableIndices(beaconState *pb.BeaconState, slashing *pb.Attester
 	slashableAttestation2 := slashing.SlashableAttestation_2
 	// Let slashable_indices = [index for index in slashable_attestation_1.validator_indices if
 	//   index in slashable_attestation_2.validator_indices and
-	//   state.validator_registry[index].penalized_epoch > get_current_epoch(state)].
+	//   state.validator_registry[index].slashed_epoch > get_current_epoch(state)].
 	var slashableIndices []uint64
 	for _, idx1 := range slashableAttestation1.ValidatorIndices {
 		for _, idx2 := range slashableAttestation2.ValidatorIndices {
 			if idx1 == idx2 {
-				if beaconState.ValidatorRegistry[idx1].PenalizedEpoch > helpers.CurrentEpoch(beaconState) {
+				if beaconState.ValidatorRegistry[idx1].SlashedEpoch > helpers.CurrentEpoch(beaconState) {
 					slashableIndices = append(slashableIndices, idx1)
 				}
 			}
@@ -341,8 +375,9 @@ func isSurroundVote(data1 *pb.AttestationData, data2 *pb.AttestationData) bool {
 //   Verify that len(block.body.attestations) <= MAX_ATTESTATIONS.
 //
 //   For each attestation in block.body.attestations:
-//     Verify that attestation.data.slot <= state.slot - MIN_ATTESTATION_INCLUSION_DELAY <
-//       attestation.data.slot + EPOCH_LENGTH.
+//     Verify that `attestation.data.slot >= GENESIS_SLOT`.
+//     Verify that `attestation.data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot`.
+//     Verify that `state.slot < attestation.data.slot + SLOTS_PER_EPOCH.
 //     Verify that attestation.data.justified_epoch is equal to state.justified_epoch
 //       if attestation.data.slot >= get_epoch_start_slot(get_current_epoch(state)) else state.previous_justified_epoch.
 //     Verify that attestation.data.justified_block_root is equal to
@@ -366,44 +401,51 @@ func ProcessBlockAttestations(
 			params.BeaconConfig().MaxAttestations,
 		)
 	}
-	var pendingAttestations []*pb.PendingAttestation
+
 	for idx, attestation := range atts {
 		if err := verifyAttestation(beaconState, attestation, verifySignatures); err != nil {
 			return nil, fmt.Errorf("could not verify attestation at index %d in block: %v", idx, err)
 		}
-		pendingAttestations = append(pendingAttestations, &pb.PendingAttestation{
+		beaconState.LatestAttestations = append(beaconState.LatestAttestations, &pb.PendingAttestation{
 			Data:                attestation.Data,
 			AggregationBitfield: attestation.AggregationBitfield,
 			CustodyBitfield:     attestation.CustodyBitfield,
 			InclusionSlot:       beaconState.Slot,
 		})
 	}
-	beaconState.LatestAttestations = pendingAttestations
+
 	return beaconState, nil
 }
 
 func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifySignatures bool) error {
+	if att.Data.Slot < params.BeaconConfig().GenesisSlot {
+		return fmt.Errorf(
+			"attestation slot (slot %d) less than genesis slot (%d)",
+			att.Data.Slot,
+			params.BeaconConfig().GenesisSlot,
+		)
+	}
 	inclusionDelay := params.BeaconConfig().MinAttestationInclusionDelay
 	if att.Data.Slot+inclusionDelay > beaconState.Slot {
 		return fmt.Errorf(
 			"attestation slot (slot %d) + inclusion delay (%d) beyond current beacon state slot (%d)",
-			att.Data.Slot,
+			att.Data.Slot-params.BeaconConfig().GenesisSlot,
 			inclusionDelay,
-			beaconState.Slot,
+			beaconState.Slot-params.BeaconConfig().GenesisSlot,
 		)
 	}
-	if att.Data.Slot+params.BeaconConfig().EpochLength < beaconState.Slot {
+	if att.Data.Slot+params.BeaconConfig().SlotsPerEpoch <= beaconState.Slot {
 		return fmt.Errorf(
 			"attestation slot (slot %d) + epoch length (%d) less than current beacon state slot (%d)",
-			att.Data.Slot,
-			params.BeaconConfig().EpochLength,
-			beaconState.Slot,
+			att.Data.Slot-params.BeaconConfig().GenesisSlot,
+			params.BeaconConfig().SlotsPerEpoch,
+			beaconState.Slot-params.BeaconConfig().GenesisSlot,
 		)
 	}
-	// Verify that attestation.data.justified_epoch is equal to state.justified_epoch
-	// 	if attestation.data.slot >= get_epoch_start_slot(get_current_epoch(state))
-	// 	else state.previous_justified_epoch.
-	if att.Data.Slot >= helpers.StartSlot(helpers.SlotToEpoch(beaconState.Slot)) {
+	// Verify that `attestation.data.justified_epoch` is equal to `state.justified_epoch
+	// 	if slot_to_epoch(attestation.data.slot+1) >= get_current_epoch(state)
+	// 	else state.previous_justified_epoch`.
+	if helpers.SlotToEpoch(att.Data.Slot+1) >= helpers.CurrentEpoch(beaconState) {
 		if att.Data.JustifiedEpoch != beaconState.JustifiedEpoch {
 			return fmt.Errorf(
 				"expected attestation.JustifiedEpoch == state.JustifiedEpoch, received %d == %d",
@@ -445,12 +487,11 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	// 	equals state.latest_crosslinks[attestation.data.shard]
 	shard := att.Data.Shard
 	crosslink := &pb.Crosslink{
-		ShardBlockRootHash32: att.Data.ShardBlockRootHash32,
-		Epoch:                helpers.SlotToEpoch(att.Data.Slot),
+		CrosslinkDataRootHash32: att.Data.CrosslinkDataRootHash32,
+		Epoch:                   helpers.SlotToEpoch(att.Data.Slot),
 	}
 	crosslinkFromAttestation := att.Data.LatestCrosslink
 	crosslinkFromState := beaconState.LatestCrosslinks[shard]
-
 	if !(reflect.DeepEqual(crosslinkFromState, crosslink) ||
 		reflect.DeepEqual(crosslinkFromState, crosslinkFromAttestation)) {
 		return fmt.Errorf(
@@ -460,11 +501,11 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 	}
 
 	// Verify attestation.shard_block_root == ZERO_HASH [TO BE REMOVED IN PHASE 1].
-	if !bytes.Equal(att.Data.ShardBlockRootHash32, []byte{}) {
+	if !bytes.Equal(att.Data.CrosslinkDataRootHash32, params.BeaconConfig().ZeroHash[:]) {
 		return fmt.Errorf(
 			"expected attestation.ShardBlockRoot == %#x, received %#x instead",
-			[]byte{},
-			att.Data.ShardBlockRootHash32,
+			params.BeaconConfig().ZeroHash[:],
+			att.Data.CrosslinkDataRootHash32,
 		)
 	}
 	if verifySignatures {
@@ -527,7 +568,7 @@ func ProcessValidatorDeposits(
 	validatorIndexMap := stateutils.ValidatorIndexMap(beaconState)
 	for idx, deposit := range deposits {
 		depositData := deposit.DepositData
-		depositInput, err = DecodeDepositInput(depositData)
+		depositInput, err = helpers.DecodeDepositInput(depositData)
 		if err != nil {
 			return nil, fmt.Errorf("could not decode deposit input: %v", err)
 		}
@@ -578,9 +619,9 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 //
 // Official spec definition for processing exits:
 //
-//   Verify that len(block.body.exits) <= MAX_EXITS.
+//   Verify that len(block.body.voluntary_exits) <= MAX_VOLUNTARY_EXITS.
 //
-//   For each exit in block.body.exits:
+//   For each exit in block.body.voluntary_exits:
 //     Let validator = state.validator_registry[exit.validator_index].
 //     Verify that validator.exit_epoch > get_entry_exit_effect_epoch(get_current_epoch(state)).
 //     Verify that get_current_epoch(state) >= exit.epoch.
@@ -595,12 +636,12 @@ func ProcessValidatorExits(
 	block *pb.BeaconBlock,
 	verifySignatures bool,
 ) (*pb.BeaconState, error) {
-	exits := block.Body.Exits
-	if uint64(len(exits)) > params.BeaconConfig().MaxExits {
+	exits := block.Body.VoluntaryExits
+	if uint64(len(exits)) > params.BeaconConfig().MaxVoluntaryExits {
 		return nil, fmt.Errorf(
 			"number of exits (%d) exceeds allowed threshold of %d",
 			len(exits),
-			params.BeaconConfig().MaxExits,
+			params.BeaconConfig().MaxVoluntaryExits,
 		)
 	}
 
@@ -615,7 +656,7 @@ func ProcessValidatorExits(
 	return beaconState, nil
 }
 
-func verifyExit(beaconState *pb.BeaconState, exit *pb.Exit, verifySignatures bool) error {
+func verifyExit(beaconState *pb.BeaconState, exit *pb.VoluntaryExit, verifySignatures bool) error {
 	validator := beaconState.ValidatorRegistry[exit.ValidatorIndex]
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	entryExitEffectEpoch := helpers.EntryExitEffectEpoch(currentEpoch)

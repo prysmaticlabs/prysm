@@ -5,6 +5,12 @@ import (
 )
 
 var (
+	// DemoConfigFlag determines whether to launch a beacon chain using demo parameters
+	// such as shorter cycle length, fewer shards, and more.
+	DemoConfigFlag = cli.BoolFlag{
+		Name:  "demo-config",
+		Usage: " Run the validator using demo paramteres (i.e. shorter cycles, fewer shards and committees)",
+	}
 	// BeaconRPCProviderFlag defines a beacon node RPC endpoint.
 	BeaconRPCProviderFlag = cli.StringFlag{
 		Name:  "beacon-rpc-provider",
@@ -21,9 +27,9 @@ var (
 		Name:  "keystore-path",
 		Usage: "path to the desired keystore directory",
 	}
-	// PasswordFlag defines the password for storing and retrieving validator private keys from the keystore.
+	// PasswordFlag defines the password value for storing and retrieving validator private keys from the keystore.
 	PasswordFlag = cli.StringFlag{
 		Name:  "password",
-		Usage: "password to your validator private keys",
+		Usage: "string value of the password for your validator private keys",
 	}
 )

@@ -8,13 +8,15 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 )
+
+var log = logrus.WithField("prefix", "core/blocks")
 
 // IsValidBlock ensures that the block is compliant with the block processing validity conditions.
 // Spec:
@@ -22,7 +24,7 @@ import (
 //  The parent block with root block.parent_root has been processed and accepted.
 //  The node has processed its state up to slot, block.slot - 1.
 //  The Ethereum 1.0 block pointed to by the state.processed_pow_receipt_root has been processed and accepted.
-//  The node's local clock time is greater than or equal to state.genesis_time + block.slot * SLOT_DURATION.
+//  The node's local clock time is greater than or equal to state.genesis_time + block.slot * SECONDS_PER_SLOT.
 func IsValidBlock(
 	ctx context.Context,
 	state *pb.BeaconState,
@@ -57,9 +59,9 @@ func IsValidBlock(
 
 	// Pre-Processing Condition 4:
 	// The node's local time is greater than or equal to
-	// state.genesis_time + (block.slot-GENESIS_SLOT)* SLOT_DURATION.
+	// state.genesis_time + (block.slot-GENESIS_SLOT)* SECONDS_PER_SLOT.
 	if !IsSlotValid(block.Slot, genesisTime) {
-		return fmt.Errorf("slot of block is too high: %d", block.Slot)
+		return fmt.Errorf("slot of block is too high: %d", block.Slot-params.BeaconConfig().GenesisSlot)
 	}
 
 	return nil
@@ -67,7 +69,12 @@ func IsValidBlock(
 
 // IsSlotValid compares the slot to the system clock to determine if the block is valid.
 func IsSlotValid(slot uint64, genesisTime time.Time) bool {
-	slotDuration := time.Duration((slot-params.BeaconConfig().GenesisSlot)*params.BeaconConfig().SlotDuration) * time.Second
-	validTimeThreshold := genesisTime.Add(slotDuration)
-	return clock.Now().After(validTimeThreshold)
+	secondsPerSlot := time.Duration((slot-params.BeaconConfig().GenesisSlot)*params.BeaconConfig().SecondsPerSlot) * time.Second
+	validTimeThreshold := genesisTime.Add(secondsPerSlot)
+	now := clock.Now()
+	if !now.After(validTimeThreshold) {
+		log.Infof("Waiting for slot to be valid. local clock: %v, genesis+slot: %v",
+			now, validTimeThreshold)
+	}
+	return now.After(validTimeThreshold)
 }

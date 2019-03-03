@@ -35,7 +35,9 @@ func (db *BeaconDB) Close() error {
 func (db *BeaconDB) update(fn func(*bolt.Tx) error) error {
 	return db.db.Update(fn)
 }
-
+func (db *BeaconDB) batch(fn func(*bolt.Tx) error) error {
+	return db.db.Batch(fn)
+}
 func (db *BeaconDB) view(fn func(*bolt.Tx) error) error {
 	return db.db.View(fn)
 }
@@ -68,7 +70,7 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 
 	if err := db.update(func(tx *bolt.Tx) error {
 		return createBuckets(tx, blockBucket, attestationBucket, mainChainBucket,
-			chainInfoBucket, cleanupHistoryBucket, blockOperationsBucket)
+			chainInfoBucket, cleanupHistoryBucket, blockOperationsBucket, validatorBucket)
 
 	}); err != nil {
 		return nil, err

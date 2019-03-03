@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"crypto/rand"
 	"io/ioutil"
-	"math/big"
 	"os"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 	"github.com/pborman/uuid"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -15,22 +16,23 @@ import (
 
 func TestMarshalAndUnmarshal(t *testing.T) {
 	testID := uuid.NewRandom()
-	blsKey := &bls.SecretKey{
-		K: big.NewInt(10),
+	blsKey, err := bls.RandKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
 	}
 	key := &Key{
 		ID:        testID,
 		SecretKey: blsKey,
+		PublicKey: blsKey.PublicKey(),
 	}
 	marshalledObject, err := key.MarshalJSON()
 	if err != nil {
 		t.Fatalf("unable to marshall key %v", err)
 	}
 	newKey := &Key{
-		ID: []byte{},
-		SecretKey: &bls.SecretKey{
-			K: big.NewInt(0),
-		},
+		ID:        []byte{},
+		SecretKey: blsKey,
+		PublicKey: blsKey.PublicKey(),
 	}
 
 	err = newKey.UnmarshalJSON(marshalledObject)
@@ -61,22 +63,23 @@ func TestStoreRandomKey(t *testing.T) {
 	if err := os.RemoveAll(filedir); err != nil {
 		t.Errorf("unable to remove temporary files %v", err)
 	}
-
 }
-func TestNewKeyFromBLS(t *testing.T) {
-	blskey := &bls.SecretKey{
-		K: big.NewInt(20),
-	}
 
+func TestNewKeyFromBLS(t *testing.T) {
+	b := []byte("hi")
+	b32 := bytesutil.ToBytes32(b)
+	blskey, err := bls.SecretKeyFromBytes(b32[:])
+	if err != nil {
+		t.Fatal(err)
+	}
 	key, err := newKeyFromBLS(blskey)
 	if err != nil {
 		t.Fatalf("could not get new key from bls %v", err)
 	}
 
-	expectedNum := big.NewInt(20)
-
-	if expectedNum.Cmp(key.SecretKey.K) != 0 {
-		t.Fatalf("secret key is not of the expected value %d", key.SecretKey.K)
+	expected := blskey.Marshal()
+	if !bytes.Equal(expected, key.SecretKey.Marshal()) {
+		t.Fatalf("secret key is not of the expected value %d", key.SecretKey.Marshal())
 	}
 
 	reader := rand.Reader
@@ -85,11 +88,10 @@ func TestNewKeyFromBLS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("random key unable to be generated: %v", err)
 	}
-
 }
 
 func TestWriteFile(t *testing.T) {
-	tmpdir := os.TempDir()
+	tmpdir := testutil.TempDir()
 	filedir := tmpdir + "/keystore"
 
 	testKeystore := []byte{'t', 'e', 's', 't'}

@@ -9,14 +9,14 @@ import (
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 )
 
-func TestMakePeerFails(t *testing.T) {
+func TestMakePeer_InvalidMultiaddress(t *testing.T) {
 	_, err := MakePeer("/ip4")
 	if err == nil {
 		t.Error("Expect error when invalid multiaddress was provided")
 	}
 }
 
-func TestMakePeerSucceeds(t *testing.T) {
+func TestMakePeer_OK(t *testing.T) {
 	a, err := MakePeer("/ip4/127.0.0.1/tcp/5678/p2p/QmUn6ycS8Fu6L462uZvuEfDoSgYX6kqP4aSZWMa7z1tWAX")
 	if err != nil {
 		t.Fatalf("Unexpected error when making a valid peer: %v", err)
@@ -27,13 +27,13 @@ func TestMakePeerSucceeds(t *testing.T) {
 	}
 }
 
-func TestDialRelayNodeFailsInvalidPeerString(t *testing.T) {
+func TestDialRelayNode_InvalidPeerString(t *testing.T) {
 	if err := dialRelayNode(context.Background(), nil, "/ip4"); err == nil {
 		t.Fatal("Expected to fail with invalid peer string, but there was no error")
 	}
 }
 
-func TestDialRelayNodeSucceeds(t *testing.T) {
+func TestDialRelayNode_OK(t *testing.T) {
 	ctx := context.Background()
 	relay := bh.NewBlankHost(swarmt.GenSwarm(t, ctx))
 	host := bh.NewBlankHost(swarmt.GenSwarm(t, ctx))

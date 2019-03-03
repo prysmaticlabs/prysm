@@ -6,14 +6,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func TestProposeBlock(t *testing.T) {
+func TestProposeBlock_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	mockChain := &mockChainService{}
@@ -25,7 +28,7 @@ func TestProposeBlock(t *testing.T) {
 
 	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
-		depositData, err := b.EncodeDepositData(
+		depositData, err := helpers.EncodeDepositData(
 			&pbp2p.DepositInput{
 				Pubkey: []byte(strconv.Itoa(i)),
 			},
@@ -40,9 +43,9 @@ func TestProposeBlock(t *testing.T) {
 		}
 	}
 
-	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
-		t.Fatalf("Could not instantiate initial state: %v", err)
+		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
 
 	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
@@ -63,7 +66,7 @@ func TestProposeBlock(t *testing.T) {
 	}
 }
 
-func TestComputeStateRoot(t *testing.T) {
+func TestComputeStateRoot_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
@@ -76,7 +79,7 @@ func TestComputeStateRoot(t *testing.T) {
 
 	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
 	for i := 0; i < len(deposits); i++ {
-		depositData, err := b.EncodeDepositData(
+		depositData, err := helpers.EncodeDepositData(
 			&pbp2p.DepositInput{
 				Pubkey: []byte(strconv.Itoa(i)),
 			},
@@ -91,9 +94,9 @@ func TestComputeStateRoot(t *testing.T) {
 		}
 	}
 
-	beaconState, err := state.InitialBeaconState(deposits, 0, nil)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
-		t.Fatalf("Could not instantiate initial state: %v", err)
+		t.Fatalf("Could not instantiate genesis state: %v", err)
 	}
 
 	beaconState.Slot = 10
@@ -109,9 +112,9 @@ func TestComputeStateRoot(t *testing.T) {
 	}
 
 	req := &pbp2p.BeaconBlock{
-		ParentRootHash32:   nil,
-		Slot:               11,
-		RandaoRevealHash32: nil,
+		ParentRootHash32: nil,
+		Slot:             11,
+		RandaoReveal:     nil,
 		Body: &pbp2p.BeaconBlockBody{
 			ProposerSlashings: nil,
 			AttesterSlashings: nil,
@@ -121,13 +124,44 @@ func TestComputeStateRoot(t *testing.T) {
 	_, _ = proposerServer.ComputeStateRoot(context.Background(), req)
 }
 
-func TestPendingAttestations_Ok(t *testing.T) {
+func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	proposerServer := &ProposerServer{
 		operationService: &mockOperationService{},
+		beaconDB:         db,
 	}
-	res, err := proposerServer.PendingAttestations(context.Background(), nil)
+	beaconState := &pbp2p.BeaconState{
+		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().MinAttestationInclusionDelay,
+	}
+	if err := db.SaveState(beaconState); err != nil {
+		t.Fatal(err)
+	}
+	res, err := proposerServer.PendingAttestations(context.Background(), &pb.PendingAttestationsRequest{
+		FilterReadyForInclusion: true,
+	})
+	if err != nil {
+		t.Fatalf("Unexpected error fetching pending attestations: %v", err)
+	}
+	if len(res.PendingAttestations) == 0 {
+		t.Error("Expected pending attestations list to be non-empty")
+	}
+}
+
+func TestPendingAttestations_OK(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	proposerServer := &ProposerServer{
+		operationService: &mockOperationService{},
+		beaconDB:         db,
+	}
+	beaconState := &pbp2p.BeaconState{
+		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().MinAttestationInclusionDelay,
+	}
+	if err := db.SaveState(beaconState); err != nil {
+		t.Fatal(err)
+	}
+	res, err := proposerServer.PendingAttestations(context.Background(), &pb.PendingAttestationsRequest{})
 	if err != nil {
 		t.Fatalf("Unexpected error fetching pending attestations: %v", err)
 	}

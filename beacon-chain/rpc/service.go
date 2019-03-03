@@ -8,12 +8,14 @@ import (
 	"net"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
@@ -44,7 +46,10 @@ type operationService interface {
 type powChainService interface {
 	HasChainStartLogOccurred() (bool, uint64, error)
 	ChainStartFeed() *event.Feed
-	LatestBlockNumber() *big.Int
+	LatestBlockHeight() *big.Int
+	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
+	BlockHashByHeight(ctx context.Context, height *big.Int) (common.Hash, error)
+	DepositRoot() [32]byte
 }
 
 // Service defining an RPC server for a beacon node.
@@ -56,6 +61,7 @@ type Service struct {
 	powChainService       powChainService
 	operationService      operationService
 	port                  string
+	chainStartDelayFlag   uint64
 	listener              net.Listener
 	withCert              string
 	withKey               string
@@ -69,14 +75,15 @@ type Service struct {
 
 // Config options for the beacon node RPC server.
 type Config struct {
-	Port             string
-	CertFlag         string
-	KeyFlag          string
-	SubscriptionBuf  int
-	BeaconDB         *db.BeaconDB
-	ChainService     chainService
-	POWChainService  powChainService
-	OperationService operationService
+	Port                string
+	CertFlag            string
+	KeyFlag             string
+	ChainStartDelayFlag uint64
+	SubscriptionBuf     int
+	BeaconDB            *db.BeaconDB
+	ChainService        chainService
+	POWChainService     powChainService
+	OperationService    operationService
 }
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
@@ -93,7 +100,8 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		port:                  cfg.Port,
 		withCert:              cfg.CertFlag,
 		withKey:               cfg.KeyFlag,
-		slotAlignmentDuration: time.Duration(params.BeaconConfig().SlotDuration) * time.Second,
+		chainStartDelayFlag:   cfg.ChainStartDelayFlag,
+		slotAlignmentDuration: time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
 		canonicalBlockChan:    make(chan *pbp2p.BeaconBlock, cfg.SubscriptionBuf),
 		canonicalStateChan:    make(chan *pbp2p.BeaconState, cfg.SubscriptionBuf),
 		incomingAttestation:   make(chan *pbp2p.Attestation, cfg.SubscriptionBuf),
@@ -118,10 +126,10 @@ func (s *Service) Start() {
 			log.Errorf("Could not load TLS keys: %s", err)
 			s.credentialError = err
 		}
-		s.grpcServer = grpc.NewServer(grpc.Creds(creds))
+		s.grpcServer = grpc.NewServer(grpc.Creds(creds), grpc.StatsHandler(&ocgrpc.ServerHandler{}))
 	} else {
 		log.Warn("You are using an insecure gRPC connection! Provide a certificate and key to connect securely")
-		s.grpcServer = grpc.NewServer()
+		s.grpcServer = grpc.NewServer(grpc.StatsHandler(&ocgrpc.ServerHandler{}))
 	}
 
 	beaconServer := &BeaconServer{
@@ -132,6 +140,7 @@ func (s *Service) Start() {
 		operationService:    s.operationService,
 		incomingAttestation: s.incomingAttestation,
 		canonicalStateChan:  s.canonicalStateChan,
+		chainStartDelayFlag: s.chainStartDelayFlag,
 		chainStartChan:      make(chan time.Time, 1),
 	}
 	proposerServer := &ProposerServer{
