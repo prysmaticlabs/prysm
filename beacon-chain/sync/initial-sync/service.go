@@ -338,7 +338,6 @@ func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock, p
 	if err := s.validateAndSaveNextBlock(ctx, block); err != nil {
 		log.Errorf("Unable to save block: %v", err)
 	}
-	//s.requestNextBlockBySlot(ctx, s.currentSlot+1)
 }
 
 // processBatchedBlocks processes all the received blocks from
