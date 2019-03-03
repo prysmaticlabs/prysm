@@ -548,7 +548,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_ws_transport",
-    commit = "7b8b65749f06928c9aba331ea62f13000ac43846",
+    commit = "2114e839891f0a824d9a36919165fed197522d87",  # v0.0.1
     importpath = "github.com/libp2p/go-ws-transport",
 )
 
