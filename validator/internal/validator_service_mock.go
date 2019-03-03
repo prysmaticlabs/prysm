@@ -6,11 +6,10 @@ package internal
 
 import (
 	context "context"
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	grpc "google.golang.org/grpc"
+	reflect "reflect"
 )
 
 // MockValidatorServiceClient is a mock of ValidatorServiceClient interface
@@ -114,4 +113,24 @@ func (mr *MockValidatorServiceClientMockRecorder) ValidatorIndex(arg0, arg1 inte
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatorIndex", reflect.TypeOf((*MockValidatorServiceClient)(nil).ValidatorIndex), varargs...)
+}
+
+// ValidatorStatus mocks base method
+func (m *MockValidatorServiceClient) ValidatorStatus(arg0 context.Context, arg1 *v1.ValidatorIndexRequest, arg2 ...grpc.CallOption) (*v1.ValidatorStatusResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ValidatorStatus", varargs...)
+	ret0, _ := ret[0].(*v1.ValidatorStatusResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ValidatorStatus indicates an expected call of ValidatorStatus
+func (mr *MockValidatorServiceClientMockRecorder) ValidatorStatus(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatorStatus", reflect.TypeOf((*MockValidatorServiceClient)(nil).ValidatorStatus), varargs...)
 }
