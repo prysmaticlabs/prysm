@@ -416,7 +416,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_testutil",
-    commit = "873eaa1a26ba46f53f62d5ffd4193f74c73ff76a",
+    commit = "425d0bf3c5d09720ab62cb2b79107d83651f271b",  # v0.0.1
     importpath = "github.com/libp2p/go-testutil",
 )
 
