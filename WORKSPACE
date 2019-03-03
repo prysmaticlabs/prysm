@@ -404,7 +404,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_stream_muxer",
-    commit = "85c59fe9952848ae238f31e07272ab0d1f0309d6",
+    commit = "96b8d4dc6b2577782a7c6c33776c115e3d2eacf6",  # v0.0.1
     importpath = "github.com/libp2p/go-stream-muxer",
 )
 
