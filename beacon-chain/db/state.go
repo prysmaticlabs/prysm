@@ -72,8 +72,7 @@ func (db *BeaconDB) State(ctx context.Context) (*pb.BeaconState, error) {
 	db.stateLock.RLock()
 	defer db.stateLock.RUnlock()
 	if db.currentState != nil {
-		cachedState, ok := proto.Clone(db.currentState).(*pb.BeaconState)
-		if ok {
+		if cachedState, ok := proto.Clone(db.currentState).(*pb.BeaconState); ok {
 			return cachedState, nil
 		}
 	}
