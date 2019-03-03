@@ -1029,7 +1029,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_base32",
-    commit = "a9c2755c3d1672dbe6a7e4a5d182169fa30b6a8e",
+    commit = "a9c2755c3d1672dbe6a7e4a5d182169fa30b6a8e",  # v0.0.3
     importpath = "github.com/multiformats/go-base32",
 )
 
