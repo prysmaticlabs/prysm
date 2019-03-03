@@ -54,6 +54,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	// Fetch other necessary information from the beacon node in order to attest
 	// including the justified epoch, epoch boundary information, and more.
 	infoReq := &pb.AttestationDataRequest{
+		Slot:  slot,
 		Shard: resp.Shard,
 	}
 	infoRes, err := v.attesterClient.AttestationDataAtSlot(ctx, infoReq)
@@ -100,6 +101,10 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 			indexIntoCommittee = uint(i)
 			break
 		}
+	}
+	if len(aggregationBitfield) == 0 {
+		log.Error("Aggregation bitfield is empty so unable to attest to block head")
+		return
 	}
 	aggregationBitfield[indexIntoCommittee/8] |= 1 << (indexIntoCommittee % 8)
 	// Note: calling get_attestation_participants(state, attestation.data, attestation.aggregation_bitfield)

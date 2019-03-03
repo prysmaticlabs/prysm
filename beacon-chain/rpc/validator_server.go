@@ -83,7 +83,7 @@ func (vs *ValidatorServer) ValidatorEpochAssignments(
 		if err != nil {
 			return nil, err
 		}
-		log.Infof("Proposer index: %d, slot: %d", proposerIndex, slot-params.BeaconConfig().GenesisSlot)
+		log.Debugf("Proposer index: %d, slot: %d", proposerIndex, slot-params.BeaconConfig().GenesisSlot)
 		if proposerIndex == uint64(validatorIndex) {
 			proposerSlot = slot
 		}
