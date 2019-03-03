@@ -193,7 +193,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_crypto",
     build_file_proto_mode = "disable_global",
-    commit = "b0ed0e663e8b6832bad3f4502b2f6551ff2686cd",
+    commit = "b0ed0e663e8b6832bad3f4502b2f6551ff2686cd",  # v0.0.1
     importpath = "github.com/libp2p/go-libp2p-crypto",
 )
 
@@ -223,7 +223,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_host",
-    commit = "2aa838333967d181d28f8612a1109cb58df3c77f",
+    commit = "7e2de4bb2b77a5b155b9993309b34e0e8b1890b0",  # v0.0.1
     importpath = "github.com/libp2p/go-libp2p-host",
 )
 
@@ -235,7 +235,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_circuit",
-    commit = "ae9b94afecf55cc91e0afe91f7ce2fbf513244b2",
+    commit = "0e57e52a3e3dc6d9e446117beded675d021fd3a4",  # v0.0.1
     importpath = "github.com/libp2p/go-libp2p-circuit",
 )
 
@@ -247,7 +247,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_interface_connmgr",
-    commit = "6a96ea29ac65d4ee4cc52c25ac41c036bbb7992a",
+    commit = "8bddc198c80e6242d016361b3c5f02fb920e9faa",  # v0.0.1
     importpath = "github.com/libp2p/go-libp2p-interface-connmgr",
 )
 
@@ -446,7 +446,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_interface_pnet",
-    commit = "1db4baf9fd85048385e8043b588b3708ffeac1e5",
+    commit = "b02026130a4daafb8001e039e116121cb92ae1a9",  # v0.0.1
     importpath = "github.com/libp2p/go-libp2p-interface-pnet",
 )
 
@@ -748,7 +748,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_kad_dht",
     build_file_proto_mode = "disable_global",
-    commit = "f1a42512708e2f510c3f3019cae549a70bc3049b",
+    commit = "5bbc7dc86cab146554bc022699b9f8a0546360a3",  # v0.0.3
     importpath = "github.com/libp2p/go-libp2p-kad-dht",
 )
 
@@ -785,7 +785,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_kbucket",
-    commit = "719fa0d0a8531cbdf0be22205eb5f647e65779a1",
+    commit = "c228706f665e12eb98ec89a68782824bf928ae0e",  # v0.0.1
     importpath = "github.com/libp2p/go-libp2p-kbucket",
 )
 
@@ -821,13 +821,13 @@ go_repository(
 
 go_repository(
     name = "com_github_ipfs_go_ipfs_addr",
-    commit = "b43fab3140b14e74a04dd8722f4373c449039a66",
+    commit = "ac4881d4db36effbbeebf93d9172fcb20ed04c15",  # v0.0.1
     importpath = "github.com/ipfs/go-ipfs-addr",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_discovery",
-    commit = "f6df2e8dcd01e739e4c0d06c799c4de736c0aab2",
+    commit = "d4ef632c52ff995d94eaed926529eede8faa3965",  # v0.0.1
     importpath = "github.com/libp2p/go-libp2p-discovery",
 )
 
