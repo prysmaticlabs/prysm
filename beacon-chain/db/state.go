@@ -17,8 +17,8 @@ import (
 
 // InitializeState creates an initial genesis state for the beacon
 // node using a set of genesis validators.
-func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit) error {
-	beaconState, err := state.GenesisBeaconState(deposits, genesisTime, nil)
+func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit, eth1Data *pb.Eth1Data) error {
+	beaconState, err := state.GenesisBeaconState(deposits, genesisTime, eth1Data)
 	if err != nil {
 		return err
 	}
