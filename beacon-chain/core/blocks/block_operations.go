@@ -10,8 +10,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
@@ -20,8 +18,10 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/forkutils"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	"github.com/sirupsen/logrus"
 )
 
 // VerifyProposerSignature uses BLS signature verification to ensure
@@ -35,7 +35,7 @@ func VerifyProposerSignature(
 	return nil
 }
 
-// ProcessEth1Data is an operation performed on each
+// ProcessEth1DataInBlock is an operation performed on each
 // beacon block to ensure the ETH1 data votes are processed
 // into the beacon state.
 //
@@ -43,7 +43,7 @@ func VerifyProposerSignature(
 //   If block.eth1_data equals eth1_data_vote.eth1_data for some eth1_data_vote
 //   in state.eth1_data_votes, set eth1_data_vote.vote_count += 1.
 //   Otherwise, append to state.eth1_data_votes a new Eth1DataVote(eth1_data=block.eth1_data, vote_count=1).
-func ProcessEth1Data(beaconState *pb.BeaconState, block *pb.BeaconBlock) *pb.BeaconState {
+func ProcessEth1DataInBlock(beaconState *pb.BeaconState, block *pb.BeaconBlock) *pb.BeaconState {
 	var eth1DataVoteAdded bool
 
 	for idx := range beaconState.Eth1DataVotes {
@@ -94,7 +94,8 @@ func ProcessBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, veri
 	latestMixesLength := params.BeaconConfig().LatestRandaoMixesLength
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	latestMixSlice := beaconState.LatestRandaoMixes[currentEpoch%latestMixesLength]
-	for i, x := range block.RandaoReveal {
+	blockRandaoReveal := hashutil.Hash(block.RandaoReveal)
+	for i, x := range blockRandaoReveal {
 		latestMixSlice[i] ^= x
 	}
 	beaconState.LatestRandaoMixes[currentEpoch%latestMixesLength] = latestMixSlice

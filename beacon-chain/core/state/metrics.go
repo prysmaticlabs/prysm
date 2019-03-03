@@ -15,6 +15,10 @@ var (
 	}, []string{
 		"validator",
 	})
+	lastSlotGauge = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "state_last_slot",
+		Help: "Last slot number of the processed state",
+	})
 )
 
 func reportEpochTransitionMetrics(state *pb.BeaconState) {
@@ -24,4 +28,6 @@ func reportEpochTransitionMetrics(state *pb.BeaconState) {
 			"0x" + hex.EncodeToString(state.ValidatorRegistry[i].Pubkey), // Validator
 		).Set(float64(bal))
 	}
+	// Slot number
+	lastSlotGauge.Set(float64(state.Slot))
 }
