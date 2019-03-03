@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -187,5 +188,52 @@ func (vs *ValidatorServer) CommitteeAssignment(
 		Shard:      shard,
 		Slot:       slot,
 		IsProposer: isProposer,
+	}, nil
+}
+
+// ValidatorStatus returns the validator status of the current epoch.
+// The status response can be one of the following:
+//	PENDING_ACTIVE - validator is waiting to get activated.
+//	ACTIVE - validator is active.
+//	INITIATED_EXIT - validator has initiated an an exit request.
+//	WITHDRAWABLE - validator's deposit can be withdrawn after lock up period.
+//	EXITED - validator has exited, means the deposit has been withdrawn.
+//	EXITED_SLASHED - validator was forcefully exited due to slashing.
+func (vs *ValidatorServer) ValidatorStatus(
+	ctx context.Context,
+	req *pb.ValidatorIndexRequest) (*pb.ValidatorStatusResponse, error) {
+
+	beaconState, err := vs.beaconDB.State(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
+	}
+	idx, err := vs.beaconDB.ValidatorIndex(req.PublicKey)
+	if err != nil {
+		return nil, fmt.Errorf("could not get active validator index: %v", err)
+	}
+
+	var status pb.ValidatorStatus
+	v := beaconState.ValidatorRegistry[idx]
+	farFutureEpoch := params.BeaconConfig().FarFutureEpoch
+	epoch := helpers.CurrentEpoch(beaconState)
+
+	if v.ActivationEpoch == farFutureEpoch {
+		status = pb.ValidatorStatus_PENDING_ACTIVE
+	} else if v.ActivationEpoch <= epoch && epoch < v.ExitEpoch {
+		status = pb.ValidatorStatus_ACTIVE
+	} else if v.StatusFlags == pbp2p.Validator_INITIATED_EXIT {
+		status = pb.ValidatorStatus_INITIATED_EXIT
+	} else if v.StatusFlags == pbp2p.Validator_WITHDRAWABLE {
+		status = pb.ValidatorStatus_WITHDRAWABLE
+	} else if epoch >= v.ExitEpoch && epoch >= v.SlashedEpoch {
+		status = pb.ValidatorStatus_EXITED_SLASHED
+	} else if epoch >= v.ExitEpoch {
+		status = pb.ValidatorStatus_EXITED
+	} else {
+		status = pb.ValidatorStatus_UNKNOWN_STATUS
+	}
+
+	return &pb.ValidatorStatusResponse{
+		Status: status,
 	}, nil
 }

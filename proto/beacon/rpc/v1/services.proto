@@ -34,6 +34,7 @@ service ValidatorService {
     rpc ValidatorEpochAssignments(ValidatorEpochAssignmentsRequest) returns (ValidatorEpochAssignmentsResponse);
     rpc ValidatorCommitteeAtSlot(CommitteeRequest) returns (CommitteeResponse);
     rpc CommitteeAssignment(ValidatorEpochAssignmentsRequest) returns (CommitteeAssignmentResponse);
+    rpc ValidatorStatus(ValidatorIndexRequest) returns (ValidatorStatusResponse);
 }
 
 message CommitteeRequest {
@@ -153,6 +154,20 @@ message CommitteeAssignmentResponse {
     bool is_proposer = 4;
 }
 
+message ValidatorStatusResponse {
+    ValidatorStatus status = 1;
+}
+
 message Eth1DataResponse {
     ethereum.beacon.p2p.v1.Eth1Data eth1_data = 1;
+}
+
+enum ValidatorStatus {
+    PENDING_ACTIVE = 0;
+    ACTIVE = 1;
+    INITIATED_EXIT = 2;
+    WITHDRAWABLE = 3;
+    EXITED = 4;
+    EXITED_SLASHED = 5;
+    UNKNOWN_STATUS = 100;
 }
