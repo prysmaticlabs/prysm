@@ -201,10 +201,11 @@ func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T
 
 func TestSyncing_AFullySyncedNode(t *testing.T) {
 	numOfBlocks := 12
+	ctx := context.Background()
 	newP2P := &simulatedP2P{
 		subsChannels: make(map[reflect.Type]*event.Feed),
 		mutex:        new(sync.RWMutex),
-		ctx:          context.Background(),
+		ctx:          ctx,
 	}
 
 	// Sets up a synced service which has its head at the current
@@ -214,7 +215,7 @@ func TestSyncing_AFullySyncedNode(t *testing.T) {
 	defer ss.Stop()
 	defer db.TeardownDB(syncedDB)
 
-	bState, err := syncedDB.State()
+	bState, err := syncedDB.State(ctx)
 	if err != nil {
 		t.Fatalf("Could not retrieve state %v", err)
 	}

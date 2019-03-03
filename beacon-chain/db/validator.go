@@ -23,6 +23,19 @@ func (db *BeaconDB) SaveValidatorIndex(pubKey []byte, index int) error {
 	})
 }
 
+// SaveValidatorIndexBatch accepts a public key and validator index and writes them to disk.
+func (db *BeaconDB) SaveValidatorIndexBatch(pubKey []byte, index int) error {
+	h := hashutil.Hash(pubKey)
+
+	return db.batch(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(validatorBucket)
+		buf := make([]byte, binary.MaxVarintLen64)
+		n := binary.PutUvarint(buf, uint64(index))
+		return bucket.Put(h[:], buf[:n])
+	})
+
+}
+
 // ValidatorIndex accepts a public key and returns the corresponding validator index.
 func (db *BeaconDB) ValidatorIndex(pubKey []byte) (uint64, error) {
 	if !db.HasValidator(pubKey) {

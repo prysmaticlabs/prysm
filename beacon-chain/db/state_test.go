@@ -2,6 +2,7 @@ package db
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"testing"
 	"time"
@@ -39,6 +40,7 @@ func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.
 func TestInitializeState_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
+	ctx := context.Background()
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
@@ -53,7 +55,7 @@ func TestInitializeState_OK(t *testing.T) {
 		t.Fatalf("Expected block height to equal 1. Got %d", b.GetSlot())
 	}
 
-	beaconState, err := db.State()
+	beaconState, err := db.State(ctx)
 	if err != nil {
 		t.Fatalf("Failed to get state: %v", err)
 	}
@@ -65,7 +67,7 @@ func TestInitializeState_OK(t *testing.T) {
 		t.Fatalf("Failed to encode state: %v", err)
 	}
 
-	statePrime, err := db.State()
+	statePrime, err := db.State(ctx)
 	if err != nil {
 		t.Fatalf("Failed to get state: %v", err)
 	}
@@ -82,8 +84,9 @@ func TestInitializeState_OK(t *testing.T) {
 func TestGenesisTime_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
+	ctx := context.Background()
 
-	genesisTime, err := db.GenesisTime()
+	genesisTime, err := db.GenesisTime(ctx)
 	if err == nil {
 		t.Fatal("expected GenesisTime to fail")
 	}
@@ -93,11 +96,11 @@ func TestGenesisTime_OK(t *testing.T) {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
 
-	time1, err := db.GenesisTime()
+	time1, err := db.GenesisTime(ctx)
 	if err != nil {
 		t.Fatalf("GenesisTime failed on second attempt: %v", err)
 	}
-	time2, err := db.GenesisTime()
+	time2, err := db.GenesisTime(ctx)
 	if err != nil {
 		t.Fatalf("GenesisTime failed on second attempt: %v", err)
 	}

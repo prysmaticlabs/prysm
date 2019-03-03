@@ -239,7 +239,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 			log.Debugf("Successfully requested the next block with slot: %d", data.SlotNumber)
 		case msg := <-s.blockBuf:
 			data := msg.Data.(*pb.BeaconBlockResponse)
-			s.processBlock(data.Block, msg.Peer)
+			s.processBlock(context.TODO(), data.Block, msg.Peer)
 		case msg := <-s.stateBuf:
 			data := msg.Data.(*pb.BeaconStateResponse)
 			beaconState := data.BeaconState
@@ -270,7 +270,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 			s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
 
 		case msg := <-s.batchedBlockBuf:
-			s.processBatchedBlocks(msg)
+			s.processBatchedBlocks(context.TODO(), msg)
 		}
 	}
 }
@@ -289,7 +289,7 @@ func (s *InitialSync) checkInMemoryBlocks() {
 			}
 			s.mutex.Lock()
 			if block, ok := s.inMemoryBlocks[s.currentSlot+1]; ok && s.currentSlot+1 <= s.highestObservedSlot {
-				s.processBlock(block, p2p.Peer{})
+				s.processBlock(context.TODO(), block, p2p.Peer{})
 			}
 			s.mutex.Unlock()
 		}
@@ -299,7 +299,7 @@ func (s *InitialSync) checkInMemoryBlocks() {
 // processBlock is the main method that validates each block which is received
 // for initial sync. It checks if the blocks are valid and then will continue to
 // process and save it into the db.
-func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
+func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock, peer p2p.Peer) {
 	if block.Slot > s.highestObservedSlot {
 		s.highestObservedSlot = block.Slot
 		s.stateRootOfHighestObservedSlot = bytesutil.ToBytes32(block.StateRootHash32)
@@ -326,23 +326,22 @@ func (s *InitialSync) processBlock(block *pb.BeaconBlock, peer p2p.Peer) {
 		return
 	}
 
-	if err := s.validateAndSaveNextBlock(block); err != nil {
+	if err := s.validateAndSaveNextBlock(ctx, block); err != nil {
 		log.Errorf("Unable to save block: %v", err)
 	}
-	s.requestNextBlockBySlot(s.currentSlot + 1)
-
+	s.requestNextBlockBySlot(ctx, s.currentSlot+1)
 }
 
 // processBatchedBlocks processes all the received blocks from
 // the p2p message.
-func (s *InitialSync) processBatchedBlocks(msg p2p.Message) {
+func (s *InitialSync) processBatchedBlocks(ctx context.Context, msg p2p.Message) {
 	log.Debug("Processing batched block response")
 
 	response := msg.Data.(*pb.BatchedBeaconBlockResponse)
 	batchedBlocks := response.BatchedBlocks
 
 	for _, block := range batchedBlocks {
-		s.processBlock(block, msg.Peer)
+		s.processBlock(ctx, block, msg.Peer)
 	}
 	log.Debug("Finished processing batched blocks")
 }
@@ -356,12 +355,12 @@ func (s *InitialSync) requestStateFromPeer(stateRoot []byte, peer p2p.Peer) erro
 }
 
 // requestNextBlock broadcasts a request for a block with the entered slotnumber.
-func (s *InitialSync) requestNextBlockBySlot(slotNumber uint64) {
+func (s *InitialSync) requestNextBlockBySlot(ctx context.Context, slotNumber uint64) {
 	log.Debugf("Requesting block %d ", slotNumber)
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	if block, ok := s.inMemoryBlocks[slotNumber]; ok {
-		s.processBlock(block, p2p.Peer{})
+		s.processBlock(ctx, block, p2p.Peer{})
 		return
 	}
 	s.p2p.Broadcast(&pb.BeaconBlockRequestBySlotNumber{SlotNumber: slotNumber})
@@ -383,7 +382,7 @@ func (s *InitialSync) requestBatchedBlocks(startSlot uint64, endSlot uint64) {
 
 // validateAndSaveNextBlock will validate whether blocks received from the blockfetcher
 // routine can be added to the chain.
-func (s *InitialSync) validateAndSaveNextBlock(block *pb.BeaconBlock) error {
+func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.BeaconBlock) error {
 	root, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return err
@@ -391,7 +390,7 @@ func (s *InitialSync) validateAndSaveNextBlock(block *pb.BeaconBlock) error {
 
 	if (s.currentSlot + 1) == block.Slot {
 
-		if err := s.checkBlockValidity(block); err != nil {
+		if err := s.checkBlockValidity(ctx, block); err != nil {
 			return err
 		}
 
@@ -411,7 +410,7 @@ func (s *InitialSync) validateAndSaveNextBlock(block *pb.BeaconBlock) error {
 	return nil
 }
 
-func (s *InitialSync) checkBlockValidity(block *pb.BeaconBlock) error {
+func (s *InitialSync) checkBlockValidity(ctx context.Context, block *pb.BeaconBlock) error {
 	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return fmt.Errorf("could not tree hash received block: %v", err)
@@ -423,7 +422,7 @@ func (s *InitialSync) checkBlockValidity(block *pb.BeaconBlock) error {
 		return errors.New("received a block that already exists. Exiting")
 	}
 
-	beaconState, err := s.db.State()
+	beaconState, err := s.db.State(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get beacon state: %v", err)
 	}

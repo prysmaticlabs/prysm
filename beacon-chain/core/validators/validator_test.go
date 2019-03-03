@@ -101,9 +101,9 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 
 	prevAttestation := &pb.PendingAttestation{
 		Data: &pb.AttestationData{
-			Slot:                 params.BeaconConfig().GenesisSlot + 3,
-			Shard:                6,
-			ShardBlockRootHash32: []byte{'B'},
+			Slot:                    params.BeaconConfig().GenesisSlot + 3,
+			Shard:                   6,
+			CrosslinkDataRootHash32: []byte{'B'},
 		},
 		AggregationBitfield: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1},
 	}
@@ -139,9 +139,9 @@ func TestAttestingValidatorIndices_OutOfBound(t *testing.T) {
 
 	attestation := &pb.PendingAttestation{
 		Data: &pb.AttestationData{
-			Slot:                 0,
-			Shard:                1,
-			ShardBlockRootHash32: []byte{'B'},
+			Slot:                    0,
+			Shard:                   1,
+			CrosslinkDataRootHash32: []byte{'B'},
 		},
 		AggregationBitfield: []byte{'A'}, // 01000001 = 1,7
 	}

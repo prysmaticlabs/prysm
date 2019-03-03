@@ -53,7 +53,7 @@ type BeaconChainConfig struct {
 	// Time parameters constants.
 	SecondsPerSlot               uint64 // SecondsPerSlot is how many seconds are in a single slot.
 	MinAttestationInclusionDelay uint64 // MinAttestationInclusionDelay defines how long validator has to wait to include attestation for beacon block.
-	SlotsPerEpoch                uint64 // EpochLength is the number of slots in an epoch.
+	SlotsPerEpoch                uint64 // SlotsPerEpoch is the number of slots in an epoch.
 	MinSeedLookahead             uint64 // SeedLookahead is the duration of randao look ahead seed.
 	ActivationExitDelay          uint64 // EntryExitDelay is the duration a validator has to wait for entry and exit in epoch.
 	EpochsPerEth1VotingPeriod    uint64 //  defines how often the merkle root of deposit receipts get updated in beacon node.

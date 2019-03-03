@@ -31,7 +31,7 @@ type ProposerServer struct {
 // are shuffled and assigned slots to attest/propose to. This method will look for the validator that is assigned
 // to propose a beacon block at the given slot.
 func (ps *ProposerServer) ProposerIndex(ctx context.Context, req *pb.ProposerIndexRequest) (*pb.ProposerIndexResponse, error) {
-	beaconState, err := ps.beaconDB.State()
+	beaconState, err := ps.beaconDB.State(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
@@ -68,7 +68,7 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 // attestations which are ready for inclusion. That is, attestations that satisfy:
 // attestation.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot.
 func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.PendingAttestationsRequest) (*pb.PendingAttestationsResponse, error) {
-	beaconState, err := ps.beaconDB.State()
+	beaconState, err := ps.beaconDB.State(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
@@ -95,7 +95,7 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 // ComputeStateRoot computes the state root after a block has been processed through a state transition and
 // returns it to the validator client.
 func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.BeaconBlock) (*pb.StateRootResponse, error) {
-	beaconState, err := ps.beaconDB.State()
+	beaconState, err := ps.beaconDB.State(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}

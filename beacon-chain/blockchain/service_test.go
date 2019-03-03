@@ -238,7 +238,7 @@ func setupBeaconChain(t *testing.T, faultyPoWClient bool, beaconDB *db.BeaconDB,
 }
 
 func SetSlotInState(service *ChainService, slot uint64) error {
-	bState, err := service.beaconDB.State()
+	bState, err := service.beaconDB.State(context.Background())
 	if err != nil {
 		return err
 	}
@@ -305,6 +305,8 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
 	chainService := setupBeaconChain(t, false, db, true)
 
 	unixTime := uint64(time.Now().Unix())
@@ -312,7 +314,7 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	if err := db.InitializeState(unixTime, deposits); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := db.State()
+	beaconState, err := db.State(ctx)
 	if err != nil {
 		t.Fatalf("Could not fetch beacon state: %v", err)
 	}
@@ -515,6 +517,8 @@ func TestPOWBlockExists_UsingDepositRootHash(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
 	chainService := setupBeaconChain(t, true, db, true)
 	unixTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
@@ -522,7 +526,7 @@ func TestPOWBlockExists_UsingDepositRootHash(t *testing.T) {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 
-	beaconState, err := chainService.beaconDB.State()
+	beaconState, err := chainService.beaconDB.State(ctx)
 	if err != nil {
 		t.Fatalf("Unable to retrieve beacon state %v", err)
 	}
@@ -622,13 +626,15 @@ func TestUpdateHead_SavesBlock(t *testing.T) {
 func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
 	chainService := setupBeaconChain(t, false, db, true)
 	unixTime := uint64(time.Now().Unix())
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	if err := db.InitializeState(unixTime, deposits); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := db.State()
+	beaconState, err := db.State(ctx)
 	if err != nil {
 		t.Fatalf("Can't get genesis state: %v", err)
 	}

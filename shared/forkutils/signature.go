@@ -10,7 +10,7 @@ import (
 //
 // Spec pseudocode definition:
 //	def get_fork_version(fork: Fork,
-//                     epoch: EpochNumber) -> int:
+//                     epoch: Epoch) -> int:
 //    """
 //    Return the fork version of the given ``epoch``.
 //    """
@@ -29,7 +29,7 @@ func ForkVersion(fork *pb.Fork, epoch uint64) uint64 {
 //
 // Spec pseudocode definition:
 //	def get_domain(fork: Fork,
-//               epoch: EpochNumber,
+//               epoch: Epoch,
 //               domain_type: int) -> int:
 //    """
 //    Get the domain number that represents the fork meta and signature domain.

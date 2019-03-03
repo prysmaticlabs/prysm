@@ -149,7 +149,7 @@ func TestInclusionDistRewards_AccurateRewards(t *testing.T) {
 		voted []uint64
 	}{
 		{[]uint64{}},
-		{[]uint64{237, 224}},
+		{[]uint64{8320, 14035}},
 	}
 	for _, tt := range tests {
 		validatorBalances := make([]uint64, len(validators))
@@ -383,7 +383,7 @@ func TestInactivityInclusionPenalty_AccuratePenalties(t *testing.T) {
 		voted []uint64
 	}{
 		{[]uint64{}},
-		{[]uint64{237, 224}},
+		{[]uint64{8320, 14035}},
 	}
 	for _, tt := range tests {
 		validatorBalances := make([]uint64, params.BeaconConfig().SlotsPerEpoch*4)
@@ -468,7 +468,7 @@ func TestAttestationInclusionRewards_AccurateRewards(t *testing.T) {
 		voted []uint64
 	}{
 		{[]uint64{}},
-		{[]uint64{237}},
+		{[]uint64{8320}},
 	}
 	for _, tt := range tests {
 		validatorBalances := make([]uint64, params.BeaconConfig().SlotsPerEpoch*4)

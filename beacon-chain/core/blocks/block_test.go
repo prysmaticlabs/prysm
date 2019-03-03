@@ -42,7 +42,7 @@ func TestGenesisBlock_InitializedCorrectly(t *testing.T) {
 
 func TestBlockRootAtSlot_AccurateBlockRoot(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("epochLength should be 64 for these tests to pass")
+		t.Errorf("slotsPerEpoch should be 64 for these tests to pass")
 	}
 	var blockRoots [][]byte
 
@@ -101,7 +101,7 @@ func TestBlockRootAtSlot_AccurateBlockRoot(t *testing.T) {
 
 func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("epochLength should be 64 for these tests to pass")
+		t.Errorf("slotsPerEpoch should be 64 for these tests to pass")
 	}
 
 	var blockRoots [][]byte

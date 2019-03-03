@@ -86,7 +86,7 @@ func (q *Querier) Start() {
 		return
 	}
 
-	bState, err := q.db.State()
+	bState, err := q.db.State(context.TODO())
 	if err != nil {
 		queryLog.Errorf("Unable to retrieve beacon state %v", err)
 	}

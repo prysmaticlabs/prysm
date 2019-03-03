@@ -5,8 +5,8 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/shared/p2p/adapter"
 	"github.com/prysmaticlabs/prysm/shared/p2p/adapter/metric"
-	"github.com/prysmaticlabs/prysm/shared/p2p/adapter/tracer"
 	"github.com/urfave/cli"
 )
 
@@ -34,15 +34,7 @@ func configureP2P(ctx *cli.Context) (*p2p.Server, error) {
 		return nil, err
 	}
 
-	traceAdapter, err := tracer.New("beacon-chain",
-		ctx.GlobalString(cmd.TracingEndpointFlag.Name),
-		ctx.GlobalFloat64(cmd.TraceSampleFractionFlag.Name),
-		ctx.GlobalBool(cmd.EnableTracingFlag.Name))
-	if err != nil {
-		return nil, err
-	}
-
-	adapters := []p2p.Adapter{traceAdapter}
+	adapters := []p2p.Adapter{adapter.TracingAdapter}
 	if !ctx.GlobalBool(cmd.DisableMonitoringFlag.Name) {
 		adapters = append(adapters, metric.New())
 	}

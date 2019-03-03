@@ -199,9 +199,13 @@ func (sb *SimulatedBackend) RunForkChoiceTest(testCase *ForkChoiceTestCase) erro
 func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
 	defer db.TeardownDB(sb.beaconDB)
 	seed := common.BytesToHash([]byte(testCase.Seed))
-	output, err := utils.ShuffleIndices(seed, testCase.Input)
-	if err != nil {
-		return err
+	output := make([]uint64, 0, len(testCase.Input))
+	for _, v := range testCase.Input {
+		indice, err := utils.PermutedIndex(v, uint64(len(testCase.Input)), seed)
+		if err != nil {
+			return err
+		}
+		output = append(output, indice)
 	}
 	if !reflect.DeepEqual(output, testCase.Output) {
 		return fmt.Errorf("shuffle result error: expected %v, actual %v", testCase.Output, output)

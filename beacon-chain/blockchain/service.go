@@ -78,7 +78,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
-	beaconState, err := c.beaconDB.State()
+	beaconState, err := c.beaconDB.State(context.TODO())
 	if err != nil {
 		log.Fatalf("Could not fetch beacon state: %v", err)
 	}
@@ -117,7 +117,7 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	if err := c.beaconDB.InitializeState(unixTime, deposits); err != nil {
 		return fmt.Errorf("could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := c.beaconDB.State()
+	beaconState, err := c.beaconDB.State(context.TODO())
 	if err != nil {
 		return fmt.Errorf("could not attempt fetch beacon state: %v", err)
 	}
@@ -214,7 +214,7 @@ func (c *ChainService) blockProcessing() {
 		// can be received either from the sync service, the RPC service,
 		// or via p2p.
 		case block := <-c.incomingBlockChan:
-			beaconState, err := c.beaconDB.State()
+			beaconState, err := c.beaconDB.State(context.TODO())
 			if err != nil {
 				log.Errorf("Unable to retrieve beacon state %v", err)
 				continue

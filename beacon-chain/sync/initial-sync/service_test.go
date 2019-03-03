@@ -56,12 +56,13 @@ func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
 }
 
 func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
+	ctx := context.Background()
 	genesisTime := time.Now()
 	unixTime := uint64(genesisTime.Unix())
 	if err := beaconDB.InitializeState(unixTime, []*pb.Deposit{}); err != nil {
 		t.Fatalf("could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := beaconDB.State()
+	beaconState, err := beaconDB.State(ctx)
 	if err != nil {
 		t.Fatalf("could not attempt fetch beacon state: %v", err)
 	}

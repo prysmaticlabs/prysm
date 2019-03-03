@@ -5,15 +5,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
-
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
-
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
+	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/sirupsen/logrus"
 )
 
 var log = logrus.WithField("prefix", "validator")
@@ -72,7 +70,7 @@ func (v *ValidatorService) Start() {
 		dialOpt = grpc.WithInsecure()
 		log.Warn("You are using an insecure gRPC connection! Please provide a certificate and key to use a secure connection.")
 	}
-	conn, err := grpc.DialContext(v.ctx, v.endpoint, dialOpt)
+	conn, err := grpc.DialContext(v.ctx, v.endpoint, dialOpt, grpc.WithStatsHandler(&ocgrpc.ClientHandler{}))
 	if err != nil {
 		log.Errorf("Could not dial endpoint: %s, %v", v.endpoint, err)
 		return

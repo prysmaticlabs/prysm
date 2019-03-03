@@ -87,8 +87,8 @@ func (a *Service) IncomingAttestationFeed() *event.Feed {
 //	Let `get_latest_attestation(store: Store, validator_index: ValidatorIndex) ->
 //		Attestation` be the attestation with the highest slot number in `store`
 //		from the validator with the given `validator_index`
-func (a *Service) LatestAttestation(index int) (*pb.Attestation, error) {
-	state, err := a.beaconDB.State()
+func (a *Service) LatestAttestation(ctx context.Context, index int) (*pb.Attestation, error) {
+	state, err := a.beaconDB.State(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -114,8 +114,8 @@ func (a *Service) LatestAttestation(index int) (*pb.Attestation, error) {
 //	Let `get_latest_attestation_target(store: Store, validator_index: ValidatorIndex) ->
 //		BeaconBlock` be the target block in the attestation
 //		`get_latest_attestation(store, validator_index)`.
-func (a *Service) LatestAttestationTarget(index int) (*pb.BeaconBlock, error) {
-	attestation, err := a.LatestAttestation(index)
+func (a *Service) LatestAttestationTarget(ctx context.Context, index int) (*pb.BeaconBlock, error) {
+	attestation, err := a.LatestAttestation(ctx, index)
 	if err != nil {
 		return nil, fmt.Errorf("could not get attestation: %v", err)
 	}
@@ -147,7 +147,7 @@ func (a *Service) attestationPool() {
 			}
 			h := hashutil.Hash(enc)
 
-			if err := a.updateLatestAttestation(attestation); err != nil {
+			if err := a.updateLatestAttestation(context.TODO(), attestation); err != nil {
 				log.Errorf("Could not update attestation pool: %v", err)
 				continue
 			}
@@ -160,10 +160,10 @@ func (a *Service) attestationPool() {
 // the attesters who submitted this attestation with the higher slot number
 // have been noted in the attestation pool. If not, it updates the
 // attestation pool with attester's public key to attestation.
-func (a *Service) updateLatestAttestation(attestation *pb.Attestation) error {
+func (a *Service) updateLatestAttestation(ctx context.Context, attestation *pb.Attestation) error {
 	// Potential improvement, instead of getting the state,
 	// we could get a mapping of validator index to public key.
-	state, err := a.beaconDB.State()
+	state, err := a.beaconDB.State(ctx)
 	if err != nil {
 		return err
 	}

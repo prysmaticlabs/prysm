@@ -102,7 +102,8 @@ func TestCanProcessEth1Data_TrueOnVotingPeriods(t *testing.T) {
 }
 
 func TestProcessEth1Data_UpdatesStateAndCleans(t *testing.T) {
-	requiredVoteCount := params.BeaconConfig().EpochsPerEth1VotingPeriod
+	requiredVoteCount := params.BeaconConfig().EpochsPerEth1VotingPeriod *
+		params.BeaconConfig().SlotsPerEpoch
 	state := &pb.BeaconState{
 		Slot: 15 * params.BeaconConfig().SlotsPerEpoch,
 		LatestEth1Data: &pb.Eth1Data{
@@ -210,7 +211,7 @@ func TestProcessJustification_PreviousEpochJustified(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                  300,
+		Slot:                  300 + params.BeaconConfig().GenesisSlot,
 		JustifiedEpoch:        3,
 		JustificationBitfield: 4,
 	}
@@ -244,7 +245,7 @@ func TestProcessCrosslinks_CrosslinksCorrectEpoch(t *testing.T) {
 	state := buildState(5, params.BeaconConfig().DepositsForChainStart)
 	state.LatestCrosslinks = []*pb.Crosslink{{}, {}}
 	epoch := uint64(5)
-	state.Slot = epoch * params.BeaconConfig().SlotsPerEpoch
+	state.Slot = params.BeaconConfig().GenesisSlot + epoch*params.BeaconConfig().SlotsPerEpoch
 
 	byteLength := int(params.BeaconConfig().DepositsForChainStart / params.BeaconConfig().TargetCommitteeSize / 8)
 	var participationBitfield []byte
@@ -256,8 +257,8 @@ func TestProcessCrosslinks_CrosslinksCorrectEpoch(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		attestation := &pb.PendingAttestation{
 			Data: &pb.AttestationData{
-				Slot:                 state.Slot,
-				ShardBlockRootHash32: []byte{'A'},
+				Slot:                    state.Slot,
+				CrosslinkDataRootHash32: []byte{'A'},
 			},
 			// All validators attested to the above roots.
 			AggregationBitfield: participationBitfield,
@@ -273,17 +274,17 @@ func TestProcessCrosslinks_CrosslinksCorrectEpoch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not execute ProcessCrosslinks: %v", err)
 	}
-	// Verify crosslink for shard 0([1]) was processed at state.slot (5).
-	if newState.LatestCrosslinks[0].Epoch != epoch {
+	// Verify crosslink for shard 0([1]) was processed at genesis epoch + 5.
+	if newState.LatestCrosslinks[0].Epoch != params.BeaconConfig().GenesisEpoch+epoch {
 		t.Errorf("Shard 0s got crosslinked at epoch %d, wanted: %d",
-			newState.LatestCrosslinks[0].Epoch, epoch)
+			newState.LatestCrosslinks[0].Epoch, +params.BeaconConfig().GenesisSlot)
 	}
 	// Verify crosslink for shard 0 was root hashed for []byte{'A'}.
-	if !bytes.Equal(newState.LatestCrosslinks[0].ShardBlockRootHash32,
-		attestations[0].Data.ShardBlockRootHash32) {
+	if !bytes.Equal(newState.LatestCrosslinks[0].CrosslinkDataRootHash32,
+		attestations[0].Data.CrosslinkDataRootHash32) {
 		t.Errorf("Shard 0's root hash is %#x, wanted: %#x",
-			newState.LatestCrosslinks[0].ShardBlockRootHash32,
-			attestations[0].Data.ShardBlockRootHash32)
+			newState.LatestCrosslinks[0].CrosslinkDataRootHash32,
+			attestations[0].Data.CrosslinkDataRootHash32)
 	}
 }
 
@@ -418,27 +419,27 @@ func TestCleanupAttestations_RemovesFromLastEpoch(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")
 	}
-	epochLength := params.BeaconConfig().SlotsPerEpoch
+	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	state := &pb.BeaconState{
-		Slot: epochLength,
+		Slot: slotsPerEpoch,
 		LatestAttestations: []*pb.PendingAttestation{
 			{Data: &pb.AttestationData{Slot: 1}},
-			{Data: &pb.AttestationData{Slot: epochLength - 10}},
-			{Data: &pb.AttestationData{Slot: epochLength}},
-			{Data: &pb.AttestationData{Slot: epochLength + 1}},
-			{Data: &pb.AttestationData{Slot: epochLength + 20}},
+			{Data: &pb.AttestationData{Slot: slotsPerEpoch - 10}},
+			{Data: &pb.AttestationData{Slot: slotsPerEpoch}},
+			{Data: &pb.AttestationData{Slot: slotsPerEpoch + 1}},
+			{Data: &pb.AttestationData{Slot: slotsPerEpoch + 20}},
 			{Data: &pb.AttestationData{Slot: 32}},
 			{Data: &pb.AttestationData{Slot: 33}},
-			{Data: &pb.AttestationData{Slot: 2 * epochLength}},
+			{Data: &pb.AttestationData{Slot: 2 * slotsPerEpoch}},
 		},
 	}
 	wanted := &pb.BeaconState{
-		Slot: epochLength,
+		Slot: slotsPerEpoch,
 		LatestAttestations: []*pb.PendingAttestation{
-			{Data: &pb.AttestationData{Slot: epochLength}},
-			{Data: &pb.AttestationData{Slot: epochLength + 1}},
-			{Data: &pb.AttestationData{Slot: epochLength + 20}},
-			{Data: &pb.AttestationData{Slot: 2 * epochLength}},
+			{Data: &pb.AttestationData{Slot: slotsPerEpoch}},
+			{Data: &pb.AttestationData{Slot: slotsPerEpoch + 1}},
+			{Data: &pb.AttestationData{Slot: slotsPerEpoch + 20}},
+			{Data: &pb.AttestationData{Slot: 2 * slotsPerEpoch}},
 		},
 	}
 	newState := CleanupAttestations(state)
