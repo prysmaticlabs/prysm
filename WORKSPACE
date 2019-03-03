@@ -476,7 +476,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_reuseport",
-    commit = "6a75ffd916e5e70a5231da13d63ee5bba1109742",
+    commit = "3e6d618acfdfacbbeff71cb2bd70fc188f897a0f",  # v0.0.1
     importpath = "github.com/libp2p/go-reuseport",
 )
 
