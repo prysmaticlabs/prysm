@@ -4,7 +4,7 @@ metadata:
   name: validator
   namespace: beacon-chain
 spec:
-  replicas: 1
+  replicas: 8
   selector:
     matchLabels:
       component: validator
@@ -25,6 +25,7 @@ spec:
         - --demo-config
         - --enable-tracing
         - --tracing-endpoint=http://jaeger-collector.istio-system.svc.cluster.local:14268
+        - --trace-sample-fraction=1.0
         volumeMounts:
         - name: localdata
           mountPath: /data

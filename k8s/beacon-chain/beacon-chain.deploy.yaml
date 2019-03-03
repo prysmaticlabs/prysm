@@ -35,6 +35,7 @@ spec:
             - --demo-config
             - --enable-tracing
             - --tracing-endpoint=http://jaeger-collector.istio-system.svc.cluster.local:14268
+            - --trace-sample-fraction=1.0
           resources:
             requests:
               memory: "100Mi"
