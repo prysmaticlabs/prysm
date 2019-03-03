@@ -1,6 +1,8 @@
 package testutil
 
-import "os"
+import (
+	"os"
+)
 
 // TempDir returns a directory path for temporary test storage.
 func TempDir() string {
