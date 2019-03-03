@@ -147,6 +147,8 @@ func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
 		return pb.ValidatorRole_UNKNOWN
 	}
 	if v.assignment.Slot == slot {
+		// if the committee length is 1, that means validator has to perform both
+		// proposer and validator roles.
 		if len(v.assignment.Committee) == 1 {
 			return pb.ValidatorRole_BOTH
 		} else if v.assignment.IsProposer {
