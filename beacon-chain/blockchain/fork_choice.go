@@ -3,13 +3,12 @@ package blockchain
 import (
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 // LMDGhost applies the Latest Message Driven, Greediest Heaviest Observed Sub-Tree
