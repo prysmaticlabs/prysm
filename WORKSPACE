@@ -217,7 +217,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_swarm",
-    commit = "22f358a2d09ac82ee9ff0774d06010913fa900ad",
+    commit = "60a7ff4a5eda1873184a80689a0c7a3b36e76452",  # v0.0.1
     importpath = "github.com/libp2p/go-libp2p-swarm",
 )
 
