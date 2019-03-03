@@ -355,9 +355,6 @@ func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
 	}
 
 	timestamp := binary.LittleEndian.Uint64(timestampData)
-	if uint64(time.Now().Unix()) < timestamp {
-		log.Errorf("Invalid timestamp from log expected %d > %d", time.Now().Unix(), timestamp)
-	}
 	w.chainStarted = true
 	chainStartTime := time.Unix(int64(timestamp), 0)
 	log.WithFields(logrus.Fields{
