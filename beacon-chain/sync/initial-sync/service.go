@@ -416,7 +416,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 		s.chainService.IncomingBlockFeed().Send(block)
 
 		// since the block will not be processed by chainservice.
-		if s.beaconStateSlot > block.Slot {
+		if s.beaconStateSlot >= block.Slot {
 			if err := s.db.SaveBlock(block); err != nil {
 				return err
 			}
