@@ -60,10 +60,10 @@ func (ms *mockChainService) StateInitializedFeed() *event.Feed {
 }
 
 func (ms *mockChainService) CanonicalBlockFeed() *event.Feed {
-	if ms.sFeed == nil {
+	if ms.cFeed == nil {
 		return new(event.Feed)
 	}
-	return ms.sFeed
+	return ms.cFeed
 }
 
 type mockOperationService struct{}
