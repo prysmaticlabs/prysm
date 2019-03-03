@@ -7,7 +7,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
-
 	"github.com/urfave/cli"
 )
 
