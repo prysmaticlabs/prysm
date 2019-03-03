@@ -229,7 +229,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_peerstore",
-    commit = "d2a21b6d4a88bd06c1cd5700b38df4529e556b28",
+    commit = "d2a21b6d4a88bd06c1cd5700b38df4529e556b28",  # v0.0.1
     importpath = "github.com/libp2p/go-libp2p-peerstore",
 )
 
