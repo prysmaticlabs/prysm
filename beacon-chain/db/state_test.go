@@ -136,17 +136,18 @@ func BenchmarkState_ReadingFromCache(b *testing.B) {
 		b.Fatalf("Could not save beacon state to cache from DB: %v", err)
 	}
 
-	if db.currentState == nil {
+	if db.currentState.Slot != params.BeaconConfig().GenesisSlot+1 {
 		b.Fatal("cache should be prepared on state after saving to DB")
 	}
-	b.ResetTimer()
 
 	b.N = 20
 	b.ReportAllocs()
+	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
 		_, err := db.State(ctx)
 		if err != nil {
-			b.Fatalf("Could not read beacon state from DB: %v", err)
+			b.Fatalf("Could not read beacon state from cache: %v", err)
 		}
 	}
 }
@@ -167,10 +168,10 @@ func BenchmarkState_ReadingFromDB(b *testing.B) {
 		b.Fatal("cache should not be prepared on newly initialized state")
 	}
 
-	b.ResetTimer()
-
 	b.N = 20
 	b.ReportAllocs()
+	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
 		_, err := db.State(ctx)
 		if err != nil {
