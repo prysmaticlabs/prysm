@@ -410,7 +410,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_transport_upgrader",
-    commit = "83703858bb4649336a7bc91d359a3c69e9c932ce",
+    commit = "b4ab689796cdae99ad6641abcedcd7c23258de0c",  # v0.0.1
     importpath = "github.com/libp2p/go-libp2p-transport-upgrader",
 )
 
