@@ -147,7 +147,7 @@ func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
 		return pb.ValidatorRole_UNKNOWN
 	}
 	if v.assignment.Slot == slot {
-		if v.assignment.IsProposer && len(v.assignment.Committee) == 1 {
+		if len(v.assignment.Committee) == 1 {
 			return pb.ValidatorRole_BOTH
 		} else if v.assignment.IsProposer {
 			return pb.ValidatorRole_PROPOSER

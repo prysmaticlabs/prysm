@@ -53,7 +53,7 @@ func (vs *ValidatorServer) CommitteeAssignment(
 	}
 	idx, err := vs.beaconDB.ValidatorIndex(req.PublicKey)
 	if err != nil {
-		return nil, fmt.Errorf("could not get activate validator index: %v", err)
+		return nil, fmt.Errorf("could not get active validator index: %v", err)
 	}
 
 	committee, shard, slot, isProposer, err :=
