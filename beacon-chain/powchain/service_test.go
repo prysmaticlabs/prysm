@@ -962,7 +962,7 @@ func TestStatus(t *testing.T) {
 				t.Errorf("Wanted: \"%v\", but Status() return: \"%v\"", wantedErrorText, status.Error())
 			}
 		}
-  }
+	}
 }
 
 func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
