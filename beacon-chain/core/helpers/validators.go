@@ -41,17 +41,16 @@ func ActiveValidatorIndices(validators []*pb.Validator, epoch uint64) []uint64 {
 	return indices
 }
 
-// EntryExitEffectEpoch takes in epoch number and returns when
+// DelayedActivationExitEpoch takes in epoch number and returns when
 // the validator is eligible for activation and exit.
 //
 // Spec pseudocode definition:
-// def get_entry_exit_effect_epoch(epoch: Epoch) -> Epoch:
+// def get_delayed_activation_exit_epoch(epoch: Epoch) -> Epoch:
 //    """
-//    An entry or exit triggered in the ``epoch`` given by the input takes effect at
-//    the epoch given by the output.
+//    Return the epoch at which an activation or exit triggered in ``epoch`` takes effect.
 //    """
 //    return epoch + 1 + ACTIVATION_EXIT_DELAY
-func EntryExitEffectEpoch(epoch uint64) uint64 {
+func DelayedActivationExitEpoch(epoch uint64) uint64 {
 	return epoch + 1 + params.BeaconConfig().ActivationExitDelay
 }
 

@@ -150,7 +150,7 @@ func ActivateValidator(state *pb.BeaconState, idx uint64, genesis bool) (*pb.Bea
 	if genesis {
 		validator.ActivationEpoch = params.BeaconConfig().GenesisEpoch
 	} else {
-		validator.ActivationEpoch = helpers.EntryExitEffectEpoch(helpers.CurrentEpoch(state))
+		validator.ActivationEpoch = helpers.DelayedActivationExitEpoch(helpers.CurrentEpoch(state))
 	}
 
 	state.ValidatorRegistry[idx] = validator
