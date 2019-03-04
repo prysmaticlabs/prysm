@@ -295,8 +295,8 @@ func (s *InitialSync) processBlockAnnounce(msg p2p.Message) {
 // for initial sync. It checks if the blocks are valid and then will continue to
 // process and save it into the db.
 func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock, peer p2p.Peer) {
-	nCtx, processBlkAnnounce := trace.StartSpan(ctx, "InitialSync_processBlockAnnounce")
-	defer processBlkAnnounce.End()
+	nCtx, processBlk := trace.StartSpan(ctx, "InitialSync_processBlock")
+	defer processBlk.End()
 	recBlock.Inc()
 	if block.Slot > s.highestObservedSlot {
 		s.highestObservedSlot = block.Slot
