@@ -1035,6 +1035,6 @@ go_repository(
 
 go_repository(
     name = "com_github_allegro_bigcache",
-    commit = "e24eb225f15679bbe54f91bfa7da3b00e59b9768",
+    commit = "84a0ff3f153cbd7e280a19029a864bb04b504e62",  # v1.2.0
     importpath = "github.com/allegro/bigcache",
 )
