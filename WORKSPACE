@@ -162,7 +162,7 @@ go_repository(
 
 go_repository(
     name = "com_github_x_cray_logrus_prefixed_formatter",
-    commit = "bb2702d423886830dee131692131d35648c382e2",
+    commit = "bb2702d423886830dee131692131d35648c382e2",  # v0.5.2
     importpath = "github.com/x-cray/logrus-prefixed-formatter",
 )
 
