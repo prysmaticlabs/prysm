@@ -86,15 +86,8 @@ message Validator {
   uint64 activation_epoch = 5;
   uint64 exit_epoch = 6;
   uint64 withdrawal_epoch = 7;
-  uint64 slashed_epoch = 8;
-  // Possible validator status code:
-  // https://github.com/ethereum/eth2.0-specs/blob/master/specs/core/0_beacon-chain.md#constants
-  enum StatusFlags {
-    INITIAL = 0; // validator status initial value.
-    INITIATED_EXIT = 1; // validator initiated exit.
-    WITHDRAWABLE = 2; // validator deposit is withdrawable.
-  }
-  StatusFlags status_flags = 9;
+  bool initiated_exit = 8;
+  bool slashed = 9;
 }
 
 message ShardReassignmentRecord {
