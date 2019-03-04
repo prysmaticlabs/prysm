@@ -536,7 +536,7 @@ go_repository(
 
 go_repository(
     name = "com_github_jackpal_gateway",
-    commit = "cbcf4e3f3baee7952fc386c8b2534af4d267c875",
+    commit = "bfe829fefc91f676644aee0dc057097c605ae5ab",  # v1.0.5
     importpath = "github.com/jackpal/gateway",
 )
 
