@@ -159,6 +159,260 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	}
 }
 
+func TestValidatorStatus_CantFindValidatorIdx(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	if err := db.SaveState(&pbp2p.BeaconState{ValidatorRegistry: []*pbp2p.Validator{}}); err != nil {
+		t.Fatalf("could not save state: %v", err)
+	}
+	vs := &ValidatorServer{
+		beaconDB: db,
+	}
+	req := &pb.ValidatorIndexRequest{
+		PublicKey: []byte{'B'},
+	}
+	want := fmt.Sprintf("validator %#x does not exist", req.PublicKey)
+	if _, err := vs.ValidatorStatus(context.Background(), req); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %v, received %v", want, err)
+	}
+}
+
+func TestValidatorStatus_PendingActive(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	pubKey := []byte{'A'}
+	if err := db.SaveValidatorIndex(pubKey, 0); err != nil {
+		t.Fatalf("Could not save validator index: %v", err)
+	}
+
+	// Pending active because activation epoch is still defaulted at far future slot.
+	if err := db.SaveState(&pbp2p.BeaconState{ValidatorRegistry: []*pbp2p.Validator{
+		{ActivationEpoch: params.BeaconConfig().FarFutureEpoch, Pubkey: pubKey},
+	}}); err != nil {
+		t.Fatalf("could not save state: %v", err)
+	}
+
+	vs := &ValidatorServer{
+		beaconDB: db,
+	}
+	req := &pb.ValidatorIndexRequest{
+		PublicKey: pubKey,
+	}
+	resp, err := vs.ValidatorStatus(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Could not get validator status %v", err)
+	}
+	if resp.Status != pb.ValidatorStatus_PENDING_ACTIVE {
+		t.Errorf("Wanted %v, got %v", pb.ValidatorStatus_PENDING_ACTIVE, resp.Status)
+	}
+}
+
+func TestValidatorStatus_Active(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	pubKey := []byte{'A'}
+	if err := db.SaveValidatorIndex(pubKey, 0); err != nil {
+		t.Fatalf("Could not save validator index: %v", err)
+	}
+
+	// Active because activation epoch <= current epoch < exit epoch.
+	if err := db.SaveState(&pbp2p.BeaconState{
+		Slot: params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry: []*pbp2p.Validator{{
+			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+			Pubkey:          pubKey},
+		}}); err != nil {
+		t.Fatalf("could not save state: %v", err)
+	}
+
+	vs := &ValidatorServer{
+		beaconDB: db,
+	}
+	req := &pb.ValidatorIndexRequest{
+		PublicKey: pubKey,
+	}
+	resp, err := vs.ValidatorStatus(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Could not get validator status %v", err)
+	}
+	if resp.Status != pb.ValidatorStatus_ACTIVE {
+		t.Errorf("Wanted %v, got %v", pb.ValidatorStatus_ACTIVE, resp.Status)
+	}
+}
+
+func TestValidatorStatus_InitiatedExit(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	pubKey := []byte{'A'}
+	if err := db.SaveValidatorIndex(pubKey, 0); err != nil {
+		t.Fatalf("Could not save validator index: %v", err)
+	}
+
+	// Initiated exit because validator status flag = Validator_INITIATED_EXIT.
+	if err := db.SaveState(&pbp2p.BeaconState{
+		Slot: params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry: []*pbp2p.Validator{{
+			StatusFlags: pbp2p.Validator_INITIATED_EXIT,
+			Pubkey:      pubKey},
+		}}); err != nil {
+		t.Fatalf("could not save state: %v", err)
+	}
+
+	vs := &ValidatorServer{
+		beaconDB: db,
+	}
+	req := &pb.ValidatorIndexRequest{
+		PublicKey: pubKey,
+	}
+	resp, err := vs.ValidatorStatus(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Could not get validator status %v", err)
+	}
+	if resp.Status != pb.ValidatorStatus_INITIATED_EXIT {
+		t.Errorf("Wanted %v, got %v", pb.ValidatorStatus_INITIATED_EXIT, resp.Status)
+	}
+}
+
+func TestValidatorStatus_Withdrawable(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	pubKey := []byte{'A'}
+	if err := db.SaveValidatorIndex(pubKey, 0); err != nil {
+		t.Fatalf("Could not save validator index: %v", err)
+	}
+
+	// Withdrawable exit because validator status flag = Validator_WITHDRAWABLE.
+	if err := db.SaveState(&pbp2p.BeaconState{
+		Slot: params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry: []*pbp2p.Validator{{
+			StatusFlags: pbp2p.Validator_WITHDRAWABLE,
+			Pubkey:      pubKey},
+		}}); err != nil {
+		t.Fatalf("could not save state: %v", err)
+	}
+
+	vs := &ValidatorServer{
+		beaconDB: db,
+	}
+	req := &pb.ValidatorIndexRequest{
+		PublicKey: pubKey,
+	}
+	resp, err := vs.ValidatorStatus(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Could not get validator status %v", err)
+	}
+	if resp.Status != pb.ValidatorStatus_WITHDRAWABLE {
+		t.Errorf("Wanted %v, got %v", pb.ValidatorStatus_WITHDRAWABLE, resp.Status)
+	}
+}
+
+func TestValidatorStatus_ExitedSlashed(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	pubKey := []byte{'A'}
+	if err := db.SaveValidatorIndex(pubKey, 0); err != nil {
+		t.Fatalf("Could not save validator index: %v", err)
+	}
+
+	// Exit slashed because exit epoch and slashed epoch are =< current epoch.
+	if err := db.SaveState(&pbp2p.BeaconState{
+		Slot: params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry: []*pbp2p.Validator{{
+			Pubkey: pubKey},
+		}}); err != nil {
+		t.Fatalf("could not save state: %v", err)
+	}
+
+	vs := &ValidatorServer{
+		beaconDB: db,
+	}
+	req := &pb.ValidatorIndexRequest{
+		PublicKey: pubKey,
+	}
+	resp, err := vs.ValidatorStatus(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Could not get validator status %v", err)
+	}
+	if resp.Status != pb.ValidatorStatus_EXITED_SLASHED {
+		t.Errorf("Wanted %v, got %v", pb.ValidatorStatus_EXITED_SLASHED, resp.Status)
+	}
+}
+
+func TestValidatorStatus_Exited(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	pubKey := []byte{'A'}
+	if err := db.SaveValidatorIndex(pubKey, 0); err != nil {
+		t.Fatalf("Could not save validator index: %v", err)
+	}
+
+	// Exit because only exit epoch is =< current epoch.
+	if err := db.SaveState(&pbp2p.BeaconState{
+		Slot: params.BeaconConfig().GenesisSlot + 64,
+		ValidatorRegistry: []*pbp2p.Validator{{
+			Pubkey:       pubKey,
+			SlashedEpoch: params.BeaconConfig().FarFutureEpoch},
+		}}); err != nil {
+		t.Fatalf("could not save state: %v", err)
+	}
+
+	vs := &ValidatorServer{
+		beaconDB: db,
+	}
+	req := &pb.ValidatorIndexRequest{
+		PublicKey: pubKey,
+	}
+	resp, err := vs.ValidatorStatus(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Could not get validator status %v", err)
+	}
+	if resp.Status != pb.ValidatorStatus_EXITED {
+		t.Errorf("Wanted %v, got %v", pb.ValidatorStatus_EXITED, resp.Status)
+	}
+}
+
+func TestValidatorStatus_UnknownStatus(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	pubKey := []byte{'A'}
+	if err := db.SaveValidatorIndex(pubKey, 0); err != nil {
+		t.Fatalf("Could not save validator index: %v", err)
+	}
+
+	if err := db.SaveState(&pbp2p.BeaconState{
+		Slot: params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry: []*pbp2p.Validator{{
+			ActivationEpoch: params.BeaconConfig().GenesisSlot,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+			Pubkey:          pubKey},
+		}}); err != nil {
+		t.Fatalf("could not save state: %v", err)
+	}
+
+	vs := &ValidatorServer{
+		beaconDB: db,
+	}
+	req := &pb.ValidatorIndexRequest{
+		PublicKey: pubKey,
+	}
+	resp, err := vs.ValidatorStatus(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Could not get validator status %v", err)
+	}
+	if resp.Status != pb.ValidatorStatus_UNKNOWN_STATUS {
+		t.Errorf("Wanted %v, got %v", pb.ValidatorStatus_UNKNOWN_STATUS, resp.Status)
+	}
+}
+
 func genesisState(validators uint64) (*pbp2p.BeaconState, error) {
 	genesisTime := time.Unix(0, 0).Unix()
 	deposits := make([]*pbp2p.Deposit, validators)
