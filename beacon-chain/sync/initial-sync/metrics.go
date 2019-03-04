@@ -24,7 +24,7 @@ var (
 		Help: "The number of received blocks",
 	})
 	recBlockAnnounce = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "initSync_received_blocks",
+		Name: "initSync_received_block_announce",
 		Help: "The number of received block announce",
 	})
 	stateReq = promauto.NewCounter(prometheus.CounterOpts{

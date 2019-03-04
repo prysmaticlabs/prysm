@@ -73,7 +73,7 @@ var (
 		Help: "The number of received exits",
 	})
 	sentExit = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "regSync_received_exits",
+		Name: "regSync_sent_exits",
 		Help: "The number of sent exits",
 	})
 	chainHeadReq = promauto.NewCounter(prometheus.CounterOpts{
