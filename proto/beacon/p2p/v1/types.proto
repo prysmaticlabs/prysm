@@ -92,9 +92,9 @@ message Validator {
   enum StatusFlags {
     INITIAL = 0; // validator status initial value.
     INITIATED_EXIT = 1; // validator initiated exit.
-    WITHDRAWABLE = 2; // validator is participating validator duties.
+    WITHDRAWABLE = 2; // validator deposit is withdrawable.
   }
-  StatusFlags status_flags = 10;
+  StatusFlags status_flags = 9;
 }
 
 message ShardReassignmentRecord {
