@@ -504,6 +504,7 @@ func TestLatestMainchainInfoFromDB_OK(t *testing.T) {
 	if web3Service.blockHash.Hex() != header.Hash().Hex() {
 		t.Errorf("block hash not set, expected %v, got %v", header.Hash().Hex(), web3Service.blockHash.Hex())
 	}
+
 }
 
 func TestProcessDepositLog_OK(t *testing.T) {
