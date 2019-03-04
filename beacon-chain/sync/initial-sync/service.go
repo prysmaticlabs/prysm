@@ -250,6 +250,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 		case msg := <-s.stateBuf:
 			data := msg.Data.(*pb.BeaconStateResponse)
 			beaconState := data.BeaconState
+			recState.Inc()
 
 			if s.currentSlot > beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
 				continue
@@ -308,6 +309,7 @@ func (s *InitialSync) checkInMemoryBlocks() {
 // for initial sync. It checks if the blocks are valid and then will continue to
 // process and save it into the db.
 func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock, peer p2p.Peer) {
+	recBlock.Inc()
 	if block.Slot > s.highestObservedSlot {
 		s.highestObservedSlot = block.Slot
 		s.stateRootOfHighestObservedSlot = bytesutil.ToBytes32(block.StateRootHash32)
@@ -342,6 +344,7 @@ func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock, p
 // processBatchedBlocks processes all the received blocks from
 // the p2p message.
 func (s *InitialSync) processBatchedBlocks(ctx context.Context, msg p2p.Message) {
+	batchedBlockReq.Inc()
 	log.Debug("Processing batched block response")
 
 	response := msg.Data.(*pb.BatchedBeaconBlockResponse)
@@ -353,9 +356,14 @@ func (s *InitialSync) processBatchedBlocks(ctx context.Context, msg p2p.Message)
 	log.Debug("Finished processing batched blocks")
 }
 
+func (s *InitialSync) processBatchedBlocks(ctx context.Context, msg p2p.Message) {
+
+}
+
 // requestStateFromPeer sends a request to a peer for the corresponding state
 // for a beacon block.
 func (s *InitialSync) requestStateFromPeer(stateRoot []byte, peer p2p.Peer) error {
+	stateReq.Inc()
 	log.Debugf("Successfully processed incoming block with state hash: %#x", stateRoot)
 	s.p2p.Send(&pb.BeaconStateRequest{Hash: stateRoot}, peer)
 	return nil
@@ -364,6 +372,7 @@ func (s *InitialSync) requestStateFromPeer(stateRoot []byte, peer p2p.Peer) erro
 // requestNextBlock broadcasts a request for a block with the entered slotnumber.
 func (s *InitialSync) requestNextBlockBySlot(ctx context.Context, slotNumber uint64) {
 	log.Debugf("Requesting block %d ", slotNumber)
+	blockReqSlot.Inc()
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	if block, ok := s.inMemoryBlocks[slotNumber]; ok {
@@ -376,6 +385,7 @@ func (s *InitialSync) requestNextBlockBySlot(ctx context.Context, slotNumber uin
 // requestBatchedBlocks sends out a request for multiple blocks till a
 // specified bound slot number.
 func (s *InitialSync) requestBatchedBlocks(startSlot uint64, endSlot uint64) {
+	sentBatchedBlockReq.Inc()
 	blockLimit := params.BeaconConfig().BatchBlockLimit
 	if startSlot+blockLimit < endSlot {
 		endSlot = startSlot + blockLimit
