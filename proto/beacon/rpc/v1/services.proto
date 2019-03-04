@@ -163,11 +163,11 @@ message Eth1DataResponse {
 }
 
 enum ValidatorStatus {
-    PENDING_ACTIVE = 0;
-    ACTIVE = 1;
-    INITIATED_EXIT = 2;
-    WITHDRAWABLE = 3;
-    EXITED = 4;
-    EXITED_SLASHED = 5;
-    UNKNOWN_STATUS = 100;
+    UNKNOWN_STATUS = 0;
+    PENDING_ACTIVE = 1;
+    ACTIVE = 2;
+    INITIATED_EXIT = 3;
+    WITHDRAWABLE = 4;
+    EXITED = 5;
+    EXITED_SLASHED = 6;
 }
