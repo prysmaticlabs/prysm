@@ -41,9 +41,9 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_k8s",
-    sha256 = "828fb1ac4c44280be95306b885a326e40110eeba50bffa05e72ddd3b5cdc5d33",
-    strip_prefix = "rules_k8s-2206972072d64e5d2d966d81cc6c5fb77fd58dcb",
-    url = "https://github.com/bazelbuild/rules_k8s/archive/2206972072d64e5d2d966d81cc6c5fb77fd58dcb.tar.gz",
+    sha256 = "6983fcebc70f1e559bfe7dea066b68d1963abc1e154db9a12acebbfb4f47c3c3",
+    strip_prefix = "rules_k8s-9de769e87a1910f00b11fbb7f62d09d6d03e60ef",
+    url = "https://github.com/bazelbuild/rules_k8s/archive/9de769e87a1910f00b11fbb7f62d09d6d03e60ef.tar.gz",
 )
 
 load(
@@ -122,9 +122,9 @@ proto_library(
 
 http_archive(
     name = "io_kubernetes_build",
-    sha256 = "b4e7819861f2ec89b7309bd0c44fb3348c3a4a8ee494ec7668edb3960ff11814",
-    strip_prefix = "repo-infra-4ce715fbe67d8fbed05ec2bb47a148e754100a4b",
-    url = "https://github.com/kubernetes/repo-infra/archive/4ce715fbe67d8fbed05ec2bb47a148e754100a4b.tar.gz",
+    sha256 = "4985e8d2da96c9ec293897cc19573390c392e068e733b3d85972b43aac2f1309",
+    strip_prefix = "repo-infra-52d76ba3344e755f5a9ab595b94b21df49448ffb",
+    url = "https://github.com/kubernetes/repo-infra/archive/52d76ba3344e755f5a9ab595b94b21df49448ffb.tar.gz",
 )
 
 go_repository(
@@ -536,7 +536,7 @@ go_repository(
 
 go_repository(
     name = "com_github_jackpal_gateway",
-    commit = "cbcf4e3f3baee7952fc386c8b2534af4d267c875",
+    commit = "bfe829fefc91f676644aee0dc057097c605ae5ab",  # v1.0.5
     importpath = "github.com/jackpal/gateway",
 )
 
@@ -560,7 +560,7 @@ go_repository(
 
 go_repository(
     name = "com_github_jackpal_go_nat_pmp",
-    commit = "d89d09f6f3329bc3c2479aa3cafd76a5aa93a35c",
+    commit = "b977c5efcadd604e306a97fdf06ff544f785df56",  # v1.0.1
     importpath = "github.com/jackpal/go-nat-pmp",
 )
 
@@ -933,7 +933,7 @@ go_repository(
 
 go_repository(
     name = "com_github_hashicorp_errwrap",
-    commit = "8a6fb523712970c966eefc6b39ed2c5e74880354",
+    commit = "8a6fb523712970c966eefc6b39ed2c5e74880354",  # v1.0.0
     importpath = "github.com/hashicorp/errwrap",
 )
 
@@ -945,7 +945,7 @@ go_repository(
 
 go_repository(
     name = "com_github_inconshreveable_mousetrap",
-    commit = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75",
+    commit = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75",  # v1.0.0
     importpath = "github.com/inconshreveable/mousetrap",
 )
 
