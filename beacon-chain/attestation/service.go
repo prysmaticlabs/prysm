@@ -147,7 +147,7 @@ func (a *Service) attestationPool() {
 			}
 			h := hashutil.Hash(enc)
 
-			if err := a.updateLatestAttestation(context.TODO(), attestation); err != nil {
+			if err := a.updateLatestAttestation(a.ctx, attestation); err != nil {
 				log.Errorf("Could not update attestation pool: %v", err)
 				continue
 			}

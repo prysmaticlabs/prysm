@@ -190,7 +190,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 		return err
 	}
 
-	blockchainService, err := blockchain.NewChainService(context.TODO(), &blockchain.Config{
+	blockchainService, err := blockchain.NewChainService(context.Background(), &blockchain.Config{
 		BeaconDB:         b.db,
 		Web3Service:      web3Service,
 		OpsPoolService:   opsService,
@@ -204,7 +204,7 @@ func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 }
 
 func (b *BeaconNode) registerOperationService() error {
-	operationService := operations.NewOpsPoolService(context.TODO(), &operations.Config{
+	operationService := operations.NewOpsPoolService(context.Background(), &operations.Config{
 		BeaconDB: b.db,
 	})
 
@@ -313,7 +313,7 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	cert := ctx.GlobalString(utils.CertFlag.Name)
 	key := ctx.GlobalString(utils.KeyFlag.Name)
 	chainStartDelayFlag := ctx.GlobalUint64(utils.ChainStartDelay.Name)
-	rpcService := rpc.NewRPCService(context.TODO(), &rpc.Config{
+	rpcService := rpc.NewRPCService(context.Background(), &rpc.Config{
 		Port:                port,
 		CertFlag:            cert,
 		KeyFlag:             key,
