@@ -173,8 +173,12 @@ func (w *Web3Service) Start() {
 
 // Stop the web3 service's main event loop and associated goroutines.
 func (w *Web3Service) Stop() error {
-	defer w.cancel()
-	defer close(w.headerChan)
+	if w.cancel != nil {
+		defer w.cancel()
+	}
+	if w.headerChan != nil {
+		defer close(w.headerChan)
+	}
 	log.Info("Stopping service")
 	return nil
 }
