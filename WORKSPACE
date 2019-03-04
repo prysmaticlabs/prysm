@@ -21,9 +21,9 @@ http_archive(
 
 http_archive(
     name = "com_github_atlassian_bazel_tools",
-    sha256 = "e7d0c0e2963a7f9cb2c377e241502119dae24909708adef1918e8dcb70ae9e8c",
-    strip_prefix = "bazel-tools-6fef37f33dfa0189be9df4d3d60e6291bfe71177",
-    urls = ["https://github.com/atlassian/bazel-tools/archive/6fef37f33dfa0189be9df4d3d60e6291bfe71177.tar.gz"],
+    sha256 = "2842e7e4315f43df4223b7af40ae7d3547cce967595505bc335dacad5d69a39f",
+    strip_prefix = "bazel-tools-02472d814d1867de2ad75801760732c9e595c9d9",
+    urls = ["https://github.com/atlassian/bazel-tools/archive/02472d814d1867de2ad75801760732c9e595c9d9.tar.gz"],
 )
 
 http_archive(
@@ -162,7 +162,7 @@ go_repository(
 
 go_repository(
     name = "com_github_x_cray_logrus_prefixed_formatter",
-    commit = "bb2702d423886830dee131692131d35648c382e2",
+    commit = "bb2702d423886830dee131692131d35648c382e2",  # v0.5.2
     importpath = "github.com/x-cray/logrus-prefixed-formatter",
 )
 
@@ -386,7 +386,7 @@ go_repository(
 
 go_repository(
     name = "com_github_fd_go_nat",
-    commit = "e3ba0d89e7d9f0a458bf08baae8db007eb7d242d",
+    commit = "d6a8fd67f078b7cc7a16d623ee52e859b2daccd5",  # v1.0.0
     importpath = "github.com/fd/go-nat",
 )
 
@@ -704,7 +704,7 @@ go_repository(
 
 go_repository(
     name = "com_github_boltdb_bolt",
-    commit = "fd01fc79c553a8e99d512a07e8e0c63d4a3ccfc5",
+    commit = "2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8",  # v1.3.1
     importpath = "github.com/boltdb/bolt",
 )
 
@@ -927,7 +927,7 @@ go_repository(
 
 go_repository(
     name = "com_github_hashicorp_go_multierror",
-    commit = "886a7fbe3eb1c874d46f623bfa70af45f425b3d1",
+    commit = "886a7fbe3eb1c874d46f623bfa70af45f425b3d1",  # v1.0.0
     importpath = "github.com/hashicorp/go-multierror",
 )
 
