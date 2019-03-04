@@ -179,11 +179,8 @@ func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 
 func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
 	var web3Service *powchain.Web3Service
-	enablePOWChain := ctx.GlobalBool(utils.EnablePOWChain.Name)
-	if enablePOWChain {
-		if err := b.services.FetchService(&web3Service); err != nil {
-			return err
-		}
+	if err := b.services.FetchService(&web3Service); err != nil {
+		return err
 	}
 	var opsService *operations.Service
 	if err := b.services.FetchService(&opsService); err != nil {
@@ -212,11 +209,11 @@ func (b *BeaconNode) registerOperationService() error {
 }
 
 func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
-	if !cliCtx.GlobalBool(utils.EnablePOWChain.Name) {
-		return nil
-	}
-
 	depAddress := b.ctx.GlobalString(utils.DepositContractFlag.Name)
+
+	if depAddress == "" {
+		log.Fatal("No deposit contract specified. Add --deposit-contract with a valud deposit contract address to start.")
+	}
 
 	if !common.IsHexAddress(depAddress) {
 		log.Fatalf("Invalid deposit contract address given: %s", depAddress)
@@ -271,11 +268,8 @@ func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
 	}
 
 	var web3Service *powchain.Web3Service
-	var enablePOWChain = ctx.GlobalBool(utils.EnablePOWChain.Name)
-	if enablePOWChain {
-		if err := b.services.FetchService(&web3Service); err != nil {
-			return err
-		}
+	if err := b.services.FetchService(&web3Service); err != nil {
+		return err
 	}
 
 	cfg := &rbcsync.Config{
@@ -302,11 +296,8 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	}
 
 	var web3Service *powchain.Web3Service
-	var enablePOWChain = ctx.GlobalBool(utils.EnablePOWChain.Name)
-	if enablePOWChain {
-		if err := b.services.FetchService(&web3Service); err != nil {
-			return err
-		}
+	if err := b.services.FetchService(&web3Service); err != nil {
+		return err
 	}
 
 	port := ctx.GlobalString(utils.RPCPort.Name)
