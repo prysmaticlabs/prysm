@@ -33,7 +33,9 @@ import (
 )
 
 var log = logrus.WithField("prefix", "node")
-var beaconChainDBName = "beaconchaindata"
+
+const beaconChainDBName = "beaconchaindata"
+const testSkipPowFlag = "test-skip-pow"
 
 // BeaconNode defines a struct that handles the services running a random beacon chain
 // full PoS node. It handles the lifecycle of the entire system and registers
@@ -209,6 +211,10 @@ func (b *BeaconNode) registerOperationService() error {
 }
 
 func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
+	if b.ctx.GlobalBool(testSkipPowFlag) {
+		return b.services.RegisterService(&powchain.Web3Service{})
+	}
+
 	depAddress := b.ctx.GlobalString(utils.DepositContractFlag.Name)
 
 	if depAddress == "" {
