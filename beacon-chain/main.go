@@ -51,7 +51,6 @@ func main() {
 		utils.CertFlag,
 		utils.KeyFlag,
 		utils.GenesisJSON,
-		utils.EnablePOWChain,
 		utils.EnableDBCleanup,
 		utils.ChainStartDelay,
 		cmd.BootstrapNode,
