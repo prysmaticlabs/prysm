@@ -362,7 +362,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multistream",
-    commit = "c5a72a718aa128e5f0bb5d4bd5d9a518bceb15e5",
+    commit = "f3f44044ac2444cd3a017c0b269f8da65b0012f1",  # v0.0.1
     importpath = "github.com/multiformats/go-multistream",
 )
 
