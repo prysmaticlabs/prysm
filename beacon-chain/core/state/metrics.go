@@ -19,6 +19,18 @@ var (
 		Name: "state_last_slot",
 		Help: "Last slot number of the processed state",
 	})
+	lastJustifiedEpochGauge = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "state_last_justified_epoch",
+		Help: "Last justified epoch of the processed state",
+	})
+	lastPrevJustifiedEpochGauge = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "state_last_prev_justified_epoch",
+		Help: "Last prev justified epoch of the processed state",
+	})
+	lastFinalizedEpochGauge = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "state_last_finalized_epoch",
+		Help: "Last finalized epoch of the processed state",
+	})
 )
 
 func reportEpochTransitionMetrics(state *pb.BeaconState) {
@@ -30,4 +42,10 @@ func reportEpochTransitionMetrics(state *pb.BeaconState) {
 	}
 	// Slot number
 	lastSlotGauge.Set(float64(state.Slot))
+	// Last justified slot
+	lastJustifiedEpochGauge.Set(float64(state.JustifiedEpoch))
+	// Last previous justified slot
+	lastPrevJustifiedEpochGauge.Set(float64(state.PreviousJustifiedEpoch))
+	// Last finalized slot
+	lastFinalizedEpochGauge.Set(float64(state.FinalizedEpoch))
 }

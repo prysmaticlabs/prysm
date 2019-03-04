@@ -9,13 +9,12 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	block "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	b "github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // CurrentAttestations returns the pending attestations from current epoch.

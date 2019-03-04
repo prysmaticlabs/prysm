@@ -1,13 +1,15 @@
 package db
 
-import "github.com/prysmaticlabs/prysm/shared/bytesutil"
+import (
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+)
 
 // The Schema will define how to store and retrieve data from the db.
 // Currently we store blocks by prefixing `block` to their hash and
 // using that as the key to store blocks.
 // `block` + hash -> block
 //
-// We store the crystallized state using the crystallized state lookup key, and
+// We store the state using the state lookup key, and
 // also the genesis block using the genesis lookup key.
 // The canonical head is stored using the canonical head lookup key.
 
