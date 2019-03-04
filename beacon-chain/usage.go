@@ -23,8 +23,8 @@ GLOBAL OPTIONS:
    {{range .App.Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
    {{end}}{{end}}{{if .FlagGroups}}
 {{range .FlagGroups}}{{.Name}} OPTIONS:
-  {{range .Flags}}{{.}}
-  {{end}}
+   {{range .Flags}}{{.}}
+   {{end}}
 {{end}}{{end}}{{if .App.Copyright }}
 COPYRIGHT:
    {{.App.Copyright}}
@@ -76,7 +76,6 @@ var appHelpFlagGroups = []flagGroup{
 			utils.CertFlag,
 			utils.KeyFlag,
 			utils.GenesisJSON,
-			utils.EnablePOWChain,
 			utils.EnableDBCleanup,
 			utils.ChainStartDelay,
 		},

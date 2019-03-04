@@ -42,6 +42,7 @@ func (mp *mockP2P) Send(msg proto.Message, peer p2p.Peer) {
 type mockChainService struct {
 	bFeed *event.Feed
 	sFeed *event.Feed
+	cFeed *event.Feed
 }
 
 func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
@@ -56,6 +57,13 @@ func (ms *mockChainService) StateInitializedFeed() *event.Feed {
 		return new(event.Feed)
 	}
 	return ms.sFeed
+}
+
+func (ms *mockChainService) CanonicalBlockFeed() *event.Feed {
+	if ms.cFeed == nil {
+		return new(event.Feed)
+	}
+	return ms.cFeed
 }
 
 type mockOperationService struct{}
@@ -136,7 +144,7 @@ func TestProcessBlock_OK(t *testing.T) {
 	}
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	if err := db.InitializeState(genesisTime, deposits); err != nil {
+	if err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -216,7 +224,7 @@ func TestProcessBlock_MultipleBlocks(t *testing.T) {
 	}
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	if err := db.InitializeState(genesisTime, deposits); err != nil {
+	if err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -468,6 +476,7 @@ func TestReceiveExitReq_OK(t *testing.T) {
 		OperationService: os,
 		P2P:              &mockP2P{},
 		BeaconDB:         db,
+		ChainService:     &mockChainService{},
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
@@ -503,6 +512,7 @@ func TestHandleAttReq_HashNotFound(t *testing.T) {
 		OperationService: os,
 		P2P:              &mockP2P{},
 		BeaconDB:         db,
+		ChainService:     &mockChainService{},
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
@@ -538,6 +548,7 @@ func TestHandleUnseenAttsReq_EmptyAttsPool(t *testing.T) {
 		OperationService: os,
 		P2P:              &mockP2P{},
 		BeaconDB:         db,
+		ChainService:     &mockChainService{},
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
@@ -581,6 +592,7 @@ func TestHandleAttReq_Ok(t *testing.T) {
 		OperationService: os,
 		P2P:              &mockP2P{},
 		BeaconDB:         db,
+		ChainService:     &mockChainService{},
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
@@ -623,6 +635,7 @@ func TestHandleUnseenAttsReq_Ok(t *testing.T) {
 		OperationService: os,
 		P2P:              &mockP2P{},
 		BeaconDB:         db,
+		ChainService:     &mockChainService{},
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
@@ -655,7 +668,7 @@ func TestHandleStateReq_NOState(t *testing.T) {
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	if err := db.InitializeState(genesisTime, deposits); err != nil {
+	if err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -693,7 +706,7 @@ func TestHandleStateReq_OK(t *testing.T) {
 
 	genesisTime := time.Now()
 	unixTime := uint64(genesisTime.Unix())
-	if err := db.InitializeState(unixTime, []*pb.Deposit{}); err != nil {
+	if err := db.InitializeState(unixTime, []*pb.Deposit{}, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("could not initialize beacon state to disk: %v", err)
 	}
 	beaconState, err := db.State(ctx)

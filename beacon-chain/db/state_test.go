@@ -7,9 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -44,7 +43,7 @@ func TestInitializeState_OK(t *testing.T) {
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	if err := db.InitializeState(genesisTime, deposits); err != nil {
+	if err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 	b, err := db.ChainHead()
@@ -92,7 +91,7 @@ func TestGenesisTime_OK(t *testing.T) {
 	}
 
 	deposits, _ := setupInitialDeposits(t, 10)
-	if err := db.InitializeState(uint64(genesisTime.Unix()), deposits); err != nil {
+	if err := db.InitializeState(uint64(genesisTime.Unix()), deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
 

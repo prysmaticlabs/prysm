@@ -201,12 +201,69 @@ func TestCrosslinkCommitteesAtSlot_OK(t *testing.T) {
 	}
 }
 
+func TestCrosslinkCommitteesAtSlot_RegistryChange(t *testing.T) {
+	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
+	committeesPerEpoch := uint64(4)
+	// Set epoch total validators count to 4 committees per slot.
+	validators := make([]*pb.Validator, committeesPerEpoch*validatorsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	state := &pb.BeaconState{
+		ValidatorRegistry:      validators,
+		Slot:                   params.BeaconConfig().GenesisSlot,
+		LatestIndexRootHash32S: [][]byte{{'A'}, {'B'}},
+		LatestRandaoMixes:      [][]byte{{'C'}, {'D'}},
+	}
+
+	committees, err := CrosslinkCommitteesAtSlot(state, params.BeaconConfig().GenesisSlot+100, true)
+	if err != nil {
+		t.Fatalf("Could not get crosslink committee: %v", err)
+	}
+	if len(committees) != int(committeesPerEpoch) {
+		t.Errorf("Incorrect committee count per slot. Wanted: %d, got: %d",
+			committeesPerEpoch, len(committees))
+	}
+}
+
+func TestCrosslinkCommitteesAtSlot_EpochSinceLastUpdatePow2(t *testing.T) {
+	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
+	committeesPerEpoch := uint64(5)
+	// Set epoch total validators count to 5 committees per slot.
+	validators := make([]*pb.Validator, committeesPerEpoch*validatorsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	state := &pb.BeaconState{
+		ValidatorRegistry:            validators,
+		Slot:                         params.BeaconConfig().GenesisSlot + 128,
+		LatestIndexRootHash32S:       [][]byte{{'A'}, {'B'}, {'C'}},
+		LatestRandaoMixes:            [][]byte{{'D'}, {'E'}, {'F'}},
+		ValidatorRegistryUpdateEpoch: params.BeaconConfig().GenesisEpoch,
+	}
+
+	committees, err := CrosslinkCommitteesAtSlot(state, params.BeaconConfig().GenesisSlot+192, false)
+	if err != nil {
+		t.Fatalf("Could not get crosslink committee: %v", err)
+	}
+	if len(committees) != int(committeesPerEpoch) {
+		t.Errorf("Incorrect committee count per slot. Wanted: %d, got: %d",
+			committeesPerEpoch, len(committees))
+	}
+}
+
 func TestCrosslinkCommitteesAtSlot_OutOfBound(t *testing.T) {
 	want := fmt.Sprintf(
 		"input committee epoch %d out of bounds: %d <= epoch <= %d",
-		params.BeaconConfig().GenesisEpoch,
-		params.BeaconConfig().GenesisEpoch+1,
-		params.BeaconConfig().GenesisEpoch+2,
+		0,
+		1,
+		2,
 	)
 	slot := params.BeaconConfig().GenesisSlot
 	beaconState := &pb.BeaconState{
@@ -225,8 +282,7 @@ func TestCrosslinkCommitteesAtSlot_ShuffleFailed(t *testing.T) {
 	}
 
 	want := fmt.Sprint(
-		"could not shuffle epoch validators: " +
-			"input list exceeded upper bound and reached modulo bias",
+		"input list exceeded upper bound and reached modulo bias",
 	)
 
 	if _, err := CrosslinkCommitteesAtSlot(state, params.BeaconConfig().GenesisSlot+1, false); !strings.Contains(err.Error(), want) {
@@ -412,7 +468,7 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 
 	for _, tt := range tests {
 		committee, shard, slot, isProposer, err := CommitteeAssignment(
-			state, SlotToEpoch(tt.slot), tt.index, false)
+			state, tt.slot, tt.index, false)
 		if err != nil {
 			t.Fatalf("failed to execute NextEpochCommitteeAssignment: %v", err)
 		}
@@ -444,7 +500,7 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 		"could not get assignment validator %d",
 		index,
 	)
-	if _, _, _, _, err := CommitteeAssignment(state, SlotToEpoch(state.Slot), index, false); !strings.Contains(err.Error(), want) {
+	if _, _, _, _, err := CommitteeAssignment(state, state.Slot, index, false); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }

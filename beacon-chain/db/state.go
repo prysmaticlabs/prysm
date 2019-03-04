@@ -17,8 +17,8 @@ import (
 
 // InitializeState creates an initial genesis state for the beacon
 // node using a set of genesis validators.
-func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit) error {
-	beaconState, err := state.GenesisBeaconState(deposits, genesisTime, nil)
+func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit, eth1Data *pb.Eth1Data) error {
+	beaconState, err := state.GenesisBeaconState(deposits, genesisTime, eth1Data)
 	if err != nil {
 		return err
 	}
@@ -93,41 +93,6 @@ func (db *BeaconDB) SaveState(beaconState *pb.BeaconState) error {
 			return err
 		}
 		return chainInfo.Put(stateLookupKey, beaconStateEnc)
-	})
-}
-
-// UnfinalizedBlockState fetches an unfinalized block's
-// active and crystallized state pair.
-func (db *BeaconDB) UnfinalizedBlockState(stateRoot [32]byte) (*pb.BeaconState, error) {
-	var beaconState *pb.BeaconState
-	err := db.view(func(tx *bolt.Tx) error {
-		chainInfo := tx.Bucket(chainInfoBucket)
-		encState := chainInfo.Get(stateRoot[:])
-		if encState == nil {
-			return nil
-		}
-
-		var err error
-		beaconState, err = createState(encState)
-		return err
-	})
-	return beaconState, err
-}
-
-// SaveUnfinalizedBlockState persists the associated state
-// for a given unfinalized block.
-func (db *BeaconDB) SaveUnfinalizedBlockState(beaconState *pb.BeaconState) error {
-	enc, err := proto.Marshal(beaconState)
-	if err != nil {
-		return fmt.Errorf("unable to marshal the beacon state: %v", err)
-	}
-	stateHash := hashutil.Hash(enc)
-	return db.update(func(tx *bolt.Tx) error {
-		chainInfo := tx.Bucket(chainInfoBucket)
-		if err := chainInfo.Put(stateHash[:], enc); err != nil {
-			return fmt.Errorf("failed to save beacon state: %v", err)
-		}
-		return nil
 	})
 }
 

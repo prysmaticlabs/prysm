@@ -10,8 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -26,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/forkutils"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -311,7 +310,7 @@ func TestChainStartStop_Initialized(t *testing.T) {
 
 	unixTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 100)
-	if err := db.InitializeState(unixTime, deposits); err != nil {
+	if err := db.InitializeState(unixTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 	beaconState, err := db.State(ctx)
@@ -340,7 +339,7 @@ func TestChainService_FaultyPOWChain(t *testing.T) {
 	chainService := setupBeaconChain(t, true, db, true)
 	unixTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 100)
-	if err := db.InitializeState(unixTime, deposits); err != nil {
+	if err := db.InitializeState(unixTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 
@@ -393,7 +392,11 @@ func TestChainService_Starts(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db, true)
 	deposits, privKeys := setupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
+	eth1Data := &pb.Eth1Data{
+		DepositRootHash32: []byte{},
+		BlockHash32:       []byte{},
+	}
+	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -448,7 +451,11 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db, true)
 	deposits, privKeys := setupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
+	eth1Data := &pb.Eth1Data{
+		DepositRootHash32: []byte{},
+		BlockHash32:       []byte{},
+	}
+	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -522,7 +529,11 @@ func TestPOWBlockExists_UsingDepositRootHash(t *testing.T) {
 	chainService := setupBeaconChain(t, true, db, true)
 	unixTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	if err := db.InitializeState(unixTime, deposits); err != nil {
+	eth1Data := &pb.Eth1Data{
+		DepositRootHash32: []byte{},
+		BlockHash32:       []byte{},
+	}
+	if err := db.InitializeState(unixTime, deposits, eth1Data); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 
@@ -561,19 +572,19 @@ func TestUpdateHead_SavesBlock(t *testing.T) {
 		state     *pb.BeaconState
 		logAssert string
 	}{
-		// Higher slot but same crystallized state should trigger chain update.
+		// Higher slot but same state should trigger chain update.
 		{
 			blockSlot: 64,
 			state:     beaconState,
 			logAssert: "Chain head block and state updated",
 		},
-		// Higher slot, different crystallized state, but higher last finalized slot.
+		// Higher slot, different state, but higher last finalized slot.
 		{
 			blockSlot: 64,
 			state:     &pb.BeaconState{FinalizedEpoch: 2},
 			logAssert: "Chain head block and state updated",
 		},
-		// Higher slot, different crystallized state, same last finalized slot,
+		// Higher slot, different state, same last finalized slot,
 		// but last justified slot.
 		{
 			blockSlot: 64,
@@ -591,7 +602,7 @@ func TestUpdateHead_SavesBlock(t *testing.T) {
 		chainService := setupBeaconChain(t, false, db, true)
 		unixTime := uint64(time.Now().Unix())
 		deposits, _ := setupInitialDeposits(t, 100)
-		if err := db.InitializeState(unixTime, deposits); err != nil {
+		if err := db.InitializeState(unixTime, deposits, &pb.Eth1Data{}); err != nil {
 			t.Fatalf("Could not initialize beacon state to disk: %v", err)
 		}
 
@@ -631,7 +642,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 	chainService := setupBeaconChain(t, false, db, true)
 	unixTime := uint64(time.Now().Unix())
 	deposits, privKeys := setupInitialDeposits(t, 100)
-	if err := db.InitializeState(unixTime, deposits); err != nil {
+	if err := db.InitializeState(unixTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 	beaconState, err := db.State(ctx)

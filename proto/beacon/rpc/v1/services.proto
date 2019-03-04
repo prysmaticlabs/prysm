@@ -31,19 +31,8 @@ service ProposerService {
 
 service ValidatorService {
     rpc ValidatorIndex(ValidatorIndexRequest) returns (ValidatorIndexResponse);
-    rpc ValidatorEpochAssignments(ValidatorEpochAssignmentsRequest) returns (ValidatorEpochAssignmentsResponse);
-    rpc ValidatorCommitteeAtSlot(CommitteeRequest) returns (CommitteeResponse);
     rpc CommitteeAssignment(ValidatorEpochAssignmentsRequest) returns (CommitteeAssignmentResponse);
-}
-
-message CommitteeRequest {
-    uint64 slot = 1;
-    uint64 validator_index = 2;
-}
-
-message CommitteeResponse {
-    repeated uint64 committee = 1;
-    uint64 shard = 2;
+    rpc ValidatorStatus(ValidatorIndexRequest) returns (ValidatorStatusResponse);
 }
 
 message AttestationDataRequest {
@@ -65,15 +54,6 @@ message PendingAttestationsRequest {
 
 message PendingAttestationsResponse {
     repeated ethereum.beacon.p2p.v1.Attestation pending_attestations = 1;
-}
-
-message CrosslinkCommitteeRequest {
-    uint64 slot = 1;
-}
-
-message CrosslinkCommitteeResponse {
-    repeated uint64 committee = 1;
-    uint64 shard = 2;
 }
 
 message ChainStartResponse {
@@ -117,14 +97,6 @@ enum ValidatorRole {
     BOTH = 3;
 }
 
-// Assignment defines a validator's assignment responsibilities.
-message Assignment {
-    bytes public_key = 1;
-    uint64 shard = 2;
-    uint64 attester_slot = 3;
-    uint64 proposer_slot = 4;
-}
-
 message ValidatorIndexRequest {
     bytes public_key = 1;
 }
@@ -138,10 +110,6 @@ message ValidatorEpochAssignmentsRequest {
     bytes public_key = 2;
 }
 
-message ValidatorEpochAssignmentsResponse {
-    Assignment assignment = 2;
-}
-
 message PendingDepositsResponse {
     repeated ethereum.beacon.p2p.v1.Deposit pending_deposits = 1;
 }
@@ -153,6 +121,20 @@ message CommitteeAssignmentResponse {
     bool is_proposer = 4;
 }
 
+message ValidatorStatusResponse {
+    ValidatorStatus status = 1;
+}
+
 message Eth1DataResponse {
     ethereum.beacon.p2p.v1.Eth1Data eth1_data = 1;
+}
+
+enum ValidatorStatus {
+    UNKNOWN_STATUS = 0;
+    PENDING_ACTIVE = 1;
+    ACTIVE = 2;
+    INITIATED_EXIT = 3;
+    WITHDRAWABLE = 4;
+    EXITED = 5;
+    EXITED_SLASHED = 6;
 }
