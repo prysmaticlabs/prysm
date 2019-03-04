@@ -179,7 +179,7 @@ func (b *BeaconNode) registerP2P(ctx *cli.Context) error {
 	return b.services.RegisterService(beaconp2p)
 }
 
-func (b *BeaconNode) registerBlockchainService(ctx *cli.Context) error {
+func (b *BeaconNode) registerBlockchainService(_ *cli.Context) error {
 	var web3Service *powchain.Web3Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
@@ -257,7 +257,7 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 	return b.services.RegisterService(web3Service)
 }
 
-func (b *BeaconNode) registerSyncService(ctx *cli.Context) error {
+func (b *BeaconNode) registerSyncService(_ *cli.Context) error {
 	var chainService *blockchain.ChainService
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err
