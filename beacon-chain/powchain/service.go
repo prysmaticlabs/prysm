@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
+	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -424,7 +424,7 @@ func (w *Web3Service) run(done <-chan struct{}) {
 	header, err := w.blockFetcher.HeaderByNumber(w.ctx, nil)
 	if err != nil {
 		log.Errorf("Unable to retrieve latest ETH1.0 chain header: %v", err)
-  	w.runError = err
+		w.runError = err
 		return
 	}
 
@@ -454,9 +454,6 @@ func (w *Web3Service) run(done <-chan struct{}) {
 		case w.runError = <-headSub.Err():
 			log.Debug("Unsubscribed to head events, exiting goroutine")
 			return
-		case w.runError = <-logSub.Err():
-			log.Debug("Unsubscribed to log events, exiting goroutine")
-			return
 		case header := <-w.headerChan:
 			blockNumberGauge.Set(float64(header.Number.Int64()))
 			w.blockHeight = header.Number
@@ -468,6 +465,7 @@ func (w *Web3Service) run(done <-chan struct{}) {
 			}).Debug("Latest web3 chain event")
 
 			if err := w.blockCache.AddBlock(gethTypes.NewBlockWithHeader(header)); err != nil {
+				w.runError = err
 				log.Errorf("Unable to add block data to cache %v", err)
 			}
 		case <-ticker.C:
@@ -475,6 +473,7 @@ func (w *Web3Service) run(done <-chan struct{}) {
 				continue
 			}
 			if err := w.requestBatchedLogs(); err != nil {
+				w.runError = err
 				log.Error(err)
 			}
 
