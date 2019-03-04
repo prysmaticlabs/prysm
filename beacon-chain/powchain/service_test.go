@@ -12,8 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
@@ -21,6 +19,7 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -416,6 +415,21 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 	if web3Service.blockHash.Hex() != header.Hash().Hex() {
 		t.Errorf("block hash not set, expected %v, got %v", header.Hash().Hex(), web3Service.blockHash.Hex())
 	}
+
+	blockInfoExistsInCache, info, err := web3Service.blockCache.BlockInfoByHash(web3Service.blockHash)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !blockInfoExistsInCache {
+		t.Error("Expected block info to exist in cache")
+	}
+	if info.Hash != web3Service.blockHash {
+		t.Errorf(
+			"Expected block info hash to be %v, got %v",
+			web3Service.blockHash,
+			info.Hash,
+		)
+	}
 }
 
 func TestProcessDepositLog_OK(t *testing.T) {
@@ -775,15 +789,7 @@ func TestProcessChainStartLog_OK(t *testing.T) {
 		)
 	}
 
-	genesisTime := <-genesisTimeChan
-	if genesisTime.Unix() > time.Now().Unix() {
-		t.Errorf(
-			"Timestamp from log is higher than the current time %d > %d",
-			genesisTime.Unix(),
-			time.Now().Unix(),
-		)
-	}
-
+	<-genesisTimeChan
 	testutil.AssertLogsDoNotContain(t, hook, "Unable to unpack ChainStart log data")
 	testutil.AssertLogsDoNotContain(t, hook, "Receipt root from log doesn't match the root saved in memory")
 	testutil.AssertLogsDoNotContain(t, hook, "Invalid timestamp from log")
@@ -930,6 +936,7 @@ func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
+	ctx := context.Background()
 
 	block := gethTypes.NewBlock(
 		&gethTypes.Header{
@@ -941,13 +948,21 @@ func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 	)
 	wanted := block.Hash()
 
-	hash, err := web3Service.BlockHashByHeight(big.NewInt(0))
+	hash, err := web3Service.BlockHashByHeight(ctx, big.NewInt(0))
 	if err != nil {
 		t.Fatalf("Could not get block hash with given height %v", err)
 	}
 
 	if !bytes.Equal(hash.Bytes(), wanted.Bytes()) {
 		t.Fatalf("Block hash did not equal expected hash, expected: %v, got: %v", wanted, hash)
+	}
+
+	exists, _, err := web3Service.blockCache.BlockInfoByHash(wanted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !exists {
+		t.Error("Expected block info to be cached")
 	}
 }
 
@@ -970,7 +985,7 @@ func TestBlockExists_ValidHash(t *testing.T) {
 		[]*gethTypes.Receipt{},
 	)
 
-	exists, height, err := web3Service.BlockExists(block.Hash())
+	exists, height, err := web3Service.BlockExists(context.Background(), block.Hash())
 	if err != nil {
 		t.Fatalf("Could not get block hash with given height %v", err)
 	}
@@ -980,6 +995,14 @@ func TestBlockExists_ValidHash(t *testing.T) {
 	}
 	if height.Cmp(block.Number()) != 0 {
 		t.Fatalf("Block height did not equal expected height, expected: %v, got: %v", big.NewInt(42), height)
+	}
+
+	exists, _, err = web3Service.blockCache.BlockInfoByHeight(height)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !exists {
+		t.Error("Expected block to be cached")
 	}
 }
 
@@ -993,8 +1016,44 @@ func TestBlockExists_InvalidHash(t *testing.T) {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
-	_, _, err = web3Service.BlockExists(common.BytesToHash([]byte{0}))
+	_, _, err = web3Service.BlockExists(context.Background(), common.BytesToHash([]byte{0}))
 	if err == nil {
 		t.Fatal("Expected BlockExists to error with invalid hash")
+	}
+}
+
+func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
+	endpoint := "ws://127.0.0.1"
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint:     endpoint,
+		BlockFetcher: nil, // nil blockFetcher would panic if cached value not used
+	})
+	if err != nil {
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+
+	block := gethTypes.NewBlock(
+		&gethTypes.Header{
+			Number: big.NewInt(0),
+		},
+		[]*gethTypes.Transaction{},
+		[]*gethTypes.Header{},
+		[]*gethTypes.Receipt{},
+	)
+
+	if err := web3Service.blockCache.AddBlock(block); err != nil {
+		t.Fatal(err)
+	}
+
+	exists, height, err := web3Service.BlockExists(context.Background(), block.Hash())
+	if err != nil {
+		t.Fatalf("Could not get block hash with given height %v", err)
+	}
+
+	if !exists {
+		t.Fatal("Expected BlockExists to return true.")
+	}
+	if height.Cmp(block.Number()) != 0 {
+		t.Fatalf("Block height did not equal expected height, expected: %v, got: %v", big.NewInt(42), height)
 	}
 }

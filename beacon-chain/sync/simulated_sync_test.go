@@ -7,17 +7,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/bls"
-
 	"github.com/gogo/protobuf/proto"
-
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 type simulatedP2P struct {
@@ -111,7 +109,9 @@ func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*S
 	}
 
 	mockChain := &mockChainService{
-		feed: new(event.Feed),
+		bFeed: new(event.Feed),
+		sFeed: new(event.Feed),
+		cFeed: new(event.Feed),
 	}
 
 	cfg := &Config{
@@ -126,7 +126,7 @@ func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*S
 
 	go ss.run()
 	for !ss.Querier.chainStarted {
-		mockPow.feed.Send(time.Now())
+		mockChain.sFeed.Send(time.Now())
 	}
 
 	for i := 1; i <= numOfBlocks; i++ {
@@ -145,8 +145,8 @@ func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*S
 	return ss, beacondb
 }
 
-func setUpUnSyncedService(simP2P *simulatedP2P, t *testing.T) (*Service, *db.BeaconDB) {
-	bd, beacondb, _ := setupSimBackendAndDB(t)
+func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T) (*Service, *db.BeaconDB) {
+	bd, beacondb, privKeys := setupSimBackendAndDB(t)
 	defer bd.Shutdown()
 	defer db.TeardownDB(bd.DB())
 
@@ -155,7 +155,24 @@ func setUpUnSyncedService(simP2P *simulatedP2P, t *testing.T) (*Service, *db.Bea
 	}
 
 	mockChain := &mockChainService{
-		feed: new(event.Feed),
+		bFeed: new(event.Feed),
+		sFeed: new(event.Feed),
+		cFeed: new(event.Feed),
+	}
+
+	// we add in 2 blocks to the unsynced node so that, we dont request the beacon state from the
+	// synced node to reduce test time.
+	for i := 1; i <= 2; i++ {
+		if err := bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys); err != nil {
+			t.Fatalf("Unable to generate block in simulated backend %v", err)
+		}
+		blocks := bd.InMemoryBlocks()
+		if err := beacondb.SaveBlock(blocks[i]); err != nil {
+			t.Fatalf("Unable to save block %v", err)
+		}
+		if err := beacondb.UpdateChainHead(blocks[i], bd.State()); err != nil {
+			t.Fatalf("Unable to update chain head %v", err)
+		}
 	}
 
 	cfg := &Config{
@@ -170,22 +187,26 @@ func setUpUnSyncedService(simP2P *simulatedP2P, t *testing.T) (*Service, *db.Bea
 
 	go ss.run()
 
-	for ss.Querier.curentHeadSlot == 0 {
+	for ss.Querier.currentHeadSlot == 0 {
 		simP2P.Send(&pb.ChainHeadResponse{
-			Slot: params.BeaconConfig().GenesisSlot + 10,
+			Slot: params.BeaconConfig().GenesisSlot + 12,
 			Hash: []byte{'t', 'e', 's', 't'},
+			Block: &pb.BeaconBlock{
+				StateRootHash32: stateRoot[:],
+			},
 		}, p2p.Peer{})
 	}
 
 	return ss, beacondb
 }
 
-func TestSync_AFullySyncedNode(t *testing.T) {
-	numOfBlocks := 10
+func TestSyncing_AFullySyncedNode(t *testing.T) {
+	numOfBlocks := 12
+	ctx := context.Background()
 	newP2P := &simulatedP2P{
 		subsChannels: make(map[reflect.Type]*event.Feed),
 		mutex:        new(sync.RWMutex),
-		ctx:          context.Background(),
+		ctx:          ctx,
 	}
 
 	// Sets up a synced service which has its head at the current
@@ -195,13 +216,23 @@ func TestSync_AFullySyncedNode(t *testing.T) {
 	defer ss.Stop()
 	defer db.TeardownDB(syncedDB)
 
+	bState, err := syncedDB.State(ctx)
+	if err != nil {
+		t.Fatalf("Could not retrieve state %v", err)
+	}
+
+	h, err := hashutil.HashProto(bState)
+	if err != nil {
+		t.Fatalf("unable to marshal the beacon state: %v", err)
+	}
+
 	// Sets up a sync service which has its current head at genesis.
-	us, unSyncedDB := setUpUnSyncedService(newP2P, t)
+	us, unSyncedDB := setUpUnSyncedService(newP2P, h, t)
 	defer us.Stop()
 	defer db.TeardownDB(unSyncedDB)
 
 	// Sets up another sync service which has its current head at genesis.
-	us2, unSyncedDB2 := setUpUnSyncedService(newP2P, t)
+	us2, unSyncedDB2 := setUpUnSyncedService(newP2P, h, t)
 	defer us2.Stop()
 	defer db.TeardownDB(unSyncedDB2)
 

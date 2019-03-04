@@ -45,7 +45,7 @@ func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.
 
 func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	deposits, privKeys := setupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), []byte{})
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +77,7 @@ func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
 
 func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testing.T) {
 	deposits, privKeys := setupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), []byte{})
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +106,8 @@ func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testi
 	}
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	mix := newState.LatestRandaoMixes[currentEpoch%params.BeaconConfig().LatestRandaoMixesLength]
-	if bytes.Equal(mix, params.BeaconConfig().EmptySignature[:]) {
+
+	if bytes.Equal(mix, params.BeaconConfig().ZeroHash[:]) {
 		t.Errorf(
 			"Expected empty signature to be overwritten by randao reveal, received %v",
 			params.BeaconConfig().EmptySignature,
@@ -132,7 +133,7 @@ func TestProcessEth1Data_SameRootHash(t *testing.T) {
 			BlockHash32:       []byte{2},
 		},
 	}
-	beaconState = blocks.ProcessEth1Data(beaconState, block)
+	beaconState = blocks.ProcessEth1DataInBlock(beaconState, block)
 	newETH1DataVotes := beaconState.Eth1DataVotes
 	if newETH1DataVotes[0].VoteCount != 6 {
 		t.Errorf("expected votes to increase from 5 to 6, received %d", newETH1DataVotes[0].VoteCount)
@@ -159,7 +160,7 @@ func TestProcessEth1Data_NewDepositRootHash(t *testing.T) {
 		},
 	}
 
-	beaconState = blocks.ProcessEth1Data(beaconState, block)
+	beaconState = blocks.ProcessEth1DataInBlock(beaconState, block)
 	newETH1DataVotes := beaconState.Eth1DataVotes
 	if len(newETH1DataVotes) <= 1 {
 		t.Error("expected new ETH1 data votes to have length > 1")
@@ -324,12 +325,12 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
 
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	validators := make([]*pb.Validator, 10)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
-			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-			SlashedEpoch:    params.BeaconConfig().GenesisEpoch * 2,
-			WithdrawalEpoch: params.BeaconConfig().GenesisEpoch,
+			ExitEpoch:       params.BeaconConfig().GenesisEpoch + 1,
+			SlashedEpoch:    params.BeaconConfig().GenesisEpoch + 1,
+			WithdrawalEpoch: params.BeaconConfig().GenesisEpoch + 1,
 		}
 	}
 	validatorBalances := make([]uint64, len(validators))
@@ -341,18 +342,18 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		{
 			ProposerIndex: 1,
 			ProposalData_1: &pb.ProposalSignedData{
-				Slot:            1,
+				Slot:            params.BeaconConfig().GenesisSlot + 1,
 				Shard:           1,
 				BlockRootHash32: []byte{0, 1, 0},
 			},
 			ProposalData_2: &pb.ProposalSignedData{
-				Slot:            1,
+				Slot:            params.BeaconConfig().GenesisSlot + 1,
 				Shard:           1,
 				BlockRootHash32: []byte{0, 1, 0},
 			},
 		},
 	}
-	currentSlot := uint64(1)
+	currentSlot := params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch
 	beaconState := &pb.BeaconState{
 		ValidatorRegistry:     validators,
 		Slot:                  currentSlot,
@@ -374,11 +375,10 @@ func TestProcessProposerSlashings_AppliesCorrectStatus(t *testing.T) {
 		t.Fatalf("Unexpected error: %s", err)
 	}
 
-	validators = newState.ValidatorRegistry
-	if validators[1].ExitEpoch !=
-		beaconState.Slot+params.BeaconConfig().ActivationExitDelay {
+	newStateVals := newState.ValidatorRegistry
+	if newStateVals[1].ExitEpoch != validators[1].ExitEpoch {
 		t.Errorf("Proposer with index 1 did not correctly exit,"+"wanted slot:%d, got:%d",
-			beaconState.Slot+params.BeaconConfig().ActivationExitDelay, validators[1].ExitEpoch)
+			newStateVals[1], validators[1].ExitEpoch)
 	}
 }
 
@@ -594,12 +594,12 @@ func TestProcessAttesterSlashings_EmptyVoteIndexIntersection(t *testing.T) {
 func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	// We test the case when data is correct and verify the validator
 	// registry has been updated.
-	validators := make([]*pb.Validator, params.BeaconConfig().DepositsForChainStart)
+	validators := make([]*pb.Validator, 100)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
-			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-			SlashedEpoch:    6,
-			WithdrawalEpoch: params.BeaconConfig().FarFutureEpoch,
+			ExitEpoch:       params.BeaconConfig().GenesisEpoch + 1,
+			SlashedEpoch:    params.BeaconConfig().FarFutureEpoch,
+			WithdrawalEpoch: params.BeaconConfig().GenesisEpoch + 1*params.BeaconConfig().SlotsPerEpoch,
 		}
 	}
 	validatorBalances := make([]uint64, len(validators))
@@ -608,11 +608,11 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	}
 
 	att1 := &pb.AttestationData{
-		Slot:           5,
+		Slot:           params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch,
 		JustifiedEpoch: 5,
 	}
 	att2 := &pb.AttestationData{
-		Slot:           5,
+		Slot:           params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch,
 		JustifiedEpoch: 4,
 	}
 	slashings := []*pb.AttesterSlashing{
@@ -630,12 +630,12 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		},
 	}
 
-	currentSlot := uint64(5)
+	currentSlot := params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch
 	beaconState := &pb.BeaconState{
 		ValidatorRegistry:     validators,
 		Slot:                  currentSlot,
 		ValidatorBalances:     validatorBalances,
-		LatestSlashedBalances: []uint64{0},
+		LatestSlashedBalances: make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -654,24 +654,14 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 
 	// Given the intersection of slashable indices is [1], only validator
 	// at index 1 should be slashed and exited. We confirm this below.
-	if newRegistry[1].ExitEpoch !=
-		helpers.EntryExitEffectEpoch(helpers.CurrentEpoch(beaconState)) {
+	if newRegistry[1].ExitEpoch != validators[1].ExitEpoch {
 		t.Errorf(
 			`
-			Expected validator at index 1's exit epoch to change to
+			Expected validator at index 1's exit epoch to match
 			%d, received %d instead
 			`,
-			helpers.EntryExitEffectEpoch(helpers.CurrentEpoch(beaconState)),
+			validators[1].ExitEpoch,
 			newRegistry[1].ExitEpoch,
-		)
-	}
-	if newRegistry[0].ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-		t.Errorf(
-			`
-			Expected validator at index 0's exit epoch to not change,
-			received %d instead
-			`,
-			newRegistry[0].ExitEpoch,
 		)
 	}
 }
@@ -768,7 +758,7 @@ func TestProcessBlockAttestations_JustifiedEpochVerificationFailure(t *testing.T
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Slot:           152,
+				Slot:           params.BeaconConfig().GenesisSlot + 152,
 				JustifiedEpoch: 2,
 			},
 		},
@@ -779,7 +769,7 @@ func TestProcessBlockAttestations_JustifiedEpochVerificationFailure(t *testing.T
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:           158,
+		Slot:           params.BeaconConfig().GenesisSlot + 158,
 		JustifiedEpoch: 1,
 	}
 
@@ -801,7 +791,7 @@ func TestProcessBlockAttestations_PreviousJustifiedEpochVerificationFailure(t *t
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Slot:           params.BeaconConfig().SlotsPerEpoch,
+				Slot:           params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch + 1,
 				JustifiedEpoch: 3,
 			},
 		},
@@ -812,7 +802,7 @@ func TestProcessBlockAttestations_PreviousJustifiedEpochVerificationFailure(t *t
 		},
 	}
 	state := &pb.BeaconState{
-		Slot:                   params.BeaconConfig().SlotsPerEpoch * 2,
+		Slot:                   params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch,
 		PreviousJustifiedEpoch: 2,
 	}
 
@@ -837,14 +827,14 @@ func TestProcessBlockAttestations_BlockRootOutOfBounds(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
-		Slot:                   64,
+		Slot:                   params.BeaconConfig().GenesisSlot + 64,
 		PreviousJustifiedEpoch: 1,
 		LatestBlockRootHash32S: blockRoots,
 	}
 	attestations := []*pb.Attestation{
 		{
 			Data: &pb.AttestationData{
-				Slot:                     60,
+				Slot:                     params.BeaconConfig().GenesisSlot + 60,
 				JustifiedBlockRootHash32: []byte{},
 				JustifiedEpoch:           1,
 			},
@@ -918,7 +908,7 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 	// the attestation should be invalid.
 	stateLatestCrosslinks := []*pb.Crosslink{
 		{
-			ShardBlockRootHash32: []byte{1},
+			CrosslinkDataRootHash32: []byte{1},
 		},
 	}
 	state := &pb.BeaconState{
@@ -933,8 +923,8 @@ func TestProcessBlockAttestations_CrosslinkRootFailure(t *testing.T) {
 				Shard:                    0,
 				Slot:                     params.BeaconConfig().GenesisSlot + 20,
 				JustifiedBlockRootHash32: blockRoots[0],
-				LatestCrosslink:          &pb.Crosslink{ShardBlockRootHash32: []byte{2}},
-				ShardBlockRootHash32:     params.BeaconConfig().ZeroHash[:],
+				LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{2}},
+				CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
 				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
 			},
 		},
@@ -964,7 +954,7 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 	}
 	stateLatestCrosslinks := []*pb.Crosslink{
 		{
-			ShardBlockRootHash32: []byte{1},
+			CrosslinkDataRootHash32: []byte{1},
 		},
 	}
 	state := &pb.BeaconState{
@@ -979,8 +969,8 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 				Shard:                    0,
 				Slot:                     params.BeaconConfig().GenesisSlot + 20,
 				JustifiedBlockRootHash32: blockRoots[0],
-				LatestCrosslink:          &pb.Crosslink{ShardBlockRootHash32: []byte{1}},
-				ShardBlockRootHash32:     []byte{1},
+				LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
+				CrosslinkDataRootHash32:  []byte{1},
 				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
 			},
 		},
@@ -1011,7 +1001,7 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 	}
 	stateLatestCrosslinks := []*pb.Crosslink{
 		{
-			ShardBlockRootHash32: []byte{1},
+			CrosslinkDataRootHash32: []byte{1},
 		},
 	}
 	state := &pb.BeaconState{
@@ -1025,8 +1015,8 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 			Shard:                    0,
 			Slot:                     params.BeaconConfig().GenesisSlot + 20,
 			JustifiedBlockRootHash32: blockRoots[0],
-			LatestCrosslink:          &pb.Crosslink{ShardBlockRootHash32: []byte{1}},
-			ShardBlockRootHash32:     params.BeaconConfig().ZeroHash[:],
+			LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
+			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
 			JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
 		},
 		AggregationBitfield: []byte{1},

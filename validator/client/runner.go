@@ -3,10 +3,10 @@ package client
 import (
 	"context"
 
-	"github.com/opentracing/opentracing-go"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 // Validator interface defines the primary methods of a validator client.
@@ -42,14 +42,17 @@ func run(ctx context.Context, v Validator) {
 	if err := v.UpdateAssignments(ctx, params.BeaconConfig().GenesisSlot); err != nil {
 		log.WithField("error", err).Error("Failed to update assignments")
 	}
-	span, ctx := opentracing.StartSpanFromContext(ctx, "processSlot")
-	defer span.Finish()
 	for {
+		ctx, span := trace.StartSpan(ctx, "processSlot")
+		defer span.End()
+
 		select {
 		case <-ctx.Done():
 			log.Info("Context cancelled, stopping validator")
 			return // Exit if context is cancelled.
 		case slot := <-v.NextSlot():
+			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
+
 			if err := v.UpdateAssignments(ctx, slot); err != nil {
 				log.WithField("error", err).Error("Failed to update assignments")
 				continue
@@ -69,7 +72,7 @@ func run(ctx context.Context, v Validator) {
 				log.WithFields(logrus.Fields{
 					"slot": slot - params.BeaconConfig().GenesisSlot,
 					"role": role,
-				}).Warn("Unknown role, doing nothing")
+				}).Info("Unknown role, doing nothing")
 			default:
 				// Do nothing :)
 			}

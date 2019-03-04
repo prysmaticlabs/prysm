@@ -1,12 +1,13 @@
 package db
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 func TestNilDB_OK(t *testing.T) {
@@ -14,7 +15,7 @@ func TestNilDB_OK(t *testing.T) {
 	defer teardownDB(t, db)
 
 	block := &pb.BeaconBlock{}
-	h, _ := ssz.TreeHash(block)
+	h, _ := hashutil.HashBeaconBlock(block)
 
 	hasBlock := db.HasBlock(h)
 	if hasBlock {
@@ -35,7 +36,7 @@ func TestSave_OK(t *testing.T) {
 	defer teardownDB(t, db)
 
 	block1 := &pb.BeaconBlock{}
-	h1, _ := ssz.TreeHash(block1)
+	h1, _ := hashutil.HashBeaconBlock(block1)
 
 	err := db.SaveBlock(block1)
 	if err != nil {
@@ -46,7 +47,7 @@ func TestSave_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get block: %v", err)
 	}
-	h1Prime, _ := ssz.TreeHash(b1Prime)
+	h1Prime, _ := hashutil.HashBeaconBlock(b1Prime)
 
 	if b1Prime == nil || h1 != h1Prime {
 		t.Fatalf("get should return b1: %x", h1)
@@ -55,7 +56,7 @@ func TestSave_OK(t *testing.T) {
 	block2 := &pb.BeaconBlock{
 		Slot: 0,
 	}
-	h2, _ := ssz.TreeHash(block2)
+	h2, _ := hashutil.HashBeaconBlock(block2)
 
 	err = db.SaveBlock(block2)
 	if err != nil {
@@ -66,7 +67,7 @@ func TestSave_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get block: %v", err)
 	}
-	h2Prime, _ := ssz.TreeHash(b2Prime)
+	h2Prime, _ := hashutil.HashBeaconBlock(b2Prime)
 	if b2Prime == nil || h2 != h2Prime {
 		t.Fatalf("get should return b2: %x", h2)
 	}
@@ -88,14 +89,15 @@ func TestBlockBySlotEmptyChain_OK(t *testing.T) {
 func TestUpdateChainHead_NoBlock(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
+	ctx := context.Background()
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	err := db.InitializeState(genesisTime, deposits)
+	err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
-	beaconState, err := db.State()
+	beaconState, err := db.State(ctx)
 	if err != nil {
 		t.Fatalf("failed to get beacon state: %v", err)
 	}
@@ -109,10 +111,11 @@ func TestUpdateChainHead_NoBlock(t *testing.T) {
 func TestUpdateChainHead_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
+	ctx := context.Background()
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	err := db.InitializeState(genesisTime, deposits)
+	err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
@@ -121,12 +124,12 @@ func TestUpdateChainHead_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get genesis block: %v", err)
 	}
-	bHash, err := ssz.TreeHash(block)
+	bHash, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		t.Fatalf("failed to get hash of b: %v", err)
 	}
 
-	beaconState, err := db.State()
+	beaconState, err := db.State(ctx)
 	if err != nil {
 		t.Fatalf("failed to get beacon state: %v", err)
 	}
@@ -135,7 +138,7 @@ func TestUpdateChainHead_OK(t *testing.T) {
 		Slot:             1,
 		ParentRootHash32: bHash[:],
 	}
-	b2Hash, err := ssz.TreeHash(block2)
+	b2Hash, err := hashutil.HashBeaconBlock(block2)
 	if err != nil {
 		t.Fatalf("failed to hash b2: %v", err)
 	}
@@ -155,11 +158,11 @@ func TestUpdateChainHead_OK(t *testing.T) {
 		t.Fatalf("failed to retrieve head: %v", err)
 	}
 
-	b2PrimeHash, err := ssz.TreeHash(b2Prime)
+	b2PrimeHash, err := hashutil.HashBeaconBlock(b2Prime)
 	if err != nil {
 		t.Fatalf("failed to hash b2Prime: %v", err)
 	}
-	b2SigmaHash, err := ssz.TreeHash(b2Sigma)
+	b2SigmaHash, err := hashutil.HashBeaconBlock(b2Sigma)
 	if err != nil {
 		t.Fatalf("failed to hash b2Sigma: %v", err)
 	}
@@ -175,15 +178,16 @@ func TestUpdateChainHead_OK(t *testing.T) {
 func TestChainProgress_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
+	ctx := context.Background()
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	err := db.InitializeState(genesisTime, deposits)
+	err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
 
-	beaconState, err := db.State()
+	beaconState, err := db.State(ctx)
 	if err != nil {
 		t.Fatalf("Failed to get beacon state: %v", err)
 	}

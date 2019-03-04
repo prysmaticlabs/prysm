@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -41,14 +40,30 @@ func (mp *mockP2P) Send(msg proto.Message, peer p2p.Peer) {
 }
 
 type mockChainService struct {
-	feed *event.Feed
+	bFeed *event.Feed
+	sFeed *event.Feed
+	cFeed *event.Feed
 }
 
 func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
-	if ms.feed == nil {
+	if ms.bFeed == nil {
 		return new(event.Feed)
 	}
-	return ms.feed
+	return ms.bFeed
+}
+
+func (ms *mockChainService) StateInitializedFeed() *event.Feed {
+	if ms.sFeed == nil {
+		return new(event.Feed)
+	}
+	return ms.sFeed
+}
+
+func (ms *mockChainService) CanonicalBlockFeed() *event.Feed {
+	if ms.cFeed == nil {
+		return new(event.Feed)
+	}
+	return ms.cFeed
 }
 
 type mockOperationService struct{}
@@ -129,7 +144,7 @@ func TestProcessBlock_OK(t *testing.T) {
 	}
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	if err := db.InitializeState(genesisTime, deposits); err != nil {
+	if err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
@@ -155,7 +170,7 @@ func TestProcessBlock_OK(t *testing.T) {
 	if err := db.SaveBlock(parentBlock); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
-	parentRoot, err := ssz.TreeHash(parentBlock)
+	parentRoot, err := hashutil.HashBeaconBlock(parentBlock)
 	if err != nil {
 		t.Fatalf("failed to get parent root: %v", err)
 	}
@@ -170,9 +185,9 @@ func TestProcessBlock_OK(t *testing.T) {
 	}
 	attestation := &pb.Attestation{
 		Data: &pb.AttestationData{
-			Slot:                 0,
-			Shard:                0,
-			ShardBlockRootHash32: []byte{'A'},
+			Slot:                    0,
+			Shard:                   0,
+			CrosslinkDataRootHash32: []byte{'A'},
 		},
 	}
 
@@ -209,7 +224,7 @@ func TestProcessBlock_MultipleBlocks(t *testing.T) {
 	}
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	if err := db.InitializeState(genesisTime, deposits); err != nil {
+	if err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -236,7 +251,7 @@ func TestProcessBlock_MultipleBlocks(t *testing.T) {
 	if err := db.SaveBlock(parentBlock); err != nil {
 		t.Fatalf("failed to save block: %v", err)
 	}
-	parentRoot, err := ssz.TreeHash(parentBlock)
+	parentRoot, err := hashutil.HashBeaconBlock(parentBlock)
 	if err != nil {
 		t.Fatalf("failed to get parent root: %v", err)
 	}
@@ -254,8 +269,8 @@ func TestProcessBlock_MultipleBlocks(t *testing.T) {
 		Block: data1,
 		Attestation: &pb.Attestation{
 			Data: &pb.AttestationData{
-				ShardBlockRootHash32: []byte{},
-				Slot:                 params.BeaconConfig().GenesisSlot,
+				CrosslinkDataRootHash32: []byte{},
+				Slot:                    params.BeaconConfig().GenesisSlot,
 			},
 		},
 	}
@@ -279,8 +294,8 @@ func TestProcessBlock_MultipleBlocks(t *testing.T) {
 		Block: data2,
 		Attestation: &pb.Attestation{
 			Data: &pb.AttestationData{
-				ShardBlockRootHash32: []byte{},
-				Slot:                 0,
+				CrosslinkDataRootHash32: []byte{},
+				Slot:                    0,
 			},
 		},
 	}
@@ -461,6 +476,7 @@ func TestReceiveExitReq_OK(t *testing.T) {
 		OperationService: os,
 		P2P:              &mockP2P{},
 		BeaconDB:         db,
+		ChainService:     &mockChainService{},
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
@@ -496,6 +512,7 @@ func TestHandleAttReq_HashNotFound(t *testing.T) {
 		OperationService: os,
 		P2P:              &mockP2P{},
 		BeaconDB:         db,
+		ChainService:     &mockChainService{},
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
@@ -531,6 +548,7 @@ func TestHandleUnseenAttsReq_EmptyAttsPool(t *testing.T) {
 		OperationService: os,
 		P2P:              &mockP2P{},
 		BeaconDB:         db,
+		ChainService:     &mockChainService{},
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
@@ -574,6 +592,7 @@ func TestHandleAttReq_Ok(t *testing.T) {
 		OperationService: os,
 		P2P:              &mockP2P{},
 		BeaconDB:         db,
+		ChainService:     &mockChainService{},
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
@@ -616,6 +635,7 @@ func TestHandleUnseenAttsReq_Ok(t *testing.T) {
 		OperationService: os,
 		P2P:              &mockP2P{},
 		BeaconDB:         db,
+		ChainService:     &mockChainService{},
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
@@ -636,4 +656,90 @@ func TestHandleUnseenAttsReq_Ok(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 	testutil.AssertLogsContain(t, hook, "Sending response for batched unseen attestations to peer")
+}
+
+func TestHandleStateReq_NOState(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	ss := setupService(t, db)
+
+	genesisTime := uint64(time.Now().Unix())
+	deposits, _ := setupInitialDeposits(t, 10)
+	if err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{}); err != nil {
+		t.Fatalf("Failed to initialize state: %v", err)
+	}
+
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.run()
+		<-exitRoutine
+	}()
+
+	request1 := &pb.BeaconStateRequest{
+		Hash: []byte{'a'},
+	}
+
+	msg1 := p2p.Message{
+		Ctx:  context.Background(),
+		Data: request1,
+		Peer: p2p.Peer{},
+	}
+
+	ss.stateRequestBuf <- msg1
+
+	ss.cancel()
+	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, "Requested state root is different from locally stored state root")
+
+}
+
+func TestHandleStateReq_OK(t *testing.T) {
+	hook := logTest.NewGlobal()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
+	genesisTime := time.Now()
+	unixTime := uint64(genesisTime.Unix())
+	if err := db.InitializeState(unixTime, []*pb.Deposit{}, &pb.Eth1Data{}); err != nil {
+		t.Fatalf("could not initialize beacon state to disk: %v", err)
+	}
+	beaconState, err := db.State(ctx)
+	if err != nil {
+		t.Fatalf("could not attempt fetch beacon state: %v", err)
+	}
+	stateRoot, err := hashutil.HashProto(beaconState)
+	if err != nil {
+		t.Fatalf("could not hash beacon state: %v", err)
+	}
+
+	ss := setupService(t, db)
+	exitRoutine := make(chan bool)
+
+	go func() {
+		ss.run()
+		<-exitRoutine
+	}()
+
+	request1 := &pb.BeaconStateRequest{
+		Hash: stateRoot[:],
+	}
+
+	msg1 := p2p.Message{
+		Ctx:  context.Background(),
+		Data: request1,
+		Peer: p2p.Peer{},
+	}
+
+	ss.stateRequestBuf <- msg1
+
+	ss.cancel()
+	exitRoutine <- true
+
+	testutil.AssertLogsContain(t, hook, "Sending beacon state to peer")
 }

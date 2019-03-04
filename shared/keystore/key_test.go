@@ -7,10 +7,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	"github.com/pborman/uuid"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 )
 
@@ -91,7 +90,7 @@ func TestNewKeyFromBLS(t *testing.T) {
 }
 
 func TestWriteFile(t *testing.T) {
-	tmpdir := os.TempDir()
+	tmpdir := testutil.TempDir()
 	filedir := tmpdir + "/keystore"
 
 	testKeystore := []byte{'t', 'e', 's', 't'}

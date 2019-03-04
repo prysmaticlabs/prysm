@@ -2,16 +2,18 @@ package state_test
 
 import (
 	"bytes"
+	"encoding/binary"
 	"reflect"
 	"strconv"
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 func TestGenesisBeaconState_OK(t *testing.T) {
@@ -84,7 +86,10 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	newState, err := state.GenesisBeaconState(
 		deposits,
 		genesisTime,
-		processedPowReceiptRoot)
+		&pb.Eth1Data{
+			DepositRootHash32: processedPowReceiptRoot,
+			BlockHash32:       []byte{},
+		})
 	if err != nil {
 		t.Fatalf("could not execute GenesisBeaconState: %v", err)
 	}
@@ -105,7 +110,7 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	}
 
 	// Validator registry fields checks.
-	if newState.ValidatorRegistryUpdateEpoch != params.BeaconConfig().FarFutureEpoch {
+	if newState.ValidatorRegistryUpdateEpoch != params.BeaconConfig().GenesisEpoch {
 		t.Error("ValidatorRegistryUpdateSlot was not correctly initialized")
 	}
 	if len(newState.ValidatorRegistry) != depositsForChainStart {
@@ -149,10 +154,13 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 		t.Error("BatchedBlockRootHash32S was not correctly initialized")
 	}
 	activeValidators := helpers.ActiveValidatorIndices(newState.ValidatorRegistry, params.BeaconConfig().GenesisEpoch)
-	genesisActiveIndexRoot, err := ssz.TreeHash(activeValidators)
-	if err != nil {
-		t.Fatalf("Could not determine genesis active index root: %v", err)
+	indicesBytes := []byte{}
+	for _, val := range activeValidators {
+		buf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(buf, val)
+		indicesBytes = append(indicesBytes, buf...)
 	}
+	genesisActiveIndexRoot := hashutil.Hash(indicesBytes)
 	if !bytes.Equal(newState.LatestIndexRootHash32S[0], genesisActiveIndexRoot[:]) {
 		t.Errorf(
 			"Expected index roots to be the tree hash root of active validator indices, received %#x",
@@ -177,11 +185,11 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 }
 
 func TestGenesisState_HashEquality(t *testing.T) {
-	state1, _ := state.GenesisBeaconState(nil, 0, nil)
-	state2, _ := state.GenesisBeaconState(nil, 0, nil)
+	state1, _ := state.GenesisBeaconState(nil, 0, &pb.Eth1Data{})
+	state2, _ := state.GenesisBeaconState(nil, 0, &pb.Eth1Data{})
 
-	root1, err1 := ssz.TreeHash(state1)
-	root2, err2 := ssz.TreeHash(state2)
+	root1, err1 := hashutil.HashProto(state1)
+	root2, err2 := hashutil.HashProto(state2)
 
 	if err1 != nil || err2 != nil {
 		t.Fatalf("Failed to marshal state to bytes: %v %v", err1, err2)

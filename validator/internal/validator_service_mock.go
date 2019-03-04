@@ -36,64 +36,24 @@ func (m *MockValidatorServiceClient) EXPECT() *MockValidatorServiceClientMockRec
 	return m.recorder
 }
 
-// NextEpochCommitteeAssignment mocks base method
-func (m *MockValidatorServiceClient) NextEpochCommitteeAssignment(arg0 context.Context, arg1 *v1.ValidatorIndexRequest, arg2 ...grpc.CallOption) (*v1.CommitteeAssignmentResponse, error) {
+// CommitteeAssignment mocks base method
+func (m *MockValidatorServiceClient) CommitteeAssignment(arg0 context.Context, arg1 *v1.ValidatorEpochAssignmentsRequest, arg2 ...grpc.CallOption) (*v1.CommitteeAssignmentResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "NextEpochCommitteeAssignment", varargs...)
+	ret := m.ctrl.Call(m, "CommitteeAssignment", varargs...)
 	ret0, _ := ret[0].(*v1.CommitteeAssignmentResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// NextEpochCommitteeAssignment indicates an expected call of NextEpochCommitteeAssignment
-func (mr *MockValidatorServiceClientMockRecorder) NextEpochCommitteeAssignment(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+// CommitteeAssignment indicates an expected call of CommitteeAssignment
+func (mr *MockValidatorServiceClientMockRecorder) CommitteeAssignment(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NextEpochCommitteeAssignment", reflect.TypeOf((*MockValidatorServiceClient)(nil).NextEpochCommitteeAssignment), varargs...)
-}
-
-// ValidatorCommitteeAtSlot mocks base method
-func (m *MockValidatorServiceClient) ValidatorCommitteeAtSlot(arg0 context.Context, arg1 *v1.CommitteeRequest, arg2 ...grpc.CallOption) (*v1.CommitteeResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "ValidatorCommitteeAtSlot", varargs...)
-	ret0, _ := ret[0].(*v1.CommitteeResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ValidatorCommitteeAtSlot indicates an expected call of ValidatorCommitteeAtSlot
-func (mr *MockValidatorServiceClientMockRecorder) ValidatorCommitteeAtSlot(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatorCommitteeAtSlot", reflect.TypeOf((*MockValidatorServiceClient)(nil).ValidatorCommitteeAtSlot), varargs...)
-}
-
-// ValidatorEpochAssignments mocks base method
-func (m *MockValidatorServiceClient) ValidatorEpochAssignments(arg0 context.Context, arg1 *v1.ValidatorEpochAssignmentsRequest, arg2 ...grpc.CallOption) (*v1.ValidatorEpochAssignmentsResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "ValidatorEpochAssignments", varargs...)
-	ret0, _ := ret[0].(*v1.ValidatorEpochAssignmentsResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ValidatorEpochAssignments indicates an expected call of ValidatorEpochAssignments
-func (mr *MockValidatorServiceClientMockRecorder) ValidatorEpochAssignments(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatorEpochAssignments", reflect.TypeOf((*MockValidatorServiceClient)(nil).ValidatorEpochAssignments), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommitteeAssignment", reflect.TypeOf((*MockValidatorServiceClient)(nil).CommitteeAssignment), varargs...)
 }
 
 // ValidatorIndex mocks base method
@@ -114,4 +74,24 @@ func (mr *MockValidatorServiceClientMockRecorder) ValidatorIndex(arg0, arg1 inte
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatorIndex", reflect.TypeOf((*MockValidatorServiceClient)(nil).ValidatorIndex), varargs...)
+}
+
+// ValidatorStatus mocks base method
+func (m *MockValidatorServiceClient) ValidatorStatus(arg0 context.Context, arg1 *v1.ValidatorIndexRequest, arg2 ...grpc.CallOption) (*v1.ValidatorStatusResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ValidatorStatus", varargs...)
+	ret0, _ := ret[0].(*v1.ValidatorStatusResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ValidatorStatus indicates an expected call of ValidatorStatus
+func (mr *MockValidatorServiceClientMockRecorder) ValidatorStatus(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatorStatus", reflect.TypeOf((*MockValidatorServiceClient)(nil).ValidatorStatus), varargs...)
 }

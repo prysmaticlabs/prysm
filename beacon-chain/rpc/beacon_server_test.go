@@ -12,16 +12,14 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
-	"github.com/prysmaticlabs/prysm/shared/event"
-
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -29,6 +27,7 @@ import (
 
 type faultyPOWChainService struct {
 	chainStartFeed *event.Feed
+	hashesByHeight map[int][]byte
 }
 
 func (f *faultyPOWChainService) HasChainStartLogOccurred() (bool, uint64, error) {
@@ -41,11 +40,15 @@ func (f *faultyPOWChainService) LatestBlockHeight() *big.Int {
 	return big.NewInt(0)
 }
 
-func (f *faultyPOWChainService) BlockExists(hash common.Hash) (bool, *big.Int, error) {
-	return false, big.NewInt(1), errors.New("failed")
+func (f *faultyPOWChainService) BlockExists(_ context.Context, hash common.Hash) (bool, *big.Int, error) {
+	if f.hashesByHeight == nil {
+		return false, big.NewInt(1), errors.New("failed")
+	}
+
+	return true, big.NewInt(1), nil
 }
 
-func (f *faultyPOWChainService) BlockHashByHeight(height *big.Int) (common.Hash, error) {
+func (f *faultyPOWChainService) BlockHashByHeight(_ context.Context, height *big.Int) (common.Hash, error) {
 	return [32]byte{}, errors.New("failed")
 }
 
@@ -69,7 +72,7 @@ func (m *mockPOWChainService) LatestBlockHeight() *big.Int {
 	return m.latestBlockNumber
 }
 
-func (m *mockPOWChainService) BlockExists(hash common.Hash) (bool, *big.Int, error) {
+func (m *mockPOWChainService) BlockExists(_ context.Context, hash common.Hash) (bool, *big.Int, error) {
 	// Reverse the map of heights by hash.
 	heightsByHash := make(map[[32]byte]int)
 	for k, v := range m.hashesByHeight {
@@ -83,7 +86,7 @@ func (m *mockPOWChainService) BlockExists(hash common.Hash) (bool, *big.Int, err
 	return true, big.NewInt(int64(val)), nil
 }
 
-func (m *mockPOWChainService) BlockHashByHeight(height *big.Int) (common.Hash, error) {
+func (m *mockPOWChainService) BlockHashByHeight(_ context.Context, height *big.Int) (common.Hash, error) {
 	k := int(height.Int64())
 	val, ok := m.hashesByHeight[k]
 	if !ok {
@@ -333,10 +336,17 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	beaconServer := &BeaconServer{
-		beaconDB:        db,
-		powChainService: &faultyPOWChainService{},
+		beaconDB: db,
+		powChainService: &faultyPOWChainService{
+			hashesByHeight: make(map[int][]byte),
+		},
 	}
-	beaconState := &pbp2p.BeaconState{}
+	beaconState := &pbp2p.BeaconState{
+		LatestEth1Data: &pbp2p.Eth1Data{
+			BlockHash32: []byte{'a'},
+		},
+		Eth1DataVotes: []*pbp2p.Eth1DataVote{},
+	}
 	if err := beaconServer.beaconDB.SaveState(beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -349,17 +359,26 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 func TestEth1Data_EmptyVotesOk(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+
+	beaconState := &pbp2p.BeaconState{
+		LatestEth1Data: &pbp2p.Eth1Data{
+			BlockHash32: []byte{'a'},
+		},
+		Eth1DataVotes: []*pbp2p.Eth1DataVote{},
+	}
+
 	powChainService := &mockPOWChainService{
 		latestBlockNumber: big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)),
 		hashesByHeight: map[int][]byte{
 			0: []byte("hash0"),
+			1: beaconState.LatestEth1Data.BlockHash32,
 		},
 	}
 	beaconServer := &BeaconServer{
 		beaconDB:        db,
 		powChainService: powChainService,
 	}
-	beaconState := &pbp2p.BeaconState{}
+
 	if err := beaconServer.beaconDB.SaveState(beaconState); err != nil {
 		t.Fatal(err)
 	}
@@ -459,5 +478,53 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 			result.Eth1Data.DepositRootHash32,
 			beaconState.Eth1DataVotes[2].Eth1Data.DepositRootHash32,
 		)
+	}
+}
+
+func Benchmark_Eth1Data(b *testing.B) {
+	db := internal.SetupDB(b)
+	defer internal.TeardownDB(b, db)
+
+	hashesByHeight := make(map[int][]byte)
+
+	beaconState := &pbp2p.BeaconState{
+		Eth1DataVotes: []*pbp2p.Eth1DataVote{},
+		LatestEth1Data: &pbp2p.Eth1Data{
+			BlockHash32: []byte("stub"),
+		},
+	}
+	numOfVotes := 1000
+	for i := 0; i < numOfVotes; i++ {
+		blockhash := []byte{'b', 'l', 'o', 'c', 'k', byte(i)}
+		deposit := []byte{'d', 'e', 'p', 'o', 's', 'i', 't', byte(i)}
+		beaconState.Eth1DataVotes = append(beaconState.Eth1DataVotes,
+			&pbp2p.Eth1DataVote{
+				VoteCount: uint64(i),
+				Eth1Data: &pbp2p.Eth1Data{
+					BlockHash32:       blockhash,
+					DepositRootHash32: deposit,
+				},
+			})
+		hashesByHeight[i] = blockhash
+	}
+	hashesByHeight[numOfVotes+1] = []byte("stub")
+
+	if err := db.SaveState(beaconState); err != nil {
+		b.Fatal(err)
+	}
+	currentHeight := params.BeaconConfig().Eth1FollowDistance + 5
+	beaconServer := &BeaconServer{
+		beaconDB: db,
+		powChainService: &mockPOWChainService{
+			latestBlockNumber: big.NewInt(int64(currentHeight)),
+			hashesByHeight:    hashesByHeight,
+		},
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := beaconServer.Eth1Data(context.Background(), nil)
+		if err != nil {
+			b.Fatal(err)
+		}
 	}
 }

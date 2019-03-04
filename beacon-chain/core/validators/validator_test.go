@@ -60,12 +60,15 @@ func TestBoundaryAttesterIndices_OK(t *testing.T) {
 	}
 
 	state := &pb.BeaconState{
+		Slot:              params.BeaconConfig().GenesisSlot,
 		ValidatorRegistry: validators,
 	}
 
 	boundaryAttestations := []*pb.PendingAttestation{
-		{Data: &pb.AttestationData{}, AggregationBitfield: []byte{0x03}}, // returns indices 242
-		{Data: &pb.AttestationData{}, AggregationBitfield: []byte{0x03}}, // returns indices 237,224,2
+		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
+			AggregationBitfield: []byte{0x03}}, // returns indices 242
+		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
+			AggregationBitfield: []byte{0x03}}, // returns indices 237,224,2
 	}
 
 	attesterIndices, err := ValidatorIndices(state, boundaryAttestations)
@@ -93,14 +96,14 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 
 	state := &pb.BeaconState{
 		ValidatorRegistry: validators,
-		Slot:              0,
+		Slot:              params.BeaconConfig().GenesisSlot,
 	}
 
 	prevAttestation := &pb.PendingAttestation{
 		Data: &pb.AttestationData{
-			Slot:                 3,
-			Shard:                6,
-			ShardBlockRootHash32: []byte{'B'},
+			Slot:                    params.BeaconConfig().GenesisSlot + 3,
+			Shard:                   6,
+			CrosslinkDataRootHash32: []byte{'B'},
 		},
 		AggregationBitfield: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1},
 	}
@@ -136,9 +139,9 @@ func TestAttestingValidatorIndices_OutOfBound(t *testing.T) {
 
 	attestation := &pb.PendingAttestation{
 		Data: &pb.AttestationData{
-			Slot:                 0,
-			Shard:                1,
-			ShardBlockRootHash32: []byte{'B'},
+			Slot:                    0,
+			Shard:                   1,
+			CrosslinkDataRootHash32: []byte{'B'},
 		},
 		AggregationBitfield: []byte{'A'}, // 01000001 = 1,7
 	}

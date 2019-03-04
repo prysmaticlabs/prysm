@@ -11,14 +11,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -27,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 var log = logrus.WithField("prefix", "powchain")
@@ -86,6 +86,7 @@ type Web3Service struct {
 	blockFetcher            POWBlockFetcher
 	blockHeight             *big.Int    // the latest ETH1.0 chain blockHeight.
 	blockHash               common.Hash // the latest ETH1.0 chain blockHash.
+	blockCache              *blockCache // cache to store block hash/block height.
 	depositContractCaller   *contracts.DepositContractCaller
 	depositRoot             []byte
 	depositTrie             *trieutil.DepositTrie
@@ -138,7 +139,9 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		endpoint:                config.Endpoint,
 		blockHeight:             nil,
 		blockHash:               common.BytesToHash([]byte{}),
+		blockCache:              newBlockCache(),
 		depositContractAddress:  config.DepositContract,
+		depositTrie:             trieutil.NewDepositTrie(),
 		chainStartFeed:          new(event.Feed),
 		client:                  config.Client,
 		reader:                  config.Reader,
@@ -208,20 +211,51 @@ func (w *Web3Service) LatestBlockHash() common.Hash {
 }
 
 // BlockExists returns true if the block exists, it's height and any possible error encountered.
-func (w *Web3Service) BlockExists(hash common.Hash) (bool, *big.Int, error) {
-	block, err := w.blockFetcher.BlockByHash(w.ctx, hash)
+func (w *Web3Service) BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockExists")
+	defer span.End()
+
+	if exists, blkInfo, err := w.blockCache.BlockInfoByHash(hash); exists || err != nil {
+		if err != nil {
+			return false, nil, err
+		}
+		span.AddAttributes(trace.BoolAttribute("blockCacheHit", true))
+		return true, blkInfo.Number, nil
+	}
+	span.AddAttributes(trace.BoolAttribute("blockCacheHit", false))
+	block, err := w.blockFetcher.BlockByHash(ctx, hash)
 	if err != nil {
 		return false, big.NewInt(0), fmt.Errorf("could not query block with given hash: %v", err)
+	}
+
+	if err := w.blockCache.AddBlock(block); err != nil {
+		return false, big.NewInt(0), err
 	}
 
 	return true, block.Number(), nil
 }
 
 // BlockHashByHeight returns the block hash of the block at the given height.
-func (w *Web3Service) BlockHashByHeight(height *big.Int) (common.Hash, error) {
+func (w *Web3Service) BlockHashByHeight(ctx context.Context, height *big.Int) (common.Hash, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockHashByHeight")
+	defer span.End()
+
+	if exists, blkInfo, err := w.blockCache.BlockInfoByHeight(height); exists || err != nil {
+		if err != nil {
+			return [32]byte{}, err
+		}
+		span.AddAttributes(trace.BoolAttribute("blockCacheHit", true))
+		return blkInfo.Hash, nil
+	}
+	span.AddAttributes(trace.BoolAttribute("blockCacheHit", false))
+
 	block, err := w.blockFetcher.BlockByNumber(w.ctx, height)
 	if err != nil {
 		return [32]byte{}, fmt.Errorf("could not query block with given height: %v", err)
+	}
+
+	if err := w.blockCache.AddBlock(block); err != nil {
+		return [32]byte{}, err
 	}
 
 	return block.Hash(), nil
@@ -244,9 +278,6 @@ func (w *Web3Service) HasChainStartLogOccurred() (bool, uint64, error) {
 		return false, 0, nil
 	}
 	timestamp := binary.LittleEndian.Uint64(genesisTime)
-	if uint64(time.Now().Unix()) < timestamp {
-		return false, 0, fmt.Errorf("invalid timestamp from log expected %d > %d", time.Now().Unix(), timestamp)
-	}
 	return true, timestamp, nil
 }
 
@@ -324,9 +355,6 @@ func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
 	}
 
 	timestamp := binary.LittleEndian.Uint64(timestampData)
-	if uint64(time.Now().Unix()) < timestamp {
-		log.Errorf("Invalid timestamp from log expected %d > %d", time.Now().Unix(), timestamp)
-	}
 	w.chainStarted = true
 	chainStartTime := time.Unix(int64(timestamp), 0)
 	log.WithFields(logrus.Fields{
@@ -363,12 +391,6 @@ func (w *Web3Service) run(done <-chan struct{}) {
 		log.Errorf("Unable to retrieve data from deposit contract %v", err)
 		return
 	}
-	hasChainStarted, _, err := w.HasChainStartLogOccurred()
-	if err != nil {
-		log.Errorf("Unable to verify chain has started: %v", err)
-		return
-	}
-	w.chainStarted = hasChainStarted
 
 	headSub, err := w.reader.SubscribeNewHead(w.ctx, w.headerChan)
 	if err != nil {
@@ -413,6 +435,10 @@ func (w *Web3Service) run(done <-chan struct{}) {
 				"blockNumber": w.blockHeight,
 				"blockHash":   w.blockHash.Hex(),
 			}).Debug("Latest web3 chain event")
+
+			if err := w.blockCache.AddBlock(gethTypes.NewBlockWithHeader(header)); err != nil {
+				log.Errorf("Unable to add block data to cache %v", err)
+			}
 		case <-ticker.C:
 			if w.lastRequestedBlock.Cmp(w.blockHeight) == 0 {
 				continue
@@ -433,7 +459,6 @@ func (w *Web3Service) initDataFromContract() error {
 		return fmt.Errorf("could not retrieve deposit root %v", err)
 	}
 	w.depositRoot = root[:]
-	w.depositTrie = trieutil.NewDepositTrie()
 	return nil
 }
 
@@ -470,7 +495,6 @@ func (w *Web3Service) processPastLogs() error {
 // requestBatchedLogs requests and processes all the logs from the period
 // last polled to now.
 func (w *Web3Service) requestBatchedLogs() error {
-
 	// We request for the nth block behind the current head, in order to have
 	// stabilised logs when we retrieve it from the 1.0 chain.
 	requestedBlock := big.NewInt(0).Sub(w.blockHeight, big.NewInt(params.BeaconConfig().LogBlockDelay))

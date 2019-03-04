@@ -3,13 +3,12 @@ package blockchain
 import (
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/ssz"
-
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 // LMDGhost applies the Latest Message Driven, Greediest Heaviest Observed Sub-Tree
@@ -73,11 +72,11 @@ func VoteCount(block *pb.BeaconBlock, state *pb.BeaconState, targets map[uint64]
 		if err != nil {
 			return 0, err
 		}
-		ancestorRoot, err := ssz.TreeHash(ancestor)
+		ancestorRoot, err := hashutil.HashBeaconBlock(ancestor)
 		if err != nil {
 			return 0, err
 		}
-		blockRoot, err := ssz.TreeHash(block)
+		blockRoot, err := hashutil.HashBeaconBlock(block)
 		if err != nil {
 			return 0, err
 		}

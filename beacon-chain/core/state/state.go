@@ -4,14 +4,16 @@
 package state
 
 import (
+	"encoding/binary"
 	"fmt"
+
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 // GenesisBeaconState gets called when DepositsForChainStart count of
@@ -19,15 +21,14 @@ import (
 func GenesisBeaconState(
 	genesisValidatorDeposits []*pb.Deposit,
 	genesisTime uint64,
-	processedPowReceiptRoot []byte,
+	eth1Data *pb.Eth1Data,
 ) (*pb.BeaconState, error) {
 	latestRandaoMixes := make(
 		[][]byte,
 		params.BeaconConfig().LatestRandaoMixesLength,
 	)
 	for i := 0; i < len(latestRandaoMixes); i++ {
-		emptySig := params.BeaconConfig().EmptySignature
-		latestRandaoMixes[i] = emptySig[:]
+		latestRandaoMixes[i] = make([]byte, 32)
 	}
 
 	zeroHash := params.BeaconConfig().ZeroHash[:]
@@ -49,8 +50,8 @@ func GenesisBeaconState(
 	latestCrosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
 	for i := 0; i < len(latestCrosslinks); i++ {
 		latestCrosslinks[i] = &pb.Crosslink{
-			Epoch:                params.BeaconConfig().GenesisEpoch,
-			ShardBlockRootHash32: zeroHash,
+			Epoch:                   params.BeaconConfig().GenesisEpoch,
+			CrosslinkDataRootHash32: zeroHash,
 		}
 	}
 
@@ -70,6 +71,7 @@ func GenesisBeaconState(
 		validator := &pb.Validator{
 			Pubkey:                      depositInput.Pubkey,
 			WithdrawalCredentialsHash32: depositInput.WithdrawalCredentialsHash32,
+			ActivationEpoch:             params.BeaconConfig().FarFutureEpoch,
 			ExitEpoch:                   params.BeaconConfig().FarFutureEpoch,
 			SlashedEpoch:                params.BeaconConfig().FarFutureEpoch,
 			WithdrawalEpoch:             params.BeaconConfig().FarFutureEpoch,
@@ -94,7 +96,7 @@ func GenesisBeaconState(
 		// Validator registry fields.
 		ValidatorRegistry:            validatorRegistry,
 		ValidatorBalances:            latestBalances,
-		ValidatorRegistryUpdateEpoch: params.BeaconConfig().FarFutureEpoch,
+		ValidatorRegistryUpdateEpoch: params.BeaconConfig().GenesisEpoch,
 
 		// Randomness and committees.
 		LatestRandaoMixes:           latestRandaoMixes,
@@ -120,11 +122,8 @@ func GenesisBeaconState(
 		BatchedBlockRootHash32S: [][]byte{},
 
 		// Eth1 data.
-		LatestEth1Data: &pb.Eth1Data{
-			DepositRootHash32: processedPowReceiptRoot,
-			BlockHash32:       []byte{},
-		},
-		Eth1DataVotes: []*pb.Eth1DataVote{},
+		LatestEth1Data: eth1Data,
+		Eth1DataVotes:  []*pb.Eth1DataVote{},
 	}
 
 	// Process initial deposits.
@@ -162,10 +161,13 @@ func GenesisBeaconState(
 		}
 	}
 	activeValidators := helpers.ActiveValidatorIndices(state.ValidatorRegistry, params.BeaconConfig().GenesisEpoch)
-	genesisActiveIndexRoot, err := ssz.TreeHash(activeValidators)
-	if err != nil {
-		return nil, fmt.Errorf("could not determine genesis active index root: %v", err)
+	indicesBytes := []byte{}
+	for _, val := range activeValidators {
+		buf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(buf, val)
+		indicesBytes = append(indicesBytes, buf...)
 	}
+	genesisActiveIndexRoot := hashutil.Hash(indicesBytes)
 	for i := uint64(0); i < params.BeaconConfig().LatestActiveIndexRootsLength; i++ {
 		state.LatestIndexRootHash32S[i] = genesisActiveIndexRoot[:]
 	}

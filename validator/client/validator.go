@@ -8,13 +8,13 @@ import (
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
-	"github.com/opentracing/opentracing-go"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 // AttestationPool STUB interface. Final attestation pool pending design.
@@ -29,13 +29,13 @@ type AttestationPool interface {
 type validator struct {
 	genesisTime     uint64
 	ticker          *slotutil.SlotTicker
-	assignment      *pb.Assignment
+	assignment      *pb.CommitteeAssignmentResponse
 	proposerClient  pb.ProposerServiceClient
 	validatorClient pb.ValidatorServiceClient
 	beaconClient    pb.BeaconServiceClient
 	attesterClient  pb.AttesterServiceClient
 	key             *keystore.Key
-	index uint64
+	index           uint64
 }
 
 // Done cleans up the validator.
@@ -48,8 +48,8 @@ func (v *validator) Done() {
 // for the ChainStart log to have been emitted. If so, it starts a ticker based on the ChainStart
 // unix timestamp which will be used to keep track of time within the validator client.
 func (v *validator) WaitForChainStart(ctx context.Context) error {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.WaitForChainStart")
-	defer span.Finish()
+	ctx, span := trace.StartSpan(ctx, "validator.WaitForChainStart")
+	defer span.End()
 	// First, check if the beacon chain has started.
 	stream, err := v.beaconClient.WaitForChainStart(ctx, &ptypes.Empty{})
 	if err != nil {
@@ -85,8 +85,8 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 //
 // WIP - not done.
 func (v *validator) WaitForActivation(ctx context.Context) {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.WaitForActivation")
-	defer span.Finish()
+	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
+	defer span.End()
 	// First, check if the validator has deposited into the Deposit Contract.
 	// If the validator has deposited, subscribe to a stream receiving the activation status.
 	// of the validator until a final ACTIVATED check if received, then this function can return.
@@ -101,29 +101,41 @@ func (v *validator) NextSlot() <-chan uint64 {
 // list of upcoming assignments needs to be updated. For example, at the
 // beginning of a new epoch.
 func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.UpdateAssignments")
-	defer span.Finish()
-
 	if slot%params.BeaconConfig().SlotsPerEpoch != 0 && v.assignment != nil {
 		// Do nothing if not epoch start AND assignments already exist.
 		return nil
 	}
+
+	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
+	defer span.End()
 
 	req := &pb.ValidatorEpochAssignmentsRequest{
 		EpochStart: slot,
 		PublicKey:  v.key.PublicKey.Marshal(),
 	}
 
-	resp, err := v.validatorClient.ValidatorEpochAssignments(ctx, req)
+	resp, err := v.validatorClient.CommitteeAssignment(ctx, req)
 	if err != nil {
 		return err
 	}
 
-	v.assignment = resp.Assignment
+	v.assignment = resp
+
+	var proposerSlot uint64
+	var attesterSlot uint64
+	if v.assignment.IsProposer && len(v.assignment.Committee) == 1 {
+		proposerSlot = resp.Slot
+		attesterSlot = resp.Slot
+	} else if v.assignment.IsProposer {
+		proposerSlot = resp.Slot
+	} else {
+		attesterSlot = resp.Slot
+	}
+
 	log.WithFields(logrus.Fields{
-		"proposerSlot": resp.Assignment.ProposerSlot - params.BeaconConfig().GenesisSlot,
-		"attesterSlot": resp.Assignment.AttesterSlot - params.BeaconConfig().GenesisSlot,
-		"shard":        resp.Assignment.Shard,
+		"proposerSlot": proposerSlot - params.BeaconConfig().GenesisSlot,
+		"attesterSlot": attesterSlot - params.BeaconConfig().GenesisSlot,
+		"shard":        resp.Shard,
 	}).Info("Updated validator assignments")
 	return nil
 }
@@ -132,15 +144,19 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 // validator is known to not have a role at the at slot. Returns UNKNOWN if the
 // validator assignments are unknown. Otherwise returns a valid ValidatorRole.
 func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
-	if v.assignment == nil || slot == params.BeaconConfig().GenesisSlot {
+	if v.assignment == nil {
 		return pb.ValidatorRole_UNKNOWN
 	}
-	if v.assignment.AttesterSlot == slot && v.assignment.ProposerSlot == slot {
-		return pb.ValidatorRole_BOTH
-	} else if v.assignment.ProposerSlot == slot {
-		return pb.ValidatorRole_PROPOSER
-	} else if v.assignment.AttesterSlot == slot {
-		return pb.ValidatorRole_ATTESTER
+	if v.assignment.Slot == slot {
+		// if the committee length is 1, that means validator has to perform both
+		// proposer and validator roles.
+		if len(v.assignment.Committee) == 1 {
+			return pb.ValidatorRole_BOTH
+		} else if v.assignment.IsProposer {
+			return pb.ValidatorRole_PROPOSER
+		} else {
+			return pb.ValidatorRole_ATTESTER
+		}
 	}
 	return pb.ValidatorRole_UNKNOWN
 }
@@ -150,7 +166,7 @@ func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
 // through out validator life cycle.
 func (v *validator) Index(ctx context.Context) error {
 	req := &pb.ValidatorIndexRequest{
-		PublicKey:  v.key.PublicKey.Marshal(),
+		PublicKey: v.key.PublicKey.Marshal(),
 	}
 
 	resp, err := v.validatorClient.ValidatorIndex(ctx, req)
@@ -161,4 +177,3 @@ func (v *validator) Index(ctx context.Context) error {
 	v.index = resp.Index
 	return nil
 }
-

@@ -12,8 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/ssz"
 )
 
 // Generates an initial genesis block and state using a custom number of initial
@@ -45,7 +45,7 @@ func generateTestGenesisStateAndBlock(
 	if err := beaconDB.SaveState(beaconState); err != nil {
 		t.Fatal(err)
 	}
-	stateRoot, err := ssz.TreeHash(beaconState)
+	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +53,7 @@ func generateTestGenesisStateAndBlock(
 	if err := beaconDB.SaveBlock(genesisBlock); err != nil {
 		t.Fatal(err)
 	}
-	genesisRoot, err := ssz.TreeHash(genesisBlock)
+	genesisRoot, err := hashutil.HashBeaconBlock(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,7 +159,7 @@ func TestLMDGhost_EveryActiveValidatorHasLatestAttestation(t *testing.T) {
 	beaconState.ValidatorBalances[0] = 32e9
 	candidate1, candidate2 := setupConflictingBlocks(t, beaconDB, genesisHash, stateHash)
 
-	activeIndices := helpers.ActiveValidatorIndices(beaconState.ValidatorRegistry, 0)
+	activeIndices := helpers.ActiveValidatorIndices(beaconState.ValidatorRegistry, params.BeaconConfig().GenesisEpoch)
 	// We store some simulated latest attestation target for every active validator in a map.
 	voteTargets := make(map[uint64]*pb.BeaconBlock, len(activeIndices))
 	for i := 0; i < len(activeIndices); i++ {
@@ -207,7 +207,7 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	genesisBlock := b.NewGenesisBlock([]byte("stateroot"))
-	genesisRoot, err := ssz.TreeHash(genesisBlock)
+	genesisRoot, err := hashutil.HashBeaconBlock(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
