@@ -927,7 +927,7 @@ go_repository(
 
 go_repository(
     name = "com_github_hashicorp_go_multierror",
-    commit = "886a7fbe3eb1c874d46f623bfa70af45f425b3d1",
+    commit = "886a7fbe3eb1c874d46f623bfa70af45f425b3d1",  # v1.0.0
     importpath = "github.com/hashicorp/go-multierror",
 )
 
