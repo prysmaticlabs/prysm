@@ -211,7 +211,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multihash",
-    commit = "1a04c485626b992b36afcaa599584fdb0770c397",
+    commit = "6b439b7c6e3c44c112171540500be697ba235235",  # v0.0.1
     importpath = "github.com/multiformats/go-multihash",
 )
 
