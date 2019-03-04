@@ -140,7 +140,7 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 //     Verify that proposer_slashing.proposal_data_1.slot == proposer_slashing.proposal_data_2.slot.
 //     Verify that proposer_slashing.proposal_data_1.shard == proposer_slashing.proposal_data_2.shard.
 //     Verify that proposer_slashing.proposal_data_1.block_root != proposer_slashing.proposal_data_2.block_root.
-//     Verify that proposer.slashed_epoch > get_current_epoch(state).
+//     Verify that `proposer.slashed == False`.
 //     Verify that bls_verify(pubkey=proposer.pubkey, message_hash=hash_tree_root(proposer_slashing.proposal_data_1),
 //       signature=proposer_slashing.proposal_signature_1,
 //       domain=get_domain(state.fork, slot_to_epoch(proposer_slashing.proposal_data_1.slot), DOMAIN_PROPOSAL)).
@@ -168,7 +168,7 @@ func ProcessProposerSlashings(
 			return nil, fmt.Errorf("could not verify proposer slashing #%d: %v", idx, err)
 		}
 		proposer := registry[slashing.ProposerIndex]
-		if proposer.SlashedEpoch > helpers.CurrentEpoch(beaconState) {
+		if !proposer.Slashed {
 			beaconState, err = v.SlashValidator(beaconState, slashing.ProposerIndex)
 			if err != nil {
 				return nil, fmt.Errorf("could not slash proposer index %d: %v",
@@ -307,7 +307,7 @@ func attesterSlashableIndices(beaconState *pb.BeaconState, slashing *pb.Attester
 	for _, idx1 := range slashableAttestation1.ValidatorIndices {
 		for _, idx2 := range slashableAttestation2.ValidatorIndices {
 			if idx1 == idx2 {
-				if beaconState.ValidatorRegistry[idx1].SlashedEpoch > helpers.CurrentEpoch(beaconState) {
+				if !beaconState.ValidatorRegistry[idx1].Slashed {
 					slashableIndices = append(slashableIndices, idx1)
 				}
 			}

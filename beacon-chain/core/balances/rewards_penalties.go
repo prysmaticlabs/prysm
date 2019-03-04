@@ -243,7 +243,7 @@ func InactivityExitedPenalties(
 	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, state.Slot)
 
 	for _, index := range activeValidatorIndices {
-		if state.ValidatorRegistry[index].SlashedEpoch <= helpers.CurrentEpoch(state) {
+		if state.ValidatorRegistry[index].Slashed {
 			state.ValidatorBalances[index] -=
 				2*helpers.InactivityPenalty(state, index, baseRewardQuotient, epochsSinceFinality) +
 					helpers.BaseReward(state, index, baseRewardQuotient)
