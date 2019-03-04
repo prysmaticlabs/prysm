@@ -73,7 +73,6 @@ func GenesisBeaconState(
 			WithdrawalCredentialsHash32: depositInput.WithdrawalCredentialsHash32,
 			ActivationEpoch:             params.BeaconConfig().FarFutureEpoch,
 			ExitEpoch:                   params.BeaconConfig().FarFutureEpoch,
-			SlashedEpoch:                params.BeaconConfig().FarFutureEpoch,
 			WithdrawalEpoch:             params.BeaconConfig().FarFutureEpoch,
 		}
 

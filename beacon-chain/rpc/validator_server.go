@@ -6,7 +6,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -101,11 +100,11 @@ func (vs *ValidatorServer) ValidatorStatus(
 		status = pb.ValidatorStatus_PENDING_ACTIVE
 	} else if v.ActivationEpoch <= epoch && epoch < v.ExitEpoch {
 		status = pb.ValidatorStatus_ACTIVE
-	} else if v.StatusFlags == pbp2p.Validator_INITIATED_EXIT {
+	} else if v.InitiatedExit {
 		status = pb.ValidatorStatus_INITIATED_EXIT
-	} else if v.StatusFlags == pbp2p.Validator_WITHDRAWABLE {
+	} else if v.WithdrawalEpoch >= epoch {
 		status = pb.ValidatorStatus_WITHDRAWABLE
-	} else if epoch >= v.ExitEpoch && epoch >= v.SlashedEpoch {
+	} else if epoch >= v.ExitEpoch && v.Slashed {
 		status = pb.ValidatorStatus_EXITED_SLASHED
 	} else if epoch >= v.ExitEpoch {
 		status = pb.ValidatorStatus_EXITED
