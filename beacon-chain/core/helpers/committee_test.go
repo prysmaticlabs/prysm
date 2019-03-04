@@ -468,7 +468,7 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 
 	for _, tt := range tests {
 		committee, shard, slot, isProposer, err := CommitteeAssignment(
-			state, SlotToEpoch(tt.slot), tt.index, false)
+			state, tt.slot, tt.index, false)
 		if err != nil {
 			t.Fatalf("failed to execute NextEpochCommitteeAssignment: %v", err)
 		}
@@ -500,7 +500,7 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 		"could not get assignment validator %d",
 		index,
 	)
-	if _, _, _, _, err := CommitteeAssignment(state, SlotToEpoch(state.Slot), index, false); !strings.Contains(err.Error(), want) {
+	if _, _, _, _, err := CommitteeAssignment(state, state.Slot, index, false); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }

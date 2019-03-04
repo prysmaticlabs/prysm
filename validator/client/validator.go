@@ -29,7 +29,7 @@ type AttestationPool interface {
 type validator struct {
 	genesisTime     uint64
 	ticker          *slotutil.SlotTicker
-	assignment      *pb.Assignment
+	assignment      *pb.CommitteeAssignmentResponse
 	proposerClient  pb.ProposerServiceClient
 	validatorClient pb.ValidatorServiceClient
 	beaconClient    pb.BeaconServiceClient
@@ -113,16 +113,28 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 		PublicKey:  v.key.PublicKey.Marshal(),
 	}
 
-	resp, err := v.validatorClient.ValidatorEpochAssignments(ctx, req)
+	resp, err := v.validatorClient.CommitteeAssignment(ctx, req)
 	if err != nil {
 		return err
 	}
 
-	v.assignment = resp.Assignment
+	v.assignment = resp
+
+	var proposerSlot uint64
+	var attesterSlot uint64
+	if v.assignment.IsProposer && len(v.assignment.Committee) == 1 {
+		proposerSlot = resp.Slot
+		attesterSlot = resp.Slot
+	} else if v.assignment.IsProposer {
+		proposerSlot = resp.Slot
+	} else {
+		attesterSlot = resp.Slot
+	}
+
 	log.WithFields(logrus.Fields{
-		"proposerSlot": resp.Assignment.ProposerSlot - params.BeaconConfig().GenesisSlot,
-		"attesterSlot": resp.Assignment.AttesterSlot - params.BeaconConfig().GenesisSlot,
-		"shard":        resp.Assignment.Shard,
+		"proposerSlot": proposerSlot - params.BeaconConfig().GenesisSlot,
+		"attesterSlot": attesterSlot - params.BeaconConfig().GenesisSlot,
+		"shard":        resp.Shard,
 	}).Info("Updated validator assignments")
 	return nil
 }
@@ -131,15 +143,19 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 // validator is known to not have a role at the at slot. Returns UNKNOWN if the
 // validator assignments are unknown. Otherwise returns a valid ValidatorRole.
 func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
-	if v.assignment == nil || slot == params.BeaconConfig().GenesisSlot {
+	if v.assignment == nil {
 		return pb.ValidatorRole_UNKNOWN
 	}
-	if v.assignment.AttesterSlot == slot && v.assignment.ProposerSlot == slot {
-		return pb.ValidatorRole_BOTH
-	} else if v.assignment.ProposerSlot == slot {
-		return pb.ValidatorRole_PROPOSER
-	} else if v.assignment.AttesterSlot == slot {
-		return pb.ValidatorRole_ATTESTER
+	if v.assignment.Slot == slot {
+		// if the committee length is 1, that means validator has to perform both
+		// proposer and validator roles.
+		if len(v.assignment.Committee) == 1 {
+			return pb.ValidatorRole_BOTH
+		} else if v.assignment.IsProposer {
+			return pb.ValidatorRole_PROPOSER
+		} else {
+			return pb.ValidatorRole_ATTESTER
+		}
 	}
 	return pb.ValidatorRole_UNKNOWN
 }

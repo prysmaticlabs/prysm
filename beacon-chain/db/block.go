@@ -105,7 +105,7 @@ func (db *BeaconDB) ChainHead() (*pb.BeaconBlock, error) {
 }
 
 // UpdateChainHead atomically updates the head of the chain as well as the corresponding state changes
-// Including a new crystallized state is optional.
+// Including a new state is optional.
 func (db *BeaconDB) UpdateChainHead(block *pb.BeaconBlock, beaconState *pb.BeaconState) error {
 	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {

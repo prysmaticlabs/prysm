@@ -21,9 +21,9 @@ http_archive(
 
 http_archive(
     name = "com_github_atlassian_bazel_tools",
-    sha256 = "e7d0c0e2963a7f9cb2c377e241502119dae24909708adef1918e8dcb70ae9e8c",
-    strip_prefix = "bazel-tools-6fef37f33dfa0189be9df4d3d60e6291bfe71177",
-    urls = ["https://github.com/atlassian/bazel-tools/archive/6fef37f33dfa0189be9df4d3d60e6291bfe71177.tar.gz"],
+    sha256 = "2842e7e4315f43df4223b7af40ae7d3547cce967595505bc335dacad5d69a39f",
+    strip_prefix = "bazel-tools-02472d814d1867de2ad75801760732c9e595c9d9",
+    urls = ["https://github.com/atlassian/bazel-tools/archive/02472d814d1867de2ad75801760732c9e595c9d9.tar.gz"],
 )
 
 http_archive(
@@ -41,9 +41,9 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_k8s",
-    sha256 = "828fb1ac4c44280be95306b885a326e40110eeba50bffa05e72ddd3b5cdc5d33",
-    strip_prefix = "rules_k8s-2206972072d64e5d2d966d81cc6c5fb77fd58dcb",
-    url = "https://github.com/bazelbuild/rules_k8s/archive/2206972072d64e5d2d966d81cc6c5fb77fd58dcb.tar.gz",
+    sha256 = "6983fcebc70f1e559bfe7dea066b68d1963abc1e154db9a12acebbfb4f47c3c3",
+    strip_prefix = "rules_k8s-9de769e87a1910f00b11fbb7f62d09d6d03e60ef",
+    url = "https://github.com/bazelbuild/rules_k8s/archive/9de769e87a1910f00b11fbb7f62d09d6d03e60ef.tar.gz",
 )
 
 load(
@@ -122,9 +122,9 @@ proto_library(
 
 http_archive(
     name = "io_kubernetes_build",
-    sha256 = "b4e7819861f2ec89b7309bd0c44fb3348c3a4a8ee494ec7668edb3960ff11814",
-    strip_prefix = "repo-infra-4ce715fbe67d8fbed05ec2bb47a148e754100a4b",
-    url = "https://github.com/kubernetes/repo-infra/archive/4ce715fbe67d8fbed05ec2bb47a148e754100a4b.tar.gz",
+    sha256 = "4985e8d2da96c9ec293897cc19573390c392e068e733b3d85972b43aac2f1309",
+    strip_prefix = "repo-infra-52d76ba3344e755f5a9ab595b94b21df49448ffb",
+    url = "https://github.com/kubernetes/repo-infra/archive/52d76ba3344e755f5a9ab595b94b21df49448ffb.tar.gz",
 )
 
 go_repository(
@@ -162,7 +162,7 @@ go_repository(
 
 go_repository(
     name = "com_github_x_cray_logrus_prefixed_formatter",
-    commit = "bb2702d423886830dee131692131d35648c382e2",
+    commit = "bb2702d423886830dee131692131d35648c382e2",  # v0.5.2
     importpath = "github.com/x-cray/logrus-prefixed-formatter",
 )
 
@@ -386,7 +386,7 @@ go_repository(
 
 go_repository(
     name = "com_github_fd_go_nat",
-    commit = "e3ba0d89e7d9f0a458bf08baae8db007eb7d242d",
+    commit = "d6a8fd67f078b7cc7a16d623ee52e859b2daccd5",  # v1.0.0
     importpath = "github.com/fd/go-nat",
 )
 
@@ -536,7 +536,7 @@ go_repository(
 
 go_repository(
     name = "com_github_jackpal_gateway",
-    commit = "cbcf4e3f3baee7952fc386c8b2534af4d267c875",
+    commit = "bfe829fefc91f676644aee0dc057097c605ae5ab",  # v1.0.5
     importpath = "github.com/jackpal/gateway",
 )
 
@@ -560,7 +560,7 @@ go_repository(
 
 go_repository(
     name = "com_github_jackpal_go_nat_pmp",
-    commit = "d89d09f6f3329bc3c2479aa3cafd76a5aa93a35c",
+    commit = "b977c5efcadd604e306a97fdf06ff544f785df56",  # v1.0.1
     importpath = "github.com/jackpal/go-nat-pmp",
 )
 
@@ -698,13 +698,13 @@ go_repository(
 
 go_repository(
     name = "com_github_matttproud_golang_protobuf_extensions",
-    commit = "c182affec369e30f25d3eb8cd8a478dee585ae7d",
+    commit = "c12348ce28de40eed0136aa2b644d0ee0650e56c",  # v1.0.1
     importpath = "github.com/matttproud/golang_protobuf_extensions",
 )
 
 go_repository(
     name = "com_github_boltdb_bolt",
-    commit = "fd01fc79c553a8e99d512a07e8e0c63d4a3ccfc5",
+    commit = "2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8",  # v1.3.1
     importpath = "github.com/boltdb/bolt",
 )
 
@@ -901,7 +901,7 @@ go_repository(
 
 go_repository(
     name = "com_github_spf13_cobra",
-    commit = "7547e83b2d85fd1893c7d76916f67689d761fecb",
+    commit = "ef82de70bb3f60c65fb8eebacbb2d122ef517385",  # v0.0.3
     importpath = "github.com/spf13/cobra",
 )
 
@@ -927,13 +927,13 @@ go_repository(
 
 go_repository(
     name = "com_github_hashicorp_go_multierror",
-    commit = "886a7fbe3eb1c874d46f623bfa70af45f425b3d1",
+    commit = "886a7fbe3eb1c874d46f623bfa70af45f425b3d1",  # v1.0.0
     importpath = "github.com/hashicorp/go-multierror",
 )
 
 go_repository(
     name = "com_github_hashicorp_errwrap",
-    commit = "8a6fb523712970c966eefc6b39ed2c5e74880354",
+    commit = "8a6fb523712970c966eefc6b39ed2c5e74880354",  # v1.0.0
     importpath = "github.com/hashicorp/errwrap",
 )
 
@@ -945,7 +945,7 @@ go_repository(
 
 go_repository(
     name = "com_github_inconshreveable_mousetrap",
-    commit = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75",
+    commit = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75",  # v1.0.0
     importpath = "github.com/inconshreveable/mousetrap",
 )
 
@@ -1035,6 +1035,6 @@ go_repository(
 
 go_repository(
     name = "com_github_allegro_bigcache",
-    commit = "e24eb225f15679bbe54f91bfa7da3b00e59b9768",
+    commit = "84a0ff3f153cbd7e280a19029a864bb04b504e62",  # v1.2.0
     importpath = "github.com/allegro/bigcache",
 )
