@@ -46,10 +46,15 @@ message BeaconState {
 message POWDepositState {
   bytes latest_block_hash = 1;
   uint64 last_block_height = 2;
-  bytes deposit_trie = 3;
+  DepositTrie deposit_trie = 3;
   uint64 deposit_count = 4;
-  uint64 pending_deposits_count = 5;
 }
+message DepositTrie  {
+	uint64 depositCount = 1;
+	repeated bytes branch = 2 ;
+	repeated bytes zeroHashes = 3 ;
+}
+
 
 message Fork {
   uint64 previous_version = 1;

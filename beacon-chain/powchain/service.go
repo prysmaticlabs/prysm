@@ -124,6 +124,12 @@ var (
 // NewWeb3Service sets up a new instance with an ethclient when
 // given a web3 endpoint as a string in the config.
 func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Service, error) {
+	return NewWeb3ServiceWithDbSupport(ctx, config, false)
+}
+
+// NewWeb3ServiceWithDbSupport sets up a new instance with an ethclient when
+// given a web3 endpoint as a string in the config.
+func NewWeb3ServiceWithDbSupport(ctx context.Context, config *Web3ServiceConfig, initFromDb bool) (*Web3Service, error) {
 	if !strings.HasPrefix(config.Endpoint, "ws") && !strings.HasPrefix(config.Endpoint, "ipc") {
 		return nil, fmt.Errorf(
 			"powchain service requires either an IPC or WebSocket endpoint, provided %s",
@@ -137,7 +143,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
-	return &Web3Service{
+	web3Service := &Web3Service{
 		ctx:                     ctx,
 		cancel:                  cancel,
 		headerChan:              make(chan *gethTypes.Header),
@@ -158,7 +164,14 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		lastReceivedMerkleIndex: -1,
 		chainStartDelay:         config.ChainStartDelay,
 		lastRequestedBlock:      big.NewInt(0),
-	}, nil
+	}
+	if initFromDb {
+		if err := web3Service.initFromDB(); err != nil {
+			log.Errorf("Unable to retrieve latest ETH1.0 state from db: %v", err)
+		}
+	}
+	return web3Service, nil
+
 }
 
 // Start a web3 service's main event loop.
@@ -189,6 +202,20 @@ func (w *Web3Service) Stop() error {
 // whenever the deposit contract fires a ChainStart log.
 func (w *Web3Service) ChainStartFeed() *event.Feed {
 	return w.chainStartFeed
+}
+func (w *Web3Service) saveToDb() {
+	powDepState := &pb.POWDepositState{}
+	if (w.depositTrie != nil && w.depositTrie != &trieutil.DepositTrie{}) {
+		(*powDepState).DepositTrie = w.depositTrie.ToProtoDepositTrie()
+	}
+	if w.LatestBlockHash().Bytes() != nil {
+		(*powDepState).LatestBlockHash = w.LatestBlockHash().Bytes()
+	}
+	if w.LatestBlockHeight() != nil {
+		(*powDepState).LastBlockHeight = w.LatestBlockHeight().Uint64()
+	}
+	(*powDepState).DepositCount = uint64(PrometheusToFloat64(validDepositsCount))
+	w.beaconDB.SaveDepositState(powDepState)
 }
 
 // ChainStartDeposits returns a slice of validator deposits processed
@@ -316,6 +343,7 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
 		w.ProcessChainStartLog(depositLog)
 		return
 	}
+
 	log.Debugf("Log is not of a valid event signature %#x", depositLog.Topics[0])
 }
 
@@ -348,15 +376,6 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	}
 	deposit := &pb.Deposit{
 		DepositData: depositData,
-	}
-	if w.LatestBlockHeight() != nil {
-		powDepState := &pb.POWDepositState{}
-		(*powDepState).LatestBlockHash = w.LatestBlockHash().Bytes()
-		(*powDepState).LastBlockHeight = w.LatestBlockHeight().Uint64()
-		(*powDepState).DepositCount = uint64(PrometheusToFloat64(validDepositsCount))
-		if powDepState.LastBlockHeight != uint64(0) {
-			w.beaconDB.SaveDepositState(powDepState)
-		}
 	}
 
 	// If chain has not started, do not update the merkle trie
@@ -443,9 +462,6 @@ func (w *Web3Service) run(done <-chan struct{}) {
 
 	w.blockHeight = header.Number
 	w.blockHash = header.Hash()
-	if err := w.initFromDB(); err != nil {
-		log.Errorf("Unable to retrieve latest ETH1.0 state from db: %v", err)
-	}
 	// Only process logs if the chain start delay flag is not enabled.
 	if w.chainStartDelay == 0 {
 		if err := w.processPastLogs(); err != nil {
@@ -471,6 +487,21 @@ func (w *Web3Service) run(done <-chan struct{}) {
 			return
 		case header := <-w.headerChan:
 			w.processSubscribedHeaders(header)
+			blockNumberGauge.Set(float64(header.Number.Int64()))
+			w.blockHeight = header.Number
+			w.blockHash = header.Hash()
+			w.blockTime = time.Unix(header.Time.Int64(), 0)
+			log.WithFields(logrus.Fields{
+				"blockNumber": w.blockHeight,
+				"blockHash":   w.blockHash.Hex(),
+			}).Debug("Latest web3 chain event")
+
+			if err := w.blockCache.AddBlock(gethTypes.NewBlockWithHeader(header)); err != nil {
+				w.runError = err
+				log.Errorf("Unable to add block data to cache %v", err)
+			}
+			w.saveToDb()
+
 		case <-ticker.C:
 			w.handleDelayTicker()
 		}
@@ -556,9 +587,9 @@ func (w *Web3Service) initFromDB() error {
 	if powDepositState == nil {
 		return nil
 	}
-	w.blockHeight = new(big.Int).SetBytes((*powDepositState).LatestBlockHash)
+	w.blockHeight = new(big.Int).SetUint64((*powDepositState).LastBlockHeight)
 	w.blockHash = common.BytesToHash((*powDepositState).LatestBlockHash)
-	w.depositTrie.UpdateDepositTrie((*powDepositState).DepositTrie)
+	w.depositTrie = trieutil.FromProtoDepositTrie((*powDepositState).DepositTrie)
 	validDepositsCount.Add(float64((*powDepositState).DepositCount))
 
 	return nil
@@ -603,6 +634,7 @@ func safelyHandlePanic() {
 		}).Error("Panicked when handling data from ETH 1.0 Chain! Recovering...")
 	}
 }
+
 // PrometheusToFloat64 convert counters to float64
 func PrometheusToFloat64(m prometheus.Metric) float64 {
 	pb := &dto.Metric{}

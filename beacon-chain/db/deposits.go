@@ -38,10 +38,10 @@ func (db *BeaconDB) SaveDepositState(powDepositState *pb.POWDepositState) error 
 	})
 }
 
-// // ResetLastLogBlockNumber updates the last read block number.
-// func (db *BeaconDB) ResetDepositState(powDepositState *pb.POWDepositState) error {
-// 	//return db.SaveDepositState()
-// }
+// ResetDepositState updates the last read block number.
+func (db *BeaconDB) ResetDepositState() error {
+	return db.SaveDepositState(&pb.POWDepositState{})
+}
 
 func createDepositState(enc []byte) (*pb.POWDepositState, error) {
 	protoDepositState := &pb.POWDepositState{}
