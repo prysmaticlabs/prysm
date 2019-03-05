@@ -110,6 +110,9 @@ func PrevJustifiedAttestations(
 	prevEpochAttestations []*pb.PendingAttestation,
 ) []*pb.PendingAttestation {
 
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.PrevJustifiedAttestations")
+	defer span.End()
+
 	var prevJustifiedAttestations []*pb.PendingAttestation
 	epochAttestations := append(currentEpochAttestations, prevEpochAttestations...)
 
@@ -343,6 +346,9 @@ func winningRoot(
 	shard uint64,
 	currentEpochAttestations []*pb.PendingAttestation,
 	prevEpochAttestations []*pb.PendingAttestation) ([]byte, error) {
+
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.CalculateWinningRoot")
+	defer span.End()
 
 	var winnerBalance uint64
 	var winnerRoot []byte
