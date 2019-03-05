@@ -1,10 +1,11 @@
-kind: Deployment
-apiVersion: apps/v1beta1
+kind: StatefulSet
+apiVersion: apps/v1
 metadata:
   name: beacon-chain
   namespace: beacon-chain
 spec:
   replicas: 1
+  serviceName: beacon-chain
   selector:
     matchLabels:
       component: beacon-chain
@@ -23,7 +24,6 @@ spec:
         - name: beacon-chain
           image: gcr.io/prysmaticlabs/prysm/beacon-chain:latest
           args: 
-            - --enable-powchain
             - --web3provider=ws://public-rpc-nodes.pow.svc.cluster.local:8546
               #- --verbosity=debug
             - --deposit-contract=$(DEPOSIT_CONTRACT_ADDRESS)
@@ -36,10 +36,14 @@ spec:
             - --enable-tracing
             - --tracing-endpoint=http://jaeger-collector.istio-system.svc.cluster.local:14268
             - --trace-sample-fraction=1.0
+            - --datadir=/data
           resources:
             requests:
               memory: "100Mi"
               cpu: "50m"
+          volumeMounts:
+          - mountPath: /data
+            name: beacondb
           ports:
             - containerPort: 4000
               name: grpc
@@ -53,3 +57,11 @@ spec:
                 configMapKeyRef:
                   name: beacon-config
                   key: DEPOSIT_CONTRACT_ADDRESS
+  volumeClaimTemplates:
+  - metadata:
+      name: beacondb
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 5Gi
