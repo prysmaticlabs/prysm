@@ -3,12 +3,8 @@ package main
 import (
 	"context"
 	"crypto/ecdsa"
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/big"
 	"time"
@@ -18,10 +14,8 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/gbrlsnchs/jwt"
 	recaptcha "github.com/prestonvanloon/go-recaptcha"
 	faucetpb "github.com/prysmaticlabs/prysm/proto/faucet"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 )
 
@@ -29,18 +23,16 @@ var minScore = 0.5
 var fundingAmount = big.NewInt(0.5 * params.Ether)
 
 type faucetServer struct {
-	r        recaptcha.Recaptcha
-	client   *ethclient.Client
-	funder   common.Address
-	pk       *ecdsa.PrivateKey
-	verifier jwt.Signer
+	r      recaptcha.Recaptcha
+	client *ethclient.Client
+	funder common.Address
+	pk     *ecdsa.PrivateKey
 }
 
 func NewFaucetServer(
 	r recaptcha.Recaptcha,
 	rpcPath string,
 	funderPrivateKey string,
-	rsaPubKeyPath string,
 ) *faucetServer {
 	client, err := ethclient.DialContext(context.Background(), rpcPath)
 	if err != nil {
@@ -59,31 +51,14 @@ func NewFaucetServer(
 		panic(err)
 	}
 
-	b, err := ioutil.ReadFile(rsaPubKeyPath)
-	if err != nil {
-		panic(err)
-	}
-
-	block, _ := pem.Decode(b)
-	if block == nil {
-		panic("failed to parse PEM block containing public key")
-	}
-	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err != nil {
-		panic("failed to parse DER encoded public key: " + err.Error())
-	}
-
-	rsaPK := pub.(*rsa.PublicKey)
-
 	fmt.Printf("Funder is %s\n", funder.Hex())
 	fmt.Printf("Funder has %d\n", bal)
 
 	return &faucetServer{
-		r:        r,
-		client:   client,
-		funder:   funder,
-		pk:       pk,
-		verifier: jwt.NewRS256(nil /*privateKey*/, rsaPK),
+		r:      r,
+		client: client,
+		funder: funder,
+		pk:     pk,
 	}
 }
 
@@ -109,41 +84,12 @@ func (s *faucetServer) verifyRecaptcha(ctx context.Context, req *faucetpb.Fundin
 	return nil
 }
 
-func (s *faucetServer) isAuthenticatedRequest(ctx context.Context) (bool, error) {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return false, errors.New("bad metadata")
-	}
-
-	token := md["authorization"][0]
-	if token == "" {
-		return false, nil
-	}
-
-	payload, sig, err := jwt.Parse(token)
-	if err != nil {
-		return false, err
-	}
-	if err := s.verifier.Verify(payload, sig); err != nil {
-		return false, err
-	}
-
-	return true, nil
-}
-
 // RequestFunds from the ethereum 1.x faucet. Requires a valid captcha
 // response.
 func (s *faucetServer) RequestFunds(ctx context.Context, req *faucetpb.FundingRequest) (*faucetpb.FundingResponse, error) {
 
-	authenticated, err := s.isAuthenticatedRequest(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if !authenticated {
-		if err := s.verifyRecaptcha(ctx, req); err != nil {
-			return &faucetpb.FundingResponse{Error: fmt.Sprintf("Recaptcha failure: %v", err)}, nil
-		}
+	if err := s.verifyRecaptcha(ctx, req); err != nil {
+		return &faucetpb.FundingResponse{Error: fmt.Sprintf("Recaptcha failure: %v", err)}, nil
 	}
 
 	txHash, err := s.fundAndWait(common.HexToAddress(req.WalletAddress))

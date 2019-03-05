@@ -6,7 +6,7 @@ load("@k8s_service//:defaults.bzl", "k8s_service")
 k8s_objects(
     name = "everything",
     objects = [
-      ":grafana.service",
+        ":grafana.service",
     ],
 )
 
