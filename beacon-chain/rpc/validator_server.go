@@ -18,7 +18,6 @@ import (
 // and more.
 type ValidatorServer struct {
 	ctx                context.Context
-	cancel             context.CancelFunc
 	beaconDB           *db.BeaconDB
 	chainService       chainService
 	canonicalStateChan chan *pbp2p.BeaconState

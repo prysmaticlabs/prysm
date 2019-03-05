@@ -452,7 +452,6 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 	vs := &ValidatorServer{
 		beaconDB:           db,
 		ctx:                ctx,
-		cancel:             cancel,
 		chainService:       newMockChainService(),
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 	}
