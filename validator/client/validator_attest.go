@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"time"
 
+	ptypes "github.com/gogo/protobuf/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/forkutils"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -112,8 +115,26 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	// should return a list of length equal to 1, containing validator_index.
 	attestation.AggregationBitfield = aggregationBitfield
 
-	// TODO(#1366): Use BLS to generate an aggregate signature.
-	attestation.AggregateSignature = []byte("signed")
+	// Retrieve the current fork data from the beacon node.
+	fork, err := v.beaconClient.ForkData(ctx, &ptypes.Empty{})
+	if err != nil {
+		log.Errorf("Failed to get fork data from beacon node's state: %v", err)
+		return
+	}
+
+	epoch := slot / params.BeaconConfig().SlotsPerEpoch
+	attestationData, err := hashutil.HashProto(attData)
+	if err != nil {
+		log.Error("Could not hash attestation data")
+		return
+	}
+	log.Infof("Signing attestation: %d", epoch)
+	domain := forkutils.DomainVersion(fork, epoch, params.BeaconConfig().DomainAttestation)
+	aggregateSignature := v.key.SecretKey.Sign(attestationData[:], domain)
+	log.Infof("Pubkey: %#x", v.key.PublicKey.Marshal())
+	log.Infof("Aggregate signature: %#x", aggregateSignature.Marshal())
+
+	attestation.AggregateSignature = aggregateSignature.Marshal()
 
 	duration := time.Duration(slot*params.BeaconConfig().SecondsPerSlot+delay) * time.Second
 	timeToBroadcast := time.Unix(int64(v.genesisTime), 0).Add(duration)
