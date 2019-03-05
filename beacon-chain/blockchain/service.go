@@ -320,6 +320,7 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	// Check for skipped slots.
 	for beaconState.Slot < block.Slot-1 {
 		beaconState, err = state.ExecuteStateTransition(
+			c.ctx,
 			beaconState,
 			nil,
 			headRoot,
@@ -334,6 +335,7 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	}
 
 	beaconState, err = state.ExecuteStateTransition(
+		c.ctx,
 		beaconState,
 		block,
 		headRoot,
