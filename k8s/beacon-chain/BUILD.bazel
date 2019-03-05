@@ -19,6 +19,7 @@ k8s_objects(
         ":services",
         ":secrets",
     ],
+    tags = ["manual"],
 )
 
 _NAMESPACE = "beacon-chain"
