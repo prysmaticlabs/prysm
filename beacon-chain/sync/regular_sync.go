@@ -222,8 +222,8 @@ func (rs *RegularSync) run() {
 // TODO(#175): New hashes are forwarded to other peers in the network, and
 // the contents of the block are requested if the local chain doesn't have the block.
 func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) {
-	ctx, receiveBlockSpan := trace.StartSpan(msg.Ctx, "beacon-chain.sync.receiveBlockAnnounce")
-	defer receiveBlockSpan.End()
+	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.receiveBlockAnnounce")
+	defer span.End()
 	recBlockAnnounce.Inc()
 
 	data := msg.Data.(*pb.BeaconBlockAnnounce)
@@ -244,8 +244,8 @@ func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) {
 
 // receiveBlock processes a block from the p2p layer.
 func (rs *RegularSync) receiveBlock(msg p2p.Message) {
-	ctx, receiveBlockSpan := trace.StartSpan(msg.Ctx, "beacon-chain.sync.receiveBlock")
-	defer receiveBlockSpan.End()
+	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.receiveBlock")
+	defer span.End()
 	recBlock.Inc()
 
 	response := msg.Data.(*pb.BeaconBlockResponse)
@@ -283,8 +283,8 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 // handleBlockRequestBySlot processes a block request from the p2p layer.
 // if found, the block is sent to the requesting peer.
 func (rs *RegularSync) handleBlockRequestBySlot(msg p2p.Message) {
-	ctx, blockRequestSpan := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleBlockRequestBySlot")
-	defer blockRequestSpan.End()
+	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleBlockRequestBySlot")
+	defer span.End()
 	blockReqSlot.Inc()
 
 	request, ok := msg.Data.(*pb.BeaconBlockRequestBySlotNumber)
@@ -312,8 +312,8 @@ func (rs *RegularSync) handleBlockRequestBySlot(msg p2p.Message) {
 }
 
 func (rs *RegularSync) handleStateRequest(msg p2p.Message) {
-	ctx, handleStateReqSpan := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleStateRequest")
-	defer handleStateReqSpan.End()
+	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleStateRequest")
+	defer span.End()
 	stateReq.Inc()
 	req, ok := msg.Data.(*pb.BeaconStateRequest)
 	if !ok {
@@ -342,8 +342,8 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) {
 }
 
 func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) {
-	ctx, receiveBatchedBlockReqSpan := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleChainHeadRequest")
-	defer receiveBatchedBlockReqSpan.End()
+	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleChainHeadRequest")
+	defer span.End()
 	chainHeadReq.Inc()
 	if _, ok := msg.Data.(*pb.ChainHeadRequest); !ok {
 		log.Errorf("message is of the incorrect type")
@@ -377,8 +377,8 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) {
 // discard the attestation if we have gotten before, send it to attestation
 // pool if we have not.
 func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
-	ctx, receiveAttestationSpan := trace.StartSpan(msg.Ctx, "beacon-chain.sync.receiveAttestation")
-	defer receiveAttestationSpan.End()
+	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.receiveAttestation")
+	defer span.End()
 	recAttestation.Inc()
 
 	attestation := msg.Data.(*pb.Attestation)
@@ -418,8 +418,8 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 // discard the exit if we have gotten before, send it to operation
 // service if we have not.
 func (rs *RegularSync) receiveExitRequest(msg p2p.Message) {
-	ctx, receiveExitReqSpan := trace.StartSpan(msg.Ctx, "beacon-chain.sync.receiveExitRequest")
-	defer receiveExitReqSpan.End()
+	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.receiveExitRequest")
+	defer span.End()
 	recExit.Inc()
 	exit := msg.Data.(*pb.VoluntaryExit)
 	h, err := hashutil.HashProto(exit)
@@ -441,8 +441,8 @@ func (rs *RegularSync) receiveExitRequest(msg p2p.Message) {
 }
 
 func (rs *RegularSync) handleBlockRequestByHash(msg p2p.Message) {
-	ctx, receiveBlockReqByHashSpan := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleBlockRequestByHash")
-	defer receiveBlockReqByHashSpan.End()
+	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleBlockRequestByHash")
+	defer span.End()
 	blockReqHash.Inc()
 
 	data := msg.Data.(*pb.BeaconBlockRequest)
@@ -468,8 +468,8 @@ func (rs *RegularSync) handleBlockRequestByHash(msg p2p.Message) {
 // handleBatchedBlockRequest receives p2p messages which consist of requests for batched blocks
 // which are bounded by a start slot and end slot.
 func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) {
-	ctx, receiveBatchedBlockReqSpan := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleBatchedBlockRequest")
-	defer receiveBatchedBlockReqSpan.End()
+	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleBatchedBlockRequest")
+	defer span.End()
 	batchedBlockReq.Inc()
 	data := msg.Data.(*pb.BatchedBeaconBlockRequest)
 	startSlot, endSlot := data.StartSlot, data.EndSlot
@@ -524,8 +524,8 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) {
 }
 
 func (rs *RegularSync) handleAttestationRequestByHash(msg p2p.Message) {
-	ctx, respondAttestationSpan := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleAttestationRequestByHash")
-	defer respondAttestationSpan.End()
+	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleAttestationRequestByHash")
+	defer span.End()
 	attestationReq.Inc()
 
 	req := msg.Data.(*pb.AttestationRequest)
@@ -550,8 +550,8 @@ func (rs *RegularSync) handleAttestationRequestByHash(msg p2p.Message) {
 }
 
 func (rs *RegularSync) handleUnseenAttestationsRequest(msg p2p.Message) {
-	ctx, respondUnseenAttestationSpan := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleUnseenAttestationsRequest")
-	defer respondUnseenAttestationSpan.End()
+	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleUnseenAttestationsRequest")
+	defer span.End()
 	unseenAttestationReq.Inc()
 	if _, ok := msg.Data.(*pb.UnseenAttestationsRequest); !ok {
 		log.Errorf("message is of the incorrect type")
@@ -579,8 +579,8 @@ func (rs *RegularSync) handleUnseenAttestationsRequest(msg p2p.Message) {
 }
 
 func (rs *RegularSync) broadcastCanonicalBlock(ctx context.Context, blk *pb.BeaconBlock) {
-	_, sendCanonicalBlockSpan := trace.StartSpan(ctx, "beacon-chain.sync.broadcastCanonicalBlock")
-	defer sendCanonicalBlockSpan.End()
+	_, span := trace.StartSpan(ctx, "beacon-chain.sync.broadcastCanonicalBlock")
+	defer span.End()
 
 	h, err := hashutil.HashProto(blk)
 	if err != nil {

@@ -17,8 +17,6 @@ import (
 	"sync"
 	"time"
 
-	"go.opencensus.io/trace"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -28,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 var log = logrus.WithField("prefix", "initial-sync")
@@ -271,8 +270,8 @@ func (s *InitialSync) checkSyncStatus() bool {
 }
 
 func (s *InitialSync) processBlockAnnounce(msg p2p.Message) {
-	ctx, processBlkAnnounce := trace.StartSpan(msg.Ctx, "beacon-chain.sync.initial-sync.processBlockAnnounce")
-	defer processBlkAnnounce.End()
+	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.initial-sync.processBlockAnnounce")
+	defer span.End()
 	data := msg.Data.(*pb.BeaconBlockAnnounce)
 	recBlockAnnounce.Inc()
 
@@ -295,8 +294,8 @@ func (s *InitialSync) processBlockAnnounce(msg p2p.Message) {
 // for initial sync. It checks if the blocks are valid and then will continue to
 // process and save it into the db.
 func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock, peer p2p.Peer) {
-	ctx, processBlk := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.processBlock")
-	defer processBlk.End()
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.processBlock")
+	defer span.End()
 	recBlock.Inc()
 	if block.Slot > s.highestObservedSlot {
 		s.highestObservedSlot = block.Slot
@@ -332,8 +331,8 @@ func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock, p
 // processBatchedBlocks processes all the received blocks from
 // the p2p message.
 func (s *InitialSync) processBatchedBlocks(msg p2p.Message) {
-	ctx, processBatchedBlocksSpan := trace.StartSpan(msg.Ctx, "beacon-chain.sync.initial-sync.processBatchedBlocks")
-	defer processBatchedBlocksSpan.End()
+	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.initial-sync.processBatchedBlocks")
+	defer span.End()
 	batchedBlockReq.Inc()
 	log.Debug("Processing batched block response")
 
@@ -347,8 +346,8 @@ func (s *InitialSync) processBatchedBlocks(msg p2p.Message) {
 }
 
 func (s *InitialSync) processState(msg p2p.Message) {
-	_, processStateSpan := trace.StartSpan(msg.Ctx, "beacon-chain.sync.initial-sync.processState")
-	defer processStateSpan.End()
+	_, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.initial-sync.processState")
+	defer span.End()
 	data := msg.Data.(*pb.BeaconStateResponse)
 	beaconState := data.BeaconState
 	recState.Inc()
@@ -383,8 +382,8 @@ func (s *InitialSync) processState(msg p2p.Message) {
 // requestStateFromPeer sends a request to a peer for the corresponding state
 // for a beacon block.
 func (s *InitialSync) requestStateFromPeer(ctx context.Context, stateRoot []byte, peer p2p.Peer) error {
-	_, reqStateSpan := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.requestStateFromPeer")
-	defer reqStateSpan.End()
+	_, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.requestStateFromPeer")
+	defer span.End()
 	stateReq.Inc()
 	log.Debugf("Successfully processed incoming block with state hash: %#x", stateRoot)
 	s.p2p.Send(&pb.BeaconStateRequest{Hash: stateRoot}, peer)
@@ -393,8 +392,8 @@ func (s *InitialSync) requestStateFromPeer(ctx context.Context, stateRoot []byte
 
 // requestNextBlock broadcasts a request for a block with the entered slotnumber.
 func (s *InitialSync) requestNextBlockBySlot(ctx context.Context, slotNumber uint64) {
-	ctx, reqBlkBySlotSpan := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.requestBlockBySlot")
-	defer reqBlkBySlotSpan.End()
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.requestBlockBySlot")
+	defer span.End()
 	log.Debugf("Requesting block %d ", slotNumber)
 	blockReqSlot.Inc()
 	s.mutex.Lock()
@@ -409,8 +408,8 @@ func (s *InitialSync) requestNextBlockBySlot(ctx context.Context, slotNumber uin
 // requestBatchedBlocks sends out a request for multiple blocks till a
 // specified bound slot number.
 func (s *InitialSync) requestBatchedBlocks(startSlot uint64, endSlot uint64) {
-	_, reqBatchBlkBySlotSpan := trace.StartSpan(context.Background(), "beacon-chain.sync.initial-sync.requestBatchedBlocks")
-	defer reqBatchBlkBySlotSpan.End()
+	_, span := trace.StartSpan(context.Background(), "beacon-chain.sync.initial-sync.requestBatchedBlocks")
+	defer span.End()
 	sentBatchedBlockReq.Inc()
 	blockLimit := params.BeaconConfig().BatchBlockLimit
 	if startSlot+blockLimit < endSlot {
@@ -426,8 +425,8 @@ func (s *InitialSync) requestBatchedBlocks(startSlot uint64, endSlot uint64) {
 // validateAndSaveNextBlock will validate whether blocks received from the blockfetcher
 // routine can be added to the chain.
 func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.BeaconBlock) error {
-	ctx, validateSaveBlockSpan := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.validateAndSaveNextBlock")
-	defer validateSaveBlockSpan.End()
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.validateAndSaveNextBlock")
+	defer span.End()
 	root, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return err
@@ -462,8 +461,8 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 }
 
 func (s *InitialSync) checkBlockValidity(ctx context.Context, block *pb.BeaconBlock) error {
-	ctx, checkBlockValiditySpan := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.checkBlockValidity")
-	defer checkBlockValiditySpan.End()
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.checkBlockValidity")
+	defer span.End()
 	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return fmt.Errorf("could not tree hash received block: %v", err)
