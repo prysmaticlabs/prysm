@@ -288,6 +288,7 @@ func SlashValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) 
 //    state.validator_registry_update_epoch = current_epoch
 func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
+	updatedEpoch := helpers.EntryExitEffectEpoch(currentEpoch)
 	activeValidatorIndices := helpers.ActiveValidatorIndices(
 		state.ValidatorRegistry, currentEpoch)
 
@@ -310,7 +311,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 			if err != nil {
 				return nil, fmt.Errorf("could not activate validator %d: %v", idx, err)
 			}
-			ActivatedValidators[currentEpoch] = append(ActivatedValidators[currentEpoch], uint64(idx))
+			ActivatedValidators[updatedEpoch] = append(ActivatedValidators[updatedEpoch], uint64(idx))
 		}
 	}
 
@@ -324,7 +325,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 				break
 			}
 			state = ExitValidator(state, uint64(idx))
-			ExitedValidators[currentEpoch] = append(ExitedValidators[currentEpoch], uint64(idx))
+			ExitedValidators[updatedEpoch] = append(ExitedValidators[updatedEpoch], uint64(idx))
 		}
 	}
 	state.ValidatorRegistryUpdateEpoch = currentEpoch
