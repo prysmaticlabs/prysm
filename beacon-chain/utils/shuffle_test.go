@@ -67,3 +67,22 @@ func TestSplitIndices_OK(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkPermutedIndex(b *testing.B) {
+	hash1 := common.BytesToHash([]byte{'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'a', 'b', 'c', 'd', 'e', 'f', 'g'})
+	list1 := make([]uint64, 10)
+	for i := uint64(0); i < 10; i++ {
+		list1[i] = i
+	}
+
+	b.N = 50
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i, v := range list1 {
+		indice, err := PermutedIndex(v, uint64(len(list1)), hash1)
+		if err != nil {
+			b.Errorf("Shuffle failed with: %v", err)
+		}
+		list1[i] = indice
+	}
+}

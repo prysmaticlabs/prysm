@@ -293,15 +293,14 @@ func Shuffling(
 	activeCount := uint64(len(activeIndices))
 	committeesPerEpoch := EpochCommitteeCount(activeCount)
 
-	shuffledIndices := make([]uint64, 0, activeCount)
-
+	shuffledIndices := make([]uint64, activeCount)
 	for idx := range activeIndices {
 		id, err := utils.PermutedIndex(uint64(idx), activeCount, seed)
 		if err != nil {
 			return nil, err
 		}
 
-		shuffledIndices = append(shuffledIndices, activeIndices[id])
+		shuffledIndices[idx] = activeIndices[id]
 	}
 
 	// Split the shuffled list into epoch_length * committees_per_slot pieces.

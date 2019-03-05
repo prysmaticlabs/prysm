@@ -9,8 +9,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -19,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -200,12 +199,12 @@ func (sb *SimulatedBackend) RunShuffleTest(testCase *ShuffleTestCase) error {
 	defer db.TeardownDB(sb.beaconDB)
 	seed := common.BytesToHash([]byte(testCase.Seed))
 	output := make([]uint64, 0, len(testCase.Input))
-	for _, v := range testCase.Input {
-		indice, err := utils.PermutedIndex(v, uint64(len(testCase.Input)), seed)
+	for idx := range testCase.Input {
+		indice, err := utils.PermutedIndex(uint64(idx), uint64(len(testCase.Input)), seed)
 		if err != nil {
 			return err
 		}
-		output = append(output, indice)
+		output[idx] = testCase.Input[indice]
 	}
 	if !reflect.DeepEqual(output, testCase.Output) {
 		return fmt.Errorf("shuffle result error: expected %v, actual %v", testCase.Output, output)
