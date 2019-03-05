@@ -152,6 +152,7 @@ func TestSavingBlock_InSync(t *testing.T) {
 		return p2p.Message{
 			Peer: p2p.Peer{},
 			Data: blockResponse,
+			Ctx:  context.Background(),
 		}
 	}
 
@@ -167,6 +168,7 @@ func TestSavingBlock_InSync(t *testing.T) {
 	msg2 := p2p.Message{
 		Peer: p2p.Peer{},
 		Data: incorrectStateResponse,
+		Ctx:  context.Background(),
 	}
 
 	ss.stateBuf <- msg2
@@ -262,11 +264,13 @@ func TestDelayChan_OK(t *testing.T) {
 	msg1 := p2p.Message{
 		Peer: p2p.Peer{},
 		Data: blockResponse,
+		Ctx:  context.Background(),
 	}
 
 	msg2 := p2p.Message{
 		Peer: p2p.Peer{},
 		Data: stateResponse,
+		Ctx:  context.Background(),
 	}
 
 	ss.blockBuf <- msg1
@@ -353,6 +357,7 @@ func TestRequestBlocksBySlot_OK(t *testing.T) {
 		return p2p.Message{
 			Peer: p2p.Peer{},
 			Data: blockResponse,
+			Ctx:  context.Background(),
 		}, root
 	}
 
