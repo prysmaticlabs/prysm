@@ -349,6 +349,14 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 		"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
 	).Info("Block transition successfully processed")
 	if (beaconState.Slot+1)%params.BeaconConfig().SlotsPerEpoch == 0 {
+		// Save activated validators of this epoch to public key -> index DB.
+		if err := c.saveValidatorIdx(beaconState); err != nil {
+			return nil, fmt.Errorf("could not save validator index: %v", err)
+		}
+		// Delete exited validators of this epoch to public key -> index DB.
+		if err := c.deleteValidatorIdx(beaconState); err != nil {
+			return nil, fmt.Errorf("could not delete validator index: %v", err)
+		}
 		log.WithField(
 			"SlotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
 		).Info("Epoch transition successfully processed")
@@ -383,6 +391,9 @@ func (c *ChainService) isBlockReadyForProcessing(block *pb.BeaconBlock, beaconSt
 	return nil
 }
 
+// saveValidatorIdx saves the validators public key to index mapping in DB, these
+// validators were activated from current epoch. After it saves, current epoch key
+// is deleted from ActivatedValidators mapping.
 func (c *ChainService) saveValidatorIdx(state *pb.BeaconState) error {
 	for _, idx := range validators.ActivatedValidators[helpers.CurrentEpoch(state)] {
 		pubKey := state.ValidatorRegistry[idx].Pubkey
@@ -394,6 +405,9 @@ func (c *ChainService) saveValidatorIdx(state *pb.BeaconState) error {
 	return nil
 }
 
+// deleteValidatorIdx deletes the validators public key to index mapping in DB, the
+// validators were exited from current epoch. After it deletes, current epoch key
+// is deleted from ExitedValidators mapping.
 func (c *ChainService) deleteValidatorIdx(state *pb.BeaconState) error {
 	for _, idx := range validators.ExitedValidators[helpers.CurrentEpoch(state)] {
 		pubKey := state.ValidatorRegistry[idx].Pubkey

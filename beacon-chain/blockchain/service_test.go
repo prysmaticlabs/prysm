@@ -711,13 +711,14 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 	}
 }
 
-func TestDeleteVaidatorIdx_DeleteWorks(t *testing.T) {
+func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	epoch := uint64(2)
-	v.ExitedValidators[epoch] = []uint64{4,5,6}
+	v.ActivatedValidators[epoch] = []uint64{0, 1, 2}
+	v.ExitedValidators[epoch] = []uint64{0, 2}
 	var validators []*pb.Validator
-	for i := 0; i < 3; i ++ {
+	for i := 0; i < 3; i++ {
 		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 		binary.PutUvarint(pubKeyBuf, uint64(i))
 		validators = append(validators, &pb.Validator{
@@ -726,14 +727,16 @@ func TestDeleteVaidatorIdx_DeleteWorks(t *testing.T) {
 	}
 	state := &pb.BeaconState{
 		ValidatorRegistry: validators,
-		Slot: epoch * params.BeaconConfig().SlotsPerEpoch,
+		Slot:              epoch * params.BeaconConfig().SlotsPerEpoch,
 	}
 	chainService := setupBeaconChain(t, false, db, true)
 	if err := chainService.saveValidatorIdx(state); err != nil {
 		t.Fatalf("Could not save validator idx: %v", err)
 	}
-
-	wantedIdx := uint64(2)
+	if err := chainService.deleteValidatorIdx(state); err != nil {
+		t.Fatalf("Could not delete validator idx: %v", err)
+	}
+	wantedIdx := uint64(1)
 	idx, err := chainService.beaconDB.ValidatorIndex(validators[wantedIdx].Pubkey)
 	if err != nil {
 		t.Fatalf("Could not get validator index: %v", err)
@@ -742,18 +745,23 @@ func TestDeleteVaidatorIdx_DeleteWorks(t *testing.T) {
 		t.Errorf("Wanted: %d, got: %d", wantedIdx, idx)
 	}
 
-	if _, ok := v.ActivatedValidators[epoch]; ok {
+	wantedIdx = uint64(2)
+	if chainService.beaconDB.HasValidator(validators[wantedIdx].Pubkey) {
+		t.Errorf("Validator index %d should have been deleted", wantedIdx)
+	}
+
+	if _, ok := v.ExitedValidators[epoch]; ok {
 		t.Errorf("Activated validators mapping for epoch %d still there", epoch)
 	}
 }
 
-func TestSaveVaidatorIdx_SaveRetrieveWorks(t *testing.T) {
+func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	epoch := uint64(1)
-	v.ActivatedValidators[epoch] = []uint64{0,1,2}
+	v.ActivatedValidators[epoch] = []uint64{0, 1, 2}
 	var validators []*pb.Validator
-	for i := 0; i < 3; i ++ {
+	for i := 0; i < 3; i++ {
 		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 		binary.PutUvarint(pubKeyBuf, uint64(i))
 		validators = append(validators, &pb.Validator{
@@ -762,7 +770,7 @@ func TestSaveVaidatorIdx_SaveRetrieveWorks(t *testing.T) {
 	}
 	state := &pb.BeaconState{
 		ValidatorRegistry: validators,
-		Slot: epoch * params.BeaconConfig().SlotsPerEpoch,
+		Slot:              epoch * params.BeaconConfig().SlotsPerEpoch,
 	}
 	chainService := setupBeaconChain(t, false, db, true)
 	if err := chainService.saveValidatorIdx(state); err != nil {
