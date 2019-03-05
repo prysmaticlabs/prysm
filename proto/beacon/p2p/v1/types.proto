@@ -47,13 +47,11 @@ message POWDepositState {
   bytes latest_block_hash = 1;
   uint64 last_block_height = 2;
   DepositTrie deposit_trie = 3;
-  uint64 deposit_count = 4;
 }
 
 message DepositTrie  {
 	uint64 deposit_count = 1;
 	repeated bytes branch = 2 ;
-	repeated bytes zero_hashes = 3 ;
 }
 
 message Fork {

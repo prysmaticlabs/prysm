@@ -26,7 +26,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	pr "github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -199,7 +198,7 @@ func (w *Web3Service) ChainStartFeed() *event.Feed {
 func (w *Web3Service) saveToDb() {
 	powDepState := &pb.POWDepositState{}
 	if (w.depositTrie != nil && w.depositTrie != &trieutil.DepositTrie{}) {
-		powDepState.DepositTrie = w.depositTrie.ToProtoDepositTrie()
+		powDepState.DepositTrie = w.depositTrie.GetTrie()
 	}
 	if w.LatestBlockHash().Bytes() != nil {
 		powDepState.LatestBlockHash = w.LatestBlockHash().Bytes()
@@ -207,7 +206,7 @@ func (w *Web3Service) saveToDb() {
 	if w.LatestBlockHeight() != nil {
 		powDepState.LastBlockHeight = w.LatestBlockHeight().Uint64()
 	}
-	powDepState.DepositCount = uint64(pr.ToFloat64(validDepositsCount))
+
 	w.beaconDB.SaveDepositState(powDepState)
 }
 
@@ -583,13 +582,9 @@ func (w *Web3Service) initFromDB() error {
 	if powDepositState == nil {
 		return nil
 	}
-	w.blockHeight = new(big.Int).SetUint64((*powDepositState).LastBlockHeight)
-	w.blockHash = common.BytesToHash((*powDepositState).LatestBlockHash)
-	w.depositTrie, err = trieutil.FromProtoDepositTrie((*powDepositState).DepositTrie)
-	if err != nil {
-		return err
-	}
-	validDepositsCount.Add(float64((*powDepositState).DepositCount))
+	w.blockHeight = new(big.Int).SetUint64(powDepositState.LastBlockHeight)
+	w.blockHash = common.BytesToHash(powDepositState.LatestBlockHash)
+	w.depositTrie.SetTrie(powDepositState.DepositTrie)
 
 	return nil
 }
