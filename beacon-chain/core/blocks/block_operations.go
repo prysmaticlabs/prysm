@@ -5,10 +5,10 @@ package blocks
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"context"
 	"reflect"
 
 	"github.com/gogo/protobuf/proto"
