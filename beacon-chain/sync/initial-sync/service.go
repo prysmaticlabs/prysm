@@ -251,6 +251,8 @@ func (s *InitialSync) checkInMemoryBlocks() {
 	}
 }
 
+// checkSyncStatus verifies if the beacon node is correctly synced with its peers up to their
+// latest canonical head. If not, then it requests batched blocks up to the highest observed slot.
 func (s *InitialSync) checkSyncStatus() bool {
 	if s.atGenesis {
 		if err := s.requestStateFromPeer(s.ctx, s.stateRootOfHighestObservedSlot[:], p2p.Peer{}); err != nil {
