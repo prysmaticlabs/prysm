@@ -8,5 +8,14 @@
    ],
   "prConcurrentLimit": 0,
   "prHourlyLimit": 0,
-  "automerge": true
+  "automerge": true,
+  "packageRules": [{
+    "packagePatterns": [
+      ".*libp2p.*",
+      ".*multiformats.*",
+      ".*ipfs.*",
+      ".*whyrusleeping.*"
+    ],
+    "groupName": "libp2p"
+  }]
 }

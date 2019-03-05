@@ -4,6 +4,7 @@
 package state
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -17,6 +18,7 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 var log = logrus.WithField("prefix", "core/state")
@@ -32,6 +34,7 @@ var log = logrus.WithField("prefix", "core/state")
 //  The per-epoch transitions focus on the validator registry, including adjusting balances and activating and exiting validators,
 //  as well as processing crosslinks and managing block justification/finalization.
 func ExecuteStateTransition(
+	ctx context.Context,
 	state *pb.BeaconState,
 	block *pb.BeaconBlock,
 	headRoot [32]byte,
@@ -40,7 +43,7 @@ func ExecuteStateTransition(
 	var err error
 
 	// Execute per slot transition.
-	state = ProcessSlot(state, headRoot)
+	state = ProcessSlot(ctx, state, headRoot)
 
 	// Execute per block transition.
 	if block != nil {
@@ -70,9 +73,11 @@ func ExecuteStateTransition(
 //	Set state.latest_block_roots[(state.slot - 1) % LATEST_BLOCK_ROOTS_LENGTH] = previous_block_root
 //	If state.slot % LATEST_BLOCK_ROOTS_LENGTH == 0
 //		append merkle_root(state.latest_block_roots) to state.batched_block_roots
-func ProcessSlot(state *pb.BeaconState, headRoot [32]byte) *pb.BeaconState {
+func ProcessSlot(ctx context.Context, state *pb.BeaconState, headRoot [32]byte) *pb.BeaconState {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessSlot")
+	defer span.End()
 	state.Slot++
-	state = b.ProcessBlockRoots(state, headRoot)
+	state = b.ProcessBlockRoots(ctx, state, headRoot)
 	return state
 }
 
