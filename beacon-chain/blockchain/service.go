@@ -6,12 +6,14 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -378,5 +380,27 @@ func (c *ChainService) isBlockReadyForProcessing(block *pb.BeaconBlock, beaconSt
 		c.beaconDB.HasBlock, powBlockFetcher, c.genesisTime); err != nil {
 		return fmt.Errorf("block does not fulfill pre-processing conditions %v", err)
 	}
+	return nil
+}
+
+func (c *ChainService) saveValidatorIdx(state *pb.BeaconState) error {
+	for _, idx := range validators.ActivatedValidators[helpers.CurrentEpoch(state)] {
+		pubKey := state.ValidatorRegistry[idx].Pubkey
+		if err := c.beaconDB.SaveValidatorIndex(pubKey, int(idx)); err != nil {
+			return fmt.Errorf("could not save validator index: %v", err)
+		}
+	}
+	delete(validators.ActivatedValidators, helpers.CurrentEpoch(state))
+	return nil
+}
+
+func (c *ChainService) deleteValidatorIdx(state *pb.BeaconState) error {
+	for _, idx := range validators.ExitedValidators[helpers.CurrentEpoch(state)] {
+		pubKey := state.ValidatorRegistry[idx].Pubkey
+		if err := c.beaconDB.DeleteValidatorIndex(pubKey); err != nil {
+			return fmt.Errorf("could not delete validator index: %v", err)
+		}
+	}
+	delete(validators.ExitedValidators, helpers.CurrentEpoch(state))
 	return nil
 }
