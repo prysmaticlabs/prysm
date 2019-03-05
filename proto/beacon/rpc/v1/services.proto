@@ -30,9 +30,18 @@ service ProposerService {
 }
 
 service ValidatorService {
+    rpc WaitForActivation(ValidatorActivationRequest) returns (stream ValidatorActivationResponse);
     rpc ValidatorIndex(ValidatorIndexRequest) returns (ValidatorIndexResponse);
     rpc CommitteeAssignment(ValidatorEpochAssignmentsRequest) returns (CommitteeAssignmentResponse);
     rpc ValidatorStatus(ValidatorIndexRequest) returns (ValidatorStatusResponse);
+}
+
+message ValidatorActivationRequest {
+    bytes pubkey = 1;
+}
+
+message ValidatorActivationResponse {
+    ethereum.beacon.p2p.v1.Validator validator = 1;
 }
 
 message AttestationDataRequest {

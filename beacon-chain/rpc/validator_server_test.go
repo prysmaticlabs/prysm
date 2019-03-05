@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
+
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -18,6 +20,28 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+func genesisState(validators uint64) (*pbp2p.BeaconState, error) {
+	genesisTime := time.Unix(0, 0).Unix()
+	deposits := make([]*pbp2p.Deposit, validators)
+	for i := 0; i < len(deposits); i++ {
+		var pubKey [96]byte
+		copy(pubKey[:], []byte(strconv.Itoa(i)))
+		depositInput := &pbp2p.DepositInput{
+			Pubkey: pubKey[:],
+		}
+		depositData, err := helpers.EncodeDepositData(
+			depositInput,
+			params.BeaconConfig().MaxDepositAmount,
+			genesisTime,
+		)
+		if err != nil {
+			return nil, err
+		}
+		deposits[i] = &pbp2p.Deposit{DepositData: depositData}
+	}
+	return state.GenesisBeaconState(deposits, uint64(genesisTime), nil)
+}
 
 func TestValidatorIndex_OK(t *testing.T) {
 	db := internal.SetupDB(t)
@@ -413,24 +437,136 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	}
 }
 
-func genesisState(validators uint64) (*pbp2p.BeaconState, error) {
-	genesisTime := time.Unix(0, 0).Unix()
-	deposits := make([]*pbp2p.Deposit, validators)
-	for i := 0; i < len(deposits); i++ {
-		var pubKey [96]byte
-		copy(pubKey[:], []byte(strconv.Itoa(i)))
-		depositInput := &pbp2p.DepositInput{
-			Pubkey: pubKey[:],
-		}
-		depositData, err := helpers.EncodeDepositData(
-			depositInput,
-			params.BeaconConfig().MaxDepositAmount,
-			genesisTime,
-		)
-		if err != nil {
-			return nil, err
-		}
-		deposits[i] = &pbp2p.Deposit{DepositData: depositData}
+func TestWaitForActivation_ContextClosed(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	beaconState := &pbp2p.BeaconState{
+		Slot: params.BeaconConfig().GenesisSlot,
 	}
-	return state.GenesisBeaconState(deposits, uint64(genesisTime), nil)
+	if err := db.SaveState(beaconState); err != nil {
+		t.Fatalf("could not save state: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	vs := &ValidatorServer{
+		beaconDB:           db,
+		ctx:                ctx,
+		chainService:       newMockChainService(),
+		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
+	}
+	req := &pb.ValidatorActivationRequest{
+		Pubkey: []byte("A"),
+	}
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := internal.NewMockValidatorService_WaitForActivationServer(ctrl)
+	exitRoutine := make(chan bool)
+	go func(tt *testing.T) {
+		want := "context closed"
+		if err := vs.WaitForActivation(req, mockStream); !strings.Contains(err.Error(), want) {
+			tt.Errorf("Could not call RPC method: %v", err)
+		}
+		<-exitRoutine
+	}(t)
+	cancel()
+	exitRoutine <- true
+}
+
+func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	pubKey := []byte{'A'}
+	if err := db.SaveValidatorIndex(pubKey, 0); err != nil {
+		t.Fatalf("Could not save validator index: %v", err)
+	}
+
+	beaconState := &pbp2p.BeaconState{
+		Slot: params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry: []*pbp2p.Validator{{
+			ActivationEpoch: params.BeaconConfig().GenesisSlot,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+			Pubkey:          pubKey},
+		},
+	}
+	if err := db.SaveState(beaconState); err != nil {
+		t.Fatalf("could not save state: %v", err)
+	}
+
+	vs := &ValidatorServer{
+		beaconDB:           db,
+		ctx:                context.Background(),
+		chainService:       newMockChainService(),
+		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
+	}
+	req := &pb.ValidatorActivationRequest{
+		Pubkey: pubKey,
+	}
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := internal.NewMockValidatorService_WaitForActivationServer(ctrl)
+	mockStream.EXPECT().Send(
+		&pb.ValidatorActivationResponse{
+			Validator: beaconState.ValidatorRegistry[0],
+		},
+	).Return(nil)
+
+	if err := vs.WaitForActivation(req, mockStream); err != nil {
+		t.Fatalf("Could not setup wait for activation stream: %v", err)
+	}
+}
+
+func TestWaitForActivation_ListensAndFetchesValidatorFromStateFeed(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	pubKey := []byte{'A'}
+
+	beaconState := &pbp2p.BeaconState{
+		Slot: params.BeaconConfig().GenesisSlot,
+		ValidatorRegistry: []*pbp2p.Validator{{
+			ActivationEpoch: params.BeaconConfig().GenesisSlot,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+			Pubkey:          pubKey},
+		},
+	}
+	if err := db.SaveState(beaconState); err != nil {
+		t.Fatalf("could not save state: %v", err)
+	}
+
+	vs := &ValidatorServer{
+		beaconDB:           db,
+		ctx:                context.Background(),
+		chainService:       newMockChainService(),
+		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
+	}
+	req := &pb.ValidatorActivationRequest{
+		Pubkey: pubKey,
+	}
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStream := internal.NewMockValidatorService_WaitForActivationServer(ctrl)
+	mockStream.EXPECT().Send(
+		&pb.ValidatorActivationResponse{
+			Validator: beaconState.ValidatorRegistry[0],
+		},
+	).Return(nil)
+
+	exitRoutine := make(chan bool)
+	go func(tt *testing.T) {
+		if err := vs.WaitForActivation(req, mockStream); err != nil {
+			t.Fatalf("Could not setup wait for activation stream: %v", err)
+		}
+		<-exitRoutine
+	}(t)
+	vs.canonicalStateChan <- beaconState
+	if err := db.SaveValidatorIndex(pubKey, 0); err != nil {
+		t.Fatalf("Could not save validator index: %v", err)
+	}
+	vs.canonicalStateChan <- beaconState
+	exitRoutine <- true
 }
