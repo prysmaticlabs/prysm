@@ -16,11 +16,11 @@ import (
 )
 
 var (
-	// ActivatedValidators is a dict that tracks which validator indexes are activated at
-	// which epoch. Key is epoch, value is a list of activated validator indexes.
+	// ActivatedValidators is a mapping that tracks epoch to activated validators indexes.
+	// Where key is epoch, value is a list of activated validator indexes.
 	ActivatedValidators = make(map[uint64][]uint64)
-	// ExitedValidators is a dict that tracks which validator indexes are exited at
-	// which epoch. Key is epoch, value is a list of exited validator indexes.
+	// ExitedValidators is a mapping that tracks epoch to excited validators indexes.
+	// Where key is epoch, value is a list of exited validator indexes.
 	ExitedValidators = make(map[uint64][]uint64)
 )
 
