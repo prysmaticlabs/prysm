@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
+	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -86,6 +86,8 @@ type Web3Service struct {
 	blockFetcher            POWBlockFetcher
 	blockHeight             *big.Int    // the latest ETH1.0 chain blockHeight.
 	blockHash               common.Hash // the latest ETH1.0 chain blockHash.
+	blockTime               time.Time   // the latest ETH1.0 chain blockTime.
+	blockCache              *blockCache // cache to store block hash/block height.
 	depositContractCaller   *contracts.DepositContractCaller
 	depositRoot             []byte
 	depositTrie             *trieutil.DepositTrie
@@ -93,6 +95,8 @@ type Web3Service struct {
 	chainStarted            bool
 	beaconDB                *db.BeaconDB
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
+	isRunning               bool
+	runError                error
 	chainStartDelay         uint64
 	lastRequestedBlock      *big.Int
 }
@@ -138,7 +142,9 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		endpoint:                config.Endpoint,
 		blockHeight:             nil,
 		blockHash:               common.BytesToHash([]byte{}),
+		blockCache:              newBlockCache(),
 		depositContractAddress:  config.DepositContract,
+		depositTrie:             trieutil.NewDepositTrie(),
 		chainStartFeed:          new(event.Feed),
 		client:                  config.Client,
 		reader:                  config.Reader,
@@ -167,8 +173,12 @@ func (w *Web3Service) Start() {
 
 // Stop the web3 service's main event loop and associated goroutines.
 func (w *Web3Service) Stop() error {
-	defer w.cancel()
-	defer close(w.headerChan)
+	if w.cancel != nil {
+		defer w.cancel()
+	}
+	if w.headerChan != nil {
+		defer close(w.headerChan)
+	}
 	log.Info("Stopping service")
 	return nil
 }
@@ -185,9 +195,23 @@ func (w *Web3Service) ChainStartDeposits() []*pb.Deposit {
 	return w.chainStartDeposits
 }
 
-// Status always returns nil.
-// TODO(1204): Add service health checks.
+// Status is service health checks. Return nil or error.
 func (w *Web3Service) Status() error {
+	// Web3Service don't start
+	if !w.isRunning {
+		return nil
+	}
+	// get error from run function
+	if w.runError != nil {
+		return w.runError
+	}
+	// use a 5 minutes timeout for block time, because the max mining time is 278 sec (block 7208027)
+	// (analyzed the time of the block from 2018-09-01 to 2019-02-13)
+	fiveMinutesTimeout := time.Now().Add(-5 * time.Minute)
+	// check that web3 client is syncing
+	if w.blockTime.Before(fiveMinutesTimeout) {
+		return errors.New("web3 client is not syncing")
+	}
 	return nil
 }
 
@@ -211,19 +235,48 @@ func (w *Web3Service) LatestBlockHash() common.Hash {
 func (w *Web3Service) BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockExists")
 	defer span.End()
+
+	if exists, blkInfo, err := w.blockCache.BlockInfoByHash(hash); exists || err != nil {
+		if err != nil {
+			return false, nil, err
+		}
+		span.AddAttributes(trace.BoolAttribute("blockCacheHit", true))
+		return true, blkInfo.Number, nil
+	}
+	span.AddAttributes(trace.BoolAttribute("blockCacheHit", false))
 	block, err := w.blockFetcher.BlockByHash(ctx, hash)
 	if err != nil {
 		return false, big.NewInt(0), fmt.Errorf("could not query block with given hash: %v", err)
+	}
+
+	if err := w.blockCache.AddBlock(block); err != nil {
+		return false, big.NewInt(0), err
 	}
 
 	return true, block.Number(), nil
 }
 
 // BlockHashByHeight returns the block hash of the block at the given height.
-func (w *Web3Service) BlockHashByHeight(height *big.Int) (common.Hash, error) {
+func (w *Web3Service) BlockHashByHeight(ctx context.Context, height *big.Int) (common.Hash, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockHashByHeight")
+	defer span.End()
+
+	if exists, blkInfo, err := w.blockCache.BlockInfoByHeight(height); exists || err != nil {
+		if err != nil {
+			return [32]byte{}, err
+		}
+		span.AddAttributes(trace.BoolAttribute("blockCacheHit", true))
+		return blkInfo.Hash, nil
+	}
+	span.AddAttributes(trace.BoolAttribute("blockCacheHit", false))
+
 	block, err := w.blockFetcher.BlockByNumber(w.ctx, height)
 	if err != nil {
 		return [32]byte{}, fmt.Errorf("could not query block with given height: %v", err)
+	}
+
+	if err := w.blockCache.AddBlock(block); err != nil {
+		return [32]byte{}, err
 	}
 
 	return block.Hash(), nil
@@ -323,9 +376,6 @@ func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
 	}
 
 	timestamp := binary.LittleEndian.Uint64(timestampData)
-	if uint64(time.Now().Unix()) < timestamp {
-		log.Errorf("Invalid timestamp from log expected %d > %d", time.Now().Unix(), timestamp)
-	}
 	w.chainStarted = true
 	chainStartTime := time.Unix(int64(timestamp), 0)
 	log.WithFields(logrus.Fields{
@@ -358,6 +408,8 @@ func (w *Web3Service) runDelayTimer(done <-chan struct{}) {
 
 // run subscribes to all the services for the ETH1.0 chain.
 func (w *Web3Service) run(done <-chan struct{}) {
+	w.isRunning = true
+	w.runError = nil
 	if err := w.initDataFromContract(); err != nil {
 		log.Errorf("Unable to retrieve data from deposit contract %v", err)
 		return
@@ -366,12 +418,14 @@ func (w *Web3Service) run(done <-chan struct{}) {
 	headSub, err := w.reader.SubscribeNewHead(w.ctx, w.headerChan)
 	if err != nil {
 		log.Errorf("Unable to subscribe to incoming ETH1.0 chain headers: %v", err)
+		w.runError = err
 		return
 	}
 
 	header, err := w.blockFetcher.HeaderByNumber(w.ctx, nil)
 	if err != nil {
 		log.Errorf("Unable to retrieve latest ETH1.0 chain header: %v", err)
+		w.runError = err
 		return
 	}
 
@@ -382,6 +436,7 @@ func (w *Web3Service) run(done <-chan struct{}) {
 	if w.chainStartDelay == 0 {
 		if err := w.processPastLogs(); err != nil {
 			log.Errorf("Unable to process past logs %v", err)
+			w.runError = err
 			return
 		}
 	}
@@ -393,24 +448,33 @@ func (w *Web3Service) run(done <-chan struct{}) {
 	for {
 		select {
 		case <-done:
+			w.isRunning = false
+			w.runError = nil
 			log.Debug("ETH1.0 chain service context closed, exiting goroutine")
 			return
-		case <-headSub.Err():
+		case w.runError = <-headSub.Err():
 			log.Debug("Unsubscribed to head events, exiting goroutine")
 			return
 		case header := <-w.headerChan:
 			blockNumberGauge.Set(float64(header.Number.Int64()))
 			w.blockHeight = header.Number
 			w.blockHash = header.Hash()
+			w.blockTime = time.Unix(header.Time.Int64(), 0)
 			log.WithFields(logrus.Fields{
 				"blockNumber": w.blockHeight,
 				"blockHash":   w.blockHash.Hex(),
 			}).Debug("Latest web3 chain event")
+
+			if err := w.blockCache.AddBlock(gethTypes.NewBlockWithHeader(header)); err != nil {
+				w.runError = err
+				log.Errorf("Unable to add block data to cache %v", err)
+			}
 		case <-ticker.C:
 			if w.lastRequestedBlock.Cmp(w.blockHeight) == 0 {
 				continue
 			}
 			if err := w.requestBatchedLogs(); err != nil {
+				w.runError = err
 				log.Error(err)
 			}
 
@@ -426,7 +490,6 @@ func (w *Web3Service) initDataFromContract() error {
 		return fmt.Errorf("could not retrieve deposit root %v", err)
 	}
 	w.depositRoot = root[:]
-	w.depositTrie = trieutil.NewDepositTrie()
 	return nil
 }
 

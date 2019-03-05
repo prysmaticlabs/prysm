@@ -86,7 +86,10 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	newState, err := state.GenesisBeaconState(
 		deposits,
 		genesisTime,
-		processedPowReceiptRoot)
+		&pb.Eth1Data{
+			DepositRootHash32: processedPowReceiptRoot,
+			BlockHash32:       []byte{},
+		})
 	if err != nil {
 		t.Fatalf("could not execute GenesisBeaconState: %v", err)
 	}
@@ -182,8 +185,8 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 }
 
 func TestGenesisState_HashEquality(t *testing.T) {
-	state1, _ := state.GenesisBeaconState(nil, 0, nil)
-	state2, _ := state.GenesisBeaconState(nil, 0, nil)
+	state1, _ := state.GenesisBeaconState(nil, 0, &pb.Eth1Data{})
+	state2, _ := state.GenesisBeaconState(nil, 0, &pb.Eth1Data{})
 
 	root1, err1 := hashutil.HashProto(state1)
 	root2, err2 := hashutil.HashProto(state2)

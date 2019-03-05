@@ -70,7 +70,7 @@ func run(ctx context.Context, v Validator) {
 				log.WithFields(logrus.Fields{
 					"slot": slot - params.BeaconConfig().GenesisSlot,
 					"role": role,
-				}).Warn("Unknown role, doing nothing")
+				}).Info("Unknown role, doing nothing")
 			default:
 				// Do nothing :)
 			}

@@ -31,7 +31,7 @@ go_image(
     goarch = "amd64",
     goos = "linux",
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain",
-    static = "on",
+    static = "off",  # Static enabled binary seems to cause issues with DNS lookup with cgo.
     tags = ["manual"],
     visibility = ["//visibility:private"],
     deps = [

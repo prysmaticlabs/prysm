@@ -4,16 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 // ProposerServer defines a server implementation of the gRPC Proposer service,
@@ -104,6 +102,7 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 	// Check for skipped slots.
 	for beaconState.Slot < req.Slot-1 {
 		beaconState, err = state.ExecuteStateTransition(
+			ctx,
 			beaconState,
 			nil,
 			parentHash,
@@ -114,6 +113,7 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 		}
 	}
 	beaconState, err = state.ExecuteStateTransition(
+		ctx,
 		beaconState,
 		req,
 		parentHash,

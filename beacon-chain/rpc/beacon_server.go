@@ -123,7 +123,7 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 	stateLatestEth1Hash := bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockHash32)
 	// If latest ETH1 block hash is empty, send a default response
 	if stateLatestEth1Hash == [32]byte{} {
-		return bs.defaultDataResponse(currentHeight, eth1FollowDistance)
+		return bs.defaultDataResponse(ctx, currentHeight, eth1FollowDistance)
 	}
 	// Fetch the height of the block pointed to by the beacon state's latest_eth1_data.block_hash
 	// in the canonical, eth1.0 chain.
@@ -190,7 +190,7 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 	// Let deposit_root be the deposit root of the eth1.0 deposit contract in the
 	// post-state of the block referenced by block_hash.
 	if len(dataVotes) == 0 {
-		return bs.defaultDataResponse(currentHeight, eth1FollowDistance)
+		return bs.defaultDataResponse(ctx, currentHeight, eth1FollowDistance)
 	}
 
 	return &pb.Eth1DataResponse{
@@ -213,9 +213,9 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 	return &pb.PendingDepositsResponse{PendingDeposits: bs.beaconDB.PendingDeposits(ctx, bNum)}, nil
 }
 
-func (bs *BeaconServer) defaultDataResponse(currentHeight *big.Int, eth1FollowDistance int64) (*pb.Eth1DataResponse, error) {
+func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *big.Int, eth1FollowDistance int64) (*pb.Eth1DataResponse, error) {
 	ancestorHeight := currentHeight.Sub(currentHeight, big.NewInt(eth1FollowDistance))
-	blockHash, err := bs.powChainService.BlockHashByHeight(ancestorHeight)
+	blockHash, err := bs.powChainService.BlockHashByHeight(ctx, ancestorHeight)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch ETH1_FOLLOW_DISTANCE ancestor: %v", err)
 	}

@@ -4,10 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
@@ -53,6 +52,7 @@ type Querier struct {
 	chainStartBuf    chan time.Time
 	powchain         powChainService
 	chainStarted     bool
+	atGenesis        bool
 }
 
 // NewQuerierService constructs a new Sync Querier Service.
@@ -86,7 +86,9 @@ func (q *Querier) Start() {
 		return
 	}
 
-	bState, err := q.db.State(context.TODO())
+	q.atGenesis = !hasChainStarted
+
+	bState, err := q.db.State(q.ctx)
 	if err != nil {
 		queryLog.Errorf("Unable to retrieve beacon state %v", err)
 	}
@@ -97,7 +99,11 @@ func (q *Querier) Start() {
 	// to accumulate all the deposits and process them.
 	if !hasChainStarted || bState == nil {
 		q.listenForStateInitialization()
-		return
+
+		// Return, if the node is at genesis.
+		if q.atGenesis {
+			return
+		}
 	}
 	q.run()
 }
@@ -116,6 +122,7 @@ func (q *Querier) listenForStateInitialization() {
 	for {
 		select {
 		case <-q.chainStartBuf:
+			queryLog.Info("state initialized")
 			q.chainStarted = true
 			return
 		case <-sub.Err():
@@ -175,7 +182,7 @@ func (q *Querier) RequestLatestHead() {
 // IsSynced checks if the node is cuurently synced with the
 // rest of the network.
 func (q *Querier) IsSynced() (bool, error) {
-	if q.chainStarted {
+	if q.chainStarted && q.atGenesis {
 		return true, nil
 	}
 	block, err := q.db.ChainHead()

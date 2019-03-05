@@ -12,16 +12,14 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
-	"github.com/prysmaticlabs/prysm/shared/event"
-
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -50,7 +48,7 @@ func (f *faultyPOWChainService) BlockExists(_ context.Context, hash common.Hash)
 	return true, big.NewInt(1), nil
 }
 
-func (f *faultyPOWChainService) BlockHashByHeight(height *big.Int) (common.Hash, error) {
+func (f *faultyPOWChainService) BlockHashByHeight(_ context.Context, height *big.Int) (common.Hash, error) {
 	return [32]byte{}, errors.New("failed")
 }
 
@@ -88,7 +86,7 @@ func (m *mockPOWChainService) BlockExists(_ context.Context, hash common.Hash) (
 	return true, big.NewInt(int64(val)), nil
 }
 
-func (m *mockPOWChainService) BlockHashByHeight(height *big.Int) (common.Hash, error) {
+func (m *mockPOWChainService) BlockHashByHeight(_ context.Context, height *big.Int) (common.Hash, error) {
 	k := int(height.Int64())
 	val, ok := m.hashesByHeight[k]
 	if !ok {
