@@ -110,7 +110,7 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 		break
 	}
 	log.WithFields(logrus.Fields{
-		"activationEpoch": validatorActivatedRecord.ActivationEpoch-params.BeaconConfig().GenesisEpoch,
+		"activationEpoch": validatorActivatedRecord.ActivationEpoch - params.BeaconConfig().GenesisEpoch,
 	}).Info("Validator activated")
 	return nil
 }
