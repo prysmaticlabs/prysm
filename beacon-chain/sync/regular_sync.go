@@ -22,6 +22,7 @@ var log = logrus.WithField("prefix", "regular-sync")
 type chainService interface {
 	IncomingBlockFeed() *event.Feed
 	StateInitializedFeed() *event.Feed
+	CanonicalBlockFeed() *event.Feed
 }
 
 type operationService interface {
@@ -66,6 +67,7 @@ type RegularSync struct {
 	attestationReqByHashBuf  chan p2p.Message
 	unseenAttestationsReqBuf chan p2p.Message
 	exitBuf                  chan p2p.Message
+	canonicalBuf             chan *pb.BeaconBlock
 }
 
 // RegularSyncConfig allows the channel's buffer sizes to be changed.
@@ -81,6 +83,7 @@ type RegularSyncConfig struct {
 	UnseenAttestationsReqBufSize int
 	ExitBufferSize               int
 	ChainHeadReqBufferSize       int
+	CanonicalBufferSize          int
 	ChainService                 chainService
 	OperationService             operationService
 	BeaconDB                     *db.BeaconDB
@@ -101,6 +104,7 @@ func DefaultRegularSyncConfig() *RegularSyncConfig {
 		AttestationReqHashBufSize:    100,
 		UnseenAttestationsReqBufSize: 100,
 		ExitBufferSize:               100,
+		CanonicalBufferSize:          100,
 	}
 }
 
@@ -126,6 +130,7 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		unseenAttestationsReqBuf: make(chan p2p.Message, cfg.UnseenAttestationsReqBufSize),
 		exitBuf:                  make(chan p2p.Message, cfg.ExitBufferSize),
 		chainHeadReqBuf:          make(chan p2p.Message, cfg.ChainHeadReqBufferSize),
+		canonicalBuf:             make(chan *pb.BeaconBlock, cfg.CanonicalBufferSize),
 	}
 }
 
@@ -165,6 +170,7 @@ func (rs *RegularSync) run() {
 	unseenAttestationsReqSub := rs.p2p.Subscribe(&pb.UnseenAttestationsRequest{}, rs.unseenAttestationsReqBuf)
 	exitSub := rs.p2p.Subscribe(&pb.VoluntaryExit{}, rs.exitBuf)
 	chainHeadReqSub := rs.p2p.Subscribe(&pb.ChainHeadRequest{}, rs.chainHeadReqBuf)
+	canonicalBlockSub := rs.chainService.CanonicalBlockFeed().Subscribe(rs.canonicalBuf)
 
 	defer announceBlockSub.Unsubscribe()
 	defer blockSub.Unsubscribe()
@@ -177,6 +183,7 @@ func (rs *RegularSync) run() {
 	defer attestationReqSub.Unsubscribe()
 	defer unseenAttestationsReqSub.Unsubscribe()
 	defer exitSub.Unsubscribe()
+	defer canonicalBlockSub.Unsubscribe()
 
 	for {
 		select {
@@ -205,6 +212,8 @@ func (rs *RegularSync) run() {
 			rs.handleStateRequest(msg)
 		case msg := <-rs.chainHeadReqBuf:
 			rs.handleChainHeadRequest(msg)
+		case block := <-rs.canonicalBuf:
+			rs.broadcastCanonicalBlock(block)
 		}
 	}
 }
@@ -458,7 +467,13 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) {
 		return
 	}
 
-	response := make([]*pb.BeaconBlock, 0, endSlot-startSlot)
+	blockRange := endSlot - startSlot
+	// Handle overflows
+	if startSlot > endSlot {
+		blockRange = 0
+	}
+
+	response := make([]*pb.BeaconBlock, 0, blockRange)
 
 	for i := startSlot; i <= endSlot; i++ {
 		retBlock, err := rs.db.BlockBySlot(i)
@@ -531,4 +546,17 @@ func (rs *RegularSync) handleUnseenAttestationsRequest(msg p2p.Message) {
 		Attestations: atts,
 	}, msg.Peer)
 	sendAttestationsSpan.End()
+}
+
+func (rs *RegularSync) broadcastCanonicalBlock(blk *pb.BeaconBlock) {
+	h, err := hashutil.HashProto(blk)
+	if err != nil {
+		log.Errorf("Could not tree hash block %v", err)
+		return
+	}
+	log.Debugf("Announcing canonical block %#x", h)
+	rs.p2p.Broadcast(&pb.BeaconBlockAnnounce{
+		Hash:       h[:],
+		SlotNumber: blk.Slot,
+	})
 }

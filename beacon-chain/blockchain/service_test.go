@@ -10,8 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -26,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/forkutils"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -573,19 +572,19 @@ func TestUpdateHead_SavesBlock(t *testing.T) {
 		state     *pb.BeaconState
 		logAssert string
 	}{
-		// Higher slot but same crystallized state should trigger chain update.
+		// Higher slot but same state should trigger chain update.
 		{
 			blockSlot: 64,
 			state:     beaconState,
 			logAssert: "Chain head block and state updated",
 		},
-		// Higher slot, different crystallized state, but higher last finalized slot.
+		// Higher slot, different state, but higher last finalized slot.
 		{
 			blockSlot: 64,
 			state:     &pb.BeaconState{FinalizedEpoch: 2},
 			logAssert: "Chain head block and state updated",
 		},
-		// Higher slot, different crystallized state, same last finalized slot,
+		// Higher slot, different state, same last finalized slot,
 		// but last justified slot.
 		{
 			blockSlot: 64,

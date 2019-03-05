@@ -5,9 +5,8 @@ import (
 	"crypto/rand"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 func TestMarshalUnmarshal(t *testing.T) {

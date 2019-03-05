@@ -377,24 +377,25 @@ func VerifyBitfield(bitfield []byte, committeeSize int) (bool, error) {
 //            return assignment
 func CommitteeAssignment(
 	state *pb.BeaconState,
-	epoch uint64,
+	slot uint64,
 	validatorIndex uint64,
 	registryChange bool) ([]uint64, uint64, uint64, bool, error) {
 	var selectedCommittees []*CrosslinkCommittee
 
+	wantedEpoch := slot / params.BeaconConfig().SlotsPerEpoch
 	prevEpoch := PrevEpoch(state)
 	nextEpoch := NextEpoch(state)
 
-	if epoch < prevEpoch || epoch > nextEpoch {
+	if wantedEpoch < prevEpoch || wantedEpoch > nextEpoch {
 		return nil, 0, 0, false, fmt.Errorf(
 			"epoch %d out of bounds: %d <= epoch <= %d",
-			epoch-params.BeaconConfig().GenesisEpoch,
+			wantedEpoch-params.BeaconConfig().GenesisEpoch,
 			prevEpoch-params.BeaconConfig().GenesisEpoch,
 			nextEpoch-params.BeaconConfig().GenesisEpoch,
 		)
 	}
 
-	startSlot := StartSlot(epoch)
+	startSlot := StartSlot(wantedEpoch)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		crosslinkCommittees, err := CrosslinkCommitteesAtSlot(
 			state, slot, registryChange)

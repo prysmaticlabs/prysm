@@ -10,8 +10,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
@@ -23,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	"github.com/sirupsen/logrus"
 )
 
 // VerifyProposerSignature uses BLS signature verification to ensure

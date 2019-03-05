@@ -1,6 +1,8 @@
 package p2p
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestBuildOptions(t *testing.T) {
 	opts := buildOptions(1)

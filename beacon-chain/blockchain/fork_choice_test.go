@@ -6,14 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -160,7 +159,7 @@ func TestLMDGhost_EveryActiveValidatorHasLatestAttestation(t *testing.T) {
 	beaconState.ValidatorBalances[0] = 32e9
 	candidate1, candidate2 := setupConflictingBlocks(t, beaconDB, genesisHash, stateHash)
 
-	activeIndices := helpers.ActiveValidatorIndices(beaconState.ValidatorRegistry, 0)
+	activeIndices := helpers.ActiveValidatorIndices(beaconState.ValidatorRegistry, params.BeaconConfig().GenesisEpoch)
 	// We store some simulated latest attestation target for every active validator in a map.
 	voteTargets := make(map[uint64]*pb.BeaconBlock, len(activeIndices))
 	for i := 0; i < len(activeIndices); i++ {

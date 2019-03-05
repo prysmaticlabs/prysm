@@ -142,13 +142,13 @@ func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignm
 	v := validator{
 		key:             validatorKey,
 		validatorClient: client,
-		assignment: &pb.Assignment{
-			PublicKey:    []byte{},
-			AttesterSlot: 10,
-			ProposerSlot: 20,
+		assignment: &pb.CommitteeAssignmentResponse{
+			Committee: []uint64{},
+			Slot:      10,
+			Shard:     20,
 		},
 	}
-	client.EXPECT().ValidatorEpochAssignments(
+	client.EXPECT().CommitteeAssignment(
 		gomock.Any(),
 		gomock.Any(),
 	).Times(0)
@@ -170,7 +170,7 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 
 	expected := errors.New("bad")
 
-	client.EXPECT().ValidatorEpochAssignments(
+	client.EXPECT().CommitteeAssignment(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(nil, expected)
@@ -186,17 +186,17 @@ func TestUpdateAssignments_OK(t *testing.T) {
 	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	slot := params.BeaconConfig().SlotsPerEpoch
-	resp := &pb.ValidatorEpochAssignmentsResponse{
-		Assignment: &pb.Assignment{
-			ProposerSlot: 67,
-			AttesterSlot: 78,
-		},
+	resp := &pb.CommitteeAssignmentResponse{
+		Slot:       params.BeaconConfig().SlotsPerEpoch,
+		Shard:      100,
+		Committee:  []uint64{0, 1, 2, 3},
+		IsProposer: true,
 	}
 	v := validator{
 		key:             validatorKey,
 		validatorClient: client,
 	}
-	client.EXPECT().ValidatorEpochAssignments(
+	client.EXPECT().CommitteeAssignment(
 		gomock.Any(),
 		gomock.Any(),
 	).Return(resp, nil)
@@ -205,10 +205,13 @@ func TestUpdateAssignments_OK(t *testing.T) {
 		t.Fatalf("Could not update assignments: %v", err)
 	}
 
-	if v.assignment.ProposerSlot != 67 {
-		t.Errorf("Unexpected validator assignments. want=%v got=%v", 67, v.assignment.ProposerSlot)
+	if v.assignment.Slot != params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Unexpected validator assignments. want=%v got=%v", params.BeaconConfig().SlotsPerEpoch, v.assignment.Slot)
 	}
-	if v.assignment.AttesterSlot != 78 {
-		t.Errorf("Unexpected validator assignments. want=%v got=%v", 78, v.assignment.AttesterSlot)
+	if v.assignment.Shard != resp.Shard {
+		t.Errorf("Unexpected validator assignments. want=%v got=%v", resp.Shard, v.assignment.Slot)
+	}
+	if !v.assignment.IsProposer {
+		t.Errorf("Unexpected validator assignments. want: proposer=true")
 	}
 }
