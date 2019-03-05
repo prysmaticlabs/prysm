@@ -42,12 +42,13 @@ func reportEpochTransitionMetrics(state *pb.BeaconState) {
 		).Set(float64(bal))
 	}
 	s := params.BeaconConfig().GenesisSlot
+	e := params.BeaconConfig().GenesisEpoch
 	// Slot number
 	lastSlotGauge.Set(float64(state.Slot - s))
 	// Last justified slot
-	lastJustifiedEpochGauge.Set(float64(state.JustifiedEpoch))
+	lastJustifiedEpochGauge.Set(float64(state.JustifiedEpoch - e))
 	// Last previous justified slot
-	lastPrevJustifiedEpochGauge.Set(float64(state.PreviousJustifiedEpoch))
+	lastPrevJustifiedEpochGauge.Set(float64(state.PreviousJustifiedEpoch - e))
 	// Last finalized slot
-	lastFinalizedEpochGauge.Set(float64(state.FinalizedEpoch))
+	lastFinalizedEpochGauge.Set(float64(state.FinalizedEpoch - e))
 }
