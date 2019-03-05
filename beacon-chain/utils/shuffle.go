@@ -43,8 +43,8 @@ func PermutedIndex(index uint64, listSize uint64, seed common.Hash) (uint64, err
 		}
 		copy(hBuf[hPivotViewSize:], bytesutil.Bytes4(position / 0xff)[:hPositionWindowSize])
 		source := hashutil.Hash(hBuf)
-		byteV := source[(int(position)%0xff)/0x7]
-		bitV := (byteV >> (position % 0x7)) % 0x1
+		byteV := source[(int(position)%0xff)/8]
+		bitV := (byteV >> (position % 8)) % 0x1
 		if bitV == 1 {
 			index = flip
 		}
