@@ -68,6 +68,8 @@ type RegularSync struct {
 	unseenAttestationsReqBuf chan p2p.Message
 	exitBuf                  chan p2p.Message
 	canonicalBuf             chan *pb.BeaconBlock
+	latestObservedSlot       uint64
+	blocksAwaitingProcessing map[[32]byte]*pb.BeaconBlock
 }
 
 // RegularSyncConfig allows the channel's buffer sizes to be changed.
@@ -131,6 +133,7 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		exitBuf:                  make(chan p2p.Message, cfg.ExitBufferSize),
 		chainHeadReqBuf:          make(chan p2p.Message, cfg.ChainHeadReqBufferSize),
 		canonicalBuf:             make(chan *pb.BeaconBlock, cfg.CanonicalBufferSize),
+		blocksAwaitingProcessing: make(map[[32]byte]*pb.BeaconBlock),
 	}
 }
 
@@ -257,6 +260,15 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 
 	log.Debugf("Processing response to block request: %#x", blockRoot)
 
+	if childBlock, ok := rs.blocksAwaitingProcessing[blockRoot]; ok && block.Slot < rs.latestObservedSlot {
+		log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Received missing block parent")
+		delete(rs.blocksAwaitingProcessing, blockRoot)
+		rs.chainService.IncomingBlockFeed().Send(block)
+		rs.chainService.IncomingBlockFeed().Send(childBlock)
+		log.Debug("Sent missing block parent and child to chain service for processing")
+		return
+	}
+
 	if rs.db.HasBlock(blockRoot) {
 		log.Debug("Received a block that already exists. Exiting...")
 		return
@@ -273,11 +285,22 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 		return
 	}
 
+	// We check if we have the block's parents saved locally, if not, we store the block in a
+	// pending processing map by hash and once we receive the parent, we process said parent AND then
+	// we process the this received block.
+	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+	if !rs.db.HasBlock(parentRoot) {
+		rs.blocksAwaitingProcessing[parentRoot] = block
+		rs.p2p.Broadcast(&pb.BeaconBlockRequest{Hash: parentRoot[:]})
+		return
+	}
+
 	_, sendBlockSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendBlock")
 	log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Sending newly received block to subscribers")
 	rs.chainService.IncomingBlockFeed().Send(block)
 	sentBlocks.Inc()
 	sendBlockSpan.End()
+	rs.latestObservedSlot = block.Slot
 }
 
 // handleBlockRequestBySlot processes a block request from the p2p layer.
