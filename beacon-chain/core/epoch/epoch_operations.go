@@ -6,6 +6,7 @@ package epoch
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"math"
 
@@ -15,6 +16,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	b "github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 )
 
 // CurrentAttestations returns the pending attestations from current epoch.
@@ -25,7 +27,10 @@ import (
 //  (Note: this is the set of attestations of slots in the epoch
 //  current_epoch, not attestations that got included in the chain
 //  during the epoch current_epoch.)
-func CurrentAttestations(state *pb.BeaconState) []*pb.PendingAttestation {
+func CurrentAttestations(ctx context.Context, state *pb.BeaconState) []*pb.PendingAttestation {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.CurrentAttestations")
+	defer span.End()
+
 	var currentEpochAttestations []*pb.PendingAttestation
 	currentEpoch := helpers.CurrentEpoch(state)
 
@@ -44,9 +49,14 @@ func CurrentAttestations(state *pb.BeaconState) []*pb.PendingAttestation {
 //   return [a for a in current_epoch_attestations if a.data.epoch_boundary_root ==
 //   	get_block_root(state, get_epoch_start_slot(current_epoch))
 func CurrentEpochBoundaryAttestations(
+	ctx context.Context,
 	state *pb.BeaconState,
 	currentEpochAttestations []*pb.PendingAttestation,
 ) ([]*pb.PendingAttestation, error) {
+
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.CurrentEpochBoundaryAttestations")
+	defer span.End()
+
 	var boundaryAttestations []*pb.PendingAttestation
 	for _, attestation := range currentEpochAttestations {
 		boundaryBlockRoot, err := block.BlockRoot(state, helpers.StartSlot(helpers.CurrentEpoch(state)))
@@ -69,7 +79,11 @@ func CurrentEpochBoundaryAttestations(
 // Spec pseudocode definition:
 //   return [a for a in state.latest_attestations if
 //   	previous_epoch == slot_to_epoch(a.data.slot)].
-func PrevAttestations(state *pb.BeaconState) []*pb.PendingAttestation {
+func PrevAttestations(ctx context.Context, state *pb.BeaconState) []*pb.PendingAttestation {
+
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.PrevAttestations")
+	defer span.End()
+
 	var prevEpochAttestations []*pb.PendingAttestation
 	prevEpoch := helpers.PrevEpoch(state)
 	log.Infof("Fetching prev boundary attestations, prev epoch: %d", helpers.PrevEpoch(state)-params.BeaconConfig().GenesisEpoch)
@@ -90,6 +104,7 @@ func PrevAttestations(state *pb.BeaconState) []*pb.PendingAttestation {
 //   return [a for a in current_epoch_attestations + previous_epoch_attestations
 //   if a.data.justified_epoch  == state.previous_justified_epoch]
 func PrevJustifiedAttestations(
+	ctx context.Context,
 	state *pb.BeaconState,
 	currentEpochAttestations []*pb.PendingAttestation,
 	prevEpochAttestations []*pb.PendingAttestation,
@@ -113,9 +128,13 @@ func PrevJustifiedAttestations(
 //   return [a for a in previous_epoch_attestations
 // 	 if a.epoch_boundary_root == get_block_root(state, get_epoch_start_slot(previous_epoch)]
 func PrevEpochBoundaryAttestations(
+	ctx context.Context,
 	state *pb.BeaconState,
 	prevEpochAttestations []*pb.PendingAttestation,
 ) ([]*pb.PendingAttestation, error) {
+
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.PrevEpochBoundaryAttestations")
+	defer span.End()
 
 	var prevEpochBoundaryAttestations []*pb.PendingAttestation
 
@@ -140,9 +159,13 @@ func PrevEpochBoundaryAttestations(
 //   return [a for a in previous_epoch_attestations
 //   if a.data.beacon_block_root == get_block_root(state, a.data.slot)]
 func PrevHeadAttestations(
+	ctx context.Context,
 	state *pb.BeaconState,
 	prevEpochAttestations []*pb.PendingAttestation,
 ) ([]*pb.PendingAttestation, error) {
+
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.PrevHeadAttestations")
+	defer span.End()
 
 	var headAttestations []*pb.PendingAttestation
 	for _, attestation := range prevEpochAttestations {
@@ -169,8 +192,12 @@ func PrevHeadAttestations(
 //    """
 //    return sum([get_effective_balance(state, i) for i in validators])
 func TotalBalance(
+	ctx context.Context,
 	state *pb.BeaconState,
 	activeValidatorIndices []uint64) uint64 {
+
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.TotalBalance")
+	defer span.End()
 
 	var totalBalance uint64
 	for _, index := range activeValidatorIndices {
@@ -239,12 +266,14 @@ func InclusionDistance(state *pb.BeaconState, validatorIndex uint64) (uint64, er
 //    Let `attesting_validators(crosslink_committee)` be equal to
 //    `attesting_validator_indices(crosslink_committee, winning_root(crosslink_committee))` for convenience
 func AttestingValidators(
+	ctx context.Context,
 	state *pb.BeaconState,
 	shard uint64,
 	currentEpochAttestations []*pb.PendingAttestation,
 	prevEpochAttestations []*pb.PendingAttestation) ([]uint64, error) {
 
 	root, err := winningRoot(
+		ctx,
 		state,
 		shard,
 		currentEpochAttestations,
@@ -273,13 +302,14 @@ func AttestingValidators(
 //    Let total_balance(crosslink_committee) =
 //    sum([get_effective_balance(state, i) for i in crosslink_committee.committee])
 func TotalAttestingBalance(
+	ctx context.Context,
 	state *pb.BeaconState,
 	shard uint64,
 	currentEpochAttestations []*pb.PendingAttestation,
 	prevEpochAttestations []*pb.PendingAttestation) (uint64, error) {
 
 	var totalBalance uint64
-	attestedValidatorIndices, err := AttestingValidators(state, shard, currentEpochAttestations, prevEpochAttestations)
+	attestedValidatorIndices, err := AttestingValidators(ctx, state, shard, currentEpochAttestations, prevEpochAttestations)
 	if err != nil {
 		return 0, fmt.Errorf("could not get attesting validator indices: %v", err)
 	}
@@ -308,6 +338,7 @@ func SinceFinality(state *pb.BeaconState) uint64 {
 //   such that get_total_balance(state, attesting_validator_indices(crosslink_committee, crosslink_data_root))
 //   is maximized (ties broken by favoring lexicographically smallest crosslink_data_root).
 func winningRoot(
+	ctx context.Context,
 	state *pb.BeaconState,
 	shard uint64,
 	currentEpochAttestations []*pb.PendingAttestation,
