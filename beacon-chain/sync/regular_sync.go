@@ -259,16 +259,6 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 	}
 
 	log.Debugf("Processing response to block request: %#x", blockRoot)
-
-	if childBlock, ok := rs.blocksAwaitingProcessing[blockRoot]; ok && block.Slot < rs.latestObservedSlot {
-		log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Received missing block parent")
-		delete(rs.blocksAwaitingProcessing, blockRoot)
-		rs.chainService.IncomingBlockFeed().Send(block)
-		rs.chainService.IncomingBlockFeed().Send(childBlock)
-		log.Debug("Sent missing block parent and child to chain service for processing")
-		return
-	}
-
 	if rs.db.HasBlock(blockRoot) {
 		log.Debug("Received a block that already exists. Exiting...")
 		return
@@ -282,6 +272,15 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 
 	if block.Slot < beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
 		log.Debug("Discarding received block with a slot number smaller than the last finalized slot")
+		return
+	}
+
+	if childBlock, ok := rs.blocksAwaitingProcessing[blockRoot]; ok && block.Slot < rs.latestObservedSlot {
+		log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Received missing block parent")
+		delete(rs.blocksAwaitingProcessing, blockRoot)
+		rs.chainService.IncomingBlockFeed().Send(block)
+		rs.chainService.IncomingBlockFeed().Send(childBlock)
+		log.Debug("Sent missing block parent and child to chain service for processing")
 		return
 	}
 
