@@ -4,6 +4,8 @@ package sync
 import (
 	"context"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -17,7 +19,14 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var log = logrus.WithField("prefix", "regular-sync")
+var (
+	log = logrus.WithField("prefix", "regular-sync")
+	blocksAwaitingProcessingGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "regsync_blocks_awaiting_processing",
+		Help: "Number of blocks which do not have a parent and are awaiting processing by the chain service",
+	})
+)
+
 
 type chainService interface {
 	IncomingBlockFeed() *event.Feed
@@ -68,7 +77,7 @@ type RegularSync struct {
 	unseenAttestationsReqBuf chan p2p.Message
 	exitBuf                  chan p2p.Message
 	canonicalBuf             chan *pb.BeaconBlock
-	latestObservedSlot       uint64
+	highestObservedSlot       uint64
 	blocksAwaitingProcessing map[[32]byte]*pb.BeaconBlock
 }
 
@@ -256,6 +265,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		log.Errorf("Could not hash received block: %v", err)
+		return
 	}
 
 	log.Debugf("Processing response to block request: %#x", blockRoot)
@@ -281,16 +291,23 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
 	if !rs.db.HasBlock(parentRoot) {
 		rs.blocksAwaitingProcessing[parentRoot] = block
+		blocksAwaitingProcessingGauge.Inc()
 		rs.p2p.Broadcast(&pb.BeaconBlockRequest{Hash: parentRoot[:]})
+		// We update the last observed slot to the received canonical block's slot.
+		if block.Slot > rs.highestObservedSlot {
+			rs.highestObservedSlot = block.Slot
+		}
 		return
 	}
 
-	// If we receive a block from the past, that means we are receiving a parent
-	// block which was missing from our db.
-	if block.Slot < rs.latestObservedSlot {
+	if block.Slot < rs.highestObservedSlot {
+		// If we receive a block from the past AND it corresponds to
+		// a parent block of a block stored in the processing cache, that means we are
+		// receiving a parent block which was missing from our db.
 		if childBlock, ok := rs.blocksAwaitingProcessing[blockRoot]; ok {
 			log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Received missing block parent")
 			delete(rs.blocksAwaitingProcessing, blockRoot)
+			blocksAwaitingProcessingGauge.Dec()
 			rs.chainService.IncomingBlockFeed().Send(block)
 			rs.chainService.IncomingBlockFeed().Send(childBlock)
 			log.Debug("Sent missing block parent and child to chain service for processing")
@@ -304,7 +321,9 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 	sentBlocks.Inc()
 	sendBlockSpan.End()
 	// We update the last observed slot to the received canonical block's slot.
-	rs.latestObservedSlot = block.Slot
+	if block.Slot > rs.highestObservedSlot {
+		rs.highestObservedSlot = block.Slot
+	}
 }
 
 // handleBlockRequestBySlot processes a block request from the p2p layer.
