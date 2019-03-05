@@ -37,6 +37,5 @@ func startPeerWatcher(ctx context.Context, h host.Host) {
 }
 
 func peerCount(h host.Host) int {
-	// Return number of peers in peerstore, excluding our own host.
-	return len(h.Peerstore().Peers()) - 1
+	return len(h.Network().Peers())
 }
