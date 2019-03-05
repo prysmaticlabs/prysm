@@ -19,7 +19,7 @@ type watchtower struct {
 	client *kubernetes.Clientset
 }
 
-func NewWatchtower(db *db) *watchtower {
+func newWatchtower(db *db) *watchtower {
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		panic(err)

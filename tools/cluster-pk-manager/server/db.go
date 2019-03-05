@@ -35,7 +35,7 @@ type db struct {
 	db *bolt.DB
 }
 
-func NewDB(dbPath string) *db {
+func newDB(dbPath string) *db {
 	datafile := path.Join(dbPath, dbFileName)
 	boltdb, err := bolt.Open(datafile, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {

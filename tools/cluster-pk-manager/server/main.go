@@ -29,10 +29,10 @@ func main() {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
 
-	db := NewDB(*dbPath)
-	srv := NewServer(db, *rpcPath, *depositContractAddr, *privateKey, *depositAmount)
+	db := newDB(*dbPath)
+	srv := newServer(db, *rpcPath, *depositContractAddr, *privateKey, *depositAmount)
 	if !*disableWatchtower {
-		wt := NewWatchtower(db)
+		wt := newWatchtower(db)
 		go wt.WatchPods()
 	}
 

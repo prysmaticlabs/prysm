@@ -32,7 +32,7 @@ type server struct {
 	clientLock sync.Mutex
 }
 
-func NewServer(
+func newServer(
 	db *db,
 	rpcAddr string,
 	depositContractAddr string,
