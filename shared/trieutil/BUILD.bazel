@@ -22,5 +22,8 @@ go_test(
         "sparse_merkle_test.go",
     ],
     embed = [":go_default_library"],
-    deps = ["//shared/hashutil:go_default_library"],
+    deps = [
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/hashutil:go_default_library",
+    ],
 )
