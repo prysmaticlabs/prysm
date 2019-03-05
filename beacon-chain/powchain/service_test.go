@@ -940,14 +940,14 @@ func TestStatus(t *testing.T) {
 
 	testCases := map[*Web3Service]string{
 		// "status is ok" cases
-		&Web3Service{}: "",
-		&Web3Service{isRunning: true, blockTime: afterFiveMinutesAgo}:         "",
-		&Web3Service{isRunning: false, blockTime: beforeFiveMinutesAgo}:       "",
-		&Web3Service{isRunning: false, runError: errors.New("test runError")}: "",
+		{}: "",
+		{isRunning: true, blockTime: afterFiveMinutesAgo}:         "",
+		{isRunning: false, blockTime: beforeFiveMinutesAgo}:       "",
+		{isRunning: false, runError: errors.New("test runError")}: "",
 		// "status is error" cases
-		&Web3Service{isRunning: true, blockTime: beforeFiveMinutesAgo}:       "web3 client is not syncing",
-		&Web3Service{isRunning: true}:                                        "web3 client is not syncing",
-		&Web3Service{isRunning: true, runError: errors.New("test runError")}: "test runError",
+		{isRunning: true, blockTime: beforeFiveMinutesAgo}: "web3 client is not syncing",
+		{isRunning: true}: "web3 client is not syncing",
+		{isRunning: true, runError: errors.New("test runError")}: "test runError",
 	}
 
 	for web3ServiceState, wantedErrorText := range testCases {

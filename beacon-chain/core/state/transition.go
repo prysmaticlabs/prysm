@@ -4,6 +4,7 @@
 package state
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -17,6 +18,7 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 var log = logrus.WithField("prefix", "core/state")
@@ -32,6 +34,7 @@ var log = logrus.WithField("prefix", "core/state")
 //  The per-epoch transitions focus on the validator registry, including adjusting balances and activating and exiting validators,
 //  as well as processing crosslinks and managing block justification/finalization.
 func ExecuteStateTransition(
+	ctx context.Context,
 	state *pb.BeaconState,
 	block *pb.BeaconBlock,
 	headRoot [32]byte,
@@ -40,11 +43,11 @@ func ExecuteStateTransition(
 	var err error
 
 	// Execute per slot transition.
-	state = ProcessSlot(state, headRoot)
+	state = ProcessSlot(ctx, state, headRoot)
 
 	// Execute per block transition.
 	if block != nil {
-		state, err = ProcessBlock(state, block, verifySignatures)
+		state, err = ProcessBlock(ctx, state, block, verifySignatures)
 		if err != nil {
 			return nil, fmt.Errorf("could not process block: %v", err)
 		}
@@ -70,16 +73,26 @@ func ExecuteStateTransition(
 //	Set state.latest_block_roots[(state.slot - 1) % LATEST_BLOCK_ROOTS_LENGTH] = previous_block_root
 //	If state.slot % LATEST_BLOCK_ROOTS_LENGTH == 0
 //		append merkle_root(state.latest_block_roots) to state.batched_block_roots
-func ProcessSlot(state *pb.BeaconState, headRoot [32]byte) *pb.BeaconState {
+func ProcessSlot(ctx context.Context, state *pb.BeaconState, headRoot [32]byte) *pb.BeaconState {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessSlot")
+	defer span.End()
 	state.Slot++
-	state = b.ProcessBlockRoots(state, headRoot)
+	state = b.ProcessBlockRoots(ctx, state, headRoot)
 	return state
 }
 
 // ProcessBlock creates a new, modified beacon state by applying block operation
 // transformations as defined in the Ethereum Serenity specification, including processing proposer slashings,
 // processing block attestations, and more.
-func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock, verifySignatures bool) (*pb.BeaconState, error) {
+func ProcessBlock(
+	ctx context.Context,
+	state *pb.BeaconState,
+	block *pb.BeaconBlock,
+	verifySignatures bool) (*pb.BeaconState, error) {
+
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
+	defer span.End()
+
 	r, err := hashutil.HashProto(block)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash block: %v", err)
@@ -99,42 +112,42 @@ func ProcessBlock(state *pb.BeaconState, block *pb.BeaconBlock, verifySignatures
 	// Verify block signature.
 	if verifySignatures {
 		// TODO(#781): Verify Proposer Signature.
-		if err := b.VerifyProposerSignature(block); err != nil {
+		if err := b.VerifyProposerSignature(ctx, block); err != nil {
 			return nil, fmt.Errorf("could not verify proposer signature: %v", err)
 		}
 	}
 	log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Verified block signature")
 
 	// Verify block RANDAO.
-	state, err = b.ProcessBlockRandao(state, block, verifySignatures)
+	state, err = b.ProcessBlockRandao(ctx, state, block, verifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify and process block randao: %v", err)
 	}
 	log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Verified and processed block RANDAO")
 
 	// Process ETH1 data.
-	state = b.ProcessEth1DataInBlock(state, block)
-	state, err = b.ProcessAttesterSlashings(state, block, verifySignatures)
+	state = b.ProcessEth1DataInBlock(ctx, state, block)
+	state, err = b.ProcessAttesterSlashings(ctx, state, block, verifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify block attester slashings: %v", err)
 	}
 	log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Processed ETH1 data")
 
-	state, err = b.ProcessProposerSlashings(state, block, verifySignatures)
+	state, err = b.ProcessProposerSlashings(ctx, state, block, verifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify block proposer slashings: %v", err)
 	}
 
-	state, err = b.ProcessBlockAttestations(state, block, verifySignatures)
+	state, err = b.ProcessBlockAttestations(ctx, state, block, verifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block attestations: %v", err)
 	}
 
-	state, err = b.ProcessValidatorDeposits(state, block)
+	state, err = b.ProcessValidatorDeposits(ctx, state, block)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block validator deposits: %v", err)
 	}
-	state, err = b.ProcessValidatorExits(state, block, verifySignatures)
+	state, err = b.ProcessValidatorExits(ctx, state, block, verifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not process validator exits: %v", err)
 	}
