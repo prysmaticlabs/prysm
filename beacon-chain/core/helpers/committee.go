@@ -5,7 +5,6 @@ package helpers
 import (
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -292,9 +291,7 @@ func Shuffling(
 	// Figure out how many committees can be in a single slot.
 	activeIndices := ActiveValidatorIndices(validators, epoch)
 	activeCount := uint64(len(activeIndices))
-	log.Printf("Activecount: %v", activeCount)
 	committeesPerEpoch := EpochCommitteeCount(activeCount)
-	log.Printf("committeesPerEpoch: %v", committeesPerEpoch)
 
 	shuffledIndices := make([]uint64, 0, activeCount)
 
