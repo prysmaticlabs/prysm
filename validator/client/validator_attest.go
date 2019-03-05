@@ -123,18 +123,21 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	}
 
 	epoch := slot / params.BeaconConfig().SlotsPerEpoch
-	attestationData, err := hashutil.HashProto(attData)
+	attestationDataHash, err := hashutil.HashProto(&pbp2p.AttestationDataAndCustodyBit{
+		Data:       attData,
+		CustodyBit: true,
+	})
 	if err != nil {
 		log.Error("Could not hash attestation data")
 		return
 	}
 	log.Infof("Signing attestation: %d", epoch)
 	domain := forkutils.DomainVersion(fork, epoch, params.BeaconConfig().DomainAttestation)
-	aggregateSignature := v.key.SecretKey.Sign(attestationData[:], domain)
-	log.Infof("Pubkey: %#x", v.key.PublicKey.Marshal())
-	log.Infof("Aggregate signature: %#x", aggregateSignature.Marshal())
-
+	aggregateSignature := v.key.SecretKey.Sign(attestationDataHash[:], domain)
 	attestation.AggregateSignature = aggregateSignature.Marshal()
+
+	log.Infof("Pubkey: %#x", v.key.PublicKey.Marshal())
+	log.Infof("Aggregate signature: %#x", attestation.AggregateSignature)
 
 	duration := time.Duration(slot*params.BeaconConfig().SecondsPerSlot+delay) * time.Second
 	timeToBroadcast := time.Unix(int64(v.genesisTime), 0).Add(duration)

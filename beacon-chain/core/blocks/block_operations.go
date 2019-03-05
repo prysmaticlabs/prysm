@@ -561,21 +561,15 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 			custodyBit1PubKeys = append(custodyBit1PubKeys, pubkey)
 		}
 
-		pubkeys := []*bls.PublicKey{
-			bls.AggregatePublicKeys(custodyBit0PubKeys),
-			bls.AggregatePublicKeys(custodyBit1PubKeys),
-		}
+		pubkey := bls.AggregatePublicKeys(custodyBit1PubKeys)
 
-		custodyBit0Hash, err := hashutil.HashProto(&pb.AttestationDataAndCustodyBit{Data: att.Data, CustodyBit: false})
-		if err != nil {
-			return fmt.Errorf("Could not tree hash AttestationDataAndCustodyBit0: %v", err)
-		}
+		// No custodyBit0 for now
 		custodyBit1Hash, err := hashutil.HashProto(&pb.AttestationDataAndCustodyBit{Data: att.Data, CustodyBit: true})
 		if err != nil {
 			return fmt.Errorf("Could not tree hash AttestationDataAndCustodyBit1: %v", err)
 		}
 
-		messageHashes := [][]byte{custodyBit0Hash[:], custodyBit1Hash[:]}
+		messageHash := custodyBit1Hash[:]
 
 		sig, err := bls.SignatureFromBytes(att.AggregateSignature)
 		if err != nil {
@@ -587,11 +581,11 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 		domain := forkutils.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainAttestation)
 
 		log.WithFields(logrus.Fields{
-			"pubkeys":       pubkeys,
-			"messageHashes": messageHashes,
+			"pubkeys":       pubkey,
+			"messageHashes": messageHash,
 			"aggregateSig":  fmt.Sprintf("%#x", sig.Marshal()),
 		}).Info("Verifying attestation")
-		if !sig.VerifyMultiple(pubkeys, messageHashes, domain) {
+		if !sig.Verify(messageHash, pubkey, domain) {
 			return fmt.Errorf("block randao reveal signature did not verify")
 		}
 		return nil
