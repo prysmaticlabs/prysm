@@ -480,12 +480,14 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 
 func TestLatestMainchainInfoFromDB_OK(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
+
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
+
 	testAcc, err := setup()
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
-	beaconDB := internal.SetupDB(t)
-	defer internal.TeardownDB(t, beaconDB)
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.contractAddr,
@@ -495,22 +497,25 @@ func TestLatestMainchainInfoFromDB_OK(t *testing.T) {
 		ContractBackend: testAcc.backend,
 		BeaconDB:        beaconDB,
 	})
+
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
+
+	exitRoutine := make(chan bool)
 	testAcc.backend.Commit()
 	web3Service.reader = &goodReader{}
 	web3Service.logger = &goodLogger{}
-
-	exitRoutine := make(chan bool)
 
 	go func() {
 		web3Service.run(web3Service.ctx.Done())
 		<-exitRoutine
 	}()
 
-	header := &gethTypes.Header{Number: big.NewInt(42)}
-
+	header := &gethTypes.Header{
+		Number: big.NewInt(42),
+		Time:   big.NewInt(308534400),
+	}
 	web3Service.headerChan <- header
 	web3Service.cancel()
 	exitRoutine <- true

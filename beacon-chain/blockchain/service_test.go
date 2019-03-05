@@ -205,6 +205,7 @@ func setupBeaconChain(t *testing.T, faultyPoWClient bool, beaconDB *db.BeaconDB,
 				Reader:          client,
 				Client:          client,
 				Logger:          client,
+				BeaconDB:        beaconDB,
 			})
 		} else {
 			client := &mockClient{}
@@ -214,6 +215,7 @@ func setupBeaconChain(t *testing.T, faultyPoWClient bool, beaconDB *db.BeaconDB,
 				Reader:          client,
 				Client:          client,
 				Logger:          client,
+				BeaconDB:        beaconDB,
 			})
 		}
 	}
