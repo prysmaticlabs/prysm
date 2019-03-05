@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -17,7 +19,13 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var log = logrus.WithField("prefix", "regular-sync")
+var (
+	log                           = logrus.WithField("prefix", "regular-sync")
+	blocksAwaitingProcessingGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "regsync_blocks_awaiting_processing",
+		Help: "Number of blocks which do not have a parent and are awaiting processing by the chain service",
+	})
+)
 
 type chainService interface {
 	IncomingBlockFeed() *event.Feed
@@ -68,6 +76,8 @@ type RegularSync struct {
 	unseenAttestationsReqBuf chan p2p.Message
 	exitBuf                  chan p2p.Message
 	canonicalBuf             chan *pb.BeaconBlock
+	highestObservedSlot      uint64
+	blocksAwaitingProcessing map[[32]byte]*pb.BeaconBlock
 }
 
 // RegularSyncConfig allows the channel's buffer sizes to be changed.
@@ -131,6 +141,7 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		exitBuf:                  make(chan p2p.Message, cfg.ExitBufferSize),
 		chainHeadReqBuf:          make(chan p2p.Message, cfg.ChainHeadReqBufferSize),
 		canonicalBuf:             make(chan *pb.BeaconBlock, cfg.CanonicalBufferSize),
+		blocksAwaitingProcessing: make(map[[32]byte]*pb.BeaconBlock),
 	}
 }
 
@@ -253,10 +264,10 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		log.Errorf("Could not hash received block: %v", err)
+		return
 	}
 
 	log.Debugf("Processing response to block request: %#x", blockRoot)
-
 	if rs.db.HasBlock(blockRoot) {
 		log.Debug("Received a block that already exists. Exiting...")
 		return
@@ -273,11 +284,45 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 		return
 	}
 
+	// We check if we have the block's parents saved locally, if not, we store the block in a
+	// pending processing map by hash and once we receive the parent, we process said parent AND then
+	// we process the received block.
+	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+	if !rs.db.HasBlock(parentRoot) {
+		rs.blocksAwaitingProcessing[parentRoot] = block
+		blocksAwaitingProcessingGauge.Inc()
+		rs.p2p.Broadcast(&pb.BeaconBlockRequest{Hash: parentRoot[:]})
+		// We update the last observed slot to the received canonical block's slot.
+		if block.Slot > rs.highestObservedSlot {
+			rs.highestObservedSlot = block.Slot
+		}
+		return
+	}
+
+	if block.Slot < rs.highestObservedSlot {
+		// If we receive a block from the past AND it corresponds to
+		// a parent block of a block stored in the processing cache, that means we are
+		// receiving a parent block which was missing from our db.
+		if childBlock, ok := rs.blocksAwaitingProcessing[blockRoot]; ok {
+			log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Received missing block parent")
+			delete(rs.blocksAwaitingProcessing, blockRoot)
+			blocksAwaitingProcessingGauge.Dec()
+			rs.chainService.IncomingBlockFeed().Send(block)
+			rs.chainService.IncomingBlockFeed().Send(childBlock)
+			log.Debug("Sent missing block parent and child to chain service for processing")
+			return
+		}
+	}
+
 	_, sendBlockSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendBlock")
 	log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Sending newly received block to subscribers")
 	rs.chainService.IncomingBlockFeed().Send(block)
 	sentBlocks.Inc()
 	sendBlockSpan.End()
+	// We update the last observed slot to the received canonical block's slot.
+	if block.Slot > rs.highestObservedSlot {
+		rs.highestObservedSlot = block.Slot
+	}
 }
 
 // handleBlockRequestBySlot processes a block request from the p2p layer.

@@ -2,10 +2,10 @@ package blocks_test
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
-	"context"
 	"reflect"
 	"strings"
 	"testing"
