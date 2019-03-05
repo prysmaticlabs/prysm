@@ -17,9 +17,9 @@ import (
 // and shards in which particular validators need to perform their responsibilities,
 // and more.
 type ValidatorServer struct {
-	ctx context.Context
-	beaconDB *db.BeaconDB
-	chainService chainService
+	ctx                context.Context
+	beaconDB           *db.BeaconDB
+	chainService       chainService
 	canonicalStateChan chan *pbp2p.BeaconState
 }
 
@@ -41,7 +41,7 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 		}
 		return stream.Send(res)
 	}
-    sub := vs.chainService.CanonicalStateFeed().Subscribe(vs.canonicalStateChan)
+	sub := vs.chainService.CanonicalStateFeed().Subscribe(vs.canonicalStateChan)
 	defer sub.Unsubscribe()
 	for {
 		select {
