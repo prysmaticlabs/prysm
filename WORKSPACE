@@ -9,8 +9,8 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_go",
-    url = "https://github.com/bazelbuild/rules_go/releases/download/0.17.1/rules_go-0.17.1.tar.gz",
-    sha256 = "6776d68ebb897625dead17ae510eac3d5f6342367327875210df44dbe2aeeb19",
+    url = "https://github.com/bazelbuild/rules_go/releases/download/0.18.0/rules_go-0.18.0.tar.gz",
+    sha256 = "301c8b39b0808c49f98895faa6aa8c92cbd605ab5ad4b6a3a652da33a1a2ba2e",
 )
 
 http_archive(
@@ -327,7 +327,7 @@ go_repository(
 
 go_repository(
     name = "com_github_mr_tron_base58",
-    commit = "fe73eb13120270ef478822e38664f5e56dc39547",
+    commit = "89529c6904fcd077434931b4eac8b4b2f0991baf",  # v1.1.0
     importpath = "github.com/mr-tron/base58",
 )
 
@@ -466,7 +466,7 @@ go_repository(
 
 go_repository(
     name = "com_github_miekg_dns",
-    commit = "092d7745b47c1a19a6533514ff7a05387b5c5bf9",
+    commit = "8fc2e5773bbd308ca2fcc962fd8d25c1bd0f6743",  # v1.1.4
     importpath = "github.com/miekg/dns",
 )
 
@@ -628,7 +628,7 @@ go_repository(
 
 go_repository(
     name = "io_opencensus_go",
-    commit = "22a302cdd30bb5e3c0c894c70decd0b53e96eda0",
+    commit = "986bcac05415cee0c283e43f5097b0448871d74c",  # v0.19.1
     importpath = "go.opencensus.io",
 )
 
@@ -787,7 +787,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_kbucket",
-    commit = "c228706f665e12eb98ec89a68782824bf928ae0e",  # v0.0.1
+    commit = "fb3bb85b76cc6efea5566649702b3fe6ecbad05f",  # v0.1.0
     importpath = "github.com/libp2p/go-libp2p-kbucket",
 )
 
