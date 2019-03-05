@@ -275,15 +275,6 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 		return
 	}
 
-	if childBlock, ok := rs.blocksAwaitingProcessing[blockRoot]; ok && block.Slot < rs.latestObservedSlot {
-		log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Received missing block parent")
-		delete(rs.blocksAwaitingProcessing, blockRoot)
-		rs.chainService.IncomingBlockFeed().Send(block)
-		rs.chainService.IncomingBlockFeed().Send(childBlock)
-		log.Debug("Sent missing block parent and child to chain service for processing")
-		return
-	}
-
 	// We check if we have the block's parents saved locally, if not, we store the block in a
 	// pending processing map by hash and once we receive the parent, we process said parent AND then
 	// we process the this received block.
@@ -294,11 +285,25 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 		return
 	}
 
+	// If we receive a block from the past, that means we are receiving a parent
+	// block which was missing from our db.
+	if block.Slot < rs.latestObservedSlot {
+		if childBlock, ok := rs.blocksAwaitingProcessing[blockRoot]; ok {
+			log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Received missing block parent")
+			delete(rs.blocksAwaitingProcessing, blockRoot)
+			rs.chainService.IncomingBlockFeed().Send(block)
+			rs.chainService.IncomingBlockFeed().Send(childBlock)
+			log.Debug("Sent missing block parent and child to chain service for processing")
+			return
+		}
+	}
+
 	_, sendBlockSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendBlock")
 	log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Sending newly received block to subscribers")
 	rs.chainService.IncomingBlockFeed().Send(block)
 	sentBlocks.Inc()
 	sendBlockSpan.End()
+	// We update the last observed slot to the received canonical block's slot.
 	rs.latestObservedSlot = block.Slot
 }
 
