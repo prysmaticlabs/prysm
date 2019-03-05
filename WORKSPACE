@@ -470,7 +470,7 @@ go_repository(
 
 go_repository(
     name = "com_github_opentracing_opentracing_go",
-    commit = "25a84ff92183e2f8ac018ba1db54f8a07b3c0e04",
+    commit = "1949ddbfd147afd4d964a9f00b24eb291e0e7c38",  # v1.0.2
     importpath = "github.com/opentracing/opentracing-go",
 )
 
@@ -500,7 +500,7 @@ go_repository(
 
 go_repository(
     name = "com_github_satori_go_uuid",
-    commit = "b2ce2384e17bbe0c6d34077efa39dbab3e09123b",
+    commit = "fe3bd84a0754cc4deb35c1398cd0ebd23f1d8a41",  # v1.2.0
     importpath = "github.com/satori/go.uuid",
 )
 
@@ -686,7 +686,7 @@ go_repository(
 
 go_repository(
     name = "com_github_prometheus_prometheus",
-    commit = "d8c06bb2b797de6c208b2a7995327ba1b94c77da",
+    commit = "ed970a17fe1585310bd79093b788602df9fc73c3",  # v2.7.2
     importpath = "github.com/prometheus/prometheus",
 )
 
@@ -710,7 +710,7 @@ go_repository(
 
 go_repository(
     name = "com_github_pborman_uuid",
-    commit = "8b1b92947f46224e3b97bb1a3a5b0382be00d31e",
+    commit = "8b1b92947f46224e3b97bb1a3a5b0382be00d31e",  # v1.2.0
     importpath = "github.com/pborman/uuid",
 )
 
