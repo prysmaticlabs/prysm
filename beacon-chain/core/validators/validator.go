@@ -15,6 +15,15 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
+var (
+	// ActivatedValidators is a mapping that tracks epoch to activated validators indexes.
+	// Where key is epoch, value is a list of activated validator indexes.
+	ActivatedValidators = make(map[uint64][]uint64)
+	// ExitedValidators is a mapping that tracks epoch to excited validators indexes.
+	// Where key is epoch, value is a list of exited validator indexes.
+	ExitedValidators = make(map[uint64][]uint64)
+)
+
 // ValidatorIndices returns all the validator indices from the input attestations
 // and state.
 //
@@ -278,6 +287,7 @@ func SlashValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) 
 //    state.validator_registry_update_epoch = current_epoch
 func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 	currentEpoch := helpers.CurrentEpoch(state)
+	updatedEpoch := helpers.EntryExitEffectEpoch(currentEpoch)
 	activeValidatorIndices := helpers.ActiveValidatorIndices(
 		state.ValidatorRegistry, currentEpoch)
 
@@ -300,6 +310,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 			if err != nil {
 				return nil, fmt.Errorf("could not activate validator %d: %v", idx, err)
 			}
+			ActivatedValidators[updatedEpoch] = append(ActivatedValidators[updatedEpoch], uint64(idx))
 		}
 	}
 
@@ -313,6 +324,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 				break
 			}
 			state = ExitValidator(state, uint64(idx))
+			ExitedValidators[updatedEpoch] = append(ExitedValidators[updatedEpoch], uint64(idx))
 		}
 	}
 	state.ValidatorRegistryUpdateEpoch = currentEpoch

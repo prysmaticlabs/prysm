@@ -392,8 +392,6 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 	testAcc.backend.Commit()
-	web3Service.reader = &goodReader{}
-	web3Service.logger = &goodLogger{}
 
 	exitRoutine := make(chan bool)
 
@@ -402,7 +400,10 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	header := &gethTypes.Header{Number: big.NewInt(42)}
+	header := &gethTypes.Header{
+		Number: big.NewInt(42),
+		Time:   big.NewInt(308534400),
+	}
 
 	web3Service.headerChan <- header
 	web3Service.cancel()
@@ -414,6 +415,10 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 
 	if web3Service.blockHash.Hex() != header.Hash().Hex() {
 		t.Errorf("block hash not set, expected %v, got %v", header.Hash().Hex(), web3Service.blockHash.Hex())
+	}
+
+	if web3Service.blockTime != time.Unix(header.Time.Int64(), 0) {
+		t.Errorf("block time not set, expected %v, got %v", time.Unix(header.Time.Int64(), 0), web3Service.blockTime)
 	}
 
 	blockInfoExistsInCache, info, err := web3Service.blockCache.BlockInfoByHash(web3Service.blockHash)
@@ -924,6 +929,38 @@ func TestHasChainStartLogOccurred_OK(t *testing.T) {
 	}
 	if !ok {
 		t.Error("Expected chain start log to have occurred")
+	}
+}
+
+func TestStatus(t *testing.T) {
+	now := time.Now()
+
+	beforeFiveMinutesAgo := now.Add(-5*time.Minute - 30*time.Second)
+	afterFiveMinutesAgo := now.Add(-5*time.Minute + 30*time.Second)
+
+	testCases := map[*Web3Service]string{
+		// "status is ok" cases
+		&Web3Service{}: "",
+		&Web3Service{isRunning: true, blockTime: afterFiveMinutesAgo}:         "",
+		&Web3Service{isRunning: false, blockTime: beforeFiveMinutesAgo}:       "",
+		&Web3Service{isRunning: false, runError: errors.New("test runError")}: "",
+		// "status is error" cases
+		&Web3Service{isRunning: true, blockTime: beforeFiveMinutesAgo}:       "web3 client is not syncing",
+		&Web3Service{isRunning: true}:                                        "web3 client is not syncing",
+		&Web3Service{isRunning: true, runError: errors.New("test runError")}: "test runError",
+	}
+
+	for web3ServiceState, wantedErrorText := range testCases {
+		status := web3ServiceState.Status()
+		if status == nil {
+			if wantedErrorText != "" {
+				t.Errorf("Wanted: \"%v\", but Status() return nil", wantedErrorText)
+			}
+		} else {
+			if status.Error() != wantedErrorText {
+				t.Errorf("Wanted: \"%v\", but Status() return: \"%v\"", wantedErrorText, status.Error())
+			}
+		}
 	}
 }
 

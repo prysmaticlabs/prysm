@@ -11,7 +11,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -78,7 +80,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 
 // Start a blockchain service's main event loop.
 func (c *ChainService) Start() {
-	beaconState, err := c.beaconDB.State(context.TODO())
+	beaconState, err := c.beaconDB.State(c.ctx)
 	if err != nil {
 		log.Fatalf("Could not fetch beacon state: %v", err)
 	}
@@ -124,7 +126,7 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	if err := c.beaconDB.InitializeState(unixTime, deposits, eth1data); err != nil {
 		return fmt.Errorf("could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := c.beaconDB.State(context.TODO())
+	beaconState, err := c.beaconDB.State(c.ctx)
 	if err != nil {
 		return fmt.Errorf("could not attempt fetch beacon state: %v", err)
 	}
@@ -221,7 +223,7 @@ func (c *ChainService) blockProcessing() {
 		// can be received either from the sync service, the RPC service,
 		// or via p2p.
 		case block := <-c.incomingBlockChan:
-			beaconState, err := c.beaconDB.State(context.TODO())
+			beaconState, err := c.beaconDB.State(c.ctx)
 			if err != nil {
 				log.Errorf("Unable to retrieve beacon state %v", err)
 				continue
@@ -347,6 +349,14 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 		"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
 	).Info("Block transition successfully processed")
 	if (beaconState.Slot+1)%params.BeaconConfig().SlotsPerEpoch == 0 {
+		// Save activated validators of this epoch to public key -> index DB.
+		if err := c.saveValidatorIdx(beaconState); err != nil {
+			return nil, fmt.Errorf("could not save validator index: %v", err)
+		}
+		// Delete exited validators of this epoch to public key -> index DB.
+		if err := c.deleteValidatorIdx(beaconState); err != nil {
+			return nil, fmt.Errorf("could not delete validator index: %v", err)
+		}
 		log.WithField(
 			"SlotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
 		).Info("Epoch transition successfully processed")
@@ -378,5 +388,33 @@ func (c *ChainService) isBlockReadyForProcessing(block *pb.BeaconBlock, beaconSt
 		c.beaconDB.HasBlock, powBlockFetcher, c.genesisTime); err != nil {
 		return fmt.Errorf("block does not fulfill pre-processing conditions %v", err)
 	}
+	return nil
+}
+
+// saveValidatorIdx saves the validators public key to index mapping in DB, these
+// validators were activated from current epoch. After it saves, current epoch key
+// is deleted from ActivatedValidators mapping.
+func (c *ChainService) saveValidatorIdx(state *pb.BeaconState) error {
+	for _, idx := range validators.ActivatedValidators[helpers.CurrentEpoch(state)] {
+		pubKey := state.ValidatorRegistry[idx].Pubkey
+		if err := c.beaconDB.SaveValidatorIndex(pubKey, int(idx)); err != nil {
+			return fmt.Errorf("could not save validator index: %v", err)
+		}
+	}
+	delete(validators.ActivatedValidators, helpers.CurrentEpoch(state))
+	return nil
+}
+
+// deleteValidatorIdx deletes the validators public key to index mapping in DB, the
+// validators were exited from current epoch. After it deletes, current epoch key
+// is deleted from ExitedValidators mapping.
+func (c *ChainService) deleteValidatorIdx(state *pb.BeaconState) error {
+	for _, idx := range validators.ExitedValidators[helpers.CurrentEpoch(state)] {
+		pubKey := state.ValidatorRegistry[idx].Pubkey
+		if err := c.beaconDB.DeleteValidatorIndex(pubKey); err != nil {
+			return fmt.Errorf("could not delete validator index: %v", err)
+		}
+	}
+	delete(validators.ExitedValidators, helpers.CurrentEpoch(state))
 	return nil
 }

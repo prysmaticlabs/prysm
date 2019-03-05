@@ -246,7 +246,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 			log.Debugf("Successfully requested the next block with slot: %d", data.SlotNumber)
 		case msg := <-s.blockBuf:
 			data := msg.Data.(*pb.BeaconBlockResponse)
-			s.processBlock(context.TODO(), data.Block, msg.Peer)
+			s.processBlock(s.ctx, data.Block, msg.Peer)
 		case msg := <-s.stateBuf:
 			data := msg.Data.(*pb.BeaconStateResponse)
 			beaconState := data.BeaconState
@@ -278,7 +278,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 			s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
 
 		case msg := <-s.batchedBlockBuf:
-			s.processBatchedBlocks(context.TODO(), msg)
+			s.processBatchedBlocks(s.ctx, msg)
 		}
 	}
 }
@@ -297,7 +297,7 @@ func (s *InitialSync) checkInMemoryBlocks() {
 			}
 			s.mutex.Lock()
 			if block, ok := s.inMemoryBlocks[s.currentSlot+1]; ok && s.currentSlot+1 <= s.highestObservedSlot {
-				s.processBlock(context.TODO(), block, p2p.Peer{})
+				s.processBlock(s.ctx, block, p2p.Peer{})
 			}
 			s.mutex.Unlock()
 		}
