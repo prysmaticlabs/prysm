@@ -93,7 +93,7 @@ func TestSavingBlock_InSync(t *testing.T) {
 		ChainService: &mockChainService{},
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
-	ss.atGenesis = false
+	ss.reqState = false
 
 	exitRoutine := make(chan bool)
 	delayChan := make(chan time.Time)
@@ -213,7 +213,7 @@ func TestDelayChan_OK(t *testing.T) {
 		ChainService: &mockChainService{},
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
-	ss.atGenesis = false
+	ss.reqState = false
 
 	exitRoutine := make(chan bool)
 	delayChan := make(chan time.Time)
@@ -312,7 +312,7 @@ func TestRequestBlocksBySlot_OK(t *testing.T) {
 		t.Fatalf("could not save beacon state %v", err)
 	}
 
-	ss.atGenesis = false
+	ss.reqState = false
 
 	exitRoutine := make(chan bool)
 	delayChan := make(chan time.Time)
