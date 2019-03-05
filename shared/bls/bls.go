@@ -110,6 +110,15 @@ func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg []byte, domain uin
 	return s.val.VerifyAggregateCommon(keys, msg, domain)
 }
 
+// VerifyMultiple verifies each public key against each message.
+func (s *Signature) VerifyMultiple(pubKeys []*PublicKey, msgs [][]byte, domain uint64) bool {
+	var keys []*gobls.PublicKey
+	for _, v := range pubKeys {
+		keys = append(keys, v.val)
+	}
+	return s.val.VerifyAggregate(keys, msgs, domain)
+}
+
 // Marshal a signature into a byte slice.
 func (s *Signature) Marshal() []byte {
 	k := s.val.Serialize()
@@ -123,4 +132,13 @@ func AggregateSignatures(sigs []*Signature) *Signature {
 		ss = append(ss, v.val)
 	}
 	return &Signature{val: gobls.AggregateSignatures(ss)}
+}
+
+// AggregatePublicKeys converts a list of public keys into a single, aggregated public key.
+func AggregatePublicKeys(publicKeys []*PublicKey) *PublicKey {
+	var ss []*gobls.PublicKey
+	for _, pub := range publicKeys {
+		ss = append(ss, pub.val)
+	}
+	return &PublicKey{val: gobls.AggregatePublicKeys(ss)}
 }

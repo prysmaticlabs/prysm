@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/forkutils"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -532,19 +533,67 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 		)
 	}
 	if verifySignatures {
-		// TODO(#258): Integrate BLS signature verification for attestation.
-		// assert bls_verify_multiple(
-		//   pubkeys=[
-		//	 bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_0_participants]),
-		//   bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_1_participants]),
-		//   ],
-		//   message_hash=[
-		//   hash_tree_root(AttestationDataAndCustodyBit(data=attestation.data, custody_bit=0b0)),
-		//   hash_tree_root(AttestationDataAndCustodyBit(data=attestation.data, custody_bit=0b1)),
-		//   ],
-		//   signature=attestation.aggregate_signature,
-		//   domain=get_domain(state.fork, slot_to_epoch(attestation.data.slot), DOMAIN_ATTESTATION),
-		// )
+		participants, err := helpers.AttestationParticipants(beaconState, att.Data, att.AggregationBitfield)
+		if err != nil {
+			return fmt.Errorf("could not get attestation participants: %v", err)
+		}
+		custodyBit1Participants, err := helpers.AttestationParticipants(beaconState, att.Data, att.CustodyBitfield)
+		if err != nil {
+			return fmt.Errorf("could not get custody bit 1 attestation participants: %v", err)
+		}
+		custodyBit0Participants := sliceutil.Not(participants, custodyBit1Participants)
+
+		custodyBit0PubKeys := make([]*bls.PublicKey, len(custodyBit0Participants))
+		for _, participantIndex := range custodyBit0Participants {
+			pubkey, err := bls.PublicKeyFromBytes(beaconState.ValidatorRegistry[participantIndex].Pubkey)
+			if err != nil {
+				return fmt.Errorf("could not deserialize proposer public key: %v", err)
+			}
+			custodyBit0PubKeys = append(custodyBit0PubKeys, pubkey)
+		}
+
+		custodyBit1PubKeys := make([]*bls.PublicKey, len(custodyBit1Participants))
+		for _, participantIndex := range custodyBit1Participants {
+			pubkey, err := bls.PublicKeyFromBytes(beaconState.ValidatorRegistry[participantIndex].Pubkey)
+			if err != nil {
+				return fmt.Errorf("could not deserialize proposer public key: %v", err)
+			}
+			custodyBit1PubKeys = append(custodyBit1PubKeys, pubkey)
+		}
+
+		pubkeys := []*bls.PublicKey{
+			bls.AggregatePublicKeys(custodyBit0PubKeys),
+			bls.AggregatePublicKeys(custodyBit1PubKeys),
+		}
+
+		custodyBit0Hash, err := hashutil.HashProto(&pb.AttestationDataAndCustodyBit{Data: att.Data, CustodyBit: false})
+		if err != nil {
+			return fmt.Errorf("Could not tree hash AttestationDataAndCustodyBit0: %v", err)
+		}
+		custodyBit1Hash, err := hashutil.HashProto(&pb.AttestationDataAndCustodyBit{Data: att.Data, CustodyBit: true})
+		if err != nil {
+			return fmt.Errorf("Could not tree hash AttestationDataAndCustodyBit1: %v", err)
+		}
+
+		messageHashes := [][]byte{custodyBit0Hash[:], custodyBit1Hash[:]}
+
+		sig, err := bls.SignatureFromBytes(att.AggregateSignature)
+		if err != nil {
+			return fmt.Errorf("could not deserialize block randao reveal: %v", err)
+		}
+		currentEpoch := helpers.CurrentEpoch(beaconState)
+		buf := make([]byte, 32)
+		binary.LittleEndian.PutUint64(buf, currentEpoch)
+		domain := forkutils.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainAttestation)
+
+		log.WithFields(logrus.Fields{
+			"pubkeys":       pubkeys,
+			"messageHashes": messageHashes,
+			"aggregateSig":  fmt.Sprintf("%#x", sig.Marshal()),
+		}).Info("Verifying attestation")
+		if !sig.VerifyMultiple(pubkeys, messageHashes, domain) {
+			return fmt.Errorf("block randao reveal signature did not verify")
+		}
 		return nil
 	}
 	return nil
