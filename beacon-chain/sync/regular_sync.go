@@ -4,6 +4,7 @@ package sync
 import (
 	"context"
 	"fmt"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
@@ -20,13 +21,12 @@ import (
 )
 
 var (
-	log = logrus.WithField("prefix", "regular-sync")
+	log                           = logrus.WithField("prefix", "regular-sync")
 	blocksAwaitingProcessingGauge = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "regsync_blocks_awaiting_processing",
 		Help: "Number of blocks which do not have a parent and are awaiting processing by the chain service",
 	})
 )
-
 
 type chainService interface {
 	IncomingBlockFeed() *event.Feed
@@ -77,7 +77,7 @@ type RegularSync struct {
 	unseenAttestationsReqBuf chan p2p.Message
 	exitBuf                  chan p2p.Message
 	canonicalBuf             chan *pb.BeaconBlock
-	highestObservedSlot       uint64
+	highestObservedSlot      uint64
 	blocksAwaitingProcessing map[[32]byte]*pb.BeaconBlock
 }
 

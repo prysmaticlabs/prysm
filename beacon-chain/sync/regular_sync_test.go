@@ -411,7 +411,7 @@ func TestProcessBlock_MissingParentBlockRequestedOK(t *testing.T) {
 	if _, ok := ss.blocksAwaitingProcessing[parentRoot]; !ok {
 		t.Errorf("Expected block with missing parent to have been placed in processing cache: %#x", parentRoot)
 	}
-    // Finally, we respond with the parent block that was missing.
+	// Finally, we respond with the parent block that was missing.
 	ss.receiveBlock(msg2)
 	testutil.AssertLogsContain(t, hook, "Sending newly received block to subscribers")
 	testutil.AssertLogsContain(t, hook, "Received missing block parent")
