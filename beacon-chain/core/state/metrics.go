@@ -6,6 +6,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 var (
@@ -15,19 +16,19 @@ var (
 	}, []string{
 		"validator",
 	})
-	lastSlotGauge = prometheus.NewGauge(prometheus.GaugeOpts{
+	lastSlotGauge = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "state_last_slot",
 		Help: "Last slot number of the processed state",
 	})
-	lastJustifiedEpochGauge = prometheus.NewGauge(prometheus.GaugeOpts{
+	lastJustifiedEpochGauge = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "state_last_justified_epoch",
 		Help: "Last justified epoch of the processed state",
 	})
-	lastPrevJustifiedEpochGauge = prometheus.NewGauge(prometheus.GaugeOpts{
+	lastPrevJustifiedEpochGauge = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "state_last_prev_justified_epoch",
 		Help: "Last prev justified epoch of the processed state",
 	})
-	lastFinalizedEpochGauge = prometheus.NewGauge(prometheus.GaugeOpts{
+	lastFinalizedEpochGauge = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "state_last_finalized_epoch",
 		Help: "Last finalized epoch of the processed state",
 	})
@@ -40,8 +41,9 @@ func reportEpochTransitionMetrics(state *pb.BeaconState) {
 			"0x" + hex.EncodeToString(state.ValidatorRegistry[i].Pubkey), // Validator
 		).Set(float64(bal))
 	}
+	s := params.BeaconConfig().GenesisSlot
 	// Slot number
-	lastSlotGauge.Set(float64(state.Slot))
+	lastSlotGauge.Set(float64(state.Slot - s))
 	// Last justified slot
 	lastJustifiedEpochGauge.Set(float64(state.JustifiedEpoch))
 	// Last previous justified slot
