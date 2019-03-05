@@ -5,9 +5,9 @@ package trieutil
 
 import (
 	"encoding/binary"
+	"fmt"
 
-	proto "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-
+	pr "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -127,8 +127,8 @@ func zeroHashes() [32][32]byte {
 }
 
 // ToProtoDepositTrie converts DepositTrie to proto.DepositTrie
-func (d *DepositTrie) ToProtoDepositTrie() *proto.DepositTrie {
-	depositTrie := &proto.DepositTrie{}
+func (d *DepositTrie) ToProtoDepositTrie() *pr.DepositTrie {
+	depositTrie := &pr.DepositTrie{}
 	(*depositTrie).DepositCount = d.depositCount
 	branch := make([][]byte, 32, 32)
 	for i := range branch {
@@ -150,15 +150,17 @@ func (d *DepositTrie) ToProtoDepositTrie() *proto.DepositTrie {
 }
 
 // FromProtoDepositTrie converts proto.DepositTrie to DepositTrie
-func FromProtoDepositTrie(depositTrie *proto.DepositTrie) *DepositTrie {
+func FromProtoDepositTrie(depositTrie *pr.DepositTrie) (*DepositTrie, error) {
 	dt := &DepositTrie{}
 	dt.depositCount = (*depositTrie).DepositCount
-
+	if len(depositTrie.Branch) != 32 || len(depositTrie.ZeroHashes) != 32 {
+		return dt, fmt.Errorf("depositTrie is not initialized: %v", depositTrie)
+	}
 	for i := 0; i < 32; i++ {
 		for j := 0; j < 32; j++ {
 			dt.branch[i][j] = depositTrie.Branch[i][j]
 			dt.zeroHashes[i][j] = depositTrie.ZeroHashes[i][j]
 		}
 	}
-	return dt
+	return dt, nil
 }

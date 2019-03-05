@@ -38,7 +38,7 @@ func (db *BeaconDB) SaveDepositState(powDepositState *pb.POWDepositState) error 
 	})
 }
 
-// ResetDepositState updates the last read block number.
+// ResetDepositState resets the last deposit state from db in order to re read the powchain deposit logs
 func (db *BeaconDB) ResetDepositState() error {
 	return db.SaveDepositState(&pb.POWDepositState{})
 }

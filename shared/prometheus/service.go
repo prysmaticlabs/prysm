@@ -4,10 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math"
 	"net/http"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	pm "github.com/prometheus/client_model/go"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/sirupsen/logrus"
 )
@@ -97,4 +100,20 @@ func (s *Service) Status() error {
 		return s.failStatus
 	}
 	return nil
+}
+
+// ToFloat64 convert counters to float64
+func ToFloat64(m prometheus.Metric) float64 {
+	pb := &pm.Metric{}
+	m.Write(pb)
+	if pb.Gauge != nil {
+		return pb.Gauge.GetValue()
+	}
+	if pb.Counter != nil {
+		return pb.Counter.GetValue()
+	}
+	if pb.Untyped != nil {
+		return pb.Untyped.GetValue()
+	}
+	return math.NaN()
 }

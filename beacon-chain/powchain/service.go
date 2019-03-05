@@ -7,7 +7,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"math"
 	"math/big"
 	"strings"
 	"time"
@@ -18,7 +17,6 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	dto "github.com/prometheus/client_model/go"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
@@ -26,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	pr "github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -124,12 +123,6 @@ var (
 // NewWeb3Service sets up a new instance with an ethclient when
 // given a web3 endpoint as a string in the config.
 func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Service, error) {
-	return NewWeb3ServiceWithDbSupport(ctx, config, false)
-}
-
-// NewWeb3ServiceWithDbSupport sets up a new instance with an ethclient when
-// given a web3 endpoint as a string in the config.
-func NewWeb3ServiceWithDbSupport(ctx context.Context, config *Web3ServiceConfig, initFromDb bool) (*Web3Service, error) {
 	if !strings.HasPrefix(config.Endpoint, "ws") && !strings.HasPrefix(config.Endpoint, "ipc") {
 		return nil, fmt.Errorf(
 			"powchain service requires either an IPC or WebSocket endpoint, provided %s",
@@ -165,13 +158,11 @@ func NewWeb3ServiceWithDbSupport(ctx context.Context, config *Web3ServiceConfig,
 		chainStartDelay:         config.ChainStartDelay,
 		lastRequestedBlock:      big.NewInt(0),
 	}
-	if initFromDb {
-		if err := web3Service.initFromDB(); err != nil {
-			log.Errorf("Unable to retrieve latest ETH1.0 state from db: %v", err)
-		}
+	if err := web3Service.initFromDB(); err != nil {
+		log.Errorf("Unable to retrieve latest ETH1.0 state from db: %v", err)
+		return nil, fmt.Errorf("Unable to retrieve latest ETH1.0 state from db: %v", err)
 	}
 	return web3Service, nil
-
 }
 
 // Start a web3 service's main event loop.
@@ -206,15 +197,15 @@ func (w *Web3Service) ChainStartFeed() *event.Feed {
 func (w *Web3Service) saveToDb() {
 	powDepState := &pb.POWDepositState{}
 	if (w.depositTrie != nil && w.depositTrie != &trieutil.DepositTrie{}) {
-		(*powDepState).DepositTrie = w.depositTrie.ToProtoDepositTrie()
+		powDepState.DepositTrie = w.depositTrie.ToProtoDepositTrie()
 	}
 	if w.LatestBlockHash().Bytes() != nil {
-		(*powDepState).LatestBlockHash = w.LatestBlockHash().Bytes()
+		powDepState.LatestBlockHash = w.LatestBlockHash().Bytes()
 	}
 	if w.LatestBlockHeight() != nil {
-		(*powDepState).LastBlockHeight = w.LatestBlockHeight().Uint64()
+		powDepState.LastBlockHeight = w.LatestBlockHeight().Uint64()
 	}
-	(*powDepState).DepositCount = uint64(PrometheusToFloat64(validDepositsCount))
+	powDepState.DepositCount = uint64(pr.ToFloat64(validDepositsCount))
 	w.beaconDB.SaveDepositState(powDepState)
 }
 
@@ -580,6 +571,9 @@ func (w *Web3Service) processPastLogs() error {
 }
 
 func (w *Web3Service) initFromDB() error {
+	if w.beaconDB == nil {
+		return errors.New("Beacon db is missing from the argument list")
+	}
 	powDepositState, err := w.beaconDB.DepositState()
 	if err != nil {
 		return err
@@ -589,7 +583,10 @@ func (w *Web3Service) initFromDB() error {
 	}
 	w.blockHeight = new(big.Int).SetUint64((*powDepositState).LastBlockHeight)
 	w.blockHash = common.BytesToHash((*powDepositState).LatestBlockHash)
-	w.depositTrie = trieutil.FromProtoDepositTrie((*powDepositState).DepositTrie)
+	w.depositTrie, err = trieutil.FromProtoDepositTrie((*powDepositState).DepositTrie)
+	if err != nil {
+		return err
+	}
 	validDepositsCount.Add(float64((*powDepositState).DepositCount))
 
 	return nil

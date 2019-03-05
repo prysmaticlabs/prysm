@@ -49,12 +49,12 @@ message POWDepositState {
   DepositTrie deposit_trie = 3;
   uint64 deposit_count = 4;
 }
-message DepositTrie  {
-	uint64 depositCount = 1;
-	repeated bytes branch = 2 ;
-	repeated bytes zeroHashes = 3 ;
-}
 
+message DepositTrie  {
+	uint64 deposit_count = 1;
+	repeated bytes branch = 2 ;
+	repeated bytes zero_hashes = 3 ;
+}
 
 message Fork {
   uint64 previous_version = 1;

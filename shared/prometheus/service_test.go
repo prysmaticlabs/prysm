@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -92,4 +94,15 @@ func TestStatus(t *testing.T) {
 	if err := s.Status(); err != s.failStatus {
 		t.Errorf("Wanted: %v, got: %v", s.failStatus, s.Status())
 	}
+}
+func TestToFloat64(t *testing.T) {
+	counter := promauto.NewCounter(prometheus.CounterOpts{
+		Name: "test_counter",
+		Help: "test counter",
+	})
+	counter.Inc()
+	if s := ToFloat64(counter); s != 1 {
+		t.Errorf("Wanted: %v, got: %v", 1, s)
+	}
+
 }

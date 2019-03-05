@@ -20,7 +20,6 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -163,11 +162,14 @@ func TestNewWeb3Service_OK(t *testing.T) {
 	endpoint := "http://127.0.0.1"
 	ctx := context.Background()
 	var err error
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
 	if _, err = NewWeb3Service(ctx, &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: common.Address{},
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		BeaconDB:        beaconDB,
 	}); err == nil {
 		t.Errorf("passing in an HTTP endpoint should throw an error, received nil")
 	}
@@ -177,6 +179,7 @@ func TestNewWeb3Service_OK(t *testing.T) {
 		DepositContract: common.Address{},
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		BeaconDB:        beaconDB,
 	}); err == nil {
 		t.Errorf("passing in a non-ws, wss, or ipc endpoint should throw an error, received nil")
 	}
@@ -186,6 +189,7 @@ func TestNewWeb3Service_OK(t *testing.T) {
 		DepositContract: common.Address{},
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		BeaconDB:        beaconDB,
 	}); err != nil {
 		t.Errorf("passing in as ws endpoint should not throw error, received %v", err)
 	}
@@ -195,6 +199,7 @@ func TestNewWeb3Service_OK(t *testing.T) {
 		DepositContract: common.Address{},
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
+		BeaconDB:        beaconDB,
 	}); err != nil {
 		t.Errorf("passing in an ipc endpoint should not throw error, received %v", err)
 	}
@@ -208,6 +213,8 @@ func TestStart_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.contractAddr,
@@ -215,6 +222,7 @@ func TestStart_OK(t *testing.T) {
 		Logger:          &goodLogger{},
 		BlockFetcher:    &goodFetcher{},
 		ContractBackend: testAcc.backend,
+		BeaconDB:        beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -240,6 +248,8 @@ func TestStop_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.contractAddr,
@@ -247,6 +257,7 @@ func TestStop_OK(t *testing.T) {
 		Logger:          &goodLogger{},
 		BlockFetcher:    &goodFetcher{},
 		ContractBackend: testAcc.backend,
+		BeaconDB:        beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -277,12 +288,15 @@ func TestInitDataFromContract_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
 		ContractBackend: testAcc.backend,
+		BeaconDB:        beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -322,12 +336,15 @@ func TestSaveInTrie_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
 		ContractBackend: testAcc.backend,
+		BeaconDB:        beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -352,12 +369,15 @@ func TestWeb3Service_BadReader(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.contractAddr,
 		Reader:          &badReader{},
 		Logger:          &goodLogger{},
 		ContractBackend: testAcc.backend,
+		BeaconDB:        beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -374,7 +394,24 @@ func TestWeb3Service_BadReader(t *testing.T) {
 	}
 	hook.Reset()
 }
-
+func TestNoBeaconDBError_OK(t *testing.T) {
+	endpoint := "ws://127.0.0.1"
+	testAcc, err := setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
+	_, err = NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint:        endpoint,
+		DepositContract: testAcc.contractAddr,
+		Reader:          &goodReader{},
+		Logger:          &goodLogger{},
+		BlockFetcher:    &goodFetcher{},
+		ContractBackend: testAcc.backend,
+	})
+	if err == nil {
+		t.Fatalf("Expected NewWeb3Service to error with no db setup")
+	}
+}
 func TestLatestMainchainInfo_OK(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
@@ -482,7 +519,7 @@ func TestLatestMainchainInfoFromDB_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
-	web3Service, err = NewWeb3ServiceWithDbSupport(context.Background(), &Web3ServiceConfig{
+	web3Service, err = NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
@@ -490,7 +527,7 @@ func TestLatestMainchainInfoFromDB_OK(t *testing.T) {
 		BlockFetcher:    &goodFetcher{},
 		ContractBackend: testAcc.backend,
 		BeaconDB:        beaconDB,
-	}, true)
+	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service from db: %v", err)
 	}
@@ -580,13 +617,15 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
 		ContractBackend: testAcc.backend,
-		BeaconDB:        &db.BeaconDB{},
+		BeaconDB:        beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -643,13 +682,15 @@ func TestProcessDepositLog_SkipDuplicateLog(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
 		ContractBackend: testAcc.backend,
-		BeaconDB:        &db.BeaconDB{},
+		BeaconDB:        beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
@@ -708,12 +749,15 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
 		ContractBackend: testAcc.backend,
+		BeaconDB:        beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -797,12 +841,15 @@ func TestProcessChainStartLog_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
 		ContractBackend: testAcc.backend,
+		BeaconDB:        beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -883,12 +930,15 @@ func TestUnpackChainStartLogData_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
 		ContractBackend: testAcc.backend,
+		BeaconDB:        beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -951,12 +1001,15 @@ func TestHasChainStartLogOccurred_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
 		DepositContract: testAcc.contractAddr,
 		Reader:          &goodReader{},
 		Logger:          testAcc.backend,
 		ContractBackend: testAcc.backend,
+		BeaconDB:        beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -1039,9 +1092,12 @@ func TestStatus(t *testing.T) {
 
 func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:     endpoint,
 		BlockFetcher: &goodFetcher{},
+		BeaconDB:     beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -1078,9 +1134,12 @@ func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 
 func TestBlockExists_ValidHash(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:     endpoint,
 		BlockFetcher: &goodFetcher{},
+		BeaconDB:     beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -1118,9 +1177,12 @@ func TestBlockExists_ValidHash(t *testing.T) {
 
 func TestBlockExists_InvalidHash(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:     endpoint,
 		BlockFetcher: &goodFetcher{},
+		BeaconDB:     beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -1134,9 +1196,12 @@ func TestBlockExists_InvalidHash(t *testing.T) {
 
 func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:     endpoint,
 		BlockFetcher: nil, // nil blockFetcher would panic if cached value not used
+		BeaconDB:     beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
