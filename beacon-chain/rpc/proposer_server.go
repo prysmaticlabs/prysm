@@ -102,6 +102,7 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 	// Check for skipped slots.
 	for beaconState.Slot < req.Slot-1 {
 		beaconState, err = state.ExecuteStateTransition(
+			ctx,
 			beaconState,
 			nil,
 			parentHash,
@@ -112,6 +113,7 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 		}
 	}
 	beaconState, err = state.ExecuteStateTransition(
+		ctx,
 		beaconState,
 		req,
 		parentHash,
