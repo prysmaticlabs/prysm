@@ -2,6 +2,7 @@ package epoch
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"fmt"
 	"reflect"
@@ -135,7 +136,7 @@ func TestProcessEth1Data_UpdatesStateAndCleans(t *testing.T) {
 		},
 	}
 
-	newState := ProcessEth1Data(state)
+	newState := ProcessEth1Data(context.Background(), state)
 	if !bytes.Equal(newState.LatestEth1Data.DepositRootHash32, []byte{'C'}) {
 		t.Errorf("Incorrect DepositRootHash32. Wanted: %v, got: %v",
 			[]byte{'C'}, newState.LatestEth1Data.DepositRootHash32)
@@ -151,7 +152,7 @@ func TestProcessEth1Data_UpdatesStateAndCleans(t *testing.T) {
 			VoteCount: requiredVoteCount,
 		},
 	)
-	newState = ProcessEth1Data(state)
+	newState = ProcessEth1Data(context.Background(), state)
 	if !bytes.Equal(newState.LatestEth1Data.DepositRootHash32, []byte{'G'}) {
 		t.Errorf("Incorrect DepositRootHash32. Wanted: %v, got: %v",
 			[]byte{'G'}, newState.LatestEth1Data.DepositRootHash32)
@@ -197,7 +198,7 @@ func TestProcessEth1Data_InactionSlot(t *testing.T) {
 	}
 
 	// Adding a new receipt root ['D'] which should be the new processed receipt root.
-	newState := ProcessEth1Data(state)
+	newState := ProcessEth1Data(context.Background(), state)
 	if !bytes.Equal(newState.LatestEth1Data.DepositRootHash32, []byte{'A'}) {
 		t.Errorf("Incorrect DepositRootHash32. Wanted: %v, got: %v",
 			[]byte{'A'}, newState.LatestEth1Data.DepositRootHash32)
@@ -214,7 +215,7 @@ func TestProcessJustification_PreviousEpochJustified(t *testing.T) {
 		JustifiedEpoch:        3,
 		JustificationBitfield: 4,
 	}
-	newState := ProcessJustification(state, 1, 1, 1, 1)
+	newState := ProcessJustification(context.Background(), state, 1, 1, 1, 1)
 
 	if newState.PreviousJustifiedEpoch != 3 {
 		t.Errorf("New state's prev justified slot %d != old state's justified slot %d",
@@ -233,7 +234,7 @@ func TestProcessJustification_PreviousEpochJustified(t *testing.T) {
 
 	// Assume for the case where only prev epoch got justified. Verify
 	// justified_epoch = slot_to_epoch(state.slot) -2.
-	newState = ProcessJustification(state, 0, 1, 1, 1)
+	newState = ProcessJustification(context.Background(), state, 0, 1, 1, 1)
 	if newState.JustifiedEpoch != helpers.CurrentEpoch(state)-1 {
 		t.Errorf("New state's justified epoch %d != state's epoch -2: %d",
 			newState.JustifiedEpoch, helpers.CurrentEpoch(state)-1)
@@ -266,6 +267,7 @@ func TestProcessCrosslinks_CrosslinksCorrectEpoch(t *testing.T) {
 	}
 
 	newState, err := ProcessCrosslinks(
+		context.Background(),
 		state,
 		attestations,
 		nil,
@@ -300,7 +302,7 @@ func TestProcessCrosslinks_NoParticipantsBitField(t *testing.T) {
 		"wanted participants bitfield length %d, got: %d",
 		16, 0,
 	)
-	if _, err := ProcessCrosslinks(state, attestations, nil); !strings.Contains(err.Error(), wanted) {
+	if _, err := ProcessCrosslinks(context.Background(), state, attestations, nil); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected: %s, received: %s", wanted, err.Error())
 	}
 }
@@ -317,7 +319,7 @@ func TestProcessEjections_EjectsAtCorrectSlot(t *testing.T) {
 			{ExitEpoch: params.BeaconConfig().FarFutureEpoch}},
 	}
 
-	state, err := ProcessEjections(state)
+	state, err := ProcessEjections(context.Background(), state)
 	if err != nil {
 		t.Fatalf("Could not execute ProcessEjections: %v", err)
 	}
@@ -347,7 +349,7 @@ func TestCanProcessValidatorRegistry_OnFarEpoch(t *testing.T) {
 		LatestCrosslinks:             crosslinks,
 	}
 
-	if processed := CanProcessValidatorRegistry(state); !processed {
+	if processed := CanProcessValidatorRegistry(context.Background(), state); !processed {
 		t.Errorf("Wanted True for CanProcessValidatorRegistry, but got %v", processed)
 	}
 }
@@ -358,7 +360,7 @@ func TestCanProcessValidatorRegistry_OutOfBounds(t *testing.T) {
 		ValidatorRegistryUpdateEpoch: 101,
 	}
 
-	if processed := CanProcessValidatorRegistry(state); processed {
+	if processed := CanProcessValidatorRegistry(context.Background(), state); processed {
 		t.Errorf("Wanted False for CanProcessValidatorRegistry, but got %v", processed)
 	}
 	state = &pb.BeaconState{
@@ -368,7 +370,7 @@ func TestCanProcessValidatorRegistry_OutOfBounds(t *testing.T) {
 			{Epoch: 100},
 		},
 	}
-	if processed := CanProcessValidatorRegistry(state); processed {
+	if processed := CanProcessValidatorRegistry(context.Background(), state); processed {
 		t.Errorf("Wanted False for CanProcessValidatorRegistry, but got %v", processed)
 	}
 }
@@ -404,7 +406,7 @@ func TestProcessPartialValidatorRegistry_CorrectShufflingEpoch(t *testing.T) {
 		LatestIndexRootHash32S: [][]byte{{'D'}, {'E'}, {'F'}},
 	}
 	copiedState := proto.Clone(state).(*pb.BeaconState)
-	newState, err := ProcessPartialValidatorRegistry(copiedState)
+	newState, err := ProcessPartialValidatorRegistry(context.Background(), copiedState)
 	if err != nil {
 		t.Fatalf("could not ProcessPartialValidatorRegistry: %v", err)
 	}
@@ -441,7 +443,7 @@ func TestCleanupAttestations_RemovesFromLastEpoch(t *testing.T) {
 			{Data: &pb.AttestationData{Slot: 2 * slotsPerEpoch}},
 		},
 	}
-	newState := CleanupAttestations(state)
+	newState := CleanupAttestations(context.Background(), state)
 
 	if !reflect.DeepEqual(newState, wanted) {
 		t.Errorf("Wanted state: %v, got state: %v ",
@@ -481,7 +483,7 @@ func TestUpdateLatestSlashedBalances_UpdatesBalances(t *testing.T) {
 		state := &pb.BeaconState{
 			Slot:                  tt.epoch * params.BeaconConfig().SlotsPerEpoch,
 			LatestSlashedBalances: latestSlashedExitBalances}
-		newState := UpdateLatestSlashedBalances(state)
+		newState := UpdateLatestSlashedBalances(context.Background(), state)
 		if newState.LatestSlashedBalances[epoch+1] !=
 			tt.balances {
 			t.Errorf(
@@ -525,7 +527,7 @@ func TestUpdateLatestRandaoMixes_UpdatesRandao(t *testing.T) {
 		state := &pb.BeaconState{
 			Slot:              tt.epoch * params.BeaconConfig().SlotsPerEpoch,
 			LatestRandaoMixes: latestSlashedRandaoMixes}
-		newState, err := UpdateLatestRandaoMixes(state)
+		newState, err := UpdateLatestRandaoMixes(context.Background(), state)
 		if err != nil {
 			t.Fatalf("could not update latest randao mixes: %v", err)
 		}
@@ -546,7 +548,7 @@ func TestUpdateLatestActiveIndexRoots_UpdatesActiveIndexRoots(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:                   epoch * params.BeaconConfig().SlotsPerEpoch,
 		LatestIndexRootHash32S: latestActiveIndexRoots}
-	newState, err := UpdateLatestActiveIndexRoots(state)
+	newState, err := UpdateLatestActiveIndexRoots(context.Background(), state)
 	if err != nil {
 		t.Fatalf("could not update latest index roots: %v", err)
 	}

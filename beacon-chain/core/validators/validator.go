@@ -6,6 +6,7 @@ package validators
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -13,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"go.opencensus.io/trace"
 )
 
 var (
@@ -32,9 +34,13 @@ var (
 //   index sets given by [get_attestation_participants(state, a.data, a.aggregation_bitfield)
 //   for a in attestations]
 func ValidatorIndices(
+	ctx context.Context,
 	state *pb.BeaconState,
 	attestations []*pb.PendingAttestation,
 ) ([]uint64, error) {
+
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.ValidatorIndices")
+	defer span.End()
 
 	var attesterIndicesIntersection []uint64
 	for _, attestation := range attestations {
@@ -286,7 +292,11 @@ func SlashValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) 
 //            exit_validator(state, index)
 //
 //    state.validator_registry_update_epoch = current_epoch
-func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
+func UpdateRegistry(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
+
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.UpdateRegistry")
+	defer span.End()
+
 	currentEpoch := helpers.CurrentEpoch(state)
 	updatedEpoch := helpers.EntryExitEffectEpoch(currentEpoch)
 	activeValidatorIndices := helpers.ActiveValidatorIndices(
@@ -374,7 +384,10 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 //        withdrawn_so_far += 1
 //        if withdrawn_so_far >= MAX_EXIT_DEQUEUES_PER_EPOCH:
 //            break
-func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
+func ProcessPenaltiesAndExits(ctx context.Context, state *pb.BeaconState) *pb.BeaconState {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.ProcessPenaltiesAndExits")
+	defer span.End()
+
 	currentEpoch := helpers.CurrentEpoch(state)
 	activeValidatorIndices := helpers.ActiveValidatorIndices(
 		state.ValidatorRegistry, currentEpoch)
