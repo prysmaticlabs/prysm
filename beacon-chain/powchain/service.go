@@ -159,8 +159,8 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		lastRequestedBlock:      big.NewInt(0),
 	}
 	if err := web3Service.initFromDB(); err != nil {
-		log.Errorf("Unable to retrieve latest ETH1.0 state from db: %v", err)
-		return nil, fmt.Errorf("Unable to retrieve latest ETH1.0 state from db: %v", err)
+		log.Errorf("unable to retrieve latest ETH1.0 state from db: %v", err)
+		return nil, fmt.Errorf("unable to retrieve latest ETH1.0 state from db: %v", err)
 	}
 	return web3Service, nil
 }
@@ -572,7 +572,7 @@ func (w *Web3Service) processPastLogs() error {
 
 func (w *Web3Service) initFromDB() error {
 	if w.beaconDB == nil {
-		return errors.New("Beacon db is missing from the argument list")
+		return errors.New("beacon db is missing from the argument list")
 	}
 	powDepositState, err := w.beaconDB.DepositState()
 	if err != nil {
