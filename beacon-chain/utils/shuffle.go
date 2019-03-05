@@ -11,23 +11,20 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 )
 
-// Permuted Index returns pseudo random permutation of the active index.
+// PermutedIndex returns pseudo random permutation of the active index.
 func PermutedIndex(index uint64, listSize uint64, seed common.Hash) (uint64, error) {
 	if index >= listSize {
-		err := errors.New("index is greater or equal than listSize")
-		return 0, err
+		return 0, errors.New("index is greater or equal than listSize")
 	}
 
 	if listSize > mathutil.PowerOf2(40) {
-		err := errors.New("listSize is greater than 2**40")
-		return 0, err
+		return 0, errors.New("listSize is greater than 2**40")
 	}
 
 	for round := 0; round < 90; round++ {
-
 		hashedValue := hashutil.Hash(append(seed[:], bytesutil.Bytes1(uint64(round))...))
 		pivot := bytesutil.FromBytes8(hashedValue[:8]) % listSize
-		flip := (pivot + (listSize - index)) % listSize
+		flip := (listSize + (pivot - index)) % listSize
 		position := index
 		if flip > index {
 			position = flip
@@ -46,12 +43,12 @@ func PermutedIndex(index uint64, listSize uint64, seed common.Hash) (uint64, err
 
 // SplitIndices splits a list into n pieces.
 func SplitIndices(l []uint64, n uint64) [][]uint64 {
-	var divided [][]uint64
+	divided := make([][]uint64, n)
 	var lSize = uint64(len(l))
 	for i := uint64(0); i < n; i++ {
 		start := lSize * i / n
 		end := lSize * (i + 1) / n
-		divided = append(divided, l[start:end])
+		divided[i] = l[start:end]
 	}
 	return divided
 }

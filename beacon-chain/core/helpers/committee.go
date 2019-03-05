@@ -5,6 +5,7 @@ package helpers
 import (
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -270,46 +271,40 @@ func CrosslinkCommitteesAtSlot(
 //
 // Spec pseudocode definition:
 //   def get_shuffling(seed: Bytes32,
-//                  validators: List[Validator],
-//                  epoch: Epoch) -> List[List[ValidatorIndex]]
-//    """
-//    Shuffle ``validators`` into crosslink committees seeded by ``seed`` and ``epoch``.
-//    Return a list of ``committees_per_epoch`` committees where each
-//    committee is itself a list of validator indices.
-//    """
+//   	validators: List[Validator],
+//   	epoch: Epoch) -> List[List[ValidatorIndex]]
+//   """
+//   Shuffle active validators and split into crosslink committees.
+//   Return a list of committees (each a list of validator indices).
+//   """
+//   # Shuffle active validator indices
+//   active_validator_indices = get_active_validator_indices(validators, epoch)
+//   length = len(active_validator_indices)
+//   shuffled_indices = [active_validator_indices[get_permuted_index(i, length, seed)] for i in range(length)]
 //
-//    active_validator_indices = get_active_validator_indices(validators, epoch)
-//
-//    committees_per_epoch = get_epoch_committee_count(len(active_validator_indices))
-//
-//    # Shuffle
-//    seed = xor(seed, int_to_bytes32(epoch))
-//    shuffled_active_validator_indices = shuffle(active_validator_indices, seed)
-//
-//    # Split the shuffled list into committees_per_epoch pieces
-//    return split(shuffled_active_validator_indices, committees_per_epoch)
+//   # Split the shuffled active validator indices
+//   return split(shuffled_indices, get_epoch_committee_count(length))
 func Shuffling(
 	seed [32]byte,
 	validators []*pb.Validator,
-	slot uint64) ([][]uint64, error) {
-
-	// Normalize slot to start of epoch boundary.
-	slot -= slot % params.BeaconConfig().SlotsPerEpoch
+	epoch uint64) ([][]uint64, error) {
 
 	// Figure out how many committees can be in a single slot.
-	activeIndices := ActiveValidatorIndices(validators, slot)
+	activeIndices := ActiveValidatorIndices(validators, epoch)
 	activeCount := uint64(len(activeIndices))
+	log.Printf("Activecount: %v", activeCount)
 	committeesPerEpoch := EpochCommitteeCount(activeCount)
+	log.Printf("committeesPerEpoch: %v", committeesPerEpoch)
 
 	shuffledIndices := make([]uint64, 0, activeCount)
 
-	for _, v := range activeIndices {
-		id, err := utils.PermutedIndex(uint64(v), activeCount, seed)
+	for idx := range activeIndices {
+		id, err := utils.PermutedIndex(uint64(idx), activeCount, seed)
 		if err != nil {
 			return nil, err
 		}
 
-		shuffledIndices = append(shuffledIndices, id)
+		shuffledIndices = append(shuffledIndices, activeIndices[id])
 	}
 
 	// Split the shuffled list into epoch_length * committees_per_slot pieces.
