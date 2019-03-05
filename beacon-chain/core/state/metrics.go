@@ -6,6 +6,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 var (
@@ -40,8 +41,9 @@ func reportEpochTransitionMetrics(state *pb.BeaconState) {
 			"0x" + hex.EncodeToString(state.ValidatorRegistry[i].Pubkey), // Validator
 		).Set(float64(bal))
 	}
+	s := params.BeaconConfig().GenesisSlot
 	// Slot number
-	lastSlotGauge.Set(float64(state.Slot))
+	lastSlotGauge.Set(float64(state.Slot - s))
 	// Last justified slot
 	lastJustifiedEpochGauge.Set(float64(state.JustifiedEpoch))
 	// Last previous justified slot
