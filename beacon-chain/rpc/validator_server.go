@@ -17,6 +17,30 @@ import (
 // and more.
 type ValidatorServer struct {
 	beaconDB *db.BeaconDB
+	chainService chainService
+	canonicalStateChan chan *pbp2p.BeaconState
+}
+
+// ValidatorIndex is called by a validator to get its index location that corresponds
+// to the attestation bit fields.
+func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest, stream pb.ValidatorService_WaitForActivationServer) error {
+    sub := vs.chainService.CanonicalStateFeed().Subscribe(vs.canonicalStateChan)
+	defer sub.Unsubscribe()
+	for {
+		select {
+		case chainStartTime := <-bs.chainStartChan:
+			log.Info("Sending ChainStart log and genesis time to connected validator clients")
+			res := &pb.ChainStartResponse{
+				Started:     true,
+				GenesisTime: uint64(chainStartTime.Unix()),
+			}
+			return stream.Send(res)
+		case <-sub.Err():
+			return errors.New("subscriber closed, exiting goroutine")
+		case <-bs.ctx.Done():
+			return errors.New("rpc context closed, exiting goroutine")
+		}
+	}
 }
 
 // ValidatorIndex is called by a validator to get its index location that corresponds

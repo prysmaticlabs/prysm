@@ -156,6 +156,7 @@ func (s *Service) Start() {
 	}
 	validatorServer := &ValidatorServer{
 		beaconDB: s.beaconDB,
+		chainService: s.chainService,
 	}
 	pb.RegisterBeaconServiceServer(s.grpcServer, beaconServer)
 	pb.RegisterProposerServiceServer(s.grpcServer, proposerServer)
