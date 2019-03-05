@@ -1036,12 +1036,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_gbrlsnchs_jwt",
-    commit = "ad902494bf9857ef93c4838d0c3c027e48fa6329",
-    importpath = "github.com/gbrlsnchs/jwt",
-)
-
-go_repository(
     name = "com_github_allegro_bigcache",
     commit = "84a0ff3f153cbd7e280a19029a864bb04b504e62",  # v1.2.0
     importpath = "github.com/allegro/bigcache",

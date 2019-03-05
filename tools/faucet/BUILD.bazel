@@ -16,7 +16,6 @@ DEPS = [
     "@org_golang_google_grpc//metadata:go_default_library",
     "@org_golang_google_grpc//reflection:go_default_library",
     "@com_github_prestonvanloon_go_recaptcha//:go_default_library",
-    "@com_github_gbrlsnchs_jwt//:go_default_library",
     "@com_github_ethereum_go_ethereum//ethclient:go_default_library",
     "@com_github_ethereum_go_ethereum//common:go_default_library",
     "@com_github_ethereum_go_ethereum//params:go_default_library",
