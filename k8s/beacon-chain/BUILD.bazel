@@ -31,6 +31,7 @@ _deployments = [
     "beacon-chain",
     "bootnode",
     "relay",
+    "validator",
 ]
 
 _secrets = [

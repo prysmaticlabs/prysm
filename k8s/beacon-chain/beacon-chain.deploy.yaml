@@ -4,7 +4,7 @@ metadata:
   name: beacon-chain
   namespace: beacon-chain
 spec:
-  replicas: 1
+  replicas: 3
   serviceName: beacon-chain
   selector:
     matchLabels:
@@ -20,6 +20,20 @@ spec:
         prometheus.io/port: '9090'
     spec:
       priorityClassName: production-priority
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  component: beacon-chain
+              topologyKey: kubernetes.io/hostname
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    component: beacon-chain
+                topologyKey: failure-domain.beta.kubernetes.io/zone
       containers:
         - name: beacon-chain
           image: gcr.io/prysmaticlabs/prysm/beacon-chain:latest
