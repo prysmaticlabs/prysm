@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -16,28 +17,28 @@ import (
 // and shards in which particular validators need to perform their responsibilities,
 // and more.
 type ValidatorServer struct {
+	ctx context.Context
 	beaconDB *db.BeaconDB
 	chainService chainService
 	canonicalStateChan chan *pbp2p.BeaconState
 }
 
-// ValidatorIndex is called by a validator to get its index location that corresponds
-// to the attestation bit fields.
+// WaitForActivation checks if a validator public key exists in the active validator registry of the current
+// beacon state, if not, then it creates a stream which listens for canonical states which contain
+// the validator with the public key as an active validator record.
 func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest, stream pb.ValidatorService_WaitForActivationServer) error {
     sub := vs.chainService.CanonicalStateFeed().Subscribe(vs.canonicalStateChan)
 	defer sub.Unsubscribe()
 	for {
 		select {
-		case chainStartTime := <-bs.chainStartChan:
-			log.Info("Sending ChainStart log and genesis time to connected validator clients")
-			res := &pb.ChainStartResponse{
-				Started:     true,
-				GenesisTime: uint64(chainStartTime.Unix()),
+		case beaconState := <-vs.canonicalStateChan:
+			res := &pb.ValidatorActivationResponse{
+                Validator: beaconState.ValidatorRegistry[0],
 			}
 			return stream.Send(res)
 		case <-sub.Err():
 			return errors.New("subscriber closed, exiting goroutine")
-		case <-bs.ctx.Done():
+		case <-vs.ctx.Done():
 			return errors.New("rpc context closed, exiting goroutine")
 		}
 	}
