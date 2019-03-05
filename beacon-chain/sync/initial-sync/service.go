@@ -448,6 +448,8 @@ func (s *InitialSync) checkBlockValidity(ctx context.Context, block *pb.BeaconBl
 	return nil
 }
 
+// isSlotDiff large checks if the difference between the current slot and highest observed
+// slot isnt too large.
 func (s *InitialSync) isSlotDiffLarge() bool {
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	epochLimit := params.BeaconConfig().SyncEpochLimit
