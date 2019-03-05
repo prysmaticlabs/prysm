@@ -198,7 +198,7 @@ func ExitValidator(state *pb.BeaconState, idx uint64) *pb.BeaconState {
 //    Note that this function mutates ``state``.
 //    """
 //    validator = state.validator_registry[index]
-//    state.latest_slashed_balances[get_current_epoch(state) % LATEST_PENALIZED_EXIT_LENGTH] += get_effective_balance(state, index)
+//    state.latest_slashed_balances[get_current_epoch(state) % LATEST_SLASHED_EXIT_LENGTH] += get_effective_balance(state, index)
 //
 //    whistleblower_index = get_beacon_proposer_index(state, state.slot)
 //    whistleblower_reward = get_effective_balance(state, index) // WHISTLEBLOWER_REWARD_QUOTIENT
@@ -336,18 +336,21 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 //    total_balance = sum(get_effective_balance(state, i) for i in active_validator_indices)
 //
 //    for index, validator in enumerate(state.validator_registry):
-//        if current_epoch == validator.slashed_epoch + LATEST_PENALIZED_EXIT_LENGTH // 2:
-//            epoch_index = current_epoch % LATEST_PENALIZED_EXIT_LENGTH
-//            total_at_start = state.latest_slashed_balances[(epoch_index + 1) % LATEST_PENALIZED_EXIT_LENGTH]
+//        if current_epoch == validator.slashed_epoch + LATEST_SLASHED_EXIT_LENGTH // 2:
+//            epoch_index = current_epoch % LATEST_SLASHED_EXIT_LENGTH
+//            total_at_start = state.latest_SLASHED_balances[(epoch_index + 1) % LATEST_SLASHED_EXIT_LENGTH]
 //            total_at_end = state.latest_slashed_balances[epoch_index]
 //            total_penalties = total_at_end - total_at_start
-//            penalty = get_effective_balance(state, index) * min(total_penalties * 3, total_balance) // total_balance
+//            penalty = max(
+//              get_effective_balance(state, index) * min(total_penalties * 3, total_balance) // total_balance,
+//              get_effective_balance(state, index) // MIN_PENALTY_QUOTIENT
+//            )
 //            state.validator_balances[index] -= penalty
 //
 //    def eligible(index):
 //        validator = state.validator_registry[index]
 //        if validator.slashed_epoch <= current_epoch:
-//            slashed_withdrawal_epochs = LATEST_PENALIZED_EXIT_LENGTH // 2
+//            slashed_withdrawal_epochs = LATEST_SLASHED_EXIT_LENGTH // 2
 //            return current_epoch >= validator.slashed_epoch + slashd_withdrawal_epochs
 //        else:
 //            return current_epoch >= validator.exit_epoch + MIN_VALIDATOR_WITHDRAWAL_DELAY
@@ -382,8 +385,16 @@ func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
 			if totalBalance < penaltyMultiplier {
 				penaltyMultiplier = totalBalance
 			}
-			penalty := helpers.EffectiveBalance(state, uint64(idx)) *
-				penaltyMultiplier / totalBalance
+			fmt.Println(totalBalance)
+			penalty := helpers.EffectiveBalance(state, uint64(idx)) * penaltyMultiplier / totalBalance
+			minPenalty := helpers.EffectiveBalance(state, uint64(idx)) / params.BeaconConfig().MinPenaltyQuotient
+			fmt.Println(totalBalance)
+			fmt.Println(penalty)
+			fmt.Println(minPenalty)
+			if minPenalty > penalty {
+				penalty = minPenalty
+			}
+			fmt.Println(penalty)
 			state.ValidatorBalances[idx] -= penalty
 		}
 	}
@@ -437,7 +448,7 @@ func maxBalanceChurn(totalBalance uint64) uint64 {
 // def eligible(index):
 //    validator = state.validator_registry[index]
 //    if validator.slashed_epoch <= current_epoch:
-//         slashed_withdrawal_epochs = LATEST_PENALIZED_EXIT_LENGTH // 2
+//         slashed_withdrawal_epochs = LATEST_SLASHED_EXIT_LENGTH // 2
 //        return current_epoch >= validator.slashed_epoch + slashd_withdrawal_epochs
 //    else:
 //        return current_epoch >= validator.exit_epoch + MIN_VALIDATOR_WITHDRAWAL_DELAY
