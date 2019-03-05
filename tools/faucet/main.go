@@ -28,7 +28,7 @@ func main() {
 	s := grpc.NewServer()
 	fmt.Println("recaptcha = " + *recaptchaSecret)
 	faucetpb.RegisterFaucetServiceServer(s,
-		NewFaucetServer(
+		newFaucetServer(
 			recaptcha.Recaptcha{RecaptchaPrivateKey: *recaptchaSecret},
 			*rpcPath,
 			*privateKey,

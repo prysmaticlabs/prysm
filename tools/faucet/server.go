@@ -19,7 +19,8 @@ import (
 	"google.golang.org/grpc/peer"
 )
 
-var minScore = 0.5
+const minScore = 0.8
+
 var fundingAmount = big.NewInt(0.5 * params.Ether)
 
 type faucetServer struct {
@@ -29,7 +30,7 @@ type faucetServer struct {
 	pk     *ecdsa.PrivateKey
 }
 
-func NewFaucetServer(
+func newFaucetServer(
 	r recaptcha.Recaptcha,
 	rpcPath string,
 	funderPrivateKey string,
