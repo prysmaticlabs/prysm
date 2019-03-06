@@ -225,9 +225,10 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 	// from the powchain service accordingly.
 	pendingDeposits := bs.beaconDB.PendingDeposits(ctx, ancestorHeight)
 	if len(pendingDeposits) == 0 {
+		root := bs.powChainService.DepositRoot()
 		return &pb.Eth1DataResponse{
 			Eth1Data: &pbp2p.Eth1Data{
-				DepositRootHash32: params.BeaconConfig().ZeroHash[:],
+				DepositRootHash32: root[:],
 				BlockHash32:       ancestorHash[:],
 			},
 		}, nil
