@@ -202,31 +202,68 @@ func (rs *RegularSync) run() {
 			log.Debug("Exiting goroutine")
 			return
 		case msg := <-rs.announceBlockBuf:
-			rs.receiveBlockAnnounce(msg)
+			safelyHandleMessage(func() {
+				rs.receiveBlockAnnounce(msg)
+			})
 		case msg := <-rs.attestationBuf:
-			rs.receiveAttestation(msg)
+			safelyHandleMessage(func() {
+				rs.receiveAttestation(msg)
+			})
 		case msg := <-rs.attestationReqByHashBuf:
-			rs.handleAttestationRequestByHash(msg)
+			safelyHandleMessage(func() {
+				rs.handleAttestationRequestByHash(msg)
+			})
 		case msg := <-rs.unseenAttestationsReqBuf:
-			rs.handleUnseenAttestationsRequest(msg)
+			safelyHandleMessage(func() {
+				rs.handleUnseenAttestationsRequest(msg)
+			})
 		case msg := <-rs.exitBuf:
-			rs.receiveExitRequest(msg)
+			safelyHandleMessage(func() {
+				rs.receiveExitRequest(msg)
+			})
 		case msg := <-rs.blockBuf:
-			rs.receiveBlock(msg)
+			safelyHandleMessage(func() {
+				rs.receiveBlock(msg)
+			})
 		case msg := <-rs.blockRequestBySlot:
-			rs.handleBlockRequestBySlot(msg)
+			safelyHandleMessage(func() {
+				rs.handleBlockRequestBySlot(msg)
+			})
 		case msg := <-rs.blockRequestByHash:
-			rs.handleBlockRequestByHash(msg)
+			safelyHandleMessage(func() {
+				rs.handleBlockRequestByHash(msg)
+			})
 		case msg := <-rs.batchedRequestBuf:
-			rs.handleBatchedBlockRequest(msg)
+			safelyHandleMessage(func() {
+				rs.handleBatchedBlockRequest(msg)
+			})
 		case msg := <-rs.stateRequestBuf:
-			rs.handleStateRequest(msg)
+			safelyHandleMessage(func() {
+				rs.handleStateRequest(msg)
+			})
 		case msg := <-rs.chainHeadReqBuf:
-			rs.handleChainHeadRequest(msg)
+			safelyHandleMessage(func() {
+				rs.handleChainHeadRequest(msg)
+			})
 		case block := <-rs.canonicalBuf:
-			rs.broadcastCanonicalBlock(rs.ctx, block)
+			safelyHandleMessage(func() {
+				rs.broadcastCanonicalBlock(rs.ctx, block)
+			})
 		}
 	}
+}
+
+// safelyHandleMessage will recover and log any panic that occurs from the
+// function argument.
+func safelyHandleMessage(fn func()) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.WithField("r", r).Error("Panicked when handling p2p message! Recovering...")
+		}
+	}()
+
+	// Fingers crossed that it doesn't panic...
+	fn()
 }
 
 // receiveBlockAnnounce accepts a block hash.
