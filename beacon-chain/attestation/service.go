@@ -87,14 +87,14 @@ func (a *Service) IncomingAttestationFeed() *event.Feed {
 //	Let `get_latest_attestation(store: Store, validator_index: ValidatorIndex) ->
 //		Attestation` be the attestation with the highest slot number in `store`
 //		from the validator with the given `validator_index`
-func (a *Service) LatestAttestation(ctx context.Context, index int) (*pb.Attestation, error) {
+func (a *Service) LatestAttestation(ctx context.Context, index uint64) (*pb.Attestation, error) {
 	state, err := a.beaconDB.State(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	// return error if it's an invalid validator index.
-	if index >= len(state.ValidatorRegistry) {
+	if index >= uint64(len(state.ValidatorRegistry)) {
 		return nil, fmt.Errorf("invalid validator index %d", index)
 	}
 	pubKey := bytesutil.ToBytes48(state.ValidatorRegistry[index].Pubkey)
@@ -114,7 +114,7 @@ func (a *Service) LatestAttestation(ctx context.Context, index int) (*pb.Attesta
 //	Let `get_latest_attestation_target(store: Store, validator_index: ValidatorIndex) ->
 //		BeaconBlock` be the target block in the attestation
 //		`get_latest_attestation(store, validator_index)`.
-func (a *Service) LatestAttestationTarget(ctx context.Context, index int) (*pb.BeaconBlock, error) {
+func (a *Service) LatestAttestationTarget(ctx context.Context, index uint64) (*pb.BeaconBlock, error) {
 	attestation, err := a.LatestAttestation(ctx, index)
 	if err != nil {
 		return nil, fmt.Errorf("could not get attestation: %v", err)

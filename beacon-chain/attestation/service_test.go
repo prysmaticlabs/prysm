@@ -127,7 +127,7 @@ func TestLatestAttestation_InvalidIndex(t *testing.T) {
 	}
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 
-	index := 0
+	index := uint64(0)
 	want := fmt.Sprintf("invalid validator index %d", index)
 	if _, err := service.LatestAttestation(ctx, index); !strings.Contains(err.Error(), want) {
 		t.Errorf("Wanted error to contain %s, received %v", want, err)
@@ -148,7 +148,7 @@ func TestLatestAttestation_NoAttestation(t *testing.T) {
 
 	index := 0
 	want := fmt.Sprintf("validator index %d does not have an attestation", index)
-	if _, err := service.LatestAttestation(ctx, index); !strings.Contains(err.Error(), want) {
+	if _, err := service.LatestAttestation(ctx, uint64(index)); !strings.Contains(err.Error(), want) {
 		t.Errorf("Wanted error to contain %s, received %v", want, err)
 	}
 }
@@ -165,7 +165,7 @@ func TestLatestAttestationTarget_CantGetAttestation(t *testing.T) {
 	}
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 
-	index := 100
+	index := uint64(100)
 	want := fmt.Sprintf("could not get attestation: invalid validator index %d", index)
 	if _, err := service.LatestAttestationTarget(ctx, index); !strings.Contains(err.Error(), want) {
 		t.Errorf("Wanted error to contain %s, received %v", want, err)
