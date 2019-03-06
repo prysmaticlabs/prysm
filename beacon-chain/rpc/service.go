@@ -49,7 +49,7 @@ type powChainService interface {
 	LatestBlockHeight() *big.Int
 	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
 	BlockHashByHeight(ctx context.Context, height *big.Int) (common.Hash, error)
-	DepositRootUpToBlockHeight(ctx context.Context, hash common.Hash) ([]byte, error)
+	DepositRootUpToBlockHeight(ctx context.Context, height *big.Int) ([]byte, error)
 	DepositRoot() [32]byte
 }
 

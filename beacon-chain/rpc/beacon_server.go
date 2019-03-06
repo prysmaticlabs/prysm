@@ -168,7 +168,6 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 			// breaking ties by favoring block hashes with higher associated block height.
 			// Let block_hash = best_vote.eth1_data.block_hash.
 			// Let deposit_root = best_vote.eth1_data.deposit_root.
-
 			if vote.VoteCount > bestVote.VoteCount {
 				bestVote = vote
 				bestVoteHeight = blockHeight
@@ -221,13 +220,10 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 	}
 	// Fetch the deposit root up to the block height of the ancestor
 	// from the powchain service accordingly.
-	depositRoot, err := bs.powChainService.DepositRootUpToBlockHeight(ctx, ancestorHeight)
-	if err != nil {
-		return nil, fmt.Errorf("could not fetch deposit root up to block hash: %v", err)
-	}
+	pendingDeposits := bs.beaconDB.PendingDeposits(ctx, ancestorHeight)
 	return &pb.Eth1DataResponse{
 		Eth1Data: &pbp2p.Eth1Data{
-			DepositRootHash32: depositRoot,
+			DepositRootHash32: pendingDeposits[len(pendingDeposits)-1].DepositRootHash32,
 			BlockHash32:       ancestorHash[:],
 		},
 	}, nil

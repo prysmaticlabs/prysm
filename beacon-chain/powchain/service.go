@@ -99,6 +99,7 @@ type Web3Service struct {
 	runError                error
 	chainStartDelay         uint64
 	lastRequestedBlock      *big.Int
+	lastRequestedFollowDistanceHeight *n
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -282,39 +283,6 @@ func (w *Web3Service) BlockHashByHeight(ctx context.Context, height *big.Int) (c
 	return block.Hash(), nil
 }
 
-// DepositRootUpToBlockHash fetches the deposit root of the contract up to a given
-// block height. This is used when fetching eth1 data in our RPC service for proposers to fetch
-// the deposit root up to an ETH_FOLLOW_DISTANCE block ancestor appropriately.
-func (w *Web3Service) DepositRootUpToBlockHeight(ctx context.Context, height *big.Int) ([]byte, error) {
-	query := ethereum.FilterQuery{
-		ToBlock: height,
-		Addresses: []common.Address{
-			w.depositContractAddress,
-		},
-	}
-	logs, err := w.logger.FilterLogs(w.ctx, query)
-	if err != nil {
-		return nil, err
-	}
-
-	var lastRootLog gethTypes.Log
-	var hasLog bool
-	for _, log := range logs {
-		if log.Topics[0] == hashutil.Hash(depositEventSignature) {
-			lastRootLog = lastRootLog
-			hasLog = true
-		}
-	}
-	if !hasLog {
-		return nil, nil
-	}
-	depositRoot, _, _, _, err := contracts.UnpackDepositLogData(lastRootLog.Data)
-	if err != nil {
-		return nil, fmt.Errorf("could not unpack deposit log: %v", err)
-	}
-	return depositRoot[:], nil
-}
-
 // Client for interacting with the ETH1.0 chain.
 func (w *Web3Service) Client() Client {
 	return w.client
@@ -385,6 +353,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 		DepositData: depositData,
 		MerkleTreeIndex: binary.LittleEndian.Uint64(merkleTreeIndex),
 		MerkleBranchHash32S: branch,
+		DepositRootHash32: merkleRoot,
 	}
 	// If chain has not started, do not update the merkle trie
 	if !w.chainStarted {

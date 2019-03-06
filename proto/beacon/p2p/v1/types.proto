@@ -171,6 +171,7 @@ message Deposit {
   repeated bytes merkle_branch_hash32s = 1;
   uint64 merkle_tree_index = 2;
   bytes deposit_data = 3;
+  bytes deposit_root_hash32 = 4;
 }
 
 message VoluntaryExit {
