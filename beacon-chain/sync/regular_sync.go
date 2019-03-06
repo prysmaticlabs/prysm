@@ -8,6 +8,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -202,31 +203,57 @@ func (rs *RegularSync) run() {
 			log.Debug("Exiting goroutine")
 			return
 		case msg := <-rs.announceBlockBuf:
-			rs.receiveBlockAnnounce(msg)
+			safelyHandleMessage(rs.receiveBlockAnnounce, msg)
 		case msg := <-rs.attestationBuf:
-			rs.receiveAttestation(msg)
+			safelyHandleMessage(rs.receiveAttestation, msg)
 		case msg := <-rs.attestationReqByHashBuf:
-			rs.handleAttestationRequestByHash(msg)
+			safelyHandleMessage(rs.handleAttestationRequestByHash, msg)
 		case msg := <-rs.unseenAttestationsReqBuf:
-			rs.handleUnseenAttestationsRequest(msg)
+			safelyHandleMessage(rs.handleUnseenAttestationsRequest, msg)
 		case msg := <-rs.exitBuf:
-			rs.receiveExitRequest(msg)
+			safelyHandleMessage(rs.receiveExitRequest, msg)
 		case msg := <-rs.blockBuf:
-			rs.receiveBlock(msg)
+			safelyHandleMessage(rs.receiveBlock, msg)
 		case msg := <-rs.blockRequestBySlot:
-			rs.handleBlockRequestBySlot(msg)
+			safelyHandleMessage(rs.handleBlockRequestBySlot, msg)
 		case msg := <-rs.blockRequestByHash:
-			rs.handleBlockRequestByHash(msg)
+			safelyHandleMessage(rs.handleBlockRequestByHash, msg)
 		case msg := <-rs.batchedRequestBuf:
-			rs.handleBatchedBlockRequest(msg)
+			safelyHandleMessage(rs.handleBatchedBlockRequest, msg)
 		case msg := <-rs.stateRequestBuf:
-			rs.handleStateRequest(msg)
+			safelyHandleMessage(rs.handleStateRequest, msg)
 		case msg := <-rs.chainHeadReqBuf:
-			rs.handleChainHeadRequest(msg)
+			safelyHandleMessage(rs.handleChainHeadRequest, msg)
 		case block := <-rs.canonicalBuf:
 			rs.broadcastCanonicalBlock(rs.ctx, block)
 		}
 	}
+}
+
+// safelyHandleMessage will recover and log any panic that occurs from the
+// function argument.
+func safelyHandleMessage(fn func(p2p.Message), msg p2p.Message) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.WithFields(logrus.Fields{
+				"r":   r,
+				"msg": proto.MarshalTextString(msg.Data),
+			}).Error("Panicked when handling p2p message! Recovering...")
+
+			if msg.Ctx == nil {
+				return
+			}
+			if span := trace.FromContext(msg.Ctx); span != nil {
+				span.SetStatus(trace.Status{
+					Code:    trace.StatusCodeInternal,
+					Message: fmt.Sprintf("Panic: %v", r),
+				})
+			}
+		}
+	}()
+
+	// Fingers crossed that it doesn't panic...
+	fn(msg)
 }
 
 // receiveBlockAnnounce accepts a block hash.
@@ -445,10 +472,10 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 		return
 	}
 
-	finalizedSlot := beaconState.FinalizedEpoch * params.BeaconConfig().SlotsPerEpoch
-	if attestation.Data.Slot < finalizedSlot {
-		log.Debugf("Skipping received attestation with slot smaller than last finalized slot, %d < %d",
-			attestation.Data.Slot, finalizedSlot)
+	previousEpochStartSlot := helpers.StartSlot(helpers.PrevEpoch(beaconState))
+	if attestation.Data.Slot < previousEpochStartSlot {
+		log.Debugf("Skipping received attestation with slot smaller than previous epoch start slot, %d < %d",
+			attestation.Data.Slot, previousEpochStartSlot)
 		return
 	}
 
