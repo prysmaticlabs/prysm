@@ -10,10 +10,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-<<<<<<< HEAD
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-=======
->>>>>>> 728c9fbfdc379a509ef63abfbc1c2fee4bf52a96
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
