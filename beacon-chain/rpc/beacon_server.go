@@ -202,8 +202,12 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 
 // PendingDeposits returns a list of pending deposits that are ready for
 // inclusion in the next beacon block.
-func (bs *BeaconServer) PendingDeposits(ctx context.Context, req *pb.PendingDepositsRequest) (*pb.PendingDepositsResponse, error) {
-	hash := bytesutil.ToBytes32(req.BlockHash32)
+func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*pb.PendingDepositsResponse, error) {
+	beaconState, err := bs.beaconDB.State(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
+	}
+	hash := bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockHash32)
 	blockExists, height, err := bs.powChainService.BlockExists(ctx, hash)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch block hash for pending deposits: %v", err)

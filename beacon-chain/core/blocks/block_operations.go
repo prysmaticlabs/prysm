@@ -632,7 +632,8 @@ func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 		index,
 	); !ok {
 		return fmt.Errorf(
-			"deposit merkle branch of deposit root did not verify for root: %#x",
+			"deposit merkle branch of deposit root %#x did not verify for root: %#x",
+			deposit.DepositRootHash32,
 			receiptRoot,
 		)
 	}
