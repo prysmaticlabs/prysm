@@ -349,10 +349,10 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 		branch = append(branch, val[:])
 	}
 	deposit := &pb.Deposit{
-		DepositData: depositData,
-		MerkleTreeIndex: binary.LittleEndian.Uint64(merkleTreeIndex),
+		DepositData:         depositData,
+		MerkleTreeIndex:     binary.LittleEndian.Uint64(merkleTreeIndex),
 		MerkleBranchHash32S: branch,
-		DepositRootHash32: merkleRoot[:],
+		DepositRootHash32:   merkleRoot[:],
 	}
 	// If chain has not started, do not update the merkle trie
 	if !w.chainStarted {
@@ -558,4 +558,3 @@ func (w *Web3Service) requestBatchedLogs() error {
 	w.lastRequestedBlock.Set(requestedBlock)
 	return nil
 }
-

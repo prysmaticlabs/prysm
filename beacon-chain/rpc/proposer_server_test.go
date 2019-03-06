@@ -154,14 +154,14 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	opService := &mockOperationService{
 		pendingAttestations: []*pbp2p.Attestation{
 			// Expired attestations
-			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: 0}},
-			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot - 10000}},
-			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot - 5000}},
-			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot - 100}},
+			{Data: &pbp2p.AttestationData{Slot: 0}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 10000}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 5000}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 100}},
 			// Non-expired attestations
-			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot - 5}},
-			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot - 2}},
-			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 5}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 2}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot}},
 		},
 	}
 	expectedNumberOfAttestations := 3

@@ -69,9 +69,18 @@ func TestProposeBlock_PendingDepositsFailure(t *testing.T) {
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pbp2p.BeaconBlock{}, nil /*err*/)
 
-	m.beaconClient.EXPECT().PendingDeposits(
+	m.beaconClient.EXPECT().Eth1Data(
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pb.Eth1DataResponse{
+		Eth1Data: &pbp2p.Eth1Data{
+			BlockHash32: []byte{},
+		},
+	}, nil /*err*/)
+
+	m.beaconClient.EXPECT().PendingDeposits(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.PendingDepositsRequest{}),
 	).Return(nil /*response*/, errors.New("something bad happened"))
 
 	validator.ProposeBlock(context.Background(), 55)
@@ -88,19 +97,23 @@ func TestProposeBlock_UsePendingDeposits(t *testing.T) {
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pbp2p.BeaconBlock{}, nil /*err*/)
 
-	m.beaconClient.EXPECT().PendingDeposits(
+	m.beaconClient.EXPECT().Eth1Data(
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pb.Eth1DataResponse{
+		Eth1Data: &pbp2p.Eth1Data{
+			BlockHash32: []byte{},
+		},
+	}, nil /*err*/)
+
+	m.beaconClient.EXPECT().PendingDeposits(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.PendingDepositsRequest{}),
 	).Return(&pb.PendingDepositsResponse{
 		PendingDeposits: []*pbp2p.Deposit{
 			{DepositData: []byte{'D', 'A', 'T', 'A'}},
 		},
 	}, nil /*err*/)
-
-	m.beaconClient.EXPECT().Eth1Data(
-		gomock.Any(), // ctx
-		gomock.Eq(&ptypes.Empty{}),
-	).Return(&pb.Eth1DataResponse{}, nil /*err*/)
 
 	m.beaconClient.EXPECT().ForkData(
 		gomock.Any(), // ctx
@@ -148,11 +161,6 @@ func TestProposeBlock_Eth1DataFailure(t *testing.T) {
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pbp2p.BeaconBlock{}, nil /*err*/)
 
-	m.beaconClient.EXPECT().PendingDeposits(
-		gomock.Any(), // ctx
-		gomock.Eq(&ptypes.Empty{}),
-	).Return(&pb.PendingDepositsResponse{}, nil /*err*/)
-
 	m.beaconClient.EXPECT().Eth1Data(
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
@@ -172,17 +180,17 @@ func TestProposeBlock_UsesEth1Data(t *testing.T) {
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pbp2p.BeaconBlock{}, nil /*err*/)
 
-	m.beaconClient.EXPECT().PendingDeposits(
-		gomock.Any(), // ctx
-		gomock.Eq(&ptypes.Empty{}),
-	).Return(&pb.PendingDepositsResponse{}, nil /*err*/)
-
 	m.beaconClient.EXPECT().Eth1Data(
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.Eth1DataResponse{
 		Eth1Data: &pbp2p.Eth1Data{BlockHash32: []byte{'B', 'L', 'O', 'C', 'K'}},
 	}, nil /*err*/)
+
+	m.beaconClient.EXPECT().PendingDeposits(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.PendingDepositsRequest{}),
+	).Return(&pb.PendingDepositsResponse{}, nil /*err*/)
 
 	m.beaconClient.EXPECT().ForkData(
 		gomock.Any(), // ctx
@@ -230,17 +238,17 @@ func TestProposeBlock_PendingAttestationsFailure(t *testing.T) {
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pbp2p.BeaconBlock{}, nil /*err*/)
 
-	m.beaconClient.EXPECT().PendingDeposits(
-		gomock.Any(), // ctx
-		gomock.Eq(&ptypes.Empty{}),
-	).Return(&pb.PendingDepositsResponse{}, nil /*err*/)
-
 	m.beaconClient.EXPECT().Eth1Data(
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pb.Eth1DataResponse{
 		Eth1Data: &pbp2p.Eth1Data{BlockHash32: []byte{'B', 'L', 'O', 'C', 'K'}},
 	}, nil /*err*/)
+
+	m.beaconClient.EXPECT().PendingDeposits(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.PendingDepositsRequest{}),
+	).Return(&pb.PendingDepositsResponse{}, nil /*err*/)
 
 	m.beaconClient.EXPECT().ForkData(
 		gomock.Any(), // ctx
@@ -270,15 +278,19 @@ func TestProposeBlock_ComputeStateFailure(t *testing.T) {
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pbp2p.BeaconBlock{}, nil /*err*/)
 
-	m.beaconClient.EXPECT().PendingDeposits(
-		gomock.Any(), // ctx
-		gomock.Eq(&ptypes.Empty{}),
-	).Return(&pb.PendingDepositsResponse{}, nil /*err*/)
-
 	m.beaconClient.EXPECT().Eth1Data(
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
-	).Return(&pb.Eth1DataResponse{}, nil /*err*/)
+	).Return(&pb.Eth1DataResponse{
+		Eth1Data: &pbp2p.Eth1Data{
+			BlockHash32: []byte{},
+		},
+	}, nil /*err*/)
+
+	m.beaconClient.EXPECT().PendingDeposits(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.PendingDepositsRequest{}),
+	).Return(&pb.PendingDepositsResponse{}, nil /*err*/)
 
 	m.beaconClient.EXPECT().ForkData(
 		gomock.Any(), // ctx
@@ -317,15 +329,19 @@ func TestProposeBlock_UsesComputedState(t *testing.T) {
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pbp2p.BeaconBlock{}, nil /*err*/)
 
-	m.beaconClient.EXPECT().PendingDeposits(
-		gomock.Any(), // ctx
-		gomock.Eq(&ptypes.Empty{}),
-	).Return(&pb.PendingDepositsResponse{}, nil /*err*/)
-
 	m.beaconClient.EXPECT().Eth1Data(
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
-	).Return(&pb.Eth1DataResponse{}, nil /*err*/)
+	).Return(&pb.Eth1DataResponse{
+		Eth1Data: &pbp2p.Eth1Data{
+			BlockHash32: []byte{},
+		},
+	}, nil /*err*/)
+
+	m.beaconClient.EXPECT().PendingDeposits(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.PendingDepositsRequest{}),
+	).Return(&pb.PendingDepositsResponse{}, nil /*err*/)
 
 	m.beaconClient.EXPECT().ForkData(
 		gomock.Any(), // ctx
@@ -376,15 +392,19 @@ func TestProposeBlock_BroadcastsABlock(t *testing.T) {
 		gomock.Eq(&ptypes.Empty{}),
 	).Return(&pbp2p.BeaconBlock{}, nil /*err*/)
 
-	m.beaconClient.EXPECT().PendingDeposits(
-		gomock.Any(), // ctx
-		gomock.Eq(&ptypes.Empty{}),
-	).Return(&pb.PendingDepositsResponse{}, nil /*err*/)
-
 	m.beaconClient.EXPECT().Eth1Data(
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
-	).Return(&pb.Eth1DataResponse{}, nil /*err*/)
+	).Return(&pb.Eth1DataResponse{
+		Eth1Data: &pbp2p.Eth1Data{
+			BlockHash32: []byte{},
+		},
+	}, nil /*err*/)
+
+	m.beaconClient.EXPECT().PendingDeposits(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.PendingDepositsRequest{}),
+	).Return(&pb.PendingDepositsResponse{}, nil /*err*/)
 
 	m.beaconClient.EXPECT().ForkData(
 		gomock.Any(), // ctx

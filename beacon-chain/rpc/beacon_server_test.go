@@ -262,22 +262,12 @@ func TestLatestAttestation_SendsCorrectly(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Sending attestation to RPC clients")
 }
 
-func TestPendingDeposits_UnknownBlockNum(t *testing.T) {
-	p := &mockPOWChainService{
-		latestBlockNumber: nil,
-	}
-	bs := BeaconServer{powChainService: p}
-
-	_, err := bs.PendingDeposits(context.Background(), nil)
-	if err.Error() != "latest PoW block number is unknown" {
-		t.Errorf("Received unexpected error: %v", err)
-	}
-}
-
 func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	p := &mockPOWChainService{
 		latestBlockNumber: big.NewInt(int64(10 + params.BeaconConfig().Eth1FollowDistance)),
+		hashesByHeight:    map[int][]byte{},
 	}
+	p.hashesByHeight[int(10+params.BeaconConfig().Eth1FollowDistance)] = []byte("hi")
 	d := &db.BeaconDB{}
 
 	// Using the merkleTreeIndex as the block number for this test...
@@ -309,26 +299,14 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 		chainService:    newMockChainService(),
 	}
 
-	result, err := bs.PendingDeposits(ctx, nil)
+	result, err := bs.PendingDeposits(ctx, &pb.PendingDepositsRequest{
+		BlockHash32: []byte("hi"),
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(result.PendingDeposits, readyDeposits) {
 		t.Errorf("Received unexpected list of deposits: %+v, wanted: %+v", result, readyDeposits)
-	}
-
-	// It should also return the recent deposits after their follow window.
-	p.latestBlockNumber = big.NewInt(0).Add(p.latestBlockNumber, big.NewInt(10000))
-	allResp, err := bs.PendingDeposits(ctx, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(allResp.PendingDeposits) != len(recentDeposits)+len(readyDeposits) {
-		t.Errorf(
-			"Received unexpected number of pending deposits: %d, wanted: %d",
-			len(allResp.PendingDeposits),
-			len(recentDeposits)+len(readyDeposits),
-		)
 	}
 }
 
@@ -388,12 +366,11 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 	}
 	// If the data vote objects are empty, the deposit root should be the one corresponding
 	// to the deposit contract in the powchain service, fetched using powChainService.DepositRoot()
-	depositRoot := beaconServer.powChainService.DepositRoot()
-	if !bytes.Equal(result.Eth1Data.DepositRootHash32, depositRoot[:]) {
+	if !bytes.Equal(result.Eth1Data.DepositRootHash32, params.BeaconConfig().ZeroHash[:]) {
 		t.Errorf(
 			"Expected deposit roots to match, received %#x == %#x",
 			result.Eth1Data.DepositRootHash32,
-			depositRoot,
+			params.BeaconConfig().ZeroHash,
 		)
 	}
 }

@@ -1,4 +1,3 @@
-
 package main
 
 import (
@@ -19,15 +18,14 @@ var output = flag.String("output", "", "The output file name, or empty to use st
 func main() {
 	flag.Parse()
 
-	its := []struct{
+	its := []struct {
 		sym string
 		typ reflect.Type
 	}{
-		
-		{ "BeaconServiceClient", reflect.TypeOf((*pkg_.BeaconServiceClient)(nil)).Elem()},
-		
-		{ "BeaconService_WaitForChainStartClient", reflect.TypeOf((*pkg_.BeaconService_WaitForChainStartClient)(nil)).Elem()},
-		
+
+		{"BeaconServiceClient", reflect.TypeOf((*pkg_.BeaconServiceClient)(nil)).Elem()},
+
+		{"BeaconService_WaitForChainStartClient", reflect.TypeOf((*pkg_.BeaconService_WaitForChainStartClient)(nil)).Elem()},
 	}
 	pkg := &model.Package{
 		// NOTE: This behaves contrary to documented behaviour if the

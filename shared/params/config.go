@@ -206,7 +206,7 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.EjectionBalance = 1600000
 	demoConfig.SyncPollingInterval = 1 * 10 // Query nodes over the network every slot.
 	demoConfig.Eth1FollowDistance = 8
-	demoConfig.EpochsPerEth1VotingPeriod = 2
+	demoConfig.EpochsPerEth1VotingPeriod = 1
 
 	return &demoConfig
 }
