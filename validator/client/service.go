@@ -58,6 +58,8 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 // Start the validator service. Launches the main go routine for the validator
 // client.
 func (v *ValidatorService) Start() {
+	log.WithField("publicKey", fmt.Sprintf("%#x", v.key.PublicKey.Marshal())).Info("Initializing new validator service")
+
 	var dialOpt grpc.DialOption
 	if v.withCert != "" {
 		creds, err := credentials.NewClientTLSFromFile(v.withCert, "")
