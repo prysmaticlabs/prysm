@@ -92,6 +92,17 @@ func (db *BeaconDB) SaveState(beaconState *pb.BeaconState) error {
 	})
 }
 
+func (db *BeaconDB) SaveFinalizedState(beaconState *pb.BeaconState) error {
+	return db.update(func(tx *bolt.Tx) error {
+		chainInfo := tx.Bucket(chainInfoBucket)
+		beaconStateEnc, err := proto.Marshal(beaconState)
+		if err != nil {
+			return err
+		}
+		return chainInfo.Put(finalizedStateLookupKey, beaconStateEnc)
+	})
+}
+
 // UnfinalizedBlockState fetches an unfinalized block's
 // active and crystallized state pair.
 func (db *BeaconDB) UnfinalizedBlockState(stateRoot [32]byte) (*pb.BeaconState, error) {

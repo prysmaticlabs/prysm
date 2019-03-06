@@ -20,8 +20,9 @@ var (
 	chainInfoBucket       = []byte("chain-info")
 	validatorBucket       = []byte("validator")
 
-	mainChainHeightKey = []byte("chain-height")
-	stateLookupKey     = []byte("state")
+	mainChainHeightKey      = []byte("chain-height")
+	stateLookupKey          = []byte("state")
+	finalizedStateLookupKey = []byte("finalized-state")
 
 	// DB internal use
 	cleanupHistoryBucket    = []byte("cleanup-history-bucket")
