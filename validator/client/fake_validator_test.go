@@ -35,8 +35,9 @@ func (fv *fakeValidator) WaitForChainStart(_ context.Context) error {
 	return nil
 }
 
-func (fv *fakeValidator) WaitForActivation(_ context.Context) {
+func (fv *fakeValidator) WaitForActivation(_ context.Context) error {
 	fv.WaitForActivationCalled = true
+	return nil
 }
 
 func (fv *fakeValidator) NextSlot() <-chan uint64 {

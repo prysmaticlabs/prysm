@@ -13,7 +13,7 @@ import (
 type Validator interface {
 	Done()
 	WaitForChainStart(ctx context.Context) error
-	WaitForActivation(ctx context.Context)
+	WaitForActivation(ctx context.Context) error
 	NextSlot() <-chan uint64
 	UpdateAssignments(ctx context.Context, slot uint64) error
 	RoleAt(slot uint64) pb.ValidatorRole
@@ -36,7 +36,9 @@ func run(ctx context.Context, v Validator) {
 	if err := v.WaitForChainStart(ctx); err != nil {
 		log.Fatalf("Could not determine if beacon chain started: %v", err)
 	}
-	v.WaitForActivation(ctx)
+	if err := v.WaitForActivation(ctx); err != nil {
+		log.Fatalf("Could not wait for validator activation: %v", err)
+	}
 	if err := v.UpdateAssignments(ctx, params.BeaconConfig().GenesisSlot); err != nil {
 		log.WithField("error", err).Error("Failed to update assignments")
 	}
