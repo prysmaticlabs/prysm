@@ -524,14 +524,14 @@ func TestReceiveAttestation_OK(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Sending newly received attestation to subscribers")
 }
 
-func TestReceiveAttestation_OlderThanFinalizedEpoch(t *testing.T) {
+func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ms := &mockChainService{}
 	os := &mockOperationService{}
 
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	state := &pb.BeaconState{FinalizedEpoch: params.BeaconConfig().GenesisEpoch + 1}
+	state := &pb.BeaconState{Slot: params.BeaconConfig().GenesisSlot + 192}
 	if err := db.SaveState(state); err != nil {
 		t.Fatalf("Could not save state: %v", err)
 	}
@@ -551,7 +551,7 @@ func TestReceiveAttestation_OlderThanFinalizedEpoch(t *testing.T) {
 
 	request1 := &pb.Attestation{
 		Data: &pb.AttestationData{
-			Slot: params.BeaconConfig().GenesisSlot + 1,
+			Slot: params.BeaconConfig().GenesisSlot,
 		},
 	}
 
@@ -565,8 +565,8 @@ func TestReceiveAttestation_OlderThanFinalizedEpoch(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 	want := fmt.Sprintf(
-		"Skipping received attestation with slot smaller than last finalized slot, %d < %d",
-		request1.Data.Slot, state.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch)
+		"Skipping received attestation with slot smaller than previous epoch start slot, %d < %d",
+		request1.Data.Slot, params.BeaconConfig().GenesisSlot + 128)
 	testutil.AssertLogsContain(t, hook, want)
 }
 
