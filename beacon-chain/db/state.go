@@ -3,10 +3,9 @@ package db
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"time"
-
-	"github.com/pkg/errors"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
