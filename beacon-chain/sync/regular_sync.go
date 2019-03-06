@@ -202,68 +202,47 @@ func (rs *RegularSync) run() {
 			log.Debug("Exiting goroutine")
 			return
 		case msg := <-rs.announceBlockBuf:
-			safelyHandleMessage(func() {
-				rs.receiveBlockAnnounce(msg)
-			})
+			safelyHandleMessage(rs.receiveBlockAnnounce, msg)
 		case msg := <-rs.attestationBuf:
-			safelyHandleMessage(func() {
-				rs.receiveAttestation(msg)
-			})
+			safelyHandleMessage(rs.receiveAttestation, msg)
 		case msg := <-rs.attestationReqByHashBuf:
-			safelyHandleMessage(func() {
-				rs.handleAttestationRequestByHash(msg)
-			})
+			safelyHandleMessage(rs.handleAttestationRequestByHash, msg)
 		case msg := <-rs.unseenAttestationsReqBuf:
-			safelyHandleMessage(func() {
-				rs.handleUnseenAttestationsRequest(msg)
-			})
+			safelyHandleMessage(rs.handleUnseenAttestationsRequest, msg)
 		case msg := <-rs.exitBuf:
-			safelyHandleMessage(func() {
-				rs.receiveExitRequest(msg)
-			})
+			safelyHandleMessage(rs.receiveExitRequest, msg)
 		case msg := <-rs.blockBuf:
-			safelyHandleMessage(func() {
-				rs.receiveBlock(msg)
-			})
+			safelyHandleMessage(rs.receiveBlock, msg)
 		case msg := <-rs.blockRequestBySlot:
-			safelyHandleMessage(func() {
-				rs.handleBlockRequestBySlot(msg)
-			})
+			safelyHandleMessage(rs.handleBlockRequestBySlot, msg)
 		case msg := <-rs.blockRequestByHash:
-			safelyHandleMessage(func() {
-				rs.handleBlockRequestByHash(msg)
-			})
+			safelyHandleMessage(rs.handleBlockRequestByHash, msg)
 		case msg := <-rs.batchedRequestBuf:
-			safelyHandleMessage(func() {
-				rs.handleBatchedBlockRequest(msg)
-			})
+			safelyHandleMessage(rs.handleBatchedBlockRequest, msg)
 		case msg := <-rs.stateRequestBuf:
-			safelyHandleMessage(func() {
-				rs.handleStateRequest(msg)
-			})
+			safelyHandleMessage(rs.handleStateRequest, msg)
 		case msg := <-rs.chainHeadReqBuf:
-			safelyHandleMessage(func() {
-				rs.handleChainHeadRequest(msg)
-			})
+			safelyHandleMessage(rs.handleChainHeadRequest, msg)
 		case block := <-rs.canonicalBuf:
-			safelyHandleMessage(func() {
-				rs.broadcastCanonicalBlock(rs.ctx, block)
-			})
+			rs.broadcastCanonicalBlock(rs.ctx, block)
 		}
 	}
 }
 
 // safelyHandleMessage will recover and log any panic that occurs from the
 // function argument.
-func safelyHandleMessage(fn func()) {
+func safelyHandleMessage(fn func(p2p.Message), msg p2p.Message) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.WithField("r", r).Error("Panicked when handling p2p message! Recovering...")
+			log.WithFields(logrus.Fields{
+				"r":   r,
+				"msg": proto.MarshalTextString(msg.Data),
+			}).Error("Panicked when handling p2p message! Recovering...")
 		}
 	}()
 
 	// Fingers crossed that it doesn't panic...
-	fn()
+	fn(msg)
 }
 
 // receiveBlockAnnounce accepts a block hash.

@@ -851,9 +851,9 @@ func TestHandleStateReq_OK(t *testing.T) {
 func TestSafelyHandleMessage(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	safelyHandleMessage(func() {
+	safelyHandleMessage(func(_ p2p.Message) {
 		panic("bad!")
-	})
+	}, p2p.Message{})
 
 	testutil.AssertLogsContain(t, hook, "Panicked when handling p2p message!")
 }
