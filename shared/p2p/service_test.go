@@ -19,6 +19,7 @@ import (
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 	"github.com/prysmaticlabs/prysm/shared"
 	p2pmock "github.com/prysmaticlabs/prysm/shared/p2p/mock"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -240,8 +241,6 @@ func TestRegisterTopic_InvalidProtobufs(t *testing.T) {
 }
 
 func TestRegisterTopic_WithoutAdapters(t *testing.T) {
-	// TODO(488): Unskip this test
-	t.Skip("Currently failing to simulate incoming p2p messages. See github.com/prysmaticlabs/prysm/issues/488")
 	s, err := NewServer(&ServerConfig{})
 	if err != nil {
 		t.Fatalf("Failed to create new server: %v", err)
@@ -265,10 +264,7 @@ func TestRegisterTopic_WithoutAdapters(t *testing.T) {
 		}
 	}()
 
-	b, _ := proto.Marshal(testMessage)
-	_ = b
-
-	if err := simulateIncomingMessage(t, s, topic, b); err != nil {
+	if err := simulateIncomingMessage(t, s, topic, testMessage); err != nil {
 		t.Errorf("Failed to send to topic %s", topic)
 	}
 
@@ -281,8 +277,6 @@ func TestRegisterTopic_WithoutAdapters(t *testing.T) {
 }
 
 func TestRegisterTopic_WithAdapters(t *testing.T) {
-	// TODO(488): Unskip this test
-	t.Skip("Currently failing to simulate incoming p2p messages. See github.com/prysmaticlabs/prysm/issues/488")
 	s, err := NewServer(&ServerConfig{})
 	if err != nil {
 		t.Fatalf("Failed to create new server: %v", err)
@@ -322,7 +316,7 @@ func TestRegisterTopic_WithAdapters(t *testing.T) {
 		}
 	}()
 
-	if err := simulateIncomingMessage(t, s, topic, []byte{}); err != nil {
+	if err := simulateIncomingMessage(t, s, topic, testMessage); err != nil {
 		t.Errorf("Failed to send to topic %s", topic)
 	}
 
@@ -335,6 +329,35 @@ func TestRegisterTopic_WithAdapters(t *testing.T) {
 	case <-time.After(1 * time.Second):
 		t.Fatal("TestMessage not received within 1 seconds")
 	}
+}
+
+func TestRegisterTopic_HandlesPanic(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	s, err := NewServer(&ServerConfig{})
+	if err != nil {
+		t.Fatalf("Failed to create new server: %v", err)
+	}
+	topic := "test_topic"
+	testMessage := &testpb.TestMessage{Foo: "bar"}
+
+	var panicAdapter Adapter = func(next Handler) Handler {
+		return func(msg Message) {
+			panic("bad!")
+		}
+	}
+
+	s.RegisterTopic(topic, testMessage, panicAdapter)
+
+	ch := make(chan Message)
+	sub := s.Subscribe(testMessage, ch)
+	defer sub.Unsubscribe()
+
+	if err := simulateIncomingMessage(t, s, topic, testMessage); err != nil {
+		t.Errorf("Failed to send to topic %s", topic)
+	}
+
+	testutil.WaitForLog(t, hook, "P2P message caused a panic")
 }
 
 func TestStatus_MinimumPeers(t *testing.T) {
@@ -361,9 +384,8 @@ func TestStatus_MinimumPeers(t *testing.T) {
 	}
 }
 
-func simulateIncomingMessage(t *testing.T, s *Server, topic string, b []byte) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+func simulateIncomingMessage(t *testing.T, s *Server, topic string, msg proto.Message) error {
+	ctx := context.Background()
 	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
 
 	gsub, err := pubsub.NewFloodSub(ctx, h)
@@ -377,7 +399,12 @@ func simulateIncomingMessage(t *testing.T, s *Server, topic string, b []byte) er
 	}
 
 	// Short timeout to allow libp2p to handle peer connection.
-	time.Sleep(time.Millisecond * 10)
+	time.Sleep(time.Millisecond * 100)
+
+	b, err := proto.Marshal(msg)
+	if err != nil {
+		return err
+	}
 
 	return gsub.Publish(topic, b)
 }
