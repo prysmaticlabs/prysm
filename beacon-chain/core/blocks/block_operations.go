@@ -21,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/forkutils"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -441,6 +440,29 @@ func ProcessBlockAttestations(
 	return beaconState, nil
 }
 
+func verifyAttestationSig(beaconState *pb.BeaconState, att *pb.Attestation, pubkey *bls.PublicKey) bool {
+	attestationDataHash, err := hashutil.HashProto(&pb.AttestationDataAndCustodyBit{
+		Data:       att.Data,
+		CustodyBit: true,
+	})
+	if err != nil {
+		log.Errorf("could not hash attestation data: %v", err)
+	}
+
+	sig, err := bls.SignatureFromBytes(att.AggregateSignature)
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+
+	domain := forkutils.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainAttestation)
+
+	log.WithFields(logrus.Fields{
+		"pubkey":       fmt.Sprintf("%#x", pubkey.Marshal()),
+		"messageHash":  attestationDataHash[:],
+		"aggregateSig": fmt.Sprintf("%#x", sig.Marshal()),
+	}).Info("Verifying attestation")
+
+	return sig.Verify(attestationDataHash[:], pubkey, domain)
+}
+
 func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifySignatures bool) error {
 	if att.Data.Slot < params.BeaconConfig().GenesisSlot {
 		return fmt.Errorf(
@@ -533,60 +555,25 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 		)
 	}
 	if verifySignatures {
-		participants, err := helpers.AttestationParticipants(beaconState, att.Data, att.AggregationBitfield)
-		if err != nil {
-			return fmt.Errorf("could not get attestation participants: %v", err)
-		}
-		custodyBit1Participants, err := helpers.AttestationParticipants(beaconState, att.Data, att.CustodyBitfield)
+		attesterIndices, err := helpers.AttestationParticipants(beaconState, att.Data, att.AggregationBitfield)
 		if err != nil {
 			return fmt.Errorf("could not get custody bit 1 attestation participants: %v", err)
 		}
-		custodyBit0Participants := sliceutil.Not(participants, custodyBit1Participants)
 
-		custodyBit0PubKeys := make([]*bls.PublicKey, len(custodyBit0Participants))
-		for _, participantIndex := range custodyBit0Participants {
+		attestorPubKeys := make([]*bls.PublicKey, len(attesterIndices))
+		for idx, participantIndex := range attesterIndices {
 			pubkey, err := bls.PublicKeyFromBytes(beaconState.ValidatorRegistry[participantIndex].Pubkey)
 			if err != nil {
 				return fmt.Errorf("could not deserialize proposer public key: %v", err)
 			}
-			custodyBit0PubKeys = append(custodyBit0PubKeys, pubkey)
+
+			attestorPubKeys[idx] = pubkey
 		}
 
-		custodyBit1PubKeys := make([]*bls.PublicKey, len(custodyBit1Participants))
-		for _, participantIndex := range custodyBit1Participants {
-			pubkey, err := bls.PublicKeyFromBytes(beaconState.ValidatorRegistry[participantIndex].Pubkey)
-			if err != nil {
-				return fmt.Errorf("could not deserialize proposer public key: %v", err)
-			}
-			custodyBit1PubKeys = append(custodyBit1PubKeys, pubkey)
-		}
+		pubkey := attestorPubKeys[0]
 
-		pubkey := bls.AggregatePublicKeys(custodyBit1PubKeys)
-
-		// No custodyBit0 for now
-		custodyBit1Hash, err := hashutil.HashProto(&pb.AttestationDataAndCustodyBit{Data: att.Data, CustodyBit: true})
-		if err != nil {
-			return fmt.Errorf("Could not tree hash AttestationDataAndCustodyBit1: %v", err)
-		}
-
-		messageHash := custodyBit1Hash[:]
-
-		sig, err := bls.SignatureFromBytes(att.AggregateSignature)
-		if err != nil {
-			return fmt.Errorf("could not deserialize block randao reveal: %v", err)
-		}
-		currentEpoch := helpers.CurrentEpoch(beaconState)
-		buf := make([]byte, 32)
-		binary.LittleEndian.PutUint64(buf, currentEpoch)
-		domain := forkutils.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainAttestation)
-
-		log.WithFields(logrus.Fields{
-			"pubkeys":       pubkey,
-			"messageHashes": messageHash,
-			"aggregateSig":  fmt.Sprintf("%#x", sig.Marshal()),
-		}).Info("Verifying attestation")
-		if !sig.Verify(messageHash, pubkey, domain) {
-			return fmt.Errorf("block randao reveal signature did not verify")
+		if !verifyAttestationSig(beaconState, att, pubkey) {
+			return fmt.Errorf("aggregate signature did not verify")
 		}
 		return nil
 	}

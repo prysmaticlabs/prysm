@@ -8,6 +8,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/forkutils"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -15,6 +16,23 @@ import (
 )
 
 var delay = params.BeaconConfig().SecondsPerSlot / 2
+
+func createAggregateSignature(slot uint64, att *pbp2p.Attestation, privKey *bls.SecretKey, fork *pbp2p.Fork) []byte {
+	epoch := slot / params.BeaconConfig().SlotsPerEpoch
+
+	attestationDataHash, err := hashutil.HashProto(&pbp2p.AttestationDataAndCustodyBit{
+		Data:       att.Data,
+		CustodyBit: true,
+	})
+	if err != nil {
+		log.Error("Could not hash attestation data")
+		return nil
+	}
+	log.Infof("Signing attestation for slot: %d", slot)
+	domain := forkutils.DomainVersion(fork, epoch, params.BeaconConfig().DomainAttestation)
+	aggregateSignature := privKey.Sign(attestationDataHash[:], domain)
+	return aggregateSignature.Marshal()
+}
 
 // AttestToBlockHead completes the validator client's attester responsibility at a given slot.
 // It fetches the latest beacon block head along with the latest canonical beacon state
@@ -122,19 +140,8 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 		return
 	}
 
-	epoch := slot / params.BeaconConfig().SlotsPerEpoch
-	attestationDataHash, err := hashutil.HashProto(&pbp2p.AttestationDataAndCustodyBit{
-		Data:       attData,
-		CustodyBit: true,
-	})
-	if err != nil {
-		log.Error("Could not hash attestation data")
-		return
-	}
-	log.Infof("Signing attestation: %d", epoch)
-	domain := forkutils.DomainVersion(fork, epoch, params.BeaconConfig().DomainAttestation)
-	aggregateSignature := v.key.SecretKey.Sign(attestationDataHash[:], domain)
-	attestation.AggregateSignature = aggregateSignature.Marshal()
+	aggregateSig := createAggregateSignature(slot, attestation, v.key.SecretKey, fork)
+	attestation.AggregateSignature = aggregateSig
 
 	log.Infof("Pubkey: %#x", v.key.PublicKey.Marshal())
 	log.Infof("Aggregate signature: %#x", attestation.AggregateSignature)

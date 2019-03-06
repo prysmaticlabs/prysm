@@ -205,7 +205,6 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		log.Error("Could not hash attestation data")
 		return
 	}
-	log.Infof("Signing attestation: %d", epoch)
 	domain := forkutils.DomainVersion(fork, epoch, params.BeaconConfig().DomainAttestation)
 
 	expectedAttestation.AggregateSignature = validator.key.SecretKey.Sign(attestationHash[:], domain).Marshal()
