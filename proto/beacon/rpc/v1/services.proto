@@ -12,7 +12,7 @@ service BeaconService {
     rpc CanonicalHead(google.protobuf.Empty) returns (ethereum.beacon.p2p.v1.BeaconBlock);
     // LatestAttestation streams the latest aggregated attestation to connected validator clients.
     rpc LatestAttestation(google.protobuf.Empty) returns (stream ethereum.beacon.p2p.v1.Attestation);
-    rpc PendingDeposits(google.protobuf.Empty) returns (PendingDepositsResponse);
+    rpc PendingDeposits(PendingDepositsRequest) returns (PendingDepositsResponse);
     rpc Eth1Data(google.protobuf.Empty) returns (Eth1DataResponse);
     rpc ForkData(google.protobuf.Empty) returns (ethereum.beacon.p2p.v1.Fork);
 }

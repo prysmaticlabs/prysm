@@ -202,8 +202,9 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 
 // PendingDeposits returns a list of pending deposits that are ready for
 // inclusion in the next beacon block.
-func (bs *BeaconServer) PendingDeposits(ctx context.Context, req *pb.PendingAttestationsRequest) (*pb.PendingDepositsResponse, error) {
-	blockExists, height, err := bs.powChainService.BlockExists(req.BlockHash32)
+func (bs *BeaconServer) PendingDeposits(ctx context.Context, req *pb.PendingDepositsRequest) (*pb.PendingDepositsResponse, error) {
+	hash := bytesutil.ToBytes32(req.BlockHash32)
+	blockExists, height, err := bs.powChainService.BlockExists(ctx, hash)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch block hash for pending deposits: %v", err)
 	}
@@ -223,6 +224,14 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 	// Fetch the deposit root up to the block height of the ancestor
 	// from the powchain service accordingly.
 	pendingDeposits := bs.beaconDB.PendingDeposits(ctx, ancestorHeight)
+	if len(pendingDeposits) == 0 {
+		return &pb.Eth1DataResponse{
+			Eth1Data: &pbp2p.Eth1Data{
+				DepositRootHash32: params.BeaconConfig().ZeroHash[:],
+				BlockHash32:       ancestorHash[:],
+			},
+		}, nil
+	}
 	return &pb.Eth1DataResponse{
 		Eth1Data: &pbp2p.Eth1Data{
 			DepositRootHash32: pendingDeposits[len(pendingDeposits)-1].DepositRootHash32,

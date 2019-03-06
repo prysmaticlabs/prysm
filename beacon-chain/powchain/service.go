@@ -99,7 +99,6 @@ type Web3Service struct {
 	runError                error
 	chainStartDelay         uint64
 	lastRequestedBlock      *big.Int
-	lastRequestedFollowDistanceHeight *n
 }
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
@@ -353,7 +352,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 		DepositData: depositData,
 		MerkleTreeIndex: binary.LittleEndian.Uint64(merkleTreeIndex),
 		MerkleBranchHash32S: branch,
-		DepositRootHash32: merkleRoot,
+		DepositRootHash32: merkleRoot[:],
 	}
 	// If chain has not started, do not update the merkle trie
 	if !w.chainStarted {
