@@ -38,18 +38,20 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 		return
 	}
 
-	// Get validator ETH1 deposits which have not been included in the beacon
-	// chain.
-	pDepResp, err := v.beaconClient.PendingDeposits(ctx, &ptypes.Empty{})
-	if err != nil {
-		log.Errorf("Failed to get pending pendings: %v", err)
-		return
-	}
-
 	// Get ETH1 data.
 	eth1DataResp, err := v.beaconClient.Eth1Data(ctx, &ptypes.Empty{})
 	if err != nil {
 		log.Errorf("Failed to get ETH1 data: %v", err)
+		return
+	}
+
+	// Get validator ETH1 deposits which have not been included in the beacon chain.
+	pDepsReq := &pb.PendingDepositsRequest{
+		BlockHash32: eth1DataResp.Eth1Data.BlockHash32,
+	}
+	pDepResp, err := v.beaconClient.PendingDeposits(ctx, pDepsReq)
+	if err != nil {
+		log.Errorf("Failed to get pending pendings: %v", err)
 		return
 	}
 

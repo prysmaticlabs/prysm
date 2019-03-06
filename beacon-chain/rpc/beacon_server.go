@@ -202,14 +202,16 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 
 // PendingDeposits returns a list of pending deposits that are ready for
 // inclusion in the next beacon block.
-func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*pb.PendingDepositsResponse, error) {
-	bNum := bs.powChainService.LatestBlockHeight()
-	if bNum == nil {
-		return nil, errors.New("latest PoW block number is unknown")
+func (bs *BeaconServer) PendingDeposits(ctx context.Context, req *pb.PendingAttestationsRequest) (*pb.PendingDepositsResponse, error) {
+	blockExists, height, err := bs.powChainService.BlockExists(req.BlockHash32)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch block hash for pending deposits: %v", err)
+	}
+	if !blockExists {
+		return &pb.PendingDepositsResponse{PendingDeposits: nil}, nil
 	}
 	// Only request deposits that have passed the ETH1 follow distance window.
-	bNum = bNum.Sub(bNum, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
-	return &pb.PendingDepositsResponse{PendingDeposits: bs.beaconDB.PendingDeposits(ctx, bNum)}, nil
+	return &pb.PendingDepositsResponse{PendingDeposits: bs.beaconDB.PendingDeposits(ctx, height)}, nil
 }
 
 func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *big.Int, eth1FollowDistance int64) (*pb.Eth1DataResponse, error) {

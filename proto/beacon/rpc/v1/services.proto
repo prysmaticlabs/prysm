@@ -119,6 +119,10 @@ message ValidatorEpochAssignmentsRequest {
     bytes public_key = 2;
 }
 
+message PendingDepositsRequest {
+    bytes block_hash32 = 1;
+}
+
 message PendingDepositsResponse {
     repeated ethereum.beacon.p2p.v1.Deposit pending_deposits = 1;
 }
