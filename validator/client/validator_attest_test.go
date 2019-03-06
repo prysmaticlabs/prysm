@@ -197,7 +197,10 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	}
 
 	epoch := 30 / params.BeaconConfig().SlotsPerEpoch
-	attestationData, err := hashutil.HashProto(expectedAttestation.Data)
+	attestationHash, err := hashutil.HashProto(&pbp2p.AttestationDataAndCustodyBit{
+		Data:       expectedAttestation.Data,
+		CustodyBit: true,
+	})
 	if err != nil {
 		log.Error("Could not hash attestation data")
 		return
@@ -205,7 +208,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	log.Infof("Signing attestation: %d", epoch)
 	domain := forkutils.DomainVersion(fork, epoch, params.BeaconConfig().DomainAttestation)
 
-	expectedAttestation.AggregateSignature = validator.key.SecretKey.Sign(attestationData[:], domain).Marshal()
+	expectedAttestation.AggregateSignature = validator.key.SecretKey.Sign(attestationHash[:], domain).Marshal()
 
 	if !proto.Equal(generatedAttestation, expectedAttestation) {
 		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
@@ -264,7 +267,7 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 		Epoch:           params.BeaconConfig().GenesisEpoch,
 		CurrentVersion:  0,
 		PreviousVersion: 0,
-	}, nil /*err*/).Times(0)
+	}, nil /*err*/).Times(1)
 
 	m.attesterClient.EXPECT().AttestHead(
 		gomock.Any(), // ctx
@@ -272,7 +275,9 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 	).Return(&pb.AttestResponse{}, nil /* error */).Times(0)
 
 	delay = 2
+	timer := time.NewTimer(time.Duration(1 * time.Second))
 	go validator.AttestToBlockHead(context.Background(), 0)
+	<-timer.C
 }
 
 func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
