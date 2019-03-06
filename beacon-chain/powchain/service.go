@@ -282,6 +282,26 @@ func (w *Web3Service) BlockHashByHeight(ctx context.Context, height *big.Int) (c
 	return block.Hash(), nil
 }
 
+// DepositRootUpToBlockHash fetches the deposit root of the contract up to a given
+// block hash. This is used when fetching eth1 data in our RPC service for proposers to fetch
+// the deposit root up to an ETH_FOLLOW_DISTANCE block ancestor appropriately.
+func (w *Web3Service) DepositRootUpToBlockHeight(ctx context.Context, height *big.Int) ([]byte, error) {
+	query := ethereum.FilterQuery{
+		ToBlock: height,
+		Addresses: []common.Address{
+			w.depositContractAddress,
+		},
+	}
+	logs, err := w.logger.FilterLogs(w.ctx, query)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, log := range logs {
+		w.ProcessLog(log)
+	}
+}
+
 // Client for interacting with the ETH1.0 chain.
 func (w *Web3Service) Client() Client {
 	return w.client
@@ -400,7 +420,6 @@ func (w *Web3Service) runDelayTimer(done <-chan struct{}) {
 			timer.Stop()
 			return
 		case currentTime := <-timer.C:
-
 			w.chainStarted = true
 			log.WithFields(logrus.Fields{
 				"ChainStartTime": currentTime.Unix(),
@@ -558,3 +577,4 @@ func (w *Web3Service) requestBatchedLogs() error {
 	w.lastRequestedBlock.Set(requestedBlock)
 	return nil
 }
+

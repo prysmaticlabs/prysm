@@ -215,17 +215,20 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 
 func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *big.Int, eth1FollowDistance int64) (*pb.Eth1DataResponse, error) {
 	ancestorHeight := currentHeight.Sub(currentHeight, big.NewInt(eth1FollowDistance))
-	blockHash, err := bs.powChainService.BlockHashByHeight(ctx, ancestorHeight)
+	ancestorHash, err := bs.powChainService.BlockHashByHeight(ctx, ancestorHeight)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch ETH1_FOLLOW_DISTANCE ancestor: %v", err)
 	}
-	// TODO(#1656): Fetch the deposit root of the post-state deposit contract of the block
-	// references by the block hash of the ancestor instead.
-	depositRoot := bs.powChainService.DepositRoot()
+	// Fetch the deposit root up to the block hash of the ancestor
+	// from the powchain service accordingly.
+	depositRoot, err := bs.powChainService.DepositRootUpToBlockHash(ctx, ancestorHash)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch deposit root up to block hash: %v", err)
+	}
 	return &pb.Eth1DataResponse{
 		Eth1Data: &pbp2p.Eth1Data{
 			DepositRootHash32: depositRoot[:],
-			BlockHash32:       blockHash[:],
+			BlockHash32:       ancestorHash[:],
 		},
 	}, nil
 }
