@@ -87,12 +87,12 @@ func TestGenesisTime_OK(t *testing.T) {
 
 	genesisTime, err := db.GenesisTime(ctx)
 	if err == nil {
-		t.Fatal("expected GenesisTime to fail")
+		t.Fatal("Expected GenesisTime to fail")
 	}
 
 	deposits, _ := setupInitialDeposits(t, 10)
 	if err := db.InitializeState(uint64(genesisTime.Unix()), deposits, &pb.Eth1Data{}); err != nil {
-		t.Fatalf("failed to initialize state: %v", err)
+		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
 	time1, err := db.GenesisTime(ctx)
@@ -134,6 +134,6 @@ func TestFinalizeState_OK(t *testing.T) {
 	}
 
 	if !proto.Equal(fState, state) {
-		t.Error("retrieved and saved finalized are unequal")
+		t.Error("Retrieved and saved finalized are unequal")
 	}
 }
