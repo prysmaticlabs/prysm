@@ -321,7 +321,7 @@ func (w *Web3Service) ProcessLog(depositLog gethTypes.Log) {
 // the ETH1.0 chain by trying to ascertain which participant deposited
 // in the contract.
 func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
-	merkleRoot, depositData, merkleTreeIndex, _, err := contracts.UnpackDepositLogData(depositLog.Data)
+	merkleRoot, depositData, merkleTreeIndex, merkleBranch, err := contracts.UnpackDepositLogData(depositLog.Data)
 	if err != nil {
 		log.Errorf("Could not unpack log %v", err)
 		return
@@ -344,8 +344,14 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 		log.Errorf("Could not decode deposit input  %v", err)
 		return
 	}
+	var branch [][]byte
+	for _, val := range merkleBranch {
+		branch = append(branch, val[:])
+	}
 	deposit := &pb.Deposit{
 		DepositData: depositData,
+		MerkleTreeIndex: binary.LittleEndian.Uint64(merkleTreeIndex),
+		MerkleBranchHash32S: branch,
 	}
 	// If chain has not started, do not update the merkle trie
 	if !w.chainStarted {
