@@ -147,6 +147,47 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 	}
 }
 
+func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	currentSlot := params.BeaconConfig().GenesisSlot + 100000
+	opService := &mockOperationService{
+		pendingAttestations: []*pbp2p.Attestation{
+			// Expired attestations
+			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: 0}},
+			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot - 10000}},
+			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot - 5000}},
+			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot - 100}},
+			// Non-expired attestations
+			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot - 5}},
+			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot - 2}},
+			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot}},
+		},
+	}
+	expectedNumberOfAttestations := 3
+	proposerServer := &ProposerServer{
+		operationService: opService,
+		beaconDB:         db,
+	}
+	beaconState := &pbp2p.BeaconState{
+		Slot: currentSlot,
+	}
+	if err := db.SaveState(beaconState); err != nil {
+		t.Fatal(err)
+	}
+	res, err := proposerServer.PendingAttestations(context.Background(), &pb.PendingAttestationsRequest{})
+	if err != nil {
+		t.Fatalf("Unexpected error fetching pending attestations: %v", err)
+	}
+	if len(res.PendingAttestations) != expectedNumberOfAttestations {
+		t.Errorf(
+			"Expected pending attestations list length %d, but was %d",
+			expectedNumberOfAttestations,
+			len(res.PendingAttestations),
+		)
+	}
+}
+
 func TestPendingAttestations_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
