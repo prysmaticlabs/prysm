@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 
 	"github.com/boltdb/bolt"
@@ -199,37 +197,4 @@ func (db *BeaconDB) HasBlockBySlot(slot uint64) (bool, *pb.BeaconBlock, error) {
 		return err
 	})
 	return exists, block, err
-}
-
-// ParentBlockBySlot returns a parent block referenced to a block of a given slot number.
-func (db *BeaconDB) ParentBlockBySlot(slot uint64) (*pb.BeaconBlock, error) {
-	var block *pb.BeaconBlock
-	slotEnc := encodeSlotNumber(slot)
-
-	err := db.view(func(tx *bolt.Tx) error {
-		mainChain := tx.Bucket(mainChainBucket)
-		blockBkt := tx.Bucket(blockBucket)
-
-		blockRoot := mainChain.Get(slotEnc)
-		if blockRoot == nil {
-			return fmt.Errorf("block not found for slot %d", slot)
-		}
-
-		enc := blockBkt.Get(blockRoot)
-		if enc == nil {
-			return fmt.Errorf("block not found with root: %#x", blockRoot)
-		}
-
-		var err error
-		block, err = createBlock(enc)
-		return err
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	parentHash := bytesutil.ToBytes32(block.ParentRootHash32)
-
-	return db.Block(parentHash)
 }
