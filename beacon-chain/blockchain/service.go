@@ -10,6 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -449,4 +450,41 @@ func (c *ChainService) attestationTargets(state *pb.BeaconState) ([]*attestation
 		}
 	}
 	return attestationTargets, nil
+}
+
+// blockChildren returns the child blocks of the given block.
+// ex:
+//       /- C - E
+// A - B - D - F
+//          \- G
+// Input: B. Output: [C, D, E, F, G]
+func (c *ChainService) blockChildren(block *pb.BeaconBlock, state *pb.BeaconState) ([]*pb.BeaconBlock, error) {
+	var children []*pb.BeaconBlock
+	seenRoots := make(map[[32]byte]bool)
+
+	blockRoot, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
+	}
+	seenRoots[blockRoot] = true
+
+	startSlot := block.Slot + 1
+	currentSlot := state.Slot
+	for i := startSlot; i < currentSlot; i++ {
+		block, err := c.beaconDB.BlockBySlot(i)
+		if err != nil {
+			return nil, fmt.Errorf("could not get block by slot: %v", err)
+		}
+		parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+		if seenRoots[parentRoot] {
+			blockRoot, err := hashutil.HashBeaconBlock(block)
+			if err != nil {
+				return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
+			}
+			seenRoots[blockRoot] = true
+
+			children = append(children, block)
+		}
+	}
+	return children, nil
 }
