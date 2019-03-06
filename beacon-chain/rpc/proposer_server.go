@@ -78,7 +78,7 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 	// the previous epoch. This should be handled in the operationService cleanup
 	// method, but we should filter here in case it wasn't yet processed.
 	boundary := helpers.StartSlot(helpers.PrevEpoch(beaconState))
-	var attsInBoundary []*pbp2p.Attestation
+	attsInBoundary := make([]*pbp2p.Attestation, 0, len(atts))
 	for _, att := range atts {
 		if att.Data.Slot >= boundary {
 			attsInBoundary = append(attsInBoundary, att)
