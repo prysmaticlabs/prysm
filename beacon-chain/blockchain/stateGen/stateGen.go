@@ -17,11 +17,15 @@ func GenerateStateFromSlot(db *db.BeaconDB, slot uint64) (*pb.BeaconState, error
 	}
 
 	if fState.Slot >= slot {
-		return nil, fmt.Errorf("requested slot is lower than or equal to the current slot in the finalized beacon state.Got %d",
-			slot)
+		return nil, fmt.Errorf("requested slot is lower than or equal to the current slot in the finalized beacon state."+
+			" Current finalized slot in state %d but was requested %d",
+			fState.Slot, slot)
 	}
 
 	pBlock, err := db.BlockBySlot(fState.Slot)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve block: %v", err)
+	}
 	root, err := hashutil.HashBeaconBlock(pBlock)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash parent block: %v", err)
