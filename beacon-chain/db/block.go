@@ -155,12 +155,12 @@ func (db *BeaconDB) BlockBySlot(slot uint64) (*pb.BeaconBlock, error) {
 
 		blockRoot := mainChain.Get(slotEnc)
 		if blockRoot == nil {
-			return fmt.Errorf("block not found for slot %d", slot)
+			return nil
 		}
 
 		enc := blockBkt.Get(blockRoot)
 		if enc == nil {
-			return fmt.Errorf("block not found with root: %#x", blockRoot)
+			return nil
 		}
 
 		var err error

@@ -1,4 +1,4 @@
-package stategen
+package stategenerator
 
 import (
 	"context"
@@ -28,7 +28,7 @@ func TestGenerateState_OK(t *testing.T) {
 	genesisSlot := params.BeaconConfig().GenesisSlot
 	slotLimit := uint64(30)
 
-	// Run the simulated chain for 30 slots, to get a state that we can save as finalized
+	// Run the simulated chain for 30 slots, to get a state that we can save as finalized.
 	for i := uint64(0); i < slotLimit; i++ {
 		if err := bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys); err != nil {
 			t.Fatalf("Could not generate block and transition state successfully %v for slot %d", err, bd.State().Slot+1)
@@ -36,7 +36,7 @@ func TestGenerateState_OK(t *testing.T) {
 	}
 
 	if err := beaconDb.SaveFinalizedState(bd.State()); err != nil {
-		t.Fatalf("Unable to save finalized state")
+		t.Fatalf("Unable to save finalized state: %v", err)
 	}
 
 	// Run the chain for another 30 slots so that we can have this at the current head.
@@ -72,7 +72,7 @@ func TestGenerateState_OK(t *testing.T) {
 	}
 
 	if !proto.Equal(newState, bd.State()) {
-		t.Error("generated and saved states are unequal")
+		t.Error("Generated and saved states are unequal")
 	}
 }
 
@@ -92,7 +92,7 @@ func TestGenerateState_WithNilBlocksOK(t *testing.T) {
 	genesisSlot := params.BeaconConfig().GenesisSlot
 	slotLimit := uint64(30)
 
-	// Run the simulated chain for 30 slots, to get a state that we can save as finalized
+	// Run the simulated chain for 30 slots, to get a state that we can save as finalized.
 	for i := uint64(0); i < slotLimit; i++ {
 		if err := bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys); err != nil {
 			t.Fatalf("Could not generate block and transition state successfully %v for slot %d", err, bd.State().Slot+1)
@@ -118,7 +118,7 @@ func TestGenerateState_WithNilBlocksOK(t *testing.T) {
 		}
 	}
 
-	// Save all in memory blocks
+	// Save all in memory blocks.
 	for _, v := range bd.InMemoryBlocks() {
 		if err := beaconDb.SaveBlock(v); err != nil {
 			t.Fatalf("Unable to save block %v", err)

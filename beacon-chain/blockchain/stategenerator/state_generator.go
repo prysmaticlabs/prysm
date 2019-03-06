@@ -1,4 +1,4 @@
-package stategen
+package stategenerator
 
 import (
 	"context"
@@ -17,10 +17,12 @@ func GenerateStateFromSlot(ctx context.Context, db *db.BeaconDB, slot uint64) (*
 		return nil, err
 	}
 
-	if fState.Slot >= slot {
-		return nil, fmt.Errorf("requested slot is lower than or equal to the current slot in the finalized beacon state."+
-			" Current finalized slot in state %d but was requested %d",
-			fState.Slot, slot)
+	if fState.Slot > slot {
+		return nil, fmt.Errorf(
+			"requested slot %d < current slot %d in the finalized beacon state",
+			fState.Slot,
+			slot,
+		)
 	}
 
 	pBlock, err := db.BlockBySlot(fState.Slot)

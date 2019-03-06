@@ -2,8 +2,8 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["stateGen.go"],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/stateGen",
+    srcs = ["state_generator.go"],
+    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/stategenerator",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/core/state:go_default_library",
@@ -15,7 +15,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["stateGen_test.go"],
+    srcs = ["state_generator_test.go"],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/chaintest/backend:go_default_library",
