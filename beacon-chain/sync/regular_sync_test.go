@@ -566,7 +566,7 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 	<-exitRoutine
 	want := fmt.Sprintf(
 		"Skipping received attestation with slot smaller than previous epoch start slot, %d < %d",
-		request1.Data.Slot, params.BeaconConfig().GenesisSlot + 128)
+		request1.Data.Slot, params.BeaconConfig().GenesisSlot+128)
 	testutil.AssertLogsContain(t, hook, want)
 }
 
