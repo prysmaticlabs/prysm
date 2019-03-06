@@ -4,6 +4,7 @@ package sync
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -400,10 +401,10 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 		return
 	}
 
-	finalizedSlot := beaconState.FinalizedEpoch * params.BeaconConfig().SlotsPerEpoch
-	if attestation.Data.Slot < finalizedSlot {
-		log.Debugf("Skipping received attestation with slot smaller than last finalized slot, %d < %d",
-			attestation.Data.Slot, finalizedSlot)
+	previousEpochStartSlot := helpers.StartSlot(helpers.PrevEpoch(beaconState))
+	if attestation.Data.Slot < previousEpochStartSlot {
+		log.Debugf("Skipping received attestation with slot smaller than previous epoch start slot, %d < %d",
+			attestation.Data.Slot, previousEpochStartSlot)
 		return
 	}
 
