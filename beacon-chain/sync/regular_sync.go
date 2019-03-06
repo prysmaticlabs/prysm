@@ -242,8 +242,7 @@ func safelyHandleMessage(fn func(p2p.Message), msg p2p.Message) {
 			if msg.Ctx == nil {
 				return
 			}
-			span := trace.FromContext(msg.Ctx)
-			if span != nil {
+			if span := trace.FromContext(msg.Ctx); span != nil {
 				span.SetStatus(trace.Status{
 					Code:    trace.StatusCodeInternal,
 					Message: fmt.Sprintf("Panic: %v", r),
