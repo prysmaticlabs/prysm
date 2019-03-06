@@ -29,7 +29,7 @@ type Service struct {
 	incomingChan  chan *pb.Attestation
 	// store is the mapping of individual
 	// validator's public key to it's latest attestation.
-	store map[[48]byte]*pb.Attestation
+	Store map[[48]byte]*pb.Attestation
 }
 
 // Config options for the service.
@@ -51,7 +51,7 @@ func NewAttestationService(ctx context.Context, cfg *Config) *Service {
 		broadcastChan: make(chan *pb.Attestation, cfg.BroadcastAttestationBuf),
 		incomingFeed:  new(event.Feed),
 		incomingChan:  make(chan *pb.Attestation, cfg.ReceiveAttestationBuf),
-		store:         make(map[[48]byte]*pb.Attestation),
+		Store:         make(map[[48]byte]*pb.Attestation),
 	}
 }
 
@@ -100,11 +100,11 @@ func (a *Service) LatestAttestation(ctx context.Context, index uint64) (*pb.Atte
 	pubKey := bytesutil.ToBytes48(state.ValidatorRegistry[index].Pubkey)
 
 	// return error if validator has no attestation.
-	if _, exists := a.store[pubKey]; !exists {
+	if _, exists := a.Store[pubKey]; !exists {
 		return nil, fmt.Errorf("validator index %d does not have an attestation", index)
 	}
 
-	return a.store[pubKey], nil
+	return a.Store[pubKey], nil
 }
 
 // LatestAttestationTarget returns the target block the validator index attested to,
@@ -187,12 +187,12 @@ func (a *Service) updateLatestAttestation(ctx context.Context, attestation *pb.A
 		pubkey := bytesutil.ToBytes48(state.ValidatorRegistry[i].Pubkey)
 		newAttestationSlot := attestation.Data.Slot
 		currentAttestationSlot := uint64(0)
-		if _, exists := a.store[pubkey]; exists {
-			currentAttestationSlot = a.store[pubkey].Data.Slot
+		if _, exists := a.Store[pubkey]; exists {
+			currentAttestationSlot = a.Store[pubkey].Data.Slot
 		}
 		// If the attestation is newer than this attester's one in pool.
 		if newAttestationSlot > currentAttestationSlot {
-			a.store[pubkey] = attestation
+			a.Store[pubkey] = attestation
 		}
 	}
 	return nil

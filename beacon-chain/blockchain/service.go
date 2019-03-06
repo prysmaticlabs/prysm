@@ -435,7 +435,7 @@ func (c *ChainService) deleteValidatorIdx(state *pb.BeaconState) error {
 // attestationTargets retrieves the list of attestation targets since last finalized epoch,
 // each attestation target consists of validator index and its attestation target (i.e. the block
 // which the validator attested to)
-func (c *ChainService) attestationTargets(state *pb.BeaconState, beaconDB *db.BeaconDB) ([]*attestationTarget, error) {
+func (c *ChainService) attestationTargets(state *pb.BeaconState) ([]*attestationTarget, error) {
 	indices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, state.FinalizedEpoch)
 	attestationTargets := make([]*attestationTarget, len(indices))
 	for i, index := range indices {
