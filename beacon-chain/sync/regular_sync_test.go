@@ -847,3 +847,13 @@ func TestHandleStateReq_OK(t *testing.T) {
 
 	testutil.AssertLogsContain(t, hook, "Sending beacon state to peer")
 }
+
+func TestSafelyHandleMessage(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	safelyHandleMessage(func(_ p2p.Message) {
+		panic("bad!")
+	}, p2p.Message{})
+
+	testutil.AssertLogsContain(t, hook, "Panicked when handling p2p message!")
+}
