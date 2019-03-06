@@ -82,7 +82,7 @@ go_image(
         "@org_golang_google_grpc//:go_default_library",
     ],
     pure = "off",  # depends on cgo for go-ethereum crypto
-    static = "on",
+    static = "off",
     tags = ["manual"],
     goarch = "amd64",
     goos = "linux",
