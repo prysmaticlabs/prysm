@@ -150,7 +150,7 @@ go_repository(
 
 go_repository(
     name = "com_github_urfave_cli",
-    commit = "693af58b4d51b8fcc7f9d89576da170765980581",
+    commit = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1",  # v1.20.0
     importpath = "github.com/urfave/cli",
 )
 
