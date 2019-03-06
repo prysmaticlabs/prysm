@@ -8,7 +8,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-// DepositState fetches the deposits state from POW chain from the DB.
+// DepositState deposits state of POW chain from the DB
 func (db *BeaconDB) DepositState() (*pb.POWDepositState, error) {
 	var powDepositState *pb.POWDepositState
 	err := db.view(func(tx *bolt.Tx) error {

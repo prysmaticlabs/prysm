@@ -160,7 +160,6 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		lastRequestedBlock:      big.NewInt(0),
 	}
 	if err := web3Service.initFromDB(); err != nil {
-		log.Errorf("unable to retrieve latest ETH1.0 state from db: %v", err)
 		return nil, fmt.Errorf("unable to retrieve latest ETH1.0 state from db: %v", err)
 	}
 	return web3Service, nil

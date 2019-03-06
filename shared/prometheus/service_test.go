@@ -95,6 +95,7 @@ func TestStatus(t *testing.T) {
 		t.Errorf("Wanted: %v, got: %v", s.failStatus, s.Status())
 	}
 }
+
 func TestToFloat64(t *testing.T) {
 	counter := promauto.NewCounter(prometheus.CounterOpts{
 		Name: "test_counter",

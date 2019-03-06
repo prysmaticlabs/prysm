@@ -394,6 +394,7 @@ func TestWeb3Service_BadReader(t *testing.T) {
 	}
 	hook.Reset()
 }
+
 func TestNoBeaconDBError_OK(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
@@ -412,6 +413,7 @@ func TestNoBeaconDBError_OK(t *testing.T) {
 		t.Fatalf("Expected NewWeb3Service to error with no db setup")
 	}
 }
+
 func TestLatestMainchainInfo_OK(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
@@ -501,9 +503,42 @@ func TestLatestMainchainInfoFromDB_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
+	web3Service.depositTrie = trieutil.NewDepositTrie()
+	var stub [48]byte
+	copy(stub[:], []byte("testing"))
 
-	exitRoutine := make(chan bool)
+	data := &pb.DepositInput{
+		Pubkey:                      stub[:],
+		ProofOfPossession:           stub[:],
+		WithdrawalCredentialsHash32: []byte("withdraw"),
+	}
+
+	serializedData := new(bytes.Buffer)
+	if err := ssz.Encode(serializedData, data); err != nil {
+		t.Fatalf("Could not serialize data %v", err)
+	}
+
+	testAcc.txOpts.Value = amount32Eth
+	if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+		t.Fatalf("Could not deposit to deposit contract %v", err)
+	}
+
 	testAcc.backend.Commit()
+
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{
+			web3Service.depositContractAddress,
+		},
+	}
+
+	logs, err := testAcc.backend.FilterLogs(web3Service.ctx, query)
+	if err != nil {
+		t.Fatalf("Unable to retrieve logs %v", err)
+	}
+
+	web3Service.ProcessLog(logs[0])
+	web3Service.saveToDb()
+	exitRoutine := make(chan bool)
 	web3Service.reader = &goodReader{}
 	web3Service.logger = &goodLogger{}
 
@@ -519,10 +554,10 @@ func TestLatestMainchainInfoFromDB_OK(t *testing.T) {
 	web3Service.headerChan <- header
 	web3Service.cancel()
 	exitRoutine <- true
-	testAcc.backend.Commit()
 
+	testAcc, err = setup()
 	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+		t.Fatalf("Unable to set up simulated backend %v", err)
 	}
 	web3Service, err = NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:        endpoint,
@@ -539,6 +574,9 @@ func TestLatestMainchainInfoFromDB_OK(t *testing.T) {
 	web3Service.reader = &goodReader{}
 	web3Service.logger = &goodLogger{}
 
+	if web3Service.depositTrie.GetTrie().DepositCount != 1 {
+		t.Errorf("depositCount expected to be 1 when initializing from state from db %v, got %v", 1, web3Service.blockHeight)
+	}
 	if web3Service.blockHeight.Cmp(header.Number) != 0 {
 		t.Errorf("block number not set, expected %v, got %v", header.Number, web3Service.blockHeight)
 	}
