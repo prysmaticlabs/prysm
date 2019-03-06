@@ -115,11 +115,11 @@ func TestFinalizeState_OK(t *testing.T) {
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	if err := db.InitializeState(genesisTime, deposits); err != nil {
+	if err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
-	state, err := db.State()
+	state, err := db.State(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to retrieve state: %v", err)
 	}

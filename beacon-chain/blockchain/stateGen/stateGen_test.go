@@ -1,6 +1,7 @@
 package stateGen
 
 import (
+	"context"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -60,7 +61,7 @@ func TestGenerateState_OK(t *testing.T) {
 	}
 
 	slotToGenerate := genesisSlot + 2*(slotLimit)
-	newState, err := GenerateStateFromSlot(beaconDb, slotToGenerate)
+	newState, err := GenerateStateFromSlot(context.Background(), beaconDb, slotToGenerate)
 	if err != nil {
 		t.Fatalf("Unable to generate new state from previous finalized state %v", err)
 	}
@@ -132,7 +133,7 @@ func TestGenerateState_WithNilBlocksOK(t *testing.T) {
 	}
 
 	slotToGenerate := genesisSlot + 2*(slotLimit)
-	newState, err := GenerateStateFromSlot(beaconDb, slotToGenerate)
+	newState, err := GenerateStateFromSlot(context.Background(), beaconDb, slotToGenerate)
 	if err != nil {
 		t.Fatalf("Unable to generate new state from previous finalized state %v", err)
 	}

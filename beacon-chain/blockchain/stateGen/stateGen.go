@@ -1,6 +1,7 @@
 package stateGen
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -9,8 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
-// generates state from the last finalized epoch till the specified slot.
-func GenerateStateFromSlot(db *db.BeaconDB, slot uint64) (*pb.BeaconState, error) {
+// GenerateStateFromSlot generates state from the last finalized epoch till the specified slot.
+func GenerateStateFromSlot(ctx context.Context, db *db.BeaconDB, slot uint64) (*pb.BeaconState, error) {
 	fState, err := db.FinalizedState()
 	if err != nil {
 		return nil, err
@@ -36,6 +37,7 @@ func GenerateStateFromSlot(db *db.BeaconDB, slot uint64) (*pb.BeaconState, error
 		exists, blk, err := db.HasBlockBySlot(i)
 		if !exists {
 			fState, err = state.ExecuteStateTransition(
+				ctx,
 				fState,
 				nil,
 				root,
@@ -48,6 +50,7 @@ func GenerateStateFromSlot(db *db.BeaconDB, slot uint64) (*pb.BeaconState, error
 		}
 
 		fState, err = state.ExecuteStateTransition(
+			ctx,
 			fState,
 			blk,
 			root,

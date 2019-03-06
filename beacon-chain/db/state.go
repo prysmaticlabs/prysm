@@ -98,6 +98,7 @@ func (db *BeaconDB) SaveState(beaconState *pb.BeaconState) error {
 	})
 }
 
+// SaveFinalizedState saves the last finazlied state in the db.
 func (db *BeaconDB) SaveFinalizedState(beaconState *pb.BeaconState) error {
 	return db.update(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
@@ -109,6 +110,7 @@ func (db *BeaconDB) SaveFinalizedState(beaconState *pb.BeaconState) error {
 	})
 }
 
+// FinalizedState retrieves the finalized state from the db.
 func (db *BeaconDB) FinalizedState() (*pb.BeaconState, error) {
 	var beaconState *pb.BeaconState
 	err := db.view(func(tx *bolt.Tx) error {
