@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -101,6 +103,22 @@ func (db *BeaconDB) SaveFinalizedState(beaconState *pb.BeaconState) error {
 		}
 		return chainInfo.Put(finalizedStateLookupKey, beaconStateEnc)
 	})
+}
+
+func (db *BeaconDB) FinalizedState(slot uint64) (*pb.BeaconState, error) {
+	var beaconState *pb.BeaconState
+	err := db.view(func(tx *bolt.Tx) error {
+		chainInfo := tx.Bucket(chainInfoBucket)
+		encState := chainInfo.Get(finalizedStateLookupKey)
+		if encState == nil {
+			return errors.New("no finalized state saved")
+		}
+
+		var err error
+		beaconState, err = createState(encState)
+		return err
+	})
+	return beaconState, err
 }
 
 // UnfinalizedBlockState fetches an unfinalized block's

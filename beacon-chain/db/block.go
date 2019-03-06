@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 
 	"github.com/boltdb/bolt"
@@ -155,12 +157,12 @@ func (db *BeaconDB) BlockBySlot(slot uint64) (*pb.BeaconBlock, error) {
 
 		blockRoot := mainChain.Get(slotEnc)
 		if blockRoot == nil {
-			return nil
+			return fmt.Errorf("block not found for slot %d", slot)
 		}
 
 		enc := blockBkt.Get(blockRoot)
 		if enc == nil {
-			return fmt.Errorf("block not found: %#x", blockRoot)
+			return fmt.Errorf("block not found with root: %#x", blockRoot)
 		}
 
 		var err error
@@ -169,4 +171,65 @@ func (db *BeaconDB) BlockBySlot(slot uint64) (*pb.BeaconBlock, error) {
 	})
 
 	return block, err
+}
+
+// HasBlockBySlot returns a boolean, and if the block exists, it returns the block.
+func (db *BeaconDB) HasBlockBySlot(slot uint64) (bool, *pb.BeaconBlock, error) {
+	var block *pb.BeaconBlock
+	var exists bool
+	slotEnc := encodeSlotNumber(slot)
+
+	err := db.view(func(tx *bolt.Tx) error {
+		mainChain := tx.Bucket(mainChainBucket)
+		blockBkt := tx.Bucket(blockBucket)
+
+		blockRoot := mainChain.Get(slotEnc)
+		if blockRoot == nil {
+			return nil
+		}
+
+		enc := blockBkt.Get(blockRoot)
+		if enc == nil {
+			return nil
+		}
+		exists = true
+
+		var err error
+		block, err = createBlock(enc)
+		return err
+	})
+	return exists, block, err
+}
+
+// GetParentBlockBySlot returns a parent block referenced to a block of a given slot number.
+func (db *BeaconDB) ParentBlockBySlot(slot uint64) (*pb.BeaconBlock, error) {
+	var block *pb.BeaconBlock
+	slotEnc := encodeSlotNumber(slot)
+
+	err := db.view(func(tx *bolt.Tx) error {
+		mainChain := tx.Bucket(mainChainBucket)
+		blockBkt := tx.Bucket(blockBucket)
+
+		blockRoot := mainChain.Get(slotEnc)
+		if blockRoot == nil {
+			return fmt.Errorf("block not found for slot %d", slot)
+		}
+
+		enc := blockBkt.Get(blockRoot)
+		if enc == nil {
+			return fmt.Errorf("block not found with root: %#x", blockRoot)
+		}
+
+		var err error
+		block, err = createBlock(enc)
+		return err
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	parentHash := bytesutil.ToBytes32(block.ParentRootHash32)
+
+	return db.Block(parentHash)
 }
