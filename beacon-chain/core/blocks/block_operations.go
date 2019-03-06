@@ -440,13 +440,30 @@ func ProcessBlockAttestations(
 	return beaconState, nil
 }
 
-func verifyAttestationSig(beaconState *pb.BeaconState, att *pb.Attestation, pubkey *bls.PublicKey) bool {
+func verifyAttestationSig(beaconState *pb.BeaconState, att *pb.Attestation) (bool, error) {
+	attesterIndices, err := helpers.AttestationParticipants(beaconState, att.Data, att.AggregationBitfield)
+	if err != nil {
+		return false, fmt.Errorf("could not get custody bit 1 attestation participants: %v", err)
+	}
+
+	attestorPubKeys := make([]*bls.PublicKey, len(attesterIndices))
+	for idx, participantIndex := range attesterIndices {
+		pubkey, err := bls.PublicKeyFromBytes(beaconState.ValidatorRegistry[participantIndex].Pubkey)
+		if err != nil {
+			return false, fmt.Errorf("could not deserialize proposer public key: %v", err)
+		}
+
+		attestorPubKeys[idx] = pubkey
+	}
+
+	pubkey := attestorPubKeys[0]
+
 	attestationDataHash, err := hashutil.HashProto(&pb.AttestationDataAndCustodyBit{
 		Data:       att.Data,
 		CustodyBit: true,
 	})
 	if err != nil {
-		log.Errorf("could not hash attestation data: %v", err)
+		return false, fmt.Errorf("could not hash attestation data: %v", err)
 	}
 
 	sig, err := bls.SignatureFromBytes(att.AggregateSignature)
@@ -460,7 +477,7 @@ func verifyAttestationSig(beaconState *pb.BeaconState, att *pb.Attestation, pubk
 		"aggregateSig": fmt.Sprintf("%#x", sig.Marshal()),
 	}).Info("Verifying attestation")
 
-	return sig.Verify(attestationDataHash[:], pubkey, domain)
+	return sig.Verify(attestationDataHash[:], pubkey, domain), nil
 }
 
 func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifySignatures bool) error {
@@ -555,27 +572,13 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 		)
 	}
 	if verifySignatures {
-		attesterIndices, err := helpers.AttestationParticipants(beaconState, att.Data, att.AggregationBitfield)
+		verified, err := verifyAttestationSig(beaconState, att)
 		if err != nil {
-			return fmt.Errorf("could not get custody bit 1 attestation participants: %v", err)
+			return fmt.Errorf("could not verify aggregate signature")
 		}
-
-		attestorPubKeys := make([]*bls.PublicKey, len(attesterIndices))
-		for idx, participantIndex := range attesterIndices {
-			pubkey, err := bls.PublicKeyFromBytes(beaconState.ValidatorRegistry[participantIndex].Pubkey)
-			if err != nil {
-				return fmt.Errorf("could not deserialize proposer public key: %v", err)
-			}
-
-			attestorPubKeys[idx] = pubkey
+		if !verified {
+			return fmt.Errorf("attestation did not pass verification")
 		}
-
-		pubkey := attestorPubKeys[0]
-
-		if !verifyAttestationSig(beaconState, att, pubkey) {
-			return fmt.Errorf("aggregate signature did not verify")
-		}
-		return nil
 	}
 	return nil
 }
