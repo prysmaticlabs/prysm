@@ -29,7 +29,9 @@ func (t *TestLogger) Errorf(format string, args ...interface{}) {
 	t.testMap["error"] = true
 }
 
-type mockOperationService struct{}
+type mockOperationService struct {
+	pendingAttestations []*pb.Attestation
+}
 
 func (ms *mockOperationService) IncomingAttFeed() *event.Feed {
 	return new(event.Feed)
@@ -40,6 +42,9 @@ func (ms *mockOperationService) IncomingExitFeed() *event.Feed {
 }
 
 func (ms *mockOperationService) PendingAttestations() ([]*pb.Attestation, error) {
+	if ms.pendingAttestations != nil {
+		return ms.pendingAttestations, nil
+	}
 	return []*pb.Attestation{
 		{
 			AggregationBitfield: []byte("A"),
