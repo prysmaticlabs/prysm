@@ -116,10 +116,12 @@ func (c *ChainService) Start() {
 				DepositRootHash32: depositRoot[:],
 				BlockHash32:       latestBlockHash[:],
 			}
-			if err := c.initializeBeaconChain(genesisTime, initialDeposits, eth1Data); err != nil {
+			beaconState, err := c.initializeBeaconChain(genesisTime, initialDeposits, eth1Data)
+			if err != nil {
 				log.Fatalf("Could not initialize beacon chain: %v", err)
 			}
 			c.stateInitializedFeed.Send(genesisTime)
+			c.canonicalStateFeed.Send(beaconState)
 			go c.blockProcessing()
 			subChainStart.Unsubscribe()
 		}()
@@ -130,29 +132,29 @@ func (c *ChainService) Start() {
 // based on a genesis timestamp value obtained from the ChainStart event emitted
 // by the ETH1.0 Deposit Contract and the POWChain service of the node.
 func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*pb.Deposit,
-	eth1data *pb.Eth1Data) error {
+	eth1data *pb.Eth1Data) (*pb.BeaconState, error) {
 	log.Info("ChainStart time reached, starting the beacon chain!")
 	c.genesisTime = genesisTime
 	unixTime := uint64(genesisTime.Unix())
 	if err := c.beaconDB.InitializeState(unixTime, deposits, eth1data); err != nil {
-		return fmt.Errorf("could not initialize beacon state to disk: %v", err)
+		return nil, fmt.Errorf("could not initialize beacon state to disk: %v", err)
 	}
 	beaconState, err := c.beaconDB.State(c.ctx)
 	if err != nil {
-		return fmt.Errorf("could not attempt fetch beacon state: %v", err)
+		return nil, fmt.Errorf("could not attempt fetch beacon state: %v", err)
 	}
 	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
-		return fmt.Errorf("could not hash beacon state: %v", err)
+		return nil, fmt.Errorf("could not hash beacon state: %v", err)
 	}
 	genBlock := b.NewGenesisBlock(stateRoot[:])
 	if err := c.beaconDB.SaveBlock(genBlock); err != nil {
-		return fmt.Errorf("could not save genesis block to disk: %v", err)
+		return nil, fmt.Errorf("could not save genesis block to disk: %v", err)
 	}
 	if err := c.beaconDB.UpdateChainHead(genBlock, beaconState); err != nil {
-		return fmt.Errorf("could not set chain head, %v", err)
+		return nil, fmt.Errorf("could not set chain head, %v", err)
 	}
-	return nil
+	return beaconState, nil
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.
