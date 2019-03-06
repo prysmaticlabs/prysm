@@ -1,4 +1,4 @@
-package blockchain
+package stateGen
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 )
 
 // generates state from the last finalized epoch till the specified slot.
-func generateStateFromSlot(db *db.BeaconDB, slot uint64) (*pb.BeaconState, error) {
+func GenerateStateFromSlot(db *db.BeaconDB, slot uint64) (*pb.BeaconState, error) {
 	fState, err := db.FinalizedState(slot)
 	if err != nil {
 		return nil, err
