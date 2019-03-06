@@ -10,7 +10,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+<<<<<<< HEAD
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+=======
+>>>>>>> 728c9fbfdc379a509ef63abfbc1c2fee4bf52a96
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -117,10 +120,12 @@ func (c *ChainService) Start() {
 				DepositRootHash32: depositRoot[:],
 				BlockHash32:       latestBlockHash[:],
 			}
-			if err := c.initializeBeaconChain(genesisTime, initialDeposits, eth1Data); err != nil {
+			beaconState, err := c.initializeBeaconChain(genesisTime, initialDeposits, eth1Data)
+			if err != nil {
 				log.Fatalf("Could not initialize beacon chain: %v", err)
 			}
 			c.stateInitializedFeed.Send(genesisTime)
+			c.canonicalStateFeed.Send(beaconState)
 			go c.blockProcessing()
 			subChainStart.Unsubscribe()
 		}()
@@ -131,29 +136,29 @@ func (c *ChainService) Start() {
 // based on a genesis timestamp value obtained from the ChainStart event emitted
 // by the ETH1.0 Deposit Contract and the POWChain service of the node.
 func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*pb.Deposit,
-	eth1data *pb.Eth1Data) error {
+	eth1data *pb.Eth1Data) (*pb.BeaconState, error) {
 	log.Info("ChainStart time reached, starting the beacon chain!")
 	c.genesisTime = genesisTime
 	unixTime := uint64(genesisTime.Unix())
 	if err := c.beaconDB.InitializeState(unixTime, deposits, eth1data); err != nil {
-		return fmt.Errorf("could not initialize beacon state to disk: %v", err)
+		return nil, fmt.Errorf("could not initialize beacon state to disk: %v", err)
 	}
 	beaconState, err := c.beaconDB.State(c.ctx)
 	if err != nil {
-		return fmt.Errorf("could not attempt fetch beacon state: %v", err)
+		return nil, fmt.Errorf("could not attempt fetch beacon state: %v", err)
 	}
 	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
-		return fmt.Errorf("could not hash beacon state: %v", err)
+		return nil, fmt.Errorf("could not hash beacon state: %v", err)
 	}
 	genBlock := b.NewGenesisBlock(stateRoot[:])
 	if err := c.beaconDB.SaveBlock(genBlock); err != nil {
-		return fmt.Errorf("could not save genesis block to disk: %v", err)
+		return nil, fmt.Errorf("could not save genesis block to disk: %v", err)
 	}
 	if err := c.beaconDB.UpdateChainHead(genBlock, beaconState); err != nil {
-		return fmt.Errorf("could not set chain head, %v", err)
+		return nil, fmt.Errorf("could not set chain head, %v", err)
 	}
-	return nil
+	return beaconState, nil
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.
@@ -450,41 +455,4 @@ func (c *ChainService) attestationTargets(state *pb.BeaconState) ([]*attestation
 		}
 	}
 	return attestationTargets, nil
-}
-
-// blockChildren returns the child blocks of the given block.
-// ex:
-//       /- C - E
-// A - B - D - F
-//          \- G
-// Input: B. Output: [C, D, E, F, G]
-func (c *ChainService) blockChildren(block *pb.BeaconBlock, state *pb.BeaconState) ([]*pb.BeaconBlock, error) {
-	var children []*pb.BeaconBlock
-	seenRoots := make(map[[32]byte]bool)
-
-	blockRoot, err := hashutil.HashBeaconBlock(block)
-	if err != nil {
-		return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
-	}
-	seenRoots[blockRoot] = true
-
-	startSlot := block.Slot + 1
-	currentSlot := state.Slot
-	for i := startSlot; i < currentSlot; i++ {
-		block, err := c.beaconDB.BlockBySlot(i)
-		if err != nil {
-			return nil, fmt.Errorf("could not get block by slot: %v", err)
-		}
-		parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
-		if seenRoots[parentRoot] {
-			blockRoot, err := hashutil.HashBeaconBlock(block)
-			if err != nil {
-				return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
-			}
-			seenRoots[blockRoot] = true
-
-			children = append(children, block)
-		}
-	}
-	return children, nil
 }
