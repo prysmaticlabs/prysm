@@ -271,7 +271,7 @@ go_repository(
 
 go_repository(
     name = "com_github_whyrusleeping_mafmt",
-    commit = "faeb70738e904fdbef70bcf62ec8c38726c16d17",
+    commit = "158fbc0fcc20b3d8a251df520466e16f66eb3651",  # v1.2.8
     importpath = "github.com/whyrusleeping/mafmt",
 )
 
@@ -331,7 +331,7 @@ go_repository(
 
 go_repository(
     name = "com_github_whyrusleeping_go_smux_yamux",
-    commit = "28bea8f315d17495c5cad8547b661245486ebeee",
+    commit = "d6a2882127944a9f581608c8a87fa64c2cc0fc30",  # v2.0.8
     importpath = "github.com/whyrusleeping/go-smux-yamux",
 )
 
@@ -422,7 +422,7 @@ go_repository(
 
 go_repository(
     name = "com_github_whyrusleeping_go_smux_multistream",
-    commit = "8e5c10881353c91b4214466d916ad8429508c056",
+    commit = "90c0868b4933b5cb1bbcf68a3ca11c6767ccc048",  # v2.0.2
     importpath = "github.com/whyrusleeping/go-smux-multistream",
 )
 
@@ -518,7 +518,7 @@ go_repository(
 
 go_repository(
     name = "com_github_whyrusleeping_yamux",
-    commit = "5364a42fe4b5efa5967c11c8f9b0f049cac0c4a9",
+    commit = "5364a42fe4b5efa5967c11c8f9b0f049cac0c4a9",  # v1.1.5
     importpath = "github.com/whyrusleeping/yamux",
 )
 
@@ -590,7 +590,7 @@ go_repository(
 
 go_repository(
     name = "com_github_whyrusleeping_go_smux_multiplex",
-    commit = "b4ed6c794676f7b9f186d0355bc00033b0167c80",
+    commit = "69b7a74ecfb84be57bdcf4b264a7042d80569287",  # v3.0.16
     importpath = "github.com/whyrusleeping/go-smux-multiplex",
 )
 
