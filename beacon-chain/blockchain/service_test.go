@@ -10,14 +10,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -26,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/forkutils"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -238,7 +238,7 @@ func setupBeaconChain(t *testing.T, faultyPoWClient bool, beaconDB *db.BeaconDB,
 }
 
 func SetSlotInState(service *ChainService, slot uint64) error {
-	bState, err := service.beaconDB.State()
+	bState, err := service.beaconDB.State(context.Background())
 	if err != nil {
 		return err
 	}
@@ -305,14 +305,16 @@ func TestChainStartStop_Initialized(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
 	chainService := setupBeaconChain(t, false, db, true)
 
 	unixTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 100)
-	if err := db.InitializeState(unixTime, deposits); err != nil {
+	if err := db.InitializeState(unixTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := db.State()
+	beaconState, err := db.State(ctx)
 	if err != nil {
 		t.Fatalf("Could not fetch beacon state: %v", err)
 	}
@@ -338,7 +340,7 @@ func TestChainService_FaultyPOWChain(t *testing.T) {
 	chainService := setupBeaconChain(t, true, db, true)
 	unixTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 100)
-	if err := db.InitializeState(unixTime, deposits); err != nil {
+	if err := db.InitializeState(unixTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 
@@ -391,7 +393,11 @@ func TestChainService_Starts(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db, true)
 	deposits, privKeys := setupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
+	eth1Data := &pb.Eth1Data{
+		DepositRootHash32: []byte{},
+		BlockHash32:       []byte{},
+	}
+	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -446,7 +452,11 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db, true)
 	deposits, privKeys := setupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
+	eth1Data := &pb.Eth1Data{
+		DepositRootHash32: []byte{},
+		BlockHash32:       []byte{},
+	}
+	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
@@ -515,14 +525,20 @@ func TestPOWBlockExists_UsingDepositRootHash(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
 	chainService := setupBeaconChain(t, true, db, true)
 	unixTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	if err := db.InitializeState(unixTime, deposits); err != nil {
+	eth1Data := &pb.Eth1Data{
+		DepositRootHash32: []byte{},
+		BlockHash32:       []byte{},
+	}
+	if err := db.InitializeState(unixTime, deposits, eth1Data); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
 
-	beaconState, err := chainService.beaconDB.State()
+	beaconState, err := chainService.beaconDB.State(ctx)
 	if err != nil {
 		t.Fatalf("Unable to retrieve beacon state %v", err)
 	}
@@ -557,19 +573,19 @@ func TestUpdateHead_SavesBlock(t *testing.T) {
 		state     *pb.BeaconState
 		logAssert string
 	}{
-		// Higher slot but same crystallized state should trigger chain update.
+		// Higher slot but same state should trigger chain update.
 		{
 			blockSlot: 64,
 			state:     beaconState,
 			logAssert: "Chain head block and state updated",
 		},
-		// Higher slot, different crystallized state, but higher last finalized slot.
+		// Higher slot, different state, but higher last finalized slot.
 		{
 			blockSlot: 64,
 			state:     &pb.BeaconState{FinalizedEpoch: 2},
 			logAssert: "Chain head block and state updated",
 		},
-		// Higher slot, different crystallized state, same last finalized slot,
+		// Higher slot, different state, same last finalized slot,
 		// but last justified slot.
 		{
 			blockSlot: 64,
@@ -587,7 +603,7 @@ func TestUpdateHead_SavesBlock(t *testing.T) {
 		chainService := setupBeaconChain(t, false, db, true)
 		unixTime := uint64(time.Now().Unix())
 		deposits, _ := setupInitialDeposits(t, 100)
-		if err := db.InitializeState(unixTime, deposits); err != nil {
+		if err := db.InitializeState(unixTime, deposits, &pb.Eth1Data{}); err != nil {
 			t.Fatalf("Could not initialize beacon state to disk: %v", err)
 		}
 
@@ -622,13 +638,15 @@ func TestUpdateHead_SavesBlock(t *testing.T) {
 func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
 	chainService := setupBeaconChain(t, false, db, true)
 	unixTime := uint64(time.Now().Unix())
 	deposits, privKeys := setupInitialDeposits(t, 100)
-	if err := db.InitializeState(unixTime, deposits); err != nil {
+	if err := db.InitializeState(unixTime, deposits, &pb.Eth1Data{}); err != nil {
 		t.Fatalf("Could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := db.State()
+	beaconState, err := db.State(ctx)
 	if err != nil {
 		t.Fatalf("Can't get genesis state: %v", err)
 	}
@@ -690,5 +708,85 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 
 	if err := chainService.isBlockReadyForProcessing(block2, beaconState); err != nil {
 		t.Fatalf("block processing failed despite being a valid block: %v", err)
+	}
+}
+
+func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	epoch := uint64(2)
+	v.ActivatedValidators[epoch] = []uint64{0, 1, 2}
+	v.ExitedValidators[epoch] = []uint64{0, 2}
+	var validators []*pb.Validator
+	for i := 0; i < 3; i++ {
+		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
+		binary.PutUvarint(pubKeyBuf, uint64(i))
+		validators = append(validators, &pb.Validator{
+			Pubkey: pubKeyBuf,
+		})
+	}
+	state := &pb.BeaconState{
+		ValidatorRegistry: validators,
+		Slot:              epoch * params.BeaconConfig().SlotsPerEpoch,
+	}
+	chainService := setupBeaconChain(t, false, db, true)
+	if err := chainService.saveValidatorIdx(state); err != nil {
+		t.Fatalf("Could not save validator idx: %v", err)
+	}
+	if err := chainService.deleteValidatorIdx(state); err != nil {
+		t.Fatalf("Could not delete validator idx: %v", err)
+	}
+	wantedIdx := uint64(1)
+	idx, err := chainService.beaconDB.ValidatorIndex(validators[wantedIdx].Pubkey)
+	if err != nil {
+		t.Fatalf("Could not get validator index: %v", err)
+	}
+	if wantedIdx != idx {
+		t.Errorf("Wanted: %d, got: %d", wantedIdx, idx)
+	}
+
+	wantedIdx = uint64(2)
+	if chainService.beaconDB.HasValidator(validators[wantedIdx].Pubkey) {
+		t.Errorf("Validator index %d should have been deleted", wantedIdx)
+	}
+
+	if _, ok := v.ExitedValidators[epoch]; ok {
+		t.Errorf("Activated validators mapping for epoch %d still there", epoch)
+	}
+}
+
+func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	epoch := uint64(1)
+	v.ActivatedValidators[epoch] = []uint64{0, 1, 2}
+	var validators []*pb.Validator
+	for i := 0; i < 3; i++ {
+		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
+		binary.PutUvarint(pubKeyBuf, uint64(i))
+		validators = append(validators, &pb.Validator{
+			Pubkey: pubKeyBuf,
+		})
+	}
+	state := &pb.BeaconState{
+		ValidatorRegistry: validators,
+		Slot:              epoch * params.BeaconConfig().SlotsPerEpoch,
+	}
+	chainService := setupBeaconChain(t, false, db, true)
+	if err := chainService.saveValidatorIdx(state); err != nil {
+		t.Fatalf("Could not save validator idx: %v", err)
+	}
+
+	wantedIdx := uint64(2)
+	idx, err := chainService.beaconDB.ValidatorIndex(validators[wantedIdx].Pubkey)
+	if err != nil {
+		t.Fatalf("Could not get validator index: %v", err)
+	}
+	if wantedIdx != idx {
+		t.Errorf("Wanted: %d, got: %d", wantedIdx, idx)
+	}
+
+	if _, ok := v.ActivatedValidators[epoch]; ok {
+		t.Errorf("Activated validators mapping for epoch %d still there", epoch)
 	}
 }

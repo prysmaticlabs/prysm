@@ -1,12 +1,12 @@
 package db
 
 import (
+	"context"
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -86,14 +86,15 @@ func TestBlockBySlotEmptyChain_OK(t *testing.T) {
 func TestUpdateChainHead_NoBlock(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
+	ctx := context.Background()
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	err := db.InitializeState(genesisTime, deposits)
+	err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
-	beaconState, err := db.State()
+	beaconState, err := db.State(ctx)
 	if err != nil {
 		t.Fatalf("failed to get beacon state: %v", err)
 	}
@@ -107,10 +108,11 @@ func TestUpdateChainHead_NoBlock(t *testing.T) {
 func TestUpdateChainHead_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
+	ctx := context.Background()
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	err := db.InitializeState(genesisTime, deposits)
+	err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
@@ -124,7 +126,7 @@ func TestUpdateChainHead_OK(t *testing.T) {
 		t.Fatalf("failed to get hash of b: %v", err)
 	}
 
-	beaconState, err := db.State()
+	beaconState, err := db.State(ctx)
 	if err != nil {
 		t.Fatalf("failed to get beacon state: %v", err)
 	}
@@ -173,15 +175,16 @@ func TestUpdateChainHead_OK(t *testing.T) {
 func TestChainProgress_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
+	ctx := context.Background()
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	err := db.InitializeState(genesisTime, deposits)
+	err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
 
-	beaconState, err := db.State()
+	beaconState, err := db.State(ctx)
 	if err != nil {
 		t.Fatalf("Failed to get beacon state: %v", err)
 	}

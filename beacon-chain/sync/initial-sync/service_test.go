@@ -56,12 +56,13 @@ func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
 }
 
 func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
+	ctx := context.Background()
 	genesisTime := time.Now()
 	unixTime := uint64(genesisTime.Unix())
-	if err := beaconDB.InitializeState(unixTime, []*pb.Deposit{}); err != nil {
+	if err := beaconDB.InitializeState(unixTime, []*pb.Deposit{}, nil); err != nil {
 		t.Fatalf("could not initialize beacon state to disk: %v", err)
 	}
-	beaconState, err := beaconDB.State()
+	beaconState, err := beaconDB.State(ctx)
 	if err != nil {
 		t.Fatalf("could not attempt fetch beacon state: %v", err)
 	}
@@ -92,7 +93,7 @@ func TestSavingBlock_InSync(t *testing.T) {
 		ChainService: &mockChainService{},
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
-	ss.atGenesis = false
+	ss.reqState = false
 
 	exitRoutine := make(chan bool)
 	delayChan := make(chan time.Time)
@@ -151,6 +152,7 @@ func TestSavingBlock_InSync(t *testing.T) {
 		return p2p.Message{
 			Peer: p2p.Peer{},
 			Data: blockResponse,
+			Ctx:  context.Background(),
 		}
 	}
 
@@ -166,6 +168,7 @@ func TestSavingBlock_InSync(t *testing.T) {
 	msg2 := p2p.Message{
 		Peer: p2p.Peer{},
 		Data: incorrectStateResponse,
+		Ctx:  context.Background(),
 	}
 
 	ss.stateBuf <- msg2
@@ -212,7 +215,7 @@ func TestDelayChan_OK(t *testing.T) {
 		ChainService: &mockChainService{},
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
-	ss.atGenesis = false
+	ss.reqState = false
 
 	exitRoutine := make(chan bool)
 	delayChan := make(chan time.Time)
@@ -261,11 +264,13 @@ func TestDelayChan_OK(t *testing.T) {
 	msg1 := p2p.Message{
 		Peer: p2p.Peer{},
 		Data: blockResponse,
+		Ctx:  context.Background(),
 	}
 
 	msg2 := p2p.Message{
 		Peer: p2p.Peer{},
 		Data: stateResponse,
+		Ctx:  context.Background(),
 	}
 
 	ss.blockBuf <- msg1
@@ -311,7 +316,7 @@ func TestRequestBlocksBySlot_OK(t *testing.T) {
 		t.Fatalf("could not save beacon state %v", err)
 	}
 
-	ss.atGenesis = false
+	ss.reqState = false
 
 	exitRoutine := make(chan bool)
 	delayChan := make(chan time.Time)
@@ -352,6 +357,7 @@ func TestRequestBlocksBySlot_OK(t *testing.T) {
 		return p2p.Message{
 			Peer: p2p.Peer{},
 			Data: blockResponse,
+			Ctx:  context.Background(),
 		}, root
 	}
 

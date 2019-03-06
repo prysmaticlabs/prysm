@@ -7,14 +7,14 @@ test_cases:
   - config:
       slots_per_epoch: 64
       deposits_for_chain_start: 64
-      num_slots: 32 # Testing advancing state to slot < EpochLength
+      num_slots: 32 # Testing advancing state to slot < SlotsPerEpoch
     results:
       slot: 9223372036854775840
       num_validators: 64
   - config:
       slots_per_epoch: 64
       deposits_for_chain_start: 64
-      num_slots: 64 # Testing advancing state to exactly slot == EpochLength
+      num_slots: 64 # Testing advancing state to exactly slot == SlotsPerEpoch
       deposits:
         - slot: 9223372036854775809
           amount: 32
@@ -49,9 +49,9 @@ test_cases:
           slashable_attestation_1_justified_epoch: 0
           slashable_attestation_2_justified_epoch: 1
           slashable_attestation_1_custody_bitfield: !binary "F"
-          slashable_attestation_1_validator_indices: [1,2,3,4,5,6,7,51]
+          slashable_attestation_1_validator_indices: [1, 2, 3, 4, 5, 6, 7, 51]
           slashable_attestation_2_custody_bitfield: !binary "F"
-          slashable_attestation_2_validator_indices: [1,2,3,4,5,6,7,51]
+          slashable_attestation_2_validator_indices: [1, 2, 3, 4, 5, 6, 7, 51]
       validator_exits:
         - epoch: 144115188075855872
           validator_index: 45 # At slot 9223372036854775868, validator at index 45 triggers a voluntary exit
@@ -65,7 +65,7 @@ test_cases:
 #      skip_slots: [10, 20]
 #      slots_per_epoch: 64
 #      deposits_for_chain_start: 1000
-#      num_slots: 128 # Testing advancing state's slot == 2*EpochLength
+#      num_slots: 128 # Testing advancing state's slot == 2*SlotsPerEpoch
 #      deposits:
 #        - slot: 10
 #          amount: 32

@@ -7,14 +7,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/event"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -112,6 +111,7 @@ func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*S
 	mockChain := &mockChainService{
 		bFeed: new(event.Feed),
 		sFeed: new(event.Feed),
+		cFeed: new(event.Feed),
 	}
 
 	cfg := &Config{
@@ -157,6 +157,7 @@ func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T
 	mockChain := &mockChainService{
 		bFeed: new(event.Feed),
 		sFeed: new(event.Feed),
+		cFeed: new(event.Feed),
 	}
 
 	// we add in 2 blocks to the unsynced node so that, we dont request the beacon state from the
@@ -188,7 +189,7 @@ func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T
 
 	for ss.Querier.currentHeadSlot == 0 {
 		simP2P.Send(&pb.ChainHeadResponse{
-			Slot: params.BeaconConfig().GenesisSlot + 10,
+			Slot: params.BeaconConfig().GenesisSlot + 12,
 			Hash: []byte{'t', 'e', 's', 't'},
 			Block: &pb.BeaconBlock{
 				StateRootHash32: stateRoot[:],
@@ -201,10 +202,11 @@ func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T
 
 func TestSyncing_AFullySyncedNode(t *testing.T) {
 	numOfBlocks := 12
+	ctx := context.Background()
 	newP2P := &simulatedP2P{
 		subsChannels: make(map[reflect.Type]*event.Feed),
 		mutex:        new(sync.RWMutex),
-		ctx:          context.Background(),
+		ctx:          ctx,
 	}
 
 	// Sets up a synced service which has its head at the current
@@ -214,7 +216,7 @@ func TestSyncing_AFullySyncedNode(t *testing.T) {
 	defer ss.Stop()
 	defer db.TeardownDB(syncedDB)
 
-	bState, err := syncedDB.State()
+	bState, err := syncedDB.State(ctx)
 	if err != nil {
 		t.Fatalf("Could not retrieve state %v", err)
 	}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -32,10 +33,10 @@ func (as *AttesterServer) AttestHead(ctx context.Context, att *pbp2p.Attestation
 	return &pb.AttestResponse{AttestationHash: h[:]}, nil
 }
 
-// AttestationInfoAtSlot fetches the necessary information from the current canonical head
+// AttestationDataAtSlot fetches the necessary information from the current canonical head
 // and beacon state for an assigned attester to perform necessary responsibilities. This includes
 // fetching the epoch boundary roots, the latest justified block root, among others.
-func (as *AttesterServer) AttestationInfoAtSlot(ctx context.Context, req *pb.AttestationInfoRequest) (*pb.AttestationInfoResponse, error) {
+func (as *AttesterServer) AttestationDataAtSlot(ctx context.Context, req *pb.AttestationDataRequest) (*pb.AttestationDataResponse, error) {
 	// Set the attestation data's beacon block root = hash_tree_root(head) where head
 	// is the validator's view of the head block of the beacon chain during the slot.
 	head, err := as.beaconDB.ChainHead()
@@ -46,14 +47,21 @@ func (as *AttesterServer) AttestationInfoAtSlot(ctx context.Context, req *pb.Att
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash beacon block: %v", err)
 	}
-	beaconState, err := as.beaconDB.State()
+	beaconState, err := as.beaconDB.State(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
+	}
+	for beaconState.Slot < req.Slot {
+		beaconState, err = state.ExecuteStateTransition(
+			ctx, beaconState, nil /* block */, blockRoot, false, /* verify signatures */
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could not execute head transition: %v", err)
+		}
 	}
 	// Fetch the epoch boundary root = hash_tree_root(epoch_boundary)
 	// where epoch_boundary is the block at the most recent epoch boundary in the
 	// chain defined by head -- i.e. the BeaconBlock where block.slot == get_epoch_start_slot(head.slot).
-	// On the server side, this is fetched by calling get_block_root(state, get_epoch_start_slot(head.slot)).
 	// If the epoch boundary slot is the same as state current slot,
 	// we set epoch boundary root to an empty root.
 	epochBoundaryRoot := make([]byte, 32)
@@ -89,9 +97,7 @@ func (as *AttesterServer) AttestationInfoAtSlot(ctx context.Context, req *pb.Att
 		epochBoundaryRoot = blockRoot[:]
 		justifiedBlockRoot = blockRoot[:]
 	}
-	log.Infof("Fetching epoch boundary root: %#x, state slot: %d", epochBoundaryRoot, beaconState.Slot-params.BeaconConfig().GenesisSlot)
-	log.Infof("Fetching justified block root: %#x, state slot: %d", justifiedBlockRoot, beaconState.Slot-params.BeaconConfig().GenesisSlot)
-	return &pb.AttestationInfoResponse{
+	return &pb.AttestationDataResponse{
 		BeaconBlockRootHash32:    blockRoot[:],
 		EpochBoundaryRootHash32:  epochBoundaryRoot,
 		JustifiedEpoch:           beaconState.JustifiedEpoch,

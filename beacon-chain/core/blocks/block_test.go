@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -42,7 +43,7 @@ func TestGenesisBlock_InitializedCorrectly(t *testing.T) {
 
 func TestBlockRootAtSlot_AccurateBlockRoot(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("epochLength should be 64 for these tests to pass")
+		t.Errorf("slotsPerEpoch should be 64 for these tests to pass")
 	}
 	var blockRoots [][]byte
 
@@ -101,7 +102,7 @@ func TestBlockRootAtSlot_AccurateBlockRoot(t *testing.T) {
 
 func TestBlockRootAtSlot_OutOfBounds(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
-		t.Errorf("epochLength should be 64 for these tests to pass")
+		t.Errorf("slotsPerEpoch should be 64 for these tests to pass")
 	}
 
 	var blockRoots [][]byte
@@ -149,7 +150,7 @@ func TestProcessBlockRoots_AccurateMerkleTree(t *testing.T) {
 
 	testRoot := [32]byte{'a'}
 
-	newState := ProcessBlockRoots(state, testRoot)
+	newState := ProcessBlockRoots(context.Background(), state, testRoot)
 	if !bytes.Equal(newState.LatestBlockRootHash32S[0], testRoot[:]) {
 		t.Fatalf("Latest Block root hash not saved."+
 			" Supposed to get %#x , but got %#x", testRoot, newState.LatestBlockRootHash32S[0])
@@ -157,7 +158,7 @@ func TestProcessBlockRoots_AccurateMerkleTree(t *testing.T) {
 
 	newState.Slot = newState.Slot - 1
 
-	newState = ProcessBlockRoots(newState, testRoot)
+	newState = ProcessBlockRoots(context.Background(), newState, testRoot)
 	expectedHashes := make([][]byte, params.BeaconConfig().LatestBlockRootsLength)
 	expectedHashes[0] = testRoot[:]
 	expectedHashes[params.BeaconConfig().LatestBlockRootsLength-1] = testRoot[:]

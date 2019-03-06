@@ -7,14 +7,13 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
 	ptypes "github.com/gogo/protobuf/types"
-	"github.com/opentracing/opentracing-go"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/forkutils"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 )
 
 // ProposeBlock A new beacon block for a given slot. This method collects the
@@ -23,8 +22,8 @@ import (
 // the state root computation, and finally signed by the validator before being
 // sent back to the beacon node for broadcasting.
 func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.ProposeBlock")
-	defer span.Finish()
+	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")
+	defer span.End()
 	log.Info("Proposing...")
 	// 1. Fetch data from Beacon Chain node.
 	// Get current head beacon block.

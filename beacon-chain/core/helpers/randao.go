@@ -12,7 +12,7 @@ import (
 //
 // Spec pseudocode definition:
 //   def generate_seed(state: BeaconState,
-//                  epoch: EpochNumber) -> Bytes32:
+//                  epoch: Epoch) -> Bytes32:
 //    """
 //    Generate a seed for the given ``epoch``.
 //    """
@@ -39,11 +39,11 @@ func GenerateSeed(state *pb.BeaconState, wantedEpoch uint64) ([32]byte, error) {
 //
 // Spec pseudocode definition:
 //   def get_active_index_root(state: BeaconState,
-//                          epoch: EpochNumber) -> Bytes32:
+//                          epoch: Epoch) -> Bytes32:
 //    """
 //    Return the index root at a recent ``epoch``.
 //    """
-//    assert get_current_epoch(state) - LATEST_INDEX_ROOTS_LENGTH + ACTIVATION_EXIT_DELAY < epoch <= get_current_epoch(state) + ENTRY_EXIT_DELAY
+//    assert get_current_epoch(state) - LATEST_INDEX_ROOTS_LENGTH + ACTIVATION_EXIT_DELAY < epoch <= get_current_epoch(state) + ACTIVATION_EXIT_DELAY
 //    return state.latest_index_roots[epoch % LATEST_INDEX_ROOTS_LENGTH]
 func ActiveIndexRoot(state *pb.BeaconState, wantedEpoch uint64) ([]byte, error) {
 	var earliestEpoch uint64
@@ -63,7 +63,7 @@ func ActiveIndexRoot(state *pb.BeaconState, wantedEpoch uint64) ([]byte, error) 
 //
 // Spec pseudocode definition:
 //   def get_randao_mix(state: BeaconState,
-//                   epoch: EpochNumber) -> Bytes32:
+//                   epoch: Epoch) -> Bytes32:
 //    """
 //    Return the randao mix at a recent ``epoch``.
 //    """

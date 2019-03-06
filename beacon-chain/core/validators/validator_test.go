@@ -1,6 +1,7 @@
 package validators
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"strings"
@@ -71,7 +72,7 @@ func TestBoundaryAttesterIndices_OK(t *testing.T) {
 			AggregationBitfield: []byte{0x03}}, // returns indices 237,224,2
 	}
 
-	attesterIndices, err := ValidatorIndices(state, boundaryAttestations)
+	attesterIndices, err := ValidatorIndices(context.Background(), state, boundaryAttestations)
 	if err != nil {
 		t.Fatalf("Failed to run BoundaryAttesterIndices: %v", err)
 	}
@@ -101,9 +102,9 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 
 	prevAttestation := &pb.PendingAttestation{
 		Data: &pb.AttestationData{
-			Slot:                 params.BeaconConfig().GenesisSlot + 3,
-			Shard:                6,
-			ShardBlockRootHash32: []byte{'B'},
+			Slot:                    params.BeaconConfig().GenesisSlot + 3,
+			Shard:                   6,
+			CrosslinkDataRootHash32: []byte{'B'},
 		},
 		AggregationBitfield: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1},
 	}
@@ -139,9 +140,9 @@ func TestAttestingValidatorIndices_OutOfBound(t *testing.T) {
 
 	attestation := &pb.PendingAttestation{
 		Data: &pb.AttestationData{
-			Slot:                 0,
-			Shard:                1,
-			ShardBlockRootHash32: []byte{'B'},
+			Slot:                    0,
+			Shard:                   1,
+			CrosslinkDataRootHash32: []byte{'B'},
 		},
 		AggregationBitfield: []byte{'A'}, // 01000001 = 1,7
 	}
@@ -425,11 +426,11 @@ func TestProcessPenaltiesExits_NothingHappened(t *testing.T) {
 			{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 		},
 	}
-	if ProcessPenaltiesAndExits(state).ValidatorBalances[0] !=
+	if ProcessPenaltiesAndExits(context.Background(), state).ValidatorBalances[0] !=
 		params.BeaconConfig().MaxDepositAmount {
 		t.Errorf("wanted validator balance %d, got %d",
 			params.BeaconConfig().MaxDepositAmount,
-			ProcessPenaltiesAndExits(state).ValidatorBalances[0])
+			ProcessPenaltiesAndExits(context.Background(), state).ValidatorBalances[0])
 	}
 }
 
@@ -453,7 +454,7 @@ func TestProcessPenaltiesExits_ValidatorSlashed(t *testing.T) {
 		helpers.EffectiveBalance(state, 0) /
 		params.BeaconConfig().MaxDepositAmount
 
-	newState := ProcessPenaltiesAndExits(state)
+	newState := ProcessPenaltiesAndExits(context.Background(), state)
 	if newState.ValidatorBalances[0] != params.BeaconConfig().MaxDepositAmount-penalty {
 		t.Errorf("wanted validator balance %d, got %d",
 			params.BeaconConfig().MaxDepositAmount-penalty,
@@ -502,7 +503,7 @@ func TestUpdateRegistry_NoRotation(t *testing.T) {
 			params.BeaconConfig().MaxDepositAmount,
 		},
 	}
-	newState, err := UpdateRegistry(state)
+	newState, err := UpdateRegistry(context.Background(), state)
 	if err != nil {
 		t.Fatalf("could not update validator registry:%v", err)
 	}
@@ -532,7 +533,7 @@ func TestUpdateRegistry_Activations(t *testing.T) {
 			params.BeaconConfig().MaxDepositAmount,
 		},
 	}
-	newState, err := UpdateRegistry(state)
+	newState, err := UpdateRegistry(context.Background(), state)
 	if err != nil {
 		t.Fatalf("could not update validator registry:%v", err)
 	}
@@ -566,7 +567,7 @@ func TestUpdateRegistry_Exits(t *testing.T) {
 			params.BeaconConfig().MaxDepositAmount,
 		},
 	}
-	newState, err := UpdateRegistry(state)
+	newState, err := UpdateRegistry(context.Background(), state)
 	if err != nil {
 		t.Fatalf("could not update validator registry:%v", err)
 	}

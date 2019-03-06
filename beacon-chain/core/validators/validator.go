@@ -6,6 +6,7 @@ package validators
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -13,6 +14,16 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"go.opencensus.io/trace"
+)
+
+var (
+	// ActivatedValidators is a mapping that tracks epoch to activated validators indexes.
+	// Where key is epoch, value is a list of activated validator indexes.
+	ActivatedValidators = make(map[uint64][]uint64)
+	// ExitedValidators is a mapping that tracks epoch to excited validators indexes.
+	// Where key is epoch, value is a list of exited validator indexes.
+	ExitedValidators = make(map[uint64][]uint64)
 )
 
 // ValidatorIndices returns all the validator indices from the input attestations
@@ -23,9 +34,13 @@ import (
 //   index sets given by [get_attestation_participants(state, a.data, a.aggregation_bitfield)
 //   for a in attestations]
 func ValidatorIndices(
+	ctx context.Context,
 	state *pb.BeaconState,
 	attestations []*pb.PendingAttestation,
 ) ([]uint64, error) {
+
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.ValidatorIndices")
+	defer span.End()
 
 	var attesterIndicesIntersection []uint64
 	for _, attestation := range attestations {
@@ -55,7 +70,7 @@ func ValidatorIndices(
 func AttestingValidatorIndices(
 	state *pb.BeaconState,
 	shard uint64,
-	shardBlockRoot []byte,
+	crosslinkDataRoot []byte,
 	thisEpochAttestations []*pb.PendingAttestation,
 	prevEpochAttestations []*pb.PendingAttestation) ([]uint64, error) {
 
@@ -64,7 +79,7 @@ func AttestingValidatorIndices(
 
 	for _, attestation := range attestations {
 		if attestation.Data.Shard == shard &&
-			bytes.Equal(attestation.Data.ShardBlockRootHash32, shardBlockRoot) {
+			bytes.Equal(attestation.Data.CrosslinkDataRootHash32, crosslinkDataRoot) {
 
 			validatorIndicesCommittee, err := helpers.AttestationParticipants(state, attestation.Data, attestation.AggregationBitfield)
 			if err != nil {
@@ -227,7 +242,7 @@ func SlashValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) 
 	state.ValidatorBalances[whistleblowerIdx] += whistleblowerReward
 	state.ValidatorBalances[idx] -= whistleblowerReward
 
-	state.ValidatorRegistry[idx].SlashedEpoch = helpers.CurrentEpoch(state)
+	state.ValidatorRegistry[idx].SlashedEpoch = helpers.CurrentEpoch(state) + params.BeaconConfig().LatestSlashedExitLength
 	return state, nil
 }
 
@@ -277,8 +292,13 @@ func SlashValidator(state *pb.BeaconState, idx uint64) (*pb.BeaconState, error) 
 //            exit_validator(state, index)
 //
 //    state.validator_registry_update_epoch = current_epoch
-func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
+func UpdateRegistry(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
+
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.UpdateRegistry")
+	defer span.End()
+
 	currentEpoch := helpers.CurrentEpoch(state)
+	updatedEpoch := helpers.EntryExitEffectEpoch(currentEpoch)
 	activeValidatorIndices := helpers.ActiveValidatorIndices(
 		state.ValidatorRegistry, currentEpoch)
 
@@ -301,6 +321,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 			if err != nil {
 				return nil, fmt.Errorf("could not activate validator %d: %v", idx, err)
 			}
+			ActivatedValidators[updatedEpoch] = append(ActivatedValidators[updatedEpoch], uint64(idx))
 		}
 	}
 
@@ -314,6 +335,7 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 				break
 			}
 			state = ExitValidator(state, uint64(idx))
+			ExitedValidators[updatedEpoch] = append(ExitedValidators[updatedEpoch], uint64(idx))
 		}
 	}
 	state.ValidatorRegistryUpdateEpoch = currentEpoch
@@ -362,7 +384,10 @@ func UpdateRegistry(state *pb.BeaconState) (*pb.BeaconState, error) {
 //        withdrawn_so_far += 1
 //        if withdrawn_so_far >= MAX_EXIT_DEQUEUES_PER_EPOCH:
 //            break
-func ProcessPenaltiesAndExits(state *pb.BeaconState) *pb.BeaconState {
+func ProcessPenaltiesAndExits(ctx context.Context, state *pb.BeaconState) *pb.BeaconState {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.ProcessPenaltiesAndExits")
+	defer span.End()
+
 	currentEpoch := helpers.CurrentEpoch(state)
 	activeValidatorIndices := helpers.ActiveValidatorIndices(
 		state.ValidatorRegistry, currentEpoch)
@@ -420,7 +445,7 @@ func allValidatorsIndices(state *pb.BeaconState) []uint64 {
 // in and out of the validator pool.
 // Spec pseudocode definition:
 //     max_balance_churn = max(
-//        MAX_DEPOSIT * GWEI_PER_ETH,
+//        MAX_DEPOSIT_AMOUNT,
 //        total_balance // (2 * MAX_BALANCE_CHURN_QUOTIENT))
 func maxBalanceChurn(totalBalance uint64) uint64 {
 	maxBalanceChurn := totalBalance / 2 * params.BeaconConfig().MaxBalanceChurnQuotient
@@ -473,7 +498,7 @@ func prepareValidatorForWithdrawal(state *pb.BeaconState, idx uint64) *pb.Beacon
 // the validator is eligible for activation and exit.
 //
 // Spec pseudocode definition:
-// def get_entry_exit_effect_epoch(epoch: EpochNumber) -> EpochNumber:
+// def get_entry_exit_effect_epoch(epoch: Epoch) -> Epoch:
 //    """
 //    An entry or exit triggered in the ``epoch`` given by the input takes effect at
 //    the epoch given by the output.

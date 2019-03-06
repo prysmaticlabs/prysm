@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
 	"time"
@@ -13,12 +14,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"go.opencensus.io/trace"
 )
 
 // InitializeState creates an initial genesis state for the beacon
 // node using a set of genesis validators.
-func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit) error {
-	beaconState, err := state.GenesisBeaconState(deposits, genesisTime, nil)
+func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit, eth1Data *pb.Eth1Data) error {
+	beaconState, err := state.GenesisBeaconState(deposits, genesisTime, eth1Data)
 	if err != nil {
 		return err
 	}
@@ -65,7 +67,9 @@ func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit) 
 }
 
 // State fetches the canonical beacon chain's state from the DB.
-func (db *BeaconDB) State() (*pb.BeaconState, error) {
+func (db *BeaconDB) State(ctx context.Context) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.State")
+	defer span.End()
 	var beaconState *pb.BeaconState
 	err := db.view(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
@@ -121,41 +125,6 @@ func (db *BeaconDB) FinalizedState() (*pb.BeaconState, error) {
 	return beaconState, err
 }
 
-// UnfinalizedBlockState fetches an unfinalized block's
-// active and crystallized state pair.
-func (db *BeaconDB) UnfinalizedBlockState(stateRoot [32]byte) (*pb.BeaconState, error) {
-	var beaconState *pb.BeaconState
-	err := db.view(func(tx *bolt.Tx) error {
-		chainInfo := tx.Bucket(chainInfoBucket)
-		encState := chainInfo.Get(stateRoot[:])
-		if encState == nil {
-			return nil
-		}
-
-		var err error
-		beaconState, err = createState(encState)
-		return err
-	})
-	return beaconState, err
-}
-
-// SaveUnfinalizedBlockState persists the associated state
-// for a given unfinalized block.
-func (db *BeaconDB) SaveUnfinalizedBlockState(beaconState *pb.BeaconState) error {
-	enc, err := proto.Marshal(beaconState)
-	if err != nil {
-		return fmt.Errorf("unable to marshal the beacon state: %v", err)
-	}
-	stateHash := hashutil.Hash(enc)
-	return db.update(func(tx *bolt.Tx) error {
-		chainInfo := tx.Bucket(chainInfoBucket)
-		if err := chainInfo.Put(stateHash[:], enc); err != nil {
-			return fmt.Errorf("failed to save beacon state: %v", err)
-		}
-		return nil
-	})
-}
-
 func createState(enc []byte) (*pb.BeaconState, error) {
 	protoState := &pb.BeaconState{}
 	err := proto.Unmarshal(enc, protoState)
@@ -166,8 +135,8 @@ func createState(enc []byte) (*pb.BeaconState, error) {
 }
 
 // GenesisTime returns the genesis timestamp for the state.
-func (db *BeaconDB) GenesisTime() (time.Time, error) {
-	state, err := db.State()
+func (db *BeaconDB) GenesisTime(ctx context.Context) (time.Time, error) {
+	state, err := db.State(ctx)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("could not retrieve state: %v", err)
 	}

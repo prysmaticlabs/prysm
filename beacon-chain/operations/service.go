@@ -116,7 +116,6 @@ func (s *Service) PendingAttestations() ([]*pb.Attestation, error) {
 		}
 		attestations = append(attestations, attestationsFromDB[i])
 	}
-	log.Infof("%d Attestations obtained from DB in operations service", len(attestations))
 	return attestations, nil
 }
 

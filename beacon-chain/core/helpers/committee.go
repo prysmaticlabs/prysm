@@ -21,6 +21,14 @@ type CrosslinkCommittee struct {
 	Shard     uint64
 }
 
+type shufflingInput struct {
+	seed               []byte
+	shufflingEpoch     uint64
+	slot               uint64
+	startShard         uint64
+	committeesPerEpoch uint64
+}
+
 // EpochCommitteeCount returns the number of crosslink committees of an epoch.
 //
 // Spec pseudocode definition:
@@ -117,9 +125,11 @@ func NextEpochCommitteeCount(state *pb.BeaconState) uint64 {
 // CrosslinkCommitteesAtSlot returns the list of crosslink committees, it
 // contains the shard associated with the committee and the validator indices
 // in that committee.
+//
+// Spec pseudocode definition:
 //   def get_crosslink_committees_at_slot(state: BeaconState,
-//                                     slot: SlotNumber,
-//                                     registry_change=False: bool) -> List[Tuple[List[ValidatorIndex], ShardNumber]]:
+//                                     slot: Slot,
+//                                     registry_change: bool=False) -> List[Tuple[List[ValidatorIndex], Shard]]:
 //    """
 //    Return the list of ``(committee, shard)`` tuples for the ``slot``.
 //
@@ -128,69 +138,35 @@ func NextEpochCommitteeCount(state *pb.BeaconState) uint64 {
 //    """
 //    epoch = slot_to_epoch(slot)
 //    current_epoch = get_current_epoch(state)
-//    previous_epoch = current_epoch - 1 if current_epoch > GENESIS_EPOCH else current_epoch
+//    previous_epoch = get_previous_epoch(state)
 //    next_epoch = current_epoch + 1
 //
 //    assert previous_epoch <= epoch <= next_epoch
 //
-//    if epoch == previous_epoch:
-//        committees_per_epoch = get_previous_epoch_committee_count(state)
-//        seed = state.previous_epoch_seed
-//        shuffling_epoch = state.previous_calculation_epoch
-//        shuffling_start_shard = state.previous_epoch_start_shard
-//    elif epoch == current_epoch:
-//        committees_per_epoch = get_current_epoch_committee_count(state)
-//        seed = state.current_epoch_seed
-//        shuffling_epoch = state.current_calculation_epoch
-//        shuffling_start_shard = state.current_epoch_start_shard
+//    if epoch == current_epoch:
+//        return get_current_epoch_committees_at_slot(state, slot)
+//    elif epoch == previous_epoch:
+//        return get_previous_epoch_committees_at_slot(state, slot)
 //    elif epoch == next_epoch:
-//        current_committees_per_epoch = get_current_epoch_committee_count(state)
-//        committees_per_epoch = get_next_epoch_committee_count(state)
-//        shuffling_epoch = next_epoch
-//
-//        epochs_since_last_registry_update = current_epoch - state.validator_registry_update_epoch
-//        if registry_change:
-//            seed = generate_seed(state, next_epoch)
-//            shuffling_start_shard = (state.current_epoch_start_shard + current_committees_per_epoch) % SHARD_COUNT
-//        elif epochs_since_last_registry_update > 1 and is_power_of_two(epochs_since_last_registry_update):
-//            seed = generate_seed(state, next_epoch)
-//            shuffling_start_shard = state.current_epoch_start_shard
-//        else:
-//            seed = state.current_epoch_seed
-//            shuffling_start_shard = state.current_epoch_start_shard
-//
-//    shuffling = get_shuffling(
-//        seed,
-//        state.validator_registry,
-//        shuffling_epoch,
-//    )
-//    offset = slot % SLOTS_PER_EPOCH
-//    committees_per_slot = committees_per_epoch // SLOTS_PER_EPOCH
-//    slot_start_shard = (shuffling_start_shard + committees_per_slot * offset) % SHARD_COUNT
-//
-//    return [
-//        (
-//            shuffling[committees_per_slot * offset + i],
-//            (slot_start_shard + i) % SHARD_COUNT,
-//        )
-//        for i in range(committees_per_slot)
-//    ]
+//        return get_next_epoch_committee_count(state, slot, registry_change)
 func CrosslinkCommitteesAtSlot(
 	state *pb.BeaconState,
 	slot uint64,
 	registryChange bool) ([]*CrosslinkCommittee, error) {
-	var committeesPerEpoch uint64
-	var shufflingEpoch uint64
-	var shufflingStartShard uint64
-	var seed [32]byte
-	var err error
 
 	wantedEpoch := SlotToEpoch(slot)
 	currentEpoch := CurrentEpoch(state)
 	prevEpoch := PrevEpoch(state)
 	nextEpoch := NextEpoch(state)
 
-	if wantedEpoch < prevEpoch || wantedEpoch > nextEpoch {
+	switch wantedEpoch {
+	case currentEpoch:
+		return currEpochCommitteesAtSlot(state, slot)
+	case prevEpoch:
+		return prevEpochCommitteesAtSlot(state, slot)
+	case nextEpoch:
+		return nextEpochCommitteesAtSlot(state, slot, registryChange)
+	default:
 		return nil, fmt.Errorf(
 			"input committee epoch %d out of bounds: %d <= epoch <= %d",
 			wantedEpoch-params.BeaconConfig().GenesisEpoch,
@@ -198,65 +174,6 @@ func CrosslinkCommitteesAtSlot(
 			currentEpoch-params.BeaconConfig().GenesisEpoch,
 		)
 	}
-
-	if wantedEpoch == prevEpoch {
-		committeesPerEpoch = PrevEpochCommitteeCount(state)
-		seed = bytesutil.ToBytes32(state.PreviousShufflingSeedHash32)
-		shufflingEpoch = state.PreviousShufflingEpoch
-		shufflingStartShard = state.PreviousShufflingStartShard
-	} else if wantedEpoch == currentEpoch {
-		committeesPerEpoch = PrevEpochCommitteeCount(state)
-		seed = bytesutil.ToBytes32(state.CurrentShufflingSeedHash32)
-		shufflingEpoch = state.CurrentShufflingEpoch
-		shufflingStartShard = state.CurrentShufflingStartShard
-	} else if wantedEpoch == nextEpoch {
-		currentCommitteesPerEpoch := CurrentEpochCommitteeCount(state)
-		committeesPerEpoch = NextEpochCommitteeCount(state)
-		shufflingEpoch = nextEpoch
-
-		epochsSinceLastRegistryUpdate := currentEpoch - state.ValidatorRegistryUpdateEpoch
-		if registryChange {
-			seed, err = GenerateSeed(state, nextEpoch)
-			if err != nil {
-				return nil, fmt.Errorf("could not generate seed: %v", err)
-			}
-			shufflingStartShard = (state.CurrentShufflingStartShard + currentCommitteesPerEpoch) %
-				params.BeaconConfig().ShardCount
-		} else if epochsSinceLastRegistryUpdate > 1 &&
-			mathutil.IsPowerOf2(epochsSinceLastRegistryUpdate) {
-			seed, err = GenerateSeed(state, nextEpoch)
-			if err != nil {
-				return nil, fmt.Errorf("could not generate seed: %v", err)
-			}
-			shufflingStartShard = state.CurrentShufflingStartShard
-		} else {
-			seed = bytesutil.ToBytes32(state.CurrentShufflingSeedHash32)
-			shufflingStartShard = state.CurrentShufflingStartShard
-		}
-	}
-
-	shuffledIndices, err := Shuffling(
-		seed,
-		state.ValidatorRegistry,
-		shufflingEpoch)
-	if err != nil {
-		return nil, fmt.Errorf("could not shuffle epoch validators: %v", err)
-	}
-
-	offSet := slot % params.BeaconConfig().SlotsPerEpoch
-	committeesPerSlot := committeesPerEpoch / params.BeaconConfig().SlotsPerEpoch
-	slotStardShard := (shufflingStartShard + committeesPerSlot*offSet) %
-		params.BeaconConfig().ShardCount
-
-	var crosslinkCommittees []*CrosslinkCommittee
-	for i := uint64(0); i < committeesPerSlot; i++ {
-		crosslinkCommittees = append(crosslinkCommittees, &CrosslinkCommittee{
-			Committee: shuffledIndices[committeesPerSlot*offSet+i],
-			Shard:     (slotStardShard + i) % params.BeaconConfig().ShardCount,
-		})
-	}
-
-	return crosslinkCommittees, nil
 }
 
 // Shuffling shuffles input validator indices and splits them by slot and shard.
@@ -264,7 +181,7 @@ func CrosslinkCommitteesAtSlot(
 // Spec pseudocode definition:
 //   def get_shuffling(seed: Bytes32,
 //                  validators: List[Validator],
-//                  epoch: EpochNumber) -> List[List[ValidatorIndex]]
+//                  epoch: Epoch) -> List[List[ValidatorIndex]]
 //    """
 //    Shuffle ``validators`` into crosslink committees seeded by ``seed`` and ``epoch``.
 //    Return a list of ``committees_per_epoch`` committees where each
@@ -339,7 +256,10 @@ func AttestationParticipants(
 	bitfield []byte) ([]uint64, error) {
 
 	// Find the relevant committee.
-	crosslinkCommittees, err := CrosslinkCommitteesAtSlot(state, attestationData.Slot, false)
+	// RegistryChange is a no-op when requesting slot in current and previous epoch.
+	// AttestationParticipants is used to calculate justification and finality hence won't be used
+	// to request crosslink commitees of future epoch.
+	crosslinkCommittees, err := CrosslinkCommitteesAtSlot(state, attestationData.Slot, false /* registryChange */)
 	if err != nil {
 		return nil, err
 	}
@@ -413,16 +333,17 @@ func VerifyBitfield(bitfield []byte, committeeSize int) (bool, error) {
 	return true, nil
 }
 
-// NextEpochCommitteeAssignment query slots in the next epoch
-// for it to discover which shard and slot a validator gets assigned.
+// CommitteeAssignment is used to query committee assignment from
+// current and previous epoch.
 //
 // Spec pseudocode definition:
-//   def get_next_epoch_committee_assignment(
+//   def get_committee_assignment(
 //        state: BeaconState,
+//        epoch: Epoch,
 //        validator_index: ValidatorIndex,
-//        registry_change: bool) -> Tuple[List[ValidatorIndex], ShardNumber, SlotNumber, bool]:
+//        registry_change: bool=False) -> Tuple[List[ValidatorIndex], Shard, Slot, bool]:
 //    """
-//    Return the committee assignment in the next epoch for ``validator_index`` and ``registry_change``.
+//    Return the committee assignment in the ``epoch`` for ``validator_index`` and ``registry_change``.
 //    ``assignment`` returned is a tuple of the following form:
 //        * ``assignment[0]`` is the list of validators in the committee
 //        * ``assignment[1]`` is the shard to which the committee is assigned
@@ -430,17 +351,19 @@ func VerifyBitfield(bitfield []byte, committeeSize int) (bool, error) {
 //        * ``assignment[3]`` is a bool signalling if the validator is expected to propose
 //            a beacon block at the assigned slot.
 //    """
-//    current_epoch = get_current_epoch(state)
-//    next_epoch = current_epoch + 1
-//    next_epoch_start_slot = get_epoch_start_slot(next_epoch)
-//    for slot in range(next_epoch_start_slot, next_epoch_start_slot + SLOTS_PER_EPOCH):
+//    previous_epoch = get_previous_epoch(state)
+//    next_epoch = get_current_epoch(state)
+//    assert previous_epoch <= epoch <= next_epoch
+//
+//    epoch_start_slot = get_epoch_start_slot(epoch)
+//    for slot in range(epoch_start_slot, epoch_start_slot + SLOTS_PER_EPOCH):
 //        crosslink_committees = get_crosslink_committees_at_slot(
 //            state,
 //            slot,
 //            registry_change=registry_change,
 //        )
 //        selected_committees = [
-//            committee  # Tuple[List[ValidatorIndex], ShardNumber]
+//            committee  # Tuple[List[ValidatorIndex], Shard]
 //            for committee in crosslink_committees
 //            if validator_index in committee[0]
 //        ]
@@ -452,14 +375,28 @@ func VerifyBitfield(bitfield []byte, committeeSize int) (bool, error) {
 //
 //            assignment = (validators, shard, slot, is_proposer)
 //            return assignment
-func NextEpochCommitteeAssignment(
+func CommitteeAssignment(
 	state *pb.BeaconState,
-	index uint64,
+	slot uint64,
+	validatorIndex uint64,
 	registryChange bool) ([]uint64, uint64, uint64, bool, error) {
 	var selectedCommittees []*CrosslinkCommittee
+
+	wantedEpoch := slot / params.BeaconConfig().SlotsPerEpoch
+	prevEpoch := PrevEpoch(state)
 	nextEpoch := NextEpoch(state)
-	nextEpochStartSlot := StartSlot(nextEpoch)
-	for slot := nextEpochStartSlot; slot < nextEpochStartSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
+
+	if wantedEpoch < prevEpoch || wantedEpoch > nextEpoch {
+		return nil, 0, 0, false, fmt.Errorf(
+			"epoch %d out of bounds: %d <= epoch <= %d",
+			wantedEpoch-params.BeaconConfig().GenesisEpoch,
+			prevEpoch-params.BeaconConfig().GenesisEpoch,
+			nextEpoch-params.BeaconConfig().GenesisEpoch,
+		)
+	}
+
+	startSlot := StartSlot(wantedEpoch)
+	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		crosslinkCommittees, err := CrosslinkCommitteesAtSlot(
 			state, slot, registryChange)
 		if err != nil {
@@ -467,7 +404,7 @@ func NextEpochCommitteeAssignment(
 		}
 		for _, committee := range crosslinkCommittees {
 			for _, idx := range committee.Committee {
-				if idx == index {
+				if idx == validatorIndex {
 					selectedCommittees = append(selectedCommittees, committee)
 				}
 
@@ -476,11 +413,196 @@ func NextEpochCommitteeAssignment(
 					shard := selectedCommittees[0].Shard
 					firstCommitteeAtSlot := crosslinkCommittees[0].Committee
 					isProposer := firstCommitteeAtSlot[slot%
-						uint64(len(firstCommitteeAtSlot))] == index
+						uint64(len(firstCommitteeAtSlot))] == validatorIndex
 					return validators, shard, slot, isProposer, nil
 				}
 			}
 		}
 	}
-	return []uint64{}, 0, 0, false, fmt.Errorf("could not get assignment validator %d", index)
+	return []uint64{}, 0, 0, false, fmt.Errorf("could not get assignment validator %d", validatorIndex)
+}
+
+// prevEpochCommitteesAtSlot returns a list of crosslink committees of the previous epoch.
+//
+// Spec pseudocode definition:
+//   def get_previous_epoch_committees_at_slot(state: BeaconState,
+//                                          slot: Slot) -> List[Tuple[List[ValidatorIndex], Shard]]:
+//    committees_per_epoch = get_previous_epoch_committee_count(state)
+//    seed = state.previous_shuffling_seed
+//    shuffling_epoch = state.previous_shuffling_epoch
+//    shuffling_start_shard = state.previous_shuffling_start_shard
+//    return get_crosslink_committees(
+//        state,
+//        seed,
+//        shuffling_epoch,
+//        slot,
+//        start_shard,
+//        committees_per_epoch,
+//    )
+func prevEpochCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*CrosslinkCommittee, error) {
+	committeesPerEpoch := PrevEpochCommitteeCount(state)
+	return crosslinkCommittees(
+		state, &shufflingInput{
+			seed:               state.PreviousShufflingSeedHash32,
+			shufflingEpoch:     state.PreviousShufflingEpoch,
+			slot:               slot,
+			startShard:         state.PreviousShufflingStartShard,
+			committeesPerEpoch: committeesPerEpoch,
+		})
+}
+
+// currEpochCommitteesAtSlot returns a list of crosslink committees of the current epoch.
+//
+// Spec pseudocode definition:
+//   def get_current_epoch_committees_at_slot(state: BeaconState,
+//                                         slot: Slot) -> List[Tuple[List[ValidatorIndex], Shard]]:
+//    committees_per_epoch = get_current_epoch_committee_count(state)
+//    seed = state.current_shuffling_seed
+//    shuffling_epoch = state.current_shuffling_epoch
+//    shuffling_start_shard = state.current_shuffling_start_shard
+//    return get_crosslink_committees(
+//        state,
+//        seed,
+//        shuffling_epoch,
+//        slot,
+//        start_shard,
+//        committees_per_epoch,
+//    )
+func currEpochCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*CrosslinkCommittee, error) {
+	committeesPerEpoch := CurrentEpochCommitteeCount(state)
+	return crosslinkCommittees(
+		state, &shufflingInput{
+			seed:               state.CurrentShufflingSeedHash32,
+			shufflingEpoch:     state.CurrentShufflingEpoch,
+			slot:               slot,
+			startShard:         state.CurrentShufflingStartShard,
+			committeesPerEpoch: committeesPerEpoch,
+		})
+}
+
+// nextEpochCommitteesAtSlot returns a list of crosslink committees of the next epoch.
+//
+// Spec pseudocode definition:
+//   def get_next_epoch_committees_at_slot(state: BeaconState,
+//                                      slot: Slot,
+//                                      registry_change: bool) -> List[Tuple[List[ValidatorIndex], Shard]]:
+//    epochs_since_last_registry_update = current_epoch - state.validator_registry_update_epoch
+//    if registry_change:
+//        committees_per_epoch = get_next_epoch_committee_count(state)
+//        seed = generate_seed(state, next_epoch)
+//        shuffling_epoch = next_epoch
+//        current_committees_per_epoch = get_current_epoch_committee_count(state)
+//        shuffling_start_shard = (state.current_shuffling_start_shard + current_committees_per_epoch) % SHARD_COUNT
+//    elif epochs_since_last_registry_update > 1 and is_power_of_two(epochs_since_last_registry_update):
+//        committees_per_epoch = get_next_epoch_committee_count(state)
+//        seed = generate_seed(state, next_epoch)
+//        shuffling_epoch = next_epoch
+//        shuffling_start_shard = state.current_shuffling_start_shard
+//    else:
+//        committees_per_epoch = get_current_epoch_committee_count(state)
+//        seed = state.current_shuffling_seed
+//        shuffling_epoch = state.current_shuffling_epoch
+//        shuffling_start_shard = state.current_shuffling_start_shard
+//
+//    return get_crosslink_committees(
+//        state,
+//        seed,
+//        shuffling_epoch,
+//        slot,
+//        start_shard,
+//        committees_per_epoch,
+//    )
+func nextEpochCommitteesAtSlot(state *pb.BeaconState, slot uint64, registryChange bool) ([]*CrosslinkCommittee, error) {
+	var committeesPerEpoch uint64
+	var shufflingEpoch uint64
+	var shufflingStartShard uint64
+	var seed [32]byte
+	var err error
+
+	epochsSinceLastUpdate := CurrentEpoch(state) - state.ValidatorRegistryUpdateEpoch
+	if registryChange {
+		committeesPerEpoch = NextEpochCommitteeCount(state)
+		shufflingEpoch = NextEpoch(state)
+		seed, err = GenerateSeed(state, shufflingEpoch)
+		if err != nil {
+			return nil, fmt.Errorf("could not generate seed: %v", err)
+		}
+		shufflingStartShard = (state.CurrentShufflingStartShard + CurrentEpochCommitteeCount(state)) %
+			params.BeaconConfig().ShardCount
+	} else if epochsSinceLastUpdate > 1 &&
+		mathutil.IsPowerOf2(epochsSinceLastUpdate) {
+		committeesPerEpoch = NextEpochCommitteeCount(state)
+		shufflingEpoch = NextEpoch(state)
+		seed, err = GenerateSeed(state, shufflingEpoch)
+		if err != nil {
+			return nil, fmt.Errorf("could not generate seed: %v", err)
+		}
+		shufflingStartShard = state.CurrentShufflingStartShard
+	} else {
+		committeesPerEpoch = CurrentEpochCommitteeCount(state)
+		seed = bytesutil.ToBytes32(state.CurrentShufflingSeedHash32)
+		shufflingEpoch = state.CurrentShufflingEpoch
+		shufflingStartShard = state.CurrentShufflingStartShard
+	}
+
+	return crosslinkCommittees(
+		state, &shufflingInput{
+			seed:               seed[:],
+			shufflingEpoch:     shufflingEpoch,
+			slot:               slot,
+			startShard:         shufflingStartShard,
+			committeesPerEpoch: committeesPerEpoch,
+		})
+}
+
+// crosslinkCommittees breaks down the shuffled indices into list of crosslink committee structs
+// which contains of validator indices and the shard they are assigned to.
+//
+// Spec pseudocode definition:
+//   def get_crosslink_committees(state: BeaconState,
+//                             seed: Bytes32,
+//                             shuffling_epoch: Epoch,
+//                             slot: Slot,
+//                             start_shard: Shard,
+//                             committees_per_epoch: int) -> List[Tuple[List[ValidatorIndex], Shard]]:
+//    offset = slot % SLOTS_PER_EPOCH
+//    committees_per_slot = committees_per_epoch // SLOTS_PER_EPOCH
+//    slot_start_shard = (shuffling_start_shard + committees_per_slot * offset) % SHARD_COUNT
+//
+//    shuffling = get_shuffling(
+//        seed,
+//        state.validator_registry,
+//        shuffling_epoch,
+//    )
+//
+//    return [
+//        (
+//            shuffling[committees_per_slot * offset + i],
+//            (slot_start_shard + i) % SHARD_COUNT,
+//        )
+//        for i in range(committees_per_slot)
+//    ]
+func crosslinkCommittees(state *pb.BeaconState, input *shufflingInput) ([]*CrosslinkCommittee, error) {
+	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+	offSet := input.slot % slotsPerEpoch
+	committeesPerSlot := input.committeesPerEpoch / slotsPerEpoch
+	slotStartShard := (input.startShard + committeesPerSlot*offSet) %
+		params.BeaconConfig().ShardCount
+
+	shuffledIndices, err := Shuffling(
+		bytesutil.ToBytes32(input.seed),
+		state.ValidatorRegistry,
+		input.shufflingEpoch)
+	if err != nil {
+		return nil, err
+	}
+
+	var crosslinkCommittees []*CrosslinkCommittee
+	for i := uint64(0); i < committeesPerSlot; i++ {
+		crosslinkCommittees = append(crosslinkCommittees, &CrosslinkCommittee{
+			Committee: shuffledIndices[committeesPerSlot*offSet+i],
+			Shard:     (slotStartShard + i) % params.BeaconConfig().ShardCount,
+		})
+	}
+	return crosslinkCommittees, nil
 }

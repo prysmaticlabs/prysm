@@ -8,13 +8,13 @@ import (
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
-	"github.com/opentracing/opentracing-go"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/slotutil"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 // AttestationPool STUB interface. Final attestation pool pending design.
@@ -29,7 +29,7 @@ type AttestationPool interface {
 type validator struct {
 	genesisTime     uint64
 	ticker          *slotutil.SlotTicker
-	assignment      *pb.Assignment
+	assignment      *pb.CommitteeAssignmentResponse
 	proposerClient  pb.ProposerServiceClient
 	validatorClient pb.ValidatorServiceClient
 	beaconClient    pb.BeaconServiceClient
@@ -47,8 +47,8 @@ func (v *validator) Done() {
 // for the ChainStart log to have been emitted. If so, it starts a ticker based on the ChainStart
 // unix timestamp which will be used to keep track of time within the validator client.
 func (v *validator) WaitForChainStart(ctx context.Context) error {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.WaitForChainStart")
-	defer span.Finish()
+	ctx, span := trace.StartSpan(ctx, "validator.WaitForChainStart")
+	defer span.End()
 	// First, check if the beacon chain has started.
 	stream, err := v.beaconClient.WaitForChainStart(ctx, &ptypes.Empty{})
 	if err != nil {
@@ -81,14 +81,38 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 // WaitForActivation checks whether the validator pubkey is in the active
 // validator set. If not, this operation will block until an activation message is
 // received.
-//
-// WIP - not done.
-func (v *validator) WaitForActivation(ctx context.Context) {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.WaitForActivation")
-	defer span.Finish()
-	// First, check if the validator has deposited into the Deposit Contract.
-	// If the validator has deposited, subscribe to a stream receiving the activation status.
-	// of the validator until a final ACTIVATED check if received, then this function can return.
+func (v *validator) WaitForActivation(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
+	defer span.End()
+	req := &pb.ValidatorActivationRequest{
+		Pubkey: v.key.PublicKey.Marshal(),
+	}
+	stream, err := v.validatorClient.WaitForActivation(ctx, req)
+	if err != nil {
+		return fmt.Errorf("could not setup validator WaitForActivation streaming client: %v", err)
+	}
+	var validatorActivatedRecord *pbp2p.Validator
+	for {
+		log.Info("Waiting for validator to be activated in the beacon chain")
+		res, err := stream.Recv()
+		// If the stream is closed, we stop the loop.
+		if err == io.EOF {
+			break
+		}
+		// If context is canceled we stop the loop.
+		if ctx.Err() == context.Canceled {
+			return fmt.Errorf("context has been canceled so shutting down the loop: %v", ctx.Err())
+		}
+		if err != nil {
+			return fmt.Errorf("could not receive validator activation from stream: %v", err)
+		}
+		validatorActivatedRecord = res.Validator
+		break
+	}
+	log.WithFields(logrus.Fields{
+		"activationEpoch": validatorActivatedRecord.ActivationEpoch - params.BeaconConfig().GenesisEpoch,
+	}).Info("Validator activated")
+	return nil
 }
 
 // NextSlot emits the next slot number at the start time of that slot.
@@ -100,29 +124,41 @@ func (v *validator) NextSlot() <-chan uint64 {
 // list of upcoming assignments needs to be updated. For example, at the
 // beginning of a new epoch.
 func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "validator.UpdateAssignments")
-	defer span.Finish()
-
 	if slot%params.BeaconConfig().SlotsPerEpoch != 0 && v.assignment != nil {
 		// Do nothing if not epoch start AND assignments already exist.
 		return nil
 	}
+
+	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
+	defer span.End()
 
 	req := &pb.ValidatorEpochAssignmentsRequest{
 		EpochStart: slot,
 		PublicKey:  v.key.PublicKey.Marshal(),
 	}
 
-	resp, err := v.validatorClient.ValidatorEpochAssignments(ctx, req)
+	resp, err := v.validatorClient.CommitteeAssignment(ctx, req)
 	if err != nil {
 		return err
 	}
 
-	v.assignment = resp.Assignment
+	v.assignment = resp
+
+	var proposerSlot uint64
+	var attesterSlot uint64
+	if v.assignment.IsProposer && len(v.assignment.Committee) == 1 {
+		proposerSlot = resp.Slot
+		attesterSlot = resp.Slot
+	} else if v.assignment.IsProposer {
+		proposerSlot = resp.Slot
+	} else {
+		attesterSlot = resp.Slot
+	}
+
 	log.WithFields(logrus.Fields{
-		"proposerSlot": resp.Assignment.ProposerSlot - params.BeaconConfig().GenesisSlot,
-		"attesterSlot": resp.Assignment.AttesterSlot - params.BeaconConfig().GenesisSlot,
-		"shard":        resp.Assignment.Shard,
+		"proposerSlot": proposerSlot - params.BeaconConfig().GenesisSlot,
+		"attesterSlot": attesterSlot - params.BeaconConfig().GenesisSlot,
+		"shard":        resp.Shard,
 	}).Info("Updated validator assignments")
 	return nil
 }
@@ -131,15 +167,19 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 // validator is known to not have a role at the at slot. Returns UNKNOWN if the
 // validator assignments are unknown. Otherwise returns a valid ValidatorRole.
 func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
-	if v.assignment == nil || slot == params.BeaconConfig().GenesisSlot {
+	if v.assignment == nil {
 		return pb.ValidatorRole_UNKNOWN
 	}
-	if v.assignment.AttesterSlot == slot && v.assignment.ProposerSlot == slot {
-		return pb.ValidatorRole_BOTH
-	} else if v.assignment.ProposerSlot == slot {
-		return pb.ValidatorRole_PROPOSER
-	} else if v.assignment.AttesterSlot == slot {
-		return pb.ValidatorRole_ATTESTER
+	if v.assignment.Slot == slot {
+		// if the committee length is 1, that means validator has to perform both
+		// proposer and validator roles.
+		if len(v.assignment.Committee) == 1 {
+			return pb.ValidatorRole_BOTH
+		} else if v.assignment.IsProposer {
+			return pb.ValidatorRole_PROPOSER
+		} else {
+			return pb.ValidatorRole_ATTESTER
+		}
 	}
 	return pb.ValidatorRole_UNKNOWN
 }

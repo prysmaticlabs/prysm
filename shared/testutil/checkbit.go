@@ -1,6 +1,8 @@
 package testutil
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // CheckBit checks if a bit in a bit field is one.
 func CheckBit(bitfield []byte, index int) (bool, error) {

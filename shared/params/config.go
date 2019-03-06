@@ -53,7 +53,7 @@ type BeaconChainConfig struct {
 	// Time parameters constants.
 	SecondsPerSlot               uint64 // SecondsPerSlot is how many seconds are in a single slot.
 	MinAttestationInclusionDelay uint64 // MinAttestationInclusionDelay defines how long validator has to wait to include attestation for beacon block.
-	SlotsPerEpoch                uint64 // EpochLength is the number of slots in an epoch.
+	SlotsPerEpoch                uint64 // SlotsPerEpoch is the number of slots in an epoch.
 	MinSeedLookahead             uint64 // SeedLookahead is the duration of randao look ahead seed.
 	ActivationExitDelay          uint64 // EntryExitDelay is the duration a validator has to wait for entry and exit in epoch.
 	EpochsPerEth1VotingPeriod    uint64 //  defines how often the merkle root of deposit receipts get updated in beacon node.
@@ -79,6 +79,7 @@ type BeaconChainConfig struct {
 	RandBytes             uint64 // RandBytes is the number of bytes used as entropy to shuffle validators.
 	SyncPollingInterval   int64  // SyncPollingInterval queries network nodes for sync status.
 	BatchBlockLimit       uint64 // BatchBlockLimit is maximum number of blocks that can be requested for initial sync.
+	SyncEpochLimit        uint64 // SyncEpochLimit is the number of epochs the current node can be behind before it requests for the latest state.
 	MaxNumLog2Validators  uint64 // MaxNumLog2Validators is the Max number of validators in Log2 exists given total ETH supply.
 	LogBlockDelay         int64  // Number of blocks to wait from the current head before processing logs from the deposit contract.
 }
@@ -164,8 +165,9 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	// Prysm constants.
 	DepositsForChainStart: 16384,
 	RandBytes:             3,
-	SyncPollingInterval:   6 * 4, // Query nodes over the network every 4 slots for sync status.
-	BatchBlockLimit:       100,
+	SyncPollingInterval:   6 * 1, // Query nodes over the network every slot for sync status.
+	BatchBlockLimit:       50,
+	SyncEpochLimit:        4,
 	MaxNumLog2Validators:  24,
 	LogBlockDelay:         2, //
 }
@@ -199,12 +201,11 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.DepositsForChainStart = 8
 	demoConfig.SlotsPerEpoch = 8
 	demoConfig.GenesisEpoch = demoConfig.GenesisSlot / 8
-	demoConfig.SecondsPerSlot = 10
 	demoConfig.MinDepositAmount = 100
 	demoConfig.MaxDepositAmount = 3200000
 	demoConfig.EjectionBalance = 1600000
-	demoConfig.SyncPollingInterval = 2 * 4 // Query nodes over the network every 4 slots
-	demoConfig.SyncPollingInterval = 2 * 4 // Query nodes over the network every 4 slots for sync status.
+	demoConfig.SyncPollingInterval = 1 * 10 // Query nodes over the network every slot.
+	demoConfig.Eth1FollowDistance = 16
 
 	return &demoConfig
 }
