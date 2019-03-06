@@ -219,15 +219,15 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch ETH1_FOLLOW_DISTANCE ancestor: %v", err)
 	}
-	// Fetch the deposit root up to the block hash of the ancestor
+	// Fetch the deposit root up to the block height of the ancestor
 	// from the powchain service accordingly.
-	depositRoot, err := bs.powChainService.DepositRootUpToBlockHash(ctx, ancestorHash)
+	depositRoot, err := bs.powChainService.DepositRootUpToBlockHeight(ctx, ancestorHeight)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch deposit root up to block hash: %v", err)
 	}
 	return &pb.Eth1DataResponse{
 		Eth1Data: &pbp2p.Eth1Data{
-			DepositRootHash32: depositRoot[:],
+			DepositRootHash32: depositRoot,
 			BlockHash32:       ancestorHash[:],
 		},
 	}, nil
