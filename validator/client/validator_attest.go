@@ -143,8 +143,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	aggregateSig := createAggregateSignature(slot, attestation, v.key.SecretKey, fork)
 	attestation.AggregateSignature = aggregateSig
 
-	log.Infof("Pubkey: %#x", v.key.PublicKey.Marshal())
-	log.Infof("Aggregate signature: %#x", attestation.AggregateSignature)
+	log.Infof("Signed attestation successfully with signature %#x", attestation.AggregateSignature)
 
 	duration := time.Duration(slot*params.BeaconConfig().SecondsPerSlot+delay) * time.Second
 	timeToBroadcast := time.Unix(int64(v.genesisTime), 0).Add(duration)
