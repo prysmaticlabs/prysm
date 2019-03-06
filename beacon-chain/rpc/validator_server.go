@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -16,7 +17,52 @@ import (
 // and shards in which particular validators need to perform their responsibilities,
 // and more.
 type ValidatorServer struct {
-	beaconDB *db.BeaconDB
+	ctx                context.Context
+	beaconDB           *db.BeaconDB
+	chainService       chainService
+	canonicalStateChan chan *pbp2p.BeaconState
+}
+
+// WaitForActivation checks if a validator public key exists in the active validator registry of the current
+// beacon state, if not, then it creates a stream which listens for canonical states which contain
+// the validator with the public key as an active validator record.
+func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest, stream pb.ValidatorService_WaitForActivationServer) error {
+	if vs.beaconDB.HasValidator(req.Pubkey) {
+		beaconState, err := vs.beaconDB.State(vs.ctx)
+		if err != nil {
+			return fmt.Errorf("could not retrieve beacon state: %v", err)
+		}
+		activeVal, err := vs.retrieveActiveValidator(beaconState, req.Pubkey)
+		if err != nil {
+			return fmt.Errorf("could not retrieve active validator from state: %v", err)
+		}
+		res := &pb.ValidatorActivationResponse{
+			Validator: activeVal,
+		}
+		return stream.Send(res)
+	}
+	sub := vs.chainService.CanonicalStateFeed().Subscribe(vs.canonicalStateChan)
+	defer sub.Unsubscribe()
+	for {
+		select {
+		case beaconState := <-vs.canonicalStateChan:
+			if !vs.beaconDB.HasValidator(req.Pubkey) {
+				continue
+			}
+			activeVal, err := vs.retrieveActiveValidator(beaconState, req.Pubkey)
+			if err != nil {
+				return fmt.Errorf("could not retrieve active validator from state: %v", err)
+			}
+			res := &pb.ValidatorActivationResponse{
+				Validator: activeVal,
+			}
+			return stream.Send(res)
+		case <-sub.Err():
+			return errors.New("subscriber closed, exiting goroutine")
+		case <-vs.ctx.Done():
+			return errors.New("rpc context closed, exiting goroutine")
+		}
+	}
 }
 
 // ValidatorIndex is called by a validator to get its index location that corresponds
@@ -116,4 +162,12 @@ func (vs *ValidatorServer) ValidatorStatus(
 	return &pb.ValidatorStatusResponse{
 		Status: status,
 	}, nil
+}
+
+func (vs *ValidatorServer) retrieveActiveValidator(beaconState *pbp2p.BeaconState, pubkey []byte) (*pbp2p.Validator, error) {
+	validatorIdx, err := vs.beaconDB.ValidatorIndex(pubkey)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve validator index: %v", err)
+	}
+	return beaconState.ValidatorRegistry[validatorIdx], nil
 }
