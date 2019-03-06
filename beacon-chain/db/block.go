@@ -201,7 +201,7 @@ func (db *BeaconDB) HasBlockBySlot(slot uint64) (bool, *pb.BeaconBlock, error) {
 	return exists, block, err
 }
 
-// GetParentBlockBySlot returns a parent block referenced to a block of a given slot number.
+// ParentBlockBySlot returns a parent block referenced to a block of a given slot number.
 func (db *BeaconDB) ParentBlockBySlot(slot uint64) (*pb.BeaconBlock, error) {
 	var block *pb.BeaconBlock
 	slotEnc := encodeSlotNumber(slot)
