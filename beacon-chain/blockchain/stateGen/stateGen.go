@@ -11,7 +11,7 @@ import (
 
 // generates state from the last finalized epoch till the specified slot.
 func GenerateStateFromSlot(db *db.BeaconDB, slot uint64) (*pb.BeaconState, error) {
-	fState, err := db.FinalizedState(slot)
+	fState, err := db.FinalizedState()
 	if err != nil {
 		return nil, err
 	}

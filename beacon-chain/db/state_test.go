@@ -106,3 +106,32 @@ func TestGenesisTime_OK(t *testing.T) {
 		t.Fatalf("Expected %v and %v to be equal", time1, time2)
 	}
 }
+
+func TestFinalizeState_OK(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	genesisTime := uint64(time.Now().Unix())
+	deposits, _ := setupInitialDeposits(t, 10)
+	if err := db.InitializeState(genesisTime, deposits); err != nil {
+		t.Fatalf("Failed to initialize state: %v", err)
+	}
+
+	state, err := db.State()
+	if err != nil {
+		t.Fatalf("Failed to retrieve state: %v", err)
+	}
+
+	if err := db.SaveFinalizedState(state); err != nil {
+		t.Fatalf("Unable to save finalized state")
+	}
+
+	fState, err := db.FinalizedState()
+	if err != nil {
+		t.Fatalf("Unable to retrieve finalized state")
+	}
+
+	if !proto.Equal(fState, state) {
+		t.Error("retrieved and saved finalized are unequal")
+	}
+}

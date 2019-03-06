@@ -105,7 +105,7 @@ func (db *BeaconDB) SaveFinalizedState(beaconState *pb.BeaconState) error {
 	})
 }
 
-func (db *BeaconDB) FinalizedState(slot uint64) (*pb.BeaconState, error) {
+func (db *BeaconDB) FinalizedState() (*pb.BeaconState, error) {
 	var beaconState *pb.BeaconState
 	err := db.view(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
