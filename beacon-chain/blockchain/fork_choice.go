@@ -3,57 +3,12 @@ package blockchain
 import (
 	"fmt"
 
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
-
-// LMDGhost applies the Latest Message Driven, Greediest Heaviest Observed Sub-Tree
-// fork-choice rule defined in the Ethereum Serenity specification for the beacon chain.
-//
-// Spec pseudocode definition:
-//    head = start_block
-//    while 1:
-//        children = get_children(store, head)
-//        if len(children) == 0:
-//            return head
-//        head = max(children, key=get_vote_count)
-func LMDGhost(
-	block *pb.BeaconBlock,
-	state *pb.BeaconState,
-	voteTargets map[uint64]*pb.BeaconBlock,
-	observedBlocks []*pb.BeaconBlock,
-	beaconDB *db.BeaconDB,
-) (*pb.BeaconBlock, error) {
-	head := block
-	for {
-		children, err := b.BlockChildren(head, observedBlocks)
-		if err != nil {
-			return nil, fmt.Errorf("could not fetch block children: %v", err)
-		}
-		if len(children) == 0 {
-			return head, nil
-		}
-		maxChild := children[0]
-		maxChildVotes, err := VoteCount(maxChild, state, voteTargets, beaconDB)
-		if err != nil {
-			return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
-		}
-		for i := 0; i < len(children); i++ {
-			candidateChildVotes, err := VoteCount(children[i], state, voteTargets, beaconDB)
-			if err != nil {
-				return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
-			}
-			if candidateChildVotes > maxChildVotes {
-				maxChild = children[i]
-			}
-		}
-		head = maxChild
-	}
-}
 
 // VoteCount determines the number of votes on a beacon block by counting the number
 // of target blocks that have such beacon block as a common ancestor.
@@ -71,6 +26,9 @@ func VoteCount(block *pb.BeaconBlock, state *pb.BeaconState, targets map[uint64]
 		ancestor, err := BlockAncestor(targetBlock, block.Slot, beaconDB)
 		if err != nil {
 			return 0, err
+		}
+		if ancestor == nil {
+			continue
 		}
 		ancestorRoot, err := hashutil.HashBeaconBlock(ancestor)
 		if err != nil {
@@ -90,15 +48,22 @@ func VoteCount(block *pb.BeaconBlock, state *pb.BeaconState, targets map[uint64]
 // BlockAncestor obtains the ancestor at of a block at a certain slot.
 //
 // Spec pseudocode definition:
-//	Let get_ancestor(store: Store, block: BeaconBlock, slot: SlotNumber) ->
-//	BeaconBlock be the ancestor of block with slot number slot.
-//	The get_ancestor function can be defined recursively as
-//		def get_ancestor(store: Store, block: BeaconBlock, slot: SlotNumber) ->
-//		BeaconBlock: return block if block.slot ==
-//		slot else get_ancestor(store, store.get_parent(block), slot)
+//	def get_ancestor(store: Store, block: BeaconBlock, slot: Slot) -> BeaconBlock:
+//    """
+//    Get the ancestor of ``block`` with slot number ``slot``; return ``None`` if not found.
+//    """
+//    if block.slot == slot:
+//        return block
+//    elif block.slot < slot:
+//        return None
+//    else:
+//        return get_ancestor(store, store.get_parent(block), slot)
 func BlockAncestor(block *pb.BeaconBlock, slot uint64, beaconDB *db.BeaconDB) (*pb.BeaconBlock, error) {
 	if block.Slot == slot {
 		return block, nil
+	}
+	if block.Slot < slot {
+		return nil, nil
 	}
 	parentHash := bytesutil.ToBytes32(block.ParentRootHash32)
 	parent, err := beaconDB.Block(parentHash)
