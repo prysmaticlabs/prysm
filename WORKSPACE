@@ -70,14 +70,16 @@ k8s_repositories()
 
 [k8s_defaults(
     name = "k8s_" + kind,
-    cluster = "minikube",
+    cluster = "minikube",  # DO NOT CHANGE THIS!
     kind = kind,
 ) for kind in [
     "cluster_role",
     "configmap",
     "deploy",
     "ingress",
+    "issuer",
     "job",
+    "gateway",
     "namespace",
     "pod",
     "priority_class",
@@ -180,7 +182,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p",
-    commit = "c4b498537c1845292f8fbba6fddec3587eb15698",  # v0.0.1
+    commit = "2308ba3c0036ddf8ac390c893b71d946c57a7328",  # v0.0.2
     importpath = "github.com/libp2p/go-libp2p",
 )
 
@@ -374,7 +376,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_nat",
-    commit = "474050eab05bd273cf9928650f9a6ed8231b9bfe",  # v0.0.1
+    commit = "3efa307896b71a07705d8d0cf7f19a4595c62d4f",  # v0.0.2
     importpath = "github.com/libp2p/go-libp2p-nat",
 )
 
@@ -748,7 +750,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_kad_dht",
     build_file_proto_mode = "disable_global",
-    commit = "5bbc7dc86cab146554bc022699b9f8a0546360a3",  # v0.0.3
+    commit = "7bdf621a661616003dcf678d662667c5d476be26",  # v0.0.4
     importpath = "github.com/libp2p/go-libp2p-kad-dht",
 )
 
@@ -833,7 +835,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_autonat",
-    commit = "1d196ecb101a968e32426714ba6aa33d12858a2e",  # v0.0.1
+    commit = "16d66b2ad60fc6b6956b0c2bd332111a94db6dbb",  # v0.0.2
     importpath = "github.com/libp2p/go-libp2p-autonat",
 )
 
@@ -1037,4 +1039,10 @@ go_repository(
     name = "com_github_allegro_bigcache",
     commit = "84a0ff3f153cbd7e280a19029a864bb04b504e62",  # v1.2.0
     importpath = "github.com/allegro/bigcache",
+)
+
+go_repository(
+    name = "org_golang_x_xerrors",
+    commit = "a5947ffaace3e882f334c1750858b4a6a7e52422",
+    importpath = "golang.org/x/xerrors",
 )
