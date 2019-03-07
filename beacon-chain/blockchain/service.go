@@ -10,6 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -36,6 +37,7 @@ type ChainService struct {
 	cancel               context.CancelFunc
 	beaconDB             *db.BeaconDB
 	web3Service          *powchain.Web3Service
+	attsService          *attestation.Service
 	opsPoolService       operationService
 	incomingBlockFeed    *event.Feed
 	incomingBlockChan    chan *pb.BeaconBlock
@@ -52,10 +54,18 @@ type Config struct {
 	BeaconBlockBuf   int
 	IncomingBlockBuf int
 	Web3Service      *powchain.Web3Service
+	AttsService      *attestation.Service
 	BeaconDB         *db.BeaconDB
 	OpsPoolService   operationService
 	DevMode          bool
 	EnablePOWChain   bool
+}
+
+// attestationTarget consists of validator index and block, it's
+// used to represent which validator index has voted which block.
+type attestationTarget struct {
+	validatorIndex uint64
+	block          *pb.BeaconBlock
 }
 
 // NewChainService instantiates a new service instance that will
@@ -68,6 +78,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		beaconDB:             cfg.BeaconDB,
 		web3Service:          cfg.Web3Service,
 		opsPoolService:       cfg.OpsPoolService,
+		attsService:          cfg.AttsService,
 		incomingBlockChan:    make(chan *pb.BeaconBlock, cfg.IncomingBlockBuf),
 		chainStartChan:       make(chan time.Time),
 		incomingBlockFeed:    new(event.Feed),
@@ -105,10 +116,12 @@ func (c *ChainService) Start() {
 				DepositRootHash32: depositRoot[:],
 				BlockHash32:       latestBlockHash[:],
 			}
-			if err := c.initializeBeaconChain(genesisTime, initialDeposits, eth1Data); err != nil {
+			beaconState, err := c.initializeBeaconChain(genesisTime, initialDeposits, eth1Data)
+			if err != nil {
 				log.Fatalf("Could not initialize beacon chain: %v", err)
 			}
 			c.stateInitializedFeed.Send(genesisTime)
+			c.canonicalStateFeed.Send(beaconState)
 			go c.blockProcessing()
 			subChainStart.Unsubscribe()
 		}()
@@ -119,29 +132,29 @@ func (c *ChainService) Start() {
 // based on a genesis timestamp value obtained from the ChainStart event emitted
 // by the ETH1.0 Deposit Contract and the POWChain service of the node.
 func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*pb.Deposit,
-	eth1data *pb.Eth1Data) error {
+	eth1data *pb.Eth1Data) (*pb.BeaconState, error) {
 	log.Info("ChainStart time reached, starting the beacon chain!")
 	c.genesisTime = genesisTime
 	unixTime := uint64(genesisTime.Unix())
 	if err := c.beaconDB.InitializeState(unixTime, deposits, eth1data); err != nil {
-		return fmt.Errorf("could not initialize beacon state to disk: %v", err)
+		return nil, fmt.Errorf("could not initialize beacon state to disk: %v", err)
 	}
 	beaconState, err := c.beaconDB.State(c.ctx)
 	if err != nil {
-		return fmt.Errorf("could not attempt fetch beacon state: %v", err)
+		return nil, fmt.Errorf("could not attempt fetch beacon state: %v", err)
 	}
 	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
-		return fmt.Errorf("could not hash beacon state: %v", err)
+		return nil, fmt.Errorf("could not hash beacon state: %v", err)
 	}
 	genBlock := b.NewGenesisBlock(stateRoot[:])
 	if err := c.beaconDB.SaveBlock(genBlock); err != nil {
-		return fmt.Errorf("could not save genesis block to disk: %v", err)
+		return nil, fmt.Errorf("could not save genesis block to disk: %v", err)
 	}
 	if err := c.beaconDB.UpdateChainHead(genBlock, beaconState); err != nil {
-		return fmt.Errorf("could not set chain head, %v", err)
+		return nil, fmt.Errorf("could not set chain head, %v", err)
 	}
-	return nil
+	return beaconState, nil
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.
@@ -419,4 +432,23 @@ func (c *ChainService) deleteValidatorIdx(state *pb.BeaconState) error {
 	}
 	delete(validators.ExitedValidators, helpers.CurrentEpoch(state))
 	return nil
+}
+
+// attestationTargets retrieves the list of attestation targets since last finalized epoch,
+// each attestation target consists of validator index and its attestation target (i.e. the block
+// which the validator attested to)
+func (c *ChainService) attestationTargets(state *pb.BeaconState) ([]*attestationTarget, error) {
+	indices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, state.FinalizedEpoch)
+	attestationTargets := make([]*attestationTarget, len(indices))
+	for i, index := range indices {
+		block, err := c.attsService.LatestAttestationTarget(c.ctx, index)
+		if err != nil {
+			return nil, fmt.Errorf("could not retrieve attestation target: %v", err)
+		}
+		attestationTargets[i] = &attestationTarget{
+			validatorIndex: index,
+			block:          block,
+		}
+	}
+	return attestationTargets, nil
 }

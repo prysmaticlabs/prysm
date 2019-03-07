@@ -126,12 +126,18 @@ func TestComputeStateRoot_OK(t *testing.T) {
 func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	proposerServer := &ProposerServer{
-		operationService: &mockOperationService{},
-		beaconDB:         db,
-	}
 	beaconState := &pbp2p.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().MinAttestationInclusionDelay,
+		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().MinAttestationInclusionDelay + 100,
+	}
+	proposerServer := &ProposerServer{
+		operationService: &mockOperationService{
+			pendingAttestations: []*pbp2p.Attestation{
+				&pbp2p.Attestation{Data: &pbp2p.AttestationData{
+					Slot: beaconState.Slot - params.BeaconConfig().MinAttestationInclusionDelay,
+				}},
+			},
+		},
+		beaconDB: db,
 	}
 	if err := db.SaveState(beaconState); err != nil {
 		t.Fatal(err)
@@ -150,7 +156,13 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	currentSlot := params.BeaconConfig().GenesisSlot + 100000
+
+	// Edge case: current slot is at the end of an epoch. The pending attestation
+	// for the next slot should come from currentSlot + 1.
+	currentSlot := helpers.StartSlot(
+		params.BeaconConfig().GenesisEpoch+10,
+	) - 1
+
 	opService := &mockOperationService{
 		pendingAttestations: []*pbp2p.Attestation{
 			// Expired attestations
@@ -158,6 +170,7 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot - 10000}},
 			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot - 5000}},
 			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot - 100}},
+			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot - params.BeaconConfig().SlotsPerEpoch}},
 			// Non-expired attestations
 			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot - 5}},
 			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot - 2}},

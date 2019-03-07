@@ -29,7 +29,7 @@ type Service struct {
 	incomingChan  chan *pb.Attestation
 	// store is the mapping of individual
 	// validator's public key to it's latest attestation.
-	store map[[48]byte]*pb.Attestation
+	Store map[[48]byte]*pb.Attestation
 }
 
 // Config options for the service.
@@ -51,7 +51,7 @@ func NewAttestationService(ctx context.Context, cfg *Config) *Service {
 		broadcastChan: make(chan *pb.Attestation, cfg.BroadcastAttestationBuf),
 		incomingFeed:  new(event.Feed),
 		incomingChan:  make(chan *pb.Attestation, cfg.ReceiveAttestationBuf),
-		store:         make(map[[48]byte]*pb.Attestation),
+		Store:         make(map[[48]byte]*pb.Attestation),
 	}
 }
 
@@ -87,24 +87,24 @@ func (a *Service) IncomingAttestationFeed() *event.Feed {
 //	Let `get_latest_attestation(store: Store, validator_index: ValidatorIndex) ->
 //		Attestation` be the attestation with the highest slot number in `store`
 //		from the validator with the given `validator_index`
-func (a *Service) LatestAttestation(ctx context.Context, index int) (*pb.Attestation, error) {
+func (a *Service) LatestAttestation(ctx context.Context, index uint64) (*pb.Attestation, error) {
 	state, err := a.beaconDB.State(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	// return error if it's an invalid validator index.
-	if index >= len(state.ValidatorRegistry) {
+	if index >= uint64(len(state.ValidatorRegistry)) {
 		return nil, fmt.Errorf("invalid validator index %d", index)
 	}
 	pubKey := bytesutil.ToBytes48(state.ValidatorRegistry[index].Pubkey)
 
 	// return error if validator has no attestation.
-	if _, exists := a.store[pubKey]; !exists {
+	if _, exists := a.Store[pubKey]; !exists {
 		return nil, fmt.Errorf("validator index %d does not have an attestation", index)
 	}
 
-	return a.store[pubKey], nil
+	return a.Store[pubKey], nil
 }
 
 // LatestAttestationTarget returns the target block the validator index attested to,
@@ -114,7 +114,7 @@ func (a *Service) LatestAttestation(ctx context.Context, index int) (*pb.Attesta
 //	Let `get_latest_attestation_target(store: Store, validator_index: ValidatorIndex) ->
 //		BeaconBlock` be the target block in the attestation
 //		`get_latest_attestation(store, validator_index)`.
-func (a *Service) LatestAttestationTarget(ctx context.Context, index int) (*pb.BeaconBlock, error) {
+func (a *Service) LatestAttestationTarget(ctx context.Context, index uint64) (*pb.BeaconBlock, error) {
 	attestation, err := a.LatestAttestation(ctx, index)
 	if err != nil {
 		return nil, fmt.Errorf("could not get attestation: %v", err)
@@ -187,12 +187,12 @@ func (a *Service) updateLatestAttestation(ctx context.Context, attestation *pb.A
 		pubkey := bytesutil.ToBytes48(state.ValidatorRegistry[i].Pubkey)
 		newAttestationSlot := attestation.Data.Slot
 		currentAttestationSlot := uint64(0)
-		if _, exists := a.store[pubkey]; exists {
-			currentAttestationSlot = a.store[pubkey].Data.Slot
+		if _, exists := a.Store[pubkey]; exists {
+			currentAttestationSlot = a.Store[pubkey].Data.Slot
 		}
 		// If the attestation is newer than this attester's one in pool.
 		if newAttestationSlot > currentAttestationSlot {
-			a.store[pubkey] = attestation
+			a.Store[pubkey] = attestation
 		}
 	}
 	return nil
