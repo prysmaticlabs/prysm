@@ -16,11 +16,11 @@ func GenerateTrieFromItems(items [][]byte, depth int) (*MerkleTrie, error) {
 	if len(items) == 0 {
 		return nil, errors.New("no items provided to generate Merkle trie")
 	}
-	leaves := [][32]byte{}
+	leaves := make([][32]byte, len(items))
 	// We then construct the leaves of the trie by hashing every
 	// value in the items slice.
-	for _, val := range items {
-		leaves = append(leaves, hashutil.Hash(val))
+	for i, val := range items {
+		leaves[i] = hashutil.Hash(val)
 	}
 	branches := [][][32]byte{leaves}
 	// Prepend the leaves to the branches.
@@ -107,7 +107,7 @@ func parentHash(left [32]byte, right [32]byte) [32]byte {
 // nodes to compute the nodes in the trie above.
 func hashLayer(layer [][32]byte) [][32]byte {
 	chunks := partition(layer, 2)
-	topLayer := [][32]byte{}
+    topLayer := [][32]byte{}
 	for i := 0; i < len(chunks); i++ {
 		topLayer = append(topLayer, parentHash(chunks[i][0], chunks[i][1]))
 	}
