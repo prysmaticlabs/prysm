@@ -13,6 +13,10 @@
 // Read more about gossipsub at https://github.com/vyzo/gerbil-simsub
 package p2p
 
+import "github.com/libp2p/go-libp2p-peer"
+
+const AnyPeer = peer.ID("AnyPeer")
+
 // Use this file for interfaces only!
 
 // Adapter is used to create middleware.

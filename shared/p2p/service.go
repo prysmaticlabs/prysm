@@ -16,6 +16,7 @@ import (
 	host "github.com/libp2p/go-libp2p-host"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
 	libp2pnet "github.com/libp2p/go-libp2p-net"
+	peer "github.com/libp2p/go-libp2p-peer"
 	protocol "github.com/libp2p/go-libp2p-protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
@@ -31,7 +32,7 @@ const maxMessageSize = 1 << 20
 // Sender represents a struct that is able to relay information via p2p.
 // Server implements this interface.
 type Sender interface {
-	Send(msg interface{}, peer Peer)
+	Send(ctx context.Context, msg proto.Message, peer peer.ID) error
 }
 
 // Server is a placeholder for a p2p service. To be designed.
@@ -187,13 +188,13 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 		adapters[i], adapters[opp] = adapters[opp], adapters[i]
 	}
 
-	handler := func(msg proto.Message) {
+	handler := func(msg proto.Message, peerID peer.ID) {
 		log.WithField("topic", topic).Debug("Processing incoming message")
 		var h Handler = func(pMsg Message) {
 			s.emit(pMsg, feed)
 		}
 
-		pMsg := Message{Ctx: s.ctx, Data: msg}
+		pMsg := Message{Ctx: s.ctx, Data: msg, Peer: peerID}
 		for _, adapter := range adapters {
 			h = adapter(h)
 		}
@@ -201,8 +202,8 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 		h(pMsg)
 	}
 
-	s.host.SetStreamHandler(protocol.ID(prysmProtocolPrefix+"/"+topic), func(s libp2pnet.Stream) {
-		r := ggio.NewDelimitedReader(s, maxMessageSize)
+	s.host.SetStreamHandler(protocol.ID(prysmProtocolPrefix+"/"+topic), func(stream libp2pnet.Stream) {
+		r := ggio.NewDelimitedReader(stream, maxMessageSize)
 
 		msg := proto.Clone(message)
 		for {
@@ -211,7 +212,7 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 				return
 			}
 
-			handler(msg)
+			handler(msg, stream.Conn().RemotePeer())
 		}
 	})
 
@@ -253,7 +254,7 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 				continue
 			}
 
-			handler(d)
+			handler(d, msg.GetFrom())
 		}
 	}()
 }
@@ -287,9 +288,26 @@ func (s *Server) Subscribe(msg proto.Message, channel chan Message) event.Subscr
 	return s.Feed(msg).Subscribe(channel)
 }
 
-// Send a message to a specific peer.
-func (s *Server) Send(msg proto.Message, peer Peer) {
-	// TODO
+// Send a message to a specific peer. If the peerID is set to p2p.AnyPeer, then
+// this method will act as a broadcast.
+func (s *Server) Send(ctx context.Context, msg proto.Message, peerID peer.ID) error {
+	ctx, span := trace.StartSpan(ctx, "p2p.Send")
+	defer span.End()
+	if peerID == AnyPeer {
+		s.Broadcast(msg)
+		return nil
+	}
+
+	topic := s.topicMapping[messageType(msg)]
+	pid := protocol.ID(prysmProtocolPrefix + "/" + topic)
+	stream, err := s.host.NewStream(ctx, peerID, pid)
+	if err != nil {
+		return err
+	}
+
+	w := ggio.NewDelimitedWriter(stream)
+	defer w.Close()
+	return w.WriteMsg(msg)
 }
 
 // Broadcast publishes a message to all localized peers using gossipsub.
