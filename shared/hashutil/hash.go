@@ -1,9 +1,14 @@
 package hashutil
 
 import (
+	"errors"
+	"reflect"
+
 	"github.com/gogo/protobuf/proto"
 	"golang.org/x/crypto/sha3"
 )
+
+var ErrNilProto = errors.New("cannot hash a nil protobuf message")
 
 // Hash defines a function that returns the
 // Keccak-256/SHA3 hash of the data passed in.
@@ -34,7 +39,18 @@ func RepeatHash(data [32]byte, numTimes uint64) [32]byte {
 }
 
 // HashProto hashes a protocol buffer message using Keccak-256/SHA3.
-func HashProto(msg proto.Message) ([32]byte, error) {
+func HashProto(msg proto.Message) (result [32]byte, err error) {
+	// Hashing a proto with nil pointers will cause a panic in the unsafe
+	// proto.Marshal library.
+	defer func() {
+		if r := recover(); r != nil {
+			err = ErrNilProto
+		}
+	}()
+
+	if msg == nil || reflect.ValueOf(msg).IsNil() {
+		return [32]byte{}, ErrNilProto
+	}
 	data, err := proto.Marshal(msg)
 	if err != nil {
 		return [32]byte{}, err
