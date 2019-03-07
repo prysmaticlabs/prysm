@@ -417,7 +417,7 @@ func (s *InitialSync) requestBatchedBlocks(startSlot uint64, endSlot uint64) {
 	_, span := trace.StartSpan(context.Background(), "beacon-chain.sync.initial-sync.requestBatchedBlocks")
 	defer span.End()
 	sentBatchedBlockReq.Inc()
-	if startSlot >= endSlot {
+	if startSlot > endSlot {
 		log.Debugf("Invalid batched request from slot %d to %d", startSlot, endSlot)
 		return
 	}
