@@ -29,6 +29,7 @@ func generateTestGenesisStateAndBlock(
 		depositInput := &pb.DepositInput{
 			Pubkey: pubkey,
 		}
+
 		balance := params.BeaconConfig().MaxDepositAmount
 		depositData, err := helpers.EncodeDepositData(depositInput, balance, time.Now().Unix())
 		if err != nil {
