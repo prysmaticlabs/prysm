@@ -220,6 +220,12 @@ func (w *Web3Service) DepositRoot() [32]byte {
 	return w.depositTrie.Root()
 }
 
+// DepositTrie returns the sparse Merkle trie used for storing
+// deposits from the ETH1.0 deposit contract.
+func (w *Web3Service) DepositTrie() *trieutil.MerkleTrie {
+	return w.depositTrie
+}
+
 // LatestBlockHeight in the ETH1.0 chain.
 func (w *Web3Service) LatestBlockHeight() *big.Int {
 	return w.blockHeight
@@ -268,17 +274,28 @@ func (w *Web3Service) BlockHashByHeight(ctx context.Context, height *big.Int) (c
 		return blkInfo.Hash, nil
 	}
 	span.AddAttributes(trace.BoolAttribute("blockCacheHit", false))
-
 	block, err := w.blockFetcher.BlockByNumber(w.ctx, height)
 	if err != nil {
 		return [32]byte{}, fmt.Errorf("could not query block with given height: %v", err)
 	}
-
 	if err := w.blockCache.AddBlock(block); err != nil {
 		return [32]byte{}, err
 	}
-
 	return block.Hash(), nil
+}
+
+// RecalculateDepositTrie recomputes the deposit trie given a new
+// list of deposits and the existing deposits in the current trie.
+func (w *Web3Service) RecalculateDepositTrie(deposits []*pb.Deposit) error {
+	existingDeposits := w.depositTrie.Items()
+	sparseMerkleTrie, err := trieutil.GenerateTrieFromItems(
+		append(existingDeposits, deposits...),
+		int(params.BeaconConfig().DepositContractTreeDepth),
+	)
+	if err != nil {
+		return fmt.Errorf("could not update deposit trie: %v", err)
+	}
+	w.depositTrie = sparseMerkleTrie
 }
 
 // Client for interacting with the ETH1.0 chain.
@@ -376,7 +393,10 @@ func (w *Web3Service) ProcessChainStartLog(depositLog gethTypes.Log) {
 	// We then update the in-memory deposit trie from the chain start
 	// deposits at this point, as this trie will be later needed for
 	// incoming, post-chain start deposits.
-	sparseMerkleTrie, err := trieutil.GenerateTrieFromItems(w.chainStartDeposits, int(params.BeaconConfig().DepositContractTreeDepth))
+	sparseMerkleTrie, err := trieutil.GenerateTrieFromItems(
+		w.chainStartDeposits,
+		int(params.BeaconConfig().DepositContractTreeDepth),
+	)
 	if err != nil {
 		log.Fatalf("Unable to generate deposit trie from ChainStart deposits: %v", err)
 	}

@@ -10,6 +10,7 @@ import (
 // across ETH2.0 Phase 0 functionality.
 type MerkleTrie struct {
 	branches [][][32]byte
+	originalItems [][]byte // list of provided items before hashing them into leaves.
 }
 
 // GenerateTrieFromItems constructs a Merkle trie from a sequence of byte slices.
@@ -37,7 +38,12 @@ func GenerateTrieFromItems(items [][]byte, depth int) (*MerkleTrie, error) {
 	for i, j := 0, len(branches)-1; i < j; i, j = i+1, j-1 {
 		branches[i], branches[j] = branches[j], branches[i]
 	}
-	return &MerkleTrie{branches}, nil
+	return &MerkleTrie{branches: branches, originalItems: items}, nil
+}
+
+// Items returns the original items that were hashed into leaves of the Merkle trie.
+func (m *MerkleTrie) Items() [][]byte {
+	return m.originalItems
 }
 
 // VerifyMerkleProof verifies a Merkle branch against a root of a trie.

@@ -6,6 +6,8 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	"github.com/gogo/protobuf/proto"
+	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -331,6 +333,10 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	log.WithField("slotNumber", block.Slot-params.BeaconConfig().GenesisSlot).Info(
 		"Executing state transition")
 
+	// We check what the latest ETH1 data is in the state before
+	// executing any state transitions in case it changes.
+	latestEth1Data := beaconState.LatestEth1Data
+
 	// Check for skipped slots.
 	for beaconState.Slot < block.Slot-1 {
 		beaconState, err = state.ExecuteStateTransition(
@@ -390,8 +396,24 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	for _, dep := range block.Body.Deposits {
 		c.beaconDB.RemovePendingDeposit(c.ctx, dep)
 	}
-
 	log.WithField("hash", fmt.Sprintf("%#x", blockRoot)).Debug("Processed beacon block")
+
+	// If the ETH1 data of the state has changed, we update the deposit trie
+	// of the powchain service by fetching the pending deposits up to that latest ETH1 data's
+	// corresponding block hash.
+	if !proto.Equal(beaconState.LatestEth1Data, latestEth1Data) {
+		hash := bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockHash32)
+		_, blockHeight, err := c.web3Service.BlockExists(c.ctx, hash)
+		if err != nil {
+            return nil, fmt.Errorf("could not verify latest eth1 data block exists: %v", err)
+		}
+		behindFollowDistance := blockHeight.Sub(blockHeight, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
+		pendingDeps := c.beaconDB.PendingDeposits(c.ctx, behindFollowDistance)
+		if err := c.web3Service.RecalculateDepositTrie(pendingDeps); err != nil {
+			return nil, fmt.Errorf("could not update deposit trie after latest eth1data changed: %v", err)
+		}
+	}
+
 	return beaconState, nil
 }
 
