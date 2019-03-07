@@ -471,9 +471,9 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 		return
 	}
 
-	if attestation.Data.Slot < beaconState.Slot - params.BeaconConfig().SlotsPerEpoch {
+	if attestation.Data.Slot < beaconState.Slot-params.BeaconConfig().SlotsPerEpoch {
 		log.Debugf("Skipping received attestation with slot smaller than one epoch ago, %d < %d",
-			attestation.Data.Slot, beaconState.Slot - params.BeaconConfig().SlotsPerEpoch)
+			attestation.Data.Slot, beaconState.Slot-params.BeaconConfig().SlotsPerEpoch)
 		return
 	}
 
