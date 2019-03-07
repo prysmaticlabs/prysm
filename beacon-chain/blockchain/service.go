@@ -469,14 +469,18 @@ func (c *ChainService) blockChildren(block *pb.BeaconBlock, state *pb.BeaconStat
 		return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
 	}
 	seenRoots[blockRoot] = true
-
-	startSlot := block.Slot + 1
+	startSlot := block.Slot
 	currentSlot := state.Slot
-	for i := startSlot; i < currentSlot; i++ {
+	for i := startSlot; i <= currentSlot; i++ {
 		block, err := c.beaconDB.BlockBySlot(i)
 		if err != nil {
 			return nil, fmt.Errorf("could not get block by slot: %v", err)
 		}
+		// Continue if there's a skip block.
+		if block == nil {
+			continue
+		}
+
 		parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
 		if seenRoots[parentRoot] {
 			blockRoot, err := hashutil.HashBeaconBlock(block)
