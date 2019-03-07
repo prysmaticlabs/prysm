@@ -443,14 +443,14 @@ func ProcessBlockAttestations(
 func verifyAttestationSig(beaconState *pb.BeaconState, att *pb.Attestation) (bool, error) {
 	attesterIndices, err := helpers.AttestationParticipants(beaconState, att.Data, att.AggregationBitfield)
 	if err != nil {
-		return false, fmt.Errorf("could not get custody bit 1 attestation participants: %v", err)
+		return false, fmt.Errorf("could not get attestation participants: %v", err)
 	}
 
 	attestorPubKeys := make([]*bls.PublicKey, len(attesterIndices))
 	for idx, participantIndex := range attesterIndices {
 		pubkey, err := bls.PublicKeyFromBytes(beaconState.ValidatorRegistry[participantIndex].Pubkey)
 		if err != nil {
-			return false, fmt.Errorf("could not deserialize proposer public key: %v", err)
+			return false, fmt.Errorf("could not deserialize attestor public key: %v", err)
 		}
 
 		attestorPubKeys[idx] = pubkey
@@ -577,7 +577,7 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 			return fmt.Errorf("could not verify aggregate signature")
 		}
 		if !verified {
-			return fmt.Errorf("attestation did not pass verification")
+			return fmt.Errorf("could not verify attestation")
 		}
 	}
 	return nil
