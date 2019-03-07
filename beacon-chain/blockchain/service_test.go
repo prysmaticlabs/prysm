@@ -1080,14 +1080,14 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	defer internal.TeardownDB(t, beaconDB)
 
 	state := &pb.BeaconState{
-		Slot: 10,
+		Slot:              10,
 		ValidatorBalances: []uint64{params.BeaconConfig().MaxDepositAmount},
 	}
 
 	chainService := setupBeaconChain(t, false, beaconDB, true, nil)
 
 	// Construct the following chain:
-	// B1 <- B2 (State is slot 2)
+	// B1 - B2 (State is slot 2)
 	block1 := &pb.BeaconBlock{
 		Slot:             1,
 		ParentRootHash32: []byte{'A'},
@@ -1132,7 +1132,7 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	}
 }
 
-func TestLMDGhost_3WayChainSplits(t *testing.T) {
+func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 
@@ -1149,7 +1149,7 @@ func TestLMDGhost_3WayChainSplits(t *testing.T) {
 
 	// Construct the following chain:
 	//    /- B2
-	// B1  - B3 (State is slot 2)
+	// B1  - B3 (State is slot 10)
 	//    \- B4
 	block1 := &pb.BeaconBlock{
 		Slot:             1,
@@ -1223,3 +1223,129 @@ func TestLMDGhost_3WayChainSplits(t *testing.T) {
 	}
 }
 
+func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
+
+	state := &pb.BeaconState{
+		Slot: 10,
+		ValidatorBalances: []uint64{
+			params.BeaconConfig().MaxDepositAmount,
+			params.BeaconConfig().MaxDepositAmount,
+			params.BeaconConfig().MaxDepositAmount,
+			params.BeaconConfig().MaxDepositAmount},
+	}
+
+	chainService := setupBeaconChain(t, false, beaconDB, true, nil)
+
+	// Construct the following chain:
+	//    /- B2 - B4 - B6
+	// B1  - B3 - B5 (State is slot 10)
+	block1 := &pb.BeaconBlock{
+		Slot:             1,
+		ParentRootHash32: []byte{'A'},
+	}
+	root1, err := hashutil.HashBeaconBlock(block1)
+	if err != nil {
+		t.Fatalf("Could not hash block: %v", err)
+	}
+	err = chainService.beaconDB.SaveBlock(block1)
+	if err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	err = chainService.beaconDB.UpdateChainHead(block1, state)
+	if err != nil {
+		t.Fatalf("Could update chain head: %v", err)
+	}
+
+	block2 := &pb.BeaconBlock{
+		Slot:             2,
+		ParentRootHash32: root1[:],
+	}
+	root2, err := hashutil.HashBeaconBlock(block2)
+	if err != nil {
+		t.Fatalf("Could not hash block: %v", err)
+	}
+	err = chainService.beaconDB.SaveBlock(block2)
+	if err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	err = chainService.beaconDB.UpdateChainHead(block2, state)
+	if err != nil {
+		t.Fatalf("Could update chain head: %v", err)
+	}
+
+	block3 := &pb.BeaconBlock{
+		Slot:             3,
+		ParentRootHash32: root1[:],
+	}
+	root3, err := hashutil.HashBeaconBlock(block3)
+	if err != nil {
+		t.Fatalf("Could not hash block: %v", err)
+	}
+	err = chainService.beaconDB.SaveBlock(block3)
+	if err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	err = chainService.beaconDB.UpdateChainHead(block3, state)
+	if err != nil {
+		t.Fatalf("Could update chain head: %v", err)
+	}
+
+	block4 := &pb.BeaconBlock{
+		Slot:             4,
+		ParentRootHash32: root2[:],
+	}
+	root4, err := hashutil.HashBeaconBlock(block4)
+	if err != nil {
+		t.Fatalf("Could not hash block: %v", err)
+	}
+	err = chainService.beaconDB.SaveBlock(block4)
+	if err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	err = chainService.beaconDB.UpdateChainHead(block4, state)
+	if err != nil {
+		t.Fatalf("Could update chain head: %v", err)
+	}
+
+	block5 := &pb.BeaconBlock{
+		Slot:             5,
+		ParentRootHash32: root3[:],
+	}
+	err = chainService.beaconDB.SaveBlock(block5)
+	if err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	err = chainService.beaconDB.UpdateChainHead(block5, state)
+	if err != nil {
+		t.Fatalf("Could update chain head: %v", err)
+	}
+
+	block6 := &pb.BeaconBlock{
+		Slot:             6,
+		ParentRootHash32: root4[:],
+	}
+	err = chainService.beaconDB.SaveBlock(block6)
+	if err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	err = chainService.beaconDB.UpdateChainHead(block6, state)
+	if err != nil {
+		t.Fatalf("Could update chain head: %v", err)
+	}
+
+	// Give block 5 the most votes (2).
+	voteTargets := make(map[uint64]*pb.BeaconBlock)
+	voteTargets[0] = block6
+	voteTargets[1] = block5
+	voteTargets[2] = block5
+	// LMDGhost should pick block 5.
+	head, err := chainService.lmdGhost(block1, state, voteTargets)
+	if err != nil {
+		t.Fatalf("Could not run LMD GHOST: %v", err)
+	}
+	if !reflect.DeepEqual(block5, head) {
+		t.Errorf("Expected head to equal %v, received %v", block5, head)
+	}
+}

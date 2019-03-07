@@ -541,7 +541,6 @@ func (c *ChainService) lmdGhost(
 		}
 		for i := 0; i < len(children); i++ {
 			candidateChildVotes, err := VoteCount(children[i], state, voteTargets, c.beaconDB)
-			fmt.Println(children[i].Slot, candidateChildVotes)
 			if err != nil {
 				return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
 			}
@@ -552,4 +551,3 @@ func (c *ChainService) lmdGhost(
 		head = maxChild
 	}
 }
-
