@@ -254,7 +254,7 @@ func TestProcessBlock_IncorrectAggregateSig(t *testing.T) {
 			VoluntaryExits:    exits,
 		},
 	}
-	want := "attestation did not pass verification"
+	want := "aggregate signature did not verify"
 	if _, err := state.ProcessBlock(context.Background(), beaconState, block, true); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}

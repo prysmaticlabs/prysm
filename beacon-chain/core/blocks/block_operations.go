@@ -134,7 +134,7 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 		"pubkey":   fmt.Sprintf("%#x", proposer.Pubkey),
 		"epochSig": fmt.Sprintf("%#x", sig.Marshal()),
 	}).Info("Verifying randao")
-	if !sig.Verify(buf, pub, domain) {
+	if !sig.Verify(pub, buf, domain) {
 		return fmt.Errorf("block randao reveal signature did not verify")
 	}
 	return nil
@@ -456,7 +456,9 @@ func verifyAttestationSig(beaconState *pb.BeaconState, att *pb.Attestation) (boo
 		attestorPubKeys[idx] = pubkey
 	}
 
-	pubkey := attestorPubKeys[0]
+	aggregatePubkeys := []*bls.PublicKey{
+		bls.AggregatePublicKeys(attestorPubKeys),
+	}
 
 	attestationDataHash, err := hashutil.HashProto(&pb.AttestationDataAndCustodyBit{
 		Data:       att.Data,
@@ -465,6 +467,9 @@ func verifyAttestationSig(beaconState *pb.BeaconState, att *pb.Attestation) (boo
 	if err != nil {
 		return false, fmt.Errorf("could not hash attestation data: %v", err)
 	}
+	messageHashes := [][]byte{
+		attestationDataHash[:],
+	}
 
 	sig, err := bls.SignatureFromBytes(att.AggregateSignature)
 	currentEpoch := helpers.CurrentEpoch(beaconState)
@@ -472,12 +477,12 @@ func verifyAttestationSig(beaconState *pb.BeaconState, att *pb.Attestation) (boo
 	domain := forkutils.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainAttestation)
 
 	log.WithFields(logrus.Fields{
-		"pubkey":       fmt.Sprintf("%#x", pubkey.Marshal()),
-		"messageHash":  attestationDataHash[:],
-		"aggregateSig": fmt.Sprintf("%#x", sig.Marshal()),
+		"aggregatePubkeys": fmt.Sprintf("%#x", aggregatePubkeys),
+		"messageHashes":    messageHashes,
+		"aggregateSig":     fmt.Sprintf("%#x", sig.Marshal()),
 	}).Info("Verifying attestation")
 
-	return sig.Verify(attestationDataHash[:], pubkey, domain), nil
+	return sig.VerifyMultiple(aggregatePubkeys, messageHashes, domain), nil
 }
 
 func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifySignatures bool) error {
@@ -577,7 +582,7 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 			return fmt.Errorf("could not verify aggregate signature")
 		}
 		if !verified {
-			return fmt.Errorf("could not verify attestation")
+			return fmt.Errorf("aggregate signature did not verify")
 		}
 	}
 	return nil

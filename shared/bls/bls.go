@@ -95,7 +95,7 @@ func (p *PublicKey) Aggregate(p2 *PublicKey) *PublicKey {
 }
 
 // Verify a bls signature given a public key, a message, and a domain.
-func (s *Signature) Verify(msg []byte, pub *PublicKey, domain uint64) bool {
+func (s *Signature) Verify(pub *PublicKey, msg []byte, domain uint64) bool {
 	return gobls.Verify(msg, pub.val, s.val, domain)
 }
 
