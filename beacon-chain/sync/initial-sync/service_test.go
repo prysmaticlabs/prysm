@@ -391,3 +391,27 @@ func TestRequestBlocksBySlot_OK(t *testing.T) {
 
 	hook.Reset()
 }
+func TestSafelyHandleMessage(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	safelyHandleMessage(func(_ p2p.Message) {
+		panic("bad!")
+	}, p2p.Message{
+		Data: &pb.BeaconBlock{},
+	})
+
+	testutil.AssertLogsContain(t, hook, "Panicked when handling p2p message!")
+}
+
+func TestSafelyHandleMessage_NoData(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	safelyHandleMessage(func(_ p2p.Message) {
+		panic("bad!")
+	}, p2p.Message{})
+
+	entry := hook.LastEntry()
+	if entry.Data["msg"] != "message contains no data" {
+		t.Errorf("Message logged was not what was expected: %s", entry.Data["msg"])
+	}
+}
