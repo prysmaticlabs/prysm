@@ -1,6 +1,9 @@
 package trieutil
 
-import "github.com/prysmaticlabs/prysm/shared/hashutil"
+import (
+	"errors"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+)
 
 type MerkleTrie struct {
 	branches [][][32]byte
@@ -43,8 +46,22 @@ func (m *MerkleTrie) BranchIndices(merkleIndex int) []int {
 
 // MerkleProof obtains a Merkle proof for an item at a given
 // index in the Merkle trie up to the root of the trie.
-func (m *MerkleTrie) MerkleProof(merkleIndex int) [][32]byte {
-	return [][32]byte{}
+//if item_index < 0 or item_index >= len(tree[-1]) or tree[-1][item_index] == EmptyNodeHashes[0]:
+//	raise ValidationError("Item index out of range")
+//
+//branch_indices = get_branch_indices(item_index, len(tree))
+//proof_indices = [i ^ 1 for i in branch_indices][:-1]  # get sibling by flipping rightmost bit
+//return tuple(
+//	layer[proof_index]
+//	for layer, proof_index
+//	in zip(reversed(tree), proof_indices)
+//)
+func (m *MerkleTrie) MerkleProof(merkleIndex int) ([][32]byte, error) {
+	lastLevel := m.branches[len(m.branches)]
+	if merkleIndex < 0 || merkleIndex >= len(lastLevel) || lastLevel[merkleIndex] == [32]byte{} {
+		return nil, errors.New("merkle index out of range in trie")
+	}
+	return [][32]byte{}, nil
 }
 
 // parentHash takes a left and right node and hashes their concatenation.
