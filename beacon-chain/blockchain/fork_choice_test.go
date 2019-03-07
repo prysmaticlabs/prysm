@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-	"strings"
 	"testing"
 	"time"
 
@@ -86,7 +85,7 @@ func setupConflictingBlocks(
 	return candidate1, candidate2
 }
 
-func TestVoteCount_ParentDoesNotExist(t *testing.T) {
+func TestVoteCount_ParentDoesNotExistNoVoteCount(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
 	genesisBlock := b.NewGenesisBlock([]byte("stateroot"))
@@ -94,8 +93,7 @@ func TestVoteCount_ParentDoesNotExist(t *testing.T) {
 		t.Fatal(err)
 	}
 	potentialHead := &pb.BeaconBlock{
-		Slot:             5,
-		ParentRootHash32: []byte{}, // We give a bogus parent root hash.
+		ParentRootHash32: []byte{'A'}, // We give a bogus parent root hash.
 	}
 	if err := beaconDB.SaveBlock(potentialHead); err != nil {
 		t.Fatal(err)
@@ -103,9 +101,12 @@ func TestVoteCount_ParentDoesNotExist(t *testing.T) {
 
 	voteTargets := make(map[uint64]*pb.BeaconBlock)
 	voteTargets[0] = potentialHead
-	want := "parent block does not exist"
-	if _, err := VoteCount(genesisBlock, &pb.BeaconState{}, voteTargets, beaconDB); !strings.Contains(err.Error(), want) {
-		t.Fatalf("Expected %s, received %v", want, err)
+	count, err := VoteCount(genesisBlock, &pb.BeaconState{}, voteTargets, beaconDB)
+	if err != nil {
+		t.Fatalf("Could not get vote count: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("Wanted vote count 0, got: %d", count)
 	}
 }
 
@@ -122,11 +123,11 @@ func TestVoteCount_IncreaseCountCorrectly(t *testing.T) {
 	}
 
 	potentialHead := &pb.BeaconBlock{
-		Slot:             5,
+		Slot:             params.BeaconConfig().GenesisSlot + 5,
 		ParentRootHash32: genesisRoot[:],
 	}
 	potentialHead2 := &pb.BeaconBlock{
-		Slot:             6,
+		Slot:             params.BeaconConfig().GenesisSlot + 6,
 		ParentRootHash32: genesisRoot[:],
 	}
 	// We store these potential heads in the DB.
