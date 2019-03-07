@@ -8,6 +8,8 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
+// ErrNilProto can occur when attempting to hash a protobuf message that is nil
+// or has nil objects within lists.
 var ErrNilProto = errors.New("cannot hash a nil protobuf message")
 
 // Hash defines a function that returns the
