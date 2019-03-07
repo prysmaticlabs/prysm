@@ -1038,3 +1038,9 @@ go_repository(
     commit = "84a0ff3f153cbd7e280a19029a864bb04b504e62",  # v1.2.0
     importpath = "github.com/allegro/bigcache",
 )
+
+go_repository(
+    name = "org_golang_x_xerrors",
+    commit = "a5947ffaace3e882f334c1750858b4a6a7e52422",
+    importpath = "golang.org/x/xerrors",
+)
