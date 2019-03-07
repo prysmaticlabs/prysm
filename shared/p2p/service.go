@@ -206,7 +206,11 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 			}
 			if err != nil {
 				log.Errorf("Failed to get next message: %v", err)
-				return
+				continue
+			}
+
+			if msg == nil || msg.GetFrom() == s.host.ID() {
+				continue
 			}
 
 			d := message
@@ -215,6 +219,7 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 				continue
 			}
 
+			log.WithField("topic", topic).Debug("Processing incoming message")
 			var h Handler = func(pMsg Message) {
 				s.emit(pMsg, feed)
 			}
@@ -260,13 +265,7 @@ func (s *Server) Subscribe(msg proto.Message, channel chan Message) event.Subscr
 
 // Send a message to a specific peer.
 func (s *Server) Send(msg proto.Message, peer Peer) {
-	// TODO(#175)
-	// https://github.com/prysmaticlabs/prysm/issues/175
-
-	// TODO(#175): Remove debug log after send is implemented.
-	_ = peer
-	log.Debug("Broadcasting to everyone rather than sending a single peer")
-	s.Broadcast(msg)
+	s.gsub.Publish
 }
 
 // Broadcast publishes a message to all localized peers using gossipsub.
@@ -301,7 +300,8 @@ func (s *Server) Broadcast(msg proto.Message) {
 	} else {
 		log.WithFields(logrus.Fields{
 			"topic": topic,
-		}).Debugf("Broadcasting msg %+v", msg)
+			"msg":   msg,
+		}).Debug("Broadcasting msg")
 	}
 
 	if topic == "" {
