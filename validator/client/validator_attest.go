@@ -17,23 +17,6 @@ import (
 
 var delay = params.BeaconConfig().SecondsPerSlot / 2
 
-func createAggregateSignature(slot uint64, att *pbp2p.Attestation, privKey *bls.SecretKey, fork *pbp2p.Fork) []byte {
-	epoch := slot / params.BeaconConfig().SlotsPerEpoch
-
-	attestationDataHash, err := hashutil.HashProto(&pbp2p.AttestationDataAndCustodyBit{
-		Data:       att.Data,
-		CustodyBit: true,
-	})
-	if err != nil {
-		log.Error("Could not hash attestation data")
-		return nil
-	}
-	log.Infof("Signing attestation for slot: %d", slot)
-	domain := forkutils.DomainVersion(fork, epoch, params.BeaconConfig().DomainAttestation)
-	aggregateSignature := privKey.Sign(attestationDataHash[:], domain)
-	return aggregateSignature.Marshal()
-}
-
 // AttestToBlockHead completes the validator client's attester responsibility at a given slot.
 // It fetches the latest beacon block head along with the latest canonical beacon state
 // information in order to sign the block and include information about the validator's
@@ -140,10 +123,21 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 		return
 	}
 
-	aggregateSig := createAggregateSignature(slot, attestation, v.key.SecretKey, fork)
-	attestation.AggregateSignature = aggregateSig
+	epoch := slot / params.BeaconConfig().SlotsPerEpoch
 
-	log.Infof("Signed attestation successfully with signature %#x", attestation.AggregateSignature)
+	attDataHash, err := hashutil.HashProto(&pbp2p.AttestationDataAndCustodyBit{
+		Data:       attestation.Data,
+		CustodyBit: true,
+	})
+	if err != nil {
+		log.Error("Could not hash attestation data")
+		return
+	}
+	log.Infof("Signing attestation for slot: %d", slot)
+	domain := forkutils.DomainVersion(fork, epoch, params.BeaconConfig().DomainAttestation)
+	aggregateSig := v.key.SecretKey.Sign(attDataHash[:], domain)
+	attestation.AggregateSignature = aggregateSig.Marshal()
+	log.Infof("Attestation signature: %#x", attestation.AggregateSignature)
 
 	duration := time.Duration(slot*params.BeaconConfig().SecondsPerSlot+delay) * time.Second
 	timeToBroadcast := time.Unix(int64(v.genesisTime), 0).Add(duration)
