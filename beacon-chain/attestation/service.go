@@ -140,20 +140,42 @@ func (a *Service) attestationPool() {
 			return
 		// Listen for a newly received incoming attestation from the sync service.
 		case attestation := <-a.incomingChan:
-			enc, err := proto.Marshal(attestation)
-			if err != nil {
-				log.Errorf("Could not marshal incoming attestation to bytes: %v", err)
-				continue
-			}
-			h := hashutil.Hash(enc)
-
-			if err := a.updateLatestAttestation(a.ctx, attestation); err != nil {
-				log.Errorf("Could not update attestation pool: %v", err)
-				continue
-			}
-			log.Infof("Updated attestation pool for attestation %#x", h)
+			safelyHandleAttestation(a.handleAttestation, attestation)
 		}
 	}
+}
+
+// safelyHandleMessage will recover and log any panic that occurs from the
+// function argument.
+func safelyHandleAttestation(fn func(att *pb.Attestation), att *pb.Attestation) {
+	defer func() {
+		if r := recover(); r != nil {
+			printedMsg := "message contains no data"
+			if att != nil {
+				printedMsg = proto.MarshalTextString(att)
+			}
+			log.WithFields(logrus.Fields{
+				"r":   r,
+				"msg": printedMsg,
+			}).Error("Panicked when handling attestation! Recovering...")
+		}
+	}()
+	fn(att)
+}
+
+func (a *Service) handleAttestation(attestation *pb.Attestation) {
+	enc, err := proto.Marshal(attestation)
+	if err != nil {
+		log.Errorf("Could not marshal incoming attestation to bytes: %v", err)
+		return
+	}
+	h := hashutil.Hash(enc)
+
+	if err := a.updateLatestAttestation(a.ctx, attestation); err != nil {
+		log.Errorf("Could not update attestation pool: %v", err)
+		return
+	}
+	log.Infof("Updated attestation pool for attestation %#x", h)
 }
 
 // updateLatestAttestation inputs an new attestation and checks whether

@@ -210,3 +210,13 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 		t.Errorf("Wanted: %v, got: %v", block, latestAttestedBlock)
 	}
 }
+
+func TestSafelyHandleAttestation(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	safelyHandleAttestation(func(att *pb.Attestation) {
+		panic("Test")
+	}, &pb.Attestation{})
+
+	testutil.AssertLogsContain(t, hook, "Panicked when handling attestation!")
+}

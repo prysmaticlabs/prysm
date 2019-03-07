@@ -241,7 +241,7 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 	}
 }
 
-func TestSafelyHandleMessage(t *testing.T) {
+func TestSafelyHandleOperation(t *testing.T) {
 	hook := logTest.NewGlobal()
 
 	safelyHandleOperation(func(msg proto.Message) {
