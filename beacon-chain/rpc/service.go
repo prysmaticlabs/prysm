@@ -187,7 +187,7 @@ func (s *Service) handleRPCPanic() {
 		log.WithFields(logrus.Fields{
 			"r": r,
 		}).Error("Panicked when serving rpc request! Recovering...")
-		// restart grpc service
+		// continue serving rpc responses
 		s.serveGRPC()
 	}
 }

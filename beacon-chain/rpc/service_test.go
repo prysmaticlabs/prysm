@@ -164,3 +164,21 @@ func TestRPC_InsecureEndpoint(t *testing.T) {
 	rpcService.Stop()
 	testutil.AssertLogsContain(t, hook, "Stopping service")
 }
+
+func TestRPC_Panic(t *testing.T) {
+	hook := logTest.NewGlobal()
+	rpcService := NewRPCService(context.Background(), &Config{
+		Port:         "7348",
+		ChainService: newMockChainService(),
+	})
+
+	rpcService.Start()
+
+	go func() {
+		defer rpcService.handleRPCPanic()
+		panic("test")
+
+	}()
+
+	testutil.AssertLogsContain(t, hook, "Panicked when serving rpc request!")
+}

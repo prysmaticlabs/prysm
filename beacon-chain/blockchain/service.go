@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
+
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -293,6 +295,7 @@ func (c *ChainService) ApplyForkChoiceRule(block *pb.BeaconBlock, computedState 
 //			return nil, error  # or throw or whatever
 //
 func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.BeaconState) (*pb.BeaconState, error) {
+	defer safelyHandleBlock(block)
 	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
@@ -419,4 +422,19 @@ func (c *ChainService) deleteValidatorIdx(state *pb.BeaconState) error {
 	}
 	delete(validators.ExitedValidators, helpers.CurrentEpoch(state))
 	return nil
+}
+
+// safelyHandleBlock will recover and log any panic that occurs from the
+// block
+func safelyHandleBlock(blk *pb.BeaconBlock) {
+	if r := recover(); r != nil {
+		printedMsg := "block contains no data"
+		if blk != nil {
+			printedMsg = proto.MarshalTextString(blk)
+		}
+		log.WithFields(logrus.Fields{
+			"r":   r,
+			"msg": printedMsg,
+		}).Error("Panicked when handling block! Recovering...")
+	}
 }

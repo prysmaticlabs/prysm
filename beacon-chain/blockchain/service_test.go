@@ -790,3 +790,14 @@ func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
 		t.Errorf("Activated validators mapping for epoch %d still there", epoch)
 	}
 }
+
+func TestReceiveBlock_HandlePanic(t *testing.T) {
+	hook := logTest.NewGlobal()
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	chainService := setupBeaconChain(t, false, db, true)
+
+	// Cause method to panic
+	chainService.ReceiveBlock(nil, nil)
+	testutil.AssertLogsContain(t, hook, "Panicked when handling block!")
+}

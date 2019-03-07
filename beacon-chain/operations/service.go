@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -138,29 +139,58 @@ func (s *Service) saveOperations() {
 			return
 		// Listen for a newly received incoming exit from the sync service.
 		case exit := <-s.incomingValidatorExits:
-			hash, err := hashutil.HashProto(exit)
-			if err != nil {
-				log.Errorf("Could not hash exit req proto: %v", err)
-				continue
-			}
-			if err := s.beaconDB.SaveExit(exit); err != nil {
-				log.Errorf("Could not save exit request: %v", err)
-				continue
-			}
-			log.Infof("Exit request %#x saved in DB", hash)
+			safelyHandleOperation(s.handleValidatorExits, exit)
+
 		case attestation := <-s.incomingAtt:
-			hash, err := hashutil.HashProto(attestation)
-			if err != nil {
-				log.Errorf("Could not hash attestation proto: %v", err)
-				continue
-			}
-			if err := s.beaconDB.SaveAttestation(attestation); err != nil {
-				log.Errorf("Could not save attestation: %v", err)
-				continue
-			}
-			log.Infof("Attestation %#x saved in DB", hash)
+			safelyHandleOperation(s.handleAttestations, attestation)
 		}
 	}
+}
+
+// safelyHandleMessage will recover and log any panic that occurs from the
+// function argument.
+func safelyHandleOperation(fn func(message proto.Message), msg proto.Message) {
+	defer func() {
+		if r := recover(); r != nil {
+			printedMsg := "message contains no data"
+			if msg != nil {
+				printedMsg = proto.MarshalTextString(msg)
+			}
+			log.WithFields(logrus.Fields{
+				"r":   r,
+				"msg": printedMsg,
+			}).Error("Panicked when handling operation! Recovering...")
+		}
+	}()
+	fn(msg)
+}
+
+func (s *Service) handleValidatorExits(message proto.Message) {
+	exit := message.(*pb.VoluntaryExit)
+	hash, err := hashutil.HashProto(exit)
+	if err != nil {
+		log.Errorf("Could not hash exit req proto: %v", err)
+		return
+	}
+	if err := s.beaconDB.SaveExit(exit); err != nil {
+		log.Errorf("Could not save exit request: %v", err)
+		return
+	}
+	log.Infof("Exit request %#x saved in DB", hash)
+}
+
+func (s *Service) handleAttestations(message proto.Message) {
+	attestation := message.(*pb.Attestation)
+	hash, err := hashutil.HashProto(attestation)
+	if err != nil {
+		log.Errorf("Could not hash attestation proto: %v", err)
+		return
+	}
+	if err := s.beaconDB.SaveAttestation(attestation); err != nil {
+		log.Errorf("Could not save attestation: %v", err)
+		return
+	}
+	log.Infof("Attestation %#x saved in DB", hash)
 }
 
 // removeOperations removes the processed operations from operation pool and DB.
