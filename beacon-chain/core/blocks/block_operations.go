@@ -31,14 +31,52 @@ import (
 // transition processing.
 //
 // WIP - this is stubbed out until BLS is integrated into Prysm.
-func VerifyProposerSignature(
-	ctx context.Context,
-	_ *pb.BeaconBlock,
-) error {
+func VerifyProposerSignature(ctx context.Context, beaconState *pb.BeaconState, block *pb.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock.VerifyProposerSignature")
 	defer span.End()
 
-	return nil
+	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, block.Slot)
+	if err != nil {
+		return fmt.Errorf("could not get beacon proposer index: %v", err)
+	}
+
+	attestorPubKeys := make([]*bls.PublicKey, len(attesterIndices))
+	for idx, participantIndex := range attesterIndices {
+		pubkey, err := bls.PublicKeyFromBytes(beaconState.ValidatorRegistry[participantIndex].Pubkey)
+		if err != nil {
+			return false, fmt.Errorf("could not deserialize attestor public key: %v", err)
+		}
+
+		attestorPubKeys[idx] = pubkey
+	}
+
+	aggregatePubkeys := []*bls.PublicKey{
+		bls.AggregatePublicKeys(attestorPubKeys),
+	}
+
+	attestationDataHash, err := hashutil.HashProto(&pb.AttestationDataAndCustodyBit{
+		Data:       att.Data,
+		CustodyBit: true,
+	})
+	if err != nil {
+		return false, fmt.Errorf("could not hash attestation data: %v", err)
+	}
+	messageHashes := [][]byte{
+		attestationDataHash[:],
+	}
+
+	sig, err := bls.SignatureFromBytes(att.AggregateSignature)
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+
+	domain := forkutils.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainAttestation)
+
+	log.WithFields(logrus.Fields{
+		"aggregatePubkeys": fmt.Sprintf("%#x", aggregatePubkeys),
+		"messageHashes":    messageHashes,
+		"aggregateSig":     fmt.Sprintf("%#x", sig.Marshal()),
+	}).Info("Verifying attestation")
+
+	return sig.VerifyMultiple(aggregatePubkeys, messageHashes, domain), nil
 }
 
 // ProcessEth1DataInBlock is an operation performed on each
