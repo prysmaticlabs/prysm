@@ -48,7 +48,7 @@ func VoteCount(block *pb.BeaconBlock, state *pb.BeaconState, targets map[uint64]
 // BlockAncestor obtains the ancestor at of a block at a certain slot.
 //
 // Spec pseudocode definition:
-//	def get_ancestor(store: Store, block: BeaconBlock, slot: Slot) -> BeaconBlock:
+//  def get_ancestor(store: Store, block: BeaconBlock, slot: Slot) -> BeaconBlock:
 //    """
 //    Get the ancestor of ``block`` with slot number ``slot``; return ``None`` if not found.
 //    """
