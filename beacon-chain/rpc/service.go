@@ -169,27 +169,12 @@ func (s *Service) Start() {
 	reflection.Register(s.grpcServer)
 
 	go func() {
-		s.serveGRPC()
-	}()
-}
-
-func (s *Service) serveGRPC() {
-	defer s.handleRPCPanic()
-	if s.listener != nil {
-		if err := s.grpcServer.Serve(s.listener); err != nil {
-			log.Errorf("Could not serve gRPC: %v", err)
+		if s.listener != nil {
+			if err := s.grpcServer.Serve(s.listener); err != nil {
+				log.Errorf("Could not serve gRPC: %v", err)
+			}
 		}
-	}
-}
-
-func (s *Service) handleRPCPanic() {
-	if r := recover(); r != nil {
-		log.WithFields(logrus.Fields{
-			"r": r,
-		}).Error("Panicked when serving rpc request! Recovering...")
-		// continue serving rpc responses
-		s.serveGRPC()
-	}
+	}()
 }
 
 // Stop the service.
