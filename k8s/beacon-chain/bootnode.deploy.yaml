@@ -1,5 +1,5 @@
-kind: Deployment
-apiVersion: apps/v1beta1
+kind: StatefulSet
+apiVersion: apps/v1
 metadata: 
   name: bootnode
   namespace: beacon-chain
@@ -7,6 +7,7 @@ metadata:
     prometheus.io/scrape: 'true'
 spec:
   replicas: 1
+  serviceName: bootnode
   selector:
     matchLabels:
       component: bootnode
@@ -17,12 +18,12 @@ spec:
     spec:
       priorityClassName: production-priority
       containers:
-        - name: relay
+        - name: bootnode
           image: gcr.io/prysmaticlabs/prysm/bootnode:latest
           args:
             - "-debug"
             - "-port=4000"
-            - "-private=CAASpwkwggSjAgEAAoIBAQDLd5Sfv/8+ybSSeEj3980Bk1JOd8SXQ8e22ntKqtCWOoQ27jwUn6FH03poMvikJlHzkgnEXCZugeAbc/8rP1q/JRlOqhO/Zw7aQm6e+VjyKdzbTMv/YPkctsvStJw66U2EKkah02t7KTLO82qOQW3rgQFtRqKcN/jT0K2M4l6ED6DFhAYzjnBZpxEX3rCbqmKJQMYBFxlXa7T1kfpUQ7MdRtGtxW/GxJvo5CPf7e8T2SrKok437TN4aoD03W+czaJd48EFb/kgQNKbBoGX7+2c/liatm7QqvYbNkuU+N0sPZ7tkoxyxVQN2ie6WsZDVH3F1LOyI638w6WhYu2TmY9pAgMBAAECggEAYyCSRzYqK7PnhoiVvEF9Hmxg6BvPqoZ6MWrGMH2B+/7sVTrCCKYw1CaC92sF2itVN96JZaIjkykxPw7HXZGTK5buenXAAzs5cDp3XHpMzEZ69Fi49mWPWF7ydGhLySPLAT37hXHUZn+O4maTHlVgMSF7yXplVMisML31H7NVqu53N8U697Me+GIdB6dNn8in3n7O4Kkzo0V/h1YhPWwvds9Vzbh3CHnskeoY/J1UVIpwrELKS9OgcgXP+Kdx4jV4sPT4HAXvRj4dcCE2uAdbdKVVnrIhYBaIdNWzpXxj9cNcV/3P5XjrDsuVghKSrB86C/iM7YncvtVadwswc0oEEQKBgQD2IdGXHU9Hzqdus6Dj16ndCuVcKWqeHZcLR/tkk/HnsRuGmj4o5FdPrZ0yR1HBsSkLuJbw6trJtO7xzkvYmR9abXrKIqKAHRclwXopF6IdroOSjQj9j7GJp9YT/EQ3fqH0yw3h2ELyRRmxlQmKDQQDTM7CTUgYZ2WOK4hLsMcpPQKBgQDTn95yGBkd2eizPSLPTG41JWb89xQsS4RRcZHdqpiNce993lgiXzdWco/8kRhI+9h7MHPAaXrFP9gyX4H5ln3e0ovlulo/JYQSABGHycU1krOeHdfnbyxtrrbYdLan9DfZq2N/at58cAeiC8GGwYk8KCrC7h+9w1c76gCkB+ypnQKBgQDELbhshgQG7AQwDCSU9fSCJokhqDE+zb7yUvFg/Tq2vUd/Rbl9xmKBM5Qz2vyjMZ3RpdNJOygf1YMOYKu7fHCtFs3kBy8WhhlJEqlXz2p71fkw+hDMaZfMbGYJj+yffuN/xcjO1hymFcWg8XWk/zLPnoy9+fMY4HDlnHUKP2C+0QKBgHudpQisfu9q/HzGt3CzyqSMxo35nfUJ367bUkNThW0KIsU5fe4GBIMgxG7aKn9nbVr4QIUimC5kTtuN4pRyje/8uO9mXZUJSw5gr9zLxcC3guhXsmhkDmW7at8hvhh5la42aRZizLePkUXc7BzVLF7Rb7kR88SbOHetBtbKMjoZAoGAXJvdjLmx5rYOZvTgwEbZ0vIrAmexLU8uJ5B+VC4ScQ7MvXwGq4S3GRN3OD4mBfscJ/XCsMrg+9famUOxE+5uWWnQOPBjLu53q8/uQYLWlaxCijo7aGTTX2XgiuNMTvwbRoxpiUwyBi0zv5C7u/bjBvwYX37aYKIr7xnvEPk9pYQ="
+            - "-private=$(PRIVATE_KEY)"
           resources:
             requests:
               memory: "100Mi"
@@ -30,3 +31,9 @@ spec:
           ports:
             - containerPort: 4000
               name: bootnodeport
+          env:
+            - name: PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: bootnode-secrets
+                  key: private_key

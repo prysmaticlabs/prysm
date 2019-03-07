@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -17,7 +19,13 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var log = logrus.WithField("prefix", "regular-sync")
+var (
+	log                           = logrus.WithField("prefix", "regular-sync")
+	blocksAwaitingProcessingGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "regsync_blocks_awaiting_processing",
+		Help: "Number of blocks which do not have a parent and are awaiting processing by the chain service",
+	})
+)
 
 type chainService interface {
 	IncomingBlockFeed() *event.Feed
@@ -68,6 +76,8 @@ type RegularSync struct {
 	unseenAttestationsReqBuf chan p2p.Message
 	exitBuf                  chan p2p.Message
 	canonicalBuf             chan *pb.BeaconBlock
+	highestObservedSlot      uint64
+	blocksAwaitingProcessing map[[32]byte]*pb.BeaconBlock
 }
 
 // RegularSyncConfig allows the channel's buffer sizes to be changed.
@@ -131,6 +141,7 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		exitBuf:                  make(chan p2p.Message, cfg.ExitBufferSize),
 		chainHeadReqBuf:          make(chan p2p.Message, cfg.ChainHeadReqBufferSize),
 		canonicalBuf:             make(chan *pb.BeaconBlock, cfg.CanonicalBufferSize),
+		blocksAwaitingProcessing: make(map[[32]byte]*pb.BeaconBlock),
 	}
 }
 
@@ -191,39 +202,70 @@ func (rs *RegularSync) run() {
 			log.Debug("Exiting goroutine")
 			return
 		case msg := <-rs.announceBlockBuf:
-			rs.receiveBlockAnnounce(msg)
+			safelyHandleMessage(rs.receiveBlockAnnounce, msg)
 		case msg := <-rs.attestationBuf:
-			rs.receiveAttestation(msg)
+			safelyHandleMessage(rs.receiveAttestation, msg)
 		case msg := <-rs.attestationReqByHashBuf:
-			rs.handleAttestationRequestByHash(msg)
+			safelyHandleMessage(rs.handleAttestationRequestByHash, msg)
 		case msg := <-rs.unseenAttestationsReqBuf:
-			rs.handleUnseenAttestationsRequest(msg)
+			safelyHandleMessage(rs.handleUnseenAttestationsRequest, msg)
 		case msg := <-rs.exitBuf:
-			rs.receiveExitRequest(msg)
+			safelyHandleMessage(rs.receiveExitRequest, msg)
 		case msg := <-rs.blockBuf:
-			rs.receiveBlock(msg)
+			safelyHandleMessage(rs.receiveBlock, msg)
 		case msg := <-rs.blockRequestBySlot:
-			rs.handleBlockRequestBySlot(msg)
+			safelyHandleMessage(rs.handleBlockRequestBySlot, msg)
 		case msg := <-rs.blockRequestByHash:
-			rs.handleBlockRequestByHash(msg)
+			safelyHandleMessage(rs.handleBlockRequestByHash, msg)
 		case msg := <-rs.batchedRequestBuf:
-			rs.handleBatchedBlockRequest(msg)
+			safelyHandleMessage(rs.handleBatchedBlockRequest, msg)
 		case msg := <-rs.stateRequestBuf:
-			rs.handleStateRequest(msg)
+			safelyHandleMessage(rs.handleStateRequest, msg)
 		case msg := <-rs.chainHeadReqBuf:
-			rs.handleChainHeadRequest(msg)
+			safelyHandleMessage(rs.handleChainHeadRequest, msg)
 		case block := <-rs.canonicalBuf:
-			rs.broadcastCanonicalBlock(block)
+			rs.broadcastCanonicalBlock(rs.ctx, block)
 		}
 	}
+}
+
+// safelyHandleMessage will recover and log any panic that occurs from the
+// function argument.
+func safelyHandleMessage(fn func(p2p.Message), msg p2p.Message) {
+	defer func() {
+		if r := recover(); r != nil {
+			printedMsg := "message contains no data"
+			if msg.Data != nil {
+				printedMsg = proto.MarshalTextString(msg.Data)
+			}
+			log.WithFields(logrus.Fields{
+				"r":   r,
+				"msg": printedMsg,
+			}).Error("Panicked when handling p2p message! Recovering...")
+
+			if msg.Ctx == nil {
+				return
+			}
+			if span := trace.FromContext(msg.Ctx); span != nil {
+				span.SetStatus(trace.Status{
+					Code:    trace.StatusCodeInternal,
+					Message: fmt.Sprintf("Panic: %v", r),
+				})
+			}
+		}
+	}()
+
+	// Fingers crossed that it doesn't panic...
+	fn(msg)
 }
 
 // receiveBlockAnnounce accepts a block hash.
 // TODO(#175): New hashes are forwarded to other peers in the network, and
 // the contents of the block are requested if the local chain doesn't have the block.
 func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) {
-	ctx, receiveBlockSpan := trace.StartSpan(msg.Ctx, "RegularSync_receiveBlockRoot")
-	defer receiveBlockSpan.End()
+	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.receiveBlockAnnounce")
+	defer span.End()
+	recBlockAnnounce.Inc()
 
 	data := msg.Data.(*pb.BeaconBlockAnnounce)
 	h := bytesutil.ToBytes32(data.Hash[:32])
@@ -235,25 +277,27 @@ func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) {
 
 	log.WithField("blockRoot", fmt.Sprintf("%#x", h)).Debug("Received incoming block root, requesting full block data from sender")
 	// Request the full block data from peer that sent the block hash.
-	_, sendBlockRequestSpan := trace.StartSpan(ctx, "sendBlockRequest")
+	_, sendBlockRequestSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendBlockRequest")
 	rs.p2p.Send(&pb.BeaconBlockRequest{Hash: h[:]}, msg.Peer)
+	sentBlockReq.Inc()
 	sendBlockRequestSpan.End()
 }
 
 // receiveBlock processes a block from the p2p layer.
 func (rs *RegularSync) receiveBlock(msg p2p.Message) {
-	ctx, receiveBlockSpan := trace.StartSpan(msg.Ctx, "RegularSync_receiveBlock")
-	defer receiveBlockSpan.End()
+	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.receiveBlock")
+	defer span.End()
+	recBlock.Inc()
 
 	response := msg.Data.(*pb.BeaconBlockResponse)
 	block := response.Block
 	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		log.Errorf("Could not hash received block: %v", err)
+		return
 	}
 
 	log.Debugf("Processing response to block request: %#x", blockRoot)
-
 	if rs.db.HasBlock(blockRoot) {
 		log.Debug("Received a block that already exists. Exiting...")
 		return
@@ -270,17 +314,53 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 		return
 	}
 
-	_, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
+	// We check if we have the block's parents saved locally, if not, we store the block in a
+	// pending processing map by hash and once we receive the parent, we process said parent AND then
+	// we process the received block.
+	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+	if !rs.db.HasBlock(parentRoot) {
+		rs.blocksAwaitingProcessing[parentRoot] = block
+		blocksAwaitingProcessingGauge.Inc()
+		rs.p2p.Broadcast(&pb.BeaconBlockRequest{Hash: parentRoot[:]})
+		// We update the last observed slot to the received canonical block's slot.
+		if block.Slot > rs.highestObservedSlot {
+			rs.highestObservedSlot = block.Slot
+		}
+		return
+	}
+
+	if block.Slot < rs.highestObservedSlot {
+		// If we receive a block from the past AND it corresponds to
+		// a parent block of a block stored in the processing cache, that means we are
+		// receiving a parent block which was missing from our db.
+		if childBlock, ok := rs.blocksAwaitingProcessing[blockRoot]; ok {
+			log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Received missing block parent")
+			delete(rs.blocksAwaitingProcessing, blockRoot)
+			blocksAwaitingProcessingGauge.Dec()
+			rs.chainService.IncomingBlockFeed().Send(block)
+			rs.chainService.IncomingBlockFeed().Send(childBlock)
+			log.Debug("Sent missing block parent and child to chain service for processing")
+			return
+		}
+	}
+
+	_, sendBlockSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendBlock")
 	log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Sending newly received block to subscribers")
 	rs.chainService.IncomingBlockFeed().Send(block)
+	sentBlocks.Inc()
 	sendBlockSpan.End()
+	// We update the last observed slot to the received canonical block's slot.
+	if block.Slot > rs.highestObservedSlot {
+		rs.highestObservedSlot = block.Slot
+	}
 }
 
 // handleBlockRequestBySlot processes a block request from the p2p layer.
 // if found, the block is sent to the requesting peer.
 func (rs *RegularSync) handleBlockRequestBySlot(msg p2p.Message) {
-	ctx, blockRequestSpan := trace.StartSpan(msg.Ctx, "RegularSync_blockRequestBySlot")
-	defer blockRequestSpan.End()
+	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleBlockRequestBySlot")
+	defer span.End()
+	blockReqSlot.Inc()
 
 	request, ok := msg.Data.(*pb.BeaconBlockRequestBySlotNumber)
 	if !ok {
@@ -302,12 +382,14 @@ func (rs *RegularSync) handleBlockRequestBySlot(msg p2p.Message) {
 	rs.p2p.Send(&pb.BeaconBlockResponse{
 		Block: block,
 	}, msg.Peer)
+	sentBlocks.Inc()
 	sendBlockSpan.End()
 }
 
 func (rs *RegularSync) handleStateRequest(msg p2p.Message) {
-	ctx, handleStateReqSpan := trace.StartSpan(msg.Ctx, "RegularSync_handleStateReq")
-	defer handleStateReqSpan.End()
+	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleStateRequest")
+	defer span.End()
+	stateReq.Inc()
 	req, ok := msg.Data.(*pb.BeaconStateRequest)
 	if !ok {
 		log.Errorf("Message is of the incorrect type")
@@ -327,13 +409,17 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) {
 		log.Debugf("Requested state root is different from locally stored state root %#x", req.Hash)
 		return
 	}
-	_, sendStateSpan := trace.StartSpan(ctx, "sendState")
+	_, sendStateSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendState")
 	log.WithField("beaconState", fmt.Sprintf("%#x", root)).Debug("Sending beacon state to peer")
 	rs.p2p.Send(&pb.BeaconStateResponse{BeaconState: state}, msg.Peer)
+	sentState.Inc()
 	sendStateSpan.End()
 }
 
 func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) {
+	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleChainHeadRequest")
+	defer span.End()
+	chainHeadReq.Inc()
 	if _, ok := msg.Data.(*pb.ChainHeadRequest); !ok {
 		log.Errorf("message is of the incorrect type")
 		return
@@ -356,16 +442,19 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) {
 		Hash:  blockRoot[:],
 		Block: block,
 	}
-
+	_, ChainHead := trace.StartSpan(ctx, "sendChainHead")
 	rs.p2p.Send(req, msg.Peer)
+	sentChainHead.Inc()
+	ChainHead.End()
 }
 
 // receiveAttestation accepts an broadcasted attestation from the p2p layer,
 // discard the attestation if we have gotten before, send it to attestation
 // pool if we have not.
 func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
-	ctx, receiveAttestationSpan := trace.StartSpan(msg.Ctx, "RegularSync_receiveAttestation")
-	defer receiveAttestationSpan.End()
+	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.receiveAttestation")
+	defer span.End()
+	recAttestation.Inc()
 
 	attestation := msg.Data.(*pb.Attestation)
 	attestationRoot, err := hashutil.HashProto(attestation)
@@ -386,16 +475,16 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 		return
 	}
 
-	finalizedSlot := beaconState.FinalizedEpoch * params.BeaconConfig().SlotsPerEpoch
-	if attestation.Data.Slot < finalizedSlot {
-		log.Debugf("Skipping received attestation with slot smaller than last finalized slot, %d < %d",
-			attestation.Data.Slot, finalizedSlot)
+	if attestation.Data.Slot < beaconState.Slot-params.BeaconConfig().SlotsPerEpoch {
+		log.Debugf("Skipping received attestation with slot smaller than one epoch ago, %d < %d",
+			attestation.Data.Slot, beaconState.Slot-params.BeaconConfig().SlotsPerEpoch)
 		return
 	}
 
-	_, sendAttestationSpan := trace.StartSpan(ctx, "sendAttestation")
+	_, sendAttestationSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendAttestation")
 	log.WithField("attestationHash", fmt.Sprintf("%#x", attestationRoot)).Debug("Sending newly received attestation to subscribers")
 	rs.operationsService.IncomingAttFeed().Send(attestation)
+	sentAttestation.Inc()
 	sendAttestationSpan.End()
 }
 
@@ -403,6 +492,9 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 // discard the exit if we have gotten before, send it to operation
 // service if we have not.
 func (rs *RegularSync) receiveExitRequest(msg p2p.Message) {
+	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.receiveExitRequest")
+	defer span.End()
+	recExit.Inc()
 	exit := msg.Data.(*pb.VoluntaryExit)
 	h, err := hashutil.HashProto(exit)
 	if err != nil {
@@ -414,17 +506,21 @@ func (rs *RegularSync) receiveExitRequest(msg p2p.Message) {
 		log.Debugf("Received, skipping exit request #%x", h)
 		return
 	}
-
+	_, sendExitReqSpan := trace.StartSpan(ctx, "sendExitRequest")
 	log.WithField("exitReqHash", fmt.Sprintf("%#x", h)).
 		Debug("Forwarding validator exit request to subscribed services")
 	rs.operationsService.IncomingExitFeed().Send(exit)
+	sentExit.Inc()
+	sendExitReqSpan.End()
 }
 
 func (rs *RegularSync) handleBlockRequestByHash(msg p2p.Message) {
+	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleBlockRequestByHash")
+	defer span.End()
+	blockReqHash.Inc()
+
 	data := msg.Data.(*pb.BeaconBlockRequest)
-
 	root := bytesutil.ToBytes32(data.Hash)
-
 	block, err := rs.db.Block(root)
 	if err != nil {
 		log.Error(err)
@@ -435,14 +531,20 @@ func (rs *RegularSync) handleBlockRequestByHash(msg p2p.Message) {
 		return
 	}
 
+	_, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
 	rs.p2p.Send(&pb.BeaconBlockResponse{
 		Block: block,
 	}, msg.Peer)
+	sentBlocks.Inc()
+	sendBlockSpan.End()
 }
 
 // handleBatchedBlockRequest receives p2p messages which consist of requests for batched blocks
 // which are bounded by a start slot and end slot.
 func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) {
+	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleBatchedBlockRequest")
+	defer span.End()
+	batchedBlockReq.Inc()
 	data := msg.Data.(*pb.BatchedBeaconBlockRequest)
 	startSlot, endSlot := data.StartSlot, data.EndSlot
 
@@ -459,7 +561,6 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) {
 	}
 
 	currentSlot := block.Slot
-
 	if currentSlot < startSlot || finalizedSlot > endSlot {
 		log.Debugf(
 			"invalid batch request: current slot < start slot || finalized slot > end slot."+
@@ -474,35 +575,35 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) {
 	}
 
 	response := make([]*pb.BeaconBlock, 0, blockRange)
-
 	for i := startSlot; i <= endSlot; i++ {
 		retBlock, err := rs.db.BlockBySlot(i)
 		if err != nil {
 			log.Errorf("Unable to retrieve block from db %v", err)
 			continue
 		}
-
 		if retBlock == nil {
 			log.Debug("Block does not exist in db")
 			continue
 		}
-
 		response = append(response, retBlock)
 	}
 
+	_, sendBatchedBlockSpan := trace.StartSpan(ctx, "sendBatchedBlocks")
 	log.Debugf("Sending response for batch blocks to peer %v", msg.Peer)
 	rs.p2p.Send(&pb.BatchedBeaconBlockResponse{
 		BatchedBlocks: response,
 	}, msg.Peer)
+	sentBatchedBlocks.Inc()
+	sendBatchedBlockSpan.End()
 }
 
 func (rs *RegularSync) handleAttestationRequestByHash(msg p2p.Message) {
-	ctx, respondAttestationSpan := trace.StartSpan(msg.Ctx, "RegularSync_respondAttestation")
-	defer respondAttestationSpan.End()
+	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleAttestationRequestByHash")
+	defer span.End()
+	attestationReq.Inc()
+
 	req := msg.Data.(*pb.AttestationRequest)
-
 	root := bytesutil.ToBytes32(req.Hash)
-
 	att, err := rs.db.Attestation(root)
 	if err != nil {
 		log.Error(err)
@@ -518,12 +619,14 @@ func (rs *RegularSync) handleAttestationRequestByHash(msg p2p.Message) {
 	rs.p2p.Send(&pb.AttestationResponse{
 		Attestation: att,
 	}, msg.Peer)
+	sentAttestation.Inc()
 	sendAttestationSpan.End()
 }
 
 func (rs *RegularSync) handleUnseenAttestationsRequest(msg p2p.Message) {
-	ctx, respondAttestationxSpan := trace.StartSpan(msg.Ctx, "RegularSync_respondUnseenAttestations")
-	defer respondAttestationxSpan.End()
+	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleUnseenAttestationsRequest")
+	defer span.End()
+	unseenAttestationReq.Inc()
 	if _, ok := msg.Data.(*pb.UnseenAttestationsRequest); !ok {
 		log.Errorf("message is of the incorrect type")
 		return
@@ -540,23 +643,31 @@ func (rs *RegularSync) handleUnseenAttestationsRequest(msg p2p.Message) {
 		return
 	}
 
-	_, sendAttestationsSpan := trace.StartSpan(ctx, "sendAttestation")
+	_, sendAttestationsSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendAttestation")
 	log.Debugf("Sending response for batched unseen attestations to peer %v", msg.Peer)
 	rs.p2p.Send(&pb.UnseenAttestationResponse{
 		Attestations: atts,
 	}, msg.Peer)
+	sentAttestation.Inc()
 	sendAttestationsSpan.End()
 }
 
-func (rs *RegularSync) broadcastCanonicalBlock(blk *pb.BeaconBlock) {
+func (rs *RegularSync) broadcastCanonicalBlock(ctx context.Context, blk *pb.BeaconBlock) {
+	_, span := trace.StartSpan(ctx, "beacon-chain.sync.broadcastCanonicalBlock")
+	defer span.End()
+
 	h, err := hashutil.HashProto(blk)
 	if err != nil {
 		log.Errorf("Could not tree hash block %v", err)
 		return
 	}
+
+	_, sendBlockAnnounceSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendBlockAnnounce")
 	log.Debugf("Announcing canonical block %#x", h)
 	rs.p2p.Broadcast(&pb.BeaconBlockAnnounce{
 		Hash:       h[:],
 		SlotNumber: blk.Slot,
 	})
+	sentBlockAnnounce.Inc()
+	sendBlockAnnounceSpan.End()
 }

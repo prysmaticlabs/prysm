@@ -183,8 +183,22 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 
 	go func() {
 		defer sub.Cancel()
+
+		var msg *pubsub.Message
+		var err error
+
+		// Recover from any panic as part of the receive p2p msg process.
+		defer func() {
+			if r := recover(); r != nil {
+				log.WithFields(logrus.Fields{
+					"r":        r,
+					"msg.Data": attemptToConvertPbToString(msg.Data, message),
+				}).Error("P2P message caused a panic! Recovering...")
+			}
+		}()
+
 		for {
-			msg, err := sub.Next(s.ctx)
+			msg, err = sub.Next(s.ctx)
 
 			if s.ctx.Err() != nil {
 				log.WithError(s.ctx.Err()).Debug("Context error")
@@ -213,6 +227,21 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 			h(pMsg)
 		}
 	}()
+}
+
+// Attempts to convert some proto.Message to a string in a panic safe method.
+func attemptToConvertPbToString(b []byte, msg proto.Message) string {
+	defer func() {
+		if r := recover(); r != nil {
+			log.WithField("r", r).Error("Panicked when trying to log PB")
+		}
+	}()
+	if err := proto.Unmarshal(b, msg); err != nil {
+		log.WithError(err).Error("Failed to decode data")
+		return ""
+	}
+
+	return proto.MarshalTextString(msg)
 }
 
 func (s *Server) emit(msg Message, feed Feed) {
@@ -253,6 +282,11 @@ func (s *Server) Send(msg proto.Message, peer Peer) {
 //   ps.RegisterTopic("message_topic_here", msg)
 //   ps.Broadcast(msg)
 func (s *Server) Broadcast(msg proto.Message) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.WithField("r", r).Error("Panicked when broadcasting!")
+		}
+	}()
 	topic := s.topicMapping[messageType(msg)]
 
 	// Shorten message if it is too long to avoid

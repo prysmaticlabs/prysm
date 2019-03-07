@@ -82,6 +82,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	// Fetch pending attestations seen by the beacon node.
 	attResp, err := v.proposerClient.PendingAttestations(ctx, &pb.PendingAttestationsRequest{
 		FilterReadyForInclusion: true,
+		ProposalBlockSlot:       slot,
 	})
 	if err != nil {
 		log.Errorf("Failed to fetch pending attestations from the beacon node: %v", err)

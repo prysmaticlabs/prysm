@@ -1,0 +1,107 @@
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: cluster-pk-manager
+  namespace: beacon-chain
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  namespace: beacon-chain
+  name: pod-reader
+rules:
+- apiGroups: [""] # Core API
+  resources: ["pods"]
+  verbs: ["get", "watch", "list"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  namespace: beacon-chain
+  name: cluster-pk-manager-role-binding
+subjects:
+- kind: ServiceAccount
+  name: cluster-pk-manager
+  namespace: beacon-chain
+roleRef:
+  kind: Role
+  name: pod-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: cluster-pk-manager
+  namespace: beacon-chain
+spec:
+  replicas: 1
+  serviceName: cluster-pk-manager
+  selector:
+    matchLabels:
+      component: cluster-pk-manager
+  template:
+    metadata:
+      labels:
+        component: cluster-pk-manager
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '9090'
+    spec:
+      priorityClassName: production-priority
+      serviceAccountName: cluster-pk-manager
+      containers:
+      - name: server
+        image: gcr.io/prysmaticlabs/prysm/cluster-pk-manager/server:latest 
+        args: 
+        - --deposit-contract=$(DEPOSIT_CONTRACT_ADDRESS)
+        - --private-key=$(PRIVATE_KEY)
+        - --rpc=ws://public-rpc-nodes.pow.svc.cluster.local:8546
+        - --port=8000
+        - --metrics-port=9090
+        - --deposit-amount=3200000000000000
+        - --db-path=/data
+        - --verbose
+        ports:
+        - containerPort: 8000
+          name: grpc-service
+        - containerPort: 9090
+          name: prometheus
+        volumeMounts:
+        - mountPath: /data
+          name: cluster-pk-manager-db 
+        env:
+        - name: DEPOSIT_CONTRACT_ADDRESS
+          valueFrom:
+            configMapKeyRef:
+              name: beacon-config
+              key: DEPOSIT_CONTRACT_ADDRESS
+        - name: PRIVATE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: cluster-manager-secrets
+              key: private_key
+  volumeClaimTemplates:
+  - metadata:
+      name: cluster-pk-manager-db
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests: 
+          storage: 1Gi
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: cluster-pk-manager
+  namespace: beacon-chain
+spec:
+  selector:
+    component: cluster-pk-manager
+  ports: 
+  - port: 8000
+    targetPort: 8000
+    name: grpc-service
+  - port: 9090
+    targetPort: 9090
+    name: prometheus
+  type: ClusterIP

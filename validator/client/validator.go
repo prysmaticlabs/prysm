@@ -81,14 +81,38 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 // WaitForActivation checks whether the validator pubkey is in the active
 // validator set. If not, this operation will block until an activation message is
 // received.
-//
-// WIP - not done.
-func (v *validator) WaitForActivation(ctx context.Context) {
+func (v *validator) WaitForActivation(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
 	defer span.End()
-	// First, check if the validator has deposited into the Deposit Contract.
-	// If the validator has deposited, subscribe to a stream receiving the activation status.
-	// of the validator until a final ACTIVATED check if received, then this function can return.
+	req := &pb.ValidatorActivationRequest{
+		Pubkey: v.key.PublicKey.Marshal(),
+	}
+	stream, err := v.validatorClient.WaitForActivation(ctx, req)
+	if err != nil {
+		return fmt.Errorf("could not setup validator WaitForActivation streaming client: %v", err)
+	}
+	var validatorActivatedRecord *pbp2p.Validator
+	for {
+		log.Info("Waiting for validator to be activated in the beacon chain")
+		res, err := stream.Recv()
+		// If the stream is closed, we stop the loop.
+		if err == io.EOF {
+			break
+		}
+		// If context is canceled we stop the loop.
+		if ctx.Err() == context.Canceled {
+			return fmt.Errorf("context has been canceled so shutting down the loop: %v", ctx.Err())
+		}
+		if err != nil {
+			return fmt.Errorf("could not receive validator activation from stream: %v", err)
+		}
+		validatorActivatedRecord = res.Validator
+		break
+	}
+	log.WithFields(logrus.Fields{
+		"activationEpoch": validatorActivatedRecord.ActivationEpoch - params.BeaconConfig().GenesisEpoch,
+	}).Info("Validator activated")
+	return nil
 }
 
 // NextSlot emits the next slot number at the start time of that slot.

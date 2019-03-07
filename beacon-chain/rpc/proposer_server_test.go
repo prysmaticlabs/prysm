@@ -126,12 +126,18 @@ func TestComputeStateRoot_OK(t *testing.T) {
 func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	proposerServer := &ProposerServer{
-		operationService: &mockOperationService{},
-		beaconDB:         db,
-	}
 	beaconState := &pbp2p.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().MinAttestationInclusionDelay,
+		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().MinAttestationInclusionDelay + 100,
+	}
+	proposerServer := &ProposerServer{
+		operationService: &mockOperationService{
+			pendingAttestations: []*pbp2p.Attestation{
+				&pbp2p.Attestation{Data: &pbp2p.AttestationData{
+					Slot: beaconState.Slot - params.BeaconConfig().MinAttestationInclusionDelay,
+				}},
+			},
+		},
+		beaconDB: db,
 	}
 	if err := db.SaveState(beaconState); err != nil {
 		t.Fatal(err)
@@ -144,6 +150,59 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 	}
 	if len(res.PendingAttestations) == 0 {
 		t.Error("Expected pending attestations list to be non-empty")
+	}
+}
+
+func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	// Edge case: current slot is at the end of an epoch. The pending attestation
+	// for the next slot should come from currentSlot + 1.
+	currentSlot := helpers.StartSlot(
+		params.BeaconConfig().GenesisEpoch+10,
+	) - 1
+
+	opService := &mockOperationService{
+		pendingAttestations: []*pbp2p.Attestation{
+			// Expired attestations
+			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: 0}},
+			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot - 10000}},
+			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot - 5000}},
+			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot - 100}},
+			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot - params.BeaconConfig().SlotsPerEpoch}},
+			// Non-expired attestations
+			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot - 5}},
+			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot - 2}},
+			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot}},
+		},
+	}
+	expectedNumberOfAttestations := 3
+	proposerServer := &ProposerServer{
+		operationService: opService,
+		beaconDB:         db,
+	}
+	beaconState := &pbp2p.BeaconState{
+		Slot: currentSlot,
+	}
+	if err := db.SaveState(beaconState); err != nil {
+		t.Fatal(err)
+	}
+	res, err := proposerServer.PendingAttestations(
+		context.Background(),
+		&pb.PendingAttestationsRequest{
+			ProposalBlockSlot: currentSlot,
+		},
+	)
+	if err != nil {
+		t.Fatalf("Unexpected error fetching pending attestations: %v", err)
+	}
+	if len(res.PendingAttestations) != expectedNumberOfAttestations {
+		t.Errorf(
+			"Expected pending attestations list length %d, but was %d",
+			expectedNumberOfAttestations,
+			len(res.PendingAttestations),
+		)
 	}
 }
 

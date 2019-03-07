@@ -30,7 +30,7 @@ type BeaconDB struct {
 	depositsLock sync.RWMutex
 }
 
-// Close closes the underlying leveldb database.
+// Close closes the underlying boltdb database.
 func (db *BeaconDB) Close() error {
 	return db.db.Close()
 }

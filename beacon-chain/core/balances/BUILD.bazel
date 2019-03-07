@@ -11,6 +11,7 @@ go_library(
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/params:go_default_library",
         "//shared/sliceutil:go_default_library",
+        "@io_opencensus_go//trace:go_default_library",
     ],
 )
 
