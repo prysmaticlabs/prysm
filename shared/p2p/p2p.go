@@ -15,6 +15,7 @@ package p2p
 
 import "github.com/libp2p/go-libp2p-peer"
 
+// AnyPeer represents a Peer ID alias for sending to any available peer(s).
 const AnyPeer = peer.ID("AnyPeer")
 
 // Use this file for interfaces only!
