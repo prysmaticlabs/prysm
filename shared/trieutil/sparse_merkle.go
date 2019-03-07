@@ -32,6 +32,7 @@ func GenerateTrieFromItems(items [][]byte, depth int) (*MerkleTrie, error) {
 		// We prepend the layer that results from hashing the trie's current layer.
 		branches = append(branches, hashLayer(branches[i]))
 	}
+	// Reverse the branches so as to have the root in the 0th layer.
 	for i, j := 0, len(branches)-1; i < j; i, j = i+1, j-1 {
 		branches[i], branches[j] = branches[j], branches[i]
 	}
@@ -113,6 +114,9 @@ func hashLayer(layer [][32]byte) [][32]byte {
 	return topLayer
 }
 
+// generateEmptyNodes creates a trie of empty nodes up a path given a trie depth.
+// This is necessary given the Merkle trie is a balanced trie and empty nodes serve
+// as padding along the way if an odd number of leaves are originally provided.
 func generateEmptyNodes(depth int) [][32]byte {
 	nodes := make([][32]byte, depth)
 	for i := 0; i < depth; i++ {
@@ -121,6 +125,8 @@ func generateEmptyNodes(depth int) [][32]byte {
 	return nodes
 }
 
+// partition a slice into chunks of a certain size.
+// Example: [1, 2, 3, 4] -> [[1, 2], [3, 4]]
 func partition(layer [][32]byte, size int) [][][32]byte {
 	chunks := [][][32]byte{}
 	for i := 0; i < len(layer); i += size {
