@@ -4,12 +4,13 @@ package node
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"os"
 	"os/signal"
 	"path"
 	"sync"
 	"syscall"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
