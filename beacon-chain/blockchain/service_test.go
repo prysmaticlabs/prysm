@@ -1074,3 +1074,152 @@ func TestBlockChildren_SkipSlots(t *testing.T) {
 		t.Errorf("Wrong children block received")
 	}
 }
+
+func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
+
+	state := &pb.BeaconState{
+		Slot: 10,
+		ValidatorBalances: []uint64{params.BeaconConfig().MaxDepositAmount},
+	}
+
+	chainService := setupBeaconChain(t, false, beaconDB, true, nil)
+
+	// Construct the following chain:
+	// B1 <- B2 (State is slot 2)
+	block1 := &pb.BeaconBlock{
+		Slot:             1,
+		ParentRootHash32: []byte{'A'},
+	}
+	root1, err := hashutil.HashBeaconBlock(block1)
+	if err != nil {
+		t.Fatalf("Could not hash block: %v", err)
+	}
+	err = chainService.beaconDB.SaveBlock(block1)
+	if err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	err = chainService.beaconDB.UpdateChainHead(block1, state)
+	if err != nil {
+		t.Fatalf("Could update chain head: %v", err)
+	}
+
+	block2 := &pb.BeaconBlock{
+		Slot:             2,
+		ParentRootHash32: root1[:],
+	}
+	err = chainService.beaconDB.SaveBlock(block2)
+	if err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	err = chainService.beaconDB.UpdateChainHead(block2, state)
+	if err != nil {
+		t.Fatalf("Could update chain head: %v", err)
+	}
+
+	// The only vote is on block 2.
+	voteTargets := make(map[uint64]*pb.BeaconBlock)
+	voteTargets[0] = block2
+
+	// LMDGhost should pick block 2.
+	head, err := chainService.lmdGhost(block1, state, voteTargets)
+	if err != nil {
+		t.Fatalf("Could not run LMD GHOST: %v", err)
+	}
+	if !reflect.DeepEqual(block2, head) {
+		t.Errorf("Expected head to equal %v, received %v", block1, head)
+	}
+}
+
+func TestLMDGhost_3WayChainSplits(t *testing.T) {
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
+
+	state := &pb.BeaconState{
+		Slot: 10,
+		ValidatorBalances: []uint64{
+			params.BeaconConfig().MaxDepositAmount,
+			params.BeaconConfig().MaxDepositAmount,
+			params.BeaconConfig().MaxDepositAmount,
+			params.BeaconConfig().MaxDepositAmount},
+	}
+
+	chainService := setupBeaconChain(t, false, beaconDB, true, nil)
+
+	// Construct the following chain:
+	//    /- B2
+	// B1  - B3 (State is slot 2)
+	//    \- B4
+	block1 := &pb.BeaconBlock{
+		Slot:             1,
+		ParentRootHash32: []byte{'A'},
+	}
+	root1, err := hashutil.HashBeaconBlock(block1)
+	if err != nil {
+		t.Fatalf("Could not hash block: %v", err)
+	}
+	err = chainService.beaconDB.SaveBlock(block1)
+	if err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	err = chainService.beaconDB.UpdateChainHead(block1, state)
+	if err != nil {
+		t.Fatalf("Could update chain head: %v", err)
+	}
+
+	block2 := &pb.BeaconBlock{
+		Slot:             2,
+		ParentRootHash32: root1[:],
+	}
+	err = chainService.beaconDB.SaveBlock(block2)
+	if err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	err = chainService.beaconDB.UpdateChainHead(block2, state)
+	if err != nil {
+		t.Fatalf("Could update chain head: %v", err)
+	}
+
+	block3 := &pb.BeaconBlock{
+		Slot:             3,
+		ParentRootHash32: root1[:],
+	}
+	err = chainService.beaconDB.SaveBlock(block3)
+	if err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	err = chainService.beaconDB.UpdateChainHead(block3, state)
+	if err != nil {
+		t.Fatalf("Could update chain head: %v", err)
+	}
+
+	block4 := &pb.BeaconBlock{
+		Slot:             4,
+		ParentRootHash32: root1[:],
+	}
+	err = chainService.beaconDB.SaveBlock(block4)
+	if err != nil {
+		t.Fatalf("Could not save block: %v", err)
+	}
+	err = chainService.beaconDB.UpdateChainHead(block4, state)
+	if err != nil {
+		t.Fatalf("Could update chain head: %v", err)
+	}
+
+	// Give block 4 the most votes (2).
+	voteTargets := make(map[uint64]*pb.BeaconBlock)
+	voteTargets[0] = block2
+	voteTargets[1] = block3
+	voteTargets[2] = block4
+	voteTargets[3] = block4
+	// LMDGhost should pick block 4.
+	head, err := chainService.lmdGhost(block1, state, voteTargets)
+	if err != nil {
+		t.Fatalf("Could not run LMD GHOST: %v", err)
+	}
+	if !reflect.DeepEqual(block4, head) {
+		t.Errorf("Expected head to equal %v, received %v", block4, head)
+	}
+}
+
