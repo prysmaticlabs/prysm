@@ -15,3 +15,19 @@ func HashBeaconBlock(bb *pb.BeaconBlock) ([32]byte, error) {
 
 	return HashProto(bb)
 }
+
+// HashProposal hashes the proposal without the proposal signature.
+// The proposer signature is ignored in order obtain the same proposal hash used
+// as the "proposal_signed_data" property in the proposal signature data.
+func HashProposal(p *pb.Proposal) ([32]byte, error) {
+	// Ignore the proposal signature by temporarily deleting it.
+	sig := p.Signature
+	p.Signature = nil
+	defer func() { p.Signature = sig }()
+
+	data, err := proto.Marshal(p)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	return Hash(data), nil
+}

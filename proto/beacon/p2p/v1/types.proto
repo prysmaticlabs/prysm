@@ -141,6 +141,13 @@ message ProposalSignedData {
   bytes block_root_hash32 = 3;
 }
 
+message Proposal {
+  uint64 slot = 1;
+  uint64 shard = 2;
+  bytes block_root_hash32 = 3;
+  bytes signature = 4; // bytes96
+}
+
 message SlashableAttestation {
   repeated uint64 validator_indices = 1;
   bytes custody_bitfield = 2;
