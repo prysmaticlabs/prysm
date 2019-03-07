@@ -10,6 +10,8 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"

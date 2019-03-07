@@ -87,12 +87,12 @@ func TestGenesisTime_OK(t *testing.T) {
 
 	genesisTime, err := db.GenesisTime(ctx)
 	if err == nil {
-		t.Fatal("expected GenesisTime to fail")
+		t.Fatal("Expected GenesisTime to fail")
 	}
 
 	deposits, _ := setupInitialDeposits(t, 10)
 	if err := db.InitializeState(uint64(genesisTime.Unix()), deposits, &pb.Eth1Data{}); err != nil {
-		t.Fatalf("failed to initialize state: %v", err)
+		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
 	time1, err := db.GenesisTime(ctx)
@@ -106,5 +106,34 @@ func TestGenesisTime_OK(t *testing.T) {
 
 	if time1 != time2 {
 		t.Fatalf("Expected %v and %v to be equal", time1, time2)
+	}
+}
+
+func TestFinalizeState_OK(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	genesisTime := uint64(time.Now().Unix())
+	deposits, _ := setupInitialDeposits(t, 10)
+	if err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{}); err != nil {
+		t.Fatalf("Failed to initialize state: %v", err)
+	}
+
+	state, err := db.State(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to retrieve state: %v", err)
+	}
+
+	if err := db.SaveFinalizedState(state); err != nil {
+		t.Fatalf("Unable to save finalized state")
+	}
+
+	fState, err := db.FinalizedState()
+	if err != nil {
+		t.Fatalf("Unable to retrieve finalized state")
+	}
+
+	if !proto.Equal(fState, state) {
+		t.Error("Retrieved and saved finalized are unequal")
 	}
 }
