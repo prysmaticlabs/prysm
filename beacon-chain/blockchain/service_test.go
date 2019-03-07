@@ -854,7 +854,7 @@ func TestReceiveBlock_HandlePanic(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	chainService := setupBeaconChain(t, false, db, true)
+	chainService := setupBeaconChain(t, false, db, true, nil)
 
 	// Cause method to panic
 	chainService.ReceiveBlock(nil, nil)
