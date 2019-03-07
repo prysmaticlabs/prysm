@@ -14,6 +14,8 @@ import (
 var (
 	port            = flag.Int("port", 8000, "Port to server gRPC service")
 	recaptchaSecret = flag.String("recaptcha_secret", "", "Secret to verify recaptcha")
+	rpcPath         = flag.String("rpc", "", "RPC address of a running geth node")
+	privateKey      = flag.String("private-key", "", "The private key of funder")
 )
 
 func main() {
@@ -25,9 +27,13 @@ func main() {
 	}
 	s := grpc.NewServer()
 	fmt.Println("recaptcha = " + *recaptchaSecret)
-	faucetpb.RegisterFaucetServiceServer(s, &faucetServer{
-		r: recaptcha.Recaptcha{RecaptchaPrivateKey: *recaptchaSecret},
-	})
+	faucetpb.RegisterFaucetServiceServer(s,
+		newFaucetServer(
+			recaptcha.Recaptcha{RecaptchaPrivateKey: *recaptchaSecret},
+			*rpcPath,
+			*privateKey,
+		),
+	)
 
 	reflection.Register(s)
 

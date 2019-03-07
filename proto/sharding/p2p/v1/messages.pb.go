@@ -3,11 +3,12 @@
 
 package ethereum_sharding_p2p_v1
 
-import proto "github.com/gogo/protobuf/proto"
-import fmt "fmt"
-import math "math"
-
-import io "io"
+import (
+	fmt "fmt"
+	proto "github.com/gogo/protobuf/proto"
+	io "io"
+	math "math"
+)
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -35,6 +36,7 @@ var Topic_name = map[int32]string{
 	2: "COLLATION_BODY_RESPONSE",
 	3: "TRANSACTIONS",
 }
+
 var Topic_value = map[string]int32{
 	"UNKNOWN":                 0,
 	"COLLATION_BODY_REQUEST":  1,
@@ -45,8 +47,9 @@ var Topic_value = map[string]int32{
 func (x Topic) String() string {
 	return proto.EnumName(Topic_name, int32(x))
 }
+
 func (Topic) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_messages_378f1318ba5b4c6a, []int{0}
+	return fileDescriptor_6b281833bfe9b3ff, []int{0}
 }
 
 type CollationBodyRequest struct {
@@ -64,7 +67,7 @@ func (m *CollationBodyRequest) Reset()         { *m = CollationBodyRequest{} }
 func (m *CollationBodyRequest) String() string { return proto.CompactTextString(m) }
 func (*CollationBodyRequest) ProtoMessage()    {}
 func (*CollationBodyRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_378f1318ba5b4c6a, []int{0}
+	return fileDescriptor_6b281833bfe9b3ff, []int{0}
 }
 func (m *CollationBodyRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -81,8 +84,8 @@ func (m *CollationBodyRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte
 		return b[:n], nil
 	}
 }
-func (dst *CollationBodyRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_CollationBodyRequest.Merge(dst, src)
+func (m *CollationBodyRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CollationBodyRequest.Merge(m, src)
 }
 func (m *CollationBodyRequest) XXX_Size() int {
 	return m.Size()
@@ -140,7 +143,7 @@ func (m *CollationBodyResponse) Reset()         { *m = CollationBodyResponse{} }
 func (m *CollationBodyResponse) String() string { return proto.CompactTextString(m) }
 func (*CollationBodyResponse) ProtoMessage()    {}
 func (*CollationBodyResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_378f1318ba5b4c6a, []int{1}
+	return fileDescriptor_6b281833bfe9b3ff, []int{1}
 }
 func (m *CollationBodyResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -157,8 +160,8 @@ func (m *CollationBodyResponse) XXX_Marshal(b []byte, deterministic bool) ([]byt
 		return b[:n], nil
 	}
 }
-func (dst *CollationBodyResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_CollationBodyResponse.Merge(dst, src)
+func (m *CollationBodyResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CollationBodyResponse.Merge(m, src)
 }
 func (m *CollationBodyResponse) XXX_Size() int {
 	return m.Size()
@@ -200,7 +203,7 @@ func (m *Transaction) Reset()         { *m = Transaction{} }
 func (m *Transaction) String() string { return proto.CompactTextString(m) }
 func (*Transaction) ProtoMessage()    {}
 func (*Transaction) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_378f1318ba5b4c6a, []int{2}
+	return fileDescriptor_6b281833bfe9b3ff, []int{2}
 }
 func (m *Transaction) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -217,8 +220,8 @@ func (m *Transaction) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) 
 		return b[:n], nil
 	}
 }
-func (dst *Transaction) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Transaction.Merge(dst, src)
+func (m *Transaction) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Transaction.Merge(m, src)
 }
 func (m *Transaction) XXX_Size() int {
 	return m.Size()
@@ -291,7 +294,7 @@ func (m *Signature) Reset()         { *m = Signature{} }
 func (m *Signature) String() string { return proto.CompactTextString(m) }
 func (*Signature) ProtoMessage()    {}
 func (*Signature) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_378f1318ba5b4c6a, []int{3}
+	return fileDescriptor_6b281833bfe9b3ff, []int{3}
 }
 func (m *Signature) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -308,8 +311,8 @@ func (m *Signature) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (dst *Signature) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Signature.Merge(dst, src)
+func (m *Signature) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Signature.Merge(m, src)
 }
 func (m *Signature) XXX_Size() int {
 	return m.Size()
@@ -342,12 +345,51 @@ func (m *Signature) GetS() uint64 {
 }
 
 func init() {
+	proto.RegisterEnum("ethereum.sharding.p2p.v1.Topic", Topic_name, Topic_value)
 	proto.RegisterType((*CollationBodyRequest)(nil), "ethereum.sharding.p2p.v1.CollationBodyRequest")
 	proto.RegisterType((*CollationBodyResponse)(nil), "ethereum.sharding.p2p.v1.CollationBodyResponse")
 	proto.RegisterType((*Transaction)(nil), "ethereum.sharding.p2p.v1.Transaction")
 	proto.RegisterType((*Signature)(nil), "ethereum.sharding.p2p.v1.Signature")
-	proto.RegisterEnum("ethereum.sharding.p2p.v1.Topic", Topic_name, Topic_value)
 }
+
+func init() {
+	proto.RegisterFile("proto/sharding/p2p/v1/messages.proto", fileDescriptor_6b281833bfe9b3ff)
+}
+
+var fileDescriptor_6b281833bfe9b3ff = []byte{
+	// 479 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x92, 0xdf, 0x6e, 0xd3, 0x3c,
+	0x18, 0xc6, 0x3f, 0x6f, 0xfd, 0xb3, 0xbe, 0x8d, 0xf4, 0x45, 0xd6, 0x18, 0x81, 0x41, 0xa9, 0x0a,
+	0x07, 0x85, 0x83, 0x54, 0x2b, 0xe2, 0x02, 0xda, 0x52, 0x89, 0x89, 0x2a, 0x19, 0x49, 0x26, 0xc4,
+	0x51, 0xe4, 0x25, 0x56, 0x62, 0xd1, 0xda, 0xc6, 0x4e, 0x22, 0xed, 0xb2, 0xb8, 0x0b, 0x0e, 0xb9,
+	0x04, 0xd4, 0x43, 0xae, 0x02, 0xc5, 0x49, 0xc7, 0x04, 0xe2, 0x2c, 0xbf, 0xe7, 0x79, 0xe5, 0xbc,
+	0x3f, 0x27, 0xf0, 0x42, 0x2a, 0x51, 0x88, 0x99, 0xce, 0x89, 0x4a, 0x19, 0xcf, 0x66, 0x72, 0x2e,
+	0x67, 0xd5, 0xc5, 0x6c, 0x47, 0xb5, 0x26, 0x19, 0xd5, 0xae, 0xa9, 0xb1, 0x43, 0x8b, 0x9c, 0x2a,
+	0x5a, 0xee, 0xdc, 0xc3, 0xa0, 0x2b, 0xe7, 0xd2, 0xad, 0x2e, 0x26, 0x5f, 0x11, 0x9c, 0xae, 0xc4,
+	0x76, 0x4b, 0x0a, 0x26, 0xf8, 0x52, 0xa4, 0xb7, 0x01, 0xfd, 0x52, 0x52, 0x5d, 0xe0, 0x47, 0x70,
+	0x62, 0x66, 0x63, 0x96, 0x3a, 0x68, 0x8c, 0xa6, 0x9d, 0xa0, 0x6f, 0xf8, 0x32, 0xc5, 0x67, 0xd0,
+	0x93, 0x54, 0x31, 0x91, 0x3a, 0x47, 0xa6, 0x68, 0x09, 0x3f, 0x05, 0x48, 0xf2, 0x92, 0x7f, 0x8e,
+	0x95, 0x10, 0x85, 0x73, 0x3c, 0x46, 0x53, 0x2b, 0x18, 0x98, 0x24, 0x10, 0xa2, 0xc0, 0x2f, 0xc1,
+	0x96, 0x4a, 0x48, 0xa1, 0xa9, 0x8a, 0x49, 0x9a, 0x2a, 0xaa, 0xb5, 0xd3, 0x31, 0x43, 0xff, 0x1f,
+	0xf2, 0x45, 0x13, 0xe3, 0x27, 0x30, 0xd0, 0x2c, 0xe3, 0xa4, 0x28, 0x15, 0x75, 0xba, 0xcd, 0x41,
+	0x77, 0xc1, 0x64, 0x03, 0x0f, 0xfe, 0x58, 0x59, 0x4b, 0xc1, 0x35, 0xc5, 0xcf, 0x60, 0x98, 0x53,
+	0x92, 0x52, 0x15, 0xe7, 0x44, 0xe7, 0x66, 0x6d, 0x2b, 0x80, 0x26, 0x7a, 0x47, 0x74, 0x8e, 0x31,
+	0x74, 0x6e, 0x44, 0x7a, 0x6b, 0xf6, 0xb6, 0x02, 0xf3, 0x3c, 0xf9, 0x89, 0x60, 0x18, 0x29, 0xc2,
+	0x35, 0x49, 0xea, 0x03, 0xf1, 0x29, 0x74, 0xb9, 0xe0, 0x09, 0x6d, 0xad, 0x1b, 0xc0, 0xe7, 0x30,
+	0xc8, 0x88, 0x8e, 0xa5, 0x62, 0x09, 0x6d, 0xb5, 0x4f, 0x32, 0xa2, 0xaf, 0x6a, 0x3e, 0x94, 0x5b,
+	0xb6, 0x63, 0x8d, 0x77, 0x53, 0x6e, 0x6a, 0xae, 0x5d, 0x14, 0x4d, 0x98, 0x64, 0x94, 0x17, 0xad,
+	0xef, 0xef, 0xa0, 0x7e, 0x5b, 0x45, 0xb6, 0x65, 0x63, 0xd9, 0x09, 0x1a, 0xa8, 0x53, 0xc6, 0x65,
+	0x59, 0x38, 0x3d, 0x33, 0xdf, 0x00, 0x5e, 0xdc, 0xbf, 0x95, 0xfe, 0x18, 0x4d, 0x87, 0xf3, 0xe7,
+	0xee, 0xbf, 0xbe, 0xac, 0x1b, 0x1e, 0x46, 0xef, 0x5f, 0xdd, 0x1b, 0x18, 0xdc, 0xe5, 0xd8, 0x02,
+	0x54, 0xb5, 0x96, 0xa8, 0xaa, 0x49, 0xb5, 0x66, 0x48, 0xd5, 0xa4, 0x5b, 0x15, 0xa4, 0x5f, 0xc5,
+	0xd0, 0x8d, 0x84, 0x64, 0x09, 0x1e, 0x42, 0xff, 0xda, 0x7b, 0xef, 0xf9, 0x1f, 0x3d, 0xfb, 0x3f,
+	0xfc, 0x18, 0xce, 0x56, 0xfe, 0x66, 0xb3, 0x88, 0x2e, 0x7d, 0x2f, 0x5e, 0xfa, 0x6f, 0x3f, 0xc5,
+	0xc1, 0xfa, 0xc3, 0xf5, 0x3a, 0x8c, 0x6c, 0x84, 0xcf, 0xe1, 0xe1, 0x5f, 0x5d, 0x78, 0xe5, 0x7b,
+	0xe1, 0xda, 0x3e, 0xc2, 0x36, 0x58, 0x51, 0xb0, 0xf0, 0xc2, 0xc5, 0xaa, 0xae, 0x43, 0xfb, 0x78,
+	0x69, 0x7d, 0xdb, 0x8f, 0xd0, 0xf7, 0xfd, 0x08, 0xfd, 0xd8, 0x8f, 0xd0, 0x4d, 0xcf, 0xfc, 0xb5,
+	0xaf, 0x7f, 0x05, 0x00, 0x00, 0xff, 0xff, 0xc4, 0x1a, 0xde, 0xa7, 0xdd, 0x02, 0x00, 0x00,
+}
+
 func (m *CollationBodyRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -673,7 +715,7 @@ func (m *CollationBodyRequest) Unmarshal(dAtA []byte) error {
 			}
 			b := dAtA[iNdEx]
 			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
+			wire |= uint64(b&0x7F) << shift
 			if b < 0x80 {
 				break
 			}
@@ -701,7 +743,7 @@ func (m *CollationBodyRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.ShardId |= (uint64(b) & 0x7F) << shift
+				m.ShardId |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -720,7 +762,7 @@ func (m *CollationBodyRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Period |= (uint64(b) & 0x7F) << shift
+				m.Period |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -739,7 +781,7 @@ func (m *CollationBodyRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= (int(b) & 0x7F) << shift
+				byteLen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -748,6 +790,9 @@ func (m *CollationBodyRequest) Unmarshal(dAtA []byte) error {
 				return ErrInvalidLengthMessages
 			}
 			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthMessages
+			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
@@ -770,7 +815,7 @@ func (m *CollationBodyRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= (int(b) & 0x7F) << shift
+				byteLen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -779,6 +824,9 @@ func (m *CollationBodyRequest) Unmarshal(dAtA []byte) error {
 				return ErrInvalidLengthMessages
 			}
 			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthMessages
+			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
@@ -801,7 +849,7 @@ func (m *CollationBodyRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= (int(b) & 0x7F) << shift
+				byteLen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -810,6 +858,9 @@ func (m *CollationBodyRequest) Unmarshal(dAtA []byte) error {
 				return ErrInvalidLengthMessages
 			}
 			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthMessages
+			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
@@ -825,6 +876,9 @@ func (m *CollationBodyRequest) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			if skippy < 0 {
+				return ErrInvalidLengthMessages
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthMessages
 			}
 			if (iNdEx + skippy) > l {
@@ -855,7 +909,7 @@ func (m *CollationBodyResponse) Unmarshal(dAtA []byte) error {
 			}
 			b := dAtA[iNdEx]
 			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
+			wire |= uint64(b&0x7F) << shift
 			if b < 0x80 {
 				break
 			}
@@ -883,7 +937,7 @@ func (m *CollationBodyResponse) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= (int(b) & 0x7F) << shift
+				byteLen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -892,6 +946,9 @@ func (m *CollationBodyResponse) Unmarshal(dAtA []byte) error {
 				return ErrInvalidLengthMessages
 			}
 			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthMessages
+			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
@@ -914,7 +971,7 @@ func (m *CollationBodyResponse) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= (int(b) & 0x7F) << shift
+				byteLen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -923,6 +980,9 @@ func (m *CollationBodyResponse) Unmarshal(dAtA []byte) error {
 				return ErrInvalidLengthMessages
 			}
 			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthMessages
+			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
@@ -938,6 +998,9 @@ func (m *CollationBodyResponse) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			if skippy < 0 {
+				return ErrInvalidLengthMessages
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthMessages
 			}
 			if (iNdEx + skippy) > l {
@@ -968,7 +1031,7 @@ func (m *Transaction) Unmarshal(dAtA []byte) error {
 			}
 			b := dAtA[iNdEx]
 			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
+			wire |= uint64(b&0x7F) << shift
 			if b < 0x80 {
 				break
 			}
@@ -996,7 +1059,7 @@ func (m *Transaction) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Nonce |= (uint64(b) & 0x7F) << shift
+				m.Nonce |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -1015,7 +1078,7 @@ func (m *Transaction) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.GasPrice |= (uint64(b) & 0x7F) << shift
+				m.GasPrice |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -1034,7 +1097,7 @@ func (m *Transaction) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.GasLimit |= (uint64(b) & 0x7F) << shift
+				m.GasLimit |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -1053,7 +1116,7 @@ func (m *Transaction) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= (int(b) & 0x7F) << shift
+				byteLen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -1062,6 +1125,9 @@ func (m *Transaction) Unmarshal(dAtA []byte) error {
 				return ErrInvalidLengthMessages
 			}
 			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthMessages
+			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
@@ -1084,7 +1150,7 @@ func (m *Transaction) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Value |= (uint64(b) & 0x7F) << shift
+				m.Value |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -1103,7 +1169,7 @@ func (m *Transaction) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				byteLen |= (int(b) & 0x7F) << shift
+				byteLen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -1112,6 +1178,9 @@ func (m *Transaction) Unmarshal(dAtA []byte) error {
 				return ErrInvalidLengthMessages
 			}
 			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthMessages
+			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
@@ -1134,7 +1203,7 @@ func (m *Transaction) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				msglen |= (int(b) & 0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -1143,6 +1212,9 @@ func (m *Transaction) Unmarshal(dAtA []byte) error {
 				return ErrInvalidLengthMessages
 			}
 			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthMessages
+			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
@@ -1160,6 +1232,9 @@ func (m *Transaction) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			if skippy < 0 {
+				return ErrInvalidLengthMessages
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthMessages
 			}
 			if (iNdEx + skippy) > l {
@@ -1190,7 +1265,7 @@ func (m *Signature) Unmarshal(dAtA []byte) error {
 			}
 			b := dAtA[iNdEx]
 			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
+			wire |= uint64(b&0x7F) << shift
 			if b < 0x80 {
 				break
 			}
@@ -1218,7 +1293,7 @@ func (m *Signature) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.V |= (uint64(b) & 0x7F) << shift
+				m.V |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -1237,7 +1312,7 @@ func (m *Signature) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.R |= (uint64(b) & 0x7F) << shift
+				m.R |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -1256,7 +1331,7 @@ func (m *Signature) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.S |= (uint64(b) & 0x7F) << shift
+				m.S |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -1268,6 +1343,9 @@ func (m *Signature) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			if skippy < 0 {
+				return ErrInvalidLengthMessages
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthMessages
 			}
 			if (iNdEx + skippy) > l {
@@ -1337,8 +1415,11 @@ func skipMessages(dAtA []byte) (n int, err error) {
 					break
 				}
 			}
-			iNdEx += length
 			if length < 0 {
+				return 0, ErrInvalidLengthMessages
+			}
+			iNdEx += length
+			if iNdEx < 0 {
 				return 0, ErrInvalidLengthMessages
 			}
 			return iNdEx, nil
@@ -1369,6 +1450,9 @@ func skipMessages(dAtA []byte) (n int, err error) {
 					return 0, err
 				}
 				iNdEx = start + next
+				if iNdEx < 0 {
+					return 0, ErrInvalidLengthMessages
+				}
 			}
 			return iNdEx, nil
 		case 4:
@@ -1387,41 +1471,3 @@ var (
 	ErrInvalidLengthMessages = fmt.Errorf("proto: negative length found during unmarshaling")
 	ErrIntOverflowMessages   = fmt.Errorf("proto: integer overflow")
 )
-
-func init() {
-	proto.RegisterFile("proto/sharding/p2p/v1/messages.proto", fileDescriptor_messages_378f1318ba5b4c6a)
-}
-
-var fileDescriptor_messages_378f1318ba5b4c6a = []byte{
-	// 479 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x92, 0xdf, 0x6e, 0xd3, 0x3c,
-	0x18, 0xc6, 0x3f, 0x6f, 0xfd, 0xb3, 0xbe, 0x8d, 0xf4, 0x45, 0xd6, 0x18, 0x81, 0x41, 0xa9, 0x0a,
-	0x07, 0x85, 0x83, 0x54, 0x2b, 0xe2, 0x02, 0xda, 0x52, 0x89, 0x89, 0x2a, 0x19, 0x49, 0x26, 0xc4,
-	0x51, 0xe4, 0x25, 0x56, 0x62, 0xd1, 0xda, 0xc6, 0x4e, 0x22, 0xed, 0xb2, 0xb8, 0x0b, 0x0e, 0xb9,
-	0x04, 0xd4, 0x43, 0xae, 0x02, 0xc5, 0x49, 0xc7, 0x04, 0xe2, 0x2c, 0xbf, 0xe7, 0x79, 0xe5, 0xbc,
-	0x3f, 0x27, 0xf0, 0x42, 0x2a, 0x51, 0x88, 0x99, 0xce, 0x89, 0x4a, 0x19, 0xcf, 0x66, 0x72, 0x2e,
-	0x67, 0xd5, 0xc5, 0x6c, 0x47, 0xb5, 0x26, 0x19, 0xd5, 0xae, 0xa9, 0xb1, 0x43, 0x8b, 0x9c, 0x2a,
-	0x5a, 0xee, 0xdc, 0xc3, 0xa0, 0x2b, 0xe7, 0xd2, 0xad, 0x2e, 0x26, 0x5f, 0x11, 0x9c, 0xae, 0xc4,
-	0x76, 0x4b, 0x0a, 0x26, 0xf8, 0x52, 0xa4, 0xb7, 0x01, 0xfd, 0x52, 0x52, 0x5d, 0xe0, 0x47, 0x70,
-	0x62, 0x66, 0x63, 0x96, 0x3a, 0x68, 0x8c, 0xa6, 0x9d, 0xa0, 0x6f, 0xf8, 0x32, 0xc5, 0x67, 0xd0,
-	0x93, 0x54, 0x31, 0x91, 0x3a, 0x47, 0xa6, 0x68, 0x09, 0x3f, 0x05, 0x48, 0xf2, 0x92, 0x7f, 0x8e,
-	0x95, 0x10, 0x85, 0x73, 0x3c, 0x46, 0x53, 0x2b, 0x18, 0x98, 0x24, 0x10, 0xa2, 0xc0, 0x2f, 0xc1,
-	0x96, 0x4a, 0x48, 0xa1, 0xa9, 0x8a, 0x49, 0x9a, 0x2a, 0xaa, 0xb5, 0xd3, 0x31, 0x43, 0xff, 0x1f,
-	0xf2, 0x45, 0x13, 0xe3, 0x27, 0x30, 0xd0, 0x2c, 0xe3, 0xa4, 0x28, 0x15, 0x75, 0xba, 0xcd, 0x41,
-	0x77, 0xc1, 0x64, 0x03, 0x0f, 0xfe, 0x58, 0x59, 0x4b, 0xc1, 0x35, 0xc5, 0xcf, 0x60, 0x98, 0x53,
-	0x92, 0x52, 0x15, 0xe7, 0x44, 0xe7, 0x66, 0x6d, 0x2b, 0x80, 0x26, 0x7a, 0x47, 0x74, 0x8e, 0x31,
-	0x74, 0x6e, 0x44, 0x7a, 0x6b, 0xf6, 0xb6, 0x02, 0xf3, 0x3c, 0xf9, 0x89, 0x60, 0x18, 0x29, 0xc2,
-	0x35, 0x49, 0xea, 0x03, 0xf1, 0x29, 0x74, 0xb9, 0xe0, 0x09, 0x6d, 0xad, 0x1b, 0xc0, 0xe7, 0x30,
-	0xc8, 0x88, 0x8e, 0xa5, 0x62, 0x09, 0x6d, 0xb5, 0x4f, 0x32, 0xa2, 0xaf, 0x6a, 0x3e, 0x94, 0x5b,
-	0xb6, 0x63, 0x8d, 0x77, 0x53, 0x6e, 0x6a, 0xae, 0x5d, 0x14, 0x4d, 0x98, 0x64, 0x94, 0x17, 0xad,
-	0xef, 0xef, 0xa0, 0x7e, 0x5b, 0x45, 0xb6, 0x65, 0x63, 0xd9, 0x09, 0x1a, 0xa8, 0x53, 0xc6, 0x65,
-	0x59, 0x38, 0x3d, 0x33, 0xdf, 0x00, 0x5e, 0xdc, 0xbf, 0x95, 0xfe, 0x18, 0x4d, 0x87, 0xf3, 0xe7,
-	0xee, 0xbf, 0xbe, 0xac, 0x1b, 0x1e, 0x46, 0xef, 0x5f, 0xdd, 0x1b, 0x18, 0xdc, 0xe5, 0xd8, 0x02,
-	0x54, 0xb5, 0x96, 0xa8, 0xaa, 0x49, 0xb5, 0x66, 0x48, 0xd5, 0xa4, 0x5b, 0x15, 0xa4, 0x5f, 0xc5,
-	0xd0, 0x8d, 0x84, 0x64, 0x09, 0x1e, 0x42, 0xff, 0xda, 0x7b, 0xef, 0xf9, 0x1f, 0x3d, 0xfb, 0x3f,
-	0xfc, 0x18, 0xce, 0x56, 0xfe, 0x66, 0xb3, 0x88, 0x2e, 0x7d, 0x2f, 0x5e, 0xfa, 0x6f, 0x3f, 0xc5,
-	0xc1, 0xfa, 0xc3, 0xf5, 0x3a, 0x8c, 0x6c, 0x84, 0xcf, 0xe1, 0xe1, 0x5f, 0x5d, 0x78, 0xe5, 0x7b,
-	0xe1, 0xda, 0x3e, 0xc2, 0x36, 0x58, 0x51, 0xb0, 0xf0, 0xc2, 0xc5, 0xaa, 0xae, 0x43, 0xfb, 0x78,
-	0x69, 0x7d, 0xdb, 0x8f, 0xd0, 0xf7, 0xfd, 0x08, 0xfd, 0xd8, 0x8f, 0xd0, 0x4d, 0xcf, 0xfc, 0xb5,
-	0xaf, 0x7f, 0x05, 0x00, 0x00, 0xff, 0xff, 0xc4, 0x1a, 0xde, 0xa7, 0xdd, 0x02, 0x00, 0x00,
-}

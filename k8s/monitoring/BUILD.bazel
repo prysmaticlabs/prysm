@@ -1,0 +1,17 @@
+package(default_visibility = ["//k8s:__subpackages__"])
+
+load("@io_bazel_rules_k8s//k8s:objects.bzl", "k8s_objects")
+load("@k8s_service//:defaults.bzl", "k8s_service")
+
+k8s_objects(
+    name = "everything",
+    objects = [
+        ":grafana.service",
+    ],
+)
+
+k8s_service(
+    name = "grafana.service",
+    template = "grafana.service.yaml",
+    namespace = "istio-system",
+)
