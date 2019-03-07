@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"reflect"
 	"strings"
 	"testing"
@@ -115,6 +116,82 @@ func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testi
 			"Expected empty signature to be overwritten by randao reveal, received %v",
 			params.BeaconConfig().EmptySignature,
 		)
+	}
+}
+
+func TestVerifyProposerSignature_SignsCorrectly(t *testing.T) {
+	deposits, privKeys := setupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, params.BeaconConfig().GenesisSlot)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	block := &pb.BeaconBlock{
+		Slot:             params.BeaconConfig().GenesisSlot,
+		ParentRootHash32: []byte{'a', 'b', 'c'},
+	}
+	blockRootHash, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		t.Errorf("Could not process beacon block: %v", err)
+	}
+
+	proposal := &pb.Proposal{
+		Slot:            params.BeaconConfig().GenesisSlot,
+		Shard:           params.BeaconConfig().BeaconChainShardNumber,
+		BlockRootHash32: blockRootHash[:],
+	}
+	proposalHash, err := hashutil.HashProposal(proposal)
+
+	domain := forkutils.DomainVersion(beaconState.Fork, params.BeaconConfig().GenesisEpoch, params.BeaconConfig().DomainProposal)
+	proposerSignature := privKeys[proposerIdx].Sign(proposalHash[:], domain)
+	block.Signature = proposerSignature.Marshal()
+
+	err = blocks.VerifyProposerSignature(context.Background(), beaconState, block)
+	if err != nil {
+		t.Errorf("Unexpected error verifying proposer signature: %v", err)
+	}
+}
+
+func TestVerifyProposerSignature_IncorrectSig(t *testing.T) {
+	deposits, privKeys := setupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, params.BeaconConfig().GenesisSlot)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	block := &pb.BeaconBlock{
+		Slot:             params.BeaconConfig().GenesisSlot,
+		ParentRootHash32: []byte{'a', 'b', 'c'},
+	}
+	blockRootHash, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		t.Errorf("Could not process beacon block: %v", err)
+	}
+
+	proposal := &pb.Proposal{
+		Slot:            params.BeaconConfig().GenesisSlot,
+		Shard:           params.BeaconConfig().BeaconChainShardNumber,
+		BlockRootHash32: blockRootHash[:],
+	}
+	proposalHash, err := hashutil.HashProposal(proposal)
+
+	domain := forkutils.DomainVersion(beaconState.Fork, params.BeaconConfig().GenesisEpoch, params.BeaconConfig().DomainProposal)
+	proposerSignature := privKeys[proposerIdx+1].Sign(proposalHash[:], domain)
+	block.Signature = proposerSignature.Marshal()
+
+	want := "proposer signature did not verify"
+	if err = blocks.VerifyProposerSignature(context.Background(), beaconState, block); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 

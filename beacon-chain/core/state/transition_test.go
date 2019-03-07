@@ -11,10 +11,10 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
-	"github.com/prysmaticlabs/prysm/shared/forkutils"
-
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/forkutils"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -392,8 +392,75 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			VoluntaryExits:    exits,
 		},
 	}
-	if _, err := state.ProcessBlock(context.Background(), beaconState, block, false); err != nil {
+
+	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, block.Slot)
+	if err != nil {
+		t.Errorf("could not get beacon proposer index: %v", err)
+	}
+
+	blockRootHash, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		t.Errorf("could not hash beacon block: %v", err)
+	}
+
+	proposalHash, err := hashutil.HashProposal(&pb.Proposal{
+		Slot:            block.Slot,
+		Shard:           params.BeaconConfig().BeaconChainShardNumber,
+		BlockRootHash32: blockRootHash[:],
+		Signature:       block.Signature,
+	})
+	if err != nil {
+		t.Errorf("could not hash attestation data: %v", err)
+	}
+
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+	domain := forkutils.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainProposal)
+	block.Signature = privKeys[proposerIndex].Sign(proposalHash[:], domain).Marshal()
+
+	if _, err := state.ProcessBlock(context.Background(), beaconState, block, true); err != nil {
 		t.Errorf("Expected block to pass processing conditions: %v", err)
+	}
+}
+
+func TestProcessBlock_IncorrectProposerSig(t *testing.T) {
+	deposits, privKeys := setupInitialDeposits(t, params.BeaconConfig().SlotsPerEpoch)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	beaconState.Slot = params.BeaconConfig().GenesisSlot + 10
+	block := &pb.BeaconBlock{
+		Slot: params.BeaconConfig().GenesisSlot + 10,
+	}
+
+	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, block.Slot)
+	if err != nil {
+		t.Errorf("could not get beacon proposer index: %v", err)
+	}
+
+	blockRootHash, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		t.Errorf("could not hash beacon block: %v", err)
+	}
+
+	proposalHash, err := hashutil.HashProposal(&pb.Proposal{
+		Slot:            block.Slot,
+		Shard:           params.BeaconConfig().BeaconChainShardNumber,
+		BlockRootHash32: blockRootHash[:],
+		Signature:       block.Signature,
+	})
+	if err != nil {
+		t.Errorf("could not hash attestation data: %v", err)
+	}
+
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+	domain := forkutils.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainProposal)
+	block.Signature = privKeys[proposerIndex+1].Sign(proposalHash[:], domain).Marshal()
+
+	want := "proposer signature did not verify"
+	if _, err := state.ProcessBlock(context.Background(), beaconState, block, true); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
@@ -434,6 +501,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 	}
 
 	crosslinkRecord := make([]*pb.Crosslink, 64)
+
 	newState := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
 		LatestAttestations:     attestations,

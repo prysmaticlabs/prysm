@@ -40,43 +40,41 @@ func VerifyProposerSignature(ctx context.Context, beaconState *pb.BeaconState, b
 		return fmt.Errorf("could not get beacon proposer index: %v", err)
 	}
 
-	attestorPubKeys := make([]*bls.PublicKey, len(attesterIndices))
-	for idx, participantIndex := range attesterIndices {
-		pubkey, err := bls.PublicKeyFromBytes(beaconState.ValidatorRegistry[participantIndex].Pubkey)
-		if err != nil {
-			return false, fmt.Errorf("could not deserialize attestor public key: %v", err)
-		}
-
-		attestorPubKeys[idx] = pubkey
+	proposerPubkey, err := bls.PublicKeyFromBytes(beaconState.ValidatorRegistry[proposerIndex].Pubkey)
+	if err != nil {
+		return fmt.Errorf("could not get proposer public key: %v", err)
 	}
 
-	aggregatePubkeys := []*bls.PublicKey{
-		bls.AggregatePublicKeys(attestorPubKeys),
+	blockRootHash, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		return fmt.Errorf("could not hash beacon block: %v", err)
 	}
 
-	attestationDataHash, err := hashutil.HashProto(&pb.AttestationDataAndCustodyBit{
-		Data:       att.Data,
-		CustodyBit: true,
+	proposalHash, err := hashutil.HashProposal(&pb.Proposal{
+		Slot:            block.Slot,
+		Shard:           params.BeaconConfig().BeaconChainShardNumber,
+		BlockRootHash32: blockRootHash[:],
+		Signature:       block.Signature,
 	})
 	if err != nil {
-		return false, fmt.Errorf("could not hash attestation data: %v", err)
-	}
-	messageHashes := [][]byte{
-		attestationDataHash[:],
+		return fmt.Errorf("could not hash attestation data: %v", err)
 	}
 
-	sig, err := bls.SignatureFromBytes(att.AggregateSignature)
+	sig, err := bls.SignatureFromBytes(block.Signature)
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 
-	domain := forkutils.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainAttestation)
+	domain := forkutils.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainProposal)
 
 	log.WithFields(logrus.Fields{
-		"aggregatePubkeys": fmt.Sprintf("%#x", aggregatePubkeys),
-		"messageHashes":    messageHashes,
-		"aggregateSig":     fmt.Sprintf("%#x", sig.Marshal()),
-	}).Info("Verifying attestation")
+		"pubkey":       fmt.Sprintf("%#x", proposerPubkey.Marshal()),
+		"proposalHash": proposalHash[:],
+		"BlockSig":     fmt.Sprintf("%#x", sig.Marshal()),
+	}).Info("Verifying proposal")
 
-	return sig.VerifyMultiple(aggregatePubkeys, messageHashes, domain), nil
+	if !sig.Verify(proposalHash[:], proposerPubkey, domain) {
+		return errors.New("proposer signature did not verify")
+	}
+	return nil
 }
 
 // ProcessEth1DataInBlock is an operation performed on each
