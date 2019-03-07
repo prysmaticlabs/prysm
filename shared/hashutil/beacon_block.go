@@ -1,7 +1,6 @@
 package hashutil
 
 import (
-	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
@@ -14,9 +13,5 @@ func HashBeaconBlock(bb *pb.BeaconBlock) ([32]byte, error) {
 	bb.Signature = nil
 	defer func() { bb.Signature = sig }()
 
-	data, err := proto.Marshal(bb)
-	if err != nil {
-		return [32]byte{}, err
-	}
-	return Hash(data), nil
+	return HashProto(bb)
 }
