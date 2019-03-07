@@ -4,7 +4,6 @@ package node
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"os"
 	"os/signal"
 	"path"
@@ -14,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
+	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
