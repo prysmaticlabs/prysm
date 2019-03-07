@@ -11,7 +11,6 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
-	ipfslog "github.com/ipfs/go-log"
 	bhost "github.com/libp2p/go-libp2p-blankhost"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
@@ -30,7 +29,6 @@ var _ = Broadcaster(&Server{})
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
-	ipfslog.SetDebugLogging()
 }
 
 func TestStartDialRelayNode_InvalidMultiaddress(t *testing.T) {
@@ -100,8 +98,9 @@ func TestSubscribeToTopic_OK(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
 	defer cancel()
 	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
+	h2 := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
 
-	gsub, err := pubsub.NewFloodSub(ctx, h)
+	gsub, err := pubsub.NewFloodSub(ctx, h2)
 	if err != nil {
 		t.Errorf("Failed to create pubsub: %v", err)
 	}
@@ -127,8 +126,9 @@ func TestSubscribe_OK(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
 	defer cancel()
 	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
+	h2 := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
 
-	gsub, err := pubsub.NewFloodSub(ctx, h)
+	gsub, err := pubsub.NewFloodSub(ctx, h2)
 	if err != nil {
 		t.Errorf("Failed to create pubsub: %v", err)
 	}
@@ -199,8 +199,9 @@ func TestRegisterTopic_InvalidProtobufs(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
 	defer cancel()
 	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
+	h2 := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
 
-	gsub, err := pubsub.NewFloodSub(ctx, h)
+	gsub, err := pubsub.NewFloodSub(ctx, h2)
 
 	if err != nil {
 		t.Errorf("Failed to create floodsub: %v", err)

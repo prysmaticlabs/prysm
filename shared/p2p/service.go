@@ -8,12 +8,15 @@ import (
 	"reflect"
 	"sync"
 
+	ggio "github.com/gogo/protobuf/io"
 	"github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"
 	dsync "github.com/ipfs/go-datastore/sync"
 	libp2p "github.com/libp2p/go-libp2p"
 	host "github.com/libp2p/go-libp2p-host"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
+	libp2pnet "github.com/libp2p/go-libp2p-net"
+	protocol "github.com/libp2p/go-libp2p-protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -21,6 +24,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
+
+const prysmProtocolPrefix = "/prysm/0.0.0"
+const maxMessageSize = 1 << 20
 
 // Sender represents a struct that is able to relay information via p2p.
 // Server implements this interface.
@@ -181,6 +187,34 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 		adapters[i], adapters[opp] = adapters[opp], adapters[i]
 	}
 
+	handler := func(msg proto.Message) {
+		log.WithField("topic", topic).Debug("Processing incoming message")
+		var h Handler = func(pMsg Message) {
+			s.emit(pMsg, feed)
+		}
+
+		pMsg := Message{Ctx: s.ctx, Data: msg}
+		for _, adapter := range adapters {
+			h = adapter(h)
+		}
+
+		h(pMsg)
+	}
+
+	s.host.SetStreamHandler(protocol.ID(prysmProtocolPrefix+"/"+topic), func(s libp2pnet.Stream) {
+		r := ggio.NewDelimitedReader(s, maxMessageSize)
+
+		msg := proto.Clone(message)
+		for {
+			if err := r.ReadMsg(msg); err != nil {
+				log.WithError(err).Error("Could not read message from stream")
+				return
+			}
+
+			handler(msg)
+		}
+	})
+
 	go func() {
 		defer sub.Cancel()
 
@@ -213,23 +247,13 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 				continue
 			}
 
-			d := message
+			d := proto.Clone(message)
 			if err := proto.Unmarshal(msg.Data, d); err != nil {
 				log.WithError(err).Error("Failed to decode data")
 				continue
 			}
 
-			log.WithField("topic", topic).Debug("Processing incoming message")
-			var h Handler = func(pMsg Message) {
-				s.emit(pMsg, feed)
-			}
-
-			pMsg := Message{Ctx: s.ctx, Data: d}
-			for _, adapter := range adapters {
-				h = adapter(h)
-			}
-
-			h(pMsg)
+			handler(d)
 		}
 	}()
 }
