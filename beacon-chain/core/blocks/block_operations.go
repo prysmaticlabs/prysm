@@ -68,7 +68,7 @@ func VerifyProposerSignature(ctx context.Context, beaconState *pb.BeaconState, b
 	log.WithFields(logrus.Fields{
 		"pubkey":       fmt.Sprintf("%#x", proposerPubkey.Marshal()),
 		"proposalHash": proposalHash[:],
-		"BlockSig":     fmt.Sprintf("%#x", sig.Marshal()),
+		"blockSig":     fmt.Sprintf("%#x", sig.Marshal()),
 	}).Info("Verifying proposal")
 
 	if !sig.Verify(proposalHash[:], proposerPubkey, domain) {
@@ -126,12 +126,12 @@ func ProcessBlockRandao(ctx context.Context, beaconState *pb.BeaconState, block 
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock.ProcessBlockRandao")
 	defer span.End()
 
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
+	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
 	}
-	log.WithField("proposerIndex", proposerIdx).Info("RANDAO expected proposer")
-	proposer := beaconState.ValidatorRegistry[proposerIdx]
+	log.WithField("proposerIndex", proposerIndex).Info("RANDAO expected proposer")
+	proposer := beaconState.ValidatorRegistry[proposerIndex]
 	if verifySignatures {
 		if err := verifyBlockRandao(beaconState, block, proposer); err != nil {
 			return nil, fmt.Errorf("could not verify block randao: %v", err)

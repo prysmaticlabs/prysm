@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
@@ -29,7 +30,7 @@ func generateSimulatedBlock(
 	if err != nil {
 		return nil, [32]byte{}, fmt.Errorf("could not tree hash state: %v", err)
 	}
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot+1)
+	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot+1)
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
@@ -38,7 +39,7 @@ func generateSimulatedBlock(
 	binary.LittleEndian.PutUint64(buf, epoch)
 	domain := forkutils.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
 	// We make the previous validator's index sign the message instead of the proposer.
-	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
+	epochSignature := privKeys[proposerIndex].Sign(buf, domain)
 	block := &pb.BeaconBlock{
 		Slot:             beaconState.Slot + 1,
 		RandaoReveal:     epochSignature.Marshal(),
@@ -120,10 +121,17 @@ func generateSimulatedBlock(
 			ValidatorIndex: simObjects.simValidatorExit.ValidatorIndex,
 		})
 	}
+
 	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return nil, [32]byte{}, fmt.Errorf("could not tree hash new block: %v", err)
 	}
+
+	block.Signature, err = b.BlockSignature(beaconState, block, privKeys[proposerIndex])
+	if err != nil {
+		return nil, [32]byte{}, fmt.Errorf("could not get block signature: %v", err)
+	}
+
 	return block, blockRoot, nil
 }
 

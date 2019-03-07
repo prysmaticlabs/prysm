@@ -9,12 +9,12 @@ import (
 	"testing"
 	"time"
 
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/forkutils"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -42,7 +42,7 @@ func setupInitialDeposits(t *testing.T, numDeposits uint64) ([]*pb.Deposit, []*b
 
 func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*bls.SecretKey) []byte {
 	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
+	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +51,7 @@ func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*b
 	binary.LittleEndian.PutUint64(buf, epoch)
 	domain := forkutils.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
 	// We make the previous validator's index sign the message instead of the proposer.
-	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
+	epochSignature := privKeys[proposerIndex].Sign(buf, domain)
 	return epochSignature.Marshal()
 }
 
@@ -398,24 +398,10 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		t.Errorf("could not get beacon proposer index: %v", err)
 	}
 
-	blockRootHash, err := hashutil.HashBeaconBlock(block)
+	block.Signature, err = b.BlockSignature(beaconState, block, privKeys[proposerIndex])
 	if err != nil {
-		t.Errorf("could not hash beacon block: %v", err)
+		t.Errorf("could not get block signature: %v", err)
 	}
-
-	proposalHash, err := hashutil.HashProposal(&pb.Proposal{
-		Slot:            block.Slot,
-		Shard:           params.BeaconConfig().BeaconChainShardNumber,
-		BlockRootHash32: blockRootHash[:],
-		Signature:       block.Signature,
-	})
-	if err != nil {
-		t.Errorf("could not hash attestation data: %v", err)
-	}
-
-	currentEpoch := helpers.CurrentEpoch(beaconState)
-	domain := forkutils.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainProposal)
-	block.Signature = privKeys[proposerIndex].Sign(proposalHash[:], domain).Marshal()
 
 	if _, err := state.ProcessBlock(context.Background(), beaconState, block, true); err != nil {
 		t.Errorf("Expected block to pass processing conditions: %v", err)
@@ -439,24 +425,10 @@ func TestProcessBlock_IncorrectProposerSig(t *testing.T) {
 		t.Errorf("could not get beacon proposer index: %v", err)
 	}
 
-	blockRootHash, err := hashutil.HashBeaconBlock(block)
+	block.Signature, err = b.BlockSignature(beaconState, block, privKeys[proposerIndex+1])
 	if err != nil {
-		t.Errorf("could not hash beacon block: %v", err)
+		t.Errorf("could not get block signature: %v", err)
 	}
-
-	proposalHash, err := hashutil.HashProposal(&pb.Proposal{
-		Slot:            block.Slot,
-		Shard:           params.BeaconConfig().BeaconChainShardNumber,
-		BlockRootHash32: blockRootHash[:],
-		Signature:       block.Signature,
-	})
-	if err != nil {
-		t.Errorf("could not hash attestation data: %v", err)
-	}
-
-	currentEpoch := helpers.CurrentEpoch(beaconState)
-	domain := forkutils.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainProposal)
-	block.Signature = privKeys[proposerIndex+1].Sign(proposalHash[:], domain).Marshal()
 
 	want := "proposer signature did not verify"
 	if _, err := state.ProcessBlock(context.Background(), beaconState, block, true); !strings.Contains(err.Error(), want) {
