@@ -49,19 +49,19 @@ func (ms *mockOperationService) PendingAttestations() ([]*pb.Attestation, error)
 		{
 			AggregationBitfield: []byte("A"),
 			Data: &pb.AttestationData{
-				Slot: params.BeaconConfig().GenesisSlot,
+				Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
 			},
 		},
 		{
 			AggregationBitfield: []byte("B"),
 			Data: &pb.AttestationData{
-				Slot: params.BeaconConfig().GenesisSlot,
+				Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
 			},
 		},
 		{
 			AggregationBitfield: []byte("C"),
 			Data: &pb.AttestationData{
-				Slot: params.BeaconConfig().GenesisSlot,
+				Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
 			},
 		},
 	}, nil

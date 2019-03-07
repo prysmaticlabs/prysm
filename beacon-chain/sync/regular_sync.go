@@ -8,7 +8,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -472,10 +471,9 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 		return
 	}
 
-	previousEpochStartSlot := helpers.StartSlot(helpers.PrevEpoch(beaconState))
-	if attestation.Data.Slot < previousEpochStartSlot {
-		log.Debugf("Skipping received attestation with slot smaller than previous epoch start slot, %d < %d",
-			attestation.Data.Slot, previousEpochStartSlot)
+	if attestation.Data.Slot < beaconState.Slot - params.BeaconConfig().SlotsPerEpoch {
+		log.Debugf("Skipping received attestation with slot smaller than one epoch ago, %d < %d",
+			attestation.Data.Slot, beaconState.Slot - params.BeaconConfig().SlotsPerEpoch)
 		return
 	}
 
