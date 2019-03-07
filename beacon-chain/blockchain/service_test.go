@@ -915,8 +915,8 @@ func TestBlockChildren_2InARow(t *testing.T) {
 		t.Fatalf("Could not get block children: %v", err)
 	}
 
-	// When we input block B1, we should get B2 and B3 back.
-	wanted := []*pb.BeaconBlock{block2, block3}
+	// When we input block B1, we should get B2 back.
+	wanted := []*pb.BeaconBlock{block2}
 	if !reflect.DeepEqual(wanted, childrenBlock) {
 		t.Errorf("Wrong children block received")
 	}
@@ -1068,8 +1068,8 @@ func TestBlockChildren_SkipSlots(t *testing.T) {
 		t.Fatalf("Could not get block children: %v", err)
 	}
 
-	// When we input block B1, we should get B5 and B9 back.
-	wanted := []*pb.BeaconBlock{block5, block9}
+	// When we input block B1, we should get B5.
+	wanted := []*pb.BeaconBlock{block5}
 	if !reflect.DeepEqual(wanted, childrenBlock) {
 		t.Errorf("Wrong children block received")
 	}

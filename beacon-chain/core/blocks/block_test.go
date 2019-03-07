@@ -170,32 +170,3 @@ func TestProcessBlockRoots_AccurateMerkleTree(t *testing.T) {
 			"\n expected %#x but got %#x", expectedRoot, newState.BatchedBlockRootHash32S[0])
 	}
 }
-
-func TestBlockChildren_Fetches2Children(t *testing.T) {
-	genesisBlock := NewGenesisBlock([]byte{})
-	genesisRoot, err := hashutil.HashBeaconBlock(genesisBlock)
-	if err != nil {
-		t.Fatal(err)
-	}
-	targets := []*pb.BeaconBlock{
-		{
-			Slot:             9,
-			ParentRootHash32: genesisRoot[:],
-		},
-		{
-			Slot:             5,
-			ParentRootHash32: []byte{},
-		},
-		{
-			Slot:             8,
-			ParentRootHash32: genesisRoot[:],
-		},
-	}
-	children, err := BlockChildren(genesisBlock, targets)
-	if err != nil {
-		t.Fatalf("Could not fetch block children: %v", err)
-	}
-	if len(children) != 2 {
-		t.Errorf("Expected %d children, received %d", 2, len(children))
-	}
-}

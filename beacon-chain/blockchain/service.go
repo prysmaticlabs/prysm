@@ -458,17 +458,15 @@ func (c *ChainService) attestationTargets(state *pb.BeaconState) ([]*attestation
 // ex:
 //       /- C - E
 // A - B - D - F
-//          \- G
-// Input: B. Output: [C, D, E, F, G]
+//       \- G
+// Input: B. Output: [C, D, G]
 func (c *ChainService) blockChildren(block *pb.BeaconBlock, state *pb.BeaconState) ([]*pb.BeaconBlock, error) {
 	var children []*pb.BeaconBlock
-	seenRoots := make(map[[32]byte]bool)
 
-	blockRoot, err := hashutil.HashBeaconBlock(block)
+	currentRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
 	}
-	seenRoots[blockRoot] = true
 	startSlot := block.Slot
 	currentSlot := state.Slot
 	for i := startSlot; i <= currentSlot; i++ {
@@ -482,15 +480,44 @@ func (c *ChainService) blockChildren(block *pb.BeaconBlock, state *pb.BeaconStat
 		}
 
 		parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
-		if seenRoots[parentRoot] {
-			blockRoot, err := hashutil.HashBeaconBlock(block)
-			if err != nil {
-				return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
-			}
-			seenRoots[blockRoot] = true
-
+		if currentRoot == parentRoot {
 			children = append(children, block)
 		}
 	}
 	return children, nil
 }
+
+func (c *ChainService) lmdGhost(
+	block *pb.BeaconBlock,
+	state *pb.BeaconState,
+	voteTargets map[uint64]*pb.BeaconBlock,
+	observedBlocks []*pb.BeaconBlock,
+	beaconDB *db.BeaconDB,
+) (*pb.BeaconBlock, error) {
+	head := block
+	for {
+		children, err := c.blockChildren(head, state)
+		if err != nil {
+			return nil, fmt.Errorf("could not fetch block children: %v", err)
+		}
+		if len(children) == 0 {
+			return head, nil
+		}
+		maxChild := children[0]
+		maxChildVotes, err := VoteCount(maxChild, state, voteTargets, beaconDB)
+		if err != nil {
+			return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
+		}
+		for i := 0; i < len(children); i++ {
+			candidateChildVotes, err := VoteCount(children[i], state, voteTargets, beaconDB)
+			if err != nil {
+				return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
+			}
+			if candidateChildVotes > maxChildVotes {
+				maxChild = children[i]
+			}
+		}
+		head = maxChild
+	}
+}
+
