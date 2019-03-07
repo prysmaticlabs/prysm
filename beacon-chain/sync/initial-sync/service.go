@@ -336,11 +336,15 @@ func (s *InitialSync) processBatchedBlocks(msg p2p.Message) {
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.initial-sync.processBatchedBlocks")
 	defer span.End()
 	batchedBlockReq.Inc()
-	log.Debug("Processing batched block response")
 
 	response := msg.Data.(*pb.BatchedBeaconBlockResponse)
 	batchedBlocks := response.BatchedBlocks
+	if len(batchedBlocks) == 0 {
+		// Do not process empty response
+		return
+	}
 
+	log.Debug("Processing batched block response")
 	for _, block := range batchedBlocks {
 		s.processBlock(ctx, block, msg.Peer)
 	}
@@ -413,6 +417,10 @@ func (s *InitialSync) requestBatchedBlocks(startSlot uint64, endSlot uint64) {
 	_, span := trace.StartSpan(context.Background(), "beacon-chain.sync.initial-sync.requestBatchedBlocks")
 	defer span.End()
 	sentBatchedBlockReq.Inc()
+	if startSlot > endSlot {
+		log.Debugf("Invalid batched request from slot %d to %d", startSlot, endSlot)
+		return
+	}
 	blockLimit := params.BeaconConfig().BatchBlockLimit
 	if startSlot+blockLimit < endSlot {
 		endSlot = startSlot + blockLimit
