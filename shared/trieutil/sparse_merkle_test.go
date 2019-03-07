@@ -1,14 +1,79 @@
 package trieutil
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestMerkleTrie_BranchIndices(t *testing.T) {
-	m := &MerkleTrie{depth: 3}
-	indices := m.BranchIndices(1024)
+	indices := BranchIndices(1024, 3 /* depth */)
 	expected := []int{1024, 512, 256}
 	for i := 0; i < len(indices); i++ {
 		if expected[i] != indices[i] {
 			t.Errorf("Expected %d, received %d", expected[i], indices[i])
 		}
+	}
+}
+
+func TestMerkleTrie_MerkleProofOutOfRange(t *testing.T) {
+	m := &MerkleTrie{
+		branches: [][][32]byte{
+			{
+				[32]byte{},
+			},
+			{
+				[32]byte{},
+			},
+			{
+				[32]byte{},
+			},
+		},
+	}
+	if _, err := m.MerkleProof(-1); err == nil {
+		t.Error("Expected out of range failure, received nil", err)
+	}
+	if _, err := m.MerkleProof(2); err == nil {
+		t.Error("Expected out of range failure, received nil", err)
+	}
+	if _, err := m.MerkleProof(0); err == nil {
+		t.Error("Expected out of range failure, received nil", err)
+	}
+}
+
+func TestGenerateTrieFromItems_NoItemsProvided(t *testing.T) {
+	if _, err := GenerateTrieFromItems(nil, 32); err == nil {
+		t.Error("Expected error when providing nil items received nil")
+	}
+}
+
+func TestMerkleTrie_VerifyMerkleProof(t *testing.T) {
+	items := [][]byte{
+		[]byte("short"),
+		[]byte("eos"),
+		[]byte("long"),
+		[]byte("eth"),
+		[]byte("4ever"),
+		[]byte("eth2"),
+		[]byte("moon"),
+	}
+	m, err := GenerateTrieFromItems(items, 32)
+	if err != nil {
+		t.Fatalf("Could not generate Merkle trie from items: %v", err)
+	}
+	proof, err := m.MerkleProof(2)
+	if err != nil {
+		t.Fatalf("Could not generate Merkle proof: %v", err)
+	}
+	if ok := m.VerifyMerkleProof(items[2], 2, proof); !ok {
+		t.Error("Merkle proof did not verify")
+	}
+	proof, err = m.MerkleProof(3)
+	if err != nil {
+		t.Fatalf("Could not generate Merkle proof: %v", err)
+	}
+	if ok := m.VerifyMerkleProof(items[3], 3, proof); !ok {
+		t.Error("Merkle proof did not verify")
+	}
+	if ok := m.VerifyMerkleProof([]byte("btc"), 3, proof); ok {
+		t.Error("Item not in tree should fail to verify")
 	}
 }
