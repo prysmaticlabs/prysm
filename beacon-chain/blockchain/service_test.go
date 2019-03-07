@@ -5,9 +5,9 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"errors"
-	"reflect"
 	"io/ioutil"
 	"math/big"
+	"reflect"
 	"testing"
 	"time"
 
