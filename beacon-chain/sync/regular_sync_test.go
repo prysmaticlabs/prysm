@@ -488,7 +488,7 @@ func TestReceiveAttestation_OK(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	if err := db.SaveState(&pb.BeaconState{
-		FinalizedEpoch: params.BeaconConfig().GenesisEpoch,
+		Slot: params.BeaconConfig().GenesisSlot + 2,
 	}); err != nil {
 		t.Fatalf("Could not save state: %v", err)
 	}
@@ -531,7 +531,7 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	state := &pb.BeaconState{Slot: params.BeaconConfig().GenesisSlot + 192}
+	state := &pb.BeaconState{Slot: params.BeaconConfig().GenesisSlot + 2 * params.BeaconConfig().SlotsPerEpoch}
 	if err := db.SaveState(state); err != nil {
 		t.Fatalf("Could not save state: %v", err)
 	}
@@ -565,8 +565,8 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 	want := fmt.Sprintf(
-		"Skipping received attestation with slot smaller than previous epoch start slot, %d < %d",
-		request1.Data.Slot, params.BeaconConfig().GenesisSlot+128)
+		"Skipping received attestation with slot smaller than one epoch ago, %d < %d",
+		request1.Data.Slot, params.BeaconConfig().GenesisSlot+params.BeaconConfig().SlotsPerEpoch)
 	testutil.AssertLogsContain(t, hook, want)
 }
 
