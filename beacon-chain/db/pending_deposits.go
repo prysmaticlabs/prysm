@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	depositsCount = promauto.NewGauge(prometheus.GaugeOpts{
+	pendingDepositsCount = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "beacondb_pending_deposits",
 		Help: "The number of pending deposits in the beaconDB in-memory database",
 	})
@@ -39,8 +39,8 @@ func (db *BeaconDB) InsertPendingDeposit(ctx context.Context, d *pb.Deposit, blo
 	}
 	db.depositsLock.Lock()
 	defer db.depositsLock.Unlock()
-	db.deposits = append(db.deposits, &depositContainer{deposit: d, block: blockNum})
-	depositsCount.Inc()
+	db.pendingDeposits = append(db.pendingDeposits, &depositContainer{deposit: d, block: blockNum})
+	pendingDepositsCount.Inc()
 }
 
 // PendingDeposits returns a list of deposits until the given block number
@@ -53,7 +53,7 @@ func (db *BeaconDB) PendingDeposits(ctx context.Context, beforeBlk *big.Int) []*
 	defer db.depositsLock.RUnlock()
 
 	var deposits []*pb.Deposit
-	for _, ctnr := range db.deposits {
+	for _, ctnr := range db.pendingDeposits {
 		if beforeBlk == nil || beforeBlk.Cmp(ctnr.block) > -1 {
 			deposits = append(deposits, ctnr.deposit)
 		}
@@ -77,7 +77,7 @@ func (db *BeaconDB) RemovePendingDeposit(ctx context.Context, d *pb.Deposit) {
 	defer db.depositsLock.Unlock()
 
 	idx := -1
-	for i, ctnr := range db.deposits {
+	for i, ctnr := range db.pendingDeposits {
 		if ctnr.deposit.MerkleTreeIndex == d.MerkleTreeIndex {
 			idx = i
 			break
@@ -85,7 +85,7 @@ func (db *BeaconDB) RemovePendingDeposit(ctx context.Context, d *pb.Deposit) {
 	}
 
 	if idx >= 0 {
-		db.deposits = append(db.deposits[:idx], db.deposits[idx+1:]...)
-		depositsCount.Dec()
+		db.pendingDeposits = append(db.pendingDeposits[:idx], db.pendingDeposits[idx+1:]...)
+		pendingDepositsCount.Dec()
 	}
 }

@@ -47,7 +47,7 @@ func (m *MerkleTrie) Items() [][]byte {
 }
 
 // VerifyMerkleProof verifies a Merkle branch against a root of a trie.
-func (m *MerkleTrie) VerifyMerkleProof(item []byte, merkleIndex int, proof [][32]byte) bool {
+func VerifyMerkleProof(root [32]byte, item []byte, merkleIndex int, proof [][32]byte) bool {
 	node := hashutil.Hash(item)
 	branchIndices := BranchIndices(merkleIndex, len(proof))
 	for i := 0; i < len(proof); i++ {
@@ -57,7 +57,7 @@ func (m *MerkleTrie) VerifyMerkleProof(item []byte, merkleIndex int, proof [][32
 			node = parentHash(proof[i], node)
 		}
 	}
-	return m.Root() == node
+	return root == node
 }
 
 // BranchIndices returns the indices of all ancestors for a node with up to the root

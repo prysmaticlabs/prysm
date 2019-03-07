@@ -23,6 +23,7 @@ type BeaconDB struct {
 	DatabasePath string
 
 	// Beacon chain deposits in memory.
+	pendingDeposits     []*depositContainer
 	deposits     []*depositContainer
 	depositsLock sync.RWMutex
 }

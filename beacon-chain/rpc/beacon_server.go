@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"math/big"
 	"time"
 
@@ -168,7 +169,6 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 			// breaking ties by favoring block hashes with higher associated block height.
 			// Let block_hash = best_vote.eth1_data.block_hash.
 			// Let deposit_root = best_vote.eth1_data.deposit_root.
-
 			if vote.VoteCount > bestVote.VoteCount {
 				bestVote = vote
 				bestVoteHeight = blockHeight
@@ -219,9 +219,17 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch ETH1_FOLLOW_DISTANCE ancestor: %v", err)
 	}
-	// TODO(#1656): Fetch the deposit root of the post-state deposit contract of the block
-	// references by the block hash of the ancestor instead.
-	depositRoot := bs.powChainService.DepositRoot()
+	// Fetch all historical deposits up to an ancestor height.
+	allDeposits := bs.beaconDB.AllDeposits(ctx, ancestorHeight)
+	depositData := make([][]byte, len(allDeposits))
+	for i := range allDeposits {
+		depositData[i] = allDeposits[i].DepositData
+	}
+   	depositTrie, err := trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
+   	if err != nil {
+   		return nil, fmt.Errorf("could not generate historical deposit trie from deposits: %v", err)
+	}
+   	depositRoot := depositTrie.Root()
 	return &pb.Eth1DataResponse{
 		Eth1Data: &pbp2p.Eth1Data{
 			DepositRootHash32: depositRoot[:],

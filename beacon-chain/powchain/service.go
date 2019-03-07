@@ -288,8 +288,12 @@ func (w *Web3Service) BlockHashByHeight(ctx context.Context, height *big.Int) (c
 // list of deposits and the existing deposits in the current trie.
 func (w *Web3Service) RecalculateDepositTrie(deposits []*pb.Deposit) error {
 	existingDeposits := w.depositTrie.Items()
+	newDeposits := make([][]byte, len(deposits))
+	for idx := range deposits {
+		newDeposits[idx] = deposits[idx].DepositData
+	}
 	sparseMerkleTrie, err := trieutil.GenerateTrieFromItems(
-		append(existingDeposits, deposits...),
+		append(existingDeposits, newDeposits...),
 		int(params.BeaconConfig().DepositContractTreeDepth),
 	)
 	if err != nil {
