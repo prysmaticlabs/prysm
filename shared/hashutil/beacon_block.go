@@ -25,9 +25,5 @@ func HashProposal(p *pb.Proposal) ([32]byte, error) {
 	p.Signature = nil
 	defer func() { p.Signature = sig }()
 
-	data, err := proto.Marshal(p)
-	if err != nil {
-		return [32]byte{}, err
-	}
-	return Hash(data), nil
+	return HashProto(p)
 }
