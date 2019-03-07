@@ -139,7 +139,6 @@ func BenchmarkState_ReadingFromCache(b *testing.B) {
 		b.Fatal("cache should be prepared on state after saving to DB")
 	}
 
-	b.N = 20
 	b.ReportAllocs()
 	b.ResetTimer()
 
@@ -167,7 +166,6 @@ func BenchmarkState_ReadingFromDB(b *testing.B) {
 		b.Fatal("cache should not be prepared on newly initialized state")
 	}
 
-	b.N = 20
 	b.ReportAllocs()
 	b.ResetTimer()
 
