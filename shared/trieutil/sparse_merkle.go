@@ -5,6 +5,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
+// MerkleTrie implements a sparse, general purpose Merkle trie to be used
+// across ETH2.0 Phase 0 functionality.
 type MerkleTrie struct {
 	branches [][][32]byte
 }
