@@ -4,6 +4,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"os"
 	"os/signal"
 	"path"
@@ -86,6 +87,10 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	}
 
 	if err := beacon.registerOperationService(); err != nil {
+		return nil, err
+	}
+
+	if err := beacon.registerAttestationService(); err != nil {
 		return nil, err
 	}
 
@@ -188,11 +193,16 @@ func (b *BeaconNode) registerBlockchainService(_ *cli.Context) error {
 	if err := b.services.FetchService(&opsService); err != nil {
 		return err
 	}
+	var attsService *attestation.Service
+	if err := b.services.FetchService(&attsService); err != nil {
+		return err
+	}
 
 	blockchainService, err := blockchain.NewChainService(context.Background(), &blockchain.Config{
 		BeaconDB:         b.db,
 		Web3Service:      web3Service,
 		OpsPoolService:   opsService,
+		AttsService:      attsService,
 		BeaconBlockBuf:   10,
 		IncomingBlockBuf: 100, // Big buffer to accommodate other feed subscribers.
 	})
@@ -333,4 +343,13 @@ func (b *BeaconNode) registerPrometheusService(ctx *cli.Context) error {
 	hook := prometheus.NewLogrusCollector()
 	logrus.AddHook(hook)
 	return b.services.RegisterService(service)
+}
+
+func (b *BeaconNode) registerAttestationService() error {
+	attsService := attestation.NewAttestationService(context.Background(),
+		&attestation.Config{
+			BeaconDB: b.db,
+		})
+
+	return b.services.RegisterService(attsService)
 }
