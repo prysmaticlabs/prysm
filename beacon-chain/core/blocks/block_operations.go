@@ -440,17 +440,17 @@ func ProcessBlockAttestations(
 	return beaconState, nil
 }
 
-func verifyAttestationSig(beaconState *pb.BeaconState, att *pb.Attestation) (bool, error) {
+func verifyAttestationSig(beaconState *pb.BeaconState, att *pb.Attestation) error {
 	attesterIndices, err := helpers.AttestationParticipants(beaconState, att.Data, att.AggregationBitfield)
 	if err != nil {
-		return false, fmt.Errorf("could not get attestation participants: %v", err)
+		return fmt.Errorf("could not get attestation participants: %v", err)
 	}
 
 	attestorPubKeys := make([]*bls.PublicKey, len(attesterIndices))
 	for idx, participantIndex := range attesterIndices {
 		pubkey, err := bls.PublicKeyFromBytes(beaconState.ValidatorRegistry[participantIndex].Pubkey)
 		if err != nil {
-			return false, fmt.Errorf("could not deserialize attestor public key: %v", err)
+			return fmt.Errorf("could not deserialize attestor public key: %v", err)
 		}
 
 		attestorPubKeys[idx] = pubkey
@@ -465,7 +465,7 @@ func verifyAttestationSig(beaconState *pb.BeaconState, att *pb.Attestation) (boo
 		CustodyBit: true,
 	})
 	if err != nil {
-		return false, fmt.Errorf("could not hash attestation data: %v", err)
+		return fmt.Errorf("could not hash attestation data: %v", err)
 	}
 	messageHashes := [][]byte{
 		attestationDataHash[:],
@@ -482,7 +482,10 @@ func verifyAttestationSig(beaconState *pb.BeaconState, att *pb.Attestation) (boo
 		"aggregateSig":     fmt.Sprintf("%#x", sig.Marshal()),
 	}).Info("Verifying attestation")
 
-	return sig.VerifyMultiple(aggregatePubkeys, messageHashes, domain), nil
+	if !sig.VerifyMultiple(aggregatePubkeys, messageHashes, domain) {
+		return errors.New("aggregate signature did not verify")
+	}
+	return nil
 }
 
 func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifySignatures bool) error {
@@ -577,12 +580,8 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 		)
 	}
 	if verifySignatures {
-		verified, err := verifyAttestationSig(beaconState, att)
-		if err != nil {
-			return fmt.Errorf("could not verify aggregate signature")
-		}
-		if !verified {
-			return fmt.Errorf("aggregate signature did not verify")
+		if err := verifyAttestationSig(beaconState, att); err != nil {
+			return fmt.Errorf("could not verify aggregate signature %v", err)
 		}
 	}
 	return nil
