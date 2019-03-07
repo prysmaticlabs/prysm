@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"reflect"
 	"sync"
@@ -203,11 +204,16 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 	}
 
 	s.host.SetStreamHandler(protocol.ID(prysmProtocolPrefix+"/"+topic), func(stream libp2pnet.Stream) {
+		log.WithField("topic", topic).Debug("Received new stream")
 		r := ggio.NewDelimitedReader(stream, maxMessageSize)
 
 		msg := proto.Clone(message)
 		for {
-			if err := r.ReadMsg(msg); err != nil {
+			err := r.ReadMsg(msg)
+			if err == io.EOF {
+				return // end of stream
+			}
+			if err != nil {
 				log.WithError(err).Error("Could not read message from stream")
 				return
 			}
