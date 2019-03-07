@@ -70,14 +70,16 @@ k8s_repositories()
 
 [k8s_defaults(
     name = "k8s_" + kind,
-    cluster = "minikube",
+    cluster = "minikube",  # DO NOT CHANGE THIS!
     kind = kind,
 ) for kind in [
     "cluster_role",
     "configmap",
     "deploy",
     "ingress",
+    "issuer",
     "job",
+    "gateway",
     "namespace",
     "pod",
     "priority_class",
