@@ -282,6 +282,11 @@ func (s *Server) Send(msg proto.Message, peer Peer) {
 //   ps.RegisterTopic("message_topic_here", msg)
 //   ps.Broadcast(msg)
 func (s *Server) Broadcast(msg proto.Message) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.WithField("r", r).Error("Panicked when broadcasting!")
+		}
+	}()
 	topic := s.topicMapping[messageType(msg)]
 
 	// Shorten message if it is too long to avoid
