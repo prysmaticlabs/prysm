@@ -2,6 +2,7 @@ package trieutil
 
 import (
 	"errors"
+
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
@@ -107,7 +108,7 @@ func parentHash(left [32]byte, right [32]byte) [32]byte {
 // nodes to compute the nodes in the trie above.
 func hashLayer(layer [][32]byte) [][32]byte {
 	chunks := partition(layer, 2)
-    topLayer := [][32]byte{}
+	topLayer := [][32]byte{}
 	for i := 0; i < len(chunks); i++ {
 		topLayer = append(topLayer, parentHash(chunks[i][0], chunks[i][1]))
 	}
