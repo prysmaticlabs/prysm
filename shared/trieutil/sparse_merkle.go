@@ -25,7 +25,7 @@ func GenerateTrieFromItems(items [][]byte, depth int) (*MerkleTrie, error) {
 	branches := [][][32]byte{leaves}
 	// Prepend the leaves to the branches.
 	for i := 0; i < depth-1; i++ {
-		if len(branches[i]) % 2 == 1 {
+		if len(branches[i])%2 == 1 {
 			emptyNodes := generateEmptyNodes(depth)
 			branches[i] = append(branches[i], emptyNodes[i])
 		}
@@ -49,7 +49,7 @@ func (m *MerkleTrie) VerifyMerkleProof(item []byte, merkleIndex int, proof [][32
 			node = parentHash(proof[i], node)
 		}
 	}
-    return m.Root() == node
+	return m.Root() == node
 }
 
 // BranchIndices returns the indices of all ancestors for a node with up to the root
@@ -128,4 +128,3 @@ func partition(layer [][32]byte, size int) [][][32]byte {
 	}
 	return chunks
 }
-
