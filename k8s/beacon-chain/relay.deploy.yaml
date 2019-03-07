@@ -1,5 +1,5 @@
-kind: Deployment
-apiVersion: apps/v1beta1
+kind: StatefulSet
+apiVersion: apps/v1
 metadata: 
   name: relay
   namespace: beacon-chain
@@ -7,6 +7,7 @@ metadata:
     prometheus.io/scrape: 'true'
 spec:
   replicas: 1
+  serviceName: relay
   selector:
     matchLabels:
       component: relay
@@ -22,6 +23,7 @@ spec:
           args:
             - "-debug"
             - "-port=4000"
+            - "-private=$(PRIVATE_KEY)"
           resources:
             requests:
               memory: "100Mi"
@@ -29,3 +31,9 @@ spec:
           ports:
             - containerPort: 4000
               name: relayport
+          env:
+            - name: PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: relay-secrets
+                  key: private_key 
