@@ -46,7 +46,7 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 	defer sub.Unsubscribe()
 	for {
 		select {
-		case <-time.After(3*time.Second):
+		case <-time.After(3 * time.Second):
 		case beaconState := <-vs.canonicalStateChan:
 			if !vs.beaconDB.HasValidator(req.Pubkey) {
 				continue

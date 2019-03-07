@@ -531,7 +531,7 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	state := &pb.BeaconState{Slot: params.BeaconConfig().GenesisSlot + 2 * params.BeaconConfig().SlotsPerEpoch}
+	state := &pb.BeaconState{Slot: params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch}
 	if err := db.SaveState(state); err != nil {
 		t.Fatalf("Could not save state: %v", err)
 	}
@@ -853,7 +853,22 @@ func TestSafelyHandleMessage(t *testing.T) {
 
 	safelyHandleMessage(func(_ p2p.Message) {
 		panic("bad!")
-	}, p2p.Message{})
+	}, p2p.Message{
+		Data: &pb.BeaconBlock{},
+	})
 
 	testutil.AssertLogsContain(t, hook, "Panicked when handling p2p message!")
+}
+
+func TestSafelyHandleMessage_NoData(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	safelyHandleMessage(func(_ p2p.Message) {
+		panic("bad!")
+	}, p2p.Message{})
+
+	entry := hook.LastEntry()
+	if entry.Data["msg"] != "message contains no data" {
+		t.Errorf("Message logged was not what was expected: %s", entry.Data["msg"])
+	}
 }

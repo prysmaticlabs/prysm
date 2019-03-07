@@ -234,9 +234,13 @@ func (rs *RegularSync) run() {
 func safelyHandleMessage(fn func(p2p.Message), msg p2p.Message) {
 	defer func() {
 		if r := recover(); r != nil {
+			printedMsg := "message contains no data"
+			if msg.Data != nil {
+				printedMsg = proto.MarshalTextString(msg.Data)
+			}
 			log.WithFields(logrus.Fields{
 				"r":   r,
-				"msg": proto.MarshalTextString(msg.Data),
+				"msg": printedMsg,
 			}).Error("Panicked when handling p2p message! Recovering...")
 
 			if msg.Ctx == nil {
@@ -471,9 +475,9 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 		return
 	}
 
-	if attestation.Data.Slot < beaconState.Slot - params.BeaconConfig().SlotsPerEpoch {
+	if attestation.Data.Slot < beaconState.Slot-params.BeaconConfig().SlotsPerEpoch {
 		log.Debugf("Skipping received attestation with slot smaller than one epoch ago, %d < %d",
-			attestation.Data.Slot, beaconState.Slot - params.BeaconConfig().SlotsPerEpoch)
+			attestation.Data.Slot, beaconState.Slot-params.BeaconConfig().SlotsPerEpoch)
 		return
 	}
 
