@@ -78,15 +78,14 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 	// Remove any attestation from the list if their slot is before the start of
 	// the previous epoch. This should be handled in the operationService cleanup
 	// method, but we should filter here in case it wasn't yet processed.
-	beaconState.Slot++
-	lastEpochStartSlot := helpers.StartSlot(helpers.PrevEpoch(beaconState))
-	attsSinceLastEpoch := make([]*pbp2p.Attestation, 0, len(atts))
+	boundary := beaconState.Slot - params.BeaconConfig().SlotsPerEpoch
+	attsWithinBoundary := make([]*pbp2p.Attestation, 0, len(atts))
 	for _, att := range atts {
-		if att.Data.Slot >= lastEpochStartSlot {
-			attsSinceLastEpoch = append(attsSinceLastEpoch, att)
+		if att.Data.Slot > boundary {
+			attsWithinBoundary = append(attsWithinBoundary, att)
 		}
 	}
-	atts = attsSinceLastEpoch
+	atts = attsWithinBoundary
 
 	if req.FilterReadyForInclusion {
 		var attsReadyForInclusion []*pbp2p.Attestation
