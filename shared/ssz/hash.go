@@ -222,3 +222,5 @@ func merkleHash(list [][]byte) ([]byte, error) {
 	result := hashutil.Hash(append(chunkz[0], dataLenEnc...))
 	return result[:], nil
 }
+
+//TODO Add Caching to Tree Hashing Algorithm
