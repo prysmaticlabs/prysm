@@ -59,6 +59,7 @@ message AttestationDataResponse {
 
 message PendingAttestationsRequest {
     bool filter_ready_for_inclusion = 1;
+    uint64 proposal_block_slot = 2;
 }
 
 message PendingAttestationsResponse {

@@ -188,7 +188,12 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	if err := db.SaveState(beaconState); err != nil {
 		t.Fatal(err)
 	}
-	res, err := proposerServer.PendingAttestations(context.Background(), &pb.PendingAttestationsRequest{})
+	res, err := proposerServer.PendingAttestations(
+		context.Background(),
+		&pb.PendingAttestationsRequest{
+			ProposalBlockSlot: currentSlot,
+		},
+	)
 	if err != nil {
 		t.Fatalf("Unexpected error fetching pending attestations: %v", err)
 	}
