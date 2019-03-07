@@ -113,6 +113,20 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 
 	// 4. Sign the complete block.
 	// TODO(1366): BLS sign block
+	blockRootHash, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		log.Errorf("Could not hash beacon block: %v", err)
+	}
+
+	blockHash, err := hashutil.HashProto(&pbp2p.ProposalSignedData{
+		Slot:            slot,
+		Shard:           0,
+		BlockRootHash32: blockRootHash[:],
+	})
+	if err != nil {
+		log.Error("Could not hash attestation data")
+	}
+
 	block.Signature = nil
 
 	// 5. Broadcast to the network via beacon chain node.
