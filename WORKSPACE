@@ -331,7 +331,7 @@ go_repository(
 
 go_repository(
     name = "com_github_whyrusleeping_go_smux_yamux",
-    commit = "d6a2882127944a9f581608c8a87fa64c2cc0fc30",  # v2.0.8
+    commit = "7402600b69ab8af34116420d9b9cd4e1b8968901",  # v2.0.9
     importpath = "github.com/whyrusleeping/go-smux-yamux",
 )
 
