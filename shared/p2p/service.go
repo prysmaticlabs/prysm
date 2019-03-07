@@ -265,7 +265,7 @@ func (s *Server) Subscribe(msg proto.Message, channel chan Message) event.Subscr
 
 // Send a message to a specific peer.
 func (s *Server) Send(msg proto.Message, peer Peer) {
-	s.gsub.Publish
+	// TODO
 }
 
 // Broadcast publishes a message to all localized peers using gossipsub.
