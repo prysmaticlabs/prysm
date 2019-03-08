@@ -89,7 +89,7 @@ func BenchmarkGenerateTrieFromItems(b *testing.B) {
 		[]byte("moon"),
 	}
 	for i := 0; i < b.N; i++ {
-		if _ , err := GenerateTrieFromItems(items, 32); err != nil {
+		if _, err := GenerateTrieFromItems(items, 32); err != nil {
 			b.Fatalf("Could not generate Merkle trie from items: %v", err)
 		}
 	}
