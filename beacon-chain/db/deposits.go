@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"math/big"
+	"sort"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -50,6 +51,10 @@ func (db *BeaconDB) AllDeposits(ctx context.Context, beforeBlk *big.Int) []*pb.D
 			deposits = append(deposits, ctnr.deposit)
 		}
 	}
+	// Sort the deposits by Merkle index.
+	sort.SliceStable(deposits, func(i, j int) bool {
+		return deposits[i].MerkleTreeIndex < deposits[j].MerkleTreeIndex
+	})
 
 	return deposits
 }

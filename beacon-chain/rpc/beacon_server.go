@@ -210,6 +210,21 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 	}
 	// Only request deposits that have passed the ETH1 follow distance window.
 	bNum = bNum.Sub(bNum, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
+	pendingDeps := bs.beaconDB.PendingDeposits(ctx, bNum)
+	for i := range pendingDeps {
+		proof, err := bs.powChainService.DepositTrie().MerkleProof(pendingDeps[i].MerkleTreeIndex)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"could not generate merkle proof for deposit at index %d: %v",
+				pendingDeps[i].MerkleTreeIndex,
+				err,
+			)
+		}
+		// For every deposit, we construct a Merkle proof using the powchain service's
+		// in-memory deposits trie, which is updated only once the state's LatestETH1Data
+		// property changes during a state transition after a voting period.
+		pendingDeps[i].MerkleBranchHash32S = proof
+	}
 	return &pb.PendingDepositsResponse{PendingDeposits: bs.beaconDB.PendingDeposits(ctx, bNum)}, nil
 }
 

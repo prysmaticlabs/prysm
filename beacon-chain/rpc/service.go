@@ -8,6 +8,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -50,6 +51,7 @@ type powChainService interface {
 	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
 	BlockHashByHeight(ctx context.Context, height *big.Int) (common.Hash, error)
 	DepositRoot() [32]byte
+	DepositTrie() *trieutil.MerkleTrie
 }
 
 // Service defining an RPC server for a beacon node.

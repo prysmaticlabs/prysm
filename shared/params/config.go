@@ -205,7 +205,7 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.MaxDepositAmount = 3200000
 	demoConfig.EjectionBalance = 1600000
 	demoConfig.SyncPollingInterval = 1 * 10 // Query nodes over the network every slot.
-	demoConfig.Eth1FollowDistance = 100
+	demoConfig.Eth1FollowDistance = 10
 	demoConfig.EpochsPerEth1VotingPeriod = 2
 
 	return &demoConfig

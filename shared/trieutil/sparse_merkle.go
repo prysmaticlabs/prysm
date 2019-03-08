@@ -1,7 +1,9 @@
 package trieutil
 
 import (
+	"bytes"
 	"errors"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
@@ -9,7 +11,7 @@ import (
 // MerkleTrie implements a sparse, general purpose Merkle trie to be used
 // across ETH2.0 Phase 0 functionality.
 type MerkleTrie struct {
-	branches [][][32]byte
+	branches [][][]byte
 	originalItems [][]byte // list of provided items before hashing them into leaves.
 }
 
@@ -18,18 +20,19 @@ func GenerateTrieFromItems(items [][]byte, depth int) (*MerkleTrie, error) {
 	if len(items) == 0 {
 		return nil, errors.New("no items provided to generate Merkle trie")
 	}
-	leaves := make([][32]byte, len(items))
+	leaves := make([][]byte, len(items))
 	// We then construct the leaves of the trie by hashing every
 	// value in the items slice.
 	for i, val := range items {
-		leaves[i] = hashutil.Hash(val)
+		h := hashutil.Hash(val)
+		leaves[i] = h[:]
 	}
-	branches := [][][32]byte{leaves}
+	branches := [][][]byte{leaves}
 	// Prepend the leaves to the branches.
 	for i := 0; i < depth-1; i++ {
 		if len(branches[i])%2 == 1 {
 			emptyNodes := generateEmptyNodes(depth)
-			branches[i] = append(branches[i], emptyNodes[i])
+			branches[i] = append(branches[i], emptyNodes[i][:])
 		}
 		// We prepend the layer that results from hashing the trie's current layer.
 		branches = append(branches, hashLayer(branches[i]))
@@ -47,17 +50,18 @@ func (m *MerkleTrie) Items() [][]byte {
 }
 
 // VerifyMerkleProof verifies a Merkle branch against a root of a trie.
-func VerifyMerkleProof(root [32]byte, item []byte, merkleIndex int, proof [][32]byte) bool {
-	node := hashutil.Hash(item)
+func VerifyMerkleProof(root []byte, item []byte, merkleIndex int, proof [][]byte) bool {
+	leaf := hashutil.Hash(item)
+	node := leaf[:]
 	branchIndices := BranchIndices(merkleIndex, len(proof))
 	for i := 0; i < len(proof); i++ {
 		if branchIndices[i]%2 == 0 {
-			node = parentHash(node, proof[i])
+			node = parentHash(node, proof[i][:])
 		} else {
-			node = parentHash(proof[i], node)
+			node = parentHash(proof[i][:], node)
 		}
 	}
-	return root == node
+    return bytes.Equal(root, node)
 }
 
 // BranchIndices returns the indices of all ancestors for a node with up to the root
@@ -75,14 +79,14 @@ func BranchIndices(merkleIndex int, depth int) []int {
 
 // Root of the Merkle trie.
 func (m *MerkleTrie) Root() [32]byte {
-	return m.branches[0][0]
+	return bytesutil.ToBytes32(m.branches[0][0])
 }
 
 // MerkleProof obtains a Merkle proof for an item at a given
 // index in the Merkle trie up to the root of the trie.
-func (m *MerkleTrie) MerkleProof(merkleIndex int) ([][32]byte, error) {
+func (m *MerkleTrie) MerkleProof(merkleIndex int) ([][]byte, error) {
 	lastLevel := m.branches[len(m.branches)-1]
-	if merkleIndex < 0 || merkleIndex >= len(lastLevel) || lastLevel[merkleIndex] == [32]byte{} {
+	if merkleIndex < 0 || merkleIndex >= len(lastLevel) || bytes.Equal(lastLevel[merkleIndex], []byte{}) {
 		return nil, errors.New("merkle index out of range in trie")
 	}
 	branchIndices := BranchIndices(merkleIndex, len(m.branches))
@@ -93,7 +97,7 @@ func (m *MerkleTrie) MerkleProof(merkleIndex int) ([][32]byte, error) {
 		// We fetch the sibling by flipping the rightmost bit.
 		proofIndices[i] = branchIndices[i] ^ 1
 	}
-	proof := make([][32]byte, len(proofIndices))
+	proof := make([][]byte, len(proofIndices))
 	for j := 0; j < len(proofIndices); j++ {
 		// We fetch the layer that corresponds to the proof element index
 		// in our Merkle trie's branches. Since the length of proof indices
@@ -105,16 +109,16 @@ func (m *MerkleTrie) MerkleProof(merkleIndex int) ([][32]byte, error) {
 }
 
 // parentHash takes a left and right node and hashes their concatenation.
-func parentHash(left [32]byte, right [32]byte) [32]byte {
-	res := hashutil.Hash(append(left[:], right[:]...))
-	return res
+func parentHash(left []byte, right []byte) []byte {
+	res := hashutil.Hash(append(left, right...))
+	return res[:]
 }
 
 // hashLayer computes the layer on top of another one by hashing left and right
 // nodes to compute the nodes in the trie above.
-func hashLayer(layer [][32]byte) [][32]byte {
+func hashLayer(layer [][]byte) [][]byte {
 	chunks := partition(layer, 2)
-	topLayer := [][32]byte{}
+	topLayer := [][]byte{}
 	for i := 0; i < len(chunks); i++ {
 		topLayer = append(topLayer, parentHash(chunks[i][0], chunks[i][1]))
 	}
@@ -124,18 +128,18 @@ func hashLayer(layer [][32]byte) [][32]byte {
 // generateEmptyNodes creates a trie of empty nodes up a path given a trie depth.
 // This is necessary given the Merkle trie is a balanced trie and empty nodes serve
 // as padding along the way if an odd number of leaves are originally provided.
-func generateEmptyNodes(depth int) [][32]byte {
-	nodes := make([][32]byte, depth)
+func generateEmptyNodes(depth int) [][]byte {
+	nodes := make([][]byte, depth)
 	for i := 0; i < depth; i++ {
-		nodes[i] = parentHash([32]byte{}, [32]byte{})
+		nodes[i] = parentHash([]byte{}, []byte{})
 	}
 	return nodes
 }
 
 // partition a slice into chunks of a certain size.
 // Example: [1, 2, 3, 4] -> [[1, 2], [3, 4]]
-func partition(layer [][32]byte, size int) [][][32]byte {
-	chunks := [][][32]byte{}
+func partition(layer [][]byte, size int) [][][]byte {
+	chunks := [][][]byte{}
 	for i := 0; i < len(layer); i += size {
 		chunks = append(chunks, layer[i:i+size])
 	}
