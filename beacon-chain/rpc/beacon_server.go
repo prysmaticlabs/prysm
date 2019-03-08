@@ -211,8 +211,38 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 	// Only request deposits that have passed the ETH1 follow distance window.
 	bNum = bNum.Sub(bNum, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
 	pendingDeps := bs.beaconDB.PendingDeposits(ctx, bNum)
+	allDeps := bs.beaconDB.AllDeposits(ctx, bNum)
+	depositData := [][]byte{}
+	if len(allDeps) == 0 {
+        return &pb.PendingDepositsResponse{PendingDeposits: nil}, nil
+	} else {
+		for i := range allDeps {
+			depositData = append(depositData, allDeps[i].DepositData)
+		}
+	}
+
+	// Need to fetch if the deposits up to the state's latest eth 1 data matches
+	// the number of all deposits in this RPC call. If not, then we return nil.
+	beaconState, err := bs.beaconDB.State(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
+	}
+	h := bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockHash32)
+	_, latestEth1DataHeight, err := bs.powChainService.BlockExists(ctx, h)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch eth1data height: %v", err)
+	}
+	upToLatestEth1DataDeposits := bs.beaconDB.AllDeposits(ctx, bNum)
+	if len(upToLatestEth1DataDeposits) != 
+
+	log.Infof("TOTAL DEPOSITS IN PENDING DEPOSITS RPC CALL: %d", len(allDeps))
+	log.Infof("TOTAL PENDING DEPOSITS: %d", len(pendingDeps))
+	depositTrie, err := trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		return nil, fmt.Errorf("could not generate historical deposit trie from deposits: %v", err)
+	}
 	for i := range pendingDeps {
-		proof, err := bs.powChainService.DepositTrie().MerkleProof(int(pendingDeps[i].MerkleTreeIndex))
+		proof, err := depositTrie.MerkleProof(int(pendingDeps[i].MerkleTreeIndex))
 		if err != nil {
 			return nil, fmt.Errorf(
 				"could not generate merkle proof for deposit at index %d: %v",
@@ -243,9 +273,10 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 		depositData = bs.powChainService.ChainStartDeposits()
 	} else {
 		for i := range allDeposits {
-			depositData[i] = allDeposits[i].DepositData
+			depositData = append(depositData, allDeposits[i].DepositData)
 		}
 	}
+	log.Infof("GENERATED DEPOSIT TRIE FOR DEFAULT DATA RESPONSE WITH %d DEPOSITS", len(allDeposits))
    	depositTrie, err := trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
    	if err != nil {
    		return nil, fmt.Errorf("could not generate historical deposit trie from deposits: %v", err)

@@ -465,9 +465,9 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 		)
 	}
 	// Verify that `attestation.data.justified_epoch` is equal to `state.justified_epoch
-	// 	if slot_to_epoch(attestation.data.slot+1) >= get_current_epoch(state)
+	// 	if slot_to_epoch(attestation.data.slot) >= get_current_epoch(state)
 	// 	else state.previous_justified_epoch`.
-	if helpers.SlotToEpoch(att.Data.Slot+1) >= helpers.CurrentEpoch(beaconState) {
+	if helpers.SlotToEpoch(att.Data.Slot) >= helpers.CurrentEpoch(beaconState) {
 		if att.Data.JustifiedEpoch != beaconState.JustifiedEpoch {
 			return fmt.Errorf(
 				"expected attestation.JustifiedEpoch == state.JustifiedEpoch, received %d == %d",

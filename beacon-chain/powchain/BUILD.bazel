@@ -44,7 +44,6 @@ go_test(
         "//shared/event:go_default_library",
         "//shared/ssz:go_default_library",
         "//shared/testutil:go_default_library",
-        "//shared/trieutil:go_default_library",
         "@com_github_ethereum_go_ethereum//:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind/backends:go_default_library",
