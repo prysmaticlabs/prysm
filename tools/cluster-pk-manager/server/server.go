@@ -89,7 +89,7 @@ func (s *server) Request(ctx context.Context, req *pb.PrivateKeyRequest) (*pb.Pr
 	}
 	if pk != nil {
 		log.WithField("pod", req.PodName).Debug("Returning existing assignment")
-		return &pb.PrivateKeyResponse{PrivateKey: string(pk)}, nil
+		return &pb.PrivateKeyResponse{PrivateKey: pk}, nil
 	}
 
 	pk, err = s.db.UnallocatedPK(ctx)
@@ -101,7 +101,7 @@ func (s *server) Request(ctx context.Context, req *pb.PrivateKeyRequest) (*pb.Pr
 		if err := s.db.AssignExistingPK(ctx, pk, req.PodName); err != nil {
 			return nil, err
 		}
-		return &pb.PrivateKeyResponse{PrivateKey: string(pk)}, nil
+		return &pb.PrivateKeyResponse{PrivateKey: pk}, nil
 	}
 
 	log.WithField("pod", req.PodName).Debug("Allocating a new private key")
@@ -134,6 +134,6 @@ func (s *server) allocateNewKey(ctx context.Context, podName string) (*pb.Privat
 		return nil, err
 	}
 
-	return &pb.PrivateKeyResponse{PrivateKey: string(key.SecretKey.Marshal())}, nil
+	return &pb.PrivateKeyResponse{PrivateKey: key.SecretKey.Marshal()}, nil
 
 }
