@@ -107,7 +107,7 @@ func parentHash(left [32]byte, right [32]byte) [32]byte {
 // hashLayer computes the layer on top of another one by hashing left and right
 // nodes to compute the nodes in the trie above.
 func hashLayer(layer [][32]byte) [][32]byte {
-	chunks := partition(layer, 2)
+	chunks := partition(layer)
 	topLayer := [][32]byte{}
 	for i := 0; i < len(chunks); i++ {
 		topLayer = append(topLayer, parentHash(chunks[i][0], chunks[i][1]))
@@ -126,10 +126,11 @@ func generateEmptyNodes(depth int) [][32]byte {
 	return nodes
 }
 
-// partition a slice into chunks of a certain size.
+// partition a slice into chunks of size two.
 // Example: [1, 2, 3, 4] -> [[1, 2], [3, 4]]
-func partition(layer [][32]byte, size int) [][][32]byte {
+func partition(layer [][32]byte) [][][32]byte {
 	chunks := [][][32]byte{}
+	size := 2
 	for i := 0; i < len(layer); i += size {
 		chunks = append(chunks, layer[i:i+size])
 	}
