@@ -300,6 +300,7 @@ func (w *Web3Service) RecalculateDepositTrie(deposits []*pb.Deposit) error {
 		return fmt.Errorf("could not update deposit trie: %v", err)
 	}
 	w.depositTrie = sparseMerkleTrie
+	return nil
 }
 
 // Client for interacting with the ETH1.0 chain.

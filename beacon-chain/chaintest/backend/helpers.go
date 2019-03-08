@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/forkutils"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 // Generates a simulated beacon block to use
@@ -21,7 +20,7 @@ import (
 func generateSimulatedBlock(
 	beaconState *pb.BeaconState,
 	prevBlockRoot [32]byte,
-	depositsTrie *trieutil.DepositTrie,
+	//depositsTrie *trieutil.DepositTrie,
 	simObjects *SimulatedObjects,
 	privKeys []*bls.SecretKey,
 ) (*pb.BeaconBlock, [32]byte, error) {
@@ -70,12 +69,12 @@ func generateSimulatedBlock(
 
 		// We then update the deposits Merkle trie with the deposit data and return
 		// its Merkle branch leading up to the root of the trie.
-		depositsTrie.UpdateDepositTrie(data)
-		merkleBranch := depositsTrie.Branch()
+		//depositsTrie.UpdateDepositTrie(data)
+		//merkleBranch := depositsTrie.Branch()
 
 		block.Body.Deposits = append(block.Body.Deposits, &pb.Deposit{
 			DepositData:         data,
-			MerkleBranchHash32S: merkleBranch,
+			//MerkleBranchHash32S: merkleBranch,
 			MerkleTreeIndex:     simObjects.simDeposit.MerkleIndex,
 		})
 	}

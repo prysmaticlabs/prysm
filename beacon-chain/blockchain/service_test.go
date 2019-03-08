@@ -30,7 +30,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -488,13 +487,13 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	pendingDeposits := []*pb.Deposit{
 		createPreChainStartDeposit(t, []byte{'F'}),
 	}
-	depositTrie := trieutil.NewDepositTrie()
-	for _, pd := range pendingDeposits {
-		depositTrie.UpdateDepositTrie(pd.DepositData)
-		pd.MerkleBranchHash32S = depositTrie.Branch()
-	}
-	depositRoot := depositTrie.Root()
-	beaconState.LatestEth1Data.DepositRootHash32 = depositRoot[:]
+	//depositTrie := trieutil.NewDepositTrie()
+	//for _, pd := range pendingDeposits {
+	//	depositTrie.UpdateDepositTrie(pd.DepositData)
+	//	pd.MerkleBranchHash32S = depositTrie.Branch()
+	//}
+	//depositRoot := depositTrie.Root()
+	//beaconState.LatestEth1Data.DepositRootHash32 = depositRoot[:]
 
 	block := &pb.BeaconBlock{
 		Slot:             currentSlot + 1,

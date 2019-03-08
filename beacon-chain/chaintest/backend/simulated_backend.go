@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -33,7 +32,7 @@ type SimulatedBackend struct {
 	state          *pb.BeaconState
 	prevBlockRoots [][32]byte
 	inMemoryBlocks []*pb.BeaconBlock
-	depositTrie    *trieutil.DepositTrie
+	//depositTrie    *trieutil.DepositTrie
 }
 
 // SimulatedObjects is a container to hold the
@@ -79,7 +78,7 @@ func (sb *SimulatedBackend) SetupBackend(numOfDeposits uint64) ([]*bls.SecretKey
 	if err := sb.setupBeaconStateAndGenesisBlock(initialDeposits); err != nil {
 		return nil, fmt.Errorf("could not set up beacon state and initialize genesis block %v", err)
 	}
-	sb.depositTrie = trieutil.NewDepositTrie()
+	//sb.depositTrie = trieutil.NewDepositTrie()
 	return privKeys, nil
 }
 
@@ -97,17 +96,16 @@ func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain(objects *SimulatedObjec
 	newBlock, newBlockRoot, err := generateSimulatedBlock(
 		sb.state,
 		prevBlockRoot,
-		sb.depositTrie,
 		objects,
 		privKeys,
 	)
 	if err != nil {
 		return fmt.Errorf("could not generate simulated beacon block %v", err)
 	}
-	latestRoot := sb.depositTrie.Root()
+	//latestRoot := sb.depositTrie.Root()
 
 	sb.state.LatestEth1Data = &pb.Eth1Data{
-		DepositRootHash32: latestRoot[:],
+		//DepositRootHash32: latestRoot[:],
 		BlockHash32:       []byte{},
 	}
 
@@ -268,7 +266,7 @@ func (sb *SimulatedBackend) initializeStateTest(testCase *StateTestCase) ([]*bls
 	if err := sb.setupBeaconStateAndGenesisBlock(initialDeposits); err != nil {
 		return nil, fmt.Errorf("could not set up beacon state and initialize genesis block %v", err)
 	}
-	sb.depositTrie = trieutil.NewDepositTrie()
+	//sb.depositTrie = trieutil.NewDepositTrie()
 	return privKeys, nil
 }
 

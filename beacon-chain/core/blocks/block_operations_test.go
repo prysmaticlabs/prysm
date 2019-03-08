@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/forkutils"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.SecretKey) {
@@ -1154,13 +1153,13 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	data = append(data, timestamp...)
 
 	// We then create a merkle branch for the test.
-	depositTrie := trieutil.NewDepositTrie()
-	depositTrie.UpdateDepositTrie(data)
-	branch := depositTrie.Branch()
+	//depositTrie := trieutil.NewDepositTrie()
+	//depositTrie.UpdateDepositTrie(data)
+	//branch := depositTrie.Branch()
 
 	deposit := &pb.Deposit{
 		DepositData:         data,
-		MerkleBranchHash32S: branch,
+		//MerkleBranchHash32S: branch,
 		MerkleTreeIndex:     0,
 	}
 	block := &pb.BeaconBlock{
@@ -1223,13 +1222,13 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	data = append(data, encodedInput...)
 
 	// We then create a merkle branch for the test.
-	depositTrie := trieutil.NewDepositTrie()
-	depositTrie.UpdateDepositTrie(data)
-	branch := depositTrie.Branch()
+	//depositTrie := trieutil.NewDepositTrie()
+	//depositTrie.UpdateDepositTrie(data)
+	//branch := depositTrie.Branch()
 
 	deposit := &pb.Deposit{
 		DepositData:         data,
-		MerkleBranchHash32S: branch,
+		//MerkleBranchHash32S: branch,
 		MerkleTreeIndex:     0,
 	}
 	block := &pb.BeaconBlock{
@@ -1246,13 +1245,13 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
-	root := depositTrie.Root()
+	//root := depositTrie.Root()
 	beaconState := &pb.BeaconState{
 		ValidatorRegistry: registry,
 		ValidatorBalances: balances,
 		LatestEth1Data: &pb.Eth1Data{
-			DepositRootHash32: root[:],
-			BlockHash32:       root[:],
+			//DepositRootHash32: root[:],
+			//BlockHash32:       root[:],
 		},
 		Slot:        currentSlot,
 		GenesisTime: uint64(genesisTime),
@@ -1304,13 +1303,13 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	data = append(data, encodedInput...)
 
 	// We then create a merkle branch for the test.
-	depositTrie := trieutil.NewDepositTrie()
-	depositTrie.UpdateDepositTrie(data)
-	branch := depositTrie.Branch()
+	//depositTrie := trieutil.NewDepositTrie()
+	//depositTrie.UpdateDepositTrie(data)
+	//branch := depositTrie.Branch()
 
 	deposit := &pb.Deposit{
 		DepositData:         data,
-		MerkleBranchHash32S: branch,
+		//MerkleBranchHash32S: branch,
 		MerkleTreeIndex:     0,
 	}
 	block := &pb.BeaconBlock{
@@ -1325,13 +1324,13 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
-	root := depositTrie.Root()
+	//root := depositTrie.Root()
 	beaconState := &pb.BeaconState{
 		ValidatorRegistry: registry,
 		ValidatorBalances: balances,
 		LatestEth1Data: &pb.Eth1Data{
-			DepositRootHash32: root[:],
-			BlockHash32:       root[:],
+			//DepositRootHash32: root[:],
+			//BlockHash32:       root[:],
 		},
 		Slot:        currentSlot,
 		GenesisTime: uint64(genesisTime),

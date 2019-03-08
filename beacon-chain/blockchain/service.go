@@ -112,7 +112,12 @@ func (c *ChainService) Start() {
 		subChainStart := c.web3Service.ChainStartFeed().Subscribe(c.chainStartChan)
 		go func() {
 			genesisTime := <-c.chainStartChan
-			initialDeposits := c.web3Service.ChainStartDeposits()
+			initialDepositsData := c.web3Service.ChainStartDeposits()
+			initialDeposits := make([]*pb.Deposit, len(initialDepositsData))
+			for i := range initialDepositsData {
+				initialDeposits[i] = &pb.Deposit{DepositData: initialDepositsData[i]}
+			}
+
 			depositRoot := c.web3Service.DepositRoot()
 			latestBlockHash := c.web3Service.LatestBlockHash()
 			eth1Data := &pb.Eth1Data{

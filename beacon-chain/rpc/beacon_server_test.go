@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"math/big"
 	"reflect"
 	"strings"
@@ -56,6 +57,10 @@ func (f *faultyPOWChainService) DepositRoot() [32]byte {
 	return [32]byte{}
 }
 
+func (f *faultyPOWChainService) DepositTrie() *trieutil.MerkleTrie {
+    return &trieutil.MerkleTrie{}
+}
+
 type mockPOWChainService struct {
 	chainStartFeed    *event.Feed
 	latestBlockNumber *big.Int
@@ -70,6 +75,10 @@ func (m *mockPOWChainService) ChainStartFeed() *event.Feed {
 }
 func (m *mockPOWChainService) LatestBlockHeight() *big.Int {
 	return m.latestBlockNumber
+}
+
+func (f *mockPOWChainService) DepositTrie() *trieutil.MerkleTrie {
+	return &trieutil.MerkleTrie{}
 }
 
 func (m *mockPOWChainService) BlockExists(_ context.Context, hash common.Hash) (bool, *big.Int, error) {
