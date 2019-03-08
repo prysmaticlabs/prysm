@@ -190,12 +190,17 @@ func (s *Service) removeOperations() {
 			return
 		// Listen for processed block from the block chain service.
 		case block := <-s.incomingProcessedBlock:
-			// Removes the pending attestations received from processed block body in DB.
-			if err := s.removePendingAttestations(block.Body.Attestations); err != nil {
-				log.Errorf("Could not remove processed attestations from DB: %v", err)
-				return
-			}
+			handler.SafelyHandleMessage(s.ctx, s.handleProcessedBlock, block)
 		}
+	}
+}
+
+func (s *Service) handleProcessedBlock(message proto.Message) {
+	block := message.(*pb.BeaconBlock)
+	// Removes the pending attestations received from processed block body in DB.
+	if err := s.removePendingAttestations(block.Body.Attestations); err != nil {
+		log.Errorf("Could not remove processed attestations from DB: %v", err)
+		return
 	}
 }
 
