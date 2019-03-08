@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -60,8 +61,8 @@ func DefaultConfig() *Config {
 }
 
 type p2pAPI interface {
+	p2p.Sender
 	Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription
-	Send(msg proto.Message, peer p2p.Peer)
 	Broadcast(msg proto.Message)
 }
 
@@ -200,7 +201,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 	}()
 
 	if s.reqState {
-		if err := s.requestStateFromPeer(s.ctx, s.stateRootOfHighestObservedSlot[:], p2p.Peer{}); err != nil {
+		if err := s.requestStateFromPeer(s.ctx, s.stateRootOfHighestObservedSlot[:], p2p.AnyPeer); err != nil {
 			log.Errorf("Could not request state from peer %v", err)
 		}
 	} else {
@@ -244,7 +245,7 @@ func (s *InitialSync) checkInMemoryBlocks() {
 			}
 			s.mutex.Lock()
 			if block, ok := s.inMemoryBlocks[s.currentSlot+1]; ok && s.currentSlot+1 <= s.highestObservedSlot {
-				s.processBlock(s.ctx, block, p2p.Peer{})
+				s.processBlock(s.ctx, block, p2p.AnyPeer)
 			}
 			s.mutex.Unlock()
 		}
@@ -255,7 +256,7 @@ func (s *InitialSync) checkInMemoryBlocks() {
 // latest canonical head. If not, then it requests batched blocks up to the highest observed slot.
 func (s *InitialSync) checkSyncStatus() bool {
 	if s.reqState {
-		if err := s.requestStateFromPeer(s.ctx, s.stateRootOfHighestObservedSlot[:], p2p.Peer{}); err != nil {
+		if err := s.requestStateFromPeer(s.ctx, s.stateRootOfHighestObservedSlot[:], p2p.AnyPeer); err != nil {
 			log.Errorf("Could not request state from peer %v", err)
 		}
 		return false
@@ -278,7 +279,7 @@ func (s *InitialSync) processBlockAnnounce(msg p2p.Message) {
 	recBlockAnnounce.Inc()
 
 	if s.reqState {
-		if err := s.requestStateFromPeer(ctx, s.stateRootOfHighestObservedSlot[:], p2p.Peer{}); err != nil {
+		if err := s.requestStateFromPeer(ctx, s.stateRootOfHighestObservedSlot[:], msg.Peer); err != nil {
 			log.Errorf("Could not request state from peer %v", err)
 		}
 		return
@@ -295,7 +296,7 @@ func (s *InitialSync) processBlockAnnounce(msg p2p.Message) {
 // processBlock is the main method that validates each block which is received
 // for initial sync. It checks if the blocks are valid and then will continue to
 // process and save it into the db.
-func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock, peer p2p.Peer) {
+func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock, peerID peer.ID) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.processBlock")
 	defer span.End()
 	recBlock.Inc()
@@ -310,7 +311,7 @@ func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock, p
 
 	// requesting beacon state if there is no saved state.
 	if s.reqState {
-		if err := s.requestStateFromPeer(s.ctx, block.StateRootHash32, peer); err != nil {
+		if err := s.requestStateFromPeer(s.ctx, block.StateRootHash32, peerID); err != nil {
 			log.Errorf("Could not request beacon state from peer: %v", err)
 		}
 		return
@@ -336,11 +337,15 @@ func (s *InitialSync) processBatchedBlocks(msg p2p.Message) {
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.initial-sync.processBatchedBlocks")
 	defer span.End()
 	batchedBlockReq.Inc()
-	log.Debug("Processing batched block response")
 
 	response := msg.Data.(*pb.BatchedBeaconBlockResponse)
 	batchedBlocks := response.BatchedBlocks
+	if len(batchedBlocks) == 0 {
+		// Do not process empty response
+		return
+	}
 
+	log.Debug("Processing batched block response")
 	for _, block := range batchedBlocks {
 		s.processBlock(ctx, block, msg.Peer)
 	}
@@ -383,13 +388,12 @@ func (s *InitialSync) processState(msg p2p.Message) {
 
 // requestStateFromPeer sends a request to a peer for the corresponding state
 // for a beacon block.
-func (s *InitialSync) requestStateFromPeer(ctx context.Context, stateRoot []byte, peer p2p.Peer) error {
-	_, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.requestStateFromPeer")
+func (s *InitialSync) requestStateFromPeer(ctx context.Context, stateRoot []byte, peerID peer.ID) error {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.requestStateFromPeer")
 	defer span.End()
 	stateReq.Inc()
 	log.Debugf("Successfully processed incoming block with state hash: %#x", stateRoot)
-	s.p2p.Send(&pb.BeaconStateRequest{Hash: stateRoot}, peer)
-	return nil
+	return s.p2p.Send(ctx, &pb.BeaconStateRequest{Hash: stateRoot}, peerID)
 }
 
 // requestNextBlock broadcasts a request for a block with the entered slotnumber.
@@ -401,7 +405,7 @@ func (s *InitialSync) requestNextBlockBySlot(ctx context.Context, slotNumber uin
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	if block, ok := s.inMemoryBlocks[slotNumber]; ok {
-		s.processBlock(ctx, block, p2p.Peer{})
+		s.processBlock(ctx, block, p2p.AnyPeer)
 		return
 	}
 	s.p2p.Broadcast(&pb.BeaconBlockRequestBySlotNumber{SlotNumber: slotNumber})
@@ -413,6 +417,10 @@ func (s *InitialSync) requestBatchedBlocks(startSlot uint64, endSlot uint64) {
 	_, span := trace.StartSpan(context.Background(), "beacon-chain.sync.initial-sync.requestBatchedBlocks")
 	defer span.End()
 	sentBatchedBlockReq.Inc()
+	if startSlot > endSlot {
+		log.Debugf("Invalid batched request from slot %d to %d", startSlot, endSlot)
+		return
+	}
 	blockLimit := params.BeaconConfig().BatchBlockLimit
 	if startSlot+blockLimit < endSlot {
 		endSlot = startSlot + blockLimit

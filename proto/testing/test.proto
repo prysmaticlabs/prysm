@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package ethereum.testing;
 
+import "google/protobuf/timestamp.proto";
+
 message TestMessage {
     string foo = 1;
 }
@@ -10,4 +12,32 @@ message TestMessage {
 message Puzzle {
     string challenge = 1;
     string answer = 2;
+}
+
+// Person and address book example from 
+// https://github.com/protocolbuffers/protobuf/blob/master/examples/addressbook.proto
+message Person {
+  string name = 1;
+  int32 id = 2;
+  string email = 3;
+
+  enum PhoneType {
+    MOBILE = 0;
+    HOME = 1;
+    WORK = 2;
+  }
+
+  message PhoneNumber {
+    string number = 1;
+    PhoneType type = 2;
+  }
+
+  repeated PhoneNumber phones = 4;
+
+  google.protobuf.Timestamp last_updated = 5;
+}
+
+// Our address book file is just one of these.
+message AddressBook {
+  repeated Person people = 1;
 }

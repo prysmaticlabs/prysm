@@ -77,10 +77,7 @@ func TestBlockBySlotEmptyChain_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	block, err := db.BlockBySlot(0)
-	if err != nil {
-		t.Errorf("failure when fetching block by slot: %v", err)
-	}
+	block, _ := db.BlockBySlot(0)
 	if block != nil {
 		t.Error("BlockBySlot should return nil for an empty chain")
 	}
@@ -237,4 +234,43 @@ func TestChainProgress_OK(t *testing.T) {
 	if heighestBlock.Slot != block3.Slot {
 		t.Fatalf("expected height to equal %d, got %d", block3.Slot, heighestBlock.Slot)
 	}
+}
+
+func TestHasBlockBySlot_OK(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	blkSlot := uint64(10)
+	block1 := &pb.BeaconBlock{
+		Slot: blkSlot,
+	}
+
+	exists, _, err := db.HasBlockBySlot(blkSlot)
+	if err != nil {
+		t.Fatalf("failed to get block: %v", err)
+	}
+	if exists {
+		t.Error("Block exists despite being not being saved")
+	}
+
+	if err := db.SaveBlock(block1); err != nil {
+		t.Fatalf("save block failed: %v", err)
+	}
+
+	if err := db.UpdateChainHead(block1, &pb.BeaconState{}); err != nil {
+		t.Fatalf("Unable to save block and state in db %v", err)
+	}
+
+	exists, blk, err := db.HasBlockBySlot(blkSlot)
+	if err != nil {
+		t.Fatalf("failed to get block: %v", err)
+	}
+	if !exists {
+		t.Error("Block does not exist in db")
+	}
+
+	if blk.Slot != blkSlot {
+		t.Errorf("Saved block does not have the slot from which it was requested")
+	}
+
 }

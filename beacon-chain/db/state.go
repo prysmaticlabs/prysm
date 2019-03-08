@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"time"
 
@@ -94,6 +95,35 @@ func (db *BeaconDB) SaveState(beaconState *pb.BeaconState) error {
 		}
 		return chainInfo.Put(stateLookupKey, beaconStateEnc)
 	})
+}
+
+// SaveFinalizedState saves the last finazlied state in the db.
+func (db *BeaconDB) SaveFinalizedState(beaconState *pb.BeaconState) error {
+	return db.update(func(tx *bolt.Tx) error {
+		chainInfo := tx.Bucket(chainInfoBucket)
+		beaconStateEnc, err := proto.Marshal(beaconState)
+		if err != nil {
+			return err
+		}
+		return chainInfo.Put(finalizedStateLookupKey, beaconStateEnc)
+	})
+}
+
+// FinalizedState retrieves the finalized state from the db.
+func (db *BeaconDB) FinalizedState() (*pb.BeaconState, error) {
+	var beaconState *pb.BeaconState
+	err := db.view(func(tx *bolt.Tx) error {
+		chainInfo := tx.Bucket(chainInfoBucket)
+		encState := chainInfo.Get(finalizedStateLookupKey)
+		if encState == nil {
+			return errors.New("no finalized state saved")
+		}
+
+		var err error
+		beaconState, err = createState(encState)
+		return err
+	})
+	return beaconState, err
 }
 
 func createState(enc []byte) (*pb.BeaconState, error) {
