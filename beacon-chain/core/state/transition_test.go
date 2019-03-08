@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	atts "github.com/prysmaticlabs/prysm/beacon-chain/core/attestations"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -140,6 +141,73 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 	}
 	want := "could not verify block attester slashing"
 	if _, err := state.ProcessBlock(context.Background(), beaconState, block, false); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
+	}
+}
+
+func TestProcessBlock_IncorrectAggregateSig(t *testing.T) {
+	deposits, privKeys := setupInitialDeposits(t, params.BeaconConfig().SlotsPerEpoch)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var blockRoots [][]byte
+	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
+		blockRoots = append(blockRoots, []byte{byte(i)})
+	}
+	beaconState.LatestBlockRootHash32S = blockRoots
+	beaconState.LatestCrosslinks = []*pb.Crosslink{
+		{
+			CrosslinkDataRootHash32: []byte{1},
+		},
+	}
+	beaconState.Slot = params.BeaconConfig().GenesisSlot + 10
+	blockAtt := &pb.Attestation{
+		Data: &pb.AttestationData{
+			Shard:                    0,
+			Slot:                     params.BeaconConfig().GenesisSlot,
+			JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
+			JustifiedBlockRootHash32: blockRoots[0],
+			LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
+			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
+		},
+		AggregationBitfield: []byte{1},
+		CustodyBitfield:     []byte{1},
+	}
+
+	attestorIndices, err := helpers.AttestationParticipants(beaconState, blockAtt.Data, blockAtt.AggregationBitfield)
+	if err != nil {
+		t.Errorf("could not get aggergation participants %v", err)
+	}
+	blockAtt.AggregateSignature = atts.AggregateSignature(beaconState, blockAtt, privKeys[attestorIndices[0]-1])
+	attestations := []*pb.Attestation{blockAtt}
+
+	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
+	block := &pb.BeaconBlock{
+		Slot:         params.BeaconConfig().GenesisSlot + 10,
+		RandaoReveal: randaoReveal,
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{2},
+			BlockHash32:       []byte{3},
+		},
+		Body: &pb.BeaconBlockBody{
+			Attestations: attestations,
+		},
+	}
+
+	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, block.Slot)
+	if err != nil {
+		t.Errorf("could not get beacon proposer index: %v", err)
+	}
+
+	block.Signature, err = b.BlockSignature(beaconState, block, privKeys[proposerIndex])
+	if err != nil {
+		t.Errorf("could not get block signature: %v", err)
+	}
+
+	want := "aggregate signature did not verify"
+	if _, err := state.ProcessBlock(context.Background(), beaconState, block, true); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -370,6 +438,12 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		AggregationBitfield: []byte{1},
 		CustodyBitfield:     []byte{1},
 	}
+	attestorIndices, err := helpers.AttestationParticipants(beaconState, blockAtt.Data, blockAtt.AggregationBitfield)
+	if err != nil {
+		t.Errorf("could not get aggergation participants %v", err)
+	}
+	blockAtt.AggregateSignature = atts.AggregateSignature(beaconState, blockAtt, privKeys[attestorIndices[0]])
+
 	attestations := []*pb.Attestation{blockAtt}
 	exits := []*pb.VoluntaryExit{
 		{
