@@ -52,6 +52,7 @@ type powChainService interface {
 	BlockHashByHeight(ctx context.Context, height *big.Int) (common.Hash, error)
 	DepositRoot() [32]byte
 	DepositTrie() *trieutil.MerkleTrie
+	ChainStartDeposits() [][]byte
 }
 
 // Service defining an RPC server for a beacon node.

@@ -225,7 +225,7 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 		// property changes during a state transition after a voting period.
 		pendingDeps[i].MerkleBranchHash32S = proof
 	}
-	return &pb.PendingDepositsResponse{PendingDeposits: bs.beaconDB.PendingDeposits(ctx, bNum)}, nil
+	return &pb.PendingDepositsResponse{PendingDeposits: pendingDeps}, nil
 }
 
 func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *big.Int, eth1FollowDistance int64) (*pb.Eth1DataResponse, error) {
@@ -236,9 +236,15 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 	}
 	// Fetch all historical deposits up to an ancestor height.
 	allDeposits := bs.beaconDB.AllDeposits(ctx, ancestorHeight)
-	depositData := make([][]byte, len(allDeposits))
-	for i := range allDeposits {
-		depositData[i] = allDeposits[i].DepositData
+	depositData := [][]byte{}
+	// If there are no historical deposits up to an ancestor height, then we just fetch the default
+	// deposit root obtained from constructing the Merkle trie with the ChainStart deposits.
+	if len(allDeposits) == 0 {
+		depositData = bs.powChainService.ChainStartDeposits()
+	} else {
+		for i := range allDeposits {
+			depositData[i] = allDeposits[i].DepositData
+		}
 	}
    	depositTrie, err := trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
    	if err != nil {
