@@ -24,13 +24,13 @@ func GenerateTrieFromItems(items [][]byte, depth int) (*MerkleTrie, error) {
 	for i, val := range items {
 		leaves[i] = hashutil.Hash(val)
 	}
+	// Append the leaves to the branches.
 	branches := [][][32]byte{leaves}
-	// Prepend the leaves to the branches.
 	for i := 0; i < depth-1; i++ {
 		if len(branches[i])%2 == 1 {
 			branches[i] = append(branches[i], emptyNodes[i])
 		}
-		// We prepend the layer that results from hashing the trie's current layer.
+		// We append the layer that results from hashing the trie's current layer.
 		branches = append(branches, hashLayer(branches[i]))
 	}
 	// Reverse the branches so as to have the root in the 0th layer.
