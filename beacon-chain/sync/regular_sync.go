@@ -375,6 +375,10 @@ func (rs *RegularSync) handleBlockRequestBySlot(msg p2p.Message) {
 	block, err := rs.db.BlockBySlot(request.SlotNumber)
 	getBlockSpan.End()
 	if err != nil || block == nil {
+		if block == nil {
+			log.Debugf("Block with slot %d does not exist", request.SlotNumber)
+			return
+		}
 		log.Errorf("Error retrieving block from db: %v", err)
 		return
 	}
@@ -582,7 +586,9 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) {
 	blockRange := endSlot - startSlot
 	// Handle overflows
 	if startSlot > endSlot {
-		blockRange = 0
+		// Do not process requests with invalid slot ranges
+		log.Debugf("Batched block range is invalid, start slot %d , end slot %d", startSlot, endSlot)
+		return
 	}
 
 	response := make([]*pb.BeaconBlock, 0, blockRange)

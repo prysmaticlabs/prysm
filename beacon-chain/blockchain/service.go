@@ -465,17 +465,19 @@ func (c *ChainService) attestationTargets(state *pb.BeaconState) ([]*attestation
 // ex:
 //       /- C - E
 // A - B - D - F
-//          \- G
-// Input: B. Output: [C, D, E, F, G]
+//       \- G
+// Input: B. Output: [C, D, G]
+//
+// Spec pseudocode definition:
+//	get_children(store: Store, block: BeaconBlock) -> List[BeaconBlock]
+//		returns the child blocks of the given block.
 func (c *ChainService) blockChildren(block *pb.BeaconBlock, state *pb.BeaconState) ([]*pb.BeaconBlock, error) {
 	var children []*pb.BeaconBlock
-	seenRoots := make(map[[32]byte]bool)
 
-	blockRoot, err := hashutil.HashBeaconBlock(block)
+	currentRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
 	}
-	seenRoots[blockRoot] = true
 	startSlot := block.Slot
 	currentSlot := state.Slot
 	for i := startSlot; i <= currentSlot; i++ {
@@ -489,15 +491,70 @@ func (c *ChainService) blockChildren(block *pb.BeaconBlock, state *pb.BeaconStat
 		}
 
 		parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
-		if seenRoots[parentRoot] {
-			blockRoot, err := hashutil.HashBeaconBlock(block)
-			if err != nil {
-				return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
-			}
-			seenRoots[blockRoot] = true
-
+		if currentRoot == parentRoot {
 			children = append(children, block)
 		}
 	}
 	return children, nil
+}
+
+// lmdGhost applies the Latest Message Driven, Greediest Heaviest Observed Sub-Tree
+// fork-choice rule defined in the Ethereum Serenity specification for the beacon chain.
+//
+// Spec pseudocode definition:
+//	def lmd_ghost(store: Store, start_state: BeaconState, start_block: BeaconBlock) -> BeaconBlock:
+//    """
+//    Execute the LMD-GHOST algorithm to find the head ``BeaconBlock``.
+//    """
+//    validators = start_state.validator_registry
+//    active_validator_indices = get_active_validator_indices(validators, slot_to_epoch(start_state.slot))
+//    attestation_targets = [
+//        (validator_index, get_latest_attestation_target(store, validator_index))
+//        for validator_index in active_validator_indices
+//    ]
+//
+//    def get_vote_count(block: BeaconBlock) -> int:
+//        return sum(
+//            get_effective_balance(start_state.validator_balances[validator_index]) // FORK_CHOICE_BALANCE_INCREMENT
+//            for validator_index, target in attestation_targets
+//            if get_ancestor(store, target, block.slot) == block
+//        )
+//
+//    head = start_block
+//    while 1:
+//        children = get_children(store, head)
+//        if len(children) == 0:
+//            return head
+//        head = max(children, key=get_vote_count)
+func (c *ChainService) lmdGhost(
+	block *pb.BeaconBlock,
+	state *pb.BeaconState,
+	voteTargets map[uint64]*pb.BeaconBlock,
+) (*pb.BeaconBlock, error) {
+	head := block
+	for {
+		children, err := c.blockChildren(head, state)
+		if err != nil {
+			return nil, fmt.Errorf("could not fetch block children: %v", err)
+		}
+		if len(children) == 0 {
+			return head, nil
+		}
+		maxChild := children[0]
+
+		maxChildVotes, err := VoteCount(maxChild, state, voteTargets, c.beaconDB)
+		if err != nil {
+			return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
+		}
+		for i := 0; i < len(children); i++ {
+			candidateChildVotes, err := VoteCount(children[i], state, voteTargets, c.beaconDB)
+			if err != nil {
+				return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
+			}
+			if candidateChildVotes > maxChildVotes {
+				maxChild = children[i]
+			}
+		}
+		head = maxChild
+	}
 }
