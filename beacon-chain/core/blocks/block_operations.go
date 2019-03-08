@@ -450,7 +450,7 @@ func verifyAttestationSig(beaconState *pb.BeaconState, att *pb.Attestation) erro
 	for idx, participantIndex := range attesterIndices {
 		pubkey, err := bls.PublicKeyFromBytes(beaconState.ValidatorRegistry[participantIndex].Pubkey)
 		if err != nil {
-			return fmt.Errorf("could not deserialize attestor public key: %v", err)
+			return fmt.Errorf("could not deserialize attestor public key: %v at index: %v", err, participantIndex)
 		}
 
 		attestorPubKeys[idx] = pubkey
@@ -478,8 +478,6 @@ func verifyAttestationSig(beaconState *pb.BeaconState, att *pb.Attestation) erro
 
 	log.WithFields(logrus.Fields{
 		"aggregatePubkeys": fmt.Sprintf("%#x", aggregatePubkeys),
-		"messageHashes":    messageHashes,
-		"aggregateSig":     fmt.Sprintf("%#x", sig.Marshal()),
 	}).Info("Verifying attestation")
 
 	if !sig.VerifyMultiple(aggregatePubkeys, messageHashes, domain) {

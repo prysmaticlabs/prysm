@@ -61,7 +61,7 @@ func createAggregateSignature(t *testing.T, beaconState *pb.BeaconState, att *pb
 		CustodyBit: true,
 	})
 	if err != nil {
-		t.Errorf("could not hash attestation data: %v", err)
+		t.Fatalf("could not hash attestation data: %v", err)
 	}
 
 	domain := forkutils.DomainVersion(beaconState.Fork, params.BeaconConfig().GenesisEpoch, params.BeaconConfig().DomainAttestation)

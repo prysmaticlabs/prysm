@@ -202,7 +202,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		CustodyBit: true,
 	})
 	if err != nil {
-		log.Error("Could not hash attestation data")
+		log.Fatalf("Could not hash attestation data: %v", err)
 		return
 	}
 	domain := forkutils.DomainVersion(fork, epoch, params.BeaconConfig().DomainAttestation)

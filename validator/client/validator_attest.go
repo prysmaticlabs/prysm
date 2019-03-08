@@ -129,7 +129,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 		CustodyBit: true,
 	})
 	if err != nil {
-		log.Error("Could not hash attestation data")
+		log.Errorf("Could not hash attestation data: %v", err)
 		return
 	}
 	log.Infof("Signing attestation for slot: %d", slot)
