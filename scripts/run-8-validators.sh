@@ -15,7 +15,7 @@ do
   UNAME=$(echo `uname` | tr '[A-Z]' '[a-z]')
   CMD="bazel-bin/validator/"
   CMD+=$UNAME
-  CMD+="_amd64_pure_stripped/validator --demo-config --password $PASSWORD_PATH --keystore-path $KEYSTORE --enable-tracing"
+  CMD+="_amd64_pure_stripped/validator --demo-config --password $PASSWORD_PATH --keystore-path $KEYSTORE"
 
   nohup $CMD $> /tmp/validator$i.log &
 done

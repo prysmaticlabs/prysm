@@ -1,13 +1,13 @@
 #!/bin/sh
 
-PRIVATE_KEY_PATH=~/priv
+PRIVATE_KEY_PATH="/Users/ivanthegreat/priv"
 
 echo "clearing data"
 DATA_PATH=/tmp/data
 rm -rf $DATA_PATH
 mkdir -p $DATA_PATH
 
-CONTRACT="0x067a1C3455aa798911156ae06DC5C8dc64a6649D"
+CONTRACT="0xf430ce6768e5D63Af3a451994d1aeaaF7718a600"
 PASSWORD="password"
 PASSWORD_PATH=$DATA_PATH/password.txt
 
@@ -25,10 +25,27 @@ do
   KEYSTORE=$DATA_PATH/keystore$i
 
   ACCOUNTCMD="bazel-bin/validator/$UNAME"
-  ACCOUNTCMD+="_amd64_pure_stripped/validator accounts create --password $PASSWORD_PATH --keystore-path $KEYSTORE"
+  ACCOUNTCMD+="_amd64_pure_stripped/validator accounts create --password $(cat $PASSWORD_PATH) --keystore-path $KEYSTORE"
+
+  echo $ACCOUNTCMD
 
   $ACCOUNTCMD
 done
+
+for i in `seq 1 8`;
+do
+  KEYSTORE=$DATA_PATH/keystore$i
+
+  CMD="bazel-bin/validator/"
+  CMD+=$UNAME
+  CMD+="_amd64_pure_stripped/validator --demo-config --password $(cat $PASSWORD_PATH) --keystore-path $KEYSTORE"
+
+  echo $CMD
+
+  nohup $CMD $> /tmp/validator$i.log &
+done
+
+echo "Started 8 validators"
 
 for i in `seq 1 8`;
 do
@@ -43,8 +60,14 @@ do
   DEPOSITCMD+=" --depositContract=$CONTRACT"
   DEPOSITCMD+=" --numberOfDeposits=1"
   DEPOSITCMD+=" --privKey=$(cat $PRIVATE_KEY_PATH)"
-  DEPOSITCMD+=" --keystoreUTCPath=$KEYSTORE"
+  DEPOSITCMD+=" --prysm-keystore=$KEYSTORE"
   DEPOSITCMD+=" --depositAmount=3200000"
 
   $DEPOSITCMD
+
+  echo $DEPOSITCMD
 done
+
+echo "8 validators are running in the background. You can follow their logs at /tmp/validator#.log where # is replaced by the validator index of 1 through 8."
+
+echo "To stop the processes, use 'pkill validator'"
