@@ -11,6 +11,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -139,30 +140,11 @@ func (s *Service) saveOperations() {
 			return
 		// Listen for a newly received incoming exit from the sync service.
 		case exit := <-s.incomingValidatorExits:
-			safelyHandleOperation(s.handleValidatorExits, exit)
-
+			handler.SafelyHandleMessage(s.ctx, s.handleValidatorExits, exit)
 		case attestation := <-s.incomingAtt:
-			safelyHandleOperation(s.handleAttestations, attestation)
+			handler.SafelyHandleMessage(s.ctx, s.handleAttestations, attestation)
 		}
 	}
-}
-
-// safelyHandleMessage will recover and log any panic that occurs from the
-// function argument.
-func safelyHandleOperation(fn func(message proto.Message), msg proto.Message) {
-	defer func() {
-		if r := recover(); r != nil {
-			printedMsg := "message contains no data"
-			if msg != nil {
-				printedMsg = proto.MarshalTextString(msg)
-			}
-			log.WithFields(logrus.Fields{
-				"r":   r,
-				"msg": printedMsg,
-			}).Error("Panicked when handling operation! Recovering...")
-		}
-	}()
-	fn(msg)
 }
 
 func (s *Service) handleValidatorExits(message proto.Message) {

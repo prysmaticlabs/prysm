@@ -7,8 +7,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/gogo/protobuf/proto"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -239,14 +237,4 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 	if len(atts) != 0 {
 		t.Errorf("Attestation pool should be empty but got a length of %d", len(atts))
 	}
-}
-
-func TestSafelyHandleOperation(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	safelyHandleOperation(func(msg proto.Message) {
-		panic("Test")
-	}, &pb.VoluntaryExit{})
-
-	testutil.AssertLogsContain(t, hook, "Panicked when handling operation!")
 }
