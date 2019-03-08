@@ -1,13 +1,13 @@
 #!/bin/sh
 
-PRIVATE_KEY_PATH="/Users/ivanthegreat/priv"
+PRIVATE_KEY_PATH=PUTPRIVKEYPATHHERE
 
 echo "clearing data"
 DATA_PATH=/tmp/data
 rm -rf $DATA_PATH
 mkdir -p $DATA_PATH
 
-CONTRACT="0xf430ce6768e5D63Af3a451994d1aeaaF7718a600"
+CONTRACT=PUTDEPOSITCONTRACTHERE
 PASSWORD="password"
 PASSWORD_PATH=$DATA_PATH/password.txt
 
