@@ -9,12 +9,12 @@ import (
 	"testing"
 	"time"
 
+	atts "github.com/prysmaticlabs/prysm/beacon-chain/core/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/forkutils"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -53,21 +53,6 @@ func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*b
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	return epochSignature.Marshal()
-}
-
-func createAggregateSignature(t *testing.T, beaconState *pb.BeaconState, att *pb.Attestation, privKey *bls.SecretKey) []byte {
-	attestationDataHash, err := hashutil.HashProto(&pb.AttestationDataAndCustodyBit{
-		Data:       att.Data,
-		CustodyBit: true,
-	})
-	if err != nil {
-		t.Fatalf("could not hash attestation data: %v", err)
-	}
-
-	domain := forkutils.DomainVersion(beaconState.Fork, params.BeaconConfig().GenesisEpoch, params.BeaconConfig().DomainAttestation)
-	sig := privKey.Sign(attestationDataHash[:], domain)
-
-	return sig.Marshal()
 }
 
 func TestProcessBlock_IncorrectSlot(t *testing.T) {
@@ -229,8 +214,7 @@ func TestProcessBlock_IncorrectAggregateSig(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not get aggergation participants %v", err)
 	}
-	aggregateSig := createAggregateSignature(t, beaconState, blockAtt, privKeys[attestorIndices[0]+1])
-	blockAtt.AggregateSignature = aggregateSig
+	blockAtt.AggregateSignature = atts.AggregateSignature(beaconState, blockAtt, privKeys[attestorIndices[0]+1])
 
 	attestations := []*pb.Attestation{blockAtt}
 	exits := []*pb.VoluntaryExit{
@@ -490,8 +474,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not get aggergation participants %v", err)
 	}
-	aggregateSig := createAggregateSignature(t, beaconState, blockAtt, privKeys[attestorIndices[0]])
-	blockAtt.AggregateSignature = aggregateSig
+	blockAtt.AggregateSignature = atts.AggregateSignature(beaconState, blockAtt, privKeys[attestorIndices[0]])
 
 	attestations := []*pb.Attestation{blockAtt}
 	exits := []*pb.VoluntaryExit{

@@ -11,13 +11,13 @@ import (
 	"testing"
 	"time"
 
+	atts "github.com/prysmaticlabs/prysm/beacon-chain/core/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/forkutils"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -43,21 +43,6 @@ func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.
 		privKeys[i] = priv
 	}
 	return deposits, privKeys
-}
-
-func createAggregateSignature(t *testing.T, beaconState *pb.BeaconState, att *pb.Attestation, privKey *bls.SecretKey) []byte {
-	attestationDataHash, err := hashutil.HashProto(&pb.AttestationDataAndCustodyBit{
-		Data:       att.Data,
-		CustodyBit: true,
-	})
-	if err != nil {
-		t.Fatalf("could not hash attestation data: %v", err)
-	}
-
-	domain := forkutils.DomainVersion(beaconState.Fork, params.BeaconConfig().GenesisEpoch, params.BeaconConfig().DomainAttestation)
-	sig := privKey.Sign(attestationDataHash[:], domain)
-
-	return sig.Marshal()
 }
 
 func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
@@ -1068,7 +1053,8 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not get aggregation participants %v", err)
 	}
-	att1.AggregateSignature = createAggregateSignature(t, beaconState, att1, privKeys[attestorIndices[0]])
+	att1.AggregateSignature = atts.AggregateSignature(beaconState, att1, privKeys[attestorIndices[0]])
+
 	attestations := []*pb.Attestation{att1}
 
 	block := &pb.BeaconBlock{
