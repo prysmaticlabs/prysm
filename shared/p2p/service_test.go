@@ -9,9 +9,12 @@ import (
 	"testing"
 	"time"
 
+	ggio "github.com/gogo/protobuf/io"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
 	bhost "github.com/libp2p/go-libp2p-blankhost"
+	pstore "github.com/libp2p/go-libp2p-peerstore"
+	protocol "github.com/libp2p/go-libp2p-protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
@@ -95,7 +98,7 @@ func TestEmit_OK(t *testing.T) {
 	}
 }
 
-func TestSubscribeToTopic_OK(t *testing.T) {
+func TestSubscribeToTopic_onPubSub_OK(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
 	defer cancel()
 	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
@@ -121,6 +124,65 @@ func TestSubscribeToTopic_OK(t *testing.T) {
 	defer sub.Unsubscribe()
 
 	testSubscribe(ctx, t, s, gsub, ch)
+}
+
+func TestSubscribeToTopic_directMessaging_OK(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
+	defer cancel()
+	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
+
+	gsub, err := pubsub.NewFloodSub(ctx, h)
+	if err != nil {
+		t.Errorf("Failed to create pubsub: %v", err)
+	}
+
+	s := Server{
+		ctx:          ctx,
+		gsub:         gsub,
+		host:         h,
+		feeds:        make(map[reflect.Type]Feed),
+		mutex:        &sync.Mutex{},
+		topicMapping: make(map[reflect.Type]string),
+	}
+
+	feed := s.Feed(&shardpb.CollationBodyRequest{})
+	ch := make(chan Message)
+	sub := feed.Subscribe(ch)
+	defer sub.Unsubscribe()
+	topic := shardpb.Topic_COLLATION_BODY_REQUEST
+
+	s.RegisterTopic(topic.String(), &shardpb.CollationBodyRequest{})
+	pbMsg := &shardpb.CollationBodyRequest{ShardId: 5}
+
+	done := make(chan bool)
+	go func() {
+		// The message should be received from the feed.
+		msg := <-ch
+		if !proto.Equal(msg.Data.(proto.Message), pbMsg) {
+			t.Errorf("Unexpected msg: %+v. Wanted %+v.", msg.Data, pbMsg)
+		}
+
+		done <- true
+	}()
+
+	h2 := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
+	if err := h2.Connect(ctx, pstore.PeerInfo{ID: h.ID(), Addrs: h.Addrs()}); err != nil {
+		t.Fatal(err)
+	}
+	stream, err := h2.NewStream(ctx, h.ID(), protocol.ID(prysmProtocolPrefix+"/"+topic.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := ggio.NewDelimitedWriter(stream)
+	defer w.Close()
+	w.WriteMsg(pbMsg)
+
+	// Wait for our message assertion to complete.
+	select {
+	case <-done:
+	case <-ctx.Done():
+		t.Error("Context timed out before a message was received!")
+	}
 }
 
 func TestSubscribe_OK(t *testing.T) {
