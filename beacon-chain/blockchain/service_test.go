@@ -871,12 +871,10 @@ func TestBlockChildren_2InARow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	err = chainService.beaconDB.SaveBlock(block1)
-	if err != nil {
+	if err = chainService.beaconDB.SaveBlock(block1); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	err = chainService.beaconDB.UpdateChainHead(block1, state)
-	if err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(block1, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -888,12 +886,10 @@ func TestBlockChildren_2InARow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	err = chainService.beaconDB.SaveBlock(block2)
-	if err != nil {
+	if err = chainService.beaconDB.SaveBlock(block2); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	err = chainService.beaconDB.UpdateChainHead(block2, state)
-	if err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(block2, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -901,12 +897,10 @@ func TestBlockChildren_2InARow(t *testing.T) {
 		Slot:             3,
 		ParentRootHash32: root2[:],
 	}
-	err = chainService.beaconDB.SaveBlock(block3)
-	if err != nil {
+	if err = chainService.beaconDB.SaveBlock(block3); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	err = chainService.beaconDB.UpdateChainHead(block3, state)
-	if err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(block3, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -944,12 +938,10 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	err = chainService.beaconDB.SaveBlock(block1)
-	if err != nil {
+	if err = chainService.beaconDB.SaveBlock(block1); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	err = chainService.beaconDB.UpdateChainHead(block1, state)
-	if err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(block1, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -957,12 +949,10 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 		Slot:             2,
 		ParentRootHash32: root1[:],
 	}
-	err = chainService.beaconDB.SaveBlock(block2)
-	if err != nil {
+	if err = chainService.beaconDB.SaveBlock(block2); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	err = chainService.beaconDB.UpdateChainHead(block2, state)
-	if err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(block2, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -970,12 +960,10 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 		Slot:             3,
 		ParentRootHash32: root1[:],
 	}
-	err = chainService.beaconDB.SaveBlock(block3)
-	if err != nil {
+	if err = chainService.beaconDB.SaveBlock(block3); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	err = chainService.beaconDB.UpdateChainHead(block3, state)
-	if err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(block3, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -983,12 +971,10 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 		Slot:             4,
 		ParentRootHash32: root1[:],
 	}
-	err = chainService.beaconDB.SaveBlock(block4)
-	if err != nil {
+	if err = chainService.beaconDB.SaveBlock(block4); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	err = chainService.beaconDB.UpdateChainHead(block4, state)
-	if err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(block4, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -1024,12 +1010,10 @@ func TestBlockChildren_SkipSlots(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	err = chainService.beaconDB.SaveBlock(block1)
-	if err != nil {
+	if err = chainService.beaconDB.SaveBlock(block1); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	err = chainService.beaconDB.UpdateChainHead(block1, state)
-	if err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(block1, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -1041,12 +1025,10 @@ func TestBlockChildren_SkipSlots(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	err = chainService.beaconDB.SaveBlock(block5)
-	if err != nil {
+	if err = chainService.beaconDB.SaveBlock(block5); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	err = chainService.beaconDB.UpdateChainHead(block5, state)
-	if err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(block5, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -1054,12 +1036,10 @@ func TestBlockChildren_SkipSlots(t *testing.T) {
 		Slot:             9,
 		ParentRootHash32: root2[:],
 	}
-	err = chainService.beaconDB.SaveBlock(block9)
-	if err != nil {
+	if err = chainService.beaconDB.SaveBlock(block9); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	err = chainService.beaconDB.UpdateChainHead(block9, state)
-	if err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(block9, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -1096,12 +1076,10 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	err = chainService.beaconDB.SaveBlock(block1)
-	if err != nil {
+	if err = chainService.beaconDB.SaveBlock(block1); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	err = chainService.beaconDB.UpdateChainHead(block1, state)
-	if err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(block1, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -1109,12 +1087,10 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 		Slot:             2,
 		ParentRootHash32: root1[:],
 	}
-	err = chainService.beaconDB.SaveBlock(block2)
-	if err != nil {
+	if err = chainService.beaconDB.SaveBlock(block2); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	err = chainService.beaconDB.UpdateChainHead(block2, state)
-	if err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(block2, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -1159,12 +1135,10 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	err = chainService.beaconDB.SaveBlock(block1)
-	if err != nil {
+	if err = chainService.beaconDB.SaveBlock(block1); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	err = chainService.beaconDB.UpdateChainHead(block1, state)
-	if err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(block1, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -1172,12 +1146,10 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 		Slot:             2,
 		ParentRootHash32: root1[:],
 	}
-	err = chainService.beaconDB.SaveBlock(block2)
-	if err != nil {
+	if err = chainService.beaconDB.SaveBlock(block2); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	err = chainService.beaconDB.UpdateChainHead(block2, state)
-	if err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(block2, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -1185,12 +1157,10 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 		Slot:             3,
 		ParentRootHash32: root1[:],
 	}
-	err = chainService.beaconDB.SaveBlock(block3)
-	if err != nil {
+	if err = chainService.beaconDB.SaveBlock(block3); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	err = chainService.beaconDB.UpdateChainHead(block3, state)
-	if err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(block3, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -1198,12 +1168,10 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 		Slot:             4,
 		ParentRootHash32: root1[:],
 	}
-	err = chainService.beaconDB.SaveBlock(block4)
-	if err != nil {
+	if err = chainService.beaconDB.SaveBlock(block4); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	err = chainService.beaconDB.UpdateChainHead(block4, state)
-	if err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(block4, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -1249,12 +1217,10 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	err = chainService.beaconDB.SaveBlock(block1)
-	if err != nil {
+	if err = chainService.beaconDB.SaveBlock(block1); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	err = chainService.beaconDB.UpdateChainHead(block1, state)
-	if err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(block1, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -1266,12 +1232,10 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	err = chainService.beaconDB.SaveBlock(block2)
-	if err != nil {
+	if err = chainService.beaconDB.SaveBlock(block2); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	err = chainService.beaconDB.UpdateChainHead(block2, state)
-	if err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(block2, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -1283,12 +1247,10 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	err = chainService.beaconDB.SaveBlock(block3)
-	if err != nil {
+	if err = chainService.beaconDB.SaveBlock(block3); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	err = chainService.beaconDB.UpdateChainHead(block3, state)
-	if err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(block3, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -1300,12 +1262,10 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash block: %v", err)
 	}
-	err = chainService.beaconDB.SaveBlock(block4)
-	if err != nil {
+	if err = chainService.beaconDB.SaveBlock(block4); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	err = chainService.beaconDB.UpdateChainHead(block4, state)
-	if err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(block4, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -1313,12 +1273,10 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 		Slot:             5,
 		ParentRootHash32: root3[:],
 	}
-	err = chainService.beaconDB.SaveBlock(block5)
-	if err != nil {
+	if err = chainService.beaconDB.SaveBlock(block5); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	err = chainService.beaconDB.UpdateChainHead(block5, state)
-	if err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(block5, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
@@ -1326,12 +1284,10 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 		Slot:             6,
 		ParentRootHash32: root4[:],
 	}
-	err = chainService.beaconDB.SaveBlock(block6)
-	if err != nil {
+	if err = chainService.beaconDB.SaveBlock(block6); err != nil {
 		t.Fatalf("Could not save block: %v", err)
 	}
-	err = chainService.beaconDB.UpdateChainHead(block6, state)
-	if err != nil {
+	if err = chainService.beaconDB.UpdateChainHead(block6, state); err != nil {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
