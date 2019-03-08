@@ -18,6 +18,7 @@ func GenerateTrieFromItems(items [][]byte, depth int) (*MerkleTrie, error) {
 		return nil, errors.New("no items provided to generate Merkle trie")
 	}
 	leaves := make([][32]byte, len(items))
+	emptyNodes := generateEmptyNodes(depth)
 	// We then construct the leaves of the trie by hashing every
 	// value in the items slice.
 	for i, val := range items {
@@ -27,7 +28,6 @@ func GenerateTrieFromItems(items [][]byte, depth int) (*MerkleTrie, error) {
 	// Prepend the leaves to the branches.
 	for i := 0; i < depth-1; i++ {
 		if len(branches[i])%2 == 1 {
-			emptyNodes := generateEmptyNodes(depth)
 			branches[i] = append(branches[i], emptyNodes[i])
 		}
 		// We prepend the layer that results from hashing the trie's current layer.

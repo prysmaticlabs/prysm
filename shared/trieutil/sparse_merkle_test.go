@@ -77,3 +77,45 @@ func TestMerkleTrie_VerifyMerkleProof(t *testing.T) {
 		t.Error("Item not in tree should fail to verify")
 	}
 }
+
+func BenchmarkGenerateTrieFromItems(b *testing.B) {
+	items := [][]byte{
+		[]byte("short"),
+		[]byte("eos"),
+		[]byte("long"),
+		[]byte("eth"),
+		[]byte("4ever"),
+		[]byte("eth2"),
+		[]byte("moon"),
+	}
+	for i := 0; i < b.N; i++ {
+		if _ , err := GenerateTrieFromItems(items, 32); err != nil {
+			b.Fatalf("Could not generate Merkle trie from items: %v", err)
+		}
+	}
+}
+
+func BenchmarkVerifyMerkleBranch(b *testing.B) {
+	items := [][]byte{
+		[]byte("short"),
+		[]byte("eos"),
+		[]byte("long"),
+		[]byte("eth"),
+		[]byte("4ever"),
+		[]byte("eth2"),
+		[]byte("moon"),
+	}
+	m, err := GenerateTrieFromItems(items, 32)
+	if err != nil {
+		b.Fatalf("Could not generate Merkle trie from items: %v", err)
+	}
+	proof, err := m.MerkleProof(2)
+	if err != nil {
+		b.Fatalf("Could not generate Merkle proof: %v", err)
+	}
+	for i := 0; i < b.N; i++ {
+		if ok := m.VerifyMerkleProof(items[2], 2, proof); !ok {
+			b.Error("Merkle proof did not verify")
+		}
+	}
+}
