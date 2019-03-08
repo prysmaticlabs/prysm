@@ -4,4 +4,4 @@ metadata:
   name: beacon-config
   namespace: beacon-chain
 data:
-  DEPOSIT_CONTRACT_ADDRESS: "0x0"
+ DEPOSIT_CONTRACT_ADDRESS: "0x8bDa9BAB2fa46D08D33b85491F14CE2B63B6820b"

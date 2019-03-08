@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -469,4 +470,45 @@ func safelyHandleBlock(blk *pb.BeaconBlock) {
 			"msg": printedMsg,
 		}).Error("Panicked when handling block! Recovering...")
 	}
+}
+
+// blockChildren returns the child blocks of the given block.
+// ex:
+//       /- C - E
+// A - B - D - F
+//          \- G
+// Input: B. Output: [C, D, E, F, G]
+func (c *ChainService) blockChildren(block *pb.BeaconBlock, state *pb.BeaconState) ([]*pb.BeaconBlock, error) {
+	var children []*pb.BeaconBlock
+	seenRoots := make(map[[32]byte]bool)
+
+	blockRoot, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
+	}
+	seenRoots[blockRoot] = true
+	startSlot := block.Slot
+	currentSlot := state.Slot
+	for i := startSlot; i <= currentSlot; i++ {
+		block, err := c.beaconDB.BlockBySlot(i)
+		if err != nil {
+			return nil, fmt.Errorf("could not get block by slot: %v", err)
+		}
+		// Continue if there's a skip block.
+		if block == nil {
+			continue
+		}
+
+		parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+		if seenRoots[parentRoot] {
+			blockRoot, err := hashutil.HashBeaconBlock(block)
+			if err != nil {
+				return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
+			}
+			seenRoots[blockRoot] = true
+
+			children = append(children, block)
+		}
+	}
+	return children, nil
 }

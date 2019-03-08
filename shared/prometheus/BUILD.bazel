@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "logrus_collector.go",
         "service.go",
+        "simple_server.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/prometheus",
     visibility = ["//visibility:public"],

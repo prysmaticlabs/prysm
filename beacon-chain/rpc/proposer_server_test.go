@@ -132,7 +132,7 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 	proposerServer := &ProposerServer{
 		operationService: &mockOperationService{
 			pendingAttestations: []*pbp2p.Attestation{
-				&pbp2p.Attestation{Data: &pbp2p.AttestationData{
+				{Data: &pbp2p.AttestationData{
 					Slot: beaconState.Slot - params.BeaconConfig().MinAttestationInclusionDelay,
 				}},
 			},
@@ -166,15 +166,15 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	opService := &mockOperationService{
 		pendingAttestations: []*pbp2p.Attestation{
 			// Expired attestations
-			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: 0}},
-			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot - 10000}},
-			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot - 5000}},
-			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot - 100}},
-			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot - params.BeaconConfig().SlotsPerEpoch}},
+			{Data: &pbp2p.AttestationData{Slot: 0}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 10000}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 5000}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 100}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - params.BeaconConfig().SlotsPerEpoch}},
 			// Non-expired attestations
-			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot - 5}},
-			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot - 2}},
-			&pbp2p.Attestation{Data: &pbp2p.AttestationData{Slot: currentSlot}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 5}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 2}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot}},
 		},
 	}
 	expectedNumberOfAttestations := 3
@@ -188,7 +188,12 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	if err := db.SaveState(beaconState); err != nil {
 		t.Fatal(err)
 	}
-	res, err := proposerServer.PendingAttestations(context.Background(), &pb.PendingAttestationsRequest{})
+	res, err := proposerServer.PendingAttestations(
+		context.Background(),
+		&pb.PendingAttestationsRequest{
+			ProposalBlockSlot: currentSlot,
+		},
+	)
 	if err != nil {
 		t.Fatalf("Unexpected error fetching pending attestations: %v", err)
 	}
