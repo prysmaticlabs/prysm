@@ -470,7 +470,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 		return nil
 	}
 
-	// Send block to main chain service to be processed
+	// Send block to main chain service to be processed.
 	s.chainService.IncomingBlockFeed().Send(block)
 	return nil
 }
