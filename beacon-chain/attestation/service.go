@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 
+	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -140,30 +142,13 @@ func (a *Service) attestationPool() {
 			return
 		// Listen for a newly received incoming attestation from the sync service.
 		case attestation := <-a.incomingChan:
-			safelyHandleAttestation(a.handleAttestation, attestation)
+			handler.SafelyHandleMessage(a.handleAttestation, attestation, a.ctx)
 		}
 	}
 }
 
-// safelyHandleMessage will recover and log any panic that occurs from the
-// function argument.
-func safelyHandleAttestation(fn func(att *pb.Attestation), att *pb.Attestation) {
-	defer func() {
-		if r := recover(); r != nil {
-			printedMsg := "message contains no data"
-			if att != nil {
-				printedMsg = proto.MarshalTextString(att)
-			}
-			log.WithFields(logrus.Fields{
-				"r":   r,
-				"msg": printedMsg,
-			}).Error("Panicked when handling attestation! Recovering...")
-		}
-	}()
-	fn(att)
-}
-
-func (a *Service) handleAttestation(attestation *pb.Attestation) {
+func (a *Service) handleAttestation(msg proto.Message) {
+	attestation := msg.(*pb.Attestation)
 	enc, err := proto.Marshal(attestation)
 	if err != nil {
 		log.Errorf("Could not marshal incoming attestation to bytes: %v", err)

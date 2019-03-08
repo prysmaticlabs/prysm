@@ -23,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -239,23 +240,27 @@ func (c *ChainService) blockProcessing() {
 		// can be received either from the sync service, the RPC service,
 		// or via p2p.
 		case block := <-c.incomingBlockChan:
-			beaconState, err := c.beaconDB.State(c.ctx)
-			if err != nil {
-				log.Errorf("Unable to retrieve beacon state %v", err)
-				continue
-			}
+			handler.SafelyHandleMessage(c.processBlock, block, c.ctx)
+		}
+	}
+}
 
-			if block.Slot > beaconState.Slot {
-				computedState, err := c.ReceiveBlock(block, beaconState)
-				if err != nil {
-					log.Errorf("Could not process received block: %v", err)
-					continue
-				}
-				if err := c.ApplyForkChoiceRule(block, computedState); err != nil {
-					log.Errorf("Could not update chain head: %v", err)
-					continue
-				}
-			}
+func (c *ChainService) processBlock(message proto.Message) {
+	block := message.(*pb.BeaconBlock)
+	beaconState, err := c.beaconDB.State(c.ctx)
+	if err != nil {
+		log.Errorf("Unable to retrieve beacon state %v", err)
+		return
+	}
+	if block.Slot > beaconState.Slot {
+		computedState, err := c.ReceiveBlock(block, beaconState)
+		if err != nil {
+			log.Errorf("Could not process received block: %v", err)
+			return
+		}
+		if err := c.ApplyForkChoiceRule(block, computedState); err != nil {
+			log.Errorf("Could not update chain head: %v", err)
+			return
 		}
 	}
 }
@@ -309,7 +314,6 @@ func (c *ChainService) ApplyForkChoiceRule(block *pb.BeaconBlock, computedState 
 //			return nil, error  # or throw or whatever
 //
 func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.BeaconState) (*pb.BeaconState, error) {
-	defer safelyHandleBlock(block)
 	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
@@ -455,21 +459,6 @@ func (c *ChainService) attestationTargets(state *pb.BeaconState) ([]*attestation
 		}
 	}
 	return attestationTargets, nil
-}
-
-// safelyHandleBlock will recover and log any panic that occurs from the
-// block
-func safelyHandleBlock(blk *pb.BeaconBlock) {
-	if r := recover(); r != nil {
-		printedMsg := "block contains no data"
-		if blk != nil {
-			printedMsg = proto.MarshalTextString(blk)
-		}
-		log.WithFields(logrus.Fields{
-			"r":   r,
-			"msg": printedMsg,
-		}).Error("Panicked when handling block! Recovering...")
-	}
 }
 
 // blockChildren returns the child blocks of the given block.
