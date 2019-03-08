@@ -8,9 +8,12 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/forkutils"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -100,6 +103,14 @@ func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
 		LatestCrosslink:          &pbp2p.Crosslink{},
 		JustifiedEpoch:           0,
 	}, nil)
+	m.beaconClient.EXPECT().ForkData(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.Fork{
+		Epoch:           params.BeaconConfig().GenesisEpoch,
+		CurrentVersion:  0,
+		PreviousVersion: 0,
+	}, nil /*err*/)
 	m.attesterClient.EXPECT().AttestHead(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
@@ -129,6 +140,14 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		Shard:     5,
 		Committee: committee,
 	}, nil)
+	m.beaconClient.EXPECT().ForkData(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.Fork{
+		Epoch:           params.BeaconConfig().GenesisEpoch,
+		CurrentVersion:  0,
+		PreviousVersion: 0,
+	}, nil /*err*/)
 	m.attesterClient.EXPECT().AttestationDataAtSlot(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.AttestationDataRequest{}),
@@ -154,6 +173,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	// Validator index is at index 4 in the mocked committee defined in this test.
 	indexIntoCommittee := uint64(4)
 	aggregationBitfield[indexIntoCommittee/8] |= 1 << (indexIntoCommittee % 8)
+
 	expectedAttestation := &pbp2p.Attestation{
 		Data: &pbp2p.AttestationData{
 			Slot:                     30,
@@ -167,8 +187,28 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		},
 		CustodyBitfield:     make([]byte, (len(committee)+7)/8),
 		AggregationBitfield: aggregationBitfield,
-		AggregateSignature:  []byte("signed"),
 	}
+
+	// Retrieve the current fork data from the beacon node.
+	fork := &pbp2p.Fork{
+		Epoch:           params.BeaconConfig().GenesisEpoch,
+		CurrentVersion:  0,
+		PreviousVersion: 0,
+	}
+
+	epoch := 30 / params.BeaconConfig().SlotsPerEpoch
+	attestationHash, err := hashutil.HashProto(&pbp2p.AttestationDataAndCustodyBit{
+		Data:       expectedAttestation.Data,
+		CustodyBit: true,
+	})
+	if err != nil {
+		log.Fatalf("Could not hash attestation data: %v", err)
+		return
+	}
+	domain := forkutils.DomainVersion(fork, epoch, params.BeaconConfig().DomainAttestation)
+
+	expectedAttestation.AggregateSignature = validator.key.SecretKey.Sign(attestationHash[:], domain).Marshal()
+
 	if !proto.Equal(generatedAttestation, expectedAttestation) {
 		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
 	}
@@ -219,13 +259,24 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 		wg.Done()
 	})
 
+	m.beaconClient.EXPECT().ForkData(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.Fork{
+		Epoch:           params.BeaconConfig().GenesisEpoch,
+		CurrentVersion:  0,
+		PreviousVersion: 0,
+	}, nil /*err*/).Times(1)
+
 	m.attesterClient.EXPECT().AttestHead(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
 	).Return(&pb.AttestResponse{}, nil /* error */).Times(0)
 
 	delay = 2
+	timer := time.NewTimer(time.Duration(1 * time.Second))
 	go validator.AttestToBlockHead(context.Background(), 0)
+	<-timer.C
 }
 
 func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
@@ -270,6 +321,15 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	}, nil).Do(func(arg0, arg1 interface{}) {
 		wg.Done()
 	})
+
+	m.beaconClient.EXPECT().ForkData(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.Fork{
+		Epoch:           params.BeaconConfig().GenesisEpoch,
+		CurrentVersion:  0,
+		PreviousVersion: 0,
+	}, nil /*err*/).Times(1)
 
 	m.attesterClient.EXPECT().AttestHead(
 		gomock.Any(), // ctx
