@@ -39,7 +39,7 @@ func main() {
 		panic(err)
 	}
 
-	pk, err := bls.SecretKeyFromBytes(resp.PrivateKey)
+	pk, err := bls.SecretKeyFromBytes([]byte(resp.PrivateKey))
 	if err != nil {
 		panic(err)
 	}
