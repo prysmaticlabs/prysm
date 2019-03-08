@@ -302,7 +302,7 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 	}
 
 	if ss.highestObservedSlot != expectedSlot {
-		t.Errorf("Expected slot %d not equal to highest observed slot slot %d", expectedSlot, ss.highestObservedSlot)
+		t.Errorf("Expected slot %d not equal to highest observed slot %d", expectedSlot, ss.highestObservedSlot)
 	}
 }
 
