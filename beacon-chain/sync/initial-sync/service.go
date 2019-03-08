@@ -457,7 +457,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	// delete block from memory
+	// delete block from memory.
 	if _, ok := s.inMemoryBlocks[block.Slot]; ok {
 		delete(s.inMemoryBlocks, block.Slot)
 	}
