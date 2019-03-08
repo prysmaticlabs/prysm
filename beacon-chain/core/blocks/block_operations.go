@@ -17,7 +17,6 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/forkutils"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -623,13 +622,12 @@ func ProcessValidatorDeposits(
 
 func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 	// Verify Merkle proof of deposit and deposit trie root.
-	receiptRoot := bytesutil.ToBytes32(beaconState.LatestEth1Data.DepositRootHash32)
-	index := make([]byte, 8)
-	binary.LittleEndian.PutUint64(index, deposit.MerkleTreeIndex)
-	if ok := trieutil.VerifyMerkleBranch(
-		deposit.MerkleBranchHash32S,
+	receiptRoot := beaconState.LatestEth1Data.DepositRootHash32
+	if ok := trieutil.VerifyMerkleProof(
 		receiptRoot,
-		index,
+		deposit.DepositData,
+		int(deposit.MerkleTreeIndex),
+		deposit.MerkleBranchHash32S,
 	); !ok {
 		return fmt.Errorf(
 			"deposit merkle branch of deposit root did not verify for root: %#x",

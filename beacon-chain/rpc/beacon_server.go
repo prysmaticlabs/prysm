@@ -212,7 +212,7 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 	bNum = bNum.Sub(bNum, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
 	pendingDeps := bs.beaconDB.PendingDeposits(ctx, bNum)
 	for i := range pendingDeps {
-		proof, err := bs.powChainService.DepositTrie().MerkleProof(pendingDeps[i].MerkleTreeIndex)
+		proof, err := bs.powChainService.DepositTrie().MerkleProof(int(pendingDeps[i].MerkleTreeIndex))
 		if err != nil {
 			return nil, fmt.Errorf(
 				"could not generate merkle proof for deposit at index %d: %v",

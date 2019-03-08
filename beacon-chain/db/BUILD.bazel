@@ -8,6 +8,7 @@ go_library(
         "block_operations.go",
         "cleanup_history.go",
         "db.go",
+        "deposits.go",
         "pending_deposits.go",
         "schema.go",
         "setup_db.go",
