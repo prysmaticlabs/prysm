@@ -69,7 +69,7 @@ func newDB(dbPath string) *db {
 
 // UnallocatedPK returns the first unassigned private key, if any are
 // available.
-func (d *db) UnallocatedPK(ctx context.Context) ([]byte, error) {
+func (d *db) UnallocatedPK(_ context.Context) ([]byte, error) {
 	var pk []byte
 	if err := d.db.View(func(tx *bolt.Tx) error {
 		c := tx.Bucket(unassignedPkBucket).Cursor()
@@ -84,7 +84,7 @@ func (d *db) UnallocatedPK(ctx context.Context) ([]byte, error) {
 }
 
 // PodPK returns an assigned private key to the given pod name, if one exists.
-func (d *db) PodPK(ctx context.Context, podName string) ([]byte, error) {
+func (d *db) PodPK(_ context.Context, podName string) ([]byte, error) {
 	var pk []byte
 	if err := d.db.View(func(tx *bolt.Tx) error {
 		pk = tx.Bucket(assignedPkBucket).Get([]byte(podName))
@@ -98,7 +98,7 @@ func (d *db) PodPK(ctx context.Context, podName string) ([]byte, error) {
 
 // AllocateNewPkToPod records new private key assignment in DB.
 func (d *db) AllocateNewPkToPod(
-	ctx context.Context,
+	_ context.Context,
 	pk *keystore.Key,
 	podName string,
 ) error {
@@ -114,7 +114,7 @@ func (d *db) AllocateNewPkToPod(
 
 // RemovePKAssignment from pod and put the private key into the unassigned
 // bucket.
-func (d *db) RemovePKAssignment(ctx context.Context, podName string) error {
+func (d *db) RemovePKAssignment(_ context.Context, podName string) error {
 	assignedPkCount.Dec()
 	return d.db.Update(func(tx *bolt.Tx) error {
 		pk := tx.Bucket(assignedPkBucket).Get([]byte(podName))
@@ -130,7 +130,7 @@ func (d *db) RemovePKAssignment(ctx context.Context, podName string) error {
 }
 
 // AssignExistingPK assigns a PK from the unassigned bucket to a given pod.
-func (d *db) AssignExistingPK(ctx context.Context, pk []byte, podName string) error {
+func (d *db) AssignExistingPK(_ context.Context, pk []byte, podName string) error {
 	return d.db.Update(func(tx *bolt.Tx) error {
 		if !bytes.Equal(tx.Bucket(unassignedPkBucket).Get(pk), dummyVal) {
 			return errors.New("private key not in unassigned bucket")
@@ -147,7 +147,7 @@ func (d *db) AssignExistingPK(ctx context.Context, pk []byte, podName string) er
 
 // AllocatedPodNames returns the string list of pod names with current private
 // key allocations.
-func (d *db) AllocatedPodNames(ctx context.Context) ([]string, error) {
+func (d *db) AllocatedPodNames(_ context.Context) ([]string, error) {
 	var podNames []string
 	if err := d.db.View(func(tx *bolt.Tx) error {
 		return tx.Bucket(assignedPkBucket).ForEach(func(k, v []byte) error {

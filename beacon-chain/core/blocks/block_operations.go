@@ -134,7 +134,7 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 		"pubkey":   fmt.Sprintf("%#x", proposer.Pubkey),
 		"epochSig": fmt.Sprintf("%#x", sig.Marshal()),
 	}).Info("Verifying randao")
-	if !sig.Verify(buf, pub, domain) {
+	if !sig.Verify(pub, buf, domain) {
 		return fmt.Errorf("block randao reveal signature did not verify")
 	}
 	return nil
@@ -440,6 +440,52 @@ func ProcessBlockAttestations(
 	return beaconState, nil
 }
 
+func verifyAttestationSig(beaconState *pb.BeaconState, att *pb.Attestation) error {
+	attesterIndices, err := helpers.AttestationParticipants(beaconState, att.Data, att.AggregationBitfield)
+	if err != nil {
+		return fmt.Errorf("could not get attestation participants: %v", err)
+	}
+
+	attestorPubKeys := make([]*bls.PublicKey, len(attesterIndices))
+	for idx, participantIndex := range attesterIndices {
+		pubkey, err := bls.PublicKeyFromBytes(beaconState.ValidatorRegistry[participantIndex].Pubkey)
+		if err != nil {
+			return fmt.Errorf("could not deserialize attestor public key: %v at index: %v", err, participantIndex)
+		}
+
+		attestorPubKeys[idx] = pubkey
+	}
+
+	aggregatePubkeys := []*bls.PublicKey{
+		bls.AggregatePublicKeys(attestorPubKeys),
+	}
+
+	attestationDataHash, err := hashutil.HashProto(&pb.AttestationDataAndCustodyBit{
+		Data:       att.Data,
+		CustodyBit: true,
+	})
+	if err != nil {
+		return fmt.Errorf("could not hash attestation data: %v", err)
+	}
+	messageHashes := [][]byte{
+		attestationDataHash[:],
+	}
+
+	sig, err := bls.SignatureFromBytes(att.AggregateSignature)
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+
+	domain := forkutils.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainAttestation)
+
+	log.WithFields(logrus.Fields{
+		"aggregatePubkeys": fmt.Sprintf("%#x", aggregatePubkeys),
+	}).Info("Verifying attestation")
+
+	if !sig.VerifyMultiple(aggregatePubkeys, messageHashes, domain) {
+		return errors.New("aggregate signature did not verify")
+	}
+	return nil
+}
+
 func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifySignatures bool) error {
 	if att.Data.Slot < params.BeaconConfig().GenesisSlot {
 		return fmt.Errorf(
@@ -532,20 +578,9 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 		)
 	}
 	if verifySignatures {
-		// TODO(#258): Integrate BLS signature verification for attestation.
-		// assert bls_verify_multiple(
-		//   pubkeys=[
-		//	 bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_0_participants]),
-		//   bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_1_participants]),
-		//   ],
-		//   message_hash=[
-		//   hash_tree_root(AttestationDataAndCustodyBit(data=attestation.data, custody_bit=0b0)),
-		//   hash_tree_root(AttestationDataAndCustodyBit(data=attestation.data, custody_bit=0b1)),
-		//   ],
-		//   signature=attestation.aggregate_signature,
-		//   domain=get_domain(state.fork, slot_to_epoch(attestation.data.slot), DOMAIN_ATTESTATION),
-		// )
-		return nil
+		if err := verifyAttestationSig(beaconState, att); err != nil {
+			return fmt.Errorf("could not verify aggregate signature %v", err)
+		}
 	}
 	return nil
 }
