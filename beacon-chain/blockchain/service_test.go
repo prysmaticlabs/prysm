@@ -851,16 +851,6 @@ func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 	}
 }
 
-func TestReceiveBlock_HandlePanic(t *testing.T) {
-	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	chainService := setupBeaconChain(t, false, db, true, nil)
-
-	// Cause method to panic
-	chainService.ReceiveBlock(nil, nil)
-	testutil.AssertLogsContain(t, hook, "Panicked when handling block!")
-}
 func TestBlockChildren_2InARow(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
