@@ -24,7 +24,7 @@ var (
 
 	mainChainHeightKey      = []byte("chain-height")
 	stateLookupKey          = []byte("state")
-	slotLookupKey          = []byte("slot")
+	slotLookupKey           = []byte("slot")
 	finalizedStateLookupKey = []byte("finalized-state")
 
 	// DB internal use

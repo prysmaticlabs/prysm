@@ -12,7 +12,7 @@ import (
 func (db *BeaconDB) UpdateSlot(slot uint64) error {
 	return db.update(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
-		buf :=make([]byte, 64)
+		buf := make([]byte, 64)
 		binary.LittleEndian.PutUint64(buf, slot)
 
 		if err := chainInfo.Put(slotLookupKey, buf); err != nil {

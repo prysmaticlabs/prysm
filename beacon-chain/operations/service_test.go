@@ -193,6 +193,42 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 	}
 }
 
+func TestCleanUpAttestations_OlderThanOneEpoch(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
+
+	// Construct attestations for slot 0..99.
+	slot := uint64(99)
+	attestations := make([]*pb.Attestation, slot+1)
+	for i := 0; i < len(attestations); i++ {
+		attestations[i] = &pb.Attestation{
+			Data: &pb.AttestationData{
+				Slot:  params.BeaconConfig().GenesisSlot + uint64(i),
+				Shard: uint64(i),
+			},
+		}
+		if err := s.beaconDB.SaveAttestation(attestations[i]); err != nil {
+			t.Fatalf("Failed to save attestation: %v", err)
+		}
+	}
+
+	// Assume current slot is 99. All the attestations before (99 - 64) should get removed.
+	if err := s.removeEpochOldAttestations(params.BeaconConfig().GenesisSlot + slot); err != nil {
+		t.Fatalf("Could not remove old attestations: %v", err)
+	}
+	attestations, err := s.beaconDB.Attestations()
+	if err != nil {
+		t.Fatalf("Could not retrieve attestations: %v", err)
+	}
+	for _, a := range attestations {
+		if a.Data.Slot < slot-params.BeaconConfig().SlotsPerEpoch {
+			t.Errorf("Attestation slot %d can't be lower than %d",
+				a.Data.Slot, slot-params.BeaconConfig().SlotsPerEpoch)
+		}
+	}
+}
+
 func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)

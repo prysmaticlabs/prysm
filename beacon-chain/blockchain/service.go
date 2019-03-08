@@ -358,12 +358,19 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	if err != nil {
 		return nil, fmt.Errorf("could not execute state transition with block %v", err)
 	}
+
 	log.WithField(
 		"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
 	).Info("Slot transition successfully processed")
+	if err := c.beaconDB.UpdateSlot(beaconState.Slot); err != nil {
+		return nil, fmt.Errorf("could not save canonical slot %d in db: %v",
+			beaconState.Slot-params.BeaconConfig().GenesisSlot, err)
+	}
+
 	log.WithField(
 		"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
 	).Info("Block transition successfully processed")
+
 	if (beaconState.Slot+1)%params.BeaconConfig().SlotsPerEpoch == 0 {
 		// Save activated validators of this epoch to public key -> index DB.
 		if err := c.saveValidatorIdx(beaconState); err != nil {
