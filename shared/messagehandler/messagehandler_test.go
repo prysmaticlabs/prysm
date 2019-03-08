@@ -13,9 +13,9 @@ import (
 func TestSafelyHandleMessage(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	SafelyHandleMessage(func(_ proto.Message) {
+	SafelyHandleMessage(nil, func(_ proto.Message) {
 		panic("bad!")
-	}, &pb.BeaconBlock{}, nil)
+	}, &pb.BeaconBlock{})
 
 	testutil.AssertLogsContain(t, hook, "Panicked when handling p2p message!")
 }
@@ -23,9 +23,9 @@ func TestSafelyHandleMessage(t *testing.T) {
 func TestSafelyHandleMessage_NoData(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	SafelyHandleMessage(func(_ proto.Message) {
+	SafelyHandleMessage(nil, func(_ proto.Message) {
 		panic("bad!")
-	}, nil, nil)
+	}, nil)
 
 	entry := hook.LastEntry()
 	if entry.Data["msg"] != "message contains no data" {

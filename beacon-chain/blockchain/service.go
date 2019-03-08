@@ -240,7 +240,7 @@ func (c *ChainService) blockProcessing() {
 		// can be received either from the sync service, the RPC service,
 		// or via p2p.
 		case block := <-c.incomingBlockChan:
-			handler.SafelyHandleMessage(c.processBlock, block, c.ctx)
+			handler.SafelyHandleMessage(c.ctx, c.processBlock, block)
 		}
 	}
 }

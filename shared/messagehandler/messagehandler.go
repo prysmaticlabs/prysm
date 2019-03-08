@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
-
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -14,7 +13,7 @@ var log = logrus.WithField("prefix", "message-handler")
 
 // SafelyHandleMessage will recover and log any panic that occurs from the
 // function argument.
-func SafelyHandleMessage(fn func(message proto.Message), msg proto.Message, ctx context.Context) {
+func SafelyHandleMessage(ctx context.Context, fn func(message proto.Message), msg proto.Message) {
 	defer func() {
 		if r := recover(); r != nil {
 			printedMsg := "message contains no data"

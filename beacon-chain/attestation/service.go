@@ -142,7 +142,7 @@ func (a *Service) attestationPool() {
 			return
 		// Listen for a newly received incoming attestation from the sync service.
 		case attestation := <-a.incomingChan:
-			handler.SafelyHandleMessage(a.handleAttestation, attestation, a.ctx)
+			handler.SafelyHandleMessage(a.ctx, a.handleAttestation, attestation)
 		}
 	}
 }
