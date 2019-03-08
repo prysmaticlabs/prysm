@@ -43,7 +43,7 @@ http_archive(
     name = "io_bazel_rules_k8s",
     sha256 = "50fd2489a0c5e524ab67d92021899b25d49d449a787acd90d42206f6e0cf06a6",
     strip_prefix = "rules_k8s-7c3e33f57cbe5a0401201c59f7f6b6a68be7ce1f",
-    url = "https://github.com/bazelbuild/rules_k8s/archive/9de769e87a1910f00b11fbb7f62d09d6d03e60ef.tar.gz",
+    url = "https://github.com/bazelbuild/rules_k8s/archive/7c3e33f57cbe5a0401201c59f7f6b6a68be7ce1f.tar.gz",
 )
 
 load(
