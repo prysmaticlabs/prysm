@@ -58,6 +58,7 @@ func ProcessEth1DataInBlock(ctx context.Context, beaconState *pb.BeaconState, bl
 		if proto.Equal(beaconState.Eth1DataVotes[idx].Eth1Data, block.Eth1Data) {
 			beaconState.Eth1DataVotes[idx].VoteCount++
 			eth1DataVoteAdded = true
+			log.Info("ETH1Data vote added")
 			break
 		}
 	}

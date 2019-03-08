@@ -135,6 +135,7 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 	dataVotes := []*pbp2p.Eth1DataVote{}
 	bestVote := &pbp2p.Eth1DataVote{}
 	bestVoteHeight := big.NewInt(0)
+	log.Infof("")
 	for _, vote := range beaconState.Eth1DataVotes {
 		eth1Hash := bytesutil.ToBytes32(vote.Eth1Data.BlockHash32)
 		// Verify the block from the vote's block hash exists in the eth1.0 chain and fetch its height.
@@ -212,13 +213,8 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 	bNum = bNum.Sub(bNum, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
 	pendingDeps := bs.beaconDB.PendingDeposits(ctx, bNum)
 	allDeps := bs.beaconDB.AllDeposits(ctx, bNum)
-	depositData := [][]byte{}
 	if len(allDeps) == 0 {
         return &pb.PendingDepositsResponse{PendingDeposits: nil}, nil
-	} else {
-		for i := range allDeps {
-			depositData = append(depositData, allDeps[i].DepositData)
-		}
 	}
 
 	// Need to fetch if the deposits up to the state's latest eth 1 data matches
@@ -232,8 +228,15 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch eth1data height: %v", err)
 	}
-	upToLatestEth1DataDeposits := bs.beaconDB.AllDeposits(ctx, bNum)
-	if len(upToLatestEth1DataDeposits) != 
+	upToLatestEth1DataDeposits := bs.beaconDB.AllDeposits(ctx, latestEth1DataHeight)
+	if len(upToLatestEth1DataDeposits) != len(allDeps) {
+		return &pb.PendingDepositsResponse{PendingDeposits: nil}, nil
+	}
+	log.Infof("UP TO LATESTETH1DATA: %v, ALL DEPS: %v", len(upToLatestEth1DataDeposits), len(allDeps))
+	depositData := [][]byte{}
+	for i := range upToLatestEth1DataDeposits {
+		depositData = append(depositData, upToLatestEth1DataDeposits[i].DepositData)
+	}
 
 	log.Infof("TOTAL DEPOSITS IN PENDING DEPOSITS RPC CALL: %d", len(allDeps))
 	log.Infof("TOTAL PENDING DEPOSITS: %d", len(pendingDeps))
@@ -269,14 +272,15 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 	depositData := [][]byte{}
 	// If there are no historical deposits up to an ancestor height, then we just fetch the default
 	// deposit root obtained from constructing the Merkle trie with the ChainStart deposits.
-	if len(allDeposits) == 0 {
-		depositData = bs.powChainService.ChainStartDeposits()
+	chainStartDeposits := bs.powChainService.ChainStartDeposits()
+    if len(allDeposits) <= len(chainStartDeposits) {
+		depositData = chainStartDeposits
 	} else {
 		for i := range allDeposits {
 			depositData = append(depositData, allDeposits[i].DepositData)
 		}
 	}
-	log.Infof("GENERATED DEPOSIT TRIE FOR DEFAULT DATA RESPONSE WITH %d DEPOSITS", len(allDeposits))
+	log.Infof("GENERATED DEPOSIT TRIE FOR DEFAULT DATA RESPONSE WITH %d DEPOSITS", len(depositData))
    	depositTrie, err := trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
    	if err != nil {
    		return nil, fmt.Errorf("could not generate historical deposit trie from deposits: %v", err)
