@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -53,7 +54,7 @@ func (sim *simulatedP2P) Broadcast(msg proto.Message) {
 	feed.Send(p2p.Message{Ctx: sim.ctx, Data: msg})
 }
 
-func (sim *simulatedP2P) Send(msg proto.Message, peer p2p.Peer) {
+func (sim *simulatedP2P) Send(ctx context.Context, msg proto.Message, peerID peer.ID) error {
 	sim.mutex.Lock()
 	defer sim.mutex.Unlock()
 
@@ -61,10 +62,11 @@ func (sim *simulatedP2P) Send(msg proto.Message, peer p2p.Peer) {
 
 	feed, ok := sim.subsChannels[protoType]
 	if !ok {
-		return
+		return nil
 	}
 
 	feed.Send(p2p.Message{Ctx: sim.ctx, Data: msg})
+	return nil
 }
 
 func setupSimBackendAndDB(t *testing.T) (*backend.SimulatedBackend, *db.BeaconDB, []*bls.SecretKey) {
@@ -188,13 +190,13 @@ func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T
 	go ss.run()
 
 	for ss.Querier.currentHeadSlot == 0 {
-		simP2P.Send(&pb.ChainHeadResponse{
+		simP2P.Send(simP2P.ctx, &pb.ChainHeadResponse{
 			Slot: params.BeaconConfig().GenesisSlot + 12,
 			Hash: []byte{'t', 'e', 's', 't'},
 			Block: &pb.BeaconBlock{
 				StateRootHash32: stateRoot[:],
 			},
-		}, p2p.Peer{})
+		}, "")
 	}
 
 	return ss, beacondb
