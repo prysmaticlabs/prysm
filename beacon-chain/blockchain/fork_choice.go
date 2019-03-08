@@ -27,6 +27,11 @@ func VoteCount(block *pb.BeaconBlock, state *pb.BeaconState, targets map[uint64]
 		if err != nil {
 			return 0, err
 		}
+		// This covers the following case, we start at B5, and want to process B6 and B7
+		// B6 can be processed, B7 can not be processed because it's pointed to the
+		// block older than current block 5.
+		// B4 - B5 - B6
+		//   \ - - - - - B7
 		if ancestor == nil {
 			continue
 		}
