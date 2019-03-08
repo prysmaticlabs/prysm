@@ -36,10 +36,10 @@ spec:
                 topologyKey: failure-domain.beta.kubernetes.io/zone
       containers:
         - name: beacon-chain
-          image: gcr.io/prysmaticlabs/prysm/beacon-chain:latest
+          image: gcr.io/prysmaticlabs/prysm/beacon-chain@sha256:a8f6acb67d0eaf0c5f4a118bd65fb411cf11f71e02f9912893a4540daa678417
           args: 
             - --web3provider=ws://public-rpc-nodes.pow.svc.cluster.local:8546
-              #- --verbosity=debug
+            #- --verbosity=debug
             - --deposit-contract=$(DEPOSIT_CONTRACT_ADDRESS)
             - --rpc-port=4000
             - --monitoring-port=9090

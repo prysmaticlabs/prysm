@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	peer "github.com/libp2p/go-libp2p-peer"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -29,7 +30,8 @@ func (mp *mockP2P) Subscribe(msg proto.Message, channel chan p2p.Message) event.
 
 func (mp *mockP2P) Broadcast(msg proto.Message) {}
 
-func (mp *mockP2P) Send(msg proto.Message, peer p2p.Peer) {
+func (mp *mockP2P) Send(ctx context.Context, msg proto.Message, peerID peer.ID) error {
+	return nil
 }
 
 type mockSyncService struct {
@@ -150,7 +152,7 @@ func TestSavingBlock_InSync(t *testing.T) {
 		}
 
 		return p2p.Message{
-			Peer: p2p.Peer{},
+			Peer: "",
 			Data: blockResponse,
 			Ctx:  context.Background(),
 		}
@@ -166,7 +168,7 @@ func TestSavingBlock_InSync(t *testing.T) {
 	ss.blockBuf <- msg1
 
 	msg2 := p2p.Message{
-		Peer: p2p.Peer{},
+		Peer: "",
 		Data: incorrectStateResponse,
 		Ctx:  context.Background(),
 	}
@@ -262,13 +264,13 @@ func TestDelayChan_OK(t *testing.T) {
 	}
 
 	msg1 := p2p.Message{
-		Peer: p2p.Peer{},
+		Peer: "",
 		Data: blockResponse,
 		Ctx:  context.Background(),
 	}
 
 	msg2 := p2p.Message{
-		Peer: p2p.Peer{},
+		Peer: "",
 		Data: stateResponse,
 		Ctx:  context.Background(),
 	}
@@ -355,7 +357,7 @@ func TestRequestBlocksBySlot_OK(t *testing.T) {
 		}
 
 		return p2p.Message{
-			Peer: p2p.Peer{},
+			Peer: "",
 			Data: blockResponse,
 			Ctx:  context.Background(),
 		}, root
