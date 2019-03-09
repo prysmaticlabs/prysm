@@ -184,7 +184,7 @@ func (s *Service) removeOperations() {
 				return
 			}
 			if err := s.removeEpochOldAttestations(block.Slot); err != nil {
-				log.Errorf("Could not remove old attestations from DB: %v", err)
+				log.Errorf("Could not remove old attestations from DB at slot %d: %v",block.slot, err)
 				return
 			}
 		}
