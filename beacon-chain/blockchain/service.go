@@ -279,7 +279,10 @@ func (c *ChainService) ApplyForkChoiceRule(block *pb.BeaconBlock, computedState 
 	if block.Slot%params.BeaconConfig().SlotsPerEpoch == 0 {
 		c.canonicalStateFeed.Send(computedState)
 	}
-	c.canonicalBlockFeed.Send(block)
+	c.canonicalBlockFeed.Send(&pb.BeaconBlockAnnounce{
+		Hash:       h[:],
+		SlotNumber: block.Slot,
+	})
 	return nil
 }
 
