@@ -281,7 +281,10 @@ func (c *ChainService) ApplyForkChoiceRule(block *pb.BeaconBlock, computedState 
 			log.Error("Sent canonical state to no subscribers")
 		}
 	}
-	if c.canonicalBlockFeed.Send(block) == 0 {
+	if c.canonicalBlockFeed.Send(&pb.BeaconBlockAnnounce{
+		Hash:       h[:],
+		SlotNumber: block.Slot,
+	}) == 0 {
 		log.Error("Sent canonical block to no subscribers")
 	}
 	return nil
