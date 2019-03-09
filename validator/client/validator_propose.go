@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -82,6 +83,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	// Fetch pending attestations seen by the beacon node.
 	attResp, err := v.proposerClient.PendingAttestations(ctx, &pb.PendingAttestationsRequest{
 		FilterReadyForInclusion: true,
+		ProposalBlockSlot:       slot,
 	})
 	if err != nil {
 		log.Errorf("Failed to fetch pending attestations from the beacon node: %v", err)
@@ -106,7 +108,9 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	// 3. Compute state root transition from parent block to the new block.
 	resp, err := v.proposerClient.ComputeStateRoot(ctx, block)
 	if err != nil {
-		log.Errorf("Unable to compute state root: %v", err)
+		log.WithField(
+			"block", proto.MarshalTextString(block),
+		).Errorf("Unable to compute state root: %v", err)
 	}
 	block.StateRootHash32 = resp.GetStateRoot()
 
