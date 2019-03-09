@@ -1,0 +1,101 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+load("@io_bazel_rules_docker//go:image.bzl", "go_image")
+load("@io_bazel_rules_docker//container:container.bzl", "container_push")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "db.go",
+        "logger.go",
+        "main.go",
+        "server.go",
+        "watchtower.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/tools/cluster-pk-manager/server",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//contracts/deposit-contract:go_default_library",
+        "//proto/cluster:go_default_library",
+        "//shared/keystore:go_default_library",
+        "//shared/prometheus:go_default_library",
+        "//shared/ssz:go_default_library",
+        "@com_github_boltdb_bolt//:go_default_library",
+        "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
+        "@com_github_ethereum_go_ethereum//crypto:go_default_library",
+        "@com_github_ethereum_go_ethereum//ethclient:go_default_library",
+        "@com_github_ethereum_go_ethereum//rpc:go_default_library",
+        "@com_github_prometheus_client_golang//prometheus:go_default_library",
+        "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
+        "@com_github_sirupsen_logrus//:go_default_library",
+        "@io_k8s_api//core/v1:go_default_library",
+        "@io_k8s_apimachinery//pkg/apis/meta/v1:go_default_library",
+        "@io_k8s_client_go//kubernetes:go_default_library",
+        "@io_k8s_client_go//rest:go_default_library",
+        "@org_golang_google_grpc//:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "server",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["server_test.go"],
+    embed = [":go_default_library"],
+    deps = ["//proto/cluster:go_default_library"],
+)
+
+go_image(
+    name = "image",
+    srcs = [
+        "db.go",
+        "logger.go",
+        "main.go",
+        "server.go",
+        "watchtower.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/tools/cluster-pk-manager/server",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//contracts/deposit-contract:go_default_library",
+        "//proto/cluster:go_default_library",
+        "//shared/keystore:go_default_library",
+        "//shared/prometheus:go_default_library",
+        "//shared/ssz:go_default_library",
+        "@com_github_boltdb_bolt//:go_default_library",
+        "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
+        "@com_github_ethereum_go_ethereum//crypto:go_default_library",
+        "@com_github_ethereum_go_ethereum//ethclient:go_default_library",
+        "@com_github_ethereum_go_ethereum//rpc:go_default_library",
+        "@com_github_prometheus_client_golang//prometheus:go_default_library",
+        "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
+        "@com_github_sirupsen_logrus//:go_default_library",
+        "@io_k8s_api//core/v1:go_default_library",
+        "@io_k8s_apimachinery//pkg/apis/meta/v1:go_default_library",
+        "@io_k8s_client_go//kubernetes:go_default_library",
+        "@io_k8s_client_go//rest:go_default_library",
+        "@org_golang_google_grpc//:go_default_library",
+    ],
+    pure = "off",  # depends on cgo for go-ethereum crypto
+    static = "off",
+    tags = ["manual"],
+    goarch = "amd64",
+    goos = "linux",
+    race = "off",
+)
+
+container_push(
+    name = "push_image",
+    format = "Docker",
+    image = ":image",
+    registry = "gcr.io",
+    repository = "prysmaticlabs/prysm/cluster-pk-manager/server",
+    tag = "latest",
+    tags = ["manual"],
+    visibility = ["//visibility:private"],
+)

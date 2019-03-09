@@ -74,10 +74,30 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve pending attestations from operations service: %v", err)
 	}
+
+	// Use the optional proposal block slot parameter as the current slot for
+	// determining the validity window for attestations.
+	currentSlot := req.ProposalBlockSlot
+	if currentSlot == 0 {
+		currentSlot = beaconState.Slot
+	}
+
+	// Remove any attestation from the list if their slot is before the start of
+	// the previous epoch. This should be handled in the operationService cleanup
+	// method, but we should filter here in case it wasn't yet processed.
+	boundary := currentSlot - params.BeaconConfig().SlotsPerEpoch
+	attsWithinBoundary := make([]*pbp2p.Attestation, 0, len(atts))
+	for _, att := range atts {
+		if att.Data.Slot > boundary {
+			attsWithinBoundary = append(attsWithinBoundary, att)
+		}
+	}
+	atts = attsWithinBoundary
+
 	if req.FilterReadyForInclusion {
 		var attsReadyForInclusion []*pbp2p.Attestation
 		for _, val := range atts {
-			if val.Data.Slot+params.BeaconConfig().MinAttestationInclusionDelay <= beaconState.Slot {
+			if val.Data.Slot+params.BeaconConfig().MinAttestationInclusionDelay <= currentSlot {
 				attsReadyForInclusion = append(attsReadyForInclusion, val)
 			}
 		}
@@ -102,6 +122,7 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 	// Check for skipped slots.
 	for beaconState.Slot < req.Slot-1 {
 		beaconState, err = state.ExecuteStateTransition(
+			ctx,
 			beaconState,
 			nil,
 			parentHash,
@@ -112,6 +133,7 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 		}
 	}
 	beaconState, err = state.ExecuteStateTransition(
+		ctx,
 		beaconState,
 		req,
 		parentHash,

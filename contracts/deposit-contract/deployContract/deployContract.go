@@ -174,6 +174,8 @@ func main() {
 			drain = common.HexToAddress(drainAddress)
 		}
 
+		txOps.GasPrice = big.NewInt(10 * 1e9 /* 10 gwei */)
+
 		// Deploy validator registration contract
 		addr, tx, _, err := contracts.DeployDepositContract(
 			txOps,

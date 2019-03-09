@@ -4,16 +4,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"reflect"
 	"sync"
 
+	ggio "github.com/gogo/protobuf/io"
 	"github.com/gogo/protobuf/proto"
 	ds "github.com/ipfs/go-datastore"
 	dsync "github.com/ipfs/go-datastore/sync"
 	libp2p "github.com/libp2p/go-libp2p"
 	host "github.com/libp2p/go-libp2p-host"
 	kaddht "github.com/libp2p/go-libp2p-kad-dht"
+	libp2pnet "github.com/libp2p/go-libp2p-net"
+	peer "github.com/libp2p/go-libp2p-peer"
+	protocol "github.com/libp2p/go-libp2p-protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	rhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -22,10 +27,13 @@ import (
 	"go.opencensus.io/trace"
 )
 
+const prysmProtocolPrefix = "/prysm/0.0.0"
+const maxMessageSize = 1 << 20
+
 // Sender represents a struct that is able to relay information via p2p.
 // Server implements this interface.
 type Sender interface {
-	Send(msg interface{}, peer Peer)
+	Send(ctx context.Context, msg proto.Message, peer peer.ID) error
 }
 
 // Server is a placeholder for a p2p service. To be designed.
@@ -181,10 +189,57 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 		adapters[i], adapters[opp] = adapters[opp], adapters[i]
 	}
 
+	handler := func(msg proto.Message, peerID peer.ID) {
+		log.WithField("topic", topic).Debug("Processing incoming message")
+		var h Handler = func(pMsg Message) {
+			s.emit(pMsg, feed)
+		}
+
+		pMsg := Message{Ctx: s.ctx, Data: msg, Peer: peerID}
+		for _, adapter := range adapters {
+			h = adapter(h)
+		}
+
+		h(pMsg)
+	}
+
+	s.host.SetStreamHandler(protocol.ID(prysmProtocolPrefix+"/"+topic), func(stream libp2pnet.Stream) {
+		log.WithField("topic", topic).Debug("Received new stream")
+		r := ggio.NewDelimitedReader(stream, maxMessageSize)
+
+		msg := proto.Clone(message)
+		for {
+			err := r.ReadMsg(msg)
+			if err == io.EOF {
+				return // end of stream
+			}
+			if err != nil {
+				log.WithError(err).Error("Could not read message from stream")
+				return
+			}
+
+			handler(msg, stream.Conn().RemotePeer())
+		}
+	})
+
 	go func() {
 		defer sub.Cancel()
+
+		var msg *pubsub.Message
+		var err error
+
+		// Recover from any panic as part of the receive p2p msg process.
+		defer func() {
+			if r := recover(); r != nil {
+				log.WithFields(logrus.Fields{
+					"r":        r,
+					"msg.Data": attemptToConvertPbToString(msg.Data, message),
+				}).Error("P2P message caused a panic! Recovering...")
+			}
+		}()
+
 		for {
-			msg, err := sub.Next(s.ctx)
+			msg, err = sub.Next(s.ctx)
 
 			if s.ctx.Err() != nil {
 				log.WithError(s.ctx.Err()).Debug("Context error")
@@ -192,27 +247,37 @@ func (s *Server) RegisterTopic(topic string, message proto.Message, adapters ...
 			}
 			if err != nil {
 				log.Errorf("Failed to get next message: %v", err)
-				return
+				continue
 			}
 
-			d := message
+			if msg == nil || msg.GetFrom() == s.host.ID() {
+				continue
+			}
+
+			d := proto.Clone(message)
 			if err := proto.Unmarshal(msg.Data, d); err != nil {
 				log.WithError(err).Error("Failed to decode data")
 				continue
 			}
 
-			var h Handler = func(pMsg Message) {
-				s.emit(pMsg, feed)
-			}
-
-			pMsg := Message{Ctx: s.ctx, Data: d}
-			for _, adapter := range adapters {
-				h = adapter(h)
-			}
-
-			h(pMsg)
+			handler(d, msg.GetFrom())
 		}
 	}()
+}
+
+// Attempts to convert some proto.Message to a string in a panic safe method.
+func attemptToConvertPbToString(b []byte, msg proto.Message) string {
+	defer func() {
+		if r := recover(); r != nil {
+			log.WithField("r", r).Error("Panicked when trying to log PB")
+		}
+	}()
+	if err := proto.Unmarshal(b, msg); err != nil {
+		log.WithError(err).Error("Failed to decode data")
+		return ""
+	}
+
+	return proto.MarshalTextString(msg)
 }
 
 func (s *Server) emit(msg Message, feed Feed) {
@@ -229,15 +294,26 @@ func (s *Server) Subscribe(msg proto.Message, channel chan Message) event.Subscr
 	return s.Feed(msg).Subscribe(channel)
 }
 
-// Send a message to a specific peer.
-func (s *Server) Send(msg proto.Message, peer Peer) {
-	// TODO(#175)
-	// https://github.com/prysmaticlabs/prysm/issues/175
+// Send a message to a specific peer. If the peerID is set to p2p.AnyPeer, then
+// this method will act as a broadcast.
+func (s *Server) Send(ctx context.Context, msg proto.Message, peerID peer.ID) error {
+	ctx, span := trace.StartSpan(ctx, "p2p.Send")
+	defer span.End()
+	if peerID == AnyPeer {
+		s.Broadcast(msg)
+		return nil
+	}
 
-	// TODO(#175): Remove debug log after send is implemented.
-	_ = peer
-	log.Debug("Broadcasting to everyone rather than sending a single peer")
-	s.Broadcast(msg)
+	topic := s.topicMapping[messageType(msg)]
+	pid := protocol.ID(prysmProtocolPrefix + "/" + topic)
+	stream, err := s.host.NewStream(ctx, peerID, pid)
+	if err != nil {
+		return err
+	}
+
+	w := ggio.NewDelimitedWriter(stream)
+	defer w.Close()
+	return w.WriteMsg(msg)
 }
 
 // Broadcast publishes a message to all localized peers using gossipsub.
@@ -253,6 +329,11 @@ func (s *Server) Send(msg proto.Message, peer Peer) {
 //   ps.RegisterTopic("message_topic_here", msg)
 //   ps.Broadcast(msg)
 func (s *Server) Broadcast(msg proto.Message) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.WithField("r", r).Error("Panicked when broadcasting!")
+		}
+	}()
 	topic := s.topicMapping[messageType(msg)]
 
 	// Shorten message if it is too long to avoid
@@ -267,7 +348,8 @@ func (s *Server) Broadcast(msg proto.Message) {
 	} else {
 		log.WithFields(logrus.Fields{
 			"topic": topic,
-		}).Debugf("Broadcasting msg %+v", msg)
+			"msg":   msg,
+		}).Debug("Broadcasting msg")
 	}
 
 	if topic == "" {

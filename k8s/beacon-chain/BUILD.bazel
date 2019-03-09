@@ -7,6 +7,8 @@ load("@k8s_job//:defaults.bzl", "k8s_job")
 load("@k8s_namespace//:defaults.bzl", "k8s_namespace")
 load("@k8s_service//:defaults.bzl", "k8s_service")
 load("@k8s_service_account//:defaults.bzl", "k8s_service_account")
+load("@k8s_secret//:defaults.bzl", "k8s_secret")
+load("//tools:kubesec.bzl", "k8s_encrypted_secret")
 
 k8s_objects(
     name = "everything",
@@ -15,8 +17,9 @@ k8s_objects(
         ":configs",
         ":deployments",
         ":services",
-        ":jobs",
+        ":secrets",
     ],
+    tags = ["manual"],
 )
 
 _NAMESPACE = "beacon-chain"
@@ -29,20 +32,19 @@ _deployments = [
     "beacon-chain",
     "bootnode",
     "relay",
+    "validator",
 ]
 
-_jobs = [
-    "deploydepositcontract",
+_secrets = [
+    "bootnode",
+    "cluster-manager",
+    "relay",
 ]
 
 _services = [
     "beacon-chain",
     "bootnode",
     "relay",
-]
-
-_service_accounts = [
-    "deploydepositcontract",
 ]
 
 k8s_objects(
@@ -68,17 +70,6 @@ k8s_objects(
 ) for name in _deployments]
 
 k8s_objects(
-    name = "jobs",
-    objects = [":" + name + ".job" for name in _jobs],
-)
-
-[k8s_job(
-    name = name + ".job",
-    template = name + ".job.yaml",
-    namespace = _NAMESPACE,
-) for name in _jobs]
-
-k8s_objects(
     name = "services",
     objects = [":" + name + ".service" for name in _services],
 )
@@ -89,18 +80,30 @@ k8s_objects(
     namespace = _NAMESPACE,
 ) for name in _services]
 
-k8s_objects(
-    name = "service_accounts",
-    objects = [":" + name + ".service_account" for name in _service_accounts],
-)
-
-[k8s_service_account(
-    name = name + ".service_account",
-    template = name + ".serviceaccount.yaml",
-    namespace = _NAMESPACE,
-) for name in _service_accounts]
-
 k8s_namespace(
     name = "namespace",
     template = "namespace.yaml",
 )
+
+k8s_objects(
+    name = "secrets",
+    objects = [":" + name + ".secret" for name in _secrets],
+    tags = ["manual"],
+)
+
+[k8s_secret(
+    name = name + ".secret",
+    template = name + ".secret.yaml",
+    namespace = _NAMESPACE,
+    tags = ["manual"],
+) for name in _secrets]
+
+[k8s_encrypted_secret(
+    name = name + ".encrypted_secret",
+    template = name + ".encrypted_secret.yaml",
+    out = name + ".secret.yaml",
+    tags = [
+        "local",
+        "manual",
+    ],
+) for name in _secrets]

@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -149,7 +150,7 @@ func TestProcessBlockRoots_AccurateMerkleTree(t *testing.T) {
 
 	testRoot := [32]byte{'a'}
 
-	newState := ProcessBlockRoots(state, testRoot)
+	newState := ProcessBlockRoots(context.Background(), state, testRoot)
 	if !bytes.Equal(newState.LatestBlockRootHash32S[0], testRoot[:]) {
 		t.Fatalf("Latest Block root hash not saved."+
 			" Supposed to get %#x , but got %#x", testRoot, newState.LatestBlockRootHash32S[0])
@@ -157,7 +158,7 @@ func TestProcessBlockRoots_AccurateMerkleTree(t *testing.T) {
 
 	newState.Slot = newState.Slot - 1
 
-	newState = ProcessBlockRoots(newState, testRoot)
+	newState = ProcessBlockRoots(context.Background(), newState, testRoot)
 	expectedHashes := make([][]byte, params.BeaconConfig().LatestBlockRootsLength)
 	expectedHashes[0] = testRoot[:]
 	expectedHashes[params.BeaconConfig().LatestBlockRootsLength-1] = testRoot[:]
@@ -167,34 +168,5 @@ func TestProcessBlockRoots_AccurateMerkleTree(t *testing.T) {
 	if !bytes.Equal(newState.BatchedBlockRootHash32S[0], expectedRoot[:]) {
 		t.Errorf("saved merkle root is not equal to expected merkle root"+
 			"\n expected %#x but got %#x", expectedRoot, newState.BatchedBlockRootHash32S[0])
-	}
-}
-
-func TestBlockChildren_Fetches2Children(t *testing.T) {
-	genesisBlock := NewGenesisBlock([]byte{})
-	genesisRoot, err := hashutil.HashBeaconBlock(genesisBlock)
-	if err != nil {
-		t.Fatal(err)
-	}
-	targets := []*pb.BeaconBlock{
-		{
-			Slot:             9,
-			ParentRootHash32: genesisRoot[:],
-		},
-		{
-			Slot:             5,
-			ParentRootHash32: []byte{},
-		},
-		{
-			Slot:             8,
-			ParentRootHash32: genesisRoot[:],
-		},
-	}
-	children, err := BlockChildren(genesisBlock, targets)
-	if err != nil {
-		t.Fatalf("Could not fetch block children: %v", err)
-	}
-	if len(children) != 2 {
-		t.Errorf("Expected %d children, received %d", 2, len(children))
 	}
 }

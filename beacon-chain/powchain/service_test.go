@@ -392,8 +392,6 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 	testAcc.backend.Commit()
-	web3Service.reader = &goodReader{}
-	web3Service.logger = &goodLogger{}
 
 	exitRoutine := make(chan bool)
 
@@ -402,7 +400,10 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 		<-exitRoutine
 	}()
 
-	header := &gethTypes.Header{Number: big.NewInt(42)}
+	header := &gethTypes.Header{
+		Number: big.NewInt(42),
+		Time:   big.NewInt(308534400),
+	}
 
 	web3Service.headerChan <- header
 	web3Service.cancel()
@@ -414,6 +415,10 @@ func TestLatestMainchainInfo_OK(t *testing.T) {
 
 	if web3Service.blockHash.Hex() != header.Hash().Hex() {
 		t.Errorf("block hash not set, expected %v, got %v", header.Hash().Hex(), web3Service.blockHash.Hex())
+	}
+
+	if web3Service.blockTime != time.Unix(header.Time.Int64(), 0) {
+		t.Errorf("block time not set, expected %v, got %v", time.Unix(header.Time.Int64(), 0), web3Service.blockTime)
 	}
 
 	blockInfoExistsInCache, info, err := web3Service.blockCache.BlockInfoByHash(web3Service.blockHash)

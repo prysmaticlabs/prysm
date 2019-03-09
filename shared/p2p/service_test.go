@@ -9,16 +9,19 @@ import (
 	"testing"
 	"time"
 
+	ggio "github.com/gogo/protobuf/io"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
-	ipfslog "github.com/ipfs/go-log"
 	bhost "github.com/libp2p/go-libp2p-blankhost"
+	pstore "github.com/libp2p/go-libp2p-peerstore"
+	protocol "github.com/libp2p/go-libp2p-protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
 	shardpb "github.com/prysmaticlabs/prysm/proto/sharding/p2p/v1"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
 	"github.com/prysmaticlabs/prysm/shared"
 	p2pmock "github.com/prysmaticlabs/prysm/shared/p2p/mock"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -26,10 +29,10 @@ import (
 // Ensure that server implements service.
 var _ = shared.Service(&Server{})
 var _ = Broadcaster(&Server{})
+var _ = Sender(&Server{})
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
-	ipfslog.SetDebugLogging()
 }
 
 func TestStartDialRelayNode_InvalidMultiaddress(t *testing.T) {
@@ -95,7 +98,35 @@ func TestEmit_OK(t *testing.T) {
 	}
 }
 
-func TestSubscribeToTopic_OK(t *testing.T) {
+func TestSubscribeToTopic_onPubSub_OK(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
+	defer cancel()
+	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
+	h2 := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
+
+	gsub, err := pubsub.NewFloodSub(ctx, h2)
+	if err != nil {
+		t.Errorf("Failed to create pubsub: %v", err)
+	}
+
+	s := Server{
+		ctx:          ctx,
+		gsub:         gsub,
+		host:         h,
+		feeds:        make(map[reflect.Type]Feed),
+		mutex:        &sync.Mutex{},
+		topicMapping: make(map[reflect.Type]string),
+	}
+
+	feed := s.Feed(&shardpb.CollationBodyRequest{})
+	ch := make(chan Message)
+	sub := feed.Subscribe(ch)
+	defer sub.Unsubscribe()
+
+	testSubscribe(ctx, t, s, gsub, ch)
+}
+
+func TestSubscribeToTopic_directMessaging_OK(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
 	defer cancel()
 	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
@@ -118,16 +149,49 @@ func TestSubscribeToTopic_OK(t *testing.T) {
 	ch := make(chan Message)
 	sub := feed.Subscribe(ch)
 	defer sub.Unsubscribe()
+	topic := shardpb.Topic_COLLATION_BODY_REQUEST
 
-	testSubscribe(ctx, t, s, gsub, ch)
+	s.RegisterTopic(topic.String(), &shardpb.CollationBodyRequest{})
+	pbMsg := &shardpb.CollationBodyRequest{ShardId: 5}
+
+	done := make(chan bool)
+	go func() {
+		// The message should be received from the feed.
+		msg := <-ch
+		if !proto.Equal(msg.Data.(proto.Message), pbMsg) {
+			t.Errorf("Unexpected msg: %+v. Wanted %+v.", msg.Data, pbMsg)
+		}
+
+		done <- true
+	}()
+
+	h2 := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
+	if err := h2.Connect(ctx, pstore.PeerInfo{ID: h.ID(), Addrs: h.Addrs()}); err != nil {
+		t.Fatal(err)
+	}
+	stream, err := h2.NewStream(ctx, h.ID(), protocol.ID(prysmProtocolPrefix+"/"+topic.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := ggio.NewDelimitedWriter(stream)
+	defer w.Close()
+	w.WriteMsg(pbMsg)
+
+	// Wait for our message assertion to complete.
+	select {
+	case <-done:
+	case <-ctx.Done():
+		t.Error("Context timed out before a message was received!")
+	}
 }
 
 func TestSubscribe_OK(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
 	defer cancel()
 	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
+	h2 := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
 
-	gsub, err := pubsub.NewFloodSub(ctx, h)
+	gsub, err := pubsub.NewFloodSub(ctx, h2)
 	if err != nil {
 		t.Errorf("Failed to create pubsub: %v", err)
 	}
@@ -198,8 +262,9 @@ func TestRegisterTopic_InvalidProtobufs(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
 	defer cancel()
 	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
+	h2 := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
 
-	gsub, err := pubsub.NewFloodSub(ctx, h)
+	gsub, err := pubsub.NewFloodSub(ctx, h2)
 
 	if err != nil {
 		t.Errorf("Failed to create floodsub: %v", err)
@@ -240,8 +305,6 @@ func TestRegisterTopic_InvalidProtobufs(t *testing.T) {
 }
 
 func TestRegisterTopic_WithoutAdapters(t *testing.T) {
-	// TODO(488): Unskip this test
-	t.Skip("Currently failing to simulate incoming p2p messages. See github.com/prysmaticlabs/prysm/issues/488")
 	s, err := NewServer(&ServerConfig{})
 	if err != nil {
 		t.Fatalf("Failed to create new server: %v", err)
@@ -265,10 +328,7 @@ func TestRegisterTopic_WithoutAdapters(t *testing.T) {
 		}
 	}()
 
-	b, _ := proto.Marshal(testMessage)
-	_ = b
-
-	if err := simulateIncomingMessage(t, s, topic, b); err != nil {
+	if err := simulateIncomingMessage(t, s, topic, testMessage); err != nil {
 		t.Errorf("Failed to send to topic %s", topic)
 	}
 
@@ -281,8 +341,6 @@ func TestRegisterTopic_WithoutAdapters(t *testing.T) {
 }
 
 func TestRegisterTopic_WithAdapters(t *testing.T) {
-	// TODO(488): Unskip this test
-	t.Skip("Currently failing to simulate incoming p2p messages. See github.com/prysmaticlabs/prysm/issues/488")
 	s, err := NewServer(&ServerConfig{})
 	if err != nil {
 		t.Fatalf("Failed to create new server: %v", err)
@@ -322,7 +380,7 @@ func TestRegisterTopic_WithAdapters(t *testing.T) {
 		}
 	}()
 
-	if err := simulateIncomingMessage(t, s, topic, []byte{}); err != nil {
+	if err := simulateIncomingMessage(t, s, topic, testMessage); err != nil {
 		t.Errorf("Failed to send to topic %s", topic)
 	}
 
@@ -335,6 +393,35 @@ func TestRegisterTopic_WithAdapters(t *testing.T) {
 	case <-time.After(1 * time.Second):
 		t.Fatal("TestMessage not received within 1 seconds")
 	}
+}
+
+func TestRegisterTopic_HandlesPanic(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	s, err := NewServer(&ServerConfig{})
+	if err != nil {
+		t.Fatalf("Failed to create new server: %v", err)
+	}
+	topic := "test_topic"
+	testMessage := &testpb.TestMessage{Foo: "bar"}
+
+	var panicAdapter Adapter = func(next Handler) Handler {
+		return func(msg Message) {
+			panic("bad!")
+		}
+	}
+
+	s.RegisterTopic(topic, testMessage, panicAdapter)
+
+	ch := make(chan Message)
+	sub := s.Subscribe(testMessage, ch)
+	defer sub.Unsubscribe()
+
+	if err := simulateIncomingMessage(t, s, topic, testMessage); err != nil {
+		t.Errorf("Failed to send to topic %s", topic)
+	}
+
+	testutil.WaitForLog(t, hook, "P2P message caused a panic")
 }
 
 func TestStatus_MinimumPeers(t *testing.T) {
@@ -361,9 +448,8 @@ func TestStatus_MinimumPeers(t *testing.T) {
 	}
 }
 
-func simulateIncomingMessage(t *testing.T, s *Server, topic string, b []byte) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+func simulateIncomingMessage(t *testing.T, s *Server, topic string, msg proto.Message) error {
+	ctx := context.Background()
 	h := bhost.NewBlankHost(swarmt.GenSwarm(t, ctx))
 
 	gsub, err := pubsub.NewFloodSub(ctx, h)
@@ -377,7 +463,12 @@ func simulateIncomingMessage(t *testing.T, s *Server, topic string, b []byte) er
 	}
 
 	// Short timeout to allow libp2p to handle peer connection.
-	time.Sleep(time.Millisecond * 10)
+	time.Sleep(time.Millisecond * 100)
+
+	b, err := proto.Marshal(msg)
+	if err != nil {
+		return err
+	}
 
 	return gsub.Publish(topic, b)
 }
