@@ -35,8 +35,8 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.27.1/rules_nodejs-0.27.1.tar.gz"],
-    sha256 = "71867bb432496d6d54ccece234403fd1784b95f409492511236607c5190d3d4e",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.27.3/rules_nodejs-0.27.3.tar.gz"],
+    sha256 = "df4786a84a25d5b9f9eaaf9b5cac37fa1136f51c99fb0fbeed921204a1596c82",
 )
 
 http_archive(
@@ -201,7 +201,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr",
-    commit = "0297994296f173f2708ff1a9f9ae336af59172c5",  # v0.0.1
+    commit = "ce21123d5172669bbf37a166078bc5f9d345ec2f",  # v0.0.2
     importpath = "github.com/multiformats/go-multiaddr",
 )
 

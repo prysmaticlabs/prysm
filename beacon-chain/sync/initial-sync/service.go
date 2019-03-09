@@ -316,8 +316,16 @@ func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock, p
 		}
 		return
 	}
-	// if it isn't the block in the next slot it saves it in memory.
+	// if it isn't the block in the next slot we check if it is a skipped slot.
+	// if it isn't skipped we save it in memory.
 	if block.Slot != (s.currentSlot + 1) {
+		// if parent exists we validate the block.
+		if s.doesParentExist(block) {
+			if err := s.validateAndSaveNextBlock(ctx, block); err != nil {
+				log.Errorf("Unable to save block: %v", err)
+			}
+			return
+		}
 		s.mutex.Lock()
 		defer s.mutex.Unlock()
 		if _, ok := s.inMemoryBlocks[block.Slot]; !ok {
@@ -441,32 +449,29 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	if err != nil {
 		return err
 	}
+	if err := s.checkBlockValidity(ctx, block); err != nil {
+		return err
+	}
+	log.Infof("Saved block with root %#x and slot %d for initial sync", root, block.Slot)
+	s.currentSlot = block.Slot
 
-	if (s.currentSlot + 1) == block.Slot {
-
-		if err := s.checkBlockValidity(ctx, block); err != nil {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	// delete block from memory.
+	if _, ok := s.inMemoryBlocks[block.Slot]; ok {
+		delete(s.inMemoryBlocks, block.Slot)
+	}
+	// since the block will not be processed by chainservice we save
+	// the block and do not send it to chainservice.
+	if s.beaconStateSlot >= block.Slot {
+		if err := s.db.SaveBlock(block); err != nil {
 			return err
 		}
-
-		log.Infof("Saved block with root %#x and slot %d for initial sync", root, block.Slot)
-		s.currentSlot = block.Slot
-
-		s.mutex.Lock()
-		defer s.mutex.Unlock()
-		// delete block from memory
-		if _, ok := s.inMemoryBlocks[block.Slot]; ok {
-			delete(s.inMemoryBlocks, block.Slot)
-		}
-		// Send block to main chain service to be processed
-		s.chainService.IncomingBlockFeed().Send(block)
-
-		// since the block will not be processed by chainservice.
-		if s.beaconStateSlot >= block.Slot {
-			if err := s.db.SaveBlock(block); err != nil {
-				return err
-			}
-		}
+		return nil
 	}
+
+	// Send block to main chain service to be processed.
+	s.chainService.IncomingBlockFeed().Send(block)
 	return nil
 }
 
@@ -479,7 +484,6 @@ func (s *InitialSync) checkBlockValidity(ctx context.Context, block *pb.BeaconBl
 	}
 
 	log.Debugf("Processing response to block request: %#x", blockRoot)
-
 	if s.db.HasBlock(blockRoot) {
 		return errors.New("received a block that already exists. Exiting")
 	}
@@ -503,4 +507,9 @@ func (s *InitialSync) isSlotDiffLarge() bool {
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	epochLimit := params.BeaconConfig().SyncEpochLimit
 	return s.currentSlot+slotsPerEpoch*epochLimit < s.highestObservedSlot
+}
+
+func (s *InitialSync) doesParentExist(block *pb.BeaconBlock) bool {
+	parentHash := bytesutil.ToBytes32(block.ParentRootHash32)
+	return s.db.HasBlock(parentHash)
 }
