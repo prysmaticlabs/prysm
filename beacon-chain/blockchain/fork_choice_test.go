@@ -797,11 +797,11 @@ func BenchmarkLMDGhost_32Slots_8Validators(b *testing.B) {
 	}
 }
 
-// This test benchmarks LMD GHOST fork choice using 64 blocks in a row.
+// This test benchmarks LMD GHOST fork choice using 32 blocks in a row.
 // 64 validators and all validators voted on the last block.
 // Ex:
-// 	B0 - B1 - B2 - ... - B64 (64 votes)
-func BenchmarkLMDGhost_64Slots_64Validators(b *testing.B) {
+// 	B0 - B1 - B2 - ... - B32 (64 votes)
+func BenchmarkLMDGhost_32Slots_64Validators(b *testing.B) {
 	beaconDB := internal.SetupDB(b)
 	defer internal.TeardownDB(b, beaconDB)
 
@@ -814,7 +814,7 @@ func BenchmarkLMDGhost_64Slots_64Validators(b *testing.B) {
 	chainService := setupBeaconChainBenchmark(b, false, beaconDB, true, nil)
 
 	// Construct 64 blocks. (Epoch length = 64)
-	epochLength := uint64(64)
+	epochLength := uint64(32)
 	state := &pb.BeaconState{
 		Slot:              epochLength,
 		ValidatorBalances: balances,
