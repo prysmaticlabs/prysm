@@ -6,12 +6,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -655,4 +657,327 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 	if !reflect.DeepEqual(block5, head) {
 		t.Errorf("Expected head to equal %v, received %v", block5, head)
 	}
+}
+
+// This benchmarks LMD GHOST fork choice using 8 blocks in a row.
+// 8 validators and all validators voted on the last block.
+// Ex:
+// 	B0 - B1 - B2 - B3 - B4 - B5 - B6 - B7 (8 votes)
+func BenchmarkLMDGhost_8Slots_8Validators(b *testing.B) {
+	beaconDB := internal.SetupDB(b)
+	defer internal.TeardownDB(b, beaconDB)
+
+	validatorCount := 8
+	balances := make([]uint64, validatorCount)
+	for i := 0; i < validatorCount; i++ {
+		balances[i] = params.BeaconConfig().MaxDepositAmount
+	}
+
+	chainService := setupBeaconChainBenchmark(b, false, beaconDB, true, nil)
+
+	// Construct 8 blocks. (Epoch length = 8)
+	epochLength := uint64(8)
+	state := &pb.BeaconState{
+		Slot:              epochLength,
+		ValidatorBalances: balances,
+	}
+	genesis := &pb.BeaconBlock{
+		Slot:             0,
+		ParentRootHash32: []byte{},
+	}
+	root, err := hashutil.HashBeaconBlock(genesis)
+	if err != nil {
+		b.Fatalf("Could not hash block: %v", err)
+	}
+	if err = chainService.beaconDB.SaveBlock(genesis); err != nil {
+		b.Fatalf("Could not save block: %v", err)
+	}
+	if err = chainService.beaconDB.UpdateChainHead(genesis, state); err != nil {
+		b.Fatalf("Could update chain head: %v", err)
+	}
+
+	var block *pb.BeaconBlock
+	for i := 1; i < int(epochLength); i++ {
+		block = &pb.BeaconBlock{
+			Slot:             uint64(i),
+			ParentRootHash32: root[:],
+		}
+		if err = chainService.beaconDB.SaveBlock(block); err != nil {
+			b.Fatalf("Could not save block: %v", err)
+		}
+		if err = chainService.beaconDB.UpdateChainHead(block, state); err != nil {
+			b.Fatalf("Could update chain head: %v", err)
+		}
+		root, err = hashutil.HashBeaconBlock(block)
+		if err != nil {
+			b.Fatalf("Could not hash block: %v", err)
+		}
+	}
+
+	voteTargets := make(map[uint64]*pb.BeaconBlock)
+	for i := 0; i < validatorCount; i++ {
+		voteTargets[uint64(i)] = block
+	}
+
+	for i := 0; i < b.N; i++ {
+		_, err := chainService.lmdGhost(genesis, state, voteTargets)
+		if err != nil {
+			b.Fatalf("Could not run LMD GHOST: %v", err)
+		}
+	}
+}
+
+// This benchmarks LMD GHOST fork choice 32 blocks in a row.
+// This is assuming the worst case where no finalization happens
+// for 4 epochs in our Sapphire test net. (epoch length is 8 slots)
+// 8 validators and all validators voted on the last block.
+// Ex:
+// 	B0 - B1 - B2 - B3 - B4 - B5 - B6 - B7 (8 votes)
+func BenchmarkLMDGhost_32Slots_8Validators(b *testing.B) {
+	beaconDB := internal.SetupDB(b)
+	defer internal.TeardownDB(b, beaconDB)
+
+	validatorCount := 8
+	balances := make([]uint64, validatorCount)
+	for i := 0; i < validatorCount; i++ {
+		balances[i] = params.BeaconConfig().MaxDepositAmount
+	}
+
+	chainService := setupBeaconChainBenchmark(b, false, beaconDB, true, nil)
+
+	// Construct 8 blocks. (Epoch length = 8)
+	epochLength := uint64(8)
+	state := &pb.BeaconState{
+		Slot:              epochLength,
+		ValidatorBalances: balances,
+	}
+	genesis := &pb.BeaconBlock{
+		Slot:             0,
+		ParentRootHash32: []byte{},
+	}
+	root, err := hashutil.HashBeaconBlock(genesis)
+	if err != nil {
+		b.Fatalf("Could not hash block: %v", err)
+	}
+	if err = chainService.beaconDB.SaveBlock(genesis); err != nil {
+		b.Fatalf("Could not save block: %v", err)
+	}
+	if err = chainService.beaconDB.UpdateChainHead(genesis, state); err != nil {
+		b.Fatalf("Could update chain head: %v", err)
+	}
+
+	var block *pb.BeaconBlock
+	for i := 1; i < int(epochLength); i++ {
+		block = &pb.BeaconBlock{
+			Slot:             uint64(i),
+			ParentRootHash32: root[:],
+		}
+		if err = chainService.beaconDB.SaveBlock(block); err != nil {
+			b.Fatalf("Could not save block: %v", err)
+		}
+		if err = chainService.beaconDB.UpdateChainHead(block, state); err != nil {
+			b.Fatalf("Could update chain head: %v", err)
+		}
+		root, err = hashutil.HashBeaconBlock(block)
+		if err != nil {
+			b.Fatalf("Could not hash block: %v", err)
+		}
+	}
+
+	voteTargets := make(map[uint64]*pb.BeaconBlock)
+	for i := 0; i < validatorCount; i++ {
+		voteTargets[uint64(i)] = block
+	}
+
+	for i := 0; i < b.N; i++ {
+		_, err := chainService.lmdGhost(genesis, state, voteTargets)
+		if err != nil {
+			b.Fatalf("Could not run LMD GHOST: %v", err)
+		}
+	}
+}
+
+// This test benchmarks LMD GHOST fork choice using 64 blocks in a row.
+// 64 validators and all validators voted on the last block.
+// Ex:
+// 	B0 - B1 - B2 - ... - B64 (64 votes)
+func BenchmarkLMDGhost_64Slots_64Validators(b *testing.B) {
+	beaconDB := internal.SetupDB(b)
+	defer internal.TeardownDB(b, beaconDB)
+
+	validatorCount := 64
+	balances := make([]uint64, validatorCount)
+	for i := 0; i < validatorCount; i++ {
+		balances[i] = params.BeaconConfig().MaxDepositAmount
+	}
+
+	chainService := setupBeaconChainBenchmark(b, false, beaconDB, true, nil)
+
+	// Construct 64 blocks. (Epoch length = 64)
+	epochLength := uint64(64)
+	state := &pb.BeaconState{
+		Slot:              epochLength,
+		ValidatorBalances: balances,
+	}
+	genesis := &pb.BeaconBlock{
+		Slot:             0,
+		ParentRootHash32: []byte{},
+	}
+	root, err := hashutil.HashBeaconBlock(genesis)
+	if err != nil {
+		b.Fatalf("Could not hash block: %v", err)
+	}
+	if err = chainService.beaconDB.SaveBlock(genesis); err != nil {
+		b.Fatalf("Could not save block: %v", err)
+	}
+	if err = chainService.beaconDB.UpdateChainHead(genesis, state); err != nil {
+		b.Fatalf("Could update chain head: %v", err)
+	}
+
+	var block *pb.BeaconBlock
+	for i := 1; i < int(epochLength); i++ {
+		block = &pb.BeaconBlock{
+			Slot:             uint64(i),
+			ParentRootHash32: root[:],
+		}
+		if err = chainService.beaconDB.SaveBlock(block); err != nil {
+			b.Fatalf("Could not save block: %v", err)
+		}
+		if err = chainService.beaconDB.UpdateChainHead(block, state); err != nil {
+			b.Fatalf("Could update chain head: %v", err)
+		}
+		root, err = hashutil.HashBeaconBlock(block)
+		if err != nil {
+			b.Fatalf("Could not hash block: %v", err)
+		}
+	}
+
+	voteTargets := make(map[uint64]*pb.BeaconBlock)
+	for i := 0; i < validatorCount; i++ {
+		voteTargets[uint64(i)] = block
+	}
+
+	for i := 0; i < b.N; i++ {
+		_, err := chainService.lmdGhost(genesis, state, voteTargets)
+		if err != nil {
+			b.Fatalf("Could not run LMD GHOST: %v", err)
+		}
+	}
+}
+
+// This test benchmarks LMD GHOST fork choice using 64 blocks in a row.
+// 16384 validators and all validators voted on the last block.
+// Ex:
+// 	B0 - B1 - B2 - ... - B64 (16384 votes)
+func BenchmarkLMDGhost_64Slots_16384Validators(b *testing.B) {
+	beaconDB := internal.SetupDB(b)
+	defer internal.TeardownDB(b, beaconDB)
+
+	validatorCount := 16384
+	balances := make([]uint64, validatorCount)
+	for i := 0; i < validatorCount; i++ {
+		balances[i] = params.BeaconConfig().MaxDepositAmount
+	}
+
+	chainService := setupBeaconChainBenchmark(b, false, beaconDB, true, nil)
+
+	// Construct 64 blocks. (Epoch length = 64)
+	epochLength := uint64(64)
+	state := &pb.BeaconState{
+		Slot:              epochLength,
+		ValidatorBalances: balances,
+	}
+	genesis := &pb.BeaconBlock{
+		Slot:             0,
+		ParentRootHash32: []byte{},
+	}
+	root, err := hashutil.HashBeaconBlock(genesis)
+	if err != nil {
+		b.Fatalf("Could not hash block: %v", err)
+	}
+	if err = chainService.beaconDB.SaveBlock(genesis); err != nil {
+		b.Fatalf("Could not save block: %v", err)
+	}
+	if err = chainService.beaconDB.UpdateChainHead(genesis, state); err != nil {
+		b.Fatalf("Could update chain head: %v", err)
+	}
+
+	var block *pb.BeaconBlock
+	for i := 1; i < int(epochLength); i++ {
+		block = &pb.BeaconBlock{
+			Slot:             uint64(i),
+			ParentRootHash32: root[:],
+		}
+		if err = chainService.beaconDB.SaveBlock(block); err != nil {
+			b.Fatalf("Could not save block: %v", err)
+		}
+		if err = chainService.beaconDB.UpdateChainHead(block, state); err != nil {
+			b.Fatalf("Could update chain head: %v", err)
+		}
+		root, err = hashutil.HashBeaconBlock(block)
+		if err != nil {
+			b.Fatalf("Could not hash block: %v", err)
+		}
+	}
+
+	voteTargets := make(map[uint64]*pb.BeaconBlock)
+	for i := 0; i < validatorCount; i++ {
+		voteTargets[uint64(i)] = block
+	}
+
+	for i := 0; i < b.N; i++ {
+		_, err := chainService.lmdGhost(genesis, state, voteTargets)
+		if err != nil {
+			b.Fatalf("Could not run LMD GHOST: %v", err)
+		}
+	}
+}
+
+func setupBeaconChainBenchmark(b *testing.B, faultyPoWClient bool, beaconDB *db.BeaconDB, enablePOWChain bool, attsService *attestation.Service) *ChainService {
+	endpoint := "ws://127.0.0.1"
+	ctx := context.Background()
+	var web3Service *powchain.Web3Service
+	var err error
+	if enablePOWChain {
+		if faultyPoWClient {
+			client := &faultyClient{}
+			web3Service, err = powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{
+				Endpoint:        endpoint,
+				DepositContract: common.Address{},
+				Reader:          client,
+				Client:          client,
+				Logger:          client,
+			})
+		} else {
+			client := &mockClient{}
+			web3Service, err = powchain.NewWeb3Service(ctx, &powchain.Web3ServiceConfig{
+				Endpoint:        endpoint,
+				DepositContract: common.Address{},
+				Reader:          client,
+				Client:          client,
+				Logger:          client,
+			})
+		}
+	}
+	if err != nil {
+		b.Fatalf("unable to set up web3 service: %v", err)
+	}
+
+	cfg := &Config{
+		BeaconBlockBuf: 0,
+		BeaconDB:       beaconDB,
+		Web3Service:    web3Service,
+		OpsPoolService: &mockOperationService{},
+		EnablePOWChain: enablePOWChain,
+		AttsService:    attsService,
+	}
+	if err != nil {
+		b.Fatalf("could not register blockchain service: %v", err)
+	}
+	chainService, err := NewChainService(ctx, cfg)
+	if err != nil {
+		b.Fatalf("unable to setup chain service: %v", err)
+	}
+
+	return chainService
 }
