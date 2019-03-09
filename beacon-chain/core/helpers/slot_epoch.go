@@ -60,3 +60,15 @@ func StartSlot(epoch uint64) uint64 {
 func AttestationCurrentEpoch(att *pb.AttestationData) uint64 {
 	return SlotToEpoch(att.Slot)
 }
+
+// IsEpochStart returns true if the given slot number is an epoch starting slot
+// number.
+func IsEpochStart(slot uint64) bool {
+	return slot%params.BeaconConfig().SlotsPerEpoch == 0
+}
+
+// IsEpochEnd returns true if the given slot number is an epoch ending slot
+// number.
+func IsEpochEnd(slot uint64) bool {
+	return IsEpochStart(slot + 1)
+}
