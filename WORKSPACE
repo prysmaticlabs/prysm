@@ -124,8 +124,8 @@ proto_library(
 
 http_archive(
     name = "io_kubernetes_build",
-    sha256 = "4985e8d2da96c9ec293897cc19573390c392e068e733b3d85972b43aac2f1309",
-    strip_prefix = "repo-infra-52d76ba3344e755f5a9ab595b94b21df49448ffb",
+    sha256 = "e64c79664aad304197830171bc69d4fae785add56967155db76049d46a6e961f",
+    strip_prefix = "repo-infra-a3f1f8d5b18ad754f553bb59a80334f4f70405a6",
     url = "https://github.com/kubernetes/repo-infra/archive/52d76ba3344e755f5a9ab595b94b21df49448ffb.tar.gz",
 )
 
