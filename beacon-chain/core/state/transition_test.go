@@ -45,7 +45,7 @@ func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*b
 	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
 	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
 	if err != nil {
-		t.Fatal(err)
+		t.Errorf("could not get beacon proposer index at slot %v: %v", beaconState.Slot, err)
 	}
 	epoch := helpers.SlotToEpoch(params.BeaconConfig().GenesisSlot)
 	buf := make([]byte, 32)
@@ -198,7 +198,7 @@ func TestProcessBlock_IncorrectAggregateSig(t *testing.T) {
 
 	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, block.Slot)
 	if err != nil {
-		t.Errorf("could not get beacon proposer index: %v", err)
+		t.Errorf("could not get beacon proposer index at slot %v: %v", block.Slot, err)
 	}
 
 	block.Signature, err = b.BlockSignature(beaconState, block, privKeys[proposerIndex])
@@ -469,7 +469,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 
 	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, block.Slot)
 	if err != nil {
-		t.Errorf("could not get beacon proposer index: %v", err)
+		t.Errorf("could not get beacon proposer index at slot %v: %v", block.Slot, err)
 	}
 
 	block.Signature, err = b.BlockSignature(beaconState, block, privKeys[proposerIndex])
@@ -496,7 +496,7 @@ func TestProcessBlock_IncorrectProposerSig(t *testing.T) {
 
 	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, block.Slot)
 	if err != nil {
-		t.Errorf("could not get beacon proposer index: %v", err)
+		t.Errorf("could not get beacon proposer index at slot %v: %v", block.Slot, err)
 	}
 
 	block.Signature, err = b.BlockSignature(beaconState, block, privKeys[proposerIndex+1])

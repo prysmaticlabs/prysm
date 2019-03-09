@@ -442,7 +442,7 @@ func TestChainService_Starts(t *testing.T) {
 
 	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, block.Slot)
 	if err != nil {
-		t.Errorf("could not get beacon proposer index: %v", err)
+		t.Errorf("could not get beacon proposer index at slot %v: %v", block.Slot, err)
 	}
 
 	block.Signature, err = b.BlockSignature(beaconState, block, privKeys[proposerIndex])
@@ -532,7 +532,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 
 	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, block.Slot)
 	if err != nil {
-		t.Errorf("could not get beacon proposer index: %v", err)
+		t.Errorf("could not get beacon proposer index at slot %v: %v", block.Slot, err)
 	}
 
 	block.Signature, err = b.BlockSignature(beaconState, block, privKeys[proposerIndex])

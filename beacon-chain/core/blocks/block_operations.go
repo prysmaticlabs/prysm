@@ -37,7 +37,7 @@ func VerifyProposerSignature(ctx context.Context, beaconState *pb.BeaconState, b
 
 	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, block.Slot)
 	if err != nil {
-		return fmt.Errorf("could not get beacon proposer index: %v", err)
+		return fmt.Errorf("could not get beacon proposer index at slot %v: %v", block.Slot, err)
 	}
 
 	proposerPubkey, err := bls.PublicKeyFromBytes(beaconState.ValidatorRegistry[proposerIndex].Pubkey)
@@ -123,7 +123,7 @@ func ProcessBlockRandao(ctx context.Context, beaconState *pb.BeaconState, block 
 
 	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
 	if err != nil {
-		return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
+		return nil, fmt.Errorf("could not get beacon proposer index at slot %v: %v", beaconState.Slot, err)
 	}
 	log.WithField("proposerIndex", proposerIndex).Info("RANDAO expected proposer")
 	proposer := beaconState.ValidatorRegistry[proposerIndex]
