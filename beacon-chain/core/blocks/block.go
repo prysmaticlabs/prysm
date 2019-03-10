@@ -73,10 +73,10 @@ func BlockRoot(state *pb.BeaconState, slot uint64) ([]byte, error) {
 //  Let previous_block_root be the tree_hash_root of the previous beacon block processed in the chain.
 //	Set state.latest_block_roots[(state.slot - 1) % LATEST_BLOCK_ROOTS_LENGTH] = previous_block_root.
 //	If state.slot % LATEST_BLOCK_ROOTS_LENGTH == 0 append merkle_root(state.latest_block_roots) to state.batched_block_roots.
-func ProcessBlockRoots(ctx context.Context, state *pb.BeaconState, prevBlockRoot [32]byte) *pb.BeaconState {
+func ProcessBlockRoots(ctx context.Context, state *pb.BeaconState, parentRoot [32]byte) *pb.BeaconState {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.ProcessSlot.ProcessBlockRoots")
 	defer span.End()
-	state.LatestBlockRootHash32S[(state.Slot-1)%params.BeaconConfig().LatestBlockRootsLength] = prevBlockRoot[:]
+	state.LatestBlockRootHash32S[(state.Slot-1)%params.BeaconConfig().LatestBlockRootsLength] = parentRoot[:]
 	if state.Slot%params.BeaconConfig().LatestBlockRootsLength == 0 {
 		merkleRoot := hashutil.MerkleRoot(state.LatestBlockRootHash32S)
 		state.BatchedBlockRootHash32S = append(state.BatchedBlockRootHash32S, merkleRoot)
