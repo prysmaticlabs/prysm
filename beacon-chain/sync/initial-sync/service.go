@@ -400,7 +400,7 @@ func (s *InitialSync) requestStateFromPeer(ctx context.Context, stateRoot []byte
 	defer span.End()
 	stateReq.Inc()
 	log.Debugf("Successfully processed incoming block with state hash: %#x", stateRoot)
-	return s.p2p.Send(ctx, &pb.BeaconStateRequest{Hash: stateRoot}, peerID)
+	return s.p2p.Send(ctx, &pb.BeaconStateRequest{FinalizedStateRoot: stateRoot}, peerID)
 }
 
 // requestNextBlock broadcasts a request for a block with the entered slotnumber.
