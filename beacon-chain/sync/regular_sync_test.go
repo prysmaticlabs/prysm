@@ -786,7 +786,7 @@ func TestHandleStateReq_NOState(t *testing.T) {
 	}()
 
 	request1 := &pb.BeaconStateRequest{
-		Hash: []byte{'a'},
+		FinalizedStateRootHash32S: []byte{'a'},
 	}
 
 	msg1 := p2p.Message{
@@ -833,7 +833,7 @@ func TestHandleStateReq_OK(t *testing.T) {
 	}()
 
 	request1 := &pb.BeaconStateRequest{
-		Hash: stateRoot[:],
+		FinalizedStateRootHash32S: stateRoot[:],
 	}
 
 	msg1 := p2p.Message{
