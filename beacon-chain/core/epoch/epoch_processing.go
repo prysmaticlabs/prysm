@@ -262,7 +262,6 @@ func ProcessEjections(ctx context.Context, state *pb.BeaconState) (*pb.BeaconSta
 	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
 	for _, index := range activeValidatorIndices {
 		if state.ValidatorBalances[index] < params.BeaconConfig().EjectionBalance {
-			log.Infof("Validator at index %d EJECTED", index)
 			log.WithFields(logrus.Fields{
 				"pubKey": fmt.Sprintf("%#x", state.ValidatorRegistry[index].Pubkey),
 				"index":  index}).Info("Validator ejected")
