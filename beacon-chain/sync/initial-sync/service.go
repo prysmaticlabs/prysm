@@ -394,8 +394,7 @@ func (s *InitialSync) processState(msg p2p.Message) {
 	s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
 }
 
-// requestStateFromPeer sends a request to a peer for the corresponding state
-// for a beacon block.
+// requestStateFromPeer always requests for the last finalized slot from a peer.
 func (s *InitialSync) requestStateFromPeer(ctx context.Context, stateRoot []byte, peerID peer.ID) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.requestStateFromPeer")
 	defer span.End()
