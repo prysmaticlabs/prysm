@@ -265,13 +265,10 @@ func TestProposeBlock_PendingAttestations_UsesCurrentSlot(t *testing.T) {
 		StateRoot: []byte{'F'},
 	}, nil /*err*/)
 
-	var broadcastedBlock *pbp2p.BeaconBlock
 	m.proposerClient.EXPECT().ProposeBlock(
 		gomock.Any(), // context
 		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
-	).Do(func(_ context.Context, blk *pbp2p.BeaconBlock) {
-		broadcastedBlock = blk
-	}).Return(&pb.ProposeResponse{}, nil /*error*/)
+	).Return(&pb.ProposeResponse{}, nil /*error*/)
 
 	validator.ProposeBlock(context.Background(), 55)
 	if req.ProposalBlockSlot != 55 {
