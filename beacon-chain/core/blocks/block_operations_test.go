@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	atts "github.com/prysmaticlabs/prysm/beacon-chain/core/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -1019,27 +1018,24 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 }
 
 func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
-	deposits, privKeys := setupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
-
-	beaconState.Slot = params.BeaconConfig().GenesisSlot + 70
-	beaconState.PreviousJustifiedEpoch = params.BeaconConfig().GenesisEpoch
-
-	stateLatestCrosslinks := make([]*pb.Crosslink, 21)
-	stateLatestCrosslinks[20] = &pb.Crosslink{
-		CrosslinkDataRootHash32: []byte{1},
-	}
-	beaconState.LatestCrosslinks = stateLatestCrosslinks
-
 	var blockRoots [][]byte
 	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
-	beaconState.LatestBlockRootHash32S = blockRoots
-
+	stateLatestCrosslinks := []*pb.Crosslink{
+		{
+			CrosslinkDataRootHash32: []byte{1},
+		},
+	}
+	state := &pb.BeaconState{
+		Slot:                   params.BeaconConfig().GenesisSlot + 70,
+		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
+		LatestBlockRootHash32S: blockRoots,
+		LatestCrosslinks:       stateLatestCrosslinks,
+	}
 	att1 := &pb.Attestation{
 		Data: &pb.AttestationData{
-			Shard:                    20,
+			Shard:                    0,
 			Slot:                     params.BeaconConfig().GenesisSlot + 20,
 			JustifiedBlockRootHash32: blockRoots[0],
 			LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
@@ -1049,27 +1045,18 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 		AggregationBitfield: []byte{1},
 		CustodyBitfield:     []byte{1},
 	}
-	attestorIndices, err := helpers.AttestationParticipants(beaconState, att1.Data, att1.AggregationBitfield)
-	if err != nil {
-		t.Errorf("could not get aggregation participants %v", err)
-	}
-	att1.AggregateSignature = atts.AggregateSignature(beaconState, att1, privKeys[attestorIndices[0]])
-
 	attestations := []*pb.Attestation{att1}
-
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			Attestations: attestations,
 		},
 	}
-
 	newState, err := blocks.ProcessBlockAttestations(
 		context.Background(),
-		beaconState,
+		state,
 		block,
-		true,
+		false,
 	)
-
 	pendingAttestations := newState.LatestAttestations
 	if err != nil {
 		t.Fatalf("Could not produce pending attestations: %v", err)
