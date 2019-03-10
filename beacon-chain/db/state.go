@@ -61,6 +61,11 @@ func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit, 
 			}
 		}
 
+		// Putting in finalized state.
+		if err := chainInfo.Put(finalizedStateLookupKey, stateEnc); err != nil {
+			return err
+		}
+
 		return chainInfo.Put(stateLookupKey, stateEnc)
 	})
 }

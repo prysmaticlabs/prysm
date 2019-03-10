@@ -284,6 +284,10 @@ func (c *ChainService) ApplyForkChoiceRule(block *pb.BeaconBlock, computedState 
 			log.Error("Sent canonical state to no subscribers")
 		}
 	}
+
+	if err := c.checkLastFinalizedEpoch(computedState); err != nil {
+		log.Errorf("Could not check if there is a new last finalized epoch: %v", err)
+	}
 	if c.canonicalBlockFeed.Send(&pb.BeaconBlockAnnounce{
 		Hash:       h[:],
 		SlotNumber: block.Slot,
@@ -423,6 +427,14 @@ func (c *ChainService) isBlockReadyForProcessing(block *pb.BeaconBlock, beaconSt
 	if err := b.IsValidBlock(c.ctx, beaconState, block, c.enablePOWChain,
 		c.beaconDB.HasBlock, powBlockFetcher, c.genesisTime); err != nil {
 		return fmt.Errorf("block does not fulfill pre-processing conditions %v", err)
+	}
+	return nil
+}
+
+func (c *ChainService) checkLastFinalizedEpoch(beaconState *pb.BeaconState) error {
+	if c.finalizedEpoch != beaconState.FinalizedEpoch {
+		c.finalizedEpoch = beaconState.FinalizedEpoch
+		return c.beaconDB.SaveFinalizedState(beaconState)
 	}
 	return nil
 }
