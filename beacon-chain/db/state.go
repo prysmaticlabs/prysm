@@ -102,7 +102,7 @@ func (db *BeaconDB) SaveState(beaconState *pb.BeaconState) error {
 	})
 }
 
-// SaveFinalizedState saves the last finazlied state in the db.
+// SaveFinalizedState saves the last finalized state in the db.
 func (db *BeaconDB) SaveFinalizedState(beaconState *pb.BeaconState) error {
 	return db.update(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
@@ -110,6 +110,24 @@ func (db *BeaconDB) SaveFinalizedState(beaconState *pb.BeaconState) error {
 		if err != nil {
 			return err
 		}
+		return chainInfo.Put(finalizedStateLookupKey, beaconStateEnc)
+	})
+}
+
+// SaveCurrentAndFinalizedState saves the state as both the current and last finalized state.
+func (db *BeaconDB) SaveCurrentAndFinalizedState(beaconState *pb.BeaconState) error {
+	return db.update(func(tx *bolt.Tx) error {
+		chainInfo := tx.Bucket(chainInfoBucket)
+		beaconStateEnc, err := proto.Marshal(beaconState)
+		if err != nil {
+			return err
+		}
+
+		// Putting in finalized state.
+		if err := chainInfo.Put(stateLookupKey, beaconStateEnc); err != nil {
+			return err
+		}
+
 		return chainInfo.Put(finalizedStateLookupKey, beaconStateEnc)
 	})
 }

@@ -137,3 +137,44 @@ func TestFinalizeState_OK(t *testing.T) {
 		t.Error("Retrieved and saved finalized are unequal")
 	}
 }
+
+func TestCurrentAndFinalizeState_OK(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	genesisTime := uint64(time.Now().Unix())
+	deposits, _ := setupInitialDeposits(t, 10)
+	if err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{}); err != nil {
+		t.Fatalf("Failed to initialize state: %v", err)
+	}
+
+	state, err := db.State(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to retrieve state: %v", err)
+	}
+
+	state.FinalizedEpoch = 10000
+	state.BatchedBlockRootHash32S = [][]byte{[]byte("testing-prysm")}
+
+	if err := db.SaveCurrentAndFinalizedState(state); err != nil {
+		t.Fatalf("Unable to save state")
+	}
+
+	fState, err := db.FinalizedState()
+	if err != nil {
+		t.Fatalf("Unable to retrieve finalized state")
+	}
+
+	cState, err := db.State(context.Background())
+	if err != nil {
+		t.Fatalf("Unable to retrieve state")
+	}
+
+	if !proto.Equal(fState, state) {
+		t.Error("Retrieved and saved finalized are unequal")
+	}
+
+	if !proto.Equal(cState, state) {
+		t.Error("Retrieved and saved current are unequal")
+	}
+}
