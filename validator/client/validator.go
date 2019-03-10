@@ -106,8 +106,9 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 		validatorActivatedRecord = res.Validator
 		break
 	}
-	if validatorActivatedRecord.ActivationEpoch != 0 {
-		activationEpochSeconds := validatorActivatedRecord.ActivationEpoch * params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot
+	if validatorActivatedRecord.ActivationEpoch != 0 && validatorActivatedRecord.ActivationEpoch != params.BeaconConfig().GenesisEpoch {
+		normalizedEpoch := validatorActivatedRecord.ActivationEpoch  - params.BeaconConfig().GenesisEpoch
+		activationEpochSeconds := normalizedEpoch * params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot
 		v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime+activationEpochSeconds), 0), params.BeaconConfig().SecondsPerSlot)
 	} else {
 		v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)

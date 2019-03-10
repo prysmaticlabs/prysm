@@ -135,7 +135,6 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 	dataVotes := []*pbp2p.Eth1DataVote{}
 	bestVote := &pbp2p.Eth1DataVote{}
 	bestVoteHeight := big.NewInt(0)
-	log.Infof("Number of ETH1 votes: %d", len(beaconState.Eth1DataVotes))
 	for _, vote := range beaconState.Eth1DataVotes {
 		eth1Hash := bytesutil.ToBytes32(vote.Eth1Data.BlockHash32)
 		// Verify the block from the vote's block hash exists in the eth1.0 chain and fetch its height.
@@ -156,10 +155,6 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 		// at the block defined by vote.eth1_data.block_hash.
 		isBehindFollowDistance := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance)).Cmp(blockHeight) >= 0
 		isAheadStateLatestEth1Data := blockHeight.Cmp(stateLatestEth1Height) == 1
-		log.Infof("Block exists: %v, isBehindFollow: %v, isAheadState: %v", blockExists, isBehindFollowDistance, isAheadStateLatestEth1Data)
-        log.Infof("Current height: %v", currentHeight)
-		log.Infof("Block height: %v", blockHeight)
-		log.Infof("Latest ETH1 height: %v", stateLatestEth1Height)
 		if blockExists && isBehindFollowDistance && isAheadStateLatestEth1Data {
 			dataVotes = append(dataVotes, vote)
 
@@ -236,7 +231,6 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 	if len(upToLatestEth1DataDeposits) != len(allDeps) {
 		return &pb.PendingDepositsResponse{PendingDeposits: nil}, nil
 	}
-	log.Infof("UP TO LATESTETH1DATA: %v, ALL DEPS: %v", len(upToLatestEth1DataDeposits), len(allDeps))
 	depositData := [][]byte{}
 	indices := []uint64{}
 	for i := range upToLatestEth1DataDeposits {
@@ -244,15 +238,10 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 		indices = append(indices, upToLatestEth1DataDeposits[i].MerkleTreeIndex)
 	}
 
-	log.Infof("TOTAL DEPOSITS IN PENDING DEPOSITS RPC CALL: %d", len(allDeps))
-	log.Infof("TOTAL PENDING DEPOSITS: %d", len(pendingDeps))
 	depositTrie, err := trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
 	if err != nil {
 		return nil, fmt.Errorf("could not generate historical deposit trie from deposits: %v", err)
 	}
-	log.Infof("LATEST ETH1 DATA DEPOSIT ROOT: %#x", beaconState.LatestEth1Data.DepositRootHash32)
-	log.Infof("IN PENDING DEPOSITS, MERKLE INDICES: %v", indices)
-	log.Infof("GENERATED TRIE DEPOSIT ROOT: %#x", depositTrie.Root())
 	for i := range pendingDeps {
 		proof, err := depositTrie.MerkleProof(int(pendingDeps[i].MerkleTreeIndex))
 		if err != nil {
@@ -272,7 +261,6 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 
 func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *big.Int, eth1FollowDistance int64) (*pb.Eth1DataResponse, error) {
 	ancestorHeight := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance))
-	log.Infof("ANCESTOR HEIGHT: %d", ancestorHeight)
 	blockHash, err := bs.powChainService.BlockHashByHeight(ctx, ancestorHeight)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch ETH1_FOLLOW_DISTANCE ancestor: %v", err)
@@ -291,14 +279,11 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 			depositData = append(depositData, allDeposits[i].DepositData)
 			indices = append(indices, allDeposits[i].MerkleTreeIndex)
 		}
-        log.Infof("IN DEFAULT DATA, MERKLE INDICES: %v", indices)
 	}
-	log.Infof("GENERATED DEPOSIT TRIE FOR DEFAULT DATA RESPONSE WITH %d DEPOSITS", len(depositData))
    	depositTrie, err := trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
    	if err != nil {
    		return nil, fmt.Errorf("could not generate historical deposit trie from deposits: %v", err)
 	}
-	log.Infof("WITH 9 DEPOSITS, TRIE DEPOSIT ROOT IS: %#x", depositTrie.Root())
    	depositRoot := depositTrie.Root()
 	return &pb.Eth1DataResponse{
 		Eth1Data: &pbp2p.Eth1Data{

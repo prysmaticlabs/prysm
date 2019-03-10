@@ -228,12 +228,7 @@ func (w *Web3Service) DepositTrie() *trieutil.MerkleTrie {
 
 // LatestBlockHeight in the ETH1.0 chain.
 func (w *Web3Service) LatestBlockHeight() *big.Int {
-	header, err := w.blockFetcher.HeaderByNumber(w.ctx, nil)
-	if err != nil {
-		log.Errorf("unable to retrieve latest ETH1.0 chain header: %v", err)
-		return nil
-	}
-	return header.Number
+	return w.blockHeight
 }
 
 // LatestBlockHash in the ETH1.0 chain.
