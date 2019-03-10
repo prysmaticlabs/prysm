@@ -372,7 +372,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	}
 	deposit := &pb.Deposit{
 		DepositData: depositData,
-		MerkleTreeIndex: merkleTreeIndex,
+		MerkleTreeIndex: index,
 	}
 	if !w.chainStarted {
 		w.chainStartDeposits = append(w.chainStartDeposits, depositData)
