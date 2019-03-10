@@ -113,3 +113,63 @@ func TestAttestationCurrentEpoch_OK(t *testing.T) {
 		}
 	}
 }
+
+func TestIsEpochStart(t *testing.T) {
+	epochLength := params.BeaconConfig().SlotsPerEpoch
+
+	tests := []struct {
+		slot   uint64
+		result bool
+	}{
+		{
+			slot:   epochLength + 1,
+			result: false,
+		},
+		{
+			slot:   epochLength - 1,
+			result: false,
+		},
+		{
+			slot:   epochLength,
+			result: true,
+		},
+		{
+			slot:   epochLength * 2,
+			result: true,
+		},
+	}
+
+	for _, tt := range tests {
+		if IsEpochStart(tt.slot) != tt.result {
+			t.Errorf("IsEpochStart(%d) = %v, wanted %v", tt.slot, IsEpochStart(tt.slot), tt.result)
+		}
+	}
+}
+
+func TestIsEpochEnd(t *testing.T) {
+	epochLength := params.BeaconConfig().SlotsPerEpoch
+
+	tests := []struct {
+		slot   uint64
+		result bool
+	}{
+		{
+			slot:   epochLength + 1,
+			result: false,
+		},
+		{
+			slot:   epochLength,
+			result: false,
+		},
+		{
+			slot:   epochLength - 1,
+			result: true,
+		},
+	}
+
+	for _, tt := range tests {
+		if IsEpochEnd(tt.slot) != tt.result {
+			t.Errorf("IsEpochEnd(%d) = %v, wanted %v", tt.slot, IsEpochEnd(tt.slot), tt.result)
+		}
+	}
+}

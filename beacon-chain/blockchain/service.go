@@ -283,10 +283,17 @@ func (c *ChainService) ApplyForkChoiceRule(block *pb.BeaconBlock, computedState 
 	// server to stream these events to beacon clients.
 	// When the transition is a cycle transition, we stream the state containing the new validator
 	// assignments to clients.
-	if block.Slot%params.BeaconConfig().SlotsPerEpoch == 0 {
-		c.canonicalStateFeed.Send(computedState)
+	if helpers.IsEpochStart(block.Slot) {
+		if c.canonicalStateFeed.Send(computedState) == 0 {
+			log.Error("Sent canonical state to no subscribers")
+		}
 	}
-	c.canonicalBlockFeed.Send(block)
+	if c.canonicalBlockFeed.Send(&pb.BeaconBlockAnnounce{
+		Hash:       h[:],
+		SlotNumber: block.Slot,
+	}) == 0 {
+		log.Error("Sent canonical block to no subscribers")
+	}
 	return nil
 }
 
@@ -339,6 +346,7 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 		"Executing state transition")
 
 	// Check for skipped slots.
+	numSkippedSlots := 0
 	for beaconState.Slot < block.Slot-1 {
 		beaconState, err = state.ExecuteStateTransition(
 			c.ctx,
@@ -353,6 +361,10 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 		log.WithField(
 			"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
 		).Info("Slot transition successfully processed")
+		numSkippedSlots++
+	}
+	if numSkippedSlots > 0 {
+		log.Warnf("Processed %d skipped slots", numSkippedSlots)
 	}
 
 	beaconState, err = state.ExecuteStateTransition(
@@ -371,7 +383,7 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	log.WithField(
 		"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
 	).Info("Block transition successfully processed")
-	if (beaconState.Slot+1)%params.BeaconConfig().SlotsPerEpoch == 0 {
+	if helpers.IsEpochEnd(beaconState.Slot) {
 		// Save activated validators of this epoch to public key -> index DB.
 		if err := c.saveValidatorIdx(beaconState); err != nil {
 			return nil, fmt.Errorf("could not save validator index: %v", err)
