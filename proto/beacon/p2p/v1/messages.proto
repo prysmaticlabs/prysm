@@ -62,6 +62,7 @@ message BeaconStateHashAnnounce {
 }
 
 message BeaconStateRequest {
+  bytes finalized_state_root = 1;
 }
 
 message BeaconStateResponse {
