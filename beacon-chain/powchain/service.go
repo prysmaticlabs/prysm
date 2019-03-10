@@ -228,7 +228,12 @@ func (w *Web3Service) DepositTrie() *trieutil.MerkleTrie {
 
 // LatestBlockHeight in the ETH1.0 chain.
 func (w *Web3Service) LatestBlockHeight() *big.Int {
-	return w.blockHeight
+	header, err := w.blockFetcher.HeaderByNumber(w.ctx, nil)
+	if err != nil {
+		log.Errorf("unable to retrieve latest ETH1.0 chain header: %v", err)
+		return nil
+	}
+	return header.Number
 }
 
 // LatestBlockHash in the ETH1.0 chain.
@@ -367,6 +372,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	}
 	deposit := &pb.Deposit{
 		DepositData: depositData,
+		MerkleTreeIndex: merkleTreeIndex,
 	}
 	if !w.chainStarted {
 		w.chainStartDeposits = append(w.chainStartDeposits, depositData)
@@ -549,6 +555,7 @@ func (w *Web3Service) run(done <-chan struct{}) {
 		case header := <-w.headerChan:
 			blockNumberGauge.Set(float64(header.Number.Int64()))
 			w.blockHeight = header.Number
+			log.Infof("POWCHAIN BLOCKHEIGHT: %v", w.blockHeight)
 			w.blockHash = header.Hash()
 			w.blockTime = time.Unix(header.Time.Int64(), 0)
 			log.WithFields(logrus.Fields{
