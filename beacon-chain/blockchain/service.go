@@ -47,6 +47,7 @@ type ChainService struct {
 	canonicalStateFeed   *event.Feed
 	genesisTime          time.Time
 	enablePOWChain       bool
+	finalizedEpoch       uint64
 	stateInitializedFeed *event.Feed
 }
 
@@ -100,6 +101,7 @@ func (c *ChainService) Start() {
 	if beaconState != nil {
 		log.Info("Beacon chain data already exists, starting service")
 		c.genesisTime = time.Unix(int64(beaconState.GenesisTime), 0)
+		c.finalizedEpoch = beaconState.FinalizedEpoch
 		go c.blockProcessing()
 	} else {
 		log.Info("Waiting for ChainStart log from the Validator Deposit Contract to start the beacon chain...")
@@ -121,6 +123,7 @@ func (c *ChainService) Start() {
 			if err != nil {
 				log.Fatalf("Could not initialize beacon chain: %v", err)
 			}
+			c.finalizedEpoch = beaconState.FinalizedEpoch
 			c.stateInitializedFeed.Send(genesisTime)
 			c.canonicalStateFeed.Send(beaconState)
 			go c.blockProcessing()
@@ -341,53 +344,19 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	// Check for skipped slots.
 	numSkippedSlots := 0
 	for beaconState.Slot < block.Slot-1 {
-		beaconState, err = state.ExecuteStateTransition(
-			c.ctx,
-			beaconState,
-			nil,
-			headRoot,
-			true, /* sig verify */
-		)
+		c.runStateTransition(headRoot, nil, beaconState)
 		if err != nil {
 			return nil, fmt.Errorf("could not execute state transition without block %v", err)
 		}
-		log.WithField(
-			"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
-		).Info("Slot transition successfully processed")
 		numSkippedSlots++
 	}
 	if numSkippedSlots > 0 {
 		log.Warnf("Processed %d skipped slots", numSkippedSlots)
 	}
 
-	beaconState, err = state.ExecuteStateTransition(
-		c.ctx,
-		beaconState,
-		block,
-		headRoot,
-		true, /* no sig verify */
-	)
+	beaconState, err = c.runStateTransition(headRoot, block, beaconState)
 	if err != nil {
 		return nil, fmt.Errorf("could not execute state transition with block %v", err)
-	}
-	log.WithField(
-		"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
-	).Info("Slot transition successfully processed")
-	log.WithField(
-		"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
-	).Info("Block transition successfully processed")
-	if helpers.IsEpochEnd(beaconState.Slot) {
-		// Save activated validators of this epoch to public key -> index DB.
-		if err := c.saveValidatorIdx(beaconState); err != nil {
-			return nil, fmt.Errorf("could not save validator index: %v", err)
-		}
-		// Delete exited validators of this epoch to public key -> index DB.
-		if err := c.deleteValidatorIdx(beaconState); err != nil {
-			return nil, fmt.Errorf("could not delete validator index: %v", err)
-		}
-		log.WithField(
-			"SlotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
-		).Info("Epoch transition successfully processed")
 	}
 
 	// if there exists a block for the slot being processed.
@@ -404,6 +373,45 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	}
 
 	log.WithField("hash", fmt.Sprintf("%#x", blockRoot)).Debug("Processed beacon block")
+	return beaconState, nil
+}
+
+func (c *ChainService) runStateTransition(headRoot [32]byte, block *pb.BeaconBlock,
+	beaconState *pb.BeaconState) (*pb.BeaconState, error) {
+	beaconState, err := state.ExecuteStateTransition(
+		c.ctx,
+		beaconState,
+		block,
+		headRoot,
+		true, /* sig verify */
+	)
+	if err != nil {
+		return nil, fmt.Errorf("could not execute state transition %v", err)
+	}
+	log.WithField(
+		"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
+	).Info("Slot transition successfully processed")
+
+	if block != nil {
+		log.WithField(
+			"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
+		).Info("Block transition successfully processed")
+	}
+
+	if helpers.IsEpochEnd(beaconState.Slot) {
+		// Save activated validators of this epoch to public key -> index DB.
+		if err := c.saveValidatorIdx(beaconState); err != nil {
+			return nil, fmt.Errorf("could not save validator index: %v", err)
+		}
+		// Delete exited validators of this epoch to public key -> index DB.
+		if err := c.deleteValidatorIdx(beaconState); err != nil {
+			return nil, fmt.Errorf("could not delete validator index: %v", err)
+		}
+		log.WithField(
+			"SlotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
+		).Info("Epoch transition successfully processed")
+	}
+
 	return beaconState, nil
 }
 
