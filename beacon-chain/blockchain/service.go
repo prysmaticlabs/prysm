@@ -4,6 +4,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -408,6 +409,15 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	// Remove pending deposits from the deposit queue.
 	for _, dep := range block.Body.Deposits {
 		c.beaconDB.RemovePendingDeposit(c.ctx, dep)
+	}
+
+	// Check state root
+	stateRoot, err := hashutil.HashProto(beaconState)
+	if err != nil {
+		return nil, fmt.Errorf("could not hash beacon state: %v", err)
+	}
+	if !bytes.Equal(block.StateRootHash32, stateRoot[:]) {
+		return nil, fmt.Errorf("beacon state root is not equal to block state root: %#x != %#x", stateRoot, block.StateRootHash32)
 	}
 
 	log.WithField("hash", fmt.Sprintf("%#x", blockRoot)).Debug("Processed beacon block")
