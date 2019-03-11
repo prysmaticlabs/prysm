@@ -284,25 +284,6 @@ func (w *Web3Service) BlockHashByHeight(ctx context.Context, height *big.Int) (c
 	return block.Hash(), nil
 }
 
-// RecalculateDepositTrie recomputes the deposit trie given a new
-// list of deposits and the existing deposits in the current trie.
-func (w *Web3Service) RecalculateDepositTrie(deposits []*pb.Deposit) error {
-	existingDeposits := w.depositTrie.Items()
-	newDeposits := make([][]byte, len(deposits))
-	for idx := range deposits {
-		newDeposits[idx] = deposits[idx].DepositData
-	}
-	sparseMerkleTrie, err := trieutil.GenerateTrieFromItems(
-		append(existingDeposits, newDeposits...),
-		int(params.BeaconConfig().DepositContractTreeDepth),
-	)
-	if err != nil {
-		return fmt.Errorf("could not update deposit trie: %v", err)
-	}
-	w.depositTrie = sparseMerkleTrie
-	return nil
-}
-
 // Client for interacting with the ETH1.0 chain.
 func (w *Web3Service) Client() Client {
 	return w.client
