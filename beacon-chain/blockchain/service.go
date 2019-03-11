@@ -293,7 +293,7 @@ func (c *ChainService) ApplyForkChoiceRule(block *pb.BeaconBlock, computedState 
 	}
 
 	if err := c.saveFinalizedState(computedState); err != nil {
-		log.Errorf("Could not check if there is a new last finalized epoch: %v", err)
+		log.Errorf("Could not save new finalized state: %v", err)
 	}
 	if c.canonicalBlockFeed.Send(&pb.BeaconBlockAnnounce{
 		Hash:       h[:],
