@@ -1279,9 +1279,12 @@ func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
 func TestHandlePanic_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	endpoint := "ws://127.0.0.1"
+	beaconDB := internal.SetupDB(t)
+	defer internal.TeardownDB(t, beaconDB)
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
 		Endpoint:     endpoint,
 		BlockFetcher: nil, // nil blockFetcher would panic if cached value not used
+		BeaconDB:     beaconDB,
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)

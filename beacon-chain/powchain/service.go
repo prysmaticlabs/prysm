@@ -7,7 +7,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"math"
 	"math/big"
 	"strings"
 	"time"
@@ -18,7 +17,6 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	dto "github.com/prometheus/client_model/go"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
@@ -626,20 +624,4 @@ func safelyHandlePanic() {
 			"r": r,
 		}).Error("Panicked when handling data from ETH 1.0 Chain! Recovering...")
 	}
-}
-
-// PrometheusToFloat64 convert counters to float64
-func PrometheusToFloat64(m prometheus.Metric) float64 {
-	pb := &dto.Metric{}
-	m.Write(pb)
-	if pb.Gauge != nil {
-		return pb.Gauge.GetValue()
-	}
-	if pb.Counter != nil {
-		return pb.Counter.GetValue()
-	}
-	if pb.Untyped != nil {
-		return pb.Untyped.GetValue()
-	}
-	return math.NaN()
 }
