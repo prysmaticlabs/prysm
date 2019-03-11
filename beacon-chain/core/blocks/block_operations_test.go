@@ -777,7 +777,7 @@ func TestProcessBlockAttestations_JustifiedEpochVerificationFailure(t *testing.T
 		{
 			Data: &pb.AttestationData{
 				Slot:           params.BeaconConfig().GenesisSlot + 152,
-				JustifiedEpoch: 2,
+				JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 2,
 			},
 		},
 	}
@@ -788,7 +788,7 @@ func TestProcessBlockAttestations_JustifiedEpochVerificationFailure(t *testing.T
 	}
 	state := &pb.BeaconState{
 		Slot:           params.BeaconConfig().GenesisSlot + 158,
-		JustifiedEpoch: 1,
+		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 1,
 	}
 
 	want := fmt.Sprintf(
@@ -811,7 +811,7 @@ func TestProcessBlockAttestations_PreviousJustifiedEpochVerificationFailure(t *t
 		{
 			Data: &pb.AttestationData{
 				Slot:           params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch + 1,
-				JustifiedEpoch: 3,
+				JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 3,
 			},
 		},
 	}
@@ -822,7 +822,7 @@ func TestProcessBlockAttestations_PreviousJustifiedEpochVerificationFailure(t *t
 	}
 	state := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch,
-		PreviousJustifiedEpoch: 2,
+		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch + 2,
 	}
 
 	want := fmt.Sprintf(

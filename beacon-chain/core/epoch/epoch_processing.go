@@ -62,7 +62,6 @@ func CanProcessValidatorRegistry(ctx context.Context, state *pb.BeaconState) boo
 	shardsProcessed := helpers.CurrentEpochCommitteeCount(state) * params.BeaconConfig().SlotsPerEpoch
 	startShard := state.CurrentShufflingStartShard
 	for i := startShard; i < shardsProcessed; i++ {
-
 		if state.LatestCrosslinks[i%params.BeaconConfig().ShardCount].Epoch <=
 			state.ValidatorRegistryUpdateEpoch {
 			return false
@@ -133,7 +132,7 @@ func ProcessJustification(
 	prevEpoch := helpers.PrevEpoch(state)
 	currentEpoch := helpers.CurrentEpoch(state)
 	// Shifts all the bits over one to create a new bit for the recent epoch.
-	state.JustificationBitfield = state.JustificationBitfield << 1
+	state.JustificationBitfield <<= 1
 	log.Infof("Processing Total Balance: %d", totalBalance)
 	// If prev prev epoch was justified then we ensure the 2nd bit in the bitfield is set,
 	// assign new justified slot to 2 * SLOTS_PER_EPOCH before.
@@ -153,21 +152,29 @@ func ProcessJustification(
 	}
 
 	// Process finality.
+	// When the 2nd, 3rd and 4th most epochs are all justified, the 2nd can finalize the 4th epoch
+	// as a source.
 	if state.PreviousJustifiedEpoch == prevEpoch-2 &&
 		(state.JustificationBitfield>>1)%8 == 7 {
 		state.FinalizedEpoch = state.PreviousJustifiedEpoch
 		log.Infof("New Finalized Epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
 	}
+	// When the 2nd and 3rd most epochs are all justified, the 2nd can finalize the 3rd epoch
+	// as a source.
 	if state.PreviousJustifiedEpoch == prevEpoch-1 &&
 		(state.JustificationBitfield>>1)%4 == 3 {
 		state.FinalizedEpoch = state.PreviousJustifiedEpoch
 		log.Infof("New Finalized Epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
 	}
+	// When the 1st, 2nd and 3rd most epochs are all justified, the 1st can finalize the 3rd epoch
+	// as a source.
 	if state.JustifiedEpoch == prevEpoch-1 &&
 		(state.JustificationBitfield>>0)%8 == 7 {
 		state.FinalizedEpoch = state.JustifiedEpoch
 		log.Infof("New Finalized Epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
 	}
+	// When the 1st and 2nd most epochs are all justified, the 1st can finalize the 2nd epoch
+	// as a source.
 	if state.JustifiedEpoch == prevEpoch &&
 		(state.JustificationBitfield>>0)%4 == 3 {
 		state.FinalizedEpoch = state.JustifiedEpoch
@@ -255,7 +262,9 @@ func ProcessEjections(ctx context.Context, state *pb.BeaconState) (*pb.BeaconSta
 	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
 	for _, index := range activeValidatorIndices {
 		if state.ValidatorBalances[index] < params.BeaconConfig().EjectionBalance {
-			log.Infof("Validator at index %d EJECTED", index)
+			log.WithFields(logrus.Fields{
+				"pubKey": fmt.Sprintf("%#x", state.ValidatorRegistry[index].Pubkey),
+				"index":  index}).Info("Validator ejected")
 			state = validators.ExitValidator(state, index)
 		}
 	}
