@@ -348,7 +348,7 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	// Check for skipped slots.
 	numSkippedSlots := 0
 	for beaconState.Slot < block.Slot-1 {
-		c.runStateTransition(headRoot, nil, beaconState)
+		beaconState, err = c.runStateTransition(headRoot, nil, beaconState)
 		if err != nil {
 			return nil, fmt.Errorf("could not execute state transition without block %v", err)
 		}
