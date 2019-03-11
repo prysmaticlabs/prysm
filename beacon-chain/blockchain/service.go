@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
+
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
@@ -21,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -240,23 +243,27 @@ func (c *ChainService) blockProcessing() {
 		// can be received either from the sync service, the RPC service,
 		// or via p2p.
 		case block := <-c.incomingBlockChan:
-			beaconState, err := c.beaconDB.State(c.ctx)
-			if err != nil {
-				log.Errorf("Unable to retrieve beacon state %v", err)
-				continue
-			}
+			handler.SafelyHandleMessage(c.ctx, c.processBlock, block)
+		}
+	}
+}
 
-			if block.Slot > beaconState.Slot {
-				computedState, err := c.ReceiveBlock(block, beaconState)
-				if err != nil {
-					log.Errorf("Could not process received block: %v", err)
-					continue
-				}
-				if err := c.ApplyForkChoiceRule(block, computedState); err != nil {
-					log.Errorf("Could not update chain head: %v", err)
-					continue
-				}
-			}
+func (c *ChainService) processBlock(message proto.Message) {
+	block := message.(*pb.BeaconBlock)
+	beaconState, err := c.beaconDB.State(c.ctx)
+	if err != nil {
+		log.Errorf("Unable to retrieve beacon state %v", err)
+		return
+	}
+	if block.Slot > beaconState.Slot {
+		computedState, err := c.ReceiveBlock(block, beaconState)
+		if err != nil {
+			log.Errorf("Could not process received block: %v", err)
+			return
+		}
+		if err := c.ApplyForkChoiceRule(block, computedState); err != nil {
+			log.Errorf("Could not update chain head: %v", err)
+			return
 		}
 	}
 }
