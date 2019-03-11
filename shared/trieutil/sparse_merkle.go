@@ -77,7 +77,7 @@ func (m *MerkleTrie) Root() [32]byte {
 	return bytesutil.ToBytes32(m.branches[0][0])
 }
 
-// The original items passed in when creating the Merkle trie.
+// Items returns the original items passed in when creating the Merkle trie.
 func (m *MerkleTrie) Items() [][]byte {
 	return m.originalItems
 }

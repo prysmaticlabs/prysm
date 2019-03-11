@@ -79,7 +79,7 @@ func (m *mockPOWChainService) LatestBlockHeight() *big.Int {
 	return m.latestBlockNumber
 }
 
-func (f *mockPOWChainService) DepositTrie() *trieutil.MerkleTrie {
+func (m *mockPOWChainService) DepositTrie() *trieutil.MerkleTrie {
 	return &trieutil.MerkleTrie{}
 }
 
@@ -111,7 +111,7 @@ func (m *mockPOWChainService) DepositRoot() [32]byte {
 	return bytesutil.ToBytes32(root)
 }
 
-func (f *mockPOWChainService) ChainStartDeposits() [][]byte {
+func (m *mockPOWChainService) ChainStartDeposits() [][]byte {
 	return [][]byte{}
 }
 
