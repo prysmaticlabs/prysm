@@ -932,6 +932,38 @@ func TestHasChainStartLogOccurred_OK(t *testing.T) {
 	}
 }
 
+func TestStatus(t *testing.T) {
+	now := time.Now()
+
+	beforeFiveMinutesAgo := now.Add(-5*time.Minute - 30*time.Second)
+	afterFiveMinutesAgo := now.Add(-5*time.Minute + 30*time.Second)
+
+	testCases := map[*Web3Service]string{
+		// "status is ok" cases
+		{}: "",
+		{isRunning: true, blockTime: afterFiveMinutesAgo}:         "",
+		{isRunning: false, blockTime: beforeFiveMinutesAgo}:       "",
+		{isRunning: false, runError: errors.New("test runError")}: "",
+		// "status is error" cases
+		{isRunning: true, blockTime: beforeFiveMinutesAgo}: "web3 client is not syncing",
+		{isRunning: true}: "web3 client is not syncing",
+		{isRunning: true, runError: errors.New("test runError")}: "test runError",
+	}
+
+	for web3ServiceState, wantedErrorText := range testCases {
+		status := web3ServiceState.Status()
+		if status == nil {
+			if wantedErrorText != "" {
+				t.Errorf("Wanted: \"%v\", but Status() return nil", wantedErrorText)
+			}
+		} else {
+			if status.Error() != wantedErrorText {
+				t.Errorf("Wanted: \"%v\", but Status() return: \"%v\"", wantedErrorText, status.Error())
+			}
+		}
+	}
+}
+
 func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
