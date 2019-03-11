@@ -1,0 +1,32 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    testonly = True,
+    srcs = [
+        "deploy_deposit_contract.go",
+        "docs.go",
+        "geth.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/test/e2etestutil",
+    visibility = ["//test:__subpackages__"],
+    deps = [
+        "//contracts/deposit-contract:go_default_library",
+        "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
+        "@com_github_ethereum_go_ethereum//accounts/keystore:go_default_library",
+        "@com_github_ethereum_go_ethereum//cmd/utils:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
+        "@com_github_ethereum_go_ethereum//core:go_default_library",
+        "@com_github_ethereum_go_ethereum//eth:go_default_library",
+        "@com_github_ethereum_go_ethereum//ethclient:go_default_library",
+        "@com_github_ethereum_go_ethereum//node:go_default_library",
+        "@com_github_ethereum_go_ethereum//p2p:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["geth_test.go"],
+    embed = [":go_default_library"],
+    deps = ["//shared:go_default_library"],
+)

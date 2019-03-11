@@ -1,0 +1,35 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
+
+# gazelle:ignore -- Manually write go_tests so they are separate targets.
+
+test_suite(
+    name = "e2e",
+    tests = [
+        "beacon_multinode_e2e",
+        "beacon_initialsync_e2e",
+    ],
+)
+
+go_test(
+    name = "beacon_multinode_e2e",
+    size = "large",
+    srcs = ["beacon_multinode_e2e_test.go"],
+    tags = [
+        "block-network",
+        "manual",
+    ],
+    deps = [
+        "//test/e2etestutil:go_default_library",
+    ],
+)
+
+go_test(
+    name = "beacon_initialsync_e2e",
+    size = "large",
+    srcs = ["beacon_initialsync_e2e_test.go"],
+    tags = [
+        "block-network",
+        "manual",
+    ],
+)
+
