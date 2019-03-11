@@ -1313,13 +1313,18 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	data = append(data, encodedInput...)
 
 	// We then create a merkle branch for the test.
-	//depositTrie := trieutil.NewDepositTrie()
-	//depositTrie.UpdateDepositTrie(data)
-	//branch := depositTrie.Branch()
+	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{data}, int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatalf("Could not generate trie: %v", err)
+	}
+	proof, err := depositTrie.MerkleProof(0)
+	if err != nil {
+		t.Fatalf("Could not generate proof: %v", err)
+	}
 
 	deposit := &pb.Deposit{
 		DepositData: data,
-		//MerkleBranchHash32S: branch,
+		MerkleBranchHash32S: proof,
 		MerkleTreeIndex: 0,
 	}
 	block := &pb.BeaconBlock{
@@ -1334,13 +1339,13 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
-	//root := depositTrie.Root()
+	root := depositTrie.Root()
 	beaconState := &pb.BeaconState{
 		ValidatorRegistry: registry,
 		ValidatorBalances: balances,
 		LatestEth1Data:    &pb.Eth1Data{
-			//DepositRootHash32: root[:],
-			//BlockHash32:       root[:],
+			DepositRootHash32: root[:],
+			BlockHash32:       root[:],
 		},
 		Slot:        currentSlot,
 		GenesisTime: uint64(genesisTime),
