@@ -61,6 +61,10 @@ func (f *faultyPOWChainService) DepositTrie() *trieutil.MerkleTrie {
 	return &trieutil.MerkleTrie{}
 }
 
+func (f *faultyPOWChainService) ChainStartDeposits() [][]byte {
+	return [][]byte{}
+}
+
 type mockPOWChainService struct {
 	chainStartFeed    *event.Feed
 	latestBlockNumber *big.Int
@@ -107,6 +111,10 @@ func (m *mockPOWChainService) BlockHashByHeight(_ context.Context, height *big.I
 func (m *mockPOWChainService) DepositRoot() [32]byte {
 	root := []byte("depositroot")
 	return bytesutil.ToBytes32(root)
+}
+
+func (f *mockPOWChainService) ChainStartDeposits() [][]byte {
+	return [][]byte{}
 }
 
 func TestWaitForChainStart_ContextClosed(t *testing.T) {

@@ -163,7 +163,7 @@ func generateInitialSimulatedDeposits(numDeposits uint64) ([]*pb.Deposit, []*bls
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not encode genesis block deposits: %v", err)
 		}
-		deposits[i] = &pb.Deposit{DepositData: depositData, MerkleTreeIndex: i}
+		deposits[i] = &pb.Deposit{DepositData: depositData, MerkleTreeIndex: uint64(i)}
 		privKeys[i] = priv
 	}
 	return deposits, privKeys, nil
