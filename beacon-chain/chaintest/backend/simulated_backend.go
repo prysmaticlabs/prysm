@@ -265,7 +265,6 @@ func (sb *SimulatedBackend) initializeStateTest(testCase *StateTestCase) ([]*bls
 	if err := sb.setupBeaconStateAndGenesisBlock(initialDeposits); err != nil {
 		return nil, fmt.Errorf("could not set up beacon state and initialize genesis block %v", err)
 	}
-	//sb.depositTrie = trieutil.NewDepositTrie()
 	return privKeys, nil
 }
 
