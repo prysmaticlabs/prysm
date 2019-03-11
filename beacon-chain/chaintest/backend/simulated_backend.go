@@ -103,8 +103,9 @@ func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain(objects *SimulatedObjec
 	if err != nil {
 		return fmt.Errorf("could not generate simulated beacon block %v", err)
 	}
-
-	newState, err := state.ExecuteStateTransition(
+	newState := sb.state
+	newState.LatestEth1Data = newBlock.Eth1Data
+	newState, err = state.ExecuteStateTransition(
 		context.Background(),
 		sb.state,
 		newBlock,
