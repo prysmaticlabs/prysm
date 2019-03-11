@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 

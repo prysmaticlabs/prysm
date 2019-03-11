@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
-
 	"github.com/ethereum/go-ethereum/common"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
