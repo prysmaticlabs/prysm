@@ -314,35 +314,6 @@ func TestInitDataFromContract_OK(t *testing.T) {
 
 }
 
-//func TestSaveInTrie_OK(t *testing.T) {
-//	endpoint := "ws://127.0.0.1"
-//	testAcc, err := setup()
-//	if err != nil {
-//		t.Fatalf("Unable to set up simulated backend %v", err)
-//	}
-//	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
-//		Endpoint:        endpoint,
-//		DepositContract: testAcc.contractAddr,
-//		Reader:          &goodReader{},
-//		Logger:          &goodLogger{},
-//		ContractBackend: testAcc.backend,
-//	})
-//	if err != nil {
-//		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
-//	}
-//
-//	testAcc.backend.Commit()
-//
-//	web3Service.depositTrie = trieutil.NewDepositTrie()
-//	mockTrie := trieutil.NewDepositTrie()
-//	mockTrie.UpdateDepositTrie([]byte{'A'})
-//
-//	if err := web3Service.saveInTrie([]byte{'A'}, mockTrie.Root()); err != nil {
-//		t.Errorf("Unable to save deposit in trie %v", err)
-//	}
-//
-//}
-
 func TestWeb3Service_BadReader(t *testing.T) {
 	hook := logTest.NewGlobal()
 	endpoint := "ws://127.0.0.1"
@@ -456,8 +427,6 @@ func TestProcessDepositLog_OK(t *testing.T) {
 
 	testAcc.backend.Commit()
 
-	//web3Service.depositTrie = trieutil.NewDepositTrie()
-
 	var stub [48]byte
 	copy(stub[:], []byte("testing"))
 
@@ -520,8 +489,6 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 
 	testAcc.backend.Commit()
 
-	//web3Service.depositTrie = trieutil.NewDepositTrie()
-
 	var stub [48]byte
 	copy(stub[:], []byte("testing"))
 
@@ -582,8 +549,6 @@ func TestProcessDepositLog_SkipDuplicateLog(t *testing.T) {
 	}
 
 	testAcc.backend.Commit()
-
-	//web3Service.depositTrie = trieutil.NewDepositTrie()
 
 	var stub [48]byte
 	copy(stub[:], []byte("testing"))
@@ -736,8 +701,6 @@ func TestProcessChainStartLog_OK(t *testing.T) {
 
 	testAcc.backend.Commit()
 	testAcc.backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
-
-	//web3Service.depositTrie = trieutil.NewDepositTrie()
 
 	var stub [48]byte
 	copy(stub[:], []byte("testing"))

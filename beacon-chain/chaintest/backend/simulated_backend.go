@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -32,7 +33,7 @@ type SimulatedBackend struct {
 	state          *pb.BeaconState
 	prevBlockRoots [][32]byte
 	inMemoryBlocks []*pb.BeaconBlock
-	//depositTrie    *trieutil.DepositTrie
+	historicalDeposits []*pb.Deposit
 }
 
 // SimulatedObjects is a container to hold the
@@ -65,6 +66,7 @@ func NewSimulatedBackend() (*SimulatedBackend, error) {
 		chainService:   cs,
 		beaconDB:       db,
 		inMemoryBlocks: make([]*pb.BeaconBlock, 0),
+		historicalDeposits: make([]*pb.Deposit, 0),
 	}, nil
 }
 
@@ -78,7 +80,6 @@ func (sb *SimulatedBackend) SetupBackend(numOfDeposits uint64) ([]*bls.SecretKey
 	if err := sb.setupBeaconStateAndGenesisBlock(initialDeposits); err != nil {
 		return nil, fmt.Errorf("could not set up beacon state and initialize genesis block %v", err)
 	}
-	//sb.depositTrie = trieutil.NewDepositTrie()
 	return privKeys, nil
 }
 
@@ -96,17 +97,12 @@ func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain(objects *SimulatedObjec
 	newBlock, newBlockRoot, err := generateSimulatedBlock(
 		sb.state,
 		prevBlockRoot,
+		sb.historicalDeposits,
 		objects,
 		privKeys,
 	)
 	if err != nil {
 		return fmt.Errorf("could not generate simulated beacon block %v", err)
-	}
-	//latestRoot := sb.depositTrie.Root()
-
-	sb.state.LatestEth1Data = &pb.Eth1Data{
-		//DepositRootHash32: latestRoot[:],
-		BlockHash32: []byte{},
 	}
 
 	newState, err := state.ExecuteStateTransition(
@@ -123,6 +119,9 @@ func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain(objects *SimulatedObjec
 	sb.state = newState
 	sb.prevBlockRoots = append(sb.prevBlockRoots, newBlockRoot)
 	sb.inMemoryBlocks = append(sb.inMemoryBlocks, newBlock)
+	if len(newBlock.Body.Deposits) > 0 {
+		sb.historicalDeposits = append(sb.historicalDeposits, newBlock.Body.Deposits...)
+	}
 
 	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"errors"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"io/ioutil"
 	"math/big"
 	"reflect"
@@ -487,13 +488,24 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	pendingDeposits := []*pb.Deposit{
 		createPreChainStartDeposit(t, []byte{'F'}),
 	}
-	//depositTrie := trieutil.NewDepositTrie()
-	//for _, pd := range pendingDeposits {
-	//	depositTrie.UpdateDepositTrie(pd.DepositData)
-	//	pd.MerkleBranchHash32S = depositTrie.Branch()
-	//}
-	//depositRoot := depositTrie.Root()
-	//beaconState.LatestEth1Data.DepositRootHash32 = depositRoot[:]
+	pendingDepositsData := make([][]byte, len(pendingDeposits))
+	for i, pd := range pendingDeposits {
+		pendingDepositsData[i] = pd.DepositData
+	}
+	depositTrie, err := trieutil.GenerateTrieFromItems(pendingDepositsData, int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatalf("Could not generate deposit trie: %v", err)
+	}
+	for i := range pendingDeposits {
+		pendingDeposits[i].MerkleTreeIndex = 0
+		proof, err := depositTrie.MerkleProof(int(pendingDeposits[i].MerkleTreeIndex))
+		if err != nil {
+			t.Fatalf("Could not generate proof: %v", err)
+		}
+		pendingDeposits[i].MerkleBranchHash32S = proof
+	}
+	depositRoot := depositTrie.Root()
+	beaconState.LatestEth1Data.DepositRootHash32 = depositRoot[:]
 
 	block := &pb.BeaconBlock{
 		Slot:             currentSlot + 1,

@@ -77,6 +77,11 @@ func (m *MerkleTrie) Root() [32]byte {
 	return bytesutil.ToBytes32(m.branches[0][0])
 }
 
+// The original items passed in when creating the Merkle trie.
+func (m *MerkleTrie) Items() [][]byte {
+	return m.originalItems
+}
+
 // MerkleProof obtains a Merkle proof for an item at a given
 // index in the Merkle trie up to the root of the trie.
 func (m *MerkleTrie) MerkleProof(merkleIndex int) ([][]byte, error) {
