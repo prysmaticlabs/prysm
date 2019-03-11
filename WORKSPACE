@@ -1046,3 +1046,9 @@ go_repository(
     commit = "a5947ffaace3e882f334c1750858b4a6a7e52422",
     importpath = "golang.org/x/xerrors",
 )
+
+go_repository(
+    name = "com_github_grpc_ecosystem_go_grpc_middleware",
+    commit = "cfaf5686ec79ff8344257723b6f5ba1ae0ffeb4d",
+    importpath = "github.com/grpc-ecosystem/go-grpc-middleware",
+)

@@ -932,6 +932,38 @@ func TestHasChainStartLogOccurred_OK(t *testing.T) {
 	}
 }
 
+func TestStatus(t *testing.T) {
+	now := time.Now()
+
+	beforeFiveMinutesAgo := now.Add(-5*time.Minute - 30*time.Second)
+	afterFiveMinutesAgo := now.Add(-5*time.Minute + 30*time.Second)
+
+	testCases := map[*Web3Service]string{
+		// "status is ok" cases
+		{}: "",
+		{isRunning: true, blockTime: afterFiveMinutesAgo}:         "",
+		{isRunning: false, blockTime: beforeFiveMinutesAgo}:       "",
+		{isRunning: false, runError: errors.New("test runError")}: "",
+		// "status is error" cases
+		{isRunning: true, blockTime: beforeFiveMinutesAgo}: "web3 client is not syncing",
+		{isRunning: true}: "web3 client is not syncing",
+		{isRunning: true, runError: errors.New("test runError")}: "test runError",
+	}
+
+	for web3ServiceState, wantedErrorText := range testCases {
+		status := web3ServiceState.Status()
+		if status == nil {
+			if wantedErrorText != "" {
+				t.Errorf("Wanted: \"%v\", but Status() return nil", wantedErrorText)
+			}
+		} else {
+			if status.Error() != wantedErrorText {
+				t.Errorf("Wanted: \"%v\", but Status() return: \"%v\"", wantedErrorText, status.Error())
+			}
+		}
+	}
+}
+
 func TestBlockHashByHeight_ReturnsHash(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
@@ -1061,4 +1093,19 @@ func TestBlockExists_UsesCachedBlockInfo(t *testing.T) {
 	if height.Cmp(block.Number()) != 0 {
 		t.Fatalf("Block height did not equal expected height, expected: %v, got: %v", big.NewInt(42), height)
 	}
+}
+
+func TestHandlePanic_OK(t *testing.T) {
+	hook := logTest.NewGlobal()
+	endpoint := "ws://127.0.0.1"
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint:     endpoint,
+		BlockFetcher: nil, // nil blockFetcher would panic if cached value not used
+	})
+	if err != nil {
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+
+	web3Service.processSubscribedHeaders(nil)
+	testutil.AssertLogsContain(t, hook, "Panicked when handling data from ETH 1.0 Chain!")
 }
