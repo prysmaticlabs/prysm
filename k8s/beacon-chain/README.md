@@ -22,17 +22,15 @@ https://github.com/kubernetes/minikube/blob/master/docs/drivers.md#hyperkit-driv
 
 `minikube dashboard`
 
-### Set up the configs
+### Set up the beacon-chain config
 
 Deploy a new deposit contract with:
 
 ```
-bazel run //contracts/deposit-contract/deployContract -- --httpPath=https://goerli.prylabs.net --privKey=$(echo /path/to/private/key/file) --chainStart=8 --minDeposit=100000 --maxDeposit=3200000 --customChainstartDelay 120
+bazel run //contracts/deposit-contract/deployContract -- --httpPath=https://goerli.prylabs.net --privKey=$(cat /path/to/private/key/file) --chainStart=8 --minDeposit=100000 --maxDeposit=3200000 --customChainstartDelay 120
 ```
 
 Place the Goerli network deposit contract address from above in `k8s/beacon-chain/beacon-config.config.yaml`
-
-Convert a goerli private key with ETH to base64 in [a browser js console](https://stackoverflow.com/questions/246801/how-can-you-encode-a-string-to-base64-in-javascript) and set it in `k8s/beacon-chain/cluster-manager.encrypted_secret.yaml`.
 
 ### Apply the namespace and config yamls
 
@@ -40,7 +38,7 @@ Convert a goerli private key with ETH to base64 in [a browser js console](https:
 cd k8s/
 kubectl apply -f priority.yaml
 
-cd beacon-chain
+cd beacon-chain/
 kubectl apply -f namespace.yaml
 kubectl apply -f beacon-config.config.yaml
 ```
@@ -68,6 +66,21 @@ Change the lines 40-53 to:
 
 (commenting out the 3 tracing items and the bootstrap/relay nodes)
 
+### Apply the beacon chain yamls to start the beacon-chain
+
+```
+kubectl apply -f beacon-chain.service.yaml
+kubectl apply -f beacon-chain.deploy.yaml
+```
+
+### Go into the minikube dashboard and set your namespace to "beacon-chain" in the middle of the left side
+
+You should see 3 beacon-chain node replicas
+
+### Add your private key into the cluster manger config
+
+Convert a goerli private key with ETH to base64 in [a browser js console](https://stackoverflow.com/questions/246801/how-can-you-encode-a-string-to-base64-in-javascript) and set it in `k8s/beacon-chain/cluster-manager.encrypted_secret.yaml`.
+
 ### Edit the validator.deploy.yaml to prepare it for a local instance
 
 Change the lines 20-28 to:
@@ -85,17 +98,6 @@ Change the lines 20-28 to:
 ```
 
 (commenting out the bottom 3)
-
-### Apply the beacon chain yamls to start the beacon-chain
-
-```
-kubectl apply -f beacon-chain.service.yaml
-kubectl apply -f beacon-chain.deploy.yaml
-```
-
-### Go into the minikube dashboard and set your namespace to "beacon-chain" in the middle of the left side
-
-You should see 3 beacon-chain node replicas
 
 ### Apply the cluster manager and validator yamls
 
