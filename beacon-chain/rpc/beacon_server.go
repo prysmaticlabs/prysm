@@ -210,12 +210,12 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 	}
 	// Only request deposits that have passed the ETH1 follow distance window.
 	bNum = bNum.Sub(bNum, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
-	pendingDeps := bs.beaconDB.PendingDeposits(ctx, bNum)
 	allDeps := bs.beaconDB.AllDeposits(ctx, bNum)
 	if len(allDeps) == 0 {
 		return &pb.PendingDepositsResponse{PendingDeposits: nil}, nil
 	}
 
+	pendingDeps := bs.beaconDB.PendingDeposits(ctx, bNum)
 	// Need to fetch if the deposits up to the state's latest eth 1 data matches
 	// the number of all deposits in this RPC call. If not, then we return nil.
 	beaconState, err := bs.beaconDB.State(ctx)
@@ -243,18 +243,10 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 		return nil, fmt.Errorf("could not generate historical deposit trie from deposits: %v", err)
 	}
 	for i := range pendingDeps {
-		proof, err := depositTrie.MerkleProof(int(pendingDeps[i].MerkleTreeIndex))
+		pendingDeps[i], err = constructMerkleProof(depositTrie, pendingDeps[i])
 		if err != nil {
-			return nil, fmt.Errorf(
-				"could not generate merkle proof for deposit at index %d: %v",
-				pendingDeps[i].MerkleTreeIndex,
-				err,
-			)
+			return nil, err
 		}
-		// For every deposit, we construct a Merkle proof using the powchain service's
-		// in-memory deposits trie, which is updated only once the state's LatestETH1Data
-		// property changes during a state transition after a voting period.
-		pendingDeps[i].MerkleBranchHash32S = proof
 	}
 	return &pb.PendingDepositsResponse{PendingDeposits: pendingDeps}, nil
 }
@@ -268,7 +260,7 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 	// Fetch all historical deposits up to an ancestor height.
 	allDeposits := bs.beaconDB.AllDeposits(ctx, ancestorHeight)
 	depositData := [][]byte{}
-	// If there are no historical deposits up to an ancestor height, then we just fetch the default
+	// If there are less than or equal to len(ChainStartDeposits) historical deposits, then we just fetch the default
 	// deposit root obtained from constructing the Merkle trie with the ChainStart deposits.
 	chainStartDeposits := bs.powChainService.ChainStartDeposits()
 	if len(allDeposits) <= len(chainStartDeposits) {
@@ -291,4 +283,20 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 			BlockHash32:       blockHash[:],
 		},
 	}, nil
+}
+
+func constructMerkleProof(trie *trieutil.MerkleTrie, deposit *pbp2p.Deposit) (*pbp2p.Deposit, error) {
+	proof, err := trie.MerkleProof(int(deposit.MerkleTreeIndex))
+	if err != nil {
+		return nil, fmt.Errorf(
+			"could not generate merkle proof for deposit at index %d: %v",
+			deposit.MerkleTreeIndex,
+			err,
+		)
+	}
+	// For every deposit, we construct a Merkle proof using the powchain service's
+	// in-memory deposits trie, which is updated only once the state's LatestETH1Data
+	// property changes during a state transition after a voting period.
+	deposit.MerkleBranchHash32S = proof
+	return deposit, nil
 }
