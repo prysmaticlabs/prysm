@@ -1158,9 +1158,9 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	//branch := depositTrie.Branch()
 
 	deposit := &pb.Deposit{
-		DepositData:         data,
+		DepositData: data,
 		//MerkleBranchHash32S: branch,
-		MerkleTreeIndex:     0,
+		MerkleTreeIndex: 0,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -1227,9 +1227,9 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	//branch := depositTrie.Branch()
 
 	deposit := &pb.Deposit{
-		DepositData:         data,
+		DepositData: data,
 		//MerkleBranchHash32S: branch,
-		MerkleTreeIndex:     0,
+		MerkleTreeIndex: 0,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -1249,7 +1249,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	beaconState := &pb.BeaconState{
 		ValidatorRegistry: registry,
 		ValidatorBalances: balances,
-		LatestEth1Data: &pb.Eth1Data{
+		LatestEth1Data:    &pb.Eth1Data{
 			//DepositRootHash32: root[:],
 			//BlockHash32:       root[:],
 		},
@@ -1308,9 +1308,9 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	//branch := depositTrie.Branch()
 
 	deposit := &pb.Deposit{
-		DepositData:         data,
+		DepositData: data,
 		//MerkleBranchHash32S: branch,
-		MerkleTreeIndex:     0,
+		MerkleTreeIndex: 0,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -1328,7 +1328,7 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	beaconState := &pb.BeaconState{
 		ValidatorRegistry: registry,
 		ValidatorBalances: balances,
-		LatestEth1Data: &pb.Eth1Data{
+		LatestEth1Data:    &pb.Eth1Data{
 			//DepositRootHash32: root[:],
 			//BlockHash32:       root[:],
 		},

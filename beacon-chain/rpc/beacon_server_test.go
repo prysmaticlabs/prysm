@@ -5,12 +5,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"math/big"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 
 	"github.com/ethereum/go-ethereum/common"
 	ptypes "github.com/gogo/protobuf/types"
@@ -58,7 +59,7 @@ func (f *faultyPOWChainService) DepositRoot() [32]byte {
 }
 
 func (f *faultyPOWChainService) DepositTrie() *trieutil.MerkleTrie {
-    return &trieutil.MerkleTrie{}
+	return &trieutil.MerkleTrie{}
 }
 
 type mockPOWChainService struct {

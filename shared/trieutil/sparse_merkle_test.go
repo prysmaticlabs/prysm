@@ -1,8 +1,9 @@
 package trieutil
 
 import (
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 func TestMerkleTrie_BranchIndices(t *testing.T) {

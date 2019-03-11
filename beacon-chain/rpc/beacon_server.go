@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"math/big"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -213,7 +214,7 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 	pendingDeps := bs.beaconDB.PendingDeposits(ctx, bNum)
 	allDeps := bs.beaconDB.AllDeposits(ctx, bNum)
 	if len(allDeps) == 0 {
-        return &pb.PendingDepositsResponse{PendingDeposits: nil}, nil
+		return &pb.PendingDepositsResponse{PendingDeposits: nil}, nil
 	}
 
 	// Need to fetch if the deposits up to the state's latest eth 1 data matches
@@ -271,7 +272,7 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 	// If there are no historical deposits up to an ancestor height, then we just fetch the default
 	// deposit root obtained from constructing the Merkle trie with the ChainStart deposits.
 	chainStartDeposits := bs.powChainService.ChainStartDeposits()
-    if len(allDeposits) <= len(chainStartDeposits) {
+	if len(allDeposits) <= len(chainStartDeposits) {
 		depositData = chainStartDeposits
 	} else {
 		indices := []uint64{}
@@ -280,11 +281,11 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 			indices = append(indices, allDeposits[i].MerkleTreeIndex)
 		}
 	}
-   	depositTrie, err := trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
-   	if err != nil {
-   		return nil, fmt.Errorf("could not generate historical deposit trie from deposits: %v", err)
+	depositTrie, err := trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		return nil, fmt.Errorf("could not generate historical deposit trie from deposits: %v", err)
 	}
-   	depositRoot := depositTrie.Root()
+	depositRoot := depositTrie.Root()
 	return &pb.Eth1DataResponse{
 		Eth1Data: &pbp2p.Eth1Data{
 			DepositRootHash32: depositRoot[:],

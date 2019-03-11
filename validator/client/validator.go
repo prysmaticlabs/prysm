@@ -71,6 +71,9 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 		v.genesisTime = chainStartRes.GenesisTime
 		break
 	}
+	// Once the ChainStart log is received, we update the genesis time of the validator client
+	// and begin a slot ticker used to track the current slot the beacon node is in.
+	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
 	log.Infof("Beacon chain initialized at unix time: %v", time.Unix(int64(v.genesisTime), 0))
 	return nil
 }
@@ -105,13 +108,6 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 		}
 		validatorActivatedRecord = res.Validator
 		break
-	}
-	if validatorActivatedRecord.ActivationEpoch != 0 && validatorActivatedRecord.ActivationEpoch != params.BeaconConfig().GenesisEpoch {
-		normalizedEpoch := validatorActivatedRecord.ActivationEpoch  - params.BeaconConfig().GenesisEpoch
-		activationEpochSeconds := normalizedEpoch * params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().SecondsPerSlot
-		v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime+activationEpochSeconds), 0), params.BeaconConfig().SecondsPerSlot)
-	} else {
-		v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
 	}
 	log.WithFields(logrus.Fields{
 		"activationEpoch": validatorActivatedRecord.ActivationEpoch - params.BeaconConfig().GenesisEpoch,

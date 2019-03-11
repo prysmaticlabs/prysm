@@ -106,7 +106,7 @@ func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain(objects *SimulatedObjec
 
 	sb.state.LatestEth1Data = &pb.Eth1Data{
 		//DepositRootHash32: latestRoot[:],
-		BlockHash32:       []byte{},
+		BlockHash32: []byte{},
 	}
 
 	newState, err := state.ExecuteStateTransition(

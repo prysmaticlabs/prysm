@@ -3,6 +3,7 @@ package trieutil
 import (
 	"bytes"
 	"errors"
+
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -11,7 +12,7 @@ import (
 // MerkleTrie implements a sparse, general purpose Merkle trie to be used
 // across ETH2.0 Phase 0 functionality.
 type MerkleTrie struct {
-	branches [][][]byte
+	branches      [][][]byte
 	originalItems [][]byte // list of provided items before hashing them into leaves.
 }
 

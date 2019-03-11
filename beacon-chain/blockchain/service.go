@@ -6,8 +6,9 @@ package blockchain
 import (
 	"context"
 	"fmt"
-	"github.com/gogo/protobuf/proto"
 	"time"
+
+	"github.com/gogo/protobuf/proto"
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -348,10 +349,6 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 
 	log.WithField("slotNumber", block.Slot-params.BeaconConfig().GenesisSlot).Info(
 		"Executing state transition")
-
-	// We check what the latest ETH1 data is in the state before
-	// executing any state transitions in case it changes.
-	latestEth1Data := beaconState.LatestEth1Data
 
 	// Check for skipped slots.
 	numSkippedSlots := 0

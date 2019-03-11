@@ -82,15 +82,12 @@ func CanProcessValidatorRegistry(ctx context.Context, state *pb.BeaconState) boo
 //		 Set state.eth1_data_votes = [].
 //
 func ProcessEth1Data(ctx context.Context, state *pb.BeaconState) *pb.BeaconState {
-
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.ProcessEth1Data")
 	defer span.End()
 
 	for _, eth1DataVote := range state.Eth1DataVotes {
 		if eth1DataVote.VoteCount*2 > params.BeaconConfig().SlotsPerEpoch*
 			params.BeaconConfig().EpochsPerEth1VotingPeriod {
-			log.Info("LatestETH1Data vote wins the voting period!")
-			log.Infof("Winner: %v", state.LatestEth1Data)
 			state.LatestEth1Data = eth1DataVote.Eth1Data
 		}
 	}

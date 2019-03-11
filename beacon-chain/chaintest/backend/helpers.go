@@ -73,9 +73,9 @@ func generateSimulatedBlock(
 		//merkleBranch := depositsTrie.Branch()
 
 		block.Body.Deposits = append(block.Body.Deposits, &pb.Deposit{
-			DepositData:         data,
+			DepositData: data,
 			//MerkleBranchHash32S: merkleBranch,
-			MerkleTreeIndex:     simObjects.simDeposit.MerkleIndex,
+			MerkleTreeIndex: simObjects.simDeposit.MerkleIndex,
 		})
 	}
 	if simObjects.simProposerSlashing != nil {
