@@ -1,8 +1,7 @@
-package powchain
+package ssz
 
 import (
 	"math/big"
-	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -34,12 +33,6 @@ var (
 	})
 )
 
-// blockInfo specifies the block information in the ETH 1.0 chain.
-type blockInfo struct {
-	Number *big.Int
-	Hash   common.Hash
-}
-
 // hashKeyFn takes the hex string representation as the key for a blockInfo.
 func hashKeyFn(obj interface{}) (string, error) {
 	bInfo, ok := obj.(*blockInfo)
@@ -61,20 +54,10 @@ func heightKeyFn(obj interface{}) (string, error) {
 	return bInfo.Number.String(), nil
 }
 
-// blockCache struct with two queues for looking up by hash or by block height.
-type blockCache struct {
-	hashCache   *cache.FIFO
-	heightCache *cache.FIFO
-	lock        sync.RWMutex
-}
-
 // newBlockCache creates a new block cache for storing/accessing blockInfo from
 // memory.
-func newBlockCache() *blockCache {
-	return &blockCache{
-		hashCache:   cache.NewFIFO(hashKeyFn),
-		heightCache: cache.NewFIFO(heightKeyFn),
-	}
+func newHashCache() *cache.FIFO {
+	return cache.NewFIFO(hashKeyFn)
 }
 
 // BlockInfoByHash fetches blockInfo by its block hash. Returns true with a
