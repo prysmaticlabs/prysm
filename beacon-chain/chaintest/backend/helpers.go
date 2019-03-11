@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/forkutils"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 // Generates a simulated beacon block to use
@@ -21,7 +21,7 @@ import (
 func generateSimulatedBlock(
 	beaconState *pb.BeaconState,
 	prevBlockRoot [32]byte,
-    historicalDeposits []*pb.Deposit,
+	historicalDeposits []*pb.Deposit,
 	simObjects *SimulatedObjects,
 	privKeys []*bls.SecretKey,
 ) (*pb.BeaconBlock, [32]byte, error) {
@@ -70,9 +70,9 @@ func generateSimulatedBlock(
 
 		// We then update the deposits Merkle trie with the deposit data and return
 		// its Merkle branch leading up to the root of the trie.
-        historicalDepositData := make([][]byte, len(historicalDeposits))
-        for i := range historicalDeposits {
-        	historicalDepositData[i] = historicalDeposits[i].DepositData
+		historicalDepositData := make([][]byte, len(historicalDeposits))
+		for i := range historicalDeposits {
+			historicalDepositData[i] = historicalDeposits[i].DepositData
 		}
 		newTrie, err := trieutil.GenerateTrieFromItems(append(historicalDepositData, data), int(params.BeaconConfig().DepositContractTreeDepth))
 		if err != nil {
@@ -86,9 +86,9 @@ func generateSimulatedBlock(
 		root := newTrie.Root()
 		block.Eth1Data.DepositRootHash32 = root[:]
 		block.Body.Deposits = append(block.Body.Deposits, &pb.Deposit{
-			DepositData: data,
+			DepositData:         data,
 			MerkleBranchHash32S: proof,
-			MerkleTreeIndex: simObjects.simDeposit.MerkleIndex,
+			MerkleTreeIndex:     simObjects.simDeposit.MerkleIndex,
 		})
 	}
 	if simObjects.simProposerSlashing != nil {

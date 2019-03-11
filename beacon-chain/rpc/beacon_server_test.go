@@ -312,22 +312,22 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	readyDeposits := []*pbp2p.Deposit{
 		{
 			MerkleTreeIndex: 0,
-			DepositData: []byte("a"),
+			DepositData:     []byte("a"),
 		},
 		{
 			MerkleTreeIndex: 1,
-			DepositData: []byte("b"),
+			DepositData:     []byte("b"),
 		},
 	}
 
 	recentDeposits := []*pbp2p.Deposit{
 		{
 			MerkleTreeIndex: 2,
-			DepositData: []byte("c"),
+			DepositData:     []byte("c"),
 		},
 		{
 			MerkleTreeIndex: 3,
-			DepositData: []byte("d"),
+			DepositData:     []byte("d"),
 		},
 	}
 	ctx := context.Background()
@@ -348,7 +348,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-    if len(result.PendingDeposits) != 0 {
+	if len(result.PendingDeposits) != 0 {
 		t.Errorf("Received unexpected list of deposits: %+v, wanted: 0", len(result.PendingDeposits))
 	}
 
@@ -413,7 +413,7 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 	depositRoot := depositTrie.Root()
 	beaconState := &pbp2p.BeaconState{
 		LatestEth1Data: &pbp2p.Eth1Data{
-			BlockHash32: []byte("hash0"),
+			BlockHash32:       []byte("hash0"),
 			DepositRootHash32: depositRoot[:],
 		},
 		Eth1DataVotes: []*pbp2p.Eth1DataVote{},

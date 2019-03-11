@@ -5,12 +5,13 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"errors"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"io/ioutil"
 	"math/big"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"

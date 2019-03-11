@@ -150,7 +150,7 @@ func NewWeb3Service(ctx context.Context, config *Web3ServiceConfig) (*Web3Servic
 		depositContractAddress:  config.DepositContract,
 		chainStartFeed:          new(event.Feed),
 		client:                  config.Client,
-		depositTrie: depositTrie,
+		depositTrie:             depositTrie,
 		reader:                  config.Reader,
 		logger:                  config.Logger,
 		blockFetcher:            config.BlockFetcher,

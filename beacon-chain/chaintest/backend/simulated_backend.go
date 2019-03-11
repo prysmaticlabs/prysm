@@ -27,11 +27,11 @@ import (
 // of an in-memory beacon chain for client test runs
 // and other e2e use cases.
 type SimulatedBackend struct {
-	chainService   *blockchain.ChainService
-	beaconDB       *db.BeaconDB
-	state          *pb.BeaconState
-	prevBlockRoots [][32]byte
-	inMemoryBlocks []*pb.BeaconBlock
+	chainService       *blockchain.ChainService
+	beaconDB           *db.BeaconDB
+	state              *pb.BeaconState
+	prevBlockRoots     [][32]byte
+	inMemoryBlocks     []*pb.BeaconBlock
 	historicalDeposits []*pb.Deposit
 }
 
@@ -62,9 +62,9 @@ func NewSimulatedBackend() (*SimulatedBackend, error) {
 		return nil, err
 	}
 	return &SimulatedBackend{
-		chainService:   cs,
-		beaconDB:       db,
-		inMemoryBlocks: make([]*pb.BeaconBlock, 0),
+		chainService:       cs,
+		beaconDB:           db,
+		inMemoryBlocks:     make([]*pb.BeaconBlock, 0),
 		historicalDeposits: make([]*pb.Deposit, 0),
 	}, nil
 }

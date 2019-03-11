@@ -6,11 +6,12 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -1164,9 +1165,9 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	}
 
 	deposit := &pb.Deposit{
-		DepositData: data,
+		DepositData:         data,
 		MerkleBranchHash32S: proof,
-		MerkleTreeIndex: 0,
+		MerkleTreeIndex:     0,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -1237,9 +1238,9 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 		t.Fatalf("Could not generate proof: %v", err)
 	}
 	deposit := &pb.Deposit{
-		DepositData: data,
+		DepositData:         data,
 		MerkleBranchHash32S: proof,
-		MerkleTreeIndex: 0,
+		MerkleTreeIndex:     0,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -1259,7 +1260,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	beaconState := &pb.BeaconState{
 		ValidatorRegistry: registry,
 		ValidatorBalances: balances,
-		LatestEth1Data:    &pb.Eth1Data{
+		LatestEth1Data: &pb.Eth1Data{
 			DepositRootHash32: root[:],
 			BlockHash32:       root[:],
 		},
@@ -1323,9 +1324,9 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	}
 
 	deposit := &pb.Deposit{
-		DepositData: data,
+		DepositData:         data,
 		MerkleBranchHash32S: proof,
-		MerkleTreeIndex: 0,
+		MerkleTreeIndex:     0,
 	}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
@@ -1343,7 +1344,7 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	beaconState := &pb.BeaconState{
 		ValidatorRegistry: registry,
 		ValidatorBalances: balances,
-		LatestEth1Data:    &pb.Eth1Data{
+		LatestEth1Data: &pb.Eth1Data{
 			DepositRootHash32: root[:],
 			BlockHash32:       root[:],
 		},

@@ -609,7 +609,7 @@ func TestProcessChainStartLog_OK(t *testing.T) {
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
 		ContractBackend: testAcc.backend,
-		BeaconDB: &db.BeaconDB{},
+		BeaconDB:        &db.BeaconDB{},
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
