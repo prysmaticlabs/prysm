@@ -15,7 +15,7 @@ func TestMultiNodeDeployment(t *testing.T) {
 	contractAddr := geth.DeployDepositContract()
 	// Generate private keys for validator
 	// Start beacon node(s)
-	beacons := e2etestutil.NewBeaconNodes(t, 3)
+	beacons := e2etestutil.NewBeaconNodes(t, 3, geth)
 	beacons.Start()
 	defer beacons.Stop()
 	// Start validators

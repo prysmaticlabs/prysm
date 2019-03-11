@@ -41,6 +41,7 @@ func (g *GoEthereumInstance) DeployDepositContract() common.Address {
 		g.t.Fatal(err)
 	}
 	g.depositContract = depContract
+	g.DepositContractAddr = addr
 	return addr
 }
 

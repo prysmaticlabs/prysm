@@ -8,7 +8,10 @@ go_library(
         "shuffle.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/utils",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//test:__subpackages__",
+    ],
     deps = [
         "//shared/hashutil:go_default_library",
         "//shared/params:go_default_library",

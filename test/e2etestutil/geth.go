@@ -5,6 +5,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/cmd/utils"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/node"
@@ -15,6 +16,8 @@ import (
 var blockPeriod = uint64(15)
 
 type GoEthereumInstance struct {
+	DepositContractAddr common.Address
+
 	t               *testing.T
 	node            *node.Node
 	ks              *keystore.KeyStore
