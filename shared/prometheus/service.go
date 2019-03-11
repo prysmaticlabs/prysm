@@ -103,17 +103,19 @@ func (s *Service) Status() error {
 }
 
 // ToFloat64 convert counters to float64
-func ToFloat64(m prometheus.Metric) float64 {
+func ToFloat64(m prometheus.Metric) (float64, error) {
 	pb := &pm.Metric{}
-	m.Write(pb)
+	if err := m.Write(pb); err != nil {
+		return math.NaN(), err
+	}
 	if pb.Gauge != nil {
-		return pb.Gauge.GetValue()
+		return pb.Gauge.GetValue(), nil
 	}
 	if pb.Counter != nil {
-		return pb.Counter.GetValue()
+		return pb.Counter.GetValue(), nil
 	}
 	if pb.Untyped != nil {
-		return pb.Untyped.GetValue()
+		return pb.Untyped.GetValue(), nil
 	}
-	return math.NaN()
+	return math.NaN(), nil
 }

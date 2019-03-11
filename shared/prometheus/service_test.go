@@ -102,7 +102,11 @@ func TestToFloat64(t *testing.T) {
 		Help: "test counter",
 	})
 	counter.Inc()
-	if s := ToFloat64(counter); s != 1 {
+	s, err := ToFloat64(counter)
+	if err != nil {
+		t.Errorf("Error returned: %v", err)
+	}
+	if s != 1 {
 		t.Errorf("Wanted: %v, got: %v", 1, s)
 	}
 

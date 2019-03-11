@@ -192,7 +192,7 @@ func (w *Web3Service) Stop() error {
 func (w *Web3Service) ChainStartFeed() *event.Feed {
 	return w.chainStartFeed
 }
-func (w *Web3Service) saveToDb() {
+func (w *Web3Service) saveToDb() error {
 	powDepState := &pb.POWDepositState{}
 	if (w.depositTrie != nil && w.depositTrie != &trieutil.DepositTrie{}) {
 		powDepState.DepositTrie = w.depositTrie.GetTrie()
@@ -203,8 +203,7 @@ func (w *Web3Service) saveToDb() {
 	if w.LatestBlockHeight() != nil {
 		powDepState.LastBlockHeight = w.LatestBlockHeight().Uint64()
 	}
-
-	w.beaconDB.SaveDepositState(powDepState)
+	return w.beaconDB.SaveDepositState(powDepState)
 }
 
 // ChainStartDeposits returns a slice of validator deposits processed
@@ -489,7 +488,10 @@ func (w *Web3Service) run(done <-chan struct{}) {
 				w.runError = err
 				log.Errorf("Unable to add block data to cache %v", err)
 			}
-			w.saveToDb()
+			if err := w.saveToDb(); err != nil {
+				w.runError = err
+				log.Errorf("Error while trying to cache pow status to db: %v", err)
+			}
 
 		case <-ticker.C:
 			w.handleDelayTicker()

@@ -537,7 +537,9 @@ func TestLatestMainchainInfoFromDB_OK(t *testing.T) {
 	}
 
 	web3Service.ProcessLog(logs[0])
-	web3Service.saveToDb()
+	if err := web3Service.saveToDb(); err != nil {
+		t.Fatalf("Got error while trying to save to db %v", err)
+	}
 	exitRoutine := make(chan bool)
 	web3Service.reader = &goodReader{}
 	web3Service.logger = &goodLogger{}
