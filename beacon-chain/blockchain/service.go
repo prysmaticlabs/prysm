@@ -65,13 +65,6 @@ type Config struct {
 	EnablePOWChain   bool
 }
 
-// attestationTarget consists of validator index and block, it's
-// used to represent which validator index has voted which block.
-type attestationTarget struct {
-	validatorIndex uint64
-	block          *pb.BeaconBlock
-}
-
 // NewChainService instantiates a new service instance that will
 // be registered into a running beacon node.
 func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
@@ -267,14 +260,21 @@ func (c *ChainService) processBlock(message proto.Message) {
 
 // ApplyForkChoiceRule determines the current beacon chain head using LMD GHOST as a block-vote
 // weighted function to select a canonical head in Ethereum Serenity.
-func (c *ChainService) ApplyForkChoiceRule(block *pb.BeaconBlock, computedState *pb.BeaconState) error {
+func (c *ChainService) ApplyForkChoiceRule(block *pb.BeaconBlock, postState *pb.BeaconState) error {
 	h, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return fmt.Errorf("could not tree hash incoming block: %v", err)
 	}
-	// TODO(#1307): Use LMD GHOST as the fork-choice rule for Ethereum Serenity.
-	// TODO(#674): Handle chain reorgs.
-	if err := c.beaconDB.UpdateChainHead(block, computedState); err != nil {
+	attestationTargets, err := c.attestationTargets(postState)
+	if err != nil {
+		return fmt.Errorf("could not retreive attestation target: %v", err)
+	}
+	head, err := c.lmdGhost(block, postState, attestationTargets)
+	if err != nil {
+		return fmt.Errorf("could not run fork choice: %v", err)
+	}
+
+	if err := c.beaconDB.UpdateChainHead(head, postState); err != nil {
 		return fmt.Errorf("failed to update chain: %v", err)
 	}
 	log.WithField("blockRoot", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
@@ -284,7 +284,7 @@ func (c *ChainService) ApplyForkChoiceRule(block *pb.BeaconBlock, computedState 
 	// When the transition is a cycle transition, we stream the state containing the new validator
 	// assignments to clients.
 	if helpers.IsEpochStart(block.Slot) {
-		if c.canonicalStateFeed.Send(computedState) == 0 {
+		if c.canonicalStateFeed.Send(postState) == 0 {
 			log.Error("Sent canonical state to no subscribers")
 		}
 	}
@@ -457,18 +457,15 @@ func (c *ChainService) deleteValidatorIdx(state *pb.BeaconState) error {
 // attestationTargets retrieves the list of attestation targets since last finalized epoch,
 // each attestation target consists of validator index and its attestation target (i.e. the block
 // which the validator attested to)
-func (c *ChainService) attestationTargets(state *pb.BeaconState) ([]*attestationTarget, error) {
+func (c *ChainService) attestationTargets(state *pb.BeaconState) (map[uint64]*pb.BeaconBlock, error) {
+	attestationTargets := make(map[uint64]*pb.BeaconBlock)
 	indices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, state.FinalizedEpoch)
-	attestationTargets := make([]*attestationTarget, len(indices))
 	for i, index := range indices {
 		block, err := c.attsService.LatestAttestationTarget(c.ctx, index)
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve attestation target: %v", err)
 		}
-		attestationTargets[i] = &attestationTarget{
-			validatorIndex: index,
-			block:          block,
-		}
+		attestationTargets[uint64(i)] = block
 	}
 	return attestationTargets, nil
 }
