@@ -10,6 +10,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
+
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
@@ -23,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -244,23 +247,27 @@ func (c *ChainService) blockProcessing() {
 		// can be received either from the sync service, the RPC service,
 		// or via p2p.
 		case block := <-c.incomingBlockChan:
-			beaconState, err := c.beaconDB.State(c.ctx)
-			if err != nil {
-				log.Errorf("Unable to retrieve beacon state %v", err)
-				continue
-			}
+			handler.SafelyHandleMessage(c.ctx, c.processBlock, block)
+		}
+	}
+}
 
-			if block.Slot > beaconState.Slot {
-				computedState, err := c.ReceiveBlock(block, beaconState)
-				if err != nil {
-					log.Errorf("Could not process received block: %v", err)
-					continue
-				}
-				if err := c.ApplyForkChoiceRule(block, computedState); err != nil {
-					log.Errorf("Could not update chain head: %v", err)
-					continue
-				}
-			}
+func (c *ChainService) processBlock(message proto.Message) {
+	block := message.(*pb.BeaconBlock)
+	beaconState, err := c.beaconDB.State(c.ctx)
+	if err != nil {
+		log.Errorf("Unable to retrieve beacon state %v", err)
+		return
+	}
+	if block.Slot > beaconState.Slot {
+		computedState, err := c.ReceiveBlock(block, beaconState)
+		if err != nil {
+			log.Errorf("Could not process received block: %v", err)
+			return
+		}
+		if err := c.ApplyForkChoiceRule(block, computedState); err != nil {
+			log.Errorf("Could not update chain head: %v", err)
+			return
 		}
 	}
 }
@@ -283,10 +290,17 @@ func (c *ChainService) ApplyForkChoiceRule(block *pb.BeaconBlock, computedState 
 	// server to stream these events to beacon clients.
 	// When the transition is a cycle transition, we stream the state containing the new validator
 	// assignments to clients.
-	if block.Slot%params.BeaconConfig().SlotsPerEpoch == 0 {
-		c.canonicalStateFeed.Send(computedState)
+	if helpers.IsEpochStart(block.Slot) {
+		if c.canonicalStateFeed.Send(computedState) == 0 {
+			log.Error("Sent canonical state to no subscribers")
+		}
 	}
-	c.canonicalBlockFeed.Send(block)
+	if c.canonicalBlockFeed.Send(&pb.BeaconBlockAnnounce{
+		Hash:       h[:],
+		SlotNumber: block.Slot,
+	}) == 0 {
+		log.Error("Sent canonical block to no subscribers")
+	}
 	return nil
 }
 
@@ -343,6 +357,7 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	latestEth1Data := beaconState.LatestEth1Data
 
 	// Check for skipped slots.
+	numSkippedSlots := 0
 	for beaconState.Slot < block.Slot-1 {
 		beaconState, err = state.ExecuteStateTransition(
 			c.ctx,
@@ -357,6 +372,10 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 		log.WithField(
 			"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
 		).Info("Slot transition successfully processed")
+		numSkippedSlots++
+	}
+	if numSkippedSlots > 0 {
+		log.Warnf("Processed %d skipped slots", numSkippedSlots)
 	}
 
 	beaconState, err = state.ExecuteStateTransition(
@@ -375,7 +394,7 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	log.WithField(
 		"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
 	).Info("Block transition successfully processed")
-	if (beaconState.Slot+1)%params.BeaconConfig().SlotsPerEpoch == 0 {
+	if helpers.IsEpochEnd(beaconState.Slot) {
 		// Save activated validators of this epoch to public key -> index DB.
 		if err := c.saveValidatorIdx(beaconState); err != nil {
 			return nil, fmt.Errorf("could not save validator index: %v", err)
@@ -485,17 +504,19 @@ func (c *ChainService) attestationTargets(state *pb.BeaconState) ([]*attestation
 // ex:
 //       /- C - E
 // A - B - D - F
-//          \- G
-// Input: B. Output: [C, D, E, F, G]
+//       \- G
+// Input: B. Output: [C, D, G]
+//
+// Spec pseudocode definition:
+//	get_children(store: Store, block: BeaconBlock) -> List[BeaconBlock]
+//		returns the child blocks of the given block.
 func (c *ChainService) blockChildren(block *pb.BeaconBlock, state *pb.BeaconState) ([]*pb.BeaconBlock, error) {
 	var children []*pb.BeaconBlock
-	seenRoots := make(map[[32]byte]bool)
 
-	blockRoot, err := hashutil.HashBeaconBlock(block)
+	currentRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
 	}
-	seenRoots[blockRoot] = true
 	startSlot := block.Slot
 	currentSlot := state.Slot
 	for i := startSlot; i <= currentSlot; i++ {
@@ -509,15 +530,70 @@ func (c *ChainService) blockChildren(block *pb.BeaconBlock, state *pb.BeaconStat
 		}
 
 		parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
-		if seenRoots[parentRoot] {
-			blockRoot, err := hashutil.HashBeaconBlock(block)
-			if err != nil {
-				return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
-			}
-			seenRoots[blockRoot] = true
-
+		if currentRoot == parentRoot {
 			children = append(children, block)
 		}
 	}
 	return children, nil
+}
+
+// lmdGhost applies the Latest Message Driven, Greediest Heaviest Observed Sub-Tree
+// fork-choice rule defined in the Ethereum Serenity specification for the beacon chain.
+//
+// Spec pseudocode definition:
+//	def lmd_ghost(store: Store, start_state: BeaconState, start_block: BeaconBlock) -> BeaconBlock:
+//    """
+//    Execute the LMD-GHOST algorithm to find the head ``BeaconBlock``.
+//    """
+//    validators = start_state.validator_registry
+//    active_validator_indices = get_active_validator_indices(validators, slot_to_epoch(start_state.slot))
+//    attestation_targets = [
+//        (validator_index, get_latest_attestation_target(store, validator_index))
+//        for validator_index in active_validator_indices
+//    ]
+//
+//    def get_vote_count(block: BeaconBlock) -> int:
+//        return sum(
+//            get_effective_balance(start_state.validator_balances[validator_index]) // FORK_CHOICE_BALANCE_INCREMENT
+//            for validator_index, target in attestation_targets
+//            if get_ancestor(store, target, block.slot) == block
+//        )
+//
+//    head = start_block
+//    while 1:
+//        children = get_children(store, head)
+//        if len(children) == 0:
+//            return head
+//        head = max(children, key=get_vote_count)
+func (c *ChainService) lmdGhost(
+	block *pb.BeaconBlock,
+	state *pb.BeaconState,
+	voteTargets map[uint64]*pb.BeaconBlock,
+) (*pb.BeaconBlock, error) {
+	head := block
+	for {
+		children, err := c.blockChildren(head, state)
+		if err != nil {
+			return nil, fmt.Errorf("could not fetch block children: %v", err)
+		}
+		if len(children) == 0 {
+			return head, nil
+		}
+		maxChild := children[0]
+
+		maxChildVotes, err := VoteCount(maxChild, state, voteTargets, c.beaconDB)
+		if err != nil {
+			return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
+		}
+		for i := 0; i < len(children); i++ {
+			candidateChildVotes, err := VoteCount(children[i], state, voteTargets, c.beaconDB)
+			if err != nil {
+				return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
+			}
+			if candidateChildVotes > maxChildVotes {
+				maxChild = children[i]
+			}
+		}
+		head = maxChild
+	}
 }

@@ -472,16 +472,16 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 		if att.Data.JustifiedEpoch != beaconState.JustifiedEpoch {
 			return fmt.Errorf(
 				"expected attestation.JustifiedEpoch == state.JustifiedEpoch, received %d == %d",
-				att.Data.JustifiedEpoch,
-				beaconState.JustifiedEpoch,
+				att.Data.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
+				beaconState.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 			)
 		}
 	} else {
 		if att.Data.JustifiedEpoch != beaconState.PreviousJustifiedEpoch {
 			return fmt.Errorf(
 				"expected attestation.JustifiedEpoch == state.PreviousJustifiedEpoch, received %d == %d",
-				att.Data.JustifiedEpoch,
-				beaconState.PreviousJustifiedEpoch,
+				att.Data.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
+				beaconState.PreviousJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 			)
 		}
 	}

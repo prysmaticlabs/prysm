@@ -39,8 +39,8 @@ type operationService interface {
 }
 
 type p2pAPI interface {
+	p2p.Sender
 	Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription
-	Send(msg proto.Message, peer p2p.Peer)
 	Broadcast(msg proto.Message)
 }
 
@@ -75,7 +75,7 @@ type RegularSync struct {
 	attestationReqByHashBuf  chan p2p.Message
 	unseenAttestationsReqBuf chan p2p.Message
 	exitBuf                  chan p2p.Message
-	canonicalBuf             chan *pb.BeaconBlock
+	canonicalBuf             chan *pb.BeaconBlockAnnounce
 	highestObservedSlot      uint64
 	blocksAwaitingProcessing map[[32]byte]*pb.BeaconBlock
 }
@@ -140,7 +140,7 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		unseenAttestationsReqBuf: make(chan p2p.Message, cfg.UnseenAttestationsReqBufSize),
 		exitBuf:                  make(chan p2p.Message, cfg.ExitBufferSize),
 		chainHeadReqBuf:          make(chan p2p.Message, cfg.ChainHeadReqBufferSize),
-		canonicalBuf:             make(chan *pb.BeaconBlock, cfg.CanonicalBufferSize),
+		canonicalBuf:             make(chan *pb.BeaconBlockAnnounce, cfg.CanonicalBufferSize),
 		blocksAwaitingProcessing: make(map[[32]byte]*pb.BeaconBlock),
 	}
 }
@@ -223,10 +223,11 @@ func (rs *RegularSync) run() {
 			safelyHandleMessage(rs.handleStateRequest, msg)
 		case msg := <-rs.chainHeadReqBuf:
 			safelyHandleMessage(rs.handleChainHeadRequest, msg)
-		case block := <-rs.canonicalBuf:
-			rs.broadcastCanonicalBlock(rs.ctx, block)
+		case blockAnnounce := <-rs.canonicalBuf:
+			rs.broadcastCanonicalBlock(rs.ctx, blockAnnounce)
 		}
 	}
+	log.Info("Exiting regular sync run()")
 }
 
 // safelyHandleMessage will recover and log any panic that occurs from the
@@ -277,8 +278,10 @@ func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) {
 
 	log.WithField("blockRoot", fmt.Sprintf("%#x", h)).Debug("Received incoming block root, requesting full block data from sender")
 	// Request the full block data from peer that sent the block hash.
-	_, sendBlockRequestSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendBlockRequest")
-	rs.p2p.Send(&pb.BeaconBlockRequest{Hash: h[:]}, msg.Peer)
+	ctx, sendBlockRequestSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendBlockRequest")
+	if err := rs.p2p.Send(ctx, &pb.BeaconBlockRequest{Hash: h[:]}, msg.Peer); err != nil {
+		log.Error(err)
+	}
 	sentBlockReq.Inc()
 	sendBlockRequestSpan.End()
 }
@@ -372,16 +375,22 @@ func (rs *RegularSync) handleBlockRequestBySlot(msg p2p.Message) {
 	block, err := rs.db.BlockBySlot(request.SlotNumber)
 	getBlockSpan.End()
 	if err != nil || block == nil {
+		if block == nil {
+			log.Debugf("Block with slot %d does not exist", request.SlotNumber)
+			return
+		}
 		log.Errorf("Error retrieving block from db: %v", err)
 		return
 	}
 
-	_, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
+	ctx, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
 	log.WithField("slotNumber",
 		fmt.Sprintf("%d", request.SlotNumber-params.BeaconConfig().GenesisSlot)).Debug("Sending requested block to peer")
-	rs.p2p.Send(&pb.BeaconBlockResponse{
+	if err := rs.p2p.Send(ctx, &pb.BeaconBlockResponse{
 		Block: block,
-	}, msg.Peer)
+	}, msg.Peer); err != nil {
+		log.Error(err)
+	}
 	sentBlocks.Inc()
 	sendBlockSpan.End()
 }
@@ -409,9 +418,11 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) {
 		log.Debugf("Requested state root is different from locally stored state root %#x", req.Hash)
 		return
 	}
-	_, sendStateSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendState")
+	ctx, sendStateSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendState")
 	log.WithField("beaconState", fmt.Sprintf("%#x", root)).Debug("Sending beacon state to peer")
-	rs.p2p.Send(&pb.BeaconStateResponse{BeaconState: state}, msg.Peer)
+	if err := rs.p2p.Send(ctx, &pb.BeaconStateResponse{BeaconState: state}, msg.Peer); err != nil {
+		log.Error(err)
+	}
 	sentState.Inc()
 	sendStateSpan.End()
 }
@@ -442,10 +453,12 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) {
 		Hash:  blockRoot[:],
 		Block: block,
 	}
-	_, ChainHead := trace.StartSpan(ctx, "sendChainHead")
-	rs.p2p.Send(req, msg.Peer)
+	ctx, ChainHead := trace.StartSpan(ctx, "sendChainHead")
+	defer ChainHead.End()
+	if err := rs.p2p.Send(ctx, req, msg.Peer); err != nil {
+		log.Error(err)
+	}
 	sentChainHead.Inc()
-	ChainHead.End()
 }
 
 // receiveAttestation accepts an broadcasted attestation from the p2p layer,
@@ -531,12 +544,14 @@ func (rs *RegularSync) handleBlockRequestByHash(msg p2p.Message) {
 		return
 	}
 
-	_, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
-	rs.p2p.Send(&pb.BeaconBlockResponse{
+	ctx, sendBlockSpan := trace.StartSpan(ctx, "sendBlock")
+	defer sendBlockSpan.End()
+	if err := rs.p2p.Send(ctx, &pb.BeaconBlockResponse{
 		Block: block,
-	}, msg.Peer)
+	}, msg.Peer); err != nil {
+		log.Error(err)
+	}
 	sentBlocks.Inc()
-	sendBlockSpan.End()
 }
 
 // handleBatchedBlockRequest receives p2p messages which consist of requests for batched blocks
@@ -571,7 +586,9 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) {
 	blockRange := endSlot - startSlot
 	// Handle overflows
 	if startSlot > endSlot {
-		blockRange = 0
+		// Do not process requests with invalid slot ranges
+		log.Debugf("Batched block range is invalid, start slot %d , end slot %d", startSlot, endSlot)
+		return
 	}
 
 	response := make([]*pb.BeaconBlock, 0, blockRange)
@@ -588,13 +605,15 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) {
 		response = append(response, retBlock)
 	}
 
-	_, sendBatchedBlockSpan := trace.StartSpan(ctx, "sendBatchedBlocks")
+	ctx, sendBatchedBlockSpan := trace.StartSpan(ctx, "sendBatchedBlocks")
+	defer sendBatchedBlockSpan.End()
 	log.Debugf("Sending response for batch blocks to peer %v", msg.Peer)
-	rs.p2p.Send(&pb.BatchedBeaconBlockResponse{
+	if err := rs.p2p.Send(ctx, &pb.BatchedBeaconBlockResponse{
 		BatchedBlocks: response,
-	}, msg.Peer)
+	}, msg.Peer); err != nil {
+		log.Error(err)
+	}
 	sentBatchedBlocks.Inc()
-	sendBatchedBlockSpan.End()
 }
 
 func (rs *RegularSync) handleAttestationRequestByHash(msg p2p.Message) {
@@ -614,13 +633,15 @@ func (rs *RegularSync) handleAttestationRequestByHash(msg p2p.Message) {
 		return
 	}
 
-	_, sendAttestationSpan := trace.StartSpan(ctx, "sendAttestation")
+	ctx, sendAttestationSpan := trace.StartSpan(ctx, "sendAttestation")
+	defer sendAttestationSpan.End()
 	log.Debugf("Sending attestation %#x to peer %v", root, msg.Peer)
-	rs.p2p.Send(&pb.AttestationResponse{
+	if err := rs.p2p.Send(ctx, &pb.AttestationResponse{
 		Attestation: att,
-	}, msg.Peer)
+	}, msg.Peer); err != nil {
+		log.Error(err)
+	}
 	sentAttestation.Inc()
-	sendAttestationSpan.End()
 }
 
 func (rs *RegularSync) handleUnseenAttestationsRequest(msg p2p.Message) {
@@ -643,31 +664,24 @@ func (rs *RegularSync) handleUnseenAttestationsRequest(msg p2p.Message) {
 		return
 	}
 
-	_, sendAttestationsSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendAttestation")
+	ctx, sendAttestationsSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendAttestation")
+	defer sendAttestationsSpan.End()
 	log.Debugf("Sending response for batched unseen attestations to peer %v", msg.Peer)
-	rs.p2p.Send(&pb.UnseenAttestationResponse{
+	if err := rs.p2p.Send(ctx, &pb.UnseenAttestationResponse{
 		Attestations: atts,
-	}, msg.Peer)
+	}, msg.Peer); err != nil {
+		log.Error(err)
+	}
 	sentAttestation.Inc()
-	sendAttestationsSpan.End()
 }
 
-func (rs *RegularSync) broadcastCanonicalBlock(ctx context.Context, blk *pb.BeaconBlock) {
+func (rs *RegularSync) broadcastCanonicalBlock(ctx context.Context, announce *pb.BeaconBlockAnnounce) {
 	_, span := trace.StartSpan(ctx, "beacon-chain.sync.broadcastCanonicalBlock")
 	defer span.End()
 
-	h, err := hashutil.HashProto(blk)
-	if err != nil {
-		log.Errorf("Could not tree hash block %v", err)
-		return
-	}
-
 	_, sendBlockAnnounceSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendBlockAnnounce")
-	log.Debugf("Announcing canonical block %#x", h)
-	rs.p2p.Broadcast(&pb.BeaconBlockAnnounce{
-		Hash:       h[:],
-		SlotNumber: blk.Slot,
-	})
+	log.Debugf("Announcing canonical block %#x", announce.Hash)
+	rs.p2p.Broadcast(announce)
 	sentBlockAnnounce.Inc()
 	sendBlockAnnounceSpan.End()
 }

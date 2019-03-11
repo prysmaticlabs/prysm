@@ -10,6 +10,8 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/ethereum/go-ethereum/common"
+	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -121,6 +123,15 @@ func (s *Service) Start() {
 	s.listener = lis
 	log.Infof("RPC server listening on port :%s", s.port)
 
+	opts := []grpc.ServerOption{
+		grpc.StatsHandler(&ocgrpc.ServerHandler{}),
+		grpc.StreamInterceptor(middleware.ChainStreamServer(
+			recovery.StreamServerInterceptor(),
+		)),
+		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
+			recovery.UnaryServerInterceptor(),
+		)),
+	}
 	// TODO(#791): Utilize a certificate for secure connections
 	// between beacon nodes and validator clients.
 	if s.withCert != "" && s.withKey != "" {
@@ -129,11 +140,11 @@ func (s *Service) Start() {
 			log.Errorf("Could not load TLS keys: %s", err)
 			s.credentialError = err
 		}
-		s.grpcServer = grpc.NewServer(grpc.Creds(creds), grpc.StatsHandler(&ocgrpc.ServerHandler{}))
+		opts = append(opts, grpc.Creds(creds))
 	} else {
 		log.Warn("You are using an insecure gRPC connection! Provide a certificate and key to connect securely")
-		s.grpcServer = grpc.NewServer(grpc.StatsHandler(&ocgrpc.ServerHandler{}))
 	}
+	s.grpcServer = grpc.NewServer(opts...)
 
 	beaconServer := &BeaconServer{
 		beaconDB:            s.beaconDB,

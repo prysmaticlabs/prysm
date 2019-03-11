@@ -35,15 +35,15 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.26.0/rules_nodejs-0.26.0.tar.gz"],
-    sha256 = "5c86b055c57e15bf32d9009a15bcd6d8e190c41b1ff2fb18037b75e0012e4e7c",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.27.3/rules_nodejs-0.27.3.tar.gz"],
+    sha256 = "df4786a84a25d5b9f9eaaf9b5cac37fa1136f51c99fb0fbeed921204a1596c82",
 )
 
 http_archive(
     name = "io_bazel_rules_k8s",
-    sha256 = "6983fcebc70f1e559bfe7dea066b68d1963abc1e154db9a12acebbfb4f47c3c3",
-    strip_prefix = "rules_k8s-9de769e87a1910f00b11fbb7f62d09d6d03e60ef",
-    url = "https://github.com/bazelbuild/rules_k8s/archive/9de769e87a1910f00b11fbb7f62d09d6d03e60ef.tar.gz",
+    sha256 = "053c71ab73970314691ac1ff78299c83d39d990e336412316d3022a59d195712",
+    strip_prefix = "rules_k8s-1f166008cc86d60e274b274cbc5803de120caf29",
+    url = "https://github.com/bazelbuild/rules_k8s/archive/1f166008cc86d60e274b274cbc5803de120caf29.tar.gz",
 )
 
 load(
@@ -201,7 +201,7 @@ go_repository(
 
 go_repository(
     name = "com_github_multiformats_go_multiaddr",
-    commit = "0297994296f173f2708ff1a9f9ae336af59172c5",  # v0.0.1
+    commit = "ce21123d5172669bbf37a166078bc5f9d345ec2f",  # v0.0.2
     importpath = "github.com/multiformats/go-multiaddr",
 )
 
@@ -1045,4 +1045,10 @@ go_repository(
     name = "org_golang_x_xerrors",
     commit = "a5947ffaace3e882f334c1750858b4a6a7e52422",
     importpath = "golang.org/x/xerrors",
+)
+
+go_repository(
+    name = "com_github_grpc_ecosystem_go_grpc_middleware",
+    commit = "c250d6563d4d4c20252cd865923440e829844f4e",  # v1.0.0
+    importpath = "github.com/grpc-ecosystem/go-grpc-middleware",
 )

@@ -21,20 +21,20 @@ func GenerateTrieFromItems(items [][]byte, depth int) (*MerkleTrie, error) {
 		return nil, errors.New("no items provided to generate Merkle trie")
 	}
 	leaves := make([][]byte, len(items))
+	emptyNodes := generateEmptyNodes(depth)
 	// We then construct the leaves of the trie by hashing every
 	// value in the items slice.
 	for i, val := range items {
 		h := hashutil.Hash(val)
 		leaves[i] = h[:]
 	}
+	// Append the leaves to the branches.
 	branches := [][][]byte{leaves}
-	// Prepend the leaves to the branches.
 	for i := 0; i < depth-1; i++ {
 		if len(branches[i])%2 == 1 {
-			emptyNodes := generateEmptyNodes(depth)
-			branches[i] = append(branches[i], emptyNodes[i][:])
+			branches[i] = append(branches[i], emptyNodes[i])
 		}
-		// We prepend the layer that results from hashing the trie's current layer.
+		// We append the layer that results from hashing the trie's current layer.
 		branches = append(branches, hashLayer(branches[i]))
 	}
 	// Reverse the branches so as to have the root in the 0th layer.
@@ -44,11 +44,6 @@ func GenerateTrieFromItems(items [][]byte, depth int) (*MerkleTrie, error) {
 	return &MerkleTrie{branches: branches, originalItems: items}, nil
 }
 
-// Items returns the original items that were hashed into leaves of the Merkle trie.
-func (m *MerkleTrie) Items() [][]byte {
-	return m.originalItems
-}
-
 // VerifyMerkleProof verifies a Merkle branch against a root of a trie.
 func VerifyMerkleProof(root []byte, item []byte, merkleIndex int, proof [][]byte) bool {
 	leaf := hashutil.Hash(item)
@@ -56,12 +51,12 @@ func VerifyMerkleProof(root []byte, item []byte, merkleIndex int, proof [][]byte
 	branchIndices := BranchIndices(merkleIndex, len(proof))
 	for i := 0; i < len(proof); i++ {
 		if branchIndices[i]%2 == 0 {
-			node = parentHash(node, proof[i][:])
+			node = parentHash(node[:], proof[i])
 		} else {
-			node = parentHash(proof[i][:], node)
+			node = parentHash(proof[i], node[:])
 		}
 	}
-    return bytes.Equal(root, node)
+	return bytes.Equal(root, node)
 }
 
 // BranchIndices returns the indices of all ancestors for a node with up to the root
@@ -117,7 +112,7 @@ func parentHash(left []byte, right []byte) []byte {
 // hashLayer computes the layer on top of another one by hashing left and right
 // nodes to compute the nodes in the trie above.
 func hashLayer(layer [][]byte) [][]byte {
-	chunks := partition(layer, 2)
+	chunks := partition(layer)
 	topLayer := [][]byte{}
 	for i := 0; i < len(chunks); i++ {
 		topLayer = append(topLayer, parentHash(chunks[i][0], chunks[i][1]))
@@ -138,8 +133,9 @@ func generateEmptyNodes(depth int) [][]byte {
 
 // partition a slice into chunks of a certain size.
 // Example: [1, 2, 3, 4] -> [[1, 2], [3, 4]]
-func partition(layer [][]byte, size int) [][][]byte {
+func partition(layer [][]byte) [][][]byte {
 	chunks := [][][]byte{}
+	size := 2
 	for i := 0; i < len(layer); i += size {
 		chunks = append(chunks, layer[i:i+size])
 	}

@@ -498,6 +498,44 @@ func (w *Web3Service) requestBatchedLogs() error {
 	return nil
 }
 
+func (w *Web3Service) processSubscribedHeaders(header *gethTypes.Header) {
+	defer safelyHandlePanic()
+	blockNumberGauge.Set(float64(header.Number.Int64()))
+	w.blockHeight = header.Number
+	w.blockHash = header.Hash()
+	w.blockTime = time.Unix(header.Time.Int64(), 0)
+	log.WithFields(logrus.Fields{
+		"blockNumber": w.blockHeight,
+		"blockHash":   w.blockHash.Hex(),
+	}).Debug("Latest web3 chain event")
+
+	if err := w.blockCache.AddBlock(gethTypes.NewBlockWithHeader(header)); err != nil {
+		w.runError = err
+		log.Errorf("Unable to add block data to cache %v", err)
+	}
+}
+
+// safelyHandleHeader will recover and log any panic that occurs from the
+// block
+func safelyHandlePanic() {
+	if r := recover(); r != nil {
+		log.WithFields(logrus.Fields{
+			"r": r,
+		}).Error("Panicked when handling data from ETH 1.0 Chain! Recovering...")
+	}
+}
+
+func (w *Web3Service) handleDelayTicker() {
+	defer safelyHandlePanic()
+	if w.lastRequestedBlock.Cmp(w.blockHeight) == 0 {
+		return
+	}
+	if err := w.requestBatchedLogs(); err != nil {
+		w.runError = err
+		log.Error(err)
+	}
+}
+
 // run subscribes to all the services for the ETH1.0 chain.
 func (w *Web3Service) run(done <-chan struct{}) {
 	w.isRunning = true
@@ -548,29 +586,9 @@ func (w *Web3Service) run(done <-chan struct{}) {
 			log.Debug("Unsubscribed to head events, exiting goroutine")
 			return
 		case header := <-w.headerChan:
-			blockNumberGauge.Set(float64(header.Number.Int64()))
-			w.blockHeight = header.Number
-			log.Infof("POWCHAIN BLOCKHEIGHT: %v", w.blockHeight)
-			w.blockHash = header.Hash()
-			w.blockTime = time.Unix(header.Time.Int64(), 0)
-			log.WithFields(logrus.Fields{
-				"blockNumber": w.blockHeight,
-				"blockHash":   w.blockHash.Hex(),
-			}).Debug("Latest web3 chain event")
-
-			if err := w.blockCache.AddBlock(gethTypes.NewBlockWithHeader(header)); err != nil {
-				w.runError = err
-				log.Errorf("Unable to add block data to cache %v", err)
-			}
+			w.processSubscribedHeaders(header)
 		case <-ticker.C:
-			if w.lastRequestedBlock.Cmp(w.blockHeight) == 0 {
-				continue
-			}
-			if err := w.requestBatchedLogs(); err != nil {
-				w.runError = err
-				log.Error(err)
-			}
-
+			w.handleDelayTicker()
 		}
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
+	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -36,7 +37,8 @@ func (mp *mockP2P) Subscribe(msg proto.Message, channel chan p2p.Message) event.
 
 func (mp *mockP2P) Broadcast(msg proto.Message) {}
 
-func (mp *mockP2P) Send(msg proto.Message, peer p2p.Peer) {
+func (mp *mockP2P) Send(ctx context.Context, msg proto.Message, peerID peer.ID) error {
+	return nil
 }
 
 type mockChainService struct {
@@ -117,7 +119,7 @@ func TestProcessBlockRoot_OK(t *testing.T) {
 
 	msg := p2p.Message{
 		Ctx:  context.Background(),
-		Peer: p2p.Peer{},
+		Peer: "",
 		Data: hashAnnounce,
 	}
 
@@ -198,7 +200,7 @@ func TestProcessBlock_OK(t *testing.T) {
 
 	msg := p2p.Message{
 		Ctx:  context.Background(),
-		Peer: p2p.Peer{},
+		Peer: "",
 		Data: responseBlock,
 	}
 
@@ -277,7 +279,7 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 
 	msg1 := p2p.Message{
 		Ctx:  context.Background(),
-		Peer: p2p.Peer{},
+		Peer: "",
 		Data: responseBlock1,
 	}
 
@@ -302,7 +304,7 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 
 	msg2 := p2p.Message{
 		Ctx:  context.Background(),
-		Peer: p2p.Peer{},
+		Peer: "",
 		Data: responseBlock2,
 	}
 
@@ -380,7 +382,7 @@ func TestProcessBlock_MissingParentBlockRequestedOK(t *testing.T) {
 
 	msg1 := p2p.Message{
 		Ctx:  context.Background(),
-		Peer: p2p.Peer{},
+		Peer: "",
 		Data: &pb.BeaconBlockResponse{
 			Block: block1,
 		},
@@ -388,7 +390,7 @@ func TestProcessBlock_MissingParentBlockRequestedOK(t *testing.T) {
 
 	msg2 := p2p.Message{
 		Ctx:  context.Background(),
-		Peer: p2p.Peer{},
+		Peer: "",
 		Data: &pb.BeaconBlockResponse{
 			Block: block2,
 		},
@@ -396,7 +398,7 @@ func TestProcessBlock_MissingParentBlockRequestedOK(t *testing.T) {
 
 	msg3 := p2p.Message{
 		Ctx:  context.Background(),
-		Peer: p2p.Peer{},
+		Peer: "",
 		Data: &pb.BeaconBlockResponse{
 			Block: block3,
 		},
@@ -440,7 +442,7 @@ func TestBlockRequest_InvalidMsg(t *testing.T) {
 	invalidmsg := p2p.Message{
 		Ctx:  context.Background(),
 		Data: malformedRequest,
-		Peer: p2p.Peer{},
+		Peer: "",
 	}
 
 	ss.blockRequestBySlot <- invalidmsg
@@ -470,7 +472,7 @@ func TestBlockRequest_OK(t *testing.T) {
 	msg1 := p2p.Message{
 		Ctx:  context.Background(),
 		Data: request1,
-		Peer: p2p.Peer{},
+		Peer: "",
 	}
 
 	ss.blockRequestBySlot <- msg1
@@ -515,7 +517,7 @@ func TestReceiveAttestation_OK(t *testing.T) {
 	msg1 := p2p.Message{
 		Ctx:  context.Background(),
 		Data: request1,
-		Peer: p2p.Peer{},
+		Peer: "",
 	}
 
 	ss.attestationBuf <- msg1
@@ -558,7 +560,7 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 	msg1 := p2p.Message{
 		Ctx:  context.Background(),
 		Data: request1,
-		Peer: p2p.Peer{},
+		Peer: "",
 	}
 
 	ss.attestationBuf <- msg1
@@ -597,7 +599,7 @@ func TestReceiveExitReq_OK(t *testing.T) {
 	msg1 := p2p.Message{
 		Ctx:  context.Background(),
 		Data: request1,
-		Peer: p2p.Peer{},
+		Peer: "",
 	}
 
 	ss.exitBuf <- msg1
@@ -632,7 +634,7 @@ func TestHandleAttReq_HashNotFound(t *testing.T) {
 	msg := p2p.Message{
 		Ctx:  context.Background(),
 		Data: req,
-		Peer: p2p.Peer{},
+		Peer: "",
 	}
 
 	ss.attestationReqByHashBuf <- msg
@@ -666,7 +668,7 @@ func TestHandleUnseenAttsReq_EmptyAttsPool(t *testing.T) {
 	msg := p2p.Message{
 		Ctx:  context.Background(),
 		Data: req,
-		Peer: p2p.Peer{},
+		Peer: "",
 	}
 
 	ss.unseenAttestationsReqBuf <- msg
@@ -712,7 +714,7 @@ func TestHandleAttReq_Ok(t *testing.T) {
 	msg := p2p.Message{
 		Ctx:  context.Background(),
 		Data: req,
-		Peer: p2p.Peer{},
+		Peer: "",
 	}
 
 	ss.attestationReqByHashBuf <- msg
@@ -753,7 +755,7 @@ func TestHandleUnseenAttsReq_Ok(t *testing.T) {
 	msg := p2p.Message{
 		Ctx:  context.Background(),
 		Data: req,
-		Peer: p2p.Peer{},
+		Peer: "",
 	}
 
 	ss.unseenAttestationsReqBuf <- msg
@@ -790,7 +792,7 @@ func TestHandleStateReq_NOState(t *testing.T) {
 	msg1 := p2p.Message{
 		Ctx:  context.Background(),
 		Data: request1,
-		Peer: p2p.Peer{},
+		Peer: "",
 	}
 
 	ss.stateRequestBuf <- msg1
@@ -837,7 +839,7 @@ func TestHandleStateReq_OK(t *testing.T) {
 	msg1 := p2p.Message{
 		Ctx:  context.Background(),
 		Data: request1,
-		Peer: p2p.Peer{},
+		Peer: "",
 	}
 
 	ss.stateRequestBuf <- msg1
@@ -846,29 +848,4 @@ func TestHandleStateReq_OK(t *testing.T) {
 	exitRoutine <- true
 
 	testutil.AssertLogsContain(t, hook, "Sending beacon state to peer")
-}
-
-func TestSafelyHandleMessage(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	safelyHandleMessage(func(_ p2p.Message) {
-		panic("bad!")
-	}, p2p.Message{
-		Data: &pb.BeaconBlock{},
-	})
-
-	testutil.AssertLogsContain(t, hook, "Panicked when handling p2p message!")
-}
-
-func TestSafelyHandleMessage_NoData(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	safelyHandleMessage(func(_ p2p.Message) {
-		panic("bad!")
-	}, p2p.Message{})
-
-	entry := hook.LastEntry()
-	if entry.Data["msg"] != "message contains no data" {
-		t.Errorf("Message logged was not what was expected: %s", entry.Data["msg"])
-	}
 }
