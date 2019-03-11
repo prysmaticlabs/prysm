@@ -14,6 +14,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -31,6 +32,7 @@ import (
 )
 
 var log = logrus.WithField("prefix", "initial-sync")
+var debugError = "debug:"
 
 // Config defines the configurable properties of InitialSync.
 //
@@ -354,6 +356,11 @@ func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock, p
 		// if parent exists we validate the block.
 		if s.doesParentExist(block) {
 			if err := s.validateAndSaveNextBlock(ctx, block); err != nil {
+				// Debug error so as not to have noisy error logs
+				if strings.HasPrefix(err.Error(), debugError) {
+					log.Debug(strings.TrimPrefix(err.Error(), debugError))
+					return
+				}
 				log.Errorf("Unable to save block: %v", err)
 			}
 			return
@@ -367,6 +374,11 @@ func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock, p
 	}
 
 	if err := s.validateAndSaveNextBlock(ctx, block); err != nil {
+		// Debug error so as not to have noisy error logs
+		if strings.HasPrefix(err.Error(), debugError) {
+			log.Debug(strings.TrimPrefix(err.Error(), debugError))
+			return
+		}
 		log.Errorf("Unable to save block: %v", err)
 	}
 }
@@ -515,9 +527,8 @@ func (s *InitialSync) checkBlockValidity(ctx context.Context, block *pb.BeaconBl
 		return fmt.Errorf("could not tree hash received block: %v", err)
 	}
 
-	log.Debugf("Processing response to block request: %#x", blockRoot)
 	if s.db.HasBlock(blockRoot) {
-		return errors.New("received a block that already exists. Exiting")
+		return errors.New(debugError + "received a block that already exists. Exiting")
 	}
 
 	beaconState, err := s.db.State(ctx)
@@ -526,7 +537,7 @@ func (s *InitialSync) checkBlockValidity(ctx context.Context, block *pb.BeaconBl
 	}
 
 	if block.Slot < beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
-		return errors.New("discarding received block with a slot number smaller than the last finalized slot")
+		return errors.New(debugError + "discarding received block with a slot number smaller than the last finalized slot")
 	}
 	// Attestation from proposer not verified as, other nodes only store blocks not proposer
 	// attestations.
