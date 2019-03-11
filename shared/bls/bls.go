@@ -95,7 +95,7 @@ func (p *PublicKey) Aggregate(p2 *PublicKey) *PublicKey {
 }
 
 // Verify a bls signature given a public key, a message, and a domain.
-func (s *Signature) Verify(pub *PublicKey, msg []byte, domain uint64) bool {
+func (s *Signature) Verify(msg []byte, pub *PublicKey, domain uint64) bool {
 	return gobls.Verify(msg, pub.val, s.val, domain)
 }
 
@@ -103,20 +103,11 @@ func (s *Signature) Verify(pub *PublicKey, msg []byte, domain uint64) bool {
 // This is vulnerable to rogue public-key attack. Each user must
 // provide a proof-of-knowledge of the public key.
 func (s *Signature) VerifyAggregate(pubKeys []*PublicKey, msg []byte, domain uint64) bool {
-	keys := make([]*gobls.PublicKey, len(pubKeys))
-	for idx, v := range pubKeys {
-		keys[idx] = v.val
+	var keys []*gobls.PublicKey
+	for _, v := range pubKeys {
+		keys = append(keys, v.val)
 	}
 	return s.val.VerifyAggregateCommon(keys, msg, domain)
-}
-
-// VerifyMultiple verifies each public key against each message.
-func (s *Signature) VerifyMultiple(pubKeys []*PublicKey, msgs [][]byte, domain uint64) bool {
-	keys := make([]*gobls.PublicKey, len(pubKeys))
-	for idx, v := range pubKeys {
-		keys[idx] = v.val
-	}
-	return s.val.VerifyAggregate(keys, msgs, domain)
 }
 
 // Marshal a signature into a byte slice.
@@ -127,18 +118,9 @@ func (s *Signature) Marshal() []byte {
 
 // AggregateSignatures converts a list of signatures into a single, aggregated sig.
 func AggregateSignatures(sigs []*Signature) *Signature {
-	ss := make([]*gobls.Signature, len(sigs))
-	for idx, v := range sigs {
-		ss[idx] = v.val
+	var ss []*gobls.Signature
+	for _, v := range sigs {
+		ss = append(ss, v.val)
 	}
 	return &Signature{val: gobls.AggregateSignatures(ss)}
-}
-
-// AggregatePublicKeys converts a list of public keys into a single, aggregated public key.
-func AggregatePublicKeys(publicKeys []*PublicKey) *PublicKey {
-	ss := make([]*gobls.PublicKey, len(publicKeys))
-	for idx, pub := range publicKeys {
-		ss[idx] = pub.val
-	}
-	return &PublicKey{val: gobls.AggregatePublicKeys(ss)}
 }

@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 
+	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -140,20 +142,25 @@ func (a *Service) attestationPool() {
 			return
 		// Listen for a newly received incoming attestation from the sync service.
 		case attestation := <-a.incomingChan:
-			enc, err := proto.Marshal(attestation)
-			if err != nil {
-				log.Errorf("Could not marshal incoming attestation to bytes: %v", err)
-				continue
-			}
-			h := hashutil.Hash(enc)
-
-			if err := a.updateLatestAttestation(a.ctx, attestation); err != nil {
-				log.Errorf("Could not update attestation pool: %v", err)
-				continue
-			}
-			log.Infof("Updated attestation pool for attestation %#x", h)
+			handler.SafelyHandleMessage(a.ctx, a.handleAttestation, attestation)
 		}
 	}
+}
+
+func (a *Service) handleAttestation(msg proto.Message) {
+	attestation := msg.(*pb.Attestation)
+	enc, err := proto.Marshal(attestation)
+	if err != nil {
+		log.Errorf("Could not marshal incoming attestation to bytes: %v", err)
+		return
+	}
+	h := hashutil.Hash(enc)
+
+	if err := a.updateLatestAttestation(a.ctx, attestation); err != nil {
+		log.Errorf("Could not update attestation pool: %v", err)
+		return
+	}
+	log.Infof("Updated attestation pool for attestation %#x", h)
 }
 
 // updateLatestAttestation inputs an new attestation and checks whether
