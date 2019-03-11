@@ -292,7 +292,7 @@ func (c *ChainService) ApplyForkChoiceRule(block *pb.BeaconBlock, computedState 
 		}
 	}
 
-	if err := c.checkLastFinalizedEpoch(computedState); err != nil {
+	if err := c.saveFinalizedState(computedState); err != nil {
 		log.Errorf("Could not check if there is a new last finalized epoch: %v", err)
 	}
 	if c.canonicalBlockFeed.Send(&pb.BeaconBlockAnnounce{
@@ -376,7 +376,9 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	}
 
 	// Forward processed block to operation pool to remove individual operation from DB.
-	c.opsPoolService.IncomingProcessedBlockFeed().Send(block)
+	if c.opsPoolService.IncomingProcessedBlockFeed().Send(block) == 0 {
+		log.Error("Sent processed block to no subscribers")
+	}
 
 	// Remove pending deposits from the deposit queue.
 	for _, dep := range block.Body.Deposits {
@@ -438,7 +440,9 @@ func (c *ChainService) isBlockReadyForProcessing(block *pb.BeaconBlock, beaconSt
 	return nil
 }
 
-func (c *ChainService) checkLastFinalizedEpoch(beaconState *pb.BeaconState) error {
+func (c *ChainService) saveFinalizedState(beaconState *pb.BeaconState) error {
+	// check if the finalized epoch has changed, if it
+	// has we save the finalized state.
 	if c.finalizedEpoch != beaconState.FinalizedEpoch {
 		c.finalizedEpoch = beaconState.FinalizedEpoch
 		return c.beaconDB.SaveFinalizedState(beaconState)
