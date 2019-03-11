@@ -462,7 +462,10 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	chainService := setupBeaconChain(t, false, db, true, nil)
+	attsService := attestation.NewAttestationService(
+		context.Background(),
+		&attestation.Config{BeaconDB: db})
+	chainService := setupBeaconChain(t, false, db, true, attsService)
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	eth1Data := &pb.Eth1Data{
 		DepositRootHash32: []byte{},
@@ -509,6 +512,10 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 			Deposits: pendingDeposits,
 		},
 	}
+	blockRoot, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		log.Fatalf("could not hash block: %v", err)
+	}
 
 	for _, dep := range pendingDeposits {
 		db.InsertPendingDeposit(chainService.ctx, dep, big.NewInt(0))
@@ -522,6 +529,13 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	computedState, err := chainService.ReceiveBlock(block, beaconState)
 	if err != nil {
 		t.Fatal(err)
+	}
+	for i := 0; i < len(beaconState.ValidatorRegistry); i++ {
+		pubKey := bytesutil.ToBytes48(beaconState.ValidatorRegistry[i].Pubkey)
+		attsService.Store[pubKey] = &pb.Attestation{
+			Data: &pb.AttestationData{
+				BeaconBlockRootHash32: blockRoot[:],
+			}}
 	}
 	if err := chainService.ApplyForkChoiceRule(block, computedState); err != nil {
 		t.Fatal(err)
@@ -587,23 +601,23 @@ func TestUpdateHead_SavesBlock(t *testing.T) {
 	}{
 		// Higher slot but same state should trigger chain update.
 		{
-			blockSlot: 64,
+			blockSlot: params.BeaconConfig().GenesisSlot + 64,
 			state:     beaconState,
 			logAssert: "Chain head block and state updated",
 		},
 		// Higher slot, different state, but higher last finalized slot.
 		{
-			blockSlot: 64,
-			state:     &pb.BeaconState{FinalizedEpoch: 2},
+			blockSlot: params.BeaconConfig().GenesisSlot + 64,
+			state:     &pb.BeaconState{FinalizedEpoch: params.BeaconConfig().GenesisEpoch + 2},
 			logAssert: "Chain head block and state updated",
 		},
 		// Higher slot, different state, same last finalized slot,
 		// but last justified slot.
 		{
-			blockSlot: 64,
+			blockSlot: params.BeaconConfig().GenesisSlot + 64,
 			state: &pb.BeaconState{
-				FinalizedEpoch: 0,
-				JustifiedEpoch: 2,
+				FinalizedEpoch: params.BeaconConfig().GenesisEpoch,
+				JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 2,
 			},
 			logAssert: "Chain head block and state updated",
 		},
@@ -612,7 +626,11 @@ func TestUpdateHead_SavesBlock(t *testing.T) {
 		hook := logTest.NewGlobal()
 		db := internal.SetupDB(t)
 		defer internal.TeardownDB(t, db)
-		chainService := setupBeaconChain(t, false, db, true, nil)
+		attsService := attestation.NewAttestationService(
+			context.Background(),
+			&attestation.Config{BeaconDB: db})
+
+		chainService := setupBeaconChain(t, false, db, true, attsService)
 		unixTime := uint64(time.Now().Unix())
 		deposits, _ := setupInitialDeposits(t, 100)
 		if err := db.InitializeState(unixTime, deposits, &pb.Eth1Data{}); err != nil {
@@ -632,6 +650,7 @@ func TestUpdateHead_SavesBlock(t *testing.T) {
 				BlockHash32:       []byte("b"),
 			},
 		}
+
 		if err := chainService.beaconDB.SaveBlock(block); err != nil {
 			t.Fatal(err)
 		}
@@ -639,9 +658,6 @@ func TestUpdateHead_SavesBlock(t *testing.T) {
 			t.Errorf("Expected head to update, received %v", err)
 		}
 
-		if err := chainService.beaconDB.SaveBlock(block); err != nil {
-			t.Fatal(err)
-		}
 		chainService.cancel()
 		testutil.AssertLogsContain(t, hook, tt.logAssert)
 	}
@@ -843,11 +859,8 @@ func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get attestation targets: %v", err)
 	}
-	if attestationTargets[0].validatorIndex != 0 {
-		t.Errorf("Wanted validator index 0, got %d", attestationTargets[0].validatorIndex)
-	}
-	if attestationTargets[0].block.Slot != block.Slot {
-		t.Errorf("Wanted attested slot %d, got %d", block.Slot, attestationTargets[0].block.Slot)
+	if attestationTargets[0].Slot != block.Slot {
+		t.Errorf("Wanted attested slot %d, got %d", block.Slot, attestationTargets[0].Slot)
 	}
 }
 
