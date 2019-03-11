@@ -227,6 +227,10 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch eth1data height: %v", err)
 	}
+	// If the state's latest eth1 data's block hash has a height of 100, we fetch all the deposits up to height 100.
+	// If this doesn't match the number of deposits stored in the cache, the generated trie will not be the same and
+	// root will fail to verify. This can happen in a scenario where we perhaps have a deposit from height 101,
+	// so we want to avoid any possible mismatches in these lengths.
 	upToLatestEth1DataDeposits := bs.beaconDB.AllDeposits(ctx, latestEth1DataHeight)
 	if len(upToLatestEth1DataDeposits) != len(allDeps) {
 		return &pb.PendingDepositsResponse{PendingDeposits: nil}, nil

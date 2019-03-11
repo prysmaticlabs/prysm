@@ -214,7 +214,7 @@ func (w *Web3Service) Status() error {
 	fiveMinutesTimeout := time.Now().Add(-5 * time.Minute)
 	// check that web3 client is syncing
 	if w.blockTime.Before(fiveMinutesTimeout) {
-		return errors.New("web3 client is not syncing")
+		return errors.New("eth1 client is not syncing")
 	}
 	return nil
 }
@@ -493,7 +493,7 @@ func (w *Web3Service) processSubscribedHeaders(header *gethTypes.Header) {
 	log.WithFields(logrus.Fields{
 		"blockNumber": w.blockHeight,
 		"blockHash":   w.blockHash.Hex(),
-	}).Debug("Latest web3 chain event")
+	}).Debug("Latest eth1 chain event")
 
 	if err := w.blockCache.AddBlock(gethTypes.NewBlockWithHeader(header)); err != nil {
 		w.runError = err
