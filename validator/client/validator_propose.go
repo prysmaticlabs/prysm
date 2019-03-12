@@ -11,7 +11,7 @@ import (
 	ptypes "github.com/gogo/protobuf/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/forkutils"
+	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -75,7 +75,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
 	log.Infof("Signing randao epoch: %d", epoch)
-	domain := forkutils.DomainVersion(fork, epoch, params.BeaconConfig().DomainRandao)
+	domain := forkutil.DomainVersion(fork, epoch, params.BeaconConfig().DomainRandao)
 	epochSignature := v.key.SecretKey.Sign(buf, domain)
 	log.Infof("Pubkey: %#x", v.key.PublicKey.Marshal())
 	log.Infof("Epoch signature: %#x", epochSignature.Marshal())
