@@ -176,7 +176,7 @@ func TestCurrentAndFinalizeState_OK(t *testing.T) {
 
 	if !proto.Equal(cState, state) {
 		t.Error("Retrieved and saved current are unequal")
-  }
+	}
 }
 
 func BenchmarkState_ReadingFromCache(b *testing.B) {
