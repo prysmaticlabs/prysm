@@ -2,6 +2,8 @@ package trieutil
 
 import (
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 func TestMerkleTrie_BranchIndices(t *testing.T) {
@@ -15,16 +17,17 @@ func TestMerkleTrie_BranchIndices(t *testing.T) {
 }
 
 func TestMerkleTrie_MerkleProofOutOfRange(t *testing.T) {
+	h := hashutil.Hash([]byte("hi"))
 	m := &MerkleTrie{
-		branches: [][][32]byte{
+		branches: [][][]byte{
 			{
-				[32]byte{},
+				h[:],
 			},
 			{
-				[32]byte{},
+				h[:],
 			},
 			{
-				[32]byte{},
+				[]byte{},
 			},
 		},
 	}
@@ -63,17 +66,18 @@ func TestMerkleTrie_VerifyMerkleProof(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not generate Merkle proof: %v", err)
 	}
-	if ok := m.VerifyMerkleProof(items[2], 2, proof); !ok {
+	root := m.Root()
+	if ok := VerifyMerkleProof(root[:], items[2], 2, proof); !ok {
 		t.Error("Merkle proof did not verify")
 	}
 	proof, err = m.MerkleProof(3)
 	if err != nil {
 		t.Fatalf("Could not generate Merkle proof: %v", err)
 	}
-	if ok := m.VerifyMerkleProof(items[3], 3, proof); !ok {
+	if ok := VerifyMerkleProof(root[:], items[3], 3, proof); !ok {
 		t.Error("Merkle proof did not verify")
 	}
-	if ok := m.VerifyMerkleProof([]byte("btc"), 3, proof); ok {
+	if ok := VerifyMerkleProof(root[:], []byte("btc"), 3, proof); ok {
 		t.Error("Item not in tree should fail to verify")
 	}
 }
@@ -114,7 +118,7 @@ func BenchmarkVerifyMerkleBranch(b *testing.B) {
 		b.Fatalf("Could not generate Merkle proof: %v", err)
 	}
 	for i := 0; i < b.N; i++ {
-		if ok := m.VerifyMerkleProof(items[2], 2, proof); !ok {
+		if ok := VerifyMerkleProof(m.branches[0][0], items[2], 2, proof); !ok {
 			b.Error("Merkle proof did not verify")
 		}
 	}
