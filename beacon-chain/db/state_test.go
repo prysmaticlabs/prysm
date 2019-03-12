@@ -149,11 +149,6 @@ func BenchmarkState_ReadingFromCache(b *testing.B) {
 		b.Fatalf("Failed to initialize state: %v", err)
 	}
 
-	// Initial read should not be from DB
-	if db.currentState != nil {
-		b.Fatal("cache should not be prepared on newly initialized state")
-	}
-
 	state, err := db.State(ctx)
 	if err != nil {
 		b.Fatalf("Could not read DV beacon state from DB: %v", err)
@@ -175,33 +170,6 @@ func BenchmarkState_ReadingFromCache(b *testing.B) {
 		_, err := db.State(ctx)
 		if err != nil {
 			b.Fatalf("Could not read beacon state from cache: %v", err)
-		}
-	}
-}
-
-func BenchmarkState_ReadingFromDB(b *testing.B) {
-	db := setupDB(b)
-	defer teardownDB(b, db)
-	ctx := context.Background()
-
-	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(b, 10)
-	if err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{}); err != nil {
-		b.Fatalf("Failed to initialize state: %v", err)
-	}
-
-	// Initial read should not be from DB
-	if db.currentState != nil {
-		b.Fatal("cache should not be prepared on newly initialized state")
-	}
-
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		_, err := db.State(ctx)
-		if err != nil {
-			b.Fatalf("Could not read beacon state from DB: %v", err)
 		}
 	}
 }
