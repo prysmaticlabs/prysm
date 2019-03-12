@@ -55,6 +55,7 @@ go_test(
         "service_test.go",
     ],
     embed = [":go_default_library"],
+    tags = ["block-network"],
     deps = [
         "//proto/sharding/p2p/v1:go_default_library",
         "//proto/testing:go_default_library",
@@ -89,6 +90,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     race = "off",  # TODO(#377): fix issues with race detection testing.
+    tags = ["requires-network"],
     deps = [
         "@com_github_libp2p_go_libp2p//p2p/host/basic:go_default_library",
         "@com_github_libp2p_go_libp2p_swarm//testing:go_default_library",
