@@ -131,11 +131,10 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 		return
 	}
 
-	log.Infof("Signing proposal for slot: %d", slot)
 	proposalDomain := forkutils.DomainVersion(fork, epoch, params.BeaconConfig().DomainProposal)
 	proposalSignature := v.key.SecretKey.Sign(proposalDataHash[:], proposalDomain)
 	block.Signature = proposalSignature.Marshal()
-	log.Infof("Proposal signature: %#x", proposalSignature.Marshal())
+	log.Debugf("Signing proposal for slot %d: %#x", slot, block.Signature)
 
 	// 5. Broadcast to the network via beacon chain node.
 	blkResp, err := v.proposerClient.ProposeBlock(ctx, block)

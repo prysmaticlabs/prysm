@@ -166,7 +166,7 @@ func createPreChainStartDeposit(t *testing.T, pk []byte) *pb.Deposit {
 
 func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*bls.SecretKey) []byte {
 	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
-	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -175,7 +175,7 @@ func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*b
 	binary.LittleEndian.PutUint64(buf, epoch)
 	domain := forkutils.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
 	// We make the previous validator's index sign the message instead of the proposer.
-	epochSignature := privKeys[proposerIndex].Sign(buf, domain)
+	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	return epochSignature.Marshal()
 }
 
@@ -440,12 +440,12 @@ func TestChainService_Starts(t *testing.T) {
 		},
 	}
 
-	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, block.Slot)
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, block.Slot)
 	if err != nil {
-		t.Errorf("could not get beacon proposer index at slot %v: %v", block.Slot, err)
+		t.Errorf("could not get beacon proposer index at slot %d: %v", block.Slot, err)
 	}
 
-	block.Signature, err = b.BlockSignature(beaconState, block, privKeys[proposerIndex])
+	block.Signature, err = b.BlockSignature(beaconState, block, privKeys[proposerIdx])
 	if err != nil {
 		t.Errorf("could not get block signature: %v", err)
 	}
@@ -541,12 +541,12 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 
 	beaconState.Slot--
 
-	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, block.Slot)
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, block.Slot)
 	if err != nil {
-		t.Errorf("could not get beacon proposer index at slot %v: %v", block.Slot, err)
+		t.Errorf("could not get beacon proposer index at slot %d: %v", block.Slot, err)
 	}
 
-	block.Signature, err = b.BlockSignature(beaconState, block, privKeys[proposerIndex])
+	block.Signature, err = b.BlockSignature(beaconState, block, privKeys[proposerIdx])
 	if err != nil {
 		t.Errorf("could not get block signature: %v", err)
 	}

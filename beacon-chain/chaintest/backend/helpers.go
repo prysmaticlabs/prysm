@@ -30,7 +30,7 @@ func generateSimulatedBlock(
 	if err != nil {
 		return nil, [32]byte{}, fmt.Errorf("could not tree hash state: %v", err)
 	}
-	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot+1)
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot+1)
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
@@ -39,7 +39,7 @@ func generateSimulatedBlock(
 	binary.LittleEndian.PutUint64(buf, epoch)
 	domain := forkutils.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
 	// We make the previous validator's index sign the message instead of the proposer.
-	epochSignature := privKeys[proposerIndex].Sign(buf, domain)
+	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	block := &pb.BeaconBlock{
 		Slot:             beaconState.Slot + 1,
 		RandaoReveal:     epochSignature.Marshal(),
@@ -139,7 +139,7 @@ func generateSimulatedBlock(
 		return nil, [32]byte{}, fmt.Errorf("could not tree hash new block: %v", err)
 	}
 
-	block.Signature, err = b.BlockSignature(beaconState, block, privKeys[proposerIndex])
+	block.Signature, err = b.BlockSignature(beaconState, block, privKeys[proposerIdx])
 	if err != nil {
 		return nil, [32]byte{}, fmt.Errorf("could not get block signature: %v", err)
 	}

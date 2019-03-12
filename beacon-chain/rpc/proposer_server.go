@@ -34,7 +34,7 @@ func (ps *ProposerServer) ProposerIndex(ctx context.Context, req *pb.ProposerInd
 		return nil, fmt.Errorf("could not get beacon state: %v", err)
 	}
 
-	proposerIndex, err := helpers.BeaconProposerIndex(
+	proposerIdx, err := helpers.BeaconProposerIndex(
 		beaconState,
 		req.SlotNumber,
 	)
@@ -43,7 +43,7 @@ func (ps *ProposerServer) ProposerIndex(ctx context.Context, req *pb.ProposerInd
 	}
 
 	return &pb.ProposerIndexResponse{
-		Index: proposerIndex,
+		Index: proposerIdx,
 	}, nil
 }
 

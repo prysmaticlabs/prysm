@@ -341,12 +341,12 @@ func AttestationInclusion(
 		if err != nil {
 			return nil, fmt.Errorf("could not get inclusion slot: %v", err)
 		}
-		proposerIndex, err := helpers.BeaconProposerIndex(state, slot)
+		proposerIdx, err := helpers.BeaconProposerIndex(state, slot)
 		if err != nil {
 			return nil, fmt.Errorf("could not get propoer index: %v", err)
 		}
-		state.ValidatorBalances[proposerIndex] +=
-			helpers.BaseReward(state, proposerIndex, baseRewardQuotient) /
+		state.ValidatorBalances[proposerIdx] +=
+			helpers.BaseReward(state, proposerIdx, baseRewardQuotient) /
 				params.BeaconConfig().AttestationInclusionRewardQuotient
 	}
 	return state, nil

@@ -107,7 +107,7 @@ func BlockChildren(block *pb.BeaconBlock, observedBlocks []*pb.BeaconBlock) ([]*
 	return children, nil
 }
 
-// BlockSignature returns the signature of the block using the secret key provided
+// BlockSignature returns the signature of the block using the secret key provided.
 func BlockSignature(beaconState *pb.BeaconState, block *pb.BeaconBlock, priv *bls.SecretKey) ([]byte, error) {
 	blockRootHash, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
@@ -120,7 +120,7 @@ func BlockSignature(beaconState *pb.BeaconState, block *pb.BeaconBlock, priv *bl
 		BlockRootHash32: blockRootHash[:],
 	})
 	if err != nil {
-		return []byte{}, fmt.Errorf("could not hash attestation data: %v", err)
+		return []byte{}, fmt.Errorf("could not hash proposal: %v", err)
 	}
 
 	currentEpoch := helpers.CurrentEpoch(beaconState)
