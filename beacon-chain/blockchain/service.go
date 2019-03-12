@@ -49,6 +49,7 @@ type ChainService struct {
 	canonicalStateFeed   *event.Feed
 	genesisTime          time.Time
 	enablePOWChain       bool
+	finalizedEpoch       uint64
 	stateInitializedFeed *event.Feed
 }
 
@@ -102,6 +103,7 @@ func (c *ChainService) Start() {
 	if beaconState != nil {
 		log.Info("Beacon chain data already exists, starting service")
 		c.genesisTime = time.Unix(int64(beaconState.GenesisTime), 0)
+		c.finalizedEpoch = beaconState.FinalizedEpoch
 		go c.blockProcessing()
 	} else {
 		log.Info("Waiting for ChainStart log from the Validator Deposit Contract to start the beacon chain...")
@@ -128,6 +130,7 @@ func (c *ChainService) Start() {
 			if err != nil {
 				log.Fatalf("Could not initialize beacon chain: %v", err)
 			}
+			c.finalizedEpoch = beaconState.FinalizedEpoch
 			c.stateInitializedFeed.Send(genesisTime)
 			c.canonicalStateFeed.Send(beaconState)
 			go c.blockProcessing()
@@ -292,6 +295,10 @@ func (c *ChainService) ApplyForkChoiceRule(block *pb.BeaconBlock, computedState 
 			log.Error("Sent canonical state to no subscribers")
 		}
 	}
+
+	if err := c.saveFinalizedState(computedState); err != nil {
+		log.Errorf("Could not save new finalized state: %v", err)
+	}
 	if c.canonicalBlockFeed.Send(&pb.BeaconBlockAnnounce{
 		Hash:       h[:],
 		SlotNumber: block.Slot,
@@ -352,41 +359,62 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	// Check for skipped slots.
 	numSkippedSlots := 0
 	for beaconState.Slot < block.Slot-1 {
-		beaconState, err = state.ExecuteStateTransition(
-			c.ctx,
-			beaconState,
-			nil,
-			headRoot,
-			true, /* sig verify */
-		)
+		beaconState, err = c.runStateTransition(headRoot, nil, beaconState)
 		if err != nil {
 			return nil, fmt.Errorf("could not execute state transition without block %v", err)
 		}
-		log.WithField(
-			"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
-		).Info("Slot transition successfully processed")
 		numSkippedSlots++
 	}
 	if numSkippedSlots > 0 {
 		log.Warnf("Processed %d skipped slots", numSkippedSlots)
 	}
 
-	beaconState, err = state.ExecuteStateTransition(
+	beaconState, err = c.runStateTransition(headRoot, block, beaconState)
+	if err != nil {
+		return nil, fmt.Errorf("could not execute state transition with block %v", err)
+	}
+
+	// if there exists a block for the slot being processed.
+	if err := c.beaconDB.SaveBlock(block); err != nil {
+		return nil, fmt.Errorf("failed to save block: %v", err)
+	}
+
+	// Forward processed block to operation pool to remove individual operation from DB.
+	if c.opsPoolService.IncomingProcessedBlockFeed().Send(block) == 0 {
+		log.Error("Sent processed block to no subscribers")
+	}
+
+	// Remove pending deposits from the deposit queue.
+	for _, dep := range block.Body.Deposits {
+		c.beaconDB.RemovePendingDeposit(c.ctx, dep)
+	}
+
+	log.WithField("hash", fmt.Sprintf("%#x", blockRoot)).Debug("Processed beacon block")
+	return beaconState, nil
+}
+
+func (c *ChainService) runStateTransition(headRoot [32]byte, block *pb.BeaconBlock,
+	beaconState *pb.BeaconState) (*pb.BeaconState, error) {
+	beaconState, err := state.ExecuteStateTransition(
 		c.ctx,
 		beaconState,
 		block,
 		headRoot,
-		true, /* no sig verify */
+		true, /* sig verify */
 	)
 	if err != nil {
-		return nil, fmt.Errorf("could not execute state transition with block %v", err)
+		return nil, fmt.Errorf("could not execute state transition %v", err)
 	}
 	log.WithField(
 		"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
 	).Info("Slot transition successfully processed")
-	log.WithField(
-		"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
-	).Info("Block transition successfully processed")
+
+	if block != nil {
+		log.WithField(
+			"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
+		).Info("Block transition successfully processed")
+	}
+
 	if helpers.IsEpochEnd(beaconState.Slot) {
 		// Save activated validators of this epoch to public key -> index DB.
 		if err := c.saveValidatorIdx(beaconState); err != nil {
@@ -400,20 +428,6 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 			"SlotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
 		).Info("Epoch transition successfully processed")
 	}
-
-	// if there exists a block for the slot being processed.
-	if err := c.beaconDB.SaveBlock(block); err != nil {
-		return nil, fmt.Errorf("failed to save block: %v", err)
-	}
-
-	// Forward processed block to operation pool to remove individual operation from DB.
-	c.opsPoolService.IncomingProcessedBlockFeed().Send(block)
-
-	// Remove pending deposits from the deposit queue.
-	for _, dep := range block.Body.Deposits {
-		c.beaconDB.RemovePendingDeposit(c.ctx, dep)
-	}
-	log.WithField("hash", fmt.Sprintf("%#x", blockRoot)).Debug("Processed beacon block")
 	return beaconState, nil
 }
 
@@ -425,6 +439,16 @@ func (c *ChainService) isBlockReadyForProcessing(block *pb.BeaconBlock, beaconSt
 	if err := b.IsValidBlock(c.ctx, beaconState, block, c.enablePOWChain,
 		c.beaconDB.HasBlock, powBlockFetcher, c.genesisTime); err != nil {
 		return fmt.Errorf("block does not fulfill pre-processing conditions %v", err)
+	}
+	return nil
+}
+
+func (c *ChainService) saveFinalizedState(beaconState *pb.BeaconState) error {
+	// check if the finalized epoch has changed, if it
+	// has we save the finalized state.
+	if c.finalizedEpoch != beaconState.FinalizedEpoch {
+		c.finalizedEpoch = beaconState.FinalizedEpoch
+		return c.beaconDB.SaveFinalizedState(beaconState)
 	}
 	return nil
 }
