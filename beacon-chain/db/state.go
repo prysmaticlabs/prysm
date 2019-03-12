@@ -34,6 +34,8 @@ func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit, 
 	blockEnc, _ := proto.Marshal(genesisBlock)
 	zeroBinary := encodeSlotNumber(0)
 
+	db.currentState = beaconState
+
 	return db.update(func(tx *bolt.Tx) error {
 		blockBkt := tx.Bucket(blockBucket)
 		validatorBkt := tx.Bucket(validatorBucket)
@@ -74,6 +76,15 @@ func (db *BeaconDB) InitializeState(genesisTime uint64, deposits []*pb.Deposit, 
 func (db *BeaconDB) State(ctx context.Context) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.State")
 	defer span.End()
+
+	db.stateLock.RLock()
+	defer db.stateLock.RUnlock()
+	if db.currentState != nil {
+		if cachedState, ok := proto.Clone(db.currentState).(*pb.BeaconState); ok {
+			return cachedState, nil
+		}
+	}
+
 	var beaconState *pb.BeaconState
 	err := db.view(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
@@ -92,6 +103,14 @@ func (db *BeaconDB) State(ctx context.Context) (*pb.BeaconState, error) {
 
 // SaveState updates the beacon chain state.
 func (db *BeaconDB) SaveState(beaconState *pb.BeaconState) error {
+	db.stateLock.Lock()
+	defer db.stateLock.Unlock()
+	// Clone to prevent mutations of the cached copy
+	currentState, ok := proto.Clone(beaconState).(*pb.BeaconState)
+	if !ok {
+		return errors.New("could not clone beacon state")
+	}
+	db.currentState = currentState
 	return db.update(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
 		beaconStateEnc, err := proto.Marshal(beaconState)
