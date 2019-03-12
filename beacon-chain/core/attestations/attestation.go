@@ -6,14 +6,7 @@ package attestations
 import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/forkutils"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/sirupsen/logrus"
 )
-
-var log = logrus.WithField("prefix", "attestation")
 
 // IsDoubleVote checks if both of the attestations have been used to vote for the same slot.
 // Spec:
@@ -52,22 +45,4 @@ func IsSurroundVote(attestation1 *pb.AttestationData, attestation2 *pb.Attestati
 	targetEpoch2 := helpers.SlotToEpoch(attestation2.Slot)
 
 	return sourceEpoch1 < sourceEpoch2 && targetEpoch2 < targetEpoch1
-}
-
-// AggregateSignature returns the signature of the attestation from the beacon state, attestation
-// and secret key provided.
-func AggregateSignature(beaconState *pb.BeaconState, att *pb.Attestation, privKey *bls.SecretKey) []byte {
-	attestationDataHash, err := hashutil.HashProto(&pb.AttestationDataAndCustodyBit{
-		Data:       att.Data,
-		CustodyBit: true,
-	})
-	if err != nil {
-		log.Errorf("could not hash attestation data: %v", err)
-	}
-
-	currentEpoch := helpers.SlotToEpoch(att.Data.Slot)
-	domain := forkutils.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainAttestation)
-	sig := privKey.Sign(attestationDataHash[:], domain)
-
-	return sig.Marshal()
 }

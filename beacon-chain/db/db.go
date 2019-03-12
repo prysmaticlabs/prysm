@@ -26,8 +26,9 @@ type BeaconDB struct {
 	DatabasePath string
 
 	// Beacon chain deposits in memory.
-	deposits     []*depositContainer
-	depositsLock sync.RWMutex
+	pendingDeposits []*depositContainer
+	deposits        []*depositContainer
+	depositsLock    sync.RWMutex
 }
 
 // Close closes the underlying boltdb database.
