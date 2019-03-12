@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
@@ -14,6 +15,8 @@ import (
 )
 
 type BeaconNodesInstance struct {
+	NodeGRPCAddrs []string
+
 	nodes []*node.BeaconNode
 	t     *testing.T
 	geth  *GoEthereumInstance
@@ -26,12 +29,16 @@ func NewBeaconNodes(t *testing.T, instances int, geth *GoEthereumInstance) *Beac
 	}
 
 	var nodes []*node.BeaconNode
+	var nodeGRPCAddrs []string
 	for i := 0; i < instances; i++ {
+		rpcPort := 4000 + i
+
 		flagSet := flag.NewFlagSet("test", 0)
 		flagSet.String(utils.DepositContractFlag.Name, geth.DepositContractAddr.String(), "")
 		flagSet.String(utils.Web3ProviderFlag.Name, "ws://127.0.0.1:9000", "")
 		flagSet.String(cmd.DataDirFlag.Name, fmt.Sprintf("%s/beacon/db%d", testutil.TempDir(), i), "")
 		flagSet.Uint64(utils.ChainStartDelay.Name, chainStartDelay.Uint64(), "")
+		flagSet.String(utils.RPCPort.Name, strconv.Itoa(rpcPort), "")
 		n, err := node.NewBeaconNode(cli.NewContext(
 			cli.NewApp(),
 			flagSet,
@@ -41,6 +48,7 @@ func NewBeaconNodes(t *testing.T, instances int, geth *GoEthereumInstance) *Beac
 			t.Fatal(err)
 		}
 		nodes = append(nodes, n)
+		nodeGRPCAddrs = append(nodeGRPCAddrs, fmt.Sprintf("127.0.0.1:%d", rpcPort))
 	}
 	return &BeaconNodesInstance{
 		nodes: nodes,
