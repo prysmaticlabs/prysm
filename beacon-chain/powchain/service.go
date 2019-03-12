@@ -513,7 +513,7 @@ func safelyHandlePanic() {
 
 func (w *Web3Service) handleDelayTicker() {
 	defer safelyHandlePanic()
-	
+
 	// If the last requested block has not changed,
 	// we do not request batched logs as this means there are no new
 	// logs for the powchain service to process.
