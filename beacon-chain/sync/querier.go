@@ -185,6 +185,10 @@ func (q *Querier) IsSynced() (bool, error) {
 	if q.chainStarted && q.atGenesis {
 		return true, nil
 	}
+
+	if !q.chainStarted && q.atGenesis {
+		return false, nil
+	}
 	block, err := q.db.ChainHead()
 	if err != nil {
 		return false, err

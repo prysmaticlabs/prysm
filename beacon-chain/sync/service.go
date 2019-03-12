@@ -98,6 +98,11 @@ func (ss *Service) run() {
 		slog.Fatalf("Unable to retrieve result from sync querier %v", err)
 	}
 
+	// return since there is nothing to sync
+	if !ss.Querier.chainStarted && ss.Querier.atGenesis {
+		return
+	}
+
 	if synced {
 		ss.RegularSync.Start()
 		return
