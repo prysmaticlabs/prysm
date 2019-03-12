@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -28,12 +27,12 @@ import (
 // of an in-memory beacon chain for client test runs
 // and other e2e use cases.
 type SimulatedBackend struct {
-	chainService   *blockchain.ChainService
-	beaconDB       *db.BeaconDB
-	state          *pb.BeaconState
-	prevBlockRoots [][32]byte
-	inMemoryBlocks []*pb.BeaconBlock
-	depositTrie    *trieutil.DepositTrie
+	chainService       *blockchain.ChainService
+	beaconDB           *db.BeaconDB
+	state              *pb.BeaconState
+	prevBlockRoots     [][32]byte
+	inMemoryBlocks     []*pb.BeaconBlock
+	historicalDeposits []*pb.Deposit
 }
 
 // SimulatedObjects is a container to hold the
@@ -63,9 +62,10 @@ func NewSimulatedBackend() (*SimulatedBackend, error) {
 		return nil, err
 	}
 	return &SimulatedBackend{
-		chainService:   cs,
-		beaconDB:       db,
-		inMemoryBlocks: make([]*pb.BeaconBlock, 0),
+		chainService:       cs,
+		beaconDB:           db,
+		inMemoryBlocks:     make([]*pb.BeaconBlock, 0),
+		historicalDeposits: make([]*pb.Deposit, 0),
 	}, nil
 }
 
@@ -79,7 +79,6 @@ func (sb *SimulatedBackend) SetupBackend(numOfDeposits uint64) ([]*bls.SecretKey
 	if err := sb.setupBeaconStateAndGenesisBlock(initialDeposits); err != nil {
 		return nil, fmt.Errorf("could not set up beacon state and initialize genesis block %v", err)
 	}
-	sb.depositTrie = trieutil.NewDepositTrie()
 	return privKeys, nil
 }
 
@@ -97,21 +96,16 @@ func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain(objects *SimulatedObjec
 	newBlock, newBlockRoot, err := generateSimulatedBlock(
 		sb.state,
 		prevBlockRoot,
-		sb.depositTrie,
+		sb.historicalDeposits,
 		objects,
 		privKeys,
 	)
 	if err != nil {
 		return fmt.Errorf("could not generate simulated beacon block %v", err)
 	}
-	latestRoot := sb.depositTrie.Root()
-
-	sb.state.LatestEth1Data = &pb.Eth1Data{
-		DepositRootHash32: latestRoot[:],
-		BlockHash32:       []byte{},
-	}
-
-	newState, err := state.ExecuteStateTransition(
+	newState := sb.state
+	newState.LatestEth1Data = newBlock.Eth1Data
+	newState, err = state.ExecuteStateTransition(
 		context.Background(),
 		sb.state,
 		newBlock,
@@ -125,6 +119,9 @@ func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain(objects *SimulatedObjec
 	sb.state = newState
 	sb.prevBlockRoots = append(sb.prevBlockRoots, newBlockRoot)
 	sb.inMemoryBlocks = append(sb.inMemoryBlocks, newBlock)
+	if len(newBlock.Body.Deposits) > 0 {
+		sb.historicalDeposits = append(sb.historicalDeposits, newBlock.Body.Deposits...)
+	}
 
 	return nil
 }
@@ -268,7 +265,6 @@ func (sb *SimulatedBackend) initializeStateTest(testCase *StateTestCase) ([]*bls
 	if err := sb.setupBeaconStateAndGenesisBlock(initialDeposits); err != nil {
 		return nil, fmt.Errorf("could not set up beacon state and initialize genesis block %v", err)
 	}
-	sb.depositTrie = trieutil.NewDepositTrie()
 	return privKeys, nil
 }
 

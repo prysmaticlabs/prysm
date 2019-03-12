@@ -8,10 +8,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
-
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -113,7 +112,12 @@ func (c *ChainService) Start() {
 		subChainStart := c.web3Service.ChainStartFeed().Subscribe(c.chainStartChan)
 		go func() {
 			genesisTime := <-c.chainStartChan
-			initialDeposits := c.web3Service.ChainStartDeposits()
+			initialDepositsData := c.web3Service.ChainStartDeposits()
+			initialDeposits := make([]*pb.Deposit, len(initialDepositsData))
+			for i := range initialDepositsData {
+				initialDeposits[i] = &pb.Deposit{DepositData: initialDepositsData[i]}
+			}
+
 			depositRoot := c.web3Service.DepositRoot()
 			latestBlockHash := c.web3Service.LatestBlockHash()
 			eth1Data := &pb.Eth1Data{
@@ -409,7 +413,6 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	for _, dep := range block.Body.Deposits {
 		c.beaconDB.RemovePendingDeposit(c.ctx, dep)
 	}
-
 	log.WithField("hash", fmt.Sprintf("%#x", blockRoot)).Debug("Processed beacon block")
 	return beaconState, nil
 }
@@ -490,7 +493,7 @@ func (c *ChainService) blockChildren(block *pb.BeaconBlock, state *pb.BeaconStat
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
 	}
-	startSlot := block.Slot
+	startSlot := block.Slot + 1
 	currentSlot := state.Slot
 	for i := startSlot; i <= currentSlot; i++ {
 		block, err := c.beaconDB.BlockBySlot(i)

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -14,7 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -22,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -56,6 +55,14 @@ func (f *faultyPOWChainService) DepositRoot() [32]byte {
 	return [32]byte{}
 }
 
+func (f *faultyPOWChainService) DepositTrie() *trieutil.MerkleTrie {
+	return &trieutil.MerkleTrie{}
+}
+
+func (f *faultyPOWChainService) ChainStartDeposits() [][]byte {
+	return [][]byte{}
+}
+
 type mockPOWChainService struct {
 	chainStartFeed    *event.Feed
 	latestBlockNumber *big.Int
@@ -70,6 +77,10 @@ func (m *mockPOWChainService) ChainStartFeed() *event.Feed {
 }
 func (m *mockPOWChainService) LatestBlockHeight() *big.Int {
 	return m.latestBlockNumber
+}
+
+func (m *mockPOWChainService) DepositTrie() *trieutil.MerkleTrie {
+	return &trieutil.MerkleTrie{}
 }
 
 func (m *mockPOWChainService) BlockExists(_ context.Context, hash common.Hash) (bool, *big.Int, error) {
@@ -98,6 +109,10 @@ func (m *mockPOWChainService) BlockHashByHeight(_ context.Context, height *big.I
 func (m *mockPOWChainService) DepositRoot() [32]byte {
 	root := []byte("depositroot")
 	return bytesutil.ToBytes32(root)
+}
+
+func (m *mockPOWChainService) ChainStartDeposits() [][]byte {
+	return [][]byte{}
 }
 
 func TestWaitForChainStart_ContextClosed(t *testing.T) {
@@ -275,31 +290,51 @@ func TestPendingDeposits_UnknownBlockNum(t *testing.T) {
 }
 
 func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
+	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
 	p := &mockPOWChainService{
-		latestBlockNumber: big.NewInt(int64(10 + params.BeaconConfig().Eth1FollowDistance)),
+		latestBlockNumber: height,
+		hashesByHeight: map[int][]byte{
+			int(height.Int64()): []byte("0x0"),
+		},
 	}
-	d := &db.BeaconDB{}
+	d := internal.SetupDB(t)
+
+	beaconState := &pbp2p.BeaconState{
+		LatestEth1Data: &pbp2p.Eth1Data{
+			BlockHash32: []byte("0x0"),
+		},
+	}
+	if err := d.SaveState(beaconState); err != nil {
+		t.Fatal(err)
+	}
 
 	// Using the merkleTreeIndex as the block number for this test...
 	readyDeposits := []*pbp2p.Deposit{
 		{
-			MerkleTreeIndex: 1,
+			MerkleTreeIndex: 0,
+			DepositData:     []byte("a"),
 		},
 		{
-			MerkleTreeIndex: 2,
+			MerkleTreeIndex: 1,
+			DepositData:     []byte("b"),
 		},
 	}
 
 	recentDeposits := []*pbp2p.Deposit{
 		{
-			MerkleTreeIndex: params.BeaconConfig().Eth1FollowDistance + 100,
+			MerkleTreeIndex: 2,
+			DepositData:     []byte("c"),
 		},
 		{
-			MerkleTreeIndex: params.BeaconConfig().Eth1FollowDistance + 101,
+			MerkleTreeIndex: 3,
+			DepositData:     []byte("d"),
 		},
 	}
 	ctx := context.Background()
-	for _, dp := range append(recentDeposits, readyDeposits...) {
+	for _, dp := range append(readyDeposits, recentDeposits...) {
+		d.InsertDeposit(ctx, dp, big.NewInt(int64(dp.MerkleTreeIndex)))
+	}
+	for _, dp := range recentDeposits {
 		d.InsertPendingDeposit(ctx, dp, big.NewInt(int64(dp.MerkleTreeIndex)))
 	}
 
@@ -313,8 +348,8 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(result.PendingDeposits, readyDeposits) {
-		t.Errorf("Received unexpected list of deposits: %+v, wanted: %+v", result, readyDeposits)
+	if len(result.PendingDeposits) != 0 {
+		t.Errorf("Received unexpected list of deposits: %+v, wanted: 0", len(result.PendingDeposits))
 	}
 
 	// It should also return the recent deposits after their follow window.
@@ -323,7 +358,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(allResp.PendingDeposits) != len(recentDeposits)+len(readyDeposits) {
+	if len(allResp.PendingDeposits) != len(readyDeposits) {
 		t.Errorf(
 			"Received unexpected number of pending deposits: %d, wanted: %d",
 			len(allResp.PendingDeposits),
@@ -360,15 +395,32 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
+	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
+	deps := []*pbp2p.Deposit{
+		{MerkleTreeIndex: 0, DepositData: []byte("a")},
+		{MerkleTreeIndex: 1, DepositData: []byte("b")},
+	}
+	depsData := [][]byte{}
+	for _, dp := range deps {
+		db.InsertDeposit(context.Background(), dp, big.NewInt(0))
+		depsData = append(depsData, dp.DepositData)
+	}
+
+	depositTrie, err := trieutil.GenerateTrieFromItems(depsData, int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatal(err)
+	}
+	depositRoot := depositTrie.Root()
 	beaconState := &pbp2p.BeaconState{
 		LatestEth1Data: &pbp2p.Eth1Data{
-			BlockHash32: []byte{'a'},
+			BlockHash32:       []byte("hash0"),
+			DepositRootHash32: depositRoot[:],
 		},
 		Eth1DataVotes: []*pbp2p.Eth1DataVote{},
 	}
 
 	powChainService := &mockPOWChainService{
-		latestBlockNumber: big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)),
+		latestBlockNumber: height,
 		hashesByHeight: map[int][]byte{
 			0: []byte("hash0"),
 			1: beaconState.LatestEth1Data.BlockHash32,
@@ -388,7 +440,6 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 	}
 	// If the data vote objects are empty, the deposit root should be the one corresponding
 	// to the deposit contract in the powchain service, fetched using powChainService.DepositRoot()
-	depositRoot := beaconServer.powChainService.DepositRoot()
 	if !bytes.Equal(result.Eth1Data.DepositRootHash32, depositRoot[:]) {
 		t.Errorf(
 			"Expected deposit roots to match, received %#x == %#x",

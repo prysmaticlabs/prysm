@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.SecretKey) {
+func setupInitialDeposits(t testing.TB, numDeposits int) ([]*pb.Deposit, []*bls.SecretKey) {
 	privKeys := make([]*bls.SecretKey, numDeposits)
 	deposits := make([]*pb.Deposit, numDeposits)
 	for i := 0; i < len(deposits); i++ {
@@ -135,5 +135,41 @@ func TestFinalizeState_OK(t *testing.T) {
 
 	if !proto.Equal(fState, state) {
 		t.Error("Retrieved and saved finalized are unequal")
+	}
+}
+
+func BenchmarkState_ReadingFromCache(b *testing.B) {
+	db := setupDB(b)
+	defer teardownDB(b, db)
+	ctx := context.Background()
+
+	genesisTime := uint64(time.Now().Unix())
+	deposits, _ := setupInitialDeposits(b, 10)
+	if err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{}); err != nil {
+		b.Fatalf("Failed to initialize state: %v", err)
+	}
+
+	state, err := db.State(ctx)
+	if err != nil {
+		b.Fatalf("Could not read DV beacon state from DB: %v", err)
+	}
+	state.Slot++
+	err = db.SaveState(state)
+	if err != nil {
+		b.Fatalf("Could not save beacon state to cache from DB: %v", err)
+	}
+
+	if db.currentState.Slot != params.BeaconConfig().GenesisSlot+1 {
+		b.Fatal("cache should be prepared on state after saving to DB")
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, err := db.State(ctx)
+		if err != nil {
+			b.Fatalf("Could not read beacon state from cache: %v", err)
+		}
 	}
 }
