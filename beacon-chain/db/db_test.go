@@ -12,7 +12,7 @@ import (
 )
 
 // setupDB instantiates and returns a BeaconDB instance.
-func setupDB(t *testing.T) *BeaconDB {
+func setupDB(t testing.TB) *BeaconDB {
 	randPath, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	if err != nil {
 		t.Fatalf("Could not generate random file path: %v", err)
@@ -29,7 +29,7 @@ func setupDB(t *testing.T) *BeaconDB {
 }
 
 // teardownDB cleans up a test BeaconDB instance.
-func teardownDB(t *testing.T, db *BeaconDB) {
+func teardownDB(t testing.TB, db *BeaconDB) {
 	if err := db.Close(); err != nil {
 		t.Fatalf("Failed to close database: %v", err)
 	}
