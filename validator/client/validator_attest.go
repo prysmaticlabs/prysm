@@ -8,6 +8,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"go.opencensus.io/trace"
 )
 
@@ -110,7 +111,13 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	aggregationBitfield[indexIntoCommittee/8] |= 1 << (indexIntoCommittee % 8)
 	// Note: calling get_attestation_participants(state, attestation.data, attestation.aggregation_bitfield)
 	// should return a list of length equal to 1, containing validator_index.
-	attestation.AggregationBitfield = aggregationBitfield
+	log.Info("validator index")
+	log.Info(validatorIndexRes.Index)
+	log.Info("aggregation bitfield 1")
+	log.Info(aggregationBitfield)
+	log.Info("aggregation bitfield 2")
+	log.Info(bitutil.SetBitfield(int(validatorIndexRes.Index)))
+	attestation.AggregationBitfield = bitutil.SetBitfield(int(validatorIndexRes.Index))
 
 	// TODO(#1366): Use BLS to generate an aggregate signature.
 	attestation.AggregateSignature = []byte("signed")

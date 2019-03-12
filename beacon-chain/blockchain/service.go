@@ -273,6 +273,7 @@ func (c *ChainService) ApplyForkChoiceRule(block *pb.BeaconBlock, postState *pb.
 	if err != nil {
 		return fmt.Errorf("could not retreive attestation target: %v", err)
 	}
+	log.Infof("Applying fork choice, attestation targets: %v", attestationTargets)
 	head, err := c.lmdGhost(block, postState, attestationTargets)
 	if err != nil {
 		return fmt.Errorf("could not run fork choice: %v", err)
@@ -409,6 +410,20 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	// Forward processed block to operation pool to remove individual operation from DB.
 	c.opsPoolService.IncomingProcessedBlockFeed().Send(block)
 
+	// Update attestation store with latest attestation target.
+	log.Info("UPDATING LATEST ATTESTATION TARGET")
+	for _, att := range block.Body.Attestations {
+		if err := c.attsService.UpdateLatestAttestation(c.ctx, att); err != nil {
+			return nil, fmt.Errorf("failed to update latest attestation for store: %v", err)
+		}
+		log.WithFields(
+			logrus.Fields{
+				"attestationSlot": att.Data.Slot,
+				"attestationIndex": att.AggregationBitfield,
+			},
+		).Info("Attestation Store updated")
+	}
+
 	// Remove pending deposits from the deposit queue.
 	for _, dep := range block.Body.Deposits {
 		c.beaconDB.RemovePendingDeposit(c.ctx, dep)
@@ -467,6 +482,9 @@ func (c *ChainService) attestationTargets(state *pb.BeaconState) (map[uint64]*pb
 		block, err := c.attsService.LatestAttestationTarget(c.ctx, index)
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve attestation target: %v", err)
+		}
+		if block == nil {
+			continue
 		}
 		attestationTargets[uint64(i)] = block
 	}

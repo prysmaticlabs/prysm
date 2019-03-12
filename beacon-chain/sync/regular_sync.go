@@ -38,6 +38,10 @@ type operationService interface {
 	IncomingAttFeed() *event.Feed
 }
 
+type attsService interface {
+	IncomingAttestationFeed() *event.Feed
+}
+
 type p2pAPI interface {
 	p2p.Sender
 	Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription
@@ -62,6 +66,7 @@ type RegularSync struct {
 	p2p                      p2pAPI
 	chainService             chainService
 	operationsService        operationService
+	attsService              attsService
 	db                       *db.BeaconDB
 	blockAnnouncementFeed    *event.Feed
 	announceBlockBuf         chan p2p.Message
@@ -96,6 +101,7 @@ type RegularSyncConfig struct {
 	CanonicalBufferSize          int
 	ChainService                 chainService
 	OperationService             operationService
+	AttsService                  attsService
 	BeaconDB                     *db.BeaconDB
 	P2P                          p2pAPI
 }
@@ -128,6 +134,7 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		chainService:             cfg.ChainService,
 		db:                       cfg.BeaconDB,
 		operationsService:        cfg.OperationService,
+		attsService:              cfg.AttsService,
 		blockAnnouncementFeed:    new(event.Feed),
 		announceBlockBuf:         make(chan p2p.Message, cfg.BlockAnnounceBufferSize),
 		blockBuf:                 make(chan p2p.Message, cfg.BlockBufferSize),
@@ -465,6 +472,7 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) {
 // discard the attestation if we have gotten before, send it to attestation
 // pool if we have not.
 func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
+	log.Info("Received an attestation!")
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.receiveAttestation")
 	defer span.End()
 	recAttestation.Inc()
@@ -495,8 +503,9 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 	}
 
 	_, sendAttestationSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendAttestation")
-	log.WithField("attestationHash", fmt.Sprintf("%#x", attestationRoot)).Debug("Sending newly received attestation to subscribers")
+	log.WithField("attestationHash", fmt.Sprintf("%#x", attestationRoot)).Info("Sending newly received attestation to subscribers")
 	rs.operationsService.IncomingAttFeed().Send(attestation)
+	rs.attsService.IncomingAttestationFeed().Send(attestation)
 	sentAttestation.Inc()
 	sendAttestationSpan.End()
 }

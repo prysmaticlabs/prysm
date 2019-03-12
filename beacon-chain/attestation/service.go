@@ -103,7 +103,7 @@ func (a *Service) LatestAttestation(ctx context.Context, index uint64) (*pb.Atte
 
 	// return error if validator has no attestation.
 	if _, exists := a.Store[pubKey]; !exists {
-		return nil, fmt.Errorf("validator index %d does not have an attestation", index)
+		return nil, nil
 	}
 
 	return a.Store[pubKey], nil
@@ -121,6 +121,9 @@ func (a *Service) LatestAttestationTarget(ctx context.Context, index uint64) (*p
 	if err != nil {
 		return nil, fmt.Errorf("could not get attestation: %v", err)
 	}
+	if attestation == nil {
+		return nil, nil
+	}
 	targetBlockHash := bytesutil.ToBytes32(attestation.Data.BeaconBlockRootHash32)
 	targetBlock, err := a.beaconDB.Block(targetBlockHash)
 	if err != nil {
@@ -134,7 +137,7 @@ func (a *Service) LatestAttestationTarget(ctx context.Context, index uint64) (*p
 func (a *Service) attestationPool() {
 	incomingSub := a.incomingFeed.Subscribe(a.incomingChan)
 	defer incomingSub.Unsubscribe()
-
+	log.Info("Launching attestation pool")
 	for {
 		select {
 		case <-a.ctx.Done():
@@ -142,6 +145,7 @@ func (a *Service) attestationPool() {
 			return
 		// Listen for a newly received incoming attestation from the sync service.
 		case attestation := <-a.incomingChan:
+			log.Info("Attestation Store received incoming attestation from sync service")
 			handler.SafelyHandleMessage(a.ctx, a.handleAttestation, attestation)
 		}
 	}
@@ -156,18 +160,18 @@ func (a *Service) handleAttestation(msg proto.Message) {
 	}
 	h := hashutil.Hash(enc)
 
-	if err := a.updateLatestAttestation(a.ctx, attestation); err != nil {
+	if err := a.UpdateLatestAttestation(a.ctx, attestation); err != nil {
 		log.Errorf("Could not update attestation pool: %v", err)
 		return
 	}
 	log.Infof("Updated attestation pool for attestation %#x", h)
 }
 
-// updateLatestAttestation inputs an new attestation and checks whether
+// UpdateLatestAttestation inputs an new attestation and checks whether
 // the attesters who submitted this attestation with the higher slot number
 // have been noted in the attestation pool. If not, it updates the
 // attestation pool with attester's public key to attestation.
-func (a *Service) updateLatestAttestation(ctx context.Context, attestation *pb.Attestation) error {
+func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.Attestation) error {
 	// Potential improvement, instead of getting the state,
 	// we could get a mapping of validator index to public key.
 	state, err := a.beaconDB.State(ctx)

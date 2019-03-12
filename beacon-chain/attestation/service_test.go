@@ -39,7 +39,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 		},
 	}
 
-	if err := service.updateLatestAttestation(ctx, attestation); err != nil {
+	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
 	pubkey := bytesutil.ToBytes48([]byte{'A'})
@@ -50,7 +50,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	}
 
 	attestation.Data.Slot = 100
-	if err := service.updateLatestAttestation(ctx, attestation); err != nil {
+	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
 	if service.Store[pubkey].Data.Slot !=
