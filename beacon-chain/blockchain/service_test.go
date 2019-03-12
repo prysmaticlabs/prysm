@@ -566,7 +566,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Executing state transition")
 }
 
-func TestReceiveBlock_CheckStateRoot(t *testing.T) {
+func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -586,7 +586,6 @@ func TestReceiveBlock_CheckStateRoot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// good block processing check
 	beaconState.Slot++
 	goodStateBlock := &pb.BeaconBlock{
 		Slot:             beaconState.Slot,
@@ -602,8 +601,26 @@ func TestReceiveBlock_CheckStateRoot(t *testing.T) {
 		t.Fatalf("error exists for good block %v", err)
 	}
 	testutil.AssertLogsContain(t, hook, "Executing state transition")
+}
+func TestReceiveBlock_CheckBlockStateRoot_BadState(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	chainService := setupBeaconChain(t, false, db, false, nil)
+	deposits, privKeys := setupInitialDeposits(t, 100)
+	eth1Data := &pb.Eth1Data{
+		DepositRootHash32: []byte{},
+		BlockHash32:       []byte{},
+	}
+	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	if err != nil {
+		t.Fatalf("Can't generate genesis state: %v", err)
+	}
+	parentHash, genesisBlock := setupGenesisBlock(t, chainService, beaconState)
+	beaconState.Slot++
+	if err := chainService.beaconDB.UpdateChainHead(genesisBlock, beaconState); err != nil {
+		t.Fatal(err)
+	}
 
-	// bad block processing check
 	beaconState.Slot++
 	invalidStateBlock := &pb.BeaconBlock{
 		Slot:             beaconState.Slot,
