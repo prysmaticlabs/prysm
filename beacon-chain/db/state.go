@@ -135,6 +135,12 @@ func (db *BeaconDB) SaveFinalizedState(beaconState *pb.BeaconState) error {
 
 // SaveCurrentAndFinalizedState saves the state as both the current and last finalized state.
 func (db *BeaconDB) SaveCurrentAndFinalizedState(beaconState *pb.BeaconState) error {
+	// Clone to prevent mutations of the cached copy
+	currentState, ok := proto.Clone(beaconState).(*pb.BeaconState)
+	if !ok {
+		return errors.New("could not clone beacon state")
+	}
+	db.currentState = currentState
 	return db.update(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
 		beaconStateEnc, err := proto.Marshal(beaconState)
