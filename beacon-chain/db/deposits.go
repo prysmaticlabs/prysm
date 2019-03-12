@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	historicalDepositsCount = promauto.NewGauge(prometheus.GaugeOpts{
+	historicalDepositsCount = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "beacondb_all_deposits",
 		Help: "The number of total deposits in the beaconDB in-memory database",
 	})
