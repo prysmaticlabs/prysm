@@ -265,37 +265,43 @@ func (c *ChainService) processBlock(message proto.Message) {
 // ApplyForkChoiceRule determines the current beacon chain head using LMD GHOST as a block-vote
 // weighted function to select a canonical head in Ethereum Serenity.
 func (c *ChainService) ApplyForkChoiceRule(block *pb.BeaconBlock, postState *pb.BeaconState) error {
-	h, err := hashutil.HashBeaconBlock(block)
-	if err != nil {
-		return fmt.Errorf("could not tree hash incoming block: %v", err)
-	}
 	attestationTargets, err := c.attestationTargets(postState)
 	if err != nil {
 		return fmt.Errorf("could not retreive attestation target: %v", err)
 	}
-	log.Infof("Applying fork choice, attestation targets: %v", attestationTargets)
 	head, err := c.lmdGhost(block, postState, attestationTargets)
 	if err != nil {
 		return fmt.Errorf("could not run fork choice: %v", err)
 	}
+	headRoot, err := hashutil.HashBeaconBlock(head)
+	if err != nil {
+		return fmt.Errorf("could not tree hash incoming block: %v", err)
+	}
+
+	log.WithFields(
+		logrus.Fields{
+			"headSlot": head.Slot,
+			"headRoot": headRoot,
+		},
+	).Info("Chain head after fork choice")
+
 
 	if err := c.beaconDB.UpdateChainHead(head, postState); err != nil {
 		return fmt.Errorf("failed to update chain: %v", err)
 	}
-	log.WithField("blockRoot", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
 	// We fire events that notify listeners of a new block in
 	// the case of a state transition. This is useful for the beacon node's gRPC
 	// server to stream these events to beacon clients.
 	// When the transition is a cycle transition, we stream the state containing the new validator
 	// assignments to clients.
-	if helpers.IsEpochStart(block.Slot) {
+	if helpers.IsEpochStart(head.Slot) {
 		if c.canonicalStateFeed.Send(postState) == 0 {
 			log.Error("Sent canonical state to no subscribers")
 		}
 	}
 	if c.canonicalBlockFeed.Send(&pb.BeaconBlockAnnounce{
-		Hash:       h[:],
-		SlotNumber: block.Slot,
+		Hash:       headRoot[:],
+		SlotNumber: head.Slot,
 	}) == 0 {
 		log.Error("Sent canonical block to no subscribers")
 	}
@@ -410,8 +416,7 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	// Forward processed block to operation pool to remove individual operation from DB.
 	c.opsPoolService.IncomingProcessedBlockFeed().Send(block)
 
-	// Update attestation store with latest attestation target.
-	log.Info("UPDATING LATEST ATTESTATION TARGET")
+	// Update attestation store with latest attestation target for each validator.
 	for _, att := range block.Body.Attestations {
 		if err := c.attsService.UpdateLatestAttestation(c.ctx, att); err != nil {
 			return nil, fmt.Errorf("failed to update latest attestation for store: %v", err)
@@ -419,7 +424,7 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 		log.WithFields(
 			logrus.Fields{
 				"attestationSlot": att.Data.Slot,
-				"attestationIndex": att.AggregationBitfield,
+				"attestationBitfield": att.AggregationBitfield,
 			},
 		).Info("Attestation Store updated")
 	}

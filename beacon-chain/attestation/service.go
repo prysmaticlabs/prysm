@@ -137,7 +137,6 @@ func (a *Service) LatestAttestationTarget(ctx context.Context, index uint64) (*p
 func (a *Service) attestationPool() {
 	incomingSub := a.incomingFeed.Subscribe(a.incomingChan)
 	defer incomingSub.Unsubscribe()
-	log.Info("Launching attestation pool")
 	for {
 		select {
 		case <-a.ctx.Done():
@@ -145,7 +144,6 @@ func (a *Service) attestationPool() {
 			return
 		// Listen for a newly received incoming attestation from the sync service.
 		case attestation := <-a.incomingChan:
-			log.Info("Attestation Store received incoming attestation from sync service")
 			handler.SafelyHandleMessage(a.ctx, a.handleAttestation, attestation)
 		}
 	}
