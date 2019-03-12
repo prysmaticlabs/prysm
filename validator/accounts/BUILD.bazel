@@ -4,7 +4,10 @@ go_library(
     name = "go_default_library",
     srcs = ["account.go"],
     importpath = "github.com/prysmaticlabs/prysm/validator/accounts",
-    visibility = ["//validator:__subpackages__"],
+    visibility = [
+        "//validator:__subpackages__",
+        "//test:__subpackages__",
+    ],
     deps = [
         "//shared/keystore:go_default_library",
         "//shared/params:go_default_library",

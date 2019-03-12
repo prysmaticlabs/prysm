@@ -6,28 +6,35 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/node"
 	"github.com/prysmaticlabs/prysm/validator/types"
 	"github.com/urfave/cli"
 )
 
 type ValidatorsInstance struct {
-	clients []*node.ValidatorClient
-	t       *testing.T
+	DepositData [][]byte
+	clients     []*node.ValidatorClient
+	t           *testing.T
 }
 
 func NewValidators(t *testing.T, numValidators int, beacons *BeaconNodesInstance) *ValidatorsInstance {
 
 	numBeaconNodes := len(beacons.NodeGRPCAddrs)
 	var clients []*node.ValidatorClient
+	var depositData [][]byte
 	for i := 0; i < numValidators; i++ {
 		GRPCAddr := beacons.NodeGRPCAddrs[i%numBeaconNodes]
 		keystorePath := fmt.Sprintf("%s/keystore%d", testutil.TempDir(), i)
+		depositDatum, err := accounts.NewValidatorAccount(keystorePath, "password")
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		flagSet := flag.NewFlagSet("test", 0)
 		flagSet.String(types.BeaconRPCProviderFlag.Name, GRPCAddr, "")
 		flagSet.String(types.KeystorePathFlag.Name, keystorePath, "")
-		flagSet.String(types.PasswordFlag.Name, "", "")
+		flagSet.String(types.PasswordFlag.Name, "password", "")
 		v, err := node.NewValidatorClient(cli.NewContext(
 			cli.NewApp(),
 			flagSet,
@@ -38,11 +45,13 @@ func NewValidators(t *testing.T, numValidators int, beacons *BeaconNodesInstance
 		}
 
 		clients = append(clients, v)
+		depositData = append(depositData, depositDatum)
 	}
 
 	return &ValidatorsInstance{
-		clients: clients,
-		t:       t,
+		DepositData: depositData,
+		clients:     clients,
+		t:           t,
 	}
 }
 
@@ -54,7 +63,8 @@ func (v *ValidatorsInstance) Start() {
 
 func (v *ValidatorsInstance) Stop() error {
 	for _, client := range v.clients {
-		client.Close()
+		//client.Close()
+		_ = client
 	}
 	return nil
 }

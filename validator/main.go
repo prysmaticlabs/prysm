@@ -43,7 +43,7 @@ func startNode(ctx *cli.Context) error {
 func createValidatorAccount(ctx *cli.Context) error {
 	keystoreDirectory := ctx.String(types.KeystorePathFlag.Name)
 	keystorePassword := ctx.String(types.PasswordFlag.Name)
-	if err := accounts.NewValidatorAccount(keystoreDirectory, keystorePassword); err != nil {
+	if _, err := accounts.NewValidatorAccount(keystoreDirectory, keystorePassword); err != nil {
 		return fmt.Errorf("could not initialize validator account: %v", err)
 	}
 	return nil

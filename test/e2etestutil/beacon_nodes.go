@@ -51,9 +51,10 @@ func NewBeaconNodes(t *testing.T, instances int, geth *GoEthereumInstance) *Beac
 		nodeGRPCAddrs = append(nodeGRPCAddrs, fmt.Sprintf("127.0.0.1:%d", rpcPort))
 	}
 	return &BeaconNodesInstance{
-		nodes: nodes,
-		t:     t,
-		geth:  geth,
+		NodeGRPCAddrs: nodeGRPCAddrs,
+		nodes:         nodes,
+		t:             t,
+		geth:          geth,
 	}
 
 }

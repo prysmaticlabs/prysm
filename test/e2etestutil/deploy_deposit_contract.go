@@ -8,14 +8,15 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 )
 
 var depositsForChainStart = big.NewInt(8)
-var minDepositAmount = big.NewInt(1e9)
-var maxDepositAmount = big.NewInt(32e9)
-var chainStartDelay = big.NewInt(10)
+var minDepositAmount = big.NewInt(1e9)  // gwei
+var maxDepositAmount = big.NewInt(32e9) // gwei
+var chainStartDelay = big.NewInt(10)    // seconds
 
 func (g *GoEthereumInstance) DeployDepositContract() common.Address {
 	client, err := g.node.Attach()
@@ -57,6 +58,36 @@ func (g *GoEthereumInstance) DeployDepositContract() common.Address {
 	return addr
 }
 
-func (g *GoEthereumInstance) Deposit() {
+func (g *GoEthereumInstance) SendValidatorDeposits(depositData [][]byte) {
+	txOpts := g.txOpts()
+	txOpts.Value = big.NewInt(0).Mul(maxDepositAmount, big.NewInt(1e9)) // wei
 
+	if len(depositData) == 0 {
+		g.t.Fatal("No deposit data provided to SendValidatorDeposits")
+	}
+
+	var lastTx *types.Transaction
+	for _, depositDatum := range depositData {
+		tx, err := g.depositContract.Deposit(txOpts, depositDatum)
+		if err != nil {
+			g.t.Logf("Failing data: %#x", depositDatum)
+			g.t.Fatal(err)
+		}
+		lastTx = tx
+		g.t.Logf("Deposited %#x", tx.Hash())
+	}
+
+	_ = lastTx // Wait for last tx to be mined?
+}
+
+func (g *GoEthereumInstance) txOpts() *bind.TransactOpts {
+	keyjson, err := g.ks.Export(g.ks.Accounts()[0], "", "")
+	if err != nil {
+		g.t.Fatal(err)
+	}
+	txOpts, err := bind.NewTransactor(bytes.NewReader(keyjson), "")
+	if err != nil {
+		g.t.Fatal(err)
+	}
+	return txOpts
 }

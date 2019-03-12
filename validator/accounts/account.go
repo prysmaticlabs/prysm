@@ -38,11 +38,12 @@ func VerifyAccountNotExists(directory string, password string) error {
 // parameters needed to deposit into the deposit contract on the ETH1.0 chain. Specifically, this
 // generates a BLS private and public key, and then logs the serialized deposit input hex string
 // to be used in an ETH1.0 transaction by the validator.
-func NewValidatorAccount(directory string, password string) error {
+// Returns the serialized deposit data byte array.
+func NewValidatorAccount(directory string, password string) ([]byte, error) {
 	// First, if the keystore already exists, throws an error as there can only be
 	// one keystore per validator client.
 	if err := VerifyAccountNotExists(directory, password); err != nil {
-		return fmt.Errorf("validator account exists: %v", err)
+		return []byte{}, fmt.Errorf("validator account exists: %v", err)
 	}
 	shardWithdrawalKeyFile := directory + params.BeaconConfig().WithdrawalPrivkeyFileName
 	validatorKeyFile := directory + params.BeaconConfig().ValidatorPrivkeyFileName
@@ -50,10 +51,10 @@ func NewValidatorAccount(directory string, password string) error {
 	// If the keystore does not exists at the path, we create a new one for the validator.
 	shardWithdrawalKey, err := keystore.NewKey(rand.Reader)
 	if err != nil {
-		return err
+		return []byte{}, err
 	}
 	if err := ks.StoreKey(shardWithdrawalKeyFile, shardWithdrawalKey, password); err != nil {
-		return fmt.Errorf("unable to store key %v", err)
+		return []byte{}, fmt.Errorf("unable to store key %v", err)
 	}
 	log.WithField(
 		"path",
@@ -61,10 +62,10 @@ func NewValidatorAccount(directory string, password string) error {
 	).Info("Keystore generated for shard withdrawals at path")
 	validatorKey, err := keystore.NewKey(rand.Reader)
 	if err != nil {
-		return err
+		return []byte{}, err
 	}
 	if err := ks.StoreKey(validatorKeyFile, validatorKey, password); err != nil {
-		return fmt.Errorf("unable to store key %v", err)
+		return []byte{}, fmt.Errorf("unable to store key %v", err)
 	}
 	log.WithField(
 		"path",
@@ -73,11 +74,11 @@ func NewValidatorAccount(directory string, password string) error {
 
 	data, err := keystore.DepositInput(validatorKey, shardWithdrawalKey)
 	if err != nil {
-		return fmt.Errorf("unable to generate deposit data: %v", err)
+		return []byte{}, fmt.Errorf("unable to generate deposit data: %v", err)
 	}
 	serializedData := new(bytes.Buffer)
 	if err := ssz.Encode(serializedData, data); err != nil {
-		return fmt.Errorf("could not serialize deposit data: %v", err)
+		return []byte{}, fmt.Errorf("could not serialize deposit data: %v", err)
 	}
 	log.Info(`Account creation complete! Copy and paste the deposit data shown below when issuing a transaction into the ETH1.0 deposit contract to activate your validator client`)
 	fmt.Printf(`
@@ -87,5 +88,5 @@ func NewValidatorAccount(directory string, password string) error {
 
 ===========================================================
 `, serializedData)
-	return nil
+	return serializedData.Bytes(), nil
 }
