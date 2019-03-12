@@ -2,6 +2,7 @@ package main
 
 import (
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/test/e2etestutil"
 )
@@ -26,5 +27,6 @@ func TestMultiNodeDeployment(t *testing.T) {
 	// Report PASS/FAIL
 
 	_ = contractAddr
-	t.Skip()
+
+	time.Sleep(1 * time.Minute)
 }

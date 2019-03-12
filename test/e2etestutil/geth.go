@@ -13,7 +13,7 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 )
 
-var blockPeriod = uint64(15)
+var blockPeriod = uint64(15) // seconds
 
 type GoEthereumInstance struct {
 	DepositContractAddr common.Address
@@ -33,6 +33,8 @@ func NewGoEthereumInstance(t *testing.T) *GoEthereumInstance {
 			DiscoveryV5: false,
 		},
 		DataDir: "", // Use memory db
+		WSHost:  "127.0.0.1",
+		WSPort:  9000,
 	}
 	node, err := node.New(cfg)
 	if err != nil {

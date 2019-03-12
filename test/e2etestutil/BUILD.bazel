@@ -16,6 +16,7 @@ go_library(
         "//beacon-chain/utils:go_default_library",
         "//contracts/deposit-contract:go_default_library",
         "//shared/cmd:go_default_library",
+        "//shared/testutil:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/keystore:go_default_library",
         "@com_github_ethereum_go_ethereum//cmd/utils:go_default_library",

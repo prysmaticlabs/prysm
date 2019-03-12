@@ -2,7 +2,9 @@ package e2etestutil
 
 import (
 	"bytes"
+	"context"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -13,13 +15,14 @@ import (
 var depositsForChainStart = big.NewInt(8)
 var minDepositAmount = big.NewInt(1e9)
 var maxDepositAmount = big.NewInt(32e9)
-var chainStartDelay = big.NewInt(0)
+var chainStartDelay = big.NewInt(10)
 
 func (g *GoEthereumInstance) DeployDepositContract() common.Address {
 	client, err := g.node.Attach()
 	if err != nil {
 		g.t.Fatal(err)
 	}
+	eclient := ethclient.NewClient(client)
 	keyjson, err := g.ks.Export(g.ks.Accounts()[0], "", "")
 	if err != nil {
 		g.t.Fatal(err)
@@ -28,9 +31,9 @@ func (g *GoEthereumInstance) DeployDepositContract() common.Address {
 	if err != nil {
 		g.t.Fatal(err)
 	}
-	addr, _, depContract, err := contracts.DeployDepositContract(
+	addr, tx, depContract, err := contracts.DeployDepositContract(
 		txOpts,
-		ethclient.NewClient(client),
+		eclient,
 		depositsForChainStart,
 		minDepositAmount,
 		maxDepositAmount,
@@ -40,6 +43,15 @@ func (g *GoEthereumInstance) DeployDepositContract() common.Address {
 	if err != nil {
 		g.t.Fatal(err)
 	}
+
+	g.t.Log("Waiting for contract to be mined in proof-of-work chain")
+	for pending := true; pending; _, pending, err = eclient.TransactionByHash(context.Background(), tx.Hash()) {
+		if err != nil {
+			g.t.Fatal(err)
+		}
+		time.Sleep(1 * time.Second)
+	}
+
 	g.depositContract = depContract
 	g.DepositContractAddr = addr
 	return addr
