@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -138,29 +140,39 @@ func (s *Service) saveOperations() {
 			return
 		// Listen for a newly received incoming exit from the sync service.
 		case exit := <-s.incomingValidatorExits:
-			hash, err := hashutil.HashProto(exit)
-			if err != nil {
-				log.Errorf("Could not hash exit req proto: %v", err)
-				continue
-			}
-			if err := s.beaconDB.SaveExit(exit); err != nil {
-				log.Errorf("Could not save exit request: %v", err)
-				continue
-			}
-			log.Infof("Exit request %#x saved in DB", hash)
+			handler.SafelyHandleMessage(s.ctx, s.handleValidatorExits, exit)
 		case attestation := <-s.incomingAtt:
-			hash, err := hashutil.HashProto(attestation)
-			if err != nil {
-				log.Errorf("Could not hash attestation proto: %v", err)
-				continue
-			}
-			if err := s.beaconDB.SaveAttestation(attestation); err != nil {
-				log.Errorf("Could not save attestation: %v", err)
-				continue
-			}
-			log.Infof("Attestation %#x saved in DB", hash)
+			handler.SafelyHandleMessage(s.ctx, s.handleAttestations, attestation)
 		}
 	}
+}
+
+func (s *Service) handleValidatorExits(message proto.Message) {
+	exit := message.(*pb.VoluntaryExit)
+	hash, err := hashutil.HashProto(exit)
+	if err != nil {
+		log.Errorf("Could not hash exit req proto: %v", err)
+		return
+	}
+	if err := s.beaconDB.SaveExit(exit); err != nil {
+		log.Errorf("Could not save exit request: %v", err)
+		return
+	}
+	log.Infof("Exit request %#x saved in DB", hash)
+}
+
+func (s *Service) handleAttestations(message proto.Message) {
+	attestation := message.(*pb.Attestation)
+	hash, err := hashutil.HashProto(attestation)
+	if err != nil {
+		log.Errorf("Could not hash attestation proto: %v", err)
+		return
+	}
+	if err := s.beaconDB.SaveAttestation(attestation); err != nil {
+		log.Errorf("Could not save attestation: %v", err)
+		return
+	}
+	log.Infof("Attestation %#x saved in DB", hash)
 }
 
 // removeOperations removes the processed operations from operation pool and DB.
@@ -178,12 +190,26 @@ func (s *Service) removeOperations() {
 			return
 		// Listen for processed block from the block chain service.
 		case block := <-s.incomingProcessedBlock:
+			handler.SafelyHandleMessage(s.ctx, s.handleProcessedBlock, block)
 			// Removes the pending attestations received from processed block body in DB.
 			if err := s.removePendingAttestations(block.Body.Attestations); err != nil {
 				log.Errorf("Could not remove processed attestations from DB: %v", err)
 				return
 			}
+			if err := s.removeEpochOldAttestations(block.Slot); err != nil {
+				log.Errorf("Could not remove old attestations from DB at slot %d: %v", block.Slot, err)
+				return
+			}
 		}
+	}
+}
+
+func (s *Service) handleProcessedBlock(message proto.Message) {
+	block := message.(*pb.BeaconBlock)
+	// Removes the pending attestations received from processed block body in DB.
+	if err := s.removePendingAttestations(block.Body.Attestations); err != nil {
+		log.Errorf("Could not remove processed attestations from DB: %v", err)
+		return
 	}
 }
 
@@ -198,6 +224,23 @@ func (s *Service) removePendingAttestations(attestations []*pb.Attestation) erro
 			return err
 		}
 		log.WithField("attestationRoot", fmt.Sprintf("0x%x", h)).Info("Attestation removed")
+	}
+	return nil
+}
+
+// removeEpochOldAttestations removes attestations that's older than one epoch length from current slot.
+func (s *Service) removeEpochOldAttestations(slot uint64) error {
+	attestations, err := s.beaconDB.Attestations()
+	if err != nil {
+		return err
+	}
+	for _, a := range attestations {
+		// Remove attestation from DB if it's one epoch older than slot.
+		if slot-params.BeaconConfig().SlotsPerEpoch >= a.Data.Slot {
+			if err := s.beaconDB.DeleteAttestation(a); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }

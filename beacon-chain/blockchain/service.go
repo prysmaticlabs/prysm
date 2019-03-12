@@ -10,6 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -21,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
@@ -110,7 +112,12 @@ func (c *ChainService) Start() {
 		subChainStart := c.web3Service.ChainStartFeed().Subscribe(c.chainStartChan)
 		go func() {
 			genesisTime := <-c.chainStartChan
-			initialDeposits := c.web3Service.ChainStartDeposits()
+			initialDepositsData := c.web3Service.ChainStartDeposits()
+			initialDeposits := make([]*pb.Deposit, len(initialDepositsData))
+			for i := range initialDepositsData {
+				initialDeposits[i] = &pb.Deposit{DepositData: initialDepositsData[i]}
+			}
+
 			depositRoot := c.web3Service.DepositRoot()
 			latestBlockHash := c.web3Service.LatestBlockHash()
 			eth1Data := &pb.Eth1Data{
@@ -237,23 +244,27 @@ func (c *ChainService) blockProcessing() {
 		// can be received either from the sync service, the RPC service,
 		// or via p2p.
 		case block := <-c.incomingBlockChan:
-			beaconState, err := c.beaconDB.State(c.ctx)
-			if err != nil {
-				log.Errorf("Unable to retrieve beacon state %v", err)
-				continue
-			}
+			handler.SafelyHandleMessage(c.ctx, c.processBlock, block)
+		}
+	}
+}
 
-			if block.Slot > beaconState.Slot {
-				computedState, err := c.ReceiveBlock(block, beaconState)
-				if err != nil {
-					log.Errorf("Could not process received block: %v", err)
-					continue
-				}
-				if err := c.ApplyForkChoiceRule(block, computedState); err != nil {
-					log.Errorf("Could not update chain head: %v", err)
-					continue
-				}
-			}
+func (c *ChainService) processBlock(message proto.Message) {
+	block := message.(*pb.BeaconBlock)
+	beaconState, err := c.beaconDB.State(c.ctx)
+	if err != nil {
+		log.Errorf("Unable to retrieve beacon state %v", err)
+		return
+	}
+	if block.Slot > beaconState.Slot {
+		computedState, err := c.ReceiveBlock(block, beaconState)
+		if err != nil {
+			log.Errorf("Could not process received block: %v", err)
+			return
+		}
+		if err := c.ApplyForkChoiceRule(block, computedState); err != nil {
+			log.Errorf("Could not update chain head: %v", err)
+			return
 		}
 	}
 }
@@ -276,10 +287,17 @@ func (c *ChainService) ApplyForkChoiceRule(block *pb.BeaconBlock, computedState 
 	// server to stream these events to beacon clients.
 	// When the transition is a cycle transition, we stream the state containing the new validator
 	// assignments to clients.
-	if block.Slot%params.BeaconConfig().SlotsPerEpoch == 0 {
-		c.canonicalStateFeed.Send(computedState)
+	if helpers.IsEpochStart(block.Slot) {
+		if c.canonicalStateFeed.Send(computedState) == 0 {
+			log.Error("Sent canonical state to no subscribers")
+		}
 	}
-	c.canonicalBlockFeed.Send(block)
+	if c.canonicalBlockFeed.Send(&pb.BeaconBlockAnnounce{
+		Hash:       h[:],
+		SlotNumber: block.Slot,
+	}) == 0 {
+		log.Error("Sent canonical block to no subscribers")
+	}
 	return nil
 }
 
@@ -332,6 +350,7 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 		"Executing state transition")
 
 	// Check for skipped slots.
+	numSkippedSlots := 0
 	for beaconState.Slot < block.Slot-1 {
 		beaconState, err = state.ExecuteStateTransition(
 			c.ctx,
@@ -346,6 +365,10 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 		log.WithField(
 			"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
 		).Info("Slot transition successfully processed")
+		numSkippedSlots++
+	}
+	if numSkippedSlots > 0 {
+		log.Warnf("Processed %d skipped slots", numSkippedSlots)
 	}
 
 	beaconState, err = state.ExecuteStateTransition(
@@ -364,7 +387,7 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	log.WithField(
 		"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
 	).Info("Block transition successfully processed")
-	if (beaconState.Slot+1)%params.BeaconConfig().SlotsPerEpoch == 0 {
+	if helpers.IsEpochEnd(beaconState.Slot) {
 		// Save activated validators of this epoch to public key -> index DB.
 		if err := c.saveValidatorIdx(beaconState); err != nil {
 			return nil, fmt.Errorf("could not save validator index: %v", err)
@@ -390,7 +413,6 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	for _, dep := range block.Body.Deposits {
 		c.beaconDB.RemovePendingDeposit(c.ctx, dep)
 	}
-
 	log.WithField("hash", fmt.Sprintf("%#x", blockRoot)).Debug("Processed beacon block")
 	return beaconState, nil
 }
