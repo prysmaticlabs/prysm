@@ -37,7 +37,6 @@ func NewBeaconNodes(t *testing.T, instances int, geth *GoEthereumInstance) *Beac
 		flagSet.String(utils.DepositContractFlag.Name, geth.DepositContractAddr.String(), "")
 		flagSet.String(utils.Web3ProviderFlag.Name, "ws://127.0.0.1:9000", "")
 		flagSet.String(cmd.DataDirFlag.Name, fmt.Sprintf("%s/beacon/db%d", testutil.TempDir(), i), "")
-		flagSet.Uint64(utils.ChainStartDelay.Name, chainStartDelay.Uint64(), "")
 		flagSet.String(utils.RPCPort.Name, strconv.Itoa(rpcPort), "")
 		n, err := node.NewBeaconNode(cli.NewContext(
 			cli.NewApp(),

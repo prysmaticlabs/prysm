@@ -20,7 +20,7 @@ func TestMultiNodeDeployment(t *testing.T) {
 	//defer beacons.Stop()
 	time.Sleep(5 * time.Second) // wait for beacon nodes to boot up
 	// Start validators
-	validators := e2etestutil.NewValidators(t, 1, beacons)
+	validators := e2etestutil.NewValidators(t, 8, beacons)
 	validators.Start()
 	//defer validators.Stop()
 	// Send deposits

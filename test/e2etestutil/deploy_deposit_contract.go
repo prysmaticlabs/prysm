@@ -9,7 +9,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 )
 
@@ -19,11 +18,6 @@ var maxDepositAmount = big.NewInt(32e9) // gwei
 var chainStartDelay = big.NewInt(10)    // seconds
 
 func (g *GoEthereumInstance) DeployDepositContract() common.Address {
-	client, err := g.node.Attach()
-	if err != nil {
-		g.t.Fatal(err)
-	}
-	eclient := ethclient.NewClient(client)
 	keyjson, err := g.ks.Export(g.ks.Accounts()[0], "", "")
 	if err != nil {
 		g.t.Fatal(err)
@@ -34,7 +28,7 @@ func (g *GoEthereumInstance) DeployDepositContract() common.Address {
 	}
 	addr, tx, depContract, err := contracts.DeployDepositContract(
 		txOpts,
-		eclient,
+		g.client,
 		depositsForChainStart,
 		minDepositAmount,
 		maxDepositAmount,
@@ -45,14 +39,7 @@ func (g *GoEthereumInstance) DeployDepositContract() common.Address {
 		g.t.Fatal(err)
 	}
 
-	g.t.Log("Waiting for contract to be mined in proof-of-work chain")
-	for pending := true; pending; _, pending, err = eclient.TransactionByHash(context.Background(), tx.Hash()) {
-		if err != nil {
-			g.t.Fatal(err)
-		}
-		time.Sleep(1 * time.Second)
-	}
-
+	g.waitForTransaction(tx)
 	g.depositContract = depContract
 	g.DepositContractAddr = addr
 	return addr
@@ -77,7 +64,11 @@ func (g *GoEthereumInstance) SendValidatorDeposits(depositData [][]byte) {
 		g.t.Logf("Deposited %#x", tx.Hash())
 	}
 
-	_ = lastTx // Wait for last tx to be mined?
+	g.t.Logf("Sent %d deposits", len(depositData))
+
+	g.waitForTransaction(lastTx)
+
+	// flush transactions?
 }
 
 func (g *GoEthereumInstance) txOpts() *bind.TransactOpts {
@@ -90,4 +81,16 @@ func (g *GoEthereumInstance) txOpts() *bind.TransactOpts {
 		g.t.Fatal(err)
 	}
 	return txOpts
+}
+
+func (g *GoEthereumInstance) waitForTransaction(tx *types.Transaction) {
+	// Send another transaction and wait for it to no longer be pending
+	g.t.Log("Waiting for transaction to be mined in proof-of-work chain")
+	var err error
+	for pending := true; pending; _, pending, err = g.client.TransactionByHash(context.Background(), tx.Hash()) {
+		if err != nil {
+			g.t.Fatal(err)
+		}
+		time.Sleep(1 * time.Second)
+	}
 }

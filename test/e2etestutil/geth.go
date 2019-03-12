@@ -8,12 +8,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/eth"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/p2p"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
 )
 
-var blockPeriod = uint64(2) // seconds
+var blockPeriod = uint64(0) // seconds
 
 type GoEthereumInstance struct {
 	DepositContractAddr common.Address
@@ -22,6 +23,7 @@ type GoEthereumInstance struct {
 	node            *node.Node
 	ks              *keystore.KeyStore
 	depositContract *contracts.DepositContract
+	client          *ethclient.Client
 }
 
 func NewGoEthereumInstance(t *testing.T) *GoEthereumInstance {
@@ -79,6 +81,12 @@ func (g *GoEthereumInstance) Start() {
 	if err := ethereum.StartMining(1 /*threads*/); err != nil {
 		g.t.Fatal(err)
 	}
+
+	client, err := g.node.Attach()
+	if err != nil {
+		g.t.Fatal(err)
+	}
+	g.client = ethclient.NewClient(client)
 }
 
 func (g *GoEthereumInstance) Stop() error {
