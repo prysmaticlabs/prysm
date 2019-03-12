@@ -14,6 +14,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -31,6 +32,7 @@ import (
 )
 
 var log = logrus.WithField("prefix", "initial-sync")
+var debugError = "debug:"
 
 // Config defines the configurable properties of InitialSync.
 //
@@ -219,16 +221,48 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 				return
 			}
 		case msg := <-s.blockAnnounceBuf:
-			s.processBlockAnnounce(msg)
+			safelyHandleMessage(s.processBlockAnnounce, msg)
 		case msg := <-s.blockBuf:
-			data := msg.Data.(*pb.BeaconBlockResponse)
-			s.processBlock(msg.Ctx, data.Block, msg.Peer)
+			safelyHandleMessage(func(message p2p.Message) {
+				data := message.Data.(*pb.BeaconBlockResponse)
+				s.processBlock(message.Ctx, data.Block, message.Peer)
+			}, msg)
 		case msg := <-s.stateBuf:
-			s.processState(msg)
+			safelyHandleMessage(s.processState, msg)
 		case msg := <-s.batchedBlockBuf:
-			s.processBatchedBlocks(msg)
+			safelyHandleMessage(s.processBatchedBlocks, msg)
 		}
 	}
+}
+
+// safelyHandleMessage will recover and log any panic that occurs from the
+// function argument.
+func safelyHandleMessage(fn func(p2p.Message), msg p2p.Message) {
+	defer func() {
+		if r := recover(); r != nil {
+			printedMsg := "message contains no data"
+			if msg.Data != nil {
+				printedMsg = proto.MarshalTextString(msg.Data)
+			}
+			log.WithFields(logrus.Fields{
+				"r":   r,
+				"msg": printedMsg,
+			}).Error("Panicked when handling p2p message! Recovering...")
+
+			if msg.Ctx == nil {
+				return
+			}
+			if span := trace.FromContext(msg.Ctx); span != nil {
+				span.SetStatus(trace.Status{
+					Code:    trace.StatusCodeInternal,
+					Message: fmt.Sprintf("Panic: %v", r),
+				})
+			}
+		}
+	}()
+
+	// Fingers crossed that it doesn't panic...
+	fn(msg)
 }
 
 // checkInMemoryBlocks is another routine which will run concurrently with the
@@ -322,6 +356,11 @@ func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock, p
 		// if parent exists we validate the block.
 		if s.doesParentExist(block) {
 			if err := s.validateAndSaveNextBlock(ctx, block); err != nil {
+				// Debug error so as not to have noisy error logs
+				if strings.HasPrefix(err.Error(), debugError) {
+					log.Debug(strings.TrimPrefix(err.Error(), debugError))
+					return
+				}
 				log.Errorf("Unable to save block: %v", err)
 			}
 			return
@@ -335,6 +374,11 @@ func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock, p
 	}
 
 	if err := s.validateAndSaveNextBlock(ctx, block); err != nil {
+		// Debug error so as not to have noisy error logs
+		if strings.HasPrefix(err.Error(), debugError) {
+			log.Debug(strings.TrimPrefix(err.Error(), debugError))
+			return
+		}
 		log.Errorf("Unable to save block: %v", err)
 	}
 }
@@ -483,9 +527,8 @@ func (s *InitialSync) checkBlockValidity(ctx context.Context, block *pb.BeaconBl
 		return fmt.Errorf("could not tree hash received block: %v", err)
 	}
 
-	log.Debugf("Processing response to block request: %#x", blockRoot)
 	if s.db.HasBlock(blockRoot) {
-		return errors.New("received a block that already exists. Exiting")
+		return errors.New(debugError + "received a block that already exists. Exiting")
 	}
 
 	beaconState, err := s.db.State(ctx)
@@ -494,7 +537,7 @@ func (s *InitialSync) checkBlockValidity(ctx context.Context, block *pb.BeaconBl
 	}
 
 	if block.Slot < beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
-		return errors.New("discarding received block with a slot number smaller than the last finalized slot")
+		return errors.New(debugError + "discarding received block with a slot number smaller than the last finalized slot")
 	}
 	// Attestation from proposer not verified as, other nodes only store blocks not proposer
 	// attestations.

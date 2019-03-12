@@ -10,10 +10,11 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
-	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
@@ -228,7 +229,7 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 	depAddress := b.ctx.GlobalString(utils.DepositContractFlag.Name)
 
 	if depAddress == "" {
-		log.Fatal("No deposit contract specified. Add --deposit-contract with a valud deposit contract address to start.")
+		log.Fatal("No deposit contract specified. Add --deposit-contract with a valid deposit contract address to start.")
 	}
 
 	if !common.IsHexAddress(depAddress) {
