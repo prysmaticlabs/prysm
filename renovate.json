@@ -1,7 +1,7 @@
 {
   "extends": [
     "config:base",
-    "schedule:daily"
+    "schedule:earlyMondays"
   ],
   "ignoreDeps": [
     "com_github_aws_aws_sdk_go" 
