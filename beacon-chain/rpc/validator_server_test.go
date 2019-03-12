@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
