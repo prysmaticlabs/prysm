@@ -52,7 +52,7 @@ func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
 		t.Fatal(err)
 	}
 	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, params.BeaconConfig().GenesisSlot)
+	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, params.BeaconConfig().GenesisSlot)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +62,7 @@ func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	domain := forkutils.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
 
 	// We make the previous validator's index sign the message instead of the proposer.
-	epochSignature := privKeys[proposerIdx-1].Sign(buf, domain)
+	epochSignature := privKeys[proposerIndex-1].Sign(buf, domain)
 	block := &pb.BeaconBlock{
 		RandaoReveal: epochSignature.Marshal(),
 	}
@@ -85,7 +85,7 @@ func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testi
 		t.Fatal(err)
 	}
 	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, params.BeaconConfig().GenesisSlot)
+	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, params.BeaconConfig().GenesisSlot)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +93,7 @@ func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testi
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
 	domain := forkutils.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
-	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
+	epochSignature := privKeys[proposerIndex].Sign(buf, domain)
 
 	block := &pb.BeaconBlock{
 		RandaoReveal: epochSignature.Marshal(),
@@ -116,6 +116,61 @@ func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testi
 			"Expected empty signature to be overwritten by randao reveal, received %v",
 			params.BeaconConfig().EmptySignature,
 		)
+	}
+}
+
+func TestVerifyProposerSignature_SignsCorrectly(t *testing.T) {
+	deposits, privKeys := setupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	block := &pb.BeaconBlock{
+		Slot:             params.BeaconConfig().GenesisSlot,
+		ParentRootHash32: []byte{'a', 'b', 'c'},
+	}
+
+	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, block.Slot)
+	if err != nil {
+		t.Errorf("could not get becon proposer index: %v", err)
+	}
+
+	block.Signature, err = blocks.BlockSignature(beaconState, block, privKeys[proposerIndex])
+	if err != nil {
+		t.Errorf("could not get block signature: %v", err)
+	}
+
+	err = blocks.VerifyProposerSignature(context.Background(), beaconState, block)
+	if err != nil {
+		t.Errorf("Unexpected error verifying proposer signature: %v", err)
+	}
+}
+
+func TestVerifyProposerSignature_IncorrectSig(t *testing.T) {
+	deposits, privKeys := setupInitialDeposits(t, 100)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	block := &pb.BeaconBlock{
+		Slot:             params.BeaconConfig().GenesisSlot,
+		ParentRootHash32: []byte{'a', 'b', 'c'},
+	}
+
+	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, block.Slot)
+	if err != nil {
+		t.Errorf("could not get becon proposer index: %v", err)
+	}
+
+	block.Signature, err = blocks.BlockSignature(beaconState, block, privKeys[proposerIndex+1])
+	if err != nil {
+		t.Errorf("could not get block signature: %v", err)
+	}
+
+	want := "proposer signature did not verify"
+	if err = blocks.VerifyProposerSignature(context.Background(), beaconState, block); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 

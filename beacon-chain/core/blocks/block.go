@@ -8,8 +8,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/forkutils"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -102,4 +105,25 @@ func BlockChildren(block *pb.BeaconBlock, observedBlocks []*pb.BeaconBlock) ([]*
 		}
 	}
 	return children, nil
+}
+
+// BlockSignature returns the signature of the block using the secret key provided
+func BlockSignature(beaconState *pb.BeaconState, block *pb.BeaconBlock, priv *bls.SecretKey) ([]byte, error) {
+	blockRootHash, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		return []byte{}, fmt.Errorf("could not hash beacon block: %v", err)
+	}
+
+	proposalHash, err := hashutil.HashProposal(&pb.Proposal{
+		Slot:            block.Slot,
+		Shard:           params.BeaconConfig().BeaconChainShardNumber,
+		BlockRootHash32: blockRootHash[:],
+	})
+	if err != nil {
+		return []byte{}, fmt.Errorf("could not hash attestation data: %v", err)
+	}
+
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+	domain := forkutils.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainProposal)
+	return priv.Sign(proposalHash[:], domain).Marshal(), nil
 }

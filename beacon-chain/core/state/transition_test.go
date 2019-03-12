@@ -10,6 +10,7 @@ import (
 	"time"
 
 	atts "github.com/prysmaticlabs/prysm/beacon-chain/core/attestations"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -42,16 +43,16 @@ func setupInitialDeposits(t *testing.T, numDeposits uint64) ([]*pb.Deposit, []*b
 
 func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*bls.SecretKey) []byte {
 	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
+	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
 	if err != nil {
-		t.Fatal(err)
+		t.Errorf("could not get beacon proposer index at slot %v: %v", beaconState.Slot, err)
 	}
 	epoch := helpers.SlotToEpoch(params.BeaconConfig().GenesisSlot)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
 	domain := forkutils.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
 	// We make the previous validator's index sign the message instead of the proposer.
-	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
+	epochSignature := privKeys[proposerIndex].Sign(buf, domain)
 	return epochSignature.Marshal()
 }
 
@@ -150,43 +151,7 @@ func TestProcessBlock_IncorrectAggregateSig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	proposerSlashings := []*pb.ProposerSlashing{
-		{
-			ProposerIndex: 1,
-			ProposalData_1: &pb.ProposalSignedData{
-				Slot:            1,
-				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
-			},
-			ProposalData_2: &pb.ProposalSignedData{
-				Slot:            1,
-				Shard:           1,
-				BlockRootHash32: []byte{0, 1, 0},
-			},
-		},
-	}
-	att1 := &pb.AttestationData{
-		Slot:           5,
-		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 5,
-	}
-	att2 := &pb.AttestationData{
-		Slot:           5,
-		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 4,
-	}
-	attesterSlashings := []*pb.AttesterSlashing{
-		{
-			SlashableAttestation_1: &pb.SlashableAttestation{
-				Data:             att1,
-				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
-				CustodyBitfield:  []byte{0xFF},
-			},
-			SlashableAttestation_2: &pb.SlashableAttestation{
-				Data:             att2,
-				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
-				CustodyBitfield:  []byte{0xFF},
-			},
-		},
-	}
+
 	var blockRoots [][]byte
 	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
@@ -210,19 +175,14 @@ func TestProcessBlock_IncorrectAggregateSig(t *testing.T) {
 		AggregationBitfield: []byte{1},
 		CustodyBitfield:     []byte{1},
 	}
+
 	attestorIndices, err := helpers.AttestationParticipants(beaconState, blockAtt.Data, blockAtt.AggregationBitfield)
 	if err != nil {
 		t.Errorf("could not get aggergation participants %v", err)
 	}
-	blockAtt.AggregateSignature = atts.AggregateSignature(beaconState, blockAtt, privKeys[attestorIndices[0]+1])
-
+	blockAtt.AggregateSignature = atts.AggregateSignature(beaconState, blockAtt, privKeys[attestorIndices[0]-1])
 	attestations := []*pb.Attestation{blockAtt}
-	exits := []*pb.VoluntaryExit{
-		{
-			ValidatorIndex: 10,
-			Epoch:          params.BeaconConfig().GenesisEpoch,
-		},
-	}
+
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 	block := &pb.BeaconBlock{
 		Slot:         params.BeaconConfig().GenesisSlot + 10,
@@ -232,12 +192,20 @@ func TestProcessBlock_IncorrectAggregateSig(t *testing.T) {
 			BlockHash32:       []byte{3},
 		},
 		Body: &pb.BeaconBlockBody{
-			ProposerSlashings: proposerSlashings,
-			AttesterSlashings: attesterSlashings,
-			Attestations:      attestations,
-			VoluntaryExits:    exits,
+			Attestations: attestations,
 		},
 	}
+
+	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, block.Slot)
+	if err != nil {
+		t.Errorf("could not get beacon proposer index at slot %v: %v", block.Slot, err)
+	}
+
+	block.Signature, err = b.BlockSignature(beaconState, block, privKeys[proposerIndex])
+	if err != nil {
+		t.Errorf("could not get block signature: %v", err)
+	}
+
 	want := "aggregate signature did not verify"
 	if _, err := state.ProcessBlock(context.Background(), beaconState, block, true); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
@@ -498,8 +466,47 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			VoluntaryExits:    exits,
 		},
 	}
+
+	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, block.Slot)
+	if err != nil {
+		t.Errorf("could not get beacon proposer index at slot %v: %v", block.Slot, err)
+	}
+
+	block.Signature, err = b.BlockSignature(beaconState, block, privKeys[proposerIndex])
+	if err != nil {
+		t.Errorf("could not get block signature: %v", err)
+	}
+
 	if _, err := state.ProcessBlock(context.Background(), beaconState, block, true); err != nil {
 		t.Errorf("Expected block to pass processing conditions: %v", err)
+	}
+}
+
+func TestProcessBlock_IncorrectProposerSig(t *testing.T) {
+	deposits, privKeys := setupInitialDeposits(t, params.BeaconConfig().SlotsPerEpoch)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	beaconState.Slot = params.BeaconConfig().GenesisSlot + 10
+	block := &pb.BeaconBlock{
+		Slot: params.BeaconConfig().GenesisSlot + 10,
+	}
+
+	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, block.Slot)
+	if err != nil {
+		t.Errorf("could not get beacon proposer index at slot %v: %v", block.Slot, err)
+	}
+
+	block.Signature, err = b.BlockSignature(beaconState, block, privKeys[proposerIndex+1])
+	if err != nil {
+		t.Errorf("could not get block signature: %v", err)
+	}
+
+	want := "proposer signature did not verify"
+	if _, err := state.ProcessBlock(context.Background(), beaconState, block, true); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
@@ -540,6 +547,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 	}
 
 	crosslinkRecord := make([]*pb.Crosslink, 64)
+
 	newState := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot + 1,
 		LatestAttestations:     attestations,

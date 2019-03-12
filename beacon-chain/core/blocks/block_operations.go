@@ -30,13 +30,44 @@ import (
 // transition processing.
 //
 // WIP - this is stubbed out until BLS is integrated into Prysm.
-func VerifyProposerSignature(
-	ctx context.Context,
-	_ *pb.BeaconBlock,
-) error {
+func VerifyProposerSignature(ctx context.Context, beaconState *pb.BeaconState, block *pb.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock.VerifyProposerSignature")
 	defer span.End()
 
+	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, block.Slot)
+	if err != nil {
+		return fmt.Errorf("could not get beacon proposer index at slot %v: %v", block.Slot, err)
+	}
+
+	proposerPubkey, err := bls.PublicKeyFromBytes(beaconState.ValidatorRegistry[proposerIndex].Pubkey)
+	if err != nil {
+		return fmt.Errorf("could not get proposer public key: %v", err)
+	}
+
+	blockRootHash, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		return fmt.Errorf("could not hash beacon block: %v", err)
+	}
+
+	proposalHash, err := hashutil.HashProposal(&pb.Proposal{
+		Slot:            block.Slot,
+		Shard:           params.BeaconConfig().BeaconChainShardNumber,
+		BlockRootHash32: blockRootHash[:],
+	})
+	if err != nil {
+		return fmt.Errorf("could not hash attestation data: %v", err)
+	}
+
+	sig, err := bls.SignatureFromBytes(block.Signature)
+	currentEpoch := helpers.CurrentEpoch(beaconState)
+
+	domain := forkutils.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainProposal)
+
+	log.WithFields(logrus.Fields{}).Info("Verifying proposal")
+
+	if !sig.Verify(proposerPubkey, proposalHash[:], domain) {
+		return errors.New("proposer signature did not verify")
+	}
 	return nil
 }
 
@@ -89,12 +120,12 @@ func ProcessBlockRandao(ctx context.Context, beaconState *pb.BeaconState, block 
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock.ProcessBlockRandao")
 	defer span.End()
 
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
+	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
 	if err != nil {
-		return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
+		return nil, fmt.Errorf("could not get beacon proposer index at slot %v: %v", beaconState.Slot, err)
 	}
-	log.WithField("proposerIndex", proposerIdx).Info("RANDAO expected proposer")
-	proposer := beaconState.ValidatorRegistry[proposerIdx]
+	log.WithField("proposerIndex", proposerIndex).Info("RANDAO expected proposer")
+	proposer := beaconState.ValidatorRegistry[proposerIndex]
 	if verifySignatures {
 		if err := verifyBlockRandao(beaconState, block, proposer); err != nil {
 			return nil, fmt.Errorf("could not verify block randao: %v", err)

@@ -109,8 +109,7 @@ func ProcessBlock(
 
 	// Verify block signature.
 	if verifySignatures {
-		// TODO(#781): Verify Proposer Signature.
-		if err := b.VerifyProposerSignature(ctx, block); err != nil {
+		if err := b.VerifyProposerSignature(ctx, state, block); err != nil {
 			return nil, fmt.Errorf("could not verify proposer signature: %v", err)
 		}
 	}

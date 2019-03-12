@@ -10,6 +10,8 @@ import (
 	"github.com/golang/mock/gomock"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/forkutils"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/internal"
@@ -473,4 +475,84 @@ func TestProposeBlock_BroadcastsABlock(t *testing.T) {
 	).Return(&pb.ProposeResponse{}, nil /*error*/)
 
 	validator.ProposeBlock(context.Background(), 55)
+}
+
+func TestProposeBlock_SignsBlock(t *testing.T) {
+	validator, m, finish := setup(t)
+	defer finish()
+
+	m.beaconClient.EXPECT().CanonicalHead(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.BeaconBlock{}, nil /*err*/)
+
+	m.beaconClient.EXPECT().PendingDeposits(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pb.PendingDepositsResponse{}, nil /*err*/)
+
+	m.beaconClient.EXPECT().Eth1Data(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pb.Eth1DataResponse{}, nil /*err*/)
+
+	m.beaconClient.EXPECT().ForkData(
+		gomock.Any(), // ctx
+		gomock.Eq(&ptypes.Empty{}),
+	).Return(&pbp2p.Fork{
+		Epoch:           params.BeaconConfig().GenesisEpoch,
+		CurrentVersion:  0,
+		PreviousVersion: 0,
+	}, nil /*err*/)
+
+	m.proposerClient.EXPECT().PendingAttestations(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pb.PendingAttestationsRequest{}),
+	).Return(&pb.PendingAttestationsResponse{PendingAttestations: []*pbp2p.Attestation{}}, nil)
+
+	m.proposerClient.EXPECT().ComputeStateRoot(
+		gomock.Any(), // context
+		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
+	).Return(&pb.StateRootResponse{
+		StateRoot: []byte{'F'},
+	}, nil /*err*/)
+
+	var broadcastedBlock *pbp2p.BeaconBlock
+	m.proposerClient.EXPECT().ProposeBlock(
+		gomock.Any(), // ctx
+		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
+	).Do(func(_ context.Context, blk *pbp2p.BeaconBlock) {
+		broadcastedBlock = blk
+	}).Return(&pb.ProposeResponse{}, nil /*error*/)
+
+	validator.ProposeBlock(context.Background(), 55)
+
+	blockRootHash, err := hashutil.HashBeaconBlock(broadcastedBlock)
+	if err != nil {
+		log.Errorf("Could not hash beacon block: %v", err)
+		return
+	}
+
+	proposalDataHash, err := hashutil.HashProto(&pbp2p.ProposalSignedData{
+		Slot:            broadcastedBlock.Slot,
+		Shard:           params.BeaconConfig().BeaconChainShardNumber,
+		BlockRootHash32: blockRootHash[:],
+	})
+	if err != nil {
+		log.Errorf("Could not hash proposal signed data: %v", err)
+		return
+	}
+
+	fork := &pbp2p.Fork{
+		Epoch:           params.BeaconConfig().GenesisEpoch,
+		CurrentVersion:  0,
+		PreviousVersion: 0,
+	}
+
+	domain := forkutils.DomainVersion(fork, params.BeaconConfig().GenesisEpoch, params.BeaconConfig().DomainProposal)
+	proposalSignature := validator.key.SecretKey.Sign(proposalDataHash[:], domain).Marshal()
+
+	if !bytes.Equal(broadcastedBlock.Signature, proposalSignature) {
+		t.Errorf("Unexpected block signature. want=%#x got=%#x", proposalSignature, broadcastedBlock.Signature)
+	}
 }

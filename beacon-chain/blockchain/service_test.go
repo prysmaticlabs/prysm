@@ -166,7 +166,7 @@ func createPreChainStartDeposit(t *testing.T, pk []byte) *pb.Deposit {
 
 func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*bls.SecretKey) []byte {
 	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
+	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -175,7 +175,7 @@ func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*b
 	binary.LittleEndian.PutUint64(buf, epoch)
 	domain := forkutils.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
 	// We make the previous validator's index sign the message instead of the proposer.
-	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
+	epochSignature := privKeys[proposerIndex].Sign(buf, domain)
 	return epochSignature.Marshal()
 }
 
@@ -440,6 +440,16 @@ func TestChainService_Starts(t *testing.T) {
 		},
 	}
 
+	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, block.Slot)
+	if err != nil {
+		t.Errorf("could not get beacon proposer index at slot %v: %v", block.Slot, err)
+	}
+
+	block.Signature, err = b.BlockSignature(beaconState, block, privKeys[proposerIndex])
+	if err != nil {
+		t.Errorf("could not get block signature: %v", err)
+	}
+
 	exitRoutine := make(chan bool)
 	go func() {
 		chainService.blockProcessing()
@@ -530,10 +540,22 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 
 	beaconState.Slot--
+
+	proposerIndex, err := helpers.BeaconProposerIndex(beaconState, block.Slot)
+	if err != nil {
+		t.Errorf("could not get beacon proposer index at slot %v: %v", block.Slot, err)
+	}
+
+	block.Signature, err = b.BlockSignature(beaconState, block, privKeys[proposerIndex])
+	if err != nil {
+		t.Errorf("could not get block signature: %v", err)
+	}
+
 	computedState, err := chainService.ReceiveBlock(block, beaconState)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if err := chainService.ApplyForkChoiceRule(block, computedState); err != nil {
 		t.Fatal(err)
 	}

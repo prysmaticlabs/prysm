@@ -33,3 +33,21 @@ func TestHashBeaconBlock_doesntMutate(t *testing.T) {
 		t.Error("Protos are not equal!")
 	}
 }
+func TestHashProposal_doesntMutate(t *testing.T) {
+	a := &pb.Proposal{
+		Slot:            123,
+		Shard:           456,
+		BlockRootHash32: []byte{'R', 'O', 'O', 'T'},
+		Signature:       []byte{'S', 'I', 'G'},
+	}
+	b := proto.Clone(a).(*pb.Proposal)
+
+	_, err := hashutil.HashProposal(b)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if !proto.Equal(a, b) {
+		t.Error("Protos are not equal!")
+	}
+}
