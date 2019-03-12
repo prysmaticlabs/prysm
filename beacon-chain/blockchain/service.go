@@ -428,20 +428,6 @@ func (c *ChainService) runStateTransition(headRoot [32]byte, block *pb.BeaconBlo
 			"SlotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
 		).Info("Epoch transition successfully processed")
 	}
-
-	// if there exists a block for the slot being processed.
-	if err := c.beaconDB.SaveBlock(block); err != nil {
-		return nil, fmt.Errorf("failed to save block: %v", err)
-	}
-
-	// Forward processed block to operation pool to remove individual operation from DB.
-	c.opsPoolService.IncomingProcessedBlockFeed().Send(block)
-
-	// Remove pending deposits from the deposit queue.
-	for _, dep := range block.Body.Deposits {
-		c.beaconDB.RemovePendingDeposit(c.ctx, dep)
-	}
-	log.WithField("hash", fmt.Sprintf("%#x", blockRoot)).Debug("Processed beacon block")
 	return beaconState, nil
 }
 
