@@ -613,13 +613,13 @@ func TestUpdateHead_SavesBlock(t *testing.T) {
 		{
 			blockSlot: params.BeaconConfig().GenesisSlot + 64,
 			state:     beaconState,
-			logAssert: "Chain head block and state updated",
+			logAssert: "Chain head after fork choice",
 		},
 		// Higher slot, different state, but higher last finalized slot.
 		{
 			blockSlot: params.BeaconConfig().GenesisSlot + 64,
 			state:     &pb.BeaconState{FinalizedEpoch: params.BeaconConfig().GenesisEpoch + 2},
-			logAssert: "Chain head block and state updated",
+			logAssert: "Chain head after fork choice",
 		},
 		// Higher slot, different state, same last finalized slot,
 		// but last justified slot.
@@ -629,7 +629,7 @@ func TestUpdateHead_SavesBlock(t *testing.T) {
 				FinalizedEpoch: params.BeaconConfig().GenesisEpoch,
 				JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 2,
 			},
-			logAssert: "Chain head block and state updated",
+			logAssert: "Chain head after fork choice",
 		},
 	}
 	for _, tt := range tests {

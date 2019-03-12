@@ -147,9 +147,12 @@ func TestLatestAttestation_NoAttestation(t *testing.T) {
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	index := 0
-	want := fmt.Sprintf("validator index %d does not have an attestation", index)
-	if _, err := service.LatestAttestation(ctx, uint64(index)); !strings.Contains(err.Error(), want) {
-		t.Errorf("Wanted error to contain %s, received %v", want, err)
+	a, err := service.LatestAttestation(ctx, uint64(index))
+	if err != nil {
+		t.Fatalf("could not run latest attestation: %v", err)
+	}
+	if a != nil {
+		t.Errorf("Wanted attesstation %v, received %v", nil, a)
 	}
 }
 

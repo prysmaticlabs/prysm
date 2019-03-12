@@ -196,11 +196,8 @@ func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get attestation targets: %v", err)
 	}
-	if attestationTargets[0].validatorIndex != 0 {
-		t.Errorf("Wanted validator index 0, got %d", attestationTargets[0].validatorIndex)
-	}
-	if attestationTargets[0].block.Slot != block.Slot {
-		t.Errorf("Wanted attested slot %d, got %d", block.Slot, attestationTargets[0].block.Slot)
+	if attestationTargets[0].Slot != block.Slot {
+		t.Errorf("Wanted attested slot %d, got %d", block.Slot, attestationTargets[0].Slot)
 	}
 }
 

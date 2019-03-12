@@ -12,6 +12,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/stategenerator"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -280,11 +281,20 @@ func (c *ChainService) ApplyForkChoiceRule(block *pb.BeaconBlock, postState *pb.
 
 	log.WithFields(
 		logrus.Fields{
-			"headSlot": head.Slot,
-			"headRoot": headRoot,
+			"headSlot": head.Slot - params.BeaconConfig().GenesisSlot,
+			"headRoot": fmt.Sprintf("%#x", headRoot),
 		},
 	).Info("Chain head after fork choice")
 
+	if head.Slot < postState.Slot {
+		log.Info("Reverting state, head slot %d is less than state slot %d",
+			head.Slot-params.BeaconConfig().GenesisSlot, postState.Slot-params.BeaconConfig().GenesisSlot)
+		postState, err = stategenerator.GenerateStateFromSlot(c.ctx, c.beaconDB, head.Slot)
+		if err != nil {
+			return fmt.Errorf("failed to revert state back to slot %d: %v",
+				head.Slot-params.BeaconConfig().GenesisSlot, err)
+		}
+	}
 
 	if err := c.beaconDB.UpdateChainHead(head, postState); err != nil {
 		return fmt.Errorf("failed to update chain: %v", err)
@@ -423,7 +433,7 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 		}
 		log.WithFields(
 			logrus.Fields{
-				"attestationSlot": att.Data.Slot,
+				"attestationSlot":     att.Data.Slot,
 				"attestationBitfield": att.AggregationBitfield,
 			},
 		).Info("Attestation Store updated")
