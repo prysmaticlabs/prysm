@@ -228,7 +228,7 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 	depAddress := b.ctx.GlobalString(utils.DepositContractFlag.Name)
 
 	if depAddress == "" {
-		log.Fatal("No deposit contract specified. Add --deposit-contract with a valud deposit contract address to start.")
+		log.Fatal("No deposit contract specified. Add --deposit-contract with a valid deposit contract address to start.")
 	}
 
 	if !common.IsHexAddress(depAddress) {

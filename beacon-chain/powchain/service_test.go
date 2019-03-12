@@ -26,7 +26,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -287,18 +286,6 @@ func TestInitDataFromContract_OK(t *testing.T) {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
-	testAcc.backend.Commit()
-
-	if err := web3Service.initDataFromContract(); err != nil {
-		t.Fatalf("Could not init from deposit contract: %v", err)
-	}
-
-	computedRoot := web3Service.depositTrie.Root()
-
-	if !bytes.Equal(web3Service.depositRoot, computedRoot[:]) {
-		t.Errorf("Deposit root is not empty %v", web3Service.depositRoot)
-	}
-
 	testAcc.txOpts.Value = amount32Eth
 	if _, err := testAcc.contract.Deposit(testAcc.txOpts, []byte{'a'}); err != nil {
 		t.Fatalf("Could not deposit to deposit contract %v", err)
@@ -308,40 +295,6 @@ func TestInitDataFromContract_OK(t *testing.T) {
 	if err := web3Service.initDataFromContract(); err != nil {
 		t.Fatalf("Could not init from deposit contract: %v", err)
 	}
-
-	if bytes.Equal(web3Service.depositRoot, []byte{}) {
-		t.Errorf("Deposit root is  empty %v", web3Service.depositRoot)
-	}
-
-}
-
-func TestSaveInTrie_OK(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
-	testAcc, err := setup()
-	if err != nil {
-		t.Fatalf("Unable to set up simulated backend %v", err)
-	}
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
-		Endpoint:        endpoint,
-		DepositContract: testAcc.contractAddr,
-		Reader:          &goodReader{},
-		Logger:          &goodLogger{},
-		ContractBackend: testAcc.backend,
-	})
-	if err != nil {
-		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
-	}
-
-	testAcc.backend.Commit()
-
-	web3Service.depositTrie = trieutil.NewDepositTrie()
-	mockTrie := trieutil.NewDepositTrie()
-	mockTrie.UpdateDepositTrie([]byte{'A'})
-
-	if err := web3Service.saveInTrie([]byte{'A'}, mockTrie.Root()); err != nil {
-		t.Errorf("Unable to save deposit in trie %v", err)
-	}
-
 }
 
 func TestWeb3Service_BadReader(t *testing.T) {
@@ -450,14 +403,13 @@ func TestProcessDepositLog_OK(t *testing.T) {
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
 		ContractBackend: testAcc.backend,
+		BeaconDB:        &db.BeaconDB{},
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
 	}
 
 	testAcc.backend.Commit()
-
-	web3Service.depositTrie = trieutil.NewDepositTrie()
 
 	var stub [48]byte
 	copy(stub[:], []byte("testing"))
@@ -521,8 +473,6 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 
 	testAcc.backend.Commit()
 
-	web3Service.depositTrie = trieutil.NewDepositTrie()
-
 	var stub [48]byte
 	copy(stub[:], []byte("testing"))
 
@@ -564,71 +514,6 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	}
 }
 
-func TestProcessDepositLog_SkipDuplicateLog(t *testing.T) {
-	endpoint := "ws://127.0.0.1"
-	testAcc, err := setup()
-	if err != nil {
-		t.Fatalf("Unable to set up simulated backend %v", err)
-	}
-	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
-		Endpoint:        endpoint,
-		DepositContract: testAcc.contractAddr,
-		Reader:          &goodReader{},
-		Logger:          &goodLogger{},
-		ContractBackend: testAcc.backend,
-		BeaconDB:        &db.BeaconDB{},
-	})
-	if err != nil {
-		t.Fatalf("Unable to setup web3 ETH1.0 chain service: %v", err)
-	}
-
-	testAcc.backend.Commit()
-
-	web3Service.depositTrie = trieutil.NewDepositTrie()
-
-	var stub [48]byte
-	copy(stub[:], []byte("testing"))
-
-	data := &pb.DepositInput{
-		Pubkey:                      stub[:],
-		ProofOfPossession:           stub[:],
-		WithdrawalCredentialsHash32: []byte("withdraw"),
-	}
-
-	serializedData := new(bytes.Buffer)
-	if err := ssz.Encode(serializedData, data); err != nil {
-		t.Fatalf("Could not serialize data %v", err)
-	}
-
-	testAcc.txOpts.Value = amount32Eth
-	if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
-		t.Fatalf("Could not deposit to deposit contract %v", err)
-	}
-
-	testAcc.backend.Commit()
-
-	query := ethereum.FilterQuery{
-		Addresses: []common.Address{
-			web3Service.depositContractAddress,
-		},
-	}
-
-	logs, err := testAcc.backend.FilterLogs(web3Service.ctx, query)
-	if err != nil {
-		t.Fatalf("Unable to retrieve logs %v", err)
-	}
-
-	web3Service.ProcessDepositLog(logs[0])
-	// We keep track of the current deposit root and make sure it doesn't change if we
-	// receive a duplicate log from the contract.
-	currentRoot := web3Service.depositTrie.Root()
-	web3Service.ProcessDepositLog(logs[0])
-	nextRoot := web3Service.depositTrie.Root()
-	if currentRoot != nextRoot {
-		t.Error("Processing a duplicate log should not update deposit trie")
-	}
-}
-
 func TestUnpackDepositLogData_OK(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
@@ -650,12 +535,6 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 
 	if err := web3Service.initDataFromContract(); err != nil {
 		t.Fatalf("Could not init from contract: %v", err)
-	}
-
-	computedRoot := web3Service.depositTrie.Root()
-
-	if !bytes.Equal(web3Service.depositRoot, computedRoot[:]) {
-		t.Errorf("Deposit root is not equal to computed root Got: %#x , Expected: %#x", web3Service.depositRoot, computedRoot)
 	}
 
 	var stub [48]byte
@@ -730,6 +609,7 @@ func TestProcessChainStartLog_OK(t *testing.T) {
 		Reader:          &goodReader{},
 		Logger:          &goodLogger{},
 		ContractBackend: testAcc.backend,
+		BeaconDB:        &db.BeaconDB{},
 	})
 	if err != nil {
 		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
@@ -737,8 +617,6 @@ func TestProcessChainStartLog_OK(t *testing.T) {
 
 	testAcc.backend.Commit()
 	testAcc.backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
-
-	web3Service.depositTrie = trieutil.NewDepositTrie()
 
 	var stub [48]byte
 	copy(stub[:], []byte("testing"))
@@ -929,6 +807,38 @@ func TestHasChainStartLogOccurred_OK(t *testing.T) {
 	}
 	if !ok {
 		t.Error("Expected chain start log to have occurred")
+	}
+}
+
+func TestStatus(t *testing.T) {
+	now := time.Now()
+
+	beforeFiveMinutesAgo := now.Add(-5*time.Minute - 30*time.Second)
+	afterFiveMinutesAgo := now.Add(-5*time.Minute + 30*time.Second)
+
+	testCases := map[*Web3Service]string{
+		// "status is ok" cases
+		{}: "",
+		{isRunning: true, blockTime: afterFiveMinutesAgo}:         "",
+		{isRunning: false, blockTime: beforeFiveMinutesAgo}:       "",
+		{isRunning: false, runError: errors.New("test runError")}: "",
+		// "status is error" cases
+		{isRunning: true, blockTime: beforeFiveMinutesAgo}: "eth1 client is not syncing",
+		{isRunning: true}: "eth1 client is not syncing",
+		{isRunning: true, runError: errors.New("test runError")}: "test runError",
+	}
+
+	for web3ServiceState, wantedErrorText := range testCases {
+		status := web3ServiceState.Status()
+		if status == nil {
+			if wantedErrorText != "" {
+				t.Errorf("Wanted: \"%v\", but Status() return nil", wantedErrorText)
+			}
+		} else {
+			if status.Error() != wantedErrorText {
+				t.Errorf("Wanted: \"%v\", but Status() return: \"%v\"", wantedErrorText, status.Error())
+			}
+		}
 	}
 }
 
