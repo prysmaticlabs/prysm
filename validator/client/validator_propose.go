@@ -110,7 +110,8 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	if err != nil {
 		log.WithField(
 			"block", proto.MarshalTextString(block),
-		).Errorf("Unable to compute state root: %v", err)
+		).Errorf("Not proposing! Unable to compute state root: %v", err)
+		return
 	}
 	block.StateRootHash32 = resp.GetStateRoot()
 
