@@ -24,11 +24,11 @@ var (
 	maxCacheSize = params.BeaconConfig().HashCacheSize
 
 	// Metrics
-	blockCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
+	hashCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "powchain_block_cache_miss",
 		Help: "The number of block requests that aren't present in the cache.",
 	})
-	blockCacheHit = promauto.NewCounter(prometheus.CounterOpts{
+	hashCacheHit = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "powchain_block_cache_hit",
 		Help: "The number of block requests that are present in the cache.",
 	})
@@ -54,7 +54,7 @@ func hashKeyFn(obj interface{}) (string, error) {
 	return mRoot.Hash.Hex(), nil
 }
 
-// newHashCache creates a new hash cache for storing/accessing blockInfo from
+// newHashCache creates a new hash cache for storing/accessing root hashes from
 // memory.
 func newHashCache() *hashCacheS {
 	return &hashCacheS{
@@ -67,8 +67,8 @@ type hashCacheS struct {
 	hashCache *cache.FIFO
 }
 
-// RootByHash fetches MarkleRoot by its hash. Returns true with a
-// reference to the MarkleRoot if exists. Otherwise returns false, nil.
+// RootByHash fetches Root by its hash. Returns true with a
+// reference to the root if exists. Otherwise returns false, nil.
 func (b *hashCacheS) RootByHash(h common.Hash) (bool, *root, error) {
 
 	obj, exists, err := b.hashCache.GetByKey(h.Hex())
@@ -77,9 +77,9 @@ func (b *hashCacheS) RootByHash(h common.Hash) (bool, *root, error) {
 	}
 
 	if exists {
-		blockCacheHit.Inc()
+		hashCacheHit.Inc()
 	} else {
-		blockCacheMiss.Inc()
+		hashCacheMiss.Inc()
 		return false, nil, nil
 	}
 
@@ -92,7 +92,7 @@ func (b *hashCacheS) RootByHash(h common.Hash) (bool, *root, error) {
 }
 
 // AddRetrieveTrieRoot adds a trie root to the cache. This method also trims the
-// least recently added block info if the cache size has reached the max cache
+// least recently added root info if the cache size has reached the max cache
 // size limit.
 func (b *hashCacheS) AddRetrieveTrieRoot(val interface{}) ([32]byte, error) {
 	if val == nil {
@@ -133,7 +133,7 @@ func (b *hashCacheS) AddRetrieveTrieRoot(val interface{}) ([32]byte, error) {
 }
 
 // AddRetriveMarkleRoot adds a mrakle object to the cache. This method also trims the
-// least recently added block info if the cache size has reached the max cache
+// least recently added root info if the cache size has reached the max cache
 // size limit.
 func (b *hashCacheS) AddRetriveMarkleRoot(byteSlice [][]byte) ([]byte, error) {
 	mh := []byte{}
@@ -169,7 +169,7 @@ func (b *hashCacheS) AddRetriveMarkleRoot(byteSlice [][]byte) ([]byte, error) {
 }
 
 // AddRoot adds a rootHash object to the cache. This method also trims the
-// least recently added block info if the cache size has reached the max cache
+// least recently added root info if the cache size has reached the max cache
 // size limit.
 func (b *hashCacheS) AddRoot(h common.Hash, rootB []byte) error {
 
@@ -188,6 +188,7 @@ func (b *hashCacheS) AddRoot(h common.Hash, rootB []byte) error {
 	return nil
 }
 
+// MakeSliceHasherCache add caching mechanism to slice hasher
 func makeSliceHasherCache(typ reflect.Type) (hasher, error) {
 	elemSSZUtils, err := cachedSSZUtilsNoAcquireLock(typ.Elem())
 	if err != nil {
