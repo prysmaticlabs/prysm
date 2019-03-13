@@ -34,6 +34,7 @@ type ChainService struct {
 	attsService          *attestation.Service
 	opsPoolService       operationService
 	chainStartChan       chan time.Time
+	canonicalBlockChan       chan *pb.BeaconBlock
 	canonicalBlockFeed   *event.Feed
 	genesisTime          time.Time
 	enablePOWChain       bool
@@ -44,7 +45,6 @@ type ChainService struct {
 // Config options for the service.
 type Config struct {
 	BeaconBlockBuf   int
-	IncomingBlockBuf int
 	Web3Service      *powchain.Web3Service
 	AttsService      *attestation.Service
 	BeaconDB         *db.BeaconDB
@@ -71,6 +71,8 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		web3Service:          cfg.Web3Service,
 		opsPoolService:       cfg.OpsPoolService,
 		attsService:          cfg.AttsService,
+		canonicalBlockFeed: new(event.Feed),
+		canonicalBlockChan:  make(chan *pb.BeaconBlock, cfg.BeaconBlockBuf),
 		chainStartChan:       make(chan time.Time),
 		stateInitializedFeed: new(event.Feed),
 		enablePOWChain:       cfg.EnablePOWChain,

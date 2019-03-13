@@ -205,7 +205,6 @@ func (b *BeaconNode) registerBlockchainService(_ *cli.Context) error {
 		OpsPoolService:   opsService,
 		AttsService:      attsService,
 		BeaconBlockBuf:   10,
-		IncomingBlockBuf: 100, // Big buffer to accommodate other feed subscribers.
 	})
 	if err != nil {
 		return fmt.Errorf("could not register blockchain service: %v", err)

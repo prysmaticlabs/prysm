@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"reflect"
 	"testing"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 // Generates an initial genesis block and state using a custom number of initial
@@ -65,33 +67,7 @@ func generateTestGenesisStateAndBlock(
 	return beaconState, genesisBlock, stateRoot, genesisRoot
 }
 
-func setupConflictingBlocks(
-	t *testing.T,
-	beaconDB *db.BeaconDB,
-	genesisHash [32]byte,
-	stateRoot [32]byte,
-) (candidate1 *pb.BeaconBlock, candidate2 *pb.BeaconBlock) {
-	candidate1 = &pb.BeaconBlock{
-		Slot:             5,
-		ParentRootHash32: genesisHash[:],
-		StateRootHash32:  stateRoot[:],
-	}
-	candidate2 = &pb.BeaconBlock{
-		Slot:             5,
-		ParentRootHash32: genesisHash[:],
-		StateRootHash32:  []byte("some-other-state"),
-	}
-	// We store these potential heads in the DB.
-	if err := beaconDB.SaveBlock(candidate1); err != nil {
-		t.Fatal(err)
-	}
-	if err := beaconDB.SaveBlock(candidate2); err != nil {
-		t.Fatal(err)
-	}
-	return candidate1, candidate2
-}
-
-func TestUpdateHead_SavesBlock(t *testing.T) {
+func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 	beaconState, err := state.GenesisBeaconState(nil, 0, nil)
 	if err != nil {
 		t.Fatalf("Cannot create genesis beacon state: %v", err)

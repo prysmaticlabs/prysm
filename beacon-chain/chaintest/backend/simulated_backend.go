@@ -55,7 +55,6 @@ func NewSimulatedBackend() (*SimulatedBackend, error) {
 	}
 	cs, err := blockchain.NewChainService(context.Background(), &blockchain.Config{
 		BeaconDB:         db,
-		IncomingBlockBuf: 0,
 		EnablePOWChain:   false,
 	})
 	if err != nil {

@@ -1,19 +1,24 @@
 package blockchain
 
 import (
+	"math/big"
+	"context"
+	"testing"
+	"time"
 	"encoding/binary"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
-	"math/big"
-	"testing"
-	"time"
+	logTest "github.com/sirupsen/logrus/hooks/test"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-func TestChainService_FaultyPOWChain(t *testing.T) {
+func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -61,7 +66,7 @@ func TestChainService_FaultyPOWChain(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "unable to retrieve POW chain reference block")
 }
 
-func TestChainService_Starts(t *testing.T) {
+func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -102,21 +107,13 @@ func TestChainService_Starts(t *testing.T) {
 		},
 	}
 
-	exitRoutine := make(chan bool)
-	go func() {
-		chainService.blockProcessing()
-		<-exitRoutine
-	}()
-
 	if err := chainService.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := chainService.ReceiveBlock(block); err != nil {
+		t.Errorf("Block failed processing: %v", err)
+	}
 
-	chainService.incomingBlockChan <- block
-	chainService.cancel()
-	exitRoutine <- true
-
-	testutil.AssertLogsContain(t, hook, "Chain service context closed, exiting goroutine")
 	testutil.AssertLogsContain(t, hook, "Processed beacon block")
 }
 
@@ -192,7 +189,10 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 
 	beaconState.Slot--
-	computedState, err := chainService.ReceiveBlock(block, beaconState)
+	if err := chainService.beaconDB.SaveState(beaconState); err != nil {
+		t.Fatal(err)
+	}
+	computedState, err := chainService.ReceiveBlock(block)
 	if err != nil {
 		t.Fatal(err)
 	}
