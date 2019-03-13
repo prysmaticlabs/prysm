@@ -1,6 +1,5 @@
 package stategenerator
 
-
 import (
 	"context"
 	"testing"
