@@ -28,12 +28,6 @@ func (c *ChainService) ApplyForkChoiceRule(block *pb.BeaconBlock, computedState 
 	// server to stream these events to beacon clients.
 	// When the transition is a cycle transition, we stream the state containing the new validator
 	// assignments to clients.
-	if helpers.IsEpochStart(block.Slot) {
-		if c.canonicalStateFeed.Send(computedState) == 0 {
-			log.Error("Sent canonical state to no subscribers")
-		}
-	}
-
 	if err := c.saveFinalizedState(computedState); err != nil {
 		log.Errorf("Could not save new finalized state: %v", err)
 	}

@@ -255,15 +255,11 @@ func TestChainStartStop_Uninitialized(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, false, db, true, nil)
 
-	chainService.IncomingBlockFeed()
-
 	// Test the start function.
 	genesisChan := make(chan time.Time, 0)
 	stateChan := make(chan *pb.BeaconState, 0)
 	sub := chainService.stateInitializedFeed.Subscribe(genesisChan)
 	defer sub.Unsubscribe()
-	sub2 := chainService.canonicalStateFeed.Subscribe(stateChan)
-	defer sub2.Unsubscribe()
 	chainService.Start()
 	chainService.chainStartChan <- time.Unix(0, 0)
 	genesisTime := <-genesisChan

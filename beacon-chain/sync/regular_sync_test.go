@@ -47,13 +47,6 @@ type mockChainService struct {
 	cFeed *event.Feed
 }
 
-func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
-	if ms.bFeed == nil {
-		return new(event.Feed)
-	}
-	return ms.bFeed
-}
-
 func (ms *mockChainService) StateInitializedFeed() *event.Feed {
 	if ms.sFeed == nil {
 		return new(event.Feed)

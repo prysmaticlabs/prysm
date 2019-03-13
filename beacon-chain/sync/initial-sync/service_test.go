@@ -53,10 +53,6 @@ func (ms *mockSyncService) ResumeSync() {
 
 type mockChainService struct{}
 
-func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
-	return &event.Feed{}
-}
-
 func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
 	ctx := context.Background()
 	genesisTime := time.Now()

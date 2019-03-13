@@ -31,13 +31,10 @@ func init() {
 }
 
 type chainService interface {
-	IncomingBlockFeed() *event.Feed
-	// These methods are not called on-demand by a validator
-	// but instead streamed to connected validators every
-	// time the canonical head changes in the chain service.
 	CanonicalBlockFeed() *event.Feed
-	CanonicalStateFeed() *event.Feed
 	StateInitializedFeed() *event.Feed
+	ReceiveBlock(block *pbp2p.BeaconBlock) (*pbp2p.BeaconState, error)
+	ApplyForkChoiceRule(block *pbp2p.BeaconBlock, computedState *pbp2p.BeaconState) error
 }
 
 type operationService interface {

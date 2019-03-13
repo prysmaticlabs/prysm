@@ -33,11 +33,8 @@ type ChainService struct {
 	web3Service          *powchain.Web3Service
 	attsService          *attestation.Service
 	opsPoolService       operationService
-	incomingBlockFeed    *event.Feed
-	incomingBlockChan    chan *pb.BeaconBlock
 	chainStartChan       chan time.Time
 	canonicalBlockFeed   *event.Feed
-	canonicalStateFeed   *event.Feed
 	genesisTime          time.Time
 	enablePOWChain       bool
 	finalizedEpoch       uint64
@@ -74,11 +71,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		web3Service:          cfg.Web3Service,
 		opsPoolService:       cfg.OpsPoolService,
 		attsService:          cfg.AttsService,
-		incomingBlockChan:    make(chan *pb.BeaconBlock, cfg.IncomingBlockBuf),
 		chainStartChan:       make(chan time.Time),
-		incomingBlockFeed:    new(event.Feed),
-		canonicalBlockFeed:   new(event.Feed),
-		canonicalStateFeed:   new(event.Feed),
 		stateInitializedFeed: new(event.Feed),
 		enablePOWChain:       cfg.EnablePOWChain,
 	}, nil
@@ -130,7 +123,6 @@ func (c *ChainService) processChainStartTime(genesisTime time.Time, chainStartSu
 	}
 	c.finalizedEpoch = beaconState.FinalizedEpoch
 	c.stateInitializedFeed.Send(genesisTime)
-	c.canonicalStateFeed.Send(beaconState)
 	chainStartSub.Unsubscribe()
 }
 
@@ -177,22 +169,10 @@ func (c *ChainService) Status() error {
 	return nil
 }
 
-// IncomingBlockFeed returns a feed that any service can send incoming p2p blocks into.
-// The chain service will subscribe to this feed in order to process incoming blocks.
-func (c *ChainService) IncomingBlockFeed() *event.Feed {
-	return c.incomingBlockFeed
-}
-
 // CanonicalBlockFeed returns a channel that is written to
 // whenever a new block is determined to be canonical in the chain.
 func (c *ChainService) CanonicalBlockFeed() *event.Feed {
 	return c.canonicalBlockFeed
-}
-
-// CanonicalStateFeed returns a feed that is written to
-// whenever a new state is determined to be canonical in the chain.
-func (c *ChainService) CanonicalStateFeed() *event.Feed {
-	return c.canonicalStateFeed
 }
 
 // StateInitializedFeed returns a feed that is written to

@@ -74,18 +74,6 @@ type mockChainService struct {
 	stateInitializedFeed *event.Feed
 }
 
-func (m *mockChainService) IncomingBlockFeed() *event.Feed {
-	return new(event.Feed)
-}
-
-func (m *mockChainService) CanonicalBlockFeed() *event.Feed {
-	return m.blockFeed
-}
-
-func (m *mockChainService) CanonicalStateFeed() *event.Feed {
-	return m.stateFeed
-}
-
 func (m *mockChainService) StateInitializedFeed() *event.Feed {
 	return m.stateInitializedFeed
 }
