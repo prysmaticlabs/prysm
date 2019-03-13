@@ -33,8 +33,8 @@ func init() {
 type chainService interface {
 	CanonicalBlockFeed() *event.Feed
 	StateInitializedFeed() *event.Feed
-	ReceiveBlock(block *pbp2p.BeaconBlock) (*pbp2p.BeaconState, error)
-	ApplyForkChoiceRule(block *pbp2p.BeaconBlock, computedState *pbp2p.BeaconState) error
+	ReceiveBlock(ctx context.Context, block *pbp2p.BeaconBlock) (*pbp2p.BeaconState, error)
+	ApplyForkChoiceRule(ctx context.Context, block *pbp2p.BeaconBlock, computedState *pbp2p.BeaconState) error
 }
 
 type operationService interface {

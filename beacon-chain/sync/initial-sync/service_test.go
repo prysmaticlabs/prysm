@@ -53,11 +53,11 @@ func (ms *mockSyncService) ResumeSync() {
 
 type mockChainService struct{}
 
-func (m *mockChainService) ReceiveBlock(block *pb.BeaconBlock) (*pb.BeaconState, error) {
+func (m *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
 	return &pb.BeaconState{}, nil
 }
 
-func (m *mockChainService) ApplyForkChoiceRule(block *pb.BeaconBlock, computedState *pb.BeaconState) error {
+func (m *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error {
 	return nil
 }
 

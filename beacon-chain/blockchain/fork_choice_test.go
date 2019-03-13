@@ -6,8 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -20,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -139,7 +138,7 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 		if err := chainService.beaconDB.SaveBlock(block); err != nil {
 			t.Fatal(err)
 		}
-		if err := chainService.ApplyForkChoiceRule(block, tt.state); err != nil {
+		if err := chainService.ApplyForkChoiceRule(context.Background(), block, tt.state); err != nil {
 			t.Errorf("Expected head to update, received %v", err)
 		}
 

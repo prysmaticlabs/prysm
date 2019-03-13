@@ -39,8 +39,8 @@ import (
 //		else:
 //			return nil, error  # or throw or whatever
 //
-func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock) (*pb.BeaconState, error) {
-	ctx, span := trace.StartSpan(c.ctx, "beacon-chain.blockchain.ReceiveBlock")
+func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
 	beaconState, err := c.beaconDB.State(ctx)
 	if err != nil {
