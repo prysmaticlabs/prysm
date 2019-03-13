@@ -13,6 +13,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
 )
 
 // ReceiveBlock is a function that defines the operations that are preformed on
@@ -39,7 +40,9 @@ import (
 //			return nil, error  # or throw or whatever
 //
 func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock) (*pb.BeaconState, error) {
-	beaconState, err := c.beaconDB.State(c.ctx)
+	ctx, span := trace.StartSpan(c.ctx, "beacon-chain.blockchain.ReceiveBlock")
+	defer span.End()
+	beaconState, err := c.beaconDB.State(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
