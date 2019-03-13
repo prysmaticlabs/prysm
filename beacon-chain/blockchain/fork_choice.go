@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -8,7 +9,157 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"go.opencensus.io/trace"
 )
+
+// ApplyForkChoiceRule determines the current beacon chain head using LMD GHOST as a block-vote
+// weighted function to select a canonical head in Ethereum Serenity.
+func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ApplyForkChoiceRule")
+	defer span.End()
+	h, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		return fmt.Errorf("could not tree hash incoming block: %v", err)
+	}
+	// TODO(#1307): Use LMD GHOST as the fork-choice rule for Ethereum Serenity.
+	// TODO(#674): Handle chain reorgs.
+	if err := c.beaconDB.UpdateChainHead(block, computedState); err != nil {
+		return fmt.Errorf("failed to update chain: %v", err)
+	}
+	log.WithField("blockRoot", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
+	// We fire events that notify listeners of a new block in
+	// the case of a state transition. This is useful for the beacon node's gRPC
+	// server to stream these events to beacon clients.
+	// When the transition is a cycle transition, we stream the state containing the new validator
+	// assignments to clients.
+	if err := c.saveFinalizedState(computedState); err != nil {
+		log.Errorf("Could not save new finalized state: %v", err)
+	}
+	if c.canonicalBlockFeed.Send(&pb.BeaconBlockAnnounce{
+		Hash:       h[:],
+		SlotNumber: block.Slot,
+	}) == 0 {
+		log.Error("Sent canonical block to no subscribers")
+	}
+	return nil
+}
+
+// lmdGhost applies the Latest Message Driven, Greediest Heaviest Observed Sub-Tree
+// fork-choice rule defined in the Ethereum Serenity specification for the beacon chain.
+//
+// Spec pseudocode definition:
+//	def lmd_ghost(store: Store, start_state: BeaconState, start_block: BeaconBlock) -> BeaconBlock:
+//    """
+//    Execute the LMD-GHOST algorithm to find the head ``BeaconBlock``.
+//    """
+//    validators = start_state.validator_registry
+//    active_validator_indices = get_active_validator_indices(validators, slot_to_epoch(start_state.slot))
+//    attestation_targets = [
+//        (validator_index, get_latest_attestation_target(store, validator_index))
+//        for validator_index in active_validator_indices
+//    ]
+//
+//    def get_vote_count(block: BeaconBlock) -> int:
+//        return sum(
+//            get_effective_balance(start_state.validator_balances[validator_index]) // FORK_CHOICE_BALANCE_INCREMENT
+//            for validator_index, target in attestation_targets
+//            if get_ancestor(store, target, block.slot) == block
+//        )
+//
+//    head = start_block
+//    while 1:
+//        children = get_children(store, head)
+//        if len(children) == 0:
+//            return head
+//        head = max(children, key=get_vote_count)
+func (c *ChainService) lmdGhost(
+	block *pb.BeaconBlock,
+	state *pb.BeaconState,
+	voteTargets map[uint64]*pb.BeaconBlock,
+) (*pb.BeaconBlock, error) {
+	head := block
+	for {
+		children, err := c.blockChildren(head, state)
+		if err != nil {
+			return nil, fmt.Errorf("could not fetch block children: %v", err)
+		}
+		if len(children) == 0 {
+			return head, nil
+		}
+		maxChild := children[0]
+
+		maxChildVotes, err := VoteCount(maxChild, state, voteTargets, c.beaconDB)
+		if err != nil {
+			return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
+		}
+		for i := 0; i < len(children); i++ {
+			candidateChildVotes, err := VoteCount(children[i], state, voteTargets, c.beaconDB)
+			if err != nil {
+				return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
+			}
+			if candidateChildVotes > maxChildVotes {
+				maxChild = children[i]
+			}
+		}
+		head = maxChild
+	}
+}
+
+// blockChildren returns the child blocks of the given block.
+// ex:
+//       /- C - E
+// A - B - D - F
+//       \- G
+// Input: B. Output: [C, D, G]
+//
+// Spec pseudocode definition:
+//	get_children(store: Store, block: BeaconBlock) -> List[BeaconBlock]
+//		returns the child blocks of the given block.
+func (c *ChainService) blockChildren(block *pb.BeaconBlock, state *pb.BeaconState) ([]*pb.BeaconBlock, error) {
+	var children []*pb.BeaconBlock
+
+	currentRoot, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
+	}
+	startSlot := block.Slot + 1
+	currentSlot := state.Slot
+	for i := startSlot; i <= currentSlot; i++ {
+		block, err := c.beaconDB.BlockBySlot(i)
+		if err != nil {
+			return nil, fmt.Errorf("could not get block by slot: %v", err)
+		}
+		// Continue if there's a skip block.
+		if block == nil {
+			continue
+		}
+
+		parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
+		if currentRoot == parentRoot {
+			children = append(children, block)
+		}
+	}
+	return children, nil
+}
+
+// attestationTargets retrieves the list of attestation targets since last finalized epoch,
+// each attestation target consists of validator index and its attestation target (i.e. the block
+// which the validator attested to)
+func (c *ChainService) attestationTargets(state *pb.BeaconState) ([]*attestationTarget, error) {
+	indices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, state.FinalizedEpoch)
+	attestationTargets := make([]*attestationTarget, len(indices))
+	for i, index := range indices {
+		block, err := c.attsService.LatestAttestationTarget(c.ctx, index)
+		if err != nil {
+			return nil, fmt.Errorf("could not retrieve attestation target: %v", err)
+		}
+		attestationTargets[i] = &attestationTarget{
+			validatorIndex: index,
+			block:          block,
+		}
+	}
+	return attestationTargets, nil
+}
 
 // VoteCount determines the number of votes on a beacon block by counting the number
 // of target blocks that have such beacon block as a common ancestor.
