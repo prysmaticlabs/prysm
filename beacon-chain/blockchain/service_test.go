@@ -824,3 +824,26 @@ func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
 		t.Errorf("Activated validators mapping for epoch %d still there", epoch)
 	}
 }
+
+//func TestUpdateFFGCheckPts_newJustifiedSlot(t *testing.T) {
+//	db := internal.SetupDB(t)
+//	defer internal.TeardownDB(t, db)
+//	chainSvc := setupBeaconChain(t, false, db, true, nil)
+//
+//	// Last justified check point happened at slot 64.
+//	if err := chainSvc.beaconDB.SaveJustifiedBlock(
+//		&pb.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot + 64}); err != nil {
+//			t.Fatal(err)
+//	}
+//	if err := chainSvc.beaconDB.SaveJustifiedState(
+//		&pb.BeaconState{Slot: params.BeaconConfig().GenesisSlot + 64}); err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	// New justified slot in state is at slot 128 (2 epochs).
+//	state := &pb.BeaconState{JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 2}
+//
+//	if err := chainSvc.updateFFGCheckPts(state); err != nil {
+//		t.Fatal(err)
+//	}
+//}

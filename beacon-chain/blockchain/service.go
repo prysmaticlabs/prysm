@@ -388,7 +388,7 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	}
 
 	// Update FFG checkpoints in DB.
-	if err := c.updateFFGCheckPoints(beaconState); err != nil {
+	if err := c.updateFFGCheckPts(beaconState); err != nil {
 		return nil, fmt.Errorf("could not update FFG checkpts: %v", err)
 	}
 
@@ -601,10 +601,10 @@ func (c *ChainService) lmdGhost(
 	}
 }
 
-// updateFFGCheckPoints checks whether the existing FFG check points saved in DB
+// updateFFGCheckPts checks whether the existing FFG check points saved in DB
 // are not older than the ones just processed in state. If it's older, we update
 // the db with the latest FFG check points, both justification and finalization.
-func (c *ChainService) updateFFGCheckPoints(state *pb.BeaconState) error {
+func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 	lastJustifiedSlot := helpers.StartSlot(state.JustifiedEpoch)
 	savedJustifiedBlock, err := c.beaconDB.JustifiedBlock()
 	if err != nil {
