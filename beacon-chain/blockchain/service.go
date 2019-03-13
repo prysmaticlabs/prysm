@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/stategenerator"
 	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -625,7 +626,7 @@ func (c *ChainService) updateFFGCheckPoints(state *pb.BeaconState) error {
 			return err
 		}
 		// Generate the new justified state with using new justified slot and save it.
-		newJustifiedState, err := GenerateStateFromSlot(c.ctx, c.beaconDB, lastJustifiedSlot)
+		newJustifiedState, err := stategenerator.GenerateStateFromSlot(c.ctx, c.beaconDB, lastJustifiedSlot)
 		if err != nil {
 			return err
 		}
@@ -655,7 +656,7 @@ func (c *ChainService) updateFFGCheckPoints(state *pb.BeaconState) error {
 			return err
 		}
 		// Generate the new finalized state with using new finalized slot and save it.
-		newFinalizedState, err := GenerateStateFromSlot(c.ctx, c.beaconDB, lastFinalizedSlot)
+		newFinalizedState, err := stategenerator.GenerateStateFromSlot(c.ctx, c.beaconDB, lastFinalizedSlot)
 		if err != nil {
 			return err
 		}

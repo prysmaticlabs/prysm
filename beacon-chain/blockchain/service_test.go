@@ -445,6 +445,12 @@ func TestChainService_Starts(t *testing.T) {
 		<-exitRoutine
 	}()
 
+	if err := chainService.beaconDB.SaveJustifiedBlock(block); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainService.beaconDB.SaveFinalizedBlock(block); err != nil {
+		t.Fatal(err)
+	}
 	if err := chainService.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
@@ -518,6 +524,12 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 		Body: &pb.BeaconBlockBody{
 			Deposits: pendingDeposits,
 		},
+	}
+	if err := chainService.beaconDB.SaveJustifiedBlock(block); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainService.beaconDB.SaveFinalizedBlock(block); err != nil {
+		t.Fatal(err)
 	}
 
 	for _, dep := range pendingDeposits {
