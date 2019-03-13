@@ -660,7 +660,7 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 		if err != nil {
 			return err
 		}
-		if err := c.beaconDB.SaveJustifiedState(newFinalizedState); err != nil {
+		if err := c.beaconDB.SaveFinalizedState(newFinalizedState); err != nil {
 			return err
 		}
 	}

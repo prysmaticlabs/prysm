@@ -825,32 +825,245 @@ func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
 	}
 }
 
-func TestUpdateFFGCheckPts_newJustifiedSlot(t *testing.T) {
+func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
+	genesisSlot := params.BeaconConfig().GenesisSlot
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	chainSvc := setupBeaconChain(t, false, db, true, nil)
-
-	// Last justified check point happened at slot 64.
-	if err := chainSvc.beaconDB.SaveJustifiedBlock(
-		&pb.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot + 64}); err != nil {
-			t.Fatal(err)
+	var crosslinks []*pb.Crosslink
+	for i := 0; i < int(params.BeaconConfig().ShardCount); i++ {
+		crosslinks = append(crosslinks, &pb.Crosslink{Epoch: params.BeaconConfig().GenesisEpoch})
 	}
-	if err := chainSvc.beaconDB.SaveJustifiedState(
-		&pb.BeaconState{Slot: params.BeaconConfig().GenesisSlot + 64}); err != nil {
+	latestRandaoMixes := make(
+		[][]byte,
+		params.BeaconConfig().LatestRandaoMixesLength,
+	)
+	for i := 0; i < len(latestRandaoMixes); i++ {
+		latestRandaoMixes[i] = make([]byte, 32)
+	}
+	var validatorRegistry []*pb.Validator
+	var validatorBalances []uint64
+	var privKeys []*bls.SecretKey
+	for i := uint64(0); i < 64; i++ {
+		priv, err := bls.RandKey(rand.Reader)
+		if err != nil {
+			t.Fatal(err)
+		}
+		privKeys = append(privKeys, priv)
+		validatorRegistry = append(validatorRegistry,
+			&pb.Validator{
+				Pubkey:    priv.PublicKey().Marshal(),
+				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			})
+		validatorBalances = append(validatorBalances, params.BeaconConfig().MaxDepositAmount)
+	}
+	gState := &pb.BeaconState{
+		Slot:                   genesisSlot,
+		LatestBlockRootHash32S: make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
+		LatestRandaoMixes:      latestRandaoMixes,
+		LatestIndexRootHash32S: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
+		LatestCrosslinks:       crosslinks,
+		ValidatorRegistry:      validatorRegistry,
+		ValidatorBalances:      validatorBalances,
+		Fork: &pb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			Epoch:           params.BeaconConfig().GenesisEpoch,
+		},
+	}
+	gBlock := &pb.BeaconBlock{Slot: genesisSlot}
+	if err := chainSvc.beaconDB.SaveBlock(gBlock); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainSvc.beaconDB.UpdateChainHead(gBlock, gState); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainSvc.beaconDB.SaveFinalizedState(gState); err != nil {
 		t.Fatal(err)
 	}
 
-	// New justified slot in state is at slot 128 (2 epochs).
-	state := &pb.BeaconState{JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 2}
-	block := &pb.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot + 128}
+	// Last justified check point happened at slot 0.
+	if err := chainSvc.beaconDB.SaveJustifiedBlock(
+		&pb.BeaconBlock{Slot: genesisSlot}); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainSvc.beaconDB.SaveJustifiedState(
+		&pb.BeaconState{Slot: genesisSlot}); err != nil {
+		t.Fatal(err)
+	}
+
+	// New justified slot in state is at slot 64.
+	offset := uint64(64)
+	proposerIdx, err := helpers.BeaconProposerIndex(gState, genesisSlot+offset)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Also saved finalized block to slot 0 to test justification case only.
+	if err := chainSvc.beaconDB.SaveFinalizedBlock(
+		&pb.BeaconBlock{Slot: genesisSlot}); err != nil {
+		t.Fatal(err)
+	}
+
+	gState.JustifiedEpoch = params.BeaconConfig().GenesisEpoch + 1
+	gState.Slot = genesisSlot + offset
+	buf := make([]byte, 32)
+	binary.LittleEndian.PutUint64(buf, gState.JustifiedEpoch)
+	domain := forkutil.DomainVersion(gState.Fork, gState.JustifiedEpoch, params.BeaconConfig().DomainRandao)
+	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
+	block := &pb.BeaconBlock{
+		Slot:         genesisSlot + offset,
+		RandaoReveal: epochSignature.Marshal(),
+		Body:         &pb.BeaconBlockBody{}}
 	if err := chainSvc.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
-	if err := chainSvc.beaconDB.UpdateChainHead(block, state); err != nil {
+	if err := chainSvc.beaconDB.UpdateChainHead(block, gState); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainSvc.updateFFGCheckPts(gState); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := chainSvc.updateFFGCheckPts(state); err != nil {
+	// Getting latest justification check point from DB and
+	// verify they have been updated.
+	newJustifiedState, err := chainSvc.beaconDB.JustifiedState()
+	if err != nil {
 		t.Fatal(err)
+	}
+	newJustifiedBlock, err := chainSvc.beaconDB.JustifiedBlock()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if newJustifiedState.Slot-genesisSlot != offset {
+		t.Errorf("Wanted justification state slot: %d, got: %d",
+			offset, newJustifiedState.Slot-genesisSlot)
+	}
+	if newJustifiedBlock.Slot-genesisSlot != offset {
+		t.Errorf("Wanted justification block slot: %d, got: %d",
+			offset, newJustifiedBlock.Slot-genesisSlot)
+	}
+}
+
+func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
+	genesisSlot := params.BeaconConfig().GenesisSlot
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	chainSvc := setupBeaconChain(t, false, db, true, nil)
+	var crosslinks []*pb.Crosslink
+	for i := 0; i < int(params.BeaconConfig().ShardCount); i++ {
+		crosslinks = append(crosslinks, &pb.Crosslink{Epoch: params.BeaconConfig().GenesisEpoch})
+	}
+	latestRandaoMixes := make(
+		[][]byte,
+		params.BeaconConfig().LatestRandaoMixesLength,
+	)
+	for i := 0; i < len(latestRandaoMixes); i++ {
+		latestRandaoMixes[i] = make([]byte, 32)
+	}
+	var validatorRegistry []*pb.Validator
+	var validatorBalances []uint64
+	var privKeys []*bls.SecretKey
+	for i := uint64(0); i < 64; i++ {
+		priv, err := bls.RandKey(rand.Reader)
+		if err != nil {
+			t.Fatal(err)
+		}
+		privKeys = append(privKeys, priv)
+		validatorRegistry = append(validatorRegistry,
+			&pb.Validator{
+				Pubkey:    priv.PublicKey().Marshal(),
+				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			})
+		validatorBalances = append(validatorBalances, params.BeaconConfig().MaxDepositAmount)
+	}
+	gState := &pb.BeaconState{
+		Slot:                   genesisSlot,
+		LatestBlockRootHash32S: make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
+		LatestRandaoMixes:      latestRandaoMixes,
+		LatestIndexRootHash32S: make([][]byte, params.BeaconConfig().LatestActiveIndexRootsLength),
+		LatestSlashedBalances:  make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
+		LatestCrosslinks:       crosslinks,
+		ValidatorRegistry:      validatorRegistry,
+		ValidatorBalances:      validatorBalances,
+		Fork: &pb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			Epoch:           params.BeaconConfig().GenesisEpoch,
+		},
+	}
+	gBlock := &pb.BeaconBlock{Slot: genesisSlot}
+	if err := chainSvc.beaconDB.SaveBlock(gBlock); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainSvc.beaconDB.UpdateChainHead(gBlock, gState); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainSvc.beaconDB.SaveFinalizedState(gState); err != nil {
+		t.Fatal(err)
+	}
+
+	// Last finalized check point happened at slot 0.
+	if err := chainSvc.beaconDB.SaveFinalizedBlock(
+		&pb.BeaconBlock{Slot: genesisSlot}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := chainSvc.beaconDB.SaveFinalizedState(
+		gState); err != nil {
+		t.Fatal(err)
+	}
+
+	// New Finalized slot in state is at slot 64.
+	offset := uint64(64)
+	proposerIdx, err := helpers.BeaconProposerIndex(gState, genesisSlot+offset)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Also saved justified block to slot 0 to test finalized case only.
+	if err := chainSvc.beaconDB.SaveJustifiedBlock(
+		&pb.BeaconBlock{Slot: genesisSlot}); err != nil {
+		t.Fatal(err)
+	}
+
+	gState.FinalizedEpoch = params.BeaconConfig().GenesisEpoch + 1
+	gState.Slot = genesisSlot + offset
+	buf := make([]byte, 32)
+	binary.LittleEndian.PutUint64(buf, gState.FinalizedEpoch)
+	domain := forkutil.DomainVersion(gState.Fork, gState.FinalizedEpoch, params.BeaconConfig().DomainRandao)
+	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
+	block := &pb.BeaconBlock{
+		Slot:         genesisSlot + offset,
+		RandaoReveal: epochSignature.Marshal(),
+		Body:         &pb.BeaconBlockBody{}}
+	if err := chainSvc.beaconDB.SaveBlock(block); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainSvc.beaconDB.UpdateChainHead(block, gState); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainSvc.updateFFGCheckPts(gState); err != nil {
+		t.Fatal(err)
+	}
+
+	// Getting latest justification check point from DB and
+	// verify they have been updated.
+	newFinalizedState, err := chainSvc.beaconDB.FinalizedState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	newFinalizedBlock, err := chainSvc.beaconDB.FinalizedBlock()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if newFinalizedState.Slot-genesisSlot != offset {
+		t.Errorf("Wanted finalized state slot: %d, got: %d",
+			offset, newFinalizedState.Slot-genesisSlot)
+	}
+	if newFinalizedBlock.Slot-genesisSlot != offset {
+		t.Errorf("Wanted finalized block slot: %d, got: %d",
+			offset, newFinalizedBlock.Slot-genesisSlot)
 	}
 }
