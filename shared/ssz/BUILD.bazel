@@ -7,6 +7,7 @@ go_library(
         "doc.go",
         "encode.go",
         "hash.go",
+        "hash_cache.go",
         "ssz_utils_cache.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/shared/ssz",
@@ -14,6 +15,11 @@ go_library(
     deps = [
         "//shared/bytesutil:go_default_library",
         "//shared/hashutil:go_default_library",
+        "//shared/params:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
+        "@com_github_prometheus_client_golang//prometheus:go_default_library",
+        "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
+        "@io_k8s_client_go//tools/cache:go_default_library",
     ],
 )
 
@@ -24,7 +30,15 @@ go_test(
         "encode_test.go",
         "example_and_test.go",
         "example_encode_test.go",
+        "hash_cache_test.go",
         "hash_test.go",
     ],
     embed = [":go_default_library"],
+    deps = [
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//shared/bls:go_default_library",
+        "//shared/bytesutil:go_default_library",
+        "//shared/params:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
+    ],
 )

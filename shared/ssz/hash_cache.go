@@ -25,16 +25,16 @@ var (
 
 	// Metrics
 	hashCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "powchain_block_cache_miss",
-		Help: "The number of block requests that aren't present in the cache.",
+		Name: "powchain_hash_cache_miss",
+		Help: "The number of hash requests that aren't present in the cache.",
 	})
 	hashCacheHit = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "powchain_block_cache_hit",
-		Help: "The number of block requests that are present in the cache.",
+		Name: "powchain_hash_cache_hit",
+		Help: "The number of hash requests that are present in the cache.",
 	})
 	hashCacheSize = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "powchain_block_cache_size",
-		Help: "The number of blocks in the block cache",
+		Name: "powchain_hash_cache_size",
+		Help: "The number of hashes in the block cache",
 	})
 )
 
