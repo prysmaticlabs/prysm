@@ -61,6 +61,14 @@ func (ms *mockChainService) CanonicalBlockFeed() *event.Feed {
 	return ms.cFeed
 }
 
+func (ms *mockChainService) ReceiveBlock(block *pb.BeaconBlock) (*pb.BeaconState, error) {
+	return &pb.BeaconState{}, nil
+}
+
+func (ms *mockChainService) ApplyForkChoiceRule(block *pb.BeaconBlock, computedState *pb.BeaconState) error {
+	return nil
+}
+
 type mockOperationService struct{}
 
 func (ms *mockOperationService) IncomingAttFeed() *event.Feed {
