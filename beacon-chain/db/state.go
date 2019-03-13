@@ -121,6 +121,18 @@ func (db *BeaconDB) SaveState(beaconState *pb.BeaconState) error {
 	})
 }
 
+// SaveJustifiedState saves the last justified state in the db.
+func (db *BeaconDB) SaveJustifiedState(beaconState *pb.BeaconState) error {
+	return db.update(func(tx *bolt.Tx) error {
+		chainInfo := tx.Bucket(chainInfoBucket)
+		beaconStateEnc, err := proto.Marshal(beaconState)
+		if err != nil {
+			return err
+		}
+		return chainInfo.Put(justifiedStateLookupKey, beaconStateEnc)
+	})
+}
+
 // SaveFinalizedState saves the last finalized state in the db.
 func (db *BeaconDB) SaveFinalizedState(beaconState *pb.BeaconState) error {
 	return db.update(func(tx *bolt.Tx) error {
@@ -155,6 +167,23 @@ func (db *BeaconDB) SaveCurrentAndFinalizedState(beaconState *pb.BeaconState) er
 
 		return chainInfo.Put(finalizedStateLookupKey, beaconStateEnc)
 	})
+}
+
+// JustifiedState retrieves the justified state from the db.
+func (db *BeaconDB) JustifiedState() (*pb.BeaconState, error) {
+	var beaconState *pb.BeaconState
+	err := db.view(func(tx *bolt.Tx) error {
+		chainInfo := tx.Bucket(chainInfoBucket)
+		encState := chainInfo.Get(justifiedStateLookupKey)
+		if encState == nil {
+			return errors.New("no justified state saved")
+		}
+
+		var err error
+		beaconState, err = createState(encState)
+		return err
+	})
+	return beaconState, err
 }
 
 // FinalizedState retrieves the finalized state from the db.
