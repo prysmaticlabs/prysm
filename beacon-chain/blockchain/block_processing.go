@@ -100,7 +100,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 
 	// Remove pending deposits from the deposit queue.
 	for _, dep := range block.Body.Deposits {
-		c.beaconDB.RemovePendingDeposit(c.ctx, dep)
+		c.beaconDB.RemovePendingDeposit(ctx, dep)
 	}
 
 	log.WithField("hash", fmt.Sprintf("%#x", blockRoot)).Debug("Processed beacon block")
