@@ -3,15 +3,16 @@ package blockchain
 import (
 	"context"
 	"fmt"
+
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 // ReceiveBlock is a function that defines the operations that are preformed on
@@ -187,7 +188,3 @@ func (c *ChainService) deleteValidatorIdx(state *pb.BeaconState) error {
 	delete(validators.ExitedValidators, helpers.CurrentEpoch(state))
 	return nil
 }
-
-
-
-
