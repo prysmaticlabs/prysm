@@ -13,6 +13,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 // BeaconServer defines a server implementation of the gRPC Beacon service,
@@ -152,7 +153,7 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 		//   (iii) newer than state.latest_eth1_data.block_data.
 		// vote.eth1_data.deposit_root is the deposit root of the eth1.0 deposit contract
 		// at the block defined by vote.eth1_data.block_hash.
-		isBehindFollowDistance := blockHeight.Add(blockHeight, big.NewInt(eth1FollowDistance)).Cmp(currentHeight) >= -1
+		isBehindFollowDistance := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance)).Cmp(blockHeight) >= 0
 		isAheadStateLatestEth1Data := blockHeight.Cmp(stateLatestEth1Height) == 1
 		if blockExists && isBehindFollowDistance && isAheadStateLatestEth1Data {
 			dataVotes = append(dataVotes, vote)
@@ -168,7 +169,6 @@ func (bs *BeaconServer) Eth1Data(ctx context.Context, _ *ptypes.Empty) (*pb.Eth1
 			// breaking ties by favoring block hashes with higher associated block height.
 			// Let block_hash = best_vote.eth1_data.block_hash.
 			// Let deposit_root = best_vote.eth1_data.deposit_root.
-
 			if vote.VoteCount > bestVote.VoteCount {
 				bestVote = vote
 				bestVoteHeight = blockHeight
@@ -210,22 +210,97 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 	}
 	// Only request deposits that have passed the ETH1 follow distance window.
 	bNum = bNum.Sub(bNum, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
-	return &pb.PendingDepositsResponse{PendingDeposits: bs.beaconDB.PendingDeposits(ctx, bNum)}, nil
+	allDeps := bs.beaconDB.AllDeposits(ctx, bNum)
+	if len(allDeps) == 0 {
+		return &pb.PendingDepositsResponse{PendingDeposits: nil}, nil
+	}
+
+	pendingDeps := bs.beaconDB.PendingDeposits(ctx, bNum)
+	// Need to fetch if the deposits up to the state's latest eth 1 data matches
+	// the number of all deposits in this RPC call. If not, then we return nil.
+	beaconState, err := bs.beaconDB.State(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
+	}
+	h := bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockHash32)
+	_, latestEth1DataHeight, err := bs.powChainService.BlockExists(ctx, h)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch eth1data height: %v", err)
+	}
+	// If the state's latest eth1 data's block hash has a height of 100, we fetch all the deposits up to height 100.
+	// If this doesn't match the number of deposits stored in the cache, the generated trie will not be the same and
+	// root will fail to verify. This can happen in a scenario where we perhaps have a deposit from height 101,
+	// so we want to avoid any possible mismatches in these lengths.
+	upToLatestEth1DataDeposits := bs.beaconDB.AllDeposits(ctx, latestEth1DataHeight)
+	if len(upToLatestEth1DataDeposits) != len(allDeps) {
+		return &pb.PendingDepositsResponse{PendingDeposits: nil}, nil
+	}
+	depositData := [][]byte{}
+	indices := []uint64{}
+	for i := range upToLatestEth1DataDeposits {
+		depositData = append(depositData, upToLatestEth1DataDeposits[i].DepositData)
+		indices = append(indices, upToLatestEth1DataDeposits[i].MerkleTreeIndex)
+	}
+
+	depositTrie, err := trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		return nil, fmt.Errorf("could not generate historical deposit trie from deposits: %v", err)
+	}
+	for i := range pendingDeps {
+		pendingDeps[i], err = constructMerkleProof(depositTrie, pendingDeps[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &pb.PendingDepositsResponse{PendingDeposits: pendingDeps}, nil
 }
 
 func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *big.Int, eth1FollowDistance int64) (*pb.Eth1DataResponse, error) {
-	ancestorHeight := currentHeight.Sub(currentHeight, big.NewInt(eth1FollowDistance))
+	ancestorHeight := big.NewInt(0).Sub(currentHeight, big.NewInt(eth1FollowDistance))
 	blockHash, err := bs.powChainService.BlockHashByHeight(ctx, ancestorHeight)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch ETH1_FOLLOW_DISTANCE ancestor: %v", err)
 	}
-	// TODO(#1656): Fetch the deposit root of the post-state deposit contract of the block
-	// references by the block hash of the ancestor instead.
-	depositRoot := bs.powChainService.DepositRoot()
+	// Fetch all historical deposits up to an ancestor height.
+	allDeposits := bs.beaconDB.AllDeposits(ctx, ancestorHeight)
+	depositData := [][]byte{}
+	// If there are less than or equal to len(ChainStartDeposits) historical deposits, then we just fetch the default
+	// deposit root obtained from constructing the Merkle trie with the ChainStart deposits.
+	chainStartDeposits := bs.powChainService.ChainStartDeposits()
+	if len(allDeposits) <= len(chainStartDeposits) {
+		depositData = chainStartDeposits
+	} else {
+		indices := []uint64{}
+		for i := range allDeposits {
+			depositData = append(depositData, allDeposits[i].DepositData)
+			indices = append(indices, allDeposits[i].MerkleTreeIndex)
+		}
+	}
+	depositTrie, err := trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		return nil, fmt.Errorf("could not generate historical deposit trie from deposits: %v", err)
+	}
+	depositRoot := depositTrie.Root()
 	return &pb.Eth1DataResponse{
 		Eth1Data: &pbp2p.Eth1Data{
 			DepositRootHash32: depositRoot[:],
 			BlockHash32:       blockHash[:],
 		},
 	}, nil
+}
+
+func constructMerkleProof(trie *trieutil.MerkleTrie, deposit *pbp2p.Deposit) (*pbp2p.Deposit, error) {
+	proof, err := trie.MerkleProof(int(deposit.MerkleTreeIndex))
+	if err != nil {
+		return nil, fmt.Errorf(
+			"could not generate merkle proof for deposit at index %d: %v",
+			deposit.MerkleTreeIndex,
+			err,
+		)
+	}
+	// For every deposit, we construct a Merkle proof using the powchain service's
+	// in-memory deposits trie, which is updated only once the state's LatestETH1Data
+	// property changes during a state transition after a voting period.
+	deposit.MerkleBranchHash32S = proof
+	return deposit, nil
 }
