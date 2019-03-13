@@ -91,6 +91,89 @@ func setupConflictingBlocks(
 	return candidate1, candidate2
 }
 
+func TestUpdateHead_SavesBlock(t *testing.T) {
+	beaconState, err := state.GenesisBeaconState(nil, 0, nil)
+	if err != nil {
+		t.Fatalf("Cannot create genesis beacon state: %v", err)
+	}
+	stateRoot, err := hashutil.HashProto(beaconState)
+	if err != nil {
+		t.Fatalf("Could not tree hash state: %v", err)
+	}
+
+	genesis := b.NewGenesisBlock(stateRoot[:])
+	genesisRoot, err := hashutil.HashProto(genesis)
+	if err != nil {
+		t.Fatalf("Could not get genesis block root: %v", err)
+	}
+	// Table driven tests for various fork choice scenarios.
+	tests := []struct {
+		blockSlot uint64
+		state     *pb.BeaconState
+		logAssert string
+	}{
+		// Higher slot but same state should trigger chain update.
+		{
+			blockSlot: 64,
+			state:     beaconState,
+			logAssert: "Chain head block and state updated",
+		},
+		// Higher slot, different state, but higher last finalized slot.
+		{
+			blockSlot: 64,
+			state:     &pb.BeaconState{FinalizedEpoch: 2},
+			logAssert: "Chain head block and state updated",
+		},
+		// Higher slot, different state, same last finalized slot,
+		// but last justified slot.
+		{
+			blockSlot: 64,
+			state: &pb.BeaconState{
+				FinalizedEpoch: 0,
+				JustifiedEpoch: 2,
+			},
+			logAssert: "Chain head block and state updated",
+		},
+	}
+	for _, tt := range tests {
+		hook := logTest.NewGlobal()
+		db := internal.SetupDB(t)
+		defer internal.TeardownDB(t, db)
+		chainService := setupBeaconChain(t, false, db, true, nil)
+		unixTime := uint64(time.Now().Unix())
+		deposits, _ := setupInitialDeposits(t, 100)
+		if err := db.InitializeState(unixTime, deposits, &pb.Eth1Data{}); err != nil {
+			t.Fatalf("Could not initialize beacon state to disk: %v", err)
+		}
+
+		stateRoot, err := hashutil.HashProto(tt.state)
+		if err != nil {
+			t.Fatalf("Could not tree hash state: %v", err)
+		}
+		block := &pb.BeaconBlock{
+			Slot:             tt.blockSlot,
+			StateRootHash32:  stateRoot[:],
+			ParentRootHash32: genesisRoot[:],
+			Eth1Data: &pb.Eth1Data{
+				DepositRootHash32: []byte("a"),
+				BlockHash32:       []byte("b"),
+			},
+		}
+		if err := chainService.beaconDB.SaveBlock(block); err != nil {
+			t.Fatal(err)
+		}
+		if err := chainService.ApplyForkChoiceRule(block, tt.state); err != nil {
+			t.Errorf("Expected head to update, received %v", err)
+		}
+
+		if err := chainService.beaconDB.SaveBlock(block); err != nil {
+			t.Fatal(err)
+		}
+		chainService.cancel()
+		testutil.AssertLogsContain(t, hook, tt.logAssert)
+	}
+}
+
 func TestVoteCount_ParentDoesNotExistNoVoteCount(t *testing.T) {
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)

@@ -38,7 +38,11 @@ import (
 //		else:
 //			return nil, error  # or throw or whatever
 //
-func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.BeaconState) (*pb.BeaconState, error) {
+func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock) (*pb.BeaconState, error) {
+	beaconState, err := c.beaconDB.State(c.ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
+	}
 	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
