@@ -1,21 +1,22 @@
 package blockchain
 
 import (
-	"math/big"
 	"context"
+	"encoding/binary"
+	"math/big"
 	"testing"
 	"time"
-	"encoding/binary"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
+
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
@@ -53,7 +54,6 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 			BlockHash32:       []byte("b"),
 		},
 	}
-
 
 	if err := chainService.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)

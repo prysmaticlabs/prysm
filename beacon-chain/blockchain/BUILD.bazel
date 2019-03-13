@@ -31,6 +31,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "block_processing_test.go",
         "fork_choice_test.go",
         "service_test.go",
     ],

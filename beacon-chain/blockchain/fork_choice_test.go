@@ -2,10 +2,11 @@ package blockchain
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"

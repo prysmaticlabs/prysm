@@ -83,11 +83,11 @@ func (m *mockChainService) ReceiveBlock(block *pb.BeaconBlock) (*pb.BeaconState,
 }
 
 func (m *mockChainService) ApplyForkChoiceRule(block *pb.BeaconBlock, computedState *pb.BeaconState) error {
-    return nil
+	return nil
 }
 
 func (m *mockChainService) CanonicalBlockFeed() *event.Feed {
-    return new(event.Feed)
+	return new(event.Feed)
 }
 
 func newMockChainService() *mockChainService {

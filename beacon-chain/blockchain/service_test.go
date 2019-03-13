@@ -366,6 +366,3 @@ func TestPOWBlockExists_UsingDepositRootHash(t *testing.T) {
 	}
 	testutil.AssertLogsContain(t, hook, "fetching PoW block corresponding to mainchain reference failed")
 }
-
-
-
