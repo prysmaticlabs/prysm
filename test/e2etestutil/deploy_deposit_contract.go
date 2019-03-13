@@ -53,7 +53,7 @@ func (g *GoEthereumInstance) SendValidatorDeposits(depositData [][]byte) {
 		g.t.Fatal("No deposit data provided to SendValidatorDeposits")
 	}
 
-	nonce, err := g.client.PendingNonceAt(context.Background(), txOpts.From, nil /*blk*/)
+	nonce, err := g.client.PendingNonceAt(context.Background(), txOpts.From)
 	if err != nil {
 		g.t.Fatal(err)
 	}
@@ -65,7 +65,6 @@ func (g *GoEthereumInstance) SendValidatorDeposits(depositData [][]byte) {
 			g.t.Logf("Failing data: %#x", depositDatum)
 			g.t.Fatal(err)
 		}
-		lastTx = tx
 		g.t.Logf("Deposited %#x with nonce %d", tx.Hash(), txOpts.Nonce)
 
 		nonce++
