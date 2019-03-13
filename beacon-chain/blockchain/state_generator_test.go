@@ -1,4 +1,4 @@
-package stategenerator
+package blockchain
 
 import (
 	"context"
