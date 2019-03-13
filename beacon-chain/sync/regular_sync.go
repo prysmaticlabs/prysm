@@ -359,6 +359,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 				log.Errorf("could not apply fork choice rule: %v", err)
 				return
 			}
+			log.Debug("Sent missing block parent and child to chain service for processing")
 			return
 		}
 	}

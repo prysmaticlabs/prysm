@@ -209,7 +209,7 @@ func TestProcessBlock_OK(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	testutil.AssertLogsContain(t, hook, "Sending newly received block to subscribers")
+	testutil.AssertLogsContain(t, hook, "Sending newly received block to chain service")
 	hook.Reset()
 }
 
@@ -313,8 +313,8 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 	ss.blockBuf <- msg2
 	ss.cancel()
 	<-exitRoutine
-	testutil.AssertLogsContain(t, hook, "Sending newly received block to subscribers")
-	testutil.AssertLogsContain(t, hook, "Sending newly received block to subscribers")
+	testutil.AssertLogsContain(t, hook, "Sending newly received block to chain service")
+	testutil.AssertLogsContain(t, hook, "Sending newly received block to chain service")
 	hook.Reset()
 }
 
@@ -416,7 +416,7 @@ func TestProcessBlock_MissingParentBlockRequestedOK(t *testing.T) {
 	}
 	// Finally, we respond with the parent block that was missing.
 	ss.receiveBlock(msg2)
-	testutil.AssertLogsContain(t, hook, "Sending newly received block to subscribers")
+	testutil.AssertLogsContain(t, hook, "Sending newly received block to chain service")
 	testutil.AssertLogsContain(t, hook, "Received missing block parent")
 	testutil.AssertLogsContain(t, hook, "Sent missing block parent and child to chain service for processing")
 	hook.Reset()
