@@ -517,4 +517,3 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		t.Fatalf("Could not setup wait for activation stream: %v", err)
 	}
 }
-
