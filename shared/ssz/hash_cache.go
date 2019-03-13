@@ -1,18 +1,23 @@
 package ssz
 
 import (
-	"math/big"
+	"errors"
+	"fmt"
+	"reflect"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"k8s.io/client-go/tools/cache"
 )
 
 var (
-
+	// ErrNotMarakleRoot will be returned when a cache object is not a marakle root
+	ErrNotMarakleRoot = errors.New("object is not a markle root")
 	// maxCacheSize is 2x of the follow distance for additional cache padding.
 	// Requests should be only accessing blocks within recent blocks within the
 	// Eth1FollowDistance.
@@ -27,46 +32,46 @@ var (
 		Name: "powchain_block_cache_hit",
 		Help: "The number of block requests that are present in the cache.",
 	})
-	blockCacheSize = promauto.NewGauge(prometheus.GaugeOpts{
+	hashCacheSize = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "powchain_block_cache_size",
 		Help: "The number of blocks in the block cache",
 	})
 )
 
-// hashKeyFn takes the hex string representation as the key for a blockInfo.
+// markleRoot specifies the hash of data in a struct
+type root struct {
+	Hash       common.Hash
+	MarkleRoot []byte
+}
+
+// hashKeyFn takes the  representation as the key for a hashInfo.
 func hashKeyFn(obj interface{}) (string, error) {
-	bInfo, ok := obj.(*blockInfo)
+	mRoot, ok := obj.(*root)
 	if !ok {
-		return "", ErrNotABlockInfo
+		return "", ErrNotMarakleRoot
 	}
 
-	return bInfo.Hash.Hex(), nil
+	return mRoot.Hash.Hex(), nil
 }
 
-// heightKeyFn takes the string representation of the block number as the key
-// for a blockInfo.
-func heightKeyFn(obj interface{}) (string, error) {
-	bInfo, ok := obj.(*blockInfo)
-	if !ok {
-		return "", ErrNotABlockInfo
-	}
-
-	return bInfo.Number.String(), nil
-}
-
-// newBlockCache creates a new block cache for storing/accessing blockInfo from
+// newHashCache creates a new hash cache for storing/accessing blockInfo from
 // memory.
-func newHashCache() *cache.FIFO {
-	return cache.NewFIFO(hashKeyFn)
+func newHashCache() *hashCacheS {
+	return &hashCacheS{
+		hashCache: cache.NewFIFO(hashKeyFn),
+	}
 }
 
-// BlockInfoByHash fetches blockInfo by its block hash. Returns true with a
-// reference to the block info, if exists. Otherwise returns false, nil.
-func (b *blockCache) BlockInfoByHash(hash common.Hash) (bool, *blockInfo, error) {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
+// hashCacheS struct with one queue for looking up by hash.
+type hashCacheS struct {
+	hashCache *cache.FIFO
+}
 
-	obj, exists, err := b.hashCache.GetByKey(hash.Hex())
+// RootByHash fetches MarkleRoot by its hash. Returns true with a
+// reference to the MarkleRoot if exists. Otherwise returns false, nil.
+func (b *hashCacheS) RootByHash(h common.Hash) (bool, *root, error) {
+
+	obj, exists, err := b.hashCache.GetByKey(h.Hex())
 	if err != nil {
 		return false, nil, err
 	}
@@ -78,67 +83,185 @@ func (b *blockCache) BlockInfoByHash(hash common.Hash) (bool, *blockInfo, error)
 		return false, nil, nil
 	}
 
-	bInfo, ok := obj.(*blockInfo)
+	hInfo, ok := obj.(*root)
 	if !ok {
-		return false, nil, ErrNotABlockInfo
+		return false, nil, ErrNotMarakleRoot
 	}
 
-	return true, bInfo, nil
+	return true, hInfo, nil
 }
 
-// BlockInfoByHeight fetches blockInfo by its block number. Returns true with a
-// reference to the block info, if exists. Otherwise returns false, nil.
-func (b *blockCache) BlockInfoByHeight(height *big.Int) (bool, *blockInfo, error) {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
-	obj, exists, err := b.heightCache.GetByKey(height.String())
-	if err != nil {
-		return false, nil, err
-	}
-
-	if exists {
-		blockCacheHit.Inc()
-	} else {
-		blockCacheMiss.Inc()
-		return false, nil, nil
-	}
-
-	bInfo, ok := obj.(*blockInfo)
-	if !ok {
-		return false, nil, ErrNotABlockInfo
-	}
-
-	return exists, bInfo, nil
-}
-
-// AddBlock adds a blockInfo object to the cache. This method also trims the
+// AddRetrieveTrieRoot adds a trie root to the cache. This method also trims the
 // least recently added block info if the cache size has reached the max cache
-// size limit. This method should be called in sequential block number order if
-// the desired behavior is that the blocks with the highest block number should
-// be present in the cache.
-func (b *blockCache) AddBlock(blk *gethTypes.Block) error {
-	b.lock.Lock()
-	defer b.lock.Unlock()
+// size limit.
+func (b *hashCacheS) AddRetrieveTrieRoot(val interface{}) ([32]byte, error) {
+	if val == nil {
+		return [32]byte{}, newHashError("untyped nil is not supported", nil)
+	}
+	rval := reflect.ValueOf(val)
 
-	bInfo := &blockInfo{
-		Hash:   blk.Hash(),
-		Number: blk.Number(),
+	startTime := time.Now().UnixNano()
+	hs, err := hashedEncoding(rval)
+	if err != nil {
+		return [32]byte{}, newHashError(fmt.Sprint(err), rval.Type())
+	}
+	exists, fetchedInfo, err := b.RootByHash(bytesutil.ToBytes32(hs))
+	if err != nil {
+		return [32]byte{}, newHashError(fmt.Sprint(err), rval.Type())
+	}
+	fmt.Printf("encoding time: %v \n", time.Now().UnixNano()-startTime)
+	var paddedOutput [32]byte
+	if exists {
+		paddedOutput = bytesutil.ToBytes32(fetchedInfo.MarkleRoot)
+	} else {
+		sszUtils, err := cachedSSZUtils(rval.Type())
+		if err != nil {
+			return [32]byte{}, newHashError(fmt.Sprint(err), rval.Type())
+		}
+		startTime = time.Now().UnixNano()
+		output, err := sszUtils.hasher(rval)
+		fmt.Printf("hashing time: %v \n", time.Now().UnixNano()-startTime)
+		if err != nil {
+			return [32]byte{}, newHashError(fmt.Sprint(err), rval.Type())
+		}
+		// Right-pad with 0 to make 32 bytes long, if necessary
+		paddedOutput = bytesutil.ToBytes32(output)
+		b.AddRoot(bytesutil.ToBytes32(hs), paddedOutput[:])
 	}
 
-	if err := b.hashCache.AddIfNotPresent(bInfo); err != nil {
-		return err
+	return paddedOutput, nil
+}
+
+// AddRetriveMarkleRoot adds a mrakle object to the cache. This method also trims the
+// least recently added block info if the cache size has reached the max cache
+// size limit.
+func (b *hashCacheS) AddRetriveMarkleRoot(byteSlice [][]byte) ([]byte, error) {
+	mh := []byte{}
+	hs, err := hashedEncoding(reflect.ValueOf(byteSlice))
+	if err != nil {
+		return mh, newHashError(fmt.Sprint(err), reflect.TypeOf(byteSlice))
 	}
-	if err := b.heightCache.AddIfNotPresent(bInfo); err != nil {
+	exists, fetchedInfo, err := b.RootByHash(bytesutil.ToBytes32(hs))
+	if err != nil {
+		return mh, newHashError(fmt.Sprint(err), reflect.TypeOf(byteSlice))
+	}
+	if exists {
+		mh = fetchedInfo.MarkleRoot
+	} else {
+		mh, err = merkleHash(byteSlice)
+		if err != nil {
+			return nil, err
+		}
+		mr := &root{
+			Hash:       bytesutil.ToBytes32(hs),
+			MarkleRoot: mh,
+		}
+		if err := b.hashCache.AddIfNotPresent(mr); err != nil {
+			return nil, err
+		}
+
+		trim(b.hashCache, maxCacheSize)
+
+		hashCacheSize.Set(float64(len(b.hashCache.ListKeys())))
+	}
+
+	return mh, nil
+}
+
+// AddRoot adds a rootHash object to the cache. This method also trims the
+// least recently added block info if the cache size has reached the max cache
+// size limit.
+func (b *hashCacheS) AddRoot(h common.Hash, rootB []byte) error {
+
+	mr := &root{
+		Hash:       h,
+		MarkleRoot: rootB,
+	}
+	if err := b.hashCache.AddIfNotPresent(mr); err != nil {
 		return err
 	}
 
 	trim(b.hashCache, maxCacheSize)
-	trim(b.heightCache, maxCacheSize)
 
-	blockCacheSize.Set(float64(len(b.hashCache.ListKeys())))
+	hashCacheSize.Set(float64(len(b.hashCache.ListKeys())))
 
 	return nil
+}
+
+func makeSliceHasherCache(typ reflect.Type) (hasher, error) {
+	elemSSZUtils, err := cachedSSZUtilsNoAcquireLock(typ.Elem())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ssz utils: %v", err)
+	}
+	hasher := func(val reflect.Value) ([]byte, error) {
+		hs, err := hashedEncoding(val)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode element of slice/array: %v", err)
+		}
+		exists, fetchedInfo, err := hashCache.RootByHash(bytesutil.ToBytes32(hs))
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode element of slice/array: %v", err)
+		}
+		var output []byte
+		if exists {
+			output = fetchedInfo.MarkleRoot
+		} else {
+			var elemHashList [][]byte
+			for i := 0; i < val.Len(); i++ {
+				elemHash, err := elemSSZUtils.hasher(val.Index(i))
+				if err != nil {
+					return nil, fmt.Errorf("failed to hash element of slice/array: %v", err)
+				}
+				elemHashList = append(elemHashList, elemHash)
+			}
+			output, err = hashCache.AddRetriveMarkleRoot(elemHashList)
+			if err != nil {
+				return nil, fmt.Errorf("failed to calculate merkle hash of element hash list: %v", err)
+			}
+			err := hashCache.AddRoot(bytesutil.ToBytes32(hs), output)
+			if err != nil {
+				return nil, fmt.Errorf("failed to add root to cache: %v", err)
+			}
+		}
+
+		return output, nil
+	}
+	return hasher, nil
+}
+
+func makeStructHasherCache(typ reflect.Type) (hasher, error) {
+	fields, err := structFields(typ)
+	if err != nil {
+		return nil, err
+	}
+	hasher := func(val reflect.Value) ([]byte, error) {
+		hs, err := hashedEncoding(val)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode element of slice/array: %v", err)
+		}
+		exists, fetchedInfo, err := hashCache.RootByHash(bytesutil.ToBytes32(hs))
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode element of slice/array: %v", err)
+		}
+		var result [32]byte
+		if exists {
+			result = bytesutil.ToBytes32(fetchedInfo.MarkleRoot)
+		} else {
+			concatElemHash := make([]byte, 0)
+			for _, f := range fields {
+				elemHash, err := f.sszUtils.hasher(val.Field(f.index))
+				if err != nil {
+					return nil, fmt.Errorf("failed to hash field of struct: %v", err)
+				}
+				concatElemHash = append(concatElemHash, elemHash...)
+			}
+			result = hashutil.Hash(concatElemHash)
+
+		}
+
+		return result[:], nil
+	}
+	return hasher, nil
 }
 
 // trim the FIFO queue to the maxSize.

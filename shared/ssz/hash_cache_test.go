@@ -1,64 +1,57 @@
 package ssz
 
 import (
-	"math/big"
+	"bytes"
+	"crypto/rand"
+	"encoding/binary"
+	"fmt"
+	"reflect"
 	"testing"
+	"time"
+
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 
 	"github.com/ethereum/go-ethereum/common"
-	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestHashKeyFn_OK(t *testing.T) {
-	bInfo := &blockInfo{
+	mRoot := &root{
 		Hash: common.HexToHash("0x0123456"),
 	}
 
-	key, err := hashKeyFn(bInfo)
+	key, err := hashKeyFn(mRoot)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if key != bInfo.Hash.Hex() {
-		t.Errorf("Incorrect hash key: %s, expected %s", key, bInfo.Hash.Hex())
+	if key != mRoot.Hash.Hex() {
+		t.Errorf("Incorrect hash key: %s, expected %s", key, mRoot.Hash.Hex())
 	}
 }
 
 func TestHashKeyFn_InvalidObj(t *testing.T) {
 	_, err := hashKeyFn("bad")
-	if err != ErrNotABlockInfo {
-		t.Errorf("Expected error %v, got %v", ErrNotABlockInfo, err)
+	if err != ErrNotMarakleRoot {
+		t.Errorf("Expected error %v, got %v", ErrNotMarakleRoot, err)
 	}
 }
 
-func TestHeightKeyFn_OK(t *testing.T) {
-	bInfo := &blockInfo{
-		Number: big.NewInt(555),
-	}
+func TestObjCache_byHash(t *testing.T) {
+	cache := newHashCache()
 
-	key, err := heightKeyFn(bInfo)
+	byteSl := [][]byte{{0, 0}, {1, 1}}
+	mr, err := merkleHash(byteSl)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if key != bInfo.Number.String() {
-		t.Errorf("Incorrect height key: %s, expected %s", key, bInfo.Number.String())
+	hs, err := hashedEncoding(reflect.ValueOf(byteSl))
+	if err != nil {
+		t.Fatal(err)
 	}
-}
+	exists, _, err := cache.RootByHash(bytesutil.ToBytes32(hs))
 
-func TestHeightKeyFn_InvalidObj(t *testing.T) {
-	_, err := heightKeyFn("bad")
-	if err != ErrNotABlockInfo {
-		t.Errorf("Expected error %v, got %v", ErrNotABlockInfo, err)
-	}
-}
-
-func TestBlockCache_byHash(t *testing.T) {
-	cache := newBlockCache()
-
-	header := &gethTypes.Header{
-		ParentHash: common.HexToHash("0x12345"),
-		Number:     big.NewInt(55),
-	}
-
-	exists, _, err := cache.BlockInfoByHash(header.Hash())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,84 +59,148 @@ func TestBlockCache_byHash(t *testing.T) {
 		t.Error("Expected block info not to exist in empty cache")
 	}
 
-	if err := cache.AddBlock(gethTypes.NewBlockWithHeader(header)); err != nil {
+	if _, err := cache.AddRetriveMarkleRoot(byteSl); err != nil {
 		t.Fatal(err)
 	}
 
-	exists, fetchedInfo, err := cache.BlockInfoByHash(header.Hash())
+	exists, fetchedInfo, err := cache.RootByHash(bytesutil.ToBytes32(hs))
+
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !exists {
 		t.Error("Expected blockInfo to exist")
 	}
-	if fetchedInfo.Number.Cmp(header.Number) != 0 {
+	if bytes.Compare(mr, fetchedInfo.MarkleRoot) != 0 {
 		t.Errorf(
 			"Expected fetched info number to be %v, got %v",
-			header.Number,
-			fetchedInfo.Number,
+			mr,
+			fetchedInfo.MarkleRoot,
 		)
 	}
-	if fetchedInfo.Hash != header.Hash() {
+	if fetchedInfo.Hash != bytesutil.ToBytes32(hs) {
 		t.Errorf(
 			"Expected fetched info hash to be %v, got %v",
-			header.Hash(),
+			hs,
 			fetchedInfo.Hash,
 		)
 	}
 }
 
-func TestBlockCache_byHeight(t *testing.T) {
-	cache := newBlockCache()
+func TestMerkleHashWithCache(t *testing.T) {
+	cache := newHashCache()
+	for i := 0; i < 200; i++ {
 
-	header := &gethTypes.Header{
-		ParentHash: common.HexToHash("0x12345"),
-		Number:     big.NewInt(55),
-	}
+		runMerkleHashTests(t, func(val [][]byte) ([]byte, error) {
+			return merkleHash(val)
+		})
 
-	exists, _, err := cache.BlockInfoByHeight(header.Number)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if exists {
-		t.Error("Expected block info not to exist in empty cache")
 	}
 
-	if err := cache.AddBlock(gethTypes.NewBlockWithHeader(header)); err != nil {
-		t.Fatal(err)
+	for i := 0; i < 200; i++ {
+
+		runMerkleHashTests(t, func(val [][]byte) ([]byte, error) {
+			return cache.AddRetriveMarkleRoot(val)
+		})
+
 	}
 
-	exists, fetchedInfo, err := cache.BlockInfoByHeight(header.Number)
-	if err != nil {
-		t.Fatal(err)
+}
+
+// EncodeDepositData converts a deposit input proto into an a byte slice
+// of Simple Serialized deposit input followed by 8 bytes for a deposit value
+// and 8 bytes for a unix timestamp, all in LittleEndian format.
+func EncodeDepositData(
+	depositInput *pb.DepositInput,
+	depositValue uint64,
+	depositTimestamp int64,
+) ([]byte, error) {
+	wBuf := new(bytes.Buffer)
+	if err := Encode(wBuf, depositInput); err != nil {
+		return nil, fmt.Errorf("failed to encode deposit input: %v", err)
 	}
-	if !exists {
-		t.Error("Expected blockInfo to exist")
-	}
-	if fetchedInfo.Number.Cmp(header.Number) != 0 {
-		t.Errorf(
-			"Expected fetched info number to be %v, got %v",
-			header.Number,
-			fetchedInfo.Number,
+	encodedInput := wBuf.Bytes()
+	depositData := make([]byte, 0, 512)
+	value := make([]byte, 8)
+	binary.LittleEndian.PutUint64(value, depositValue)
+	timestamp := make([]byte, 8)
+	binary.LittleEndian.PutUint64(timestamp, uint64(depositTimestamp))
+
+	depositData = append(depositData, value...)
+	depositData = append(depositData, timestamp...)
+	depositData = append(depositData, encodedInput...)
+
+	return depositData, nil
+}
+
+// generateInitialSimulatedDeposits generates initial deposits for creating a beacon state in the simulated
+// backend based on the yaml configuration.
+func generateInitialSimulatedDeposits(numDeposits uint64) ([]*pb.Deposit, []*bls.SecretKey, error) {
+	genesisTime := time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC).Unix()
+	deposits := make([]*pb.Deposit, numDeposits)
+	privKeys := make([]*bls.SecretKey, numDeposits)
+	for i := 0; i < len(deposits); i++ {
+		priv, err := bls.RandKey(rand.Reader)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not initialize key: %v", err)
+		}
+		depositInput := &pb.DepositInput{
+			Pubkey:                      priv.PublicKey().Marshal(),
+			WithdrawalCredentialsHash32: make([]byte, 32),
+			ProofOfPossession:           make([]byte, 96),
+		}
+		depositData, err := EncodeDepositData(
+			depositInput,
+			params.BeaconConfig().MaxDepositAmount,
+			genesisTime,
 		)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not encode genesis block deposits: %v", err)
+		}
+		deposits[i] = &pb.Deposit{DepositData: depositData}
+		privKeys[i] = priv
 	}
-	if fetchedInfo.Hash != header.Hash() {
-		t.Errorf(
-			"Expected fetched info hash to be %v, got %v",
-			header.Hash(),
-			fetchedInfo.Hash,
-		)
+	return deposits, privKeys, nil
+}
+
+func TestDepositsBLSHash(t *testing.T) {
+	cache := newHashCache()
+	initialDeposits, blsg, err := generateInitialSimulatedDeposits(1000)
+	if err != nil {
+		t.Errorf("test: unexpected error: %v\n", err)
+	}
+	type tree struct {
+		Dep []*pb.Deposit
+		BLS []*bls.SecretKey
+	}
+
+	startTime := time.Now().UnixNano()
+	output, err := cache.AddRetrieveTrieRoot(&tree{
+		Dep: initialDeposits,
+		BLS: blsg,
+	})
+
+	fmt.Printf("time it took: %v \n", time.Now().UnixNano()-startTime)
+	startTime = time.Now().UnixNano()
+	output2, err := cache.AddRetrieveTrieRoot(&tree{
+		Dep: initialDeposits,
+		BLS: blsg,
+	})
+	fmt.Printf("time it took when cached: %v \n", time.Now().UnixNano()-startTime)
+
+	// Check expected output
+	if err == nil && !bytes.Equal(output[:], output2[:]) {
+		t.Errorf("output mismatch:\ngot   %X\nwant  %X\n",
+			output2, output)
 	}
 }
 
 func TestBlockCache_maxSize(t *testing.T) {
-	cache := newBlockCache()
+	cache := newHashCache()
+	maxCacheSize = 10000
+	for i := uint64(0); i < uint64(maxCacheSize+10); i++ {
 
-	for i := int64(0); i < int64(maxCacheSize+10); i++ {
-		header := &gethTypes.Header{
-			Number: big.NewInt(i),
-		}
-		if err := cache.AddBlock(gethTypes.NewBlockWithHeader(header)); err != nil {
+		if err := cache.AddRoot(bytesutil.ToBytes32(bytesutil.Bytes4(i)), []byte{1}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -155,11 +212,5 @@ func TestBlockCache_maxSize(t *testing.T) {
 			len(cache.hashCache.ListKeys()),
 		)
 	}
-	if len(cache.heightCache.ListKeys()) != maxCacheSize {
-		t.Errorf(
-			"Expected height cache key size to be %d, got %d",
-			maxCacheSize,
-			len(cache.heightCache.ListKeys()),
-		)
-	}
+
 }

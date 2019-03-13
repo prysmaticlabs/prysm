@@ -64,9 +64,9 @@ func makeHasher(typ reflect.Type) (hasher, error) {
 		kind == reflect.Array && typ.Elem().Kind() == reflect.Uint8:
 		return hashedEncoding, nil
 	case kind == reflect.Slice || kind == reflect.Array:
-		return makeSliceHasher(typ)
+		return makeSliceHasherCache(typ)
 	case kind == reflect.Struct:
-		return makeStructHasher(typ)
+		return makeStructHasherCache(typ)
 	case kind == reflect.Ptr:
 		return makePtrHasher(typ)
 	default:
