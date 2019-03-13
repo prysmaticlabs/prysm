@@ -18,6 +18,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 // Generates an initial genesis block and state using a custom number of initial
@@ -65,30 +67,87 @@ func generateTestGenesisStateAndBlock(
 	return beaconState, genesisBlock, stateRoot, genesisRoot
 }
 
-func setupConflictingBlocks(
-	t *testing.T,
-	beaconDB *db.BeaconDB,
-	genesisHash [32]byte,
-	stateRoot [32]byte,
-) (candidate1 *pb.BeaconBlock, candidate2 *pb.BeaconBlock) {
-	candidate1 = &pb.BeaconBlock{
-		Slot:             5,
-		ParentRootHash32: genesisHash[:],
-		StateRootHash32:  stateRoot[:],
+func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
+	beaconState, err := state.GenesisBeaconState(nil, 0, nil)
+	if err != nil {
+		t.Fatalf("Cannot create genesis beacon state: %v", err)
 	}
-	candidate2 = &pb.BeaconBlock{
-		Slot:             5,
-		ParentRootHash32: genesisHash[:],
-		StateRootHash32:  []byte("some-other-state"),
+	stateRoot, err := hashutil.HashProto(beaconState)
+	if err != nil {
+		t.Fatalf("Could not tree hash state: %v", err)
 	}
-	// We store these potential heads in the DB.
-	if err := beaconDB.SaveBlock(candidate1); err != nil {
-		t.Fatal(err)
+
+	genesis := b.NewGenesisBlock(stateRoot[:])
+	genesisRoot, err := hashutil.HashProto(genesis)
+	if err != nil {
+		t.Fatalf("Could not get genesis block root: %v", err)
 	}
-	if err := beaconDB.SaveBlock(candidate2); err != nil {
-		t.Fatal(err)
+	// Table driven tests for various fork choice scenarios.
+	tests := []struct {
+		blockSlot uint64
+		state     *pb.BeaconState
+		logAssert string
+	}{
+		// Higher slot but same state should trigger chain update.
+		{
+			blockSlot: 64,
+			state:     beaconState,
+			logAssert: "Chain head block and state updated",
+		},
+		// Higher slot, different state, but higher last finalized slot.
+		{
+			blockSlot: 64,
+			state:     &pb.BeaconState{FinalizedEpoch: 2},
+			logAssert: "Chain head block and state updated",
+		},
+		// Higher slot, different state, same last finalized slot,
+		// but last justified slot.
+		{
+			blockSlot: 64,
+			state: &pb.BeaconState{
+				FinalizedEpoch: 0,
+				JustifiedEpoch: 2,
+			},
+			logAssert: "Chain head block and state updated",
+		},
 	}
-	return candidate1, candidate2
+	for _, tt := range tests {
+		hook := logTest.NewGlobal()
+		db := internal.SetupDB(t)
+		defer internal.TeardownDB(t, db)
+		chainService := setupBeaconChain(t, false, db, true, nil)
+		unixTime := uint64(time.Now().Unix())
+		deposits, _ := setupInitialDeposits(t, 100)
+		if err := db.InitializeState(unixTime, deposits, &pb.Eth1Data{}); err != nil {
+			t.Fatalf("Could not initialize beacon state to disk: %v", err)
+		}
+
+		stateRoot, err := hashutil.HashProto(tt.state)
+		if err != nil {
+			t.Fatalf("Could not tree hash state: %v", err)
+		}
+		block := &pb.BeaconBlock{
+			Slot:             tt.blockSlot,
+			StateRootHash32:  stateRoot[:],
+			ParentRootHash32: genesisRoot[:],
+			Eth1Data: &pb.Eth1Data{
+				DepositRootHash32: []byte("a"),
+				BlockHash32:       []byte("b"),
+			},
+		}
+		if err := chainService.beaconDB.SaveBlock(block); err != nil {
+			t.Fatal(err)
+		}
+		if err := chainService.ApplyForkChoiceRule(context.Background(), block, tt.state); err != nil {
+			t.Errorf("Expected head to update, received %v", err)
+		}
+
+		if err := chainService.beaconDB.SaveBlock(block); err != nil {
+			t.Fatal(err)
+		}
+		chainService.cancel()
+		testutil.AssertLogsContain(t, hook, tt.logAssert)
+	}
 }
 
 func TestVoteCount_ParentDoesNotExistNoVoteCount(t *testing.T) {

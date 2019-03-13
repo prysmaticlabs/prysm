@@ -42,14 +42,15 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 		}
 		return stream.Send(res)
 	}
-	sub := vs.chainService.CanonicalStateFeed().Subscribe(vs.canonicalStateChan)
-	defer sub.Unsubscribe()
 	for {
 		select {
 		case <-time.After(3 * time.Second):
-		case beaconState := <-vs.canonicalStateChan:
 			if !vs.beaconDB.HasValidator(req.Pubkey) {
 				continue
+			}
+			beaconState, err := vs.beaconDB.State(vs.ctx)
+			if err != nil {
+				return fmt.Errorf("could not retrieve beacon state: %v", err)
 			}
 			activeVal, err := vs.retrieveActiveValidator(beaconState, req.Pubkey)
 			if err != nil {
@@ -59,8 +60,6 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 				Validator: activeVal,
 			}
 			return stream.Send(res)
-		case <-sub.Err():
-			return errors.New("subscriber closed, exiting goroutine")
 		case <-vs.ctx.Done():
 			return errors.New("rpc context closed, exiting goroutine")
 		}
