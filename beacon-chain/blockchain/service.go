@@ -296,9 +296,6 @@ func (c *ChainService) ApplyForkChoiceRule(block *pb.BeaconBlock, computedState 
 		}
 	}
 
-	if err := c.saveFinalizedState(computedState); err != nil {
-		log.Errorf("Could not save new finalized state: %v", err)
-	}
 	if c.canonicalBlockFeed.Send(&pb.BeaconBlockAnnounce{
 		Hash:       h[:],
 		SlotNumber: block.Slot,
@@ -387,6 +384,11 @@ func (c *ChainService) ReceiveBlock(block *pb.BeaconBlock, beaconState *pb.Beaco
 	// Remove pending deposits from the deposit queue.
 	for _, dep := range block.Body.Deposits {
 		c.beaconDB.RemovePendingDeposit(c.ctx, dep)
+	}
+
+	// Update FFG checkpoints in DB.
+	if err := c.updateFFGCheckPoints(beaconState); err != nil {
+		return nil, fmt.Errorf("could not update FFG checkpts: %v", err)
 	}
 
 	log.WithField("hash", fmt.Sprintf("%#x", blockRoot)).Debug("Processed beacon block")
@@ -596,4 +598,70 @@ func (c *ChainService) lmdGhost(
 		}
 		head = maxChild
 	}
+}
+
+// updateFFGCheckPoints checks whether the existing FFG check points saved in DB
+// are not older than the ones just processed in state. If it's older, we update
+// the db with the latest FFG check points, both justification and finalization.
+func (c *ChainService) updateFFGCheckPoints(state *pb.BeaconState) error {
+	lastJustifiedSlot := helpers.StartSlot(state.JustifiedEpoch)
+	savedJustifiedBlock, err := c.beaconDB.JustifiedBlock()
+	if err != nil {
+		return err
+	}
+	// If the last processed justification slot in state is greater than
+	// the slot of justified block saved in DB.
+	if lastJustifiedSlot > savedJustifiedBlock.Slot {
+		log.WithFields(logrus.Fields{
+			"saved_justified_slot": savedJustifiedBlock.Slot,
+			"new_justified_slot":   lastJustifiedSlot,
+		}).Info("Updating justified checkpoint in DB")
+		// Retrieve the new justified block from DB using the new justified slot and save it.
+		newJustifiedBlock, err := c.beaconDB.BlockBySlot(lastJustifiedSlot)
+		if err != nil {
+			return err
+		}
+		if err := c.beaconDB.SaveJustifiedBlock(newJustifiedBlock); err != nil {
+			return err
+		}
+		// Generate the new justified state with using new justified slot and save it.
+		newJustifiedState, err := GenerateStateFromSlot(c.ctx, c.beaconDB, lastJustifiedSlot)
+		if err != nil {
+			return err
+		}
+		if err := c.beaconDB.SaveJustifiedState(newJustifiedState); err != nil {
+			return err
+		}
+	}
+
+	lastFinalizedSlot := helpers.StartSlot(state.FinalizedEpoch)
+	savedFinalizedBlock, err := c.beaconDB.FinalizedBlock()
+	// If the last processed finalized slot in state is greater than
+	// the slot of finalized block saved in DB.
+	if err != nil {
+		return err
+	}
+	if lastFinalizedSlot > savedFinalizedBlock.Slot {
+		log.WithFields(logrus.Fields{
+			"saved_finalized_slot": savedFinalizedBlock.Slot,
+			"new_finalized_slot":   lastFinalizedSlot,
+		}).Info("Updating finalized checkpoint in DB")
+		// Retrieve the new finalized block from DB using the new finalized slot and save it.
+		newFinalizedBlock, err := c.beaconDB.BlockBySlot(lastFinalizedSlot)
+		if err != nil {
+			return err
+		}
+		if err := c.beaconDB.SaveFinalizedBlock(newFinalizedBlock); err != nil {
+			return err
+		}
+		// Generate the new finalized state with using new finalized slot and save it.
+		newFinalizedState, err := GenerateStateFromSlot(c.ctx, c.beaconDB, lastFinalizedSlot)
+		if err != nil {
+			return err
+		}
+		if err := c.beaconDB.SaveJustifiedState(newFinalizedState); err != nil {
+			return err
+		}
+	}
+	return nil
 }
