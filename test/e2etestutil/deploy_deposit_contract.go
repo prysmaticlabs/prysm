@@ -53,22 +53,49 @@ func (g *GoEthereumInstance) SendValidatorDeposits(depositData [][]byte) {
 		g.t.Fatal("No deposit data provided to SendValidatorDeposits")
 	}
 
-	var lastTx *types.Transaction
+	nonce, err := g.client.PendingNonceAt(context.Background(), txOpts.From, nil /*blk*/)
+	if err != nil {
+		g.t.Fatal(err)
+	}
+
 	for _, depositDatum := range depositData {
+		txOpts.Nonce = big.NewInt(int64(nonce))
 		tx, err := g.depositContract.Deposit(txOpts, depositDatum)
 		if err != nil {
 			g.t.Logf("Failing data: %#x", depositDatum)
 			g.t.Fatal(err)
 		}
 		lastTx = tx
-		g.t.Logf("Deposited %#x", tx.Hash())
+		g.t.Logf("Deposited %#x with nonce %d", tx.Hash(), txOpts.Nonce)
+
+		nonce++
 	}
 
 	g.t.Logf("Sent %d deposits", len(depositData))
 
-	g.waitForTransaction(lastTx)
+	g.flushTransactions()
+}
 
-	// flush transactions?
+// flushTransactions in the geth instance. For some reason, sending
+// transactions to the go-ethereum instance leaves 2 transactions that haven't
+// emit the log yet.
+func (g *GoEthereumInstance) flushTransactions() {
+	nonce, err := g.client.PendingNonceAt(context.Background(), g.ks.Accounts()[0].Address)
+	if err != nil {
+		g.t.Fatal(err)
+	}
+
+	for i := 0; i < 10; i++ {
+		tx := types.NewTransaction(nonce, g.ks.Accounts()[0].Address, nil, 21000, nil, nil)
+		tx, err = g.ks.SignTxWithPassphrase(g.ks.Accounts()[0], "", tx, big.NewInt(1337))
+		if err != nil {
+			g.t.Fatal(err)
+		}
+		if err := g.client.SendTransaction(context.Background(), tx); err != nil {
+			g.t.Fatal(err)
+		}
+		nonce++
+	}
 }
 
 func (g *GoEthereumInstance) txOpts() *bind.TransactOpts {

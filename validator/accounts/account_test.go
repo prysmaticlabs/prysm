@@ -21,7 +21,7 @@ func TestNewValidatorAccount_AccountExists(t *testing.T) {
 	if err := ks.StoreKey(directory+params.BeaconConfig().ValidatorPrivkeyFileName, validatorKey, ""); err != nil {
 		t.Fatalf("Unable to store key %v", err)
 	}
-	if err := NewValidatorAccount(directory, ""); err == nil {
+	if _, err := NewValidatorAccount(directory, ""); err == nil {
 		t.Error("Expected new validator account to throw error, received nil")
 	}
 	if err := os.RemoveAll(directory); err != nil {

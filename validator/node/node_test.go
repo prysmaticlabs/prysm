@@ -22,7 +22,7 @@ func TestNode_Builds(t *testing.T) {
 	set.String("password", "1234", "validator account password")
 	context := cli.NewContext(app, set, nil)
 
-	if err := accounts.NewValidatorAccount(dir, "1234"); err != nil {
+	if _, err := accounts.NewValidatorAccount(dir, "1234"); err != nil {
 		t.Fatalf("Could not create validator account: %v", err)
 	}
 	_, err := NewValidatorClient(context)

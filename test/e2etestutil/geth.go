@@ -28,6 +28,7 @@ type GoEthereumInstance struct {
 
 func NewGoEthereumInstance(t *testing.T) *GoEthereumInstance {
 	cfg := &node.Config{
+		Name: "geth",
 		P2P: p2p.Config{
 			MaxPeers:    0,
 			ListenAddr:  ":0",
