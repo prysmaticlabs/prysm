@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -31,7 +32,7 @@ func TestNilDB_OK(t *testing.T) {
 	}
 }
 
-func TestSave_OK(t *testing.T) {
+func TestSaveBlock_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
@@ -273,4 +274,70 @@ func TestHasBlockBySlot_OK(t *testing.T) {
 		t.Errorf("Saved block does not have the slot from which it was requested")
 	}
 
+}
+
+func TestJustifiedBlock_NoneExists(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	wanted := "no justified block saved"
+	_, err := db.JustifiedBlock()
+	if !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected: %s, received: %s", wanted, err.Error())
+	}
+}
+
+func TestJustifiedBlock_CanSaveRetrieve(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	blkSlot := uint64(10)
+	block1 := &pb.BeaconBlock{
+		Slot: blkSlot,
+	}
+
+	if err := db.SaveJustifiedBlock(block1); err != nil {
+		t.Fatalf("could not save justified block: %v", err)
+	}
+
+	justifiedBlk, err := db.JustifiedBlock()
+	if err != nil {
+		t.Fatalf("could not get justified block: %v", err)
+	}
+	if justifiedBlk.Slot != blkSlot {
+		t.Errorf("Saved block does not have the slot from which it was requested, wanted: %d, got: %d",
+			blkSlot, justifiedBlk.Slot)
+	}
+}
+
+func TestFinalizedBlock_NoneExists(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	wanted := "no finalized block saved"
+	_, err := db.FinalizedBlock()
+	if !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected: %s, received: %s", wanted, err.Error())
+	}
+}
+
+func TestFinalizedBlock_CanSaveRetrieve(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	blkSlot := uint64(22)
+	block1 := &pb.BeaconBlock{
+		Slot: blkSlot,
+	}
+
+	if err := db.saveFinalizedBlock(block1); err != nil {
+		t.Fatalf("could not save finalized block: %v", err)
+	}
+
+	finalizedblk, err := db.FinalizedBlock()
+	if err != nil {
+		t.Fatalf("could not get finalized block: %v", err)
+	}
+	if finalizedblk.Slot != blkSlot {
+		t.Errorf("Saved block does not have the slot from which it was requested, wanted: %d, got: %d",
+			blkSlot, finalizedblk.Slot)
+	}
 }
