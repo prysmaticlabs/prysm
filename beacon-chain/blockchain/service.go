@@ -100,6 +100,7 @@ func (c *ChainService) Start() {
 		go func() {
 			genesisTime := <-c.chainStartChan
 			c.processChainStartTime(genesisTime, subChainStart)
+			return
 		}()
 	}
 }

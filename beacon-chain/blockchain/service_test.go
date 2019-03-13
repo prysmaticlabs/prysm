@@ -254,7 +254,6 @@ func TestChainStartStop_Uninitialized(t *testing.T) {
 
 	// Test the start function.
 	genesisChan := make(chan time.Time, 0)
-	stateChan := make(chan *pb.BeaconState, 0)
 	sub := chainService.stateInitializedFeed.Subscribe(genesisChan)
 	defer sub.Unsubscribe()
 	chainService.Start()
@@ -268,16 +267,16 @@ func TestChainStartStop_Uninitialized(t *testing.T) {
 		)
 	}
 
-	beaconState := <-stateChan
-
+	beaconState, err := db.State(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
 	if beaconState == nil || beaconState.Slot != params.BeaconConfig().GenesisSlot {
 		t.Error("Expected canonical state feed to send a state with genesis block")
 	}
-
 	if err := chainService.Stop(); err != nil {
 		t.Fatalf("Unable to stop chain service: %v", err)
 	}
-
 	// The context should have been canceled.
 	if chainService.ctx.Err() != context.Canceled {
 		t.Error("Context was not canceled")

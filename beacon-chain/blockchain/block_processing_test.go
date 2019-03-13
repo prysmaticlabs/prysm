@@ -19,7 +19,6 @@ import (
 )
 
 func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
-	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, true, db, true, nil)
@@ -62,8 +61,6 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 	if _, err := chainService.ReceiveBlock(block); err == nil {
 		t.Errorf("Expected receive block to fail, received nil: %v", err)
 	}
-
-	testutil.AssertLogsContain(t, hook, "unable to retrieve POW chain reference block")
 }
 
 func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
