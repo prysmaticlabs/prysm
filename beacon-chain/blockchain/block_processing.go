@@ -29,7 +29,7 @@ import (
 //
 // 		while (state.slot < block.slot - 1):
 //      	state = slot_state_transition(state, block=None)
-//ReceiveBlock
+//
 //		# process slot with block
 //		state = slot_state_transition(state, block)
 //
@@ -109,11 +109,6 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	// Remove pending deposits from the deposit queue.
 	for _, dep := range block.Body.Deposits {
 		c.beaconDB.RemovePendingDeposit(ctx, dep)
-	}
-
-	// Update FFG checkpoints in DB.
-	if err := c.updateFFGCheckPts(beaconState); err != nil {
-		return nil, fmt.Errorf("could not update FFG checkpts: %v", err)
 	}
 
 	log.WithField("hash", fmt.Sprintf("%#x", blockRoot)).Debug("Processed beacon block")
