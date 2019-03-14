@@ -5,7 +5,10 @@ go_library(
     srcs = ["bit.go"],
     importpath = "github.com/prysmaticlabs/prysm/shared/bitutil",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_steakknife_hamming//:go_default_library"],
+    deps = [
+        "//shared/mathutil:go_default_library",
+        "@com_github_steakknife_hamming//:go_default_library",
+    ],
 )
 
 go_test(

@@ -3,6 +3,8 @@ package bitutil
 import (
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
+
 	"github.com/steakknife/hamming"
 )
 
@@ -21,7 +23,7 @@ func CheckBit(bitfield []byte, index int) (bool, error) {
 			len(bitfield), chunkLocation-1)
 	}
 
-	field := bitfield[chunkLocation-1] >> uint(indexLocation-1)
+	field := bitfield[chunkLocation-1] >> (7 - uint(indexLocation-1))
 	return field%2 != 0, nil
 }
 
@@ -39,7 +41,7 @@ func BitLength(b int) int {
 // SetBitfield takes an index and returns bitfield with the index flipped.
 func SetBitfield(index int) []byte {
 	chunkLocation := index / 8
-	indexLocation := 1 << uint64(index)
+	indexLocation := mathutil.PowerOf2(uint64(7 - (index % 8)))
 	var bitfield []byte
 
 	for i := 0; i < chunkLocation; i++ {
