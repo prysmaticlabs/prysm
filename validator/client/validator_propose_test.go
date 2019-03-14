@@ -43,6 +43,15 @@ func setup(t *testing.T) (*validator, *mocks, func()) {
 	return validator, m, ctrl.Finish
 }
 
+func TestProposeBlock_DoesNotProposeGenesisBlock(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validator, _, finish := setup(t)
+	defer finish()
+	validator.ProposeBlock(context.Background(), params.BeaconConfig().GenesisSlot)
+
+	testutil.AssertLogsContain(t, hook, "Assigned to genesis slot, skipping proposal")
+}
+
 func TestProposeBlock_LogsCanonicalHeadFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, m, finish := setup(t)
