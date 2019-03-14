@@ -74,20 +74,20 @@ type mockChainService struct {
 	stateInitializedFeed *event.Feed
 }
 
-func (m *mockChainService) IncomingBlockFeed() *event.Feed {
-	return new(event.Feed)
+func (m *mockChainService) StateInitializedFeed() *event.Feed {
+	return m.stateInitializedFeed
+}
+
+func (m *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+	return &pb.BeaconState{}, nil
+}
+
+func (m *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error {
+	return nil
 }
 
 func (m *mockChainService) CanonicalBlockFeed() *event.Feed {
-	return m.blockFeed
-}
-
-func (m *mockChainService) CanonicalStateFeed() *event.Feed {
-	return m.stateFeed
-}
-
-func (m *mockChainService) StateInitializedFeed() *event.Feed {
-	return m.stateInitializedFeed
+	return new(event.Feed)
 }
 
 func newMockChainService() *mockChainService {

@@ -73,6 +73,64 @@ func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
 	})
 }
 
+// SaveJustifiedBlock saves the last justified block from canonical chain to DB.
+func (db *BeaconDB) SaveJustifiedBlock(block *pb.BeaconBlock) error {
+	return db.update(func(tx *bolt.Tx) error {
+		enc, err := proto.Marshal(block)
+		if err != nil {
+			return fmt.Errorf("failed to encode block: %v", err)
+		}
+		chainInfo := tx.Bucket(chainInfoBucket)
+		return chainInfo.Put(justifiedBlockLookupKey, enc)
+	})
+}
+
+// saveFinalizedBlock saves the last finalized block from canonical chain to DB.
+func (db *BeaconDB) saveFinalizedBlock(block *pb.BeaconBlock) error {
+	return db.update(func(tx *bolt.Tx) error {
+		enc, err := proto.Marshal(block)
+		if err != nil {
+			return fmt.Errorf("failed to encode block: %v", err)
+		}
+		chainInfo := tx.Bucket(chainInfoBucket)
+		return chainInfo.Put(finalizedBlockLookupKey, enc)
+	})
+}
+
+// JustifiedBlock retrieves the justified block from the db.
+func (db *BeaconDB) JustifiedBlock() (*pb.BeaconBlock, error) {
+	var block *pb.BeaconBlock
+	err := db.view(func(tx *bolt.Tx) error {
+		chainInfo := tx.Bucket(chainInfoBucket)
+		encBlock := chainInfo.Get(justifiedBlockLookupKey)
+		if encBlock == nil {
+			return errors.New("no justified block saved")
+		}
+
+		var err error
+		block, err = createBlock(encBlock)
+		return err
+	})
+	return block, err
+}
+
+// FinalizedBlock retrieves the finalized block from the db.
+func (db *BeaconDB) FinalizedBlock() (*pb.BeaconBlock, error) {
+	var block *pb.BeaconBlock
+	err := db.view(func(tx *bolt.Tx) error {
+		chainInfo := tx.Bucket(chainInfoBucket)
+		encBlock := chainInfo.Get(finalizedBlockLookupKey)
+		if encBlock == nil {
+			return errors.New("no finalized block saved")
+		}
+
+		var err error
+		block, err = createBlock(encBlock)
+		return err
+	})
+	return block, err
+}
+
 // ChainHead returns the head of the main chain.
 func (db *BeaconDB) ChainHead() (*pb.BeaconBlock, error) {
 	var block *pb.BeaconBlock
@@ -116,6 +174,12 @@ func (db *BeaconDB) UpdateChainHead(block *pb.BeaconBlock, beaconState *pb.Beaco
 	if err != nil {
 		return fmt.Errorf("unable to encode beacon state: %v", err)
 	}
+
+	currentState, ok := proto.Clone(beaconState).(*pb.BeaconState)
+	if !ok {
+		return errors.New("could not clone beacon state")
+	}
+	db.currentState = currentState
 
 	slotBinary := encodeSlotNumber(block.Slot)
 

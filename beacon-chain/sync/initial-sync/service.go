@@ -69,7 +69,8 @@ type p2pAPI interface {
 }
 
 type chainService interface {
-	IncomingBlockFeed() *event.Feed
+	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error)
+	ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error
 }
 
 // SyncService is the interface for the Sync service.
@@ -513,7 +514,13 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	}
 
 	// Send block to main chain service to be processed.
-	s.chainService.IncomingBlockFeed().Send(block)
+	beaconState, err := s.chainService.ReceiveBlock(ctx, block)
+	if err != nil {
+		return fmt.Errorf("could not process beacon block: %v", err)
+	}
+	if err := s.chainService.ApplyForkChoiceRule(ctx, block, beaconState); err != nil {
+		return fmt.Errorf("could not apply fork choice rule: %v", err)
+	}
 	return nil
 }
 
