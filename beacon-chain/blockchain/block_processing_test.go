@@ -24,13 +24,13 @@ func TestReceiveBlock_DiscardOldBlock(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, true, db, true, nil)
 	beaconState := &pb.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot+3,
+		Slot: params.BeaconConfig().GenesisSlot + 3,
 	}
 	if err := db.SaveState(beaconState); err != nil {
 		t.Fatal(err)
 	}
 	block := &pb.BeaconBlock{
-		Slot: beaconState.Slot-1,
+		Slot: beaconState.Slot - 1,
 	}
 	if _, err := chainService.ReceiveBlock(context.Background(), block); err == nil {
 		t.Errorf("Expected receive block to fail, received nil: %v", err)
