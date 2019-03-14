@@ -325,7 +325,7 @@ func VerifyBitfield(bitfield []byte, committeeSize int) (bool, error) {
 			return false, fmt.Errorf("unable to check bit in bitfield %v", err)
 		}
 
-		if bitSet {
+		if !bitSet {
 			return false, nil
 		}
 	}
