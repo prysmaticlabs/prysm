@@ -140,11 +140,9 @@ func TestQuerier_ChainReqResponse(t *testing.T) {
 	}()
 
 	response := &pb.ChainHeadResponse{
-		Slot: 0,
-		Hash: []byte{'a', 'b'},
-		Block: &pb.BeaconBlock{
-			StateRootHash32: []byte{'c', 'd'},
-		},
+		Slot:                      0,
+		Hash:                      []byte{'a', 'b'},
+		FinalizedStateRootHash32S: []byte{'c', 'd'},
 	}
 
 	msg := p2p.Message{

@@ -354,11 +354,6 @@ func TestProposeBlock_ComputeStateFailure(t *testing.T) {
 		gomock.AssignableToTypeOf(&pb.PendingAttestationsRequest{}),
 	).Return(&pb.PendingAttestationsResponse{PendingAttestations: []*pbp2p.Attestation{}}, nil)
 
-	m.proposerClient.EXPECT().ProposeBlock(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
-	).Return(&pb.ProposeResponse{}, nil /*error*/)
-
 	m.proposerClient.EXPECT().ComputeStateRoot(
 		gomock.Any(), // context
 		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),

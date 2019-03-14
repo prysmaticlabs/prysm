@@ -17,7 +17,7 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/forkutils"
+	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -123,7 +123,7 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, currentEpoch)
-	domain := forkutils.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainRandao)
+	domain := forkutil.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainRandao)
 	sig, err := bls.SignatureFromBytes(block.RandaoReveal)
 	if err != nil {
 		return fmt.Errorf("could not deserialize block randao reveal: %v", err)
@@ -473,7 +473,7 @@ func verifyAttestationSig(beaconState *pb.BeaconState, att *pb.Attestation) erro
 	sig, err := bls.SignatureFromBytes(att.AggregateSignature)
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 
-	domain := forkutils.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainAttestation)
+	domain := forkutil.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainAttestation)
 
 	log.WithFields(logrus.Fields{
 		"aggregatePubkeys": fmt.Sprintf("%#x", aggregatePubkeys),
@@ -511,7 +511,7 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 		)
 	}
 	// Verify that `attestation.data.justified_epoch` is equal to `state.justified_epoch
-	// 	if slot_to_epoch(attestation.data.slot+1) >= get_current_epoch(state):
+	// 	if slot_to_epoch(attestation.data.slot + 1) >= get_current_epoch(state)
 	// 	else state.previous_justified_epoch`.
 	if helpers.SlotToEpoch(att.Data.Slot+1) >= helpers.CurrentEpoch(beaconState) {
 		if att.Data.JustifiedEpoch != beaconState.JustifiedEpoch {

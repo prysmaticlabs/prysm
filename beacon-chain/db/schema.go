@@ -25,6 +25,9 @@ var (
 	mainChainHeightKey      = []byte("chain-height")
 	stateLookupKey          = []byte("state")
 	finalizedStateLookupKey = []byte("finalized-state")
+	justifiedStateLookupKey = []byte("justified-state")
+	finalizedBlockLookupKey = []byte("finalized-block")
+	justifiedBlockLookupKey = []byte("justified-block")
 
 	// DB internal use
 	cleanupHistoryBucket    = []byte("cleanup-history-bucket")
