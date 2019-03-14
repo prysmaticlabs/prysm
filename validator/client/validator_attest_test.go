@@ -227,6 +227,10 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 }
 
 func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
+	cfg := &featureflags.FeatureFlagConfig{
+		VerifyAttestationSigs: true,
+	}
+	featureflags.OverrideFeatureConfig(cfg)
 	validator, m, finish := setup(t)
 	defer finish()
 
@@ -284,7 +288,7 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
 	).Return(&pb.AttestResponse{}, nil /* error */).Times(0)
 
-	delay = 2
+	delay = 3
 	timer := time.NewTimer(time.Duration(1 * time.Second))
 	go validator.AttestToBlockHead(context.Background(), 0)
 	<-timer.C
