@@ -47,16 +47,21 @@ func (ps *ProposerServer) ProposerIndex(ctx context.Context, req *pb.ProposerInd
 	}, nil
 }
 
-// ProposeBlock is called by a proposer in a sharding validator and a full beacon node
-// sends the request into a beacon block that can then be included in a canonical chain.
+// ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
+// to get it processed by the beacon node as the canonical head.
 func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlock) (*pb.ProposeResponse, error) {
 	h, err := hashutil.HashBeaconBlock(blk)
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash block: %v", err)
 	}
 	log.WithField("blockRoot", fmt.Sprintf("%#x", h)).Debugf("Block proposal received via RPC")
-	// We relay the received block from the proposer to the chain service for processing.
-	ps.chainService.IncomingBlockFeed().Send(blk)
+	beaconState, err := ps.chainService.ReceiveBlock(ctx, blk)
+	if err != nil {
+		return nil, fmt.Errorf("could not process beacon block: %v", err)
+	}
+	if err := ps.chainService.ApplyForkChoiceRule(ctx, blk, beaconState); err != nil {
+		return nil, fmt.Errorf("could not apply fork choice rule: %v", err)
+	}
 	return &pb.ProposeResponse{BlockHash: h[:]}, nil
 }
 

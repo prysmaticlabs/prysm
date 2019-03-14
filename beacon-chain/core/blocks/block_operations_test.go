@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/forkutils"
+	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -58,7 +58,7 @@ func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	epoch := helpers.SlotToEpoch(params.BeaconConfig().GenesisSlot)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := forkutils.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
+	domain := forkutil.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
 
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx-1].Sign(buf, domain)
@@ -91,7 +91,7 @@ func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testi
 	epoch := helpers.SlotToEpoch(params.BeaconConfig().GenesisSlot)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := forkutils.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
+	domain := forkutil.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 
 	block := &pb.BeaconBlock{
@@ -1154,13 +1154,18 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	data = append(data, timestamp...)
 
 	// We then create a merkle branch for the test.
-	depositTrie := trieutil.NewDepositTrie()
-	depositTrie.UpdateDepositTrie(data)
-	branch := depositTrie.Branch()
+	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{data}, int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatalf("Could not generate trie: %v", err)
+	}
+	proof, err := depositTrie.MerkleProof(0)
+	if err != nil {
+		t.Fatalf("Could not generate proof: %v", err)
+	}
 
 	deposit := &pb.Deposit{
 		DepositData:         data,
-		MerkleBranchHash32S: branch,
+		MerkleBranchHash32S: proof,
 		MerkleTreeIndex:     0,
 	}
 	block := &pb.BeaconBlock{
@@ -1223,13 +1228,17 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	data = append(data, encodedInput...)
 
 	// We then create a merkle branch for the test.
-	depositTrie := trieutil.NewDepositTrie()
-	depositTrie.UpdateDepositTrie(data)
-	branch := depositTrie.Branch()
-
+	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{data}, int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatalf("Could not generate trie: %v", err)
+	}
+	proof, err := depositTrie.MerkleProof(0)
+	if err != nil {
+		t.Fatalf("Could not generate proof: %v", err)
+	}
 	deposit := &pb.Deposit{
 		DepositData:         data,
-		MerkleBranchHash32S: branch,
+		MerkleBranchHash32S: proof,
 		MerkleTreeIndex:     0,
 	}
 	block := &pb.BeaconBlock{
@@ -1304,13 +1313,18 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	data = append(data, encodedInput...)
 
 	// We then create a merkle branch for the test.
-	depositTrie := trieutil.NewDepositTrie()
-	depositTrie.UpdateDepositTrie(data)
-	branch := depositTrie.Branch()
+	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{data}, int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatalf("Could not generate trie: %v", err)
+	}
+	proof, err := depositTrie.MerkleProof(0)
+	if err != nil {
+		t.Fatalf("Could not generate proof: %v", err)
+	}
 
 	deposit := &pb.Deposit{
 		DepositData:         data,
-		MerkleBranchHash32S: branch,
+		MerkleBranchHash32S: proof,
 		MerkleTreeIndex:     0,
 	}
 	block := &pb.BeaconBlock{
