@@ -113,7 +113,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		return nil, fmt.Errorf("beacon state root is not equal to block state root: %#x != %#x", stateRoot, block.StateRootHash32)
 	}
 
-  // Update FFG checkpoints in DB.
+	// Update FFG checkpoints in DB.
 	if err := c.updateFFGCheckPts(beaconState); err != nil {
 		return nil, fmt.Errorf("could not update FFG checkpts: %v", err)
 	}
