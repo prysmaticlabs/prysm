@@ -123,6 +123,75 @@ func TestComputeStateRoot_OK(t *testing.T) {
 	_, _ = proposerServer.ComputeStateRoot(context.Background(), req)
 }
 
+func TestComputeStateRoot_Works(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	mockChain := &mockChainService{}
+
+	genesis := b.NewGenesisBlock([]byte{})
+	if err := db.SaveBlock(genesis); err != nil {
+		t.Fatalf("Could not save genesis block: %v", err)
+	}
+
+	deposits := make([]*pbp2p.Deposit, params.BeaconConfig().DepositsForChainStart)
+	for i := 0; i < len(deposits); i++ {
+		depositData, err := helpers.EncodeDepositData(
+			&pbp2p.DepositInput{
+				Pubkey: []byte(strconv.Itoa(i)),
+			},
+			params.BeaconConfig().MaxDepositAmount,
+			time.Now().Unix(),
+		)
+		if err != nil {
+			t.Fatalf("Could not encode deposit input: %v", err)
+		}
+		deposits[i] = &pbp2p.Deposit{
+			DepositData: depositData,
+		}
+	}
+
+	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
+	if err != nil {
+		t.Fatalf("Could not instantiate genesis state: %v", err)
+	}
+
+	beaconState.Slot += 6
+
+	if err := db.UpdateChainHead(genesis, beaconState); err != nil {
+		t.Fatalf("Could not save genesis state: %v", err)
+	}
+
+	proposerServer := &ProposerServer{
+		chainService:    mockChain,
+		beaconDB:        db,
+		powChainService: &mockPOWChainService{},
+	}
+
+	req := &pbp2p.BeaconBlock{
+		ParentRootHash32: nil,
+		Slot:             genesis.Slot + 10,
+		RandaoReveal:     nil,
+		Body: &pbp2p.BeaconBlockBody{
+			ProposerSlashings: nil,
+			AttesterSlashings: nil,
+			Attestations: []*pbp2p.Attestation{
+				&pbp2p.Attestation{
+					Data: &pbp2p.AttestationData{
+						Slot:           genesis.Slot + 3,
+						JustifiedEpoch: beaconState.JustifiedEpoch,
+					},
+				},
+			},
+		},
+	}
+
+	_, err = proposerServer.ComputeStateRoot(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
