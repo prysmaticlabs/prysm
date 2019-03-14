@@ -577,9 +577,7 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 		)
 	}
 	if verifySignatures {
-		if err := verifyAttestationSig(beaconState, att); err != nil {
-			return fmt.Errorf("could not verify aggregate signature %v", err)
-		}
+		return verifyAttestationSig(beaconState, att)
 	}
 	return nil
 }
