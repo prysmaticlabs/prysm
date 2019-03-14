@@ -2,7 +2,6 @@ package bitutil
 
 import (
 	"fmt"
-	"math"
 
 	"github.com/steakknife/hamming"
 )
@@ -40,7 +39,7 @@ func BitLength(b int) int {
 // SetBitfield takes an index and returns bitfield with the index flipped.
 func SetBitfield(index int) []byte {
 	chunkLocation := index / 8
-	indexLocation := math.Pow(2, 7-float64(index%8))
+	indexLocation := 1 << uint64(index)
 	var bitfield []byte
 
 	for i := 0; i < chunkLocation; i++ {
