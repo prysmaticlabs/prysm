@@ -113,7 +113,7 @@ kubectl apply -f validator.deploy.yaml
 
 ## To remove all the containers inside the minikube
 
-`kubectl delete -f beacon-chain
+`kubectl delete -f beacon-chain`
 
 ## To stop the minikube instance
 
