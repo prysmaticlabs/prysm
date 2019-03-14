@@ -1,10 +1,11 @@
-package stategenerator
+package stategenerator_test
 
 import (
 	"context"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/stategenerator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -59,7 +60,7 @@ func TestGenerateState_OK(t *testing.T) {
 	}
 
 	slotToGenerate := genesisSlot + 2*(slotLimit)
-	newState, err := GenerateStateFromSlot(context.Background(), beaconDb, slotToGenerate)
+	newState, err := stategenerator.GenerateStateFromSlot(context.Background(), beaconDb, slotToGenerate)
 	if err != nil {
 		t.Fatalf("Unable to generate new state from previous finalized state %v", err)
 	}
@@ -131,7 +132,7 @@ func TestGenerateState_WithNilBlocksOK(t *testing.T) {
 	}
 
 	slotToGenerate := genesisSlot + 2*(slotLimit)
-	newState, err := GenerateStateFromSlot(context.Background(), beaconDb, slotToGenerate)
+	newState, err := stategenerator.GenerateStateFromSlot(context.Background(), beaconDb, slotToGenerate)
 	if err != nil {
 		t.Fatalf("Unable to generate new state from previous finalized state %v", err)
 	}
