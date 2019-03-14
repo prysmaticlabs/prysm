@@ -97,7 +97,17 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	// Note: calling get_attestation_participants(state, attestation.data, attestation.aggregation_bitfield)
 	// should return a list of length equal to 1, containing validator_index.
 
-	aggregationBitfield := bitutil.SetBitfield(int(validatorIndexRes.Index))
+	// Find the index in committee to be used for
+	// the aggregation bitfield
+	var indexInCommittee int
+	for i, vIndex := range resp.Committee {
+		if vIndex == validatorIndexRes.Index {
+			indexInCommittee = i
+			break
+		}
+	}
+
+	aggregationBitfield := bitutil.SetBitfield(indexInCommittee)
 	attestation.AggregationBitfield = aggregationBitfield
 
 	// TODO(#1366): Use BLS to generate an aggregate signature.
