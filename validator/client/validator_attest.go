@@ -9,6 +9,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
+	"github.com/prysmaticlabs/prysm/shared/featureflags"
 	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -103,28 +104,31 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	aggregationBitfield := bitutil.SetBitfield(int(validatorIndexRes.Index))
 	attestation.AggregationBitfield = aggregationBitfield
 
-	// Retrieve the current fork data from the beacon node.
-	fork, err := v.beaconClient.ForkData(ctx, &ptypes.Empty{})
-	if err != nil {
-		log.Errorf("Failed to get fork data from beacon node's state: %v", err)
-		return
-	}
+	if featureflags.FeatureConfig().VerifyAttestationSigs {
+		// Retrieve the current fork data from the beacon node.
+		fork, err := v.beaconClient.ForkData(ctx, &ptypes.Empty{})
+		if err != nil {
+			log.Errorf("Failed to get fork data from beacon node's state: %v", err)
+			return
+		}
 
-	epoch := slot / params.BeaconConfig().SlotsPerEpoch
+		epoch := slot / params.BeaconConfig().SlotsPerEpoch
 
-	attDataHash, err := hashutil.HashProto(&pbp2p.AttestationDataAndCustodyBit{
-		Data:       attestation.Data,
-		CustodyBit: true,
-	})
-	if err != nil {
-		log.Errorf("Could not hash attestation data: %v", err)
-		return
+		attDataHash, err := hashutil.HashProto(&pbp2p.AttestationDataAndCustodyBit{
+			Data:       attestation.Data,
+			CustodyBit: true,
+		})
+		if err != nil {
+			log.Errorf("Could not hash attestation data: %v", err)
+			return
+		}
+		domain := forkutil.DomainVersion(fork, epoch, params.BeaconConfig().DomainAttestation)
+		aggregateSig := v.key.SecretKey.Sign(attDataHash[:], domain)
+		attestation.AggregateSignature = aggregateSig.Marshal()
+		log.Debugf("Signing attestation for slot %d: %#x", slot, attestation.AggregateSignature)
+	} else {
+		attestation.AggregateSignature = []byte("signed")
 	}
-	log.Infof("Signing attestation for slot: %d", slot)
-	domain := forkutil.DomainVersion(fork, epoch, params.BeaconConfig().DomainAttestation)
-	aggregateSig := v.key.SecretKey.Sign(attDataHash[:], domain)
-	attestation.AggregateSignature = aggregateSig.Marshal()
-	log.Infof("Attestation signature: %#x", attestation.AggregateSignature)
 
 	duration := time.Duration(slot*params.BeaconConfig().SecondsPerSlot+delay) * time.Second
 	timeToBroadcast := time.Unix(int64(v.genesisTime), 0).Add(duration)

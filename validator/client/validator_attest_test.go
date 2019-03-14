@@ -13,6 +13,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
+	"github.com/prysmaticlabs/prysm/shared/featureflags"
 	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -77,6 +78,11 @@ func TestAttestToBlockHead_AttestationDataAtSlotFailure(t *testing.T) {
 }
 
 func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
+	cfg := &featureflags.FeatureFlagConfig{
+		VerifyAttestationSigs: true,
+	}
+	featureflags.OverrideFeatureConfig(cfg)
+
 	hook := logTest.NewGlobal()
 
 	validator, m, finish := setup(t)
@@ -122,6 +128,11 @@ func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
 }
 
 func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
+	cfg := &featureflags.FeatureFlagConfig{
+		VerifyAttestationSigs: true,
+	}
+	featureflags.OverrideFeatureConfig(cfg)
+
 	hook := logTest.NewGlobal()
 
 	validator, m, finish := setup(t)
@@ -212,6 +223,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
 	}
 	testutil.AssertLogsContain(t, hook, "Submitted attestation successfully")
+	testutil.AssertLogsContain(t, hook, "Signing attestation for slot")
 }
 
 func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {

@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/shared/featureflags"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
@@ -57,6 +58,8 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 		log.Info("Using custom parameter configuration")
 		params.UseDemoBeaconConfig()
 	}
+
+	configureFeatures(ctx)
 
 	if err := ValidatorClient.registerPrometheusService(ctx); err != nil {
 		return nil, err
@@ -136,4 +139,13 @@ func (s *ValidatorClient) registerClientService(ctx *cli.Context) error {
 		return fmt.Errorf("could not initialize client service: %v", err)
 	}
 	return s.services.RegisterService(v)
+}
+
+func configureFeatures(ctx *cli.Context) {
+	cfg := &featureflags.FeatureFlagConfig{}
+	if ctx.GlobalBool(types.VerifyAttestationSigsFlag.Name) {
+		log.Info("Verifying signatures for attestations")
+		cfg.VerifyAttestationSigs = true
+	}
+	featureflags.OverrideFeatureConfig(cfg)
 }

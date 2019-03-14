@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/shared/featureflags"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
@@ -73,6 +74,8 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		log.Info("Using custom parameter configuration")
 		params.UseDemoBeaconConfig()
 	}
+
+	configureFeatures(ctx)
 
 	if err := beacon.startDB(ctx); err != nil {
 		return nil, err
@@ -351,4 +354,13 @@ func (b *BeaconNode) registerAttestationService() error {
 		})
 
 	return b.services.RegisterService(attsService)
+}
+
+func configureFeatures(ctx *cli.Context) {
+	cfg := &featureflags.FeatureFlagConfig{}
+	if ctx.GlobalBool(utils.VerifyAttestationSigsFlag.Name) {
+		log.Info("Verifying signatures for attestations")
+		cfg.VerifyAttestationSigs = true
+	}
+	featureflags.OverrideFeatureConfig(cfg)
 }

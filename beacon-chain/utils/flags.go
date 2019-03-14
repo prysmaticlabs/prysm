@@ -9,7 +9,12 @@ var (
 	// such as shorter cycle length, fewer shards, and more.
 	DemoConfigFlag = cli.BoolFlag{
 		Name:  "demo-config",
-		Usage: " Run the beacon node using demo paramteres (i.e. shorter cycles, fewer shards and committees)",
+		Usage: " Run the beacon node using demo parameters (i.e. shorter cycles, fewer shards and committees)",
+	}
+	// VerifyAttestationSigsFlag determines whether to verify signatures for attestations.
+	VerifyAttestationSigsFlag = cli.BoolFlag{
+		Name:  "enable-attestation-signature-verification",
+		Usage: "Verify signatures for attestations (testing)",
 	}
 	// Web3ProviderFlag defines a flag for a mainchain RPC endpoint.
 	Web3ProviderFlag = cli.StringFlag{
