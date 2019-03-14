@@ -66,7 +66,7 @@ type BeaconChainConfig struct {
 	WhistlerBlowerRewardQuotient       uint64 // WhistlerBlowerRewardQuotient is used to calculate whistler blower reward.
 	AttestationInclusionRewardQuotient uint64 // IncluderRewardQuotient defines the reward quotient of proposer for including attestations..
 	InactivityPenaltyQuotient          uint64 // InactivityPenaltyQuotient defines how much validator leaks out balances for offline.
-	MinPenaltyQuotient		   uint64 // MinPenaltyQuotient defines the minimum penalty for a slashed validator
+	MinPenaltyQuotient                 uint64 // MinPenaltyQuotient defines the minimum penalty for a slashed validator
 
 	// Max operations per block constants.
 	MaxVoluntaryExits    uint64 // MaxVoluntaryExits determines the maximum number of validator exits in a block.
@@ -155,7 +155,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	WhistlerBlowerRewardQuotient:       512,
 	AttestationInclusionRewardQuotient: 8,
 	InactivityPenaltyQuotient:          1 << 24,
-	MinPenaltyQuotient:		    32,
+	MinPenaltyQuotient:                 32,
 
 	// Max operations per block constants.
 	MaxVoluntaryExits:    16,

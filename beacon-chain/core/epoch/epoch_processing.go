@@ -331,7 +331,7 @@ func ProcessPartialValidatorRegistry(ctx context.Context, state *pb.BeaconState)
 	return state, nil
 }
 
-// ProcessSlashings processes all slashings. 
+// ProcessSlashings processes all slashings.
 // Spec pseudocode definition:
 // def process_slashings(state: BeaconState) -> None:
 //     """
@@ -363,26 +363,26 @@ func ProcessSlashings(ctx context.Context, state *pb.BeaconState) (*pb.BeaconSta
 
 	for _, index := range validatorIndices {
 		if state.ValidatorRegistry[index].SlashedEpoch != params.BeaconConfig().FarFutureEpoch &&
-			currEpoch == state.ValidatorRegistry[index].WithdrawalEpoch - params.BeaconConfig().LatestSlashedExitLength/2 {
+			currEpoch == state.ValidatorRegistry[index].WithdrawalEpoch-params.BeaconConfig().LatestSlashedExitLength/2 {
 			epochIndex := currEpoch % params.BeaconConfig().LatestSlashedExitLength
-			totalAtStart := state.LatestSlashedBalances[(epochIndex + 1) % params.BeaconConfig().LatestSlashedExitLength]
+			totalAtStart := state.LatestSlashedBalances[(epochIndex+1)%params.BeaconConfig().LatestSlashedExitLength]
 			totalAtEnd := state.LatestSlashedBalances[epochIndex]
 			totalPenalties := totalAtEnd - totalAtStart
 
 			var penalty uint64
-			if totalPenalties * 3 < totalBalance {
-				if helpers.EffectiveBalance(state, index) * totalPenalties * 3 / totalBalance > helpers.EffectiveBalance(state, index) / params.BeaconConfig().MinPenaltyQuotient {
+			if totalPenalties*3 < totalBalance {
+				if helpers.EffectiveBalance(state, index)*totalPenalties*3/totalBalance > helpers.EffectiveBalance(state, index)/params.BeaconConfig().MinPenaltyQuotient {
 					penalty = helpers.EffectiveBalance(state, index) * totalPenalties * 3 / totalBalance
 				} else {
 					penalty = helpers.EffectiveBalance(state, index) / params.BeaconConfig().MinPenaltyQuotient
 				}
 			} else {
-				if helpers.EffectiveBalance(state, index) * totalBalance / totalBalance > helpers.EffectiveBalance(state, index) / params.BeaconConfig().MinPenaltyQuotient {
+				if helpers.EffectiveBalance(state, index)*totalBalance/totalBalance > helpers.EffectiveBalance(state, index)/params.BeaconConfig().MinPenaltyQuotient {
 					penalty = helpers.EffectiveBalance(state, index) * totalBalance / totalBalance
 				} else {
 					penalty = helpers.EffectiveBalance(state, index) / params.BeaconConfig().MinPenaltyQuotient
 				}
-			} 
+			}
 
 			state.ValidatorBalances[index] -= penalty
 		}
