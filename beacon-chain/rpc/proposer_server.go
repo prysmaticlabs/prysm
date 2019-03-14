@@ -113,7 +113,7 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 	for _, att := range atts {
 
 		var expectedJustifedEpoch uint64
-		if att.Data.Slot >= helpers.StartSlot(helpers.SlotToEpoch(currentSlot)) {
+		if helpers.SlotToEpoch(att.Data.Slot+1) >= helpers.SlotToEpoch(currentSlot) {
 			expectedJustifedEpoch = beaconState.JustifiedEpoch
 		} else {
 			expectedJustifedEpoch = beaconState.PreviousJustifiedEpoch
