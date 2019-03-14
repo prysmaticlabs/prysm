@@ -146,7 +146,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 			Attestations: nil,
 		},
 	}
-  
+
 	beaconState.Slot--
 	initBlockStateRoot(t, block, beaconState, chainService)
 
@@ -157,7 +157,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-  if err := chainService.beaconDB.SaveBlock(block); err != nil {
+	if err := chainService.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := chainService.ReceiveBlock(context.Background(), block); err != nil {
@@ -196,6 +196,16 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	}
 	beaconState.Slot--
 	initBlockStateRoot(t, goodStateBlock, beaconState, chainService)
+
+	if err := chainService.beaconDB.SaveJustifiedBlock(goodStateBlock); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainService.beaconDB.SaveFinalizedBlock(goodStateBlock); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainService.beaconDB.SaveBlock(goodStateBlock); err != nil {
+		t.Fatal(err)
+	}
 
 	_, err = chainService.ReceiveBlock(context.Background(), goodStateBlock)
 	if err != nil {
