@@ -345,7 +345,7 @@ func TestHeadAttestations_InvalidRange(t *testing.T) {
 func TestWinningRoot_AccurateRoot(t *testing.T) {
 	state := buildState(params.BeaconConfig().GenesisSlot, 100)
 	var participationBitfield []byte
-	participationBitfield = append(participationBitfield, byte(0x01))
+	participationBitfield = append(participationBitfield, byte(0x80))
 
 	// Generate 10 roots ([]byte{100}...[]byte{110})
 	var attestations []*pb.PendingAttestation
@@ -404,7 +404,7 @@ func TestAttestingValidators_MatchActive(t *testing.T) {
 				Slot:                    params.BeaconConfig().GenesisSlot,
 				CrosslinkDataRootHash32: []byte{byte(i + 100)},
 			},
-			AggregationBitfield: []byte{0x03},
+			AggregationBitfield: []byte{0xC0},
 		}
 		attestations = append(attestations, attestation)
 	}
@@ -455,7 +455,7 @@ func TestTotalAttestingBalance_CorrectBalance(t *testing.T) {
 				CrosslinkDataRootHash32: []byte{byte(i + 100)},
 			},
 			// All validators attested to the above roots.
-			AggregationBitfield: []byte{0x03},
+			AggregationBitfield: []byte{0xC0},
 		}
 		attestations = append(attestations, attestation)
 	}

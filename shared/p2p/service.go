@@ -79,7 +79,7 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 	// distributed hash table by their peer ID.
 	h = rhost.Wrap(h, dht)
 
-	gsub, err := pubsub.NewGossipSub(ctx, h)
+	gsub, err := pubsub.NewFloodSub(ctx, h)
 	if err != nil {
 		cancel()
 		return nil, err

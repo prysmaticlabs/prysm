@@ -28,9 +28,10 @@ var (
 )
 
 type chainService interface {
-	IncomingBlockFeed() *event.Feed
 	StateInitializedFeed() *event.Feed
 	CanonicalBlockFeed() *event.Feed
+	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error)
+	ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error
 }
 
 type operationService interface {
@@ -340,16 +341,40 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 			log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Received missing block parent")
 			delete(rs.blocksAwaitingProcessing, blockRoot)
 			blocksAwaitingProcessingGauge.Dec()
-			rs.chainService.IncomingBlockFeed().Send(block)
-			rs.chainService.IncomingBlockFeed().Send(childBlock)
+			beaconState, err = rs.chainService.ReceiveBlock(ctx, block)
+			if err != nil {
+				log.Errorf("could not process beacon block: %v", err)
+				return
+			}
+			if err := rs.chainService.ApplyForkChoiceRule(ctx, block, beaconState); err != nil {
+				log.Errorf("could not apply fork choice rule: %v", err)
+				return
+			}
+			beaconState, err = rs.chainService.ReceiveBlock(ctx, childBlock)
+			if err != nil {
+				log.Errorf("could not process beacon block: %v", err)
+				return
+			}
+			if err := rs.chainService.ApplyForkChoiceRule(ctx, childBlock, beaconState); err != nil {
+				log.Errorf("could not apply fork choice rule: %v", err)
+				return
+			}
 			log.Debug("Sent missing block parent and child to chain service for processing")
 			return
 		}
 	}
 
 	_, sendBlockSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendBlock")
-	log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Sending newly received block to subscribers")
-	rs.chainService.IncomingBlockFeed().Send(block)
+	log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Sending newly received block to chain service")
+	beaconState, err = rs.chainService.ReceiveBlock(ctx, block)
+	if err != nil {
+		log.Errorf("could not process beacon block: %v", err)
+		return
+	}
+	if err := rs.chainService.ApplyForkChoiceRule(ctx, block, beaconState); err != nil {
+		log.Errorf("could not apply fork choice rule: %v", err)
+		return
+	}
 	sentBlocks.Inc()
 	sendBlockSpan.End()
 	// We update the last observed slot to the received canonical block's slot.

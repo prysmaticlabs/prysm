@@ -4,6 +4,8 @@ go_library(
     name = "go_default_library",
     srcs = [
         "block_cache.go",
+        "block_reader.go",
+        "log_processing.go",
         "service.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/powchain",
@@ -33,6 +35,8 @@ go_test(
     name = "go_default_test",
     srcs = [
         "block_cache_test.go",
+        "block_reader_test.go",
+        "log_processing_test.go",
         "service_test.go",
     ],
     embed = [":go_default_library"],

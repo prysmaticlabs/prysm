@@ -85,8 +85,8 @@ func (db *BeaconDB) SaveJustifiedBlock(block *pb.BeaconBlock) error {
 	})
 }
 
-// saveFinalizedBlock saves the last finalized block from canonical chain to DB.
-func (db *BeaconDB) saveFinalizedBlock(block *pb.BeaconBlock) error {
+// SaveFinalizedBlock saves the last finalized block from canonical chain to DB.
+func (db *BeaconDB) SaveFinalizedBlock(block *pb.BeaconBlock) error {
 	return db.update(func(tx *bolt.Tx) error {
 		enc, err := proto.Marshal(block)
 		if err != nil {
@@ -174,6 +174,12 @@ func (db *BeaconDB) UpdateChainHead(block *pb.BeaconBlock, beaconState *pb.Beaco
 	if err != nil {
 		return fmt.Errorf("unable to encode beacon state: %v", err)
 	}
+
+	currentState, ok := proto.Clone(beaconState).(*pb.BeaconState)
+	if !ok {
+		return errors.New("could not clone beacon state")
+	}
+	db.currentState = currentState
 
 	slotBinary := encodeSlotNumber(block.Slot)
 

@@ -47,13 +47,6 @@ type mockChainService struct {
 	cFeed *event.Feed
 }
 
-func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
-	if ms.bFeed == nil {
-		return new(event.Feed)
-	}
-	return ms.bFeed
-}
-
 func (ms *mockChainService) StateInitializedFeed() *event.Feed {
 	if ms.sFeed == nil {
 		return new(event.Feed)
@@ -66,6 +59,14 @@ func (ms *mockChainService) CanonicalBlockFeed() *event.Feed {
 		return new(event.Feed)
 	}
 	return ms.cFeed
+}
+
+func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+	return &pb.BeaconState{}, nil
+}
+
+func (ms *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error {
+	return nil
 }
 
 type mockOperationService struct{}
@@ -208,7 +209,7 @@ func TestProcessBlock_OK(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	testutil.AssertLogsContain(t, hook, "Sending newly received block to subscribers")
+	testutil.AssertLogsContain(t, hook, "Sending newly received block to chain service")
 	hook.Reset()
 }
 
@@ -312,8 +313,8 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 	ss.blockBuf <- msg2
 	ss.cancel()
 	<-exitRoutine
-	testutil.AssertLogsContain(t, hook, "Sending newly received block to subscribers")
-	testutil.AssertLogsContain(t, hook, "Sending newly received block to subscribers")
+	testutil.AssertLogsContain(t, hook, "Sending newly received block to chain service")
+	testutil.AssertLogsContain(t, hook, "Sending newly received block to chain service")
 	hook.Reset()
 }
 
@@ -415,7 +416,7 @@ func TestProcessBlock_MissingParentBlockRequestedOK(t *testing.T) {
 	}
 	// Finally, we respond with the parent block that was missing.
 	ss.receiveBlock(msg2)
-	testutil.AssertLogsContain(t, hook, "Sending newly received block to subscribers")
+	testutil.AssertLogsContain(t, hook, "Sending newly received block to chain service")
 	testutil.AssertLogsContain(t, hook, "Received missing block parent")
 	testutil.AssertLogsContain(t, hook, "Sent missing block parent and child to chain service for processing")
 	hook.Reset()
