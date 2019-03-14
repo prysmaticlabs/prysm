@@ -175,6 +175,12 @@ func (db *BeaconDB) UpdateChainHead(block *pb.BeaconBlock, beaconState *pb.Beaco
 		return fmt.Errorf("unable to encode beacon state: %v", err)
 	}
 
+	currentState, ok := proto.Clone(beaconState).(*pb.BeaconState)
+	if !ok {
+		return errors.New("could not clone beacon state")
+	}
+	db.currentState = currentState
+
 	slotBinary := encodeSlotNumber(block.Slot)
 
 	return db.update(func(tx *bolt.Tx) error {
