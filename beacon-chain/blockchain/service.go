@@ -155,18 +155,6 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	if err := c.beaconDB.UpdateChainHead(genBlock, beaconState); err != nil {
 		return nil, fmt.Errorf("could not set chain head, %v", err)
 	}
-	if err := c.beaconDB.SaveJustifiedBlock(genBlock); err != nil {
-		return nil, fmt.Errorf("could not save gensis block as justified block: %v", err)
-	}
-	if err := c.beaconDB.SaveFinalizedBlock(genBlock); err != nil {
-		return nil, fmt.Errorf("could not save gensis block as finalized block: %v", err)
-	}
-	if err := c.beaconDB.SaveJustifiedState(beaconState); err != nil {
-		return nil, fmt.Errorf("could not save gensis state as justified state: %v", err)
-	}
-	if err := c.beaconDB.SaveFinalizedState(beaconState); err != nil {
-		return nil, fmt.Errorf("could not save gensis state as finalized state: %v", err)
-	}
 	return beaconState, nil
 }
 
