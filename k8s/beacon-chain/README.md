@@ -49,7 +49,7 @@ Change the lines 40-53 to:
 
 ```
   args:
-    - --web3provider=ws://public-rpc-nodes.pow.svc.cluster.local:8546
+    - --web3provider=ws://goerli.prylabs.com/websocket
     #- --verbosity=debug
     - --deposit-contract=$(DEPOSIT_CONTRACT_ADDRESS)
     - --rpc-port=4000
@@ -64,7 +64,7 @@ Change the lines 40-53 to:
     - --datadir=/data
 ```
 
-(commenting out the 3 tracing items and the bootstrap/relay nodes)
+(commenting out the 3 tracing items and the bootstrap/relay nodes, also changing the web3 provider to ws://goerli.prylabs.com/websocket)
 
 ### Apply the beacon chain yamls to start the beacon-chain
 
@@ -81,6 +81,22 @@ You should see 3 beacon-chain node replicas
 
 Convert a goerli private key with ETH to base64 in [a browser js console](https://stackoverflow.com/questions/246801/how-can-you-encode-a-string-to-base64-in-javascript) and set it in `k8s/beacon-chain/cluster-manager.encrypted_secret.yaml`.
 
+### Edit the cluster-manager.yaml to use the Prylabs Goerli node endpoint
+
+Change lines 55-63 to:
+
+```
+  args:
+  - --deposit-contract=$(DEPOSIT_CONTRACT_ADDRESS)
+  - --private-key=$(PRIVATE_KEY)
+  - --rpc=ws://goerli.prylabs.com/websocket
+  - --port=8000
+  - --metrics-port=9090
+  - --deposit-amount=3200000000000000
+  - --db-path=/data
+  - --verbose
+```
+
 ### Edit the validator.deploy.yaml to prepare it for a local instance
 
 Change the lines 20-28 to:
@@ -92,7 +108,7 @@ Change the lines 20-28 to:
   - --datadir=/data
   - --beacon-rpc-provider=beacon-chain:4000
   - --demo-config
-  - --enable-tracing
+#  - --enable-tracing
 #  - --tracing-endpoint=http://jaeger-collector.istio-system.svc.cluster.local:14268
 #  - --trace-sample-fraction=1.0
 ```
@@ -113,7 +129,7 @@ kubectl apply -f validator.deploy.yaml
 
 ## To remove all the containers inside the minikube
 
-`kubectl delete -f beacon-chain
+`kubectl delete -f k8s/beacon-chain/namespace.yaml`
 
 ## To stop the minikube instance
 
