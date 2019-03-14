@@ -115,7 +115,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 
 	validator, m, finish := setup(t)
 	defer finish()
-	validatorIndex := uint64(4)
+	validatorIndex := uint64(7)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
@@ -166,7 +166,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		CustodyBitfield:    make([]byte, (len(committee)+7)/8),
 		AggregateSignature: []byte("signed"),
 	}
-	aggregationBitfield := bitutil.SetBitfield(int(validatorIndex))
+	aggregationBitfield := bitutil.SetBitfield(4)
 	expectedAttestation.AggregationBitfield = aggregationBitfield
 	if !proto.Equal(generatedAttestation, expectedAttestation) {
 		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
