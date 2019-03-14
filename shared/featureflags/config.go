@@ -2,7 +2,7 @@
 // Ethereum 2.0 services.
 package featureflags
 
-// FeatureConfig contains configs for the client to determine what it will perform on runtime.
+// FeatureFlagConfig contains configs for the client to determine what it will perform on runtime.
 type FeatureFlagConfig struct {
 	// Misc constants.
 	VerifyAttestationSigs bool // VerifySigs declares if the client will verify attestations
