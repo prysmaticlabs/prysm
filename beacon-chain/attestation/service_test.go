@@ -33,7 +33,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	attestation := &pb.Attestation{
-		AggregationBitfield: []byte{0x01},
+		AggregationBitfield: []byte{0x80},
 		Data: &pb.AttestationData{
 			Slot: 5,
 		},
@@ -72,7 +72,7 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 	attestation := &pb.Attestation{
-		AggregationBitfield: []byte{0x01},
+		AggregationBitfield: []byte{0x80},
 		Data:                &pb.AttestationData{},
 	}
 

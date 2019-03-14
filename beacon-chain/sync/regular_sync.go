@@ -28,9 +28,10 @@ var (
 )
 
 type chainService interface {
-	IncomingBlockFeed() *event.Feed
 	StateInitializedFeed() *event.Feed
 	CanonicalBlockFeed() *event.Feed
+	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error)
+	ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error
 }
 
 type operationService interface {
@@ -347,16 +348,40 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 			log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Received missing block parent")
 			delete(rs.blocksAwaitingProcessing, blockRoot)
 			blocksAwaitingProcessingGauge.Dec()
-			rs.chainService.IncomingBlockFeed().Send(block)
-			rs.chainService.IncomingBlockFeed().Send(childBlock)
+			beaconState, err = rs.chainService.ReceiveBlock(ctx, block)
+			if err != nil {
+				log.Errorf("could not process beacon block: %v", err)
+				return
+			}
+			if err := rs.chainService.ApplyForkChoiceRule(ctx, block, beaconState); err != nil {
+				log.Errorf("could not apply fork choice rule: %v", err)
+				return
+			}
+			beaconState, err = rs.chainService.ReceiveBlock(ctx, childBlock)
+			if err != nil {
+				log.Errorf("could not process beacon block: %v", err)
+				return
+			}
+			if err := rs.chainService.ApplyForkChoiceRule(ctx, childBlock, beaconState); err != nil {
+				log.Errorf("could not apply fork choice rule: %v", err)
+				return
+			}
 			log.Debug("Sent missing block parent and child to chain service for processing")
 			return
 		}
 	}
 
 	_, sendBlockSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendBlock")
-	log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Sending newly received block to subscribers")
-	rs.chainService.IncomingBlockFeed().Send(block)
+	log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Sending newly received block to chain service")
+	beaconState, err = rs.chainService.ReceiveBlock(ctx, block)
+	if err != nil {
+		log.Errorf("could not process beacon block: %v", err)
+		return
+	}
+	if err := rs.chainService.ApplyForkChoiceRule(ctx, block, beaconState); err != nil {
+		log.Errorf("could not apply fork choice rule: %v", err)
+		return
+	}
 	sentBlocks.Inc()
 	sendBlockSpan.End()
 	// We update the last observed slot to the received canonical block's slot.
@@ -411,23 +436,23 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) {
 		log.Errorf("Message is of the incorrect type")
 		return
 	}
-	state, err := rs.db.State(msg.Ctx)
+	fState, err := rs.db.FinalizedState()
 	if err != nil {
 		log.Errorf("Unable to retrieve beacon state, %v", err)
 		return
 	}
-	root, err := hashutil.HashProto(state)
+	root, err := hashutil.HashProto(fState)
 	if err != nil {
 		log.Errorf("unable to marshal the beacon state: %v", err)
 		return
 	}
-	if root != bytesutil.ToBytes32(req.Hash) {
-		log.Debugf("Requested state root is different from locally stored state root %#x", req.Hash)
+	if root != bytesutil.ToBytes32(req.FinalizedStateRootHash32S) {
+		log.Debugf("Requested state root is different from locally stored state root %#x", req.FinalizedStateRootHash32S)
 		return
 	}
 	ctx, sendStateSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendState")
 	log.WithField("beaconState", fmt.Sprintf("%#x", root)).Debug("Sending beacon state to peer")
-	if err := rs.p2p.Send(ctx, &pb.BeaconStateResponse{BeaconState: state}, msg.Peer); err != nil {
+	if err := rs.p2p.Send(ctx, &pb.BeaconStateResponse{BeaconState: fState}, msg.Peer); err != nil {
 		log.Error(err)
 	}
 	sentState.Inc()
@@ -455,10 +480,22 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) {
 		return
 	}
 
+	finalizedState, err := rs.db.FinalizedState()
+	if err != nil {
+		log.Errorf("Could not retrieve finalized state %v", err)
+		return
+	}
+
+	finalizedRoot, err := hashutil.HashProto(finalizedState)
+	if err != nil {
+		log.Errorf("Could not tree hash block %v", err)
+		return
+	}
+
 	req := &pb.ChainHeadResponse{
-		Slot:  block.Slot,
-		Hash:  blockRoot[:],
-		Block: block,
+		Slot:                      block.Slot,
+		Hash:                      blockRoot[:],
+		FinalizedStateRootHash32S: finalizedRoot[:],
 	}
 	ctx, ChainHead := trace.StartSpan(ctx, "sendChainHead")
 	defer ChainHead.End()

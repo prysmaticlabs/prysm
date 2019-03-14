@@ -69,7 +69,8 @@ type p2pAPI interface {
 }
 
 type chainService interface {
-	IncomingBlockFeed() *event.Feed
+	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error)
+	ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error
 }
 
 // SyncService is the interface for the Sync service.
@@ -336,7 +337,6 @@ func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock, p
 	recBlock.Inc()
 	if block.Slot > s.highestObservedSlot {
 		s.highestObservedSlot = block.Slot
-		s.stateRootOfHighestObservedSlot = bytesutil.ToBytes32(block.StateRootHash32)
 	}
 
 	if block.Slot < s.currentSlot {
@@ -345,7 +345,7 @@ func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock, p
 
 	// requesting beacon state if there is no saved state.
 	if s.reqState {
-		if err := s.requestStateFromPeer(s.ctx, block.StateRootHash32, peerID); err != nil {
+		if err := s.requestStateFromPeer(s.ctx, s.stateRootOfHighestObservedSlot[:], peerID); err != nil {
 			log.Errorf("Could not request beacon state from peer: %v", err)
 		}
 		return
@@ -415,7 +415,7 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		return
 	}
 
-	if err := s.db.SaveState(beaconState); err != nil {
+	if err := s.db.SaveCurrentAndFinalizedState(beaconState); err != nil {
 		log.Errorf("Unable to set beacon state for initial sync %v", err)
 	}
 
@@ -438,14 +438,13 @@ func (s *InitialSync) processState(msg p2p.Message) {
 	s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
 }
 
-// requestStateFromPeer sends a request to a peer for the corresponding state
-// for a beacon block.
+// requestStateFromPeer always requests for the last finalized slot from a peer.
 func (s *InitialSync) requestStateFromPeer(ctx context.Context, stateRoot []byte, peerID peer.ID) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.requestStateFromPeer")
 	defer span.End()
 	stateReq.Inc()
 	log.Debugf("Successfully processed incoming block with state hash: %#x", stateRoot)
-	return s.p2p.Send(ctx, &pb.BeaconStateRequest{Hash: stateRoot}, peerID)
+	return s.p2p.Send(ctx, &pb.BeaconStateRequest{FinalizedStateRootHash32S: stateRoot}, peerID)
 }
 
 // requestNextBlock broadcasts a request for a block with the entered slotnumber.
@@ -515,7 +514,13 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	}
 
 	// Send block to main chain service to be processed.
-	s.chainService.IncomingBlockFeed().Send(block)
+	beaconState, err := s.chainService.ReceiveBlock(ctx, block)
+	if err != nil {
+		return fmt.Errorf("could not process beacon block: %v", err)
+	}
+	if err := s.chainService.ApplyForkChoiceRule(ctx, block, beaconState); err != nil {
+		return fmt.Errorf("could not apply fork choice rule: %v", err)
+	}
 	return nil
 }
 
