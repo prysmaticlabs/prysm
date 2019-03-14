@@ -4,11 +4,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 func createBlock(enc []byte) (*pb.BeaconBlock, error) {
