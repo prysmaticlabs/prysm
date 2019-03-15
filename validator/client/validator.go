@@ -139,6 +139,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 
 	resp, err := v.validatorClient.CommitteeAssignment(ctx, req)
 	if err != nil {
+		v.assignment = nil // Clear assignments so we know to retry the request.
 		return err
 	}
 
