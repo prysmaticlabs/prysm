@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+
 	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
 
 	"github.com/gogo/protobuf/proto"
@@ -174,6 +176,22 @@ func (a *Service) updateLatestAttestation(ctx context.Context, attestation *pb.A
 	if err != nil {
 		return err
 	}
+
+	var committee []uint64
+	// We find the crosslink committee for the shard and slot by the attestation.
+	committees, err := helpers.CrosslinkCommitteesAtSlot(state, attestation.Data.Slot, false /* registryChange */)
+	if err != nil {
+		return err
+	}
+
+	// Find committee for shard
+	for _, v := range committees {
+		if v.Shard == attestation.Data.Shard {
+			committee = v.Committee
+			break
+		}
+	}
+
 	// The participation bitfield from attestation is represented in bytes,
 	// here we multiply by 8 to get an accurate validator count in bits.
 	bitfield := attestation.AggregationBitfield
@@ -190,8 +208,10 @@ func (a *Service) updateLatestAttestation(ctx context.Context, attestation *pb.A
 		if !bitSet {
 			continue
 		}
-		// If the attestation came from this attester.
-		pubkey := bytesutil.ToBytes48(state.ValidatorRegistry[i].Pubkey)
+
+		// If the attestation came from this attester. We use the slot committee to find the
+		// validator's actual index
+		pubkey := bytesutil.ToBytes48(state.ValidatorRegistry[committee[i]].Pubkey)
 		newAttestationSlot := attestation.Data.Slot
 		currentAttestationSlot := uint64(0)
 		if _, exists := a.Store[pubkey]; exists {
