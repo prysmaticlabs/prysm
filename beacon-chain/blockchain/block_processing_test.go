@@ -150,13 +150,6 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	beaconState.Slot--
 	initBlockStateRoot(t, block, beaconState, chainService)
 
-	if err := chainService.beaconDB.SaveJustifiedBlock(block); err != nil {
-		t.Fatal(err)
-	}
-	if err := chainService.beaconDB.SaveFinalizedBlock(block); err != nil {
-		t.Fatal(err)
-	}
-
 	if err := chainService.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
@@ -310,12 +303,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 			Deposits: pendingDeposits,
 		},
 	}
-	if err := chainService.beaconDB.SaveJustifiedBlock(block); err != nil {
-		t.Fatal(err)
-	}
-	if err := chainService.beaconDB.SaveFinalizedBlock(block); err != nil {
-		t.Fatal(err)
-	}
+
 	for _, dep := range pendingDeposits {
 		db.InsertPendingDeposit(chainService.ctx, dep, big.NewInt(0))
 	}

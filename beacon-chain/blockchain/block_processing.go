@@ -30,7 +30,7 @@ import (
 //
 // 		while (state.slot < block.slot - 1):
 //      	state = slot_state_transition(state, block=None)
-//ReceiveBlock
+//
 //		# process slot with block
 //		state = slot_state_transition(state, block)
 //
@@ -111,11 +111,6 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	}
 	if !bytes.Equal(block.StateRootHash32, stateRoot[:]) {
 		return nil, fmt.Errorf("beacon state root is not equal to block state root: %#x != %#x", stateRoot, block.StateRootHash32)
-	}
-
-	// Update FFG checkpoints in DB.
-	if err := c.updateFFGCheckPts(beaconState); err != nil {
-		return nil, fmt.Errorf("could not update FFG checkpts: %v", err)
 	}
 
 	log.WithField("hash", fmt.Sprintf("%#x", blockRoot)).Debug("Processed beacon block")
