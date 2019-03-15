@@ -2,18 +2,13 @@ package ssz
 
 import (
 	"bytes"
-	"crypto/rand"
-	"encoding/binary"
 	"fmt"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bls"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestHashKeyFn_OK(t *testing.T) {
@@ -49,7 +44,7 @@ func TestObjCache_byHash(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	exists, _, err := cache.RootByHash(bytesutil.ToBytes32(hs))
+	exists, _, err := cache.RootByEncodedHash(bytesutil.ToBytes32(hs))
 
 	if err != nil {
 		t.Fatal(err)
@@ -58,11 +53,11 @@ func TestObjCache_byHash(t *testing.T) {
 		t.Error("Expected block info not to exist in empty cache")
 	}
 
-	if _, err := cache.AddRetriveMerkleRoot(byteSl); err != nil {
+	if _, err := cache.MerkleHashCached(byteSl); err != nil {
 		t.Fatal(err)
 	}
 
-	exists, fetchedInfo, err := cache.RootByHash(bytesutil.ToBytes32(hs))
+	exists, fetchedInfo, err := cache.RootByEncodedHash(bytesutil.ToBytes32(hs))
 
 	if err != nil {
 		t.Fatal(err)
@@ -99,89 +94,59 @@ func TestMerkleHashWithCache(t *testing.T) {
 	for i := 0; i < 200; i++ {
 
 		runMerkleHashTests(t, func(val [][]byte) ([]byte, error) {
-			return cache.AddRetriveMerkleRoot(val)
+			return cache.MerkleHashCached(val)
 		})
 
 	}
 
 }
 
-// EncodeDepositData converts a deposit input proto into an a byte slice
-// of Simple Serialized deposit input followed by 8 bytes for a deposit value
-// and 8 bytes for a unix timestamp, all in LittleEndian format.
-func EncodeDepositData(
-	depositInput *pb.DepositInput,
-	depositValue uint64,
-	depositTimestamp int64,
-) ([]byte, error) {
-	wBuf := new(bytes.Buffer)
-	if err := Encode(wBuf, depositInput); err != nil {
-		return nil, fmt.Errorf("failed to encode deposit input: %v", err)
-	}
-	encodedInput := wBuf.Bytes()
-	depositData := make([]byte, 0, 512)
-	value := make([]byte, 8)
-	binary.LittleEndian.PutUint64(value, depositValue)
-	timestamp := make([]byte, 8)
-	binary.LittleEndian.PutUint64(timestamp, uint64(depositTimestamp))
-
-	depositData = append(depositData, value...)
-	depositData = append(depositData, timestamp...)
-	depositData = append(depositData, encodedInput...)
-
-	return depositData, nil
+type JunkObject struct {
+	D2Int64Slice [][]int64
+	Uint         int64
+	Int64Slice   []int64
 }
 
-// generateInitialSimulatedDeposits generates initial deposits for creating a beacon state in the simulated
-// backend based on the yaml configuration.
-func generateInitialSimulatedDeposits(numDeposits uint64) ([]*pb.Deposit, []*bls.SecretKey, error) {
-	genesisTime := time.Date(2018, 9, 0, 0, 0, 0, 0, time.UTC).Unix()
-	deposits := make([]*pb.Deposit, numDeposits)
-	privKeys := make([]*bls.SecretKey, numDeposits)
-	for i := 0; i < len(deposits); i++ {
-		priv, err := bls.RandKey(rand.Reader)
-		if err != nil {
-			return nil, nil, fmt.Errorf("could not initialize key: %v", err)
+// GenerateJunkObject generates junk object.
+func GenerateJunkObject(size uint64) []*JunkObject {
+	object := make([]*JunkObject, size)
+	for i := int64(0); i < int64(len(object)); i++ {
+		d2Int64Slice := make([][]int64, size)
+		is := make([]int64, size)
+		uInt := time.Now().UnixNano()
+		is[i] = i
+		d2Int64Slice[i] = make([]int64, size)
+		for j := int64(0); j < int64(len(object)); j++ {
+			d2Int64Slice[i][j] = i + j
 		}
-		depositInput := &pb.DepositInput{
-			Pubkey:                      priv.PublicKey().Marshal(),
-			WithdrawalCredentialsHash32: make([]byte, 32),
-			ProofOfPossession:           make([]byte, 96),
+		object[i] = &JunkObject{
+			D2Int64Slice: d2Int64Slice,
+			Uint:         uInt,
+			Int64Slice:   is,
 		}
-		depositData, err := EncodeDepositData(
-			depositInput,
-			params.BeaconConfig().MaxDepositAmount,
-			genesisTime,
-		)
-		if err != nil {
-			return nil, nil, fmt.Errorf("could not encode genesis block deposits: %v", err)
-		}
-		deposits[i] = &pb.Deposit{DepositData: depositData}
-		privKeys[i] = priv
+
 	}
-	return deposits, privKeys, nil
+	return object
 }
 
 func TestBenchmarHashWithCache(t *testing.T) {
 
 	useCache = false
 
-	initialDeposits, blsg, err := generateInitialSimulatedDeposits(1000)
-	if err != nil {
-		t.Errorf("test: unexpected error: %v\n", err)
-	}
+	First := GenerateJunkObject(10000)
+
 	type tree struct {
-		Dep []*pb.Deposit
-		BLS []*bls.SecretKey
+		First  []*JunkObject
+		Second []*JunkObject
 	}
 	startTime := time.Now().UnixNano()
-	TreeHash(&tree{Dep: initialDeposits, BLS: blsg})
+	TreeHash(&tree{First: First, Second: First})
 	fmt.Printf("time it took without cache: %v \n", time.Now().UnixNano()-startTime)
 	useCache = true
 	sszUtilsCache = make(map[reflect.Type]*sszUtils)
-	TreeHash(&tree{Dep: initialDeposits, BLS: blsg})
+	TreeHash(&tree{First: First, Second: First})
 	startTime = time.Now().UnixNano()
-	TreeHash(&tree{Dep: initialDeposits, BLS: blsg})
+	TreeHash(&tree{First: First, Second: First})
 	fmt.Printf("time it took with cache: %v \n", time.Now().UnixNano()-startTime)
 
 }

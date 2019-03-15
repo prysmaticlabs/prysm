@@ -17,7 +17,6 @@ limitations under the License.
 package ssz
 
 import (
-	"sort"
 	"sync"
 	"time"
 
@@ -146,37 +145,6 @@ func (c *ExpirationCache) List() []interface{} {
 		}
 	}
 	return list
-}
-
-type byLeastUsed []timestampedKey
-
-func (a byLeastUsed) Len() int           { return len(a) }
-func (a byLeastUsed) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a byLeastUsed) Less(i, j int) bool { return a[i].timestamp.After(a[j].timestamp) }
-
-// PurgeByDateAndSize purges the hash to its max size by least used items
-func (c *ExpirationCache) PurgeByDateAndSize(maxSize int) {
-	items := c.cacheStorage.List()
-
-	if len(items) > maxSize {
-		list := make(byLeastUsed, 0, len(items))
-		for _, item := range items {
-			ts := item.(*timestampedEntry).timestamp
-			obj := item.(*timestampedEntry).obj
-			key, err := c.keyFunc(obj)
-			if err == nil {
-				list = append(list, timestampedKey{timestamp: ts, key: key})
-			}
-		}
-		sort.Sort(list)
-		c.expirationLock.Lock()
-		defer c.expirationLock.Unlock()
-		for s := len(list) - 1; s > maxSize-1; s-- {
-
-			c.cacheStorage.Delete(list[s].key)
-		}
-	}
-
 }
 
 // ListKeys returns a list of all keys in the expiration cache.

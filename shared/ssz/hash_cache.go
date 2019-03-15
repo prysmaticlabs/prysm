@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sort"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -66,9 +67,9 @@ type hashCacheS struct {
 	hashCache *ExpirationCache
 }
 
-// RootByHash fetches Root by the encoded hash of the object. Returns true with a
+// RootByEncodedHash fetches Root by the encoded hash of the object. Returns true with a
 // reference to the root if exists. Otherwise returns false, nil.
-func (b *hashCacheS) RootByHash(h common.Hash) (bool, *root, error) {
+func (b *hashCacheS) RootByEncodedHash(h common.Hash) (bool, *root, error) {
 
 	obj, exists, err := b.hashCache.GetByKey(h.Hex())
 	if err != nil {
@@ -90,10 +91,11 @@ func (b *hashCacheS) RootByHash(h common.Hash) (bool, *root, error) {
 	return true, hInfo, nil
 }
 
-// AddRetrieveTrieRoot adds a trie root to the cache. This method also trims the
-// least recently added root info if the cache size has reached the max cache
-// size limit.
-func (b *hashCacheS) AddRetrieveTrieRoot(val interface{}) ([32]byte, error) {
+// TrieRootCached computes a trie root and add it to the cache.
+// if the encoded hash of the object is in cache it will be retrieved from cache.
+// This method also trims the least recently added root info if the cache size
+// has reached the max cache size limit.
+func (b *hashCacheS) TrieRootCached(val interface{}) ([32]byte, error) {
 	if val == nil {
 		return [32]byte{}, newHashError("untyped nil is not supported", nil)
 	}
@@ -104,7 +106,7 @@ func (b *hashCacheS) AddRetrieveTrieRoot(val interface{}) ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, newHashError(fmt.Sprint(err), rval.Type())
 	}
-	exists, fetchedInfo, err := b.RootByHash(bytesutil.ToBytes32(hs))
+	exists, fetchedInfo, err := b.RootByEncodedHash(bytesutil.ToBytes32(hs))
 	if err != nil {
 		return [32]byte{}, newHashError(fmt.Sprint(err), rval.Type())
 	}
@@ -131,16 +133,16 @@ func (b *hashCacheS) AddRetrieveTrieRoot(val interface{}) ([32]byte, error) {
 	return paddedOutput, nil
 }
 
-// AddRetriveMerkleRoot adds a mrakle object to the cache. This method also trims the
+// MerkleHashCached adds a mrakle object to the cache. This method also trims the
 // least recently added root info if the cache size has reached the max cache
 // size limit.
-func (b *hashCacheS) AddRetriveMerkleRoot(byteSlice [][]byte) ([]byte, error) {
+func (b *hashCacheS) MerkleHashCached(byteSlice [][]byte) ([]byte, error) {
 	mh := []byte{}
 	hs, err := hashedEncoding(reflect.ValueOf(byteSlice))
 	if err != nil {
 		return mh, newHashError(fmt.Sprint(err), reflect.TypeOf(byteSlice))
 	}
-	exists, fetchedInfo, err := b.RootByHash(bytesutil.ToBytes32(hs))
+	exists, fetchedInfo, err := b.RootByEncodedHash(bytesutil.ToBytes32(hs))
 	if err != nil {
 		return mh, newHashError(fmt.Sprint(err), reflect.TypeOf(byteSlice))
 	}
@@ -167,7 +169,8 @@ func (b *hashCacheS) AddRetriveMerkleRoot(byteSlice [][]byte) ([]byte, error) {
 	return mh, nil
 }
 
-// AddRoot adds a rootHash object to the cache. This method also trims the
+// AddRoot adds an encodedhash of the object as key and a rootHash object to the cache.
+// This method also trims the
 // least recently added root info if the cache size has reached the max cache
 // size limit.
 func (b *hashCacheS) AddRoot(h common.Hash, rootB []byte) error {
@@ -198,7 +201,7 @@ func makeSliceHasherCache(typ reflect.Type) (hasher, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to encode element of slice/array: %v", err)
 		}
-		exists, fetchedInfo, err := hashCache.RootByHash(bytesutil.ToBytes32(hs))
+		exists, fetchedInfo, err := hashCache.RootByEncodedHash(bytesutil.ToBytes32(hs))
 		if err != nil {
 			return nil, fmt.Errorf("failed to encode element of slice/array: %v", err)
 		}
@@ -214,7 +217,7 @@ func makeSliceHasherCache(typ reflect.Type) (hasher, error) {
 				}
 				elemHashList = append(elemHashList, elemHash)
 			}
-			output, err = hashCache.AddRetriveMerkleRoot(elemHashList)
+			output, err = hashCache.MerkleHashCached(elemHashList)
 			if err != nil {
 				return nil, fmt.Errorf("failed to calculate merkle hash of element hash list: %v", err)
 			}
@@ -239,7 +242,7 @@ func makeStructHasherCache(typ reflect.Type) (hasher, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to encode element of slice/array: %v", err)
 		}
-		exists, fetchedInfo, err := hashCache.RootByHash(bytesutil.ToBytes32(hs))
+		exists, fetchedInfo, err := hashCache.RootByEncodedHash(bytesutil.ToBytes32(hs))
 		if err != nil {
 			return nil, fmt.Errorf("failed to encode element of slice/array: %v", err)
 		}
@@ -272,4 +275,35 @@ func (b *hashCacheS) trim(maxSize int) {
 // popProcessNoopFunc is a no-op function that never returns an error.
 func popProcessNoopFunc(obj interface{}) error {
 	return nil
+}
+
+type byLeastUsed []timestampedKey
+
+func (a byLeastUsed) Len() int           { return len(a) }
+func (a byLeastUsed) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a byLeastUsed) Less(i, j int) bool { return a[i].timestamp.After(a[j].timestamp) }
+
+// PurgeByDateAndSize purges the hash to its max size by least used items
+func (c *ExpirationCache) PurgeByDateAndSize(maxSize int) {
+	items := c.cacheStorage.List()
+
+	if len(items) > maxSize {
+		list := make(byLeastUsed, 0, len(items))
+		for _, item := range items {
+			ts := item.(*timestampedEntry).timestamp
+			obj := item.(*timestampedEntry).obj
+			key, err := c.keyFunc(obj)
+			if err == nil {
+				list = append(list, timestampedKey{timestamp: ts, key: key})
+			}
+		}
+		sort.Sort(list)
+		c.expirationLock.Lock()
+		defer c.expirationLock.Unlock()
+		for s := len(list) - 1; s > maxSize-1; s-- {
+
+			c.cacheStorage.Delete(list[s].key)
+		}
+	}
+
 }
