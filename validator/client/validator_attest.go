@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	ptypes "github.com/gogo/protobuf/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/forkutils"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -96,47 +94,24 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	// of length len(committee)+7 // 8.
 	attestation.CustodyBitfield = make([]byte, (len(resp.Committee)+7)/8)
 
-	// We set the attestation's aggregation bitfield by determining the index in the committee
-	// corresponding to the validator and modifying the bitfield itself.
-	aggregationBitfield := make([]byte, (len(resp.Committee)+7)/8)
-	var indexIntoCommittee uint
-	for i, validator := range resp.Committee {
-		if validator == validatorIndexRes.Index {
-			indexIntoCommittee = uint(i)
+	// Note: calling get_attestation_participants(state, attestation.data, attestation.aggregation_bitfield)
+	// should return a list of length equal to 1, containing validator_index.
+
+	// Find the index in committee to be used for
+	// the aggregation bitfield
+	var indexInCommittee int
+	for i, vIndex := range resp.Committee {
+		if vIndex == validatorIndexRes.Index {
+			indexInCommittee = i
 			break
 		}
 	}
-	if len(aggregationBitfield) == 0 {
-		log.Error("Aggregation bitfield is empty so unable to attest to block head")
-		return
-	}
-	aggregationBitfield[indexIntoCommittee/8] |= 1 << (indexIntoCommittee % 8)
-	// Note: calling get_attestation_participants(state, attestation.data, attestation.aggregation_bitfield)
-	// should return a list of length equal to 1, containing validator_index.
+
+	aggregationBitfield := bitutil.SetBitfield(indexInCommittee)
 	attestation.AggregationBitfield = aggregationBitfield
 
-	// Retrieve the current fork data from the beacon node.
-	fork, err := v.beaconClient.ForkData(ctx, &ptypes.Empty{})
-	if err != nil {
-		log.Errorf("Failed to get fork data from beacon node's state: %v", err)
-		return
-	}
-
-	epoch := slot / params.BeaconConfig().SlotsPerEpoch
-
-	attDataHash, err := hashutil.HashProto(&pbp2p.AttestationDataAndCustodyBit{
-		Data:       attestation.Data,
-		CustodyBit: true,
-	})
-	if err != nil {
-		log.Errorf("Could not hash attestation data: %v", err)
-		return
-	}
-	log.Infof("Signing attestation for slot: %d", slot)
-	domain := forkutils.DomainVersion(fork, epoch, params.BeaconConfig().DomainAttestation)
-	aggregateSig := v.key.SecretKey.Sign(attDataHash[:], domain)
-	attestation.AggregateSignature = aggregateSig.Marshal()
-	log.Infof("Attestation signature: %#x", attestation.AggregateSignature)
+	// TODO(#1366): Use BLS to generate an aggregate signature.
+	attestation.AggregateSignature = []byte("signed")
 
 	duration := time.Duration(slot*params.BeaconConfig().SecondsPerSlot+delay) * time.Second
 	timeToBroadcast := time.Unix(int64(v.genesisTime), 0).Add(duration)

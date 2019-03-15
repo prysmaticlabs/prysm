@@ -7,10 +7,11 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/forkutils"
+	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
@@ -22,6 +23,10 @@ import (
 // the state root computation, and finally signed by the validator before being
 // sent back to the beacon node for broadcasting.
 func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
+	if slot == params.BeaconConfig().GenesisSlot {
+		log.Info("Assigned to genesis slot, skipping proposal")
+		return
+	}
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")
 	defer span.End()
 	log.Info("Proposing...")
@@ -74,7 +79,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
 	log.Infof("Signing randao epoch: %d", epoch)
-	domain := forkutils.DomainVersion(fork, epoch, params.BeaconConfig().DomainRandao)
+	domain := forkutil.DomainVersion(fork, epoch, params.BeaconConfig().DomainRandao)
 	epochSignature := v.key.SecretKey.Sign(buf, domain)
 	log.Infof("Pubkey: %#x", v.key.PublicKey.Marshal())
 	log.Infof("Epoch signature: %#x", epochSignature.Marshal())
@@ -82,6 +87,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	// Fetch pending attestations seen by the beacon node.
 	attResp, err := v.proposerClient.PendingAttestations(ctx, &pb.PendingAttestationsRequest{
 		FilterReadyForInclusion: true,
+		ProposalBlockSlot:       slot,
 	})
 	if err != nil {
 		log.Errorf("Failed to fetch pending attestations from the beacon node: %v", err)
@@ -106,7 +112,10 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	// 3. Compute state root transition from parent block to the new block.
 	resp, err := v.proposerClient.ComputeStateRoot(ctx, block)
 	if err != nil {
-		log.Errorf("Unable to compute state root: %v", err)
+		log.WithField(
+			"block", proto.MarshalTextString(block),
+		).Errorf("Not proposing! Unable to compute state root: %v", err)
+		return
 	}
 	block.StateRootHash32 = resp.GetStateRoot()
 

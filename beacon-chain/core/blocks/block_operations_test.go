@@ -11,13 +11,12 @@ import (
 	"testing"
 	"time"
 
-	atts "github.com/prysmaticlabs/prysm/beacon-chain/core/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/forkutils"
+	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -59,7 +58,7 @@ func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	epoch := helpers.SlotToEpoch(params.BeaconConfig().GenesisSlot)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := forkutils.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
+	domain := forkutil.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
 
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx-1].Sign(buf, domain)
@@ -92,7 +91,7 @@ func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testi
 	epoch := helpers.SlotToEpoch(params.BeaconConfig().GenesisSlot)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := forkutils.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
+	domain := forkutil.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 
 	block := &pb.BeaconBlock{
@@ -777,7 +776,7 @@ func TestProcessBlockAttestations_JustifiedEpochVerificationFailure(t *testing.T
 		{
 			Data: &pb.AttestationData{
 				Slot:           params.BeaconConfig().GenesisSlot + 152,
-				JustifiedEpoch: 2,
+				JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 2,
 			},
 		},
 	}
@@ -788,7 +787,7 @@ func TestProcessBlockAttestations_JustifiedEpochVerificationFailure(t *testing.T
 	}
 	state := &pb.BeaconState{
 		Slot:           params.BeaconConfig().GenesisSlot + 158,
-		JustifiedEpoch: 1,
+		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 1,
 	}
 
 	want := fmt.Sprintf(
@@ -811,7 +810,7 @@ func TestProcessBlockAttestations_PreviousJustifiedEpochVerificationFailure(t *t
 		{
 			Data: &pb.AttestationData{
 				Slot:           params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch + 1,
-				JustifiedEpoch: 3,
+				JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 3,
 			},
 		},
 	}
@@ -822,7 +821,7 @@ func TestProcessBlockAttestations_PreviousJustifiedEpochVerificationFailure(t *t
 	}
 	state := &pb.BeaconState{
 		Slot:                   params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch,
-		PreviousJustifiedEpoch: 2,
+		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch + 2,
 	}
 
 	want := fmt.Sprintf(
@@ -1019,27 +1018,24 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 }
 
 func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
-	deposits, privKeys := setupInitialDeposits(t, 100)
-	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
-
-	beaconState.Slot = params.BeaconConfig().GenesisSlot + 70
-	beaconState.PreviousJustifiedEpoch = params.BeaconConfig().GenesisEpoch
-
-	stateLatestCrosslinks := make([]*pb.Crosslink, 21)
-	stateLatestCrosslinks[20] = &pb.Crosslink{
-		CrosslinkDataRootHash32: []byte{1},
-	}
-	beaconState.LatestCrosslinks = stateLatestCrosslinks
-
 	var blockRoots [][]byte
 	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
-	beaconState.LatestBlockRootHash32S = blockRoots
-
+	stateLatestCrosslinks := []*pb.Crosslink{
+		{
+			CrosslinkDataRootHash32: []byte{1},
+		},
+	}
+	state := &pb.BeaconState{
+		Slot:                   params.BeaconConfig().GenesisSlot + 70,
+		PreviousJustifiedEpoch: params.BeaconConfig().GenesisEpoch,
+		LatestBlockRootHash32S: blockRoots,
+		LatestCrosslinks:       stateLatestCrosslinks,
+	}
 	att1 := &pb.Attestation{
 		Data: &pb.AttestationData{
-			Shard:                    20,
+			Shard:                    0,
 			Slot:                     params.BeaconConfig().GenesisSlot + 20,
 			JustifiedBlockRootHash32: blockRoots[0],
 			LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
@@ -1049,27 +1045,18 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 		AggregationBitfield: []byte{1},
 		CustodyBitfield:     []byte{1},
 	}
-	attestorIndices, err := helpers.AttestationParticipants(beaconState, att1.Data, att1.AggregationBitfield)
-	if err != nil {
-		t.Errorf("could not get aggregation participants %v", err)
-	}
-	att1.AggregateSignature = atts.AggregateSignature(beaconState, att1, privKeys[attestorIndices[0]])
-
 	attestations := []*pb.Attestation{att1}
-
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			Attestations: attestations,
 		},
 	}
-
 	newState, err := blocks.ProcessBlockAttestations(
 		context.Background(),
-		beaconState,
+		state,
 		block,
-		true,
+		false,
 	)
-
 	pendingAttestations := newState.LatestAttestations
 	if err != nil {
 		t.Fatalf("Could not produce pending attestations: %v", err)
@@ -1167,13 +1154,18 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	data = append(data, timestamp...)
 
 	// We then create a merkle branch for the test.
-	depositTrie := trieutil.NewDepositTrie()
-	depositTrie.UpdateDepositTrie(data)
-	branch := depositTrie.Branch()
+	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{data}, int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatalf("Could not generate trie: %v", err)
+	}
+	proof, err := depositTrie.MerkleProof(0)
+	if err != nil {
+		t.Fatalf("Could not generate proof: %v", err)
+	}
 
 	deposit := &pb.Deposit{
 		DepositData:         data,
-		MerkleBranchHash32S: branch,
+		MerkleBranchHash32S: proof,
 		MerkleTreeIndex:     0,
 	}
 	block := &pb.BeaconBlock{
@@ -1236,13 +1228,17 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 	data = append(data, encodedInput...)
 
 	// We then create a merkle branch for the test.
-	depositTrie := trieutil.NewDepositTrie()
-	depositTrie.UpdateDepositTrie(data)
-	branch := depositTrie.Branch()
-
+	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{data}, int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatalf("Could not generate trie: %v", err)
+	}
+	proof, err := depositTrie.MerkleProof(0)
+	if err != nil {
+		t.Fatalf("Could not generate proof: %v", err)
+	}
 	deposit := &pb.Deposit{
 		DepositData:         data,
-		MerkleBranchHash32S: branch,
+		MerkleBranchHash32S: proof,
 		MerkleTreeIndex:     0,
 	}
 	block := &pb.BeaconBlock{
@@ -1317,13 +1313,18 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 	data = append(data, encodedInput...)
 
 	// We then create a merkle branch for the test.
-	depositTrie := trieutil.NewDepositTrie()
-	depositTrie.UpdateDepositTrie(data)
-	branch := depositTrie.Branch()
+	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{data}, int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		t.Fatalf("Could not generate trie: %v", err)
+	}
+	proof, err := depositTrie.MerkleProof(0)
+	if err != nil {
+		t.Fatalf("Could not generate proof: %v", err)
+	}
 
 	deposit := &pb.Deposit{
 		DepositData:         data,
-		MerkleBranchHash32S: branch,
+		MerkleBranchHash32S: proof,
 		MerkleTreeIndex:     0,
 	}
 	block := &pb.BeaconBlock{

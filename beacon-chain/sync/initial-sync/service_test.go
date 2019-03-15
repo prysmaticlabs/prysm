@@ -53,8 +53,12 @@ func (ms *mockSyncService) ResumeSync() {
 
 type mockChainService struct{}
 
-func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
-	return &event.Feed{}
+func (m *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+	return &pb.BeaconState{}, nil
+}
+
+func (m *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error {
+	return nil
 }
 
 func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
@@ -494,4 +498,28 @@ func TestRequestBlocksBySlot_OK(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Exiting initial sync and starting normal sync")
 
 	hook.Reset()
+}
+func TestSafelyHandleMessage(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	safelyHandleMessage(func(_ p2p.Message) {
+		panic("bad!")
+	}, p2p.Message{
+		Data: &pb.BeaconBlock{},
+	})
+
+	testutil.AssertLogsContain(t, hook, "Panicked when handling p2p message!")
+}
+
+func TestSafelyHandleMessage_NoData(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	safelyHandleMessage(func(_ p2p.Message) {
+		panic("bad!")
+	}, p2p.Message{})
+
+	entry := hook.LastEntry()
+	if entry.Data["msg"] != "message contains no data" {
+		t.Errorf("Message logged was not what was expected: %s", entry.Data["msg"])
+	}
 }

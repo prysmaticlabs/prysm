@@ -17,8 +17,7 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/forkutils"
+	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -124,7 +123,7 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, currentEpoch)
-	domain := forkutils.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainRandao)
+	domain := forkutil.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainRandao)
 	sig, err := bls.SignatureFromBytes(block.RandaoReveal)
 	if err != nil {
 		return fmt.Errorf("could not deserialize block randao reveal: %v", err)
@@ -134,7 +133,7 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 		"pubkey":   fmt.Sprintf("%#x", proposer.Pubkey),
 		"epochSig": fmt.Sprintf("%#x", sig.Marshal()),
 	}).Info("Verifying randao")
-	if !sig.Verify(pub, buf, domain) {
+	if !sig.Verify(buf, pub, domain) {
 		return fmt.Errorf("block randao reveal signature did not verify")
 	}
 	return nil
@@ -440,52 +439,6 @@ func ProcessBlockAttestations(
 	return beaconState, nil
 }
 
-func verifyAttestationSig(beaconState *pb.BeaconState, att *pb.Attestation) error {
-	attesterIndices, err := helpers.AttestationParticipants(beaconState, att.Data, att.AggregationBitfield)
-	if err != nil {
-		return fmt.Errorf("could not get attestation participants: %v", err)
-	}
-
-	attestorPubKeys := make([]*bls.PublicKey, len(attesterIndices))
-	for idx, participantIndex := range attesterIndices {
-		pubkey, err := bls.PublicKeyFromBytes(beaconState.ValidatorRegistry[participantIndex].Pubkey)
-		if err != nil {
-			return fmt.Errorf("could not deserialize attestor public key: %v at index: %v", err, participantIndex)
-		}
-
-		attestorPubKeys[idx] = pubkey
-	}
-
-	aggregatePubkeys := []*bls.PublicKey{
-		bls.AggregatePublicKeys(attestorPubKeys),
-	}
-
-	attestationDataHash, err := hashutil.HashProto(&pb.AttestationDataAndCustodyBit{
-		Data:       att.Data,
-		CustodyBit: true,
-	})
-	if err != nil {
-		return fmt.Errorf("could not hash attestation data: %v", err)
-	}
-	messageHashes := [][]byte{
-		attestationDataHash[:],
-	}
-
-	sig, err := bls.SignatureFromBytes(att.AggregateSignature)
-	currentEpoch := helpers.CurrentEpoch(beaconState)
-
-	domain := forkutils.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainAttestation)
-
-	log.WithFields(logrus.Fields{
-		"aggregatePubkeys": fmt.Sprintf("%#x", aggregatePubkeys),
-	}).Info("Verifying attestation")
-
-	if !sig.VerifyMultiple(aggregatePubkeys, messageHashes, domain) {
-		return errors.New("aggregate signature did not verify")
-	}
-	return nil
-}
-
 func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifySignatures bool) error {
 	if att.Data.Slot < params.BeaconConfig().GenesisSlot {
 		return fmt.Errorf(
@@ -512,22 +465,22 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 		)
 	}
 	// Verify that `attestation.data.justified_epoch` is equal to `state.justified_epoch
-	// 	if slot_to_epoch(attestation.data.slot+1) >= get_current_epoch(state)
+	// 	if slot_to_epoch(attestation.data.slot + 1) >= get_current_epoch(state)
 	// 	else state.previous_justified_epoch`.
 	if helpers.SlotToEpoch(att.Data.Slot+1) >= helpers.CurrentEpoch(beaconState) {
 		if att.Data.JustifiedEpoch != beaconState.JustifiedEpoch {
 			return fmt.Errorf(
 				"expected attestation.JustifiedEpoch == state.JustifiedEpoch, received %d == %d",
-				att.Data.JustifiedEpoch,
-				beaconState.JustifiedEpoch,
+				att.Data.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
+				beaconState.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 			)
 		}
 	} else {
 		if att.Data.JustifiedEpoch != beaconState.PreviousJustifiedEpoch {
 			return fmt.Errorf(
 				"expected attestation.JustifiedEpoch == state.PreviousJustifiedEpoch, received %d == %d",
-				att.Data.JustifiedEpoch,
-				beaconState.PreviousJustifiedEpoch,
+				att.Data.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
+				beaconState.PreviousJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 			)
 		}
 	}
@@ -578,9 +531,20 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 		)
 	}
 	if verifySignatures {
-		if err := verifyAttestationSig(beaconState, att); err != nil {
-			return fmt.Errorf("could not verify aggregate signature %v", err)
-		}
+		// TODO(#258): Integrate BLS signature verification for attestation.
+		// assert bls_verify_multiple(
+		//   pubkeys=[
+		//	 bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_0_participants]),
+		//   bls_aggregate_pubkeys([state.validator_registry[i].pubkey for i in custody_bit_1_participants]),
+		//   ],
+		//   message_hash=[
+		//   hash_tree_root(AttestationDataAndCustodyBit(data=attestation.data, custody_bit=0b0)),
+		//   hash_tree_root(AttestationDataAndCustodyBit(data=attestation.data, custody_bit=0b1)),
+		//   ],
+		//   signature=attestation.aggregate_signature,
+		//   domain=get_domain(state.fork, slot_to_epoch(attestation.data.slot), DOMAIN_ATTESTATION),
+		// )
+		return nil
 	}
 	return nil
 }
@@ -658,13 +622,12 @@ func ProcessValidatorDeposits(
 
 func verifyDeposit(beaconState *pb.BeaconState, deposit *pb.Deposit) error {
 	// Verify Merkle proof of deposit and deposit trie root.
-	receiptRoot := bytesutil.ToBytes32(beaconState.LatestEth1Data.DepositRootHash32)
-	index := make([]byte, 8)
-	binary.LittleEndian.PutUint64(index, deposit.MerkleTreeIndex)
-	if ok := trieutil.VerifyMerkleBranch(
-		deposit.MerkleBranchHash32S,
+	receiptRoot := beaconState.LatestEth1Data.DepositRootHash32
+	if ok := trieutil.VerifyMerkleProof(
 		receiptRoot,
-		index,
+		deposit.DepositData,
+		int(deposit.MerkleTreeIndex),
+		deposit.MerkleBranchHash32S,
 	); !ok {
 		return fmt.Errorf(
 			"deposit merkle branch of deposit root did not verify for root: %#x",

@@ -10,10 +10,11 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
-	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
@@ -165,6 +166,12 @@ func (b *BeaconNode) Close() {
 func (b *BeaconNode) startDB(ctx *cli.Context) error {
 	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
 
+	if b.ctx.GlobalBool(cmd.ClearDBFlag.Name) {
+		if err := db.ClearDB(path.Join(baseDir, beaconChainDBName)); err != nil {
+			return err
+		}
+	}
+
 	db, err := db.NewDB(path.Join(baseDir, beaconChainDBName))
 	if err != nil {
 		return err
@@ -199,12 +206,11 @@ func (b *BeaconNode) registerBlockchainService(_ *cli.Context) error {
 	}
 
 	blockchainService, err := blockchain.NewChainService(context.Background(), &blockchain.Config{
-		BeaconDB:         b.db,
-		Web3Service:      web3Service,
-		OpsPoolService:   opsService,
-		AttsService:      attsService,
-		BeaconBlockBuf:   10,
-		IncomingBlockBuf: 100, // Big buffer to accommodate other feed subscribers.
+		BeaconDB:       b.db,
+		Web3Service:    web3Service,
+		OpsPoolService: opsService,
+		AttsService:    attsService,
+		BeaconBlockBuf: 10,
 	})
 	if err != nil {
 		return fmt.Errorf("could not register blockchain service: %v", err)
@@ -228,7 +234,7 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 	depAddress := b.ctx.GlobalString(utils.DepositContractFlag.Name)
 
 	if depAddress == "" {
-		log.Fatal("No deposit contract specified. Add --deposit-contract with a valud deposit contract address to start.")
+		log.Fatal("No deposit contract specified. Add --deposit-contract with a valid deposit contract address to start.")
 	}
 
 	if !common.IsHexAddress(depAddress) {

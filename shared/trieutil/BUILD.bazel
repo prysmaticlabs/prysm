@@ -2,18 +2,18 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["deposit_trie.go"],
+    srcs = ["sparse_merkle.go"],
     importpath = "github.com/prysmaticlabs/prysm/shared/trieutil",
     visibility = ["//visibility:public"],
     deps = [
+        "//shared/bytesutil:go_default_library",
         "//shared/hashutil:go_default_library",
-        "//shared/params:go_default_library",
     ],
 )
 
 go_test(
     name = "go_default_test",
-    srcs = ["deposit_trie_test.go"],
+    srcs = ["sparse_merkle_test.go"],
     embed = [":go_default_library"],
     deps = ["//shared/hashutil:go_default_library"],
 )

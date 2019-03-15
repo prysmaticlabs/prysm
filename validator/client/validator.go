@@ -71,10 +71,10 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 		v.genesisTime = chainStartRes.GenesisTime
 		break
 	}
-	log.Infof("Beacon chain initialized at unix time: %v", time.Unix(int64(v.genesisTime), 0))
 	// Once the ChainStart log is received, we update the genesis time of the validator client
 	// and begin a slot ticker used to track the current slot the beacon node is in.
 	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
+	log.Infof("Beacon chain initialized at unix time: %v", time.Unix(int64(v.genesisTime), 0))
 	return nil
 }
 
@@ -139,6 +139,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 
 	resp, err := v.validatorClient.CommitteeAssignment(ctx, req)
 	if err != nil {
+		v.assignment = nil // Clear assignments so we know to retry the request.
 		return err
 	}
 
