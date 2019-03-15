@@ -13,6 +13,8 @@ import (
 const hashLengthBytes = 32
 const sszChunkSize = 128
 
+var useCache = true
+
 // Hashable defines the interface for supporting tree-hash function.
 type Hashable interface {
 	TreeHashSSZ() ([32]byte, error)
@@ -64,9 +66,15 @@ func makeHasher(typ reflect.Type) (hasher, error) {
 		kind == reflect.Array && typ.Elem().Kind() == reflect.Uint8:
 		return hashedEncoding, nil
 	case kind == reflect.Slice || kind == reflect.Array:
-		return makeSliceHasherCache(typ)
+		if useCache {
+			return makeSliceHasherCache(typ)
+		}
+		return makeSliceHasher(typ)
 	case kind == reflect.Struct:
-		return makeStructHasherCache(typ)
+		if useCache {
+			return makeStructHasherCache(typ)
+		}
+		return makeStructHasher(typ)
 	case kind == reflect.Ptr:
 		return makePtrHasher(typ)
 	default:

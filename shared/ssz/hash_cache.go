@@ -12,12 +12,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"k8s.io/client-go/tools/cache"
 )
 
 var (
-	// ErrNotMarakleRoot will be returned when a cache object is not a marakle root
-	ErrNotMarakleRoot = errors.New("object is not a markle root")
+	// ErrNotMerkleRoot will be returned when a cache object is not a merkle root
+	ErrNotMerkleRoot = errors.New("object is not a merkle root")
 	// maxCacheSize is 2x of the follow distance for additional cache padding.
 	// Requests should be only accessing blocks within recent blocks within the
 	// Eth1FollowDistance.
@@ -48,7 +47,7 @@ type root struct {
 func hashKeyFn(obj interface{}) (string, error) {
 	mRoot, ok := obj.(*root)
 	if !ok {
-		return "", ErrNotMarakleRoot
+		return "", ErrNotMerkleRoot
 	}
 
 	return mRoot.Hash.Hex(), nil
@@ -58,16 +57,16 @@ func hashKeyFn(obj interface{}) (string, error) {
 // memory.
 func newHashCache() *hashCacheS {
 	return &hashCacheS{
-		hashCache: cache.NewFIFO(hashKeyFn),
+		hashCache: NewTTLStoreRestampOnGet(hashKeyFn, time.Hour),
 	}
 }
 
 // hashCacheS struct with one queue for looking up by hash.
 type hashCacheS struct {
-	hashCache *cache.FIFO
+	hashCache *ExpirationCache
 }
 
-// RootByHash fetches Root by its hash. Returns true with a
+// RootByHash fetches Root by the encoded hash of the object. Returns true with a
 // reference to the root if exists. Otherwise returns false, nil.
 func (b *hashCacheS) RootByHash(h common.Hash) (bool, *root, error) {
 
@@ -85,7 +84,7 @@ func (b *hashCacheS) RootByHash(h common.Hash) (bool, *root, error) {
 
 	hInfo, ok := obj.(*root)
 	if !ok {
-		return false, nil, ErrNotMarakleRoot
+		return false, nil, ErrNotMerkleRoot
 	}
 
 	return true, hInfo, nil
@@ -132,10 +131,10 @@ func (b *hashCacheS) AddRetrieveTrieRoot(val interface{}) ([32]byte, error) {
 	return paddedOutput, nil
 }
 
-// AddRetriveMarkleRoot adds a mrakle object to the cache. This method also trims the
+// AddRetriveMerkleRoot adds a mrakle object to the cache. This method also trims the
 // least recently added root info if the cache size has reached the max cache
 // size limit.
-func (b *hashCacheS) AddRetriveMarkleRoot(byteSlice [][]byte) ([]byte, error) {
+func (b *hashCacheS) AddRetriveMerkleRoot(byteSlice [][]byte) ([]byte, error) {
 	mh := []byte{}
 	hs, err := hashedEncoding(reflect.ValueOf(byteSlice))
 	if err != nil {
@@ -156,11 +155,11 @@ func (b *hashCacheS) AddRetriveMarkleRoot(byteSlice [][]byte) ([]byte, error) {
 			Hash:       bytesutil.ToBytes32(hs),
 			MarkleRoot: mh,
 		}
-		if err := b.hashCache.AddIfNotPresent(mr); err != nil {
+		if err := b.hashCache.Add(mr); err != nil {
 			return nil, err
 		}
 
-		trim(b.hashCache, maxCacheSize)
+		b.trim(maxCacheSize)
 
 		hashCacheSize.Set(float64(len(b.hashCache.ListKeys())))
 	}
@@ -177,11 +176,11 @@ func (b *hashCacheS) AddRoot(h common.Hash, rootB []byte) error {
 		Hash:       h,
 		MarkleRoot: rootB,
 	}
-	if err := b.hashCache.AddIfNotPresent(mr); err != nil {
+	if err := b.hashCache.Add(mr); err != nil {
 		return err
 	}
 
-	trim(b.hashCache, maxCacheSize)
+	b.trim(maxCacheSize)
 
 	hashCacheSize.Set(float64(len(b.hashCache.ListKeys())))
 
@@ -215,7 +214,7 @@ func makeSliceHasherCache(typ reflect.Type) (hasher, error) {
 				}
 				elemHashList = append(elemHashList, elemHash)
 			}
-			output, err = hashCache.AddRetriveMarkleRoot(elemHashList)
+			output, err = hashCache.AddRetriveMerkleRoot(elemHashList)
 			if err != nil {
 				return nil, fmt.Errorf("failed to calculate merkle hash of element hash list: %v", err)
 			}
@@ -265,12 +264,9 @@ func makeStructHasherCache(typ reflect.Type) (hasher, error) {
 	return hasher, nil
 }
 
-// trim the FIFO queue to the maxSize.
-func trim(queue *cache.FIFO, maxSize int) {
-	for s := len(queue.ListKeys()); s > maxSize; s-- {
-		// #nosec G104 popProcessNoopFunc never returns an error
-		_, _ = queue.Pop(popProcessNoopFunc)
-	}
+// trim the store to the maxSize.
+func (b *hashCacheS) trim(maxSize int) {
+	b.hashCache.PurgeByDateAndSize(maxSize)
 }
 
 // popProcessNoopFunc is a no-op function that never returns an error.

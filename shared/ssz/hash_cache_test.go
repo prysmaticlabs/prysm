@@ -9,11 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	"github.com/ethereum/go-ethereum/common"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -33,8 +32,8 @@ func TestHashKeyFn_OK(t *testing.T) {
 
 func TestHashKeyFn_InvalidObj(t *testing.T) {
 	_, err := hashKeyFn("bad")
-	if err != ErrNotMarakleRoot {
-		t.Errorf("Expected error %v, got %v", ErrNotMarakleRoot, err)
+	if err != ErrNotMerkleRoot {
+		t.Errorf("Expected error %v, got %v", ErrNotMerkleRoot, err)
 	}
 }
 
@@ -59,7 +58,7 @@ func TestObjCache_byHash(t *testing.T) {
 		t.Error("Expected block info not to exist in empty cache")
 	}
 
-	if _, err := cache.AddRetriveMarkleRoot(byteSl); err != nil {
+	if _, err := cache.AddRetriveMerkleRoot(byteSl); err != nil {
 		t.Fatal(err)
 	}
 
@@ -100,7 +99,7 @@ func TestMerkleHashWithCache(t *testing.T) {
 	for i := 0; i < 200; i++ {
 
 		runMerkleHashTests(t, func(val [][]byte) ([]byte, error) {
-			return cache.AddRetriveMarkleRoot(val)
+			return cache.AddRetriveMerkleRoot(val)
 		})
 
 	}
@@ -163,8 +162,10 @@ func generateInitialSimulatedDeposits(numDeposits uint64) ([]*pb.Deposit, []*bls
 	return deposits, privKeys, nil
 }
 
-func TestDepositsBLSHash(t *testing.T) {
-	cache := newHashCache()
+func TestBenchmarHashWithCache(t *testing.T) {
+
+	useCache = false
+
 	initialDeposits, blsg, err := generateInitialSimulatedDeposits(1000)
 	if err != nil {
 		t.Errorf("test: unexpected error: %v\n", err)
@@ -173,26 +174,16 @@ func TestDepositsBLSHash(t *testing.T) {
 		Dep []*pb.Deposit
 		BLS []*bls.SecretKey
 	}
-
 	startTime := time.Now().UnixNano()
-	output, err := cache.AddRetrieveTrieRoot(&tree{
-		Dep: initialDeposits,
-		BLS: blsg,
-	})
-
-	fmt.Printf("time it took: %v \n", time.Now().UnixNano()-startTime)
+	TreeHash(&tree{Dep: initialDeposits, BLS: blsg})
+	fmt.Printf("time it took without cache: %v \n", time.Now().UnixNano()-startTime)
+	useCache = true
+	sszUtilsCache = make(map[reflect.Type]*sszUtils)
+	TreeHash(&tree{Dep: initialDeposits, BLS: blsg})
 	startTime = time.Now().UnixNano()
-	output2, err := cache.AddRetrieveTrieRoot(&tree{
-		Dep: initialDeposits,
-		BLS: blsg,
-	})
-	fmt.Printf("time it took when cached: %v \n", time.Now().UnixNano()-startTime)
+	TreeHash(&tree{Dep: initialDeposits, BLS: blsg})
+	fmt.Printf("time it took with cache: %v \n", time.Now().UnixNano()-startTime)
 
-	// Check expected output
-	if err == nil && !bytes.Equal(output[:], output2[:]) {
-		t.Errorf("output mismatch:\ngot   %X\nwant  %X\n",
-			output2, output)
-	}
 }
 
 func TestBlockCache_maxSize(t *testing.T) {
@@ -212,5 +203,4 @@ func TestBlockCache_maxSize(t *testing.T) {
 			len(cache.hashCache.ListKeys()),
 		)
 	}
-
 }
