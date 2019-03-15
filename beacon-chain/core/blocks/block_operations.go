@@ -477,8 +477,8 @@ func verifyAttestationSig(beaconState *pb.BeaconState, att *pb.Attestation) erro
 	domain := forkutil.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainAttestation)
 
 	log.WithFields(logrus.Fields{
-		"aggregatePubkeys": fmt.Sprintf("%#x", aggregatePubkeys),
-	}).Info("Verifying attestation")
+		"aggregatePubkeys": fmt.Sprintf("%#x", aggregatePubkeys[0].Marshal()),
+	}).Debug("Verifying attestation")
 
 	if !sig.VerifyMultiple(aggregatePubkeys, messageHashes, domain) {
 		return errors.New("aggregate signature did not verify")

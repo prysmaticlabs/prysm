@@ -45,6 +45,7 @@ func main() {
 
 	app.Flags = []cli.Flag{
 		utils.DemoConfigFlag,
+		utils.VerifyAttestationSigsFlag,
 		utils.DepositContractFlag,
 		utils.Web3ProviderFlag,
 		utils.RPCPort,
