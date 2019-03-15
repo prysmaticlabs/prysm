@@ -190,12 +190,6 @@ func TestReceiveBlock_CheckBlockStateRoot_GoodState(t *testing.T) {
 	beaconState.Slot--
 	initBlockStateRoot(t, goodStateBlock, beaconState, chainService)
 
-	if err := chainService.beaconDB.SaveJustifiedBlock(goodStateBlock); err != nil {
-		t.Fatal(err)
-	}
-	if err := chainService.beaconDB.SaveFinalizedBlock(goodStateBlock); err != nil {
-		t.Fatal(err)
-	}
 	if err := chainService.beaconDB.SaveBlock(goodStateBlock); err != nil {
 		t.Fatal(err)
 	}
