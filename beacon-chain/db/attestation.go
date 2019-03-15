@@ -1,16 +1,21 @@
 package db
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"go.opencensus.io/trace"
 )
 
 // SaveAttestation puts the attestation record into the beacon chain db.
-func (db *BeaconDB) SaveAttestation(attestation *pb.Attestation) error {
+func (db *BeaconDB) SaveAttestation(ctx context.Context, attestation *pb.Attestation) error {
+	ctx, span := trace.StartSpan(ctx, "beaconDB.SaveAttestation")
+	defer span.End()
+
 	encodedState, err := proto.Marshal(attestation)
 	if err != nil {
 		return err
