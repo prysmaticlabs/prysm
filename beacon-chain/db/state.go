@@ -113,6 +113,18 @@ func (db *BeaconDB) SaveState(beaconState *pb.BeaconState) error {
 	db.currentState = currentState
 	return db.update(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
+
+		prevState := chainInfo.Get(stateLookupKey)
+		if prevState != nil {
+			prevStatePb := &pb.BeaconState{}
+			if err := proto.Unmarshal(prevState, prevStatePb); err != nil {
+				return err
+			}
+			if prevStatePb.Slot >= beaconState.Slot {
+				return errors.New("current saved state has a slot number greater or equal to the state attempted to be saved")
+			}
+		}
+
 		beaconStateEnc, err := proto.Marshal(beaconState)
 		if err != nil {
 			return err
@@ -152,16 +164,16 @@ func (db *BeaconDB) SaveCurrentAndFinalizedState(beaconState *pb.BeaconState) er
 	if !ok {
 		return errors.New("could not clone beacon state")
 	}
+
+	if err := db.SaveState(beaconState); err != nil {
+		return err
+	}
+
 	db.currentState = currentState
 	return db.update(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
 		beaconStateEnc, err := proto.Marshal(beaconState)
 		if err != nil {
-			return err
-		}
-
-		// Putting in finalized state.
-		if err := chainInfo.Put(stateLookupKey, beaconStateEnc); err != nil {
 			return err
 		}
 
