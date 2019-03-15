@@ -25,7 +25,7 @@ import (
 	"k8s.io/klog"
 )
 
-// ExpirationCache implements the store interface
+// ExpirationByUseCache implements the store interface
 //	1. All entries are automatically time stamped on insert
 //		a. The key is computed based off the original item/keyFunc
 //		b. The value inserted under that key is the timestamped item
@@ -33,10 +33,11 @@ import (
 //      a. No item can be inserted into the store while we're expiring
 //		   *any* item in the cache.
 //	3. Time-stamps are stripped off unexpired entries before return
-// Note that the ExpirationCache is inherently slower than a normal
+//  4. All entries are automatically re time stamped on read
+// Note that the ExpirationByUseCache is inherently slower than a normal
 // threadSafeStore because it takes a write lock every time it checks if
 // an item has expired.
-type ExpirationCache struct {
+type ExpirationByUseCache struct {
 	cacheStorage     cache.ThreadSafeStore
 	keyFunc          cache.KeyFunc
 	clock            clock.Clock
@@ -81,7 +82,7 @@ type timestampedKey struct {
 }
 
 // getTimestampedEntry returns the timestampedEntry stored under the given key.
-func (c *ExpirationCache) getTimestampedEntry(key string) (*timestampedEntry, bool) {
+func (c *ExpirationByUseCache) getTimestampedEntry(key string) (*timestampedEntry, bool) {
 	item, _ := c.cacheStorage.Get(key)
 	if tsEntry, ok := item.(*timestampedEntry); ok {
 		return tsEntry, true
@@ -92,7 +93,7 @@ func (c *ExpirationCache) getTimestampedEntry(key string) (*timestampedEntry, bo
 // getOrExpire retrieves the object from the timestampedEntry if and only if it hasn't
 // already expired.in case it is not expired its timestamp is being updated to now.
 // It holds a write lock across deletion.
-func (c *ExpirationCache) getAndRestampOrExpire(key string) (interface{}, bool) {
+func (c *ExpirationByUseCache) getAndRestampOrExpire(key string) (interface{}, bool) {
 	// Prevent all inserts from the time we deem an item as "expired" to when we
 	// delete it, so an un-expired item doesn't sneak in under the same key, just
 	// before the Delete.
@@ -114,14 +115,14 @@ func (c *ExpirationCache) getAndRestampOrExpire(key string) (interface{}, bool) 
 }
 
 // GetByKey returns the item stored under the key, or sets exists=false.
-func (c *ExpirationCache) GetByKey(key string) (interface{}, bool, error) {
+func (c *ExpirationByUseCache) GetByKey(key string) (interface{}, bool, error) {
 	obj, exists := c.getAndRestampOrExpire(key)
 	return obj, exists, nil
 }
 
 // Get returns unexpired items. It purges the cache of expired items in the
 // process.
-func (c *ExpirationCache) Get(obj interface{}) (interface{}, bool, error) {
+func (c *ExpirationByUseCache) Get(obj interface{}) (interface{}, bool, error) {
 	key, err := c.keyFunc(obj)
 	if err != nil {
 		return nil, false, cache.KeyError{Obj: obj, Err: err}
@@ -132,7 +133,7 @@ func (c *ExpirationCache) Get(obj interface{}) (interface{}, bool, error) {
 
 // List retrieves a list of unexpired items. It purges the cache of expired
 // items in the process.
-func (c *ExpirationCache) List() []interface{} {
+func (c *ExpirationByUseCache) List() []interface{} {
 	items := c.cacheStorage.List()
 
 	list := make([]interface{}, 0, len(items))
@@ -148,13 +149,13 @@ func (c *ExpirationCache) List() []interface{} {
 }
 
 // ListKeys returns a list of all keys in the expiration cache.
-func (c *ExpirationCache) ListKeys() []string {
+func (c *ExpirationByUseCache) ListKeys() []string {
 	return c.cacheStorage.ListKeys()
 }
 
 // Add timestamps an item and inserts it into the cache, overwriting entries
 // that might exist under the same key.
-func (c *ExpirationCache) Add(obj interface{}) error {
+func (c *ExpirationByUseCache) Add(obj interface{}) error {
 	key, err := c.keyFunc(obj)
 	if err != nil {
 		return cache.KeyError{Obj: obj, Err: err}
@@ -168,12 +169,12 @@ func (c *ExpirationCache) Add(obj interface{}) error {
 
 // Update has not been implemented yet for lack of a use case, so this method
 // simply calls `Add`. This effectively refreshes the timestamp.
-func (c *ExpirationCache) Update(obj interface{}) error {
+func (c *ExpirationByUseCache) Update(obj interface{}) error {
 	return c.Add(obj)
 }
 
 // Delete removes an item from the cache.
-func (c *ExpirationCache) Delete(obj interface{}) error {
+func (c *ExpirationByUseCache) Delete(obj interface{}) error {
 	key, err := c.keyFunc(obj)
 	if err != nil {
 		return cache.KeyError{Obj: obj, Err: err}
@@ -187,7 +188,7 @@ func (c *ExpirationCache) Delete(obj interface{}) error {
 // Replace will convert all items in the given list to TimestampedEntries
 // before attempting the replace operation. The replace operation will
 // delete the contents of the ExpirationCache `c`.
-func (c *ExpirationCache) Replace(list []interface{}, resourceVersion string) error {
+func (c *ExpirationByUseCache) Replace(list []interface{}, resourceVersion string) error {
 	items := make(map[string]interface{}, len(list))
 	ts := c.clock.Now()
 	for _, item := range list {
@@ -204,13 +205,13 @@ func (c *ExpirationCache) Replace(list []interface{}, resourceVersion string) er
 }
 
 // Resync will touch all objects to put them into the processing queue
-func (c *ExpirationCache) Resync() error {
+func (c *ExpirationByUseCache) Resync() error {
 	return c.cacheStorage.Resync()
 }
 
 // NewTTLStoreRestampOnGet creates and returns a ExpirationCache with a TTLPolicy
-func NewTTLStoreRestampOnGet(keyFunc cache.KeyFunc, ttl time.Duration) *ExpirationCache {
-	return &ExpirationCache{
+func NewTTLStoreRestampOnGet(keyFunc cache.KeyFunc, ttl time.Duration) *ExpirationByUseCache {
+	return &ExpirationByUseCache{
 		cacheStorage:     cache.NewThreadSafeStore(cache.Indexers{}, cache.Indices{}),
 		keyFunc:          keyFunc,
 		clock:            clock.RealClock{},

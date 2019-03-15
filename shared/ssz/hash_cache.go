@@ -64,7 +64,7 @@ func newHashCache() *hashCacheS {
 
 // hashCacheS struct with one queue for looking up by hash.
 type hashCacheS struct {
-	hashCache *ExpirationCache
+	hashCache *ExpirationByUseCache
 }
 
 // RootByEncodedHash fetches Root by the encoded hash of the object. Returns true with a
@@ -284,7 +284,7 @@ func (a byLeastUsed) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a byLeastUsed) Less(i, j int) bool { return a[i].timestamp.After(a[j].timestamp) }
 
 // PurgeByDateAndSize purges the hash to its max size by least used items
-func (c *ExpirationCache) PurgeByDateAndSize(maxSize int) {
+func (c *ExpirationByUseCache) PurgeByDateAndSize(maxSize int) {
 	items := c.cacheStorage.List()
 
 	if len(items) > maxSize {
