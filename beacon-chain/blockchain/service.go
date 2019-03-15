@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -186,17 +188,10 @@ func (c *ChainService) StateInitializedFeed() *event.Feed {
 
 // ChainHeadRoot returns the hash root of the last beacon block processed by the
 // block chain service.
-func (c *ChainService) ChainHeadRoot() ([32]byte, error) {
-	head, err := c.beaconDB.ChainHead()
-	if err != nil {
-		return [32]byte{}, fmt.Errorf("could not retrieve chain head: %v", err)
-	}
-
-	root, err := hashutil.HashBeaconBlock(head)
-	if err != nil {
-		return [32]byte{}, fmt.Errorf("could not tree hash parent block: %v", err)
-	}
-	return root, nil
+func (c *ChainService) ChainHeadRoot(state *pb.BeaconState) [32]byte {
+	lengthOfRoots := len(state.LatestBlockRootHash32S)
+	root := bytesutil.ToBytes32(state.LatestBlockRootHash32S[lengthOfRoots-1])
+	return root
 }
 
 // doesPoWBlockExist checks if the referenced PoW block exists.
