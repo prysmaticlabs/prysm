@@ -110,6 +110,7 @@ func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain(objects *SimulatedObjec
 		newBlock,
 		prevBlockRoot,
 		false, /*  no sig verify */
+		false, /* rpc calls */
 	)
 	if err != nil {
 		return fmt.Errorf("could not execute state transition: %v", err)
@@ -134,6 +135,7 @@ func (sb *SimulatedBackend) GenerateNilBlockAndAdvanceChain() error {
 		nil,
 		prevBlockRoot,
 		false, /* no sig verify */
+		false, /* rpc calls */
 	)
 	if err != nil {
 		return fmt.Errorf("could not execute state transition: %v", err)

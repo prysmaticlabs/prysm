@@ -132,6 +132,7 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 			nil,
 			parentHash,
 			false, /* no sig verify */
+			true,  /* rpc calls */
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not execute state transition %v", err)
@@ -143,6 +144,7 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 		req,
 		parentHash,
 		false, /* no sig verification */
+		true,  /* rpc calls */
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not execute state transition %v", err)

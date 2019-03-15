@@ -39,6 +39,7 @@ func ExecuteStateTransition(
 	block *pb.BeaconBlock,
 	headRoot [32]byte,
 	verifySignatures bool,
+	rpc bool,
 ) (*pb.BeaconState, error) {
 	var err error
 
@@ -47,7 +48,7 @@ func ExecuteStateTransition(
 
 	// Execute per block transition.
 	if block != nil {
-		state, err = ProcessBlock(ctx, state, block, verifySignatures)
+		state, err = ProcessBlock(ctx, state, block, verifySignatures, rpc)
 		if err != nil {
 			return nil, fmt.Errorf("could not process block: %v", err)
 		}
@@ -88,7 +89,8 @@ func ProcessBlock(
 	ctx context.Context,
 	state *pb.BeaconState,
 	block *pb.BeaconBlock,
-	verifySignatures bool) (*pb.BeaconState, error) {
+	verifySignatures bool,
+	rpc bool) (*pb.BeaconState, error) {
 
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
 	defer span.End()
@@ -107,7 +109,9 @@ func ProcessBlock(
 			state.Slot-params.BeaconConfig().GenesisSlot,
 		)
 	}
-	log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Verified block slot == state slot")
+	if !rpc {
+		log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Verified block slot == state slot")
+	}
 
 	// Verify block signature.
 	if verifySignatures {
@@ -116,14 +120,18 @@ func ProcessBlock(
 			return nil, fmt.Errorf("could not verify proposer signature: %v", err)
 		}
 	}
-	log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Verified block signature")
+	if !rpc {
+		log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Verified block signature")
+	}
 
 	// Verify block RANDAO.
 	state, err = b.ProcessBlockRandao(ctx, state, block, verifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify and process block randao: %v", err)
 	}
-	log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Verified and processed block RANDAO")
+	if !rpc {
+		log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Verified and processed block RANDAO")
+	}
 
 	// Process ETH1 data.
 	state = b.ProcessEth1DataInBlock(ctx, state, block)
@@ -131,7 +139,9 @@ func ProcessBlock(
 	if err != nil {
 		return nil, fmt.Errorf("could not verify block attester slashings: %v", err)
 	}
-	log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Processed ETH1 data")
+	if !rpc {
+		log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Processed ETH1 data")
+	}
 
 	state, err = b.ProcessProposerSlashings(ctx, state, block, verifySignatures)
 	if err != nil {
@@ -151,13 +161,14 @@ func ProcessBlock(
 	if err != nil {
 		return nil, fmt.Errorf("could not process validator exits: %v", err)
 	}
-
-	log.WithField(
-		"attestationsInBlock", len(block.Body.Attestations),
-	).Info("Block attestations")
-	log.WithField(
-		"depositsInBlock", len(block.Body.Deposits),
-	).Info("Block deposits")
+	if !rpc {
+		log.WithField(
+			"attestationsInBlock", len(block.Body.Attestations),
+		).Info("Block attestations")
+		log.WithField(
+			"depositsInBlock", len(block.Body.Deposits),
+		).Info("Block deposits")
+	}
 	return state, nil
 }
 

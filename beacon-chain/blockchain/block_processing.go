@@ -127,7 +127,8 @@ func (c *ChainService) runStateTransition(
 		beaconState,
 		block,
 		headRoot,
-		true, /* sig verify */
+		true,  /* sig verify */
+		false, /* rpc calls */
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not execute state transition %v", err)
