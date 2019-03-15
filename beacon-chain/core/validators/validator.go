@@ -342,50 +342,30 @@ func UpdateRegistry(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState
 	return state, nil
 }
 
-// ProcessPenaltiesAndExits prepares the validators and the slashed validators
-// for withdrawal.
-//
+// ProcessSlashings processes all slashings.
 // Spec pseudocode definition:
-// def process_penalties_and_exits(state: BeaconState) -> None:
-//    """
-//    Process the penalties and prepare the validators who are eligible to withdrawal.
-//    Note that this function mutates ``state``.
-//    """
-//    current_epoch = get_current_epoch(state)
-//    # The active validators
-//    active_validator_indices = get_active_validator_indices(state.validator_registry, current_epoch)
-//    # The total effective balance of active validators
-//    total_balance = sum(get_effective_balance(state, i) for i in active_validator_indices)
+// def process_slashings(state: BeaconState) -> None:
+//     """
+//     Process the slashings.
+//     Note that this function mutates ``state``.
+//     """
+//     current_epoch = get_current_epoch(state)
+//     active_validator_indices = get_active_validator_indices(state.validator_registry, current_epoch)
+//     total_balance = sum(get_effective_balance(state, i) for i in active_validator_indices)
 //
-//    for index, validator in enumerate(state.validator_registry):
-//        if current_epoch == validator.slashed_epoch + LATEST_PENALIZED_EXIT_LENGTH // 2:
-//            epoch_index = current_epoch % LATEST_PENALIZED_EXIT_LENGTH
-//            total_at_start = state.latest_slashed_balances[(epoch_index + 1) % LATEST_PENALIZED_EXIT_LENGTH]
-//            total_at_end = state.latest_slashed_balances[epoch_index]
-//            total_penalties = total_at_end - total_at_start
-//            penalty = get_effective_balance(state, index) * min(total_penalties * 3, total_balance) // total_balance
-//            state.validator_balances[index] -= penalty
-//
-//    def eligible(index):
-//        validator = state.validator_registry[index]
-//        if validator.slashed_epoch <= current_epoch:
-//            slashed_withdrawal_epochs = LATEST_PENALIZED_EXIT_LENGTH // 2
-//            return current_epoch >= validator.slashed_epoch + slashd_withdrawal_epochs
-//        else:
-//            return current_epoch >= validator.exit_epoch + MIN_VALIDATOR_WITHDRAWAL_DELAY
-//
-//    all_indices = list(range(len(state.validator_registry)))
-//    eligible_indices = filter(eligible, all_indices)
-//    # Sort in order of exit epoch, and validators that exit within the same epoch exit in order of validator index
-//    sorted_indices = sorted(eligible_indices, key=lambda index: state.validator_registry[index].exit_epoch)
-//    withdrawn_so_far = 0
-//    for index in sorted_indices:
-//        prepare_validator_for_withdrawal(state, index)
-//        withdrawn_so_far += 1
-//        if withdrawn_so_far >= MAX_EXIT_DEQUEUES_PER_EPOCH:
-//            break
-func ProcessPenaltiesAndExits(ctx context.Context, state *pb.BeaconState) *pb.BeaconState {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.ProcessPenaltiesAndExits")
+//     for index, validator in enumerate(state.validator_registry):
+//         if validator.slashed and current_epoch == validator.withdrawable_epoch - LATEST_SLASHED_EXIT_LENGTH // 2:
+//             epoch_index = current_epoch % LATEST_SLASHED_EXIT_LENGTH
+//             total_at_start = state.latest_slashed_balances[(epoch_index + 1) % LATEST_SLASHED_EXIT_LENGTH]
+//             total_at_end = state.latest_slashed_balances[epoch_index]
+//             total_penalties = total_at_end - total_at_start
+//             penalty = max(
+//                 get_effective_balance(state, index) * min(total_penalties * 3, total_balance) // total_balance,
+//                 get_effective_balance(state, index) // MIN_PENALTY_QUOTIENT
+//             )
+//             state.validator_balances[index] -= penalty
+func ProcessSlashings(ctx context.Context, state *pb.BeaconState) *pb.BeaconState {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.ProcessSlashings")
 	defer span.End()
 
 	currentEpoch := helpers.CurrentEpoch(state)
@@ -403,15 +383,54 @@ func ProcessPenaltiesAndExits(ctx context.Context, state *pb.BeaconState) *pb.Be
 			totalAtEnd := state.LatestSlashedBalances[slashedEpoch]
 			totalPenalties := totalAtStart - totalAtEnd
 
-			penaltyMultiplier := totalPenalties * 3
-			if totalBalance < penaltyMultiplier {
-				penaltyMultiplier = totalBalance
+			var penalty uint64
+			index := uint64(idx)
+			if totalPenalties*3 < totalBalance {
+				if helpers.EffectiveBalance(state, index)*totalPenalties*3/totalBalance > helpers.EffectiveBalance(state, index)/params.BeaconConfig().MinPenaltyQuotient {
+					penalty = helpers.EffectiveBalance(state, index) * totalPenalties * 3 / totalBalance
+				} else {
+					penalty = helpers.EffectiveBalance(state, index) / params.BeaconConfig().MinPenaltyQuotient
+				}
+			} else {
+				if helpers.EffectiveBalance(state, index)*totalBalance/totalBalance > helpers.EffectiveBalance(state, index)/params.BeaconConfig().MinPenaltyQuotient {
+					penalty = helpers.EffectiveBalance(state, index) * totalBalance / totalBalance
+				} else {
+					penalty = helpers.EffectiveBalance(state, index) / params.BeaconConfig().MinPenaltyQuotient
+				}
 			}
-			penalty := helpers.EffectiveBalance(state, uint64(idx)) *
-				penaltyMultiplier / totalBalance
 			state.ValidatorBalances[idx] -= penalty
 		}
 	}
+	return state
+}
+
+// ProcessExitQueue processes the exit queue.
+// Spec pseudocode definition:
+// def process_exit_queue(state: BeaconState) -> None:
+//     """
+//     Process the exit queue.
+//     Note that this function mutates ``state``.
+//     """
+//     def eligible(index):
+//         validator = state.validator_registry[index]
+//         # Filter out dequeued validators
+//         if validator.withdrawable_epoch != FAR_FUTURE_EPOCH:
+//             return False
+//         # Dequeue if the minimum amount of time has passed
+//         else:
+//             return get_current_epoch(state) >= validator.exit_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY
+//
+//     eligible_indices = filter(eligible, list(range(len(state.validator_registry))))
+//     # Sort in order of exit epoch, and validators that exit within the same epoch exit in order of validator index
+//     sorted_indices = sorted(eligible_indices, key=lambda index: state.validator_registry[index].exit_epoch)
+//     for dequeues, index in enumerate(sorted_indices):
+//         if dequeues >= MAX_EXIT_DEQUEUES_PER_EPOCH:
+//             break
+//         prepare_validator_for_withdrawal(state, index)
+func ProcessExitQueue(ctx context.Context, state *pb.BeaconState) *pb.BeaconState {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.ProcessExitQueue")
+	defer span.End()
+
 	allIndices := allValidatorsIndices(state)
 	var eligibleIndices []uint64
 	for _, idx := range allIndices {
@@ -460,19 +479,19 @@ func maxBalanceChurn(totalBalance uint64) uint64 {
 //
 // Spec pseudocode definition:
 // def eligible(index):
-//    validator = state.validator_registry[index]
-//    if validator.slashed_epoch <= current_epoch:
-//         slashed_withdrawal_epochs = LATEST_PENALIZED_EXIT_LENGTH // 2
-//        return current_epoch >= validator.slashed_epoch + slashd_withdrawal_epochs
-//    else:
-//        return current_epoch >= validator.exit_epoch + MIN_VALIDATOR_WITHDRAWAL_DELAY
+//     validator = state.validator_registry[index]
+//     # Filter out dequeued validators
+//     if validator.withdrawable_epoch != FAR_FUTURE_EPOCH:
+//         return False
+//     # Dequeue if the minimum amount of time has passed
+//     else:
+//         return get_current_epoch(state) >= validator.exit_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY
 func eligibleToExit(state *pb.BeaconState, idx uint64) bool {
 	currentEpoch := helpers.CurrentEpoch(state)
 	validator := state.ValidatorRegistry[idx]
 
-	if validator.SlashedEpoch <= currentEpoch {
-		slashedWithdrawalEpochs := params.BeaconConfig().LatestSlashedExitLength / 2
-		return currentEpoch >= validator.SlashedEpoch+slashedWithdrawalEpochs
+	if validator.WithdrawalEpoch != params.BeaconConfig().FarFutureEpoch {
+		return false
 	}
 	return currentEpoch >= validator.ExitEpoch+params.BeaconConfig().MinValidatorWithdrawalDelay
 }

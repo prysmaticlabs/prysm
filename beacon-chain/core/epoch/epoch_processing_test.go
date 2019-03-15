@@ -416,47 +416,6 @@ func TestProcessPartialValidatorRegistry_CorrectShufflingEpoch(t *testing.T) {
 	}
 }
 
-func TestProcessSlashings_ProcessesSlashings(t *testing.T) {
-	state := &pb.BeaconState{
-		Slot: 1,
-		ValidatorBalances: []uint64{
-			params.BeaconConfig().EjectionBalance + 1,
-			params.BeaconConfig().EjectionBalance * 2,
-			params.BeaconConfig().EjectionBalance * 4},
-		LatestSlashedBalances: []uint64{32, 16},
-		ValidatorRegistry: []*pb.Validator{
-			{ActivationEpoch: 0,
-				ExitEpoch:    params.BeaconConfig().FarFutureEpoch,
-				SlashedEpoch: params.BeaconConfig().FarFutureEpoch},
-			{ActivationEpoch: 0,
-				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-				SlashedEpoch:    0,
-				WithdrawalEpoch: params.BeaconConfig().LatestSlashedExitLength},
-			{ActivationEpoch: 0,
-				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-				SlashedEpoch:    0,
-				WithdrawalEpoch: params.BeaconConfig().LatestSlashedExitLength / 2},
-		},
-	}
-
-	state, err := ProcessSlashings(context.Background(), state)
-	if err != nil {
-		t.Fatalf("Could not execute ProcessSlashings: %v", err)
-	}
-
-	if state.ValidatorBalances[0] !=
-		params.BeaconConfig().EjectionBalance+1 {
-		t.Errorf("Unslashed validator was penalized")
-	}
-	if state.ValidatorBalances[1] != params.BeaconConfig().EjectionBalance*2 {
-		t.Errorf("Slashed validator penalized when WithdrawalEpoch not reached")
-	}
-	if state.ValidatorBalances[2] >= params.BeaconConfig().EjectionBalance*4 {
-		t.Errorf("Slashed validator was not penalized")
-	}
-
-}
-
 func TestCleanupAttestations_RemovesFromLastEpoch(t *testing.T) {
 	if params.BeaconConfig().SlotsPerEpoch != 64 {
 		t.Errorf("SlotsPerEpoch should be 64 for these tests to pass")

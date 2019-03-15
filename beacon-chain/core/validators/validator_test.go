@@ -419,23 +419,23 @@ func TestSlashValidator_AlreadyWithdrawn(t *testing.T) {
 	}
 }
 
-func TestProcessPenaltiesExits_NothingHappened(t *testing.T) {
+func TestProcessSlashings_NothingHappened(t *testing.T) {
 	state := &pb.BeaconState{
 		ValidatorBalances: []uint64{params.BeaconConfig().MaxDepositAmount},
 		ValidatorRegistry: []*pb.Validator{
 			{ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 		},
 	}
-	if ProcessPenaltiesAndExits(context.Background(), state).ValidatorBalances[0] !=
+	newState := ProcessSlashings(context.Background(), state)
+	if newState.ValidatorBalances[0] !=
 		params.BeaconConfig().MaxDepositAmount {
 		t.Errorf("wanted validator balance %d, got %d",
 			params.BeaconConfig().MaxDepositAmount,
-			ProcessPenaltiesAndExits(context.Background(), state).ValidatorBalances[0])
+			newState.ValidatorBalances[0])
 	}
 }
 
-func TestProcessPenaltiesExits_ValidatorSlashed(t *testing.T) {
-
+func TestProcessSlashings_ValidatorSlashed(t *testing.T) {
 	latestSlashedExits := make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
 	for i := 0; i < len(latestSlashedExits); i++ {
 		latestSlashedExits[i] = uint64(i) * params.BeaconConfig().MaxDepositAmount
@@ -450,11 +450,9 @@ func TestProcessPenaltiesExits_ValidatorSlashed(t *testing.T) {
 		},
 	}
 
-	penalty := helpers.EffectiveBalance(state, 0) *
-		helpers.EffectiveBalance(state, 0) /
-		params.BeaconConfig().MaxDepositAmount
+	penalty := helpers.EffectiveBalance(state, 0) / params.BeaconConfig().MinPenaltyQuotient
 
-	newState := ProcessPenaltiesAndExits(context.Background(), state)
+	newState := ProcessSlashings(context.Background(), state)
 	if newState.ValidatorBalances[0] != params.BeaconConfig().MaxDepositAmount-penalty {
 		t.Errorf("wanted validator balance %d, got %d",
 			params.BeaconConfig().MaxDepositAmount-penalty,
