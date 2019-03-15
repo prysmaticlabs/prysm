@@ -383,7 +383,6 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 
 	// Process validator registry.
 	state = e.ProcessPrevSlotShardSeed(state)
-	// state = v.ProcessPenaltiesAndExits(ctx, state)
 	state = v.ProcessSlashings(ctx, state)
 	state = v.ProcessExitQueue(ctx, state)
 	if e.CanProcessValidatorRegistry(ctx, state) {

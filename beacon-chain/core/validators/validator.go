@@ -385,17 +385,19 @@ func ProcessSlashings(ctx context.Context, state *pb.BeaconState) *pb.BeaconStat
 
 			var penalty uint64
 			index := uint64(idx)
-			if totalPenalties*3 < totalBalance {
-				if helpers.EffectiveBalance(state, index)*totalPenalties*3/totalBalance > helpers.EffectiveBalance(state, index)/params.BeaconConfig().MinPenaltyQuotient {
-					penalty = helpers.EffectiveBalance(state, index) * totalPenalties * 3 / totalBalance
+            effectiveBalance := helpers.EffectiveBalance(state, index)
+            minPenaltyQuotient := params.BeaconConfig().MinPenaltyQuotient
+            if totalPenalties*3 < totalBalance {
+				if effectiveBalance*totalPenalties*3/totalBalance > effectiveBalance/minPenaltyQuotient {
+					penalty = effectiveBalance * totalPenalties * 3 / totalBalance
 				} else {
-					penalty = helpers.EffectiveBalance(state, index) / params.BeaconConfig().MinPenaltyQuotient
+					penalty = effectiveBalance / minPenaltyQuotient
 				}
 			} else {
-				if helpers.EffectiveBalance(state, index)*totalBalance/totalBalance > helpers.EffectiveBalance(state, index)/params.BeaconConfig().MinPenaltyQuotient {
-					penalty = helpers.EffectiveBalance(state, index) * totalBalance / totalBalance
+				if effectiveBalance*totalBalance/totalBalance > effectiveBalance/minPenaltyQuotient {
+					penalty = effectiveBalance * totalBalance / totalBalance
 				} else {
-					penalty = helpers.EffectiveBalance(state, index) / params.BeaconConfig().MinPenaltyQuotient
+					penalty = effectiveBalance / minPenaltyQuotient
 				}
 			}
 			state.ValidatorBalances[idx] -= penalty
