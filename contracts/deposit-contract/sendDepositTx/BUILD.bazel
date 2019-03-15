@@ -7,8 +7,8 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//contracts/deposit-contract:go_default_library",
-        "//proto/beacon/p2p/v1:go_default_library",
         "//shared/keystore:go_default_library",
+        "//shared/params:go_default_library",
         "//shared/ssz:go_default_library",
         "//shared/version:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
