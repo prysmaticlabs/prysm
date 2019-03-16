@@ -76,7 +76,7 @@ func TestBroadcast_OK(t *testing.T) {
 	}
 
 	msg := &shardpb.CollationBodyRequest{}
-	s.Broadcast(msg)
+	s.Broadcast(context.Background(), msg)
 
 	// TODO(543): test that topic was published
 }

@@ -35,7 +35,7 @@ func (mp *mockP2P) Subscribe(msg proto.Message, channel chan p2p.Message) event.
 	return new(event.Feed).Subscribe(channel)
 }
 
-func (mp *mockP2P) Broadcast(msg proto.Message) {}
+func (mp *mockP2P) Broadcast(ctx context.Context, msg proto.Message) {}
 
 func (mp *mockP2P) Send(ctx context.Context, msg proto.Message, peerID peer.ID) error {
 	return nil
@@ -691,7 +691,7 @@ func TestHandleAttReq_Ok(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash attestation: %v", err)
 	}
-	if err := db.SaveAttestation(att); err != nil {
+	if err := db.SaveAttestation(context.Background(), att); err != nil {
 		t.Fatalf("Could not save attestation: %v", err)
 	}
 
@@ -734,7 +734,7 @@ func TestHandleUnseenAttsReq_Ok(t *testing.T) {
 	att := &pb.Attestation{
 		AggregationBitfield: []byte{'D', 'E', 'F'},
 	}
-	if err := db.SaveAttestation(att); err != nil {
+	if err := db.SaveAttestation(context.Background(), att); err != nil {
 		t.Fatalf("Could not save attestation: %v", err)
 	}
 

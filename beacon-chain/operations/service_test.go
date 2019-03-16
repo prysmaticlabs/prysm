@@ -142,7 +142,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 				Shard: uint64(i),
 			},
 		}
-		if err := service.beaconDB.SaveAttestation(origAttestations[i]); err != nil {
+		if err := service.beaconDB.SaveAttestation(context.Background(), origAttestations[i]); err != nil {
 			t.Fatalf("Failed to save attestation: %v", err)
 		}
 	}
@@ -170,7 +170,7 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 				Shard: uint64(i),
 			},
 		}
-		if err := s.beaconDB.SaveAttestation(attestations[i]); err != nil {
+		if err := s.beaconDB.SaveAttestation(context.Background(), attestations[i]); err != nil {
 			t.Fatalf("Failed to save attestation: %v", err)
 		}
 	}
@@ -208,7 +208,7 @@ func TestCleanUpAttestations_OlderThanOneEpoch(t *testing.T) {
 				Shard: uint64(i),
 			},
 		}
-		if err := s.beaconDB.SaveAttestation(attestations[i]); err != nil {
+		if err := s.beaconDB.SaveAttestation(context.Background(), attestations[i]); err != nil {
 			t.Fatalf("Failed to save attestation: %v", err)
 		}
 	}
@@ -242,7 +242,7 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 				Shard: uint64(i),
 			},
 		}
-		if err := s.beaconDB.SaveAttestation(attestations[i]); err != nil {
+		if err := s.beaconDB.SaveAttestation(context.Background(), attestations[i]); err != nil {
 			t.Fatalf("Failed to save attestation: %v", err)
 		}
 	}

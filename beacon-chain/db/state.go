@@ -123,13 +123,6 @@ func (db *BeaconDB) SaveState(beaconState *pb.BeaconState) error {
 				return err
 			}
 			if prevStatePb.Slot >= beaconState.Slot {
-				log.WithField(
-					"beaconState",
-					proto.MarshalTextString(beaconState),
-				).WithField(
-					"prevState",
-					proto.MarshalTextString(prevStatePb),
-				).Error("State update failed")
 				return errors.New("current saved state has a slot number greater or equal to the state attempted to be saved")
 			}
 		}
