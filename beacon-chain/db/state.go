@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"runtime/debug"
 	"time"
 
 	"github.com/boltdb/bolt"
@@ -81,9 +80,6 @@ func (db *BeaconDB) State(ctx context.Context) (*pb.BeaconState, error) {
 	db.stateLock.RLock()
 	defer db.stateLock.RUnlock()
 
-	log.Warn("Accessing state")
-	debug.PrintStack()
-
 	if db.currentState != nil {
 		if cachedState, ok := proto.Clone(db.currentState).(*pb.BeaconState); ok {
 			return cachedState, nil
@@ -111,9 +107,6 @@ func (db *BeaconDB) SaveState(beaconState *pb.BeaconState) error {
 	db.stateLock.Lock()
 	defer db.stateLock.Unlock()
 
-	log.Warn("Saving state")
-	debug.PrintStack()
-
 	// Clone to prevent mutations of the cached copy
 	currentState, ok := proto.Clone(beaconState).(*pb.BeaconState)
 	if !ok {
@@ -130,6 +123,13 @@ func (db *BeaconDB) SaveState(beaconState *pb.BeaconState) error {
 				return err
 			}
 			if prevStatePb.Slot >= beaconState.Slot {
+				log.WithField(
+					"beaconState",
+					proto.MarshalTextString(beaconState),
+				).WithField(
+					"prevState",
+					proto.MarshalTextString(prevStatePb),
+				).Error("State update failed")
 				return errors.New("current saved state has a slot number greater or equal to the state attempted to be saved")
 			}
 		}

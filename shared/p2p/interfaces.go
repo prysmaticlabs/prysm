@@ -1,6 +1,8 @@
 package p2p
 
 import (
+	"context"
+
 	"github.com/gogo/protobuf/proto"
 )
 
@@ -8,5 +10,5 @@ import (
 // for testing or when the calling code only needs access to the broadcast
 // method.
 type Broadcaster interface {
-	Broadcast(proto.Message)
+	Broadcast(context.Context, proto.Message)
 }

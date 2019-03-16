@@ -65,7 +65,7 @@ func DefaultConfig() *Config {
 type p2pAPI interface {
 	p2p.Sender
 	Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription
-	Broadcast(msg proto.Message)
+	Broadcast(ctx context.Context, msg proto.Message)
 }
 
 type chainService interface {
@@ -459,13 +459,13 @@ func (s *InitialSync) requestNextBlockBySlot(ctx context.Context, slotNumber uin
 		s.processBlock(ctx, block, p2p.AnyPeer)
 		return
 	}
-	s.p2p.Broadcast(&pb.BeaconBlockRequestBySlotNumber{SlotNumber: slotNumber})
+	s.p2p.Broadcast(ctx, &pb.BeaconBlockRequestBySlotNumber{SlotNumber: slotNumber})
 }
 
 // requestBatchedBlocks sends out a request for multiple blocks till a
 // specified bound slot number.
 func (s *InitialSync) requestBatchedBlocks(startSlot uint64, endSlot uint64) {
-	_, span := trace.StartSpan(context.Background(), "beacon-chain.sync.initial-sync.requestBatchedBlocks")
+	ctx, span := trace.StartSpan(context.Background(), "beacon-chain.sync.initial-sync.requestBatchedBlocks")
 	defer span.End()
 	sentBatchedBlockReq.Inc()
 	if startSlot > endSlot {
@@ -477,7 +477,7 @@ func (s *InitialSync) requestBatchedBlocks(startSlot uint64, endSlot uint64) {
 		endSlot = startSlot + blockLimit
 	}
 	log.Debugf("Requesting batched blocks from slot %d to %d", startSlot, endSlot)
-	s.p2p.Broadcast(&pb.BatchedBeaconBlockRequest{
+	s.p2p.Broadcast(ctx, &pb.BatchedBeaconBlockRequest{
 		StartSlot: startSlot,
 		EndSlot:   endSlot,
 	})

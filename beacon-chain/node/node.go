@@ -204,6 +204,10 @@ func (b *BeaconNode) registerBlockchainService(_ *cli.Context) error {
 	if err := b.services.FetchService(&attsService); err != nil {
 		return err
 	}
+	var p2pService *p2p.Server
+	if err := b.services.FetchService(&p2pService); err != nil {
+		return err
+	}
 
 	blockchainService, err := blockchain.NewChainService(context.Background(), &blockchain.Config{
 		BeaconDB:       b.db,
@@ -211,6 +215,7 @@ func (b *BeaconNode) registerBlockchainService(_ *cli.Context) error {
 		OpsPoolService: opsService,
 		AttsService:    attsService,
 		BeaconBlockBuf: 10,
+		P2p:            p2pService,
 	})
 	if err != nil {
 		return fmt.Errorf("could not register blockchain service: %v", err)

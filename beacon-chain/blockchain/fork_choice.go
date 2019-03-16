@@ -35,13 +35,18 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 	if err := c.saveFinalizedState(computedState); err != nil {
 		log.Errorf("Could not save new finalized state: %v", err)
 	}
-	if c.canonicalBlockFeed.Send(&pb.BeaconBlockAnnounce{
+	c.p2p.Broadcast(ctx, &pb.BeaconBlockAnnounce{
 		Hash:       h[:],
 		SlotNumber: block.Slot,
-	}) == 0 {
-		log.Error("Sent canonical block to no subscribers")
-	}
+	})
 	return nil
+	//	if c.canonicalBlockFeed.Send(&pb.BeaconBlockAnnounce{
+	//		Hash:       h[:],
+	//		SlotNumber: block.Slot,
+	//	}) == 0 {
+	//		log.Error("Sent canonical block to no subscribers")
+	//	}
+	//	return nil
 }
 
 // lmdGhost applies the Latest Message Driven, Greediest Heaviest Observed Sub-Tree
