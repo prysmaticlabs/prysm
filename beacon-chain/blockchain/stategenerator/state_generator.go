@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
 // GenerateStateFromSlot generates state from the last finalized epoch till the specified block.
@@ -37,54 +36,34 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, block *pb.Beac
 		return nil, fmt.Errorf("unable to look up block ancestors %v", err)
 	}
 
-	for i := len(ancestorSet); i > 0; i-- {
-		if v.Slot != fState.Slot+1 {
-			fState, err = state.ExecuteStateTransition(
-				ctx,
-				fState,
-				nil,
-				finalizedBlockRoot,
-				true, /* sig verify */
-			)
-			if err != nil {
-				return nil, fmt.Errorf("could not execute state transition %v", err)
-			}
-		}
-	}
-
 	logrus.Errorf("Start: Current slot %d and Finalized Epoch %d", fState.Slot, fState.FinalizedEpoch)
 
-	// run N state transitions to generate state
-	for i := fState.Slot + 1; i <= slot; i++ {
-		exists, blk, err := db.HasBlockBySlot(i)
-		if !exists {
+	for i := len(ancestorSet); i > 0; i-- {
+		block := ancestorSet[i-1]
+
+		// Running state transitions for skipped slots.
+		for block.Slot != fState.Slot+1 {
 			fState, err = state.ExecuteStateTransition(
 				ctx,
 				fState,
 				nil,
-				finalizedBlockRoot,
+				bytesutil.ToBytes32(block.ParentRootHash32),
 				true, /* sig verify */
 			)
 			if err != nil {
 				return nil, fmt.Errorf("could not execute state transition %v", err)
 			}
-			continue
 		}
 
 		fState, err = state.ExecuteStateTransition(
 			ctx,
 			fState,
-			blk,
-			finalizedBlockRoot,
+			block,
+			bytesutil.ToBytes32(block.ParentRootHash32),
 			true, /* sig verify */
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not execute state transition %v", err)
-		}
-
-		finalizedBlockRoot, err = hashutil.HashBeaconBlock(blk)
-		if err != nil {
-			return nil, fmt.Errorf("could not tree hash parent block: %v", err)
 		}
 	}
 

@@ -7,7 +7,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestGenerateState_OK(t *testing.T) {
@@ -23,7 +22,6 @@ func TestGenerateState_OK(t *testing.T) {
 	defer bd.Shutdown()
 	defer db.TeardownDB(beaconDb)
 
-	genesisSlot := params.BeaconConfig().GenesisSlot
 	slotLimit := uint64(30)
 
 	// Run the simulated chain for 30 slots, to get a state that we can save as finalized.
@@ -58,8 +56,9 @@ func TestGenerateState_OK(t *testing.T) {
 		t.Fatalf("Unable to save state in chain %v", err)
 	}
 
-	slotToGenerate := genesisSlot + 2*(slotLimit)
-	newState, err := GenerateStateFromSlot(context.Background(), beaconDb, slotToGenerate)
+	inMemBlocks := bd.InMemoryBlocks()
+	blockToGenerateTill := inMemBlocks[len(inMemBlocks)-1]
+	newState, err := stategenerator.GenerateStateFromBlock(context.Background(), beaconDb, blockToGenerateTill)
 	if err != nil {
 		t.Fatalf("Unable to generate new state from previous finalized state %v", err)
 	}
@@ -87,7 +86,6 @@ func TestGenerateState_WithNilBlocksOK(t *testing.T) {
 	defer bd.Shutdown()
 	defer db.TeardownDB(beaconDb)
 
-	genesisSlot := params.BeaconConfig().GenesisSlot
 	slotLimit := uint64(30)
 
 	// Run the simulated chain for 30 slots, to get a state that we can save as finalized.
@@ -130,8 +128,9 @@ func TestGenerateState_WithNilBlocksOK(t *testing.T) {
 		t.Fatalf("Unable to save state in chain %v", err)
 	}
 
-	slotToGenerate := genesisSlot + 2*(slotLimit)
-	newState, err := GenerateStateFromSlot(context.Background(), beaconDb, slotToGenerate)
+	inMemBlocks := bd.InMemoryBlocks()
+	blockToGenerateTill := inMemBlocks[len(inMemBlocks)-1]
+	newState, err := stategenerator.GenerateStateFromBlock(context.Background(), beaconDb, blockToGenerateTill)
 	if err != nil {
 		t.Fatalf("Unable to generate new state from previous finalized state %v", err)
 	}
