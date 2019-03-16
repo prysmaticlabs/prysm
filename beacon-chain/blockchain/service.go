@@ -188,10 +188,12 @@ func (c *ChainService) StateInitializedFeed() *event.Feed {
 
 // ChainHeadRoot returns the hash root of the last beacon block processed by the
 // block chain service.
-func (c *ChainService) ChainHeadRoot(state *pb.BeaconState) [32]byte {
-	lengthOfRoots := len(state.LatestBlockRootHash32S)
-	root := bytesutil.ToBytes32(state.LatestBlockRootHash32S[lengthOfRoots-1])
-	return root
+func (c *ChainService) ChainHeadRoot(state *pb.BeaconState) ([32]byte, error) {
+	root, err := b.BlockRoot(state, state.Slot-1)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	return bytesutil.ToBytes32(root), nil
 }
 
 // doesPoWBlockExist checks if the referenced PoW block exists.

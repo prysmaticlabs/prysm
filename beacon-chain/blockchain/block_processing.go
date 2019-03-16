@@ -62,7 +62,10 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	}
 
 	// Retrieve the last processed beacon block's hash root.
-	headRoot := c.ChainHeadRoot(beaconState)
+	headRoot, err := c.ChainHeadRoot(beaconState)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get chain head root %v", err)
+	}
 
 	log.WithField("slotNumber", block.Slot-params.BeaconConfig().GenesisSlot).Info(
 		"Executing state transition")
