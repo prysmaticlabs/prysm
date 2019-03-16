@@ -59,6 +59,7 @@ go_test(
     embed = [":go_default_library"],
     tags = ["block-network"],
     deps = [
+        "//proto/beacon/p2p/v1:go_default_library",
         "//proto/sharding/p2p/v1:go_default_library",
         "//proto/testing:go_default_library",
         "//shared:go_default_library",
