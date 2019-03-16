@@ -184,7 +184,7 @@ func (a *Service) updateLatestAttestation(ctx context.Context, attestation *pb.A
 		return err
 	}
 
-	// Find committee for shard
+	// Find committee for shard.
 	for _, v := range committees {
 		if v.Shard == attestation.Data.Shard {
 			committee = v.Committee
@@ -210,7 +210,7 @@ func (a *Service) updateLatestAttestation(ctx context.Context, attestation *pb.A
 		}
 
 		// If the attestation came from this attester. We use the slot committee to find the
-		// validator's actual index
+		// validator's actual index.
 		pubkey := bytesutil.ToBytes48(state.ValidatorRegistry[committee[i]].Pubkey)
 		newAttestationSlot := attestation.Data.Slot
 		currentAttestationSlot := uint64(0)
