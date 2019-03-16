@@ -41,6 +41,9 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, block *pb.Beac
 	for i := len(ancestorSet); i > 0; i-- {
 		block := ancestorSet[i-1]
 
+		if block.Slot <= fState.Slot {
+			continue
+		}
 		// Running state transitions for skipped slots.
 		for block.Slot != fState.Slot+1 {
 			fState, err = state.ExecuteStateTransition(
