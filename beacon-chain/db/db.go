@@ -82,3 +82,11 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 
 	return db, err
 }
+
+// ClearDB removes the previously stored directory at the data directory.
+func ClearDB(dirPath string) error {
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		return nil
+	}
+	return os.RemoveAll(dirPath)
+}

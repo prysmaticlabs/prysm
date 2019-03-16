@@ -67,9 +67,9 @@ func TestBoundaryAttesterIndices_OK(t *testing.T) {
 
 	boundaryAttestations := []*pb.PendingAttestation{
 		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
-			AggregationBitfield: []byte{0x03}}, // returns indices 242
+			AggregationBitfield: []byte{0xC0}}, // returns indices 242
 		{Data: &pb.AttestationData{Slot: params.BeaconConfig().GenesisSlot},
-			AggregationBitfield: []byte{0x03}}, // returns indices 237,224,2
+			AggregationBitfield: []byte{0xC0}}, // returns indices 237,224,2
 	}
 
 	attesterIndices, err := ValidatorIndices(context.Background(), state, boundaryAttestations)
@@ -119,9 +119,9 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 		t.Fatalf("Could not execute AttestingValidatorIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(indices, []uint64{1117, 333}) {
+	if !reflect.DeepEqual(indices, []uint64{1141, 688}) {
 		t.Errorf("Could not get incorrect validator indices. Wanted: %v, got: %v",
-			[]uint64{1117, 333}, indices)
+			[]uint64{1141, 688}, indices)
 	}
 }
 
