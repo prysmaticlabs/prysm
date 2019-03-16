@@ -20,12 +20,10 @@ var log = logrus.WithField("prefix", "beacondb")
 // For example, instead of defining get, put, remove
 // This defines methods such as getBlock, saveBlocksAndAttestations, etc.
 type BeaconDB struct {
-	stateLock           sync.RWMutex
-	stateLocked         bool
-	stateProcessingLock sync.RWMutex
-	currentState        *pb.BeaconState
-	db                  *bolt.DB
-	DatabasePath        string
+	stateLock    sync.RWMutex
+	currentState *pb.BeaconState
+	db           *bolt.DB
+	DatabasePath string
 
 	// Beacon chain deposits in memory.
 	pendingDeposits []*depositContainer
