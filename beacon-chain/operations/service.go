@@ -148,6 +148,7 @@ func (s *Service) saveOperations() {
 	}
 }
 
+// HandleValidatorExits processes a validator exit operation.
 func (s *Service) HandleValidatorExits(ctx context.Context, message proto.Message) error {
 	ctx, span := trace.StartSpan(ctx, "operations.HandleValidatorExits")
 	defer span.End()
@@ -164,6 +165,7 @@ func (s *Service) HandleValidatorExits(ctx context.Context, message proto.Messag
 	return nil
 }
 
+// HandleAttestations processes a received attestation message.
 func (s *Service) HandleAttestations(ctx context.Context, message proto.Message) error {
 	ctx, span := trace.StartSpan(ctx, "operations.HandleAttestations")
 	defer span.End()
