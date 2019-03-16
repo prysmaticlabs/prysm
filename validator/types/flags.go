@@ -11,11 +11,6 @@ var (
 		Name:  "demo-config",
 		Usage: "Run the validator using demo paramteres (i.e. shorter cycles, fewer shards and committees)",
 	}
-	// VerifyAttestationSigsFlag determines whether to verify signatures for attestations.
-	VerifyAttestationSigsFlag = cli.BoolFlag{
-		Name:  "enable-attestation-signature-verification",
-		Usage: "Verify signatures for attestations (testing)",
-	}
 	// BeaconRPCProviderFlag defines a beacon node RPC endpoint.
 	BeaconRPCProviderFlag = cli.StringFlag{
 		Name:  "beacon-rpc-provider",
