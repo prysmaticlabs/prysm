@@ -21,7 +21,7 @@ var (
 	// ActivatedValidators is a mapping that tracks epoch to activated validators indexes.
 	// Where key is epoch, value is a list of activated validator indexes.
 	ActivatedValidators = make(map[uint64][]uint64)
-	// ExitedValidators is a mapping that tracks epoch to excited validators indexes.
+	// ExitedValidators is a mapping that tracks epoch to exited validators indexes.
 	// Where key is epoch, value is a list of exited validator indexes.
 	ExitedValidators = make(map[uint64][]uint64)
 )
