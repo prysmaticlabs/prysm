@@ -131,9 +131,12 @@ func (f *faultyClient) LatestBlockHash() common.Hash {
 	return common.BytesToHash([]byte{'A'})
 }
 
-type mockBroadcaster struct{}
+type mockBroadcaster struct {
+	broadcastCalled bool
+}
 
 func (mb *mockBroadcaster) Broadcast(_ context.Context, _ proto.Message) {
+	mb.broadcastCalled = true
 }
 
 var _ = p2p.Broadcaster(&mockBroadcaster{})
