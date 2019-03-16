@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -25,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/sirupsen/logrus"
@@ -128,6 +130,14 @@ func (f *faultyClient) CodeAt(ctx context.Context, account common.Address, block
 func (f *faultyClient) LatestBlockHash() common.Hash {
 	return common.BytesToHash([]byte{'A'})
 }
+
+type mockBroadcaster struct{}
+
+func (mb *mockBroadcaster) Broadcast(_ context.Context, _ proto.Message) {
+}
+
+var _ = p2p.Broadcaster(&mockBroadcaster{})
+
 func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.SecretKey) {
 	privKeys := make([]*bls.SecretKey, numDeposits)
 	deposits := make([]*pb.Deposit, numDeposits)
@@ -224,6 +234,7 @@ func setupBeaconChain(t *testing.T, faultyPoWClient bool, beaconDB *db.BeaconDB,
 		OpsPoolService: &mockOperationService{},
 		EnablePOWChain: enablePOWChain,
 		AttsService:    attsService,
+		P2p:            &mockBroadcaster{},
 	}
 	if err != nil {
 		t.Fatalf("could not register blockchain service: %v", err)
