@@ -28,7 +28,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	var validators []*pb.Validator
 	for i := 0; i < 64; i++ {
 		validators = append(validators, &pb.Validator{
-			Pubkey:          []byte{'A'},
+			Pubkey:          []byte{byte(i)},
 			ActivationEpoch: 0,
 			ExitEpoch:       10,
 		})
@@ -52,7 +52,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	if err := service.updateLatestAttestation(ctx, attestation); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
-	pubkey := bytesutil.ToBytes48([]byte{'A'})
+	pubkey := bytesutil.ToBytes48([]byte{byte(35)})
 	if service.Store[pubkey].Data.Slot !=
 		attestation.Data.Slot {
 		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",
@@ -79,7 +79,7 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 	var validators []*pb.Validator
 	for i := 0; i < 64; i++ {
 		validators = append(validators, &pb.Validator{
-			Pubkey:          []byte{'A'},
+			Pubkey:          []byte{byte(i)},
 			ActivationEpoch: 0,
 			ExitEpoch:       10,
 		})
