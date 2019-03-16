@@ -4,13 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
-	"github.com/sirupsen/logrus"
-
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/sirupsen/logrus"
 )
 
 // GenerateStateFromSlot generates state from the last finalized epoch till the specified block.
@@ -28,9 +27,12 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, block *pb.Beac
 		)
 	}
 
-	lengthOfRoots := len(fState.LatestBlockRootHash32S)
-	finalizedBlockRoot := bytesutil.ToBytes32(fState.LatestBlockRootHash32S[lengthOfRoots-1])
+	root, err := b.BlockRoot(fState, fState.Slot-1)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get block root %v", err)
+	}
 
+	finalizedBlockRoot := bytesutil.ToBytes32(root)
 	ancestorSet, err := lookUpFromFinalizedBlock(ctx, db, block, finalizedBlockRoot)
 	if err != nil {
 		return nil, fmt.Errorf("unable to look up block ancestors %v", err)
