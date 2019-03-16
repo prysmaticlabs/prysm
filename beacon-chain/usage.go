@@ -80,6 +80,10 @@ var appHelpFlagGroups = []flagGroup{
 			utils.ChainStartDelay,
 		},
 	},
+	{
+		Name:  "features",
+		Flags: []cli.Flag{},
+	},
 }
 
 func init() {
