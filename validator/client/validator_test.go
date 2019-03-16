@@ -283,6 +283,7 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 	v := validator{
 		key:             validatorKey,
 		validatorClient: client,
+		assignment:      &pb.CommitteeAssignmentResponse{Shard: 1},
 	}
 
 	expected := errors.New("bad")
@@ -294,6 +295,9 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 
 	if err := v.UpdateAssignments(context.Background(), params.BeaconConfig().SlotsPerEpoch); err != expected {
 		t.Errorf("Bad error; want=%v got=%v", expected, err)
+	}
+	if v.assignment != nil {
+		t.Error("Assignments should have been cleared on failure")
 	}
 }
 

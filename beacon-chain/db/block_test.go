@@ -328,7 +328,7 @@ func TestFinalizedBlock_CanSaveRetrieve(t *testing.T) {
 		Slot: blkSlot,
 	}
 
-	if err := db.SaveFinalizedBlock(block1); err != nil {
+	if err := db.saveFinalizedBlock(block1); err != nil {
 		t.Fatalf("could not save finalized block: %v", err)
 	}
 
