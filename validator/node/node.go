@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
-	"github.com/prysmaticlabs/prysm/shared/featureflags"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
 	"github.com/prysmaticlabs/prysm/shared/tracing"
@@ -59,7 +59,7 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 		params.UseDemoBeaconConfig()
 	}
 
-	featureflags.ConfigureValidatorFeatures(ctx)
+	featureconfig.ConfigureBeaconFeatures(ctx)
 
 	if err := ValidatorClient.registerPrometheusService(ctx); err != nil {
 		return nil, err

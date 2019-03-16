@@ -1,4 +1,4 @@
-package featureflags
+package featureconfig
 
 import (
 	"testing"
