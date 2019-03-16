@@ -364,7 +364,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 		}
 	}
 
-	_, sendBlockSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendBlock")
+	ctx, sendBlockSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendBlock")
 	log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Sending newly received block to chain service")
 	beaconState, err = rs.chainService.ReceiveBlock(ctx, block)
 	if err != nil {
