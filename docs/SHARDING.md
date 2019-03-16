@@ -64,7 +64,7 @@ Our current work is focused on creating a localized version of a beacon chain wi
 -   A minimal, **beacon chain node** that will interact with a main chain geth node via JSON-RPC
 -   A **Validator Registration Contract** deployed on the main chain where a beacon node can read logs to check for registered validators
 -   A minimal, gossipsub shardp2p network
--   Ability for proposers/attesters/attesters to be selected by the beacon chain's randomness into committees that work on specific shards
+-   Ability for proposers/attesters to be selected by the beacon chain's randomness into committees that work on specific shards
 -   Ability to serialize blobs into collations on shard chains and advance the growth of the shard chains
 
 
@@ -90,7 +90,7 @@ ETA: To Be determined
 
 # Beacon Chain and Sharding Alpha Implementation
 
-Prysmatic Labs will begin by focusing its implementation entirely on the **Ruby Release** from our roadmap. We plan on being as pragmatic as possible to create something that can be locally run by any developer as soon as possible. Our initial deliverable will center around a command line tool that will serve as an entrypoint into a beacon chain node that allows for users to become a attester, proposer, and to manage the growth of shard chains.
+Prysmatic Labs will begin by focusing its implementation entirely on the **Ruby Release** from our roadmap. We plan on being as pragmatic as possible to create something that can be locally run by any developer as soon as possible. Our initial deliverable will center around a command line tool that will serve as an entrypoint into a beacon chain node that allows users to become attesters/proposers, and to manage the growth of shard chains.
 
 Here is a reference spec explaining how our initial system will function:
 
@@ -104,23 +104,23 @@ Our implementation revolves around the following core components:
 
 A basic, end-to-end example of the system is as follows:
 
-1.  _**User deposits 32 ETH into a Validator Registration Contract on the main chain:**_ the beacon chain listens for the logs in the main chain to queue that validator into the beacon chain chain's main event loop
+1.  _**User deposits 32 ETH into a Validator Registration Contract on the main chain:**_ the beacon chain listens for the logs in the main chain to queue that validator into the beacon chain's main event loop
 
 2.  _**Registered validator begins PoS process to propose blocks:**_ the PoS validator has the resposibility to participate in the addition of new blocks to the beacon chain
 
-3.  _**RANDAO mechanism selects committees of proposers/attesters/attesters for shards:**_ the beacon chain node will use its RANDAO mechanism to select committees of proposers, attesters, and attesters that each have responsibilities within the sharding system. Refer to the [Full Casper Chain V2 Doc](https://ethresear.ch/t/convenience-link-to-full-casper-chain-v2-spec/2332) for extensive detail on the different fields in the state of the beacon chain related to sharding
+3.  _**RANDAO mechanism selects committees of proposers/attesters/attesters for shards:**_ the beacon chain node will use its RANDAO mechanism to select committees of proposers and attesters, each with their own responsibilities within the sharding system. Refer to the [Full Casper Chain V2 Doc](https://ethresear.ch/t/convenience-link-to-full-casper-chain-v2-spec/2332) for extensive detail on the different fields in the state of the beacon chain related to sharding
 
-4. _**Beacon Chain State Advances, Committees are Reshuffled:**_ upon completing responsibilities, the different actors of the sharding system are them reshuffled into new committees on different shards
+4. _**Beacon Chain State Advances, Committees are Reshuffled:**_ upon completing responsibilities, different actors of the sharding system are then reshuffled into new committees on different shards
 
 ## System Start and User Entrypoint
 
-Our Ruby Release requires users to start a local geth node running a localized, private blockchain to deploy the **Validator Registration Contract**. This will kickstart the entire beacon chain sync process and listen for registrations of validators in the main chain VRC. The beacon node begins to work by its main loop, which involves the following steps:
+Our Ruby Release requires users to start a local geth node running a localized, private blockchain to deploy the **Validator Registration Contract**. This will kickstart the entire beacon chain sync process and listen for registrations of validators in the main chain VRC. The beacon node starts its main loop, which involves the following steps:
 
 1.  _**Sync to the latest block header on the beacon chain:**_ the node will begin a sync process for the beacon chain
 
 2.  _**Assign the validator as a proposer/attester/attester based on RANDAO mechanism:**_ on incoming headers, the validator will interact with the SMC to check if the current user is an eligible attester for an upcoming period (only a few minutes notice)
 
-3.  _**Process shard cross-links:**_ once a attester is selected, he/she has to download subimtted collation headers for the shard in a certain period and check for their data availability
+3.  _**Process shard cross-links:**_ once an attester node is selected, it has to download subimtted collation headers for the shard in a certain period and check for their data availability
 
 5.  _**Reshuffle committees**_ the attester votes on the available collation header that came first in the submissions.
 
@@ -128,9 +128,9 @@ Our Ruby Release requires users to start a local geth node running a localized, 
 
 ## Attester Sampling
 
-The probability of being selected as a attester on a particular shard is being heavily researched in the latest ETHResearch discussions. As specified in the [Sharding FAQ](https://github.com/ethereum/wiki/wiki/Sharding-FAQ) by Vitalik, “if validators [collators] could choose, then attackers with small total stake could concentrate their stake onto one shard and attack it, thereby eliminating the system’s security.”
+The probability of being selected as an attester on a particular shard is being heavily researched in the latest ETHResearch discussions. As specified in the [Sharding FAQ](https://github.com/ethereum/wiki/wiki/Sharding-FAQ) by Vitalik, “if validators [collators] could choose, then attackers with small total stake could concentrate their stake onto one shard and attack it, thereby eliminating the system’s security.”
 
-The idea is that attesters should not be able to figure out which shard they will become a attester of and during which period they will be assigned with anything more than a few minutes notice.
+The idea is that attesters should not be able to figure out which shard they will become attesters of and during which period they will be assigned with anything more than a few minutes notice.
 
 Ideally, we want attesters to shuffle across shards very rapidly and through a source of pseudorandomness built in-protocol.
 
@@ -153,13 +153,13 @@ As an important aside, we’ll take a brief detour into the EVM and what we need
 
 So what exactly is the EVM? The EVM was purposely designed to be a stack based machine with memory-byte arrays and key-value stores that are kept on a trie
 
--   Every single keys and storage values are 32 bytes
+-   Every single key and storage value are 32 bytes
 -   There are 100 total opcodes in the EVM
 -   The EVM comes with a temporary memory byte-array and storage trie to hold persistent memory.
 
 Cryptographic operations are done using pre-compiled contracts. Aside from that, the EVM provides a bunch of blockchain access-level context that allows certain opcodes to fetch useful information from the external system. For example, LOG opcodes store useful information in the log bloom filter that can be synced with light clients. This can be used as a low-gas form of storage, since LOG does not modify the state.
 
-Additionally, the EVM contains a call-depth limit such that recursive invocations or chains of calls will eventually halt, preventing a drastic use of resources.
+Additionally, the EVM contains a call-depth limit such that recursive invocations or call chains will eventually halt, preventing a drastic use of resources.
 
 It is important to note that the merkle root of an Ethereum account is updated any time an `SSTORE` opcode is executed successfully by a program on the EVM that results in a key or value changing in the state merklix (merkle radix) tree.
 
@@ -169,7 +169,7 @@ How is this relevant to sharding? It is important to note the importance of cert
 
 ## Not Included in Ruby Release
 
-We will not be considering data availability proofs (part of the stateless client model) as part of the ruby release we will not be implementing them as it just yet as they are an area of active research.
+We will not be considering data availability proofs (part of the stateless client model) as part of the Ruby release, we will not be implementing them just yet as they are an area of active research.
 
 Additionally, we will be using simple blockhashes for randomness in committee selections instead of a full RANDAO mechanism.
 
@@ -199,14 +199,14 @@ Then, in the resolution, all participants are then to reveal their private keys,
 ## Torus-shaped Sharded P2P Network
 
 One recommendation is using a [Torus-shaped sharding network](https://commons.wikimedia.org/wiki/File:Toroidal_coord.png). In this paradigm, there would be a single network that all shards share rather than a network for each shard. Nodes would propagate messages to peers interested in neighboring shards. A node listening on shard 16 would relay messages for shards in range of 11 to 21 (i.e +/-5). Nodes that need to listen on multiple shards can quickly change shards to find peers that may relay necessary messages. A node could potentially have access to messages from all shards with only 10 distinct peers for a 100 shard network. At the same time, we're considering replacing [DEVp2p](https://github.com/ethereum/wiki/wiki/%C3%90%CE%9EVp2p-Wire-Protocol) with [libp2p](https://github.com/libp2p) framework, which is actively maintained, proven to work with IPFS, and comes with client libraries for Go and Javascript.
-Active research is on going for moving Ethereum fron DEVp2p to libp2p. We are looking into how to map shards to libp2p and how to balance flood/gossipsub progagation vs active connections. Here is the current work of [poc](https://github.com/mhchia/go-libp2p/tree/poc-testing/examples/minimal) on [gossiphub](https://github.com/libp2p/go-floodsub/pull/67/). It utilizies pubsub for propagating messages such as transactions, proposals and sharded collations.
+Active research is on going for moving Ethereum from DEVp2p to libp2p. We are looking into how to map shards to libp2p and how to balance flood/gossipsub progagation vs active connections. Here is the current work of [poc](https://github.com/mhchia/go-libp2p/tree/poc-testing/examples/minimal) on [gossiphub](https://github.com/libp2p/go-floodsub/pull/67/). It utilizies pubsub for propagating messages such as transactions, proposals and sharded collations.
 
 <https://ethresear.ch/t/torus-shaped-sharding-network/1720>
 
 
 ## Sparse Merkle Tree for State Storage
 
-With a sharded network comes sharded state storage. State sync today is difficult for clients today. While the blockchain data stored on disk might use~80gb for a fast sync, less than 5gb of that disk is state data while state sync accounts for the majority of time spent syncing. As the state grows, this issue will also grow. We imagine that it might be difficult to sync effectively when there are 100 shards and 100 different state tries. One recommendation from the Ethereum Research team outlines using [sparse merkle trees].(https://www.links.org/files/RevocationTransparency.pdf)
+With a sharded network comes sharded state storage. State sync today is difficult for clients. While the blockchain data stored on disk might use ~80gb for a fast sync, less than 5gb of that disk is state data while state sync accounts for the majority of time spent syncing. As the state grows, this issue will also grow. We imagine that it might be difficult to sync effectively when there are 100 shards and 100 different state tries. One recommendation from the Ethereum Research team outlines using [sparse merkle trees].(https://www.links.org/files/RevocationTransparency.pdf)
 
 <https://ethresear.ch/t/data-availability-proof-friendly-state-tree-transitions/1453>
 
