@@ -90,7 +90,7 @@ ETA: To Be determined
 
 # Beacon Chain and Sharding Alpha Implementation
 
-Prysmatic Labs will begin by focusing its implementation entirely on the **Ruby Release** from our roadmap. We plan on being as pragmatic as possible to create something that can be locally run by any developer as soon as possible. Our initial deliverable will center around a command line tool that will serve as an entrypoint into a beacon chain node that allows users to become attester/proposers, and to manage the growth of shard chains.
+Prysmatic Labs will begin by focusing its implementation entirely on the **Ruby Release** from our roadmap. We plan on being as pragmatic as possible to create something that can be locally run by any developer as soon as possible. Our initial deliverable will center around a command line tool that will serve as an entrypoint into a beacon chain node that allows users to become attesters/proposers, and to manage the growth of shard chains.
 
 Here is a reference spec explaining how our initial system will function:
 
