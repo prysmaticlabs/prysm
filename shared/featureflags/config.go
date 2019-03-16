@@ -6,10 +6,10 @@ The process for implementing new features using this package is as follows:
 	1. Create a new CMD flag in validator/types/flags.go and beacon-chain/utils/flags.go.
 	2. If the feature has changes in beacon-chain, place the flag in beacon-chain/main.go
 	and beacon-chain/usage.go in the "features" flag group.
-		2a. Add a case for the flag in ConfigureBeaconFeatures.
+	2a. Add a case for the flag in ConfigureBeaconFeatures.
 	3. If the feature has changes in validator, place the flag in validator/main.go
 	and validator/usage.go in the "features" flag group.
-		3a. Add a case for the flag in the ConfigureValidatorFeatures function in this file.
+	3a. Add a case for the flag in the ConfigureValidatorFeatures function in this file.
 	4. Place any "new" behavior in the `if flagEnabled` statement.
 	5. Place any "previous" behavior in the `else` statement.
 	6. Ensure any tests using the new feature fail if the flag isn't enabled.
