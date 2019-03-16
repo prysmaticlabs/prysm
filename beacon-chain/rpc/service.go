@@ -41,6 +41,7 @@ type chainService interface {
 type operationService interface {
 	PendingAttestations() ([]*pbp2p.Attestation, error)
 	HandleAttestations(context.Context, proto.Message) error
+	IncomingAttFeed() *event.Feed
 }
 
 type powChainService interface {

@@ -79,24 +79,23 @@ func (bs *BeaconServer) CanonicalHead(ctx context.Context, req *ptypes.Empty) (*
 
 // LatestAttestation streams the latest processed attestations to the rpc clients.
 func (bs *BeaconServer) LatestAttestation(req *ptypes.Empty, stream pb.BeaconService_LatestAttestationServer) error {
-	return nil
-	//	sub := bs.operationService.IncomingAttFeed().Subscribe(bs.incomingAttestation)
-	//	defer sub.Unsubscribe()
-	//	for {
-	//		select {
-	//		case attestation := <-bs.incomingAttestation:
-	//			log.Info("Sending attestation to RPC clients")
-	//			if err := stream.Send(attestation); err != nil {
-	//				return err
-	//			}
-	//		case <-sub.Err():
-	//			log.Debug("Subscriber closed, exiting goroutine")
-	//			return nil
-	//		case <-bs.ctx.Done():
-	//			log.Debug("RPC context closed, exiting goroutine")
-	//			return nil
-	//		}
-	//	}
+	sub := bs.operationService.IncomingAttFeed().Subscribe(bs.incomingAttestation)
+	defer sub.Unsubscribe()
+	for {
+		select {
+		case attestation := <-bs.incomingAttestation:
+			log.Info("Sending attestation to RPC clients")
+			if err := stream.Send(attestation); err != nil {
+				return err
+			}
+		case <-sub.Err():
+			log.Debug("Subscriber closed, exiting goroutine")
+			return nil
+		case <-bs.ctx.Done():
+			log.Debug("RPC context closed, exiting goroutine")
+			return nil
+		}
+	}
 }
 
 // ForkData fetches the current fork information from the beacon state.
