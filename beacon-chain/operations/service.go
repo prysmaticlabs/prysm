@@ -211,7 +211,7 @@ func (s *Service) removeOperations() {
 	}
 }
 
-func (s *Service) handleProcessedBlock(ctx context.Context, message proto.Message) error {
+func (s *Service) handleProcessedBlock(_ context.Context, message proto.Message) error {
 	block := message.(*pb.BeaconBlock)
 	// Removes the pending attestations received from processed block body in DB.
 	if err := s.removePendingAttestations(block.Body.Attestations); err != nil {
