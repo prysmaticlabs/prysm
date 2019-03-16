@@ -32,6 +32,7 @@ go_image(
     goarch = "amd64",
     goos = "linux",
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain",
+    race = "off",
     static = "off",  # Static enabled binary seems to cause issues with DNS lookup with cgo.
     tags = ["manual"],
     visibility = ["//visibility:private"],
@@ -45,7 +46,6 @@ go_image(
         "@com_github_urfave_cli//:go_default_library",
         "@com_github_x_cray_logrus_prefixed_formatter//:go_default_library",
     ],
-    race = "off",
 )
 
 container_push(
