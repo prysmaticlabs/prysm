@@ -9,10 +9,10 @@ The process for implementing new features using this package is as follows:
 	4. Place any "previous" behavior in the `else` statement.
 	5. Ensure any tests using the new feature fail if the flag isn't enabled.
 	5a. Use the following to enable your flag for tests:
-	cfg := &FeatureFlagConfig{
+	cfg := &featureconfig.FeatureFlagConfig{
 		VerifyAttestationSigs: true,
 	}
-	InitFeatureConfig(cfg)
+	featureconfig.InitFeatureConfig(cfg)
 */
 package featureconfig
 
