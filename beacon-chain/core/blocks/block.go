@@ -53,7 +53,7 @@ func NewGenesisBlock(stateRoot []byte) *pb.BeaconBlock {
 func BlockRoot(state *pb.BeaconState, slot uint64) ([]byte, error) {
 	earliestSlot := state.Slot - params.BeaconConfig().LatestBlockRootsLength
 
-	if slot < earliestSlot || slot >= state.Slot {
+	if slot < earliestSlot || slot > state.Slot {
 		if earliestSlot < params.BeaconConfig().GenesisSlot {
 			earliestSlot = params.BeaconConfig().GenesisSlot
 		}

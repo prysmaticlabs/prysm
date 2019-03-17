@@ -27,11 +27,10 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, block *pb.Beac
 		)
 	}
 
-	root, err := b.BlockRoot(fState, fState.Slot-1)
+	root, err := b.BlockRoot(fState, fState.Slot)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get block root %v", err)
 	}
-
 	finalizedBlockRoot := bytesutil.ToBytes32(root)
 	ancestorSet, err := lookUpFromFinalizedBlock(ctx, db, block, finalizedBlockRoot)
 	if err != nil {
