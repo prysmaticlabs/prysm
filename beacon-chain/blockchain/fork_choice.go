@@ -27,20 +27,16 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 		return fmt.Errorf("failed to update chain: %v", err)
 	}
 	log.WithField("blockRoot", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
-	// We fire events that notify listeners of a new block in
-	// the case of a state transition. This is useful for the beacon node's gRPC
-	// server to stream these events to beacon clients.
-	// When the transition is a cycle transition, we stream the state containing the new validator
-	// assignments to clients.
 	if err := c.saveFinalizedState(computedState); err != nil {
 		log.Errorf("Could not save new finalized state: %v", err)
 	}
-	if c.canonicalBlockFeed.Send(&pb.BeaconBlockAnnounce{
+
+	// Announce the new block to the network.
+	c.p2p.Broadcast(ctx, &pb.BeaconBlockAnnounce{
 		Hash:       h[:],
 		SlotNumber: block.Slot,
-	}) == 0 {
-		log.Error("Sent canonical block to no subscribers")
-	}
+	})
+
 	return nil
 }
 

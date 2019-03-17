@@ -28,7 +28,7 @@ func (mp *mockP2P) Subscribe(msg proto.Message, channel chan p2p.Message) event.
 	return new(event.Feed).Subscribe(channel)
 }
 
-func (mp *mockP2P) Broadcast(msg proto.Message) {}
+func (mp *mockP2P) Broadcast(ctx context.Context, msg proto.Message) {}
 
 func (mp *mockP2P) Send(ctx context.Context, msg proto.Message, peerID peer.ID) error {
 	return nil

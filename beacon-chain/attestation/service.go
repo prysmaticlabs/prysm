@@ -149,20 +149,19 @@ func (a *Service) attestationPool() {
 	}
 }
 
-func (a *Service) handleAttestation(msg proto.Message) {
+func (a *Service) handleAttestation(ctx context.Context, msg proto.Message) error {
 	attestation := msg.(*pb.Attestation)
 	enc, err := proto.Marshal(attestation)
 	if err != nil {
-		log.Errorf("Could not marshal incoming attestation to bytes: %v", err)
-		return
+		return fmt.Errorf("could not marshal incoming attestation to bytes: %v", err)
 	}
 	h := hashutil.Hash(enc)
 
-	if err := a.updateLatestAttestation(a.ctx, attestation); err != nil {
-		log.Errorf("Could not update attestation pool: %v", err)
-		return
+	if err := a.updateLatestAttestation(ctx, attestation); err != nil {
+		return fmt.Errorf("could not update attestation pool: %v", err)
 	}
 	log.Infof("Updated attestation pool for attestation %#x", h)
+	return nil
 }
 
 // updateLatestAttestation inputs an new attestation and checks whether

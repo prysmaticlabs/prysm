@@ -79,6 +79,7 @@ func (db *BeaconDB) State(ctx context.Context) (*pb.BeaconState, error) {
 
 	db.stateLock.RLock()
 	defer db.stateLock.RUnlock()
+
 	if db.currentState != nil {
 		if cachedState, ok := proto.Clone(db.currentState).(*pb.BeaconState); ok {
 			return cachedState, nil
@@ -105,6 +106,7 @@ func (db *BeaconDB) State(ctx context.Context) (*pb.BeaconState, error) {
 func (db *BeaconDB) SaveState(beaconState *pb.BeaconState) error {
 	db.stateLock.Lock()
 	defer db.stateLock.Unlock()
+
 	// Clone to prevent mutations of the cached copy
 	currentState, ok := proto.Clone(beaconState).(*pb.BeaconState)
 	if !ok {
@@ -113,6 +115,24 @@ func (db *BeaconDB) SaveState(beaconState *pb.BeaconState) error {
 	db.currentState = currentState
 	return db.update(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
+
+		prevState := chainInfo.Get(stateLookupKey)
+		if prevState != nil {
+			prevStatePb := &pb.BeaconState{}
+			if err := proto.Unmarshal(prevState, prevStatePb); err != nil {
+				return err
+			}
+			if prevStatePb.Slot >= beaconState.Slot {
+				log.WithField(
+					"prevStateSlot",
+					prevStatePb.Slot,
+				).WithField(
+					"newStateSlot",
+					beaconState.Slot,
+				).Warn("Current saved state has a slot number greater or equal to the state attempted to be saved")
+			}
+		}
+
 		beaconStateEnc, err := proto.Marshal(beaconState)
 		if err != nil {
 			return err
@@ -152,16 +172,16 @@ func (db *BeaconDB) SaveCurrentAndFinalizedState(beaconState *pb.BeaconState) er
 	if !ok {
 		return errors.New("could not clone beacon state")
 	}
+
+	if err := db.SaveState(beaconState); err != nil {
+		return err
+	}
+
 	db.currentState = currentState
 	return db.update(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
 		beaconStateEnc, err := proto.Marshal(beaconState)
 		if err != nil {
-			return err
-		}
-
-		// Putting in finalized state.
-		if err := chainInfo.Put(stateLookupKey, beaconStateEnc); err != nil {
 			return err
 		}
 
