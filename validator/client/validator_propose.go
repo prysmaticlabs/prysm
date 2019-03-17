@@ -124,7 +124,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	// 5. Broadcast to the network via beacon chain node.
 	blkResp, err := v.proposerClient.ProposeBlock(ctx, block)
 	if err != nil {
-		log.WithField("error", err).Error("Failed to propose block")
+		log.WithError(err).Error("Failed to propose block")
 		return
 	}
 	log.WithFields(logrus.Fields{
