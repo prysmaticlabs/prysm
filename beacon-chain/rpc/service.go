@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/gogo/protobuf/proto"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -38,9 +39,9 @@ type chainService interface {
 }
 
 type operationService interface {
-	IncomingExitFeed() *event.Feed
-	IncomingAttFeed() *event.Feed
 	PendingAttestations() ([]*pbp2p.Attestation, error)
+	HandleAttestations(context.Context, proto.Message) error
+	IncomingAttFeed() *event.Feed
 }
 
 type powChainService interface {
