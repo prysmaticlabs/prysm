@@ -114,9 +114,9 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 		"blockRoot", fmt.Sprintf("%#x", attData.BeaconBlockRootHash32),
 	).Info("Current beacon chain head block")
 	log.WithFields(logrus.Fields{
-		"justifiedEpoch": attData.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
+		"justifiedEpoch": attData.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
 		"shard":          attData.Shard,
-		"slot":           slot-params.BeaconConfig().GenesisSlot,
+		"slot":           slot - params.BeaconConfig().GenesisSlot,
 	}).Info("Attesting to beacon chain head...")
 
 	duration := time.Duration(slot*params.BeaconConfig().SecondsPerSlot+delay) * time.Second
@@ -131,6 +131,6 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	}
 	log.WithFields(logrus.Fields{
 		"shard": attData.Shard,
-		"slot":  slot-params.BeaconConfig().GenesisSlot,
+		"slot":  slot - params.BeaconConfig().GenesisSlot,
 	}).Info("Beacon node processed attestation successfully")
 }

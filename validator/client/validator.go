@@ -112,11 +112,11 @@ func (v *validator) NextSlot() <-chan uint64 {
 	return v.ticker.C()
 }
 
-// ReportValidatorPerformance logs important metrics related to this validator client's
+// LogValidatorGainsAndLosses logs important metrics related to this validator client's
 // responsibilities throughout the beacon chain's lifecycle. It logs absolute accrued rewards
 // and penalties over time, percentage gain/loss, and gives the end user a better idea
 // of how the validator performs with respect to the rest.
-func (v *validator) ReportValidatorPerformance(ctx context.Context, slot uint64) error {
+func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error {
 	if slot%params.BeaconConfig().SlotsPerEpoch != 0 {
 		// Do nothing if we are not at the start of a new epoch.
 		return nil
@@ -135,11 +135,11 @@ func (v *validator) ReportValidatorPerformance(ctx context.Context, slot uint64)
 	}
 	newBalance := float64(resp.Balance) / float64(params.BeaconConfig().GweiPerEth)
 	log.WithFields(logrus.Fields{
-		"slot": slot-params.BeaconConfig().GenesisSlot,
-		"epoch": (slot / params.BeaconConfig().SlotsPerEpoch)-params.BeaconConfig().GenesisEpoch,
+		"slot":  slot - params.BeaconConfig().GenesisSlot,
+		"epoch": (slot / params.BeaconConfig().SlotsPerEpoch) - params.BeaconConfig().GenesisEpoch,
 	}).Info("Start of a new epoch!")
 	log.WithFields(logrus.Fields{
-		"totalValidators": resp.TotalValidators,
+		"totalValidators":     resp.TotalValidators,
 		"numActiveValidators": resp.TotalActiveValidators,
 	}).Infof("Validator registry information")
 	log.Info("Generating validator performance report from the previous epoch...")
@@ -152,7 +152,7 @@ func (v *validator) ReportValidatorPerformance(ctx context.Context, slot uint64)
 		percentNet := (newBalance - prevBalance) / prevBalance
 		log.WithField("prevEthBalance", prevBalance).Info("Previous validator balance")
 		log.WithFields(logrus.Fields{
-			"gwei":           fmt.Sprintf("%.0f", (newBalance - prevBalance) * float64(params.BeaconConfig().GweiPerEth)),
+			"gwei":          fmt.Sprintf("%.0f", (newBalance-prevBalance)*float64(params.BeaconConfig().GweiPerEth)),
 			"percentChange": fmt.Sprintf("%%%.2f", percentNet*100),
 		}).Info("Net eth gains/losses")
 	}

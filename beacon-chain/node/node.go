@@ -4,12 +4,13 @@ package node
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/validator/types"
 	"os"
 	"os/signal"
 	"path"
 	"sync"
 	"syscall"
+
+	"github.com/prysmaticlabs/prysm/validator/types"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 

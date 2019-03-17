@@ -62,7 +62,7 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 	if err := ps.chainService.ApplyForkChoiceRule(ctx, blk, beaconState); err != nil {
 		return nil, fmt.Errorf("could not apply fork choice rule: %v", err)
 	}
-	return &pb.ProposeResponse{BlockHash: h[:]}, nil
+	return &pb.ProposeResponse{BlockRootHash32: h[:]}, nil
 }
 
 // PendingAttestations retrieves attestations kept in the beacon node's operations pool which have

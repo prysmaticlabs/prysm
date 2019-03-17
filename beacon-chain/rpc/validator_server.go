@@ -98,10 +98,10 @@ func (vs *ValidatorServer) ValidatorPerformance(
 	balance := beaconState.ValidatorBalances[index]
 	activeIndices := helpers.ActiveValidatorIndices(beaconState.ValidatorRegistry, req.Slot)
 	return &pb.ValidatorPerformanceResponse{
-		Balance: balance,
+		Balance:                 balance,
 		AverageValidatorBalance: avgBalance,
-		TotalValidators: uint64(len(beaconState.ValidatorRegistry)),
-		TotalActiveValidators: uint64(len(activeIndices)),
+		TotalValidators:         uint64(len(beaconState.ValidatorRegistry)),
+		TotalActiveValidators:   uint64(len(activeIndices)),
 	}, nil
 }
 

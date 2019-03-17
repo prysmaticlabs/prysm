@@ -128,7 +128,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 		return
 	}
 	log.WithFields(logrus.Fields{
-		"blockRoot":       fmt.Sprintf("%#x", blkResp.BlockHash),
+		"blockRoot": fmt.Sprintf("%#x", blkResp.BlockRootHash32),
 	}).Info("Proposed new beacon block")
 	log.WithFields(logrus.Fields{
 		"numAttestations": len(block.Body.Attestations),

@@ -16,7 +16,7 @@ type Validator interface {
 	WaitForChainStart(ctx context.Context) error
 	WaitForActivation(ctx context.Context) error
 	NextSlot() <-chan uint64
-	ReportValidatorPerformance(ctx context.Context, slot uint64) error
+	LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error
 	UpdateAssignments(ctx context.Context, slot uint64) error
 	RoleAt(slot uint64) pb.ValidatorRole
 	AttestToBlockHead(ctx context.Context, slot uint64)
@@ -55,7 +55,7 @@ func run(ctx context.Context, v Validator) {
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
 			// Report this validator client's rewards and penalties throughout its lifecycle.
-			if err := v.ReportValidatorPerformance(ctx, slot); err != nil {
+			if err := v.LogValidatorGainsAndLosses(ctx, slot); err != nil {
 				log.Errorf("Could not report validator's rewards/penalties for slot %d: %v", slot, err)
 			}
 
