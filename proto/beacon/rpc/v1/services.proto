@@ -44,6 +44,9 @@ message ValidatorPerformanceRequest {
 
 message ValidatorPerformanceResponse {
     uint64 balance = 1;
+    uint64 total_validators = 2;
+    uint64 total_active_validators = 3;
+    uint64 average_validator_balance = 4;
 }
 
 message ValidatorActivationRequest {

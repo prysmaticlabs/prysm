@@ -50,8 +50,8 @@ func run(ctx context.Context, v Validator) {
 
 		select {
 		case <-ctx.Done():
-			log.Info("Context cancelled, stopping validator")
-			return // Exit if context is cancelled.
+			log.Info("Context canceled, stopping validator")
+			return // Exit if context is canceled.
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
 			// Report this validator client's rewards and penalties throughout its lifecycle.
@@ -79,7 +79,7 @@ func run(ctx context.Context, v Validator) {
 				log.WithFields(logrus.Fields{
 					"slot": slot - params.BeaconConfig().GenesisSlot,
 					"role": role,
-				}).Info("Unknown role, doing nothing")
+				}).Info("No active assignment, doing nothing")
 			default:
 				// Do nothing :)
 			}
