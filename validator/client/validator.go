@@ -134,17 +134,21 @@ func (v *validator) ReportValidatorPerformance(ctx context.Context, slot uint64)
 		return err
 	}
 	newBalance := float64(resp.Balance) / float64(params.BeaconConfig().GweiPerEth)
-	log.Info("Reporting validator performance in the eth2 beacon chain...")
+	log.WithFields(logrus.Fields{
+		"slot": slot-params.BeaconConfig().GenesisSlot,
+		"epoch": (slot / params.BeaconConfig().SlotsPerEpoch)-params.BeaconConfig().GenesisEpoch,
+	}).Info("Start of a new epoch!")
+	log.Info("Generating validator performance report from the previous epoch...")
 	log.WithFields(logrus.Fields{
 		"ethBalance": newBalance,
-	}).Info("Validator balance")
+	}).Info("New validator balance")
 	if v.prevBalance > 0 {
 		prevBalance := float64(v.prevBalance) / float64(params.BeaconConfig().GweiPerEth)
 		percentNet := (newBalance - prevBalance) / prevBalance
 		log.WithField("prevEthBalance", prevBalance).Info("Previous validator balance")
 		log.WithFields(logrus.Fields{
-			"eth":           newBalance - prevBalance,
-			"percentChange": fmt.Sprintf("%%f", percentNet*100),
+			"gwei":           fmt.Sprintf("%.0f", (newBalance - prevBalance) * float64(params.BeaconConfig().GweiPerEth)),
+			"percentChange": fmt.Sprintf("%%%.2f", percentNet*100),
 		}).Info("Net eth gains/losses")
 	}
 	v.prevBalance = resp.Balance
@@ -172,13 +176,6 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	if err != nil {
 		v.assignment = nil // Clear assignments so we know to retry the request.
 		return err
-	}
-
-	// If we were in an epoch transition, we log important parameters from the validator's
-	// performance in the previous epoch, including rewards/penalties, or other important
-	// parameters from the previous epoch that are useful to log.
-	if slot%params.BeaconConfig().SlotsPerEpoch == 0 {
-		log.Infof("")
 	}
 
 	v.assignment = resp
