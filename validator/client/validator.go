@@ -26,7 +26,7 @@ type validator struct {
 	beaconClient    pb.BeaconServiceClient
 	attesterClient  pb.AttesterServiceClient
 	key             *keystore.Key
-	prevBalance uint64
+	prevBalance     uint64
 }
 
 // Done cleans up the validator.
@@ -123,16 +123,17 @@ func (v *validator) ReportValidatorPerformance(ctx context.Context, slot uint64)
 	}
 	epoch := slot / params.BeaconConfig().SlotsPerEpoch
 	if epoch == params.BeaconConfig().GenesisEpoch {
-		v.prevBalance =	params.BeaconConfig().MaxDepositAmount
+		v.prevBalance = params.BeaconConfig().MaxDepositAmount
 	}
 	req := &pb.ValidatorPerformanceRequest{
-		Slot: slot,
+		Slot:      slot,
+		PublicKey: v.key.PublicKey.Marshal(),
 	}
 	resp, err := v.validatorClient.ValidatorPerformance(ctx, req)
 	if err != nil {
 		return err
 	}
-	newBalance := float64(resp.Balance ) / float64(params.BeaconConfig().GweiPerEth)
+	newBalance := float64(resp.Balance) / float64(params.BeaconConfig().GweiPerEth)
 	log.Info("Reporting validator performance in the eth2 beacon chain...")
 	log.WithFields(logrus.Fields{
 		"ethBalance": newBalance,
@@ -142,8 +143,8 @@ func (v *validator) ReportValidatorPerformance(ctx context.Context, slot uint64)
 		percentNet := (newBalance - prevBalance) / prevBalance
 		log.WithField("prevEthBalance", prevBalance).Info("Previous validator balance")
 		log.WithFields(logrus.Fields{
-			"eth": newBalance-prevBalance,
-			"percentChange": fmt.Sprintf("%%f", percentNet * 100),
+			"eth":           newBalance - prevBalance,
+			"percentChange": fmt.Sprintf("%%f", percentNet*100),
 		}).Info("Net eth gains/losses")
 	}
 	v.prevBalance = resp.Balance

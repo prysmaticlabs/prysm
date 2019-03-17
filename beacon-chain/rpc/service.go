@@ -77,14 +77,14 @@ type Service struct {
 
 // Config options for the beacon node RPC server.
 type Config struct {
-	Port                string
-	CertFlag            string
-	KeyFlag             string
-	SubscriptionBuf     int
-	BeaconDB            *db.BeaconDB
-	ChainService        chainService
-	POWChainService     powChainService
-	OperationService    operationService
+	Port             string
+	CertFlag         string
+	KeyFlag          string
+	SubscriptionBuf  int
+	BeaconDB         *db.BeaconDB
+	ChainService     chainService
+	POWChainService  powChainService
+	OperationService operationService
 }
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer

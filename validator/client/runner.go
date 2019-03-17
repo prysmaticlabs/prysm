@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/errutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -61,7 +62,7 @@ func run(ctx context.Context, v Validator) {
 			// Keep trying to update assignments if they are nil or if we are past an
 			// epoch transition in the beacon node's state.
 			if err := v.UpdateAssignments(ctx, slot); err != nil {
-                handleAssignmentError(err, slot)
+				handleAssignmentError(err, slot)
 				continue
 			}
 			role := v.RoleAt(slot)
@@ -89,7 +90,7 @@ func run(ctx context.Context, v Validator) {
 func handleAssignmentError(err error, slot uint64) {
 	if err == errutil.AssignmentNotFoundErr {
 		log.WithField(
-			"epoch", (slot*params.BeaconConfig().SlotsPerEpoch) - params.BeaconConfig().GenesisEpoch,
+			"epoch", (slot*params.BeaconConfig().SlotsPerEpoch)-params.BeaconConfig().GenesisEpoch,
 		).Warn("Validator not yet assigned to epoch")
 	} else {
 		log.WithField("error", err).Error("Failed to update assignments")

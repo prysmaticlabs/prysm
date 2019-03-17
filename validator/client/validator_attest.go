@@ -3,8 +3,9 @@ package client
 import (
 	"context"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"time"
+
+	"github.com/sirupsen/logrus"
 
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -110,10 +111,10 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	attestation.AggregateSignature = []byte("signed")
 
 	log.WithFields(logrus.Fields{
-		"blockRoot": fmt.Sprintf("%#x", attData.BeaconBlockRootHash32),
+		"blockRoot":      fmt.Sprintf("%#x", attData.BeaconBlockRootHash32),
 		"justifiedEpoch": attData.JustifiedEpoch,
-		"shard": attData.Shard,
-		"slot": slot,
+		"shard":          attData.Shard,
+		"slot":           slot,
 	}).Info("Attesting to beacon chain head...")
 
 	duration := time.Duration(slot*params.BeaconConfig().SecondsPerSlot+delay) * time.Second
@@ -128,7 +129,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 		return
 	}
 	log.WithFields(logrus.Fields{
-		"hash": fmt.Sprintf("%#x", attestRes.AttestationHash),
+		"hash":  fmt.Sprintf("%#x", attestRes.AttestationHash),
 		"shard": attData.Shard,
 		"slot":  slot,
 	}).Info("Beacon node processed attestation successfully")

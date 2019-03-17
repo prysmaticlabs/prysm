@@ -39,6 +39,7 @@ service ValidatorService {
 
 message ValidatorPerformanceRequest {
    uint64 slot = 1;
+   bytes public_key = 2;
 }
 
 message ValidatorPerformanceResponse {

@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+
 	"github.com/sirupsen/logrus"
 
 	"github.com/gogo/protobuf/proto"
@@ -127,9 +128,9 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 		return
 	}
 	log.WithFields(logrus.Fields{
-		"blockRoot": fmt.Sprintf("%#x", blkResp.BlockHash),
-		"stateRoot": fmt.Sprintf("%#x", block.StateRootHash32),
+		"blockRoot":       fmt.Sprintf("%#x", blkResp.BlockHash),
+		"stateRoot":       fmt.Sprintf("%#x", block.StateRootHash32),
 		"numAttestations": len(block.Body.Attestations),
-		"numDeposits": len(block.Body.Deposits),
+		"numDeposits":     len(block.Body.Deposits),
 	}).Info("Proposed new beacon block")
 }

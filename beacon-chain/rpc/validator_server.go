@@ -77,6 +77,25 @@ func (vs *ValidatorServer) ValidatorIndex(ctx context.Context, req *pb.Validator
 	return &pb.ValidatorIndexResponse{Index: uint64(index)}, nil
 }
 
+// ValidatorPerformance reports the validator's latest balance along with other important metrics on
+// rewards and penalties throughout its lifecycle in the beacon chain.
+func (vs *ValidatorServer) ValidatorPerformance(
+	ctx context.Context, req *pb.ValidatorPerformanceRequest,
+) (*pb.ValidatorPerformanceResponse, error) {
+	index, err := vs.beaconDB.ValidatorIndex(req.PublicKey)
+	if err != nil {
+		return nil, fmt.Errorf("could not get validator index: %v", err)
+	}
+	beaconState, err := vs.beaconDB.State(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
+	}
+	balance := beaconState.ValidatorBalances[index]
+	return &pb.ValidatorPerformanceResponse{
+		Balance: balance,
+	}, nil
+}
+
 // CommitteeAssignment returns the committee assignment response from a given validator public key.
 // The committee assignment response contains the following fields for the current and previous epoch:
 //	1.) The list of validators in the committee.
