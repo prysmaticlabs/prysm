@@ -15,6 +15,7 @@ go_library(
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/beacon/rpc/v1:go_default_library",
         "//shared/bitutil:go_default_library",
+        "//shared/errutil:go_default_library",
         "//shared/forkutil:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/keystore:go_default_library",
