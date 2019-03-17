@@ -118,6 +118,9 @@ func ProcessBlock(
 	}
 	log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Verified block signature")
 
+	// Save latest block.
+	state.LatestBlock = block
+
 	// Verify block RANDAO.
 	state, err = b.ProcessBlockRandao(ctx, state, block, verifySignatures)
 	if err != nil {

@@ -4,7 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -27,12 +28,12 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, block *pb.Beac
 		)
 	}
 
-	root, err := b.BlockRoot(fState, fState.Slot)
+	root, err := hashutil.HashBeaconBlock(fState.LatestBlock)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get block root %v", err)
 	}
-	finalizedBlockRoot := bytesutil.ToBytes32(root)
-	ancestorSet, err := lookUpFromFinalizedBlock(ctx, db, block, finalizedBlockRoot)
+
+	ancestorSet, err := lookUpFromFinalizedBlock(ctx, db, block, root)
 	if err != nil {
 		return nil, fmt.Errorf("unable to look up block ancestors %v", err)
 	}
