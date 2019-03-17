@@ -9,7 +9,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
-	"github.com/prysmaticlabs/prysm/shared/featureflags"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -114,7 +114,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	aggregationBitfield := bitutil.SetBitfield(indexInCommittee)
 	attestation.AggregationBitfield = aggregationBitfield
 
-	if featureflags.FeatureConfig().VerifyAttestationSigs {
+	if featureconfig.FeatureConfig().VerifyAttestationSigs {
 		// Retrieve the current fork data from the beacon node.
 		fork, err := v.beaconClient.ForkData(ctx, &ptypes.Empty{})
 		if err != nil {

@@ -13,6 +13,7 @@ go_library(
     deps = [
         "//shared/cmd:go_default_library",
         "//shared/debug:go_default_library",
+        "//shared/featureconfig:go_default_library",
         "//shared/version:go_default_library",
         "//validator/accounts:go_default_library",
         "//validator/node:go_default_library",

@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/urfave/cli"
 )
 
@@ -70,7 +71,6 @@ var appHelpFlagGroups = []flagGroup{
 		Name: "utils",
 		Flags: []cli.Flag{
 			utils.DemoConfigFlag,
-			utils.VerifyAttestationSigsFlag,
 			utils.DepositContractFlag,
 			utils.Web3ProviderFlag,
 			utils.RPCPort,
@@ -80,6 +80,10 @@ var appHelpFlagGroups = []flagGroup{
 			utils.EnableDBCleanup,
 			utils.ChainStartDelay,
 		},
+	},
+	{
+		Name:  "features",
+		Flags: append([]cli.Flag{}, featureconfig.BeaconChainFlags...),
 	},
 }
 

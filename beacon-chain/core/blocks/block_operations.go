@@ -17,7 +17,7 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/featureflags"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -577,7 +577,7 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 			att.Data.CrosslinkDataRootHash32,
 		)
 	}
-	if verifySignatures && featureflags.FeatureConfig().VerifyAttestationSigs {
+	if verifySignatures && featureconfig.FeatureConfig().VerifyAttestationSigs {
 		return verifyAttestationSig(beaconState, att)
 	}
 	return nil

@@ -13,7 +13,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
-	"github.com/prysmaticlabs/prysm/shared/featureflags"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -78,10 +78,10 @@ func TestAttestToBlockHead_AttestationDataAtSlotFailure(t *testing.T) {
 }
 
 func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
-	cfg := &featureflags.FeatureFlagConfig{
+	cfg := &featureconfig.FeatureFlagConfig{
 		VerifyAttestationSigs: true,
 	}
-	featureflags.InitFeatureConfig(cfg)
+	featureconfig.InitFeatureConfig(cfg)
 
 	hook := logTest.NewGlobal()
 
@@ -128,10 +128,10 @@ func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
 }
 
 func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
-	cfg := &featureflags.FeatureFlagConfig{
+	cfg := &featureconfig.FeatureFlagConfig{
 		VerifyAttestationSigs: true,
 	}
-	featureflags.InitFeatureConfig(cfg)
+	featureconfig.InitFeatureConfig(cfg)
 
 	hook := logTest.NewGlobal()
 
@@ -226,10 +226,10 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 }
 
 func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
-	cfg := &featureflags.FeatureFlagConfig{
+	cfg := &featureconfig.FeatureFlagConfig{
 		VerifyAttestationSigs: true,
 	}
-	featureflags.InitFeatureConfig(cfg)
+	featureconfig.InitFeatureConfig(cfg)
 	validator, m, finish := setup(t)
 	defer finish()
 

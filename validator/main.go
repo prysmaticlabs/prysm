@@ -8,6 +8,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/node"
@@ -83,7 +84,6 @@ contract in order to activate the validator client`,
 	}
 	app.Flags = []cli.Flag{
 		types.DemoConfigFlag,
-		types.VerifyAttestationSigsFlag,
 		types.BeaconRPCProviderFlag,
 		types.KeystorePathFlag,
 		types.PasswordFlag,
@@ -101,6 +101,8 @@ contract in order to activate the validator client`,
 		debug.CPUProfileFlag,
 		debug.TraceFlag,
 	}
+
+	app.Flags = append(app.Flags, featureconfig.ValidatorFlags...)
 
 	app.Before = func(ctx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())

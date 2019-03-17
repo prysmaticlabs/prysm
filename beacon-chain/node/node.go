@@ -24,7 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
-	"github.com/prysmaticlabs/prysm/shared/featureflags"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/prometheus"
@@ -75,7 +75,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		params.UseDemoBeaconConfig()
 	}
 
-	configureFeatures(ctx)
+	featureconfig.ConfigureBeaconFeatures(ctx)
 
 	if err := beacon.startDB(ctx); err != nil {
 		return nil, err
@@ -167,6 +167,12 @@ func (b *BeaconNode) Close() {
 
 func (b *BeaconNode) startDB(ctx *cli.Context) error {
 	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
+
+	if b.ctx.GlobalBool(cmd.ClearDBFlag.Name) {
+		if err := db.ClearDB(path.Join(baseDir, beaconChainDBName)); err != nil {
+			return err
+		}
+	}
 
 	db, err := db.NewDB(path.Join(baseDir, beaconChainDBName))
 	if err != nil {
@@ -354,13 +360,4 @@ func (b *BeaconNode) registerAttestationService() error {
 		})
 
 	return b.services.RegisterService(attsService)
-}
-
-func configureFeatures(ctx *cli.Context) {
-	cfg := &featureflags.FeatureFlagConfig{}
-	if ctx.GlobalBool(utils.VerifyAttestationSigsFlag.Name) {
-		log.Info("Verifying signatures for attestations")
-		cfg.VerifyAttestationSigs = true
-	}
-	featureflags.InitFeatureConfig(cfg)
 }

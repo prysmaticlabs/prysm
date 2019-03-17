@@ -1,4 +1,4 @@
-package featureflags
+package featureconfig
 
 import (
 	"testing"
@@ -10,6 +10,6 @@ func TestInitFeatureConfig(t *testing.T) {
 	}
 	InitFeatureConfig(cfg)
 	if c := FeatureConfig(); !c.VerifyAttestationSigs {
-		t.Errorf("VerifyAttestationSigs in FeatureFlags incorrect. Wanted true, got false")
+		t.Errorf("VerifyAttestationSigs in featureconfig incorrect. Wanted true, got false")
 	}
 }

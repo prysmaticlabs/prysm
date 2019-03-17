@@ -18,7 +18,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/featureflags"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
@@ -1021,10 +1021,10 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 }
 
 func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
-	cfg := &featureflags.FeatureFlagConfig{
+	cfg := &featureconfig.FeatureFlagConfig{
 		VerifyAttestationSigs: true,
 	}
-	featureflags.InitFeatureConfig(cfg)
+	featureconfig.InitFeatureConfig(cfg)
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 
