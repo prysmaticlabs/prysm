@@ -30,7 +30,6 @@ Also, read our [Roadmap Reference Implementation Doc](https://github.com/prysmat
 You can either choose to run our system via:
 
 - Use Our Build Tool, Bazel **(Recommended)**
-- The Go tool to manage builds and tests
 - Use Docker
 
 ## Run Via Bazel (Recommended)
@@ -52,12 +51,29 @@ Bazel manages all of the dependencies for you (including go and necessary compil
 
 ### Building
 
-Then, build both parts of our system: a beacon chain node, and a validator client which attaches to it:
+You can prepare our entire repo for a local build by simply running:
 
 ```
-bazel build //beacon-chain:beacon-chain
-bazel build //validator:validator
+bazel build //...
 ```
+
+## Deploying a Validator Deposit Contract
+
+If you want to run our system locally, you'll need to have a **Validator Deposit Contract** deployed on the Goerli Ethereum 1.0 [testnet](https://github.com/goerli/testnet). You'll need to acquire some Goerli ETH first and then you can easily deploy our deposit contract with Bazel: 
+
+```
+bazel run //contracts/deposit-contract/deployContract -- --httpPath=https://goerli.prylabs.net 
+ --privKey=${YOUR_GOERLI_PRIV_KEY} 
+```
+
+You'll see the deposit contract address printed out, which we'll use when running our Eth 2.0 beacon nodes below:
+
+```bash
+INFO: Build completed successfully, 1 total action
+[2019-03-17 11:54:27]  INFO main: New contract deployed address=0x1be4cbd38AC5b68727dCD2B73fc0553c1832ca42
+```
+
+Copy the address, you'll need it in the next step:
 
 ## Running The Beacon Chain
 
@@ -65,11 +81,10 @@ To start your beacon node with bazel:
 
 ```
 bazel run //beacon-chain \ 
-  --web3provider wss://goerli.prylabs.net/websocket \
   --deposit-contract DEPOSIT_CONTRACT_ADDRESS
 ```
 
-If you want to see what's happening in the system underneath the hood, add a `--verbosity debug` flag to show every single thing the beacon chain node does during its run time.
+The chain will then be waiting for the **Validator Deposit Contract** to reach a deposit threshold before it begins! Now, you'll need to spin up enough validator clients that can reach the threshold with the following next steps:
 
 ## Running an ETH2.0 Validator Client
 
@@ -83,7 +98,19 @@ bazel run //validator --\
   --keystore-path /path/to/validator/keystore/dir
 ```
 
-This will connect you to your running beacon node and listen for validator assignments! The beacon node will update you at every cycle transition and shuffle your validator into different shards and slots in order to vote on or propose beacon blocks. To then run the validator, use the command: 
+Once you create your validator account, you'll see a special piece of information printed out below:
+
+```bash
+[2019-03-17 11:57:55]  INFO accounts: Account creation complete! Copy and paste the deposit data shown below when issuing a transaction into the ETH1.0 deposit contract to activate your validator client
+
+========================Deposit Data=======================
+
+0xbc00000060000000814eb687f39e9a0be79552cd51711dfb1711274a892e4ccae1e61d0bb28ef82c85e81b68b4911f73ca06e6694133c9610a6677d512df7a6a0289ecd1a218a8b2de29fa298c24c9e17dac4d7fb268992e8d08d74fafa076757d28ffa29ea7a36b30000000996e3494661110bf9c72f1bacee84d1b64039092bf1e6856eaf8d87b1a992999d4bff9c3701ded7714e8421c8ec1fd4520000000001e1ba7155f64eda1d1a87f3ed4eaf0280b86bef90b2cd1d9b905e370650251
+
+===========================================================
+```
+
+Keep this deposit data string, as you'll need it in the next section.
 
 ```
 bazel run //validator --\
@@ -91,12 +118,19 @@ bazel run //validator --\
   --keystore-path /path/to/validator/keystore/dir
 ```
 
+This will connect you to your running beacon node and listen for validator assignments! The beacon node will update you at every cycle transition and shuffle your validator into different shards and slots in order to vote on or propose beacon blocks. To then run the validator, use the command: 
+
+Given this is a local network, you'll need to create and run enough validators to reach the deposit contract threshold so your chain can begin.
+
+## Depositing 32ETH and Starting the Eth 2.0 Network
+
+Once you launch your beacon chain and validators, your nodes won't do much and will simply listen for the deposit contract to reach a valid threshold. You'll need an Eth 1.0 wallet that can send transactions via the Goerli network such as Metamask loaded with enough Ether to make deposits into the contract. Using the deposit contract address from earlier and your validator deposit data from the previous step, send a transactions with the validator deposit data as the `data` parameter in your web3 provider such as Metamask to kick things off. Once you make enough deposits, your beacon node will start and your system will begin running the phase 0 beacon chain!
+
 ## Running Via Docker
 
 ```
 docker run -p 4000:4000 -v gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
   --rpc-port 4000 \
-  --web3provider wss://goerli.prylabs.net/websocket \
   --deposit-contract DEPOSIT_CONTRACT_ADDRESS
 ```
 
@@ -117,7 +151,6 @@ The best way to run under Windows is to clone the repository and then run the no
 
 ```
 go run ./beacon-chain main.go \
-  --web3provider wss://goerli.prylabs.net/websocket \
   --deposit-contract DEPOSIT_CONTRACT_ADDRESS
 ```
 
