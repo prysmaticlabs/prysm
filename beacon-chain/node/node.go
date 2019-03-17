@@ -10,13 +10,10 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/prysmaticlabs/prysm/validator/types"
-
-	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
+	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
@@ -72,7 +69,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	}
 
 	// Use custom config values if the --no-custom-config flag is set.
-	if !ctx.GlobalBool(types.NoCustomConfigFlag.Name) {
+	if !ctx.GlobalBool(utils.NoCustomConfigFlag.Name) {
 		log.Info("Using custom parameter configuration")
 		params.UseDemoBeaconConfig()
 	}
