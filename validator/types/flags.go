@@ -5,8 +5,8 @@ import (
 )
 
 var (
-	// NoDemoConfigFlag determines whether to launch a beacon chain using real parameters or demo parameters.
-	NoDemoConfigFlag = cli.BoolFlag{
+	// NoCustomConfigFlag determines whether to launch a beacon chain using real parameters or demo parameters.
+	NoCustomConfigFlag = cli.BoolFlag{
 		Name:  "no-custom-config",
 		Usage: "Run the beacon chain with the real parameters from phase 0.",
 	}

@@ -44,7 +44,7 @@ func main() {
 	app.Version = version.GetVersion()
 
 	app.Flags = []cli.Flag{
-		utils.NoDemoConfigFlag,
+		utils.NoCustomConfigFlag,
 		utils.DepositContractFlag,
 		utils.Web3ProviderFlag,
 		utils.RPCPort,

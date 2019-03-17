@@ -69,7 +69,7 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "utils",
 		Flags: []cli.Flag{
-			utils.NoDemoConfigFlag,
+			utils.NoCustomConfigFlag,
 			utils.DepositContractFlag,
 			utils.Web3ProviderFlag,
 			utils.RPCPort,

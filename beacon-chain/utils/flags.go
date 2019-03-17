@@ -5,9 +5,9 @@ import (
 )
 
 var (
-	// NoDemoConfigFlag determines whether to launch a beacon chain using demo parameters
+	// NoCustomConfigFlag determines whether to launch a beacon chain using demo parameters
 	// such as shorter cycle length, fewer shards, and more.
-	NoDemoConfigFlag = cli.BoolFlag{
+	NoCustomConfigFlag = cli.BoolFlag{
 		Name:  "no-custom-config",
 		Usage: "Run the beacon chain with the real parameters from phase 0.",
 	}
