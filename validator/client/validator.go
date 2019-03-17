@@ -17,15 +17,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// AttestationPool STUB interface. Final attestation pool pending design.
-// TODO(1323): Replace with actual attestation pool.
-type AttestationPool interface {
-	PendingAttestations() []*pbp2p.Attestation
-}
-
-// validator
-//
-// WIP - not done.
 type validator struct {
 	genesisTime     uint64
 	ticker          *slotutil.SlotTicker
@@ -120,6 +111,18 @@ func (v *validator) NextSlot() <-chan uint64 {
 	return v.ticker.C()
 }
 
+// ReportValidatorPerformance logs important metrics related to this validator client's
+// responsibilities throughout the beacon chain's lifecycle. It logs absolute accrued rewards
+// and penalties over time, percentage gain/loss, and gives the end user a better idea
+// of how the validator performs with respect to the rest.
+func (v *validator) ReportValidatorPerformance(ctx context.Context, slot uint64) error {
+	if slot%params.BeaconConfig().SlotsPerEpoch != 0 {
+		// Do nothing if we are not at the start of a new epoch.
+		return nil
+	}
+	return nil
+}
+
 // UpdateAssignments checks the slot number to determine if the validator's
 // list of upcoming assignments needs to be updated. For example, at the
 // beginning of a new epoch.
@@ -147,7 +150,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	// performance in the previous epoch, including rewards/penalties, or other important
 	// parameters from the previous epoch that are useful to log.
 	if slot%params.BeaconConfig().SlotsPerEpoch == 0 {
-
+		log.Infof("")
 	}
 
 	v.assignment = resp
