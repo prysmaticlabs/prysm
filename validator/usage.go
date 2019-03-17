@@ -75,7 +75,7 @@ var appHelpFlagGroups = []flagGroup{
 	},
 	{
 		Name:  "features",
-		Flags: append([]cli.Flag{}, featureconfig.ValidatorFlags...),
+		Flags: featureconfig.ValidatorFlags,
 	},
 }
 

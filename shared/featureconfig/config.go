@@ -21,7 +21,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-var log = logrus.WithField("prefix", "node")
+var log = logrus.WithField("prefix", "flags")
 
 // FeatureFlagConfig is a struct to represent what features the client will perform on runtime.
 type FeatureFlagConfig struct {
