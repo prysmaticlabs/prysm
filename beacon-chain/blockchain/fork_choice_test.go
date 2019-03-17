@@ -147,6 +147,14 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 		}
 		chainService.cancel()
 		testutil.AssertLogsContain(t, hook, tt.logAssert)
+
+		mb, ok := chainService.p2p.(*mockBroadcaster)
+		if !ok {
+			t.Fatal("chainService.p2p is not a mockBroadcaster")
+		}
+		if !mb.broadcastCalled {
+			t.Error("ApplyForkChoiceRule did not broadcast the new block")
+		}
 	}
 }
 
