@@ -143,6 +143,13 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 		return err
 	}
 
+	// If we were in an epoch transition, we log important parameters from the validator's
+	// performance in the previous epoch, including rewards/penalties, or other important
+	// parameters from the previous epoch that are useful to log.
+	if slot%params.BeaconConfig().SlotsPerEpoch == 0 {
+		
+	}
+
 	v.assignment = resp
 
 	var proposerSlot uint64

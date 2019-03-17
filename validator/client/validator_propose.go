@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/sirupsen/logrus"
 
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
@@ -29,7 +30,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	}
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")
 	defer span.End()
-	log.Info("Proposing...")
+	log.Info("Performing a beacon block proposal...")
 	// 1. Fetch data from Beacon Chain node.
 	// Get current head beacon block.
 	headBlock, err := v.beaconClient.CanonicalHead(ctx, &ptypes.Empty{})
@@ -43,8 +44,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 		return
 	}
 
-	// Get validator ETH1 deposits which have not been included in the beacon
-	// chain.
+	// Get validator ETH1 deposits which have not been included in the beacon chain.
 	pDepResp, err := v.beaconClient.PendingDeposits(ctx, &ptypes.Empty{})
 	if err != nil {
 		log.Errorf("Failed to get pending pendings: %v", err)
@@ -78,11 +78,8 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	epoch := slot / params.BeaconConfig().SlotsPerEpoch
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	log.Infof("Signing randao epoch: %d", epoch)
 	domain := forkutil.DomainVersion(fork, epoch, params.BeaconConfig().DomainRandao)
 	epochSignature := v.key.SecretKey.Sign(buf, domain)
-	log.Infof("Pubkey: %#x", v.key.PublicKey.Marshal())
-	log.Infof("Epoch signature: %#x", epochSignature.Marshal())
 
 	// Fetch pending attestations seen by the beacon node.
 	attResp, err := v.proposerClient.PendingAttestations(ctx, &pb.PendingAttestationsRequest{
@@ -129,5 +126,10 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 		log.WithField("error", err).Error("Failed to propose block")
 		return
 	}
-	log.WithField("hash", fmt.Sprintf("%#x", blkResp.BlockHash)).Info("Proposed new beacon block")
+	log.WithFields(logrus.Fields{
+		"blockRoot": fmt.Sprintf("%#x", blkResp.BlockHash),
+		"stateRoot": fmt.Sprintf("%#x", block.StateRootHash32),
+		"numAttestations": len(block.Body.Attestations),
+		"numDeposits": len(block.Body.Deposits),
+	}).Info("Proposed new beacon block")
 }

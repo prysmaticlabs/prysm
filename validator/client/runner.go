@@ -54,7 +54,7 @@ func run(ctx context.Context, v Validator) {
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
 
 			if err := v.UpdateAssignments(ctx, slot); err != nil {
-				log.WithField("error", err).Error("Failed to update assignments")
+				log.WithField("error", err).Warn("Failed to update validator assignments")
 				continue
 			}
 			role := v.RoleAt(slot)
@@ -68,7 +68,6 @@ func run(ctx context.Context, v Validator) {
 			case pb.ValidatorRole_PROPOSER:
 				v.ProposeBlock(ctx, slot)
 			case pb.ValidatorRole_UNKNOWN:
-				// This shouldn't happen normally, so it is considered a warning.
 				log.WithFields(logrus.Fields{
 					"slot": slot - params.BeaconConfig().GenesisSlot,
 					"role": role,

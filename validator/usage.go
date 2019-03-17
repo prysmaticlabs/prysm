@@ -66,7 +66,7 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "types",
 		Flags: []cli.Flag{
-			types.DemoConfigFlag,
+			types.NoDemoConfigFlag,
 			types.BeaconRPCProviderFlag,
 			types.KeystorePathFlag,
 			types.PasswordFlag,

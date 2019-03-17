@@ -70,7 +70,7 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 	}
 
 	// Use demo config values if demo config flag is set.
-	if ctx.GlobalBool(utils.DemoConfigFlag.Name) {
+	if !ctx.GlobalBool(utils.NoDemoConfigFlag.Name) {
 		log.Info("Using custom parameter configuration")
 		params.UseDemoBeaconConfig()
 	}
@@ -252,8 +252,6 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 	}
 	powClient := ethclient.NewClient(rpcClient)
 
-	delay := cliCtx.GlobalUint64(utils.ChainStartDelay.Name)
-
 	ctx := context.Background()
 	cfg := &powchain.Web3ServiceConfig{
 		Endpoint:        b.ctx.GlobalString(utils.Web3ProviderFlag.Name),
@@ -264,7 +262,6 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 		BlockFetcher:    powClient,
 		ContractBackend: powClient,
 		BeaconDB:        b.db,
-		ChainStartDelay: delay,
 	}
 	web3Service, err := powchain.NewWeb3Service(ctx, cfg)
 	if err != nil {
@@ -330,12 +327,10 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	port := ctx.GlobalString(utils.RPCPort.Name)
 	cert := ctx.GlobalString(utils.CertFlag.Name)
 	key := ctx.GlobalString(utils.KeyFlag.Name)
-	chainStartDelayFlag := ctx.GlobalUint64(utils.ChainStartDelay.Name)
 	rpcService := rpc.NewRPCService(context.Background(), &rpc.Config{
 		Port:                port,
 		CertFlag:            cert,
 		KeyFlag:             key,
-		ChainStartDelayFlag: chainStartDelayFlag,
 		SubscriptionBuf:     100,
 		BeaconDB:            b.db,
 		ChainService:        chainService,
