@@ -1,6 +1,6 @@
 # Required Readings
 
-This document serves as an outline of the required readings to catch up with and contribute to the sharding implementation for the Ethereum protocol. Whether you are an expert at Ethereum and want to contribute to sharding, or are a beginner and want to take the time to learn the concepts, this will serve as a comprehensive set of readings and links to get you up to speed.
+This document serves as an outline of the required readings to catch up with and contribute to the implementation for of the Ethereum 2.0 (Serenity) protocol. Whether you are an expert at Ethereum and want to contribute, or are a beginner and want to take the time to learn the concepts, this will serve as a comprehensive set of readings and links to help you up to speed.
 
 ## Required Blockchain & Ethereum Knowledge
 
@@ -28,11 +28,11 @@ This document serves as an outline of the required readings to catch up with and
 -   [What is an Ethereum Token?](https://blockgeeks.com/guides/ethereum-token/)
 -   [What is Ethereum Gas?](https://blockgeeks.com/guides/ethereum-gas-step-by-step-guide/)
 
--   Ethereum Client Implementations
-    -   [Geth](https://github.com/ethereum/go-ethereum) (known also as go-ethereum) is the Golang implementation of the Ethereum protocol
-    -   [Parity](https://github.com/paritytech/parity) the fastest and most performant implementation - written in Rust
-    -   [Trinity](https://github.com/ethereum/py-evm/tree/master/trinity) new project implements Ethereum in Python
-    -   [Cpp-Ethereum](https://github.com/ethereum/cpp-ethereum) a C++ implementation of Ethereum
+**Ethereum Client Implementations**
+-   [Geth](https://github.com/ethereum/go-ethereum) (known also as go-ethereum) is the Golang implementation of the Ethereum protocol
+-   [Parity](https://github.com/paritytech/parity) the fastest and most performant implementation - written in Rust
+-   [Trinity](https://github.com/ethereum/py-evm/tree/master/trinity) new project implements Ethereum in Python
+-   [Cpp-Ethereum](https://github.com/ethereum/cpp-ethereum) a C++ implementation of Ethereum
 
 **Consensus**
 

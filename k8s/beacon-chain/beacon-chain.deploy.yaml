@@ -18,6 +18,7 @@ spec:
       annotations:
         prometheus.io/scrape: 'true'
         prometheus.io/port: '9090'
+        sidecar.istio.io/inject: 'false' # istio breaks local peer connections
     spec:
       priorityClassName: production-priority
       affinity:

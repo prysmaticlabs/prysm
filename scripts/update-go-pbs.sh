@@ -22,3 +22,8 @@ do
   destination=${file_list[i]#*$searchstring}
   cp -R -L "${file_list[i]}" "$destination"
 done
+
+# Run goimports on newly generated protos until gogo protobuf's proto-gen-go 
+# formats imports properly.
+# https://github.com/gogo/protobuf/issues/554
+goimports -w proto/**/*.pb.go

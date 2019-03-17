@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 )
 
@@ -41,6 +42,7 @@ type ChainService struct {
 	enablePOWChain       bool
 	finalizedEpoch       uint64
 	stateInitializedFeed *event.Feed
+	p2p                  p2p.Broadcaster
 }
 
 // Config options for the service.
@@ -52,6 +54,7 @@ type Config struct {
 	OpsPoolService operationService
 	DevMode        bool
 	EnablePOWChain bool
+	P2p            p2p.Broadcaster
 }
 
 // attestationTarget consists of validator index and block, it's
@@ -77,6 +80,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		chainStartChan:       make(chan time.Time),
 		stateInitializedFeed: new(event.Feed),
 		enablePOWChain:       cfg.EnablePOWChain,
+		p2p:                  cfg.P2p,
 	}, nil
 }
 
@@ -145,6 +149,7 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	if err != nil {
 		return nil, fmt.Errorf("could not attempt fetch beacon state: %v", err)
 	}
+
 	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash beacon state: %v", err)
@@ -156,6 +161,7 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	if err := c.beaconDB.UpdateChainHead(genBlock, beaconState); err != nil {
 		return nil, fmt.Errorf("could not set chain head, %v", err)
 	}
+
 	return beaconState, nil
 }
 
