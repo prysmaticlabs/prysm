@@ -157,8 +157,8 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		}).Info("Net eth gains/losses")
 	}
 	log.WithField(
-		"averageEthBalance", fmt.Sprintf("%.0f", avgBalance),
-	).Info("Average validator balance in eth2")
+		"averageEthBalance", fmt.Sprintf("%f", avgBalance),
+	).Info("Average eth balance per validator in the beacon chain")
 	v.prevBalance = resp.Balance
 	return nil
 }
