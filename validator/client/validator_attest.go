@@ -125,13 +125,11 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	time.Sleep(time.Until(timeToBroadcast))
 	sleepSpan.End()
 	log.Debugf("Produced attestation: %v", attestation)
-	attestRes, err := v.attesterClient.AttestHead(ctx, attestation)
-	if err != nil {
+	if _, err := v.attesterClient.AttestHead(ctx, attestation); err != nil {
 		log.Errorf("Could not submit attestation to beacon node: %v", err)
 		return
 	}
 	log.WithFields(logrus.Fields{
-		"hash":  fmt.Sprintf("%#x", attestRes.AttestationHash),
 		"shard": attData.Shard,
 		"slot":  slot-params.BeaconConfig().GenesisSlot,
 	}).Info("Beacon node processed attestation successfully")
