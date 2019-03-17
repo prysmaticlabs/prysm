@@ -2,21 +2,20 @@
 
 [![Build status](https://badge.buildkite.com/b555891daf3614bae4284dcf365b2340cefc0089839526f096.svg)](https://buildkite.com/prysmatic-labs/prysm)
 
-This is the main repository for the beacon chain and sharding implementation for Ethereum Serenity [Prysmatic Labs](https://prysmaticlabs.com).
+This is the main repository for the Go implementation of the Ethereum 2.0 Serenity [Prysmatic Labs](https://prysmaticlabs.com).
 
 Before you begin, check out our [Contribution Guidelines](#contributing) and join our active chat room on Discord or Gitter below:
 
 [![Discord](https://user-images.githubusercontent.com/7288322/34471967-1df7808a-efbb-11e7-9088-ed0b04151291.png)](https://discord.gg/KSA7rPr)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/prysmaticlabs/geth-sharding?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
-Also, read our [Sharding Reference Implementation Doc](https://github.com/prysmaticlabs/prysm/blob/master/docs/SHARDING.md). This doc provides a background on the sharding implementation we follow at Prysmatic Labs.
+Also, read our [Roadmap Reference Implementation Doc](https://github.com/prysmaticlabs/prysm/blob/master/docs/ROADMAP.md). This doc provides a background on the milestones we aim for the project to achieve.
 
 
 # Table of Contents
 
--   [Running Our Demo Release](#running-our-demo-release)
-    - [Installation](#installation)
-    - [Run Our Pre-Compiled Binaries](#run-our-pre-compiled-binaries)
+ - [Installation](#installation)
+    - [Run Via the Go Tool](#run-via-the-go-tool)
     - [Run Via Bazel (Recommended)](#run-via-bazel-recommended)
     - [Running The Beacon Chain](#running-the-beacon-chain)
     - [Running an ETH2.0 Validator Client](#running-an-eth20-validator-client)
@@ -26,28 +25,13 @@ Also, read our [Sharding Reference Implementation Doc](https://github.com/prysma
 -   [Contributing](#contributing)
 -   [License](#license)
 
-# Running Our Demo Release
-
-To run our current release, v0.0.0, as a local demo, you'll need to run a beacon chain node and a validator client.
-
-In this local demo, you can start a beacon chain from genesis, connect as a validator client through a public key, and propose/vote on beacon blocks during each cycle. For more information on the full scope of the public demo, see the demo information [here](https://github.com/prysmaticlabs/prysm/blob/master/docs/DEMO_INFORMATION.md).
-
 ## Installation
 
 You can either choose to run our system via:
 
-- Downloading our Precompiled Binaries from our latest [release](https://github.com/prysmaticlabs/prysm/releases)
-- Use Docker
 - Use Our Build Tool, Bazel **(Recommended)**
-
-## Run Our Pre-Compiled Binaries
-
-First, download our latest [release](https://github.com/prysmaticlabs/prysm/releases) for your operating system. Then:
-
-```
-chmod +x ./beacon-chain
-chmod +x ./validator
-```
+- The Go tool to manage builds and tests
+- Use Docker
 
 ## Run Via Bazel (Recommended)
 
@@ -68,7 +52,7 @@ Bazel manages all of the dependencies for you (including go and necessary compil
 
 ### Building
 
-Then, build both parts of our system: a beacon chain node implementation, and a validator client:
+Then, build both parts of our system: a beacon chain node, and a validator client which attaches to it:
 
 ```
 bazel build //beacon-chain:beacon-chain
@@ -77,88 +61,43 @@ bazel build //validator:validator
 
 ## Running The Beacon Chain
 
-To start the system, you will need a special data directory where all the beacon chain data will be persisted to. 
-
-Then, you can run the node as follows:
-
-With the binary executable:
+To start your beacon node with bazel:
 
 ```
-./beacon-chain \
-  --datadir /path/to/your/datadir \
-  --rpc-port 4000 \
-  --demo-config \
-  --p2p-port 9000
+bazel run //beacon-chain \ 
+  --web3provider wss://goerli.prylabs.net/websocket \
+  --deposit-contract DEPOSIT_CONTRACT_ADDRESS
 ```
 
-With bazel:
-
-```
-bazel run //beacon-chain --\
-  --datadir /path/to/your/datadir \
-  --rpc-port 4000 \
-  --demo-config \
-  --p2p-port 9000
-```
-
-
-We also have a `--demo-config` flag that configures some internal parameters for you to run a local demo version of the system.
-
-If you want to see what's happening in the system underneath the hood, add a `--verbosity debug` flag to show every single thing the beacon chain node does during its run time. If you want to rerun the beacon chain, delete and create a new data directory for the system to start from scratch.
-
-![beaconsystem](https://i.imgur.com/vsUfLFu.png)
+If you want to see what's happening in the system underneath the hood, add a `--verbosity debug` flag to show every single thing the beacon chain node does during its run time.
 
 ## Running an ETH2.0 Validator Client
 
-Once your beacon node is up, you'll need to attach a validator client as a separate process. This validator is in charge of running Casper+Sharding responsibilities (shard state execution to be designed in phase 2). This validator will listen for incoming beacon blocks and shard assignments and determine when its time to perform attester/proposer responsibilities accordingly.
+Once your beacon node is up, you'll need to attach a validator client as a separate process. Each validator represents 32ETH being staked in the system, so you can spin up as many as you want to have more at stake in the network.
 
-To get started, you'll need to use a public key from the initial validator set of the beacon node. Here are a few you can try out:
-
-```
-bc36789e7a1e281436464229828f817d6612f7b477d66591ff96a9e064bcc98a
-5fe7f977e71dba2ea1a68e21057beebb9be2ac30c6410aa38d4f3fbe41dcffd2
-f2ee15ea639b73fa3db9b34a245bdfa015c260c598b211bf05a1ecc4b3e3b4f2
-69c322e3248a5dfc29d73c5b0553b0185a35cd5bb6386747517ef7e53b15e287
-f343681465b9efe82c933c3e8748c70cb8aa06539c361de20f72eac04e766393
-dbb8d0f4c497851a5043c6363657698cb1387682cac2f786c731f8936109d795
-d0591206d9e81e07f4defc5327957173572bcd1bca7838caa7be39b0c12b1873
-ee2a4bc7db81da2b7164e56b3649b1e2a09c58c455b15dabddd9146c7582cebc
-d33e25809fcaa2b6900567812852539da8559dc8b76a7ce3fc5ddd77e8d19a69
-b2e7b7a21d986ae84d62a7de4a916f006c4e42a596358b93bad65492d174c4ff
-```
-
-Run as follows:
-
-With the binary executable:
-
-```
-./validator \
-  --beacon-rpc-provider http://localhost:4000 \
-  --datadir /path/to/uniquevalidatordatadir \
-  --pubkey f2ee15ea639b73fa3db9b34a245bdfa015c260c598b211bf05a1ecc4b3e3b4f2
-```
-
-With Bazel:
+To get started, you'll need to create a new validator account with a unique password and data directory to store your encrypted private keys:
 
 ```
 bazel run //validator --\
-  --beacon-rpc-provider http://localhost:4000 \
-  --datadir /path/to/uniquevalidatordatadir \
-  --pubkey f2ee15ea639b73fa3db9b34a245bdfa015c260c598b211bf05a1ecc4b3e3b4f2
+  accounts create --password YOUR_PASSWORD \
+  --keystore-path /path/to/validator/keystore/dir
 ```
 
+This will connect you to your running beacon node and listen for validator assignments! The beacon node will update you at every cycle transition and shuffle your validator into different shards and slots in order to vote on or propose beacon blocks. To then run the validator, use the command: 
 
-This will connect you to your running beacon node and listen for shard/slot assignments! The beacon node will update you at every cycle transition and shuffle your validator into different shards and slots in order to vote on or propose beacon blocks.
-
-if you want to run multiple validator clients, **each one needs to have its own data directory where it will persist information, so create a new one each time** and pass it into the validator command with the flag `--datadir /path/to/validatordatadir`.
+```
+bazel run //validator --\
+  --password YOUR_PASSWORD \
+  --keystore-path /path/to/validator/keystore/dir
+```
 
 ## Running Via Docker
 
 ```
 docker run -p 4000:4000 -v gcr.io/prysmaticlabs/prysm/beacon-chain:latest \
   --rpc-port 4000 \
-  --demo-config \
-  --p2p-port 9000
+  --web3provider wss://goerli.prylabs.net/websocket \
+  --deposit-contract DEPOSIT_CONTRACT_ADDRESS
 ```
 
 Then, to run a validator client, use:
@@ -166,15 +105,11 @@ Then, to run a validator client, use:
 ```
 docker run gcr.io/prysmaticlabs/prysm/validator:latest \
   --beacon-rpc-provider http://{YOUR_LOCAL_IP}:4000 \
-  --pubkey f2ee15ea639b73fa3db9b34a245bdfa015c260c598b211bf05a1ecc4b3e3b4f2
+  --password YOUR_PASSWORD \
+  --keystore-path /path/to/your/validator/keystore/dir
 ```
 
-
 This will connect you to your running beacon node and listen for shard/slot assignments! The beacon node will update you at every cycle transition and shuffle your validator into different shards and slots in order to vote on or propose beacon blocks.
-
-## Running While Connected to a Mainchain Ethereum 1.0 Node
-
-If you want to run the system with a real Web3 endpoint to listen for incoming Ethereum 1.0 block hashes, follow the instructions on setting up a geth node [here](https://github.com/prysmaticlabs/prysm/blob/master/docs/MAINCHAIN.md).
 
 ## Running Under Windows
 
@@ -182,19 +117,16 @@ The best way to run under Windows is to clone the repository and then run the no
 
 ```
 go run ./beacon-chain main.go \
-   --datadir /path/to/your/datadir \
-   --rpc-port 4000 \
-   --demo-config \
-   --p2p-port 9000
+  --web3provider wss://goerli.prylabs.net/websocket \
+  --deposit-contract DEPOSIT_CONTRACT_ADDRESS
 ```
 
 After the beacon chain is up and running, run the validator client as a separate process as follows:
 
 ```
 go run ./validator/main.go \
-  --beacon-rpc-provider http://localhost:4000 \
-  --datadir /path/to/uniquevalidatordatadir \
-  --pubkey f2ee15ea639b73fa3db9b34a245bdfa015c260c598b211bf05a1ecc4b3e3b4f2
+  --password YOUR_PASSWORD \
+  --keystore-path /path/to/your/validator/keystore/dir
 ```
 
 # Testing
