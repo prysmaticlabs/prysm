@@ -9,10 +9,10 @@ The process for implementing new features using this package is as follows:
 	4. Place any "previous" behavior in the `else` statement.
 	5. Ensure any tests using the new feature fail if the flag isn't enabled.
 	5a. Use the following to enable your flag for tests:
-			cfg := &FeatureFlagConfig{
-				VerifyAttestationSigs: true,
-			}
-			InitFeatureConfig(cfg)
+	cfg := &featureconfig.FeatureFlagConfig{
+		VerifyAttestationSigs: true,
+	}
+	featureconfig.InitFeatureConfig(cfg)
 */
 package featureconfig
 
@@ -21,7 +21,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-var log = logrus.WithField("prefix", "node")
+var log = logrus.WithField("prefix", "flags")
 
 // FeatureFlagConfig is a struct to represent what features the client will perform on runtime.
 type FeatureFlagConfig struct {

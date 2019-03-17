@@ -1,5 +1,7 @@
 # Ethereum Serenity Prysm Demo
 
+**IMPORTANT: This document describes our v0.0.0 demo release from October 2018, which is no longer relevant to our current work and is only here for historical purposes**
+
 ## Overview & Research Background
 
 At Prysmatic Labs, we started working on Ethereum Serenity all the way back since Vitalik first had a Sharding FAQ as the only reference for the system at the start of 2018. A lot has happened, with the specification evolving from a series of ETHResearch blog posts into a minimal viable blueprint for how to design a scalable, secure Ethereum blockchain using Casper Proof of Stake and Sharding at its core.

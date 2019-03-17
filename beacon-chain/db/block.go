@@ -169,18 +169,11 @@ func (db *BeaconDB) UpdateChainHead(block *pb.BeaconBlock, beaconState *pb.Beaco
 		return fmt.Errorf("unable to tree hash block: %v", err)
 	}
 
-	beaconStateEnc, err := proto.Marshal(beaconState)
-	if err != nil {
-		return fmt.Errorf("unable to encode beacon state: %v", err)
-	}
-
-	currentState, ok := proto.Clone(beaconState).(*pb.BeaconState)
-	if !ok {
-		return errors.New("could not clone beacon state")
-	}
-	db.currentState = currentState
-
 	slotBinary := encodeSlotNumber(block.Slot)
+
+	if err := db.SaveState(beaconState); err != nil {
+		return fmt.Errorf("failed to save beacon state as canonical: %v", err)
+	}
 
 	return db.update(func(tx *bolt.Tx) error {
 		blockBucket := tx.Bucket(blockBucket)
@@ -199,9 +192,6 @@ func (db *BeaconDB) UpdateChainHead(block *pb.BeaconBlock, beaconState *pb.Beaco
 			return fmt.Errorf("failed to record the block as the head of the main chain: %v", err)
 		}
 
-		if err := chainInfo.Put(stateLookupKey, beaconStateEnc); err != nil {
-			return fmt.Errorf("failed to save beacon state as canonical: %v", err)
-		}
 		return nil
 	})
 }

@@ -28,8 +28,11 @@ func (as *AttesterServer) AttestHead(ctx context.Context, att *pbp2p.Attestation
 	if err != nil {
 		return nil, fmt.Errorf("could not hash attestation: %v", err)
 	}
-	// Relays the attestation to chain service.
-	as.operationService.IncomingAttFeed().Send(att)
+
+	if err := as.operationService.HandleAttestations(ctx, att); err != nil {
+		return nil, err
+	}
+
 	return &pb.AttestResponse{AttestationHash: h[:]}, nil
 }
 
