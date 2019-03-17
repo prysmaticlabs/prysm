@@ -40,7 +40,7 @@ func (sim *simulatedP2P) Subscribe(msg proto.Message, channel chan p2p.Message) 
 	return feed.Subscribe(channel)
 }
 
-func (sim *simulatedP2P) Broadcast(msg proto.Message) {
+func (sim *simulatedP2P) Broadcast(_ context.Context, msg proto.Message) {
 	sim.mutex.Lock()
 	defer sim.mutex.Unlock()
 
