@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/shared/errutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
@@ -419,7 +420,7 @@ func CommitteeAssignment(
 			}
 		}
 	}
-	return []uint64{}, 0, 0, false, fmt.Errorf("could not get assignment validator %d", validatorIndex)
+	return []uint64{}, 0, 0, false, errutil.AssignmentNotFoundErr
 }
 
 // prevEpochCommitteesAtSlot returns a list of crosslink committees of the previous epoch.

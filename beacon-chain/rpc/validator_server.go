@@ -107,7 +107,7 @@ func (vs *ValidatorServer) CommitteeAssignment(
 	committee, shard, slot, isProposer, err :=
 		helpers.CommitteeAssignment(beaconState, req.EpochStart, uint64(idx), false)
 	if err != nil {
-		return nil, fmt.Errorf("could not get next epoch committee assignment: %v", err)
+		return nil, err
 	}
 
 	return &pb.CommitteeAssignmentResponse{

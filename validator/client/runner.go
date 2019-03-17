@@ -2,8 +2,8 @@ package client
 
 import (
 	"context"
-
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/errutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -40,7 +40,7 @@ func run(ctx context.Context, v Validator) {
 		log.Fatalf("Could not wait for validator activation: %v", err)
 	}
 	if err := v.UpdateAssignments(ctx, params.BeaconConfig().GenesisSlot); err != nil {
-		log.WithField("error", err).Error("Failed to update assignments")
+		handleAssignmentError(err, params.BeaconConfig().GenesisSlot)
 	}
 	for {
 		ctx, span := trace.StartSpan(ctx, "processSlot")
@@ -54,7 +54,7 @@ func run(ctx context.Context, v Validator) {
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
 
 			if err := v.UpdateAssignments(ctx, slot); err != nil {
-				log.WithField("error", err).Warn("Failed to update validator assignments")
+                handleAssignmentError(err, slot)
 				continue
 			}
 			role := v.RoleAt(slot)
@@ -76,5 +76,15 @@ func run(ctx context.Context, v Validator) {
 				// Do nothing :)
 			}
 		}
+	}
+}
+
+func handleAssignmentError(err error, slot uint64) {
+	if err == errutil.AssignmentNotFoundErr {
+		log.WithField(
+			"epoch", (slot*params.BeaconConfig().SlotsPerEpoch) - params.BeaconConfig().GenesisEpoch,
+		).Warn("Validator not yet assigned to epoch")
+	} else {
+		log.WithField("error", err).Error("Failed to update assignments")
 	}
 }

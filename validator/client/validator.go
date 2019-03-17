@@ -147,7 +147,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	// performance in the previous epoch, including rewards/penalties, or other important
 	// parameters from the previous epoch that are useful to log.
 	if slot%params.BeaconConfig().SlotsPerEpoch == 0 {
-		
+
 	}
 
 	v.assignment = resp
