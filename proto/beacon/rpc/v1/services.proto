@@ -34,6 +34,15 @@ service ValidatorService {
     rpc ValidatorIndex(ValidatorIndexRequest) returns (ValidatorIndexResponse);
     rpc CommitteeAssignment(ValidatorEpochAssignmentsRequest) returns (CommitteeAssignmentResponse);
     rpc ValidatorStatus(ValidatorIndexRequest) returns (ValidatorStatusResponse);
+    rpc ValidatorPerformance(ValidatorPerformanceRequest) returns (ValidatorPerformanceResponse);
+}
+
+message ValidatorPerformanceRequest {
+   uint64 slot = 1;
+}
+
+message ValidatorPerformanceResponse {
+    uint64 balance = 1;
 }
 
 message ValidatorActivationRequest {
