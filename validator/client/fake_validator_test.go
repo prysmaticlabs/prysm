@@ -24,6 +24,7 @@ type fakeValidator struct {
 	AttestToBlockHeadArg1   uint64
 	ProposeBlockCalled      bool
 	ProposeBlockArg1        uint64
+	LogValidatorGainsAndLossesCalled bool
 }
 
 func (fv *fakeValidator) Done() {
@@ -49,6 +50,11 @@ func (fv *fakeValidator) UpdateAssignments(_ context.Context, slot uint64) error
 	fv.UpdateAssignmentsCalled = true
 	fv.UpdateAssignmentsArg1 = slot
 	return fv.UpdateAssignmentsRet
+}
+
+func (fv *fakeValidator) LogValidatorGainsAndLosses(_ context.Context, slot uint64) error {
+	fv.LogValidatorGainsAndLossesCalled = true
+	return nil
 }
 
 func (fv *fakeValidator) RoleAt(slot uint64) pb.ValidatorRole {
