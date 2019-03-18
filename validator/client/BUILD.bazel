@@ -15,7 +15,6 @@ go_library(
         "//proto/beacon/p2p/v1:go_default_library",
         "//proto/beacon/rpc/v1:go_default_library",
         "//shared/bitutil:go_default_library",
-        "//shared/errutil:go_default_library",
         "//shared/forkutil:go_default_library",
         "//shared/hashutil:go_default_library",
         "//shared/keystore:go_default_library",
@@ -27,7 +26,9 @@ go_library(
         "@io_opencensus_go//plugin/ocgrpc:go_default_library",
         "@io_opencensus_go//trace:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//codes:go_default_library",
         "@org_golang_google_grpc//credentials:go_default_library",
+        "@org_golang_google_grpc//status:go_default_library",
     ],
 )
 

@@ -9,21 +9,21 @@ import (
 var _ = Validator(&fakeValidator{})
 
 type fakeValidator struct {
-	DoneCalled              bool
-	WaitForActivationCalled bool
-	WaitForChainStartCalled bool
-	NextSlotRet             <-chan uint64
-	NextSlotCalled          bool
-	UpdateAssignmentsCalled bool
-	UpdateAssignmentsArg1   uint64
-	UpdateAssignmentsRet    error
-	RoleAtCalled            bool
-	RoleAtArg1              uint64
-	RoleAtRet               pb.ValidatorRole
-	AttestToBlockHeadCalled bool
-	AttestToBlockHeadArg1   uint64
-	ProposeBlockCalled      bool
-	ProposeBlockArg1        uint64
+	DoneCalled                       bool
+	WaitForActivationCalled          bool
+	WaitForChainStartCalled          bool
+	NextSlotRet                      <-chan uint64
+	NextSlotCalled                   bool
+	UpdateAssignmentsCalled          bool
+	UpdateAssignmentsArg1            uint64
+	UpdateAssignmentsRet             error
+	RoleAtCalled                     bool
+	RoleAtArg1                       uint64
+	RoleAtRet                        pb.ValidatorRole
+	AttestToBlockHeadCalled          bool
+	AttestToBlockHeadArg1            uint64
+	ProposeBlockCalled               bool
+	ProposeBlockArg1                 uint64
 	LogValidatorGainsAndLossesCalled bool
 }
 

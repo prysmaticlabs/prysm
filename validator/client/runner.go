@@ -3,8 +3,10 @@ package client
 import (
 	"context"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/errutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -88,11 +90,14 @@ func run(ctx context.Context, v Validator) {
 }
 
 func handleAssignmentError(err error, slot uint64) {
-	if err == errutil.AssignmentNotFoundErr {
+	errCode, ok := status.FromError(err)
+	if !ok {
+		log.WithField("error", err).Error("Failed to update assignments")
+		return
+	}
+	if errCode.Code() == codes.NotFound {
 		log.WithField(
 			"epoch", (slot*params.BeaconConfig().SlotsPerEpoch)-params.BeaconConfig().GenesisEpoch,
 		).Warn("Validator not yet assigned to epoch")
-	} else {
-		log.WithField("error", err).Error("Failed to update assignments")
 	}
 }

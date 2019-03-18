@@ -152,7 +152,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 		percentNet := (newBalance - prevBalance) / prevBalance
 		log.WithField("prevEthBalance", prevBalance).Info("Previous validator balance")
 		log.WithFields(logrus.Fields{
-			"eth":          fmt.Sprintf("%f", newBalance-prevBalance),
+			"eth":           fmt.Sprintf("%f", newBalance-prevBalance),
 			"percentChange": fmt.Sprintf("%.2f%%", percentNet*100),
 		}).Info("Net gains/losses in eth")
 	}
