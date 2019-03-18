@@ -32,7 +32,7 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, block *pb.Beac
 		return nil, fmt.Errorf("unable to get block root %v", err)
 	}
 
-	ancestorSet, err := lookUpFromFinalizedBlock(ctx, db, block, root)
+	ancestorSet, err := lookUpFromFinalizedBlock(db, block, root)
 	if err != nil {
 		return nil, fmt.Errorf("unable to look up block ancestors %v", err)
 	}
@@ -82,7 +82,7 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, block *pb.Beac
 	return fState, nil
 }
 
-func lookUpFromFinalizedBlock(ctx context.Context, db *db.BeaconDB, block *pb.BeaconBlock,
+func lookUpFromFinalizedBlock(db *db.BeaconDB, block *pb.BeaconBlock,
 	finalizedBlockRoot [32]byte) ([]*pb.BeaconBlock, error) {
 
 	blockAncestors := make([]*pb.BeaconBlock, 0)

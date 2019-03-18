@@ -46,7 +46,7 @@ func PowerOf2(n uint64) uint64 {
 // power of 2 that is less than or equal to the argument.
 func ClosestPowerOf2(n uint64) uint64 {
 	if n == 0 {
-        return uint64(1)
+		return uint64(1)
 	}
 	exponent := math.Floor(math.Log2(float64(n)))
 	return PowerOf2(uint64(exponent))
