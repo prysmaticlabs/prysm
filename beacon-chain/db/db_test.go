@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"os"
 	"path"
+	"strings"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -35,5 +36,17 @@ func teardownDB(t testing.TB, db *BeaconDB) {
 	}
 	if err := os.RemoveAll(db.DatabasePath); err != nil {
 		t.Fatalf("Failed to remove directory: %v", err)
+	}
+}
+
+func TestClearDB(t *testing.T) {
+	beaconDB := setupDB(t)
+	path := strings.TrimSuffix(beaconDB.DatabasePath, "beaconchain.db")
+	if err := ClearDB(path); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(beaconDB.DatabasePath); !os.IsNotExist(err) {
+		t.Fatalf("db wasnt cleared %v", err)
 	}
 }

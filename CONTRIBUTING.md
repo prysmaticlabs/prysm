@@ -2,9 +2,7 @@
 
 Excited by our work and want to get involved in building out our sharding releases? Or maybe you haven't learned as much about the Ethereum protocol but are a savvy developer? Our [READINGS.md](https://github.com/prysmaticlabs/prysm/blob/master/docs/READINGS.md) doc includes comprehensive information on Ethereum and sharding for both part-time and core contributors to the project.
 
-Additionally, our [Sharding Reference Implementation Doc](https://github.com/prysmaticlabs/prysm/blob/master/validator/README.md) serves source of truth for all things related to our implementation of sharding for Ethereum.
-
-You can explore our [Current Projects](https://github.com/prysmaticlabs/prysm/projects) in-the works for our different releases. Feel free to fork our repo and start creating PR’s after assigning yourself to an issue of interest. We are always chatting on [Discord](https://discord.gg/che9auJ) or [Gitter](https://gitter.im/prysmaticlabs/geth-sharding) drop us a line there if you want to get more involved or have any questions on our implementation!
+You can explore our [Open Issues](https://github.com/prysmaticlabs/prysm/issues) in-the works for our different releases. Feel free to fork our repo and start creating PR’s after assigning yourself to an issue of interest. We are always chatting on [Discord](https://discord.gg/che9auJ) or [Gitter](https://gitter.im/prysmaticlabs/geth-sharding) drop us a line there if you want to get more involved or have any questions on our implementation!
 
 ## Contribution Steps
 
@@ -198,7 +196,7 @@ We do not expect all part-time contributors to be experts on all the latest shar
 
 Core contributors are remote contractors of Prysmatic Labs, LLC. and are considered critical team members of our organization. Core devs have all of the responsibilities of part-time contributors plus the majority of the following:
 
--   Stay up to date on the latest sharding posts on ETHResearch
+-   Stay up to date on the latest beacon chain sepcification
 -   Monitor github issues and PR’s to make sure owner, labels, descriptions are correct
 -   Formulate independent ideas, suggest new work to do, point out improvements to existing approaches
 -   Participate in code review, ensure code quality is excellent, and have ensure high code coverage

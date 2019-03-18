@@ -22,6 +22,11 @@ enum Topic {
   ATTESTATION_RESPONSE = 14;
 }
 
+message Envelope {
+  bytes span_context = 1;
+  bytes payload = 2;
+}
+
 message BeaconBlockAnnounce {
   bytes hash = 1;
   uint64 slot_number = 2;

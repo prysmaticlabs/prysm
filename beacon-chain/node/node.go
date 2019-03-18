@@ -166,6 +166,12 @@ func (b *BeaconNode) Close() {
 func (b *BeaconNode) startDB(ctx *cli.Context) error {
 	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
 
+	if b.ctx.GlobalBool(cmd.ClearDBFlag.Name) {
+		if err := db.ClearDB(path.Join(baseDir, beaconChainDBName)); err != nil {
+			return err
+		}
+	}
+
 	db, err := db.NewDB(path.Join(baseDir, beaconChainDBName))
 	if err != nil {
 		return err
@@ -198,6 +204,10 @@ func (b *BeaconNode) registerBlockchainService(_ *cli.Context) error {
 	if err := b.services.FetchService(&attsService); err != nil {
 		return err
 	}
+	var p2pService *p2p.Server
+	if err := b.services.FetchService(&p2pService); err != nil {
+		return err
+	}
 
 	blockchainService, err := blockchain.NewChainService(context.Background(), &blockchain.Config{
 		BeaconDB:       b.db,
@@ -205,6 +215,7 @@ func (b *BeaconNode) registerBlockchainService(_ *cli.Context) error {
 		OpsPoolService: opsService,
 		AttsService:    attsService,
 		BeaconBlockBuf: 10,
+		P2p:            p2pService,
 	})
 	if err != nil {
 		return fmt.Errorf("could not register blockchain service: %v", err)
