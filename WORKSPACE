@@ -9,8 +9,8 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_go",
-    url = "https://github.com/bazelbuild/rules_go/releases/download/0.18.0/rules_go-0.18.0.tar.gz",
-    sha256 = "301c8b39b0808c49f98895faa6aa8c92cbd605ab5ad4b6a3a652da33a1a2ba2e",
+    url = "https://github.com/bazelbuild/rules_go/releases/download/0.18.1/rules_go-0.18.1.tar.gz",
+    sha256 = "77dfd303492f2634de7a660445ee2d3de2960cbd52f97d8c0dffa9362d3ddef9",
 )
 
 http_archive(
@@ -35,15 +35,15 @@ http_archive(
 
 http_archive(
     name = "build_bazel_rules_nodejs",
-    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.27.3/rules_nodejs-0.27.3.tar.gz"],
-    sha256 = "df4786a84a25d5b9f9eaaf9b5cac37fa1136f51c99fb0fbeed921204a1596c82",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/0.27.5/rules_nodejs-0.27.5.tar.gz"],
+    sha256 = "02506a501974b6803e9756a4e655f2e1e79d2eafa474154e83b07289f3abab0d",
 )
 
 http_archive(
     name = "io_bazel_rules_k8s",
-    sha256 = "053c71ab73970314691ac1ff78299c83d39d990e336412316d3022a59d195712",
-    strip_prefix = "rules_k8s-1f166008cc86d60e274b274cbc5803de120caf29",
-    url = "https://github.com/bazelbuild/rules_k8s/archive/1f166008cc86d60e274b274cbc5803de120caf29.tar.gz",
+    sha256 = "c18619d129c5a22798e8a8149c29a55f11f3b1a79872f5ad5282624e5c845f4a",
+    strip_prefix = "rules_k8s-54e9742bd2b75facdcf30fe3a1307ca0fad17385",
+    url = "https://github.com/bazelbuild/rules_k8s/archive/54e9742bd2b75facdcf30fe3a1307ca0fad17385.tar.gz",
 )
 
 load(
@@ -400,7 +400,7 @@ go_repository(
 
 go_repository(
     name = "com_github_mattn_go_isatty",
-    commit = "369ecd8cea9851e459abb67eb171853e3986591e",
+    commit = "c2a7a6ca930a4cd0bc33a3f298eb71960732a3a7",  # v0.0.7
     importpath = "github.com/mattn/go-isatty",
 )
 
@@ -490,7 +490,7 @@ go_repository(
 
 go_repository(
     name = "com_github_spaolacci_murmur3",
-    commit = "f09979ecbc725b9e6d41a297405f65e7e8804acc",
+    commit = "f09979ecbc725b9e6d41a297405f65e7e8804acc",  # v1.1.0
     importpath = "github.com/spaolacci/murmur3",
 )
 
@@ -634,7 +634,7 @@ go_repository(
 
 go_repository(
     name = "org_golang_google_api",
-    commit = "1e61edccee94899d35fb4f2be2c3dbf636d1bb2b",
+    commit = "e742f5a8defa1f9f5d723dfa04c962e680dc33f0",  # v0.2.0
     importpath = "google.golang.org/api",
 )
 
@@ -941,7 +941,7 @@ go_repository(
 
 go_repository(
     name = "com_google_cloud_go",
-    commit = "7e92b4d51047c91ec65bab1144f1c3183d7db9d6",
+    commit = "f52f9bc132541d2aa914f42100c36d10b1ef7e0c",  # v0.37.0
     importpath = "cloud.google.com/go",
 )
 
