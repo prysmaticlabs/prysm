@@ -490,7 +490,7 @@ go_repository(
 
 go_repository(
     name = "com_github_spaolacci_murmur3",
-    commit = "f09979ecbc725b9e6d41a297405f65e7e8804acc",
+    commit = "f09979ecbc725b9e6d41a297405f65e7e8804acc",  # v1.1.0
     importpath = "github.com/spaolacci/murmur3",
 )
 
