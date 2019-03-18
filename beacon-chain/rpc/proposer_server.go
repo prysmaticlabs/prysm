@@ -131,7 +131,7 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 			beaconState,
 			nil,
 			parentHash,
-			false, /* no sig verify */
+			state.DefaultConfig(),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not execute state transition %v", err)
@@ -142,7 +142,7 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 		beaconState,
 		req,
 		parentHash,
-		false, /* no sig verification */
+		state.DefaultConfig(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not execute state transition %v", err)
