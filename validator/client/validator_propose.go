@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"github.com/sirupsen/logrus"
-
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
