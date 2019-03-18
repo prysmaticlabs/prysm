@@ -4,16 +4,15 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/sirupsen/logrus"
 )
 
-// GenerateStateFromSlot generates state from the last finalized epoch till the specified block.
+// GenerateStateFromBlock generates state from the last finalized epoch till the specified block.
 func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, block *pb.BeaconBlock) (*pb.BeaconState, error) {
 	fState, err := db.HistoricalStateFromSlot(block.Slot)
 	if err != nil {
@@ -66,7 +65,7 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, block *pb.Beac
 		fState, err = state.ExecuteStateTransition(
 			ctx,
 			fState,
-			blk,
+			block,
 			root,
 			&state.TransitionConfig{
 				VerifySignatures: true,
