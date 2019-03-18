@@ -1,4 +1,4 @@
-package stategenerator
+package stategenerator_test
 
 import (
 	"context"
