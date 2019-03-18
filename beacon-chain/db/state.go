@@ -160,6 +160,11 @@ func (db *BeaconDB) SaveJustifiedState(beaconState *pb.BeaconState) error {
 // SaveFinalizedState saves the last finalized state in the db.
 func (db *BeaconDB) SaveFinalizedState(beaconState *pb.BeaconState) error {
 	return db.update(func(tx *bolt.Tx) error {
+		// Delete historical states if we are saving a new finalized state.
+		if err := db.deleteHistoricalStates(); err != nil {
+			return err
+		}
+
 		chainInfo := tx.Bucket(chainInfoBucket)
 		beaconStateEnc, err := proto.Marshal(beaconState)
 		if err != nil {
@@ -220,6 +225,16 @@ func (db *BeaconDB) SaveCurrentAndFinalizedState(beaconState *pb.BeaconState) er
 			return err
 		}
 
+		// Delete historical states if we are saving a new finalized state.
+		if err := db.deleteHistoricalStates(); err != nil {
+			return err
+		}
+
+		// Putting in finalized state.
+		if err := chainInfo.Put(stateLookupKey, beaconStateEnc); err != nil {
+			return err
+		}
+
 		return chainInfo.Put(finalizedStateLookupKey, beaconStateEnc)
 	})
 }
@@ -243,6 +258,23 @@ func (db *BeaconDB) JustifiedState() (*pb.BeaconState, error) {
 
 // FinalizedState retrieves the finalized state from the db.
 func (db *BeaconDB) FinalizedState() (*pb.BeaconState, error) {
+	var beaconState *pb.BeaconState
+	err := db.view(func(tx *bolt.Tx) error {
+		chainInfo := tx.Bucket(chainInfoBucket)
+		encState := chainInfo.Get(finalizedStateLookupKey)
+		if encState == nil {
+			return errors.New("no finalized state saved")
+		}
+
+		var err error
+		beaconState, err = createState(encState)
+		return err
+	})
+	return beaconState, err
+}
+
+// HistoricalStateFromSlot retrieves the closest historical state to a slot
+func (db *BeaconDB) HistoricalStateFromSlot(slot uint64) (*pb.BeaconState, error) {
 	var beaconState *pb.BeaconState
 	err := db.view(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
@@ -283,17 +315,19 @@ func (db *BeaconDB) GenesisTime(ctx context.Context) (time.Time, error) {
 func (db *BeaconDB) deleteHistoricalStates() error {
 	return db.update(func(tx *bolt.Tx) error {
 		histState := tx.Bucket(histStateBucket)
+		return histState.ForEach(db.deleteHistKeys)
+	})
+}
+
+func (db *BeaconDB) deleteHistKeys(k []byte, v []byte) error {
+	return db.update(func(tx *bolt.Tx) error {
+		histState := tx.Bucket(histStateBucket)
 		chainInfo := tx.Bucket(chainInfoBucket)
-		beaconStateEnc, err := proto.Marshal(beaconState)
-		if err != nil {
+
+		if err := histState.Delete(k); err != nil {
 			return err
 		}
 
-		// Putting in finalized state.
-		if err := chainInfo.Put(stateLookupKey, beaconStateEnc); err != nil {
-			return err
-		}
-
-		return chainInfo.Put(finalizedStateLookupKey, beaconStateEnc)
+		return chainInfo.Delete(v)
 	})
 }
