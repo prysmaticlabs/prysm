@@ -52,8 +52,11 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, block *pb.Beac
 				ctx,
 				fState,
 				nil,
-				bytesutil.ToBytes32(block.ParentRootHash32),
-				true, /* sig verify */
+				root,
+				&state.TransitionConfig{
+					VerifySignatures: true,
+					Logging:          false,
+				},
 			)
 			if err != nil {
 				return nil, fmt.Errorf("could not execute state transition %v", err)
@@ -63,9 +66,12 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, block *pb.Beac
 		fState, err = state.ExecuteStateTransition(
 			ctx,
 			fState,
-			block,
-			bytesutil.ToBytes32(block.ParentRootHash32),
-			true, /* sig verify */
+			blk,
+			root,
+			&state.TransitionConfig{
+				VerifySignatures: true,
+				Logging:          false,
+			},
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not execute state transition %v", err)

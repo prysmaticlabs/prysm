@@ -127,7 +127,10 @@ func (c *ChainService) runStateTransition(
 		beaconState,
 		block,
 		headRoot,
-		true, /* sig verify */
+		&state.TransitionConfig{
+			VerifySignatures: true, // We activate signature verification in this state transition.
+			Logging:          true, // We enable logging in this state transition call.
+		},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not execute state transition %v", err)
