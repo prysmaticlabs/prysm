@@ -146,7 +146,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 	log.WithFields(logrus.Fields{
 		"ethBalance": newBalance,
 	}).Info("New validator balance")
-	avgBalance := float64(newBalance) / float64(params.BeaconConfig().GweiPerEth)
+	avgBalance := resp.AverageValidatorBalance / float32(params.BeaconConfig().GweiPerEth)
 	if v.prevBalance > 0 {
 		prevBalance := float64(v.prevBalance) / float64(params.BeaconConfig().GweiPerEth)
 		percentNet := (newBalance - prevBalance) / prevBalance

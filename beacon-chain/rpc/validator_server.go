@@ -90,11 +90,11 @@ func (vs *ValidatorServer) ValidatorPerformance(
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
-	totalBalance := uint64(0)
+	totalBalance := float32(0)
 	for _, val := range beaconState.ValidatorBalances {
-		totalBalance += val
+		totalBalance += float32(val)
 	}
-	avgBalance := totalBalance / uint64(len(beaconState.ValidatorBalances))
+	avgBalance := totalBalance / float32(len(beaconState.ValidatorBalances))
 	balance := beaconState.ValidatorBalances[index]
 	activeIndices := helpers.ActiveValidatorIndices(beaconState.ValidatorRegistry, req.Slot)
 	return &pb.ValidatorPerformanceResponse{
