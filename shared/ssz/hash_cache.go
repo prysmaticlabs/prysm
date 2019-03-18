@@ -127,7 +127,10 @@ func (b *hashCacheS) TrieRootCached(val interface{}) ([32]byte, error) {
 		}
 		// Right-pad with 0 to make 32 bytes long, if necessary
 		paddedOutput = bytesutil.ToBytes32(output)
-		b.AddRoot(bytesutil.ToBytes32(hs), paddedOutput[:])
+		err = b.AddRoot(bytesutil.ToBytes32(hs), paddedOutput[:])
+		if err != nil {
+			return [32]byte{}, newHashError(fmt.Sprint(err), rval.Type())
+		}
 	}
 
 	return paddedOutput, nil
@@ -270,11 +273,6 @@ func makeStructHasherCache(typ reflect.Type) (hasher, error) {
 // trim the store to the maxSize.
 func (b *hashCacheS) trim(maxSize int) {
 	b.hashCache.PurgeByDateAndSize(maxSize)
-}
-
-// popProcessNoopFunc is a no-op function that never returns an error.
-func popProcessNoopFunc(obj interface{}) error {
-	return nil
 }
 
 type byLeastUsed []timestampedKey
