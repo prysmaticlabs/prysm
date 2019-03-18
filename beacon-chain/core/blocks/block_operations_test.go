@@ -71,7 +71,8 @@ func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
 		context.Background(),
 		beaconState,
 		block,
-		true,
+		true,  /* verify signatures */
+		false, /* disable logging */
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
@@ -102,7 +103,8 @@ func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testi
 		context.Background(),
 		beaconState,
 		block,
-		true,
+		true,  /* verify signatures */
+		false, /* disable logging */
 	)
 	if err != nil {
 		t.Errorf("Unexpected error processing block randao: %v", err)
