@@ -23,17 +23,17 @@ import (
 
 var log = logrus.WithField("prefix", "core/state")
 
-// StateTransitionConfig defines important configuration options
+// TransitionConfig defines important configuration options
 // for executing a state transition, which can have logging and signature
 // verification on or off depending on when and where it is used.
-type StateTransitionConfig struct {
+type TransitionConfig struct {
 	VerifySignatures bool
 	Logging          bool
 }
 
 // DefaultConfig option for executing state transitions.
-func DefaultConfig() *StateTransitionConfig {
-	return &StateTransitionConfig{
+func DefaultConfig() *TransitionConfig {
+	return &TransitionConfig{
 		VerifySignatures: false,
 		Logging:          false,
 	}
@@ -54,7 +54,7 @@ func ExecuteStateTransition(
 	state *pb.BeaconState,
 	block *pb.BeaconBlock,
 	headRoot [32]byte,
-	config *StateTransitionConfig,
+	config *TransitionConfig,
 ) (*pb.BeaconState, error) {
 	var err error
 
@@ -104,7 +104,7 @@ func ProcessBlock(
 	ctx context.Context,
 	state *pb.BeaconState,
 	block *pb.BeaconBlock,
-	config *StateTransitionConfig,
+	config *TransitionConfig,
 ) (*pb.BeaconState, error) {
 
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
@@ -191,7 +191,7 @@ func ProcessBlock(
 // 	 process_crosslink_reward_penalties(state)
 // 	 update_validator_registry(state)
 // 	 final_book_keeping(state)
-func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *StateTransitionConfig) (*pb.BeaconState, error) {
+func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *TransitionConfig) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch")
 	defer span.End()
 

@@ -43,7 +43,7 @@ func GenerateStateFromSlot(ctx context.Context, db *db.BeaconDB, slot uint64) (*
 				fState,
 				nil,
 				root,
-				&state.StateTransitionConfig{
+				&state.TransitionConfig{
 					VerifySignatures: true,
 					Logging:          false,
 				},
@@ -59,7 +59,7 @@ func GenerateStateFromSlot(ctx context.Context, db *db.BeaconDB, slot uint64) (*
 			fState,
 			blk,
 			root,
-			&state.StateTransitionConfig{
+			&state.TransitionConfig{
 				VerifySignatures: true,
 				Logging:          false,
 			},
