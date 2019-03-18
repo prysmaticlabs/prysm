@@ -131,7 +131,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	}
 	log.WithFields(logrus.Fields{
 		"attestationHash": fmt.Sprintf("%#x", attResp.AttestationHash),
-		"shard": attData.Shard,
-		"slot":  slot - params.BeaconConfig().GenesisSlot,
+		"shard":           attData.Shard,
+		"slot":            slot - params.BeaconConfig().GenesisSlot,
 	}).Info("Beacon node processed attestation successfully")
 }
