@@ -280,8 +280,20 @@ func (db *BeaconDB) GenesisTime(ctx context.Context) (time.Time, error) {
 	return genesisTime, nil
 }
 
-func generateStateKey(beaconState *pb.BeaconState) []byte {
-	finalizedSlot := beaconState.FinalizedEpoch * params.BeaconConfig().SlotsPerEpoch
-	slotDiff := beaconState.Slot - finalizedSlot
-	return encodeSlotNumber(slotDiff)
+func (db *BeaconDB) deleteHistoricalStates() error {
+	return db.update(func(tx *bolt.Tx) error {
+		histState := tx.Bucket(histStateBucket)
+		chainInfo := tx.Bucket(chainInfoBucket)
+		beaconStateEnc, err := proto.Marshal(beaconState)
+		if err != nil {
+			return err
+		}
+
+		// Putting in finalized state.
+		if err := chainInfo.Put(stateLookupKey, beaconStateEnc); err != nil {
+			return err
+		}
+
+		return chainInfo.Put(finalizedStateLookupKey, beaconStateEnc)
+	})
 }
