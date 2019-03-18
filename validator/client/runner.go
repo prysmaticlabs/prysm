@@ -89,14 +89,11 @@ func run(ctx context.Context, v Validator) {
 }
 
 func handleAssignmentError(err error, slot uint64) {
-	errCode, ok := status.FromError(err)
-	if !ok {
-		log.WithField("error", err).Error("Failed to update assignments")
-		return
-	}
-	if errCode.Code() == codes.NotFound {
+	if errCode, ok := status.FromError(err); ok && errCode.Code() == codes.NotFound {
 		log.WithField(
 			"epoch", (slot*params.BeaconConfig().SlotsPerEpoch)-params.BeaconConfig().GenesisEpoch,
 		).Warn("Validator not yet assigned to epoch")
+	} else {
+		log.WithField("error", err).Error("Failed to update assignments")
 	}
 }
