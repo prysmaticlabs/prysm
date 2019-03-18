@@ -275,16 +275,41 @@ func (db *BeaconDB) FinalizedState() (*pb.BeaconState, error) {
 
 // HistoricalStateFromSlot retrieves the closest historical state to a slot
 func (db *BeaconDB) HistoricalStateFromSlot(slot uint64) (*pb.BeaconState, error) {
-
+	closestSlot := mathutil.ClosestPowerOf2(slot)
 	var beaconState *pb.BeaconState
+
 	err := db.view(func(tx *bolt.Tx) error {
+		var err error
+		var highestStateSlot uint64
+		histStateKey := make([]byte, 32)
+
 		chainInfo := tx.Bucket(chainInfoBucket)
-		encState := chainInfo.Get(finalizedStateLookupKey)
+		histState := tx.Bucket(histStateBucket)
+		hsCursor := histState.Cursor()
+
+		for k, v := hsCursor.First(); k != nil; k, v = hsCursor.Next() {
+			slotNumber := decodeToSlotNumber(k)
+			if slotNumber > highestStateSlot && closestSlot >= slotNumber {
+				highestStateSlot = slotNumber
+				histStateKey = v
+			}
+		}
+
+		// If no state exists send the finalized state to be unencoded
+		if highestStateSlot == 0 {
+			encState := chainInfo.Get(finalizedStateLookupKey)
+			if encState == nil {
+				return errors.New("no finalized state saved")
+			}
+			beaconState, err = createState(encState)
+			return err
+		}
+
+		// retrieve the stored historical state
+		encState := chainInfo.Get(histStateKey)
 		if encState == nil {
 			return errors.New("no finalized state saved")
 		}
-
-		var err error
 		beaconState, err = createState(encState)
 		return err
 	})
