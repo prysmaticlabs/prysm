@@ -135,7 +135,7 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 	}
 	if enableLogging {
 		log.WithFields(logrus.Fields{
-			"epoch":    helpers.CurrentEpoch(beaconState) - params.BeaconConfig().GenesisEpoch,
+			"epoch":         helpers.CurrentEpoch(beaconState) - params.BeaconConfig().GenesisEpoch,
 			"proposerIndex": proposerIdx,
 		}).Info("Verifying randao")
 	}
