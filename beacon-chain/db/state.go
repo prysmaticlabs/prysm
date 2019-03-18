@@ -226,7 +226,7 @@ func (db *BeaconDB) SaveCurrentAndFinalizedState(beaconState *pb.BeaconState) er
 		if err != nil {
 			return err
 		}
-		// Putting in finalized state.
+		// Putting in historical state.
 		if err := chainInfo.Put(stateLookupKey, beaconStateEnc); err != nil {
 			return err
 		}
@@ -269,7 +269,7 @@ func (db *BeaconDB) FinalizedState() (*pb.BeaconState, error) {
 	return beaconState, err
 }
 
-// HistoricalStateFromSlot retrieves the closest historical state to a slot
+// HistoricalStateFromSlot retrieves the closest historical state to a slot.
 func (db *BeaconDB) HistoricalStateFromSlot(slot uint64) (*pb.BeaconState, error) {
 	state, err := db.FinalizedState()
 	if err != nil {
@@ -297,7 +297,7 @@ func (db *BeaconDB) HistoricalStateFromSlot(slot uint64) (*pb.BeaconState, error
 			}
 		}
 
-		// If no state exists send the finalized state to be unencoded
+		// If no state exists send the finalized state to be unencoded.
 		if highestStateSlot == 0 {
 			encState := chainInfo.Get(finalizedStateLookupKey)
 			if encState == nil {
@@ -307,10 +307,10 @@ func (db *BeaconDB) HistoricalStateFromSlot(slot uint64) (*pb.BeaconState, error
 			return err
 		}
 
-		// retrieve the stored historical state
+		// retrieve the stored historical state.
 		encState := chainInfo.Get(histStateKey)
 		if encState == nil {
-			return errors.New("no finalized state saved")
+			return errors.New("no historical state saved")
 		}
 		beaconState, err = createState(encState)
 		return err
