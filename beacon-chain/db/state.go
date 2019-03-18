@@ -275,6 +275,7 @@ func (db *BeaconDB) FinalizedState() (*pb.BeaconState, error) {
 
 // HistoricalStateFromSlot retrieves the closest historical state to a slot
 func (db *BeaconDB) HistoricalStateFromSlot(slot uint64) (*pb.BeaconState, error) {
+
 	var beaconState *pb.BeaconState
 	err := db.view(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainInfoBucket)
