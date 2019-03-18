@@ -43,7 +43,10 @@ func GenerateStateFromSlot(ctx context.Context, db *db.BeaconDB, slot uint64) (*
 				fState,
 				nil,
 				root,
-				true, /* sig verify */
+				&state.StateTransitionConfig{
+					VerifySignatures: true,
+					Logging:          false,
+				},
 			)
 			if err != nil {
 				return nil, fmt.Errorf("could not execute state transition %v", err)
@@ -56,7 +59,10 @@ func GenerateStateFromSlot(ctx context.Context, db *db.BeaconDB, slot uint64) (*
 			fState,
 			blk,
 			root,
-			true, /* sig verify */
+			&state.StateTransitionConfig{
+				VerifySignatures: true,
+				Logging:          false,
+			},
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not execute state transition %v", err)
