@@ -66,7 +66,7 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, block *pb.Beac
 		fState, err = state.ExecuteStateTransition(
 			ctx,
 			fState,
-			blk,
+			block,
 			root,
 			&state.TransitionConfig{
 				VerifySignatures: true,

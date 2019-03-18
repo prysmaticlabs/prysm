@@ -162,6 +162,9 @@ func (c *ChainService) runStateTransition(
 }
 
 func (c *ChainService) saveFinalizedState(beaconState *pb.BeaconState) error {
+	if err := c.beaconDB.SaveHistoricalState(beaconState); err != nil {
+		return err
+	}
 	// check if the finalized epoch has changed, if it
 	// has we save the finalized state.
 	if c.finalizedEpoch != beaconState.FinalizedEpoch {
