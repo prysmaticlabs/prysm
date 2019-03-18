@@ -169,3 +169,45 @@ func TestBlockCache_maxSize(t *testing.T) {
 		)
 	}
 }
+
+func TestBlockCache_prune_removeLastRead(t *testing.T) {
+	cache := newHashCache()
+	maxCacheSize = 10000
+	for i := uint64(0); i < uint64(maxCacheSize); i++ {
+
+		if err := cache.AddRoot(bytesutil.ToBytes32(bytesutil.Bytes4(i)), []byte{1}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	exists, _, err := cache.RootByEncodedHash(bytesutil.ToBytes32(bytesutil.Bytes4(0)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !exists {
+		t.Error("Expected blockInfo to exist")
+	}
+	if err := cache.AddRoot(bytesutil.ToBytes32(bytesutil.Bytes4(10000)), []byte{1}); err != nil {
+		t.Fatal(err)
+	}
+	exists, _, err = cache.RootByEncodedHash(bytesutil.ToBytes32(bytesutil.Bytes4(0)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !exists {
+		t.Error("Expected blockInfo to exist")
+	}
+	exists, _, err = cache.RootByEncodedHash(bytesutil.ToBytes32(bytesutil.Bytes4(1)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if exists {
+		t.Error("Expected blockInfo to be pruned")
+	}
+	if len(cache.hashCache.ListKeys()) != maxCacheSize {
+		t.Errorf(
+			"Expected hash cache key size to be %d, got %d",
+			maxCacheSize,
+			len(cache.hashCache.ListKeys()),
+		)
+	}
+}
