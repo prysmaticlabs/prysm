@@ -1,7 +1,6 @@
 package iputils
 
 import (
-	"fmt"
 	"net"
 )
 
