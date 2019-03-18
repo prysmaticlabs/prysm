@@ -5,11 +5,10 @@ import (
 )
 
 var (
-	// DemoConfigFlag determines whether to launch a beacon chain using demo parameters
-	// such as shorter cycle length, fewer shards, and more.
-	DemoConfigFlag = cli.BoolFlag{
-		Name:  "demo-config",
-		Usage: " Run the beacon node using demo paramteres (i.e. shorter cycles, fewer shards and committees)",
+	// NoCustomConfigFlag determines whether to launch a beacon chain using real parameters or demo parameters.
+	NoCustomConfigFlag = cli.BoolFlag{
+		Name:  "no-custom-config",
+		Usage: "Run the beacon chain with the real parameters from phase 0.",
 	}
 	// Web3ProviderFlag defines a flag for a mainchain RPC endpoint.
 	Web3ProviderFlag = cli.StringFlag{
@@ -38,21 +37,9 @@ var (
 		Name:  "tls-key",
 		Usage: "Key for secure gRPC. Pass this and the tls-cert flag in order to use gRPC securely.",
 	}
-	// GenesisJSON defines a flag for bootstrapping validators from genesis JSON.
-	// If this flag is not specified, beacon node will bootstrap validators from code from state.go.
-	GenesisJSON = cli.StringFlag{
-		Name:  "genesis-json",
-		Usage: "Beacon node will bootstrap genesis state defined in genesis.json",
-	}
 	// EnableDBCleanup tells the beacon node to automatically clean DB content such as block vote cache.
 	EnableDBCleanup = cli.BoolFlag{
 		Name:  "enable-db-cleanup",
 		Usage: "Enable automatic DB cleanup routine",
-	}
-	// ChainStartDelay tells the beacon node to wait for a period of time from the current time, before
-	// logging chainstart.
-	ChainStartDelay = cli.Uint64Flag{
-		Name:  "chain-start-delay",
-		Usage: "Delay the chain start so as to make local testing easier",
 	}
 )

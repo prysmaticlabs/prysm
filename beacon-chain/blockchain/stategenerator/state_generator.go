@@ -4,53 +4,55 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/sirupsen/logrus"
 )
 
-// GenerateStateFromSlot generates state from the last finalized epoch till the specified block.
+var log = logrus.WithField("prefix", "stategenerator")
+
+// GenerateStateFromBlock generates state from the historical state at the
+// given block's slot.
 func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, block *pb.BeaconBlock) (*pb.BeaconState, error) {
-	fState, err := db.HistoricalStateFromSlot(block.Slot)
+	hState, err := db.HistoricalStateFromSlot(block.Slot)
 	if err != nil {
 		return nil, err
 	}
 
-	if fState.Slot > block.Slot {
+	if hState.Slot > block.Slot {
 		return nil, fmt.Errorf(
-			"requested slot %d < current slot %d in the finalized beacon state",
-			fState.Slot,
+			"requested slot %d < current slot %d in the historical beacon state",
+			hState.Slot,
 			block,
 		)
 	}
 
-	root, err := hashutil.HashBeaconBlock(fState.LatestBlock)
+	root, err := hashutil.HashBeaconBlock(hState.LatestBlock)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get block root %v", err)
 	}
 
-	ancestorSet, err := lookUpFromFinalizedBlock(ctx, db, block, root)
+	ancestorSet, err := ancestersToLastFinalizedBlock(db, block, root)
 	if err != nil {
 		return nil, fmt.Errorf("unable to look up block ancestors %v", err)
 	}
 
-	logrus.Errorf("Start: Current slot %d and Finalized Epoch %d", fState.Slot, fState.FinalizedEpoch)
+	log.Debugf("Start: Current slot %d and Finalized Epoch %d", hState.Slot, hState.FinalizedEpoch)
 
 	for i := len(ancestorSet); i > 0; i-- {
 		block := ancestorSet[i-1]
 
-		if block.Slot <= fState.Slot {
+		if block.Slot <= hState.Slot {
 			continue
 		}
 		// Running state transitions for skipped slots.
-		for block.Slot != fState.Slot+1 {
-			fState, err = state.ExecuteStateTransition(
+		for block.Slot != hState.Slot+1 {
+			hState, err = state.ExecuteStateTransition(
 				ctx,
-				fState,
+				hState,
 				nil,
 				root,
 				&state.TransitionConfig{
@@ -63,9 +65,9 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, block *pb.Beac
 			}
 		}
 
-		fState, err = state.ExecuteStateTransition(
+		hState, err = state.ExecuteStateTransition(
 			ctx,
-			fState,
+			hState,
 			block,
 			root,
 			&state.TransitionConfig{
@@ -78,12 +80,15 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, block *pb.Beac
 		}
 	}
 
-	logrus.Errorf("End: Current slot %d and Finalized Epoch %d", fState.Slot, fState.FinalizedEpoch)
+	log.Debugf("End: Current slot %d and Finalized Epoch %d", hState.Slot, hState.FinalizedEpoch)
 
-	return fState, nil
+	return hState, nil
 }
 
-func lookUpFromFinalizedBlock(ctx context.Context, db *db.BeaconDB, block *pb.BeaconBlock,
+// ancestersToLastFinalizedBlock will return a list of all block ancesters
+// between the given block and the most recent finalized block in the db.
+// The given block is also returned in the list of ancesters.
+func ancestersToLastFinalizedBlock(db *db.BeaconDB, block *pb.BeaconBlock,
 	finalizedBlockRoot [32]byte) ([]*pb.BeaconBlock, error) {
 
 	blockAncestors := make([]*pb.BeaconBlock, 0)
