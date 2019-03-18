@@ -281,3 +281,52 @@ func TestFinalizedState_CanSaveRetrieve(t *testing.T) {
 			stateSlot, finalizedState.Slot)
 	}
 }
+
+func TestHistoricalState_CanSaveRetrieve(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	tests := []struct {
+		state *pb.BeaconState
+	}{
+		{
+			state: &pb.BeaconState{
+				Slot:           66,
+				FinalizedEpoch: 1,
+			},
+		},
+		{
+			state: &pb.BeaconState{
+				Slot:           72,
+				FinalizedEpoch: 1,
+			},
+		},
+		{
+			state: &pb.BeaconState{
+				Slot:           96,
+				FinalizedEpoch: 1,
+			},
+		},
+		{
+			state: &pb.BeaconState{
+				Slot:           120,
+				FinalizedEpoch: 1,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		if err := db.SaveHistoricalState(tt.state); err != nil {
+			t.Fatalf("could not save historical state: %v", err)
+		}
+
+		retState1, err := db.HistoricalStateFromSlot(tt.state.Slot)
+		if err != nil {
+			t.Fatalf("Unable to retrieve state %v", err)
+		}
+
+		if !proto.Equal(tt.state, retState1) {
+			t.Errorf("Saved and retrieved states are not equal")
+		}
+	}
+}

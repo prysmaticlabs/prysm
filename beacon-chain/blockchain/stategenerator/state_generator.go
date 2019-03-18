@@ -15,7 +15,7 @@ import (
 
 // GenerateStateFromSlot generates state from the last finalized epoch till the specified block.
 func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, block *pb.BeaconBlock) (*pb.BeaconState, error) {
-	fState, err := db.FinalizedState()
+	fState, err := db.HistoricalStateFromSlot(block.Slot)
 	if err != nil {
 		return nil, err
 	}
