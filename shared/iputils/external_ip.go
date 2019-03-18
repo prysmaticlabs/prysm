@@ -31,7 +31,6 @@ func ExternalIPv4() (string, error) {
 			case *net.IPAddr:
 				ip = v.IP
 			}
-			fmt.Print(ip)
 			if ip == nil || ip.IsLoopback() {
 				continue
 			}
