@@ -78,6 +78,11 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, block *pb.Beac
 		if err != nil {
 			return nil, fmt.Errorf("could not execute state transition %v", err)
 		}
+
+		root, err = hashutil.HashBeaconBlock(block)
+		if err != nil {
+			return nil, fmt.Errorf("unable to get block root %v", err)
+		}
 	}
 
 	log.Debugf("End: Current slot %d and Finalized Epoch %d", hState.Slot, hState.FinalizedEpoch)
