@@ -17,15 +17,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// AttestationPool STUB interface. Final attestation pool pending design.
-// TODO(1323): Replace with actual attestation pool.
-type AttestationPool interface {
-	PendingAttestations() []*pbp2p.Attestation
-}
-
-// validator
-//
-// WIP - not done.
 type validator struct {
 	genesisTime     uint64
 	ticker          *slotutil.SlotTicker
@@ -35,6 +26,7 @@ type validator struct {
 	beaconClient    pb.BeaconServiceClient
 	attesterClient  pb.AttesterServiceClient
 	key             *keystore.Key
+	prevBalance     uint64
 }
 
 // Done cleans up the validator.
@@ -139,6 +131,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 
 	resp, err := v.validatorClient.CommitteeAssignment(ctx, req)
 	if err != nil {
+		v.assignment = nil // Clear assignments so we know to retry the request.
 		return err
 	}
 

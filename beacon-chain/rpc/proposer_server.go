@@ -62,7 +62,7 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 	if err := ps.chainService.ApplyForkChoiceRule(ctx, blk, beaconState); err != nil {
 		return nil, fmt.Errorf("could not apply fork choice rule: %v", err)
 	}
-	return &pb.ProposeResponse{BlockHash: h[:]}, nil
+	return &pb.ProposeResponse{BlockRootHash32: h[:]}, nil
 }
 
 // PendingAttestations retrieves attestations kept in the beacon node's operations pool which have
@@ -157,7 +157,7 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 			beaconState,
 			nil,
 			parentHash,
-			false, /* no sig verify */
+			state.DefaultConfig(),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not execute state transition %v", err)
@@ -168,7 +168,7 @@ func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.Beaco
 		beaconState,
 		req,
 		parentHash,
-		false, /* no sig verification */
+		state.DefaultConfig(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not execute state transition %v", err)

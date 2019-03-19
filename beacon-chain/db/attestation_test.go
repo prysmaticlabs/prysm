@@ -2,6 +2,7 @@ package db
 
 import (
 	"bytes"
+	"context"
 	"reflect"
 	"sort"
 	"testing"
@@ -22,7 +23,7 @@ func TestSaveAndRetrieveAttestation_OK(t *testing.T) {
 		},
 	}
 
-	if err := db.SaveAttestation(a); err != nil {
+	if err := db.SaveAttestation(context.Background(), a); err != nil {
 		t.Fatalf("Failed to save attestation: %v", err)
 	}
 
@@ -61,7 +62,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 				Shard: uint64(i),
 			},
 		}
-		if err := db.SaveAttestation(attestations[i]); err != nil {
+		if err := db.SaveAttestation(context.Background(), attestations[i]); err != nil {
 			t.Fatalf("Failed to save attestation: %v", err)
 		}
 	}
@@ -91,7 +92,7 @@ func TestDeleteAttestation_OK(t *testing.T) {
 		},
 	}
 
-	if err := db.SaveAttestation(a); err != nil {
+	if err := db.SaveAttestation(context.Background(), a); err != nil {
 		t.Fatalf("Could not save attestation: %v", err)
 	}
 
@@ -150,7 +151,7 @@ func TestHasAttestation_OK(t *testing.T) {
 		t.Fatal("Expected HasAttestation to return false")
 	}
 
-	if err := db.SaveAttestation(a); err != nil {
+	if err := db.SaveAttestation(context.Background(), a); err != nil {
 		t.Fatalf("Failed to save attestation: %v", err)
 	}
 	if !db.HasAttestation(aHash) {

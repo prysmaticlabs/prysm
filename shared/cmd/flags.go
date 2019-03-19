@@ -64,4 +64,9 @@ var (
 		Usage: "The port used by libp2p.",
 		Value: 12000,
 	}
+	// ClearDBFlag tells the beacon node to remove any previously stored data at the data directory.
+	ClearDBFlag = cli.BoolFlag{
+		Name:  "clear-db",
+		Usage: "Clears any previously stored data at the data directory",
+	}
 )
