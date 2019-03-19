@@ -15,6 +15,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
 )
 
@@ -40,6 +41,7 @@ type ChainService struct {
 	enablePOWChain       bool
 	finalizedEpoch       uint64
 	stateInitializedFeed *event.Feed
+	p2p                  p2p.Broadcaster
 }
 
 // Config options for the service.
@@ -51,6 +53,7 @@ type Config struct {
 	OpsPoolService operationService
 	DevMode        bool
 	EnablePOWChain bool
+	P2p            p2p.Broadcaster
 }
 
 // NewChainService instantiates a new service instance that will
@@ -69,6 +72,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		chainStartChan:       make(chan time.Time),
 		stateInitializedFeed: new(event.Feed),
 		enablePOWChain:       cfg.EnablePOWChain,
+		p2p:                  cfg.P2p,
 	}, nil
 }
 
@@ -137,6 +141,7 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	if err != nil {
 		return nil, fmt.Errorf("could not attempt fetch beacon state: %v", err)
 	}
+
 	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		return nil, fmt.Errorf("could not hash beacon state: %v", err)
@@ -148,18 +153,7 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	if err := c.beaconDB.UpdateChainHead(genBlock, beaconState); err != nil {
 		return nil, fmt.Errorf("could not set chain head, %v", err)
 	}
-	if err := c.beaconDB.SaveJustifiedBlock(genBlock); err != nil {
-		return nil, fmt.Errorf("could not save gensis block as justified block: %v", err)
-	}
-	if err := c.beaconDB.SaveFinalizedBlock(genBlock); err != nil {
-		return nil, fmt.Errorf("could not save gensis block as finalized block: %v", err)
-	}
-	if err := c.beaconDB.SaveJustifiedState(beaconState); err != nil {
-		return nil, fmt.Errorf("could not save gensis state as justified state: %v", err)
-	}
-	if err := c.beaconDB.SaveFinalizedState(beaconState); err != nil {
-		return nil, fmt.Errorf("could not save gensis state as finalized state: %v", err)
-	}
+
 	return beaconState, nil
 }
 

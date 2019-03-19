@@ -73,7 +73,7 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 	db := &BeaconDB{db: boltDB, DatabasePath: dirPath}
 
 	if err := db.update(func(tx *bolt.Tx) error {
-		return createBuckets(tx, blockBucket, attestationBucket, mainChainBucket,
+		return createBuckets(tx, blockBucket, attestationBucket, mainChainBucket, histStateBucket,
 			chainInfoBucket, cleanupHistoryBucket, blockOperationsBucket, validatorBucket)
 
 	}); err != nil {
@@ -81,4 +81,12 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 	}
 
 	return db, err
+}
+
+// ClearDB removes the previously stored directory at the data directory.
+func ClearDB(dirPath string) error {
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		return nil
+	}
+	return os.RemoveAll(dirPath)
 }

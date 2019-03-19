@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"testing"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -23,7 +24,7 @@ func TestBeaconDB_HasExit(t *testing.T) {
 		t.Fatal("Expected HasExit to return false")
 	}
 
-	if err := db.SaveExit(d); err != nil {
+	if err := db.SaveExit(context.Background(), d); err != nil {
 		t.Fatalf("Failed to save exit request: %v", err)
 	}
 	if !db.HasExit(hash) {
