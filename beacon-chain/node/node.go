@@ -164,19 +164,19 @@ func (b *BeaconNode) Close() {
 
 func (b *BeaconNode) startDB(ctx *cli.Context) error {
 	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
-	dbPath :=
+	dbPath := path.Join(baseDir, beaconChainDBName)
 	if b.ctx.GlobalBool(cmd.ClearDBFlag.Name) {
-		if err := db.ClearDB(path.Join(baseDir, beaconChainDBName)); err != nil {
+		if err := db.ClearDB(dbPath); err != nil {
 			return err
 		}
 	}
 
-	db, err := db.NewDB(path.Join(baseDir, beaconChainDBName))
+	db, err := db.NewDB(dbPath)
 	if err != nil {
 		return err
 	}
 
-	log.Info("checking db")
+	log.Infof("Checking db at %s", dbPath)
 	b.db = db
 	return nil
 }
