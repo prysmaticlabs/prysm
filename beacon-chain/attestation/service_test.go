@@ -59,7 +59,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 			attestation.Data.Slot, service.Store[pubkey].Data.Slot)
 	}
 
-	attestation.Data.Shard = 36
+	attestation.Data.Slot = 100
 	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}

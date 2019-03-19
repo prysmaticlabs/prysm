@@ -95,7 +95,7 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 	}
 	log.WithField("blockRoot", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
 
-	if err := c.saveHistoricalState(computedState); err != nil {
+	if err := c.saveHistoricalState(postState); err != nil {
 		log.Errorf("Could not save new historical state: %v", err)
 	}
 

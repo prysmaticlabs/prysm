@@ -186,6 +186,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 			Deposits: pendingDeposits,
 		},
 	}
+
 	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		log.Fatalf("could not hash block: %v", err)
@@ -197,6 +198,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	if err := chainService.beaconDB.SaveFinalizedBlock(block); err != nil {
 		t.Fatal(err)
 	}
+
 	for _, dep := range pendingDeposits {
 		db.InsertPendingDeposit(chainService.ctx, dep, big.NewInt(0))
 	}

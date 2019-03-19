@@ -159,7 +159,6 @@ func (a *Service) handleAttestation(ctx context.Context, msg proto.Message) erro
 	}
 	h := hashutil.Hash(enc)
 
-
 	if err := a.UpdateLatestAttestation(ctx, attestation); err != nil {
 		return fmt.Errorf("could not update attestation pool: %v", err)
 	}
