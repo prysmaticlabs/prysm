@@ -290,7 +290,6 @@ func (db *BeaconDB) HistoricalStateFromSlot(slot uint64) (*pb.BeaconState, error
 
 		for k, v := hsCursor.First(); k != nil; k, v = hsCursor.Next() {
 			slotNumber := decodeToSlotNumber(k)
-			log.Errorf("State Slot Number %d", slotNumber)
 			if slotNumber == slotDiff {
 				highestStateSlot = slotNumber
 				histStateKey = v
