@@ -23,7 +23,7 @@ func TestGenerateState_OK(t *testing.T) {
 	defer bd.Shutdown()
 	defer db.TeardownDB(beaconDb)
 
-	slotLimit := uint64(5)
+	slotLimit := uint64(30)
 
 	// Run the simulated chain for 30 slots, to get a state that we can save as finalized.
 	for i := uint64(0); i < slotLimit; i++ {
