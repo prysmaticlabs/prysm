@@ -19,6 +19,8 @@ import (
 
 var log = logrus.WithField("prefix", "operation")
 
+// OperationFeeds inteface defines the informational feeds from the operations
+// service.
 type OperationFeeds interface {
 	IncomingAttFeed() *event.Feed
 	IncomingExitFeed() *event.Feed

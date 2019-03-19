@@ -33,6 +33,9 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+// Ensure ChainService implements interfaces.
+var _ = ChainFeeds(&ChainService{})
+
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)

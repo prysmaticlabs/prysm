@@ -17,6 +17,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// BlockProcessor interface defines the methods in the blockchain service which
+// handle new block operations.
 type BlockProcessor interface {
 	CanonicalBlockFeed() *event.Feed
 	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error)

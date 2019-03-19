@@ -13,6 +13,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// ForkChoice interface defines the methods for applying fork choice rule
+// operations to the blockchain.
 type ForkChoice interface {
 	ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error
 }
