@@ -531,7 +531,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 		return
 	}
 
-	_, sendAttestationSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendAttestation")
+	ctx, sendAttestationSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendAttestation")
 	log.WithField("attestationHash", fmt.Sprintf("%#x", attestationRoot)).Debug("Sending newly received attestation to subscribers")
 	rs.operationsService.IncomingAttFeed().Send(attestation)
 	sentAttestation.Inc()
@@ -556,7 +556,7 @@ func (rs *RegularSync) receiveExitRequest(msg p2p.Message) {
 		log.Debugf("Received, skipping exit request #%x", h)
 		return
 	}
-	_, sendExitReqSpan := trace.StartSpan(ctx, "sendExitRequest")
+	ctx, sendExitReqSpan := trace.StartSpan(ctx, "sendExitRequest")
 	log.WithField("exitReqHash", fmt.Sprintf("%#x", h)).
 		Debug("Forwarding validator exit request to subscribed services")
 	rs.operationsService.IncomingExitFeed().Send(exit)
@@ -713,12 +713,9 @@ func (rs *RegularSync) handleUnseenAttestationsRequest(msg p2p.Message) {
 }
 
 func (rs *RegularSync) broadcastCanonicalBlock(ctx context.Context, announce *pb.BeaconBlockAnnounce) {
-	_, span := trace.StartSpan(ctx, "beacon-chain.sync.broadcastCanonicalBlock")
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.sendBlockAnnounce")
 	defer span.End()
-
-	_, sendBlockAnnounceSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendBlockAnnounce")
 	log.Debugf("Announcing canonical block %#x", announce.Hash)
 	rs.p2p.Broadcast(ctx, announce)
 	sentBlockAnnounce.Inc()
-	sendBlockAnnounceSpan.End()
 }
