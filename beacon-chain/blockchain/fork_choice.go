@@ -10,8 +10,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -27,10 +25,6 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 	// If the last processed justification slot in state is greater than
 	// the slot of justified block saved in DB.
 	if lastJustifiedSlot > savedJustifiedBlock.Slot {
-		log.WithFields(logrus.Fields{
-			"saved_justified_block_slot": savedJustifiedBlock.Slot - params.BeaconConfig().GenesisSlot,
-			"new_justified_block_slot":   lastJustifiedSlot - params.BeaconConfig().GenesisSlot,
-		}).Info("Updating justified checkpoint in DB")
 		// Retrieve the new justified block from DB using the new justified slot and save it.
 		newJustifiedBlock, err := c.beaconDB.BlockBySlot(lastJustifiedSlot)
 		if err != nil {
@@ -44,9 +38,6 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 		if err != nil {
 			return err
 		}
-		log.WithFields(logrus.Fields{
-			"new_justified_state_slot": newJustifiedState.Slot - params.BeaconConfig().GenesisSlot,
-		}).Info("Updating justified checkpoint in DB")
 		if err := c.beaconDB.SaveJustifiedState(newJustifiedState); err != nil {
 			return err
 		}
@@ -60,10 +51,6 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 		return err
 	}
 	if lastFinalizedSlot > savedFinalizedBlock.Slot {
-		log.WithFields(logrus.Fields{
-			"saved_finalized_slot": savedFinalizedBlock.Slot - params.BeaconConfig().GenesisSlot,
-			"new_finalized_slot":   lastFinalizedSlot - params.BeaconConfig().GenesisSlot,
-		}).Info("Updating finalized checkpoint in DB")
 		// Retrieve the new finalized block from DB using the new finalized slot and save it.
 		newFinalizedBlock, err := c.beaconDB.BlockBySlot(lastFinalizedSlot)
 		if err != nil {
@@ -77,9 +64,6 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 		if err != nil {
 			return err
 		}
-		log.WithFields(logrus.Fields{
-			"new_finalized_state_slot": newFinalizedState.Slot - params.BeaconConfig().GenesisSlot,
-		}).Info("Updating justified checkpoint in DB")
 		if err := c.beaconDB.SaveFinalizedState(newFinalizedState); err != nil {
 			return err
 		}
