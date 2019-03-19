@@ -164,7 +164,7 @@ func (b *BeaconNode) Close() {
 
 func (b *BeaconNode) startDB(ctx *cli.Context) error {
 	baseDir := ctx.GlobalString(cmd.DataDirFlag.Name)
-
+	dbPath :=
 	if b.ctx.GlobalBool(cmd.ClearDBFlag.Name) {
 		if err := db.ClearDB(path.Join(baseDir, beaconChainDBName)); err != nil {
 			return err

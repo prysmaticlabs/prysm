@@ -44,7 +44,6 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 		if err != nil {
 			return err
 		}
-		log.Infof("newJustifiedState's slot is: %d", newJustifiedState.Slot-params.BeaconConfig().GenesisSlot)
 		log.WithFields(logrus.Fields{
 			"new_justified_state_slot": newJustifiedState.Slot - params.BeaconConfig().GenesisSlot,
 		}).Info("Updating justified checkpoint in DB")
@@ -78,7 +77,6 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 		if err != nil {
 			return err
 		}
-		log.Infof("newFinalizedState's slot is: %d", newFinalizedState.Slot-params.BeaconConfig().GenesisSlot)
 		log.WithFields(logrus.Fields{
 			"new_finalized_state_slot": newFinalizedState.Slot - params.BeaconConfig().GenesisSlot,
 		}).Info("Updating justified checkpoint in DB")
