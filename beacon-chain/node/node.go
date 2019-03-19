@@ -10,11 +10,10 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
+	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
@@ -69,8 +68,8 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		stop:     make(chan struct{}),
 	}
 
-	// Use demo config values if demo config flag is set.
-	if ctx.GlobalBool(utils.DemoConfigFlag.Name) {
+	// Use custom config values if the --no-custom-config flag is set.
+	if !ctx.GlobalBool(utils.NoCustomConfigFlag.Name) {
 		log.Info("Using custom parameter configuration")
 		params.UseDemoBeaconConfig()
 	}
@@ -204,6 +203,10 @@ func (b *BeaconNode) registerBlockchainService(_ *cli.Context) error {
 	if err := b.services.FetchService(&attsService); err != nil {
 		return err
 	}
+	var p2pService *p2p.Server
+	if err := b.services.FetchService(&p2pService); err != nil {
+		return err
+	}
 
 	blockchainService, err := blockchain.NewChainService(context.Background(), &blockchain.Config{
 		BeaconDB:       b.db,
@@ -211,6 +214,7 @@ func (b *BeaconNode) registerBlockchainService(_ *cli.Context) error {
 		OpsPoolService: opsService,
 		AttsService:    attsService,
 		BeaconBlockBuf: 10,
+		P2p:            p2pService,
 	})
 	if err != nil {
 		return fmt.Errorf("could not register blockchain service: %v", err)
@@ -227,11 +231,11 @@ func (b *BeaconNode) registerOperationService() error {
 }
 
 func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
-	if b.ctx.GlobalBool(testSkipPowFlag) {
+	if cliCtx.GlobalBool(testSkipPowFlag) {
 		return b.services.RegisterService(&powchain.Web3Service{})
 	}
 
-	depAddress := b.ctx.GlobalString(utils.DepositContractFlag.Name)
+	depAddress := cliCtx.GlobalString(utils.DepositContractFlag.Name)
 
 	if depAddress == "" {
 		log.Fatal("No deposit contract specified. Add --deposit-contract with a valid deposit contract address to start.")
@@ -241,17 +245,15 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 		log.Fatalf("Invalid deposit contract address given: %s", depAddress)
 	}
 
-	rpcClient, err := gethRPC.Dial(b.ctx.GlobalString(utils.Web3ProviderFlag.Name))
+	rpcClient, err := gethRPC.Dial(cliCtx.GlobalString(utils.Web3ProviderFlag.Name))
 	if err != nil {
 		log.Fatalf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
 	}
 	powClient := ethclient.NewClient(rpcClient)
 
-	delay := cliCtx.GlobalUint64(utils.ChainStartDelay.Name)
-
 	ctx := context.Background()
 	cfg := &powchain.Web3ServiceConfig{
-		Endpoint:        b.ctx.GlobalString(utils.Web3ProviderFlag.Name),
+		Endpoint:        cliCtx.GlobalString(utils.Web3ProviderFlag.Name),
 		DepositContract: common.HexToAddress(depAddress),
 		Client:          powClient,
 		Reader:          powClient,
@@ -259,7 +261,6 @@ func (b *BeaconNode) registerPOWChainService(cliCtx *cli.Context) error {
 		BlockFetcher:    powClient,
 		ContractBackend: powClient,
 		BeaconDB:        b.db,
-		ChainStartDelay: delay,
 	}
 	web3Service, err := powchain.NewWeb3Service(ctx, cfg)
 	if err != nil {
@@ -325,17 +326,15 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 	port := ctx.GlobalString(utils.RPCPort.Name)
 	cert := ctx.GlobalString(utils.CertFlag.Name)
 	key := ctx.GlobalString(utils.KeyFlag.Name)
-	chainStartDelayFlag := ctx.GlobalUint64(utils.ChainStartDelay.Name)
 	rpcService := rpc.NewRPCService(context.Background(), &rpc.Config{
-		Port:                port,
-		CertFlag:            cert,
-		KeyFlag:             key,
-		ChainStartDelayFlag: chainStartDelayFlag,
-		SubscriptionBuf:     100,
-		BeaconDB:            b.db,
-		ChainService:        chainService,
-		OperationService:    operationService,
-		POWChainService:     web3Service,
+		Port:             port,
+		CertFlag:         cert,
+		KeyFlag:          key,
+		SubscriptionBuf:  100,
+		BeaconDB:         b.db,
+		ChainService:     chainService,
+		OperationService: operationService,
+		POWChainService:  web3Service,
 	})
 
 	return b.services.RegisterService(rpcService)

@@ -19,6 +19,7 @@ var (
 	blockOperationsBucket = []byte("block-operations-bucket")
 	blockBucket           = []byte("block-bucket")
 	mainChainBucket       = []byte("main-chain-bucket")
+	histStateBucket       = []byte("historical-state-bucket")
 	chainInfoBucket       = []byte("chain-info")
 	validatorBucket       = []byte("validator")
 

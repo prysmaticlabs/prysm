@@ -25,8 +25,17 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	defer internal.TeardownDB(t, beaconDB)
 	ctx := context.Background()
 
+	var validators []*pb.Validator
+	for i := 0; i < 64; i++ {
+		validators = append(validators, &pb.Validator{
+			Pubkey:          []byte{byte(i)},
+			ActivationEpoch: 0,
+			ExitEpoch:       10,
+		})
+	}
+
 	if err := beaconDB.SaveState(&pb.BeaconState{
-		ValidatorRegistry: []*pb.Validator{{Pubkey: []byte{'A'}}},
+		ValidatorRegistry: validators,
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
@@ -35,14 +44,15 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	attestation := &pb.Attestation{
 		AggregationBitfield: []byte{0x80},
 		Data: &pb.AttestationData{
-			Slot: 5,
+			Slot:  1,
+			Shard: 1,
 		},
 	}
 
 	if err := service.updateLatestAttestation(ctx, attestation); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
-	pubkey := bytesutil.ToBytes48([]byte{'A'})
+	pubkey := bytesutil.ToBytes48([]byte{byte(35)})
 	if service.Store[pubkey].Data.Slot !=
 		attestation.Data.Slot {
 		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",
@@ -50,6 +60,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	}
 
 	attestation.Data.Slot = 100
+	attestation.Data.Shard = 36
 	if err := service.updateLatestAttestation(ctx, attestation); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
@@ -64,8 +75,17 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
+
+	var validators []*pb.Validator
+	for i := 0; i < 64; i++ {
+		validators = append(validators, &pb.Validator{
+			Pubkey:          []byte{byte(i)},
+			ActivationEpoch: 0,
+			ExitEpoch:       10,
+		})
+	}
 	if err := beaconDB.SaveState(&pb.BeaconState{
-		ValidatorRegistry: []*pb.Validator{{Pubkey: []byte{'A'}}},
+		ValidatorRegistry: validators,
 	}); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
@@ -73,7 +93,10 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 	attestation := &pb.Attestation{
 		AggregationBitfield: []byte{0x80},
-		Data:                &pb.AttestationData{},
+		Data: &pb.AttestationData{
+			Slot:  1,
+			Shard: 1,
+		},
 	}
 
 	exitRoutine := make(chan bool)

@@ -137,7 +137,10 @@ func (c *ChainService) runStateTransition(
 		beaconState,
 		block,
 		headRoot,
-		true, /* sig verify */
+		&state.TransitionConfig{
+			VerifySignatures: true, // We activate signature verification in this state transition.
+			Logging:          true, // We enable logging in this state transition call.
+		},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not execute state transition %v", err)
@@ -169,6 +172,9 @@ func (c *ChainService) runStateTransition(
 }
 
 func (c *ChainService) saveFinalizedState(beaconState *pb.BeaconState) error {
+	if err := c.beaconDB.SaveHistoricalState(beaconState); err != nil {
+		return err
+	}
 	// check if the finalized epoch has changed, if it
 	// has we save the finalized state.
 	if c.finalizedEpoch != beaconState.FinalizedEpoch {

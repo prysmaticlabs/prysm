@@ -1,6 +1,6 @@
 # Beacon Chain Research Synopsis
 
-This doc will summarize the latest discussions and roadmap updates around integrating Casper/Sharding through a beacon chain and what it means for Ethereum's end-game. 
+This doc will summarize some historical discussions and roadmap updates around integrating Casper/Sharding through a beacon chain and what it means for Ethereum's end-game. 
 
 ### Research Notes Leading Up To This
 
