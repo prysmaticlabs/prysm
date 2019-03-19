@@ -26,10 +26,9 @@ import (
 //          return nil, error
 //
 //  	# process skipped slots
-//
 // 		while (state.slot < block.slot - 1):
 //      	state = slot_state_transition(state, block=None)
-//ReceiveBlock
+//
 //		# process slot with block
 //		state = slot_state_transition(state, block)
 //
