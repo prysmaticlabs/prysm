@@ -7,6 +7,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // Validator interface defines the primary methods of a validator client.
@@ -15,6 +17,7 @@ type Validator interface {
 	WaitForChainStart(ctx context.Context) error
 	WaitForActivation(ctx context.Context) error
 	NextSlot() <-chan uint64
+	LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error
 	UpdateAssignments(ctx context.Context, slot uint64) error
 	RoleAt(slot uint64) pb.ValidatorRole
 	AttestToBlockHead(ctx context.Context, slot uint64)
@@ -40,7 +43,7 @@ func run(ctx context.Context, v Validator) {
 		log.Fatalf("Could not wait for validator activation: %v", err)
 	}
 	if err := v.UpdateAssignments(ctx, params.BeaconConfig().GenesisSlot); err != nil {
-		log.WithField("error", err).Error("Failed to update assignments")
+		handleAssignmentError(err, params.BeaconConfig().GenesisSlot)
 	}
 	for {
 		ctx, span := trace.StartSpan(ctx, "processSlot")
@@ -48,13 +51,19 @@ func run(ctx context.Context, v Validator) {
 
 		select {
 		case <-ctx.Done():
-			log.Info("Context cancelled, stopping validator")
-			return // Exit if context is cancelled.
+			log.Info("Context canceled, stopping validator")
+			return // Exit if context is canceled.
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
+			// Report this validator client's rewards and penalties throughout its lifecycle.
+			if err := v.LogValidatorGainsAndLosses(ctx, slot); err != nil {
+				log.Errorf("Could not report validator's rewards/penalties for slot %d: %v", slot, err)
+			}
 
+			// Keep trying to update assignments if they are nil or if we are past an
+			// epoch transition in the beacon node's state.
 			if err := v.UpdateAssignments(ctx, slot); err != nil {
-				log.WithField("error", err).Error("Failed to update assignments")
+				handleAssignmentError(err, slot)
 				continue
 			}
 			role := v.RoleAt(slot)
@@ -68,14 +77,23 @@ func run(ctx context.Context, v Validator) {
 			case pb.ValidatorRole_PROPOSER:
 				v.ProposeBlock(ctx, slot)
 			case pb.ValidatorRole_UNKNOWN:
-				// This shouldn't happen normally, so it is considered a warning.
 				log.WithFields(logrus.Fields{
 					"slot": slot - params.BeaconConfig().GenesisSlot,
 					"role": role,
-				}).Info("Unknown role, doing nothing")
+				}).Info("No active assignment, doing nothing")
 			default:
 				// Do nothing :)
 			}
 		}
+	}
+}
+
+func handleAssignmentError(err error, slot uint64) {
+	if errCode, ok := status.FromError(err); ok && errCode.Code() == codes.NotFound {
+		log.WithField(
+			"epoch", (slot*params.BeaconConfig().SlotsPerEpoch)-params.BeaconConfig().GenesisEpoch,
+		).Warn("Validator not yet assigned to epoch")
+	} else {
+		log.WithField("error", err).Error("Failed to update assignments")
 	}
 }

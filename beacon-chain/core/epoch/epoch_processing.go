@@ -122,7 +122,9 @@ func ProcessJustification(
 	thisEpochBoundaryAttestingBalance uint64,
 	prevEpochBoundaryAttestingBalance uint64,
 	prevTotalBalance uint64,
-	totalBalance uint64) *pb.BeaconState {
+	totalBalance uint64,
+	enableLogging bool,
+) *pb.BeaconState {
 
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.ProcessJustification")
 	defer span.End()
@@ -132,22 +134,23 @@ func ProcessJustification(
 	currentEpoch := helpers.CurrentEpoch(state)
 	// Shifts all the bits over one to create a new bit for the recent epoch.
 	state.JustificationBitfield <<= 1
-	log.Infof("Processing Total Balance: %d", totalBalance)
 	// If prev prev epoch was justified then we ensure the 2nd bit in the bitfield is set,
 	// assign new justified slot to 2 * SLOTS_PER_EPOCH before.
-	log.Infof("Previous Epoch Boundary Attesting Balance: %d", prevEpochBoundaryAttestingBalance)
 	if 3*prevEpochBoundaryAttestingBalance >= 2*prevTotalBalance {
 		state.JustificationBitfield |= 2
 		newJustifiedEpoch = prevEpoch
-		log.Infof("Previous epoch %d was justified", newJustifiedEpoch-params.BeaconConfig().GenesisEpoch)
+		if enableLogging {
+			log.Infof("Previous epoch %d was justified", newJustifiedEpoch-params.BeaconConfig().GenesisEpoch)
+		}
 	}
-	log.Infof("Current Epoch Boundary Attesting Balance: %d", thisEpochBoundaryAttestingBalance)
 	// If this epoch was justified then we ensure the 1st bit in the bitfield is set,
 	// assign new justified slot to 1 * SLOTS_PER_EPOCH before.
 	if 3*thisEpochBoundaryAttestingBalance >= 2*totalBalance {
 		state.JustificationBitfield |= 1
 		newJustifiedEpoch = currentEpoch
-		log.Infof("Current epoch %d was justified", newJustifiedEpoch-params.BeaconConfig().GenesisEpoch)
+		if enableLogging {
+			log.Infof("Current epoch %d was justified", newJustifiedEpoch-params.BeaconConfig().GenesisEpoch)
+		}
 	}
 
 	// Process finality.
@@ -156,28 +159,36 @@ func ProcessJustification(
 	if state.PreviousJustifiedEpoch == prevEpoch-2 &&
 		(state.JustificationBitfield>>1)%8 == 7 {
 		state.FinalizedEpoch = state.PreviousJustifiedEpoch
-		log.Infof("New Finalized Epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
+		if enableLogging {
+			log.Infof("New finalized epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
+		}
 	}
 	// When the 2nd and 3rd most epochs are all justified, the 2nd can finalize the 3rd epoch
 	// as a source.
 	if state.PreviousJustifiedEpoch == prevEpoch-1 &&
 		(state.JustificationBitfield>>1)%4 == 3 {
 		state.FinalizedEpoch = state.PreviousJustifiedEpoch
-		log.Infof("New Finalized Epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
+		if enableLogging {
+			log.Infof("New finalized epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
+		}
 	}
 	// When the 1st, 2nd and 3rd most epochs are all justified, the 1st can finalize the 3rd epoch
 	// as a source.
 	if state.JustifiedEpoch == prevEpoch-1 &&
 		(state.JustificationBitfield>>0)%8 == 7 {
 		state.FinalizedEpoch = state.JustifiedEpoch
-		log.Infof("New Finalized Epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
+		if enableLogging {
+			log.Infof("New finalized epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
+		}
 	}
 	// When the 1st and 2nd most epochs are all justified, the 1st can finalize the 2nd epoch
 	// as a source.
 	if state.JustifiedEpoch == prevEpoch &&
 		(state.JustificationBitfield>>0)%4 == 3 {
 		state.FinalizedEpoch = state.JustifiedEpoch
-		log.Infof("New Finalized Epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
+		if enableLogging {
+			log.Infof("New finalized epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
+		}
 	}
 	state.PreviousJustifiedEpoch = state.JustifiedEpoch
 	state.JustifiedEpoch = newJustifiedEpoch
@@ -253,7 +264,7 @@ func ProcessCrosslinks(
 //    for index in get_active_validator_indices(state.validator_registry, current_epoch(state)):
 //        if state.validator_balances[index] < EJECTION_BALANCE:
 //            exit_validator(state, index)
-func ProcessEjections(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
+func ProcessEjections(ctx context.Context, state *pb.BeaconState, enableLogging bool) (*pb.BeaconState, error) {
 
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch.ProcessEjections")
 	defer span.End()
@@ -261,9 +272,11 @@ func ProcessEjections(ctx context.Context, state *pb.BeaconState) (*pb.BeaconSta
 	activeValidatorIndices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
 	for _, index := range activeValidatorIndices {
 		if state.ValidatorBalances[index] < params.BeaconConfig().EjectionBalance {
-			log.WithFields(logrus.Fields{
-				"pubKey": fmt.Sprintf("%#x", state.ValidatorRegistry[index].Pubkey),
-				"index":  index}).Info("Validator ejected")
+			if enableLogging {
+				log.WithFields(logrus.Fields{
+					"pubKey": fmt.Sprintf("%#x", state.ValidatorRegistry[index].Pubkey),
+					"index":  index}).Info("Validator ejected")
+			}
 			state = validators.ExitValidator(state, index)
 		}
 	}

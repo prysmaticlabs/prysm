@@ -62,7 +62,7 @@ func NewSyncService(ctx context.Context, cfg *Config) *Service {
 
 // Start kicks off the sync service
 func (ss *Service) Start() {
-	slog.Info("Starting Sync Service")
+	slog.Info("Starting service")
 	go ss.run()
 }
 

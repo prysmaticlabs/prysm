@@ -176,7 +176,7 @@ func (q *Querier) run() {
 // the latest chain heads from the node's peers.
 func (q *Querier) RequestLatestHead() {
 	request := &pb.ChainHeadRequest{}
-	q.p2p.Broadcast(request)
+	q.p2p.Broadcast(context.Background(), request)
 }
 
 // IsSynced checks if the node is cuurently synced with the

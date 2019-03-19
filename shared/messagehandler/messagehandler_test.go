@@ -1,6 +1,7 @@
 package messagehandler
 
 import (
+	"context"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -13,8 +14,9 @@ import (
 func TestSafelyHandleMessage(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	SafelyHandleMessage(nil, func(_ proto.Message) {
+	SafelyHandleMessage(nil, func(_ context.Context, _ proto.Message) error {
 		panic("bad!")
+		return nil
 	}, &pb.BeaconBlock{})
 
 	testutil.AssertLogsContain(t, hook, "Panicked when handling p2p message!")
@@ -23,8 +25,9 @@ func TestSafelyHandleMessage(t *testing.T) {
 func TestSafelyHandleMessage_NoData(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	SafelyHandleMessage(nil, func(_ proto.Message) {
+	SafelyHandleMessage(nil, func(_ context.Context, _ proto.Message) error {
 		panic("bad!")
+		return nil
 	}, nil)
 
 	entry := hook.LastEntry()
