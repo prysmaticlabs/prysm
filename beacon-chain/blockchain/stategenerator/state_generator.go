@@ -9,7 +9,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -22,10 +21,7 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, block *pb.Beac
 	if err != nil {
 		return nil, err
 	}
-	log.WithFields(logrus.Fields{
-		"input_block_slot":  block.Slot - params.BeaconConfig().GenesisSlot,
-		"output_state_slot": hState.Slot - params.BeaconConfig().GenesisSlot,
-	}).Info("Generating state from block")
+
 	if hState.Slot == block.Slot {
 		return hState, nil
 	}
