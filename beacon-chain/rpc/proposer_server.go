@@ -80,6 +80,23 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 		return nil, fmt.Errorf("could not retrieve pending attestations from operations service: %v", err)
 	}
 
+	head, err := ps.beaconDB.ChainHead()
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve chain head: %v", err)
+	}
+	blockRoot, err := hashutil.HashBeaconBlock(head)
+	if err != nil {
+		return nil, fmt.Errorf("could not hash beacon block: %v", err)
+	}
+	for beaconState.Slot < req.ProposalBlockSlot {
+		beaconState, err = state.ExecuteStateTransition(
+			ctx, beaconState, nil /* block */, blockRoot, &state.TransitionConfig{},
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could not execute head transition: %v", err)
+		}
+	}
+
 	// Use the optional proposal block slot parameter as the current slot for
 	// determining the validity window for attestations.
 	currentSlot := req.ProposalBlockSlot
@@ -88,12 +105,21 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 	}
 
 	// Remove any attestation from the list if their slot is before the start of
-	// the previous epoch. This should be handled in the operationService cleanup
-	// method, but we should filter here in case it wasn't yet processed.
+	// the previous epoch or does not match the current state previous justified
+	// epoch. This should be handled in the operationService cleanup but we
+	// should filter here in case it wasn't yet processed.
 	boundary := currentSlot - params.BeaconConfig().SlotsPerEpoch
 	attsWithinBoundary := make([]*pbp2p.Attestation, 0, len(atts))
 	for _, att := range atts {
-		if att.Data.Slot > boundary {
+
+		var expectedJustifedEpoch uint64
+		if helpers.SlotToEpoch(att.Data.Slot+1) >= helpers.SlotToEpoch(currentSlot) {
+			expectedJustifedEpoch = beaconState.JustifiedEpoch
+		} else {
+			expectedJustifedEpoch = beaconState.PreviousJustifiedEpoch
+		}
+
+		if att.Data.Slot > boundary && att.Data.JustifiedEpoch == expectedJustifedEpoch {
 			attsWithinBoundary = append(attsWithinBoundary, att)
 		}
 	}
