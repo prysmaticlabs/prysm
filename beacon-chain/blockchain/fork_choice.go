@@ -28,8 +28,8 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 	// the slot of justified block saved in DB.
 	if lastJustifiedSlot > savedJustifiedBlock.Slot {
 		log.WithFields(logrus.Fields{
-			"saved_justified_slot": savedJustifiedBlock.Slot - params.BeaconConfig().GenesisSlot,
-			"new_justified_slot":   lastJustifiedSlot - params.BeaconConfig().GenesisSlot,
+			"saved_justified_block_slot": savedJustifiedBlock.Slot - params.BeaconConfig().GenesisSlot,
+			"new_justified_block_slot":   lastJustifiedSlot - params.BeaconConfig().GenesisSlot,
 		}).Info("Updating justified checkpoint in DB")
 		// Retrieve the new justified block from DB using the new justified slot and save it.
 		newJustifiedBlock, err := c.beaconDB.BlockBySlot(lastJustifiedSlot)
@@ -44,6 +44,9 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 		if err != nil {
 			return err
 		}
+		log.WithFields(logrus.Fields{
+			"new_justified_state_slot":   newJustifiedState.Slot - params.BeaconConfig().GenesisSlot,
+		}).Info("Updating justified checkpoint in DB")
 		if err := c.beaconDB.SaveJustifiedState(newJustifiedState); err != nil {
 			return err
 		}
@@ -74,6 +77,9 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 		if err != nil {
 			return err
 		}
+		log.WithFields(logrus.Fields{
+			"new_finalized_state_slot":   newFinalizedState.Slot - params.BeaconConfig().GenesisSlot,
+		}).Info("Updating justified checkpoint in DB")
 		if err := c.beaconDB.SaveFinalizedState(newFinalizedState); err != nil {
 			return err
 		}
