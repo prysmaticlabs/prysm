@@ -103,11 +103,6 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		c.beaconDB.RemovePendingDeposit(ctx, dep)
 	}
 
-	// Update FFG checkpoints in DB.
-	if err := c.updateFFGCheckPts(beaconState); err != nil {
-		return nil, fmt.Errorf("could not update FFG checkpts: %v", err)
-	}
-
 	log.WithField("hash", fmt.Sprintf("%#x", blockRoot)).Debug("Processed beacon block")
 	return beaconState, nil
 }
@@ -158,6 +153,10 @@ func (c *ChainService) runStateTransition(
 		// Delete exited validators of this epoch to public key -> index DB.
 		if err := c.deleteValidatorIdx(beaconState); err != nil {
 			return nil, fmt.Errorf("could not delete validator index: %v", err)
+		}
+		// Update FFG checkpoints in DB.
+		if err := c.updateFFGCheckPts(beaconState); err != nil {
+			return nil, fmt.Errorf("could not update FFG checkpts: %v", err)
 		}
 		log.WithField(
 			"SlotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
