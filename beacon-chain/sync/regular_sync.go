@@ -713,7 +713,7 @@ func (rs *RegularSync) handleUnseenAttestationsRequest(msg p2p.Message) {
 }
 
 func (rs *RegularSync) broadcastCanonicalBlock(ctx context.Context, announce *pb.BeaconBlockAnnounce) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.sendBlockAnnounce")
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.broadcastCanonicalBlock")
 	defer span.End()
 	log.Debugf("Announcing canonical block %#x", announce.Hash)
 	rs.p2p.Broadcast(ctx, announce)
