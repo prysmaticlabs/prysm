@@ -16,6 +16,9 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+// Ensure operations service implements intefaces.
+var _ = OperationFeeds(&Service{})
+
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 }
