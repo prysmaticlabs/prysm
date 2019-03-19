@@ -159,6 +159,10 @@ func (c *ChainService) runStateTransition(
 		if err := c.deleteValidatorIdx(beaconState); err != nil {
 			return nil, fmt.Errorf("could not delete validator index: %v", err)
 		}
+		// Update FFG checkpoints in DB.
+		if err := c.updateFFGCheckPts(beaconState); err != nil {
+			return nil, fmt.Errorf("could not update FFG checkpts: %v", err)
+		}
 		log.WithField(
 			"SlotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
 		).Info("Epoch transition successfully processed")
