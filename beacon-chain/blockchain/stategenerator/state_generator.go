@@ -21,6 +21,9 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, block *pb.Beac
 	if err != nil {
 		return nil, err
 	}
+	if hState.Slot == block.Slot {
+		return hState, nil
+	}
 
 	if hState.Slot > block.Slot {
 		return nil, fmt.Errorf(

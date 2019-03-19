@@ -105,8 +105,8 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 	}
 	log.WithField("blockRoot", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
 
-	if err := c.saveFinalizedState(computedState); err != nil {
-		log.Errorf("Could not save new finalized state: %v", err)
+	if err := c.saveHistoricalState(computedState); err != nil {
+		log.Errorf("Could not save new historical state: %v", err)
 	}
 
 	// Announce the new block to the network.
