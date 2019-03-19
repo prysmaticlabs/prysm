@@ -138,6 +138,9 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
 	}
+	if err := chainService.beaconDB.SaveJustifiedState(beaconState); err != nil {
+		t.Fatal(err)
+	}
 	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)

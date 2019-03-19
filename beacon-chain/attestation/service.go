@@ -212,6 +212,7 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 
 		// If the attestation came from this attester. We use the slot committee to find the
 		// validator's actual index.
+		fmt.Println(committee[i])
 		pubkey := bytesutil.ToBytes48(state.ValidatorRegistry[committee[i]].Pubkey)
 		newAttestationSlot := attestation.Data.Slot
 		currentAttestationSlot := uint64(0)

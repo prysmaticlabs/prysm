@@ -76,33 +76,45 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, postState *pb.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ApplyForkChoiceRule")
 	defer span.End()
-	h, err := hashutil.HashBeaconBlock(block)
-	if err != nil {
-		return fmt.Errorf("could not tree hash incoming block: %v", err)
-	}
+
 	attestationTargets, err := c.attestationTargets(postState)
 	if err != nil {
 		return fmt.Errorf("could not retreive attestation target: %v", err)
 	}
 	log.Infof("Applying fork choice, attestation targets: %v", attestationTargets)
-	head, err := c.lmdGhost(block, postState, attestationTargets)
+
+	justifiedHead, err := c.beaconDB.JustifiedBlock()
+	if err != nil {
+		return err
+	}
+	justifiedState, err := c.beaconDB.JustifiedState()
+	if err != nil {
+		return err
+	}
+	head, err := c.lmdGhost(justifiedHead, justifiedState, attestationTargets)
 	if err != nil {
 		return fmt.Errorf("could not run fork choice: %v", err)
 	}
 
+	// TODO(99999): Confirming with Nishant state gen can return state of any head slot. Using postState as a stub.
 	if err := c.beaconDB.UpdateChainHead(head, postState); err != nil {
 		return fmt.Errorf("failed to update chain: %v", err)
 	}
-	log.WithField("blockRoot", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
+	h, err := hashutil.HashBeaconBlock(head)
+	if err != nil {
+		return fmt.Errorf("could not hash head: %v", err)
+	}
+	log.WithField("headRoot", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
 
+	// TODO(99999): Using postState as a stub.
 	if err := c.saveHistoricalState(postState); err != nil {
 		log.Errorf("Could not save new historical state: %v", err)
 	}
 
-	// Announce the new block to the network.
+	// Announce the new head to the network.
 	c.p2p.Broadcast(ctx, &pb.BeaconBlockAnnounce{
 		Hash:       h[:],
-		SlotNumber: block.Slot,
+		SlotNumber: head.Slot,
 	})
 
 	return nil

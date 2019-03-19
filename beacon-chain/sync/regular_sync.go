@@ -540,7 +540,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 	}
 
 	_, sendAttestationSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendAttestation")
-	log.WithField("attestationHash", fmt.Sprintf("%#x", attestationRoot)).Info("Sending newly received attestation to subscribers")
+	log.WithField("attestationHash", fmt.Sprintf("%#x", attestationRoot)).Debug("Sending newly received attestation to subscribers")
 	rs.operationsService.IncomingAttFeed().Send(attestation)
 	rs.attsService.IncomingAttestationFeed().Send(attestation)
 	sentAttestation.Inc()

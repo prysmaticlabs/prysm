@@ -86,6 +86,7 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get genesis block root: %v", err)
 	}
+
 	// Table driven tests for various fork choice scenarios.
 	tests := []struct {
 		blockSlot uint64
@@ -124,6 +125,10 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 			&attestation.Config{BeaconDB: db})
 
 		chainService := setupBeaconChain(t, false, db, true, attsService)
+		if err := chainService.beaconDB.SaveJustifiedBlock(
+			genesis); err != nil {
+			t.Fatal(err)
+		}
 		unixTime := uint64(time.Now().Unix())
 		deposits, _ := setupInitialDeposits(t, 100)
 		if err := db.InitializeState(unixTime, deposits, &pb.Eth1Data{}); err != nil {
