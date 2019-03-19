@@ -27,10 +27,9 @@ import (
 //          return nil, error
 //
 //  	# process skipped slots
-//
 // 		while (state.slot < block.slot - 1):
 //      	state = slot_state_transition(state, block=None)
-//ReceiveBlock
+//
 //		# process slot with block
 //		state = slot_state_transition(state, block)
 //
@@ -118,11 +117,6 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		c.beaconDB.RemovePendingDeposit(ctx, dep)
 	}
 
-	// Update FFG checkpoints in DB.
-	if err := c.updateFFGCheckPts(beaconState); err != nil {
-		return nil, fmt.Errorf("could not update FFG checkpts: %v", err)
-	}
-
 	log.WithField("hash", fmt.Sprintf("%#x", blockRoot)).Debug("Processed beacon block")
 	return beaconState, nil
 }
@@ -147,7 +141,10 @@ func (c *ChainService) runStateTransition(
 		beaconState,
 		block,
 		headRoot,
-		true, /* sig verify */
+		&state.TransitionConfig{
+			VerifySignatures: true, // We activate signature verification in this state transition.
+			Logging:          true, // We enable logging in this state transition call.
+		},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not execute state transition %v", err)
@@ -171,6 +168,10 @@ func (c *ChainService) runStateTransition(
 		if err := c.deleteValidatorIdx(beaconState); err != nil {
 			return nil, fmt.Errorf("could not delete validator index: %v", err)
 		}
+		// Update FFG checkpoints in DB.
+		if err := c.updateFFGCheckPts(beaconState); err != nil {
+			return nil, fmt.Errorf("could not update FFG checkpts: %v", err)
+		}
 		log.WithField(
 			"SlotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
 		).Info("Epoch transition successfully processed")
@@ -178,14 +179,8 @@ func (c *ChainService) runStateTransition(
 	return beaconState, nil
 }
 
-func (c *ChainService) saveFinalizedState(beaconState *pb.BeaconState) error {
-	// check if the finalized epoch has changed, if it
-	// has we save the finalized state.
-	if c.finalizedEpoch != beaconState.FinalizedEpoch {
-		c.finalizedEpoch = beaconState.FinalizedEpoch
-		return c.beaconDB.SaveFinalizedState(beaconState)
-	}
-	return nil
+func (c *ChainService) saveHistoricalState(beaconState *pb.BeaconState) error {
+	return c.beaconDB.SaveHistoricalState(beaconState)
 }
 
 // saveValidatorIdx saves the validators public key to index mapping in DB, these

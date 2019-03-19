@@ -10,7 +10,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -26,10 +25,6 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 	// If the last processed justification slot in state is greater than
 	// the slot of justified block saved in DB.
 	if lastJustifiedSlot > savedJustifiedBlock.Slot {
-		log.WithFields(logrus.Fields{
-			"saved_justified_slot": savedJustifiedBlock.Slot,
-			"new_justified_slot":   lastJustifiedSlot,
-		}).Info("Updating justified checkpoint in DB")
 		// Retrieve the new justified block from DB using the new justified slot and save it.
 		newJustifiedBlock, err := c.beaconDB.BlockBySlot(lastJustifiedSlot)
 		if err != nil {
@@ -38,8 +33,8 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 		if err := c.beaconDB.SaveJustifiedBlock(newJustifiedBlock); err != nil {
 			return err
 		}
-		// Generate the new justified state with using new justified slot and save it.
-		newJustifiedState, err := stategenerator.GenerateStateFromSlot(c.ctx, c.beaconDB, lastJustifiedSlot)
+		// Generate the new justified state with using new justified block and save it.
+		newJustifiedState, err := stategenerator.GenerateStateFromBlock(c.ctx, c.beaconDB, newJustifiedBlock)
 		if err != nil {
 			return err
 		}
@@ -56,10 +51,6 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 		return err
 	}
 	if lastFinalizedSlot > savedFinalizedBlock.Slot {
-		log.WithFields(logrus.Fields{
-			"saved_finalized_slot": savedFinalizedBlock.Slot,
-			"new_finalized_slot":   lastFinalizedSlot,
-		}).Info("Updating finalized checkpoint in DB")
 		// Retrieve the new finalized block from DB using the new finalized slot and save it.
 		newFinalizedBlock, err := c.beaconDB.BlockBySlot(lastFinalizedSlot)
 		if err != nil {
@@ -68,8 +59,8 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 		if err := c.beaconDB.SaveFinalizedBlock(newFinalizedBlock); err != nil {
 			return err
 		}
-		// Generate the new finalized state with using new finalized slot and save it.
-		newFinalizedState, err := stategenerator.GenerateStateFromSlot(c.ctx, c.beaconDB, lastFinalizedSlot)
+		// Generate the new finalized state with using new finalized block and save it.
+		newFinalizedState, err := stategenerator.GenerateStateFromBlock(c.ctx, c.beaconDB, newFinalizedBlock)
 		if err != nil {
 			return err
 		}
@@ -103,17 +94,17 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 		return fmt.Errorf("failed to update chain: %v", err)
 	}
 	log.WithField("blockRoot", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
-	// We fire events that notify listeners of a new block in
-	// the case of a state transition. This is useful for the beacon node's gRPC
-	// server to stream these events to beacon clients.
-	// When the transition is a cycle transition, we stream the state containing the new validator
-	// assignments to clients.
-	if c.canonicalBlockFeed.Send(&pb.BeaconBlockAnnounce{
+
+	if err := c.saveHistoricalState(computedState); err != nil {
+		log.Errorf("Could not save new historical state: %v", err)
+	}
+
+	// Announce the new block to the network.
+	c.p2p.Broadcast(ctx, &pb.BeaconBlockAnnounce{
 		Hash:       h[:],
 		SlotNumber: block.Slot,
-	}) == 0 {
-		log.Error("Sent canonical block to no subscribers")
-	}
+	})
+
 	return nil
 }
 

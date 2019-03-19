@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/rand"
+	"fmt"
 	"io/ioutil"
 	"math"
 	"math/big"
@@ -17,8 +18,8 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit-contract"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	prysmKeyStore "github.com/prysmaticlabs/prysm/shared/keystore"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
@@ -28,8 +29,13 @@ import (
 	"gonum.org/v1/gonum/stat/distuv"
 )
 
+var (
+	log = logrus.WithField("prefix", "main")
+)
+
 func main() {
 	var keystoreUTCPath string
+	var prysmKeystorePath string
 	var ipcPath string
 	var passwordFile string
 	var httpPath string
@@ -40,12 +46,12 @@ func main() {
 	var depositDelay int64
 	var variableTx bool
 	var txDeviation int64
+	var randomKey bool
 
 	customFormatter := new(prefixed.TextFormatter)
 	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
 	customFormatter.FullTimestamp = true
 	logrus.SetFormatter(customFormatter)
-	log := logrus.WithField("prefix", "main")
 
 	app := cli.NewApp()
 	app.Name = "sendDepositTx"
@@ -56,6 +62,11 @@ func main() {
 			Name:        "keystoreUTCPath",
 			Usage:       "Location of keystore",
 			Destination: &keystoreUTCPath,
+		},
+		cli.StringFlag{
+			Name:        "prysm-keystore",
+			Usage:       "The path to the existing prysm keystore. This flag is ignored if used with --random-key",
+			Destination: &prysmKeystorePath,
 		},
 		cli.StringFlag{
 			Name:        "ipcPath",
@@ -76,7 +87,7 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:        "privKey",
-			Usage:       "Private key to unlock account",
+			Usage:       "Private key to send ETH transaction",
 			Destination: &privKeyString,
 		},
 		cli.StringFlag{
@@ -113,6 +124,11 @@ func main() {
 			Value:       2,
 			Destination: &txDeviation,
 		},
+		cli.BoolFlag{
+			Name:        "random-key",
+			Usage:       "Use a randomly generated keystore key",
+			Destination: &randomKey,
+		},
 	}
 
 	app.Action = func(c *cli.Context) {
@@ -145,16 +161,7 @@ func main() {
 			txOps.GasLimit = 4000000
 			// User inputs keystore json file, sign tx with keystore json
 		} else {
-			// #nosec - Inclusion of file via variable is OK for this tool.
-			file, err := os.Open(passwordFile)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			scanner := bufio.NewScanner(file)
-			scanner.Split(bufio.ScanWords)
-			scanner.Scan()
-			password := scanner.Text()
+			password := loadTextFromFile(passwordFile)
 
 			// #nosec - Inclusion of file via variable is OK for this tool.
 			keyJSON, err := ioutil.ReadFile(keystoreUTCPath)
@@ -180,12 +187,28 @@ func main() {
 
 		for i := int64(0); i < numberOfDeposits; i++ {
 
-			validatorKey, err := prysmKeyStore.NewKey(rand.Reader)
+			var validatorKey *prysmKeyStore.Key
+			if randomKey {
+				validatorKey, err = prysmKeyStore.NewKey(rand.Reader)
+				if err != nil {
+					log.Errorf("Could not generate random key: %v", err)
+				}
+			} else {
+				// Load from keystore
+				store := prysmKeyStore.NewKeystore(prysmKeystorePath)
+				rawPassword := loadTextFromFile(passwordFile)
+				validatorKeyPath := prysmKeystorePath + params.BeaconConfig().ValidatorPrivkeyFileName
+				validatorKey, err = store.GetKey(validatorKeyPath, rawPassword)
+				if err != nil {
+					log.WithField("path", validatorKeyPath).WithField("password", rawPassword).Errorf("Could not get key: %v", err)
+					continue
+				}
+			}
 
-			data := &pb.DepositInput{
-				Pubkey:                      validatorKey.PublicKey.Marshal(),
-				ProofOfPossession:           []byte("pop"),
-				WithdrawalCredentialsHash32: []byte("withdraw"),
+			data, err := prysmKeyStore.DepositInput(validatorKey, validatorKey)
+			if err != nil {
+				log.Errorf("Could not generate deposit input data: %v", err)
+				continue
 			}
 
 			serializedData := new(bytes.Buffer)
@@ -199,7 +222,7 @@ func main() {
 			}
 
 			log.WithFields(logrus.Fields{
-				"Transaction Hash": tx.Hash(),
+				"Transaction Hash": fmt.Sprintf("%#x", tx.Hash()),
 			}).Infof("Deposit %d sent to contract for validator with a public key %#x", i, validatorKey.PublicKey.Marshal())
 
 			// If flag is enabled make transaction times variable
@@ -230,4 +253,17 @@ func buildStatisticalDist(depositDelay int64, numberOfDeposits int64, txDeviatio
 	}
 
 	return dist
+}
+
+func loadTextFromFile(filepath string) string {
+	// #nosec - Inclusion of file via variable is OK for this tool.
+	file, err := os.Open(filepath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	scanner := bufio.NewScanner(file)
+	scanner.Split(bufio.ScanWords)
+	scanner.Scan()
+	return scanner.Text()
 }

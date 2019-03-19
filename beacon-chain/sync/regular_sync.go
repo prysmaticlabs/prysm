@@ -46,7 +46,7 @@ type attsService interface {
 type p2pAPI interface {
 	p2p.Sender
 	Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription
-	Broadcast(msg proto.Message)
+	Broadcast(ctx context.Context, msg proto.Message)
 }
 
 // RegularSync is the gateway and the bridge between the p2p network and the local beacon chain.
@@ -332,7 +332,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 	if !rs.db.HasBlock(parentRoot) {
 		rs.blocksAwaitingProcessing[parentRoot] = block
 		blocksAwaitingProcessingGauge.Inc()
-		rs.p2p.Broadcast(&pb.BeaconBlockRequest{Hash: parentRoot[:]})
+		rs.p2p.Broadcast(ctx, &pb.BeaconBlockRequest{Hash: parentRoot[:]})
 		// We update the last observed slot to the received canonical block's slot.
 		if block.Slot > rs.highestObservedSlot {
 			rs.highestObservedSlot = block.Slot
@@ -371,7 +371,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 		}
 	}
 
-	_, sendBlockSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendBlock")
+	ctx, sendBlockSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendBlock")
 	log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Sending newly received block to chain service")
 	beaconState, err = rs.chainService.ReceiveBlock(ctx, block)
 	if err != nil {
@@ -727,7 +727,7 @@ func (rs *RegularSync) broadcastCanonicalBlock(ctx context.Context, announce *pb
 
 	_, sendBlockAnnounceSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendBlockAnnounce")
 	log.Debugf("Announcing canonical block %#x", announce.Hash)
-	rs.p2p.Broadcast(announce)
+	rs.p2p.Broadcast(ctx, announce)
 	sentBlockAnnounce.Inc()
 	sendBlockAnnounceSpan.End()
 }

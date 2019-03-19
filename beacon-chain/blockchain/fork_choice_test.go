@@ -151,6 +151,14 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 		}
 		chainService.cancel()
 		testutil.AssertLogsContain(t, hook, tt.logAssert)
+
+		mb, ok := chainService.p2p.(*mockBroadcaster)
+		if !ok {
+			t.Fatal("chainService.p2p is not a mockBroadcaster")
+		}
+		if !mb.broadcastCalled {
+			t.Error("ApplyForkChoiceRule did not broadcast the new block")
+		}
 	}
 }
 
@@ -1074,6 +1082,11 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 			})
 		validatorBalances = append(validatorBalances, params.BeaconConfig().MaxDepositAmount)
 	}
+	gBlock := &pb.BeaconBlock{Slot: genesisSlot}
+	gBlockRoot, err := hashutil.HashBeaconBlock(gBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
 	gState := &pb.BeaconState{
 		Slot:                   genesisSlot,
 		LatestBlockRootHash32S: make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
@@ -1083,13 +1096,13 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 		LatestCrosslinks:       crosslinks,
 		ValidatorRegistry:      validatorRegistry,
 		ValidatorBalances:      validatorBalances,
+		LatestBlock:            gBlock,
 		Fork: &pb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			Epoch:           params.BeaconConfig().GenesisEpoch,
 		},
 	}
-	gBlock := &pb.BeaconBlock{Slot: genesisSlot}
 	if err := chainSvc.beaconDB.SaveBlock(gBlock); err != nil {
 		t.Fatal(err)
 	}
@@ -1105,8 +1118,10 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 		&pb.BeaconBlock{Slot: genesisSlot}); err != nil {
 		t.Fatal(err)
 	}
-	if err := chainSvc.beaconDB.SaveJustifiedState(
-		&pb.BeaconState{Slot: genesisSlot}); err != nil {
+
+	// Also saved finalized block to slot 0 to test justification case only.
+	if err := chainSvc.beaconDB.SaveFinalizedBlock(
+		&pb.BeaconBlock{Slot: genesisSlot}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1116,13 +1131,6 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	// Also saved finalized block to slot 0 to test justification case only.
-	if err := chainSvc.beaconDB.SaveFinalizedBlock(
-		&pb.BeaconBlock{Slot: genesisSlot}); err != nil {
-		t.Fatal(err)
-	}
-
 	gState.JustifiedEpoch = params.BeaconConfig().GenesisEpoch + 1
 	gState.Slot = genesisSlot + offset
 	buf := make([]byte, 32)
@@ -1130,9 +1138,10 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 	domain := forkutil.DomainVersion(gState.Fork, gState.JustifiedEpoch, params.BeaconConfig().DomainRandao)
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	block := &pb.BeaconBlock{
-		Slot:         genesisSlot + offset,
-		RandaoReveal: epochSignature.Marshal(),
-		Body:         &pb.BeaconBlockBody{}}
+		Slot:             genesisSlot + offset,
+		RandaoReveal:     epochSignature.Marshal(),
+		ParentRootHash32: gBlockRoot[:],
+		Body:             &pb.BeaconBlockBody{}}
 	if err := chainSvc.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
@@ -1195,6 +1204,14 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 			})
 		validatorBalances = append(validatorBalances, params.BeaconConfig().MaxDepositAmount)
 	}
+	gBlock := &pb.BeaconBlock{Slot: genesisSlot}
+	if err := chainSvc.beaconDB.SaveBlock(gBlock); err != nil {
+		t.Fatal(err)
+	}
+	gBlockRoot, err := hashutil.HashBeaconBlock(gBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
 	gState := &pb.BeaconState{
 		Slot:                   genesisSlot,
 		LatestBlockRootHash32S: make([][]byte, params.BeaconConfig().LatestBlockRootsLength),
@@ -1204,15 +1221,12 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 		LatestCrosslinks:       crosslinks,
 		ValidatorRegistry:      validatorRegistry,
 		ValidatorBalances:      validatorBalances,
+		LatestBlock:            gBlock,
 		Fork: &pb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
 			Epoch:           params.BeaconConfig().GenesisEpoch,
 		},
-	}
-	gBlock := &pb.BeaconBlock{Slot: genesisSlot}
-	if err := chainSvc.beaconDB.SaveBlock(gBlock); err != nil {
-		t.Fatal(err)
 	}
 	if err := chainSvc.beaconDB.UpdateChainHead(gBlock, gState); err != nil {
 		t.Fatal(err)
@@ -1252,9 +1266,10 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 	domain := forkutil.DomainVersion(gState.Fork, gState.FinalizedEpoch, params.BeaconConfig().DomainRandao)
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	block := &pb.BeaconBlock{
-		Slot:         genesisSlot + offset,
-		RandaoReveal: epochSignature.Marshal(),
-		Body:         &pb.BeaconBlockBody{}}
+		Slot:             genesisSlot + offset,
+		RandaoReveal:     epochSignature.Marshal(),
+		ParentRootHash32: gBlockRoot[:],
+		Body:             &pb.BeaconBlockBody{}}
 	if err := chainSvc.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}

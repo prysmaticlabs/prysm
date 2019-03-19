@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	b "github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
 
@@ -86,7 +85,6 @@ func PrevAttestations(ctx context.Context, state *pb.BeaconState) []*pb.PendingA
 
 	var prevEpochAttestations []*pb.PendingAttestation
 	prevEpoch := helpers.PrevEpoch(state)
-	log.Infof("Fetching prev boundary attestations, prev epoch: %d", helpers.PrevEpoch(state)-params.BeaconConfig().GenesisEpoch)
 
 	for _, attestation := range state.LatestAttestations {
 		if prevEpoch == helpers.SlotToEpoch(attestation.Data.Slot) {

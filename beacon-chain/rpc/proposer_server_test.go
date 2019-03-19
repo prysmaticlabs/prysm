@@ -142,6 +142,19 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 	if err := db.SaveState(beaconState); err != nil {
 		t.Fatal(err)
 	}
+
+	blk := &pbp2p.BeaconBlock{
+		Slot: beaconState.Slot,
+	}
+
+	if err := db.SaveBlock(blk); err != nil {
+		t.Fatalf("failed to save block %v")
+	}
+
+	if err := db.UpdateChainHead(blk, beaconState); err != nil {
+		t.Fatalf("couldnt update chainhead: %v")
+	}
+
 	res, err := proposerServer.PendingAttestations(context.Background(), &pb.PendingAttestationsRequest{
 		FilterReadyForInclusion: true,
 	})
@@ -188,6 +201,19 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	if err := db.SaveState(beaconState); err != nil {
 		t.Fatal(err)
 	}
+
+	blk := &pbp2p.BeaconBlock{
+		Slot: beaconState.Slot,
+	}
+
+	if err := db.SaveBlock(blk); err != nil {
+		t.Fatalf("failed to save block %v")
+	}
+
+	if err := db.UpdateChainHead(blk, beaconState); err != nil {
+		t.Fatalf("couldnt update chainhead: %v")
+	}
+
 	res, err := proposerServer.PendingAttestations(
 		context.Background(),
 		&pb.PendingAttestationsRequest{
@@ -219,6 +245,19 @@ func TestPendingAttestations_OK(t *testing.T) {
 	if err := db.SaveState(beaconState); err != nil {
 		t.Fatal(err)
 	}
+
+	blk := &pbp2p.BeaconBlock{
+		Slot: beaconState.Slot,
+	}
+
+	if err := db.SaveBlock(blk); err != nil {
+		t.Fatalf("failed to save block %v")
+	}
+
+	if err := db.UpdateChainHead(blk, beaconState); err != nil {
+		t.Fatalf("couldnt update chainhead: %v")
+	}
+
 	res, err := proposerServer.PendingAttestations(context.Background(), &pb.PendingAttestationsRequest{})
 	if err != nil {
 		t.Fatalf("Unexpected error fetching pending attestations: %v", err)
