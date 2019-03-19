@@ -307,7 +307,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 		return
 	}
 
-	beaconState, err := rs.db.State(msg.Ctx)
+	beaconState, err := rs.db.State(ctx)
 	if err != nil {
 		log.Errorf("Failed to get beacon state: %v", err)
 		return
@@ -519,7 +519,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 	}
 
 	// Skip if attestation slot is older than last finalized slot in state.
-	beaconState, err := rs.db.State(msg.Ctx)
+	beaconState, err := rs.db.State(ctx)
 	if err != nil {
 		log.Errorf("Failed to get beacon state: %v", err)
 		return
