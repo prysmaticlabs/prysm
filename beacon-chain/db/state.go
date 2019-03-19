@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
 )
@@ -173,12 +172,11 @@ func (db *BeaconDB) SaveFinalizedState(beaconState *pb.BeaconState) error {
 
 // SaveHistoricalState saves the last finalized state in the db.
 func (db *BeaconDB) SaveHistoricalState(beaconState *pb.BeaconState) error {
-	finalizedSlot := beaconState.FinalizedEpoch * params.BeaconConfig().SlotsPerEpoch
-	slotDiff := beaconState.Slot - finalizedSlot
+	slotDiff := beaconState.Slot - params.BeaconConfig().GenesisSlot
 
 	// Do not save state, if slot diff is not
 	// a power of 2.
-	if !mathutil.IsPowerOf2(slotDiff) {
+	if slotDiff%params.BeaconConfig().SlotsPerEpoch != 0 {
 		return nil
 	}
 
@@ -275,9 +273,10 @@ func (db *BeaconDB) HistoricalStateFromSlot(slot uint64) (*pb.BeaconState, error
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve finalized state %v", err)
 	}
-	finalizedSlot := state.FinalizedEpoch * params.BeaconConfig().SlotsPerEpoch
-	slotDiff := slot - finalizedSlot
-	closestSlot := mathutil.ClosestPowerOf2(slotDiff)
+	slotDiff := slot - params.BeaconConfig().GenesisSlot
+	if slotDiff%params.BeaconConfig().SlotsPerEpoch != 0 {
+		return state, nil
+	}
 	var beaconState *pb.BeaconState
 
 	err = db.view(func(tx *bolt.Tx) error {
@@ -291,12 +290,13 @@ func (db *BeaconDB) HistoricalStateFromSlot(slot uint64) (*pb.BeaconState, error
 
 		for k, v := hsCursor.First(); k != nil; k, v = hsCursor.Next() {
 			slotNumber := decodeToSlotNumber(k)
-			if slotNumber > highestStateSlot && closestSlot >= slotNumber {
+			log.Errorf("State Slot Number %d", slotNumber)
+			if slotNumber == slotDiff {
 				highestStateSlot = slotNumber
 				histStateKey = v
+				break
 			}
 		}
-
 		// If no state exists send the finalized state to be unencoded.
 		if highestStateSlot == 0 {
 			encState := chainInfo.Get(finalizedStateLookupKey)

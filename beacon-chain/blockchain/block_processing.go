@@ -165,17 +165,8 @@ func (c *ChainService) runStateTransition(
 	return beaconState, nil
 }
 
-func (c *ChainService) saveFinalizedState(beaconState *pb.BeaconState) error {
-	if err := c.beaconDB.SaveHistoricalState(beaconState); err != nil {
-		return err
-	}
-	// check if the finalized epoch has changed, if it
-	// has we save the finalized state.
-	if c.finalizedEpoch != beaconState.FinalizedEpoch {
-		c.finalizedEpoch = beaconState.FinalizedEpoch
-		return c.beaconDB.SaveFinalizedState(beaconState)
-	}
-	return nil
+func (c *ChainService) saveHistoricalState(beaconState *pb.BeaconState) error {
+	return c.beaconDB.SaveHistoricalState(beaconState)
 }
 
 // saveValidatorIdx saves the validators public key to index mapping in DB, these
