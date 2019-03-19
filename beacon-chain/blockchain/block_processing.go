@@ -46,24 +46,16 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
+	blockRoot, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
+	}
 
 	if block.Slot == params.BeaconConfig().GenesisSlot {
 		return nil, fmt.Errorf("cannot process a genesis block: received block with slot %d",
 			block.Slot-params.BeaconConfig().GenesisSlot)
 	}
 
-	if block.Slot <= beaconState.Slot {
-		return nil, fmt.Errorf(
-			"cannot process a block from the past, block.slot=%d, state.slot=%d",
-			block.Slot,
-			beaconState.Slot,
-		)
-	}
-
-	blockRoot, err := hashutil.HashBeaconBlock(block)
-	if err != nil {
-		return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
-	}
 	// Save blocks with higher slot numbers in cache.
 	if err := c.isBlockReadyForProcessing(block, beaconState); err != nil {
 		return nil, fmt.Errorf("block with root %#x is not ready for processing: %v", blockRoot, err)

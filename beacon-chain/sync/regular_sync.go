@@ -318,11 +318,6 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 		return
 	}
 
-	if block.Slot <= beaconState.Slot {
-		log.Debug("Discarding received block with a slot number smaller than current state slot")
-		return
-	}
-
 	// We check if we have the block's parents saved locally, if not, we store the block in a
 	// pending processing map by hash and once we receive the parent, we process said parent AND then
 	// we process the received block.
