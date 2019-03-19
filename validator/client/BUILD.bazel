@@ -7,6 +7,7 @@ go_library(
         "service.go",
         "validator.go",
         "validator_attest.go",
+        "validator_metrics.go",
         "validator_propose.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/client",
@@ -26,7 +27,9 @@ go_library(
         "@io_opencensus_go//plugin/ocgrpc:go_default_library",
         "@io_opencensus_go//trace:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//codes:go_default_library",
         "@org_golang_google_grpc//credentials:go_default_library",
+        "@org_golang_google_grpc//status:go_default_library",
     ],
 )
 

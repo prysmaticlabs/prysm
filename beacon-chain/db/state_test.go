@@ -281,3 +281,61 @@ func TestFinalizedState_CanSaveRetrieve(t *testing.T) {
 			stateSlot, finalizedState.Slot)
 	}
 }
+
+func TestHistoricalState_CanSaveRetrieve(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	tests := []struct {
+		state *pb.BeaconState
+	}{
+		{
+			state: &pb.BeaconState{
+				Slot:           66,
+				FinalizedEpoch: 1,
+			},
+		},
+		{
+			state: &pb.BeaconState{
+				Slot:           72,
+				FinalizedEpoch: 1,
+			},
+		},
+		{
+			state: &pb.BeaconState{
+				Slot:           96,
+				FinalizedEpoch: 1,
+			},
+		},
+		{
+			state: &pb.BeaconState{
+				Slot:           130,
+				FinalizedEpoch: 2,
+			},
+		},
+		{
+			state: &pb.BeaconState{
+				Slot:           300,
+				FinalizedEpoch: 4,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		if err := db.SaveFinalizedState(tt.state); err != nil {
+			t.Fatalf("could not save finalized state: %v", err)
+		}
+		if err := db.SaveHistoricalState(tt.state); err != nil {
+			t.Fatalf("could not save historical state: %v", err)
+		}
+
+		retState, err := db.HistoricalStateFromSlot(tt.state.Slot)
+		if err != nil {
+			t.Fatalf("Unable to retrieve state %v", err)
+		}
+
+		if !proto.Equal(tt.state, retState) {
+			t.Errorf("Saved and retrieved states are not equal got\n %v but wanted\n %v", proto.MarshalTextString(retState), proto.MarshalTextString(tt.state))
+		}
+	}
+}
