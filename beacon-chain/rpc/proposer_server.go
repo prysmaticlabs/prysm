@@ -90,7 +90,7 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 	}
 	for beaconState.Slot < req.ProposalBlockSlot {
 		beaconState, err = state.ExecuteStateTransition(
-			ctx, beaconState, nil /* block */, blockRoot, false, /* verify signatures */
+			ctx, beaconState, nil /* block */, blockRoot, &state.TransitionConfig{},
 		)
 		if err != nil {
 			return nil, fmt.Errorf("could not execute head transition: %v", err)
