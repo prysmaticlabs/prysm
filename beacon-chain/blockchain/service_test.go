@@ -44,6 +44,14 @@ func (ms *mockOperationService) IncomingProcessedBlockFeed() *event.Feed {
 	return new(event.Feed)
 }
 
+func (ms *mockOperationService) IncomingAttFeed() *event.Feed {
+	return nil
+}
+
+func (ms *mockOperationService) IncomingExitFeed() *event.Feed {
+	return nil
+}
+
 type mockClient struct{}
 
 func (m *mockClient) SubscribeNewHead(ctx context.Context, ch chan<- *gethTypes.Header) (ethereum.Subscription, error) {

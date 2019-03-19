@@ -13,6 +13,10 @@ import (
 	"go.opencensus.io/trace"
 )
 
+type ForkChoice interface {
+	ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error
+}
+
 // updateFFGCheckPts checks whether the existing FFG check points saved in DB
 // are not older than the ones just processed in state. If it's older, we update
 // the db with the latest FFG check points, both justification and finalization.

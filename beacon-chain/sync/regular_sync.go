@@ -8,7 +8,9 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -28,21 +30,15 @@ var (
 )
 
 type chainService interface {
-	StateInitializedFeed() *event.Feed
-	CanonicalBlockFeed() *event.Feed
-	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error)
-	ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error
-}
-
-type operationService interface {
-	IncomingExitFeed() *event.Feed
-	IncomingAttFeed() *event.Feed
+	blockchain.BlockProcessor
+	blockchain.ForkChoice
+	blockchain.ChainFeeds
 }
 
 type p2pAPI interface {
+	p2p.Broadcaster
 	p2p.Sender
-	Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription
-	Broadcast(ctx context.Context, msg proto.Message)
+	p2p.Subscriber
 }
 
 // RegularSync is the gateway and the bridge between the p2p network and the local beacon chain.
@@ -62,7 +58,7 @@ type RegularSync struct {
 	cancel                   context.CancelFunc
 	p2p                      p2pAPI
 	chainService             chainService
-	operationsService        operationService
+	operationsService        operations.OperationFeeds
 	db                       *db.BeaconDB
 	blockAnnouncementFeed    *event.Feed
 	announceBlockBuf         chan p2p.Message
@@ -96,7 +92,7 @@ type RegularSyncConfig struct {
 	ChainHeadReqBufferSize       int
 	CanonicalBufferSize          int
 	ChainService                 chainService
-	OperationService             operationService
+	OperationService             operations.OperationFeeds
 	BeaconDB                     *db.BeaconDB
 	P2P                          p2pAPI
 }

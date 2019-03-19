@@ -19,6 +19,12 @@ import (
 
 var log = logrus.WithField("prefix", "operation")
 
+type OperationFeeds interface {
+	IncomingAttFeed() *event.Feed
+	IncomingExitFeed() *event.Feed
+	IncomingProcessedBlockFeed() *event.Feed
+}
+
 // Service represents a service that handles the internal
 // logic of beacon block operations.
 type Service struct {
