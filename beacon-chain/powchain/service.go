@@ -332,7 +332,7 @@ func (w *Web3Service) run(done <-chan struct{}) {
 			log.Debug("ETH1.0 chain service context closed, exiting goroutine")
 			return
 		case w.runError = <-headSub.Err():
-			log.Debug("Unsubscribed to head events, exiting goroutine")
+			log.Debugf("Unsubscribed to head events, exiting goroutine: %v", w.runError)
 			return
 		case header := <-w.headerChan:
 			w.processSubscribedHeaders(header)

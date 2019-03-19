@@ -72,32 +72,57 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	if int64(index) <= w.lastReceivedMerkleIndex {
 		return
 	}
-
 	w.lastReceivedMerkleIndex = int64(index)
+
+	validData := true
 
 	// We then decode the deposit input in order to create a deposit object
 	// we can store in our persistent DB.
 	depositInput, err := helpers.DecodeDepositInput(depositData)
 	if err != nil {
-		log.Errorf("Could not decode deposit input  %v", err)
-		return
+		log.Errorf("Could not decode deposit input %v", err)
+		validData = false
 	}
+
 	deposit := &pb.Deposit{
 		DepositData:     depositData,
 		MerkleTreeIndex: index,
 	}
+
+	// Make sure duplicates are rejected pre-chainstart.
+	allDeps := w.beaconDB.AllDeposits(w.ctx, nil)
 	if !w.chainStarted {
-		w.chainStartDeposits = append(w.chainStartDeposits, depositData)
-	} else {
-		w.beaconDB.InsertPendingDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)))
+		for _, dep := range allDeps {
+			depInput, err := helpers.DecodeDepositInput(dep.DepositData)
+			if err != nil {
+				log.Errorf("Could not decode deposit input %v", err)
+				validData = false
+				break
+			}
+
+			if bytes.Equal(depositInput.Pubkey, depInput.Pubkey) {
+				log.Debugf("Pubkey %#x has already been submitted for chainstart", depInput.Pubkey)
+				validData = false
+				break
+			}
+		}
 	}
+
 	// We always store all historical deposits in the DB.
 	w.beaconDB.InsertDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)))
-	log.WithFields(logrus.Fields{
-		"publicKey":       fmt.Sprintf("%#x", depositInput.Pubkey),
-		"merkleTreeIndex": index,
-	}).Info("Validator registered in deposit contract")
-	validDepositsCount.Inc()
+
+	if validData {
+		if !w.chainStarted {
+			w.chainStartDeposits = append(w.chainStartDeposits, depositData)
+		} else {
+			w.beaconDB.InsertPendingDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)))
+		}
+		log.WithFields(logrus.Fields{
+			"publicKey":       fmt.Sprintf("%#x", depositInput.Pubkey),
+			"merkleTreeIndex": index,
+		}).Info("Validator registered in deposit contract")
+		validDepositsCount.Inc()
+	}
 }
 
 // ProcessChainStartLog processes the log which had been received from
