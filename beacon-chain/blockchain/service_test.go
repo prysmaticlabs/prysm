@@ -33,6 +33,9 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+// Ensure ChainService implements interfaces.
+var _ = ChainFeeds(&ChainService{})
+
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(ioutil.Discard)
@@ -42,6 +45,14 @@ type mockOperationService struct{}
 
 func (ms *mockOperationService) IncomingProcessedBlockFeed() *event.Feed {
 	return new(event.Feed)
+}
+
+func (ms *mockOperationService) IncomingAttFeed() *event.Feed {
+	return nil
+}
+
+func (ms *mockOperationService) IncomingExitFeed() *event.Feed {
+	return nil
 }
 
 type mockClient struct{}
