@@ -4,6 +4,7 @@ package sync
 import (
 	"context"
 	"fmt"
+	"runtime/debug"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
@@ -240,6 +241,8 @@ func safelyHandleMessage(fn func(p2p.Message), msg p2p.Message) {
 				"r":   r,
 				"msg": printedMsg,
 			}).Error("Panicked when handling p2p message! Recovering...")
+
+			debug.PrintStack()
 
 			if msg.Ctx == nil {
 				return
@@ -502,7 +505,8 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 	defer span.End()
 	recAttestation.Inc()
 
-	attestation := msg.Data.(*pb.Attestation)
+	resp := msg.Data.(*pb.AttestationResponse)
+	attestation := resp.Attestation
 	attestationRoot, err := hashutil.HashProto(attestation)
 	if err != nil {
 		log.Errorf("Could not hash received attestation: %v", err)
