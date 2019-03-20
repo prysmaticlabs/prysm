@@ -36,6 +36,20 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 		if err != nil {
 			return err
 		}
+		// If the new justified slot is a skip slot in db then we keep getting it's ancestors
+		// until we can get a block.
+		for newJustifiedBlock == nil {
+			log.Debugf("Saving new justified block, no block with slot %d in db, trying slot %d",
+				lastJustifiedSlot, lastJustifiedSlot-1)
+			lastJustifiedSlot--
+			newJustifiedBlock, err = c.beaconDB.BlockBySlot(lastJustifiedSlot)
+			if err != nil {
+				return err
+			}
+		}
+		if err != nil {
+			return err
+		}
 		if err := c.beaconDB.SaveJustifiedBlock(newJustifiedBlock); err != nil {
 			return err
 		}
@@ -61,6 +75,17 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 		newFinalizedBlock, err := c.beaconDB.BlockBySlot(lastFinalizedSlot)
 		if err != nil {
 			return err
+		}
+		// If the new finalized slot is a skip slot in db then we keep getting it's ancestors
+		// until we can get a block.
+		for newFinalizedBlock == nil {
+			log.Debugf("Saving new finalized block, no block with slot %d in db, trying slot %d",
+				lastFinalizedSlot, lastFinalizedSlot-1)
+			lastFinalizedSlot--
+			newFinalizedBlock, err = c.beaconDB.BlockBySlot(lastFinalizedSlot)
+			if err != nil {
+				return err
+			}
 		}
 		if err := c.beaconDB.SaveFinalizedBlock(newFinalizedBlock); err != nil {
 			return err
