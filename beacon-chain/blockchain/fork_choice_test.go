@@ -26,6 +26,9 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+// Ensure ChainService implements interfaces.
+var _ = ForkChoice(&ChainService{})
+
 // Generates an initial genesis block and state using a custom number of initial
 // deposits as a helper function for LMD Ghost fork-choice testing.
 func generateTestGenesisStateAndBlock(

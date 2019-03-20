@@ -71,6 +71,10 @@ func (ms *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.B
 
 type mockOperationService struct{}
 
+func (ms *mockOperationService) IncomingProcessedBlockFeed() *event.Feed {
+	return nil
+}
+
 func (ms *mockOperationService) IncomingAttFeed() *event.Feed {
 	return new(event.Feed)
 }
