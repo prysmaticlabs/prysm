@@ -11,11 +11,19 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
+
+// BlockProcessor interface defines the methods in the blockchain service which
+// handle new block operations.
+type BlockProcessor interface {
+	CanonicalBlockFeed() *event.Feed
+	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error)
+}
 
 // ReceiveBlock is a function that defines the operations that are preformed on
 // any block that is received from p2p layer or rpc. It checks the block to see

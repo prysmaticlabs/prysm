@@ -102,7 +102,7 @@ func (a *Service) LatestAttestation(ctx context.Context, index uint64) (*pb.Atte
 		return nil, fmt.Errorf("invalid validator index %d", index)
 	}
 	pubKey := bytesutil.ToBytes48(state.ValidatorRegistry[index].Pubkey)
-
+	fmt.Println(pubKey)
 	// return error if validator has no attestation.
 	if _, exists := a.Store[pubKey]; !exists {
 		return nil, nil
@@ -123,6 +123,7 @@ func (a *Service) LatestAttestationTarget(ctx context.Context, index uint64) (*p
 	if err != nil {
 		return nil, fmt.Errorf("could not get attestation: %v", err)
 	}
+	fmt.Println(attestation)
 	if attestation == nil {
 		return nil, nil
 	}

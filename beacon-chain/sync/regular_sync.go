@@ -8,7 +8,9 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -28,15 +30,9 @@ var (
 )
 
 type chainService interface {
-	StateInitializedFeed() *event.Feed
-	CanonicalBlockFeed() *event.Feed
-	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error)
-	ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error
-}
-
-type operationService interface {
-	IncomingExitFeed() *event.Feed
-	IncomingAttFeed() *event.Feed
+	blockchain.BlockProcessor
+	blockchain.ForkChoice
+	blockchain.ChainFeeds
 }
 
 type attsService interface {
@@ -44,9 +40,9 @@ type attsService interface {
 }
 
 type p2pAPI interface {
+	p2p.Broadcaster
 	p2p.Sender
-	Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription
-	Broadcast(ctx context.Context, msg proto.Message)
+	p2p.Subscriber
 }
 
 // RegularSync is the gateway and the bridge between the p2p network and the local beacon chain.
@@ -66,8 +62,8 @@ type RegularSync struct {
 	cancel                   context.CancelFunc
 	p2p                      p2pAPI
 	chainService             chainService
-	operationsService        operationService
 	attsService              attsService
+	operationsService        operations.OperationFeeds
 	db                       *db.BeaconDB
 	blockAnnouncementFeed    *event.Feed
 	announceBlockBuf         chan p2p.Message
@@ -101,8 +97,8 @@ type RegularSyncConfig struct {
 	ChainHeadReqBufferSize       int
 	CanonicalBufferSize          int
 	ChainService                 chainService
-	OperationService             operationService
 	AttsService                  attsService
+	OperationService             operations.OperationFeeds
 	BeaconDB                     *db.BeaconDB
 	P2P                          p2pAPI
 }
@@ -314,7 +310,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 		return
 	}
 
-	beaconState, err := rs.db.State(msg.Ctx)
+	beaconState, err := rs.db.State(ctx)
 	if err != nil {
 		log.Errorf("Failed to get beacon state: %v", err)
 		return
@@ -527,7 +523,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 	}
 
 	// Skip if attestation slot is older than last finalized slot in state.
-	beaconState, err := rs.db.State(msg.Ctx)
+	beaconState, err := rs.db.State(ctx)
 	if err != nil {
 		log.Errorf("Failed to get beacon state: %v", err)
 		return
@@ -539,7 +535,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 		return
 	}
 
-	_, sendAttestationSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendAttestation")
+	ctx, sendAttestationSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendAttestation")
 	log.WithField("attestationHash", fmt.Sprintf("%#x", attestationRoot)).Debug("Sending newly received attestation to subscribers")
 	rs.operationsService.IncomingAttFeed().Send(attestation)
 	rs.attsService.IncomingAttestationFeed().Send(attestation)
@@ -565,7 +561,7 @@ func (rs *RegularSync) receiveExitRequest(msg p2p.Message) {
 		log.Debugf("Received, skipping exit request #%x", h)
 		return
 	}
-	_, sendExitReqSpan := trace.StartSpan(ctx, "sendExitRequest")
+	ctx, sendExitReqSpan := trace.StartSpan(ctx, "sendExitRequest")
 	log.WithField("exitReqHash", fmt.Sprintf("%#x", h)).
 		Debug("Forwarding validator exit request to subscribed services")
 	rs.operationsService.IncomingExitFeed().Send(exit)
@@ -722,12 +718,9 @@ func (rs *RegularSync) handleUnseenAttestationsRequest(msg p2p.Message) {
 }
 
 func (rs *RegularSync) broadcastCanonicalBlock(ctx context.Context, announce *pb.BeaconBlockAnnounce) {
-	_, span := trace.StartSpan(ctx, "beacon-chain.sync.broadcastCanonicalBlock")
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.broadcastCanonicalBlock")
 	defer span.End()
-
-	_, sendBlockAnnounceSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendBlockAnnounce")
 	log.Debugf("Announcing canonical block %#x", announce.Hash)
 	rs.p2p.Broadcast(ctx, announce)
 	sentBlockAnnounce.Inc()
-	sendBlockAnnounceSpan.End()
 }

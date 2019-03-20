@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	initialsync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync"
 	"github.com/sirupsen/logrus"
 )
@@ -22,8 +23,8 @@ type Config struct {
 	ChainService     chainService
 	BeaconDB         *db.BeaconDB
 	P2P              p2pAPI
-	OperationService operationService
 	AttsService attsService
+	OperationService operations.OperationFeeds
 	PowChainService  powChainService
 }
 

@@ -21,6 +21,9 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+// Ensure ChainService implements interfaces.
+var _ = BlockProcessor(&ChainService{})
+
 func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
