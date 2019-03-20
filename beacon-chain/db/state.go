@@ -173,15 +173,15 @@ func (db *BeaconDB) SaveFinalizedState(beaconState *pb.BeaconState) error {
 
 // SaveHistoricalState saves the last finalized state in the db.
 func (db *BeaconDB) SaveHistoricalState(beaconState *pb.BeaconState) error {
-	slotDiff := beaconState.Slot - params.BeaconConfig().GenesisSlot
+	slotSinceGenesis := beaconState.Slot - params.BeaconConfig().GenesisSlot
 
 	// Do not save state, if slot diff is not
 	// a power of 2.
-	if slotDiff%params.BeaconConfig().SlotsPerEpoch != 0 {
+	if slotSinceGenesis%params.BeaconConfig().SlotsPerEpoch != 0 {
 		return nil
 	}
 
-	slotBinary := encodeSlotNumber(slotDiff)
+	slotBinary := encodeSlotNumber(slotSinceGenesis)
 	stateHash, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		return err
@@ -274,8 +274,8 @@ func (db *BeaconDB) HistoricalStateFromSlot(slot uint64) (*pb.BeaconState, error
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve finalized state %v", err)
 	}
-	slotDiff := slot - params.BeaconConfig().GenesisSlot
-	if slotDiff%params.BeaconConfig().SlotsPerEpoch != 0 {
+	slotSinceGenesis := slot - params.BeaconConfig().GenesisSlot
+	if slotSinceGenesis%params.BeaconConfig().SlotsPerEpoch != 0 {
 		return state, nil
 	}
 	var beaconState *pb.BeaconState
@@ -291,7 +291,7 @@ func (db *BeaconDB) HistoricalStateFromSlot(slot uint64) (*pb.BeaconState, error
 
 		for k, v := hsCursor.First(); k != nil; k, v = hsCursor.Next() {
 			slotNumber := decodeToSlotNumber(k)
-			if slotNumber == slotDiff {
+			if slotNumber == slotSinceGenesis {
 				highestStateSlot = slotNumber
 				histStateKey = v
 				break
@@ -345,11 +345,11 @@ func (db *BeaconDB) deleteHistoricalStates(slot uint64) error {
 		histState := tx.Bucket(histStateBucket)
 		chainInfo := tx.Bucket(chainInfoBucket)
 		hsCursor := histState.Cursor()
-		slotsSinceGenesis := slot - params.BeaconConfig().GenesisSlot
+		slotSinceGenesis := slot - params.BeaconConfig().GenesisSlot
 
 		for k, v := hsCursor.First(); k != nil; k, v = hsCursor.Next() {
 			keySlotNumber := decodeToSlotNumber(k)
-			if keySlotNumber <= slotDiff {
+			if keySlotNumber <= slotSinceGenesis {
 				if err := histState.Delete(k); err != nil {
 					return err
 				}

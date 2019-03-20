@@ -339,3 +339,125 @@ func TestHistoricalState_CanSaveRetrieve(t *testing.T) {
 		}
 	}
 }
+
+func TestHistoricalState_Pruning(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	params.UseDemoBeaconConfig()
+	slotGen := func(slot uint64) uint64 {
+		return params.BeaconConfig().GenesisSlot + slot
+	}
+
+	tests := []struct {
+		finalizedState *pb.BeaconState
+		histState1     *pb.BeaconState
+		histState2     *pb.BeaconState
+	}{
+		{
+			finalizedState: &pb.BeaconState{
+				Slot:           slotGen(16),
+				FinalizedEpoch: 2,
+			},
+			histState1: &pb.BeaconState{
+				Slot:           slotGen(8),
+				FinalizedEpoch: 1,
+			},
+			histState2: &pb.BeaconState{
+				Slot:           slotGen(32),
+				FinalizedEpoch: 2,
+			},
+		},
+		{
+			finalizedState: &pb.BeaconState{
+				Slot:           slotGen(32),
+				FinalizedEpoch: 4,
+			},
+			histState1: &pb.BeaconState{
+				Slot:           slotGen(16),
+				FinalizedEpoch: 2,
+			},
+			histState2: &pb.BeaconState{
+				Slot:           slotGen(40),
+				FinalizedEpoch: 4,
+			},
+		},
+		{
+			finalizedState: &pb.BeaconState{
+				Slot:           slotGen(96),
+				FinalizedEpoch: 12,
+			},
+			histState1: &pb.BeaconState{
+				Slot:           slotGen(48),
+				FinalizedEpoch: 6,
+			},
+			histState2: &pb.BeaconState{
+				Slot:           slotGen(112),
+				FinalizedEpoch: 14,
+			},
+		},
+		{
+			finalizedState: &pb.BeaconState{
+				Slot:           slotGen(800),
+				FinalizedEpoch: 100,
+			},
+			histState1: &pb.BeaconState{
+				Slot:           slotGen(96),
+				FinalizedEpoch: 12,
+			},
+			histState2: &pb.BeaconState{
+				Slot:           slotGen(824),
+				FinalizedEpoch: 103,
+			},
+		},
+		{
+			finalizedState: &pb.BeaconState{
+				Slot:           slotGen(4000),
+				FinalizedEpoch: 500,
+			},
+			histState1: &pb.BeaconState{
+				Slot:           slotGen(800),
+				FinalizedEpoch: 100,
+			},
+			histState2: &pb.BeaconState{
+				Slot:           slotGen(4800),
+				FinalizedEpoch: 600,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		if err := db.SaveFinalizedState(tt.finalizedState); err != nil {
+			t.Fatalf("could not save finalized state: %v", err)
+		}
+		if err := db.SaveHistoricalState(tt.histState1); err != nil {
+			t.Fatalf("could not save historical state: %v", err)
+		}
+		if err := db.SaveHistoricalState(tt.histState2); err != nil {
+			t.Fatalf("could not save historical state: %v", err)
+		}
+
+		if err := db.deleteHistoricalStates(tt.finalizedState.Slot); err != nil {
+			t.Fatalf("Could not delete historical states %v", err)
+		}
+
+		retState, err := db.HistoricalStateFromSlot(tt.histState1.Slot)
+		if err != nil {
+			t.Fatalf("Unable to retrieve state %v", err)
+		}
+
+		if proto.Equal(tt.histState1, retState) {
+			t.Errorf("Saved and retrieved states are equal when they aren't supposed to be for slot %d", retState.Slot)
+		}
+
+		retState, err = db.HistoricalStateFromSlot(tt.histState2.Slot)
+		if err != nil {
+			t.Fatalf("Unable to retrieve state %v", err)
+		}
+
+		if !proto.Equal(tt.histState2, retState) {
+			t.Errorf("Saved and retrieved states are not equal when they supposed to be for slot %d", tt.histState2.Slot-params.BeaconConfig().GenesisSlot)
+		}
+
+	}
+}
