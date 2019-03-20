@@ -505,7 +505,8 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 	defer span.End()
 	recAttestation.Inc()
 
-	attestation := msg.Data.(*pb.Attestation)
+	resp := msg.Data.(*pb.AttestationResponse)
+	attestation := resp.Attestation
 	attestationRoot, err := hashutil.HashProto(attestation)
 	if err != nil {
 		log.Errorf("Could not hash received attestation: %v", err)
