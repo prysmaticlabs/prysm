@@ -16,7 +16,7 @@ var log = logrus.WithField("prefix", "stategenerator")
 
 // GenerateStateFromBlock generates state from the last finalized state to the input slot.
 // Ex:
-// 	1A - 2B(finalized) - 3C - 4 - 5D - 6 - 7F
+// 	1A - 2B(finalized) - 3C - 4 - 5D - 6 - 7F  (letters mean there's a block)
 //  Input: slot 6
 //	Output: resulting state of state transition function after applying block C and D
 //  	along with skipped slot 4 and 6.
@@ -57,7 +57,7 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 	}
 	// if the most recent block is a skip block, we get its parent block.
 	// ex:
-	// 	1A - 2B - 3C - 4 - 5
+	// 	1A - 2B - 3C - 4 - 5 (letters mean there's a block)
 	//  input slot is 5, but slots 4 and 5 are skipped, we get block C from slot 3.
 	for mostRecentBlock == nil {
 		slot--
@@ -67,8 +67,8 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 		}
 	}
 
-	// retrieve the block list to recompute state for the input slot.
-	blocks, err := recentToFinalizedBlocks(db, mostRecentBlock, fRoot)
+	// retrieve the block list to recompute state of the input slot.
+	blocks, err := blocksSinceFinalized(db, mostRecentBlock, fRoot)
 	if err != nil {
 		return nil, fmt.Errorf("unable to look up block ancestors %v", err)
 	}
@@ -126,13 +126,13 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 	return postState, nil
 }
 
-// recentToFinalizedBlocks will return a list of linked blocks that's
+// blocksSinceFinalized will return a list of linked blocks that's
 // between the input block and the last finalized block in the db.
 // The input block is also returned in the list.
 // Ex:
 // 	A -> B(finalized) -> C -> D -> E -> D
 // 	Input: E, output: [E, D, C, B]
-func recentToFinalizedBlocks(db *db.BeaconDB, block *pb.BeaconBlock,
+func blocksSinceFinalized(db *db.BeaconDB, block *pb.BeaconBlock,
 	finalizedBlockRoot [32]byte) ([]*pb.BeaconBlock, error) {
 
 	blockAncestors := make([]*pb.BeaconBlock, 0)
