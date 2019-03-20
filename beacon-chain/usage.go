@@ -70,15 +70,13 @@ var appHelpFlagGroups = []flagGroup{
 	{
 		Name: "utils",
 		Flags: []cli.Flag{
-			utils.DemoConfigFlag,
+			utils.NoCustomConfigFlag,
 			utils.DepositContractFlag,
 			utils.Web3ProviderFlag,
 			utils.RPCPort,
 			utils.CertFlag,
 			utils.KeyFlag,
-			utils.GenesisJSON,
 			utils.EnableDBCleanup,
-			utils.ChainStartDelay,
 		},
 	},
 	{

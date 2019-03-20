@@ -9,6 +9,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -21,7 +22,6 @@ var delay = params.BeaconConfig().SecondsPerSlot / 2
 func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	ctx, span := trace.StartSpan(ctx, "validator.AttestToBlockHead")
 	defer span.End()
-	log.Info("Attesting...")
 	// First the validator should construct attestation_data, an AttestationData
 	// object based upon the state at the assigned slot.
 	attData := &pbp2p.AttestationData{
@@ -65,7 +65,6 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 			slot-params.BeaconConfig().GenesisSlot, err)
 		return
 	}
-	log.Infof("Attestation info response: %v", infoRes)
 	// Set the attestation data's beacon block root = hash_tree_root(head) where head
 	// is the validator's view of the head block of the beacon chain during the slot.
 	attData.BeaconBlockRootHash32 = infoRes.BeaconBlockRootHash32
@@ -94,9 +93,6 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	// of length len(committee)+7 // 8.
 	attestation.CustodyBitfield = make([]byte, (len(resp.Committee)+7)/8)
 
-	// Note: calling get_attestation_participants(state, attestation.data, attestation.aggregation_bitfield)
-	// should return a list of length equal to 1, containing validator_index.
-
 	// Find the index in committee to be used for
 	// the aggregation bitfield
 	var indexInCommittee int
@@ -113,18 +109,29 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	// TODO(#1366): Use BLS to generate an aggregate signature.
 	attestation.AggregateSignature = []byte("signed")
 
+	log.WithField(
+		"blockRoot", fmt.Sprintf("%#x", attData.BeaconBlockRootHash32),
+	).Info("Current beacon chain head block")
+	log.WithFields(logrus.Fields{
+		"justifiedEpoch": attData.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
+		"shard":          attData.Shard,
+		"slot":           slot - params.BeaconConfig().GenesisSlot,
+	}).Info("Attesting to beacon chain head...")
+
 	duration := time.Duration(slot*params.BeaconConfig().SecondsPerSlot+delay) * time.Second
 	timeToBroadcast := time.Unix(int64(v.genesisTime), 0).Add(duration)
 	_, sleepSpan := trace.StartSpan(ctx, "validator.AttestToBlockHead_sleepUntilTimeToBroadcast")
 	time.Sleep(time.Until(timeToBroadcast))
 	sleepSpan.End()
-	log.Infof("Produced attestation: %v", attestation)
-	attestRes, err := v.attesterClient.AttestHead(ctx, attestation)
+	log.Debugf("Produced attestation: %v", attestation)
+	attResp, err := v.attesterClient.AttestHead(ctx, attestation)
 	if err != nil {
 		log.Errorf("Could not submit attestation to beacon node: %v", err)
 		return
 	}
-	log.WithField(
-		"hash", fmt.Sprintf("%#x", attestRes.AttestationHash),
-	).Infof("Submitted attestation successfully with hash %#x", attestRes.AttestationHash)
+	log.WithFields(logrus.Fields{
+		"attestationHash": fmt.Sprintf("%#x", attResp.AttestationHash),
+		"shard":           attData.Shard,
+		"slot":            slot - params.BeaconConfig().GenesisSlot,
+	}).Info("Beacon node processed attestation successfully")
 }

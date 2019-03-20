@@ -32,6 +32,7 @@ message BeaconState {
   repeated uint64 latest_slashed_balances = 3005;
   repeated PendingAttestation latest_attestations = 3006;
   repeated bytes latest_index_root_hash32s = 3007;
+  BeaconBlock latest_block = 3008;
 
   // Ethereum 1.0 chain data [4001-5000]
   Eth1Data latest_eth1_data = 4001;

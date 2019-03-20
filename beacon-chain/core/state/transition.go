@@ -133,6 +133,9 @@ func ProcessBlock(
 		}
 	}
 
+	// Save latest block.
+	state.LatestBlock = block
+
 	// Verify block RANDAO.
 	state, err = b.ProcessBlockRandao(ctx, state, block, config.VerifySignatures, config.Logging)
 	if err != nil {
