@@ -70,8 +70,9 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 	validatorServer := &ValidatorServer{
 		beaconDB: db,
 	}
-	req := &pb.ValidatorEpochAssignmentsRequest{
-		PublicKey:  []byte{},
+	req := &pb.CommitteeAssignmentRequest{
+
+		PublicKey:  [][]byte{},
 		EpochStart: params.BeaconConfig().GenesisEpoch,
 	}
 	want := fmt.Sprintf("expected public key to have length %d", params.BeaconConfig().BLSPubkeyLength)
@@ -92,8 +93,8 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	}
 
 	pubKey := make([]byte, 96)
-	req := &pb.ValidatorEpochAssignmentsRequest{
-		PublicKey:  pubKey,
+	req := &pb.CommitteeAssignmentRequest{
+		PublicKey:  [][]byte{pubKey},
 		EpochStart: params.BeaconConfig().GenesisEpoch,
 	}
 	want := fmt.Sprintf("validator %#x does not exist", req.PublicKey)
@@ -143,8 +144,8 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
 	binary.PutUvarint(pubKeyBuf, 0)
 	// Test the first validator in registry.
-	req := &pb.ValidatorEpochAssignmentsRequest{
-		PublicKey:  pubKeyBuf,
+	req := &pb.CommitteeAssignmentRequest{
+		PublicKey:  [][]byte{pubKeyBuf},
 		EpochStart: params.BeaconConfig().GenesisSlot,
 	}
 	res, err := vs.CommitteeAssignment(context.Background(), req)
@@ -164,8 +165,8 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 	lastValidatorIndex := params.BeaconConfig().DepositsForChainStart - 1
 	pubKeyBuf = make([]byte, params.BeaconConfig().BLSPubkeyLength)
 	binary.PutUvarint(pubKeyBuf, lastValidatorIndex)
-	req = &pb.ValidatorEpochAssignmentsRequest{
-		PublicKey:  pubKeyBuf,
+	req = &pb.CommitteeAssignmentRequest{
+		PublicKey:  [][]byte{pubKeyBuf},
 		EpochStart: params.BeaconConfig().GenesisSlot,
 	}
 	res, err = vs.CommitteeAssignment(context.Background(), req)

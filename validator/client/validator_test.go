@@ -229,7 +229,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 		key:             validatorKey,
 		validatorClient: client,
 	}
-	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
+	clientStream := internal.NewMockValidatorServiceClient_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&pb.ValidatorActivationRequest{
@@ -260,9 +260,13 @@ func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignm
 		key:             validatorKey,
 		validatorClient: client,
 		assignment: &pb.CommitteeAssignmentResponse{
-			Committee: []uint64{},
-			Slot:      10,
-			Shard:     20,
+			Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+				&pb.CommitteeAssignmentResponse_CommitteeAssignment{
+					Committee: []uint64{},
+					Slot:      10,
+					Shard:     20,
+				},
+			},
 		},
 	}
 	client.EXPECT().CommitteeAssignment(
@@ -283,7 +287,13 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 	v := validator{
 		key:             validatorKey,
 		validatorClient: client,
-		assignment:      &pb.CommitteeAssignmentResponse{Shard: 1},
+		assignment: &pb.CommitteeAssignmentResponse{
+			Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+				&pb.CommitteeAssignmentResponse_CommitteeAssignment{
+					Shard: 1,
+				},
+			},
+		},
 	}
 
 	expected := errors.New("bad")
@@ -308,10 +318,14 @@ func TestUpdateAssignments_OK(t *testing.T) {
 
 	slot := params.BeaconConfig().SlotsPerEpoch
 	resp := &pb.CommitteeAssignmentResponse{
-		Slot:       params.BeaconConfig().SlotsPerEpoch,
-		Shard:      100,
-		Committee:  []uint64{0, 1, 2, 3},
-		IsProposer: true,
+		Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+			&pb.CommitteeAssignmentResponse_CommitteeAssignment{
+				Slot:       params.BeaconConfig().SlotsPerEpoch,
+				Shard:      100,
+				Committee:  []uint64{0, 1, 2, 3},
+				IsProposer: true,
+			},
+		},
 	}
 	v := validator{
 		key:             validatorKey,
@@ -326,13 +340,13 @@ func TestUpdateAssignments_OK(t *testing.T) {
 		t.Fatalf("Could not update assignments: %v", err)
 	}
 
-	if v.assignment.Slot != params.BeaconConfig().SlotsPerEpoch {
-		t.Errorf("Unexpected validator assignments. want=%v got=%v", params.BeaconConfig().SlotsPerEpoch, v.assignment.Slot)
+	if v.assignment.Assignment[0].Slot != params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Unexpected validator assignments. want=%v got=%v", params.BeaconConfig().SlotsPerEpoch, v.assignment.Assignment[0].Slot)
 	}
-	if v.assignment.Shard != resp.Shard {
-		t.Errorf("Unexpected validator assignments. want=%v got=%v", resp.Shard, v.assignment.Slot)
+	if v.assignment.Assignment[0].Shard != resp.Assignment[0].Shard {
+		t.Errorf("Unexpected validator assignments. want=%v got=%v", resp.Assignment[0].Shard, v.assignment.Assignment[0].Slot)
 	}
-	if !v.assignment.IsProposer {
+	if !v.assignment.Assignment[0].IsProposer {
 		t.Errorf("Unexpected validator assignments. want: proposer=true")
 	}
 }
