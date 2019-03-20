@@ -90,8 +90,8 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	}
 
 	// Make sure duplicates are rejected pre-chainstart.
-	allDeps := w.beaconDB.AllDeposits(w.ctx, nil)
 	if !w.chainStarted {
+		allDeps := w.beaconDB.AllDeposits(w.ctx, nil)
 		for _, dep := range allDeps {
 			depInput, err := helpers.DecodeDepositInput(dep.DepositData)
 			if err != nil {
@@ -120,7 +120,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 		log.WithFields(logrus.Fields{
 			"publicKey":       fmt.Sprintf("%#x", depositInput.Pubkey),
 			"merkleTreeIndex": index,
-		}).Info("Validator registered in deposit contract")
+		}).Info("Deposit registered from deposit contract")
 		validDepositsCount.Inc()
 	}
 }
