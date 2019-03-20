@@ -193,7 +193,7 @@ func (c *ChainService) runStateTransition(
 	return beaconState, nil
 }
 
-func (c *ChainService) saveHistoricalState(beaconState *pb.BeaconState) error {
+func (c *ChainService) SaveHistoricalState(beaconState *pb.BeaconState) error {
 	return c.beaconDB.SaveHistoricalState(beaconState)
 }
 

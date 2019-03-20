@@ -87,8 +87,6 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 	if err != nil {
 		return fmt.Errorf("could not retrieve attestation target: %v", err)
 	}
-	log.Infof("Applying fork choice, attestation targets: %v", attestationTargets)
-
 	justifiedHead, err := c.beaconDB.JustifiedBlock()
 	if err != nil {
 		return err
@@ -113,7 +111,7 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 	log.WithField("headRoot", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
 
 	// TODO(99999): Using postState as a stub.
-	if err := c.saveHistoricalState(postState); err != nil {
+	if err := c.SaveHistoricalState(postState); err != nil {
 		log.Errorf("Could not save new historical state: %v", err)
 	}
 
