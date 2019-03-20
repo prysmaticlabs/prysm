@@ -345,7 +345,7 @@ func (db *BeaconDB) deleteHistoricalStates(slot uint64) error {
 		histState := tx.Bucket(histStateBucket)
 		chainInfo := tx.Bucket(chainInfoBucket)
 		hsCursor := histState.Cursor()
-		slotDiff := slot - params.BeaconConfig().GenesisSlot
+		slotsSinceGenesis := slot - params.BeaconConfig().GenesisSlot
 
 		for k, v := hsCursor.First(); k != nil; k, v = hsCursor.Next() {
 			keySlotNumber := decodeToSlotNumber(k)
