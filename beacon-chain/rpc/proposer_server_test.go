@@ -176,18 +176,22 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 		params.BeaconConfig().GenesisEpoch+10,
 	) - 1
 
+	expectedEpoch := uint64(100)
+
 	opService := &mockOperationService{
 		pendingAttestations: []*pbp2p.Attestation{
 			// Expired attestations
-			{Data: &pbp2p.AttestationData{Slot: 0}},
-			{Data: &pbp2p.AttestationData{Slot: currentSlot - 10000}},
-			{Data: &pbp2p.AttestationData{Slot: currentSlot - 5000}},
-			{Data: &pbp2p.AttestationData{Slot: currentSlot - 100}},
-			{Data: &pbp2p.AttestationData{Slot: currentSlot - params.BeaconConfig().SlotsPerEpoch}},
-			// Non-expired attestations
-			{Data: &pbp2p.AttestationData{Slot: currentSlot - 5}},
-			{Data: &pbp2p.AttestationData{Slot: currentSlot - 2}},
-			{Data: &pbp2p.AttestationData{Slot: currentSlot}},
+			{Data: &pbp2p.AttestationData{Slot: 0, JustifiedEpoch: expectedEpoch}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 10000, JustifiedEpoch: expectedEpoch}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 5000, JustifiedEpoch: expectedEpoch}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 100, JustifiedEpoch: expectedEpoch}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - params.BeaconConfig().SlotsPerEpoch, JustifiedEpoch: expectedEpoch}},
+			// Non-expired attestation with incorrect justified epoch
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 5, JustifiedEpoch: expectedEpoch - 1}},
+			// Non-expired attestations with correct justified epoch
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 5, JustifiedEpoch: expectedEpoch}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot - 2, JustifiedEpoch: expectedEpoch}},
+			{Data: &pbp2p.AttestationData{Slot: currentSlot, JustifiedEpoch: expectedEpoch}},
 		},
 	}
 	expectedNumberOfAttestations := 3
@@ -196,7 +200,9 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 		beaconDB:         db,
 	}
 	beaconState := &pbp2p.BeaconState{
-		Slot: currentSlot,
+		Slot:                   currentSlot,
+		JustifiedEpoch:         expectedEpoch,
+		PreviousJustifiedEpoch: expectedEpoch,
 	}
 	if err := db.SaveState(beaconState); err != nil {
 		t.Fatal(err)
