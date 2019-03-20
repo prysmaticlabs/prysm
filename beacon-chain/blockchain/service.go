@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -21,8 +22,10 @@ import (
 
 var log = logrus.WithField("prefix", "blockchain")
 
-type operationService interface {
-	IncomingProcessedBlockFeed() *event.Feed
+// ChainFeeds interface defines the methods of the ChainService which provide
+// information feeds.
+type ChainFeeds interface {
+	StateInitializedFeed() *event.Feed
 }
 
 // ChainService represents a service that handles the internal
@@ -33,7 +36,7 @@ type ChainService struct {
 	beaconDB             *db.BeaconDB
 	web3Service          *powchain.Web3Service
 	attsService          *attestation.Service
-	opsPoolService       operationService
+	opsPoolService       operations.OperationFeeds
 	chainStartChan       chan time.Time
 	canonicalBlockChan   chan *pb.BeaconBlock
 	canonicalBlockFeed   *event.Feed
@@ -50,7 +53,7 @@ type Config struct {
 	Web3Service    *powchain.Web3Service
 	AttsService    *attestation.Service
 	BeaconDB       *db.BeaconDB
-	OpsPoolService operationService
+	OpsPoolService operations.OperationFeeds
 	DevMode        bool
 	EnablePOWChain bool
 	P2p            p2p.Broadcaster

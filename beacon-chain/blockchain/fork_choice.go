@@ -13,6 +13,12 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// ForkChoice interface defines the methods for applying fork choice rule
+// operations to the blockchain.
+type ForkChoice interface {
+	ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error
+}
+
 // updateFFGCheckPts checks whether the existing FFG check points saved in DB
 // are not older than the ones just processed in state. If it's older, we update
 // the db with the latest FFG check points, both justification and finalization.
@@ -90,12 +96,6 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 	if err := c.saveHistoricalState(computedState); err != nil {
 		log.Errorf("Could not save new historical state: %v", err)
 	}
-
-	// Announce the new block to the network.
-	c.p2p.Broadcast(ctx, &pb.BeaconBlockAnnounce{
-		Hash:       h[:],
-		SlotNumber: block.Slot,
-	})
 
 	return nil
 }

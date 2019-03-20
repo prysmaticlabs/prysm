@@ -51,7 +51,7 @@ type Config struct {
 // DefaultConfig provides the default configuration for a sync service.
 // SyncPollingInterval determines how frequently the service checks that initial sync is complete.
 // BlockBufferSize determines that buffer size of the `blockBuf` channel.
-// StateBufferSize determines the buffer size of thhe `stateBuf` channel.
+// StateBufferSize determines the buffer size of the `stateBuf` channel.
 func DefaultConfig() *Config {
 	return &Config{
 		SyncPollingInterval:     time.Duration(params.BeaconConfig().SyncPollingInterval) * time.Second,

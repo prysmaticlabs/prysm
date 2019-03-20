@@ -26,6 +26,9 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+// Ensure ChainService implements interfaces.
+var _ = ForkChoice(&ChainService{})
+
 // Generates an initial genesis block and state using a custom number of initial
 // deposits as a helper function for LMD Ghost fork-choice testing.
 func generateTestGenesisStateAndBlock(
@@ -151,14 +154,6 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 		}
 		chainService.cancel()
 		testutil.AssertLogsContain(t, hook, tt.logAssert)
-
-		mb, ok := chainService.p2p.(*mockBroadcaster)
-		if !ok {
-			t.Fatal("chainService.p2p is not a mockBroadcaster")
-		}
-		if !mb.broadcastCalled {
-			t.Error("ApplyForkChoiceRule did not broadcast the new block")
-		}
 	}
 }
 

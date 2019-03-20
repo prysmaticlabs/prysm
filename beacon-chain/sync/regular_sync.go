@@ -8,7 +8,9 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -28,21 +30,15 @@ var (
 )
 
 type chainService interface {
-	StateInitializedFeed() *event.Feed
-	CanonicalBlockFeed() *event.Feed
-	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error)
-	ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error
-}
-
-type operationService interface {
-	IncomingExitFeed() *event.Feed
-	IncomingAttFeed() *event.Feed
+	blockchain.BlockProcessor
+	blockchain.ForkChoice
+	blockchain.ChainFeeds
 }
 
 type p2pAPI interface {
+	p2p.Broadcaster
 	p2p.Sender
-	Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription
-	Broadcast(ctx context.Context, msg proto.Message)
+	p2p.Subscriber
 }
 
 // RegularSync is the gateway and the bridge between the p2p network and the local beacon chain.
@@ -62,7 +58,7 @@ type RegularSync struct {
 	cancel                   context.CancelFunc
 	p2p                      p2pAPI
 	chainService             chainService
-	operationsService        operationService
+	operationsService        operations.OperationFeeds
 	db                       *db.BeaconDB
 	blockAnnouncementFeed    *event.Feed
 	announceBlockBuf         chan p2p.Message
@@ -74,7 +70,7 @@ type RegularSync struct {
 	chainHeadReqBuf          chan p2p.Message
 	attestationBuf           chan p2p.Message
 	attestationReqByHashBuf  chan p2p.Message
-	unseenAttestationsReqBuf chan p2p.Message
+	announceAttestationBuf   chan p2p.Message
 	exitBuf                  chan p2p.Message
 	canonicalBuf             chan *pb.BeaconBlockAnnounce
 	highestObservedSlot      uint64
@@ -83,39 +79,39 @@ type RegularSync struct {
 
 // RegularSyncConfig allows the channel's buffer sizes to be changed.
 type RegularSyncConfig struct {
-	BlockAnnounceBufferSize      int
-	BlockBufferSize              int
-	BlockReqSlotBufferSize       int
-	BlockReqHashBufferSize       int
-	BatchedBufferSize            int
-	StateReqBufferSize           int
-	AttestationBufferSize        int
-	AttestationReqHashBufSize    int
-	UnseenAttestationsReqBufSize int
-	ExitBufferSize               int
-	ChainHeadReqBufferSize       int
-	CanonicalBufferSize          int
-	ChainService                 chainService
-	OperationService             operationService
-	BeaconDB                     *db.BeaconDB
-	P2P                          p2pAPI
+	BlockAnnounceBufferSize     int
+	BlockBufferSize             int
+	BlockReqSlotBufferSize      int
+	BlockReqHashBufferSize      int
+	BatchedBufferSize           int
+	StateReqBufferSize          int
+	AttestationBufferSize       int
+	AttestationReqHashBufSize   int
+	AttestationsAnnounceBufSize int
+	ExitBufferSize              int
+	ChainHeadReqBufferSize      int
+	CanonicalBufferSize         int
+	ChainService                chainService
+	OperationService            operations.OperationFeeds
+	BeaconDB                    *db.BeaconDB
+	P2P                         p2pAPI
 }
 
 // DefaultRegularSyncConfig provides the default configuration for a sync service.
 func DefaultRegularSyncConfig() *RegularSyncConfig {
 	return &RegularSyncConfig{
-		BlockAnnounceBufferSize:      100,
-		BlockBufferSize:              100,
-		BlockReqSlotBufferSize:       100,
-		BlockReqHashBufferSize:       100,
-		BatchedBufferSize:            100,
-		StateReqBufferSize:           100,
-		ChainHeadReqBufferSize:       100,
-		AttestationBufferSize:        100,
-		AttestationReqHashBufSize:    100,
-		UnseenAttestationsReqBufSize: 100,
-		ExitBufferSize:               100,
-		CanonicalBufferSize:          100,
+		BlockAnnounceBufferSize:     100,
+		BlockBufferSize:             100,
+		BlockReqSlotBufferSize:      100,
+		BlockReqHashBufferSize:      100,
+		BatchedBufferSize:           100,
+		StateReqBufferSize:          100,
+		ChainHeadReqBufferSize:      100,
+		AttestationBufferSize:       100,
+		AttestationReqHashBufSize:   100,
+		AttestationsAnnounceBufSize: 100,
+		ExitBufferSize:              100,
+		CanonicalBufferSize:         100,
 	}
 }
 
@@ -138,7 +134,7 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		stateRequestBuf:          make(chan p2p.Message, cfg.StateReqBufferSize),
 		attestationBuf:           make(chan p2p.Message, cfg.AttestationBufferSize),
 		attestationReqByHashBuf:  make(chan p2p.Message, cfg.AttestationReqHashBufSize),
-		unseenAttestationsReqBuf: make(chan p2p.Message, cfg.UnseenAttestationsReqBufSize),
+		announceAttestationBuf:   make(chan p2p.Message, cfg.AttestationsAnnounceBufSize),
 		exitBuf:                  make(chan p2p.Message, cfg.ExitBufferSize),
 		chainHeadReqBuf:          make(chan p2p.Message, cfg.ChainHeadReqBufferSize),
 		canonicalBuf:             make(chan *pb.BeaconBlockAnnounce, cfg.CanonicalBufferSize),
@@ -179,7 +175,7 @@ func (rs *RegularSync) run() {
 	stateRequestSub := rs.p2p.Subscribe(&pb.BeaconStateRequest{}, rs.stateRequestBuf)
 	attestationSub := rs.p2p.Subscribe(&pb.AttestationResponse{}, rs.attestationBuf)
 	attestationReqSub := rs.p2p.Subscribe(&pb.AttestationRequest{}, rs.attestationReqByHashBuf)
-	unseenAttestationsReqSub := rs.p2p.Subscribe(&pb.UnseenAttestationsRequest{}, rs.unseenAttestationsReqBuf)
+	announceAttestationSub := rs.p2p.Subscribe(&pb.AttestationAnnounce{}, rs.announceAttestationBuf)
 	exitSub := rs.p2p.Subscribe(&pb.VoluntaryExit{}, rs.exitBuf)
 	chainHeadReqSub := rs.p2p.Subscribe(&pb.ChainHeadRequest{}, rs.chainHeadReqBuf)
 	canonicalBlockSub := rs.chainService.CanonicalBlockFeed().Subscribe(rs.canonicalBuf)
@@ -193,7 +189,7 @@ func (rs *RegularSync) run() {
 	defer chainHeadReqSub.Unsubscribe()
 	defer attestationSub.Unsubscribe()
 	defer attestationReqSub.Unsubscribe()
-	defer unseenAttestationsReqSub.Unsubscribe()
+	defer announceAttestationSub.Unsubscribe()
 	defer exitSub.Unsubscribe()
 	defer canonicalBlockSub.Unsubscribe()
 
@@ -208,8 +204,8 @@ func (rs *RegularSync) run() {
 			safelyHandleMessage(rs.receiveAttestation, msg)
 		case msg := <-rs.attestationReqByHashBuf:
 			safelyHandleMessage(rs.handleAttestationRequestByHash, msg)
-		case msg := <-rs.unseenAttestationsReqBuf:
-			safelyHandleMessage(rs.handleUnseenAttestationsRequest, msg)
+		case msg := <-rs.announceAttestationBuf:
+			safelyHandleMessage(rs.handleAttestationAnnouncement, msg)
 		case msg := <-rs.exitBuf:
 			safelyHandleMessage(rs.receiveExitRequest, msg)
 		case msg := <-rs.blockBuf:
@@ -307,7 +303,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 		return
 	}
 
-	beaconState, err := rs.db.State(msg.Ctx)
+	beaconState, err := rs.db.State(ctx)
 	if err != nil {
 		log.Errorf("Failed to get beacon state: %v", err)
 		return
@@ -519,7 +515,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 	}
 
 	// Skip if attestation slot is older than last finalized slot in state.
-	beaconState, err := rs.db.State(msg.Ctx)
+	beaconState, err := rs.db.State(ctx)
 	if err != nil {
 		log.Errorf("Failed to get beacon state: %v", err)
 		return
@@ -531,7 +527,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 		return
 	}
 
-	_, sendAttestationSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendAttestation")
+	ctx, sendAttestationSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendAttestation")
 	log.WithField("attestationHash", fmt.Sprintf("%#x", attestationRoot)).Debug("Sending newly received attestation to subscribers")
 	rs.operationsService.IncomingAttFeed().Send(attestation)
 	sentAttestation.Inc()
@@ -556,7 +552,7 @@ func (rs *RegularSync) receiveExitRequest(msg p2p.Message) {
 		log.Debugf("Received, skipping exit request #%x", h)
 		return
 	}
-	_, sendExitReqSpan := trace.StartSpan(ctx, "sendExitRequest")
+	ctx, sendExitReqSpan := trace.StartSpan(ctx, "sendExitRequest")
 	log.WithField("exitReqHash", fmt.Sprintf("%#x", h)).
 		Debug("Forwarding validator exit request to subscribed services")
 	rs.operationsService.IncomingExitFeed().Send(exit)
@@ -681,44 +677,36 @@ func (rs *RegularSync) handleAttestationRequestByHash(msg p2p.Message) {
 	sentAttestation.Inc()
 }
 
-func (rs *RegularSync) handleUnseenAttestationsRequest(msg p2p.Message) {
-	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleUnseenAttestationsRequest")
+// handleAttestationAnnouncement will process the incoming p2p message. The
+// behavior here is that we've just received an announcement of a new
+// attestation and we're given the hash of that new attestation. If we don't
+// have this attestation yet in our database, request the attestation from the
+// sending peer.
+func (rs *RegularSync) handleAttestationAnnouncement(msg p2p.Message) {
+	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleAttestationAnnouncement")
 	defer span.End()
-	unseenAttestationReq.Inc()
-	if _, ok := msg.Data.(*pb.UnseenAttestationsRequest); !ok {
+	data, ok := msg.Data.(*pb.AttestationAnnounce)
+	if !ok {
 		log.Errorf("message is of the incorrect type")
 		return
 	}
 
-	atts, err := rs.db.Attestations()
-	if err != nil {
-		log.Error(err)
+	if rs.db.HasAttestation(bytesutil.ToBytes32(data.Hash)) {
 		return
 	}
 
-	if len(atts) == 0 {
-		log.Debug("There's no unseen attestation in db")
-		return
-	}
-
-	ctx, sendAttestationsSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendAttestation")
-	defer sendAttestationsSpan.End()
-	log.Debugf("Sending response for batched unseen attestations to peer %v", msg.Peer)
-	if err := rs.p2p.Send(ctx, &pb.UnseenAttestationResponse{
-		Attestations: atts,
+	log.Debugf("Sending request for attestation to peer %v", msg.Peer)
+	if err := rs.p2p.Send(ctx, &pb.AttestationRequest{
+		Hash: data.Hash,
 	}, msg.Peer); err != nil {
 		log.Error(err)
 	}
-	sentAttestation.Inc()
 }
 
 func (rs *RegularSync) broadcastCanonicalBlock(ctx context.Context, announce *pb.BeaconBlockAnnounce) {
-	_, span := trace.StartSpan(ctx, "beacon-chain.sync.broadcastCanonicalBlock")
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.broadcastCanonicalBlock")
 	defer span.End()
-
-	_, sendBlockAnnounceSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendBlockAnnounce")
 	log.Debugf("Announcing canonical block %#x", announce.Hash)
 	rs.p2p.Broadcast(ctx, announce)
 	sentBlockAnnounce.Inc()
-	sendBlockAnnounceSpan.End()
 }

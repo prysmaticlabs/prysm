@@ -29,15 +29,18 @@ func init() {
 }
 
 type mockP2P struct {
+	sentMsg proto.Message
 }
 
 func (mp *mockP2P) Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription {
 	return new(event.Feed).Subscribe(channel)
 }
 
-func (mp *mockP2P) Broadcast(ctx context.Context, msg proto.Message) {}
+func (mp *mockP2P) Broadcast(ctx context.Context, msg proto.Message) {
+}
 
 func (mp *mockP2P) Send(ctx context.Context, msg proto.Message, peerID peer.ID) error {
+	mp.sentMsg = msg
 	return nil
 }
 
@@ -70,6 +73,10 @@ func (ms *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.B
 }
 
 type mockOperationService struct{}
+
+func (ms *mockOperationService) IncomingProcessedBlockFeed() *event.Feed {
+	return nil
+}
 
 func (ms *mockOperationService) IncomingAttFeed() *event.Feed {
 	return new(event.Feed)
@@ -645,37 +652,79 @@ func TestHandleAttReq_HashNotFound(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, want)
 }
 
-func TestHandleUnseenAttsReq_EmptyAttsPool(t *testing.T) {
-	hook := logTest.NewGlobal()
+func TestHandleAnnounceAttestation_requestsAttestationData(t *testing.T) {
 	os := &mockOperationService{}
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
+	att := &pb.Attestation{
+		AggregationBitfield: []byte{'A', 'B', 'C'},
+	}
+	hash, err := hashutil.HashProto(att)
+	if err != nil {
+		t.Fatalf("Could not hash attestation: %v", err)
+	}
+	sender := &mockP2P{}
 	cfg := &RegularSyncConfig{
 		OperationService: os,
-		P2P:              &mockP2P{},
+		P2P:              sender,
 		BeaconDB:         db,
 		ChainService:     &mockChainService{},
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
-	exitRoutine := make(chan bool)
-	go func() {
-		ss.run()
-		exitRoutine <- true
-	}()
-
-	req := &pb.UnseenAttestationsRequest{}
-	msg := p2p.Message{
+	ss.handleAttestationAnnouncement(p2p.Message{
 		Ctx:  context.Background(),
-		Data: req,
-		Peer: "",
+		Data: &pb.AttestationAnnounce{Hash: hash[:]},
+	})
+
+	if sender.sentMsg == nil {
+		t.Fatal("send was not called")
 	}
 
-	ss.unseenAttestationsReqBuf <- msg
-	ss.cancel()
-	<-exitRoutine
-	testutil.AssertLogsContain(t, hook, "There's no unseen attestation in db")
+	msg, ok := sender.sentMsg.(*pb.AttestationRequest)
+	if !ok {
+		t.Fatal("sent p2p message is wrong type")
+	}
+
+	if bytesutil.ToBytes32(msg.Hash) != hash {
+		t.Fatal("message didnt include the proper hash")
+	}
+}
+
+func TestHandleAnnounceAttestation_doNothingIfAlreadySeen(t *testing.T) {
+	os := &mockOperationService{}
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	att := &pb.Attestation{
+		AggregationBitfield: []byte{'A', 'B', 'C'},
+	}
+	hash, err := hashutil.HashProto(att)
+	if err != nil {
+		t.Fatalf("Could not hash attestation: %v", err)
+	}
+	if err := db.SaveAttestation(context.Background(), att); err != nil {
+		t.Fatalf("Could not save attestation: %v", err)
+	}
+	sender := &mockP2P{}
+	cfg := &RegularSyncConfig{
+		OperationService: os,
+		P2P:              sender,
+		BeaconDB:         db,
+		ChainService:     &mockChainService{},
+	}
+	ss := NewRegularSyncService(context.Background(), cfg)
+
+	ss.handleAttestationAnnouncement(p2p.Message{
+		Ctx:  context.Background(),
+		Data: &pb.AttestationAnnounce{Hash: hash[:]},
+	})
+
+	if sender.sentMsg != nil {
+		t.Error("send was called, but it should not have been called")
+	}
+
 }
 
 func TestHandleAttReq_Ok(t *testing.T) {
@@ -723,46 +772,6 @@ func TestHandleAttReq_Ok(t *testing.T) {
 	<-exitRoutine
 	want := fmt.Sprintf("Sending attestation %#x to peer", attRoot)
 	testutil.AssertLogsContain(t, hook, want)
-}
-
-func TestHandleUnseenAttsReq_Ok(t *testing.T) {
-	hook := logTest.NewGlobal()
-	os := &mockOperationService{}
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-
-	att := &pb.Attestation{
-		AggregationBitfield: []byte{'D', 'E', 'F'},
-	}
-	if err := db.SaveAttestation(context.Background(), att); err != nil {
-		t.Fatalf("Could not save attestation: %v", err)
-	}
-
-	cfg := &RegularSyncConfig{
-		OperationService: os,
-		P2P:              &mockP2P{},
-		BeaconDB:         db,
-		ChainService:     &mockChainService{},
-	}
-	ss := NewRegularSyncService(context.Background(), cfg)
-
-	exitRoutine := make(chan bool)
-	go func() {
-		ss.run()
-		exitRoutine <- true
-	}()
-
-	req := &pb.UnseenAttestationsRequest{}
-	msg := p2p.Message{
-		Ctx:  context.Background(),
-		Data: req,
-		Peer: "",
-	}
-
-	ss.unseenAttestationsReqBuf <- msg
-	ss.cancel()
-	<-exitRoutine
-	testutil.AssertLogsContain(t, hook, "Sending response for batched unseen attestations to peer")
 }
 
 func TestHandleStateReq_NOState(t *testing.T) {
