@@ -116,7 +116,7 @@ func TestIncomingAttestation_OK(t *testing.T) {
 	broadcaster := &mockBroadcaster{}
 	service := NewOpsPoolService(context.Background(), &Config{
 		BeaconDB: beaconDB,
-		P2p:      broadcaster,
+		P2P:      broadcaster,
 	})
 
 	exitRoutine := make(chan bool)

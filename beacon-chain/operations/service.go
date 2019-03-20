@@ -50,7 +50,7 @@ type Config struct {
 	ReceiveExitBuf  int
 	ReceiveAttBuf   int
 	ReceiveBlockBuf int
-	P2p             p2p.Broadcaster
+	P2P             p2p.Broadcaster
 }
 
 // NewOpsPoolService instantiates a new service instance that will
@@ -67,7 +67,7 @@ func NewOpsPoolService(ctx context.Context, cfg *Config) *Service {
 		incomingAtt:                make(chan *pb.Attestation, cfg.ReceiveAttBuf),
 		incomingProcessedBlockFeed: new(event.Feed),
 		incomingProcessedBlock:     make(chan *pb.BeaconBlock, cfg.ReceiveBlockBuf),
-		p2p:                        cfg.P2p,
+		p2p:                        cfg.P2P,
 	}
 }
 

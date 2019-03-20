@@ -230,7 +230,7 @@ func (b *BeaconNode) registerOperationService() error {
 
 	operationService := operations.NewOpsPoolService(context.Background(), &operations.Config{
 		BeaconDB: b.db,
-		P2p:      p2pService,
+		P2P:      p2pService,
 	})
 
 	return b.services.RegisterService(operationService)
