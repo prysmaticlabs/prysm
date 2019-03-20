@@ -48,6 +48,7 @@ func NewSyncService(ctx context.Context, cfg *Config) *Service {
 	rsCfg.BeaconDB = cfg.BeaconDB
 	rsCfg.P2P = cfg.P2P
 	rsCfg.AttsService = cfg.AttsService
+	rsCfg.OperationService = cfg.OperationService
 
 	sq := NewQuerierService(ctx, sqCfg)
 	rs := NewRegularSyncService(ctx, rsCfg)
