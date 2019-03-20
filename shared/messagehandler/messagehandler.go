@@ -3,6 +3,7 @@ package messagehandler
 import (
 	"context"
 	"fmt"
+	"runtime/debug"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/sirupsen/logrus"
@@ -24,6 +25,8 @@ func SafelyHandleMessage(ctx context.Context, fn func(ctx context.Context, messa
 				"r":   r,
 				"msg": printedMsg,
 			}).Error("Panicked when handling p2p message! Recovering...")
+
+			debug.PrintStack()
 
 			if ctx == nil {
 				return
