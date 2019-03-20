@@ -516,9 +516,11 @@ func TestReceiveAttestation_OK(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	request1 := &pb.Attestation{
-		Data: &pb.AttestationData{
-			Slot: params.BeaconConfig().GenesisSlot + 1,
+	request1 := &pb.AttestationResponse{
+		Attestation: &pb.Attestation{
+			Data: &pb.AttestationData{
+				Slot: params.BeaconConfig().GenesisSlot + 1,
+			},
 		},
 	}
 
@@ -559,9 +561,11 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	request1 := &pb.Attestation{
-		Data: &pb.AttestationData{
-			Slot: params.BeaconConfig().GenesisSlot,
+	request1 := &pb.AttestationResponse{
+		Attestation: &pb.Attestation{
+			Data: &pb.AttestationData{
+				Slot: params.BeaconConfig().GenesisSlot,
+			},
 		},
 	}
 
@@ -576,7 +580,7 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 	<-exitRoutine
 	want := fmt.Sprintf(
 		"Skipping received attestation with slot smaller than one epoch ago, %d < %d",
-		request1.Data.Slot, params.BeaconConfig().GenesisSlot+params.BeaconConfig().SlotsPerEpoch)
+		request1.Attestation.Data.Slot, params.BeaconConfig().GenesisSlot+params.BeaconConfig().SlotsPerEpoch)
 	testutil.AssertLogsContain(t, hook, want)
 }
 
