@@ -87,12 +87,6 @@ message AttestationResponse {
   Attestation attestation = 2;
 }
 
-message UnseenAttestationsRequest {}
-
-message UnseenAttestationResponse {
-  repeated Attestation attestations = 1;
-}
-
 message ProposerSlashingAnnounce {
   bytes hash = 1;
 }

@@ -21,6 +21,9 @@ var topicMappings = map[pb.Topic]proto.Message{
 	pb.Topic_BEACON_STATE_HASH_ANNOUNCE:          &pb.BeaconStateHashAnnounce{},
 	pb.Topic_BEACON_STATE_REQUEST:                &pb.BeaconStateRequest{},
 	pb.Topic_BEACON_STATE_RESPONSE:               &pb.BeaconStateResponse{},
+	pb.Topic_ATTESTATION_ANNOUNCE:                &pb.AttestationAnnounce{},
+	pb.Topic_ATTESTATION_REQUEST:                 &pb.AttestationRequest{},
+	pb.Topic_ATTESTATION_RESPONSE:                &pb.AttestationResponse{},
 }
 
 func configureP2P(ctx *cli.Context) (*p2p.Server, error) {

@@ -117,12 +117,6 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 		log.Errorf("Could not save new historical state: %v", err)
 	}
 
-	// Announce the new head to the network.
-	c.p2p.Broadcast(ctx, &pb.BeaconBlockAnnounce{
-		Hash:       h[:],
-		SlotNumber: head.Slot,
-	})
-
 	return nil
 }
 
