@@ -68,6 +68,17 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		return nil, fmt.Errorf("block with root %#x is not ready for processing: %v", blockRoot, err)
 	}
 
+	// if there exists a block for the slot being processed.
+	if err := c.beaconDB.SaveBlock(block); err != nil {
+		return nil, fmt.Errorf("failed to save block: %v", err)
+	}
+
+	// Announce the new block to the network.
+	c.p2p.Broadcast(ctx, &pb.BeaconBlockAnnounce{
+		Hash:       blockRoot[:],
+		SlotNumber: block.Slot,
+	})
+
 	// Retrieve the last processed beacon block's hash root.
 	headRoot, err := c.ChainHeadRoot()
 	if err != nil {
@@ -93,11 +104,6 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	beaconState, err = c.runStateTransition(headRoot, block, beaconState)
 	if err != nil {
 		return nil, fmt.Errorf("could not execute state transition with block %v", err)
-	}
-
-	// if there exists a block for the slot being processed.
-	if err := c.beaconDB.SaveBlock(block); err != nil {
-		return nil, fmt.Errorf("failed to save block: %v", err)
 	}
 
 	// Forward processed block to operation pool to remove individual operation from DB.
