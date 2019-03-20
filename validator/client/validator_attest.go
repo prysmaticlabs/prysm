@@ -131,7 +131,10 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 		domain := forkutil.DomainVersion(fork, epoch, params.BeaconConfig().DomainAttestation)
 		aggregateSig := v.key.SecretKey.Sign(attDataHash[:], domain)
 		attestation.AggregateSignature = aggregateSig.Marshal()
-		log.Debugf("Signing attestation for slot %d: %#x", slot, attestation.AggregateSignature)
+		log.WithFields(logrus.Fields{
+			"slot":         slot - params.BeaconConfig().GenesisSlot,
+			"aggregateSig": fmt.Sprintf("%#x", attestation.AggregateSignature),
+		}).Debug("Signed attestation")
 	} else {
 		attestation.AggregateSignature = []byte("signed")
 	}
