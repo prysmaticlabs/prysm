@@ -38,7 +38,6 @@ func (m *MockProposerServiceClient) EXPECT() *MockProposerServiceClientMockRecor
 
 // ComputeStateRoot mocks base method
 func (m *MockProposerServiceClient) ComputeStateRoot(arg0 context.Context, arg1 *v1.BeaconBlock, arg2 ...grpc.CallOption) (*v10.StateRootResponse, error) {
-	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -51,14 +50,12 @@ func (m *MockProposerServiceClient) ComputeStateRoot(arg0 context.Context, arg1 
 
 // ComputeStateRoot indicates an expected call of ComputeStateRoot
 func (mr *MockProposerServiceClientMockRecorder) ComputeStateRoot(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ComputeStateRoot", reflect.TypeOf((*MockProposerServiceClient)(nil).ComputeStateRoot), varargs...)
 }
 
 // PendingAttestations mocks base method
 func (m *MockProposerServiceClient) PendingAttestations(arg0 context.Context, arg1 *v10.PendingAttestationsRequest, arg2 ...grpc.CallOption) (*v10.PendingAttestationsResponse, error) {
-	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -71,14 +68,12 @@ func (m *MockProposerServiceClient) PendingAttestations(arg0 context.Context, ar
 
 // PendingAttestations indicates an expected call of PendingAttestations
 func (mr *MockProposerServiceClientMockRecorder) PendingAttestations(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PendingAttestations", reflect.TypeOf((*MockProposerServiceClient)(nil).PendingAttestations), varargs...)
 }
 
 // ProposeBlock mocks base method
 func (m *MockProposerServiceClient) ProposeBlock(arg0 context.Context, arg1 *v1.BeaconBlock, arg2 ...grpc.CallOption) (*v10.ProposeResponse, error) {
-	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -91,14 +86,12 @@ func (m *MockProposerServiceClient) ProposeBlock(arg0 context.Context, arg1 *v1.
 
 // ProposeBlock indicates an expected call of ProposeBlock
 func (mr *MockProposerServiceClientMockRecorder) ProposeBlock(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposeBlock", reflect.TypeOf((*MockProposerServiceClient)(nil).ProposeBlock), varargs...)
 }
 
 // ProposerIndex mocks base method
 func (m *MockProposerServiceClient) ProposerIndex(arg0 context.Context, arg1 *v10.ProposerIndexRequest, arg2 ...grpc.CallOption) (*v10.ProposerIndexResponse, error) {
-	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -111,7 +104,6 @@ func (m *MockProposerServiceClient) ProposerIndex(arg0 context.Context, arg1 *v1
 
 // ProposerIndex indicates an expected call of ProposerIndex
 func (mr *MockProposerServiceClientMockRecorder) ProposerIndex(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposerIndex", reflect.TypeOf((*MockProposerServiceClient)(nil).ProposerIndex), varargs...)
 }

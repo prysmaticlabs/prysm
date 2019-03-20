@@ -37,7 +37,6 @@ func (m *MockValidatorServiceClient) EXPECT() *MockValidatorServiceClientMockRec
 
 // CommitteeAssignment mocks base method
 func (m *MockValidatorServiceClient) CommitteeAssignment(arg0 context.Context, arg1 *v1.CommitteeAssignmentsRequest, arg2 ...grpc.CallOption) (*v1.CommitteeAssignmentResponse, error) {
-	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -50,14 +49,12 @@ func (m *MockValidatorServiceClient) CommitteeAssignment(arg0 context.Context, a
 
 // CommitteeAssignment indicates an expected call of CommitteeAssignment
 func (mr *MockValidatorServiceClientMockRecorder) CommitteeAssignment(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommitteeAssignment", reflect.TypeOf((*MockValidatorServiceClient)(nil).CommitteeAssignment), varargs...)
 }
 
 // ValidatorIndex mocks base method
 func (m *MockValidatorServiceClient) ValidatorIndex(arg0 context.Context, arg1 *v1.ValidatorIndexRequest, arg2 ...grpc.CallOption) (*v1.ValidatorIndexResponse, error) {
-	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -70,14 +67,12 @@ func (m *MockValidatorServiceClient) ValidatorIndex(arg0 context.Context, arg1 *
 
 // ValidatorIndex indicates an expected call of ValidatorIndex
 func (mr *MockValidatorServiceClientMockRecorder) ValidatorIndex(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatorIndex", reflect.TypeOf((*MockValidatorServiceClient)(nil).ValidatorIndex), varargs...)
 }
 
 // ValidatorPerformance mocks base method
 func (m *MockValidatorServiceClient) ValidatorPerformance(arg0 context.Context, arg1 *v1.ValidatorPerformanceRequest, arg2 ...grpc.CallOption) (*v1.ValidatorPerformanceResponse, error) {
-	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -90,14 +85,12 @@ func (m *MockValidatorServiceClient) ValidatorPerformance(arg0 context.Context, 
 
 // ValidatorPerformance indicates an expected call of ValidatorPerformance
 func (mr *MockValidatorServiceClientMockRecorder) ValidatorPerformance(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatorPerformance", reflect.TypeOf((*MockValidatorServiceClient)(nil).ValidatorPerformance), varargs...)
 }
 
 // ValidatorStatus mocks base method
 func (m *MockValidatorServiceClient) ValidatorStatus(arg0 context.Context, arg1 *v1.ValidatorIndexRequest, arg2 ...grpc.CallOption) (*v1.ValidatorStatusResponse, error) {
-	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -110,14 +103,12 @@ func (m *MockValidatorServiceClient) ValidatorStatus(arg0 context.Context, arg1 
 
 // ValidatorStatus indicates an expected call of ValidatorStatus
 func (mr *MockValidatorServiceClientMockRecorder) ValidatorStatus(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatorStatus", reflect.TypeOf((*MockValidatorServiceClient)(nil).ValidatorStatus), varargs...)
 }
 
 // WaitForActivation mocks base method
 func (m *MockValidatorServiceClient) WaitForActivation(arg0 context.Context, arg1 *v1.ValidatorActivationRequest, arg2 ...grpc.CallOption) (v1.ValidatorService_WaitForActivationClient, error) {
-	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
@@ -130,7 +121,6 @@ func (m *MockValidatorServiceClient) WaitForActivation(arg0 context.Context, arg
 
 // WaitForActivation indicates an expected call of WaitForActivation
 func (mr *MockValidatorServiceClientMockRecorder) WaitForActivation(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForActivation", reflect.TypeOf((*MockValidatorServiceClient)(nil).WaitForActivation), varargs...)
 }
