@@ -85,7 +85,7 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 
 	attestationTargets, err := c.attestationTargets(postState)
 	if err != nil {
-		return fmt.Errorf("could not retreive attestation target: %v", err)
+		return fmt.Errorf("could not retrieve attestation target: %v", err)
 	}
 	log.Infof("Applying fork choice, attestation targets: %v", attestationTargets)
 
