@@ -156,8 +156,9 @@ func (db *BeaconDB) SaveJustifiedState(beaconState *pb.BeaconState) error {
 
 // SaveFinalizedState saves the last finalized state in the db.
 func (db *BeaconDB) SaveFinalizedState(beaconState *pb.BeaconState) error {
+	finalizedSlot := beaconState.FinalizedEpoch * params.BeaconConfig().SlotsPerEpoch
 	// Delete historical states if we are saving a new finalized state.
-	if err := db.deleteHistoricalStates(); err != nil {
+	if err := db.deleteHistoricalStates(finalizedSlot); err != nil {
 		return err
 	}
 	return db.update(func(tx *bolt.Tx) error {
@@ -213,9 +214,9 @@ func (db *BeaconDB) SaveCurrentAndFinalizedState(beaconState *pb.BeaconState) er
 	}
 
 	db.currentState = currentState
-
+	finalizedSlot := beaconState.FinalizedEpoch * params.BeaconConfig().SlotsPerEpoch
 	// Delete historical states if we are saving a new finalized state.
-	if err := db.deleteHistoricalStates(); err != nil {
+	if err := db.deleteHistoricalStates(finalizedSlot); err != nil {
 		return err
 	}
 	return db.update(func(tx *bolt.Tx) error {
@@ -339,18 +340,22 @@ func (db *BeaconDB) GenesisTime(ctx context.Context) (time.Time, error) {
 	return genesisTime, nil
 }
 
-func (db *BeaconDB) deleteHistoricalStates() error {
+func (db *BeaconDB) deleteHistoricalStates(slot uint64) error {
 	return db.update(func(tx *bolt.Tx) error {
 		histState := tx.Bucket(histStateBucket)
 		chainInfo := tx.Bucket(chainInfoBucket)
 		hsCursor := histState.Cursor()
+		slotDiff := slot - params.BeaconConfig().GenesisSlot
 
 		for k, v := hsCursor.First(); k != nil; k, v = hsCursor.Next() {
-			if err := histState.Delete(k); err != nil {
-				return err
-			}
-			if err := chainInfo.Delete(v); err != nil {
-				return err
+			keySlotNumber := decodeToSlotNumber(k)
+			if keySlotNumber <= slotDiff {
+				if err := histState.Delete(k); err != nil {
+					return err
+				}
+				if err := chainInfo.Delete(v); err != nil {
+					return err
+				}
 			}
 		}
 		return nil
