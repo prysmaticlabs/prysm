@@ -8,7 +8,7 @@ var (
 	// VerifyAttestationSigsFlag determines whether to verify signatures for attestations.
 	VerifyAttestationSigsFlag = cli.BoolFlag{
 		Name:  "enable-attestation-signature-verification",
-		Usage: "Verify signatures for attestations (testing)",
+		Usage: "Verify signatures for attestations.",
 	}
 )
 
