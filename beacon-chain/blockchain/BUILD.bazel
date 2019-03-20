@@ -11,11 +11,13 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/attestation:go_default_library",
+        "//beacon-chain/blockchain/stategenerator:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/core/validators:go_default_library",
         "//beacon-chain/db:go_default_library",
+        "//beacon-chain/operations:go_default_library",
         "//beacon-chain/powchain:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
         "//shared/bytesutil:go_default_library",

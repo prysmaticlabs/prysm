@@ -13,6 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // CrosslinkCommittee defines the validator committee of slot and shard combinations.
@@ -419,7 +421,7 @@ func CommitteeAssignment(
 			}
 		}
 	}
-	return []uint64{}, 0, 0, false, fmt.Errorf("could not get assignment validator %d", validatorIndex)
+	return []uint64{}, 0, 0, false, status.Error(codes.NotFound, "validator not found found in assignments")
 }
 
 // prevEpochCommitteesAtSlot returns a list of crosslink committees of the previous epoch.

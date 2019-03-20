@@ -19,6 +19,9 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
+// Ensure ChainService implements interfaces.
+var _ = BlockProcessor(&ChainService{})
+
 func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -103,7 +106,12 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 			Attestations: nil,
 		},
 	}
-
+	if err := chainService.beaconDB.SaveJustifiedBlock(block); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainService.beaconDB.SaveFinalizedBlock(block); err != nil {
+		t.Fatal(err)
+	}
 	if err := chainService.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
@@ -176,7 +184,12 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 			Deposits: pendingDeposits,
 		},
 	}
-
+	if err := chainService.beaconDB.SaveJustifiedBlock(block); err != nil {
+		t.Fatal(err)
+	}
+	if err := chainService.beaconDB.SaveFinalizedBlock(block); err != nil {
+		t.Fatal(err)
+	}
 	for _, dep := range pendingDeposits {
 		db.InsertPendingDeposit(chainService.ctx, dep, big.NewInt(0))
 	}

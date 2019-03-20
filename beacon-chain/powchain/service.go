@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -268,6 +269,8 @@ func safelyHandlePanic() {
 		log.WithFields(logrus.Fields{
 			"r": r,
 		}).Error("Panicked when handling data from ETH 1.0 Chain! Recovering...")
+
+		debug.PrintStack()
 	}
 }
 

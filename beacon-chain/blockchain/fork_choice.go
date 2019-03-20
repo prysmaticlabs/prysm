@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/stategenerator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -11,6 +12,95 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"go.opencensus.io/trace"
 )
+
+// ForkChoice interface defines the methods for applying fork choice rule
+// operations to the blockchain.
+type ForkChoice interface {
+	ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error
+}
+
+// updateFFGCheckPts checks whether the existing FFG check points saved in DB
+// are not older than the ones just processed in state. If it's older, we update
+// the db with the latest FFG check points, both justification and finalization.
+func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
+	lastJustifiedSlot := helpers.StartSlot(state.JustifiedEpoch)
+	savedJustifiedBlock, err := c.beaconDB.JustifiedBlock()
+	if err != nil {
+		return err
+	}
+	// If the last processed justification slot in state is greater than
+	// the slot of justified block saved in DB.
+	if lastJustifiedSlot > savedJustifiedBlock.Slot {
+		// Retrieve the new justified block from DB using the new justified slot and save it.
+		newJustifiedBlock, err := c.beaconDB.BlockBySlot(lastJustifiedSlot)
+		if err != nil {
+			return err
+		}
+		// If the new justified slot is a skip slot in db then we keep getting it's ancestors
+		// until we can get a block.
+		for newJustifiedBlock == nil {
+			log.Debugf("Saving new justified block, no block with slot %d in db, trying slot %d",
+				lastJustifiedSlot, lastJustifiedSlot-1)
+			lastJustifiedSlot--
+			newJustifiedBlock, err = c.beaconDB.BlockBySlot(lastJustifiedSlot)
+			if err != nil {
+				return err
+			}
+		}
+		if err != nil {
+			return err
+		}
+		if err := c.beaconDB.SaveJustifiedBlock(newJustifiedBlock); err != nil {
+			return err
+		}
+		// Generate the new justified state with using new justified block and save it.
+		newJustifiedState, err := stategenerator.GenerateStateFromBlock(c.ctx, c.beaconDB, newJustifiedBlock)
+		if err != nil {
+			return err
+		}
+		if err := c.beaconDB.SaveJustifiedState(newJustifiedState); err != nil {
+			return err
+		}
+	}
+
+	lastFinalizedSlot := helpers.StartSlot(state.FinalizedEpoch)
+	savedFinalizedBlock, err := c.beaconDB.FinalizedBlock()
+	// If the last processed finalized slot in state is greater than
+	// the slot of finalized block saved in DB.
+	if err != nil {
+		return err
+	}
+	if lastFinalizedSlot > savedFinalizedBlock.Slot {
+		// Retrieve the new finalized block from DB using the new finalized slot and save it.
+		newFinalizedBlock, err := c.beaconDB.BlockBySlot(lastFinalizedSlot)
+		if err != nil {
+			return err
+		}
+		// If the new finalized slot is a skip slot in db then we keep getting it's ancestors
+		// until we can get a block.
+		for newFinalizedBlock == nil {
+			log.Debugf("Saving new finalized block, no block with slot %d in db, trying slot %d",
+				lastFinalizedSlot, lastFinalizedSlot-1)
+			lastFinalizedSlot--
+			newFinalizedBlock, err = c.beaconDB.BlockBySlot(lastFinalizedSlot)
+			if err != nil {
+				return err
+			}
+		}
+		if err := c.beaconDB.SaveFinalizedBlock(newFinalizedBlock); err != nil {
+			return err
+		}
+		// Generate the new finalized state with using new finalized block and save it.
+		newFinalizedState, err := stategenerator.GenerateStateFromBlock(c.ctx, c.beaconDB, newFinalizedBlock)
+		if err != nil {
+			return err
+		}
+		if err := c.beaconDB.SaveFinalizedState(newFinalizedState); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 // ApplyForkChoiceRule determines the current beacon chain head using LMD GHOST as a block-vote
 // weighted function to select a canonical head in Ethereum Serenity.
@@ -27,15 +117,10 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 		return fmt.Errorf("failed to update chain: %v", err)
 	}
 	log.WithField("blockRoot", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
-	if err := c.saveFinalizedState(computedState); err != nil {
-		log.Errorf("Could not save new finalized state: %v", err)
-	}
 
-	// Announce the new block to the network.
-	c.p2p.Broadcast(ctx, &pb.BeaconBlockAnnounce{
-		Hash:       h[:],
-		SlotNumber: block.Slot,
-	})
+	if err := c.saveHistoricalState(computedState); err != nil {
+		log.Errorf("Could not save new historical state: %v", err)
+	}
 
 	return nil
 }

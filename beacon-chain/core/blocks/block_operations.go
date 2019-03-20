@@ -86,7 +86,13 @@ func ProcessEth1DataInBlock(ctx context.Context, beaconState *pb.BeaconState, bl
 //     signature=block.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO)).
 //   Set state.latest_randao_mixes[get_current_epoch(state) % LATEST_RANDAO_MIXES_LENGTH] =
 //     xor(get_randao_mix(state, get_current_epoch(state)), hash(block.randao_reveal))
-func ProcessBlockRandao(ctx context.Context, beaconState *pb.BeaconState, block *pb.BeaconBlock, verifySignatures bool) (*pb.BeaconState, error) {
+func ProcessBlockRandao(
+	ctx context.Context,
+	beaconState *pb.BeaconState,
+	block *pb.BeaconBlock,
+	verifySignatures bool,
+	enableLogging bool,
+) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock.ProcessBlockRandao")
 	defer span.End()
 
@@ -94,10 +100,8 @@ func ProcessBlockRandao(ctx context.Context, beaconState *pb.BeaconState, block 
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon proposer index: %v", err)
 	}
-	log.WithField("proposerIndex", proposerIdx).Info("RANDAO expected proposer")
-	proposer := beaconState.ValidatorRegistry[proposerIdx]
 	if verifySignatures {
-		if err := verifyBlockRandao(beaconState, block, proposer); err != nil {
+		if err := verifyBlockRandao(beaconState, block, proposerIdx, enableLogging); err != nil {
 			return nil, fmt.Errorf("could not verify block randao: %v", err)
 		}
 	}
@@ -116,7 +120,8 @@ func ProcessBlockRandao(ctx context.Context, beaconState *pb.BeaconState, block 
 
 // Verify that bls_verify(pubkey=proposer.pubkey, message_hash=hash_tree_root(get_current_epoch(state)),
 //   signature=block.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO))
-func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, proposer *pb.Validator) error {
+func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, proposerIdx uint64, enableLogging bool) error {
+	proposer := beaconState.ValidatorRegistry[proposerIdx]
 	pub, err := bls.PublicKeyFromBytes(proposer.Pubkey)
 	if err != nil {
 		return fmt.Errorf("could not deserialize proposer public key: %v", err)
@@ -129,11 +134,14 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 	if err != nil {
 		return fmt.Errorf("could not deserialize block randao reveal: %v", err)
 	}
-	log.WithFields(logrus.Fields{
-		"epoch":    helpers.CurrentEpoch(beaconState) - params.BeaconConfig().GenesisEpoch,
-		"pubkey":   fmt.Sprintf("%#x", proposer.Pubkey),
-		"epochSig": fmt.Sprintf("%#x", sig.Marshal()),
-	}).Info("Verifying randao")
+
+	if enableLogging {
+		log.WithFields(logrus.Fields{
+			"epoch":         helpers.CurrentEpoch(beaconState) - params.BeaconConfig().GenesisEpoch,
+			"proposerIndex": proposerIdx,
+		}).Info("Verifying randao")
+	}
+
 	if !sig.Verify(pub, buf, domain) {
 		return fmt.Errorf("block randao reveal signature did not verify")
 	}

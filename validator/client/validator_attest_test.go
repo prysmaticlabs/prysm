@@ -221,7 +221,8 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	if !proto.Equal(generatedAttestation, expectedAttestation) {
 		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
 	}
-	testutil.AssertLogsContain(t, hook, "Submitted attestation successfully")
+
+	testutil.AssertLogsContain(t, hook, "Beacon node processed attestation successfully")
 	testutil.AssertLogsContain(t, hook, "Signing attestation for slot")
 }
 
