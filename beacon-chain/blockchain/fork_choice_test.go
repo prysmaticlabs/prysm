@@ -1118,8 +1118,7 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 	}
 
 	// Also saved finalized block to slot 0 to test justification case only.
-	if err := chainSvc.beaconDB.SaveFinalizedBlock(
-		&pb.BeaconBlock{Slot: genesisSlot}); err != nil {
+	if err := chainSvc.beaconDB.SaveFinalizedBlock(&pb.BeaconBlock{Slot: genesisSlot}); err != nil {
 		t.Fatal(err)
 	}
 
