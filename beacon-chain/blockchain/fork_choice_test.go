@@ -103,21 +103,21 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 			logAssert: "Chain head block and state updated",
 		},
 		// Higher slot, different state, but higher last finalized slot.
-		//{
-		//	blockSlot: params.BeaconConfig().GenesisSlot + 64,
-		//	state:     &pb.BeaconState{FinalizedEpoch: params.BeaconConfig().GenesisEpoch + 2},
-		//	logAssert: "Chain head block and state updated",
-		//},
-		//// Higher slot, different state, same last finalized slot,
-		//// but last justified slot.
-		//{
-		//	blockSlot: params.BeaconConfig().GenesisSlot + 64,
-		//	state: &pb.BeaconState{
-		//		FinalizedEpoch: params.BeaconConfig().GenesisEpoch,
-		//		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 2,
-		//	},
-		//	logAssert: "Chain head block and state updated",
-		//},
+		{
+			blockSlot: params.BeaconConfig().GenesisSlot + 64,
+			state:     &pb.BeaconState{FinalizedEpoch: params.BeaconConfig().GenesisEpoch + 2},
+			logAssert: "Chain head block and state updated",
+		},
+		// Higher slot, different state, same last finalized slot,
+		// but last justified slot.
+		{
+			blockSlot: params.BeaconConfig().GenesisSlot + 64,
+			state: &pb.BeaconState{
+				FinalizedEpoch: params.BeaconConfig().GenesisEpoch,
+				JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 2,
+			},
+			logAssert: "Chain head block and state updated",
+		},
 	}
 	for _, tt := range tests {
 		hook := logTest.NewGlobal()
@@ -128,8 +128,16 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 			&attestation.Config{BeaconDB: db})
 
 		chainService := setupBeaconChain(t, false, db, true, attsService)
+		if err := chainService.beaconDB.SaveBlock(
+			genesis); err != nil {
+			t.Fatal(err)
+		}
 		if err := chainService.beaconDB.SaveJustifiedBlock(
 			genesis); err != nil {
+			t.Fatal(err)
+		}
+		if err := chainService.beaconDB.SaveJustifiedState(
+			beaconState); err != nil {
 			t.Fatal(err)
 		}
 		unixTime := uint64(time.Now().Unix())
