@@ -74,20 +74,20 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	}
 	w.lastReceivedMerkleIndex = int64(index)
 
-	validData := true
-
 	// We then decode the deposit input in order to create a deposit object
 	// we can store in our persistent DB.
 	depositInput, err := helpers.DecodeDepositInput(depositData)
 	if err != nil {
 		log.Errorf("Could not decode deposit input %v", err)
-		validData = false
+		return
 	}
 
 	deposit := &pb.Deposit{
 		DepositData:     depositData,
 		MerkleTreeIndex: index,
 	}
+
+	validData := true
 
 	// Make sure duplicates are rejected pre-chainstart.
 	if !w.chainStarted {
@@ -96,8 +96,7 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 			depInput, err := helpers.DecodeDepositInput(dep.DepositData)
 			if err != nil {
 				log.Errorf("Could not decode deposit input %v", err)
-				validData = false
-				break
+				return
 			}
 
 			if bytes.Equal(depositInput.Pubkey, depInput.Pubkey) {
