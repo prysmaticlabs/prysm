@@ -420,7 +420,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 
 func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 	cfg := &featureconfig.FeatureFlagConfig{
-		VerifyAttestationSigs: true,
+		VerifyAttestationSigs: false,
 	}
 	featureconfig.InitFeatureConfig(cfg)
 	deposits, privKeys := setupInitialDeposits(t, params.BeaconConfig().SlotsPerEpoch)

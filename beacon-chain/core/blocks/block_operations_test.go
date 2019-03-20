@@ -22,7 +22,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.SecretKey) {
@@ -1027,6 +1029,8 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 		VerifyAttestationSigs: true,
 	}
 	featureconfig.InitFeatureConfig(cfg)
+	hook := logTest.NewGlobal()
+
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 
@@ -1096,6 +1100,8 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 			pendingAttestations[0].InclusionSlot,
 		)
 	}
+
+	testutil.AssertLogsContain(t, hook, "Verifying attestation")
 }
 
 func TestProcessValidatorDeposits_ThresholdReached(t *testing.T) {

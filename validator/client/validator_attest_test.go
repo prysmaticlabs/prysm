@@ -223,7 +223,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	}
 
 	testutil.AssertLogsContain(t, hook, "Beacon node processed attestation successfully")
-	testutil.AssertLogsContain(t, hook, "Signing attestation for slot")
+	testutil.AssertLogsContain(t, hook, "Signed attestation")
 }
 
 func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
