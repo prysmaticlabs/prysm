@@ -344,7 +344,7 @@ func TestHistoricalState_Pruning(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	params.UseDemoBeaconConfig()
+	epochSize := params.BeaconConfig().SlotsPerEpoch
 	slotGen := func(slot uint64) uint64 {
 		return params.BeaconConfig().GenesisSlot + slot
 	}
@@ -356,71 +356,71 @@ func TestHistoricalState_Pruning(t *testing.T) {
 	}{
 		{
 			finalizedState: &pb.BeaconState{
-				Slot:           slotGen(16),
+				Slot:           slotGen(2 * epochSize),
 				FinalizedEpoch: 2,
 			},
 			histState1: &pb.BeaconState{
-				Slot:           slotGen(8),
+				Slot:           slotGen(1 * epochSize),
 				FinalizedEpoch: 1,
 			},
 			histState2: &pb.BeaconState{
-				Slot:           slotGen(32),
+				Slot:           slotGen(4 * epochSize),
 				FinalizedEpoch: 2,
 			},
 		},
 		{
 			finalizedState: &pb.BeaconState{
-				Slot:           slotGen(32),
+				Slot:           slotGen(4 * epochSize),
 				FinalizedEpoch: 4,
 			},
 			histState1: &pb.BeaconState{
-				Slot:           slotGen(16),
+				Slot:           slotGen(2 * epochSize),
 				FinalizedEpoch: 2,
 			},
 			histState2: &pb.BeaconState{
-				Slot:           slotGen(40),
+				Slot:           slotGen(5 * epochSize),
 				FinalizedEpoch: 4,
 			},
 		},
 		{
 			finalizedState: &pb.BeaconState{
-				Slot:           slotGen(96),
+				Slot:           slotGen(12 * epochSize),
 				FinalizedEpoch: 12,
 			},
 			histState1: &pb.BeaconState{
-				Slot:           slotGen(48),
+				Slot:           slotGen(6 * epochSize),
 				FinalizedEpoch: 6,
 			},
 			histState2: &pb.BeaconState{
-				Slot:           slotGen(112),
+				Slot:           slotGen(14 * epochSize),
 				FinalizedEpoch: 14,
 			},
 		},
 		{
 			finalizedState: &pb.BeaconState{
-				Slot:           slotGen(800),
+				Slot:           slotGen(100 * epochSize),
 				FinalizedEpoch: 100,
 			},
 			histState1: &pb.BeaconState{
-				Slot:           slotGen(96),
+				Slot:           slotGen(12 * epochSize),
 				FinalizedEpoch: 12,
 			},
 			histState2: &pb.BeaconState{
-				Slot:           slotGen(824),
+				Slot:           slotGen(103 * epochSize),
 				FinalizedEpoch: 103,
 			},
 		},
 		{
 			finalizedState: &pb.BeaconState{
-				Slot:           slotGen(4000),
+				Slot:           slotGen(500 * epochSize),
 				FinalizedEpoch: 500,
 			},
 			histState1: &pb.BeaconState{
-				Slot:           slotGen(800),
+				Slot:           slotGen(100 * epochSize),
 				FinalizedEpoch: 100,
 			},
 			histState2: &pb.BeaconState{
-				Slot:           slotGen(4800),
+				Slot:           slotGen(600 * epochSize),
 				FinalizedEpoch: 600,
 			},
 		},
