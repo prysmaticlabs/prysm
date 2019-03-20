@@ -44,7 +44,6 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 	if err != nil {
 		return nil, err
 	}
-
 	fRoot, err := hashutil.HashBeaconBlock(fBlock)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get block root %v", err)
@@ -55,6 +54,7 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 	if err != nil {
 		return nil, err
 	}
+
 	// if the most recent block is a skip block, we get its parent block.
 	// ex:
 	// 	1A - 2B - 3C - 4 - 5 (letters mean there's a block)
@@ -79,7 +79,6 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 	root := fRoot
 	for i := len(blocks); i > 0; i-- {
 		block := blocks[i-1]
-
 		if block.Slot <= postState.Slot {
 			continue
 		}
@@ -99,7 +98,6 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 				return nil, fmt.Errorf("could not execute state transition %v", err)
 			}
 		}
-
 		postState, err = state.ExecuteStateTransition(
 			ctx,
 			postState,
@@ -119,7 +117,6 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 			return nil, fmt.Errorf("unable to get block root %v", err)
 		}
 	}
-
 	log.Debugf("Finished recompute state with slot %d and finalized epoch %d",
 		postState.Slot, postState.FinalizedEpoch)
 
@@ -137,7 +134,6 @@ func blocksSinceFinalized(db *db.BeaconDB, block *pb.BeaconBlock,
 
 	blockAncestors := make([]*pb.BeaconBlock, 0)
 	blockAncestors = append(blockAncestors, block)
-
 	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
 	// looking up ancestors, until the finalized block.
 	for parentRoot != finalizedBlockRoot {
@@ -148,6 +144,5 @@ func blocksSinceFinalized(db *db.BeaconDB, block *pb.BeaconBlock,
 		blockAncestors = append(blockAncestors, retblock)
 		parentRoot = bytesutil.ToBytes32(retblock.ParentRootHash32)
 	}
-
 	return blockAncestors, nil
 }
