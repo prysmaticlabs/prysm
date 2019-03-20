@@ -226,8 +226,14 @@ func (b *BeaconNode) registerBlockchainService(_ *cli.Context) error {
 }
 
 func (b *BeaconNode) registerOperationService() error {
+	var p2pService *p2p.Server
+	if err := b.services.FetchService(&p2pService); err != nil {
+		return err
+	}
+
 	operationService := operations.NewOpsPoolService(context.Background(), &operations.Config{
 		BeaconDB: b.db,
+		P2P:      p2pService,
 	})
 
 	return b.services.RegisterService(operationService)
