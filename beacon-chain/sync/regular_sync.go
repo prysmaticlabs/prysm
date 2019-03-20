@@ -4,6 +4,7 @@ package sync
 import (
 	"context"
 	"fmt"
+	"runtime/debug"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
@@ -240,6 +241,8 @@ func safelyHandleMessage(fn func(p2p.Message), msg p2p.Message) {
 				"r":   r,
 				"msg": printedMsg,
 			}).Error("Panicked when handling p2p message! Recovering...")
+
+			debug.PrintStack()
 
 			if msg.Ctx == nil {
 				return
