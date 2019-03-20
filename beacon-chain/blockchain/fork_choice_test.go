@@ -1232,20 +1232,21 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// New justified slot in state is at slot 64.
+	// New justified slot in state is at slot 64, but it's a skip slot...
 	offset := uint64(64)
-	proposerIdx, err := helpers.BeaconProposerIndex(gState, genesisSlot+offset)
+	lastAvailableSlot := uint64(60)
+	proposerIdx, err := helpers.BeaconProposerIndex(gState, genesisSlot+lastAvailableSlot)
 	if err != nil {
 		t.Fatal(err)
 	}
 	gState.JustifiedEpoch = params.BeaconConfig().GenesisEpoch + 1
 	gState.Slot = genesisSlot + offset
 	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, gState.JustifiedEpoch)
-	domain := forkutil.DomainVersion(gState.Fork, gState.JustifiedEpoch, params.BeaconConfig().DomainRandao)
+	binary.LittleEndian.PutUint64(buf, params.BeaconConfig().GenesisEpoch)
+	domain := forkutil.DomainVersion(gState.Fork, params.BeaconConfig().GenesisEpoch, params.BeaconConfig().DomainRandao)
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	block := &pb.BeaconBlock{
-		Slot:             genesisSlot + offset,
+		Slot:             genesisSlot + lastAvailableSlot,
 		RandaoReveal:     epochSignature.Marshal(),
 		ParentRootHash32: gBlockRoot[:],
 		Body:             &pb.BeaconBlockBody{}}
@@ -1273,7 +1274,7 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 		t.Errorf("Wanted justification state slot: %d, got: %d",
 			offset, newJustifiedState.Slot-genesisSlot)
 	}
-	if newJustifiedBlock.Slot-genesisSlot != offset {
+	if newJustifiedBlock.Slot-genesisSlot != lastAvailableSlot {
 		t.Errorf("Wanted justification block slot: %d, got: %d",
 			offset, newJustifiedBlock.Slot-genesisSlot)
 	}
