@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -39,6 +40,7 @@ type Service struct {
 	incomingAtt                chan *pb.Attestation
 	incomingProcessedBlockFeed *event.Feed
 	incomingProcessedBlock     chan *pb.BeaconBlock
+	p2p                        p2p.Broadcaster
 	error                      error
 }
 
@@ -48,6 +50,7 @@ type Config struct {
 	ReceiveExitBuf  int
 	ReceiveAttBuf   int
 	ReceiveBlockBuf int
+	P2p             p2p.Broadcaster
 }
 
 // NewOpsPoolService instantiates a new service instance that will
@@ -64,6 +67,7 @@ func NewOpsPoolService(ctx context.Context, cfg *Config) *Service {
 		incomingAtt:                make(chan *pb.Attestation, cfg.ReceiveAttBuf),
 		incomingProcessedBlockFeed: new(event.Feed),
 		incomingProcessedBlock:     make(chan *pb.BeaconBlock, cfg.ReceiveBlockBuf),
+		p2p:                        cfg.P2p,
 	}
 }
 
@@ -186,7 +190,8 @@ func (s *Service) HandleAttestations(ctx context.Context, message proto.Message)
 	if err := s.beaconDB.SaveAttestation(ctx, attestation); err != nil {
 		return err
 	}
-	log.Infof("Attestation %#x saved in DB", hash)
+	s.p2p.Broadcast(ctx, attestation)
+	log.Infof("Attestation %#x saved in DB and broadcasted to network", hash)
 	return nil
 }
 
