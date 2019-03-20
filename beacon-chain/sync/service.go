@@ -23,7 +23,7 @@ type Config struct {
 	ChainService     chainService
 	BeaconDB         *db.BeaconDB
 	P2P              p2pAPI
-	AttsService attsService
+	AttsService      attsService
 	OperationService operations.OperationFeeds
 	PowChainService  powChainService
 }

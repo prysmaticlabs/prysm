@@ -120,7 +120,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		}
 		log.WithFields(
 			logrus.Fields{
-				"attestationSlot":  att.Data.Slot,
+				"attestationSlot":     att.Data.Slot,
 				"attestationBitfield": att.AggregationBitfield,
 			},
 		).Info("Attestation Store updated")

@@ -312,7 +312,7 @@ func (b *BeaconNode) registerSyncService(_ *cli.Context) error {
 		BeaconDB:         b.db,
 		OperationService: operationService,
 		PowChainService:  web3Service,
-		AttsService: attsService,
+		AttsService:      attsService,
 	}
 
 	syncService := rbcsync.NewSyncService(context.Background(), cfg)

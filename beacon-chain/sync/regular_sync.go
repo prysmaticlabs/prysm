@@ -98,7 +98,7 @@ type RegularSyncConfig struct {
 	CanonicalBufferSize         int
 	ChainService                chainService
 	OperationService            operations.OperationFeeds
-	AttsService                  attsService
+	AttsService                 attsService
 	BeaconDB                    *db.BeaconDB
 	P2P                         p2pAPI
 }
