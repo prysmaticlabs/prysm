@@ -99,7 +99,7 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	}
 	want := fmt.Sprintf("validator %#x does not exist", req.PublicKeys[0])
 	if _, err := vs.CommitteeAssignment(context.Background(), req); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err)
+		t.Errorf("Expected %v, received %v", want, err.Error())
 	}
 }
 
