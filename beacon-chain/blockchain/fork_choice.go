@@ -107,11 +107,13 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, postState *pb.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ApplyForkChoiceRule")
 	defer span.End()
+	log.Info("Applying LMD-GHOST Fork Choice Rule")
 
 	attestationTargets, err := c.attestationTargets(postState)
 	if err != nil {
 		return fmt.Errorf("could not retrieve attestation target: %v", err)
 	}
+	log.Infof("Attestation targets: %v", attestationTargets)
 	justifiedHead, err := c.beaconDB.JustifiedBlock()
 	if err != nil {
 		return err

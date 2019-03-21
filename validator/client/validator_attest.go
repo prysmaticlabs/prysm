@@ -123,7 +123,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	_, sleepSpan := trace.StartSpan(ctx, "validator.AttestToBlockHead_sleepUntilTimeToBroadcast")
 	time.Sleep(time.Until(timeToBroadcast))
 	sleepSpan.End()
-	log.Debugf("Produced attestation: %v", attestation)
+	log.Infof("Produced attestation: %v", attestation)
 	attResp, err := v.attesterClient.AttestHead(ctx, attestation)
 	if err != nil {
 		log.Errorf("Could not submit attestation to beacon node: %v", err)
