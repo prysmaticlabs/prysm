@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
 
-func TestHashBeaconBlock_doesntMutate(t *testing.T) {
+func TestHashBeaconBlock_DoesntMutate(t *testing.T) {
 	a := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			Attestations: []*pb.Attestation{
@@ -33,7 +33,7 @@ func TestHashBeaconBlock_doesntMutate(t *testing.T) {
 		t.Error("Protos are not equal!")
 	}
 }
-func TestHashProposal_doesntMutate(t *testing.T) {
+func TestHashProposal_DoesntMutate(t *testing.T) {
 	a := &pb.Proposal{
 		Slot:            123,
 		Shard:           456,

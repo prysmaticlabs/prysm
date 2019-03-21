@@ -49,14 +49,10 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 	if ctx.GlobalBool(VerifyAttestationSigsFlag.Name) {
 		log.Info("Verifying signatures for attestations")
 		cfg.VerifyAttestationSigs = true
-	} else {
-		cfg.VerifyAttestationSigs = false
 	}
 	if ctx.GlobalBool(VerifyBlockSigsFlag.Name) {
 		log.Info("Verifying signatures for blocks")
 		cfg.VerifyBlockSigs = true
-	} else {
-		cfg.VerifyBlockSigs = false
 	}
 
 	InitFeatureConfig(cfg)
