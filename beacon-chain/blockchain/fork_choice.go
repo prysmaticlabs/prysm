@@ -50,12 +50,13 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 		if err != nil {
 			return err
 		}
-		if err := c.beaconDB.SaveJustifiedBlock(newJustifiedBlock); err != nil {
+
+		// Generate the new justified state with using new justified block and save it.
+		newJustifiedState, err := stategenerator.GenerateStateFromBlock(c.ctx, c.beaconDB, lastJustifiedSlot)
+		if err != nil {
 			return err
 		}
-		// Generate the new justified state with using new justified block and save it.
-		newJustifiedState, err := stategenerator.GenerateStateFromBlock(c.ctx, c.beaconDB, newJustifiedBlock)
-		if err != nil {
+		if err := c.beaconDB.SaveJustifiedBlock(newJustifiedBlock); err != nil {
 			return err
 		}
 		if err := c.beaconDB.SaveJustifiedState(newJustifiedState); err != nil {
@@ -87,12 +88,13 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 				return err
 			}
 		}
-		if err := c.beaconDB.SaveFinalizedBlock(newFinalizedBlock); err != nil {
+
+		// Generate the new finalized state with using new finalized block and save it.
+		newFinalizedState, err := stategenerator.GenerateStateFromBlock(c.ctx, c.beaconDB, lastFinalizedSlot)
+		if err != nil {
 			return err
 		}
-		// Generate the new finalized state with using new finalized block and save it.
-		newFinalizedState, err := stategenerator.GenerateStateFromBlock(c.ctx, c.beaconDB, newFinalizedBlock)
-		if err != nil {
+		if err := c.beaconDB.SaveFinalizedBlock(newFinalizedBlock); err != nil {
 			return err
 		}
 		if err := c.beaconDB.SaveFinalizedState(newFinalizedState); err != nil {

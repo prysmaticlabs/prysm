@@ -1128,8 +1128,7 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 	}
 
 	// Also saved finalized block to slot 0 to test justification case only.
-	if err := chainSvc.beaconDB.SaveFinalizedBlock(
-		&pb.BeaconBlock{Slot: genesisSlot}); err != nil {
+	if err := chainSvc.beaconDB.SaveFinalizedBlock(&pb.BeaconBlock{Slot: genesisSlot}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1212,7 +1211,7 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 			})
 		validatorBalances = append(validatorBalances, params.BeaconConfig().MaxDepositAmount)
 	}
-	gBlock := &pb.BeaconBlock{Slot: genesisSlot}
+	gBlock := &pb.BeaconBlock{Slot: genesisSlot, ParentRootHash32: params.BeaconConfig().ZeroHash[:]}
 	if err := chainSvc.beaconDB.SaveBlock(gBlock); err != nil {
 		t.Fatal(err)
 	}
@@ -1245,7 +1244,7 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 
 	// Last finalized check point happened at slot 0.
 	if err := chainSvc.beaconDB.SaveFinalizedBlock(
-		&pb.BeaconBlock{Slot: genesisSlot}); err != nil {
+		gBlock); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1278,6 +1277,7 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 		RandaoReveal:     epochSignature.Marshal(),
 		ParentRootHash32: gBlockRoot[:],
 		Body:             &pb.BeaconBlockBody{}}
+
 	if err := chainSvc.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
