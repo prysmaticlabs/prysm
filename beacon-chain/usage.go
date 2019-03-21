@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/urfave/cli"
 )
 
@@ -77,6 +78,10 @@ var appHelpFlagGroups = []flagGroup{
 			utils.KeyFlag,
 			utils.EnableDBCleanup,
 		},
+	},
+	{
+		Name:  "features",
+		Flags: featureconfig.BeaconChainFlags,
 	},
 }
 
