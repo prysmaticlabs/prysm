@@ -1071,8 +1071,7 @@ func TestUpdateFFGCheckPts_NewJustifiedSlot(t *testing.T) {
 	}
 
 	// Also saved finalized block to slot 0 to test justification case only.
-	if err := chainSvc.beaconDB.SaveFinalizedBlock(
-		&pb.BeaconBlock{Slot: genesisSlot}); err != nil {
+	if err := chainSvc.beaconDB.SaveFinalizedBlock(&pb.BeaconBlock{Slot: genesisSlot}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1142,7 +1141,7 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 
 	// Last finalized check point happened at slot 0.
 	if err := chainSvc.beaconDB.SaveFinalizedBlock(
-		&pb.BeaconBlock{Slot: genesisSlot}); err != nil {
+		gBlock); err != nil {
 		t.Fatal(err)
 	}
 	if err := chainSvc.beaconDB.SaveFinalizedState(
@@ -1174,6 +1173,7 @@ func TestUpdateFFGCheckPts_NewFinalizedSlot(t *testing.T) {
 		RandaoReveal:     epochSignature.Marshal(),
 		ParentRootHash32: gBlockRoot[:],
 		Body:             &pb.BeaconBlockBody{}}
+
 	if err := chainSvc.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
@@ -1280,8 +1280,7 @@ func TestUpdateFFGCheckPts_NewJustifiedSkipSlot(t *testing.T) {
 	}
 }
 
-
-func setupFFGTest(t *testing.T, ) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*bls.SecretKey){
+func setupFFGTest(t *testing.T) ([32]byte, *pb.BeaconBlock, *pb.BeaconState, []*bls.SecretKey) {
 	genesisSlot := params.BeaconConfig().GenesisSlot
 	var crosslinks []*pb.Crosslink
 	for i := 0; i < int(params.BeaconConfig().ShardCount); i++ {
