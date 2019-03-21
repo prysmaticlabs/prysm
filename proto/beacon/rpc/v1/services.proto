@@ -136,6 +136,7 @@ message CommitteeAssignmentsRequest {
 message PendingDepositsResponse {
     repeated ethereum.beacon.p2p.v1.Deposit pending_deposits = 1;
 }
+
 message CommitteeAssignmentResponse {
     
     repeated CommitteeAssignment assignment = 1;
@@ -148,7 +149,6 @@ message CommitteeAssignmentResponse {
         ValidatorStatus status = 6;
     }
 }
-
 
 message ValidatorStatusResponse {
     ValidatorStatus status = 1;
