@@ -121,8 +121,6 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 			return nil, fmt.Errorf("unable to get block root %v", err)
 		}
 	}
-	log.Debugf("Finished recompute state with slot %d and finalized epoch %d",
-		postState.Slot, postState.FinalizedEpoch)
 
 	// this recomputes state from last block to last slot if there's skipp slots after.
 	//	ex: 1A - 2B (finalized) - 3C - 4 - 5 - 6C - 7 - 8 (7 and 8 are skipped slots).
