@@ -194,17 +194,27 @@ func (c *ChainService) lmdGhost(
 		if len(children) == 0 {
 			return head, nil
 		}
+		for _, kid := range children {
+			kidRoot, err := hashutil.HashBeaconBlock(kid)
+			if err != nil {
+				return nil, fmt.Errorf("could not hash: %v", err)
+			}
+			log.Infof("Child root: %#x", kidRoot)
+			log.Infof("Child root: %v", kid)
+		}
 		maxChild := children[0]
 
 		maxChildVotes, err := VoteCount(maxChild, state, voteTargets, c.beaconDB)
 		if err != nil {
 			return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
 		}
+		log.Infof("Max child votes: %d", maxChildVotes)
 		for i := 0; i < len(children); i++ {
 			candidateChildVotes, err := VoteCount(children[i], state, voteTargets, c.beaconDB)
 			if err != nil {
 				return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
 			}
+			log.Infof("Candidate child: %d, votes: %d", i, candidateChildVotes)
 			if candidateChildVotes > maxChildVotes {
 				maxChild = children[i]
 			}
