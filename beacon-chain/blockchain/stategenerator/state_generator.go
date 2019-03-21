@@ -16,9 +16,9 @@ var log = logrus.WithField("prefix", "stategenerator")
 
 // GenerateStateFromBlock generates state from the last finalized state to the input slot.
 // Ex:
-// 	1A - 2B(finalized) - 3C - 4 - 5D - 6 - 7F  (letters mean there's a block)
-//  Input: slot 6
-//	Output: resulting state of state transition function after applying block C and D
+// 	1A - 2B(finalized) - 3C - 4 - 5D - 6 - 7F  (letters mean there's a block).
+//  Input: slot 6.
+//	Output: resulting state of state transition function after applying block C and D.
 //  	along with skipped slot 4 and 6.
 func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (*pb.BeaconState, error) {
 	fState, err := db.FinalizedState()
@@ -57,11 +57,12 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 
 	// if the most recent block is a skip block, we get its parent block.
 	// ex:
-	// 	1A - 2B - 3C - 4 - 5 (letters mean there's a block)
+	// 	1A - 2B - 3C - 4 - 5 (letters mean there's a block).
 	//  input slot is 5, but slots 4 and 5 are skipped, we get block C from slot 3.
+	lastSlot := slot
 	for mostRecentBlock == nil {
-		slot--
-		mostRecentBlock, err = db.BlockBySlot(slot)
+		lastSlot--
+		mostRecentBlock, err = db.BlockBySlot(lastSlot)
 		if err != nil {
 			return nil, err
 		}
@@ -77,12 +78,15 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 		fState.Slot, slot)
 	postState := fState
 	root := fRoot
+	// this recomputes state up to the last available block.
+	//	ex: 1A - 2B (finalized) - 3C - 4 - 5 - 6C - 7 - 8 (C is the last block).
+	// 	input slot 8, this recomputes state to slot 6.
 	for i := len(blocks); i > 0; i-- {
 		block := blocks[i-1]
 		if block.Slot <= postState.Slot {
 			continue
 		}
-		// Running state transitions for skipped slots.
+		// running state transitions for skipped slots.
 		for block.Slot != fState.Slot+1 {
 			postState, err = state.ExecuteStateTransition(
 				ctx,
@@ -117,6 +121,26 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 			return nil, fmt.Errorf("unable to get block root %v", err)
 		}
 	}
+
+	// this recomputes state from last block to last slot if there's skipp slots after.
+	//	ex: 1A - 2B (finalized) - 3C - 4 - 5 - 6C - 7 - 8 (7 and 8 are skipped slots).
+	// 	input slot 8, this recomputes state from 6C to 8.
+	for i := postState.Slot; i < slot; i++ {
+		postState, err = state.ExecuteStateTransition(
+			ctx,
+			postState,
+			nil,
+			root,
+			&state.TransitionConfig{
+				VerifySignatures: true,
+				Logging:          false,
+			},
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could not execute state transition %v", err)
+		}
+	}
+
 	log.Debugf("Finished recompute state with slot %d and finalized epoch %d",
 		postState.Slot, postState.FinalizedEpoch)
 
@@ -127,8 +151,8 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 // between the input block and the last finalized block in the db.
 // The input block is also returned in the list.
 // Ex:
-// 	A -> B(finalized) -> C -> D -> E -> D
-// 	Input: E, output: [E, D, C, B]
+// 	A -> B(finalized) -> C -> D -> E -> D.
+// 	Input: E, output: [E, D, C, B].
 func blocksSinceFinalized(db *db.BeaconDB, block *pb.BeaconBlock,
 	finalizedBlockRoot [32]byte) ([]*pb.BeaconBlock, error) {
 
