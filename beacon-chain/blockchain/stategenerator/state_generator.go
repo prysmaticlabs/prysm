@@ -75,15 +75,10 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 		return nil, fmt.Errorf("unable to look up block ancestors %v", err)
 	}
 
-	log.Info("Recompute state starting last finalized slot %d and ending slot %d",
+	log.Debugf("Recompute state starting last finalized slot %d and ending slot %d",
 		fState.Slot-params.BeaconConfig().GenesisSlot, slot-params.BeaconConfig().GenesisSlot)
 	postState := fState
 	root := fRoot
-	log.Infof("Num blocks in recompute: %v", len(blocks))
-	for _, j := range blocks {
-		bh, _ := hashutil.HashBeaconBlock(j)
-		log.Infof("Slot: %d, root: %#x", j.Slot, bh)
-	}
 	// this recomputes state up to the last available block.
 	//	ex: 1A - 2B (finalized) - 3C - 4 - 5 - 6C - 7 - 8 (C is the last block).
 	// 	input slot 8, this recomputes state to slot 6.
@@ -148,7 +143,7 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 	}
 
 	log.Infof("Finished recompute state with slot %d and finalized epoch %d",
-		postState.Slot-params.BeaconConfig().GenesisSlot, postState.FinalizedEpoch-params.BeaconConfig().GenesisSlot)
+		postState.Slot-params.BeaconConfig().GenesisSlot, postState.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
 
 	return postState, nil
 }
