@@ -24,7 +24,7 @@ func TestConfigureBeaconConfig(t *testing.T) {
 	context := cli.NewContext(app, set, nil)
 	ConfigureBeaconFeatures(context)
 	if c := FeatureConfig(); !c.VerifyAttestationSigs {
-		t.Errorf("VerifyAttestationSigs in FeatureFlags incorrect. Wanted true, got false")
+		t.Errorf("VerifyAttestationSigs in featureconfig incorrect. Wanted true, got false")
 	}
 }
 

@@ -240,8 +240,11 @@ func TestProcessBlock_IncorrectAggregateSig(t *testing.T) {
 		t.Errorf("could not get block signature: %v", err)
 	}
 
+	tcfg := &state.TransitionConfig{
+		VerifySignatures: true,
+	}
 	want := "aggregate signature did not verify"
-	_, err = state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig())
+	_, err = state.ProcessBlock(context.Background(), beaconState, block, tcfg)
 	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}

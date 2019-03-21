@@ -234,61 +234,34 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 	validator, m, finish := setup(t)
 	defer finish()
 
-	var wg sync.WaitGroup
-	wg.Add(3)
-	defer wg.Wait()
-
 	validator.genesisTime = uint64(time.Now().Unix())
-	validatorIndex := uint64(5)
-	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	m.validatorClient.EXPECT().CommitteeAssignment(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.ValidatorEpochAssignmentsRequest{}),
-		gomock.Any(), // ctx
-	).Return(&pb.CommitteeAssignmentResponse{
-		Shard:     5,
-		Committee: committee,
-	}, nil).Do(func(arg0, arg1 interface{}) {
-		wg.Done()
-	})
+		gomock.Any(),
+	).Times(0)
 
 	m.attesterClient.EXPECT().AttestationDataAtSlot(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.AttestationDataRequest{}),
-	).Return(&pb.AttestationDataResponse{
-		BeaconBlockRootHash32:    []byte("A"),
-		EpochBoundaryRootHash32:  []byte("B"),
-		JustifiedBlockRootHash32: []byte("C"),
-		LatestCrosslink:          &pbp2p.Crosslink{CrosslinkDataRootHash32: []byte{'D'}},
-		JustifiedEpoch:           3,
-	}, nil).Do(func(arg0, arg1 interface{}) {
-		wg.Done()
-	})
+	).Times(0)
 
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
-	).Return(&pb.ValidatorIndexResponse{
-		Index: uint64(validatorIndex),
-	}, nil).Do(func(arg0, arg1 interface{}) {
-		wg.Done()
-	})
+	).Times(0)
 
 	m.beaconClient.EXPECT().ForkData(
 		gomock.Any(), // ctx
 		gomock.Eq(&ptypes.Empty{}),
-	).Return(&pbp2p.Fork{
-		Epoch:           params.BeaconConfig().GenesisEpoch,
-		CurrentVersion:  0,
-		PreviousVersion: 0,
-	}, nil /*err*/).Times(1)
+	).Return(&pbp2p.Fork{}, nil /*err*/).Times(0)
 
 	m.attesterClient.EXPECT().AttestHead(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
 	).Return(&pb.AttestResponse{}, nil /* error */).Times(0)
 
-	delay = 3
+	delay = 5
 	timer := time.NewTimer(time.Duration(1 * time.Second))
 	go validator.AttestToBlockHead(context.Background(), 0)
 	<-timer.C
