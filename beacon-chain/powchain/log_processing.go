@@ -91,9 +91,8 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 
 	// Make sure duplicates are rejected pre-chainstart.
 	if !w.chainStarted {
-		allDeps := w.beaconDB.AllDeposits(w.ctx, nil)
-		for _, dep := range allDeps {
-			depInput, err := helpers.DecodeDepositInput(dep.DepositData)
+		for _, dep := range w.chainStartDeposits {
+			depInput, err := helpers.DecodeDepositInput(dep)
 			if err != nil {
 				log.Errorf("Could not decode deposit input %v", err)
 				return
