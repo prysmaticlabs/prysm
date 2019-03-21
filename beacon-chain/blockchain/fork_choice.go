@@ -53,6 +53,7 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 		if err != nil {
 			return err
 		}
+
 		if err := c.beaconDB.SaveJustifiedBlock(newJustifiedBlock); err != nil {
 			return err
 		}
