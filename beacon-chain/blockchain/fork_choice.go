@@ -3,6 +3,7 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/stategenerator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -125,11 +126,7 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 	if err != nil {
 		return err
 	}
-	justifiedState, err := c.beaconDB.JustifiedState()
-	if err != nil {
-		return err
-	}
-	head, err := c.lmdGhost(justifiedHead, justifiedState, attestationTargets)
+	head, err := c.lmdGhost(justifiedHead, postState, attestationTargets)
 	if err != nil {
 		return fmt.Errorf("could not run fork choice: %v", err)
 	}
@@ -187,7 +184,7 @@ func (c *ChainService) lmdGhost(
 ) (*pb.BeaconBlock, error) {
 	head := block
 	for {
-		children, err := c.blockChildren(head, state)
+		children, err := c.blockChildren(head, state.Slot)
 		if err != nil {
 			return nil, fmt.Errorf("could not fetch block children: %v", err)
 		}
@@ -233,7 +230,7 @@ func (c *ChainService) lmdGhost(
 // Spec pseudocode definition:
 //	get_children(store: Store, block: BeaconBlock) -> List[BeaconBlock]
 //		returns the child blocks of the given block.
-func (c *ChainService) blockChildren(block *pb.BeaconBlock, state *pb.BeaconState) ([]*pb.BeaconBlock, error) {
+func (c *ChainService) blockChildren(block *pb.BeaconBlock, stateSlot uint64) ([]*pb.BeaconBlock, error) {
 	var children []*pb.BeaconBlock
 
 	currentRoot, err := hashutil.HashBeaconBlock(block)
@@ -241,7 +238,8 @@ func (c *ChainService) blockChildren(block *pb.BeaconBlock, state *pb.BeaconStat
 		return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
 	}
 	startSlot := block.Slot + 1
-	currentSlot := state.Slot
+	currentSlot := stateSlot
+	log.Infof("In blockChildren, startSlot: %d, currentSlot: %v", startSlot-params.BeaconConfig().GenesisSlot, currentSlot-params.BeaconConfig().GenesisSlot)
 	for i := startSlot; i <= currentSlot; i++ {
 		block, err := c.beaconDB.BlockBySlot(i)
 		if err != nil {
