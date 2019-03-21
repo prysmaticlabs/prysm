@@ -71,7 +71,6 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 		beaconDB: db,
 	}
 	req := &pb.CommitteeAssignmentsRequest{
-
 		PublicKey:  [][]byte{[]byte{1}},
 		EpochStart: params.BeaconConfig().GenesisEpoch,
 	}
@@ -99,7 +98,7 @@ func TestNextEpochCommitteeAssignment_CantFindValidatorIdx(t *testing.T) {
 	}
 	want := fmt.Sprintf("validator %#x does not exist", req.PublicKey[0])
 	if _, err := vs.CommitteeAssignment(context.Background(), req); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %v, received %v", want, err.Error())
+		t.Errorf("Expected %v, received %v", want, err)
 	}
 }
 
