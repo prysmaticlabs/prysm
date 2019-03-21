@@ -9,12 +9,21 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
+)
+
+var (
+	stateBytes = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "beacondb_state_size_bytes",
+		Help: "The protobuf encoded size of the last saved state in the beaconDB",
+	})
 )
 
 // InitializeState creates an initial genesis state for the beacon
@@ -138,6 +147,7 @@ func (db *BeaconDB) SaveState(beaconState *pb.BeaconState) error {
 		if err != nil {
 			return err
 		}
+		stateBytes.Set(float64(len(beaconStateEnc)))
 		return chainInfo.Put(stateLookupKey, beaconStateEnc)
 	})
 }

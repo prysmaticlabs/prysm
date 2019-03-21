@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/stategenerator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestGenerateState_OK(t *testing.T) {
@@ -37,6 +38,9 @@ func TestGenerateState_OK(t *testing.T) {
 		if err := beaconDb.UpdateChainHead(inMemBlocks[len(inMemBlocks)-1], bd.State()); err != nil {
 			t.Fatalf("Unable to save block %v", err)
 		}
+		if err := beaconDb.SaveFinalizedBlock(inMemBlocks[len(inMemBlocks)-1]); err != nil {
+			t.Fatalf("Unable to save finalized state: %v", err)
+		}
 	}
 
 	if err := beaconDb.SaveFinalizedState(bd.State()); err != nil {
@@ -57,9 +61,9 @@ func TestGenerateState_OK(t *testing.T) {
 		}
 	}
 
-	inMemBlocks := bd.InMemoryBlocks()
-	blockToGenerateTill := inMemBlocks[len(inMemBlocks)-1]
-	newState, err := stategenerator.GenerateStateFromBlock(context.Background(), beaconDb, blockToGenerateTill)
+	// Ran 30 slots to save finalized slot then ran another 30 slots.
+	slotToGenerateTill := params.BeaconConfig().GenesisSlot + slotLimit*2
+	newState, err := stategenerator.GenerateStateFromBlock(context.Background(), beaconDb, slotToGenerateTill)
 	if err != nil {
 		t.Fatalf("Unable to generate new state from previous finalized state %v", err)
 	}
@@ -101,6 +105,9 @@ func TestGenerateState_WithNilBlocksOK(t *testing.T) {
 		if err := beaconDb.UpdateChainHead(inMemBlocks[len(inMemBlocks)-1], bd.State()); err != nil {
 			t.Fatalf("Unable to save block %v", err)
 		}
+		if err := beaconDb.SaveFinalizedBlock(inMemBlocks[len(inMemBlocks)-1]); err != nil {
+			t.Fatalf("Unable to save finalized state: %v", err)
+		}
 	}
 
 	if err := beaconDb.SaveFinalizedState(bd.State()); err != nil {
@@ -129,9 +136,9 @@ func TestGenerateState_WithNilBlocksOK(t *testing.T) {
 		}
 	}
 
-	inMemBlocks := bd.InMemoryBlocks()
-	blockToGenerateTill := inMemBlocks[len(inMemBlocks)-1]
-	newState, err := stategenerator.GenerateStateFromBlock(context.Background(), beaconDb, blockToGenerateTill)
+	// Ran 30 slots to save finalized slot then ran another 10 slots w/o blocks and 20 slots w/ blocks.
+	slotToGenerateTill := params.BeaconConfig().GenesisSlot + slotLimit*2
+	newState, err := stategenerator.GenerateStateFromBlock(context.Background(), beaconDb, slotToGenerateTill)
 	if err != nil {
 		t.Fatalf("Unable to generate new state from previous finalized state %v", err)
 	}
