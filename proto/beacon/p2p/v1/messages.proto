@@ -22,6 +22,11 @@ enum Topic {
   ATTESTATION_RESPONSE = 14;
 }
 
+message Envelope {
+  bytes span_context = 1;
+  bytes payload = 2;
+}
+
 message BeaconBlockAnnounce {
   bytes hash = 1;
   uint64 slot_number = 2;
@@ -54,7 +59,7 @@ message ChainHeadRequest {}
 message ChainHeadResponse {
   bytes hash = 1;
   uint64 slot = 2;
-  BeaconBlock block = 3;
+  bytes finalized_state_root_hash32s =3;
 }
 
 message BeaconStateHashAnnounce {
@@ -62,7 +67,7 @@ message BeaconStateHashAnnounce {
 }
 
 message BeaconStateRequest {
-  bytes hash = 1;
+  bytes finalized_state_root_hash32s = 1;
 }
 
 message BeaconStateResponse {
@@ -80,12 +85,6 @@ message AttestationRequest {
 message AttestationResponse {
   bytes hash = 1;
   Attestation attestation = 2;
-}
-
-message UnseenAttestationsRequest {}
-
-message UnseenAttestationResponse {
-  repeated Attestation attestations = 1;
 }
 
 message ProposerSlashingAnnounce {

@@ -17,7 +17,8 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/forkutils"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -25,13 +26,11 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// VerifyProposerSignature uses BLS signature verification to ensure
+// VerifyBlockSignature uses BLS signature verification to ensure
 // the correct proposer created an incoming beacon block during state
 // transition processing.
-//
-// WIP - this is stubbed out until BLS is integrated into Prysm.
-func VerifyProposerSignature(ctx context.Context, beaconState *pb.BeaconState, block *pb.BeaconBlock) error {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock.VerifyProposerSignature")
+func VerifyBlockSignature(ctx context.Context, beaconState *pb.BeaconState, block *pb.BeaconBlock) error {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock.VerifyBlockSignature")
 	defer span.End()
 
 	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, block.Slot)
@@ -61,12 +60,12 @@ func VerifyProposerSignature(ctx context.Context, beaconState *pb.BeaconState, b
 	sig, err := bls.SignatureFromBytes(block.Signature)
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 
-	domain := forkutils.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainProposal)
+	domain := forkutil.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainProposal)
 
 	log.Debugf("Verifying proposal hash %#x", proposalHash[:])
 
 	if !sig.Verify(proposerPubkey, proposalHash[:], domain) {
-		return errors.New("proposer signature did not verify")
+		return errors.New("block signature did not verify")
 	}
 	return nil
 }
@@ -116,7 +115,13 @@ func ProcessEth1DataInBlock(ctx context.Context, beaconState *pb.BeaconState, bl
 //     signature=block.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO)).
 //   Set state.latest_randao_mixes[get_current_epoch(state) % LATEST_RANDAO_MIXES_LENGTH] =
 //     xor(get_randao_mix(state, get_current_epoch(state)), hash(block.randao_reveal))
-func ProcessBlockRandao(ctx context.Context, beaconState *pb.BeaconState, block *pb.BeaconBlock, verifySignatures bool) (*pb.BeaconState, error) {
+func ProcessBlockRandao(
+	ctx context.Context,
+	beaconState *pb.BeaconState,
+	block *pb.BeaconBlock,
+	verifySignatures bool,
+	enableLogging bool,
+) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock.ProcessBlockRandao")
 	defer span.End()
 
@@ -124,10 +129,9 @@ func ProcessBlockRandao(ctx context.Context, beaconState *pb.BeaconState, block 
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon proposer index at slot %d: %v", beaconState.Slot, err)
 	}
-	log.WithField("proposerIdx", proposerIdx).Info("RANDAO expected proposer")
-	proposer := beaconState.ValidatorRegistry[proposerIdx]
+
 	if verifySignatures {
-		if err := verifyBlockRandao(beaconState, block, proposer); err != nil {
+		if err := verifyBlockRandao(beaconState, block, proposerIdx, enableLogging); err != nil {
 			return nil, fmt.Errorf("could not verify block randao: %v", err)
 		}
 	}
@@ -146,7 +150,8 @@ func ProcessBlockRandao(ctx context.Context, beaconState *pb.BeaconState, block 
 
 // Verify that bls_verify(pubkey=proposer.pubkey, message_hash=hash_tree_root(get_current_epoch(state)),
 //   signature=block.randao_reveal, domain=get_domain(state.fork, get_current_epoch(state), DOMAIN_RANDAO))
-func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, proposer *pb.Validator) error {
+func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, proposerIdx uint64, enableLogging bool) error {
+	proposer := beaconState.ValidatorRegistry[proposerIdx]
 	pub, err := bls.PublicKeyFromBytes(proposer.Pubkey)
 	if err != nil {
 		return fmt.Errorf("could not deserialize proposer public key: %v", err)
@@ -154,16 +159,19 @@ func verifyBlockRandao(beaconState *pb.BeaconState, block *pb.BeaconBlock, propo
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, currentEpoch)
-	domain := forkutils.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainRandao)
+	domain := forkutil.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainRandao)
 	sig, err := bls.SignatureFromBytes(block.RandaoReveal)
 	if err != nil {
 		return fmt.Errorf("could not deserialize block randao reveal: %v", err)
 	}
-	log.WithFields(logrus.Fields{
-		"epoch":    helpers.CurrentEpoch(beaconState) - params.BeaconConfig().GenesisEpoch,
-		"pubkey":   fmt.Sprintf("%#x", proposer.Pubkey),
-		"epochSig": fmt.Sprintf("%#x", sig.Marshal()),
-	}).Info("Verifying randao")
+
+	if enableLogging {
+		log.WithFields(logrus.Fields{
+			"epoch":         helpers.CurrentEpoch(beaconState) - params.BeaconConfig().GenesisEpoch,
+			"proposerIndex": proposerIdx,
+		}).Info("Verifying randao")
+	}
+
 	if !sig.Verify(pub, buf, domain) {
 		return fmt.Errorf("block randao reveal signature did not verify")
 	}
@@ -492,7 +500,7 @@ func verifyAttestationSig(beaconState *pb.BeaconState, att *pb.Attestation) erro
 
 	attestationDataHash, err := hashutil.HashProto(&pb.AttestationDataAndCustodyBit{
 		Data:       att.Data,
-		CustodyBit: true,
+		CustodyBit: false,
 	})
 	if err != nil {
 		return fmt.Errorf("could not hash attestation data: %v", err)
@@ -504,11 +512,11 @@ func verifyAttestationSig(beaconState *pb.BeaconState, att *pb.Attestation) erro
 	sig, err := bls.SignatureFromBytes(att.AggregateSignature)
 	currentEpoch := helpers.CurrentEpoch(beaconState)
 
-	domain := forkutils.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainAttestation)
+	domain := forkutil.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainAttestation)
 
 	log.WithFields(logrus.Fields{
-		"aggregatePubkeys": fmt.Sprintf("%#x", aggregatePubkeys),
-	}).Info("Verifying attestation")
+		"aggregatePubkeys": fmt.Sprintf("%#x", aggregatePubkeys[0].Marshal()),
+	}).Debug("Verifying attestation")
 
 	if !sig.VerifyMultiple(aggregatePubkeys, messageHashes, domain) {
 		return errors.New("aggregate signature did not verify")
@@ -542,7 +550,7 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 		)
 	}
 	// Verify that `attestation.data.justified_epoch` is equal to `state.justified_epoch
-	// 	if slot_to_epoch(attestation.data.slot+1) >= get_current_epoch(state):
+	// 	if slot_to_epoch(attestation.data.slot + 1) >= get_current_epoch(state)
 	// 	else state.previous_justified_epoch`.
 	if helpers.SlotToEpoch(att.Data.Slot+1) >= helpers.CurrentEpoch(beaconState) {
 		if att.Data.JustifiedEpoch != beaconState.JustifiedEpoch {
@@ -607,10 +615,8 @@ func verifyAttestation(beaconState *pb.BeaconState, att *pb.Attestation, verifyS
 			att.Data.CrosslinkDataRootHash32,
 		)
 	}
-	if verifySignatures {
-		if err := verifyAttestationSig(beaconState, att); err != nil {
-			return fmt.Errorf("could not verify aggregate signature %v", err)
-		}
+	if verifySignatures && featureconfig.FeatureConfig().VerifyAttestationSigs {
+		return verifyAttestationSig(beaconState, att)
 	}
 	return nil
 }

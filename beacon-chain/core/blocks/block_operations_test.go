@@ -16,11 +16,15 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/forkutils"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/ssz"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func setupInitialDeposits(t *testing.T, numDeposits int) ([]*pb.Deposit, []*bls.SecretKey) {
@@ -59,7 +63,7 @@ func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	epoch := helpers.SlotToEpoch(params.BeaconConfig().GenesisSlot)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := forkutils.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
+	domain := forkutil.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
 
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx-1].Sign(buf, domain)
@@ -72,7 +76,8 @@ func TestProcessBlockRandao_IncorrectProposerFailsVerification(t *testing.T) {
 		context.Background(),
 		beaconState,
 		block,
-		true,
+		true,  /* verify signatures */
+		false, /* disable logging */
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %v, received %v", want, err)
 	}
@@ -92,7 +97,7 @@ func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testi
 	epoch := helpers.SlotToEpoch(params.BeaconConfig().GenesisSlot)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := forkutils.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
+	domain := forkutil.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 
 	block := &pb.BeaconBlock{
@@ -103,7 +108,8 @@ func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testi
 		context.Background(),
 		beaconState,
 		block,
-		true,
+		true,  /* verify signatures */
+		false, /* disable logging */
 	)
 	if err != nil {
 		t.Errorf("Unexpected error processing block randao: %v", err)
@@ -119,7 +125,7 @@ func TestProcessBlockRandao_SignatureVerifiesAndUpdatesLatestStateMixes(t *testi
 	}
 }
 
-func TestVerifyProposerSignature_SignsCorrectly(t *testing.T) {
+func TestVerifyBlockSignature(t *testing.T) {
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
@@ -141,13 +147,13 @@ func TestVerifyProposerSignature_SignsCorrectly(t *testing.T) {
 		t.Errorf("could not get block signature: %v", err)
 	}
 
-	err = blocks.VerifyProposerSignature(context.Background(), beaconState, block)
+	err = blocks.VerifyBlockSignature(context.Background(), beaconState, block)
 	if err != nil {
-		t.Errorf("Unexpected error verifying proposer signature: %v", err)
+		t.Errorf("Unexpected error verifying block signature: %v", err)
 	}
 }
 
-func TestVerifyProposerSignature_IncorrectSig(t *testing.T) {
+func TestVerifyBlockSignature_IncorrectSig(t *testing.T) {
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
@@ -168,8 +174,8 @@ func TestVerifyProposerSignature_IncorrectSig(t *testing.T) {
 		t.Errorf("could not get block signature: %v", err)
 	}
 
-	want := "proposer signature did not verify"
-	if err = blocks.VerifyProposerSignature(context.Background(), beaconState, block); !strings.Contains(err.Error(), want) {
+	want := "block signature did not verify"
+	if err = blocks.VerifyBlockSignature(context.Background(), beaconState, block); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -1074,6 +1080,12 @@ func TestProcessBlockAttestations_ShardBlockRootEqualZeroHashFailure(t *testing.
 }
 
 func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
+	cfg := &featureconfig.FeatureFlagConfig{
+		VerifyAttestationSigs: true,
+	}
+	featureconfig.InitFeatureConfig(cfg)
+	hook := logTest.NewGlobal()
+
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 
@@ -1101,7 +1113,7 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
 			JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
 		},
-		AggregationBitfield: []byte{1},
+		AggregationBitfield: bitutil.SetBitfield(0),
 		CustodyBitfield:     []byte{1},
 	}
 	attestorIndices, err := helpers.AttestationParticipants(beaconState, att1.Data, att1.AggregationBitfield)
@@ -1143,6 +1155,8 @@ func TestProcessBlockAttestations_CreatePendingAttestations(t *testing.T) {
 			pendingAttestations[0].InclusionSlot,
 		)
 	}
+
+	testutil.AssertLogsContain(t, hook, "Verifying attestation")
 }
 
 func TestProcessValidatorDeposits_ThresholdReached(t *testing.T) {

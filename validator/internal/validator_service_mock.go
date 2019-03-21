@@ -76,6 +76,26 @@ func (mr *MockValidatorServiceClientMockRecorder) ValidatorIndex(arg0, arg1 inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatorIndex", reflect.TypeOf((*MockValidatorServiceClient)(nil).ValidatorIndex), varargs...)
 }
 
+// ValidatorPerformance mocks base method
+func (m *MockValidatorServiceClient) ValidatorPerformance(arg0 context.Context, arg1 *v1.ValidatorPerformanceRequest, arg2 ...grpc.CallOption) (*v1.ValidatorPerformanceResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ValidatorPerformance", varargs...)
+	ret0, _ := ret[0].(*v1.ValidatorPerformanceResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ValidatorPerformance indicates an expected call of ValidatorPerformance
+func (mr *MockValidatorServiceClientMockRecorder) ValidatorPerformance(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatorPerformance", reflect.TypeOf((*MockValidatorServiceClient)(nil).ValidatorPerformance), varargs...)
+}
+
 // ValidatorStatus mocks base method
 func (m *MockValidatorServiceClient) ValidatorStatus(arg0 context.Context, arg1 *v1.ValidatorIndexRequest, arg2 ...grpc.CallOption) (*v1.ValidatorStatusResponse, error) {
 	m.ctrl.T.Helper()

@@ -18,6 +18,7 @@ spec:
       annotations:
         prometheus.io/scrape: 'true'
         prometheus.io/port: '9090'
+        sidecar.istio.io/inject: 'false' # istio breaks local peer connections
     spec:
       priorityClassName: production-priority
       affinity:
@@ -46,7 +47,6 @@ spec:
             - --bootstrap-node=/ip4/$(BOOTNODE_SERVICE_HOST)/tcp/$(BOOTNODE_SERVICE_PORT)/p2p/QmQEe7o6hKJdGdSkJRh7WJzS6xrex5f4w2SPR6oWbJNriw
             - --relay-node=/ip4/35.224.249.2/tcp/30000/p2p/QmfAgkmjiZNZhr2wFN9TwaRgHouMTBT6HELyzE5A3BT2wK
             - --p2p-port=5000
-            - --demo-config
             - --enable-tracing
             - --tracing-endpoint=http://jaeger-collector.istio-system.svc.cluster.local:14268
             - --trace-sample-fraction=1.0

@@ -21,6 +21,22 @@ import (
 
 var log = logrus.WithField("prefix", "core/state")
 
+// TransitionConfig defines important configuration options
+// for executing a state transition, which can have logging and signature
+// verification on or off depending on when and where it is used.
+type TransitionConfig struct {
+	VerifySignatures bool
+	Logging          bool
+}
+
+// DefaultConfig option for executing state transitions.
+func DefaultConfig() *TransitionConfig {
+	return &TransitionConfig{
+		VerifySignatures: true,
+		Logging:          false,
+	}
+}
+
 // ExecuteStateTransition defines the procedure for a state transition function.
 // Spec pseudocode definition:
 //  We now define the state transition function. At a high level the state transition is made up of three parts:
@@ -36,7 +52,7 @@ func ExecuteStateTransition(
 	state *pb.BeaconState,
 	block *pb.BeaconBlock,
 	headRoot [32]byte,
-	verifySignatures bool,
+	config *TransitionConfig,
 ) (*pb.BeaconState, error) {
 	var err error
 
@@ -45,7 +61,7 @@ func ExecuteStateTransition(
 
 	// Execute per block transition.
 	if block != nil {
-		state, err = ProcessBlock(ctx, state, block, verifySignatures)
+		state, err = ProcessBlock(ctx, state, block, config)
 		if err != nil {
 			return nil, fmt.Errorf("could not process block: %v", err)
 		}
@@ -53,7 +69,7 @@ func ExecuteStateTransition(
 
 	// Execute per epoch transition.
 	if e.CanProcessEpoch(state) {
-		state, err = ProcessEpoch(ctx, state)
+		state, err = ProcessEpoch(ctx, state, config)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("could not process epoch: %v", err)
@@ -86,7 +102,8 @@ func ProcessBlock(
 	ctx context.Context,
 	state *pb.BeaconState,
 	block *pb.BeaconBlock,
-	verifySignatures bool) (*pb.BeaconState, error) {
+	config *TransitionConfig,
+) (*pb.BeaconState, error) {
 
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock")
 	defer span.End()
@@ -105,37 +122,36 @@ func ProcessBlock(
 			state.Slot-params.BeaconConfig().GenesisSlot,
 		)
 	}
-	log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Verified block slot == state slot")
 
 	// Verify block signature.
-	if verifySignatures {
-		if err := b.VerifyProposerSignature(ctx, state, block); err != nil {
-			return nil, fmt.Errorf("could not verify proposer signature: %v", err)
+	if config.VerifySignatures {
+		if err := b.VerifyBlockSignature(ctx, state, block); err != nil {
+			return nil, fmt.Errorf("could not verify block signature: %v", err)
 		}
 	}
-	log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Verified block signature")
+
+	// Save latest block.
+	state.LatestBlock = block
 
 	// Verify block RANDAO.
-	state, err = b.ProcessBlockRandao(ctx, state, block, verifySignatures)
+	state, err = b.ProcessBlockRandao(ctx, state, block, config.VerifySignatures, config.Logging)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify and process block randao: %v", err)
 	}
-	log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Verified and processed block RANDAO")
 
 	// Process ETH1 data.
 	state = b.ProcessEth1DataInBlock(ctx, state, block)
-	state, err = b.ProcessAttesterSlashings(ctx, state, block, verifySignatures)
+	state, err = b.ProcessAttesterSlashings(ctx, state, block, config.VerifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify block attester slashings: %v", err)
 	}
-	log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Processed ETH1 data")
 
-	state, err = b.ProcessProposerSlashings(ctx, state, block, verifySignatures)
+	state, err = b.ProcessProposerSlashings(ctx, state, block, config.VerifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify block proposer slashings: %v", err)
 	}
 
-	state, err = b.ProcessBlockAttestations(ctx, state, block, verifySignatures)
+	state, err = b.ProcessBlockAttestations(ctx, state, block, config.VerifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not process block attestations: %v", err)
 	}
@@ -144,17 +160,22 @@ func ProcessBlock(
 	if err != nil {
 		return nil, fmt.Errorf("could not process block validator deposits: %v", err)
 	}
-	state, err = b.ProcessValidatorExits(ctx, state, block, verifySignatures)
+	state, err = b.ProcessValidatorExits(ctx, state, block, config.VerifySignatures)
 	if err != nil {
 		return nil, fmt.Errorf("could not process validator exits: %v", err)
 	}
 
-	log.WithField(
-		"attestationsInBlock", len(block.Body.Attestations),
-	).Info("Block attestations")
-	log.WithField(
-		"depositsInBlock", len(block.Body.Deposits),
-	).Info("Block deposits")
+	if config.Logging {
+		log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Verified block slot == state slot")
+		log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Verified and processed block RANDAO")
+		log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debugf("Processed ETH1 data")
+		log.WithField(
+			"attestationsInBlock", len(block.Body.Attestations),
+		).Info("Block attestations")
+		log.WithField(
+			"depositsInBlock", len(block.Body.Deposits),
+		).Info("Block deposits")
+	}
 	return state, nil
 }
 
@@ -170,8 +191,7 @@ func ProcessBlock(
 // 	 process_crosslink_reward_penalties(state)
 // 	 update_validator_registry(state)
 // 	 final_book_keeping(state)
-func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, error) {
-
+func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *TransitionConfig) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessEpoch")
 	defer span.End()
 
@@ -185,8 +205,6 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 	// Calculate the attesting balances of validators that justified the
 	// epoch boundary block at the start of the current epoch.
 	currentEpochAttestations := e.CurrentAttestations(ctx, state)
-	log.Infof("Number of current epoch attestations: %d", len(currentEpochAttestations))
-
 	currentEpochBoundaryAttestations, err := e.CurrentEpochBoundaryAttestations(ctx, state, currentEpochAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not get current boundary attestations: %v", err)
@@ -196,8 +214,6 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 	if err != nil {
 		return nil, fmt.Errorf("could not get current boundary attester indices: %v", err)
 	}
-	log.Infof("Current epoch boundary attester indices: %v", currentBoundaryAttesterIndices)
-
 	currentBoundaryAttestingBalances := e.TotalBalance(ctx, state, currentBoundaryAttesterIndices)
 
 	// Calculate the attesting balances of validators from previous epoch.
@@ -205,13 +221,10 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 	prevTotalBalance := e.TotalBalance(ctx, state, previousActiveValidatorIndices)
 
 	prevEpochAttestations := e.PrevAttestations(ctx, state)
-	log.Infof("Number of prev epoch attestations: %d", len(prevEpochAttestations))
 	prevEpochAttesterIndices, err := v.ValidatorIndices(ctx, state, prevEpochAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not get prev epoch attester indices: %v", err)
 	}
-	log.Infof("Previous epoch attester indices: %v", prevEpochAttesterIndices)
-
 	prevEpochAttestingBalance := e.TotalBalance(ctx, state, prevEpochAttesterIndices)
 
 	// Calculate the attesting balances of validator justifying epoch boundary block
@@ -220,14 +233,11 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 	if err != nil {
 		return nil, fmt.Errorf("could not get prev boundary attestations: %v", err)
 	}
-	log.Infof("Number of prev epoch boundary attestations: %d", len(prevEpochAttestations))
 
 	prevEpochBoundaryAttesterIndices, err := v.ValidatorIndices(ctx, state, prevEpochBoundaryAttestations)
 	if err != nil {
 		return nil, fmt.Errorf("could not get prev boundary attester indices: %v", err)
 	}
-	log.Infof("Previous epoch boundary attester indices: %v", prevEpochBoundaryAttesterIndices)
-
 	prevEpochBoundaryAttestingBalances := e.TotalBalance(ctx, state, prevEpochBoundaryAttesterIndices)
 
 	// Calculate attesting balances of validator attesting to expected beacon chain head
@@ -255,6 +265,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 		prevEpochAttestingBalance,
 		prevTotalBalance,
 		totalBalance,
+		config.Logging,
 	)
 
 	// Process crosslinks records.
@@ -279,7 +290,6 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 			prevEpochAttesterIndices,
 			prevEpochAttestingBalance,
 			totalBalance)
-		log.Infof("Balance after FFG src calculation: %v", state.ValidatorBalances)
 		// Apply rewards/penalties to validators for attesting
 		// expected FFG target.
 		state = bal.ExpectedFFGTarget(
@@ -288,7 +298,6 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 			prevEpochBoundaryAttesterIndices,
 			prevEpochBoundaryAttestingBalances,
 			totalBalance)
-		log.Infof("Balance after FFG target calculation: %v", state.ValidatorBalances)
 		// Apply rewards/penalties to validators for attesting
 		// expected beacon chain head.
 		state = bal.ExpectedBeaconChainHead(
@@ -297,7 +306,6 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 			prevEpochHeadAttesterIndices,
 			prevEpochHeadAttestingBalances,
 			totalBalance)
-		log.Infof("Balance after chain head calculation: %v", state.ValidatorBalances)
 		// Apply rewards for to validators for including attestations
 		// based on inclusion distance.
 		state, err = bal.InclusionDistance(
@@ -308,7 +316,12 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 		if err != nil {
 			return nil, fmt.Errorf("could not calculate inclusion dist rewards: %v", err)
 		}
-		log.Infof("Balance after inclusion distance calculation: %v", state.ValidatorBalances)
+		if config.Logging {
+			log.Infof("Balance after FFG src calculation: %v", state.ValidatorBalances)
+			log.Infof("Balance after FFG target calculation: %v", state.ValidatorBalances)
+			log.Infof("Balance after chain head calculation: %v", state.ValidatorBalances)
+			log.Infof("Balance after inclusion distance calculation: %v", state.ValidatorBalances)
+		}
 
 	case epochsSinceFinality > 4:
 		log.Infof("Applying more penalties. ESF %d greater than 4", epochsSinceFinality)
@@ -373,7 +386,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 	}
 
 	// Process ejections.
-	state, err = e.ProcessEjections(ctx, state)
+	state, err = e.ProcessEjections(ctx, state, config.Logging)
 	if err != nil {
 		return nil, fmt.Errorf("could not process ejections: %v", err)
 	}
@@ -420,25 +433,33 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState, 
 	// Clean up processed attestations.
 	state = e.CleanupAttestations(ctx, state)
 
-	log.WithField(
-		"PreviousJustifiedEpoch", state.PreviousJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
-	).Info("Previous justified epoch")
-	log.WithField(
-		"JustifiedEpoch", state.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
-	).Info("Justified epoch")
-	log.WithField(
-		"FinalizedEpoch", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch,
-	).Info("Finalized epoch")
-	log.WithField(
-		"ValidatorRegistryUpdateEpoch", state.ValidatorRegistryUpdateEpoch-params.BeaconConfig().GenesisEpoch,
-	).Info("Validator Registry Update Epoch")
-	log.WithField(
-		"NumValidators", len(state.ValidatorRegistry),
-	).Info("Validator registry length")
-	log.Infof("Validator balances: %v", state.ValidatorBalances)
-	log.WithField(
-		"ValidatorRegistryUpdateEpoch", state.ValidatorRegistryUpdateEpoch-params.BeaconConfig().GenesisEpoch,
-	).Info("Validator registry update epoch")
+	if config.Logging {
+		log.Infof("Number of current epoch attestations: %d", len(currentEpochAttestations))
+		log.Infof("Current epoch boundary attester indices: %v", currentBoundaryAttesterIndices)
+		log.Infof("Number of prev epoch attestations: %d", len(prevEpochAttestations))
+		log.Infof("Previous epoch attester indices: %v", prevEpochAttesterIndices)
+		log.Infof("Number of prev epoch boundary attestations: %d", len(prevEpochAttestations))
+		log.Infof("Previous epoch boundary attester indices: %v", prevEpochBoundaryAttesterIndices)
+		log.WithField(
+			"PreviousJustifiedEpoch", state.PreviousJustifiedEpoch-params.BeaconConfig().GenesisEpoch,
+		).Info("Previous justified epoch")
+		log.WithField(
+			"JustifiedEpoch", state.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
+		).Info("Justified epoch")
+		log.WithField(
+			"FinalizedEpoch", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch,
+		).Info("Finalized epoch")
+		log.WithField(
+			"ValidatorRegistryUpdateEpoch", state.ValidatorRegistryUpdateEpoch-params.BeaconConfig().GenesisEpoch,
+		).Info("Validator Registry Update Epoch")
+		log.WithField(
+			"NumValidators", len(state.ValidatorRegistry),
+		).Info("Validator registry length")
+		log.Infof("Validator balances: %v", state.ValidatorBalances)
+		log.WithField(
+			"ValidatorRegistryUpdateEpoch", state.ValidatorRegistryUpdateEpoch-params.BeaconConfig().GenesisEpoch,
+		).Info("Validator registry update epoch")
+	}
 
 	// Report interesting metrics.
 	reportEpochTransitionMetrics(state)

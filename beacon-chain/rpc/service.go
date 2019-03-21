@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/gogo/protobuf/proto"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -31,19 +32,16 @@ func init() {
 }
 
 type chainService interface {
-	IncomingBlockFeed() *event.Feed
-	// These methods are not called on-demand by a validator
-	// but instead streamed to connected validators every
-	// time the canonical head changes in the chain service.
 	CanonicalBlockFeed() *event.Feed
-	CanonicalStateFeed() *event.Feed
 	StateInitializedFeed() *event.Feed
+	ReceiveBlock(ctx context.Context, block *pbp2p.BeaconBlock) (*pbp2p.BeaconState, error)
+	ApplyForkChoiceRule(ctx context.Context, block *pbp2p.BeaconBlock, computedState *pbp2p.BeaconState) error
 }
 
 type operationService interface {
-	IncomingExitFeed() *event.Feed
-	IncomingAttFeed() *event.Feed
 	PendingAttestations() ([]*pbp2p.Attestation, error)
+	HandleAttestations(context.Context, proto.Message) error
+	IncomingAttFeed() *event.Feed
 }
 
 type powChainService interface {
@@ -66,7 +64,6 @@ type Service struct {
 	powChainService       powChainService
 	operationService      operationService
 	port                  string
-	chainStartDelayFlag   uint64
 	listener              net.Listener
 	withCert              string
 	withKey               string
@@ -80,15 +77,14 @@ type Service struct {
 
 // Config options for the beacon node RPC server.
 type Config struct {
-	Port                string
-	CertFlag            string
-	KeyFlag             string
-	ChainStartDelayFlag uint64
-	SubscriptionBuf     int
-	BeaconDB            *db.BeaconDB
-	ChainService        chainService
-	POWChainService     powChainService
-	OperationService    operationService
+	Port             string
+	CertFlag         string
+	KeyFlag          string
+	SubscriptionBuf  int
+	BeaconDB         *db.BeaconDB
+	ChainService     chainService
+	POWChainService  powChainService
+	OperationService operationService
 }
 
 // NewRPCService creates a new instance of a struct implementing the BeaconServiceServer
@@ -105,7 +101,6 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		port:                  cfg.Port,
 		withCert:              cfg.CertFlag,
 		withKey:               cfg.KeyFlag,
-		chainStartDelayFlag:   cfg.ChainStartDelayFlag,
 		slotAlignmentDuration: time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
 		canonicalBlockChan:    make(chan *pbp2p.BeaconBlock, cfg.SubscriptionBuf),
 		canonicalStateChan:    make(chan *pbp2p.BeaconState, cfg.SubscriptionBuf),
@@ -154,7 +149,6 @@ func (s *Service) Start() {
 		operationService:    s.operationService,
 		incomingAttestation: s.incomingAttestation,
 		canonicalStateChan:  s.canonicalStateChan,
-		chainStartDelayFlag: s.chainStartDelayFlag,
 		chainStartChan:      make(chan time.Time, 1),
 	}
 	proposerServer := &ProposerServer{

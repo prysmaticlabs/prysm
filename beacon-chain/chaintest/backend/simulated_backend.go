@@ -54,9 +54,8 @@ func NewSimulatedBackend() (*SimulatedBackend, error) {
 		return nil, fmt.Errorf("could not setup simulated backend db: %v", err)
 	}
 	cs, err := blockchain.NewChainService(context.Background(), &blockchain.Config{
-		BeaconDB:         db,
-		IncomingBlockBuf: 0,
-		EnablePOWChain:   false,
+		BeaconDB:       db,
+		EnablePOWChain: false,
 	})
 	if err != nil {
 		return nil, err
@@ -110,7 +109,7 @@ func (sb *SimulatedBackend) GenerateBlockAndAdvanceChain(objects *SimulatedObjec
 		sb.state,
 		newBlock,
 		prevBlockRoot,
-		false, /*  no sig verify */
+		state.DefaultConfig(),
 	)
 	if err != nil {
 		return fmt.Errorf("could not execute state transition: %v", err)
@@ -134,7 +133,7 @@ func (sb *SimulatedBackend) GenerateNilBlockAndAdvanceChain() error {
 		sb.state,
 		nil,
 		prevBlockRoot,
-		false, /* no sig verify */
+		state.DefaultConfig(),
 	)
 	if err != nil {
 		return fmt.Errorf("could not execute state transition: %v", err)

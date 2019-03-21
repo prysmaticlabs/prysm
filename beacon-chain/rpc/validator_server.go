@@ -42,14 +42,15 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 		}
 		return stream.Send(res)
 	}
-	sub := vs.chainService.CanonicalStateFeed().Subscribe(vs.canonicalStateChan)
-	defer sub.Unsubscribe()
 	for {
 		select {
 		case <-time.After(3 * time.Second):
-		case beaconState := <-vs.canonicalStateChan:
 			if !vs.beaconDB.HasValidator(req.Pubkey) {
 				continue
+			}
+			beaconState, err := vs.beaconDB.State(vs.ctx)
+			if err != nil {
+				return fmt.Errorf("could not retrieve beacon state: %v", err)
 			}
 			activeVal, err := vs.retrieveActiveValidator(beaconState, req.Pubkey)
 			if err != nil {
@@ -59,8 +60,6 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 				Validator: activeVal,
 			}
 			return stream.Send(res)
-		case <-sub.Err():
-			return errors.New("subscriber closed, exiting goroutine")
 		case <-vs.ctx.Done():
 			return errors.New("rpc context closed, exiting goroutine")
 		}
@@ -76,6 +75,34 @@ func (vs *ValidatorServer) ValidatorIndex(ctx context.Context, req *pb.Validator
 	}
 
 	return &pb.ValidatorIndexResponse{Index: uint64(index)}, nil
+}
+
+// ValidatorPerformance reports the validator's latest balance along with other important metrics on
+// rewards and penalties throughout its lifecycle in the beacon chain.
+func (vs *ValidatorServer) ValidatorPerformance(
+	ctx context.Context, req *pb.ValidatorPerformanceRequest,
+) (*pb.ValidatorPerformanceResponse, error) {
+	index, err := vs.beaconDB.ValidatorIndex(req.PublicKey)
+	if err != nil {
+		return nil, fmt.Errorf("could not get validator index: %v", err)
+	}
+	beaconState, err := vs.beaconDB.State(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
+	}
+	totalBalance := float32(0)
+	for _, val := range beaconState.ValidatorBalances {
+		totalBalance += float32(val)
+	}
+	avgBalance := totalBalance / float32(len(beaconState.ValidatorBalances))
+	balance := beaconState.ValidatorBalances[index]
+	activeIndices := helpers.ActiveValidatorIndices(beaconState.ValidatorRegistry, req.Slot)
+	return &pb.ValidatorPerformanceResponse{
+		Balance:                 balance,
+		AverageValidatorBalance: avgBalance,
+		TotalValidators:         uint64(len(beaconState.ValidatorRegistry)),
+		TotalActiveValidators:   uint64(len(activeIndices)),
+	}, nil
 }
 
 // CommitteeAssignment returns the committee assignment response from a given validator public key.
@@ -108,7 +135,7 @@ func (vs *ValidatorServer) CommitteeAssignment(
 	committee, shard, slot, isProposer, err :=
 		helpers.CommitteeAssignment(beaconState, req.EpochStart, uint64(idx), false)
 	if err != nil {
-		return nil, fmt.Errorf("could not get next epoch committee assignment: %v", err)
+		return nil, err
 	}
 
 	return &pb.CommitteeAssignmentResponse{

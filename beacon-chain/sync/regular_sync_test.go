@@ -29,15 +29,18 @@ func init() {
 }
 
 type mockP2P struct {
+	sentMsg proto.Message
 }
 
 func (mp *mockP2P) Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription {
 	return new(event.Feed).Subscribe(channel)
 }
 
-func (mp *mockP2P) Broadcast(msg proto.Message) {}
+func (mp *mockP2P) Broadcast(ctx context.Context, msg proto.Message) {
+}
 
 func (mp *mockP2P) Send(ctx context.Context, msg proto.Message, peerID peer.ID) error {
+	mp.sentMsg = msg
 	return nil
 }
 
@@ -45,13 +48,6 @@ type mockChainService struct {
 	bFeed *event.Feed
 	sFeed *event.Feed
 	cFeed *event.Feed
-}
-
-func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
-	if ms.bFeed == nil {
-		return new(event.Feed)
-	}
-	return ms.bFeed
 }
 
 func (ms *mockChainService) StateInitializedFeed() *event.Feed {
@@ -68,7 +64,19 @@ func (ms *mockChainService) CanonicalBlockFeed() *event.Feed {
 	return ms.cFeed
 }
 
+func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+	return &pb.BeaconState{}, nil
+}
+
+func (ms *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error {
+	return nil
+}
+
 type mockOperationService struct{}
+
+func (ms *mockOperationService) IncomingProcessedBlockFeed() *event.Feed {
+	return nil
+}
 
 func (ms *mockOperationService) IncomingAttFeed() *event.Feed {
 	return new(event.Feed)
@@ -208,7 +216,7 @@ func TestProcessBlock_OK(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	testutil.AssertLogsContain(t, hook, "Sending newly received block to subscribers")
+	testutil.AssertLogsContain(t, hook, "Sending newly received block to chain service")
 	hook.Reset()
 }
 
@@ -312,8 +320,8 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 	ss.blockBuf <- msg2
 	ss.cancel()
 	<-exitRoutine
-	testutil.AssertLogsContain(t, hook, "Sending newly received block to subscribers")
-	testutil.AssertLogsContain(t, hook, "Sending newly received block to subscribers")
+	testutil.AssertLogsContain(t, hook, "Sending newly received block to chain service")
+	testutil.AssertLogsContain(t, hook, "Sending newly received block to chain service")
 	hook.Reset()
 }
 
@@ -415,7 +423,7 @@ func TestProcessBlock_MissingParentBlockRequestedOK(t *testing.T) {
 	}
 	// Finally, we respond with the parent block that was missing.
 	ss.receiveBlock(msg2)
-	testutil.AssertLogsContain(t, hook, "Sending newly received block to subscribers")
+	testutil.AssertLogsContain(t, hook, "Sending newly received block to chain service")
 	testutil.AssertLogsContain(t, hook, "Received missing block parent")
 	testutil.AssertLogsContain(t, hook, "Sent missing block parent and child to chain service for processing")
 	hook.Reset()
@@ -508,9 +516,11 @@ func TestReceiveAttestation_OK(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	request1 := &pb.Attestation{
-		Data: &pb.AttestationData{
-			Slot: params.BeaconConfig().GenesisSlot + 1,
+	request1 := &pb.AttestationResponse{
+		Attestation: &pb.Attestation{
+			Data: &pb.AttestationData{
+				Slot: params.BeaconConfig().GenesisSlot + 1,
+			},
 		},
 	}
 
@@ -551,9 +561,11 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 		exitRoutine <- true
 	}()
 
-	request1 := &pb.Attestation{
-		Data: &pb.AttestationData{
-			Slot: params.BeaconConfig().GenesisSlot,
+	request1 := &pb.AttestationResponse{
+		Attestation: &pb.Attestation{
+			Data: &pb.AttestationData{
+				Slot: params.BeaconConfig().GenesisSlot,
+			},
 		},
 	}
 
@@ -568,7 +580,7 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 	<-exitRoutine
 	want := fmt.Sprintf(
 		"Skipping received attestation with slot smaller than one epoch ago, %d < %d",
-		request1.Data.Slot, params.BeaconConfig().GenesisSlot+params.BeaconConfig().SlotsPerEpoch)
+		request1.Attestation.Data.Slot, params.BeaconConfig().GenesisSlot+params.BeaconConfig().SlotsPerEpoch)
 	testutil.AssertLogsContain(t, hook, want)
 }
 
@@ -644,37 +656,79 @@ func TestHandleAttReq_HashNotFound(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, want)
 }
 
-func TestHandleUnseenAttsReq_EmptyAttsPool(t *testing.T) {
-	hook := logTest.NewGlobal()
+func TestHandleAnnounceAttestation_requestsAttestationData(t *testing.T) {
 	os := &mockOperationService{}
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 
+	att := &pb.Attestation{
+		AggregationBitfield: []byte{'A', 'B', 'C'},
+	}
+	hash, err := hashutil.HashProto(att)
+	if err != nil {
+		t.Fatalf("Could not hash attestation: %v", err)
+	}
+	sender := &mockP2P{}
 	cfg := &RegularSyncConfig{
 		OperationService: os,
-		P2P:              &mockP2P{},
+		P2P:              sender,
 		BeaconDB:         db,
 		ChainService:     &mockChainService{},
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
-	exitRoutine := make(chan bool)
-	go func() {
-		ss.run()
-		exitRoutine <- true
-	}()
-
-	req := &pb.UnseenAttestationsRequest{}
-	msg := p2p.Message{
+	ss.handleAttestationAnnouncement(p2p.Message{
 		Ctx:  context.Background(),
-		Data: req,
-		Peer: "",
+		Data: &pb.AttestationAnnounce{Hash: hash[:]},
+	})
+
+	if sender.sentMsg == nil {
+		t.Fatal("send was not called")
 	}
 
-	ss.unseenAttestationsReqBuf <- msg
-	ss.cancel()
-	<-exitRoutine
-	testutil.AssertLogsContain(t, hook, "There's no unseen attestation in db")
+	msg, ok := sender.sentMsg.(*pb.AttestationRequest)
+	if !ok {
+		t.Fatal("sent p2p message is wrong type")
+	}
+
+	if bytesutil.ToBytes32(msg.Hash) != hash {
+		t.Fatal("message didnt include the proper hash")
+	}
+}
+
+func TestHandleAnnounceAttestation_doNothingIfAlreadySeen(t *testing.T) {
+	os := &mockOperationService{}
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+
+	att := &pb.Attestation{
+		AggregationBitfield: []byte{'A', 'B', 'C'},
+	}
+	hash, err := hashutil.HashProto(att)
+	if err != nil {
+		t.Fatalf("Could not hash attestation: %v", err)
+	}
+	if err := db.SaveAttestation(context.Background(), att); err != nil {
+		t.Fatalf("Could not save attestation: %v", err)
+	}
+	sender := &mockP2P{}
+	cfg := &RegularSyncConfig{
+		OperationService: os,
+		P2P:              sender,
+		BeaconDB:         db,
+		ChainService:     &mockChainService{},
+	}
+	ss := NewRegularSyncService(context.Background(), cfg)
+
+	ss.handleAttestationAnnouncement(p2p.Message{
+		Ctx:  context.Background(),
+		Data: &pb.AttestationAnnounce{Hash: hash[:]},
+	})
+
+	if sender.sentMsg != nil {
+		t.Error("send was called, but it should not have been called")
+	}
+
 }
 
 func TestHandleAttReq_Ok(t *testing.T) {
@@ -690,7 +744,7 @@ func TestHandleAttReq_Ok(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not hash attestation: %v", err)
 	}
-	if err := db.SaveAttestation(att); err != nil {
+	if err := db.SaveAttestation(context.Background(), att); err != nil {
 		t.Fatalf("Could not save attestation: %v", err)
 	}
 
@@ -724,46 +778,6 @@ func TestHandleAttReq_Ok(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, want)
 }
 
-func TestHandleUnseenAttsReq_Ok(t *testing.T) {
-	hook := logTest.NewGlobal()
-	os := &mockOperationService{}
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-
-	att := &pb.Attestation{
-		AggregationBitfield: []byte{'D', 'E', 'F'},
-	}
-	if err := db.SaveAttestation(att); err != nil {
-		t.Fatalf("Could not save attestation: %v", err)
-	}
-
-	cfg := &RegularSyncConfig{
-		OperationService: os,
-		P2P:              &mockP2P{},
-		BeaconDB:         db,
-		ChainService:     &mockChainService{},
-	}
-	ss := NewRegularSyncService(context.Background(), cfg)
-
-	exitRoutine := make(chan bool)
-	go func() {
-		ss.run()
-		exitRoutine <- true
-	}()
-
-	req := &pb.UnseenAttestationsRequest{}
-	msg := p2p.Message{
-		Ctx:  context.Background(),
-		Data: req,
-		Peer: "",
-	}
-
-	ss.unseenAttestationsReqBuf <- msg
-	ss.cancel()
-	<-exitRoutine
-	testutil.AssertLogsContain(t, hook, "Sending response for batched unseen attestations to peer")
-}
-
 func TestHandleStateReq_NOState(t *testing.T) {
 	hook := logTest.NewGlobal()
 
@@ -786,7 +800,7 @@ func TestHandleStateReq_NOState(t *testing.T) {
 	}()
 
 	request1 := &pb.BeaconStateRequest{
-		Hash: []byte{'a'},
+		FinalizedStateRootHash32S: []byte{'a'},
 	}
 
 	msg1 := p2p.Message{
@@ -833,7 +847,7 @@ func TestHandleStateReq_OK(t *testing.T) {
 	}()
 
 	request1 := &pb.BeaconStateRequest{
-		Hash: stateRoot[:],
+		FinalizedStateRootHash32S: stateRoot[:],
 	}
 
 	msg1 := p2p.Message{

@@ -12,7 +12,9 @@ import (
 	"github.com/golang/mock/gomock"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/forkutils"
+	"github.com/prysmaticlabs/prysm/shared/bitutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -76,6 +78,11 @@ func TestAttestToBlockHead_AttestationDataAtSlotFailure(t *testing.T) {
 }
 
 func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
+	cfg := &featureconfig.FeatureFlagConfig{
+		VerifyAttestationSigs: true,
+	}
+	featureconfig.InitFeatureConfig(cfg)
+
 	hook := logTest.NewGlobal()
 
 	validator, m, finish := setup(t)
@@ -121,11 +128,16 @@ func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
 }
 
 func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
+	cfg := &featureconfig.FeatureFlagConfig{
+		VerifyAttestationSigs: true,
+	}
+	featureconfig.InitFeatureConfig(cfg)
+
 	hook := logTest.NewGlobal()
 
 	validator, m, finish := setup(t)
 	defer finish()
-	validatorIndex := uint64(5)
+	validatorIndex := uint64(7)
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	m.validatorClient.EXPECT().ValidatorIndex(
 		gomock.Any(), // ctx
@@ -169,11 +181,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 
 	validator.AttestToBlockHead(context.Background(), 30)
 
-	aggregationBitfield := make([]byte, (len(committee)+7)/8)
 	// Validator index is at index 4 in the mocked committee defined in this test.
-	indexIntoCommittee := uint64(4)
-	aggregationBitfield[indexIntoCommittee/8] |= 1 << (indexIntoCommittee % 8)
-
 	expectedAttestation := &pbp2p.Attestation{
 		Data: &pbp2p.AttestationData{
 			Slot:                     30,
@@ -185,9 +193,10 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
 			JustifiedEpoch:           3,
 		},
-		CustodyBitfield:     make([]byte, (len(committee)+7)/8),
-		AggregationBitfield: aggregationBitfield,
+		CustodyBitfield: make([]byte, (len(committee)+7)/8),
 	}
+
+	expectedAttestation.AggregationBitfield = bitutil.SetBitfield(4)
 
 	// Retrieve the current fork data from the beacon node.
 	fork := &pbp2p.Fork{
@@ -199,23 +208,29 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	epoch := 30 / params.BeaconConfig().SlotsPerEpoch
 	attestationHash, err := hashutil.HashProto(&pbp2p.AttestationDataAndCustodyBit{
 		Data:       expectedAttestation.Data,
-		CustodyBit: true,
+		CustodyBit: false,
 	})
 	if err != nil {
 		log.Fatalf("Could not hash attestation data: %v", err)
 		return
 	}
-	domain := forkutils.DomainVersion(fork, epoch, params.BeaconConfig().DomainAttestation)
+	domain := forkutil.DomainVersion(fork, epoch, params.BeaconConfig().DomainAttestation)
 
 	expectedAttestation.AggregateSignature = validator.key.SecretKey.Sign(attestationHash[:], domain).Marshal()
 
 	if !proto.Equal(generatedAttestation, expectedAttestation) {
 		t.Errorf("Incorrectly attested head, wanted %v, received %v", expectedAttestation, generatedAttestation)
 	}
-	testutil.AssertLogsContain(t, hook, "Submitted attestation successfully")
+
+	testutil.AssertLogsContain(t, hook, "Beacon node processed attestation successfully")
+	testutil.AssertLogsContain(t, hook, "Signed attestation")
 }
 
 func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
+	cfg := &featureconfig.FeatureFlagConfig{
+		VerifyAttestationSigs: true,
+	}
+	featureconfig.InitFeatureConfig(cfg)
 	validator, m, finish := setup(t)
 	defer finish()
 
@@ -273,7 +288,7 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
 	).Return(&pb.AttestResponse{}, nil /* error */).Times(0)
 
-	delay = 2
+	delay = 3
 	timer := time.NewTimer(time.Duration(1 * time.Second))
 	go validator.AttestToBlockHead(context.Background(), 0)
 	<-timer.C
@@ -338,39 +353,4 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 
 	delay = 0
 	validator.AttestToBlockHead(context.Background(), 0)
-}
-
-func TestAttestToBlockHead_EmptyAggregationBitfield(t *testing.T) {
-	hook := logTest.NewGlobal()
-	validator, m, finish := setup(t)
-	defer finish()
-
-	validatorIndex := uint64(5)
-	committee := []uint64{}
-	m.validatorClient.EXPECT().ValidatorIndex(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
-	).Return(&pb.ValidatorIndexResponse{
-		Index: uint64(validatorIndex),
-	}, nil)
-	m.validatorClient.EXPECT().CommitteeAssignment(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.ValidatorEpochAssignmentsRequest{}),
-	).Return(&pb.CommitteeAssignmentResponse{
-		Shard:     5,
-		Committee: committee,
-	}, nil)
-	m.attesterClient.EXPECT().AttestationDataAtSlot(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.AttestationDataRequest{}),
-	).Return(&pb.AttestationDataResponse{
-		BeaconBlockRootHash32:    []byte("A"),
-		EpochBoundaryRootHash32:  []byte("B"),
-		JustifiedBlockRootHash32: []byte("C"),
-		LatestCrosslink:          &pbp2p.Crosslink{CrosslinkDataRootHash32: []byte{'D'}},
-		JustifiedEpoch:           3,
-	}, nil)
-
-	validator.AttestToBlockHead(context.Background(), 30)
-	testutil.AssertLogsContain(t, hook, "Aggregation bitfield is empty so unable to attest to block head")
 }

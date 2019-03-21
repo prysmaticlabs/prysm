@@ -12,11 +12,21 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 var log = logrus.WithField("prefix", "operation")
+
+// OperationFeeds inteface defines the informational feeds from the operations
+// service.
+type OperationFeeds interface {
+	IncomingAttFeed() *event.Feed
+	IncomingExitFeed() *event.Feed
+	IncomingProcessedBlockFeed() *event.Feed
+}
 
 // Service represents a service that handles the internal
 // logic of beacon block operations.
@@ -30,6 +40,7 @@ type Service struct {
 	incomingAtt                chan *pb.Attestation
 	incomingProcessedBlockFeed *event.Feed
 	incomingProcessedBlock     chan *pb.BeaconBlock
+	p2p                        p2p.Broadcaster
 	error                      error
 }
 
@@ -39,6 +50,7 @@ type Config struct {
 	ReceiveExitBuf  int
 	ReceiveAttBuf   int
 	ReceiveBlockBuf int
+	P2P             p2p.Broadcaster
 }
 
 // NewOpsPoolService instantiates a new service instance that will
@@ -55,6 +67,7 @@ func NewOpsPoolService(ctx context.Context, cfg *Config) *Service {
 		incomingAtt:                make(chan *pb.Attestation, cfg.ReceiveAttBuf),
 		incomingProcessedBlockFeed: new(event.Feed),
 		incomingProcessedBlock:     make(chan *pb.BeaconBlock, cfg.ReceiveBlockBuf),
+		p2p:                        cfg.P2P,
 	}
 }
 
@@ -140,39 +153,48 @@ func (s *Service) saveOperations() {
 			return
 		// Listen for a newly received incoming exit from the sync service.
 		case exit := <-s.incomingValidatorExits:
-			handler.SafelyHandleMessage(s.ctx, s.handleValidatorExits, exit)
+			handler.SafelyHandleMessage(s.ctx, s.HandleValidatorExits, exit)
 		case attestation := <-s.incomingAtt:
-			handler.SafelyHandleMessage(s.ctx, s.handleAttestations, attestation)
+			handler.SafelyHandleMessage(s.ctx, s.HandleAttestations, attestation)
 		}
 	}
 }
 
-func (s *Service) handleValidatorExits(message proto.Message) {
+// HandleValidatorExits processes a validator exit operation.
+func (s *Service) HandleValidatorExits(ctx context.Context, message proto.Message) error {
+	ctx, span := trace.StartSpan(ctx, "operations.HandleValidatorExits")
+	defer span.End()
+
 	exit := message.(*pb.VoluntaryExit)
 	hash, err := hashutil.HashProto(exit)
 	if err != nil {
-		log.Errorf("Could not hash exit req proto: %v", err)
-		return
+		return err
 	}
-	if err := s.beaconDB.SaveExit(exit); err != nil {
-		log.Errorf("Could not save exit request: %v", err)
-		return
+	if err := s.beaconDB.SaveExit(ctx, exit); err != nil {
+		return err
 	}
 	log.Infof("Exit request %#x saved in DB", hash)
+	return nil
 }
 
-func (s *Service) handleAttestations(message proto.Message) {
+// HandleAttestations processes a received attestation message.
+func (s *Service) HandleAttestations(ctx context.Context, message proto.Message) error {
+	ctx, span := trace.StartSpan(ctx, "operations.HandleAttestations")
+	defer span.End()
+
 	attestation := message.(*pb.Attestation)
 	hash, err := hashutil.HashProto(attestation)
 	if err != nil {
-		log.Errorf("Could not hash attestation proto: %v", err)
-		return
+		return err
 	}
-	if err := s.beaconDB.SaveAttestation(attestation); err != nil {
-		log.Errorf("Could not save attestation: %v", err)
-		return
+	if err := s.beaconDB.SaveAttestation(ctx, attestation); err != nil {
+		return err
 	}
-	log.Infof("Attestation %#x saved in DB", hash)
+	s.p2p.Broadcast(ctx, &pb.AttestationAnnounce{
+		Hash: hash[:],
+	})
+	log.Infof("Attestation %#x saved in DB and broadcasted to network", hash)
+	return nil
 }
 
 // removeOperations removes the processed operations from operation pool and DB.
@@ -204,13 +226,13 @@ func (s *Service) removeOperations() {
 	}
 }
 
-func (s *Service) handleProcessedBlock(message proto.Message) {
+func (s *Service) handleProcessedBlock(_ context.Context, message proto.Message) error {
 	block := message.(*pb.BeaconBlock)
 	// Removes the pending attestations received from processed block body in DB.
 	if err := s.removePendingAttestations(block.Body.Attestations); err != nil {
-		log.Errorf("Could not remove processed attestations from DB: %v", err)
-		return
+		return fmt.Errorf("could not remove processed attestations from DB: %v", err)
 	}
+	return nil
 }
 
 // removePendingAttestations removes a list of attestations from DB.

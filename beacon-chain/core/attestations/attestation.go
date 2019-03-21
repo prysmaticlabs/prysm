@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/forkutils"
+	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -59,14 +59,14 @@ func IsSurroundVote(attestation1 *pb.AttestationData, attestation2 *pb.Attestati
 func AggregateSignature(beaconState *pb.BeaconState, att *pb.Attestation, privKey *bls.SecretKey) []byte {
 	attestationDataHash, err := hashutil.HashProto(&pb.AttestationDataAndCustodyBit{
 		Data:       att.Data,
-		CustodyBit: true,
+		CustodyBit: false,
 	})
 	if err != nil {
 		log.Errorf("could not hash attestation data: %v", err)
 	}
 
 	currentEpoch := helpers.SlotToEpoch(att.Data.Slot)
-	domain := forkutils.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainAttestation)
+	domain := forkutil.DomainVersion(beaconState.Fork, currentEpoch, params.BeaconConfig().DomainAttestation)
 	sig := privKey.Sign(attestationDataHash[:], domain)
 
 	return sig.Marshal()

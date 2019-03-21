@@ -66,6 +66,7 @@ type BeaconChainConfig struct {
 	WhistlerBlowerRewardQuotient       uint64 // WhistlerBlowerRewardQuotient is used to calculate whistler blower reward.
 	AttestationInclusionRewardQuotient uint64 // IncluderRewardQuotient defines the reward quotient of proposer for including attestations..
 	InactivityPenaltyQuotient          uint64 // InactivityPenaltyQuotient defines how much validator leaks out balances for offline.
+	GweiPerEth                         uint64 // GweiPerEth is the amount of gwei corresponding to 1 eth.
 
 	// Max operations per block constants.
 	MaxVoluntaryExits    uint64 // MaxVoluntaryExits determines the maximum number of validator exits in a block.
@@ -88,7 +89,7 @@ type BeaconChainConfig struct {
 type DepositContractConfig struct {
 	DepositsForChainStart *big.Int // DepositsForChainStart defines how many validator deposits needed to kick off beacon chain.
 	MinDepositAmount      *big.Int // MinDepositAmount defines the minimum deposit amount in gwei that is required in the deposit contract.
-	MaxDepositAmount      *big.Int // // MaxDepositAmount defines the minimum deposit amount in gwei that is required in the deposit contract.
+	MaxDepositAmount      *big.Int // MaxDepositAmount defines the maximum deposit amount in gwei that is required in the deposit contract.
 }
 
 // ShardChainConfig contains configs for node to participate in shard chains.
@@ -154,6 +155,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	WhistlerBlowerRewardQuotient:       512,
 	AttestationInclusionRewardQuotient: 8,
 	InactivityPenaltyQuotient:          1 << 24,
+	GweiPerEth:                         1000000000,
 
 	// Max operations per block constants.
 	MaxVoluntaryExits:    16,

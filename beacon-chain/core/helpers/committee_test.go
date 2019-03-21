@@ -8,6 +8,8 @@ import (
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 var size = 1<<(params.BeaconConfig().RandBytes*8) - 1
@@ -319,21 +321,21 @@ func TestAttestationParticipants_OK(t *testing.T) {
 			attestationSlot: params.BeaconConfig().GenesisSlot + 2,
 			stateSlot:       params.BeaconConfig().GenesisSlot + 5,
 			shard:           2,
-			bitfield:        []byte{0x03},
+			bitfield:        []byte{0xC0},
 			wanted:          []uint64{11, 121},
 		},
 		{
 			attestationSlot: params.BeaconConfig().GenesisSlot + 1,
 			stateSlot:       params.BeaconConfig().GenesisSlot + 10,
 			shard:           1,
-			bitfield:        []byte{0x01},
+			bitfield:        []byte{0x80},
 			wanted:          []uint64{4},
 		},
 		{
 			attestationSlot: params.BeaconConfig().GenesisSlot + 10,
 			stateSlot:       params.BeaconConfig().GenesisSlot + 10,
 			shard:           10,
-			bitfield:        []byte{0x03},
+			bitfield:        []byte{0xC0},
 			wanted:          []uint64{14, 30},
 		},
 	}
@@ -381,7 +383,7 @@ func TestAttestationParticipants_IncorrectBitfield(t *testing.T) {
 }
 
 func TestVerifyBitfield_OK(t *testing.T) {
-	bitfield := []byte{0xff}
+	bitfield := []byte{0xFF}
 	committeeSize := 8
 
 	isValidated, err := VerifyBitfield(bitfield, committeeSize)
@@ -393,7 +395,7 @@ func TestVerifyBitfield_OK(t *testing.T) {
 		t.Error("bitfield is not validated when it was supposed to be")
 	}
 
-	bitfield = []byte{0xff, 0x80}
+	bitfield = []byte{0xff, 0x01}
 	committeeSize = 9
 
 	isValidated, err = VerifyBitfield(bitfield, committeeSize)
@@ -405,7 +407,7 @@ func TestVerifyBitfield_OK(t *testing.T) {
 		t.Error("bitfield is validated when it was supposed to be")
 	}
 
-	bitfield = []byte{0xff, 0x01}
+	bitfield = []byte{0xff, 0x80}
 	committeeSize = 10
 	isValidated, err = VerifyBitfield(bitfield, committeeSize)
 	if err != nil {
@@ -496,11 +498,12 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
 	}
 	index := uint64(10000)
-	want := fmt.Sprintf(
-		"could not get assignment validator %d",
-		index,
-	)
-	if _, _, _, _, err := CommitteeAssignment(state, state.Slot, index, false); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
+	_, _, _, _, err := CommitteeAssignment(state, state.Slot, index, false)
+	statusErr, ok := status.FromError(err)
+	if !ok {
+		t.Fatal(err)
+	}
+	if statusErr.Code() != codes.NotFound {
+		t.Errorf("Unexpected error: %v", err)
 	}
 }

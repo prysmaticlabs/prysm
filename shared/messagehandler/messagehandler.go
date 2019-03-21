@@ -3,6 +3,7 @@ package messagehandler
 import (
 	"context"
 	"fmt"
+	"runtime/debug"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/sirupsen/logrus"
@@ -13,7 +14,7 @@ var log = logrus.WithField("prefix", "message-handler")
 
 // SafelyHandleMessage will recover and log any panic that occurs from the
 // function argument.
-func SafelyHandleMessage(ctx context.Context, fn func(message proto.Message), msg proto.Message) {
+func SafelyHandleMessage(ctx context.Context, fn func(ctx context.Context, message proto.Message) error, msg proto.Message) {
 	defer func() {
 		if r := recover(); r != nil {
 			printedMsg := "message contains no data"
@@ -24,6 +25,8 @@ func SafelyHandleMessage(ctx context.Context, fn func(message proto.Message), ms
 				"r":   r,
 				"msg": printedMsg,
 			}).Error("Panicked when handling p2p message! Recovering...")
+
+			debug.PrintStack()
 
 			if ctx == nil {
 				return
@@ -38,5 +41,13 @@ func SafelyHandleMessage(ctx context.Context, fn func(message proto.Message), ms
 	}()
 
 	// Fingers crossed that it doesn't panic...
-	fn(msg)
+	if err := fn(ctx, msg); err != nil {
+		// Report any error on the span, if one exists.
+		if span := trace.FromContext(ctx); span != nil {
+			span.SetStatus(trace.Status{
+				Code:    trace.StatusCodeInternal,
+				Message: err.Error(),
+			})
+		}
+	}
 }

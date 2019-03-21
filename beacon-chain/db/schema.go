@@ -19,12 +19,16 @@ var (
 	blockOperationsBucket = []byte("block-operations-bucket")
 	blockBucket           = []byte("block-bucket")
 	mainChainBucket       = []byte("main-chain-bucket")
+	histStateBucket       = []byte("historical-state-bucket")
 	chainInfoBucket       = []byte("chain-info")
 	validatorBucket       = []byte("validator")
 
 	mainChainHeightKey      = []byte("chain-height")
 	stateLookupKey          = []byte("state")
 	finalizedStateLookupKey = []byte("finalized-state")
+	justifiedStateLookupKey = []byte("justified-state")
+	finalizedBlockLookupKey = []byte("finalized-block")
+	justifiedBlockLookupKey = []byte("justified-block")
 
 	// DB internal use
 	cleanupHistoryBucket    = []byte("cleanup-history-bucket")

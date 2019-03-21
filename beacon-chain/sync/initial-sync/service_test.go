@@ -28,7 +28,7 @@ func (mp *mockP2P) Subscribe(msg proto.Message, channel chan p2p.Message) event.
 	return new(event.Feed).Subscribe(channel)
 }
 
-func (mp *mockP2P) Broadcast(msg proto.Message) {}
+func (mp *mockP2P) Broadcast(ctx context.Context, msg proto.Message) {}
 
 func (mp *mockP2P) Send(ctx context.Context, msg proto.Message, peerID peer.ID) error {
 	return nil
@@ -53,8 +53,12 @@ func (ms *mockSyncService) ResumeSync() {
 
 type mockChainService struct{}
 
-func (ms *mockChainService) IncomingBlockFeed() *event.Feed {
-	return &event.Feed{}
+func (m *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+	return &pb.BeaconState{}, nil
+}
+
+func (m *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error {
+	return nil
 }
 
 func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {

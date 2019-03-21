@@ -9,13 +9,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/shared/bitutil"
+
 	atts "github.com/prysmaticlabs/prysm/beacon-chain/core/attestations"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/forkutils"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -50,7 +53,7 @@ func createRandaoReveal(t *testing.T, beaconState *pb.BeaconState, privKeys []*b
 	epoch := helpers.SlotToEpoch(params.BeaconConfig().GenesisSlot)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := forkutils.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
+	domain := forkutil.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	return epochSignature.Marshal()
@@ -68,7 +71,7 @@ func TestProcessBlock_IncorrectSlot(t *testing.T) {
 		4,
 		5,
 	)
-	if _, err := state.ProcessBlock(context.Background(), beaconState, block, false); !strings.Contains(err.Error(), want) {
+	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -95,8 +98,19 @@ func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
 			ProposerSlashings: slashings,
 		},
 	}
+
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
+	if err != nil {
+		t.Errorf("Could not get beacon proposer index: %v", err)
+	}
+
+	block.Signature, err = b.BlockSignature(beaconState, block, privKeys[proposerIdx])
+	if err != nil {
+		t.Errorf("Could not sign block: %v", err)
+	}
+
 	want := "could not verify block proposer slashing"
-	if _, err := state.ProcessBlock(context.Background(), beaconState, block, false); !strings.Contains(err.Error(), want) {
+	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -139,13 +153,28 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 			AttesterSlashings: attesterSlashings,
 		},
 	}
+
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
+	if err != nil {
+		t.Errorf("Could not get beacon proposer index: %v", err)
+	}
+
+	block.Signature, err = b.BlockSignature(beaconState, block, privKeys[proposerIdx])
+	if err != nil {
+		t.Errorf("Could not sign block: %v", err)
+	}
+
 	want := "could not verify block attester slashing"
-	if _, err := state.ProcessBlock(context.Background(), beaconState, block, false); !strings.Contains(err.Error(), want) {
+	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
 func TestProcessBlock_IncorrectAggregateSig(t *testing.T) {
+	cfg := &featureconfig.FeatureFlagConfig{
+		VerifyAttestationSigs: true,
+	}
+	featureconfig.InitFeatureConfig(cfg)
 	deposits, privKeys := setupInitialDeposits(t, params.BeaconConfig().SlotsPerEpoch)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
@@ -172,13 +201,13 @@ func TestProcessBlock_IncorrectAggregateSig(t *testing.T) {
 			LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
 			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
 		},
-		AggregationBitfield: []byte{1},
+		AggregationBitfield: bitutil.SetBitfield(0),
 		CustodyBitfield:     []byte{1},
 	}
 
 	attestorIndices, err := helpers.AttestationParticipants(beaconState, blockAtt.Data, blockAtt.AggregationBitfield)
 	if err != nil {
-		t.Errorf("could not get aggergation participants %v", err)
+		t.Errorf("could not get aggregation participants %v", err)
 	}
 	blockAtt.AggregateSignature = atts.AggregateSignature(beaconState, blockAtt, privKeys[attestorIndices[0]-1])
 	attestations := []*pb.Attestation{blockAtt}
@@ -207,7 +236,8 @@ func TestProcessBlock_IncorrectAggregateSig(t *testing.T) {
 	}
 
 	want := "aggregate signature did not verify"
-	if _, err := state.ProcessBlock(context.Background(), beaconState, block, true); !strings.Contains(err.Error(), want) {
+	_, err = state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig())
+	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -274,8 +304,19 @@ func TestProcessBlock_IncorrectProcessBlockAttestations(t *testing.T) {
 			Attestations:      blockAttestations,
 		},
 	}
+
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
+	if err != nil {
+		t.Errorf("Could not get beacon proposer index: %v", err)
+	}
+
+	block.Signature, err = b.BlockSignature(beaconState, block, privKeys[proposerIdx])
+	if err != nil {
+		t.Errorf("Could not sign block: %v", err)
+	}
+
 	want := "could not process block attestations"
-	if _, err := state.ProcessBlock(context.Background(), beaconState, block, false); !strings.Contains(err.Error(), want) {
+	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -343,7 +384,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
 			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
 		},
-		AggregationBitfield: []byte{1},
+		AggregationBitfield: bitutil.SetBitfield(0),
 		CustodyBitfield:     []byte{1},
 	}
 	attestations := []*pb.Attestation{blockAtt}
@@ -367,12 +408,21 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		},
 	}
 	want := "could not process validator exits"
-	if _, err := state.ProcessBlock(context.Background(), beaconState, block, false); !strings.Contains(err.Error(), want) {
+	transitionConfig := &state.TransitionConfig{
+		VerifySignatures: false,
+		Logging:          false,
+	}
+	_, err = state.ProcessBlock(context.Background(), beaconState, block, transitionConfig)
+	if !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
 
 func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
+	cfg := &featureconfig.FeatureFlagConfig{
+		VerifyAttestationSigs: false,
+	}
+	featureconfig.InitFeatureConfig(cfg)
 	deposits, privKeys := setupInitialDeposits(t, params.BeaconConfig().SlotsPerEpoch)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
@@ -435,7 +485,7 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 			LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
 			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
 		},
-		AggregationBitfield: []byte{1},
+		AggregationBitfield: bitutil.SetBitfield(0),
 		CustodyBitfield:     []byte{1},
 	}
 	attestorIndices, err := helpers.AttestationParticipants(beaconState, blockAtt.Data, blockAtt.AggregationBitfield)
@@ -477,12 +527,12 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 		t.Errorf("could not get block signature: %v", err)
 	}
 
-	if _, err := state.ProcessBlock(context.Background(), beaconState, block, true); err != nil {
+	if _, err := state.ProcessBlock(context.Background(), beaconState, block, state.DefaultConfig()); err != nil {
 		t.Errorf("Expected block to pass processing conditions: %v", err)
 	}
 }
 
-func TestProcessBlock_IncorrectProposerSig(t *testing.T) {
+func TestProcessBlock_IncorrectBlockSig(t *testing.T) {
 	deposits, privKeys := setupInitialDeposits(t, params.BeaconConfig().SlotsPerEpoch)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
@@ -504,8 +554,12 @@ func TestProcessBlock_IncorrectProposerSig(t *testing.T) {
 		t.Errorf("could not get block signature: %v", err)
 	}
 
-	want := "proposer signature did not verify"
-	if _, err := state.ProcessBlock(context.Background(), beaconState, block, true); !strings.Contains(err.Error(), want) {
+	want := "block signature did not verify"
+	transitionConfig := &state.TransitionConfig{
+		VerifySignatures: true,
+		Logging:          false,
+	}
+	if _, err := state.ProcessBlock(context.Background(), beaconState, block, transitionConfig); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected %s, received %v", want, err)
 	}
 }
@@ -562,7 +616,7 @@ func TestProcessEpoch_PassesProcessingConditions(t *testing.T) {
 			params.BeaconConfig().LatestSlashedExitLength),
 	}
 
-	_, err := state.ProcessEpoch(context.Background(), newState)
+	_, err := state.ProcessEpoch(context.Background(), newState, state.DefaultConfig())
 	if err != nil {
 		t.Errorf("Expected epoch transition to pass processing conditions: %v", err)
 	}
@@ -622,7 +676,7 @@ func TestProcessEpoch_InactiveConditions(t *testing.T) {
 			params.BeaconConfig().LatestSlashedExitLength),
 	}
 
-	_, err := state.ProcessEpoch(context.Background(), newState)
+	_, err := state.ProcessEpoch(context.Background(), newState, state.DefaultConfig())
 	if err != nil {
 		t.Errorf("Expected epoch transition to pass processing conditions: %v", err)
 	}
@@ -641,7 +695,7 @@ func TestProcessEpoch_CantGetBoundaryAttestation(t *testing.T) {
 		0,
 		newState.Slot-params.BeaconConfig().GenesisSlot,
 	)
-	if _, err := state.ProcessEpoch(context.Background(), newState); !strings.Contains(err.Error(), want) {
+	if _, err := state.ProcessEpoch(context.Background(), newState, state.DefaultConfig()); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected: %s, received: %v", want, err)
 	}
 }
@@ -671,7 +725,7 @@ func TestProcessEpoch_CantGetCurrentValidatorIndices(t *testing.T) {
 	}
 
 	wanted := fmt.Sprintf("wanted participants bitfield length %d, got: %d", 0, 1)
-	if _, err := state.ProcessEpoch(context.Background(), newState); !strings.Contains(err.Error(), wanted) {
+	if _, err := state.ProcessEpoch(context.Background(), newState, state.DefaultConfig()); !strings.Contains(err.Error(), wanted) {
 		t.Errorf("Expected: %s, received: %v", wanted, err)
 	}
 }

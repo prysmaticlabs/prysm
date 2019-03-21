@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	"github.com/prysmaticlabs/prysm/shared/cmd"
 	"github.com/prysmaticlabs/prysm/shared/debug"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -44,15 +45,13 @@ func main() {
 	app.Version = version.GetVersion()
 
 	app.Flags = []cli.Flag{
-		utils.DemoConfigFlag,
+		utils.NoCustomConfigFlag,
 		utils.DepositContractFlag,
 		utils.Web3ProviderFlag,
 		utils.RPCPort,
 		utils.CertFlag,
 		utils.KeyFlag,
-		utils.GenesisJSON,
 		utils.EnableDBCleanup,
-		utils.ChainStartDelay,
 		cmd.BootstrapNode,
 		cmd.RelayNode,
 		cmd.P2PPort,
@@ -63,6 +62,7 @@ func main() {
 		cmd.TraceSampleFractionFlag,
 		cmd.MonitoringPortFlag,
 		cmd.DisableMonitoringFlag,
+		cmd.ClearDBFlag,
 		debug.PProfFlag,
 		debug.PProfAddrFlag,
 		debug.PProfPortFlag,
@@ -70,6 +70,8 @@ func main() {
 		debug.CPUProfileFlag,
 		debug.TraceFlag,
 	}
+
+	app.Flags = append(app.Flags, featureconfig.BeaconChainFlags...)
 
 	app.Before = func(ctx *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())

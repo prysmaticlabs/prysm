@@ -10,7 +10,7 @@ import (
 	"github.com/golang/mock/gomock"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/forkutils"
+	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -43,6 +43,15 @@ func setup(t *testing.T) (*validator, *mocks, func()) {
 	}
 
 	return validator, m, ctrl.Finish
+}
+
+func TestProposeBlock_DoesNotProposeGenesisBlock(t *testing.T) {
+	hook := logTest.NewGlobal()
+	validator, _, finish := setup(t)
+	defer finish()
+	validator.ProposeBlock(context.Background(), params.BeaconConfig().GenesisSlot)
+
+	testutil.AssertLogsContain(t, hook, "Assigned to genesis slot, skipping proposal")
 }
 
 func TestProposeBlock_LogsCanonicalHeadFailure(t *testing.T) {
@@ -356,11 +365,6 @@ func TestProposeBlock_ComputeStateFailure(t *testing.T) {
 		gomock.AssignableToTypeOf(&pb.PendingAttestationsRequest{}),
 	).Return(&pb.PendingAttestationsResponse{PendingAttestations: []*pbp2p.Attestation{}}, nil)
 
-	m.proposerClient.EXPECT().ProposeBlock(
-		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
-	).Return(&pb.ProposeResponse{}, nil /*error*/)
-
 	m.proposerClient.EXPECT().ComputeStateRoot(
 		gomock.Any(), // context
 		gomock.AssignableToTypeOf(&pbp2p.BeaconBlock{}),
@@ -549,7 +553,7 @@ func TestProposeBlock_SignsBlock(t *testing.T) {
 		PreviousVersion: 0,
 	}
 
-	domain := forkutils.DomainVersion(fork, params.BeaconConfig().GenesisEpoch, params.BeaconConfig().DomainProposal)
+	domain := forkutil.DomainVersion(fork, params.BeaconConfig().GenesisEpoch, params.BeaconConfig().DomainProposal)
 	proposalSignature := validator.key.SecretKey.Sign(proposalDataHash[:], domain).Marshal()
 
 	if !bytes.Equal(broadcastedBlock.Signature, proposalSignature) {
