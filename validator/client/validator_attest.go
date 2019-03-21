@@ -22,6 +22,9 @@ var delay = params.BeaconConfig().SecondsPerSlot / 2
 func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	ctx, span := trace.StartSpan(ctx, "validator.AttestToBlockHead")
 	defer span.End()
+
+	v.waitToSlotMidpoint(ctx, slot)
+
 	// First the validator should construct attestation_data, an AttestationData
 	// object based upon the state at the assigned slot.
 	attData := &pbp2p.AttestationData{
@@ -118,12 +121,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 		"slot":           slot - params.BeaconConfig().GenesisSlot,
 	}).Info("Attesting to beacon chain head...")
 
-	duration := time.Duration(slot*params.BeaconConfig().SecondsPerSlot+delay) * time.Second
-	timeToBroadcast := time.Unix(int64(v.genesisTime), 0).Add(duration)
-	_, sleepSpan := trace.StartSpan(ctx, "validator.AttestToBlockHead_sleepUntilTimeToBroadcast")
-	time.Sleep(time.Until(timeToBroadcast))
-	sleepSpan.End()
-	log.Infof("Produced attestation: %v", attestation)
+	log.Debugf("Produced attestation: %v", attestation)
 	attResp, err := v.attesterClient.AttestHead(ctx, attestation)
 	if err != nil {
 		log.Errorf("Could not submit attestation to beacon node: %v", err)
@@ -134,4 +132,17 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 		"shard":           attData.Shard,
 		"slot":            slot - params.BeaconConfig().GenesisSlot,
 	}).Info("Beacon node processed attestation successfully")
+}
+
+// waitToSlotMidpoint waits until halfway through the current slot period
+// such that any blocks from this slot have time to reach the beacon node
+// before creating the attestation.
+func (v *validator) waitToSlotMidpoint(ctx context.Context, slot uint64) {
+	_, span := trace.StartSpan(ctx, "validator.waitToSlotMidpoint")
+	defer span.End()
+
+	duration := time.Duration(slot*params.BeaconConfig().SecondsPerSlot+delay) * time.Second
+	timeToBroadcast := time.Unix(int64(v.genesisTime), 0).Add(duration)
+
+	time.Sleep(time.Until(timeToBroadcast))
 }
