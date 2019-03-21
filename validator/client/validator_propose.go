@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 
 	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
@@ -117,26 +118,30 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	block.StateRootHash32 = resp.GetStateRoot()
 
 	// 4. Sign the complete block.
-	blockRootHash, err := hashutil.HashBeaconBlock(block)
-	if err != nil {
-		log.Errorf("Could not hash beacon block: %v", err)
-		return
-	}
+	if featureconfig.FeatureConfig().VerifyBlockSigs {
+		blockRootHash, err := hashutil.HashBeaconBlock(block)
+		if err != nil {
+			log.Errorf("Could not hash beacon block at slot %d: %v", block.Slot, err)
+			return
+		}
 
-	proposalDataHash, err := hashutil.HashProto(&pbp2p.ProposalSignedData{
-		Slot:            slot,
-		Shard:           params.BeaconConfig().BeaconChainShardNumber,
-		BlockRootHash32: blockRootHash[:],
-	})
-	if err != nil {
-		log.Errorf("Could not hash proposal signed data: %v", err)
-		return
-	}
+		proposalDataHash, err := hashutil.HashProto(&pbp2p.ProposalSignedData{
+			Slot:            slot,
+			Shard:           params.BeaconConfig().BeaconChainShardNumber,
+			BlockRootHash32: blockRootHash[:],
+		})
+		if err != nil {
+			log.Errorf("Could not hash proposal signed data: %v", err)
+			return
+		}
 
-	proposalDomain := forkutil.DomainVersion(fork, epoch, params.BeaconConfig().DomainProposal)
-	proposalSignature := v.key.SecretKey.Sign(proposalDataHash[:], proposalDomain)
-	block.Signature = proposalSignature.Marshal()
-	log.Debugf("Signing proposal for slot %d: %#x", slot, block.Signature)
+		proposalDomain := forkutil.DomainVersion(fork, epoch, params.BeaconConfig().DomainProposal)
+		proposalSignature := v.key.SecretKey.Sign(proposalDataHash[:], proposalDomain)
+		block.Signature = proposalSignature.Marshal()
+		log.Debugf("Signing proposal for slot %d: %#x", slot, block.Signature)
+	} else {
+		block.Signature = nil
+	}
 
 	// 5. Broadcast to the network via beacon chain node.
 	blkResp, err := v.proposerClient.ProposeBlock(ctx, block)

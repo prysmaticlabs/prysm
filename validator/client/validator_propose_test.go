@@ -10,6 +10,7 @@ import (
 	"github.com/golang/mock/gomock"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -482,6 +483,10 @@ func TestProposeBlock_BroadcastsABlock(t *testing.T) {
 }
 
 func TestProposeBlock_SignsBlock(t *testing.T) {
+	cfg := &featureconfig.FeatureFlagConfig{
+		VerifyBlockSigs: true,
+	}
+	featureconfig.InitFeatureConfig(cfg)
 	validator, m, finish := setup(t)
 	defer finish()
 

@@ -29,7 +29,7 @@ type FeatureFlagConfig struct {
 	VerifyBlockSigs       bool // VerifyBlockSigs declares if the client will verify block signatures.
 }
 
-var featureConfig *FeatureFlagConfig
+var featureConfig = &FeatureFlagConfig{}
 
 // FeatureConfig retrieves feature config.
 func FeatureConfig() *FeatureFlagConfig {
@@ -45,9 +45,18 @@ func InitFeatureConfig(c *FeatureFlagConfig) {
 // on what flags are enabled for the beacon-chain client.
 func ConfigureBeaconFeatures(ctx *cli.Context) {
 	cfg := &FeatureFlagConfig{}
+
 	if ctx.GlobalBool(VerifyAttestationSigsFlag.Name) {
 		log.Info("Verifying signatures for attestations")
 		cfg.VerifyAttestationSigs = true
+	} else {
+		cfg.VerifyAttestationSigs = false
+	}
+	if ctx.GlobalBool(VerifyBlockSigsFlag.Name) {
+		log.Info("Verifying signatures for blocks")
+		cfg.VerifyBlockSigs = true
+	} else {
+		cfg.VerifyBlockSigs = false
 	}
 
 	InitFeatureConfig(cfg)
@@ -60,6 +69,10 @@ func ConfigureValidatorFeatures(ctx *cli.Context) {
 	if ctx.GlobalBool(VerifyAttestationSigsFlag.Name) {
 		log.Info("Verifying signatures for attestations")
 		cfg.VerifyAttestationSigs = true
+	}
+	if ctx.GlobalBool(VerifyBlockSigsFlag.Name) {
+		log.Info("Verifying signatures for blocks")
+		cfg.VerifyBlockSigs = true
 	}
 
 	InitFeatureConfig(cfg)

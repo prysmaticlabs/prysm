@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -32,7 +33,7 @@ type TransitionConfig struct {
 // DefaultConfig option for executing state transitions.
 func DefaultConfig() *TransitionConfig {
 	return &TransitionConfig{
-		VerifySignatures: true,
+		VerifySignatures: false,
 		Logging:          false,
 	}
 }
@@ -124,7 +125,7 @@ func ProcessBlock(
 	}
 
 	// Verify block signature.
-	if config.VerifySignatures {
+	if config.VerifySignatures && featureconfig.FeatureConfig().VerifyBlockSigs {
 		if err := b.VerifyBlockSignature(ctx, state, block); err != nil {
 			return nil, fmt.Errorf("could not verify block signature: %v", err)
 		}

@@ -77,6 +77,10 @@ func TestProcessBlock_IncorrectSlot(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectProposerSlashing(t *testing.T) {
+	cfg := &featureconfig.FeatureFlagConfig{
+		VerifyBlockSigs: true,
+	}
+	featureconfig.InitFeatureConfig(cfg)
 	deposits, privKeys := setupInitialDeposits(t, params.BeaconConfig().SlotsPerEpoch)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
@@ -173,6 +177,7 @@ func TestProcessBlock_IncorrectAttesterSlashing(t *testing.T) {
 func TestProcessBlock_IncorrectAggregateSig(t *testing.T) {
 	cfg := &featureconfig.FeatureFlagConfig{
 		VerifyAttestationSigs: true,
+		VerifyBlockSigs:       true,
 	}
 	featureconfig.InitFeatureConfig(cfg)
 	deposits, privKeys := setupInitialDeposits(t, params.BeaconConfig().SlotsPerEpoch)
@@ -533,6 +538,10 @@ func TestProcessBlock_PassesProcessingConditions(t *testing.T) {
 }
 
 func TestProcessBlock_IncorrectBlockSig(t *testing.T) {
+	cfg := &featureconfig.FeatureFlagConfig{
+		VerifyBlockSigs: true,
+	}
+	featureconfig.InitFeatureConfig(cfg)
 	deposits, privKeys := setupInitialDeposits(t, params.BeaconConfig().SlotsPerEpoch)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
