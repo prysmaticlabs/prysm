@@ -7,12 +7,14 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/gogo/protobuf/proto"
 	ptypes "github.com/gogo/protobuf/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/forkutils"
+	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -22,9 +24,13 @@ import (
 // the state root computation, and finally signed by the validator before being
 // sent back to the beacon node for broadcasting.
 func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
+	if slot == params.BeaconConfig().GenesisSlot {
+		log.Info("Assigned to genesis slot, skipping proposal")
+		return
+	}
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")
 	defer span.End()
-	log.Info("Proposing...")
+	log.Info("Performing a beacon block proposal...")
 	// 1. Fetch data from Beacon Chain node.
 	// Get current head beacon block.
 	headBlock, err := v.beaconClient.CanonicalHead(ctx, &ptypes.Empty{})
@@ -38,8 +44,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 		return
 	}
 
-	// Get validator ETH1 deposits which have not been included in the beacon
-	// chain.
+	// Get validator ETH1 deposits which have not been included in the beacon chain.
 	pDepResp, err := v.beaconClient.PendingDeposits(ctx, &ptypes.Empty{})
 	if err != nil {
 		log.Errorf("Failed to get pending pendings: %v", err)
@@ -73,15 +78,13 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	epoch := slot / params.BeaconConfig().SlotsPerEpoch
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	log.Infof("Signing randao epoch: %d", epoch)
-	domain := forkutils.DomainVersion(fork, epoch, params.BeaconConfig().DomainRandao)
+	domain := forkutil.DomainVersion(fork, epoch, params.BeaconConfig().DomainRandao)
 	epochSignature := v.key.SecretKey.Sign(buf, domain)
-	log.Infof("Pubkey: %#x", v.key.PublicKey.Marshal())
-	log.Infof("Epoch signature: %#x", epochSignature.Marshal())
 
 	// Fetch pending attestations seen by the beacon node.
 	attResp, err := v.proposerClient.PendingAttestations(ctx, &pb.PendingAttestationsRequest{
 		FilterReadyForInclusion: true,
+		ProposalBlockSlot:       slot,
 	})
 	if err != nil {
 		log.Errorf("Failed to fetch pending attestations from the beacon node: %v", err)
@@ -106,7 +109,10 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	// 3. Compute state root transition from parent block to the new block.
 	resp, err := v.proposerClient.ComputeStateRoot(ctx, block)
 	if err != nil {
-		log.Errorf("Unable to compute state root: %v", err)
+		log.WithField(
+			"block", proto.MarshalTextString(block),
+		).Errorf("Not proposing! Unable to compute state root: %v", err)
+		return
 	}
 	block.StateRootHash32 = resp.GetStateRoot()
 
@@ -117,8 +123,14 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	// 5. Broadcast to the network via beacon chain node.
 	blkResp, err := v.proposerClient.ProposeBlock(ctx, block)
 	if err != nil {
-		log.WithField("error", err).Error("Failed to propose block")
+		log.WithError(err).Error("Failed to propose block")
 		return
 	}
-	log.WithField("hash", fmt.Sprintf("%#x", blkResp.BlockHash)).Info("Proposed new beacon block")
+	log.WithFields(logrus.Fields{
+		"blockRoot": fmt.Sprintf("%#x", blkResp.BlockRootHash32),
+	}).Info("Proposed new beacon block")
+	log.WithFields(logrus.Fields{
+		"numAttestations": len(block.Body.Attestations),
+		"numDeposits":     len(block.Body.Deposits),
+	}).Info("Items included in block")
 }

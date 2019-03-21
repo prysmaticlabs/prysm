@@ -3,11 +3,13 @@
 
 package ethereum_common
 
-import proto "github.com/gogo/protobuf/proto"
-import fmt "fmt"
-import math "math"
+import (
+	fmt "fmt"
+	io "io"
+	math "math"
 
-import io "io"
+	proto "github.com/gogo/protobuf/proto"
+)
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -31,7 +33,7 @@ func (m *Uint32List) Reset()         { *m = Uint32List{} }
 func (m *Uint32List) String() string { return proto.CompactTextString(m) }
 func (*Uint32List) ProtoMessage()    {}
 func (*Uint32List) Descriptor() ([]byte, []int) {
-	return fileDescriptor_messages_ae0f39d901774850, []int{0}
+	return fileDescriptor_70e99ec59498f69e, []int{0}
 }
 func (m *Uint32List) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -48,8 +50,8 @@ func (m *Uint32List) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (dst *Uint32List) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Uint32List.Merge(dst, src)
+func (m *Uint32List) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Uint32List.Merge(m, src)
 }
 func (m *Uint32List) XXX_Size() int {
 	return m.Size()
@@ -70,6 +72,21 @@ func (m *Uint32List) GetList() []uint32 {
 func init() {
 	proto.RegisterType((*Uint32List)(nil), "ethereum.common.Uint32List")
 }
+
+func init() { proto.RegisterFile("proto/common/messages.proto", fileDescriptor_70e99ec59498f69e) }
+
+var fileDescriptor_70e99ec59498f69e = []byte{
+	// 113 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x92, 0x2e, 0x28, 0xca, 0x2f,
+	0xc9, 0xd7, 0x4f, 0xce, 0xcf, 0xcd, 0xcd, 0xcf, 0xd3, 0xcf, 0x4d, 0x2d, 0x2e, 0x4e, 0x4c, 0x4f,
+	0x2d, 0xd6, 0x03, 0x8b, 0x0a, 0xf1, 0xa7, 0x96, 0x64, 0xa4, 0x16, 0xa5, 0x96, 0xe6, 0xea, 0x41,
+	0xe4, 0x95, 0x14, 0xb8, 0xb8, 0x42, 0x33, 0xf3, 0x4a, 0x8c, 0x8d, 0x7c, 0x32, 0x8b, 0x4b, 0x84,
+	0x84, 0xb8, 0x58, 0x72, 0x32, 0x8b, 0x4b, 0x24, 0x18, 0x15, 0x98, 0x35, 0x78, 0x83, 0xc0, 0x6c,
+	0x27, 0x9e, 0x13, 0x8f, 0xe4, 0x18, 0x2f, 0x3c, 0x92, 0x63, 0x7c, 0xf0, 0x48, 0x8e, 0x31, 0x89,
+	0x0d, 0x6c, 0x8e, 0x31, 0x20, 0x00, 0x00, 0xff, 0xff, 0x6f, 0xc7, 0x49, 0x9d, 0x66, 0x00, 0x00,
+	0x00,
+}
+
 func (m *Uint32List) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -164,7 +181,7 @@ func (m *Uint32List) Unmarshal(dAtA []byte) error {
 			}
 			b := dAtA[iNdEx]
 			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
+			wire |= uint64(b&0x7F) << shift
 			if b < 0x80 {
 				break
 			}
@@ -190,7 +207,7 @@ func (m *Uint32List) Unmarshal(dAtA []byte) error {
 					}
 					b := dAtA[iNdEx]
 					iNdEx++
-					v |= (uint32(b) & 0x7F) << shift
+					v |= uint32(b&0x7F) << shift
 					if b < 0x80 {
 						break
 					}
@@ -207,7 +224,7 @@ func (m *Uint32List) Unmarshal(dAtA []byte) error {
 					}
 					b := dAtA[iNdEx]
 					iNdEx++
-					packedLen |= (int(b) & 0x7F) << shift
+					packedLen |= int(b&0x7F) << shift
 					if b < 0x80 {
 						break
 					}
@@ -216,12 +233,15 @@ func (m *Uint32List) Unmarshal(dAtA []byte) error {
 					return ErrInvalidLengthMessages
 				}
 				postIndex := iNdEx + packedLen
+				if postIndex < 0 {
+					return ErrInvalidLengthMessages
+				}
 				if postIndex > l {
 					return io.ErrUnexpectedEOF
 				}
 				var elementCount int
 				var count int
-				for _, integer := range dAtA {
+				for _, integer := range dAtA[iNdEx:postIndex] {
 					if integer < 128 {
 						count++
 					}
@@ -241,7 +261,7 @@ func (m *Uint32List) Unmarshal(dAtA []byte) error {
 						}
 						b := dAtA[iNdEx]
 						iNdEx++
-						v |= (uint32(b) & 0x7F) << shift
+						v |= uint32(b&0x7F) << shift
 						if b < 0x80 {
 							break
 						}
@@ -258,6 +278,9 @@ func (m *Uint32List) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			if skippy < 0 {
+				return ErrInvalidLengthMessages
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthMessages
 			}
 			if (iNdEx + skippy) > l {
@@ -327,8 +350,11 @@ func skipMessages(dAtA []byte) (n int, err error) {
 					break
 				}
 			}
-			iNdEx += length
 			if length < 0 {
+				return 0, ErrInvalidLengthMessages
+			}
+			iNdEx += length
+			if iNdEx < 0 {
 				return 0, ErrInvalidLengthMessages
 			}
 			return iNdEx, nil
@@ -359,6 +385,9 @@ func skipMessages(dAtA []byte) (n int, err error) {
 					return 0, err
 				}
 				iNdEx = start + next
+				if iNdEx < 0 {
+					return 0, ErrInvalidLengthMessages
+				}
 			}
 			return iNdEx, nil
 		case 4:
@@ -377,19 +406,3 @@ var (
 	ErrInvalidLengthMessages = fmt.Errorf("proto: negative length found during unmarshaling")
 	ErrIntOverflowMessages   = fmt.Errorf("proto: integer overflow")
 )
-
-func init() {
-	proto.RegisterFile("proto/common/messages.proto", fileDescriptor_messages_ae0f39d901774850)
-}
-
-var fileDescriptor_messages_ae0f39d901774850 = []byte{
-	// 113 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x92, 0x2e, 0x28, 0xca, 0x2f,
-	0xc9, 0xd7, 0x4f, 0xce, 0xcf, 0xcd, 0xcd, 0xcf, 0xd3, 0xcf, 0x4d, 0x2d, 0x2e, 0x4e, 0x4c, 0x4f,
-	0x2d, 0xd6, 0x03, 0x8b, 0x0a, 0xf1, 0xa7, 0x96, 0x64, 0xa4, 0x16, 0xa5, 0x96, 0xe6, 0xea, 0x41,
-	0xe4, 0x95, 0x14, 0xb8, 0xb8, 0x42, 0x33, 0xf3, 0x4a, 0x8c, 0x8d, 0x7c, 0x32, 0x8b, 0x4b, 0x84,
-	0x84, 0xb8, 0x58, 0x72, 0x32, 0x8b, 0x4b, 0x24, 0x18, 0x15, 0x98, 0x35, 0x78, 0x83, 0xc0, 0x6c,
-	0x27, 0x9e, 0x13, 0x8f, 0xe4, 0x18, 0x2f, 0x3c, 0x92, 0x63, 0x7c, 0xf0, 0x48, 0x8e, 0x31, 0x89,
-	0x0d, 0x6c, 0x8e, 0x31, 0x20, 0x00, 0x00, 0xff, 0xff, 0x6f, 0xc7, 0x49, 0x9d, 0x66, 0x00, 0x00,
-	0x00,
-}

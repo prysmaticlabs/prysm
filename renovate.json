@@ -1,8 +1,21 @@
 {
   "extends": [
-    "config:base"
+    "config:base",
+    "schedule:earlyMondays"
   ],
   "ignoreDeps": [
     "com_github_aws_aws_sdk_go" 
-   ]
+   ],
+  "prConcurrentLimit": 0,
+  "prHourlyLimit": 0,
+  "automerge": true,
+  "packageRules": [{
+    "packagePatterns": [
+      ".*libp2p.*",
+      ".*multiformats.*",
+      ".*ipfs.*",
+      ".*whyrusleeping.*"
+    ],
+    "groupName": "libp2p"
+  }]
 }

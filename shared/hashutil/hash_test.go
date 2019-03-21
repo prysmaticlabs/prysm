@@ -4,7 +4,8 @@ import (
 	"encoding/hex"
 	"testing"
 
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	fuzz "github.com/google/gofuzz"
+	pb "github.com/prysmaticlabs/prysm/proto/testing"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 )
@@ -38,11 +39,11 @@ func TestHash(t *testing.T) {
 }
 
 func TestHashProto(t *testing.T) {
-	msg1 := &pb.BeaconState{
-		Slot: 5,
+	msg1 := &pb.Puzzle{
+		Challenge: "hello",
 	}
-	msg2 := &pb.BeaconState{
-		Slot: 5,
+	msg2 := &pb.Puzzle{
+		Challenge: "hello",
 	}
 	h1, err := hashutil.HashProto(msg1)
 	if err != nil {
@@ -54,5 +55,15 @@ func TestHashProto(t *testing.T) {
 	}
 	if h1 != h2 {
 		t.Errorf("Expected hashes to equal, received %#x == %#x", h1, h2)
+	}
+}
+
+func TestHashProtoFuzz(t *testing.T) {
+	f := fuzz.New().NilChance(.2)
+
+	for i := 0; i < 1000; i++ {
+		msg := &pb.AddressBook{}
+		f.Fuzz(msg)
+		_, _ = hashutil.HashProto(msg)
 	}
 }

@@ -6,12 +6,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bls"
-	"github.com/prysmaticlabs/prysm/shared/forkutils"
+	"github.com/prysmaticlabs/prysm/shared/forkutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
@@ -22,7 +21,7 @@ import (
 func generateSimulatedBlock(
 	beaconState *pb.BeaconState,
 	prevBlockRoot [32]byte,
-	depositsTrie *trieutil.DepositTrie,
+	historicalDeposits []*pb.Deposit,
 	simObjects *SimulatedObjects,
 	privKeys []*bls.SecretKey,
 ) (*pb.BeaconBlock, [32]byte, error) {
@@ -37,7 +36,7 @@ func generateSimulatedBlock(
 	epoch := helpers.SlotToEpoch(beaconState.Slot + 1)
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := forkutils.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
+	domain := forkutil.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
 	// We make the previous validator's index sign the message instead of the proposer.
 	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	block := &pb.BeaconBlock{
@@ -71,12 +70,24 @@ func generateSimulatedBlock(
 
 		// We then update the deposits Merkle trie with the deposit data and return
 		// its Merkle branch leading up to the root of the trie.
-		depositsTrie.UpdateDepositTrie(data)
-		merkleBranch := depositsTrie.Branch()
+		historicalDepositData := make([][]byte, len(historicalDeposits))
+		for i := range historicalDeposits {
+			historicalDepositData[i] = historicalDeposits[i].DepositData
+		}
+		newTrie, err := trieutil.GenerateTrieFromItems(append(historicalDepositData, data), int(params.BeaconConfig().DepositContractTreeDepth))
+		if err != nil {
+			return nil, [32]byte{}, fmt.Errorf("could not regenerate trie: %v", err)
+		}
+		proof, err := newTrie.MerkleProof(int(simObjects.simDeposit.MerkleIndex))
+		if err != nil {
+			return nil, [32]byte{}, fmt.Errorf("could not generate proof: %v", err)
+		}
 
+		root := newTrie.Root()
+		block.Eth1Data.DepositRootHash32 = root[:]
 		block.Body.Deposits = append(block.Body.Deposits, &pb.Deposit{
 			DepositData:         data,
-			MerkleBranchHash32S: merkleBranch,
+			MerkleBranchHash32S: proof,
 			MerkleTreeIndex:     simObjects.simDeposit.MerkleIndex,
 		})
 	}
@@ -152,7 +163,7 @@ func generateInitialSimulatedDeposits(numDeposits uint64) ([]*pb.Deposit, []*bls
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not encode genesis block deposits: %v", err)
 		}
-		deposits[i] = &pb.Deposit{DepositData: depositData}
+		deposits[i] = &pb.Deposit{DepositData: depositData, MerkleTreeIndex: uint64(i)}
 		privKeys[i] = priv
 	}
 	return deposits, privKeys, nil

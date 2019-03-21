@@ -4,10 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/sirupsen/logrus"
@@ -41,18 +40,19 @@ func DefaultQuerierConfig() *QuerierConfig {
 // Querier defines the main class in this package.
 // See the package comments for a general description of the service's functions.
 type Querier struct {
-	ctx              context.Context
-	cancel           context.CancelFunc
-	p2p              p2pAPI
-	db               *db.BeaconDB
-	chainService     chainService
-	currentHeadSlot  uint64
-	currentHeadHash  []byte
-	currentStateRoot [32]byte
-	responseBuf      chan p2p.Message
-	chainStartBuf    chan time.Time
-	powchain         powChainService
-	chainStarted     bool
+	ctx                       context.Context
+	cancel                    context.CancelFunc
+	p2p                       p2pAPI
+	db                        *db.BeaconDB
+	chainService              chainService
+	currentHeadSlot           uint64
+	currentHeadHash           []byte
+	currentFinalizedStateRoot [32]byte
+	responseBuf               chan p2p.Message
+	chainStartBuf             chan time.Time
+	powchain                  powChainService
+	chainStarted              bool
+	atGenesis                 bool
 }
 
 // NewQuerierService constructs a new Sync Querier Service.
@@ -86,7 +86,9 @@ func (q *Querier) Start() {
 		return
 	}
 
-	bState, err := q.db.State(context.TODO())
+	q.atGenesis = !hasChainStarted
+
+	bState, err := q.db.State(q.ctx)
 	if err != nil {
 		queryLog.Errorf("Unable to retrieve beacon state %v", err)
 	}
@@ -97,7 +99,11 @@ func (q *Querier) Start() {
 	// to accumulate all the deposits and process them.
 	if !hasChainStarted || bState == nil {
 		q.listenForStateInitialization()
-		return
+
+		// Return, if the node is at genesis.
+		if q.atGenesis {
+			return
+		}
 	}
 	q.run()
 }
@@ -116,6 +122,7 @@ func (q *Querier) listenForStateInitialization() {
 	for {
 		select {
 		case <-q.chainStartBuf:
+			queryLog.Info("state initialized")
 			q.chainStarted = true
 			return
 		case <-sub.Err():
@@ -156,7 +163,7 @@ func (q *Querier) run() {
 			queryLog.Infof("Latest chain head is at slot: %d and hash %#x", response.Slot, response.Hash)
 			q.currentHeadSlot = response.Slot
 			q.currentHeadHash = response.Hash
-			q.currentStateRoot = bytesutil.ToBytes32(response.Block.StateRootHash32)
+			q.currentFinalizedStateRoot = bytesutil.ToBytes32(response.FinalizedStateRootHash32S)
 
 			ticker.Stop()
 			responseSub.Unsubscribe()
@@ -169,13 +176,13 @@ func (q *Querier) run() {
 // the latest chain heads from the node's peers.
 func (q *Querier) RequestLatestHead() {
 	request := &pb.ChainHeadRequest{}
-	q.p2p.Broadcast(request)
+	q.p2p.Broadcast(context.Background(), request)
 }
 
 // IsSynced checks if the node is cuurently synced with the
 // rest of the network.
 func (q *Querier) IsSynced() (bool, error) {
-	if q.chainStarted {
+	if q.chainStarted && q.atGenesis {
 		return true, nil
 	}
 	block, err := q.db.ChainHead()

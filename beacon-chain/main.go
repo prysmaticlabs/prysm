@@ -44,16 +44,13 @@ func main() {
 	app.Version = version.GetVersion()
 
 	app.Flags = []cli.Flag{
-		utils.DemoConfigFlag,
+		utils.NoCustomConfigFlag,
 		utils.DepositContractFlag,
 		utils.Web3ProviderFlag,
 		utils.RPCPort,
 		utils.CertFlag,
 		utils.KeyFlag,
-		utils.GenesisJSON,
-		utils.EnablePOWChain,
 		utils.EnableDBCleanup,
-		utils.ChainStartDelay,
 		cmd.BootstrapNode,
 		cmd.RelayNode,
 		cmd.P2PPort,
@@ -64,6 +61,7 @@ func main() {
 		cmd.TraceSampleFractionFlag,
 		cmd.MonitoringPortFlag,
 		cmd.DisableMonitoringFlag,
+		cmd.ClearDBFlag,
 		debug.PProfFlag,
 		debug.PProfAddrFlag,
 		debug.PProfPortFlag,

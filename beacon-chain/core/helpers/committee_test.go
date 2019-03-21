@@ -8,6 +8,8 @@ import (
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 var size = 1<<(params.BeaconConfig().RandBytes*8) - 1
@@ -201,12 +203,69 @@ func TestCrosslinkCommitteesAtSlot_OK(t *testing.T) {
 	}
 }
 
+func TestCrosslinkCommitteesAtSlot_RegistryChange(t *testing.T) {
+	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
+	committeesPerEpoch := uint64(4)
+	// Set epoch total validators count to 4 committees per slot.
+	validators := make([]*pb.Validator, committeesPerEpoch*validatorsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	state := &pb.BeaconState{
+		ValidatorRegistry:      validators,
+		Slot:                   params.BeaconConfig().GenesisSlot,
+		LatestIndexRootHash32S: [][]byte{{'A'}, {'B'}},
+		LatestRandaoMixes:      [][]byte{{'C'}, {'D'}},
+	}
+
+	committees, err := CrosslinkCommitteesAtSlot(state, params.BeaconConfig().GenesisSlot+100, true)
+	if err != nil {
+		t.Fatalf("Could not get crosslink committee: %v", err)
+	}
+	if len(committees) != int(committeesPerEpoch) {
+		t.Errorf("Incorrect committee count per slot. Wanted: %d, got: %d",
+			committeesPerEpoch, len(committees))
+	}
+}
+
+func TestCrosslinkCommitteesAtSlot_EpochSinceLastUpdatePow2(t *testing.T) {
+	validatorsPerEpoch := params.BeaconConfig().SlotsPerEpoch * params.BeaconConfig().TargetCommitteeSize
+	committeesPerEpoch := uint64(5)
+	// Set epoch total validators count to 5 committees per slot.
+	validators := make([]*pb.Validator, committeesPerEpoch*validatorsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+
+	state := &pb.BeaconState{
+		ValidatorRegistry:            validators,
+		Slot:                         params.BeaconConfig().GenesisSlot + 128,
+		LatestIndexRootHash32S:       [][]byte{{'A'}, {'B'}, {'C'}},
+		LatestRandaoMixes:            [][]byte{{'D'}, {'E'}, {'F'}},
+		ValidatorRegistryUpdateEpoch: params.BeaconConfig().GenesisEpoch,
+	}
+
+	committees, err := CrosslinkCommitteesAtSlot(state, params.BeaconConfig().GenesisSlot+192, false)
+	if err != nil {
+		t.Fatalf("Could not get crosslink committee: %v", err)
+	}
+	if len(committees) != int(committeesPerEpoch) {
+		t.Errorf("Incorrect committee count per slot. Wanted: %d, got: %d",
+			committeesPerEpoch, len(committees))
+	}
+}
+
 func TestCrosslinkCommitteesAtSlot_OutOfBound(t *testing.T) {
 	want := fmt.Sprintf(
 		"input committee epoch %d out of bounds: %d <= epoch <= %d",
-		params.BeaconConfig().GenesisEpoch,
-		params.BeaconConfig().GenesisEpoch+1,
-		params.BeaconConfig().GenesisEpoch+2,
+		0,
+		1,
+		2,
 	)
 	slot := params.BeaconConfig().GenesisSlot
 	beaconState := &pb.BeaconState{
@@ -225,8 +284,7 @@ func TestCrosslinkCommitteesAtSlot_ShuffleFailed(t *testing.T) {
 	}
 
 	want := fmt.Sprint(
-		"could not shuffle epoch validators: " +
-			"input list exceeded upper bound and reached modulo bias",
+		"input list exceeded upper bound and reached modulo bias",
 	)
 
 	if _, err := CrosslinkCommitteesAtSlot(state, params.BeaconConfig().GenesisSlot+1, false); !strings.Contains(err.Error(), want) {
@@ -263,21 +321,21 @@ func TestAttestationParticipants_OK(t *testing.T) {
 			attestationSlot: params.BeaconConfig().GenesisSlot + 2,
 			stateSlot:       params.BeaconConfig().GenesisSlot + 5,
 			shard:           2,
-			bitfield:        []byte{0x03},
+			bitfield:        []byte{0xC0},
 			wanted:          []uint64{11, 121},
 		},
 		{
 			attestationSlot: params.BeaconConfig().GenesisSlot + 1,
 			stateSlot:       params.BeaconConfig().GenesisSlot + 10,
 			shard:           1,
-			bitfield:        []byte{0x01},
+			bitfield:        []byte{0x80},
 			wanted:          []uint64{4},
 		},
 		{
 			attestationSlot: params.BeaconConfig().GenesisSlot + 10,
 			stateSlot:       params.BeaconConfig().GenesisSlot + 10,
 			shard:           10,
-			bitfield:        []byte{0x03},
+			bitfield:        []byte{0xC0},
 			wanted:          []uint64{14, 30},
 		},
 	}
@@ -325,7 +383,7 @@ func TestAttestationParticipants_IncorrectBitfield(t *testing.T) {
 }
 
 func TestVerifyBitfield_OK(t *testing.T) {
-	bitfield := []byte{0xff}
+	bitfield := []byte{0xFF}
 	committeeSize := 8
 
 	isValidated, err := VerifyBitfield(bitfield, committeeSize)
@@ -337,7 +395,7 @@ func TestVerifyBitfield_OK(t *testing.T) {
 		t.Error("bitfield is not validated when it was supposed to be")
 	}
 
-	bitfield = []byte{0xff, 0x80}
+	bitfield = []byte{0xff, 0x01}
 	committeeSize = 9
 
 	isValidated, err = VerifyBitfield(bitfield, committeeSize)
@@ -349,7 +407,7 @@ func TestVerifyBitfield_OK(t *testing.T) {
 		t.Error("bitfield is validated when it was supposed to be")
 	}
 
-	bitfield = []byte{0xff, 0x01}
+	bitfield = []byte{0xff, 0x80}
 	committeeSize = 10
 	isValidated, err = VerifyBitfield(bitfield, committeeSize)
 	if err != nil {
@@ -412,7 +470,7 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 
 	for _, tt := range tests {
 		committee, shard, slot, isProposer, err := CommitteeAssignment(
-			state, SlotToEpoch(tt.slot), tt.index, false)
+			state, tt.slot, tt.index, false)
 		if err != nil {
 			t.Fatalf("failed to execute NextEpochCommitteeAssignment: %v", err)
 		}
@@ -440,11 +498,12 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
 	}
 	index := uint64(10000)
-	want := fmt.Sprintf(
-		"could not get assignment validator %d",
-		index,
-	)
-	if _, _, _, _, err := CommitteeAssignment(state, SlotToEpoch(state.Slot), index, false); !strings.Contains(err.Error(), want) {
-		t.Errorf("Expected %s, received %v", want, err)
+	_, _, _, _, err := CommitteeAssignment(state, state.Slot, index, false)
+	statusErr, ok := status.FromError(err)
+	if !ok {
+		t.Fatal(err)
+	}
+	if statusErr.Code() != codes.NotFound {
+		t.Errorf("Unexpected error: %v", err)
 	}
 }

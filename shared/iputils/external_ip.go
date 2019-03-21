@@ -1,7 +1,6 @@
 package iputils
 
 import (
-	"errors"
 	"net"
 )
 
@@ -11,6 +10,7 @@ func ExternalIPv4() (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	for _, iface := range ifaces {
 		if iface.Flags&net.FlagUp == 0 {
 			continue // interface down
@@ -40,5 +40,5 @@ func ExternalIPv4() (string, error) {
 			return ip.String(), nil
 		}
 	}
-	return "", errors.New("are you connected to the network?")
+	return "127.0.0.1", nil
 }

@@ -30,20 +30,31 @@ service ProposerService {
 }
 
 service ValidatorService {
+    rpc WaitForActivation(ValidatorActivationRequest) returns (stream ValidatorActivationResponse);
     rpc ValidatorIndex(ValidatorIndexRequest) returns (ValidatorIndexResponse);
-    rpc ValidatorEpochAssignments(ValidatorEpochAssignmentsRequest) returns (ValidatorEpochAssignmentsResponse);
-    rpc ValidatorCommitteeAtSlot(CommitteeRequest) returns (CommitteeResponse);
     rpc CommitteeAssignment(ValidatorEpochAssignmentsRequest) returns (CommitteeAssignmentResponse);
+    rpc ValidatorStatus(ValidatorIndexRequest) returns (ValidatorStatusResponse);
+    rpc ValidatorPerformance(ValidatorPerformanceRequest) returns (ValidatorPerformanceResponse);
 }
 
-message CommitteeRequest {
-    uint64 slot = 1;
-    uint64 validator_index = 2;
+message ValidatorPerformanceRequest {
+   uint64 slot = 1;
+   bytes public_key = 2;
 }
 
-message CommitteeResponse {
-    repeated uint64 committee = 1;
-    uint64 shard = 2;
+message ValidatorPerformanceResponse {
+    uint64 balance = 1;
+    uint64 total_validators = 2;
+    uint64 total_active_validators = 3;
+    float average_validator_balance = 4;
+}
+
+message ValidatorActivationRequest {
+    bytes pubkey = 1;
+}
+
+message ValidatorActivationResponse {
+    ethereum.beacon.p2p.v1.Validator validator = 1;
 }
 
 message AttestationDataRequest {
@@ -61,19 +72,11 @@ message AttestationDataResponse {
 
 message PendingAttestationsRequest {
     bool filter_ready_for_inclusion = 1;
+    uint64 proposal_block_slot = 2;
 }
 
 message PendingAttestationsResponse {
     repeated ethereum.beacon.p2p.v1.Attestation pending_attestations = 1;
-}
-
-message CrosslinkCommitteeRequest {
-    uint64 slot = 1;
-}
-
-message CrosslinkCommitteeResponse {
-    repeated uint64 committee = 1;
-    uint64 shard = 2;
 }
 
 message ChainStartResponse {
@@ -91,7 +94,7 @@ message ProposeRequest {
 }
 
 message ProposeResponse {
-    bytes block_hash = 1;
+    bytes block_root_hash32 = 1;
 }
 
 message ProposerIndexRequest {
@@ -117,14 +120,6 @@ enum ValidatorRole {
     BOTH = 3;
 }
 
-// Assignment defines a validator's assignment responsibilities.
-message Assignment {
-    bytes public_key = 1;
-    uint64 shard = 2;
-    uint64 attester_slot = 3;
-    uint64 proposer_slot = 4;
-}
-
 message ValidatorIndexRequest {
     bytes public_key = 1;
 }
@@ -138,10 +133,6 @@ message ValidatorEpochAssignmentsRequest {
     bytes public_key = 2;
 }
 
-message ValidatorEpochAssignmentsResponse {
-    Assignment assignment = 2;
-}
-
 message PendingDepositsResponse {
     repeated ethereum.beacon.p2p.v1.Deposit pending_deposits = 1;
 }
@@ -153,6 +144,20 @@ message CommitteeAssignmentResponse {
     bool is_proposer = 4;
 }
 
+message ValidatorStatusResponse {
+    ValidatorStatus status = 1;
+}
+
 message Eth1DataResponse {
     ethereum.beacon.p2p.v1.Eth1Data eth1_data = 1;
+}
+
+enum ValidatorStatus {
+    UNKNOWN_STATUS = 0;
+    PENDING_ACTIVE = 1;
+    ACTIVE = 2;
+    INITIATED_EXIT = 3;
+    WITHDRAWABLE = 4;
+    EXITED = 5;
+    EXITED_SLASHED = 6;
 }

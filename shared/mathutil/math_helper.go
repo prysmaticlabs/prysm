@@ -1,5 +1,7 @@
 package mathutil
 
+import "math"
+
 // IntegerSquareRoot defines a function that returns the
 // largest possible integer root of a number.
 func IntegerSquareRoot(n uint64) uint64 {
@@ -38,4 +40,14 @@ func PowerOf2(n uint64) uint64 {
 		panic("integer overflow")
 	}
 	return 1 << n
+}
+
+// ClosestPowerOf2 returns an integer that is the closest
+// power of 2 that is less than or equal to the argument.
+func ClosestPowerOf2(n uint64) uint64 {
+	if n == 0 {
+		return uint64(1)
+	}
+	exponent := math.Floor(math.Log2(float64(n)))
+	return PowerOf2(uint64(exponent))
 }

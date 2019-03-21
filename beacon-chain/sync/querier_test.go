@@ -7,10 +7,8 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
-
-	"github.com/prysmaticlabs/prysm/shared/event"
-
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -142,11 +140,9 @@ func TestQuerier_ChainReqResponse(t *testing.T) {
 	}()
 
 	response := &pb.ChainHeadResponse{
-		Slot: 0,
-		Hash: []byte{'a', 'b'},
-		Block: &pb.BeaconBlock{
-			StateRootHash32: []byte{'c', 'd'},
-		},
+		Slot:                      0,
+		Hash:                      []byte{'a', 'b'},
+		FinalizedStateRootHash32S: []byte{'c', 'd'},
 	}
 
 	msg := p2p.Message{

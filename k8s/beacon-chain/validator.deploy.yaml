@@ -1,0 +1,58 @@
+kind: Deployment
+apiVersion: apps/v1beta1
+metadata:
+  name: validator
+  namespace: beacon-chain
+spec:
+  replicas: 8
+  selector:
+    matchLabels:
+      component: validator
+  template:
+    metadata:
+      labels:
+        component: validator
+    spec:
+      priorityClassName: production-priority
+      containers:
+      - name: validator
+        image: gcr.io/prysmaticlabs/prysm/validator:latest
+        args:
+        - --keystore-path=/keystore
+        - --password=nopass
+        - --datadir=/data  
+        - --beacon-rpc-provider=beacon-chain:4000 
+        - --enable-tracing
+        - --tracing-endpoint=http://jaeger-collector.istio-system.svc.cluster.local:14268
+        - --trace-sample-fraction=1.0
+        volumeMounts:
+        - name: localdata
+          mountPath: /data
+        - name: keystore
+          mountPath: /keystore
+          readOnly: true
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "100Mi"
+      initContainers:
+      - name: init-pk
+        image: gcr.io/prysmaticlabs/prysm/cluster-pk-manager/client:latest 
+        args:
+        - --keystore-dir=/keystore
+        - --keystore-password=nopass
+        - --pod-name=$(POD_NAME)
+        - --server=cluster-pk-manager:8000
+        volumeMounts:
+        - name: keystore
+          mountPath: /keystore
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+      volumes:
+        - name: keystore
+          emptyDir: {}
+        - name: localdata
+          emptyDir: {}

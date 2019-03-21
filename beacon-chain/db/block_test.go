@@ -2,12 +2,12 @@ package db
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -32,7 +32,7 @@ func TestNilDB_OK(t *testing.T) {
 	}
 }
 
-func TestSave_OK(t *testing.T) {
+func TestSaveBlock_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
@@ -78,10 +78,7 @@ func TestBlockBySlotEmptyChain_OK(t *testing.T) {
 	db := setupDB(t)
 	defer teardownDB(t, db)
 
-	block, err := db.BlockBySlot(0)
-	if err != nil {
-		t.Errorf("failure when fetching block by slot: %v", err)
-	}
+	block, _ := db.BlockBySlot(0)
 	if block != nil {
 		t.Error("BlockBySlot should return nil for an empty chain")
 	}
@@ -94,7 +91,7 @@ func TestUpdateChainHead_NoBlock(t *testing.T) {
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	err := db.InitializeState(genesisTime, deposits)
+	err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
@@ -116,7 +113,7 @@ func TestUpdateChainHead_OK(t *testing.T) {
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	err := db.InitializeState(genesisTime, deposits)
+	err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
@@ -183,7 +180,7 @@ func TestChainProgress_OK(t *testing.T) {
 
 	genesisTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 10)
-	err := db.InitializeState(genesisTime, deposits)
+	err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{})
 	if err != nil {
 		t.Fatalf("failed to initialize state: %v", err)
 	}
@@ -237,5 +234,110 @@ func TestChainProgress_OK(t *testing.T) {
 	}
 	if heighestBlock.Slot != block3.Slot {
 		t.Fatalf("expected height to equal %d, got %d", block3.Slot, heighestBlock.Slot)
+	}
+}
+
+func TestHasBlockBySlot_OK(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	blkSlot := uint64(10)
+	block1 := &pb.BeaconBlock{
+		Slot: blkSlot,
+	}
+
+	exists, _, err := db.HasBlockBySlot(blkSlot)
+	if err != nil {
+		t.Fatalf("failed to get block: %v", err)
+	}
+	if exists {
+		t.Error("Block exists despite being not being saved")
+	}
+
+	if err := db.SaveBlock(block1); err != nil {
+		t.Fatalf("save block failed: %v", err)
+	}
+
+	if err := db.UpdateChainHead(block1, &pb.BeaconState{}); err != nil {
+		t.Fatalf("Unable to save block and state in db %v", err)
+	}
+
+	exists, blk, err := db.HasBlockBySlot(blkSlot)
+	if err != nil {
+		t.Fatalf("failed to get block: %v", err)
+	}
+	if !exists {
+		t.Error("Block does not exist in db")
+	}
+
+	if blk.Slot != blkSlot {
+		t.Errorf("Saved block does not have the slot from which it was requested")
+	}
+
+}
+
+func TestJustifiedBlock_NoneExists(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	wanted := "no justified block saved"
+	_, err := db.JustifiedBlock()
+	if !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected: %s, received: %s", wanted, err.Error())
+	}
+}
+
+func TestJustifiedBlock_CanSaveRetrieve(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	blkSlot := uint64(10)
+	block1 := &pb.BeaconBlock{
+		Slot: blkSlot,
+	}
+
+	if err := db.SaveJustifiedBlock(block1); err != nil {
+		t.Fatalf("could not save justified block: %v", err)
+	}
+
+	justifiedBlk, err := db.JustifiedBlock()
+	if err != nil {
+		t.Fatalf("could not get justified block: %v", err)
+	}
+	if justifiedBlk.Slot != blkSlot {
+		t.Errorf("Saved block does not have the slot from which it was requested, wanted: %d, got: %d",
+			blkSlot, justifiedBlk.Slot)
+	}
+}
+
+func TestFinalizedBlock_NoneExists(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+	wanted := "no finalized block saved"
+	_, err := db.FinalizedBlock()
+	if !strings.Contains(err.Error(), wanted) {
+		t.Errorf("Expected: %s, received: %s", wanted, err.Error())
+	}
+}
+
+func TestFinalizedBlock_CanSaveRetrieve(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	blkSlot := uint64(22)
+	block1 := &pb.BeaconBlock{
+		Slot: blkSlot,
+	}
+
+	if err := db.SaveFinalizedBlock(block1); err != nil {
+		t.Fatalf("could not save finalized block: %v", err)
+	}
+
+	finalizedblk, err := db.FinalizedBlock()
+	if err != nil {
+		t.Fatalf("could not get finalized block: %v", err)
+	}
+	if finalizedblk.Slot != blkSlot {
+		t.Errorf("Saved block does not have the slot from which it was requested, wanted: %d, got: %d",
+			blkSlot, finalizedblk.Slot)
 	}
 }

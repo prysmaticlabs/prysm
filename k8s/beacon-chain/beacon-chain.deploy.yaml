@@ -1,10 +1,11 @@
-kind: Deployment
-apiVersion: apps/v1beta1
+kind: StatefulSet
+apiVersion: apps/v1
 metadata:
   name: beacon-chain
   namespace: beacon-chain
 spec:
   replicas: 3
+  serviceName: beacon-chain
   selector:
     matchLabels:
       component: beacon-chain
@@ -17,27 +18,46 @@ spec:
       annotations:
         prometheus.io/scrape: 'true'
         prometheus.io/port: '9090'
+        sidecar.istio.io/inject: 'false' # istio breaks local peer connections
     spec:
       priorityClassName: production-priority
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  component: beacon-chain
+              topologyKey: kubernetes.io/hostname
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    component: beacon-chain
+                topologyKey: failure-domain.beta.kubernetes.io/zone
       containers:
         - name: beacon-chain
           image: gcr.io/prysmaticlabs/prysm/beacon-chain:latest
           args: 
-            - "--web3provider=ws://geth-nodes.pow.svc.cluster.local:8546"
-            - "--verbosity=debug"
-            - "--deposit-contract=$(DEPOSIT_CONTRACT_ADDRESS)"
-            - "--rpc-port=4000"
-            - "--monitoring-port=9090"
-            - "--bootstrap-node=/ip4/$(BOOTNODE_SERVICE_HOST)/tcp/$(BOOTNODE_SERVICE_PORT)/p2p/QmUWTsZwoJ51tey4fEE9EAqzQeHFHm4FE9aSfgTv8xyuG5" 
-            - "--relay-node=/ip4/35.221.47.224/tcp/20000/p2p/QmXNZeGdHYshgwyYyJnYG7u5iQ1Hej5R9QshgEZ5NACc1x" 
-            - "--p2p-port=5000"
+            - --web3provider=ws://public-rpc-nodes.pow.svc.cluster.local:8546
+            #- --verbosity=debug
+            - --deposit-contract=$(DEPOSIT_CONTRACT_ADDRESS)
+            - --rpc-port=4000
+            - --monitoring-port=9090
+            - --bootstrap-node=/ip4/$(BOOTNODE_SERVICE_HOST)/tcp/$(BOOTNODE_SERVICE_PORT)/p2p/QmQEe7o6hKJdGdSkJRh7WJzS6xrex5f4w2SPR6oWbJNriw
+            - --relay-node=/ip4/35.224.249.2/tcp/30000/p2p/QmfAgkmjiZNZhr2wFN9TwaRgHouMTBT6HELyzE5A3BT2wK
+            - --p2p-port=5000
+            - --enable-tracing
+            - --tracing-endpoint=http://jaeger-collector.istio-system.svc.cluster.local:14268
+            - --trace-sample-fraction=1.0
+            - --datadir=/data
           resources:
             requests:
               memory: "100Mi"
               cpu: "50m"
-            limits:
-              memory: "250Mi"
-              cpu: "100m"
+          volumeMounts:
+          - mountPath: /data
+            name: beacondb
           ports:
             - containerPort: 4000
               name: grpc
@@ -51,3 +71,11 @@ spec:
                 configMapKeyRef:
                   name: beacon-config
                   key: DEPOSIT_CONTRACT_ADDRESS
+  volumeClaimTemplates:
+  - metadata:
+      name: beacondb
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 5Gi

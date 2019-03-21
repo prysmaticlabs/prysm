@@ -52,8 +52,8 @@ func NewValidatorClient(ctx *cli.Context) (*ValidatorClient, error) {
 		stop:     make(chan struct{}),
 	}
 
-	// Use demo config values if demo config flag is set.
-	if ctx.GlobalBool(types.DemoConfigFlag.Name) {
+	// Use custom config values if the --no-custom-config flag is set.
+	if !ctx.GlobalBool(types.NoCustomConfigFlag.Name) {
 		log.Info("Using custom parameter configuration")
 		params.UseDemoBeaconConfig()
 	}
@@ -127,7 +127,7 @@ func (s *ValidatorClient) registerClientService(ctx *cli.Context) error {
 	endpoint := ctx.GlobalString(types.BeaconRPCProviderFlag.Name)
 	keystoreDirectory := ctx.GlobalString(types.KeystorePathFlag.Name)
 	keystorePassword := ctx.String(types.PasswordFlag.Name)
-	v, err := client.NewValidatorService(context.TODO(), &client.Config{
+	v, err := client.NewValidatorService(context.Background(), &client.Config{
 		Endpoint:     endpoint,
 		KeystorePath: keystoreDirectory,
 		Password:     keystorePassword,

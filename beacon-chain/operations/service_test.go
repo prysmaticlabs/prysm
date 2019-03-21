@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -15,6 +16,17 @@ import (
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
+
+// Ensure operations service implements intefaces.
+var _ = OperationFeeds(&Service{})
+
+type mockBroadcaster struct {
+	broadcastCalled bool
+}
+
+func (mb *mockBroadcaster) Broadcast(_ context.Context, _ proto.Message) {
+	mb.broadcastCalled = true
+}
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
@@ -101,7 +113,11 @@ func TestIncomingAttestation_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := internal.SetupDB(t)
 	defer internal.TeardownDB(t, beaconDB)
-	service := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
+	broadcaster := &mockBroadcaster{}
+	service := NewOpsPoolService(context.Background(), &Config{
+		BeaconDB: beaconDB,
+		P2P:      broadcaster,
+	})
 
 	exitRoutine := make(chan bool)
 	go func() {
@@ -124,6 +140,10 @@ func TestIncomingAttestation_OK(t *testing.T) {
 
 	want := fmt.Sprintf("Attestation %#x saved in DB", hash)
 	testutil.AssertLogsContain(t, hook, want)
+
+	if !broadcaster.broadcastCalled {
+		t.Error("Attestation was not broadcasted")
+	}
 }
 
 func TestRetrieveAttestations_OK(t *testing.T) {
@@ -142,7 +162,7 @@ func TestRetrieveAttestations_OK(t *testing.T) {
 				Shard: uint64(i),
 			},
 		}
-		if err := service.beaconDB.SaveAttestation(origAttestations[i]); err != nil {
+		if err := service.beaconDB.SaveAttestation(context.Background(), origAttestations[i]); err != nil {
 			t.Fatalf("Failed to save attestation: %v", err)
 		}
 	}
@@ -170,7 +190,7 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 				Shard: uint64(i),
 			},
 		}
-		if err := s.beaconDB.SaveAttestation(attestations[i]); err != nil {
+		if err := s.beaconDB.SaveAttestation(context.Background(), attestations[i]); err != nil {
 			t.Fatalf("Failed to save attestation: %v", err)
 		}
 	}
@@ -193,6 +213,42 @@ func TestRemoveProcessedAttestations_Ok(t *testing.T) {
 	}
 }
 
+func TestCleanUpAttestations_OlderThanOneEpoch(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	s := NewOpsPoolService(context.Background(), &Config{BeaconDB: db})
+
+	// Construct attestations for slot 0..99.
+	slot := uint64(99)
+	attestations := make([]*pb.Attestation, slot+1)
+	for i := 0; i < len(attestations); i++ {
+		attestations[i] = &pb.Attestation{
+			Data: &pb.AttestationData{
+				Slot:  params.BeaconConfig().GenesisSlot + uint64(i),
+				Shard: uint64(i),
+			},
+		}
+		if err := s.beaconDB.SaveAttestation(context.Background(), attestations[i]); err != nil {
+			t.Fatalf("Failed to save attestation: %v", err)
+		}
+	}
+
+	// Assume current slot is 99. All the attestations before (99 - 64) should get removed.
+	if err := s.removeEpochOldAttestations(params.BeaconConfig().GenesisSlot + slot); err != nil {
+		t.Fatalf("Could not remove old attestations: %v", err)
+	}
+	attestations, err := s.beaconDB.Attestations()
+	if err != nil {
+		t.Fatalf("Could not retrieve attestations: %v", err)
+	}
+	for _, a := range attestations {
+		if a.Data.Slot < slot-params.BeaconConfig().SlotsPerEpoch {
+			t.Errorf("Attestation slot %d can't be lower than %d",
+				a.Data.Slot, slot-params.BeaconConfig().SlotsPerEpoch)
+		}
+	}
+}
+
 func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -206,7 +262,7 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 				Shard: uint64(i),
 			},
 		}
-		if err := s.beaconDB.SaveAttestation(attestations[i]); err != nil {
+		if err := s.beaconDB.SaveAttestation(context.Background(), attestations[i]); err != nil {
 			t.Fatalf("Failed to save attestation: %v", err)
 		}
 	}

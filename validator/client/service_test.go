@@ -8,13 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/keystore"
-
-	"github.com/prysmaticlabs/prysm/validator/accounts"
-
-	"github.com/prysmaticlabs/prysm/shared/testutil"
-
 	"github.com/prysmaticlabs/prysm/shared"
+	"github.com/prysmaticlabs/prysm/shared/keystore"
+	"github.com/prysmaticlabs/prysm/shared/testutil"
+	"github.com/prysmaticlabs/prysm/validator/accounts"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 

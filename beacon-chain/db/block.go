@@ -73,6 +73,64 @@ func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
 	})
 }
 
+// SaveJustifiedBlock saves the last justified block from canonical chain to DB.
+func (db *BeaconDB) SaveJustifiedBlock(block *pb.BeaconBlock) error {
+	return db.update(func(tx *bolt.Tx) error {
+		enc, err := proto.Marshal(block)
+		if err != nil {
+			return fmt.Errorf("failed to encode block: %v", err)
+		}
+		chainInfo := tx.Bucket(chainInfoBucket)
+		return chainInfo.Put(justifiedBlockLookupKey, enc)
+	})
+}
+
+// SaveFinalizedBlock saves the last finalized block from canonical chain to DB.
+func (db *BeaconDB) SaveFinalizedBlock(block *pb.BeaconBlock) error {
+	return db.update(func(tx *bolt.Tx) error {
+		enc, err := proto.Marshal(block)
+		if err != nil {
+			return fmt.Errorf("failed to encode block: %v", err)
+		}
+		chainInfo := tx.Bucket(chainInfoBucket)
+		return chainInfo.Put(finalizedBlockLookupKey, enc)
+	})
+}
+
+// JustifiedBlock retrieves the justified block from the db.
+func (db *BeaconDB) JustifiedBlock() (*pb.BeaconBlock, error) {
+	var block *pb.BeaconBlock
+	err := db.view(func(tx *bolt.Tx) error {
+		chainInfo := tx.Bucket(chainInfoBucket)
+		encBlock := chainInfo.Get(justifiedBlockLookupKey)
+		if encBlock == nil {
+			return errors.New("no justified block saved")
+		}
+
+		var err error
+		block, err = createBlock(encBlock)
+		return err
+	})
+	return block, err
+}
+
+// FinalizedBlock retrieves the finalized block from the db.
+func (db *BeaconDB) FinalizedBlock() (*pb.BeaconBlock, error) {
+	var block *pb.BeaconBlock
+	err := db.view(func(tx *bolt.Tx) error {
+		chainInfo := tx.Bucket(chainInfoBucket)
+		encBlock := chainInfo.Get(finalizedBlockLookupKey)
+		if encBlock == nil {
+			return errors.New("no finalized block saved")
+		}
+
+		var err error
+		block, err = createBlock(encBlock)
+		return err
+	})
+	return block, err
+}
+
 // ChainHead returns the head of the main chain.
 func (db *BeaconDB) ChainHead() (*pb.BeaconBlock, error) {
 	var block *pb.BeaconBlock
@@ -105,19 +163,18 @@ func (db *BeaconDB) ChainHead() (*pb.BeaconBlock, error) {
 }
 
 // UpdateChainHead atomically updates the head of the chain as well as the corresponding state changes
-// Including a new crystallized state is optional.
+// Including a new state is optional.
 func (db *BeaconDB) UpdateChainHead(block *pb.BeaconBlock, beaconState *pb.BeaconState) error {
 	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return fmt.Errorf("unable to tree hash block: %v", err)
 	}
 
-	beaconStateEnc, err := proto.Marshal(beaconState)
-	if err != nil {
-		return fmt.Errorf("unable to encode beacon state: %v", err)
-	}
-
 	slotBinary := encodeSlotNumber(block.Slot)
+
+	if err := db.SaveState(beaconState); err != nil {
+		return fmt.Errorf("failed to save beacon state as canonical: %v", err)
+	}
 
 	return db.update(func(tx *bolt.Tx) error {
 		blockBucket := tx.Bucket(blockBucket)
@@ -136,9 +193,6 @@ func (db *BeaconDB) UpdateChainHead(block *pb.BeaconBlock, beaconState *pb.Beaco
 			return fmt.Errorf("failed to record the block as the head of the main chain: %v", err)
 		}
 
-		if err := chainInfo.Put(stateLookupKey, beaconStateEnc); err != nil {
-			return fmt.Errorf("failed to save beacon state as canonical: %v", err)
-		}
 		return nil
 	})
 }
@@ -160,7 +214,7 @@ func (db *BeaconDB) BlockBySlot(slot uint64) (*pb.BeaconBlock, error) {
 
 		enc := blockBkt.Get(blockRoot)
 		if enc == nil {
-			return fmt.Errorf("block not found: %#x", blockRoot)
+			return nil
 		}
 
 		var err error
@@ -169,4 +223,32 @@ func (db *BeaconDB) BlockBySlot(slot uint64) (*pb.BeaconBlock, error) {
 	})
 
 	return block, err
+}
+
+// HasBlockBySlot returns a boolean, and if the block exists, it returns the block.
+func (db *BeaconDB) HasBlockBySlot(slot uint64) (bool, *pb.BeaconBlock, error) {
+	var block *pb.BeaconBlock
+	var exists bool
+	slotEnc := encodeSlotNumber(slot)
+
+	err := db.view(func(tx *bolt.Tx) error {
+		mainChain := tx.Bucket(mainChainBucket)
+		blockBkt := tx.Bucket(blockBucket)
+
+		blockRoot := mainChain.Get(slotEnc)
+		if blockRoot == nil {
+			return nil
+		}
+
+		enc := blockBkt.Get(blockRoot)
+		if enc == nil {
+			return nil
+		}
+		exists = true
+
+		var err error
+		block, err = createBlock(enc)
+		return err
+	})
+	return exists, block, err
 }

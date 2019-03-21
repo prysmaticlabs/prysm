@@ -66,6 +66,7 @@ type BeaconChainConfig struct {
 	WhistlerBlowerRewardQuotient       uint64 // WhistlerBlowerRewardQuotient is used to calculate whistler blower reward.
 	AttestationInclusionRewardQuotient uint64 // IncluderRewardQuotient defines the reward quotient of proposer for including attestations..
 	InactivityPenaltyQuotient          uint64 // InactivityPenaltyQuotient defines how much validator leaks out balances for offline.
+	GweiPerEth                         uint64 // GweiPerEth is the amount of gwei corresponding to 1 eth.
 
 	// Max operations per block constants.
 	MaxVoluntaryExits    uint64 // MaxVoluntaryExits determines the maximum number of validator exits in a block.
@@ -79,6 +80,7 @@ type BeaconChainConfig struct {
 	RandBytes             uint64 // RandBytes is the number of bytes used as entropy to shuffle validators.
 	SyncPollingInterval   int64  // SyncPollingInterval queries network nodes for sync status.
 	BatchBlockLimit       uint64 // BatchBlockLimit is maximum number of blocks that can be requested for initial sync.
+	SyncEpochLimit        uint64 // SyncEpochLimit is the number of epochs the current node can be behind before it requests for the latest state.
 	MaxNumLog2Validators  uint64 // MaxNumLog2Validators is the Max number of validators in Log2 exists given total ETH supply.
 	LogBlockDelay         int64  // Number of blocks to wait from the current head before processing logs from the deposit contract.
 }
@@ -153,6 +155,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	WhistlerBlowerRewardQuotient:       512,
 	AttestationInclusionRewardQuotient: 8,
 	InactivityPenaltyQuotient:          1 << 24,
+	GweiPerEth:                         1000000000,
 
 	// Max operations per block constants.
 	MaxVoluntaryExits:    16,
@@ -165,7 +168,8 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	DepositsForChainStart: 16384,
 	RandBytes:             3,
 	SyncPollingInterval:   6 * 1, // Query nodes over the network every slot for sync status.
-	BatchBlockLimit:       100,
+	BatchBlockLimit:       50,
+	SyncEpochLimit:        4,
 	MaxNumLog2Validators:  24,
 	LogBlockDelay:         2, //
 }
@@ -203,6 +207,8 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.MaxDepositAmount = 3200000
 	demoConfig.EjectionBalance = 1600000
 	demoConfig.SyncPollingInterval = 1 * 10 // Query nodes over the network every slot.
+	demoConfig.Eth1FollowDistance = 5
+	demoConfig.EpochsPerEth1VotingPeriod = 1
 
 	return &demoConfig
 }

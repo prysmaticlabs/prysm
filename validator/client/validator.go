@@ -17,24 +17,16 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// AttestationPool STUB interface. Final attestation pool pending design.
-// TODO(1323): Replace with actual attestation pool.
-type AttestationPool interface {
-	PendingAttestations() []*pbp2p.Attestation
-}
-
-// validator
-//
-// WIP - not done.
 type validator struct {
 	genesisTime     uint64
 	ticker          *slotutil.SlotTicker
-	assignment      *pb.Assignment
+	assignment      *pb.CommitteeAssignmentResponse
 	proposerClient  pb.ProposerServiceClient
 	validatorClient pb.ValidatorServiceClient
 	beaconClient    pb.BeaconServiceClient
 	attesterClient  pb.AttesterServiceClient
 	key             *keystore.Key
+	prevBalance     uint64
 }
 
 // Done cleans up the validator.
@@ -71,24 +63,48 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 		v.genesisTime = chainStartRes.GenesisTime
 		break
 	}
-	log.Infof("Beacon chain initialized at unix time: %v", time.Unix(int64(v.genesisTime), 0))
 	// Once the ChainStart log is received, we update the genesis time of the validator client
 	// and begin a slot ticker used to track the current slot the beacon node is in.
 	v.ticker = slotutil.GetSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
+	log.Infof("Beacon chain initialized at unix time: %v", time.Unix(int64(v.genesisTime), 0))
 	return nil
 }
 
 // WaitForActivation checks whether the validator pubkey is in the active
 // validator set. If not, this operation will block until an activation message is
 // received.
-//
-// WIP - not done.
-func (v *validator) WaitForActivation(ctx context.Context) {
+func (v *validator) WaitForActivation(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
 	defer span.End()
-	// First, check if the validator has deposited into the Deposit Contract.
-	// If the validator has deposited, subscribe to a stream receiving the activation status.
-	// of the validator until a final ACTIVATED check if received, then this function can return.
+	req := &pb.ValidatorActivationRequest{
+		Pubkey: v.key.PublicKey.Marshal(),
+	}
+	stream, err := v.validatorClient.WaitForActivation(ctx, req)
+	if err != nil {
+		return fmt.Errorf("could not setup validator WaitForActivation streaming client: %v", err)
+	}
+	var validatorActivatedRecord *pbp2p.Validator
+	for {
+		log.Info("Waiting for validator to be activated in the beacon chain")
+		res, err := stream.Recv()
+		// If the stream is closed, we stop the loop.
+		if err == io.EOF {
+			break
+		}
+		// If context is canceled we stop the loop.
+		if ctx.Err() == context.Canceled {
+			return fmt.Errorf("context has been canceled so shutting down the loop: %v", ctx.Err())
+		}
+		if err != nil {
+			return fmt.Errorf("could not receive validator activation from stream: %v", err)
+		}
+		validatorActivatedRecord = res.Validator
+		break
+	}
+	log.WithFields(logrus.Fields{
+		"activationEpoch": validatorActivatedRecord.ActivationEpoch - params.BeaconConfig().GenesisEpoch,
+	}).Info("Validator activated")
+	return nil
 }
 
 // NextSlot emits the next slot number at the start time of that slot.
@@ -113,16 +129,29 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 		PublicKey:  v.key.PublicKey.Marshal(),
 	}
 
-	resp, err := v.validatorClient.ValidatorEpochAssignments(ctx, req)
+	resp, err := v.validatorClient.CommitteeAssignment(ctx, req)
 	if err != nil {
+		v.assignment = nil // Clear assignments so we know to retry the request.
 		return err
 	}
 
-	v.assignment = resp.Assignment
+	v.assignment = resp
+
+	var proposerSlot uint64
+	var attesterSlot uint64
+	if v.assignment.IsProposer && len(v.assignment.Committee) == 1 {
+		proposerSlot = resp.Slot
+		attesterSlot = resp.Slot
+	} else if v.assignment.IsProposer {
+		proposerSlot = resp.Slot
+	} else {
+		attesterSlot = resp.Slot
+	}
+
 	log.WithFields(logrus.Fields{
-		"proposerSlot": resp.Assignment.ProposerSlot - params.BeaconConfig().GenesisSlot,
-		"attesterSlot": resp.Assignment.AttesterSlot - params.BeaconConfig().GenesisSlot,
-		"shard":        resp.Assignment.Shard,
+		"proposerSlot": proposerSlot - params.BeaconConfig().GenesisSlot,
+		"attesterSlot": attesterSlot - params.BeaconConfig().GenesisSlot,
+		"shard":        resp.Shard,
 	}).Info("Updated validator assignments")
 	return nil
 }
@@ -131,15 +160,19 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 // validator is known to not have a role at the at slot. Returns UNKNOWN if the
 // validator assignments are unknown. Otherwise returns a valid ValidatorRole.
 func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
-	if v.assignment == nil || slot == params.BeaconConfig().GenesisSlot {
+	if v.assignment == nil {
 		return pb.ValidatorRole_UNKNOWN
 	}
-	if v.assignment.AttesterSlot == slot && v.assignment.ProposerSlot == slot {
-		return pb.ValidatorRole_BOTH
-	} else if v.assignment.ProposerSlot == slot {
-		return pb.ValidatorRole_PROPOSER
-	} else if v.assignment.AttesterSlot == slot {
-		return pb.ValidatorRole_ATTESTER
+	if v.assignment.Slot == slot {
+		// if the committee length is 1, that means validator has to perform both
+		// proposer and validator roles.
+		if len(v.assignment.Committee) == 1 {
+			return pb.ValidatorRole_BOTH
+		} else if v.assignment.IsProposer {
+			return pb.ValidatorRole_PROPOSER
+		} else {
+			return pb.ValidatorRole_ATTESTER
+		}
 	}
 	return pb.ValidatorRole_UNKNOWN
 }

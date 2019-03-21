@@ -1,13 +1,15 @@
 package db
 
-import "github.com/prysmaticlabs/prysm/shared/bytesutil"
+import (
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+)
 
 // The Schema will define how to store and retrieve data from the db.
 // Currently we store blocks by prefixing `block` to their hash and
 // using that as the key to store blocks.
 // `block` + hash -> block
 //
-// We store the crystallized state using the crystallized state lookup key, and
+// We store the state using the state lookup key, and
 // also the genesis block using the genesis lookup key.
 // The canonical head is stored using the canonical head lookup key.
 
@@ -17,11 +19,16 @@ var (
 	blockOperationsBucket = []byte("block-operations-bucket")
 	blockBucket           = []byte("block-bucket")
 	mainChainBucket       = []byte("main-chain-bucket")
+	histStateBucket       = []byte("historical-state-bucket")
 	chainInfoBucket       = []byte("chain-info")
 	validatorBucket       = []byte("validator")
 
-	mainChainHeightKey = []byte("chain-height")
-	stateLookupKey     = []byte("state")
+	mainChainHeightKey      = []byte("chain-height")
+	stateLookupKey          = []byte("state")
+	finalizedStateLookupKey = []byte("finalized-state")
+	justifiedStateLookupKey = []byte("justified-state")
+	finalizedBlockLookupKey = []byte("finalized-block")
+	justifiedBlockLookupKey = []byte("justified-block")
 
 	// DB internal use
 	cleanupHistoryBucket    = []byte("cleanup-history-bucket")
