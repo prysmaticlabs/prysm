@@ -3,13 +3,24 @@ package blockchain
 import (
 	"context"
 	"fmt"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/stategenerator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
+)
+
+var (
+	reorgCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "reorg_counter",
+		Help: "The number of reorg has happened in the past",
+	})
 )
 
 // ForkChoice interface defines the methods for applying fork choice rule
@@ -121,9 +132,19 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 	if err != nil {
 		return fmt.Errorf("could not run fork choice: %v", err)
 	}
+	if head.Slot != block.Slot {
+		log.Warnf("reorg happened, last processed block at slot %d, new head block at slot %d",
+			block.Slot-params.BeaconConfig().GenesisSlot, head.Slot-params.BeaconConfig().GenesisSlot)
+		reorgCount.Inc()
+	}
 	genState, err := stategenerator.GenerateStateFromBlock(c.ctx, c.beaconDB, head.Slot)
 	if err != nil {
 		return fmt.Errorf("could not gen state: %v", err)
+	}
+	if genState.Slot != postState.Slot {
+		log.Warnf("reorg happened, post state slot at %d, new head state at slot %d",
+			postState.Slot-params.BeaconConfig().GenesisSlot, genState.Slot-params.BeaconConfig().GenesisSlot)
+		reorgCount.Inc()
 	}
 	if err := c.beaconDB.UpdateChainHead(head, genState); err != nil {
 		return fmt.Errorf("failed to update chain: %v", err)
