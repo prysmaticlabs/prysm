@@ -8,13 +8,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/validator/internal"
+
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
-	"github.com/prysmaticlabs/prysm/validator/internal"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -229,7 +230,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 		key:             validatorKey,
 		validatorClient: client,
 	}
-	clientStream := internal.NewMockValidatorServiceClient_WaitForActivationClient(ctrl)
+	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&pb.ValidatorActivationRequest{

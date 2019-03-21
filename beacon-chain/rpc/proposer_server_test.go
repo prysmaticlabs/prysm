@@ -148,11 +148,11 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 	}
 
 	if err := db.SaveBlock(blk); err != nil {
-		t.Fatalf("failed to save block %v")
+		t.Fatalf("failed to save block %v", err)
 	}
 
 	if err := db.UpdateChainHead(blk, beaconState); err != nil {
-		t.Fatalf("couldnt update chainhead: %v")
+		t.Fatalf("couldnt update chainhead: %v", err)
 	}
 
 	res, err := proposerServer.PendingAttestations(context.Background(), &pb.PendingAttestationsRequest{
@@ -213,11 +213,11 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	}
 
 	if err := db.SaveBlock(blk); err != nil {
-		t.Fatalf("failed to save block %v")
+		t.Fatalf("failed to save block %v", err)
 	}
 
 	if err := db.UpdateChainHead(blk, beaconState); err != nil {
-		t.Fatalf("couldnt update chainhead: %v")
+		t.Fatalf("couldnt update chainhead: %v", err)
 	}
 
 	res, err := proposerServer.PendingAttestations(
@@ -257,11 +257,11 @@ func TestPendingAttestations_OK(t *testing.T) {
 	}
 
 	if err := db.SaveBlock(blk); err != nil {
-		t.Fatalf("failed to save block %v")
+		t.Fatalf("failed to save block %v", err)
 	}
 
 	if err := db.UpdateChainHead(blk, beaconState); err != nil {
-		t.Fatalf("couldnt update chainhead: %v")
+		t.Fatalf("couldnt update chainhead: %v", err)
 	}
 
 	res, err := proposerServer.PendingAttestations(context.Background(), &pb.PendingAttestationsRequest{})

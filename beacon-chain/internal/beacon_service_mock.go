@@ -39,6 +39,7 @@ func (m *MockBeaconServiceServer) EXPECT() *MockBeaconServiceServerMockRecorder 
 
 // CanonicalHead mocks base method
 func (m *MockBeaconServiceServer) CanonicalHead(arg0 context.Context, arg1 *types.Empty) (*v1.BeaconBlock, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CanonicalHead", arg0, arg1)
 	ret0, _ := ret[0].(*v1.BeaconBlock)
 	ret1, _ := ret[1].(error)
@@ -47,11 +48,13 @@ func (m *MockBeaconServiceServer) CanonicalHead(arg0 context.Context, arg1 *type
 
 // CanonicalHead indicates an expected call of CanonicalHead
 func (mr *MockBeaconServiceServerMockRecorder) CanonicalHead(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CanonicalHead", reflect.TypeOf((*MockBeaconServiceServer)(nil).CanonicalHead), arg0, arg1)
 }
 
 // Eth1Data mocks base method
 func (m *MockBeaconServiceServer) Eth1Data(arg0 context.Context, arg1 *types.Empty) (*v10.Eth1DataResponse, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Eth1Data", arg0, arg1)
 	ret0, _ := ret[0].(*v10.Eth1DataResponse)
 	ret1, _ := ret[1].(error)
@@ -60,11 +63,13 @@ func (m *MockBeaconServiceServer) Eth1Data(arg0 context.Context, arg1 *types.Emp
 
 // Eth1Data indicates an expected call of Eth1Data
 func (mr *MockBeaconServiceServerMockRecorder) Eth1Data(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Eth1Data", reflect.TypeOf((*MockBeaconServiceServer)(nil).Eth1Data), arg0, arg1)
 }
 
 // ForkData mocks base method
 func (m *MockBeaconServiceServer) ForkData(arg0 context.Context, arg1 *types.Empty) (*v1.Fork, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ForkData", arg0, arg1)
 	ret0, _ := ret[0].(*v1.Fork)
 	ret1, _ := ret[1].(error)
@@ -73,11 +78,13 @@ func (m *MockBeaconServiceServer) ForkData(arg0 context.Context, arg1 *types.Emp
 
 // ForkData indicates an expected call of ForkData
 func (mr *MockBeaconServiceServerMockRecorder) ForkData(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForkData", reflect.TypeOf((*MockBeaconServiceServer)(nil).ForkData), arg0, arg1)
 }
 
 // LatestAttestation mocks base method
 func (m *MockBeaconServiceServer) LatestAttestation(arg0 *types.Empty, arg1 v10.BeaconService_LatestAttestationServer) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LatestAttestation", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -85,11 +92,13 @@ func (m *MockBeaconServiceServer) LatestAttestation(arg0 *types.Empty, arg1 v10.
 
 // LatestAttestation indicates an expected call of LatestAttestation
 func (mr *MockBeaconServiceServerMockRecorder) LatestAttestation(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LatestAttestation", reflect.TypeOf((*MockBeaconServiceServer)(nil).LatestAttestation), arg0, arg1)
 }
 
 // PendingDeposits mocks base method
 func (m *MockBeaconServiceServer) PendingDeposits(arg0 context.Context, arg1 *types.Empty) (*v10.PendingDepositsResponse, error) {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PendingDeposits", arg0, arg1)
 	ret0, _ := ret[0].(*v10.PendingDepositsResponse)
 	ret1, _ := ret[1].(error)
@@ -98,11 +107,13 @@ func (m *MockBeaconServiceServer) PendingDeposits(arg0 context.Context, arg1 *ty
 
 // PendingDeposits indicates an expected call of PendingDeposits
 func (mr *MockBeaconServiceServerMockRecorder) PendingDeposits(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PendingDeposits", reflect.TypeOf((*MockBeaconServiceServer)(nil).PendingDeposits), arg0, arg1)
 }
 
 // WaitForChainStart mocks base method
 func (m *MockBeaconServiceServer) WaitForChainStart(arg0 *types.Empty, arg1 v10.BeaconService_WaitForChainStartServer) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WaitForChainStart", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -110,6 +121,7 @@ func (m *MockBeaconServiceServer) WaitForChainStart(arg0 *types.Empty, arg1 v10.
 
 // WaitForChainStart indicates an expected call of WaitForChainStart
 func (mr *MockBeaconServiceServerMockRecorder) WaitForChainStart(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForChainStart", reflect.TypeOf((*MockBeaconServiceServer)(nil).WaitForChainStart), arg0, arg1)
 }
 
@@ -138,6 +150,7 @@ func (m *MockBeaconService_LatestAttestationServer) EXPECT() *MockBeaconService_
 
 // Context mocks base method
 func (m *MockBeaconService_LatestAttestationServer) Context() context.Context {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Context")
 	ret0, _ := ret[0].(context.Context)
 	return ret0
@@ -145,11 +158,13 @@ func (m *MockBeaconService_LatestAttestationServer) Context() context.Context {
 
 // Context indicates an expected call of Context
 func (mr *MockBeaconService_LatestAttestationServerMockRecorder) Context() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockBeaconService_LatestAttestationServer)(nil).Context))
 }
 
 // RecvMsg mocks base method
 func (m *MockBeaconService_LatestAttestationServer) RecvMsg(arg0 interface{}) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RecvMsg", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -157,11 +172,13 @@ func (m *MockBeaconService_LatestAttestationServer) RecvMsg(arg0 interface{}) er
 
 // RecvMsg indicates an expected call of RecvMsg
 func (mr *MockBeaconService_LatestAttestationServerMockRecorder) RecvMsg(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecvMsg", reflect.TypeOf((*MockBeaconService_LatestAttestationServer)(nil).RecvMsg), arg0)
 }
 
 // Send mocks base method
 func (m *MockBeaconService_LatestAttestationServer) Send(arg0 *v1.Attestation) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Send", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -169,11 +186,13 @@ func (m *MockBeaconService_LatestAttestationServer) Send(arg0 *v1.Attestation) e
 
 // Send indicates an expected call of Send
 func (mr *MockBeaconService_LatestAttestationServerMockRecorder) Send(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockBeaconService_LatestAttestationServer)(nil).Send), arg0)
 }
 
 // SendHeader mocks base method
 func (m *MockBeaconService_LatestAttestationServer) SendHeader(arg0 metadata.MD) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SendHeader", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -181,11 +200,13 @@ func (m *MockBeaconService_LatestAttestationServer) SendHeader(arg0 metadata.MD)
 
 // SendHeader indicates an expected call of SendHeader
 func (mr *MockBeaconService_LatestAttestationServerMockRecorder) SendHeader(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendHeader", reflect.TypeOf((*MockBeaconService_LatestAttestationServer)(nil).SendHeader), arg0)
 }
 
 // SendMsg mocks base method
 func (m *MockBeaconService_LatestAttestationServer) SendMsg(arg0 interface{}) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SendMsg", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -193,11 +214,13 @@ func (m *MockBeaconService_LatestAttestationServer) SendMsg(arg0 interface{}) er
 
 // SendMsg indicates an expected call of SendMsg
 func (mr *MockBeaconService_LatestAttestationServerMockRecorder) SendMsg(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMsg", reflect.TypeOf((*MockBeaconService_LatestAttestationServer)(nil).SendMsg), arg0)
 }
 
 // SetHeader mocks base method
 func (m *MockBeaconService_LatestAttestationServer) SetHeader(arg0 metadata.MD) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SetHeader", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -205,16 +228,19 @@ func (m *MockBeaconService_LatestAttestationServer) SetHeader(arg0 metadata.MD) 
 
 // SetHeader indicates an expected call of SetHeader
 func (mr *MockBeaconService_LatestAttestationServerMockRecorder) SetHeader(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHeader", reflect.TypeOf((*MockBeaconService_LatestAttestationServer)(nil).SetHeader), arg0)
 }
 
 // SetTrailer mocks base method
 func (m *MockBeaconService_LatestAttestationServer) SetTrailer(arg0 metadata.MD) {
+	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetTrailer", arg0)
 }
 
 // SetTrailer indicates an expected call of SetTrailer
 func (mr *MockBeaconService_LatestAttestationServerMockRecorder) SetTrailer(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTrailer", reflect.TypeOf((*MockBeaconService_LatestAttestationServer)(nil).SetTrailer), arg0)
 }
 
@@ -243,6 +269,7 @@ func (m *MockBeaconService_WaitForChainStartServer) EXPECT() *MockBeaconService_
 
 // Context mocks base method
 func (m *MockBeaconService_WaitForChainStartServer) Context() context.Context {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Context")
 	ret0, _ := ret[0].(context.Context)
 	return ret0
@@ -250,11 +277,13 @@ func (m *MockBeaconService_WaitForChainStartServer) Context() context.Context {
 
 // Context indicates an expected call of Context
 func (mr *MockBeaconService_WaitForChainStartServerMockRecorder) Context() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockBeaconService_WaitForChainStartServer)(nil).Context))
 }
 
 // RecvMsg mocks base method
 func (m *MockBeaconService_WaitForChainStartServer) RecvMsg(arg0 interface{}) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RecvMsg", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -262,11 +291,13 @@ func (m *MockBeaconService_WaitForChainStartServer) RecvMsg(arg0 interface{}) er
 
 // RecvMsg indicates an expected call of RecvMsg
 func (mr *MockBeaconService_WaitForChainStartServerMockRecorder) RecvMsg(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecvMsg", reflect.TypeOf((*MockBeaconService_WaitForChainStartServer)(nil).RecvMsg), arg0)
 }
 
 // Send mocks base method
 func (m *MockBeaconService_WaitForChainStartServer) Send(arg0 *v10.ChainStartResponse) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Send", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -274,11 +305,13 @@ func (m *MockBeaconService_WaitForChainStartServer) Send(arg0 *v10.ChainStartRes
 
 // Send indicates an expected call of Send
 func (mr *MockBeaconService_WaitForChainStartServerMockRecorder) Send(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockBeaconService_WaitForChainStartServer)(nil).Send), arg0)
 }
 
 // SendHeader mocks base method
 func (m *MockBeaconService_WaitForChainStartServer) SendHeader(arg0 metadata.MD) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SendHeader", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -286,11 +319,13 @@ func (m *MockBeaconService_WaitForChainStartServer) SendHeader(arg0 metadata.MD)
 
 // SendHeader indicates an expected call of SendHeader
 func (mr *MockBeaconService_WaitForChainStartServerMockRecorder) SendHeader(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendHeader", reflect.TypeOf((*MockBeaconService_WaitForChainStartServer)(nil).SendHeader), arg0)
 }
 
 // SendMsg mocks base method
 func (m *MockBeaconService_WaitForChainStartServer) SendMsg(arg0 interface{}) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SendMsg", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -298,11 +333,13 @@ func (m *MockBeaconService_WaitForChainStartServer) SendMsg(arg0 interface{}) er
 
 // SendMsg indicates an expected call of SendMsg
 func (mr *MockBeaconService_WaitForChainStartServerMockRecorder) SendMsg(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMsg", reflect.TypeOf((*MockBeaconService_WaitForChainStartServer)(nil).SendMsg), arg0)
 }
 
 // SetHeader mocks base method
 func (m *MockBeaconService_WaitForChainStartServer) SetHeader(arg0 metadata.MD) error {
+	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SetHeader", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -310,15 +347,18 @@ func (m *MockBeaconService_WaitForChainStartServer) SetHeader(arg0 metadata.MD) 
 
 // SetHeader indicates an expected call of SetHeader
 func (mr *MockBeaconService_WaitForChainStartServerMockRecorder) SetHeader(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHeader", reflect.TypeOf((*MockBeaconService_WaitForChainStartServer)(nil).SetHeader), arg0)
 }
 
 // SetTrailer mocks base method
 func (m *MockBeaconService_WaitForChainStartServer) SetTrailer(arg0 metadata.MD) {
+	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetTrailer", arg0)
 }
 
 // SetTrailer indicates an expected call of SetTrailer
 func (mr *MockBeaconService_WaitForChainStartServerMockRecorder) SetTrailer(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTrailer", reflect.TypeOf((*MockBeaconService_WaitForChainStartServer)(nil).SetTrailer), arg0)
 }
