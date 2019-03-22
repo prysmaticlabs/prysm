@@ -2,6 +2,7 @@ package accounts
 
 import (
 	"crypto/rand"
+	"io/ioutil"
 	"os"
 	"testing"
 
@@ -21,8 +22,15 @@ func TestNewValidatorAccount_AccountExists(t *testing.T) {
 	if err := ks.StoreKey(directory+params.BeaconConfig().ValidatorPrivkeyFileName, validatorKey, ""); err != nil {
 		t.Fatalf("Unable to store key %v", err)
 	}
-	if err := NewValidatorAccount(directory, ""); err == nil {
-		t.Error("Expected new validator account to throw error, received nil")
+	if err := NewValidatorAccount(directory, ""); err != nil {
+		t.Errorf("Should support multiple keys: %v", err)
+	}
+	files, _ := ioutil.ReadDir(directory)
+	if len(files) != 3 {
+		t.Errorf("multiple validators wasn't created only: %v files in directory", len(files))
+		for _, f := range files {
+			t.Errorf("%v\n", f.Name())
+		}
 	}
 	if err := os.RemoveAll(directory); err != nil {
 		t.Fatalf("Could not remove directory: %v", err)
