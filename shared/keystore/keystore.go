@@ -86,7 +86,7 @@ func (ks Store) GetKey(filename, password string) (*Key, error) {
 func (ks Store) GetKeys(directory, fileprefix, password string) ([]*Key, error) {
 	// Load the key from the keystore and decrypt its contents
 	// #nosec G304
-	files, err := ioutil.ReadDir(filepath.Dir(directory))
+	files, err := ioutil.ReadDir(directory)
 	if err != nil {
 		return nil, err
 	}
@@ -94,8 +94,8 @@ func (ks Store) GetKeys(directory, fileprefix, password string) ([]*Key, error) 
 	i := 0
 	for _, f := range files {
 		n := f.Name()
-		fn := directory + n
-		if f.Mode().IsRegular() && strings.Contains(n, fileprefix) {
+		fn := directory + "/" + n
+		if f.Mode().IsRegular() && strings.Contains(n, strings.TrimPrefix(fileprefix, "/")) {
 			keyjson, err := ioutil.ReadFile(fn)
 			if err != nil {
 				return nil, err

@@ -3,6 +3,7 @@ package accounts
 import (
 	"bytes"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"time"
 
@@ -13,6 +14,26 @@ import (
 )
 
 var log = logrus.WithField("prefix", "accounts")
+
+// VerifyAccountNotExists checks if a validator has not yet created an account
+// and keystore in the provided directory string.
+func VerifyAccountNotExists(directory string, password string) error {
+	if directory == "" || password == "" {
+		return errors.New("expected a path to the validator keystore and password to be provided, received nil")
+	}
+	shardWithdrawalKeyFile := directory + params.BeaconConfig().WithdrawalPrivkeyFileName
+	validatorKeyFile := directory + params.BeaconConfig().ValidatorPrivkeyFileName
+	// First, if the keystore already exists, throws an error as there can only be
+	// one keystore per validator client.
+	ks := keystore.NewKeystore(directory)
+	if _, err := ks.GetKey(shardWithdrawalKeyFile, password); err == nil {
+		return fmt.Errorf("keystore at path already exists: %s", shardWithdrawalKeyFile)
+	}
+	if _, err := ks.GetKey(validatorKeyFile, password); err == nil {
+		return fmt.Errorf("keystore at path already exists: %s", validatorKeyFile)
+	}
+	return nil
+}
 
 // NewValidatorAccount sets up a validator client's secrets and generates the necessary deposit data
 // parameters needed to deposit into the deposit contract on the ETH1.0 chain. Specifically, this

@@ -40,9 +40,10 @@ type Config struct {
 // registry.
 func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	validatorKeyFile := cfg.KeystorePath + params.BeaconConfig().ValidatorPrivkeyFileName
+	validatorFolder := cfg.KeystorePath
+	validatorPrefix := params.BeaconConfig().ValidatorPrivkeyFileName
 	ks := keystore.NewKeystore(cfg.KeystorePath)
-	key, err := ks.GetKey(validatorKeyFile, cfg.Password)
+	keys, err := ks.GetKeys(validatorFolder, validatorPrefix, cfg.Password)
 	if err != nil {
 		return nil, fmt.Errorf("could not get private key: %v", err)
 	}
@@ -51,7 +52,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		cancel:   cancel,
 		endpoint: cfg.Endpoint,
 		withCert: cfg.CertFlag,
-		key:      key,
+		key:      keys[0],
 	}, nil
 }
 
