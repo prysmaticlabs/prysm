@@ -3,6 +3,7 @@ package stategenerator
 import (
 	"context"
 	"fmt"
+
 	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
