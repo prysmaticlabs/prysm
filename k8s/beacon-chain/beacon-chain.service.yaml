@@ -50,3 +50,15 @@ spec:
         port:
           number: 4000
         host: beacon-chain.beacon-chain.svc.cluster.local
+---
+ apiVersion: networking.istio.io/v1alpha3
+ kind: DestinationRule
+ metadata:
+   name: beacon-chain
+   namespace: beacon-chain
+ spec:
+   host: beacon-chain.beacon-chain.svc.cluster.local
+   trafficPolicy:
+     loadBalancer:
+       consistentHash:
+         useSourceIp: true
