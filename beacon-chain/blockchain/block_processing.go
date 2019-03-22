@@ -193,6 +193,8 @@ func (c *ChainService) runStateTransition(
 	return beaconState, nil
 }
 
+// SaveHistoricalState saves the state at each epoch transition so that it can be used
+// by the state generator to regenerate state.
 func (c *ChainService) SaveHistoricalState(beaconState *pb.BeaconState) error {
 	return c.beaconDB.SaveHistoricalState(beaconState)
 }
