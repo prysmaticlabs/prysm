@@ -135,18 +135,23 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 	if head.Slot != block.Slot {
 		log.Warnf("reorg happened, last processed block at slot %d, new head block at slot %d",
 			block.Slot-params.BeaconConfig().GenesisSlot, head.Slot-params.BeaconConfig().GenesisSlot)
+
+		// Only regenerate head state if there was a reorg.
+		postState, err = stategenerator.GenerateStateFromBlock(c.ctx, c.beaconDB, head.Slot)
+		if err != nil {
+			return fmt.Errorf("could not gen state: %v", err)
+		}
+
+		if postState.Slot != postState.Slot {
+			log.Warnf("reorg happened, post state slot at %d, new head state at slot %d",
+				postState.Slot-params.BeaconConfig().GenesisSlot, postState.Slot-params.BeaconConfig().GenesisSlot)
+			reorgCount.Inc()
+		}
+
 		reorgCount.Inc()
 	}
-	genState, err := stategenerator.GenerateStateFromBlock(c.ctx, c.beaconDB, head.Slot)
-	if err != nil {
-		return fmt.Errorf("could not gen state: %v", err)
-	}
-	if genState.Slot != postState.Slot {
-		log.Warnf("reorg happened, post state slot at %d, new head state at slot %d",
-			postState.Slot-params.BeaconConfig().GenesisSlot, genState.Slot-params.BeaconConfig().GenesisSlot)
-		reorgCount.Inc()
-	}
-	if err := c.beaconDB.UpdateChainHead(head, genState); err != nil {
+
+	if err := c.beaconDB.UpdateChainHead(head, postState); err != nil {
 		return fmt.Errorf("failed to update chain: %v", err)
 	}
 	h, err := hashutil.HashBeaconBlock(head)
