@@ -94,9 +94,9 @@ func (ks Store) GetKeys(directory, fileprefix, password string) ([]*Key, error) 
 	i := 0
 	for _, f := range files {
 		n := f.Name()
-		fn := directory + "/" + n
+		filePath := filepath.Join(directory, n)
 		if f.Mode().IsRegular() && strings.Contains(n, strings.TrimPrefix(fileprefix, "/")) {
-			keyjson, err := ioutil.ReadFile(fn)
+			keyjson, err := ioutil.ReadFile(filePath)
 			if err != nil {
 				return nil, err
 			}
