@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"runtime/debug"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -509,7 +508,6 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) {
 // discard the attestation if we have gotten before, send it to attestation
 // pool if we have not.
 func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
-	log.Info("Received an attestation!")
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.receiveAttestation")
 	defer span.End()
 	recAttestation.Inc()
@@ -520,6 +518,10 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 	if err != nil {
 		log.Errorf("Could not hash received attestation: %v", err)
 	}
+	log.WithFields(logrus.Fields{
+		"blockRoot": fmt.Sprintf("%#x", attestation.Data.BeaconBlockRootHash32),
+		"justifiedEpoch": attestation.Data.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
+	}).Info("Received an attestation!")
 
 	// Skip if attestation has been seen before.
 	if rs.db.HasAttestation(attestationRoot) {
@@ -540,26 +542,12 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 		return
 	}
 
-	boundary := beaconState.Slot - params.BeaconConfig().SlotsPerEpoch
-	var expectedJustifiedEpoch uint64
-	if helpers.SlotToEpoch(attestation.Data.Slot+1) >= helpers.SlotToEpoch(beaconState.Slot) {
-		expectedJustifiedEpoch = beaconState.JustifiedEpoch
-	} else {
-		expectedJustifiedEpoch = beaconState.PreviousJustifiedEpoch
-	}
-
-	if attestation.Data.Slot+params.BeaconConfig().MinAttestationInclusionDelay > beaconState.Slot {
-		return
-	}
-
-	if attestation.Data.Slot > boundary && attestation.Data.JustifiedEpoch == expectedJustifiedEpoch {
-		_, sendAttestationSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendAttestation")
-		log.WithField("attestationHash", fmt.Sprintf("%#x", attestationRoot)).Debug("Sending newly received attestation to subscribers")
-		rs.operationsService.IncomingAttFeed().Send(attestation)
-		rs.attsService.IncomingAttestationFeed().Send(attestation)
-		sentAttestation.Inc()
-		sendAttestationSpan.End()
-	}
+	_, sendAttestationSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendAttestation")
+	log.Info("Sending newly received attestation to subscribers")
+	rs.operationsService.IncomingAttFeed().Send(attestation)
+	rs.attsService.IncomingAttestationFeed().Send(attestation)
+	sentAttestation.Inc()
+	sendAttestationSpan.End()
 }
 
 // receiveExitRequest accepts an broadcasted exit from the p2p layer,

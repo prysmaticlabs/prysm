@@ -124,6 +124,14 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 	if err != nil {
 		return fmt.Errorf("could not retrieve attestation target: %v", err)
 	}
+	log.Infof("Attestation targets at slot: %d", postState.Slot)
+	for idx, target := range attestationTargets {
+		h, err := hashutil.HashBeaconBlock(target)
+		if err != nil {
+			return fmt.Errorf("could not hash target: %v", err)
+		}
+		log.Infof("Validator index: %d, target slot: %d, target hash: %#x", idx, target.Slot, h)
+	}
 	justifiedHead, err := c.beaconDB.JustifiedBlock()
 	if err != nil {
 		return err
@@ -133,7 +141,7 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 		return fmt.Errorf("could not run fork choice: %v", err)
 	}
 	if head.Slot != block.Slot {
-		log.Warnf("reorg happened, last processed block at slot %d, new head block at slot %d",
+		log.Warnf("Reorg happened, last processed block at slot %d, new head block at slot %d",
 			block.Slot-params.BeaconConfig().GenesisSlot, head.Slot-params.BeaconConfig().GenesisSlot)
 
 		// Only regenerate head state if there was a reorg.
@@ -143,7 +151,7 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 		}
 
 		if postState.Slot != postState.Slot {
-			log.Warnf("reorg happened, post state slot at %d, new head state at slot %d",
+			log.Warnf("Reorg	 happened, post state slot at %d, new head state at slot %d",
 				postState.Slot-params.BeaconConfig().GenesisSlot, postState.Slot-params.BeaconConfig().GenesisSlot)
 			reorgCount.Inc()
 		}

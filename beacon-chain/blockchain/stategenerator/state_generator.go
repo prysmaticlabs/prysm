@@ -76,7 +76,7 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 		return nil, fmt.Errorf("unable to look up block ancestors %v", err)
 	}
 
-	log.Debugf("Recompute state starting last finalized slot %d and ending slot %d",
+	log.Infof("Recompute state starting last finalized slot %d and ending slot %d",
 		fState.Slot-params.BeaconConfig().GenesisSlot, slot-params.BeaconConfig().GenesisSlot)
 	postState := fState
 	root := fRoot

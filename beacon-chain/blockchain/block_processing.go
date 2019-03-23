@@ -107,6 +107,13 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		return nil, fmt.Errorf("could not execute state transition with block %v", err)
 	}
 
+	log.WithFields(logrus.Fields{
+		"slotNumber": block.Slot - params.BeaconConfig().GenesisSlot,
+		"justifiedEpoch": beaconState.JustifiedEpoch,
+		"finalizedEpoch": beaconState.FinalizedEpoch,
+	}).Info(
+		"State transition complete")
+
 	// Forward processed block to operation pool to remove individual operation from DB.
 	if c.opsPoolService.IncomingProcessedBlockFeed().Send(block) == 0 {
 		log.Error("Sent processed block to no subscribers")
@@ -120,10 +127,10 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		}
 		log.WithFields(
 			logrus.Fields{
-				"attestationSlot":     att.Data.Slot,
-				"attestationBitfield": att.AggregationBitfield,
+				"attestationSlot":     att.Data.Slot-params.BeaconConfig().GenesisSlot,
+				"justifiedEpoch": att.Data.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
 			},
-		).Info("Attestation Store updated")
+		).Info("Attestation store updated")
 	}
 
 	// Remove pending deposits from the deposit queue.
@@ -131,7 +138,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		c.beaconDB.RemovePendingDeposit(ctx, dep)
 	}
 
-	log.WithField("hash", fmt.Sprintf("%#x", blockRoot)).Debug("Processed beacon block")
+	log.WithField("hash", fmt.Sprintf("%#x", blockRoot)).Info("Processed beacon block")
 	return beaconState, nil
 }
 
