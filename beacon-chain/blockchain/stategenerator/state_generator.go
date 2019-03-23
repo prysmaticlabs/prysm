@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"go.opencensus.io/trace"
 	"github.com/prysmaticlabs/prysm/shared/params"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -23,6 +23,8 @@ var log = logrus.WithField("prefix", "stategenerator")
 //	Output: resulting state of state transition function after applying block C and D.
 //  	along with skipped slot 4 and 6.
 func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (*pb.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.stategenerator.GenerateStateFromBlock")
+	defer span.End()
 	fState, err := db.FinalizedState()
 	if err != nil {
 		return nil, err
@@ -71,12 +73,12 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 	}
 
 	// retrieve the block list to recompute state of the input slot.
-	blocks, err := blocksSinceFinalized(db, mostRecentBlock, fRoot)
+	blocks, err := blocksSinceFinalized(ctx, db, mostRecentBlock, fRoot)
 	if err != nil {
 		return nil, fmt.Errorf("unable to look up block ancestors %v", err)
 	}
 
-	log.Debugf("Recompute state starting last finalized slot %d and ending slot %d",
+	log.Infof("Recompute state starting last finalized slot %d and ending slot %d",
 		fState.Slot-params.BeaconConfig().GenesisSlot, slot-params.BeaconConfig().GenesisSlot)
 	postState := fState
 	root := fRoot
@@ -155,9 +157,10 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 // Ex:
 // 	A -> B(finalized) -> C -> D -> E -> D.
 // 	Input: E, output: [E, D, C, B].
-func blocksSinceFinalized(db *db.BeaconDB, block *pb.BeaconBlock,
+func blocksSinceFinalized(ctx context.Context, db *db.BeaconDB, block *pb.BeaconBlock,
 	finalizedBlockRoot [32]byte) ([]*pb.BeaconBlock, error) {
-
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.stategenerator.blocksSinceFinalized")
+	defer span.End()
 	blockAncestors := make([]*pb.BeaconBlock, 0)
 	blockAncestors = append(blockAncestors, block)
 	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)

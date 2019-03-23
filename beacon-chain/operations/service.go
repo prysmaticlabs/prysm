@@ -241,11 +241,7 @@ func (s *Service) removePendingAttestations(attestations []*pb.Attestation) erro
 		if err := s.beaconDB.DeleteAttestation(attestation); err != nil {
 			return err
 		}
-		h, err := hashutil.HashProto(attestation)
-		if err != nil {
-			return err
-		}
-		log.WithField("attestationRoot", fmt.Sprintf("0x%x", h)).Info("Attestation removed")
+		log.WithField("blockRoot", fmt.Sprintf("0x%x", attestation.Data.BeaconBlockRootHash32)).Info("Attestation removed")
 	}
 	return nil
 }
