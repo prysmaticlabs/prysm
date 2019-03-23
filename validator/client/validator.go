@@ -112,6 +112,12 @@ func (v *validator) NextSlot() <-chan uint64 {
 	return v.ticker.C()
 }
 
+// SlotDeadline is the start time of the next slot.
+func (v *validator) SlotDeadline(slot uint64) time.Time {
+	secs := (slot + 1 - params.BeaconConfig().GenesisSlot) * params.BeaconConfig().SecondsPerSlot
+	return time.Unix(int64(v.genesisTime), 0 /*ns*/).Add(time.Duration(secs) * time.Second)
+}
+
 // UpdateAssignments checks the slot number to determine if the validator's
 // list of upcoming assignments needs to be updated. For example, at the
 // beginning of a new epoch.
