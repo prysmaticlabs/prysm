@@ -49,7 +49,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 		},
 	}
 
-	if err := service.updateLatestAttestation(ctx, attestation); err != nil {
+	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
 	pubkey := bytesutil.ToBytes48([]byte{byte(35)})
@@ -59,9 +59,9 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 			attestation.Data.Slot, service.Store[pubkey].Data.Slot)
 	}
 
-	attestation.Data.Slot = 100
+	attestation.Data.Slot = 36
 	attestation.Data.Shard = 36
-	if err := service.updateLatestAttestation(ctx, attestation); err != nil {
+	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
 	if service.Store[pubkey].Data.Slot !=
@@ -170,9 +170,12 @@ func TestLatestAttestation_NoAttestation(t *testing.T) {
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	index := 0
-	want := fmt.Sprintf("validator index %d does not have an attestation", index)
-	if _, err := service.LatestAttestation(ctx, uint64(index)); !strings.Contains(err.Error(), want) {
-		t.Errorf("Wanted error to contain %s, received %v", want, err)
+	a, err := service.LatestAttestation(ctx, uint64(index))
+	if err != nil {
+		t.Fatalf("could not run latest attestation: %v", err)
+	}
+	if a != nil {
+		t.Errorf("Wanted attesstation %v, received %v", nil, a)
 	}
 }
 

@@ -75,7 +75,8 @@ func generateTestGenesisStateAndBlock(
 }
 
 func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
-	beaconState, err := state.GenesisBeaconState(nil, 0, nil)
+	deposits, _ := setupInitialDeposits(t, 5)
+	beaconState, err := state.GenesisBeaconState(deposits, 0, nil)
 	if err != nil {
 		t.Fatalf("Cannot create genesis beacon state: %v", err)
 	}
@@ -83,12 +84,12 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
-
 	genesis := b.NewGenesisBlock(stateRoot[:])
 	genesisRoot, err := hashutil.HashProto(genesis)
 	if err != nil {
 		t.Fatalf("Could not get genesis block root: %v", err)
 	}
+
 	// Table driven tests for various fork choice scenarios.
 	tests := []struct {
 		blockSlot uint64
@@ -97,23 +98,23 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 	}{
 		// Higher slot but same state should trigger chain update.
 		{
-			blockSlot: 64,
+			blockSlot: params.BeaconConfig().GenesisSlot + 64,
 			state:     beaconState,
 			logAssert: "Chain head block and state updated",
 		},
 		// Higher slot, different state, but higher last finalized slot.
 		{
-			blockSlot: 64,
-			state:     &pb.BeaconState{FinalizedEpoch: 2},
+			blockSlot: params.BeaconConfig().GenesisSlot + 64,
+			state:     &pb.BeaconState{FinalizedEpoch: params.BeaconConfig().GenesisEpoch + 2},
 			logAssert: "Chain head block and state updated",
 		},
 		// Higher slot, different state, same last finalized slot,
 		// but last justified slot.
 		{
-			blockSlot: 64,
+			blockSlot: params.BeaconConfig().GenesisSlot + 64,
 			state: &pb.BeaconState{
-				FinalizedEpoch: 0,
-				JustifiedEpoch: 2,
+				FinalizedEpoch: params.BeaconConfig().GenesisEpoch,
+				JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 2,
 			},
 			logAssert: "Chain head block and state updated",
 		},
@@ -122,7 +123,23 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 		hook := logTest.NewGlobal()
 		db := internal.SetupDB(t)
 		defer internal.TeardownDB(t, db)
-		chainService := setupBeaconChain(t, false, db, true, nil)
+		attsService := attestation.NewAttestationService(
+			context.Background(),
+			&attestation.Config{BeaconDB: db})
+
+		chainService := setupBeaconChain(t, false, db, true, attsService)
+		if err := chainService.beaconDB.SaveBlock(
+			genesis); err != nil {
+			t.Fatal(err)
+		}
+		if err := chainService.beaconDB.SaveJustifiedBlock(
+			genesis); err != nil {
+			t.Fatal(err)
+		}
+		if err := chainService.beaconDB.SaveJustifiedState(
+			beaconState); err != nil {
+			t.Fatal(err)
+		}
 		unixTime := uint64(time.Now().Unix())
 		deposits, _ := setupInitialDeposits(t, 100)
 		if err := db.InitializeState(unixTime, deposits, &pb.Eth1Data{}); err != nil {
@@ -147,10 +164,6 @@ func TestApplyForkChoice_SetsCanonicalHead(t *testing.T) {
 		}
 		if err := chainService.ApplyForkChoiceRule(context.Background(), block, tt.state); err != nil {
 			t.Errorf("Expected head to update, received %v", err)
-		}
-
-		if err := chainService.beaconDB.SaveBlock(block); err != nil {
-			t.Fatal(err)
 		}
 		chainService.cancel()
 		testutil.AssertLogsContain(t, hook, tt.logAssert)
@@ -262,11 +275,8 @@ func TestAttestationTargets_RetrieveWorks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get attestation targets: %v", err)
 	}
-	if attestationTargets[0].validatorIndex != 0 {
-		t.Errorf("Wanted validator index 0, got %d", attestationTargets[0].validatorIndex)
-	}
-	if attestationTargets[0].block.Slot != block.Slot {
-		t.Errorf("Wanted attested slot %d, got %d", block.Slot, attestationTargets[0].block.Slot)
+	if attestationTargets[0].Slot != block.Slot {
+		t.Errorf("Wanted attested slot %d, got %d", block.Slot, attestationTargets[0].Slot)
 	}
 }
 
@@ -323,7 +333,7 @@ func TestBlockChildren_2InARow(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	childrenBlock, err := chainService.blockChildren(block1, state)
+	childrenBlock, err := chainService.blockChildren(block1, state.Slot)
 	if err != nil {
 		t.Fatalf("Could not get block children: %v", err)
 	}
@@ -397,7 +407,7 @@ func TestBlockChildren_ChainSplits(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	childrenBlock, err := chainService.blockChildren(block1, state)
+	childrenBlock, err := chainService.blockChildren(block1, state.Slot)
 	if err != nil {
 		t.Fatalf("Could not get block children: %v", err)
 	}
@@ -462,7 +472,7 @@ func TestBlockChildren_SkipSlots(t *testing.T) {
 		t.Fatalf("Could update chain head: %v", err)
 	}
 
-	childrenBlock, err := chainService.blockChildren(block1, state)
+	childrenBlock, err := chainService.blockChildren(block1, state.Slot)
 	if err != nil {
 		t.Fatalf("Could not get block children: %v", err)
 	}

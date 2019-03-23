@@ -459,9 +459,6 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *Transition
 			"NumValidators", len(state.ValidatorRegistry),
 		).Info("Validator registry length")
 		log.Infof("Validator balances: %v", state.ValidatorBalances)
-		log.WithField(
-			"ValidatorRegistryUpdateEpoch", state.ValidatorRegistryUpdateEpoch-params.BeaconConfig().GenesisEpoch,
-		).Info("Validator registry update epoch")
 	}
 
 	// Report interesting metrics.

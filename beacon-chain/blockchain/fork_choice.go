@@ -4,13 +4,23 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/stategenerator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
+)
+
+var (
+	reorgCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "reorg_counter",
+		Help: "The number of reorg has happened in the past",
+	})
 )
 
 // ForkChoice interface defines the methods for applying fork choice rule
@@ -105,24 +115,58 @@ func (c *ChainService) updateFFGCheckPts(state *pb.BeaconState) error {
 
 // ApplyForkChoiceRule determines the current beacon chain head using LMD GHOST as a block-vote
 // weighted function to select a canonical head in Ethereum Serenity.
-func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error {
+func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, postState *pb.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ApplyForkChoiceRule")
 	defer span.End()
-	h, err := hashutil.HashBeaconBlock(block)
+	log.Info("Applying LMD-GHOST Fork Choice Rule")
+
+	attestationTargets, err := c.attestationTargets(postState)
 	if err != nil {
-		return fmt.Errorf("could not tree hash incoming block: %v", err)
+		return fmt.Errorf("could not retrieve attestation target: %v", err)
 	}
-	// TODO(#1307): Use LMD GHOST as the fork-choice rule for Ethereum Serenity.
-	// TODO(#674): Handle chain reorgs.
-	if err := c.beaconDB.UpdateChainHead(block, computedState); err != nil {
+	log.Infof("Attestation targets at slot: %d", postState.Slot-params.BeaconConfig().GenesisSlot)
+	for idx, target := range attestationTargets {
+		h, err := hashutil.HashBeaconBlock(target)
+		if err != nil {
+			return fmt.Errorf("could not hash target: %v", err)
+		}
+		log.Infof("Validator index: %d, target slot: %d, target hash: %#x", idx, target.Slot-params.BeaconConfig().GenesisSlot, h)
+	}
+	justifiedHead, err := c.beaconDB.JustifiedBlock()
+	if err != nil {
+		return err
+	}
+	head, err := c.lmdGhost(justifiedHead, postState, attestationTargets)
+	if err != nil {
+		return fmt.Errorf("could not run fork choice: %v", err)
+	}
+	if head.Slot != block.Slot {
+		log.Warnf("Reorg happened, last processed block at slot %d, new head block at slot %d",
+			block.Slot-params.BeaconConfig().GenesisSlot, head.Slot-params.BeaconConfig().GenesisSlot)
+
+		// Only regenerate head state if there was a reorg.
+		postState, err = stategenerator.GenerateStateFromBlock(c.ctx, c.beaconDB, head.Slot)
+		if err != nil {
+			return fmt.Errorf("could not gen state: %v", err)
+		}
+
+		if postState.Slot != postState.Slot {
+			log.Warnf("Reorg	 happened, post state slot at %d, new head state at slot %d",
+				postState.Slot-params.BeaconConfig().GenesisSlot, postState.Slot-params.BeaconConfig().GenesisSlot)
+			reorgCount.Inc()
+		}
+
+		reorgCount.Inc()
+	}
+
+	if err := c.beaconDB.UpdateChainHead(head, postState); err != nil {
 		return fmt.Errorf("failed to update chain: %v", err)
 	}
-	log.WithField("blockRoot", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
-
-	if err := c.saveHistoricalState(computedState); err != nil {
-		log.Errorf("Could not save new historical state: %v", err)
+	h, err := hashutil.HashBeaconBlock(head)
+	if err != nil {
+		return fmt.Errorf("could not hash head: %v", err)
 	}
-
+	log.WithField("headRoot", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
 	return nil
 }
 
@@ -161,7 +205,7 @@ func (c *ChainService) lmdGhost(
 ) (*pb.BeaconBlock, error) {
 	head := block
 	for {
-		children, err := c.blockChildren(head, state)
+		children, err := c.blockChildren(head, state.Slot)
 		if err != nil {
 			return nil, fmt.Errorf("could not fetch block children: %v", err)
 		}
@@ -197,7 +241,7 @@ func (c *ChainService) lmdGhost(
 // Spec pseudocode definition:
 //	get_children(store: Store, block: BeaconBlock) -> List[BeaconBlock]
 //		returns the child blocks of the given block.
-func (c *ChainService) blockChildren(block *pb.BeaconBlock, state *pb.BeaconState) ([]*pb.BeaconBlock, error) {
+func (c *ChainService) blockChildren(block *pb.BeaconBlock, stateSlot uint64) ([]*pb.BeaconBlock, error) {
 	var children []*pb.BeaconBlock
 
 	currentRoot, err := hashutil.HashBeaconBlock(block)
@@ -205,7 +249,7 @@ func (c *ChainService) blockChildren(block *pb.BeaconBlock, state *pb.BeaconStat
 		return nil, fmt.Errorf("could not tree hash incoming block: %v", err)
 	}
 	startSlot := block.Slot + 1
-	currentSlot := state.Slot
+	currentSlot := stateSlot
 	for i := startSlot; i <= currentSlot; i++ {
 		block, err := c.beaconDB.BlockBySlot(i)
 		if err != nil {
@@ -227,18 +271,18 @@ func (c *ChainService) blockChildren(block *pb.BeaconBlock, state *pb.BeaconStat
 // attestationTargets retrieves the list of attestation targets since last finalized epoch,
 // each attestation target consists of validator index and its attestation target (i.e. the block
 // which the validator attested to)
-func (c *ChainService) attestationTargets(state *pb.BeaconState) ([]*attestationTarget, error) {
+func (c *ChainService) attestationTargets(state *pb.BeaconState) (map[uint64]*pb.BeaconBlock, error) {
 	indices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, state.FinalizedEpoch)
-	attestationTargets := make([]*attestationTarget, len(indices))
+	attestationTargets := make(map[uint64]*pb.BeaconBlock)
 	for i, index := range indices {
 		block, err := c.attsService.LatestAttestationTarget(c.ctx, index)
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve attestation target: %v", err)
 		}
-		attestationTargets[i] = &attestationTarget{
-			validatorIndex: index,
-			block:          block,
+		if block == nil {
+			continue
 		}
+		attestationTargets[uint64(i)] = block
 	}
 	return attestationTargets, nil
 }

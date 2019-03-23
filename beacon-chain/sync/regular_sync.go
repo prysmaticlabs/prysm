@@ -36,6 +36,10 @@ type chainService interface {
 	blockchain.ChainFeeds
 }
 
+type attsService interface {
+	IncomingAttestationFeed() *event.Feed
+}
+
 type p2pAPI interface {
 	p2p.Broadcaster
 	p2p.Sender
@@ -59,6 +63,7 @@ type RegularSync struct {
 	cancel                   context.CancelFunc
 	p2p                      p2pAPI
 	chainService             chainService
+	attsService              attsService
 	operationsService        operations.OperationFeeds
 	db                       *db.BeaconDB
 	blockAnnouncementFeed    *event.Feed
@@ -94,6 +99,7 @@ type RegularSyncConfig struct {
 	CanonicalBufferSize         int
 	ChainService                chainService
 	OperationService            operations.OperationFeeds
+	AttsService                 attsService
 	BeaconDB                    *db.BeaconDB
 	P2P                         p2pAPI
 }
@@ -126,6 +132,7 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		chainService:             cfg.ChainService,
 		db:                       cfg.BeaconDB,
 		operationsService:        cfg.OperationService,
+		attsService:              cfg.AttsService,
 		blockAnnouncementFeed:    new(event.Feed),
 		announceBlockBuf:         make(chan p2p.Message, cfg.BlockAnnounceBufferSize),
 		blockBuf:                 make(chan p2p.Message, cfg.BlockBufferSize),
@@ -367,7 +374,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) {
 	log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Sending newly received block to chain service")
 	beaconState, err = rs.chainService.ReceiveBlock(ctx, block)
 	if err != nil {
-		log.Errorf("could not process beacon block: %v", err)
+		log.Errorf("could not process beacon block for slot %d: %v", block.Slot, err)
 		return
 	}
 	if err := rs.chainService.ApplyForkChoiceRule(ctx, block, beaconState); err != nil {
@@ -511,6 +518,10 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 	if err != nil {
 		log.Errorf("Could not hash received attestation: %v", err)
 	}
+	log.WithFields(logrus.Fields{
+		"blockRoot":      fmt.Sprintf("%#x", attestation.Data.BeaconBlockRootHash32),
+		"justifiedEpoch": attestation.Data.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
+	}).Info("Received an attestation!")
 
 	// Skip if attestation has been seen before.
 	if rs.db.HasAttestation(attestationRoot) {
@@ -531,9 +542,10 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 		return
 	}
 
-	ctx, sendAttestationSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendAttestation")
-	log.WithField("attestationHash", fmt.Sprintf("%#x", attestationRoot)).Debug("Sending newly received attestation to subscribers")
+	_, sendAttestationSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendAttestation")
+	log.Info("Sending newly received attestation to subscribers")
 	rs.operationsService.IncomingAttFeed().Send(attestation)
+	rs.attsService.IncomingAttestationFeed().Send(attestation)
 	sentAttestation.Inc()
 	sendAttestationSpan.End()
 }

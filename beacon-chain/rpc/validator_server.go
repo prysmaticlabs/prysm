@@ -7,9 +7,11 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -126,6 +128,22 @@ func (vs *ValidatorServer) CommitteeAssignment(
 	beaconState, err := vs.beaconDB.State(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
+	}
+	head, err := vs.beaconDB.ChainHead()
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve chain head: %v", err)
+	}
+	headRoot, err := hashutil.HashBeaconBlock(head)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve head root: %v", err)
+	}
+	for beaconState.Slot < req.EpochStart {
+		beaconState, err = state.ExecuteStateTransition(
+			ctx, beaconState, nil /* block */, headRoot, state.DefaultConfig(),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could not execute head transition: %v", err)
+		}
 	}
 	idx, err := vs.beaconDB.ValidatorIndex(req.PublicKey)
 	if err != nil {

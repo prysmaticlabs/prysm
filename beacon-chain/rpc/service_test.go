@@ -95,6 +95,10 @@ func (m *mockChainService) CanonicalBlockFeed() *event.Feed {
 	return new(event.Feed)
 }
 
+func (m mockChainService) SaveHistoricalState(beaconState *pb.BeaconState) error {
+	return nil
+}
+
 func newMockChainService() *mockChainService {
 	return &mockChainService{
 		blockFeed:            new(event.Feed),

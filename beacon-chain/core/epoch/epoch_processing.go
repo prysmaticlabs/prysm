@@ -160,7 +160,7 @@ func ProcessJustification(
 		(state.JustificationBitfield>>1)%8 == 7 {
 		state.FinalizedEpoch = state.PreviousJustifiedEpoch
 		if enableLogging {
-			log.Infof("New finalized epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
+			log.Infof("New finalized epoch calculated: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
 		}
 	}
 	// When the 2nd and 3rd most epochs are all justified, the 2nd can finalize the 3rd epoch
@@ -169,7 +169,7 @@ func ProcessJustification(
 		(state.JustificationBitfield>>1)%4 == 3 {
 		state.FinalizedEpoch = state.PreviousJustifiedEpoch
 		if enableLogging {
-			log.Infof("New finalized epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
+			log.Infof("New finalized epoch calculated: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
 		}
 	}
 	// When the 1st, 2nd and 3rd most epochs are all justified, the 1st can finalize the 3rd epoch
@@ -178,7 +178,7 @@ func ProcessJustification(
 		(state.JustificationBitfield>>0)%8 == 7 {
 		state.FinalizedEpoch = state.JustifiedEpoch
 		if enableLogging {
-			log.Infof("New finalized epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
+			log.Infof("New finalized epoch calculated: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
 		}
 	}
 	// When the 1st and 2nd most epochs are all justified, the 1st can finalize the 2nd epoch
@@ -187,7 +187,7 @@ func ProcessJustification(
 		(state.JustificationBitfield>>0)%4 == 3 {
 		state.FinalizedEpoch = state.JustifiedEpoch
 		if enableLogging {
-			log.Infof("New finalized epoch: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
+			log.Infof("New finalized epoch calculated: %d", state.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
 		}
 	}
 	state.PreviousJustifiedEpoch = state.JustifiedEpoch

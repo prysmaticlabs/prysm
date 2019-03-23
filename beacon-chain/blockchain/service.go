@@ -59,13 +59,6 @@ type Config struct {
 	P2p            p2p.Broadcaster
 }
 
-// attestationTarget consists of validator index and block, it's
-// used to represent which validator index has voted which block.
-type attestationTarget struct {
-	validatorIndex uint64
-	block          *pb.BeaconBlock
-}
-
 // NewChainService instantiates a new service instance that will
 // be registered into a running beacon node.
 func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
