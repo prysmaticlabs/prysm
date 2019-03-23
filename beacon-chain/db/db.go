@@ -73,7 +73,6 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 	}
 
 	db := &BeaconDB{db: boltDB, DatabasePath: dirPath}
-	db.chainstartPubkeys = make(map[string]bool)
 
 	if err := db.update(func(tx *bolt.Tx) error {
 		return createBuckets(tx, blockBucket, attestationBucket, mainChainBucket, histStateBucket,

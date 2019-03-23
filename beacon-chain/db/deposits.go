@@ -52,7 +52,11 @@ func (db *BeaconDB) PubkeyInChainstart(ctx context.Context, pubkey string) bool 
 	defer span.End()
 	db.chainstartPubkeysLock.Lock()
 	defer db.chainstartPubkeysLock.Unlock()
-	return db.chainstartPubkeys[pubkey]
+	if db.chainstartPubkeys != nil {
+		return db.chainstartPubkeys[pubkey]
+	}
+	db.chainstartPubkeys = make(map[string]bool)
+	return false
 }
 
 // AllDeposits returns a list of deposits all historical deposits until the given block number
