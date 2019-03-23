@@ -224,7 +224,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 
 }
 
-func TestProcessChainStartLog_DuplicatePubkeys(t *testing.T) {
+func TestProcessChainStartLog_8DuplicatePubkeys(t *testing.T) {
 	hook := logTest.NewGlobal()
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
@@ -247,7 +247,7 @@ func TestProcessChainStartLog_DuplicatePubkeys(t *testing.T) {
 	testAcc.backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
 
 	var stub [48]byte
-	copy(stub[:], []byte("signed"))
+	copy(stub[:], []byte("testing"))
 
 	data := &pb.DepositInput{
 		Pubkey:                      stub[:],
@@ -309,7 +309,7 @@ func TestProcessChainStartLog_DuplicatePubkeys(t *testing.T) {
 	hook.Reset()
 }
 
-func TestProcessChainStartLog_OK(t *testing.T) {
+func TestProcessChainStartLog_8UniquePubkeys(t *testing.T) {
 	hook := logTest.NewGlobal()
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
