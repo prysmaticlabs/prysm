@@ -109,8 +109,8 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 
 	log.WithFields(logrus.Fields{
 		"slotNumber": block.Slot - params.BeaconConfig().GenesisSlot,
-		"justifiedEpoch": beaconState.JustifiedEpoch,
-		"finalizedEpoch": beaconState.FinalizedEpoch,
+		"justifiedEpoch": beaconState.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
+		"finalizedEpoch": beaconState.FinalizedEpoch-params.BeaconConfig().GenesisEpoch,
 	}).Info(
 		"State transition complete")
 
