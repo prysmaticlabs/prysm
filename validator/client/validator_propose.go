@@ -1,16 +1,15 @@
 package client
 
 // Validator client proposer functions.
-
 import (
 	"context"
 	"encoding/binary"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	ptypes "github.com/gogo/protobuf/types"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/forkutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -94,7 +93,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	block := &pbp2p.BeaconBlock{
 		Slot:             slot,
 		ParentRootHash32: parentTreeRoot[:],
-		RandaoReveal:     epochSignature.Marshal(),
+		RandaoReveal:     []byte("signed"),
 		Eth1Data:         eth1DataResp.Eth1Data,
 		Body: &pbp2p.BeaconBlockBody{
 			Attestations:      attResp.PendingAttestations,
