@@ -91,18 +91,12 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 
 	// Make sure duplicates are rejected pre-chainstart.
 	if !w.chainStarted {
-		for _, dep := range w.chainStartDeposits {
-			depInput, err := helpers.DecodeDepositInput(dep)
-			if err != nil {
-				log.Errorf("Could not decode deposit input %v", err)
-				return
-			}
-
-			if bytes.Equal(depositInput.Pubkey, depInput.Pubkey) {
-				log.Debugf("Pubkey %#x has already been submitted for chainstart", depInput.Pubkey)
-				validData = false
-				break
-			}
+		var pubkey = fmt.Sprintf("#%x", depositInput.Pubkey)
+		if w.beaconDB.PubkeyInChainstart(w.ctx, pubkey) {
+			log.Debugf("Pubkey %#x has already been submitted for chainstart", pubkey)
+			validData = false
+		} else {
+			w.beaconDB.MarkPubkeyForChainstart(w.ctx, pubkey)
 		}
 	}
 
