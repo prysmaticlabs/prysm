@@ -25,7 +25,7 @@ var log = logrus.WithField("prefix", "stategenerator")
 func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.stategenerator.GenerateStateFromBlock")
 	defer span.End()
-	fState, err := db.FinalizedState()
+	fState, err := db.HistoricalStateFromSlot(slot)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +44,7 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 		)
 	}
 
-	fBlock, err := db.FinalizedBlock()
+	fBlock, err := db.BlockBySlot(fState.Slot)
 	if err != nil {
 		return nil, err
 	}

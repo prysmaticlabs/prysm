@@ -193,6 +193,10 @@ func (c *ChainService) runStateTransition(
 		if err := c.updateFFGCheckPts(beaconState); err != nil {
 			return nil, fmt.Errorf("could not update FFG checkpts: %v", err)
 		}
+		// Save Historical States
+		if err := c.SaveHistoricalState(beaconState); err != nil {
+			return nil, fmt.Errorf("could not save historical state: %v", err)
+		}
 		log.WithField(
 			"SlotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
 		).Info("Epoch transition successfully processed")
