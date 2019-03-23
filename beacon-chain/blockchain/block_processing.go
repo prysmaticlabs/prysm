@@ -108,9 +108,9 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	}
 
 	log.WithFields(logrus.Fields{
-		"slotNumber": block.Slot - params.BeaconConfig().GenesisSlot,
-		"justifiedEpoch": beaconState.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
-		"finalizedEpoch": beaconState.FinalizedEpoch-params.BeaconConfig().GenesisEpoch,
+		"slotNumber":     block.Slot - params.BeaconConfig().GenesisSlot,
+		"justifiedEpoch": beaconState.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
+		"finalizedEpoch": beaconState.FinalizedEpoch - params.BeaconConfig().GenesisEpoch,
 	}).Info(
 		"State transition complete")
 
@@ -127,8 +127,8 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		}
 		log.WithFields(
 			logrus.Fields{
-				"attestationSlot":     att.Data.Slot-params.BeaconConfig().GenesisSlot,
-				"justifiedEpoch": att.Data.JustifiedEpoch-params.BeaconConfig().GenesisEpoch,
+				"attestationSlot": att.Data.Slot - params.BeaconConfig().GenesisSlot,
+				"justifiedEpoch":  att.Data.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
 			},
 		).Info("Attestation store updated")
 	}
@@ -164,7 +164,7 @@ func (c *ChainService) runStateTransition(
 		headRoot,
 		&state.TransitionConfig{
 			VerifySignatures: false, // TODO: Activate signature verification in this state transition.
-			Logging:          true, // We enable logging in this state transition call.
+			Logging:          true,  // We enable logging in this state transition call.
 		},
 	)
 	if err != nil {

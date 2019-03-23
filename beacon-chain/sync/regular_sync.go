@@ -519,7 +519,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) {
 		log.Errorf("Could not hash received attestation: %v", err)
 	}
 	log.WithFields(logrus.Fields{
-		"blockRoot": fmt.Sprintf("%#x", attestation.Data.BeaconBlockRootHash32),
+		"blockRoot":      fmt.Sprintf("%#x", attestation.Data.BeaconBlockRootHash32),
 		"justifiedEpoch": attestation.Data.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
 	}).Info("Received an attestation!")
 
