@@ -6,6 +6,7 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
@@ -71,7 +72,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		opsPoolService:       cfg.OpsPoolService,
 		attsService:          cfg.AttsService,
 		canonicalBlockFeed:   new(event.Feed),
-		canonicalBlockChan:   make(chan *pb.BeaconBlock, cfg.BeaconBlockBuf),
+		canonicalBlockChan:   make(chan *pb.BeaconBlock, params.BeaconConfig().DefaultBufferSize),
 		chainStartChan:       make(chan time.Time),
 		stateInitializedFeed: new(event.Feed),
 		enablePOWChain:       cfg.EnablePOWChain,

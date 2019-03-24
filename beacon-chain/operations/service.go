@@ -47,9 +47,6 @@ type Service struct {
 // Config options for the service.
 type Config struct {
 	BeaconDB        *db.BeaconDB
-	ReceiveExitBuf  int
-	ReceiveAttBuf   int
-	ReceiveBlockBuf int
 	P2P             p2p.Broadcaster
 }
 
@@ -62,11 +59,11 @@ func NewOpsPoolService(ctx context.Context, cfg *Config) *Service {
 		cancel:                     cancel,
 		beaconDB:                   cfg.BeaconDB,
 		incomingExitFeed:           new(event.Feed),
-		incomingValidatorExits:     make(chan *pb.VoluntaryExit, cfg.ReceiveExitBuf),
+		incomingValidatorExits:     make(chan *pb.VoluntaryExit, params.BeaconConfig().DefaultBufferSize),
 		incomingAttFeed:            new(event.Feed),
-		incomingAtt:                make(chan *pb.Attestation, cfg.ReceiveAttBuf),
+		incomingAtt:                make(chan *pb.Attestation, params.BeaconConfig().DefaultBufferSize),
 		incomingProcessedBlockFeed: new(event.Feed),
-		incomingProcessedBlock:     make(chan *pb.BeaconBlock, cfg.ReceiveBlockBuf),
+		incomingProcessedBlock:     make(chan *pb.BeaconBlock, params.BeaconConfig().DefaultBufferSize),
 		p2p:                        cfg.P2P,
 	}
 }

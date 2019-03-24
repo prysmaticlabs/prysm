@@ -108,18 +108,18 @@ type RegularSyncConfig struct {
 // DefaultRegularSyncConfig provides the default configuration for a sync service.
 func DefaultRegularSyncConfig() *RegularSyncConfig {
 	return &RegularSyncConfig{
-		BlockAnnounceBufferSize:     100,
-		BlockBufferSize:             100,
-		BlockReqSlotBufferSize:      100,
-		BlockReqHashBufferSize:      100,
-		BatchedBufferSize:           100,
-		StateReqBufferSize:          100,
-		ChainHeadReqBufferSize:      100,
-		AttestationBufferSize:       100,
-		AttestationReqHashBufSize:   100,
-		AttestationsAnnounceBufSize: 100,
-		ExitBufferSize:              100,
-		CanonicalBufferSize:         100,
+		BlockAnnounceBufferSize:     params.BeaconConfig().DefaultBufferSize,
+		BlockBufferSize:             params.BeaconConfig().DefaultBufferSize,
+		BlockReqSlotBufferSize:      params.BeaconConfig().DefaultBufferSize,
+		BlockReqHashBufferSize:      params.BeaconConfig().DefaultBufferSize,
+		BatchedBufferSize:           params.BeaconConfig().DefaultBufferSize,
+		StateReqBufferSize:          params.BeaconConfig().DefaultBufferSize,
+		ChainHeadReqBufferSize:      params.BeaconConfig().DefaultBufferSize,
+		AttestationBufferSize:       params.BeaconConfig().DefaultBufferSize,
+		AttestationReqHashBufSize:   params.BeaconConfig().DefaultBufferSize,
+		AttestationsAnnounceBufSize: params.BeaconConfig().DefaultBufferSize,
+		ExitBufferSize:              params.BeaconConfig().DefaultBufferSize,
+		CanonicalBufferSize:         params.BeaconConfig().DefaultBufferSize,
 	}
 }
 

@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -33,7 +34,7 @@ type QuerierConfig struct {
 // ResponseBufferSize determines that buffer size of the `responseBuf` channel.
 func DefaultQuerierConfig() *QuerierConfig {
 	return &QuerierConfig{
-		ResponseBufferSize: 100,
+		ResponseBufferSize: params.BeaconConfig().DefaultBufferSize,
 	}
 }
 

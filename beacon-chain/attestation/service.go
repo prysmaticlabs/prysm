@@ -4,6 +4,7 @@ package attestation
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 
@@ -39,8 +40,6 @@ type Service struct {
 // Config options for the service.
 type Config struct {
 	BeaconDB                *db.BeaconDB
-	ReceiveAttestationBuf   int
-	BroadcastAttestationBuf int
 }
 
 // NewAttestationService instantiates a new service instance that will
@@ -52,9 +51,9 @@ func NewAttestationService(ctx context.Context, cfg *Config) *Service {
 		cancel:        cancel,
 		beaconDB:      cfg.BeaconDB,
 		broadcastFeed: new(event.Feed),
-		broadcastChan: make(chan *pb.Attestation, cfg.BroadcastAttestationBuf),
+		broadcastChan: make(chan *pb.Attestation, params.BeaconConfig().DefaultBufferSize),
 		incomingFeed:  new(event.Feed),
-		incomingChan:  make(chan *pb.Attestation, cfg.ReceiveAttestationBuf),
+		incomingChan:  make(chan *pb.Attestation, params.BeaconConfig().DefaultBufferSize),
 		Store:         make(map[[48]byte]*pb.Attestation),
 	}
 }

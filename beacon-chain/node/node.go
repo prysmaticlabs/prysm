@@ -216,7 +216,6 @@ func (b *BeaconNode) registerBlockchainService(_ *cli.Context) error {
 		Web3Service:    web3Service,
 		OpsPoolService: opsService,
 		AttsService:    attsService,
-		BeaconBlockBuf: 10,
 		P2p:            p2pService,
 	})
 	if err != nil {
