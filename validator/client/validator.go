@@ -20,12 +20,12 @@ import (
 type validator struct {
 	genesisTime     uint64
 	ticker          *slotutil.SlotTicker
-	assignment      *pb.CommitteeAssignmentResponse
+	assignments     *pb.CommitteeAssignmentResponse
 	proposerClient  pb.ProposerServiceClient
 	validatorClient pb.ValidatorServiceClient
 	beaconClient    pb.BeaconServiceClient
 	attesterClient  pb.AttesterServiceClient
-	key             *keystore.Key
+	keys            map[uint64]keystore.Key
 	prevBalance     uint64
 }
 
@@ -76,14 +76,18 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 func (v *validator) WaitForActivation(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
 	defer span.End()
+	pks := [][]byte{}
+	for _, key := range v.keys {
+		pks = append(pks, key.PublicKey.Marshal())
+	}
 	req := &pb.ValidatorActivationRequest{
-		Pubkey: v.key.PublicKey.Marshal(),
+		PublicKey: pks,
 	}
 	stream, err := v.validatorClient.WaitForActivation(ctx, req)
 	if err != nil {
 		return fmt.Errorf("could not setup validator WaitForActivation streaming client: %v", err)
 	}
-	var validatorActivatedRecord *pbp2p.Validator
+	var validatorActivatedRecords []*pbp2p.Validator
 	for {
 		log.Info("Waiting for validator to be activated in the beacon chain")
 		res, err := stream.Recv()
@@ -98,12 +102,15 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("could not receive validator activation from stream: %v", err)
 		}
-		validatorActivatedRecord = res.Validator
+		validatorActivatedRecords = res.Validators
 		break
 	}
-	log.WithFields(logrus.Fields{
-		"activationEpoch": validatorActivatedRecord.ActivationEpoch - params.BeaconConfig().GenesisEpoch,
-	}).Info("Validator activated")
+	for _, validatorActivatedRecord := range validatorActivatedRecords {
+		log.WithFields(logrus.Fields{
+			"activationEpoch": validatorActivatedRecord.ActivationEpoch - params.BeaconConfig().GenesisEpoch,
+		}).Info("Validator activated")
+	}
+
 	return nil
 }
 
@@ -143,46 +150,69 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 
 	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
 	defer span.End()
-
+	pks := [][]byte{}
+	for i := range v.keys {
+		pks = append(pks, v.keys[i].PublicKey.Marshal())
+	}
 	req := &pb.CommitteeAssignmentsRequest{
 		EpochStart: slot,
-		PublicKeys: [][]byte{v.key.PublicKey.Marshal()},
+		PublicKeys: pks,
 	}
 
 	resp, err := v.validatorClient.CommitteeAssignment(ctx, req)
 	if err != nil {
-		v.assignment = nil // Clear assignments so we know to retry the request.
+		v.assignments = nil // Clear assignments so we know to retry the request.
 		return err
 	}
 
-	v.assignment = resp
+	v.assignments = resp
+	for i, assignment := range v.assignments.Assignment {
+		var proposerSlot uint64
+		var attesterSlot uint64
+		if assignment.IsProposer && len(assignment.Committee) == 1 {
+			proposerSlot = assignment.Slot
+			attesterSlot = assignment.Slot
+		} else if assignment.IsProposer {
+			proposerSlot = assignment.Slot
+		} else {
+			attesterSlot = assignment.Slot
+		}
 
-	lFields := logrus.Fields{
-		"attesterSlot": resp.Assignment[0].Slot - params.BeaconConfig().GenesisSlot,
-		"proposerSlot": "Not proposing",
-		"shard":        resp.Assignment[0].Shard,
-	}
-	if v.assignment.Assignment[0].IsProposer {
-		lFields["proposerSlot"] = resp.Assignment[0].Slot - params.BeaconConfig().GenesisSlot
-	}
+		lFields := logrus.Fields{
+			"attesterSlot": assignment.Slot - params.BeaconConfig().GenesisSlot,
+			"proposerSlot": "Not proposing",
+			"shard":        assignment.Shard,
+		}
+		if assignment.IsProposer {
+			lFields["proposerSlot"] = resp.Assignment[0].Slot - params.BeaconConfig().GenesisSlot
+		}
 
-	log.WithFields(lFields).Info("Updated validator assignments")
+		log.WithFields(lFields).Info("Updated validator assignments")
+
+	}
 	return nil
 }
 
-// RoleAt slot returns the validator role at the given slot. Returns nil if the
-// validator is known to not have a role at the at slot. Returns UNKNOWN if the
+// RolesAt slot returns the validator roles at the given slot. Returns nil if the
+// validator is known to not have a roles at the at slot. Returns UNKNOWN if the
 // validator assignments are unknown. Otherwise returns a valid ValidatorRole.
-func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
-	if v.assignment == nil {
-		return pb.ValidatorRole_UNKNOWN
-	}
-	if v.assignment.Assignment[0].Slot == slot {
-		if v.assignment.Assignment[0].IsProposer {
-			// Note: A proposer also attests to the slot.
-			return pb.ValidatorRole_PROPOSER
+func (v *validator) RolesAt(slot uint64) map[uint64]pb.ValidatorRole {
+	rolesAt := make(map[uint64]pb.ValidatorRole)
+	for i, assignment := range v.assignments.Assignment {
+		var role pb.ValidatorRole
+		if assignment == nil {
+			role = pb.ValidatorRole_UNKNOWN
 		}
-		return pb.ValidatorRole_ATTESTER
+		if assignment.Slot == slot {
+			// Note: A proposer also attests to the slot.
+			if assignment.IsProposer {
+				role = pb.ValidatorRole_PROPOSER
+			} else {
+				role = pb.ValidatorRole_ATTESTER
+			}
+		}
+		role = pb.ValidatorRole_UNKNOWN
+		rolesAt[uint64(i)] = role
 	}
-	return pb.ValidatorRole_UNKNOWN
+	return rolesAt
 }

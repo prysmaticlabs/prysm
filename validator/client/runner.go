@@ -22,9 +22,9 @@ type Validator interface {
 	SlotDeadline(slot uint64) time.Time
 	LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error
 	UpdateAssignments(ctx context.Context, slot uint64) error
-	RoleAt(slot uint64) pb.ValidatorRole
-	AttestToBlockHead(ctx context.Context, slot uint64)
-	ProposeBlock(ctx context.Context, slot uint64)
+	RolesAt(slot uint64) map[uint64]pb.ValidatorRole // validatorIndex -> role
+	AttestToBlockHead(ctx context.Context, slot uint64, idx uint64)
+	ProposeBlock(ctx context.Context, slot uint64, idx uint64)
 }
 
 // Run the main validator routine. This routine exits if the context is
@@ -75,21 +75,23 @@ func run(ctx context.Context, v Validator) {
 				handleAssignmentError(err, slot)
 				continue
 			}
-			role := v.RoleAt(slot)
-
-			switch role {
-			case pb.ValidatorRole_ATTESTER:
-				v.AttestToBlockHead(slotCtx, slot)
-			case pb.ValidatorRole_PROPOSER:
-				v.ProposeBlock(slotCtx, slot)
-				v.AttestToBlockHead(slotCtx, slot)
-			case pb.ValidatorRole_UNKNOWN:
-				log.WithFields(logrus.Fields{
-					"slot": slot - params.BeaconConfig().GenesisSlot,
-					"role": role,
-				}).Info("No active assignment, doing nothing")
-			default:
-				// Do nothing :)
+			for idx, rol := range v.RolesAt(slot) {
+				go func(role pb.ValidatorRole, id uint64) {
+					switch rol {
+					case pb.ValidatorRole_ATTESTER:
+						v.AttestToBlockHead(slotCtx, slot, id)
+					case pb.ValidatorRole_PROPOSER:
+						v.ProposeBlock(slotCtx, slot, id)
+						v.AttestToBlockHead(slotCtx, slot, id)
+					case pb.ValidatorRole_UNKNOWN:
+						log.WithFields(logrus.Fields{
+							"slot": slot - params.BeaconConfig().GenesisSlot,
+							"role": rol,
+						}).Info("No active assignment, doing nothing")
+					default:
+						// Do nothing :)
+					}
+				}(rol, idx)
 			}
 		}
 	}

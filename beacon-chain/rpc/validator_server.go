@@ -30,36 +30,41 @@ type ValidatorServer struct {
 // beacon state, if not, then it creates a stream which listens for canonical states which contain
 // the validator with the public key as an active validator record.
 func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest, stream pb.ValidatorService_WaitForActivationServer) error {
+<<<<<<< HEAD
 	if vs.beaconDB.HasValidator(req.Pubkey) {
 		beaconState, err := vs.beaconDB.HeadState(vs.ctx)
+=======
+	if vs.beaconDB.HasValidators(req.PublicKey) {
+		beaconState, err := vs.beaconDB.State(vs.ctx)
+>>>>>>> first logic version-broken
 		if err != nil {
 			return fmt.Errorf("could not retrieve beacon state: %v", err)
 		}
-		activeVal, err := vs.retrieveActiveValidator(beaconState, req.Pubkey)
+		activeVals, err := vs.retrieveActiveValidators(beaconState, req.PublicKey)
 		if err != nil {
 			return fmt.Errorf("could not retrieve active validator from state: %v", err)
 		}
 		res := &pb.ValidatorActivationResponse{
-			Validator: activeVal,
+			ActivatedPublicKey: activeVals,
 		}
 		return stream.Send(res)
 	}
 	for {
 		select {
 		case <-time.After(3 * time.Second):
-			if !vs.beaconDB.HasValidator(req.Pubkey) {
+			if !vs.beaconDB.HasValidators(req.PublicKey) {
 				continue
 			}
 			beaconState, err := vs.beaconDB.HeadState(vs.ctx)
 			if err != nil {
 				return fmt.Errorf("could not retrieve beacon state: %v", err)
 			}
-			activeVal, err := vs.retrieveActiveValidator(beaconState, req.Pubkey)
+			activeVals, err := vs.retrieveActiveValidators(beaconState, req.PublicKey)
 			if err != nil {
 				return fmt.Errorf("could not retrieve active validator from state: %v", err)
 			}
 			res := &pb.ValidatorActivationResponse{
-				Validator: activeVal,
+				ActivatedPublicKey: activeVals,
 			}
 			return stream.Send(res)
 		case <-vs.ctx.Done():
@@ -251,4 +256,17 @@ func (vs *ValidatorServer) retrieveActiveValidator(beaconState *pbp2p.BeaconStat
 		return nil, fmt.Errorf("could not retrieve validator index: %v", err)
 	}
 	return beaconState.ValidatorRegistry[validatorIdx], nil
+}
+
+func (vs *ValidatorServer) retrieveActiveValidators(beaconState *pbp2p.BeaconState, pubkeys [][]byte) ([][]byte, error) {
+	v := [][]byte{}
+	for _, pk := range pubkeys {
+		_, err := vs.beaconDB.ValidatorIndex(pk)
+		if err != nil {
+			return nil, fmt.Errorf("could not retrieve validator index: %v", err)
+		}
+		v = append(v, pk)
+	}
+
+	return v, nil
 }

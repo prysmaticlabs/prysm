@@ -549,17 +549,23 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
 
-	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndex(pubKey, 0); err != nil {
+	pubKeys := [][]byte{{'A'}, {'B'}}
+	if err := db.SaveValidatorIndex(pubKeys[0], 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
-
+	if err := db.SaveValidatorIndex(pubKeys[1], 0); err != nil {
+		t.Fatalf("Could not save validator index: %v", err)
+	}
 	beaconState := &pbp2p.BeaconState{
 		Slot: params.BeaconConfig().GenesisSlot,
 		ValidatorRegistry: []*pbp2p.Validator{{
 			ActivationEpoch: params.BeaconConfig().GenesisSlot,
 			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-			Pubkey:          pubKey},
+			Pubkey:          pubKeys[0]},
+			{
+				ActivationEpoch: params.BeaconConfig().GenesisSlot,
+				ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+				Pubkey:          pubKeys[1]},
 		},
 	}
 	if err := db.SaveState(ctx, beaconState); err != nil {
@@ -573,15 +579,14 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 	}
 	req := &pb.ValidatorActivationRequest{
-		Pubkey: pubKey,
+		PublicKey: pubKeys,
 	}
-
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockStream := internal.NewMockValidatorService_WaitForActivationServer(ctrl)
 	mockStream.EXPECT().Send(
 		&pb.ValidatorActivationResponse{
-			Validator: beaconState.ValidatorRegistry[0],
+			ActivatedPublicKey: beaconState.ValidatorRegistry,
 		},
 	).Return(nil)
 

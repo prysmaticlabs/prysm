@@ -50,11 +50,11 @@ message ValidatorPerformanceResponse {
 }
 
 message ValidatorActivationRequest {
-    bytes pubkey = 1;
+    repeated bytes public_key = 1;
 }
 
 message ValidatorActivationResponse {
-    ethereum.beacon.p2p.v1.Validator validator = 1;
+    repeated ethereum.beacon.p2p.v1.Validator validators = 1;
 }
 
 message AttestationDataRequest {

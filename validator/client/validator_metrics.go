@@ -24,7 +24,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot uint64)
 	}
 	req := &pb.ValidatorPerformanceRequest{
 		Slot:      slot,
-		PublicKey: v.key.PublicKey.Marshal(),
+		PublicKey: v.keys.PublicKey.Marshal(),
 	}
 	resp, err := v.validatorClient.ValidatorPerformance(ctx, req)
 	if err != nil {

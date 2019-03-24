@@ -20,7 +20,7 @@ var delay = params.BeaconConfig().SecondsPerSlot / 2
 // It fetches the latest beacon block head along with the latest canonical beacon state
 // information in order to sign the block and include information about the validator's
 // participation in voting on the block.
-func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
+func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx uint64) {
 	ctx, span := trace.StartSpan(ctx, "validator.AttestToBlockHead")
 	defer span.End()
 	span.AddAttributes(
@@ -36,7 +36,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	}
 	// We fetch the validator index as it is necessary to generate the aggregation
 	// bitfield of the attestation itself.
-	pubKey := v.key.PublicKey.Marshal()
+	pubKey := v.keys[idx].PublicKey.Marshal()
 	idxReq := &pb.ValidatorIndexRequest{
 		PublicKey: pubKey,
 	}
