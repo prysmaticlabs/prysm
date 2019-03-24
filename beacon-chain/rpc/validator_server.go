@@ -7,11 +7,9 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -115,13 +113,13 @@ func (vs *ValidatorServer) ValidatorPerformance(
 //	4.) The bool signalling if the validator is expected to propose a block at the assigned slot.
 func (vs *ValidatorServer) CommitteeAssignment(
 	ctx context.Context,
-	req *pb.ValidatorEpochAssignmentsRequest) (*pb.CommitteeAssignmentResponse, error) {
+	req *pb.CommitteeAssignmentsRequest) (*pb.CommitteeAssignmentResponse, error) {
 
-	if len(req.PublicKey) != params.BeaconConfig().BLSPubkeyLength {
+	if len(req.PublicKey[0]) != params.BeaconConfig().BLSPubkeyLength {
 		return nil, fmt.Errorf(
 			"expected public key to have length %d, received %d",
 			params.BeaconConfig().BLSPubkeyLength,
-			len(req.PublicKey),
+			len(req.PublicKey[0]),
 		)
 	}
 
@@ -129,23 +127,7 @@ func (vs *ValidatorServer) CommitteeAssignment(
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
-	head, err := vs.beaconDB.ChainHead()
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve chain head: %v", err)
-	}
-	headRoot, err := hashutil.HashBeaconBlock(head)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve head root: %v", err)
-	}
-	for beaconState.Slot < req.EpochStart {
-		beaconState, err = state.ExecuteStateTransition(
-			ctx, beaconState, nil /* block */, headRoot, state.DefaultConfig(),
-		)
-		if err != nil {
-			return nil, fmt.Errorf("could not execute head transition: %v", err)
-		}
-	}
-	idx, err := vs.beaconDB.ValidatorIndex(req.PublicKey)
+	idx, err := vs.beaconDB.ValidatorIndex(req.PublicKey[0])
 	if err != nil {
 		return nil, fmt.Errorf("could not get active validator index: %v", err)
 	}
@@ -155,12 +137,20 @@ func (vs *ValidatorServer) CommitteeAssignment(
 	if err != nil {
 		return nil, err
 	}
-
-	return &pb.CommitteeAssignmentResponse{
-		Committee:  committee,
-		Shard:      shard,
-		Slot:       slot,
-		IsProposer: isProposer,
+	vsr, err := vs.ValidatorStatus(ctx, &pb.ValidatorIndexRequest{PublicKey: req.PublicKey[0]})
+	if err != nil {
+		return nil, err
+	}
+	return &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+		{
+			Committee:  committee,
+			Shard:      shard,
+			Slot:       slot,
+			IsProposer: isProposer,
+			PublicKey:  req.PublicKey[0],
+			Status:     vsr.Status,
+		},
+	},
 	}, nil
 }
 

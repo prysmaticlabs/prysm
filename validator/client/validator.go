@@ -131,9 +131,9 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
 	defer span.End()
 
-	req := &pb.ValidatorEpochAssignmentsRequest{
+	req := &pb.CommitteeAssignmentsRequest{
 		EpochStart: slot,
-		PublicKey:  v.key.PublicKey.Marshal(),
+		PublicKey:  [][]byte{v.key.PublicKey.Marshal()},
 	}
 
 	resp, err := v.validatorClient.CommitteeAssignment(ctx, req)
@@ -146,19 +146,19 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 
 	var proposerSlot uint64
 	var attesterSlot uint64
-	if v.assignment.IsProposer && len(v.assignment.Committee) == 1 {
-		proposerSlot = resp.Slot
-		attesterSlot = resp.Slot
-	} else if v.assignment.IsProposer {
-		proposerSlot = resp.Slot
+	if v.assignment.Assignment[0].IsProposer && len(v.assignment.Assignment[0].Committee) == 1 {
+		proposerSlot = resp.Assignment[0].Slot
+		attesterSlot = resp.Assignment[0].Slot
+	} else if v.assignment.Assignment[0].IsProposer {
+		proposerSlot = resp.Assignment[0].Slot
 	} else {
-		attesterSlot = resp.Slot
+		attesterSlot = resp.Assignment[0].Slot
 	}
 
 	log.WithFields(logrus.Fields{
 		"proposerSlot": proposerSlot - params.BeaconConfig().GenesisSlot,
 		"attesterSlot": attesterSlot - params.BeaconConfig().GenesisSlot,
-		"shard":        resp.Shard,
+		"shard":        resp.Assignment[0].Shard,
 	}).Info("Updated validator assignments")
 	return nil
 }
@@ -170,12 +170,12 @@ func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
 	if v.assignment == nil {
 		return pb.ValidatorRole_UNKNOWN
 	}
-	if v.assignment.Slot == slot {
+	if v.assignment.Assignment[0].Slot == slot {
 		// if the committee length is 1, that means validator has to perform both
 		// proposer and validator roles.
-		if len(v.assignment.Committee) == 1 {
+		if len(v.assignment.Assignment[0].Committee) == 1 {
 			return pb.ValidatorRole_BOTH
-		} else if v.assignment.IsProposer {
+		} else if v.assignment.Assignment[0].IsProposer {
 			return pb.ValidatorRole_PROPOSER
 		} else {
 			return pb.ValidatorRole_ATTESTER
