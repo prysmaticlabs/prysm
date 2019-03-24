@@ -42,9 +42,9 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 		log.Errorf("Could not fetch validator index: %v", err)
 		return
 	}
-	req := &pb.ValidatorEpochAssignmentsRequest{
+	req := &pb.CommitteeAssignmentsRequest{
 		EpochStart: slot,
-		PublicKey:  pubKey,
+		PublicKey:  [][]byte{pubKey},
 	}
 	resp, err := v.validatorClient.CommitteeAssignment(ctx, req)
 	if err != nil {
@@ -54,13 +54,13 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 	}
 	// Set the attestation data's shard as the shard associated with the validator's
 	// committee as retrieved by CrosslinkCommitteesAtSlot.
-	attData.Shard = resp.Shard
+	attData.Shard = resp.Assignment[0].Shard
 
 	// Fetch other necessary information from the beacon node in order to attest
 	// including the justified epoch, epoch boundary information, and more.
 	infoReq := &pb.AttestationDataRequest{
 		Slot:  slot,
-		Shard: resp.Shard,
+		Shard: resp.Assignment[0].Shard,
 	}
 	infoRes, err := v.attesterClient.AttestationDataAtSlot(ctx, infoReq)
 	if err != nil {
@@ -94,12 +94,12 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 
 	// We set the custody bitfield to an slice of zero values as a stub for phase 0
 	// of length len(committee)+7 // 8.
-	attestation.CustodyBitfield = make([]byte, (len(resp.Committee)+7)/8)
+	attestation.CustodyBitfield = make([]byte, (len(resp.Assignment[0].Committee)+7)/8)
 
 	// Find the index in committee to be used for
 	// the aggregation bitfield
 	var indexInCommittee int
-	for i, vIndex := range resp.Committee {
+	for i, vIndex := range resp.Assignment[0].Committee {
 		if vIndex == validatorIndexRes.Index {
 			indexInCommittee = i
 			break

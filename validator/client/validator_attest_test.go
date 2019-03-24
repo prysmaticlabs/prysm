@@ -60,10 +60,12 @@ func TestAttestToBlockHead_AttestationDataAtSlotFailure(t *testing.T) {
 	).Return(&pb.ValidatorIndexResponse{Index: 5}, nil)
 	m.validatorClient.EXPECT().CommitteeAssignment(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.ValidatorEpochAssignmentsRequest{}),
-	).Return(&pb.CommitteeAssignmentResponse{
-		Shard: 5,
-	}, nil)
+		gomock.AssignableToTypeOf(&pb.CommitteeAssignmentsRequest{}),
+	).Return(&pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+		&pb.CommitteeAssignmentResponse_CommitteeAssignment{
+			Shard: 5,
+		},
+	}}, nil)
 	m.attesterClient.EXPECT().AttestationDataAtSlot(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.AttestationDataRequest{}),
@@ -86,11 +88,12 @@ func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
 	}, nil)
 	m.validatorClient.EXPECT().CommitteeAssignment(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.ValidatorEpochAssignmentsRequest{}),
-	).Return(&pb.CommitteeAssignmentResponse{
-		Shard:     5,
-		Committee: make([]uint64, 111),
-	}, nil)
+		gomock.AssignableToTypeOf(&pb.CommitteeAssignmentsRequest{}),
+	).Return(&pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+		&pb.CommitteeAssignmentResponse_CommitteeAssignment{
+			Shard:     5,
+			Committee: make([]uint64, 111),
+		}}}, nil)
 	m.attesterClient.EXPECT().AttestationDataAtSlot(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.AttestationDataRequest{}),
@@ -125,11 +128,12 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	}, nil)
 	m.validatorClient.EXPECT().CommitteeAssignment(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.ValidatorEpochAssignmentsRequest{}),
-	).Return(&pb.CommitteeAssignmentResponse{
-		Shard:     5,
-		Committee: committee,
-	}, nil)
+		gomock.AssignableToTypeOf(&pb.CommitteeAssignmentsRequest{}),
+	).Return(&pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+		&pb.CommitteeAssignmentResponse_CommitteeAssignment{
+			Shard:     5,
+			Committee: committee,
+		}}}, nil)
 	m.attesterClient.EXPECT().AttestationDataAtSlot(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.AttestationDataRequest{}),
@@ -181,7 +185,7 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 	validator.genesisTime = uint64(time.Now().Unix())
 	m.validatorClient.EXPECT().CommitteeAssignment(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.ValidatorEpochAssignmentsRequest{}),
+		gomock.AssignableToTypeOf(&pb.CommitteeAssignmentsRequest{}),
 		gomock.Any(),
 	).Times(0)
 
@@ -219,11 +223,12 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	committee := []uint64{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	m.validatorClient.EXPECT().CommitteeAssignment(
 		gomock.Any(), // ctx
-		gomock.AssignableToTypeOf(&pb.ValidatorEpochAssignmentsRequest{}),
-	).Return(&pb.CommitteeAssignmentResponse{
-		Shard:     5,
-		Committee: committee,
-	}, nil).Do(func(arg0, arg1 interface{}) {
+		gomock.AssignableToTypeOf(&pb.CommitteeAssignmentsRequest{}),
+	).Return(&pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+		&pb.CommitteeAssignmentResponse_CommitteeAssignment{
+			Shard:     5,
+			Committee: committee,
+		}}}, nil).Do(func(arg0, arg1 interface{}) {
 		wg.Done()
 	})
 
