@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -59,13 +60,6 @@ type Config struct {
 	P2p            p2p.Broadcaster
 }
 
-// attestationTarget consists of validator index and block, it's
-// used to represent which validator index has voted which block.
-type attestationTarget struct {
-	validatorIndex uint64
-	block          *pb.BeaconBlock
-}
-
 // NewChainService instantiates a new service instance that will
 // be registered into a running beacon node.
 func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
@@ -78,7 +72,7 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		opsPoolService:       cfg.OpsPoolService,
 		attsService:          cfg.AttsService,
 		canonicalBlockFeed:   new(event.Feed),
-		canonicalBlockChan:   make(chan *pb.BeaconBlock, cfg.BeaconBlockBuf),
+		canonicalBlockChan:   make(chan *pb.BeaconBlock, params.BeaconConfig().DefaultBufferSize),
 		chainStartChan:       make(chan time.Time),
 		stateInitializedFeed: new(event.Feed),
 		enablePOWChain:       cfg.EnablePOWChain,

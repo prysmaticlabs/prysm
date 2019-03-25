@@ -65,10 +65,14 @@ func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
 	if err != nil {
 		return fmt.Errorf("failed to encode block: %v", err)
 	}
+	slotBinary := encodeSlotNumber(block.Slot)
 
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blockBucket)
-
+		mainChain := tx.Bucket(mainChainBucket)
+		if err := mainChain.Put(slotBinary, root[:]); err != nil {
+			return fmt.Errorf("failed to include the block in the main chain bucket: %v", err)
+		}
 		return bucket.Put(root[:], enc)
 	})
 }

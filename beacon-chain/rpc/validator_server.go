@@ -142,7 +142,7 @@ func (vs *ValidatorServer) CommitteeAssignment(
 		return nil, err
 	}
 	return &pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
-		&pb.CommitteeAssignmentResponse_CommitteeAssignment{
+		{
 			Committee:  committee,
 			Shard:      shard,
 			Slot:       slot,

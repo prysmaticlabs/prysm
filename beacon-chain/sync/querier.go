@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -33,7 +34,7 @@ type QuerierConfig struct {
 // ResponseBufferSize determines that buffer size of the `responseBuf` channel.
 func DefaultQuerierConfig() *QuerierConfig {
 	return &QuerierConfig{
-		ResponseBufferSize: 100,
+		ResponseBufferSize: params.BeaconConfig().DefaultBufferSize,
 	}
 }
 

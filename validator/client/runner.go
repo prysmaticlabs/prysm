@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"time"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -17,6 +18,7 @@ type Validator interface {
 	WaitForChainStart(ctx context.Context) error
 	WaitForActivation(ctx context.Context) error
 	NextSlot() <-chan uint64
+	SlotDeadline(slot uint64) time.Time
 	LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error
 	UpdateAssignments(ctx context.Context, slot uint64) error
 	RoleAt(slot uint64) pb.ValidatorRole
@@ -55,14 +57,15 @@ func run(ctx context.Context, v Validator) {
 			return // Exit if context is canceled.
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
+			slotCtx, _ := context.WithDeadline(ctx, v.SlotDeadline(slot))
 			// Report this validator client's rewards and penalties throughout its lifecycle.
-			if err := v.LogValidatorGainsAndLosses(ctx, slot); err != nil {
+			if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
 				log.Errorf("Could not report validator's rewards/penalties for slot %d: %v", slot, err)
 			}
 
 			// Keep trying to update assignments if they are nil or if we are past an
 			// epoch transition in the beacon node's state.
-			if err := v.UpdateAssignments(ctx, slot); err != nil {
+			if err := v.UpdateAssignments(slotCtx, slot); err != nil {
 				handleAssignmentError(err, slot)
 				continue
 			}
@@ -70,12 +73,12 @@ func run(ctx context.Context, v Validator) {
 
 			switch role {
 			case pb.ValidatorRole_BOTH:
-				v.ProposeBlock(ctx, slot)
-				v.AttestToBlockHead(ctx, slot)
+				v.ProposeBlock(slotCtx, slot)
+				v.AttestToBlockHead(slotCtx, slot)
 			case pb.ValidatorRole_ATTESTER:
-				v.AttestToBlockHead(ctx, slot)
+				v.AttestToBlockHead(slotCtx, slot)
 			case pb.ValidatorRole_PROPOSER:
-				v.ProposeBlock(ctx, slot)
+				v.ProposeBlock(slotCtx, slot)
 			case pb.ValidatorRole_UNKNOWN:
 				log.WithFields(logrus.Fields{
 					"slot": slot - params.BeaconConfig().GenesisSlot,

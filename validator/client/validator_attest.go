@@ -121,7 +121,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 		"slot":           slot - params.BeaconConfig().GenesisSlot,
 	}).Info("Attesting to beacon chain head...")
 
-	log.Debugf("Produced attestation: %v", attestation)
+	log.Infof("Produced attestation with block root: %#x", attestation.Data.BeaconBlockRootHash32)
 	attResp, err := v.attesterClient.AttestHead(ctx, attestation)
 	if err != nil {
 		log.Errorf("Could not submit attestation to beacon node: %v", err)

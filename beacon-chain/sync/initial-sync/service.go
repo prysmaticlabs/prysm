@@ -56,10 +56,10 @@ type Config struct {
 func DefaultConfig() *Config {
 	return &Config{
 		SyncPollingInterval:     time.Duration(params.BeaconConfig().SyncPollingInterval) * time.Second,
-		BlockBufferSize:         100,
-		BatchedBlockBufferSize:  100,
-		BlockAnnounceBufferSize: 100,
-		StateBufferSize:         100,
+		BlockBufferSize:         params.BeaconConfig().DefaultBufferSize,
+		BatchedBlockBufferSize:  params.BeaconConfig().DefaultBufferSize,
+		BlockAnnounceBufferSize: params.BeaconConfig().DefaultBufferSize,
+		StateBufferSize:         params.BeaconConfig().DefaultBufferSize,
 	}
 }
 
@@ -420,6 +420,12 @@ func (s *InitialSync) processState(msg p2p.Message) {
 
 	if err := s.db.SaveCurrentAndFinalizedState(beaconState); err != nil {
 		log.Errorf("Unable to set beacon state for initial sync %v", err)
+		return
+	}
+
+	if err := s.db.SaveFinalizedBlock(beaconState.LatestBlock); err != nil {
+		log.Errorf("Could not save finalized block %v", err)
+		return
 	}
 
 	h, err := hashutil.HashProto(beaconState)

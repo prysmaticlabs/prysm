@@ -7,11 +7,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -126,7 +128,10 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	chainService := setupBeaconChain(t, false, db, true, nil)
+	attsService := attestation.NewAttestationService(
+		context.Background(),
+		&attestation.Config{BeaconDB: db})
+	chainService := setupBeaconChain(t, false, db, true, attsService)
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	eth1Data := &pb.Eth1Data{
 		DepositRootHash32: []byte{},
@@ -135,6 +140,9 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
+	}
+	if err := chainService.beaconDB.SaveJustifiedState(beaconState); err != nil {
+		t.Fatal(err)
 	}
 	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
@@ -184,12 +192,19 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 			Deposits: pendingDeposits,
 		},
 	}
+
+	blockRoot, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		log.Fatalf("could not hash block: %v", err)
+	}
+
 	if err := chainService.beaconDB.SaveJustifiedBlock(block); err != nil {
 		t.Fatal(err)
 	}
 	if err := chainService.beaconDB.SaveFinalizedBlock(block); err != nil {
 		t.Fatal(err)
 	}
+
 	for _, dep := range pendingDeposits {
 		db.InsertPendingDeposit(chainService.ctx, dep, big.NewInt(0))
 	}
@@ -205,6 +220,13 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	computedState, err := chainService.ReceiveBlock(context.Background(), block)
 	if err != nil {
 		t.Fatal(err)
+	}
+	for i := 0; i < len(beaconState.ValidatorRegistry); i++ {
+		pubKey := bytesutil.ToBytes48(beaconState.ValidatorRegistry[i].Pubkey)
+		attsService.Store[pubKey] = &pb.Attestation{
+			Data: &pb.AttestationData{
+				BeaconBlockRootHash32: blockRoot[:],
+			}}
 	}
 	if err := chainService.ApplyForkChoiceRule(context.Background(), block, computedState); err != nil {
 		t.Fatal(err)
