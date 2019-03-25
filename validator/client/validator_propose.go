@@ -22,7 +22,7 @@ import (
 // chain node to construct the new block. The new block is then processed with
 // the state root computation, and finally signed by the validator before being
 // sent back to the beacon node for broadcasting.
-func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
+func (v *validator) ProposeBlock(ctx context.Context, slot uint64, idx string) {
 	if slot == params.BeaconConfig().GenesisSlot {
 		log.Info("Assigned to genesis slot, skipping proposal")
 		return
@@ -79,7 +79,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	buf := make([]byte, 32)
 	binary.LittleEndian.PutUint64(buf, epoch)
 	domain := forkutil.DomainVersion(fork, epoch, params.BeaconConfig().DomainRandao)
-	epochSignature := v.key.SecretKey.Sign(buf, domain)
+	epochSignature := v.keys[idx].SecretKey.Sign(buf, domain)
 
 	// Fetch pending attestations seen by the beacon node.
 	attResp, err := v.proposerClient.PendingAttestations(ctx, &pb.PendingAttestationsRequest{

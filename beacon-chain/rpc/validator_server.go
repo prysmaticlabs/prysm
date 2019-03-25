@@ -45,7 +45,7 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 			return fmt.Errorf("could not retrieve active validator from state: %v", err)
 		}
 		res := &pb.ValidatorActivationResponse{
-			ActivatedPublicKey: activeVals,
+			ActivatedPublicKeys: activeVals,
 		}
 		return stream.Send(res)
 	}
@@ -64,7 +64,7 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 				return fmt.Errorf("could not retrieve active validator from state: %v", err)
 			}
 			res := &pb.ValidatorActivationResponse{
-				ActivatedPublicKey: activeVals,
+				ActivatedPublicKeys: activeVals,
 			}
 			return stream.Send(res)
 		case <-vs.ctx.Done():

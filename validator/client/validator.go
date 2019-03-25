@@ -3,12 +3,12 @@ package client
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -25,7 +25,7 @@ type validator struct {
 	validatorClient pb.ValidatorServiceClient
 	beaconClient    pb.BeaconServiceClient
 	attesterClient  pb.AttesterServiceClient
-	keys            map[uint64]keystore.Key
+	keys            map[string]*keystore.Key
 	prevBalance     uint64
 }
 
@@ -87,7 +87,7 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("could not setup validator WaitForActivation streaming client: %v", err)
 	}
-	var validatorActivatedRecords []*pbp2p.Validator
+	var validatorActivatedRecords [][]byte
 	for {
 		log.Info("Waiting for validator to be activated in the beacon chain")
 		res, err := stream.Recv()
@@ -102,12 +102,12 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("could not receive validator activation from stream: %v", err)
 		}
-		validatorActivatedRecords = res.Validators
+		validatorActivatedRecords = res.ActivatedPublicKeys
 		break
 	}
-	for _, validatorActivatedRecord := range validatorActivatedRecords {
+	for pk := range validatorActivatedRecords {
 		log.WithFields(logrus.Fields{
-			"activationEpoch": validatorActivatedRecord.ActivationEpoch - params.BeaconConfig().GenesisEpoch,
+			"public key": pk,
 		}).Info("Validator activated")
 	}
 
@@ -196,9 +196,9 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 // RolesAt slot returns the validator roles at the given slot. Returns nil if the
 // validator is known to not have a roles at the at slot. Returns UNKNOWN if the
 // validator assignments are unknown. Otherwise returns a valid ValidatorRole.
-func (v *validator) RolesAt(slot uint64) map[uint64]pb.ValidatorRole {
-	rolesAt := make(map[uint64]pb.ValidatorRole)
-	for i, assignment := range v.assignments.Assignment {
+func (v *validator) RolesAt(slot uint64) map[string]pb.ValidatorRole {
+	rolesAt := make(map[string]pb.ValidatorRole)
+	for _, assignment := range v.assignments.Assignment {
 		var role pb.ValidatorRole
 		if assignment == nil {
 			role = pb.ValidatorRole_UNKNOWN
@@ -212,7 +212,7 @@ func (v *validator) RolesAt(slot uint64) map[uint64]pb.ValidatorRole {
 			}
 		}
 		role = pb.ValidatorRole_UNKNOWN
-		rolesAt[uint64(i)] = role
+		rolesAt[hex.EncodeToString(assignment.PublicKey)] = role
 	}
 	return rolesAt
 }

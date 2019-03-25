@@ -54,7 +54,7 @@ message ValidatorActivationRequest {
 }
 
 message ValidatorActivationResponse {
-    repeated ethereum.beacon.p2p.v1.Validator validators = 1;
+    repeated bytes activated_public_keys = 1;
 }
 
 message AttestationDataRequest {

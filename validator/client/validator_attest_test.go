@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"sync"
 	"testing"
@@ -28,7 +29,7 @@ func TestAttestToBlockHead_ValidatorIndexRequestFailure(t *testing.T) {
 		gomock.AssignableToTypeOf(&pb.ValidatorIndexRequest{}),
 	).Return(nil /* Validator Index Response*/, errors.New("something bad happened"))
 
-	validator.AttestToBlockHead(context.Background(), 30)
+	validator.AttestToBlockHead(context.Background(), 30, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 	testutil.AssertLogsContain(t, hook, "Could not fetch validator index")
 }
 
@@ -51,7 +52,7 @@ func TestAttestToBlockHead_AttestationDataAtSlotFailure(t *testing.T) {
 		gomock.AssignableToTypeOf(&pb.AttestationDataRequest{}),
 	).Return(nil, errors.New("something went wrong"))
 
-	validator.AttestToBlockHead(context.Background(), 30)
+	validator.AttestToBlockHead(context.Background(), 30, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 	testutil.AssertLogsContain(t, hook, "Could not fetch necessary info to produce attestation")
 }
 
@@ -86,7 +87,7 @@ func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
 		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
 	).Return(nil, errors.New("something went wrong"))
 
-	validator.AttestToBlockHead(context.Background(), 30)
+	validator.AttestToBlockHead(context.Background(), 30, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 	testutil.AssertLogsContain(t, hook, "Could not submit attestation to beacon node")
 }
 
@@ -128,7 +129,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		generatedAttestation = att
 	}).Return(&pb.AttestResponse{}, nil /* error */)
 
-	validator.AttestToBlockHead(context.Background(), 30)
+	validator.AttestToBlockHead(context.Background(), 30, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 
 	// Validator index is at index 4 in the mocked committee defined in this test.
 	expectedAttestation := &pbp2p.Attestation{
@@ -230,7 +231,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	).Return(&pb.AttestResponse{}, nil).Times(1)
 
 	delay = 0
-	validator.AttestToBlockHead(context.Background(), 0)
+	validator.AttestToBlockHead(context.Background(), 0, hex.EncodeToString(validatorKey.PublicKey.Marshal()))
 }
 
 func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {

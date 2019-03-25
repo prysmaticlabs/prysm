@@ -10,8 +10,8 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
 	"github.com/prysmaticlabs/prysm/validator/internal"
@@ -26,13 +26,21 @@ func init() {
 
 var _ = Validator(&validator{})
 
+func publicKeys(keys map[string]*keystore.Key) [][]byte {
+	pks := make([][]byte, 0, len(keys))
+	for _, value := range keys {
+		pks = append(pks, value.PublicKey.Marshal())
+	}
+	return pks
+}
+
 func TestWaitForChainStart_SetsChainStartGenesisTime(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := internal.NewMockBeaconServiceClient(ctrl)
 
 	v := validator{
-		key:          validatorKey,
+		keys:         keyMap,
 		beaconClient: client,
 	}
 	genesis := uint64(time.Unix(0, 0).Unix())
@@ -65,7 +73,7 @@ func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 	client := internal.NewMockBeaconServiceClient(ctrl)
 
 	v := validator{
-		key:          validatorKey,
+		keys:         keyMap,
 		beaconClient: client,
 	}
 	genesis := uint64(time.Unix(0, 0).Unix())
@@ -96,7 +104,7 @@ func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
 	client := internal.NewMockBeaconServiceClient(ctrl)
 
 	v := validator{
-		key:          validatorKey,
+		keys:         keyMap,
 		beaconClient: client,
 	}
 	clientStream := internal.NewMockBeaconService_WaitForChainStartClient(ctrl)
@@ -117,7 +125,7 @@ func TestWaitForChainStart_ReceiveErrorFromStream(t *testing.T) {
 	client := internal.NewMockBeaconServiceClient(ctrl)
 
 	v := validator{
-		key:          validatorKey,
+		keys:         keyMap,
 		beaconClient: client,
 	}
 	clientStream := internal.NewMockBeaconService_WaitForChainStartClient(ctrl)
@@ -142,21 +150,23 @@ func TestWaitActivation_ContextCanceled(t *testing.T) {
 	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
-		key:             validatorKey,
+		keys:            keyMap,
 		validatorClient: client,
 	}
 	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
+
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&pb.ValidatorActivationRequest{
-			Pubkey: v.key.PublicKey.Marshal(),
+			PublicKey: publicKeys(v.keys),
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
 		&pb.ValidatorActivationResponse{
-			Validator: &pbp2p.Validator{
-				ActivationEpoch: params.BeaconConfig().GenesisEpoch,
-			},
+			ActivatedPublicKeys: publicKeys(v.keys),
+			// Validator: &pbp2p.Validator{
+			// 	ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+			// },
 		},
 		nil,
 	)
@@ -175,14 +185,14 @@ func TestWaitActivation_StreamSetupFails(t *testing.T) {
 	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
-		key:             validatorKey,
+		keys:            keyMap,
 		validatorClient: client,
 	}
 	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&pb.ValidatorActivationRequest{
-			Pubkey: v.key.PublicKey.Marshal(),
+			PublicKey: publicKeys(v.keys),
 		},
 	).Return(clientStream, errors.New("failed stream"))
 	err := v.WaitForActivation(context.Background())
@@ -198,14 +208,14 @@ func TestWaitActivation_ReceiveErrorFromStream(t *testing.T) {
 	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
-		key:             validatorKey,
+		keys:            keyMap,
 		validatorClient: client,
 	}
 	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&pb.ValidatorActivationRequest{
-			Pubkey: v.key.PublicKey.Marshal(),
+			PublicKey: publicKeys(v.keys),
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
@@ -226,21 +236,22 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
-		key:             validatorKey,
+		keys:            keyMap,
 		validatorClient: client,
 	}
 	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&pb.ValidatorActivationRequest{
-			Pubkey: v.key.PublicKey.Marshal(),
+			PublicKey: publicKeys(v.keys),
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
 		&pb.ValidatorActivationResponse{
-			Validator: &pbp2p.Validator{
-				ActivationEpoch: params.BeaconConfig().GenesisEpoch,
-			},
+			ActivatedPublicKeys: publicKeys(v.keys),
+			// Validator: &pbp2p.Validator{
+			// 	ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+			// },
 		},
 		nil,
 	)
@@ -325,9 +336,9 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 	client := internal.NewMockValidatorServiceClient(ctrl)
 
 	v := validator{
-		key:             validatorKey,
+		keys:            keyMap,
 		validatorClient: client,
-		assignment: &pb.CommitteeAssignmentResponse{
+		assignments: &pb.CommitteeAssignmentResponse{
 			Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
 				{
 					Shard: 1,
@@ -346,7 +357,7 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 	if err := v.UpdateAssignments(context.Background(), params.BeaconConfig().SlotsPerEpoch); err != expected {
 		t.Errorf("Bad error; want=%v got=%v", expected, err)
 	}
-	if v.assignment != nil {
+	if v.assignments != nil {
 		t.Error("Assignments should have been cleared on failure")
 	}
 }
@@ -368,7 +379,7 @@ func TestUpdateAssignments_OK(t *testing.T) {
 		},
 	}
 	v := validator{
-		key:             validatorKey,
+		keys:            keyMap,
 		validatorClient: client,
 	}
 	client.EXPECT().CommitteeAssignment(
@@ -380,13 +391,13 @@ func TestUpdateAssignments_OK(t *testing.T) {
 		t.Fatalf("Could not update assignments: %v", err)
 	}
 
-	if v.assignment.Assignment[0].Slot != params.BeaconConfig().SlotsPerEpoch {
-		t.Errorf("Unexpected validator assignments. want=%v got=%v", params.BeaconConfig().SlotsPerEpoch, v.assignment.Assignment[0].Slot)
+	if v.assignments.Assignment[0].Slot != params.BeaconConfig().SlotsPerEpoch {
+		t.Errorf("Unexpected validator assignments. want=%v got=%v", params.BeaconConfig().SlotsPerEpoch, v.assignments.Assignment[0].Slot)
 	}
-	if v.assignment.Assignment[0].Shard != resp.Assignment[0].Shard {
-		t.Errorf("Unexpected validator assignments. want=%v got=%v", resp.Assignment[0].Shard, v.assignment.Assignment[0].Slot)
+	if v.assignments.Assignment[0].Shard != resp.Assignment[0].Shard {
+		t.Errorf("Unexpected validator assignments. want=%v got=%v", resp.Assignment[0].Shard, v.assignments.Assignment[0].Slot)
 	}
-	if !v.assignment.Assignment[0].IsProposer {
+	if !v.assignments.Assignment[0].IsProposer {
 		t.Errorf("Unexpected validator assignments. want: proposer=true")
 	}
 }

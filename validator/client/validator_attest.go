@@ -20,7 +20,7 @@ var delay = params.BeaconConfig().SecondsPerSlot / 2
 // It fetches the latest beacon block head along with the latest canonical beacon state
 // information in order to sign the block and include information about the validator's
 // participation in voting on the block.
-func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx uint64) {
+func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64, idx string) {
 	ctx, span := trace.StartSpan(ctx, "validator.AttestToBlockHead")
 	defer span.End()
 	span.AddAttributes(

@@ -526,7 +526,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 	}
 	req := &pb.ValidatorActivationRequest{
-		Pubkey: []byte("A"),
+		PublicKey: [][]byte{[]byte("A")},
 	}
 
 	ctrl := gomock.NewController(t)
@@ -586,7 +586,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	mockStream := internal.NewMockValidatorService_WaitForActivationServer(ctrl)
 	mockStream.EXPECT().Send(
 		&pb.ValidatorActivationResponse{
-			ActivatedPublicKey: beaconState.ValidatorRegistry,
+			ActivatedPublicKeys: pubKeys,
 		},
 	).Return(nil)
 

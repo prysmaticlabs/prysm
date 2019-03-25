@@ -29,6 +29,7 @@ type fakeValidator struct {
 	ProposeBlockArg1                 uint64
 	LogValidatorGainsAndLossesCalled bool
 	SlotDeadlineCalled               bool
+	PublicKey                        string
 }
 
 func (fv *fakeValidator) Done() {
@@ -71,18 +72,20 @@ func (fv *fakeValidator) LogValidatorGainsAndLosses(_ context.Context, slot uint
 	return nil
 }
 
-func (fv *fakeValidator) RoleAt(slot uint64) pb.ValidatorRole {
+func (fv *fakeValidator) RolesAt(slot uint64) map[string]pb.ValidatorRole {
 	fv.RoleAtCalled = true
 	fv.RoleAtArg1 = slot
-	return fv.RoleAtRet
+	vr := make(map[string]pb.ValidatorRole)
+	vr[fv.PublicKey] = fv.RoleAtRet
+	return vr
 }
 
-func (fv *fakeValidator) AttestToBlockHead(_ context.Context, slot uint64) {
+func (fv *fakeValidator) AttestToBlockHead(_ context.Context, slot uint64, idx string) {
 	fv.AttestToBlockHeadCalled = true
 	fv.AttestToBlockHeadArg1 = slot
 }
 
-func (fv *fakeValidator) ProposeBlock(_ context.Context, slot uint64) {
+func (fv *fakeValidator) ProposeBlock(_ context.Context, slot uint64, idx string) {
 	fv.ProposeBlockCalled = true
 	fv.ProposeBlockArg1 = slot
 }
