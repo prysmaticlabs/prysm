@@ -250,35 +250,6 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Validator activated")
 }
 
-func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignments(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	client := internal.NewMockValidatorServiceClient(ctrl)
-
-	slot := uint64(1)
-	v := validator{
-		key:             validatorKey,
-		validatorClient: client,
-		assignment: &pb.CommitteeAssignmentResponse{
-			Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
-				&pb.CommitteeAssignmentResponse_CommitteeAssignment{
-					Committee: []uint64{},
-					Slot:      10,
-					Shard:     20,
-				},
-			},
-		},
-	}
-	client.EXPECT().CommitteeAssignment(
-		gomock.Any(),
-		gomock.Any(),
-	).Times(0)
-
-	if err := v.UpdateAssignments(context.Background(), slot); err != nil {
-		t.Errorf("Could not update assignments: %v", err)
-	}
-}
-
 func TestUpdateAssignments_ReturnsError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -289,7 +260,7 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 		validatorClient: client,
 		assignment: &pb.CommitteeAssignmentResponse{
 			Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
-				&pb.CommitteeAssignmentResponse_CommitteeAssignment{
+				{
 					Shard: 1,
 				},
 			},
@@ -319,7 +290,7 @@ func TestUpdateAssignments_OK(t *testing.T) {
 	slot := params.BeaconConfig().SlotsPerEpoch
 	resp := &pb.CommitteeAssignmentResponse{
 		Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
-			&pb.CommitteeAssignmentResponse_CommitteeAssignment{
+			{
 				Slot:       params.BeaconConfig().SlotsPerEpoch,
 				Shard:      100,
 				Committee:  []uint64{0, 1, 2, 3},

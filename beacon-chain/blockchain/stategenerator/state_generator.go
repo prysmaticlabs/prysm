@@ -9,7 +9,9 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 var log = logrus.WithField("prefix", "stategenerator")
@@ -21,7 +23,9 @@ var log = logrus.WithField("prefix", "stategenerator")
 //	Output: resulting state of state transition function after applying block C and D.
 //  	along with skipped slot 4 and 6.
 func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (*pb.BeaconState, error) {
-	fState, err := db.FinalizedState()
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.stategenerator.GenerateStateFromBlock")
+	defer span.End()
+	fState, err := db.HistoricalStateFromSlot(slot)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +44,7 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 		)
 	}
 
-	fBlock, err := db.FinalizedBlock()
+	fBlock, err := db.BlockBySlot(fState.Slot)
 	if err != nil {
 		return nil, err
 	}
@@ -69,13 +73,13 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 	}
 
 	// retrieve the block list to recompute state of the input slot.
-	blocks, err := blocksSinceFinalized(db, mostRecentBlock, fRoot)
+	blocks, err := blocksSinceFinalized(ctx, db, mostRecentBlock, fRoot)
 	if err != nil {
 		return nil, fmt.Errorf("unable to look up block ancestors %v", err)
 	}
 
-	log.Debugf("Recompute state starting last finalized slot %d and ending slot %d",
-		fState.Slot, slot)
+	log.Infof("Recompute state starting last finalized slot %d and ending slot %d",
+		fState.Slot-params.BeaconConfig().GenesisSlot, slot-params.BeaconConfig().GenesisSlot)
 	postState := fState
 	root := fRoot
 	// this recomputes state up to the last available block.
@@ -94,7 +98,7 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 				nil,
 				root,
 				&state.TransitionConfig{
-					VerifySignatures: true,
+					VerifySignatures: false,
 					Logging:          false,
 				},
 			)
@@ -108,7 +112,7 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 			block,
 			root,
 			&state.TransitionConfig{
-				VerifySignatures: true,
+				VerifySignatures: false,
 				Logging:          false,
 			},
 		)
@@ -132,7 +136,7 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 			nil,
 			root,
 			&state.TransitionConfig{
-				VerifySignatures: true,
+				VerifySignatures: false,
 				Logging:          false,
 			},
 		)
@@ -141,8 +145,8 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 		}
 	}
 
-	log.Debugf("Finished recompute state with slot %d and finalized epoch %d",
-		postState.Slot, postState.FinalizedEpoch)
+	log.Infof("Finished recompute state with slot %d and finalized epoch %d",
+		postState.Slot-params.BeaconConfig().GenesisSlot, postState.FinalizedEpoch-params.BeaconConfig().GenesisEpoch)
 
 	return postState, nil
 }
@@ -153,9 +157,10 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 // Ex:
 // 	A -> B(finalized) -> C -> D -> E -> D.
 // 	Input: E, output: [E, D, C, B].
-func blocksSinceFinalized(db *db.BeaconDB, block *pb.BeaconBlock,
+func blocksSinceFinalized(ctx context.Context, db *db.BeaconDB, block *pb.BeaconBlock,
 	finalizedBlockRoot [32]byte) ([]*pb.BeaconBlock, error) {
-
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.stategenerator.blocksSinceFinalized")
+	defer span.End()
 	blockAncestors := make([]*pb.BeaconBlock, 0)
 	blockAncestors = append(blockAncestors, block)
 	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)

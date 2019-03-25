@@ -62,7 +62,7 @@ func TestAttestToBlockHead_AttestationDataAtSlotFailure(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.CommitteeAssignmentsRequest{}),
 	).Return(&pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
-		&pb.CommitteeAssignmentResponse_CommitteeAssignment{
+		{
 			Shard: 5,
 		},
 	}}, nil)
@@ -90,7 +90,7 @@ func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.CommitteeAssignmentsRequest{}),
 	).Return(&pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
-		&pb.CommitteeAssignmentResponse_CommitteeAssignment{
+		{
 			Shard:     5,
 			Committee: make([]uint64, 111),
 		}}}, nil)
@@ -130,7 +130,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.CommitteeAssignmentsRequest{}),
 	).Return(&pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
-		&pb.CommitteeAssignmentResponse_CommitteeAssignment{
+		{
 			Shard:     5,
 			Committee: committee,
 		}}}, nil)
@@ -225,7 +225,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.CommitteeAssignmentsRequest{}),
 	).Return(&pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
-		&pb.CommitteeAssignmentResponse_CommitteeAssignment{
+		{
 			Shard:     5,
 			Committee: committee,
 		}}}, nil).Do(func(arg0, arg1 interface{}) {
