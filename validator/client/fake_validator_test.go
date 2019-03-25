@@ -26,7 +26,7 @@ type fakeValidator struct {
 	ProposeBlockCalled               bool
 	ProposeBlockArg1                 uint64
 	LogValidatorGainsAndLossesCalled bool
-	SlotDeadlineCalled bool
+	SlotDeadlineCalled               bool
 }
 
 func (fv *fakeValidator) Done() {
@@ -44,7 +44,7 @@ func (fv *fakeValidator) WaitForActivation(_ context.Context) error {
 }
 
 func (fv *fakeValidator) SlotDeadline(_ uint64) time.Time {
-    fv.SlotDeadlineCalled = true
+	fv.SlotDeadlineCalled = true
 	return time.Now()
 }
 

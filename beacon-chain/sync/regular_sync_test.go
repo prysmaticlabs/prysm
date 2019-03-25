@@ -119,7 +119,6 @@ func TestProcessBlockRoot_OK(t *testing.T) {
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
-
 	announceHash := hashutil.Hash([]byte{})
 	hashAnnounce := &pb.BeaconBlockAnnounce{
 		Hash: announceHash[:],
@@ -479,7 +478,7 @@ func TestReceiveAttestation_OK(t *testing.T) {
 	}
 	cfg := &RegularSyncConfig{
 		ChainService:     ms,
-		AttsService: &mockAttestationService{},
+		AttsService:      &mockAttestationService{},
 		OperationService: os,
 		P2P:              &mockP2P{},
 		BeaconDB:         db,
