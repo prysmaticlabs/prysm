@@ -545,7 +545,7 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 	log.WithFields(logrus.Fields{
 		"blockRoot":      fmt.Sprintf("%#x", attestation.Data.BeaconBlockRootHash32),
 		"justifiedEpoch": attestation.Data.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
-	}).Info("Received an attestation!")
+	}).Info("Received an attestation")
 
 	// Skip if attestation has been seen before.
 	hasAttestation := rs.db.HasAttestation(attestationRoot)

@@ -16,7 +16,7 @@ spec:
       priorityClassName: production-priority
       containers:
       - name: validator
-        image: gcr.io/prysmaticlabs/prysm/validator@sha256:ead770ad1ea44eed836d97bdf11f7ff2875b69ced13f9206671679acc61f8917
+        image: gcr.io/prysmaticlabs/prysm/validator:latest
         args:
         - --keystore-path=/keystore
         - --password=nopass

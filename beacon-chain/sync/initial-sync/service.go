@@ -419,7 +419,7 @@ func (s *InitialSync) processState(msg p2p.Message) {
 	}
 
 	if err := s.db.SaveCurrentAndFinalizedState(beaconState); err != nil {
-		log.Errorf("Could not set beacon state for initial sync %v", err)
+		log.Errorf("Unable to set beacon state for initial sync %v", err)
 		return
 	}
 
