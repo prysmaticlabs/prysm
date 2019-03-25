@@ -743,7 +743,7 @@ go_repository(
 
 go_repository(
     name = "com_github_google_uuid",
-    commit = "0cd6bf5da1e1c83f8b45653022c74f71af0538a4",
+    commit = "0cd6bf5da1e1c83f8b45653022c74f71af0538a4",  # v1.1.1
     importpath = "github.com/google/uuid",
 )
 
