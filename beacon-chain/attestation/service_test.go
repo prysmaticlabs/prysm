@@ -52,7 +52,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
-	pubkey := bytesutil.ToBytes48([]byte{byte(19)})
+	pubkey := bytesutil.ToBytes48([]byte{byte(35)})
 	if service.Store[pubkey].Data.Slot !=
 		attestation.Data.Slot {
 		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",

@@ -77,9 +77,9 @@ func TestBoundaryAttesterIndices_OK(t *testing.T) {
 		t.Fatalf("Failed to run BoundaryAttesterIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(attesterIndices, []uint64{127, 81}) {
+	if !reflect.DeepEqual(attesterIndices, []uint64{109, 97}) {
 		t.Errorf("Incorrect boundary attester indices. Wanted: %v, got: %v",
-			[]uint64{127, 81}, attesterIndices)
+			[]uint64{109, 97}, attesterIndices)
 	}
 }
 
@@ -119,9 +119,9 @@ func TestAttestingValidatorIndices_OK(t *testing.T) {
 		t.Fatalf("Could not execute AttestingValidatorIndices: %v", err)
 	}
 
-	if !reflect.DeepEqual(indices, []uint64{377, 1150}) {
+	if !reflect.DeepEqual(indices, []uint64{1141, 688}) {
 		t.Errorf("Could not get incorrect validator indices. Wanted: %v, got: %v",
-			[]uint64{377, 1150}, indices)
+			[]uint64{1141, 688}, indices)
 	}
 }
 
