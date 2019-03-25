@@ -4,6 +4,7 @@ package attestation
 import (
 	"context"
 	"fmt"
+
 	"github.com/prysmaticlabs/prysm/shared/params"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -39,7 +40,7 @@ type Service struct {
 
 // Config options for the service.
 type Config struct {
-	BeaconDB                *db.BeaconDB
+	BeaconDB *db.BeaconDB
 }
 
 // NewAttestationService instantiates a new service instance that will

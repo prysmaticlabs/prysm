@@ -6,7 +6,6 @@ package blockchain
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
@@ -18,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 

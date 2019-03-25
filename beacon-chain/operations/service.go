@@ -46,8 +46,8 @@ type Service struct {
 
 // Config options for the service.
 type Config struct {
-	BeaconDB        *db.BeaconDB
-	P2P             p2p.Broadcaster
+	BeaconDB *db.BeaconDB
+	P2P      p2p.Broadcaster
 }
 
 // NewOpsPoolService instantiates a new service instance that will

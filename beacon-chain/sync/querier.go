@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/shared/params"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -10,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
