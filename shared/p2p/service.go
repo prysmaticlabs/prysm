@@ -146,7 +146,7 @@ func (s *Server) Start() {
 		return
 	}
 
-	startPeerWatcher(ctx, s.host)
+	startPeerWatcher(ctx, s.host, s.bootstrapNode, s.relayNodeAddr)
 }
 
 // Stop the main p2p loop.
