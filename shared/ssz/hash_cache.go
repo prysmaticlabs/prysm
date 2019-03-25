@@ -92,8 +92,8 @@ func (b *hashCacheS) RootByEncodedHash(h common.Hash) (bool, *root, error) {
 }
 
 // TrieRootCached computes a trie root and add it to the cache.
-// if the encoded hash of the object is in cache it will be retrieved from cache.
-// This method also trims the least recently added root info if the cache size
+// if the encoded hash of the object is in cache, it will be retrieved from cache.
+// This method also trims the least recently added root info. if the cache size
 // has reached the max cache size limit.
 func (b *hashCacheS) TrieRootCached(val interface{}) ([32]byte, error) {
 	if val == nil {

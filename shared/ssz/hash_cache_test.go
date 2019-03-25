@@ -16,6 +16,11 @@ type JunkObject struct {
 	Int64Slice   []uint64
 }
 
+type tree struct {
+	First  []*JunkObject
+	Second []*JunkObject
+}
+
 // GenerateJunkObject generates junk object.
 func GenerateJunkObject(size uint64) []*JunkObject {
 	object := make([]*JunkObject, size)
@@ -131,10 +136,6 @@ func TestMerkleHashWithCache(t *testing.T) {
 func BenchmarkHashWithoutCache(b *testing.B) {
 	useCache = false
 	First := GenerateJunkObject(100)
-	type tree struct {
-		First  []*JunkObject
-		Second []*JunkObject
-	}
 	TreeHash(&tree{First: First, Second: First})
 	for n := 0; n < b.N; n++ {
 		TreeHash(&tree{First: First, Second: First})
