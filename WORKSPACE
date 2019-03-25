@@ -2,9 +2,9 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
     name = "bazel_skylib",
-    url = "https://github.com/bazelbuild/bazel-skylib/archive/0.7.0.tar.gz",
-    sha256 = "2c62d8cd4ab1e65c08647eb4afe38f51591f43f7f0885e7769832fa137633dcb",
-    strip_prefix = "bazel-skylib-0.7.0",
+    url = "https://github.com/bazelbuild/bazel-skylib/archive/0.8.0.tar.gz",
+    sha256 = "2ea8a5ed2b448baf4a6855d3ce049c4c452a6470b1efd1504fdb7c1c134d220a",
+    strip_prefix = "bazel-skylib-0.8.0",
 )
 
 http_archive(
@@ -21,9 +21,9 @@ http_archive(
 
 http_archive(
     name = "com_github_atlassian_bazel_tools",
-    sha256 = "2842e7e4315f43df4223b7af40ae7d3547cce967595505bc335dacad5d69a39f",
-    strip_prefix = "bazel-tools-02472d814d1867de2ad75801760732c9e595c9d9",
-    urls = ["https://github.com/atlassian/bazel-tools/archive/02472d814d1867de2ad75801760732c9e595c9d9.tar.gz"],
+    sha256 = "afed91a52aa6ef069fa6abe80c88512a349b62aa4a617cbba3c93da4b642a123",
+    strip_prefix = "bazel-tools-986ed8f71dc910ac8766c920cef56e0e94db5bd0",
+    urls = ["https://github.com/atlassian/bazel-tools/archive/986ed8f71dc910ac8766c920cef56e0e94db5bd0.tar.gz"],
 )
 
 http_archive(
@@ -131,7 +131,7 @@ http_archive(
 
 go_repository(
     name = "com_github_golang_mock",
-    commit = "c20582278a829e4b3259747a3ce0eceb1763ee13",
+    commit = "51421b967af1f557f93a59e0057aaf15ca02e29c",  # v1.2.0
     importpath = "github.com/golang/mock",
 )
 
@@ -158,7 +158,7 @@ go_repository(
 
 go_repository(
     name = "com_github_go_yaml_yaml",
-    commit = "51d6538a90f86fe93ac480b35f37b2be17fef232",
+    commit = "51d6538a90f86fe93ac480b35f37b2be17fef232",  # v2.2.2
     importpath = "github.com/go-yaml/yaml",
 )
 
@@ -188,7 +188,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_peer",
-    commit = "6ce6ea8d949b826bc1e663ba5bc321c3cc9c2cce",  # v0.0.1
+    commit = "0af66450abe0a80f55c82f00b5f059cc2651498e",  # v0.1.0
     importpath = "github.com/libp2p/go-libp2p-peer",
 )
 
@@ -225,7 +225,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_host",
-    commit = "7e2de4bb2b77a5b155b9993309b34e0e8b1890b0",  # v0.0.1
+    commit = "0edd439378603e9228acb78e0ae7e1b54b9d3f3a",  # v0.0.2
     importpath = "github.com/libp2p/go-libp2p-host",
 )
 
@@ -484,7 +484,7 @@ go_repository(
 
 go_repository(
     name = "com_github_huin_goupnp",
-    commit = "656e61dfadd241c7cbdd22a023fa81ecb6860ea8",
+    commit = "656e61dfadd241c7cbdd22a023fa81ecb6860ea8",  # v1.0.0
     importpath = "github.com/huin/goupnp",
 )
 
@@ -586,7 +586,7 @@ go_repository(
 
 go_repository(
     name = "com_github_gorilla_websocket",
-    commit = "7c8e298727d149d7c329b4dec7e94e1932ac5c11",
+    commit = "66b9c49e59c6c48f0ffce28c2d8b8a5678502c6d",  # v1.4.0
     importpath = "github.com/gorilla/websocket",
 )
 
@@ -628,7 +628,7 @@ go_repository(
 
 go_repository(
     name = "io_opencensus_go",
-    commit = "986bcac05415cee0c283e43f5097b0448871d74c",  # v0.19.1
+    commit = "3c9057dbd62b763d954b9fc4ad4618a22aa5dd2e",  # v0.19.2
     importpath = "go.opencensus.io",
 )
 
@@ -743,14 +743,14 @@ go_repository(
 
 go_repository(
     name = "com_github_google_uuid",
-    commit = "0cd6bf5da1e1c83f8b45653022c74f71af0538a4",
+    commit = "0cd6bf5da1e1c83f8b45653022c74f71af0538a4",  # v1.1.1
     importpath = "github.com/google/uuid",
 )
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_kad_dht",
     build_file_proto_mode = "disable_global",
-    commit = "7bdf621a661616003dcf678d662667c5d476be26",  # v0.0.4
+    commit = "d1855272f4c0b93bd3cf4cf2fa27f1daf8880433",  # v0.0.5
     importpath = "github.com/libp2p/go-libp2p-kad-dht",
 )
 
@@ -941,7 +941,7 @@ go_repository(
 
 go_repository(
     name = "com_google_cloud_go",
-    commit = "f52f9bc132541d2aa914f42100c36d10b1ef7e0c",  # v0.37.0
+    commit = "2fa99f4c25c422525316dcb1fd3d5b94e1944cfd",  # v0.37.1
     importpath = "cloud.google.com/go",
 )
 
@@ -1051,4 +1051,10 @@ go_repository(
     name = "com_github_grpc_ecosystem_go_grpc_middleware",
     commit = "c250d6563d4d4c20252cd865923440e829844f4e",  # v1.0.0
     importpath = "github.com/grpc-ecosystem/go-grpc-middleware",
+)
+
+go_repository(
+    name = "com_github_apache_thrift",
+    commit = "ddec431b4a402258c3b56b873908c98a15f22de4",
+    importpath = "github.com/apache/thrift",
 )
