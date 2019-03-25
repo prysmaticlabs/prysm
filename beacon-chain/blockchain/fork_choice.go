@@ -19,7 +19,7 @@ import (
 var (
 	reorgCount = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "reorg_counter",
-		Help: "The number of reorg has happened in the past",
+		Help: "The number of chain reorganization events that have happened in the fork choice rule",
 	})
 )
 
@@ -143,7 +143,7 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 		}
 
 		if postState.Slot != postState.Slot {
-			log.Warnf("Reorg	 happened, post state slot at %d, new head state at slot %d",
+			log.Warnf("Reorg happened, post state slot at %d, new head state at slot %d",
 				postState.Slot-params.BeaconConfig().GenesisSlot, postState.Slot-params.BeaconConfig().GenesisSlot)
 			reorgCount.Inc()
 		}

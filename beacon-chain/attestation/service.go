@@ -5,19 +5,16 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
-
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-
-	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
-
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bitutil"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	handler "github.com/prysmaticlabs/prysm/shared/messagehandler"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -103,7 +100,6 @@ func (a *Service) LatestAttestation(ctx context.Context, index uint64) (*pb.Atte
 	}
 	pubKey := bytesutil.ToBytes48(state.ValidatorRegistry[index].Pubkey)
 
-	// return error if validator has no attestation.
 	if _, exists := a.Store[pubKey]; !exists {
 		return nil, nil
 	}

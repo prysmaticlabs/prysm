@@ -419,8 +419,8 @@ func TestAttestingValidators_MatchActive(t *testing.T) {
 		t.Fatalf("Could not execute AttestingValidators: %v", err)
 	}
 
-	// Verify the winner root is attested by validator 127 81 based on shuffling.
-	if !reflect.DeepEqual(attestedValidators, []uint64{127, 81}) {
+	// Verify the winner root is attested by validator 109 97 based on shuffling.
+	if !reflect.DeepEqual(attestedValidators, []uint64{109, 97}) {
 		t.Errorf("Active validators don't match. Wanted:[109,97], Got: %v", attestedValidators)
 	}
 }
@@ -525,7 +525,7 @@ func TestInclusionSlot_GetsCorrectSlot(t *testing.T) {
 			AggregationBitfield: participationBitfield,
 			InclusionSlot:       102},
 	}
-	slot, err := InclusionSlot(state, 255)
+	slot, err := InclusionSlot(state, 237)
 	if err != nil {
 		t.Fatalf("Could not execute InclusionSlot: %v", err)
 	}
@@ -572,7 +572,7 @@ func TestInclusionDistance_CorrectDistance(t *testing.T) {
 			AggregationBitfield: participationBitfield,
 			InclusionSlot:       params.BeaconConfig().GenesisSlot + 100},
 	}
-	distance, err := InclusionDistance(state, 255)
+	distance, err := InclusionDistance(state, 237)
 	if err != nil {
 		t.Fatalf("Could not execute InclusionDistance: %v", err)
 	}
