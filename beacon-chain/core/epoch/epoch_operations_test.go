@@ -419,7 +419,7 @@ func TestAttestingValidators_MatchActive(t *testing.T) {
 		t.Fatalf("Could not execute AttestingValidators: %v", err)
 	}
 
-	// Verify the winner root is attested by validator 109 97 based on shuffling.
+	// Verify the winner root is attested by validators based on shuffling.
 	if !reflect.DeepEqual(attestedValidators, []uint64{109, 97}) {
 		t.Errorf("Active validators don't match. Wanted:[109,97], Got: %v", attestedValidators)
 	}

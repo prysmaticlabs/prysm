@@ -59,7 +59,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 			attestation.Data.Slot, service.Store[pubkey].Data.Slot)
 	}
 
-	attestation.Data.Slot = 100
+	attestation.Data.Slot = 36
 	attestation.Data.Shard = 36
 	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
@@ -99,15 +99,9 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 		},
 	}
 
-	exitRoutine := make(chan bool)
-	go func() {
-		service.attestationPool()
-		<-exitRoutine
-	}()
-	service.incomingChan <- attestation
-
-	service.cancel()
-	exitRoutine <- true
+	if err := service.handleAttestation(context.Background(), attestation); err != nil {
+		t.Error(err)
+	}
 
 	testutil.AssertLogsContain(t, hook, "Updated attestation pool for attestation")
 }

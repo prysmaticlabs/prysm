@@ -39,8 +39,8 @@ func GenerateStateFromBlock(ctx context.Context, db *db.BeaconDB, slot uint64) (
 	if fState.Slot > slot {
 		return nil, fmt.Errorf(
 			"requested slot %d < current slot %d in the finalized beacon state",
-			fState.Slot,
-			slot,
+			slot-params.BeaconConfig().GenesisSlot,
+			fState.Slot-params.BeaconConfig().GenesisSlot,
 		)
 	}
 
