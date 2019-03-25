@@ -3,7 +3,7 @@ package blocks_test
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
+	// "crypto/rand"
 	"encoding/binary"
 	"fmt"
 	"testing"
@@ -20,11 +20,8 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
-var ValidatorCount = 10
-var RunAmount = 100000
-
-func main() {
-}
+var ValidatorCount = 131072
+var RunAmount = 67108864 / ValidatorCount
 
 func setBenchmarkConfig() {
 	c := params.BeaconConfig()
@@ -40,40 +37,29 @@ func setBenchmarkConfig() {
 }
 
 func BenchmarkProcessBlockRandao(b *testing.B) {
-	fmt.Printf("Running benchmarks with %d validators\n", ValidatorCount)
-	deposits, privKeys := setupBenchmarkInitialDeposits(ValidatorCount)
+	deposits, _ := setupBenchmarkInitialDeposits(ValidatorCount)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
 	if err != nil {
 		b.Fatal(err)
 	}
 
-	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
-	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
-	if err != nil {
-		b.Fatal(err)
-	}
-	epoch := helpers.SlotToEpoch(params.BeaconConfig().GenesisSlot)
-	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, epoch)
-	domain := forkutil.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
-
-	// We make the previous validator's index sign the message instead of the proposer.
-	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
 	block := &pb.BeaconBlock{
-		RandaoReveal: epochSignature.Marshal(),
+		RandaoReveal: []byte{2, 3, 4},
 	}
 
+	b.N = 50
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _ = blocks.ProcessBlockRandao(
 			context.Background(),
 			beaconState,
 			block,
-			true,  /* verify signatures */
+			false, /* verify signatures */
 			false, /* disable logging */
 		)
 	}
 }
+
 func BenchmarkProcessEth1Data(b *testing.B) {
 	deposits, _ := setupBenchmarkInitialDeposits(ValidatorCount)
 	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
@@ -87,6 +73,12 @@ func BenchmarkProcessEth1Data(b *testing.B) {
 				BlockHash32:       []byte{1},
 			},
 			VoteCount: 5,
+		}, {
+			Eth1Data: &pb.Eth1Data{
+				DepositRootHash32: []byte{2},
+				BlockHash32:       []byte{3},
+			},
+			VoteCount: 2,
 		},
 	}
 
@@ -105,9 +97,6 @@ func BenchmarkProcessEth1Data(b *testing.B) {
 }
 
 func BenchmarkProcessProposerSlashings(b *testing.B) {
-	// We test the case when data is correct and verify the validator
-	// registry has been updated.
-
 	validators := make([]*pb.Validator, ValidatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -162,8 +151,6 @@ func BenchmarkProcessProposerSlashings(b *testing.B) {
 }
 
 func BenchmarkProcessAttesterSlashings(b *testing.B) {
-	// We test the case when data is correct and verify the validator
-	// registry has been updated.
 	validators := make([]*pb.Validator, ValidatorCount)
 	for i := 0; i < len(validators); i++ {
 		validators[i] = &pb.Validator{
@@ -249,19 +236,22 @@ func BenchmarkProcessBlockAttestations(b *testing.B) {
 	beaconState.LatestBlockRootHash32S = blockRoots
 	beaconState.LatestCrosslinks = stateLatestCrosslinks
 
-	att1 := &pb.Attestation{
-		Data: &pb.AttestationData{
-			Shard:                    0,
-			Slot:                     params.BeaconConfig().GenesisSlot + 20,
-			JustifiedBlockRootHash32: blockRoots[0],
-			LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
-			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
-			JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
-		},
-		AggregationBitfield: []byte{1},
-		CustodyBitfield:     []byte{1},
+	attestations := []*pb.Attestation{}
+	for i := uint64(0); i < params.BeaconConfig().MaxAttestations; i++ {
+		att1 := &pb.Attestation{
+			Data: &pb.AttestationData{
+				Shard:                    0,
+				Slot:                     params.BeaconConfig().GenesisSlot + 20,
+				JustifiedBlockRootHash32: blockRoots[0],
+				LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
+				CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
+				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
+			},
+			AggregationBitfield: []byte{1},
+			CustodyBitfield:     []byte{1},
+		}
+		attestations = append(attestations, att1)
 	}
-	attestations := []*pb.Attestation{att1}
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			Attestations: attestations,
@@ -290,60 +280,64 @@ func BenchmarkProcessValidatorDeposits(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	depositInput := &pb.DepositInput{
-		Pubkey:                      []byte{1},
-		WithdrawalCredentialsHash32: []byte{1, 2, 3},
-		ProofOfPossession:           []byte{},
-	}
-	wBuf := new(bytes.Buffer)
-	if err := ssz.Encode(wBuf, depositInput); err != nil {
-		b.Fatalf("failed to encode deposit input: %v", err)
-	}
-	encodedInput := wBuf.Bytes()
-	data := []byte{}
-
-	// We set a deposit value of 1000.
-	value := make([]byte, 8)
-	depositValue := uint64(1000)
-	binary.LittleEndian.PutUint64(value, depositValue)
-
-	// We then serialize a unix time into the timestamp []byte slice
-	// and ensure it has size of 8 bytes.
-	timestamp := make([]byte, 8)
-
-	// Set deposit time to 1000 seconds since unix time 0.
-	depositTime := time.Unix(1000, 0).Unix()
-
 	currentSlot := 1000 * params.BeaconConfig().SecondsPerSlot
-	binary.LittleEndian.PutUint64(timestamp, uint64(depositTime))
 
-	// We then create a serialized deposit data slice of type []byte
-	// by appending all 3 items above together.
-	data = append(data, value...)
-	data = append(data, timestamp...)
-	data = append(data, encodedInput...)
+	newDeposits := []*pb.Deposit{}
+	allData := [][]byte{}
+	for i := uint64(0); i < params.BeaconConfig().MaxDeposits; i++ {
+		pubkey := make([]byte, 32)
+		binary.LittleEndian.PutUint64(pubkey, uint64(i))
+		depositInput := &pb.DepositInput{
+			Pubkey: pubkey,
+		}
+		wBuf := new(bytes.Buffer)
+		if err := ssz.Encode(wBuf, depositInput); err != nil {
+			b.Fatalf("failed to encode deposit input: %v", err)
+		}
+		encodedInput := wBuf.Bytes()
 
-	// We then create a merkle branch for the test.
-	depositTrie, err := trieutil.GenerateTrieFromItems([][]byte{data}, int(params.BeaconConfig().DepositContractTreeDepth))
-	if err != nil {
-		b.Fatalf("Could not generate trie: %v", err)
-	}
-	proof, err := depositTrie.MerkleProof(0)
-	if err != nil {
-		b.Fatalf("Could not generate proof: %v", err)
+		data := []byte{}
+		value := make([]byte, 8)
+		depositValue := uint64(1000)
+		binary.LittleEndian.PutUint64(value, depositValue)
+
+		timestamp := make([]byte, 8)
+		depositTime := time.Unix(1000, 0).Unix()
+		binary.LittleEndian.PutUint64(timestamp, uint64(depositTime))
+
+		data = append(data, value...)
+		data = append(data, timestamp...)
+		data = append(data, encodedInput...)
+		allData = append(allData, data)
 	}
 
-	deposit := &pb.Deposit{
-		DepositData:         data,
-		MerkleBranchHash32S: proof,
-		MerkleTreeIndex:     0,
+	for i := uint64(0); i < params.BeaconConfig().MaxDeposits; i++ {
+		depositTrie, err := trieutil.GenerateTrieFromItems(allData, int(params.BeaconConfig().DepositContractTreeDepth))
+		if err != nil {
+			b.Fatalf("Could not generate trie: %v", err)
+		}
+		proof, err := depositTrie.MerkleProof(int(i))
+		if err != nil {
+			b.Fatalf("Could not generate proof: %v", err)
+		}
+
+		newDeposits = append(newDeposits, &pb.Deposit{
+			DepositData:         allData[i],
+			MerkleBranchHash32S: proof,
+			MerkleTreeIndex:     i,
+		})
 	}
+
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
-			Deposits: []*pb.Deposit{deposit},
+			Deposits: newDeposits,
 		},
 	}
 
+	depositTrie, err := trieutil.GenerateTrieFromItems(allData, int(params.BeaconConfig().DepositContractTreeDepth))
+	if err != nil {
+		b.Fatalf("Could not generate trie: %v", err)
+	}
 	root := depositTrie.Root()
 	beaconState.LatestEth1Data = &pb.Eth1Data{
 		DepositRootHash32: root[:],
@@ -351,7 +345,7 @@ func BenchmarkProcessValidatorDeposits(b *testing.B) {
 	}
 	beaconState.Slot = currentSlot
 
-	b.N = RunAmount
+	b.N = 1000
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err = blocks.ProcessValidatorDeposits(
@@ -363,7 +357,6 @@ func BenchmarkProcessValidatorDeposits(b *testing.B) {
 			b.Fatalf("Expected block deposits to process correctly, received: %v", err)
 		}
 	}
-
 }
 
 func BenchmarkProcessValidatorExits(b *testing.B) {
@@ -373,16 +366,15 @@ func BenchmarkProcessValidatorExits(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	exits := []*pb.VoluntaryExit{
-		{
-			ValidatorIndex: 0,
-			Epoch:          0,
-		},
-	}
 	beaconState.Slot = 4
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
-			VoluntaryExits: exits,
+			VoluntaryExits: []*pb.VoluntaryExit{
+				{
+					ValidatorIndex: 0,
+					Epoch:          0,
+				},
+			},
 		},
 	}
 
@@ -396,17 +388,115 @@ func BenchmarkProcessValidatorExits(b *testing.B) {
 	}
 }
 
+func BenchmarkProcessBlock(b *testing.B) {
+	deposits, _ := setupBenchmarkInitialDeposits(ValidatorCount)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	proposerSlashings := []*pb.ProposerSlashing{
+		{
+			ProposerIndex: 1,
+			ProposalData_1: &pb.ProposalSignedData{
+				Slot:            1,
+				Shard:           1,
+				BlockRootHash32: []byte{0, 1, 0},
+			},
+			ProposalData_2: &pb.ProposalSignedData{
+				Slot:            1,
+				Shard:           1,
+				BlockRootHash32: []byte{0, 1, 0},
+			},
+		},
+	}
+	att1 := &pb.AttestationData{
+		Slot:           5,
+		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 5,
+	}
+	att2 := &pb.AttestationData{
+		Slot:           5,
+		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 4,
+	}
+	attesterSlashings := []*pb.AttesterSlashing{
+		{
+			SlashableAttestation_1: &pb.SlashableAttestation{
+				Data:             att1,
+				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
+				CustodyBitfield:  []byte{0xFF},
+			},
+			SlashableAttestation_2: &pb.SlashableAttestation{
+				Data:             att2,
+				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
+				CustodyBitfield:  []byte{0xFF},
+			},
+		},
+	}
+	var blockRoots [][]byte
+	for i := uint64(0); i < params.BeaconConfig().LatestBlockRootsLength; i++ {
+		blockRoots = append(blockRoots, []byte{byte(i)})
+	}
+	beaconState.LatestBlockRootHash32S = blockRoots
+	beaconState.LatestCrosslinks = []*pb.Crosslink{
+		{
+			CrosslinkDataRootHash32: []byte{1},
+		},
+	}
+	beaconState.Slot = params.BeaconConfig().GenesisSlot + 10
+	blockAtt := &pb.Attestation{
+		Data: &pb.AttestationData{
+			Shard:                    0,
+			Slot:                     params.BeaconConfig().GenesisSlot,
+			JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
+			JustifiedBlockRootHash32: blockRoots[0],
+			LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
+			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
+		},
+		AggregationBitfield: []byte{1},
+		CustodyBitfield:     []byte{1},
+	}
+	attestations := []*pb.Attestation{blockAtt}
+	exits := []*pb.VoluntaryExit{
+		{
+			ValidatorIndex: 10,
+			Epoch:          params.BeaconConfig().GenesisEpoch,
+		},
+	}
+	// randaoReveal := createRandaoReveal(b, beaconState, privKeys, params.BeaconConfig().GenesisSlot+10)
+	block := &pb.BeaconBlock{
+		Slot:         params.BeaconConfig().GenesisSlot + 10,
+		RandaoReveal: []byte{1, 2, 3},
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte{2},
+			BlockHash32:       []byte{3},
+		},
+		Body: &pb.BeaconBlockBody{
+			ProposerSlashings: proposerSlashings,
+			AttesterSlashings: attesterSlashings,
+			Attestations:      attestations,
+			VoluntaryExits:    exits,
+		},
+	}
+
+	cfg := &state.TransitionConfig{
+		VerifySignatures: false,
+		Logging:          false,
+	}
+	b.N = 100
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := state.ProcessBlock(context.Background(), beaconState, block, cfg); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
 func setupBenchmarkInitialDeposits(numDeposits int) ([]*pb.Deposit, []*bls.SecretKey) {
 	setBenchmarkConfig()
-	privKeys := make([]*bls.SecretKey, numDeposits)
 	deposits := make([]*pb.Deposit, numDeposits)
 	for i := 0; i < len(deposits); i++ {
-		priv, err := bls.RandKey(rand.Reader)
-		if err != nil {
-			panic(err)
-		}
 		depositInput := &pb.DepositInput{
-			Pubkey:                      priv.PublicKey().Marshal(),
+			Pubkey:                      []byte(fmt.Sprintf("%d", i)),
 			WithdrawalCredentialsHash32: []byte{1, 2, 3},
 		}
 		balance := params.BeaconConfig().MaxDepositAmount
@@ -417,7 +507,21 @@ func setupBenchmarkInitialDeposits(numDeposits int) ([]*pb.Deposit, []*bls.Secre
 		deposits[i] = &pb.Deposit{
 			DepositData: depositData,
 		}
-		privKeys[i] = priv
 	}
-	return deposits, privKeys
+	return deposits, nil
+}
+
+func createRandaoReveal(b *testing.B, beaconState *pb.BeaconState, privKeys []*bls.SecretKey, slot uint64) []byte {
+	// We fetch the proposer's index as that is whom the RANDAO will be verified against.
+	proposerIdx, err := helpers.BeaconProposerIndex(beaconState, beaconState.Slot)
+	if err != nil {
+		b.Fatal(err)
+	}
+	epoch := helpers.SlotToEpoch(slot)
+	buf := make([]byte, 32)
+	binary.LittleEndian.PutUint64(buf, epoch)
+	domain := forkutil.DomainVersion(beaconState.Fork, epoch, params.BeaconConfig().DomainRandao)
+	// We make the previous validator's index sign the message instead of the proposer.
+	epochSignature := privKeys[proposerIdx].Sign(buf, domain)
+	return epochSignature.Marshal()
 }

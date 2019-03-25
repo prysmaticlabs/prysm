@@ -129,9 +129,9 @@ func ProcessDeposit(
 			withdrawalCredentials,
 		) {
 			return nil, fmt.Errorf(
-				"expected withdrawal credentials to match, received %#x == %#x",
-				state.ValidatorRegistry[existingValidatorIdx].WithdrawalCredentialsHash32,
+				"expected withdrawal credentials to match, received %#x, expected %#x",
 				withdrawalCredentials,
+				state.ValidatorRegistry[existingValidatorIdx].WithdrawalCredentialsHash32,
 			)
 		}
 		state.ValidatorBalances[existingValidatorIdx] += amount
