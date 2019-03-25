@@ -99,15 +99,9 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 		},
 	}
 
-	exitRoutine := make(chan bool)
-	go func() {
-		service.attestationPool()
-		<-exitRoutine
-	}()
-	service.incomingChan <- attestation
-
-	service.cancel()
-	exitRoutine <- true
+	if err := service.handleAttestation(context.Background(), attestation); err != nil {
+		t.Error(err)
+	}
 
 	testutil.AssertLogsContain(t, hook, "Updated attestation pool for attestation")
 }
