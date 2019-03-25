@@ -188,7 +188,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_peer",
-    commit = "6ce6ea8d949b826bc1e663ba5bc321c3cc9c2cce",  # v0.0.1
+    commit = "0af66450abe0a80f55c82f00b5f059cc2651498e",  # v0.1.0
     importpath = "github.com/libp2p/go-libp2p-peer",
 )
 
@@ -225,7 +225,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_host",
-    commit = "7e2de4bb2b77a5b155b9993309b34e0e8b1890b0",  # v0.0.1
+    commit = "0edd439378603e9228acb78e0ae7e1b54b9d3f3a",  # v0.0.2
     importpath = "github.com/libp2p/go-libp2p-host",
 )
 
@@ -750,7 +750,7 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_kad_dht",
     build_file_proto_mode = "disable_global",
-    commit = "7bdf621a661616003dcf678d662667c5d476be26",  # v0.0.4
+    commit = "d1855272f4c0b93bd3cf4cf2fa27f1daf8880433",  # v0.0.5
     importpath = "github.com/libp2p/go-libp2p-kad-dht",
 )
 
