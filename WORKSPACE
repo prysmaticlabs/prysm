@@ -1052,3 +1052,9 @@ go_repository(
     commit = "c250d6563d4d4c20252cd865923440e829844f4e",  # v1.0.0
     importpath = "github.com/grpc-ecosystem/go-grpc-middleware",
 )
+
+go_repository(
+    name = "com_github_apache_thrift",
+    commit = "ddec431b4a402258c3b56b873908c98a15f22de4",
+    importpath = "github.com/apache/thrift",
+)
