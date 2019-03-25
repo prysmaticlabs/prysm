@@ -216,7 +216,6 @@ func (b *BeaconNode) registerBlockchainService(_ *cli.Context) error {
 		Web3Service:    web3Service,
 		OpsPoolService: opsService,
 		AttsService:    attsService,
-		BeaconBlockBuf: 10,
 		P2p:            p2pService,
 	})
 	if err != nil {
@@ -345,7 +344,6 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		Port:             port,
 		CertFlag:         cert,
 		KeyFlag:          key,
-		SubscriptionBuf:  100,
 		BeaconDB:         b.db,
 		ChainService:     chainService,
 		OperationService: operationService,

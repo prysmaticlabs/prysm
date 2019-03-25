@@ -108,18 +108,18 @@ type RegularSyncConfig struct {
 // DefaultRegularSyncConfig provides the default configuration for a sync service.
 func DefaultRegularSyncConfig() *RegularSyncConfig {
 	return &RegularSyncConfig{
-		BlockAnnounceBufferSize:     100,
-		BlockBufferSize:             100,
-		BlockReqSlotBufferSize:      100,
-		BlockReqHashBufferSize:      100,
-		BatchedBufferSize:           100,
-		StateReqBufferSize:          100,
-		ChainHeadReqBufferSize:      100,
-		AttestationBufferSize:       100,
-		AttestationReqHashBufSize:   100,
-		AttestationsAnnounceBufSize: 100,
-		ExitBufferSize:              100,
-		CanonicalBufferSize:         100,
+		BlockAnnounceBufferSize:     params.BeaconConfig().DefaultBufferSize,
+		BlockBufferSize:             params.BeaconConfig().DefaultBufferSize,
+		BlockReqSlotBufferSize:      params.BeaconConfig().DefaultBufferSize,
+		BlockReqHashBufferSize:      params.BeaconConfig().DefaultBufferSize,
+		BatchedBufferSize:           params.BeaconConfig().DefaultBufferSize,
+		StateReqBufferSize:          params.BeaconConfig().DefaultBufferSize,
+		ChainHeadReqBufferSize:      params.BeaconConfig().DefaultBufferSize,
+		AttestationBufferSize:       params.BeaconConfig().DefaultBufferSize,
+		AttestationReqHashBufSize:   params.BeaconConfig().DefaultBufferSize,
+		AttestationsAnnounceBufSize: params.BeaconConfig().DefaultBufferSize,
+		ExitBufferSize:              params.BeaconConfig().DefaultBufferSize,
+		CanonicalBufferSize:         params.BeaconConfig().DefaultBufferSize,
 	}
 }
 
@@ -208,29 +208,29 @@ func (rs *RegularSync) run() {
 			log.Debug("Exiting goroutine")
 			return
 		case msg := <-rs.announceBlockBuf:
-			safelyHandleMessage(rs.receiveBlockAnnounce, msg)
+			go safelyHandleMessage(rs.receiveBlockAnnounce, msg)
 		case msg := <-rs.attestationBuf:
-			safelyHandleMessage(rs.receiveAttestation, msg)
+			go safelyHandleMessage(rs.receiveAttestation, msg)
 		case msg := <-rs.attestationReqByHashBuf:
-			safelyHandleMessage(rs.handleAttestationRequestByHash, msg)
+			go safelyHandleMessage(rs.handleAttestationRequestByHash, msg)
 		case msg := <-rs.announceAttestationBuf:
-			safelyHandleMessage(rs.handleAttestationAnnouncement, msg)
+			go safelyHandleMessage(rs.handleAttestationAnnouncement, msg)
 		case msg := <-rs.exitBuf:
-			safelyHandleMessage(rs.receiveExitRequest, msg)
+			go safelyHandleMessage(rs.receiveExitRequest, msg)
 		case msg := <-rs.blockBuf:
-			safelyHandleMessage(rs.receiveBlock, msg)
+			go safelyHandleMessage(rs.receiveBlock, msg)
 		case msg := <-rs.blockRequestBySlot:
-			safelyHandleMessage(rs.handleBlockRequestBySlot, msg)
+			go safelyHandleMessage(rs.handleBlockRequestBySlot, msg)
 		case msg := <-rs.blockRequestByHash:
-			safelyHandleMessage(rs.handleBlockRequestByHash, msg)
+			go safelyHandleMessage(rs.handleBlockRequestByHash, msg)
 		case msg := <-rs.batchedRequestBuf:
-			safelyHandleMessage(rs.handleBatchedBlockRequest, msg)
+			go safelyHandleMessage(rs.handleBatchedBlockRequest, msg)
 		case msg := <-rs.stateRequestBuf:
-			safelyHandleMessage(rs.handleStateRequest, msg)
+			go safelyHandleMessage(rs.handleStateRequest, msg)
 		case msg := <-rs.chainHeadReqBuf:
-			safelyHandleMessage(rs.handleChainHeadRequest, msg)
+			go safelyHandleMessage(rs.handleChainHeadRequest, msg)
 		case blockAnnounce := <-rs.canonicalBuf:
-			rs.broadcastCanonicalBlock(rs.ctx, blockAnnounce)
+			go rs.broadcastCanonicalBlock(rs.ctx, blockAnnounce)
 		}
 	}
 	log.Info("Exiting regular sync run()")

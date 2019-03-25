@@ -124,14 +124,6 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 	if err != nil {
 		return fmt.Errorf("could not retrieve attestation target: %v", err)
 	}
-	log.Infof("Attestation targets at slot: %d", postState.Slot-params.BeaconConfig().GenesisSlot)
-	for idx, target := range attestationTargets {
-		h, err := hashutil.HashBeaconBlock(target)
-		if err != nil {
-			return fmt.Errorf("could not hash target: %v", err)
-		}
-		log.Infof("Validator index: %d, target slot: %d, target hash: %#x", idx, target.Slot-params.BeaconConfig().GenesisSlot, h)
-	}
 	justifiedHead, err := c.beaconDB.JustifiedBlock()
 	if err != nil {
 		return err

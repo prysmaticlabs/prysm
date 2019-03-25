@@ -163,7 +163,7 @@ func (c *ChainService) runStateTransition(
 		block,
 		headRoot,
 		&state.TransitionConfig{
-			VerifySignatures: false, // TODO: Activate signature verification in this state transition.
+			VerifySignatures: false, // We disable signature verification for now.
 			Logging:          true,  // We enable logging in this state transition call.
 		},
 	)

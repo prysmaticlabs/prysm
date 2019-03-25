@@ -60,6 +60,9 @@ func TestProposeBlock_OK(t *testing.T) {
 		Slot:             5,
 		ParentRootHash32: []byte("parent-hash"),
 	}
+	if err := proposerServer.beaconDB.SaveBlock(req); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := proposerServer.ProposeBlock(context.Background(), req); err != nil {
 		t.Errorf("Could not propose block correctly: %v", err)
 	}

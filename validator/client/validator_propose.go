@@ -105,7 +105,6 @@ func (v *validator) ProposeBlock(ctx context.Context, slot uint64) {
 	}
 
 	// 3. Compute state root transition from parent block to the new block.
-	// TODO: Fix off by one conditions in processing of attestations.
 	block.StateRootHash32 = []byte("root")
 
 	// 4. Sign the complete block.

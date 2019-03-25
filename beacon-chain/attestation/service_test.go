@@ -52,7 +52,7 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
-	pubkey := bytesutil.ToBytes48([]byte{byte(35)})
+	pubkey := bytesutil.ToBytes48([]byte{byte(19)})
 	if service.Store[pubkey].Data.Slot !=
 		attestation.Data.Slot {
 		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",
@@ -99,15 +99,9 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 		},
 	}
 
-	exitRoutine := make(chan bool)
-	go func() {
-		service.attestationPool()
-		<-exitRoutine
-	}()
-	service.incomingChan <- attestation
-
-	service.cancel()
-	exitRoutine <- true
+	if err := service.handleAttestation(context.Background(), attestation); err != nil {
+		t.Error(err)
+	}
 
 	testutil.AssertLogsContain(t, hook, "Updated attestation pool for attestation")
 }

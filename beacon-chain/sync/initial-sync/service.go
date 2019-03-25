@@ -56,10 +56,10 @@ type Config struct {
 func DefaultConfig() *Config {
 	return &Config{
 		SyncPollingInterval:     time.Duration(params.BeaconConfig().SyncPollingInterval) * time.Second,
-		BlockBufferSize:         100,
-		BatchedBlockBufferSize:  100,
-		BlockAnnounceBufferSize: 100,
-		StateBufferSize:         100,
+		BlockBufferSize:         params.BeaconConfig().DefaultBufferSize,
+		BatchedBlockBufferSize:  params.BeaconConfig().DefaultBufferSize,
+		BlockAnnounceBufferSize: params.BeaconConfig().DefaultBufferSize,
+		StateBufferSize:         params.BeaconConfig().DefaultBufferSize,
 	}
 }
 
