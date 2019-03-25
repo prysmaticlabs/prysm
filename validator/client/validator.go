@@ -150,8 +150,7 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 		"shard":        resp.Assignment[0].Shard,
 	}
 	if v.assignment.Assignment[0].IsProposer {
-		proposerSlot := resp.Assignment[0].Slot
-		lFields["proposerSlot"] = proposerSlot - params.BeaconConfig().GenesisSlot
+		lFields["proposerSlot"] = resp.Assignment[0].Slot - params.BeaconConfig().GenesisSlot
 	}
 
 	log.WithFields(lFields).Info("Updated validator assignments")
