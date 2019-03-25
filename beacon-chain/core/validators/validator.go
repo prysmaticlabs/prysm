@@ -24,10 +24,92 @@ type validatorStore struct {
 	exitedValidators map[uint64][]uint64
 }
 
+<<<<<<< HEAD
 //VStore validator map for quick
 var VStore = validatorStore{
 	activatedValidators: make(map[uint64][]uint64),
 	exitedValidators:    make(map[uint64][]uint64),
+=======
+// AttestingValidatorIndices returns the crosslink committee validator indices
+// if the validators from crosslink committee is part of the input attestations.
+//
+// Spec pseudocode definition:
+// Let attesting_validator_indices(crosslink_committee, shard_block_root)
+// 	be the union of the validator index sets given by
+// 	[get_attestation_participants(state, a.data, a.participation_bitfield)
+// 	for a in current_epoch_attestations + previous_epoch_attestations
+// 		if a.shard == shard_committee.shard and a.shard_block_root == shard_block_root]
+func AttestingValidatorIndices(
+	state *pb.BeaconState,
+	shard uint64,
+	crosslinkDataRoot []byte,
+	thisEpochAttestations []*pb.PendingAttestation,
+	prevEpochAttestations []*pb.PendingAttestation) ([]uint64, error) {
+
+	var validatorIndicesCommittees []uint64
+	attestations := append(thisEpochAttestations, prevEpochAttestations...)
+
+	for _, attestation := range attestations {
+		if attestation.Data.Shard == shard &&
+			bytes.Equal(attestation.Data.CrosslinkDataRootHash32, crosslinkDataRoot) {
+
+			validatorIndicesCommittee, err := helpers.AttestationParticipants(state, attestation.Data, attestation.AggregationBitfield)
+			if err != nil {
+				return nil, fmt.Errorf("could not get attester indices: %v", err)
+			}
+			validatorIndicesCommittees = sliceutil.Union(validatorIndicesCommittees, validatorIndicesCommittee)
+		}
+	}
+	return validatorIndicesCommittees, nil
+}
+
+// ProcessDeposit mutates a corresponding index in the beacon state for
+// a validator depositing ETH into the beacon chain. Specifically, this function
+// adds a validator balance or tops up an existing validator's balance
+// by some deposit amount. This function returns a mutated beacon state and
+// the validator index corresponding to the validator in the processed
+// deposit.
+func ProcessDeposit(
+	state *pb.BeaconState,
+	validatorIdxMap map[[32]byte]int,
+	pubkey []byte,
+	amount uint64,
+	_ /*proofOfPossession*/ []byte,
+	withdrawalCredentials []byte,
+) (*pb.BeaconState, error) {
+	// TODO(#258): Validate proof of possession using BLS.
+	var publicKeyExists bool
+	var existingValidatorIdx int
+
+	existingValidatorIdx, publicKeyExists = validatorIdxMap[bytesutil.ToBytes32(pubkey)]
+	if !publicKeyExists {
+		// If public key does not exist in the registry, we add a new validator
+		// to the beacon state.
+		newValidator := &pb.Validator{
+			Pubkey:          pubkey,
+			ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+			WithdrawalEpoch: params.BeaconConfig().FarFutureEpoch,
+			SlashedEpoch:    params.BeaconConfig().FarFutureEpoch,
+			StatusFlags:     0,
+		}
+		state.ValidatorRegistry = append(state.ValidatorRegistry, newValidator)
+		state.ValidatorBalances = append(state.ValidatorBalances, amount)
+	} else {
+		if !bytes.Equal(
+			state.ValidatorRegistry[existingValidatorIdx].WithdrawalCredentialsHash32,
+			withdrawalCredentials,
+		) {
+			return nil, fmt.Errorf(
+				"expected withdrawal credentials to match, received %#x, expected %#x",
+				withdrawalCredentials,
+				state.ValidatorRegistry[existingValidatorIdx].WithdrawalCredentialsHash32,
+			)
+		}
+		state.ValidatorBalances[existingValidatorIdx] += amount
+	}
+	return state, nil
+>>>>>>> a9fe6ed0e... Complete block processing benchmarks
 }
 
 // ActivateValidator takes in validator index and updates
