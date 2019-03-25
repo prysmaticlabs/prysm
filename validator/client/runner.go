@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -75,13 +76,15 @@ func run(ctx context.Context, v Validator) {
 				handleAssignmentError(err, slot)
 				continue
 			}
-			for idx, rol := range v.RolesAt(slot) {
-				go func(role pb.ValidatorRole, id string) {
+			var wg sync.WaitGroup
+			for idx, role := range v.RolesAt(slot) {
+				wg.Add(1)
+				go func(rol pb.ValidatorRole, id string) {
+					defer wg.Done()
 					switch rol {
 					case pb.ValidatorRole_ATTESTER:
 						v.AttestToBlockHead(slotCtx, slot, id)
 					case pb.ValidatorRole_PROPOSER:
-
 						v.ProposeBlock(slotCtx, slot, id)
 						v.AttestToBlockHead(slotCtx, slot, id)
 					case pb.ValidatorRole_UNKNOWN:
@@ -92,8 +95,10 @@ func run(ctx context.Context, v Validator) {
 					default:
 						// Do nothing :)
 					}
-				}(rol, idx)
+				}(role, idx)
 			}
+			wg.Wait()
+
 		}
 	}
 }
