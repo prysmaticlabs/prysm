@@ -140,8 +140,8 @@ func TestRPC_BadEndpoint(t *testing.T) {
 		Port: "ralph merkle!!!",
 	})
 
-	if _, ok := log.(*TestLogger).testMap["error"]; ok {
-		t.Fatal("Error in Start() occurred before expected")
+	if val, ok := log.(*TestLogger).testMap["error"]; ok {
+		t.Fatalf("Error in Start() occurred before expected: %v", val)
 	}
 
 	rpcService.Start()
