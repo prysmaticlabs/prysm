@@ -131,7 +131,7 @@ http_archive(
 
 go_repository(
     name = "com_github_golang_mock",
-    commit = "c20582278a829e4b3259747a3ce0eceb1763ee13",
+    commit = "51421b967af1f557f93a59e0057aaf15ca02e29c",  # v1.2.0
     importpath = "github.com/golang/mock",
 )
 
