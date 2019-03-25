@@ -130,7 +130,9 @@ func (s *Server) Start() {
 		if err := startDHTDiscovery(ctx, s.host, s.bootstrapNode); err != nil {
 			log.Errorf("Could not start peer discovery via DHT: %v", err)
 		}
-		if err := s.dht.Bootstrap(ctx); err != nil {
+		bcfg := kaddht.DefaultBootstrapConfig
+		bcfg.Period = time.Duration(30 * time.Second)
+		if err := s.dht.BootstrapWithConfig(ctx, bcfg); err != nil {
 			log.Errorf("Failed to bootstrap DHT: %v", err)
 		}
 	}
