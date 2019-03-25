@@ -23,6 +23,7 @@ type Config struct {
 	ChainService     chainService
 	BeaconDB         *db.BeaconDB
 	P2P              p2pAPI
+	AttsService      attsService
 	OperationService operations.OperationFeeds
 	PowChainService  powChainService
 }
@@ -46,6 +47,8 @@ func NewSyncService(ctx context.Context, cfg *Config) *Service {
 	rsCfg.ChainService = cfg.ChainService
 	rsCfg.BeaconDB = cfg.BeaconDB
 	rsCfg.P2P = cfg.P2P
+	rsCfg.AttsService = cfg.AttsService
+	rsCfg.OperationService = cfg.OperationService
 
 	sq := NewQuerierService(ctx, sqCfg)
 	rs := NewRegularSyncService(ctx, rsCfg)

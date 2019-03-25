@@ -37,6 +37,10 @@ type chainService interface {
 	blockchain.ChainFeeds
 }
 
+type attsService interface {
+	IncomingAttestationFeed() *event.Feed
+}
+
 type p2pAPI interface {
 	p2p.Broadcaster
 	p2p.Sender
@@ -60,6 +64,7 @@ type RegularSync struct {
 	cancel                   context.CancelFunc
 	p2p                      p2pAPI
 	chainService             chainService
+	attsService              attsService
 	operationsService        operations.OperationFeeds
 	db                       *db.BeaconDB
 	blockAnnouncementFeed    *event.Feed
@@ -95,6 +100,7 @@ type RegularSyncConfig struct {
 	CanonicalBufferSize         int
 	ChainService                chainService
 	OperationService            operations.OperationFeeds
+	AttsService                 attsService
 	BeaconDB                    *db.BeaconDB
 	P2P                         p2pAPI
 }
@@ -102,18 +108,18 @@ type RegularSyncConfig struct {
 // DefaultRegularSyncConfig provides the default configuration for a sync service.
 func DefaultRegularSyncConfig() *RegularSyncConfig {
 	return &RegularSyncConfig{
-		BlockAnnounceBufferSize:     100,
-		BlockBufferSize:             100,
-		BlockReqSlotBufferSize:      100,
-		BlockReqHashBufferSize:      100,
-		BatchedBufferSize:           100,
-		StateReqBufferSize:          100,
-		ChainHeadReqBufferSize:      100,
-		AttestationBufferSize:       100,
-		AttestationReqHashBufSize:   100,
-		AttestationsAnnounceBufSize: 100,
-		ExitBufferSize:              100,
-		CanonicalBufferSize:         100,
+		BlockAnnounceBufferSize:     params.BeaconConfig().DefaultBufferSize,
+		BlockBufferSize:             params.BeaconConfig().DefaultBufferSize,
+		BlockReqSlotBufferSize:      params.BeaconConfig().DefaultBufferSize,
+		BlockReqHashBufferSize:      params.BeaconConfig().DefaultBufferSize,
+		BatchedBufferSize:           params.BeaconConfig().DefaultBufferSize,
+		StateReqBufferSize:          params.BeaconConfig().DefaultBufferSize,
+		ChainHeadReqBufferSize:      params.BeaconConfig().DefaultBufferSize,
+		AttestationBufferSize:       params.BeaconConfig().DefaultBufferSize,
+		AttestationReqHashBufSize:   params.BeaconConfig().DefaultBufferSize,
+		AttestationsAnnounceBufSize: params.BeaconConfig().DefaultBufferSize,
+		ExitBufferSize:              params.BeaconConfig().DefaultBufferSize,
+		CanonicalBufferSize:         params.BeaconConfig().DefaultBufferSize,
 	}
 }
 
@@ -127,6 +133,7 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		chainService:             cfg.ChainService,
 		db:                       cfg.BeaconDB,
 		operationsService:        cfg.OperationService,
+		attsService:              cfg.AttsService,
 		blockAnnouncementFeed:    new(event.Feed),
 		announceBlockBuf:         make(chan p2p.Message, cfg.BlockAnnounceBufferSize),
 		blockBuf:                 make(chan p2p.Message, cfg.BlockBufferSize),
@@ -201,29 +208,29 @@ func (rs *RegularSync) run() {
 			log.Debug("Exiting goroutine")
 			return
 		case msg := <-rs.announceBlockBuf:
-			safelyHandleMessage(rs.receiveBlockAnnounce, msg)
+			go safelyHandleMessage(rs.receiveBlockAnnounce, msg)
 		case msg := <-rs.attestationBuf:
-			safelyHandleMessage(rs.receiveAttestation, msg)
+			go safelyHandleMessage(rs.receiveAttestation, msg)
 		case msg := <-rs.attestationReqByHashBuf:
-			safelyHandleMessage(rs.handleAttestationRequestByHash, msg)
+			go safelyHandleMessage(rs.handleAttestationRequestByHash, msg)
 		case msg := <-rs.announceAttestationBuf:
-			safelyHandleMessage(rs.handleAttestationAnnouncement, msg)
+			go safelyHandleMessage(rs.handleAttestationAnnouncement, msg)
 		case msg := <-rs.exitBuf:
-			safelyHandleMessage(rs.receiveExitRequest, msg)
+			go safelyHandleMessage(rs.receiveExitRequest, msg)
 		case msg := <-rs.blockBuf:
-			safelyHandleMessage(rs.receiveBlock, msg)
+			go safelyHandleMessage(rs.receiveBlock, msg)
 		case msg := <-rs.blockRequestBySlot:
-			safelyHandleMessage(rs.handleBlockRequestBySlot, msg)
+			go safelyHandleMessage(rs.handleBlockRequestBySlot, msg)
 		case msg := <-rs.blockRequestByHash:
-			safelyHandleMessage(rs.handleBlockRequestByHash, msg)
+			go safelyHandleMessage(rs.handleBlockRequestByHash, msg)
 		case msg := <-rs.batchedRequestBuf:
-			safelyHandleMessage(rs.handleBatchedBlockRequest, msg)
+			go safelyHandleMessage(rs.handleBatchedBlockRequest, msg)
 		case msg := <-rs.stateRequestBuf:
-			safelyHandleMessage(rs.handleStateRequest, msg)
+			go safelyHandleMessage(rs.handleStateRequest, msg)
 		case msg := <-rs.chainHeadReqBuf:
-			safelyHandleMessage(rs.handleChainHeadRequest, msg)
+			go safelyHandleMessage(rs.handleChainHeadRequest, msg)
 		case blockAnnounce := <-rs.canonicalBuf:
-			rs.broadcastCanonicalBlock(rs.ctx, blockAnnounce)
+			go rs.broadcastCanonicalBlock(rs.ctx, blockAnnounce)
 		}
 	}
 	log.Info("Exiting regular sync run()")
@@ -387,7 +394,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) error {
 	log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Sending newly received block to chain service")
 	beaconState, err = rs.chainService.ReceiveBlock(ctx, block)
 	if err != nil {
-		log.Errorf("could not process beacon block: %v", err)
+		log.Errorf("Could not process beacon block: %v", err)
 		return err
 	}
 	if err := rs.chainService.ApplyForkChoiceRule(ctx, block, beaconState); err != nil {
@@ -535,6 +542,10 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 		log.Errorf("Could not hash received attestation: %v", err)
 		return err
 	}
+	log.WithFields(logrus.Fields{
+		"blockRoot":      fmt.Sprintf("%#x", attestation.Data.BeaconBlockRootHash32),
+		"justifiedEpoch": attestation.Data.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
+	}).Info("Received an attestation")
 
 	// Skip if attestation has been seen before.
 	hasAttestation := rs.db.HasAttestation(attestationRoot)
@@ -561,9 +572,12 @@ func (rs *RegularSync) receiveAttestation(msg p2p.Message) error {
 		return nil
 	}
 
-	log.WithField("attestationHash", fmt.Sprintf("%#x", attestationRoot)).Debug("Sending newly received attestation to subscribers")
+	_, sendAttestationSpan := trace.StartSpan(ctx, "beacon-chain.sync.sendAttestation")
+	log.Info("Sending newly received attestation to subscribers")
 	rs.operationsService.IncomingAttFeed().Send(attestation)
+	rs.attsService.IncomingAttestationFeed().Send(attestation)
 	sentAttestation.Inc()
+	sendAttestationSpan.End()
 	return nil
 }
 

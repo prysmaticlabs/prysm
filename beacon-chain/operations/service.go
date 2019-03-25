@@ -46,11 +46,8 @@ type Service struct {
 
 // Config options for the service.
 type Config struct {
-	BeaconDB        *db.BeaconDB
-	ReceiveExitBuf  int
-	ReceiveAttBuf   int
-	ReceiveBlockBuf int
-	P2P             p2p.Broadcaster
+	BeaconDB *db.BeaconDB
+	P2P      p2p.Broadcaster
 }
 
 // NewOpsPoolService instantiates a new service instance that will
@@ -62,11 +59,11 @@ func NewOpsPoolService(ctx context.Context, cfg *Config) *Service {
 		cancel:                     cancel,
 		beaconDB:                   cfg.BeaconDB,
 		incomingExitFeed:           new(event.Feed),
-		incomingValidatorExits:     make(chan *pb.VoluntaryExit, cfg.ReceiveExitBuf),
+		incomingValidatorExits:     make(chan *pb.VoluntaryExit, params.BeaconConfig().DefaultBufferSize),
 		incomingAttFeed:            new(event.Feed),
-		incomingAtt:                make(chan *pb.Attestation, cfg.ReceiveAttBuf),
+		incomingAtt:                make(chan *pb.Attestation, params.BeaconConfig().DefaultBufferSize),
 		incomingProcessedBlockFeed: new(event.Feed),
-		incomingProcessedBlock:     make(chan *pb.BeaconBlock, cfg.ReceiveBlockBuf),
+		incomingProcessedBlock:     make(chan *pb.BeaconBlock, params.BeaconConfig().DefaultBufferSize),
 		p2p:                        cfg.P2P,
 	}
 }
@@ -241,11 +238,7 @@ func (s *Service) removePendingAttestations(attestations []*pb.Attestation) erro
 		if err := s.beaconDB.DeleteAttestation(attestation); err != nil {
 			return err
 		}
-		h, err := hashutil.HashProto(attestation)
-		if err != nil {
-			return err
-		}
-		log.WithField("attestationRoot", fmt.Sprintf("0x%x", h)).Info("Attestation removed")
+		log.WithField("blockRoot", fmt.Sprintf("0x%x", attestation.Data.BeaconBlockRootHash32)).Info("Attestation removed")
 	}
 	return nil
 }

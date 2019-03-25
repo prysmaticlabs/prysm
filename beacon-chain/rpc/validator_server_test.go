@@ -71,7 +71,7 @@ func TestNextEpochCommitteeAssignment_WrongPubkeyLength(t *testing.T) {
 		beaconDB: db,
 	}
 	req := &pb.CommitteeAssignmentsRequest{
-		PublicKey:  [][]byte{[]byte{1}},
+		PublicKey:  [][]byte{{1}},
 		EpochStart: params.BeaconConfig().GenesisEpoch,
 	}
 	want := fmt.Sprintf("expected public key to have length %d", params.BeaconConfig().BLSPubkeyLength)
