@@ -296,6 +296,64 @@ func TestCanonicalHeadSlot_OK(t *testing.T) {
 	}
 	if headSlot != params.BeaconConfig().GenesisSlot {
 		t.Errorf("Mismatch slots, wanted: %v, received: %v", params.BeaconConfig().GenesisSlot, headSlot)
+func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := internal.NewMockValidatorServiceClient(ctrl)
+
+	v := validator{
+		keys:            keyMapThreeValidators,
+		validatorClient: client,
+	}
+	clientStream := internal.NewMockValidatorService_WaitForActivationClient(ctrl)
+	client.EXPECT().WaitForActivation(
+		gomock.Any(),
+		&pb.ValidatorActivationRequest{
+			PublicKey: publicKeys(v.keys),
+		},
+	).Return(clientStream, nil)
+	clientStream.EXPECT().Recv().Return(
+		&pb.ValidatorActivationResponse{
+			ActivatedPublicKeys: publicKeys(v.keys),
+			// Validator: &pbp2p.Validator{
+			// 	ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+			// },
+		},
+		nil,
+	)
+	if err := v.WaitForActivation(context.Background()); err != nil {
+		t.Errorf("Could not wait for activation: %v", err)
+	}
+	testutil.AssertLogsContain(t, hook, "Validator activated")
+}
+
+func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignments(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := internal.NewMockValidatorServiceClient(ctrl)
+
+	slot := uint64(1)
+	v := validator{
+		keys:            keyMap,
+		validatorClient: client,
+		assignments: &pb.CommitteeAssignmentResponse{
+			Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
+				&pb.CommitteeAssignmentResponse_CommitteeAssignment{
+					Committee: []uint64{},
+					Slot:      10,
+					Shard:     20,
+				},
+			},
+		},
+	}
+	client.EXPECT().CommitteeAssignment(
+		gomock.Any(),
+		gomock.Any(),
+	).Times(0)
+
+	if err := v.UpdateAssignments(context.Background(), slot); err != nil {
+		t.Errorf("Could not update assignments: %v", err)
 	}
 }
 

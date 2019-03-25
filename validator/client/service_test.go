@@ -19,14 +19,21 @@ import (
 var _ = shared.Service(&ValidatorService{})
 var validatorKey *keystore.Key
 var keyMap map[string]*keystore.Key
+var keyMapThreeValidators map[string]*keystore.Key
 
 func TestMain(m *testing.M) {
+	keyMap = make(map[string]*keystore.Key)
+	keyMapThreeValidators = make(map[string]*keystore.Key)
 	dir := testutil.TempDir() + "/keystore1"
 	defer os.RemoveAll(dir)
 	accounts.NewValidatorAccount(dir, "1234")
 	validatorKey, _ = keystore.NewKey(rand.Reader)
-	keyMap = make(map[string]*keystore.Key)
 	keyMap[hex.EncodeToString(validatorKey.PublicKey.Marshal())] = validatorKey
+	keyMapThreeValidators[hex.EncodeToString(validatorKey.PublicKey.Marshal())] = validatorKey
+	validatorKey2, _ := keystore.NewKey(rand.Reader)
+	keyMapThreeValidators[hex.EncodeToString(validatorKey.PublicKey.Marshal())] = validatorKey2
+	validatorKey3, _ := keystore.NewKey(rand.Reader)
+	keyMapThreeValidators[hex.EncodeToString(validatorKey.PublicKey.Marshal())] = validatorKey3
 	os.Exit(m.Run())
 }
 
