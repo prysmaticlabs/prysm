@@ -330,6 +330,14 @@ func (s *Server) Send(ctx context.Context, msg proto.Message, peerID peer.ID) er
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err := stream.Reset(); err != nil {
+			log.Errorf("Could not reset stream: %v", err)
+		}
+		if err := stream.Close(); err != nil {
+            log.Errorf("Could not close stream: %v", err)
+		}
+	}()
 
 	w := ggio.NewDelimitedWriter(stream)
 	defer w.Close()
