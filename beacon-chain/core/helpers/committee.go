@@ -3,6 +3,7 @@
 package helpers
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 
@@ -213,10 +214,9 @@ func Shuffling(
 	committeesPerEpoch := EpochCommitteeCount(activeCount)
 
 	// Convert slot to bytes and xor it with seed.
-	//slotInBytes := make([]byte, 32)
-	//binary.LittleEndian.PutUint64(slotInBytes, slot)
-	//seed = bytesutil.ToBytes32(bytesutil.Xor(seed[:], slotInBytes))
-	//seed := bytesutil.ToBytes32([]byte("fixed"))
+	slotInBytes := make([]byte, 32)
+	binary.LittleEndian.PutUint64(slotInBytes, slot)
+	seed = bytesutil.ToBytes32(bytesutil.Xor(seed[:], slotInBytes))
 
 	shuffledIndices, err := utils.ShuffleIndices(seed, activeIndices)
 	if err != nil {
@@ -592,7 +592,7 @@ func crosslinkCommittees(state *pb.BeaconState, input *shufflingInput) ([]*Cross
 		params.BeaconConfig().ShardCount
 
 	shuffledIndices, err := Shuffling(
-		bytesutil.ToBytes32([]byte("fixed-seed")),
+		bytesutil.ToBytes32(input.seed),
 		state.ValidatorRegistry,
 		input.shufflingEpoch)
 	if err != nil {
