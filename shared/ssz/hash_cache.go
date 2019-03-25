@@ -38,6 +38,11 @@ var (
 	})
 )
 
+// hashCacheS struct with one queue for looking up by hash.
+type hashCacheS struct {
+	hashCache *ExpirationByUseCache
+}
+
 // markleRoot specifies the hash of data in a struct
 type root struct {
 	Hash       common.Hash
@@ -60,11 +65,6 @@ func newHashCache() *hashCacheS {
 	return &hashCacheS{
 		hashCache: NewTTLStoreRestampOnGet(hashKeyFn, time.Hour),
 	}
-}
-
-// hashCacheS struct with one queue for looking up by hash.
-type hashCacheS struct {
-	hashCache *ExpirationByUseCache
 }
 
 // RootByEncodedHash fetches Root by the encoded hash of the object. Returns true with a
@@ -100,8 +100,6 @@ func (b *hashCacheS) TrieRootCached(val interface{}) ([32]byte, error) {
 		return [32]byte{}, newHashError("untyped nil is not supported", nil)
 	}
 	rval := reflect.ValueOf(val)
-
-	startTime := time.Now().UnixNano()
 	hs, err := hashedEncoding(rval)
 	if err != nil {
 		return [32]byte{}, newHashError(fmt.Sprint(err), rval.Type())
@@ -110,7 +108,6 @@ func (b *hashCacheS) TrieRootCached(val interface{}) ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, newHashError(fmt.Sprint(err), rval.Type())
 	}
-	fmt.Printf("encoding time: %v \n", time.Now().UnixNano()-startTime)
 	var paddedOutput [32]byte
 	if exists {
 		paddedOutput = bytesutil.ToBytes32(fetchedInfo.MarkleRoot)
@@ -119,9 +116,7 @@ func (b *hashCacheS) TrieRootCached(val interface{}) ([32]byte, error) {
 		if err != nil {
 			return [32]byte{}, newHashError(fmt.Sprint(err), rval.Type())
 		}
-		startTime = time.Now().UnixNano()
 		output, err := sszUtils.hasher(rval)
-		fmt.Printf("hashing time: %v \n", time.Now().UnixNano()-startTime)
 		if err != nil {
 			return [32]byte{}, newHashError(fmt.Sprint(err), rval.Type())
 		}

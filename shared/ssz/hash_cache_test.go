@@ -2,7 +2,6 @@ package ssz
 
 import (
 	"bytes"
-	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -10,6 +9,34 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
+
+type JunkObject struct {
+	D2Int64Slice [][]uint64
+	Uint         uint64
+	Int64Slice   []uint64
+}
+
+// GenerateJunkObject generates junk object.
+func GenerateJunkObject(size uint64) []*JunkObject {
+	object := make([]*JunkObject, size)
+	for i := uint64(0); i < uint64(len(object)); i++ {
+		d2Int64Slice := make([][]uint64, size)
+		is := make([]uint64, size)
+		uInt := uint64(time.Now().UnixNano())
+		is[i] = i
+		d2Int64Slice[i] = make([]uint64, size)
+		for j := uint64(0); j < uint64(len(object)); j++ {
+			d2Int64Slice[i][j] = i + j
+		}
+		object[i] = &JunkObject{
+			D2Int64Slice: d2Int64Slice,
+			Uint:         uInt,
+			Int64Slice:   is,
+		}
+
+	}
+	return object
+}
 
 func TestHashKeyFn_OK(t *testing.T) {
 	mRoot := &root{
@@ -101,54 +128,30 @@ func TestMerkleHashWithCache(t *testing.T) {
 
 }
 
-type JunkObject struct {
-	D2Int64Slice [][]int64
-	Uint         int64
-	Int64Slice   []int64
-}
-
-// GenerateJunkObject generates junk object.
-func GenerateJunkObject(size uint64) []*JunkObject {
-	object := make([]*JunkObject, size)
-	for i := int64(0); i < int64(len(object)); i++ {
-		d2Int64Slice := make([][]int64, size)
-		is := make([]int64, size)
-		uInt := time.Now().UnixNano()
-		is[i] = i
-		d2Int64Slice[i] = make([]int64, size)
-		for j := int64(0); j < int64(len(object)); j++ {
-			d2Int64Slice[i][j] = i + j
-		}
-		object[i] = &JunkObject{
-			D2Int64Slice: d2Int64Slice,
-			Uint:         uInt,
-			Int64Slice:   is,
-		}
-
-	}
-	return object
-}
-
-func TestBenchmarHashWithCache(t *testing.T) {
-
+func BenchmarkHashWithoutCache(b *testing.B) {
 	useCache = false
-
-	First := GenerateJunkObject(10000)
-
+	First := GenerateJunkObject(100)
 	type tree struct {
 		First  []*JunkObject
 		Second []*JunkObject
 	}
-	startTime := time.Now().UnixNano()
 	TreeHash(&tree{First: First, Second: First})
-	fmt.Printf("time it took without cache: %v \n", time.Now().UnixNano()-startTime)
-	useCache = true
-	sszUtilsCache = make(map[reflect.Type]*sszUtils)
-	TreeHash(&tree{First: First, Second: First})
-	startTime = time.Now().UnixNano()
-	TreeHash(&tree{First: First, Second: First})
-	fmt.Printf("time it took with cache: %v \n", time.Now().UnixNano()-startTime)
+	for n := 0; n < b.N; n++ {
+		TreeHash(&tree{First: First, Second: First})
+	}
+}
 
+func BenchmarkHashWithCache(b *testing.B) {
+	useCache = true
+	First := GenerateJunkObject(100)
+	type tree struct {
+		First  []*JunkObject
+		Second []*JunkObject
+	}
+	TreeHash(&tree{First: First, Second: First})
+	for n := 0; n < b.N; n++ {
+		TreeHash(&tree{First: First, Second: First})
+	}
 }
 
 func TestBlockCache_maxSize(t *testing.T) {
