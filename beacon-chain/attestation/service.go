@@ -4,6 +4,7 @@ package attestation
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -20,6 +21,11 @@ import (
 
 var log = logrus.WithField("prefix", "attestation")
 
+type attestationStore struct {
+	sync.RWMutex
+	m map[[48]byte]*pb.Attestation
+}
+
 // Service represents a service that handles the internal
 // logic of managing single and aggregated attestation.
 type Service struct {
@@ -32,7 +38,7 @@ type Service struct {
 	incomingChan  chan *pb.Attestation
 	// store is the mapping of individual
 	// validator's public key to it's latest attestation.
-	Store map[[48]byte]*pb.Attestation
+	store attestationStore
 }
 
 // Config options for the service.
@@ -52,7 +58,7 @@ func NewAttestationService(ctx context.Context, cfg *Config) *Service {
 		broadcastChan: make(chan *pb.Attestation, params.BeaconConfig().DefaultBufferSize),
 		incomingFeed:  new(event.Feed),
 		incomingChan:  make(chan *pb.Attestation, params.BeaconConfig().DefaultBufferSize),
-		Store:         make(map[[48]byte]*pb.Attestation),
+		store:         attestationStore{m: make(map[[48]byte]*pb.Attestation)},
 	}
 }
 
@@ -100,11 +106,13 @@ func (a *Service) LatestAttestation(ctx context.Context, index uint64) (*pb.Atte
 	}
 	pubKey := bytesutil.ToBytes48(state.ValidatorRegistry[index].Pubkey)
 
-	if _, exists := a.Store[pubKey]; !exists {
+	a.store.RLock()
+	defer a.store.RUnlock()
+	if _, exists := a.store.m[pubKey]; !exists {
 		return nil, nil
 	}
 
-	return a.Store[pubKey], nil
+	return a.store.m[pubKey], nil
 }
 
 // LatestAttestationTarget returns the target block the validator index attested to,
@@ -211,13 +219,24 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 		pubkey := bytesutil.ToBytes48(state.ValidatorRegistry[committee[i]].Pubkey)
 		newAttestationSlot := attestation.Data.Slot
 		currentAttestationSlot := uint64(0)
-		if _, exists := a.Store[pubkey]; exists {
-			currentAttestationSlot = a.Store[pubkey].Data.Slot
+		a.store.Lock()
+		defer a.store.Unlock()
+		if _, exists := a.store.m[pubkey]; exists {
+			currentAttestationSlot = a.store.m[pubkey].Data.Slot
 		}
 		// If the attestation is newer than this attester's one in pool.
 		if newAttestationSlot > currentAttestationSlot {
-			a.Store[pubkey] = attestation
+			a.store.m[pubkey] = attestation
 		}
 	}
 	return nil
+}
+
+// InsertAttestationIntoStore locks the store, inserts the attestation, then
+// unlocks the store again. This method may be used by external services
+// in testing to populate the attestation store.
+func (a *Service) InsertAttestationIntoStore(pubkey [48]byte, att *pb.Attestation) {
+	a.store.Lock()
+	defer a.store.Unlock()
+	a.store.m[pubkey] = att
 }
