@@ -72,13 +72,11 @@ func run(ctx context.Context, v Validator) {
 			role := v.RoleAt(slot)
 
 			switch role {
-			case pb.ValidatorRole_BOTH:
-				v.ProposeBlock(slotCtx, slot)
-				v.AttestToBlockHead(slotCtx, slot)
 			case pb.ValidatorRole_ATTESTER:
 				v.AttestToBlockHead(slotCtx, slot)
 			case pb.ValidatorRole_PROPOSER:
 				v.ProposeBlock(slotCtx, slot)
+				v.AttestToBlockHead(slotCtx, slot)
 			case pb.ValidatorRole_UNKNOWN:
 				log.WithFields(logrus.Fields{
 					"slot": slot - params.BeaconConfig().GenesisSlot,

@@ -117,7 +117,6 @@ enum ValidatorRole {
     UNKNOWN = 0;
     ATTESTER = 1;
     PROPOSER = 2;
-    BOTH = 3;
 }
 
 message ValidatorIndexRequest {
