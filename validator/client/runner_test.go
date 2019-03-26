@@ -32,14 +32,6 @@ func TestCancelledContext_WaitsForChainStart(t *testing.T) {
 	}
 }
 
-func TestCancelledContext_WaitsForActivation(t *testing.T) {
-	v := &fakeValidator{}
-	run(cancelledContext(), v)
-	if !v.WaitForActivationCalled {
-		t.Error("Expected WaitForActivation() to be called")
-	}
-}
-
 func TestUpdateAssignments_NextSlot(t *testing.T) {
 	v := &fakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())
@@ -161,7 +153,7 @@ func TestBothProposesAndAttests_NextSlot(t *testing.T) {
 	slot := uint64(55)
 	ticker := make(chan uint64)
 	v.NextSlotRet = ticker
-	v.RoleAtRet = pb.ValidatorRole_BOTH
+	v.RoleAtRet = pb.ValidatorRole_PROPOSER
 	go func() {
 		ticker <- slot
 

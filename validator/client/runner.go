@@ -16,7 +16,7 @@ import (
 type Validator interface {
 	Done()
 	WaitForChainStart(ctx context.Context) error
-	WaitForActivation(ctx context.Context) error
+	CanonicalHeadSlot(ctx context.Context) (uint64, error)
 	NextSlot() <-chan uint64
 	SlotDeadline(slot uint64) time.Time
 	LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error
@@ -41,11 +41,12 @@ func run(ctx context.Context, v Validator) {
 	if err := v.WaitForChainStart(ctx); err != nil {
 		log.Fatalf("Could not determine if beacon chain started: %v", err)
 	}
-	if err := v.WaitForActivation(ctx); err != nil {
-		log.Fatalf("Could not wait for validator activation: %v", err)
+	headSlot, err := v.CanonicalHeadSlot(ctx)
+	if err != nil {
+		log.Fatalf("Could not get latest beacon chain head: %v", err)
 	}
-	if err := v.UpdateAssignments(ctx, params.BeaconConfig().GenesisSlot); err != nil {
-		handleAssignmentError(err, params.BeaconConfig().GenesisSlot)
+	if err := v.UpdateAssignments(ctx, headSlot); err != nil {
+		handleAssignmentError(err, headSlot)
 	}
 	for {
 		ctx, span := trace.StartSpan(ctx, "processSlot")
@@ -72,13 +73,11 @@ func run(ctx context.Context, v Validator) {
 			role := v.RoleAt(slot)
 
 			switch role {
-			case pb.ValidatorRole_BOTH:
-				v.ProposeBlock(slotCtx, slot)
-				v.AttestToBlockHead(slotCtx, slot)
 			case pb.ValidatorRole_ATTESTER:
 				v.AttestToBlockHead(slotCtx, slot)
 			case pb.ValidatorRole_PROPOSER:
 				v.ProposeBlock(slotCtx, slot)
+				v.AttestToBlockHead(slotCtx, slot)
 			case pb.ValidatorRole_UNKNOWN:
 				log.WithFields(logrus.Fields{
 					"slot": slot - params.BeaconConfig().GenesisSlot,
@@ -94,7 +93,7 @@ func run(ctx context.Context, v Validator) {
 func handleAssignmentError(err error, slot uint64) {
 	if errCode, ok := status.FromError(err); ok && errCode.Code() == codes.NotFound {
 		log.WithField(
-			"epoch", (slot*params.BeaconConfig().SlotsPerEpoch)-params.BeaconConfig().GenesisEpoch,
+			"slot", slot-params.BeaconConfig().GenesisSlot,
 		).Warn("Validator not yet assigned to epoch")
 	} else {
 		log.WithField("error", err).Error("Failed to update assignments")

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	ptypes "github.com/gogo/protobuf/types"
-	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -70,41 +69,16 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 	return nil
 }
 
-// WaitForActivation checks whether the validator pubkey is in the active
-// validator set. If not, this operation will block until an activation message is
-// received.
-func (v *validator) WaitForActivation(ctx context.Context) error {
-	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
+// CanonicalHeadSlot returns the slot of canonical block currently found in the
+// beacon chain via RPC.
+func (v *validator) CanonicalHeadSlot(ctx context.Context) (uint64, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.CanonicalHeadSlot")
 	defer span.End()
-	req := &pb.ValidatorActivationRequest{
-		Pubkey: v.key.PublicKey.Marshal(),
-	}
-	stream, err := v.validatorClient.WaitForActivation(ctx, req)
+	head, err := v.beaconClient.CanonicalHead(ctx, &ptypes.Empty{})
 	if err != nil {
-		return fmt.Errorf("could not setup validator WaitForActivation streaming client: %v", err)
+		return params.BeaconConfig().GenesisSlot, err
 	}
-	var validatorActivatedRecord *pbp2p.Validator
-	for {
-		log.Info("Waiting for validator to be activated in the beacon chain")
-		res, err := stream.Recv()
-		// If the stream is closed, we stop the loop.
-		if err == io.EOF {
-			break
-		}
-		// If context is canceled we stop the loop.
-		if ctx.Err() == context.Canceled {
-			return fmt.Errorf("context has been canceled so shutting down the loop: %v", ctx.Err())
-		}
-		if err != nil {
-			return fmt.Errorf("could not receive validator activation from stream: %v", err)
-		}
-		validatorActivatedRecord = res.Validator
-		break
-	}
-	log.WithFields(logrus.Fields{
-		"activationEpoch": validatorActivatedRecord.ActivationEpoch - params.BeaconConfig().GenesisEpoch,
-	}).Info("Validator activated")
-	return nil
+	return head.Slot, nil
 }
 
 // NextSlot emits the next slot number at the start time of that slot.
@@ -144,22 +118,16 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 
 	v.assignment = resp
 
-	var proposerSlot uint64
-	var attesterSlot uint64
-	if v.assignment.Assignment[0].IsProposer && len(v.assignment.Assignment[0].Committee) == 1 {
-		proposerSlot = resp.Assignment[0].Slot
-		attesterSlot = resp.Assignment[0].Slot
-	} else if v.assignment.Assignment[0].IsProposer {
-		proposerSlot = resp.Assignment[0].Slot
-	} else {
-		attesterSlot = resp.Assignment[0].Slot
+	lFields := logrus.Fields{
+		"attesterSlot": resp.Assignment[0].Slot - params.BeaconConfig().GenesisSlot,
+		"proposerSlot": "Not proposing",
+		"shard":        resp.Assignment[0].Shard,
+	}
+	if v.assignment.Assignment[0].IsProposer {
+		lFields["proposerSlot"] = resp.Assignment[0].Slot - params.BeaconConfig().GenesisSlot
 	}
 
-	log.WithFields(logrus.Fields{
-		"proposerSlot": proposerSlot - params.BeaconConfig().GenesisSlot,
-		"attesterSlot": attesterSlot - params.BeaconConfig().GenesisSlot,
-		"shard":        resp.Assignment[0].Shard,
-	}).Info("Updated validator assignments")
+	log.WithFields(lFields).Info("Updated validator assignments")
 	return nil
 }
 
@@ -171,15 +139,11 @@ func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
 		return pb.ValidatorRole_UNKNOWN
 	}
 	if v.assignment.Assignment[0].Slot == slot {
-		// if the committee length is 1, that means validator has to perform both
-		// proposer and validator roles.
-		if len(v.assignment.Assignment[0].Committee) == 1 {
-			return pb.ValidatorRole_BOTH
-		} else if v.assignment.Assignment[0].IsProposer {
+		if v.assignment.Assignment[0].IsProposer {
+			// Note: A proposer also attests to the slot.
 			return pb.ValidatorRole_PROPOSER
-		} else {
-			return pb.ValidatorRole_ATTESTER
 		}
+		return pb.ValidatorRole_ATTESTER
 	}
 	return pb.ValidatorRole_UNKNOWN
 }

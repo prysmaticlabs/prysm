@@ -223,10 +223,11 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 	for i := 0; i < len(beaconState.ValidatorRegistry); i++ {
 		pubKey := bytesutil.ToBytes48(beaconState.ValidatorRegistry[i].Pubkey)
-		attsService.Store[pubKey] = &pb.Attestation{
+		attsService.InsertAttestationIntoStore(pubKey, &pb.Attestation{
 			Data: &pb.AttestationData{
 				BeaconBlockRootHash32: blockRoot[:],
-			}}
+			}},
+		)
 	}
 	if err := chainService.ApplyForkChoiceRule(context.Background(), block, computedState); err != nil {
 		t.Fatal(err)
