@@ -3,6 +3,8 @@ package rpc
 import (
 	"context"
 	"fmt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -86,6 +88,10 @@ func (vs *ValidatorServer) CommitteeAssignment(
 	idx, err := vs.beaconDB.ValidatorIndex(req.PublicKey[0])
 	if err != nil {
 		return nil, fmt.Errorf("could not get active validator index: %v", err)
+	}
+	val := beaconState.ValidatorRegistry[idx]
+	if val.ActivationEpoch > helpers.SlotToEpoch(beaconState.Slot) {
+		return nil, status.Error(codes.NotFound, "validator not yet activated")
 	}
 
 	committee, shard, slot, isProposer, err :=
