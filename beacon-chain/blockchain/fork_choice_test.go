@@ -491,6 +491,7 @@ func TestLMDGhost_TrivialHeadUpdate(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot:              10,
 		ValidatorBalances: []uint64{params.BeaconConfig().MaxDepositAmount},
+		ValidatorRegistry: []*pb.Validator{{}},
 	}
 
 	chainService := setupBeaconChain(t, false, beaconDB, true, nil)
@@ -548,6 +549,7 @@ func TestLMDGhost_3WayChainSplitsSameHeight(t *testing.T) {
 			params.BeaconConfig().MaxDepositAmount,
 			params.BeaconConfig().MaxDepositAmount,
 			params.BeaconConfig().MaxDepositAmount},
+		ValidatorRegistry: []*pb.Validator{{}, {}, {}, {}},
 	}
 
 	chainService := setupBeaconChain(t, false, beaconDB, true, nil)
@@ -631,6 +633,7 @@ func TestLMDGhost_2WayChainSplitsDiffHeight(t *testing.T) {
 			params.BeaconConfig().MaxDepositAmount,
 			params.BeaconConfig().MaxDepositAmount,
 			params.BeaconConfig().MaxDepositAmount},
+		ValidatorRegistry: []*pb.Validator{{}, {}, {}, {}},
 	}
 
 	chainService := setupBeaconChain(t, false, beaconDB, true, nil)

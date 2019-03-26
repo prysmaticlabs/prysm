@@ -13,6 +13,7 @@ go_library(
         "schema.go",
         "setup_db.go",
         "state.go",
+        "state_metrics.go",
         "validator.go",
         "verify_contract.go",
     ],

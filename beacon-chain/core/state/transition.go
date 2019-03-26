@@ -466,7 +466,5 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *Transition
 		log.Infof("Validator balances: %v", state.ValidatorBalances)
 	}
 
-	// Report interesting metrics.
-	reportEpochTransitionMetrics(state)
 	return state, nil
 }
