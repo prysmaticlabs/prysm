@@ -164,9 +164,6 @@ func TestWaitActivation_ContextCanceled(t *testing.T) {
 	clientStream.EXPECT().Recv().Return(
 		&pb.ValidatorActivationResponse{
 			ActivatedPublicKeys: publicKeys(v.keys),
-			// Validator: &pbp2p.Validator{
-			// 	ActivationEpoch: params.BeaconConfig().GenesisEpoch,
-			// },
 		},
 		nil,
 	)
@@ -249,9 +246,6 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	clientStream.EXPECT().Recv().Return(
 		&pb.ValidatorActivationResponse{
 			ActivatedPublicKeys: publicKeys(v.keys),
-			// Validator: &pbp2p.Validator{
-			// 	ActivationEpoch: params.BeaconConfig().GenesisEpoch,
-			// },
 		},
 		nil,
 	)
@@ -316,9 +310,6 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	clientStream.EXPECT().Recv().Return(
 		&pb.ValidatorActivationResponse{
 			ActivatedPublicKeys: publicKeys(v.keys),
-			// Validator: &pbp2p.Validator{
-			// 	ActivationEpoch: params.BeaconConfig().GenesisEpoch,
-			// },
 		},
 		nil,
 	)

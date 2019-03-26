@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -76,12 +75,9 @@ func run(ctx context.Context, v Validator) {
 				handleAssignmentError(err, slot)
 				continue
 			}
-			var wg sync.WaitGroup
-			for idx, role := range v.RolesAt(slot) {
-				wg.Add(1)
-				go func(rol pb.ValidatorRole, id string) {
-					defer wg.Done()
-					switch rol {
+			for id, role := range v.RolesAt(slot) {
+				go func(role pb.ValidatorRole, id string) {
+					switch role {
 					case pb.ValidatorRole_ATTESTER:
 						v.AttestToBlockHead(slotCtx, slot, id)
 					case pb.ValidatorRole_PROPOSER:
@@ -90,15 +86,14 @@ func run(ctx context.Context, v Validator) {
 					case pb.ValidatorRole_UNKNOWN:
 						log.WithFields(logrus.Fields{
 							"slot": slot - params.BeaconConfig().GenesisSlot,
-							"role": rol,
+							"role": role,
 						}).Info("No active assignment, doing nothing")
 					default:
 						// Do nothing :)
 					}
 
-				}(role, idx)
+				}(role, id)
 			}
-			wg.Wait()
 		}
 	}
 }
