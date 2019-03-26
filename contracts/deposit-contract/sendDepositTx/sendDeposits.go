@@ -223,7 +223,7 @@ func main() {
 
 			log.WithFields(logrus.Fields{
 				"Transaction Hash": fmt.Sprintf("%#x", tx.Hash()),
-			}).Infof("Deposit %d sent to contract for validator with a public key %#x", i, validatorKey.PublicKey.Marshal())
+			}).Infof("Deposit %d sent to contract address %v for validator with a public key %#x", i, depositContractAddr, validatorKey.PublicKey.Marshal())
 
 			// If flag is enabled make transaction times variable
 			if variableTx {
