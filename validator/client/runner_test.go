@@ -32,14 +32,6 @@ func TestCancelledContext_WaitsForChainStart(t *testing.T) {
 	}
 }
 
-func TestCancelledContext_WaitsForActivation(t *testing.T) {
-	v := &fakeValidator{}
-	run(cancelledContext(), v)
-	if !v.WaitForActivationCalled {
-		t.Error("Expected WaitForActivation() to be called")
-	}
-}
-
 func TestUpdateAssignments_NextSlot(t *testing.T) {
 	v := &fakeValidator{}
 	ctx, cancel := context.WithCancel(context.Background())
