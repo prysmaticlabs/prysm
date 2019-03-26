@@ -32,4 +32,5 @@ var ValidatorFlags = []cli.Flag{}
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = []cli.Flag{
 	EnableComputeStateRootFlag,
+	EnableCrosslinksFlag,
 }
