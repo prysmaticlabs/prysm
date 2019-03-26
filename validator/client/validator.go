@@ -143,7 +143,7 @@ func (v *validator) SlotDeadline(slot uint64) time.Time {
 func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	// Testing run time for fetching every slot. This is not meant for production!
 	// https://github.com/prysmaticlabs/prysm/issues/2167
-	if slot%params.BeaconConfig().SlotsPerEpoch != 0 && v.assignment != nil && false {
+	if slot%params.BeaconConfig().SlotsPerEpoch != 0 && v.assignments != nil && false {
 		// Do nothing if not epoch start AND assignments already exist.
 		return nil
 	}
@@ -166,44 +166,29 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	}
 
 	v.assignments = resp
-	for i, assignment := range v.assignments.Assignment {
+	for _, assignment := range v.assignments.Assignment {
 		var proposerSlot uint64
 		var attesterSlot uint64
-<<<<<<< HEAD
 		if assignment.IsProposer && len(assignment.Committee) == 1 {
 			proposerSlot = assignment.Slot
 			attesterSlot = assignment.Slot
 		} else if assignment.IsProposer {
-=======
-		if v.assignments.Assignment[i].IsProposer && len(v.assignments.Assignment[i].Committee) == 1 {
-			proposerSlot = assignment.Slot
-			attesterSlot = assignment.Slot
-		} else if v.assignments.Assignment[i].IsProposer {
->>>>>>> fix review remarks and tests
 			proposerSlot = assignment.Slot
 		} else {
 			attesterSlot = assignment.Slot
 		}
 
-<<<<<<< HEAD
 		lFields := logrus.Fields{
-			"attesterSlot": assignment.Slot - params.BeaconConfig().GenesisSlot,
+			"attesterSlot": attesterSlot - params.BeaconConfig().GenesisSlot,
 			"proposerSlot": "Not proposing",
 			"shard":        assignment.Shard,
 		}
 		if assignment.IsProposer {
-			lFields["proposerSlot"] = resp.Assignment[0].Slot - params.BeaconConfig().GenesisSlot
+			lFields["proposerSlot"] = proposerSlot - params.BeaconConfig().GenesisSlot
 		}
 
 		log.WithFields(lFields).Info("Updated validator assignments")
 
-=======
-		log.WithFields(logrus.Fields{
-			"proposerSlot": proposerSlot - params.BeaconConfig().GenesisSlot,
-			"attesterSlot": attesterSlot - params.BeaconConfig().GenesisSlot,
-			"shard":        assignment.Shard,
-		}).Info("Updated validator assignments")
->>>>>>> fix review remarks and tests
 	}
 	return nil
 }

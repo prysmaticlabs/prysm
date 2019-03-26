@@ -28,11 +28,8 @@ type fakeValidator struct {
 	ProposeBlockCalled               bool
 	ProposeBlockArg1                 uint64
 	LogValidatorGainsAndLossesCalled bool
-<<<<<<< HEAD
 	SlotDeadlineCalled               bool
 	PublicKey                        string
-=======
->>>>>>> fix validator client test
 }
 
 func (fv *fakeValidator) Done() {
