@@ -18,7 +18,7 @@ bazel build //validator
 bazel build //contracts/deposit-contract/sendDepositTx:sendDepositTx
 
 START_INDEX=1
-VALIDATORS=8
+END_INDEX=8
 
 while test $# -gt 0; do
     case "$1" in
@@ -27,9 +27,9 @@ while test $# -gt 0; do
           DEPOSIT_CONTRACT=$1
           shift
           ;;
-      --validators)
+      --end-index)
           shift
-          VALIDATORS=$1
+          END_INDEX=$1
           shift
           ;;
       --start-index)
@@ -49,7 +49,7 @@ while test $# -gt 0; do
     esac
 done
 
-for i in `seq $START_INDEX $VALIDATORS`;
+for i in `seq $START_INDEX $END_INDEX`;
 do
   echo "Generating validator $i"
 
@@ -62,7 +62,7 @@ do
   $ACCOUNTCMD
 done
 
-for i in `seq $START_INDEX $VALIDATORS`;
+for i in `seq $START_INDEX $END_INDEX`;
 do
   KEYSTORE=$DATA_PATH/keystore$i
 
@@ -75,7 +75,7 @@ done
 
 echo "Started $VALIDATORS validators"
 
-for i in `seq $START_INDEX $VALIDATORS`;
+for i in `seq $START_INDEX $END_INDEX`;
 do
   echo "Sending TX for validator $i"
 
@@ -96,6 +96,6 @@ do
   $DEPOSITCMD
 done
 
-echo "$VALIDATORS validators are running in the background. You can follow their logs at /tmp/validator#.log where # is replaced by the validator index of $START_INDEX through $VALIDATORS."
+echo "$END_INDEX validators are running in the background. You can follow their logs at /tmp/validator#.log where # is replaced by the validator index of $START_INDEX through $END_INDEX."
 
 echo "To stop the processes, use 'pkill validator'"
