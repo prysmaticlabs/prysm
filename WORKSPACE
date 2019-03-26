@@ -1058,3 +1058,9 @@ go_repository(
     commit = "ddec431b4a402258c3b56b873908c98a15f22de4",
     importpath = "github.com/apache/thrift",
 )
+
+go_repository(
+    name = "com_github_grpc_ecosystem_go_grpc_prometheus",
+    commit = "68e3a13e41175110a447e67246a59873d6aca902",
+    importpath = "github.com/grpc-ecosystem/go-grpc-prometheus",
+)
