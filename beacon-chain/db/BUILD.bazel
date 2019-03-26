@@ -45,7 +45,6 @@ go_test(
         "cleanup_history_test.go",
         "db_test.go",
         "pending_deposits_test.go",
-        "state_metrics_test.go",
         "state_test.go",
         "validator_test.go",
         "verify_contract_test.go",
@@ -60,6 +59,5 @@ go_test(
         "//shared/testutil:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
-        "@com_github_prometheus_client_golang//prometheus/testutil:go_default_library",
     ],
 )
