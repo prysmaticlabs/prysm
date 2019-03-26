@@ -189,6 +189,14 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 		}
 	}
 
+	log.WithFields(logrus.Fields{
+		"attestation slot": attestation.Data.Slot,
+		"attestation shard": attestation.Data.Shard,
+		"committees shard":      committees[0].Shard,
+		"committees list":       committees[0].Committee,
+		"length of committees":  len(committees),
+	}).Info("Updating latest attestation")
+
 	// The participation bitfield from attestation is represented in bytes,
 	// here we multiply by 8 to get an accurate validator count in bits.
 	bitfield := attestation.AggregationBitfield
