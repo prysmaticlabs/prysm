@@ -419,7 +419,7 @@ func TestSlashValidator_AlreadyWithdrawn(t *testing.T) {
 	}
 }
 
-func TestProcessPenaltiesExits_NothingHappened(t *testing.T) {
+func TestProcessAndPenaltiesExits_NothingHappened(t *testing.T) {
 	state := &pb.BeaconState{
 		ValidatorBalances: []uint64{params.BeaconConfig().MaxDepositAmount},
 		ValidatorRegistry: []*pb.Validator{
@@ -434,7 +434,7 @@ func TestProcessPenaltiesExits_NothingHappened(t *testing.T) {
 	}
 }
 
-func TestProcessPenaltiesExits_ValidatorSlashed(t *testing.T) {
+func TestProcessPenaltiesAndExits_ValidatorSlashed(t *testing.T) {
 
 	latestSlashedExits := make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
 	for i := 0; i < len(latestSlashedExits); i++ {
