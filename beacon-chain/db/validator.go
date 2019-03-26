@@ -7,8 +7,6 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // SaveValidatorIndex accepts a public key and validator index and writes them to disk.
