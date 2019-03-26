@@ -1,4 +1,4 @@
-package state
+package db
 
 import (
 	"strings"
@@ -8,7 +8,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
-func TestReportEpochTransitionMetrics_validatorBalances(t *testing.T) {
+func TestReportStateMetrics_validatorBalances(t *testing.T) {
 	state := &pb.BeaconState{
 		ValidatorBalances: []uint64{1, 15},
 		ValidatorRegistry: []*pb.Validator{
@@ -17,7 +17,7 @@ func TestReportEpochTransitionMetrics_validatorBalances(t *testing.T) {
 		},
 	}
 
-	reportEpochTransitionMetrics(state)
+	reportStateMetrics(state)
 	expectedMetadata := `
 	  # HELP state_validator_balances Balances of validators, updated on epoch transition
 	  # TYPE state_validator_balances gauge
