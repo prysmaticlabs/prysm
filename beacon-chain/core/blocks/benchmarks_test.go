@@ -443,25 +443,29 @@ func BenchmarkProcessBlock(b *testing.B) {
 		},
 	}
 	beaconState.Slot = params.BeaconConfig().GenesisSlot + 10
-	blockAtt := &pb.Attestation{
-		Data: &pb.AttestationData{
-			Shard:                    0,
-			Slot:                     params.BeaconConfig().GenesisSlot,
-			JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
-			JustifiedBlockRootHash32: blockRoots[0],
-			LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
-			CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
-		},
-		AggregationBitfield: []byte{1},
-		CustodyBitfield:     []byte{1},
+	attestations := make([]*pb.Attestation, params.BeaconConfig().MaxAttestations)
+	for i := uint64(0); i < params.BeaconConfig().MaxAttestations; i++ {
+		att1 := &pb.Attestation{
+			Data: &pb.AttestationData{
+				Shard:                    0,
+				Slot:                     params.BeaconConfig().GenesisSlot + 20,
+				JustifiedBlockRootHash32: blockRoots[0],
+				LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
+				CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
+				JustifiedEpoch:           params.BeaconConfig().GenesisEpoch,
+			},
+			AggregationBitfield: []byte{1},
+			CustodyBitfield:     []byte{1},
+		}
+		attestations = append(attestations, att1)
 	}
-	attestations := []*pb.Attestation{blockAtt}
 	exits := []*pb.VoluntaryExit{
 		{
 			ValidatorIndex: 10,
 			Epoch:          params.BeaconConfig().GenesisEpoch,
 		},
 	}
+
 	// randaoReveal := createRandaoReveal(b, beaconState, privKeys, params.BeaconConfig().GenesisSlot+10)
 	block := &pb.BeaconBlock{
 		Slot:         params.BeaconConfig().GenesisSlot + 10,
