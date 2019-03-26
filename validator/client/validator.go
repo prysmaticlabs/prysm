@@ -168,9 +168,8 @@ func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
 		if v.assignment.Assignment[0].IsProposer {
 			// Note: A proposer also attests to the slot.
 			return pb.ValidatorRole_PROPOSER
-		} else {
-			return pb.ValidatorRole_ATTESTER
 		}
+		return pb.ValidatorRole_ATTESTER
 	}
 	return pb.ValidatorRole_UNKNOWN
 }
