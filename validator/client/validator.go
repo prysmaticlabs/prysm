@@ -118,22 +118,16 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 
 	v.assignment = resp
 
-	var proposerSlot uint64
-	var attesterSlot uint64
-	if v.assignment.Assignment[0].IsProposer && len(v.assignment.Assignment[0].Committee) == 1 {
-		proposerSlot = resp.Assignment[0].Slot
-		attesterSlot = resp.Assignment[0].Slot
-	} else if v.assignment.Assignment[0].IsProposer {
-		proposerSlot = resp.Assignment[0].Slot
-	} else {
-		attesterSlot = resp.Assignment[0].Slot
+	lFields := logrus.Fields{
+		"attesterSlot": resp.Assignment[0].Slot - params.BeaconConfig().GenesisSlot,
+		"proposerSlot": "Not proposing",
+		"shard":        resp.Assignment[0].Shard,
+	}
+	if v.assignment.Assignment[0].IsProposer {
+		lFields["proposerSlot"] = resp.Assignment[0].Slot - params.BeaconConfig().GenesisSlot
 	}
 
-	log.WithFields(logrus.Fields{
-		"proposerSlot": proposerSlot - params.BeaconConfig().GenesisSlot,
-		"attesterSlot": attesterSlot - params.BeaconConfig().GenesisSlot,
-		"shard":        resp.Assignment[0].Shard,
-	}).Info("Updated validator assignments")
+	log.WithFields(lFields).Info("Updated validator assignments")
 	return nil
 }
 
@@ -145,15 +139,11 @@ func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
 		return pb.ValidatorRole_UNKNOWN
 	}
 	if v.assignment.Assignment[0].Slot == slot {
-		// if the committee length is 1, that means validator has to perform both
-		// proposer and validator roles.
-		if len(v.assignment.Assignment[0].Committee) == 1 {
-			return pb.ValidatorRole_BOTH
-		} else if v.assignment.Assignment[0].IsProposer {
+		if v.assignment.Assignment[0].IsProposer {
+			// Note: A proposer also attests to the slot.
 			return pb.ValidatorRole_PROPOSER
-		} else {
-			return pb.ValidatorRole_ATTESTER
 		}
+		return pb.ValidatorRole_ATTESTER
 	}
 	return pb.ValidatorRole_UNKNOWN
 }
