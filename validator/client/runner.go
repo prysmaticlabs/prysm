@@ -95,10 +95,10 @@ func run(ctx context.Context, v Validator) {
 					default:
 						// Do nothing :)
 					}
+
 				}(role, idx)
 			}
 			wg.Wait()
-
 		}
 	}
 }

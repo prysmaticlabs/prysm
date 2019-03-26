@@ -81,7 +81,7 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 		pks = append(pks, key.PublicKey.Marshal())
 	}
 	req := &pb.ValidatorActivationRequest{
-		PublicKey: pks,
+		PublicKeys: pks,
 	}
 	stream, err := v.validatorClient.WaitForActivation(ctx, req)
 	if err != nil {
@@ -169,15 +169,23 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	for i, assignment := range v.assignments.Assignment {
 		var proposerSlot uint64
 		var attesterSlot uint64
+<<<<<<< HEAD
 		if assignment.IsProposer && len(assignment.Committee) == 1 {
 			proposerSlot = assignment.Slot
 			attesterSlot = assignment.Slot
 		} else if assignment.IsProposer {
+=======
+		if v.assignments.Assignment[i].IsProposer && len(v.assignments.Assignment[i].Committee) == 1 {
+			proposerSlot = assignment.Slot
+			attesterSlot = assignment.Slot
+		} else if v.assignments.Assignment[i].IsProposer {
+>>>>>>> fix review remarks and tests
 			proposerSlot = assignment.Slot
 		} else {
 			attesterSlot = assignment.Slot
 		}
 
+<<<<<<< HEAD
 		lFields := logrus.Fields{
 			"attesterSlot": assignment.Slot - params.BeaconConfig().GenesisSlot,
 			"proposerSlot": "Not proposing",
@@ -189,6 +197,13 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 
 		log.WithFields(lFields).Info("Updated validator assignments")
 
+=======
+		log.WithFields(logrus.Fields{
+			"proposerSlot": proposerSlot - params.BeaconConfig().GenesisSlot,
+			"attesterSlot": attesterSlot - params.BeaconConfig().GenesisSlot,
+			"shard":        assignment.Shard,
+		}).Info("Updated validator assignments")
+>>>>>>> fix review remarks and tests
 	}
 	return nil
 }

@@ -158,7 +158,7 @@ func TestWaitActivation_ContextCanceled(t *testing.T) {
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&pb.ValidatorActivationRequest{
-			PublicKey: publicKeys(v.keys),
+			PublicKeys: publicKeys(v.keys),
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
@@ -192,7 +192,7 @@ func TestWaitActivation_StreamSetupFails(t *testing.T) {
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&pb.ValidatorActivationRequest{
-			PublicKey: publicKeys(v.keys),
+			PublicKeys: publicKeys(v.keys),
 		},
 	).Return(clientStream, errors.New("failed stream"))
 	err := v.WaitForActivation(context.Background())
@@ -215,7 +215,7 @@ func TestWaitActivation_ReceiveErrorFromStream(t *testing.T) {
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&pb.ValidatorActivationRequest{
-			PublicKey: publicKeys(v.keys),
+			PublicKeys: publicKeys(v.keys),
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
@@ -243,7 +243,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&pb.ValidatorActivationRequest{
-			PublicKey: publicKeys(v.keys),
+			PublicKeys: publicKeys(v.keys),
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
@@ -310,7 +310,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	client.EXPECT().WaitForActivation(
 		gomock.Any(),
 		&pb.ValidatorActivationRequest{
-			PublicKey: publicKeys(v.keys),
+			PublicKeys: publicKeys(v.keys),
 		},
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(

@@ -31,6 +31,7 @@ type ValidatorServer struct {
 // the validator with the public key as an active validator record.
 func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest, stream pb.ValidatorService_WaitForActivationServer) error {
 <<<<<<< HEAD
+<<<<<<< HEAD
 	if vs.beaconDB.HasValidator(req.Pubkey) {
 		beaconState, err := vs.beaconDB.HeadState(vs.ctx)
 =======
@@ -45,6 +46,10 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 =======
 		activeVals, err := vs.retrieveActiveValidators(req.PublicKey)
 >>>>>>> remove unused var in function call
+=======
+	if vs.beaconDB.HasValidators(req.PublicKeys) {
+		activeVals, err := vs.retrieveActiveValidators(req.PublicKeys)
+>>>>>>> fix review remarks and tests
 		if err != nil {
 			return fmt.Errorf("could not retrieve active validator from state: %v", err)
 		}
@@ -56,9 +61,10 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 	for {
 		select {
 		case <-time.After(3 * time.Second):
-			if !vs.beaconDB.HasValidators(req.PublicKey) {
+			if !vs.beaconDB.HasValidators(req.PublicKeys) {
 				continue
 			}
+<<<<<<< HEAD
 <<<<<<< HEAD
 			beaconState, err := vs.beaconDB.HeadState(vs.ctx)
 			if err != nil {
@@ -68,6 +74,9 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 =======
 			activeVals, err := vs.retrieveActiveValidators(req.PublicKey)
 >>>>>>> remove unused var in function call
+=======
+			activeVals, err := vs.retrieveActiveValidators(req.PublicKeys)
+>>>>>>> fix review remarks and tests
 			if err != nil {
 				return fmt.Errorf("could not retrieve active validator from state: %v", err)
 			}
@@ -267,14 +276,13 @@ func (vs *ValidatorServer) retrieveActiveValidator(beaconState *pbp2p.BeaconStat
 }
 
 func (vs *ValidatorServer) retrieveActiveValidators(pubkeys [][]byte) ([][]byte, error) {
-	v := [][]byte{}
-	for _, pk := range pubkeys {
-		_, err := vs.beaconDB.ValidatorIndex(pk)
-		if err != nil {
-			return nil, fmt.Errorf("could not retrieve validator index: %v", err)
-		}
-		v = append(v, pk)
+	m, err := vs.beaconDB.ValidatorsIndexes(pubkeys)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve validators indexes: %v", err)
 	}
-
+	v := make([][]byte, len(m))
+	for i, value := range m {
+		v[i] = value
+	}
 	return v, nil
 }

@@ -1,6 +1,7 @@
 package db
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 	"testing"
@@ -37,6 +38,33 @@ func TestSaveAndRetrieveValidatorIndex_OK(t *testing.T) {
 	}
 	if index2 != 2 {
 		t.Fatalf("Saved index and retrieved index are not equal: %#x and %#x", 2, index2)
+	}
+}
+
+func TestSaveAndRetrieveValidatorsIndexes_OK(t *testing.T) {
+	db := setupDB(t)
+	defer teardownDB(t, db)
+
+	p1 := []byte{'A', 'B', 'C'}
+	p2 := []byte{'D', 'E', 'F'}
+
+	if err := db.SaveValidatorIndex(p1, 1); err != nil {
+		t.Fatalf("Failed to save validator index: %v", err)
+	}
+	if err := db.SaveValidatorIndex(p2, 2); err != nil {
+		t.Fatalf("Failed to save validator index: %v", err)
+	}
+	ids := [][]byte{}
+	ids = append(ids, p1, p2)
+	indexes, err := db.ValidatorsIndexes(ids)
+	if err != nil {
+		t.Fatalf("Failed to call Attestation: %v", err)
+	}
+	if bytes.Equal(indexes[0], p1) {
+		t.Fatalf("Saved index and retrieved index are not equal: %#x and %#x", 1, indexes[0])
+	}
+	if bytes.Equal(indexes[1], p2) {
+		t.Fatalf("Saved index and retrieved index are not equal: %#x and %#x", 2, indexes[1])
 	}
 }
 

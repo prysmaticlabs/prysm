@@ -526,7 +526,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 	}
 	req := &pb.ValidatorActivationRequest{
-		PublicKey: [][]byte{[]byte("A")},
+		PublicKeys: [][]byte{[]byte("A")},
 	}
 
 	ctrl := gomock.NewController(t)
@@ -571,7 +571,12 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatalf("could not save state: %v", err)
 	}
-
+	if err := db.SaveValidatorIndex(pubKeys[0], 0); err != nil {
+		t.Fatalf("could not save validator index: %v", err)
+	}
+	if err := db.SaveValidatorIndex(pubKeys[1], 1); err != nil {
+		t.Fatalf("could not save validator index: %v", err)
+	}
 	vs := &ValidatorServer{
 		beaconDB:           db,
 		ctx:                context.Background(),
@@ -579,7 +584,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
 	}
 	req := &pb.ValidatorActivationRequest{
-		PublicKey: pubKeys,
+		PublicKeys: pubKeys,
 	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
