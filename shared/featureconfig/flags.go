@@ -19,6 +19,11 @@ var (
 		Name:  "enable-compute-state-root",
 		Usage: "Enable server side compute state root. Default is a no-op implementation.",
 	}
+	// EnableCrosslinksFlag enables the processing of crosslinks in epoch processing. It is disabled by default.
+	EnableCrosslinksFlag = cli.BoolFlag{
+		Name:  "enable-crosslinks",
+		Usage: "Enable crosslinks in epoch processing, default is disabled.",
+	}
 )
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
