@@ -272,14 +272,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *Transition
 	)
 
 	// Process crosslinks records.
-	state, err = e.ProcessCrosslinks(
-		ctx,
-		state,
-		currentEpochAttestations,
-		prevEpochAttestations)
-	if err != nil {
-		return nil, fmt.Errorf("could not process crosslink records: %v", err)
-	}
+	// TODO(#2072): Include an optimized process crosslinks version.
 
 	// Process attester rewards and penalties.
 	epochsSinceFinality := e.SinceFinality(state)
@@ -379,14 +372,7 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *Transition
 	}
 
 	// Process crosslink rewards and penalties.
-	state, err = bal.Crosslinks(
-		ctx,
-		state,
-		currentEpochAttestations,
-		prevEpochAttestations)
-	if err != nil {
-		return nil, fmt.Errorf("could not process crosslink rewards and penalties: %v", err)
-	}
+	// TODO(#2072): Include an optimized version of processing crosslink balances.
 
 	// Process ejections.
 	state, err = e.ProcessEjections(ctx, state, config.Logging)
