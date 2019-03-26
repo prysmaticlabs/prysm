@@ -7,16 +7,15 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
-
-	"github.com/prysmaticlabs/prysm/shared/params"
-
 	bal "github.com/prysmaticlabs/prysm/beacon-chain/core/balances"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -272,13 +271,16 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *Transition
 	)
 
 	// Process crosslinks records.
-	state, err = e.ProcessCrosslinks(
-		ctx,
-		state,
-		currentEpochAttestations,
-		prevEpochAttestations)
-	if err != nil {
-		return nil, fmt.Errorf("could not process crosslink records: %v", err)
+	// TODO(#2072): Include an optimized process crosslinks version.
+	if featureconfig.FeatureConfig().EnableCrosslinks {
+		state, err = e.ProcessCrosslinks(
+			ctx,
+			state,
+			currentEpochAttestations,
+			prevEpochAttestations)
+		if err != nil {
+			return nil, fmt.Errorf("could not process crosslink records: %v", err)
+		}
 	}
 
 	// Process attester rewards and penalties.
@@ -379,13 +381,16 @@ func ProcessEpoch(ctx context.Context, state *pb.BeaconState, config *Transition
 	}
 
 	// Process crosslink rewards and penalties.
-	state, err = bal.Crosslinks(
-		ctx,
-		state,
-		currentEpochAttestations,
-		prevEpochAttestations)
-	if err != nil {
-		return nil, fmt.Errorf("could not process crosslink rewards and penalties: %v", err)
+	// TODO(#2072): Optimize crosslinks.
+	if featureconfig.FeatureConfig().EnableCrosslinks {
+		state, err = bal.Crosslinks(
+			ctx,
+			state,
+			currentEpochAttestations,
+			prevEpochAttestations)
+		if err != nil {
+			return nil, fmt.Errorf("could not process crosslink rewards and penalties: %v", err)
+		}
 	}
 
 	// Process ejections.
