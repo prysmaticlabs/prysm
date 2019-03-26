@@ -7,6 +7,8 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // SaveValidatorIndex accepts a public key and validator index and writes them to disk.
@@ -39,7 +41,7 @@ func (db *BeaconDB) SaveValidatorIndexBatch(pubKey []byte, index int) error {
 // ValidatorIndex accepts a public key and returns the corresponding validator index.
 func (db *BeaconDB) ValidatorIndex(pubKey []byte) (uint64, error) {
 	if !db.HasValidator(pubKey) {
-		return 0, fmt.Errorf("validator %#x does not exist", pubKey)
+		return 0, status.Error(codes.NotFound, fmt.Sprintf("validator %#x does not exist", pubKey))
 	}
 
 	var index uint64

@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -433,87 +432,5 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	}
 	if resp.Status != pb.ValidatorStatus_UNKNOWN_STATUS {
 		t.Errorf("Wanted %v, got %v", pb.ValidatorStatus_UNKNOWN_STATUS, resp.Status)
-	}
-}
-
-func TestWaitForActivation_ContextClosed(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-
-	beaconState := &pbp2p.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot,
-	}
-	if err := db.SaveState(beaconState); err != nil {
-		t.Fatalf("could not save state: %v", err)
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	vs := &ValidatorServer{
-		beaconDB:           db,
-		ctx:                ctx,
-		chainService:       newMockChainService(),
-		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
-	}
-	req := &pb.ValidatorActivationRequest{
-		Pubkey: []byte("A"),
-	}
-
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mockStream := internal.NewMockValidatorService_WaitForActivationServer(ctrl)
-	exitRoutine := make(chan bool)
-	go func(tt *testing.T) {
-		want := "context closed"
-		if err := vs.WaitForActivation(req, mockStream); !strings.Contains(err.Error(), want) {
-			tt.Errorf("Could not call RPC method: %v", err)
-		}
-		<-exitRoutine
-	}(t)
-	cancel()
-	exitRoutine <- true
-}
-
-func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-
-	pubKey := []byte{'A'}
-	if err := db.SaveValidatorIndex(pubKey, 0); err != nil {
-		t.Fatalf("Could not save validator index: %v", err)
-	}
-
-	beaconState := &pbp2p.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot,
-		ValidatorRegistry: []*pbp2p.Validator{{
-			ActivationEpoch: params.BeaconConfig().GenesisSlot,
-			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
-			Pubkey:          pubKey},
-		},
-	}
-	if err := db.SaveState(beaconState); err != nil {
-		t.Fatalf("could not save state: %v", err)
-	}
-
-	vs := &ValidatorServer{
-		beaconDB:           db,
-		ctx:                context.Background(),
-		chainService:       newMockChainService(),
-		canonicalStateChan: make(chan *pbp2p.BeaconState, 1),
-	}
-	req := &pb.ValidatorActivationRequest{
-		Pubkey: pubKey,
-	}
-
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mockStream := internal.NewMockValidatorService_WaitForActivationServer(ctrl)
-	mockStream.EXPECT().Send(
-		&pb.ValidatorActivationResponse{
-			Validator: beaconState.ValidatorRegistry[0],
-		},
-	).Return(nil)
-
-	if err := vs.WaitForActivation(req, mockStream); err != nil {
-		t.Fatalf("Could not setup wait for activation stream: %v", err)
 	}
 }
