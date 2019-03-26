@@ -14,8 +14,11 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/sliceutil"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
+
+var log = logrus.WithField("prefix", "powchain")
 
 var (
 	// ActivatedValidators is a mapping that tracks epoch to activated validators indexes.
@@ -160,6 +163,12 @@ func ActivateValidator(state *pb.BeaconState, idx uint64, genesis bool) (*pb.Bea
 	}
 
 	state.ValidatorRegistry[idx] = validator
+
+	log.WithFields(logrus.Fields{
+		"index":           idx,
+		"activationEpoch": validator.ActivationEpoch - params.BeaconConfig().GenesisEpoch,
+	}).Info("Validator activated ")
+
 	return state, nil
 }
 
@@ -314,6 +323,13 @@ func UpdateRegistry(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState
 		if validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch &&
 			state.ValidatorBalances[idx] >= params.BeaconConfig().MaxDepositAmount {
 			balChurn += helpers.EffectiveBalance(state, uint64(idx))
+			log.WithFields(logrus.Fields{
+				"index":               idx,
+				"currentBalanceChurn": balChurn,
+				"maxBalanceChurn":     maxBalChurn,
+				"currentEpoch":        currentEpoch - params.BeaconConfig().GenesisEpoch,
+			}).Info("Attempting to activate validator")
+
 			if balChurn > maxBalChurn {
 				break
 			}
