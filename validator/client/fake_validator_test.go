@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/shared/params"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 var _ = Validator(&fakeValidator{})
