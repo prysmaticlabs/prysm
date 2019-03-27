@@ -162,12 +162,12 @@ func TestProcessBlock_OK(t *testing.T) {
 	cfg := &RegularSyncConfig{
 		BlockAnnounceBufferSize: 0,
 		BlockBufferSize:         0,
-		ChainService:            &mockChainService{
+		ChainService: &mockChainService{
 			db: db,
 		},
-		P2P:                     &mockP2P{},
-		BeaconDB:                db,
-		OperationService:        &mockOperationService{},
+		P2P:              &mockP2P{},
+		BeaconDB:         db,
+		OperationService: &mockOperationService{},
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
@@ -237,12 +237,12 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 	cfg := &RegularSyncConfig{
 		BlockAnnounceBufferSize: 0,
 		BlockBufferSize:         0,
-		ChainService:            &mockChainService{
+		ChainService: &mockChainService{
 			db: db,
 		},
-		P2P:                     &mockP2P{},
-		BeaconDB:                db,
-		OperationService:        &mockOperationService{},
+		P2P:              &mockP2P{},
+		BeaconDB:         db,
+		OperationService: &mockOperationService{},
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
