@@ -6,9 +6,10 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"sync"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"sync"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
