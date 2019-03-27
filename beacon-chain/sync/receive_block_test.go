@@ -2,12 +2,13 @@ package sync
 
 import (
 	"context"
+	"testing"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"testing"
 )
 
 func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
@@ -28,7 +29,7 @@ func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
 		t.Fatal(err)
 	}
 	genesisState := &pb.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot,
+		Slot:           params.BeaconConfig().GenesisSlot,
 		FinalizedEpoch: params.BeaconConfig().GenesisEpoch,
 	}
 	if err := db.SaveBlock(genesisBlock); err != nil {
@@ -40,22 +41,22 @@ func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
 
 	parents := []*pb.BeaconBlock{
 		{
-			Slot: params.BeaconConfig().GenesisSlot + 1,
+			Slot:             params.BeaconConfig().GenesisSlot + 1,
 			ParentRootHash32: genesisRoot[:],
 		},
 	}
-    parentRoots := make([][]byte, len(parents))
-    for i := range parents {
-    	h, err := hashutil.HashBeaconBlock(parents[i])
-    	if err != nil {
-    		t.Fatal(err)
+	parentRoots := make([][]byte, len(parents))
+	for i := range parents {
+		h, err := hashutil.HashBeaconBlock(parents[i])
+		if err != nil {
+			t.Fatal(err)
 		}
 		parentRoots[i] = h[:]
 	}
 
 	blocksMissingParent := []*pb.BeaconBlock{
 		{
-			Slot: params.BeaconConfig().GenesisSlot + 2,
+			Slot:             params.BeaconConfig().GenesisSlot + 2,
 			ParentRootHash32: parentRoots[0],
 		},
 	}

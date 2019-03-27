@@ -61,28 +61,28 @@ type p2pAPI interface {
 //     *  Drop peers that send invalid data
 //     *  Throttle incoming requests
 type RegularSync struct {
-	ctx                      context.Context
-	cancel                   context.CancelFunc
-	p2p                      p2pAPI
-	chainService             chainService
-	attsService              attsService
-	operationsService        operations.OperationFeeds
-	db                       *db.BeaconDB
-	blockAnnouncementFeed    *event.Feed
-	announceBlockBuf         chan p2p.Message
-	blockBuf                 chan p2p.Message
-	blockRequestBySlot       chan p2p.Message
-	blockRequestByHash       chan p2p.Message
-	batchedRequestBuf        chan p2p.Message
-	stateRequestBuf          chan p2p.Message
-	chainHeadReqBuf          chan p2p.Message
-	attestationBuf           chan p2p.Message
-	attestationReqByHashBuf  chan p2p.Message
-	announceAttestationBuf   chan p2p.Message
-	exitBuf                  chan p2p.Message
-	canonicalBuf             chan *pb.BeaconBlockAnnounce
-	highestObservedSlot      uint64
-	blocksAwaitingProcessing map[[32]byte]p2p.Message
+	ctx                          context.Context
+	cancel                       context.CancelFunc
+	p2p                          p2pAPI
+	chainService                 chainService
+	attsService                  attsService
+	operationsService            operations.OperationFeeds
+	db                           *db.BeaconDB
+	blockAnnouncementFeed        *event.Feed
+	announceBlockBuf             chan p2p.Message
+	blockBuf                     chan p2p.Message
+	blockRequestBySlot           chan p2p.Message
+	blockRequestByHash           chan p2p.Message
+	batchedRequestBuf            chan p2p.Message
+	stateRequestBuf              chan p2p.Message
+	chainHeadReqBuf              chan p2p.Message
+	attestationBuf               chan p2p.Message
+	attestationReqByHashBuf      chan p2p.Message
+	announceAttestationBuf       chan p2p.Message
+	exitBuf                      chan p2p.Message
+	canonicalBuf                 chan *pb.BeaconBlockAnnounce
+	highestObservedSlot          uint64
+	blocksAwaitingProcessing     map[[32]byte]p2p.Message
 	blocksAwaitingProcessingLock sync.RWMutex
 }
 

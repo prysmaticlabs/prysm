@@ -48,7 +48,7 @@ type mockChainService struct {
 	bFeed *event.Feed
 	sFeed *event.Feed
 	cFeed *event.Feed
-	db *db.BeaconDB
+	db    *db.BeaconDB
 }
 
 func (ms *mockChainService) StateInitializedFeed() *event.Feed {
