@@ -63,8 +63,8 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 	if err := chainService.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := chainService.ReceiveBlock(context.Background(), block); err != nil {
-		t.Errorf("Expected receive block to fail, received nil: %v", err)
+	if _, err := chainService.ReceiveBlock(context.Background(), block); err == nil {
+		t.Errorf("Expected receive block to fail, received nil")
 	}
 }
 
