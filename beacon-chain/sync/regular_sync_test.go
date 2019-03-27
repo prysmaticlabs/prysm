@@ -48,6 +48,7 @@ type mockChainService struct {
 	bFeed *event.Feed
 	sFeed *event.Feed
 	cFeed *event.Feed
+	db *db.BeaconDB
 }
 
 func (ms *mockChainService) StateInitializedFeed() *event.Feed {
@@ -65,6 +66,9 @@ func (ms *mockChainService) CanonicalBlockFeed() *event.Feed {
 }
 
 func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+	if err := ms.db.SaveBlock(block); err != nil {
+		return nil, err
+	}
 	return &pb.BeaconState{}, nil
 }
 
