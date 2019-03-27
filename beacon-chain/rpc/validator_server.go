@@ -132,7 +132,8 @@ func (vs *ValidatorServer) CommitteeAssignment(
 		return nil, fmt.Errorf("could not get active validator index: %v", err)
 	}
 
-	committee, shard, slot, isProposer, err := helpers.CommitteeAssignment(beaconState, req.EpochStart, idx, false)
+	committee, shard, slot, isProposer, err :=
+		helpers.CommitteeAssignment(beaconState, req.EpochStart, idx, false)
 	if err != nil {
 		return nil, err
 	}
