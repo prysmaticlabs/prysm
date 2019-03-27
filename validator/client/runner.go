@@ -60,7 +60,8 @@ func run(ctx context.Context, v Validator) {
 			slotCtx, _ := context.WithDeadline(ctx, v.SlotDeadline(slot))
 			// Report this validator client's rewards and penalties throughout its lifecycle.
 			if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
-				log.Errorf("Could not report validator's rewards/penalties for slot %d: %v", slot, err)
+				log.Errorf("Could not report validator's rewards/penalties for slot %d: %v",
+					slot - params.BeaconConfig().GenesisSlot, err)
 			}
 
 			// Keep trying to update assignments if they are nil or if we are past an
@@ -92,7 +93,7 @@ func run(ctx context.Context, v Validator) {
 func handleAssignmentError(err error, slot uint64) {
 	if errCode, ok := status.FromError(err); ok && errCode.Code() == codes.NotFound {
 		log.WithField(
-			"epoch", (slot*params.BeaconConfig().SlotsPerEpoch)-params.BeaconConfig().GenesisEpoch,
+			"epoch", (slot/params.BeaconConfig().SlotsPerEpoch)-params.BeaconConfig().GenesisEpoch,
 		).Warn("Validator not yet assigned to epoch")
 	} else {
 		log.WithField("error", err).Error("Failed to update assignments")
