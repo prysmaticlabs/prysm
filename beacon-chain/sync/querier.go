@@ -2,7 +2,10 @@ package sync
 
 import (
 	"context"
+	"math/big"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -17,6 +20,7 @@ var queryLog = logrus.WithField("prefix", "syncQuerier")
 
 type powChainService interface {
 	HasChainStartLogOccurred() (bool, uint64, error)
+	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
 	ChainStartFeed() *event.Feed
 }
 
