@@ -10,6 +10,55 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 )
 
+// totalMissingParents describes the number of missing parent requests we want to test.
+var totalMissingParents = 50
+
+func setupBlockParents(t *testing.T, genesisRoot [32]byte) ([]*pb.BeaconBlock, [][32]byte){
+	parents := []*pb.BeaconBlock{}
+	parentRoots := [][32]byte{}
+	// Sets up a list of block parents of the form:
+	//   Parent 1: {Slot: 1, Parent: genesisBlock},
+	//   Parent 2: {Slot: 3, Parent: Parent1},
+	//   Parent 3: {Slot: 5, Parent: parent2},
+	//   ...
+	for slot := 1; slot < totalMissingParents; slot += 2 {
+		parent := &pb.BeaconBlock{
+			Slot:             uint64(slot),
+		}
+		// At slot 1, the parent is the genesis block.
+		if slot == 1 {
+			parent.ParentRootHash32 = genesisRoot[:]
+		} else {
+			parent.ParentRootHash32 = parentRoots[len(parentRoots)-1][:]
+		}
+		parentRoot, err := hashutil.HashBeaconBlock(parent)
+		if err != nil {
+			t.Fatal(err)
+		}
+		parents = append(parents, parent)
+		parentRoots = append(parentRoots, parentRoot)
+	}
+	return parents, parentRoots
+}
+
+func setupBlocksMissingParent(parents []*pb.BeaconBlock, parentRoots [][32]byte) ([]*pb.BeaconBlock) {
+    blocksMissingParent := []*pb.BeaconBlock{}
+	// Sets up a list of block with missing parents of the form:
+	//   Parent 1: {Slot: 6, Parent: parents[0]},
+	//   Parent 2: {Slot: 4, Parent: parents[1]},
+	//   Parent 3: {Slot: 2, Parent: parents[2]},
+	//   ...
+	for slot := parents[len(parents)-1].Slot+1; slot >= 2; slot -= 2 {
+		blocksMissingParent = append(blocksMissingParent, &pb.BeaconBlock{
+			Slot:             slot,
+		})
+	}
+	for i := range parentRoots {
+		blocksMissingParent[i].ParentRootHash32 = parentRoots[i][:]
+	}
+	return blocksMissingParent
+}
+
 func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
@@ -38,46 +87,8 @@ func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	parent1 := &pb.BeaconBlock{
-		Slot:             1,
-		ParentRootHash32: genesisRoot[:],
-	}
-	parent1Root, err := hashutil.HashBeaconBlock(parent1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	parent2 := &pb.BeaconBlock{
-		Slot:             3,
-		ParentRootHash32: parent1Root[:],
-	}
-	parent2Root, err := hashutil.HashBeaconBlock(parent2)
-	if err != nil {
-		t.Fatal(err)
-	}
-	parent3 := &pb.BeaconBlock{
-		Slot:             5,
-		ParentRootHash32: parent2Root[:],
-	}
-	parent3Root, err := hashutil.HashBeaconBlock(parent3)
-	if err != nil {
-		t.Fatal(err)
-	}
-	parents := []*pb.BeaconBlock{parent1, parent2, parent3}
-
-	blocksMissingParent := []*pb.BeaconBlock{
-		{
-			Slot:             6,
-			ParentRootHash32: parent1Root[:],
-		},
-		{
-			Slot:             4,
-			ParentRootHash32: parent2Root[:],
-		},
-		{
-			Slot:             2,
-			ParentRootHash32: parent3Root[:],
-		},
-	}
+	parents, parentRoots := setupBlockParents(t, genesisRoot)
+	blocksMissingParent := setupBlocksMissingParent(parents, parentRoots)
 
 	for _, block := range blocksMissingParent {
 		msg := p2p.Message{
