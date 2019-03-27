@@ -32,6 +32,8 @@ type shufflingInput struct {
 	committeesPerEpoch uint64
 }
 
+// ValidatorAssignment defines the assignment information needed by
+// validators every epoch.
 type ValidatorAssignment struct {
 	Committee  []uint64
 	Shard      uint64
@@ -42,6 +44,15 @@ type ValidatorAssignment struct {
 var currentEpoch uint64
 var validatorAssignments map[uint64]*ValidatorAssignment
 var assignmentsLock sync.RWMutex
+
+// ClearAssignmentsCache clears the assignments stored to make
+// sure the assignments data is recalculated.
+func ClearAssignmentsCache() {
+	assignmentsLock.Lock()
+	defer assignmentsLock.Unlock()
+	currentEpoch = 0
+	validatorAssignments = make(map[uint64]*ValidatorAssignment)
+}
 
 // EpochCommitteeCount returns the number of crosslink committees of an epoch.
 //

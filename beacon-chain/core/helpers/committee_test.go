@@ -507,3 +507,42 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 }
+
+func BenchmarkCommitteeAssignment(b *testing.B) {
+	// Initialize test with 128 validators, each slot and each shard gets 2 validators.
+	validators := make([]*pb.Validator, 8192)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	beaconState := &pb.BeaconState{
+		ValidatorRegistry: validators,
+		Slot:              params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+	}
+
+	slot := params.BeaconConfig().GenesisSlot + 146
+
+	b.Run("Uncached", func(b *testing.B) {
+		b.N = 500
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			ClearAssignmentsCache()
+			_, _, _, _, err := CommitteeAssignment(beaconState, slot, 800, false)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+
+	b.Run("Cached", func(b *testing.B) {
+		b.N = 5000
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_, _, _, _, err := CommitteeAssignment(beaconState, slot, 105, false)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+}
