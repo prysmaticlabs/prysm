@@ -61,7 +61,7 @@ func run(ctx context.Context, v Validator) {
 			// Report this validator client's rewards and penalties throughout its lifecycle.
 			if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
 				log.Errorf("Could not report validator's rewards/penalties for slot %d: %v",
-					slot - params.BeaconConfig().GenesisSlot, err)
+					slot-params.BeaconConfig().GenesisSlot, err)
 			}
 
 			// Keep trying to update assignments if they are nil or if we are past an
