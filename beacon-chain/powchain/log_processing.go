@@ -89,7 +89,9 @@ func (w *Web3Service) ProcessDepositLog(depositLog gethTypes.Log) {
 	if !w.chainStarted {
 		w.chainStartDeposits = append(w.chainStartDeposits, depositData)
 	} else {
-		w.beaconDB.InsertPendingDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)))
+		if !w.disablePendingDeposits {
+			w.beaconDB.InsertPendingDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)))
+		}
 	}
 	// We always store all historical deposits in the DB.
 	w.beaconDB.InsertDeposit(w.ctx, deposit, big.NewInt(int64(depositLog.BlockNumber)))

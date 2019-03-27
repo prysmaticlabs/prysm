@@ -88,6 +88,7 @@ type Web3Service struct {
 	depositTrie             *trieutil.MerkleTrie
 	chainStartDeposits      [][]byte
 	chainStarted            bool
+	disablePendingDeposits  bool
 	beaconDB                *db.BeaconDB
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	isRunning               bool
@@ -311,16 +312,27 @@ func (w *Web3Service) run(done <-chan struct{}) {
 		return
 	}
 
+	chainstarted, _, err := w.HasChainStartLogOccurred()
+	if err != nil {
+		log.Errorf("Unable to find out if chainstart occurred %v", err)
+		return
+	}
+
 	w.blockHeight = header.Number
 	w.blockHash = header.Hash()
 
 	// Only process logs if the chain start delay flag is not enabled.
 	if w.chainStartDelay == 0 {
+		// dont add to pending deposits if the chain has already started.
+		if chainstarted {
+			w.disablePendingDeposits = true
+		}
 		if err := w.processPastLogs(); err != nil {
 			log.Errorf("Unable to process past logs %v", err)
 			w.runError = err
 			return
 		}
+		w.disablePendingDeposits = false
 	}
 
 	ticker := time.NewTicker(1 * time.Second)
