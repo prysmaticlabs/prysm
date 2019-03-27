@@ -2,13 +2,12 @@ package sync
 
 import (
 	"context"
-	"fmt"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"testing"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
@@ -53,7 +52,6 @@ func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
 		}
 		parentRoots[i] = h[:]
 	}
-    fmt.Println(parentRoots)
 
 	blocksMissingParent := []*pb.BeaconBlock{
 		{
@@ -92,6 +90,6 @@ func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
 		}
 	}
 	if len(rs.blocksAwaitingProcessing) > 0 {
-		t.Errorf("Expected blocks awaiting processing map to be empty, received len = %v", rs.blocksAwaitingProcessing)
+		t.Errorf("Expected blocks awaiting processing map to be empty, received len = %d", len(rs.blocksAwaitingProcessing))
 	}
 }

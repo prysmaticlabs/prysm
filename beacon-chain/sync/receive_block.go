@@ -85,7 +85,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) error {
 
 	if !hasParent {
 		// If we do not have the parent, we insert it into a pending block's map.
-		rs.insertPendingBlock(ctx, blockRoot, msg)
+		rs.insertPendingBlock(ctx, parentRoot, msg)
 		// We update the last observed slot to the received canonical block's slot.
 		if block.Slot > rs.highestObservedSlot {
 			rs.highestObservedSlot = block.Slot
