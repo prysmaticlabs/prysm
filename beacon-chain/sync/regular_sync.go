@@ -11,6 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -650,11 +651,13 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) error {
 		return err
 	}
 
-	finalizedSlot, err := rs.db.CleanedFinalizedSlot()
+	bState, err := rs.db.State(ctx)
 	if err != nil {
 		log.Errorf("Could not retrieve last finalized slot %v", err)
 		return err
 	}
+
+	finalizedSlot := helpers.StartSlot(bState.FinalizedEpoch)
 
 	currentSlot := block.Slot
 	if currentSlot < startSlot || finalizedSlot > endSlot {
