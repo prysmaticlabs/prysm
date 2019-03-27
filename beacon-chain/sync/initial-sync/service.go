@@ -473,7 +473,6 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		return
 	}
 
-	// removes old deposits
 	s.db.PrunePendingDeposits(ctx, blkNum)
 
 	if h == s.stateRootOfHighestObservedSlot {
