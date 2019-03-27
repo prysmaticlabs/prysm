@@ -31,8 +31,7 @@ var (
 	justifiedBlockLookupKey = []byte("justified-block")
 
 	// DB internal use
-	cleanupHistoryBucket    = []byte("cleanup-history-bucket")
-	cleanedFinalizedSlotKey = []byte("cleaned-finalized-slot")
+	cleanupHistoryBucket = []byte("cleanup-history-bucket")
 )
 
 // encodeSlotNumber encodes a slot number as little-endian uint32.
