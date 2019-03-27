@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"runtime/debug"
+	"sync"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
@@ -61,28 +62,29 @@ type p2pAPI interface {
 //     *  Drop peers that send invalid data
 //     *  Throttle incoming requests
 type RegularSync struct {
-	ctx                      context.Context
-	cancel                   context.CancelFunc
-	p2p                      p2pAPI
-	chainService             chainService
-	attsService              attsService
-	operationsService        operations.OperationFeeds
-	db                       *db.BeaconDB
-	blockAnnouncementFeed    *event.Feed
-	announceBlockBuf         chan p2p.Message
-	blockBuf                 chan p2p.Message
-	blockRequestBySlot       chan p2p.Message
-	blockRequestByHash       chan p2p.Message
-	batchedRequestBuf        chan p2p.Message
-	stateRequestBuf          chan p2p.Message
-	chainHeadReqBuf          chan p2p.Message
-	attestationBuf           chan p2p.Message
-	attestationReqByHashBuf  chan p2p.Message
-	announceAttestationBuf   chan p2p.Message
-	exitBuf                  chan p2p.Message
-	canonicalBuf             chan *pb.BeaconBlockAnnounce
-	highestObservedSlot      uint64
-	blocksAwaitingProcessing map[[32]byte]*pb.BeaconBlock
+	ctx                          context.Context
+	cancel                       context.CancelFunc
+	p2p                          p2pAPI
+	chainService                 chainService
+	attsService                  attsService
+	operationsService            operations.OperationFeeds
+	db                           *db.BeaconDB
+	blockAnnouncementFeed        *event.Feed
+	announceBlockBuf             chan p2p.Message
+	blockBuf                     chan p2p.Message
+	blockRequestBySlot           chan p2p.Message
+	blockRequestByHash           chan p2p.Message
+	batchedRequestBuf            chan p2p.Message
+	stateRequestBuf              chan p2p.Message
+	chainHeadReqBuf              chan p2p.Message
+	attestationBuf               chan p2p.Message
+	attestationReqByHashBuf      chan p2p.Message
+	announceAttestationBuf       chan p2p.Message
+	exitBuf                      chan p2p.Message
+	canonicalBuf                 chan *pb.BeaconBlockAnnounce
+	highestObservedSlot          uint64
+	blocksAwaitingProcessing     map[[32]byte]p2p.Message
+	blocksAwaitingProcessingLock sync.RWMutex
 }
 
 // RegularSyncConfig allows the channel's buffer sizes to be changed.
@@ -148,7 +150,7 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		exitBuf:                  make(chan p2p.Message, cfg.ExitBufferSize),
 		chainHeadReqBuf:          make(chan p2p.Message, cfg.ChainHeadReqBufferSize),
 		canonicalBuf:             make(chan *pb.BeaconBlockAnnounce, cfg.CanonicalBufferSize),
-		blocksAwaitingProcessing: make(map[[32]byte]*pb.BeaconBlock),
+		blocksAwaitingProcessing: make(map[[32]byte]p2p.Message),
 	}
 }
 
@@ -275,139 +277,6 @@ func safelyHandleMessage(fn func(p2p.Message) error, msg p2p.Message) {
 			})
 		}
 	}
-}
-
-// receiveBlockAnnounce accepts a block hash.
-// TODO(#175): New hashes are forwarded to other peers in the network, and
-// the contents of the block are requested if the local chain doesn't have the block.
-func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) error {
-	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.receiveBlockAnnounce")
-	defer span.End()
-	recBlockAnnounce.Inc()
-
-	data := msg.Data.(*pb.BeaconBlockAnnounce)
-	h := bytesutil.ToBytes32(data.Hash[:32])
-
-	hasBlock := rs.db.HasBlock(h)
-	span.AddAttributes(trace.BoolAttribute("hasBlock", hasBlock))
-
-	if hasBlock {
-		log.Debugf("Received a root for a block that has already been processed: %#x", h)
-		return nil
-	}
-
-	log.WithField("blockRoot", fmt.Sprintf("%#x", h)).Debug("Received incoming block root, requesting full block data from sender")
-	// Request the full block data from peer that sent the block hash.
-	if err := rs.p2p.Send(ctx, &pb.BeaconBlockRequest{Hash: h[:]}, msg.Peer); err != nil {
-		log.Error(err)
-		return err
-	}
-	sentBlockReq.Inc()
-	return nil
-}
-
-// receiveBlock processes a block from the p2p layer.
-func (rs *RegularSync) receiveBlock(msg p2p.Message) error {
-	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.receiveBlock")
-	defer span.End()
-	recBlock.Inc()
-
-	response := msg.Data.(*pb.BeaconBlockResponse)
-	block := response.Block
-	blockRoot, err := hashutil.HashBeaconBlock(block)
-	if err != nil {
-		log.Errorf("Could not hash received block: %v", err)
-		return err
-	}
-
-	log.Debugf("Processing response to block request: %#x", blockRoot)
-	hasBlock := rs.db.HasBlock(blockRoot)
-	span.AddAttributes(trace.BoolAttribute("hasBlock", hasBlock))
-	if hasBlock {
-		log.Debug("Received a block that already exists. Exiting...")
-		return nil
-	}
-
-	beaconState, err := rs.db.State(ctx)
-	if err != nil {
-		log.Errorf("Failed to get beacon state: %v", err)
-		return err
-	}
-
-	span.AddAttributes(
-		trace.Int64Attribute("block.Slot", int64(block.Slot)),
-		trace.Int64Attribute("finalized slot", int64(beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch)),
-	)
-	if block.Slot < beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
-		log.Debug("Discarding received block with a slot number smaller than the last finalized slot")
-		return nil
-	}
-
-	// We check if we have the block's parents saved locally, if not, we store the block in a
-	// pending processing map by hash and once we receive the parent, we process said parent AND then
-	// we process the received block.
-	parentRoot := bytesutil.ToBytes32(block.ParentRootHash32)
-	hasParent := rs.db.HasBlock(parentRoot)
-	span.AddAttributes(trace.BoolAttribute("hasParent", hasParent))
-	if !hasParent {
-		rs.blocksAwaitingProcessing[parentRoot] = block
-		blocksAwaitingProcessingGauge.Inc()
-		rs.p2p.Broadcast(ctx, &pb.BeaconBlockRequest{Hash: parentRoot[:]})
-		// We update the last observed slot to the received canonical block's slot.
-		if block.Slot > rs.highestObservedSlot {
-			rs.highestObservedSlot = block.Slot
-		}
-		return nil
-	}
-
-	span.AddAttributes(trace.Int64Attribute("highestObservedSlot", int64(rs.highestObservedSlot)))
-	if block.Slot < rs.highestObservedSlot {
-		// If we receive a block from the past AND it corresponds to
-		// a parent block of a block stored in the processing cache, that means we are
-		// receiving a parent block which was missing from our db.
-		if childBlock, ok := rs.blocksAwaitingProcessing[blockRoot]; ok {
-			log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Received missing block parent")
-			delete(rs.blocksAwaitingProcessing, blockRoot)
-			blocksAwaitingProcessingGauge.Dec()
-			beaconState, err = rs.chainService.ReceiveBlock(ctx, block)
-			if err != nil {
-				log.Errorf("could not process beacon block: %v", err)
-				return err
-			}
-			if err := rs.chainService.ApplyForkChoiceRule(ctx, block, beaconState); err != nil {
-				log.Errorf("could not apply fork choice rule: %v", err)
-				return err
-			}
-			beaconState, err = rs.chainService.ReceiveBlock(ctx, childBlock)
-			if err != nil {
-				log.Errorf("could not process beacon block: %v", err)
-				return err
-			}
-			if err := rs.chainService.ApplyForkChoiceRule(ctx, childBlock, beaconState); err != nil {
-				log.Errorf("could not apply fork choice rule: %v", err)
-				return err
-			}
-			log.Debug("Sent missing block parent and child to chain service for processing")
-			return nil
-		}
-	}
-
-	log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Sending newly received block to chain service")
-	beaconState, err = rs.chainService.ReceiveBlock(ctx, block)
-	if err != nil {
-		log.Errorf("Could not process beacon block: %v", err)
-		return err
-	}
-	if err := rs.chainService.ApplyForkChoiceRule(ctx, block, beaconState); err != nil {
-		log.Errorf("could not apply fork choice rule: %v", err)
-		return err
-	}
-	sentBlocks.Inc()
-	// We update the last observed slot to the received canonical block's slot.
-	if block.Slot > rs.highestObservedSlot {
-		rs.highestObservedSlot = block.Slot
-	}
-	return nil
 }
 
 // handleBlockRequestBySlot processes a block request from the p2p layer.
