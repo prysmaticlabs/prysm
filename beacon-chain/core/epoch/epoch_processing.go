@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 
@@ -59,12 +60,14 @@ func CanProcessValidatorRegistry(ctx context.Context, state *pb.BeaconState) boo
 	if state.FinalizedEpoch <= state.ValidatorRegistryUpdateEpoch {
 		return false
 	}
-	shardsProcessed := helpers.CurrentEpochCommitteeCount(state) * params.BeaconConfig().SlotsPerEpoch
-	startShard := state.CurrentShufflingStartShard
-	for i := startShard; i < shardsProcessed; i++ {
-		if state.LatestCrosslinks[i%params.BeaconConfig().ShardCount].Epoch <=
-			state.ValidatorRegistryUpdateEpoch {
-			return false
+	if featureconfig.FeatureConfig().EnableCrosslinks {
+		shardsProcessed := helpers.CurrentEpochCommitteeCount(state) * params.BeaconConfig().SlotsPerEpoch
+		startShard := state.CurrentShufflingStartShard
+		for i := startShard; i < shardsProcessed; i++ {
+			if state.LatestCrosslinks[i%params.BeaconConfig().ShardCount].Epoch <=
+				state.ValidatorRegistryUpdateEpoch {
+				return false
+			}
 		}
 	}
 	return true
