@@ -95,7 +95,7 @@ func TestReceiveBlock_DeletesFaultyBlockFromDB(t *testing.T) {
 	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
 
 	block := &pb.BeaconBlock{
-		Slot:             currentSlot+1,
+		Slot:             currentSlot + 1,
 		StateRootHash32:  stateRoot[:],
 		ParentRootHash32: parentHash[:],
 		RandaoReveal:     randaoReveal,
@@ -106,8 +106,8 @@ func TestReceiveBlock_DeletesFaultyBlockFromDB(t *testing.T) {
 		Body: &pb.BeaconBlockBody{
 			Attestations: []*pb.Attestation{
 				{Data: &pb.AttestationData{
-					JustifiedEpoch: params.BeaconConfig().GenesisEpoch+100,
-					Slot: 100*params.BeaconConfig().SlotsPerEpoch,
+					JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 100,
+					Slot:           100 * params.BeaconConfig().SlotsPerEpoch,
 				}},
 			},
 		},
