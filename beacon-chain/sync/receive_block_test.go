@@ -11,7 +11,7 @@ import (
 )
 
 // totalMissingParents describes the number of missing parent requests we want to test.
-var totalMissingParents = 100
+var totalMissingParents = 50
 
 func setupBlockParents(t *testing.T, genesisRoot [32]byte) ([]*pb.BeaconBlock, [][32]byte){
 	parents := []*pb.BeaconBlock{}
