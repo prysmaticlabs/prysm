@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"runtime/debug"
+	"sync"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
@@ -82,6 +83,7 @@ type RegularSync struct {
 	canonicalBuf             chan *pb.BeaconBlockAnnounce
 	highestObservedSlot      uint64
 	blocksAwaitingProcessing map[[32]byte]p2p.Message
+	blocksAwaitingProcessingLock sync.RWMutex
 }
 
 // RegularSyncConfig allows the channel's buffer sizes to be changed.
@@ -147,7 +149,7 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		exitBuf:                  make(chan p2p.Message, cfg.ExitBufferSize),
 		chainHeadReqBuf:          make(chan p2p.Message, cfg.ChainHeadReqBufferSize),
 		canonicalBuf:             make(chan *pb.BeaconBlockAnnounce, cfg.CanonicalBufferSize),
-		blocksAwaitingProcessing: make(map[[32]byte]*pb.BeaconBlock),
+		blocksAwaitingProcessing: make(map[[32]byte]p2p.Message),
 	}
 }
 
