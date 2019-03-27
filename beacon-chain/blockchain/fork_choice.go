@@ -120,7 +120,11 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 	defer span.End()
 	log.Info("Applying LMD-GHOST Fork Choice Rule")
 
-	attestationTargets, err := c.attestationTargets(postState)
+	justifiedState, err := c.beaconDB.JustifiedState()
+	if err != nil {
+		return fmt.Errorf("could not retrieve justified state: %v", err)
+	}
+	attestationTargets, err := c.attestationTargets(justifiedState)
 	if err != nil {
 		return fmt.Errorf("could not retrieve attestation target: %v", err)
 	}
@@ -128,7 +132,7 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 	if err != nil {
 		return err
 	}
-	head, err := c.lmdGhost(justifiedHead, postState, attestationTargets)
+	head, err := c.lmdGhost(justifiedHead, justifiedState, postState, attestationTargets)
 	if err != nil {
 		return fmt.Errorf("could not run fork choice: %v", err)
 	}
@@ -191,13 +195,14 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 //            return head
 //        head = max(children, key=get_vote_count)
 func (c *ChainService) lmdGhost(
-	block *pb.BeaconBlock,
-	state *pb.BeaconState,
+	startBlock *pb.BeaconBlock,
+	startState *pb.BeaconState,
+	currState *pb.BeaconState,
 	voteTargets map[uint64]*pb.BeaconBlock,
 ) (*pb.BeaconBlock, error) {
-	head := block
+	head := startBlock
 	for {
-		children, err := c.blockChildren(head, state.Slot)
+		children, err := c.blockChildren(head, currState.Slot)
 		if err != nil {
 			return nil, fmt.Errorf("could not fetch block children: %v", err)
 		}
@@ -206,12 +211,12 @@ func (c *ChainService) lmdGhost(
 		}
 		maxChild := children[0]
 
-		maxChildVotes, err := VoteCount(maxChild, state, voteTargets, c.beaconDB)
+		maxChildVotes, err := VoteCount(maxChild, startState, voteTargets, c.beaconDB)
 		if err != nil {
 			return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
 		}
 		for i := 0; i < len(children); i++ {
-			candidateChildVotes, err := VoteCount(children[i], state, voteTargets, c.beaconDB)
+			candidateChildVotes, err := VoteCount(children[i], startState, voteTargets, c.beaconDB)
 			if err != nil {
 				return nil, fmt.Errorf("unable to determine vote count for block: %v", err)
 			}
@@ -264,7 +269,7 @@ func (c *ChainService) blockChildren(block *pb.BeaconBlock, stateSlot uint64) ([
 // each attestation target consists of validator index and its attestation target (i.e. the block
 // which the validator attested to)
 func (c *ChainService) attestationTargets(state *pb.BeaconState) (map[uint64]*pb.BeaconBlock, error) {
-	indices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, state.FinalizedEpoch)
+	indices := helpers.ActiveValidatorIndices(state.ValidatorRegistry, helpers.CurrentEpoch(state))
 	attestationTargets := make(map[uint64]*pb.BeaconBlock)
 	for i, index := range indices {
 		block, err := c.attsService.LatestAttestationTarget(c.ctx, index)
