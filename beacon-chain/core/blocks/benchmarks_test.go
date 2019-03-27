@@ -22,6 +22,7 @@ import (
 
 var ValidatorCount = 131072
 var RunAmount = 67108864 / ValidatorCount
+var conditions = "MAX"
 
 func setBenchmarkConfig() {
 	c := params.BeaconConfig()
@@ -33,6 +34,15 @@ func setBenchmarkConfig() {
 	// c.LatestRandaoMixesLength = 64
 	// c.LatestActiveIndexRootsLength = 64
 	// c.LatestSlashedExitLength = 64
+	if conditions == "MAX" {
+		c.MaxAttestations = 128
+		c.MaxDeposits = 16
+		c.MaxVoluntaryExits = 16
+	} else if conditions == "MIN" {
+		c.MaxAttestations = 16
+		c.MaxDeposits = 2
+		c.MaxVoluntaryExits = 2
+	}
 	params.OverrideBeaconConfig(c)
 }
 
