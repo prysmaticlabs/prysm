@@ -70,6 +70,10 @@ spec:
                 configMapKeyRef:
                   name: beacon-config
                   key: DEPOSIT_CONTRACT_ADDRESS
+          readinessProbe:
+            initialDelaySeconds: 60
+            tcpSocket:
+              port: 4000
   volumeClaimTemplates:
   - metadata:
       name: beacondb
