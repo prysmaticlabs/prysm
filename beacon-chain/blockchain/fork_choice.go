@@ -146,7 +146,6 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 		if newState.Slot != postState.Slot {
 			log.Warnf("Reorg happened, post state slot at %d, new head state at slot %d",
 				postState.Slot-params.BeaconConfig().GenesisSlot, newState.Slot-params.BeaconConfig().GenesisSlot)
-			reorgCount.Inc()
 		}
 
 		reorgCount.Inc()
