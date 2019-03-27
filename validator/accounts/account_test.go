@@ -27,7 +27,7 @@ func TestNewValidatorAccount_AccountExists(t *testing.T) {
 	}
 	files, _ := ioutil.ReadDir(directory)
 	if len(files) != 3 {
-		t.Errorf("multiple validators wasn't created only: %v files in directory", len(files))
+		t.Errorf("multiple validators wasn't created only %v files in directory", len(files))
 		for _, f := range files {
 			t.Errorf("%v\n", f.Name())
 		}

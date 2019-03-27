@@ -56,7 +56,7 @@ func TestSaveAndRetrieveValidatorsIndexes_OK(t *testing.T) {
 	}
 	ids := [][]byte{}
 	ids = append(ids, p1, p2)
-	indexes, err := db.ValidatorsIndexes(ids)
+	indexes, err := db.ValidatorIndices(ids)
 	if err != nil {
 		t.Fatalf("Failed to call Attestation: %v", err)
 	}

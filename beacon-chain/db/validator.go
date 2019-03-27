@@ -61,8 +61,8 @@ func (db *BeaconDB) ValidatorIndex(pubKey []byte) (uint64, error) {
 	return index, err
 }
 
-// ValidatorsIndexes accepts a slice of public keys and returns the corresponding slice of validators indexs.
-func (db *BeaconDB) ValidatorsIndexes(pubKeys [][]byte) (map[uint64][]byte, error) {
+// ValidatorIndices accepts a slice of public keys and returns the corresponding slice of validators indexs.
+func (db *BeaconDB) ValidatorIndices(pubKeys [][]byte) (map[uint64][]byte, error) {
 	m := make(map[uint64][]byte)
 	if !db.HasValidators(pubKeys) {
 		return m, fmt.Errorf("validator %#x does not exist", pubKeys)

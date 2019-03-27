@@ -48,8 +48,12 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 >>>>>>> remove unused var in function call
 =======
 	if vs.beaconDB.HasValidators(req.PublicKeys) {
+<<<<<<< HEAD
 		activeVals, err := vs.retrieveActiveValidators(req.PublicKeys)
 >>>>>>> fix review remarks and tests
+=======
+		activeVals, err := vs.retrieveActiveValidatorsPublicKeys(req.PublicKeys)
+>>>>>>> merge and some of terenc3t remarks addressed
 		if err != nil {
 			return fmt.Errorf("could not retrieve active validator from state: %v", err)
 		}
@@ -66,6 +70,7 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 			}
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 			beaconState, err := vs.beaconDB.HeadState(vs.ctx)
 			if err != nil {
 				return fmt.Errorf("could not retrieve beacon state: %v", err)
@@ -77,6 +82,9 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 =======
 			activeVals, err := vs.retrieveActiveValidators(req.PublicKeys)
 >>>>>>> fix review remarks and tests
+=======
+			activeVals, err := vs.retrieveActiveValidatorsPublicKeys(req.PublicKeys)
+>>>>>>> merge and some of terenc3t remarks addressed
 			if err != nil {
 				return fmt.Errorf("could not retrieve active validator from state: %v", err)
 			}
@@ -275,14 +283,16 @@ func (vs *ValidatorServer) retrieveActiveValidator(beaconState *pbp2p.BeaconStat
 	return beaconState.ValidatorRegistry[validatorIdx], nil
 }
 
-func (vs *ValidatorServer) retrieveActiveValidators(pubkeys [][]byte) ([][]byte, error) {
-	m, err := vs.beaconDB.ValidatorsIndexes(pubkeys)
+func (vs *ValidatorServer) retrieveActiveValidatorsPublicKeys(pubkeys [][]byte) ([][]byte, error) {
+	m, err := vs.beaconDB.ValidatorIndices(pubkeys)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve validators indexes: %v", err)
 	}
 	v := make([][]byte, len(m))
-	for i, value := range m {
+	i := 0
+	for _, value := range m {
 		v[i] = value
+		i++
 	}
 	return v, nil
 }
