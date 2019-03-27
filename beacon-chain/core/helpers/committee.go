@@ -6,6 +6,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"sync"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/utils"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -13,8 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // CrosslinkCommittee defines the validator committee of slot and shard combinations.
@@ -30,6 +31,17 @@ type shufflingInput struct {
 	startShard         uint64
 	committeesPerEpoch uint64
 }
+
+type ValidatorAssignment struct {
+	Committee  []uint64
+	Shard      uint64
+	Slot       uint64
+	IsProposer bool
+}
+
+var currentEpoch uint64
+var validatorAssignments map[uint64]*ValidatorAssignment
+var assignmentsLock sync.RWMutex
 
 // EpochCommitteeCount returns the number of crosslink committees of an epoch.
 //
@@ -382,14 +394,43 @@ func CommitteeAssignment(
 	slot uint64,
 	validatorIndex uint64,
 	registryChange bool) ([]uint64, uint64, uint64, bool, error) {
-	var selectedCommittees []*CrosslinkCommittee
+	var err error
+	stateEpoch := SlotToEpoch(slot)
+	if currentEpoch != stateEpoch || registryChange {
+		validatorAssignments, err = CommitteeAssignmentMapping(state, slot, validatorIndex, registryChange)
+		if err != nil {
+			return nil, 0, 0, false, fmt.Errorf("could not get committee assignment mapping: %v", err)
+		}
+		currentEpoch = stateEpoch
+	}
+	if assignment, ok := validatorAssignments[validatorIndex]; ok {
+		committee := assignment.Committee
+		shard := assignment.Shard
+		actingSlot := assignment.Slot
+		isProposer := assignment.IsProposer
+		return committee, shard, actingSlot, isProposer, nil
+	}
+	return nil, 0, 0, false, status.Error(codes.NotFound, "validator not found found in assignments")
+}
+
+// CommitteeAssignmentMapping returns a mapping of a validator indice
+// to their assignment data.
+func CommitteeAssignmentMapping(
+	state *pb.BeaconState,
+	slot uint64,
+	validatorIndex uint64,
+	registryChange bool) (map[uint64]*ValidatorAssignment, error) {
+	assignmentsLock.Lock()
+	defer assignmentsLock.Unlock()
+
+	assigments := make(map[uint64]*ValidatorAssignment)
 
 	wantedEpoch := slot / params.BeaconConfig().SlotsPerEpoch
 	prevEpoch := PrevEpoch(state)
 	nextEpoch := NextEpoch(state)
 
 	if wantedEpoch < prevEpoch || wantedEpoch > nextEpoch {
-		return nil, 0, 0, false, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"epoch %d out of bounds: %d <= epoch <= %d",
 			wantedEpoch-params.BeaconConfig().GenesisEpoch,
 			prevEpoch-params.BeaconConfig().GenesisEpoch,
@@ -399,29 +440,27 @@ func CommitteeAssignment(
 
 	startSlot := StartSlot(wantedEpoch)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
-		crosslinkCommittees, err := CrosslinkCommitteesAtSlot(
-			state, slot, registryChange)
+		crosslinkCommittees, err := CrosslinkCommitteesAtSlot(state, slot, registryChange)
 		if err != nil {
-			return []uint64{}, 0, 0, false, fmt.Errorf("could not get crosslink committee: %v", err)
+			return nil, fmt.Errorf("could not get crosslink committee: %v", err)
 		}
 		for _, committee := range crosslinkCommittees {
-			for _, idx := range committee.Committee {
-				if idx == validatorIndex {
-					selectedCommittees = append(selectedCommittees, committee)
-				}
+			for _, indice := range committee.Committee {
+				firstCommitteeAtSlot := committee.Committee
+				isProposer := firstCommitteeAtSlot[slot%
+					uint64(len(firstCommitteeAtSlot))] == indice
 
-				if len(selectedCommittees) > 0 {
-					validators := selectedCommittees[0].Committee
-					shard := selectedCommittees[0].Shard
-					firstCommitteeAtSlot := crosslinkCommittees[0].Committee
-					isProposer := firstCommitteeAtSlot[slot%
-						uint64(len(firstCommitteeAtSlot))] == validatorIndex
-					return validators, shard, slot, isProposer, nil
+				assignment := &ValidatorAssignment{
+					Committee:  committee.Committee,
+					Shard:      committee.Shard,
+					Slot:       slot,
+					IsProposer: isProposer,
 				}
+				assigments[indice] = assignment
 			}
 		}
 	}
-	return []uint64{}, 0, 0, false, status.Error(codes.NotFound, "validator not found found in assignments")
+	return assigments, nil
 }
 
 // prevEpochCommitteesAtSlot returns a list of crosslink committees of the previous epoch.
