@@ -1,4 +1,4 @@
-package state
+package db
 
 import (
 	"encoding/hex"
@@ -34,7 +34,7 @@ var (
 	})
 )
 
-func reportEpochTransitionMetrics(state *pb.BeaconState) {
+func reportStateMetrics(state *pb.BeaconState) {
 	// Validator balances
 	for i, bal := range state.ValidatorBalances {
 		validatorBalancesGauge.WithLabelValues(
