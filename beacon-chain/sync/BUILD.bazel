@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "metrics.go",
         "querier.go",
+        "receive_block.go",
         "regular_sync.go",
         "service.go",
     ],
@@ -35,6 +36,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "querier_test.go",
+        "receive_block_test.go",
         "regular_sync_test.go",
         "service_test.go",
         "simulated_sync_test.go",
