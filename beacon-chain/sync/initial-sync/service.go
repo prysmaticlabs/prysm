@@ -14,6 +14,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -51,14 +52,14 @@ type Config struct {
 // DefaultConfig provides the default configuration for a sync service.
 // SyncPollingInterval determines how frequently the service checks that initial sync is complete.
 // BlockBufferSize determines that buffer size of the `blockBuf` channel.
-// StateBufferSize determines the buffer size of thhe `stateBuf` channel.
+// StateBufferSize determines the buffer size of the `stateBuf` channel.
 func DefaultConfig() *Config {
 	return &Config{
 		SyncPollingInterval:     time.Duration(params.BeaconConfig().SyncPollingInterval) * time.Second,
-		BlockBufferSize:         100,
-		BatchedBlockBufferSize:  100,
-		BlockAnnounceBufferSize: 100,
-		StateBufferSize:         100,
+		BlockBufferSize:         params.BeaconConfig().DefaultBufferSize,
+		BatchedBlockBufferSize:  params.BeaconConfig().DefaultBufferSize,
+		BlockAnnounceBufferSize: params.BeaconConfig().DefaultBufferSize,
+		StateBufferSize:         params.BeaconConfig().DefaultBufferSize,
 	}
 }
 
@@ -250,6 +251,8 @@ func safelyHandleMessage(fn func(p2p.Message), msg p2p.Message) {
 				"msg": printedMsg,
 			}).Error("Panicked when handling p2p message! Recovering...")
 
+			debug.PrintStack()
+
 			if msg.Ctx == nil {
 				return
 			}
@@ -325,7 +328,7 @@ func (s *InitialSync) processBlockAnnounce(msg p2p.Message) {
 	}
 
 	s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
-	log.Debugf("Successfully requested the next block with slot: %d", data.SlotNumber)
+	log.Debugf("Successfully requested the next block with slot: %d", data.SlotNumber-params.BeaconConfig().GenesisSlot)
 }
 
 // processBlock is the main method that validates each block which is received
@@ -417,6 +420,32 @@ func (s *InitialSync) processState(msg p2p.Message) {
 
 	if err := s.db.SaveCurrentAndFinalizedState(beaconState); err != nil {
 		log.Errorf("Unable to set beacon state for initial sync %v", err)
+		return
+	}
+
+	if err := s.db.SaveFinalizedBlock(beaconState.LatestBlock); err != nil {
+		log.Errorf("Could not save finalized block %v", err)
+		return
+	}
+
+	if err := s.db.SaveBlock(beaconState.LatestBlock); err != nil {
+		log.Errorf("Could not save block %v", err)
+		return
+	}
+
+	if err := s.db.UpdateChainHead(beaconState.LatestBlock, beaconState); err != nil {
+		log.Errorf("Could not update chainhead %v", err)
+		return
+	}
+
+	if err := s.db.SaveJustifiedState(beaconState); err != nil {
+		log.Errorf("Could not set beacon state for initial sync %v", err)
+		return
+	}
+
+	if err := s.db.SaveJustifiedBlock(beaconState.LatestBlock); err != nil {
+		log.Errorf("Could not save finalized block %v", err)
+		return
 	}
 
 	h, err := hashutil.HashProto(beaconState)
@@ -433,7 +462,7 @@ func (s *InitialSync) processState(msg p2p.Message) {
 	// beacon state to begin our sync from.
 	s.currentSlot = beaconState.FinalizedEpoch * params.BeaconConfig().SlotsPerEpoch
 	s.beaconStateSlot = beaconState.Slot
-	log.Debugf("Successfully saved beacon state with the last finalized slot: %d", beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch)
+	log.Debugf("Successfully saved beacon state with the last finalized slot: %d", beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch-params.BeaconConfig().GenesisSlot)
 
 	s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
 }
@@ -469,14 +498,14 @@ func (s *InitialSync) requestBatchedBlocks(startSlot uint64, endSlot uint64) {
 	defer span.End()
 	sentBatchedBlockReq.Inc()
 	if startSlot > endSlot {
-		log.Debugf("Invalid batched request from slot %d to %d", startSlot, endSlot)
+		log.Debugf("Invalid batched request from slot %d to %d", startSlot-params.BeaconConfig().GenesisSlot, endSlot-params.BeaconConfig().GenesisSlot)
 		return
 	}
 	blockLimit := params.BeaconConfig().BatchBlockLimit
 	if startSlot+blockLimit < endSlot {
 		endSlot = startSlot + blockLimit
 	}
-	log.Debugf("Requesting batched blocks from slot %d to %d", startSlot, endSlot)
+	log.Debugf("Requesting batched blocks from slot %d to %d", startSlot-params.BeaconConfig().GenesisSlot, endSlot-params.BeaconConfig().GenesisSlot)
 	s.p2p.Broadcast(ctx, &pb.BatchedBeaconBlockRequest{
 		StartSlot: startSlot,
 		EndSlot:   endSlot,

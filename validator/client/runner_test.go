@@ -161,7 +161,7 @@ func TestBothProposesAndAttests_NextSlot(t *testing.T) {
 	slot := uint64(55)
 	ticker := make(chan uint64)
 	v.NextSlotRet = ticker
-	v.RoleAtRet = pb.ValidatorRole_BOTH
+	v.RoleAtRet = pb.ValidatorRole_PROPOSER
 	go func() {
 		ticker <- slot
 

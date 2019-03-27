@@ -52,6 +52,7 @@ go_test(
         "feed_example_test.go",
         "feed_test.go",
         "message_test.go",
+        "monitoring_test.go",
         "options_test.go",
         "register_topic_example_test.go",
         "service_test.go",

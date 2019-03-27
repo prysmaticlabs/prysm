@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -68,6 +69,17 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		return nil, fmt.Errorf("block with root %#x is not ready for processing: %v", blockRoot, err)
 	}
 
+	// if there exists a block for the slot being processed.
+	if err := c.beaconDB.SaveBlock(block); err != nil {
+		return nil, fmt.Errorf("failed to save block: %v", err)
+	}
+
+	// Announce the new block to the network.
+	c.p2p.Broadcast(ctx, &pb.BeaconBlockAnnounce{
+		Hash:       blockRoot[:],
+		SlotNumber: block.Slot,
+	})
+
 	// Retrieve the last processed beacon block's hash root.
 	headRoot, err := c.ChainHeadRoot(beaconState)
 	if err != nil {
@@ -95,14 +107,29 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		return nil, fmt.Errorf("could not execute state transition with block %v", err)
 	}
 
-	// if there exists a block for the slot being processed.
-	if err := c.beaconDB.SaveBlock(block); err != nil {
-		return nil, fmt.Errorf("failed to save block: %v", err)
-	}
+	log.WithFields(logrus.Fields{
+		"slotNumber":     block.Slot - params.BeaconConfig().GenesisSlot,
+		"justifiedEpoch": beaconState.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
+		"finalizedEpoch": beaconState.FinalizedEpoch - params.BeaconConfig().GenesisEpoch,
+	}).Info("State transition complete")
 
 	// Forward processed block to operation pool to remove individual operation from DB.
 	if c.opsPoolService.IncomingProcessedBlockFeed().Send(block) == 0 {
 		log.Error("Sent processed block to no subscribers")
+	}
+
+	// Update attestation store with latest attestation target.
+	log.Info("Updating latest attestation target")
+	for _, att := range block.Body.Attestations {
+		if err := c.attsService.UpdateLatestAttestation(c.ctx, att); err != nil {
+			return nil, fmt.Errorf("failed to update latest attestation for store: %v", err)
+		}
+		log.WithFields(
+			logrus.Fields{
+				"attestationSlot": att.Data.Slot - params.BeaconConfig().GenesisSlot,
+				"justifiedEpoch":  att.Data.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
+			},
+		).Info("Attestation store updated")
 	}
 
 	// Remove pending deposits from the deposit queue.
@@ -110,7 +137,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		c.beaconDB.RemovePendingDeposit(ctx, dep)
 	}
 
-	log.WithField("hash", fmt.Sprintf("%#x", blockRoot)).Debug("Processed beacon block")
+	log.WithField("hash", fmt.Sprintf("%#x", blockRoot)).Info("Processed beacon block")
 	return beaconState, nil
 }
 
@@ -135,8 +162,8 @@ func (c *ChainService) runStateTransition(
 		block,
 		headRoot,
 		&state.TransitionConfig{
-			VerifySignatures: true, // We activate signature verification in this state transition.
-			Logging:          true, // We enable logging in this state transition call.
+			VerifySignatures: false, // We disable signature verification for now.
+			Logging:          true,  // We enable logging in this state transition call.
 		},
 	)
 	if err != nil {
@@ -165,6 +192,10 @@ func (c *ChainService) runStateTransition(
 		if err := c.updateFFGCheckPts(beaconState); err != nil {
 			return nil, fmt.Errorf("could not update FFG checkpts: %v", err)
 		}
+		// Save Historical States.
+		if err := c.SaveHistoricalState(beaconState); err != nil {
+			return nil, fmt.Errorf("could not save historical state: %v", err)
+		}
 		log.WithField(
 			"SlotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
 		).Info("Epoch transition successfully processed")
@@ -172,7 +203,9 @@ func (c *ChainService) runStateTransition(
 	return beaconState, nil
 }
 
-func (c *ChainService) saveHistoricalState(beaconState *pb.BeaconState) error {
+// SaveHistoricalState saves the state at each epoch transition so that it can be used
+// by the state generator to regenerate state.
+func (c *ChainService) SaveHistoricalState(beaconState *pb.BeaconState) error {
 	return c.beaconDB.SaveHistoricalState(beaconState)
 }
 
