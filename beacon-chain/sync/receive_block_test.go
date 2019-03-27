@@ -13,7 +13,7 @@ import (
 // totalMissingParents describes the number of missing parent requests we want to test.
 var totalMissingParents = 50
 
-func setupBlockParents(t *testing.T, genesisRoot [32]byte) ([]*pb.BeaconBlock, [][32]byte){
+func setupBlockParents(t *testing.T, genesisRoot [32]byte) ([]*pb.BeaconBlock, [][32]byte) {
 	parents := []*pb.BeaconBlock{}
 	parentRoots := [][32]byte{}
 	// Sets up a list of block parents of the form:
@@ -23,7 +23,7 @@ func setupBlockParents(t *testing.T, genesisRoot [32]byte) ([]*pb.BeaconBlock, [
 	//   ...
 	for slot := 1; slot < totalMissingParents; slot += 2 {
 		parent := &pb.BeaconBlock{
-			Slot:             uint64(slot),
+			Slot: uint64(slot),
 		}
 		// At slot 1, the parent is the genesis block.
 		if slot == 1 {
@@ -41,16 +41,16 @@ func setupBlockParents(t *testing.T, genesisRoot [32]byte) ([]*pb.BeaconBlock, [
 	return parents, parentRoots
 }
 
-func setupBlocksMissingParent(parents []*pb.BeaconBlock, parentRoots [][32]byte) ([]*pb.BeaconBlock) {
-    blocksMissingParent := []*pb.BeaconBlock{}
+func setupBlocksMissingParent(parents []*pb.BeaconBlock, parentRoots [][32]byte) []*pb.BeaconBlock {
+	blocksMissingParent := []*pb.BeaconBlock{}
 	// Sets up a list of block with missing parents of the form:
 	//   Parent 1: {Slot: 6, Parent: parents[0]},
 	//   Parent 2: {Slot: 4, Parent: parents[1]},
 	//   Parent 3: {Slot: 2, Parent: parents[2]},
 	//   ...
-	for slot := parents[len(parents)-1].Slot+1; slot >= 2; slot -= 2 {
+	for slot := parents[len(parents)-1].Slot + 1; slot >= 2; slot -= 2 {
 		blocksMissingParent = append(blocksMissingParent, &pb.BeaconBlock{
-			Slot:             slot,
+			Slot: slot,
 		})
 	}
 	for i := range parentRoots {
