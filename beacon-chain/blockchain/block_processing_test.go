@@ -63,8 +63,64 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 	if err := chainService.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := chainService.ReceiveBlock(context.Background(), block); err == nil {
+	if _, err := chainService.ReceiveBlock(context.Background(), block); err != nil {
 		t.Errorf("Expected receive block to fail, received nil: %v", err)
+	}
+}
+
+func TestReceiveBlock_DeletesFaultyBlockFromDB(t *testing.T) {
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	chainService := setupBeaconChain(t, false, db, true, nil)
+	deposits, privKeys := setupInitialDeposits(t, 100)
+	eth1Data := &pb.Eth1Data{
+		DepositRootHash32: []byte{},
+		BlockHash32:       []byte{},
+	}
+	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	if err != nil {
+		t.Fatalf("Can't generate genesis state: %v", err)
+	}
+	stateRoot, err := hashutil.HashProto(beaconState)
+	if err != nil {
+		t.Fatalf("Could not tree hash state: %v", err)
+	}
+	parentHash, genesisBlock := setupGenesisBlock(t, chainService, beaconState)
+	if err := chainService.beaconDB.UpdateChainHead(genesisBlock, beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	currentSlot := params.BeaconConfig().GenesisSlot
+	beaconState.Slot++
+	randaoReveal := createRandaoReveal(t, beaconState, privKeys)
+
+	block := &pb.BeaconBlock{
+		Slot:             currentSlot+1,
+		StateRootHash32:  stateRoot[:],
+		ParentRootHash32: parentHash[:],
+		RandaoReveal:     randaoReveal,
+		Eth1Data: &pb.Eth1Data{
+			DepositRootHash32: []byte("a"),
+			BlockHash32:       []byte("b"),
+		},
+		Body: &pb.BeaconBlockBody{
+			Attestations: []*pb.Attestation{
+				{Data: &pb.AttestationData{
+					JustifiedEpoch: params.BeaconConfig().GenesisEpoch+100,
+					Slot: 100*params.BeaconConfig().SlotsPerEpoch,
+				}},
+			},
+		},
+	}
+	blockRoot, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		t.Fatalf("Could not hash beacon block: %v", err)
+	}
+	if _, err := chainService.ReceiveBlock(context.Background(), block); err == nil {
+		t.Error("Expected block to fail processing, did not")
+	}
+	if chainService.beaconDB.HasBlock(blockRoot) {
+		t.Error("Expected faulty block to have been deleted from db")
 	}
 }
 

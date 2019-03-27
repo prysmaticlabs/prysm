@@ -104,6 +104,9 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 
 	beaconState, err = c.runStateTransition(headRoot, block, beaconState)
 	if err != nil {
+		if err := c.beaconDB.DeleteBlock(block); err != nil {
+			return nil, fmt.Errorf("could not delete faulty block from DB: %v", err)
+		}
 		return nil, fmt.Errorf("could not execute state transition with block %v", err)
 	}
 
