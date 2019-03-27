@@ -89,6 +89,8 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) error {
 		return nil
 	}
 
+	// We then process the block by passing it through the ChainService and running
+	// a fork choice rule.
 	beaconState, err = rs.chainService.ReceiveBlock(ctx, block)
 	if err != nil {
 		log.Errorf("Could not process beacon block: %v", err)
@@ -99,9 +101,13 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) error {
 		return err
 	}
 
-	if _, ok := rs.blocksAwaitingProcessing[blockRoot]; !ok {
-		return nil
+	// If the block has a child, we then clear it from the blocks pending processing
+	// and call receiveBlock recursively. The recursive function call will stop once
+	// the block we process no longer has children.
+	if rs.hasChild(blockRoot) {
+		return rs.receiveBlock(p2p.Message{})
 	}
+
 
 
 
@@ -166,3 +172,9 @@ func (rs *RegularSync) insertPendingBlock(block *pb.BeaconBlock) error {
 
 }
 
+func (rs *RegularSync) hasChild(blockRoot [32]byte) bool {
+	if _, ok := rs.blocksAwaitingProcessing[blockRoot]; !ok {
+		return false
+	}
+	return true
+}
