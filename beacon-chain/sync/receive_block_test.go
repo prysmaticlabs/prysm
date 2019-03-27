@@ -8,7 +8,6 @@ import (
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
-	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
@@ -22,15 +21,15 @@ func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
 	rsCfg.P2P = &mockP2P{}
 	rs := NewRegularSyncService(context.Background(), rsCfg)
 	genesisBlock := &pb.BeaconBlock{
-		Slot: params.BeaconConfig().GenesisSlot,
+		Slot: 0,
 	}
 	genesisRoot, err := hashutil.HashBeaconBlock(genesisBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
 	genesisState := &pb.BeaconState{
-		Slot:           params.BeaconConfig().GenesisSlot,
-		FinalizedEpoch: params.BeaconConfig().GenesisEpoch,
+		Slot:           0,
+		FinalizedEpoch: 0,
 	}
 	if err := db.SaveBlock(genesisBlock); err != nil {
 		t.Fatal(err)
@@ -39,25 +38,44 @@ func TestReceiveBlock_RecursivelyProcessesChildren(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	parents := []*pb.BeaconBlock{
-		{
-			Slot:             params.BeaconConfig().GenesisSlot + 1,
-			ParentRootHash32: genesisRoot[:],
-		},
+	parent1 := &pb.BeaconBlock{
+		Slot:             1,
+		ParentRootHash32: genesisRoot[:],
 	}
-	parentRoots := make([][]byte, len(parents))
-	for i := range parents {
-		h, err := hashutil.HashBeaconBlock(parents[i])
-		if err != nil {
-			t.Fatal(err)
-		}
-		parentRoots[i] = h[:]
+	parent1Root, err := hashutil.HashBeaconBlock(parent1)
+	if err != nil {
+		t.Fatal(err)
 	}
+	parent2 := &pb.BeaconBlock{
+		Slot:             3,
+		ParentRootHash32: parent1Root[:],
+	}
+	parent2Root, err := hashutil.HashBeaconBlock(parent2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parent3 := &pb.BeaconBlock{
+		Slot:             5,
+		ParentRootHash32: parent2Root[:],
+	}
+	parent3Root, err := hashutil.HashBeaconBlock(parent3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parents := []*pb.BeaconBlock{parent1, parent2, parent3}
 
 	blocksMissingParent := []*pb.BeaconBlock{
 		{
-			Slot:             params.BeaconConfig().GenesisSlot + 2,
-			ParentRootHash32: parentRoots[0],
+			Slot:             6,
+			ParentRootHash32: parent1Root[:],
+		},
+		{
+			Slot:             4,
+			ParentRootHash32: parent2Root[:],
+		},
+		{
+			Slot:             2,
+			ParentRootHash32: parent3Root[:],
 		},
 	}
 
