@@ -105,7 +105,7 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 		validatorActivatedRecords = res.ActivatedPublicKeys
 		break
 	}
-	for pk := range validatorActivatedRecords {
+	for _, pk := range validatorActivatedRecords {
 		log.WithFields(logrus.Fields{
 			"public key": pk,
 		}).Info("Validator activated")
