@@ -14,10 +14,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
 	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
@@ -47,6 +50,7 @@ type Config struct {
 	P2P                     p2pAPI
 	SyncService             syncService
 	ChainService            chainService
+	PowChain                powChainService
 }
 
 // DefaultConfig provides the default configuration for a sync service.
@@ -74,6 +78,10 @@ type chainService interface {
 	ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error
 }
 
+type powChainService interface {
+	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
+}
+
 // SyncService is the interface for the Sync service.
 // InitialSync calls `Start` when initial sync completes.
 type syncService interface {
@@ -90,6 +98,7 @@ type InitialSync struct {
 	syncService                    syncService
 	chainService                   chainService
 	db                             *db.BeaconDB
+	powchain                       powChainService
 	blockAnnounceBuf               chan p2p.Message
 	batchedBlockBuf                chan p2p.Message
 	blockBuf                       chan p2p.Message
@@ -124,6 +133,7 @@ func NewInitialSyncService(ctx context.Context,
 		syncService:                    cfg.SyncService,
 		chainService:                   cfg.ChainService,
 		db:                             cfg.BeaconDB,
+		powchain:                       cfg.PowChain,
 		currentSlot:                    params.BeaconConfig().GenesisSlot,
 		highestObservedSlot:            params.BeaconConfig().GenesisSlot,
 		beaconStateSlot:                params.BeaconConfig().GenesisSlot,
@@ -408,7 +418,7 @@ func (s *InitialSync) processBatchedBlocks(msg p2p.Message) {
 }
 
 func (s *InitialSync) processState(msg p2p.Message) {
-	_, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.initial-sync.processState")
+	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.initial-sync.processState")
 	defer span.End()
 	data := msg.Data.(*pb.BeaconStateResponse)
 	beaconState := data.BeaconState
@@ -453,6 +463,19 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		log.Error(err)
 		return
 	}
+
+	exists, blkNum, err := s.powchain.BlockExists(context.Background(), bytesutil.ToBytes32(beaconState.LatestEth1Data.BlockHash32))
+	if err != nil {
+		log.Errorf("Unable to get powchain block %v", err)
+	}
+
+	if !exists {
+		log.Error("Latest ETH1 block doesn't exist in the pow chain")
+		return
+	}
+
+	// removes old deposits
+	s.db.PrunePendingDeposits(ctx, blkNum)
 
 	if h == s.stateRootOfHighestObservedSlot {
 		s.reqState = false
