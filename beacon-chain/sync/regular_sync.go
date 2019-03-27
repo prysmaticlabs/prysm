@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"runtime/debug"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -650,11 +652,13 @@ func (rs *RegularSync) handleBatchedBlockRequest(msg p2p.Message) error {
 		return err
 	}
 
-	finalizedSlot, err := rs.db.CleanedFinalizedSlot()
+	bState, err := rs.db.State(ctx)
 	if err != nil {
 		log.Errorf("Could not retrieve last finalized slot %v", err)
 		return err
 	}
+
+	finalizedSlot := helpers.StartSlot(bState.FinalizedEpoch)
 
 	currentSlot := block.Slot
 	if currentSlot < startSlot || finalizedSlot > endSlot {
