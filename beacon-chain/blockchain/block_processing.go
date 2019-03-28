@@ -213,13 +213,14 @@ func (c *ChainService) SaveHistoricalState(beaconState *pb.BeaconState) error {
 // validators were activated from current epoch. After it saves, current epoch key
 // is deleted from ActivatedValidators mapping.
 func (c *ChainService) saveValidatorIdx(state *pb.BeaconState) error {
-	for _, idx := range validators.ActivatedValidators[helpers.CurrentEpoch(state)] {
+	activatedValidators := validators.ActivatedValFromEpoch(helpers.CurrentEpoch(state))
+	for _, idx := range activatedValidators {
 		pubKey := state.ValidatorRegistry[idx].Pubkey
 		if err := c.beaconDB.SaveValidatorIndex(pubKey, int(idx)); err != nil {
 			return fmt.Errorf("could not save validator index: %v", err)
 		}
 	}
-	delete(validators.ActivatedValidators, helpers.CurrentEpoch(state))
+	validators.DeleteActivatedVal(helpers.CurrentEpoch(state))
 	return nil
 }
 
@@ -227,12 +228,13 @@ func (c *ChainService) saveValidatorIdx(state *pb.BeaconState) error {
 // validators were exited from current epoch. After it deletes, current epoch key
 // is deleted from ExitedValidators mapping.
 func (c *ChainService) deleteValidatorIdx(state *pb.BeaconState) error {
-	for _, idx := range validators.ExitedValidators[helpers.CurrentEpoch(state)] {
+	exitedValidators := validators.ExitedValFromEpoch(helpers.CurrentEpoch(state))
+	for _, idx := range exitedValidators {
 		pubKey := state.ValidatorRegistry[idx].Pubkey
 		if err := c.beaconDB.DeleteValidatorIndex(pubKey); err != nil {
 			return fmt.Errorf("could not delete validator index: %v", err)
 		}
 	}
-	delete(validators.ExitedValidators, helpers.CurrentEpoch(state))
+	validators.DeleteExitedVal(helpers.CurrentEpoch(state))
 	return nil
 }
