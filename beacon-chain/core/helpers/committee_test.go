@@ -418,6 +418,111 @@ func TestVerifyBitfield_OK(t *testing.T) {
 		t.Error("bitfield is not validated when it was supposed to be")
 	}
 }
+
+func TestClearAssignmentsCache(t *testing.T) {
+	// Initialize test with 128 validators, each slot and each shard gets 2 validators.
+	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	state := &pb.BeaconState{
+		ValidatorRegistry: validators,
+		Slot:              params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot,
+	}
+
+	if err := RecalculateAssignmentsCache(state, params.BeaconConfig().GenesisSlot+130); err != nil {
+		t.Fatalf("failed to recalculate assignments cache: %v", err)
+	}
+
+	ClearAssignmentsCache()
+
+	if validatorAssignments[11] != nil {
+		t.Fatal("expected assignment to be nil after clearing")
+	}
+}
+
+func TestCommitteeAssignmentMapping_ProperAssignments(t *testing.T) {
+	// Initialize test with 128 validators, each slot and each shard gets 2 validators.
+	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	state := &pb.BeaconState{
+		ValidatorRegistry: validators,
+		Slot:              params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot,
+	}
+
+	tests := []struct {
+		index      uint64
+		slot       uint64
+		committee  []uint64
+		shard      uint64
+		isProposer bool
+	}{
+		{
+			index:      0,
+			slot:       params.BeaconConfig().GenesisSlot + 146,
+			committee:  []uint64{105, 0},
+			shard:      18,
+			isProposer: false,
+		},
+		{
+			index:      105,
+			slot:       params.BeaconConfig().GenesisSlot + 146,
+			committee:  []uint64{105, 0},
+			shard:      18,
+			isProposer: true,
+		},
+		{
+			index:      64,
+			slot:       params.BeaconConfig().GenesisSlot + 139,
+			committee:  []uint64{64, 52},
+			shard:      11,
+			isProposer: false,
+		},
+		{
+			index:      11,
+			slot:       params.BeaconConfig().GenesisSlot + 130,
+			committee:  []uint64{11, 121},
+			shard:      2,
+			isProposer: true,
+		},
+	}
+
+	// Update cache for assignments
+	if err := RecalculateAssignmentsCache(state, params.BeaconConfig().GenesisSlot+130); err != nil {
+		t.Fatalf("failed to recalculate assignments cache: %v", err)
+	}
+
+	for _, tt := range tests {
+		committee, shard, slot, isProposer, err := CommitteeAssignment(
+			state, tt.slot, tt.index, false)
+		if err != nil {
+			t.Fatalf("failed to execute NextEpochCommitteeAssignment: %v", err)
+		}
+		if shard != tt.shard {
+			t.Errorf("wanted shard %d, got shard %d",
+				tt.shard, shard)
+		}
+		if slot != tt.slot {
+			t.Errorf("wanted slot %d, got slot %d",
+				tt.slot, slot)
+		}
+		if isProposer != tt.isProposer {
+			t.Errorf("wanted isProposer %v, got isProposer %v",
+				tt.isProposer, isProposer)
+		}
+		if !reflect.DeepEqual(committee, tt.committee) {
+			t.Errorf("wanted committee %v, got committee %v",
+				tt.committee, committee)
+		}
+	}
+}
+
 func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 	// Initialize test with 128 validators, each slot and each shard gets 2 validators.
 	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
