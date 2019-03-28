@@ -96,12 +96,12 @@ func CurrentEpochCommitteeCount(state *pb.BeaconState) uint64 {
 //    """
 //    previous_active_validators = get_active_validator_indices(
 //        state.validator_registry,
-//        state.previous_calculation_epoch,
+//        state.previous_epoch,
 //    )
 //    return get_epoch_committee_count(len(previous_active_validators))
 func PrevEpochCommitteeCount(state *pb.BeaconState) uint64 {
 	prevActiveValidatorIndices := ActiveValidatorIndices(
-		state.ValidatorRegistry, state.PreviousShufflingEpoch)
+		state.ValidatorRegistry, PrevEpoch(state))
 	return EpochCommitteeCount(uint64(len(prevActiveValidatorIndices)))
 }
 
