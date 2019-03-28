@@ -10,6 +10,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -171,6 +172,9 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	}
 	if err := c.beaconDB.SaveFinalizedState(beaconState); err != nil {
 		return nil, fmt.Errorf("could not save gensis state as finalized state: %v", err)
+	}
+	if err := helpers.RecalculateAssignmentsCache(beaconState, beaconState.Slot+1); err != nil {
+		return nil, fmt.Errorf("could not update assignment cache: %v", err)
 	}
 	return beaconState, nil
 }

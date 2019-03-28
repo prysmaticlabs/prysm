@@ -54,6 +54,17 @@ func ClearAssignmentsCache() {
 	validatorAssignments = make(map[uint64]*ValidatorAssignment)
 }
 
+// RecalculateAssignmentsCache calculates validator assignments for the slot's epoch passed in.
+func RecalculateAssignmentsCache(state *pb.BeaconState, slot uint64) error {
+	var err error
+	validatorAssignments, err = CommitteeAssignmentMapping(state, slot, false)
+	if err != nil {
+		return fmt.Errorf("could not get committee assignment mapping: %v", err)
+	}
+	currentEpoch = SlotToEpoch(slot)
+	return nil
+}
+
 // EpochCommitteeCount returns the number of crosslink committees of an epoch.
 //
 // Spec pseudocode definition:
@@ -405,15 +416,50 @@ func CommitteeAssignment(
 	slot uint64,
 	validatorIndex uint64,
 	registryChange bool) ([]uint64, uint64, uint64, bool, error) {
-	var err error
-	stateEpoch := SlotToEpoch(slot)
-	if currentEpoch != stateEpoch || registryChange {
-		validatorAssignments, err = CommitteeAssignmentMapping(state, slot, validatorIndex, registryChange)
-		if err != nil {
-			return nil, 0, 0, false, fmt.Errorf("could not get committee assignment mapping: %v", err)
-		}
-		currentEpoch = stateEpoch
+	wantedEpoch := slot / params.BeaconConfig().SlotsPerEpoch
+	prevEpoch := PrevEpoch(state)
+	nextEpoch := NextEpoch(state)
+
+	if wantedEpoch < prevEpoch || wantedEpoch > nextEpoch {
+		return nil, 0, 0, false, fmt.Errorf(
+			"epoch %d out of bounds: %d <= epoch <= %d",
+			wantedEpoch-params.BeaconConfig().GenesisEpoch,
+			prevEpoch-params.BeaconConfig().GenesisEpoch,
+			nextEpoch-params.BeaconConfig().GenesisEpoch,
+		)
 	}
+
+	requestedEpoch := SlotToEpoch(slot)
+	if requestedEpoch != currentEpoch {
+		var selectedCommittees []*CrosslinkCommittee
+		startSlot := StartSlot(wantedEpoch)
+		for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
+			crosslinkCommittees, err := CrosslinkCommitteesAtSlot(
+				state, slot, registryChange)
+			if err != nil {
+				return []uint64{}, 0, 0, false, fmt.Errorf("could not get crosslink committee: %v", err)
+			}
+			for _, committee := range crosslinkCommittees {
+				for _, idx := range committee.Committee {
+					if idx == validatorIndex {
+						selectedCommittees = append(selectedCommittees, committee)
+					}
+
+					if len(selectedCommittees) > 0 {
+						validators := selectedCommittees[0].Committee
+						shard := selectedCommittees[0].Shard
+						firstCommitteeAtSlot := crosslinkCommittees[0].Committee
+						isProposer := firstCommitteeAtSlot[slot%
+							uint64(len(firstCommitteeAtSlot))] == validatorIndex
+						return validators, shard, slot, isProposer, nil
+					}
+				}
+			}
+		}
+	}
+
+	assignmentsLock.Lock()
+	defer assignmentsLock.Unlock()
 	if assignment, ok := validatorAssignments[validatorIndex]; ok {
 		committee := assignment.Committee
 		shard := assignment.Shard
@@ -429,26 +475,13 @@ func CommitteeAssignment(
 func CommitteeAssignmentMapping(
 	state *pb.BeaconState,
 	slot uint64,
-	validatorIndex uint64,
 	registryChange bool) (map[uint64]*ValidatorAssignment, error) {
 	assignmentsLock.Lock()
 	defer assignmentsLock.Unlock()
 
-	assigments := make(map[uint64]*ValidatorAssignment)
+	assignments := make(map[uint64]*ValidatorAssignment)
 
 	wantedEpoch := slot / params.BeaconConfig().SlotsPerEpoch
-	prevEpoch := PrevEpoch(state)
-	nextEpoch := NextEpoch(state)
-
-	if wantedEpoch < prevEpoch || wantedEpoch > nextEpoch {
-		return nil, fmt.Errorf(
-			"epoch %d out of bounds: %d <= epoch <= %d",
-			wantedEpoch-params.BeaconConfig().GenesisEpoch,
-			prevEpoch-params.BeaconConfig().GenesisEpoch,
-			nextEpoch-params.BeaconConfig().GenesisEpoch,
-		)
-	}
-
 	startSlot := StartSlot(wantedEpoch)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		crosslinkCommittees, err := CrosslinkCommitteesAtSlot(state, slot, registryChange)
@@ -467,11 +500,11 @@ func CommitteeAssignmentMapping(
 					Slot:       slot,
 					IsProposer: isProposer,
 				}
-				assigments[indice] = assignment
+				assignments[indice] = assignment
 			}
 		}
 	}
-	return assigments, nil
+	return assignments, nil
 }
 
 // prevEpochCommitteesAtSlot returns a list of crosslink committees of the previous epoch.

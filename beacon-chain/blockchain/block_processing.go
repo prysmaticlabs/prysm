@@ -196,6 +196,10 @@ func (c *ChainService) runStateTransition(
 		if err := c.SaveHistoricalState(beaconState); err != nil {
 			return nil, fmt.Errorf("could not save historical state: %v", err)
 		}
+		// Calculate validator assignments
+		if err := helpers.RecalculateAssignmentsCache(beaconState, beaconState.Slot+1); err != nil {
+			return nil, fmt.Errorf("could not update assignment cache: %v", err)
+		}
 		log.WithField(
 			"SlotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
 		).Info("Epoch transition successfully processed")
