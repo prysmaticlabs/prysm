@@ -93,3 +93,33 @@ func (db *BeaconDB) RemovePendingDeposit(ctx context.Context, d *pb.Deposit) {
 		pendingDepositsCount.Dec()
 	}
 }
+
+// PrunePendingDeposits removes any deposit which is older than the given block number.
+func (db *BeaconDB) PrunePendingDeposits(ctx context.Context, b *big.Int) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.PrunePendingDeposits")
+	defer span.End()
+
+	if b == nil {
+		log.Debug("Ignoring nil deposit removal")
+		return
+	}
+
+	db.depositsLock.Lock()
+	defer db.depositsLock.Unlock()
+
+	depositListSize := len(db.pendingDeposits)
+
+	// since list is sorted by block number it checks from the last
+	// added deposit and works backwards.
+	idx := -1
+	for i := depositListSize - 1; i >= 0; i-- {
+		if db.pendingDeposits[i].block.Cmp(b) == -1 {
+			idx = i
+			break
+		}
+	}
+
+	if idx >= 0 {
+		db.pendingDeposits = db.pendingDeposits[idx+1:]
+	}
+}
