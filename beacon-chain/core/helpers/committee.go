@@ -41,18 +41,66 @@ type ValidatorAssignment struct {
 	IsProposer bool
 }
 
-var currentEpoch uint64
-var validatorAssignments map[uint64]*ValidatorAssignment
-var assignmentsLock sync.RWMutex
+// AssignmentCache defines the cache structure for saving the
+// validator assignments.
+type AssignmentCache struct {
+	lock               sync.RWMutex
+	currentEpoch       uint64
+	prevAssignments    map[uint64]*ValidatorAssignment
+	currentAssignments map[uint64]*ValidatorAssignment
+	nextAssignments    map[uint64]*ValidatorAssignment
+}
+
+var assignmentCache = &AssignmentCache{
+	prevAssignments:    make(map[uint64]*ValidatorAssignment, 0),
+	currentAssignments: make(map[uint64]*ValidatorAssignment, 0),
+	nextAssignments:    make(map[uint64]*ValidatorAssignment, 0),
+}
 
 // RecalculateAssignmentsCache calculates validator assignments for the slot's epoch passed in.
 func RecalculateAssignmentsCache(state *pb.BeaconState, slot uint64) error {
+	assignmentCache.lock.Lock()
+	defer assignmentCache.lock.Unlock()
 	var err error
-	validatorAssignments, err = CommitteeAssignmentMapping(state, slot, false)
-	if err != nil {
-		return fmt.Errorf("could not get committee assignment mapping: %v", err)
+	currentEpoch := SlotToEpoch(slot)
+
+	if assignmentCache.currentEpoch+1 != currentEpoch {
+		assignmentCache.prevAssignments = make(map[uint64]*ValidatorAssignment, 0)
+		assignmentCache.currentAssignments = make(map[uint64]*ValidatorAssignment, 0)
+		assignmentCache.nextAssignments = make(map[uint64]*ValidatorAssignment, 0)
 	}
-	currentEpoch = SlotToEpoch(slot)
+
+	if _, ok := assignmentCache.currentAssignments[0]; !ok {
+		assignmentCache.currentAssignments, err = CommitteeAssignmentMapping(state, currentEpoch, false)
+		if err != nil {
+			return fmt.Errorf("could not get committee assignment mapping: %v", err)
+		}
+	} else {
+		assignmentCache.prevAssignments = assignmentCache.currentAssignments
+	}
+
+	if _, ok := assignmentCache.nextAssignments[0]; !ok {
+		assignmentCache.nextAssignments, err = CommitteeAssignmentMapping(state, currentEpoch+1, false)
+		if err != nil {
+			return fmt.Errorf("could not get committee assignment mapping: %v", err)
+		}
+	} else {
+		assignmentCache.currentAssignments = assignmentCache.nextAssignments
+		assignmentCache.nextAssignments, err = CommitteeAssignmentMapping(state, currentEpoch+1, false)
+		if err != nil {
+			return fmt.Errorf("could not get committee assignment mapping: %v", err)
+		}
+	}
+
+	if _, ok := assignmentCache.prevAssignments[0]; !ok && currentEpoch != params.BeaconConfig().GenesisEpoch {
+		assignmentCache.prevAssignments, err = CommitteeAssignmentMapping(state, currentEpoch-1, false)
+		if err != nil {
+			return fmt.Errorf("could not get committee assignment mapping: %v", err)
+		}
+	}
+
+	assignmentCache.currentEpoch = currentEpoch
+
 	return nil
 }
 
@@ -414,44 +462,25 @@ func CommitteeAssignment(
 	if wantedEpoch < prevEpoch || wantedEpoch > nextEpoch {
 		return nil, 0, 0, false, fmt.Errorf(
 			"epoch %d out of bounds: %d <= epoch <= %d",
-			wantedEpoch-params.BeaconConfig().GenesisEpoch,
+			wantedEpoch-params.BeaconConfig().GenesisEpoch-params.BeaconConfig().GenesisEpoch,
 			prevEpoch-params.BeaconConfig().GenesisEpoch,
 			nextEpoch-params.BeaconConfig().GenesisEpoch,
 		)
 	}
 
-	requestedEpoch := SlotToEpoch(slot)
-	if requestedEpoch != currentEpoch {
-		var selectedCommittees []*CrosslinkCommittee
-		startSlot := StartSlot(wantedEpoch)
-		for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
-			crosslinkCommittees, err := CrosslinkCommitteesAtSlot(
-				state, slot, registryChange)
-			if err != nil {
-				return []uint64{}, 0, 0, false, fmt.Errorf("could not get crosslink committee: %v", err)
-			}
-			for _, committee := range crosslinkCommittees {
-				for _, idx := range committee.Committee {
-					if idx == validatorIndex {
-						selectedCommittees = append(selectedCommittees, committee)
-					}
+	assignmentCache.lock.Lock()
+	defer assignmentCache.lock.Unlock()
 
-					if len(selectedCommittees) > 0 {
-						validators := selectedCommittees[0].Committee
-						shard := selectedCommittees[0].Shard
-						firstCommitteeAtSlot := crosslinkCommittees[0].Committee
-						isProposer := firstCommitteeAtSlot[slot%
-							uint64(len(firstCommitteeAtSlot))] == validatorIndex
-						return validators, shard, slot, isProposer, nil
-					}
-				}
-			}
-		}
+	var assignment *ValidatorAssignment
+	var ok bool
+	if wantedEpoch == prevEpoch && CurrentEpoch(state) != params.BeaconConfig().GenesisEpoch {
+		assignment, ok = assignmentCache.prevAssignments[validatorIndex]
+	} else if wantedEpoch == nextEpoch {
+		assignment, ok = assignmentCache.nextAssignments[validatorIndex]
+	} else {
+		assignment, ok = assignmentCache.currentAssignments[validatorIndex]
 	}
-
-	assignmentsLock.Lock()
-	defer assignmentsLock.Unlock()
-	if assignment, ok := validatorAssignments[validatorIndex]; ok {
+	if ok {
 		committee := assignment.Committee
 		shard := assignment.Shard
 		actingSlot := assignment.Slot
@@ -465,14 +494,10 @@ func CommitteeAssignment(
 // to their assignment data.
 func CommitteeAssignmentMapping(
 	state *pb.BeaconState,
-	slot uint64,
+	wantedEpoch uint64,
 	registryChange bool) (map[uint64]*ValidatorAssignment, error) {
-	assignmentsLock.Lock()
-	defer assignmentsLock.Unlock()
-
 	assignments := make(map[uint64]*ValidatorAssignment)
 
-	wantedEpoch := slot / params.BeaconConfig().SlotsPerEpoch
 	startSlot := StartSlot(wantedEpoch)
 	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		crosslinkCommittees, err := CrosslinkCommitteesAtSlot(state, slot, registryChange)

@@ -136,6 +136,10 @@ func TestCommitteeAssignment_OK(t *testing.T) {
 		}
 	}
 
+	if err := helpers.RecalculateAssignmentsCache(state, state.Slot); err != nil {
+		t.Fatalf("could not initially calculate assignments: %v", err)
+	}
+
 	vs := &ValidatorServer{
 		beaconDB: db,
 	}
