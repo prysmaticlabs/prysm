@@ -49,25 +49,25 @@ func TestUpdateLatestAttestation_UpdatesLatest(t *testing.T) {
 		},
 	}
 
-	if err := service.updateLatestAttestation(ctx, attestation); err != nil {
+	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
 	pubkey := bytesutil.ToBytes48([]byte{byte(35)})
-	if service.Store[pubkey].Data.Slot !=
+	if service.store.m[pubkey].Data.Slot !=
 		attestation.Data.Slot {
 		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",
-			attestation.Data.Slot, service.Store[pubkey].Data.Slot)
+			attestation.Data.Slot, service.store.m[pubkey].Data.Slot)
 	}
 
-	attestation.Data.Slot = 100
+	attestation.Data.Slot = 36
 	attestation.Data.Shard = 36
-	if err := service.updateLatestAttestation(ctx, attestation); err != nil {
+	if err := service.UpdateLatestAttestation(ctx, attestation); err != nil {
 		t.Fatalf("could not update latest attestation: %v", err)
 	}
-	if service.Store[pubkey].Data.Slot !=
+	if service.store.m[pubkey].Data.Slot !=
 		attestation.Data.Slot {
 		t.Errorf("Incorrect slot stored, wanted: %d, got: %d",
-			attestation.Data.Slot, service.Store[pubkey].Data.Slot)
+			attestation.Data.Slot, service.store.m[pubkey].Data.Slot)
 	}
 }
 
@@ -99,15 +99,9 @@ func TestAttestationPool_UpdatesAttestationPool(t *testing.T) {
 		},
 	}
 
-	exitRoutine := make(chan bool)
-	go func() {
-		service.attestationPool()
-		<-exitRoutine
-	}()
-	service.incomingChan <- attestation
-
-	service.cancel()
-	exitRoutine <- true
+	if err := service.handleAttestation(context.Background(), attestation); err != nil {
+		t.Error(err)
+	}
 
 	testutil.AssertLogsContain(t, hook, "Updated attestation pool for attestation")
 }
@@ -127,7 +121,7 @@ func TestLatestAttestation_ReturnsLatestAttestation(t *testing.T) {
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 	pubKey48 := bytesutil.ToBytes48(pubKey)
 	attestation := &pb.Attestation{AggregationBitfield: []byte{'B'}}
-	service.Store[pubKey48] = attestation
+	service.store.m[pubKey48] = attestation
 
 	latestAttestation, err := service.LatestAttestation(ctx, 0)
 	if err != nil {
@@ -170,9 +164,12 @@ func TestLatestAttestation_NoAttestation(t *testing.T) {
 	service := NewAttestationService(context.Background(), &Config{BeaconDB: beaconDB})
 
 	index := 0
-	want := fmt.Sprintf("validator index %d does not have an attestation", index)
-	if _, err := service.LatestAttestation(ctx, uint64(index)); !strings.Contains(err.Error(), want) {
-		t.Errorf("Wanted error to contain %s, received %v", want, err)
+	a, err := service.LatestAttestation(ctx, uint64(index))
+	if err != nil {
+		t.Fatalf("could not run latest attestation: %v", err)
+	}
+	if a != nil {
+		t.Errorf("Wanted attesstation %v, received %v", nil, a)
 	}
 }
 
@@ -223,7 +220,7 @@ func TestLatestAttestationTarget_ReturnsLatestAttestedBlock(t *testing.T) {
 			BeaconBlockRootHash32: blockRoot[:],
 		}}
 	pubKey48 := bytesutil.ToBytes48(pubKey)
-	service.Store[pubKey48] = attestation
+	service.store.m[pubKey48] = attestation
 
 	latestAttestedBlock, err := service.LatestAttestationTarget(ctx, 0)
 	if err != nil {

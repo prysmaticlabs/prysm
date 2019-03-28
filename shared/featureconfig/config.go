@@ -25,7 +25,9 @@ var log = logrus.WithField("prefix", "flags")
 
 // FeatureFlagConfig is a struct to represent what features the client will perform on runtime.
 type FeatureFlagConfig struct {
-	VerifyAttestationSigs bool // VerifyAttestationSigs declares if the client will verify attestations.
+	VerifyAttestationSigs  bool // VerifyAttestationSigs declares if the client will verify attestations.
+	EnableComputeStateRoot bool // EnableComputeStateRoot implementation on server side.
+	EnableCrosslinks       bool // EnableCrosslinks in epoch processing.
 }
 
 var featureConfig *FeatureFlagConfig
@@ -47,6 +49,14 @@ func ConfigureBeaconFeatures(ctx *cli.Context) {
 	if ctx.GlobalBool(VerifyAttestationSigsFlag.Name) {
 		log.Info("Verifying signatures for attestations")
 		cfg.VerifyAttestationSigs = true
+	}
+	if ctx.GlobalBool(EnableComputeStateRootFlag.Name) {
+		log.Info("Enabled compute state root server side")
+		cfg.EnableComputeStateRoot = true
+	}
+	if ctx.GlobalBool(EnableCrosslinksFlag.Name) {
+		log.Info("Enabled crosslink computations")
+		cfg.EnableCrosslinks = true
 	}
 
 	InitFeatureConfig(cfg)

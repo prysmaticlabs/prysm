@@ -12,6 +12,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -35,7 +36,7 @@ type chainService interface {
 	CanonicalBlockFeed() *event.Feed
 	StateInitializedFeed() *event.Feed
 	ReceiveBlock(ctx context.Context, block *pbp2p.BeaconBlock) (*pbp2p.BeaconState, error)
-	ApplyForkChoiceRule(ctx context.Context, block *pbp2p.BeaconBlock, computedState *pbp2p.BeaconState) error
+	SaveHistoricalState(beaconState *pbp2p.BeaconState) error
 }
 
 type operationService interface {
@@ -80,7 +81,6 @@ type Config struct {
 	Port             string
 	CertFlag         string
 	KeyFlag          string
-	SubscriptionBuf  int
 	BeaconDB         *db.BeaconDB
 	ChainService     chainService
 	POWChainService  powChainService
@@ -102,9 +102,9 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		withCert:              cfg.CertFlag,
 		withKey:               cfg.KeyFlag,
 		slotAlignmentDuration: time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
-		canonicalBlockChan:    make(chan *pbp2p.BeaconBlock, cfg.SubscriptionBuf),
-		canonicalStateChan:    make(chan *pbp2p.BeaconState, cfg.SubscriptionBuf),
-		incomingAttestation:   make(chan *pbp2p.Attestation, cfg.SubscriptionBuf),
+		canonicalBlockChan:    make(chan *pbp2p.BeaconBlock, params.BeaconConfig().DefaultBufferSize),
+		canonicalStateChan:    make(chan *pbp2p.BeaconState, params.BeaconConfig().DefaultBufferSize),
+		incomingAttestation:   make(chan *pbp2p.Attestation, params.BeaconConfig().DefaultBufferSize),
 	}
 }
 
@@ -122,9 +122,11 @@ func (s *Service) Start() {
 		grpc.StatsHandler(&ocgrpc.ServerHandler{}),
 		grpc.StreamInterceptor(middleware.ChainStreamServer(
 			recovery.StreamServerInterceptor(),
+			grpc_prometheus.StreamServerInterceptor,
 		)),
 		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
 			recovery.UnaryServerInterceptor(),
+			grpc_prometheus.UnaryServerInterceptor,
 		)),
 	}
 	// TODO(#791): Utilize a certificate for secure connections

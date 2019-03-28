@@ -148,6 +148,7 @@ func (db *BeaconDB) SaveState(beaconState *pb.BeaconState) error {
 			return err
 		}
 		stateBytes.Set(float64(len(beaconStateEnc)))
+		reportStateMetrics(beaconState)
 		return chainInfo.Put(stateLookupKey, beaconStateEnc)
 	})
 }

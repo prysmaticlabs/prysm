@@ -4,8 +4,15 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+func init() {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableCrosslinks: true,
+	})
+}
 
 func TestSimulatedBackendStop_ShutsDown(t *testing.T) {
 
