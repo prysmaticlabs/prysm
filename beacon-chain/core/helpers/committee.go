@@ -205,7 +205,7 @@ func Shuffling(
 	validators []*pb.Validator,
 	epoch uint64) ([][]uint64, error) {
 
-	// Figure out how many committees can be in a single slot.
+	// Figure out how many committees can be in a single epoch.
 	activeIndices := ActiveValidatorIndices(validators, epoch)
 	activeCount := uint64(len(activeIndices))
 	committeesPerEpoch := EpochCommitteeCount(activeCount)
