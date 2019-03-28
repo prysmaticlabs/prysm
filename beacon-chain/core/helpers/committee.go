@@ -45,15 +45,6 @@ var currentEpoch uint64
 var validatorAssignments map[uint64]*ValidatorAssignment
 var assignmentsLock sync.RWMutex
 
-// ClearAssignmentsCache clears the assignments stored to make
-// sure the assignments data is recalculated.
-func ClearAssignmentsCache() {
-	assignmentsLock.Lock()
-	defer assignmentsLock.Unlock()
-	currentEpoch = 0
-	validatorAssignments = make(map[uint64]*ValidatorAssignment)
-}
-
 // RecalculateAssignmentsCache calculates validator assignments for the slot's epoch passed in.
 func RecalculateAssignmentsCache(state *pb.BeaconState, slot uint64) error {
 	var err error

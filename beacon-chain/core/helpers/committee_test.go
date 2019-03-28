@@ -419,30 +419,6 @@ func TestVerifyBitfield_OK(t *testing.T) {
 	}
 }
 
-func TestClearAssignmentsCache(t *testing.T) {
-	// Initialize test with 128 validators, each slot and each shard gets 2 validators.
-	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
-		}
-	}
-	state := &pb.BeaconState{
-		ValidatorRegistry: validators,
-		Slot:              params.BeaconConfig().SlotsPerEpoch + params.BeaconConfig().GenesisSlot,
-	}
-
-	if err := RecalculateAssignmentsCache(state, params.BeaconConfig().GenesisSlot+130); err != nil {
-		t.Fatalf("failed to recalculate assignments cache: %v", err)
-	}
-
-	ClearAssignmentsCache()
-
-	if validatorAssignments[11] != nil {
-		t.Fatal("expected assignment to be nil after clearing")
-	}
-}
-
 func TestCommitteeAssignmentMapping_ProperAssignments(t *testing.T) {
 	// Initialize test with 128 validators, each slot and each shard gets 2 validators.
 	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
@@ -632,7 +608,6 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 		b.N = 500
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			ClearAssignmentsCache()
 			_, _, _, _, err := CommitteeAssignment(beaconState, slot, 800, false)
 			if err != nil {
 				b.Fatal(err)
@@ -640,11 +615,15 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 		}
 	})
 
+	if err := RecalculateAssignmentsCache(beaconState, slot); err != nil {
+		b.Fatal(err)
+	}
+
 	b.Run("Cached", func(b *testing.B) {
 		b.N = 5000
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			_, _, _, _, err := CommitteeAssignment(beaconState, slot, 105, false)
+			_, _, _, _, err := CommitteeAssignment(beaconState, slot, 800, false)
 			if err != nil {
 				b.Fatal(err)
 			}
