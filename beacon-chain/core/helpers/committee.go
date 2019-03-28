@@ -13,9 +13,12 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+var log = logrus.WithField("prefix", "core/helpers")
 
 // CrosslinkCommittee defines the validator committee of slot and shard combinations.
 type CrosslinkCommittee struct {
@@ -472,6 +475,11 @@ func prevEpochCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*Crosslink
 //    )
 func currEpochCommitteesAtSlot(state *pb.BeaconState, slot uint64) ([]*CrosslinkCommittee, error) {
 	committeesPerEpoch := CurrentEpochCommitteeCount(state)
+	log.WithFields(logrus.Fields{
+		"requestedSlot":     slot - params.BeaconConfig().GenesisSlot,
+		"currentStateEpoch": SlotToEpoch(state.Slot) - params.BeaconConfig().GenesisEpoch,
+		"committeeCount":    committeesPerEpoch,
+	}).Info("Commmittees per epoch")
 	return crosslinkCommittees(
 		state, &shufflingInput{
 			seed:               state.CurrentShufflingSeedHash32,
