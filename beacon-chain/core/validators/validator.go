@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -20,14 +21,18 @@ import (
 
 var log = logrus.WithField("prefix", "powchain")
 
-var (
-	// ActivatedValidators is a mapping that tracks epoch to activated validators indexes.
-	// Where key is epoch, value is a list of activated validator indexes.
-	ActivatedValidators = make(map[uint64][]uint64)
-	// ExitedValidators is a mapping that tracks epoch to exited validators indexes.
-	// Where key is epoch, value is a list of exited validator indexes.
-	ExitedValidators = make(map[uint64][]uint64)
-)
+type validatorStore struct {
+	sync.RWMutex
+	// activatedValidators is a mapping that tracks validator activation epoch to validators index.
+	activatedValidators map[uint64][]uint64
+	// exitedValidators is a mapping that tracks validator exit epoch to validators index.
+	exitedValidators map[uint64][]uint64
+}
+
+var vStore = validatorStore{
+	activatedValidators: make(map[uint64][]uint64),
+	exitedValidators:    make(map[uint64][]uint64),
+}
 
 // ValidatorIndices returns all the validator indices from the input attestations
 // and state.
@@ -318,6 +323,8 @@ func UpdateRegistry(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState
 
 	var balChurn uint64
 	var err error
+	vStore.Lock()
+	defer vStore.Unlock()
 	for idx, validator := range state.ValidatorRegistry {
 		// Activate validators within the allowable balance churn.
 		if validator.ActivationEpoch == params.BeaconConfig().FarFutureEpoch &&
@@ -337,7 +344,8 @@ func UpdateRegistry(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState
 			if err != nil {
 				return nil, fmt.Errorf("could not activate validator %d: %v", idx, err)
 			}
-			ActivatedValidators[updatedEpoch] = append(ActivatedValidators[updatedEpoch], uint64(idx))
+			vStore.activatedValidators[updatedEpoch] =
+				append(vStore.activatedValidators[updatedEpoch], uint64(idx))
 		}
 	}
 
@@ -351,7 +359,10 @@ func UpdateRegistry(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState
 				break
 			}
 			state = ExitValidator(state, uint64(idx))
-			ExitedValidators[updatedEpoch] = append(ExitedValidators[updatedEpoch], uint64(idx))
+			vStore.Lock()
+			defer vStore.Unlock()
+			vStore.exitedValidators[updatedEpoch] =
+				append(vStore.exitedValidators[updatedEpoch], uint64(idx))
 		}
 	}
 	state.ValidatorRegistryUpdateEpoch = currentEpoch
@@ -444,6 +455,62 @@ func ProcessPenaltiesAndExits(ctx context.Context, state *pb.BeaconState) *pb.Be
 		}
 	}
 	return state
+}
+
+// InsertActivatedVal locks the validator store, inserts the activated validator
+// indices, then unlocks the store again. This method may be used by
+// external services in testing to populate the validator store.
+func InsertActivatedVal(epoch uint64, validators []uint64) {
+	vStore.Lock()
+	defer vStore.Unlock()
+	vStore.activatedValidators[epoch] = validators
+}
+
+// InsertExitedVal locks the validator store, inserts the exited validator
+// indices, then unlocks the store again. This method may be used by
+// external services in testing to remove the validator store.
+func InsertExitedVal(epoch uint64, validators []uint64) {
+	vStore.Lock()
+	defer vStore.Unlock()
+	vStore.exitedValidators[epoch] = validators
+}
+
+// ActivatedValFromEpoch locks the validator store, retrieves the activated validator
+// indices of a given epoch, then unlocks the store again.
+func ActivatedValFromEpoch(epoch uint64) []uint64 {
+	vStore.RLock()
+	defer vStore.RUnlock()
+	if _, exists := vStore.activatedValidators[epoch]; !exists {
+		return nil
+	}
+	return vStore.activatedValidators[epoch]
+}
+
+// ExitedValFromEpoch locks the validator store, retrieves the exited validator
+// indices of a given epoch, then unlocks the store again.
+func ExitedValFromEpoch(epoch uint64) []uint64 {
+	vStore.RLock()
+	defer vStore.RUnlock()
+	if _, exists := vStore.exitedValidators[epoch]; !exists {
+		return nil
+	}
+	return vStore.exitedValidators[epoch]
+}
+
+// DeleteActivatedVal locks the validator store, delete the activated validator
+// indices of a given epoch, then unlocks the store again.
+func DeleteActivatedVal(epoch uint64) {
+	vStore.Lock()
+	defer vStore.Unlock()
+	delete(vStore.activatedValidators, epoch)
+}
+
+// DeleteExitedVal locks the validator store, delete the exited validator
+// indices of a given epoch, then unlocks the store again.
+func DeleteExitedVal(epoch uint64) {
+	vStore.Lock()
+	defer vStore.Unlock()
+	delete(vStore.exitedValidators, epoch)
 }
 
 // allValidatorsIndices returns all validator indices from 0 to
