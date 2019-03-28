@@ -107,6 +107,18 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 	return nil
 }
 
+// CanonicalHeadSlot returns the slot of canonical block currently found in the
+// beacon chain via RPC.
+func (v *validator) CanonicalHeadSlot(ctx context.Context) (uint64, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.CanonicalHeadSlot")
+	defer span.End()
+	head, err := v.beaconClient.CanonicalHead(ctx, &ptypes.Empty{})
+	if err != nil {
+		return params.BeaconConfig().GenesisSlot, err
+	}
+	return head.Slot, nil
+}
+
 // NextSlot emits the next slot number at the start time of that slot.
 func (v *validator) NextSlot() <-chan uint64 {
 	return v.ticker.C()
