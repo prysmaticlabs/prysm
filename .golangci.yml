@@ -183,7 +183,7 @@ linters:
   disable:
     - maligned
     - prealloc
-  disable-all: true
+  disable-all: false
   presets:
     - bugs
     - unused
