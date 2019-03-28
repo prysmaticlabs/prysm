@@ -92,7 +92,7 @@ func RecalculateAssignmentsCache(state *pb.BeaconState, slot uint64) error {
 		}
 	}
 
-	if _, ok := assignmentCache.prevAssignments[0]; !ok && currentEpoch != params.BeaconConfig().GenesisEpoch {
+	if _, ok := assignmentCache.prevAssignments[0]; !ok && CurrentEpoch(state) != params.BeaconConfig().GenesisEpoch {
 		assignmentCache.prevAssignments, err = CommitteeAssignmentMapping(state, currentEpoch-1, false)
 		if err != nil {
 			return fmt.Errorf("could not get committee assignment mapping: %v", err)

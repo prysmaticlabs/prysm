@@ -516,6 +516,39 @@ func TestCommitteeAssignment_CanRetrieve(t *testing.T) {
 	}
 }
 
+func TestCommitteeAssignment_CachesOnTransition(t *testing.T) {
+	// Initialize test with 128 validators, each slot and each shard gets 2 validators.
+	validators := make([]*pb.Validator, 2*params.BeaconConfig().SlotsPerEpoch)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &pb.Validator{
+			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	state := &pb.BeaconState{
+		ValidatorRegistry:      validators,
+		Slot:                   params.BeaconConfig().GenesisSlot,
+		LatestIndexRootHash32S: [][]byte{{'A'}, {'B'}, {'C'}},
+		LatestRandaoMixes:      [][]byte{{'D'}, {'E'}, {'F'}},
+	}
+
+	if err := RecalculateAssignmentsCache(state, state.Slot); err != nil {
+		t.Fatalf("failed to recalculate assignments cache: %v", err)
+	}
+
+	if _, ok := assignmentCache.prevAssignments[0]; ok {
+		t.Fatal("previous assignments should not be cached in genesis state")
+	}
+
+	state.Slot += params.BeaconConfig().SlotsPerEpoch
+	if err := RecalculateAssignmentsCache(state, state.Slot); err != nil {
+		t.Fatalf("failed to recalculate assignments cache: %v", err)
+	}
+
+	if _, ok := assignmentCache.prevAssignments[0]; !ok {
+		t.Fatal("previous assignments should be cached after transition")
+	}
+}
+
 func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 	state := &pb.BeaconState{
 		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
