@@ -359,8 +359,6 @@ func UpdateRegistry(ctx context.Context, state *pb.BeaconState) (*pb.BeaconState
 				break
 			}
 			state = ExitValidator(state, uint64(idx))
-			vStore.Lock()
-			defer vStore.Unlock()
 			vStore.exitedValidators[updatedEpoch] =
 				append(vStore.exitedValidators[updatedEpoch], uint64(idx))
 		}
