@@ -7,8 +7,6 @@ matrix:
       go: 1.11.x
       env:
         - lint
-      before_script:
-        - go get github.com/golangci/golangci-lint/cmd/golangci-lint
       install:
         - go get ${gobuild_args} -t ./...
         - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s v1.15.0
