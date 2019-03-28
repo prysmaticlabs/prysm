@@ -564,7 +564,7 @@ func TestCommitteeAssignment_CantFindValidator(t *testing.T) {
 	}
 }
 
-func BenchmarkCommitteeAssignment_UsesCache(b *testing.B) {
+func BenchmarkCommitteeAssignment(b *testing.B) {
 	// Initialize test with 128 validators, each slot and each shard gets 2 validators.
 	validators := make([]*pb.Validator, 8192)
 	for i := 0; i < len(validators); i++ {
