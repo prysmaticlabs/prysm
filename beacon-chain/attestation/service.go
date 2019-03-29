@@ -198,7 +198,7 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 	}
 
 	log.WithFields(logrus.Fields{
-		"attestation slot":     attestation.Data.Slot,
+		"attestation slot":     attestation.Data.Slot - params.BeaconConfig().GenesisSlot,
 		"attestation shard":    attestation.Data.Shard,
 		"committees shard":     committees[0].Shard,
 		"committees list":      committees[0].Committee,

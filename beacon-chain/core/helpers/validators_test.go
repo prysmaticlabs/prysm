@@ -51,23 +51,23 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 	}{
 		{
 			slot:  params.BeaconConfig().GenesisSlot + 1,
-			index: 511,
+			index: 504,
 		},
 		{
 			slot:  params.BeaconConfig().GenesisSlot + 10,
-			index: 2807,
+			index: 2821,
 		},
 		{
 			slot:  params.BeaconConfig().GenesisSlot + 19,
-			index: 5122,
+			index: 5132,
 		},
 		{
 			slot:  params.BeaconConfig().GenesisSlot + 30,
-			index: 7947,
+			index: 7961,
 		},
 		{
 			slot:  params.BeaconConfig().GenesisSlot + 39,
-			index: 10262,
+			index: 10272,
 		},
 	}
 

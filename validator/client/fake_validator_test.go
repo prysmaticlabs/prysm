@@ -12,10 +12,11 @@ var _ = Validator(&fakeValidator{})
 
 type fakeValidator struct {
 	DoneCalled                       bool
-	CanonicalHeadSlotCalled          bool
+	WaitForActivationCalled          bool
 	WaitForChainStartCalled          bool
 	NextSlotRet                      <-chan uint64
 	NextSlotCalled                   bool
+	CanonicalHeadSlotCalled          bool
 	UpdateAssignmentsCalled          bool
 	UpdateAssignmentsArg1            uint64
 	UpdateAssignmentsRet             error
@@ -36,6 +37,11 @@ func (fv *fakeValidator) Done() {
 
 func (fv *fakeValidator) WaitForChainStart(_ context.Context) error {
 	fv.WaitForChainStartCalled = true
+	return nil
+}
+
+func (fv *fakeValidator) WaitForActivation(_ context.Context) error {
+	fv.WaitForActivationCalled = true
 	return nil
 }
 
