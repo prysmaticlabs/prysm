@@ -83,21 +83,20 @@ func (ks Store) GetKey(filename, password string) (*Key, error) {
 
 // GetKeys from directory using the prefix to filter relevant files
 // and a decryption password.
-func (ks Store) GetKeys(directory, fileprefix, password string) ([]*Key, error) {
+func (ks Store) GetKeys(directory, fileprefix, password string) (map[string]*Key, error) {
 	// Load the key from the keystore and decrypt its contents
 	// #nosec G304
 	files, err := ioutil.ReadDir(directory)
 	if err != nil {
 		return nil, err
 	}
-	keys := []*Key{}
-	i := 0
+	keys := make(map[string]*Key)
 	for _, f := range files {
 		n := f.Name()
 		filePath := filepath.Join(directory, n)
 		filePath = filepath.Clean(filePath)
-		if f.Mode().IsRegular() && strings.Contains(n, strings.TrimPrefix(fileprefix, "/")) {
-                        // #nosec G304
+		cp := strings.Contains(n, strings.TrimPrefix(fileprefix, "/"))
+		if f.Mode().IsRegular() && cp {
 			keyjson, err := ioutil.ReadFile(filePath)
 			if err != nil {
 				return nil, err
@@ -106,11 +105,9 @@ func (ks Store) GetKeys(directory, fileprefix, password string) ([]*Key, error) 
 			if err != nil {
 				return nil, err
 			}
-			keys = append(keys, key)
-			i++
+			keys[hex.EncodeToString(key.PublicKey.Marshal())] = key
 		}
 	}
-
 	return keys, nil
 }
 
