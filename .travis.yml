@@ -11,7 +11,7 @@ matrix:
         - go get ${gobuild_args} -t ./...
         - go get ${gobuild_args} -u github.com/golangci/golangci-lint/cmd/golangci-lint
       script:
-        - go mod download && golangci-lint run
+        - golangci-lint run
       email: false
       after_success:
         - wget https://raw.githubusercontent.com/k3rn31p4nic/travis-ci-discord-webhook/master/send.sh
