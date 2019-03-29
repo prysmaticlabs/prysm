@@ -88,21 +88,9 @@ func setupSimBackendAndDB(t *testing.T) (*backend.SimulatedBackend, *db.BeaconDB
 	if err := beacondb.SaveState(bd.State()); err != nil {
 		t.Fatalf("Could not save state %v", err)
 	}
-	if err := beacondb.SaveJustifiedState(bd.State()); err != nil {
-		t.Fatalf("Could not save state %v", err)
-	}
-	if err := beacondb.SaveFinalizedState(bd.State()); err != nil {
-		t.Fatalf("Could not save state %v", err)
-	}
 
 	memBlocks := bd.InMemoryBlocks()
 	if err := beacondb.SaveBlock(memBlocks[0]); err != nil {
-		t.Fatalf("Could not save block %v", err)
-	}
-	if err := beacondb.SaveJustifiedBlock(memBlocks[0]); err != nil {
-		t.Fatalf("Could not save block %v", err)
-	}
-	if err := beacondb.SaveFinalizedBlock(memBlocks[0]); err != nil {
 		t.Fatalf("Could not save block %v", err)
 	}
 

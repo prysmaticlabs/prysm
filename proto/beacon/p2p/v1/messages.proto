@@ -71,9 +71,7 @@ message BeaconStateRequest {
 }
 
 message BeaconStateResponse {
-  BeaconState finalized_state = 1;
-  BeaconState justified_state = 2;
-  BeaconState canonical_state = 3;
+  BeaconState beacon_state = 1;
 }
 
 message AttestationAnnounce {

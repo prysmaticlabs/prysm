@@ -677,12 +677,6 @@ func TestHandleStateReq_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not attempt fetch beacon state: %v", err)
 	}
-	if err := db.SaveJustifiedState(beaconState); err != nil {
-		t.Fatalf("could not save justified state: %v", err)
-	}
-	if err := db.SaveFinalizedState(beaconState); err != nil {
-		t.Fatalf("could not save justified state: %v", err)
-	}
 	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
 		t.Fatalf("could not hash beacon state: %v", err)
@@ -703,5 +697,5 @@ func TestHandleStateReq_OK(t *testing.T) {
 	if err := ss.handleStateRequest(msg1); err != nil {
 		t.Error(err)
 	}
-	testutil.AssertLogsContain(t, hook, "Sending finalized, justified, and canonical states to peer")
+	testutil.AssertLogsContain(t, hook, "Sending beacon state to peer")
 }
