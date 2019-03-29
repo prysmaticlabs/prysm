@@ -98,7 +98,7 @@ func (vs *ValidatorServer) ValidatorPerformance(
 	}
 	avgBalance := totalBalance / float32(len(beaconState.ValidatorBalances))
 	balance := beaconState.ValidatorBalances[index]
-	activeIndices := helpers.ActiveValidatorIndices(beaconState.ValidatorRegistry, req.Slot)
+	activeIndices := helpers.ActiveValidatorIndices(beaconState.ValidatorRegistry, helpers.SlotToEpoch(req.Slot))
 	return &pb.ValidatorPerformanceResponse{
 		Balance:                 balance,
 		AverageValidatorBalance: avgBalance,
