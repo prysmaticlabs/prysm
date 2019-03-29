@@ -66,6 +66,14 @@ func TestSaveAndRetrieveValidatorsIndexes_OK(t *testing.T) {
 	if bytes.Equal(indexes[1], p2) {
 		t.Fatalf("Saved index and retrieved index are not equal: %#x and %#x", 2, indexes[1])
 	}
+	if err := db.DeleteValidatorIndex(p2); err != nil {
+		t.Fatalf("Could not delete validator index: %v", err)
+	}
+	indexes, err = db.ValidatorIndices(ids)
+	want := fmt.Sprintf("validators %#x does not exist", [][]byte{p2})
+	if !strings.Contains(err.Error(), want) {
+		t.Errorf("Want: %v, got: %v", want, err.Error())
+	}
 }
 
 func TestSaveAndDeleteValidatorIndex_OK(t *testing.T) {
