@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
+
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -17,7 +19,7 @@ import (
 )
 
 var log = logrus.WithField("prefix", "core/blocks")
-var DepositsToRemove = make([]*pb.Deposit, 0)
+var depositsToRemove = make([]*pb.Deposit, 0)
 
 // IsValidBlock ensures that the block is compliant with the block processing validity conditions.
 // Spec:
@@ -81,8 +83,24 @@ func IsSlotValid(slot uint64, genesisTime time.Time) bool {
 	return isValid
 }
 
-func removeDeposit(removalEnabled bool, deposit *pb.Deposit) {
+// DepositsToRemove returns the deposits that we have to remove.
+func DepositsToRemove() []*pb.Deposit {
+	deps := make([]*pb.Deposit, len(depositsToRemove))
+	copy(deps, depositsToRemove)
+	return deps
+}
+
+// ClearFromDepositRemovalList removes the deposit from the list.
+func ClearFromDepositRemovalList(invalidDeposit *pb.Deposit) {
+	for i, deposit := range depositsToRemove {
+		if proto.Equal(deposit, invalidDeposit) {
+			depositsToRemove = append(depositsToRemove[:i], depositsToRemove[i+1:]...)
+		}
+	}
+}
+
+func addToDepositRemovalList(removalEnabled bool, deposit *pb.Deposit) {
 	if removalEnabled {
-		DepositsToRemove = append(DepositsToRemove, deposit)
+		depositsToRemove = append(depositsToRemove, deposit)
 	}
 }

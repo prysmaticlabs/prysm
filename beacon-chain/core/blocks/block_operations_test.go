@@ -1092,6 +1092,7 @@ func TestProcessValidatorDeposits_ThresholdReached(t *testing.T) {
 		context.Background(),
 		beaconState,
 		block,
+		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected error: %s, received %v", want, err)
 	}
@@ -1113,6 +1114,7 @@ func TestProcessValidatorDeposits_DepositDataSizeTooSmall(t *testing.T) {
 		context.Background(),
 		beaconState,
 		block,
+		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected error: %s, received %v", want, err)
 	}
@@ -1134,6 +1136,7 @@ func TestProcessValidatorDeposits_DepositInputDecodingFails(t *testing.T) {
 		context.Background(),
 		beaconState,
 		block,
+		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected error: %s, received %v", want, err)
 	}
@@ -1187,6 +1190,7 @@ func TestProcessValidatorDeposits_MerkleBranchFailsVerification(t *testing.T) {
 		context.Background(),
 		beaconState,
 		block,
+		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected error: %s, received %v", want, err)
 	}
@@ -1274,6 +1278,7 @@ func TestProcessValidatorDeposits_ProcessDepositHelperFuncFails(t *testing.T) {
 		context.Background(),
 		beaconState,
 		block,
+		false,
 	); !strings.Contains(err.Error(), want) {
 		t.Errorf("Expected error: %s, received %v", want, err)
 	}
@@ -1357,6 +1362,7 @@ func TestProcessValidatorDeposits_ProcessCorrectly(t *testing.T) {
 		context.Background(),
 		beaconState,
 		block,
+		false,
 	)
 	if err != nil {
 		t.Fatalf("Expected block deposits to process correctly, received: %v", err)

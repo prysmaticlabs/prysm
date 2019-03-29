@@ -162,13 +162,17 @@ func (c *ChainService) runStateTransition(
 		block,
 		headRoot,
 		&state.TransitionConfig{
-			VerifySignatures: false, // We disable signature verification for now.
-			Logging:          true,  // We enable logging in this state transition call.
+			VerifySignatures:      false, // We disable signature verification for now.
+			Logging:               true,  // We enable logging in this state transition call.
+			InvalidDepositRemoval: true,  // We enable this to remove invalid deposits.
 		},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not execute state transition %v", err)
 	}
+
+	c.deleteInvalidDeposits()
+
 	log.WithField(
 		"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
 	).Info("Slot transition successfully processed")
@@ -237,4 +241,16 @@ func (c *ChainService) deleteValidatorIdx(state *pb.BeaconState) error {
 	}
 	validators.DeleteExitedVal(helpers.CurrentEpoch(state))
 	return nil
+}
+
+// deleteInvalidDeposits removes the invalid deposits from the db, so that
+// a proposer will not package them anymore.
+func (c *ChainService) deleteInvalidDeposits() {
+	deposits := b.DepositsToRemove()
+	if len(deposits) != 0 {
+		for _, deposit := range deposits {
+			c.beaconDB.RemovePendingDeposit(c.ctx, deposit)
+			b.ClearFromDepositRemovalList(deposit)
+		}
+	}
 }

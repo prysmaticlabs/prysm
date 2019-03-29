@@ -603,14 +603,12 @@ func ProcessValidatorDeposits(
 		depositData := deposit.DepositData
 		depositInput, err = helpers.DecodeDepositInput(depositData)
 		if err != nil {
-			log.Errorf("could not decode deposit input: %v", err)
-			removeDeposit(invalidDepositRemoval, deposit)
-			continue
+			addToDepositRemovalList(invalidDepositRemoval, deposit)
+			return nil, fmt.Errorf("could not decode deposit input: %v", err)
 		}
 		if err = verifyDeposit(beaconState, deposit); err != nil {
-			log.Errorf("could not verify deposit #%d: %v", idx, err)
-			removeDeposit(invalidDepositRemoval, deposit)
-			continue
+			addToDepositRemovalList(invalidDepositRemoval, deposit)
+			return nil, fmt.Errorf("could not verify deposit #%d: %v", idx, err)
 		}
 		// depositData consists of depositValue [8]byte +
 		// depositTimestamp [8]byte + depositInput []byte .
@@ -625,9 +623,8 @@ func ProcessValidatorDeposits(
 			depositInput.WithdrawalCredentialsHash32,
 		)
 		if err != nil {
-			log.Errorf("could not process deposit into beacon state: %v", err)
-			removeDeposit(invalidDepositRemoval, deposit)
-			continue
+			addToDepositRemovalList(invalidDepositRemoval, deposit)
+			return nil, fmt.Errorf("could not process deposit into beacon state: %v", err)
 		}
 	}
 	return beaconState, nil
