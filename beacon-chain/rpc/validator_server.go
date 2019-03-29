@@ -288,11 +288,17 @@ func (vs *ValidatorServer) retrieveActiveValidatorsPublicKeys(pubkeys [][]byte) 
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve validators indexes: %v", err)
 	}
-	v := make([][]byte, len(m))
-	i := 0
-	for _, value := range m {
-		v[i] = value
-		i++
+	beaconState, err := vs.beaconDB.State(vs.ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
+	}
+	activeIndices := helpers.ActiveValidatorIndices(beaconState.ValidatorRegistry, beaconState.Slot)
+	v := make([][]byte, 0, len(m))
+	for _, ai := range activeIndices {
+		if val, ok := m[ai]; ok {
+			v = append(v, val)
+		}
+
 	}
 	return v, nil
 }

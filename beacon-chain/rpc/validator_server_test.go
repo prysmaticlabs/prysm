@@ -556,6 +556,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	if err := db.SaveValidatorIndex(pubKeys[1], 0); err != nil {
 		t.Fatalf("Could not save validator index: %v", err)
 	}
+
 	beaconState := &pbp2p.BeaconState{
 		Slot: params.BeaconConfig().GenesisSlot,
 		ValidatorRegistry: []*pbp2p.Validator{{
