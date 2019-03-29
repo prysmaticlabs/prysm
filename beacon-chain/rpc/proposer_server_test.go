@@ -12,8 +12,15 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+func init() {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableComputeStateRoot: true,
+	})
+}
 
 func TestProposeBlock_OK(t *testing.T) {
 	db := internal.SetupDB(t)
@@ -59,6 +66,9 @@ func TestProposeBlock_OK(t *testing.T) {
 	req := &pbp2p.BeaconBlock{
 		Slot:             5,
 		ParentRootHash32: []byte("parent-hash"),
+	}
+	if err := proposerServer.beaconDB.SaveBlock(req); err != nil {
+		t.Fatal(err)
 	}
 	if _, err := proposerServer.ProposeBlock(context.Background(), req); err != nil {
 		t.Errorf("Could not propose block correctly: %v", err)
@@ -148,11 +158,11 @@ func TestPendingAttestations_FiltersWithinInclusionDelay(t *testing.T) {
 	}
 
 	if err := db.SaveBlock(blk); err != nil {
-		t.Fatalf("failed to save block %v")
+		t.Fatalf("failed to save block %v", err)
 	}
 
 	if err := db.UpdateChainHead(blk, beaconState); err != nil {
-		t.Fatalf("couldnt update chainhead: %v")
+		t.Fatalf("couldnt update chainhead: %v", err)
 	}
 
 	res, err := proposerServer.PendingAttestations(context.Background(), &pb.PendingAttestationsRequest{
@@ -213,11 +223,11 @@ func TestPendingAttestations_FiltersExpiredAttestations(t *testing.T) {
 	}
 
 	if err := db.SaveBlock(blk); err != nil {
-		t.Fatalf("failed to save block %v")
+		t.Fatalf("failed to save block %v", err)
 	}
 
 	if err := db.UpdateChainHead(blk, beaconState); err != nil {
-		t.Fatalf("couldnt update chainhead: %v")
+		t.Fatalf("couldnt update chainhead: %v", err)
 	}
 
 	res, err := proposerServer.PendingAttestations(
@@ -257,11 +267,11 @@ func TestPendingAttestations_OK(t *testing.T) {
 	}
 
 	if err := db.SaveBlock(blk); err != nil {
-		t.Fatalf("failed to save block %v")
+		t.Fatalf("failed to save block %v", err)
 	}
 
 	if err := db.UpdateChainHead(blk, beaconState); err != nil {
-		t.Fatalf("couldnt update chainhead: %v")
+		t.Fatalf("couldnt update chainhead: %v", err)
 	}
 
 	res, err := proposerServer.PendingAttestations(context.Background(), &pb.PendingAttestationsRequest{})

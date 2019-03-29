@@ -114,6 +114,7 @@ func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*S
 		bFeed: new(event.Feed),
 		sFeed: new(event.Feed),
 		cFeed: new(event.Feed),
+		db:    bd.DB(),
 	}
 
 	cfg := &Config{
@@ -160,6 +161,7 @@ func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T
 		bFeed: new(event.Feed),
 		sFeed: new(event.Feed),
 		cFeed: new(event.Feed),
+		db:    bd.DB(),
 	}
 
 	// we add in 2 blocks to the unsynced node so that, we dont request the beacon state from the

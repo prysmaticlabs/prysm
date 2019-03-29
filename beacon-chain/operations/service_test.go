@@ -90,20 +90,15 @@ func TestIncomingExits_Ok(t *testing.T) {
 	defer internal.TeardownDB(t, beaconDB)
 	service := NewOpsPoolService(context.Background(), &Config{BeaconDB: beaconDB})
 
-	exitRoutine := make(chan bool)
-	go func() {
-		service.saveOperations()
-		<-exitRoutine
-	}()
 	exit := &pb.VoluntaryExit{Epoch: 100}
 	hash, err := hashutil.HashProto(exit)
 	if err != nil {
 		t.Fatalf("Could not hash exit proto: %v", err)
 	}
 
-	service.incomingValidatorExits <- exit
-	service.cancel()
-	exitRoutine <- true
+	if err := service.HandleValidatorExits(context.Background(), exit); err != nil {
+		t.Error(err)
+	}
 
 	want := fmt.Sprintf("Exit request %#x saved in DB", hash)
 	testutil.AssertLogsContain(t, hook, want)
@@ -119,11 +114,6 @@ func TestIncomingAttestation_OK(t *testing.T) {
 		P2P:      broadcaster,
 	})
 
-	exitRoutine := make(chan bool)
-	go func() {
-		service.saveOperations()
-		<-exitRoutine
-	}()
 	attestation := &pb.Attestation{
 		AggregationBitfield: []byte{'A'},
 		Data: &pb.AttestationData{
@@ -134,9 +124,9 @@ func TestIncomingAttestation_OK(t *testing.T) {
 		t.Fatalf("Could not hash exit proto: %v", err)
 	}
 
-	service.incomingAtt <- attestation
-	service.cancel()
-	exitRoutine <- true
+	if err := service.HandleAttestations(context.Background(), attestation); err != nil {
+		t.Error(err)
+	}
 
 	want := fmt.Sprintf("Attestation %#x saved in DB", hash)
 	testutil.AssertLogsContain(t, hook, want)
@@ -279,15 +269,10 @@ func TestReceiveBlkRemoveOps_Ok(t *testing.T) {
 		},
 	}
 
-	exitRoutine := make(chan bool)
-	go func() {
-		s.removeOperations()
-		exitRoutine <- true
-	}()
-
 	s.incomingProcessedBlock <- block
-	s.cancel()
-	<-exitRoutine
+	if err := s.handleProcessedBlock(context.Background(), block); err != nil {
+		t.Error(err)
+	}
 
 	atts, _ = s.PendingAttestations()
 	if len(atts) != 0 {

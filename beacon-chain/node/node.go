@@ -89,11 +89,11 @@ func NewBeaconNode(ctx *cli.Context) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	if err := beacon.registerOperationService(); err != nil {
+	if err := beacon.registerAttestationService(); err != nil {
 		return nil, err
 	}
 
-	if err := beacon.registerAttestationService(); err != nil {
+	if err := beacon.registerOperationService(); err != nil {
 		return nil, err
 	}
 
@@ -216,7 +216,6 @@ func (b *BeaconNode) registerBlockchainService(_ *cli.Context) error {
 		Web3Service:    web3Service,
 		OpsPoolService: opsService,
 		AttsService:    attsService,
-		BeaconBlockBuf: 10,
 		P2p:            p2pService,
 	})
 	if err != nil {
@@ -299,6 +298,11 @@ func (b *BeaconNode) registerSyncService(_ *cli.Context) error {
 		return err
 	}
 
+	var attsService *attestation.Service
+	if err := b.services.FetchService(&attsService); err != nil {
+		return err
+	}
+
 	var web3Service *powchain.Web3Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
@@ -310,6 +314,7 @@ func (b *BeaconNode) registerSyncService(_ *cli.Context) error {
 		BeaconDB:         b.db,
 		OperationService: operationService,
 		PowChainService:  web3Service,
+		AttsService:      attsService,
 	}
 
 	syncService := rbcsync.NewSyncService(context.Background(), cfg)
@@ -339,7 +344,6 @@ func (b *BeaconNode) registerRPCService(ctx *cli.Context) error {
 		Port:             port,
 		CertFlag:         cert,
 		KeyFlag:          key,
-		SubscriptionBuf:  100,
 		BeaconDB:         b.db,
 		ChainService:     chainService,
 		OperationService: operationService,

@@ -18,7 +18,10 @@ spec:
       annotations:
         prometheus.io/scrape: 'true'
         prometheus.io/port: '9090'
-        sidecar.istio.io/inject: 'false' # istio breaks local peer connections
+        # Disable sidecar proxy for p2p.
+        traffic.sidecar.istio.io/excludeInboundPorts: '5000'
+        traffic.sidecar.istio.io/includeInboundPorts: '*'
+        traffic.sidecar.istio.io/includeOutboundIPRanges: ''
     spec:
       priorityClassName: production-priority
       affinity:
@@ -44,7 +47,7 @@ spec:
             - --deposit-contract=$(DEPOSIT_CONTRACT_ADDRESS)
             - --rpc-port=4000
             - --monitoring-port=9090
-            - --bootstrap-node=/ip4/$(BOOTNODE_SERVICE_HOST)/tcp/$(BOOTNODE_SERVICE_PORT)/p2p/QmQEe7o6hKJdGdSkJRh7WJzS6xrex5f4w2SPR6oWbJNriw
+            - --bootstrap-node=/dns4/bootnode/tcp/$(BOOTNODE_SERVICE_PORT)/p2p/QmQEe7o6hKJdGdSkJRh7WJzS6xrex5f4w2SPR6oWbJNriw
             - --relay-node=/ip4/35.224.249.2/tcp/30000/p2p/QmfAgkmjiZNZhr2wFN9TwaRgHouMTBT6HELyzE5A3BT2wK
             - --p2p-port=5000
             - --enable-tracing
@@ -71,6 +74,10 @@ spec:
                 configMapKeyRef:
                   name: beacon-config
                   key: DEPOSIT_CONTRACT_ADDRESS
+          readinessProbe:
+            initialDelaySeconds: 60
+            tcpSocket:
+              port: 4000
   volumeClaimTemplates:
   - metadata:
       name: beacondb
