@@ -110,7 +110,7 @@ type InitialSync struct {
 	syncedFeed                     *event.Feed
 	reqState                       bool
 	stateRootOfHighestObservedSlot [32]byte
-	highestObservedCanonicalState *pb.BeaconState
+	highestObservedCanonicalState  *pb.BeaconState
 	mutex                          *sync.Mutex
 }
 
@@ -478,6 +478,7 @@ func (s *InitialSync) processState(msg p2p.Message) {
 	// beacon state to begin our sync from.
 	lastFinalizedSlot := finalizedState.Slot
 	s.currentSlot = lastFinalizedSlot
+	s.highestObservedCanonicalState = canonicalState
 	log.Debugf(
 		"Successfully saved beacon state with the last finalized slot: %d",
 		lastFinalizedSlot-params.BeaconConfig().GenesisSlot,

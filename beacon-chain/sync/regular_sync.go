@@ -355,9 +355,9 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 		return err
 	}
 	resp := &pb.BeaconStateResponse{
-        FinalizedState: fState,
-       	JustifiedState: jState,
-       	CanonicalState: canonicalState,
+		FinalizedState: fState,
+		JustifiedState: jState,
+		CanonicalState: canonicalState,
 	}
 	if err := rs.p2p.Send(ctx, resp, msg.Peer); err != nil {
 		log.Error(err)
