@@ -83,9 +83,9 @@ func TestSavingBlock_InSync(t *testing.T) {
 	setUpGenesisStateAndBlock(db, t)
 
 	cfg := &Config{
-		P2P:          &mockP2P{},
-		SyncService:  &mockSyncService{},
-		BeaconDB:     db,
+		P2P:         &mockP2P{},
+		SyncService: &mockSyncService{},
+		BeaconDB:    db,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 	ss.reqState = false
@@ -213,9 +213,9 @@ func TestProcessingBatchedBlocks_OK(t *testing.T) {
 	setUpGenesisStateAndBlock(db, t)
 
 	cfg := &Config{
-		P2P:          &mockP2P{},
-		SyncService:  &mockSyncService{},
-		BeaconDB:     db,
+		P2P:         &mockP2P{},
+		SyncService: &mockSyncService{},
+		BeaconDB:    db,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 	ss.reqState = false
@@ -254,9 +254,9 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 	setUpGenesisStateAndBlock(db, t)
 
 	cfg := &Config{
-		P2P:          &mockP2P{},
-		SyncService:  &mockSyncService{},
-		BeaconDB:     db,
+		P2P:         &mockP2P{},
+		SyncService: &mockSyncService{},
+		BeaconDB:    db,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 	ss.reqState = false
@@ -314,9 +314,9 @@ func TestDelayChan_OK(t *testing.T) {
 	setUpGenesisStateAndBlock(db, t)
 
 	cfg := &Config{
-		P2P:          &mockP2P{},
-		SyncService:  &mockSyncService{},
-		BeaconDB:     db,
+		P2P:         &mockP2P{},
+		SyncService: &mockSyncService{},
+		BeaconDB:    db,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 	ss.reqState = false
