@@ -18,6 +18,10 @@ spec:
       annotations:
         prometheus.io/scrape: 'true'
         prometheus.io/port: '9090'
+        # Disable sidecar proxy for p2p.
+        traffic.sidecar.istio.io/excludeInboundPorts: '5000'
+        traffic.sidecar.istio.io/includeInboundPorts: '*'
+        traffic.sidecar.istio.io/includeOutboundIPRanges: ''
     spec:
       priorityClassName: production-priority
       affinity:
