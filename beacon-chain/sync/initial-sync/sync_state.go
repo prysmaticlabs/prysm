@@ -3,13 +3,12 @@ package initialsync
 import (
 	"context"
 
-	"github.com/libp2p/go-libp2p-peer"
+	peer "github.com/libp2p/go-libp2p-peer"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 func (s *InitialSync) processState(msg p2p.Message) {
@@ -20,10 +19,6 @@ func (s *InitialSync) processState(msg p2p.Message) {
 	justifiedState := data.JustifiedState
 	canonicalState := data.CanonicalState
 	recState.Inc()
-
-	if s.currentSlot > finalizedState.Slot {
-		return
-	}
 
 	if err := s.db.SaveFinalizedState(finalizedState); err != nil {
 		log.Errorf("Unable to set received last finalized state in db: %v", err)
@@ -42,12 +37,6 @@ func (s *InitialSync) processState(msg p2p.Message) {
 
 	if err := s.db.SaveJustifiedBlock(justifiedState.LatestBlock); err != nil {
 		log.Errorf("Could not save finalized block %v", err)
-		return
-	}
-
-	h, err := hashutil.HashProto(canonicalState)
-	if err != nil {
-		log.Error(err)
 		return
 	}
 
@@ -77,7 +66,7 @@ func (s *InitialSync) processState(msg p2p.Message) {
 	// beacon state to begin our sync from.
 	lastFinalizedSlot := finalizedState.Slot
 	s.currentSlot = lastFinalizedSlot
-	s.highestObservedCanonicalState = canonicalState
+	s.stateReceived = true
 	s.highestObservedSlot = canonicalState.Slot
 	log.Debugf(
 		"Successfully saved beacon state with the last finalized slot: %d, canonical slot: %d",

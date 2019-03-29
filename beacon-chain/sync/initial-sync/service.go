@@ -12,6 +12,7 @@ package initialsync
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -40,6 +41,7 @@ type Config struct {
 	BeaconDB                *db.BeaconDB
 	P2P                     p2pAPI
 	SyncService             syncService
+	ChainService            chainService
 	PowChain                powChainService
 }
 
@@ -68,7 +70,7 @@ type powChainService interface {
 }
 
 type chainService interface {
-	ReceiveBlock()
+	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error)
 }
 
 // SyncService is the interface for the Sync service.
@@ -85,6 +87,7 @@ type InitialSync struct {
 	cancel                         context.CancelFunc
 	p2p                            p2pAPI
 	syncService                    syncService
+	chainService                   chainService
 	db                             *db.BeaconDB
 	powchain                       powChainService
 	blockAnnounceBuf               chan p2p.Message
@@ -97,8 +100,8 @@ type InitialSync struct {
 	syncPollingInterval            time.Duration
 	inMemoryBlocks                 map[uint64]*pb.BeaconBlock
 	syncedFeed                     *event.Feed
-	highestObservedCanonicalState  *pb.BeaconState
-	latestSyncedBlock *pb.BeaconBlock
+	stateReceived                  bool
+	latestSyncedBlock              *pb.BeaconBlock
 	mutex                          *sync.Mutex
 	blocksAboveHighestObservedSlot []*pb.BeaconBlock
 }
@@ -122,6 +125,7 @@ func NewInitialSyncService(ctx context.Context,
 		syncService:                    cfg.SyncService,
 		db:                             cfg.BeaconDB,
 		powchain:                       cfg.PowChain,
+		chainService:                   cfg.ChainService,
 		currentSlot:                    params.BeaconConfig().GenesisSlot,
 		highestObservedSlot:            params.BeaconConfig().GenesisSlot,
 		beaconStateSlot:                params.BeaconConfig().GenesisSlot,
@@ -131,8 +135,9 @@ func NewInitialSyncService(ctx context.Context,
 		blockAnnounceBuf:               blockAnnounceBuf,
 		syncPollingInterval:            cfg.SyncPollingInterval,
 		inMemoryBlocks:                 map[uint64]*pb.BeaconBlock{},
-		blocksAboveHighestObservedSlot:                 []*pb.BeaconBlock{},
+		blocksAboveHighestObservedSlot: []*pb.BeaconBlock{},
 		syncedFeed:                     new(event.Feed),
+		stateReceived:                  false,
 		mutex:                          new(sync.Mutex),
 	}
 }
@@ -174,25 +179,47 @@ func (s *InitialSync) SyncedFeed() *event.Feed {
 // latest canonical head. If not, then it requests batched blocks up to the highest observed slot.
 func (s *InitialSync) checkSyncStatus() bool {
 	if s.highestObservedSlot == s.currentSlot {
-		state := s.highestObservedCanonicalState
-		for _, block := range s.blocksAboveHighestObservedSlot {
-			state = s.chainService.Receive
-		}
-		if err := s.db.UpdateChainHead(s.latestSyncedBlock, s.highestObservedCanonicalState); err != nil {
-			log.Errorf("Could not update chain head: %v", err)
+		if err := s.exitInitialSync(s.ctx); err != nil {
+			log.Errorf("Could not exit initial sync: %v", err)
 			return false
 		}
-		log.Infof("Updated chain head with slot: %d, and state slot: %d", s.latestSyncedBlock.Slot-params.BeaconConfig().GenesisSlot, s.highestObservedCanonicalState.Slot-params.BeaconConfig().GenesisSlot)
-		log.Info("Exiting initial sync and starting normal sync")
-		s.syncedFeed.Send(s.currentSlot)
-		s.syncService.ResumeSync()
 		return true
 	}
-	if s.highestObservedCanonicalState != nil {
+	if s.stateReceived {
 		// requests multiple blocks so as to save and sync quickly.
 		s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
 	}
 	return false
+}
+
+func (s *InitialSync) exitInitialSync(ctx context.Context) error {
+	state, err := s.db.State(ctx)
+	if err != nil {
+		return fmt.Errorf("could not fetch canonical state: %v", err)
+	}
+	// If there were any blocks received above the highest observed slot
+	// during the process of performing initial sync, we run state transitions on those blocks.
+	for _, block := range s.blocksAboveHighestObservedSlot {
+		if err = s.db.SaveBlock(block); err != nil {
+			return fmt.Errorf("could not save block: %v", err)
+		}
+		state, err = s.chainService.ReceiveBlock(s.ctx, block)
+		if err != nil {
+			return fmt.Errorf("could not receive block in chain service: %v", err)
+		}
+		if err := s.db.UpdateChainHead(block, state); err != nil {
+			return fmt.Errorf("could not update chain head: %v", err)
+		}
+	}
+	canonicalState, err := s.db.State(ctx)
+	if err != nil {
+		return fmt.Errorf("could not get state: %v", err)
+	}
+	log.Infof("Canonical state slot: %d", canonicalState.Slot-params.BeaconConfig().GenesisSlot)
+	log.Info("Exiting initial sync and starting normal sync")
+	s.syncedFeed.Send(s.currentSlot)
+	s.syncService.ResumeSync()
+	return nil
 }
 
 // checkInMemoryBlocks is another routine which will run concurrently with the
@@ -234,7 +261,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 		close(s.stateBuf)
 	}()
 
-	if err := s.requestStateFromPeer(s.ctx); err != nil {
+	if err := s.requestStateFromPeer(s.ctx, p2p.AnyPeer); err != nil {
 		log.Errorf("Could not request state from peer %v", err)
 	}
 

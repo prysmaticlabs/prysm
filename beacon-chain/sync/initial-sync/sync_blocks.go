@@ -2,31 +2,24 @@ package initialsync
 
 import (
 	"context"
-	"github.com/libp2p/go-libp2p-peer"
+	"strings"
+
+	peer "github.com/libp2p/go-libp2p-peer"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"go.opencensus.io/trace"
-	"strings"
-	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 )
 
 func (s *InitialSync) processBlockAnnounce(msg p2p.Message) {
-	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.initial-sync.processBlockAnnounce")
+	_, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.initial-sync.processBlockAnnounce")
 	defer span.End()
 	data := msg.Data.(*pb.BeaconBlockAnnounce)
 	recBlockAnnounce.Inc()
 
 	if data.SlotNumber > s.highestObservedSlot {
 		s.requestBatchedBlocks(s.currentSlot+1, data.SlotNumber)
-	}
-
-	if s.highestObservedCanonicalState != nil {
-		s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
-		log.Debugf(
-			"Successfully requested the next block with slot: %d",
-			data.SlotNumber-params.BeaconConfig().GenesisSlot,
-		)
 	}
 }
 
@@ -90,7 +83,7 @@ func (s *InitialSync) processBatchedBlocks(msg p2p.Message) {
 	response := msg.Data.(*pb.BatchedBeaconBlockResponse)
 	batchedBlocks := response.BatchedBlocks
 	if len(batchedBlocks) == 0 {
-		// Do not process empty response
+		// Do not process empty responses.
 		return
 	}
 
@@ -99,22 +92,6 @@ func (s *InitialSync) processBatchedBlocks(msg p2p.Message) {
 		s.processBlock(ctx, block, msg.Peer)
 	}
 	log.Debug("Finished processing batched blocks")
-}
-
-
-// requestNextBlock broadcasts a request for a block with the entered slotnumber.
-func (s *InitialSync) requestNextBlockBySlot(ctx context.Context, slotNumber uint64) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.requestBlockBySlot")
-	defer span.End()
-	log.Debugf("Requesting block %d ", slotNumber)
-	blockReqSlot.Inc()
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	if block, ok := s.inMemoryBlocks[slotNumber]; ok {
-		s.processBlock(ctx, block, p2p.AnyPeer)
-		return
-	}
-	s.p2p.Broadcast(ctx, &pb.BeaconBlockRequestBySlotNumber{SlotNumber: slotNumber})
 }
 
 // requestBatchedBlocks sends out a request for multiple blocks till a
@@ -165,10 +142,6 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	if _, ok := s.inMemoryBlocks[block.Slot]; ok {
 		delete(s.inMemoryBlocks, block.Slot)
 	}
-	// since the block will not be processed by chainservice we save
-	// the block and do not send it to chainservice.
 	s.latestSyncedBlock = block
 	return s.db.SaveBlock(block)
 }
-
-
