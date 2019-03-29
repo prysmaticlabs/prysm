@@ -46,7 +46,6 @@ linters:
     - goimports
     - golint
     - gosec
-    - gotype
     - misspell
     - structcheck
     - unparam
