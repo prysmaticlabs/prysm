@@ -48,7 +48,6 @@ type Config struct {
 	BeaconDB                *db.BeaconDB
 	P2P                     p2pAPI
 	SyncService             syncService
-	ChainService            chainService
 	PowChain                powChainService
 }
 
@@ -72,11 +71,6 @@ type p2pAPI interface {
 	Subscribe(msg proto.Message, channel chan p2p.Message) event.Subscription
 }
 
-type chainService interface {
-	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error)
-	ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error
-}
-
 type powChainService interface {
 	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
 }
@@ -95,7 +89,6 @@ type InitialSync struct {
 	cancel                         context.CancelFunc
 	p2p                            p2pAPI
 	syncService                    syncService
-	chainService                   chainService
 	db                             *db.BeaconDB
 	powchain                       powChainService
 	blockAnnounceBuf               chan p2p.Message
@@ -131,7 +124,6 @@ func NewInitialSyncService(ctx context.Context,
 		cancel:                         cancel,
 		p2p:                            cfg.P2P,
 		syncService:                    cfg.SyncService,
-		chainService:                   cfg.ChainService,
 		db:                             cfg.BeaconDB,
 		powchain:                       cfg.PowChain,
 		currentSlot:                    params.BeaconConfig().GenesisSlot,
@@ -432,16 +424,6 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		return
 	}
 
-	if err := s.db.SaveBlock(finalizedState.LatestBlock); err != nil {
-		log.Errorf("Could not save block %v", err)
-		return
-	}
-
-	if err := s.db.UpdateChainHead(finalizedState.LatestBlock, finalizedState); err != nil {
-		log.Errorf("Could not update chainhead %v", err)
-		return
-	}
-
 	if err := s.db.SaveJustifiedState(justifiedState); err != nil {
 		log.Errorf("Could not set beacon state for initial sync %v", err)
 		return
@@ -472,6 +454,16 @@ func (s *InitialSync) processState(msg p2p.Message) {
 
 	if h == s.stateRootOfHighestObservedSlot {
 		s.reqState = false
+	}
+
+	if err := s.db.SaveBlock(canonicalState.LatestBlock); err != nil {
+		log.Errorf("Could not save block %v", err)
+		return
+	}
+
+	if err := s.db.UpdateChainHead(canonicalState.LatestBlock, canonicalState); err != nil {
+		log.Errorf("Could not update chain head %v", err)
+		return
 	}
 
 	// sets the current slot to the last finalized slot of the
@@ -560,10 +552,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	}
 	// since the block will not be processed by chainservice we save
 	// the block and do not send it to chainservice.
-	if err := s.db.SaveBlock(block); err != nil {
-		return err
-	}
-	return s.db.UpdateChainHead(block, s.highestObservedCanonicalState)
+	return s.db.SaveBlock(block)
 }
 
 func (s *InitialSync) checkBlockValidity(ctx context.Context, block *pb.BeaconBlock) error {

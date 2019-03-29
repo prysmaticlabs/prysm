@@ -51,16 +51,6 @@ func (ms *mockSyncService) ResumeSync() {
 
 }
 
-type mockChainService struct{}
-
-func (m *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
-	return &pb.BeaconState{}, nil
-}
-
-func (m *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error {
-	return nil
-}
-
 func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
 	ctx := context.Background()
 	genesisTime := time.Now()
@@ -96,7 +86,6 @@ func TestSavingBlock_InSync(t *testing.T) {
 		P2P:          &mockP2P{},
 		SyncService:  &mockSyncService{},
 		BeaconDB:     db,
-		ChainService: &mockChainService{},
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 	ss.reqState = false
@@ -227,7 +216,6 @@ func TestProcessingBatchedBlocks_OK(t *testing.T) {
 		P2P:          &mockP2P{},
 		SyncService:  &mockSyncService{},
 		BeaconDB:     db,
-		ChainService: &mockChainService{},
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 	ss.reqState = false
@@ -269,7 +257,6 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 		P2P:          &mockP2P{},
 		SyncService:  &mockSyncService{},
 		BeaconDB:     db,
-		ChainService: &mockChainService{},
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 	ss.reqState = false
@@ -330,7 +317,6 @@ func TestDelayChan_OK(t *testing.T) {
 		P2P:          &mockP2P{},
 		SyncService:  &mockSyncService{},
 		BeaconDB:     db,
-		ChainService: &mockChainService{},
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 	ss.reqState = false
@@ -424,7 +410,6 @@ func TestRequestBlocksBySlot_OK(t *testing.T) {
 	cfg := &Config{
 		P2P:             &mockP2P{},
 		SyncService:     &mockSyncService{},
-		ChainService:    &mockChainService{},
 		BeaconDB:        db,
 		BlockBufferSize: 100,
 	}
