@@ -173,7 +173,7 @@ func (c *ChainService) initializeBeaconChain(genesisTime time.Time, deposits []*
 	if err := c.beaconDB.SaveFinalizedState(beaconState); err != nil {
 		return nil, fmt.Errorf("could not save gensis state as finalized state: %v", err)
 	}
-	if err := helpers.RecalculateAssignmentsCache(beaconState, beaconState.Slot+1); err != nil {
+	if err := helpers.RecalculateAssignmentsCache(beaconState, beaconState.Slot); err != nil {
 		return nil, fmt.Errorf("could not update assignment cache: %v", err)
 	}
 	return beaconState, nil

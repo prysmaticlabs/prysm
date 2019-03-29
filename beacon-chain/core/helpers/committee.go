@@ -52,6 +52,7 @@ type AssignmentCache struct {
 }
 
 var assignmentCache = &AssignmentCache{
+	currentEpoch:       0,
 	prevAssignments:    make(map[uint64]*ValidatorAssignment, 0),
 	currentAssignments: make(map[uint64]*ValidatorAssignment, 0),
 	nextAssignments:    make(map[uint64]*ValidatorAssignment, 0),
@@ -64,42 +65,50 @@ func RecalculateAssignmentsCache(state *pb.BeaconState, slot uint64) error {
 	var err error
 	currentEpoch := SlotToEpoch(slot)
 
-	if assignmentCache.currentEpoch+1 != currentEpoch {
-		assignmentCache.prevAssignments = make(map[uint64]*ValidatorAssignment, 0)
-		assignmentCache.currentAssignments = make(map[uint64]*ValidatorAssignment, 0)
-		assignmentCache.nextAssignments = make(map[uint64]*ValidatorAssignment, 0)
+	if assignmentCache.currentEpoch == currentEpoch {
+		return nil
 	}
 
-	if _, ok := assignmentCache.currentAssignments[0]; !ok {
+	if assignmentCache.currentEpoch+1 == currentEpoch {
+		fmt.Println("incremented cache")
+		assignmentCache.currentEpoch++
+		assignmentCache.prevAssignments = assignmentCache.currentAssignments
 		assignmentCache.currentAssignments, err = CommitteeAssignmentMapping(state, currentEpoch, false)
 		if err != nil {
 			return fmt.Errorf("could not get committee assignment mapping: %v", err)
 		}
-	} else {
-		assignmentCache.prevAssignments = assignmentCache.currentAssignments
-	}
 
-	if _, ok := assignmentCache.nextAssignments[0]; !ok {
 		assignmentCache.nextAssignments, err = CommitteeAssignmentMapping(state, currentEpoch+1, false)
 		if err != nil {
 			return fmt.Errorf("could not get committee assignment mapping: %v", err)
 		}
-	} else {
-		assignmentCache.currentAssignments = assignmentCache.nextAssignments
+
+	} else if assignmentCache.currentEpoch != currentEpoch {
+		fmt.Printf(
+			"Recalculation at slot %d, currentEpoch is: %d, cached epoch is: %d\n",
+			slot-params.BeaconConfig().GenesisSlot,
+			currentEpoch-params.BeaconConfig().GenesisEpoch,
+			assignmentCache.currentEpoch-params.BeaconConfig().GenesisEpoch,
+		)
+
+		assignmentCache.currentEpoch = currentEpoch
+		assignmentCache.currentAssignments, err = CommitteeAssignmentMapping(state, currentEpoch, false)
+		if err != nil {
+			return fmt.Errorf("could not get committee assignment mapping: %v", err)
+		}
+
 		assignmentCache.nextAssignments, err = CommitteeAssignmentMapping(state, currentEpoch+1, false)
 		if err != nil {
 			return fmt.Errorf("could not get committee assignment mapping: %v", err)
 		}
-	}
 
-	if _, ok := assignmentCache.prevAssignments[0]; !ok && CurrentEpoch(state) != params.BeaconConfig().GenesisEpoch {
-		assignmentCache.prevAssignments, err = CommitteeAssignmentMapping(state, currentEpoch-1, false)
-		if err != nil {
-			return fmt.Errorf("could not get committee assignment mapping: %v", err)
+		if CurrentEpoch(state) != params.BeaconConfig().GenesisEpoch {
+			assignmentCache.prevAssignments, err = CommitteeAssignmentMapping(state, currentEpoch-1, false)
+			if err != nil {
+				return fmt.Errorf("could not get committee assignment mapping: %v", err)
+			}
 		}
 	}
-
-	assignmentCache.currentEpoch = currentEpoch
 
 	return nil
 }
@@ -473,6 +482,7 @@ func CommitteeAssignment(
 
 	var assignment *ValidatorAssignment
 	var ok bool
+	fmt.Printf("requested from cache at slot: %d\n", slot-params.BeaconConfig().GenesisSlot)
 	if wantedEpoch == prevEpoch && CurrentEpoch(state) != params.BeaconConfig().GenesisEpoch {
 		assignment, ok = assignmentCache.prevAssignments[validatorIndex]
 	} else if wantedEpoch == nextEpoch {
