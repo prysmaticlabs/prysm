@@ -74,12 +74,6 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		return nil, fmt.Errorf("failed to save block: %v", err)
 	}
 
-	// Announce the new block to the network.
-	c.p2p.Broadcast(ctx, &pb.BeaconBlockAnnounce{
-		Hash:       blockRoot[:],
-		SlotNumber: block.Slot,
-	})
-
 	// Retrieve the last processed beacon block's hash root.
 	headRoot, err := c.ChainHeadRoot()
 	if err != nil {
@@ -106,6 +100,12 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	if err != nil {
 		return nil, fmt.Errorf("could not execute state transition with block %v", err)
 	}
+
+	// Announce the new block to the network.
+	c.p2p.Broadcast(ctx, &pb.BeaconBlockAnnounce{
+		Hash:       blockRoot[:],
+		SlotNumber: block.Slot,
+	})
 
 	log.WithFields(logrus.Fields{
 		"slotNumber":     block.Slot - params.BeaconConfig().GenesisSlot,
@@ -168,10 +168,9 @@ func (c *ChainService) runStateTransition(
 		},
 	)
 	if err != nil {
+		c.deleteInvalidDeposits()
 		return nil, fmt.Errorf("could not execute state transition %v", err)
 	}
-
-	c.deleteInvalidDeposits()
 
 	log.WithField(
 		"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
