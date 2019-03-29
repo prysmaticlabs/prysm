@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "block.go",
         "block_operations.go",
+        "deposit_removal.go",
         "validity_conditions.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks",
@@ -34,6 +35,7 @@ go_test(
     srcs = [
         "block_operations_test.go",
         "block_test.go",
+        "deposit_removal_test.go",
         "validity_conditions_test.go",
     ],
     embed = [":go_default_library"],
