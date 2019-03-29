@@ -32,6 +32,7 @@ type ValidatorServer struct {
 func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest, stream pb.ValidatorService_WaitForActivationServer) error {
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 	if vs.beaconDB.HasValidator(req.Pubkey) {
 		beaconState, err := vs.beaconDB.HeadState(vs.ctx)
 =======
@@ -52,6 +53,9 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 		activeVals, err := vs.retrieveActiveValidators(req.PublicKeys)
 >>>>>>> fix review remarks and tests
 =======
+=======
+	if ex, _ := vs.beaconDB.HasValidators(req.PublicKeys); ex {
+>>>>>>> run over all public keys in hasvalidators
 		activeVals, err := vs.retrieveActiveValidatorsPublicKeys(req.PublicKeys)
 >>>>>>> merge and some of terenc3t remarks addressed
 		if err != nil {
@@ -65,7 +69,7 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 	for {
 		select {
 		case <-time.After(3 * time.Second):
-			if !vs.beaconDB.HasValidators(req.PublicKeys) {
+			if ex, _ := vs.beaconDB.HasValidators(req.PublicKeys); !ex {
 				continue
 			}
 <<<<<<< HEAD
