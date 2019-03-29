@@ -249,6 +249,7 @@ func (c *ChainService) deleteInvalidDeposits() {
 	deposits := b.DepositsToRemove()
 	if len(deposits) != 0 {
 		for _, deposit := range deposits {
+			log.Debugf("Deleting deposit with index %v", deposit.MerkleTreeIndex)
 			c.beaconDB.RemovePendingDeposit(c.ctx, deposit)
 			b.ClearFromDepositRemovalList(deposit)
 		}
