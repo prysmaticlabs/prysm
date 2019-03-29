@@ -340,26 +340,9 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 		log.Debugf("Requested state root is different from locally stored state root %#x", req.FinalizedStateRootHash32S)
 		return err
 	}
-	log.WithField(
-		"beaconState", fmt.Sprintf("%#x", root),
-	).Debug("Sending finalized, justified, and canonical states to peer")
+	log.WithField("beaconState", fmt.Sprintf("%#x", root)).Debug("Sending beacon state to peer")
 	defer sentState.Inc()
-	jState, err := rs.db.JustifiedState()
-	if err != nil {
-		log.Errorf("Unable to retrieve justified state, %v", err)
-		return err
-	}
-	canonicalState, err := rs.db.State(ctx)
-	if err != nil {
-		log.Errorf("Unable to retrieve canonical beacon state, %v", err)
-		return err
-	}
-	resp := &pb.BeaconStateResponse{
-		FinalizedState: fState,
-		JustifiedState: jState,
-		CanonicalState: canonicalState,
-	}
-	if err := rs.p2p.Send(ctx, resp, msg.Peer); err != nil {
+	if err := rs.p2p.Send(ctx, &pb.BeaconStateResponse{BeaconState: fState}, msg.Peer); err != nil {
 		log.Error(err)
 		return err
 	}
