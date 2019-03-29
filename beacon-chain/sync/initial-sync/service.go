@@ -410,7 +410,7 @@ func (s *InitialSync) processState(msg p2p.Message) {
 	canonicalState := data.CanonicalState
 	recState.Inc()
 
-	if s.currentSlot > finalizedState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
+	if s.currentSlot > finalizedState.Slot {
 		return
 	}
 
