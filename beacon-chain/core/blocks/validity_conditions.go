@@ -17,6 +17,7 @@ import (
 )
 
 var log = logrus.WithField("prefix", "core/blocks")
+var DepositsToRemove = make([]*pb.Deposit, 0)
 
 // IsValidBlock ensures that the block is compliant with the block processing validity conditions.
 // Spec:
@@ -78,4 +79,10 @@ func IsSlotValid(slot uint64, genesisTime time.Time) bool {
 			now, validTimeThreshold)
 	}
 	return isValid
+}
+
+func removeDeposit(removalEnabled bool, deposit *pb.Deposit) {
+	if removalEnabled {
+		DepositsToRemove = append(DepositsToRemove, deposit)
+	}
 }

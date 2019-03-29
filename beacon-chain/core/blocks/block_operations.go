@@ -583,6 +583,7 @@ func ProcessValidatorDeposits(
 	ctx context.Context,
 	beaconState *pb.BeaconState,
 	block *pb.BeaconBlock,
+	invalidDepositRemoval bool,
 ) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.ChainService.state.ProcessBlock.ProcessValidatorDeposits")
 	defer span.End()
@@ -602,10 +603,14 @@ func ProcessValidatorDeposits(
 		depositData := deposit.DepositData
 		depositInput, err = helpers.DecodeDepositInput(depositData)
 		if err != nil {
-			return nil, fmt.Errorf("could not decode deposit input: %v", err)
+			log.Errorf("could not decode deposit input: %v", err)
+			removeDeposit(invalidDepositRemoval, deposit)
+			continue
 		}
 		if err = verifyDeposit(beaconState, deposit); err != nil {
-			return nil, fmt.Errorf("could not verify deposit #%d: %v", idx, err)
+			log.Errorf("could not verify deposit #%d: %v", idx, err)
+			removeDeposit(invalidDepositRemoval, deposit)
+			continue
 		}
 		// depositData consists of depositValue [8]byte +
 		// depositTimestamp [8]byte + depositInput []byte .
@@ -620,7 +625,9 @@ func ProcessValidatorDeposits(
 			depositInput.WithdrawalCredentialsHash32,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("could not process deposit into beacon state: %v", err)
+			log.Errorf("could not process deposit into beacon state: %v", err)
+			removeDeposit(invalidDepositRemoval, deposit)
+			continue
 		}
 	}
 	return beaconState, nil

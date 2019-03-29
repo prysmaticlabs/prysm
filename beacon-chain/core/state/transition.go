@@ -26,15 +26,17 @@ var log = logrus.WithField("prefix", "core/state")
 // for executing a state transition, which can have logging and signature
 // verification on or off depending on when and where it is used.
 type TransitionConfig struct {
-	VerifySignatures bool
-	Logging          bool
+	VerifySignatures      bool
+	Logging               bool
+	InvalidDepositRemoval bool
 }
 
 // DefaultConfig option for executing state transitions.
 func DefaultConfig() *TransitionConfig {
 	return &TransitionConfig{
-		VerifySignatures: false,
-		Logging:          false,
+		VerifySignatures:      false,
+		Logging:               false,
+		InvalidDepositRemoval: false,
 	}
 }
 
