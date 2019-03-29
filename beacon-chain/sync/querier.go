@@ -161,7 +161,7 @@ func (q *Querier) run() {
 			q.RequestLatestHead()
 		case msg := <-q.responseBuf:
 			response := msg.Data.(*pb.ChainHeadResponse)
-			queryLog.Infof("Latest chain head is at slot: %d and hash %#x", response.Slot, response.Hash)
+			queryLog.Infof("Latest chain head is at slot: %d and hash %#x", response.Slot-params.BeaconConfig().GenesisSlot, response.Hash)
 			q.currentHeadSlot = response.Slot
 			q.currentHeadHash = response.Hash
 			q.currentFinalizedStateRoot = bytesutil.ToBytes32(response.FinalizedStateRootHash32S)

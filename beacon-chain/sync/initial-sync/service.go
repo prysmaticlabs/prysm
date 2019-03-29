@@ -75,6 +75,10 @@ type powChainService interface {
 	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
 }
 
+type chainService interface {
+	ReceiveBlock()
+}
+
 // SyncService is the interface for the Sync service.
 // InitialSync calls `Start` when initial sync completes.
 type syncService interface {
@@ -104,7 +108,9 @@ type InitialSync struct {
 	reqState                       bool
 	stateRootOfHighestObservedSlot [32]byte
 	highestObservedCanonicalState  *pb.BeaconState
+	latestSyncedBlock *pb.BeaconBlock
 	mutex                          *sync.Mutex
+	blocksAboveHighestObservedSlot []*pb.BeaconBlock
 }
 
 // NewInitialSyncService constructs a new InitialSyncService.
@@ -135,6 +141,7 @@ func NewInitialSyncService(ctx context.Context,
 		blockAnnounceBuf:               blockAnnounceBuf,
 		syncPollingInterval:            cfg.SyncPollingInterval,
 		inMemoryBlocks:                 map[uint64]*pb.BeaconBlock{},
+		blocksAboveHighestObservedSlot:                 []*pb.BeaconBlock{},
 		syncedFeed:                     new(event.Feed),
 		reqState:                       false,
 		stateRootOfHighestObservedSlot: [32]byte{},
@@ -201,8 +208,6 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 	if err := s.requestStateFromPeer(s.ctx, s.stateRootOfHighestObservedSlot[:], p2p.AnyPeer); err != nil {
 		log.Errorf("Could not request state from peer %v", err)
 	}
-	// Send out a batch request
-	s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
 
 	for {
 		select {
@@ -284,20 +289,25 @@ func (s *InitialSync) checkInMemoryBlocks() {
 // checkSyncStatus verifies if the beacon node is correctly synced with its peers up to their
 // latest canonical head. If not, then it requests batched blocks up to the highest observed slot.
 func (s *InitialSync) checkSyncStatus() bool {
-	if s.reqState {
-		if err := s.requestStateFromPeer(s.ctx, s.stateRootOfHighestObservedSlot[:], p2p.AnyPeer); err != nil {
-			log.Errorf("Could not request state from peer %v", err)
-		}
-		return false
-	}
 	if s.highestObservedSlot == s.currentSlot {
+		state := s.highestObservedCanonicalState
+		for _, block := range s.blocksAboveHighestObservedSlot {
+			state = s.chainService.Receive
+		}
+		if err := s.db.UpdateChainHead(s.latestSyncedBlock, s.highestObservedCanonicalState); err != nil {
+			log.Errorf("Could not update chain head: %v", err)
+			return false
+		}
+		log.Infof("Updated chain head with slot: %d, and state slot: %d", s.latestSyncedBlock.Slot-params.BeaconConfig().GenesisSlot, s.highestObservedCanonicalState.Slot-params.BeaconConfig().GenesisSlot)
 		log.Info("Exiting initial sync and starting normal sync")
 		s.syncedFeed.Send(s.currentSlot)
 		s.syncService.ResumeSync()
 		return true
 	}
-	// requests multiple blocks so as to save and sync quickly.
-	s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
+	if s.highestObservedCanonicalState != nil {
+		// requests multiple blocks so as to save and sync quickly.
+		s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
+	}
 	return false
 }
 
@@ -315,14 +325,16 @@ func (s *InitialSync) processBlockAnnounce(msg p2p.Message) {
 	}
 
 	if data.SlotNumber > s.highestObservedSlot {
-		s.highestObservedSlot = data.SlotNumber
+		s.requestBatchedBlocks(s.currentSlot+1, data.SlotNumber)
 	}
 
-	s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
-	log.Debugf(
-		"Successfully requested the next block with slot: %d",
-		data.SlotNumber-params.BeaconConfig().GenesisSlot,
-	)
+	if s.highestObservedCanonicalState != nil {
+		s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
+		log.Debugf(
+			"Successfully requested the next block with slot: %d",
+			data.SlotNumber-params.BeaconConfig().GenesisSlot,
+		)
+	}
 }
 
 // processBlock is the main method that validates each block which is received
@@ -333,20 +345,15 @@ func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock, p
 	defer span.End()
 	recBlock.Inc()
 	if block.Slot > s.highestObservedSlot {
-		s.highestObservedSlot = block.Slot
+		// We put the blocks higher than the highest observed slot in a queue for processing.
+		s.blocksAboveHighestObservedSlot = append(s.blocksAboveHighestObservedSlot, block)
+		return
 	}
 
 	if block.Slot < s.currentSlot {
 		return
 	}
 
-	// requesting beacon state if there is no saved state.
-	if s.reqState {
-		if err := s.requestStateFromPeer(s.ctx, s.stateRootOfHighestObservedSlot[:], peerID); err != nil {
-			log.Errorf("Could not request beacon state from peer: %v", err)
-		}
-		return
-	}
 	// if it isn't the block in the next slot we check if it is a skipped slot.
 	// if it isn't skipped we save it in memory.
 	if block.Slot != (s.currentSlot + 1) {
@@ -471,12 +478,12 @@ func (s *InitialSync) processState(msg p2p.Message) {
 	lastFinalizedSlot := finalizedState.Slot
 	s.currentSlot = lastFinalizedSlot
 	s.highestObservedCanonicalState = canonicalState
+	s.highestObservedSlot = canonicalState.Slot
 	log.Debugf(
-		"Successfully saved beacon state with the last finalized slot: %d",
+		"Successfully saved beacon state with the last finalized slot: %d, canonical slot: %d",
 		lastFinalizedSlot-params.BeaconConfig().GenesisSlot,
+		canonicalState.Slot-params.BeaconConfig().GenesisSlot,
 	)
-
-	s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
 }
 
 // requestStateFromPeer always requests for the last finalized state from a peer.
@@ -541,7 +548,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	if err := s.checkBlockValidity(ctx, block); err != nil {
 		return err
 	}
-	log.Infof("Saved block with root %#x and slot %d for initial sync", root, block.Slot)
+	log.Infof("Saved block with root %#x and slot %d for initial sync", root, block.Slot-params.BeaconConfig().GenesisSlot)
 	s.currentSlot = block.Slot
 
 	s.mutex.Lock()
@@ -552,6 +559,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	}
 	// since the block will not be processed by chainservice we save
 	// the block and do not send it to chainservice.
+	s.latestSyncedBlock = block
 	return s.db.SaveBlock(block)
 }
 

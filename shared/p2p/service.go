@@ -31,7 +31,7 @@ import (
 )
 
 const prysmProtocolPrefix = "/prysm/0.0.0"
-const maxMessageSize = 1 << 20
+const maxMessageSize = 1 << 24
 
 // Sender represents a struct that is able to relay information via p2p.
 // Server implements this interface.
