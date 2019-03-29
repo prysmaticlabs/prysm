@@ -26,9 +26,11 @@ type BeaconDB struct {
 	DatabasePath string
 
 	// Beacon chain deposits in memory.
-	pendingDeposits []*depositContainer
-	deposits        []*depositContainer
-	depositsLock    sync.RWMutex
+	pendingDeposits       []*depositContainer
+	deposits              []*depositContainer
+	depositsLock          sync.RWMutex
+	chainstartPubkeys     map[string]bool
+	chainstartPubkeysLock sync.RWMutex
 }
 
 // Close closes the underlying boltdb database.
@@ -75,7 +77,6 @@ func NewDB(dirPath string) (*BeaconDB, error) {
 	if err := db.update(func(tx *bolt.Tx) error {
 		return createBuckets(tx, blockBucket, attestationBucket, mainChainBucket, histStateBucket,
 			chainInfoBucket, cleanupHistoryBucket, blockOperationsBucket, validatorBucket)
-
 	}); err != nil {
 		return nil, err
 	}
