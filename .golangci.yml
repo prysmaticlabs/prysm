@@ -52,7 +52,6 @@ run:
     - ^contracts/
   deadline: 10m
 
-
 # golangci.com configuration
 # https://github.com/golangci/golangci/wiki/Configuration
 service:
