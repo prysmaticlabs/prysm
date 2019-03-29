@@ -40,11 +40,18 @@ linters-settings:
       - wrapperFunc
 
 linters:
-  enable-all: true
-  disable:
-    - maligned
-    - prealloc
-    - gochecknoglobals
+  enable:
+    - deadcode
+    - goconst
+    - goimports
+    - golint
+    - gosec
+    - gotype
+    - misspell
+    - structcheck
+    - unparam
+    - varcheck
+  disable-all: true
 
 run:
   skip-dirs:
