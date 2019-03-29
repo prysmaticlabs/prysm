@@ -387,22 +387,9 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 		return err
 	}
 
-	finalizedState, err := rs.db.FinalizedState()
-	if err != nil {
-		log.Errorf("Could not retrieve finalized state %v", err)
-		return err
-	}
-
-	finalizedRoot, err := hashutil.HashProto(finalizedState)
-	if err != nil {
-		log.Errorf("Could not tree hash block %v", err)
-		return err
-	}
-
 	req := &pb.ChainHeadResponse{
 		Slot:                      block.Slot,
 		Hash:                      blockRoot[:],
-		FinalizedStateRootHash32S: finalizedRoot[:],
 	}
 	ctx, ChainHead := trace.StartSpan(ctx, "sendChainHead")
 	defer ChainHead.End()

@@ -1,0 +1,95 @@
+package initialsync
+
+import (
+	"context"
+
+	"github.com/libp2p/go-libp2p-peer"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/shared/params"
+	"go.opencensus.io/trace"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+)
+
+func (s *InitialSync) processState(msg p2p.Message) {
+	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.initial-sync.processState")
+	defer span.End()
+	data := msg.Data.(*pb.BeaconStateResponse)
+	finalizedState := data.FinalizedState
+	justifiedState := data.JustifiedState
+	canonicalState := data.CanonicalState
+	recState.Inc()
+
+	if s.currentSlot > finalizedState.Slot {
+		return
+	}
+
+	if err := s.db.SaveFinalizedState(finalizedState); err != nil {
+		log.Errorf("Unable to set received last finalized state in db: %v", err)
+		return
+	}
+
+	if err := s.db.SaveFinalizedBlock(finalizedState.LatestBlock); err != nil {
+		log.Errorf("Could not save finalized block %v", err)
+		return
+	}
+
+	if err := s.db.SaveJustifiedState(justifiedState); err != nil {
+		log.Errorf("Could not set beacon state for initial sync %v", err)
+		return
+	}
+
+	if err := s.db.SaveJustifiedBlock(justifiedState.LatestBlock); err != nil {
+		log.Errorf("Could not save finalized block %v", err)
+		return
+	}
+
+	h, err := hashutil.HashProto(canonicalState)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	exists, blkNum, err := s.powchain.BlockExists(ctx, bytesutil.ToBytes32(finalizedState.LatestEth1Data.BlockHash32))
+	if err != nil {
+		log.Errorf("Unable to get powchain block %v", err)
+	}
+
+	if !exists {
+		log.Error("Latest ETH1 block doesn't exist in the pow chain")
+		return
+	}
+
+	s.db.PrunePendingDeposits(ctx, blkNum)
+
+	if err := s.db.SaveBlock(canonicalState.LatestBlock); err != nil {
+		log.Errorf("Could not save block %v", err)
+		return
+	}
+
+	if err := s.db.UpdateChainHead(canonicalState.LatestBlock, canonicalState); err != nil {
+		log.Errorf("Could not update chain head %v", err)
+		return
+	}
+
+	// sets the current slot to the last finalized slot of the
+	// beacon state to begin our sync from.
+	lastFinalizedSlot := finalizedState.Slot
+	s.currentSlot = lastFinalizedSlot
+	s.highestObservedCanonicalState = canonicalState
+	s.highestObservedSlot = canonicalState.Slot
+	log.Debugf(
+		"Successfully saved beacon state with the last finalized slot: %d, canonical slot: %d",
+		lastFinalizedSlot-params.BeaconConfig().GenesisSlot,
+		canonicalState.Slot-params.BeaconConfig().GenesisSlot,
+	)
+}
+
+// requestStateFromPeer requests for the canonical state, finalized state, and justified state from a peer.
+func (s *InitialSync) requestStateFromPeer(ctx context.Context, peerID peer.ID) error {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.requestStateFromPeer")
+	defer span.End()
+	stateReq.Inc()
+	return s.p2p.Send(ctx, &pb.BeaconStateRequest{}, peerID)
+}

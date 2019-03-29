@@ -8,7 +8,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
-	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -164,7 +163,6 @@ func (q *Querier) run() {
 			queryLog.Infof("Latest chain head is at slot: %d and hash %#x", response.Slot-params.BeaconConfig().GenesisSlot, response.Hash)
 			q.currentHeadSlot = response.Slot
 			q.currentHeadHash = response.Hash
-			q.currentFinalizedStateRoot = bytesutil.ToBytes32(response.FinalizedStateRootHash32S)
 
 			ticker.Stop()
 			responseSub.Unsubscribe()

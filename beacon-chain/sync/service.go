@@ -31,7 +31,6 @@ type Config struct {
 // NewSyncService creates a new instance of SyncService using the config
 // given.
 func NewSyncService(ctx context.Context, cfg *Config) *Service {
-
 	sqCfg := DefaultQuerierConfig()
 	sqCfg.BeaconDB = cfg.BeaconDB
 	sqCfg.P2P = cfg.P2P
@@ -109,9 +108,5 @@ func (ss *Service) run() {
 
 	// Sets the highest observed slot from querier.
 	ss.InitialSync.InitializeObservedSlot(ss.Querier.currentHeadSlot)
-
-	// Sets the state root of the highest observed slot.
-	ss.InitialSync.InitializeStateRoot(ss.Querier.currentFinalizedStateRoot)
-
 	ss.InitialSync.Start()
 }
