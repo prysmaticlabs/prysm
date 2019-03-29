@@ -97,6 +97,7 @@ func (ks Store) GetKeys(directory, fileprefix, password string) ([]*Key, error) 
 		filePath := filepath.Join(directory, n)
 		filePath = filepath.Clean(filePath)
 		if f.Mode().IsRegular() && strings.Contains(n, strings.TrimPrefix(fileprefix, "/")) {
+                        // #nosec G304
 			keyjson, err := ioutil.ReadFile(filePath)
 			if err != nil {
 				return nil, err
