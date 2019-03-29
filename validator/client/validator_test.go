@@ -10,6 +10,7 @@ import (
 
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
+	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 	"github.com/prysmaticlabs/prysm/shared/params"
@@ -260,7 +261,7 @@ func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
 	defer ctrl.Finish()
 	client := internal.NewMockBeaconServiceClient(ctrl)
 	v := validator{
-		key:          validatorKey,
+		keys:         keyMap,
 		beaconClient: client,
 	}
 	client.EXPECT().CanonicalHead(
@@ -277,7 +278,7 @@ func TestCanonicalHeadSlot_OK(t *testing.T) {
 	defer ctrl.Finish()
 	client := internal.NewMockBeaconServiceClient(ctrl)
 	v := validator{
-		key:          validatorKey,
+		keys:         keyMap,
 		beaconClient: client,
 	}
 	client.EXPECT().CanonicalHead(
@@ -290,6 +291,8 @@ func TestCanonicalHeadSlot_OK(t *testing.T) {
 	}
 	if headSlot != params.BeaconConfig().GenesisSlot {
 		t.Errorf("Mismatch slots, wanted: %v, received: %v", params.BeaconConfig().GenesisSlot, headSlot)
+	}
+}
 func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
