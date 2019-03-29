@@ -51,16 +51,6 @@ func (ms *mockSyncService) ResumeSync() {
 
 }
 
-type mockChainService struct{}
-
-func (m *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
-	return &pb.BeaconState{}, nil
-}
-
-func (m *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error {
-	return nil
-}
-
 func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
 	ctx := context.Background()
 	genesisTime := time.Now()
@@ -93,10 +83,9 @@ func TestSavingBlock_InSync(t *testing.T) {
 	setUpGenesisStateAndBlock(db, t)
 
 	cfg := &Config{
-		P2P:          &mockP2P{},
-		SyncService:  &mockSyncService{},
-		BeaconDB:     db,
-		ChainService: &mockChainService{},
+		P2P:         &mockP2P{},
+		SyncService: &mockSyncService{},
+		BeaconDB:    db,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 	ss.reqState = false
@@ -117,12 +106,17 @@ func TestSavingBlock_InSync(t *testing.T) {
 	genericHash := make([]byte, 32)
 	genericHash[0] = 'a'
 
-	beaconState := &pb.BeaconState{
+	fState := &pb.BeaconState{
 		FinalizedEpoch: params.BeaconConfig().GenesisSlot + 1,
+	}
+	jState := &pb.BeaconState{
+		JustifiedEpoch: params.BeaconConfig().GenesisSlot + 2,
 	}
 
 	stateResponse := &pb.BeaconStateResponse{
-		BeaconState: beaconState,
+		FinalizedState: fState,
+		JustifiedState: jState,
+		CanonicalState: jState,
 	}
 
 	incorrectState := &pb.BeaconState{
@@ -131,10 +125,12 @@ func TestSavingBlock_InSync(t *testing.T) {
 	}
 
 	incorrectStateResponse := &pb.BeaconStateResponse{
-		BeaconState: incorrectState,
+		FinalizedState: incorrectState,
+		JustifiedState: incorrectState,
+		CanonicalState: incorrectState,
 	}
 
-	stateRoot, err := hashutil.HashProto(beaconState)
+	stateRoot, err := hashutil.HashProto(fState)
 	if err != nil {
 		t.Fatalf("unable to tree hash state: %v", err)
 	}
@@ -179,7 +175,7 @@ func TestSavingBlock_InSync(t *testing.T) {
 
 	ss.stateBuf <- msg2
 
-	if ss.currentSlot == incorrectStateResponse.BeaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
+	if ss.currentSlot == incorrectStateResponse.CanonicalState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
 		t.Fatalf("Beacon state updated incorrectly: %d", ss.currentSlot)
 	}
 
@@ -190,7 +186,10 @@ func TestSavingBlock_InSync(t *testing.T) {
 	msg1 = getBlockResponseMsg(params.BeaconConfig().GenesisSlot + 1)
 	ss.blockBuf <- msg1
 	if params.BeaconConfig().GenesisSlot+1 != ss.currentSlot {
-		t.Fatalf("Slot saved when it was not supposed too: %v", stateResponse.BeaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch)
+		t.Fatalf(
+			"Slot saved when it was not supposed too: %v",
+			stateResponse.CanonicalState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch,
+		)
 	}
 
 	msg1 = getBlockResponseMsg(params.BeaconConfig().GenesisSlot + 2)
@@ -214,10 +213,9 @@ func TestProcessingBatchedBlocks_OK(t *testing.T) {
 	setUpGenesisStateAndBlock(db, t)
 
 	cfg := &Config{
-		P2P:          &mockP2P{},
-		SyncService:  &mockSyncService{},
-		BeaconDB:     db,
-		ChainService: &mockChainService{},
+		P2P:         &mockP2P{},
+		SyncService: &mockSyncService{},
+		BeaconDB:    db,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 	ss.reqState = false
@@ -256,10 +254,9 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 	setUpGenesisStateAndBlock(db, t)
 
 	cfg := &Config{
-		P2P:          &mockP2P{},
-		SyncService:  &mockSyncService{},
-		BeaconDB:     db,
-		ChainService: &mockChainService{},
+		P2P:         &mockP2P{},
+		SyncService: &mockSyncService{},
+		BeaconDB:    db,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 	ss.reqState = false
@@ -317,10 +314,9 @@ func TestDelayChan_OK(t *testing.T) {
 	setUpGenesisStateAndBlock(db, t)
 
 	cfg := &Config{
-		P2P:          &mockP2P{},
-		SyncService:  &mockSyncService{},
-		BeaconDB:     db,
-		ChainService: &mockChainService{},
+		P2P:         &mockP2P{},
+		SyncService: &mockSyncService{},
+		BeaconDB:    db,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 	ss.reqState = false
@@ -341,15 +337,20 @@ func TestDelayChan_OK(t *testing.T) {
 	genericHash := make([]byte, 32)
 	genericHash[0] = 'a'
 
-	beaconState := &pb.BeaconState{
-		FinalizedEpoch: params.BeaconConfig().GenesisSlot + 1,
+	fState := &pb.BeaconState{
+		FinalizedEpoch: params.BeaconConfig().GenesisEpoch + 1,
+	}
+	jState := &pb.BeaconState{
+		FinalizedEpoch: params.BeaconConfig().GenesisEpoch + 1,
+		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 2,
 	}
 
 	stateResponse := &pb.BeaconStateResponse{
-		BeaconState: beaconState,
+		FinalizedState: fState,
+		JustifiedState: jState,
 	}
 
-	stateRoot, err := hashutil.HashProto(beaconState)
+	stateRoot, err := hashutil.HashProto(fState)
 	if err != nil {
 		t.Fatalf("unable to tree hash state: %v", err)
 	}
@@ -409,7 +410,6 @@ func TestRequestBlocksBySlot_OK(t *testing.T) {
 	cfg := &Config{
 		P2P:             &mockP2P{},
 		SyncService:     &mockSyncService{},
-		ChainService:    &mockChainService{},
 		BeaconDB:        db,
 		BlockBufferSize: 100,
 	}
