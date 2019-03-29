@@ -7,9 +7,11 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -96,7 +98,7 @@ func (vs *ValidatorServer) ValidatorPerformance(
 	}
 	avgBalance := totalBalance / float32(len(beaconState.ValidatorBalances))
 	balance := beaconState.ValidatorBalances[index]
-	activeIndices := helpers.ActiveValidatorIndices(beaconState.ValidatorRegistry, req.Slot)
+	activeIndices := helpers.ActiveValidatorIndices(beaconState.ValidatorRegistry, helpers.SlotToEpoch(req.Slot))
 	return &pb.ValidatorPerformanceResponse{
 		Balance:                 balance,
 		AverageValidatorBalance: avgBalance,
@@ -130,6 +132,22 @@ func (vs *ValidatorServer) CommitteeAssignment(
 	idx, err := vs.beaconDB.ValidatorIndex(req.PublicKey[0])
 	if err != nil {
 		return nil, fmt.Errorf("could not get active validator index: %v", err)
+	}
+	chainHead, err := vs.beaconDB.ChainHead()
+	if err != nil {
+		return nil, fmt.Errorf("could not get chain head: %v", err)
+	}
+	headRoot, err := hashutil.HashBeaconBlock(chainHead)
+	if err != nil {
+		return nil, fmt.Errorf("could not hash block: %v", err)
+	}
+	for beaconState.Slot < req.EpochStart {
+		beaconState, err = state.ExecuteStateTransition(
+			ctx, beaconState, nil /* block */, headRoot, state.DefaultConfig(),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could not execute head transition: %v", err)
+		}
 	}
 
 	committee, shard, slot, isProposer, err :=
