@@ -204,8 +204,10 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
 	).Return(&pb.AttestResponse{}, nil /* error */).Times(0)
 
-	delay = 5
+	delay = 3
+	timer := time.NewTimer(time.Duration(1 * time.Second))
 	go validator.AttestToBlockHead(context.Background(), 0)
+	<-timer.C
 }
 
 func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {

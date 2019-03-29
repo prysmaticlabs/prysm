@@ -236,10 +236,8 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 		return &pb.PendingDepositsResponse{PendingDeposits: nil}, nil
 	}
 	depositData := [][]byte{}
-	indices := []uint64{}
 	for i := range upToLatestEth1DataDeposits {
 		depositData = append(depositData, upToLatestEth1DataDeposits[i].DepositData)
-		indices = append(indices, upToLatestEth1DataDeposits[i].MerkleTreeIndex)
 	}
 
 	depositTrie, err := trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
@@ -270,10 +268,8 @@ func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *
 	if len(allDeposits) <= len(chainStartDeposits) {
 		depositData = chainStartDeposits
 	} else {
-		indices := []uint64{}
 		for i := range allDeposits {
 			depositData = append(depositData, allDeposits[i].DepositData)
-			indices = append(indices, allDeposits[i].MerkleTreeIndex)
 		}
 	}
 	depositTrie, err := trieutil.GenerateTrieFromItems(depositData, int(params.BeaconConfig().DepositContractTreeDepth))
