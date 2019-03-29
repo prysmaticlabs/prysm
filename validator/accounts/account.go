@@ -40,16 +40,15 @@ func VerifyAccountNotExists(directory string, password string) error {
 // generates a BLS private and public key, and then logs the serialized deposit input hex string
 // to be used in an ETH1.0 transaction by the validator.
 func NewValidatorAccount(directory string, password string) error {
-	t := time.Now()
-
-	shardWithdrawalKeyFile := directory + params.BeaconConfig().WithdrawalPrivkeyFileName + t.Format("20060102150405")
-	validatorKeyFile := directory + params.BeaconConfig().ValidatorPrivkeyFileName + t.Format("20060102150405")
+	shardWithdrawalKeyFile := directory + params.BeaconConfig().WithdrawalPrivkeyFileName
+	validatorKeyFile := directory + params.BeaconConfig().ValidatorPrivkeyFileName
 	ks := keystore.NewKeystore(directory)
 	// If the keystore does not exists at the path, we create a new one for the validator.
 	shardWithdrawalKey, err := keystore.NewKey(rand.Reader)
 	if err != nil {
 		return err
 	}
+	shardWithdrawalKeyFile = shardWithdrawalKeyFile + hex.EncodeToString(shardWithdrawalKey.PublicKey.Marshal())[:12]
 	if err := ks.StoreKey(shardWithdrawalKeyFile, shardWithdrawalKey, password); err != nil {
 		return fmt.Errorf("unable to store key %v", err)
 	}
@@ -61,6 +60,7 @@ func NewValidatorAccount(directory string, password string) error {
 	if err != nil {
 		return err
 	}
+	validatorKeyFile = validatorKeyFile + hex.EncodeToString(validatorKey.PublicKey.Marshal())[:12]
 	if err := ks.StoreKey(validatorKeyFile, validatorKey, password); err != nil {
 		return fmt.Errorf("unable to store key %v", err)
 	}
