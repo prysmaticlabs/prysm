@@ -52,11 +52,6 @@ run:
     - ^contracts/
   deadline: 10m
 
-issues:
-  exclude-rules:
-    - text: "weak cryptographic primitive"
-      linters:
-        - gosec
 
 # golangci.com configuration
 # https://github.com/golangci/golangci/wiki/Configuration
