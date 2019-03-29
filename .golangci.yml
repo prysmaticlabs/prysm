@@ -47,6 +47,7 @@ linters:
     - golint
     - gosec
     - misspell
+    - typecheck
     - structcheck
     - unparam
     - varcheck
