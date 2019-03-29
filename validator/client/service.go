@@ -26,6 +26,7 @@ type ValidatorService struct {
 	endpoint  string
 	withCert  string
 	key       *keystore.Key
+	keys      map[string]*keystore.Key
 }
 
 // Config for the validator service.
@@ -52,7 +53,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		cancel:   cancel,
 		endpoint: cfg.Endpoint,
 		withCert: cfg.CertFlag,
-		key:      keys[0],
+		keys:     keys,
 	}, nil
 }
 
