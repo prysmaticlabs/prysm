@@ -86,3 +86,75 @@ func TestPendingDeposits_OK(t *testing.T) {
 		t.Error("PendingDeposits(ctx, nil) did not return all deposits")
 	}
 }
+
+func TestPrunePendingDeposits_NilBlock(t *testing.T) {
+	db := BeaconDB{}
+
+	db.pendingDeposits = []*depositContainer{
+		{block: big.NewInt(2), deposit: &pb.Deposit{MerkleTreeIndex: 2}},
+		{block: big.NewInt(4), deposit: &pb.Deposit{MerkleTreeIndex: 4}},
+		{block: big.NewInt(6), deposit: &pb.Deposit{MerkleTreeIndex: 6}},
+		{block: big.NewInt(8), deposit: &pb.Deposit{MerkleTreeIndex: 8}},
+		{block: big.NewInt(10), deposit: &pb.Deposit{MerkleTreeIndex: 10}},
+		{block: big.NewInt(12), deposit: &pb.Deposit{MerkleTreeIndex: 12}},
+	}
+
+	db.PrunePendingDeposits(context.Background(), nil)
+	expected := []*depositContainer{
+		{block: big.NewInt(2), deposit: &pb.Deposit{MerkleTreeIndex: 2}},
+		{block: big.NewInt(4), deposit: &pb.Deposit{MerkleTreeIndex: 4}},
+		{block: big.NewInt(6), deposit: &pb.Deposit{MerkleTreeIndex: 6}},
+		{block: big.NewInt(8), deposit: &pb.Deposit{MerkleTreeIndex: 8}},
+		{block: big.NewInt(10), deposit: &pb.Deposit{MerkleTreeIndex: 10}},
+		{block: big.NewInt(12), deposit: &pb.Deposit{MerkleTreeIndex: 12}},
+	}
+
+	if !reflect.DeepEqual(db.pendingDeposits, expected) {
+		t.Errorf("Unexpected deposits. got=%+v want=%+v", db.pendingDeposits, expected)
+	}
+}
+
+func TestPrunePendingDeposits_OK(t *testing.T) {
+	db := BeaconDB{}
+
+	db.pendingDeposits = []*depositContainer{
+		{block: big.NewInt(2), deposit: &pb.Deposit{MerkleTreeIndex: 2}},
+		{block: big.NewInt(4), deposit: &pb.Deposit{MerkleTreeIndex: 4}},
+		{block: big.NewInt(6), deposit: &pb.Deposit{MerkleTreeIndex: 6}},
+		{block: big.NewInt(8), deposit: &pb.Deposit{MerkleTreeIndex: 8}},
+		{block: big.NewInt(10), deposit: &pb.Deposit{MerkleTreeIndex: 10}},
+		{block: big.NewInt(12), deposit: &pb.Deposit{MerkleTreeIndex: 12}},
+	}
+
+	db.PrunePendingDeposits(context.Background(), big.NewInt(6))
+	expected := []*depositContainer{
+		{block: big.NewInt(6), deposit: &pb.Deposit{MerkleTreeIndex: 6}},
+		{block: big.NewInt(8), deposit: &pb.Deposit{MerkleTreeIndex: 8}},
+		{block: big.NewInt(10), deposit: &pb.Deposit{MerkleTreeIndex: 10}},
+		{block: big.NewInt(12), deposit: &pb.Deposit{MerkleTreeIndex: 12}},
+	}
+
+	if !reflect.DeepEqual(db.pendingDeposits, expected) {
+		t.Errorf("Unexpected deposits. got=%+v want=%+v", db.pendingDeposits, expected)
+	}
+
+	db.pendingDeposits = []*depositContainer{
+		{block: big.NewInt(2), deposit: &pb.Deposit{MerkleTreeIndex: 2}},
+		{block: big.NewInt(4), deposit: &pb.Deposit{MerkleTreeIndex: 4}},
+		{block: big.NewInt(6), deposit: &pb.Deposit{MerkleTreeIndex: 6}},
+		{block: big.NewInt(8), deposit: &pb.Deposit{MerkleTreeIndex: 8}},
+		{block: big.NewInt(10), deposit: &pb.Deposit{MerkleTreeIndex: 10}},
+		{block: big.NewInt(12), deposit: &pb.Deposit{MerkleTreeIndex: 12}},
+	}
+
+	db.PrunePendingDeposits(context.Background(), big.NewInt(10))
+	expected = []*depositContainer{
+		{block: big.NewInt(10), deposit: &pb.Deposit{MerkleTreeIndex: 10}},
+		{block: big.NewInt(12), deposit: &pb.Deposit{MerkleTreeIndex: 12}},
+	}
+
+	if !reflect.DeepEqual(db.pendingDeposits, expected) {
+		t.Errorf("Unexpected deposits. got=%+v want=%+v", db.pendingDeposits, expected)
+	}
+
+}

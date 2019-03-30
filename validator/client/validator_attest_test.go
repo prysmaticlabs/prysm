@@ -62,7 +62,7 @@ func TestAttestToBlockHead_AttestationDataAtSlotFailure(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.CommitteeAssignmentsRequest{}),
 	).Return(&pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
-		&pb.CommitteeAssignmentResponse_CommitteeAssignment{
+		{
 			Shard: 5,
 		},
 	}}, nil)
@@ -90,7 +90,7 @@ func TestAttestToBlockHead_AttestHeadRequestFailure(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.CommitteeAssignmentsRequest{}),
 	).Return(&pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
-		&pb.CommitteeAssignmentResponse_CommitteeAssignment{
+		{
 			Shard:     5,
 			Committee: make([]uint64, 111),
 		}}}, nil)
@@ -130,7 +130,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.CommitteeAssignmentsRequest{}),
 	).Return(&pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
-		&pb.CommitteeAssignmentResponse_CommitteeAssignment{
+		{
 			Shard:     5,
 			Committee: committee,
 		}}}, nil)
@@ -204,8 +204,10 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 		gomock.AssignableToTypeOf(&pbp2p.Attestation{}),
 	).Return(&pb.AttestResponse{}, nil /* error */).Times(0)
 
-	delay = 5
+	delay = 3
+	timer := time.NewTimer(time.Duration(1 * time.Second))
 	go validator.AttestToBlockHead(context.Background(), 0)
+	<-timer.C
 }
 
 func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
@@ -223,7 +225,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&pb.CommitteeAssignmentsRequest{}),
 	).Return(&pb.CommitteeAssignmentResponse{Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
-		&pb.CommitteeAssignmentResponse_CommitteeAssignment{
+		{
 			Shard:     5,
 			Committee: committee,
 		}}}, nil).Do(func(arg0, arg1 interface{}) {

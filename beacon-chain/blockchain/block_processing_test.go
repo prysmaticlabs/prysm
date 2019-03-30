@@ -7,11 +7,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/attestation"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/testutil"
@@ -126,7 +128,10 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	chainService := setupBeaconChain(t, false, db, true, nil)
+	attsService := attestation.NewAttestationService(
+		context.Background(),
+		&attestation.Config{BeaconDB: db})
+	chainService := setupBeaconChain(t, false, db, true, attsService)
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	eth1Data := &pb.Eth1Data{
 		DepositRootHash32: []byte{},
@@ -135,6 +140,9 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
 	if err != nil {
 		t.Fatalf("Can't generate genesis state: %v", err)
+	}
+	if err := chainService.beaconDB.SaveJustifiedState(beaconState); err != nil {
+		t.Fatal(err)
 	}
 	stateRoot, err := hashutil.HashProto(beaconState)
 	if err != nil {
@@ -184,12 +192,19 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 			Deposits: pendingDeposits,
 		},
 	}
+
+	blockRoot, err := hashutil.HashBeaconBlock(block)
+	if err != nil {
+		log.Fatalf("could not hash block: %v", err)
+	}
+
 	if err := chainService.beaconDB.SaveJustifiedBlock(block); err != nil {
 		t.Fatal(err)
 	}
 	if err := chainService.beaconDB.SaveFinalizedBlock(block); err != nil {
 		t.Fatal(err)
 	}
+
 	for _, dep := range pendingDeposits {
 		db.InsertPendingDeposit(chainService.ctx, dep, big.NewInt(0))
 	}
@@ -205,6 +220,14 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	computedState, err := chainService.ReceiveBlock(context.Background(), block)
 	if err != nil {
 		t.Fatal(err)
+	}
+	for i := 0; i < len(beaconState.ValidatorRegistry); i++ {
+		pubKey := bytesutil.ToBytes48(beaconState.ValidatorRegistry[i].Pubkey)
+		attsService.InsertAttestationIntoStore(pubKey, &pb.Attestation{
+			Data: &pb.AttestationData{
+				BeaconBlockRootHash32: blockRoot[:],
+			}},
+		)
 	}
 	if err := chainService.ApplyForkChoiceRule(context.Background(), block, computedState); err != nil {
 		t.Fatal(err)
@@ -296,8 +319,8 @@ func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	epoch := uint64(2)
-	v.ActivatedValidators[epoch] = []uint64{0, 1, 2}
-	v.ExitedValidators[epoch] = []uint64{0, 2}
+	v.InsertActivatedVal(epoch, []uint64{0, 1, 2})
+	v.InsertExitedVal(epoch, []uint64{0, 2})
 	var validators []*pb.Validator
 	for i := 0; i < 3; i++ {
 		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
@@ -330,8 +353,7 @@ func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
 	if chainService.beaconDB.HasValidator(validators[wantedIdx].Pubkey) {
 		t.Errorf("Validator index %d should have been deleted", wantedIdx)
 	}
-
-	if _, ok := v.ExitedValidators[epoch]; ok {
+	if v.ExitedValFromEpoch(epoch) != nil {
 		t.Errorf("Activated validators mapping for epoch %d still there", epoch)
 	}
 }
@@ -340,7 +362,7 @@ func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	epoch := uint64(1)
-	v.ActivatedValidators[epoch] = []uint64{0, 1, 2}
+	v.InsertActivatedVal(epoch, []uint64{0, 1, 2})
 	var validators []*pb.Validator
 	for i := 0; i < 3; i++ {
 		pubKeyBuf := make([]byte, params.BeaconConfig().BLSPubkeyLength)
@@ -367,7 +389,7 @@ func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
 		t.Errorf("Wanted: %d, got: %d", wantedIdx, idx)
 	}
 
-	if _, ok := v.ActivatedValidators[epoch]; ok {
+	if v.ActivatedValFromEpoch(epoch) != nil {
 		t.Errorf("Activated validators mapping for epoch %d still there", epoch)
 	}
 }

@@ -10,6 +10,7 @@ import (
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
@@ -59,8 +60,13 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 	if err != nil {
 		return nil, fmt.Errorf("could not process beacon block: %v", err)
 	}
-	if err := ps.chainService.ApplyForkChoiceRule(ctx, blk, beaconState); err != nil {
-		return nil, fmt.Errorf("could not apply fork choice rule: %v", err)
+	if err := ps.beaconDB.UpdateChainHead(blk, beaconState); err != nil {
+		return nil, fmt.Errorf("failed to update chain: %v", err)
+	}
+	log.WithField("headRoot", fmt.Sprintf("0x%x", h)).Info("Chain head block and state updated")
+
+	if err := ps.chainService.SaveHistoricalState(beaconState); err != nil {
+		log.Errorf("Could not save new historical state: %v", err)
 	}
 	return &pb.ProposeResponse{BlockRootHash32: h[:]}, nil
 }
@@ -144,6 +150,11 @@ func (ps *ProposerServer) PendingAttestations(ctx context.Context, req *pb.Pendi
 // ComputeStateRoot computes the state root after a block has been processed through a state transition and
 // returns it to the validator client.
 func (ps *ProposerServer) ComputeStateRoot(ctx context.Context, req *pbp2p.BeaconBlock) (*pb.StateRootResponse, error) {
+	if !featureconfig.FeatureConfig().EnableComputeStateRoot {
+		log.Debug("Compute state root disabled, returning no-op result")
+		return &pb.StateRootResponse{StateRoot: []byte("no-op")}, nil
+	}
+
 	beaconState, err := ps.beaconDB.State(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get beacon state: %v", err)

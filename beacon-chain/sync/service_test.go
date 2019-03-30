@@ -72,7 +72,9 @@ func setupTestSyncService(t *testing.T, synced bool) (*Service, *db.BeaconDB) {
 	}
 
 	cfg := &Config{
-		ChainService:     &mockChainService{},
+		ChainService: &mockChainService{
+			db: db,
+		},
 		P2P:              &mockP2P{},
 		BeaconDB:         db,
 		OperationService: &mockOperationService{},

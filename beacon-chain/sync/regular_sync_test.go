@@ -48,6 +48,7 @@ type mockChainService struct {
 	bFeed *event.Feed
 	sFeed *event.Feed
 	cFeed *event.Feed
+	db    *db.BeaconDB
 }
 
 func (ms *mockChainService) StateInitializedFeed() *event.Feed {
@@ -65,6 +66,9 @@ func (ms *mockChainService) CanonicalBlockFeed() *event.Feed {
 }
 
 func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+	if err := ms.db.SaveBlock(block); err != nil {
+		return nil, err
+	}
 	return &pb.BeaconState{}, nil
 }
 
@@ -83,6 +87,12 @@ func (ms *mockOperationService) IncomingAttFeed() *event.Feed {
 }
 
 func (ms *mockOperationService) IncomingExitFeed() *event.Feed {
+	return new(event.Feed)
+}
+
+type mockAttestationService struct{}
+
+func (ma *mockAttestationService) IncomingAttestationFeed() *event.Feed {
 	return new(event.Feed)
 }
 
@@ -113,13 +123,6 @@ func TestProcessBlockRoot_OK(t *testing.T) {
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
-	exitRoutine := make(chan bool)
-
-	go func() {
-		ss.run()
-		exitRoutine <- true
-	}()
-
 	announceHash := hashutil.Hash([]byte{})
 	hashAnnounce := &pb.BeaconBlockAnnounce{
 		Hash: announceHash[:],
@@ -132,11 +135,9 @@ func TestProcessBlockRoot_OK(t *testing.T) {
 	}
 
 	// if a new hash is processed
-	ss.announceBlockBuf <- msg
-
-	ss.cancel()
-	<-exitRoutine
-
+	if err := ss.receiveBlockAnnounce(msg); err != nil {
+		t.Error(err)
+	}
 	testutil.AssertLogsContain(t, hook, "requesting full block data from sender")
 	hook.Reset()
 }
@@ -161,18 +162,14 @@ func TestProcessBlock_OK(t *testing.T) {
 	cfg := &RegularSyncConfig{
 		BlockAnnounceBufferSize: 0,
 		BlockBufferSize:         0,
-		ChainService:            &mockChainService{},
-		P2P:                     &mockP2P{},
-		BeaconDB:                db,
-		OperationService:        &mockOperationService{},
+		ChainService: &mockChainService{
+			db: db,
+		},
+		P2P:              &mockP2P{},
+		BeaconDB:         db,
+		OperationService: &mockOperationService{},
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
-
-	exitRoutine := make(chan bool)
-	go func() {
-		ss.run()
-		exitRoutine <- true
-	}()
 
 	parentBlock := &pb.BeaconBlock{
 		Slot: params.BeaconConfig().GenesisSlot,
@@ -212,10 +209,9 @@ func TestProcessBlock_OK(t *testing.T) {
 		Data: responseBlock,
 	}
 
-	ss.blockBuf <- msg
-	ss.cancel()
-	<-exitRoutine
-
+	if err := ss.receiveBlock(msg); err != nil {
+		t.Error(err)
+	}
 	testutil.AssertLogsContain(t, hook, "Sending newly received block to chain service")
 	hook.Reset()
 }
@@ -241,19 +237,14 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 	cfg := &RegularSyncConfig{
 		BlockAnnounceBufferSize: 0,
 		BlockBufferSize:         0,
-		ChainService:            &mockChainService{},
-		P2P:                     &mockP2P{},
-		BeaconDB:                db,
-		OperationService:        &mockOperationService{},
+		ChainService: &mockChainService{
+			db: db,
+		},
+		P2P:              &mockP2P{},
+		BeaconDB:         db,
+		OperationService: &mockOperationService{},
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
-
-	exitRoutine := make(chan bool)
-
-	go func() {
-		ss.run()
-		exitRoutine <- true
-	}()
 
 	parentBlock := &pb.BeaconBlock{
 		Slot: params.BeaconConfig().GenesisSlot,
@@ -316,116 +307,14 @@ func TestProcessBlock_MultipleBlocksProcessedOK(t *testing.T) {
 		Data: responseBlock2,
 	}
 
-	ss.blockBuf <- msg1
-	ss.blockBuf <- msg2
-	ss.cancel()
-	<-exitRoutine
+	if err := ss.receiveBlock(msg1); err != nil {
+		t.Error(err)
+	}
+	if err := ss.receiveBlock(msg2); err != nil {
+		t.Error(err)
+	}
 	testutil.AssertLogsContain(t, hook, "Sending newly received block to chain service")
 	testutil.AssertLogsContain(t, hook, "Sending newly received block to chain service")
-	hook.Reset()
-}
-
-func TestProcessBlock_MissingParentBlockRequestedOK(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-
-	validators := make([]*pb.Validator, 10)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
-			Pubkey: []byte(strconv.Itoa(i)),
-		}
-	}
-	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t, 10)
-	if err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{}); err != nil {
-		t.Fatal(err)
-	}
-
-	cfg := &RegularSyncConfig{
-		BlockAnnounceBufferSize: 0,
-		BlockBufferSize:         0,
-		ChainService:            &mockChainService{},
-		P2P:                     &mockP2P{},
-		BeaconDB:                db,
-		OperationService:        &mockOperationService{},
-	}
-	ss := NewRegularSyncService(context.Background(), cfg)
-
-	genesisBlock := &pb.BeaconBlock{
-		Slot: params.BeaconConfig().GenesisSlot,
-	}
-	if err := db.SaveBlock(genesisBlock); err != nil {
-		t.Fatalf("failed to save block: %v", err)
-	}
-	genesisRoot, err := hashutil.HashBeaconBlock(genesisBlock)
-	if err != nil {
-		t.Fatalf("failed to get parent root: %v", err)
-	}
-
-	block1 := &pb.BeaconBlock{
-		Eth1Data: &pb.Eth1Data{
-			DepositRootHash32: []byte{1, 2, 3, 4, 5},
-			BlockHash32:       []byte{6, 7, 8, 9, 10},
-		},
-		ParentRootHash32: genesisRoot[:],
-		Slot:             params.BeaconConfig().GenesisSlot + 1,
-	}
-
-	block2 := &pb.BeaconBlock{
-		ParentRootHash32: genesisRoot[:],
-		Slot:             params.BeaconConfig().GenesisSlot + 1,
-	}
-
-	block2Root, err := hashutil.HashBeaconBlock(block2)
-	if err != nil {
-		t.Fatalf("Could not hash beacon block: %v", err)
-	}
-
-	block3 := &pb.BeaconBlock{
-		ParentRootHash32: block2Root[:],
-		Slot:             params.BeaconConfig().GenesisSlot + 2,
-	}
-
-	msg1 := p2p.Message{
-		Ctx:  context.Background(),
-		Peer: "",
-		Data: &pb.BeaconBlockResponse{
-			Block: block1,
-		},
-	}
-
-	msg2 := p2p.Message{
-		Ctx:  context.Background(),
-		Peer: "",
-		Data: &pb.BeaconBlockResponse{
-			Block: block2,
-		},
-	}
-
-	msg3 := p2p.Message{
-		Ctx:  context.Background(),
-		Peer: "",
-		Data: &pb.BeaconBlockResponse{
-			Block: block3,
-		},
-	}
-
-	ss.receiveBlock(msg1)
-	// We send the message with the missing parent root next.
-	ss.receiveBlock(msg3)
-	// We verify that the block in the message above was not processed, but instead put into
-	// a cache which will be cleared until the parent block is received.
-	parentRoot := bytesutil.ToBytes32(block3.ParentRootHash32)
-	if _, ok := ss.blocksAwaitingProcessing[parentRoot]; !ok {
-		t.Errorf("Expected block with missing parent to have been placed in processing cache: %#x", parentRoot)
-	}
-	// Finally, we respond with the parent block that was missing.
-	ss.receiveBlock(msg2)
-	testutil.AssertLogsContain(t, hook, "Sending newly received block to chain service")
-	testutil.AssertLogsContain(t, hook, "Received missing block parent")
-	testutil.AssertLogsContain(t, hook, "Sent missing block parent and child to chain service for processing")
 	hook.Reset()
 }
 
@@ -435,13 +324,6 @@ func TestBlockRequest_InvalidMsg(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	ss := setupService(t, db)
-
-	exitRoutine := make(chan bool)
-
-	go func() {
-		ss.run()
-		<-exitRoutine
-	}()
 
 	malformedRequest := &pb.BeaconBlockAnnounce{
 		Hash: []byte{'t', 'e', 's', 't'},
@@ -453,9 +335,9 @@ func TestBlockRequest_InvalidMsg(t *testing.T) {
 		Peer: "",
 	}
 
-	ss.blockRequestBySlot <- invalidmsg
-	ss.cancel()
-	exitRoutine <- true
+	if err := ss.handleBlockRequestBySlot(invalidmsg); err == nil {
+		t.Error("Expected error, received nil")
+	}
 	testutil.AssertLogsContain(t, hook, "Received malformed beacon block request p2p message")
 }
 
@@ -466,13 +348,6 @@ func TestBlockRequest_OK(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	ss := setupService(t, db)
 
-	exitRoutine := make(chan bool)
-
-	go func() {
-		ss.run()
-		<-exitRoutine
-	}()
-
 	request1 := &pb.BeaconBlockRequestBySlotNumber{
 		SlotNumber: 20,
 	}
@@ -482,12 +357,15 @@ func TestBlockRequest_OK(t *testing.T) {
 		Data: request1,
 		Peer: "",
 	}
+	if err := db.SaveBlock(&pb.BeaconBlock{Slot: 20}); err != nil {
+		t.Fatal(err)
+	}
 
-	ss.blockRequestBySlot <- msg1
-	ss.cancel()
-	exitRoutine <- true
+	if err := ss.handleBlockRequestBySlot(msg1); err != nil {
+		t.Error(err)
+	}
 
-	testutil.AssertLogsDoNotContain(t, hook, "Sending requested block to peer")
+	testutil.AssertLogsContain(t, hook, "Sending requested block to peer")
 }
 
 func TestReceiveAttestation_OK(t *testing.T) {
@@ -504,17 +382,12 @@ func TestReceiveAttestation_OK(t *testing.T) {
 	}
 	cfg := &RegularSyncConfig{
 		ChainService:     ms,
+		AttsService:      &mockAttestationService{},
 		OperationService: os,
 		P2P:              &mockP2P{},
 		BeaconDB:         db,
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
-
-	exitRoutine := make(chan bool)
-	go func() {
-		ss.run()
-		exitRoutine <- true
-	}()
 
 	request1 := &pb.AttestationResponse{
 		Attestation: &pb.Attestation{
@@ -530,9 +403,9 @@ func TestReceiveAttestation_OK(t *testing.T) {
 		Peer: "",
 	}
 
-	ss.attestationBuf <- msg1
-	ss.cancel()
-	<-exitRoutine
+	if err := ss.receiveAttestation(msg1); err != nil {
+		t.Error(err)
+	}
 	testutil.AssertLogsContain(t, hook, "Sending newly received attestation to subscribers")
 }
 
@@ -555,12 +428,6 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
-	exitRoutine := make(chan bool)
-	go func() {
-		ss.run()
-		exitRoutine <- true
-	}()
-
 	request1 := &pb.AttestationResponse{
 		Attestation: &pb.Attestation{
 			Data: &pb.AttestationData{
@@ -575,9 +442,9 @@ func TestReceiveAttestation_OlderThanPrevEpoch(t *testing.T) {
 		Peer: "",
 	}
 
-	ss.attestationBuf <- msg1
-	ss.cancel()
-	<-exitRoutine
+	if err := ss.receiveAttestation(msg1); err != nil {
+		t.Error(err)
+	}
 	want := fmt.Sprintf(
 		"Skipping received attestation with slot smaller than one epoch ago, %d < %d",
 		request1.Attestation.Data.Slot, params.BeaconConfig().GenesisSlot+params.BeaconConfig().SlotsPerEpoch)
@@ -598,12 +465,6 @@ func TestReceiveExitReq_OK(t *testing.T) {
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
-	exitRoutine := make(chan bool)
-	go func() {
-		ss.run()
-		exitRoutine <- true
-	}()
-
 	request1 := &pb.VoluntaryExit{
 		Epoch: 100,
 	}
@@ -613,10 +474,9 @@ func TestReceiveExitReq_OK(t *testing.T) {
 		Data: request1,
 		Peer: "",
 	}
-
-	ss.exitBuf <- msg1
-	ss.cancel()
-	<-exitRoutine
+	if err := ss.receiveExitRequest(msg1); err != nil {
+		t.Error(err)
+	}
 	testutil.AssertLogsContain(t, hook, "Forwarding validator exit request to subscribed services")
 }
 
@@ -634,12 +494,6 @@ func TestHandleAttReq_HashNotFound(t *testing.T) {
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
-	exitRoutine := make(chan bool)
-	go func() {
-		ss.run()
-		exitRoutine <- true
-	}()
-
 	req := &pb.AttestationRequest{
 		Hash: []byte{'A'},
 	}
@@ -649,9 +503,9 @@ func TestHandleAttReq_HashNotFound(t *testing.T) {
 		Peer: "",
 	}
 
-	ss.attestationReqByHashBuf <- msg
-	ss.cancel()
-	<-exitRoutine
+	if err := ss.handleAttestationRequestByHash(msg); err != nil {
+		t.Error(err)
+	}
 	want := fmt.Sprintf("Attestation %#x is not in db", bytesutil.ToBytes32(req.Hash))
 	testutil.AssertLogsContain(t, hook, want)
 }
@@ -677,10 +531,12 @@ func TestHandleAnnounceAttestation_requestsAttestationData(t *testing.T) {
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
-	ss.handleAttestationAnnouncement(p2p.Message{
+	if err := ss.handleAttestationAnnouncement(p2p.Message{
 		Ctx:  context.Background(),
 		Data: &pb.AttestationAnnounce{Hash: hash[:]},
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 
 	if sender.sentMsg == nil {
 		t.Fatal("send was not called")
@@ -720,10 +576,12 @@ func TestHandleAnnounceAttestation_doNothingIfAlreadySeen(t *testing.T) {
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
-	ss.handleAttestationAnnouncement(p2p.Message{
+	if err := ss.handleAttestationAnnouncement(p2p.Message{
 		Ctx:  context.Background(),
 		Data: &pb.AttestationAnnounce{Hash: hash[:]},
-	})
+	}); err != nil {
+		t.Error(err)
+	}
 
 	if sender.sentMsg != nil {
 		t.Error("send was called, but it should not have been called")
@@ -756,12 +614,6 @@ func TestHandleAttReq_Ok(t *testing.T) {
 	}
 	ss := NewRegularSyncService(context.Background(), cfg)
 
-	exitRoutine := make(chan bool)
-	go func() {
-		ss.run()
-		exitRoutine <- true
-	}()
-
 	req := &pb.AttestationRequest{
 		Hash: attRoot[:],
 	}
@@ -771,9 +623,9 @@ func TestHandleAttReq_Ok(t *testing.T) {
 		Peer: "",
 	}
 
-	ss.attestationReqByHashBuf <- msg
-	ss.cancel()
-	<-exitRoutine
+	if err := ss.handleAttestationRequestByHash(msg); err != nil {
+		t.Error(err)
+	}
 	want := fmt.Sprintf("Sending attestation %#x to peer", attRoot)
 	testutil.AssertLogsContain(t, hook, want)
 }
@@ -792,13 +644,6 @@ func TestHandleStateReq_NOState(t *testing.T) {
 		t.Fatalf("Failed to initialize state: %v", err)
 	}
 
-	exitRoutine := make(chan bool)
-
-	go func() {
-		ss.run()
-		<-exitRoutine
-	}()
-
 	request1 := &pb.BeaconStateRequest{
 		FinalizedStateRootHash32S: []byte{'a'},
 	}
@@ -809,10 +654,9 @@ func TestHandleStateReq_NOState(t *testing.T) {
 		Peer: "",
 	}
 
-	ss.stateRequestBuf <- msg1
-
-	ss.cancel()
-	exitRoutine <- true
+	if err := ss.handleStateRequest(msg1); err != nil {
+		t.Error(err)
+	}
 
 	testutil.AssertLogsContain(t, hook, "Requested state root is different from locally stored state root")
 
@@ -839,12 +683,6 @@ func TestHandleStateReq_OK(t *testing.T) {
 	}
 
 	ss := setupService(t, db)
-	exitRoutine := make(chan bool)
-
-	go func() {
-		ss.run()
-		<-exitRoutine
-	}()
 
 	request1 := &pb.BeaconStateRequest{
 		FinalizedStateRootHash32S: stateRoot[:],
@@ -856,10 +694,8 @@ func TestHandleStateReq_OK(t *testing.T) {
 		Peer: "",
 	}
 
-	ss.stateRequestBuf <- msg1
-
-	ss.cancel()
-	exitRoutine <- true
-
+	if err := ss.handleStateRequest(msg1); err != nil {
+		t.Error(err)
+	}
 	testutil.AssertLogsContain(t, hook, "Sending beacon state to peer")
 }

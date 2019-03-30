@@ -12,8 +12,15 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
+
+func init() {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableComputeStateRoot: true,
+	})
+}
 
 func TestProposeBlock_OK(t *testing.T) {
 	db := internal.SetupDB(t)
@@ -59,6 +66,9 @@ func TestProposeBlock_OK(t *testing.T) {
 	req := &pbp2p.BeaconBlock{
 		Slot:             5,
 		ParentRootHash32: []byte("parent-hash"),
+	}
+	if err := proposerServer.beaconDB.SaveBlock(req); err != nil {
+		t.Fatal(err)
 	}
 	if _, err := proposerServer.ProposeBlock(context.Background(), req); err != nil {
 		t.Errorf("Could not propose block correctly: %v", err)
