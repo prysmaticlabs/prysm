@@ -3,6 +3,8 @@ package initialsync
 import (
 	"context"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
+	"math/big"
 	"testing"
 	"time"
 
@@ -51,6 +53,12 @@ func (ms *mockSyncService) ResumeSync() {
 
 }
 
+type mockPowchain struct{}
+
+func (mp *mockPowchain)	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
+	return true, nil, nil
+}
+
 func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
 	ctx := context.Background()
 	genesisTime := time.Now()
@@ -86,6 +94,7 @@ func TestSavingBlock_InSync(t *testing.T) {
 		P2P:         &mockP2P{},
 		SyncService: &mockSyncService{},
 		BeaconDB:    db,
+		PowChain: &mockPowchain{},
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 
@@ -106,10 +115,19 @@ func TestSavingBlock_InSync(t *testing.T) {
 	genericHash[0] = 'a'
 
 	fState := &pb.BeaconState{
-		FinalizedEpoch: params.BeaconConfig().GenesisSlot + 1,
+		FinalizedEpoch: params.BeaconConfig().GenesisEpoch + 1,
+		LatestBlock: &pb.BeaconBlock{
+			Slot: params.BeaconConfig().GenesisSlot+params.BeaconConfig().SlotsPerEpoch,
+		},
+		LatestEth1Data: &pb.Eth1Data{
+			BlockHash32: []byte{},
+		},
 	}
 	jState := &pb.BeaconState{
-		JustifiedEpoch: params.BeaconConfig().GenesisSlot + 2,
+		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 2,
+		LatestBlock: &pb.BeaconBlock{
+			Slot: params.BeaconConfig().GenesisSlot+2*params.BeaconConfig().SlotsPerEpoch,
+		},
 	}
 
 	stateResponse := &pb.BeaconStateResponse{
@@ -119,8 +137,14 @@ func TestSavingBlock_InSync(t *testing.T) {
 	}
 
 	incorrectState := &pb.BeaconState{
-		FinalizedEpoch: params.BeaconConfig().GenesisSlot,
-		JustifiedEpoch: params.BeaconConfig().GenesisSlot + 1,
+		FinalizedEpoch: params.BeaconConfig().GenesisEpoch,
+		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 1,
+		LatestBlock: &pb.BeaconBlock{
+			Slot: params.BeaconConfig().GenesisSlot+4*params.BeaconConfig().SlotsPerEpoch,
+		},
+		LatestEth1Data: &pb.Eth1Data{
+			BlockHash32: []byte{},
+		},
 	}
 
 	incorrectStateResponse := &pb.BeaconStateResponse{
@@ -314,6 +338,7 @@ func TestDelayChan_OK(t *testing.T) {
 		P2P:         &mockP2P{},
 		SyncService: &mockSyncService{},
 		BeaconDB:    db,
+		PowChain: &mockPowchain{},
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 
@@ -335,15 +360,28 @@ func TestDelayChan_OK(t *testing.T) {
 
 	fState := &pb.BeaconState{
 		FinalizedEpoch: params.BeaconConfig().GenesisEpoch + 1,
+		LatestBlock: &pb.BeaconBlock{
+			Slot: params.BeaconConfig().GenesisSlot+params.BeaconConfig().SlotsPerEpoch,
+		},
+		LatestEth1Data: &pb.Eth1Data{
+			BlockHash32: []byte{},
+		},
 	}
 	jState := &pb.BeaconState{
 		FinalizedEpoch: params.BeaconConfig().GenesisEpoch + 1,
 		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 2,
+		LatestBlock: &pb.BeaconBlock{
+			Slot: params.BeaconConfig().GenesisSlot+2*params.BeaconConfig().SlotsPerEpoch,
+		},
+		LatestEth1Data: &pb.Eth1Data{
+			BlockHash32: []byte{},
+		},
 	}
 
 	stateResponse := &pb.BeaconStateResponse{
 		FinalizedState: fState,
 		JustifiedState: jState,
+		CanonicalState: jState,
 	}
 
 	stateRoot, err := hashutil.HashProto(fState)
