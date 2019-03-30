@@ -67,9 +67,6 @@ func newServer(
 }
 
 func (s *server) makeDeposit(data []byte) error {
-	s.clientLock.Lock()
-	defer s.clientLock.Unlock()
-
 	txOps := bind.NewKeyedTransactor(s.txPk)
 	txOps.Value = s.depositAmount
 	txOps.GasLimit = gasLimit
@@ -83,6 +80,9 @@ func (s *server) makeDeposit(data []byte) error {
 }
 
 func (s *server) Request(ctx context.Context, req *pb.PrivateKeyRequest) (*pb.PrivateKeyResponse, error) {
+	s.clientLock.Lock()
+	defer s.clientLock.Unlock()
+
 	if req.NumberOfKeys == 0 {
 		req.NumberOfKeys = 1
 	}
@@ -105,8 +105,6 @@ func (s *server) Request(ctx context.Context, req *pb.PrivateKeyRequest) (*pb.Pr
 		}, nil
 	}
 
-	// TODO: add a lock here on the unallocated PK request. There may be some
-	// delay between reading the unallocated PKs and assigning them to the pod.
 	pks, err = s.db.UnallocatedPKs(ctx, req.NumberOfKeys)
 	if err != nil {
 		return nil, err
