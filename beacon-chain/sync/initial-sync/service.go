@@ -281,7 +281,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 		close(s.stateBuf)
 	}()
 
-	if err := s.requestStateFromPeer(s.ctx, p2p.AnyPeer); err != nil {
+	if err := s.requestStateFromPeer(s.ctx); err != nil {
 		log.Errorf("Could not request state from peer %v", err)
 	}
 
