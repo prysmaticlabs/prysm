@@ -88,7 +88,6 @@ func TestSavingBlock_InSync(t *testing.T) {
 		BeaconDB:    db,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
-	ss.reqState = false
 
 	exitRoutine := make(chan bool)
 	delayChan := make(chan time.Time)
@@ -218,7 +217,6 @@ func TestProcessingBatchedBlocks_OK(t *testing.T) {
 		BeaconDB:    db,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
-	ss.reqState = false
 
 	batchSize := 20
 	batchedBlocks := make([]*pb.BeaconBlock, batchSize)
@@ -259,7 +257,6 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 		BeaconDB:    db,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
-	ss.reqState = false
 
 	batchSize := 20
 	expectedSlot := params.BeaconConfig().GenesisSlot + uint64(batchSize)
@@ -319,7 +316,6 @@ func TestDelayChan_OK(t *testing.T) {
 		BeaconDB:    db,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
-	ss.reqState = false
 
 	exitRoutine := make(chan bool)
 	delayChan := make(chan time.Time)
@@ -423,8 +419,6 @@ func TestRequestBlocksBySlot_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not save beacon state %v", err)
 	}
-
-	ss.reqState = false
 
 	exitRoutine := make(chan bool)
 	delayChan := make(chan time.Time)

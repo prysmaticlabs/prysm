@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"io/ioutil"
 	"strconv"
 	"testing"
@@ -65,7 +66,9 @@ func (ms *mockChainService) CanonicalBlockFeed() *event.Feed {
 	return ms.cFeed
 }
 
-func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+func (ms *mockChainService) ReceiveBlock(
+	ctx context.Context, block *pb.BeaconBlock, cfg *blockchain.ReceiveBlockConfig,
+) (*pb.BeaconState, error) {
 	if err := ms.db.SaveBlock(block); err != nil {
 		return nil, err
 	}

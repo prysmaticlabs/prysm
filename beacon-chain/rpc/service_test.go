@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"io/ioutil"
 	"testing"
 
@@ -83,7 +84,9 @@ func (m *mockChainService) StateInitializedFeed() *event.Feed {
 	return m.stateInitializedFeed
 }
 
-func (m *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+func (m *mockChainService) ReceiveBlock(
+	ctx context.Context, block *pb.BeaconBlock, cfg *blockchain.ReceiveBlockConfig,
+) (*pb.BeaconState, error) {
 	return &pb.BeaconState{}, nil
 }
 
