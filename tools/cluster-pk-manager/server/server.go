@@ -100,20 +100,17 @@ func (s *server) Request(ctx context.Context, req *pb.PrivateKeyRequest) (*pb.Pr
 	if pks != nil && len(pks.PrivateKeys) > 0 {
 		log.WithField("pod", req.PodName).Debug("Returning existing assignment(s)")
 		return &pb.PrivateKeyResponse{
-			PrivateKey:  pks.PrivateKeys[0],
 			PrivateKeys: pks,
 		}, nil
 	}
 
-	if len(pks.PrivateKeys) < req.NumberOfKeys {
-		unallocated, err = s.db.UnallocatedPKs(ctx, req.NumberOfKeys-len(pks.PrivateKeys))
-		if err != nil {
-			return nil, err
-		}
-		log.WithField("pod", req.PodName).Debug("Recycling existing private key")
-
-		pks.PrivateKeys = append(pks.PrivateKeys, unallocated.PrivateKeys)
+	unallocated, err := s.db.UnallocatedPKs(ctx, req.NumberOfKeys)
+	if err != nil {
+		return nil, err
 	}
+	log.WithField("pod", req.PodName).Debug("Recycling existing private key")
+
+	pks.PrivateKeys = append(pks.PrivateKeys, unallocated.PrivateKeys...)
 
 	if len(pks.PrivateKeys) > 0 {
 		if err := s.db.AssignExistingPK(ctx, pks.PrivateKeys[0], req.PodName); err != nil {
