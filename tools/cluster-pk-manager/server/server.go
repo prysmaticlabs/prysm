@@ -113,11 +113,10 @@ func (s *server) Request(ctx context.Context, req *pb.PrivateKeyRequest) (*pb.Pr
 	pks.PrivateKeys = append(pks.PrivateKeys, unallocated.PrivateKeys...)
 
 	if len(pks.PrivateKeys) > 0 {
-		if err := s.db.AssignExistingPK(ctx, pks.PrivateKeys[0], req.PodName); err != nil {
+		if err := s.db.AssignExistingPKs(ctx, pks, req.PodName); err != nil {
 			return nil, err
 		}
 		return &pb.PrivateKeyResponse{
-			PrivateKey:  pks.PrivateKeys[0],
 			PrivateKeys: pks,
 		}, nil
 	}
