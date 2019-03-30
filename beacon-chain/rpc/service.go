@@ -4,10 +4,11 @@ package rpc
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"math/big"
 	"net"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"

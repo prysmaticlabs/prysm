@@ -85,16 +85,6 @@ func setupSimBackendAndDB(t *testing.T) (*backend.SimulatedBackend, *db.BeaconDB
 		t.Fatalf("Could not setup beacon db %v", err)
 	}
 
-	if err := beacondb.SaveState(bd.State()); err != nil {
-		t.Fatalf("Could not save state %v", err)
-	}
-	if err := beacondb.SaveJustifiedState(bd.State()); err != nil {
-		t.Fatalf("Could not save state %v", err)
-	}
-	if err := beacondb.SaveFinalizedState(bd.State()); err != nil {
-		t.Fatalf("Could not save state %v", err)
-	}
-
 	memBlocks := bd.InMemoryBlocks()
 	if err := beacondb.SaveBlock(memBlocks[0]); err != nil {
 		t.Fatalf("Could not save block %v", err)
@@ -106,7 +96,23 @@ func setupSimBackendAndDB(t *testing.T) (*backend.SimulatedBackend, *db.BeaconDB
 		t.Fatalf("Could not save block %v", err)
 	}
 
-	if err := beacondb.UpdateChainHead(memBlocks[0], bd.State()); err != nil {
+	state := bd.State()
+	state.LatestBlock = memBlocks[0]
+	state.LatestEth1Data = &pb.Eth1Data{
+		BlockHash32: []byte{},
+	}
+
+	if err := beacondb.SaveState(state); err != nil {
+		t.Fatalf("Could not save state %v", err)
+	}
+	if err := beacondb.SaveJustifiedState(state); err != nil {
+		t.Fatalf("Could not save state %v", err)
+	}
+	if err := beacondb.SaveFinalizedState(state); err != nil {
+		t.Fatalf("Could not save state %v", err)
+	}
+
+	if err := beacondb.UpdateChainHead(memBlocks[0], state); err != nil {
 		t.Fatalf("Could not update chain head %v", err)
 	}
 
@@ -205,9 +211,8 @@ func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T
 
 	for ss.Querier.currentHeadSlot == 0 {
 		simP2P.Send(simP2P.ctx, &pb.ChainHeadResponse{
-			Slot:                      params.BeaconConfig().GenesisSlot + 12,
-			Hash:                      []byte{'t', 'e', 's', 't'},
-			FinalizedStateRootHash32S: stateRoot[:],
+			Slot: params.BeaconConfig().GenesisSlot + 12,
+			Hash: []byte{'t', 'e', 's', 't'},
 		}, "")
 	}
 

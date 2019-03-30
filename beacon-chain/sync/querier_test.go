@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"math/big"
 	"testing"
 	"time"
@@ -139,20 +140,14 @@ func TestQuerier_ChainReqResponse(t *testing.T) {
 	sq := NewQuerierService(context.Background(), cfg)
 
 	exitRoutine := make(chan bool)
-
-	defer func() {
-		close(exitRoutine)
-	}()
-
 	go func() {
 		sq.run()
 		exitRoutine <- true
 	}()
 
 	response := &pb.ChainHeadResponse{
-		Slot:                      0,
-		Hash:                      []byte{'a', 'b'},
-		FinalizedStateRootHash32S: []byte{'c', 'd'},
+		Slot: 0,
+		Hash: []byte{'a', 'b'},
 	}
 
 	msg := p2p.Message{
@@ -161,12 +156,13 @@ func TestQuerier_ChainReqResponse(t *testing.T) {
 
 	sq.responseBuf <- msg
 
-	expMsg := fmt.Sprintf("Latest chain head is at slot: %d and hash %#x", response.Slot, response.Hash)
+	expMsg := fmt.Sprintf(
+		"Latest chain head is at slot: %d and hash %#x",
+		response.Slot-params.BeaconConfig().GenesisSlot, response.Hash,
+	)
 
-	testutil.WaitForLog(t, hook, expMsg)
-
-	sq.cancel()
 	<-exitRoutine
-
+	testutil.AssertLogsContain(t, hook, expMsg)
+	close(exitRoutine)
 	hook.Reset()
 }

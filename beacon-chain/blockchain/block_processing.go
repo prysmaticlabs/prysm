@@ -26,15 +26,15 @@ type BlockProcessor interface {
 }
 
 type ReceiveBlockConfig struct {
-	EnableLogging bool
-	EnableP2P bool
+	EnableLogging           bool
+	EnableP2P               bool
 	EnableOperationsCleanup bool
 }
 
 func DefaultReceiveBlockConfig() *ReceiveBlockConfig {
 	return &ReceiveBlockConfig{
-		EnableLogging: true,
-		EnableP2P: true,
+		EnableLogging:           true,
+		EnableP2P:               true,
 		EnableOperationsCleanup: true,
 	}
 }

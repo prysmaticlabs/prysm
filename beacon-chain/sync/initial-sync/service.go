@@ -13,10 +13,11 @@ package initialsync
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"math/big"
 	"sync"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
@@ -105,8 +106,8 @@ type InitialSync struct {
 	latestSyncedBlock              *pb.BeaconBlock
 	mutex                          *sync.Mutex
 	blocksAboveHighestObservedSlot []*pb.BeaconBlock
-	highestObservedCanonicalState *pb.BeaconState
-	pendingBlockAnnouncements int
+	highestObservedCanonicalState  *pb.BeaconState
+	pendingBlockAnnouncements      int
 }
 
 // NewInitialSyncService constructs a new InitialSyncService.
@@ -139,7 +140,7 @@ func NewInitialSyncService(ctx context.Context,
 		syncPollingInterval:            cfg.SyncPollingInterval,
 		inMemoryBlocks:                 map[uint64]*pb.BeaconBlock{},
 		blocksAboveHighestObservedSlot: []*pb.BeaconBlock{},
-		pendingBlockAnnouncements: 0,
+		pendingBlockAnnouncements:      0,
 		syncedFeed:                     new(event.Feed),
 		stateReceived:                  false,
 		mutex:                          new(sync.Mutex),
@@ -218,8 +219,8 @@ func (s *InitialSync) exitInitialSync(ctx context.Context) error {
 			return fmt.Errorf("could not save block: %v", err)
 		}
 		state, err = s.chainService.ReceiveBlock(s.ctx, block, &blockchain.ReceiveBlockConfig{
-			EnableP2P: false,
-			EnableLogging: false,
+			EnableP2P:               false,
+			EnableLogging:           false,
 			EnableOperationsCleanup: false,
 		})
 		if err != nil {

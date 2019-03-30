@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"io/ioutil"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"

@@ -2,13 +2,14 @@ package initialsync
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	peer "github.com/libp2p/go-libp2p-peer"
+
 	"github.com/gogo/protobuf/proto"
-	"github.com/libp2p/go-libp2p-peer"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
@@ -53,7 +54,7 @@ func (ms *mockSyncService) ResumeSync() {
 
 type mockPowchain struct{}
 
-func (mp *mockPowchain)	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
+func (mp *mockPowchain) BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
 	return true, nil, nil
 }
 
@@ -92,7 +93,7 @@ func TestSavingBlock_InSync(t *testing.T) {
 		P2P:         &mockP2P{},
 		SyncService: &mockSyncService{},
 		BeaconDB:    db,
-		PowChain: &mockPowchain{},
+		PowChain:    &mockPowchain{},
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 
@@ -115,7 +116,7 @@ func TestSavingBlock_InSync(t *testing.T) {
 	fState := &pb.BeaconState{
 		FinalizedEpoch: params.BeaconConfig().GenesisEpoch + 1,
 		LatestBlock: &pb.BeaconBlock{
-			Slot: params.BeaconConfig().GenesisSlot+params.BeaconConfig().SlotsPerEpoch,
+			Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
 		},
 		LatestEth1Data: &pb.Eth1Data{
 			BlockHash32: []byte{},
@@ -124,7 +125,7 @@ func TestSavingBlock_InSync(t *testing.T) {
 	jState := &pb.BeaconState{
 		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 2,
 		LatestBlock: &pb.BeaconBlock{
-			Slot: params.BeaconConfig().GenesisSlot+2*params.BeaconConfig().SlotsPerEpoch,
+			Slot: params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch,
 		},
 	}
 
@@ -138,7 +139,7 @@ func TestSavingBlock_InSync(t *testing.T) {
 		FinalizedEpoch: params.BeaconConfig().GenesisEpoch,
 		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 1,
 		LatestBlock: &pb.BeaconBlock{
-			Slot: params.BeaconConfig().GenesisSlot+4*params.BeaconConfig().SlotsPerEpoch,
+			Slot: params.BeaconConfig().GenesisSlot + 4*params.BeaconConfig().SlotsPerEpoch,
 		},
 		LatestEth1Data: &pb.Eth1Data{
 			BlockHash32: []byte{},
@@ -336,7 +337,7 @@ func TestDelayChan_OK(t *testing.T) {
 		P2P:         &mockP2P{},
 		SyncService: &mockSyncService{},
 		BeaconDB:    db,
-		PowChain: &mockPowchain{},
+		PowChain:    &mockPowchain{},
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 
@@ -357,21 +358,21 @@ func TestDelayChan_OK(t *testing.T) {
 	genericHash[0] = 'a'
 
 	fState := &pb.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
+		Slot:           params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
 		FinalizedEpoch: params.BeaconConfig().GenesisEpoch + 1,
 		LatestBlock: &pb.BeaconBlock{
-			Slot: params.BeaconConfig().GenesisSlot+params.BeaconConfig().SlotsPerEpoch,
+			Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
 		},
 		LatestEth1Data: &pb.Eth1Data{
 			BlockHash32: []byte{},
 		},
 	}
 	jState := &pb.BeaconState{
-		Slot: params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch,
+		Slot:           params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch,
 		FinalizedEpoch: params.BeaconConfig().GenesisEpoch + 1,
 		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 2,
 		LatestBlock: &pb.BeaconBlock{
-			Slot: params.BeaconConfig().GenesisSlot+2*params.BeaconConfig().SlotsPerEpoch,
+			Slot: params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch,
 		},
 		LatestEth1Data: &pb.Eth1Data{
 			BlockHash32: []byte{},

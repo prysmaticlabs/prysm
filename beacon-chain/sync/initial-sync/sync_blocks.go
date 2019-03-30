@@ -2,8 +2,9 @@ package initialsync
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"strings"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 
 	peer "github.com/libp2p/go-libp2p-peer"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -147,8 +148,8 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	}
 	s.latestSyncedBlock = block
 	state, err := s.chainService.ReceiveBlock(ctx, block, &blockchain.ReceiveBlockConfig{
-		EnableLogging: false,
-		EnableP2P: false,
+		EnableLogging:           false,
+		EnableP2P:               false,
 		EnableOperationsCleanup: false,
 	})
 	if err != nil {

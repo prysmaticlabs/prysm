@@ -3,11 +3,12 @@ package sync
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"io/ioutil"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
@@ -631,38 +632,6 @@ func TestHandleAttReq_Ok(t *testing.T) {
 	}
 	want := fmt.Sprintf("Sending attestation %#x to peer", attRoot)
 	testutil.AssertLogsContain(t, hook, want)
-}
-
-func TestHandleStateReq_NOState(t *testing.T) {
-	hook := logTest.NewGlobal()
-
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-
-	ss := setupService(t, db)
-
-	genesisTime := uint64(time.Now().Unix())
-	deposits, _ := setupInitialDeposits(t, 10)
-	if err := db.InitializeState(genesisTime, deposits, &pb.Eth1Data{}); err != nil {
-		t.Fatalf("Failed to initialize state: %v", err)
-	}
-
-	request1 := &pb.BeaconStateRequest{
-		FinalizedStateRootHash32S: []byte{'a'},
-	}
-
-	msg1 := p2p.Message{
-		Ctx:  context.Background(),
-		Data: request1,
-		Peer: "",
-	}
-
-	if err := ss.handleStateRequest(msg1); err != nil {
-		t.Error(err)
-	}
-
-	testutil.AssertLogsContain(t, hook, "Requested state root is different from locally stored state root")
-
 }
 
 func TestHandleStateReq_OK(t *testing.T) {
