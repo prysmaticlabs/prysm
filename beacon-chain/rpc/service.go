@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"

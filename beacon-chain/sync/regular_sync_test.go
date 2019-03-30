@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
