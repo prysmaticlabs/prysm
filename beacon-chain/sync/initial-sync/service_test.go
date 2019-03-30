@@ -54,7 +54,7 @@ func (ms *mockSyncService) ResumeSync() {
 
 type mockChainService struct{}
 
-func (ms *mockChainService) ReceiveBlock(
+func (m *mockChainService) ReceiveBlock(
 	ctx context.Context, block *pb.BeaconBlock, cfg *blockchain.ReceiveBlockConfig,
 ) (*pb.BeaconState, error) {
 	return &pb.BeaconState{}, nil
