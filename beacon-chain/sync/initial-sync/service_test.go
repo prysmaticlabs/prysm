@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -53,7 +54,9 @@ func (ms *mockSyncService) ResumeSync() {
 
 type mockChainService struct{}
 
-func (m *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+func (ms *mockChainService) ReceiveBlock(
+	ctx context.Context, block *pb.BeaconBlock, cfg *blockchain.ReceiveBlockConfig,
+) (*pb.BeaconState, error) {
 	return &pb.BeaconState{}, nil
 }
 

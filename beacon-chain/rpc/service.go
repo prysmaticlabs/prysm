@@ -8,6 +8,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -35,7 +36,7 @@ func init() {
 type chainService interface {
 	CanonicalBlockFeed() *event.Feed
 	StateInitializedFeed() *event.Feed
-	ReceiveBlock(ctx context.Context, block *pbp2p.BeaconBlock) (*pbp2p.BeaconState, error)
+	ReceiveBlock(ctx context.Context, block *pbp2p.BeaconBlock, cfg *blockchain.ReceiveBlockConfig) (*pbp2p.BeaconState, error)
 	SaveHistoricalState(beaconState *pbp2p.BeaconState) error
 }
 

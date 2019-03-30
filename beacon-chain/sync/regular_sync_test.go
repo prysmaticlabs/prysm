@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -65,7 +66,9 @@ func (ms *mockChainService) CanonicalBlockFeed() *event.Feed {
 	return ms.cFeed
 }
 
-func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+func (ms *mockChainService) ReceiveBlock(
+	ctx context.Context, block *pb.BeaconBlock, cfg *blockchain.ReceiveBlockConfig,
+) (*pb.BeaconState, error) {
 	if err := ms.db.SaveBlock(block); err != nil {
 		return nil, err
 	}

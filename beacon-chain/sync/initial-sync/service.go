@@ -20,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
@@ -73,7 +74,7 @@ type p2pAPI interface {
 }
 
 type chainService interface {
-	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error)
+	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock, cfg *blockchain.ReceiveBlockConfig) (*pb.BeaconState, error)
 	ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error
 }
 
@@ -564,7 +565,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	}
 
 	// Send block to main chain service to be processed.
-	beaconState, err := s.chainService.ReceiveBlock(ctx, block)
+	beaconState, err := s.chainService.ReceiveBlock(ctx, block, blockchain.DefaultReceiveBlockConfig())
 	if err != nil {
 		return fmt.Errorf("could not process beacon block: %v", err)
 	}

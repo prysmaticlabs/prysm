@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
@@ -83,7 +84,9 @@ func (m *mockChainService) StateInitializedFeed() *event.Feed {
 	return m.stateInitializedFeed
 }
 
-func (m *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+func (m *mockChainService) ReceiveBlock(
+	ctx context.Context, block *pb.BeaconBlock, cfg *blockchain.ReceiveBlockConfig,
+) (*pb.BeaconState, error) {
 	return &pb.BeaconState{}, nil
 }
 
