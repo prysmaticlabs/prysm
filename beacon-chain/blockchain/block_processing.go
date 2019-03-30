@@ -25,12 +25,18 @@ type BlockProcessor interface {
 	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock, cfg *ReceiveBlockConfig) (*pb.BeaconState, error)
 }
 
+// ReceiveBlockConfig specifies common configuration options for
+// logging and enabling p2p in the chain service receiving a new block.
+// Initial sync sets most of these properties to false as there is no need
+// for extensive logging when initially synchronizing with the network.
 type ReceiveBlockConfig struct {
 	EnableLogging           bool
 	EnableP2P               bool
 	EnableOperationsCleanup bool
 }
 
+// DefaultReceiveBlockConfig configures the default values of enabling loggin
+// p2p, and cleanup of block operations.
 func DefaultReceiveBlockConfig() *ReceiveBlockConfig {
 	return &ReceiveBlockConfig{
 		EnableLogging:           true,
