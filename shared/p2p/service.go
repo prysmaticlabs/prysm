@@ -31,7 +31,9 @@ import (
 )
 
 const prysmProtocolPrefix = "/prysm/0.0.0"
-const maxMessageSize = 1 << 20
+// We accommodate p2p message sizes as large as ~17Mb as we are transmitting
+// full beacon states over the wire for our current implementation.
+const maxMessageSize = 1 << 24
 
 // Sender represents a struct that is able to relay information via p2p.
 // Server implements this interface.

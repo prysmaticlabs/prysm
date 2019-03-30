@@ -170,7 +170,7 @@ var defaultBeaconConfig = &BeaconChainConfig{
 	DepositsForChainStart: 16384,
 	RandBytes:             3,
 	SyncPollingInterval:   6 * 1, // Query nodes over the network every slot for sync status.
-	BatchBlockLimit:       50,
+	BatchBlockLimit:       64 * 4, // Process blocks in batches of 4 epochs of blocks (threshold before casper penalties).
 	SyncEpochLimit:        4,
 	MaxNumLog2Validators:  24,
 	LogBlockDelay:         2, //
