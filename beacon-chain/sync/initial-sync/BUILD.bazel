@@ -36,7 +36,6 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
-        "//beacon-chain/core/state:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/internal:go_default_library",
         "//proto/beacon/p2p/v1:go_default_library",
@@ -45,6 +44,7 @@ go_test(
         "//shared/p2p:go_default_library",
         "//shared/params:go_default_library",
         "//shared/testutil:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_gogo_protobuf//proto:go_default_library",
         "@com_github_libp2p_go_libp2p_peer//:go_default_library",
         "@com_github_sirupsen_logrus//hooks/test:go_default_library",
