@@ -2,16 +2,14 @@ package initialsync
 
 import (
 	"context"
-	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"testing"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
-	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/libp2p/go-libp2p-peer"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/internal"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -265,7 +263,7 @@ func TestProcessingBatchedBlocks_OK(t *testing.T) {
 		t.Errorf("Expected slot %d not equal to current slot %d", expectedSlot, ss.currentSlot)
 	}
 
-	if ss.highestObservedSlot != expectedSlot {
+	if ss.highestObservedSlot == expectedSlot {
 		t.Errorf("Expected slot %d not equal to highest observed slot slot %d", expectedSlot, ss.highestObservedSlot)
 	}
 }
@@ -320,10 +318,10 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 	}
 
 	if ss.currentSlot != expectedSlot {
-		t.Errorf("Expected slot %d not equal to current slot %d", expectedSlot, ss.currentSlot)
+		t.Errorf("Expected slot %d equal to current slot %d", expectedSlot, ss.currentSlot)
 	}
 
-	if ss.highestObservedSlot != expectedSlot {
+	if ss.highestObservedSlot == expectedSlot {
 		t.Errorf("Expected slot %d not equal to highest observed slot %d", expectedSlot, ss.highestObservedSlot)
 	}
 }
@@ -359,6 +357,7 @@ func TestDelayChan_OK(t *testing.T) {
 	genericHash[0] = 'a'
 
 	fState := &pb.BeaconState{
+		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch,
 		FinalizedEpoch: params.BeaconConfig().GenesisEpoch + 1,
 		LatestBlock: &pb.BeaconBlock{
 			Slot: params.BeaconConfig().GenesisSlot+params.BeaconConfig().SlotsPerEpoch,
@@ -368,6 +367,7 @@ func TestDelayChan_OK(t *testing.T) {
 		},
 	}
 	jState := &pb.BeaconState{
+		Slot: params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch,
 		FinalizedEpoch: params.BeaconConfig().GenesisEpoch + 1,
 		JustifiedEpoch: params.BeaconConfig().GenesisEpoch + 2,
 		LatestBlock: &pb.BeaconBlock{
@@ -416,111 +416,16 @@ func TestDelayChan_OK(t *testing.T) {
 		Ctx:  context.Background(),
 	}
 
-	ss.blockBuf <- msg1
-
 	ss.stateBuf <- msg2
 
-	blockResponse.Block.Slot = params.BeaconConfig().GenesisSlot + 1
-	msg1.Data = blockResponse
+	ss.blockBuf <- msg1
+	ss.currentSlot = ss.highestObservedSlot
+	ss.latestSyncedBlock = block
+	ss.highestObservedCanonicalState = stateResponse.CanonicalState
 
 	ss.blockBuf <- msg1
 
-	delayChan <- time.Time{}
-
-	ss.cancel()
-	<-exitRoutine
-
-	testutil.AssertLogsContain(t, hook, "Exiting initial sync and starting normal sync")
-
-	hook.Reset()
-}
-
-func TestRequestBlocksBySlot_OK(t *testing.T) {
-	hook := logTest.NewGlobal()
-	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
-	setUpGenesisStateAndBlock(db, t)
-
-	cfg := &Config{
-		P2P:             &mockP2P{},
-		SyncService:     &mockSyncService{},
-		BeaconDB:        db,
-		BlockBufferSize: 100,
-	}
-	ss := NewInitialSyncService(context.Background(), cfg)
-	newState, err := state.GenesisBeaconState(nil, 0, nil)
-	if err != nil {
-		t.Fatalf("could not create new state %v", err)
-	}
-
-	err = ss.db.SaveState(newState)
-	if err != nil {
-		t.Fatalf("could not save beacon state %v", err)
-	}
-
-	exitRoutine := make(chan bool)
-	delayChan := make(chan time.Time)
-
-	defer func() {
-		close(exitRoutine)
-		close(delayChan)
-	}()
-
-	go func() {
-		ss.run(delayChan)
-		exitRoutine <- true
-	}()
-	genericHash := make([]byte, 32)
-	genericHash[0] = 'a'
-
-	getBlockResponseMsg := func(Slot uint64) (p2p.Message, [32]byte) {
-
-		block := &pb.BeaconBlock{
-			Eth1Data: &pb.Eth1Data{
-				DepositRootHash32: []byte{1, 2, 3},
-				BlockHash32:       []byte{4, 5, 6},
-			},
-			ParentRootHash32: genericHash,
-			Slot:             Slot,
-			StateRootHash32:  nil,
-		}
-
-		blockResponse := &pb.BeaconBlockResponse{
-			Block: block,
-		}
-
-		root, err := hashutil.HashBeaconBlock(block)
-		if err != nil {
-			t.Fatalf("unable to tree hash block %v", err)
-		}
-
-		return p2p.Message{
-			Peer: "",
-			Data: blockResponse,
-			Ctx:  context.Background(),
-		}, root
-	}
-
-	// sending all blocks except for the genesis block
-	startSlot := 1 + params.BeaconConfig().GenesisSlot
-	for i := startSlot; i < startSlot+10; i++ {
-		response, _ := getBlockResponseMsg(i)
-		ss.blockBuf <- response
-	}
-
-	initialResponse, _ := getBlockResponseMsg(1 + params.BeaconConfig().GenesisSlot)
-
-	//sending genesis block
-	ss.blockBuf <- initialResponse
-
-	_, hash := getBlockResponseMsg(9 + params.BeaconConfig().GenesisSlot)
-
-	expString := fmt.Sprintf("Saved block with root %#x and slot %d for initial sync",
-		hash, 9+params.BeaconConfig().GenesisSlot)
-
-	// waiting for the current slot to come up to the
-	// expected one.
-	testutil.WaitForLog(t, hook, expString)
+	msg1.Data = blockResponse
 
 	delayChan <- time.Time{}
 
@@ -531,6 +436,7 @@ func TestRequestBlocksBySlot_OK(t *testing.T) {
 
 	hook.Reset()
 }
+
 func TestSafelyHandleMessage(t *testing.T) {
 	hook := logTest.NewGlobal()
 
