@@ -19,8 +19,8 @@ func (s *InitialSync) processBlockAnnounce(msg p2p.Message) {
 	recBlockAnnounce.Inc()
 
 	if s.stateReceived && data.SlotNumber > s.highestObservedSlot {
-		s.pendingBlockAnnouncements++
-		s.requestBatchedBlocks(s.currentSlot+1, data.SlotNumber)
+		s.requestBatchedBlocks(s.lastRequestedSlot+1, data.SlotNumber)
+		s.lastRequestedSlot = data.SlotNumber
 	}
 }
 
@@ -33,8 +33,16 @@ func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock) {
 	recBlock.Inc()
 	if block.Slot > s.highestObservedSlot {
 		// We put the blocks higher than the highest observed slot in a queue for processing.
-		s.blocksAboveHighestObservedSlot = append(s.blocksAboveHighestObservedSlot, block)
-		s.currentSlot = block.Slot
+		if val := s.blocksAboveHighestObservedSlot[block.Slot]; val == nil {
+			s.blocksAboveHighestObservedSlot[block.Slot] = block
+		}
+		return
+	}
+
+	if block.Slot == s.highestObservedSlot {
+		// We ignore receiving the block that is canonical from the peer as we already
+		// processed and stored it during the initial state handshake.
+		s.currentSlot = s.highestObservedSlot
 		return
 	}
 
@@ -137,6 +145,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	}
 	log.Infof("Saving block with root %#x and slot %d for initial sync", root, block.Slot-params.BeaconConfig().GenesisSlot)
 	s.currentSlot = block.Slot
+	s.latestSyncedBlock = block
 
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -144,7 +153,6 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	if _, ok := s.inMemoryBlocks[block.Slot]; ok {
 		delete(s.inMemoryBlocks, block.Slot)
 	}
-	s.latestSyncedBlock = block
 	state, err := s.chainService.ReceiveBlock(ctx, block, &blockchain.ReceiveBlockConfig{
 		EnableLogging:           false,
 		EnableP2P:               false,

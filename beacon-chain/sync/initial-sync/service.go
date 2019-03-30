@@ -14,6 +14,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"sort"
 	"sync"
 	"time"
 
@@ -103,8 +104,9 @@ type InitialSync struct {
 	syncedFeed                     *event.Feed
 	stateReceived                  bool
 	latestSyncedBlock              *pb.BeaconBlock
+	lastRequestedSlot              uint64
 	mutex                          *sync.Mutex
-	blocksAboveHighestObservedSlot []*pb.BeaconBlock
+	blocksAboveHighestObservedSlot map[uint64]*pb.BeaconBlock
 	highestObservedCanonicalState  *pb.BeaconState
 	pendingBlockAnnouncements      int
 }
@@ -138,7 +140,7 @@ func NewInitialSyncService(ctx context.Context,
 		blockAnnounceBuf:               blockAnnounceBuf,
 		syncPollingInterval:            cfg.SyncPollingInterval,
 		inMemoryBlocks:                 map[uint64]*pb.BeaconBlock{},
-		blocksAboveHighestObservedSlot: []*pb.BeaconBlock{},
+		blocksAboveHighestObservedSlot: map[uint64]*pb.BeaconBlock{},
 		pendingBlockAnnouncements:      0,
 		syncedFeed:                     new(event.Feed),
 		stateReceived:                  false,
@@ -182,16 +184,12 @@ func (s *InitialSync) SyncedFeed() *event.Feed {
 // checkSyncStatus verifies if the beacon node is correctly synced with its peers up to their
 // latest canonical head. If not, then it requests batched blocks up to the highest observed slot.
 func (s *InitialSync) checkSyncStatus() bool {
-	if s.currentSlot == s.highestObservedSlot+uint64(s.pendingBlockAnnouncements) {
+	if s.currentSlot == s.highestObservedSlot {
 		if err := s.exitInitialSync(s.ctx); err != nil {
 			log.Errorf("Could not exit initial sync: %v", err)
 			return false
 		}
 		return true
-	}
-	if s.stateReceived {
-		// requests multiple blocks so as to save and sync quickly.
-		s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
 	}
 	return false
 }
@@ -208,12 +206,16 @@ func (s *InitialSync) exitInitialSync(ctx context.Context) error {
 	if err := s.db.SaveHistoricalState(state); err != nil {
 		return fmt.Errorf("could not save state: %v", err)
 	}
-	log.Infof("Updated chain head block slot: %d, state slot: %d", s.latestSyncedBlock.Slot-params.BeaconConfig().GenesisSlot, state.Slot-params.BeaconConfig().GenesisSlot)
+
 	// If there were any blocks received above the highest observed slot
 	// during the process of performing initial sync, we run state transitions on those blocks.
-	log.Infof("Processing %d blocks above high observed slot", len(s.blocksAboveHighestObservedSlot))
-	for _, block := range s.blocksAboveHighestObservedSlot {
-		log.Infof("Slot: %d", block.Slot-params.BeaconConfig().GenesisSlot)
+	keys := make([]int, 0)
+	for k := range s.blocksAboveHighestObservedSlot {
+		keys = append(keys, int(k))
+	}
+	sort.Ints(keys)
+	for i := range keys {
+		block := s.blocksAboveHighestObservedSlot[uint64(keys[i])]
 		if err = s.db.SaveBlock(block); err != nil {
 			return fmt.Errorf("could not save block: %v", err)
 		}
@@ -230,6 +232,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context) error {
 		}
 		log.Infof("Updated chain head block slot: %d, state slot: %d", block.Slot-params.BeaconConfig().GenesisSlot, state.Slot-params.BeaconConfig().GenesisSlot)
 	}
+
 	canonicalState, err := s.db.State(ctx)
 	if err != nil {
 		return fmt.Errorf("could not get state: %v", err)

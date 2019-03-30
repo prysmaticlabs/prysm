@@ -23,6 +23,10 @@ func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) error {
 	data := msg.Data.(*pb.BeaconBlockAnnounce)
 	h := bytesutil.ToBytes32(data.Hash[:32])
 
+	if _, ok := rs.blockAnnouncements[data.SlotNumber]; ok {
+		return nil
+	}
+
 	hasBlock := rs.db.HasBlock(h)
 	span.AddAttributes(trace.BoolAttribute("hasBlock", hasBlock))
 
@@ -37,6 +41,7 @@ func (rs *RegularSync) receiveBlockAnnounce(msg p2p.Message) error {
 		log.Error(err)
 		return err
 	}
+	rs.blockAnnouncements[data.SlotNumber] = data.Hash
 	sentBlockReq.Inc()
 	return nil
 }

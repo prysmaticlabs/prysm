@@ -85,6 +85,7 @@ func (s *InitialSync) processState(msg p2p.Message) {
 	// beacon state to begin our sync from.
 	lastFinalizedSlot := finalizedState.Slot
 	s.currentSlot = lastFinalizedSlot
+	s.lastRequestedSlot = s.currentSlot
 	s.stateReceived = true
 	s.highestObservedCanonicalState = canonicalState
 	s.highestObservedSlot = canonicalState.Slot
