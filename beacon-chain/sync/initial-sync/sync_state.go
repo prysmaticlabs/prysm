@@ -3,7 +3,6 @@ package initialsync
 import (
 	"context"
 
-	peer "github.com/libp2p/go-libp2p-peer"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -101,5 +100,5 @@ func (s *InitialSync) requestStateFromPeer(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.requestStateFromPeer")
 	defer span.End()
 	stateReq.Inc()
-	return s.p2p.Send(ctx, &pb.BeaconStateRequest{})
+	return s.p2p.Send(ctx, &pb.BeaconStateRequest{}, p2p.AnyPeer)
 }
