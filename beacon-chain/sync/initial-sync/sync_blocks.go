@@ -5,8 +5,6 @@ import (
 	"strings"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-
-	peer "github.com/libp2p/go-libp2p-peer"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -29,7 +27,7 @@ func (s *InitialSync) processBlockAnnounce(msg p2p.Message) {
 // processBlock is the main method that validates each block which is received
 // for initial sync. It checks if the blocks are valid and then will continue to
 // process and save it into the db.
-func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock, peerID peer.ID) {
+func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.processBlock")
 	defer span.End()
 	recBlock.Inc()
@@ -93,7 +91,7 @@ func (s *InitialSync) processBatchedBlocks(msg p2p.Message) {
 
 	log.Debug("Processing batched block response")
 	for _, block := range batchedBlocks {
-		s.processBlock(ctx, block, msg.Peer)
+		s.processBlock(ctx, block)
 	}
 	log.Debug("Finished processing batched blocks")
 }

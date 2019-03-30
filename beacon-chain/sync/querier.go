@@ -43,19 +43,18 @@ func DefaultQuerierConfig() *QuerierConfig {
 // Querier defines the main class in this package.
 // See the package comments for a general description of the service's functions.
 type Querier struct {
-	ctx                       context.Context
-	cancel                    context.CancelFunc
-	p2p                       p2pAPI
-	db                        *db.BeaconDB
-	chainService              chainService
-	currentHeadSlot           uint64
-	currentHeadHash           []byte
-	currentFinalizedStateRoot [32]byte
-	responseBuf               chan p2p.Message
-	chainStartBuf             chan time.Time
-	powchain                  powChainService
-	chainStarted              bool
-	atGenesis                 bool
+	ctx             context.Context
+	cancel          context.CancelFunc
+	p2p             p2pAPI
+	db              *db.BeaconDB
+	chainService    chainService
+	currentHeadSlot uint64
+	currentHeadHash []byte
+	responseBuf     chan p2p.Message
+	chainStartBuf   chan time.Time
+	powchain        powChainService
+	chainStarted    bool
+	atGenesis       bool
 }
 
 // NewQuerierService constructs a new Sync Querier Service.
