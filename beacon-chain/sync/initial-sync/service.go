@@ -17,9 +17,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/event"
