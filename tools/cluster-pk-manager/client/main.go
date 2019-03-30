@@ -17,6 +17,7 @@ var (
 	podName     = flag.String("pod-name", "", "The name of the pod running this tool")
 	keystoreDir = flag.String("keystore-dir", "", "The directory to generate keystore with received validator key")
 	password    = flag.String("keystore-password", "", "The password to unlock the new keystore")
+	numKeys     = flag.Uint64("keys", 1, "The number of keys to request")
 )
 
 func main() {
@@ -34,25 +35,30 @@ func main() {
 
 	client := pb.NewPrivateKeyServiceClient(conn)
 
-	resp, err := client.Request(ctx, &pb.PrivateKeyRequest{PodName: *podName})
+	resp, err := client.Request(ctx, &pb.PrivateKeyRequest{
+		PodName:      *podName,
+		NumberOfKeys: *numKeys,
+	})
 	if err != nil {
 		panic(err)
 	}
 
-	pk, err := bls.SecretKeyFromBytes(resp.PrivateKey)
-	if err != nil {
-		panic(err)
-	}
+	for i, privateKey := range resp.PrivateKeys.PrivateKeys {
+		pk, err := bls.SecretKeyFromBytes(privateKey)
+		if err != nil {
+			panic(err)
+		}
 
-	k := &keystore.Key{
-		PublicKey: pk.PublicKey(),
-		SecretKey: pk,
-	}
+		k := &keystore.Key{
+			PublicKey: pk.PublicKey(),
+			SecretKey: pk,
+		}
 
-	validatorKeyFile := *keystoreDir + params.BeaconConfig().ValidatorPrivkeyFileName
-	if err := store.StoreKey(validatorKeyFile, k, *password); err != nil {
-		panic(err)
-	}
+		validatorKeyFile := *keystoreDir + params.BeaconConfig().ValidatorPrivkeyFileName + "-" + string(i)
+		if err := store.StoreKey(validatorKeyFile, k, *password); err != nil {
+			panic(err)
+		}
 
-	fmt.Printf("New key written to %s\n", validatorKeyFile)
+		fmt.Printf("New key written to %s\n", validatorKeyFile)
+	}
 }

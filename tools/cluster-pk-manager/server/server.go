@@ -83,25 +83,43 @@ func (s *server) makeDeposit(data []byte) error {
 }
 
 func (s *server) Request(ctx context.Context, req *pb.PrivateKeyRequest) (*pb.PrivateKeyResponse, error) {
-	pk, err := s.db.PodPK(ctx, req.PodName)
-	if err != nil {
-		return nil, err
-	}
-	if pk != nil {
-		log.WithField("pod", req.PodName).Debug("Returning existing assignment")
-		return &pb.PrivateKeyResponse{PrivateKey: pk}, nil
+	if req.NumberOfKeys == 0 {
+		req.NumberOfKeys = 1
 	}
 
-	pk, err = s.db.UnallocatedPK(ctx)
+	// TODO: build the list of PKs in the following order, until the requested
+	// amount is ready to return.
+	// - PKs already assigned to the pod
+	// - PKs that have not yet been allocated
+	// - PKs that are newly initalized with deposits
+
+	pks, err := s.db.PodPKs(ctx, req.PodName)
 	if err != nil {
 		return nil, err
 	}
-	if pk != nil {
+	if pks != nil && len(pks.PrivateKeys) > 0 {
+		log.WithField("pod", req.PodName).Debug("Returning existing assignment(s)")
+		return &pb.PrivateKeyResponse{
+			PrivateKey:  pks.PrivateKeys[0],
+			PrivateKeys: pks,
+		}, nil
+	}
+
+	// TODO: add a lock here on the unallocated PK request. There may be some
+	// delay between reading the unallocated PKs and assigning them to the pod.
+	pks, err = s.db.UnallocatedPKs(ctx, req.NumberOfKeys)
+	if err != nil {
+		return nil, err
+	}
+	if len(pks.PrivateKeys) > 0 {
 		log.WithField("pod", req.PodName).Debug("Recycling existing private key")
-		if err := s.db.AssignExistingPK(ctx, pk, req.PodName); err != nil {
+		if err := s.db.AssignExistingPK(ctx, pks.PrivateKeys[0], req.PodName); err != nil {
 			return nil, err
 		}
-		return &pb.PrivateKeyResponse{PrivateKey: pk}, nil
+		return &pb.PrivateKeyResponse{
+			PrivateKey:  pks.PrivateKeys[0],
+			PrivateKeys: pks,
+		}, nil
 	}
 
 	log.WithField("pod", req.PodName).Debug("Allocating a new private key")
@@ -133,7 +151,9 @@ func (s *server) allocateNewKey(ctx context.Context, podName string) (*pb.Privat
 	if err := s.db.AllocateNewPkToPod(ctx, key, podName); err != nil {
 		return nil, err
 	}
-
-	return &pb.PrivateKeyResponse{PrivateKey: key.SecretKey.Marshal()}, nil
-
+	secret := key.SecretKey.Marshal()
+	return &pb.PrivateKeyResponse{
+		PrivateKey:  secret, // TODO: remove deprecated field.
+		PrivateKeys: &pb.PrivateKeys{PrivateKeys: [][]byte{secret}},
+	}, nil
 }

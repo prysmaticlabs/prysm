@@ -8,8 +8,10 @@ import (
 	"time"
 
 	"github.com/boltdb/bolt"
+	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	pb "github.com/prysmaticlabs/prysm/proto/cluster"
 	"github.com/prysmaticlabs/prysm/shared/keystore"
 )
 
@@ -67,33 +69,36 @@ func newDB(dbPath string) *db {
 	return &db{db: boltdb}
 }
 
-// UnallocatedPK returns the first unassigned private key, if any are
-// available.
-func (d *db) UnallocatedPK(_ context.Context) ([]byte, error) {
-	var pk []byte
+// UnallocatedPKs returns unassigned private keys, if any are available.
+func (d *db) UnallocatedPKs(_ context.Context, numKeys uint64) (*pb.PrivateKeys, error) {
+	pks := &pb.PrivateKeys{}
 	if err := d.db.View(func(tx *bolt.Tx) error {
 		c := tx.Bucket(unassignedPkBucket).Cursor()
-		k, _ := c.First()
+		i := uint64(0)
+		for k, _ := c.First(); k != nil && i < numKeys; k, _ = c.Next() {
+			pks.PrivateKeys = append(pks.PrivateKeys, k)
+			i++
+		}
 
-		pk = k
 		return nil
 	}); err != nil {
 		return nil, err
 	}
-	return pk, nil
+	return pks, nil
 }
 
 // PodPK returns an assigned private key to the given pod name, if one exists.
-func (d *db) PodPK(_ context.Context, podName string) ([]byte, error) {
-	var pk []byte
+func (d *db) PodPKs(_ context.Context, podName string) (*pb.PrivateKeys, error) {
+	pks := &pb.PrivateKeys{}
 	if err := d.db.View(func(tx *bolt.Tx) error {
-		pk = tx.Bucket(assignedPkBucket).Get([]byte(podName))
-		return nil
+		b := tx.Bucket(assignedPkBucket).Get([]byte(podName))
+
+		return proto.Unmarshal(b, pks)
 	}); err != nil {
 		return nil, err
 	}
 
-	return pk, nil
+	return pks, nil
 }
 
 // AllocateNewPkToPod records new private key assignment in DB.
