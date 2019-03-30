@@ -568,8 +568,8 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	if err != nil {
 		return fmt.Errorf("could not process beacon block: %v", err)
 	}
-	if err := s.chainService.ApplyForkChoiceRule(ctx, block, beaconState); err != nil {
-		return fmt.Errorf("could not apply fork choice rule: %v", err)
+	if err := s.db.UpdateChainHead(block, beaconState); err != nil {
+		return fmt.Errorf("could not update chain head: %v", err)
 	}
 	return nil
 }
@@ -577,14 +577,6 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 func (s *InitialSync) checkBlockValidity(ctx context.Context, block *pb.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.checkBlockValidity")
 	defer span.End()
-	blockRoot, err := hashutil.HashBeaconBlock(block)
-	if err != nil {
-		return fmt.Errorf("could not tree hash received block: %v", err)
-	}
-
-	if s.db.HasBlock(blockRoot) {
-		return errors.New(debugError + "received a block that already exists. Exiting")
-	}
 
 	beaconState, err := s.db.State(ctx)
 	if err != nil {
