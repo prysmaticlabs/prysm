@@ -25,8 +25,17 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		return
 	}
 
+	if err := s.db.SaveHistoricalState(finalizedState); err != nil {
+		log.Errorf("Could not save new historical state: %v", err)
+	}
+
 	if err := s.db.SaveFinalizedBlock(finalizedState.LatestBlock); err != nil {
 		log.Errorf("Could not save finalized block %v", err)
+		return
+	}
+
+	if err := s.db.SaveBlock(finalizedState.LatestBlock); err != nil {
+		log.Errorf("Could not save block %v", err)
 		return
 	}
 
@@ -35,8 +44,16 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		return
 	}
 
+	if err := s.db.SaveHistoricalState(justifiedState); err != nil {
+		log.Errorf("Could not save new historical state: %v", err)
+	}
+
 	if err := s.db.SaveJustifiedBlock(justifiedState.LatestBlock); err != nil {
 		log.Errorf("Could not save finalized block %v", err)
+		return
+	}
+	if err := s.db.SaveBlock(finalizedState.LatestBlock); err != nil {
+		log.Errorf("Could not save block %v", err)
 		return
 	}
 
@@ -57,9 +74,12 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		return
 	}
 
-	if err := s.db.UpdateChainHead(canonicalState.LatestBlock, canonicalState); err != nil {
+	if err := s.db.UpdateChainHead(finalizedState.LatestBlock, finalizedState); err != nil {
 		log.Errorf("Could not update chain head %v", err)
 		return
+	}
+	if err := s.db.SaveHistoricalState(canonicalState); err != nil {
+		log.Errorf("Could not save new historical state: %v", err)
 	}
 
 	// sets the current slot to the last finalized slot of the
@@ -67,6 +87,7 @@ func (s *InitialSync) processState(msg p2p.Message) {
 	lastFinalizedSlot := finalizedState.Slot
 	s.currentSlot = lastFinalizedSlot
 	s.stateReceived = true
+	s.highestObservedCanonicalState = canonicalState
 	s.highestObservedSlot = canonicalState.Slot
 	log.Debugf(
 		"Successfully saved beacon state with the last finalized slot: %d, canonical slot: %d",

@@ -321,8 +321,7 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleStateRequest")
 	defer span.End()
 	stateReq.Inc()
-	req, ok := msg.Data.(*pb.BeaconStateRequest)
-	if !ok {
+	if _, ok := msg.Data.(*pb.BeaconStateRequest); !ok {
 		log.Error("Message is of the incorrect type")
 		return errors.New("incoming message is not *pb.BeaconStateRequest")
 	}
@@ -334,10 +333,6 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 	root, err := hashutil.HashProto(fState)
 	if err != nil {
 		log.Errorf("unable to marshal the beacon state: %v", err)
-		return err
-	}
-	if root != bytesutil.ToBytes32(req.FinalizedStateRootHash32S) {
-		log.Debugf("Requested state root is different from locally stored state root %#x", req.FinalizedStateRootHash32S)
 		return err
 	}
 	log.WithField(

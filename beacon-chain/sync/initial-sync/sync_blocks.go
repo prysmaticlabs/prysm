@@ -18,7 +18,8 @@ func (s *InitialSync) processBlockAnnounce(msg p2p.Message) {
 	data := msg.Data.(*pb.BeaconBlockAnnounce)
 	recBlockAnnounce.Inc()
 
-	if data.SlotNumber > s.highestObservedSlot {
+	if s.stateReceived && data.SlotNumber > s.highestObservedSlot {
+		s.pendingBlockAnnouncements++
 		s.requestBatchedBlocks(s.currentSlot+1, data.SlotNumber)
 	}
 }
@@ -33,6 +34,7 @@ func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock, p
 	if block.Slot > s.highestObservedSlot {
 		// We put the blocks higher than the highest observed slot in a queue for processing.
 		s.blocksAboveHighestObservedSlot = append(s.blocksAboveHighestObservedSlot, block)
+		s.currentSlot = block.Slot
 		return
 	}
 
@@ -133,7 +135,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	if err := s.checkBlockValidity(ctx, block); err != nil {
 		return err
 	}
-	log.Infof("Saved block with root %#x and slot %d for initial sync", root, block.Slot-params.BeaconConfig().GenesisSlot)
+	log.Infof("Saving block with root %#x and slot %d for initial sync", root, block.Slot-params.BeaconConfig().GenesisSlot)
 	s.currentSlot = block.Slot
 
 	s.mutex.Lock()
@@ -143,5 +145,9 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 		delete(s.inMemoryBlocks, block.Slot)
 	}
 	s.latestSyncedBlock = block
-	return s.db.SaveBlock(block)
+	state, err := s.chainService.ReceiveBlock(ctx, block)
+	if err != nil {
+		return err
+	}
+	return s.db.UpdateChainHead(block, state)
 }
