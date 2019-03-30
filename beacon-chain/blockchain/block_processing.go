@@ -35,7 +35,7 @@ type ReceiveBlockConfig struct {
 	EnableOperationsCleanup bool
 }
 
-// DefaultReceiveBlockConfig configures the default values of enabling loggin
+// DefaultReceiveBlockConfig configures the default values of enabling logging
 // p2p, and cleanup of block operations.
 func DefaultReceiveBlockConfig() *ReceiveBlockConfig {
 	return &ReceiveBlockConfig{
