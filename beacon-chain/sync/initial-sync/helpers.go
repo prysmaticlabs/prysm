@@ -9,7 +9,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
-	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
 	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
@@ -19,15 +18,6 @@ import (
 func (s *InitialSync) checkBlockValidity(ctx context.Context, block *pb.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.checkBlockValidity")
 	defer span.End()
-	blockRoot, err := hashutil.HashBeaconBlock(block)
-	if err != nil {
-		return fmt.Errorf("could not tree hash received block: %v", err)
-	}
-
-	if s.db.HasBlock(blockRoot) {
-		return errors.New(debugError + "received a block that already exists. Exiting")
-	}
-
 	beaconState, err := s.db.State(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get beacon state: %v", err)

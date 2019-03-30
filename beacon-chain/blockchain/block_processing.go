@@ -22,7 +22,19 @@ import (
 // handle new block operations.
 type BlockProcessor interface {
 	CanonicalBlockFeed() *event.Feed
-	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error)
+	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock, cfg *ReceiveBlockConfig) (*pb.BeaconState, error)
+}
+
+type ReceiveBlockConfig struct {
+	EnableLogging bool
+	EnableP2P bool
+}
+
+func DefaultReceiveBlockConfig() *ReceiveBlockConfig {
+	return &ReceiveBlockConfig{
+		EnableLogging: true,
+		EnableP2P: true,
+	}
 }
 
 // ReceiveBlock is a function that defines the operations that are preformed on
@@ -47,7 +59,7 @@ type BlockProcessor interface {
 //		else:
 //			return nil, error  # or throw or whatever
 //
-func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock, cfg *ReceiveBlockConfig) (*pb.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
 	beaconState, err := c.beaconDB.State(ctx)
@@ -74,11 +86,13 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		return nil, fmt.Errorf("failed to save block: %v", err)
 	}
 
-	// Announce the new block to the network.
-	c.p2p.Broadcast(ctx, &pb.BeaconBlockAnnounce{
-		Hash:       blockRoot[:],
-		SlotNumber: block.Slot,
-	})
+	if cfg.EnableP2P {
+		// Announce the new block to the network.
+		c.p2p.Broadcast(ctx, &pb.BeaconBlockAnnounce{
+			Hash:       blockRoot[:],
+			SlotNumber: block.Slot,
+		})
+	}
 
 	// Retrieve the last processed beacon block's hash root.
 	headRoot, err := c.ChainHeadRoot()
@@ -86,13 +100,10 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		return nil, fmt.Errorf("could not retrieve chain head root: %v", err)
 	}
 
-	log.WithField("slotNumber", block.Slot-params.BeaconConfig().GenesisSlot).Info(
-		"Executing state transition")
-
 	// Check for skipped slots.
 	numSkippedSlots := 0
 	for beaconState.Slot < block.Slot-1 {
-		beaconState, err = c.runStateTransition(headRoot, nil, beaconState)
+		beaconState, err = c.runStateTransition(headRoot, nil, beaconState, cfg)
 		if err != nil {
 			return nil, fmt.Errorf("could not execute state transition without block %v", err)
 		}
@@ -102,34 +113,42 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		log.Warnf("Processed %d skipped slots", numSkippedSlots)
 	}
 
-	beaconState, err = c.runStateTransition(headRoot, block, beaconState)
+	beaconState, err = c.runStateTransition(headRoot, block, beaconState, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("could not execute state transition with block %v", err)
 	}
 
-	log.WithFields(logrus.Fields{
-		"slotNumber":     block.Slot - params.BeaconConfig().GenesisSlot,
-		"justifiedEpoch": beaconState.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
-		"finalizedEpoch": beaconState.FinalizedEpoch - params.BeaconConfig().GenesisEpoch,
-	}).Info("State transition complete")
+	if cfg.EnableLogging {
+		log.WithField("slotNumber", block.Slot-params.BeaconConfig().GenesisSlot).Info(
+			"Executing state transition")
+		log.WithFields(logrus.Fields{
+			"slotNumber":     block.Slot - params.BeaconConfig().GenesisSlot,
+			"justifiedEpoch": beaconState.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
+			"finalizedEpoch": beaconState.FinalizedEpoch - params.BeaconConfig().GenesisEpoch,
+		}).Info("State transition complete")
+	}
 
 	// Forward processed block to operation pool to remove individual operation from DB.
 	if c.opsPoolService.IncomingProcessedBlockFeed().Send(block) == 0 {
 		log.Error("Sent processed block to no subscribers")
 	}
 
-	// Update attestation store with latest attestation target.
-	log.Info("Updating latest attestation target")
+	if cfg.EnableLogging {
+		// Update attestation store with latest attestation target.
+		log.Info("Updating latest attestation target")
+	}
 	for _, att := range block.Body.Attestations {
 		if err := c.attsService.UpdateLatestAttestation(c.ctx, att); err != nil {
 			return nil, fmt.Errorf("failed to update latest attestation for store: %v", err)
 		}
-		log.WithFields(
-			logrus.Fields{
-				"attestationSlot": att.Data.Slot - params.BeaconConfig().GenesisSlot,
-				"justifiedEpoch":  att.Data.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
-			},
-		).Info("Attestation store updated")
+		if cfg.EnableLogging {
+			log.WithFields(
+				logrus.Fields{
+					"attestationSlot": att.Data.Slot - params.BeaconConfig().GenesisSlot,
+					"justifiedEpoch":  att.Data.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
+				},
+			).Info("Attestation store updated")
+		}
 	}
 
 	// Remove pending deposits from the deposit queue.
@@ -137,7 +156,9 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 		c.beaconDB.RemovePendingDeposit(ctx, dep)
 	}
 
-	log.WithField("hash", fmt.Sprintf("%#x", blockRoot)).Info("Processed beacon block")
+	if cfg.EnableLogging {
+		log.WithField("hash", fmt.Sprintf("%#x", blockRoot)).Info("Processed beacon block")
+	}
 	return beaconState, nil
 }
 
@@ -154,7 +175,7 @@ func (c *ChainService) isBlockReadyForProcessing(block *pb.BeaconBlock, beaconSt
 }
 
 func (c *ChainService) runStateTransition(
-	headRoot [32]byte, block *pb.BeaconBlock, beaconState *pb.BeaconState,
+	headRoot [32]byte, block *pb.BeaconBlock, beaconState *pb.BeaconState, cfg *ReceiveBlockConfig,
 ) (*pb.BeaconState, error) {
 	beaconState, err := state.ExecuteStateTransition(
 		c.ctx,
@@ -163,20 +184,23 @@ func (c *ChainService) runStateTransition(
 		headRoot,
 		&state.TransitionConfig{
 			VerifySignatures: false, // We disable signature verification for now.
-			Logging:          true,  // We enable logging in this state transition call.
+			Logging:          cfg.EnableLogging,
 		},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not execute state transition %v", err)
 	}
-	log.WithField(
-		"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
-	).Info("Slot transition successfully processed")
 
-	if block != nil {
+	if cfg.EnableLogging {
 		log.WithField(
 			"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
-		).Info("Block transition successfully processed")
+		).Info("Slot transition successfully processed")
+
+		if block != nil {
+			log.WithField(
+				"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
+			).Info("Block transition successfully processed")
+		}
 	}
 
 	if helpers.IsEpochEnd(beaconState.Slot) {
@@ -196,9 +220,11 @@ func (c *ChainService) runStateTransition(
 		if err := c.SaveHistoricalState(beaconState); err != nil {
 			return nil, fmt.Errorf("could not save historical state: %v", err)
 		}
-		log.WithField(
-			"SlotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
-		).Info("Epoch transition successfully processed")
+		if cfg.EnableLogging {
+			log.WithField(
+				"SlotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
+			).Info("Epoch transition successfully processed")
+		}
 	}
 	return beaconState, nil
 }

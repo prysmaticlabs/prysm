@@ -13,6 +13,7 @@ package initialsync
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"math/big"
 	"sync"
 	"time"
@@ -70,7 +71,7 @@ type powChainService interface {
 }
 
 type chainService interface {
-	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error)
+	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock, cfg *blockchain.ReceiveBlockConfig) (*pb.BeaconState, error)
 }
 
 // SyncService is the interface for the Sync service.
@@ -216,7 +217,10 @@ func (s *InitialSync) exitInitialSync(ctx context.Context) error {
 		if err = s.db.SaveBlock(block); err != nil {
 			return fmt.Errorf("could not save block: %v", err)
 		}
-		state, err = s.chainService.ReceiveBlock(s.ctx, block)
+		state, err = s.chainService.ReceiveBlock(s.ctx, block, &blockchain.ReceiveBlockConfig{
+			EnableP2P: false,
+			EnableLogging: true,
+		})
 		if err != nil {
 			return fmt.Errorf("could not receive block in chain service: %v", err)
 		}
