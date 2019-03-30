@@ -15,25 +15,25 @@ var (
 		Name: "state_validator_balances",
 		Help: "Balances of validators, updated on epoch transition",
 	}, []string{
-		"validator",
+		"validatorIndex",
 	})
 	validatorActivatedGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "state_validator_activated_epoch",
 		Help: "Activated epoch of validators, updated on epoch transition",
 	}, []string{
-		"validator",
+		"validatorIndex",
 	})
 	validatorExitedGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "state_validator_exited_epoch",
 		Help: "Exited epoch of validators, updated on epoch transition",
 	}, []string{
-		"validator",
+		"validatorIndex",
 	})
 	validatorSlashedGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "state_validator_slashed_epoch",
 		Help: "Slashed epoch of validators, updated on epoch transition",
 	}, []string{
-		"validator",
+		"validatorIndex",
 	})
 	lastSlotGauge = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "state_last_slot",
