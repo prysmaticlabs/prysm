@@ -85,6 +85,7 @@ type RegularSync struct {
 	highestObservedSlot          uint64
 	blocksAwaitingProcessing     map[[32]byte]p2p.Message
 	blocksAwaitingProcessingLock sync.RWMutex
+	blockAnnouncements           map[uint64][]byte
 }
 
 // RegularSyncConfig allows the channel's buffer sizes to be changed.
@@ -151,6 +152,7 @@ func NewRegularSyncService(ctx context.Context, cfg *RegularSyncConfig) *Regular
 		chainHeadReqBuf:          make(chan p2p.Message, cfg.ChainHeadReqBufferSize),
 		canonicalBuf:             make(chan *pb.BeaconBlockAnnounce, cfg.CanonicalBufferSize),
 		blocksAwaitingProcessing: make(map[[32]byte]p2p.Message),
+		blockAnnouncements:       make(map[uint64][]byte),
 	}
 }
 
