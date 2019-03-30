@@ -303,7 +303,7 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 			ParentRootHash32: parentHash,
 		}
 
-		ss.processBlock(context.Background(), block, p2p.AnyPeer)
+		ss.processBlock(context.Background(), block)
 
 		// Save the block and set the parent hash of the next block
 		// as the hash of the current block.

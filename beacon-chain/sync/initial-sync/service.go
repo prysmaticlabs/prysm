@@ -256,7 +256,7 @@ func (s *InitialSync) checkInMemoryBlocks() {
 			}
 			s.mutex.Lock()
 			if block, ok := s.inMemoryBlocks[s.currentSlot+1]; ok && s.currentSlot+1 <= s.highestObservedSlot {
-				s.processBlock(s.ctx, block, p2p.AnyPeer)
+				s.processBlock(s.ctx, block)
 			}
 			s.mutex.Unlock()
 		}
@@ -299,7 +299,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 		case msg := <-s.blockBuf:
 			safelyHandleMessage(func(message p2p.Message) {
 				data := message.Data.(*pb.BeaconBlockResponse)
-				s.processBlock(message.Ctx, data.Block, message.Peer)
+				s.processBlock(message.Ctx, data.Block)
 			}, msg)
 		case msg := <-s.stateBuf:
 			safelyHandleMessage(s.processState, msg)
