@@ -28,12 +28,14 @@ type BlockProcessor interface {
 type ReceiveBlockConfig struct {
 	EnableLogging bool
 	EnableP2P bool
+	EnableOperationsCleanup bool
 }
 
 func DefaultReceiveBlockConfig() *ReceiveBlockConfig {
 	return &ReceiveBlockConfig{
 		EnableLogging: true,
 		EnableP2P: true,
+		EnableOperationsCleanup: true,
 	}
 }
 
@@ -128,9 +130,15 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock, 
 		}).Info("State transition complete")
 	}
 
-	// Forward processed block to operation pool to remove individual operation from DB.
-	if c.opsPoolService.IncomingProcessedBlockFeed().Send(block) == 0 {
-		log.Error("Sent processed block to no subscribers")
+	if cfg.EnableOperationsCleanup {
+		// Forward processed block to operation pool to remove individual operation from DB.
+		if c.opsPoolService.IncomingProcessedBlockFeed().Send(block) == 0 {
+			log.Error("Sent processed block to no subscribers")
+		}
+		// Remove pending deposits from the deposit queue.
+		for _, dep := range block.Body.Deposits {
+			c.beaconDB.RemovePendingDeposit(ctx, dep)
+		}
 	}
 
 	if cfg.EnableLogging {
@@ -149,11 +157,6 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock, 
 				},
 			).Info("Attestation store updated")
 		}
-	}
-
-	// Remove pending deposits from the deposit queue.
-	for _, dep := range block.Body.Deposits {
-		c.beaconDB.RemovePendingDeposit(ctx, dep)
 	}
 
 	if cfg.EnableLogging {

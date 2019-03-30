@@ -146,9 +146,10 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 		delete(s.inMemoryBlocks, block.Slot)
 	}
 	s.latestSyncedBlock = block
-	state, err := s.chainService.ReceiveBlock(ctx, block, blockchain.ReceiveBlockConfig{
+	state, err := s.chainService.ReceiveBlock(ctx, block, &blockchain.ReceiveBlockConfig{
 		EnableLogging: false,
 		EnableP2P: false,
+		EnableOperationsCleanup: false,
 	})
 	if err != nil {
 		return err

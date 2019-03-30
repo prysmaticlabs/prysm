@@ -219,7 +219,8 @@ func (s *InitialSync) exitInitialSync(ctx context.Context) error {
 		}
 		state, err = s.chainService.ReceiveBlock(s.ctx, block, &blockchain.ReceiveBlockConfig{
 			EnableP2P: false,
-			EnableLogging: true,
+			EnableLogging: false,
+			EnableOperationsCleanup: false,
 		})
 		if err != nil {
 			return fmt.Errorf("could not receive block in chain service: %v", err)
