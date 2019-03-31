@@ -63,7 +63,7 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 	if err := chainService.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := chainService.ReceiveBlock(context.Background(), block, DefaultReceiveBlockConfig()); err == nil {
+	if _, err := chainService.ReceiveBlock(context.Background(), block); err == nil {
 		t.Errorf("Expected receive block to fail, received nil: %v", err)
 	}
 }
@@ -117,7 +117,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	if err := chainService.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := chainService.ReceiveBlock(context.Background(), block, DefaultReceiveBlockConfig()); err != nil {
+	if _, err := chainService.ReceiveBlock(context.Background(), block); err != nil {
 		t.Errorf("Block failed processing: %v", err)
 	}
 
@@ -217,7 +217,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	if err := chainService.beaconDB.SaveState(beaconState); err != nil {
 		t.Fatal(err)
 	}
-	computedState, err := chainService.ReceiveBlock(context.Background(), block, DefaultReceiveBlockConfig())
+	computedState, err := chainService.ReceiveBlock(context.Background(), block)
 	if err != nil {
 		t.Fatal(err)
 	}

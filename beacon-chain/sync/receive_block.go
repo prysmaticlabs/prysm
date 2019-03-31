@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
@@ -104,7 +103,7 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) error {
 	log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Sending newly received block to chain service")
 	// We then process the block by passing it through the ChainService and running
 	// a fork choice rule.
-	beaconState, err = rs.chainService.ReceiveBlock(ctx, block, blockchain.DefaultReceiveBlockConfig())
+	beaconState, err = rs.chainService.ReceiveBlock(ctx, block)
 	if err != nil {
 		log.Errorf("Could not process beacon block: %v", err)
 		return err

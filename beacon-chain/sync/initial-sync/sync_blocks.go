@@ -4,7 +4,6 @@ import (
 	"context"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
@@ -153,11 +152,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	if _, ok := s.inMemoryBlocks[block.Slot]; ok {
 		delete(s.inMemoryBlocks, block.Slot)
 	}
-	state, err := s.chainService.ReceiveBlock(ctx, block, &blockchain.ReceiveBlockConfig{
-		EnableLogging:           false,
-		EnableP2P:               false,
-		EnableOperationsCleanup: false,
-	})
+	state, err := s.chainService.ReceiveBlock(ctx, block)
 	if err != nil {
 		return err
 	}
