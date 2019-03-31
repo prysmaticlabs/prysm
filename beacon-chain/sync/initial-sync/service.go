@@ -72,7 +72,8 @@ type powChainService interface {
 }
 
 type chainService interface {
-	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock, cfg *blockchain.ReceiveBlockConfig) (*pb.BeaconState, error)
+    blockchain.BlockProcessor
+	blockchain.ForkChoice
 }
 
 // SyncService is the interface for the Sync service.
@@ -182,7 +183,7 @@ func (s *InitialSync) SyncedFeed() *event.Feed {
 }
 
 // checkSyncStatus verifies if the beacon node is correctly synced with its peers up to their
-// latest canonical head. If not, then it requests batched blocks up to the highest observed slot.
+// latest canonical head.
 func (s *InitialSync) checkSyncStatus() bool {
 	if s.currentSlot == s.highestObservedSlot {
 		if err := s.exitInitialSync(s.ctx); err != nil {
@@ -227,8 +228,8 @@ func (s *InitialSync) exitInitialSync(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("could not receive block in chain service: %v", err)
 		}
-		if err := s.db.UpdateChainHead(block, state); err != nil {
-			return fmt.Errorf("could not update chain head: %v", err)
+		if err := s.chainService.ApplyForkChoiceRule(s.ctx, block, state); err != nil {
+			return fmt.Errorf("could not apply fork choice rule", err)
 		}
 		log.Infof("Updated chain head block slot: %d, state slot: %d", block.Slot-params.BeaconConfig().GenesisSlot, state.Slot-params.BeaconConfig().GenesisSlot)
 	}

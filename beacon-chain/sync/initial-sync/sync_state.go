@@ -26,6 +26,7 @@ func (s *InitialSync) processState(msg p2p.Message) {
 
 	if err := s.db.SaveHistoricalState(finalizedState); err != nil {
 		log.Errorf("Could not save new historical state: %v", err)
+		return
 	}
 
 	if err := s.db.SaveFinalizedBlock(finalizedState.LatestBlock); err != nil {
@@ -45,6 +46,7 @@ func (s *InitialSync) processState(msg p2p.Message) {
 
 	if err := s.db.SaveHistoricalState(justifiedState); err != nil {
 		log.Errorf("Could not save new historical state: %v", err)
+		return
 	}
 
 	if err := s.db.SaveJustifiedBlock(justifiedState.LatestBlock); err != nil {
@@ -79,19 +81,19 @@ func (s *InitialSync) processState(msg p2p.Message) {
 	}
 	if err := s.db.SaveHistoricalState(canonicalState); err != nil {
 		log.Errorf("Could not save new historical state: %v", err)
+		return
 	}
 
 	// sets the current slot to the last finalized slot of the
 	// beacon state to begin our sync from.
-	lastFinalizedSlot := finalizedState.Slot
-	s.currentSlot = lastFinalizedSlot
+	s.currentSlot = finalizedState.Slot
 	s.lastRequestedSlot = s.currentSlot
 	s.stateReceived = true
 	s.highestObservedCanonicalState = canonicalState
 	s.highestObservedSlot = canonicalState.Slot
 	log.Debugf(
 		"Successfully saved beacon state with the last finalized slot: %d, canonical slot: %d",
-		lastFinalizedSlot-params.BeaconConfig().GenesisSlot,
+		finalizedState.Slot-params.BeaconConfig().GenesisSlot,
 		canonicalState.Slot-params.BeaconConfig().GenesisSlot,
 	)
 }
