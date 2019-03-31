@@ -423,7 +423,7 @@ func (s *InitialSync) processState(msg p2p.Message) {
 	beaconState := data.BeaconState
 	recState.Inc()
 
-	if s.currentSlot > beaconState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
+	if s.currentSlot > beaconState.Slot {
 		return
 	}
 
