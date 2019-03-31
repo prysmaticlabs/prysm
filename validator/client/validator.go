@@ -192,6 +192,9 @@ func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
 	return pb.ValidatorRole_UNKNOWN
 }
 
+// eligibleForAssignment checks if the validator is eligible for assignment
+// at the start of the epoch, and calls fatal if the validator
+// was previous exited or ejected.
 func (v *validator) eligibleForAssignment(ctx context.Context, slot uint64) error {
 	if slot%params.BeaconConfig().SlotsPerEpoch != 0 {
 		return nil
@@ -202,11 +205,17 @@ func (v *validator) eligibleForAssignment(ctx context.Context, slot uint64) erro
 	if err != nil {
 		return err
 	}
-	if res.Status == pb.ValidatorStatus_EXITED_SLASHED || res.Status == pb.ValidatorStatus_EXITED {
+	if res.Status == pb.ValidatorStatus_EXITED {
 		log.WithFields(logrus.Fields{
 			"pubKey":       fmt.Sprintf("%#x", v.key.PublicKey.Marshal()),
 			"currentEpoch": slot / params.BeaconConfig().SlotsPerEpoch,
-			"status":       res.Status}).Panic("Validator exited from beacon chain")
+			"status":       res.Status}).Fatal("Validator has exited from beacon chain")
+	}
+	if res.Status == pb.ValidatorStatus_EXITED_SLASHED {
+		log.WithFields(logrus.Fields{
+			"pubKey":       fmt.Sprintf("%#x", v.key.PublicKey.Marshal()),
+			"currentEpoch": slot / params.BeaconConfig().SlotsPerEpoch,
+			"status":       res.Status}).Fatal("Validator has been ejected from beacon chain")
 	}
 	return nil
 }
