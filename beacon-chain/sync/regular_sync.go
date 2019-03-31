@@ -323,7 +323,8 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 	ctx, span := trace.StartSpan(msg.Ctx, "beacon-chain.sync.handleStateRequest")
 	defer span.End()
 	stateReq.Inc()
-	if _, ok := msg.Data.(*pb.BeaconStateRequest); !ok {
+	req, ok := msg.Data.(*pb.BeaconStateRequest)
+	if !ok {
 		log.Error("Message is of the incorrect type")
 		return errors.New("incoming message is not *pb.BeaconStateRequest")
 	}
@@ -335,6 +336,10 @@ func (rs *RegularSync) handleStateRequest(msg p2p.Message) error {
 	root, err := hashutil.HashProto(fState)
 	if err != nil {
 		log.Errorf("unable to marshal the beacon state: %v", err)
+		return err
+	}
+	if root != bytesutil.ToBytes32(req.FinalizedStateRootHash32S) {
+		log.Debugf("Requested state root is different from locally stored state root %#x", req.FinalizedStateRootHash32S)
 		return err
 	}
 	log.WithField(
@@ -384,9 +389,22 @@ func (rs *RegularSync) handleChainHeadRequest(msg p2p.Message) error {
 		return err
 	}
 
+	finalizedState, err := rs.db.FinalizedState()
+	if err != nil {
+		log.Errorf("Could not retrieve finalized state %v", err)
+		return err
+	}
+
+	finalizedRoot, err := hashutil.HashProto(finalizedState)
+	if err != nil {
+		log.Errorf("Could not tree hash block %v", err)
+		return err
+	}
+
 	req := &pb.ChainHeadResponse{
 		Slot: block.Slot,
 		Hash: blockRoot[:],
+		FinalizedStateRootHash32S: finalizedRoot[:],
 	}
 	ctx, ChainHead := trace.StartSpan(ctx, "sendChainHead")
 	defer ChainHead.End()

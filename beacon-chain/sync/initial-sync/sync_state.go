@@ -99,9 +99,11 @@ func (s *InitialSync) processState(msg p2p.Message) {
 }
 
 // requestStateFromPeer requests for the canonical state, finalized state, and justified state from a peer.
-func (s *InitialSync) requestStateFromPeer(ctx context.Context) error {
+func (s *InitialSync) requestStateFromPeer(ctx context.Context, lastFinalizedRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.requestStateFromPeer")
 	defer span.End()
 	stateReq.Inc()
-	return s.p2p.Send(ctx, &pb.BeaconStateRequest{}, p2p.AnyPeer)
+	return s.p2p.Send(ctx, &pb.BeaconStateRequest{
+		FinalizedStateRootHash32S:  lastFinalizedRoot[:],
+	}, p2p.AnyPeer)
 }

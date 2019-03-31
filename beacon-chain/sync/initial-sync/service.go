@@ -106,6 +106,7 @@ type InitialSync struct {
 	stateReceived                  bool
 	latestSyncedBlock              *pb.BeaconBlock
 	lastRequestedSlot              uint64
+	finalizedStateRoot [32]byte
 	mutex                          *sync.Mutex
 	blocksAboveHighestObservedSlot map[uint64]*pb.BeaconBlock
 	highestObservedCanonicalState  *pb.BeaconState
@@ -175,6 +176,11 @@ func (s *InitialSync) Stop() error {
 // InitializeObservedSlot sets the highest observed slot.
 func (s *InitialSync) InitializeObservedSlot(slot uint64) {
 	s.highestObservedSlot = slot
+}
+
+// InitializeStateRoot sets the state root of the last finalized state.
+func (s *InitialSync) InitializeFinalizeStateRoot(root [32]byte) {
+	s.finalizedStateRoot = root
 }
 
 // SyncedFeed returns a feed which fires a message once the node is synced
@@ -284,7 +290,7 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 		close(s.stateBuf)
 	}()
 
-	if err := s.requestStateFromPeer(s.ctx); err != nil {
+	if err := s.requestStateFromPeer(s.ctx, s.finalizedStateRoot); err != nil {
 		log.Errorf("Could not request state from peer %v", err)
 	}
 

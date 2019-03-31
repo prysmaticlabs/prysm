@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"math/big"
 	"time"
 
@@ -50,6 +51,7 @@ type Querier struct {
 	chainService    chainService
 	currentHeadSlot uint64
 	currentHeadHash []byte
+	currentFinalizedStateRoot [32]byte
 	responseBuf     chan p2p.Message
 	chainStartBuf   chan time.Time
 	powchain        powChainService
@@ -162,6 +164,7 @@ func (q *Querier) run() {
 			queryLog.Infof("Latest chain head is at slot: %d and hash %#x", response.Slot-params.BeaconConfig().GenesisSlot, response.Hash)
 			q.currentHeadSlot = response.Slot
 			q.currentHeadHash = response.Hash
+			q.currentFinalizedStateRoot = bytesutil.ToBytes32(response.FinalizedStateRootHash32S)
 
 			ticker.Stop()
 			responseSub.Unsubscribe()
