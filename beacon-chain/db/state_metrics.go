@@ -15,7 +15,7 @@ var (
 		Name: "state_validator_balances",
 		Help: "Balances of validators, updated on epoch transition",
 	}, []string{
-		"validatorIndex",
+		"validator",
 	})
 	validatorActivatedGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "state_validator_activated_epoch",
