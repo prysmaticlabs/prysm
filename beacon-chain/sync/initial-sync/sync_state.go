@@ -87,7 +87,6 @@ func (s *InitialSync) processState(msg p2p.Message) {
 	// sets the current slot to the last finalized slot of the
 	// beacon state to begin our sync from.
 	s.currentSlot = finalizedState.Slot
-	s.lastRequestedSlot = s.currentSlot
 	s.stateReceived = true
 	s.highestObservedCanonicalState = canonicalState
 	s.highestObservedSlot = canonicalState.Slot
@@ -96,6 +95,8 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		finalizedState.Slot-params.BeaconConfig().GenesisSlot,
 		canonicalState.Slot-params.BeaconConfig().GenesisSlot,
 	)
+	s.requestBatchedBlocks(s.currentSlot+1, s.highestObservedSlot)
+	s.lastRequestedSlot = s.highestObservedSlot
 }
 
 // requestStateFromPeer requests for the canonical state, finalized state, and justified state from a peer.

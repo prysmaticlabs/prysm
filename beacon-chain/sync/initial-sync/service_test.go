@@ -280,10 +280,10 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 	setUpGenesisStateAndBlock(db, t)
 
 	cfg := &Config{
-		P2P:         &mockP2P{},
-		SyncService: &mockSyncService{},
+		P2P:          &mockP2P{},
+		SyncService:  &mockSyncService{},
 		ChainService: &mockChainService{},
-		BeaconDB:    db,
+		BeaconDB:     db,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 
