@@ -104,6 +104,6 @@ func (s *InitialSync) requestStateFromPeer(ctx context.Context, lastFinalizedRoo
 	defer span.End()
 	stateReq.Inc()
 	return s.p2p.Send(ctx, &pb.BeaconStateRequest{
-		FinalizedStateRootHash32S:  lastFinalizedRoot[:],
+		FinalizedStateRootHash32S: lastFinalizedRoot[:],
 	}, p2p.AnyPeer)
 }

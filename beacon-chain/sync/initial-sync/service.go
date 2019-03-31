@@ -72,7 +72,7 @@ type powChainService interface {
 }
 
 type chainService interface {
-    blockchain.BlockProcessor
+	blockchain.BlockProcessor
 	blockchain.ForkChoice
 }
 
@@ -106,7 +106,7 @@ type InitialSync struct {
 	stateReceived                  bool
 	latestSyncedBlock              *pb.BeaconBlock
 	lastRequestedSlot              uint64
-	finalizedStateRoot [32]byte
+	finalizedStateRoot             [32]byte
 	mutex                          *sync.Mutex
 	blocksAboveHighestObservedSlot map[uint64]*pb.BeaconBlock
 	highestObservedCanonicalState  *pb.BeaconState
