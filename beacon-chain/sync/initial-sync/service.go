@@ -178,8 +178,8 @@ func (s *InitialSync) InitializeObservedSlot(slot uint64) {
 	s.highestObservedSlot = slot
 }
 
-// InitializeStateRoot sets the state root of the last finalized state.
-func (s *InitialSync) InitializeFinalizeStateRoot(root [32]byte) {
+// InitializeFinalizedStateRoot sets the state root of the last finalized state.
+func (s *InitialSync) InitializeFinalizedStateRoot(root [32]byte) {
 	s.finalizedStateRoot = root
 }
 
@@ -233,7 +233,10 @@ func (s *InitialSync) exitInitialSync(ctx context.Context) error {
 		if err := s.chainService.ApplyForkChoiceRule(s.ctx, block, state); err != nil {
 			return fmt.Errorf("could not apply fork choice rule", err)
 		}
-		log.Infof("Updated chain head block slot: %d, state slot: %d", block.Slot-params.BeaconConfig().GenesisSlot, state.Slot-params.BeaconConfig().GenesisSlot)
+		log.Infof(
+			"Updated chain head block slot: %d, state slot: %d",
+			block.Slot-params.BeaconConfig().GenesisSlot, state.Slot-params.BeaconConfig().GenesisSlot,
+		)
 	}
 
 	canonicalState, err := s.db.State(ctx)
