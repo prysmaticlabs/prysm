@@ -140,6 +140,12 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 		return nil
 	}
 
+	// Before fetching for assignment, we should check if validator has not exited or
+	// slashed (force exited).
+	if err := v.eligibleToParticipate(ctx, slot); err != nil {
+		return err
+	}
+
 	ctx, span := trace.StartSpan(ctx, "validator.UpdateAssignments")
 	defer span.End()
 
@@ -184,4 +190,21 @@ func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
 		return pb.ValidatorRole_ATTESTER
 	}
 	return pb.ValidatorRole_UNKNOWN
+}
+
+func (v *validator) eligibleToParticipate(ctx context.Context, slot uint64) error {
+	if slot%params.BeaconConfig().SlotsPerEpoch == 0 {
+		res, err := v.validatorClient.ValidatorStatus(ctx, &pb.ValidatorIndexRequest{
+			PublicKey: [][]byte{v.key.PublicKey.Marshal()},
+		})
+		if err != nil {
+			return  err
+		}
+		if res.Status == pb.ValidatorStatus_EXITED_SLASHED || res.Status == pb.ValidatorStatus_EXITED {
+			log.WithFields(logrus.Fields{
+				"pubKey": fmt.Sprintf("%#x", v.key.PublicKey.Marshal()),
+				"currentEpoch": slot / params.BeaconConfig().SlotsPerEpoch,
+				"status": res.Status}).Panic("Validator exited from beacon chain")
+		}
+	}
 }

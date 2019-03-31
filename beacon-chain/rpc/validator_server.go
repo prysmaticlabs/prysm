@@ -71,7 +71,7 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 // ValidatorIndex is called by a validator to get its index location that corresponds
 // to the attestation bit fields.
 func (vs *ValidatorServer) ValidatorIndex(ctx context.Context, req *pb.ValidatorIndexRequest) (*pb.ValidatorIndexResponse, error) {
-	index, err := vs.beaconDB.ValidatorIndex(req.PublicKey)
+	index, err := vs.beaconDB.ValidatorIndex(req.PublicKey[0])
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator index: %v", err)
 	}
@@ -155,7 +155,7 @@ func (vs *ValidatorServer) CommitteeAssignment(
 	if err != nil {
 		return nil, err
 	}
-	vsr, err := vs.ValidatorStatus(ctx, &pb.ValidatorIndexRequest{PublicKey: req.PublicKey[0]})
+	vsr, err := vs.ValidatorStatus(ctx, &pb.ValidatorIndexRequest{PublicKey: req.PublicKey})
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +188,7 @@ func (vs *ValidatorServer) ValidatorStatus(
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch beacon state: %v", err)
 	}
-	idx, err := vs.beaconDB.ValidatorIndex(req.PublicKey)
+	idx, err := vs.beaconDB.ValidatorIndex(req.PublicKey[0])
 	if err != nil {
 		return nil, fmt.Errorf("could not get active validator index: %v", err)
 	}

@@ -120,7 +120,7 @@ enum ValidatorRole {
 }
 
 message ValidatorIndexRequest {
-    bytes public_key = 1;
+    repeated bytes public_key = 1;
 }
 
 message ValidatorIndexResponse {
