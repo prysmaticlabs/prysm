@@ -120,7 +120,7 @@ func TestAttests_NextSlot(t *testing.T) {
 
 		cancel()
 	}()
-	timer := time.NewTimer(time.Duration(1 * time.Second))
+	timer := time.NewTimer(time.Duration(200 * time.Millisecond))
 	run(ctx, v)
 	<-timer.C
 	if !v.AttestToBlockHeadCalled {
@@ -144,7 +144,7 @@ func TestProposes_NextSlot(t *testing.T) {
 
 		cancel()
 	}()
-	timer := time.NewTimer(time.Duration(1 * time.Second))
+	timer := time.NewTimer(time.Duration(200 * time.Millisecond))
 	run(ctx, v)
 	<-timer.C
 	if !v.ProposeBlockCalled {
@@ -168,7 +168,7 @@ func TestBothProposesAndAttests_NextSlot(t *testing.T) {
 
 		cancel()
 	}()
-	timer := time.NewTimer(time.Duration(1 * time.Second))
+	timer := time.NewTimer(time.Duration(200 * time.Millisecond))
 	run(ctx, v)
 	<-timer.C
 	if !v.AttestToBlockHeadCalled {
