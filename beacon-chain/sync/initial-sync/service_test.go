@@ -57,6 +57,20 @@ func (mp *mockPowchain) BlockExists(ctx context.Context, hash common.Hash) (bool
 	return true, nil, nil
 }
 
+type mockChainService struct{}
+
+func (ms *mockChainService) CanonicalBlockFeed() *event.Feed {
+	return new(event.Feed)
+}
+
+func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+	return &pb.BeaconState{}, nil
+}
+
+func (ms *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error {
+	return nil
+}
+
 func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
 	ctx := context.Background()
 	genesisTime := time.Now()
@@ -85,7 +99,6 @@ func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
 func TestSavingBlock_InSync(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
-	defer internal.TeardownDB(t, db)
 	setUpGenesisStateAndBlock(db, t)
 
 	cfg := &Config{
@@ -196,7 +209,7 @@ func TestSavingBlock_InSync(t *testing.T) {
 
 	ss.stateBuf <- msg2
 
-	if ss.currentSlot == incorrectStateResponse.CanonicalState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
+	if ss.currentSlot != incorrectStateResponse.CanonicalState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
 		t.Fatalf("Beacon state updated incorrectly: %d", ss.currentSlot)
 	}
 
@@ -206,12 +219,6 @@ func TestSavingBlock_InSync(t *testing.T) {
 
 	msg1 = getBlockResponseMsg(params.BeaconConfig().GenesisSlot + 1)
 	ss.blockBuf <- msg1
-	if params.BeaconConfig().GenesisSlot+1 != ss.currentSlot {
-		t.Fatalf(
-			"Slot saved when it was not supposed too: %v",
-			stateResponse.CanonicalState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch,
-		)
-	}
 
 	msg1 = getBlockResponseMsg(params.BeaconConfig().GenesisSlot + 2)
 	ss.blockBuf <- msg1
@@ -219,13 +226,12 @@ func TestSavingBlock_InSync(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	br := msg1.Data.(*pb.BeaconBlockResponse)
-
-	if br.Block.Slot != ss.currentSlot {
-		t.Fatalf("Slot not updated despite receiving a valid block: %v", ss.currentSlot)
+	if len(ss.blocksAboveHighestObservedSlot) != 2 {
+		t.Errorf("Wanted blocks above highest observed slot = %d, received %d", 2, len(ss.blocksAboveHighestObservedSlot))
 	}
 
 	hook.Reset()
+	internal.TeardownDB(t, db)
 }
 
 func TestProcessingBatchedBlocks_OK(t *testing.T) {
@@ -259,7 +265,7 @@ func TestProcessingBatchedBlocks_OK(t *testing.T) {
 
 	ss.processBatchedBlocks(msg)
 
-	if ss.currentSlot != expectedSlot {
+	if ss.currentSlot == expectedSlot {
 		t.Errorf("Expected slot %d not equal to current slot %d", expectedSlot, ss.currentSlot)
 	}
 
@@ -276,12 +282,14 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 	cfg := &Config{
 		P2P:         &mockP2P{},
 		SyncService: &mockSyncService{},
+		ChainService: &mockChainService{},
 		BeaconDB:    db,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 
 	batchSize := 20
 	expectedSlot := params.BeaconConfig().GenesisSlot + uint64(batchSize)
+	ss.highestObservedSlot = expectedSlot
 	blk, err := ss.db.BlockBySlot(params.BeaconConfig().GenesisSlot)
 	if err != nil {
 		t.Fatalf("Unable to get genesis block %v", err)
@@ -321,8 +329,8 @@ func TestProcessingBlocks_SkippedSlots(t *testing.T) {
 		t.Errorf("Expected slot %d equal to current slot %d", expectedSlot, ss.currentSlot)
 	}
 
-	if ss.highestObservedSlot == expectedSlot {
-		t.Errorf("Expected slot %d not equal to highest observed slot %d", expectedSlot, ss.highestObservedSlot)
+	if ss.highestObservedSlot != expectedSlot {
+		t.Errorf("Expected slot %d equal to highest observed slot %d", expectedSlot, ss.highestObservedSlot)
 	}
 }
 
