@@ -110,6 +110,6 @@ func (ss *Service) run() {
 	// Sets the highest observed slot from querier.
 	ss.InitialSync.InitializeObservedSlot(ss.Querier.currentHeadSlot)
 	// Sets the state root of the highest observed slot.
-	ss.InitialSync.InitializeStateRoot(ss.Querier.currentFinalizedStateRoot)
+	ss.InitialSync.InitializeFinalizeStateRoot(ss.Querier.currentFinalizedStateRoot)
 	ss.InitialSync.Start()
 }
