@@ -64,8 +64,8 @@ func (db *BeaconDB) ValidatorIndex(pubKey []byte) (uint64, error) {
 // ValidatorIndices accepts a slice of public keys and returns the corresponding map of validators indexes and public keys.
 func (db *BeaconDB) ValidatorIndices(pubKeys [][]byte) (map[uint64][]byte, error) {
 	m := make(map[uint64][]byte)
-	if ex, p := db.HasValidators(pubKeys); !ex {
-		return m, fmt.Errorf("validators %#x does not exist", p)
+	if !db.HasValidators(pubKeys) {
+		return m, fmt.Errorf("one or more of the validators\n%#x\ndoes not exist", pubKeys)
 	}
 
 	err := db.view(func(tx *bolt.Tx) error {
@@ -98,9 +98,8 @@ func (db *BeaconDB) DeleteValidatorIndex(pubKey []byte) error {
 }
 
 // HasValidators checks if a validator index map exists out of a list of public keys.
-func (db *BeaconDB) HasValidators(pubKeys [][]byte) (bool, [][]byte) {
+func (db *BeaconDB) HasValidators(pubKeys [][]byte) bool {
 	exists := false
-	ppk := [][]byte{}
 	// #nosec G104, similar to HasBlock, HasAttestation... etc
 	db.view(func(tx *bolt.Tx) error {
 		a := tx.Bucket(validatorBucket)
@@ -108,15 +107,13 @@ func (db *BeaconDB) HasValidators(pubKeys [][]byte) (bool, [][]byte) {
 			h := hashutil.Hash(pk)
 			exists = a.Get(h[:]) != nil
 			if !exists {
-				ppk = append(ppk, pk)
+				break
 			}
 		}
 		return nil
 	})
-	if len(ppk) > 0 {
-		return false, ppk
-	}
-	return true, nil
+
+	return exists
 }
 
 // HasValidator checks if a validator index map exists.

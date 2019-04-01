@@ -33,6 +33,7 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 	if vs.beaconDB.HasValidator(req.Pubkey) {
 		beaconState, err := vs.beaconDB.HeadState(vs.ctx)
 =======
@@ -56,6 +57,9 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 =======
 	if ex, _ := vs.beaconDB.HasValidators(req.PublicKeys); ex {
 >>>>>>> run over all public keys in hasvalidators
+=======
+	if vs.beaconDB.HasValidators(req.PublicKeys) {
+>>>>>>> hasvalidators without missing publickeys list
 		activeVals, err := vs.retrieveActiveValidatorsPublicKeys(req.PublicKeys)
 >>>>>>> merge and some of terenc3t remarks addressed
 		if err != nil {
@@ -69,7 +73,7 @@ func (vs *ValidatorServer) WaitForActivation(req *pb.ValidatorActivationRequest,
 	for {
 		select {
 		case <-time.After(3 * time.Second):
-			if ex, _ := vs.beaconDB.HasValidators(req.PublicKeys); !ex {
+			if !vs.beaconDB.HasValidators(req.PublicKeys) {
 				continue
 			}
 <<<<<<< HEAD
