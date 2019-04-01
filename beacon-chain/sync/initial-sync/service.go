@@ -108,6 +108,7 @@ type InitialSync struct {
 	lastRequestedSlot              uint64
 	finalizedStateRoot             [32]byte
 	mutex                          *sync.Mutex
+	nodeIsSynced                   bool
 	blocksAboveHighestObservedSlot map[uint64]*pb.BeaconBlock
 	highestObservedCanonicalState  *pb.BeaconState
 	pendingBlockAnnouncements      int
@@ -185,6 +186,11 @@ func (s *InitialSync) SyncedFeed() *event.Feed {
 }
 
 func (s *InitialSync) exitInitialSync(ctx context.Context) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	if s.nodeIsSynced {
+		return nil
+	}
 	state := s.highestObservedCanonicalState
 	var err error
 	if err := s.db.SaveBlock(s.latestSyncedBlock); err != nil {
@@ -242,6 +248,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context) error {
 	s.syncedFeed.Send(s.currentSlot)
 	s.cancel()
 	s.syncService.ResumeSync()
+	s.nodeIsSynced = true
 	return nil
 }
 
