@@ -31,7 +31,7 @@ type BlockProcessor interface {
 }
 
 // ReceiveBlock is a function that defines the operations that are preformed on
-// any block that is received from p2p layer or rpc. It performs the following actions:It checks the block to see
+// any block that is received from p2p layer or rpc. It performs the following actions: It checks the block to see
 // 1. Verify a block passes pre-processing conditions
 // 2. Save and broadcast the block via p2p to other peers
 // 3. Apply the block state transition function and account for skip slots.
