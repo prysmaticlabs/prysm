@@ -32,8 +32,6 @@ type Service struct {
 	ctx           context.Context
 	cancel        context.CancelFunc
 	beaconDB      *db.BeaconDB
-	broadcastFeed *event.Feed
-	broadcastChan chan *pb.Attestation
 	incomingFeed  *event.Feed
 	incomingChan  chan *pb.Attestation
 	// store is the mapping of individual
@@ -54,8 +52,6 @@ func NewAttestationService(ctx context.Context, cfg *Config) *Service {
 		ctx:           ctx,
 		cancel:        cancel,
 		beaconDB:      cfg.BeaconDB,
-		broadcastFeed: new(event.Feed),
-		broadcastChan: make(chan *pb.Attestation, params.BeaconConfig().DefaultBufferSize),
 		incomingFeed:  new(event.Feed),
 		incomingChan:  make(chan *pb.Attestation, params.BeaconConfig().DefaultBufferSize),
 		store:         attestationStore{m: make(map[[48]byte]*pb.Attestation)},

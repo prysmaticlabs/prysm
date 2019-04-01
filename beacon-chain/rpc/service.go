@@ -68,10 +68,8 @@ type Service struct {
 	withCert              string
 	withKey               string
 	grpcServer            *grpc.Server
-	canonicalBlockChan    chan *pbp2p.BeaconBlock
 	canonicalStateChan    chan *pbp2p.BeaconState
 	incomingAttestation   chan *pbp2p.Attestation
-	slotAlignmentDuration time.Duration
 	credentialError       error
 }
 
@@ -100,8 +98,6 @@ func NewRPCService(ctx context.Context, cfg *Config) *Service {
 		port:                  cfg.Port,
 		withCert:              cfg.CertFlag,
 		withKey:               cfg.KeyFlag,
-		slotAlignmentDuration: time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
-		canonicalBlockChan:    make(chan *pbp2p.BeaconBlock, params.BeaconConfig().DefaultBufferSize),
 		canonicalStateChan:    make(chan *pbp2p.BeaconState, params.BeaconConfig().DefaultBufferSize),
 		incomingAttestation:   make(chan *pbp2p.Attestation, params.BeaconConfig().DefaultBufferSize),
 	}
