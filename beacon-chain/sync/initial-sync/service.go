@@ -240,6 +240,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context) error {
 	log.Infof("Canonical state slot: %d", canonicalState.Slot-params.BeaconConfig().GenesisSlot)
 	log.Info("Exiting initial sync and starting normal sync")
 	s.syncedFeed.Send(s.currentSlot)
+	s.cancel()
 	s.syncService.ResumeSync()
 	return nil
 }

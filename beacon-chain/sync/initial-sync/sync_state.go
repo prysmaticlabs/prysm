@@ -53,8 +53,9 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		log.Errorf("Could not save finalized block %v", err)
 		return
 	}
-	if err := s.db.SaveBlock(finalizedState.LatestBlock); err != nil {
-		log.Errorf("Could not save block %v", err)
+
+	if err := s.db.SaveBlock(justifiedState.LatestBlock); err != nil {
+		log.Errorf("Could not save finalized block %v", err)
 		return
 	}
 
