@@ -29,11 +29,11 @@ type attestationStore struct {
 // Service represents a service that handles the internal
 // logic of managing single and aggregated attestation.
 type Service struct {
-	ctx           context.Context
-	cancel        context.CancelFunc
-	beaconDB      *db.BeaconDB
-	incomingFeed  *event.Feed
-	incomingChan  chan *pb.Attestation
+	ctx          context.Context
+	cancel       context.CancelFunc
+	beaconDB     *db.BeaconDB
+	incomingFeed *event.Feed
+	incomingChan chan *pb.Attestation
 	// store is the mapping of individual
 	// validator's public key to it's latest attestation.
 	store attestationStore
@@ -49,12 +49,12 @@ type Config struct {
 func NewAttestationService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	return &Service{
-		ctx:           ctx,
-		cancel:        cancel,
-		beaconDB:      cfg.BeaconDB,
-		incomingFeed:  new(event.Feed),
-		incomingChan:  make(chan *pb.Attestation, params.BeaconConfig().DefaultBufferSize),
-		store:         attestationStore{m: make(map[[48]byte]*pb.Attestation)},
+		ctx:          ctx,
+		cancel:       cancel,
+		beaconDB:     cfg.BeaconDB,
+		incomingFeed: new(event.Feed),
+		incomingChan: make(chan *pb.Attestation, params.BeaconConfig().DefaultBufferSize),
+		store:        attestationStore{m: make(map[[48]byte]*pb.Attestation)},
 	}
 }
 
