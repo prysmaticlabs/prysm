@@ -10,7 +10,6 @@ import (
 // The proposer signature is ignored in order obtain the same block hash used
 // as the "block_root" property in the proposer signature data.
 func HashBeaconBlock(bb *pb.BeaconBlock) ([32]byte, error) {
-
 	if bb == nil || reflect.ValueOf(bb).IsNil() {
 		return [32]byte{}, ErrNilProto
 	}
