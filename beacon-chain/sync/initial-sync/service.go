@@ -14,6 +14,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"math/big"
 	"runtime/debug"
 	"strings"
@@ -73,8 +74,8 @@ type p2pAPI interface {
 }
 
 type chainService interface {
-	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error)
-	ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error
+	blockchain.ForkChoice
+	blockchain.BlockProcessor
 }
 
 type powChainService interface {
@@ -564,7 +565,17 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	}
 
 	// Send block to main chain service to be processed.
-	beaconState, err := s.chainService.ReceiveBlock(ctx, block)
+	beaconState, err := s.db.State(ctx)
+	if err != nil {
+		return fmt.Errorf("could not fetch state: %v", err)
+	}
+	if err := s.chainService.VerifyBlockValidity(block, beaconState); err != nil {
+		return fmt.Errorf("block not valid: %v", err)
+	}
+	if err := s.db.SaveBlock(block); err != nil {
+		return fmt.Errorf("could not save block: %v", err)
+	}
+	beaconState, err = s.chainService.ApplyBlockStateTransition(ctx, block, beaconState)
 	if err != nil {
 		return fmt.Errorf("could not process beacon block: %v", err)
 	}
