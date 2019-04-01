@@ -14,7 +14,6 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"sort"
 	"sync"
 	"time"
 
@@ -127,27 +126,25 @@ func NewInitialSyncService(ctx context.Context,
 	batchedBlockBuf := make(chan p2p.Message, cfg.BatchedBlockBufferSize)
 
 	return &InitialSync{
-		ctx:                            ctx,
-		cancel:                         cancel,
-		p2p:                            cfg.P2P,
-		syncService:                    cfg.SyncService,
-		db:                             cfg.BeaconDB,
-		powchain:                       cfg.PowChain,
-		chainService:                   cfg.ChainService,
-		currentSlot:                    params.BeaconConfig().GenesisSlot,
-		highestObservedSlot:            params.BeaconConfig().GenesisSlot,
-		beaconStateSlot:                params.BeaconConfig().GenesisSlot,
-		blockBuf:                       blockBuf,
-		stateBuf:                       stateBuf,
-		batchedBlockBuf:                batchedBlockBuf,
-		blockAnnounceBuf:               blockAnnounceBuf,
-		syncPollingInterval:            cfg.SyncPollingInterval,
-		inMemoryBlocks:                 map[uint64]*pb.BeaconBlock{},
-		blocksAboveHighestObservedSlot: map[uint64]*pb.BeaconBlock{},
-		pendingBlockAnnouncements:      0,
-		syncedFeed:                     new(event.Feed),
-		stateReceived:                  false,
-		mutex:                          new(sync.Mutex),
+		ctx:                 ctx,
+		cancel:              cancel,
+		p2p:                 cfg.P2P,
+		syncService:         cfg.SyncService,
+		db:                  cfg.BeaconDB,
+		powchain:            cfg.PowChain,
+		chainService:        cfg.ChainService,
+		currentSlot:         params.BeaconConfig().GenesisSlot,
+		highestObservedSlot: params.BeaconConfig().GenesisSlot,
+		beaconStateSlot:     params.BeaconConfig().GenesisSlot,
+		blockBuf:            blockBuf,
+		stateBuf:            stateBuf,
+		batchedBlockBuf:     batchedBlockBuf,
+		blockAnnounceBuf:    blockAnnounceBuf,
+		syncPollingInterval: cfg.SyncPollingInterval,
+		inMemoryBlocks:      map[uint64]*pb.BeaconBlock{},
+		syncedFeed:          new(event.Feed),
+		stateReceived:       false,
+		mutex:               new(sync.Mutex),
 	}
 }
 
@@ -180,14 +177,7 @@ func (s *InitialSync) InitializeFinalizedStateRoot(root [32]byte) {
 	s.finalizedStateRoot = root
 }
 
-// SyncedFeed returns a feed which fires a message once the node is synced
-func (s *InitialSync) SyncedFeed() *event.Feed {
-	return s.syncedFeed
-}
-
 func (s *InitialSync) exitInitialSync(ctx context.Context) error {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
 	if s.nodeIsSynced {
 		return nil
 	}
@@ -203,51 +193,14 @@ func (s *InitialSync) exitInitialSync(ctx context.Context) error {
 		return fmt.Errorf("could not save state: %v", err)
 	}
 
-	// If there were any blocks received above the highest observed slot
-	// during the process of performing initial sync, we run state transitions on those blocks.
-	for len(s.blocksAboveHighestObservedSlot) > 0 {
-		keys := make([]int, 0)
-		for k := range s.blocksAboveHighestObservedSlot {
-			keys = append(keys, int(k))
-		}
-		sort.Ints(keys)
-		for i := range keys {
-			block := s.blocksAboveHighestObservedSlot[uint64(keys[i])]
-			if err := s.chainService.VerifyBlockValidity(block, state); err != nil {
-				return fmt.Errorf("could not verify block validity: %v", err)
-			}
-			if err = s.db.SaveBlock(block); err != nil {
-				return fmt.Errorf("could not save block: %v", err)
-			}
-			state, err = s.chainService.ApplyBlockStateTransition(s.ctx, block, state)
-			if err != nil {
-				return fmt.Errorf("could not receive block in chain service: %v", err)
-			}
-			if err := s.chainService.CleanupBlockOperations(ctx, block); err != nil {
-				return err
-			}
-			if err := s.chainService.ApplyForkChoiceRule(s.ctx, block, state); err != nil {
-				return fmt.Errorf("could not apply fork choice rule: %v", err)
-			}
-			log.Infof(
-				"Updated chain head block slot: %d, state slot: %d",
-				block.Slot-params.BeaconConfig().GenesisSlot, state.Slot-params.BeaconConfig().GenesisSlot,
-			)
-			s.mutex.Lock()
-			delete(s.blocksAboveHighestObservedSlot, uint64(keys[i]))
-			s.mutex.Unlock()
-		}
-	}
-
 	canonicalState, err := s.db.State(ctx)
 	if err != nil {
 		return fmt.Errorf("could not get state: %v", err)
 	}
 	log.Infof("Canonical state slot: %d", canonicalState.Slot-params.BeaconConfig().GenesisSlot)
 	log.Info("Exiting initial sync and starting normal sync")
-	s.syncedFeed.Send(s.currentSlot)
-	s.cancel()
 	s.syncService.ResumeSync()
+	s.cancel()
 	s.nodeIsSynced = true
 	return nil
 }

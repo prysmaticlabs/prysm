@@ -18,7 +18,7 @@ func (s *InitialSync) processBlockAnnounce(msg p2p.Message) {
 	recBlockAnnounce.Inc()
 
 	if s.stateReceived && data.SlotNumber > s.highestObservedSlot {
-		s.requestBatchedBlocks(s.lastRequestedSlot+1, data.SlotNumber)
+		s.requestBatchedBlocks(s.lastRequestedSlot, data.SlotNumber)
 		s.lastRequestedSlot = data.SlotNumber
 	}
 }
@@ -30,15 +30,6 @@ func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.processBlock")
 	defer span.End()
 	recBlock.Inc()
-	if block.Slot > s.highestObservedSlot {
-		s.mutex.Lock()
-		// We put the blocks higher than the highest observed slot in a queue for processing.
-		if val := s.blocksAboveHighestObservedSlot[block.Slot]; val == nil {
-			s.blocksAboveHighestObservedSlot[block.Slot] = block
-		}
-		s.mutex.Unlock()
-		return
-	}
 
 	if block.Slot == s.highestObservedSlot {
 		s.currentSlot = s.highestObservedSlot

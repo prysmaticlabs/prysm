@@ -106,15 +106,12 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) error {
 	beaconState, err = rs.chainService.ReceiveBlock(ctx, block)
 	if err != nil {
 		log.Errorf("Could not process beacon block: %v", err)
-		return err
 	}
 	if err := rs.chainService.ApplyForkChoiceRule(ctx, block, beaconState); err != nil {
 		log.Errorf("could not apply fork choice rule: %v", err)
 		return err
 	}
 
-	// We clear the block root from the pending processing map.
-	rs.clearPendingBlock(blockRoot)
 	sentBlocks.Inc()
 
 	// We update the last observed slot to the received canonical block's slot.
@@ -127,6 +124,8 @@ func (rs *RegularSync) receiveBlock(msg p2p.Message) error {
 	// and call receiveBlock recursively. The recursive function call will stop once
 	// the block we process no longer has children.
 	if child, ok := rs.hasChild(blockRoot); ok {
+		// We clear the block root from the pending processing map.
+		rs.clearPendingBlock(blockRoot)
 		return rs.receiveBlock(child)
 	}
 	return nil
