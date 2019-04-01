@@ -39,9 +39,10 @@ func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock) {
 	}
 
 	if block.Slot == s.highestObservedSlot {
-		// We ignore receiving the block that is canonical from the peer as we already
-		// processed and stored it during the initial state handshake.
-		s.currentSlot = s.highestObservedSlot
+		if err := s.exitInitialSync(s.ctx); err != nil {
+			log.Errorf("Could not exit initial sync: %v", err)
+			return
+		}
 		return
 	}
 
@@ -79,6 +80,14 @@ func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock) {
 			return
 		}
 		log.Errorf("Unable to save block: %v", err)
+	}
+
+	if s.currentSlot == s.highestObservedSlot {
+		if err := s.exitInitialSync(s.ctx); err != nil {
+			log.Errorf("Could not exit initial sync: %v", err)
+            return
+		}
+		return
 	}
 }
 

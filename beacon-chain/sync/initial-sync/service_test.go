@@ -126,15 +126,13 @@ func TestSavingBlock_InSync(t *testing.T) {
 	ss := NewInitialSyncService(context.Background(), cfg)
 
 	exitRoutine := make(chan bool)
-	delayChan := make(chan time.Time)
 
 	defer func() {
 		close(exitRoutine)
-		close(delayChan)
 	}()
 
 	go func() {
-		ss.run(delayChan)
+		ss.run()
 		exitRoutine <- true
 	}()
 
@@ -365,15 +363,13 @@ func TestDelayChan_OK(t *testing.T) {
 	ss := NewInitialSyncService(context.Background(), cfg)
 
 	exitRoutine := make(chan bool)
-	delayChan := make(chan time.Time)
 
 	defer func() {
 		close(exitRoutine)
-		close(delayChan)
 	}()
 
 	go func() {
-		ss.run(delayChan)
+		ss.run()
 		exitRoutine <- true
 	}()
 
@@ -450,8 +446,6 @@ func TestDelayChan_OK(t *testing.T) {
 	ss.blockBuf <- msg1
 
 	msg1.Data = blockResponse
-
-	delayChan <- time.Time{}
 
 	ss.cancel()
 	<-exitRoutine

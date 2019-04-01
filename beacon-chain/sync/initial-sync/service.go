@@ -157,12 +157,7 @@ func (s *InitialSync) Start() {
 		log.Errorf("Unable to get chain head %v", err)
 	}
 	s.currentSlot = cHead.Slot
-
-	go func() {
-		ticker := time.NewTicker(s.syncPollingInterval)
-		s.run(ticker.C)
-		ticker.Stop()
-	}()
+	go s.run()
 	go s.checkInMemoryBlocks()
 }
 
@@ -186,19 +181,6 @@ func (s *InitialSync) InitializeFinalizedStateRoot(root [32]byte) {
 // SyncedFeed returns a feed which fires a message once the node is synced
 func (s *InitialSync) SyncedFeed() *event.Feed {
 	return s.syncedFeed
-}
-
-// checkSyncStatus verifies if the beacon node is correctly synced with its peers up to their
-// latest canonical head.
-func (s *InitialSync) checkSyncStatus() bool {
-	if s.currentSlot == s.highestObservedSlot {
-		if err := s.exitInitialSync(s.ctx); err != nil {
-			log.Errorf("Could not exit initial sync: %v", err)
-			return false
-		}
-		return true
-	}
-	return false
 }
 
 func (s *InitialSync) exitInitialSync(ctx context.Context) error {
@@ -280,7 +262,7 @@ func (s *InitialSync) checkInMemoryBlocks() {
 // run is the main goroutine for the initial sync service.
 // delayChan is explicitly passed into this function to facilitate tests that don't require a timeout.
 // It is assumed that the goroutine `run` is only called once per instance.
-func (s *InitialSync) run(delayChan <-chan time.Time) {
+func (s *InitialSync) run() {
 	blockSub := s.p2p.Subscribe(&pb.BeaconBlockResponse{}, s.blockBuf)
 	batchedBlocksub := s.p2p.Subscribe(&pb.BatchedBeaconBlockResponse{}, s.batchedBlockBuf)
 	blockAnnounceSub := s.p2p.Subscribe(&pb.BeaconBlockAnnounce{}, s.blockAnnounceBuf)
@@ -304,10 +286,6 @@ func (s *InitialSync) run(delayChan <-chan time.Time) {
 		case <-s.ctx.Done():
 			log.Debug("Exiting goroutine")
 			return
-		case <-delayChan:
-			if s.checkSyncStatus() {
-				return
-			}
 		case msg := <-s.blockAnnounceBuf:
 			safelyHandleMessage(s.processBlockAnnounce, msg)
 		case msg := <-s.blockBuf:
