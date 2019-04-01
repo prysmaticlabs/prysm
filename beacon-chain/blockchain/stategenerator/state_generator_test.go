@@ -14,30 +14,30 @@ import (
 )
 
 func TestGenerateState_OK(t *testing.T) {
-	bd, err := backend.NewSimulatedBackend()
+	b, err := backend.NewSimulatedBackend()
 	if err != nil {
 		t.Fatalf("Could not create a new simulated backend %v", err)
 	}
-	privKeys, err := bd.SetupBackend(100)
+	privKeys, err := b.SetupBackend(100)
 	if err != nil {
 		t.Fatalf("Could not set up backend %v", err)
 	}
-	beaconDb := bd.DB()
-	defer bd.Shutdown()
+	beaconDb := b.DB()
+	defer b.Shutdown()
 	defer db.TeardownDB(beaconDb)
 
 	slotLimit := uint64(30)
 
 	// Run the simulated chain for 30 slots, to get a state that we can save as finalized.
 	for i := uint64(0); i < slotLimit; i++ {
-		if err := bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys); err != nil {
-			t.Fatalf("Could not generate block and transition state successfully %v for slot %d", err, bd.State().Slot+1)
+		if err := b.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys); err != nil {
+			t.Fatalf("Could not generate block and transition state successfully %v for slot %d", err, b.State().Slot+1)
 		}
-		inMemBlocks := bd.InMemoryBlocks()
+		inMemBlocks := b.InMemoryBlocks()
 		if err := beaconDb.SaveBlock(inMemBlocks[len(inMemBlocks)-1]); err != nil {
 			t.Fatalf("Unable to save block %v", err)
 		}
-		if err := beaconDb.UpdateChainHead(inMemBlocks[len(inMemBlocks)-1], bd.State()); err != nil {
+		if err := beaconDb.UpdateChainHead(inMemBlocks[len(inMemBlocks)-1], b.State()); err != nil {
 			t.Fatalf("Unable to save block %v", err)
 		}
 		if err := beaconDb.SaveFinalizedBlock(inMemBlocks[len(inMemBlocks)-1]); err != nil {
@@ -45,20 +45,20 @@ func TestGenerateState_OK(t *testing.T) {
 		}
 	}
 
-	if err := beaconDb.SaveFinalizedState(bd.State()); err != nil {
+	if err := beaconDb.SaveFinalizedState(b.State()); err != nil {
 		t.Fatalf("Unable to save finalized state: %v", err)
 	}
 
 	// Run the chain for another 30 slots so that we can have this at the current head.
 	for i := uint64(0); i < slotLimit; i++ {
-		if err := bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys); err != nil {
-			t.Fatalf("Could not generate block and transition state successfully %v for slot %d", err, bd.State().Slot+1)
+		if err := b.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys); err != nil {
+			t.Fatalf("Could not generate block and transition state successfully %v for slot %d", err, b.State().Slot+1)
 		}
-		inMemBlocks := bd.InMemoryBlocks()
+		inMemBlocks := b.InMemoryBlocks()
 		if err := beaconDb.SaveBlock(inMemBlocks[len(inMemBlocks)-1]); err != nil {
 			t.Fatalf("Unable to save block %v", err)
 		}
-		if err := beaconDb.UpdateChainHead(inMemBlocks[len(inMemBlocks)-1], bd.State()); err != nil {
+		if err := beaconDb.UpdateChainHead(inMemBlocks[len(inMemBlocks)-1], b.State()); err != nil {
 			t.Fatalf("Unable to save block %v", err)
 		}
 	}
@@ -70,41 +70,41 @@ func TestGenerateState_OK(t *testing.T) {
 		t.Fatalf("Unable to generate new state from previous finalized state %v", err)
 	}
 
-	if newState.Slot != bd.State().Slot {
+	if newState.Slot != b.State().Slot {
 		t.Fatalf("The generated state and the current state do not have the same slot, expected: %d but got %d",
-			bd.State().Slot, newState.Slot)
+			b.State().Slot, newState.Slot)
 	}
 
-	if !proto.Equal(newState, bd.State()) {
+	if !proto.Equal(newState, b.State()) {
 		t.Error("Generated and saved states are unequal")
 	}
 }
 
 func TestGenerateState_WithNilBlocksOK(t *testing.T) {
-	bd, err := backend.NewSimulatedBackend()
+	b, err := backend.NewSimulatedBackend()
 	if err != nil {
 		t.Fatalf("Could not create a new simulated backend %v", err)
 	}
-	privKeys, err := bd.SetupBackend(100)
+	privKeys, err := b.SetupBackend(100)
 	if err != nil {
 		t.Fatalf("Could not set up backend %v", err)
 	}
-	beaconDb := bd.DB()
-	defer bd.Shutdown()
+	beaconDb := b.DB()
+	defer b.Shutdown()
 	defer db.TeardownDB(beaconDb)
 
 	slotLimit := uint64(30)
 
 	// Run the simulated chain for 30 slots, to get a state that we can save as finalized.
 	for i := uint64(0); i < slotLimit; i++ {
-		if err := bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys); err != nil {
-			t.Fatalf("Could not generate block and transition state successfully %v for slot %d", err, bd.State().Slot+1)
+		if err := b.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys); err != nil {
+			t.Fatalf("Could not generate block and transition state successfully %v for slot %d", err, b.State().Slot+1)
 		}
-		inMemBlocks := bd.InMemoryBlocks()
+		inMemBlocks := b.InMemoryBlocks()
 		if err := beaconDb.SaveBlock(inMemBlocks[len(inMemBlocks)-1]); err != nil {
 			t.Fatalf("Unable to save block %v", err)
 		}
-		if err := beaconDb.UpdateChainHead(inMemBlocks[len(inMemBlocks)-1], bd.State()); err != nil {
+		if err := beaconDb.UpdateChainHead(inMemBlocks[len(inMemBlocks)-1], b.State()); err != nil {
 			t.Fatalf("Unable to save block %v", err)
 		}
 		if err := beaconDb.SaveFinalizedBlock(inMemBlocks[len(inMemBlocks)-1]); err != nil {
@@ -112,7 +112,7 @@ func TestGenerateState_WithNilBlocksOK(t *testing.T) {
 		}
 	}
 
-	if err := beaconDb.SaveFinalizedState(bd.State()); err != nil {
+	if err := beaconDb.SaveFinalizedState(b.State()); err != nil {
 		t.Fatalf("Unable to save finalized state")
 	}
 
@@ -120,20 +120,20 @@ func TestGenerateState_WithNilBlocksOK(t *testing.T) {
 
 	// Run the chain for 10 slots with nil blocks.
 	for i := uint64(0); i < slotsWithNil; i++ {
-		if err := bd.GenerateNilBlockAndAdvanceChain(); err != nil {
-			t.Fatalf("Could not generate block and transition state successfully %v for slot %d", err, bd.State().Slot+1)
+		if err := b.GenerateNilBlockAndAdvanceChain(); err != nil {
+			t.Fatalf("Could not generate block and transition state successfully %v for slot %d", err, b.State().Slot+1)
 		}
 	}
 
 	for i := uint64(0); i < slotLimit-slotsWithNil; i++ {
-		if err := bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys); err != nil {
-			t.Fatalf("Could not generate block and transition state successfully %v for slot %d", err, bd.State().Slot+1)
+		if err := b.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys); err != nil {
+			t.Fatalf("Could not generate block and transition state successfully %v for slot %d", err, b.State().Slot+1)
 		}
-		inMemBlocks := bd.InMemoryBlocks()
+		inMemBlocks := b.InMemoryBlocks()
 		if err := beaconDb.SaveBlock(inMemBlocks[len(inMemBlocks)-1]); err != nil {
 			t.Fatalf("Unable to save block %v", err)
 		}
-		if err := beaconDb.UpdateChainHead(inMemBlocks[len(inMemBlocks)-1], bd.State()); err != nil {
+		if err := beaconDb.UpdateChainHead(inMemBlocks[len(inMemBlocks)-1], b.State()); err != nil {
 			t.Fatalf("Unable to save block %v", err)
 		}
 	}
@@ -145,23 +145,23 @@ func TestGenerateState_WithNilBlocksOK(t *testing.T) {
 		t.Fatalf("Unable to generate new state from previous finalized state %v", err)
 	}
 
-	if newState.Slot != bd.State().Slot {
+	if newState.Slot != b.State().Slot {
 		t.Fatalf("The generated state and the current state do not have the same slot, expected: %d but got %d",
-			bd.State().Slot, newState.Slot)
+			b.State().Slot, newState.Slot)
 	}
 
-	if !proto.Equal(newState, bd.State()) {
+	if !proto.Equal(newState, b.State()) {
 		t.Error("generated and saved states are unequal")
 	}
 }
 
 func TestGenerateState_NilLatestFinalizedBlock(t *testing.T) {
-	bd, err := backend.NewSimulatedBackend()
+	b, err := backend.NewSimulatedBackend()
 	if err != nil {
 		t.Fatalf("Could not create a new simulated backend %v", err)
 	}
-	beaconDB := bd.DB()
-	defer bd.Shutdown()
+	beaconDB := b.DB()
+	defer b.Shutdown()
 	defer db.TeardownDB(beaconDB)
 	beaconState := &pb.BeaconState{
 		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch*4,
