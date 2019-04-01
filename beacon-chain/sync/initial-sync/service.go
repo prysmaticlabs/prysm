@@ -14,12 +14,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"math/big"
 	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
