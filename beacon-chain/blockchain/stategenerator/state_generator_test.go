@@ -2,12 +2,14 @@ package stategenerator_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/stategenerator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
@@ -150,5 +152,30 @@ func TestGenerateState_WithNilBlocksOK(t *testing.T) {
 
 	if !proto.Equal(newState, bd.State()) {
 		t.Error("generated and saved states are unequal")
+	}
+}
+
+func TestGenerateState_NilLatestFinalizedBlock(t *testing.T) {
+	bd, err := backend.NewSimulatedBackend()
+	if err != nil {
+		t.Fatalf("Could not create a new simulated backend %v", err)
+	}
+	beaconDB := bd.DB()
+	defer bd.Shutdown()
+	defer db.TeardownDB(beaconDB)
+	beaconState := &pb.BeaconState{
+		Slot: params.BeaconConfig().GenesisSlot + params.BeaconConfig().SlotsPerEpoch*4,
+	}
+	if err := beaconDB.SaveFinalizedState(beaconState); err != nil {
+		t.Fatalf("Unable to save finalized state")
+	}
+	if err := beaconDB.SaveHistoricalState(beaconState); err != nil {
+		t.Fatalf("Unable to save finalized state")
+	}
+
+	slot := params.BeaconConfig().GenesisSlot + 1 + params.BeaconConfig().SlotsPerEpoch*4
+	want := "latest head in state is nil"
+	if _, err := stategenerator.GenerateStateFromBlock(context.Background(), beaconDB, slot); !strings.Contains(err.Error(), want) {
+		t.Errorf("Expected %v, received %v", want, err)
 	}
 }
