@@ -31,19 +31,23 @@ func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock) {
 	defer span.End()
 	recBlock.Inc()
 	if block.Slot > s.highestObservedSlot {
+		s.mutex.Lock()
 		// We put the blocks higher than the highest observed slot in a queue for processing.
 		if val := s.blocksAboveHighestObservedSlot[block.Slot]; val == nil {
 			s.blocksAboveHighestObservedSlot[block.Slot] = block
 		}
+		s.mutex.Unlock()
 		return
 	}
 
 	if block.Slot == s.highestObservedSlot {
 		s.currentSlot = s.highestObservedSlot
-		if err := s.exitInitialSync(s.ctx); err != nil {
-			log.Errorf("Could not exit initial sync: %v", err)
-			return
-		}
+		go func() {
+			if err := s.exitInitialSync(s.ctx); err != nil {
+				log.Errorf("Could not exit initial sync: %v", err)
+				return
+			}
+		}()
 		return
 	}
 

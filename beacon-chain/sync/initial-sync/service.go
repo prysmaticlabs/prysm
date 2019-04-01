@@ -158,6 +158,7 @@ func (s *InitialSync) Start() {
 	}
 	s.currentSlot = cHead.Slot
 	go s.run()
+	go s.listenForNewBlocks()
 	go s.checkInMemoryBlocks()
 }
 
@@ -198,33 +199,38 @@ func (s *InitialSync) exitInitialSync(ctx context.Context) error {
 
 	// If there were any blocks received above the highest observed slot
 	// during the process of performing initial sync, we run state transitions on those blocks.
-	keys := make([]int, 0)
-	for k := range s.blocksAboveHighestObservedSlot {
-		keys = append(keys, int(k))
-	}
-	sort.Ints(keys)
-	for i := range keys {
-		block := s.blocksAboveHighestObservedSlot[uint64(keys[i])]
-		if err := s.chainService.VerifyBlockValidity(block, state); err != nil {
-			return fmt.Errorf("could not verify block validity: %v", err)
+	for len(s.blocksAboveHighestObservedSlot) > 0 {
+		keys := make([]int, 0)
+		for k := range s.blocksAboveHighestObservedSlot {
+			keys = append(keys, int(k))
 		}
-		if err = s.db.SaveBlock(block); err != nil {
-			return fmt.Errorf("could not save block: %v", err)
+		sort.Ints(keys)
+		for i := range keys {
+			block := s.blocksAboveHighestObservedSlot[uint64(keys[i])]
+			if err := s.chainService.VerifyBlockValidity(block, state); err != nil {
+				return fmt.Errorf("could not verify block validity: %v", err)
+			}
+			if err = s.db.SaveBlock(block); err != nil {
+				return fmt.Errorf("could not save block: %v", err)
+			}
+			state, err = s.chainService.ApplyBlockStateTransition(s.ctx, block, state)
+			if err != nil {
+				return fmt.Errorf("could not receive block in chain service: %v", err)
+			}
+			if err := s.chainService.CleanupBlockOperations(ctx, block); err != nil {
+				return err
+			}
+			if err := s.chainService.ApplyForkChoiceRule(s.ctx, block, state); err != nil {
+				return fmt.Errorf("could not apply fork choice rule: %v", err)
+			}
+			log.Infof(
+				"Updated chain head block slot: %d, state slot: %d",
+				block.Slot-params.BeaconConfig().GenesisSlot, state.Slot-params.BeaconConfig().GenesisSlot,
+			)
+			s.mutex.Lock()
+			delete(s.blocksAboveHighestObservedSlot, uint64(keys[i]))
+			s.mutex.Unlock()
 		}
-		state, err = s.chainService.ApplyBlockStateTransition(s.ctx, block, state)
-		if err != nil {
-			return fmt.Errorf("could not receive block in chain service: %v", err)
-		}
-		if err := s.chainService.CleanupBlockOperations(ctx, block); err != nil {
-			return err
-		}
-		if err := s.chainService.ApplyForkChoiceRule(s.ctx, block, state); err != nil {
-			return fmt.Errorf("could not apply fork choice rule: %v", err)
-		}
-		log.Infof(
-			"Updated chain head block slot: %d, state slot: %d",
-			block.Slot-params.BeaconConfig().GenesisSlot, state.Slot-params.BeaconConfig().GenesisSlot,
-		)
 	}
 
 	canonicalState, err := s.db.State(ctx)
@@ -259,17 +265,33 @@ func (s *InitialSync) checkInMemoryBlocks() {
 	}
 }
 
+// listenForNewBlocks listens for block announcements beyond the canonical head slot that may
+// be received during initial sync - we must process these blocks to catch up with peers.
+func (s *InitialSync) listenForNewBlocks() {
+	blockAnnounceSub := s.p2p.Subscribe(&pb.BeaconBlockAnnounce{}, s.blockAnnounceBuf)
+	defer func() {
+		blockAnnounceSub.Unsubscribe()
+		close(s.blockAnnounceBuf)
+	}()
+	for {
+		select {
+		case <-s.ctx.Done():
+			return
+		case msg := <-s.blockAnnounceBuf:
+			safelyHandleMessage(s.processBlockAnnounce, msg)
+		}
+	}
+}
+
 // run is the main goroutine for the initial sync service.
 // delayChan is explicitly passed into this function to facilitate tests that don't require a timeout.
 // It is assumed that the goroutine `run` is only called once per instance.
 func (s *InitialSync) run() {
 	blockSub := s.p2p.Subscribe(&pb.BeaconBlockResponse{}, s.blockBuf)
 	batchedBlocksub := s.p2p.Subscribe(&pb.BatchedBeaconBlockResponse{}, s.batchedBlockBuf)
-	blockAnnounceSub := s.p2p.Subscribe(&pb.BeaconBlockAnnounce{}, s.blockAnnounceBuf)
 	beaconStateSub := s.p2p.Subscribe(&pb.BeaconStateResponse{}, s.stateBuf)
 	defer func() {
 		blockSub.Unsubscribe()
-		blockAnnounceSub.Unsubscribe()
 		beaconStateSub.Unsubscribe()
 		batchedBlocksub.Unsubscribe()
 		close(s.batchedBlockBuf)
@@ -286,8 +308,6 @@ func (s *InitialSync) run() {
 		case <-s.ctx.Done():
 			log.Debug("Exiting goroutine")
 			return
-		case msg := <-s.blockAnnounceBuf:
-			safelyHandleMessage(s.processBlockAnnounce, msg)
 		case msg := <-s.blockBuf:
 			safelyHandleMessage(func(message p2p.Message) {
 				data := message.Data.(*pb.BeaconBlockResponse)
