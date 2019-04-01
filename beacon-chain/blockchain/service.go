@@ -42,7 +42,6 @@ type ChainService struct {
 	canonicalBlockChan   chan *pb.BeaconBlock
 	canonicalBlockFeed   *event.Feed
 	genesisTime          time.Time
-	enablePOWChain       bool
 	finalizedEpoch       uint64
 	stateInitializedFeed *event.Feed
 	p2p                  p2p.Broadcaster
@@ -56,7 +55,6 @@ type Config struct {
 	BeaconDB       *db.BeaconDB
 	OpsPoolService operations.OperationFeeds
 	DevMode        bool
-	EnablePOWChain bool
 	P2p            p2p.Broadcaster
 }
 
@@ -75,7 +73,6 @@ func NewChainService(ctx context.Context, cfg *Config) (*ChainService, error) {
 		canonicalBlockChan:   make(chan *pb.BeaconBlock, params.BeaconConfig().DefaultBufferSize),
 		chainStartChan:       make(chan time.Time),
 		stateInitializedFeed: new(event.Feed),
-		enablePOWChain:       cfg.EnablePOWChain,
 		p2p:                  cfg.P2p,
 	}, nil
 }
