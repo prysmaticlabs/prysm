@@ -244,13 +244,23 @@ func (bs *BeaconServer) PendingDeposits(ctx context.Context, _ *ptypes.Empty) (*
 	if err != nil {
 		return nil, fmt.Errorf("could not generate historical deposit trie from deposits: %v", err)
 	}
+
 	for i := range pendingDeps {
+		// Don't construct merkle proof if the number of deposits is more than max allowed in block.
+		if uint64(i) == params.BeaconConfig().MaxDeposits {
+			break
+		}
 		pendingDeps[i], err = constructMerkleProof(depositTrie, pendingDeps[i])
 		if err != nil {
 			return nil, err
 		}
 	}
-	return &pb.PendingDepositsResponse{PendingDeposits: pendingDeps}, nil
+	// Limit the return of pending deposits to not be more than max deposits allowed in block.
+	var pendingDeposits []*pbp2p.Deposit
+	for i := 0; i < len(pendingDeps) && i < int(params.BeaconConfig().MaxDeposits); i++ {
+		pendingDeposits = append(pendingDeposits, pendingDeps[i])
+	}
+	return &pb.PendingDepositsResponse{PendingDeposits: pendingDeposits}, nil
 }
 
 func (bs *BeaconServer) defaultDataResponse(ctx context.Context, currentHeight *big.Int, eth1FollowDistance int64) (*pb.Eth1DataResponse, error) {
