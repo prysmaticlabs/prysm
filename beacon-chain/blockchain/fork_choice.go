@@ -128,7 +128,10 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 	if err != nil {
 		return fmt.Errorf("could not retrieve attestation target: %v", err)
 	}
-	justifiedHead := justifiedState.LatestBlock
+	justifiedHead, err := c.beaconDB.JustifiedBlock()
+	if err != nil {
+		return fmt.Errorf("could not retrieve justified head: %v", err)
+	}
 	head, err := c.lmdGhost(justifiedHead, justifiedState, postState, attestationTargets)
 	if err != nil {
 		return fmt.Errorf("could not run fork choice: %v", err)

@@ -48,12 +48,12 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 
 	// We first verify the block's basic validity conditions.
 	if err := c.VerifyBlockValidity(block, beaconState); err != nil {
-		return nil, fmt.Errorf("block with slot %d is not ready for processing: %v", block.Slot, err)
+		return beaconState, fmt.Errorf("block with slot %d is not ready for processing: %v", block.Slot, err)
 	}
 
 	// We save the block to the DB and broadcast it to our peers.
 	if err := c.SaveAndBroadcastBlock(ctx, block); err != nil {
-		return nil, fmt.Errorf(
+		return beaconState, fmt.Errorf(
 			"could not save and broadcast beacon block with slot %d: %v",
 			block.Slot-params.BeaconConfig().GenesisSlot, err,
 		)
@@ -65,7 +65,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	// We then apply the block state transition accordingly to obtain the resulting beacon state.
 	beaconState, err = c.ApplyBlockStateTransition(ctx, block, beaconState)
 	if err != nil {
-		return nil, fmt.Errorf("could not apply block state transition: %v", err)
+		return beaconState, fmt.Errorf("could not apply block state transition: %v", err)
 	}
 
 	log.WithFields(logrus.Fields{
@@ -77,7 +77,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	// We process the block's contained deposits, attestations, and other operations
 	// and that may need to be stored or deleted from the beacon node's persistent storage.
 	if err := c.CleanupBlockOperations(ctx, block); err != nil {
-		return nil, fmt.Errorf("could not process block deposits, attestations, and other operations: %v", err)
+		return beaconState, fmt.Errorf("could not process block deposits, attestations, and other operations: %v", err)
 	}
 
 	log.WithField("slot", block.Slot-params.BeaconConfig().GenesisSlot).Info("Processed beacon block")
@@ -107,7 +107,7 @@ func (c *ChainService) ApplyBlockStateTransition(
 	// Retrieve the last processed beacon block's hash root.
 	headRoot, err := c.ChainHeadRoot()
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve chain head root: %v", err)
+		return beaconState, fmt.Errorf("could not retrieve chain head root: %v", err)
 	}
 
 	// Check for skipped slots.
@@ -115,7 +115,7 @@ func (c *ChainService) ApplyBlockStateTransition(
 	for beaconState.Slot < block.Slot-1 {
 		beaconState, err = c.runStateTransition(headRoot, nil, beaconState)
 		if err != nil {
-			return nil, fmt.Errorf("could not execute state transition without block %v", err)
+			return beaconState, fmt.Errorf("could not execute state transition without block %v", err)
 		}
 		numSkippedSlots++
 	}
@@ -125,7 +125,7 @@ func (c *ChainService) ApplyBlockStateTransition(
 
 	beaconState, err = c.runStateTransition(headRoot, block, beaconState)
 	if err != nil {
-		return nil, fmt.Errorf("could not execute state transition with block %v", err)
+		return beaconState, fmt.Errorf("could not execute state transition with block %v", err)
 	}
 	return beaconState, nil
 }

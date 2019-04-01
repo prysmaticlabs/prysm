@@ -177,6 +177,11 @@ func (s *InitialSync) InitializeFinalizedStateRoot(root [32]byte) {
 	s.finalizedStateRoot = root
 }
 
+// NodeIsSynced checks that the node has been caught up with the network.
+func (s *InitialSync) NodeIsSynced() (bool, uint64) {
+	return s.nodeIsSynced, s.currentSlot
+}
+
 func (s *InitialSync) exitInitialSync(ctx context.Context) error {
 	if s.nodeIsSynced {
 		return nil
