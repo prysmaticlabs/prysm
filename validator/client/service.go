@@ -48,12 +48,18 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 	if err != nil {
 		return nil, fmt.Errorf("could not get private key: %v", err)
 	}
+	var key *keystore.Key
+	for _, v := range keys {
+		key = v
+		break
+	}
 	return &ValidatorService{
 		ctx:      ctx,
 		cancel:   cancel,
 		endpoint: cfg.Endpoint,
 		withCert: cfg.CertFlag,
 		keys:     keys,
+		key:      key,
 	}, nil
 }
 
