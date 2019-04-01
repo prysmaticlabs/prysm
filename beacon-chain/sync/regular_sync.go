@@ -214,29 +214,29 @@ func (rs *RegularSync) run() {
 			log.Debug("Exiting goroutine")
 			return
 		case msg := <-rs.announceBlockBuf:
-			go safelyHandleMessage(rs.receiveBlockAnnounce, msg)
+			safelyHandleMessage(rs.receiveBlockAnnounce, msg)
 		case msg := <-rs.attestationBuf:
-			go safelyHandleMessage(rs.receiveAttestation, msg)
+			safelyHandleMessage(rs.receiveAttestation, msg)
 		case msg := <-rs.attestationReqByHashBuf:
-			go safelyHandleMessage(rs.handleAttestationRequestByHash, msg)
+			safelyHandleMessage(rs.handleAttestationRequestByHash, msg)
 		case msg := <-rs.announceAttestationBuf:
-			go safelyHandleMessage(rs.handleAttestationAnnouncement, msg)
+			safelyHandleMessage(rs.handleAttestationAnnouncement, msg)
 		case msg := <-rs.exitBuf:
-			go safelyHandleMessage(rs.receiveExitRequest, msg)
+			safelyHandleMessage(rs.receiveExitRequest, msg)
 		case msg := <-rs.blockBuf:
-			go safelyHandleMessage(rs.receiveBlock, msg)
+			safelyHandleMessage(rs.receiveBlock, msg)
 		case msg := <-rs.blockRequestBySlot:
-			go safelyHandleMessage(rs.handleBlockRequestBySlot, msg)
+			safelyHandleMessage(rs.handleBlockRequestBySlot, msg)
 		case msg := <-rs.blockRequestByHash:
-			go safelyHandleMessage(rs.handleBlockRequestByHash, msg)
+			safelyHandleMessage(rs.handleBlockRequestByHash, msg)
 		case msg := <-rs.batchedRequestBuf:
-			go safelyHandleMessage(rs.handleBatchedBlockRequest, msg)
+			safelyHandleMessage(rs.handleBatchedBlockRequest, msg)
 		case msg := <-rs.stateRequestBuf:
-			go safelyHandleMessage(rs.handleStateRequest, msg)
+			safelyHandleMessage(rs.handleStateRequest, msg)
 		case msg := <-rs.chainHeadReqBuf:
-			go safelyHandleMessage(rs.handleChainHeadRequest, msg)
+			safelyHandleMessage(rs.handleChainHeadRequest, msg)
 		case blockAnnounce := <-rs.canonicalBuf:
-			go rs.broadcastCanonicalBlock(rs.ctx, blockAnnounce)
+			rs.broadcastCanonicalBlock(rs.ctx, blockAnnounce)
 		}
 	}
 	log.Info("Exiting regular sync run()")
