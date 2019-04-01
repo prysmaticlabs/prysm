@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
-	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/state"
@@ -142,11 +140,8 @@ func (c *ChainService) VerifyBlockValidity(block *pb.BeaconBlock, beaconState *p
 		return fmt.Errorf("cannot process a genesis block: received block with slot %d",
 			block.Slot-params.BeaconConfig().GenesisSlot)
 	}
-	var powBlockFetcher func(ctx context.Context, hash common.Hash) (*gethTypes.Block, error)
-	if c.enablePOWChain {
-		powBlockFetcher = c.web3Service.Client().BlockByHash
-	}
-	if err := b.IsValidBlock(c.ctx, beaconState, block, c.enablePOWChain,
+	powBlockFetcher := c.web3Service.Client().BlockByHash
+	if err := b.IsValidBlock(c.ctx, beaconState, block,
 		c.beaconDB.HasBlock, powBlockFetcher, c.genesisTime); err != nil {
 		return fmt.Errorf("block does not fulfill pre-processing conditions %v", err)
 	}
