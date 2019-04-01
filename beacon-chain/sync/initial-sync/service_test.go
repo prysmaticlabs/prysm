@@ -83,6 +83,10 @@ func (m *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Be
 	return nil
 }
 
+func (m *mockChainService) CleanupBlockOperations(ctx context.Context, block *pb.BeaconBlock) error {
+	return nil
+}
+
 func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
 	ctx := context.Background()
 	genesisTime := time.Now()

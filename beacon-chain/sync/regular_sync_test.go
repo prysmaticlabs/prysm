@@ -84,6 +84,10 @@ func (ms *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.B
 	return nil
 }
 
+func (ms *mockChainService) CleanupBlockOperations(ctx context.Context, block *pb.BeaconBlock) error {
+	return nil
+}
+
 type mockOperationService struct{}
 
 func (ms *mockOperationService) IncomingProcessedBlockFeed() *event.Feed {

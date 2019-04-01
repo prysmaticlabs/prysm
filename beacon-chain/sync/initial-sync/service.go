@@ -233,6 +233,9 @@ func (s *InitialSync) exitInitialSync(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("could not receive block in chain service: %v", err)
 		}
+		if err := s.chainService.CleanupBlockOperations(ctx, block); err != nil {
+			return err
+		}
 		if err := s.chainService.ApplyForkChoiceRule(s.ctx, block, state); err != nil {
 			return fmt.Errorf("could not apply fork choice rule", err)
 		}

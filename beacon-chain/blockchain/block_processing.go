@@ -28,6 +28,7 @@ type BlockReceiver interface {
 type BlockProcessor interface {
 	VerifyBlockValidity(block *pb.BeaconBlock, beaconState *pb.BeaconState) error
 	ApplyBlockStateTransition(ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState) (*pb.BeaconState, error)
+	CleanupBlockOperations(ctx context.Context, block *pb.BeaconBlock) error
 }
 
 // ReceiveBlock is a function that defines the operations that are preformed on
