@@ -169,11 +169,9 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 	for _, assignment := range v.assignments.Assignment {
 		var proposerSlot uint64
 		var attesterSlot uint64
-		if assignment.IsProposer && len(assignment.Committee) == 1 {
+		if assignment.IsProposer {
 			proposerSlot = assignment.Slot
 			attesterSlot = assignment.Slot
-		} else if assignment.IsProposer {
-			proposerSlot = assignment.Slot
 		} else {
 			attesterSlot = assignment.Slot
 		}
