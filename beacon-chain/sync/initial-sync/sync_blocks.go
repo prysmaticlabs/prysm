@@ -152,7 +152,17 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	if _, ok := s.inMemoryBlocks[block.Slot]; ok {
 		delete(s.inMemoryBlocks, block.Slot)
 	}
-	state, err := s.chainService.ReceiveBlock(ctx, block)
+	state, err := s.db.State(ctx)
+	if err != nil {
+		return err
+	}
+	if err := s.chainService.VerifyBlockValidity(block, state); err != nil {
+		return err
+	}
+	if err := s.db.SaveBlock(block); err != nil {
+		return err
+	}
+	state, err = s.chainService.ApplyBlockStateTransition(ctx, block, state)
 	if err != nil {
 		return err
 	}

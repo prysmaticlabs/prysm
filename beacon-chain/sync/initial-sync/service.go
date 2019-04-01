@@ -223,10 +223,13 @@ func (s *InitialSync) exitInitialSync(ctx context.Context) error {
 	sort.Ints(keys)
 	for i := range keys {
 		block := s.blocksAboveHighestObservedSlot[uint64(keys[i])]
+		if err := s.chainService.VerifyBlockValidity(block, state); err != nil {
+			return fmt.Errorf("could not verify block validity: %v", err)
+		}
 		if err = s.db.SaveBlock(block); err != nil {
 			return fmt.Errorf("could not save block: %v", err)
 		}
-		state, err = s.chainService.ReceiveBlock(s.ctx, block)
+		state, err = s.chainService.ApplyBlockStateTransition(s.ctx, block, state)
 		if err != nil {
 			return fmt.Errorf("could not receive block in chain service: %v", err)
 		}
