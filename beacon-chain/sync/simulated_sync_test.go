@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/libp2p/go-libp2p-peer"
+	peer "github.com/libp2p/go-libp2p-peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -150,7 +150,6 @@ func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*S
 		mockChain.sFeed.Send(time.Now())
 	}
 
-
 	for i := 1; i <= numOfBlocks; i++ {
 		if err := bd.GenerateBlockAndAdvanceChain(&backend.SimulatedObjects{}, privKeys); err != nil {
 			t.Fatalf("Unable to generate block in simulated backend %v", err)
@@ -258,16 +257,16 @@ func TestSyncing_AFullySyncedNode(t *testing.T) {
 
 	timeout := time.After(10 * time.Second)
 	tick := time.Tick(200 * time.Millisecond)
-	loop:
+loop:
 	for {
 		select {
 		case <-timeout:
 			t.Error("Could not sync in time")
-            break loop
-        case <-tick:
-        	_, slot1 := us.InitialSync.NodeIsSynced()
+			break loop
+		case <-tick:
+			_, slot1 := us.InitialSync.NodeIsSynced()
 			_, slot2 := us.InitialSync.NodeIsSynced()
-            if slot1 == uint64(numOfBlocks)+params.BeaconConfig().GenesisSlot ||
+			if slot1 == uint64(numOfBlocks)+params.BeaconConfig().GenesisSlot ||
 				slot2 == uint64(numOfBlocks)+params.BeaconConfig().GenesisSlot {
 				break loop
 			}

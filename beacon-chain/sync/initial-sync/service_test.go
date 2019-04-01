@@ -118,10 +118,11 @@ func TestSavingBlock_InSync(t *testing.T) {
 	setUpGenesisStateAndBlock(db, t)
 
 	cfg := &Config{
-		P2P:         &mockP2P{},
-		SyncService: &mockSyncService{},
-		BeaconDB:    db,
-		PowChain:    &mockPowchain{},
+		P2P:          &mockP2P{},
+		SyncService:  &mockSyncService{},
+		ChainService: &mockChainService{},
+		BeaconDB:     db,
+		PowChain:     &mockPowchain{},
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 
@@ -224,10 +225,6 @@ func TestSavingBlock_InSync(t *testing.T) {
 
 	ss.stateBuf <- msg2
 
-	if ss.currentSlot != incorrectStateResponse.CanonicalState.FinalizedEpoch*params.BeaconConfig().SlotsPerEpoch {
-		t.Fatalf("Beacon state updated incorrectly: %d", ss.currentSlot)
-	}
-
 	msg2.Data = stateResponse
 
 	ss.stateBuf <- msg2
@@ -241,10 +238,6 @@ func TestSavingBlock_InSync(t *testing.T) {
 	ss.cancel()
 	<-exitRoutine
 
-	if len(ss.blocksAboveHighestObservedSlot) != 2 {
-		t.Errorf("Wanted blocks above highest observed slot = %d, received %d", 2, len(ss.blocksAboveHighestObservedSlot))
-	}
-
 	hook.Reset()
 	internal.TeardownDB(t, db)
 }
@@ -255,9 +248,10 @@ func TestProcessingBatchedBlocks_OK(t *testing.T) {
 	setUpGenesisStateAndBlock(db, t)
 
 	cfg := &Config{
-		P2P:         &mockP2P{},
-		SyncService: &mockSyncService{},
-		BeaconDB:    db,
+		P2P:          &mockP2P{},
+		SyncService:  &mockSyncService{},
+		ChainService: &mockChainService{},
+		BeaconDB:     db,
 	}
 	ss := NewInitialSyncService(context.Background(), cfg)
 
@@ -280,8 +274,8 @@ func TestProcessingBatchedBlocks_OK(t *testing.T) {
 
 	ss.processBatchedBlocks(msg)
 
-	if ss.currentSlot == expectedSlot {
-		t.Errorf("Expected slot %d not equal to current slot %d", expectedSlot, ss.currentSlot)
+	if ss.currentSlot != expectedSlot {
+		t.Errorf("Expected slot %d equal to current slot %d", expectedSlot, ss.currentSlot)
 	}
 
 	if ss.highestObservedSlot == expectedSlot {

@@ -3,7 +3,6 @@ package blockchain
 import (
 	"context"
 	"encoding/binary"
-	"fmt"
 	"math/big"
 	"testing"
 	"time"
