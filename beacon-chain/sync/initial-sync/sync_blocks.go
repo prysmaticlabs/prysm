@@ -3,7 +3,6 @@ package initialsync
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
@@ -133,7 +132,7 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.sync.initial-sync.validateAndSaveNextBlock")
 	defer span.End()
 	if block == nil {
-		return errors.New("received nil block)
+		return errors.New("received nil block")
 	}
 	root, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
