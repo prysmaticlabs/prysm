@@ -182,7 +182,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p",
-    commit = "2308ba3c0036ddf8ac390c893b71d946c57a7328",  # v0.0.2
+    commit = "c184a55f180beb5018f3cf4a3970de8e432e59e4",  # v0.0.3
     importpath = "github.com/libp2p/go-libp2p",
 )
 
@@ -249,7 +249,7 @@ go_repository(
 
 go_repository(
     name = "com_github_libp2p_go_libp2p_interface_connmgr",
-    commit = "8bddc198c80e6242d016361b3c5f02fb920e9faa",  # v0.0.1
+    commit = "e80dd2e9f839e44febfcb7e6b38ded8761332eb6",  # v0.0.3
     importpath = "github.com/libp2p/go-libp2p-interface-connmgr",
 )
 
@@ -750,13 +750,13 @@ go_repository(
 go_repository(
     name = "com_github_libp2p_go_libp2p_kad_dht",
     build_file_proto_mode = "disable_global",
-    commit = "d1855272f4c0b93bd3cf4cf2fa27f1daf8880433",  # v0.0.5
+    commit = "da821d95c0f0268f0134841589c55efa9e8e5422",  # v0.0.6
     importpath = "github.com/libp2p/go-libp2p-kad-dht",
 )
 
 go_repository(
     name = "com_github_ipfs_go_datastore",
-    commit = "1b371980cb3fe9edba40c0f0584042e5cb4477a4",  # v0.0.1
+    commit = "f3abe0ceeea5156a0873c09d3f3b36c38d881f93",  # v0.0.2
     importpath = "github.com/ipfs/go-datastore",
 )
 
