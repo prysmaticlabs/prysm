@@ -24,7 +24,6 @@ type BeaconServer struct {
 	ctx                 context.Context
 	powChainService     powChainService
 	chainService        chainService
-	chainStartDelayFlag uint64
 	operationService    operationService
 	incomingAttestation chan *pbp2p.Attestation
 	canonicalStateChan  chan *pbp2p.BeaconState
@@ -40,7 +39,7 @@ func (bs *BeaconServer) WaitForChainStart(req *ptypes.Empty, stream pb.BeaconSer
 	if err != nil {
 		return fmt.Errorf("could not determine if ChainStart log has occurred: %v", err)
 	}
-	if ok && bs.chainStartDelayFlag == 0 {
+	if ok {
 		res := &pb.ChainStartResponse{
 			Started:     true,
 			GenesisTime: genesisTime,
