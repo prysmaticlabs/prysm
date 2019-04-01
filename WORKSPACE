@@ -1061,6 +1061,6 @@ go_repository(
 
 go_repository(
     name = "com_github_grpc_ecosystem_go_grpc_prometheus",
-    commit = "68e3a13e41175110a447e67246a59873d6aca902",
+    commit = "502116f1a0a0c1140aab04fd3787489209b357d3",  # v1.2.0
     importpath = "github.com/grpc-ecosystem/go-grpc-prometheus",
 )
