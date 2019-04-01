@@ -85,7 +85,7 @@ func (s *InitialSync) processBlock(ctx context.Context, block *pb.BeaconBlock) {
 	if s.currentSlot == s.highestObservedSlot {
 		if err := s.exitInitialSync(s.ctx); err != nil {
 			log.Errorf("Could not exit initial sync: %v", err)
-            return
+			return
 		}
 		return
 	}
