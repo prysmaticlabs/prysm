@@ -67,23 +67,23 @@ func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBl
 	return &pb.BeaconState{}, nil
 }
 
-func (m *mockChainService) ApplyBlockStateTransition(
+func (ms *mockChainService) ApplyBlockStateTransition(
 	ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState,
 ) (*pb.BeaconState, error) {
 	return &pb.BeaconState{}, nil
 }
 
-func (m *mockChainService) VerifyBlockValidity(
+func (ms *mockChainService) VerifyBlockValidity(
 	block *pb.BeaconBlock, beaconState *pb.BeaconState,
 ) error {
 	return nil
 }
 
-func (m *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error {
+func (ms *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error {
 	return nil
 }
 
-func (m *mockChainService) CleanupBlockOperations(ctx context.Context, block *pb.BeaconBlock) error {
+func (ms *mockChainService) CleanupBlockOperations(ctx context.Context, block *pb.BeaconBlock) error {
 	return nil
 }
 
