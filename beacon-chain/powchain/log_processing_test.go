@@ -76,7 +76,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	testutil.AssertLogsDoNotContain(t, hook, "Could not unpack log")
 	testutil.AssertLogsDoNotContain(t, hook, "Could not save in trie")
 	testutil.AssertLogsDoNotContain(t, hook, "Could not decode deposit input")
-	testutil.AssertLogsContain(t, hook, "Validator registered in deposit contract")
+	testutil.AssertLogsContain(t, hook, "Deposit registered from deposit contract")
 
 	hook.Reset()
 }
@@ -224,7 +224,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 
 }
 
-func TestProcessChainStartLog_OK(t *testing.T) {
+func TestProcessChainStartLog_8DuplicatePubkeys(t *testing.T) {
 	hook := logTest.NewGlobal()
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
@@ -292,6 +292,91 @@ func TestProcessChainStartLog_OK(t *testing.T) {
 	}
 
 	cachedDeposits := web3Service.ChainStartDeposits()
+	if len(cachedDeposits) != 1 {
+		t.Errorf(
+			"Did not cache the chain start deposits correctly, received %d, wanted %d",
+			len(cachedDeposits),
+			depositsReqForChainStart,
+		)
+	}
+
+	<-genesisTimeChan
+	testutil.AssertLogsDoNotContain(t, hook, "Unable to unpack ChainStart log data")
+	testutil.AssertLogsDoNotContain(t, hook, "Receipt root from log doesn't match the root saved in memory")
+	testutil.AssertLogsDoNotContain(t, hook, "Invalid timestamp from log")
+	testutil.AssertLogsContain(t, hook, "Minimum number of validators reached for beacon-chain to start")
+
+	hook.Reset()
+}
+
+func TestProcessChainStartLog_8UniquePubkeys(t *testing.T) {
+	hook := logTest.NewGlobal()
+	endpoint := "ws://127.0.0.1"
+	testAcc, err := setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint:        endpoint,
+		DepositContract: testAcc.contractAddr,
+		Reader:          &goodReader{},
+		Logger:          &goodLogger{},
+		ContractBackend: testAcc.backend,
+		BeaconDB:        &db.BeaconDB{},
+	})
+	if err != nil {
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+
+	testAcc.backend.Commit()
+	testAcc.backend.AdjustTime(time.Duration(int64(time.Now().Nanosecond())))
+
+	// 8 Validators are used as size required for beacon-chain to start. This number
+	// is defined in the deposit contract as the number required for the testnet. The actual number
+	// is 2**14
+	for i := 0; i < depositsReqForChainStart; i++ {
+		var stub [48]byte
+		binary.LittleEndian.PutUint64(stub[:], uint64(i))
+
+		data := &pb.DepositInput{
+			Pubkey:                      stub[:],
+			ProofOfPossession:           stub[:],
+			WithdrawalCredentialsHash32: []byte("withdraw"),
+		}
+
+		serializedData := new(bytes.Buffer)
+		if err := ssz.Encode(serializedData, data); err != nil {
+			t.Fatalf("Could not serialize data %v", err)
+		}
+
+		testAcc.txOpts.Value = amount32Eth
+		if _, err := testAcc.contract.Deposit(testAcc.txOpts, serializedData.Bytes()); err != nil {
+			t.Fatalf("Could not deposit to deposit contract %v", err)
+		}
+
+		testAcc.backend.Commit()
+	}
+
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{
+			web3Service.depositContractAddress,
+		},
+	}
+
+	logs, err := testAcc.backend.FilterLogs(web3Service.ctx, query)
+	if err != nil {
+		t.Fatalf("Unable to retrieve logs %v", err)
+	}
+
+	genesisTimeChan := make(chan time.Time, 1)
+	sub := web3Service.chainStartFeed.Subscribe(genesisTimeChan)
+	defer sub.Unsubscribe()
+
+	for _, log := range logs {
+		web3Service.ProcessLog(log)
+	}
+
+	cachedDeposits := web3Service.ChainStartDeposits()
 	if len(cachedDeposits) != depositsReqForChainStart {
 		t.Errorf(
 			"Did not cache the chain start deposits correctly, received %d, wanted %d",
@@ -307,7 +392,6 @@ func TestProcessChainStartLog_OK(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Minimum number of validators reached for beacon-chain to start")
 
 	hook.Reset()
-
 }
 
 func TestUnpackChainStartLogData_OK(t *testing.T) {

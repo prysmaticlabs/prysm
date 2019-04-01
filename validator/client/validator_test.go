@@ -250,6 +250,44 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Validator activated")
 }
 
+func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := internal.NewMockBeaconServiceClient(ctrl)
+	v := validator{
+		key:          validatorKey,
+		beaconClient: client,
+	}
+	client.EXPECT().CanonicalHead(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(nil, errors.New("failed"))
+	if _, err := v.CanonicalHeadSlot(context.Background()); !strings.Contains(err.Error(), "failed") {
+		t.Errorf("Wanted: %v, received: %v", "failed", err)
+	}
+}
+
+func TestCanonicalHeadSlot_OK(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := internal.NewMockBeaconServiceClient(ctrl)
+	v := validator{
+		key:          validatorKey,
+		beaconClient: client,
+	}
+	client.EXPECT().CanonicalHead(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&pbp2p.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot}, nil)
+	headSlot, err := v.CanonicalHeadSlot(context.Background())
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if headSlot != params.BeaconConfig().GenesisSlot {
+		t.Errorf("Mismatch slots, wanted: %v, received: %v", params.BeaconConfig().GenesisSlot, headSlot)
+	}
+}
+
 func TestUpdateAssignments_ReturnsError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

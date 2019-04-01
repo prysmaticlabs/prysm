@@ -61,7 +61,6 @@ func GenesisBeaconState(
 	}
 
 	validatorRegistry := make([]*pb.Validator, len(genesisValidatorDeposits))
-	latestBalances := make([]uint64, len(genesisValidatorDeposits))
 	for i, d := range genesisValidatorDeposits {
 		depositInput, err := helpers.DecodeDepositInput(d.DepositData)
 		if err != nil {
@@ -78,9 +77,9 @@ func GenesisBeaconState(
 		}
 
 		validatorRegistry[i] = validator
-
 	}
 
+	latestBalances := make([]uint64, len(genesisValidatorDeposits))
 	latestSlashedExitBalances := make([]uint64, params.BeaconConfig().LatestSlashedExitLength)
 
 	state := &pb.BeaconState{

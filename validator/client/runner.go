@@ -17,6 +17,7 @@ type Validator interface {
 	Done()
 	WaitForChainStart(ctx context.Context) error
 	WaitForActivation(ctx context.Context) error
+	CanonicalHeadSlot(ctx context.Context) (uint64, error)
 	NextSlot() <-chan uint64
 	SlotDeadline(slot uint64) time.Time
 	LogValidatorGainsAndLosses(ctx context.Context, slot uint64) error
@@ -44,8 +45,12 @@ func run(ctx context.Context, v Validator) {
 	if err := v.WaitForActivation(ctx); err != nil {
 		log.Fatalf("Could not wait for validator activation: %v", err)
 	}
-	if err := v.UpdateAssignments(ctx, params.BeaconConfig().GenesisSlot); err != nil {
-		handleAssignmentError(err, params.BeaconConfig().GenesisSlot)
+	headSlot, err := v.CanonicalHeadSlot(ctx)
+	if err != nil {
+		log.Fatalf("Could not get current canonical head slot: %v", err)
+	}
+	if err := v.UpdateAssignments(ctx, headSlot); err != nil {
+		handleAssignmentError(err, headSlot)
 	}
 	for {
 		ctx, span := trace.StartSpan(ctx, "processSlot")
@@ -60,7 +65,8 @@ func run(ctx context.Context, v Validator) {
 			slotCtx, _ := context.WithDeadline(ctx, v.SlotDeadline(slot))
 			// Report this validator client's rewards and penalties throughout its lifecycle.
 			if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
-				log.Errorf("Could not report validator's rewards/penalties for slot %d: %v", slot, err)
+				log.Errorf("Could not report validator's rewards/penalties for slot %d: %v",
+					slot-params.BeaconConfig().GenesisSlot, err)
 			}
 
 			// Keep trying to update assignments if they are nil or if we are past an
@@ -92,7 +98,7 @@ func run(ctx context.Context, v Validator) {
 func handleAssignmentError(err error, slot uint64) {
 	if errCode, ok := status.FromError(err); ok && errCode.Code() == codes.NotFound {
 		log.WithField(
-			"epoch", (slot*params.BeaconConfig().SlotsPerEpoch)-params.BeaconConfig().GenesisEpoch,
+			"epoch", (slot/params.BeaconConfig().SlotsPerEpoch)-params.BeaconConfig().GenesisEpoch,
 		).Warn("Validator not yet assigned to epoch")
 	} else {
 		log.WithField("error", err).Error("Failed to update assignments")
