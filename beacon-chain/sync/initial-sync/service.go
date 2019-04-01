@@ -219,7 +219,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context) error {
 			return err
 		}
 		if err := s.chainService.ApplyForkChoiceRule(s.ctx, block, state); err != nil {
-			return fmt.Errorf("could not apply fork choice rule", err)
+			return fmt.Errorf("could not apply fork choice rule: %v", err)
 		}
 		log.Infof(
 			"Updated chain head block slot: %d, state slot: %d",
