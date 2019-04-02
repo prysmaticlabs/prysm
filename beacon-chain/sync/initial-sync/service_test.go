@@ -107,7 +107,7 @@ func setUpGenesisStateAndBlock(beaconDB *db.BeaconDB, t *testing.T) {
 	if err := beaconDB.SaveBlock(genBlock); err != nil {
 		t.Fatalf("could not save genesis block to disk: %v", err)
 	}
-	if err := beaconDB.UpdateChainHead(genBlock, beaconState); err != nil {
+	if err := beaconDB.UpdateChainHead(ctx, genBlock, beaconState); err != nil {
 		t.Fatalf("could not set chain head, %v", err)
 	}
 }

@@ -43,7 +43,7 @@ spec:
         - name: beacon-chain
           image: gcr.io/prysmaticlabs/prysm/beacon-chain:latest
           args: 
-            - --web3provider=ws://public-rpc-nodes.pow.svc.cluster.local:8546
+            - --web3provider=wss://goerli.infura.io/ws/v3/be3fb7ed377c418087602876a40affa1
             #- --verbosity=debug
             - --deposit-contract=$(DEPOSIT_CONTRACT_ADDRESS)
             - --rpc-port=4000

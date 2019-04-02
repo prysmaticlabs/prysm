@@ -155,7 +155,7 @@ func (c *ChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.Beacon
 		reorgCount.Inc()
 	}
 
-	if err := c.beaconDB.UpdateChainHead(head, newState); err != nil {
+	if err := c.beaconDB.UpdateChainHead(ctx, head, newState); err != nil {
 		return fmt.Errorf("failed to update chain: %v", err)
 	}
 	h, err := hashutil.HashBeaconBlock(head)

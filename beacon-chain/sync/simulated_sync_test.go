@@ -70,6 +70,8 @@ func (sim *simulatedP2P) Send(ctx context.Context, msg proto.Message, peerID pee
 }
 
 func setupSimBackendAndDB(t *testing.T) (*backend.SimulatedBackend, *db.BeaconDB, []*bls.SecretKey) {
+	ctx := context.Background()
+
 	bd, err := backend.NewSimulatedBackend()
 	if err != nil {
 		t.Fatalf("Could not set up simulated backend %v", err)
@@ -123,6 +125,7 @@ func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*S
 	bd, beacondb, privKeys := setupSimBackendAndDB(t)
 	defer bd.Shutdown()
 	defer db.TeardownDB(bd.DB())
+	ctx := context.Background()
 
 	mockPow := &genesisPowChain{
 		feed: new(event.Feed),
@@ -158,7 +161,7 @@ func setUpSyncedService(numOfBlocks int, simP2P *simulatedP2P, t *testing.T) (*S
 		if err := beacondb.SaveBlock(blocks[i]); err != nil {
 			t.Fatalf("Unable to save block %v", err)
 		}
-		if err := beacondb.UpdateChainHead(blocks[i], bd.State()); err != nil {
+		if err := beacondb.UpdateChainHead(ctx, blocks[i], bd.State()); err != nil {
 			t.Fatalf("Unable to update chain head %v", err)
 		}
 	}
@@ -170,6 +173,7 @@ func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T
 	bd, beacondb, _ := setupSimBackendAndDB(t)
 	defer bd.Shutdown()
 	defer db.TeardownDB(bd.DB())
+	ctx := context.Background()
 
 	mockPow := &afterGenesisPowChain{
 		feed: new(event.Feed),
