@@ -72,6 +72,8 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
 	chainService := setupBeaconChain(t, db, nil)
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	eth1Data := &pb.Eth1Data{
@@ -87,7 +89,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
 	parentHash, genesisBlock := setupGenesisBlock(t, chainService, beaconState)
-	if err := chainService.beaconDB.UpdateChainHead(genesisBlock, beaconState); err != nil {
+	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
 		t.Fatal(err)
 	}
 
@@ -128,6 +130,8 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
 	attsService := attestation.NewAttestationService(
 		context.Background(),
 		&attestation.Config{BeaconDB: db})
@@ -150,7 +154,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 	parentHash, genesisBlock := setupGenesisBlock(t, chainService, beaconState)
 	beaconState.Slot++
-	if err := chainService.beaconDB.UpdateChainHead(genesisBlock, beaconState); err != nil {
+	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
 		t.Fatal(err)
 	}
 
@@ -214,7 +218,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	}
 
 	beaconState.Slot--
-	if err := chainService.beaconDB.SaveState(beaconState); err != nil {
+	if err := chainService.beaconDB.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
 	computedState, err := chainService.ReceiveBlock(context.Background(), block)
