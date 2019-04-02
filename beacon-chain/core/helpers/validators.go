@@ -36,7 +36,6 @@ func ActiveValidatorIndices(validators []*pb.Validator, epoch uint64) []uint64 {
 		if IsActiveValidator(v, epoch) {
 			indices = append(indices, uint64(i))
 		}
-
 	}
 	return indices
 }

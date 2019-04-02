@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/state/stateutils"
 	"testing"
 	"time"
 
@@ -14,8 +15,31 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
-var ValidatorCount = 8192
+var ValidatorCount = 256
 var RunAmount = 67108864 / ValidatorCount
+var conditions = "MAX"
+
+func setBenchmarkConfig() {
+	c := params.BeaconConfig()
+	// From Danny Ryan's "Minimal Config"
+	// c.SlotsPerEpoch = 8
+	// c.MinAttestationInclusionDelay = 2
+	// c.TargetCommitteeSize = 4
+	// c.GenesisEpoch = c.GenesisSlot / 8
+	// c.LatestRandaoMixesLength = 64
+	// c.LatestActiveIndexRootsLength = 64
+	// c.LatestSlashedExitLength = 64
+	if conditions == "MAX" {
+		c.MaxAttestations = 128
+		c.MaxDeposits = 16
+		c.MaxVoluntaryExits = 16
+	} else if conditions == "MIN" {
+		c.MaxAttestations = 16
+		c.MaxDeposits = 2
+		c.MaxVoluntaryExits = 2
+	}
+	params.OverrideBeaconConfig(c)
+}
 
 func BenchmarkProcessEth1Data(b *testing.B) {
 	deposits := setupBenchmarkInitialDeposits(ValidatorCount)
@@ -201,6 +225,50 @@ func BenchmarkUpdateRegistry(b *testing.B) {
 	}
 }
 
+func BenchmarkActiveValidatorIndices(b *testing.B) {
+	deposits := setupBenchmarkInitialDeposits(ValidatorCount)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	currentEpoch := uint64(5)
+	beaconState.Slot = currentEpoch * params.BeaconConfig().SlotsPerEpoch
+
+	for index := range beaconState.ValidatorRegistry {
+		if index%2^6 == 0 {
+			beaconState.ValidatorRegistry[index].ExitEpoch = 4
+			beaconState.ValidatorRegistry[index].StatusFlags = pb.Validator_INITIATED_EXIT
+		} else if index%2^5 == 0 {
+			beaconState.ValidatorRegistry[index].ExitEpoch = params.BeaconConfig().ActivationExitDelay
+			beaconState.ValidatorRegistry[index].ActivationEpoch = 5 + params.BeaconConfig().ActivationExitDelay + 1
+		}
+	}
+
+	b.N = RunAmount
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = helpers.ActiveValidatorIndices(beaconState.ValidatorRegistry, 5)
+	}
+}
+
+func BenchmarkValidatorIndexMap(b *testing.B) {
+	deposits := setupBenchmarkInitialDeposits(ValidatorCount)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	currentEpoch := uint64(5)
+	beaconState.Slot = currentEpoch * params.BeaconConfig().SlotsPerEpoch
+
+	b.N = RunAmount
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = stateutils.ValidatorIndexMap(beaconState)
+	}
+}
+
 //
 
 // state = v.ProcessPenaltiesAndExits(ctx, state)
@@ -300,17 +368,4 @@ func setupBenchmarkInitialDeposits(numDeposits int) []*pb.Deposit {
 		}
 	}
 	return deposits
-}
-
-func setBenchmarkConfig() {
-	c := params.BeaconConfig()
-	// From Danny Ryan's "Minimal Config"
-	// c.SlotsPerEpoch = 8
-	// c.MinAttestationInclusionDelay = 2
-	// c.TargetCommitteeSize = 4
-	// c.GenesisEpoch = c.GenesisSlot / 8
-	// c.LatestRandaoMixesLength = 64
-	// c.LatestActiveIndexRootsLength = 64
-	// c.LatestSlashedExitLength = 64
-	params.OverrideBeaconConfig(c)
 }
