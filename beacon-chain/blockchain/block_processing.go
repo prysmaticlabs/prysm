@@ -205,7 +205,7 @@ func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *pb.Bea
 func (c *ChainService) runStateTransition(
 	headRoot [32]byte, block *pb.BeaconBlock, beaconState *pb.BeaconState,
 ) (*pb.BeaconState, error) {
-	beaconState, err := state.ExecuteStateTransition(
+	newState, err := state.ExecuteStateTransition(
 		c.ctx,
 		beaconState,
 		block,
@@ -216,40 +216,40 @@ func (c *ChainService) runStateTransition(
 		},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("could not execute state transition %v", err)
+		return beaconState, fmt.Errorf("could not execute state transition %v", err)
 	}
 	log.WithField(
-		"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
+		"slotsSinceGenesis", newState.Slot-params.BeaconConfig().GenesisSlot,
 	).Info("Slot transition successfully processed")
 
 	if block != nil {
 		log.WithField(
-			"slotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
+			"slotsSinceGenesis", newState.Slot-params.BeaconConfig().GenesisSlot,
 		).Info("Block transition successfully processed")
 	}
 
-	if helpers.IsEpochEnd(beaconState.Slot) {
+	if helpers.IsEpochEnd(newState.Slot) {
 		// Save activated validators of this epoch to public key -> index DB.
-		if err := c.saveValidatorIdx(beaconState); err != nil {
-			return nil, fmt.Errorf("could not save validator index: %v", err)
+		if err := c.saveValidatorIdx(newState); err != nil {
+			return newState, fmt.Errorf("could not save validator index: %v", err)
 		}
 		// Delete exited validators of this epoch to public key -> index DB.
-		if err := c.deleteValidatorIdx(beaconState); err != nil {
-			return nil, fmt.Errorf("could not delete validator index: %v", err)
+		if err := c.deleteValidatorIdx(newState); err != nil {
+			return newState, fmt.Errorf("could not delete validator index: %v", err)
 		}
 		// Update FFG checkpoints in DB.
-		if err := c.updateFFGCheckPts(beaconState); err != nil {
-			return nil, fmt.Errorf("could not update FFG checkpts: %v", err)
+		if err := c.updateFFGCheckPts(newState); err != nil {
+			return newState, fmt.Errorf("could not update FFG checkpts: %v", err)
 		}
 		// Save Historical States.
-		if err := c.beaconDB.SaveHistoricalState(beaconState); err != nil {
-			return nil, fmt.Errorf("could not save historical state: %v", err)
+		if err := c.beaconDB.SaveHistoricalState(newState); err != nil {
+			return newState, fmt.Errorf("could not save historical state: %v", err)
 		}
 		log.WithField(
-			"SlotsSinceGenesis", beaconState.Slot-params.BeaconConfig().GenesisSlot,
+			"SlotsSinceGenesis", newState.Slot-params.BeaconConfig().GenesisSlot,
 		).Info("Epoch transition successfully processed")
 	}
-	return beaconState, nil
+	return newState, nil
 }
 
 // saveValidatorIdx saves the validators public key to index mapping in DB, these
