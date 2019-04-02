@@ -184,6 +184,9 @@ func (s *Service) HandleAttestations(ctx context.Context, message proto.Message)
 	if err != nil {
 		return err
 	}
+	if s.beaconDB.HasAttestation(hash) {
+		return nil
+	}
 	if err := s.beaconDB.SaveAttestation(ctx, attestation); err != nil {
 		return err
 	}
@@ -235,10 +238,16 @@ func (s *Service) handleProcessedBlock(_ context.Context, message proto.Message)
 // removePendingAttestations removes a list of attestations from DB.
 func (s *Service) removePendingAttestations(attestations []*pb.Attestation) error {
 	for _, attestation := range attestations {
-		if err := s.beaconDB.DeleteAttestation(attestation); err != nil {
+		hash, err := hashutil.HashProto(attestation)
+		if err != nil {
 			return err
 		}
-		log.WithField("blockRoot", fmt.Sprintf("0x%x", attestation.Data.BeaconBlockRootHash32)).Info("Attestation removed")
+		if s.beaconDB.HasAttestation(hash) {
+			if err := s.beaconDB.DeleteAttestation(attestation); err != nil {
+				return err
+			}
+			log.WithField("blockRoot", fmt.Sprintf("0x%x", attestation.Data.BeaconBlockRootHash32)).Info("Attestation removed")
+		}
 	}
 	return nil
 }
