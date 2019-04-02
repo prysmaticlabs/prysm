@@ -41,7 +41,6 @@ func GenesisBeaconState(
 		latestActiveIndexRoots[i] = zeroHash
 	}
 
-
 	latestCrosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
 	for i := 0; i < len(latestCrosslinks); i++ {
 		latestCrosslinks[i] = &pb.Crosslink{
