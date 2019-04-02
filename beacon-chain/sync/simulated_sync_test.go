@@ -104,7 +104,7 @@ func setupSimBackendAndDB(t *testing.T) (*backend.SimulatedBackend, *db.BeaconDB
 		BlockHash32: []byte{},
 	}
 
-	if err := beacondb.SaveState(state); err != nil {
+	if err := beacondb.SaveState(ctx, state); err != nil {
 		t.Fatalf("Could not save state %v", err)
 	}
 	if err := beacondb.SaveJustifiedState(state); err != nil {
@@ -114,7 +114,7 @@ func setupSimBackendAndDB(t *testing.T) (*backend.SimulatedBackend, *db.BeaconDB
 		t.Fatalf("Could not save state %v", err)
 	}
 
-	if err := beacondb.UpdateChainHead(memBlocks[0], state); err != nil {
+	if err := beacondb.UpdateChainHead(ctx, memBlocks[0], state); err != nil {
 		t.Fatalf("Could not update chain head %v", err)
 	}
 
@@ -173,7 +173,6 @@ func setUpUnSyncedService(simP2P *simulatedP2P, stateRoot [32]byte, t *testing.T
 	bd, beacondb, _ := setupSimBackendAndDB(t)
 	defer bd.Shutdown()
 	defer db.TeardownDB(bd.DB())
-	ctx := context.Background()
 
 	mockPow := &afterGenesisPowChain{
 		feed: new(event.Feed),

@@ -168,5 +168,5 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	if err := s.chainService.CleanupBlockOperations(ctx, block); err != nil {
 		return err
 	}
-	return s.db.UpdateChainHead(block, state)
+	return s.db.UpdateChainHead(ctx, block, state)
 }

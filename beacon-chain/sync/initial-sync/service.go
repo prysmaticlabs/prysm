@@ -191,7 +191,7 @@ func (s *InitialSync) exitInitialSync(ctx context.Context) error {
 	if err := s.db.SaveBlock(s.latestSyncedBlock); err != nil {
 		return fmt.Errorf("could not save block: %v", err)
 	}
-	if err := s.db.UpdateChainHead(s.latestSyncedBlock, state); err != nil {
+	if err := s.db.UpdateChainHead(ctx, s.latestSyncedBlock, state); err != nil {
 		return fmt.Errorf("could not update chain head: %v", err)
 	}
 	if err := s.db.SaveHistoricalState(state); err != nil {

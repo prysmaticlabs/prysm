@@ -76,7 +76,7 @@ func (s *InitialSync) processState(msg p2p.Message) {
 		return
 	}
 
-	if err := s.db.UpdateChainHead(finalizedState.LatestBlock, finalizedState); err != nil {
+	if err := s.db.UpdateChainHead(ctx, finalizedState.LatestBlock, finalizedState); err != nil {
 		log.Errorf("Could not update chain head %v", err)
 		return
 	}
