@@ -211,10 +211,10 @@ func DemoBeaconConfig() *BeaconChainConfig {
 	demoConfig.SyncPollingInterval = 1 * 10 // Query nodes over the network every slot.
 	demoConfig.Eth1FollowDistance = 5
 	demoConfig.EpochsPerEth1VotingPeriod = 1
-	demoConfig.LatestRandaoMixesLength = 5*demoConfig.SlotsPerEpoch
-	demoConfig.LatestActiveIndexRootsLength = 5*demoConfig.SlotsPerEpoch
-	demoConfig.LatestSlashedExitLength = 5*demoConfig.SlotsPerEpoch
-	demoConfig.LatestBlockRootsLength = 5*demoConfig.SlotsPerEpoch
+	demoConfig.LatestRandaoMixesLength = 5 * demoConfig.SlotsPerEpoch
+	demoConfig.LatestActiveIndexRootsLength = 5 * demoConfig.SlotsPerEpoch
+	demoConfig.LatestSlashedExitLength = 5 * demoConfig.SlotsPerEpoch
+	demoConfig.LatestBlockRootsLength = 5 * demoConfig.SlotsPerEpoch
 
 	return &demoConfig
 }
