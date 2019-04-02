@@ -296,16 +296,17 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		t.Fatalf("Could not tree hash state: %v", err)
 	}
 	parentHash, genesisBlock := setupGenesisBlock(t, chainService, beaconState)
-	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
+	if err := db.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
 		t.Fatal(err)
 	}
-
+	if err := db.SaveFinalizedState(beaconState); err != nil {
+		t.Fatal(err)
+	}
 	genesisSlot := params.BeaconConfig().GenesisSlot
 
 	// Top chain slots (see graph)
 	blockSlots := []uint64{1, 2, 3, 5, 8}
 	for _, slot := range blockSlots {
-		t.Log(slot)
 		block := &pb.BeaconBlock{
 			Slot:             genesisSlot + slot,
 			StateRootHash32:  stateRoot[:],
@@ -321,17 +322,55 @@ func TestReceiveBlock_OnChainSplit(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		parentHash, err = hashutil.HashBeaconBlock(block)
-		if err != nil {
-			t.Fatal(err)
-		}
 		if err = db.SaveBlock(block); err != nil {
 			t.Fatal(err)
 		}
 		if err = db.UpdateChainHead(ctx, block, computedState); err != nil {
 			t.Fatal(err)
 		}
+		parentHash, err = hashutil.HashBeaconBlock(block)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
+
+	// Common ancester is block at slot 3
+	commonAncestor, err := db.BlockBySlot(genesisSlot + 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	parentHash, err = hashutil.HashBeaconBlock(commonAncestor)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	beaconState, err = db.HistoricalStateFromSlot(commonAncestor.Slot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stateRoot, err = hashutil.HashProto(beaconState)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stateRoot != bytesutil.ToBytes32(commonAncestor.StateRootHash32) {
+		t.Fatalf("Mismatched state roots for common ancestor. Wanted %#x got %#x", commonAncestor.StateRootHash32, stateRoot)
+	}
+	// Then we receive the block `f` from slot 6
+	blockF := &pb.BeaconBlock{
+		Slot:             genesisSlot + 6,
+		ParentRootHash32: parentHash[:],
+		StateRootHash32:  stateRoot[:],
+		RandaoReveal:     createRandaoReveal(t, beaconState, privKeys),
+		Body:             &pb.BeaconBlockBody{},
+	}
+
+	computedState, err := chainService.ReceiveBlock(ctx, blockF)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_ = computedState
 
 	t.Fail()
 }

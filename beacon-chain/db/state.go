@@ -202,12 +202,6 @@ func (db *BeaconDB) SaveFinalizedState(beaconState *pb.BeaconState) error {
 func (db *BeaconDB) SaveHistoricalState(beaconState *pb.BeaconState) error {
 	slotSinceGenesis := beaconState.Slot - params.BeaconConfig().GenesisSlot
 
-	// Do not save state, if slot diff is not
-	// a power of 2.
-	if slotSinceGenesis%params.BeaconConfig().SlotsPerEpoch != 0 {
-		return nil
-	}
-
 	slotBinary := encodeSlotNumber(slotSinceGenesis)
 	stateHash, err := hashutil.HashProto(beaconState)
 	if err != nil {
@@ -293,17 +287,10 @@ func (db *BeaconDB) FinalizedState() (*pb.BeaconState, error) {
 
 // HistoricalStateFromSlot retrieves the closest historical state to a slot.
 func (db *BeaconDB) HistoricalStateFromSlot(slot uint64) (*pb.BeaconState, error) {
-	state, err := db.FinalizedState()
-	if err != nil {
-		return nil, fmt.Errorf("unable to retrieve finalized state %v", err)
-	}
 	slotSinceGenesis := slot - params.BeaconConfig().GenesisSlot
-	if slotSinceGenesis%params.BeaconConfig().SlotsPerEpoch != 0 {
-		return state, nil
-	}
 	var beaconState *pb.BeaconState
 
-	err = db.view(func(tx *bolt.Tx) error {
+	err := db.view(func(tx *bolt.Tx) error {
 		var err error
 		var highestStateSlot uint64
 		histStateKey := make([]byte, 32)
