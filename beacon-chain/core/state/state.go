@@ -41,12 +41,6 @@ func GenesisBeaconState(
 		latestActiveIndexRoots[i] = zeroHash
 	}
 
-	latestVDFOutputs := make([][]byte,
-		params.BeaconConfig().LatestRandaoMixesLength/params.BeaconConfig().SlotsPerEpoch)
-	for i := 0; i < len(latestVDFOutputs); i++ {
-		latestVDFOutputs[i] = zeroHash
-	}
-
 	latestCrosslinks := make([]*pb.Crosslink, params.BeaconConfig().ShardCount)
 	for i := 0; i < len(latestCrosslinks); i++ {
 		latestCrosslinks[i] = &pb.Crosslink{
@@ -86,6 +80,7 @@ func GenesisBeaconState(
 		// Misc fields.
 		Slot:        params.BeaconConfig().GenesisSlot,
 		GenesisTime: genesisTime,
+
 		Fork: &pb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,

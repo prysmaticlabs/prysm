@@ -231,6 +231,13 @@ func (a *Service) UpdateLatestAttestation(ctx context.Context, attestation *pb.A
 		// If the attestation is newer than this attester's one in pool.
 		if newAttestationSlot > currentAttestationSlot {
 			a.store.m[pubkey] = attestation
+
+			log.WithFields(
+				logrus.Fields{
+					"attestationSlot": attestation.Data.Slot - params.BeaconConfig().GenesisSlot,
+					"justifiedEpoch":  attestation.Data.JustifiedEpoch - params.BeaconConfig().GenesisEpoch,
+				},
+			).Info("Attestation store updated")
 		}
 	}
 	return nil
