@@ -29,7 +29,6 @@ func IsValidBlock(
 	ctx context.Context,
 	state *pb.BeaconState,
 	block *pb.BeaconBlock,
-	enablePOWChain bool,
 	HasBlock func(hash [32]byte) bool,
 	GetPOWBlock func(ctx context.Context, hash common.Hash) (*gethTypes.Block, error),
 	genesisTime time.Time) error {
@@ -42,19 +41,17 @@ func IsValidBlock(
 		return fmt.Errorf("unprocessed parent block as it is not saved in the db: %#x", parentRoot)
 	}
 
-	if enablePOWChain {
-		h := common.BytesToHash(state.LatestEth1Data.BlockHash32)
-		powBlock, err := GetPOWBlock(ctx, h)
-		if err != nil {
-			return fmt.Errorf("unable to retrieve POW chain reference block: %v", err)
-		}
+	h := common.BytesToHash(state.LatestEth1Data.BlockHash32)
+	powBlock, err := GetPOWBlock(ctx, h)
+	if err != nil {
+		return fmt.Errorf("unable to retrieve POW chain reference block: %v", err)
+	}
 
-		// Pre-Processing Condition 2:
-		// The block pointed to by the state in state.processed_pow_receipt_root has
-		// been processed in the ETH 1.0 chain.
-		if powBlock == nil {
-			return fmt.Errorf("proof-of-Work chain reference in state does not exist: %#x", state.LatestEth1Data.BlockHash32)
-		}
+	// Pre-Processing Condition 2:
+	// The block pointed to by the state in state.processed_pow_receipt_root has
+	// been processed in the ETH 1.0 chain.
+	if powBlock == nil {
+		return fmt.Errorf("proof-of-Work chain reference in state does not exist: %#x", state.LatestEth1Data.BlockHash32)
 	}
 
 	// Pre-Processing Condition 4:

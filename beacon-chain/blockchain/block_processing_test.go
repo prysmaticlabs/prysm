@@ -27,7 +27,7 @@ var _ = BlockProcessor(&ChainService{})
 func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	chainService := setupBeaconChain(t, true, db, true, nil)
+	chainService := setupBeaconChain(t, db, nil)
 	unixTime := uint64(time.Now().Unix())
 	deposits, _ := setupInitialDeposits(t, 100)
 	if err := db.InitializeState(unixTime, deposits, &pb.Eth1Data{}); err != nil {
@@ -72,7 +72,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
-	chainService := setupBeaconChain(t, false, db, true, nil)
+	chainService := setupBeaconChain(t, db, nil)
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	eth1Data := &pb.Eth1Data{
 		DepositRootHash32: []byte{},
@@ -131,7 +131,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	attsService := attestation.NewAttestationService(
 		context.Background(),
 		&attestation.Config{BeaconDB: db})
-	chainService := setupBeaconChain(t, false, db, true, attsService)
+	chainService := setupBeaconChain(t, db, attsService)
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	eth1Data := &pb.Eth1Data{
 		DepositRootHash32: []byte{},
@@ -244,7 +244,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 	defer internal.TeardownDB(t, db)
 	ctx := context.Background()
 
-	chainService := setupBeaconChain(t, false, db, true, nil)
+	chainService := setupBeaconChain(t, db, nil)
 	unixTime := uint64(time.Now().Unix())
 	deposits, privKeys := setupInitialDeposits(t, 100)
 	if err := db.InitializeState(unixTime, deposits, &pb.Eth1Data{}); err != nil {
@@ -258,7 +258,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 		ParentRootHash32: []byte{'a'},
 	}
 
-	if err := chainService.isBlockReadyForProcessing(block, beaconState); err == nil {
+	if err := chainService.VerifyBlockValidity(block, beaconState); err == nil {
 		t.Fatal("block processing succeeded despite block having no parent saved")
 	}
 
@@ -308,9 +308,7 @@ func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 		},
 	}
 
-	chainService.enablePOWChain = true
-
-	if err := chainService.isBlockReadyForProcessing(block2, beaconState); err != nil {
+	if err := chainService.VerifyBlockValidity(block2, beaconState); err != nil {
 		t.Fatalf("block processing failed despite being a valid block: %v", err)
 	}
 }
@@ -333,7 +331,7 @@ func TestDeleteValidatorIdx_DeleteWorks(t *testing.T) {
 		ValidatorRegistry: validators,
 		Slot:              epoch * params.BeaconConfig().SlotsPerEpoch,
 	}
-	chainService := setupBeaconChain(t, false, db, true, nil)
+	chainService := setupBeaconChain(t, db, nil)
 	if err := chainService.saveValidatorIdx(state); err != nil {
 		t.Fatalf("Could not save validator idx: %v", err)
 	}
@@ -375,7 +373,7 @@ func TestSaveValidatorIdx_SaveRetrieveWorks(t *testing.T) {
 		ValidatorRegistry: validators,
 		Slot:              epoch * params.BeaconConfig().SlotsPerEpoch,
 	}
-	chainService := setupBeaconChain(t, false, db, true, nil)
+	chainService := setupBeaconChain(t, db, nil)
 	if err := chainService.saveValidatorIdx(state); err != nil {
 		t.Fatalf("Could not save validator idx: %v", err)
 	}
