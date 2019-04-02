@@ -109,16 +109,35 @@ func (v *validator) WaitForActivation(ctx context.Context) error {
 	return nil
 }
 
+// CanonicalHeadSlot returns the slot of canonical block currently found in the
+// beacon chain via RPC.
+func (v *validator) CanonicalHeadSlot(ctx context.Context) (uint64, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.CanonicalHeadSlot")
+	defer span.End()
+	head, err := v.beaconClient.CanonicalHead(ctx, &ptypes.Empty{})
+	if err != nil {
+		return params.BeaconConfig().GenesisSlot, err
+	}
+	return head.Slot, nil
+}
+
 // NextSlot emits the next slot number at the start time of that slot.
 func (v *validator) NextSlot() <-chan uint64 {
 	return v.ticker.C()
+}
+
+// SlotDeadline is the start time of the next slot.
+func (v *validator) SlotDeadline(slot uint64) time.Time {
+	secs := (slot + 1 - params.BeaconConfig().GenesisSlot) * params.BeaconConfig().SecondsPerSlot
+	return time.Unix(int64(v.genesisTime), 0 /*ns*/).Add(time.Duration(secs) * time.Second)
 }
 
 // UpdateAssignments checks the slot number to determine if the validator's
 // list of upcoming assignments needs to be updated. For example, at the
 // beginning of a new epoch.
 func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
-	if slot%params.BeaconConfig().SlotsPerEpoch != 0 && v.assignment != nil {
+	// Testing run time for fetching every slot. This is not meant for production!
+	if slot%params.BeaconConfig().SlotsPerEpoch != 0 && v.assignment != nil && false {
 		// Do nothing if not epoch start AND assignments already exist.
 		return nil
 	}
@@ -139,22 +158,16 @@ func (v *validator) UpdateAssignments(ctx context.Context, slot uint64) error {
 
 	v.assignment = resp
 
-	var proposerSlot uint64
-	var attesterSlot uint64
-	if v.assignment.Assignment[0].IsProposer && len(v.assignment.Assignment[0].Committee) == 1 {
-		proposerSlot = resp.Assignment[0].Slot
-		attesterSlot = resp.Assignment[0].Slot
-	} else if v.assignment.Assignment[0].IsProposer {
-		proposerSlot = resp.Assignment[0].Slot
-	} else {
-		attesterSlot = resp.Assignment[0].Slot
+	lFields := logrus.Fields{
+		"attesterSlot": resp.Assignment[0].Slot - params.BeaconConfig().GenesisSlot,
+		"proposerSlot": "Not proposing",
+		"shard":        resp.Assignment[0].Shard,
+	}
+	if v.assignment.Assignment[0].IsProposer {
+		lFields["proposerSlot"] = resp.Assignment[0].Slot - params.BeaconConfig().GenesisSlot
 	}
 
-	log.WithFields(logrus.Fields{
-		"proposerSlot": proposerSlot - params.BeaconConfig().GenesisSlot,
-		"attesterSlot": attesterSlot - params.BeaconConfig().GenesisSlot,
-		"shard":        resp.Assignment[0].Shard,
-	}).Info("Updated validator assignments")
+	log.WithFields(lFields).Info("Updated validator assignments")
 	return nil
 }
 
@@ -166,15 +179,11 @@ func (v *validator) RoleAt(slot uint64) pb.ValidatorRole {
 		return pb.ValidatorRole_UNKNOWN
 	}
 	if v.assignment.Assignment[0].Slot == slot {
-		// if the committee length is 1, that means validator has to perform both
-		// proposer and validator roles.
-		if len(v.assignment.Assignment[0].Committee) == 1 {
-			return pb.ValidatorRole_BOTH
-		} else if v.assignment.Assignment[0].IsProposer {
+		if v.assignment.Assignment[0].IsProposer {
+			// Note: A proposer also attests to the slot.
 			return pb.ValidatorRole_PROPOSER
-		} else {
-			return pb.ValidatorRole_ATTESTER
 		}
+		return pb.ValidatorRole_ATTESTER
 	}
 	return pb.ValidatorRole_UNKNOWN
 }

@@ -4,7 +4,14 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/chaintest/backend"
+	"github.com/prysmaticlabs/prysm/shared/featureconfig"
 )
+
+func init() {
+	featureconfig.InitFeatureConfig(&featureconfig.FeatureFlagConfig{
+		EnableCrosslinks: true,
+	})
+}
 
 func TestFromYaml_Pass(t *testing.T) {
 	tests, err := readTestsFromYaml("./tests")

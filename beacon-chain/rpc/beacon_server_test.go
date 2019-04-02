@@ -290,6 +290,8 @@ func TestPendingDeposits_UnknownBlockNum(t *testing.T) {
 }
 
 func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
+	ctx := context.Background()
+
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
 	p := &mockPOWChainService{
 		latestBlockNumber: height,
@@ -304,7 +306,7 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 			BlockHash32: []byte("0x0"),
 		},
 	}
-	if err := d.SaveState(beaconState); err != nil {
+	if err := d.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
 
@@ -330,7 +332,6 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 			DepositData:     []byte("d"),
 		},
 	}
-	ctx := context.Background()
 	for _, dp := range append(readyDeposits, recentDeposits...) {
 		d.InsertDeposit(ctx, dp, big.NewInt(int64(dp.MerkleTreeIndex)))
 	}
@@ -367,9 +368,79 @@ func TestPendingDeposits_OutsideEth1FollowWindow(t *testing.T) {
 	}
 }
 
+func TestPendingDeposits_CantReturnMoreThanMax(t *testing.T) {
+	ctx := context.Background()
+
+	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
+	p := &mockPOWChainService{
+		latestBlockNumber: height,
+		hashesByHeight: map[int][]byte{
+			int(height.Int64()): []byte("0x0"),
+		},
+	}
+	d := internal.SetupDB(t)
+
+	beaconState := &pbp2p.BeaconState{
+		LatestEth1Data: &pbp2p.Eth1Data{
+			BlockHash32: []byte("0x0"),
+		},
+	}
+	if err := d.SaveState(ctx, beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	readyDeposits := []*pbp2p.Deposit{
+		{
+			MerkleTreeIndex: 0,
+			DepositData:     []byte("a"),
+		},
+		{
+			MerkleTreeIndex: 1,
+			DepositData:     []byte("b"),
+		},
+	}
+
+	var recentDeposits []*pbp2p.Deposit
+	for i := 2; i < 22; i++ {
+		recentDeposits = append(recentDeposits, &pbp2p.Deposit{
+			MerkleTreeIndex: uint64(i),
+			DepositData:     []byte{byte(i)},
+		})
+	}
+
+	for _, dp := range append(readyDeposits, recentDeposits...) {
+		d.InsertDeposit(ctx, dp, big.NewInt(int64(dp.MerkleTreeIndex)))
+	}
+	for _, dp := range recentDeposits {
+		d.InsertPendingDeposit(ctx, dp, big.NewInt(int64(dp.MerkleTreeIndex)))
+	}
+
+	bs := &BeaconServer{
+		beaconDB:        d,
+		powChainService: p,
+		chainService:    newMockChainService(),
+	}
+
+	// It should also return the recent deposits after their follow window.
+	p.latestBlockNumber = big.NewInt(0).Add(p.latestBlockNumber, big.NewInt(10000))
+	allResp, err := bs.PendingDeposits(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(allResp.PendingDeposits) != int(params.BeaconConfig().MaxDeposits) {
+		t.Errorf(
+			"Received unexpected number of pending deposits: %d, wanted: %d",
+			len(allResp.PendingDeposits),
+			int(params.BeaconConfig().MaxDeposits),
+		)
+	}
+}
+
 func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
 	beaconServer := &BeaconServer{
 		beaconDB: db,
 		powChainService: &faultyPOWChainService{
@@ -382,7 +453,7 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 		},
 		Eth1DataVotes: []*pbp2p.Eth1DataVote{},
 	}
-	if err := beaconServer.beaconDB.SaveState(beaconState); err != nil {
+	if err := beaconServer.beaconDB.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
 	want := "could not fetch ETH1_FOLLOW_DISTANCE ancestor"
@@ -394,6 +465,7 @@ func TestEth1Data_EmptyVotesFetchBlockHashFailure(t *testing.T) {
 func TestEth1Data_EmptyVotesOk(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
 
 	height := big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance))
 	deps := []*pbp2p.Deposit{
@@ -431,7 +503,7 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 		powChainService: powChainService,
 	}
 
-	if err := beaconServer.beaconDB.SaveState(beaconState); err != nil {
+	if err := beaconServer.beaconDB.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
 	result, err := beaconServer.Eth1Data(context.Background(), nil)
@@ -452,6 +524,8 @@ func TestEth1Data_EmptyVotesOk(t *testing.T) {
 func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
 	eth1DataVotes := []*pbp2p.Eth1DataVote{
 		{
 			VoteCount: 1,
@@ -491,7 +565,7 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 			BlockHash32: []byte("stub"),
 		},
 	}
-	if err := db.SaveState(beaconState); err != nil {
+	if err := db.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
 	currentHeight := params.BeaconConfig().Eth1FollowDistance + 5
@@ -535,6 +609,7 @@ func TestEth1Data_NonEmptyVotesSelectsBestVote(t *testing.T) {
 func Benchmark_Eth1Data(b *testing.B) {
 	db := internal.SetupDB(b)
 	defer internal.TeardownDB(b, db)
+	ctx := context.Background()
 
 	hashesByHeight := make(map[int][]byte)
 
@@ -560,7 +635,7 @@ func Benchmark_Eth1Data(b *testing.B) {
 	}
 	hashesByHeight[numOfVotes+1] = []byte("stub")
 
-	if err := db.SaveState(beaconState); err != nil {
+	if err := db.SaveState(ctx, beaconState); err != nil {
 		b.Fatal(err)
 	}
 	currentHeight := params.BeaconConfig().Eth1FollowDistance + 5

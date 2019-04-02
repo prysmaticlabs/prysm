@@ -250,32 +250,41 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Validator activated")
 }
 
-func TestUpdateAssignments_DoesNothingWhenNotEpochStartAndAlreadyExistingAssignments(t *testing.T) {
+func TestCanonicalHeadSlot_FailedRPC(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	client := internal.NewMockValidatorServiceClient(ctrl)
-
-	slot := uint64(1)
+	client := internal.NewMockBeaconServiceClient(ctrl)
 	v := validator{
-		key:             validatorKey,
-		validatorClient: client,
-		assignment: &pb.CommitteeAssignmentResponse{
-			Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
-				&pb.CommitteeAssignmentResponse_CommitteeAssignment{
-					Committee: []uint64{},
-					Slot:      10,
-					Shard:     20,
-				},
-			},
-		},
+		key:          validatorKey,
+		beaconClient: client,
 	}
-	client.EXPECT().CommitteeAssignment(
+	client.EXPECT().CanonicalHead(
 		gomock.Any(),
 		gomock.Any(),
-	).Times(0)
+	).Return(nil, errors.New("failed"))
+	if _, err := v.CanonicalHeadSlot(context.Background()); !strings.Contains(err.Error(), "failed") {
+		t.Errorf("Wanted: %v, received: %v", "failed", err)
+	}
+}
 
-	if err := v.UpdateAssignments(context.Background(), slot); err != nil {
-		t.Errorf("Could not update assignments: %v", err)
+func TestCanonicalHeadSlot_OK(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := internal.NewMockBeaconServiceClient(ctrl)
+	v := validator{
+		key:          validatorKey,
+		beaconClient: client,
+	}
+	client.EXPECT().CanonicalHead(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&pbp2p.BeaconBlock{Slot: params.BeaconConfig().GenesisSlot}, nil)
+	headSlot, err := v.CanonicalHeadSlot(context.Background())
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if headSlot != params.BeaconConfig().GenesisSlot {
+		t.Errorf("Mismatch slots, wanted: %v, received: %v", params.BeaconConfig().GenesisSlot, headSlot)
 	}
 }
 
@@ -289,7 +298,7 @@ func TestUpdateAssignments_ReturnsError(t *testing.T) {
 		validatorClient: client,
 		assignment: &pb.CommitteeAssignmentResponse{
 			Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
-				&pb.CommitteeAssignmentResponse_CommitteeAssignment{
+				{
 					Shard: 1,
 				},
 			},
@@ -319,7 +328,7 @@ func TestUpdateAssignments_OK(t *testing.T) {
 	slot := params.BeaconConfig().SlotsPerEpoch
 	resp := &pb.CommitteeAssignmentResponse{
 		Assignment: []*pb.CommitteeAssignmentResponse_CommitteeAssignment{
-			&pb.CommitteeAssignmentResponse_CommitteeAssignment{
+			{
 				Slot:       params.BeaconConfig().SlotsPerEpoch,
 				Shard:      100,
 				Committee:  []uint64{0, 1, 2, 3},

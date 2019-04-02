@@ -157,7 +157,7 @@ func (v *validator) AttestToBlockHead(ctx context.Context, slot uint64) {
 }
 
 func (v *validator) submitAttestation(ctx context.Context, attestation *pbp2p.Attestation) {
-	log.Debugf("Produced attestation: %v", attestation)
+	log.Infof("Produced attestation with block root: %#x", attestation.Data.BeaconBlockRootHash32)
 	attResp, err := v.attesterClient.AttestHead(ctx, attestation)
 	if err != nil {
 		log.Errorf("Could not submit attestation to beacon node: %v", err)

@@ -1,10 +1,12 @@
 package db
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"go.opencensus.io/trace"
 
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
@@ -65,10 +67,14 @@ func (db *BeaconDB) SaveBlock(block *pb.BeaconBlock) error {
 	if err != nil {
 		return fmt.Errorf("failed to encode block: %v", err)
 	}
+	slotBinary := encodeSlotNumber(block.Slot)
 
 	return db.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blockBucket)
-
+		mainChain := tx.Bucket(mainChainBucket)
+		if err := mainChain.Put(slotBinary, root[:]); err != nil {
+			return fmt.Errorf("failed to include the block in the main chain bucket: %v", err)
+		}
 		return bucket.Put(root[:], enc)
 	})
 }
@@ -164,7 +170,10 @@ func (db *BeaconDB) ChainHead() (*pb.BeaconBlock, error) {
 
 // UpdateChainHead atomically updates the head of the chain as well as the corresponding state changes
 // Including a new state is optional.
-func (db *BeaconDB) UpdateChainHead(block *pb.BeaconBlock, beaconState *pb.BeaconState) error {
+func (db *BeaconDB) UpdateChainHead(ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState) error {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.db.UpdateChainHead")
+	defer span.End()
+
 	blockRoot, err := hashutil.HashBeaconBlock(block)
 	if err != nil {
 		return fmt.Errorf("unable to tree hash block: %v", err)
@@ -172,7 +181,7 @@ func (db *BeaconDB) UpdateChainHead(block *pb.BeaconBlock, beaconState *pb.Beaco
 
 	slotBinary := encodeSlotNumber(block.Slot)
 
-	if err := db.SaveState(beaconState); err != nil {
+	if err := db.SaveState(ctx, beaconState); err != nil {
 		return fmt.Errorf("failed to save beacon state as canonical: %v", err)
 	}
 

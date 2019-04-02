@@ -2,8 +2,10 @@ package client
 
 import (
 	"context"
+	"time"
 
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
+	"github.com/prysmaticlabs/prysm/shared/params"
 )
 
 var _ = Validator(&fakeValidator{})
@@ -14,6 +16,7 @@ type fakeValidator struct {
 	WaitForChainStartCalled          bool
 	NextSlotRet                      <-chan uint64
 	NextSlotCalled                   bool
+	CanonicalHeadSlotCalled          bool
 	UpdateAssignmentsCalled          bool
 	UpdateAssignmentsArg1            uint64
 	UpdateAssignmentsRet             error
@@ -25,6 +28,7 @@ type fakeValidator struct {
 	ProposeBlockCalled               bool
 	ProposeBlockArg1                 uint64
 	LogValidatorGainsAndLossesCalled bool
+	SlotDeadlineCalled               bool
 }
 
 func (fv *fakeValidator) Done() {
@@ -39,6 +43,16 @@ func (fv *fakeValidator) WaitForChainStart(_ context.Context) error {
 func (fv *fakeValidator) WaitForActivation(_ context.Context) error {
 	fv.WaitForActivationCalled = true
 	return nil
+}
+
+func (fv *fakeValidator) CanonicalHeadSlot(_ context.Context) (uint64, error) {
+	fv.CanonicalHeadSlotCalled = true
+	return params.BeaconConfig().GenesisSlot, nil
+}
+
+func (fv *fakeValidator) SlotDeadline(_ uint64) time.Time {
+	fv.SlotDeadlineCalled = true
+	return time.Now()
 }
 
 func (fv *fakeValidator) NextSlot() <-chan uint64 {

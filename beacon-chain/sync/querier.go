@@ -2,13 +2,16 @@ package sync
 
 import (
 	"context"
+	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/event"
 	"github.com/prysmaticlabs/prysm/shared/p2p"
+	"github.com/prysmaticlabs/prysm/shared/params"
 	"github.com/sirupsen/logrus"
 )
 
@@ -16,6 +19,7 @@ var queryLog = logrus.WithField("prefix", "syncQuerier")
 
 type powChainService interface {
 	HasChainStartLogOccurred() (bool, uint64, error)
+	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
 	ChainStartFeed() *event.Feed
 }
 
@@ -33,7 +37,7 @@ type QuerierConfig struct {
 // ResponseBufferSize determines that buffer size of the `responseBuf` channel.
 func DefaultQuerierConfig() *QuerierConfig {
 	return &QuerierConfig{
-		ResponseBufferSize: 100,
+		ResponseBufferSize: params.BeaconConfig().DefaultBufferSize,
 	}
 }
 
