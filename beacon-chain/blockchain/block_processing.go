@@ -38,23 +38,26 @@ type BlockProcessor interface {
 // 3. Apply the block state transition function and account for skip slots.
 // 4. Process and cleanup any block operations, such as attestations and deposits, which would need to be
 //    either included or flushed from the beacon node's runtime.
-func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) *pb.BeaconState {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
-	beaconState, err := c.beaconDB.State(ctx)
+	var err error
+	var beaconState *pb.BeaconState
+	beaconState, err = c.beaconDB.State(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
+		log.Errorf("could not retrieve beacon state: %v", err)
+        return nil
 	}
 
 	// We first verify the block's basic validity conditions.
-	if err := c.VerifyBlockValidity(block, beaconState); err != nil {
-		return beaconState, fmt.Errorf("block with slot %d is not ready for processing: %v", block.Slot, err)
+	if err = c.VerifyBlockValidity(block, beaconState); err != nil {
+		log.Errorf("block with slot %d is not ready for processing: %v", block.Slot-params.BeaconConfig().GenesisSlot, err)
 	}
 
 	// We save the block to the DB and broadcast it to our peers.
 	if err := c.SaveAndBroadcastBlock(ctx, block); err != nil {
-		return beaconState, fmt.Errorf(
-			"could not save and broadcast beacon block with slot %d: %v",
+		log.Errorf(
+			"Could not save and broadcast beacon block with slot %d: %v",
 			block.Slot-params.BeaconConfig().GenesisSlot, err,
 		)
 	}
@@ -65,7 +68,7 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	// We then apply the block state transition accordingly to obtain the resulting beacon state.
 	beaconState, err = c.ApplyBlockStateTransition(ctx, block, beaconState)
 	if err != nil {
-		return beaconState, fmt.Errorf("could not apply block state transition: %v", err)
+		log.Errorf("Could not apply block state transition: %v", err)
 	}
 
 	log.WithFields(logrus.Fields{
@@ -77,11 +80,11 @@ func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) 
 	// We process the block's contained deposits, attestations, and other operations
 	// and that may need to be stored or deleted from the beacon node's persistent storage.
 	if err := c.CleanupBlockOperations(ctx, block); err != nil {
-		return beaconState, fmt.Errorf("could not process block deposits, attestations, and other operations: %v", err)
+		log.Errorf("could not process block deposits, attestations, and other operations: %v", err)
 	}
 
 	log.WithField("slot", block.Slot-params.BeaconConfig().GenesisSlot).Info("Processed beacon block")
-	return beaconState, nil
+	return beaconState
 }
 
 // ApplyBlockStateTransition runs the Ethereum 2.0 state transition function
