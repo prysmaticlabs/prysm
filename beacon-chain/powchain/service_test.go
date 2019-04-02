@@ -264,6 +264,50 @@ func TestStop_OK(t *testing.T) {
 	hook.Reset()
 }
 
+func TestRPCRestart_OK(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	endpoint := "ws://127.0.0.1"
+	testAcc, err := setup()
+	if err != nil {
+		t.Fatalf("Unable to set up simulated backend %v", err)
+	}
+	web3Service, err := NewWeb3Service(context.Background(), &Web3ServiceConfig{
+		Endpoint:        endpoint,
+		DepositContract: testAcc.contractAddr,
+		Reader:          &goodReader{},
+		Logger:          &goodLogger{},
+		BlockFetcher:    &goodFetcher{},
+		ContractBackend: testAcc.backend,
+	})
+	if err != nil {
+		t.Fatalf("unable to setup web3 ETH1.0 chain service: %v", err)
+	}
+	testAcc.backend.Commit()
+
+	web3Service.Start()
+
+	msg := hook.LastEntry().Message
+	want := "Could not connect to ETH1.0 chain RPC client"
+	if strings.Contains(want, msg) {
+		t.Errorf("incorrect log, expected %s, got %s", want, msg)
+	}
+	// clientPTR := &web3Service.client
+	// web3Service.runError = errors.New("EOF")
+	// time.Sleep(5 * time.Second)
+	// msg = hook.LastEntry().Message
+	// want = "EOF"
+	// if msg != want {
+	// 	t.Errorf("incorrect log, expected %s, got %s", want, msg)
+	// }
+	// newClientPTR := &web3Service.client
+	// if clientPTR == newClientPTR {
+	// 	t.Errorf("client wasn't reinitialized after EOF")
+	// }
+	hook.Reset()
+	web3Service.cancel()
+}
+
 func TestInitDataFromContract_OK(t *testing.T) {
 	endpoint := "ws://127.0.0.1"
 	testAcc, err := setup()
@@ -338,6 +382,7 @@ func TestStatus(t *testing.T) {
 		{isRunning: true, blockTime: beforeFiveMinutesAgo}: "eth1 client is not syncing",
 		{isRunning: true}: "eth1 client is not syncing",
 		{isRunning: true, runError: errors.New("test runError")}: "test runError",
+		{isRunning: true, runError: errors.New("EOF")}:           "EOF",
 	}
 
 	for web3ServiceState, wantedErrorText := range testCases {

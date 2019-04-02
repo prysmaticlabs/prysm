@@ -14,6 +14,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
+	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -94,6 +96,8 @@ type Web3Service struct {
 	runError                error
 	lastRequestedBlock      *big.Int
 }
+
+type reconnectFunc func()
 
 // Web3ServiceConfig defines a config struct for web3 service to use through its life cycle.
 type Web3ServiceConfig struct {
@@ -284,6 +288,32 @@ func (w *Web3Service) handleDelayTicker() {
 		log.Error(err)
 	}
 }
+func (w *Web3Service) rerunRPCClientAndSubscribe(headSub ethereum.Subscription, header *gethTypes.Header) {
+	rpcClient, err := gethRPC.Dial(w.endpoint)
+	if err != nil {
+		log.Errorf("Access to PoW chain is required for validator. Unable to connect to Geth node: %v", err)
+	}
+	headSub.Unsubscribe()
+	powClient := ethclient.NewClient(rpcClient)
+	w.client = powClient
+	w.reader = powClient
+	w.blockFetcher = powClient
+	w.logger = powClient
+	headSub, err = w.reader.SubscribeNewHead(w.ctx, w.headerChan)
+	if err != nil {
+		log.Errorf("Unable to subscribe to incoming ETH1.0 chain headers: %v", err)
+		w.runError = err
+		return
+	}
+	header, err = w.blockFetcher.HeaderByNumber(w.ctx, nil)
+	if err != nil {
+		log.Errorf("Unable to retrieve latest ETH1.0 chain header: %v", err)
+		w.runError = err
+		return
+	}
+	w.blockHeight = header.Number
+	w.blockHash = header.Hash()
+}
 
 // run subscribes to all the services for the ETH1.0 chain.
 func (w *Web3Service) run(done <-chan struct{}) {
@@ -320,7 +350,6 @@ func (w *Web3Service) run(done <-chan struct{}) {
 	ticker := time.NewTicker(1 * time.Second)
 	defer headSub.Unsubscribe()
 	defer ticker.Stop()
-
 	for {
 		select {
 		case <-done:
@@ -329,8 +358,14 @@ func (w *Web3Service) run(done <-chan struct{}) {
 			log.Debug("ETH1.0 chain service context closed, exiting goroutine")
 			return
 		case w.runError = <-headSub.Err():
-			log.Debugf("Unsubscribed to head events, exiting goroutine: %v", w.runError)
-			return
+			if w.runError.Error() == "EOF" {
+				log.Infof("Got EOF: restarting rpc client")
+				w.rerunRPCClientAndSubscribe(headSub, header)
+			} else {
+				log.Errorf("Error: %v", w.runError)
+				return
+			}
+
 		case header := <-w.headerChan:
 			w.processSubscribedHeaders(header)
 		case <-ticker.C:
