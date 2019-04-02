@@ -80,6 +80,12 @@ func GenesisBeaconState(
 		Slot:        params.BeaconConfig().GenesisSlot,
 		GenesisTime: genesisTime,
 
+		Fork: &pb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			Epoch:           params.BeaconConfig().GenesisEpoch,
+		},
+
 		// Validator registry fields.
 		ValidatorRegistry:            validatorRegistry,
 		ValidatorBalances:            latestBalances,
