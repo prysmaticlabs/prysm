@@ -271,11 +271,68 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 //
 //    1->2->3->4->5->6->7->8->9[arrowhead=none];
 //}
-func TestReceiveBlock_ForkingCondition(t *testing.T) {
+func TestReceiveBlock_OnChainSplit(t *testing.T) {
 	// The scenario to test is that we think that the canonical head is block H
 	// and then we receive block G. We don't have block F, so we request it. Then
 	// we process F, the G. The expected behavior is that we load the historical
 	// state from slot 3 where the common ancestor block C is present.
+
+	db := internal.SetupDB(t)
+	defer internal.TeardownDB(t, db)
+	ctx := context.Background()
+
+	chainService := setupBeaconChain(t, db, nil)
+	deposits, privKeys := setupInitialDeposits(t, 100)
+	eth1Data := &pb.Eth1Data{
+		DepositRootHash32: []byte{},
+		BlockHash32:       []byte{},
+	}
+	beaconState, err := state.GenesisBeaconState(deposits, 0, eth1Data)
+	if err != nil {
+		t.Fatalf("Can't generate genesis state: %v", err)
+	}
+	stateRoot, err := hashutil.HashProto(beaconState)
+	if err != nil {
+		t.Fatalf("Could not tree hash state: %v", err)
+	}
+	parentHash, genesisBlock := setupGenesisBlock(t, chainService, beaconState)
+	if err := chainService.beaconDB.UpdateChainHead(ctx, genesisBlock, beaconState); err != nil {
+		t.Fatal(err)
+	}
+
+	genesisSlot := params.BeaconConfig().GenesisSlot
+
+	// Top chain slots (see graph)
+	blockSlots := []uint64{1, 2, 3, 5, 8}
+	for _, slot := range blockSlots {
+		t.Log(slot)
+		block := &pb.BeaconBlock{
+			Slot:             genesisSlot + slot,
+			StateRootHash32:  stateRoot[:],
+			ParentRootHash32: parentHash[:],
+			RandaoReveal:     createRandaoReveal(t, beaconState, privKeys),
+			Body:             &pb.BeaconBlockBody{},
+		}
+		computedState, err := chainService.ReceiveBlock(ctx, block)
+		if err != nil {
+			t.Fatal(err)
+		}
+		stateRoot, err = hashutil.HashProto(computedState)
+		if err != nil {
+			t.Fatal(err)
+		}
+		parentHash, err = hashutil.HashBeaconBlock(block)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = db.SaveBlock(block); err != nil {
+			t.Fatal(err)
+		}
+		if err = db.UpdateChainHead(ctx, block, computedState); err != nil {
+			t.Fatal(err)
+		}
+	}
+
 	t.Fail()
 }
 
