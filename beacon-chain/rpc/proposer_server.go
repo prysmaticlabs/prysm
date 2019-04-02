@@ -56,10 +56,11 @@ func (ps *ProposerServer) ProposeBlock(ctx context.Context, blk *pbp2p.BeaconBlo
 		return nil, fmt.Errorf("could not tree hash block: %v", err)
 	}
 	log.WithField("blockRoot", fmt.Sprintf("%#x", h)).Debugf("Block proposal received via RPC")
-	beaconState, err := ps.chainService.ReceiveBlock(ctx, blk)
+	beaconState, err := ps.beaconDB.State(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not process beacon block: %v", err)
+		return nil, fmt.Errorf("could not retrieve beacon state: %v", err)
 	}
+	beaconState = ps.chainService.ReceiveBlock(ctx, blk, beaconState)
 	if err := ps.beaconDB.UpdateChainHead(ctx, blk, beaconState); err != nil {
 		return nil, fmt.Errorf("failed to update chain: %v", err)
 	}
