@@ -20,9 +20,9 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
-var ValidatorCount = 131072
+var ValidatorCount = 8192
 var RunAmount = 67108864 / ValidatorCount
-var conditions = "MAX"
+var conditions = "BIG"
 
 func setBenchmarkConfig() {
 	c := params.BeaconConfig()
@@ -34,11 +34,13 @@ func setBenchmarkConfig() {
 	// c.LatestRandaoMixesLength = 64
 	// c.LatestActiveIndexRootsLength = 64
 	// c.LatestSlashedExitLength = 64
-	if conditions == "MAX" {
+	if conditions == "BIG" {
 		c.MaxAttestations = 128
 		c.MaxDeposits = 16
 		c.MaxVoluntaryExits = 16
-	} else if conditions == "MIN" {
+	} else if conditions == "SML" {
+		c.MaxAttesterSlashings = 0
+		c.MaxProposerSlashings = 0
 		c.MaxAttestations = 16
 		c.MaxDeposits = 2
 		c.MaxVoluntaryExits = 2
@@ -107,22 +109,16 @@ func BenchmarkProcessEth1Data(b *testing.B) {
 }
 
 func BenchmarkProcessProposerSlashings(b *testing.B) {
-	validators := make([]*pb.Validator, ValidatorCount)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
-			ExitEpoch:       params.BeaconConfig().GenesisEpoch + 1,
-			SlashedEpoch:    params.BeaconConfig().GenesisEpoch + 1,
-			WithdrawalEpoch: params.BeaconConfig().GenesisEpoch + 1,
-		}
-	}
-	validatorBalances := make([]uint64, len(validators))
-	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
+	deposits, _ := setupBenchmarkInitialDeposits(ValidatorCount)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	if err != nil {
+		b.Fatal(err)
 	}
 
-	slashings := []*pb.ProposerSlashing{
-		{
-			ProposerIndex: 1,
+	slashings := make([]*pb.ProposerSlashing, params.BeaconConfig().MaxProposerSlashings)
+	for i := uint64(0); i < params.BeaconConfig().MaxProposerSlashings; i++ {
+		slashing := &pb.ProposerSlashing{
+			ProposerIndex: i,
 			ProposalData_1: &pb.ProposalSignedData{
 				Slot:            params.BeaconConfig().GenesisSlot + 1,
 				Shard:           1,
@@ -133,15 +129,13 @@ func BenchmarkProcessProposerSlashings(b *testing.B) {
 				Shard:           1,
 				BlockRootHash32: []byte{0, 1, 0},
 			},
-		},
+		}
+		slashings = append(slashings, slashing)
 	}
+
 	currentSlot := params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch
-	beaconState := &pb.BeaconState{
-		ValidatorRegistry:     validators,
-		Slot:                  currentSlot,
-		ValidatorBalances:     validatorBalances,
-		LatestSlashedBalances: []uint64{0},
-	}
+	beaconState.Slot = currentSlot
+
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			ProposerSlashings: slashings,
@@ -161,49 +155,47 @@ func BenchmarkProcessProposerSlashings(b *testing.B) {
 }
 
 func BenchmarkProcessAttesterSlashings(b *testing.B) {
-	validators := make([]*pb.Validator, ValidatorCount)
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &pb.Validator{
-			ExitEpoch:       params.BeaconConfig().GenesisEpoch + 1,
-			SlashedEpoch:    params.BeaconConfig().FarFutureEpoch,
-			WithdrawalEpoch: params.BeaconConfig().GenesisEpoch + 1*params.BeaconConfig().SlotsPerEpoch,
-		}
-	}
-	validatorBalances := make([]uint64, len(validators))
-	for i := 0; i < len(validatorBalances); i++ {
-		validatorBalances[i] = params.BeaconConfig().MaxDepositAmount
+	deposits, _ := setupBenchmarkInitialDeposits(ValidatorCount)
+	beaconState, err := state.GenesisBeaconState(deposits, uint64(0), &pb.Eth1Data{})
+	if err != nil {
+		b.Fatal(err)
 	}
 
-	att1 := &pb.AttestationData{
-		Slot:           params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch,
-		JustifiedEpoch: 5,
-	}
-	att2 := &pb.AttestationData{
-		Slot:           params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch,
-		JustifiedEpoch: 4,
-	}
-	slashings := []*pb.AttesterSlashing{
-		{
+	slashings := make([]*pb.AttesterSlashing, params.BeaconConfig().MaxAttesterSlashings)
+	for i := uint64(0); i < params.BeaconConfig().MaxAttesterSlashings; i++ {
+		att1 := &pb.AttestationData{
+			Slot:           params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch + i,
+			JustifiedEpoch: 5,
+		}
+		att2 := &pb.AttestationData{
+			Slot:           params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch + i,
+			JustifiedEpoch: 4,
+		}
+
+		offset := i * 8
+
+		validatorIndices := make([]uint64, 8)
+		for i := uint64(0); i < 8; i++ {
+			validatorIndices[i] = offset + i
+		}
+
+		slashing := &pb.AttesterSlashing{
 			SlashableAttestation_1: &pb.SlashableAttestation{
 				Data:             att1,
-				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
+				ValidatorIndices: validatorIndices,
 				CustodyBitfield:  []byte{0xFF},
 			},
 			SlashableAttestation_2: &pb.SlashableAttestation{
 				Data:             att2,
-				ValidatorIndices: []uint64{1, 2, 3, 4, 5, 6, 7, 8},
+				ValidatorIndices: validatorIndices,
 				CustodyBitfield:  []byte{0xFF},
 			},
-		},
+		}
+		slashings[i] = slashing
 	}
 
 	currentSlot := params.BeaconConfig().GenesisSlot + 2*params.BeaconConfig().SlotsPerEpoch
-	beaconState := &pb.BeaconState{
-		ValidatorRegistry:     validators,
-		Slot:                  currentSlot,
-		ValidatorBalances:     validatorBalances,
-		LatestSlashedBalances: make([]uint64, params.BeaconConfig().LatestSlashedExitLength),
-	}
+	beaconState.Slot = currentSlot
 	block := &pb.BeaconBlock{
 		Body: &pb.BeaconBlockBody{
 			AttesterSlashings: slashings,
@@ -458,7 +450,7 @@ func BenchmarkProcessBlock(b *testing.B) {
 		att1 := &pb.Attestation{
 			Data: &pb.AttestationData{
 				Shard:                    0,
-				Slot:                     params.BeaconConfig().GenesisSlot + 20,
+				Slot:                     params.BeaconConfig().GenesisSlot + 5,
 				JustifiedBlockRootHash32: blockRoots[0],
 				LatestCrosslink:          &pb.Crosslink{CrosslinkDataRootHash32: []byte{1}},
 				CrosslinkDataRootHash32:  params.BeaconConfig().ZeroHash[:],
@@ -467,7 +459,7 @@ func BenchmarkProcessBlock(b *testing.B) {
 			AggregationBitfield: []byte{1},
 			CustodyBitfield:     []byte{1},
 		}
-		attestations = append(attestations, att1)
+		attestations[i] = att1
 	}
 	exits := []*pb.VoluntaryExit{
 		{

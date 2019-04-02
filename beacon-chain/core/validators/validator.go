@@ -53,10 +53,17 @@ func ActivateValidator(state *pb.BeaconState, idx uint64, genesis bool) (*pb.Bea
 
 	state.ValidatorRegistry[idx] = validator
 
+<<<<<<< HEAD
 	log.WithFields(logrus.Fields{
 		"index":           idx,
 		"activationEpoch": validator.ActivationEpoch,
 	}).Info("Validator activated")
+=======
+	// log.WithFields(logrus.Fields{
+	// 	"index":           idx,
+	// 	"activationEpoch": validator.ActivationEpoch - params.BeaconConfig().GenesisEpoch,
+	// }).Info("Validator activated")
+>>>>>>> 9f9aff1c8... Make cases for max conditions
 
 	return state, nil
 }
