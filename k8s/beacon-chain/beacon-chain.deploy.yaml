@@ -6,6 +6,7 @@ metadata:
 spec:
   replicas: 3
   serviceName: beacon-chain
+  podManagementPolicy: Parallel
   selector:
     matchLabels:
       component: beacon-chain

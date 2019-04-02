@@ -13,6 +13,7 @@ import (
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pbp2p "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/rpc/v1"
@@ -33,10 +34,8 @@ func init() {
 }
 
 type chainService interface {
-	CanonicalBlockFeed() *event.Feed
 	StateInitializedFeed() *event.Feed
-	ReceiveBlock(ctx context.Context, block *pbp2p.BeaconBlock) (*pbp2p.BeaconState, error)
-	SaveHistoricalState(beaconState *pbp2p.BeaconState) error
+	blockchain.BlockReceiver
 }
 
 type operationService interface {

@@ -23,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gogo/protobuf/proto"
 	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	pb "github.com/prysmaticlabs/prysm/proto/beacon/p2p/v1"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -73,8 +74,8 @@ type p2pAPI interface {
 }
 
 type chainService interface {
-	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error)
-	ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error
+	blockchain.ForkChoice
+	blockchain.BlockProcessor
 }
 
 type powChainService interface {
@@ -564,7 +565,17 @@ func (s *InitialSync) validateAndSaveNextBlock(ctx context.Context, block *pb.Be
 	}
 
 	// Send block to main chain service to be processed.
-	beaconState, err := s.chainService.ReceiveBlock(ctx, block)
+	beaconState, err := s.db.State(ctx)
+	if err != nil {
+		return fmt.Errorf("could not fetch state: %v", err)
+	}
+	if err := s.chainService.VerifyBlockValidity(block, beaconState); err != nil {
+		return fmt.Errorf("block not valid: %v", err)
+	}
+	if err := s.db.SaveBlock(block); err != nil {
+		return fmt.Errorf("could not save block: %v", err)
+	}
+	beaconState, err = s.chainService.ApplyBlockStateTransition(ctx, block, beaconState)
 	if err != nil {
 		return fmt.Errorf("could not process beacon block: %v", err)
 	}
