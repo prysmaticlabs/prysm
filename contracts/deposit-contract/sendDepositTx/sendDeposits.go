@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"math"
@@ -97,7 +98,7 @@ func main() {
 		},
 		cli.Int64Flag{
 			Name:        "numberOfDeposits",
-			Value:       8,
+			Value:       1,
 			Usage:       "number of deposits to send to the contract",
 			Destination: &numberOfDeposits,
 		},
@@ -185,26 +186,25 @@ func main() {
 
 		statDist := buildStatisticalDist(depositDelay, numberOfDeposits, txDeviation)
 
-		for i := int64(0); i < numberOfDeposits; i++ {
-
-			var validatorKey *prysmKeyStore.Key
-			if randomKey {
-				validatorKey, err = prysmKeyStore.NewKey(rand.Reader)
-				if err != nil {
-					log.Errorf("Could not generate random key: %v", err)
-				}
-			} else {
-				// Load from keystore
-				store := prysmKeyStore.NewKeystore(prysmKeystorePath)
-				rawPassword := loadTextFromFile(passwordFile)
-				validatorKeyPath := prysmKeystorePath + params.BeaconConfig().ValidatorPrivkeyFileName
-				validatorKey, err = store.GetKey(validatorKeyPath, rawPassword)
-				if err != nil {
-					log.WithField("path", validatorKeyPath).WithField("password", rawPassword).Errorf("Could not get key: %v", err)
-					continue
-				}
+		validatorKeys := make(map[string]*prysmKeyStore.Key)
+		if randomKey {
+			validatorKey, err := prysmKeyStore.NewKey(rand.Reader)
+			validatorKeys[hex.EncodeToString(validatorKey.PublicKey.Marshal())] = validatorKey
+			if err != nil {
+				log.Errorf("Could not generate random key: %v", err)
 			}
+		} else {
+			// Load from keystore
+			store := prysmKeyStore.NewKeystore(prysmKeystorePath)
+			rawPassword := loadTextFromFile(passwordFile)
+			prefix := params.BeaconConfig().ValidatorPrivkeyFileName
+			validatorKeys, err = store.GetKeys(prysmKeystorePath, prefix, rawPassword)
+			if err != nil {
+				log.WithField("path", prysmKeystorePath).WithField("password", rawPassword).Errorf("Could not get keys: %v", err)
+			}
+		}
 
+		for _, validatorKey := range validatorKeys {
 			data, err := prysmKeyStore.DepositInput(validatorKey, validatorKey)
 			if err != nil {
 				log.Errorf("Could not generate deposit input data: %v", err)
@@ -216,24 +216,25 @@ func main() {
 				log.Errorf("could not serialize deposit data: %v", err)
 			}
 
-			tx, err := depositContract.Deposit(txOps, serializedData.Bytes())
-			if err != nil {
-				log.Error("unable to send transaction to contract")
+			for i := int64(0); i < numberOfDeposits; i++ {
+				tx, err := depositContract.Deposit(txOps, serializedData.Bytes())
+				if err != nil {
+					log.Error("unable to send transaction to contract")
+				}
+
+				log.WithFields(logrus.Fields{
+					"Transaction Hash": fmt.Sprintf("%#x", tx.Hash()),
+				}).Infof("Deposit %d sent to contract address %v for validator with a public key %#x", i, depositContractAddr, validatorKey.PublicKey.Marshal())
+
+				// If flag is enabled make transaction times variable
+				if variableTx {
+					time.Sleep(time.Duration(math.Abs(statDist.Rand())) * time.Second)
+					continue
+				}
+
+				time.Sleep(time.Duration(depositDelay) * time.Second)
 			}
-
-			log.WithFields(logrus.Fields{
-				"Transaction Hash": fmt.Sprintf("%#x", tx.Hash()),
-			}).Infof("Deposit %d sent to contract for validator with a public key %#x", i, validatorKey.PublicKey.Marshal())
-
-			// If flag is enabled make transaction times variable
-			if variableTx {
-				time.Sleep(time.Duration(math.Abs(statDist.Rand())) * time.Second)
-				continue
-			}
-
-			time.Sleep(time.Duration(depositDelay) * time.Second)
 		}
-
 	}
 
 	err := app.Run(os.Args)
@@ -243,7 +244,6 @@ func main() {
 }
 
 func buildStatisticalDist(depositDelay int64, numberOfDeposits int64, txDeviation int64) *distuv.StudentsT {
-
 	src := rand2.NewSource(uint64(time.Now().Unix()))
 	dist := &distuv.StudentsT{
 		Mu:    float64(depositDelay),
