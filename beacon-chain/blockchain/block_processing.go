@@ -170,21 +170,22 @@ func (c *ChainService) SaveAndBroadcastBlock(ctx context.Context, block *pb.Beac
 // in the local node's runtime, cleanup and remove pending deposits which have been included in the block
 // from our node's local cache, and process validator exits and more.
 func (c *ChainService) CleanupBlockOperations(ctx context.Context, block *pb.BeaconBlock) error {
-	// Forward processed block to operation pool to remove individual operation from DB.
-	if c.opsPoolService.IncomingProcessedBlockFeed().Send(block) == 0 {
-		log.Error("Sent processed block to no subscribers")
-	}
-
-	// Update attestation store with latest attestation target.
-	for _, att := range block.Body.Attestations {
-		if err := c.attsService.UpdateLatestAttestation(c.ctx, att); err != nil {
-			return fmt.Errorf("failed to update latest attestation for store: %v", err)
+	if block.Body != nil {
+		// Forward processed block to operation pool to remove individual operation from DB.
+		if c.opsPoolService.IncomingProcessedBlockFeed().Send(block) == 0 {
+			log.Error("Sent processed block to no subscribers")
 		}
-	}
+		// Update attestation store with latest attestation target.
+		for _, att := range block.Body.Attestations {
+			if err := c.attsService.UpdateLatestAttestation(c.ctx, att); err != nil {
+				return fmt.Errorf("failed to update latest attestation for store: %v", err)
+			}
+		}
 
-	// Remove pending deposits from the deposit queue.
-	for _, dep := range block.Body.Deposits {
-		c.beaconDB.RemovePendingDeposit(ctx, dep)
+		// Remove pending deposits from the deposit queue.
+		for _, dep := range block.Body.Deposits {
+			c.beaconDB.RemovePendingDeposit(ctx, dep)
+		}
 	}
 	return nil
 }

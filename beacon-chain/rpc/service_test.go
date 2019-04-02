@@ -83,8 +83,8 @@ func (m *mockChainService) StateInitializedFeed() *event.Feed {
 	return m.stateInitializedFeed
 }
 
-func (m *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState) (*pb.BeaconState, error) {
-	return &pb.BeaconState{}, nil
+func (m *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState) *pb.BeaconState {
+	return &pb.BeaconState{}
 }
 
 func (m *mockChainService) ApplyForkChoiceRule(ctx context.Context, block *pb.BeaconBlock, computedState *pb.BeaconState) error {

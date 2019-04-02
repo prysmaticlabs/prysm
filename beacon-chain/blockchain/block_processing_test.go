@@ -69,7 +69,7 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 		t.Fatal(err)
 	}
 	chainService.ReceiveBlock(context.Background(), block, beaconState)
-	testutil.AssertLogsContain(t, hook, "not ready for processing")
+	testutil.AssertLogsContain(t, hook, "could not execute state transition")
 }
 
 func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
