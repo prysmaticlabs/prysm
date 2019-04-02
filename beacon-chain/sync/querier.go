@@ -120,7 +120,6 @@ func (q *Querier) Stop() error {
 }
 
 func (q *Querier) listenForStateInitialization() {
-
 	sub := q.chainService.StateInitializedFeed().Subscribe(q.chainStartBuf)
 	defer sub.Unsubscribe()
 	for {
@@ -140,9 +139,7 @@ func (q *Querier) listenForStateInitialization() {
 }
 
 func (q *Querier) run() {
-
 	responseSub := q.p2p.Subscribe(&pb.ChainHeadResponse{}, q.responseBuf)
-
 	// Ticker so that service will keep on requesting for chain head
 	// until they get a response.
 	ticker := time.NewTicker(1 * time.Second)
@@ -164,7 +161,7 @@ func (q *Querier) run() {
 			q.RequestLatestHead()
 		case msg := <-q.responseBuf:
 			response := msg.Data.(*pb.ChainHeadResponse)
-			queryLog.Infof("Latest chain head is at slot: %d and hash %#x", response.Slot, response.Hash)
+			queryLog.Infof("Latest chain head is at slot: %d and hash %#x", response.Slot-params.BeaconConfig().GenesisSlot, response.Hash)
 			q.currentHeadSlot = response.Slot
 			q.currentHeadHash = response.Hash
 			q.currentFinalizedStateRoot = bytesutil.ToBytes32(response.FinalizedStateRootHash32S)
@@ -183,7 +180,7 @@ func (q *Querier) RequestLatestHead() {
 	q.p2p.Broadcast(context.Background(), request)
 }
 
-// IsSynced checks if the node is cuurently synced with the
+// IsSynced checks if the node is currently synced with the
 // rest of the network.
 func (q *Querier) IsSynced() (bool, error) {
 	if q.chainStarted && q.atGenesis {
