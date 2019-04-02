@@ -142,6 +142,9 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 	if len(newState.LatestCrosslinks) != shardCount {
 		t.Error("Length of LatestCrosslinks was not correctly initialized")
 	}
+	if !reflect.DeepEqual(newState.LatestSlashedBalances, make([]uint64, params.BeaconConfig().LatestSlashedExitLength)) {
+		t.Error("LatestSlashedBalances was not correctly initialized")
+	}
 	if !reflect.DeepEqual(newState.LatestAttestations, []*pb.PendingAttestation{}) {
 		t.Error("LatestAttestations was not correctly initialized")
 	}
