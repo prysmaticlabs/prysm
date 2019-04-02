@@ -243,6 +243,42 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	testutil.AssertLogsContain(t, hook, "Executing state transition")
 }
 
+// Scenario graph: http://bit.ly/2JZPCbV
+//
+//digraph G {
+//    rankdir=LR;
+//    node [shape="none"];
+//
+//    subgraph blocks {
+//        rankdir=LR;
+//        node [shape="box"];
+//        a->b;
+//        b->c;
+//        c->e;
+//        c->f;
+//        f->g;
+//        e->h;
+//        i;
+//    }
+//
+//    { rank=same; 1; a;}
+//    { rank=same; 2; b;}
+//    { rank=same; 3; c;}
+//    { rank=same; 5; e;}
+//    { rank=same; 6; f;}
+//    { rank=same; 7; g;}
+//    { rank=same; 8; h;}
+//
+//    1->2->3->4->5->6->7->8->9[arrowhead=none];
+//}
+func TestReceiveBlock_ForkingCondition(t *testing.T) {
+	// The scenario to test is that we think that the canonical head is block H
+	// and then we receive block G. We don't have block F, so we request it. Then
+	// we process F, the G. The expected behavior is that we load the historical
+	// state from slot 3 where the common ancestor block C is present.
+	t.Fail()
+}
+
 func TestIsBlockReadyForProcessing_ValidBlock(t *testing.T) {
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
