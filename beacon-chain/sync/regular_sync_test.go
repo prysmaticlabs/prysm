@@ -65,11 +65,11 @@ func (ms *mockChainService) CanonicalBlockFeed() *event.Feed {
 	return ms.cFeed
 }
 
-func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock, state *pb.BeaconState) *pb.BeaconState {
 	if err := ms.db.SaveBlock(block); err != nil {
-		return nil, err
+		return nil
 	}
-	return &pb.BeaconState{}, nil
+	return &pb.BeaconState{}
 }
 
 func (ms *mockChainService) ApplyBlockStateTransition(ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState) (*pb.BeaconState, error) {

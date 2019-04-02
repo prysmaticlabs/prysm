@@ -63,7 +63,7 @@ func (ms *mockChainService) CanonicalBlockFeed() *event.Feed {
 	return new(event.Feed)
 }
 
-func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error) {
+func (ms *mockChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock, state *pb.BeaconState) (*pb.BeaconState, error) {
 	return &pb.BeaconState{}, nil
 }
 

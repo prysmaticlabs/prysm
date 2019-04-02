@@ -20,7 +20,7 @@ import (
 // directly receives a new block from other services and applies the full processing pipeline.
 type BlockReceiver interface {
 	CanonicalBlockFeed() *event.Feed
-	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) (*pb.BeaconState, error)
+	ReceiveBlock(ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState) *pb.BeaconState
 }
 
 // BlockProcessor defines a common interface for methods useful for directly applying state transitions
@@ -38,16 +38,10 @@ type BlockProcessor interface {
 // 3. Apply the block state transition function and account for skip slots.
 // 4. Process and cleanup any block operations, such as attestations and deposits, which would need to be
 //    either included or flushed from the beacon node's runtime.
-func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock) *pb.BeaconState {
+func (c *ChainService) ReceiveBlock(ctx context.Context, block *pb.BeaconBlock, beaconState *pb.BeaconState) *pb.BeaconState {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveBlock")
 	defer span.End()
 	var err error
-	var beaconState *pb.BeaconState
-	beaconState, err = c.beaconDB.State(ctx)
-	if err != nil {
-		log.Errorf("could not retrieve beacon state: %v", err)
-        return nil
-	}
 
 	// We first verify the block's basic validity conditions.
 	if err = c.VerifyBlockValidity(block, beaconState); err != nil {

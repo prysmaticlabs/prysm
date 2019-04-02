@@ -25,6 +25,7 @@ import (
 var _ = BlockProcessor(&ChainService{})
 
 func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
+	hook := logTest.NewGlobal()
 	db := internal.SetupDB(t)
 	defer internal.TeardownDB(t, db)
 	chainService := setupBeaconChain(t, db, nil)
@@ -63,9 +64,12 @@ func TestReceiveBlock_FaultyPOWChain(t *testing.T) {
 	if err := chainService.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := chainService.ReceiveBlock(context.Background(), block); err == nil {
-		t.Errorf("Expected receive block to fail, received nil: %v", err)
+	beaconState, err := chainService.beaconDB.State(context.Background())
+	if err != nil {
+		t.Fatal(err)
 	}
+	chainService.ReceiveBlock(context.Background(), block, beaconState)
+	testutil.AssertLogsContain(t, hook, "not ready for processing")
 }
 
 func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
@@ -119,10 +123,7 @@ func TestReceiveBlock_ProcessCorrectly(t *testing.T) {
 	if err := chainService.beaconDB.SaveBlock(block); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := chainService.ReceiveBlock(context.Background(), block); err != nil {
-		t.Errorf("Block failed processing: %v", err)
-	}
-
+	chainService.ReceiveBlock(context.Background(), block, beaconState)
 	testutil.AssertLogsContain(t, hook, "Processed beacon block")
 }
 
@@ -221,10 +222,7 @@ func TestReceiveBlock_RemovesPendingDeposits(t *testing.T) {
 	if err := chainService.beaconDB.SaveState(ctx, beaconState); err != nil {
 		t.Fatal(err)
 	}
-	computedState, err := chainService.ReceiveBlock(context.Background(), block)
-	if err != nil {
-		t.Fatal(err)
-	}
+	computedState := chainService.ReceiveBlock(context.Background(), block, beaconState)
 	for i := 0; i < len(beaconState.ValidatorRegistry); i++ {
 		pubKey := bytesutil.ToBytes48(beaconState.ValidatorRegistry[i].Pubkey)
 		attsService.InsertAttestationIntoStore(pubKey, &pb.Attestation{
